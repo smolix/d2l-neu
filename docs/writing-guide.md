@@ -737,7 +737,11 @@ Revision, as an illustration of length and register:
    the guide of about 30% of the body prose (`tools/exercise_budget.py`);
    the number shows balance, it is not a cap. A problem may have several
    parts and real depth if every part teaches something. Never add problems
-   to fill space.
+   to fill space. Counts stay within one band across the book so that
+   chapters are even: at least 5 problems per section; 5–8 in the main
+   text, up to 10 for sections over about 3,000 words; 8–12 in the
+   mathematics appendix; 5–8 in Tools. A section below the band needs more
+   good problems, not filler; a section above it keeps the best ones.
 
 Sections do not end with surveys, "In Practice" lists, or "Further Reading"
 paragraphs. That material goes to the chapter's Further Reading notebook.

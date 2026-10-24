@@ -603,8 +603,8 @@ but this decomposition has remained useful for decades.
        each class to whether the run diverges and to its final loss.
     1. Show that for SGD without momentum, clipping that fires on every
        step turns the update into normalized gradient descent with step
-       size $\eta\theta$. The divergent run uses momentum $\beta = 0.9$ in
-       :eqref:`eq_momentum`. Bound the length of one of its updates when
+       size $\eta\theta$. The divergent run uses momentum $\beta = 0.9$
+       in :eqref:`eq_momentum`. Bound the length of one of its updates when
        clipping fires on every step. Explain why neither case is the same
        as training at a lower learning rate.
 

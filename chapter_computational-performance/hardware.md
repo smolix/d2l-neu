@@ -637,9 +637,9 @@ The following table summarizes the characteristic performance scales:
    launches every kernel of every block for every token, while the GPU
    reads the weights of every block. Consider a GPT whose $L$ blocks of
    width $d$ each hold about $12d^2$ weights in bf16 and launch $K = 12$
-   kernels per token. Take 8 µs per launch, from the range of
-   :numref:`fig_latency_ladder`. Launches are asynchronous, so a decode
-   step takes at least the larger of the total launch time and the time to
+   kernels per token. Take 8 µs per launch, from the
+   range of :numref:`fig_latency_ladder`. Launches are asynchronous, so a
+   decode step takes at least the larger of the total launch time and the time to
    read the weights. Ignore the embedding table and the KV cache.
     1. Show that which of the two times is larger does not depend on $L$,
        and find the width $d^*$ at which they are equal on the RTX 4090 and

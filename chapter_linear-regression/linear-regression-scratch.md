@@ -752,8 +752,8 @@ curb overfitting, the first of many regularizers we will meet.
         distance $|\hat{b} - b^*|$ of the learned bias from the generating
         bias $b^* = 4.2$ against $\delta$ on logarithmic axes. Explain the
         shape of the curve from the derivative of $l_\delta$ with respect
-        to $y'$, and relate the result to the penalty curves of
-        :numref:`fig_linreg-loss-menu`.
+        to $y'$, and relate the result to the penalty curves
+        of :numref:`fig_linreg-loss-menu`.
    :exlabel:`ex_linear-regression-scratch-robust-losses`
 
 1. **Uncleared gradients.** ● Suppose the gradient buffers accumulate and

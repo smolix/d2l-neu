@@ -698,8 +698,8 @@ drops that assumption.
        mixture with the weights of `mix`, the means $t \boldsymbol{\mu}_k$,
        where $\boldsymbol{\mu}_k$ are the component means of `mix`, and the
        per-coordinate variance $t^2 \cdot 0.25 + (1 - t)^2$. Then
-       derive :eqref:`eq_diffusion-linear-dictionary` from
-       :eqref:`eq_diffusion-score-velocity`.
+       derive :eqref:`eq_diffusion-linear-dictionary`
+       from :eqref:`eq_diffusion-score-velocity`.
     1. `true_velocity` divides by $t$, so `exact` evaluates it at
        $t = 10^{-3}$ in place of $t = 0$. Show from
        :eqref:`eq_diffusion-marginal-velocity` that
@@ -769,27 +769,6 @@ drops that assumption.
        weighted by $1 / t^2$. Which times does flow matching emphasize
        relative to the unweighted noise-prediction loss?
    :exlabel:`ex_flow-matching-prediction-targets`
-1. [code] **Higher-order integration.** The midpoint rule
-   (:numref:`sec_mdl-euler-runge-kutta`) advances the state by a step of
-   size $h$ as
-
-   $$\mathbf{x} \leftarrow \mathbf{x} + h\, \mathbf{v}\big(\mathbf{x} + \tfrac{h}{2}\, \mathbf{v}(\mathbf{x}, t),\ t + \tfrac{h}{2}\big),$$
-
-   with two field evaluations per step.
-    1. Implement it and compare it with `euler_sample` at equal budgets of
-       $2$, $4$, $10$, and $20$ field evaluations, that is, with half as many
-       midpoint steps as Euler steps. From $2000$ standard Gaussian starting
-       points, report the summary statistics and the mean distance of the
-       samples to those of $1000$ Euler steps from the same points. Do this
-       for `exact` and for `velocity`. From which budget on is the midpoint
-       rule the more accurate one?
-    1. Which part of the discrepancy between the samples of `velocity` and
-       the target is integration error, and which part is learning error?
-    1. Repeat the comparison of (a) for the image model `ema` with budgets of
-       $10$ and $50$ field evaluations from the same $48$ starting images,
-       and measure the mean squared distance per pixel to the images of
-       $200$ Euler steps. Show the grids.
-   :exlabel:`ex_flow-matching-higher-order`
 1. **Gaussian data.** ● Let the data follow $\mathcal{N}(\mathbf{m}, s^2 I)$
    in $\mathbb{R}^d$, connected to the noise by the linear path
    :eqref:`eq_diffusion-linear-path` with independent end points, and write
@@ -921,27 +900,6 @@ drops that assumption.
        here? How does the ranking relate to the curvatures of the exact
        flows printed in :numref:`subsec_diffusion-flow-matching-sampling`?
    :exlabel:`ex_flow-matching-noise-prediction-velocity`
-1. [code] **Stochastic sampling from a velocity.** ● A velocity model also
-   defines stochastic samplers :cite:`Albergo.Boffi.VandenEijnden.2023`.
-   For a function $g_t \geq 0$, consider the stochastic differential
-   equation
-
-   $$d\mathbf{x} = \Big[\mathbf{u}_t(\mathbf{x}) + \frac{g_t^2}{2}\, \nabla_{\mathbf{x}} \log p_t(\mathbf{x})\Big]\, dt + g_t\, d\mathbf{W}, \qquad \mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, I).$$
-
-    1. Use the Fokker--Planck equation (:numref:`sec_mdl-fokker-planck`) to
-       show that $\mathbf{x}_t$ has the distribution $p_t$ at every $t$, for
-       every choice of $g_t$.
-    1. Solve :eqref:`eq_diffusion-linear-dictionary` for the score. Why is a
-       score computed in this way from a learned velocity unreliable as
-       $t \to 1$? Show that the choice $g_t^2 = \gamma (1 - t)$, with a
-       constant $\gamma \geq 0$, gives a drift without any division.
-    1. Implement the Euler--Maruyama discretization
-       (:numref:`sec_mdl-euler-maruyama`) of the equation with
-       $g_t^2 = \gamma (1 - t)$ for $\gamma \in \{0, 0.5, 1, 2, 4\}$, and
-       report the summary statistics with $100$ and with $10$ steps, for
-       `velocity` and for `exact`. Which statistics does the noise improve
-       for the learned field, and which does it worsen? Why does the exact
-       field gain less?
 1. **The implied weighting.** ● :citet:`Kingma.Gao.2023` compare diffusion
    objectives by writing each of them, for a network
    $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ that predicts the noise of
@@ -979,7 +937,7 @@ drops that assumption.
    :eqref:`eq_diffusion-flow-ode` backward from $t = 1$ to $t = 0$, minus
    the integral of the divergence of the field along that trajectory.
     1. Implement the computation with $100$ backward steps of the midpoint
-       rule of exercise :exref:`ex_flow-matching-higher-order`, and compute
+       rule of :numref:`sec_mdl-euler-runge-kutta`, and compute
        the divergence exactly by automatic differentiation, which takes two
        derivative passes in two dimensions. Check the implementation with
        `exact` on the first $500$ points of `test` against `mix.log_prob`.
@@ -1017,8 +975,8 @@ drops that assumption.
     1. Suppose that the pairs satisfy $\mathbf{x}_1 = T(\mathbf{x}_0)$ with
        $T = \nabla \varphi$ for a strictly convex function $\varphi$, the
        form that the optimal transport map for the squared distance takes
-       by a theorem of :citet:`Brenier.1991`
-       (:numref:`sec_mdl-ot-connection`). Show that two segments of
+       by a theorem of :citet:`Brenier.1991` (:numref:`sec_mdl-ot-connection`).
+       Show that two segments of
        :eqref:`eq_diffusion-linear-path` with different starting points
        never pass through the same point at the same time $t \in [0, 1)$.
        Conclude that the floor of :eqref:`eq_diffusion-cfm-loss` is then
@@ -1035,8 +993,8 @@ drops that assumption.
        about $64$. Does the running example behave in the same way?
     1. The floor at $B = 256$ is not zero. Which assumption of (b) does a
        minibatch coupling violate?
-    1. Compare the coupling at $B = 256$ with reflow (exercise
-       :exref:`ex_flow-matching-reflow`) in the straightness of the flow, in
+    1. Compare the coupling at $B = 256$ with reflow
+       (exercise :exref:`ex_flow-matching-reflow`) in the straightness of the flow, in
        the errors of the samples, and in cost. Which errors of a trained
        model does each method inherit?
 

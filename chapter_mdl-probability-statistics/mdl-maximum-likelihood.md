@@ -1204,9 +1204,10 @@ taken up in detail there.
        now, and why does it no longer depend on $n$?
    :exlabel:`ex_mdl-maximum-likelihood-learning-rate-loss-scale`
 
-1. **The cross-entropy floor.** For discrete outcomes the average NLL equals
+1. **The cross-entropy floor.** For discrete outcomes the average NLL
+   equals
    $H(\hat p_{\textrm{data}})+D_{\textrm{KL}}(\hat p_{\textrm{data}}\,\|\,p_{\boldsymbol{\theta}})$
-   (:numref:`subsec_mdl-nll-crossentropy`), so it cannot fall below the
+   by :numref:`subsec_mdl-nll-crossentropy`, so it cannot fall below the
    empirical entropy.
     1. Evaluate this floor in nats for the coin sequence with $9$ heads and
        $4$ tails, and the KL gap of the fair-coin model $\theta=1/2$.
@@ -1306,8 +1307,8 @@ taken up in detail there.
        exactly zero?
     1. With the Laplace prior $p(\theta)\propto e^{-|\theta|/b}$ of
        :numref:`subsec_mdl-gaussian-prior-weight-decay`, write the MAP
-       objective and solve it with the soft-thresholding formula
-       :eqref:`eq_mdl-opt-soft-threshold`. For which $z$ is the estimate
+       objective and solve it with the soft-thresholding
+       formula :eqref:`eq_mdl-opt-soft-threshold`. For which $z$ is the estimate
        exactly zero?
     1. Keep the Laplace prior and let $z>0$. Compare the posterior density at
        $\theta$ and at $-\theta$ for $\theta>0$, and conclude that the
@@ -1336,8 +1337,8 @@ taken up in detail there.
    :exlabel:`ex_mdl-maximum-likelihood-map-log-odds`
 
 1. **Densities carry units.** ● A density value is not a probability: if $x$
-   is measured in metres, $p(x)$ has units of inverse metres
-   (:numref:`subsec_mdl-mle-densities`).
+   is measured in metres, $p(x)$ has units of inverse
+   metres (:numref:`subsec_mdl-mle-densities`).
     1. A Gaussian is fit by maximum likelihood to $n$ lengths measured in
        metres and then refit to the same lengths in millimetres. How do
        $\hat\mu$, $\hat\sigma$, and the minimal NLL change?
@@ -1366,8 +1367,8 @@ taken up in detail there.
    scalar input $x$ and parameters
    $\boldsymbol{\theta}=(a_1,w_1,\ldots,a_h,w_h)$, and the regression model
    $y\sim\mathcal N(f_{\boldsymbol{\theta}}(x),\sigma^2)$ with fixed
-   $\sigma^2$. Identifiability is defined in
-   :numref:`subsec_mdl-mle-estimator-theory`.
+   $\sigma^2$. Identifiability is defined
+   in :numref:`subsec_mdl-mle-estimator-theory`.
     1. Show that replacing $(a_j,w_j)$ by $(c\,a_j,\,w_j/c)$ for any $c>0$
        leaves $f_{\boldsymbol{\theta}}$ unchanged. How many distinct
        parameter vectors with the same function does permuting the hidden
@@ -1402,33 +1403,14 @@ taken up in detail there.
     1. On the support, the score is $s(x;\theta)=-1/\theta$. Compute
        $\mathbb E_\theta[s]$. Which step in the derivation of the mean-zero
        score fails (compare exercise
-       :exref:`ex_mdl-integral-calculus-moving-support` of
-       :numref:`sec_mdl-integral_calculus`)?
+       :exref:`ex_mdl-integral-calculus-moving-support`
+       of :numref:`sec_mdl-integral_calculus`)?
     1. The unbiased estimator $\tfrac{n+1}{n}\hat\theta$ has variance
        $\theta^2/(n(n+2))$. Compare it with the value
        $1/(n\,\mathbb E_\theta[s^2])$ that :eqref:`eq_mdl-cramer-rao` would
        give as a floor. Why does this estimator not contradict the
        Cramér--Rao bound?
    :exlabel:`ex_mdl-maximum-likelihood-moving-support`
-
-1. [code] **Fisher information of a Gaussian.** ● The caption of
-   :numref:`fig_mdl-prob-mle-fisher` states the per-observation Fisher
-   information $I(\mu,\sigma)=\operatorname{diag}(1/\sigma^2,\,2/\sigma^2)$
-   of a Gaussian with unknown mean $\mu$ and standard deviation $\sigma$.
-    1. Derive this matrix from :eqref:`eq_mdl-fisher`, once from the outer
-       product of the score and once from the expected Hessian. Why are its
-       off-diagonal entries zero?
-    1. Reparameterize by the variance $v=\sigma^2$. Use the chain rule for
-       the score to show that the information about $v$ is $1/(2\sigma^4)$.
-       How does a scalar Fisher information transform under a smooth
-       one-to-one reparameterization $\theta=g(\eta)$ in general?
-    1. Simulate the setting of the figure: $20{,}000$ datasets of $n=30$
-       draws from $\mathcal N(1,1.5^2)$. Compute the MLE
-       $(\hat\mu,\hat\sigma)$ of each dataset and compare the empirical
-       covariance matrix of the estimates with $I(\mu,\sigma)^{-1}/n$. Also
-       measure the bias of $\hat\sigma$. Is it small compared with the
-       standard deviation of $\hat\sigma$?
-   :exlabel:`ex_mdl-maximum-likelihood-gaussian-fisher`
 
 1. [code] **EM speed and missing information.** ● Consider the mixture
    $p(x;\pi)=\pi f_0(x)+(1-\pi)f_1(x)$ with known components
@@ -1485,15 +1467,15 @@ taken up in detail there.
     1. Fit a Poisson model with rate $\lambda$ to counts from a negative
        binomial distribution with mean $m$ and shape $\alpha$, whose variance
        is $m+m^2/\alpha$ (exercise
-       :exref:`ex_mdl-distributions-gamma-poisson-mixture` of
-       :numref:`sec_mdl-distributions`). Find $\hat\lambda$,
+       :exref:`ex_mdl-distributions-gamma-poisson-mixture`
+       of :numref:`sec_mdl-distributions`). Find $\hat\lambda$,
        $\lambda^\dagger$, $\mathbf A$, and $\mathbf B$. By which factor does
        the inverse Fisher information understate the variance of
        $\hat\lambda$?
     1. Fit the Poisson regression $\log\lambda(x)=w_0+w_1x$ with one feature
        by the Newton method of exercise
-       :exref:`ex_mdl-distributions-poisson-regression` of
-       :numref:`sec_mdl-distributions`. An observation is now a pair
+       :exref:`ex_mdl-distributions-poisson-regression`
+       of :numref:`sec_mdl-distributions`. An observation is now a pair
        $(x_i,y_i)$, and $\log p(y_i\mid x_i;\mathbf w)$ takes the place of
        $\log p(x\mid\boldsymbol{\theta})$ in $\mathbf A$ and $\mathbf B$;
        estimate both by sample averages at the fitted $\hat{\mathbf w}$.

@@ -457,18 +457,6 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
        Which prior is it? Why does the accuracy fall as $\alpha$ grows large?
    :exlabel:`ex_mdl-naive-bayes-suppose-we-omitted-laplace`
 
-1. [code] **Missing pixels.** A generative model can classify an input of
-   which some features are unobserved. Let $O\subseteq\{1,\ldots,d\}$ be the
-   set of observed features and $\mathbf x_O$ their values.
-    1. Show that under :eqref:`eq_mdl-naive_assumption` the posterior
-       $p(y\mid\mathbf x_O)$ follows from :eqref:`eq_mdl-naive_bayes` by
-       dropping the factors of the unobserved features. Why does a
-       discriminative model of $p(y\mid\mathbf x)$ offer no such operation?
-    1. Hide the top $14$ rows of every test image. Compare the test accuracy
-       of the rule from (a) with that of setting the hidden pixels to $0$ and
-       applying `predict`. Which assumption about the hidden pixels does the
-       second rule make?
-
 1. **Two event models for text.** A vocabulary $V$ has the four words
    *goal*, *match*, *vote* and *poll*. The training set contains three
    sports documents, "goal goal match", "goal match match" and "match vote",
@@ -492,23 +480,6 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
        multinomial model does this violate?
    :exlabel:`ex_mdl-naive-bayes-two-event-models`
 
-1. [code] **Paired accuracy comparison.** Fit the model with the
-   pseudocounts $\alpha=1$ and $\alpha=10$ of exercise
-   :exref:`ex_mdl-naive-bayes-suppose-we-omitted-laplace`b, and record for
-   each model which test images it classifies correctly.
-    1. Does the test accuracy of the $\alpha=10$ model lie inside the
-       bootstrap interval that the `#mdl-naive-bayes-calibration-1` cell
-       computes for the $\alpha=1$ model?
-    1. Compute a bootstrap interval of the accuracy difference, using the
-       same resampled test indices for both models. Does it contain $0$?
-       Count the test images on which the two models disagree. From this
-       count and the accuracy difference, predict the width of the interval
-       with the variance of the per-example differences $d_i$ of exercise
-       :exref:`ex_mdl-statistics-paired-comparisons`a of
-       :numref:`sec_mdl-statistics`, and compare the prediction with the
-       bootstrap interval. Why is this interval much narrower than the
-       interval of one accuracy?
-
 1. [code] **Template overlap and confusions.** Flatten the ten smoothed
    templates in `P_xy` into vectors and compute the cosine similarity of every
    pair of classes. Rank the pairs by similarity, and rank them by the
@@ -531,8 +502,8 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
        restores the posterior of the correct model.
    :exlabel:`ex_mdl-naive-bayes-duplicated-features`
 
-1. [code] **Label shift.** Under label shift
-   (:numref:`sec_environment-and-distribution-shift`), the test prior $q(y)$
+1. [code] **Label shift.** Under label
+   shift (:numref:`sec_environment-and-distribution-shift`), the test prior $q(y)$
    differs from the training prior $p(y)$, while $p(\mathbf x\mid y)$ stays
    the same.
     1. Show that the posterior under the test prior is
@@ -544,26 +515,6 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
        the corrected rule of (a), with $q(4)=0.9$ and $q(y)=1/90$ for every
        other digit.
    :exlabel:`ex_mdl-naive-bayes-label-shift`
-
-1. [code] **Grayscale Gaussian naive Bayes.** ● The
-   `#naive-bayes-load` cell discards grayscale information by thresholding.
-   Reload the images without the threshold, scale the intensities to
-   $[0,1]$, and fit Gaussian naive Bayes with a mean $\mu_{iy}$ and a
-   variance $\sigma_{iy}^2$ for each class and pixel.
-    1. How many class--pixel pairs have zero training variance? What does the
-       log density of such a pixel do at test time? Add a floor $\epsilon$ to
-       every variance and report the test accuracy for
-       $\epsilon\in\{10^{-9},10^{-4},10^{-3},10^{-2},10^{-1}\}$. Which role
-       of the pseudocount in the Bernoulli model does $\epsilon$ play?
-    1. Replace the class-specific variances by one variance per pixel, the
-       average of the ten class variances, so that the decision boundaries
-       become linear. Repeat the sweep over $\epsilon$.
-    1. Compare the best accuracy of (a) and (b) with the $84\%$ of the
-       Bernoulli model. Within one class, choose a pixel whose mean intensity
-       in that class lies near $1/2$, and plot the histogram of its
-       intensities over the class's training images. How well does a
-       Gaussian describe this histogram? What does that imply for the
-       comparison?
 
 1. [code] **Score gaps under the model.** ● Exercise
    :exref:`ex_mdl-naive-bayes-check-template-overlap-explanation` compares

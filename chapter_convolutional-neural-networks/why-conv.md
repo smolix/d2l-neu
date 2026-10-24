@@ -319,6 +319,14 @@ dimensions and channels efficiently.
 
 ## Exercises
 
+1. **Commutativity of convolution.**
+    1. Prove that the convolution of :eqref:`eq_2d-conv-discrete` is
+       commutative, i.e., $f * g = g * f$.
+    1. Define the cross-correlation
+       $(f \star g)(i, j) = \sum_a \sum_b f(a, b)\, g(i+a, j+b)$, the
+       operation of :eqref:`eq_conv-layer`. Express $(g \star f)(i, j)$
+       through values of $f \star g$, and decide from this expression
+       whether cross-correlation is commutative.
 1. **Convolutions for audio.** Audio data is often represented as a
    one-dimensional sequence of samples.
     1. Derive the one-dimensional analog of :eqref:`eq_conv-layer`.

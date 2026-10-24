@@ -484,8 +484,8 @@ and training requires significantly more memory than prediction.
        and the largest number of nonzero entries it can have.
     1. Evaluate $\textrm{prod}(\partial J/\partial \mathbf{o},
        \partial \mathbf{o}/\partial \mathbf{W}^{(2)})$ entry by entry to
-       recover the term $(\partial J/\partial \mathbf{o})\mathbf{h}^\top$ of
-       :eqref:`eq_backprop-J-h`. Explain why backpropagation never needs to
+       recover the term $(\partial J/\partial \mathbf{o})\mathbf{h}^\top$
+       of :eqref:`eq_backprop-J-h`. Explain why backpropagation never needs to
        store $\partial \mathbf{o}/\partial \mathbf{W}^{(2)}$.
 1. **Modified activation.** The first hidden unit of the network in
    :eqref:`eq_backprop-example` receives the pre-activation $z_1 = -1$, so
@@ -531,14 +531,29 @@ and training requires significantly more memory than prediction.
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
     Chapter 2.*
+1. **Forward mode.** Backpropagation seeds $\partial J/\partial J = 1$ at the
+   output and sweeps the graph backward. Forward-mode differentiation
+   instead seeds $\partial w/\partial w = 1$ at one chosen scalar parameter
+   $w$ and sweeps forward: each node computes the derivative of its value
+   with respect to $w$ from the derivatives of its inputs.
+    1. Use forward mode to recompute $\partial L/\partial \mathbf{W}^{(1)}$
+       for the network in :eqref:`eq_backprop-example`, one sweep per entry
+       of $\mathbf{W}^{(1)}$.
+    1. How many sweeps does each mode need to obtain all six parameter
+       gradients of this network? Which factors does forward mode multiply
+       again in every sweep that reverse mode multiplies only once?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 7.12 and 7.13.*
 1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
    $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
    $4 \times 4$ Hessian of $L$ with respect to the entries of
    $\mathbf{W}^{(1)}$, show that it has rank at most one, and evaluate it at
    the given values.
 1. [extended] **Autograd engine.** ● Build a miniature autograd engine and
-   use it to re-derive the gradients of the network in
-   :eqref:`eq_backprop-example`.
+   use it to re-derive the gradients of the network
+   in :eqref:`eq_backprop-example`.
     1. Write a scalar `Value` class that records, for each result, its
        inputs and the operation that produced it (the computational graph),
        supporting `+`, `*`, and `relu`. (*Hint:* implement `__add__` and

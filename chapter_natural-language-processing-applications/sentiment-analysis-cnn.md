@@ -632,9 +632,12 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 
 ## Exercises
 
+1. The PyTorch `TextCNN` applies the ReLU after max-over-time pooling, while the other implementations apply it to every convolution output before pooling. Show that $\max_t \sigma(x_t) = \sigma(\max_t x_t)$ for every nondecreasing function $\sigma$, so both orders produce the same `encoding`. Count the ReLU evaluations per review of 500 tokens in each order, and give a sequence $x_1, x_2$ for which the two orders differ when max-over-time pooling is replaced by average pooling.
+1. Count the multiply-accumulate operations that one review of $n = 500$ tokens requires in the convolutional layers of the section's `TextCNN` (200 input channels, kernel widths 3, 4, and 5 with 100 output channels each) and in the two bidirectional LSTM layers of the `BiRNN` in :numref:`sec_sentiment_rnn` (100-dimensional embeddings, 100 hidden units). Ignore biases and elementwise operations. For each model, give the length of the longest chain of operations that must run one after another. Measure the time per training epoch of both models on your hardware, compare the ratio of the two times with the ratio of the two operation counts, and explain what limits the speed of each model.
 1. Tune hyperparameters and compare the two architectures for sentiment analysis in :numref:`sec_sentiment_rnn` and in this section, such as in classification accuracy and computational efficiency.
 1. Can you further improve the classification accuracy of the model by using the methods introduced in the exercises of :numref:`sec_sentiment_rnn`?
 1. Add positional encoding in the input representations. Does it improve the classification accuracy?
+1. Max-over-time pooling selects, for each channel and each review, one window of $k$ consecutive tokens, where $k$ is the kernel width of the channel. For the trained `net`, record for every test review and each of the 300 channels the pooled value and the position of the window that attains it. Take the 5 channels whose decoder weights favor the positive class most strongly (the largest difference between their weights to the positive and to the negative output) and the 5 that favor the negative class most strongly. For each, print the $k$-grams from the 10 test reviews with the largest pooled values. Report whether these channels respond to sentiment phrases, and whether any channel attains its maximum on a window that consists of padding.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/393)

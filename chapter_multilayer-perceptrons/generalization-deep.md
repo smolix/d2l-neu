@@ -441,24 +441,6 @@ remains an active research problem.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 8.5.*
-1. [extended] **Interpolation threshold.** ● The one-hidden-layer `MLP` of
-   :numref:`sec_mlp-implementation` has $795h + 10$ parameters, so its
-   parameter count matches the 60,000 training examples of Fashion-MNIST at
-   $h^\star \approx 75$. Randomly relabel 20% of the training examples, as
-   :citet:`nakkiran2021deep` do, and train models at widths
-   $h \in \{8, 16, 32, 75, 150, 300, 600, 1200\}$ until the training error
-   stops decreasing. Plot training and test error against width on a
-   logarithmic axis.
-    1. Does the test error rise and then fall again as the width increases,
-       and where is its peak?
-    1. At which width, if any, does the training error reach zero? Compare
-       this width with $h^\star$ and relate the outcome to the caveat in
-       :numref:`subsec_double_descent` that parameter count is not a reliable
-       proxy for the effective capacity of a deep network.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 8.4.*
 1. [extended] **Epoch-wise double descent.** ● Take the `MLP` of
    :numref:`sec_mlp-implementation` on Fashion-MNIST and randomly relabel
    15% of the training examples. Train far past convergence (several hundred
@@ -503,11 +485,11 @@ remains an active research problem.
        $i$-th eigenvector equals $1 - (1 - \eta\mu_i)^t$ times that of
        $\mathbf{w}^*$.
     1. The minimizer of $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|^2$
-       scales the same coordinate by $\mu_i/(\mu_i + \lambda)$
-       (:numref:`subsec_wd-shrinkage`). For which $\lambda$, as a function
-       of $\eta$ and $t$, do the two factors approximately agree both in the
-       directions with $\eta\mu_i t \ll 1$ and in those with
-       $\eta\mu_i t \gg 1$?
+       scales the same coordinate by
+       $\mu_i/(\mu_i + \lambda)$ (:numref:`subsec_wd-shrinkage`). For which
+       $\lambda$, as a function of $\eta$ and $t$, do the two factors
+       approximately agree both in the directions with $\eta\mu_i t \ll 1$
+       and in those with $\eta\mu_i t \gg 1$?
 
     *Adapted from Ian Goodfellow, Yoshua Bengio, and Aaron Courville,
     [Deep Learning](https://www.deeplearningbook.org/contents/regularization.html),

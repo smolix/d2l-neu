@@ -489,6 +489,184 @@ def _tab_fws(match):
     return {f.strip() for f in match.group(1).split(',')}
 
 
+_EX_TAB_BEGIN = re.compile(r'^:begin_tab:`([^`]+)`\s*$')
+_EX_ITEM = re.compile(r'^(\d+)\. ')
+_EX_LABEL = re.compile(r':(?:eq)?label:`[^`]+`')
+# Equations between these lines are not auto-numbered (number_all_equations).
+NO_AUTO_EQ_BEGIN = '<!-- d2l:no-auto-eq -->'
+NO_AUTO_EQ_END = '<!-- /d2l:no-auto-eq -->'
+
+
+def _exercise_body(lines):
+    """(first, end) line indices of the body of `## Exercises`.
+
+    The body runs from the line after the heading up to, not including, the
+    Discussions link(s) (a `[Discussions]` line or the `:begin_tab:` wrapping
+    one), `<!-- slides -->`, or the next `#`/`##` heading.
+    """
+    a = next((i for i, l in enumerate(lines) if l.startswith('## Exercises')),
+             None)
+    if a is None:
+        return None
+    for i in range(a + 1, len(lines)):
+        l = lines[i]
+        if l.startswith(('<!-- slides -->', '[Discussions]', '# ', '## ')):
+            return a + 1, i
+        if _EX_TAB_BEGIN.match(l):
+            nxt = next((m for m in lines[i + 1:] if m.strip()), '')
+            if nxt.startswith('[Discussions]'):
+                return a + 1, i
+    return a + 1, len(lines)
+
+
+def _number_exercise_items(seg):
+    """Pair each line of one list segment with its problem number (or None).
+
+    Mirrors tools/exercise_refs.py::labels_in, which numbers the :exref:
+    references: a segment (untabbed run, or one :begin_tab: block) counts from
+    its first marker, and an unindented paragraph restarts the count.
+    """
+    out, count = [], None
+    for l in seg:
+        n = None
+        m = _EX_ITEM.match(l)
+        if m:
+            count = int(m.group(1)) if count is None else count + 1
+            n = count
+        elif l.strip() and not l[0].isspace() and not l.startswith('*Adapted from'):
+            count = None
+        out.append((l, n))
+    return out
+
+
+def _drop_labels(seg):
+    """Remove :label:/:eqlabel: directives (and lines holding nothing else)."""
+    out = []
+    for l in seg:
+        if _EX_LABEL.search(l):
+            l = _EX_LABEL.sub('', l).rstrip()
+            if not l.strip():
+                continue
+        out.append(l)
+    return out
+
+
+def expand_exercise_tabs(text, primary):
+    """Rewrite an Exercises list with :begin_tab: problems as one list per framework.
+
+    convert_prose_tabs turns every :begin_tab: group into a column-0
+    panel-tabset div, which ends the Markdown list: a tabbed problem became a
+    tab pane with its own <ol>, the next problems a separate <ol start=N>, with
+    a gap and a jump in indentation between them. Here the whole section body
+    (up to the Discussions links) becomes one consecutive :begin_tab: block per
+    framework, holding the complete list with that framework's variant of each
+    tabbed problem (or without the problem if the framework has none), so
+    convert_prose_tabs emits a single tabset whose panes each hold one list.
+
+    Every framework that has any content gets a pane, not only those named in
+    the section's tab blocks: _d2l-tabs.html hides a tabset that lacks the
+    reader's framework, so a missing pane would hide the untabbed problems too.
+
+    Numbering: each item keeps the number tools/exercise_refs.py gives it, so
+    :exref: references match. Pandoc numbers a list from its first marker; where
+    a framework lacks a problem in mid-list, the list is broken with an HTML
+    comment so the next item still shows its own number.
+
+    Untabbed problems are repeated in every pane, so in all panes but the
+    primary one their :label:/:eqlabel: are dropped and display equations are
+    left unnumbered (between NO_AUTO_EQ_* markers): a hidden pane must not
+    shift the equation numbers that the primary pane shows. Sections with code
+    fences are left alone, since cells must not be duplicated.
+    """
+    lines = text.split('\n')
+    r = _exercise_body(lines)
+    if r is None:
+        return text
+    first, end = r
+    body = lines[first:end]
+    if not any(_EX_TAB_BEGIN.match(l) for l in body):
+        return text
+    if any(l.lstrip().startswith('```') for l in body):
+        return text
+
+    # Split the body into untabbed runs and tab groups. As in
+    # convert_prose_tabs, blocks separated only by blank lines form one group,
+    # and a framework that repeats starts a new group.
+    segs = []  # ('shared', lines) or ('tabs', {fw: lines})
+    pending = []
+    i = 0
+    while i < len(body):
+        m = _EX_TAB_BEGIN.match(body[i])
+        if not m:
+            pending.append(body[i])
+            i += 1
+            continue
+        j = next((k for k in range(i + 1, len(body))
+                  if body[k].lstrip().startswith(':end_tab:')), None)
+        if j is None:
+            return text  # unbalanced; lint_source.py reports it
+        fws = [f.strip() for f in m.group(1).split(',')]
+        content = body[i + 1:j]
+        group = segs[-1][1] if segs and segs[-1][0] == 'tabs' else None
+        if (group is not None and not any(l.strip() for l in pending)
+                and not set(fws) & set(group)):
+            for fw in fws:
+                group.setdefault(fw, content)
+        else:
+            if pending:
+                segs.append(('shared', pending))
+            segs.append(('tabs', {fw: content for fw in fws}))
+        pending = []
+        i = j + 1
+    if pending:
+        segs.append(('shared', pending))
+
+    def strip_blank(seg):
+        a, b = 0, len(seg)
+        while a < b and not seg[a].strip():
+            a += 1
+        while b > a and not seg[b - 1].strip():
+            b -= 1
+        return seg[a:b]
+
+    out = []
+    for fw in [primary] + [f for f in FRAMEWORKS if f != primary]:
+        pieces = []
+        for kind, val in segs:
+            seg = val if kind == 'shared' else val.get(fw)
+            seg = strip_blank(seg or [])
+            if not seg:
+                continue
+            if kind == 'shared' and fw != primary:
+                seg = _drop_labels(seg)
+            pieces.append(_number_exercise_items(seg))
+        if not pieces:
+            continue
+        # A piece that continues the list follows it without a blank line,
+        # so the joint alone does not make a tight list loose.
+        pane, prev = [], None
+        for k, piece in enumerate(pieces):
+            if k and not (prev is not None and piece[0][1] is not None):
+                pane.append('')
+            for l, n in piece:
+                if n is not None:
+                    if prev is not None and n != prev + 1:
+                        while pane and not pane[-1].strip():
+                            pane.pop()
+                        pane += ['', '<!-- -->', '']
+                    prev = n
+                elif (l.strip() and not l[0].isspace()
+                      and not l.startswith('*Adapted from')):
+                    prev = None
+                pane.append(l)
+        if fw != primary:
+            pane = [NO_AUTO_EQ_BEGIN, ''] + pane + ['', NO_AUTO_EQ_END]
+        out += [f':begin_tab:`{fw}`'] + pane + [':end_tab:', '']
+    # Keep the Discussions tabs that follow out of this tab group.
+    out += ['<!-- end of exercise tabs -->', '']
+    return '\n'.join(lines[:first] + [''] + out + lines[end:])
+
+
 def convert_prose_tabs(text, primary):
     """Convert :begin_tab:/:end_tab: sections to Quarto panel-tabsets.
 
@@ -747,7 +925,10 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     # Step 0b: Render exercise-problem labels and references (tools/exercise_refs.py)
     text = render_exercise_refs(text, src_path, mode='html')
 
-    # Step 1: Convert prose tabs on raw text BEFORE block parsing
+    # Step 1: Convert prose tabs on raw text BEFORE block parsing. An
+    # Exercises list with tabbed problems first becomes one complete list
+    # per framework, so the list is not split at each tab group.
+    text = expand_exercise_tabs(text, primary)
     text = convert_prose_tabs(text, primary)
 
     # Step 2: Parse into blocks (code vs markdown)
@@ -780,7 +961,15 @@ def number_all_equations(text, file_slug):
     display equations. This function auto-assigns labels like
     {#eq-linear-regression-auto-1}, {#eq-linear-regression-auto-2}, etc.
     """
-    lines = text.split('\n')
+    # Drop the NO_AUTO_EQ_* marker lines; skip[i] says whether line i lies
+    # between them (equations starting there are left unnumbered).
+    lines, skip, inside = [], [], False
+    for line in text.split('\n'):
+        if line.strip() in (NO_AUTO_EQ_BEGIN, NO_AUTO_EQ_END):
+            inside = line.strip() == NO_AUTO_EQ_BEGIN
+            continue
+        lines.append(line)
+        skip.append(inside)
     result = []
     eq_counter = 0
     i = 0
@@ -788,10 +977,11 @@ def number_all_equations(text, file_slug):
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
+        no_auto = skip[i]
 
         # Single-line display equation: $$...$$ (opens and closes on one line)
         if stripped.startswith('$$') and stripped.endswith('$$') and len(stripped) > 4:
-            if '{#eq-' in line:
+            if '{#eq-' in line or no_auto:
                 result.append(line)
             else:
                 eq_counter += 1
@@ -819,7 +1009,7 @@ def number_all_equations(text, file_slug):
             if not has_label and i < len(lines) and '{#eq-' in lines[i]:
                 has_label = True
 
-            if not has_label:
+            if not has_label and not no_auto:
                 eq_counter += 1
                 label = f'{{#eq-{file_slug}-auto-{eq_counter}}}'
                 # Append label AFTER the closing $$ line
@@ -1042,8 +1232,8 @@ CHAPTER_NUMBERING = {
     'chapter_recurrent-modern/mamba.md': [12, 3],
     'chapter_recurrent-modern/matrix-state.md': [12, 4],
     'chapter_recurrent-modern/deltanet.md': [12, 5],
-    'chapter_recurrent-modern/test-time-regression.md': [12, 6],
-    'chapter_recurrent-modern/hybrids.md': [12, 7],
+    'chapter_recurrent-modern/hybrids.md': [12, 6],
+    'chapter_recurrent-modern/further-reading.md': [12, 7],
     'chapter_computational-performance/index.md': [13],
     'chapter_computational-performance/performance-model.md': [13, 1],
     'chapter_computational-performance/hardware.md': [13, 2],

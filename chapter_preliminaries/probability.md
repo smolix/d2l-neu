@@ -1285,8 +1285,8 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
    indicate that at least one coin came up heads. Compute $P(A = 1)$,
    $P(A = 1 \mid C = 1)$, and $P(A = 1 \mid C = 1, B = 1)$. Use these values
    to decide whether $A$ and $B$ are conditionally independent given
-   $C = 1$, and relate the change from the second value to the third to
-   :numref:`fig_prob_explaining_away`.
+   $C = 1$, and relate the change from the second value to the third
+   to :numref:`fig_prob_explaining_away`.
 1. **A second, correlated test.** Revisit
    :numref:`subsec_probability_hiv_app` with two new tests whose outcomes
    are conditionally independent for patients with HIV but not for
@@ -1321,14 +1321,14 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
     1. Assume that every stock has variance $\sigma^2$ and that every pair
        of distinct stocks has correlation $\rho \geq 0$. Compute the
        variance of the equally weighted portfolio $\alpha_i = 1/n$ and its
-       limit as $n \to \infty$. Compare the case $\rho = 0$ with
-       :eqref:`eq_prob_var_phat`.
+       limit as $n \to \infty$. Compare the case $\rho = 0$
+       with :eqref:`eq_prob_var_phat`.
     1. Formulate an optimization problem that maximizes the expected
        return while constraining the variance to an upper bound. This is
        the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
        problem :cite:`Mangram.2013`. Methods for constrained problems of
-       this kind are developed in
-       :numref:`sec_mdl-constrained-optimization-duality`.
+       this kind are developed
+       in :numref:`sec_mdl-constrained-optimization-duality`.
 1. **A defense lawyer's statistics.** A suspect had a documented history of
    abusing his now-murdered wife. His lawyer argues that, statistically,
    only one in a thousand wife-abusers goes on to murder his wife, so the

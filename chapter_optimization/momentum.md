@@ -441,9 +441,9 @@ of this chapter.
     1. Run gradient descent at $\eta = 2/(L + \mu)$, the learning rate that
        minimizes its worst-case contraction factor
        $\max_i |1 - \eta\lambda_i|$. Run heavy-ball momentum at
-       $\eta = 4/(\sqrt{L} + \sqrt{\mu})^2$ with the $\beta^\star$ of
-       :numref:`subsec_momentum_acceleration`. Plot $|x_{i,t}|$ for every
-       coordinate on a logarithmic scale.
+       $\eta = 4/(\sqrt{L} + \sqrt{\mu})^2$ with the $\beta^\star$
+       of :numref:`subsec_momentum_acceleration`. Plot $|x_{i,t}|$ for
+       every coordinate on a logarithmic scale.
     1. Which coordinates limit the convergence of each method? Compare the
        ratio of the iteration counts until $\|\mathbf{x}_t\| \leq 10^{-6}$
        with $\sqrt{\kappa}$.

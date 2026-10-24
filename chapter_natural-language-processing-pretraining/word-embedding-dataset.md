@@ -599,6 +599,25 @@ for batch in data_iter:
 1. How does the running time of code in this section changes if not using subsampling?
 1. The `RandomGenerator` class caches `k` random sampling results. Set `k` to other values and see how it affects the data loading speed.
 1. What other hyperparameters in the code of this section may affect the data loading speed?
+1. Let $c(w)$ be the number of occurrences of word $w$ and $N$ the total
+   number of tokens, both counted after removing unknown tokens, as
+   `counter` and `num_tokens` are in `subsample`.
+    1. Show that the expected number of occurrences of $w$ that `subsample`
+       keeps is $\min\left(c(w), \sqrt{t N c(w)}\right)$, so that the kept
+       count of a frequent word grows only as the square root of its count.
+    1. Predict the kept count of "the" from `counter`, and compare it with
+       the output of `compare_counts('the')`.
+    1. Predict the total number of tokens in `subsampled` from `counter`,
+       and compare it with the actual number.
+1. `get_centers_and_contexts` draws the context window size of every center
+   word uniformly from $\{1, \ldots, W\}$, where $W$ is `max_window_size`.
+    1. Ignoring sentence boundaries, show that a word at distance
+       $d \leq W$ from the center word is one of its context words with
+       probability $(W - d + 1)/W$, and that a center word has $W + 1$
+       context words on average.
+    1. For the PTB corpus with $W = 5$, compute the average number of
+       context words per center word from `all_centers` and
+       `all_contexts`. Explain why it is smaller than $W + 1$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/383)

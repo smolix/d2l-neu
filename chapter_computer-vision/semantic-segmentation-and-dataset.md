@@ -775,6 +775,14 @@ def load_data_voc(batch_size, crop_size):
 
 1. How can semantic segmentation be applied in autonomous vehicles and medical image diagnostics? Can you think of other applications?
 1. Recall the descriptions of data augmentation in :numref:`sec_image_augmentation`. Which of the image augmentation methods used in image classification would be infeasible to be applied in semantic segmentation?
+1. Use `voc_label_indices` to compute, over all training labels returned by `read_voc_images`, the fraction of pixels in each of the 21 classes and the number of images in which each class occurs. Report the background fraction and the class with the fewest pixels. Which pixel accuracy does a model attain that predicts background everywhere? The intersection over union (IoU) of class $c$ is the number of pixels both predicted and labeled as $c$, divided by the number predicted or labeled as $c$. Compute this model's IoU for every class and the mean over the 21 classes, and explain why the mean IoU separates this model from a useful one while the pixel accuracy does not.
+1. The text crops images instead of rescaling them because rescaling a label image is inaccurate.
+    1. Two neighboring label pixels belong to the classes cat (index 8) and dog (index 12). Interpolating the class indices linearly halfway between them gives which index, and which class does it name? Interpolating their colors from `VOC_COLORMAP` instead gives which color, and which index does `voc_label_indices` return for it?
+    1. Implement a random-scale augmentation that resizes the input image with bilinear interpolation and the label image with nearest-neighbor interpolation, by a common factor drawn uniformly from $[1, 2]$, before calling `voc_rand_crop`. Check that every pixel of the resulting labels has a color in `VOC_COLORMAP`, and count the pixels that fail this check when the label image is resized with bilinear interpolation instead.
+1. In the label images, object borders and regions that are hard to label are drawn in the color $(224, 224, 192)$, which is not in `VOC_COLORMAP`.
+    1. From the way `voc_colormap2label` builds its lookup table, determine the class index that `voc_label_indices` assigns to these pixels. Compute the fraction of such pixels in the training labels.
+    1. Change `voc_colormap2label` so that this color maps to the index 255, and state how the per-pixel cross-entropy loss and the pixel accuracy must treat pixels with this index.
+    1. With such an index available, `VOCSegDataset` no longer needs to discard the training images that are smaller than `crop_size`. Modify it to pad the image and the label instead, state the label value of the padded pixels, and report the number of training examples the dataset then contains for `crop_size = (320, 480)`.
 
 
 :begin_tab:`mxnet`

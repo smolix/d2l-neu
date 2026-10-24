@@ -361,8 +361,8 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
        additively separable, and conclude that a relativistic least-squares
        game over difference critics optimizes a strict lower bound on its
        lifted divergence in general.
-    1. Measure this gap on the five atoms of
-       :numref:`subsec_gan_rp_verification`. Evaluate the unrestricted
+    1. Measure this gap on the five
+       atoms of :numref:`subsec_gan_rp_verification`. Evaluate the unrestricted
        pair-space value at the pointwise optimum, and maximize
        $2\, \Phi_\ell(D)$ over $D \in \mathbb{R}^5$ by gradient ascent, as
        the code there does for $\Phi$. How large is the gap relative to the
@@ -473,8 +473,8 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
        generated point in place or moves it to a location without data,
        and coincident generated points may move together or apart.
        Approximate each supremum by gradient ascent over the critic values
-       at the occupied locations, as in
-       :numref:`subsec_gan_rp_verification`. Some best-response critic
+       at the occupied
+       locations, as in :numref:`subsec_gan_rp_verification`. Some best-response critic
        values diverge, for example to $+\infty$ at a location that holds
        only data points and to $-\infty$ at one that holds only generated
        points, and there the error of the ascent decays only like the

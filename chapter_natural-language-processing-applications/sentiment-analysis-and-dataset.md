@@ -302,7 +302,10 @@ into a fixed-length text category.
 
 
 1. What hyperparameters in this section can we modify to accelerate training sentiment analysis models?
+1. The vocabulary built in the preprocessing cell reserves the token `<pad>`, but the one built inside `load_data_imdb` does not. Find the index that `load_data_imdb` uses for padding and the other token that has the same index. Report the fraction of positions in the training features built by `load_data_imdb` that hold this index, separately for padding and for words that occur fewer than 5 times. Explain why a model trained on these features cannot tell the end of a short review from a rare word, and change `load_data_imdb` so that the two receive different indices.
+1. With `num_steps = 500`, compute the fraction of positions in `train_features` that are padding and the fraction of reviews that are truncated. An RNN or a CNN processes every position, so a padding position costs as much computation as a word. Pad each minibatch of 64 reviews only to the length of its longest review (at most 500 tokens) and report the padding fraction twice: for minibatches drawn after shuffling, and for minibatches of reviews sorted by length. Explain the difference between the two numbers, and describe how to group reviews by length while still presenting the minibatches in random order.
 1. Can you implement a function to load the dataset of [Amazon reviews](https://snap.stanford.edu/data/web-Amazon.html) into data iterators and labels for sentiment analysis?
+1. Build a bag-of-words baseline: a linear classifier that assigns each vocabulary token a learned vector of two scores and predicts the class with the larger average score over the non-padding positions of a review. This is softmax regression (:numref:`sec_softmax`) on the relative word frequencies of the review. Train it on the iterators returned by `load_data_imdb` and report its test accuracy. Then list the 10 tokens with the largest and the 10 with the smallest difference between their positive and negative scores, among tokens that occur at least 100 times in the training set.
 
 
 :begin_tab:`mxnet`

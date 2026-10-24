@@ -1317,33 +1317,6 @@ particular model and regime.
 
 ## Exercises
 
-1. **Convex and nonconvex sets.** Decide which of the following sets are
-   convex, and prove each answer.
-    1. The set of symmetric positive definite $n \times n$ matrices. Show
-       also that the positive semidefinite cone $\mathbb{S}^n_+$ is its
-       closure.
-    1. The set of $n \times n$ matrices of rank at most $k$, for
-       $1 \le k < n$. The LoRA updates of :numref:`sec_mdl-svd-low-rank`
-       range over this set.
-    1. The set of $k$-sparse vectors
-       $\{\mathbf{x} \in \mathbb{R}^n : \mathbf{x} \textrm{ has at most } k \textrm{ nonzero entries}\}$,
-       for $1 \le k < n$. Show that the convex hull of the 1-sparse vectors
-       with entries in $[-1, 1]$ is the $\ell_1$ unit ball
-       $\{\mathbf{x} : \|\mathbf{x}\|_1 \le 1\}$. This is the sense in which
-       an $\ell_1$ penalty is a convex relaxation of a sparsity constraint.
-   :exlabel:`ex_mdl-convexity-convex-nonconvex-sets`
-
-1. **Quasiconvexity.** A function $f$ on a convex set is *quasiconvex* if
-   every sublevel set $\{\mathbf{x} : f(\mathbf{x}) \le t\}$ is convex.
-    1. Show that every convex function is quasiconvex, and that
-       $x \mapsto \sqrt{|x|}$ is quasiconvex but not convex.
-    1. Give a quasiconvex function on $\mathbb{R}$ with a local minimum that
-       is not a global minimum. Which step of the local-equals-global
-       argument in :numref:`subsec_mdl-three-lenses` fails for it?
-    1. Show that a *strict* local minimum of a quasiconvex function is its
-       unique global minimum.
-   :exlabel:`ex_mdl-convexity-quasiconvexity`
-
 1. **Subdifferentials of norms and maxima.** Compute each subdifferential
    from the definition :eqref:`eq_mdl-opt-subgradient`.
     1. Compute $\partial \|\mathbf{x}\|_2$ at every
@@ -1364,9 +1337,10 @@ particular model and regime.
        $\lambda\|\mathbf{w}\|_2 + \tfrac12\|\mathbf{w} - \mathbf{z}\|^2$ over
        $\mathbf{w} \in \mathbb{R}^n$, which gives the proximal operator of
        $\lambda\|\cdot\|_2$. Compare the zero pattern of the solution with
-       that of coordinatewise soft-thresholding
-       :eqref:`eq_mdl-opt-soft-threshold`. What does this penalty do when
-       $\mathbf{w}$ collects the outgoing weights of one hidden unit?
+       that of coordinatewise
+       soft-thresholding :eqref:`eq_mdl-opt-soft-threshold`. What does this
+       penalty do when $\mathbf{w}$ collects the outgoing weights of one
+       hidden unit?
    :exlabel:`ex_mdl-convexity-compute-full-subdifferential-f`
 
 1. **Convex combinations and Jensen's inequality.** Write
@@ -1374,8 +1348,8 @@ particular model and regime.
    $\sum_i \theta_i = 1$ for a convex combination of $m$ points.
     1. Show by induction on $m$ that a convex set $C$ contains every convex
        combination of points of $C$. This is the inclusion that completes
-       the description of the convex hull in
-       :numref:`subsec_mdl-convex-sets`.
+       the description of the convex hull
+       in :numref:`subsec_mdl-convex-sets`.
     1. Apply (a) to the epigraph of a convex function $f$ to derive the
        finite form :eqref:`eq_mdl-opt-jensen-finite` of Jensen's
        inequality.
@@ -1408,8 +1382,8 @@ particular model and regime.
        supply?
    :exlabel:`ex_mdl-convexity-minimizer-existence`
 
-1. **Conjugate pairs.** Compute each conjugate from
-   :eqref:`eq_mdl-opt-conjugate`.
+1. **Conjugate pairs.** Compute each conjugate
+   from :eqref:`eq_mdl-opt-conjugate`.
     1. $f(\mathbf{x}) = \lambda\|\mathbf{x}\|_1$ with $\lambda > 0$.
     1. $f(\mathbf{x}) = \tfrac12 \mathbf{x}^\top A \mathbf{x}$ with
        $A \succ 0$. What does the Fenchel--Young inequality
@@ -1548,39 +1522,6 @@ particular model and regime.
        Over which range of $k$ is FISTA ahead now? Why does ISTA still end
        with a fast linear phase, although $A^\top A$ is singular?
    :exlabel:`ex_mdl-convexity-accelerated-proximal-gradient`
-
-1. [code] **Coordinate selection rules.** ● Let $f$ be $\mu$-strongly
-   convex with coordinate-wise smoothness constants $L_j$ as in
-   :eqref:`eq_mdl-coordinate-smoothness`, and let $S = \sum_j L_j$.
-    1. Pick coordinate $j$ with probability $L_j/S$ and take the step
-       :eqref:`eq_mdl-coordinate-step`. Show that the new point
-       $\mathbf{x}^+$ satisfies
-       $\mathbb{E}[f(\mathbf{x}^+)] \le f(\mathbf{x}) - \|\nabla f(\mathbf{x})\|^2/(2S)$,
-       and use :eqref:`eq_mdl-opt-pl` to derive the contraction factor
-       $1 - \mu/S$ of :numref:`subsec_mdl-coordinate-descent`.
-    1. For the positive-definite quadratic
-       $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top A\mathbf{x} - \mathbf{b}^\top\mathbf{x}$
-       of :numref:`subsec_mdl-coordinate-descent`, $L_j = A_{jj}$,
-       $S = \mathrm{tr}(A)$, and the step :eqref:`eq_mdl-coordinate-step` is
-       the exact update :eqref:`eq_mdl-quadratic-coordinate`. For a dense
-       $A$, $d$ coordinate updates cost about as much as one full gradient.
-       The bound of (a) needs about $\mathrm{tr}(A)/\mu$ coordinate updates,
-       or $\mathrm{tr}(A)/(d\mu)$ gradient equivalents, to shrink the gap by
-       a factor $e$, and gradient descent with $\eta = 1/L$ needs about
-       $\lambda_{\max}(A)/\mu$ full gradients. The ratio
-       $d\,\lambda_{\max}(A)/\mathrm{tr}(A)$ of the two costs is the speedup
-       that the bounds promise for randomized coordinate descent. Show that
-       it lies between $1$ and $d$. For which spectra is it close to $d$, and
-       for which is it close to $1$?
-    1. Rerun the `#mdl-convexity-coordinate-descent` cell with gradient
-       descent and three orders: the cyclic sweep, $d$ coordinates drawn
-       uniformly at random per sweep, and a fresh random permutation per
-       sweep. Then replace `A_cd` by the matrix
-       $\delta I + (1 - \delta)\mathbf{1}\mathbf{1}^\top$ with
-       $\delta = 0.1$ :cite:`Lee.Wright.2019`, and `b_cd` by a standard
-       Gaussian vector. Which method is fastest on each matrix? Relate the
-       result on the second matrix to (b).
-   :exlabel:`ex_mdl-convexity-coordinate-selection`
 
 1. **A factored scalar model.** ● The two-weight model
    $f(a, b) = (ab - 1)^2$ of :numref:`subsec_mdl-recognizing-convexity` is

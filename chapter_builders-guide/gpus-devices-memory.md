@@ -1854,16 +1854,16 @@ CPU fallback when no GPU exists.
 ## Exercises
 
 1. [code] **Peak memory.** Take a four-layer MLP with widths 1024, 4096,
-   4096, 4096 and 10 outputs, trained with Adam, as in
-   :numref:`subsec_memory_during_training`. Using the accounting of that
+   4096, 4096 and 10 outputs, trained with Adam, as
+   in :numref:`subsec_memory_during_training`. Using the accounting of that
    subsection, predict the peak memory of one training step at batch sizes
    64, 256, and 1024, counting weights, gradients, optimizer state, and the
    activations the backward pass keeps. Then measure the peak on a GPU.
    Where does the prediction break down, and what did it omit?
 
 :begin_tab:`pytorch`
-2. [code] **Activation checkpointing.** Revisit the comparison of
-   :numref:`subsec_activation_checkpointing`.
+2. [code] **Activation checkpointing.** Revisit the comparison
+   of :numref:`subsec_activation_checkpointing`.
     1. Increase the batch size until the run without checkpointing raises
        an out-of-memory error. How much further can the checkpointed run go
        before it does too? Explain the ratio from what each variant stores.
@@ -1874,8 +1874,8 @@ CPU fallback when no GPU exists.
 :end_tab:
 
 :begin_tab:`jax`
-2. [code] **Activation checkpointing.** Revisit the comparison of
-   :numref:`subsec_activation_checkpointing`.
+2. [code] **Activation checkpointing.** Revisit the comparison
+   of :numref:`subsec_activation_checkpointing`.
     1. Increase the batch size until the run without checkpointing raises
        an out-of-memory error. How much further can the checkpointed run go
        before it does too? Explain the ratio from what each variant stores.
@@ -1887,8 +1887,8 @@ CPU fallback when no GPU exists.
 :end_tab:
 
 :begin_tab:`tensorflow`
-2. [code] **Activation checkpointing.** Revisit the comparison of
-   :numref:`subsec_activation_checkpointing`.
+2. [code] **Activation checkpointing.** Revisit the comparison
+   of :numref:`subsec_activation_checkpointing`.
     1. Increase the batch size until the run without checkpointing raises
        an out-of-memory error. How much further can the checkpointed run go
        before it does too? Explain the ratio from what each variant stores.

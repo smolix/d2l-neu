@@ -300,8 +300,35 @@ def split_and_load_ml100k(split_mode='seq-aware', feedback='explicit',
 
 ## Exercises
 
-* What other similar recommendation datasets can you find?
-* Go through the [https://movielens.org/](https://movielens.org/) site for more information about MovieLens.
+1. `load_data_ml100k` stores explicit ratings in a dense array with one entry
+   per item--user pair. Compute its size in megabytes with 32-bit floats for
+   MovieLens 100K, and for a dataset with 160,000 users, 60,000 items, and 25
+   million ratings, roughly the scale of MovieLens 25M. Compare each with
+   storing only the observed ratings as (user, item, rating) triples of 32-bit
+   numbers. At which fraction of observed entries do the two representations
+   need the same memory?
+1. Compute the number of ratings of every user and of every item. Report the
+   minimum, median, and maximum of each, and the fraction of all ratings that
+   go to the 10% most-rated items. Which of the two distributions is more
+   skewed, and what does that imply for a model that learns one parameter
+   vector per item from its ratings alone?
+1. Split the data with `split_data_ml100k` in `random` mode with the default
+   `test_ratio=0.1`. Count the test ratings whose item has no rating in the
+   training split, and the number of such items. Repeat the count for
+   `seq-aware` mode, and explain why the two protocols hold out different
+   kinds of items.
+1. For each test rating of the `random` split, check whether the same user has
+   a training rating with a later timestamp. Report the fraction of test
+   ratings for which this holds, and verify that the fraction is zero in
+   `seq-aware` mode. What can a model learn about a user in `random` mode that
+   it could not know when making a prediction at the time of the test rating?
+1. Before training any model, compute the test RMSE of three predictors in both
+   split modes: the global mean $\mu$ of the training ratings; the training mean
+   of each item, with $\mu$ for items without training ratings; and the
+   additive baseline $\mu + b_u + b_i$, where $b_i$ is the mean of the item's
+   training residuals $r_{ui}-\mu$ and $b_u$ the mean of the user's residuals
+   $r_{ui}-\mu-b_i$. Which protocol is harder, and by how much? These values
+   are the reference that a learned rating model has to beat.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/399)

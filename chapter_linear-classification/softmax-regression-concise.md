@@ -316,6 +316,46 @@ and which belongs to its implementation.
        validation accuracy with those of `SoftmaxRegression`, and relate
        the final training loss to the value from the previous step.
 
+1. [code] **Fused loss on extreme logits.** :numref:`sec_softmax_scratch`
+   showed that the from-scratch `softmax` returns `NaN` on the logits
+   $\mathbf{o} = (1000, 0, 0)$. That `softmax` is not part of the `d2l`
+   package, so copy it, and store $\mathbf{o}$ as a $1 \times 3$ matrix.
+    1. Pass $\mathbf{o}$ to the `loss` of this section, first with true
+       class $y = 0$ and then with $y = 1$. Check both values against
+       $\ell(y, \mathbf{o}) = \log\sum_k \exp(o_k) - o_y$ evaluated by
+       hand.
+    1. Compute the same two losses by the from-scratch route, `softmax`
+       followed by `d2l.cross_entropy`. Explain each value it returns, and
+       determine the largest finite loss this route can return.
+    1. Verify on benign logits such as $\mathbf{o} = (2, 1, 0)$ that the
+       two routes agree to floating-point precision.
+
+1. [code] **Stable softplus.** For two classes with logits $(x, 0)$, the
+   first term of the loss is $\mathrm{lse}(x, 0) = \log(1 + e^x)$, the
+   *softplus* of $x$.
+    1. Show that $\log(1 + e^x) = \max(x, 0) + \log(1 + e^{-|x|})$.
+    1. In single precision, evaluate the naive expression
+       `log(1 + exp(x))`, the rewritten expression, and the rewritten
+       expression with `log1p` in place of `log(1 + ...)`, for
+       $x \in \{-100, -20, -5, 0, 5, 20, 100\}$. Compare each value with a
+       double-precision reference, and report where each version
+       overflows and where it loses all relative accuracy.
+    1. Compute the derivative of the naive expression at $x = -20$ by
+       automatic differentiation. Explain why it is accurate although the
+       value of the expression is not, and what this implies for training
+       and for reporting the loss of confidently classified examples.
+
+1. [code] **Log-sum-exp bound.** Write
+   $\mathrm{lse}(\mathbf{o}) = \log\sum_k \exp(o_k)$ for logits
+   $\mathbf{o} \in \mathbb{R}^q$. By exercise :exref:`ex_softmax-regression-realsoftmax` of :numref:`sec_softmax`,
+   the gap $\mathrm{lse}(\mathbf{o}) - \max_k o_k$ is at most $\log q$.
+    1. Show that the gap equals
+       $-\log \max_j \mathrm{softmax}(\mathbf{o})_j$.
+    1. For each $q \in \{2, 10, 100, 1000\}$, draw $1000$ standard
+       Gaussian logit vectors. Plot the mean gap against $q$ together with
+       the bound $\log q$, and report the ratio of the two for each $q$.
+       How does this ratio change as $q$ grows?
+
 1. **Number formats.** ● Deep learning uses several floating-point formats.
    Each consists of one sign bit, an exponent field and a mantissa field.
    The exponent and mantissa fields have 11 and 52 bits in FP64, 8 and 23

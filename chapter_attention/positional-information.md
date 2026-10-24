@@ -715,8 +715,8 @@ to map longer contexts into the trained range.
 
 1. **Distinct positions, distinct codes.** Let $\mathbf{p}_i$ be row $i$ of
    the sinusoidal table :eqref:`eq_sinusoidal-def` of width $d$, with the
-   frequencies $\omega_j = 1/10000^{2j/d}$ of
-   :eqref:`eq_sinusoidal-rotation`.
+   frequencies $\omega_j = 1/10000^{2j/d}$
+   of :eqref:`eq_sinusoidal-rotation`.
     1. Show that
        $$\mathbf{p}_i^\top \mathbf{p}_{i+\delta} = \sum_{j=0}^{d/2-1} \cos(\delta\,\omega_j),$$
        derive $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|^2$ from it, and
@@ -889,8 +889,8 @@ to map longer contexts into the trained range.
        non-trainable model state, the way `TinyCharLM` stores the
        sinusoidal table `P`. Set every entry to $128/512$ on the trained
        `models['rope']`, evaluate it at context 512, and compare with its
-       unscaled perplexity at 512 and with the ALiBi result of
-       :numref:`subsec_pos-experiment`.
+       unscaled perplexity at 512 and with the ALiBi result
+       of :numref:`subsec_pos-experiment`.
     1. Rescale only the pairs whose period exceeds 128 positions and
        evaluate again without fine-tuning. This is a simplified form of the
        selective rescaling of YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`.

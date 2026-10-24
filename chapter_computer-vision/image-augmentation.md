@@ -1044,6 +1044,12 @@ train_with_data_aug(train_augs, test_augs, net)
 1. Train the model without using image augmentation: `train_with_data_aug(test_augs, test_augs)`. Compare training and testing accuracy when using and not using image augmentation. Can this comparative experiment support the argument that image augmentation can mitigate overfitting? Why?
 1. Combine multiple different image augmentation methods in model training on the CIFAR-10 dataset. Does it improve test accuracy? 
 1. Refer to the online documentation of the deep learning framework. What other image augmentation methods does it also provide?
+1. Augmentation changes the objective that training minimizes. Consider a linear model $f(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ trained on augmented inputs.
+    1. For additive noise $\mathbf{x}' = \mathbf{x} + \boldsymbol{\epsilon}$ with $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I})$ and squared loss, show that $\mathbb{E}_{\boldsymbol{\epsilon}}[(f(\mathbf{x}') - y)^2] = (f(\mathbf{x}) - y)^2 + \sigma^2 \|\mathbf{w}\|^2$. Training with noise is therefore weight decay (:numref:`sec_weight_decay`) with coefficient $\sigma^2$ :cite:`Bishop.1995`.
+    1. Let $\mathbf{P}$ be the permutation matrix that flips an image left to right, and let $L(\mathbf{w})$, the loss averaged over every training image and its mirror image, be convex in $\mathbf{w}$. Show that if $\mathbf{w}^*$ minimizes $L$, then so do $\mathbf{P}\mathbf{w}^*$ and $(\mathbf{w}^* + \mathbf{P}\mathbf{w}^*)/2$. What does the last minimizer predict for an image and its mirror image?
+1. Augmentation teaches a network only the invariances that it is shown. Use the network trained above with random left-right flips and the network trained without augmentation in problem 1.
+    1. Evaluate both networks on the CIFAR-10 test set with every image flipped left to right, with every image flipped upside down, with random brightness changes (`brightness=0.5`), and with random hue changes (`hue=0.5`). Report a table of the five test accuracies of each network, including the unmodified test set. Which accuracy drops does flip augmentation reduce, and which does it leave unchanged?
+    1. For the network trained with flips, average the softmax outputs on each test image and on its mirror image (*test-time augmentation*) and report the test accuracy. Explain why this classifier is invariant to left-right flips by construction.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/367)

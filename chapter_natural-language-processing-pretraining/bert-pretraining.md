@@ -591,7 +591,48 @@ for downstream natural language processing applications.
 ## Exercises
 
 1. In the experiment, we can see that the masked language modeling loss is significantly higher than the next sentence prediction loss. Why?
-2. Set the maximum length of a BERT input sequence to be 512 (same as the original BERT model). Use the configurations of the original BERT model such as $\textrm{BERT}_{\textrm{LARGE}}$. Do you encounter any error when running this section? Why?
+1. Set the maximum length of a BERT input sequence to be 512 (same as the original BERT model). Use the configurations of the original BERT model such as $\textrm{BERT}_{\textrm{LARGE}}$. Do you encounter any error when running this section? Why?
+1. The text quotes 110 million parameters for
+   $\textrm{BERT}_{\textrm{BASE}}$ and 340 million for
+   $\textrm{BERT}_{\textrm{LARGE}}$.
+    1. Write the number of parameters of `BERTEncoder` as a function of the
+       vocabulary size $V$, the hidden size $H$, the hidden size $F$ of the
+       positionwise feed-forward network, the number of blocks $L$, and
+       `max_len`. Note that its attention projections have biases.
+    1. Evaluate the function for both models with $V = 30000$,
+       `max_len` = 512, and $F = 4H$, and compare with the quoted numbers.
+    1. Count the parameters of `net` in this section with code. What
+       fraction lies in the token embedding and in the output layer of
+       `MaskLM`? How many parameters would tying the output weights of
+       `MaskLM` to the token embedding save?
+1. The section compares the first three elements of the encoding of
+   "crane" in two contexts and concludes that BERT representations are
+   context-sensitive.
+    1. Encode "a crane is flying" twice with `get_bert_encoding` and compare
+       the two encodings of "crane". If they differ, find the cause and fix
+       it.
+    1. Construct a freshly initialized `BERTModel` with the same
+       hyperparameters as `net`. For both models, compute the cosine
+       similarity between the encodings of "crane" in the two contexts of
+       this section.
+    1. What does the comparison of this section show about pretraining, and
+       what does it not show? Design a comparison with several sentences
+       for each meaning of "crane" that tests whether pretraining made the
+       encodings depend on the meaning, run it on `net`, and report the
+       result.
+1. `_WikiTextDataset` draws the masked positions of every example once,
+   when the dataset is built, so that every pass over the data repeats the
+   same masks.
+    1. How many passes over the dataset does the 50-step run of this
+       section make? Could drawing new masks every time an example is
+       loaded change its result?
+    1. Implement such dynamic masking :cite:`Liu.Ott.Goyal.ea.2019` by
+       calling `_get_mlm_data_from_tokens` in `__getitem__`. Train once
+       with static and once with dynamic masking for about ten passes over
+       the data. For each model, report the masked language modeling loss
+       at the end of training and on the same 5,000 examples with newly
+       drawn masks.
+    1. Explain the differences among the four numbers.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/390)

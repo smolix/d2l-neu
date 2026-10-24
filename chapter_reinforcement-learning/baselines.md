@@ -524,19 +524,6 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        $\pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$
        restores the zero mean for every $b$. The same ratio drives the
        clipped objective of :numref:`sec_ppo`.
-1. [code] **Reward-to-go with dense rewards.** The frozen-policy comparison
-   of :numref:`subsec_five_estimators` found that reward-to-go barely
-   improves on the trajectory return, since FrozenLake pays a single terminal
-   reward. Add a constant $c$ to the reward of every step: set
-   `b.rew = b.rew + c` right after the call of `d2l.rollout` that draws each
-   of the 200 batches, leave the loop that trains `probe` unchanged, and add
-   $c$ to `r` at every nonterminal state before recomputing `g_exact` and
-   `V_pi`.
-   The holes and the goal (the letters `H` and `G` in `env.unwrapped.desc`)
-   are absorbing in `mdp.P`, so their rewards must stay zero. Rerun the
-   comparison for $c \in \{0, -0.01, -0.05, -0.2\}$. For which $c$ does
-   reward-to-go clearly beat the trajectory return? Which terms of the
-   trajectory-return estimator does it remove there?
 1. **Optimal constant baseline.** Fix a state $s$, write
    $\boldsymbol{\psi} = \nabla_\theta \log \pi_\theta(a \mid s)$ for the
    score of the sampled action, and consider the single-step estimator
@@ -690,9 +677,9 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        problem :exref:`ex_baselines-optimal-constant-baseline`a.
    :exlabel:`ex_baselines-optimal-state-baseline`
 1. [extended] **Length bias at small scale.** ●● Dividing the loss of each
-   episode by its own length changes the direction of the gradient
-   (:numref:`subsec_pg_loss_divisor`), and GRPO divides the loss of each
-   response by its own length. :citet:`Liu.Chen.Li.ea.2025` argue that this
+   episode by its own length changes the direction of the
+   gradient (:numref:`subsec_pg_loss_divisor`), and GRPO divides the loss of
+   each response by its own length. :citet:`Liu.Chen.Li.ea.2025` argue that this
    favors short correct responses and long incorrect ones. This project
    derives the effect in a toy model and looks for it on FrozenLake.
     1. Take a single prompt with three responses and a softmax over one logit

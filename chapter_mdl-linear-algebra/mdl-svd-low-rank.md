@@ -1029,35 +1029,6 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
        far below its rank?
    :exlabel:`ex_mdl-svd-low-rank-norms-singular-values`
 
-1. **Best rank-one approximations.** The truncation
-   :eqref:`eq_mdl-truncated-svd` with $k = 1$ is a closest rank-one matrix
-   both in the spectral norm :eqref:`eq_mdl-eckart-young` and in the
-   Frobenius norm.
-    1. Find a closest rank-one approximation $\mathbf{A}_1$ to each of
-       $$
-       \begin{bmatrix}3&0&0\\0&2&0\\0&0&1\end{bmatrix},\qquad
-       \begin{bmatrix}0&3\\2&0\end{bmatrix},\qquad
-       \begin{bmatrix}2&1\\1&2\end{bmatrix},
-       $$
-       and state the errors $\|\mathbf{A}-\mathbf{A}_1\|_2$ and
-       $\|\mathbf{A}-\mathbf{A}_1\|_F$.
-    1. For $\mathbf{A} = \operatorname{diag}(3, 1)$, show that every
-       $\mathbf{B}_t = \operatorname{diag}(3+t, 0)$ with $|t|\le1$ attains the
-       minimal spectral-norm error $\sigma_2$, while only $t = 0$ attains the
-       minimal Frobenius error. Then prove that for every $\mathbf{A}$ with
-       $\sigma_1 > \sigma_2$ the truncation $\mathbf{A}_1$ is the only closest
-       rank-one matrix in the Frobenius norm. Write a rank-one matrix as
-       $s\,\mathbf{x}\mathbf{y}^\top$ with unit vectors $\mathbf{x}$ and
-       $\mathbf{y}$, and minimize over $s$ first.
-    1. Describe all closest rank-one approximations of the $2\times2$
-       identity matrix in the Frobenius norm. What does the answer imply for
-       the first principal direction of a data cloud whose covariance is a
-       multiple of the identity?
-
-   *Adapted from Gilbert Strang,
-   [MIT 18.065 problem sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
-   Lecture 7, Problem 2.*
-
 1. **Weyl perturbation bound.** An update $\boldsymbol{\Delta}$, for instance
    a rank-$r$ LoRA update $\mathbf{B}\mathbf{A}$, changes the singular values
    of a weight matrix $\mathbf{W}$. The Weyl inequality
@@ -1107,8 +1078,8 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 
 1. [code] **Centering in PCA.** Let the rows of
    $\mathbf{X}\in\mathbb{R}^{n\times d}$ be data points with mean row
-   $\bar{\mathbf{x}}$ and covariance $\mathbf{C}$ as in
-   :numref:`subsec_mdl-pca`.
+   $\bar{\mathbf{x}}$ and covariance $\mathbf{C}$ as
+   in :numref:`subsec_mdl-pca`.
     1. Show that
        $\tfrac1n\mathbf{X}^\top\mathbf{X} = \mathbf{C}+\bar{\mathbf{x}}\bar{\mathbf{x}}^\top$.
     1. Generate the cloud of :numref:`subsec_mdl-pca` again (300 points from
@@ -1148,48 +1119,6 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
        and from a random $\mathbf{x}_0$, and compare both limits and their
        norms with $\mathbf{A}^{+}\mathbf{b}$.
    :exlabel:`ex_mdl-svd-low-rank-ridgeless-gradient-descent`
-
-1. [code] **Conditioning of polynomial features.** Polynomial regression on a
-   scalar input $x$ uses the feature matrix $\mathbf{A}$ whose rows are
-   $(1, x, x^2, \ldots, x^d)$, one row per data point.
-    1. For 100 equally spaced points in $[0, 1]$, compute the condition
-       number :eqref:`eq_mdl-condition-number` of $\mathbf{A}$ for
-       $d = 1, \ldots, 10$ and plot $\log_{10}\kappa$ against $d$. By about
-       what factor does each additional degree multiply $\kappa$?
-    1. Repeat with 100 points in $[-1, 1]$, and with the points in $[0, 1]$
-       after standardizing every column except the constant one to mean $0$
-       and variance $1$. Which change helps more? Why does standardizing the
-       columns one at a time leave $\mathbf{A}$ badly conditioned?
-    1. Gradient descent on $\tfrac12\|\mathbf{A}\mathbf{w}-\mathbf{y}\|^2$ has
-       Hessian $\mathbf{A}^\top\mathbf{A}$, so with the best fixed step size
-       its error contracts by $(\kappa(\mathbf{A})^2-1)/(\kappa(\mathbf{A})^2+1)$
-       per step (:numref:`subsec_mdl-condition-number`). Estimate the number of
-       steps that reduce the error by a factor of $10^6$ for $d = 5$, with the
-       points in $[0, 1]$ and in $[-1, 1]$.
-
-1. [code] **Rank budget for LoRA.** The synthetic weight matrix of
-   :numref:`sec_mdl-svd-modern-dl` has size $256\times512$ and singular
-   values $\sigma_i = e^{-i/12}$ for
-   $i = 0, \ldots, 255$. Its rank for 95% of the energy
-   :eqref:`eq_mdl-energy-ratio` is $18$, which gives a LoRA with 10.5% of the
-   parameters of a full update.
-    1. Replace the spectrum by the power laws $\sigma_i = (i+1)^{-\alpha}$ for
-       $\alpha\in\{0.5, 1, 2\}$ and keep the shape. For each $\alpha$, find
-       the rank $r_{95}$ that retains 95% of the energy, the parameter ratio
-       :eqref:`eq_mdl-lora-ratio` at that rank, and the relative Frobenius
-       error of the best rank-8 approximation.
-    1. Above which rank does a LoRA of a $256\times512$ matrix have more
-       parameters than the full matrix? Which spectra of (a) exceed it?
-    1. Repeat (a) for a $256\times512$ matrix $\mathbf{W}$ with i.i.d.
-       standard Gaussian entries, the state of a weight matrix at random
-       initialization. Then add a rank-4 update
-       $\Delta\mathbf{W} = \mathbf{B}\mathbf{A}$ with Gaussian
-       $\mathbf{B}\in\mathbb{R}^{256\times4}$ and
-       $\mathbf{A}\in\mathbb{R}^{4\times512}$, scaled so that
-       $\|\Delta\mathbf{W}\|_F = 0.3\,\|\mathbf{W}\|_F$. Compute $r_{95}$ for
-       $\mathbf{W}+\Delta\mathbf{W}$ and for $\Delta\mathbf{W}$. What does the
-       comparison imply for choosing a LoRA rank from the spectrum of a
-       fine-tuned weight matrix?
 
 1. [code] **Newton--Schulz basin.** The Newton--Schulz iteration
    $\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$
@@ -1313,8 +1242,8 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 
    The transition at $x = 1$ is the singular-value counterpart of the
    eigenvalue transition at $\beta = \sqrt\gamma$ in exercise
-   :exref:`ex_mdl-eigendecomposition-spiked-covariance` of
-   :numref:`sec_mdl-eigendecompositions`.
+   :exref:`ex_mdl-eigendecomposition-spiked-covariance`
+   of :numref:`sec_mdl-eigendecompositions`.
 
     1. Two estimates of the signal $\theta\,\mathbf{u}\mathbf{v}^\top$ are
        the rank-one truncation $\sigma_1\hat{\mathbf{u}}\hat{\mathbf{v}}^\top$
@@ -1336,9 +1265,9 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 1. [extended] **Matrix completion by soft-thresholding.** ●● Matrix
    completion recovers a low-rank matrix $\mathbf{B}\in\mathbb{R}^{n\times n}$
    from its entries in an observed index set $\Omega$ by penalizing the
-   nuclear norm $\|\mathbf{Z}\|_* = \sum_i\sigma_i(\mathbf{Z})$
-   (:numref:`subsec_mdl-eckart-young`). Soft-Impute
-   :cite:`Mazumder.Hastie.Tibshirani.2010` minimizes
+   nuclear norm
+   $\|\mathbf{Z}\|_* = \sum_i\sigma_i(\mathbf{Z})$ (:numref:`subsec_mdl-eckart-young`).
+   Soft-Impute :cite:`Mazumder.Hastie.Tibshirani.2010` minimizes
    $\tfrac12\sum_{(i,j)\in\Omega}(Z_{ij}-B_{ij})^2+\lambda\|\mathbf{Z}\|_*$.
     1. Let $\mathbf{Y} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. Show
        that $\tfrac12\|\mathbf{Z}-\mathbf{Y}\|_F^2+\lambda\|\mathbf{Z}\|_*$ is

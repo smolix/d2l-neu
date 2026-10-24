@@ -856,6 +856,13 @@ hotdog_w = weight[:, 934]
 hotdog_w.shape
 ```
 
+5. In the PyTorch and MXNet tabs, `train_augs` applies `RandomResizedCrop(224)`, which by default draws the crop area as a fraction $s$ of the image area uniformly from $[0.08, 1]$ and resizes the crop to $224 \times 224$ pixels, while `test_augs` resizes the image to $256 \times 256$ pixels and keeps the central $224 \times 224$ pixels. Ignore the random aspect ratio of the crop and let the image be a square of side $L$.
+    1. Show that an object of side $\ell$ in the original image appears with side $224\ell/(\sqrt{s}L)$ during training and with side $256\ell/L$ during testing.
+    1. Compute the expected ratio of the training-time to the test-time object size, $\mathbb{E}_s[224/(256\sqrt{s})]$. Do objects look larger or smaller to the network during training, and by what factor?
+    1. To what side $R$ would you resize the test images to remove this mismatch on average? Explain why ResNet accepts the larger input without any change to the network.
+    1. The JAX and TensorFlow tabs instead crop a random $224 \times 224$ window from the image resized to $256 \times 256$ pixels. Do they have the same mismatch? What do they give up in exchange?
+1. Fine-tuning should help most when the target dataset is small. Train a fresh copy of `finetune_net` and of `scratch_net` on class-balanced random subsets of 100, 250, 500, and 1000 training images per class, with the test set unchanged. For the smaller subsets, increase `num_epochs` so that every run makes about as many minibatch updates as the run on the full training set. Plot the test accuracy of both models against the number of training images on a logarithmic axis. How many images per class does `scratch_net` need to reach the accuracy that `finetune_net` reaches with 100 images per class, if it reaches it at all in this range?
+
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/368)
 :end_tab:

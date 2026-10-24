@@ -458,10 +458,34 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 
 ## Exercises
 
-* Vary the size of latent factors. How does the size of latent factors impact the model performance?
-* Vary the architectures (e.g., number of layers, number of neurons of each layer) of the MLP to check its impact on the performance.
-* Try different optimizers, learning rate and weight decay rate.
-* Try to use hinge loss defined in the last section to optimize this model.
+1. Score every candidate item by its number of training interactions, with
+   the same scores for every user, and evaluate this popularity ranking with
+   `evaluate_ranking` by wrapping it in a module whose forward pass ignores
+   the user. Report its hit rate and AUC next to those of NeuMF. How much of
+   NeuMF's AUC above 0.5 does popularity alone account for?
+1. Show that the GMF branch alone, with readout $\mathbf h$, computes
+   $\mathbf p_u^\top\operatorname{diag}(\mathbf h)\,\mathbf q_i$ and therefore
+   represents exactly the scores of a dot-product model with $k$ factors.
+   Then show that if the MLP branch has no activation functions, its
+   contribution to the score has the form $f(u)+g(i)$, and that $f(u)$
+   cancels from every score difference that BPR uses. What does the MLP
+   branch need in order to model an interaction between user and item?
+1. Train NeuMF with `HingeLossbRec` in place of `BPRLoss`, keeping the other
+   settings, and report the hit rate and AUC. At the end of training, measure
+   the fraction of training triples whose hinge loss is zero, and explain
+   what that fraction means for the gradient the remaining epochs receive.
+1. Train the GMF branch alone, the MLP branch alone, and NeuMF with
+   `num_factors=10` and the optimizer settings above, and report the hit rate
+   and AUC of each. Count the parameters of each model. Which part of NeuMF
+   holds most of its parameters, and does the ablation suggest that the MLP
+   branch adds accuracy?
+1. `evaluate_ranking` ranks the held-out item against all unobserved items.
+   The evaluation of :cite:`He.Liao.Zhang.ea.2017` instead ranks it against
+   100 sampled unobserved items. Implement the sampled protocol and report
+   the hit rate at cutoff 10 under both protocols for NeuMF and for the
+   popularity ranking of the first problem. Does the ordering of the two
+   models change? Explain why a metric computed on sampled candidates need not
+   preserve the ordering of the same metric on the full candidate set.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/403)

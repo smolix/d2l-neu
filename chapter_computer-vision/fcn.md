@@ -874,8 +874,13 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ## Exercises
 
 1. If we use Xavier initialization for the transposed convolutional layer in the experiment, how does the result change?
+1. The text uses `bilinear_kernel` without deriving it. Work it out for `bilinear_kernel(1, 1, 4)`, the kernel of the layer `conv_trans` with stride 2 and padding 1.
+    1. Show that the $4\times 4$ kernel is the outer product of a vector with itself, and give the vector.
+    1. In one dimension, compute the six outputs of this transposed convolution for the input $(a, b, c)$. Show that the four interior outputs are the linear interpolations of the input at $1/4$ and $3/4$ of the way between neighboring input pixels, and find the factor by which the first and the last output differ from the neighboring input pixel.
+    1. Predict the ratio between the upper-left pixel of the two-dimensional output and the upper-left pixel of the input, and check it for each of the three color channels by applying `conv_trans` to the cat-and-dog image of this section.
 1. Can you further improve the accuracy of the model by tuning the hyperparameters?
 1. Predict the classes of all pixels in test images.
+1. Pixel accuracy is dominated by the background class. For the trained network, compute the intersection over union (IoU) of every class on the test crops of `test_iter`: the number of pixels that are both predicted and labeled as class $c$, divided by the number of pixels that are predicted or labeled as $c$, with both counts accumulated over the whole test set. Report the mean IoU over the 21 classes next to the test pixel accuracy, list the five classes with the lowest IoU, and describe what these classes have in common.
 1. The original fully convolutional network paper also uses outputs of some intermediate CNN layers :cite:`Long.Shelhamer.Darrell.2015`. Try to implement this idea.
 
 :begin_tab:`mxnet`

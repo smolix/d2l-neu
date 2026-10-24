@@ -387,8 +387,7 @@ On-policy updates estimate expectations under the current policy; importance rat
     1. For $\pi \neq \pi_e$, Expected SARSA estimates $Q^\pi$ from
        transitions collected by $\pi_e$, and its update contains no
        importance ratio. Explain why the one-step action-value target needs
-       none. Exercise :exref:`ex_offline-rl-truncated-ratios` treats the
-       state-value target, which does need one.
+       none.
     1. Which source of variance does Expected SARSA remove, and which
        remains? Predict whether it gains more over SARSA on a gridworld with
        deterministic moves or on the slippery lake.
@@ -396,26 +395,6 @@ On-policy updates estimate expectations under the current policy; importance rat
     *Adapted from Richard S. Sutton and Andrew G. Barto,
     [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
     Section 6.6.*
-
-1. [code] **Coverage of the random log.** The counts of `data` over the 44
-   live state--action pairs have minimum $7$, median $42$ and maximum $465$.
-   They can be predicted from the model. Under the
-   uniformly random policy, let $P_{\textrm{live}}$ be the transition matrix
-   among the live states, computed from `mdp.P`. The expected number of
-   visits to each live state in one episode is then the start-state row of
-   $N = (I - P_{\textrm{live}})^{-1}$. Ignore the time limit, which almost
-   never binds for this policy.
-    1. Compute this row, the expected episode length, and the expected count
-       of each live pair in 500 episodes, and compare them with `len(data)`
-       and the printed counts. Where on the lake are the rarest pairs, and
-       which role do these states play for the optimal policy?
-    1. Model each count as a Poisson variable whose mean is the expected
-       count. Estimate the expected number of unobserved live pairs in
-       fifteen datasets, and compare it with the one unobserved pair among
-       the 660 combinations of live pair and dataset in `datasets`. Which
-       assumption of the Poisson model is questionable here?
-    1. How many random episodes would bring the expected count of every
-       live pair to at least $100$?
 
 1. [code] **Data from a better policy.** The random behavior covers every
    pair but rarely reaches the goal. Build three kinds of datasets of 500
@@ -467,29 +446,6 @@ On-policy updates estimate expectations under the current policy; importance rat
     1. What does offline Q-learning learn from the same data, and why do
        the lucky episodes not mislead it?
 
-1. **Truncated importance ratios.** ● V-trace
-   :cite:`Espeholt.Soyer.Munos.ea.2018` corrects data from a behavior
-   policy $\pi_e$ toward a target policy $\pi$ with the truncated ratios
-   $\rho_t = \min\big(\bar{\rho},\, \pi(a_t \mid s_t) / \pi_e(a_t \mid s_t)\big)$.
-   In its one-step form, the state-value update on a transition collected
-   by $\pi_e$ is
-   $$V(s_t) \leftarrow V(s_t) + \alpha\, \rho_t \big(r_t + \gamma V(s_{t+1}) - V(s_t)\big).$$
-   Assume that $\pi_e(a \mid s) > 0$ wherever $\pi(a \mid s) > 0$.
-    1. For $\bar{\rho} = \infty$, show that the expected update under
-       $a_t \sim \pi_e(\cdot \mid s_t)$ vanishes at every state exactly when
-       $V$ satisfies the Bellman expectation equation of $\pi$.
-    1. For finite $\bar{\rho}$, show that the expected update vanishes at
-       the value function of the policy
-       $$\pi_{\bar{\rho}}(a \mid s) = \frac{\min\big(\bar{\rho}\, \pi_e(a \mid s),\, \pi(a \mid s)\big)}{\sum_b \min\big(\bar{\rho}\, \pi_e(b \mid s),\, \pi(b \mid s)\big)}.$$
-    1. Compute $\pi_{\bar{\rho}}$ for two actions with $\pi_e = (0.5, 0.5)$,
-       $\pi = (0.9, 0.1)$ and $\bar{\rho} = 1$, the value IMPALA uses. Which
-       policy does $\pi_{\bar{\rho}}$ approach as $\bar{\rho} \to 0$, and for
-       which $\bar{\rho}$ does it equal $\pi$?
-    1. In distributed training, $\pi_e$ is a slightly older copy of $\pi$.
-       Why is the bias of truncation small in this regime, and what does
-       truncation buy in exchange?
-   :exlabel:`ex_offline-rl-truncated-ratios`
-
 1. [code] **Dataset size and the error floor.** ● The computation of
    `kappa_fit` reports a median error of $0.077$ at pairs with more than
    $100$ visits, and the section names three candidate causes: maximization
@@ -509,8 +465,8 @@ On-policy updates estimate expectations under the current policy; importance rat
        `d2l.value_iteration` and apply its `backup` to the solution. This
        certainty-equivalent table is the limit of offline Q-learning with
        decaying step sizes, as in exercise
-       :exref:`ex_qlearning-batch-td-monte-carlo` of
-       :numref:`sec_qlearning`. Repeat the measurements of part (a) with it.
+       :exref:`ex_qlearning-batch-td-monte-carlo`
+       of :numref:`sec_qlearning`. Repeat the measurements of part (a) with it.
        Which part of the error floor disappears?
     1. Does the certainty-equivalent prediction still exceed $V^*(s_0)$?
        Which of the three causes explains what remains? How should it scale
@@ -547,32 +503,6 @@ On-policy updates estimate expectations under the current policy; importance rat
        at every count. How many pulls of arm 2 must the dataset hold before
        the rule selects it?
 
-1. [code] **Missing and thin support.** ● On `data`, `support_q`
-   reproduced naive offline Q-learning bit for bit. Every live pair of
-   `data` was observed, and with zero initialization and nonnegative
-   rewards an unobserved pair could not have outranked an observed one
-   anyway. A network, however, assigns arbitrary values to actions it has
-   never been trained on. Model this by giving `offline_q` and `support_q`
-   an argument `init` for the initial table, with entries drawn uniformly
-   from $[0, 1]$.
-    1. Collect 500 episodes from a behavior that picks uniformly among
-       *left*, *down* and *right* and never *up*. On three such datasets,
-       compare naive offline Q-learning, `support_q`, and `offline_q` with
-       $\kappa = 0.1$ by predicted value and actual return. Which method
-       fails, and how?
-    1. Let the behavior pick *up* with probability $0.01$ and the other
-       three actions uniformly otherwise, and repeat. Print the counts of
-       the *up* pairs at the live states. Why does the prediction of naive
-       offline Q-learning fall compared with part (a)? How do the
-       predictions of `support_q` and of `offline_q` with $\kappa = 0.1$
-       change, and which *up* pairs cause the change?
-    1. A cautious human operator collected a dataset and avoided the
-       actions that the operator judged unsafe, taking some of them rarely
-       and others never. What does the rarity of an action tell the learner
-       in such a dataset? Which of the two rules, the support rule or the
-       count penalty, uses this information? How does each treat an action
-       that the operator took exactly once?
-
 1. [code] **Evaluation without a simulator.** ● Every comparison in this
    section rolled the learned policies out in the environment, which a
    genuine offline deployment cannot do. Ordinary importance sampling
@@ -593,8 +523,8 @@ On-policy updates estimate expectations under the current policy; importance rat
        value `d2l.policy_evaluation(mdp, pi, 1000)[-1][0]`, where `pi` is
        the $16 \times 4$ array of the policy's action probabilities; only
        the experimenter can compute this value. For a fixed target policy,
-       ordinary importance sampling is unbiased by
-       :eqref:`eq_offpolicy_objective`. How does the spread
+       ordinary importance sampling is unbiased
+       by :eqref:`eq_offpolicy_objective`. How does the spread
        of the weights explain the errors of the two estimates?
     1. A model-based alternative evaluates a greedy policy exactly in the
        empirical MDP of problem :exref:`ex_offline-rl-dataset-size`b.

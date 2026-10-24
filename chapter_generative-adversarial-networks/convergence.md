@@ -613,8 +613,8 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
        gradient far from the data?
     1. Now let the critic be any differentiable function and subtract
        $\gamma \int m\, \|\nabla_x D\|^2$ with
-       $m = \tfrac12(\delta_0 + \delta_\theta)$, which is $R_1 + R_2$ of
-       :eqref:`eq_gan_r1r2_sum`. Show that the penalized best-response
+       $m = \tfrac12(\delta_0 + \delta_\theta)$, which is $R_1 + R_2$
+       of :eqref:`eq_gan_r1r2_sum`. Show that the penalized best-response
        value is $2\sup_t \ell(t)$ for every $\theta \neq 0$. Which
        assumption behind :eqref:`eq_gan_sobolev` fails for these two point
        masses? What does the result say about the role of the critic class
@@ -670,8 +670,8 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
        distribution on the square $[-4, 4]^2$ that contains the 25
        centers, by a short Monte Carlo computation or in closed form.
        Compare both numbers with `on_frac` and `d_mean` of the penalized
-       configurations and with their samples plotted in
-       :numref:`subsec_gan_25_gaussians`. What distribution did the
+       configurations and with their samples
+       plotted in :numref:`subsec_gan_25_gaussians`. What distribution did the
        penalized generators learn?
    :exlabel:`ex_convergence-printed-statistics-mode-coverage`
 1. [code] **Alternating updates.** ● `train_toy` updates the critic first
@@ -735,8 +735,8 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
        $\gamma = 3$. Where does each trajectory end? Explain both outcomes
        with (a) and (b).
 1. [code] **Momentum in a rotating game.** ● R3GAN trains both networks
-   with Adam at $\beta_1 = 0$, part of principle (b) of
-   :numref:`subsec_gan_r3gan_principles`. To isolate the first moment,
+   with Adam at $\beta_1 = 0$, part of principle (b)
+   of :numref:`subsec_gan_r3gan_principles`. To isolate the first moment,
    drop Adam's second-moment normalization and average the field of the
    penalized Dirac-GAN with the logistic objective:
 
@@ -756,8 +756,8 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
     1. Run the nonlinear iteration at $\gamma = 0$ from $(0.1, 0.1)$ for
        20,000 steps with $\eta = 0.2$ and $\beta \in \{-0.5, 0, 0.5\}$.
        Then give each player its own average and use it inside the
-       alternating update of exercise
-       :exref:`ex_convergence-alternating-updates`. Which combinations
+       alternating update of
+       exercise :exref:`ex_convergence-alternating-updates`. Which combinations
        converge without any penalty? Compare the outcome with the
        analysis of bilinear games by
        :citet:`Gidel.Askari-Hemmat.Pezeshki.ea.2019`.
@@ -788,36 +788,6 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
        distance from the equilibrium with $r^\star$. Check (b) with
        `flow=True`.
    :exlabel:`ex_convergence-non-saturating-dynamics`
-1. [extended] **Penalty ablations at small scale.** ●●
-   :citet:`Huang.Gokaslan.Kuleshov.ea.2024` report three findings about
-   the penalties. With $R_1$ alone, training on StackedMNIST diverged for
-   both the classical and the pairing objective, and for RpGAN no
-   $\gamma$ from 0.1 to 100 prevented it. When training diverged, the critic's
-   input gradient on generated samples exploded. Lazy regularization,
-   which applied the penalties once every 8 minibatches, made training
-   fail on StackedMNIST and on two-dimensional toy problems, among them 25
-   Gaussians. This project tests the three findings and the role of
-   $\gamma$ with `train_toy` and `mode_coverage`. One run takes a few
-   minutes on a CPU.
-    1. Before training, predict from :eqref:`eq_gan_dirac_pen` and from
-       problem :exref:`ex_convergence-penalized-best-response`b what each
-       extreme of $\gamma$ risks. Then train RpGAN with $R_1 + R_2$ for
-       $\gamma \in \{0.01, 0.1, 1, 10, 100\}$ and tabulate the statistics
-       of `mode_coverage`. Which predictions hold?
-    1. Change the critic loss so that it penalizes the critic with $R_1$
-       alone, and let the critic update also return the batch means of
-       both terms that `r1_r2_penalty` returns, the unpenalized one
-       included. Record them every 500 steps. Train with
-       $\gamma \in \{1, 10\}$ and compare with $R_1 + R_2$ at the same
-       $\gamma$. Does training diverge? Does the gradient on generated
-       samples grow?
-    1. Implement lazy regularization: add the penalty only at every $k$-th
-       critic step, multiplied by $k$. Train with $k \in \{2, 8\}$ at
-       $\gamma = 1$ and compare with $k = 1$.
-    1. Repeat every decisive comparison with two further random seeds.
-       Which of the three findings reproduce at this scale? For a finding
-       that does not, which differences between StackedMNIST and 25
-       Gaussians could explain the discrepancy?
 
 [Discussions](https://d2l.discourse.group/)
 

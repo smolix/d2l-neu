@@ -1048,8 +1048,8 @@ print('forward-over-reverse Hv:', Hv)
 print('A v                    :', A @ v)
 ```
 
-The printed product equals $\mathbf A\mathbf v$ to the digit. Exercise
-:exref:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product` builds
+The printed product equals $\mathbf A\mathbf v$ to the digit.
+Exercise :exref:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product` builds
 Hessian--vector products from the toy engines `Dual` and `Var` and contrasts forward-over-reverse
 with the *double-backward* (reverse-over-reverse) alternative.
 

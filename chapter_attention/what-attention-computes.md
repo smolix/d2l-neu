@@ -951,8 +951,8 @@ probes, and weight-level checks in addition to attention maps.
    :citet:`Olsson.Elhage.Nanda.ea.2022` tie the formation of induction
    heads in language models to an abrupt gain in in-context learning,
    measured as the drop in loss from early to late positions of the
-   context. Test this on the character-level model of
-   :numref:`subsec_pos-experiment`.
+   context. Test this on the character-level model
+   of :numref:`subsec_pos-experiment`.
     1. Train `d2l.TinyCharLM` with `pos='rope'` on the character-level Time
        Machine data of :numref:`subsec_pos-experiment` in 30 rounds of 100
        steps of `d2l.train_lm`. After each round, record two quantities. The

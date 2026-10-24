@@ -128,9 +128,9 @@ decode steps, keeping the batch nearly full:
 ![Continuous batching reclaims finished slots and admits waiting requests instead of padding every sequence to the longest output.](../img/tools-continuous-batching.svg)
 :label:`fig_tools_continuous_batching`
 
-The toy scheduler below captures the idea in ten lines. Exercise
-:exref:`ex_model-serving-arrivals` extends it with arrival times and a memory
-budget:
+The toy scheduler below captures the idea in ten lines.
+Exercise :exref:`ex_model-serving-arrivals` extends it with arrival times and
+a memory budget:
 
 ```{.python .input #model-serving-scheduler}
 from collections import deque
@@ -245,41 +245,6 @@ quality as well as latency.
        the two allocation schemes: memory or the TPOT target?
    :exlabel:`ex_model-serving-batch-limits`
 
-1. **Choosing a local model.** :numref:`subsec_model-serving-local` gives a
-   rule of thumb: pick the largest model whose chosen quant fits into
-   memory with room for the KV cache, then take the highest quant that
-   still fits. Consider a laptop that leaves 16 GB of its unified memory to
-   the model and its cache and that reads memory at 120 GB/s. The
-   candidates are the Qwen3 models with 4.0, 8.2, 14.8, and 32.8 billion
-   parameters. They have 36, 36, 40, and 64 layers, all with 8 key-value
-   heads of dimension 128 and a bf16 cache. The
-   [llama.cpp quantization README](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md)
-   lists 4.89 bits per weight for `Q4_K_M`, 5.70 for `Q5_K_M`, 6.56 for
-   `Q6_K`, and 8.50 for `Q8_0`, measured on Llama 3.1 8B. Use these values
-   for every candidate.
-    1. Apply the rule with `Q4_K_M` as the chosen quant and a context of
-       16,384 tokens. Which model and quant does it select? Bound the decode
-       rate of the selection with :eqref:`eq_hardware-buyers-decode`, once
-       for an empty context and once with the cache of the full context
-       read in every step.
-    1. Which configurations decode faster than 20 tokens/s at the full
-       context? What does the rule leave out?
-
-1. **Quantization and decode speed.** At a short context,
-   :eqref:`eq_hardware-buyers-decode` bounds the decode rate by the memory
-   bandwidth divided by the bytes of the weights, so shrinking the weights by some factor should raise the
-   rate by the same factor. The
-   [llama.cpp quantization README](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md)
-   reports text generation rates for Llama 3.1 8B on one machine: 29.2
-   tokens/s for `F16` (14.96 GiB), 50.9 for `Q8_0` (7.95 GiB), 71.9 for
-   `Q4_K_M` (4.58 GiB), 90.0 for `Q2_K_S` (2.78 GiB), and 79.7 for `IQ1_S`
-   (1.87 GiB).
-    1. Compute the speedup of each format over `F16` and the factor by
-       which it shrinks the weights. For which formats does the bound
-       predict the speedup well?
-    1. Why is `IQ1_S` slower than `Q2_K_S`, although it reads fewer bytes?
-       What limits the speedup at the lowest bit widths?
-
 1. [code] **Conformance test.** :numref:`subsec_model-serving-contract`
    recommends a small conformance test before swapping engines.
     1. Write a function `conformance(base_url, model)` with the `openai`
@@ -346,27 +311,6 @@ quality as well as latency.
        request reuse? Propose an ordering that raises reuse, and state what
        it gives up.
 
-1. **A cache shared by tenants.** A service runs one engine with prefix
-   caching for many customers. The engine serves a base model with one LoRA
-   adapter per customer and accepts images in messages. Every request
-   starts with the service's 3,000-token system prompt, followed by the
-   customer's own documents and the user's message.
-    1. Two requests agree in their first 5,000 token ids. Which other
-       properties of the two requests and of the deployment must agree
-       before the second request may reuse the cached keys and values of the
-       first?
-    1. An attacker who is also a customer sends prompts that begin with the
-       system prompt followed by a guess of another customer's document, and
-       measures the time to the first token. What can the attacker learn,
-       and how?
-    1. vLLM accepts a per-request `cache_salt` that enters the key of the
-       first block, so that only requests with equal salts share cached
-       blocks. Compare a salt per user, a salt per customer, and no salt by
-       the protection that each gives and by the cache hits that each gives
-       up.
-    1. A customer asks the service to delete all of its data. Where in the
-       serving stack can its content still reside?
-
 1. **Closed and open loops.** A load generator runs $C = 16$ clients in a
    closed loop: each client sends its next request as soon as its previous
    request completes. Little's law :cite:`Little.1961` relates the mean
@@ -385,41 +329,6 @@ quality as well as latency.
        draws Poisson arrivals at that rate. Which settings reproduce the
        closed loop? What does a run measure that sets both?
    :exlabel:`ex_model-serving-loops`
-
-1. [extended] **Two engines, one model.** ● Serve Qwen3-8B on a machine
-   with an NVIDIA GPU of at least 16 GB, once through Ollama, whose
-   `qwen3:8b` is quantized to `Q4_K_M`, and once through vLLM with the
-   `Qwen/Qwen3-8B-AWQ` checkpoint. Use the same 100 prompts for every
-   measurement. Qwen3 writes a reasoning trace before its answer by
-   default, and the two engines return it differently: Ollama in a
-   separate `reasoning` field, and a vLLM server started without a
-   reasoning parser inside `content`. Turn the trace off on both engines,
-   with `reasoning_effort="none"` for Ollama and
-   `extra_body={"chat_template_kwargs": {"enable_thinking": False}}` for
-   vLLM.
-    1. Write a client from the code of
-       :numref:`subsec_model-serving-contract` with `stream=True` that
-       records, for every request, the time to the first content chunk and
-       the time per output token after it. Measure both engines in a closed
-       loop at concurrency 1, 4, and 16, and report the p50 and p95 of both
-       quantities and the output tokens per second.
-    1. The Ollama FAQ documents the variable `OLLAMA_NUM_PARALLEL`, the
-       number of requests that a model processes at once, with a default
-       of 1. Explain the TTFT of Ollama at concurrency 16 with this
-       default. Rerun with the variable set to 16. How does the memory that Ollama
-       reserves for the cache change? What limits the number of concurrent
-       sequences in vLLM instead?
-    1. Run `vllm bench serve` against the vLLM server at five request rates
-       with `--goodput ttft:1000 tpot:50`, which counts the requests that
-       meet a TTFT of 1 s and a TPOT of 50 ms. Plot throughput and goodput
-       against the request rate. At which rate do the two curves diverge?
-       Why do the closed-loop numbers of the first sub-problem not show this
-       rate (exercise :exref:`ex_model-serving-loops`)?
-    1. The two engines run different weight formats. Which of your measured
-       differences can the formats explain rather than the engines? Compare
-       the answers of both engines on 50 questions of a task with checkable
-       answers. Which engine would you deploy for each workload of
-       :numref:`tab_serving_workloads` that your hardware supports?
 
 1. [code] **Arrivals and a memory budget.** ● Extend the cell that builds
    `timeline` into a simulator in which time advances in decode steps.

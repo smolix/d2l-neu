@@ -159,8 +159,8 @@ book:
         - chapter_recurrent-modern/mamba.qmd
         - chapter_recurrent-modern/matrix-state.qmd
         - chapter_recurrent-modern/deltanet.qmd
-        - chapter_recurrent-modern/test-time-regression.qmd
         - chapter_recurrent-modern/hybrids.qmd
+        - chapter_recurrent-modern/further-reading.qmd
         - chapter_computational-performance/index.qmd
         - chapter_computational-performance/performance-model.qmd
         - chapter_computational-performance/hardware.qmd

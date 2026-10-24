@@ -997,26 +997,6 @@ $\eta$ transfers from a small model to a large one.
 
 ## Exercises
 
-1. **Batch size at fixed budget.** Let each SGD step average $b$
-   example gradients, so that $\sigma^2 = \mathrm{tr}\,\Sigma/b$ by
-   :eqref:`eq_mdl-opt-variance`, and fix the total number of example
-   gradients processed, $M = bK$.
-    1. Substitute $\sigma^2$ and $K$ into the step
-       $\eta = \sqrt{2\Delta/(L\sigma^2 K)}$ and into the bound
-       :eqref:`eq_mdl-opt-ghadimi-lan-balanced`. Show that the step grows
-       linearly in $b$ and that the noise term of the bound does not depend
-       on $b$.
-    1. At which batch size $b_{\mathrm{c}}$ does the step reach the cap
-       $1/L$? For $b > b_{\mathrm{c}}$, write :eqref:`eq_mdl-opt-ghadimi-lan`
-       at $\eta = 1/L$ and describe how the bound changes as $b$ grows at
-       fixed $M$.
-    1. Exercise :exref:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl`
-       of :numref:`sec_mdl-gradient-based-optimization` derives the linear
-       scaling rule and a critical batch size $B_{\textrm{noise}}$ from the
-       loss decrease of a single step. Which quantities determine
-       $b_{\mathrm{c}}$ here and $B_{\textrm{noise}}$ there? How does each
-       depend on the training budget?
-
 1. **AdaGrad from the metric view.** Exercise
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b of
    :numref:`sec_mdl-gradient-based-optimization` showed that the steepest
@@ -1024,8 +1004,8 @@ $\eta$ transfers from a small model to a large one.
    $\|\mathbf{d}\|_A = \sqrt{\mathbf{d}^\top A \mathbf{d}}$ is proportional
    to $-A^{-1}\nabla f$.
     1. Set $A_t = \mathrm{diag}\bigl(\sqrt{\mathbf{s}_t}\bigr) + \epsilon I$
-       with $\mathbf{s}_t = \sum_{s \le t} \mathbf{g}_s^2$ and recover
-       :eqref:`eq_mdl-opt-adagrad`.
+       with $\mathbf{s}_t = \sum_{s \le t} \mathbf{g}_s^2$ and
+       recover :eqref:`eq_mdl-opt-adagrad`.
     1. Replace the objective $f$ by $cf$ for a constant $c > 0$ and set
        $\epsilon = 0$. How does the AdaGrad update change? How would it
        change if $A_t$ were built from $\mathbf{s}_t$ instead of
@@ -1066,8 +1046,8 @@ $\eta$ transfers from a small model to a large one.
        $\mathbb{E}[\mathbf{g}_s] = \bar{\mathbf{g}}$ and show
        $\mathbb{E}[\mathbf{m}_t] = (1 - \beta_1^t)\,\bar{\mathbf{g}}$.
     1. Without both corrections, Adam scales step $t$ by the factor
-       $h(t) = (1-\beta_1^t)/\sqrt{1-\beta_2^t}$ of
-       :numref:`fig_mdl-opt-bias-correction`. For $t \ll 1/(1-\beta_2)$,
+       $h(t) = (1-\beta_1^t)/\sqrt{1-\beta_2^t}$
+       of :numref:`fig_mdl-opt-bias-correction`. For $t \ll 1/(1-\beta_2)$,
        replace $1-\beta_2^t$ by $t\,(1-\beta_2)$. Show that the maximizer
        of the approximate factor satisfies $e^u = 1 + 2u$ with
        $u = -t\ln\beta_1$, and solve this equation numerically.
@@ -1114,20 +1094,6 @@ $\eta$ transfers from a small model to a large one.
        magnitude smaller than others. What does the gradient scale you found
        imply for the updates of those layers under the default
        $\epsilon$?
-
-1. [code] **WSD decay and checkpoints.** Use `run_schedule` of
-   the `#adaptive-stochastic-methods-schedules` cell.
-    1. At $K = 2000$, vary the fraction of the budget that WSD spends on its
-       linear decay over $\{0.05, 0.1, 0.2, 0.4, 1.0\}$, where $1.0$ decays
-       from the first step. How does the final loss depend on the fraction?
-    1. Run a constant plateau of $K_p \in \{200, 600, 1600, 3600\}$ steps
-       followed by the same $400$-step linear decay, setting the global `K`
-       that `run_schedule` loops over to $K_p + 400$ for each run. Why is the
-       final loss essentially independent of $K_p$? What does this imply for
-       decaying a checkpoint taken anywhere on the plateau?
-    1. On this quadratic a longer plateau never pays off. What property
-       would a loss need for progress made on the plateau to survive the
-       final decay?
 
 1. [code] **Adam's first steps on noise.** Let every coordinate of the
    gradient be i.i.d. zero-mean noise with variance $\sigma^2$, as for a
@@ -1185,11 +1151,9 @@ $\eta$ transfers from a small model to a large one.
     1. Show that the term $\delta^2$ cannot be removed: give a
        one-dimensional $f$ and a constant bias for which SGD with $\sigma = 0$
        converges to a point where $|f'|^2 = \delta^2$.
-    1. Exercise
-       :exref:`ex_mdl-gradient-based-optimization-sampling-without-replacement`a
-       of :numref:`sec_mdl-gradient-based-optimization` shows that a single
-       minibatch drawn without replacement is unbiased. Which of the
-       following estimators are biased in this sense: the example gradient
+    1. A single minibatch drawn uniformly without replacement is still an
+       unbiased estimator of the full gradient. Which of the following
+       estimators are biased in this sense: the example gradient
        at a step of random reshuffling (:numref:`sec_sgd`), which visits
        every example once per epoch in a fresh random order; a stochastic
        gradient clipped to norm at most $c$; the gradient evaluated at the
@@ -1270,93 +1234,6 @@ $\eta$ transfers from a small model to a large one.
        per-step shrinkage to every coordinate, and why is that the property
        that matters during training?
    :exlabel:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`
-
-1. **The optimal constant step.** ● In the scalar model of `run_schedule`,
-   $x_{k+1} = x_k - \eta(\lambda x_k + \xi_k)$ with
-   $\mathbb{E}[\xi_k] = 0$ and $\mathbb{E}[\xi_k^2] = \sigma^2$, the second
-   moment obeys
-   $\mathbb{E}[x_{k+1}^2] = (1-\eta\lambda)^2\, \mathbb{E}[x_k^2] + \eta^2\sigma^2$.
-    1. Show that
-
-       $$\mathbb{E}[x_K^2] = (1-\eta\lambda)^{2K} x_0^2 + \bigl(1 - (1-\eta\lambda)^{2K}\bigr)\, \frac{\eta\sigma^2}{\lambda(2-\eta\lambda)}.$$
-
-    1. For a fixed budget $K$, show that the minimizing constant step
-       satisfies $\eta^\star = \Theta(\log K / K)$ by balancing the
-       exponential transient against the stationary term, and give its
-       leading-order expression.
-    1. Evaluate $\eta^\star$ and the expected loss
-       $\tfrac12 \lambda\, \mathbb{E}[x_K^2]$ for the values of the
-       `#adaptive-stochastic-methods-schedules` cell, $\lambda = \sigma = 1$
-       (`lam_s` and `sigma`), $x_0 = 3$, and $K = 2000$, and check both
-       against a grid search over the exact formula. Compare the loss with
-       the final losses of the four entries of `schedules`. What does the
-       comparison say about ranking schedules whose parameters were not
-       tuned?
-    1. The Ghadimi--Lan step decays like $1/\sqrt{K}$. Why is there no
-       contradiction with your $\eta^\star$?
-
-1. **SVRG's linear rate.** ● :citet:`Johnson.Zhang.2013` prove geometric
-   convergence of SVRG when every $f_i$ is convex and $L$-smooth and $F$ is
-   $\mu$-strongly convex, with the snapshot of each epoch chosen as a
-   uniformly random iterate of its inner loop. Reproduce the proof.
-    1. For
-       $g_i(\mathbf{x}) = f_i(\mathbf{x}) - f_i(\mathbf{x}^\star) - \nabla f_i(\mathbf{x}^\star)^\top(\mathbf{x} - \mathbf{x}^\star)$,
-       use that $\mathbf{x}^\star$ minimizes $g_i$ and apply
-       :eqref:`eq_mdl-opt-descent-lemma` to one gradient step on $g_i$ to
-       show
-
-       $$\frac1n \sum_{i=1}^n \|\nabla f_i(\mathbf{x}) - \nabla f_i(\mathbf{x}^\star)\|^2 \;\le\; 2L\bigl(F(\mathbf{x}) - F(\mathbf{x}^\star)\bigr).$$
-
-    1. Deduce that the estimator :eqref:`eq_mdl-opt-svrg` satisfies
-       $\mathbb{E}_i\|\mathbf{v}_i(\mathbf{x})\|^2 \le 4L\bigl(F(\mathbf{x}) - F^\star + F(\widetilde{\mathbf{x}}) - F^\star\bigr)$.
-    1. Bound $\mathbb{E}\|\mathbf{x}_{t+1} - \mathbf{x}^\star\|^2$ by one
-       inner step, sum over an inner loop of $m$ steps, and show that the
-       expected gap contracts per epoch by the factor
-
-       $$\alpha = \frac{1}{\mu\eta(1 - 2L\eta)m} + \frac{2L\eta}{1 - 2L\eta}.$$
-
-       Which conditions on $\eta$ and $m$ make $\alpha < 1$?
-    1. For the ridge problem of the `#mdl-adaptive-svrg` cell, $L$ is the
-       largest squared row norm of `X_vr` plus `lam_vr`, and $\mu$ is the
-       smallest eigenvalue of `H_vr`. Compute both and check whether the
-       cell's $\eta = 0.05$ satisfies $2L\eta < 1$.
-    1. A longer inner loop together with a smaller step makes $\alpha$
-       arbitrarily small, so compare settings by the guaranteed contraction
-       per component-gradient evaluation, $\alpha^{1/(n + 2m)}$. Find the
-       $\eta$ and $m$ that minimize it and the number of evaluations the
-       bound needs to shrink the gap by a factor of $e$. Convert the
-       measured per-epoch ratios of `gaps_svrg` to the same unit (each epoch
-       of the cell costs $3n$ evaluations), and compare the bound's $m$ with
-       the best inner-loop lengths measured in problem
-       :exref:`ex_mdl-adaptive-stochastic-methods-svrg-inner-loop`a. Why can
-       the bound be so pessimistic on this problem?
-
-1. [code] **Adam's failure boundary.** ●● Exercise
-   :exref:`ex_mdl-adaptive-stochastic-methods-reddi-by-hand` fixed $\beta_2 = 1/(1 + C^2)$. Keep $\beta_1 = 0$, a small fixed step
-   $\eta$, and the periodic regime of $v$ without bias correction, and let
-   $C > 2$ and $\beta_2 \in (0, 1)$ vary.
-    1. Solve for the three periodic values of $v$ as functions of $C$ and
-       $\beta_2$, and write the net displacement per period
-       $\Phi(C, \beta_2)$ in units of $\eta$.
-    1. Show that for every $C > 2$, $\Phi > 0$ as $\beta_2 \to 0$ and
-       $\Phi < 0$ as $\beta_2 \to 1$. Compute the critical value
-       $\beta_2^\star(C)$ at which $\Phi$ changes sign for
-       $C \in \{2.5, 3, 4, 10\}$.
-    1. Let $C^\star(\beta_2)$ be the largest $C$ at which Adam still drifts
-       to the wrong endpoint. Show that $C^\star(\beta_2) - 2 \approx c\,(1 - \beta_2)$
-       as $\beta_2 \to 1$, and find the constant $c$. How nearly balanced
-       must the gradient sequence be to defeat Adam at $\beta_2 = 0.999$?
-    1. Add an argument `beta2` to `online`, defaulting to the proposition's
-       $1/(1 + C^2)$, and verify $\beta_2^\star(4)$ by running Adam with
-       $\beta_2$ slightly below and slightly above it.
-    1. AMSGrad with forgetting uses
-       $\tilde{v}_t = \max(\gamma\, \tilde{v}_{t-1}, v_t)$ with
-       $\gamma \in [0, 1]$, which interpolates between Adam ($\gamma = 0$)
-       and AMSGrad ($\gamma = 1$). At $C = 4$ and $\beta_2 = 1/17$, find the
-       critical $\gamma^\star$ at which the drift changes sign. Show that it
-       depends on $C$ alone as long as $\gamma\tilde{v}_{t-1} \ge v_t$ on
-       both steps with gradient $-1$. Confirm $\gamma^\star$ with `online`,
-       extended by an argument `gamma` for this rule.
 
 1. [extended] **AdamW's implicit $\ell_\infty$ constraint.** ●● Problem
    :exref:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`b

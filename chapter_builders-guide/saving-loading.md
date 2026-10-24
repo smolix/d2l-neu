@@ -1449,8 +1449,8 @@ caller must compute and review the missing/unexpected key sets.
 :end_tab:
 
 4. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
-   and 10 mantissa bits, against 8 and 23 in `float32`
-   (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
+   and 10 mantissa bits, against 8 and 23 in
+   `float32` (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
    save them, and load them back into a `float32` `MLP`.
     1. Predict the largest relative error of a restored parameter from the
        mantissa width. Measure the maximum absolute difference and, over

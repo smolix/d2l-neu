@@ -616,8 +616,8 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        $\sigma = 0.04$ and for $\sigma = 0.3$. Explain the direction in
        which the optimum moves.
 1. [code] **Critic passes and target freshness.** `train_ac` gives the
-   critic `critic_steps` regression passes per batch
-   (:numref:`subsec_actorcritic_two_timescales`) and recomputes
+   critic `critic_steps` regression passes
+   per batch (:numref:`subsec_actorcritic_two_timescales`) and recomputes
    `td_target` before every pass.
     1. Rerun `train_ac` with `critic_steps` in $\{1, 5, 20\}$, two seeds
        each, and plot the curves. How does the number of passes change the

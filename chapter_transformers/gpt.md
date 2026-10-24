@@ -411,7 +411,7 @@ sampling-with-temperature — for sequence models in general. For open-ended
 generation the workhorse is temperature-plus-truncation: divide the logits
 by a temperature $\tau$, optionally keep only the $k$ most probable tokens
 :cite:`Fan.Lewis.Dauphin.2018` (or the smallest set covering probability
-$p$, *nucleus sampling* :cite:`Holtzman.Buys.Du.ea.2020` — an exercise),
+$p$, *nucleus sampling* :cite:`Holtzman.Buys.Du.ea.2020`),
 and sample. We add `generate` to the class. It is deliberately naive:
 every new token reruns the full forward pass over the whole history,
 which is quadratic work per token. The entire next section measures that
@@ -738,8 +738,8 @@ perplexity check and produces coherent completions for the example prompts.
        parameter count of the default `TransformerBlock`, which `GPT`
        builds with its default flags. Use it to count the parameters of
        `GPT(vocab_size=28)`, with $d = 256$ and six blocks, and check the
-       total against the count printed in
-       :numref:`subsec_gpt-blocks-to-lm`. What fraction of the parameters
+       total against the count printed
+       in :numref:`subsec_gpt-blocks-to-lm`. What fraction of the parameters
        sits in the embedding tables of each of the two models?
     1. Without tying, the output head would be a separate $V \times d$
        matrix. How many parameters would GPT-2 then have? A product of a
@@ -798,31 +798,6 @@ perplexity check and produces coherent completions for the example prompts.
        verbatim fraction at the end of training with those of the two
        previous models.
 
-1. [code] **Nucleus sampling.** Nucleus or top-$p$ sampling
-   :cite:`Holtzman.Buys.Du.ea.2020` keeps the smallest set of most probable
-   tokens whose probabilities sum to at least $p$, renormalizes the
-   probabilities over this set, and samples from it. `sample_next` of
-   :numref:`sec_decoding` implements it, and that section argues that it
-   adapts to the confidence of the model while top-$k$ does not.
-    1. Add an argument `top_p` to `generate` that applies this rule after
-       the temperature. Check that `top_p=1` leaves the sampling
-       distribution unchanged and that a very small `top_p` reproduces
-       greedy decoding.
-    1. With `gpt2`, generate 40 tokens with `top_k=50` and, under the same
-       seed, with `top_p=0.9`. Do so once for a prompt whose continuation
-       is nearly determined, such as the opening words of a well-known
-       quotation, and once for an open-ended prompt. At every step, record
-       the entropy of the model's distribution, the number of tokens that
-       the nucleus keeps, and the probability mass that top-$k$ discards.
-       Plot the last two quantities against the entropy. Below which
-       entropy does the nucleus keep fewer than 5 of the 50 tokens that
-       top-$k$ admits, and above which entropy does top-$k$ discard more
-       than a tenth of the mass?
-
-    *Adapted from Stanford CS336,
-    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
-    Problem (decoding).*
-
 1. [code] **Checkpoint mismatches.** The GPT-2 checkpoint holds 160 tensors
    with 137,022,720 numbers in all, while `gpt2` has 124,439,808
    parameters.
@@ -846,26 +821,6 @@ perplexity check and produces coherent completions for the example prompts.
        `'Alan Turing theorized that computers would one day become'`.
        Which mistake does the perplexity check flag most clearly, and which
        least?
-
-1. [code] **Learned position table.** The rows $\mathbf{p}_0, \ldots,
-   \mathbf{p}_{1023}$ of `gpt2.pos_emb` were learned freely, without the
-   structure of the sinusoidal table :eqref:`eq_sinusoidal-def`.
-    1. Compute the norm of every row and plot it against position. Which
-       rows stand out? What distinguishes position 0 from every other
-       position in a causal model?
-    1. Exercise :exref:`ex_positional-information-untrained-rows` of :numref:`sec_positional-information` tested the
-       trained table of `TinyCharLM` for shift invariance by comparing the
-       spread of the cosine similarities along each diagonal
-       $i - j = \textrm{const}$ with the spread of the diagonal means.
-       Display the cosine similarities between all rows of `gpt2.pos_emb`
-       with `d2l.show_heatmaps`, apply the same test, and compare the
-       outcome with that of the 128 rows trained at context 128 there.
-    1. Center the table and compute its singular value decomposition. What
-       fraction of the variance do the top three singular directions
-       capture? Plot the projections of the rows onto these directions
-       against position, and describe the curve that the rows trace in this
-       three-dimensional subspace. Which features of a sinusoidal table
-       does it share?
 
 1. [code] **Tied head without blocks.** ● Consider `GPT` with
    `num_blks=0` and its defaults `pos='rope'` and `norm='rms'`. Let
@@ -891,33 +846,6 @@ perplexity check and produces coherent completions for the example prompts.
        $10^{-2}$, and compare its final training loss with the bigram
        cross-entropy of problem 3. Use the first sub-problem to explain the
        difference.
-
-1. [code] **Post-norm plateau.** ● :numref:`subsec_gpt-norm-placement`
-   argues that the post-norm model could reach the bigram loss of problem
-   3 even if every attention sublayer output zero, so that its plateau
-   at the unigram entropy of about 2.8 nats means that its predictions
-   ignore even the current character.
-    1. Suppose that every attention sublayer of the post-norm model outputs
-       zero, while its FFN sublayers still act on every position. Show that
-       the logits at position $t$ are then a function of the token at
-       position $t$ alone. Which property of the default `pos='rope'` does
-       the argument use, and what changes with `pos='learned'`?
-    1. Train the post-norm ablation for 800 steps at learning rate
-       $3 \times 10^{-3}$. On a validation batch, measure the mean KL
-       divergence of its predictive distributions from the unigram
-       distribution of the training text. Then apply `token_emb` and the
-       blocks of `blks` one at a time, and record after each block the
-       token spread $\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$ of
-       :numref:`subsec_signal-propagation`, averaged over the sequences of
-       the batch, both for the trained model and for a freshly initialized
-       post-norm model. After which block, if any, have the tokens of the
-       trained model collapsed, and how did training change the profile of
-       the initialized model?
-    1. Add a linear warmup of the learning rate from 0 to
-       $3 \times 10^{-3}$ over the first 200 steps and repeat the 800-step
-       run. Does the post-norm model leave the plateau, and how does its
-       loss at step 800 compare with that of the pre-norm run of
-       :numref:`subsec_gpt-norm-placement`?
 
 1. [code] **Bits per character.** ● GPT-2 and `model` use different
    tokens, so their per-token losses are not comparable. A loss of $\ell$
@@ -949,8 +877,8 @@ perplexity check and produces coherent completions for the example prompts.
     1. Subclass `d2l.TimeMachine` so that `_download` returns the
        preprocessed text, which gives both tokenizations the same
        characters. Choose `num_train` and `num_val` so that the training
-       and validation windows cover the same characters as those of
-       :numref:`subsec_gpt-training`. With `vocab_size=256` the tokenizer
+       and validation windows cover the same characters as those
+       of :numref:`subsec_gpt-training`. With `vocab_size=256` the tokenizer
        learns no merges; check that `GPT` then reaches validation losses
        close to those of `model` at the same steps.
     1. For each of the vocabulary sizes 512, 1,024, and 2,048, choose

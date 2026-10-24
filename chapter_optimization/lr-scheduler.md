@@ -930,8 +930,8 @@ its relatives became widespread where the training horizon is open-ended.
        cosine runs at the same budgets.
 
 1. **From noise floor to sampler.** ● Constant-rate SGD does not
-   converge; its iterates fluctuate in the noise ball of
-   :eqref:`eq_sgd-noise-ball`. Stochastic gradient Langevin dynamics
+   converge; its iterates fluctuate in the noise ball
+   of :eqref:`eq_sgd-noise-ball`. Stochastic gradient Langevin dynamics
    :cite:`Welling.Teh.2011` adds Gaussian noise to every step so that the
    iterates approximately sample the density proportional to $e^{-f}$:
    $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \mathbf{g}_t + \sqrt{2\eta}\,
@@ -941,8 +941,8 @@ its relatives became widespread where the training horizon is open-ended.
        the stationary variance of $x_t$ and compare it with the variance
        $1/\lambda$ of the density proportional to $e^{-f(x)}$.
     1. Compare the injected noise $\sqrt{2\eta}\, \zeta_t$ with the
-       gradient-noise term $\eta\, \xi_t$ in the model behind
-       :eqref:`eq_sgd-noise-ball`. For which gradient-noise variance
+       gradient-noise term $\eta\, \xi_t$ in the model
+       behind :eqref:`eq_sgd-noise-ball`. For which gradient-noise variance
        $\sigma^2$ do the two contributions have equal variance, and which
        of them dominates as $\eta$ decays?
 

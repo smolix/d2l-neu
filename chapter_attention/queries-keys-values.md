@@ -270,8 +270,8 @@ representations of queries and keys.
 
 1. **An average of two values.** Let the keys $\mathbf{k}_1, \ldots,
    \mathbf{k}_m$ be orthonormal and let the score be $a(\mathbf{q},
-   \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights of
-   :eqref:`eq_softmax_attention`.
+   \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights
+   of :eqref:`eq_softmax_attention`.
     1. For the query $\mathbf{q} = c\,(\mathbf{k}_a + \mathbf{k}_b)$ with
        $c > 0$, compute all $m$ weights and show that the output tends to
        $\tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)$ as $c \to \infty$.
@@ -352,8 +352,8 @@ representations of queries and keys.
 1. [code] **Soft lookup as retrieval.** ● Build a database of $m$ keys
    drawn uniformly from the unit sphere in $\mathbb{R}^{16}$, with value
    $\mathbf{v}_i$ the one-hot indicator of index $i$, and weight them with
-   the Gaussian kernel of bandwidth $\sigma$ normalized as in
-   :eqref:`eq_nadaraya-watson`. A query $\mathbf{q} = \mathbf{k}_i +
+   the Gaussian kernel of bandwidth $\sigma$ normalized as
+   in :eqref:`eq_nadaraya-watson`. A query $\mathbf{q} = \mathbf{k}_i +
    \boldsymbol{\epsilon}$ with $\boldsymbol{\epsilon} \sim
    \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I})$ is retrieved correctly when
    the largest entry of the output is entry $i$.

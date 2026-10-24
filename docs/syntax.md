@@ -91,6 +91,22 @@ Consecutive tab blocks are grouped into Quarto `panel-tabset` divs.
 In `gen_notebooks.py:convert_prose_tabs_single()`, only the target
 framework's content is kept.
 
+**Tabbed exercise problems.** A per-framework variant of a problem in
+`## Exercises` is written as a `:begin_tab:` block holding the list item(s)
+with their literal numbers (`tools/exercise_refs.py` counts a tab block from
+its first marker and the list after it from its literal number). For the
+HTML book, `d2l_preprocess.py:expand_exercise_tabs()` first rewrites such a
+section (up to the Discussions links) into one tab block per framework, each
+holding the complete list with that framework's variants, so every pane
+shows one continuous `<ol>` instead of a tabset that cuts the list. Each
+framework with any content gets a pane, because `_d2l-tabs.html` hides a
+tabset that lacks the reader's framework. Untabbed problems repeat in every
+pane; outside the primary pane their display equations stay unnumbered and
+`:label:`s are dropped, and `_d2l-tabs.html` scrolls an `:exref:` link to the
+visible copy of a repeated anchor. Sections with code fences are left as
+they are. The PDF and notebooks keep one framework's blocks inline, so the
+list is continuous there already.
+
 
 ## Framework Branching (Code-Level)
 

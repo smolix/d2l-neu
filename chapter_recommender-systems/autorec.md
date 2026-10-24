@@ -248,9 +248,31 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 
 ## Exercises
 
-* Vary the hidden dimension of AutoRec to see its impact on the model performance.
-* Try to add more hidden layers. Is it helpful to improve the model performance?
-* Can you find a better combination of decoder and encoder activation functions?
+1. Show that the item-based AutoRec of this section predicts the same vector
+   $f(\mathbf W g(\boldsymbol\mu)+\mathbf b)$ for every item without training
+   ratings, so each user gives all such items the same score. Compare with
+   what `MF` predicts for an item that never occurs in training. Which input
+   would a model need to give new items distinct scores?
+1. The evaluator reconstructs each item from its *training* column and
+   compares the reconstruction with the test ratings. Predict what happens to
+   the test RMSE if the network is fed the columns of `test_inter_mat`
+   instead, then compute it with the trained `net`. Why does that number not
+   measure prediction?
+1. AutoRec is trained on `split_data_ml100k` with its default
+   `split_mode='random'`, while the matrix-factorization experiment uses
+   `split_and_load_ml100k`, whose default is `'seq-aware'`. Train `MF` on the
+   random split used here and AutoRec on the `seq-aware` split, and tabulate
+   the four test RMSEs. Does the comparison in the summary hold on a shared
+   split?
+1. Train AutoRec with hidden width $h\in\{50, 200, 500, 1000\}$ and dropout
+   rates $0.05$ and $0.5$, and tabulate the test RMSE. Compare the number of
+   parameters at each width with the number of training ratings. Which
+   setting overfits, and does the larger dropout rate change the best width?
+1. Implement user-based AutoRec by transposing the rating matrix, so that each
+   input is a user's row of length $n$. Compare the number of parameters, the
+   number of input vectors per epoch, and the mean number of observed entries
+   per input vector with those of the item-based model, and report its test
+   RMSE on the same split.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/401)

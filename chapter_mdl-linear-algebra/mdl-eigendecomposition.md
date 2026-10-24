@@ -1467,35 +1467,6 @@ trajectory.
        $2\mathbf{I}+\varepsilon\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$.
    :exlabel:`ex_mdl-eigendecomposition-defective-limit`
 
-1. [code] **Larger Jordan blocks.** :numref:`subsec_mdl-jordan` computes
-   $\mathbf{J}_2(\lambda)^n$ from $\mathbf{J}_2(\lambda)=\lambda\mathbf{I}+\mathbf{N}$
-   with $\mathbf{N}^2=\mathbf{0}$.
-    1. Write $\mathbf{J}_3(\lambda)=\lambda\mathbf{I}+\mathbf{N}$ with
-       $\mathbf{N}^3=\mathbf{0}$ and compute $\mathbf{J}_3(\lambda)^n$ with the
-       binomial theorem. Which entry grows fastest with $n$?
-    1. Find the corner entry of $\mathbf{J}_k(\lambda)^n$ for general $k$. For
-       $0<\lambda<1$, at which $n$, approximately, does it peak? Evaluate the
-       peak location and height for $k=3$ and $\lambda=0.99$.
-    1. Adapt the code of :numref:`subsec_mdl-jordan` to print
-       $\|\mathbf{J}_3(0.99)^n\|_2$, and check the prediction of (b).
-   :exlabel:`ex_mdl-eigendecomposition-larger-jordan-blocks`
-
-1. **Fourth roots of minus the identity.** Let $\mathbf{A}$ be a
-   real $n\times n$ matrix with $\mathbf{A}^4=-\mathbf{I}$.
-    1. Show that every eigenvalue $\lambda$ of $\mathbf{A}$ satisfies
-       $\lambda^4=-1$. Which values can $\lambda$ take, and why does
-       $\mathbf{A}$ have no real eigenvector?
-    1. Take the determinant of both sides of $\mathbf{A}^4=-\mathbf{I}$ to show
-       that $n$ is even.
-    1. Use the rotation--scaling block :eqref:`eq_mdl-rotation-scaling-block`
-       to construct such a matrix for $n=2$. Then construct a $4\times4$
-       example whose eigenvalues are all four solutions of $\lambda^4=-1$.
-
-   *Adapted from Sheldon Axler,
-   [Linear Algebra Done Right, 4th ed.](https://linear.axler.net/LADR4e.pdf),
-   Exercises 5A, Problem 31.*
-   :exlabel:`ex_mdl-eigendecomposition-fourth-root-minus-identity`
-
 1. **Spectral radius and norms.** The spectral radius bounds every power of
    a matrix from below, and for normal matrices it also bounds them from
    above.
@@ -1512,26 +1483,6 @@ trajectory.
     1. For an arbitrary $M>0$, construct a diagonalizable $2\times2$ matrix
        with spectral radius $1/2$ and $\|\mathbf{A}\|_2>M$.
    :exlabel:`ex_mdl-eigendecomposition-spectral-radius-norms`
-
-1. **Complex symmetric matrices.** The spectral theorem of
-   :numref:`subsec_mdl-spectral-theorem` concerns real symmetric matrices.
-   The complex matrix
-
-   $$
-   \mathbf{S}=\begin{bmatrix}1&i\\i&-1\end{bmatrix}
-   $$
-
-   is symmetric as well, $\mathbf{S}=\mathbf{S}^\top$.
-    1. Compute $\mathbf{S}^2$ and the eigenvalues of $\mathbf{S}$. Is
-       $\mathbf{S}$ diagonalizable?
-    1. The eigenvalues of $\mathbf{S}$ are real, yet by (a) $\mathbf{S}$ has
-       no eigenbasis, so some step of part (iii) of the proof of the spectral
-       theorem fails for $\mathbf{S}$. Find a unit eigenvector $\mathbf{w}_1$
-       of $\mathbf{S}$ and the step that fails. Which property of real
-       symmetric matrices does that step use?
-    1. Is $\mathbf{S}$ normal in the sense of
-       :numref:`sec_mdl-nonnormal-transient`?
-   :exlabel:`ex_mdl-eigendecomposition-complex-symmetric`
 
 1. **The centering matrix.** Let $\mathbf{1}\in\mathbb{R}^n$ be the all-ones
    vector and $\mathbf{H}=\mathbf{I}-\tfrac1n\mathbf{1}\mathbf{1}^\top$.
@@ -1557,29 +1508,8 @@ trajectory.
    Problems for Lecture 13, Problem 4.*
    :exlabel:`ex_mdl-eigendecomposition-centering-matrix`
 
-1. **Gershgorin bounds.** Consider the symmetric matrix
-
-   $$
-   \mathbf{A} = \begin{bmatrix}
-   3.0 & 0.1 & 0.3 & 1.0 \\
-   0.1 & 1.0 & 0.1 & 0.2 \\
-   0.3 & 0.1 & 5.0 & 0.0 \\
-   1.0 & 0.2 & 0.0 & 1.8
-   \end{bmatrix}.
-   $$
-
-    1. Without computing the eigenvalues, decide whether the smallest
-       eigenvalue of $\mathbf{A}$ can be less than $0.5$.
-    1. Use the same discs to bound the condition number
-       $\kappa=\lambda_{\max}/\lambda_{\min}$ of $\mathbf{A}$ from above.
-    1. For an invertible diagonal matrix $\mathbf{D}$, the matrix
-       $\mathbf{D}^{-1}\mathbf{A}\mathbf{D}$ has the same eigenvalues as
-       $\mathbf{A}$ but different discs. Find a $\mathbf{D}$ whose discs prove
-       $\lambda_{\min}(\mathbf{A})>0.75$.
-   :exlabel:`ex_mdl-eigendecomposition-gershgorin-bounds`
-
-1. [code] **Power-iteration rates.** Let $\mathbf{B}$ be the matrix of
-   :numref:`fig_mdl-la-power-iter`.
+1. [code] **Power-iteration rates.** Let $\mathbf{B}$ be the matrix
+   of :numref:`fig_mdl-la-power-iter`.
     1. By :eqref:`eq_mdl-power-iter`, the misalignment between the iterate and
        $\mathbf{w}_1$ decays at the rate $|\lambda_2/\lambda_1|$. Predict how
        many iterations reduce it by a factor of $100$.
@@ -1623,46 +1553,16 @@ trajectory.
        How does this explain the symmetric result of (b)?
    :exlabel:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`
 
-1. [code] **A rotating dominant pair.** ● Let $\mathbf{C}$ be the
-   block-diagonal $3\times3$ matrix whose upper-left block is the
-   rotation--scaling block :eqref:`eq_mdl-rotation-scaling-block` with $a=0.6$
-   and $b=0.8$ and whose lower-right entry is $0.5$. Let
-   $\mathbf{A}=\mathbf{S}\mathbf{C}\mathbf{S}^{-1}$ with
-
-   $$
-   \mathbf{S}=\begin{bmatrix}1&2&0\\0&1&1\\1&0&1\end{bmatrix}.
-   $$
-
-    1. Run power iteration on $\mathbf{C}$ from a random start $\mathbf{v}$.
-       Explain why the consecutive-norm ratio converges to $1$, although the
-       iterate keeps rotating.
-    1. Repeat with $\mathbf{A}$, which has the same eigenvalues. Plot the
-       consecutive-norm ratio and $\|\mathbf{A}^k\mathbf{v}\|^{1/k}$ for
-       $k\le200$. Between which values does the ratio oscillate for large
-       $k$? Show that $\|\mathbf{A}^k\mathbf{v}\|^{1/k}-1=O(1/k)$, and use the
-       oscillation of $\|\mathbf{A}^k\mathbf{v}\|$ to explain why no faster
-       rate is possible.
-    1. Show that the block $\mathbf{M}$ of
-       :eqref:`eq_mdl-rotation-scaling-block` satisfies
-       $\mathbf{M}^2-2a\mathbf{M}+(a^2+b^2)\mathbf{I}=\mathbf{0}$. Conclude
-       that, for large $k$, the iterates $\mathbf{x}_k=\mathbf{A}^k\mathbf{v}$
-       approximately satisfy
-       $\mathbf{x}_{k+2}=2a\,\mathbf{x}_{k+1}-(a^2+b^2)\,\mathbf{x}_k$. Fit
-       $2a$ and $a^2+b^2$ by least squares from three consecutive iterates,
-       and find the number of iterations after which $a$ and $b$ are correct
-       to four digits.
-   :exlabel:`ex_mdl-eigendecomposition-rotating-dominant-pair`
-
 1. [code] **Pseudospectra and transient growth.** ● Let $\mathbf{A}$ be the
    non-normal matrix :eqref:`eq_mdl-nonnormal-example` and $\mathbf{D}$ the
-   diagonal matrix with the same eigenvalues from the code of
-   :numref:`sec_mdl-nonnormal-transient`.
+   diagonal matrix with the same eigenvalues from the code
+   of :numref:`sec_mdl-nonnormal-transient`.
     1. Let $\sigma=\sigma_{\min}(z\mathbf{I}-\mathbf{A})$, with unit singular
        vectors $\mathbf{u}$ and $\mathbf{v}$ such that
        $(z\mathbf{I}-\mathbf{A})\mathbf{v}=\sigma\mathbf{u}$. Show that $z$ is
        an eigenvalue of $\mathbf{A}+\sigma\mathbf{u}\mathbf{v}^*$, a matrix at
-       distance $\sigma$ from $\mathbf{A}$. This proves one inclusion of
-       :eqref:`eq_mdl-pseudospectrum`. Using the resolvent norms printed by
+       distance $\sigma$ from $\mathbf{A}$. This proves one inclusion
+       of :eqref:`eq_mdl-pseudospectrum`. Using the resolvent norms printed by
        the code, how large a perturbation makes $z=1$ an eigenvalue of a
        perturbed $\mathbf{A}$, and how large for $\mathbf{D}$?
     1. Suppose that $\|\mathbf{A}^k\|_2\le M$ for all $k\ge0$. Show that for
@@ -1678,8 +1578,8 @@ trajectory.
        contains a point at distance $\delta$ outside the unit circle, how
        large must some power of $\mathbf{A}$ be?
     1. Evaluate $K(\mathbf{A})$ numerically on a grid of points $z$ with
-       $|z|>1$, and compare it with the largest $\|\mathbf{A}^k\|_2$ printed in
-       :numref:`sec_mdl-nonnormal-transient`. Find $K(\mathbf{D})$ by hand.
+       $|z|>1$, and compare it with the largest $\|\mathbf{A}^k\|_2$ printed
+       in :numref:`sec_mdl-nonnormal-transient`. Find $K(\mathbf{D})$ by hand.
    :exlabel:`ex_mdl-eigendecomposition-pseudospectra-transient-growth`
 
 1. [code] **Shifted inverse iteration.** ● Power iteration finds only the

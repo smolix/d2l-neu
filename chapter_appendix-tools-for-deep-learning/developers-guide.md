@@ -259,8 +259,8 @@ artifact — is what changed.
    `#linear-regression-scratch-training-1` of :numref:`sec_linear_scratch`,
    which every framework runs, and again, with device support, in the
    framework variants of the cell
-   `#gpus-devices-memory-the-trainer-now-with-devices-1` of
-   :numref:`sec_use_gpu`.
+   `#gpus-devices-memory-the-trainer-now-with-devices-1`
+   of :numref:`sec_use_gpu`.
     1. Add a comment line to the body of the untagged definition and of
        the PyTorch variant of the device-aware one, run `make lib`, and
        search `d2l/torch.py` for both comments. Which comment arrives,
@@ -274,39 +274,6 @@ artifact — is what changed.
        notebooks of which sections can print different results: those
        before :numref:`sec_use_gpu` in book order, those after it, or both?
    :exlabel:`ex_developers-guide-duplicate-definitions`
-
-1. [code] **Incremental rebuilds.** The Makefile requires GNU Make 4.3 or
-   later; on macOS, whose `make` is older, install GNU Make and run it as
-   `gmake`. Build the site once with `make html`.
-    1. Run `make html` a second time and time it. Run it a third time as
-       `make --debug=basic html`. Does Make remake any target? If it does,
-       which reason does it print for the first of them? Is that remake
-       necessary?
-    1. Run `touch` on one source `.md` file and time `make html` again.
-       Which targets does Make remake now? Why does an edit to one section
-       re-render every page, and what would a render of only the edited
-       page still have to read from all other pages?
-   :exlabel:`ex_developers-guide-incremental-rebuilds`
-
-1. [code] **Focused pull requests.** A branch holds three commits. C1
-   corrects a typo in a prose paragraph of
-   `chapter_convolutional-modern/resnet.md`. C2 changes `lr=0.01` to
-   `lr=0.05` in the PyTorch variant of the cell `#resnet-training` of the
-   same file. C3 runs a code formatter over every code cell of
-   `chapter_convolutional-modern/`, and the formatter changes at least one
-   line of every cell.
-    1. Which committed outputs does each commit make stale under the rules
-       of exercise :exref:`ex_developers-guide-stale-outputs`? The ResNet
-       notebook needs a GPU. Which commits can a contributor without a GPU
-       complete, outputs included?
-    1. Split the branch into pull requests. Why should C3 not travel with
-       C2, and which pull request would you submit first?
-    1. In a clone of your fork, make three commits of the same kinds on
-       one branch. Create one branch per pull request from `main` with
-       `git switch -c` and `git cherry-pick`, and check each with
-       `git diff main...<branch> --stat`. Which cherry-pick can conflict
-       when C3 is merged before C2, and why?
-   :exlabel:`ex_developers-guide-focused-prs`
 
 1. **Agent patches.** A contributor changes the format string of a `print`
    call in the PyTorch variant of the last code cell of a section, and
@@ -331,41 +298,13 @@ artifact — is what changed.
        whose results it must report.
    :exlabel:`ex_developers-guide-agent-patches`
 
-1. [code] **Transitive library dependencies.** ● Besides `d2l/torch.py`,
-   `make lib` writes one file per `#@save` symbol to `d2l/_blocks/<fw>/`.
-   The script `tools/scan_d2l_usage.py` lists in
-   `_notebooks/<fw>/<chapter>/<stem>.d` the files of every symbol `d2l.X`
-   that the code of a section mentions, and the fingerprint of exercise
-   :exref:`ex_developers-guide-stale-outputs` hashes exactly these files.
-    1. Run `make lib` and then `python3 tools/scan_d2l_usage.py`, and read
-       the `.d` file of `chapter_convolutional-modern/resnet.md` for
-       PyTorch. Which block defines the optimizer that `trainer.fit` uses
-       in the cell `#resnet-training`? If a contributor added momentum to
-       this optimizer, would the build mark the outputs of
-       :numref:`sec_resnet` stale? Would it mark stale the notebooks of
-       problem :exref:`ex_developers-guide-duplicate-definitions`d, whose
-       results the 16-bit `prepare_batch` can change? Why do the two cases
-       differ?
-    1. Write a script that extends the list of every notebook by each
-       symbol that a listed file mentions as `d2l.X`, repeated until the
-       list stops growing. For how many PyTorch notebooks does the list
-       grow? How many notebooks does an edit of `d2l.Module` mark stale
-       before and after the extension?
-    1. Code in a block also reaches symbols of the library without the
-       prefix `d2l.`: `Module.__init__`, for example, creates its progress
-       board as `ProgressBoard()`. Replace the text search by an analysis
-       of the names in each file with `ast`, and report what it adds.
-    1. A coarser rule hashes all of `d2l/torch.py` for every notebook that
-       imports the library. How many PyTorch notebooks would one library
-       edit then mark stale? Which part of `d2l/torch.py` does this rule
-       cover that no block file contains?
-   :exlabel:`ex_developers-guide-transitive-deps`
-
 1. **Execution stamps.** ● Make and the notebook scheduler
    `tools/notebook_scheduler.py` re-execute a notebook when its stamp
    `_notebooks/<fw>/<chapter>/<stem>.executed` is older than the generated
    `.ipynb` or than one of the library block files that its `.d` file
-   lists (exercise :exref:`ex_developers-guide-transitive-deps`).
+   lists. Besides `d2l/torch.py`, `make lib` writes one block file per
+   `#@save` symbol to `d2l/_blocks/<fw>/`, and the `.d` file of a section
+   lists the block files of every symbol `d2l.X` that its code mentions.
    `make notebooks-pytorch` regenerates every PyTorch notebook and writes
    each `.ipynb` anew. When the code cells of a regenerated notebook are
    unchanged, `tools/gen_notebooks.py` then sets the modification times of
@@ -443,9 +382,10 @@ artifact — is what changed.
        of the test commit to fix this, and compare the mean number of runs
        and the error rate with (b).
     1. Treat one run as a channel from $\{\text{good}, \text{bad}\}$ to
-       $\{\text{pass}, \text{fail}\}$ and compute its capacity
-       :eqref:`eq_mdl-channel-capacity`. Each run reveals at most this many
-       bits about $k$, even when the tests are chosen adaptively. Use
+       $\{\text{pass}, \text{fail}\}$ and compute its
+       capacity :eqref:`eq_mdl-channel-capacity`. Each run reveals at most
+       this many bits about $k$, even when the tests are chosen adaptively.
+       Use
        Fano's inequality :eqref:`eq_mdl-fano` to bound from below the mean
        number of runs of any strategy that names $k$ with probability at
        least 0.95. How close does (c) come?

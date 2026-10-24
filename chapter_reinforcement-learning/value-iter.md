@@ -396,8 +396,8 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
        $\sum_{t \geq 0} \gamma^t P_\pi^t$.
     1. Interpret the entry $M_\pi(s, s')$ in terms of the visits to $s'$ by an
        agent that starts at $s$ and follows $\pi$ in the terminating process
-       of problem :exref:`ex_mdp-discount-as-termination`b of
-       :numref:`sec_mdp`. Conclude that every row of $M_\pi$ sums to
+       of problem :exref:`ex_mdp-discount-as-termination`b
+       of :numref:`sec_mdp`. Conclude that every row of $M_\pi$ sums to
        $1/(1-\gamma)$.
     1. Compute $M_\pi$ for the policy `uniform` on the slippery lake and check
        that $M_\pi r_\pi$ reproduces the start-state value $0.0078$ printed by
@@ -417,8 +417,8 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
        iteration starts and uses only $\gamma$, $\varepsilon$ and
        $\|V_1 - V_0\|_\infty$. Evaluate it for the slippery lake with
        $V_0 = 0$ and $\varepsilon = 10^{-6}$, and compare it with the $164$
-       sweeps that the certificate needed in
-       :numref:`subsec_vi_value_iteration`.
+       sweeps that the certificate
+       needed in :numref:`subsec_vi_value_iteration`.
 1. **The undiscounted lake.** The contraction proposition of
    :numref:`subsec_vi_contraction` needs $\gamma < 1$, yet value iteration on
    FrozenLake also converges at $\gamma = 1$. In FrozenLake the holes and the
@@ -473,8 +473,8 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
    and overwrites $V(s)$ immediately, so that states later in the same sweep
    already use the new values.
     1. Show that an in-place sweep is a $\gamma$-contraction in the sup norm
-       for every order of the states, with the same fixed point as $T$ of
-       :eqref:`eq_bellman_operator`. Conclude that the certificate
+       for every order of the states, with the same fixed point as $T$
+       of :eqref:`eq_bellman_operator`. Conclude that the certificate
        :eqref:`eq_vi_certificate` remains valid for its iterates.
     1. Implement the in-place sweep and count the sweeps that the certificate
        needs to reach $10^{-6}$, with the states in ascending and in
@@ -516,8 +516,8 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
    difference lemma :cite:`Kakade.Langford.2002` that :numref:`sec_ppo` states
    for trajectories, measures the gain. For a policy $\pi'$, let $T^{\pi'}$
    be the policy-evaluation operator of :eqref:`eq_policy_eval` for $\pi'$,
-   and let $M_{\pi'}$ be the matrix of problem
-   :exref:`ex_value-iter-linear-system`.
+   and let $M_{\pi'}$ be the matrix
+   of problem :exref:`ex_value-iter-linear-system`.
     1. Show that for any two policies $\pi$ and $\pi'$
 
        $$V^{\pi'} - V^\pi = M_{\pi'} \big( T^{\pi'} V^\pi - V^\pi \big),$$
@@ -553,38 +553,6 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
        the first sweep at which the condition of part b holds. Compare it with
        sweep 14. Why can the greedy policy be optimal long before the
        condition holds?
-1. [code] **The 100-step limit.** ● The success rate of $73.6\%$ that
-   `evaluate` reported for `pi_star` in :numref:`subsec_vi_slippery_ice`
-   counts only episodes that reach the goal within the environment's limit of
-   100 steps.
-    1. Compute the exact probability that `pi_star` reaches the goal within
-       100 steps, using the meaning of $V_k$ from problem
-       :exref:`ex_value-iter-undiscounted-lake`b for a fixed policy. Problem
-       :exref:`ex_mdp-time-limits`a of :numref:`sec_mdp` obtains the same
-       probability by propagating the state distribution forward, since
-       `pi_star` equals `pi_true` of that section. Why do the backward
-       recursion and the forward propagation agree? Is the difference from
-       the Monte Carlo estimate consistent with the standard error of a mean
-       over 2000 episodes?
-    1. Run 100 sweeps of `value_iteration` at $\gamma = 1$. Which success
-       probability does $V_{100}(s_0)$ give? Compare it with the
-       probabilities of reaching the goal within 100 steps under `pi_star`
-       and under the optimal policy at $\gamma = 0.99$ from problem
-       :exref:`ex_value-iter-discount`b. Among all policies, the latter has
-       the largest probability of eventually reaching the goal. How much of
-       the gap between `pi_star` and $V_{100}(s_0)$ is due to the discount,
-       and how much to the time limit?
-    1. Once value iteration at $\gamma = 1$ has converged, all four actions
-       at $s_0$ attain the maximum in :eqref:`eq_optimal_policy`. Why is a
-       policy that is greedy with respect to these values not necessarily
-       optimal?
-    1. With $k$ steps remaining, the best action at a state is the greedy
-       action of $V_{k-1}$, the iterate of part b after $k - 1$ sweeps at
-       $\gamma = 1$. Find the states at which this action changes as
-       $k$ runs from 10 to 100. Why does this not contradict the proposition
-       of :numref:`subsec_vi_optimality` that a stationary deterministic
-       policy is optimal, given the Markov state of problem
-       :exref:`ex_mdp-time-limits`b of :numref:`sec_mdp`?
 1. [extended] **Backup budgets.** ●● Policy iteration in
    :numref:`subsec_vi_policy_iteration` needed only two rounds, but each round
    ran 800 evaluation sweeps. Measure cost in *backups* instead: one backup

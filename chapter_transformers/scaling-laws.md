@@ -767,16 +767,16 @@ settings of a shared collection of architectural components.
 
 1. [code] **Irreducible loss from three points.** ● Fit
    $E + A N^{-\alpha}$ exactly through the three smallest entries of `Ns`
-   and `curves['validation']` from
-   :numref:`subsec_scaling-laws-five-sizes`. Then shift each of the three
+   and `curves['validation']`
+   from :numref:`subsec_scaling-laws-five-sizes`. Then shift each of the three
    losses by $\pm 0.005$, the rounding of a two-decimal printout, and
    report the range of $E$ and $\alpha$ over the perturbations that admit
    an exact fit with $\alpha > 0$. What does the range say about
    estimating an irreducible loss from this sweep?
 
 1. **Allocation from the fitted law.** ● Under the budget $C = 6ND$, the
-   minimizer of :eqref:`eq_chinchilla_law` satisfies
-   :eqref:`eq_chinchilla_optimum`.
+   minimizer of :eqref:`eq_chinchilla_law`
+   satisfies :eqref:`eq_chinchilla_optimum`.
     1. Solve the two conditions for $N^*(C)$ and $D^*(C)$, constant
        factors included, and show that
 
@@ -800,12 +800,12 @@ settings of a shared collection of architectural components.
 
    $$C_{\textrm{life}} = 6ND + 2N D_{\textrm{inf}}$$
 
-   FLOPs over its lifetime, since generating a token costs about $2N$
-   (:numref:`sec_kv-cache`). :citet:`Sardana.Portes.Doubov.ea.2024`
+   FLOPs over its lifetime, since generating a token costs
+   about $2N$ (:numref:`sec_kv-cache`). :citet:`Sardana.Portes.Doubov.ea.2024`
    minimize this cost at a fixed target loss instead of minimizing the
    loss at a fixed training budget.
-    1. Minimize $C_{\textrm{life}}$ subject to $L(N, D) = \ell$ under
-       :eqref:`eq_chinchilla_law`. Derive the optimality condition that
+    1. Minimize $C_{\textrm{life}}$ subject to $L(N, D) = \ell$
+       under :eqref:`eq_chinchilla_law`. Derive the optimality condition that
        replaces :eqref:`eq_chinchilla_optimum`, and show that the optimum
        moves to smaller $N$ and larger $D$ as $D_{\textrm{inf}}$ grows.
     1. Llama 3 8B was pretrained on about 15T tokens. Take the refit

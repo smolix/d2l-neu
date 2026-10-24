@@ -632,6 +632,40 @@ len(vocab)
 
 1. For simplicity, the period is used as the only delimiter for splitting sentences. Try other sentence splitting techniques, such as the spaCy and NLTK. Take NLTK as an example. You need to install NLTK first: `pip install nltk`. In the code, first `import nltk`. Then, download the Punkt sentence tokenizer: `nltk.download('punkt')`. To split sentences such as `sentences = 'This is great ! Why not ?'`, invoking `nltk.tokenize.sent_tokenize(sentences)` will return a list of two sentence strings: `['This is great !', 'Why not ?']`.
 1. What is the vocabulary size if we do not filter out any infrequent token?
+1. `_get_nsp_data_from_paragraph` drops a sentence pair whose BERT input
+   sequence would be longer than `max_len` tokens instead of truncating it.
+    1. For `max_len` = 64, compute the fraction of candidate sentence pairs
+       that are dropped and the fraction of all their tokens that the
+       dropped pairs contain. Repeat for `max_len` = 128.
+    1. Which sentences are underrepresented in the resulting pretraining
+       data? Modify the function so that it removes tokens from the end of
+       the longer sentence until the pair fits, and report the number of
+       examples for `max_len` = 64.
+1. Every BERT input sequence is padded to `max_len` = 64 tokens and every
+   example to 10 masked language modeling predictions.
+    1. From the lists `valid_lens` and `all_mlm_weights` of
+       `_WikiTextDataset`, compute the fraction of token positions that hold
+       `<pad>` and the fraction of prediction slots whose weight is zero.
+    1. Self-attention over $n$ positions computes $n^2$ attention scores.
+       Estimate the fraction of attention scores that involve a padded
+       position.
+    1. Sort the examples by length and group them into minibatches of 512,
+       each padded only to its longest sequence. Compute the fraction of
+       attention scores that involve a padded position in this scheme.
+1. `_get_next_sentence` draws the second sentence of a negative example by
+   choosing a paragraph uniformly at random and then a sentence of that
+   paragraph uniformly at random.
+    1. With $P$ paragraphs in the corpus, what is the probability of drawing
+       a given sentence of a paragraph with $n$ sentences? Compare with
+       drawing uniformly from all sentences of the corpus.
+    1. From `paragraphs`, compute the average number of sentences of the
+       paragraph that the second sentence comes from, for positive and for
+       negative examples.
+    1. The two sentences of a negative example almost always come from
+       different articles. Explain how a classifier can then solve next
+       sentence prediction without checking whether the second sentence
+       follows the first, and propose negative examples that remove this
+       shortcut.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/389)

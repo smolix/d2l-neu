@@ -427,8 +427,8 @@ DAgger collects states from the learner and obtains expert labels for them, addr
        loses $\varepsilon T$. Compare both with the values printed for
        $\varepsilon = 0.05$ and $T = 10$.
     1. Expand $G(T)$ to leading order in $\varepsilon$ and compare it with
-       the bound $\varepsilon T^2/2$ of the proof in
-       :numref:`subsec_il_error_bounds`. For $\varepsilon = 0.05$, at which
+       the bound $\varepsilon T^2/2$ of the proof
+       in :numref:`subsec_il_error_bounds`. For $\varepsilon = 0.05$, at which
        horizons does $G(T)$ exceed $\varepsilon T^2/2$? How many rewards does
        the cloned imitator lose after a first disagreement at step $t$, and
        how many does the proof count? Which bound does the corrected count
@@ -513,38 +513,10 @@ DAgger collects states from the learner and obtains expert labels for them, addr
        :numref:`subsec_il_distribution_shift` consistent with it?
    :exlabel:`ex_imitation-demonstrations-coverage`
 
-1. **Errors on the learner's states.** ● Let $J(\pi)$ be the expected
-   return of $\pi$ over the horizon $T$, with per-step rewards in $[0, 1]$.
-   Let $V^*_k(s)$ be the expected return of the expert over $k$ remaining
-   steps from $s$, and let $Q^*_k(s, a)$ be the same quantity when the first
-   action is $a$.
-    1. Let $\pi_{1:t}$ follow a deterministic policy $\hat\pi$ for the first
-       $t$ steps and the expert afterwards. Telescope over
-       $\pi_{1:0} = \pi^*, \ldots, \pi_{1:T} = \hat\pi$ to show
-       $$J(\pi^*) - J(\hat\pi) = \sum_{t=1}^{T} E_{s \sim d^{\hat\pi}_t}\left[V^*_{T-t+1}(s) - Q^*_{T-t+1}(s, \hat\pi(s))\right],$$
-       and deduce part (ii) of the proposition in
-       :numref:`subsec_il_error_bounds`. The identity is the finite-horizon
-       counterpart of the one in problem
-       :exref:`ex_value-iter-improvement-quantified`a of
-       :numref:`sec_valueiter`.
-    1. Model the chain of problem :exref:`ex_imitation-chain-closed-form` as
-       an MDP whose state records whether the imitator is on the chain. On
-       the chain, the expert's action earns reward 1 and stays on it, and any
-       other action earns 0 and leaves it. Off the chain, the expert's action
-       earns 1 and returns to it, and any other action earns 0 and stays off.
-       The recovering imitator disagrees with probability $\varepsilon$
-       everywhere, and the cloned imitator disagrees with probability
-       $\varepsilon$ on the chain and always off it. Show that $u = 1$,
-       compute the probability $\varepsilon_t$ that each imitator disagrees
-       with the expert at step $t$ under its own state distribution, and
-       evaluate the identity for both imitators.
-    1. Why does part (ii) of the proposition not contradict the quadratic
-       loss of the cloned imitator in part (i)?
-
 1. [code] **DAgger's budget.** ● Every pair in a DAgger dataset, whether it
    comes from `demonstrations` or from `relabel`, costs one expert query.
-    1. Start DAgger from `demonstrations(3)` and run the loop of
-       :numref:`subsec_il_dagger`. For each round, train a behavior-cloning
+    1. Start DAgger from `demonstrations(3)` and run the loop
+       of :numref:`subsec_il_dagger`. For each round, train a behavior-cloning
        policy on fresh demonstrations with at least as many pairs as the
        DAgger dataset of that round, drawing episodes with
        `demonstrations(1)` until the count is reached. Repeat both methods
@@ -623,35 +595,6 @@ DAgger collects states from the learner and obtains expert labels for them, addr
        Construct a three-state example in which planning with $\hat r$ under
        new dynamics $f'$ selects a different action than planning with $r$.
        Which restriction on the learned reward rules out this failure?
-
-1. **The missing-mass bound.** ●● Consider a finite MDP with horizon $T$,
-   per-step rewards in $[0, 1]$, and a deterministic expert $\pi^*$. A
-   dataset $\mathcal{D}$ of $N$ expert episodes is drawn, and the clone
-   $\hat\pi$ copies $\pi^*$ at every state in $\mathcal{D}$ and takes a fixed
-   fallback action at every other state. Let $q_s$ be the probability that
-   one expert episode visits $s$, and let $U$ be the set of states outside
-   $\mathcal{D}$ at which the fallback action differs from $\pi^*$.
-    1. Couple a deployment of $\hat\pi$ with an expert episode that uses the
-       same random transitions, and show that for a fixed dataset
-       $$J(\pi^*) - J(\hat\pi) \leq T \cdot P(\textrm{the expert episode visits } U).$$
-    1. Show that the expectation of this probability over $\mathcal{D}$ is at
-       most $\sum_s q_s (1 - q_s)^N \leq |\mathcal{S}|/(eN)$, so that
-       $J(\pi^*) - E_{\mathcal{D}}[J(\hat\pi)] \leq T|\mathcal{S}|/(eN)$.
-    1. Evaluate the sum on FrozenLake for $N \in \{1, 3, 10\}$ with the $q_s$
-       of problem :exref:`ex_imitation-demonstrations-coverage`, keeping
-       only the states at which action 0 differs from `pi_star`. Because the
-       return of a FrozenLake episode is 0 or 1, the factor $T$ can be
-       replaced by 1. Compare the bound with the mean shortfall of the clone
-       over 200 datasets for each $N$.
-    1. :citet:`Rajaraman.Yang.Jiao.ea.2020` prove that behavior cloning
-       loses at most order $|\mathcal{S}|T^2/N$ when the transitions and the
-       policies may depend on $t$. Where does the additional factor $T$ come
-       from?
-    1. The same paper shows that no learner, not even one that queries the
-       expert interactively for $N$ episodes, does better than order
-       $|\mathcal{S}|T^2/N$ on every such MDP. What does this lower bound say
-       about DAgger, and how does it relate to the comparison of problem
-       :exref:`ex_imitation-dagger-s-budget`?
 
 [Discussions](https://d2l.discourse.group/)
 

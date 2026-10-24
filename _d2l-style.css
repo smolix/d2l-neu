@@ -110,7 +110,10 @@ h1 code, h2 code, h3 code, h4 code {
   padding: 0 !important;
   margin-bottom: 0 !important;
 }
-.panel-tabset > .tab-content > .tab-pane > * {
+/* Lists keep Bootstrap's indent (ol, ul { padding-left: 2rem }), so a list
+   in a tab pane, such as an Exercises list with per-framework problems,
+   lines up with lists elsewhere on the page. */
+.panel-tabset > .tab-content > .tab-pane > :not(ol):not(ul) {
   padding: 0 !important;
 }
 

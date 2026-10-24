@@ -619,40 +619,6 @@ version to test accuracy.
 
 ## Exercises
 
-1. **Estimating a uniform endpoint.** Let $x_1,\ldots,x_n$ be iid
-   $U(0,\theta)$, and compare the estimators
-   $\hat\theta=\max_i x_i$ and $\tilde\theta=\frac2n\sum_i x_i$. The maximum
-   has the c.d.f. $P(\hat\theta\le t)=(t/\theta)^n$ for $0\le t\le\theta$.
-    1. Compute the bias, the variance, and the MSE of both estimators. For
-       which $n$ does $\hat\theta$ have the smaller MSE?
-    1. Is $\hat\theta$ consistent? Is $\tilde\theta$?
-    1. The multiple $\frac{n+1}{n}\hat\theta$ is unbiased (exercise
-       :exref:`ex_mdl-maximum-likelihood-moving-support`d of
-       :numref:`sec_mdl-maximum_likelihood`). Find the constant $c$ that
-       minimizes the MSE of $c\hat\theta$, and compare its MSE with that of
-       the unbiased multiple. Show that both decay like $1/n^2$, whereas the
-       MSE of $\tilde\theta$ decays like $1/n$. The same exercise explains
-       why the Cramér--Rao bound :eqref:`eq_mdl-cramer-rao` does not rule
-       out this rate.
-
-   *Adapted from Larry Wasserman,
-   [All of Statistics](https://link.springer.com/book/10.1007/978-0-387-21736-9),
-   Chapter 6, Exercises 2 and 3.*
-
-1. **Consistency counterexamples.** Let $x_1,\ldots,x_n$ be iid with mean
-   $\mu$ and variance $\sigma^2>0$. The argument after
-   :eqref:`eq_mdl-bias-variance` shows that vanishing bias and vanishing
-   variance together imply consistency.
-    1. Show that the last observation, $\hat\mu_n=x_n$, is an unbiased
-       estimator of $\mu$ for every $n$ but is not consistent. Which of the
-       two conditions fails?
-    1. A training pipeline returns $\bar x_n$ with probability $1-1/n$. With
-       probability $1/n$, independently of the data, it fails and returns the
-       value $n$. Compute the bias and the MSE of this estimator as
-       $n\to\infty$, and show that it is nevertheless consistent. What does
-       this say about the converse of the argument after
-       :eqref:`eq_mdl-bias-variance`?
-
 1. [code] **Shrinking the sample mean.** Scaling the sample mean toward zero,
    $\hat\theta_c=c\,\bar x$ with $0\le c\le1$, trades variance for bias. Let
    $x_1,\ldots,x_n$ be iid $\mathcal N(\theta,\sigma^2)$.
@@ -789,25 +755,6 @@ version to test accuracy.
        optimal denominator depends on $n$ alone. Why? What does (c)
        imply for the use of an MSE-optimal denominator when the
        distribution of the data is unknown?
-
-1. [code] **Power of the permutation test.** ● The discussion after the
-   `#statistics-permutation-test` cell states that a gap of $0.8$
-   percentage points, detected with $20$ seeds, would often be missed with
-   five.
-    1. Turn the cell into a function that returns the $p$-value for two
-       arrays of accuracies. Use $B=999$ and draw all permutations of one
-       experiment at once with
-       `onp.argsort(rng.random((B, 2 * num_seeds)), axis=1)`. Over $1{,}000$
-       simulated experiments without a true gap, estimate the rejection rate
-       at $\alpha=0.05$ for $k\in\{5,10,20,40\}$ seeds per model
-       (`num_seeds`).
-    1. Repeat with the true gap $\Delta=0.008$ and plot the power against
-       $k$. Compare it with the $z$-test approximation
-       $$1-\beta\approx\Phi\left(\frac{\Delta}{\sigma\sqrt{2/k}}-z_{0.975}\right),$$
-       where $\sigma=0.01$ is the seed-to-seed standard deviation. On which
-       side of the approximation does the simulated power fall, and why?
-    1. Adapt :eqref:`eq_mdl-power-sample-size` to this two-sample comparison.
-       How many seeds per model give power $0.8$?
 
 1. [code] **Paired comparisons.** ● Two models evaluated on the same test
    examples or the same seeds share part of their noise, and a paired test

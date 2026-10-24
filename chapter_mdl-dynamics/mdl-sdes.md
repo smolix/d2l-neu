@@ -1185,8 +1185,8 @@ an Euler--Maruyama step with identical coefficients.
        How do they compare with the strong-order slope of the same scheme?
    :exlabel:`ex_mdl-sdes-weak-order-multiplicative`
 
-1. [code] **Covariance of the OU process.** Let $X$ be the OU process
-   :eqref:`eq_mdl-sde-ou`.
+1. [code] **Covariance of the OU process.** Let $X$ be the OU
+   process :eqref:`eq_mdl-sde-ou`.
     1. For $s \le t$, split the integral in :eqref:`eq_mdl-sde-ou-solution`
        at time $s$ and show that
        $\operatorname{Cov}(X_s, X_t \mid X_0) = e^{-\theta(t - s)}\operatorname{Var}(X_s \mid X_0)$.

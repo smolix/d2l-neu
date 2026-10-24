@@ -462,6 +462,43 @@ Dimensionality and storage for networks are automatically inferred
    and determine, by timing those operations in isolation, whether they
    account for the measured gap.
 
+1. [code] **Several outputs.** Change the output width of the layer in
+   `LinearRegression` from 1 to 2. After constructing `data`, append to
+   `data.y` a second label column
+   $y_2 = \mathbf{x}^\top \mathbf{w}_2^* + b_2^* + \epsilon_2$, computed
+   from `data.X` with generating parameters of your choice and noise of
+   the same size.
+    1. Show that the squared loss summed over the two outputs splits into
+       two independent linear regressions, one per output. Conclude that
+       the parameters learned for one output do not depend on the labels of
+       the other.
+    1. The framework losses average over every entry of the $n \times 2$
+       residual matrix, not only over the minibatch. State by which factor
+       the gradient of each output's parameters shrinks relative to the
+       single-output model, and which learning rate reproduces the
+       single-output training run. Confirm this by training both models
+       from the same initial parameters on the same minibatches.
+
+1. [code] **Feature scale and step size.** Multiply the first column of
+   `data.X` by 100 after constructing `data`, leaving `data.y` unchanged,
+   so that the generating weight of that feature becomes $0.02$. The
+   Hessian of `LinearRegression.loss` with respect to the weights is
+   $\frac{2}{n}\mathbf{X}^\top\mathbf{X}$ for a minibatch of $n$ examples;
+   the bias nearly decouples from the weights because the features have
+   mean zero.
+    1. Estimate the eigenvalues of this Hessian before and after the
+       rescaling.
+    1. Show that on a quadratic loss one step of gradient descent
+       multiplies the error along an eigenvector with eigenvalue $\lambda$
+       by $1 - \eta\lambda$. Deduce the largest learning rate $\eta$ for
+       which training does not diverge, before and after the rescaling, and
+       check both predictions by training at learning rates around them.
+    1. At a learning rate just below the new limit, predict how many
+       updates the second weight needs to reduce its error by a factor of
+       100, and compare the prediction with a measurement. Then standardize
+       the rescaled feature as in :numref:`sec_pandas`, and show that
+       `lr=0.03` works again.
+
 1. [code] **Optimization versus estimation error.** ● Train
    `LinearRegression` with `lr=0.03` and `max_epochs=10` on
    `SyntheticRegressionData` with `num_train` set to each of
@@ -469,8 +506,8 @@ Dimensionality and storage for networks are automatically inferred
    compare the distance $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ of the
    trained weights from the generating weights $\mathbf{w}^*$, stored in
    `data.w`, with the same distance for the least-squares solution on the
-   same training data, computed as in exercise :exref:`ex_synthetic-regression-data-recovery-under-noise` of
-   :numref:`sec_synthetic-regression-data`.
+   same training data, computed as in exercise :exref:`ex_synthetic-regression-data-recovery-under-noise`
+   of :numref:`sec_synthetic-regression-data`.
     1. Count the parameter updates in each run, and explain the ratio of
        the two errors at each `num_train`.
     1. Find the number of epochs after which the run with `num_train=5`

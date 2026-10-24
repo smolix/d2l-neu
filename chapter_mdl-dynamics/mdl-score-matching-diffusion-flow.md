@@ -821,8 +821,8 @@ classifier-guidance tilt with the implicit classifier
 $p_t(y \mid \mathbf{x}) = p_t(\mathbf{x} \mid y)\, p(y) / p_t(\mathbf{x})$ in
 the exponent's role. One caveat: for $\gamma > 1$ the tilted object
 $p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})^\gamma$ is not, in general, the
-noised marginal of *any* clean distribution (exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`): the guided field is a useful
+noised marginal of *any* clean distribution
+(exercise :exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`): the guided field is a useful
 controlled distortion, not the score of a consistent diffusion, and the
 resulting fidelity-versus-diversity trade-off is an engineering choice, not a
 theorem. In $\boldsymbol{\epsilon}$-parameterization, :eqref:`eq_mdl-cfg` is
@@ -1921,24 +1921,6 @@ flows.
     1. Pixel intensities are bounded in the same way. Why does denoising score
        matching at a noise level $\sigma > 0$ not inherit the problem?
 
-1. [code] **Exact and Euler–Maruyama steps.** The DDPM step
-   :eqref:`eq_mdl-ddpm-forward` and the Euler–Maruyama step of the VP-SDE
-   :eqref:`eq_mdl-sde-vp-sde` agree to first order in $\beta_t$. By exercise
-   :exref:`ex_mdl-sdes-exact-vp-discretization`a of :numref:`sec_mdl-sdes`,
-   the exact transition of the VP-SDE from time $s$ to time $t$ has mean
-   $e^{-B/2}\, \mathbf{x}_s$ and covariance $(1 - e^{-B})\, I$, where
-   $B = \int_s^t \beta(r)\, dr$. This is the DDPM step with
-   $\beta_t = 1 - e^{-B}$.
-    1. For unit-variance data, show that one Euler–Maruyama step, which has
-       the coefficient $1 - \tfrac12 \beta_t$, returns the variance
-       $1 + \beta_t^2 / 4$.
-    1. Iterate the variance recursion of each step over the schedule `beta` of
-       `#score-matching-diffusion-flow-ddpm-marginal`, and over the
-       fifty-step schedule `np.linspace(1e-4, 0.02, 50) * 20`, which has the
-       same total $\sum_t \beta_t$. Compare the final variances with the
-       standard error of a variance estimated from $4096$ samples. When does
-       the choice between the two steps matter?
-
 1. [code] **Langevin discretization bias.** For the Gaussian target
    $p = \mathcal{N}(0, v)$, the Langevin sampler of :eqref:`eq_mdl-langevin`
    with step $h$ is the linear recursion
@@ -1985,8 +1967,8 @@ flows.
        exercise :exref:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`
        to explain why the fixed step fails at the large noise levels.
 
-1. **Crossing segments and the floor.** The constant $C$ of the CFM theorem
-   (:numref:`sec_mdl-flow-matching`) is the conditional variance
+1. **Crossing segments and the floor.** The constant $C$ of the CFM
+   theorem of :numref:`sec_mdl-flow-matching` is the conditional variance
    $\mathbb{E} \| Y - \mathbf{u}_t(\mathbf{x}) \|^2$ of the target
    $Y = \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$.
     1. Show that $C = 0$ if and only if, for almost every $t$, the conditional
@@ -2002,22 +1984,6 @@ flows.
        few thousandths. What does this value imply about crossings of the
        segments from $\mathbf{z}$ to $\hat{\mathbf{x}}_1(\mathbf{z})$, even
        though the network may carry approximation error?
-
-1. [code] **Parameterization conversions.** For the Gaussian path
-   :eqref:`eq_mdl-gaussian-path`, Tweedie's formula reads
-   $\hat{\mathbf{x}}_1 = (\mathbf{x} + \sigma_t^2\, \nabla \log p_t(\mathbf{x})) / \alpha_t$.
-    1. Derive the $v$-prediction row of :numref:`tab_mdl-score-noise-velocity`
-       from Tweedie's formula.
-    1. Specialize the score–velocity identity :eqref:`eq_mdl-score-velocity`
-       to the linear path $\alpha_t = t$, $\sigma_t = 1 - t$ of rectified flow.
-    1. Change the cell
-       `#mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function`
-       to the linear path, and check your formula from (b) and the
-       $v$-prediction row at $t \in \{0.05, 0.6, 0.95\}$.
-    1. Solve your formula from (b) for the score. If a velocity field has error
-       $\delta$ at time $t$, how large is the error of the score computed from
-       it? Near which end of the path is a score read off a flow-matching
-       model unreliable?
 
 1. [code] **The Bayes-risk floor.** ● The cell
    `#score-matching-diffusion-flow-dsm-train` prints a final DSM loss of
@@ -2154,37 +2120,6 @@ flows.
        of `cfg_sample` follows at $\gamma = 3$?
    :exlabel:`ex_mdl-score-matching-diffusion-flow-guided-marginals`
 
-1. [code] **Kinetic energy of learned flows.** ● By the Benamou–Brenier
-   theorem :eqref:`eq_mdl-benamou-brenier`, every flow that carries $p_0$ to
-   $p_1$ has kinetic energy at least $W_2^2(p_0, p_1)$ of :eqref:`eq_mdl-w2`.
-    1. Let a trajectory satisfy $\dot{\mathbf{X}}_t = \mathbf{v}_t$ on
-       $[0, 1]$. Show that
-
-       $$\int_0^1 \|\mathbf{v}_t\|^2\, dt - \|\mathbf{X}_1 - \mathbf{X}_0\|^2 = \int_0^1 \left\| \mathbf{v}_t - (\mathbf{X}_1 - \mathbf{X}_0) \right\|^2 dt,$$
-
-       and that this gap vanishes if and only if the Euler step
-       $\mathbf{X}_s + (1 - s)\, \mathbf{v}_s$ from every time $s \in [0, 1)$
-       lands on $\mathbf{X}_1$.
-    1. Modify `euler_sample` and `euler_sample2` so that they also return the
-       starting points and the Euler estimate $\sum_k h\, \|\mathbf{v}_k\|^2$
-       of the kinetic energy of each trajectory, with $h = 1/K$. For the
-       models behind both functions and for $K = 32$ and $K = 128$, estimate
-       the kinetic energy and the transport cost
-       $\mathbb{E} \|\mathbf{X}_1 - \mathbf{X}_0\|^2$ of the coupling that the
-       flow defines.
-    1. Estimate $W_2^2$ between $\mathcal{N}(\mathbf{0}, I)$ and the data by
-       solving the assignment problem between $2048$ Gaussian draws and
-       `held_out` with `scipy.optimize.linear_sum_assignment`, for three
-       independent sets of draws. Compute the transport cost of the
-       independent coupling exactly.
-    1. By (a) and :eqref:`eq_mdl-w2`, every flow from $p_0$ to $p_1$ satisfies
-       $W_2^2 \le \mathbb{E} \|\mathbf{X}_1 - \mathbf{X}_0\|^2 \le \int_0^1 \mathbb{E} \|\mathbf{v}_t\|^2\, dt$.
-       Order the cost of the independent coupling, the estimate of $W_2^2$,
-       and the transport costs and kinetic energies of the two flows. Which of
-       the two inequalities does reflow tighten? How close does the coupling
-       of the first model come to the optimal cost, given the spread of the
-       estimates in (c)?
-
 1. **Stochastic interpolants.** ● The framework of
    :citet:`Albergo.Boffi.VandenEijnden.2023` writes
    $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$,
@@ -2192,8 +2127,8 @@ flows.
    and $p_1$, $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, I)$ is independent of
    both, and the smooth schedules satisfy $\alpha_0 = \beta_1 = 1$ and
    $\alpha_1 = \beta_0 = \gamma_0 = \gamma_1 = 0$.
-    1. Take $\mathbf{z} = (\mathbf{x}_0, \mathbf{x}_1, \mathbf{w})$ in
-       :eqref:`eq_mdl-marginal-velocity`. Show that the marginal velocity is
+    1. Take $\mathbf{z} = (\mathbf{x}_0, \mathbf{x}_1, \mathbf{w})$
+       in :eqref:`eq_mdl-marginal-velocity`. Show that the marginal velocity is
        $\mathbb{E}[\dot{\alpha}_t \mathbf{x}_0 + \dot{\beta}_t \mathbf{x}_1 + \dot{\gamma}_t \mathbf{w} \mid \mathbf{x}_t = \mathbf{x}]$,
        and write the corresponding CFM loss :eqref:`eq_mdl-cfm-loss`.
     1. Give schedules that recover rectified flow :eqref:`eq_mdl-rf-path` and
@@ -2216,8 +2151,8 @@ flows.
    $\lambda = g^2$, the population score loss bounds the Kullback–Leibler
    divergence from the data to the model, by Theorem 1 of
    :citet:`Song.Durkan.Murray.ea.2021`. The paper proves the bound with path
-   measures; this problem derives it from the Fokker–Planck equation
-   (:numref:`sec_mdl-fokker-planck`), following
+   measures; this problem derives it from the Fokker–Planck equation of
+   :numref:`sec_mdl-fokker-planck`, following
    :citet:`Lu.Zheng.Bao.ea.2022`, who take this route for the SDE (their
    Proposition C.1) and for the probability-flow ODE (their Theorem 3.1).
    Let the forward SDE
@@ -2270,8 +2205,8 @@ flows.
     1. Retrain with the per-level weights that correspond to $\lambda = 1$ and
        to the likelihood weighting $\lambda = \beta$, that is, with the noise
        loss at level $t$ multiplied by $\lambda(t) / (1 - \bar{\alpha}_t)$, and
-       repeat (a) and (b). Relate the results to problem
-       :exref:`ex_mdl-score-matching-diffusion-flow-weightings`.
+       repeat (a) and (b). Relate the
+       results to problem :exref:`ex_mdl-score-matching-diffusion-flow-weightings`.
 
    The deliverable is a table of the statistics of (b) for each weighting and
    sampler, together with a plot of the error of (a) against $t$.

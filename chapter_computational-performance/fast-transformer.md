@@ -1306,38 +1306,7 @@ model, one configuration at a time.
        :numref:`subsec_ft-waterfall` does one window per configuration
        resolve?
 
-:begin_tab:`pytorch`
-2. [code] **Parity tolerance.** Configuration 1 of
-    :numref:`subsec_ft-rungs` asserts that `compiled(X)` and `model(X)`
-    agree within `atol=1e-2`, and attributes the residue to tf32 matrix
-    products whose summation order the fusion changes.
-    1. Measure the largest absolute difference between `compiled(X)` and
-       `model(X)` under `torch.set_float32_matmul_precision('high')` and
-       under `'highest'`, calling `torch._dynamo.reset()` before the
-       compiled model runs again. Measure also the difference between
-       `model(X)` under the two settings. State what the three numbers
-       imply for the attribution.
-    1. Measure the largest difference in the check of Configuration 4
-       between `ckpt_gpt(X)` and `model(X)`, and explain why that check can
-       use `atol=1e-6`.
-:end_tab:
-
-:begin_tab:`jax`
-2. [code] **Parity tolerance.** Configuration 1 of
-    :numref:`subsec_ft-rungs` asserts that `fwd(model, X)` and `model(X)`
-    agree within `atol=1e-2`, and attributes the residue of a few times
-    $10^{-4}$ to tf32 arithmetic whose summation order the fusion changes.
-    1. Measure the largest absolute difference between `fwd(model, X)` and
-       `model(X)` under the default precision and inside
-       `with jax.default_matmul_precision('float32'):`. Measure also the
-       difference between `model(X)` under the two settings. State what
-       the three numbers imply for the attribution.
-    1. Measure the largest difference in the check of Configuration 4
-       between `ckpt_forward(half, Xb)` and `half(Xb)`, and explain why
-       that check can use `atol=1e-6`.
-:end_tab:
-
-3. [code] **Model FLOPs utilization.** The GPT of
+1. [code] **Model FLOPs utilization.** The GPT of
    :numref:`subsec_ft-subject` has $L = 6$ blocks of width $d = 512$ and
    reads contexts of $T = 128$ tokens. Up to the rounding of the SwiGLU
    width, each block holds $12d^2$ weights in its matrix products, and
@@ -1414,31 +1383,8 @@ model, one configuration at a time.
        of :numref:`sec_muon` in the speedrun, by whether it changes
        $E(b)$, the throughput, or both.
 
-1. [code] **Fixed cost per step.** ● Model the time of one training step
-   at batch size $B$ as
-
-   $$t(B) = t_0 + c\,B,$$
-
-   where $t_0$ is a cost per step that does not depend on the batch and $c$
-   is the cost per sequence.
-    1. Measure the step time of Configuration 1 and of Configuration 2 of
-       :numref:`subsec_ft-rungs` with `throughput` for
-       $B \in \{16, 32, 64, 128, 256\}$, and fit $t_0$ and $c$ to each
-       configuration by least squares.
-    1. Compare the fitted $t_0$ and $c$ of the two configurations, and
-       explain each difference by the work that bf16 changes per step and
-       per sequence. Use the fits to predict the throughput ratio of the
-       two configurations at batch 64 and at batch 512, and compare the
-       bf16 prediction at batch 512 with `tput3`.
-    1. Find the batch at which $t_0$ is a tenth of the bf16 step time.
-       Configuration 4 costs about a tenth of the throughput of
-       Configuration 3. From the memory that Configurations 3 and 4 report,
-       estimate the largest bf16 batch that fits on the card with and
-       without checkpointing. Use the bf16 fit to decide whether the larger
-       batch that checkpointing admits repays that cost.
-
 :begin_tab:`pytorch`
-8. [code] **bf16 at width 256.** ● At `num_hiddens=256`,
+6. [code] **bf16 at width 256.** ● At `num_hiddens=256`,
    :numref:`subsec_ft-subject` reports that bf16 slows the compiled step
    down.
     1. Consider the product of the $8192 \times 256$ activations of one
@@ -1455,24 +1401,7 @@ model, one configuration at a time.
        for the measured ratio of Configuration 2 to Configuration 1 kernel
        by kernel, and compare it with the prediction.
 
-9. [code] **Attention kernel.** `d2l.GPT` computes attention with
-    `F.scaled_dot_product_attention`, which selects a fused kernel when its
-    inputs allow one.
-    1. For a batch of $B$ sequences of $T$ tokens and 8 heads, compute the
-       bytes of the score matrices of one layer at $B = 64, T = 128$ and at
-       $B = 8, T = 1024$, two shapes with the same number of tokens. Count
-       4 bytes per score, because the attention that writes the scores to
-       memory forms them and their softmax in fp32 even for bf16 inputs.
-       Show that at a fixed number of tokens per step these bytes grow in
-       proportion to $T$.
-    1. Write a bf16 step that calls the uncompiled `model` under autocast.
-       Measure tokens/s and `torch.cuda.max_memory_allocated` at both
-       shapes, once with the default backend and once inside
-       `sdpa_kernel(SDPBackend.MATH)` from `torch.nn.attention`, which
-       writes the scores to memory. Relate the four results to the first
-       sub-problem.
-
-10. [code] **Data-parallel overlap.** ● Let $\phi$ be the
+7. [code] **Data-parallel overlap.** ● Let $\phi$ be the
     fraction of $t_{\text{comm}}$ that DDP hides under the backward pass,
     so that a step on $k$ GPUs takes
 
@@ -1484,16 +1413,16 @@ model, one configuration at a time.
        of $\phi$ indicate?
     1. Modify `GPT_DDP` so that every rank runs the compiled bf16 step at
        batch 512 on batches of constant shape. Before launching it, predict
-       the no-overlap floor at $k = 2$ and $k = 4$ from `tput3` and
-       :eqref:`eq_dp_cost`.
+       the no-overlap floor at $k = 2$ and $k = 4$ from `tput3`
+       and :eqref:`eq_dp_cost`.
     1. Measure tokens/s at $k = 2$ and $k = 4$ with `ddp_gpt_tokens`.
        Compute the weak-scaling efficiency against `tput3` and the value of
-       $\phi$, and explain the change from Configuration 5 by the terms of
-       :eqref:`eq_dp_cost`.
+       $\phi$, and explain the change from Configuration 5 by the terms
+       of :eqref:`eq_dp_cost`.
 :end_tab:
 
 :begin_tab:`jax`
-8. [code] **Precision audit.** The receipts of Configuration 2 in
+6. [code] **Precision audit.** The receipts of Configuration 2 in
    :numref:`subsec_ft-rungs` check the dtype of one layer's output. An
    audit of the lowered program checks every matrix product of the step.
     1. Write a function that lowers a jitted step with `.lower(...)`, reads
@@ -1504,27 +1433,7 @@ model, one configuration at a time.
        gradients of `step_bf16` arise, and name the forward operation whose
        transpose each of them is.
 
-9. [code] **Attention kernel.** ● `d2l.GPT` calls
-    `jax.nn.dot_product_attention` without naming an implementation, and
-    the default lowering writes the score matrices to memory. The fused
-    kernel of :numref:`sec_attention-at-scale` is selected by
-    `implementation='cudnn'` and accepts only half-precision inputs.
-    1. For a batch of $B$ sequences of $T$ tokens and 8 heads, compute the
-       bytes of the score matrices of one layer at $B = 64, T = 128$ and at
-       $B = 8, T = 1024$, two shapes with the same number of tokens. Count
-       4 bytes per score, because the attention that writes the scores to
-       memory forms them and their softmax in fp32 even for bf16 inputs.
-       Show that at a fixed number of tokens per step these bytes grow in
-       proportion to $T$.
-    1. Subclass `Bf16GPT.CausalAttention` so that it names the cuDNN
-       implementation, and verify that its logits agree with those of
-       `Bf16GPT`.
-    1. Measure tokens/s and the planned temporary bytes of
-       `memory_analysis()` for the bf16 step at both shapes and with both
-       attention implementations. Relate the four results to the first
-       sub-problem.
-
-10. [code] **Data-parallel overlap.** ● Let $\phi$ be the
+7. [code] **Data-parallel overlap.** ● Let $\phi$ be the
     fraction of $t_{\text{comm}}$ that the compiled step hides under
     computation, so that a step on $k$ GPUs takes
 
@@ -1544,9 +1453,9 @@ model, one configuration at a time.
        Explain the trend by the terms of :eqref:`eq_dp_cost`.
 :end_tab:
 
-11. [extended] **Another model.** ●● Apply the method of this section
-   to `MambaLM` of :numref:`subsec_capstone` or to `d2l.ViT` of
-   :numref:`sec_vision-transformer`.
+8. [extended] **Another model.** ●● Apply the method of this section
+    to the Mamba language model of :numref:`subsec_mamba-lm` or to `d2l.ViT`
+    of :numref:`sec_vision-transformer`.
     1. Write a benchmark contract in the form of the table in
        :numref:`subsec_ft-subject`, profile the baseline, and classify its
        limiting regime in the terms of :numref:`subsec_perf-regimes` before
@@ -1557,29 +1466,6 @@ model, one configuration at a time.
     1. Identify every configuration whose effect changes sign relative to
        the GPT, and explain each change by the mechanism that the
        configuration targets.
-
-:begin_tab:`jax`
-12. [code] **Sharded parameters.** ● Configuration 5 of
-    :numref:`subsec_ft-rungs` replicates the model and the optimizer state
-    on every device and shards only the batch.
-    1. Change `dp_setup` so that every array of the model and optimizer
-       state is sharded over the `'data'` mesh axis along its first axis
-       whose length is divisible by $k$, and stays replicated when no axis
-       is. Leave `train_step` unchanged. Check the layout of one weight
-       matrix with `jax.debug.visualize_array_sharding`.
-    1. Compile `step_jit` on the sharded state and list the collective
-       operations in `.as_text()` of the compiled step with their sizes.
-       Decide whether the step gathers each weight once or twice, and
-       compare its bytes per device with the allreduce of
-       :eqref:`eq_ring_traffic`.
-    1. Measure tokens/s at $k = 2$ and $k = 4$, and compare them with
-       Configuration 5. Compute from :numref:`subsec_mp-anatomy` the memory
-       per device that sharding saves for this GPT at $k = 4$. Find the
-       parameter count at which this saving equals `plan16_gib`, the
-       planned temporary memory of `step_bf16` at batch 512, and explain
-       what this count implies about the model sizes for which sharding the
-       state pays on 24-GB cards.
-:end_tab:
 
 <!-- slides -->
 

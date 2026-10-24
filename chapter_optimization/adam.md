@@ -898,8 +898,8 @@ and Yogi are the standard responses.
    $$f(\mathbf{x}) = 0.05 (x_1 + x_2)^2 + (x_1 - x_2)^2,$$
    whose Hessian has the same eigenvalues as that of `f_2d`, $0.2$ and $4$.
     1. Adapt the gradients in `adagrad_2d` and `rmsprop_2d` to the rotated
-       valley, and write its gradient function for the `gd_2d` of
-       :numref:`sec_momentum`. On both valleys, run AdaGrad at
+       valley, and write its gradient function for the `gd_2d`
+       of :numref:`sec_momentum`. On both valleys, run AdaGrad at
        $\eta = 0.4$ and $\eta = 2$, RMSProp at $\eta = 0.4$, and gradient
        descent at $\eta = 0.4$ with `d2l.train_2d` and `steps=2000`. For
        each run, record the first step at which

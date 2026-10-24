@@ -660,27 +660,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        $T$?
    :exlabel:`ex_ppo-exploding-product`
 
-1. **The first epoch of a batch.** `ppo_epochs` evaluates the clipped
-   objective :eqref:`eq_ppo_clip` with log-probabilities `logp_old` that
-   `train_ppo` freezes before the first pass.
-    1. Show that at $\theta = \theta_{\textrm{old}}$ the gradient of
-       $L^{\textrm{CLIP}}$ equals the gradient of the unclipped surrogate
-       :eqref:`eq_surrogate`, and hence the policy-gradient estimate of
-       :numref:`sec_baselines` with weights $\hat{A}_t^i$. Which property of
-       $\textrm{clip}(\rho, 1-\epsilon, 1+\epsilon)$ near $\rho = 1$ does the
-       argument use?
-    1. Predict how a clipped and an unclipped run of `train_ppo` with
-       `num_epochs = 1` and the same seed differ, and what the first column of
-       the diagnostics of `ppo_epochs` reads in both.
-    1. Suppose `logp_old` were recomputed from the current policy before
-       every pass, without gradient. What would twenty passes then optimize,
-       and why would the clip never act? REINFORCE stores no log-probabilities
-       of the collecting policy; why does PPO have to?
-
-   *Adapted from Emma Brunskill,
-   [CS234: Reinforcement Learning, Assignment 2](https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf),
-   Section 2.7(c).*
-
 1. **Asymmetric bands.** An action has probability $0.01$ under the
    collecting policy. Suppose that every batch raises its probability by
    exactly the factor $1 + \epsilon_{\textrm{high}}$ at which the clip stops
@@ -778,8 +757,8 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
 
 1. **Length-normalized ratio.** ● GSPO :cite:`Zheng.Liu.Li.ea.2025`
    replaces the per-step ratios, both as weights and inside the clip, by the
-   geometric mean $s = W_T^{1/T}$ of the trajectory ratio
-   :eqref:`eq_traj_ratio`. Model the per-step log-ratios $\log \rho_t$ under
+   geometric mean $s = W_T^{1/T}$ of the trajectory
+   ratio :eqref:`eq_traj_ratio`. Model the per-step log-ratios $\log \rho_t$ under
    the old policy as independent and identically distributed, with mean
    $-\kappa$ and variance $v$, where $\kappa$ is the per-step divergence
    $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$.
@@ -794,39 +773,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        whereas their GRPO baseline clips per-token ratios to
        $[1 - 0.2, 1 + 0.27]$. Use (a) to explain why a sequence-level band
        must be much narrower than a per-token band to bind at all.
-
-1. [code] **Entropy bonus and saturation.** ● `train_ppo` reads
-   `entropy_coef` as a global. Count a seed as dead by the criterion of
-   :numref:`subsec_ppo_ablation`.
-    1. Rerun the unclipped variant on the eight seeds with `entropy_coef` in
-       $\{0, 0.05, 0.2\}$ and count the dead seeds. The number and identities
-       of the dead seeds already change with numerical details alone
-       (:numref:`subsec_ppo_ablation`), so a change by one seed is no
-       evidence. Which coefficient lowers the count by more than that? Does
-       the entropy of its dead and surviving seeds, plotted as in problem
-       :exref:`ex_ppo-dead-seed-entropy`, explain why?
-    1. Run the clipped variant at that coefficient, or at $0.2$ if none
-       qualifies. What does it cost in final return and final entropy?
-
-1. [code] **Minibatch epochs.** ● :numref:`subsec_ppo_vectorized` spends one
-   batch as four epochs of minibatches of 32 by slicing it into `d2l.Batch`
-   objects.
-    1. Extend `train_ppo` to spend every batch this way, reshuffling the
-       minibatches in each epoch. Compare it with twenty full-batch passes on
-       three seeds: learning curves, the approximate KL of each batch's final
-       policy from the collecting policy, and the fraction of ratio checks
-       outside the band.
-    1. The full-batch run checks each ratio twenty times per batch and the
-       minibatch run four times. Why is the outside-the-band fraction not a
-       fair comparison of the two procedures? Which of the measurements of
-       (a) is?
-    1. Typical implementations compute the advantages once with the critic
-       from before the update. Move the GAE computation in `train_ppo` above
-       the critic passes and rerun the full-batch variant of (a) on the same
-       seeds. For one batch, compare the advantages before normalization
-       under the two orders. How does a critic that
-       was just fitted to the batch's own $\lambda$-returns change the
-       advantages it produces?
 
 1. [code] **KL early stopping.** ● :numref:`subsec_ppo_omitted` lists
    KL-based early stopping. Spinning Up's PPO computes the approximate KL

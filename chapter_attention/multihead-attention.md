@@ -660,8 +660,8 @@ from another, with output length equal to the query length.
        $$\mathbb{E}\,\|\mathbf{W}_o \mathbf{m} - \mathbf{t}\|^2 \geq \tfrac{1}{2}\, \mathbb{E}\,\|\mathbf{t}\|^2.$$
     1. The two-head construction of :numref:`fig_one-head-averages`
        concatenates two mixtures, so its readout receives $2d$ numbers. A
-       multi-head layer instead returns a vector of width $d$, by
-       :eqref:`eq_multihead-output`. Show that no number of heads lets such
+       multi-head layer instead returns a vector of width $d$,
+       by :eqref:`eq_multihead-output`. Show that no number of heads lets such
        a layer, followed by a linear readout, solve the copy-both task with
        values in $\mathbb{R}^d$.
     1. Now let $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^c$ with $c < d$,

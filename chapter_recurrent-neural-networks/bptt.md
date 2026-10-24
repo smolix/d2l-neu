@@ -302,8 +302,8 @@ activation checkpointing at scale.
 
 ## Exercises
 
-1. **Backward pass by hand.** One step of `RNNScratch`
-   (:numref:`sec_rnn-scratch`) computes
+1. **Backward pass by hand.** One step of
+   `RNNScratch` (:numref:`sec_rnn-scratch`) computes
    $$\mathbf{H}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}).$$
    Let $\mathbf{G}_t = \partial L / \partial \mathbf{H}_t$ be the gradient
    arriving from later steps and from the output at step $t$.
@@ -343,8 +343,8 @@ activation checkpointing at scale.
 
 1. **Beyond clipping.** Propose two methods for coping with exploding
    gradients in a vanilla RNN other than clipping, truncation, and the
-   two architectural remedies of
-   :numref:`subsec_bptt-gradient-pathologies`. One method should act on
+   two architectural remedies
+   of :numref:`subsec_bptt-gradient-pathologies`. One method should act on
    the parameters and the other on the optimizer step. For each, state
    whether it changes the Jacobian product in
    :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient
@@ -357,8 +357,8 @@ activation checkpointing at scale.
    single-step gradients and the recursion of problem :exref:`ex_bptt-backward-pass-hand`,
    implement the backward pass of its `RNNScratch` cell over a full
    window with tensor operations only, starting from the gradient of the
-   loss with respect to the logits
-   (:numref:`subsec_softmax_and_derivatives`). Run it on one training
+   loss with respect to the
+   logits (:numref:`subsec_softmax_and_derivatives`). Run it on one training
    minibatch, and compare your gradients of `W_xh`, `W_hh`, and `b_h`
    with those computed by automatic differentiation.
 

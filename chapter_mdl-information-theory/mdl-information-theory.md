@@ -387,8 +387,8 @@ These logs are natural logs, so the result is in nats. Read two things off
 and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$),
 as Gibbs' inequality demands. Second, it is *not symmetric*: swapping the
 roles of $P$ and $Q$ changes the value, because the variance ratio and the
-mean gap enter asymmetrically. (Exercise
-:exref:`ex_mdl-information-theory-gaussian-kl` derives
+mean gap enter asymmetrically.
+(Exercise :exref:`ex_mdl-information-theory-gaussian-kl` derives
 :eqref:`eq_mdl-gaussian_kl`.)
 
 The following calculation compares the formula with a direct Monte Carlo estimate of
@@ -594,8 +594,8 @@ penalty is exactly
 $\textrm{CE}(\mathbf{p}, \mathbf{q}) = H(\mathbf{p}) +
 D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q})$, which Gibbs' inequality minimizes
 uniquely at $\mathbf{q} = \mathbf{p}$. Strict propriety of the log score *is*
-Gibbs' inequality restated; Exercise
-:exref:`ex_mdl-information-theory-scoring-rule-is-strictly` applies the same
+Gibbs' inequality restated;
+Exercise :exref:`ex_mdl-information-theory-scoring-rule-is-strictly` applies the same
 test to the Brier score and to an improper rule.
 
 Why insist on *strict* propriety? At population risk, over a model class that
@@ -1347,50 +1347,6 @@ information (:numref:`sec_mdl-mutual-information`).
 
 ## Exercises
 
-1. **Storing a shuffled deck.** The order of a shuffled deck carries
-   $\ln 52! \approx 156.4$ nats, or $\log_2 52! \approx 225.6$ bits.
-    1. Estimate $\ln 52!$ with Stirling's approximation
-       $\ln n! \approx n \ln n - n + \tfrac{1}{2}\ln(2\pi n)$ and compute its
-       relative error. How large is the relative error when the term
-       $\tfrac{1}{2}\ln(2\pi n)$ is dropped?
-    1. Three programs store the order of the deck. The first writes each
-       card as a $6$-bit index into the $52$ cards. The second writes the
-       $i$-th card as an index into the $53 - i$ cards that remain, using
-       $\lceil \log_2(53 - i) \rceil$ bits. The third writes the position of
-       the whole order in a fixed enumeration of all $52!$ orders, using
-       $\lceil \log_2 52! \rceil$ bits. Compute the three lengths. Where
-       does the second program lose bits relative to the third?
-   :exlabel:`ex_mdl-information-theory-shuffled-deck`
-
-1. **Entropy of text sources.** Each source below emits text one character
-   at a time, and the space between two words counts as a character.
-    1. A monkey hits each of the $44$ keys of a typewriter uniformly at
-       random. How many nats and how many bits of entropy per character does
-       its output have?
-    1. A program draws each word uniformly at random from a vocabulary of
-       $2{,}000$ words whose average length is $4.5$ letters. How many bits
-       of entropy per character does its output have?
-    1. The program instead draws the word of frequency rank $r$ with
-       probability proportional to $1/r$ (Zipf's law). Assume that the
-       average stays at $5.5$ characters per word, including the space.
-       Evaluate the entropy per word numerically and convert it to bits per
-       character.
-
-   :citet:`Shannon.1951` estimated the entropy rate of printed English at
-   roughly one bit per character. Which statistical structure of English
-   does each of the three sources leave out?
-   :exlabel:`ex_mdl-information-theory-text-sources`
-
-1. **Differential entropy and units.** The differential entropy
-   :eqref:`eq_mdl-diff-ent-def` depends on the units in which $x$ is
-   measured.
-    1. Let $X$ have a continuous density $p$, and let $X_\Delta$ be the
-       index of the bin of width $\Delta$ that contains $X$. Show that
-       $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$, so that the
-       discrete entropy grows without bound. Check the limit numerically for
-       $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.1$ and $\Delta = 0.01$.
-   :exlabel:`ex_mdl-information-theory-quantization`
-
 1. **Gaussian KL divergence.** Let $P = \mathcal{N}(\mu_1, \sigma_1^2)$.
     1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` by writing out
        $E_{x\sim P}[\log p(x) - \log q(x)]$ and using
@@ -1420,33 +1376,6 @@ information (:numref:`sec_mdl-mutual-information`).
        $0.6$ and class $2$ with probability $0.4$?
    :exlabel:`ex_mdl-information-theory-scoring-rule-is-strictly`
 
-1. [code] **Kraft slack.** Let $P = (0.4, 0.3, 0.2, 0.1)$, whose
-   probabilities are not powers of two.
-    1. Compute the Shannon code lengths, their Kraft sum $Z$, the expected
-       length $E[l]$, and $H_2(P)$. Split the excess $E[l] - H_2(P)$ into
-       the two terms of :eqref:`eq_mdl-code-length-decomp`. Which term
-       dominates?
-    1. Among all integer lengths of at most $4$ bits that satisfy the Kraft
-       inequality, find by exhaustive search those with the smallest
-       expected length. What is their Kraft sum, and how close does their
-       expected length come to $H_2(P)$?
-   :exlabel:`ex_mdl-information-theory-kraft-slack`
-
-1. **Entropy rate of a Markov source.** A binary source emits a fair coin
-   flip as its first symbol. Each later symbol repeats the previous one with
-   probability $0.9$ and differs from it with probability $0.1$.
-    1. Show that every symbol is marginally a fair coin flip, so that a code
-       that treats the symbols as i.i.d. needs about $1$ bit per symbol.
-    1. The second limit in :eqref:`eq_mdl-entropy_rate` is the expected
-       surprisal $E[-\log_2 p(X_n \mid X_{n-1}, \ldots, X_1)]$ of the next
-       symbol given its past. Use the Markov property to evaluate it and
-       obtain the entropy rate in bits per symbol.
-    1. An arithmetic coder driven by the true conditional probabilities
-       $q(x_i \mid x_{i-1})$ encodes $N = 10^4$ symbols. What is its expected
-       code length? How many bits per symbol does a coder that ignores the
-       previous symbol waste?
-   :exlabel:`ex_mdl-information-theory-markov-entropy-rate`
-
 1. **Perplexity across tokenizers.** Perplexity is computed per token, so
    it depends on how a text is split into tokens.
     1. Show that perplexity does not depend on the log base: if
@@ -1464,8 +1393,7 @@ information (:numref:`sec_mdl-mutual-information`).
        below by $e^{H}$, where $H$ is the entropy rate per token in nats.
        What is the lowest per-token perplexity that any model can reach
        with the tokenizer of A, and with that of B? How far is each model
-       from its floor, and how do both compare with the sources of exercise
-       :exref:`ex_mdl-information-theory-text-sources`?
+       from its floor?
    :exlabel:`ex_mdl-information-theory-show-that-perplexity-does`
 
 1. **Uniqueness of self-information.** ● Show that self-information is
@@ -1521,28 +1449,32 @@ information (:numref:`sec_mdl-mutual-information`).
    Problem 6.*
    :exlabel:`ex_mdl-information-theory-typical-sets`
 
-1. [code] **Scalar quantization and rate--distortion.** ● Let
-   $X \sim \mathcal{N}(0, \sigma^2)$. A uniform scalar quantizer with step
-   $\Delta$ replaces $X$ by the nearest multiple of $\Delta$, the center of
-   its bin, and an entropy coder then spends about $H(X_\Delta)$ nats per
-   sample on the index of the bin.
-    1. For small $\Delta$ the mean squared error is approximately
-       $\Delta^2/12$. Combine this approximation with problem
-       :exref:`ex_mdl-information-theory-quantization`a to show that the
-       rate exceeds the Gaussian rate--distortion function
-       :eqref:`eq_mdl-gaussian-rd` at the same distortion by
-       $\tfrac{1}{2}\log(2\pi e/12)$ nats ($\approx 0.255$ bits) per sample,
-       independently of $\sigma$ and $\Delta$.
+1. [code] **Scalar quantization and rate--distortion.** ● A uniform scalar
+   quantizer with step $\Delta$ replaces $X$ by the nearest multiple of
+   $\Delta$, the center of its bin, and an entropy coder then spends about
+   $H(X_\Delta)$ nats per sample on the index $X_\Delta$ of the bin. The
+   differential entropy :eqref:`eq_mdl-diff-ent-def` depends on the units in
+   which $x$ is measured, and the quantizer shows how.
+    1. Let $X$ have a continuous density $p$. Show that
+       $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$, so that the
+       discrete entropy grows without bound. Check the limit numerically for
+       $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.1$ and $\Delta = 0.01$.
+    1. Let $X \sim \mathcal{N}(0, \sigma^2)$. For small $\Delta$ the mean
+       squared error is approximately $\Delta^2/12$. Combine this
+       approximation with (a) to show that the rate exceeds the Gaussian
+       rate--distortion function :eqref:`eq_mdl-gaussian-rd` at the same
+       distortion by $\tfrac{1}{2}\log(2\pi e/12)$ nats ($\approx 0.255$
+       bits) per sample, independently of $\sigma$ and $\Delta$.
     1. Check the gap numerically for $\sigma = 1$ and
        $\Delta = 2, 1, 0.5, 0.25, 0.1$, computing the bin probabilities and
-       the distortion by numerical integration. Part (a) uses two
+       the distortion by numerical integration. Part (b) uses two
        approximations, $D \approx \Delta^2/12$ and
        $H(X_\Delta) \approx h(X) - \log \Delta$. Which of them accounts for
        the deviation of the gap from its limit at $\Delta = 1$ and
        $\Delta = 0.5$?
     1. A learned codec rounds each coordinate of its latent vector to the
        nearest integer and entropy-codes the result. What does the gap of
-       (a) imply for such a codec at high rate? Which kind of quantizer can
+       (b) imply for such a codec at high rate? Which kind of quantizer can
        close the gap?
    :exlabel:`ex_mdl-information-theory-scalar-quantization`
 

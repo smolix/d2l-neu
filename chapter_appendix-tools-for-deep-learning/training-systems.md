@@ -281,44 +281,6 @@ recovery must be designed and tested.
        per-rank accuracies not exact for these shards?
    :exlabel:`ex_training-systems-padded-evaluation`
 
-1. [code] **Memory floor of sharding.** Under `shard_state=True`,
-   `per_device_gib` divides the parameters, gradients, and optimizer state
-   by the world size and leaves the activations and temporaries unchanged.
-    1. Tabulate `per_device_gib(n, shard_state=True, ckpt_activations=True)`
-       for $n = 1, 2, 4, \ldots, 64$. Which per-device memory does FSDP
-       approach as $n$ grows?
-    1. FSDP gathers the full parameters of a layer before using them and
-       prefetches those of the next layer. Add a buffer term for two layers
-       of unsharded BF16 parameters, for a model of 32 identical layers that
-       together hold the 14 GiB of `terms_gib["parameters"]`. Find the
-       smallest world size that fits a 24 GiB, a 40 GiB, and an 80 GiB
-       card. Beyond which world size does doubling it reduce the
-       per-device memory by less than 10%?
-    1. Activation memory grows linearly with the microbatch size, and
-       gradient accumulation preserves the global batch when the microbatch
-       shrinks. Add an argument that scales the activation term, and keep
-       the temporary term fixed. What is the smallest world size that fits
-       a 16 GiB card at the full microbatch, and at half of it? What does
-       halving the microbatch cost in time per optimizer step?
-   :exlabel:`ex_training-systems-memory-floor`
-
-1. **70B fine-tune on one node.** The second row of
-   :numref:`tab_training_tools` assigns full fine-tunes of models with up
-   to 70B parameters to one node of 2 to 8 GPUs with DDP or FSDP2. Count
-   the model state with the 16 bytes per parameter of mixed-precision Adam
-   from exercise :exref:`ex_hardware-training-memory` of
-   :numref:`sec_hardware_buyers`: 2 bytes each for the BF16 parameters and
-   gradients, 4 for the FP32 master parameters, and 8 for Adam's two
-   moments.
-    1. Compute the per-device model state of a 70B full fine-tune under DDP
-       and under FSDP on 8 GPUs, and add 20 GB per device for activations
-       and temporaries. Does either configuration fit on cards with 80 GB?
-    1. Which technique of :numref:`fig_tools_training_memory` makes the row
-       hold on eight 80 GB cards without changing which parameters are
-       trained? How much host memory and how much memory per GPU does it
-       require? Rewrite the row so that it is correct.
-   :exlabel:`ex_training-systems-one-node-70b`
-
 1. [code] **Resume parity.** A resumed run is correct when it computes the
    same parameters as an uninterrupted one. Build a small experiment on the
    CPU: a two-layer MLP with dropout, trained on 1,024 random examples with
@@ -362,31 +324,6 @@ recovery must be designed and tested.
        of the input pipeline must still run in every epoch?
    :exlabel:`ex_training-systems-data-bound`
 
-1. [extended] **DataParallel versus DDP.** ● `train_bert` in
-   :numref:`sec_bert-pretraining` wraps the model in `nn.DataParallel`,
-   which drives all GPUs from one process. On one GPU, the output of
-   `train_bert` in that section reports about 16,700 sentence pairs per
-   second. This problem needs two GPUs, such as the 2×T4 machine on Kaggle
-   (:numref:`sec_hosted_notebooks`).
-    1. Run `train_bert` for 500 steps with the batch size of 512, once on
-       one GPU and once on both, and record the throughput and the MLM loss
-       that it prints, which is the mean over all 500 steps.
-    1. Convert the training into a script launched with
-       `torchrun --nproc-per-node=2` that wraps the model in
-       `DistributedDataParallel` and feeds each rank 256 sentence pairs per
-       step through a `DistributedSampler` over `train_iter.dataset`, so
-       that the global batch stays at 512. Each rank constructs its own
-       `_WikiTextDataset`, which draws sentence pairs and masks at random.
-       What must hold across the ranks for the sampler's shards to
-       partition one dataset? What goes wrong when it does not hold?
-    1. Compare the throughput and the MLM loss of the three runs. Explain
-       why neither two-GPU run reaches twice the single-GPU throughput.
-       Which work does `nn.DataParallel` perform on the first GPU or in its
-       single Python process that DDP distributes over the ranks?
-
-   *Adapted from Nicki Skafte Detlefsen, [Machine Learning Operations](https://skaftenicki.github.io/dtu_mlops/s9_scalable_applications/distributed_training/), module M30 "Distributed Training".*
-   :exlabel:`ex_training-systems-dataparallel-ddp`
-
 1. **Optimizer offload.** ● ZeRO-Offload
    :cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps 16-bit parameters on
    the GPU for the forward and backward passes, and keeps FP32 master
@@ -411,37 +348,6 @@ recovery must be designed and tested.
        does the update then cost no time? What does the delay change about
        the optimization?
    :exlabel:`ex_training-systems-optimizer-offload`
-
-1. **Parallel axis placement.** ● Tensor parallelism of degree $t$
-   splits every transformer layer across $t$ GPUs, and pipeline parallelism
-   of degree $p$ assigns consecutive groups of layers to $p$ stages.
-   :citet:`Narayanan.Shoeybi.Casper.ea.2021` count, for a microbatch of $b$
-   sequences of length $s$ and hidden size $h$, a tensor-parallel traffic of
-
-   $$8bsh\,\frac{t-1}{t}$$
-
-   values per layer and device, and $bsh$ values between consecutive
-   pipeline stages in each of the forward and the backward pass.
-    1. Derive the tensor-parallel count from the two all-reduces of $bsh$
-       values in the forward pass of every layer and the two in its
-       backward pass :cite:`shoeybi2019megatron`, using the ring traffic
-       :eqref:`eq_ring_traffic`.
-    1. A model with 80 layers and $h = 8192$ is trained with $s = 4096$,
-       $b = 1$, and BF16 activations on 32 GPUs in 4 nodes of 8. NVLink
-       carries 450 GB/s per GPU in each direction inside a node, and the
-       network carries 50 GB/s per GPU between nodes. Assume that each
-       collective and each transfer between stages runs at the bandwidth
-       of the slowest link that it crosses. Compute the bytes and the time
-       per microbatch and device of the tensor-parallel and of the pipeline
-       traffic for $t = 8, p = 4$ and for $t = 16, p = 2$.
-    1. Let the forward and backward pass of one layer cost
-       $3(24bsh^2 + 4bs^2h)$ FLOPs, split evenly over the $t$ GPUs, and let
-       every GPU sustain 400 TFLOP/s. The tensor-parallel all-reduces sit
-       between dependent matrix multiplications and are not hidden behind
-       computation. Compare the communication time of each configuration
-       with its compute time per microbatch. By what factor does the time
-       per microbatch of $t = 16, p = 2$ exceed that of $t = 8, p = 4$?
-   :exlabel:`ex_training-systems-axis-placement`
 
 1. **Failures at scale.** ● In a synchronous job, one failed GPU stops all
    ranks, and the job restarts from its newest checkpoint. Let failures

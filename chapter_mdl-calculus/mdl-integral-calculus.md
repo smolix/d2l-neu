@@ -1039,8 +1039,8 @@ for a gradient.
    unbounded at $u=0$, and the integral near $0$ is defined as in
    :eqref:`eq_mdl-improper`, by a limit: $\int_0^1=\lim_{a\to 0^+}\int_a^1$.
     1. For which $t$ does the integral converge at $u=0$? Compare the
-       condition with the power-law test at infinity in
-       :numref:`subsec_mdl-improper-integrals`.
+       condition with the power-law test at infinity
+       in :numref:`subsec_mdl-improper-integrals`.
     1. Integrate by parts :eqref:`eq_mdl-parts` at a general $t>0$ to show
        that $\Gamma(t+1)=t\,\Gamma(t)$, and conclude that $\Gamma(n+1)=n!$
        for every integer $n\ge 0$. Where does the argument use $t>0$? Use
@@ -1115,8 +1115,8 @@ for a gradient.
        miss?
     1. On the support, $\log p_\theta(x)=-\log\theta$. Compute the
        expectation of the score-function estimator
-       $X^2\,\partial_\theta\log p_\theta(X)$ of
-       :eqref:`eq_mdl-score-function-gradient`. Then let $g$ be continuous
+       $X^2\,\partial_\theta\log p_\theta(X)$
+       of :eqref:`eq_mdl-score-function-gradient`. Then let $g$ be continuous
        on $[0,\infty)$. Show that the mean of
        $g(X)\,\partial_\theta\log p_\theta(X)$ equals the plain swap
        :eqref:`eq_mdl-diff-under-integral` applied to
@@ -1124,8 +1124,8 @@ for a gradient.
        bias as an estimate of $\frac{d}{d\theta}\mathbb E[g(X)]$, in terms
        of $g(\theta)$ and $\theta$?
     1. Write $X=\theta U$ with $U$ uniform on $[0,1]$ and compute the
-       expectation of the pathwise estimator of
-       :eqref:`eq_mdl-pathwise-gradient`. Why does it need no boundary term,
+       expectation of the pathwise estimator
+       of :eqref:`eq_mdl-pathwise-gradient`. Why does it need no boundary term,
        although the support of $X$ moves with $\theta$?
    :exlabel:`ex_mdl-integral-calculus-moving-support`
 1. [code] **Grids against Monte Carlo.** ●
@@ -1184,8 +1184,8 @@ for a gradient.
    $\frac{d}{d\theta}\mathbb E[X^4]=4\theta^3+12\theta$.
     1. Derive the single-sample pathwise estimator from
        :eqref:`eq_mdl-pathwise-gradient` and the single-sample
-       score-function estimator from
-       :eqref:`eq_mdl-score-function-gradient`. Use the identity of problem
+       score-function estimator
+       from :eqref:`eq_mdl-score-function-gradient`. Use the identity of problem
        :exref:`ex_mdl-integral-calculus-gaussian-normalizers`b to show that
        both have mean $4\theta^3+12\theta$.
     1. For a scalar parameter $\theta$, a constant baseline $b$ leaves the

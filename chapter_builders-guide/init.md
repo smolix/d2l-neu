@@ -1138,8 +1138,8 @@ subclass with a few lines of array code in its `_init_weight`.
    $1/\sqrt{n_\textrm{in}}$, and starts the bias at zero.
     1. Compute the factor by which one such layer followed by a ReLU
        multiplies the second moment of its input, and compare it with the
-       factor of one that He initialization achieves
-       (:numref:`subsec_he_init`).
+       factor of one that He initialization
+       achieves (:numref:`subsec_he_init`).
     1. Stack ten `nnx.Linear(512, 512)` layers, each followed by a ReLU,
        with their default initialization, and push unit-variance inputs
        through. Compare the second moment of the output, the mean of its

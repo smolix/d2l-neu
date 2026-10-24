@@ -1,1633 +1,940 @@
 # Selective State Space Models
 :label:`sec_mamba`
 
-Linear state space models permit parallel training by scan, but an LTI S4D
-layer applies the same dynamics at every step. Its convolution kernel weights
-the past by position rather than content. The gated cells of
-:numref:`sec_lstm` instead use the input to control the state, but their
-nonlinear recurrence is evaluated sequentially.
+The S4D layer of :numref:`sec_ssm` weights its inputs by their distance
+alone: an input from $k$ steps ago contributes to the output through the
+fixed number $K_k$ of the convolution kernel. Whether the token ten steps
+ago was the key fact of a paragraph or a comma, its influence on the present
+is the same. Language is not like this. Most tokens can be forgotten
+quickly, and a few, such as a name, a number, or the subject of a sentence,
+must be kept for a long time, at positions that differ from one sentence to
+the next. A memory that keeps everything for the same time fills up with
+commas; a memory that forgets quickly loses the name.
 
-To combine input-dependent updates with a parallel scan, we make the step
-size, and hence the dynamics, a function of the input
-:cite:`Gu.Dao.2023`. The resulting selective recurrence remains linear in
-the state. Packaged into the residual *Mamba* block, it supports
-content-dependent updates and constant-size recurrent inference. The next
-section relates this selective recurrence to attention.
+Two models of the previous section each have half of a solution. The minGRU
+chooses its decay from the current input, so it can keep one token and
+overwrite the next, but its gates start with a memory of about one step,
+and its state holds one number per channel. S4D starts with memories of a
+step to a thousand steps and holds $N$ numbers per channel, but its dynamics
+are the same for every input. *Selective* state space models, introduced
+with the Mamba architecture by :citet:`Gu.Dao.2023`, combine the two: the
+step size $\Delta$ of the discretized SSM, and the vectors that write to and
+read from the state, become functions of the current input. A small step
+size keeps the state and ignores the token; a large one overwrites the state
+with it. The convolution of S4D no longer applies, because the dynamics
+change from step to step, but the scan of :numref:`sec_ssm` does. We test
+these models on a task that requires choosing what to keep, build the Mamba
+layer, measure where its state comes from, and train it as a language model.
+The state of a selective SSM turns out to be a matrix written one outer
+product at a time, which the next section studies in its own right.
 
-*Prerequisites: the associative scan and the S4D layer of
-:numref:`sec_ssm` (:numref:`subsec_parallel-scans`,
-:numref:`subsec_s4d`); the LSTM of :numref:`sec_lstm`; the
-language-model harness and decoding utilities of
-:numref:`sec_rnn-scratch` and :numref:`sec_decoding`.*
-
-```{.python .input #mamba-selective-state-space-models-1}
+```{.python .input #mamba-selective-state-space-models}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-import math
-import numpy as np
-import time
 import torch
 from torch import nn
 from torch.nn import functional as F
 ```
 
-```{.python .input #mamba-selective-state-space-models-1}
+```{.python .input #mamba-selective-state-space-models}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
 from flax import nnx
 import jax
 from jax import numpy as jnp
-import math
-import numpy as np
 import optax
-import time
-```
-
-This section uses the associative scan of
-:numref:`subsec_parallel-scans`, which evaluates the affine recurrence
-$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ in
-logarithmic depth.
-
-That section saved the scan in the `d2l` library, which we reuse here.
-
-```{.python .input #mamba-selective-state-space-models-2}
-%%tab pytorch, jax
-associative_scan = d2l.associative_scan  # Saved in the previous section
 ```
 
 ## The Selectivity Problem
-:label:`subsec_selectivity`
 
-What does it mean, concretely, for a model to be content-blind? The LTI
-convolution view :eqref:`eq_ssm_kernel` makes it precise: an S4D's output
-is $y_t = \sum_k \bar{K}_k u_{t-k}$, and the kernel $\bar{\mathbf{K}}$ is
-computed from the model's parameters alone. Whether the token ten steps
-ago was the key fact of the paragraph or a comma, its influence on the
-present is the same fixed number $\bar{K}_{10}$. A gated RNN would consult
-its input before deciding; the LTI system cannot, because *deciding based
-on the input* is exactly the time-variance it gave up.
+### Selective Copying
 
-### A Task That Defeats Time Invariance
+The *selective copying* task of :citet:`Gu.Dao.2023` isolates the decision
+of what to keep (:numref:`fig_selective_copy`). A sequence consists of
+1,024 filler tokens among which four symbols, drawn from eight, sit at
+random positions. Four query tokens follow, and at each of them the model
+must output the next symbol, in order. Chance accuracy is 1/8. A solution
+must store a token because it is a symbol rather than filler, at whatever
+position it occurs, and keep it for up to a thousand steps; weights that
+depend only on position cannot do this, since the same position holds
+filler in one sequence and a symbol in the next.
 
-To turn this from an observation into a measurement we borrow the
-*selective copying* task that :citet:`Gu.Dao.2023` used to motivate
-selectivity (:numref:`fig_selective_copy`). Each input is a long stretch
-of filler tokens in which a few *marked* symbols are scattered at random
-positions; after the sequence, the model is prompted with query slots and
-must reproduce the marked symbols, in order, ignoring everything else. A
-solution has to do two content-dependent things: store a token *because
-it is a symbol rather than filler*, and keep count of how many symbols it
-has seen so far. Neither is expressible with position-based weights: the
-same positions hold noise in one example and payload in the next.
-
-![The selective copying task. A few marked symbols (color) are scattered among filler tokens (grey) at positions that change from example to example; prompted by query slots, the model must emit the symbols in order. Any fixed position-based kernel is defeated by design, since content decides what matters.](../img/mdl-modernrnn-selective-copy.svg)
+![The selective copying task. A few marked symbols (color) are scattered among filler tokens (grey) at positions that change from sequence to sequence; at the query tokens, the model must output the symbols in order.](../img/mdl-modernrnn-selective-copy.svg)
 :label:`fig_selective_copy`
 
-This toy is not idle. Its language-scale counterpart is *associative
-recall*: retrieving a value mentioned pages ago the next time its key
-appears ("Mrs. Watchett ... later: Mrs. ___"). We have met the circuit
-that does this: it is the induction head of
-:numref:`sec_what-attention-computes`, which we built and watched form
-during training, and :citet:`Arora.Eyuboglu.Timalsina.ea.2024` showed
-that a small synthetic recall benchmark of this kind predicts most of
-the language-modeling gap between attention and efficient recurrent
-models. A sequence model that cannot selectively copy has no business
-writing prose.
+Token 0 is the filler, token 1 the query, and tokens 2 to 9 the symbols. We
+draw a fresh batch of sequences for every training step, so the model
+cannot memorize the training data.
 
-We generate the task synthetically: token $0$ is filler, token $1$ marks
-the query slots, and the symbols occupy ids $2$ through $9$. The targets
-are the eight-way symbol classes at the query positions.
-
-```{.python .input #mamba-a-task-that-defeats-time-invariance}
-%%tab pytorch, jax
-def selective_copy(num_seqs, num_steps, num_marked, num_symbols, seed=42):
-    """Sequences of filler (0) with num_marked symbols at random positions,
-    followed by num_marked query slots (1); targets are the symbols."""
-    rng = np.random.default_rng(seed)
-    X = np.zeros((num_seqs, num_steps + num_marked), dtype=np.int64)
-    X[:, num_steps:] = 1                          # Query slots
-    Y = rng.integers(2, 2 + num_symbols, (num_seqs, num_marked))
-    pos = np.argsort(rng.random((num_seqs, num_steps)), axis=1)
-    pos = np.sort(pos[:, :num_marked], axis=1)    # Marked positions, in order
-    np.put_along_axis(X, pos, Y, axis=1)
-    return X, Y - 2                               # Classes 0..num_symbols-1
-
-class SelectiveCopy(d2l.DataModule):
-    def __init__(self, num_train=8192, num_val=1024, batch_size=128,
-                 num_steps=256, num_marked=4, num_symbols=8):
-        super().__init__()
-        self.save_hyperparameters()
-        X, Y = selective_copy(num_train + num_val, num_steps, num_marked,
-                              num_symbols)
-        self.X, self.Y = d2l.tensor(X), d2l.tensor(Y)
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader([self.X, self.Y], train, idx)
-
-copy_data = SelectiveCopy()
-```
-
-### An LTI Baseline and a Gated One
-
-The prosecution calls two witnesses from earlier sections. The LTI
-witness is the S4D stack exactly as we assembled it in
-:numref:`subsec_s4d`: since that section saved both the layer and its
-residual block in the `d2l` library, two aliases suffice.
-
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-1}
-%%tab pytorch, jax
-S4D, S4DBlock = d2l.S4D, d2l.S4DBlock
-```
-
-The gated witness is the LSTM of :numref:`sec_lstm`, via the concise
-`d2l.LSTM` layer. Both plug into the same harness: embed the tokens, run
-the encoder, and classify each of the final query positions. As in
-:numref:`subsec_s4d` we train with Adam, the default of the training
-recipes in :numref:`sec_training_recipes` and the right tool for
-parameters as differently scaled as log-decays and linear weights (the
-reasoning of :numref:`chap_optimization`); we clip gradients to norm 1,
-without which the LSTM destabilizes on these sequence lengths.
-
-:begin_tab:`jax`
-One implementation note: we embed tokens with a one-hot matrix product
-rather than an embedding lookup. A lookup's gradient is a scatter-add,
-and on this task every batch pushes 33,000 colliding updates into a
-ten-row table, which XLA executes so slowly that it dominates the entire
-training step; as a dense product, both passes are ordinary matrix
-multiplications. Hold this thought: this section later argues that how a
-computation maps onto hardware can matter as much as what it computes.
-:end_tab:
-
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-2}
+```{.python .input #mamba-selective-copying-1}
 %%tab pytorch
-class CopyModel(d2l.Classifier):
-    """Read a token sequence; predict the symbols at the query slots."""
-    def __init__(self, encoder, num_hiddens, vocab_size=10, num_marked=4,
-                 num_symbols=8, lr=3e-3):
-        super().__init__()
-        self.save_hyperparameters()
-        self.emb = nn.Embedding(vocab_size, num_hiddens)
-        self.head = nn.LazyLinear(num_symbols)
+def copy_batch(batch_size, num_fillers=1024, num_marked=4, num_symbols=8,
+               device=None):
+    """Symbols at random positions among fillers, then query tokens."""
+    X = torch.zeros(batch_size, num_fillers + num_marked, dtype=torch.long,
+                    device=device)
+    X[:, num_fillers:] = 1  # Query tokens
+    Y = torch.randint(2, 2 + num_symbols, (batch_size, num_marked),
+                      device=device)
+    positions = torch.rand(batch_size, num_fillers, device=device).argsort(1)
+    X.scatter_(1, positions[:, :num_marked].sort(1).values, Y)
+    return X, Y
 
-    def forward(self, X):
-        Y = self.encoder(self.emb(X.T))                 # (T, batch, hiddens)
-        Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
-        return self.head(Y[-self.num_marked:]).movedim(0, 1)
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+X, Y = copy_batch(2, num_fillers=12)
+print(X, Y, sep='\n')
 ```
 
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-2}
+```{.python .input #mamba-selective-copying-1}
 %%tab jax
-class CopyModel(d2l.Classifier):
-    """Read a token sequence; predict the symbols at the query slots."""
-    def __init__(self, encoder, num_hiddens, vocab_size=10, num_marked=4,
-                 num_symbols=8, num_features=None, lr=3e-3, rngs=None):
-        super().__init__()
-        self.save_hyperparameters(ignore=['encoder', 'rngs'])
-        rngs = nnx.Rngs(1) if rngs is None else rngs
-        num_features = num_hiddens if num_features is None else num_features
-        self.encoder = encoder
-        # Embed by one-hot matmul: on a table this tiny (ten rows), the
-        # scatter-add in an embedding lookup's gradient makes 33,000 colliding
-        # updates to ten rows and serializes the whole training step on GPU;
-        # as a dense product, forward and backward are ordinary matmuls
-        self.emb = nnx.Linear(vocab_size, num_hiddens, use_bias=False,
-                              rngs=rngs)
-        self.head = nnx.Linear(num_features, num_symbols, rngs=rngs)
+def copy_batch(key, batch_size, num_fillers=1024, num_marked=4,
+               num_symbols=8):
+    """Symbols at random positions among fillers, then query tokens."""
+    key_y, key_p = jax.random.split(key)
+    Y = jax.random.randint(key_y, (batch_size, num_marked), 2, 2 + num_symbols)
+    positions = jnp.argsort(jax.random.uniform(key_p, (batch_size, num_fillers)), 1)
+    X = jnp.zeros((batch_size, num_fillers + num_marked), dtype=jnp.int32)
+    X = X.at[:, num_fillers:].set(1)  # Query tokens
+    rows = jnp.arange(batch_size)[:, None]
+    X = X.at[rows, jnp.sort(positions[:, :num_marked], 1)].set(Y)
+    return X, Y
 
-    def forward(self, X):
-        E = self.emb(jax.nn.one_hot(X.T, self.vocab_size))
-        Y = self.encoder(E)                             # (T, batch, hiddens)
-        Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
-        return self.head(Y[-self.num_marked:]).swapaxes(0, 1)
-
-    def configure_optimizers(self):
-        return optax.adam(self.lr)
+X, Y = copy_batch(jax.random.key(0), 2, num_fillers=12)
+print(X, Y, sep='\n')
 ```
 
-We give each model the same budget and record its validation accuracy
-curve; `copy_curves` collects them, and a third contender will join in
-:numref:`subsec_mamba-block`. The two encoders are sized to roughly 30,000
-parameters each, the same pairing that :numref:`subsec_s4d` used for
-sequential image classification, where the S4D *won*.
+We train every model as `d2l.SeqLM`, the residual stack of
+:numref:`sec_lstm`, with two blocks of width 48, and read its predictions at
+the four query positions. Training uses Adam with learning rate 0.003 and
+gradient clipping for 2,500 steps of 64 sequences; accuracy is measured on
+1,024 new sequences. We start with S4D and the minGRU.
 
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-3}
+```{.python .input #mamba-selective-copying-2}
 %%tab pytorch
-copy_curves = {}
-
-def train_copy(name, model, data, epochs=32):
-    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
-    trainer.fit(model, data)
-    pts = model.board.data['val_acc']
-    copy_curves[name] = ([p.x for p in pts], [float(p.y) for p in pts])
-    print(f'{name}: final validation accuracy {copy_curves[name][1][-1]:.3f}')
-
-s4d = CopyModel(nn.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
-                num_hiddens=48)
-train_copy('S4D', s4d, copy_data)
+def train_copy(model, num_steps=2500, lr=3e-3):
+    """Train on fresh batches of selective copying; return test accuracy."""
+    device = d2l.try_gpu()
+    model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    for _ in range(num_steps):
+        X, Y = copy_batch(64, device=device)
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
+        loss = F.cross_entropy(logits.flatten(0, 1), Y.flatten())
+        optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+    X, Y = copy_batch(1024, device=device)
+    with torch.inference_mode():
+        Y_hat = torch.cat([model(X_i)[:, -Y.shape[1]:].argmax(-1)
+                           for X_i in X.split(128)])
+    return (Y_hat == Y).float().mean().item()
 ```
 
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-3}
+```{.python .input #mamba-selective-copying-2}
 %%tab jax
-copy_curves = {}
+@nnx.jit
+def copy_step(model, optimizer, X, Y):
+    def loss_fn(model):
+        logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
+        return optax.softmax_cross_entropy_with_integer_labels(logits, Y).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(model)
+    optimizer.update(model, grads)
+    return loss
 
-def train_copy(name, model, data, epochs=32):
-    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
-    trainer.fit(model, data)
-    pts = model.board.data['val_acc']
-    copy_curves[name] = ([p.x for p in pts], [float(p.y) for p in pts])
-    print(f'{name}: final validation accuracy {copy_curves[name][1][-1]:.3f}')
+@nnx.jit
+def copy_predict(model, X):
+    return model(X).argmax(-1)
 
-s4d = CopyModel(nnx.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
-                num_hiddens=48)
-train_copy('S4D', s4d, copy_data)
+def train_copy(model, num_steps=2500, lr=3e-3, seed=0):
+    """Train on fresh batches of selective copying; return test accuracy."""
+    optimizer = nnx.Optimizer(model, optax.chain(
+        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
+    step = nnx.cached_partial(copy_step, model, optimizer)  # Compile once
+    predict = nnx.cached_partial(copy_predict, model)
+    key = jax.random.key(seed)
+    for _ in range(num_steps):
+        key, subkey = jax.random.split(key)
+        step(*copy_batch(subkey, 64))
+    X, Y = copy_batch(jax.random.key(seed + 1), 1024)
+    Y_hat = jnp.concatenate([predict(X[i:i + 128])[:, -Y.shape[1]:]
+                             for i in range(0, 1024, 128)])
+    return float((Y_hat == Y).mean())
 ```
 
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-4}
-%%tab pytorch, jax
-if tab.selected('pytorch'):
-    lstm = CopyModel(d2l.LSTM(num_inputs=48, num_hiddens=64), num_hiddens=48)
-if tab.selected('jax'):
-    lstm = CopyModel(d2l.LSTM(num_inputs=48, num_hiddens=64), num_hiddens=48,
-                     num_features=64)
-train_copy('LSTM', lstm, copy_data)
+```{.python .input #mamba-selective-copying-3}
+%%tab pytorch
+torch.manual_seed(0)
+models = {'S4D': d2l.SeqLM(10, 48, [d2l.S4D(48) for _ in range(2)]),
+          'minGRU': d2l.SeqLM(10, 48, [d2l.MinGRU(48, 48) for _ in range(2)])}
+for name, model in models.items():
+    print(f'{name:8s} accuracy {train_copy(model):.2f}')
 ```
 
-```{.python .input #mamba-an-lti-baseline-and-a-gated-one-5}
-%%tab pytorch, jax
-names = list(copy_curves)
-d2l.plot([copy_curves[n][0] for n in names],
-         [copy_curves[n][1] for n in names], 'epoch',
-         'validation accuracy', legend=names, figsize=(5, 3))
+```{.python .input #mamba-selective-copying-3}
+%%tab jax
+rngs = nnx.Rngs(0)
+models = {
+    'S4D': d2l.SeqLM(10, 48, [d2l.S4D(48, rngs=rngs) for _ in range(2)],
+                     rngs=rngs),
+    'minGRU': d2l.SeqLM(10, 48, [d2l.MinGRU(48, 48, rngs=rngs)
+                                 for _ in range(2)], rngs=rngs)}
+for name, model in models.items():
+    print(f'{name:8s} accuracy {train_copy(model):.2f}')
 ```
 
-The curves separate the way the content-blindness argument predicts. Both models
-start at chance (one symbol in eight). The LSTM climbs toward a complete
-solution, and in our runs ends the budget well above 0.9, in some
-frameworks essentially perfect (how far it gets inside the budget depends
-on each framework's initialization defaults, the same effect
-:numref:`subsec_s4d` dissected): its input and forget gates are
-functions of the data, so "store this, it is a symbol" is a computation
-it can learn, given enough epochs. The S4D improves slowly. Its pointwise
-nonlinear blocks can learn to suppress filler locally, which raises its
-accuracy well above chance, but the time-invariant state cannot
-cleanly align "the third symbol I saw" with "the third query slot" when
-the spacing between symbols changes from example to example, and it ends
-the same budget far from a solution. For this task, the older LSTM
-architecture is better suited to the required
-content-dependent updates. Its advantage is precisely the input dependence
-that :numref:`sec_ssm` removed to enable a scan. The remaining question is
-whether input dependence can be restored without giving up parallel
-training.
+S4D answers fewer than one query in five correctly, a little above the
+chance rate of one in eight: its weights depend on distance, and the same
+distance holds a symbol in one sequence and a filler in the next. The minGRU
+answers nine in ten or more. Its decay is chosen by each input, so it can
+keep a symbol and let fillers pass, and it nearly solves the task. Its
+gates, however, start near one half: on the delayed recall task of
+:numref:`sec_ssm`, which needs no selection at all, the minGRU could not
+keep a symbol across 1,000 fillers unless its gates were initialized with
+long memories. Selective copying is easier in this respect, because a symbol
+sometimes sits close to a query, and the short-range gradients from such
+sequences teach the gates to keep symbols longer and longer.
 
-## Selective State Space Models
-:label:`subsec_selective-ssm`
+## Selective Dynamics
 
-### Input-Dependent Dynamics
+### Input-Dependent Step Sizes
+:label:`subsec_selective-dynamics`
 
-Recall from :numref:`subsec_zoh` where the S4D's dynamics come from: a
-continuous system $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ and a step size
-$\Delta$, discretized by the zero-order hold into per-step coefficients.
-The downstream construction remains fixed; the *selective* state space
-model of :citet:`Gu.Dao.2023` changes one design principle: the
-SSM's parameters become functions of the input. Three coupled
-projections realize that principle. The step size, the input
-matrix, and the read-out are no longer constants but functions of the
-current input $\mathbf{u}_t \in \mathbb{R}^H$:
+Recall the zero-order hold of :numref:`sec_ssm`: a state that obeys
+$h'(t) = \lambda h(t) + x(t)$ with rate $\lambda < 0$, read at steps of
+length $\Delta$, decays by $e^{\Delta\lambda}$ per step, and the input enters
+with weight $(e^{\Delta\lambda} - 1)/\lambda$, which is close to $\Delta$
+when $\Delta|\lambda|$ is small. A small step keeps the state and admits
+little of the input; a large step forgets the state and admits much. The
+step size acts as a gate. In S4D it was a learned constant per channel; a
+selective SSM computes it from the input.
 
-$$
-\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{u}_t \mathbf{W}_{\Delta} + \mathbf{b}_{\Delta}),
-\qquad
-\mathbf{B}_t = \mathbf{u}_t \mathbf{W}_{\textrm{B}},
-\qquad
-\mathbf{C}_t = \mathbf{u}_t \mathbf{W}_{\textrm{C}},
-$$
-:eqlabel:`eq_selective_heads`
+Let the input of the layer have $H$ channels, $\mathbf{x}_t \in
+\mathbb{R}^H$, and let each channel $c$ have a state $\mathbf{h}_t^{(c)} \in
+\mathbb{R}^N$ with rates $\lambda_1, \ldots, \lambda_N$, initialized to
+$-1, \ldots, -N$ as in S4D. The selective SSM computes three quantities from
+the input at every step: a step size per channel, and a write vector and a
+read vector shared by all channels,
 
-with $\boldsymbol{\Delta}_t \in \mathbb{R}^H$ holding one step size per
-channel (softplus keeps it positive) and
-$\mathbf{B}_t, \mathbf{C}_t \in \mathbb{R}^N$ shared across channels. The
-state matrix $\mathbf{A} = \textrm{diag}(a_1, \ldots, a_N)$ keeps its
-fixed S4D parameterization; it sets the *menu* of decay rates, while
-$\boldsymbol{\Delta}_t$ decides, per token, how far along that menu to
-step. Discretizing exactly as before, channel $h$ of the layer now obeys
+$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t +
+\mathbf{b}_\Delta), \qquad \mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t, \qquad
+\mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t,$$
+
+where softplus$(z) = \log(1 + e^z)$ keeps the step sizes positive. The state
+of each channel then follows the discretized SSM with these step-dependent
+values,
 
 $$
-\mathbf{x}_t = e^{\Delta_{t,h} \mathbf{a}} \odot \mathbf{x}_{t-1}
-+ \Delta_{t,h}\, u_{t,h}\, \mathbf{B}_t,
-\qquad
-y_{t,h} = \mathbf{C}_t^\top \mathbf{x}_t + d_h\, u_{t,h},
+\mathbf{h}_t^{(c)} = e^{\Delta_{t,c} \boldsymbol{\lambda}} \odot
+\mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \qquad
+y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
 $$
 :eqlabel:`eq_selective_ssm`
 
-where $\mathbf{x}_t \in \mathbb{R}^N$ is that channel's state. (Mamba
-simplifies the zero-order hold on the input path to the first-order rule
-$\bar{\mathbf{B}}_t = \Delta_{t,h} \mathbf{B}_t$; the exponential on the
-state path, which controls stability, is kept exact.)
+Here $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ is the vector of decays of the
+$N$ states, and the input weight is the approximation $\Delta$ of the
+zero-order hold, which Mamba uses. Compared with S4D, three things change,
+and each is a decision the layer now makes per token. The step size
+$\Delta_{t,c}$ decides how much channel $c$ forgets and how much of the
+token it writes; at a filler token the layer can set it near zero and skip
+the token, and at a symbol it can set it large and store it. The write
+vector $\mathbf{B}_t$ decides where in the $N$-dimensional state the token
+goes, and the read vector $\mathbf{C}_t$ decides what the output reads.
+Compared with the minGRU, the decay is still chosen by the input, but each
+channel has $N$ states with rates that span a range, and the step sizes are
+initialized log-uniformly between 0.001 and 0.1, so that the layer starts
+with memories from a few steps to a thousand.
 
-The correspondence in :numref:`subsec_zoh` gives a direct interpretation
-of an input-dependent $\Delta$. There, a small $\Delta$ froze the state and
-ignored the input; a large $\Delta$ flushed the state and admitted the
-input. Make $\Delta$ a function of $\mathbf{u}_t$ and the model can
-*choose per token*: filler should produce
-$\Delta_t \approx 0$ (the state changes little and the input contributes
-almost nothing), while a marked symbol should produce a large $\Delta_t$ (reset
-toward the new content). That is a forget gate and an input gate, fused
-into one scalar acting on a linear state. The same gating mechanism has
-arisen from three requirements: controlled memory updates
-(:numref:`sec_lstm`), numerical integration (:numref:`subsec_zoh`), and
-content-dependent selection in a linear recurrence.
-$\mathbf{B}_t$ and $\mathbf{C}_t$ similarly control *where* input enters
-the state and *which* state coordinates are read out; an
-exercise asks how much they add over selectivity in $\Delta$ alone.
+### Training with a Scan
 
-### Parallel Evaluation with Selectivity
-:label:`subsec_selective-scan`
+The selective SSM cannot be computed as a convolution: the weight of an
+input from $k$ steps ago is now a product of $k$ different decays, which
+depends on the tokens in between, so there is no single kernel. The update
+:eqref:`eq_selective_ssm` is still affine in the state, with decays and
+writes that the layer computes for all positions before the recurrence
+starts, so `d2l.linear_scan` computes all states in parallel, exactly as for
+the minGRU.
 
-With time-varying coefficients, the model is no longer LTI and the
-convolutional view of :numref:`subsec_ssm-conv` no longer applies. There
-is no fixed kernel $\bar{\mathbf{K}}$ to materialize
-and no FFT shortcut; of the three views in :numref:`fig_ssm_views`, only
-the recurrence survives. This is why we built the scan rather than the
-FFT in :numref:`sec_ssm`. The recurrence
-:eqref:`eq_selective_ssm` is still an *affine* map of the state, just
-with per-step coefficients, and the associative combine
-:eqref:`eq_scan_combine` never assumed those coefficients were constant.
-The same `associative_scan` evaluates the selective recurrence in the
-same logarithmic depth, now called with tensors whose leading axis
-varies per step. We verify this equivalence by comparing a sequential loop
-with time-varying decays against the scan.
+The scan has a cost that the minGRU did not have: memory. The state at each
+position now has $H \times N$ numbers, 1,536 for 96 channels with 16 states
+(the language model below has 16 states per channel),
+and a minibatch of 64 sequences of 1,024 steps holds 100 million of them,
+400 MB in 32-bit floats. Backpropagation through the doubling scan stores
+every round, $\lceil \log_2 T \rceil = 10$ of them, which takes several
+gigabytes per layer. A property of linear recurrences avoids this. Let
+$\mathbf{g}_t$ be the derivative of the loss with respect to the state
+$\mathbf{h}_t$. The state $\mathbf{h}_t$ affects the loss directly, through
+the output at step $t$, and through the next state, $\mathbf{h}_{t+1} =
+\mathbf{a}_{t+1} \odot \mathbf{h}_t + \mathbf{b}_{t+1}$, so
 
-```{.python .input #mamba-what-selectivity-costs-and-what-survives-1}
+$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct}
++ \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}.$$
+
+This is again a linear recurrence, run backward in time, and a second scan
+computes it. The gradients of the decays and writes follow directly:
+$\partial\ell/\partial\mathbf{b}_t = \mathbf{g}_t$ and
+$\partial\ell/\partial\mathbf{a}_t = \mathbf{g}_t \odot \mathbf{h}_{t-1}$.
+The backward pass then needs only the decays and the states, not the
+intermediate rounds. Mamba's fused GPU kernel goes further: it never writes
+the states to the GPU's main memory at all, but computes them in fast on-chip
+memory, reads out $\mathbf{C}_t^\top \mathbf{h}_t$ there, and recomputes
+the states during the backward pass.
+
+In code, the backward pass is a second call of `linear_scan` on the
+reversed sequence. We give the scan this gradient explicitly, as a custom
+backward function, and check it against the gradient that automatic
+differentiation computes through the rounds of the scan.
+
+```{.python .input #mamba-training-with-a-scan-1}
 %%tab pytorch
-num_steps, num_states = 100, 4
-a_t = torch.rand(num_steps, num_states)      # Per-step decays in (0, 1)
-b_t = torch.randn(num_steps, num_states)     # Per-step inputs
-h, ys = torch.zeros(num_states), []
-for t in range(num_steps):
-    h = a_t[t] * h + b_t[t]
-    ys.append(h)
-err = (associative_scan(a_t, b_t) - torch.stack(ys)).abs().max()
-print(f'time-varying scan vs loop: {float(err):.2e}')
+class AdjointScan(torch.autograd.Function):  #@save
+    """linear_scan whose backward pass is a second scan, run backward."""
+    @staticmethod
+    def forward(ctx, a, b):
+        h = d2l.linear_scan(a, b)
+        ctx.save_for_backward(a, h)
+        return h
+
+    @staticmethod
+    def backward(ctx, grad_h):
+        a, h = ctx.saved_tensors
+        # g_t = grad_h_t + a_{t+1} g_{t+1}: a linear recurrence from the end
+        a_next = torch.cat([a[:, 1:], torch.ones_like(a[:, :1])], 1)
+        g = d2l.linear_scan(a_next.flip(1), grad_h.flip(1)).flip(1)
+        h_prev = torch.cat([torch.zeros_like(h[:, :1]), h[:, :-1]], 1)
+        return g * h_prev, g
+
+def adjoint_scan(a, b):  #@save
+    """All states of h_t = a_t * h_{t-1} + b_t, differentiated by a scan."""
+    return AdjointScan.apply(a.expand_as(b), b)
 ```
 
-
-```{.python .input #mamba-what-selectivity-costs-and-what-survives-1}
+```{.python .input #mamba-training-with-a-scan-1}
 %%tab jax
-num_steps, num_states = 100, 4
-key1, key2 = jax.random.split(d2l.get_key())
-a_t = jax.random.uniform(key1, (num_steps, num_states))  # Decays in (0, 1)
-b_t = jax.random.normal(key2, (num_steps, num_states))   # Per-step inputs
-h, ys = jnp.zeros(num_states), []
-for t in range(num_steps):
-    h = a_t[t] * h + b_t[t]
-    ys.append(h)
-err = jnp.abs(associative_scan(a_t, b_t) - jnp.stack(ys)).max()
-print(f'time-varying scan vs loop: {float(err):.2e}')
+@jax.custom_vjp  #@save
+def _adjoint_scan(a, b):
+    return d2l.linear_scan(a, b)
+
+def adjoint_scan_forward(a, b):  #@save
+    """Forward pass: the states, and what the backward pass needs."""
+    h = d2l.linear_scan(a, b)
+    return h, (a, h)
+
+def adjoint_scan_backward(saved, grad_h):  #@save
+    """Backward pass: gradients of a and b by a scan in reverse time."""
+    a, h = saved
+    # g_t = grad_h_t + a_{t+1} g_{t+1}: a linear recurrence from the end
+    a_next = jnp.concatenate([a[:, 1:], jnp.ones_like(a[:, :1])], 1)
+    g = d2l.linear_scan(a_next[:, ::-1], grad_h[:, ::-1])[:, ::-1]
+    h_prev = jnp.concatenate([jnp.zeros_like(h[:, :1]), h[:, :-1]], 1)
+    return g * h_prev, g
+
+_adjoint_scan.defvjp(adjoint_scan_forward, adjoint_scan_backward)  #@save
+
+def adjoint_scan(a, b):  #@save
+    """All states of h_t = a_t * h_{t-1} + b_t, differentiated by a scan."""
+    return _adjoint_scan(jnp.broadcast_to(a, b.shape), b)
 ```
 
-The layer below packages :eqref:`eq_selective_heads` and
-:eqref:`eq_selective_ssm`. Next to the `S4D` class it differs in three
-places: $\Delta$, $\mathbf{B}$, $\mathbf{C}$ are computed from `u` by
-small linear heads rather than stored as parameters; the $\Delta$ head is
-factored through rank $H/16$ (Mamba's `dt_rank`), which keeps its
-parameter count negligible; and its bias is initialized so that
-$\textrm{softplus}$ of it reproduces the log-uniform step sizes of
-:numref:`subsec_s4d`. Only the initial decay timescales carry over from
-the S4D, though: $\mathbf{B}_t$ and $\mathbf{C}_t$ come out of randomly
-initialized heads, so the layer is input-dependent from its first
-forward pass rather than starting as an LTI system. The scan call is
-unchanged, except that the decay tensor now genuinely spans
-`(num_steps, batch, H, N)` instead of broadcasting one value.
-
-```{.python .input #mamba-what-selectivity-costs-and-what-survives-2}
+```{.python .input #mamba-training-with-a-scan-2}
 %%tab pytorch
-class SelectiveSSM(nn.Module):  #@save
-    """A diagonal SSM whose step size, input matrix, and read-out are
-    functions of the input (Gu & Dao, 2023)."""
-    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1):
-        super().__init__()
-        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
-        self.log_a = nn.Parameter(
-            torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Sequential(nn.Linear(H, R), nn.Linear(R, H, bias=False))
-        dt = torch.exp(torch.rand(H) * math.log(dt_max / dt_min)
-                       + math.log(dt_min))
-        self.b_dt = nn.Parameter(dt + torch.log(-torch.expm1(-dt)))
-        self.W_B = nn.Linear(H, N, bias=False)
-        self.W_C = nn.Linear(H, N, bias=False)
-        self.D = nn.Parameter(torch.ones(H))
-
-    def forward(self, u):                    # (num_steps, batch, num_hiddens)
-        a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
-        dt = F.softplus(self.W_dt(u) + self.b_dt)     # (T, batch, H)
-        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
-        a_bar = torch.exp(dt.unsqueeze(-1) * a)       # (T, batch, H, N)
-        b_bar = (dt * u).unsqueeze(-1) * B.unsqueeze(-2)
-        x = associative_scan(a_bar, b_bar)
-        return (x * C.unsqueeze(-2)).sum(-1) + self.D * u
+a = torch.rand(2, 100, 8, requires_grad=True)
+b = torch.randn(2, 100, 8, requires_grad=True)
+w = torch.randn(2, 100, 8)  # A loss that weights every state
+grads_scan = torch.autograd.grad((d2l.linear_scan(a, b) * w).sum(), (a, b))
+grads_adjoint = torch.autograd.grad((adjoint_scan(a, b) * w).sum(), (a, b))
+print('max deviation:', max(float((g1 - g2).abs().max())
+                            for g1, g2 in zip(grads_scan, grads_adjoint)))
 ```
 
-
-```{.python .input #mamba-what-selectivity-costs-and-what-survives-2}
+```{.python .input #mamba-training-with-a-scan-2}
 %%tab jax
-class SelectiveSSM(nnx.Module):  #@save
-    """A diagonal SSM whose step size, input matrix, and read-out are
-    functions of the input (Gu & Dao, 2023)."""
-    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
-        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
-                                        (H, 1)))
-        self.W_dt = nnx.Sequential(
-            nnx.Linear(H, R, rngs=rngs),
-            nnx.Linear(R, H, use_bias=False, rngs=rngs))
-        dt = jnp.exp(rngs.params.uniform((H,)) * math.log(dt_max / dt_min)
-                     + math.log(dt_min))
-        self.b_dt = nnx.Param(dt + jnp.log(-jnp.expm1(-dt)))
-        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)
-        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)
-        self.D = nnx.Param(jnp.ones(H))
-
-    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
-        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
-        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (T, batch, H)
-        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
-        a_bar = jnp.exp(dt[..., None] * a)            # (T, batch, H, N)
-        b_bar = (dt * u)[..., None] * B[..., None, :]
-        x = associative_scan(a_bar, b_bar)
-        return (x * C[..., None, :]).sum(-1) + self.D * u
+key_a, key_b, key_w = jax.random.split(jax.random.key(0), 3)
+a = jax.random.uniform(key_a, (2, 100, 8))
+b = jax.random.normal(key_b, (2, 100, 8))
+w = jax.random.normal(key_w, (2, 100, 8))  # A loss that weights every state
+grad = lambda scan: jax.grad(lambda a, b: (scan(a, b) * w).sum(), (0, 1))
+print('max deviation:', max(float(jnp.abs(g1 - g2).max()) for g1, g2 in
+                            zip(grad(d2l.linear_scan)(a, b),
+                                grad(adjoint_scan)(a, b))))
 ```
 
-One prose remark on engineering, because it explains why this
-architecture arrived in 2023 rather than 2020. Our implementation
-materializes the `(num_steps, batch, H, N)` coefficient tensors in GPU
-memory, which is fine at textbook scale and ruinous at model scale: the
-computation is trivially cheap per element, so its speed is set entirely
-by memory traffic. The Mamba authors' kernel never materializes those
-tensors. It fuses discretization, scan, and read-out into a single pass
-that keeps intermediates in fast on-chip memory, and during
-backpropagation *recomputes* them from the small inputs instead of
-storing them, trading a little arithmetic for a lot of bandwidth, the
-same store-versus-recompute trade we met in :numref:`sec_bptt`. None of
-this changes what is computed. It changed whether the architecture was
-*worth* computing, and it is half the reason the paper's title contains
-the word "hardware-aware".
+The two gradients agree to rounding error. The adjoint scan stores two
+tensors of the size of the states instead of ten, and in PyTorch it lets the
+models below train in a few gigabytes.
 
-## The Mamba Block
-:label:`subsec_mamba-block`
+## The Mamba Layer
 
-The selective SSM mixes information across time. Like the S4D it needs a
-scaffold around it that mixes channels and supplies nonlinearity, and
-Mamba's block, :numref:`fig_mamba_block`, differs instructively from the
-S4D block of :numref:`fig_ssm_block`. Instead of alternating a sequence
-layer with a separate gated MLP, Mamba fuses the two: one linear
-projection widens the input from $d$ to an expanded $2d$ and forks it
-into two branches. The main branch is convolved with a short *causal*
-convolution (width 4; a cheap way to let each token see a few immediate
-predecessors before deciding its dynamics), passed through a SiLU
-activation, and fed to the selective SSM. The other branch, after its own
-SiLU, multiplies the SSM's output elementwise, one final gate, echoing
-:numref:`sec_lstm` yet again, so that even the read-out is
-content-controlled. A linear projection maps the expanded width back to
-$d$, and the whole thing sits inside the usual pre-norm residual.
+### The Layer
 
-The comparison with the transformer block of
-:numref:`sec_transformer-block` is worth making precisely. That block
-divides its labor: an attention sub-block mixes information across
-positions, then an MLP sub-block (with its own residual and
-normalization) mixes across channels, and the two alternate through the
-stack. Mamba fuses the same two jobs into one unit: the selective SSM is
-the sequence mixer, the expanded gated projections around it are the
-channel mixer, and a Mamba language model is this single homogeneous
-block stacked $L$ times where a transformer alternates two. The deeper
-question is exactly where this chapter is headed: whether the *mixers
-themselves* are secretly the same operation.
+A selective SSM mixes information along the sequence, but each channel
+separately and linearly. The Mamba layer :cite:`Gu.Dao.2023` surrounds it
+with projections, a nonlinearity, and a gate, which mix the channels as the
+MLP of a transformer block does (:numref:`fig_mamba_block`). An input projection widens the $d$-dimensional
+input to $H = 2d$ channels and produces a second branch of the same width. A
+short causal convolution over the last four tokens lets each channel combine
+a token with its neighbors before the SSM sees it, followed by a SiLU
+nonlinearity. The SSM output is multiplied by the SiLU of the second branch,
+a gate, and an output projection returns to width $d$.
 
-![The Mamba block. An input projection widens $d$ to $2d$ and forks: the main branch runs a short causal convolution, a SiLU, and the selective SSM, whose step size, input and read-out matrices are functions of its input; the gate branch applies a SiLU and multiplies the SSM output elementwise. An output projection returns to width $d$ inside a pre-norm residual.](../img/mdl-modernrnn-mamba-block.svg)
+![The Mamba layer. The input is projected to two branches of width $H = 2d$; one passes through a short causal convolution, a SiLU, and the selective SSM, whose step sizes and write and read vectors are computed from its input; the other gates the result. A final projection returns to width $d$.](../img/mdl-modernrnn-mamba-block.svg)
 :label:`fig_mamba_block`
 
-With `SelectiveSSM` in hand the block is a dozen lines, and a language
-model is the block stacked plus the embedding and head that
-`d2l.RNNLM` of :numref:`sec_rnn-scratch` already provides. The stack
-exposes the `(inputs, state)` calling convention of our recurrent cells,
-so it drops into the same scaffold as every other model in this chapter;
-like the S4D, it trains with Adam. All three classes go into the `d2l`
-library: the chapter's closing section builds its hybrid stacks out of
-them.
+The selective SSM holds the rates of its states, three projections that
+compute the step sizes and the write and read vectors from the input, and
+the skip weights $D$. The step sizes are initialized as in S4D: the weights
+that compute them start at zero, and the biases so that the softplus returns
+step sizes log-uniformly distributed between `dt_min` and `dt_max`, whatever
+the input. Training then learns how the step sizes depend on the input.
 
-```{.python .input #mamba-the-mamba-block}
+```{.python .input #mamba-the-layer-1}
 %%tab pytorch
-class MambaBlock(nn.Module):  #@save
-    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual."""
-    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
-                 dropout=0):
+class SelectiveSSM(nn.Module):  #@save
+    """A diagonal SSM whose step sizes and write and read vectors depend on
+    the input: N states for each of num_channels channels."""
+    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
-        d = expand * num_hiddens
-        self.ln = nn.LayerNorm(num_hiddens)
-        self.W_in = nn.Linear(num_hiddens, 2 * d)
-        self.conv = nn.Conv1d(d, d, conv_width, groups=d,
+        H, N = num_channels, num_states
+        self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
+            torch.log(torch.arange(1., N + 1)).repeat(H, 1))
+        self.W_dt = nn.Linear(H, H)  # Step size per channel
+        self.W_B = nn.Linear(H, N, bias=False)  # Write vector
+        self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+        dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
+        with torch.no_grad():  # Start at softplus(bias) = dt for every input
+            self.W_dt.weight.zero_()
+            self.W_dt.bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        self.D = nn.Parameter(torch.ones(H))
+```
+
+```{.python .input #mamba-the-layer-1}
+%%tab jax
+class SelectiveSSM(nnx.Module):  #@save
+    """A diagonal SSM whose step sizes and write and read vectors depend on
+    the input: N states for each of num_channels channels."""
+    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
+                 *, rngs):
+        H, N = num_channels, num_states
+        self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
+            jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
+        def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
+            dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
+            return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
+        self.W_dt = nnx.Linear(H, H, kernel_init=nnx.initializers.zeros,
+                               bias_init=dt_bias, rngs=rngs)  # Start at dt
+        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
+        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
+        self.D = nnx.Param(jnp.ones(H))
+```
+
+The method `coefficients` computes the step sizes from the input and turns
+them into the decays $e^{\Delta_{t,c}\lambda_n}$, kept as logarithms, and
+the writes $\Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t$ of
+:eqref:`eq_selective_ssm` for every position, channel, and state. The
+forward pass scans them and reads every channel's state with
+$\mathbf{C}_t$.
+
+```{.python .input #mamba-the-layer-2}
+%%tab pytorch
+@d2l.add_to_class(SelectiveSSM)  #@save
+def coefficients(self, U):
+    """Log-decays and writes, each of shape (batch_size, T, H, N)."""
+    dt = F.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+    log_a = dt.unsqueeze(-1) * -torch.exp(self.log_neg_rate)
+    return log_a, (dt * U).unsqueeze(-1) * self.W_B(U).unsqueeze(-2)
+
+@d2l.add_to_class(SelectiveSSM)  #@save
+def forward(self, U):  # U: (batch_size, num_steps, num_channels)
+    log_a, b = self.coefficients(U)
+    H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
+    return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
+```
+
+```{.python .input #mamba-the-layer-2}
+%%tab jax
+@d2l.add_to_class(SelectiveSSM)  #@save
+def coefficients(self, U):
+    """Log-decays and writes, each of shape (batch_size, T, H, N)."""
+    dt = jax.nn.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+    log_a = dt[..., None] * -jnp.exp(self.log_neg_rate[...])
+    return log_a, (dt * U)[..., None] * self.W_B(U)[..., None, :]
+
+@d2l.add_to_class(SelectiveSSM)  #@save
+def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
+    log_a, b = self.coefficients(U)
+    H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
+    return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
+```
+
+The Mamba layer wraps the selective SSM as described above. Its interface is
+that of the other mixers of the chapter, so it can be used in `d2l.SeqLM`.
+
+```{.python .input #mamba-the-layer-3}
+%%tab pytorch
+class Mamba(nn.Module):  #@save
+    """The Mamba layer: a gated selective SSM between two projections."""
+    def __init__(self, num_hiddens, num_states=16, expand=2, conv_width=4,
+                 **ssm_args):
+        super().__init__()
+        H = expand * num_hiddens
+        self.W_in = nn.Linear(num_hiddens, 2 * H)
+        self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
-        self.ssm = SelectiveSSM(d, num_states)
-        self.W_out = nn.Linear(d, num_hiddens)
-        self.drop = nn.Dropout(dropout)
+        self.ssm = SelectiveSSM(H, num_states, **ssm_args)
+        self.W_out = nn.Linear(H, num_hiddens)
 
-    def forward(self, X):                    # (num_steps, batch, num_hiddens)
-        u, gate = self.W_in(self.ln(X)).chunk(2, -1)
-        u = self.conv(u.permute(1, 2, 0))[..., :X.shape[0]]  # Causal: trim
-        y = self.ssm(F.silu(u.permute(2, 0, 1)))
-        return X + self.drop(self.W_out(y * F.silu(gate)))
+    def ssm_input(self, X):
+        """The input of the SSM and the gate branch."""
+        U, Z = self.W_in(X).chunk(2, -1)
+        U = self.conv(U.transpose(1, 2))[..., :X.shape[1]]  # Keep it causal
+        return F.silu(U.transpose(1, 2)), Z
 
-class Mamba(d2l.Module):  #@save
-    """A stack of Mamba blocks with the recurrent-cell interface."""
-    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0):
-        super().__init__()
-        self.save_hyperparameters()
-        self.num_hiddens = num_inputs                 # Output width, for heads
-        self.blocks = nn.Sequential(*[
-            MambaBlock(num_inputs, num_states, dropout=dropout)
-            for _ in range(num_blocks)])
-        self.ln = nn.LayerNorm(num_inputs)
-
-    def forward(self, X, state=None):
-        return self.ln(self.blocks(X)), None
+    def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
+        U, Z = self.ssm_input(X)
+        return self.W_out(self.ssm(U) * F.silu(Z))
 ```
 
-
-```{.python .input #mamba-the-mamba-block}
+```{.python .input #mamba-the-layer-3}
 %%tab jax
-class MambaBlock(nnx.Module):  #@save
-    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual."""
-    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
-                 dropout=0, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        d = expand * num_hiddens
-        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
-        self.W_in = nnx.Linear(num_hiddens, 2 * d, rngs=rngs)
-        self.conv = nnx.Conv(d, d, kernel_size=(conv_width,),
-                             feature_group_count=d, padding='CAUSAL',
-                             rngs=rngs)
-        self.ssm = SelectiveSSM(d, num_states, rngs=rngs)
-        self.W_out = nnx.Linear(d, num_hiddens, rngs=rngs)
-        self.drop = nnx.Dropout(dropout, rngs=rngs)
-
-    def __call__(self, X):                   # (num_steps, batch, num_hiddens)
-        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
-        u = jnp.swapaxes(self.conv(jnp.swapaxes(u, 0, 1)), 0, 1)
-        y = self.ssm(jax.nn.silu(u))
-        return X + self.drop(self.W_out(y * jax.nn.silu(gate)))
-
 class Mamba(nnx.Module):  #@save
-    """A stack of Mamba blocks with the recurrent-cell interface."""
-    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.num_inputs = self.num_hiddens = num_inputs
-        self.blocks = nnx.Sequential(*[
-            MambaBlock(num_inputs, num_states, dropout=dropout, rngs=rngs)
-            for _ in range(num_blocks)])
-        self.ln = nnx.LayerNorm(num_inputs, rngs=rngs)
+    """The Mamba layer: a gated selective SSM between two projections."""
+    def __init__(self, num_hiddens, num_states=16, expand=2, conv_width=4,
+                 *, rngs, **ssm_args):
+        H = expand * num_hiddens
+        self.W_in = nnx.Linear(num_hiddens, 2 * H, rngs=rngs)
+        self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
+                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+        self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
+        self.W_out = nnx.Linear(H, num_hiddens, rngs=rngs)
 
-    def __call__(self, X, state=None):
-        return self.ln(self.blocks(X)), None
+    def ssm_input(self, X):
+        """The input of the SSM and the gate branch."""
+        U, Z = jnp.split(self.W_in(X), 2, -1)
+        return jax.nn.silu(self.conv(U)), Z
+
+    def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
+        U, Z = self.ssm_input(X)
+        return self.W_out(self.ssm(U) * jax.nn.silu(Z))
 ```
 
-What we have just assembled is a *pedagogical Mamba-style block*, not a
-reproduction of the paper's implementation.
-:numref:`tab_mamba_simplifications` records what carries over and what
-was cut down, so that the measurements below are read at the right
-resolution.
+### Selective Copying with Mamba
 
-:What our implementation keeps from Mamba and what it simplifies.
-:label:`tab_mamba_simplifications`
+We train a Mamba model with four states per channel, with the setup above.
 
-| kept from Mamba | simplified here | effect |
-|:--|:--|:--|
-| the selective mechanism :eqref:`eq_selective_heads`--:eqref:`eq_selective_ssm`: $\Delta, \mathbf{B}, \mathbf{C}$ from the input, exact exponential state decay, S4D-style $\mathbf{A}$ and $\Delta$-bias initialization, the conv--SiLU--gate block layout | nothing | the mechanism the experiments probe is the paper's |
-| the scan's mathematics: the same affine combine, the same logarithmic depth | the fused kernel becomes a generic `associative_scan` that materializes the $(T, \textrm{batch}, H, N)$ coefficient tensors | identical outputs; memory traffic sets the wall clock, the slow `s/epoch` column below |
-| the block interface: width expansion, gating, pre-norm residual | textbook scale ($N = 4$ states, two blocks), LayerNorm in place of RMSNorm, added dropout | small enough to train in a notebook; the results are illustrations at this scale, not scaling claims |
+```{.python .input #mamba-selective-copying-with-mamba}
+%%tab pytorch
+torch.manual_seed(0)
+models['Mamba'] = d2l.SeqLM(10, 48, [Mamba(48, num_states=4)
+                                     for _ in range(2)])
+print(f"Mamba    accuracy {train_copy(models['Mamba']):.2f}")
+```
 
-### Comparing Recurrent Models
-:label:`subsec_capstone`
+```{.python .input #mamba-selective-copying-with-mamba}
+%%tab jax
+rngs = nnx.Rngs(0)
+models['Mamba'] = d2l.SeqLM(10, 48, [Mamba(48, num_states=4, rngs=rngs)
+                                     for _ in range(2)], rngs=rngs)
+print(f"Mamba    accuracy {train_copy(models['Mamba']):.2f}")
+```
 
-This chapter proposed three answers to its opening question of what a
-hidden state should remember: *gate it* (the LSTM), *linearize it* (the
-minGRU and the SSMs), *select it* (Mamba). Time to put all three on one
-scoreboard. The task is the language-modeling recipe used throughout,
-*The Time Machine* under the 1,024-token BPE tokenizer of
-:numref:`sec_rnn-scratch`, 50,000 windows of 32 tokens, ten epochs,
-gradients clipped to norm 1. Alongside perplexity we report bits per byte
-(all three models share one tokenizer, but bpb keeps the scoreboard
-comparable with the character-level models of :numref:`chap_rnn`), parameter
-counts, and wall clock per epoch. The tokens-to-bytes conversion decodes
-the full validation target stream, so bpb is normalized over exactly the
-tokens that the validation perplexity averages.
+Mamba answers nearly every query correctly. It combines the two properties that
+the models of :numref:`sec_ssm` had separately: decays chosen by the input,
+as in the minGRU, and memories of many lengths from the start, as in S4D.
+The minGRU, which has only the first, nearly solves the task; S4D, which
+has only the second, does not come close.
 
-```{.python .input #mamba-the-three-answers-measured-on-one-task-1}
+### Contributions to the State
+
+Accuracy shows that Mamba keeps the symbols; it does not show how. Because
+the state is a sum of past writes, each decayed by the decays met since, we
+can measure how much each input contributes to it. Unrolling the recurrence
+as in :numref:`sec_ssm`, the state at step $T$ is $\sum_{s \le T}
+(\prod_{r = s+1}^{T} \mathbf{a}_r) \odot \mathbf{b}_s$, and the size of
+the term for position $s$ is its contribution. With the logarithms of the
+decays, each product is the exponential of a difference of cumulative sums.
+
+```{.python .input #mamba-where-the-state-comes-from-1}
+%%tab pytorch
+def state_contributions(log_a, b):
+    """Size of each position's term in the final state of h = a h + b."""
+    cum = log_a.cumsum(1)
+    terms = torch.exp(cum[:, -1:] - cum) * b  # Decayed to the last step
+    return torch.linalg.vector_norm(terms.flatten(2), dim=-1)  # (batch, T)
+```
+
+```{.python .input #mamba-where-the-state-comes-from-1}
+%%tab jax
+def state_contributions(log_a, b):
+    """Size of each position's term in the final state of h = a h + b."""
+    cum = log_a.cumsum(1)
+    terms = jnp.exp(cum[:, -1:] - cum) * b  # Decayed to the last step
+    return jnp.linalg.norm(terms.reshape(*terms.shape[:2], -1), axis=-1)
+```
+
+We apply it to the first layer of the trained S4D and Mamba models, on one
+test sequence, for the state at the first query token. For S4D the decays
+are the same at every step; for Mamba, `coefficients` returns them for
+every position. We also compute the share of the state that comes from the
+four positions starting at each symbol, which cover less than 2% of the
+sequence: the short convolution in front of the SSM spreads a token over
+the next three positions, so the layer can write it at any of them.
+
+```{.python .input #mamba-where-the-state-comes-from-2}
+%%tab pytorch
+device = d2l.try_gpu()
+X, _ = copy_batch(1, device=device)
+X = X[:, :-3]  # Up to the first query token
+positions = (X[0] > 1).nonzero().flatten()  # The four symbols
+with torch.inference_mode():
+    s4d, mamba = models['S4D'], models['Mamba']
+    E = s4d.norms[0](s4d.embedding(X))
+    a_bar, b_bar = s4d.mixers[0].discretize()
+    c_s4d = state_contributions(torch.log(a_bar).expand(*E.shape, -1),
+                                b_bar * E.unsqueeze(-1))[0]
+    U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
+    c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
+windows = (positions[:, None] + torch.arange(4, device=device)).flatten()
+windows = windows[windows < X.shape[1]]  # A window may reach past the end
+for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
+    print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
+d2l.plot(torch.arange(X.shape[1]),
+         [(c / c.max()).cpu() for c in (c_s4d, c_mamba)],
+         'position', 'contribution to the state', legend=['S4D', 'Mamba'],
+         yscale='log', figsize=(6, 3))
+```
+
+```{.python .input #mamba-where-the-state-comes-from-2}
+%%tab jax
+X, _ = copy_batch(jax.random.key(2), 1)
+X = X[:, :-3]  # Up to the first query token
+positions = jnp.nonzero(X[0] > 1)[0]  # The four symbols
+s4d, mamba = models['S4D'], models['Mamba']
+E = s4d.norms[0](s4d.embedding(X))
+a_bar, b_bar = s4d.mixers[0].discretize()
+log_a = jnp.broadcast_to(jnp.log(a_bar), (*E.shape, a_bar.shape[-1]))
+c_s4d = state_contributions(log_a, b_bar * E[..., None])[0]
+U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
+c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
+windows = (positions[:, None] + jnp.arange(4)).flatten()
+windows = windows[windows < X.shape[1]]  # A window may reach past the end
+for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
+    print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
+d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],
+         'position', 'contribution to the state', legend=['S4D', 'Mamba'],
+         yscale='log', figsize=(6, 3))
+```
+
+For S4D, the contributions rise smoothly toward the query: the most recent
+inputs dominate, whatever they are, and a symbol 800 steps back contributes
+no more than the fillers next to it. For Mamba, the contributions spike at
+the four symbols, one to three orders of magnitude above the fillers around
+them, wherever the symbols sit. Two thirds to four fifths of Mamba's state
+comes from the windows of four positions that start at the symbols, which
+cover less than 2% of the sequence; for S4D the same windows contribute at
+most 2%. The selective SSM writes the symbols and lets the fillers pass.
+
+### Language Modeling
+:label:`subsec_mamba-lm`
+
+We train the Mamba layer as the mixer of `d2l.SeqLM` on the
+character-level Penn Treebank, with the recipe of the chapter: two blocks of
+width 128, so that each layer has $H = 256$ channels with 16 states, and
+3,000 steps of AdamW through `d2l.fit_lm`. With this recipe the minGRU
+reached a perplexity of about 3.2 and S4D about 3.35.
+
+```{.python .input #mamba-language-modeling-1}
 %%tab pytorch, jax
-data = d2l.TimeMachine(batch_size=1024, num_steps=32,
-                       num_train=50000, num_val=5000)
-ids = d2l.numpy(data.Y[data.num_train:data.num_train + data.num_val]
-                ).reshape(-1).tolist()               # Full val target stream
-bytes_per_token = len(data.tokenizer.decode(ids).encode('utf-8')) / len(ids)
+data = d2l.PennTreebank(batch_size=64, num_steps=128)
 ```
 
-```{.python .input #mamba-the-three-answers-measured-on-one-task-2}
+```{.python .input #mamba-language-modeling-2}
 %%tab pytorch
-results = {}
-
-def benchmark(name, model, epochs=10):
-    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
-    model.board.yscale = 'log'
-    start = time.time()
-    trainer.fit(model, data)
-    secs = (time.time() - start) / epochs
-    ppl = float(model.board.data['val_ppl'][-1].y)
-    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    results[name] = (ppl, math.log2(ppl) / bytes_per_token, params, secs)
+torch.manual_seed(0)
+model = d2l.SeqLM(len(data.vocab), 128, [Mamba(128) for _ in range(2)])
+print(f'Mamba perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-2}
+```{.python .input #mamba-language-modeling-2}
 %%tab jax
-results = {}
-
-def val_ppl(model):
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)  # Dropout off for evaluation
-    total_loss = num_tokens = 0
-    for X_val, y_val in data.val_dataloader():
-        losses = model.loss(model(X_val), y_val, averaged=False)
-        total_loss += float(losses.sum())
-        num_tokens += losses.size
-    return math.exp(total_loss / num_tokens)
-
-def benchmark(name, model, epochs=10):
-    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
-    model.board.yscale = 'log'
-    start = time.time()
-    trainer.fit(model, data)
-    secs = (time.time() - start) / epochs
-    params = sum(p.size for p in
-                 jax.tree.leaves(nnx.state(model, nnx.Param)))
-    results[name] = (val_ppl(model), math.log2(val_ppl(model))
-                     / bytes_per_token, params, secs)
+rngs = nnx.Rngs(0)
+model = d2l.SeqLM(len(data.vocab), 128,
+                  [Mamba(128, rngs=rngs) for _ in range(2)], rngs=rngs)
+print(f'Mamba perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-The first two answers train with the exact recipes of their home
-sections: the LSTM of :numref:`sec_lstm` and the minGRU of
-:numref:`subsec_mingru` (restated below).
+Mamba reaches a perplexity of about 2.95, level with the LSTM and the GRU
+and well below the minGRU and S4D. It also has the most parameters, about
+635,000 against 540,000 for the LSTM model, so this comparison does not show
+that it uses them better. What it does show is that a model trained entirely
+with scans, and generating with a state of fixed size, models text as well as
+the gated networks that dominated before transformers.
 
-```{.python .input #mamba-the-three-answers-measured-on-one-task-3}
-%%tab pytorch, jax
-lstm_lm = d2l.RNNLM(d2l.LSTM(num_inputs=64, num_hiddens=128),
-                    vocab_size=len(data.vocab), lr=4)
-benchmark('LSTM', lstm_lm)
-```
-
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-4}
-%%tab pytorch
-class MinGRU(d2l.Module):
-    """The minimal GRU of the previous section."""
-    def __init__(self, num_inputs, num_hiddens):
-        super().__init__()
-        self.save_hyperparameters()
-        self.W_xz = nn.Linear(num_inputs, num_hiddens)
-        self.W_xh = nn.Linear(num_inputs, num_hiddens)
-
-    def forward(self, inputs, H=None):
-        Z = torch.sigmoid(self.W_xz(inputs))     # (num_steps, batch, hiddens)
-        H_tilde = torch.tanh(self.W_xh(inputs))
-        a, b = 1 - Z, Z * H_tilde
-        if H is not None:  # Fold the carried-in state into the first step
-            b = torch.cat([b[:1] + a[:1] * H, b[1:]])
-        outputs = associative_scan(a, b)
-        return outputs, outputs[-1]
-
-mingru_lm = d2l.RNNLM(MinGRU(num_inputs=64, num_hiddens=128),
-                      vocab_size=len(data.vocab), lr=4)
-benchmark('minGRU', mingru_lm)
-```
-
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-4}
-%%tab jax
-class MinGRU(nnx.Module):
-    """The minimal GRU of the previous section."""
-    def __init__(self, num_inputs, num_hiddens, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.W_xz = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
-        self.W_xh = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
-
-    def __call__(self, inputs, H=None):
-        Z = jax.nn.sigmoid(self.W_xz(inputs))    # (num_steps, batch, hiddens)
-        H_tilde = jnp.tanh(self.W_xh(inputs))
-        a, b = 1 - Z, Z * H_tilde
-        if H is not None:  # Fold the carried-in state into the first step
-            b = jnp.concatenate([b[:1] + a[:1] * H, b[1:]])
-        outputs = associative_scan(a, b)
-        return outputs, outputs[-1]
-
-mingru_lm = d2l.RNNLM(MinGRU(num_inputs=64, num_hiddens=128),
-                      vocab_size=len(data.vocab), lr=4)
-benchmark('minGRU', mingru_lm)
-```
-
-The third answer stacks two Mamba blocks at model width 128. Since
-`d2l.RNNLM` supplies embedding and head around any module with the
-`(inputs, state)` interface, only the optimizer needs overriding. One
-adjustment is needed, and it is a compliment in disguise: trained like
-the baselines, this model *overfits*. Its validation perplexity bottoms
-out within a few epochs and then climbs while training perplexity keeps
-falling toward single digits, which no gated model in this chapter comes
-close to doing; a selective state is, among other things, an excellent
-memorization device, and our corpus is one short novel. So Mamba, alone
-in this chapter, gets the standard medicine of :numref:`sec_dropout`,
-dropout on each block's residual branch, plus a gentler learning rate.
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-5}
-%%tab pytorch
-class MambaLM(d2l.RNNLM):
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
-
-mamba_lm = MambaLM(Mamba(num_inputs=128, dropout=0.3),
-                   vocab_size=len(data.vocab), lr=3e-4)
-benchmark('Mamba', mamba_lm)
-```
-
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-5}
-%%tab jax
-class MambaLM(d2l.RNNLM):
-    def configure_optimizers(self):
-        return optax.adam(self.lr)
-
-mamba_lm = MambaLM(Mamba(num_inputs=128, dropout=0.3),
-                   vocab_size=len(data.vocab), lr=3e-4)
-benchmark('Mamba', mamba_lm)
-```
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-6}
-%%tab pytorch, jax
-print(f'{"model":>7} {"val ppl":>8} {"bpb":>6} {"params":>9} {"s/epoch":>8}')
-for name, (ppl, bpb, params, secs) in results.items():
-    print(f'{name:>7} {ppl:>8.1f} {bpb:>6.2f} {params:>9,} {secs:>8.1f}')
-```
-
-Numbers first, then caveats. In every framework we run, Mamba lands
-below the LSTM, by a few points of perplexity in some reruns and by
-tens in others, at a parameter count larger than the LSTM's (most of the extra
-sits in the block's expanded projections) and a slower epoch, our scan
-being the teaching-grade version of the fused kernel discussed above. In
-most runs it posts the best number of the chapter outright, though in
-some the minGRU, at fewer than half the parameters, stays within a few
-points or even edges it out: at this scale, framework initialization
-defaults and optimizer choices move the scoreboard by amounts comparable
-to the architectural gap. The caveats cut both ways: Mamba trains
-with Adam and dropout while the gated baselines keep their sections'
-plain SGD recipe, and at this corpus size a stronger model mostly buys
-sharper memorization of Wells's prose. This scoreboard says the selective
-architecture *can* be trained to better held-out prediction at comparable
-scale, not that it dominates pound for pound; at research scale the
-corresponding claim is the Mamba paper's central result, matching
-transformers at small model sizes.
-
-### Stepping the Selective Model
-:label:`subsec_mamba-step`
-
-Before sampling, we verify that recurrent stepping matches the parallel form.
-:numref:`subsec_ssm-step` stepped the LTI model one token at a time;
-does the trick survive selectivity? It does, and for a reason worth
-noticing: :eqref:`eq_selective_heads` computes $\boldsymbol{\Delta}_t,
-\mathbf{B}_t, \mathbf{C}_t$ from the *current* input alone, so a single
-token is all the step needs to build its own coefficients before
-applying the same recurrence as before. The one genuinely new piece of
-state sits outside the SSM: the block's causal convolution looks at the
-last `conv_width` inputs, so the step must carry a rolling buffer of
-the four most recent values alongside the $(H, N)$ state. This pair,
-conv buffer plus SSM state, is exactly what production Mamba
-implementations cache during decoding; it is the entire inference-time
-memory of a layer, a few kilobytes where a transformer layer's KV cache
-grows by :eqref:`eq_kv-cache-bytes` with every token generated
-(:numref:`sec_kv-cache`).
-
-```{.python .input #mamba-stepping-the-selective-model-1}
-%%tab pytorch
-@d2l.add_to_class(SelectiveSSM)  #@save
-def step(self, u, x=None):
-    """Advance one token: u is (batch, H); x is the (batch, H, N) state."""
-    a = -torch.exp(self.log_a)
-    dt = F.softplus(self.W_dt(u) + self.b_dt)         # (batch, H)
-    B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
-    a_bar = torch.exp(dt.unsqueeze(-1) * a)           # (batch, H, N)
-    b_bar = (dt * u).unsqueeze(-1) * B.unsqueeze(-2)
-    x = b_bar if x is None else a_bar * x + b_bar
-    return (x * C.unsqueeze(-2)).sum(-1) + self.D * u, x
-
-@d2l.add_to_class(MambaBlock)  #@save
-def step(self, X, state=None):
-    """Advance one token, carrying (conv buffer, SSM state)."""
-    u, gate = self.W_in(self.ln(X)).chunk(2, -1)
-    if state is None:
-        state = (u.new_zeros(*u.shape, self.conv.kernel_size[0]), None)
-    buf, x = state
-    buf = torch.cat([buf[..., 1:], u.unsqueeze(-1)], -1)  # Roll the window
-    u = (buf * self.conv.weight[:, 0]).sum(-1) + self.conv.bias
-    y, x = self.ssm.step(F.silu(u), x)
-    return X + self.drop(self.W_out(y * F.silu(gate))), (buf, x)
-
-@d2l.add_to_class(Mamba)  #@save
-def step(self, X, state=None):
-    """Advance the stack one token: X is (batch, d); one state per block."""
-    state = [None] * len(self.blocks) if state is None else list(state)
-    for i, blk in enumerate(self.blocks):
-        X, state[i] = blk.step(X, state[i])
-    return self.ln(X), state
-```
-
-```{.python .input #mamba-stepping-the-selective-model-1}
-%%tab jax
-@d2l.add_to_class(SelectiveSSM)  #@save
-def step(self, u, x=None):
-    """Advance one token: u is (batch, H); x is the (batch, H, N) state."""
-    a = -jnp.exp(self.log_a[...])
-    dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (batch, H)
-    B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
-    a_bar = jnp.exp(dt[..., None] * a)                # (batch, H, N)
-    b_bar = (dt * u)[..., None] * B[..., None, :]
-    x = b_bar if x is None else a_bar * x + b_bar
-    return (x * C[..., None, :]).sum(-1) + self.D * u, x
-
-@d2l.add_to_class(MambaBlock)  #@save
-def step(self, X, state=None):
-    """Advance one token, carrying (conv buffer, SSM state)."""
-    u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
-    if state is None:
-        state = (jnp.zeros((u.shape[0], self.conv.kernel_size[0],
-                            u.shape[-1])), None)
-    buf, x = state
-    buf = jnp.concatenate([buf[:, 1:], u[:, None]], 1)    # Roll the window
-    u = (buf * self.conv.kernel[:, 0]).sum(1) + self.conv.bias
-    y, x = self.ssm.step(jax.nn.silu(u), x)
-    return X + self.drop(self.W_out(y * jax.nn.silu(gate))), (buf, x)
-
-@d2l.add_to_class(Mamba)  #@save
-def step(self, X, state=None):
-    """Advance the stack one token: X is (batch, d); one state per block."""
-    state = ([None] * len(self.blocks.layers) if state is None
-             else list(state))
-    for i, blk in enumerate(self.blocks.layers):
-        X, state[i] = blk.step(X, state[i])
-    return self.ln(X), state
-```
-
-As in :numref:`subsec_ssm-step`, the check that matters runs on the
-*trained* model: we push a batch of validation windows through the
-capstone language model with the scan, then again token by token with
-`step`, and assert that the logits agree, relative to their scale, far
-more tightly than float32 rounding is obliged to deliver. (Dropout must
-be off, or the two passes would disagree by design.)
-
-```{.python .input #mamba-stepping-the-selective-model-2}
-%%tab pytorch
-mamba_lm.eval()                                  # Dropout off
-X = data.X[data.num_train:data.num_train + 8].to(d2l.try_gpu())
-with torch.no_grad():
-    logits_scan = mamba_lm(X)                    # (batch, T, vocab)
-    state, cols = None, []
-    for t in range(X.shape[1]):                  # One token at a time
-        emb = mamba_lm.emb(X[:, t].unsqueeze(0)) # (1, batch, d)
-        y, state = mamba_lm.rnn.step(emb[0], state)
-        cols.append(mamba_lm.linear(y))
-    logits_step = torch.stack(cols, 1)
-err = float((logits_step - logits_scan).abs().max())
-scale = float(logits_scan.abs().max())
-print(f'stepped vs scanned logits: deviation {err:.2e}, '
-      f'relative {err / scale:.2e}')
-assert err < 1e-3 * scale
-```
-
-```{.python .input #mamba-stepping-the-selective-model-2}
-%%tab jax
-eval_lm = nnx.view(mamba_lm, deterministic=True, use_running_average=True,
-                   raise_if_not_found=False)     # Dropout off
-X = jnp.asarray(data.X[data.num_train:data.num_train + 8])
-with jax.default_matmul_precision('float32'):    # TF32 off, as before
-    logits_scan = eval_lm(X)                     # (batch, T, vocab)
-    state, cols = None, []
-    for t in range(X.shape[1]):                  # One token at a time
-        emb = eval_lm.emb(X[:, t][None])         # (1, batch, d)
-        y, state = eval_lm.rnn.step(emb[0], state)
-        cols.append(eval_lm.linear(y))
-    logits_step = jnp.stack(cols, 1)
-err = float(jnp.abs(logits_step - logits_scan).max())
-scale = float(jnp.abs(logits_scan).max())
-print(f'stepped vs scanned logits: deviation {err:.2e}, '
-      f'relative {err / scale:.2e}')
-assert err < 1e-3 * scale
-```
-
-We also evaluate the language models through generation, following
-:numref:`sec_decoding`. We sample each model with
-the same prefix, temperature, and min-$p$ filter, using the
-`d2l.generate` helper built there. For the gated baselines we keep that
-section's harness, which re-runs the growing prefix at every token; for
-Mamba we use recurrent decoding. `d2l.generate` hands our callback the full
-token list each call, so the closure below keeps `(state, seen)` and
-feeds only the *unseen* suffix through `step`: the first call plays the
-prompt into the state and every later call advances one token, the same
-prefill/decode split that :numref:`sec_kv-cache` built for the
-transformer, except that here the "cache" never grows. Generation cost
-falls from quadratic in the output length to linear.
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-7}
-%%tab pytorch
-def step_fn(model):
-    def step(ids):  # Token ids in, numpy logits for the next token out
-        with torch.no_grad():
-            logits = model(d2l.tensor([ids], device=d2l.try_gpu()))
-        return d2l.numpy(logits)[0, -1]
-    return step
-
-def stepped_fn(model):
-    state, seen = None, 0
-    def step(ids):  # Consume only the tokens the state has not absorbed
-        nonlocal state, seen
-        with torch.no_grad():
-            for i in ids[seen:]:
-                emb = model.emb(d2l.tensor([[i]], device=d2l.try_gpu()))
-                y, state = model.rnn.step(emb[0], state)
-            seen = len(ids)
-            return d2l.numpy(model.linear(y))[0]
-    return step
-
-prefix = data.tokenizer.encode('the time traveller')
-for name, model, fn in [('LSTM', lstm_lm, step_fn),
-                        ('minGRU', mingru_lm, step_fn),
-                        ('Mamba', mamba_lm, stepped_fn)]:
-    out = d2l.generate(fn(model), prefix, 25, strategy='sample',
-                       temperature=1.0, min_p=0.1,
-                       rng=np.random.default_rng(0))
-    d2l.print_wrapped(f'{name:>7}: {data.tokenizer.decode(out)!r}')
-```
-
-```{.python .input #mamba-the-three-answers-measured-on-one-task-7}
-%%tab jax
-def step_fn(model):
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)  # Dropout off for sampling
-    def step(ids):  # Token ids in, numpy logits for the next token out
-        return d2l.numpy(model(d2l.tensor([ids])))[0, -1]
-    return step
-
-def stepped_fn(model):
-    model = nnx.view(model, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)  # Dropout off for sampling
-    state, seen = None, 0
-    def step(ids):  # Consume only the tokens the state has not absorbed
-        nonlocal state, seen
-        for i in ids[seen:]:
-            emb = model.emb(jnp.array([[i]]))
-            y, state = model.rnn.step(emb[0], state)
-        seen = len(ids)
-        return d2l.numpy(model.linear(y))[0]
-    return step
-
-prefix = data.tokenizer.encode('the time traveller')
-for name, model, fn in [('LSTM', lstm_lm, step_fn),
-                        ('minGRU', mingru_lm, step_fn),
-                        ('Mamba', mamba_lm, stepped_fn)]:
-    out = d2l.generate(fn(model), prefix, 25, strategy='sample',
-                       temperature=1.0, min_p=0.1,
-                       rng=np.random.default_rng(0))
-    d2l.print_wrapped(f'{name:>7}: {data.tokenizer.decode(out)!r}')
-```
-
-### Selective Copying, Revisited
-:label:`subsec_mamba-copy-revisited`
-
-The language-model comparison evaluates end-to-end quality; the opening
-copying task isolates content-dependent selection. We run the Mamba stack
-on the selective copying task
-that the S4D could not solve, at the same parameter budget as before, and
-replot all three curves together.
-
-```{.python .input #mamba-selective-copying-revisited-1}
-%%tab pytorch
-mamba_copy = CopyModel(nn.Sequential(*[MambaBlock(48, 4) for _ in range(2)]),
-                       num_hiddens=48)
-train_copy('Mamba', mamba_copy, copy_data)
-```
-
-
-```{.python .input #mamba-selective-copying-revisited-1}
-%%tab jax
-mamba_copy = CopyModel(
-    nnx.Sequential(*[MambaBlock(48, 4) for _ in range(2)]), num_hiddens=48)
-train_copy('Mamba', mamba_copy, copy_data)
-```
-
-```{.python .input #mamba-selective-copying-revisited-2}
-%%tab pytorch, jax
-names = list(copy_curves)
-d2l.plot([copy_curves[n][0] for n in names],
-         [copy_curves[n][1] for n in names], 'epoch',
-         'validation accuracy', legend=names, figsize=(5, 3))
-```
-
-Mamba solves the task, and faster than the LSTM did. The mechanism we
-*designed* is that filler should collapse the learned $\Delta_t$ toward
-zero, so the state carries the stored symbols forward untouched, while a
-marked symbol should open $\Delta_t$ and write. Whether training found
-that mechanism is a measurable question, not one to assert: $\Delta_t$
-is an inference-time quantity, one forward pass away. The cell below
-pushes held-out sequences through the trained model and collects each
-block's step sizes by token role.
-
-```{.python .input #mamba-selective-copying-revisited-3}
-%%tab pytorch
-mamba_copy.eval()
-X = copy_data.X[copy_data.num_train:copy_data.num_train + 512].to(
-    d2l.try_gpu())
-with torch.no_grad():
-    h, dts = mamba_copy.emb(X.T), []
-    for blk in mamba_copy.encoder:
-        u, _ = blk.W_in(blk.ln(h)).chunk(2, -1)
-        u = blk.conv(u.permute(1, 2, 0))[..., :h.shape[0]]
-        dt = F.softplus(blk.ssm.W_dt(F.silu(u.permute(2, 0, 1)))
-                        + blk.ssm.b_dt)
-        dts.append(d2l.numpy(dt.mean(-1)))  # Mean step size, (T, batch)
-        h = blk(h)                          # On to the next block
-roles = d2l.numpy(X.T)
-masks = [roles == 0, roles >= 2, roles == 1]
-fig, axes = d2l.plt.subplots(1, len(dts), figsize=(8, 3), sharey=True)
-for i, (ax, dt) in enumerate(zip(axes, dts)):
-    ax.boxplot([dt[m] for m in masks], showfliers=False)
-    ax.set_xticks([1, 2, 3], ['filler', 'symbol', 'query'])
-    ax.set_yscale('log')
-    ax.set_title(f'block {i + 1}')
-    ax.grid(linestyle='--', alpha=0.4)
-axes[0].set_ylabel(r'learned $\Delta_t$ (channel mean)');
-```
-
-```{.python .input #mamba-selective-copying-revisited-3}
-%%tab jax
-eval_copy = nnx.view(mamba_copy, deterministic=True,
-                     use_running_average=True, raise_if_not_found=False)
-X = jnp.asarray(copy_data.X[copy_data.num_train:copy_data.num_train + 512])
-h, dts = eval_copy.emb(jax.nn.one_hot(X.T, eval_copy.vocab_size)), []
-for blk in eval_copy.encoder.layers:
-    u, _ = jnp.split(blk.W_in(blk.ln(h)), 2, axis=-1)
-    u = jnp.swapaxes(blk.conv(jnp.swapaxes(u, 0, 1)), 0, 1)
-    dt = jax.nn.softplus(blk.ssm.W_dt(jax.nn.silu(u)) + blk.ssm.b_dt)
-    dts.append(d2l.numpy(dt.mean(-1)))      # Mean step size, (T, batch)
-    h = blk(h)                              # On to the next block
-roles = d2l.numpy(X.T)
-masks = [roles == 0, roles >= 2, roles == 1]
-fig, axes = d2l.plt.subplots(1, len(dts), figsize=(8, 3), sharey=True)
-for i, (ax, dt) in enumerate(zip(axes, dts)):
-    ax.boxplot([dt[m] for m in masks], showfliers=False)
-    ax.set_xticks([1, 2, 3], ['filler', 'symbol', 'query'])
-    ax.set_yscale('log')
-    ax.set_title(f'block {i + 1}')
-    ax.grid(linestyle='--', alpha=0.4)
-axes[0].set_ylabel(r'learned $\Delta_t$ (channel mean)');
-```
-
-The trained step sizes separate by role: on filler tokens $\Delta_t$
-sits low, on the marked symbols it opens, and the query slots read out
-with their own regime. These measurements show that the trained model uses
-the step size as the
-proposed content-dependent gate. The content-dependent gating that :numref:`subsec_mingru`
-deleted to linearize the recurrence has been restored, not by putting
-the state back inside a nonlinearity, but by letting the input choose
-the coefficients of a linear map while preserving the affine structure
-required by the scan.
-
-Selectivity follows from the state-space construction: begin with continuous
-dynamics, discretize them, and let the input set the step size.
-The next section (:numref:`sec_matrix-state`) starts over from the
-attention side, with the linear-attention recurrence of
-:numref:`sec_attention-at-scale`, and arrives at the same recurrence.
+The state of a selective SSM is an $H \times N$ matrix for every layer, and
+each step adds to it the outer product of the step-scaled input with the
+write vector $\mathbf{B}_t$; the read vector $\mathbf{C}_t$ multiplies it.
+This is a memory of key–value pairs, with $\mathbf{B}_t$ as key and
+$\mathbf{C}_t$ as query. The next section studies such memories directly:
+how many pairs they hold, and how to train them with matrix products.
 
 ## Summary
 
-![Three recurrent designs compared by their state update: LSTMs use state-dependent gates; minGRU and S4D use linear state paths that admit a scan; Mamba makes the linear dynamics input-dependent.](../img/mdl-modernrnn-three-answers.svg)
-:label:`fig_three_answers`
-
-The chapter has developed three increasingly flexible state updates
-(:numref:`fig_three_answers`). Multiplicative gates let the data control
-writing, retention, and readout. Removing the nonlinearity from the state
-path turns the recurrence into an associative scan, while the state-space
-view supplies step-size gates, stable parameterizations, and memory
-constructions with formal guarantees. Making the step size and projections
-input-dependent restores content-dependent updates at the same asymptotic
-scan depth, although not at the same wall-clock cost. Our teaching
-implementation materializes the scan
-coefficients and therefore takes several times longer per epoch than the
-gated baselines in this experiment.
-The resulting Mamba block solved our selective-copy task, posted the
-best perplexity of the chapter in our PyTorch run (the minGRU edged it
-out in the JAX run), and, stepped one token at a time, generated text
-at constant cost per token from a state of a few kilobytes. What no
-update rule can change is that a fixed-size state at finite precision
-holds a fixed number of bits; what that limit costs, and how production
-systems buy it back with a few layers of attention, is where this
-chapter ends. First, though, comes a reckoning: the selective
-recurrence we built from ODEs and the attention we built in
-:numref:`chap_attention` are about to turn out to be the same
-computation (:numref:`sec_matrix-state`).
-
-**Experimental scope.** The selective-copy
-runs are a *diagnostic*, built so that content-independent dynamics
-fail it. They show our S4D stack stalling and Mamba solving the same
-instance, with the measured $\Delta_t$ separation as the mechanism;
-they do not show that no time-invariant model of any size could
-memorize a bounded version of the task. The capstone scoreboard is an
-*illustration*: one small corpus, one recipe per model, single seeded
-runs. It shows that the selective architecture can be trained to the
-best held-out perplexity at this scale, as it was in our PyTorch run,
-not a pound-for-pound ranking. The step-versus-scan agreement is an
-*identity check* on the trained network and holds to float tolerance in
-both frameworks.
+A state space model with fixed dynamics weights its inputs by their
+distance, so it cannot keep a token because of what the token is, and it
+fails at selective copying. A selective state space model computes its step
+sizes, and the vectors that write to and read from its state, from the
+current input. A small step size skips a token and a large one stores it, so
+the step size acts as the gate of a gated recurrent network, while the state
+keeps $N$ numbers per channel and starts with the multi-timescale
+initialization of S4D. Mamba solves selective copying over a thousand filler
+tokens, which the minGRU nearly solves and S4D does not. In the trained
+model, most of the state at the query comes from the few positions after
+each symbol. The selective model can no longer be computed as a convolution,
+but its update is still affine in the state, so a scan trains it, and the
+gradient of the scan is a second scan, run backward. The Mamba layer wraps
+the selective SSM in projections, a short convolution, and a gate, and it is
+a strong language model at this scale.
 
 ## Exercises
 
-1. **Softplus step, sigmoid gate.** Take one channel of the selective
-   layer before discretization, that is, the continuous system
-   :eqref:`eq_ssm_cont` with a single state ($N = 1$), $a = -1$, and
-   $\mathbf{B}_t = 1$. Let the step size be
-   $\Delta_t = \textrm{softplus}(z_t)$ for a scalar pre-activation $z_t$
-   computed from the input.
-    1. Discretize with the exact zero-order hold :eqref:`eq_zoh_diag`, and
-       show that the update becomes
-       $x_t = (1 - g_t)\, x_{t-1} + g_t\, u_t$ with $g_t = \sigma(z_t)$.
-       This is Theorem 1 of :citet:`Gu.Dao.2023`.
-    1. Repeat the derivation with the first-order input rule
-       $\bar{\mathbf{B}}_t = \Delta_t \mathbf{B}_t$ that `SelectiveSSM`
-       uses. Show that both rules give an input weight of approximately
-       $e^{z_t}$ as $z_t \to -\infty$, and compute the ratio of the two
-       input weights at $z_t \in \{-4, 0, 4\}$.
-    1. For a constant input $u_t = u$, find the fixed point of the state
-       under each rule, and state which rule keeps the state on the scale
-       of the input as $\Delta_t$ grows. Then let $|u_t| \le U$ and
-       $z_t \le z_{\max}$ for all $t$, start from $x_0 = 0$, and bound
-       $|x_t|$ under each rule.
-   :exlabel:`ex_mamba-softplus-step-sigmoid-gate`
+1. **A step size is a gate.** Consider one channel with one state, rate
+   $\lambda = -1$, and the exact zero-order hold of :numref:`sec_ssm`, so
+   that $h_t = e^{-\Delta_t} h_{t-1} + (1 - e^{-\Delta_t}) x_t$.
+    1. Show that with $\Delta_t = \textrm{softplus}(s_t)$ the update is
+       $h_t = z_t h_{t-1} + (1 - z_t) x_t$ with $z_t = \sigma(-s_t)$, the
+       blend of a GRU with update gate $z_t$.
+    1. What does the approximation $\Delta_t$ of the input weight, which
+       Mamba uses, change? For which $\Delta_t$ is it accurate?
 
-1. **Linear or time-invariant.** An LTI system is both linear and time
-   invariant, and :numref:`subsec_selective-scan` states that selectivity
-   removes the convolution view. Consider one `SelectiveSSM` layer as a
-   map from an input sequence $\mathbf{u}_1, \ldots, \mathbf{u}_T$ to an
-   output sequence, started from the zero state.
-    1. Show that prepending $k$ zero vectors to the input prepends $k$ zero
-       vectors to the output and leaves the remaining outputs unchanged.
-    1. Show that the layer is not linear in its input by computing the
-       output at $t = 1$ for the inputs $\mathbf{u}_1$ and
-       $2\mathbf{u}_1$.
-    1. Prove that a causal map that is linear and commutes with the shift
-       of the first part is a convolution
-       $\mathbf{y}_t = \sum_{k \ge 0} \bar{\mathbf{K}}_k \mathbf{u}_{t-k}$.
-    1. Fix one input sequence and treat the $\boldsymbol{\Delta}_t$,
-       $\mathbf{B}_t$, and $\mathbf{C}_t$ it produces as constants. Write
-       the output of channel $h$ as
-       $y_{t,h} = \sum_{s \le t} M_{t,s}\, u_{s,h} + d_h u_{t,h}$, and
-       give $M_{t,s}$. Show that $M_{t,s}$ is in general not a function
-       of $t - s$ alone, and explain why the FFT of
-       :numref:`subsec_ssm-conv` cannot evaluate this sum even after the
-       input, and hence $M$, is known.
+1. **Memory of the scan.** For a Mamba layer with $H$ channels and $N$
+   states, a minibatch of $B$ sequences of length $T$, and 32-bit numbers,
+   count the bytes that backpropagation stores for the scan, (a) through the
+   rounds of the doubling scan, (b) with the adjoint scan, and (c) with a
+   kernel that stores only the inputs of the layer and recomputes the
+   states. Evaluate the three for $H = 4096$, $N = 16$, $B = 8$, and $T =
+   8192$, and compare with the memory of a GPU.
 
-1. **Materialized scan memory.** :numref:`tab_mamba_simplifications`
-   records that our `SelectiveSSM` materializes coefficient tensors of
-   shape $(T, \textrm{batch}, H, N)$. Take one `MambaBlock` of the
-   language model of :numref:`subsec_capstone`: $T = 32$, a batch of 1024
-   windows, model width 128 and hence $H = 256$ after expansion, $N = 4$,
-   and float32 entries.
-    1. Compute the size of one such tensor. Suppose that the scan follows
-       the doubling schedule of :numref:`fig_scan_tree` and that the
-       backward pass keeps the decay and input tensors entering each of the
-       $\lceil \log_2 T \rceil$ rounds, plus the scan output. Compute the
-       memory that the scan keeps per block.
-    1. A fused kernel keeps only $\mathbf{u}_t$ and
-       $\boldsymbol{\Delta}_t$, each of shape $(T, \textrm{batch}, H)$, and
-       $\mathbf{B}_t$ and $\mathbf{C}_t$, each of shape
-       $(T, \textrm{batch}, N)$, and recomputes everything else during the
-       backward pass. Compute its storage and the ratio to the previous
-       part. Express the ratio in terms of $T$, $H$, and $N$, and evaluate
-       it at $N = 16$, $T = 2048$, and $H = 4096$.
-    1. `S4D` passes its decays to the same scan with a batch axis of size
-       one, because they do not depend on the input. Under the assumption
-       of the first part, compute the memory that its scan keeps for the
-       same shapes. Which part of the selective layer's storage is the
-       price of selectivity?
+1. [code] **Causality.** The convolution of the Mamba layer must see only
+   the current and earlier tokens; the code pads the sequence so that
+   output $t$ depends on inputs $t-3, \ldots, t$.
+    1. Change a token in the middle of a random input sequence and check
+       that the outputs at earlier positions do not change.
+    1. Shift the padding so that output $t$ also sees input $t+1$. What
+       goes wrong, and how does the model's training loss on the copying
+       task react?
 
-1. **Block parameter budget.** Let a `MambaBlock` have model width $d$,
-   expansion $E$, $N$ states, convolution width $w$, and a rank-$R$ head
-   for $\boldsymbol{\Delta}_t$, so that its `SelectiveSSM` has width
-   $Ed$.
-    1. Count the parameters of one block, biases and normalization
-       included, as a function of $d$, $E$, $N$, $R$, and $w$. Show that
-       at fixed $R$ the leading term in $d$ is the $3Ed^2$ of
-       :citet:`Gu.Dao.2023`, and identify the matrices that contribute it.
-       `SelectiveSSM` sets $R = Ed/16$; find the quadratic term that the
-       $\boldsymbol{\Delta}_t$ head then adds.
-    1. Evaluate the count for the blocks of `Mamba(num_inputs=128)` in
-       :numref:`subsec_capstone`, where $E = 2$, $N = 4$, $R = 16$, and
-       $w = 4$. Give the fractions of the block held by the two
-       projections and by the selective SSM. Add the embedding and the
-       output layer for the 1024-token vocabulary, compare the total with
-       the parameter count that `benchmark` records in
-       :numref:`subsec_capstone`, and give the share of the model's
-       parameters that lies outside the Mamba blocks.
-    1. A transformer block of width $d$ holds about $12d^2$ parameters
-       (:numref:`sec_transformer-block`). How many Mamba blocks with
-       $E = 2$ match one transformer block, and what does this imply when
-       comparing the depths of the two architectures at equal parameter
-       count?
+1. [code] **Longer sequences.** Evaluate the Mamba model trained on 1,024
+   fillers on sequences with 2,048 and 4,096 fillers, without retraining.
+    1. Does it still copy the symbols? Compare with the minGRU.
+    1. For each channel of the first layer, compute the decay of its slowest
+       state over 1,000 filler tokens. How many channels can carry a symbol
+       across 4,096 fillers?
 
-:begin_tab:`pytorch`
-5. [code] **Causality test.** A causal sequence model must leave its
-    output at position $s$ unchanged when the input at a later position
-    $t > s$ changes.
-    1. Write a test that perturbs `X[t]` of a random input to
-       `Mamba(num_inputs=32)` and reports which output positions change.
-    1. `MambaBlock.forward` pads both ends of the sequence by
-       `conv_width - 1` and keeps the first `X.shape[0]` outputs of the
-       convolution. Keep the last `X.shape[0]` outputs instead. Before
-       running your test, determine how many future tokens each output now
-       sees, and then confirm it with the test.
-    1. Build the language model of :numref:`subsec_capstone` from the
-       modified `Mamba`, run the step-versus-scan check of
-       :numref:`subsec_mamba-step` on it without training, and explain its
-       result.
-:end_tab:
+1. **Weights that depend on position.** ● Consider any model whose state
+   at step $T$ is $\sum_{s \le T} \mathbf{w}_{T-s} \odot f(x_s)$, with
+   fixed weights $\mathbf{w}_k$ and a fixed function $f$ of a single
+   token, and whose output is any function of this state. S4D is of this
+   form. Show that for selective copying with two symbols among fillers,
+   the state cannot depend on the order of the symbols unless the weights
+   $\mathbf{w}_k$ differ for different distances $k$, and that the model
+   must then distinguish, from the state alone, every pair of positions.
+   Why does this make the task hard for S4D as the number of fillers
+   grows, while a selective model can keep its state unchanged on fillers?
 
-:begin_tab:`jax`
-5. [code] **Causality test.** A causal sequence model must leave its
-    output at position $s$ unchanged when the input at a later position
-    $t > s$ changes.
-    1. Write a test that perturbs `X[t]` of a random input to
-       `Mamba(num_inputs=32)` and reports which output positions change.
-    1. `MambaBlock` builds its convolution with `padding='CAUSAL'`. Build
-       it with `padding='SAME'` instead. Before running your test,
-       determine how many future tokens each output now sees, and then
-       confirm it with the test.
-    1. Build the language model of :numref:`subsec_capstone` from the
-       modified `Mamba`, run the step-versus-scan check of
-       :numref:`subsec_mamba-step` on it without training, and explain its
-       result.
-:end_tab:
+1. [code] **Which part must be selective?** ●
+    1. Train three variants of the Mamba model on selective copying: with
+       input-dependent step sizes but fixed write and read vectors
+       $\mathbf{B}$ and $\mathbf{C}$, with fixed step sizes but
+       input-dependent $\mathbf{B}_t$ and $\mathbf{C}_t$, and with
+       neither. Which variants solve the task? Relate the result to the
+       contributions to the state measured above.
+    1. In the trained Mamba model, set the step sizes of the first layer to
+       their median over filler positions at the four positions after each
+       symbol, so that the layer cannot write the symbols with a large
+       step. How much does the accuracy drop? Repeat with the step sizes
+       set to their median over these positions everywhere else, so that
+       the layer cannot skip the fillers.
 
-6. [code] **Longer filler runs.** The models `s4d`, `lstm`, and
-   `mamba_copy` were trained on sequences of 256 tokens before the query
-   slots. None of them uses position embeddings, so each runs on sequences
-   of any length.
-    1. Build validation sets with `SelectiveCopy` at
-       `num_steps` $\in \{1024, 4096\}$. Pass a small `num_train`, such as
-       64, since only the validation split is used. Pass `batch_size=64` as
-       well, because the scan materializes $(T, \textrm{batch}, H, N)$
-       tensors. Use the validation split of `copy_data` for 256, and report
-       the accuracy of the three trained models at each length without
-       retraining.
-    1. Over a run of filler tokens, the decay alone multiplies state
-       coordinate $n$ of a channel by
-       $\exp\bigl(-|a_n| \sum_t \Delta_t\bigr)$, the sum running over the
-       run. From the trained `log_a` and each channel's median $\Delta$ on
-       filler, measured as in :numref:`subsec_mamba-copy-revisited`,
-       compute this factor for each channel's slowest mode over runs of 256
-       and 4096 filler tokens. Use the distribution of the factor over
-       channels to explain the accuracies of the first part.
-    1. :citet:`Gu.Dao.2023` report that a Mamba trained on an
-       induction-head task at length 256 extrapolates to sequences of a
-       million tokens. Which property of the learned $\Delta_t$ would such
-       extrapolation require, and does your measurement show it?
+1. [code] **Generation.** Add a method `step` to `SelectiveSSM` and to
+   `Mamba` that processes one token, given the state of the SSM and the
+   last three inputs of the convolution, and returns the output and the
+   new state. Check that stepping through a sequence reproduces the
+   outputs of the forward pass. How many numbers does the layer carry from
+   token to token?
 
-1. **Additive scores.** ● Write a selective-copying input of
-   :numref:`subsec_selectivity` as the token ids $s_1, \ldots, s_T$ that
-   precede the query slots. Call a model *additive* at a query slot if its
-   vector of eight symbol logits there has the form
-
-    $$\mathbf{f}(s_1, \ldots, s_T) = \mathbf{c} + \sum_{t=1}^{T} \mathbf{g}_t(s_t),$$
-
-    where $\mathbf{c} \in \mathbb{R}^8$ is a constant and each
-    $\mathbf{g}_t$ is an arbitrary map from token ids to $\mathbb{R}^8$.
-    The model answers correctly if the target symbol has the strictly
-    largest logit.
-    1. Remove the gated MLP from `S4DBlock`, leaving the pre-norm, the
-       `S4D` layer, and the residual connection, and place the result
-       between a token embedding and a linear head. Show that this model is
-       additive at every query slot.
-    1. Let `num_marked` be 1. Give an additive score that answers correctly
-       wherever the single symbol appears.
-    1. Let `num_marked` be 3 and $T = 4$, and let the query slot ask for
-       the second of the three symbols. Prove that no additive score answers
-       correctly on every placement. Restrict to inputs whose symbols are
-       two fixed ids $A$ and $B$, and compare the logits of $A$ and $B$.
-    1. The two-block S4D stack of :numref:`subsec_selectivity` is built
-       from full `S4DBlock`s. Show that a stack of two of the reduced
-       blocks of the first part, with no gated MLP at all, is in general
-       not additive, and name the operation responsible. Name
-       the further operations of the full `S4DBlock` that have the same
-       effect. Finally, explain why a single layer of
-       :eqref:`eq_selective_ssm` is not additive.
-
-1. [code] **Selective in $\Delta$ only.** ● The selective layer makes
-   three quantities functions of the input: $\boldsymbol{\Delta}_t$,
-   $\mathbf{B}_t$, and $\mathbf{C}_t$. Measure which of them carries
-   selective copying.
-    1. Write two variants of `SelectiveSSM`. In the first, only
-       $\boldsymbol{\Delta}_t$ depends on the input, while
-       $\mathbf{B} = \mathbf{1}$ is fixed and $\mathbf{C}$ is a learned
-       $(H, N)$ parameter as in `S4D`. In the second, $\Delta$ is a learned
-       per-channel constant as in `S4D`, while $\mathbf{B}_t$ and
-       $\mathbf{C}_t$ remain functions of the input. Before training,
-       predict from the gate interpretation of :numref:`subsec_zoh` and
-       from problem :exref:`ex_mamba-softplus-step-sigmoid-gate` which variant solves the task within the budget of
-       `train_copy`.
-    1. Build the architecture of `mamba_copy`, replace the `ssm` attribute
-       of each `MambaBlock` by a variant, and train each with `train_copy`.
-       Plot the two curves together with those of the S4D, the LSTM, and
-       the full Mamba. Which ingredient carries the task?
-    1. :citet:`Gu.Dao.2023` run the corresponding ablation in a language
-       model and report perplexities of 10.93 with none of the three
-       input-dependent, 10.15 with $\mathbf{B}$ alone, 9.98 with
-       $\mathbf{C}$ alone, 9.81 with $\Delta$ alone, and 8.71 with all
-       three. Which of these settings matches your first variant, and why
-       does none match your second? Is the ingredient that carries
-       selective copying the one that their ablation ranks first among
-       single ingredients?
-
-1. [code] **Prefill and decode.** ● `stepped_fn` of
-   :numref:`subsec_mamba-step` plays the prompt into the state one token
-   at a time, while the parallel forward pass of `Mamba` computes the same
-   states with the scan and returns `None` as its state.
-    1. Modify the forward passes of `SelectiveSSM`, `MambaBlock`, and
-       `Mamba` so that they also return, for every block, the pair of
-       convolution buffer and SSM state that `MambaBlock.step` holds after
-       the last token, in the layout that `step` expects. Prefill a prompt
-       with one forward pass, decode the continuation with `step`, and
-       verify on the trained `mamba_lm` that the logits agree with pure
-       stepping to float tolerance.
-    1. Time the prefill of prompts of $P \in \{32, 256, 2048\}$ tokens,
-       once with the scan and once by stepping, and time the decoding of
-       each further token. How do the two prefill times scale with $P$, and
-       does the time per decoded token depend on $P$? Relate the result to
-       the split between prefill and decode of :numref:`sec_kv-cache`.
-
-1. [code] **Interventions on $\Delta$.** ● The step-size measurement of
-   :numref:`subsec_mamba-copy-revisited` shows that $\Delta_t$ separates by
-   token role in the trained `mamba_copy`. A correlation does not show that
-   the model's answers depend on this separation, but an intervention can.
-    1. Extend the measurement code into a forward pass of the trained model
-       in which each block computes its SSM from a step size that you
-       supply. Check that supplying each block's own $\Delta_t$ reproduces
-       the model's validation accuracy.
-    1. In every block, replace $\Delta_t$ at filler positions by the
-       channel's median $\Delta$ over symbol positions, and measure the
-       accuracy. Then replace $\Delta_t$ at symbol positions by the
-       channel's median over filler positions. Predict both accuracies
-       before running, and explain each outcome by what the state does at
-       the affected tokens.
-    1. Apply each intervention to one block at a time. Which block's step
-       size does the answer depend on, and does that agree with the box
-       plots of :numref:`subsec_mamba-copy-revisited`?
-
-1. [extended] **Block ablations.** ● Besides the selective SSM, the
-   block of :numref:`fig_mamba_block` has three ingredients: the short
-   causal convolution, the SiLU on the main branch, and the gate branch.
-    1. Build three variants of `MambaBlock`: one without the gate, which
-       passes the SSM output straight to `W_out`; one without the
-       convolution, with `conv_width=1`; and one with the identity in place
-       of the SiLU in front of the SSM.
-    1. Train each variant on selective copying with `train_copy`, and as a
-       two-block stack in the language model of :numref:`subsec_capstone`
-       with `benchmark`, keeping each task's recipe.
-    1. Which change hurts most on each task? For the variant without the
-       convolution, explain from :eqref:`eq_selective_heads` what
-       information $\boldsymbol{\Delta}_t$, $\mathbf{B}_t$, and
-       $\mathbf{C}_t$ lose in the first block, and why later blocks lose
-       less.
+1. [code] **Short initial memories.** Train the Mamba model with step sizes
+   initialized between 0.5 and 1 (`dt_min=0.5, dt_max=1.0`), so that every
+   state starts with a memory of a few steps.
+    1. Does it learn to copy the symbols within the training budget? If so,
+       plot the step sizes of the first layer on filler tokens before and
+       after training, and explain how the model could have learned long
+       memories from gradients that, at the start, vanish over a thousand
+       steps. (Hint: where do the symbols closest to the queries sit?)
+    1. Repeat with 4,096 fillers, and with the minGRU initialized as in the
+       long-range recall experiment of :numref:`sec_ssm`.
 
 [Discussions](https://d2l.discourse.group/)
 
 <!-- slides -->
 
-::: {.slide title="Selective State Space Models"}
-The previous section ended on a confession: the S4D is **LTI**. Its
-kernel weights the past by *position*, never by *content*: the model
-decides what to remember before it sees the input.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §12.3]{.kicker}
 
-The LSTM had the opposite profile: gates that read the data, but a
-nonlinear recurrence that trains sequentially.
-
-. . .
-
-This section: make the dynamics a **function of the input**
-(Gu & Dao, 2023):
-
-- the forget gate falls out a **third** time (engineering → calculus →
-  selectivity),
-- the scan survives; the kernel view does not,
-- packaged as the **Mamba** block (2023): selective recurrence
-  competitive at language-model scaling — ground S4's long-range wins
-  had not reached.
+Selective state space models<br>
+**selective copying · input-chosen step sizes · the scan and its gradient · the Mamba layer · where the state comes from**
+:::
 :::
 
-::: {.slide title="A task that defeats time invariance"}
-**Selective copying**: symbols scattered among filler at *random*
-positions; reproduce them, in order, at the query slots.
+::: {.slide title="S4D Copies Barely More Symbols Than Chance"}
+[The problem]{.kicker}
 
-![](../img/mdl-modernrnn-selective-copy.svg){width=100%}
+Four symbols, drawn from eight, at random positions among 1,024 filler
+tokens; at four query tokens, repeat them in order. Chance: 1/8.
 
-. . .
+- S4D: under 0.2. Its weight for an input depends only on the distance.
+- The same distance holds a symbol in one sequence and a filler in the next.
 
-- Store a token *because it is a symbol*, not because of where it sits.
-- LM-scale counterpart: **associative recall**: the induction head we
-  built in ch. 10; a synthetic recall benchmark predicts most of the
-  attention-vs-SSM gap (Arora et al., 2024).
+::: {.d2l-note}
+Keep a token **because of what it is**, wherever it occurs, for up to a
+thousand steps.
+:::
 :::
 
-::: {.slide title="Generating the task"}
-Filler is token 0, queries are token 1, symbols are ids 2-9:
+::: {.slide title="By the End of This Deck You Can"}
+- write the selective SSM: step size, write and read vectors from the input;
+- explain why the convolution is lost and the scan survives;
+- compute the gradient of a scan with a second scan;
+- read where a trained model's state comes from.
 
-@mamba-a-task-that-defeats-time-invariance
+**Running example:** selective copying with 1,024 fillers; the Penn
+Treebank results (LSTM 2.95, minGRU 3.2, S4D 3.35).
 :::
 
-::: {.slide title="Two Baseline Models"}
-The S4D stack of the previous section (imported from `d2l`) vs. the
-LSTM, both ~30k parameters, same harness: embed, encode, classify the
-query slots.
+::: {.slide title="Each Model So Far Has Half a Solution"}
+![](../img/mdl-modernrnn-selective-copy.svg){width=80%}
 
-@mamba-an-lti-baseline-and-a-gated-one-2
-
-. . .
-
-@mamba-an-lti-baseline-and-a-gated-one-3
+| | decay chosen by the input | memories of many lengths at the start |
+|---|---|---|
+| minGRU | yes | no (gates at 1/2) |
+| S4D | no | yes |
 :::
 
-::: {.slide title="The LTI model stalls; the gated one solves it"}
-@mamba-an-lti-baseline-and-a-gated-one-5
+::: {.slide title="S4D Fails, the minGRU Nearly Succeeds"}
+Two blocks of width 48 in `d2l.SeqLM`, Adam, 2,500 steps of fresh batches.
 
-. . .
-
-- LSTM: climbs to solved. Gates read the data; "store this, it is a
-  symbol" is learnable.
-- S4D: **plateaus**. Pointwise nonlinearities can suppress filler
-  locally, but a fixed kernel cannot align "third symbol seen" with
-  "third query slot" under variable spacing.
-- The task is built to stress content-independent dynamics — the
-  mechanism the S4D lacks is content-dependent gating.
+@!mamba-selective-copying-3
 :::
 
-::: {.slide title="Selective SSMs: let the input choose the dynamics"}
-Relative to S4D, the step size, input matrix, and readout become
-functions of the input,
+::: {.slide title="A Selective SSM Computes Its Dynamics From the Input"}
+$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta\mathbf{x}_t + \mathbf{b}_\Delta),\quad
+\mathbf{B}_t = \mathbf{W}_B\mathbf{x}_t,\quad \mathbf{C}_t = \mathbf{W}_C\mathbf{x}_t$$
 
-$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{u}_t \mathbf{W}_{\Delta} + \mathbf{b}_{\Delta}), \qquad \mathbf{B}_t = \mathbf{u}_t \mathbf{W}_B, \qquad \mathbf{C}_t = \mathbf{u}_t \mathbf{W}_C,$$
+$$\mathbf{h}^{(c)}_t = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}^{(c)}_{t-1} + \Delta_{t,c}\, x_{t,c}\,\mathbf{B}_t,
+\qquad y_{t,c} = \mathbf{C}_t^\top \mathbf{h}^{(c)}_t + D_c x_{t,c}$$
 
-$$\mathbf{x}_t = e^{\Delta_{t,h} \mathbf{a}} \odot \mathbf{x}_{t-1} + \Delta_{t,h}\, u_{t,h}\, \mathbf{B}_t.$$
-
-. . .
-
-Recall the step-size box: $\Delta \to 0$ freezes the state,
-$\Delta$ large overwrites it. Input-dependent $\Delta_t$ = **forget and
-input gate in one scalar**, on a linear state:
-
-- filler → $\Delta_t \approx 0$: glide through, untouched;
-- symbol → $\Delta_t$ opens: write.
-
-The gate, derived a third time.
+- Channel $c$ of $H$; $N$ states per channel with rates $\lambda_n = -(n+1)$.
+- $\Delta_{t,c}$: how much channel $c$ forgets and writes at step $t$.
+- $\mathbf{B}_t$, $\mathbf{C}_t$: where the token goes, what the output reads.
 :::
 
-::: {.slide title="Parallelism under Selectivity"}
-**Price**: time-varying coefficients kill the convolution view. No fixed
-$\bar{\mathbf{K}}$, no FFT. Of the three views only the recurrence
-survives.
+::: {.slide title="A Small Step Skips a Token, a Large Step Stores It"}
+| $\Delta_{t,c}$ | decay $e^{\Delta\lambda}$ | write $\approx\Delta$ | effect |
+|---|---|---|---|
+| near 0 | near 1 | near 0 | filler passes, state kept |
+| large | near 0 | large | state replaced by the token |
 
-**Save**: the recurrence is *still* an affine map of the state; the
-combine $(\mathbf{a}_2, \mathbf{b}_2) \circ (\mathbf{a}_1, \mathbf{b}_1)$
-never assumed constant coefficients. Same scan, per-step tensors:
-
-@mamba-what-selectivity-costs-and-what-survives-1
+- Initialization as in S4D: $\Delta$ log-uniform in $[0.001, 0.1]$, the
+  weights $\mathbf{W}_\Delta$ start at zero.
+- Training learns how $\Delta$ depends on the token.
 :::
 
-::: {.slide title="The selective SSM layer"}
-Three changes vs. `S4D`: $\Delta, \mathbf{B}, \mathbf{C}$ from linear
-heads; low-rank $\Delta$ head (`dt_rank`); bias init gives the
-*untrained* layer S4D's multi-timescale decays ($\mathbf{B}_t,
-\mathbf{C}_t$ are input-dependent from the start):
+::: {.slide title="Selectivity Breaks the Convolution, Not the Scan"}
+- Weight of an input $k$ steps back: a product of $k$ **different** decays.
+  No single kernel.
+- The update is still affine in $\mathbf{h}$: `linear_scan` applies unchanged.
+- Cost: a state of $H \times N$ numbers **at every position**.
 
-@mamba-what-selectivity-costs-and-what-survives-2
+::: {.d2l-note .warn}
+64 sequences of 1,024 steps, 96 channels, 16 states: 100 M numbers,
+400 MB, for one tensor.
+:::
 :::
 
-::: {.slide title="Why 2023 and not 2020: hardware-awareness"}
-Our implementation materializes `(T, batch, H, N)` coefficient tensors:
-fine at textbook scale, ruinous at model scale (the compute is trivial;
-**memory traffic** sets the speed).
+::: {.slide title="The Gradient of a Scan Is Another Scan"}
+$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct} + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1},
+\qquad \frac{\partial \ell}{\partial \mathbf{b}_t} = \mathbf{g}_t,\quad
+\frac{\partial \ell}{\partial \mathbf{a}_t} = \mathbf{g}_t \odot \mathbf{h}_{t-1}$$
 
-. . .
+A linear recurrence run backward: store the decays and states, not ten
+rounds.
 
-The Mamba kernel:
+@!mamba-training-with-a-scan-2
 
-- fuses discretization + scan + read-out in one pass, intermediates in
-  on-chip SRAM,
-- **recomputes** them in the backward pass instead of storing
-  (store-vs-recompute, cf. 8.6),
-- changes nothing about *what* is computed, only whether it was worth
-  computing.
+Mamba's fused kernel goes further: states stay in on-chip memory and are
+recomputed in the backward pass.
 :::
 
-::: {.slide title="The Mamba block"}
-![](../img/mdl-modernrnn-mamba-block.svg){width=52%}
+::: {.slide title="Check: Memory of the Scan"}
+$B = 64$, $T = 1024$, $H = 96$, $N = 16$, 32-bit floats.
+
+1. Bytes of one tensor of states?
+2. Backpropagation through 10 rounds of $\mathbf{a}$ and $\mathbf{b}$, against the adjoint scan's two tensors?
+
+::: {.fragment .fade-up}
+1. $64 \cdot 1024 \cdot 96 \cdot 16 \cdot 4 \approx 400$ MB.
+2. About 8 GB against 0.8 GB.
+:::
 :::
 
-::: {.slide title="Block and language model"}
-A dozen lines around `SelectiveSSM`; the stack keeps the
-`(inputs, state)` interface, so `d2l.RNNLM` wraps it unchanged:
-
-@mamba-the-mamba-block
+::: {.slide title="The Mamba Layer Wraps the SSM in Projections and a Gate"}
+::: {.cols .vc}
+::: {.col}
+- Input projection to $H = 2d$ channels and a gate branch.
+- Short causal convolution (4 tokens), SiLU, selective SSM.
+- Multiply by SiLU of the gate, project back to $d$.
+- Same interface as every mixer of `d2l.SeqLM`.
 :::
 
-::: {.slide title="Recurrent-Model Comparison"}
-**Gate it** (LSTM) vs. **linearize it** (minGRU) vs. **select it**
-(Mamba); Time Machine BPE, 50k windows of 32, ten epochs, clip 1:
-
-@mamba-the-three-answers-measured-on-one-task-6
-
-. . .
-
-- Mamba: best perplexity of the chapter in the PyTorch run; the minGRU
-  edges it out in the JAX run.
-- At this scale, recipe and initialization move the board by amounts
-  comparable to the architectural gap.
-- Caveats: Adam vs. the baselines' SGD; more parameters;
-  a small corpus rewards memorization.
+::: {.col .fig .big}
+![](../img/mdl-modernrnn-mamba-block.svg){width=92%}
+:::
+:::
 :::
 
-::: {.slide title="Stepping the selective model"}
-Selectivity does not break stepping: $\Delta_t, \mathbf{B}_t,
-\mathbf{C}_t$ come from the *current* token, so each step builds its
-own coefficients. One new piece of state: the causal conv needs its
-last 4 inputs → a **rolling buffer**: (conv buffer, SSM state) is
-exactly what production Mamba caches.
+::: {.slide title="Mamba Copies Nearly Every Symbol"}
+@!mamba-selective-copying-with-mamba
 
-@mamba-stepping-the-selective-model-1
+Decays chosen by the input (like the minGRU) **and** memories of many
+lengths from the start (like S4D).
 :::
 
-::: {.slide title="Stepped == scanned, on the trained LM"}
-Push validation windows through the trained capstone twice: parallel
-scan vs. token-by-token `step`; the logits must agree (dropout off):
+::: {.slide title="Mamba's State Comes From the Symbols"}
+@!mamba-where-the-state-comes-from-2
 
-@mamba-stepping-the-selective-model-2
+Size of each position's term in the first layer's state at the query.
+S4D: a smooth curve in distance. Mamba: spikes at the four symbols, wherever
+they sit.
 :::
 
-::: {.slide title="Sampling all three (8.7's toolkit)"}
-Baselines re-run the prefix per token; Mamba decodes through `step`:
-prefill the prompt once, then one state update per token: O(1), like a
-KV cache that never grows.
+::: {.slide title="On Text, Mamba Matches the Gated Networks"}
+| model | PTB perplexity | parameters |
+|---|---|---|
+| LSTM | about 2.95 | 540 k |
+| minGRU | about 3.2 | 344 k |
+| S4D | about 3.35 | |
+| **Mamba** | **about 2.95** | 635 k |
 
-@mamba-the-three-answers-measured-on-one-task-7
+Trained entirely with scans; generates with a fixed-size state.
 :::
 
-::: {.slide title="Selective copying, revisited"}
-@mamba-selective-copying-revisited-2
+::: {.slide title="Recap"}
+- Fixed dynamics weigh inputs by distance: S4D fails selective copying.
+- Selective SSM: $\Delta_t$, $\mathbf{B}_t$, $\mathbf{C}_t$ from the
+  input; $\Delta$ is a gate; S4D's timescales at the start.
+- The convolution is lost; the scan and its backward scan remain.
 
-. . .
-
-Mamba solves what the S4D could not, faster than the LSTM. The
-content-dependent gating we deleted to linearize is restored,
-**without** giving up the scan.
-:::
-
-::: {.slide title="The mechanism, measured"}
-Designed: filler collapses $\Delta_t$, symbols open it. Measured, on
-the trained model (one forward pass, no retraining):
-
-@!mamba-selective-copying-revisited-3
-
-The narrated gate is what training actually found.
-:::
-
-::: {.slide title="Summary"}
-![](../img/mdl-modernrnn-three-answers.svg){width=100%}
-
-. . .
-
-Selectivity from the state-space side: continuous dynamics, discretize,
-let the input set the step size. Trains as a scan, decodes as a
-constant-size state.
-
-. . .
-
-The next section starts from the **linear-attention recurrence** of ch. 10
-and derives the same recurrence.
+**Next:** the state $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ gains the outer
+product $(\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\mathbf{B}_t^\top$ at
+every step and is read by $\mathbf{C}_t$: a memory of key–value pairs.
 :::

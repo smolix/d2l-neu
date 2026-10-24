@@ -187,6 +187,11 @@ and output the span with the highest score.
 
 ## Exercises
 
+1. Take BERT base, which has a hidden size of 768 and about 110 million parameters. For each of the following output layers, count the parameters that fine-tuning learns from scratch and give the count as a fraction of BERT base: a single fully connected layer on the “&lt;cls&gt;” representation for binary sentiment classification and for three-way natural language inference, a tagging layer for a tag set of 45 tags, and the start and end layers for question answering. Show that the biases of the start and end layers change neither the start probabilities $p_i$ nor the end probabilities, so that question answering needs only $2 \times 768$ new parameters.
+1. Question answering predicts the span from position $i$ to position $j$ with the largest score $s_i + e_j$ subject to $i \leq j$.
+    1. Let $p_i$ and $q_j$ be the softmax probabilities of start position $i$ and end position $j$ computed from the scores. Show that the predicted span maximizes $p_i q_j$ over all valid spans.
+    1. A passage of $n$ tokens has $n(n+1)/2$ valid spans. Give an algorithm that finds the best span in $O(n)$ time.
+    1. Answers are usually short, so systems also require $j - i < L$. Extend your algorithm to this constraint while keeping $O(n)$ time, and count the spans that a search over all valid spans evaluates for $n = 384$ and $L = 30$, with and without the constraint.
 1. Let's design a search engine algorithm for news articles. When the system receives a query (e.g., "oil industry during the coronavirus outbreak"), it should return a ranked list of news articles that are most relevant to the query. Suppose that we have a huge pool of news articles and a large number of queries. To simplify the problem, suppose that the most relevant article has been labeled for each query. How can we apply negative sampling (see :numref:`subsec_negative-sampling`) and BERT in the algorithm design?
 1. How can we leverage BERT in training language models?
 1. Can we leverage BERT in machine translation?

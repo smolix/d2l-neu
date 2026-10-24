@@ -713,8 +713,8 @@ JAX. To work the training problems below in Keras, build its ResNet-18
 control from the `ResNet` of :numref:`sec_resnet` with
 `arch=((2, 35), (2, 70), (2, 140), (2, 280))` and the stem narrowed from 64
 to 35 channels, and reuse the `AdamW` optimizer with the `CosineDecay`
-schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
-:numref:`sec_training_recipes`.
+schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup`
+of :numref:`sec_training_recipes`.
 :end_tab:
 
 1. **Roadmap ablations.** The roadmap in :numref:`tab_convnext_roadmap`

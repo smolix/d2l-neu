@@ -832,8 +832,8 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
     1. Tabulate the parameter count and the number of multiplications of
        VGG-11, separately for its convolutional and its fully connected
        layers. Compare each total with the corresponding total of the
-       `AlexNet` ledger in the "Memory and compute ledger" exercise of
-       :numref:`sec_alexnet`.
+       `AlexNet` ledger in the "Memory and compute ledger" exercise
+       of :numref:`sec_alexnet`.
     1. Repeat the count for `NiN` and `GoogleNet`. For each network,
        determine whether the classification head or the convolutional
        layers account for most of its reduction relative to VGG-11,

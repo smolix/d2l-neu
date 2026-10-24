@@ -621,43 +621,6 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        indicate?
    :exlabel:`ex_dqn-terminated-not-done`
 
-1. [code] **The best window as a maximum.** The statistics printed in
-   :numref:`subsec_dqn-ablation` include, for each seed, the best of all
-   trailing 20-episode averages that `windows` computes. Choosing this window
-   after the run is a maximum over noisy estimates, the operation whose bias
-   :numref:`subsec_dqn-max-bias` measures.
-    1. Simulate runs whose episode returns are independent normal draws with
-       mean 200 and standard deviation 150, so that every window is an
-       unbiased estimate of the same mean. For runs of
-       $N \in \{50, 100, 300, 1000\}$ episodes, estimate the expected excess
-       of the best window over 200 and the standard deviation of the final
-       window.
-    1. Why does the excess grow with $N$ while the spread of the final window
-       does not?
-    1. The double estimator of :numref:`subsec_dqn-max-bias` selects with one
-       set of estimates and evaluates with an independent set. Describe the
-       corresponding procedure for reporting the return of a checkpoint
-       chosen during training. The fixed-budget greedy evaluation of
-       :numref:`subsec_dqn-ablation` chooses no checkpoint. Which choices,
-       made after seeing results, would still bring the bias of part (a) back
-       into it?
-
-1. **Values against returns.** In the continuing formulation of
-   :numref:`subsec_dqn-ablation`, a policy that keeps the pole up for $T$
-   steps and then fails has the discounted return
-   $(1 - \gamma^T)/(1 - \gamma)$ from its start state. Treat the evaluation
-   episodes as starting at $s_0$.
-    1. Let $T$ be random. Show that the expected discounted return is at most
-       $(1 - \gamma^{E[T]})/(1 - \gamma)$ when every episode ends by failure,
-       and that episodes truncated at 500 steps raise this bound by at most
-       $\gamma^{500}/(1 - \gamma)$.
-    1. Every CartPole step earns reward 1, so a greedy return printed by the
-       evaluation loop of :numref:`subsec_dqn-ablation` is a mean episode
-       length. For each DQN seed, convert this return into the bound of part
-       (a) and compare the bound with the final value estimate at $s_0$
-       printed in :numref:`subsec_dqn-double-dqn`. Which seeds estimate more
-       value than their own greedy policy obtains, and by at least how much?
-
 1. [code] **Maximization bias in closed form.** Let the estimates
    $X_1, \ldots, X_m$ of $m$ actions with the same true value $0$ be jointly
    normal with variance $\sigma^2$ each.
@@ -725,25 +688,6 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        assumption of part (a) fails, and what does the excess say about how
        the network obtains its values?
    :exlabel:`ex_dqn-sync-period`
-
-1. [code] **Duplicated actions.** ● :numref:`fig_rl_max_bias` shows the
-   maximization bias growing with the number of actions, and CartPole has
-   only two. Give the agent $k$ copies of each action: let the last layer of
-   `make_qnet` output $2k$ values, and pass `a % 2` to `env.step`, both in
-   `train_dqn` and in the greedy evaluation policy. The copies of an action
-   have the same true value, so they add estimates to every maximum without
-   changing the optimal return.
-    1. Suppose that every output carried independent noise of a fixed size.
-       Use problem :exref:`ex_dqn-max-bias-closed-form` and
-       :numref:`fig_rl_max_bias` to predict how the bias in the targets of
-       DQN and of Double DQN changes from $k = 1$ to $k = 8$.
-    1. Train DQN, with `q_step`, and Double DQN, with `q_step_double`, for
-       $k \in \{1, 4, 8\}$, two seeds each, and plot the start-state value
-       traces against the ceiling $1/(1 - \gamma)$. How do the measured
-       differences compare with the prediction?
-    1. Under $\epsilon$-greedy exploration, how often is each copy selected,
-       and how often is its output fitted to a target? Explain why the noise
-       per output need not stay fixed as $k$ grows.
 
 1. **n-step targets from replay.** ● Several successors of DQN replace the
    one-step target :eqref:`eq_dqn_target` by an $n$-step target in the manner

@@ -970,8 +970,14 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
 
 ## Exercises
 
+1. The competition scores a submission by the average cross-entropy of the predicted probabilities of the true breeds, so the code submits softmax outputs and reports the validation loss rather than the accuracy.
+    1. Compute the score of a submission that assigns probability $1/120$ to every breed.
+    1. A submission puts probability 1 on its predicted breed and 0 on all others, and the scorer clips every probability to the interval $[10^{-15}, 1 - 10^{-15}]$. Compute its score when 10% of its predictions are wrong, and compare it with the uniform submission.
+    1. Divide the logits of the trained output network by a temperature $T > 0$, and choose $T$ by minimizing the validation loss over a grid of values. Report the best $T$ and the validation loss before and after the change, and explain why the validation accuracy does not change.
 1. When using the full Kaggle competition dataset, what results can you achieve when you increase `batch_size` (batch size) and `num_epochs` (number of epochs) while setting some other hyperparameters as `lr = 0.01`, `lr_period = 10`, and `lr_decay = 0.1`?
 1. Do you get better results if you use a deeper pretrained model? How do you tune hyperparameters? Can you further improve the results?
+1. The text says that the output network takes the input of the pretrained model's output layer. Check which features the code of your framework passes to the output network: the pooled features that enter the pretrained output layer, or the 1000 ImageNet class scores that this layer produces. Implement the other choice and compare the validation loss after the same 10 epochs on the full dataset. Explain the result using the fact that the 1000 ImageNet classes include more than a hundred dog breeds.
+1. The pretrained network is frozen, so the features of the training images could be computed once and cached, which rules out random augmentation. Count the forward passes through the pretrained network over 10 epochs of the section's training, with and without a cache. Implement training on cached features of the training images under the test transform (resize and center crop), and compare the time per epoch and the validation loss on the full dataset with those of the section's training. State whether augmentation still lowers the validation loss when only the output network is trained.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/380)

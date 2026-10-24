@@ -217,8 +217,8 @@ deviations from either mode, where the density is smaller than at the modes
 by a factor between about $e^{-10}$ and $e^{-12}$. The noise term
 occasionally pushes a chain outward, but the gradient term pulls it back
 long before it reaches the valley. The expected waiting time for a crossing
-exceeds the run by orders of magnitude (exercise
-:exref:`ex_langevin-escaping-mode` estimates it), so the weights the chain
+exceeds the run by orders of magnitude
+(exercise :exref:`ex_langevin-escaping-mode` estimates it), so the weights the chain
 reports are the weights of its initialization. This *slow
 mixing* is the same defect that the random-walk sampler showed, and the
 gradient does not cure it :cite:`song2019generative`. The trajectories below
@@ -545,22 +545,6 @@ require different noise levels, and the next section uses a ladder of them.
        mode weights away from those of the initialization, and why?
    :exlabel:`ex_langevin-step-size`
 
-1. [code] **Score error along the chain.**
-   :numref:`sec_diffusion-score-matching` measured the error of a learned
-   score on a grid, grouped by density. Measure it instead at the states
-   that the sampler visits. Run the chains with `score_data` from `x_init`
-   as in :numref:`subsec_diffusion-langevin-learned-score`, and at steps $0$,
-   $10$, $50$, $200$, and $2000$ compute the mean squared difference between
-   `score_data` and `mix.score` over the chain states, divided by the mean
-   squared norm of `mix.score` there.
-    1. How does this relative error evolve over the run? Relate the result to
-       :numref:`fig_diffusion-low-density`.
-    1. Retrain the model on the first $200$ points of `data`, and repeat the
-       measurement and the summary statistics. By how much does the relative
-       error grow, and how much do the mode weights, the spread, and the
-       stray fraction change? What does the comparison say about these
-       statistics as a test of a learned score?
-
 1. [code] **A denoising step at the end.** The chains `samples[1.0]` of
    :numref:`subsec_diffusion-langevin-smoothing` sample the blurred
    distribution $p_\sigma$ at $\sigma = 1$. Tweedie's formula
@@ -633,12 +617,12 @@ require different noise levels, and the next section uses a ladder of them.
        $U = -\log p$ of the running example along the segment between the
        means of modes 1 and 3, read off the barrier height, and estimate the
        number of crossings into mode 3 in the same way. Compare both
-       estimates with the run started in mode 1 in
-       :numref:`subsec_diffusion-langevin-true-score`.
+       estimates with the run started in mode 1
+       in :numref:`subsec_diffusion-langevin-true-score`.
     1. Repeat the estimate of part (a) for $p_\sigma$ at $\sigma = 0.3$ and
        $\sigma = 1$, treating the result as an order of magnitude where
-       $\Delta U$ is small, and use it to explain the mode weights in
-       :numref:`subsec_diffusion-langevin-smoothing`.
+       $\Delta U$ is small, and use it to explain the mode weights
+       in :numref:`subsec_diffusion-langevin-smoothing`.
    :exlabel:`ex_langevin-escaping-mode`
 
 1. **Score errors and samples.** ● A chain that uses the field

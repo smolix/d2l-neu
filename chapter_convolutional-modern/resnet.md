@@ -1074,8 +1074,8 @@ A common feature of the designs we have discussed so far is that the network des
 
 ## Exercises
 
-1. **Inception versus residual blocks.** In the `arch` of GoogLeNet
-   (:numref:`sec_googlenet`), the second block of the middle group has
+1. **Inception versus residual blocks.** In the `arch` of
+   GoogLeNet (:numref:`sec_googlenet`), the second block of the middle group has
    branch widths $c_1 = 160$, $c_2 = (112, 224)$, $c_3 = (24, 64)$, and
    $c_4 = 64$, and it maps 512 input channels to 512 output channels.
    Compare it with a 512-channel `Residual` block that uses an identity

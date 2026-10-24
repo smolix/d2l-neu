@@ -236,5 +236,39 @@ without approximate training.
 1. How can we sample noise words in negative sampling?
 1. Verify that :eqref:`eq_hi-softmax-sum-one` holds.
 1. How to train the continuous bag of words model using negative sampling and hierarchical softmax, respectively?
+1. For a center word $w_c$, a context word $w_o$, and noise words
+   $w_{h_1}, \ldots, w_{h_K}$, the negative sampling loss is
+   $\ell = -\log \sigma(\mathbf{u}_o^\top \mathbf{v}_c) - \sum_{k=1}^K \log \sigma(-\mathbf{u}_{h_k}^\top \mathbf{v}_c)$.
+    1. Show that $\sigma'(x) = \sigma(x)(1 - \sigma(x))$ and that the
+       derivative of $\log \sigma(x)$ is $1 - \sigma(x)$.
+    1. Assume that the $K$ noise words are distinct and differ from $w_o$.
+       Derive $\partial \ell / \partial \mathbf{v}_c$,
+       $\partial \ell / \partial \mathbf{u}_o$, and
+       $\partial \ell / \partial \mathbf{u}_{h_k}$. How many word vectors
+       receive a nonzero gradient, and how many operations does computing
+       all of these gradients take, in terms of $K$ and the dimension $d$?
+    1. Now let a word $w$ be drawn several times among the noise words.
+       Derive $\partial \ell / \partial \mathbf{u}_w$.
+
+   *Adapted from Stanford CS224N,
+   [Assignment 2](https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1214/assignments/a2.pdf),
+   Problems 1(e)–1(g).*
+1. Negative sampling does not fit the probabilities
+   of :eqref:`eq_skip-gram-softmax`. To find what it fits instead, let $n_{co}$
+   be the number of times word $w_o$ occurs in a context window of center
+   word $w_c$ in the corpus, let $n_c = \sum_o n_{co}$ and
+   $n_o = \sum_c n_{co}$, and let $D = \sum_{c, o} n_{co}$ be the number of
+   (center word, context word) pairs. Treat $x = \mathbf{u}_o^\top \mathbf{v}_c$
+   as a free parameter for every pair of words.
+    1. Show that the terms of the expected loss over the corpus that depend
+       on $x$ are $n_{co} \log(1 + e^{-x}) + K n_c P(w_o) \log(1 + e^{x})$,
+       and that they are minimized at
+       $x^\star = \log \left(n_{co} / (K n_c P(w_o))\right)$.
+    1. Let the noise distribution be $P(w_o) = n_o / D$. Show that
+       $x^\star$ is the pointwise mutual information
+       $\log \left(n_{co} D / (n_c n_o)\right)$ minus $\log K$
+       :cite:`Levy.Goldberg.2014`.
+    1. What is $x^\star$ for two words that never co-occur? Explain why the
+       trained dot products stay finite nonetheless.
 
 [Discussions](https://d2l.discourse.group/t/382)

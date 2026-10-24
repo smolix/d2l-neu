@@ -264,5 +264,44 @@ uses context word vectors as the word representations.
 1. What is the computational complexity for calculating each gradient? What could be the issue if the dictionary size is huge?
 1. Some fixed phrases in English consist of multiple words, such as "new york". How to train their word vectors? Hint: see Section 4 in the word2vec paper :cite:`Mikolov.Sutskever.Chen.ea.2013`.
 1. Let's reflect on the word2vec design by taking the skip-gram model as an example. What is the relationship between the dot product of two word vectors in the skip-gram model and the cosine similarity? For a pair of words with similar semantics, why may the cosine similarity of their word vectors (trained by the skip-gram model) be high?
+1. Consider one pass over a corpus of $T$ tokens with context window size
+   $m$, ignoring the two ends of the corpus.
+    1. How many conditional probabilities does the skip-gram model evaluate
+       in one pass, and how many does the continuous bag of words model
+       evaluate? Show that the $2m$ probabilities of the skip-gram model
+       that share a center word also share the denominator of
+       :eqref:`eq_skip-gram-softmax`, and count the sums over $\mathcal{V}$
+       that each model needs per pass.
+    1. Each occurrence of a word $w$ lies in the context windows of $2m$
+       center words. Compare the gradient that the representation of $w$
+       receives from one occurrence in the two models: its center word
+       vector in the skip-gram model (:eqref:`eq_skip-gram-grad`) and its
+       context word vector in the continuous bag of words
+       model (:eqref:`eq_cbow-gradient`).
+    1. The word2vec project page linked above reports that the continuous
+       bag of words model trains several times faster, while the skip-gram
+       model represents rare words better. Explain both observations,
+       assuming that each conditional probability can be approximated at a
+       cost that does not grow with $|\mathcal{V}|$ (the next section shows
+       how).
+1. Write $\mathbf{y}$ for the one-hot vector of the context word $w_o$ and
+   $\hat{\mathbf{y}}$ for the vector of probabilities $P(w_j \mid w_c)$,
+   $j \in \mathcal{V}$, given by :eqref:`eq_skip-gram-softmax`.
+    1. Derive $\partial \log P(w_o \mid w_c) / \partial \mathbf{u}_j$ for
+       $j = o$ and for $j \neq o$, and write both cases as one expression in
+       $\mathbf{y}$, $\hat{\mathbf{y}}$, and $\mathbf{v}_c$.
+    1. How many context word vectors receive a nonzero gradient from one
+       (center word, context word) pair, and how many center word vectors?
+    1. Show that the gradients with respect to all the context word vectors
+       sum to zero. What does this imply for the mean of the context word
+       vectors during stochastic gradient descent?
+    1. Show that :eqref:`eq_skip-gram-softmax` is unchanged when the same
+       vector $\mathbf{a}$ is added to every $\mathbf{u}_i$. Which property
+       of the trained context word vectors is therefore not determined by
+       the training data?
+
+   *Adapted from Stanford CS224N,
+   [Assignment 2](https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1214/assignments/a2.pdf),
+   Problem 1(c).*
 
 [Discussions](https://d2l.discourse.group/t/381)

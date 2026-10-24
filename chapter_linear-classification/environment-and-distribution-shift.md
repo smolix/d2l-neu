@@ -687,8 +687,8 @@ on another, so evaluation should represent the deployment shifts of interest.
    $p(y \mid \mathbf{x}) = q(y \mid \mathbf{x})$.
     1. Starting from the risk under the target distribution
        $p(\mathbf{x}, y)$, derive :eqref:`eq_covariate-shift-identity`,
-       whose sample version is the weighted objective
-       :eqref:`eq_weighted-empirical-risk-min`. Mark the step that uses
+       whose sample version is the weighted
+       objective :eqref:`eq_weighted-empirical-risk-min`. Mark the step that uses
        the assumption and the step that requires $q(\mathbf{x}) > 0$
        wherever $p(\mathbf{x}) > 0$.
     1. Suppose $p(\mathbf{x}) > 0$ on a region where $q(\mathbf{x}) = 0$.

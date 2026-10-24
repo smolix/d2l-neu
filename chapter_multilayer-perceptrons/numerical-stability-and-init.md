@@ -648,8 +648,8 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
        $\sigma^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
        $2/n_\textrm{in}$. Compute the factor by which each ReLU layer
        initialized this way actually multiplies the second moment, and the
-       total factor over the 50 layers of the sweep in
-       :numref:`subsec_variance_propagation`.
+       total factor over the 50 layers of the sweep
+       in :numref:`subsec_variance_propagation`.
 1. [code] **Tanh depth sweep.** ● Rerun the depth-sweep experiment of
    :numref:`subsec_variance_propagation` with $\tanh$ in place of ReLU and
    with Xavier weights. A layer then maps the second moment $q$ of its input to

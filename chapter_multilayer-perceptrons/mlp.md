@@ -750,8 +750,8 @@ remains the sensible default for the models we build next.
        networks in either regime.
    :exlabel:`ex_mlp-vanishing-gradients`
 1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network of width $D$
-   on the real line has at most $D + 1$ linear pieces
-   (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
+   on the real line has at most $D + 1$ linear
+   pieces (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
    This problem makes the multiplicative effect of depth exact for one
    example.
     1. Take three hidden units $\operatorname{ReLU}(w_k x + b_k)$ with input

@@ -467,8 +467,8 @@ for which they are needed.
 
 1. **Softmax Hessian.** Write the cross-entropy loss as a function of the
    logits, $l(\mathbf{y}, \mathbf{o}) = g(\mathbf{o}) - \mathbf{y}^\top \mathbf{o}$
-   with $g(\mathbf{o}) = \log \sum_k \exp(o_k)$, as in
-   :numref:`subsec_softmax_and_derivatives`.
+   with $g(\mathbf{o}) = \log \sum_k \exp(o_k)$, as
+   in :numref:`subsec_softmax_and_derivatives`.
     1. Compute the Hessian $\partial^2_{\mathbf{o}}\, l(\mathbf{y}, \mathbf{o})$
        and show that it does not depend on $\mathbf{y}$.
     1. Let $\mathbf{e}_Y$ be the one-hot vector of a class $Y$ drawn from

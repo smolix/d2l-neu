@@ -419,8 +419,8 @@ $v(t) = \frac{\sigma^2}{2\theta}(1 - e^{-2\theta t})$, which satisfy
 :numref:`sec_mdl-ornstein-uhlenbeck` solves Fokker--Planck, by direct
 differentiation. The fixed point $\dot m = \dot v = 0$ gives $m = 0$,
 $v = \sigma^2/2\theta$: the stationary Gaussian is the *steady state*
-$\partial_t p = 0$ of the PDE (Exercise
-:exref:`ex_mdl-fokker-planck-probability-flow-stationary-density` re-derives
+$\partial_t p = 0$ of the PDE
+(Exercise :exref:`ex_mdl-fokker-planck-probability-flow-stationary-density` re-derives
 it from scratch, without the Gaussian ansatz). And setting $\theta = 0$ recovers the heat
 equation's linear variance growth $\dot v = \sigma^2$.
 
@@ -1125,8 +1125,8 @@ the score.
 
 1. **Laplacian as averaging.** Averaging a smooth $h$ over the sphere of
    radius $r$ centered at $\mathbf{x}$ gives
-   $h(\mathbf{x}) + \frac{r^2}{2d}\Delta h(\mathbf{x}) + O(r^4)$
-   (:numref:`sec_mdl-paths-to-densities`).
+   $h(\mathbf{x}) + \frac{r^2}{2d}\Delta h(\mathbf{x}) + O(r^4)$, as
+   shown in :numref:`sec_mdl-paths-to-densities`.
     1. Let $\mathbf{u}$ be uniformly distributed on the unit sphere of
        $\mathbb{R}^d$. Show by symmetry that $\mathbb{E}[u_i] = 0$,
        $\mathbb{E}[u_i u_j] = \delta_{ij}/d$ and
@@ -1161,26 +1161,6 @@ the score.
        equation must a stationary covariance solve?
    :exlabel:`ex_mdl-fokker-planck-probability-flow-moments-weak-form`
 
-1. [code] **Reflecting and absorbing walls.** Consider
-   $dX = -c\,dt + \sigma\,dW$ with $c > 0$ on the half-line $x \ge 0$, so
-   that the drift pushes particles toward the wall at $x = 0$.
-    1. Impose the reflecting condition: the current
-       :eqref:`eq_mdl-dyn-probability-current` vanishes at $x = 0$. Show
-       that a stationary current then vanishes everywhere, and solve the
-       resulting first-order ODE for the stationary density.
-    1. Adapt the `#fokker-planck-cloud-marginals` cell: start all particles
-       at $x_0 = 3$, take $c = 1$ and $\sigma = \sqrt{2}$, and replace each
-       Euler--Maruyama update $x \leftarrow x + \Delta x$ by
-       $x \leftarrow |x + \Delta x|$, which reflects every particle that
-       crosses the wall. Compare the histogram at $t = 10$ with your
-       stationary density.
-    1. Make the wall absorbing instead: remove each particle when it first
-       crosses $x = 0$, and plot the surviving fraction against time. Apply
-       the mass balance :eqref:`eq_mdl-dyn-mass-balance` to
-       $\Omega = (0, \infty)$ with the absorbing condition $p_t(0) = 0$, and
-       express the rate of mass loss through $\partial_x p_t(0)$. Why must
-       the surviving fraction tend to zero?
-
 1. **Stationary density from zero current.**
     1. Set $\partial_t p = 0$ in the OU Fokker--Planck equation,
        $0 = \theta\,\partial_x(x p) + \tfrac12 \sigma^2 \partial_{xx} p$.
@@ -1201,8 +1181,8 @@ the score.
 
 1. **Affine Gaussian flow.** Start the OU process from
    $X_0 \sim \mathcal{N}(x_0, v_0)$ with $v_0 > 0$. Then
-   $p_t = \mathcal{N}(m_t, v_t)$, where $m_t$ and $v_t$ solve
-   :eqref:`eq_mdl-dyn-moment-odes`.
+   $p_t = \mathcal{N}(m_t, v_t)$, where $m_t$ and $v_t$ solve the moment
+   ODEs :eqref:`eq_mdl-dyn-moment-odes`.
     1. Write the probability-flow velocity :eqref:`eq_mdl-dyn-pf-velocity`
        for this $p_t$ and show that it is affine in $x$. Show that the
        standardized coordinate $z = (x - m_t)/\sqrt{v_t}$ is constant along
@@ -1241,8 +1221,8 @@ the score.
 
 1. **Mode merging.** Consider the symmetric two-component mixture with the
    score :eqref:`eq_mdl-dyn-tanh-score`.
-    1. Derive :eqref:`eq_mdl-dyn-tanh-score` from the responsibility formula
-       :eqref:`eq_mdl-dyn-mixture-score`.
+    1. Derive :eqref:`eq_mdl-dyn-tanh-score` from the responsibility
+       formula :eqref:`eq_mdl-dyn-mixture-score`.
     1. Show that the score has three zeros when $\mu > s_0$ and only the
        zero $x = 0$ when $\mu \le s_0$. Classify each zero as a local
        maximum or a local minimum of the density.
@@ -1285,9 +1265,10 @@ the score.
    $\dot{p}_i = -(J_{i+1/2} - J_{i-1/2})/\delta$. This is a linear system
    $\dot{\mathbf{p}} = F\mathbf{p}$.
     1. Show that $\sum_i p_i\,\delta$ is conserved exactly for every
-       $\mathbf{p}$, the discrete counterpart of the divergence theorem
-       :eqref:`eq_mdl-dyn-divergence-theorem`. Which boundary condition of
-       :numref:`sec_mdl-fokker-planck` do the zero outer currents impose?
+       $\mathbf{p}$, the discrete counterpart of the divergence
+       theorem :eqref:`eq_mdl-dyn-divergence-theorem`. Which boundary
+       condition of :numref:`sec_mdl-fokker-planck` do the zero outer
+       currents impose?
     1. Build $F$ for $\theta = 1$, $\sigma = \sqrt{2}$ and $\delta = 0.05$.
        Start from the bimodal mixture `p_t(x, 0.0)` on the cell centers and
        integrate to $t = 0.5$ with forward Euler at step $h = 10^{-3}$ and
@@ -1328,9 +1309,10 @@ the score.
        :exref:`ex_mdl-fokker-planck-probability-flow-moments-weak-form`b to
        show that $\frac{\sigma^2}{2\theta} I$ is a stationary covariance for
        every $\beta$, so that the SDE has the same stationary density as in
-       (b). Compute its stationary current
-       :eqref:`eq_mdl-dyn-probability-current`. Why does the argument of
-       problem :exref:`ex_mdl-fokker-planck-probability-flow-stationary-density`a,
+       (b). Compute its stationary
+       current :eqref:`eq_mdl-dyn-probability-current`. Why does the
+       argument of problem
+       :exref:`ex_mdl-fokker-planck-probability-flow-stationary-density`a,
        which forces a stationary current to vanish, fail in two dimensions?
     1. Suppose that $\mathbf{f} = -\nabla V$, so that $\mathbf{v}_t$ is a
        gradient field. Among all velocity fields $\mathbf{u}$ whose
@@ -1384,9 +1366,9 @@ the score.
        `#fokker-planck-pf-ode-overlay`, both from $q_T$, for
        $T \in \{0.25, 0.5, 1, 2, 3\}$ with step $\Delta t = 0.005$. Record
        the fraction of samples with $x < 0$, whose target is $0.25$.
-    1. Anderson's theorem holds for the whole process
-       (:numref:`sec_mdl-time-reversal`): started at $X_T = y$, the reverse
-       SDE produces $X_0 \sim p(x_0 \mid x_T = y)$. Use this to predict the
+    1. Anderson's theorem holds for the whole process, as
+       :numref:`sec_mdl-time-reversal` states: started at $X_T = y$, the
+       reverse SDE produces $X_0 \sim p(x_0 \mid x_T = y)$. Use this to predict the
        SDE's left-mode mass as an expectation over $y \sim q_T$ of a
        responsibility of $p_T$ (:eqref:`eq_mdl-dyn-mixture-score`). For
        the ODE, use that its map from $x_T$ to $x_0$ is increasing and

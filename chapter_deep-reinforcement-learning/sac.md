@@ -793,21 +793,6 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
     Section 3.3.*
    :exlabel:`ex_sac-squashed-entropy`
 
-1. **Polyak lag.** After every critic update, `sac_step` moves each target
-   critic by $w^- \leftarrow \tau w + (1 - \tau) w^-$ with $\tau = 0.005$.
-    1. Write $w^-$ after many updates as a weighted average of past online
-       weights, and show that the mean age of the weights in this average is
-       $(1 - \tau)/\tau$ updates. Show that for online weights that drift at
-       a constant rate, $w_t = w_0 + t v$, the gap $w_t - w^-_t$ converges to
-       $v (1 - \tau)/\tau$. Why is this lag longer than the half-life
-       $\ln 2/\tau \approx 139$ of :numref:`subsec_sac-polyak`?
-    1. The DQN of :numref:`sec_dqn` copies its online network every
-       `sync_every` $= 250$ environment steps and takes a gradient update
-       every `train_freq` $= 2$ steps. Compute the mean age of its target in
-       gradient updates, and the $\tau$ of a Polyak schedule with the same
-       mean age. Which of the two methods bootstraps from the staler target?
-   :exlabel:`ex_sac-polyak-lag`
-
 1. **Off-policy without ratios.** The buffer of `train_sac` keeps every
    transition of a run, including the $1{,}000$ uniformly random warm-up
    actions, whereas :eqref:`eq_sac_target` and :eqref:`eq_sac_actor` draw

@@ -391,8 +391,18 @@ in subsequent sections of this chapter.
 
 ## Exercises
 
+1. Work through region of interest pooling by hand for the two regions `X[:, :, 0:3, 0:3]` and `X[:, :, 1:4, 0:4]` named in the text.
+    1. Using the rule that subwindow heights and widths are rounded up, list the elements of the four subwindows of each region and write down the two $2\times 2$ outputs. Compare them with the output of the section's code. If they differ, find the lines of the code that place the region boundaries or the subwindow boundaries differently from the text.
+    1. Let $L$ be the sum of the eight pooled values. List the entries of `X` whose partial derivative $\partial L/\partial x_{ij}$ is nonzero, together with the values of these derivatives. Explain why one entry receives a derivative of 2, and check your answer with automatic differentiation applied to the regions that the code actually pools.
+1. Estimate the cost of the R-CNN family on one $600\times 1000$ image with 2000 region proposals. Assume that the backbone CNN costs about 300 multiply-adds per input pixel, regardless of the image size (roughly the cost of VGG-16), that the R-CNN resizes every proposal to $224\times 224$ before running the backbone on it, and that the fast R-CNN pools each region to a $512\times 7\times 7$ feature and then applies two fully connected layers with 4096 outputs each, as in the VGG networks of :numref:`sec_vgg`.
+    1. Compute the ratio of the backbone cost of the R-CNN to that of the fast R-CNN.
+    1. Count the multiply-adds of the two fully connected layers for one region and for all 2000 regions, and compare the total with the backbone cost of the fast R-CNN.
+    1. The faster R-CNN keeps about 300 proposals from its region proposal network. Compute its total cost under the same assumptions and state which part of the computation the smaller number of proposals reduces.
 1. Can we frame object detection as a single regression problem, such as predicting bounding boxes and class probabilities? You may refer to the design of the YOLO model :cite:`Redmon.Divvala.Girshick.ea.2016`.
 1. Compare single shot multibox detection with the methods introduced in this section. What are their major differences? You may refer to Figure 2 of :citet:`Zhao.Zheng.Xu.ea.2019`.
+1. The region of interest alignment layer of the mask R-CNN does not round coordinates. Implement a function `roi_align(X, rois, pooled_size, spatial_scale)` that scales each region to real-valued coordinates on the feature map, divides it into a grid of equal subwindows, and outputs the bilinear interpolation of `X` at the center of each subwindow, treating `X[0, 0, i, j]` as the value at the point $(x, y) = (j, i)$.
+    1. Apply it to `X` and `rois` of this section and report the two $2\times 2$ outputs. The entries of `X` satisfy $x_{ij} = 4i + j$; check that each output equals $4y + x$ at the center $(x, y)$ of its subwindow, and explain why bilinear interpolation gives this value exactly.
+    1. Shift the first region proposal to the right by 2, 4, 6, and 8 pixels in the input image, that is, by 0.2 to 0.8 cells of `X`. Tabulate the outputs of region of interest pooling and of your `roi_align` for each shift. State which of the two changes continuously with the shift, and explain why this matters for predicting pixel-level masks.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/374)

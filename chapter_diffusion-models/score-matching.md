@@ -586,27 +586,6 @@ three or more orders of magnitude below its peak.
    of the sample mean and covariance of the data, minimize it, and show that
    the solution coincides with the maximum-likelihood estimate.
 
-1. [code] **Noise of the objective.** Without the true score, the implicit
-   objective is the only available measure of fit, for example to choose
-   between two trained models. For each point of `test` and for both
-   `score_exact` and `score_sliced`, compute the per-point implicit estimate
-   $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2 + \operatorname{tr}(\nabla_{\mathbf{x}} \mathbf{s}_{\boldsymbol{\theta}}) + \tfrac12 \|\nabla_{\mathbf{x}} \log p\|^2$
-   and the per-point direct estimate
-   $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}} - \nabla_{\mathbf{x}} \log p\|^2$.
-   Both have the Fisher divergence as their expectation.
-    1. Show that at the true score the implicit estimate equals
-       $\Delta p(\mathbf{x}) / p(\mathbf{x})$, where $\Delta$ is the
-       Laplacian. Compute its mean and standard deviation under a single
-       Gaussian with standard deviation $0.5$ in two dimensions. Compare the
-       result with the standard deviations of both estimates measured for the
-       two models.
-    1. Estimate the difference between the Fisher divergences of the two
-       models from the implicit estimate, once with both models evaluated on
-       the same points and once with each model evaluated on its own half of
-       `test`, and compute the standard error of each estimate. How many
-       points would each of these two estimates need to resolve, at two
-       standard errors, the difference that the direct estimate shows?
-
 1. **The projection identity.** Show that $\mathbb{E}[\mathbf{v}^\top A \mathbf{v}] = \operatorname{tr}(A)$
    whenever $\mathbb{E}[\mathbf{v} \mathbf{v}^\top] = I$, and compute the
    variance of $\mathbf{v}^\top A \mathbf{v}$ for a standard Gaussian
@@ -657,8 +636,8 @@ three or more orders of magnitude below its peak.
        $100 \times 100$ grid on $[-6, 6]^2$ rather than on the `grid` of this
        section, and compute the test negative log-likelihood with `nll` of
        that section. Compare it with the value under the true density and
-       with the value of `energy_mle` printed in
-       :numref:`sec_diffusion-ebm-training`.
+       with the value of `energy_mle`
+       printed in :numref:`sec_diffusion-ebm-training`.
     1. Compute the mode weights of the normalized model: assign each point of
        the $100 \times 100$ grid to its nearest component mean, and sum the
        model's probabilities over the points assigned to each mean. Compare
@@ -685,8 +664,8 @@ three or more orders of magnitude below its peak.
        hundred points of `test` from a few thousand directions each, once
        with Gaussian and once with Rademacher directions. Check the result of
        problem :exref:`ex_score-matching-variance-reduction`a, and relate the
-       Rademacher results to exercise
-       :exref:`ex_score-matching-projection-identity`.
+       Rademacher results to
+       exercise :exref:`ex_score-matching-projection-identity`.
     1. Retrain with each of the four combinations of Gaussian or Rademacher
        directions and the sliced or SSM-VR objective, over five seeds each.
        Compare the mean and spread of the Fisher divergence on `test` across

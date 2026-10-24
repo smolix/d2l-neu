@@ -1111,8 +1111,8 @@ $$
 which has rank two: for instance,
 the first two columns are linearly independent,
 while each of the $\binom{5}{3} = 10$ collections of three columns is
-linearly dependent (exercise
-:exref:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`).
+linearly dependent
+(exercise :exref:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`).
 
 Equivalently, the rank is the *dimension of the column space* we defined
 alongside spans and bases, and a foundational theorem of linear algebra says
@@ -1710,22 +1710,12 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
 
 ## Exercises
 
-1. **Equality in the triangle inequality.** By the Cauchy–Schwarz
-   proposition, $|\mathbf{v}\cdot\mathbf{w}| = \|\mathbf{v}\|\,\|\mathbf{w}\|$
-   holds exactly when $\mathbf{v}$ and $\mathbf{w}$ are collinear. Use the
-   proof of the triangle inequality to characterize all pairs $\mathbf{v},
-   \mathbf{w}$ with $\|\mathbf{v} + \mathbf{w}\| = \|\mathbf{v}\| +
-   \|\mathbf{w}\|$. Check the characterization on $\mathbf{v} = [1, 2]^\top$
-   paired first with $\mathbf{w} = [2, 4]^\top$ and then with
-   $\mathbf{w} = [-1, -2]^\top$.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-triangle-equality`
-
 1. **Fitting a line by projection.** Four measurements
    $\mathbf{b} = [0, 8, 8, 20]^\top$ are taken at the times
    $\mathbf{t} = [0, 1, 3, 4]^\top$. Let $\mathbf{1} = [1, 1, 1, 1]^\top$.
-    1. Project $\mathbf{b}$ onto the line through $\mathbf{1}$ with
-       :eqref:`eq_mdl-projection`. Check that the residual is orthogonal to
-       $\mathbf{1}$, confirm :eqref:`eq_mdl-pythagoras`, and find the distance
+    1. Project $\mathbf{b}$ onto the line through $\mathbf{1}$
+       with :eqref:`eq_mdl-projection`. Check that the residual is orthogonal
+       to $\mathbf{1}$, confirm :eqref:`eq_mdl-pythagoras`, and find the distance
        from $\mathbf{b}$ to the line. Which statistic of the measurements is
        the coefficient of the projection?
     1. Fit the line $C + Dt$ by least squares :eqref:`eq_mdl-least-squares`,
@@ -1866,20 +1856,6 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
        rank two, whose $2 \times 2$ product has rank one.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-product`
 
-1. **Integer inverses.**
-    1. Are $\begin{bmatrix}1 & 2\\0 & 1\end{bmatrix}$ and
-       $\begin{bmatrix}1 & -2\\0 & 1\end{bmatrix}$ inverses of one another?
-       What do the two maps do to the unit square?
-    1. A planar shape has area $100\,\textrm{m}^2$. What is its area after
-       the transformation by
-       $\mathbf{M} = \begin{bmatrix}2 & 3\\1 & 2\end{bmatrix}$? Compute
-       $\mathbf{M}^{-1}$.
-    1. Show that a $2 \times 2$ matrix with integer entries has an inverse
-       with integer entries exactly when its determinant is $1$ or $-1$. Use
-       :eqref:`eq_mdl-det-multiplicative` for one direction and the
-       $2 \times 2$ inverse formula for the other.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-integer-inverses`
-
 1. [code] **Determinant and near-singularity.** A square matrix is invertible
    exactly when its determinant is nonzero. How well does the size of the
    determinant measure how close a matrix is to being singular?
@@ -1894,44 +1870,6 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
        determinant $1$. Find the smallest change of a single entry that makes
        it singular.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`
-
-1. [code] **Index notation.**
-    1. Write $\textrm{tr}(\mathbf{A}^4)$ in Einstein notation, and check it
-       with `onp.einsum` against the trace of the fourth matrix power of a
-       random $5 \times 5$ matrix.
-    1. Use index notation to show
-       $\textrm{tr}(\mathbf{A}\mathbf{B}\mathbf{C}) =
-       \textrm{tr}(\mathbf{C}\mathbf{A}\mathbf{B})$. Find $2 \times 2$
-       matrices with $\textrm{tr}(\mathbf{A}\mathbf{B}\mathbf{C}) \neq
-       \textrm{tr}(\mathbf{A}\mathbf{C}\mathbf{B})$.
-    1. The contraction $y_i = a_{ij}\,b_{jk}\,v_k$ computes
-       $\mathbf{A}\mathbf{B}\mathbf{v}$ for $n \times n$ matrices. Count the
-       scalar multiplications when the sum runs over all index triples
-       $(i, j, k)$ at once, and when $\mathbf{B}\mathbf{v}$ is formed first.
-       Time `onp.einsum('ij,jk,k->i', A, B, v)` with `optimize=False` and
-       with `optimize=True` for $n = 100$, $200$, and $400$. How does each
-       time scale with $n$?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-index-notation`
-
-1. **Distribution of the cosine.** ● Let $\mathbf{v}$ be uniform on the unit
-   sphere of $\mathbb{R}^d$ with $d \ge 2$, and let $t = v_1$, the cosine of
-   the angle between $\mathbf{v}$ and $\mathbf{e}_1$.
-    1. The points of the sphere with $v_1 \in [t, t + dt]$ form a thin band.
-       Its cross-section at height $t$ is a sphere of dimension $d - 2$ and
-       radius $\sqrt{1 - t^2}$, whose surface measure is proportional to
-       $(1 - t^2)^{(d-2)/2}$, and the band is $dt/\sqrt{1 - t^2}$ wide along
-       the sphere. Conclude that $t$ has the density
-       $$p_d(t) \propto (1 - t^2)^{(d-3)/2}, \qquad -1 < t < 1.$$
-    1. Identify $p_2$ and $p_3$, and check
-       $\operatorname{Var}(t) = 1/d$ for both. For which $d$ does $p_d$ grow
-       toward $t = \pm 1$, and for which $d$ does it have its maximum at
-       $t = 0$?
-    1. Substitute $t = s/\sqrt{d}$ and show that the density of
-       $s = \sqrt{d}\,t$ approaches the standard normal density as
-       $d \to \infty$. For large $d$, compare the resulting probability of
-       $|t| \ge 3/\sqrt{d}$ with the Chebyshev bound in the proof of the
-       near-orthogonality proposition.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-cosine-density`
 
 1. [code] **Tilting the boundary.** ● The mean-difference normal
    $\boldsymbol{\Delta} = \overline{\mathbf{x}}_1 - \overline{\mathbf{x}}_0$
@@ -1988,26 +1926,6 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
        first pass and in the vector that enters the second.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-gram-schmidt`
 
-1. [code] **Solve versus invert.** ● :numref:`subsec_mdl-numerical-issues`
-   recommends `linalg.solve(A, b)` over `inv(A) @ b` and states that the
-   inverse of a sparse matrix is typically dense.
-    1. Let $\mathbf{T}$ be the $n \times n$ tridiagonal matrix with $2$ on the
-       diagonal and $-1$ directly above and below it. Show that the matrix
-       $\mathbf{F}$ with entries
-       $f_{ij} = \min(i, j)\,\bigl(n + 1 - \max(i, j)\bigr)/(n + 1)$ satisfies
-       $\mathbf{T}\mathbf{F} = \mathbf{I}$. For $n = 1000$, compare the
-       number of nonzero entries of $\mathbf{T}$ and of $\mathbf{T}^{-1}$,
-       and check $\mathbf{F}$ against `onp.linalg.inv(T)`.
-    1. Solve $\mathbf{H}_n\mathbf{x} = \mathbf{b}$ for the Hilbert matrices
-       $\mathbf{H}_n$ with entries $1/(i + j - 1)$, $n = 8, 10, 12$, and
-       $\mathbf{b} = \mathbf{H}_n\mathbf{1}$, once with `onp.linalg.solve`
-       and once with `onp.linalg.inv`. Compare the relative residuals
-       $\|\mathbf{H}_n\hat{\mathbf{x}} - \mathbf{b}\|/\|\mathbf{b}\|$ and the
-       errors $\|\hat{\mathbf{x}} - \mathbf{1}\|$. How does each of the two
-       quantities depend on the method and on $n$? How far does a small
-       residual guarantee an accurate solution?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-solve-vs-invert`
-
 1. **Determinant of a rank-one update.** ● A *planar flow*
    :cite:`rezende2015variational` transforms
    $\mathbf{z} \in \mathbb{R}^d$ by
@@ -2052,10 +1970,10 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
        $$\mu^2 \ge \frac{n - d}{d\,(n - 1)}.$$
        Evaluate it for $d = 32$ with $n = 64$ and $n = 512$.
     1. A union bound over the pairs shows that independent random directions
-       keep $\mu \le \varepsilon$ for $n$ of order $e^{d\varepsilon^2/4}$
-       (:numref:`sec_mdl-concentration-generalization`). For $d = 32$ and
-       $n \in \{64, 128, 256, 512\}$, compute $\mu$ for random unit vectors
-       and compare it with the Welch bound.
+       keep $\mu \le \varepsilon$ for $n$ of order
+       $e^{d\varepsilon^2/4}$ (:numref:`sec_mdl-concentration-generalization`).
+       For $d = 32$ and $n \in \{64, 128, 256, 512\}$, compute $\mu$ for
+       random unit vectors and compare it with the Welch bound.
     1. Reduce $\mu$ by optimization: minimize
        $\sum_{i \neq j}(\mathbf{u}_i\cdot\mathbf{u}_j)^{p}$ for an even power
        such as $p = 10$ by gradient steps on $\mathbf{U}$, and renormalize

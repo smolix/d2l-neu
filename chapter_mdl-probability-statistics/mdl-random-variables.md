@@ -1152,40 +1152,6 @@ $|\det A|$ and the density thins by the same factor.
        can covariances as small as those in (b) change the answer this much?
    :exlabel:`ex_mdl-random-variables-missing-classes`
 
-1. **Markov versus Chebyshev.** A non-negative random variable $X$ has
-   mean $1$ and standard deviation $2$, as a gradient norm with a long
-   right tail might.
-    1. Bound $P(X \ge 9)$ with Markov's inequality :eqref:`eq_mdl-markov`
-       and with Chebyshev's inequality :eqref:`eq_mdl-chebyshev`. For which
-       thresholds $t > 1$ does Markov's inequality give the smaller bound on
-       $P(X \ge t)$?
-    1. Find a non-negative $X$ with mean $1$ and standard deviation $2$ for
-       which $P(X \ge 5)$ equals Markov's bound.
-    1. A dataset of $n$ numbers has mean $1$ and standard deviation $2$,
-       computed with the divisor $n$. Apply Chebyshev's inequality to the
-       empirical distribution, which puts mass $1/n$ on each number, to show
-       that at most $1/16$ of the numbers exceed $9$.
-    1. Now let $1$ and $2$ be the mean and standard deviation of a
-       population, and draw $20$ points from it independently. Apply
-       Markov's inequality to the number $N$ of sample points above $9$ to
-       bound $P(N \ge 5)$. Why does (c) not rule out this event?
-   :exlabel:`ex_mdl-random-variables-markov-chebyshev`
-
-1. [code] **Moments of a mixture.** The
-   `#random-variables-density-to-probability` cell integrates the mixture
-   density $p(x) = 0.2\,\mathcal{N}(x; 3, 1) + 0.8\,\mathcal{N}(x; -1, 1)$.
-   Let $Z$ be the component label, with $P(Z = 1) = 0.2$ and
-   $X \mid Z{=}1 \sim \mathcal{N}(3, 1)$, and with $P(Z = 2) = 0.8$ and
-   $X \mid Z{=}2 \sim \mathcal{N}(-1, 1)$.
-    1. Compute $E[X]$ and $\textrm{Var}(X)$ with the laws of total
-       expectation and variance :eqref:`eq_mdl-tower`, without integrating.
-    1. Extend the cell to compute both quantities as Riemann sums of
-       :eqref:`eq_mdl-cont_mean_var`, and compare them with (a).
-    1. Compute $P\bigl(|X - \mu_X| \ge \alpha\sigma_X\bigr)$ by a Riemann
-       sum for $\alpha \in \{1.5, 2, 3\}$, and compare each value with
-       Chebyshev's bound :eqref:`eq_mdl-chebyshev`.
-   :exlabel:`ex_mdl-random-variables-mixture-moments`
-
 1. **Uncorrelated but dependent.** Whitening, for example with the
    principal components of :numref:`sec_mdl-svd-low-rank`, makes
    coordinates uncorrelated. The following pair has Gaussian coordinates
@@ -1290,8 +1256,10 @@ $|\det A|$ and the density thins by the same factor.
        $R^2 = 1 - E\bigl[(X - h(Y))^2\bigr]/\textrm{Var}(X)$. Use (a) and the
        law of total variance to show that every predictor has
        $R^2 \le \textrm{Var}\bigl(E[X \mid Y]\bigr)/\textrm{Var}(X)$.
-       Evaluate this ceiling for predicting $X$ from the label $Z$ of
-       problem :exref:`ex_mdl-random-variables-mixture-moments`.
+       Evaluate this ceiling for the mixture
+       $p(x) = 0.2\,\mathcal{N}(x; 3, 1) + 0.8\,\mathcal{N}(x; -1, 1)$ of the
+       `#random-variables-density-to-probability` cell, predicting $X$ from
+       the label $Z$ of its component.
     1. Given the input, the target is $-1$ or $+1$ with probability
        $\tfrac12$ each. Which prediction minimizes the expected squared
        error, and how often does the target take that value? Which
@@ -1365,8 +1333,8 @@ $|\det A|$ and the density thins by the same factor.
        $$\hat\alpha_k = \Bigl(\frac1k \sum_{i=1}^k \log\frac{X_{(i)}}{X_{(k+1)}}\Bigr)^{-1}.$$
 
        Check it on $10^5$ Pareto draws for $\alpha \in \{1.5, 3\}$ and
-       $k \in \{10^2, 10^3, 10^4\}$. Then train the softmax regression of
-       :numref:`sec_softmax_concise`. At the trained parameters, collect
+       $k \in \{10^2, 10^3, 10^4\}$. Then train the softmax regression
+       of :numref:`sec_softmax_concise`. At the trained parameters, collect
        the coordinates of the difference between the minibatch gradient and
        the full-batch gradient over $1000$ minibatches, for batch sizes $32$
        and $256$. Plot $\hat\alpha_k$ of their absolute values against $k$

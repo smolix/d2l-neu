@@ -231,8 +231,7 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
 
 1. **Concatenated weight matrices.** Let
    $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ and
-   $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$ be as in
-   :eqref:`rnn_h_with_state`.
+   $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$ be as in :eqref:`rnn_h_with_state`.
     1. Prove the identity demonstrated numerically in
        :numref:`subsec_rnn_w_hidden_states`,
        $$\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} = [\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix},$$
@@ -261,6 +260,39 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
        of :numref:`sec_sequence`, what plays the role of $c$ for a
        language model, and why can teacher forcing leave $c$ large even
        when $\bar\epsilon$ is small?
+
+1. **A window inside a recurrence.** The neural $n$-gram reads a fixed
+   window of the last $k$ input embeddings. Take $\phi$ to be the identity
+   and $\mathbf{b}_\textrm{h} = \mathbf{0}$ in :eqref:`rnn_h_with_state`,
+   and give the state $h = kd$ units.
+    1. Choose $\mathbf{W}_{\textrm{xh}}$ and $\mathbf{W}_{\textrm{hh}}$ so
+       that, starting from $\mathbf{H}_0 = \mathbf{0}$, the state is the
+       concatenation
+       $\mathbf{H}_t = [\mathbf{X}_t, \mathbf{X}_{t-1}, \ldots, \mathbf{X}_{t-k+1}]$
+       for every $t \geq k$.
+    1. Show that $\mathbf{W}_{\textrm{hh}}^k = \mathbf{0}$, and explain why
+       this means that no input older than $k$ steps affects
+       $\mathbf{H}_t$.
+    1. For $d = 256$ and $k = 20$, how many state units does this
+       construction need? Explain what an RNN whose state has only 256
+       units must do instead of storing the window.
+
+1. [code] **Embedding lookup as a product.** Let
+   $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ be an embedding
+   table, and let $\mathbf{x}$ hold the token ids of a minibatch of $n$
+   tokens.
+    1. Compute the inputs once by selecting the rows of $\mathbf{E}$ that
+       $\mathbf{x}$ indexes and once as the product of the
+       $n \times |\mathcal{V}|$ one-hot matrix of $\mathbf{x}$ with
+       $\mathbf{E}$, and check that the two agree. Time both for
+       $|\mathcal{V}| \in \{10^3, 10^4, 10^5\}$ with $d = n = 256$, and
+       state how the cost of each grows with $|\mathcal{V}|$.
+    1. Differentiate the sum of all entries of the selected rows with
+       respect to $\mathbf{E}$ by automatic differentiation. Which rows of
+       the gradient are nonzero, and what does a row contain when its
+       token occurs several times in the minibatch? For
+       $|\mathcal{V}| = 10^4$ and $n = 256$ ids drawn uniformly at random,
+       estimate the fraction of rows that receive a nonzero gradient.
 
 1. **Parity beyond any window.** ● Let $x_1, x_2, \ldots$ be a sequence of
    bits, and let the desired output at step $t$ be the parity of

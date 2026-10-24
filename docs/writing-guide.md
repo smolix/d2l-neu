@@ -744,7 +744,9 @@ Revision, as an illustration of length and register:
    good problems, not filler; a section above it keeps the best ones.
 
 Sections do not end with surveys, "In Practice" lists, or "Further Reading"
-paragraphs. That material goes to the chapter's Further Reading notebook.
+paragraphs. Pointers to resources for what the chapter teaches go to the
+"Resources and Further Reading" list of the chapter introduction; related
+topics the chapter does not teach go to its Further Reading notebook.
 
 ### 12.3 Further Reading Notebook
 
@@ -752,7 +754,7 @@ A chapter may end with one optional notebook, `further-reading.md`, titled
 "Further Reading". It is the only place for material that fails the
 teachable-core test (§4.1) but that some readers will want: related methods,
 recent variants, systems used in practice, history, and pointers into the
-literature. It is used sparingly.
+literature on topics beyond the chapter. It is used sparingly.
 
 - **At most one per chapter,** placed last, and never heavier than an
   ordinary section. Aim for 1,000–2,000 words; the section ceiling of 4,500
@@ -767,8 +769,14 @@ literature. It is used sparingly.
 - **Little code.** A short demonstration is allowed when it shows the one
   difference. No experiments that need training runs.
 - **Citations carry a clause** saying what each work adds.
-- It replaces the "Resources and Further Reading" sections now found in
-  chapter introductions, and the survey tails of individual sections.
+- It replaces the survey tails of individual sections, not the "Resources
+  and Further Reading" list of the chapter introduction. Every chapter
+  introduction keeps that list: annotated implementations, tutorials,
+  surveys, and courses for the material the chapter teaches, each pointing
+  with `:numref:` to the section it accompanies. The notebook covers what
+  the chapter does not teach: further topics, variants, applications, and
+  theory. The two do not repeat each other, and the list's opening
+  sentence points to the notebook.
 
 ## 13. Revision Checklist
 

@@ -1,229 +1,174 @@
-// Diagrams for chapter_preliminaries/linear-algebra (§2.3).
+// Diagrams for chapter_preliminaries/linear-algebra.md.
 //
-// Mix of structural figures (transpose, axis reduction, matrix products)
-// and geometric-intuition figures (a vector as an arrow, the dot product
-// as an angle/projection, norms as lengths). Values match the executed
-// notebook cells so the figures and the In/Out cards agree.
+// Structural figures: axis reductions with keepdims, the matrix-vector
+// product, and the shapes of the running classifier O = XW + b. Values
+// match the executed notebook cells so the figures and the In/Out cards
+// agree. The geometric figures of the section (dot product, norms, linear
+// maps, eigenvectors, cosines) are matplotlib: tools/figstyle/remake_ch02.py
+// and tools/gen_mdl_prelim_figures.py.
 //
-// Stable ids use the `linear-algebra-<concept>` prefix (abbreviated `la-`
-// in slide refs is NOT used — full id is the filename). Never rename.
+// Stable ids use the `linear-algebra-<concept>` prefix (the full id is the
+// filename). Never rename.
 
-import { C, FS, grid, tx, arrow, svg } from './engine.mjs';
+import { C, FS, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+
+const D = TOKENS.accents;   // tint / base / dark trios (dark = colored text)
 
 // plain stroked line (no arrowhead)
 const line = (x1, y1, x2, y2, color, w = 1.5, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
-const dot = (x, y, r, fill) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`;
+// Text vertically centered on y. An alphabetic baseline 0.35 em below the
+// center renders the same in browsers and in rsvg (the PDF path), where
+// dominant-baseline="central" puts digits above the center of their cells.
+const t = (x, y, s, o = {}) =>
+  tx(x, y + 0.35 * (o.fs || 15), s, { ...o, base: 'alphabetic' });
+// grid of cells (engine `grid`) with values centered by `t`
+const cells = (data, x0, y0, s, g, fill, fs = 15) => {
+  let o = grid(data, x0, y0, s, g, { fill, showVal: false });
+  data.forEach((row, r) => row.forEach((v, c) => {
+    o += t(x0 + c * (s + g) + s / 2, y0 + r * (s + g) + s / 2, v,
+           { mono: true, fs, fill: fill(r, c, v)[3] || C.ink });
+  }));
+  return o;
+};
+// a plain rectangle (block of a schematic matrix)
+const rect = (x, y, w, h, fill, stroke, dash = false) =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="2"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+// sans text with a true subscript, e.g. sub('o', 'ij')
+const sub = (x, y, base, s, o = {}) =>
+  `<text x="${x}" y="${y + 0.35 * (o.fs || 17)}" font-family="${FS}" font-size="${o.fs || 17}" font-weight="${o.fw || 700}" `
+  + `fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}" dominant-baseline="alphabetic">`
+  + `${base}<tspan baseline-shift="sub" font-size="${Math.round(0.72 * (o.fs || 17))}">${s}</tspan></text>`;
 
-// ── a vector as an arrow in the plane (geometric intuition) ─────────
-function vectorArrow() {
-  const W = 360, H = 300; let o = '';
-  const ox = 66, oy = 250, u = 52;          // origin, pixels per unit
-  o += arrow(ox - 12, oy, W - 16, oy, C.gray);   // x-axis
-  o += arrow(ox, oy + 12, ox, 34, C.gray);       // y-axis
-  o += tx(W - 20, oy + 18, 'x₁', { fs: 12.5, fill: C.muted });
-  o += tx(ox - 16, 44, 'x₂', { fs: 12.5, fill: C.muted });
-  const vx = ox + 3 * u, vy = oy - 2 * u;        // v = (3, 2)
-  o += line(vx, vy, vx, oy, C.gray, 1.2, true);  // component guides
-  o += line(vx, vy, ox, vy, C.gray, 1.2, true);
-  o += tx((ox + vx) / 2, oy + 18, '3', { fs: 13, fw: 700, fill: C.muted });
-  o += tx(ox - 16, (oy + vy) / 2, '2', { fs: 13, fw: 700, fill: C.muted });
-  o += arrow(ox, oy, vx, vy, C.blue);
-  o += dot(ox, oy, 3.5, C.ink);
-  o += tx(vx + 8, vy - 8, 'x = (3, 2)', { fs: 14, fw: 700, fill: C.blue, anchor: 'start' });
-  o += tx(ox - 13, oy + 17, '0', { fs: 12, fill: C.muted });
-  return svg(W, H, o);
-}
-
-// ── transpose: rows ↔ columns (3×2 → 2×3), one element tracked ──────
-function transpose() {
-  const s = 42, g = 5; let o = '';
-  const A = [[0, 1], [2, 3], [4, 5]];      // 3×2
-  const AT = [[0, 2, 4], [1, 3, 5]];       // 2×3
-  const ax = 56, ay = 72;
-  const Aw = 2 * s + g, Ah = 3 * s + 2 * g;
-  const hot = (r, c, R, Cc) => (r === R && c === Cc);
-  o += tx(ax + Aw / 2, ay - 18, 'A  (3×2)', { fs: 14, fw: 700, fill: C.ink });
-  o += grid(A, ax, ay, s, g, { fill: (r, c) => hot(r, c, 2, 0) ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  const arX = ax + Aw + 22;
-  o += arrow(arX, ay + Ah / 2, arX + 58, ay + Ah / 2, C.purple);
-  o += tx(arX + 29, ay + Ah / 2 - 13, 'transpose', { fs: 12, fill: C.purple });
-  const tx0 = arX + 76, ty0 = ay + (Ah - (2 * s + g)) / 2;
-  const Tw = 3 * s + 2 * g;
-  o += tx(tx0 + Tw / 2, ty0 - 18, 'Aᵀ  (2×3)', { fs: 14, fw: 700, fill: C.ink });
-  o += grid(AT, tx0, ty0, s, g, { fill: (r, c) => hot(r, c, 0, 2) ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  o += tx((ax + tx0 + Tw) / 2, ay + Ah + 22, 'A[i, j] = Aᵀ[j, i]', { fs: 13, fw: 600, fill: C.muted });
-  return svg(tx0 + Tw + 28, ay + Ah + 40, o);
-}
-
-// ── reduction along an axis: collapse rows (axis 0) / cols (axis 1) ──
+// ── reductions: an axis disappears; keepdims keeps it as length 1 ────
+// Left: A (2×3) summed over axis 0 (one sum per column, shape (3,)) and
+// over axis 1 (one sum per row, shape (2,)).  Right: with keepdims=True
+// the row sums keep shape (2, 1), so broadcasting stretches them across
+// the 3 columns of A (dashed copies).  Values match the notebook cells.
 function reduceAxes() {
-  const s = 44, g = 5; let o = '';
-  const A = [[0, 1, 2], [3, 4, 5]];        // 2×3
-  const ax = 126, ay = 66;
+  const s = 42, g = 6; let o = '';
+  const A = [[0, 1, 2], [3, 4, 5]];        // 2×3, as in the cells
   const Aw = 3 * s + 2 * g, Ah = 2 * s + g;
-  o += grid(A, ax, ay, s, g, { fill: () => [C.lblue, C.blue, false, C.ink] });
-  o += tx(ax - 16, ay + Ah / 2, 'A', { fs: 16, fw: 700, fill: C.muted, anchor: 'end' });
-  // axis=0 → column sums (3,5,7), drawn below
-  const by = ay + Ah + 42;
-  for (let c = 0; c < 3; c++) { const cx = ax + c * (s + g) + s / 2; o += arrow(cx, ay + Ah + 4, cx, by - 4, C.green); }
-  o += grid([[3, 5, 7]], ax, by, s, g, { fill: () => [C.lgreen, C.green, false, C.ink] });
-  o += tx(ax + Aw / 2, by + s + 20, 'axis=0 → shape (3,)  ·  column sums', { fs: 12.5, fw: 600, fill: C.green });
-  // axis=1 → row sums (3,12), drawn to the right
-  const rx = ax + Aw + 46;
-  for (let r = 0; r < 2; r++) { const cy = ay + r * (s + g) + s / 2; o += arrow(ax + Aw + 4, cy, rx - 4, cy, C.amber); }
-  o += grid([[3], [12]], rx, ay, s, g, { fill: () => [C.lamber, C.amber, false, C.ink] });
-  o += tx(rx + s + 12, ay + Ah / 2 - 9, 'axis=1 → (2,)', { fs: 12.5, fw: 600, fill: C.amber, anchor: 'start' });
-  o += tx(rx + s + 12, ay + Ah / 2 + 10, 'row sums', { fs: 12, fill: C.muted, anchor: 'start' });
-  return svg(rx + 150, by + s + 32, o);
-}
-
-// ── dot product as projection / angle (geometric) ───────────────────
-function dotProduct() {
-  const W = 430, H = 290; let o = '';
-  const ox = 70, oy = 232, u = 44;
-  o += arrow(ox - 12, oy, W - 18, oy, C.gray);
-  o += arrow(ox, oy + 12, ox, 26, C.gray);
-  const a = [4, 1], b = [2, 3];
-  const ax = ox + a[0] * u, ay = oy - a[1] * u;
-  const bx = ox + b[0] * u, by = oy - b[1] * u;
-  // projection of a onto b
-  const t = (a[0] * b[0] + a[1] * b[1]) / (b[0] * b[0] + b[1] * b[1]);
-  const fx = ox + t * b[0] * u, fy = oy - t * b[1] * u;
-  o += line(fx, fy, ax, ay, C.gray, 1.3, true);            // perpendicular
-  o += line(ox, oy, fx, fy, C.green, 4);                   // projection on b
-  o += arrow(ox, oy, bx, by, C.amber);
-  o += arrow(ox, oy, ax, ay, C.blue);
-  o += dot(ox, oy, 3.5, C.ink);
-  o += tx(ax + 8, ay + 2, 'a', { fs: 15, fw: 700, fill: C.blue, anchor: 'start' });
-  o += tx(bx - 4, by - 8, 'b', { fs: 15, fw: 700, fill: C.amber, anchor: 'middle' });
-  o += tx(ox + 30, oy - 14, 'θ', { fs: 14, fw: 700, fill: C.muted });
-  o += tx(W / 2, H - 40, 'a · b = Σᵢ aᵢ bᵢ', { fs: 15, fw: 700, fill: C.ink });
-  o += tx(W / 2, H - 18, '= ‖a‖ ‖b‖ cos θ', { fs: 14, fw: 600, fill: C.muted });
-  return svg(W, H, o);
+  const blue = () => [C.lblue, C.blue, false, C.ink];
+  const grn = () => [C.lgreen, C.green, false, C.ink];
+  const amb = () => [C.lamber, C.amber, false, C.ink];
+  const lab = (x, y, s, fill, anchor = 'middle') =>
+    t(x, y, s, { mono: true, fs: 15, fw: 600, fill, anchor });
+  // left: A and its two reductions
+  const ax = 20, ay = 34;
+  o += lab(ax + Aw / 2, ay - 18, 'A: shape (2, 3)', C.ink);
+  o += cells(A, ax, ay, s, g, blue);
+  const by = ay + Ah + 44;                  // axis=0 → below
+  for (let c = 0; c < 3; c++) {
+    const cx = ax + c * (s + g) + s / 2;
+    o += arrow(cx, ay + Ah + 5, cx, by - 5, C.green);
+  }
+  o += cells([[3, 5, 7]], ax, by, s, g, grn);
+  o += lab(ax + Aw / 2, by + s + 20, 'sum(axis=0)', D.green.dark);
+  o += lab(ax + Aw / 2, by + s + 40, 'shape (3,)', D.green.dark);
+  const rx = ax + Aw + 48;                  // axis=1 → right
+  for (let r = 0; r < 2; r++) {
+    const cy = ay + r * (s + g) + s / 2;
+    o += arrow(ax + Aw + 5, cy, rx - 5, cy, C.amber);
+  }
+  o += cells([[3], [12]], rx, ay, s, g, amb);
+  o += lab(rx + s / 2, ay + Ah + 20, 'sum(axis=1)', D.orange.dark);
+  o += lab(rx + s / 2, ay + Ah + 40, 'shape (2,)', D.orange.dark);
+  // divider
+  const dx = rx + s + 70;
+  o += line(dx, ay - 26, dx, by + s + 44, TOKENS.neutrals.hairline, 1.5);
+  // right: keepdims=True keeps a (2, 1) column; broadcasting stretches it
+  // (dashed copies) across the 3 columns, so A can be divided by it
+  const title = 'A.sum(axis=1, keepdims=True)';
+  const hw = 0.3 * 15 * title.length;       // half width of the mono title
+  const kx = dx + hw - Aw / 2 + 18;         // keep the title clear of the divider
+  o += lab(kx + Aw / 2, ay - 18, title, D.orange.dark);
+  o += cells([[3], [12]], kx, ay, s, g, amb);
+  o += cells([[3, 3], [12, 12]], kx + s + g, ay, s, g,
+             () => ['#FFFFFF', C.amber, true, C.muted]);
+  o += lab(kx + Aw / 2, ay + Ah + 20, 'sum_A: shape (2, 1)', D.orange.dark);
+  const ry = ay + Ah + 92;                  // the result A / sum_A
+  o += arrow(kx + Aw / 2, ay + Ah + 36, kx + Aw / 2, ry - 6, C.ink);
+  o += t(kx + Aw / 2 + 10, (ay + Ah + 30 + ry) / 2, 'A / sum_A', { mono: true, fs: 15, fw: 600, fill: C.ink, anchor: 'start' });
+  const R = [['0', '.33', '.67'], ['.25', '.33', '.42']];
+  o += cells(R, kx, ry, s, g, blue, 14.5);
+  o += t(kx + Aw / 2, ry + Ah + 20, 'each row sums to 1', { fs: 15, fill: C.ink });
+  return svg(kx + Aw / 2 + hw + 16, ry + Ah + 36, o);
 }
 
 // ── matrix–vector product: each output = one row · x ────────────────
+// Values match the cell: A = [[0, 1, 2], [3, 4, 5]], x = (0, 1, 2).
+// Row 1 of A and output 1 are highlighted; the caption states the rule.
 function matvec() {
-  const s = 42, g = 5; let o = '';
+  const s = 44, g = 6; let o = '';
   const A = [[0, 1, 2], [3, 4, 5]];        // 2×3
-  const ax = 60, ay = 78;
+  const ax = 20, ay = 72;
   const Aw = 3 * s + 2 * g, Ah = 2 * s + g;
-  o += tx(ax + Aw / 2, ay - 16, 'A  (2×3)', { fs: 13, fw: 700, fill: C.muted });
-  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
-  let cx = ax + Aw + 16;
-  o += tx(cx, ay + Ah / 2, '·', { fs: 26, fw: 700, fill: C.muted });
-  const xx = cx + 16, xy = ay - (s + g) / 2;               // x: 3×1, vertically centered
-  o += tx(xx + s / 2, xy - 16, 'x (3)', { fs: 13, fw: 700, fill: C.muted });
-  o += grid([[0], [1], [2]], xx, xy, s, g, { fill: () => [C.lamber, C.amber, false, C.ink] });
-  let ex = xx + s + 16;
-  o += tx(ex, ay + Ah / 2, '=', { fs: 24, fw: 700, fill: C.muted });
-  const yx = ex + 18;
-  o += tx(yx + s / 2, ay - 16, 'y (2)', { fs: 13, fw: 700, fill: C.muted });
-  o += grid([[5], [14]], yx, ay, s, g, { fill: (r) => r === 0 ? [C.lgreen, C.green, false, C.ink] : [C.lgray, C.gray, false, C.ink] });
-  const Wm = yx + s + 30;
-  const xBot = (ay - (s + g) / 2) + 3 * s + 2 * g;   // x is the tallest column (3 rows)
-  const capY = xBot + 28;
-  o += tx(Wm / 2, capY, 'each yᵢ = (row i of A) · x', { fs: 13, fw: 600, fill: C.muted });
-  return svg(Wm, capY + 20, o);
+  const off = ['#F0F2F5', '#C9CFD6', false, '#565D66'];
+  o += t(ax + Aw / 2, ay - 20, 'A: (2, 3)', { mono: true, fs: 15, fw: 600, fill: C.ink });
+  o += cells(A, ax, ay, s, g, (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : off);
+  const cx = ax + Aw + 18;
+  o += t(cx, ay + Ah / 2, '·', { fs: 30, fw: 700, fill: C.ink });
+  const xx = cx + 18, xy = ay - (s + g) / 2;               // x: 3×1, vertically centered
+  o += t(xx + s / 2, xy - 20, 'x: (3,)', { mono: true, fs: 15, fw: 600, fill: C.ink });
+  o += cells([[0], [1], [2]], xx, xy, s, g, () => [C.lamber, C.amber, false, C.ink]);
+  const ex = xx + s + 20;
+  o += t(ex, ay + Ah / 2, '=', { fs: 26, fw: 700, fill: C.ink });
+  const yx = ex + 20;
+  o += t(yx + s / 2, ay - 20, 'Ax: (2,)', { mono: true, fs: 15, fw: 600, fill: C.ink });
+  o += cells([[5], [14]], yx, ay, s, g, (r) => r === 0 ? [C.lgreen, C.green, false, C.ink] : off);
+  const xBot = xy + 3 * s + 2 * g;          // x is the tallest column (3 rows)
+  return svg(yx + s + 20, xBot + 16, o);
 }
 
-// ── matrix–matrix product: Cᵢⱼ = (row i of A) · (col j of B) ────────
+// ── the running classifier: O = XW + b on a batch (schematic) ───────
+// X (256 × 784) holds one image per row, W (784 × 10) one column of
+// weights per category, b (10) the offsets, O (256 × 10) the scores.
+// Row i of X and column j of W (gold) meet in the score o_ij.  Block
+// sizes are schematic: 784 is drawn shorter than to scale.
 function matmul() {
-  const s = 34, g = 4; let o = '';
-  const A = [[0, 1, 2], [3, 4, 5]];                 // 2×3
-  const B = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]; // 3×4
-  const Cm = [[3, 3, 3, 3], [12, 12, 12, 12]];      // 2×4
-  const Aw = 3 * (s + g) - g, Ah = 2 * (s + g) - g;
-  const Bw = 4 * (s + g) - g, Bh = 3 * (s + g) - g;
-  const ax = 40, ay = 70 + Bh + 24;                 // A bottom-left
-  const bx = ax + Aw + 28, by = 36;                 // B top-right
-  const cx = bx, cy = ay;                           // C aligns: cols under B, rows beside A
-  // B (top)
-  o += tx(bx + Bw / 2, by - 14, 'B  (3×4)', { fs: 12.5, fw: 700, fill: C.muted });
-  o += grid(B, bx, by, s, g, { fill: (r, c) => c === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
-  // A (left)
-  o += tx(ax + Aw / 2, ay - 14, 'A  (2×3)', { fs: 12.5, fw: 700, fill: C.muted });
-  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
-  // C (bottom-right)
-  o += tx(cx + 4 * (s + g) - g - 14, cy + Ah + 16, 'C = AB  (2×4)', { fs: 12.5, fw: 700, fill: C.ink, anchor: 'end' });
-  o += grid(Cm, cx, cy, s, g, { fill: (r, c) => (r === 0 && c === 0) ? [C.lamber, C.amber, false, C.ink] : [C.lgreen, C.green, false, C.ink] });
-  // True subscripts via tspans (the unicode ⱼ glyph is missing in many
-  // fonts, so it rendered un-subscripted); larger than before.
-  const sub = `baseline-shift="sub" font-size="11"`;
-  o += `<text x="${bx + Bw + 20}" y="${by + 6}" font-family="${FS}" `
-    + `font-size="15" font-weight="700" fill="#15181C" text-anchor="start">`
-    + `C<tspan ${sub}>ij</tspan> = row<tspan ${sub}>i</tspan> · col<tspan ${sub}>j</tspan></text>`;
-  return svg(bx + Bw + 168, ay + Ah + 34, o);
-}
-
-// ── norms as geometric lengths: ℓ₂ (hypotenuse) vs ℓ₁ (path) ─────────
-function norms() {
-  const W = 350, H = 338; let o = '';
-  const ox = 64, oy = 256, u = 46;
-  o += arrow(ox - 12, oy, W - 16, oy, C.gray);
-  o += arrow(ox, oy + 12, ox, 30, C.gray);
-  const vx = ox + 3 * u, vy = oy - 4 * u;          // v = (3, 4)
-  o += line(ox, oy, vx, oy, C.amber, 3);           // ℓ₁ path: 3 across …
-  o += line(vx, oy, vx, vy, C.amber, 3);           // … then 4 up
-  o += tx((ox + vx) / 2, oy + 17, '3', { fs: 13, fw: 700, fill: C.amber });
-  o += tx(vx + 12, (oy + vy) / 2, '4', { fs: 13, fw: 700, fill: C.amber, anchor: 'start' });
-  o += arrow(ox, oy, vx, vy, C.blue);              // ℓ₂: the vector itself
-  o += tx((ox + vx) / 2 - 8, (oy + vy) / 2 - 6, '5', { fs: 14, fw: 700, fill: C.blue, anchor: 'end' });
-  o += dot(ox, oy, 3.5, C.ink);
-  o += tx(vx + 6, vy - 6, 'v = (3, 4)', { fs: 13, fw: 700, fill: C.ink, anchor: 'start' });
-  o += tx(W / 2, H - 42, '‖v‖₂ = √(3² + 4²) = 5   (Euclidean)', { fs: 12.5, fw: 600, fill: C.blue });
-  o += tx(W / 2, H - 20, '‖v‖₁ = 3 + 4 = 7   (Manhattan)', { fs: 12.5, fw: 600, fill: C.amber });
-  return svg(W, H, o);
-}
-
-// ── symmetric matrix: A equals its mirror across the diagonal ───────
-function symmetric() {
-  const s = 48, g = 5; let o = '';
-  const A = [[1, 2, 3], [2, 0, 4], [3, 4, 5]];   // A = Aᵀ (matches the cell)
-  const ax = 64, ay = 54, W3 = 3 * s + 2 * g;
-  const pal = { '2': [C.lblue, C.blue], '3': [C.lgreen, C.green], '4': [C.lamber, C.amber] };
-  const fill = (r, c, v) => (r === c)
-    ? [C.lgray, C.gray, false, C.ink]
-    : [...pal[String(v)], false, C.ink];
-  // dashed axis of symmetry (the main diagonal)
-  o += line(ax - 6, ay - 6, ax + W3 + 6, ay + W3 + 6, C.gray, 1.4, true);
-  o += grid(A, ax, ay, s, g, { fill });
-  o += tx(ax + W3 / 2, ay + W3 + 26, 'A = Aᵀ  ·  mirror across the diagonal', { fs: 13, fw: 600, fill: C.muted });
-  return svg(ax + W3 + 28, ay + W3 + 44, o);
-}
-
-// ── 4-D tensor = a train (sequence) of 3-D tensors ──────────────────
-function tensor4d() {
-  const s = 22, g = 3, off = 12; let o = '';
-  const face = [['', '', ''], ['', '', '']];     // 2×3 face
-  const fw = 3 * s + 2 * g, fh = 2 * s + g;
-  const cube = (x, y) => {
-    let c = '';
-    c += grid(face, x + off, y - off, s, g, { showVal: false, fill: () => ['#D6EDFC', '#8F98A1', false] });
-    // edges from back to front corners
-    c += line(x + off, y - off, x, y, C.blue, 1.2);
-    c += line(x + off + fw, y - off, x + fw, y, C.blue, 1.2);
-    c += line(x + off + fw, y - off + fh, x + fw, y + fh, C.blue, 1.2);
-    c += grid(face, x, y, s, g, { showVal: false, fill: () => [C.lblue, C.blue, false] });
-    return c;
-  };
-  const ys = 58, xs = [62, 232, 402];
-  o += tx((xs[0] + xs[2] + fw) / 2, 30, 'a 4-D tensor = a sequence of 3-D tensors', { fs: 14, fw: 700, fill: C.ink });
-  xs.forEach((x, i) => { o += cube(x, ys); o += tx(x + fw / 2, ys + fh + 24, `[${i}]`, { mono: true, fs: 13, fw: 700, fill: C.muted }); });
-  o += tx(xs[2] + fw + 42, ys + fh / 2, '…', { fs: 26, fw: 700, fill: C.muted });
-  o += tx((xs[0] + xs[2] + fw) / 2, ys + fh + 50, 'shape  (N, C, H, W)', { mono: true, fs: 13, fill: C.muted });
-  return svg(xs[2] + fw + 92, ys + fh + 66, o);
+  let o = '';
+  const top = 34;                            // top of W, the tallest block
+  const Wh = 196, cw = 40;                   // height of W; width of 10 columns
+  const Xw = 196, Xh = 112;                  // X: 784 columns, 256 rows
+  const mid = top + Wh / 2;
+  const Xy = mid - Xh / 2;
+  const xX = 30, xW = xX + Xw + 38, xb = xW + cw + 42, xO = xb + cw + 42;
+  const gold = D.gold;
+  const ri = Xy + 0.38 * Xh, rh = 14;        // highlighted row i
+  const cj = 0.55 * cw, cwj = 9;             // highlighted column j (offset, width)
+  // X with row i
+  o += rect(xX, Xy, Xw, Xh, D.blue.tint, D.blue.base);
+  o += rect(xX, ri, Xw, rh, gold.tint, gold.base);
+  o += t(xX - 12, ri + rh / 2, 'i', { fs: 17, fw: 700, fill: C.ink, anchor: 'end' });
+  // · W with column j
+  o += t(xW - 19, mid, '·', { fs: 30, fw: 700, fill: C.ink });
+  o += rect(xW, top, cw, Wh, TOKENS.neutrals.panel, C.gray);
+  o += rect(xW + cj - cwj / 2, top, cwj, Wh, gold.tint, gold.base);
+  o += t(xW + cj, top - 14, 'j', { fs: 17, fw: 700, fill: C.ink });
+  // + b with entry j
+  o += t(xb - 21, mid, '+', { fs: 26, fw: 700, fill: C.ink });
+  o += rect(xb, mid - 8, cw, 16, TOKENS.neutrals.panel, C.gray);
+  o += rect(xb + cj - cwj / 2, mid - 8, cwj, 16, gold.tint, gold.base);
+  // = O with entry (i, j)
+  o += t(xO - 21, mid, '=', { fs: 26, fw: 700, fill: C.ink });
+  o += rect(xO, Xy, cw, Xh, D.green.tint, D.green.base);
+  o += rect(xO + cj - cwj / 2, ri, cwj, rh, gold.base, gold.dark);
+  o += sub(xO + cw + 10, ri + rh / 2, 'o', 'ij', { fs: 17, anchor: 'start' });
+  // names and shapes below each block
+  const ly = top + Wh + 22;
+  const name = (x, s) => t(x, ly, s, { fs: 18, fw: 700, fill: C.ink });
+  const shape = (x, s) => t(x, ly + 22, s, { mono: true, fs: 15, fill: C.ink });
+  const role = (x, s) => t(x, ly + 43, s, { fs: 14.5, fill: C.muted });
+  o += name(xX + Xw / 2, 'X') + shape(xX + Xw / 2, '256 × 784') + role(xX + Xw / 2, 'images, one per row');
+  o += name(xW + cw / 2, 'W') + shape(xW + cw / 2, '784 × 10') + role(xW + cw / 2, 'weights');
+  o += name(xb + cw / 2, 'b') + shape(xb + cw / 2, '10') + role(xb + cw / 2, 'offsets');
+  o += name(xO + cw / 2, 'O') + shape(xO + cw / 2, '256 × 10') + role(xO + cw / 2, 'scores');
+  return svg(xO + cw + 44, ly + 56, o);
 }
 
 export const diagrams = {
-  'linear-algebra-symmetric':  symmetric,
-  'linear-algebra-tensor4d':   tensor4d,
-  'linear-algebra-vector':     vectorArrow,
-  'linear-algebra-transpose':  transpose,
   'linear-algebra-reduce-axes': reduceAxes,
-  'linear-algebra-dot':        dotProduct,
-  'linear-algebra-matvec':     matvec,
-  'linear-algebra-matmul':     matmul,
-  'linear-algebra-norms':      norms,
+  'linear-algebra-matvec':      matvec,
+  'linear-algebra-matmul':      matmul,
 };

@@ -38,10 +38,39 @@ export function rc(x, y, s, f, st, dash) {
 const esc = (t) => String(t)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// A centered text label. opts: {mono, fs, fw, fill, anchor, base}
+// Vertical placement without dominant-baseline. librsvg (rsvg-convert, the
+// PDF pipeline's rasterizer) ignores dominant-baseline, so "central" text
+// sat ~0.35 em too high in the PDF. Every label therefore carries an
+// ALPHABETIC baseline (the SVG default, honoured everywhere), placed below
+// the requested centre line by half the cap height, so capitals and digits
+// are centred on y exactly. Cap heights (em) of the faces as drawn:
+//   sans  Source Sans 3: 660/1000 (also what the committed, outlined SVG
+//         uses; a browser's own "central" is the em-box middle, 0.337 em,
+//         < 0.01 em away)
+//   mono  JetBrains Mono: 730/1000. The outliner (tools/figstyle/
+//         outline_svg.py) draws it in the bundled Inconsolata scaled to
+//         the same cap height, so 0.73 holds for the committed SVG too.
+export const CAP_HEIGHT = { sans: 0.66, mono: 0.73 };
+const X_HEIGHT = { sans: 0.486, mono: 0.55 };
+
+// Baseline y for a label whose `base` alignment point is at y.
+//   base 'central' (default): y is the centre of capitals and digits
+//   base 'middle': y is the centre of lowercase (half the x-height)
+//   base 'hanging': y is the top of capitals
+//   base 'alphabetic': y is already the baseline (no shift)
+export function baselineY(y, fs, mono, base) {
+  const k = mono ? 'mono' : 'sans';
+  const shift = { central: CAP_HEIGHT[k] / 2, middle: X_HEIGHT[k] / 2,
+                  hanging: CAP_HEIGHT[k] }[base || 'central'] || 0;
+  return +(y + shift * fs).toFixed(2);
+}
+
+// A label vertically centred on y. opts: {mono, fs, fw, fill, anchor, base};
+// `base` names the alignment point at y (see baselineY), default 'central'.
 export function tx(x, y, t, o) {
   o = o || {};
-  return `<text x="${x}" y="${y}" font-family="${o.mono ? FM : FS}" font-size="${o.fs || 15}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}" dominant-baseline="${o.base || 'central'}">${esc(t)}</text>`;
+  const fs = o.fs || 15;
+  return `<text x="${x}" y="${baselineY(y, fs, o.mono, o.base)}" font-family="${o.mono ? FM : FS}" font-size="${fs}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}">${esc(t)}</text>`;
 }
 
 // A grid of cells. `data` is a 2D array of values (use '' / null for blank).

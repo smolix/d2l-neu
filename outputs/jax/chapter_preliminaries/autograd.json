@@ -9,127 +9,109 @@
   },
   "cells": {
     "autograd-automatic-differentiation": {
-      "code_fingerprint": "sha256:10bd93d1f581082f85121b0741bb86b86ce2346eca677de2f52b3dd7a7034c29",
+      "code_fingerprint": "sha256:934fd551d91d9735877015aa238acb306a6003eab0e8efd2d1c645d8545b15cf",
       "kind": "text",
       "outputs": []
     },
     "autograd-a-simple-function-1": {
-      "code_fingerprint": "sha256:6395e0af2387b2f25b650b6f0f8d59ee118add215b088be72ea740a0e470f4da",
+      "code_fingerprint": "sha256:756d3f3d8450025b7368f22e5108caa1d7caba2050a642d0b48b05187a6d7f1d",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array([0., 1., 2., 3.], dtype=float32)"
-        }
-      ]
+      "outputs": []
     },
     "autograd-a-simple-function-3": {
-      "code_fingerprint": "sha256:21b82e97ba6bd0a8aca4dd04f85c1d97b2fe9bad684ef94cc7995bcb9d5c6c1e",
+      "code_fingerprint": "sha256:a02391a8841feecc62db3b00849569a2e890bae1903cd8f1143c48c7c84bc2b9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(28., dtype=float32)"
+          "text": "Array(1., dtype=float32)"
         }
       ]
     },
     "autograd-a-simple-function-4": {
-      "code_fingerprint": "sha256:91a13241bd8d0bae3ddf7a71ed25e8d445387e3cc981aba2bb4e09ee55f6d30c",
+      "code_fingerprint": "sha256:7c48d4b7bfdca28574f1bdd267a7dd1a60c14dc52d77d509fdfa115d13d578a4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([ 0.,  4.,  8., 12.], dtype=float32)"
-        }
-      ]
-    },
-    "autograd-a-simple-function-5": {
-      "code_fingerprint": "sha256:9c42621c090536d0c2f0a252effc4cdc01fa0af959b6978dcd2e04644e07da8e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array([ True,  True,  True,  True], dtype=bool)"
-        }
-      ]
-    },
-    "autograd-a-simple-function-6": {
-      "code_fingerprint": "sha256:d01f4ca44e4e5a36542bd45ae461d4cd089bfc437ebe9fc280966365e935b115",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "Array([1., 1., 1., 1.], dtype=float32)"
+          "text": "Array([2., 4.], dtype=float32)"
         }
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:5eaf95a395883e75193bb7d46afa83be78c5ef598e8d479eae4f4296a1279fa1",
+      "code_fingerprint": "sha256:c338e1fb1d2597520324698d07ea0dbef1b64e33ef4b67f39c26ca645daf9841",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([0., 2., 4., 6.], dtype=float32)"
+          "text": "Array([2., 4.], dtype=float32)"
         }
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:d7f89a2009402f99a6edc213e36e6d8ba7c23758525612655a2029dcd493ebb0",
+      "code_fingerprint": "sha256:9de67cb66e5132d14bdd56c898210b22f95465add9ba39d5d6f75fd44ac85430",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([ True,  True,  True,  True], dtype=bool)"
+          "text": "Array([0., 1., 4., 9.], dtype=float32)"
         }
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:061eb99a596f7d220d240bc85d9d6e70d64e2a3ff3b19b12a8f081007400ed95",
+      "code_fingerprint": "sha256:155d4c53f1a917090d2f1d68b97072931fe4154d8242ac093a537d844330be9d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([ True,  True,  True,  True], dtype=bool)"
+          "text": "Array([ 0.,  3., 12., 27.], dtype=float32)"
         }
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:5af7a6e031ca11547b95814d10056e304f96abbdc8403be81a097a4606c179c1",
+      "code_fingerprint": "sha256:682713f220a212e54617631450f06e197c07bf9c826cf688adcca3c7a2bd4710",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(28., dtype=float32)"
+          "text": "(Array([ 0.8, -0.4], dtype=float32), Array(0.4, dtype=float32))"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:faec50c16be64ce084dd373dbc2dc3683b2e63e571329d74a39d60369c382e26",
+      "code_fingerprint": "sha256:4eff05a2fb6330ce3d6eda18184ad562a41abd6b450e528e6c4ca7e1d8b333a4",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:28194a0edc5c541d709e1c7eb4e46ace71c1149e3345f12faa92ffc23ced9cfc",
-      "kind": "text",
-      "outputs": []
-    },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:3a53907a26ff97a9fda437ac2e259114555233bd55fa0d72a8ebcc4b320c9f85",
+      "code_fingerprint": "sha256:2442241fbad2f08e56ad6c3a1d734b067c3f8156f5cc0adba5c39806e6ccbc91",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "Array(True, dtype=bool)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
         }
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:83f900d8d0f4cf2fc98cccb3bb6b4d96ca17297ab67672173e0bc6b26cf3001d",
+      "code_fingerprint": "sha256:802ba939820cfb764850da5f151f2bc0260fc5a1fe10a5fa94a8ee4561912c0b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(12., dtype=float32, weak_type=True),\n Array(12., dtype=float32, weak_type=True))"
+          "text": "(Array(3., dtype=float32, weak_type=True),\n Array(6., dtype=float32, weak_type=True))"
+        }
+      ]
+    },
+    "autograd-rows-and-columns-of-the-jacobian": {
+      "code_fingerprint": "sha256:d684adf8658c47652cd98961508939b464ba65900cfdac81b82ca2d4b1d4fec1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

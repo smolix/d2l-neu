@@ -476,11 +476,15 @@ answers an earlier question, it states the question again.
 
 ### 7.6 Use of the Appendix
 
-Basics and Advanced chapters must be complete without the Mathematics for
-Deep Learning appendix. The main text states each result it uses, with the
-intuition, and may point to the appendix for the proof. It never asks the
-reader to "recall" appendix material, and never hands a demonstration to the
-appendix ("A 25-parameter network demonstrates the phenomenon, and
+The Mathematics for Deep Learning appendix is optional reading for readers
+who already know a topic, and a first textbook for readers who do not
+(decided by Alex, 2026-10-24). The main text states each result it uses,
+with the intuition, so that its argument can be followed without the
+appendix. It points to the appendix for proofs and for details that would
+distract from the flow of the chapter: the properties of entropy, for
+instance, are derived in the appendix, and the main text states them and
+points there. It never asks the reader to "recall" appendix material, and
+never hands a demonstration to the appendix ("A 25-parameter network demonstrates the phenomenon, and
 :numref:`subsec_mdl-quadratic-model` does exactly that",
 `optimization-intro.md:259`). The Preliminaries alone point into the
 appendix 34 times.

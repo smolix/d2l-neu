@@ -8,13 +8,18 @@
     "max_inline_bytes": 0
   },
   "cells": {
+    "pandas-data-preprocessing": {
+      "code_fingerprint": "sha256:8752c0481b11d37e07f82d2b6906cf20ce0f82a2944291bd83e13583a074de24",
+      "kind": "text",
+      "outputs": []
+    },
     "pandas-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:a2284e3bdbfb6e545d0db8a9d6be6a2d26df4b4af78bcf59b4ba5c3010048e3c",
+      "code_fingerprint": "sha256:9b95fb96b66ee18b90612eed236c5c1ae0a3ab82f0fa6d588acb86d3a26951fe",
       "kind": "text",
       "outputs": []
     },
     "pandas-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:94c603ffd5e6eb976a7db3b0514b1dcc0e3a6861e35a604b5654d6ce7e86994e",
+      "code_fingerprint": "sha256:fef957f9d4007d11ee60dbf4b3738bac838ed29f34eb65721995d0673f1df7b0",
       "kind": "text",
       "outputs": [
         {
@@ -24,17 +29,18 @@
       ]
     },
     "pandas-knowing-your-data-1": {
-      "code_fingerprint": "sha256:d4489bc4f63f5a34acb4fe59be2cddb3208fe2f07cfb5bceee82753589ca48be",
+      "code_fingerprint": "sha256:5ff9ec70af9a275cf379173a82d0097c90aac3644a4c1c746fd7f9e4bb0fea27",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "NumRooms    float64\nRoofType        str\nArea          int64\nPrice         int64\ndtype: object"
+          "type": "stream",
+          "name": "stdout",
+          "text": "<class 'pandas.DataFrame'>\nRangeIndex: 10 entries, 0 to 9\nData columns (total 4 columns):\n #   Column    Non-Null Count  Dtype  \n---  ------    --------------  -----  \n 0   NumRooms  7 non-null      float64\n 1   RoofType  6 non-null      str    \n 2   Area      10 non-null     int64  \n 3   Price     10 non-null     int64  \ndtypes: float64(1), int64(2), str(1)\nmemory usage: 481.0 bytes\n"
         }
       ]
     },
     "pandas-knowing-your-data-2": {
-      "code_fingerprint": "sha256:81f280942afc36f5b85bb398bd605fcaa6f44065b4e33801935e982adbd0ab57",
+      "code_fingerprint": "sha256:7f80ad4e9773866407e794306d113205924fb53065ee597cb1fb8bc6f96a2a87",
       "kind": "text",
       "outputs": [
         {
@@ -44,17 +50,17 @@
       ]
     },
     "pandas-separating-inputs-and-targets-1": {
-      "code_fingerprint": "sha256:f1c85b672786be0294186e19e54889e5c6d9b2aaa4b7b67c9220af12f40997e4",
+      "code_fingerprint": "sha256:c49ece97110bfe3e0d1a932322be0d201bc7ce90595dc1ebc7f4635aa8dfc58d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "   NumRooms RoofType  Area\n0       3.0    Slate  1500\n1       NaN     Tile  2100\n2       2.0      NaN   850\n3       4.0    Slate  1940\n4       NaN      NaN  1200\n5       3.0     Tile  1650\n6       5.0    Slate  2600\n7       2.0      NaN   900\n8       NaN     Tile  1750\n9       4.0      NaN  2050"
+          "text": "(['NumRooms', 'RoofType', 'Area'], 'Price')"
         }
       ]
     },
     "pandas-handling-missing-values-1": {
-      "code_fingerprint": "sha256:6b470fe5713126fd4e7100de496358b2cba3bc7f4401491aca10ac1b8a74a58e",
+      "code_fingerprint": "sha256:04db890df4b3fee522ca9eb0239a1a44ae53e1c27a627d0b06a95efcb7632686",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +70,7 @@
       ]
     },
     "pandas-handling-missing-values-2": {
-      "code_fingerprint": "sha256:8f3702ba71e10d228950fc0d7f1391ac19fd9fea089dd646ecb001cf939b42e5",
+      "code_fingerprint": "sha256:ba3b2bd436cb60f5d63b6bbce226394b2937a21174352d52b72642088780b284",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +80,7 @@
       ]
     },
     "pandas-handling-missing-values-3": {
-      "code_fingerprint": "sha256:e0b1eb39ffb09af8eba869bc56d9db93ea79572ed0a3ffad0d9be418802dd1d0",
+      "code_fingerprint": "sha256:f7c727d84d6d03e86017b5957759d41428afec273e280c7189382e6940642dd1",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +90,7 @@
       ]
     },
     "pandas-encoding-categorical-features-1": {
-      "code_fingerprint": "sha256:253d1326b137fc1f65e8ccdf7e52b1520f480a0c14fd608e5b7c50b3536dd8d4",
+      "code_fingerprint": "sha256:32e6a10ec653219230e6b49b7da2bea09fd9155ac7df849186aae5f952b86099",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +100,7 @@
       ]
     },
     "pandas-numerical-features-1": {
-      "code_fingerprint": "sha256:f17996df46ab982306c8c91742b8375f72410b9c6c8992e084a894f0961a9746",
+      "code_fingerprint": "sha256:1908c36e7cd31c05be79350f24387c5a9dd14b77ba7c35d5e582d50153e23555",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +110,12 @@
       ]
     },
     "pandas-conversion-to-tensor-format": {
-      "code_fingerprint": "sha256:35dcdfde7da0b14f491b42571c9653dd53941c946d0ca6841fcb0584473d37f9",
+      "code_fingerprint": "sha256:a0eff181e2cbf4302445e67a0a991fe3c2be06f784e457a86e4e3314a91180d0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[-0.3145, -0.2768,  1.0000,  0.0000,  0.0000],\n         [ 0.0000,  0.8016,  0.0000,  1.0000,  0.0000],\n         [-1.4152, -1.4449,  0.0000,  0.0000,  1.0000],\n         [ 0.7862,  0.5140,  1.0000,  0.0000,  0.0000],\n         [ 0.0000, -0.8159,  0.0000,  0.0000,  1.0000],\n         [-0.3145, -0.0072,  0.0000,  1.0000,  0.0000],\n         [ 1.8869,  1.7002,  1.0000,  0.0000,  0.0000],\n         [-1.4152, -1.3551,  0.0000,  0.0000,  1.0000],\n         [ 0.0000,  0.1725,  0.0000,  1.0000,  0.0000],\n         [ 0.7862,  0.7117,  0.0000,  0.0000,  1.0000]], dtype=torch.float64),\n tensor([210000., 290000., 127500., 258000., 168000., 225000., 375000., 142000.,\n         240000., 295000.], dtype=torch.float64))"
+          "text": "(torch.Size([10, 5]), torch.float32, torch.Size([10]), torch.float32)"
         }
       ]
     }

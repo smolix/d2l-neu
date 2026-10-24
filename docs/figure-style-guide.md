@@ -176,7 +176,8 @@ has three interacting parts. Architecture-gallery figures keep their stricter
 - **Formulas** (matplotlib figures): Computer Modern mathtext
   (`mathtext.fontset: cm`) — matches the MathJax math in surrounding prose.
 - Text in committed SVGs is **outlined to paths** (matplotlib
-  `svg.fonttype: path`; the composer outlines via fontTools). Rendering is
+  `svg.fonttype: path`; the composer and, for the JS `diagrams/`,
+  `tools/figstyle/outline_svg.py` outline via fontTools). Rendering is
   then identical in every browser, in librsvg (`rsvg-convert`, the PDF
   pipeline), and in print, with no font installation anywhere. Add a
   `<desc>` for accessibility.
@@ -274,7 +275,7 @@ belongs to attention is orange). Build with `figstyle.svg.Figure`.
 ### 7.3 Mathematical illustrations (`mdl-*`)
 
 matplotlib via `figstyle.mpl.use_style()`. Coordinate scaffolding
-(`axis_cross`) is `MUTED`, grids `HAIRLINE`/`FAINT`, data vectors/curves in
+(`axis_cross`) is `INK` (black; decided 2026-10-24, matching `CLAUDE.md`), grids `HAIRLINE`/`FAINT`, data vectors/curves in
 cycle order with `dark` text labels; construction lines dashed `FAINT`;
 the result/emphasis object gets `SW_HEAVY` or a `halo_line`. CM math for
 all symbol labels. Never title panels the caption already names.
@@ -297,6 +298,8 @@ frame, `MUTED` ticks, cycle palette, `FS_TINY` ticks / `FS_LABEL` axes.
 | `tools/figstyle/check_contrast.py` | palette invariants (run after edits) |
 | `tools/figstyle/svg.py` | deterministic SVG composer: auto-sized semantic blocks, panels, data-flow arrows, leaders, pills, rich text (italic vars, sub/superscripts, mono) — text outlined via fontTools against the bundled TTFs; tight canvas; byte-idempotent |
 | `tools/figstyle/textmetrics.py` | exact text measurement + outlining (no matplotlib needed) |
+| `tools/figstyle/outline_svg.py` | post-processor for the JS `diagrams/` pipeline: rewrites every live `<text>`/`<tspan>` (italic, bold, sub/superscripts, size and colour changes, anchors, dominant-baseline) into glyph paths from the bundled fonts, keeps the string as `aria-label`, drops the font `@import`; byte-idempotent. Pipeline and per-id commands: `diagrams/README.md` |
+| `tools/figstyle/tightcrop.py` | crops a JS-pipeline SVG to its rendered content + 8 px (run after outlining, so it measures the shipped glyphs) |
 | `tools/figstyle/mpl.py` | `use_style()` rcParams theme + the primitives the old house style lacked (`box`, `halo_line`, `leader`, `panel_label`, refined `arrow`/`axis_cross`/`clean_axes`); legacy names `BLUE/ORANGE/GREEN/GRAY/LIGHT` re-exported onto the new palette for drop-in migration |
 | `tools/figstyle/export.py` | writes `tokens.json` + `diagrams/tokens.mjs` (the JS engine imports `C` from there — ends the palette drift) |
 | `tools/figstyle/demo_figures.py` | the four §9 pilots → `img/figstyle-demo/` |

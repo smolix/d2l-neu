@@ -1,137 +1,168 @@
-// Diagrams for chapter_preliminaries/pandas (§2.2 Data Preprocessing).
+// Diagrams for chapter_preliminaries/pandas (Data Preprocessing).
 //
-// The section is mostly tabular data, so the diagrams carry the
-// *decisions*: the load→clean→tensor pipeline, the three responses to a
-// missing value, one-hot encoding, and why features get standardized.
+// The section is mostly tabular output, so the diagrams carry the
+// decisions: the file -> DataFrame -> tensors pipeline (also the book
+// figure fig_pandas_pipeline), the three responses to a missing value,
+// one-hot encoding, and what standardization does to the two numerical
+// columns of the running example (house_tiny.csv).
+//
+// Sizing follows the chapter's other modules (figure-style guide §5-6):
+// canvases at most 720 units wide, labels 15-17 px, nothing below 14.5 px.
+// Structural text is INK; colored text uses the accent's dark shade.
+// Labels name things; sentences belong in the caption or the slide text.
 //
 // Stable ids use the `pandas-<concept>` prefix. Never rename.
 
-import { C, grid, tx, arrow, rc, svg } from './engine.mjs';
+import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
 
-const line = (x1, y1, x2, y2, color, w = 1.5, dash = false) =>
-  `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
-const dot = (x, y, r, fill) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`;
-// a non-square labelled cell (for text labels grid() can't size)
-const cell = (x, y, w, h, fill, st, text, tc, fs = 12) =>
-  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${fill}" stroke="${st}" stroke-width="2"/>`
-  + tx(x + w / 2, y + h / 2, text, { fs, fw: 600, fill: tc || C.ink });
-const box = (cx, cy, w, h, fill, st, label, sub) => {
-  let o = `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${st}" stroke-width="2"/>`;
-  o += tx(cx, cy - (sub ? 7 : 0), label, { fs: 14, fw: 700, fill: C.ink });
-  if (sub) o += tx(cx, cy + 13, sub, { fs: 10.5, fw: 500, fill: C.muted });
-  return o;
-};
+const D = TOKENS.accents;                     // tint / base / dark trios
+const N = TOKENS.neutrals;
+const BLUE = [C.lblue, C.blue, false, C.ink];
+const GREEN = [C.lgreen, C.green, false, C.ink];
+const AMBER = [C.lamber, C.amber, false, D.orange.dark];
+const PURPLE = [D.purple.tint, C.purple, false, D.purple.dark];
+const GRAY = [C.lgray, N.hairline, false, C.muted];
 
-// ── the preprocessing pipeline: file → DataFrame → clean → tensor ───
+const code = (x, y, t, fill = C.ink, o = {}) =>
+  tx(x, y, t, { mono: true, fs: o.fs || 15, fw: o.fw || 600, fill, anchor: o.anchor || 'middle' });
+const name = (x, y, t, fill = C.ink, o = {}) =>
+  tx(x, y, t, { fs: o.fs || 17, fw: o.fw || 700, fill, anchor: o.anchor || 'middle' });
+const note = (x, y, t, fill = C.ink, o = {}) =>
+  tx(x, y, t, { fs: o.fs || 15, fw: o.fw || 500, fill, anchor: o.anchor || 'middle' });
+const line = (x1, y1, x2, y2, color, w = 2) =>
+  `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"/>`;
+// a rounded rectangle cell with a centered text label (for words, which
+// grid()'s square cells cannot hold)
+const wcell = (x, y, w, h, [fill, stroke, , tc], t) =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
+  + code(x + w / 2, y + h / 2, t, tc, { fw: 500 });
+
+// ── the preprocessing pipeline: CSV file -> DataFrame -> tensors ───────
+// States are boxes; the operations that connect them label the arrows.
 function pipeline() {
-  const W = 720, H = 168; let o = ''; const cy = 92, bh = 58;
+  const cy = 72, bh = 60; let o = '';
   const n = [
-    { cx: 70,  w: 96,  fill: C.lgray,  st: C.gray,  l: 'house.csv',      s: 'raw file' },
-    { cx: 232, w: 112, fill: C.lblue,  st: C.blue,  l: 'DataFrame',      s: 'rows × columns' },
-    { cx: 430, w: 150, fill: C.lamber, st: C.amber, l: 'clean & encode', s: 'impute · one-hot · scale' },
-    { cx: 628, w: 104, fill: C.lgreen, st: C.green, l: 'X, y',           s: 'tensors' },
+    { w: 96, fill: C.lgray, st: C.gray, l: 'CSV file', s: 'text' },
+    { w: 116, fill: C.lblue, st: C.blue, l: 'DataFrame', s: 'gaps, words' },
+    { w: 116, fill: C.lblue, st: C.blue, l: 'DataFrame', s: 'numbers only' },
+    { w: 96, fill: C.lgreen, st: C.green, l: 'tensors', s: 'X, y' },
   ];
-  const gapmid = (a, b) => (n[a].cx + n[a].w / 2 + n[b].cx - n[b].w / 2) / 2;
-  o += arrow(n[0].cx + n[0].w / 2, cy, n[1].cx - n[1].w / 2, cy, C.ink);
-  o += tx(gapmid(0, 1), cy - 13, 'read_csv', { mono: true, fs: 10.5, fw: 700, fill: C.ink });
-  o += arrow(n[1].cx + n[1].w / 2, cy, n[2].cx - n[2].w / 2, cy, C.ink);
-  o += arrow(n[2].cx + n[2].w / 2, cy, n[3].cx - n[3].w / 2, cy, C.ink);
-  o += tx(gapmid(2, 3), cy - 13, 'to_numpy', { mono: true, fs: 10.5, fw: 700, fill: C.ink });
-  n.forEach(b => o += box(b.cx, cy, b.w, bh, b.fill, b.st, b.l, b.s));
-  return svg(W, H, o);
+  const gaps = [82, 108, 82];
+  let x = 8;
+  n.forEach((b, i) => { b.x = x; x += b.w + (gaps[i] || 0); });
+  const W = x + 8;
+  for (let i = 0; i < 3; i++) {
+    const x1 = n[i].x + n[i].w, x2 = n[i + 1].x;
+    o += arrow(x1 + 6, cy, x2 - 6, cy, C.ink);
+    const mx = (x1 + x2) / 2;
+    if (i === 1) {
+      o += note(mx, cy - 40, 'impute,', C.ink, { fs: 14.5, fw: 600 });
+      o += note(mx, cy - 21, 'encode, scale', C.ink, { fs: 14.5, fw: 600 });
+    } else {
+      o += code(mx, cy - 18, i === 0 ? 'read_csv' : 'to_numpy', C.ink, { fs: 14.5, fw: 700 });
+    }
+  }
+  n.forEach(b => {
+    o += `<rect x="${b.x}" y="${cy - bh / 2}" width="${b.w}" height="${bh}" rx="8" fill="${b.fill}" stroke="${b.st}" stroke-width="2"/>`;
+    o += name(b.x + b.w / 2, cy - 11, b.l);
+    o += note(b.x + b.w / 2, cy + 13, b.s, C.ink, { fs: 14.5 });
+  });
+  return svg(W, cy + bh / 2 + 10, o);
 }
 
-// ── three responses to a missing value ──────────────────────────────
+// ── three responses to a missing value ────────────────────────────────
+// The column holds 3, NaN, 2, 4; its mean is 3.  Slide-only, shown in a
+// figure column at ~0.9x, so values and labels are 16-18 px.
 function missing() {
-  const W = 580, H = 374; let o = ''; const s = 26, g = 4;
-  const blue = () => [C.lblue, C.blue, false, C.ink];
-  // the shared "before" column with one gap
-  const tcx = W / 2, ty = 50;
-  o += tx(tcx, ty - 11, 'one column, one gap', { fs: 11, fill: C.muted });
-  o += grid([['3'], ['?'], ['2'], ['4']], tcx - s / 2, ty, s, g,
-    { fill: (r, c, v) => v === '?' ? [C.lamber, C.amber, false, C.amber] : blue() });
-  const topBot = ty + 4 * (s + g) - g;
-  // three results
-  const ry = 198, ax = 74, bx = 268, cx = 446;
-  // A — deletion (row dropped)
-  o += grid([['3'], ['2'], ['4']], ax, ry, s, g, { fill: blue });
-  // B — imputation (filled with mean)
-  o += grid([['3'], ['3'], ['2'], ['4']], bx, ry, s, g,
-    { fill: (r) => r === 1 ? [C.lgreen, C.green, false, C.green] : blue() });
-  // C — indicator (value + missing flag)
-  o += grid([['3', '0'], ['?', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g,
-    { fill: (r, c, v) => c === 1 ? ['#EDE9F8', C.purple, false, '#503B8C']
-      : (v === '?' ? [C.lamber, C.amber, false, C.amber] : blue()) });
-  // fan arrows
-  o += arrow(tcx - 30, topBot, ax + s / 2, ry - 6, C.gray);
-  o += arrow(tcx, topBot, bx + s / 2, ry - 6, C.gray);
-  o += arrow(tcx + 30, topBot, cx + s, ry - 6, C.gray);
-  // labels under each result
-  o += tx(ax + s / 2, ry + 3 * (s + g) + 14, 'deletion', { fs: 12, fw: 700, fill: C.ink });
-  o += tx(ax + s / 2, ry + 3 * (s + g) + 30, 'loses rows', { fs: 10, fill: C.muted });
-  o += tx(bx + s / 2, ry + 4 * (s + g) + 14, 'imputation', { fs: 12, fw: 700, fill: C.ink });
-  o += tx(bx + s / 2, ry + 4 * (s + g) + 30, 'fill with mean', { fs: 10, fill: C.muted });
-  o += tx(cx + s + g / 2, ry + 4 * (s + g) + 14, 'indicator', { fs: 12, fw: 700, fill: C.ink });
-  o += tx(cx + s + g / 2, ry + 4 * (s + g) + 30, '+ "was-missing" flag', { fs: 10, fill: C.muted });
-  return svg(W, H, o);
+  const s = 36, g = 4, step = s + g, fs = 17; let o = '';
+  const W = 540, tcx = W / 2, ty = 38;
+  const src = [['3'], ['NaN'], ['2'], ['4']];
+  o += code(tcx, ty - 22, 'NumRooms', C.ink, { fs, fw: 700 });
+  o += grid(src, tcx - s / 2, ty, s, g, { fs, fill: (r, c, v) => v === 'NaN' ? AMBER : BLUE });
+  const srcBot = ty + 4 * step - g;
+  const ry = srcBot + 58;
+  const ax = 40, bx = W / 2 - s / 2, cx = W - 40 - (2 * s + g);
+  // fan arrows from the source column to the three results
+  o += arrow(tcx - 26, srcBot + 8, ax + s / 2 + 8, ry - 10, C.gray);
+  o += arrow(tcx, srcBot + 8, tcx, ry - 10, C.gray);
+  o += arrow(tcx + 26, srcBot + 8, cx + s - 8, ry - 10, C.gray);
+  // deletion: the row with the gap is gone
+  o += grid([['3'], ['2'], ['4']], ax, ry, s, g, { fs, fill: () => BLUE });
+  // imputation: the gap holds the mean
+  o += grid([['3'], ['3'], ['2'], ['4']], bx, ry, s, g, { fs,
+    fill: (r) => r === 1 ? GREEN : BLUE });
+  // indicator: imputed value plus a column that flags the gap
+  o += grid([['3', '0'], ['3', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g, { fs,
+    fill: (r, c) => c === 1 ? PURPLE : (r === 1 ? GREEN : BLUE) });
+  // labels on one baseline, below the tallest result
+  const lab = (x, t, sub) =>
+    name(x, ry + 4 * step + 16, t, C.ink, { fs: 18 })
+    + note(x, ry + 4 * step + 40, sub, C.ink, { fs: 16 });
+  o += lab(ax + s / 2, 'deletion', 'drops the row');
+  o += lab(bx + s / 2, 'imputation', 'fills in the mean');
+  o += lab(cx + s + g / 2, 'indicator', 'mean and a flag');
+  return svg(W, ry + 4 * step + 54, o);
 }
 
-// ── one-hot encoding a categorical column ───────────────────────────
+// ── one-hot encoding of the first four RoofType entries ───────────────
+// Each category keeps one accent: the word on the left and the 1 in its
+// column on the right share a color; zeros are gray.
 function onehot() {
-  const W = 560, H = 234; let o = ''; const s = 30, g = 5;
-  // left: the RoofType column (text cells → drawn manually)
-  const lw = 70, lh = s, lx = 54, ly = 74;
-  const cats = ['Slate', 'Tile', '—', 'Slate'];
-  o += tx(lx + lw / 2, ly - 12, 'RoofType', { fs: 11.5, fw: 700, fill: C.muted });
-  cats.forEach((v, i) => {
-    const y = ly + i * (lh + g);
-    const [f, st, tc] = i === 0 ? [C.lgreen, C.green, C.ink]
-      : v === '—' ? [C.lamber, C.amber, C.amber] : [C.lblue, C.blue, C.ink];
-    o += cell(lx, y, lw, lh, f, st, v, tc);
-  });
-  // arrow
-  o += arrow(lx + lw + 8, ly + 2 * (lh + g) - g / 2, lx + lw + 56, ly + 2 * (lh + g) - g / 2, C.purple);
-  o += tx(lx + lw + 32, ly + 2 * (lh + g) - g / 2 - 12, 'get_dummies', { mono: true, fs: 10, fw: 700, fill: C.purple });
-  // right: the 0/1 columns
-  const rx = lx + lw + 70, ry = ly;
+  const s = 42, g = 10, step = s + g; let o = '';
+  const cats = ['Slate', 'Tile', 'NaN', 'Slate'];
+  const col = { Slate: BLUE, Tile: GREEN, NaN: AMBER };
+  const lx = 8, lw = 80, top = 34;
+  o += code(lx + lw / 2, top - 20, 'RoofType', C.ink, { fw: 700 });
+  cats.forEach((v, i) => o += wcell(lx, top + i * step, lw, s, col[v], v));
+  // arrow with its label above, clear of the cells
+  const ax1 = lx + lw + 12, ax2 = ax1 + 112, ay = top + 2 * step - g / 2;
+  o += arrow(ax1, ay, ax2, ay, C.purple);
+  o += code((ax1 + ax2) / 2, ay - 18, 'get_dummies', D.purple.dark, { fs: 14.5, fw: 700 });
+  // the three 0/1 columns
+  const rx = ax2 + 12;
   const heads = ['Slate', 'Tile', 'nan'];
-  heads.forEach((h, c) => o += tx(rx + c * (s + g) + s / 2, ry - 12, h, { fs: 10.5, fw: 700, fill: C.muted }));
-  const oh = [['1', '0', '0'], ['0', '1', '0'], ['0', '0', '1'], ['1', '0', '0']];
-  o += grid(oh, rx, ry, s, g, {
-    fill: (r, c, v) => r === 0 ? [C.lgreen, C.green, false, C.ink]
-      : (v === '1' ? [C.lblue, C.blue, false, C.ink] : [C.lgray, '#D9DEE4', false, '#565D66'])
-  });
-  o += tx(W / 2, H - 14, "each category — and “missing” — becomes its own 0/1 column", { fs: 12, fw: 600, fill: C.muted });
-  return svg(W, H, o);
+  heads.forEach((h, c) => o += code(rx + c * step + s / 2, top - 20, h, C.ink, { fw: 700 }));
+  const oh = cats.map(v => heads.map(h => (h === v || (h === 'nan' && v === 'NaN')) ? '1' : '0'));
+  o += grid(oh, rx, top, s, g, { fs: 15,
+    fill: (r, c, v) => v === '1' ? col[cats[r]] : GRAY });
+  return svg(rx + 3 * step - g + 8, top + 4 * step - g + 8, o);
 }
 
-// ── why standardize: raw scales are incomparable ────────────────────
+// ── standardization puts NumRooms and Area on one scale ───────────────
+// Ranges from the section's data: raw NumRooms 2-5, Area 850-2600;
+// standardized (after mean imputation) NumRooms -1.42..1.89,
+// Area -1.44..1.70.
 function scale() {
-  const W = 540, H = 226; let o = '';
-  // raw axis
-  const x0 = 150, x1 = 500, yr = 80;
-  const rawX = v => x0 + (v / 2700) * (x1 - x0);
-  o += line(x0, yr, x1, yr, C.gray, 1.4);
-  o += tx(70, yr, 'raw', { fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
-  // NumRooms 2..5 (a tiny sliver near the origin)
-  o += line(rawX(2), yr, rawX(5), yr, C.blue, 5);
-  o += dot(rawX(3.3), yr, 3, C.blue);
-  o += tx(rawX(3.5), yr - 12, 'NumRooms 2–5', { fs: 10, fw: 600, fill: C.blue, anchor: 'start' });
-  // Area 850..2600 (dominates)
-  o += line(rawX(850), yr + 14, rawX(2600), yr + 14, C.amber, 5);
-  o += tx(rawX(1700), yr + 26, 'Area 850–2600', { fs: 10, fw: 600, fill: C.amber });
-  o += tx(W / 2, yr + 44, '↓  subtract mean, divide by std', { fs: 11, fw: 600, fill: C.muted });
-  // standardized axis (-2..2 centered)
-  const cx = W / 2, ys = 168, half = 150;
-  const stdX = z => cx + (z / 2) * half;
-  o += line(cx - half, ys, cx + half, ys, C.gray, 1.4);
-  o += tx(70, ys, 'standardized', { fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
-  o += dot(cx, ys, 3, C.ink);
-  o += tx(cx, ys + 16, '0', { fs: 10, fill: C.muted });
-  o += line(stdX(-1.4), ys - 8, stdX(1.4), ys - 8, C.blue, 5);
-  o += line(stdX(-1.5), ys + 8, stdX(1.5), ys + 8, C.amber, 5);
-  o += tx(W / 2, H - 12, 'both features now share one scale (≈ zero mean, unit variance)', { fs: 11.5, fw: 600, fill: C.muted });
-  return svg(W, H, o);
+  const x0 = 130, x1 = 530, W = 556; let o = '';
+  const row = (y, label) => code(x0 - 14, y, label, C.ink, { anchor: 'end' });
+  // a range as a rounded bar; a range too short to see becomes a dot
+  const bar = (xa, xb, y, color) => xb - xa < 10
+    ? `<circle cx="${(xa + xb) / 2 + 5}" cy="${y}" r="5" fill="${color}"/>`
+    : `<rect x="${xa}" y="${y - 5}" width="${xb - xa}" height="10" rx="5" fill="${color}"/>`;
+  const axis = (y, ticks, map) => {
+    let a = line(x0, y, x1, y, C.ink, 2);
+    ticks.forEach(t => {
+      const x = map(t);
+      a += line(x, y, x, y + 6, C.ink, 2);
+      a += note(x, y + 20, t < 0 ? `−${-t}` : t.toLocaleString('en-US'), C.ink, { fs: 14.5 });
+    });
+    return a;
+  };
+  // panel 1: raw units, 0..2700
+  const raw = v => x0 + (v / 2700) * (x1 - x0);
+  let y = 22;
+  o += name(8, y, 'raw', C.ink, { anchor: 'start' });
+  o += row(y + 30, 'NumRooms') + bar(raw(2), raw(5), y + 30, C.blue);
+  o += row(y + 58, 'Area') + bar(raw(850), raw(2600), y + 58, C.amber);
+  o += axis(y + 80, [0, 1000, 2000], raw);
+  // panel 2: standardized, -2..2
+  const std = z => x0 + ((z + 2) / 4) * (x1 - x0);
+  y = 152;
+  o += name(8, y, 'standardized', C.ink, { anchor: 'start' });
+  o += row(y + 30, 'NumRooms') + bar(std(-1.42), std(1.89), y + 30, C.blue);
+  o += row(y + 58, 'Area') + bar(std(-1.44), std(1.70), y + 58, C.amber);
+  o += axis(y + 80, [-2, -1, 0, 1, 2], std);
+  return svg(W, y + 110, o);
 }
 
 export const diagrams = {

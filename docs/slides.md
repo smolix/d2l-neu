@@ -288,16 +288,24 @@ diagrams/render.mjs     node CLI → standalone img/auto/<id>.svg
 ```
 
 ```bash
-node diagrams/render.mjs --out img/auto                 # all
-node diagrams/render.mjs --out img/auto ndarray-reshape # one
-node diagrams/render.mjs --list                         # known ids
+.venv-pytorch/bin/python tools/figstyle/remake_ch02.py --js                  # all
+.venv-pytorch/bin/python tools/figstyle/remake_ch02.py --js ndarray-reshape  # one
+node diagrams/render.mjs --list                                              # known ids
 ```
+
+`remake_ch02.py --js` runs the whole pipeline per id: `render.mjs` →
+`tools/figstyle/outline_svg.py` (text to glyph outlines in the bundled
+fonts) → `tools/figstyle/tightcrop.py` → copy to `img/` for book figures.
+A bare `render.mjs` leaves live text and an uncropped canvas; never commit
+that. See `diagrams/README.md`.
 
 Add a chapter: create `diagrams/<file>.mjs` exporting `diagrams`, import
 it in `registry.mjs`, render, and **commit the SVGs** (reviewable diffs,
 no reader build step). Ids are global and **immutable** (same rule as
 cell ids). `gen_slides.py` inlines the SVG into the deck via a pandoc
-`{=html}` raw block, so it inherits the page fonts.
+`{=html}` raw block. Its text is already outlined (Source Sans 3 /
+Inconsolata glyphs), so it renders identically in the deck, the book, and
+the PDF; each label keeps its string as an `aria-label`.
 
 ### Authoring diagrams — what we learned
 
@@ -309,11 +317,12 @@ cell ids). `gen_slides.py` inlines the SVG into the deck via a pandoc
   `saving-memory` and `concat` figures became portrait this way). A
   `max-height` on `.dgm-svg` caps tall figures.
 - **Geometric intuition pays off.** Arrows, angles, projections, lengths
-  (e.g. `linear-algebra-dot`, `linear-algebra-norms`, `calculus-secant-tangent`,
-  `calculus-gradient-field`) carry meaning text can't. Use them generously.
+  (e.g. `linear-algebra-matvec`, `linear-algebra-reduce-axes`,
+  `calculus-secant-tangent`) carry meaning text can't. Use them generously.
 - **Process & flow diagrams too.** Not only static shapes — a *mechanism*
   (forward build + reverse sweep in `autograd-comp-graph`, the descent path
-  in `calculus-gradient-descent`) is itself a teaching figure. Annotate the
+  drawn on the contours of the matplotlib figure `calculus-gradient-field`)
+  is itself a teaching figure. Annotate the
   two directions / steps directly on the graph.
 - **Subscripts:** the unicode subscript `j` (ⱼ) is missing in many fonts
   and renders full-size — use SVG `<tspan baseline-shift="sub">` instead.

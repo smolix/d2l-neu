@@ -9,132 +9,124 @@
   },
   "cells": {
     "autograd-automatic-differentiation": {
-      "code_fingerprint": "sha256:a4bac8ccc140298ae8526ae34fe9b3ad8da9791b1f1fbf0140798db4a9c3b5dc",
+      "code_fingerprint": "sha256:bce96c04ae9844e62f51541f370ba682375822e84a0e20d3f0991af4975742e7",
       "kind": "text",
       "outputs": []
     },
     "autograd-a-simple-function-1": {
-      "code_fingerprint": "sha256:0879465dfaf9bcfa4eab1321c35a4bb4faaf1d9d59ba29dfa79035cfa1e1502e",
+      "code_fingerprint": "sha256:75bb3a3ecb03570063ee801f742900cc400321628971468ee36a5790c2d685f9",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([0., 1., 2., 3.])"
-        }
-      ]
+      "outputs": []
     },
     "autograd-a-simple-function-2": {
-      "code_fingerprint": "sha256:ce6bc4cf4341285069e75ac598ebf2f59dc9d81faf081ebaa7f8215d3a875572",
+      "code_fingerprint": "sha256:06a67342ea8179271b909223723b5df24f4a6e2f35fd04c1159c696a1490d4d3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0., 0., 0., 0.])"
+          "text": "array([0., 0.])"
         }
       ]
     },
     "autograd-a-simple-function-3": {
-      "code_fingerprint": "sha256:2d00a223fa0b41ac84450074ab0fd802bb8f605dbb5e26e11052feac12bbffed",
+      "code_fingerprint": "sha256:fe80853b38e6587a83e0cc1ff388e7e6c03eadfe9485a2adf1a7ccbbe19a29ca",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(28.)"
+          "text": "array(1.)"
         }
       ]
     },
     "autograd-a-simple-function-4": {
-      "code_fingerprint": "sha256:25e030855048a1eff712e839773b38b8439ff647b77f1f60625d90d693e62970",
+      "code_fingerprint": "sha256:913da317e5c0e41a473c7282a8505c7623a3a57ed415ed0d0fc36c7a75a5bca4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[05:12:07] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[08:44:39] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "execute_result",
-          "text": "array([ 0.,  4.,  8., 12.])"
-        }
-      ]
-    },
-    "autograd-a-simple-function-5": {
-      "code_fingerprint": "sha256:45c4051e42ea509401563c2e0381d8cbae05d61c2a335da854bd24d3c085c085",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-a-simple-function-6": {
-      "code_fingerprint": "sha256:2545f03a2e3d5435fd3554f7df072ffd02505c7c6d9d629492807df4c9381908",
+      "code_fingerprint": "sha256:e6ac60c2ffee7219cdbd85d4fb45fe3599720e70d143f0c33f1a51f3844e5bd2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([1., 1., 1., 1.])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:b0ccd98cdcd5d5f9bdafdfd9b759730fda65f886beb28475a587fd967d48b6ba",
+      "code_fingerprint": "sha256:3780b17170c80aca5f8b17dab70c77b6f258c91d25e4f2df38e2a4642081eb8a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0., 2., 4., 6.])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:dda5685d0d43fb3fb3b90a0ddcdcaf33331a6012eeadde9bebd8708e5ee3faf6",
+      "code_fingerprint": "sha256:eeba30f49b80d1718020caef507386889afc4e2be1312fc50227b74d77512936",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([0., 1., 4., 9.])"
         }
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:7cdc512a7c6bc347286a1538ef83ee9d93a74c730011f3956882d075cee2108a",
+      "code_fingerprint": "sha256:6157de5051492281101820e814ddfe11bcb884bb78c6658c26377f79eeabd68a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([ 0.,  3., 12., 27.])"
         }
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:9ea9fc36e22538c5314d29847d13aac3b3d8eb13a870e59e4f96b30fcadea738",
+      "code_fingerprint": "sha256:7286754ef321664424445d762bab5c22f346f79258f8e855a8f88d90d3a48454",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(28.)"
+          "text": "(array([ 0.8, -0.4]), array(0.4))"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:5357a43d4b02da8890118dbbaeb49cdf6800febbdb82aca5ec421ebf99a1ca89",
+      "code_fingerprint": "sha256:4b607576127892dcaad6cd239edb828bad8dae7b44da9949aa6fbb30182eff78",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:e0b1d3ee0cc22d9caa18b57da68e207afbb9928b009db8632c90ee1d4c881a98",
-      "kind": "text",
-      "outputs": []
-    },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:ed665b80773b7f908671c4fe8a997c77932f773329c076e8e0895451295e27ee",
+      "code_fingerprint": "sha256:76720dbfff81d5a6520405845278905642d214bf502966541cbd3d2530365187",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "array(True)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
+        }
+      ]
+    },
+    "autograd-rows-and-columns-of-the-jacobian": {
+      "code_fingerprint": "sha256:5971089444e394ba587a564c6e0bedfa50e61b7929b1e841d84462fd5c9f45fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

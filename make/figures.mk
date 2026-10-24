@@ -42,6 +42,11 @@ FIGURE_STAMPS := $(patsubst tools/%.py,.figstamps/%,$(FIGURE_GENERATORS))
 $(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
     tools/figstyle/tokens.py tools/figstyle/svg.py tools/figstyle/textmetrics.py tools/figstyle/mpl.py
 
+# remake_ch02 also owns the JS diagram pipeline (diagrams/*.mjs -> render ->
+# outline_svg -> tightcrop -> img/auto, img/): re-fire it when any of those change.
+.figstamps/figstyle/remake_ch02: $(wildcard diagrams/*.mjs) \
+    tools/figstyle/outline_svg.py tools/figstyle/tightcrop.py
+
 # Aggregators pull their sub-modules in via import/runpy, so re-fire the whole
 # group when a sub-module changes (the aggregator's own mtime wouldn't).
 .figstamps/gen_mdl_attention_figures: $(wildcard tools/gen_mdl_attention_a*.py)

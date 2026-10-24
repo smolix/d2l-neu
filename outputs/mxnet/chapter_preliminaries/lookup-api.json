@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:95c27b6cb1a869428fa6a0dbf237557d8aea1d40cdeaa9cd12eca4668f791f25",
+      "code_fingerprint": "sha256:9a1d01db0002e341baa541387f1b8df1d3ee74b69c8c327281c3f6fcda45f60c",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:76a6b07dcfdcc495b70542b5b71215d1ac9de21b8179b570e93a52117d955736",
+      "code_fingerprint": "sha256:f375249ab619279d05b648c43984f09053558e6660c2c53c82785970d02e84e8",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:6785b2fe502d86bd6723ec7cbac1fea99dc9611bcb824eb97ff6459ac974c4f7",
+      "code_fingerprint": "sha256:55a0d4e88cc33cf9ad5cb8a707f1ee5e218e27d2fdd9d8cf8276f175977d3320",
       "kind": "text",
       "outputs": [
         {
@@ -36,12 +36,13 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:a30430d0b5be818e92037643656ab8858d8668f57ca1f13ae783fadd7e99f588",
+      "code_fingerprint": "sha256:6f309ae86187c5486d56011edebf35802cbb67b38b969078feeb6ae998ee331b",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "array([1., 1., 1., 1.])"
+          "type": "stream",
+          "name": "stdout",
+          "text": "TypeError: Cannot interpret '3' as a data type\nones((2, 3)) has shape (2, 3)\n"
         }
       ]
     }

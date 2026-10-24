@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [43, 57]\n"
+          "text": "heads, tails:  [56, 44]\n"
         }
       ]
     },
@@ -30,63 +30,73 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([56., 44.])"
+          "text": "tensor([52., 48.])"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-3": {
-      "code_fingerprint": "sha256:57fbb4c03a70a59af0a544990568eba0b9a69b0e65b1e58b991e9d8fa7f563cb",
+      "code_fingerprint": "sha256:3e41042d02be1a59c5515c62b0331e98e68ada88f9177901c0fc0433cffae88f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5400, 0.4600])"
+          "text": "tensor([[0.4400, 0.5600],\n        [0.4800, 0.5200],\n        [0.4800, 0.5200],\n        [0.4200, 0.5800],\n        [0.5600, 0.4400]])"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-4": {
-      "code_fingerprint": "sha256:10ad278a4f1eaf4c2f354713f4d38e356c5a46b9fc072750fc9bff81b6c435f8",
+      "code_fingerprint": "sha256:be4752ad7d0678219833f58506d2f9038d4e8141870ef739b7e1c9e1d40cd300",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4978, 0.5022])"
-        }
-      ]
-    },
-    "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:c3fade966c621df670d5e38d2a18c2b0643e2c12178c0a6a86333be48bde5418",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30140,
-          "sha256": "sha256:6d48b29a91f698f16564905bec6ccf1a863d593b4c30fa47ff0e6b764a5b312c"
+          "text": "tensor([0.4974, 0.5026])"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:15bef12561daf0470a657d7e03aaf4f01c3c087f6df10e453df3d6581f3ee9d7",
+      "code_fingerprint": "sha256:6b0b1d83e8f87265c11d534af6cae403f272cfea8379778e18ff3f4c2f7213fe",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 105784,
-          "sha256": "sha256:48ee75d4ea464ec6ab21beded3c840cae7d74bcb8ddef74a0a594e9cf8c52e75"
+          "bytes": 73987,
+          "sha256": "sha256:56cc4d1141590cbbfb609f5f3d014293887709112e4a2d0035473aa5223becf4"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:3e90854a00e30cf095db4d134b4d11889b1054445e20d5039d23c399156fe3d9",
+      "code_fingerprint": "sha256:cd58e5863d17c70fe6657ff1aac2e2e9faf0bdfe4c79a9433d1ac2932b7ffe6f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0.8303)"
+          "text": "tensor(0.8335)"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-6": {
+      "code_fingerprint": "sha256:392bb989038889ca4feee62e7de8e9005b15c52b0fd9420c4be412f19826813c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
+          "bytes": 31508,
+          "sha256": "sha256:87177757b7f0d288556c0354aae456ab03ee965c26570a8c9f3a408dbf474f79"
+        }
+      ]
+    },
+    "probability-is-the-coin-biased": {
+      "code_fingerprint": "sha256:286d39172983730bb60e750df174580e1ecec22cd528b1339e79af900209f3e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(0.2620), tensor(0.))"
         }
       ]
     }

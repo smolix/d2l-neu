@@ -14,132 +14,119 @@
       "outputs": []
     },
     "autograd-a-simple-function-1": {
-      "code_fingerprint": "sha256:32b5e4cd9799a958a25d3d69e13233a9a836ee6fc448e9440ced4c8b14b8d047",
+      "code_fingerprint": "sha256:ae6e55c34317e16b675132e385bd7b070cf5d0b30d6db831aa4e0e2e866ca8b1",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 1., 2., 3.], dtype=float32)>"
-        }
-      ]
+      "outputs": []
     },
     "autograd-a-simple-function-2": {
-      "code_fingerprint": "sha256:74bbeb0c048317a08bb8d58b0024b5ebdc81418c9c4a79b32690711f9e614c74",
+      "code_fingerprint": "sha256:7722b7f3c4d220b409069fc71215db5944530179ecd6c56df263d5b16f381b0a",
       "kind": "text",
       "outputs": []
     },
     "autograd-a-simple-function-3": {
-      "code_fingerprint": "sha256:89118cb3f7b4c9e9533ce60d1480906a133b44134a7605ab50f159c22c177486",
+      "code_fingerprint": "sha256:ded5b6c4a367ce0a9524020a0d306d46193bd30618bc8b4fa3bbed0b8d36f3ae",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=28.0>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=1.0>"
         }
       ]
     },
     "autograd-a-simple-function-4": {
-      "code_fingerprint": "sha256:18309752eb87fe8c02b6112d277461a418ae68fa0f0b2683a4b28ff83a7e3368",
+      "code_fingerprint": "sha256:ad689469ab0bee6d3a17c6c78f0eea164dd0a80047ee7468537ffb92e8f12a11",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.,  4.,  8., 12.], dtype=float32)>"
-        }
-      ]
-    },
-    "autograd-a-simple-function-5": {
-      "code_fingerprint": "sha256:9ba4732655b91aa1e098b537786bbd68ea557995a6d72de912d961da2b0bae03",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([2., 4.], dtype=float32)>"
         }
       ]
     },
     "autograd-a-simple-function-6": {
-      "code_fingerprint": "sha256:2de4407fec41a5e35f5c086af036be2bed77c2b01d2242f99d3c4515846e3e67",
+      "code_fingerprint": "sha256:92f36d5cbe7be4386b58905043437920d1d32627ac433ada84c6447305d8cf46",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([1., 1., 1., 1.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([2., 4.], dtype=float32)>"
         }
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:c8bebe1dbb9f37106cc1c960be871c62d7758521a5ce43c74bc87ee5b765e5e9",
+      "code_fingerprint": "sha256:4bb276d26b90d0e7822fab0c3f01e602ed8a2e1b8ce33014988cd895bd0b3ff2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 2., 4., 6.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([2., 4.], dtype=float32)>"
         }
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:ab4273e9e0c75bb61281433e8debf820ae1c3031cde82b447111b8f902e2aee8",
+      "code_fingerprint": "sha256:74c8e25ca5f76fb5951143e2c236098586a267a3461306b3c81e3276f511c37d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 1., 4., 9.], dtype=float32)>"
         }
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:0b245eb70552d04d31b07700cc98895487a521656159acca9defec86d480a903",
+      "code_fingerprint": "sha256:362e2222a7f0605fb4961a44418170dea9c96c3b3a0764ad68b29b256369de94",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=bool, numpy=array([ True,  True,  True,  True])>"
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.,  3., 12., 27.], dtype=float32)>"
         }
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:12f75c25b9ccc1feade94216328c7f2b6a3d1cf25e9aea40c84db747086fd7e6",
+      "code_fingerprint": "sha256:c61d38dc9ed66c9cf4ad92c25e1fc5fd2db357eb62414ccd33c7168fcab1bae1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=28.0>"
+          "text": "(array([ 0.8, -0.4], dtype=float32), 0.4)"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:5ae790e93e32b5f025c204f5c69cdc063aa498bd16795a285d106745f733e48f",
+      "code_fingerprint": "sha256:de782fe15874efe2fe2349de7d41ad9c52d53f632b535c0c97bec5c1fea75ef1",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:02a06eb30a8a927a62decf14af19fe54eb1869a7ba453c8a1b0f1910ea16e152",
+      "code_fingerprint": "sha256:0ad913a249862cd7bc5241f690d0369fbfafa2ec954933ed76e341a110e5c1e6",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=204800.0>"
-        }
-      ]
-    },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:4c84465e8ecc1c932646520e74a7215dc918e70f6f24b4b156fcbc785013d38b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=True>"
+          "type": "stream",
+          "name": "stdout",
+          "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
         }
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:936dc9be7531c4370cdd62e2edd6d0fc35117f37b6a8f87da509c95fe55a2896",
+      "code_fingerprint": "sha256:1704fa67188d50ab3703909ce1cfaa2a9abeb02394db3dd1481bd18ea47e8339",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=12.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=12.0>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=6.0>)"
+        }
+      ]
+    },
+    "autograd-rows-and-columns-of-the-jacobian": {
+      "code_fingerprint": "sha256:1abfdc28aa163ff791d2f53da916852b2f0536e1052fafc970ed7d4ae6bcdfdb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

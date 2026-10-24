@@ -1,4 +1,4 @@
-// Diagrams for chapter_preliminaries/ndarray (§2.1 Data Manipulation).
+// Diagrams for chapter_preliminaries/ndarray (Data Manipulation).
 //
 // One function per diagram. Each returns a complete <svg> string via the
 // engine's `svg()` wrapper. Export them keyed by STABLE diagram id using
@@ -6,203 +6,237 @@
 // filename (img/auto/<id>.svg) and the slide/figure reference. Never
 // rename an id once authored (same rule as code-cell ids).
 //
-// These eight are the north-star set. To add a diagram for another
-// chapter, copy this file to <file>.mjs, write the function(s), and add
-// the module to registry.mjs.
+// Sizing rule (figure-style guide §5–6): every canvas is at most 720 units
+// wide, so it displays at design size in the book column; labels are
+// 15–17 px, cell values 14–15 px, nothing below 14.5 px.  Labels name
+// things (code, shapes); sentences belong in the caption or slide text.
+// Structural text is INK; accent text uses the accent's `dark` shade.
 
-import { C, grid, tx, arrow, block, chip, svg } from './engine.mjs';
+import { C, TOKENS, grid, tx, arrow, chip, svg } from './engine.mjs';
 
-// ── rank ladder: scalar → vector → matrix → 3-D tensor ──────────────
+const D = TOKENS.accents;                 // tint / base / dark trios
+const N = TOKENS.neutrals;
+const BLUE = [C.lblue, C.blue, false, C.ink];
+const GREEN = [C.lgreen, C.green, false, C.ink];
+const AMBER = [C.lamber, C.amber, false, C.ink];
+const GHOST = (stroke) => ['#FFFFFF', stroke, true, C.muted];
+
+// a monospace label (code or shape), 15 px
+const code = (x, y, t, fill = C.ink, o = {}) =>
+  tx(x, y, t, { mono: true, fs: o.fs || 15, fw: o.fw || 600, fill, anchor: o.anchor || 'middle' });
+// a sans label, 17 px
+const name = (x, y, t, fill = C.ink, o = {}) =>
+  tx(x, y, t, { fs: o.fs || 17, fw: o.fw || 700, fill, anchor: o.anchor || 'middle' });
+// a horizontal dashed separator
+const hline = (x1, x2, y) =>
+  `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${N.hairline}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+// a rounded, tinted rectangle (a whole matrix drawn as one block)
+const rect = (x, y, w, h, fill, stroke, dash = false) =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="2"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+// a memory buffer: a box with a mono title and a sans subtitle, accent rail
+// on the left; `faded` dims it (memory that no name refers to any more)
+function buffer(x, y, title, sub, accent, faded = false, w = 210) {
+  const h = 58, op = faded ? 0.55 : 1;
+  return `<g opacity="${op}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#FFFFFF" stroke="${accent}" stroke-width="2"/>`
+    + `<rect x="${x}" y="${y}" width="6" height="${h}" rx="3" fill="${accent}"/>`
+    + tx(x + w / 2 + 3, y + 20, title, { mono: true, fs: 15, fw: 700, fill: C.ink })
+    + tx(x + w / 2 + 3, y + 40, sub, { fs: 15, fw: 500, fill: C.ink }) + `</g>`;
+}
+
+// ── tensors with 0, 1, 2, 3 axes and their shapes ────────────────────
+// Used as fig_ndarray_shapes in the book.  Names follow the book's
+// terminology: a tensor with k axes has order k.
 function rank() {
-  const s = 46, g = 4, base = 212; let o = '';
-  let x = 66; o += grid([['5']], x, base - s, s, g);
-  o += tx(x + s / 2, base + 28, 'scalar', { fw: 700, fs: 16 });
-  o += tx(x + s / 2, base + 49, 'shape ( )', { mono: true, fs: 12.5, fill: C.muted });
-  x = 196; const vw = 4 * s + 3 * g; o += grid([[0, 1, 2, 3]], x, base - s, s, g);
-  o += tx(x + vw / 2, base + 28, 'vector', { fw: 700, fs: 16 });
-  o += tx(x + vw / 2, base + 49, '(4,)', { mono: true, fs: 12.5, fill: C.muted });
-  x = 470; const mw = 4 * s + 3 * g, mh = 3 * s + 2 * g;
-  o += grid([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], x, base - mh, s, g);
-  o += tx(x + mw / 2, base + 28, 'matrix', { fw: 700, fs: 16 });
-  o += tx(x + mw / 2, base + 49, '(3, 4)', { mono: true, fs: 12.5, fill: C.muted });
-  x = 800; const off = 15;
-  o += grid([['', '', '', ''], ['', '', '', ''], ['', '', '', '']], x + off, base - mh - off, s, g, { showVal: false, fill: () => ['#D6EDFC', '#8F98A1', false] });
-  o += grid([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], x, base - mh, s, g);
-  o += tx(x + mw / 2, base + 28, '3-D tensor', { fw: 700, fs: 16 });
-  o += tx(x + mw / 2, base + 49, '(2, 3, 4)', { mono: true, fs: 12.5, fill: C.muted });
-  return svg(1060, 272, o);
+  const s = 34, g = 4, base = 168; let o = '';
+  const gw = 4 * s + 3 * g, mh = 3 * s + 2 * g, off = 12;
+  const M = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]];
+  const label = (cx, nm, shape) =>
+    name(cx, base + 26, nm) + code(cx, base + 50, shape);
+  let x = 24;                                   // scalar
+  o += grid([['5']], x, base - s, s, g, { fs: 14 });
+  o += label(x + s / 2, 'scalar', '()');
+  x = 112;                                      // vector
+  o += grid([[0, 1, 2, 3]], x, base - s, s, g, { fs: 14 });
+  o += label(x + gw / 2, 'vector', '(4,)');
+  x = 314;                                      // matrix
+  o += grid(M, x, base - mh, s, g, { fs: 14 });
+  o += label(x + gw / 2, 'matrix', '(3, 4)');
+  x = 516;                                      // order-3 tensor: 2 stacked 3×4
+  o += rect(x + off, base - mh - off, gw, mh, C.lblue, C.blue);   // the second 3×4 slice, behind
+  o += grid(M, x, base - mh, s, g, { fs: 14 });
+  o += label(x + (gw + off) / 2, 'order-3 tensor', '(2, 3, 4)');
+  return svg(x + gw + off + 24, base + 66, o);
 }
 
 // ── reshape: 12-vector → 3×4, row-major fill (color-tinted thirds) ──
 function reshape() {
-  const s = 44, g = 4, W = 900; let o = '';
-  const tint = (r, c, v) => { const k = Math.floor(v / 4); return [[C.lblue, C.blue], [C.lgreen, C.green], [C.lamber, C.amber]][k].concat([false, C.ink]); };
-  const vw = 12 * s + 11 * g, vx = (W - vw) / 2, vy = 34;
-  o += tx(vx - 14, vy + s / 2, 'x', { anchor: 'end', mono: true, fs: 18, fill: C.muted });
+  const s = 40, g = 4; let o = '';
+  const tint = (r, c, v) => [[C.lblue, C.blue], [C.lgreen, C.green], [C.lamber, C.amber]][Math.floor(v / 4)].concat([false, C.ink]);
+  const vw = 12 * s + 11 * g, W = vw + 40, vx = 20, vy = 36;
+  o += code(vx + vw / 2, vy - 18, 'x: shape (12,)');
   o += grid([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]], vx, vy, s, g, { fill: tint });
-  o += arrow(W / 2, vy + s + 12, W / 2, vy + s + 58, C.purple, false);
-  o += tx(W / 2 + 14, vy + s + 36, 'reshape(3, 4)', { anchor: 'start', mono: true, fs: 15, fill: C.purple });
-  const mw = 4 * s + 3 * g, mx = (W - mw) / 2, my = vy + s + 74;
-  o += tx(mx - 14, my + (3 * s + 2 * g) / 2, 'X', { anchor: 'end', mono: true, fs: 18, fill: C.muted });
+  const ay1 = vy + s + 10, ay2 = vy + s + 58;
+  o += arrow(W / 2, ay1, W / 2, ay2, C.purple, false);
+  o += code(W / 2 + 14, (ay1 + ay2) / 2, 'reshape(3, 4)', D.purple.dark, { anchor: 'start' });
+  const mw = 4 * s + 3 * g, mh = 3 * s + 2 * g, mx = (W - mw) / 2, my = ay2 + 30;
+  o += code(mx + mw / 2, my - 18, 'X: shape (3, 4)');
   o += grid([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], mx, my, s, g, { fill: tint });
-  return svg(W, my + 3 * s + 2 * g + 14, o);
+  return svg(W, my + mh + 16, o);
 }
 
-// ── indexing (read): X[-1] and X[1:3] highlighted on a 3×4 grid ─────
+// ── indexing (read): an integer index drops its axis, a slice keeps it ─
 function indexRead() {
-  const s = 42, g = 5, W = 880, y = 88; let o = '';
+  const s = 40, g = 5, y = 44; let o = '';
   const d = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], gw = 4 * s + 3 * g, gh = 3 * s + 2 * g;
-  let x = 80;
-  o += tx(x + gw / 2, y - 24, 'X[-1]', { mono: true, fs: 18, fw: 700, fill: C.amber });
-  o += grid(d, x, y, s, g, { fill: (r) => r === 2 ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  o += tx(x + gw / 2, y + gh + 26, 'last row', { fs: 13.5, fill: C.muted });
-  x = 500;
-  o += tx(x + gw / 2, y - 24, 'X[1:3]', { mono: true, fs: 18, fw: 700, fill: C.green });
-  o += grid(d, x, y, s, g, { fill: (r) => (r === 1 || r === 2) ? [C.lgreen, C.green, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  o += tx(x + gw / 2, y + gh + 26, 'rows 1–2  (3 excluded)', { fs: 13.5, fill: C.muted });
-  return svg(W, y + gh + 44, o);
+  let x = 24;
+  o += code(x + gw / 2, y - 22, 'X[-1]', D.orange.dark, { fs: 17, fw: 700 });
+  o += grid(d, x, y, s, g, { fill: (r) => r === 2 ? AMBER : BLUE });
+  o += code(x + gw / 2, y + gh + 24, 'shape (4,)');
+  x = 24 + gw + 72;
+  o += code(x + gw / 2, y - 22, 'X[1:3]', D.green.dark, { fs: 17, fw: 700 });
+  o += grid(d, x, y, s, g, { fill: (r) => (r === 1 || r === 2) ? GREEN : BLUE });
+  o += code(x + gw / 2, y + gh + 24, 'shape (2, 4)');
+  return svg(x + gw + 24, y + gh + 44, o);
 }
 
-// ── indexing (write): X[1,2]=17 then X[:2,:]=12 ─────────────────────
-function indexWrite() {
-  const s = 42, g = 5, W = 880, y = 86; let o = '';
+// ── indexing (write): X[1, 2] = 17, then X[:2, :] = 12 ────────────────
+function indexWrite(t1 = 'X[1, 2] = 17', t2 = 'X[:2, :] = 12') {
+  const s = 40, g = 5, y = 44; let o = '';
   const gw = 4 * s + 3 * g, gh = 3 * s + 2 * g;
-  let x = 110;
-  o += tx(x + gw / 2, y - 24, 'X[1, 2] = 17', { mono: true, fs: 15.5, fw: 700, fill: C.amber });
-  o += grid([[0, 1, 2, 3], [4, 5, 17, 7], [8, 9, 10, 11]], x, y, s, g, { fill: (r, c) => (r === 1 && c === 2) ? [C.lamber, C.amber, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
+  let x = 24;
+  o += code(x + gw / 2, y - 22, t1, D.orange.dark, { fs: 15, fw: 700 });
+  o += grid([[0, 1, 2, 3], [4, 5, 17, 7], [8, 9, 10, 11]], x, y, s, g,
+            { fill: (r, c) => (r === 1 && c === 2) ? AMBER : BLUE });
   const ay = y + gh / 2;
-  o += arrow(x + gw + 16, ay, x + gw + 74, ay, C.purple, false);
-  x = x + gw + 106;
-  o += tx(x + gw / 2, y - 24, 'X[:2, :] = 12', { mono: true, fs: 15.5, fw: 700, fill: C.green });
-  o += grid([[12, 12, 12, 12], [12, 12, 12, 12], [8, 9, 10, 11]], x, y, s, g, { fill: (r) => r < 2 ? [C.lgreen, C.green, false, C.ink] : [C.lblue, C.blue, false, C.ink] });
-  return svg(W, y + gh + 30, o);
+  o += arrow(x + gw + 24, ay, x + gw + 72, ay, C.purple, false);
+  x = x + gw + 96;
+  o += code(x + gw / 2, y - 22, t2, D.green.dark, { fs: 15, fw: 700 });
+  o += grid([[12, 12, 12, 12], [12, 12, 12, 12], [8, 9, 10, 11]], x, y, s, g,
+            { fill: (r) => r < 2 ? GREEN : BLUE });
+  return svg(x + gw + 24, y + gh + 20, o);
 }
 
-// ── concatenation: dim=0 stacks rows (6×4) ABOVE dim=1 stacks cols (3×8).
-// Stacked vertically (portrait) with larger cells so it fills a slide
-// column at a legible size instead of sitting tiny in a wide canvas.
+// ── concatenation of two 3×4 matrices along axis 0 and along axis 1 ───
+// Each matrix is one block (24 units per row/column) so the letters sit
+// on a clean tint, not on cell borders.
 function concat() {
-  const s = 30, g = 4, W = 300; let o = '';
-  const m = [['', '', '', ''], ['', '', '', ''], ['', '', '', '']], gw = 4 * s + 3 * g, gh = 3 * s + 2 * g;
-  const blue = () => [C.lblue, C.blue, false], amber = () => [C.lamber, C.amber, false];
-  // dim = 0 : X over Y → (6, 4)
-  let ax = (W - gw) / 2, ay = 44;
-  o += tx(W / 2, ay - 16, 'dim = 0', { mono: true, fs: 14, fw: 700, fill: C.purple });
-  o += grid(m, ax, ay, s, g, { showVal: false, fill: blue }); o += tx(ax + gw / 2, ay + gh / 2, 'X', { fw: 700, fs: 18 });
-  let by = ay + gh + g;
-  o += grid(m, ax, by, s, g, { showVal: false, fill: amber }); o += tx(ax + gw / 2, by + gh / 2, 'Y', { fw: 700, fs: 18 });
-  o += tx(W / 2, by + gh + 22, '(6, 4)', { mono: true, fs: 13, fill: C.muted });
-  // divider
-  let dv = by + gh + 40;
-  o += `<line x1="34" y1="${dv}" x2="${W - 34}" y2="${dv}" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-  // dim = 1 : X | Y → (3, 8)
-  let cy = dv + 36, cx = (W - (2 * gw + g)) / 2;
-  o += tx(W / 2, cy - 16, 'dim = 1', { mono: true, fs: 14, fw: 700, fill: C.purple });
-  o += grid(m, cx, cy, s, g, { showVal: false, fill: blue }); o += tx(cx + gw / 2, cy + gh / 2, 'X', { fw: 700, fs: 18 });
-  let dx = cx + gw + g;
-  o += grid(m, dx, cy, s, g, { showVal: false, fill: amber }); o += tx(dx + gw / 2, cy + gh / 2, 'Y', { fw: 700, fs: 18 });
-  o += tx(W / 2, cy + gh + 22, '(3, 8)', { mono: true, fs: 13, fill: C.muted });
-  return svg(W, cy + gh + 38, o);
+  const u = 24, w = 4 * u, h = 3 * u, gap = 4; let o = '';
+  const X = (x, y) => rect(x, y, w, h, C.lblue, C.blue) + name(x + w / 2, y + h / 2, 'X', D.blue.dark, { fs: 20 });
+  const Y = (x, y) => rect(x, y, w, h, C.lamber, C.amber) + name(x + w / 2, y + h / 2, 'Y', D.orange.dark, { fs: 20 });
+  const top = 42;
+  // axis 0: X above Y → (6, 4)
+  let x = 24;
+  o += code(x + w / 2, top - 22, 'axis 0', D.purple.dark, { fs: 16, fw: 700 });
+  o += X(x, top) + Y(x, top + h + gap);
+  o += code(x + w / 2, top + 2 * h + gap + 24, '(6, 4)');
+  // axis 1: X beside Y → (3, 8)
+  x = 24 + w + 80;
+  const cy = top + (h + gap) / 2;          // centered against the tall stack
+  o += code(x + w + gap / 2, top - 22, 'axis 1', D.purple.dark, { fs: 16, fw: 700 });
+  o += X(x, cy) + Y(x + w + gap, cy);
+  o += code(x + w + gap / 2, cy + h + 24, '(3, 8)');
+  return svg(x + 2 * w + gap + 24, top + 2 * h + gap + 44, o);
 }
 
-// ── broadcasting: a(3×1) + b(1×2) → (3×2), ghost-stretched axes ─────
+// ── broadcasting: a (3, 1) + b (1, 2) → (3, 2), ghost-stretched axes ──
+// One row: a → stretched a, + , b → stretched b, = , result.  Stretched
+// copies are dashed with muted values: they are virtual.
 function broadcasting() {
-  const s = 40, g = 6, W = 700, H = 358; let o = '';
-  const sB = [C.lblue, C.blue, false, C.ink], gB = ['#fff', '#1565C0', true, '#565D66'];
-  const sA = [C.lamber, C.amber, false, C.ink], gA = ['#fff', '#B45309', true, '#565D66'];
-  const sG = [C.lgreen, C.green, false, C.ink];
-  const col = 2 * s + g, row3 = 3 * s + 2 * g;
-  let ax = 46, ay = 30;
-  o += tx(ax + s / 2, ay - 13, 'a (3×1)', { fs: 13, fill: C.muted });
-  o += grid([[0], [1], [2]], ax, ay, s, g, { fill: () => sB });
-  let apx = 196;
-  o += tx(apx + col / 2, ay - 13, '(3×2)', { fs: 13, fill: C.muted });
-  o += grid([[0, 0], [1, 1], [2, 2]], apx, ay, s, g, { fill: (r, c) => c === 0 ? sB : gB });
-  o += arrow(ax + s + 8, ay + row3 / 2, apx - 8, ay + row3 / 2, C.gray, false);
-  let bx = 46, by = 242;
-  o += tx(bx + col / 2, by - 13, 'b (1×2)', { fs: 13, fill: C.muted });
-  o += grid([[0, 1]], bx, by, s, g, { fill: () => sA });
-  let bpx = 196, bpy = 190;
-  o += tx(bpx + col / 2, bpy - 13, '(3×2)', { fs: 13, fill: C.muted });
-  o += grid([[0, 1], [0, 1], [0, 1]], bpx, bpy, s, g, { fill: (r) => r === 0 ? sA : gA });
-  o += arrow(bx + col + 8, by + s / 2, bpx - 8, by + s / 2, C.gray, false);
-  const midY = (ay + row3 + bpy) / 2;
-  o += tx(apx + col + 34, midY, '+', { fs: 30, fw: 700, fill: C.muted });
-  o += tx(apx + col + 96, midY, '=', { fs: 30, fw: 700, fill: C.muted });
-  let rx = apx + col + 128, ry = midY - row3 / 2;
-  o += tx(rx + col / 2, ry - 13, 'result (3×2)', { fs: 13, fill: C.green });
-  o += grid([[0, 1], [1, 2], [2, 3]], rx, ry, s, g, { fill: () => sG });
-  return svg(W, H, o);
+  const s = 40, g = 6; let o = '';
+  const col = 2 * s + g, row3 = 3 * s + 2 * g, top = 44, mid = top + row3 / 2;
+  const gA = GHOST(C.blue), gB = GHOST(C.amber);
+  const op = (x, t) => tx(x, mid, t, { fs: 30, fw: 700, fill: C.ink });
+  // 17 px labels and values: the figure also sits in a slide column at ~0.9x
+  const lab = (x, t) => code(x, top - 24, t, C.ink, { fs: 17 });
+  let x = 40;                                    // a: (3, 1)
+  o += lab(x + s / 2, 'a: (3, 1)');
+  o += grid([[0], [1], [2]], x, top, s, g, { fs: 17, fill: () => BLUE });
+  o += arrow(x + s + 8, mid, x + s + 44, mid, C.ink, false);
+  x += s + 54;                                   // a stretched to (3, 2)
+  o += lab(x + col / 2, '(3, 2)');
+  o += grid([[0, 0], [1, 1], [2, 2]], x, top, s, g, { fs: 17, fill: (r, c) => c === 0 ? BLUE : gA });
+  x += col + 30; o += op(x, '+'); x += 30;
+  o += lab(x + col / 2, 'b: (1, 2)');   // b: (1, 2)
+  o += grid([[0, 1]], x, mid - s / 2, s, g, { fs: 17, fill: () => AMBER });
+  o += arrow(x + col + 8, mid, x + col + 44, mid, C.ink, false);
+  x += col + 54;                                 // b stretched to (3, 2)
+  o += lab(x + col / 2, '(3, 2)');
+  o += grid([[0, 1], [0, 1], [0, 1]], x, top, s, g, { fs: 17, fill: (r) => r === 0 ? AMBER : gB });
+  x += col + 30; o += op(x, '='); x += 30;
+  o += lab(x + col / 2, 'a + b: (3, 2)');
+  o += grid([[0, 1], [1, 2], [2, 3]], x, top, s, g, { fs: 17, fill: () => GREEN });
+  return svg(x + col + 40, top + row3 + 16, o);
 }
 
-// ── saving memory: new allocation vs in-place write ─────────────────
-// NOTE framework variance: this is the PyTorch/TF/MXNet story. JAX arrays
-// are immutable (no in-place); author a jax variant before reusing — see
-// docs/slides-northstar-design.md "Framework variants".
-// Two panels STACKED VERTICALLY (portrait) so the figure fills a slide
-// column at a readable size instead of sitting tiny and wide.
+// ── memory: Y = Y + X allocates; an in-place write reuses memory ─────
+// Two panels stacked vertically so the figure fits a slide column.  The
+// lower panel depends on the library: slice assignment (PyTorch, MXNet),
+// Variable.assign (TensorFlow), or a jit-compiled update that donates
+// its input (JAX).  The upper panel is the same for all four.
+function allocationPanel(o) {
+  o += code(210, 22, 'Y = Y + X', D.red.dark, { fs: 17, fw: 700 });
+  o += chip(56, 124, 'Y');
+  o += buffer(170, 52, 'buffer 1', 'old Y', C.gray, true);
+  o += buffer(170, 140, 'buffer 2', 'Y + X', C.green);
+  o += arrow(80, 124, 168, 81, C.gray, true);
+  o += arrow(80, 124, 168, 169, C.purple, false);
+  o += hline(30, 400, 226);
+  return o;
+}
+
+function inPlacePanel(title, nm, sub) {
+  let o = code(210, 262, title, D.green.dark, { fs: 17, fw: 700 });
+  o += chip(56, 330, nm);
+  o += buffer(170, 301, `buffer of ${nm}`, sub, C.green);
+  o += arrow(80, 330, 168, 330, C.purple, false);
+  return o;
+}
+
 function savingMemory() {
-  const W = 400, H = 470; let o = '';
-  // Panel A — Y = Y + X allocates a fresh buffer
-  o += tx(200, 26, 'Y = Y + X', { mono: true, fs: 16, fw: 700, fill: '#93261C' });
-  o += chip(72, 138, 'Y');
-  o += block(150, 80, 'addr #1', 'old buffer', true, C.gray);
-  o += block(150, 168, 'addr #2', 'Y + X', false, C.green);
-  o += arrow(95, 138, 150, 193, C.purple, false);
-  o += arrow(95, 138, 150, 105, '#8F98A1', true);
-  o += tx(200, 250, 'id(Y) changed → False', { fs: 13.5, fw: 700, fill: '#93261C' });
-  // divider
-  o += `<line x1="40" y1="272" x2="360" y2="272" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-  // Panel B — Y[:] = X + Y writes in place
-  o += tx(200, 304, 'Y[:] = X + Y', { mono: true, fs: 16, fw: 700, fill: '#1F5C2C' });
-  o += chip(72, 392, 'Y');
-  o += block(150, 365, 'addr #1', 'overwritten', false, '#2E7D3E');
-  o += arrow(95, 392, 150, 392, C.purple, false);
-  o += tx(200, 452, 'id(Y) same → True', { fs: 13.5, fw: 700, fill: '#1F5C2C' });
-  return svg(W, H, o);
+  let o = allocationPanel('');
+  o += inPlacePanel('Z[:] = X + Y', 'Z', 'overwritten: X + Y');
+  return svg(410, 372, o);
 }
 
-// ── saving memory (JAX): immutable functional update vs jit donation ─
-// JAX has no in-place write. `X.at[:].set(X+Y)` returns a NEW array (X is
-// untouched) — the opposite of the PyTorch/MXNet/TF story above. Under
-// @jit, XLA fuses the update and can donate the input buffer, recovering
-// most of the in-place benefit. Mirrors savingMemory()'s two-panel layout.
-// Stacked vertically, mirroring savingMemory()'s portrait layout.
+function savingMemoryTf() {
+  let o = allocationPanel('');
+  o += inPlacePanel('Z.assign(X + Y)', 'Z', 'overwritten: X + Y');
+  return svg(410, 372, o);
+}
+
 function savingMemoryJax() {
-  const W = 400, H = 470; let o = '';
-  // Panel A — eager: immutable, returns a new array
-  o += tx(200, 26, 'X.at[:].set(X + Y)', { mono: true, fs: 15, fw: 700, fill: '#93261C' });
-  o += chip(66, 92, 'X');
-  o += block(150, 65, 'addr #1', 'X unchanged', false, C.blue);
-  o += arrow(89, 92, 150, 92, '#8F98A1', false);
-  o += chip(66, 180, 'X′');
-  o += block(150, 153, 'addr #2', 'new array', false, C.green);
-  o += arrow(89, 180, 150, 180, C.purple, false);
-  o += tx(200, 240, 'id(X_new) == id(X) → False', { fs: 13, fw: 700, fill: '#93261C' });
-  // divider
-  o += `<line x1="40" y1="262" x2="360" y2="262" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-  // Panel B — under jit: XLA fuses + donates the buffer
-  o += tx(200, 296, '@jit  ·  donate_argnums', { mono: true, fs: 14, fw: 700, fill: '#1F5C2C' });
-  o += chip(66, 372, 'X');
-  o += block(150, 345, 'addr #1', 'reused (donated)', false, '#2E7D3E');
-  o += arrow(89, 372, 150, 372, C.purple, false);
-  o += tx(200, 424, "XLA fuses & donates X's buffer", { fs: 12.5, fill: C.muted });
-  o += tx(200, 446, 'no extra allocation → in place', { fs: 13, fw: 700, fill: '#1F5C2C' });
-  return svg(W, H, o);
+  // JAX has no in-place update: X += Y rebinds X to a new array, and the
+  // old array's memory is freed once no name refers to it.
+  let o = code(210, 22, 'X += Y', D.red.dark, { fs: 17, fw: 700 });
+  o += chip(56, 124, 'X');
+  o += buffer(170, 52, 'buffer 1', 'old X', C.gray, true);
+  o += buffer(170, 140, 'buffer 2', 'X + Y', C.green);
+  o += arrow(80, 124, 168, 81, C.gray, true);
+  o += arrow(80, 124, 168, 169, C.purple, false);
+  return svg(410, 212, o);
 }
 
-// ── numpy round-trip: two handles, one shared buffer ────────────────
+// ── PyTorch: X, A = X.numpy(), B = torch.from_numpy(A) share a buffer ─
+// Portrait, so that it fills a slide column at a legible size: the three
+// names stacked on the left, their arrows converging on one memory block.
 function numpyShare() {
-  const W = 820, H = 246, s = 40, g = 4; let o = '';
-  o += block(118, 38, 'torch.Tensor', 'B = from_numpy(A)', false, C.blue);
-  o += block(500, 38, 'numpy.ndarray', 'A = X.numpy()', false, C.amber);
-  const vals = ['12.', '12.', '12.', '8.', '9.', '10.', '11.', '…'];
-  const bw = vals.length * s + (vals.length - 1) * g, bx = (W - bw) / 2, by = 150;
-  o += grid([vals], bx, by, s, g, { fill: () => ['#F0F2F5', '#8F98A1', false, '#15181C'], fs: 12.5 });
-  o += tx(W / 2, by + s + 24, 'one shared memory buffer', { fs: 14, fw: 700, fill: C.muted });
-  o += arrow(207, 94, bx + 58, by - 8, C.blue, false);
-  o += arrow(589, 94, bx + bw - 58, by - 8, C.amber, false);
-  return svg(W, H, o);
+  const s = 34, g = 4, n = 5, bw = 196, bh = 58, gap = 22; let o = '';
+  const heads = [
+    ['X', 'torch.Tensor', C.blue],
+    ['A = X.numpy()', 'numpy.ndarray', C.amber],
+    ['B = from_numpy(A)', 'torch.Tensor', C.blue],
+  ];
+  const x0 = 16, y0 = 16, H = 3 * bh + 2 * gap, mh = n * s + (n - 1) * g;
+  const mx = x0 + bw + 84, my = y0 + (H - mh) / 2, mid = my + mh / 2;
+  heads.forEach(([t, sub, acc], i) => {
+    const y = y0 + i * (bh + gap);
+    o += buffer(x0, y, t, sub, acc, false, bw);
+    o += arrow(x0 + bw + 8, y + bh / 2, mx - 8, mid + (i - 1) * (s + g), C.purple, false);
+  });
+  o += grid(Array.from({ length: n }, () => ['']), mx, my, s, g,
+            { showVal: false, fill: () => [N.panel, N.faint, false] });
+  o += name(mx + s / 2, my + mh + 24, 'memory', C.ink, { fs: 16, fw: 600 });
+  return svg(mx + s + 24, my + mh + 42, o);
 }
 
 // Keyed by stable diagram id. The id is the SVG filename and the
@@ -211,10 +245,13 @@ export const diagrams = {
   'ndarray-rank-ladder':   rank,
   'ndarray-reshape':       reshape,
   'ndarray-index-read':    indexRead,
-  'ndarray-index-write':   indexWrite,
+  'ndarray-index-write':   () => indexWrite(),
+  'ndarray-index-write-jax': () => indexWrite('X.at[1, 2].set(17)', 'X_new.at[:2, :].set(12)'),
+  'ndarray-index-write-tensorflow': () => indexWrite('X_var[1, 2].assign(17)', 'X_var[:2, :].assign(12)'),
   'ndarray-concat':        concat,
   'ndarray-broadcasting':  broadcasting,
   'ndarray-saving-memory': savingMemory,
+  'ndarray-saving-memory-tensorflow': savingMemoryTf,
   'ndarray-saving-memory-jax': savingMemoryJax,
   'ndarray-numpy-share':   numpyShare,
 };

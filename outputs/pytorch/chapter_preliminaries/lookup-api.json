@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:b9ec507a6436c02b3cf0daebb72e5098f39bbb13d035301ccc92bc302d527211",
+      "code_fingerprint": "sha256:5118274c7a3fff0ec65880ed67197985739626ce1bb4a814787139f9e4b16d4a",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:7460ef7d0b9df5cfbb586a2fba9d583ed374120d070f40eeda04de68c9693635",
+      "code_fingerprint": "sha256:3a238567edb3dd0044f016500966b3dca92e53117eb33dd0231a11bcc556ad17",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:65e383fef85b61b885e1607305491076d4630d12fff486cfba8605be197945c3",
+      "code_fingerprint": "sha256:d362ffbcc583b99e6655217fbaab56abe8d946725bb374f8e480ab6acfb50087",
       "kind": "text",
       "outputs": [
         {
@@ -36,12 +36,13 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:92b6f883abc6d599b236a05c70062b4c1f94eb6927666b572dadd1373e452707",
+      "code_fingerprint": "sha256:290b20c2b7171bcd94b2d71129af241864774df22584e4ca408686e5a36b9195",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "tensor([1., 1., 1., 1.])"
+          "type": "stream",
+          "name": "stdout",
+          "text": "shape: torch.Size([2, 3]) dtype: torch.float32\nones((2, 3)) has shape torch.Size([2, 3])\n"
         }
       ]
     }

@@ -1,177 +1,286 @@
-// Diagrams for chapter_preliminaries/autograd (§2.5).
+// Diagrams for chapter_preliminaries/autograd.
 //
-// The computational graph for the worked example y = 2 xᵀx: the forward
-// pass builds the graph left→right; reverse-mode autodiff walks it
-// right→left, multiplying the local derivative at each node (chain rule)
-// to accumulate ∂y/∂x = 4x. Used as the book figure (img/) and, later,
-// in the slide deck.
+// Colors follow the book-wide roles (figure-style guide 4.3, tokens.mjs):
+// the forward pass, which computes values, is blue (`stream`); the backward
+// pass and gradients are red (`grad`); parameters and other nodes are
+// neutral slate (`params`). Structure is ink or gray.
+//
+//   autograd-comp-graph  the graph recorded for the running example, the
+//                        line model's loss L = ||Xw - y||^2 at w = (1, 0):
+//                        values forward, gradients backward (book + slides)
+//   autograd-detach      the same product z = u x with u attached (two
+//                        gradient paths, 3x^2) and detached (one path, x^2)
+//                        (book + slides)
+//   autograd-fwd-vs-rev  forward mode fills the Jacobian one column per
+//                        sweep, reverse mode one row per sweep (book + slides)
+//   autograd-dynamic     control flow: two inputs of the section's function
+//                        f record two different graphs (book + slides)
+//
+// Variables are italic, vectors and matrices bold upright (figure-style
+// guide 5.1); `rich` handles both, plus sub- and superscripts.
 //
 // Stable ids use the `autograd-<concept>` prefix. Never rename.
 
-import { C, tx, arrow, chip, svg } from './engine.mjs';
+import { C, TOKENS, FS, tx, baselineY, arrow, svg } from './engine.mjs';
 
-const line = (x1, y1, x2, y2, color, w = 1.6, dash = false) =>
+const BLUE_DARK = TOKENS.accents.blue.dark;
+const RED = TOKENS.accents.red;          // gradients and the backward pass
+const SLATE = TOKENS.accents.slate;      // parameters and other nodes
+const FAINT = TOKENS.neutrals.faint;
+const HAIR = TOKENS.neutrals.hairline;
+
+const line = (x1, y1, x2, y2, color, w = 2, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+const box = (x, y, w, h, fill, stroke, dash = false, rx = 8, sw = 2) =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-const node = (cx, cy, w, h, fill, stroke, label, sub) => {
-  let o = `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
-  o += tx(cx, cy - (sub ? 8 : 0), label, { mono: true, fs: 18, fw: 700, fill: C.ink });
-  if (sub) o += tx(cx, cy + 13, sub, { fs: 11.5, fw: 500, fill: C.muted });
-  return o;
-};
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function computeGraph() {
-  const W = 600, H = 250; let o = '';
-  const cy = 104, h = 58;
-  const X = { cx: 78, w: 78 }, A = { cx: 270, w: 110 }, Y = { cx: 488, w: 130 };
-
-  // (no in-figure title — the book caption / slide header carries it)
-
-  // forward edges (dark, top) with the op that produced the next node
-  o += arrow(X.cx + X.w / 2, cy - 10, A.cx - A.w / 2, cy - 10, C.ink);
-  o += arrow(A.cx + A.w / 2, cy - 10, Y.cx - Y.w / 2, cy - 10, C.ink);
-  o += tx((X.cx + A.cx) / 2, cy - 26, 'dot', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx((A.cx + Y.cx) / 2, cy - 26, '× 2', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-
-  // backward edges (blue, bottom) with the local derivative multiplied in
-  o += arrow(Y.cx - Y.w / 2, cy + 10, A.cx + A.w / 2, cy + 10, C.blue);
-  o += arrow(A.cx - A.w / 2, cy + 10, X.cx + X.w / 2, cy + 10, C.blue);
-  o += tx((A.cx + Y.cx) / 2, cy + 28, '∂y/∂a = 2', { fs: 12.5, fw: 700, fill: C.blue });
-  o += tx((X.cx + A.cx) / 2, cy + 28, '∂a/∂x = 2x', { fs: 12.5, fw: 700, fill: C.blue });
-
-  // nodes
-  o += node(X.cx, cy, X.w, h, '#EDE9F8', C.purple, 'x', 'input');
-  o += node(A.cx, cy, A.w, h, C.lblue, C.blue, 'a = xᵀx', 'scalar');
-  o += node(Y.cx, cy, Y.w, h, C.lgreen, C.green, 'y = 2a', 'output');
-
-  // forward / backward legend + accumulated result
-  o += tx(X.cx, 64, 'forward →', { fs: 11.5, fw: 700, fill: C.ink, anchor: 'start' });
-  o += tx(Y.cx + Y.w / 2, 64, '← backward', { fs: 11.5, fw: 700, fill: C.blue, anchor: 'end' });
-  o += tx(W / 2, cy + 82, 'chain rule:  ∂y/∂x = (∂y/∂a)(∂a/∂x) = 2 · 2x = 4x', { fs: 14, fw: 700, fill: C.ink });
-  return svg(W, H, o);
-}
-
-// ── the autograd loop: mark → forward → backward → read ─────────────
-function workflow() {
-  const W = 700, H = 236; let o = '';
-  const cy = 100, bw = 138, bh = 66;
-  const gap = (W - 56 - 4 * bw) / 3;
-  const xs = [28, 28 + bw + gap, 28 + 2 * (bw + gap), 28 + 3 * (bw + gap)];
-  const steps = [
-    ['1', 'mark', 'flag an input'],
-    ['2', 'forward', 'records the graph'],
-    ['3', 'backward', 'chain rule, reversed'],
-    ['4', 'read .grad', 'use it, then reset'],
-  ];
-  steps.forEach((s, i) => {
-    const x = xs[i], cxb = x + bw / 2;
-    const accent = i === 2 ? C.blue : C.gray;
-    o += `<rect x="${x}" y="${cy - bh / 2}" width="${bw}" height="${bh}" rx="11" fill="#fff" stroke="${accent}" stroke-width="2"/>`;
-    o += `<circle cx="${x + 19}" cy="${cy - bh / 2 + 19}" r="11.5" fill="${C.purple}"/>`;
-    o += tx(x + 19, cy - bh / 2 + 19, s[0], { fs: 13, fw: 700, fill: '#fff' });
-    o += tx(cxb + 9, cy - 6, s[1], { mono: true, fs: 14.5, fw: 700, fill: i === 2 ? C.blue : C.ink });
-    o += tx(cxb, cy + 16, s[2], { fs: 11, fw: 500, fill: C.muted });
-    if (i < 3) o += arrow(x + bw + 3, cy, xs[i + 1] - 3, cy, C.ink);
-  });
-  // return loop underneath
-  const yb = H - 24, x0 = xs[0] + bw / 2, x1 = xs[3] + bw / 2;
-  o += line(x1, cy + bh / 2, x1, yb, C.gray, 1.5);
-  o += line(x1, yb, x0, yb, C.gray, 1.5);
-  o += arrow(x0, yb, x0, cy + bh / 2 + 2, C.gray);
-  o += tx((x0 + x1) / 2, yb - 7, 'repeated every optimization step', { fs: 11.5, fw: 600, fill: C.muted });
-  return svg(W, H, o);
-}
-
-// ── detach: the graph above u is severed; gradient flows around it ───
-function detachGraph() {
-  const Wd = 620, H = 258; let o = '';
-  const cy = 92, bh = 52;
-  const N = { x: { cx: 70, w: 62 }, sq: { cx: 214, w: 78 }, u: { cx: 372, w: 116 }, z: { cx: 532, w: 116 } };
-  // forward (dark, top)
-  o += arrow(N.x.cx + N.x.w / 2, cy, N.sq.cx - N.sq.w / 2, cy, C.ink);
-  o += tx((N.x.cx + N.sq.cx) / 2, cy - 12, 'square', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
-  // sq → u edge is the detach: dashed + a red cut
-  o += line(N.sq.cx + N.sq.w / 2, cy, N.u.cx - N.u.w / 2, cy, C.gray, 2, true);
-  const mx = (N.sq.cx + N.u.cx) / 2;
-  o += line(mx - 7, cy - 9, mx + 7, cy + 9, '#C03B2F', 2.4);
-  o += line(mx - 7, cy + 9, mx + 7, cy - 9, '#C03B2F', 2.4);
-  o += tx(mx, cy - 16, 'detach', { mono: true, fs: 11.5, fw: 700, fill: '#93261C' });
-  o += arrow(N.u.cx + N.u.w / 2, cy, N.z.cx - N.z.w / 2, cy, C.ink);
-  o += tx((N.u.cx + N.z.cx) / 2, cy - 12, '× x', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
-  // nodes
-  o += node(N.x.cx, cy, N.x.w, bh, '#EDE9F8', C.purple, 'x', 'input');
-  o += node(N.sq.cx, cy, N.sq.w, bh, C.lblue, C.blue, 'x²', null);
-  // u: dashed border = treated as constant
-  o += `<rect x="${N.u.cx - N.u.w / 2}" y="${cy - bh / 2}" width="${N.u.w}" height="${bh}" rx="10" fill="${C.lgray}" stroke="${C.gray}" stroke-width="2" stroke-dasharray="5 4"/>`;
-  o += tx(N.u.cx, cy - 8, 'u', { mono: true, fs: 18, fw: 700, fill: C.ink });
-  o += tx(N.u.cx, cy + 13, 'constant', { fs: 11, fw: 500, fill: C.muted });
-  o += node(N.z.cx, cy, N.z.w, bh, C.lgreen, C.green, 'z = u·x', null);
-  // direct edge x → z, drawn as the BACKWARD (blue) gradient path along the bottom
-  const yb = cy + 78;
-  o += `<path d="M${N.z.cx},${cy + bh / 2} C ${N.z.cx},${yb} ${N.x.cx},${yb} ${N.x.cx},${cy + bh / 2}" fill="none" stroke="${C.blue}" stroke-width="2.4"/>`;
-  o += arrow(N.x.cx + 1, cy + bh / 2 + 14, N.x.cx, cy + bh / 2 + 1, C.blue);
-  o += tx(Wd / 2, yb + 4, '∂z/∂x = u   (gradient returns only through the direct edge)', { fs: 12.5, fw: 700, fill: C.blue });
-  o += tx(Wd / 2, H - 14, 'the path above u is cut, so z = x·x·x but ∂z/∂x = u, not 3x²', { fs: 12, fw: 600, fill: C.muted });
-  return svg(Wd, H, o);
-}
-
-// ── dynamic graphs: control flow realizes a different graph per input ─
-function dynamic() {
-  const W = 600, H = 250; let o = '';
-  const doublings = (y, n, inLabel, branch, bcolor) => {
-    let s = '', x = 44;
-    s += `<rect x="${x - 22}" y="${y - 17}" width="60" height="34" rx="8" fill="#EDE9F8" stroke="${C.purple}" stroke-width="2"/>`;
-    s += tx(x + 8, y, inLabel, { mono: true, fs: 12.5, fw: 700, fill: C.purple });
-    x += 50;
-    for (let i = 0; i < n; i++) {
-      s += `<rect x="${x}" y="${y - 15}" width="30" height="30" rx="6" fill="${C.lblue}" stroke="${C.blue}" stroke-width="1.8"/>`;
-      s += tx(x + 15, y, '×2', { mono: true, fs: 10.5, fw: 700, fill: C.ink });
-      if (i < n - 1) s += arrow(x + 30, y, x + 36, y, C.ink);
-      x += 36;
+// Math-like label. Latin letters are italic; \b{...} is bold upright (a
+// vector or matrix); _{...} and ^{...} are sub- and superscripts (a single
+// character may follow _ or ^ without braces). Digits and operators stay
+// upright.
+function parse(src, style, out) {
+  let i = 0;
+  const group = () => {
+    if (src[i] === '{') {
+      let depth = 1, j = i + 1;
+      while (j < src.length && depth) { if (src[j] === '{') depth++; else if (src[j] === '}') depth--; j++; }
+      const inner = src.slice(i + 1, j - 1); i = j; return inner;
     }
-    s += arrow(x, y, x + 12, y, C.ink);
-    x += 16;
-    s += `<rect x="${x}" y="${y - 17}" width="118" height="34" rx="8" fill="#fff" stroke="${bcolor}" stroke-width="2"/>`;
-    s += tx(x + 59, y, branch, { mono: true, fs: 11, fw: 700, fill: bcolor });
-    x += 118;
-    s += arrow(x, y, x + 14, y, C.ink);
-    s += `<circle cx="${x + 30}" cy="${y}" r="15" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
-    s += tx(x + 30, y, 'c', { mono: true, fs: 14, fw: 700, fill: C.ink });
+    return src[i++];
+  };
+  while (i < src.length) {
+    if (src.startsWith('\\b{', i)) { i += 2; parse(group(), { ...style, bold: true }, out); continue; }
+    if (src.startsWith('\\r{', i)) { i += 2; parse(group(), { ...style, roman: true }, out); continue; }
+    const c = src[i];
+    if (c === '_' || c === '^') { i++; parse(group(), { ...style, level: c === '_' ? -1 : 1 }, out); continue; }
+    const letter = /[A-Za-z]/.test(c);
+    out.push({ t: c, italic: letter && !style.bold && !style.roman, bold: !!style.bold, level: style.level || 0 });
+    i++;
+  }
+  return out;
+}
+
+function rich(x, y, src, o) {
+  o = o || {};
+  const fs = o.fs || 17;
+  const segs = parse(src, {}, []);
+  // merge runs with identical style
+  const runs = [];
+  for (const s of segs) {
+    const last = runs[runs.length - 1];
+    if (last && last.italic === s.italic && last.bold === s.bold && last.level === s.level) last.t += s.t;
+    else runs.push({ ...s });
+  }
+  const shift = (lv) => (lv < 0 ? 0.32 * fs : lv > 0 ? -0.42 * fs : 0);
+  let prev = 0, body = '';
+  for (const r of runs) {
+    const dy = shift(r.level) - prev; prev = shift(r.level);
+    const attrs = [
+      dy ? `dy="${dy.toFixed(1)}"` : '',
+      r.italic ? 'font-style="italic"' : '',
+      r.bold ? 'font-weight="700"' : '',
+      r.level ? `font-size="${(0.7 * fs).toFixed(1)}"` : '',
+    ].filter(Boolean).join(' ');
+    body += `<tspan ${attrs}>${esc(r.t)}</tspan>`;
+  }
+  // xml:space keeps the spaces at tspan boundaries (librsvg drops them otherwise)
+  return `<text xml:space="preserve" x="${x}" y="${baselineY(y, fs, false)}" font-family="${FS}" font-size="${fs}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}">${body}</text>`;
+}
+
+const mono = (x, y, t, o) => tx(x, y, t, { mono: true, fs: 14, fw: 500, ...(o || {}) });
+
+// ── the recorded graph of the line model's loss ─────────────────────
+// One node per value, one edge per recorded operation. Each node shows its
+// value (ink) and the gradient of L with respect to it (orange).
+function computeGraph() {
+  const W = 704, H = 190; let o = '';
+  const bw = 90, bh = 92, gap = 58, x0 = 8, top = 50;
+  const xs = [0, 1, 2, 3, 4].map(k => x0 + k * (bw + gap));
+  const nodes = [
+    ['\\b{w}', '(1, 0)', '(2, 4)'],
+    ['\\b{Xw}', '(1, 1, 1)', '(0, 0, 2)'],
+    ['\\b{r}', '(0, 0, 1)', '(0, 0, 2)'],
+    ['\\b{r}⊙\\b{r}', '(0, 0, 1)', '(1, 1, 1)'],
+    ['L', '1', '1'],
+  ];
+  const fwdOps = ['\\b{X}·', '−\\b{y}', '(·)^{2}', '\\r{sum}'];
+  const bwdOps = ['\\b{X}^{\\r{T}}·', '×1', '⊙2\\b{r}', '\\r{copy}'];
+  const yName = top + 20, yVal = top + 47, yGrad = top + 72;
+  const yF = top + 33, yB = top + 62;
+  // forward (blue, above) and backward (orange, below) edges with labels
+  for (let k = 0; k < 4; k++) {
+    const a = xs[k] + bw, b = xs[k + 1];
+    o += arrow(a + 4, yF, b - 4, yF, C.blue);
+    o += rich((a + b) / 2, yF - 17, fwdOps[k], { fs: 15, fill: BLUE_DARK });
+    o += arrow(b - 4, yB, a + 4, yB, RED.base);
+    o += rich((a + b) / 2, yB + 17, bwdOps[k], { fs: 15, fill: RED.dark });
+  }
+  nodes.forEach(([name, val, grad], k) => {
+    const x = xs[k];
+    o += box(x, top, bw, bh, k === 0 ? SLATE.tint : '#fff', C.gray, false, 8, 2);
+    o += rich(x + bw / 2, yName, name, { fs: 18 });
+    o += line(x + 10, top + 33, x + bw - 10, top + 33, HAIR, 1.5);
+    o += mono(x + bw / 2, yVal, val, { fill: C.ink });
+    o += mono(x + bw / 2, yGrad, grad, { fill: RED.dark, fw: 700 });
+  });
+  o += tx(x0, top - 26, '▸ forward pass: values', { fs: 15, fw: 700, fill: BLUE_DARK, anchor: 'start' });
+  o += rich(xs[4] + bw, top + bh + 26, '\\r{◂ backward pass: gradients of }L', { fs: 15, fw: 700, fill: RED.dark, anchor: 'end' });
+  return svg(W, H, o);
+}
+
+// ── detach: the same product with u attached and detached ───────────
+// Forward edges are ink; an orange arrow runs backward along every edge that
+// carries gradient, labelled with the local derivative it multiplies by.
+function chipAt(cx, cy, t, dashed = false) {
+  const s = 44;
+  return box(cx - s / 2, cy - s / 2, s, s, dashed ? '#fff' : SLATE.tint, C.gray, dashed, 6, 2)
+    + rich(cx, cy, t, { fs: 21, fill: C.ink });
+}
+
+// a forward edge between two chip centres, trimmed to the chip borders, and
+// (optionally) a parallel backward arrow offset to one side with a label
+function edge(p, q, opts) {
+  const r = 27, dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy);
+  const ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+  const a = [p[0] + ux * r, p[1] + uy * r], b = [q[0] - ux * r, q[1] - uy * r];
+  let o = arrow(a[0], a[1], b[0], b[1], C.blue);
+  if (opts && opts.back) {
+    const off = opts.side * 13, s = opts.side;
+    const a2 = [a[0] + nx * off + ux * 8, a[1] + ny * off + uy * 8];
+    const b2 = [b[0] + nx * off - ux * 8, b[1] + ny * off - uy * 8];
+    o += arrow(b2[0], b2[1], a2[0], a2[1], RED.base);
+    const m = [(a[0] + b[0]) / 2 + nx * (off + s * (opts.lab || 20)), (a[1] + b[1]) / 2 + ny * (off + s * (opts.lab || 20))];
+    o += rich(m[0], m[1], opts.back, { fs: 17, fill: RED.dark });
+  }
+  return o;
+}
+
+function detachGraph() {
+  const W = 712, H = 282; let o = '';
+  // (a) attached: x -> u -> z and x -> z
+  {
+    const X = [44, 186], U = [170, 70], Z = [296, 186];
+    o += tx(10, 18, '(a)', { fs: 16, fw: 700, anchor: 'start' });
+    o += edge(X, U, { back: '2x', side: 1, lab: 18 });
+    o += edge(U, Z, { back: 'x', side: 1, lab: 16 });
+    o += edge(X, Z, { back: 'u', side: 1, lab: 16 });
+    o += chipAt(...X, 'x'); o += chipAt(...U, 'u'); o += chipAt(...Z, 'z');
+    o += rich(U[0], U[1] - 38, 'u = x^{2}', { fs: 16 });
+    o += rich(Z[0], Z[1] + 40, 'z = ux', { fs: 16 });
+    o += rich(170, 262, '∂z/∂x = 2x · x + u = 3x^{2}', { fs: 17, fw: 700, fill: RED.dark });
+  }
+  // (b) detached: c is a copy of u without history; only x -> z carries gradient
+  {
+    const ox = 380;
+    const X = [ox + 44, 186], U = [ox + 112, 70], Cc = [ox + 232, 70], Z = [ox + 296, 186];
+    o += tx(ox - 6, 18, '(b)', { fs: 16, fw: 700, anchor: 'start' });
+    o += edge(X, U);
+    // the detach: value copied, edge cut
+    o += line(U[0] + 27, U[1], Cc[0] - 27, U[1], C.gray, 2, true);
+    const mx = (U[0] + Cc[0]) / 2;
+    o += line(mx - 7, U[1] - 9, mx + 7, U[1] + 9, C.ink, 2.6);
+    o += line(mx - 7, U[1] + 9, mx + 7, U[1] - 9, C.ink, 2.6);
+    o += tx(mx, U[1] + 24, 'detach', { mono: true, fs: 14, fw: 700, fill: C.ink });
+    o += edge(Cc, Z);
+    o += edge(X, Z, { back: 'c', side: 1, lab: 16 });
+    o += chipAt(...X, 'x'); o += chipAt(...U, 'u'); o += chipAt(...Cc, 'c', true);
+    o += chipAt(...Z, 'z');
+    o += rich(U[0], U[1] - 38, 'u = x^{2}', { fs: 16 });
+    o += rich(Cc[0], Cc[1] - 38, 'c = u\\r{, constant}', { fs: 16 });
+    o += rich(Z[0], Z[1] + 40, 'z = cx', { fs: 16 });
+    o += rich(ox + 170, 262, '∂z/∂x = c = x^{2}', { fs: 17, fw: 700, fill: RED.dark });
+  }
+  return svg(W, H, o);
+}
+
+// ── forward mode fills columns, reverse mode fills rows ─────────────
+function fwdVsRev() {
+  const W = 712, H = 268; let o = '';
+  const m = 3, n = 5, s = 30, g = 5;
+  const gw = n * s + (n - 1) * g, gh = m * s + (m - 1) * g;
+  const cell = (x, y, fill, stroke, w = 2, dash = false) => box(x, y, s, s, fill, stroke, dash, 5, w);
+  const panel = (ox, oy, mode) => {
+    let p = '';
+    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) {
+      const x = ox + c * (s + g), y = oy + r * (s + g);
+      if (mode === 'fwd') {
+        if (c < 2) p += cell(x, y, TOKENS.accents.blue.tint, C.blue, 1.5);
+        else if (c === 2) p += cell(x, y, TOKENS.accents.blue.tint, C.blue, 3);
+        else p += cell(x, y, '#fff', FAINT, 1.5, true);
+      } else {
+        if (r < 1) p += cell(x, y, RED.tint, RED.base, 1.5);
+        else if (r === 1) p += cell(x, y, RED.tint, RED.base, 3);
+        else p += cell(x, y, '#fff', FAINT, 1.5, true);
+      }
+    }
+    // axis annotations: n inputs across, m outputs down
+    p += rich(ox + gw / 2, oy + gh + 22, 'n\\r{ inputs}', { fs: 16, fill: C.ink });
+    p += rich(ox - 14, oy + gh / 2, 'm\\r{ outputs}', { fs: 16, fill: C.ink, anchor: 'end' });
+    return p;
+  };
+  // (a) forward: one column per sweep
+  const ax = 104, ay = 74;
+  o += tx(8, 18, '(a)', { fs: 16, fw: 700, anchor: 'start' });
+  o += panel(ax, ay, 'fwd');
+  const colX = ax + 2 * (s + g) + s / 2;
+  o += arrow(colX, ay - 40, colX, ay - 8, C.blue);
+  o += rich(colX + 12, ay - 40, '\\b{Je}_{3}', { fs: 17, fill: BLUE_DARK, anchor: 'start' });
+  o += tx(ax + gw / 2, ay + gh + 58, 'forward mode: one column per sweep', { fs: 16, fw: 700, fill: BLUE_DARK });
+  // (b) reverse: one row per sweep
+  const bx = 470, by = 74;
+  o += tx(352, 18, '(b)', { fs: 16, fw: 700, anchor: 'start' });
+  o += panel(bx, by, 'rev');
+  const rowY = by + 1 * (s + g) + s / 2;
+  o += arrow(bx + gw + 42, rowY, bx + gw + 8, rowY, RED.base);
+  o += rich(bx + gw + 25, rowY - 24, '\\b{J}^{\\r{T}}\\b{e}_{2}', { fs: 17, fill: RED.dark });
+  o += tx(bx + gw / 2, by + gh + 58, 'reverse mode: one row per sweep', { fs: 16, fw: 700, fill: RED.dark });
+  return svg(W, H, o);
+}
+
+// ── control flow: each input records its own graph ──────────────────
+function dynamic() {
+  const W = 712, H = 184; let o = '';
+  const row = (y, aLabel, n, branch, slope) => {
+    let s = '', x = 8;
+    s += box(x, y - 19, 98, 38, SLATE.tint, C.gray, false, 8, 2);
+    s += rich(x + 49, y, aLabel, { fs: 16, fill: C.ink });
+    x += 98;
+    const doubles = ['×2', '×2', '⋯', '×2'];
+    const x1 = x + 16;
+    doubles.forEach((d, i) => {
+      s += arrow(x + 3, y, x + 15, y, C.blue);
+      x += 16;
+      if (d === '⋯') { s += tx(x + 17, y, '⋯', { fs: 18, fw: 700, fill: C.ink }); }
+      else {
+        s += box(x, y - 16, 34, 32, TOKENS.accents.blue.tint, C.blue, false, 6, 2);
+        s += tx(x + 17, y, d, { mono: true, fs: 14, fw: 700, fill: C.ink });
+      }
+      x += 34;
+    });
+    // brace-like bracket under the doublings
+    const x2 = x;
+    s += `<path d="M${x1},${y + 24} L${x1},${y + 30} L${x2},${y + 30} L${x2},${y + 24}" fill="none" stroke="${C.gray}" stroke-width="1.5"/>`;
+    s += tx((x1 + x2) / 2, y + 44, `${n} doublings`, { fs: 14, fw: 600, fill: C.ink });
+    s += arrow(x + 3, y, x + 19, y, C.blue);
+    x += 20;
+    s += box(x, y - 19, 150, 38, '#fff', C.gray, false, 8, 2);
+    s += tx(x + 75, y, branch, { mono: true, fs: 14, fw: 700, fill: C.ink });
+    x += 150;
+    s += arrow(x + 3, y, x + 19, y, C.blue);
+    x += 20;
+    s += rich(x + 4, y, slope, { fs: 17, fw: 600, anchor: 'start' });
     return s;
   };
-  o += tx(40, 70, 'a = 0.30', { fs: 11.5, fw: 700, fill: C.muted, anchor: 'start' });
-  o += doublings(96, 3, 'a', 'b.sum()>0 → b', C.green);
-  o += tx(40, 150, 'a = −0.75', { fs: 11.5, fw: 700, fill: C.muted, anchor: 'start' });
-  o += doublings(176, 5, 'a', 'else → 100·b', C.amber);
-  o += tx(W / 2, H - 14, 'different input → different path → autograd records whatever ran', { fs: 12, fw: 600, fill: C.muted });
-  return svg(W, H, o);
-}
-
-// ── forward vs reverse mode: which way you sweep the graph ───────────
-function fwdVsRev() {
-  const W = 560, H = 250; let o = '';
-  const xs = [130, 290, 450];
-  const labels = ['x', 'h', 'y'];
-  // forward (top, dark, →)
-  const yt = 86;
-  o += tx(W / 2, yt - 34, 'forward mode: one input → all outputs', { fs: 12.5, fw: 700, fill: C.ink });
-  o += arrow(xs[0] + 26, yt, xs[1] - 26, yt, C.ink);
-  o += arrow(xs[1] + 26, yt, xs[2] - 26, yt, C.ink);
-  xs.forEach((x, i) => o += chip(x, yt, labels[i]));
-  // reverse (bottom, blue, ←)
-  const yb = 174;
-  o += arrow(xs[2] - 26, yb, xs[1] + 26, yb, C.blue);
-  o += arrow(xs[1] - 26, yb, xs[0] + 26, yb, C.blue);
-  xs.forEach((x, i) => o += chip(x, yb, labels[i]));
-  o += tx(W / 2, yb + 36, 'reverse mode (backprop): one output → all inputs', { fs: 12.5, fw: 700, fill: C.blue });
-  o += tx(W / 2, H - 12, 'a scalar loss over millions of parameters → reverse wins', { fs: 12, fw: 600, fill: C.muted });
+  o += row(26, 'a = 0.3', 12, 'sum > 0: c = b', '\\r{slope} 2^{12} = 4096');
+  o += row(122, 'a = −0.75', 11, 'else: c = 100·b', '\\r{slope} 100 · 2^{11} = 204,800');
   return svg(W, H, o);
 }
 
 export const diagrams = {
   'autograd-comp-graph': computeGraph,
-  'autograd-workflow':   workflow,
   'autograd-detach':     detachGraph,
-  'autograd-dynamic':    dynamic,
   'autograd-fwd-vs-rev': fwdVsRev,
+  'autograd-dynamic':    dynamic,
 };

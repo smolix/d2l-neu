@@ -14,127 +14,123 @@
       "outputs": []
     },
     "autograd-a-simple-function-1": {
-      "code_fingerprint": "sha256:9a447e16013963630c11cb1cfc6a842bcc27017b0774b1f97ca4b0c2cfa6d3f7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor([0., 1., 2., 3.])"
-        }
-      ]
-    },
-    "autograd-a-simple-function-2": {
-      "code_fingerprint": "sha256:5532062aba7987f14e54b8d5641fdf2a419ee77bf6aff85256417d7c95143013",
+      "code_fingerprint": "sha256:d518a9c0abac061a2a0e6f373a2666bee8b1ba9bdd5356a504ebb3d0fabcc3e8",
       "kind": "text",
       "outputs": []
     },
-    "autograd-a-simple-function-3": {
-      "code_fingerprint": "sha256:294eefb6965d99c86f0e6377066b016aed12087665b07d53ee59771512030e99",
+    "autograd-a-simple-function-2": {
+      "code_fingerprint": "sha256:5e2457a174349970e430ea81aa71e0bfb1c5b484606801d0a5928e2a3b45015a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(28., grad_fn=<MulBackward0>)"
+          "text": "tensor([1., 0.], requires_grad=True)"
+        }
+      ]
+    },
+    "autograd-a-simple-function-3": {
+      "code_fingerprint": "sha256:87e27902ca7969acfa4d64b16dd313041f946178e1a0fe3b9fe71ee81874c33e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(1., grad_fn=<SumBackward0>)"
         }
       ]
     },
     "autograd-a-simple-function-4": {
-      "code_fingerprint": "sha256:e669df9f187369bcc9e0ea9d3aeb259529c8bd4326258ea69c0227109b4ecaeb",
+      "code_fingerprint": "sha256:bd27528f5e54bd9aef50684bb20d296bf45d655ece2e9ed7089a5ff66bcc64cf",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([ 0.,  4.,  8., 12.])"
-        }
-      ]
-    },
-    "autograd-a-simple-function-5": {
-      "code_fingerprint": "sha256:5371717073ce20599b516bf37eec7302a60b3b5078ec85f3daeeab0399990f5f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor([True, True, True, True])"
+          "text": "tensor([2., 4.])"
         }
       ]
     },
     "autograd-a-simple-function-6": {
-      "code_fingerprint": "sha256:4339b6d1f01973441bc025b2f8c01ac9cddb034ea62c73d0021daa20192f2e30",
+      "code_fingerprint": "sha256:5b77038c30a94c82196b1fc99e2ee23894ca288b6945a96ceaa9dd38466acda9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([1., 1., 1., 1.])"
+          "text": "tensor([4., 8.])"
         }
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:e6bf18930c82ac233ef4ef336e5a871db1928e36487b55783bcf1565448ced31",
+      "code_fingerprint": "sha256:f5e5a46ab3d3db3c2097ef5c9645d0979daffffb4ec78e475284bcc4b3777332",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0., 2., 4., 6.])"
+          "text": "tensor([2., 4.])"
         }
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:4ec4a4aa129aabf450000997e6028888eb59a0bbf875edead6e327c6b6483c44",
+      "code_fingerprint": "sha256:47124367760c52970f52a138fa512541ec8e6d0ed71e4567fa8c2f205c9adb3b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([True, True, True, True])"
+          "text": "tensor([0., 1., 4., 9.])"
         }
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:cb1149ded99bccad110ff1f65f0485d3d143e513495ca2f601b915642a71146a",
+      "code_fingerprint": "sha256:b4a149c55dd42868437570e3d8b4af25e60e4c3c3be80044fab549746f3abe58",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([True, True, True, True])"
+          "text": "tensor([ 0.,  3., 12., 27.])"
         }
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:492465d744488271e03f55ea5248d8ee9b25a632faf2416ee370e58327a57ac5",
+      "code_fingerprint": "sha256:8a86f08ef32818839908b95ec77ea4764304acda39a2bad0a08859d515bd9dc3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "False"
+          "text": "(tensor([ 0.8000, -0.4000], requires_grad=True), tensor(0.4000))"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:577d2120b89c44fa2e82fd793fbe3b45bf1156544c011bdaf25488b9cc026cab",
+      "code_fingerprint": "sha256:26a0547273f9175811af6bfed1908b4d317a89b646858a83296f2fef79702bef",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:bdca4679625da3418c9ca5ff3fbb4f920cbe2180ca319d7c57df359241806b2e",
-      "kind": "text",
-      "outputs": []
-    },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:db426e0fd60555e0332731cb6ec18f26e5a8d38e59e4381399ff2c00596240e8",
+      "code_fingerprint": "sha256:a5c3a8bacab1e534ff5b1140ae41c1439b2bcb919e684e2fbb5bb0227c256229",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "tensor(True)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
         }
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:bdd7e27540e97fc06bb2560259c4f2ea1b1605acaf659008609ddb534ef27acb",
+      "code_fingerprint": "sha256:4e2e21f98bfa7f9b2de9f09081c6ecde13bb585af357e6761e2d3089647240e7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(12., grad_fn=<MulBackward0>), tensor(12.))"
+          "text": "(tensor(3., grad_fn=<MulBackward0>), tensor(6.))"
+        }
+      ]
+    },
+    "autograd-rows-and-columns-of-the-jacobian": {
+      "code_fingerprint": "sha256:32b66eef6f7f6b10e70a7c158b4a8aa21de5b95bc1d5ee22b9e2f35398af273e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([[1., 0.],\n         [1., 1.],\n         [1., 2.]]),\n tensor([[1., 0.],\n         [1., 1.],\n         [1., 2.]]))"
         }
       ]
     }

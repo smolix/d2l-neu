@@ -9,132 +9,118 @@
   },
   "cells": {
     "autograd-automatic-differentiation": {
-      "code_fingerprint": "sha256:a4bac8ccc140298ae8526ae34fe9b3ad8da9791b1f1fbf0140798db4a9c3b5dc",
+      "code_fingerprint": "sha256:bce96c04ae9844e62f51541f370ba682375822e84a0e20d3f0991af4975742e7",
       "kind": "text",
       "outputs": []
     },
     "autograd-a-simple-function-1": {
-      "code_fingerprint": "sha256:0879465dfaf9bcfa4eab1321c35a4bb4faaf1d9d59ba29dfa79035cfa1e1502e",
+      "code_fingerprint": "sha256:75bb3a3ecb03570063ee801f742900cc400321628971468ee36a5790c2d685f9",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([0., 1., 2., 3.])"
-        }
-      ]
+      "outputs": []
     },
     "autograd-a-simple-function-2": {
-      "code_fingerprint": "sha256:ce6bc4cf4341285069e75ac598ebf2f59dc9d81faf081ebaa7f8215d3a875572",
+      "code_fingerprint": "sha256:06a67342ea8179271b909223723b5df24f4a6e2f35fd04c1159c696a1490d4d3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0., 0., 0., 0.])"
+          "text": "array([0., 0.])"
         }
       ]
     },
     "autograd-a-simple-function-3": {
-      "code_fingerprint": "sha256:2d00a223fa0b41ac84450074ab0fd802bb8f605dbb5e26e11052feac12bbffed",
+      "code_fingerprint": "sha256:fe80853b38e6587a83e0cc1ff388e7e6c03eadfe9485a2adf1a7ccbbe19a29ca",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(28.)"
+          "text": "array(1.)"
         }
       ]
     },
     "autograd-a-simple-function-4": {
-      "code_fingerprint": "sha256:25e030855048a1eff712e839773b38b8439ff647b77f1f60625d90d693e62970",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[05:12:07] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "array([ 0.,  4.,  8., 12.])"
-        }
-      ]
-    },
-    "autograd-a-simple-function-5": {
-      "code_fingerprint": "sha256:45c4051e42ea509401563c2e0381d8cbae05d61c2a335da854bd24d3c085c085",
+      "code_fingerprint": "sha256:913da317e5c0e41a473c7282a8505c7623a3a57ed415ed0d0fc36c7a75a5bca4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-a-simple-function-6": {
-      "code_fingerprint": "sha256:2545f03a2e3d5435fd3554f7df072ffd02505c7c6d9d629492807df4c9381908",
+      "code_fingerprint": "sha256:e6ac60c2ffee7219cdbd85d4fb45fe3599720e70d143f0c33f1a51f3844e5bd2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([1., 1., 1., 1.])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:b0ccd98cdcd5d5f9bdafdfd9b759730fda65f886beb28475a587fd967d48b6ba",
+      "code_fingerprint": "sha256:418240112633d2930c7667722742960ebba98b298df9832cf426ad411700f425",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0., 2., 4., 6.])"
+          "text": "array([2., 4.])"
         }
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:dda5685d0d43fb3fb3b90a0ddcdcaf33331a6012eeadde9bebd8708e5ee3faf6",
+      "code_fingerprint": "sha256:f3f3fee469f79c2ba79d51b54777f534b9e431fbb2d7e0822632e71963eddfc2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([0., 1., 4., 9.])"
         }
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:7cdc512a7c6bc347286a1538ef83ee9d93a74c730011f3956882d075cee2108a",
+      "code_fingerprint": "sha256:8d4418241bb0052976fef27c7bf4f66ce5a00034cdde1e799854825014539301",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([ True,  True,  True,  True])"
+          "text": "array([ 0.,  3., 12., 27.])"
         }
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:9ea9fc36e22538c5314d29847d13aac3b3d8eb13a870e59e4f96b30fcadea738",
+      "code_fingerprint": "sha256:7bdf0ab0a6a16f034902ffe2f9af96d3da8159c51c37ba96442dda45b50a2d3b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(28.)"
+          "text": "(array([ 0.8, -0.4]), array(0.4))"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:5357a43d4b02da8890118dbbaeb49cdf6800febbdb82aca5ec421ebf99a1ca89",
+      "code_fingerprint": "sha256:e4f72dc365485d89385390b3722bd50b46395f399dc998d640bc5702b2273118",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:e0b1d3ee0cc22d9caa18b57da68e207afbb9928b009db8632c90ee1d4c881a98",
+      "code_fingerprint": "sha256:75c928878813ebbe45baf46d94fc29247e6d14333e67a048d587f3c2a438667f",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a =  0.30   f(a) / a =   4096   gradient =   4096\na = -0.75   f(a) / a = 204800   gradient = 204800\n"
+        }
+      ]
     },
-    "autograd-gradients-and-python-control-flow-3": {
-      "code_fingerprint": "sha256:ed665b80773b7f908671c4fe8a997c77932f773329c076e8e0895451295e27ee",
+    "autograd-rows-and-columns-of-the-jacobian": {
+      "code_fingerprint": "sha256:6017ac12b67e915a16ac6fe96294eb2a2135306f05b92000a8e70240921042d2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(True)"
+          "text": "array([[1., 0.],\n       [1., 1.],\n       [1., 2.]])"
         }
       ]
     }

@@ -18,6 +18,7 @@
 
 # --- library text the chapter is *about* ----------------------------------
 * chapter_preliminaries/lookup-api.md lookup-api-specific-functions-and-classes-1 width  # help()'s own signature line; reflowing it would misrepresent the docstring
+jax chapter_preliminaries/lookup-api.md lookup-api-specific-functions-and-classes-2 width  # JAX's own error message, which names the intended call; the section quotes it
 
 # --- deliberate error demonstrations --------------------------------------
 mxnet chapter_preliminaries/ndarray.md ndarray-broadcasting-3 width          # the broadcast-failure message IS the lesson; MXNet writes it as one long line

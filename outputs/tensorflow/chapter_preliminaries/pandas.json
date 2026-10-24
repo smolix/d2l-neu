@@ -8,13 +8,18 @@
     "max_inline_bytes": 0
   },
   "cells": {
+    "pandas-data-preprocessing": {
+      "code_fingerprint": "sha256:ad702f206d00b2f7ab0ea4597057fbc46cb44259f2948e3fabe7a5ae863dbada",
+      "kind": "text",
+      "outputs": []
+    },
     "pandas-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:a2284e3bdbfb6e545d0db8a9d6be6a2d26df4b4af78bcf59b4ba5c3010048e3c",
+      "code_fingerprint": "sha256:b32aed3ef6bc58d5182f5c550c25496b1e742c79d9037229eafd8637307d8635",
       "kind": "text",
       "outputs": []
     },
     "pandas-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:94c603ffd5e6eb976a7db3b0514b1dcc0e3a6861e35a604b5654d6ce7e86994e",
+      "code_fingerprint": "sha256:da5507b3bac36a557ada3f054d176e1525e0e27dc3dbf423dfd5293e3ae2e874",
       "kind": "text",
       "outputs": [
         {
@@ -24,17 +29,18 @@
       ]
     },
     "pandas-knowing-your-data-1": {
-      "code_fingerprint": "sha256:d4489bc4f63f5a34acb4fe59be2cddb3208fe2f07cfb5bceee82753589ca48be",
+      "code_fingerprint": "sha256:5d77206e67d00ed9b165af6de5fc7a5bf0d56401ace9d6d4d46524514864e2e8",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "NumRooms    float64\nRoofType        str\nArea          int64\nPrice         int64\ndtype: object"
+          "type": "stream",
+          "name": "stdout",
+          "text": "<class 'pandas.DataFrame'>\nRangeIndex: 10 entries, 0 to 9\nData columns (total 4 columns):\n #   Column    Non-Null Count  Dtype  \n---  ------    --------------  -----  \n 0   NumRooms  7 non-null      float64\n 1   RoofType  6 non-null      str    \n 2   Area      10 non-null     int64  \n 3   Price     10 non-null     int64  \ndtypes: float64(1), int64(2), str(1)\nmemory usage: 481.0 bytes\n"
         }
       ]
     },
     "pandas-knowing-your-data-2": {
-      "code_fingerprint": "sha256:81f280942afc36f5b85bb398bd605fcaa6f44065b4e33801935e982adbd0ab57",
+      "code_fingerprint": "sha256:98873eb7c621d93f7e85ebf999bcb1029e06bbc92a059be63324bae9b94af39e",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +50,7 @@
       ]
     },
     "pandas-separating-inputs-and-targets-1": {
-      "code_fingerprint": "sha256:f1c85b672786be0294186e19e54889e5c6d9b2aaa4b7b67c9220af12f40997e4",
+      "code_fingerprint": "sha256:37fe69f8cecd83ceb8ab1a706d2d9c0ad19f2ff26adf07a8c2f259fc55d98958",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +60,7 @@
       ]
     },
     "pandas-handling-missing-values-1": {
-      "code_fingerprint": "sha256:6b470fe5713126fd4e7100de496358b2cba3bc7f4401491aca10ac1b8a74a58e",
+      "code_fingerprint": "sha256:73c45df52f053378a0466a8ef6f42cc934cc2c6605fa17c79861fac17ead80b9",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +70,7 @@
       ]
     },
     "pandas-handling-missing-values-2": {
-      "code_fingerprint": "sha256:8f3702ba71e10d228950fc0d7f1391ac19fd9fea089dd646ecb001cf939b42e5",
+      "code_fingerprint": "sha256:74ecd3d0bbe38f72eb9385c9eb38aa5894441387102b78887e97a4727ec82b26",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +80,7 @@
       ]
     },
     "pandas-handling-missing-values-3": {
-      "code_fingerprint": "sha256:e0b1eb39ffb09af8eba869bc56d9db93ea79572ed0a3ffad0d9be418802dd1d0",
+      "code_fingerprint": "sha256:bc5c1c83e16c9afc0322c6f4d916bac06af86bf6278501449e0aa18c5f78bf09",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +90,7 @@
       ]
     },
     "pandas-encoding-categorical-features-1": {
-      "code_fingerprint": "sha256:253d1326b137fc1f65e8ccdf7e52b1520f480a0c14fd608e5b7c50b3536dd8d4",
+      "code_fingerprint": "sha256:b90590a3ca542f0ea70a2e84df0a5f5316c68f41ca34f1151065b725c78be615",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +100,7 @@
       ]
     },
     "pandas-numerical-features-1": {
-      "code_fingerprint": "sha256:f17996df46ab982306c8c91742b8375f72410b9c6c8992e084a894f0961a9746",
+      "code_fingerprint": "sha256:d0c83e46075f4c4cf311aa9f62b27c3d3c78a4aa4dc620ab8551f7c97c008bc6",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +110,12 @@
       ]
     },
     "pandas-conversion-to-tensor-format": {
-      "code_fingerprint": "sha256:14311348c4253afa491e49a57d78aabbba072fae2b4006aa57f6034038edc52b",
+      "code_fingerprint": "sha256:04eac182703de0e5e3fa1894f09c1c6c54cc7b5d48d613d36245f93bfccc1738",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(10, 5), dtype=float64, numpy=\n array([[-0.31448545, -0.2767688 ,  1.        ,  0.        ,  0.        ],\n        [ 0.        ,  0.80155119,  0.        ,  1.        ,  0.        ],\n        [-1.41518453, -1.44494879,  0.        ,  0.        ,  1.        ],\n        [ 0.78621363,  0.5139992 ,  1.        ,  0.        ,  0.        ],\n        [ 0.        , -0.81592879,  0.        ,  0.        ,  1.        ],\n        [-0.31448545, -0.0071888 ,  0.        ,  1.        ,  0.        ],\n        [ 1.88691271,  1.70015119,  1.        ,  0.        ,  0.        ],\n        [-1.41518453, -1.35508879,  0.        ,  0.        ,  1.        ],\n        [ 0.        ,  0.1725312 ,  0.        ,  1.        ,  0.        ],\n        [ 0.78621363,  0.71169119,  0.        ,  0.        ,  1.        ]])>,\n <tf.Tensor: shape=(10,), dtype=float64, numpy=\n array([210000., 290000., 127500., 258000., 168000., 225000., 375000.,\n        142000., 240000., 295000.])>)"
+          "text": "(TensorShape([10, 5]), tf.float32, TensorShape([10]), tf.float32)"
         }
       ]
     }

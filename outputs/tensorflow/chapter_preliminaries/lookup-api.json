@@ -9,12 +9,12 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:283d9ccedb48958f0f29cfec58cab177e7aaefac8413322712ffb65b7c4c2a01",
+      "code_fingerprint": "sha256:067e5fa7918ad08c6e8debcc01f137bab392fbff99eadaeb9d7d60f739acd67d",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:5820d87326266bbc0a1cc1109a57fd8e2d275ee94fd74e9d0b058f5ed679fe77",
+      "code_fingerprint": "sha256:6e4f13fb623241b42f131c323e58a4901f74d9801502b5e63296ae735078c992",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:5e7388f00dae7b934c1cc0efb2f2aad63546a65eb1e4c06a4e5627f131d2f240",
+      "code_fingerprint": "sha256:c50c1e639439e2d06cceed580f58af19e4e85209db651291c0af91fe4bad0124",
       "kind": "text",
       "outputs": [
         {
@@ -36,12 +36,13 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:10d66ec6b85748fd06644571449a4f6eb4833e5e945f9fae6d2ff7d559bbac21",
+      "code_fingerprint": "sha256:9ad87d5a94002215d69d53002c927ccc7d728e2c8ce70c121931917521d2978c",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([1., 1., 1., 1.], dtype=float32)>"
+          "type": "stream",
+          "name": "stdout",
+          "text": "shape: (2,) dtype: <dtype: 'int32'>\nones((2, 3)) has shape (2, 3)\n"
         }
       ]
     }

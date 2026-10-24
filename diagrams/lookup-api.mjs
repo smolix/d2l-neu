@@ -1,34 +1,42 @@
-// Diagram for chapter_preliminaries/lookup-api (§2.7, "Documentation").
+// Diagram for chapter_preliminaries/lookup-api (Documentation).
 //
-// The "discovery loop": a small, repeatable routine for figuring out an
-// unfamiliar API — discover names, inspect a signature, read the docs or
-// source, verify with a quick run, and loop if you're still stuck.
+// The four-step procedure for an unfamiliar function: discover names,
+// inspect a signature and docstring, read the documentation or the source,
+// verify with a small example, and go back to reading when the result is
+// unexpected. Book figure fig_lookup_loop and slide figure.
+//
+// Sizing follows the chapter's other modules: at most 720 units wide,
+// titles 17 px, labels 15 px, text in INK.
 //
 // Stable ids use the `lookup-api-<concept>` prefix. Never rename.
 
-import { C, tx, arrow, svg } from './engine.mjs';
+import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
 
 function discoveryLoop() {
-  const W = 748, H = 200; let o = '';
+  const bw = 140, bh = 62, gap = 40, x0 = 8, cy = 39; let o = '';
+  // Steps are neutral; only Verify, the step that decides, carries an accent.
+  const N = TOKENS.neutrals;
   const steps = [
-    { x: 98,  t: 'Discover', s: 'dir() · Tab',     c: C.blue,   cl: C.lblue },
-    { x: 282, t: 'Inspect',  s: 'help() · ?',       c: C.amber,  cl: C.lamber },
-    { x: 466, t: 'Read',     s: 'docs · source ??', c: C.purple, cl: '#EDE9F8' },
-    { x: 650, t: 'Verify',   s: 'run a quick test', c: C.green,  cl: C.lgreen },
+    { t: 'Discover', s: 'dir · Tab', c: C.gray, cl: N.panel },
+    { t: 'Inspect', s: 'help · ?', c: C.gray, cl: N.panel },
+    { t: 'Read', s: 'docs · ??', c: C.gray, cl: N.panel },
+    { t: 'Verify', s: 'small example', c: C.green, cl: C.lgreen },
   ];
-  const bw = 148, bh = 60, cy = 98;
+  steps.forEach((st, i) => { st.x = x0 + i * (bw + gap) + bw / 2; });
+  // the way back from Verify to Read, routed under the row; drawn first so
+  // its ends tuck under the opaque boxes
+  const yb = cy + bh / 2 + 30, from = steps[3].x, to = steps[2].x;
+  o += `<path d="M ${from} ${cy} L ${from} ${yb} L ${to} ${yb} L ${to} ${cy + bh / 2 + 12}" fill="none" stroke="${C.gray}" stroke-width="2.5"/>`;
+  o += arrow(to, cy + bh / 2 + 14, to, cy + bh / 2, C.gray);
+  o += tx((from + to) / 2, yb + 18, 'unexpected result', { fs: 15, fw: 500, fill: C.ink });
   steps.forEach((st, i) => {
-    o += `<rect x="${st.x - bw / 2}" y="${cy - bh / 2}" width="${bw}" height="${bh}" rx="10" fill="${st.cl}" stroke="${st.c}" stroke-width="2"/>`;
-    o += tx(st.x, cy - 9, st.t, { fs: 15, fw: 700, fill: C.ink });
-    o += tx(st.x, cy + 13, st.s, { fs: 11.5, fw: 600, fill: C.muted });
-    if (i < steps.length - 1) o += arrow(st.x + bw / 2 + 6, cy, steps[i + 1].x - bw / 2 - 6, cy, C.gray);
+    o += `<rect x="${st.x - bw / 2}" y="${cy - bh / 2}" width="${bw}" height="${bh}" rx="8" fill="${st.cl}" stroke="${st.c}" stroke-width="2"/>`;
+    o += tx(st.x, cy - 11, st.t, { fs: 17, fw: 700, fill: C.ink });
+    o += tx(st.x, cy + 13, st.s, { fs: 15, fw: 500, fill: C.ink });
+    if (i < steps.length - 1)
+      o += arrow(st.x + bw / 2 + 6, cy, steps[i + 1].x - bw / 2 - 6, cy, C.ink);
   });
-  // loop-back: Verify → Discover, routed under the row
-  const yb = cy + bh / 2 + 30;   // 158
-  o += `<path d="M ${steps[3].x} ${cy + bh / 2} L ${steps[3].x} ${yb} L ${steps[0].x} ${yb}" fill="none" stroke="${C.gray}" stroke-width="2"/>`;
-  o += arrow(steps[0].x, yb, steps[0].x, cy + bh / 2 + 2, C.gray);
-  o += tx(W / 2, yb + 16, 'still stuck? refine the query and loop', { fs: 11.5, fw: 600, fill: C.muted });
-  return svg(W, H, o);
+  return svg(x0 + 4 * bw + 3 * gap + 8, yb + 34, o);
 }
 
 export const diagrams = {

@@ -481,8 +481,12 @@ for name, model in models.items():
 ```{.python .input #mlp-implementation-accuracy-2}
 d2l.plot(list(range(1, trainer.max_epochs + 1)), list(curves.values()),
          'epoch', 'validation accuracy', legend=list(curves))
+```
+
+```{.python .input #mlp-implementation-accuracy-3}
+print('validation accuracy averaged over the last 5 epochs')
 for name, acc in curves.items():  # A single epoch can land a few points low
-    print(f'{name}: {sum(acc[-5:]) / 5:.3f} averaged over the last 5 epochs')
+    print(f'  {name}: {sum(acc[-5:]) / 5:.3f}')
 ```
 
 The scratch and the concise MLP follow the same curve up to the variation
@@ -955,7 +959,7 @@ about 0.01, so the hidden layer learns slowly at first.
 :::
 :::
 
-::: {.slide title="The MLP Starts Behind and Ends About Three Points Ahead"}
+::: {.slide title="The MLP Starts Behind and Ends Three Points Ahead"}
 [Comparison]{.kicker}
 
 ::: {.cols .vc}

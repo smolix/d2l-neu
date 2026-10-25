@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: (8, 256) O: (8, 10)\nloss 2.303, fraction of active units 0.50\n"
+          "text": "H: (8, 256) O: (8, 10)\nloss 2.299, fraction of active units 0.50\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 39352,
-          "sha256": "sha256:474502d0c5e7f5b23c1ad1d6b6c9fb0cdb066cf1a9f0ebe226235e44ccc31177"
+          "bytes": 39917,
+          "sha256": "sha256:0436f6db6b610038cb75c3f0322371d58f39ae3f389c53cb10043abe4892a7da"
         }
       ]
     },
@@ -63,25 +63,31 @@
       "outputs": []
     },
     "mlp-implementation-accuracy-2": {
-      "code_fingerprint": "sha256:d61df8ea91a9097159003f2bafd6bf15d68a7fc6a6ade83abaf3d453d9eef180",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:c4ced35fb6bf7ce6c1f5ed293cd7620ad4d627d49c80867516811977aad9a1a6",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "MLP from scratch: 0.868 averaged over the last 5 epochs\nconcise MLP: 0.870 averaged over the last 5 epochs\nsoftmax regression: 0.840 averaged over the last 5 epochs\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29490,
-          "sha256": "sha256:5c26b2660d32333a9d61023b4af4fed158d552bd535fa6f3a65a73dbd49ed3e0"
+          "bytes": 29487,
+          "sha256": "sha256:e790aa01715feb548120ef93d0a3192fecdfe6fb535eb86355198c07e34e7c2d"
+        }
+      ]
+    },
+    "mlp-implementation-accuracy-3": {
+      "code_fingerprint": "sha256:8f181e789384678c33755820620d51fd21566877b0a3825872131b2f92ecb011",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.864\n  concise MLP: 0.863\n  softmax regression: 0.837\n"
         }
       ]
     },
     "mlp-implementation-parameters-computation-and-time": {
-      "code_fingerprint": "sha256:8f0b108b64953c16cadbce05ea85fdfae559494062825a6e15c79d9973be6853",
+      "code_fingerprint": "sha256:a100ae514f670b77e304a575070d39f65acb564ae1b21b9ce450bddcf1edbc7b",
       "kind": "text",
       "outputs": [
         {

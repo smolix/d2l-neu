@@ -95,7 +95,6 @@ Attributes:
 | `transition="…"`       | Reveal.js transition. `fade`, `slide`, `convex`, `concave`, `zoom`, `none`. |
 | `data-background-color="#…"`   | Slide background color.                        |
 | `data-background-image="…"`    | Slide background image.                        |
-| `output-lines="N"`     | Override the per-deck text-output cap (default 12) for cells injected into this slide. |
 
 `only=` / `except=` let one shared `<!-- slides -->` block emit *different
 slides per framework* where the concept itself diverges (e.g. JAX arrays
@@ -364,9 +363,13 @@ python tools/inject_outputs.py slides --framework pytorch
 Output is wrapped between `<!-- d2l:output -->` / `<!-- /d2l:output -->`
 sentinels in the slide `.qmd`, so re-injection is idempotent.
 
-By default, text output is capped at 12 lines per cell (vs 40 for
-HTML/PDF). Override per slide with `output-lines="N"`; useful for
-training-loop logs that you want to display in full.
+Text output is capped at 12 lines per cell (40 in HTML): a longer output
+shows its first 6 and last 6 lines around a `...` line
+(`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). There is no per-slide
+override. An output that fits the cap can still exceed the output box
+(`.cell-output` has `max-height: 44vh` and scrolls), which hides lines
+without overflowing the slide; `tools/check_slide_overflow.py` reports such
+clipped boxes and wrapped code lines along with slide overflow.
 
 ---
 

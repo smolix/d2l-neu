@@ -525,6 +525,7 @@ Memorizing fails. We need a procedure that finds out what a call does.
 
 - list the names that a module defines;
 - read a signature: defaults, keyword-only arguments, `*args`;
+- predict a call's result from its signature, before running it;
 - find the docstring, the reference page, and the source;
 - design a small test that could prove your reading wrong;
 - check a coding assistant's suggestion.
@@ -550,46 +551,185 @@ Memorizing fails. We need a procedure that finds out what a call does.
 
 ::: {.col .narrow}
 - **Uses:** `ones` and the random samplers of the earlier decks.
-- **Skips:** debuggers and profilers.
+- **Skips:** debuggers, profilers, and type checkers.
 :::
 :::
 :::
 
-::: {.slide title="Four Steps Answer Most API Questions"}
+::: {.slide title="Four Steps Find Out What a Function Does"}
 [The procedure]{.kicker}
 
 @fig:lookup-api-discovery-loop
 
-Discover the names, inspect a candidate, read further, and verify with a
-small run whose result you predicted.
+1. **Discover** the names a module defines.
+2. **Inspect** a candidate's signature and docstring.
+3. **Read** the reference page or the source when a question stays open.
+4. **Verify** with a small run whose result you predicted.
 :::
 
-::: {.slide title="dir Lists What a Module Offers"}
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Discover and inspect]{.dtitle}
+
+[dir · help · signatures · a prediction]{.dsub}
+:::
+:::
+
+::: {.slide title="dir Lists the Distributions PyTorch Can Sample From" only="pytorch"}
 [Discover]{.kicker}
 
-Which distributions can the library sample from? `dir` lists the
-candidates:
+Which distributions can we sample from? `dir` lists the names in
+`torch.distributions`; names starting with `_` are internals:
 
 @lookup-api-functions-and-classes-in-a-module
 
-- The list mixes distributions with helpers: keys, generators, transforms.
-- Names starting with `_` are internals; they are dropped here.
-- In a notebook: module name, a dot, then Tab, filtered as you type.
+- The names are **classes**: create `Gamma(...)` with its parameters,
+  then sample from it.
+- `...Transform`: invertible maps that build new distributions.
+- In a notebook: `torch.distributions.` then Tab, filtered as you type.
 :::
 
-::: {.slide title="help Prints the Signature and the Docstring"}
+::: {.slide title="dir Lists the Samplers in tf.random" only="tensorflow"}
+[Discover]{.kicker}
+
+Which distributions can we sample from? `dir` lists the names in
+`tf.random`; names starting with `_` are internals:
+
+@lookup-api-functions-and-classes-in-a-module
+
+- **Samplers** such as `gamma`, `normal`, `poisson`.
+- `Generator` and `set_seed` manage the state of the random numbers.
+- In a notebook: `tf.random.` then Tab, filtered as you type.
+:::
+
+::: {.slide title="dir Lists the Samplers in jax.random" only="jax"}
+[Discover]{.kicker}
+
+Which distributions can we sample from? `dir` lists the names in
+`jax.random`; names starting with `_` are internals:
+
+@lookup-api-functions-and-classes-in-a-module
+
+- **Samplers** such as `bernoulli`, `beta`, `gamma`; each takes a key.
+- `PRNGKey` makes a key; the book uses its successor `jax.random.key`,
+  later in the alphabet.
+- In a notebook: `jax.random.` then Tab, filtered as you type.
+:::
+
+::: {.slide title="dir Lists the Samplers in mxnet.np.random" only="mxnet"}
+[Discover]{.kicker}
+
+Which distributions can we sample from? `dir` lists the names in
+`mnp.random`; names starting with `_` are internals:
+
+@lookup-api-functions-and-classes-in-a-module
+
+- Classical distributions: `beta`, `gamma`, `multinomial`, `normal`.
+- Next to them, the NumPy conveniences `rand`, `randint`, `randn`.
+- In a notebook: `mnp.random.` then Tab, filtered as you type.
+:::
+
+::: {.slide title="help Prints the Signature, the Arguments, and Examples" only="pytorch"}
 [Inspect]{.kicker}
+
+`help` prints the **docstring**, the documentation written into the code:
 
 @-lookup-api-specific-functions-and-classes-1
 
-| library | signature |
-|---|---|
-| PyTorch | `ones(*size, *, dtype=None, ...)` |
-| TensorFlow | `ones(shape, dtype=tf.float32, ...)` |
-| JAX, MXNet | `ones(shape, dtype=None, ...)` |
+| part | what `help(torch.ones)` prints |
+|------|------------------------------|
+| signature | `ones(*size, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False) -> Tensor` |
+| purpose | "Returns a tensor filled with the scalar value `1`, with the shape defined by the variable argument `size`." |
+| `size` | "a sequence of integers defining the shape ... Can be a variable number of arguments or a collection like a list or tuple." |
+| `dtype` | a keyword argument; "if `None`, uses a global default" |
+| example | `torch.ones(2, 3)`, a 2 × 3 tensor of ones |
+:::
 
-`x=v`: default value. After a lone `*`: keyword only. `*size`: any number
-of positional arguments.
+::: {.slide title="help Prints the Signature, the Arguments, and Examples" only="tensorflow"}
+[Inspect]{.kicker}
+
+`help` prints the **docstring**, the documentation written into the code:
+
+@-lookup-api-specific-functions-and-classes-1
+
+| part | what `help(tf.ones)` prints |
+|------|------------------------------|
+| signature | `ones(shape, dtype=tf.float32, name=None, layout=None)` |
+| purpose | "Creates a tensor with all elements set to one (1)." |
+| `shape` | "A `list` of integers, a `tuple` of integers, or a 1-D `Tensor` of type `int32`." |
+| `dtype` | "Optional DType of an element in the resulting `Tensor`. Default is `tf.float32`." |
+| example | `tf.ones([3, 4], tf.int32)`, a 3 × 4 tensor of `int32` ones |
+:::
+
+::: {.slide title="help Prints the Signature, the Arguments, and Examples" only="jax"}
+[Inspect]{.kicker}
+
+`help` prints the **docstring**, the documentation written into the code:
+
+@-lookup-api-specific-functions-and-classes-1
+
+| part | what `help(jnp.ones)` prints |
+|------|------------------------------|
+| signature | `ones(shape, dtype=None, *, device=None, out_sharding=None) -> jax.Array`, with type hints |
+| purpose | "Create an array full of ones." |
+| `shape` | "int or sequence of ints specifying the shape of the created array." |
+| `dtype` | "optional dtype for the created array; defaults to float32 or float64 depending on the X64 configuration" |
+| examples | `jnp.ones(4)` and `jnp.ones((2, 3), dtype=bool)` |
+:::
+
+::: {.slide title="help Prints the Signature, the Arguments, and Examples" only="mxnet"}
+[Inspect]{.kicker}
+
+`help` prints the **docstring**, the documentation written into the code:
+
+@-lookup-api-specific-functions-and-classes-1
+
+| part | what `help(mnp.ones)` prints |
+|------|------------------------------|
+| signature | `ones(shape, dtype=None, order='C', device=None)` |
+| purpose | "Return a new array of given shape and type, filled with ones." |
+| `shape` | "int or tuple of int" |
+| `dtype` | "str or numpy.dtype, optional"; float32 unless NumPy's default is switched on |
+| examples | `np.ones(5)`, `np.ones((5,), dtype=int)`, `np.ones((2, 1))` |
+:::
+
+::: {.slide title="Three Conventions Decode a Signature"}
+[Inspect]{.kicker}
+
+| written | meaning | in `ones` |
+|---|---|---|
+| `dtype=None` | a default: may be omitted | all four |
+| after a lone `*` | keyword only | PyTorch's `dtype`, JAX's `device` |
+| `*size` | any number of positional arguments | PyTorch's shape |
+
+| framework | signature of `ones` |
+|---|---|
+| PyTorch | `ones(*size, *, out=None, dtype=None, ...)` |
+| TensorFlow | `ones(shape, dtype=tf.float32, name=None, layout=None)` |
+| JAX | `ones(shape, dtype=None, *, device=None, ...)` |
+| MXNet | `ones(shape, dtype=None, order='C', device=None)` |
+:::
+
+::: {.slide title="The Signatures Predict ones(2, 3) Before Any Run"}
+[Inspect]{.kicker}
+
+Bind the two positional arguments of `ones(2, 3)`:
+
+| framework | `2` goes to | `3` goes to | prediction |
+|---|---|---|---|
+| PyTorch | `size` | `size` | a 2 × 3 matrix, default type |
+| TensorFlow | `shape` | `dtype` | two ones, of "type 3" |
+| JAX | `shape` | `dtype` | "type 3": an error? |
+| MXNet | `shape` | `dtype` | "type 3": an error? |
+
+- `*size` collects both numbers into the shape.
+- A single `shape` takes only the 2, so the 3 lands in `dtype`.
+
+::: {.d2l-note}
+One question stays open: which type, if any, does the integer 3 name?
+:::
 :::
 
 ::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix Everywhere?"}
@@ -610,17 +750,55 @@ signature has no argument `shape`. (4) All four.
 :::
 :::
 
-::: {.slide title="When the Docstring Leaves a Question Open, Read Further"}
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Read and verify]{.dtitle}
+
+[the source · the reference · a test that could fail]{.dsub}
+:::
+:::
+
+::: {.slide title="The First Line of help Says Whether ?? Can Show Source"}
 [Read]{.kicker}
 
-- `ones?` shows the docstring in a pane; `ones??` adds the source code.
-- The source answers what a docstring leaves open: how an argument is
-  converted or checked.
-- Only functions written in Python have source to show: `torch.ones` is
-  compiled C++, so `??` shows its docstring alone.
+`ones?` shows the docstring in a pane; `ones??` adds the source, which
+answers what a docstring leaves open: how an argument is converted or
+checked.
+
+| framework | `help(ones)` begins | `ones??` shows |
+|----------|--------------------------------------------|------------------|
+| PyTorch | built-in function ones in module torch | docstring only (C++) |
+| TensorFlow | function ones in module tensorflow.python.ops.array_ops | Python source |
+| JAX | function ones in module jax.numpy | Python source |
+| MXNet | function ones in module mxnet.numpy | Python source |
 
 ::: {.d2l-note}
-Also read the reference page of the function, and the tutorials.
+For `tf.ones`, the source will answer the question our prediction left
+open: which type the integer 3 names.
+:::
+:::
+
+::: {.slide title="Each Framework's Reference Has a Page per Public Function"}
+[Read]{.kicker}
+
+| framework | reference | worked examples |
+|---|---|---|
+| PyTorch | [API reference](https://docs.pytorch.org/docs/stable/index.html) | [tutorials](https://docs.pytorch.org/tutorials/beginner/basics/intro.html) |
+| TensorFlow | [API reference](https://www.tensorflow.org/api_docs/python/tf) | [tutorials](https://www.tensorflow.org/tutorials) |
+| JAX | [API reference](https://docs.jax.dev/en/latest/jax.html) | [tutorials](https://docs.jax.dev/en/latest/tutorials.html) |
+| MXNet | [`mxnet.np` reference](https://mxnet.apache.org/versions/master/api/python/docs/api/np/index.html) | [tutorials](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/index.html) |
+
+- Not sure which module holds a function? The reference's search box
+  searches all of them.
+- MXNet was retired in 2023. Its site still serves the documentation of
+  version 2.0, whose NumPy-style interface the book uses; the pages of
+  1.9.1 describe the older `mx.nd`.
+
+::: {.d2l-note}
+Where the documentation is thin or out of date, a small test in a notebook
+is the more reliable reference.
 :::
 :::
 
@@ -637,16 +815,41 @@ prediction is a test.
 :::
 :::
 
-::: {.slide title="tf.ones(2, 3) Runs, and the Source Explains Why" only="tensorflow"}
+::: {.slide title="tf.ones(2, 3) Runs Because tf.as_dtype(3) Is tf.int32"}
 [Read again]{.kicker}
 
-The first statement of `tf.ones`, seen with `tf.ones??`, is
+The prediction held in all four frameworks, but left TensorFlow's type
+open. The first statement of `tf.ones`, seen with `tf.ones??`:
 
 `dtype = dtypes.as_dtype(dtype).base_dtype`
 
-- `tf.as_dtype` also accepts TensorFlow's internal type numbers.
-- `tf.as_dtype(3)` is `tf.int32`.
-- Fix: `tf.ones((2, 3))`.
+- `as_dtype` also accepts the integers that number TensorFlow's types:
+  `tf.as_dtype(1)` is `tf.float32`, `tf.as_dtype(3)` is `tf.int32`.
+- So `tf.ones(2, 3)` returns two `int32` ones, and raises no error.
+
+::: {.d2l-note .warn}
+A call written with PyTorch in mind runs in TensorFlow and computes
+something else. `ones((2, 3))` works in all four.
+:::
+:::
+
+::: {.slide title="Check: Which Run Could Prove Us Wrong?"}
+[Check]{.kicker}
+
+Claim: "this `std` divides the squared deviations by $n - 1$, not by
+$n$." Which run could refute it?
+
+1. `std` of 1,000 random normal numbers is close to 1.
+2. `std` of $(5, 5, 5)$ is 0.
+3. `std` of $(0, 2)$ is 1.41.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Only 3. Mean 1, squared deviations sum to 2: $\sqrt{2/1} = 1.41$
+under $n - 1$, $\sqrt{2/2} = 1$ under $n$. In run 1 the two rules differ
+by 0.05%, far below the sampling noise; run 2 gives 0 under both.
+:::
+:::
 :::
 
 ::: {.slide title="An Assistant's Suggestion Is a Candidate"}
@@ -659,8 +862,8 @@ Check every suggested call like a name you found yourself:
 3. a small run gives the predicted result.
 
 ::: {.d2l-note .warn}
-A wrong suggestion need not fail: a call can exist, fit the signature, and
-run, yet compute something else.
+A wrong suggestion need not fail: `tf.ones(2, 3)` names a function that
+exists, fits its signature, and runs, yet computes something else.
 :::
 :::
 
@@ -684,11 +887,14 @@ two `int32` ones.
 [Wrap-up]{.kicker}
 
 | step | tool | in the example |
-|---|---|---|
+|--------|--------------|------------------------------|
 | discover | `dir`, Tab | the distributions a library can sample from |
 | inspect | `help`, `?` | `ones(*size, ...)` against `ones(shape, dtype, ...)` |
-| read | reference pages, `??` | `tf.ones` passes 3 to `tf.as_dtype` |
+| read | reference pages, `??` | `tf.ones` passes 3 to `tf.as_dtype`: `int32` |
 | verify | a predicted small run | `ones(2, 3)`: (2, 3), (2,) `int32`, or an error |
+
+- A test is a run whose result could have contradicted the prediction.
+- An assistant's suggestion goes through the same four steps.
 
 **Next:** a first model, linear regression.
 :::

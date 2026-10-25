@@ -415,13 +415,20 @@ with the install hint.
 
 ### JAX + TF memory coexistence
 
-JAX notebooks use `tf.data` for data loading and convert batches with
-`Dataset.as_numpy_iterator()`.
+JAX notebooks load in-memory arrays without TensorFlow:
+`DataModule.get_tensorloader` returns a `d2l.ArrayLoader` (NumPy arrays on
+the host, a new order from a split JAX key on every pass, the last partial
+minibatch kept; defined in `chapter_linear-regression/synthetic-regression-data.md`).
+TensorFlow is still part of the JAX environment: the `d2l/jax.py` preamble
+imports it, `d2l.FashionMNIST` builds a `tf.data` pipeline wrapped in
+`d2l.TensorFlowDataLoader` (batches via `Dataset.as_numpy_iterator()`), and
+the computer-vision chapters use `tf.data` directly.
 Two mechanisms prevent TF from fighting JAX for GPU memory:
 
-1. **d2l/jax.py preamble**: Calls
-   `tf.config.experimental.set_memory_growth(gpu, True)` after JAX
-   initializes, so TF allocates on-demand instead of pre-allocating.
+1. **d2l/jax.py preamble**: after JAX initializes, hides the GPUs from TF
+   (`tf.config.set_visible_devices([], 'GPU')`) when JAX runs on a GPU,
+   falling back to `tf.config.experimental.set_memory_growth(gpu, True)` if
+   the devices are already initialized.
 2. **XLA_PYTHON_CLIENT_MEM_FRACTION=.40**: JAX pre-allocates only 40% of
    GPU memory (down from the 90% default), leaving room for a second
    worker on the same GPU plus TF overhead.

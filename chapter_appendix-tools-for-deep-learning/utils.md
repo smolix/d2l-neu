@@ -66,144 +66,71 @@ def save_hyperparameters(self, ignore=None):
 
 ## Progress and Plotting
 
+The `ProgressBoard` of :numref:`sec_oo-design` draws on the calling thread.
+`show` renders all curves into a new figure and replaces the previous frame
+of the same board in the notebook output. In the headless book build only the
+final call renders, so an executed notebook records one figure per board.
+Losses go on the left axis and accuracies on a second axis on the right, in
+which case the legend moves above the plot so that it covers neither set of
+curves. Validation points, and any curve that has a single point, are marked
+with dots, so that a one-epoch run is still visible.
+
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
 #@save
-import io, os, queue, threading, time
+import os
+from matplotlib import ticker
+from matplotlib.figure import Figure
+
+def set_log_ticks(axis):  #@save
+    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades."""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
+    axis.set_minor_formatter(ticker.NullFormatter())
 
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
-def draw(self, x, y, label, every_n=1):
-    """Schedule the point (x, y) to be plotted under `label`.
-
-    This call is *asynchronous*: it appends the point to an internal queue
-    and returns immediately, so the (possibly compiled) training loop never
-    blocks on a device-to-host transfer or on matplotlib. `y` may be a number
-    or a zero-argument callable returning one; if it is a callable, the
-    conversion runs on the background drawing thread, not on the caller's.
-    `every_n` averages each group of `n` raw points into one plotted point."""
-    self._start_drawer()
-    try:
-        self._queue.put_nowait((x, y, label, every_n))
-    except queue.Full:
-        pass  # drop the point rather than stall the training loop
-
-@d2l.add_to_class(d2l.ProgressBoard)  #@save
-def _start_drawer(self):
-    if getattr(self, '_drawer', None) is not None:
+def show(self, final=True):
+    """Redraw all curves; the book build renders only the final call."""
+    if not self.display or (
+            not final and os.environ.get('D2L_NB_CAPTURE') == '1'):
         return
-    self._queue = queue.Queue(maxsize=1000)
-    self._lock = threading.Lock()
-    self._handle = None
-    self._last = 0.0
-    self._running = True
-    # Emit live frames only outside the headless book build, so an executed
-    # notebook records exactly one (final) figure in the committed store.
-    self._live = self.display and os.environ.get('D2L_NB_CAPTURE') != '1'
-    self._drawer = threading.Thread(target=self._drain, daemon=True)
-    self._drawer.start()
-
-@d2l.add_to_class(d2l.ProgressBoard)  #@save
-def _drain(self):
-    while self._running or not self._queue.empty():
-        try:
-            batch = [self._queue.get(timeout=0.1)]
-        except queue.Empty:
-            continue
-        while True:  # coalesce everything currently queued
-            try: batch.append(self._queue.get_nowait())
-            except queue.Empty: break
-        for x, y, label, every_n in batch:
-            self._accumulate(x, y() if callable(y) else y, label, every_n)
-        if self._live and time.time() - self._last > 0.1:
-            self._render(thread=True)
-            self._last = time.time()
-
-@d2l.add_to_class(d2l.ProgressBoard)  #@save
-def _accumulate(self, x, y, label, every_n):
-    Point = collections.namedtuple('Point', ['x', 'y'])
-    with self._lock:
-        if not hasattr(self, 'raw_points'):
-            self.raw_points = collections.OrderedDict()
-            self.data = collections.OrderedDict()
-        if label not in self.raw_points:
-            self.raw_points[label] = []
-            self.data[label] = []
-        points = self.raw_points[label]
-        points.append(Point(x, float(y)))
-        if len(points) != every_n:
-            return
-        mean = lambda v: sum(v) / len(v)
-        self.data[label].append(Point(mean([p.x for p in points]),
-                                      mean([p.y for p in points])))
-        points.clear()
-
-@d2l.add_to_class(d2l.ProgressBoard)  #@save
-def _plot_lines(self, axes):
-    with self._lock:
-        series = [(k, list(v)) for k, v in getattr(self, 'data', {}).items()]
-    for (k, v), ls, color in zip(series, self.ls, self.colors):
-        axes.plot([p.x for p in v], [p.y for p in v],
-                  linestyle=ls, color=color, label=k)
-    if self.xlim: axes.set_xlim(self.xlim)
-    if self.ylim: axes.set_ylim(self.ylim)
-    if not self.xlabel: self.xlabel = self.x
-    axes.set_xlabel(self.xlabel)
-    axes.set_ylabel(self.ylabel)
-    axes.set_xscale(self.xscale)
-    # A smoothed series exists before it necessarily contains its first point.
-    # Matplotlib rejects an empty/nonpositive log axis, so keep the temporary
-    # live frame linear and apply the requested log scale as soon as a positive
-    # value is available. The final training figure therefore still uses log.
-    has_positive_y = any(p.y > 0 for _, values in series for p in values)
-    if self.yscale != 'log' or has_positive_y:
-        axes.set_yscale(self.yscale)
-    if series: axes.legend()
-
-@d2l.add_to_class(d2l.ProgressBoard)  #@save
-def _render(self, thread=False):
-    if not self.display:
-        return
-    if thread:
-        # Off the main thread: matplotlib's global pyplot state is not
-        # thread-safe, so render into a private Agg figure and push a PNG.
-        from matplotlib.figure import Figure
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-        fig = Figure(figsize=self.figsize)
-        FigureCanvasAgg(fig)
-        self._plot_lines(fig.add_subplot(111))
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png', bbox_inches='tight')
-        frame = display.Image(data=buf.getvalue())
-        if self._handle is None:
-            self._handle = display.display(frame, display_id=True)
-        else:
-            self._handle.update(frame)
+    d2l.use_svg_display()
+    fig = Figure(figsize=self.figsize)
+    self._plot(fig.add_subplot())
+    if self.handle is None:
+        self.handle = display.display(fig, display_id=True)
     else:
-        # Main thread (final frame): render through pyplot so the output is
-        # captured exactly like the rest of the book's inline figures.
-        d2l.use_svg_display()
-        if self.fig is None:
-            self.fig = d2l.plt.figure(figsize=self.figsize)
-        self.fig.clf()
-        self._plot_lines(self.fig.add_subplot(111))
-        if self._handle is not None:
-            self._handle.update(self.fig)         # interactive: reuse live slot
-        else:
-            # Display, then a trailing clear_output(wait=True): the inline
-            # backend's automatic end-of-cell render then *replaces* (rather
-            # than duplicates) this figure, so exactly one image is captured.
-            display.display(self.fig)
-            display.clear_output(wait=True)
+        self.handle.update(fig)
 
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
-def flush(self):
-    """Wait for every scheduled point to be drawn, then render the final
-    figure on the calling thread. `Trainer.fit` calls this for you; call it
-    yourself after a bare `draw` loop."""
-    if getattr(self, '_drawer', None) is not None:
-        self._running = False
-        self._drawer.join()
-        self._drawer = None
-    self._render(thread=False)
+def _plot(self, ax):
+    """Losses on the left axis, accuracies on a right one."""
+    acc_ax = None
+    for i, (label, (xs, ys)) in enumerate(self.data.items()):
+        target = ax
+        if label.endswith('acc'):
+            acc_ax = acc_ax or ax.twinx()
+            target = acc_ax
+        # Mark validation points, and any curve that has a single point
+        marked = label.startswith('val') or len(xs) == 1
+        target.plot(xs, ys, ('-', '--', '-.', ':')[i % 4], color=f'C{i % 10}',
+                    marker='o' if marked else None, markersize=3,
+                    clip_on=not marked, label=label)
+    ax.set_xlabel(self.xlabel), ax.set_ylabel(self.ylabel)
+    ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
+    if self.xlim: ax.set_xlim(self.xlim)
+    if self.ylim: ax.set_ylim(self.ylim)
+    if self.yscale == 'log': set_log_ticks(ax.yaxis)
+    if acc_ax is not None: acc_ax.set_ylabel('accuracy')
+    lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
+    labels = [line.get_label() for line in lines]
+    if acc_ax is not None:  # Above the axes: no curve of either axis is hidden
+        ax.legend(lines, labels, loc='lower center', ncol=len(lines),
+                  bbox_to_anchor=(0.5, 1), frameon=False)
+    elif lines:
+        ax.legend(lines, labels)
+    ax.grid()
 ```
 
 ## Reinforcement Learning Visualizations

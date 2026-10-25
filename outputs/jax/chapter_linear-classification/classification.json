@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:64a87f318b698ef49245fbb0b1f38a65050f3e1962234e497a8837940f7a712a",
+    "d2l_lib_fingerprint": "sha256:25c8d5fbc16116b2f33a6cabe77c0953577bd3f824dc3173acedfcd4a8c49c6b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,22 +14,22 @@
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:82d4990f3514ccfc73f766bf07bbc4f4d2c882c4c1e5aea215f87a9e799e028a",
+      "code_fingerprint": "sha256:c0cc219ecff1c891093bb16c8ab3d5950231311ad3fe302ba4d35a5f3a5db64f",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:c7a8771a07f140f4645961cc08daaace1da73306f16cf9f0763027e3b6c7376f",
+      "code_fingerprint": "sha256:9ec794f12b857d12d3d7c16ac0daf896c8b743ba7cfb66f83323131c18b31e11",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:8a5ada299099218a07551d52ab14ac07ec6fb6c217763f60338a9d6be3265ae6",
+      "code_fingerprint": "sha256:c3c1873ee8b4c2c89c588de4b0d077a8d694ece284c19073bf0dbd917c4a523f",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:f19fcce04b82b8b9e2af3d8b9e9299bb2103942574c389b68f544e3a98b2885b",
+      "code_fingerprint": "sha256:e0cb5eefed11a469ae690e52068b3b48fe2cfc3eeaf0b83a20119a4bec21d331",
       "kind": "text",
       "outputs": [
         {

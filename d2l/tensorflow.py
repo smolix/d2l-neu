@@ -132,8 +132,11 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
     if axes is None:
         axes = d2l.plt.gca()
     axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x,y,fmt) if len(x) else axes.plot(y,fmt)
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
     set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
 
 def add_to_class(Class):
@@ -162,154 +165,12 @@ class HyperParameters:
         for k, v in self.hparams.items():
             setattr(self, k, v)
 
-class ProgressBoard(d2l.HyperParameters):
-    """The board that plots data points in animation.
-
-    Defined in :numref:`sec_oo-design`"""
-    def __init__(self, xlabel=None, ylabel=None, xlim=None,
-                 ylim=None, xscale='linear', yscale='linear',
-                 ls=['-', '--', '-.', ':'], colors=['C0', 'C1', 'C2', 'C3'],
-                 fig=None, axes=None, figsize=(3.5, 2.5), display=True):
-        self.save_hyperparameters()
-
-    def draw(self, x, y, label, every_n=1):
-        """Schedule the point (x, y) to be plotted under `label`.
-
-        This call is *asynchronous*: it appends the point to an internal queue
-        and returns immediately, so the (possibly compiled) training loop never
-        blocks on a device-to-host transfer or on matplotlib. `y` may be a number
-        or a zero-argument callable returning one; if it is a callable, the
-        conversion runs on the background drawing thread, not on the caller's.
-
-        Defined in :numref:`sec_utils`"""
-        self._start_drawer()
-        try:
-            self._queue.put_nowait((x, y, label, every_n))
-        except queue.Full:
-            pass  # drop the point rather than stall the training loop
-
-    def _start_drawer(self):
-        if getattr(self, '_drawer', None) is not None:
-            return
-        self._queue = queue.Queue(maxsize=1000)
-        self._lock = threading.Lock()
-        self._handle = None
-        self._last = 0.0
-        self._running = True
-        # Emit live frames only outside the headless book build, so an executed
-        # notebook records exactly one (final) figure in the committed store.
-        self._live = self.display and os.environ.get('D2L_NB_CAPTURE') != '1'
-        self._drawer = threading.Thread(target=self._drain, daemon=True)
-        self._drawer.start()
-
-    def _drain(self):
-        while self._running or not self._queue.empty():
-            try:
-                batch = [self._queue.get(timeout=0.1)]
-            except queue.Empty:
-                continue
-            while True:  # coalesce everything currently queued
-                try: batch.append(self._queue.get_nowait())
-                except queue.Empty: break
-            for x, y, label, every_n in batch:
-                self._accumulate(x, y() if callable(y) else y, label, every_n)
-            if self._live and time.time() - self._last > 0.1:
-                self._render(thread=True)
-                self._last = time.time()
-
-    def _accumulate(self, x, y, label, every_n):
-        Point = collections.namedtuple('Point', ['x', 'y'])
-        with self._lock:
-            if not hasattr(self, 'raw_points'):
-                self.raw_points = collections.OrderedDict()
-                self.data = collections.OrderedDict()
-            if label not in self.raw_points:
-                self.raw_points[label] = []
-                self.data[label] = []
-            points = self.raw_points[label]
-            points.append(Point(x, float(y)))
-            if len(points) != every_n:
-                return
-            mean = lambda v: sum(v) / len(v)
-            self.data[label].append(Point(mean([p.x for p in points]),
-                                          mean([p.y for p in points])))
-            points.clear()
-
-    def _plot_lines(self, axes):
-        with self._lock:
-            series = [(k, list(v)) for k, v in getattr(self, 'data', {}).items()]
-        for (k, v), ls, color in zip(series, self.ls, self.colors):
-            axes.plot([p.x for p in v], [p.y for p in v],
-                      linestyle=ls, color=color, label=k)
-        if self.xlim: axes.set_xlim(self.xlim)
-        if self.ylim: axes.set_ylim(self.ylim)
-        if not self.xlabel: self.xlabel = self.x
-        axes.set_xlabel(self.xlabel)
-        axes.set_ylabel(self.ylabel)
-        axes.set_xscale(self.xscale)
-        # A smoothed series exists before it necessarily contains its first point.
-        # Matplotlib rejects an empty/nonpositive log axis, so keep the temporary
-        # live frame linear and apply the requested log scale as soon as a positive
-        # value is available. The final training figure therefore still uses log.
-        has_positive_y = any(p.y > 0 for _, values in series for p in values)
-        if self.yscale != 'log' or has_positive_y:
-            axes.set_yscale(self.yscale)
-        if series: axes.legend()
-
-    def _render(self, thread=False):
-        if not self.display:
-            return
-        if thread:
-            # Off the main thread: matplotlib's global pyplot state is not
-            # thread-safe, so render into a private Agg figure and push a PNG.
-            from matplotlib.figure import Figure
-            from matplotlib.backends.backend_agg import FigureCanvasAgg
-            fig = Figure(figsize=self.figsize)
-            FigureCanvasAgg(fig)
-            self._plot_lines(fig.add_subplot(111))
-            buf = io.BytesIO()
-            fig.savefig(buf, format='png', bbox_inches='tight')
-            frame = display.Image(data=buf.getvalue())
-            if self._handle is None:
-                self._handle = display.display(frame, display_id=True)
-            else:
-                self._handle.update(frame)
-        else:
-            # Main thread (final frame): render through pyplot so the output is
-            # captured exactly like the rest of the book's inline figures.
-            d2l.use_svg_display()
-            if self.fig is None:
-                self.fig = d2l.plt.figure(figsize=self.figsize)
-            self.fig.clf()
-            self._plot_lines(self.fig.add_subplot(111))
-            if self._handle is not None:
-                self._handle.update(self.fig)         # interactive: reuse live slot
-            else:
-                # Display, then a trailing clear_output(wait=True): the inline
-                # backend's automatic end-of-cell render then *replaces* (rather
-                # than duplicates) this figure, so exactly one image is captured.
-                display.display(self.fig)
-                display.clear_output(wait=True)
-
-    def flush(self):
-        """Wait for every scheduled point to be drawn, then render the final
-        figure on the calling thread. `Trainer.fit` calls this for you; call it
-
-        Defined in :numref:`sec_utils`"""
-        if getattr(self, '_drawer', None) is not None:
-            self._running = False
-            self._drawer.join()
-            self._drawer = None
-        self._render(thread=False)
-
 class Module(d2l.nn_Module, d2l.HyperParameters):
     """The base class of models.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, plot_train_per_epoch=2, plot_valid_per_epoch=1):
+    def __init__(self):
         super().__init__()
-        self.save_hyperparameters()
-        self.board = ProgressBoard()
         self.training = None
         self.__dict__.pop('loss', None)
 
@@ -325,39 +186,22 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
             self.training = training
         return self.forward(X, *args)
 
-    def plot(self, key, value, train):
-        """Plot a point in animation."""
-        assert hasattr(self, 'trainer'), 'Trainer is not inited'
-        self.board.xlabel = 'epoch'
-        if train:
-            x = self.trainer.train_batch_idx / \
-                self.trainer.num_train_batches
-            n = self.trainer.num_train_batches / \
-                self.plot_train_per_epoch
-        else:
-            x = self.trainer.epoch + 1
-            n = self.trainer.num_val_batches / \
-                self.plot_valid_per_epoch
-        # Defer the device-to-host transfer to the board's drawing thread.
-        self.board.draw(x, lambda v=value: d2l.numpy(v), (
-            'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('loss', l, train=True)
-        return l
-
-    def _report_train(self, loss):
-        self.plot('loss', loss, train=True)
+        """The loss on one batch, or a dict of metrics with key 'loss'."""
+        return self.loss(self(*batch[:-1], training=True), batch[-1])
 
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('loss', l, train=False)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
+        """The loss on one batch, or a dict of batch-mean metrics."""
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
 
     def configure_optimizers(self):
         return tf.keras.optimizers.SGD(float(self.lr))
+
+def as_metrics(out):
+    """A step returns a loss or a dict of metrics; return a dict.
+
+    Defined in :numref:`sec_oo-design`"""
+    return out if isinstance(out, dict) else {'loss': out}
 
 class DataModule(d2l.HyperParameters):
     """The base class of data.
@@ -382,81 +226,81 @@ class DataModule(d2l.HyperParameters):
             buffer_size=shuffle_buffer).batch(self.batch_size)
 
 class Trainer(d2l.HyperParameters):
-    """The base class for training models with data.
+    """Fit a Module to a DataModule, keeping a per-epoch history.
 
     Defined in :numref:`sec_oo-design`"""
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
         self.val_dataloader = data.val_dataloader()
-        self.num_train_batches = len(self.train_dataloader)
-        self.num_val_batches = (len(self.val_dataloader)
-                                if self.val_dataloader is not None else 0)
 
-    def prepare_model(self, model):
-        model.trainer = self
-        model.board.xlim = [0, self.max_epochs]
-        self.model = model
+    def prepare_optimizer(self, model):
+        self.optim = model.configure_optimizers()
 
     def fit(self, model, data):
         self.prepare_data(data)
         self.prepare_model(model)
-        self.optim = model.configure_optimizers()
-        self.epoch = 0
-        self.train_batch_idx = 0
-        self.val_batch_idx = 0
-        self._compile_steps()
+        self.prepare_optimizer(model)
+        self.history = collections.defaultdict(list)
+        self.board.clear()
+        self.board.xlim = [0, self.max_epochs]
         for self.epoch in range(self.max_epochs):
-            self.fit_epoch()
-        self.model.board.flush()  # drain queued points; render the final figure
+            # The training mean averages over the epoch, so it sits mid-epoch
+            self.record('train', self.fit_epoch(), x=self.epoch + 0.5)
+            if self.val_dataloader is not None:
+                self.record('val', self.validate(), x=self.epoch + 1)
+            self.board.show(final=False)
+        self.board.show()
 
-    def _compile_steps(self):
-        model, optim = self.model, self.optim
-        grad_clip = self.gradient_clip_val
-        for batch in self.train_dataloader:
-            model(*self.prepare_batch(batch)[:-1], training=True)
-            break
+    def record(self, split, metrics, x):
+        for name, value in metrics.items():
+            self.history[f'{split}_{name}'].append(value)
+            self.board.draw(x, value, f'{split}_{name}')
 
-        def train_step(batch):
-            with tf.GradientTape() as tape:
-                loss = model.loss(model(*batch[:-1], training=True),
-                                  batch[-1])
-            params = model.trainable_variables
-            if not params:
-                params = list(tape.watched_variables())
-            grads = tape.gradient(loss, params)
-            if grad_clip > 0:
-                grads = self.clip_gradients(grad_clip, grads)
-            optim.apply_gradients(zip(grads, params))
-            return loss
+    def evaluate(self, model, data):
+        """Validation metrics of `model` on `data`, averaged over examples.
 
-        def val_step(batch):
-            return model(*batch[:-1], training=False)
+        Defined in :numref:`sec_oo-design`"""
+        self.prepare_data(data)
+        self.prepare_model(model)
+        return self.validate()
 
-        train_step = tf.function(train_step, reduce_retracing=True)
-        val_step = tf.function(val_step, reduce_retracing=True)
+    def prepare_model(self, model):
+        self.model = model
+        batch = self.prepare_batch(next(iter(self.train_dataloader)))
+        model(*batch[:-1], training=False)  # Keras creates the variables here
+        self._train_step = tf.function(self.train_step, reduce_retracing=True)
+        self._val_step = tf.function(self.val_step, reduce_retracing=True)
 
-        self._train_step = train_step
-        self._val_step = val_step
+    def train_step(self, batch):
+        with tf.GradientTape() as tape:
+            out = d2l.as_metrics(self.model.training_step(batch))
+        params = self.model.trainable_variables or tape.watched_variables()
+        grads = tape.gradient(out['loss'], params)
+        if self.gradient_clip_val > 0:
+            grads = self.clip_gradients(self.gradient_clip_val, grads)
+        self.optim.apply_gradients(zip(grads, params))
+        return out
+
+    def val_step(self, batch):
+        return d2l.as_metrics(self.model.validation_step(batch))
 
     def fit_epoch(self):
-        self.model.training = True
-        for batch in self.train_dataloader:
-            loss = self._train_step(self.prepare_batch(batch))
-            self.model._report_train(loss)
-            self.train_batch_idx += 1
-        if self.val_dataloader is None:
-            return
-        self.model.training = False
-        for batch in self.val_dataloader:
-            b = self.prepare_batch(batch)
-            y_hat = self._val_step(b)
-            self.model._report_val(y_hat, b)
-            self.val_batch_idx += 1
+        metrics = d2l.Averager()
+        for batch in map(self.prepare_batch, self.train_dataloader):
+            metrics.add(self._train_step(batch), len(batch[-1]))
+        return metrics.mean()
+
+    def validate(self):
+        metrics = d2l.Averager()
+        for batch in map(self.prepare_batch, self.val_dataloader):
+            metrics.add(self._val_step(batch), len(batch[-1]))
+        return metrics.mean()
 
     def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
         self.save_hyperparameters()
         self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+        self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
     def prepare_batch(self, batch):
         if self.gpus:
@@ -474,6 +318,71 @@ class Trainer(d2l.HyperParameters):
         norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)) for grad in new_grads))
         scale = tf.minimum(1.0, grad_clip_val / norm)
         return [grad * scale for grad in new_grads]
+
+class ProgressBoard(d2l.HyperParameters):
+    """Curves that grow during training; `show` redraws them.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, xlabel=None, ylabel=None, xlim=None, ylim=None,
+                 xscale='linear', yscale='linear', figsize=(3.5, 2.5),
+                 display=True):
+        self.save_hyperparameters()
+        self.clear()
+
+    def clear(self):
+        """Forget all curves; the next `show` starts a new figure."""
+        self.data, self.handle = {}, None
+
+    def draw(self, x, y, label):
+        """Append the point (x, y) to the curve called `label`."""
+        xs, ys = self.data.setdefault(label, ([], []))
+        xs.append(x)
+        ys.append(y)
+
+    def show(self, final=True):
+        """Redraw all curves; the book build renders only the final call.
+
+        Defined in :numref:`sec_utils`"""
+        if not self.display or (
+                not final and os.environ.get('D2L_NB_CAPTURE') == '1'):
+            return
+        d2l.use_svg_display()
+        fig = Figure(figsize=self.figsize)
+        self._plot(fig.add_subplot())
+        if self.handle is None:
+            self.handle = display.display(fig, display_id=True)
+        else:
+            self.handle.update(fig)
+
+    def _plot(self, ax):
+        """Losses on the left axis, accuracies on a right one.
+
+        Defined in :numref:`sec_utils`"""
+        acc_ax = None
+        for i, (label, (xs, ys)) in enumerate(self.data.items()):
+            target = ax
+            if label.endswith('acc'):
+                acc_ax = acc_ax or ax.twinx()
+                target = acc_ax
+            # Mark validation points, and any curve that has a single point
+            marked = label.startswith('val') or len(xs) == 1
+            target.plot(xs, ys, ('-', '--', '-.', ':')[i % 4], color=f'C{i % 10}',
+                        marker='o' if marked else None, markersize=3,
+                        clip_on=not marked, label=label)
+        ax.set_xlabel(self.xlabel), ax.set_ylabel(self.ylabel)
+        ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
+        if self.xlim: ax.set_xlim(self.xlim)
+        if self.ylim: ax.set_ylim(self.ylim)
+        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if acc_ax is not None: acc_ax.set_ylabel('accuracy')
+        lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
+        labels = [line.get_label() for line in lines]
+        if acc_ax is not None:  # Above the axes: no curve of either axis is hidden
+            ax.legend(lines, labels, loc='lower center', ncol=len(lines),
+                      bbox_to_anchor=(0.5, 1), frameon=False)
+        elif lines:
+            ax.legend(lines, labels)
+        ax.grid()
 
 class SyntheticRegressionData(d2l.DataModule):
     """Synthetic data for linear regression.
@@ -499,16 +408,16 @@ class LinearRegressionScratch(d2l.Module):
     def __init__(self, num_inputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        w = tf.random.normal((num_inputs, 1), mean=0, stddev=sigma)
-        b = tf.zeros(1)
-        self.w = tf.Variable(w, trainable=True)
-        self.b = tf.Variable(b, trainable=True)
+        normal = tf.keras.initializers.RandomNormal(mean=0, stddev=sigma)
+        self.w = self.add_weight(name='w', shape=(num_inputs, 1),
+                                 initializer=normal)
+        self.b = self.add_weight(name='b', shape=(1,), initializer='zeros')
 
     def forward(self, X):
         return d2l.matmul(X, self.w) + self.b
 
     def loss(self, y_hat, y):
-        l = (y_hat - y) ** 2 / 2
+        l = (y_hat - d2l.reshape(y, (-1, 1))) ** 2 / 2
         return d2l.reduce_mean(l)
 
     def configure_optimizers(self):
@@ -525,18 +434,31 @@ class SGD(d2l.HyperParameters):
         for grad, param in grads_and_vars:
             param.assign_sub(self.lr * grad)
 
+class Averager:
+    """Example-weighted means of batch metrics, summed on the device.
+
+    Defined in :numref:`sec_linear_scratch`"""
+    def __init__(self):
+        self.sums, self.n = {}, 0
+
+    def add(self, metrics, n):
+        for name, value in metrics.items():
+            self.sums[name] = self.sums.get(name, 0) + value * n
+        self.n += n
+
+    def mean(self):
+        """One host synchronization per metric."""
+        return {name: float(s) / self.n for name, s in self.sums.items()}
+
 class LinearRegression(d2l.Module):
-    """The linear regression model implemented with high-level APIs.
+    """Linear regression built from framework components.
 
     Defined in :numref:`sec_linear_concise`"""
     def __init__(self, lr):
         super().__init__()
         self.save_hyperparameters()
-        initializer = tf.initializers.RandomNormal(stddev=0.01)
-        self.net = tf.keras.layers.Dense(1, kernel_initializer=initializer)
-
-    def forward(self, X):
-        return self.net(X)
+        init = tf.initializers.RandomNormal(stddev=0.01)
+        self.net = tf.keras.layers.Dense(1, kernel_initializer=init)
 
     def loss(self, y_hat, y):
         fn = tf.keras.losses.MeanSquaredError()
@@ -546,7 +468,7 @@ class LinearRegression(d2l.Module):
         return tf.keras.optimizers.SGD(self.lr)
 
     def get_w_b(self):
-        return (self.get_weights()[0], self.get_weights()[1])
+        return self.net.kernel, self.net.bias
 
 class FashionMNIST(d2l.DataModule):
     """The Fashion-MNIST dataset.
@@ -590,13 +512,9 @@ class Classifier(d2l.Module):
 
     Defined in :numref:`sec_classification`"""
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(Y_hat, batch[-1]), train=False)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
+        Y_hat = self(*batch[:-1], training=False)
+        return {'loss': self.loss(Y_hat, batch[-1]),
+                'acc': self.accuracy(Y_hat, batch[-1])}
 
     def accuracy(self, Y_hat, Y, averaged=True):
         """Compute the fraction of correct predictions.
@@ -1066,11 +984,8 @@ class RNNLMScratch(d2l.Classifier):
             (self.rnn.num_hiddens, self.vocab_size)) * self.rnn.sigma)
         self.b_q = tf.Variable(d2l.zeros(self.vocab_size))
 
-    def _report_train(self, loss):
-        self.plot('ppl', d2l.exp(loss), train=True)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('ppl', d2l.exp(self.loss(y_hat, batch[-1])), train=False)
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
 
     def embedding(self, X):
         # Output shape: (num_steps, batch_size, num_inputs)
@@ -1287,9 +1202,11 @@ class EncoderDecoder(d2l.Classifier):
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self, enc_X, dec_X, *args, training=None):
-        enc_all_outputs = self.encoder(enc_X, *args, training=training)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
+    # Keras builds a layer by passing the arguments of `call` by name, which
+    # fails for `*args`, so we name the optional source length
+    def call(self, enc_X, dec_X, enc_valid_len=None, training=None):
+        enc_all_outputs = self.encoder(enc_X, enc_valid_len, training=training)
+        dec_state = self.decoder.init_state(enc_all_outputs, enc_valid_len)
         # Return decoder output only
         return self.decoder(dec_X, dec_state, training=training)[0]
 
@@ -1388,7 +1305,7 @@ class Seq2SeqEncoder(d2l.Encoder):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
 
-    def call(self, X, *args):
+    def call(self, X, valid_len=None):
         embs = self.embedding(d2l.transpose(X))
         outputs, state = self.rnn(embs)
         # outputs: (num_steps, batch_size, num_hiddens)
@@ -1404,8 +1321,7 @@ class Seq2Seq(d2l.EncoderDecoder):
         self.save_hyperparameters()
 
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
 
     def configure_optimizers(self):
         return tf.keras.optimizers.Adam(learning_rate=self.lr)
@@ -2728,14 +2644,7 @@ def rbfkernel(x1, x2, ls=4.):
 
 class HPOTrainer(d2l.Trainer):
     def validation_error(self):
-        accuracy = 0
-        val_batch_idx = 0
-        for batch in self.val_dataloader:
-            x, y = self.prepare_batch(batch)
-            y_hat = self.model(x, training=False)
-            accuracy += self.model.accuracy(y_hat, y)
-            val_batch_idx += 1
-        return 1 - accuracy / val_batch_idx
+        return 1 - self.validate()['acc']
 
 class HPOSearcher(d2l.HyperParameters):
     def sample_configuration(self) -> dict:
@@ -2884,7 +2793,19 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
-import io, os, queue, threading, time
+import os
+from matplotlib import ticker
+from matplotlib.figure import Figure
+
+def set_log_ticks(axis):
+    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
+
+    Defined in :numref:`sec_utils`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
+    axis.set_minor_formatter(ticker.NullFormatter())
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a TensorFlow data iterator.

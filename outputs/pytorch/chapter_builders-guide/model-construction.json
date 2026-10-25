@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:58db6b447915a8879186910b8d43482613f87ff4cefdee3241ba5647ba6e1781",
+    "d2l_lib_fingerprint": "sha256:231e043478b05f03b4c45b2bb503e722a99f322585c86a899374760edaa445dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -129,12 +129,12 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-3": {
-      "code_fingerprint": "sha256:de113617effb4cab6a77b93a740b5f20627cf87a72f41663f52621b715c4f0a5",
+      "code_fingerprint": "sha256:0f9f186b920024fd10514d0502c708f8f3b5438379842459665e00fcf6aa68d1",
       "kind": "text",
       "outputs": []
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:710be07d57cb20d748e06951336ea9b195c53c92f3c59c67998faa145177099b",
+      "code_fingerprint": "sha256:82ea2855955d15810daaa2b0893f6e4cbd9a6fc3e8dcbd1c0a3ca3bbf2f549f9",
       "kind": "text",
       "outputs": [
         {
@@ -144,12 +144,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:34c086efeedd4dc3f07d851db790c5c56fd30809c30add32f777fe475aeab9e2",
+      "code_fingerprint": "sha256:cd780fc868e167e69c61a65e49c5be2c58bea1bce2e0da1495a14fda89cf96bf",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:957fa05acc47c489e93ebbeee5b1264186dc6789839dfaf060191a9b88c8903a",
+      "code_fingerprint": "sha256:43208a5d458630dea2abc182e781187b4eee64e4be6a09c9a2c3ca8ba329f07b",
       "kind": "text",
       "outputs": [
         {
@@ -159,7 +159,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:b13cfa890abb6faedebb28cc261211cb7f72dd39c409c2ba41d5247cc30e63c3",
+      "code_fingerprint": "sha256:25529a8013d98b0c023b06243da4e57185719f6bb26383dd231c1d050a461096",
       "kind": "text",
       "outputs": [
         {
@@ -169,7 +169,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:2da58b70eece885774203305572faccd4707ab0e4665bc5a0955d9958e750fed",
+      "code_fingerprint": "sha256:975a3d1d5cacbc8f77e2b3f51e2a6662ac5b8032437d2fbbeb5018a8188875bb",
       "kind": "text",
       "outputs": [
         {

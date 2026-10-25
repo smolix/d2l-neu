@@ -99,8 +99,11 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
     if axes is None:
         axes = d2l.plt.gca()
     axes.cla()
+    # Extend the formats with new colors so that no curve is dropped
+    fmts = list(fmts) + [f'C{i % 10}' + ('-', '--', '-.', ':')[i % 4]
+                         for i in range(len(fmts), len(Y))]
     for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x,y,fmt) if len(x) else axes.plot(y,fmt)
+        axes.plot(x, y, fmt) if len(x) else axes.plot(y, fmt)
     set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
 
 def add_to_class(Class):
@@ -129,155 +132,10 @@ class HyperParameters:
         for k, v in self.hparams.items():
             setattr(self, k, v)
 
-class ProgressBoard(d2l.HyperParameters):
-    """The board that plots data points in animation.
-
-    Defined in :numref:`sec_oo-design`"""
-    def __init__(self, xlabel=None, ylabel=None, xlim=None,
-                 ylim=None, xscale='linear', yscale='linear',
-                 ls=['-', '--', '-.', ':'], colors=['C0', 'C1', 'C2', 'C3'],
-                 fig=None, axes=None, figsize=(3.5, 2.5), display=True):
-        self.save_hyperparameters()
-
-    def draw(self, x, y, label, every_n=1):
-        """Schedule the point (x, y) to be plotted under `label`.
-
-        This call is *asynchronous*: it appends the point to an internal queue
-        and returns immediately, so the (possibly compiled) training loop never
-        blocks on a device-to-host transfer or on matplotlib. `y` may be a number
-        or a zero-argument callable returning one; if it is a callable, the
-        conversion runs on the background drawing thread, not on the caller's.
-
-        Defined in :numref:`sec_utils`"""
-        self._start_drawer()
-        try:
-            self._queue.put_nowait((x, y, label, every_n))
-        except queue.Full:
-            pass  # drop the point rather than stall the training loop
-
-    def _start_drawer(self):
-        if getattr(self, '_drawer', None) is not None:
-            return
-        self._queue = queue.Queue(maxsize=1000)
-        self._lock = threading.Lock()
-        self._handle = None
-        self._last = 0.0
-        self._running = True
-        # Emit live frames only outside the headless book build, so an executed
-        # notebook records exactly one (final) figure in the committed store.
-        self._live = self.display and os.environ.get('D2L_NB_CAPTURE') != '1'
-        self._drawer = threading.Thread(target=self._drain, daemon=True)
-        self._drawer.start()
-
-    def _drain(self):
-        while self._running or not self._queue.empty():
-            try:
-                batch = [self._queue.get(timeout=0.1)]
-            except queue.Empty:
-                continue
-            while True:  # coalesce everything currently queued
-                try: batch.append(self._queue.get_nowait())
-                except queue.Empty: break
-            for x, y, label, every_n in batch:
-                self._accumulate(x, y() if callable(y) else y, label, every_n)
-            if self._live and time.time() - self._last > 0.1:
-                self._render(thread=True)
-                self._last = time.time()
-
-    def _accumulate(self, x, y, label, every_n):
-        Point = collections.namedtuple('Point', ['x', 'y'])
-        with self._lock:
-            if not hasattr(self, 'raw_points'):
-                self.raw_points = collections.OrderedDict()
-                self.data = collections.OrderedDict()
-            if label not in self.raw_points:
-                self.raw_points[label] = []
-                self.data[label] = []
-            points = self.raw_points[label]
-            points.append(Point(x, float(y)))
-            if len(points) != every_n:
-                return
-            mean = lambda v: sum(v) / len(v)
-            self.data[label].append(Point(mean([p.x for p in points]),
-                                          mean([p.y for p in points])))
-            points.clear()
-
-    def _plot_lines(self, axes):
-        with self._lock:
-            series = [(k, list(v)) for k, v in getattr(self, 'data', {}).items()]
-        for (k, v), ls, color in zip(series, self.ls, self.colors):
-            axes.plot([p.x for p in v], [p.y for p in v],
-                      linestyle=ls, color=color, label=k)
-        if self.xlim: axes.set_xlim(self.xlim)
-        if self.ylim: axes.set_ylim(self.ylim)
-        if not self.xlabel: self.xlabel = self.x
-        axes.set_xlabel(self.xlabel)
-        axes.set_ylabel(self.ylabel)
-        axes.set_xscale(self.xscale)
-        # A smoothed series exists before it necessarily contains its first point.
-        # Matplotlib rejects an empty/nonpositive log axis, so keep the temporary
-        # live frame linear and apply the requested log scale as soon as a positive
-        # value is available. The final training figure therefore still uses log.
-        has_positive_y = any(p.y > 0 for _, values in series for p in values)
-        if self.yscale != 'log' or has_positive_y:
-            axes.set_yscale(self.yscale)
-        if series: axes.legend()
-
-    def _render(self, thread=False):
-        if not self.display:
-            return
-        if thread:
-            # Off the main thread: matplotlib's global pyplot state is not
-            # thread-safe, so render into a private Agg figure and push a PNG.
-            from matplotlib.figure import Figure
-            from matplotlib.backends.backend_agg import FigureCanvasAgg
-            fig = Figure(figsize=self.figsize)
-            FigureCanvasAgg(fig)
-            self._plot_lines(fig.add_subplot(111))
-            buf = io.BytesIO()
-            fig.savefig(buf, format='png', bbox_inches='tight')
-            frame = display.Image(data=buf.getvalue())
-            if self._handle is None:
-                self._handle = display.display(frame, display_id=True)
-            else:
-                self._handle.update(frame)
-        else:
-            # Main thread (final frame): render through pyplot so the output is
-            # captured exactly like the rest of the book's inline figures.
-            d2l.use_svg_display()
-            if self.fig is None:
-                self.fig = d2l.plt.figure(figsize=self.figsize)
-            self.fig.clf()
-            self._plot_lines(self.fig.add_subplot(111))
-            if self._handle is not None:
-                self._handle.update(self.fig)         # interactive: reuse live slot
-            else:
-                # Display, then a trailing clear_output(wait=True): the inline
-                # backend's automatic end-of-cell render then *replaces* (rather
-                # than duplicates) this figure, so exactly one image is captured.
-                display.display(self.fig)
-                display.clear_output(wait=True)
-
-    def flush(self):
-        """Wait for every scheduled point to be drawn, then render the final
-        figure on the calling thread. `Trainer.fit` calls this for you; call it
-
-        Defined in :numref:`sec_utils`"""
-        if getattr(self, '_drawer', None) is not None:
-            self._running = False
-            self._drawer.join()
-            self._drawer = None
-        self._render(thread=False)
-
 class Module(d2l.nn_Module, d2l.HyperParameters):
     """The base class of models.
 
     Defined in :numref:`sec_oo-design`"""
-    def __init__(self, plot_train_per_epoch=2, plot_valid_per_epoch=1):
-        super().__init__()
-        self.save_hyperparameters()
-        self.board = ProgressBoard()
-
     def loss(self, y_hat, y):
         raise NotImplementedError
 
@@ -285,41 +143,31 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         assert hasattr(self, 'net'), 'Neural network is not defined'
         return self.net(X)
 
-    def plot(self, key, value, train):
-        """Plot a point in animation."""
-        assert hasattr(self, 'trainer'), 'Trainer is not inited'
-        self.board.xlabel = 'epoch'
-        if train:
-            x = self.trainer.train_batch_idx / \
-                self.trainer.num_train_batches
-            n = self.trainer.num_train_batches / \
-                self.plot_train_per_epoch
-        else:
-            x = self.trainer.epoch + 1
-            n = self.trainer.num_val_batches / \
-                self.plot_valid_per_epoch
-        # Pass a thunk, not the value: the device-to-host transfer is deferred
-        # to the board's drawing thread so this loop never blocks on it.
-        self.board.draw(x, lambda v=value: d2l.numpy(d2l.to(v, d2l.cpu())),
-                        ('train_' if train else 'val_') + key,
-                        every_n=int(n))
-
     def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('loss', l, train=True)
-        return l
+        """The loss on one batch, or a dict of metrics with key 'loss'."""
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('loss', l, train=False)
+        """The loss on one batch, or a dict of batch-mean metrics."""
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         return torch.optim.SGD(self.parameters(), lr=self.lr)
 
     def apply_init(self, inputs, init=None):
-        self.forward(*inputs)
+        """Run a dry pass to fix lazy shapes, then apply `init`.
+
+        Defined in :numref:`sec_lazy_init`"""
+        with torch.no_grad():
+            self(*inputs)
         if init is not None:
-            self.net.apply(init)
+            self.apply(init)
+
+def as_metrics(out):
+    """A step returns a loss or a dict of metrics; return a dict.
+
+    Defined in :numref:`sec_oo-design`"""
+    return out if isinstance(out, dict) else {'loss': out}
 
 class DataModule(d2l.HyperParameters):
     """The base class of data.
@@ -344,53 +192,79 @@ class DataModule(d2l.HyperParameters):
                                            shuffle=train)
 
 class Trainer(d2l.HyperParameters):
-    """The base class for training models with data.
+    """Fit a Module to a DataModule, keeping a per-epoch history.
 
     Defined in :numref:`sec_oo-design`"""
 
     def prepare_data(self, data):
         self.train_dataloader = data.train_dataloader()
         self.val_dataloader = data.val_dataloader()
-        self.num_train_batches = len(self.train_dataloader)
-        self.num_val_batches = (len(self.val_dataloader)
-                                if self.val_dataloader is not None else 0)
 
     def fit(self, model, data):
         self.prepare_data(data)
         self.prepare_model(model)
-        self.optim = model.configure_optimizers()
-        self.epoch = 0
-        self.train_batch_idx = 0
-        self.val_batch_idx = 0
+        self.prepare_optimizer(model)
+        self.history = collections.defaultdict(list)
+        self.board.clear()
+        self.board.xlim = [0, self.max_epochs]
         for self.epoch in range(self.max_epochs):
-            self.fit_epoch()
-        self.model.board.flush()  # drain queued points; render the final figure
+            # The training mean averages over the epoch, so it sits mid-epoch
+            self.record('train', self.fit_epoch(), x=self.epoch + 0.5)
+            if self.val_dataloader is not None:
+                self.record('val', self.validate(), x=self.epoch + 1)
+            self.board.show(final=False)
+        self.board.show()
+
+    def record(self, split, metrics, x):
+        for name, value in metrics.items():
+            self.history[f'{split}_{name}'].append(value)
+            self.board.draw(x, value, f'{split}_{name}')
+
+    def evaluate(self, model, data):
+        """Validation metrics of `model` on `data`, averaged over examples.
+
+        Defined in :numref:`sec_oo-design`"""
+        self.prepare_data(data)
+        self.prepare_model(model)
+        return self.validate()
+
+    def prepare_optimizer(self, model):
+        """`configure_optimizers` may also return a learning-rate scheduler.
+
+        Defined in :numref:`sec_oo-design`"""
+        optim = model.configure_optimizers()
+        self.optim, self.scheduler = (optim if isinstance(optim, tuple)
+                                      else (optim, None))
 
     def fit_epoch(self):
         self.model.train()
-        for batch in self.train_dataloader:
-            loss = self.model.training_step(self.prepare_batch(batch))
+        metrics = d2l.Averager()
+        for batch in map(self.prepare_batch, self.train_dataloader):
+            out = d2l.as_metrics(self.model.training_step(batch))
             self.optim.zero_grad()
-            loss.backward()
+            out['loss'].backward()
             if self.gradient_clip_val > 0:  # To be discussed later
                 self.clip_gradients(self.gradient_clip_val, self.model)
-            # The `no_grad` only needs to wrap the parameter update; the
-            # scratch `SGD.step` does an in-place `param -= lr * grad`,
-            # which would otherwise be flagged as a leaf-tensor mutation.
             with torch.no_grad():
                 self.optim.step()
-            self.train_batch_idx += 1
-        if self.val_dataloader is None:
-            return
+            if self.scheduler is not None:
+                self.scheduler.step()
+            metrics.add({k: v.detach() for k, v in out.items()}, len(batch[-1]))
+        return metrics.mean()
+
+    def validate(self):
         self.model.eval()
-        for batch in self.val_dataloader:
-            with torch.no_grad():
-                self.model.validation_step(self.prepare_batch(batch))
-            self.val_batch_idx += 1
+        metrics = d2l.Averager()
+        with torch.no_grad():
+            for batch in map(self.prepare_batch, self.val_dataloader):
+                metrics.add(d2l.as_metrics(self.model.validation_step(batch)),
+                            len(batch[-1]))
+        return metrics.mean()
 
     def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
         self.save_hyperparameters()
         self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+        self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
     def prepare_batch(self, batch):
         if self.gpus:
@@ -398,18 +272,85 @@ class Trainer(d2l.HyperParameters):
         return batch
 
     def prepare_model(self, model):
-        model.trainer = self
-        model.board.xlim = [0, self.max_epochs]
+        self.model = model
         if self.gpus:
             model.to(self.gpus[0])
-        self.model = model
+        if any(isinstance(p, nn.parameter.UninitializedParameter)
+               for p in model.parameters()):
+            batch = self.prepare_batch(next(iter(self.train_dataloader)))
+            model.apply_init(batch[:-1], getattr(model, 'weight_init', None))
 
     def clip_gradients(self, grad_clip_val, model):
         params = [p for p in model.parameters() if p.requires_grad]
-        norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
-        if norm > grad_clip_val:
-            for param in params:
-                param.grad[:] *= grad_clip_val / norm
+        norm = torch.sqrt(sum(torch.sum(p.grad ** 2) for p in params))
+        scale = torch.clamp(grad_clip_val / norm, max=1.0)  # no `if` on the host
+        for param in params:
+            param.grad.mul_(scale)
+
+class ProgressBoard(d2l.HyperParameters):
+    """Curves that grow during training; `show` redraws them.
+
+    Defined in :numref:`sec_oo-design`"""
+    def __init__(self, xlabel=None, ylabel=None, xlim=None, ylim=None,
+                 xscale='linear', yscale='linear', figsize=(3.5, 2.5),
+                 display=True):
+        self.save_hyperparameters()
+        self.clear()
+
+    def clear(self):
+        """Forget all curves; the next `show` starts a new figure."""
+        self.data, self.handle = {}, None
+
+    def draw(self, x, y, label):
+        """Append the point (x, y) to the curve called `label`."""
+        xs, ys = self.data.setdefault(label, ([], []))
+        xs.append(x)
+        ys.append(y)
+
+    def show(self, final=True):
+        """Redraw all curves; the book build renders only the final call.
+
+        Defined in :numref:`sec_utils`"""
+        if not self.display or (
+                not final and os.environ.get('D2L_NB_CAPTURE') == '1'):
+            return
+        d2l.use_svg_display()
+        fig = Figure(figsize=self.figsize)
+        self._plot(fig.add_subplot())
+        if self.handle is None:
+            self.handle = display.display(fig, display_id=True)
+        else:
+            self.handle.update(fig)
+
+    def _plot(self, ax):
+        """Losses on the left axis, accuracies on a right one.
+
+        Defined in :numref:`sec_utils`"""
+        acc_ax = None
+        for i, (label, (xs, ys)) in enumerate(self.data.items()):
+            target = ax
+            if label.endswith('acc'):
+                acc_ax = acc_ax or ax.twinx()
+                target = acc_ax
+            # Mark validation points, and any curve that has a single point
+            marked = label.startswith('val') or len(xs) == 1
+            target.plot(xs, ys, ('-', '--', '-.', ':')[i % 4], color=f'C{i % 10}',
+                        marker='o' if marked else None, markersize=3,
+                        clip_on=not marked, label=label)
+        ax.set_xlabel(self.xlabel), ax.set_ylabel(self.ylabel)
+        ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
+        if self.xlim: ax.set_xlim(self.xlim)
+        if self.ylim: ax.set_ylim(self.ylim)
+        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if acc_ax is not None: acc_ax.set_ylabel('accuracy')
+        lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
+        labels = [line.get_label() for line in lines]
+        if acc_ax is not None:  # Above the axes: no curve of either axis is hidden
+            ax.legend(lines, labels, loc='lower center', ncol=len(lines),
+                      bbox_to_anchor=(0.5, 1), frameon=False)
+        elif lines:
+            ax.legend(lines, labels)
+        ax.grid()
 
 class SyntheticRegressionData(d2l.DataModule):
     """Synthetic data for linear regression.
@@ -435,14 +376,14 @@ class LinearRegressionScratch(d2l.Module):
     def __init__(self, num_inputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.w = d2l.normal(0, sigma, (num_inputs, 1), requires_grad=True)
-        self.b = d2l.zeros(1, requires_grad=True)
+        self.w = nn.Parameter(d2l.normal(0, sigma, (num_inputs, 1)))
+        self.b = nn.Parameter(d2l.zeros(1))
 
     def forward(self, X):
         return d2l.matmul(X, self.w) + self.b
 
     def loss(self, y_hat, y):
-        l = (y_hat - y) ** 2 / 2
+        l = (y_hat - d2l.reshape(y, (-1, 1))) ** 2 / 2
         return d2l.reduce_mean(l)
 
     def configure_optimizers(self):
@@ -464,17 +405,30 @@ class SGD(d2l.HyperParameters):
             if param.grad is not None:
                 param.grad.zero_()
 
+class Averager:
+    """Example-weighted means of batch metrics, summed on the device.
+
+    Defined in :numref:`sec_linear_scratch`"""
+    def __init__(self):
+        self.sums, self.n = {}, 0
+
+    def add(self, metrics, n):
+        for name, value in metrics.items():
+            self.sums[name] = self.sums.get(name, 0) + value * n
+        self.n += n
+
+    def mean(self):
+        """One host synchronization per metric."""
+        return {name: float(s) / self.n for name, s in self.sums.items()}
+
 class LinearRegression(d2l.Module):
-    """The linear regression model implemented with high-level APIs.
+    """Linear regression built from framework components.
 
     Defined in :numref:`sec_linear_concise`"""
     def __init__(self, lr):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
-
-    def forward(self, X):
-        return self.net(X)
 
     def loss(self, y_hat, y):
         fn = nn.MSELoss()
@@ -484,7 +438,7 @@ class LinearRegression(d2l.Module):
         return torch.optim.SGD(self.parameters(), self.lr)
 
     def get_w_b(self):
-        return (self.net.weight.detach(), self.net.bias.detach())
+        return self.net.weight.detach(), self.net.bias.detach()
 
 class FashionMNIST(d2l.DataModule):
     """The Fashion-MNIST dataset.
@@ -525,12 +479,8 @@ class Classifier(d2l.Module):
     Defined in :numref:`sec_classification`"""
     def validation_step(self, batch):
         Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(Y_hat, batch[-1]), train=False)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
+        return {'loss': self.loss(Y_hat, batch[-1]),
+                'acc': self.accuracy(Y_hat, batch[-1])}
 
     def accuracy(self, Y_hat, Y, averaged=True):
         """Compute the fraction of correct predictions.
@@ -1031,14 +981,8 @@ class RNNLMScratch(d2l.Classifier):
                 self.rnn.num_hiddens, self.vocab_size) * self.rnn.sigma)
         self.b_q = nn.Parameter(d2l.zeros(self.vocab_size))
 
-    def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=True)
-        return l
-
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def embedding(self, X):
         # Output shape: (num_steps, batch_size, num_inputs)
@@ -2949,8 +2893,7 @@ class Seq2Seq(d2l.EncoderDecoder):
         self.save_hyperparameters()
 
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -4124,16 +4067,7 @@ def rbfkernel(x1, x2, ls=4.):
 
 class HPOTrainer(d2l.Trainer):
     def validation_error(self):
-        self.model.eval()
-        accuracy = 0
-        val_batch_idx = 0
-        for batch in self.val_dataloader:
-            with torch.no_grad():
-                x, y = self.prepare_batch(batch)
-                y_hat = self.model(x)
-                accuracy += self.model.accuracy(y_hat, y)
-            val_batch_idx += 1
-        return 1 - accuracy / val_batch_idx
+        return 1 - self.validate()['acc']
 
 class HPOSearcher(d2l.HyperParameters):
     def sample_configuration(self) -> dict:
@@ -4190,10 +4124,7 @@ class HPOTuner(d2l.HyperParameters):
             start_time = time.time()
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            if hasattr(error, 'cpu'):
-                error = error.cpu()
-            error = float(d2l.numpy(error))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
@@ -4527,7 +4458,19 @@ class CTRDataset(torch.utils.data.Dataset):
                              for i, v in enumerate(self.data[idx]['x'])])
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
 
-import io, os, queue, threading, time
+import os
+from matplotlib import ticker
+from matplotlib.figure import Figure
+
+def set_log_ticks(axis):
+    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
+
+    Defined in :numref:`sec_utils`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
+    axis.set_minor_formatter(ticker.NullFormatter())
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None):

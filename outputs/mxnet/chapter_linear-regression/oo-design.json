@@ -4,27 +4,27 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:26200b4d7766c5dfd2a21e620e690c67963b5cb75e0a7488a3ffb04fe023d7e2",
+    "d2l_lib_fingerprint": "sha256:aa4be36f3fa5c45450b5f55944c6dc85dc5b5e034760ae0213eb802259086d0b",
     "max_inline_bytes": 0
   },
   "cells": {
     "oo-design-object-oriented-design-for-implementation": {
-      "code_fingerprint": "sha256:15ee63f096c9fbf4554c7066ae7d4d7567d96c05a4639382fc805a5f6602717e",
+      "code_fingerprint": "sha256:e884e7cc58ccfa5a84892fd61676cf305ebaf0f6346d32028ba8f2477413ce0a",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-1": {
-      "code_fingerprint": "sha256:c069432adf71b1e436768e59a606e8d5cc7b4dea2293958e9970f68578864585",
+      "code_fingerprint": "sha256:dae2bda07cb26ab1547937042d08b26113633bbc0d48e65e4dd26f3f08b1f4a0",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-2": {
-      "code_fingerprint": "sha256:d871a9fa28db686cc4885e41a87cbde0ec1201aa8bb7f500ad28ca05ee8f5240",
+      "code_fingerprint": "sha256:8a93a9d7d84d91f92d8de4b56802a0323e35f9bcf69d012b176be6b73d8bd97a",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-3": {
-      "code_fingerprint": "sha256:a659abc2a421b1ccf2933c384e7af0802d77f74b7a7d2aac7f2c1568d0116168",
+      "code_fingerprint": "sha256:0f6d912406b363c5da057a8be488c3ebb9efc642981defded8f58241dc00beca",
       "kind": "text",
       "outputs": [
         {
@@ -35,51 +35,53 @@
       ]
     },
     "oo-design-utilities-4": {
-      "code_fingerprint": "sha256:434e2c1674bed2e5efa2c178a5dc1d425c403746182dcec9c083123e66fb6df1",
+      "code_fingerprint": "sha256:c0c37911f9313c33bdcec2ef32e23c32c314ae368a8d7b6634619994f10e9b64",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-5": {
-      "code_fingerprint": "sha256:291a48449432a975a8acb7d7235f6fc000e58caf20d5319b1aa8edc2f38e509b",
+      "code_fingerprint": "sha256:8559f19d4c2a6325f40a21cf475f41fd97cee6a57930f5fd61691915738b1f3d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "self.a = 1 self.b = 2\nThere is no self.c = True\n"
-        }
-      ]
-    },
-    "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:8b6d1c776bc38c6fe3b5f12cc58777e350e85d179f1d44be8a84d0cf2c4c4851",
-      "kind": "text",
-      "outputs": []
-    },
-    "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:595e7e245c871e3f8e2d26c561c60779b2668c25302e2ddf2f721ed4ffbb352d",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "oo-design/oo-design-utilities-7-1.svg",
-          "bytes": 17183,
-          "sha256": "sha256:362f5ad59536dea5e709628368c1291515256f1957155ad53741018141aa1f5f"
+          "text": "self.a = 1 self.b = 2\nself.c exists: False\n"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:704f7b2689f861ea2a40baff78576ab2eb6d8bbe34d28f9e26aa7661bb6f87c3",
+      "code_fingerprint": "sha256:5d7d785e0dfd447a072245c3b094ee2ad1e6d6a03d56b615ee3636735d59ffde",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-models-1": {
+      "code_fingerprint": "sha256:58deaf907ffb0dd9758cd701bf9f75b5dcad81a1b7f6c323dea99c3c8926df59",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:3897b4c09e999a157aeda8f2b86ad9c23f786ce22afb611ab67f5bb36e07b47d",
+      "code_fingerprint": "sha256:564156814ec4168b8c5fccbfef35ed887e6a487a66771780c64d2258556df095",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:8d40e9025c35aab436396452c14fa8034deac6599fbc397add59e8a467483d89",
+      "code_fingerprint": "sha256:69fe0322ff3ed226b1d148058da3a4fdd5819e2bcd3052cf807889c890cb9abc",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-training-1": {
+      "code_fingerprint": "sha256:f3d6e6d319bb26c02c79c4ffa23770c127a279b1331b2a172a34ec76d45eda6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-utilities-6": {
+      "code_fingerprint": "sha256:4a238f10ec01897fa12f2d535b313adf1e914f5c48e6668ae1f0ad6167617832",
+      "kind": "text",
+      "outputs": []
+    },
+    "oo-design-training-2": {
+      "code_fingerprint": "sha256:0a2aa56f49cb5a51fbd9d91ac06117e77e22d0667e317eea1db2e9084497c187",
       "kind": "text",
       "outputs": []
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ea3e3b353fd36280df5b65cd701817922f244c39ce79002caac7a32711b704b9",
+    "d2l_lib_fingerprint": "sha256:6ec90b7ce46c922f1fa1a3119493ede972da512db7176f72e6f00c00b872e81c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -174,7 +174,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   peak   1377 MiB, 0.04 sec\n"
+          "text": "checkpointing=True   peak   1377 MiB, 0.03 sec\n"
         },
         {
           "type": "stream",
@@ -190,25 +190,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0032 sec\ntime until they all finished:     0.0087 sec\n"
+          "text": "time to queue 32 matrix products: 0.0014 sec\ntime until they all finished:     0.0072 sec\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:03c701aefae378a916961a93d9554c2868e8d9cf6d1b77257924bc43a5337bf9",
+      "code_fingerprint": "sha256:b565ff751501632488ca5179399bb9fca671a31a01cccd4787b43bceb58d2c18",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:50e71899a74caa4068c0af8d93114cc4965a55a49c9f49f97be98afd344154b6",
+      "code_fingerprint": "sha256:20f2b09a03b83bb2c8bca14b93745b14ccb00e1b75fbe59711cb989c32cd2862",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 21157,
-          "sha256": "sha256:d54ead4d3525f4d65aaf4ec2ae8ce39aad74b1f694b0d83726b924232970eeab"
+          "bytes": 31123,
+          "sha256": "sha256:eceddcd8934938d626c5274828d5039b5de1f0504e6fc6d000d431a0f7874f0c"
         }
       ]
     }

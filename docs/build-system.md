@@ -323,11 +323,67 @@ listing the deferred notebooks and render from the store meanwhile.
 
 ### 3.4 The d2l `#@save` ripple, made precise
 
-CLAUDE.md currently says a library rebuild "can affect notebooks outside the
-edited file and outside the edited framework — rerun all plausibly affected
-notebooks; when unsure, rerun all frameworks." Under this model that guesswork
-disappears: the `d2l_lib_fingerprint` in each manifest covers exactly the symbols
-that notebook uses, so `audit_outputs.py` names the exact blast radius.
+CLAUDE.md says a library rebuild "can affect notebooks outside the edited file
+and outside the edited framework — rerun all plausibly affected notebooks; when
+unsure, rerun all frameworks." The `d2l_lib_fingerprint` in each manifest
+narrows that guesswork to the symbols a notebook references, and
+`audit_outputs.py --stale` names that set. It is not the exact blast radius:
+two gaps (verified against the code, 2026-10-24) mean some library edits
+change a notebook's outputs without flagging it.
+
+**How the fingerprint is computed.** `tools/scan_d2l_usage.py` collects the
+textual `d2l.<name>` references in a notebook's code cells and keeps those
+that match a shard file `d2l/_blocks/<fw>/<name>.py`; it writes them to the
+notebook's `.d` file. `capture_outputs.d2l_lib_fingerprint` hashes exactly
+those shards (path and bytes). `build_lib.py` merges `@d2l.add_to_class`
+methods into their class's shard, so `Trainer.py` holds `fit_epoch`,
+`prepare_batch`, `clip_gradients` and the ch. 5 device overrides.
+
+**Gap 1: the fingerprint is not transitive.** Library-internal references
+are not followed. A notebook that calls `d2l.Trainer` depends on
+`Trainer.py`, but not on `ProgressBoard.py`, `Module.py`, `Averager.py`,
+`as_metrics.py`, or the JAX `_trainer_train_step.py` /
+`_trainer_validation_step.py` that the trainer calls; a notebook that calls
+`d2l.hpo_objective_lenet` does not depend on `HPOTrainer.py` or `Trainer.py`.
+An edit to such an inner symbol alone (for example to `ProgressBoard`, which
+draws every training figure) changes the outputs of all its indirect users
+and flags none of them. Until the scanner follows references inside shards,
+force those re-runs by hand: delete the users' `.executed` stamps (find them
+with `grep -l` over `_notebooks/<fw>/**/*.d` for the outer symbol) before
+`make refresh-stale`. Example from the 2026-10 trainer redesign: the TF
+`sh-intro` notebook calls only `d2l.hpo_objective_lenet`, whose shard did not
+change, yet every training run inside it did.
+
+**Gap 2: shard naming bug (`tools/build_lib.py`).** A shard is named after
+`sorted(_block_defined_names(code))[0]`, and `_block_defined_names` also
+collects *indented* (nested) `def`s. A block whose alphabetically first name
+is a nested helper gets that helper's name: the `plot` block (ch. 1
+`calculus.md`) contains the nested `has_one_axis`, so its shard is
+`has_one_axis.py`; no notebook references `d2l.has_one_axis`, so **no
+notebook depends on `d2l.plot`**, and an edit to `plot` flags nothing. As of
+2026-10-24 the bug hides 8 PyTorch symbols (`plot`, `GPT`, `train_ch6`,
+`train_concise_ch11`, `subsample`, `show_bboxes`, `preprocess_nmt`,
+`read_snli`), 7 TensorFlow, 6 MXNet and 18 JAX symbols (including
+`linear_scan`, `train_ch11`, `update_D`, `update_G`). Two blocks can also
+collide on one shard name: PyTorch `train_ch6` and `train_concise_ch11` both
+become `init_weights.py`, JAX `train_lm` and `recall_step` both become
+`loss_fn.py`. The last writer wins, so `make lib` rewrites those shards on
+every run and the other block's users are fingerprinted against the wrong
+code. Consequences for authors until the fix lands:
+
+- Put exactly one top-level symbol in each `#@save` block. Two top-level
+  `class`/`def`s in one block name the shard after the alphabetically first
+  one and drop every user of the other from the gate.
+- After editing `plot` or another hidden symbol, force its users' re-runs by
+  hand (as for Gap 1).
+
+Planned fix (batch 2 of the trainer redesign, together with the log-axis
+changes to `d2l.plot`, not before): take a shard's name from the first
+*unindented* `class`/`def` of the block. Fixing the naming changes shard
+paths and therefore flags every user of a renamed shard (about 218 notebooks),
+which is why it waits for a re-run that changes those figures anyway. Making
+the scanner follow references inside shards (Gap 1) is a separate decision,
+since it widens the radius of every `Module` edit.
 
 ### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
 
@@ -1119,17 +1175,18 @@ notebook is a *separate* make process:
 Net effect: a full `make clean` + re-execute of all 524 notebooks runs in
 ~100 min (`run-all-notebooks`), 524/524 with 0 failures.
 
-**Gotcha — async ProgressBoard + MXNet (cross-thread CUDA).** The async board's
-drawing thread must **not** issue framework GPU ops. MXNet's engine + the custom
-CUDA-13 wheel corrupts the CUDA context when `NDArray.asnumpy()` is called from a
-foreign thread (manifests as `Xid 154` / `uvm global fatal error` → `CUDA error
-999`, **node-reboot required**, and the engine also stops reclaiming memory so a
-notebook balloons to fill the card). The MXNet tab of `Module.plot`
-(`oo-design.md`) therefore resolves the device→host metric transfer on the
-**main** thread and enqueues a host scalar; the board thread does only
-matplotlib. PyTorch/JAX/TF keep the deferred thunk (they tolerate cross-thread
-host transfers). If you add a framework whose plotting path moves a GPU read off
-the main thread, check it survives a long multi-notebook GPU run.
+**Gotcha — no framework GPU ops off the main thread (MXNet).** MXNet's engine +
+the custom CUDA-13 wheel corrupts the CUDA context when `NDArray.asnumpy()` is
+called from a foreign thread (manifests as `Xid 154` / `uvm global fatal error`
+→ `CUDA error 999`, **node-reboot required**, and the engine also stops
+reclaiming memory so a notebook balloons to fill the card). This hit the old
+asynchronous `ProgressBoard`, whose drawing thread converted metrics. Since the
+2026-10 trainer redesign the board has no thread: training and validation
+steps return device values, `Averager` sums them on the device, and the
+`Trainer` converts the sums with `float()` once per epoch on the calling
+(main) thread before drawing. Keep it that way: if a helper ever moves a GPU
+read or a plot off the main thread again, check that it survives a long
+multi-notebook MXNet GPU run.
 
 ### 6.8 HTML render — why it's a single `quarto render` (not parallel)
 

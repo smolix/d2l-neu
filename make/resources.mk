@@ -14,8 +14,8 @@
 #   make GPU_MIB_PER_jax=14000 run-all-notebooks
 # PyTorch / TensorFlow / MXNet share the lighter 7.5 GiB / 8-core budget (their
 # EXTRA_ENV_* tuning caps resident VRAM and threads). JAX is heavier (~11.5 GiB)
-# because every JAX process keeps the CPU backend + XLA pools alive
-# (d2l.Module.plot host-transfers metrics via d2l.cpu()).
+# because every JAX process keeps the CPU backend + XLA pools alive (see the
+# JAX_PLATFORMS note in make/notebooks.mk).
 GPU_MIB_PER_LIGHT ?= 7680
 GPU_MIB_PER_jax   ?= 11776
 CPU_PER_LIGHT     ?= 8

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a8a9c347083a88cdf881ccb9870ff509a5b8c027e5b67d0b5e5e784c55c0eb5d",
+    "d2l_lib_fingerprint": "sha256:103dd0b3ac830ea83852a6a2d46e33dc5d692d67c0761efcb3c3f7986e377a03",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.2502027 , 0.76355875, 0.24481392],\n       [0.28291333, 0.9236167 , 0.9350778 ]], device=gpu(1))"
+          "text": "array([[0.22466363, 0.8563807 , 0.24069457],\n       [0.68484324, 0.7554503 , 0.05396999]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.2502027, 1.7635587, 1.2448139],\n       [1.2829133, 1.9236166, 1.9350778]], device=gpu(1))"
+          "text": "array([[1.2246636, 1.8563807, 1.2406945],\n       [1.6848433, 1.7554502, 1.05397  ]], device=gpu(1))"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.14894441],\n       [0.14894441]], device=gpu(0))"
+          "text": "array([[0.0105672],\n       [0.0105672]], device=gpu(0))"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline          :  3951.8 MiB used on device 0\nafter creating big:  4895.8 MiB used on device 0\nafter deleting it :  4895.8 MiB used on device 0\nafter empty_cache :  3851.8 MiB used on device 0\n"
+          "text": "baseline          :   443.1 MiB used on device 0\nafter creating big:  1467.1 MiB used on device 0\nafter deleting it :  1467.1 MiB used on device 0\nafter empty_cache :   443.1 MiB used on device 0\n"
         }
       ]
     },
@@ -147,30 +147,30 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.1678 sec\n"
+          "text": "time until they all finished:     0.2133 sec\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:e19bb6c1af8c6722dea7be7cae43d691a159f6fad10eb7e70c207a98cc44fc4b",
+      "code_fingerprint": "sha256:8a5006237eaae161dbd24666f18f44ea3a6f7c2db2aeddb0be5b93d4e0e6e0c6",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:5c8c80949ba992f04eacb54c34645aa4284006472e992e23d918e99d753d3328",
+      "code_fingerprint": "sha256:29c47a51b9037e8c9d4146b3fec17fef2806b00efa3f1bcbe9cf553f6580bb81",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-3": {
-      "code_fingerprint": "sha256:4c6a82f76fb9dc9653d8a5152577c114f3990d4179be0c86322041b2c17d3855",
+      "code_fingerprint": "sha256:c9afa1cc6e2a142a4e41cedff7612a2356b0cb875d57d3166b2ec0cb4a87245b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 21289,
-          "sha256": "sha256:46949e63e71511df8baddec361bcb44fa40717918224ad05d9c29801c90b18b7"
+          "bytes": 31121,
+          "sha256": "sha256:00e13c7d0b46873df54462f1972e06e21d1ed7a7ba1e6947d8dee9ac5d748965"
         }
       ]
     }

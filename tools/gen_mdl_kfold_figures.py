@@ -56,7 +56,7 @@ def fig_kfold():
                                     alpha=0.85 if is_val else 0.22,
                                     edgecolor="white", lw=1.6, zorder=2))
         # round label to the left of each strip
-        ax.text(x0 - 0.28, y + cell_h / 2, rf"round ${i+1}$", ha="right",
+        ax.text(x0 - 0.28, y + cell_h / 2, f"round {i+1}", ha="right",
                 va="center", fontsize=11, color="black")
 
     strip_w = K * cell_w
@@ -65,7 +65,7 @@ def fig_kfold():
 
     # fold indices along the bottom
     for j in range(K):
-        ax.text(x0 + (j + 0.5) * cell_w, y_bot - 0.30, rf"${j+1}$",
+        ax.text(x0 + (j + 0.5) * cell_w, y_bot - 0.30, f"{j+1}",
                 ha="center", va="top", fontsize=11, color="black")
     ax.text(x0 + strip_w / 2, y_bot - 0.74, r"data split into $K=5$ folds",
             ha="center", va="top", fontsize=11, color="black")

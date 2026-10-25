@@ -9,12 +9,12 @@
   },
   "cells": {
     "linear-regression": {
-      "code_fingerprint": "sha256:644b49d8bd10ecda7f4e779078e8f114fc1c76f8299d932456e28a777da12ba6",
+      "code_fingerprint": "sha256:de434748cbd382c87653557bc9e5b323f4c6221627b3f7713327c1882ce65273",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-loss-function": {
-      "code_fingerprint": "sha256:446e31ca9da03c8831c9b077c6090a27bbfca7ca44e983b285c30318f27944a7",
+      "code_fingerprint": "sha256:27624c69e791fea8d26891684b831f900579876fab7152275f742ab0b8457ba0",
       "kind": "text",
       "outputs": [
         {
@@ -24,48 +24,35 @@
         }
       ]
     },
+    "linear-regression-the-normal-equations": {
+      "code_fingerprint": "sha256:93925d5e163e1cfcd094cd2cc40379554a06d61e43669c0cb5867d929c9c9ad7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "w_hat: (1.1667, -0.5)\nr: (0.1667, -0.3333, 0.1667)\nmax |X^T r|: 4e-07\n"
+        }
+      ]
+    },
     "linear-regression-vectorization-for-speed-1": {
-      "code_fingerprint": "sha256:de1e678bc2ba53f410094dfc32f0a60aa80cdb88c081bc6af73d3647787ed46f",
+      "code_fingerprint": "sha256:6679243442307bbf74e488ddff712944cea0db39decf3e905069cba3d21e34cf",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-vectorization-for-speed-2": {
-      "code_fingerprint": "sha256:66422a2548bbf9aab4b26782391bd4594ad940d9d778e7a8ea84b339d072e60a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "0.67895 sec\n"
-        }
-      ]
-    },
-    "linear-regression-vectorization-for-speed-3": {
-      "code_fingerprint": "sha256:0951e2936625ba6f1b3cde58f29bf4d874726b03508892261c275fe46ef723a3",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "0.00044 sec\n"
-        }
-      ]
-    },
-    "linear-regression-the-normal-distribution-and-squared-loss-1": {
-      "code_fingerprint": "sha256:eed8d5962d6ed66f8a41b5ff7324c522bb609cfdd0786b6c22174b784c31db71",
+      "code_fingerprint": "sha256:e035abaabbafd6b4d79e4976bba629a6a13f43451584e072e08189dc73a9df21",
       "kind": "text",
       "outputs": []
     },
-    "linear-regression-the-normal-distribution-and-squared-loss-2": {
-      "code_fingerprint": "sha256:07af4490b4b7b5588fad91a3f2363d370e3eb8587aa98b54feedb3cae6da17fc",
-      "kind": "asset",
+    "linear-regression-vectorization-for-speed-3": {
+      "code_fingerprint": "sha256:9c3af37c32bf504416ccb336e06516d168b5ddbdfdf7843e8034bdec064ac5d1",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
-          "bytes": 28703,
-          "sha256": "sha256:18a1d952aec4624907fc915c19a0a54c899a8543c156b0e5224f346702941fef"
+          "type": "stream",
+          "name": "stdout",
+          "text": "one example at a time:  378.983 ms\nall examples at once:     0.237 ms\nspeedup: 1599x\n"
         }
       ]
     }

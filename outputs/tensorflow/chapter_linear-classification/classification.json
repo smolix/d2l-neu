@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:00531e5db0d221aac53206e4bc8552fd2c595be958808b8bcd77985fefb1cc41",
+    "d2l_lib_fingerprint": "sha256:c17704dbf7edfee9605014c9267cf2445addb64c6fe59a93ccfd1c8b5a809436",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,22 +14,22 @@
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:c3c54b70166ebe8b64c796dd9115cdf934762952d90cefad901d8f4f59cdd208",
+      "code_fingerprint": "sha256:a2bf9afc1230280189b4907abcf62645794afdd00b2dc400ece177296c8deff8",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:f7ca4d36f3b8de28cf5a86a66a9ed83fba7191f87daa6cfea0acb7dbccae5c81",
+      "code_fingerprint": "sha256:17433fd0cf99da83b1a0a0a17559ddb1e032040ba905c04526d8ce1d083518b6",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:7e317ef9327921b2c38c9719fde23a9436da9e241c85a2006fde8523fdeac5d5",
+      "code_fingerprint": "sha256:f493746c304a93f0ae4981bef323534617aabfb036493112428766040f57e22a",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:73132d62e080af8e8826f67451cfa3a43007771b4be28ab3a4ccc9a99473e6d8",
+      "code_fingerprint": "sha256:df00f85b1aabfabf93b326f9ad0b28515ed166415c2be8e3c337c7910c76eb06",
       "kind": "text",
       "outputs": [
         {

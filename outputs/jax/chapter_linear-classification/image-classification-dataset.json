@@ -9,17 +9,17 @@
   },
   "cells": {
     "image-classification-dataset-the-image-classification-dataset": {
-      "code_fingerprint": "sha256:0c3dbea1ea979bf46817ca99344757400df0af05e4dc44353f1b5ad4da472ee3",
+      "code_fingerprint": "sha256:f71412d2006d3d11d22a14b0ed1116ba09de0fb37b04068ecdfd0ee448c423a7",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-1": {
-      "code_fingerprint": "sha256:21945e2b668b765444248d95b91cade0c5a7eb8563874c93abfba5e3fd6607ed",
+      "code_fingerprint": "sha256:524be3266b0e6ef8d4e12ea3eaa4069f73823737ddefd4afe01937bf8cd3448a",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-2": {
-      "code_fingerprint": "sha256:dfbd8ea9272d61c750340d46991c11e03942e71799ba6975099debdcf0880e24",
+      "code_fingerprint": "sha256:866cf3ab8062599b4eb2a8794e6dcad4cbca582992b186694f31e4ffb1556df1",
       "kind": "text",
       "outputs": [
         {
@@ -29,56 +29,61 @@
       ]
     },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:4e7929b5f5c93738ae09ef6abdbf424b58dda4fa7e849afe5cb49de237b1bf29",
+      "code_fingerprint": "sha256:ac21f40e1302a708742a7fd95482396057f51b0a65c5bf8520cfd90a25d232aa",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:a7c924d5c70c378e6c8ac6b2470eb700a63e6e55a1c61a01828e8808c40244e4",
+      "code_fingerprint": "sha256:248cdf0a88810d6c05bf96162d6f4534e6e7fb1fe4604e00e6f8cb2bbbe24a4b",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:7340b5d00bff15b3dc1335bdb91aa0f9d5423e80137ff921ba048a1b093b93b9",
+      "code_fingerprint": "sha256:4b135ffad39ae4b5daf5a3924ed4c215a554dc3c1db9ff6515441d3949aa3809",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(32, 32, 1)"
+          "text": "(28, 28, 1)"
         }
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:ca3fdc50008cdb643552158b09e9c560254752140b15a6bd0461136f7aa9ca40",
+      "code_fingerprint": "sha256:e465ba1b2561fd45e73f77dd1d44eb58b4bd288ad0d8d30920b9a2149ab390c4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "(64, 32, 32, 1) float32 (64,) int32\n"
+          "text": "(64, 28, 28, 1) float32 (64,) int32\n"
         }
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:485a75ba181c4a1b7c49912501e898f02d0ac75087fcf3c9671caafe917b5256",
+      "code_fingerprint": "sha256:bc517e97ef45a1831e06723d43301f9f234000d287be8eb205a4c5bd73af78e8",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.59 sec'"
+          "text": "'0.57 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:7519d5dbc5bb077a9cff47be175406d8a20688c462409d927bdb9e99a87627c0",
+      "code_fingerprint": "sha256:efe9c77a35fa1eb9ded808b353e3ca6d4e761d0b6d45e46964cba9c161e8afa5",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-inspecting-the-images-1": {
+      "code_fingerprint": "sha256:09554c015fd1422c02699ee12ebbfc0db348013a102a3211bcdc64c87b984446",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
-          "bytes": 49046,
-          "sha256": "sha256:72b1901d740d7f65e548026e02ea2a757f65dffe05b2dbc7f7cfde7d39596d0d"
+          "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
+          "bytes": 70527,
+          "sha256": "sha256:0713e3b4b350635bda3d76b6afff7d7b0050040f499e032bfd8bd0e74501c22d"
         }
       ]
     }

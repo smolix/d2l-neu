@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:277f65276eb46fdbfd1f1ed0dca139daf36e28ea81fe18c206cba0f0e4cbf462",
+    "d2l_lib_fingerprint": "sha256:16fb00375f3dcb21166dd6ca8a74796218ea3c61ad62b43ee2a8a8091804243f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -63,12 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention mass at offset 31: 0.96\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "attention mass at offset 23: 0.00\n"
+          "text": "attention mass at offset 31: 0.96\nattention mass at offset 23: 0.00\n"
         }
       ]
     },
@@ -91,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 35021,
-          "sha256": "sha256:f982df7fb14e784e6b0a7458e3ad79469899f046c68bc8da33fea06d01c97373"
+          "bytes": 35025,
+          "sha256": "sha256:4cd2059ff765aeebec692a6f2f37dcb81ee9a065d9b9f32c7e8e3f0f625d96bb"
         }
       ]
     },
@@ -104,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 176469,
-          "sha256": "sha256:742f04f6909e398dc0f91d5e8cde8f3adb6d58b24da8b359f6eb193eb6cb2d59"
+          "bytes": 176353,
+          "sha256": "sha256:aa34fbe818e19792c1c5f87cfb932e22f0b5c04040bd86bf9d65600a179b8735"
         }
       ]
     },
@@ -129,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
           "bytes": 21056,
-          "sha256": "sha256:06c1851ef3ec888ce5ae65ee7796db0d1d6aea3d427e2af669016c7d47a7a9cb"
+          "sha256": "sha256:2018073e0397253e82dbea8d578e37eb32e36eafde918cdef07e7ab3a060ca27"
         }
       ]
     },
@@ -146,8 +141,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 42324,
-          "sha256": "sha256:1fcbbdc88b02a25df243d0c24f19b0ddc4461a1b1cf1a4e9db8ec14ca24a82bc"
+          "bytes": 42260,
+          "sha256": "sha256:ef53d004ae30c487275b231b3176746ab5c2623cdb4996218ce181266cd2968f"
         }
       ]
     }

@@ -9,32 +9,33 @@
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:1146153739b2577f60bb843b22617f2c3bd021a64c1f3bf33dd8c347464f8e7e",
+      "code_fingerprint": "sha256:c83e515bf832c87f2a7bd467ec6bb6cbee9e9dcd09c3faf05738fab30de028a8",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:c0cc219ecff1c891093bb16c8ab3d5950231311ad3fe302ba4d35a5f3a5db64f",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:9ec794f12b857d12d3d7c16ac0daf896c8b743ba7cfb66f83323131c18b31e11",
+      "code_fingerprint": "sha256:6a2429e380d0ede51c97e5e3722de06c669ec79835db87b781b39974ffd7fb99",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:c3c1873ee8b4c2c89c588de4b0d077a8d694ece284c19073bf0dbd917c4a523f",
+      "code_fingerprint": "sha256:0126994a6a260623853e0c8928a098f0128626ce1e8284cec83da196512a795a",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:5fa3b3f1ea7cfbef4114bd1d3393966093206ff34607716d580d20fd355a0d77",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:e0cb5eefed11a469ae690e52068b3b48fe2cfc3eeaf0b83a20119a4bec21d331",
+      "code_fingerprint": "sha256:c043f176c5707c9d7e45f16925b01353cf17b80825626190d8e9945b78ea864b",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(0.99, 0.0)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "always healthy: accuracy 0.990, recall 0.000, precision nan\nscreening test: accuracy 0.950, recall 0.900, precision 0.154\n"
         }
       ]
     }

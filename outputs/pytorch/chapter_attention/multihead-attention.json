@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0992ee93a93129a2484219e25e3c290fb1b954790ab5bb953470ca1e5ffec265",
+    "d2l_lib_fingerprint": "sha256:f0910c3191b4318135cbbd15ccf28bb3c0b49473fcdfc1b3fdae86fe35fa84f7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 2.4e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.1e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
           "bytes": 27075,
-          "sha256": "sha256:b3e0086bf92b0c2c58d8160d13601fda2193c2ec222b62cd94eb2ad6e2055844"
+          "sha256": "sha256:b16b9d3b416909e31c403b19e3a5e15d134f7627344e6fd89a4f461bc783a2c4"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6562016dc4169c791ac539a92cad7c29692101707a6bf2cb59ecc46a5f14c7ff",
+    "d2l_lib_fingerprint": "sha256:6202b1c79fdc356124abd9876c642f6ac0ef65178db8f0ba5602c8707a51926f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32017,
-          "sha256": "sha256:686c8de4d936c8be5facd6e23058e0efeb09f32ff17027cd7c9986a881fa6de1"
+          "bytes": 34297,
+          "sha256": "sha256:75635a62bab477c88b4510bfe8cedab5a6d73fe23656014dc7ec994d8df89766"
         }
       ]
     }

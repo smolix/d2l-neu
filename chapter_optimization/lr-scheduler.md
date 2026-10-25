@@ -348,9 +348,9 @@ train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
 The loss curve is smoother and the late-epoch noise reduced, the noise
-floor shrinking as $\eta_t$ falls. But the final test accuracy gains less
-than a point over the constant baseline's, in either framework, the
-smallest gain of any decay in this section. The diagnosis is the
+floor shrinking as $\eta_t$ falls. But the final test accuracy gains at most
+about two points over the constant baseline's, in either framework, and no
+more than any other decay in this section. The diagnosis is the
 *shape*: square-root decay manages to be
 timid at both ends. It halves the rate within the first three epochs,
 giving up the large early steps that do the exploring, yet it ends the run
@@ -402,8 +402,8 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
-Both measured symptoms improve: the final loss fluctuates less, the test accuracy sits
-visibly above the constant baseline's, and the train–test gap narrows. The
+Both measured symptoms improve: the final loss fluctuates less, the test accuracy ends
+at or above the constant baseline's, and the train–test gap narrows. The
 remaining shapes repeat this pattern; what varies is how the high-rate
 budget is spent and how the descent is timed.
 
@@ -1022,8 +1022,8 @@ $\eta_t = \eta_0 (t+1)^{-1/2}$ — the convex-optimal rate from 9.3. A scheduler
 @!lr-scheduler-square-root-decay-2
 
 
-The loss is smoother, but test accuracy remains below the constant
-baseline. The rate is too small at both ends: gives up the high early rate within ~3
+The loss is smoother, but test accuracy gains at most about two points over
+the constant baseline. The rate is too small at both ends: gives up the high early rate within ~3
 epochs, yet ends with the largest tail $\eta$ of any decay here.
 **Shape matters.**
 :::

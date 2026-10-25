@@ -694,6 +694,32 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
     return axes
 ```
 
+`show_heatmaps` draws matrices as grids of colored cells, one panel per
+matrix, with a shared color bar. Its argument has the shape (rows of panels,
+columns of panels, height, width). It displays the confusion matrix of
+:numref:`sec_softmax_scratch` and the attention weights of
+:numref:`chap_attention`.
+
+```{.python .input #utils-training-utilities-1}
+def show_heatmaps(matrices, xlabel, ylabel, titles=None,  #@save
+                  figsize=(2.5, 2.5), cmap='Reds'):
+    """Show heatmaps of matrices."""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+```
+
 ```{.python .input #utils-utility-functions-and-classes-11}
 %%tab pytorch, mxnet, tensorflow
 

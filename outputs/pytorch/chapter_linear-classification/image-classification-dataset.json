@@ -19,7 +19,7 @@
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-2": {
-      "code_fingerprint": "sha256:6aa850b03da46435cbd4994ab682cb06cca9e0a8571c4e924228d9d98e2f2b17",
+      "code_fingerprint": "sha256:6bf2da1febacfcc40590acde8467c86cbd7643a46f62d719a1c14b422fe9c144",
       "kind": "text",
       "outputs": [
         {
@@ -29,56 +29,61 @@
       ]
     },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:c167907d86e07f585cd665697416ea04f23e99eaa43848da0e893621f629f250",
+      "code_fingerprint": "sha256:566acdd9ea00dd24ef3c2d9eb92c63a878b076838c1b66ccb0ef5db09a6b31f5",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:e445026e6cef1c059b63e9e149d993e5cbddf0a2c5bff0a9e765d96158197357",
+      "code_fingerprint": "sha256:969653ab97c416cf8c369b44e4d8ebffae12d8c2990e968a011edc0b861ada2f",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:9842acd5bed617d1df331bec8eabef8afc3d9a9db263c143b1b80a419f0b86b2",
+      "code_fingerprint": "sha256:a9cf1aeab8a5f88bf214962423db56a8285c43847fd344edaae6501073d3a162",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "torch.Size([1, 32, 32])"
+          "text": "torch.Size([1, 28, 28])"
         }
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:cf8488d82cc3ad8865897a7180f5b66532841f4477247c4e355cb79234ab9632",
+      "code_fingerprint": "sha256:fd1b82250923894ed00aed3b178c2c90e3455aaa1a13bd097f7e2747a78a0406",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "torch.Size([64, 1, 32, 32]) torch.float32 torch.Size([64]) torch.int64\n"
+          "text": "torch.Size([64, 1, 28, 28]) torch.float32 torch.Size([64]) torch.int64\n"
         }
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:db903fc838973f99fa5bcff0e772530323b4ef5ec318231d594989c9ceae265d",
+      "code_fingerprint": "sha256:29c756bb78ef022ef216a430606f0ef3b252d2c8f3a452e676311649671c3de0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'2.29 sec'"
+          "text": "'3.00 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:ba0c8f86a239ceb1c74d577c457329b4610f4dc30d582a9d5c2af089570c6418",
+      "code_fingerprint": "sha256:734f1f186907960c86250f38044a2d32c1dc2adffd4e1e42d31c5417f6597afa",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-classification-dataset-inspecting-the-images-1": {
+      "code_fingerprint": "sha256:e6e13dcbff421a845567be67ad7b96cd23fe12dda22fbda86c8166f46a590917",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
-          "bytes": 49234,
-          "sha256": "sha256:21e3e5101a83c0426530d9425b265675d414b5229f5c0a431b3ebaabf33a6a6d"
+          "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
+          "bytes": 70527,
+          "sha256": "sha256:480163924434b55f81b9074ee590505b4d0ceaec2b98af2637c7a11c6d26e923"
         }
       ]
     }

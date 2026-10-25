@@ -857,6 +857,7 @@ points to a bug, or to an optimization that has not converged.
   inside a `DataModule`;
 - predict how close a correct fit comes to $\mathbf{w}^*$: within a few
   standard errors $\sigma/\sqrt{n}$;
+- explain why minibatches are drawn at random;
 - write a minibatch loader that reshuffles in every epoch;
 - count the minibatches of an epoch, and explain why the `Trainer` needs a
   loader it can iterate again.
@@ -891,6 +892,16 @@ minibatches of 32.
 :::
 :::
 
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Generating the data]{.dtitle}
+
+[a known plane · a little noise · one DataModule]{.dsub}
+:::
+:::
+
 ::: {.slide title="Labels Lie on a Known Plane, Up to Noise of About 0.01"}
 [Generating the data]{.kicker}
 
@@ -909,6 +920,9 @@ $$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad x_j 
 
 @synthetic-regression-data-generating-the-dataset-2
 
+`save_hyperparameters` stores `w`, `b`, `noise`, `num_train`, `num_val`,
+and `batch_size`.
+
 . . .
 
 The first example, and its noise $y - (\mathbf{w}^{*\top}\mathbf{x} + b^*)$:
@@ -920,23 +934,106 @@ The noise is at most a few hundredths, since $\sigma = 0.01$.
 :::
 :::
 
-::: {.slide title="Even an Exact Fit Misses the Truth by About σ/√n"}
-[Recovering the parameters]{.kicker}
+::: {.slide title="One Key Fixes the Dataset; No Key Draws a New One" only="jax"}
+[Generating the data · JAX]{.kicker}
 
-Append a column of ones to $\mathbf{X}$ and $b^*$ to $\mathbf{w}^*$, so
+JAX has no global random state: every draw takes a key.
+
+```{.python #synthetic-regression-data-exercises}
+if key is None:  # A new seed on each run
+    key = jax.random.key(random.getrandbits(32))
+key1, key2 = jax.random.split(key)
+self.X = jax.random.normal(key1, (n, w.shape[0]))
+eps = jax.random.normal(key2, (n, 1)) * noise
+```
+
+- $\mathbf{X}$ and $\boldsymbol{\epsilon}$ come from two different keys.
+- The same key always produces the same dataset; without a key, each run
+  generates a new one, as in the other frameworks.
+:::
+
+::: {.slide title="Check: Which Loss Do the True Parameters Reach?"}
+[Check]{.kicker}
+
+A model that predicts with exactly $\mathbf{w}^* = (2, -3.4)$ and
+$b^* = 4.2$ is scored with the squared loss
+$\tfrac{1}{2}(\hat{y} - y)^2$, averaged over the examples. About which
+value does that average settle?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\hat{y} - y = -\epsilon$, so the average approaches
+$\tfrac{1}{2}E[\epsilon^2] = \sigma^2/2 = 5 \times 10^{-5}$. The noise is
+unpredictable: no model does better on new examples, and a correct
+training run levels off there.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Recovering the parameters]{.dtitle}
+
+[how close a correct fit can come]{.dsub}
+:::
+:::
+
+::: {.slide title="I. The Estimation Error Is Linear in the Noise"}
+[Recovering the parameters · derivation]{.kicker}
+
+Append a column of ones to $\mathbf{X}$ and $b^*$ to $\mathbf{w}^*$:
+$\mathbf{w}^* = (2, -3.4, 4.2)$ and
 $\mathbf{y} = \mathbf{X}\mathbf{w}^* + \boldsymbol{\epsilon}$.
 
-**Step 1.** Normal equations: $\hat{\mathbf{w}} - \mathbf{w}^* = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\boldsymbol{\epsilon}$, linear in the noise.
+Least squares solves
+$\mathbf{X}^\top\mathbf{X}\hat{\mathbf{w}} = \mathbf{X}^\top\mathbf{y}$.
+Substitute $\mathbf{y}$:
+$\mathbf{X}^\top\mathbf{X}(\hat{\mathbf{w}} - \mathbf{w}^*) = \mathbf{X}^\top\boldsymbol{\epsilon}$, so
 
-**Step 2.** Standard normal features: $\mathbf{X}^\top\mathbf{X} \approx n\mathbf{I}$, so
-$\hat{\mathbf{w}} - \mathbf{w}^* \approx \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\mathbf{x}^{(i)}$.
-
-**Step 3.** An average of $n$ independent terms of variance $\sigma^2$:
+$$\hat{\mathbf{w}} - \mathbf{w}^* = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\boldsymbol{\epsilon}.$$
 
 ::: {.d2l-note}
-standard error $\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$
-for each weight and the bias.
+Without noise, least squares recovers $\mathbf{w}^*$ exactly. The noise
+moves the minimizer of the loss, and we need to know how far.
 :::
+:::
+
+::: {.slide title="II. Standard Normal Features Make XᵀX ≈ 1,000 · I"}
+[Recovering the parameters · derivation]{.kicker}
+
+Each entry of $\mathbf{X}^\top\mathbf{X}$ sums $n = 1{,}000$ products of
+two columns. A sum of $n$ independent terms of variance $v$ has standard
+deviation $\sqrt{nv}$:
+
+| entry | each term | the sum |
+|---|---|---|
+| a feature squared, $x_j^2$ | mean 1, variance 2 | $1{,}000 \pm 45$ |
+| the constant column squared | exactly 1 | $1{,}000$ |
+| off the diagonal, $x_j x_k$ or $x_j \cdot 1$ | mean 0, variance 1 | $0 \pm 32$ |
+
+So $(\mathbf{X}^\top\mathbf{X})^{-1} \approx \mathbf{I}/n$, and
+
+$$\hat{\mathbf{w}} - \mathbf{w}^* \approx \frac{1}{n}\mathbf{X}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\mathbf{x}^{(i)}.$$
+:::
+
+::: {.slide title="III. Each Coordinate Misses by About σ/√n = 3 × 10⁻⁴"}
+[Recovering the parameters · derivation]{.kicker}
+
+Coordinate $j$ of the error averages $n$ independent terms
+$\epsilon^{(i)} x_j^{(i)}$, each with mean 0 and variance
+$\sigma^2 E[x_j^2] = \sigma^2$. An average of $n$ such terms has standard
+deviation $\sigma/\sqrt{n}$, its **standard error**:
+
+::: {.d2l-note .rule}
+$$\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$$
+for each weight and for the bias.
+:::
+
+Ten times more noise, ten times the error; a hundred times more examples, a tenth of it.
+
+[Assumes: noise independent of the features, $\mathbf{X}^\top\mathbf{X} \approx n\mathbf{I}$.]{.dgm-cap}
 :::
 
 ::: {.slide title="Least Squares Lands Within a Few 10⁻⁴ of the Truth"}
@@ -946,7 +1043,8 @@ for each weight and the bias.
 
 @!synthetic-regression-data-recovering-the-parameters-2
 
-- Least squares: an error above $10^{-3}$ in fewer than 1 run in 100.
+- Least squares: an error above $10^{-3}$, over three standard errors, in
+  fewer than 1 run in 100.
 - SGD fluctuates around this estimate by a similar amount: a converged
   model lands within about $10^{-3}$, essentially always within
   $2 \times 10^{-3}$.
@@ -976,6 +1074,36 @@ What standard error do the weights have with
 :::
 :::
 
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Reading the data]{.dtitle}
+
+[shuffle · cut into minibatches · serve every epoch]{.dsub}
+:::
+:::
+
+::: {.slide title="A Random Minibatch Points the Right Way; a Sorted One Need Not"}
+[Reading the data]{.kicker}
+
+At $\mathbf{w} = \mathbf{0}$, $b = 0$ a minibatch's gradient for the bias is
+$\partial L / \partial b = -(\text{mean label})$. The labels have mean 4.2
+and standard deviation $\sqrt{2^2 + 3.4^2} \approx 3.9$.
+
+| minibatch of 32 | mean label | $\partial L / \partial b$ | step on $b$ |
+|---|---|---|---|
+| drawn at random | $4.2 \pm 0.7$ | $\approx -4.2$ | up, toward 4.2 |
+| the 32 smallest labels | $\approx -4.6$ | $\approx +4.6$ | down, away from 4.2 |
+
+::: {.d2l-note}
+A random minibatch's gradient is an unbiased estimate of the full
+gradient. Minibatches in a fixed order, sorted by label, bias every step.
+:::
+
+[The lowest 3.2% of a normal distribution average 2.2 standard deviations below its mean.]{.dgm-cap}
+:::
+
 ::: {.slide title="A Minibatch Loader Shuffles, Then Cuts Into Pieces of 32"}
 [Reading the data]{.kicker}
 
@@ -984,6 +1112,8 @@ What standard error do the weights have with
 - **Training:** a new random order in every epoch; each example is used
   once per epoch.
 - **Validation:** a fixed order; we only average the loss over it.
+- `yield` makes the method a **generator**: it hands the loop one
+  minibatch at a time.
 :::
 
 ::: {.slide title="32 Minibatches per Epoch, and a Generator Runs Out After One"}
@@ -999,32 +1129,76 @@ With a generator it trains one epoch, then silently does nothing.
 :::
 :::
 
-::: {.slide title="The Framework Loader Can Be Iterated in Every Epoch" except="jax"}
+::: {.slide title="A Framework Loader Has What the Generator Lacks"}
 [Reusing a loader]{.kicker}
+
+| | our generator | framework loader |
+|---|---|---|
+| a second pass | yields nothing | a new random order |
+| `len(loader)` | needs a full pass | 32, without a pass |
+| data larger than memory | must fit in memory | read from disk |
+| assembling minibatches | in the training process | parallel workers, ahead of time |
+
+::: {.d2l-note}
+Our 2,000 examples fit in memory, so we need only the first two rows.
+:::
+:::
+
+::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="pytorch,mxnet"}
+[Reusing a loader]{.kicker}
+
+Added to `DataModule`, for any data held as tensors:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 
-. . .
+The new `get_dataloader` replaces the generator:
 
-The same test, then the first labels of two new passes:
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
 
-@!synthetic-regression-data-concise-implementation-of-the-data-loader-3
+- `shuffle=True` draws a new random order on every pass.
+:::
 
-- A new random order on every pass; `len(loader)` is 32.
+::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="tensorflow"}
+[Reusing a loader]{.kicker}
+
+Added to `DataModule`, for any data held as tensors:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-1
+
+The new `get_dataloader` replaces the generator:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
+
+- `shuffle` draws each next example from a buffer: all 1,000 training
+  examples give a uniform order, a buffer of 1 keeps the stored order.
 :::
 
 ::: {.slide title="A Short ArrayLoader Gives JAX a Loader for Every Epoch" only="jax"}
 [Reusing a loader]{.kicker}
 
-JAX has no loader; `get_tensorloader` wraps the arrays in our 28-line
-`ArrayLoader`:
+JAX has no loader, so `get_tensorloader` wraps the arrays in our
+`ArrayLoader`; the new `get_dataloader` replaces the generator:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
+
 - A new key split off on every pass: a new order, no key used twice.
-- The last minibatch of 8 is kept: one more compile per jitted step.
+- The last minibatch of 8 is kept: one more compilation per jitted step
+  and run, not per epoch.
+:::
+
+::: {.slide title="The New Loader Yields 32 Minibatches on Every Pass"}
+[Reusing a loader]{.kicker}
+
+The same test as for the generator, then the first labels of two new
+passes:
 
 @!synthetic-regression-data-concise-implementation-of-the-data-loader-3
+
+The loader reports its length without a pass:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-4
 :::
 
 ::: {.slide title="Check: How Many Minibatches per Epoch?"}
@@ -1055,9 +1229,11 @@ JAX has no loader; `get_tensorloader` wraps the arrays in our 28-line
 | generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$ |
 | standard error $\sigma/\sqrt{n}$ | $0.01/\sqrt{1000} \approx 3 \times 10^{-4}$; least-squares errors of that size |
 | threshold for training | a converged model within about $10^{-3}$ |
+| random minibatches | unbiased gradients; sorted ones push $b$ the wrong way |
 | shuffle, then cut | 32 minibatches per epoch, the last of 8 |
 | reusable loader | iterable in every epoch, reports `len` |
 
-**Next:** a linear model trained by minibatch SGD on these data, and its
-estimates checked against $\mathbf{w}^*$ and $b^*$.
+**Next:** a linear model trained by minibatch SGD on these data, its
+estimates held to $10^{-3}$. Passing tests the code, not how the method
+fares on real data.
 :::

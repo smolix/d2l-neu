@@ -180,11 +180,12 @@ def clean_cell_lines(lines, framework):
     """
     out = []
     for line in lines:
+        # strip #@save first: `@d2l.add_to_class(X)  #@save` is a decorator too
+        line = re.sub(r'\s*#@save\b', '', line)
         if _ADD_TO_CLASS_RE.match(line.strip()):
             continue
         if re.match(r'^%%tab\s+', line):
             continue
-        line = re.sub(r'\s*#@save\b', '', line)
         out.append(line)
     code = '\n'.join(out)
     code = flatten_tab_branches(code, framework)

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3a33d9a49220df369b560e96b4789b620f67190efc586e3f43b6b0db55ebbc28",
+    "d2l_lib_fingerprint": "sha256:bf739fbb0775746bc94bd89a673980b13f9a2e60ff789c054691aaefbb9dcaf9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -97,8 +97,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 31821,
-          "sha256": "sha256:de2703243184a879be4b394ea1bb8a4b6ccf74dda374e0e2d7023ae2e9960c5f"
+          "bytes": 33181,
+          "sha256": "sha256:f630fa7f396e66e6dfa09253428d4e642efe0bd0c4ae8408a6390b5abdaf68eb"
         }
       ]
     },

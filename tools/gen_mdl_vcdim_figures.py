@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
+T = fl.T
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 
 
@@ -47,13 +48,12 @@ def _separating_line(P, labels):
     y = np.asarray(labels, float)
     pos, neg = P[y > 0], P[y < 0]
     if len(pos) == 0 or len(neg) == 0:
-        # all one class: a line just outside the cloud, on the side that keeps
-        # every point in its (single) half-space.  Normal points "up"; offset so
-        # the whole triangle sits on the + side when y>0 (line below it), and on
-        # the - side when y<0 (line above it).
+        # all one class: a line just below the cloud leaves every point on
+        # one side; orient the normal so that this side carries the label.
+        sign = 1.0 if y[0] > 0 else -1.0
         w = np.array([0.0, 1.0])
-        s = P @ w
-        b = -(s.min() - 0.45) if y[0] > 0 else -(s.max() + 0.45)
+        b = -((P @ w).min() - 0.3)
+        w, b = sign * w, sign * b
         return w, b
 
     best = None
@@ -126,20 +126,44 @@ def _draw_line(ax, wb, lim, color=GRAY, lw=1.8):
             solid_capstyle="round")
 
 
-def fig_shattering():
-    """Two panels in the shared house style.
+def _frame(ax, lim):
+    """Fix the panel window and draw a hairline frame around it (no ticks), so
+    the small panels read as separate cases and no line seems to run from
+    one panel into the next."""
+    fl.clean_axes(ax, lim=lim, hide=False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_color(T.HAIRLINE)
+        spine.set_linewidth(1.2)
 
-    Left block: all 2^3 = 8 labellings of three points in general position, each
-    with a *computed* max-margin separating line, demonstrating that a line in
-    the plane shatters 3 points.  Right panel: the XOR labelling of four points,
-    for which no separating line exists (we verify none does)."""
+
+def _segment(ax, p, q, color):
+    """Dashed segment from p to q: the convex hull of two same-label points."""
+    ax.plot([p[0], q[0]], [p[1], q[1]], color=color, lw=2.0, ls=(0, (4, 3)),
+            zorder=2)
+
+
+def fig_shattering():
+    """Three blocks in the shared house style.
+
+    Left: all 2^3 = 8 labellings of three points in general position, each
+    with a *computed* max-margin separating line: lines shatter 3 points.
+    Middle and right: the two ways four points (no three collinear) can lie,
+    each with the one labelling that no line realizes, and the reason drawn in:
+    the convex hulls of the two classes intersect.  Middle: convex position,
+    XOR labels; the two diagonals (dashed, one per class) cross.  Right: one
+    point inside the triangle of the other three, labelled opposite to them;
+    it lies inside their triangle.  We verify that neither labelling is
+    separable."""
     # three points in general position (a triangle, well inside a small box)
     P3 = np.array([[-0.78, -0.55], [0.78, -0.55], [0.0, 0.82]])
-    box = ((-1.35, 1.35), (-1.25, 1.35))
+    box = ((-1.3, 1.3), (-1.2, 1.3))
 
-    fig = plt.figure(figsize=(11.0, 4.4))
-    gs = fig.add_gridspec(2, 6, width_ratios=[1, 1, 1, 1, 0.42, 1.6],
-                          wspace=0.12, hspace=0.22)
+    fig = plt.figure(figsize=(12.0, 3.0))
+    gs = fig.add_gridspec(2, 7, width_ratios=[1, 1, 1, 1, 0.3, 2.1, 2.1],
+                          wspace=0.10, hspace=0.10)
 
     # --- left: 2x4 grid of the eight labellings of three points ---
     labelings = list(product([+1, -1], repeat=3))   # 8 of them
@@ -149,32 +173,39 @@ def fig_shattering():
         assert wb is not None, f"3-point labelling {lab} should be separable"
         _draw_line(ax, wb, box)
         _draw_points(ax, P3, lab)
-        fl.clean_axes(ax, lim=box, hide=True)
-    # no shared heading: the caption already states "all 2^3=8 labelings are
-    # separable (left); the XOR labeling of 4 points is not (right)".
+        _frame(ax, box)
 
-    # --- right: four points in XOR position, not shatterable ---
-    axr = fig.add_subplot(gs[:, 5])
-    P4 = np.array([[-0.85, -0.85], [0.85, 0.85], [-0.85, 0.85], [0.85, -0.85]])
+    big = ((-1.45, 1.45), (-1.45, 1.45))
+
+    # --- middle: four points in convex position, XOR labels ---
+    axm = fig.add_subplot(gs[:, 5])
+    P4 = np.array([[-0.9, -0.75], [0.8, 0.9], [-0.75, 0.85], [0.95, -0.8]])
     xor = [+1, +1, -1, -1]            # opposite corners share a label
     assert _separating_line(P4, xor) is None, "XOR must NOT be separable"
-    big = ((-1.55, 1.55), (-1.45, 1.55))
-    # two candidate lines, each clearly failing to separate the two classes:
-    # whichever way you cut, each side carries one + and one -.
-    for w, b in [(np.array([0.0, 1.0]), 0.0),
-                 (np.array([1.0, 0.0]), 0.0)]:
-        _draw_line(axr, (w, b), big, color=LIGHT, lw=1.6)
-    _draw_points(axr, P4, xor)
-    # no per-panel title: the caption already names this panel ("the XOR
-    # labeling of 4 points is not [separable]")
-    fl.clean_axes(axr, lim=big, hide=True)
+    _segment(axm, P4[0], P4[1], BLUE)
+    _segment(axm, P4[2], P4[3], ORANGE)
+    _draw_points(axm, P4, xor)
+    _frame(axm, big)
 
-    # small shared legend (drawn once, below the right panel)
-    axr.plot([], [], "o", color=BLUE, ms=8, label=r"label $+1$")
-    axr.plot([], [], "s", mfc="white", mec=ORANGE, mew=2.0, ms=8,
+    # --- right: one point inside the triangle of the other three ---
+    axr = fig.add_subplot(gs[:, 6])
+    Q4 = np.array([[-1.0, -0.8], [1.0, -0.8], [0.0, 1.05], [0.05, -0.1]])
+    inner = [+1, +1, +1, -1]          # the inner point against the corners
+    assert _separating_line(Q4, inner) is None, "inner point must NOT be separable"
+    tri = Q4[:3]
+    axr.fill(tri[:, 0], tri[:, 1], color=T.BLUE.tint, zorder=1, lw=0)
+    for i in range(3):
+        _segment(axr, tri[i], tri[(i + 1) % 3], BLUE)
+    _draw_points(axr, Q4, inner)
+    _frame(axr, big)
+
+    # one shared legend, centred below the whole figure
+    axm.plot([], [], "o", color=BLUE, ms=8, label=r"label $+1$")
+    axm.plot([], [], "s", mfc="white", mec=ORANGE, mew=2.0, ms=8,
              label=r"label $-1$")
-    axr.legend(loc="lower center", bbox_to_anchor=(0.5, -0.10), ncol=2,
-               handletextpad=0.3, columnspacing=1.2, fontsize=11)
+    fig.legend(*axm.get_legend_handles_labels(), loc="upper center",
+               bbox_to_anchor=(0.5, 0.10), ncol=2, handletextpad=0.3,
+               columnspacing=1.5, fontsize=13)
 
     fl.save(fig, "mdl-clf-shattering")
 

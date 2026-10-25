@@ -186,14 +186,15 @@ has climbed six orders of magnitude and overflows. The clipped run, at the
 identical learning rate, trains to a final loss at or slightly below the
 tuned unclipped run of :numref:`sec_adam`. The median gradient norm was far
 below the threshold, and
-clipping changed the update on six steps out of two thousand. In these paired runs, those six interventions separate the divergent
+clipping changed the update on only a handful of the two thousand steps (six in
+our run). In these paired runs, those few interventions separate the divergent
 trajectory from the stable one.
 :end_tab:
 
 :begin_tab:`jax`
 The unclipped run makes progress for a moment, then feeds back on itself:
 an oversized step lands the iterate somewhere steeper, the gradient there
-is larger, momentum compounds it, and the loss climbs through some six
+is larger, momentum compounds it, and the loss climbs by several
 orders of magnitude within the first hundred-odd steps; the run ends in
 overflow. The
 clipped run, at the identical learning rate, trains to a final loss in the
@@ -441,7 +442,7 @@ weights, so its coefficients already sum to one and there is nothing to
 correct — the early average retains substantial weight on old iterates. That
 lag is why
 practical EMAs either warm up the decay or start averaging late. Second, after the window fills, the EMA curve is higher and less variable
-than the live-weight curve in this run. It ends roughly one to two percentage
+than the live-weight curve in this run. It ends roughly two percentage
 points higher, while reducing sensitivity to the particular stopping epoch.
 The averaged model
 at a constant rate lands in the range the decayed schedules of
@@ -728,7 +729,8 @@ divergent point, with and without the guard:
 
 ::: {.slide title="Frequency of clipping"}
 The instrumented run: median gradient norm ~0.3, threshold 1.0 —
-**clipping changed the update on 6 of 2,000 steps**.
+**clipping changed the update on only a handful of the 2,000 steps** (6 in
+our run).
 
 - Language-model gradient noise is heavy-tailed
   (Zhang et al., 2020); the guard exists for the tail.

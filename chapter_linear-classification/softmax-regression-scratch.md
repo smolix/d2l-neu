@@ -6,16 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Softmax Regression Implementation from Scratch
 :label:`sec_softmax_scratch`
 
-This section implements the components specific to softmax regression: the
-softmax transformation, cross-entropy loss, parameters, and forward pass. The
-data and training loop reuse the abstractions introduced for linear
-regression, making the differences between regression and classification
-explicit.
+Softmax regression differs from the linear regression of
+:numref:`sec_linear_scratch` in three places. The model computes one output
+per class instead of a single number, the softmax turns these outputs, the
+logits, into probabilities, and the loss is the cross-entropy instead of the
+squared error. Everything else carries over. The `Trainer` runs the same
+training loop, the default optimizer of `Module` performs the same minibatch
+SGD update, the `FashionMNIST` class of :numref:`sec_fashion_mnist` delivers
+the images in minibatches, and the `Classifier` class of
+:numref:`sec_classification` reports the loss and the accuracy on validation
+data. We therefore write only the three new pieces ourselves, with tensors and
+automatic differentiation, and train the model on Fashion-MNIST.
+
+Writing the softmax directly from its formula exposes a numerical trap. In
+single precision, $\exp(o)$ overflows to infinity once $o$ exceeds about 88,
+and the softmax of the logits $(1000, 0, 0)$ comes out as `NaN` instead of
+$(1, 0, 0)$. We show this failure and its remedy, and keep the direct formula
+in our model, whose logits stay far below that range. The next section builds
+a loss that avoids the problem altogether. Once the model is trained, we look
+at what it gets wrong: its accuracy on the validation images, some of its
+mistakes, and the confusion matrix, which shows which garments it takes for
+which.
 
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import autograd, np, npx, gluon
+from mxnet import gluon, init, npx
 npx.set_np()
 ```
 
@@ -23,6 +39,7 @@ npx.set_np()
 %%tab pytorch
 from d2l import torch as d2l
 import torch
+from torch import nn
 ```
 
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
@@ -41,178 +58,193 @@ from jax import numpy as jnp
 
 ## The Softmax
 
-We begin with the transformation from scores to probabilities.
-Softmax normalizes each *row* of a matrix, so we will need per-row sums;
-recall from :numref:`subsec_lin-alg-reduction` and
-:numref:`subsec_lin-alg-non-reduction` how `axis` selects the dimension
-a sum collapses and `keepdims` preserves it for broadcasting:
+### Normalizing Each Row
+
+For a minibatch of $n$ examples the logits form a matrix
+$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ with one row per example and
+one column per class (:numref:`subsec_softmax_vectorization`). The softmax
+acts on each row separately,
+
+$$\mathrm{softmax}(\mathbf{O})_{ij} = \frac{\exp(O_{ij})}{\sum_{k=1}^q \exp(O_{ik})},$$
+
+so entry $(i, j)$ of the result is the probability that the model assigns to
+class $j$ for example $i$. Computing it takes three steps: exponentiate every
+entry, sum each row, and divide each row by its sum. The row sums are a
+reduction over the columns. A sum with `axis=1` collapses the columns, and
+`keepdims=True` keeps the collapsed axis with length 1, so the sums form a
+column of shape $(n, 1)$ that broadcasts against the $n \times q$ matrix in
+the division (:numref:`subsec_broadcasting`). On a small matrix:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-1}
 X = d2l.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 d2l.reduce_sum(X, 0, keepdims=True), d2l.reduce_sum(X, 1, keepdims=True)
 ```
 
-Computing the softmax requires three steps:
-(i) exponentiation of each term;
-(ii) a sum over each row to compute the normalization constant for each example;
-(iii) division of each row by its normalization constant,
-ensuring that the result sums to 1:
-
-
-$$\mathrm{softmax}(\mathbf{X})_{ij} = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
-
-
-The (logarithm of the) denominator
-is called the (log) *partition function*.
-It was introduced in [statistical physics](https://en.wikipedia.org/wiki/Partition_function_(statistical_mechanics))
-to sum over all possible states in a thermodynamic ensemble.
-The implementation is straightforward:
+Summing over axis 0 gives a row of shape $(1, 3)$, summing over axis 1 a
+column of shape $(2, 1)$. The softmax divides by the column:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-2}
-def softmax(X):
-    X_exp = d2l.exp(X)
-    partition = d2l.reduce_sum(X_exp, 1, keepdims=True)
-    return X_exp / partition  # The broadcasting mechanism is applied here
+def softmax(O):
+    O_exp = d2l.exp(O)
+    return O_exp / d2l.reduce_sum(O_exp, 1, keepdims=True)  # Broadcast
 ```
 
-For any input `X`, we turn each element
-into a nonnegative number.
-Each row sums up to 1,
-as is required for a probability. Caution: the code above is *not* robust against very large or very small arguments. While it is sufficient to illustrate what is happening, you should *not* use this code verbatim for any serious purpose. Deep learning frameworks have such protections built in and we will be using the built-in softmax going forward.
+We check it on two rows of logits. The first holds the logits
+$(1.0, 2.2, 0.3)$ that :numref:`sec_softmax` computed for an image scored as
+cat, chicken, and dog; the second holds three equal logits.
 
-To see the failure rather than just assert it, feed in a logit that is large
-on the scale of $\exp$. A score of $1000$ overflows `exp` to infinity in
-float32, so the naive ratio becomes $\infty/\infty$, which evaluates to `NaN`.
-The framework's `softmax` subtracts the per-row maximum before exponentiating
-(the log-sum-exp trick of :numref:`subsec_softmax-implementation-revisited`) and
-returns a finite distribution on exactly the same input:
+```{.python .input #softmax-regression-scratch-the-softmax-3}
+O = d2l.tensor([[1.0, 2.2, 0.3], [0.0, 0.0, 0.0]])
+Y_hat = softmax(O)
+Y_hat, d2l.reduce_sum(Y_hat, 1)
+```
+
+The first row reproduces the probabilities $(0.21, 0.69, 0.10)$ computed by
+hand, and equal logits give every class the probability $1/3$. Both rows sum
+to 1.
+
+### Overflow
+
+The formula fails for large logits. The largest single-precision number is
+about $3.4 \times 10^{38}$, so $\exp(o)$ overflows to infinity once $o$
+exceeds $\log(3.4 \times 10^{38}) \approx 88.7$. For the logits
+$(1000, 0, 0)$ both the numerator of the first entry and the row sum are
+infinite, and $\infty / \infty$ is `NaN`, although the correct answer is
+$(1, 0, 0)$ up to rounding. The remedy uses a fact from
+:numref:`sec_softmax`: adding the same constant to all logits of a row does
+not change their softmax. Subtracting the largest logit of each row makes
+every exponent at most 0, so no exponential overflows. The framework's
+built-in softmax shifts the logits in the same way. We apply the direct formula, the shifted
+formula, and the built-in softmax to the same row:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-overflow}
 %%tab pytorch
-z = torch.tensor([1000., 0., 0.])
-naive = torch.exp(z) / torch.exp(z).sum()  # exp(1000) overflows -> nan
-stable = torch.softmax(z, dim=0)           # built-in uses the log-sum-exp trick
-naive, stable
+O = d2l.tensor([[1000.0, 0.0, 0.0]])
+O_max = O.amax(dim=1, keepdim=True)
+softmax(O), softmax(O - O_max), torch.softmax(O, dim=1)
 ```
 
 ```{.python .input #softmax-regression-scratch-the-softmax-overflow}
 %%tab mxnet
-z = np.array([1000., 0., 0.])
-naive = np.exp(z) / np.exp(z).sum()        # exp(1000) overflows -> nan
-stable = npx.softmax(z, axis=0)            # built-in uses the log-sum-exp trick
-naive, stable
+O = d2l.tensor([[1000.0, 0.0, 0.0]])
+O_max = O.max(axis=1, keepdims=True)
+softmax(O), softmax(O - O_max), npx.softmax(O, axis=1)
 ```
 
 ```{.python .input #softmax-regression-scratch-the-softmax-overflow}
 %%tab tensorflow
-z = tf.constant([1000., 0., 0.])
-naive = tf.exp(z) / tf.reduce_sum(tf.exp(z))  # exp(1000) overflows -> nan
-stable = tf.nn.softmax(z, axis=0)             # built-in uses the log-sum-exp trick
-naive, stable
+O = d2l.tensor([[1000.0, 0.0, 0.0]])
+O_max = tf.reduce_max(O, axis=1, keepdims=True)
+softmax(O), softmax(O - O_max), tf.nn.softmax(O, axis=1)
 ```
 
 ```{.python .input #softmax-regression-scratch-the-softmax-overflow}
 %%tab jax
-z = jnp.array([1000., 0., 0.])
-naive = jnp.exp(z) / jnp.exp(z).sum()      # exp(1000) overflows -> nan
-stable = jax.nn.softmax(z, axis=0)         # built-in uses the log-sum-exp trick
-naive, stable
+O = d2l.tensor([[1000.0, 0.0, 0.0]])
+O_max = O.max(axis=1, keepdims=True)
+softmax(O), softmax(O - O_max), jax.nn.softmax(O, axis=1)
 ```
 
-```{.python .input #softmax-regression-scratch-the-softmax-3}
-%%tab mxnet
-X = d2l.rand(2, 5)
-X_prob = softmax(X)
-X_prob, d2l.reduce_sum(X_prob, 1)
-```
+The direct formula returns `NaN` in the first entry; the shifted formula and
+the built-in softmax return $(1, 0, 0)$. A `NaN` spreads: the loss of the
+minibatch becomes `NaN`, then its gradient, and after the update the
+parameters. For our model the direct formula is safe, since its inputs are
+pixel values between 0 and 1 and its weights stay small, and we keep it
+because it shows the three steps plainly. Shifting would not remove a second
+problem, which arises in the loss: a probability can underflow to 0, and its
+logarithm is $-\infty$. :numref:`sec_softmax_concise` removes both problems
+by computing the logarithms of the probabilities directly from the logits.
 
-```{.python .input #softmax-regression-scratch-the-softmax-3}
-%%tab tensorflow, pytorch
-X = d2l.rand((2, 5))
-X_prob = softmax(X)
-X_prob, d2l.reduce_sum(X_prob, 1)
-```
+## The Model and the Loss
 
-```{.python .input #softmax-regression-scratch-the-softmax-3}
-%%tab jax
-X = jax.random.uniform(d2l.get_key(), (2, 5))
-X_prob = softmax(X)
-X_prob, d2l.reduce_sum(X_prob, 1)
-```
+### The Parameters
 
-## The Model
+Each $28 \times 28$ image becomes a vector of $d = 784$ pixel values, and
+there are $q = 10$ classes. The model therefore has a weight matrix
+$\mathbf{W} \in \mathbb{R}^{784 \times 10}$, one column per class, and a bias
+vector $\mathbf{b} \in \mathbb{R}^{10}$, together 7,850 parameters. As in
+:numref:`sec_linear_scratch`, we draw the weights from a normal distribution
+with mean 0 and standard deviation 0.01 and set the biases to 0. Such small
+weights give all classes nearly equal logits, so the model starts with
+predictions close to uniform, $\hat{y}_j \approx 0.1$, and a loss close to
+$\log 10 \approx 2.30$.
 
-We now have everything that we need
-to implement the softmax regression model.
-As in our linear regression example,
-each instance will be represented
-by a fixed-length vector.
-Since the raw data here consists
-of $28 \times 28$ pixel images,
-we flatten each image,
-treating them as vectors of length 784.
-In later chapters, we will introduce
-convolutional neural networks,
-which exploit the spatial structure
-in a more satisfying way.
+We register $\mathbf{W}$ and $\mathbf{b}$ as parameters of the module with
+the framework's parameter type, as in :numref:`sec_linear_scratch`. The
+default optimizer that `Classifier` inherits from `Module`, minibatch SGD at
+the learning rate `lr` (:numref:`sec_classification`), finds registered
+parameters by itself, so this model needs no `configure_optimizers` of its
+own.
 
+:begin_tab:`pytorch`
+`nn.Parameter` registers each tensor with the module, so
+`model.parameters()` lists `W` and `b`, and the default optimizer,
+`torch.optim.SGD`, updates them.
+:end_tab:
 
-In softmax regression,
-the number of outputs from our network
-should be equal to the number of classes.
-Since our dataset has 10 classes,
-our network has an output dimension of 10.
-Consequently, our weights constitute a $784 \times 10$ matrix
-plus a $1 \times 10$ row vector for the biases.
-As with linear regression,
-we initialize the weights `W`
-with Gaussian noise.
-The biases are initialized as zeros.
+:begin_tab:`mxnet`
+A Gluon `Parameter` assigned as an attribute of a block is registered with
+it, so `model.collect_params()` lists `W` and `b`, and the default optimizer,
+Gluon's `Trainer` with the `'sgd'` update, updates them. `initialize`
+allocates their values, which `data()` returns.
+:end_tab:
 
-```{.python .input #softmax-regression-scratch-the-model-1}
-%%tab mxnet
-class SoftmaxRegressionScratch(d2l.Classifier):
-    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
-        self.W = np.random.normal(0, sigma, (num_inputs, num_outputs))
-        self.b = np.zeros(num_outputs)
-        self.W.attach_grad()
-        self.b.attach_grad()
+:begin_tab:`tensorflow`
+`add_weight` creates each variable and registers it with the Keras model, so
+`model.trainable_variables` lists `W` and `b`, and the default optimizer,
+Keras's `SGD`, updates them.
+:end_tab:
 
-    def collect_params(self):
-        return [self.W, self.b]
-```
+:begin_tab:`jax`
+`nnx.Param` marks each array as a trainable parameter, so
+`nnx.state(model)` contains `W` and `b`, and the default optimizer,
+`optax.sgd`, updates them. As in :numref:`sec_linear_scratch`, the argument
+`rngs` supplies the random key for the initialization; without it, the model
+draws a new one on every run.
+:end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab pytorch
 class SoftmaxRegressionScratch(d2l.Classifier):
+    """Softmax regression implemented from scratch."""
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W = torch.normal(0, sigma, size=(num_inputs, num_outputs),
-                              requires_grad=True)
-        self.b = torch.zeros(num_outputs, requires_grad=True)
+        self.W = nn.Parameter(d2l.normal(0, sigma, (num_inputs, num_outputs)))
+        self.b = nn.Parameter(d2l.zeros(num_outputs))
+```
 
-    def parameters(self):
-        return [self.W, self.b]
+```{.python .input #softmax-regression-scratch-the-model-1}
+%%tab mxnet
+class SoftmaxRegressionScratch(d2l.Classifier):
+    """Softmax regression implemented from scratch."""
+    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W = gluon.Parameter('W', shape=(num_inputs, num_outputs),
+                                 init=init.Normal(sigma))
+        self.b = gluon.Parameter('b', shape=(num_outputs,), init=init.Zero())
+        self.initialize()
 ```
 
 ```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab tensorflow
 class SoftmaxRegressionScratch(d2l.Classifier):
+    """Softmax regression implemented from scratch."""
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W = tf.random.normal((num_inputs, num_outputs), 0, sigma)
-        self.b = tf.zeros(num_outputs)
-        self.W = tf.Variable(self.W)
-        self.b = tf.Variable(self.b)
+        normal = tf.keras.initializers.RandomNormal(mean=0, stddev=sigma)
+        self.W = self.add_weight(name='W', shape=(num_inputs, num_outputs),
+                                 initializer=normal)
+        self.b = self.add_weight(name='b', shape=(num_outputs,),
+                                 initializer='zeros')
 ```
 
 ```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab jax
 class SoftmaxRegressionScratch(d2l.Classifier):
+    """Softmax regression implemented from scratch."""
     def __init__(self, num_inputs, num_outputs, lr, sigma=0.01, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
@@ -222,41 +254,52 @@ class SoftmaxRegressionScratch(d2l.Classifier):
         self.b = nnx.Param(jnp.zeros(num_outputs))
 ```
 
-The code below defines how the network
-maps each input to an output.
-Note that we flatten each $28 \times 28$ pixel image in the batch
-into a vector using `reshape`
-before passing the data through our model.
+### The Forward Pass
+
+A minibatch of $n$ images arrives as a tensor of shape $(n, 1, 28, 28)$ in
+PyTorch and MXNet and $(n, 28, 28, 1)$ in TensorFlow and JAX
+(:numref:`sec_fashion_mnist`). The method `forward` reshapes it into the
+$n \times 784$ matrix $\mathbf{X}$, one flattened image per row, computes the
+logits $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$, with the bias added
+to every row by broadcasting, and returns their softmax. Flattening discards
+which pixels are neighbors. The model cannot use that information; the
+convolutional networks of :numref:`chap_cnn` do.
+
+:begin_tab:`mxnet`
+The MXNet version reads the values of the parameters with `data()`.
+:end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-model-2}
+%%tab pytorch, tensorflow, jax
 @d2l.add_to_class(SoftmaxRegressionScratch)
 def forward(self, X):
-    X = d2l.reshape(X, (-1, self.W.shape[0]))
+    X = d2l.reshape(X, (-1, self.num_inputs))  # One flattened image per row
     return softmax(d2l.matmul(X, self.W) + self.b)
 ```
 
-## The Cross-Entropy Loss
+```{.python .input #softmax-regression-scratch-the-model-2}
+%%tab mxnet
+@d2l.add_to_class(SoftmaxRegressionScratch)
+def forward(self, X):
+    X = d2l.reshape(X, (-1, self.num_inputs))  # One flattened image per row
+    return softmax(d2l.matmul(X, self.W.data()) + self.b.data())
+```
 
-Next we need to implement the cross-entropy loss function
-(introduced in :numref:`subsec_softmax-regression-loss-func`).
-This may be the most common loss function
-in deep-learning classification.
-Recall from :numref:`subsec_softmax-regression-loss-func` that minimizing cross-entropy is equivalent to maximizing the log-likelihood of the correct labels under our categorical model. It is the natural loss for classification.
-At the moment, applications of deep learning
-easily cast as classification problems
-far outnumber those better treated as regression problems.
+### The Cross-Entropy Loss
 
-Recall that cross-entropy takes the negative log-likelihood
-of the predicted probability assigned to the true label.
-For efficiency we avoid Python for-loops and use indexing instead.
-In particular, we select the correct-class probability for each row of
-$\hat{\mathbf{y}}$ (equivalent to a dot product with the one-hot label).
+The loss of one example is the negative logarithm of the probability that
+the model assigns to its true class, $l = -\log \hat{y}_y$
+(:numref:`sec_softmax`). For a minibatch we need, from each row of
+$\hat{\mathbf{Y}}$, the entry in the column of that example's label.
+Indexing does this without a loop: a list of row indices together with the
+vector of labels picks one entry per row. In code the labels are class
+indices counted from 0. Here are two examples with three classes and labels
+0 and 2:
 
-To see this in action we create sample data `y_hat`
-with 2 examples of predicted probabilities over 3 classes and their corresponding labels `y`.
-The correct labels are $0$ and $2$ respectively (i.e., the first and third class).
-Using `y` as the indices of the probabilities in `y_hat`,
-we can pick out terms efficiently.
+:begin_tab:`tensorflow`
+TensorFlow tensors do not support this kind of indexing. `tf.gather` with
+`batch_dims=1` picks, in each row, the entry at that row's label.
+:end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
 %%tab mxnet, pytorch, jax
@@ -272,19 +315,15 @@ y = tf.constant([0, 2])
 tf.gather(y_hat, y, batch_dims=1)
 ```
 
-:begin_tab:`pytorch, mxnet, tensorflow`
-Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
-:end_tab:
-
-:begin_tab:`jax`
-Now we can implement the cross-entropy loss function by averaging over the logarithms of the selected probabilities.
-
-Note that to make use of `jax.jit` to speed up JAX implementations, and
-to make sure `loss` is a pure function, the `cross_entropy` function is re-defined
-inside the `loss` to avoid usage of any global variables or functions
-which may render the `loss` function impure.
-We refer interested readers to the [JAX documentation](https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html#pure-functions) on `jax.jit` and pure functions.
-:end_tab:
+The first example gives its true class the probability 0.1, the second
+0.5. The function `cross_entropy` averages the negative logarithms of these
+probabilities over the minibatch. Before taking the logarithm it raises each
+probability to at least $10^{-12}$. A probability that has underflowed to 0
+would give $\log 0 = -\infty$ and an infinite loss; with the floor, the loss
+of such an example is at most $-\log 10^{-12} \approx 27.6$. The floor is a
+stopgap. The gradient of a probability raised to the floor is zero, so an
+example that the model gets badly wrong stops contributing to training. The
+next section replaces the floor by a loss that never forms the probability.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab pytorch
@@ -327,43 +366,29 @@ def cross_entropy(y_hat, y):  #@save
 cross_entropy(y_hat, y)
 ```
 
-Note that we clip $\hat{y}$ away from zero before taking $\log$. Without the clip, $\log(\hat{y})$ produces $-\infty$ (and downstream NaNs) whenever the softmax assigns probability exactly zero to the correct class. Production code typically uses a log-softmax layer that fuses the softmax and log into a single numerically stable operation; the explicit clamp here is the minimal change that keeps the scratch implementation usable as a teaching example without changing its mathematical form. The proper fix, fusing softmax and cross-entropy via the log-sum-exp trick, is derived in :numref:`subsec_softmax-implementation-revisited`.
+The loss is the mean of $-\log 0.1 \approx 2.30$ and
+$-\log 0.5 \approx 0.69$, about 1.50. It becomes the loss of our model:
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
-%%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(SoftmaxRegressionScratch)
 def loss(self, y_hat, y):
     return cross_entropy(y_hat, y)
 ```
 
-```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
-%%tab jax
-@d2l.add_to_class(SoftmaxRegressionScratch)
-def loss(self, y_hat, y):
-    return cross_entropy(y_hat, y)
-```
+## Training and Evaluation
 
-## Training
+### The Training Run
 
-We reuse the `fit` method defined in :numref:`sec_linear_scratch` to train the model with 10 epochs.
-Note that the number of epochs (`max_epochs`),
-the minibatch size (`batch_size`),
-and learning rate (`lr`)
-are adjustable hyperparameters.
-That means that while these values are not
-learned during our primary training loop,
-they still influence the performance
-of our model, affecting both training
-and generalization.
-In practice you will want to choose these values
-based on the *validation* split of the data
-and then, ultimately, to evaluate your final model
-on the *test* split.
-As discussed in :numref:`subsec_generalization-model-selection`,
-we will regard the test data of Fashion-MNIST
-as the validation set, thus
-reporting validation loss and validation accuracy
-on this split.
+We train for 10 epochs with minibatches of 256 images at learning rate 0.1.
+An epoch takes 235 steps, the last on the 96 images left over
+($60{,}000 = 234 \times 256 + 96$). Fashion-MNIST has no separate validation split, so we validate on
+its 10,000 test images (:numref:`sec_fashion_mnist`), and the `Trainer`
+reports the validation loss and accuracy after every epoch. The number of
+epochs, the minibatch size, and the learning rate influence the result,
+although training does not learn them. Choosing them by their validation
+accuracy is a form of model selection, and
+:numref:`chap_classification_generalization` asks what such choices do to
+the trustworthiness of the score.
 
 ```{.python .input #softmax-regression-scratch-training}
 data = d2l.FashionMNIST(batch_size=256)
@@ -372,288 +397,163 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-## Prediction
+The training loss falls quickly during the first epoch and slowly after it.
+The validation accuracy is between 75% and 80% after one epoch and about 83%
+after ten. From one epoch to the next it can also drop by about a point, since
+minibatch SGD keeps moving the parameters. The training and validation
+losses end close together, near 0.45 and 0.49. A model with 7,850
+parameters fitted to 60,000 images can memorize little of its training
+data, so it does almost as well on images it has not seen.
 
-Now that training is complete,
-our model is ready to classify some images.
-
-```{.python .input #softmax-regression-scratch-prediction-1}
-%%tab pytorch
-X, y = next(iter(data.val_dataloader()))
-with torch.no_grad():
-    preds = d2l.argmax(model(X), axis=1)
-preds.shape
-```
-
-```{.python .input #softmax-regression-scratch-prediction-1}
-%%tab tensorflow
-X, y = next(iter(data.val_dataloader()))
-preds = d2l.argmax(model(X), axis=1)
-preds.shape
-```
-
-```{.python .input #softmax-regression-scratch-prediction-1}
-%%tab jax
-X, y = next(iter(data.val_dataloader()))
-preds = d2l.argmax(model(X), axis=1)
-preds.shape
-```
-
-```{.python .input #softmax-regression-scratch-prediction-1}
-%%tab mxnet
-X, y = next(iter(data.val_dataloader()))
-preds = d2l.argmax(model(X), axis=1)
-preds.shape
-```
-
-How well do we do overall? We sweep the whole validation set and average the
-per-example correct/incorrect flags returned by `accuracy`:
+The method `trainer.evaluate` computes the validation metrics of a model,
+means over all 10,000 validation images. After training they equal the last
+point of each validation curve, which `trainer.history['val_loss'][-1]` and
+`trainer.history['val_acc'][-1]` hold.
 
 ```{.python .input #softmax-regression-scratch-prediction-accuracy}
-%%tab pytorch
-correct = []
-for X_i, y_i in data.val_dataloader():
-    with torch.no_grad():
-        correct.append(model.accuracy(model(X_i), y_i, averaged=False))
-print(f'Test accuracy: {torch.cat(correct).mean():.3f}')
+trainer.evaluate(model, data)
 ```
 
-```{.python .input #softmax-regression-scratch-prediction-accuracy}
-%%tab mxnet
-correct = []
-for X_i, y_i in data.val_dataloader():
-    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
-print(f'Test accuracy: {float(np.concatenate(correct).mean()):.3f}')
+The model labels about 83% of the validation images correctly. Repeated
+runs in all four frameworks stay between 82% and 84%: the random
+initialization and the order of the minibatches change the result by about
+a point.
+
+### Misclassified Images
+
+The accuracy tells us how often the model errs, not on which images. We take
+the first minibatch of 256 validation images, predict the class of each, and
+count the mistakes.
+
+```{.python .input #softmax-regression-scratch-prediction-1}
+X, y = next(iter(data.val_dataloader()))
+preds = d2l.astype(d2l.argmax(model(X), axis=1), y.dtype)
+wrong = preds != y
+print(f'{int(d2l.reduce_sum(d2l.astype(wrong, d2l.int32)))} of {len(y)} wrong')
 ```
 
-```{.python .input #softmax-regression-scratch-prediction-accuracy}
-%%tab tensorflow
-correct = []
-for X_i, y_i in data.val_dataloader():
-    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
-print(f'Test accuracy: {float(tf.reduce_mean(tf.concat(correct, 0))):.3f}')
-```
-
-```{.python .input #softmax-regression-scratch-prediction-accuracy}
-%%tab jax
-correct = []
-for X_i, y_i in data.val_dataloader():
-    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
-print(f'Test accuracy: {float(jnp.concatenate(correct).mean()):.3f}')
-```
-
-The overall test accuracy comes out at roughly 82--84% (the exact value
-varies a little from run to run), consistent with the training
-curve: the performance of this linear model on Fashion-MNIST. We are more interested in
-the images we label *incorrectly*. We visualize them by
-comparing their actual labels
-(first line of text output)
-with the predictions from the model
-(second line of text output).
+We show the first eight misclassified images. Each title gives the true
+class above the predicted one.
 
 ```{.python .input #softmax-regression-scratch-prediction-2}
-wrong = d2l.astype(preds, y.dtype) != y
-X, y, preds = X[wrong], y[wrong], preds[wrong]
-labels = [a+'\n'+b for a, b in zip(
-    data.text_labels(y), data.text_labels(preds))]
-data.visualize([X, y], labels=labels)
+labels = [f'{true}\n→ {pred}' for true, pred in zip(
+    data.text_labels(y[wrong]), data.text_labels(preds[wrong]))]
+data.visualize([X[wrong], y[wrong]], labels=labels)
 ```
 
-The gallery shows *which* images fail; to see *how* they fail in aggregate we
-compute the confusion matrix :eqref:`eq_confusion-matrix` introduced in
-:numref:`sec_classification`. We
-accumulate a $10\times10$ matrix of counts $C$ over the validation set, with
-entry $(i, j)$ counting how often true class $j$ was predicted as class $i$,
-and then normalize each column,
+Between 30 and 45 of the 256 images are misclassified, in line with an
+error rate of about 17%. Most mistakes confuse garments of similar outline:
+one top for another, such as a coat for a pullover, or one shoe for another.
+Some of the images are hard to label at $28 \times 28$ pixels even for a
+person.
 
-$$\tilde{C}_{ij} = C_{ij} \Big/ \sum_{i'} C_{i'j},$$
-:eqlabel:`eq_confusion-normalized`
+### The Confusion Matrix
 
-so that column $j$ shows the distribution of predictions for class $j$
-(classes are indexed in the order of `text_labels`: t-shirt, trouser,
-pullover, dress, coat, sandal, shirt, sneaker, bag, ankle boot).
+A few images show which mistakes occur; the confusion matrix of
+:numref:`sec_classification` counts all of them. Its entry $N_{ij}$ is the
+number of validation examples of class $j$ that the model predicts as class
+$i$: rows are predicted classes and columns true classes. To count all pairs
+at once we use one-hot vectors (:numref:`sec_softmax`). Let the rows of
+$\mathbf{P} \in \{0, 1\}^{n \times q}$ be the one-hot encodings of the
+predicted classes of a minibatch and the rows of
+$\mathbf{Y} \in \{0, 1\}^{n \times q}$ those of the labels. Then
 
-To display that matrix of counts as a grid of colored cells rather than a
-wall of numbers, we define `show_heatmaps`, a display utility we reuse
-throughout the book (e.g., for visualizing attention weights).
+$$(\mathbf{P}^\top \mathbf{Y})_{ij} = \sum_{m=1}^n P_{mi} Y_{mj} = \sum_{m=1}^n \mathbf{1}\big(\hat{y}^{(m)} = i\big)\, \mathbf{1}\big(y^{(m)} = j\big),$$
 
-```{.python .input #softmax-regression-scratch-prediction-3}
-%%tab pytorch
-#@save
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices."""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
+since a term is 1 exactly when example $m$ is predicted as $i$ and labeled
+$j$. One matrix product counts the pairs of a minibatch, and summing the
+products over all validation minibatches gives $\mathbf{N}$. The function
+`one_hot` builds the one-hot rows by comparing a column of class indices with
+the row $(0, 1, \ldots, q-1)$, which broadcasting expands to an $n \times q$
+matrix of comparisons.
+
+```{.python .input #softmax-regression-scratch-the-confusion-matrix-1}
+def one_hot(y, q):
+    """Rows of the q x q identity matrix, one per class index in y."""
+    return d2l.astype(d2l.reshape(y, (-1, 1)) == d2l.arange(q, dtype=y.dtype),
+                      d2l.float32)
+
+N = d2l.zeros((10, 10))
+for X, y in data.val_dataloader():
+    P = one_hot(d2l.argmax(model(X), axis=1), 10)
+    N += d2l.matmul(d2l.transpose(P), one_hot(y, 10))
+int(d2l.reduce_sum(N))
 ```
 
-```{.python .input #softmax-regression-scratch-prediction-3}
-%%tab mxnet
-#@save
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices."""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-```
-
-```{.python .input #softmax-regression-scratch-prediction-3}
-%%tab tensorflow
-#@save
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices."""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-```
-
-```{.python .input #softmax-regression-scratch-prediction-3}
-%%tab jax
-#@save
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices."""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(matrix, cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-```
+The counts add up to the 10,000 validation images. Dividing each column by
+its sum gives the matrix $\mathbf{C}$ with $C_{ij} = N_{ij} / \sum_{i'}
+N_{i'j}$, the fraction of the examples of class $j$ that are predicted as
+class $i$. It estimates the probability that the model predicts class $i$
+for an example of class $j$. Each column of $\mathbf{C}$ sums to 1, and its
+diagonal holds the recall of each class. The display utility
+`d2l.show_heatmaps` draws the matrix as a grid of colored cells. The classes
+are numbered from 0 to 9 in the order T-shirt, trouser, pullover, dress,
+coat, sandal, shirt, sneaker, bag, ankle boot.
 
 ```{.python .input #softmax-regression-scratch-prediction-confusion}
-%%tab pytorch
-C = torch.zeros(10, 10)
-for X_i, y_i in data.val_dataloader():
-    with torch.no_grad():
-        preds_i = model(X_i).argmax(axis=1)
-    C += torch.bincount(10 * preds_i + y_i, minlength=100).reshape(10, 10)
-C /= C.sum(axis=0, keepdims=True)              # column j: true class j
-d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
+C = N / d2l.reduce_sum(N, 0, keepdims=True)  # Each column sums to 1
+d2l.show_heatmaps(d2l.reshape(C, (1, 1, 10, 10)), xlabel='true class',
                   ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
 ```
 
-```{.python .input #softmax-regression-scratch-prediction-confusion}
-%%tab mxnet
-C = np.zeros((10, 10))
-for X_i, y_i in data.val_dataloader():
-    preds_i = model(X_i).argmax(axis=1).asnumpy()
-    for i, j in zip(preds_i, y_i.asnumpy()):
-        C[int(i), int(j)] += 1
-C /= C.sum(axis=0, keepdims=True)              # column j: true class j
-d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
-                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
-```
+The diagonal shows how often each class is recognized. Trousers, bags, and
+the three kinds of shoes are recognized about 90% of the time or more, and
+shirts only 40% to 70% of the time. The errors form two groups. The
+tops, T-shirts, pullovers, coats, and shirts (columns 0, 2, 4, and 6), trade
+most of their errors among themselves, and nearly all of the largest
+entries off the diagonal lie in this group: shirts taken for T-shirts,
+pullovers, or coats, and pullovers and coats taken for each other. Sandals,
+sneakers, and ankle boots (columns 5, 7, and 9) form a second, smaller
+group, whose errors almost all stay among the three. The four
+tops have similar outlines and differ in details such as collars, buttons,
+and the length of the sleeves, which change few pixels. A shirt resembles
+each of the other three in some of these details, so it collects errors
+from all of them.
 
-```{.python .input #softmax-regression-scratch-prediction-confusion}
-%%tab tensorflow
-C = tf.zeros((10, 10), dtype=tf.int32)
-for X_i, y_i in data.val_dataloader():
-    preds_i = tf.cast(d2l.argmax(model(X_i), axis=1), y_i.dtype)
-    C += tf.transpose(tf.math.confusion_matrix(y_i, preds_i, num_classes=10))
-C = tf.cast(C, tf.float32)
-C /= tf.reduce_sum(C, axis=0, keepdims=True)   # column j: true class j
-d2l.show_heatmaps(tf.reshape(C, (1, 1, 10, 10)), xlabel='true class',
-                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
-```
+We have written softmax regression with tensors, trained it to about 83%
+validation accuracy, and found where its errors lie: among garments of
+similar shape. Two limits remain. The direct softmax and the floor in the
+loss make the implementation fragile, which the next section fixes with a
+loss computed from the logits. And every class score is a weighted sum of
+pixels, so the boundaries between the predicted classes are hyperplanes in
+the space of images. Models that first compute features from groups of
+pixels, such as the multilayer perceptrons of :numref:`chap_perceptrons`,
+separate the classes better.
 
-```{.python .input #softmax-regression-scratch-prediction-confusion}
-%%tab jax
-C = jnp.zeros((10, 10))
-for X_i, y_i in data.val_dataloader():
-    preds_i = d2l.argmax(model(X_i), axis=1)
-    C += jnp.bincount(10 * preds_i + y_i, length=100).reshape(10, 10)
-C /= C.sum(axis=0, keepdims=True)              # column j: true class j
-d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
-                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
-```
+## Summary
 
-The errors concentrate in two groups. Upper-body garments
-(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) trade errors
-almost exclusively among themselves, and the *shirt* column has the largest off-diagonal mass, with predictions often
-assigned to t-shirt, pullover, and coat; footwear (sandal,
-sneaker, ankle boot: columns 5, 7, 9) forms a second, smaller cluster.
-Meanwhile, trousers and bags have predominantly diagonal entries, indicating
-fewer errors for this fitted linear model. This makes the summary's claim
-visible, since to a classifier that can only weigh pixels linearly, garments with similar global pixel patterns, such as shirts and pullovers, can
-be difficult to distinguish, while classes that
-differ in silhouette are easy.
-
-## Summary and Discussion
-
-In this section we built softmax regression from its constituent operations:
-softmax, cross-entropy, parameter initialization, the forward pass, and the
-optimization step. The concise implementation in :numref:`sec_softmax_concise`
-packages the same computation into framework primitives, including a fused and
-numerically stable loss.
-
-**What this training curve shows.** In the displayed run, 10 epochs of minibatch
-SGD reach roughly 82--84% validation accuracy. The confusion matrix shows that
-many remaining errors involve upper-body garments with similar pixel patterns.
-This observation diagnoses the fitted model; it does not establish a universal
-accuracy ceiling for linear classifiers or rule out improvements from different
-preprocessing, optimization, or regularization.
-
-**Why clipping is incomplete.** The clip stops $\log 0$ but leaves the naive
-`softmax` free to overflow for large logits; the stable approach (subtracting the row
-maximum before exponentiating and fusing softmax with log) is derived in
-:numref:`subsec_softmax-implementation-revisited`, which the concise
-implementation applies automatically.
+Softmax regression from scratch adds three components to the training code
+of linear regression: a weight matrix
+$\mathbf{W} \in \mathbb{R}^{784 \times 10}$ and a bias
+$\mathbf{b} \in \mathbb{R}^{10}$ registered as parameters, a forward pass
+that flattens the images and applies the softmax to each row of
+$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$, and the cross-entropy loss,
+which picks the probability of the true class in each row by indexing. The
+softmax written from its formula returns `NaN` once a logit exceeds about
+88; subtracting the largest logit of each row prevents the overflow, and a
+floor of $10^{-12}$ keeps the logarithm in the loss finite at the price of a
+zero gradient. Ten epochs of minibatch SGD reach about 83% validation
+accuracy, which `trainer.evaluate` reports. The confusion matrix, a sum of
+products of one-hot matrices, shows that most errors confuse garments of
+similar shape, above all shirts with T-shirts, pullovers, and coats.
 
 ## Exercises
 
-1. [code] **Numerical stability.** The `softmax` of this section returns
-   `NaN` on a matrix whose single row is the logits $(1000, 0, 0)$, because
-   $\exp(1000)$ overflows.
-    1. Show that it also returns `NaN` on the row $(-1000, -1000, -1000)$,
-       and identify the operation that produces the `NaN` in this case.
-    1. Implement a fix that subtracts the largest entry of each row before
-       exponentiating, and check that it agrees with the built-in softmax
-       on both rows and on random inputs.
+1. [code] **Underflow.** The `softmax` of this section returns `NaN` on
+   the logits $(1000, 0, 0)$, and subtracting the largest logit of the row
+   fixes it.
+    1. Show that `softmax` also returns `NaN` on the row
+       $(-1000, -1000, -1000)$, and identify the operation that produces
+       the `NaN` in this case. Check that the shifted version returns
+       $(1/3, 1/3, 1/3)$.
+    1. Take the logits $(0, -200, 0)$ and the label `y = 1`, the class of
+       the logit $-200$. Compute the shifted softmax and `cross_entropy` of
+       the result. Then compute the
+       gradient of this loss with respect to the logits by automatic
+       differentiation, and compare it with the gradient
+       $\hat{\mathbf{y}} - \mathbf{y}$ derived in :numref:`sec_softmax`.
+       Explain the difference, and what it means for training on an
+       example that the model gets badly wrong.
 
 1. [code] **Cross-entropy from one-hot labels.** The `cross_entropy` of this
    section selects the correct-class probability by indexing. Implement an
@@ -678,42 +578,47 @@ implementation applies automatically.
    this section.
 
 1. [code] **Hyperparameter sweep.** Retrain `SoftmaxRegressionScratch` with
-   `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time.
+   `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time, and
+   read the final losses from `trainer.history`.
     1. Plot the final validation loss against the learning rate over
        $\{0.01, 0.03, 0.1, 0.3, 1\}$.
     1. Plot the final training and validation losses against the minibatch
        size over $\{8, 32, 256, 2048\}$ at learning rate $0.1$.
     1. Compute the number of parameter updates that ten epochs over the
-       60,000 training images take at each batch size. Use these counts to
-       explain the trend in the previous plot, and predict how the
+       60,000 training images take at each minibatch size. Use these counts
+       to explain the trend in the previous plot, and predict how the
        comparison changes when every run takes the same number of updates.
 
-1. [code] **Confusion matrix.** The diagonal of the column-normalized
-   confusion matrix :eqref:`eq_confusion-normalized` holds the per-class
-   recall.
-    1. Compute the row-normalized counterpart, whose diagonal holds the
-       per-class precision. Find the class whose precision and recall
-       differ most, and state whether the model predicts that class more
-       often or less often than it occurs.
-    1. Reshape each column of the weight matrix `W` into a $28 \times 28$
-       image and display the ten templates with `show_images`. Relate
-       visually similar templates to the most confused class pairs.
+1. [code] **Precision and templates.** The diagonal of the column-normalized
+   confusion matrix $\mathbf{C}$ holds the recall of each class.
+    1. Divide each row of $\mathbf{N}$ by its sum instead, and show that
+       the diagonal of the result holds the precision of each class. Find
+       the class whose precision and recall differ most, and state whether
+       the model predicts that class more often or less often than it
+       occurs.
+    1. Reshape each column of the weight matrix $\mathbf{W}$ into a
+       $28 \times 28$ image and display the ten images with
+       `d2l.show_images`. Relate visually similar images to the most
+       confused pairs of classes.
 
-1. [code] **ROC of the trained model.** Exercises :exref:`ex_classification-roc-curves` and :exref:`ex_classification-auc-ranking-probability` of
-   :numref:`sec_classification` define the ROC curve and the area under
-   it (AUC) on simulated scores. Apply them to the trained
+1. [code] **ROC of the trained model.** Problems
+   :exref:`ex_classification-roc-curves` and
+   :exref:`ex_classification-auc-ranking-probability` of
+   :numref:`sec_classification` define the ROC curve and the area under it
+   (AUC) on simulated scores. Apply them to the trained
    `SoftmaxRegressionScratch` on the validation images of two classes $a$
    and $b$, with $a$ as the positive class. Because `forward` returns
    probabilities rather than logits, use the score
 
    $$s = \frac{\hat{y}_a}{\hat{y}_a + \hat{y}_b},$$
 
-   which equals $\sigma(o_a - o_b)$ by :eqref:`eq_softmax_to_sigmoid`.
+   which equals $\sigma(o_a - o_b)$, the sigmoid of the difference of the
+   two logits.
     1. Plot the ROC curves and compute the AUCs for sneaker versus sandal
-       and for shirt versus t-shirt.
+       and for shirt versus T-shirt.
     1. Compare the ordering of the two AUCs with the off-diagonal entries
-       of the confusion matrix $C$ for the same pairs, and explain why the
-       two diagnostics need not agree.
+       of $\mathbf{C}$ for the same pairs, and explain why the two
+       diagnostics need not agree.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/50)
@@ -735,31 +640,67 @@ implementation applies automatically.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §4.4]{.kicker}
+[Dive into Deep Learning · §3.4]{.kicker}
 
-Softmax regression **from scratch**<br>An explicit softmax, cross-entropy loss, and training loop.
+Softmax Regression from Scratch<br>**the softmax · registered parameters · cross-entropy by indexing · training · the confusion matrix**
 :::
 :::
 
-::: {.slide title="Two classification-specific components"}
-[Motivation]{.kicker}
+::: {.slide title="A Softmax Written From Its Formula Returns NaN"}
+[The problem]{.kicker}
+
+A classifier needs three pieces that linear regression did not have:
+$q = 10$ outputs, the softmax, and the cross-entropy loss.
+
+. . .
+
+Written from its formula, the softmax fails on one large logit:
+
+$$\mathrm{softmax}(1000, 0, 0) = \Big(\tfrac{e^{1000}}{e^{1000} + 2}, \ldots\Big) = \Big(\tfrac{\infty}{\infty}, 0, 0\Big) = (\texttt{NaN}, 0, 0)$$
+
+- In float32, $\exp(o)$ overflows once $o > 88.7$.
+- The right answer is $(1, 0, 0)$.
+
+::: {.d2l-note}
+Write the three pieces with tensors, find where they break, train on
+Fashion-MNIST, and look at what the model gets wrong.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute a rowwise softmax with broadcasting, and say when it overflows;
+- register $\mathbf{W}$ ($784 \times 10$) and $\mathbf{b}$ as parameters;
+- compute the cross-entropy by indexing the true-class probability;
+- train with the reused `Trainer` and read `trainer.evaluate`;
+- count a confusion matrix with one matrix product per minibatch, and
+  read off which garments the model confuses.
+
+**Running example:** Fashion-MNIST, 60,000 training and 10,000 validation
+images in minibatches of 256; $28 \times 28 = 784$ pixels, 10 classes.
+:::
+
+::: {.slide title="Three New Pieces, Everything Else Reused"}
+[Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Linear regression mapped inputs to **one** number. A classifier maps
-them to a **distribution over classes**. Two new parts do that:
-
-1. **Softmax** turns raw scores (logits) into probabilities.
-2. **Cross-entropy** is the loss that scores a distribution.
-
-::: {.d2l-note}
-The `Module` / `Trainer` scaffold is **reused** from
-the regression chapter; `Classifier` just adds accuracy reporting.
+| section | adds |
+|---|---|
+| Softmax Regression | probabilities over classes, cross-entropy |
+| The Image Classification Dataset | Fashion-MNIST in minibatches |
+| Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
+| **Implementation from Scratch** | **softmax regression by hand** |
+| Concise Implementation | framework layers, a stable loss |
+| Generalization in Classification | error bars, test-set reuse, VC dimension |
+| Environment and Distribution Shift | correcting for shifted data |
 :::
-:::
 
-::: {.col .fig .big}
-![](../img/mdl-clf-loss-accuracy.svg)
+::: {.col .narrow}
+- **Uses:** the `Trainer` and SGD of linear regression; `FashionMNIST`;
+  `Classifier` (loss and accuracy); softmax and cross-entropy.
+- **Skips:** a numerically stable loss (next deck).
 :::
 :::
 :::
@@ -768,73 +709,66 @@ the regression chapter; `Classifier` just adds accuracy reporting.
 ::: {.divider}
 [01]{.dnum}
 
-[The Softmax]{.dtitle}
+[The softmax]{.dtitle}
 
-[from scores to a probability distribution]{.dsub}
+[rowwise normalization · overflow]{.dsub}
 :::
 :::
 
-::: {.slide title="Sums along an axis"}
-[The Softmax]{.kicker}
+::: {.slide title="The Softmax Normalizes Each Row of the Logits"}
+[The softmax]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Softmax normalizes each row, so we need a **per-row** sum. `axis=1`
-collapses the columns; `keepdims` holds the shape for broadcasting:
+Logits $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$: one row per
+example, one column per class.
 
-@softmax-regression-scratch-the-softmax-1
-:::
-
-::: {.col .narrow}
-::: {.d2l-note}
-`axis=0` sums **down** columns, `axis=1` sums **across** rows.
-`keepdims=True` keeps a length-1 axis so the result still broadcasts
-against `X`.
-:::
-:::
-:::
-:::
-
-::: {.slide title="Softmax: exponentiate, sum, divide"}
-[The Softmax]{.kicker}
-
-$$\mathrm{softmax}(\mathbf{X})_{ij}
-  = \frac{\exp(\mathbf{X}_{ij})}{\sum_k \exp(\mathbf{X}_{ik})}.$$
-
-Three steps: exponentiate every score, sum across the class axis, divide
-each row by its total:
+$$\mathrm{softmax}(\mathbf{O})_{ij} = \frac{\exp(O_{ij})}{\sum_{k=1}^q \exp(O_{ik})}$$
 
 @softmax-regression-scratch-the-softmax-2
 
-::: {.d2l-note .warn}
-Naive `exp` **overflows** for large logits. This direct implementation exposes the formula but is numerically unstable. The stable fix arrives in the concise-softmax-regression
-section.
+::: {.d2l-note}
+Exponentiate, sum each row, divide. `keepdims=True` keeps the sums as an
+$(n, 1)$ column, which broadcasts against the $n \times q$ matrix.
 :::
 :::
 
-::: {.slide title="The output is a real distribution"}
-[The Softmax]{.kicker}
+::: {.slide title="Logits (1.0, 2.2, 0.3) Give Probabilities (0.21, 0.69, 0.10)"}
+[The softmax]{.kicker}
 
-Feed in any matrix: every entry becomes non-negative and **each row sums
-to 1**, exactly what a probability distribution over classes requires:
+Logits for cat, chicken, and dog on an image of a chicken, and three equal
+logits:
 
 @softmax-regression-scratch-the-softmax-3
+
+- Equal logits give every class $1/3$.
+- Every row sums to 1.
 :::
 
-::: {.slide title="One logit of 1000, and the answer is NaN"}
-[The Softmax · numerical failure]{.kicker}
+::: {.slide title="Subtracting the Row Maximum Prevents the Overflow"}
+[The softmax]{.kicker}
 
-A single logit of $1000$ sends $\exp$ to infinity in float32, so the max
-entry becomes $\infty/\infty=$ `NaN` (and the rest underflow to 0),
-making the row invalid. The framework's `softmax` shifts by the row maximum
-first and stays finite on the identical input:
+$\mathrm{softmax}(\mathbf{o} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{o})$
+for any $c$. With $c = \max_k o_k$ every exponent is $\le 0$:
 
 @softmax-regression-scratch-the-softmax-overflow
 
 ::: {.d2l-note .warn}
-A `NaN` propagates through downstream gradients. The concise-softmax-regression
-section derives the fix (fuse softmax and log via **log-sum-exp**) and shows
-the frameworks already ship it.
+The built-in softmax shifts first. A probability can still underflow to 0,
+and $\log 0 = -\infty$: the next deck fixes the loss.
+:::
+:::
+
+::: {.slide title="Check: Three Very Negative Logits"}
+[Check]{.kicker}
+
+What does the direct formula return for the logits
+$(-1000, -1000, -1000)$? And the shifted one?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Every $\exp(-1000)$ underflows to 0, so the direct formula
+computes $0/0$, which is `NaN`, in all three entries. The shifted logits are
+$(0, 0, 0)$, which give $(1/3, 1/3, 1/3)$.
+:::
 :::
 :::
 
@@ -842,172 +776,166 @@ the frameworks already ship it.
 ::: {.divider}
 [02]{.dnum}
 
-[The Model]{.dtitle}
+[The model and the loss]{.dtitle}
 
-[one linear layer, ten logits]{.dsub}
+[registered parameters · forward pass · cross-entropy]{.dsub}
 :::
 :::
 
-::: {.slide title="Parameters: a 784×10 weight matrix"}
-[The Model]{.kicker}
+::: {.slide title="7,850 Registered Parameters: W Is 784 × 10, b Has 10 Entries"}
+[The model]{.kicker}
 
-Each $28\times28$ image flattens to a length-784 vector; with 10 classes
-the weights are a $784\times10$ matrix `W` plus a length-10 bias `b`.
-Initialize `W` with Gaussian noise, `b` with zeros:
+Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, registered with the
+module:
 
-@softmax-regression-scratch-the-model-1
+| framework | parameter type | found by the default SGD via |
+|---|---|---|
+| PyTorch | `nn.Parameter(tensor)` | `model.parameters()` |
+| TensorFlow | `self.add_weight(...)` | `model.trainable_variables` |
+| MXNet | `gluon.Parameter(...)`, read with `data()` | `model.collect_params()` |
+| JAX | `nnx.Param(array)` | `nnx.state(model)` |
+
+::: {.d2l-note}
+No `configure_optimizers` of our own: the default minibatch SGD of
+`Module` finds registered parameters.
+:::
 :::
 
-::: {.slide title="Forward pass: flatten → linear → softmax"}
-[The Model]{.kicker}
+::: {.slide title="The Forward Pass Is One (256×784)(784×10) Product and a Softmax"}
+[The model]{.kicker}
 
-The model is one expression: reshape the batch to rows of 784, apply the
-affine map $\mathbf{X}\mathbf{W}+\mathbf{b}$, then softmax into
-per-class probabilities:
+Flatten each image to a row of 784 pixel values, compute
+$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$, apply the softmax:
 
 @softmax-regression-scratch-the-model-2
+
+- Broadcasting adds $\mathbf{b}$ to every row.
+- Flattening discards which pixels are neighbors.
+:::
+
+::: {.slide title="Indexing Picks the Probability of the True Class"}
+[The loss]{.kicker}
+
+$l = -\log \hat{y}_y$. Row indices plus labels pick one entry per row, with
+no loop. Labels 0 and 2:
+
+@softmax-regression-scratch-the-cross-entropy-loss-1
+
+::: {.d2l-note}
+Labels are class indices counted from 0, as stored by the loader.
+:::
+:::
+
+::: {.slide title="A Floor at 10⁻¹² Keeps the Average −log ŷ Finite"}
+[The loss]{.kicker}
+
+@softmax-regression-scratch-the-cross-entropy-loss-2
+
+- $(-\log 0.1 - \log 0.5)/2 = (2.30 + 0.69)/2 \approx 1.50$.
+- The floor $10^{-12}$ caps the loss of one example at $27.6$.
+
+::: {.d2l-note .warn}
+A probability raised to the floor has zero gradient: a badly wrong example
+stops contributing to training.
+:::
+:::
+
+::: {.slide title="Check: The Loss Before Training"}
+[Check]{.kicker}
+
+The weights start at $\mathcal{N}(0, 0.01^2)$ and the biases at 0. Roughly
+what loss should the first minibatch report?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Pixel values lie in $[0, 1]$, so the logits are all close to 0
+and the softmax is close to uniform, $\hat{y}_j \approx 0.1$. The loss is
+about $-\log 0.1 = \log 10 \approx 2.30$.
+:::
+:::
 :::
 
 ::: {.slide}
 ::: {.divider}
 [03]{.dnum}
 
-[Cross-Entropy Loss]{.dtitle}
+[Training and evaluation]{.dtitle}
 
-[the loss for a predicted distribution]{.dsub}
+[ten epochs · mistakes · the confusion matrix]{.dsub}
 :::
 :::
 
-::: {.slide title="The loss for distributions"}
-[Cross-Entropy Loss]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-For an integer label `y`, the loss on one example is just the negative
-log-probability the model assigned to the **correct** class:
-
-$$\ell = -\log \hat{y}_{y}.$$
-
-We pick out $\hat{y}_y$ for every row with fancy indexing, no Python
-loop. True labels `0` and `2` select the highlighted probabilities:
-
-@softmax-regression-scratch-the-cross-entropy-loss-1
-:::
-
-::: {.col .narrow}
-::: {.d2l-note}
-Minimizing cross-entropy maximizes the **log-likelihood** of the correct
-labels. It distinguishes correct-class probabilities of $0.51\to0.99$ even when
-the hard decision is unchanged.
-:::
-:::
-:::
-:::
-
-::: {.slide title="Average over the batch"}
-[Cross-Entropy Loss]{.kicker}
-
-Take the negative log of each selected probability, then average. A tiny
-clip keeps the log finite when a probability underflows to 0:
-
-@softmax-regression-scratch-the-cross-entropy-loss-2
-
-::: {.d2l-note .warn}
-The clip only masks $\log 0$; it does not fix the upstream overflow, and
-it silently kills the gradient on any clamped entry. The concise-softmax-regression section derives the stable fused loss.
-:::
-:::
-
-::: {.slide title="Register it as the loss"}
-[Cross-Entropy Loss]{.kicker}
-
-Attach `cross_entropy` as the model's `loss`, and every reused training
-utility now knows how to optimize this classifier:
-
-@softmax-regression-scratch-the-cross-entropy-loss-3
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Train & Predict]{.dtitle}
-
-[fit on Fashion-MNIST, then inspect errors]{.dsub}
-:::
-:::
-
-::: {.slide title="Train on Fashion-MNIST"}
+::: {.slide title="Ten Epochs of Minibatch SGD Reach About 83%"}
 [Training]{.kicker}
 
-Ten epochs of minibatch SGD on Fashion-MNIST. The inherited `Classifier`
-runs the validation loop and plots train/validation loss alongside
-validation accuracy, no extra code:
+::: {.cols .vc}
+::: {.col .narrow}
+Learning rate 0.1, 235 minibatches of 256 per epoch (the last of 96).
 
-@softmax-regression-scratch-training
+- 75% to 80% after one epoch, about 83% after ten.
+- Training and validation losses end near 0.45 and 0.49: 7,850
+  parameters memorize little of 60,000 images.
 :::
 
-::: {.slide title="Predictions on a validation batch"}
-[Prediction]{.kicker}
-
-Take the argmax of the model's outputs over a fresh validation batch,
-one predicted class per image:
-
-@softmax-regression-scratch-prediction-1
+::: {.col .fig .big}
+@!softmax-regression-scratch-training
+:::
+:::
 :::
 
-::: {.slide title="Inspect misclassified examples"}
-[Prediction]{.kicker}
-
-We inspect the **errors** to identify recurring class confusions. Tile the misclassified images,
-each captioned `true / predicted`:
-
-@softmax-regression-scratch-prediction-2
-:::
-
-::: {.slide title="Validation accuracy of the linear model" only="pytorch"}
-[Prediction]{.kicker}
-
-Sweep the whole validation set and average the per-example correct flags:
+::: {.slide title="trainer.evaluate Returns the Validation Means"}
+[Evaluation]{.kicker}
 
 @softmax-regression-scratch-prediction-accuracy
 
-::: {.d2l-note}
-This run reaches roughly **82--83%**. The confusion matrix on the next slide
-shows which class pairs account for many of its errors.
-:::
-:::
-
-::: {.slide title="Validation accuracy of the linear model" except="pytorch"}
-[Prediction]{.kicker}
-
-Sweep the whole validation set and average the per-example correct flags
-returned by `accuracy(..., averaged=False)`: the overall test accuracy
-lands at roughly **82--84%** in the displayed run, matching the validation
-curve above.
-
-::: {.d2l-note}
-The next slide resolves this aggregate accuracy into class-specific errors.
-:::
+- Means over all 10,000 validation images: the last points of
+  `trainer.history['val_loss']` and `['val_acc']`.
+- Repeated runs, all four frameworks: 82% to 84%.
 :::
 
-::: {.slide title="The confusion matrix identifies two error groups" only="pytorch"}
-[Prediction · the confusion matrix]{.kicker}
+::: {.slide title="About 40 of 256 Validation Images Are Misclassified"}
+[Mistakes]{.kicker}
+
+@!softmax-regression-scratch-prediction-1
+
+@!softmax-regression-scratch-prediction-2
+
+Titles: true class above the predicted one. Most mistakes confuse garments
+of similar outline: one top for another, one shoe for another.
+:::
+
+::: {.slide title="The Confusion Matrix Is a Sum of One-Hot Products"}
+[The confusion matrix]{.kicker}
+
+Rows of $\mathbf{P}$: one-hot predictions; rows of $\mathbf{Y}$: one-hot
+labels ($n \times 10$ each).
+
+$$N_{ij} = \sum_{m} \mathbf{1}\big(\hat{y}^{(m)} = i\big)\, \mathbf{1}\big(y^{(m)} = j\big) = (\mathbf{P}^\top \mathbf{Y})_{ij}$$
+
+```{.python #softmax-regression-scratch-exercises}
+N = d2l.zeros((10, 10))
+for X, y in data.val_dataloader():
+    P = one_hot(d2l.argmax(model(X), axis=1), 10)
+    N += d2l.matmul(d2l.transpose(P), one_hot(y, 10))
+```
+
+Columns divided by their sums give $\mathbf{C}$: $C_{ij}$ is the fraction
+of class $j$ predicted as $i$; the diagonal is the recall of each class.
+:::
+
+::: {.slide title="Shirts Are Recognized Only 40% to 70% of the Time"}
+[The confusion matrix]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Accumulate a $10\times 10$ count matrix over the validation set (the
-base-classification section's confusion matrix) and normalize each column:
-
-- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**)
-  account for many mutual confusions; the shirt column has the largest
-  off-diagonal mass.
-- **Footwear** (sandal, sneaker, ankle boot) forms a second cluster.
-- Trousers and bags have predominantly diagonal entries in this run.
+- Trousers, bags, shoes: recall about 90% or more.
+- **Tops** (0 T-shirt, 2 pullover, 4 coat, 6 shirt) trade errors among
+  themselves; nearly every large off-diagonal entry is a pair of tops.
+- **Shoes** (5, 7, 9): a second, smaller group.
 
 ::: {.d2l-note}
-A linear pixel model cannot represent localized or nonlinear interactions that
-may distinguish garments with similar global patterns.
+Tops share an outline and differ in collars, buttons, and sleeves, which
+change few pixels.
 :::
 :::
 
@@ -1017,41 +945,30 @@ may distinguish garments with similar global patterns.
 :::
 :::
 
-::: {.slide title="The confusion matrix identifies two error groups" except="pytorch"}
-[Prediction · the confusion matrix]{.kicker}
+::: {.slide title="Weighted Sums of Pixels Draw Flat Boundaries"}
+[Limits]{.kicker}
 
-Accumulate a $10\times 10$ count matrix over the validation set (the
-base-classification section's confusion matrix), normalize each column, and
-the errors concentrate in a few groups:
+Between two classes the model predicts by the sign of an affine function
+of the pixels. Lines in the plane separate every labeling of three points,
+but not every labeling of four:
 
-- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**) trade
-  errors almost exclusively among themselves; the shirt column has the largest off-diagonal mass, often assigned to
-  t-shirt, pullover, or coat.
-- **Footwear** (sandal, sneaker, ankle boot) forms a second, smaller cluster.
-- Trousers and bags have predominantly diagonal entries in this run.
-
-::: {.d2l-note}
-Same outline, same mass distribution → indistinguishable to a model that
-can only **weigh pixels linearly**.
-:::
-:::
-
-::: {.slide title="What the linear model cannot represent"}
-[Model capacity]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-A linear classifier draws **straight** decision boundaries: as shown in the softmax-regression section. In pixel space
-shirts and pullovers overlap, and no hyperplane separates them.
-
-The capacity of lines is finite: in the plane a line can shatter 3 points in
-general position but cannot realize the 4-point XOR labeling (the generalization-in-
-classification section makes this precise). A single hidden layer (the
-multilayer-perceptrons chapter) can represent nonlinear decision boundaries.
-:::
-
-::: {.col .fig}
 ![](../img/mdl-clf-shattering.svg)
+
+Hidden layers compute features first and draw curved boundaries.
+:::
+
+::: {.slide title="Check: Too Many or Too Few Shirts?"}
+[Check]{.kicker}
+
+Column 6 (true shirts) of $\mathbf{N}$ sums to 1,000; row 6 (predicted
+shirts) sums to 800, of which 560 are correct. Compute the recall and the
+precision of *shirt*. Does the model predict *shirt* too often or too
+rarely?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Recall $560/1000 = 0.56$, precision $560/800 = 0.70$. The model
+predicts *shirt* for 800 images but 1,000 are shirts: too rarely.
 :::
 :::
 :::
@@ -1059,21 +976,17 @@ multilayer-perceptrons chapter) can represent nonlinear decision boundaries.
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-::: {.cols}
-::: {.col}
-- **Softmax** = exp, row-sum, divide → a probability distribution over
-  classes.
-- **Cross-entropy** = $-\log \hat{y}_{\text{true}}$, averaged over the
-  batch: the negative log-likelihood used here.
-- **Model** = flatten → one linear layer ($784\times10$) → softmax.
-:::
+- **Softmax:** exponentiate, sum each row, divide; `NaN` above $o \approx 88$
+  unless the row maximum is subtracted first.
+- **Model:** $\mathbf{W} \in \mathbb{R}^{784 \times 10}$, $\mathbf{b}$:
+  7,850 registered parameters; one matrix product per minibatch.
+- **Loss:** $-\log \hat{y}_y$ by indexing, floored at $10^{-12}$ (zero
+  gradient when floored).
+- **Result:** 75% to 80% after one epoch, about 83% after ten, in every
+  framework; `trainer.evaluate` reports it.
+- **Errors:** the confusion matrix $\mathbf{N} = \sum \mathbf{P}^\top\mathbf{Y}$;
+  shirts recognized 40% to 70% of the time, confused with other
+  tops.
 
-::: {.col}
-- **Training** reuses the regression `Trainer`; `Classifier` adds
-  accuracy reporting through the base class.
-- This run reaches **82--84%**; its confusion matrix concentrates errors among
-  visually similar upper-body garments and, to a lesser extent, footwear.
-- `exp(1000)` = `NaN`: the naive softmax is fragile and clipping does not address the overflow; the concise-softmax-regression section derives the stable approach.
-:::
-:::
+**Next:** the framework's layer and a loss computed stably from the logits.
 :::

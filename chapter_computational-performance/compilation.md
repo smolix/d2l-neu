@@ -144,9 +144,9 @@ compiled fragments. Its main failure mode is recompilation: the trace is
 specialized to the *shapes and dtypes* it saw, so calling the compiled
 function with a new shape triggers a full **retrace and recompile**. In a
 training loop with variable-length batches this can mean recompiling every
-step. The escape hatches are to keep shapes static (the
-`drop_remainder=True` data-loading discipline of :numref:`sec_fashion_mnist`
-was designed for this case), to mark genuinely constant arguments
+step. The escape hatches are to keep shapes static (drop or pad the last,
+incomplete minibatch; the loaders of :numref:`sec_fashion_mnist` keep it and
+pay for one extra compilation per run), to mark genuinely constant arguments
 with `static_argnums`, and to express data-dependent control flow with
 `lax.cond`/`lax.scan` so it lives *inside* the graph rather than breaking
 it. The frameworks therefore require different checks: `torch.compile`

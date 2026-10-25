@@ -503,9 +503,11 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, '
 ```
 
 At the same parameter count, with the same data and number of epochs, the
-CNN performs better by several points, about 90–92% against the ViT's
-85–87%, a margin well beyond the run-to-run noise of these ten-epoch runs.
-The result is consistent with an advantage from the convolutional prior at
+CNN performs better, reaching about 87–92% against the ViT's 85–87%. The
+CNN's validation accuracy swings by a few points from epoch to epoch (see
+the curves), so the margin at the last epoch of a single run ranges from
+about one point to six; the CNN's curve lies above the ViT's for most of
+training. The result is consistent with an advantage from the convolutional prior at
 this scale, although the comparison does not isolate that cause. Locality
 and translation
 equivariance are a strong prior the CNN has by construction; the

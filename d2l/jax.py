@@ -77,6 +77,7 @@ import tarfile
 import time
 import requests
 import zipfile
+import gzip
 import hashlib
 d2l = sys.modules[__name__]
 
@@ -543,24 +544,24 @@ class FashionMNIST(d2l.DataModule):
         return [labels[int(i)] for i in indices]
 
     def get_dataloader(self, train):
-        data = self.train if train else self.val
-        process = lambda X, y: (tf.expand_dims(X, axis=3) / 255,
-                                tf.cast(y, dtype='int32'))
-        resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
-        shuffle_buf = len(data[0]) if train else 1
-        # `drop_remainder=train` keeps every training minibatch the same
-        # shape, so JAX does not retrace the `@jax.jit`'d step function for
-        # a smaller last batch.
-        dataset = (tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-            shuffle_buf).batch(self.batch_size, drop_remainder=train).map(
-                resize_fn))
-        return d2l.TensorFlowDataLoader(dataset)
+        X, y = self.train if train else self.val
+        X = tf.expand_dims(X, axis=3) / 255  # Channel axis last; values in [0, 1]
+        resize = lambda X, y: (tf.image.resize(X, self.resize), y)
+        return d2l.TensorFlowDataLoader(tf.data.Dataset.from_tensor_slices(
+            (X, tf.cast(y, tf.int32))).shuffle(len(y) if train else 1).batch(
+                self.batch_size).map(resize))
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
+        """Show the images of a batch in grayscale, titled by their labels.
+
+        Defined in :numref:`sec_fashion_mnist`"""
         X, y = batch
-        if not labels:
+        if labels is None:
             labels = self.text_labels(y)
-        d2l.show_images(jnp.squeeze(X), nrows, ncols, titles=labels)
+        X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
+        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
+            for image in ax.get_images():
+                image.set_cmap('gray')
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -598,32 +599,17 @@ def cross_entropy(y_hat, y):
                                      axis=1).squeeze(-1), min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_softmax_scratch`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(matrix, cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
 class SoftmaxRegression(d2l.Classifier):
+    """The softmax regression model.
+
+    Defined in :numref:`sec_softmax_concise`"""
     def __init__(self, num_outputs, lr, num_inputs=784, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.net = nnx.Linear(num_inputs, num_outputs, rngs=rngs)
+        self.net = nnx.Linear(num_inputs, num_outputs,
+                              kernel_init=nnx.initializers.normal(0.01),
+                              rngs=rngs)
 
     def forward(self, X):
         X = X.reshape((X.shape[0], -1))  # Flatten
@@ -4729,6 +4715,26 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
         if titles:
             ax.set_title(titles[i])
     return axes
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None,
+                  figsize=(2.5, 2.5), cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_utils`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
 
 def download(url, folder='../data', sha1_hash=None):
     """Download a file to folder and return the local filepath.

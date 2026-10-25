@@ -29,112 +29,88 @@ from matplotlib.patches import FancyBboxPatch
 
 
 def fig_loss_accuracy():
-    """The two roles of a classifier's scores. One forward pass produces a
-    logit vector o; from there the picture forks. The TOP (training) branch
-    softmaxes o into probabilities and reads off the differentiable
-    cross-entropy loss that gradient descent minimizes. The BOTTOM (evaluation)
-    branch takes the argmax to a single hard decision, compares it with the
-    label, and counts it for accuracy --- a discrete number with no useful
-    gradient. Both branches read the SAME o, so the numbers in the picture are
-    a real, exact softmax / cross-entropy of one concrete logit vector."""
-    # One concrete example: 3-class logits, true label y = 1 (the middle class).
-    o = np.array([1.0, 2.2, 0.3])           # the model's score vector (logits)
-    y = 1                                     # ground-truth class index
-    p = np.exp(o - o.max())                   # numerically stable softmax
+    """The two roles of a classifier's scores. One logit vector feeds two
+    branches. The TOP (training) branch softmaxes the logits into
+    probabilities and reads off the cross-entropy loss of the true class,
+    which is smooth in the parameters and is what gradient descent minimizes.
+    The BOTTOM (evaluation) branch takes the argmax to a hard decision,
+    compares it with the label, and counts it toward accuracy, a step
+    function of the parameters. The logits (1.0, 2.2, 0.3) are the running
+    example of the softmax section (cat, chicken, dog; the image is a
+    chicken), and every number shown is computed, not typed. Laid out at
+    text-column width with 13-15 pt type so it stays legible on the page."""
+    T = fl.T
+    o = np.array([1.0, 2.2, 0.3])             # logits of cat, chicken, dog
+    names = ["cat", "chicken", "dog"]
+    y = 1                                      # true class: chicken
+    p = np.exp(o - o.max())                    # numerically stable softmax
     p = p / p.sum()
-    yhat = int(np.argmax(p))                  # hard decision
-    loss = float(-np.log(p[y]))               # cross-entropy of the true class
-    correct = int(yhat == y)
-    # Strings shown in the figure are formatted from the SAME computed numbers,
-    # so the picture can never drift from the real softmax / cross-entropy.
-    o_str = "(" + ",\\ ".join(f"{v:.1f}" for v in o) + ")"
-    p_str = "(" + ",\\ ".join(f"{v:.2f}" for v in p) + ")"
-    loss_str = f"{loss:.2f}"
-    print(f"  logits o = {o.tolist()}")
-    print(f"  softmax p = {np.round(p, 3).tolist()}  ->  argmax y_hat = {yhat}")
-    print(f"  true y = {y}   cross-entropy = {loss:.3f}   correct = {correct}")
+    yhat = int(np.argmax(o))                   # hard decision
+    loss = float(-np.log(p[y]))                # cross-entropy of the label
+    print(f"  logits o = {o.tolist()}  softmax = {np.round(p, 3).tolist()}")
+    print(f"  argmax = {names[yhat]}  label = {names[y]}  loss = {loss:.3f}")
 
-    fig, ax = plt.subplots(figsize=(11.0, 4.6))
-    ax.set_xlim(0, 15.4)
-    ax.set_ylim(0, 6.0)
+    W, H = 6.7, 2.75                           # canvas in inches (aspect 1)
+    fig = plt.figure(figsize=(W, H))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, W), ax.set_ylim(0, H)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    def box(cx, cy, w, h, title, sub, color, fc_alpha=0.10, title_fs=12.5,
-            sub_fs=9.5, mono=False):
-        """Rounded box centred at (cx, cy) with a bold title and a smaller
-        second line (rendered in math/mono). Returns useful anchor points."""
-        x, y = cx - w / 2, cy - h / 2
-        for fc, a in [(color, fc_alpha), ("none", 1.0)]:
-            ax.add_patch(FancyBboxPatch(
-                (x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.10",
-                linewidth=1.8, edgecolor=color, facecolor=fc, alpha=a))
-        if sub:
-            ax.text(cx, cy + 0.30, title, ha="center", va="center",
-                    fontsize=title_fs, fontweight="bold", color=color)
-            ax.text(cx, cy - 0.34, sub, ha="center", va="center",
-                    fontsize=sub_fs, color="black",
-                    family="monospace" if mono else None)
-        else:
-            ax.text(cx, cy, title, ha="center", va="center",
-                    fontsize=title_fs, fontweight="bold", color=color)
-        return dict(l=x, r=x + w, t=y + h, b=y, cx=cx, cy=cy)
+    def box(x0, y0, w, h, acc):
+        fc, ec = (T.PANEL, T.INK) if acc is None else (acc.tint, acc.base)
+        ax.add_patch(FancyBboxPatch((x0, y0), w, h,
+                                    boxstyle="round,pad=0,rounding_size=0.08",
+                                    fc=fc, ec=ec, lw=T.SW_BOX, zorder=2))
+        return dict(l=x0, r=x0 + w, b=y0, t=y0 + h, cx=x0 + w / 2,
+                    cy=y0 + h / 2)
 
-    y_mid = 3.0
-    y_top = 4.55
-    y_bot = 1.45
+    def label(x, y0, s, **kw):
+        ax.text(x, y0, s, ha=kw.pop("ha", "center"), va=kw.pop("va", "center"),
+                fontsize=kw.pop("fontsize", 15), color=kw.pop("color", T.INK),
+                zorder=3, **kw)
 
-    # --- shared trunk: input x -> model -> logits o ---
-    xin = box(1.35, y_mid, 1.7, 1.0, r"input $\mathbf{x}$", "", GRAY,
-              fc_alpha=0.08, title_fs=12)
-    model = box(4.0, y_mid, 2.2, 1.2, "model", r"$f_{\mathbf{w}}$", BLUE,
-                title_fs=12.5, sub_fs=14)
-    # logits box shows the actual score vector
-    logits = box(6.95, y_mid, 2.7, 1.3, r"logits $\mathbf{o}$",
-                 rf"${o_str}$", BLUE, title_fs=12, sub_fs=12)
+    def flow(x0, x1, yy, acc, text=""):
+        fl.arrow(ax, (x0, yy), (x1, yy), color=acc.base, lw=T.SW_LINE, mut=15)
+        if text:
+            label((x0 + x1) / 2, yy + 0.1, text, va="bottom", fontsize=13,
+                  color=acc.dark)
 
-    fl.arrow(ax, (xin["r"], y_mid), (model["l"], y_mid), color=GRAY, lw=1.8)
-    fl.arrow(ax, (model["r"], y_mid), (logits["l"], y_mid), color=GRAY, lw=1.8)
-
-    # --- the fork: create the branch boxes FIRST, so the fork arrows can
-    #     terminate exactly at their left edges (no overshoot through the box) ---
-    fork_x = logits["r"]
-    sm = box(10.5, y_top, 2.05, 0.95, "softmax", "", ORANGE, fc_alpha=0.10,
-             title_fs=11.5)
-    am = box(10.5, y_bot, 2.05, 0.95, "argmax", "", GREEN, fc_alpha=0.10,
-             title_fs=11.5)
-    # top (training) branch and bottom (evaluation) branch
-    fl.arrow(ax, (fork_x, y_mid + 0.18), (sm["l"], y_top), color=ORANGE, lw=1.9)
-    fl.arrow(ax, (fork_x, y_mid - 0.18), (am["l"], y_bot), color=GREEN, lw=1.9)
-
-    # ---------- TOP branch: softmax -> p_hat -> cross-entropy loss ----------
-    phat = box(13.6, y_top, 2.9, 1.15, r"probs $\hat{\mathbf{y}}$",
-               rf"${p_str}$", ORANGE, title_fs=11.5, sub_fs=11)
-    fl.arrow(ax, (sm["r"], y_top), (phat["l"], y_top), color=ORANGE, lw=1.8)
-
-    # ---------- BOTTOM branch: argmax -> y_hat -> compare with y ----------
-    cmp_sub = "correct" if correct else "wrong"
-    cmp = box(13.6, y_bot, 2.9, 1.15, rf"$\hat{{y}}={yhat}$  vs  $y={y}$",
-              cmp_sub, GREEN, title_fs=11, sub_fs=10.5)
-    fl.arrow(ax, (am["r"], y_bot), (cmp["l"], y_bot), color=GREEN, lw=1.8)
-
-    # ---------- branch end-labels: loss (top) and accuracy (bottom) ----------
-    ax.text(13.6, y_top + 1.02,
-            rf"cross-entropy loss $\ell = {loss_str}$", ha="center", va="center",
-            fontsize=10.5, color=ORANGE, fontweight="bold")
-    ax.text(13.6, y_bot - 1.02,
-            "accuracy (count correct)", ha="center", va="center",
-            fontsize=10.5, color=GREEN, fontweight="bold")
-
-    # ---------- the one teaching line per branch ----------
-    ax.text(11.55, y_top - 1.18,
-            "differentiable\nused for gradient descent",
-            ha="center", va="center", fontsize=11, color=ORANGE, style="italic")
-    ax.text(11.55, y_bot + 1.18,
-            "discrete (zero gradient)\nused for benchmarks",
-            ha="center", va="center", fontsize=11, color=GREEN, style="italic")
-
-    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
+    y_top, y_bot, bh = 2.08, 0.74, 0.62
+    # the logits, one row per class
+    L = box(0.04, 0.36, 1.62, 2.10, None)
+    label(L["cx"], 2.12, r"logits $\mathbf{o}$")
+    for k, (nm, v) in enumerate(zip(names, o)):
+        label(0.22, 1.64 - 0.44 * k, nm, ha="left")
+        label(1.48, 1.64 - 0.44 * k, f"${v:.1f}$", ha="right")
+    # training: softmax -> probabilities -> loss
+    P = box(2.55, y_top - bh / 2, 2.05, bh, T.ORANGE)
+    label(P["cx"], P["cy"], r"$\hat{\mathbf{y}} = ("
+          + ",\\ ".join(f"{v:.2f}" for v in p) + ")$")
+    Lo = box(5.0, y_top - bh / 2, 1.66, bh, T.ORANGE)
+    label(Lo["cx"], Lo["cy"], rf"$-\log {p[y]:.2f} = {loss:.2f}$")
+    flow(L["r"], P["l"], y_top, T.ORANGE, "softmax")
+    flow(P["r"], Lo["l"], y_top, T.ORANGE)
+    # evaluation: argmax -> predicted class -> compared with the label
+    D = box(2.55, y_bot - bh / 2, 2.05, bh, T.BLUE)
+    label(D["cx"], D["cy"], f"predicted: {names[yhat]}")
+    A = box(5.0, y_bot - bh / 2, 1.66, bh, T.BLUE)
+    label(A["cx"], A["cy"] + 0.12, f"label: {names[y]}", fontsize=13)
+    label(A["cx"], A["cy"] - 0.13, "correct" if yhat == y else "wrong",
+          weight="bold")
+    flow(L["r"], D["l"], y_bot, T.BLUE, "argmax")
+    flow(D["r"], A["l"], y_bot, T.BLUE)
+    # what each number is, and what it is for
+    label(Lo["cx"], Lo["t"] + 0.08, "loss", va="bottom", fontsize=13,
+          color=T.ORANGE.dark, weight="bold")
+    label(A["cx"], A["t"] + 0.08, "accuracy", va="bottom", fontsize=13,
+          color=T.BLUE.dark, weight="bold")
+    label((P["l"] + Lo["r"]) / 2, P["b"] - 0.1,
+          "smooth in the parameters: training minimizes it", va="top",
+          fontsize=13, color=T.ORANGE.dark, style="italic")
+    label((D["l"] + A["r"]) / 2, D["b"] - 0.1,
+          "a step in the parameters: evaluation counts it", va="top",
+          fontsize=13, color=T.BLUE.dark, style="italic")
     fl.save(fig, "mdl-clf-loss-accuracy")
 
 
@@ -142,12 +118,15 @@ def fig_decision_regions():
     """What a (multiclass) linear classifier's decision LOOKS like. Left: a
     3-class softmax regression partitions the plane into three convex
     polyhedral regions --- the argmax of three affine score functions --- whose
-    straight pairwise boundaries (the ties o_i = o_j) meet at the single point
+    straight pairwise boundaries (the ties o_j = o_k) meet at the single point
     where all three scores are equal. Right: the binary special case. The
-    predicted probability sigma(o) depends on x only through the affine logit
-    gap o = w.x + b, so its level sets are parallel lines perpendicular to w,
-    with the decision boundary at probability 1/2. Regions/boundaries are
-    computed exactly from the affine scores, not sketched."""
+    predicted probability y_hat_1 = sigma(o) depends on x only through the
+    logit difference o = (w_1 - w_2).x + b_1 - b_2, so its level sets are
+    parallel lines perpendicular to w_1 - w_2, with the decision boundary at
+    probability 1/2. The level lines carry inline labels on white patches, so
+    no label sits on a line. Regions/boundaries are computed exactly from the
+    affine scores, not sketched."""
+    T = fl.T
     # --- three concrete affine score functions (generic, no symmetry) ---
     W = np.array([[0.30, 1.00],      # class 1
                   [-1.00, -0.55],    # class 2
@@ -184,19 +163,20 @@ def fig_decision_regions():
             t = -t
         far = p0 + t * 2.5 * lim
         axl.plot([p0[0], far[0]], [p0[1], far[1]], color=GRAY, lw=1.8)
-    axl.plot(*p0, "o", ms=6, color="black", zorder=5)
-    axl.annotate(r"$o_1 = o_2 = o_3$", p0, xytext=(p0[0] - 2.0, p0[1] - 1.1),
-                 fontsize=11, color="black",
-                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
+    axl.plot(*p0, "o", ms=7, color=T.INK, zorder=5)
+    axl.annotate(r"$o_1 = o_2 = o_3$", p0, xytext=(p0[0] - 1.9, p0[1] - 1.25),
+                 fontsize=15, color=T.INK, ha="center", va="center",
+                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=1.2,
+                                 shrinkA=9, shrinkB=4))
 
     # label each region at a representative interior point
-    for cls, col, pos in [(0, BLUE, (0.15, 2.1)), (1, ORANGE, (-2.2, 0.2)),
-                          (2, GREEN, (2.0, -1.4))]:
+    for cls, col, pos in [(0, BLUE, (0.15, 2.1)), (1, ORANGE, (-2.0, 0.35)),
+                          (2, GREEN, (1.95, -1.45))]:
         axl.text(*pos, f"class {cls + 1}", ha="center", va="center",
-                 fontsize=11.5, fontweight="bold", color=col)
-        axl.text(pos[0], pos[1] - 0.42,
-                 rf"$o_{cls + 1} \geq o_j\ \forall j$",
-                 ha="center", va="center", fontsize=11, color=col)
+                 fontsize=15, fontweight="bold", color=col)
+        axl.text(pos[0], pos[1] - 0.5,
+                 rf"$o_{cls + 1} \geq o_k\ \forall k$",
+                 ha="center", va="center", fontsize=15, color=col)
     fl.clean_axes(axl, lim=((-lim, lim), (-lim, lim)))
     axl.set_xticks([]), axl.set_yticks([])
     axl.set_xlabel(r"$x_1$"), axl.set_ylabel(r"$x_2$")
@@ -204,10 +184,11 @@ def fig_decision_regions():
     # each panel, so a repeated in-figure heading would be redundant.
 
     # ---------------- RIGHT: binary sigma level sets ----------------
-    w2, b2 = np.array([1.3, 0.9]), 0.0
+    w2, b2 = np.array([1.3, 0.9]), 0.0     # w_1 - w_2 and b_1 - b_2
     wn = w2 / np.linalg.norm(w2)
     tang = np.array([-wn[1], wn[0]])
     sigma_levels = [0.1, 0.3, 0.5, 0.7, 0.9]
+    lab_row = -1.55 * tang          # the level labels form one row across
     for s in sigma_levels:
         o = np.log(s / (1 - s))                     # logit: w.x + b = o
         c = (o - b2) / np.linalg.norm(w2)           # signed distance along w
@@ -215,25 +196,27 @@ def fig_decision_regions():
         far1, far2 = pt + tang * 3 * lim, pt - tang * 3 * lim
         main = abs(s - 0.5) < 1e-9
         axr.plot([far1[0], far2[0]], [far1[1], far2[1]],
-                 color=BLUE if main else GRAY, lw=2.4 if main else 1.2,
-                 ls="-" if main else (0, (5, 3)))
-        rot = np.degrees(np.arctan2(tang[1], tang[0]))
-        rot = rot - 180 if rot > 90 else (rot + 180 if rot <= -90 else rot)
-        lbl_pos = pt + tang * (-2.0) + wn * 0.16
-        axr.text(*lbl_pos, rf"$\hat y = {s}$", fontsize=11, color="black",
-                 ha="center", va="center", rotation=rot)
-    # weight vector from a point on the decision boundary
-    base = ((np.log(1) - b2) / np.linalg.norm(w2)) * wn + tang * 1.15
-    fl.arrow(axr, base, base + wn * 1.1, color=ORANGE, lw=2.2)
-    axr.text(*(base + wn * 1.1 + np.array([-0.02, 0.34])), r"$\mathbf{w}$",
-             fontsize=12, color=ORANGE, ha="center", va="center")
-    # region labels: placed strictly along +/- wn from the origin (the true
-    # high-/low-sigma sides for this w), in the empty corners beyond every
-    # level line, so neither the text nor the arrowhead ever crosses a line
-    axr.text(1.8, 2.4, r"$\hat y > \frac{1}{2}$", fontsize=11, color=BLUE,
-             ha="center")
-    axr.text(-2.1, -2.3, r"$\hat y < \frac{1}{2}$", fontsize=11, color=GRAY,
-             ha="center")
+                 color=BLUE if main else GRAY, lw=2.6 if main else 1.4,
+                 ls="-" if main else (0, (5, 3)), zorder=2)
+        axr.text(*(lab_row + c * wn), f"{s}", fontsize=14,
+                 color=T.BLUE.dark if main else T.INK, ha="center",
+                 va="center", zorder=4,
+                 bbox=dict(fc="white", ec="none", pad=1.5))
+    c0 = (np.log(0.1 / 0.9) - b2) / np.linalg.norm(w2)
+    axr.text(*(lab_row + (c0 - 0.75) * wn), r"$\hat{y}_1 =$", fontsize=15,
+             color=T.INK, ha="center", va="center", zorder=4)
+    # w_1 - w_2, drawn from a point on the decision boundary
+    base = 1.9 * tang
+    tip = base + 0.95 * wn
+    fl.arrow(axr, base, tip, color=ORANGE, lw=2.4)
+    axr.text(*(tip + np.array([0.05, 0.42])), r"$\mathbf{w}_1 - \mathbf{w}_2$",
+             fontsize=15, color=T.ORANGE.dark, ha="center", va="center",
+             zorder=4, bbox=dict(fc="white", ec="none", pad=1.5))
+    # region labels in the empty corners beyond every level line
+    axr.text(2.0, 2.45, r"$\hat{y}_1 > \frac{1}{2}$", fontsize=15,
+             color=T.BLUE.dark, ha="center", va="center")
+    axr.text(-2.2, -1.6, r"$\hat{y}_1 < \frac{1}{2}$", fontsize=15,
+             color=T.INK, ha="center", va="center")
     fl.clean_axes(axr, lim=((-lim, lim), (-lim, lim)))
     axr.set_xticks([]), axr.set_yticks([])
     axr.set_xlabel(r"$x_1$"), axr.set_ylabel(r"$x_2$")
@@ -248,28 +231,29 @@ def fig_temperature():
     temperatures. Cooling (T < 1) sharpens toward the hard argmax, T = 1 is
     the plain softmax, heating (T > 1) flattens toward uniform --- and the
     ORDER of the bars never changes, since 1/T scales all logits alike. Uses
-    the same logits (1.0, 2.2, 0.3) as the loss/accuracy figure, so the middle
-    panel repeats numbers the reader has already seen. All bar heights are the
-    exact computed softmax values."""
+    the section's running logits (1.0, 2.2, 0.3) for cat, chicken, and dog,
+    so the middle panel repeats numbers the reader has already seen. All bar
+    heights are the exact computed softmax values."""
     o = np.array([1.0, 2.2, 0.3])
+    names = ["cat", "chicken", "dog"]
     temps = [0.25, 1.0, 4.0]
-    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.0), sharey=True)
-    for ax, T in zip(axes, temps):
-        z = o / T
+    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.1), sharey=True)
+    for ax, temp in zip(axes, temps):
+        z = o / temp
         p = np.exp(z - z.max())
         p = p / p.sum()
-        print(f"  T = {T:>4}: softmax(o/T) = {np.round(p, 3).tolist()}")
-        bars = ax.bar([1, 2, 3], p, width=0.62, color=[BLUE, ORANGE, GREEN],
-                      alpha=0.85)
+        print(f"  T = {temp:>4}: softmax(o/T) = {np.round(p, 3).tolist()}")
+        ax.bar([1, 2, 3], p, width=0.62, color=[BLUE, ORANGE, GREEN],
+               alpha=0.85)
         for x, v in zip([1, 2, 3], p):
             ax.text(x, v + 0.03, f"{v:.2f}", ha="center", va="bottom",
-                    fontsize=11)
-        ax.set_ylim(0, 1.12)
+                    fontsize=14)
+        ax.set_ylim(0, 1.15)
         ax.set_xticks([1, 2, 3])
-        ax.set_xticklabels([r"$\hat y_1$", r"$\hat y_2$", r"$\hat y_3$"])
-        title = {0.25: r"$T = 0.25$ (sharpened)", 1.0: r"$T = 1$ (softmax)",
-                 4.0: r"$T = 4$ (flattened)"}[T]
-        ax.set_title(title)
+        ax.set_xticklabels(names, fontsize=14)
+        title = {0.25: r"$T = 0.25$ (sharper)", 1.0: r"$T = 1$ (softmax)",
+                 4.0: r"$T = 4$ (flatter)"}[temp]
+        ax.set_title(title, fontsize=17)
     axes[0].set_ylabel(r"$\mathrm{softmax}(\mathbf{o}/T)$")
     # no figure suptitle: the caption already states "the same three scores
     # ... at three temperatures"; the per-panel T= titles stay since they are
@@ -279,68 +263,192 @@ def fig_temperature():
 
 
 def fig_density_ratio():
-    """The geometry of importance weighting under covariate shift. One panel:
-    the source density q (where the training data lives), the target density p
-    (where the risk puts its weight), and the importance weight
-    beta(x) = p(x)/q(x), which is ~0 where only the source has mass, crosses 1
-    where the densities agree, and explodes exponentially where the target
-    outweighs a vanishing source. A dashed line shows the clipped weight
-    min(beta, c): a little bias for much less variance. All curves are the
-    exact computed densities/ratio for two unit-variance Gaussians."""
-    x = np.linspace(-3.5, 6.0, 601)
-    mu_q, mu_p = 0.0, 2.5
-    q = np.exp(-0.5 * (x - mu_q) ** 2) / np.sqrt(2 * np.pi)
-    p = np.exp(-0.5 * (x - mu_p) ** 2) / np.sqrt(2 * np.pi)
-    beta = p / q                       # = exp(2.5 x - 3.125) here
-    c = 5.0
-    # beta = 1 exactly where the two densities cross
-    x_eq = (mu_p**2 - mu_q**2) / (2 * (mu_p - mu_q))
-    x_clip = (np.log(c) + (mu_p**2 - mu_q**2) / 2) / (mu_p - mu_q)
+    """Importance weights under covariate shift, for the x_1-marginal of the
+    section's running example: source p_S = N(0, 1), target p_T = N(2, 1).
+    Top: the two densities.  Bottom (log scale, shared x): the weight
+    beta = p_T/p_S = exp(2 x_1 - 2), a straight line on this scale
+    because the log-ratio of two equal-variance Gaussians is linear.  It is
+    tiny where only the source has mass, equals 1 where the densities cross
+    (x_1 = 1), and grows by e^2 per unit of x_1 where the source thins out; the
+    dashed segment is the clipped weight min(beta, c) with c = 5.  All curves
+    are computed exactly, not sketched."""
+    x = np.linspace(-3.0, 5.5, 601)
+    mu_s, mu_t, c = 0.0, 2.0, 5.0
+    gauss = lambda m: np.exp(-0.5 * (x - m) ** 2) / np.sqrt(2 * np.pi)
+    p_s, p_t = gauss(mu_s), gauss(mu_t)
+    beta = p_t / p_s                                  # = exp(2 x_1 - 2)
+    x_eq = (mu_t + mu_s) / 2                          # beta = 1
+    x_clip = x_eq + np.log(c) / (mu_t - mu_s)         # beta = c
     print(f"  beta = 1 at x = {x_eq:.3f};  beta = c = {c} at x = {x_clip:.3f}")
 
-    fig, ax = plt.subplots(figsize=(7.6, 4.0))
-    ax.plot(x, q, color=BLUE, lw=2.2)
-    ax.fill_between(x, 0, q, color=BLUE, alpha=0.10)
-    ax.plot(x, p, color=GREEN, lw=2.2)
-    ax.fill_between(x, 0, p, color=GREEN, alpha=0.10)
-    ax.text(mu_q, 0.415, r"source $q(x)$" + "\n(training data)", ha="center",
-            fontsize=11, color=BLUE)
-    # shifted right of its peak: at mu_p the steep beta(x) curve (twin axis)
-    # passes straight through this text; by x=3.4 beta has already shot off
-    # the top of its own axis, so the label sits in clear space
-    ax.text(3.4, 0.415, r"target $p(x)$" + "\n(deployment)", ha="center",
-            fontsize=11, color=GREEN)
-    ax.set_xlabel(r"$x$")
-    ax.set_ylabel("density")
-    ax.set_xlim(x[0], x[-1])
-    ax.set_ylim(0, 0.50)
+    fig, (top, bot) = plt.subplots(
+        2, 1, figsize=(7.2, 5.0), sharex=True,
+        gridspec_kw=dict(height_ratios=[1, 1.15], hspace=0.12))
+    blue, green, orange = fl.T.BLUE, fl.T.GREEN, fl.T.ORANGE
+    top.plot(x, p_s, color=blue.base)
+    top.fill_between(x, 0, p_s, color=blue.base, alpha=0.10, lw=0)
+    top.plot(x, p_t, color=green.base)
+    top.fill_between(x, 0, p_t, color=green.base, alpha=0.10, lw=0)
+    top.text(-1.25, 0.30, r"source $p_S$", ha="right", fontsize=15,
+             color=blue.dark)
+    top.text(3.25, 0.30, r"target $p_T$", ha="left", fontsize=15,
+             color=green.dark)
+    top.set_ylabel("density")
+    top.set_ylim(0, 0.45)
+    top.set_yticks([0, 0.2, 0.4])
 
-    # the weight on a twin axis (its scale is different in kind)
-    ax2 = ax.twinx()
-    ax2.plot(x, beta, color=ORANGE, lw=2.4)
-    ax2.plot(x, np.minimum(beta, c), color=ORANGE, lw=2.0, ls=(0, (5, 3)))
-    ax2.axhline(1.0, color=GRAY, lw=0.9, ls=":")
-    ax2.plot([x_eq], [1.0], "o", ms=5, color=GRAY)
-    # label hugs its dotted line at the far left, where both densities are
-    # flat — at the crossing it collided with the rising target density
-    ax2.text(-2.6, 1.32, r"$\beta = 1$", fontsize=11, color=GRAY,
-             ha="center")
-    ax2.text(5.05, 7.35, r"$\beta(x) = \dfrac{p(x)}{q(x)}$", fontsize=12,
-             color=ORANGE, ha="center")
-    ax2.text(4.7, 4.35, r"clipped $\min(\beta, c)$", fontsize=11,
-             color=ORANGE, ha="center", style="italic")
-    ax2.set_ylim(0, 8)
-    ax2.set_ylabel(r"importance weight $\beta$", color=ORANGE)
-    ax2.tick_params(axis="y", colors=ORANGE)
-    ax2.spines["right"].set_visible(True)
-    ax2.spines["right"].set_color(ORANGE)
-    ax2.spines["top"].set_visible(False)
+    bot.plot(x, beta, color=orange.base)
+    keep = x >= x_clip
+    bot.plot(x[keep], np.full(keep.sum(), c), color=orange.base,
+             ls=(0, (4, 3)))
+    bot.axhline(1.0, color=fl.T.FAINT, lw=fl.T.SW_HAIR, ls=":")
+    bot.set_yscale("log")
+    bot.set_ylim(1e-3, 3e3)
+    bot.set_yticks([1e-3, 1e-2, 1e-1, 1, 10, 100, 1000])
+    bot.set_yticklabels(["0.001", "0.01", "0.1", "1", "10", "100", "1000"])
+    bot.set_ylabel(r"weight $\beta$")
+    bot.set_xlabel(r"$x_1$")
+    bot.set_xlim(x[0], x[-1])
+    bot.text(-0.9, 150, r"$\beta = \dfrac{p_T}{p_S} = e^{2x_1 - 2}$",
+             fontsize=15, color=orange.dark, ha="center", va="center")
+    bot.text(-2.85, 1.6, r"$\beta = 1$", fontsize=14, color="black",
+             ha="left", va="bottom")
+    bot.text(4.1, 7.0, rf"clipped at $c = {c:.0f}$", fontsize=14,
+             color="black", ha="center", va="bottom")
+    # the densities cross exactly where beta = 1: one guide through both panels
+    for ax in (top, bot):
+        ax.axvline(x_eq, color=fl.T.FAINT, lw=fl.T.SW_HAIR, ls=":")
+    bot.plot([x_eq], [1.0], "o", ms=5, color="black", zorder=5)
 
     fl.save(fig, "mdl-clf-density-ratio")
 
 
+def _shift_panel(ax, x, joint0, joint1, color0, color1):
+    """One panel of the shift-types figure: the class-wise joint densities
+    p(x, y=0) and p(x, y=1), their sum p(x) as a faint outline, and a dotted
+    line at the decision boundary (where the two joint densities cross)."""
+    ax.plot(x, joint0 + joint1, color=fl.T.FAINT, lw=fl.T.SW_HAIR)
+    ax.fill_between(x, 0, joint0, color=color0.base, alpha=0.18, lw=0)
+    ax.fill_between(x, 0, joint1, color=color1.base, alpha=0.18, lw=0)
+    ax.plot(x, joint0, color=color0.base)
+    ax.plot(x, joint1, color=color1.base)
+    diff = joint1 - joint0
+    k = np.flatnonzero(np.diff(np.sign(diff)) > 0)[0]       # first 0 -> 1 cross
+    xb = x[k] - diff[k] * (x[k + 1] - x[k]) / (diff[k + 1] - diff[k])
+    ax.axvline(xb, color="black", lw=fl.T.SW_HAIR, ls=":")
+    ax.set_xlim(x[0], x[-1])
+    ax.set_ylim(0, 0.52)
+    ax.set_xticks([]), ax.set_yticks([])
+    ax.spines["left"].set_visible(False)
+    return xb
+
+
+def fig_shift_types():
+    """Three kinds of distribution shift on one input coordinate x.  Columns:
+    covariate, label, concept shift; rows: source and target.  Every panel
+    draws the same object, the class-wise joint densities p(x, y=0) and
+    p(x, y=1) (their sum, p(x), is the faint outline), so the reader sees
+    which factor of p(x, y) moved and which stayed.  Covariate: p(x) moves,
+    the boundary P(y=1|x) = 1/2 stays.  Label: the class proportions move, the
+    class shapes p(x|y) stay (so the boundary moves).  Concept: p(x) stays,
+    the boundary moves.  The dotted line marks where the classes cross."""
+    x = np.linspace(-4.0, 4.5, 600)
+    gauss = lambda m, s=1.0: np.exp(-0.5 * ((x - m) / s) ** 2) / (
+        s * np.sqrt(2 * np.pi))
+    sig = lambda t: 1 / (1 + np.exp(-t))
+    c0, c1 = fl.T.PURPLE, fl.T.GOLD
+    cases = {
+        # covariate shift: p(x) moves, P(y=1|x) = sig(3x) stays
+        "covariate": [(gauss(0.0) * (1 - sig(3 * x)), gauss(0.0) * sig(3 * x)),
+                      (gauss(1.3) * (1 - sig(3 * x)), gauss(1.3) * sig(3 * x))],
+        # label shift: p(x|y) stays, p(y=1) goes from 0.5 to 0.8
+        "label": [(0.5 * gauss(-1.2, 0.8), 0.5 * gauss(1.2, 0.8)),
+                  (0.2 * gauss(-1.2, 0.8), 0.8 * gauss(1.2, 0.8))],
+        # concept shift: p(x) stays, the boundary moves from 0 to 1.2
+        "concept": [(gauss(0.3, 1.1) * (1 - sig(3 * x)),
+                     gauss(0.3, 1.1) * sig(3 * x)),
+                    (gauss(0.3, 1.1) * (1 - sig(3 * (x - 1.2))),
+                     gauss(0.3, 1.1) * sig(3 * (x - 1.2)))],
+    }
+    # column titles name the shift and the factor of p(x, y) it keeps fixed
+    titles = {"covariate": "covariate shift\n" + r"fixed $p(y \mid x)$",
+              "label": "label shift\n" + r"fixed $p(x \mid y)$",
+              "concept": "concept shift\n" + r"fixed $p(x)$"}
+
+    def draw(axes, keys):
+        """Fill a 2 x len(keys) grid of panels (rows: source, target)."""
+        for col, key in enumerate(keys):
+            for row in range(2):
+                xb = _shift_panel(axes[row, col], x, *cases[key][row], c0, c1)
+                print(f"  {key:9s} {'source' if row == 0 else 'target'}: "
+                      f"boundary at x = {xb:+.2f}")
+            axes[0, col].set_title(titles[key], fontsize=15, linespacing=1.4)
+            axes[1, col].set_xlabel(r"$x$")
+        axes[0, 0].set_ylabel("source", fontsize=15)
+        axes[1, 0].set_ylabel("target", fontsize=15)
+        # class names once, in the top-left panel, beside their own bumps
+        axes[0, 0].text(-2.55, 0.33, r"$y = 0$", ha="center", fontsize=14,
+                        color=c0.dark)
+        axes[0, 0].text(2.55, 0.33, r"$y = 1$", ha="center", fontsize=14,
+                        color=c1.dark)
+
+    # the book's three-column figure ...
+    fig, axes = plt.subplots(2, 3, figsize=(9.6, 3.9), sharex=True,
+                             gridspec_kw=dict(hspace=0.16, wspace=0.10))
+    draw(axes, list(cases))
+    fl.save(fig, "mdl-clf-shift-types")
+    # ... and one column each for the covariate and label slides of the deck
+    for key in ["covariate", "label"]:
+        fig, axes = plt.subplots(2, 1, figsize=(3.6, 3.9), sharex=True,
+                                 squeeze=False, gridspec_kw=dict(hspace=0.16))
+        draw(axes, [key])
+        fl.save(fig, f"mdl-clf-shift-{key}")
+
+
+def fig_feedback_loop():
+    """A deployed model's decisions change the data it is retrained on.  The
+    predictive-policing loop as four blocks in a cycle: the model predicts
+    more crime in area A -> more patrols go to A -> more crimes are recorded
+    in A -> the next training set holds more crime in A -> back to the model.
+    Each arrow is labeled with the step it stands for.  Built with the
+    figstyle SVG composer (text outlined, byte-idempotent)."""
+    from figstyle.svg import Figure
+    T = fl.T
+    f = Figure()
+    xl, xr, yt, yb = 0.0, 390.0, 0.0, 120.0
+    w = 300.0
+    boxes = {
+        "model": f.block(xl, yt, "model predicts more crime in A",
+                         role="stream", min_w=w),
+        "patrol": f.block(xr, yt, "more patrols go to A", min_w=w),
+        "record": f.block(xr, yb, "more crimes recorded in A", min_w=w),
+        "data": f.block(xl, yb, "training data hold more crime in A",
+                        min_w=w),
+    }
+    gap = 6.0
+    (mx, my, mw, mh) = boxes["model"]
+    (px, py, pw, ph) = boxes["patrol"]
+    (rx, ry, rw, rh) = boxes["record"]
+    (dx, dy, dw, dh) = boxes["data"]
+    # top: model -> patrols; right: patrols -> records; bottom: records ->
+    # data; left: data -> model (clockwise)
+    f.arrow(mx + mw + gap, yt, px - gap, yt)
+    f.arrow(xr, py + ph + gap, xr, ry - gap)
+    f.arrow(rx - gap, yb, dx + dw + gap, yb)
+    f.arrow(xl, dy - gap, xl, my + mh + gap)
+    lab = dict(size=T.FS_SMALL, color=T.INK)
+    f.text((mx + mw + px) / 2, yt - 16, "decision", **lab)
+    f.text(xr + 14, (yt + yb) / 2, "observation", anchor="start", **lab)
+    f.text((rx + dx + dw) / 2, yb + 16, "logging", **lab)
+    f.text(xl - 14, (yt + yb) / 2, "retraining", anchor="end", **lab)
+    f.save("mdl-clf-feedback-loop",
+           desc="Predictive-policing feedback loop: predictions direct "
+                "patrols, patrols determine which crimes are recorded, and "
+                "the records become the next training data.")
+
+
 FIGURES = [fig_loss_accuracy, fig_decision_regions, fig_temperature,
-           fig_density_ratio]
+           fig_density_ratio, fig_shift_types, fig_feedback_loop]
 
 
 def main():
@@ -359,6 +467,51 @@ def main():
             assert "<svg" in fh.read(400), f"not valid SVG: {p}"
         print(f"  {os.path.basename(p):32s} {size:>8,d} bytes")
     print(f"\nAll {len(written)} SVGs verified present, non-empty, valid.")
+
+
+def fig_margin_losses():
+    """Why we train on cross-entropy but report accuracy. Both losses of one
+    example as functions of its margin m = o_y - max_{j != y} o_j. The error
+    (0-1 loss) is a step: 1 for m < 0, 0 for m > 0, with zero derivative
+    wherever it has one. The two-class cross-entropy log(1 + e^{-m}), divided
+    by log 2 so that it is measured in bits, is smooth and decreasing, passes
+    through (0, 1), and lies above the step everywhere, so the summed loss in
+    bits bounds the number of training errors. It never reaches 0 for m > 0:
+    the loss keeps rewarding confidence after the decision is right."""
+    T = fl.T
+    m = np.linspace(-3.0, 4.0, 701)
+    ce_bits = np.log1p(np.exp(-m)) / np.log(2)
+    fig, ax = plt.subplots(figsize=(5.6, 3.3))
+    ax.axvspan(-3.0, 0.0, color=T.PANEL, zorder=0, lw=0)   # misclassified
+    ax.plot([-3.0, 0.0], [1.0, 1.0], color=T.INK, lw=T.SW_LINE, zorder=3,
+            solid_capstyle="butt")
+    ax.plot([0.0, 4.0], [0.0, 0.0], color=T.INK, lw=T.SW_LINE, zorder=3,
+            solid_capstyle="butt")
+    ax.plot([0.0, 0.0], [0.0, 1.0], color=T.INK, lw=T.SW_HAIR,
+            ls=(0, (1.5, 2.5)), zorder=3)
+    ax.plot(m, ce_bits, color=T.BLUE.base, lw=T.SW_LINE, zorder=4)
+    ax.plot([0.0], [1.0], "o", ms=6, color=T.BLUE.base, zorder=5)
+    ax.text(-2.85, 1.12, "error", ha="left", va="bottom", fontsize=16,
+            color=T.INK)
+    ax.text(1.0, 0.95, r"cross-entropy $\log_2(1 + e^{-m})$", ha="left",
+            va="bottom", fontsize=16, color=T.BLUE.dark)
+    ax.text(-0.15, 2.9, "wrong", ha="right", va="top", fontsize=14,
+            color=T.INK)
+    ax.text(0.15, 2.9, "right", ha="left", va="top", fontsize=14,
+            color=T.INK)
+    ax.set_xlim(-3.0, 4.0)
+    ax.set_ylim(-0.15, 3.0)
+    ax.set_xticks([-3, -2, -1, 0, 1, 2, 3, 4])
+    ax.set_yticks([0, 1, 2, 3])
+    ax.set_xlabel(r"margin $m$")
+    ax.set_ylabel("loss")
+    ax.spines["left"].set_color(T.INK)
+    ax.spines["bottom"].set_color(T.INK)
+    ax.tick_params(colors=T.INK)
+    fl.save(fig, "mdl-clf-margin-losses")
+
+
+FIGURES.append(fig_margin_losses)
 
 
 if __name__ == "__main__":

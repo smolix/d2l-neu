@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:46a5f7f591ffdd4fa4eac49f1c2acad2a62f5a42661a8e7eec9b6f99c2b60f55",
+    "d2l_lib_fingerprint": "sha256:62d63a83aa6b576050b450bff34b4618319a29fe4d1b395cdf0ef6ad94b1b0bd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,7 +80,7 @@
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
           "bytes": 27042,
-          "sha256": "sha256:7fc5ca25c7f4441bf5c83f206175d9a66a0e614f22fc7600d1bfa176f7a7bce8"
+          "sha256": "sha256:131f5435ad4789a1609cfaac6672a4ea90787a09300524bbc93db89c43cfe37d"
         }
       ]
     }

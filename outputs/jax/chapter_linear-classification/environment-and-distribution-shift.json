@@ -4,39 +4,68 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
   "cells": {
+    "environment-and-distribution-shift-a-two-dimensional-example-1": {
+      "code_fingerprint": "sha256:bc055200e66e96feb10bcf6ba93f7561d7e14f3c726dc59c0602333209a8de44",
+      "kind": "text",
+      "outputs": []
+    },
     "environment-and-distribution-shift-covariate-shift-correction-1": {
-      "code_fingerprint": "sha256:4cc9ca6c7855731bd7195b3799facd31e7ba05697c94c282c9e7822046856e78",
+      "code_fingerprint": "sha256:718ec03034d8ad49c330e9bebf11105332ea102603b9a972abf71880bb660152",
+      "kind": "text",
+      "outputs": []
+    },
+    "environment-and-distribution-shift-a-two-dimensional-example-2": {
+      "code_fingerprint": "sha256:2fdf421f351e7c8099351b50430d095c73c054a71e7afb75a4e317012edc4f97",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-2": {
-      "code_fingerprint": "sha256:1b85952b8685e5f0cc54d769ac4d89a0c8e66c8d9efd03127b39c0f8966c2b26",
+      "code_fingerprint": "sha256:450cc74c0240c4335953ceb4c2be0d9c4a5a74cc500429784d357b63fa4c8d9b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 2.06 x1 +0.09 x2 -2.03 (true log-ratio: 2 x1 - 2)\nbeta on source data: mean 0.86, max 56.2\n"
+          "text": "learned h(x) = 1.86 x1 +0.03 x2 -1.88   (true log-ratio: 2 x1 - 2)\nlargest weight: 74; effective sample size: 68 of 1000, 223 if clipped at 5\n"
         }
       ]
     },
     "environment-and-distribution-shift-covariate-shift-correction-3": {
-      "code_fingerprint": "sha256:96c2b3b1802f760ae2d3f32b84d745df96adba453abbc1d1fcd11dc9be2daeba",
+      "code_fingerprint": "sha256:346d94e1e46778aa1d0e5c9cbcaf30fc523aba664414c9d8ba87ed50246cdc06",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted    target accuracy: 0.502   (source accuracy: 0.860)\n"
-        },
+          "text": "unweighted  target accuracy 0.621   source accuracy 0.867\nweighted    target accuracy 0.950   source accuracy 0.809\nclipped     target accuracy 0.959   source accuracy 0.832\nalways predicting the most common target class: 0.726\n"
+        }
+      ]
+    },
+    "environment-and-distribution-shift-a-two-dimensional-example-3": {
+      "code_fingerprint": "sha256:edda08dcc133f95f76deb727a695a326f46c27bb242711a39dcceef99a4b0a9a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
+          "bytes": 792612,
+          "sha256": "sha256:c7d52cb400e0a89b2905cd53745c4c9263a7029f240cea89a200d2fde86a81ce"
+        }
+      ]
+    },
+    "environment-and-distribution-shift-estimating-the-target-class-proportions": {
+      "code_fingerprint": "sha256:a87d4944036cdae7949f1cc17ae5f7cb182436d471aedaa6a4dc9e3d8f8b5a4b",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\nclipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
+          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.772, 0.228]\nestimated target p(y) = [0.903, 0.097]\n"
         }
       ]
     }

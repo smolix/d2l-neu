@@ -461,7 +461,7 @@ systematic leftward movement seen under standard parametrization. Across the
 eightfold width change, each grid minimum lies within one or two steps of the
 base-width minimum. With the base width's selected learning rate reused at width 1,024, the muP
 run finishes within a few percent of that width's lowest loss in the grid;
-the standard-parametrization run is 15--20% above its grid minimum. Because
+the standard-parametrization run is roughly 20% above its grid minimum. Because
 each point is a single seeded run, these values describe this experiment
 rather than population uncertainty.
 This is *hyperparameter transfer*: tune the base model, scale up, keep the
@@ -767,7 +767,7 @@ We repeat the learning-rate sweep under muP:
 
 - The grid minima remain within one or two steps across 8× width; under SP,
   they moved three steps. At width 1,024, reusing the base selection finishes
-  within a few percent of the grid minimum (SP: 15--20% above it).
+  within a few percent of the grid minimum (SP: roughly 20% above it).
 - Tensor Programs V reports tuning GPT-3 6.7B from a 40M proxy at about 7%
   of the pretraining cost and improving on the original model.
 - At a width that can be swept directly, retuned standard parametrization

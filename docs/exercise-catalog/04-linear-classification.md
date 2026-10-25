@@ -1,5 +1,10 @@
 # Chapter overview — chapter_linear-classification (7 sections)
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> the sections now carry 50 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 This chapter's existing exercises are unusually strong for a bare-numbered,
 untagged style: `softmax-regression.md` (9 ex.) is the densest, most
 mathematically complete set found in the whole book so far, and
@@ -85,7 +90,7 @@ guidance.
 
 ---
 
-## chapter_linear-classification/classification.md — The Base Classification Model
+## chapter_linear-classification/classification.md — Measuring Classifiers (formerly The Base Classification Model)
 
 **Topic:** The shared `Classifier` base class (loss + accuracy reporting), why accuracy can't train a model, and precision/recall/F1/confusion-matrix diagnostics for imbalanced classes.
 **Current exercises:** 7; disposition: keep 3, rewrite 4 (drop 0) — content is already strong (decision theory, weighted-ERM forward-reference, ROC curve); four items need only a formatting fix (inline "(i)/(ii)/(iii)" crammed into one paragraph → proper nested lists) plus small enrichments from external material.

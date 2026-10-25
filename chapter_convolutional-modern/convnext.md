@@ -512,7 +512,7 @@ def mixup(key, X, y, alpha):
 
 class ModernConvNeXt(ConvNeXt):
     def __init__(self, lr=2e-3, num_classes=10, drop_path_max=0.0,
-                 max_epochs=30, steps_per_epoch=468, rngs=None):
+                 max_epochs=30, steps_per_epoch=469, rngs=None):
         super().__init__(lr=lr, num_classes=num_classes,
                          drop_path_max=drop_path_max, rngs=rngs)
         self.max_epochs, self.steps_per_epoch = max_epochs, steps_per_epoch
@@ -535,7 +535,7 @@ class ModernConvNeXt(ConvNeXt):
 
 class CompactResNet18(d2l.Classifier):
     def __init__(self, lr=2e-3, num_classes=10, base=35, max_epochs=30,
-                 steps_per_epoch=468, rngs=None):
+                 steps_per_epoch=469, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key(),
@@ -635,15 +635,15 @@ seeded run each, rounded).
 
 | Model | Parameters | PyTorch accuracy | JAX accuracy |
 |---|---:|---:|---:|
-| ConvNeXt | 3,376,450 | ≈92.5% | ≈92% |
-| Compact ResNet-18 | 3,348,320 | ≈94.5% | ≈94.5% |
+| ConvNeXt | 3,376,450 | ≈92% | ≈92% |
+| Compact ResNet-18 | 3,348,320 | ≈94% | ≈94% |
 
 This comparison asks a narrower question than the earlier run against the
 11.2-million-parameter ResNet-18: at roughly 3.4 million parameters, do the
 ConvNeXt block and stem help on upsampled Fashion-MNIST? Each entry is one
 seeded run, rounded to the half point; the independent JAX run checks that
 the result is not tied to one implementation. Here the compact
-ResNet is ahead by two to three points in both implementations. Even this control
+ResNet is ahead by about two points in both implementations. Even this control
 is task-specific: it matches parameters, not latency or multiply-adds, and
 every step in the published roadmap was selected on ImageNet at
 $224\times224$. The local result therefore says that ConvNeXt's ImageNet
@@ -933,7 +933,7 @@ label smoothing + Mixup, from the previous section:
 
 . . .
 
-The compact ResNet is ahead by two to three points in both PyTorch and
+The compact ResNet is ahead by about two points in both PyTorch and
 JAX. The control matches parameters, not latency or multiply-adds.
 
 Every roadmap step was selected on ImageNet at 224 px. On upsampled

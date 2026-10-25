@@ -651,7 +651,8 @@ adam_lm = run_lm(optax.adam, lrs=[3e-4, 1e-3, 3e-3, 1e-2])
 
 On this grid, SGD's best learning rate sits directly below a divergent one:
 moving one grid point higher produces a NaN loss. Adam's optimum is interior,
-with stable neighboring rates on both sides. This experiment establishes the
+and none of its rates produces a NaN (in JAX, the largest rate, 0.01, trains
+much worse, but its loss stays finite). This experiment establishes the
 difference for this model and grid; it does not by itself identify gradient
 tails as the cause or characterize all transformers. We compare the best rate found for each method:
 
@@ -668,7 +669,7 @@ print(f'final perplexity: SGD {math.exp(final_loss(sgd_lm[best_sgd])):.2f}, '
 ```
 
 Tuned Adam beats tuned SGD ("tuned" here and below meaning the best of the
-coarse four-point grid) by a wide margin, roughly 20% in final training
+coarse four-point grid) by a wide margin, roughly 15% to 17% in final training
 loss in our runs, and the gap is not a transient: Adam's curve is
 below SGD's at every point after the first few dozen steps and stays
 below it to the end. No rate in our grid rescued SGD: the sweep found its

@@ -258,12 +258,12 @@ print(f'after 500 steps of Adam: {ns_500:.0f}')
 ```
 
 Three readings, all of which we will use. First, the magnitudes: at these
-model and dataset sizes the noise scale is small — tens of examples for the
-CNN and single-digit sequence counts for the language model at
-initialization, rising to hundreds of examples and on the order of a
+model and dataset sizes the noise scale is small — up to about a hundred examples
+for the CNN and single-digit sequence counts for the language model at
+initialization, rising to hundreds or about a thousand examples and tens to a
 hundred sequences by step 500. The batch sizes used in the preceding experiments fall near or above these
 estimates, depending on the checkpoint. Second, the growth: within those 500
-steps the CNN's noise scale grows severalfold and the language model's by
+steps the CNN's noise scale grows by a factor of four to ten and the language model's by
 one to two orders of magnitude, because the full-gradient norm is initially large relative to per-example
 disagreement and then decreases as the easiest improvements are exhausted. We return to
 this in the last part of the section, since it is the fact behind batch-size
@@ -492,8 +492,8 @@ d2l.plot(cnn_bs, [cnn_steps,
 The CNN shows a similar pattern: the first quadrupling remains near the
 reference line, after which the gap widens. At the top of the
 range a further quadrupling of the batch (a quadrupling of the compute per
-step) cuts the step count by about a third at most, and in some runs the count
-rises instead, a sign we will explain in the next part. By then the example count is several times its small-batch minimum:
+step) cuts the step count by about two fifths at most, and in some runs the count
+rises instead, a sign we will explain in the next part. By then the example count is eight to twelve times its small-batch minimum:
 additional compute still reduces sequential steps, but with substantially
 lower data efficiency.
 
@@ -641,7 +641,7 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
 
 Both plots have a broad minimum and a sharp increase on the
 right, and growing the batch slides the basin rightward. For SGD the best
-region moves by roughly the batch ratio, a factor of four to eight in our
+region moves by roughly the batch ratio, a factor of four to sixteen in our
 runs — retuning from scratch at $b=64$ finds nothing better than what the
 linear rule predicts from $b=8$. For Adam the basin is flatter, so a single
 run locates its minimum less precisely; it typically moves by a factor of
@@ -684,7 +684,7 @@ batch is data efficiency, which is what this section measured.
 :label:`subsec_batch-size-growing`
 
 The noise scale is not a constant of the problem. We measured it growing
-within the first 500 steps (severalfold for the CNN, one to two orders of
+within the first 500 steps (four- to tenfold for the CNN, one to two orders of
 magnitude for the language model), and the mechanism operates at every
 scale: $\|\nabla f\|$ decreases as the easiest progress is made, while
 per-example disagreement persists. A fixed batch therefore cannot remain equally compute-efficient throughout
@@ -882,8 +882,9 @@ CNN, then `TinyLM` — at initialization and after 500 steps of Adam:
 
 @!batch-size-a-two-batch-estimator-4
 
-- Tens of examples (CNN) and single-digit sequence counts (`TinyLM`) at
-  init; severalfold to two orders of magnitude larger 500 steps later.
+- Up to about a hundred examples (CNN) and single-digit sequence counts
+  (`TinyLM`) at init; four- to tenfold (CNN) and one to two orders of
+  magnitude (`TinyLM`) larger 500 steps later.
 
 ::: {.d2l-note}
 For large language models, measured noise scales run to the **millions of
@@ -929,8 +930,8 @@ Single seeded runs, read qualitatively.
 @!batch-size-the-cnn
 
 At the top of the range a quadrupled batch — quadrupled compute per step —
-cuts the step count by about a third at most, and in some runs the count rises;
-examples-to-target sits several times above its minimum.
+cuts the step count by about two fifths at most, and in some runs the count rises;
+examples-to-target sits eight to twelve times above its minimum.
 :::
 
 ::: {.slide title="Examples required to reach the target"}

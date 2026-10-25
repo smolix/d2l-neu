@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:43995c6ab1386c3af68c0d8f1bc3d6de3d3dde29885473dabaa359f20410a31f",
+    "d2l_lib_fingerprint": "sha256:2a962b3d7355aa2ff0b6c1c42b786fa19adfc50bae1da3af38d95aade3f6e22e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 32579,
-          "sha256": "sha256:467125fb75c5697458ba2451275277e1ed5e79a2543d164029303f248d2bedc8"
+          "bytes": 33591,
+          "sha256": "sha256:992390a572383f2711475324df1c63dff2357fa295ac222b6a7b7057e617dc70"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([2.6686416, 1.8857186, 1.8297555, 1.6103107, 2.0628269, 1.7297167],      dtype=float32),\n Array([ 1.2561655 ,  0.6032379 , -0.22952722,  0.7811638 ,  0.11603089,\n         0.66241914], dtype=float32))"
+          "text": "(Array([1.4431142, 1.7849839, 1.6736544, 2.235729 , 1.8649852, 2.5748017],      dtype=float32),\n Array([ 0.9391632 ,  1.427216  , -0.5608355 , -0.71573216, -0.35090715,\n        -1.0224221 ], dtype=float32))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 32598,
-          "sha256": "sha256:964111f7dcd55111e33402cbc60ba9f26624942c4f18d292f1d06aa05b25a5aa"
+          "bytes": 32603,
+          "sha256": "sha256:41ea2dbe9c3260d8f8253b35a001b3f082b97ef3490d64d9f844f1219056adde"
         }
       ]
     },

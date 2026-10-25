@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d628f924be4fdd1efb73975da750e32679b77b2a9367942842fc49db848f8c07",
+    "d2l_lib_fingerprint": "sha256:e00220bbb5e3d7ea528cf526d4f7586317b7d23a3dc77f969ee4b30675046ff1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,37 +34,37 @@
       ]
     },
     "convnext-recipe": {
-      "code_fingerprint": "sha256:502891b9bebd4fb577f85f4d29f869f2dcca09176b00d7b6ab24fd985472f942",
+      "code_fingerprint": "sha256:6a761f255910bf15e80cbc99855b80a66a11c5bb0a5bc495c89985e9f194ce0c",
       "kind": "text",
       "outputs": []
     },
     "convnext-train": {
-      "code_fingerprint": "sha256:60aabb4a245e82a9979d81fbab69a773998f95aae0dfe42f83f9567d1b789b78",
+      "code_fingerprint": "sha256:b4950f8c3406a99b775bf4b7aa3cbff681f74011aba226102310ebe24a49fa9a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 41403,
-          "sha256": "sha256:94ff679855914b01b39147ef4a28513acb16eb093f13e1e715a69a9c0cf394b0"
+          "bytes": 40191,
+          "sha256": "sha256:3c14c45aa337b72c37197f6c2e1e9e41e7e445125e6187f30c714f9133248597"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 40018,
-          "sha256": "sha256:6cf282d5b5ac139eacadea2db61a81fc83385518f9b8826daa2e45ae1bf35d4e"
+          "bytes": 40000,
+          "sha256": "sha256:3ab1524d9d60d6873b132b393b8e961e2fa0cc6aa8e87d0a2993bcac5b64a3e2"
         }
       ]
     },
     "convnext-eval": {
-      "code_fingerprint": "sha256:1556ae49af077f04e400db71067125d76e94221d5953dce08bcc02b8a8be654f",
+      "code_fingerprint": "sha256:738831d9800eaba9601ef311565bac30dc933acae772dfc2ca517c9775bef3ac",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'ConvNeXt': 0.9185, 'compact ResNet-18': 0.9454}"
+          "text": "{'ConvNeXt': 0.9226, 'compact ResNet-18': 0.9425}"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d51c567c5860ca68dd47f8e9f9e6c057fd5d96a5d0172e8ebe747bd68d8dc260",
+    "d2l_lib_fingerprint": "sha256:a6ec4ea0268c7576ce4bc264d67718a0567f18163d680d1a19cbc4580f15c344",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 29157,
-          "sha256": "sha256:ca76546cf65708a84695d1270c1970e14ac306f7d98bcbf2592dcbde32fd3662"
+          "sha256": "sha256:c0f581585c330e170fe8088a6e1ac1dd0fe1bc2429e647308ed8d8756b80f538"
         }
       ]
     },
@@ -49,14 +49,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.38\n"
+          "text": "lambda = 0.64\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 65783,
-          "sha256": "sha256:2ef61118dab7a6b7bde5916935f148c34ef79fab7cf5cfb3227a75c9c67211ed"
+          "bytes": 65967,
+          "sha256": "sha256:778af61eac80c6bdb8eb03c0d5c6853daa3df80b79bfe7de4e17c091ecb60ef3"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of samples with a dropped branch: 0.472\n"
+          "text": "fraction of samples with a dropped branch: 0.509\n"
         }
       ]
     },

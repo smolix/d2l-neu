@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9c6e4c056ff3a1c35712cd37cf45b62eb969117b5061074fff82a222076ea24b",
+    "d2l_lib_fingerprint": "sha256:22d03d7e2e236215571db16d6a9996f524375027367814ae32da269a753eff75",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2668 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4391 samples/s, 1.65x, 82% weak-scaling efficiency\n4 GPU(s): 8022 samples/s, 3.01x, 75% weak-scaling efficiency\n"
+          "text": "1 GPU(s): 2668 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4391 samples/s, 1.65x, 82% weak-scaling efficiency\n4 GPU(s): 8018 samples/s, 3.01x, 75% weak-scaling efficiency\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 1.3e-04\n"
+          "text": "max update difference, k=1 vs k=2: 9.2e-05\n"
         }
       ]
     }

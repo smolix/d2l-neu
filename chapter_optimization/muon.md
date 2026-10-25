@@ -522,7 +522,7 @@ print(f'final perplexity: '
 ```
 
 :begin_tab:`pytorch`
-After tuning both methods, the hybrid finishes a few percent lower in
+After tuning both methods, the hybrid finishes several percent lower in
 perplexity than AdamW. This single-seed result supports only a modest
 difference, although the hybrid also uses nearly half the optimizer state.
 A 0.4M-parameter model trained for a minute cannot establish a broader

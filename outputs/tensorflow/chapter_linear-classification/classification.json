@@ -18,23 +18,24 @@
       "kind": "text",
       "outputs": []
     },
-    "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:17433fd0cf99da83b1a0a0a17559ddb1e032040ba905c04526d8ce1d083518b6",
+    "classification-accuracy-1": {
+      "code_fingerprint": "sha256:b7bb9b9b77a95e6c05740360bd42677c5caf195c2a3e7b67eea92b18eb5edf7d",
       "kind": "text",
       "outputs": []
     },
-    "classification-accuracy-1": {
-      "code_fingerprint": "sha256:f493746c304a93f0ae4981bef323534617aabfb036493112428766040f57e22a",
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:233612a1c072c97233127bc496736d81864042c4f8f72032a63da7b20e680501",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:df00f85b1aabfabf93b326f9ad0b28515ed166415c2be8e3c337c7910c76eb06",
+      "code_fingerprint": "sha256:4df361001b01af01f9f17d9667798d113ec6d3b152acc330052ee21fedf9273a",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(0.99, 0.0)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "always healthy: accuracy 0.990, recall 0.000, precision nan\nscreening test: accuracy 0.950, recall 0.900, precision 0.154\n"
         }
       ]
     }

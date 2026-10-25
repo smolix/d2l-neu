@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6ec90b7ce46c922f1fa1a3119493ede972da512db7176f72e6f00c00b872e81c",
+    "d2l_lib_fingerprint": "sha256:579fc3820a599f7442033cd63044c7c1b118de32300eca4216e3ffad1329a7bb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0014 sec\ntime until they all finished:     0.0072 sec\n"
+          "text": "time to queue 32 matrix products: 0.0016 sec\ntime until they all finished:     0.0071 sec\n"
         }
       ]
     },
@@ -207,8 +207,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 31123,
-          "sha256": "sha256:eceddcd8934938d626c5274828d5039b5de1f0504e6fc6d000d431a0f7874f0c"
+          "bytes": 30521,
+          "sha256": "sha256:48f231c6aa2eef789013d3b38ccd31b39fa2b092d5a9b4ada9ea937183a5f7a4"
         }
       ]
     }

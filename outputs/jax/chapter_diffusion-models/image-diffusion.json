@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:5dfe48984fb929d9984505fe48756ead81ae9a74c51533f3f12da9b8f2342189",
+    "d2l_lib_fingerprint": "sha256:fbfde870ab088f4d5914babe87bd6e45a0bdf8b7a7de0d6175f0d757e8734f09",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
-          "bytes": 133441,
-          "sha256": "sha256:30ac01d6543857ae219722df4a1cf48a81ebba01d32eb8a4fae6aec92f25305e"
+          "bytes": 133484,
+          "sha256": "sha256:517ac214c87ff2caf3c7f9b2ce075d2c07c9e86bf0ba34b0635e3b4c8da292cc"
         }
       ]
     },
@@ -85,17 +85,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.650                  16.46\n"
+          "text": "  1.0            0.637                  16.47\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0            0.850                  15.24\n"
+          "text": "  2.0            0.863                  15.24\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.900                  14.47\n"
+          "text": "  4.0            0.887                  14.47\n"
         }
       ]
     },
@@ -112,15 +112,15 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
-          "bytes": 105970,
-          "sha256": "sha256:ca1a4daebb8968db05e4ac861a896e1b58aff35af6b902f13300e141bc356ec0"
+          "bytes": 105943,
+          "sha256": "sha256:4e8c5248a742a68d89766acce02edf4bd6065b5b5adfbd881599d769ab82d6a2"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
-          "bytes": 103205,
-          "sha256": "sha256:7d5abeb0329ed29086582d5d8ae51f48af56cb2dededfd44313e045c43264bb0"
+          "bytes": 103359,
+          "sha256": "sha256:10bb05847656a0881d87b654678146d1a9b6da4650dce57426e6f9e5642835e8"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy classifier test accuracy: 0.845 at t = 0, 0.581 at t = 500\n"
+          "text": "noisy classifier test accuracy: 0.845 at t = 0, 0.580 at t = 500\n"
         }
       ]
     },
@@ -147,31 +147,31 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.525                  18.33\n"
+          "text": "  1.0            0.500                  18.35\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.812                  16.71\n"
+          "text": "  4.0            0.800                  16.80\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10.0            0.913                  16.28\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+          "text": " 10.0            0.887                  16.24\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
-          "bytes": 109950,
-          "sha256": "sha256:48a6e00d3d1af6d408f16cde9ed7af480fd1935e729fef2c7fb726124b411b78"
+          "bytes": 110030,
+          "sha256": "sha256:9c35292b23299d797d8492e96905fce1917e072d502a4e77a6ee69e913f5b2af"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
-          "bytes": 97419,
-          "sha256": "sha256:7e1c890f6d237934d6a794206c9406158d9cbc70f664ea95f5a4e579b5aaade3"
+          "bytes": 97443,
+          "sha256": "sha256:196aeeaa4efe0ff49b6355496ddcfe21aa8031efb95b513c07997095c290b45f"
         }
       ]
     }

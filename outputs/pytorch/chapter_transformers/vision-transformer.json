@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f8deb5bdc6c15acfce3fd3e32f27fa317339d295a7037c41be6fed1eada900bb",
+    "d2l_lib_fingerprint": "sha256:2e317b7b001a64aee0a33f671c17dc54204813d74d8cb0ae44111ef00a3937c4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 31637,
-          "sha256": "sha256:104a450b525bd11b94ece2c48e1836767faa5ccd2d5c61a1f46c0765e20e5f7c"
+          "bytes": 30328,
+          "sha256": "sha256:d23c0a06ad6ab34ad80e825c73ba6114bb518a5106f8aa6db2a3268743240d87"
         }
       ]
     },
@@ -69,14 +69,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean cosine similarity: grid neighbors 0.05, distant positions -0.02\n"
+          "text": "mean cosine similarity: grid neighbors 0.07, distant positions -0.03\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 108097,
-          "sha256": "sha256:09077023006449c61679819479199bf768f2a14d04ff5055752d86bbd8e1aee3"
+          "bytes": 108329,
+          "sha256": "sha256:273bf3b4455962d3485926bd23b462facd1d28c4af0913913c88538610341e71"
         }
       ]
     },
@@ -93,13 +93,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 33075,
-          "sha256": "sha256:ed43afa0aad3d4de8e8c85bfab51a373cebcd2e5d66c29f50b9ed722f3371a48"
+          "bytes": 33062,
+          "sha256": "sha256:b7b9ca7f9fb5be733251612b93041f6bc62251847458ec5f7a39fdeb4a1eb5cd"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.92\nViT: 6.5M parameters, validation accuracy 0.85\n"
+          "text": "CNN: 6.5M parameters, validation accuracy 0.91\nViT: 6.5M parameters, validation accuracy 0.85\n"
         }
       ]
     }

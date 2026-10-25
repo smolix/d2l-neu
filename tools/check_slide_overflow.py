@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Flag reveal.js slides whose content overflows the 720px slide box.
+"""Flag reveal.js slides whose content overflows the 720px slide box, and
+content hidden inside a slide (scrolled output boxes, wrapped code lines).
 
 The source-length heuristic in tools/audit_outputs.py is unreliable: it
 reported 0 overflowing slides while decks visibly overflowed. This tool
@@ -74,8 +75,42 @@ _MEASURE_JS = r"""
 """
 
 
+# Content hidden inside a slide that fits: an output box that scrolls
+# (``.cell-output`` has ``max-height: 44vh``) and code lines that wrap. The
+# overflow measure above cannot see either. Runs after it, with every slide
+# displayed so that each one has a layout.
+_CLIP_JS = r"""
+() => {
+  const res = [];
+  const slides = [...document.querySelectorAll('.reveal .slides section')]
+     .filter(s => !s.classList.contains('stack'));
+  slides.forEach((s, i) => {
+    const h = s.querySelector('h2, h1');
+    const title = h ? h.textContent.trim().slice(0, 60) : '(untitled)';
+    s.querySelectorAll('.cell-output, pre, .cell, table, div.sourceCode').forEach(el => {
+      const cs = getComputedStyle(el);
+      if (el.scrollHeight > el.clientHeight + 2 && cs.overflowY !== 'visible')
+        res.push({slide: i, title, kind: 'clipped', detail:
+                  `${el.className} ${el.scrollHeight}px > ${el.clientHeight}px`});
+      if (el.scrollWidth > el.clientWidth + 4 && cs.overflowX !== 'visible')
+        res.push({slide: i, title, kind: 'clipped-wide', detail:
+                  `${el.className} ${el.scrollWidth}px > ${el.clientWidth}px`});
+    });
+    s.querySelectorAll('pre code').forEach(c => {
+      if (c.closest('.cell-output')) return;
+      const lines = c.textContent.replace(/\n$/, '').split('\n').length;
+      const lh = parseFloat(getComputedStyle(c).lineHeight) || 0;
+      if (lh && c.getBoundingClientRect().height / lh > lines + 0.6)
+        res.push({slide: i, title, kind: 'code-wrap', detail: `${lines} line(s)`});
+    });
+  });
+  return res;
+}
+"""
+
+
 def check_deck(url: str, slack: int = 1):
-    """Render *url* and return (report, offenders)."""
+    """Render *url* and return (report, offenders, clipped)."""
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -87,9 +122,13 @@ def check_deck(url: str, slack: int = 1):
             timeout=15000,
         )
         report = page.evaluate(_MEASURE_JS)
+        page.add_style_tag(
+            content=".reveal .slides section{display:block !important;}")
+        page.wait_for_timeout(300)
+        clipped = page.evaluate(_CLIP_JS)
         browser.close()
     offenders = [s for s in report["slides"] if s["overflowPx"] > slack]
-    return report, offenders
+    return report, offenders, clipped
 
 
 def main():
@@ -102,11 +141,11 @@ def main():
                     help="emit machine-readable JSON")
     args = ap.parse_args()
 
-    report, offenders = check_deck(args.url, args.slack)
+    report, offenders, clipped = check_deck(args.url, args.slack)
 
     if args.json:
-        print(json.dumps({"url": args.url, **report, "offenders": offenders},
-                         indent=2))
+        print(json.dumps({"url": args.url, **report, "offenders": offenders,
+                          "clipped": clipped}, indent=2))
     else:
         print(f"deck: {args.url}")
         print(f"slide box: {report['slideHeight']}px · "
@@ -122,8 +161,13 @@ def main():
             for s in sorted(offenders, key=lambda s: -s["overflowPx"]):
                 print(f"  #{s['id']}  {s['scrollHeight']}px  "
                       f"(+{s['overflowPx']}px over)")
+        if clipped:
+            print(f"CLIPPED: {len(clipped)} element(s) hide content:")
+            for c in clipped:
+                print(f"  slide {c['slide']} [{c['title']}] {c['kind']}: "
+                      f"{c['detail']}")
 
-    sys.exit(1 if offenders else 0)
+    sys.exit(1 if offenders or clipped else 0)
 
 
 if __name__ == "__main__":

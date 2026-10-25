@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:eb974f235e400786da19e669bde01a9c373f207dc31bc8edaace55e1da6c7e9f",
+    "d2l_lib_fingerprint": "sha256:be7d069b696c259445e5e2ba30fc7f00cd0111b4ffc8e6cff777b449f83f5699",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,15 +46,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 37789,
-          "sha256": "sha256:ca6042f4205f2673549a5e6997778f13f346374caefd0b0d0158dcb8a5675183"
+          "bytes": 37795,
+          "sha256": "sha256:007c60693760326dfbd090fe8450a6a9c895a685a6caa83ab89bb995561bea84"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 39559,
-          "sha256": "sha256:582be357c1f9618d6baae3e00caec6c93ddf45a8834e3e426e658a8076cb4e15"
+          "bytes": 38953,
+          "sha256": "sha256:078c48b690942736ef25a2dd0a14908632e0417bc440265fd6ecec26f9aec1ca"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.923\ncompact ResNet-18: 3,348,320 parameters, val acc 0.943\n"
+          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.921\ncompact ResNet-18: 3,348,320 parameters, val acc 0.943\n"
         }
       ]
     }

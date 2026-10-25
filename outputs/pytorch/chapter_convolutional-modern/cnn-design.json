@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4d7e18d282fbae011cb5a27b41ae2dec20a70b4b86f7a2004be5ea1e166f6fe1",
+    "d2l_lib_fingerprint": "sha256:8aac20d8b30e780f52e3c0b8f586db9ac11c44937ecc1b48c3575c5e2b3d352f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32454,
-          "sha256": "sha256:a63ab37e4d1af0a70399401fefa11df2e14658ad3260284faa5759894919c8d1"
+          "bytes": 32448,
+          "sha256": "sha256:0956c2247254255156a3df956eb082da3e97a2d4aaf208eef2d8e1188c42c6de"
         }
       ]
     }

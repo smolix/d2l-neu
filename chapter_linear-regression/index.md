@@ -1,4 +1,4 @@
-# Linear Regression in Neural Networks
+# Linear Regression
 :label:`chap_regression`
 
 Suppose we want to predict a number from measurements: the price of a house

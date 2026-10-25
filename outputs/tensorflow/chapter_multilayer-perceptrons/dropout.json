@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:5309046a7fc7ce786b59b03dc6dcd96f345b92d56c464840742081b15ea896ed",
+    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  4.  0.  0. 10. 12.  0.]\n [ 0.  0.  0.  0.  0. 26. 28.  0.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  0.  4.  0.  8.  0.  0. 14.]\n [16.  0. 20. 22.  0. 26.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 38036,
-          "sha256": "sha256:6a3094b7c1a01ed40e6078a79521c13c1bf4c74e636ea4ad4ad8bdcb5d147b9e"
+          "bytes": 38021,
+          "sha256": "sha256:1e92a8681f1ab54df6efba98776cf19558c21b37d77c48e3a8cf39e68f08a305"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 37440,
-          "sha256": "sha256:0b49d767c92d06c706bf9f3f695e203c2c7aa62b7d8e2b83c24529de6f61df9e"
+          "bytes": 39306,
+          "sha256": "sha256:682332b3fd602f14442df7d7c036c9f7058618ae3476db7ef642887f3b43b8c4"
         }
       ]
     }

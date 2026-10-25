@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:103dd0b3ac830ea83852a6a2d46e33dc5d692d67c0761efcb3c3f7986e377a03",
+    "d2l_lib_fingerprint": "sha256:47ddc018a2618009dbd5712b21a78419cee74db419e54b80ab2d1ac97b13e182",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.22466363, 0.8563807 , 0.24069457],\n       [0.68484324, 0.7554503 , 0.05396999]], device=gpu(1))"
+          "text": "array([[0.17753658, 0.11707093, 0.3173439 ],\n       [0.40256193, 0.5244376 , 0.11069937]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.2246636, 1.8563807, 1.2406945],\n       [1.6848433, 1.7554502, 1.05397  ]], device=gpu(1))"
+          "text": "array([[1.1775366, 1.1170709, 1.317344 ],\n       [1.4025619, 1.5244377, 1.1106994]], device=gpu(1))"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.0105672],\n       [0.0105672]], device=gpu(0))"
+          "text": "array([[0.00927074],\n       [0.00927074]], device=gpu(0))"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline          :   443.1 MiB used on device 0\nafter creating big:  1467.1 MiB used on device 0\nafter deleting it :  1467.1 MiB used on device 0\nafter empty_cache :   443.1 MiB used on device 0\n"
+          "text": "baseline          :  2946.4 MiB used on device 0\nafter creating big:  3970.4 MiB used on device 0\nafter deleting it :  3970.4 MiB used on device 0\nafter empty_cache :  2946.4 MiB used on device 0\n"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.2133 sec\n"
+          "text": "time until they all finished:     0.2557 sec\n"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 31121,
-          "sha256": "sha256:00e13c7d0b46873df54462f1972e06e21d1ed7a7ba1e6947d8dee9ac5d748965"
+          "bytes": 31329,
+          "sha256": "sha256:11a0c3db56bd87a7691113a9bca779cdc8bffb2db6277654e30a3e66fa6d1d1b"
         }
       ]
     }

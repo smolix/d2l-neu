@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6c61103dea0b2f69838a8ca83b2bfbcdc165f5e7428418f94359fe32dc719591",
+    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8.,  0., 12.,  0.],\n        [ 0.,  0., 20.,  0.,  0.,  0., 28., 30.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
+          "text": "dropout_p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\ndropout_p = 0.5: tensor([[ 0.,  2.,  0.,  0.,  0.,  0., 12.,  0.],\n        [ 0.,  0.,  0., 22., 24.,  0.,  0.,  0.]])\ndropout_p = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 37757,
-          "sha256": "sha256:c64616c9ad6639122c411d2ece1b8cf0e429a355d2bab4c84b5e6b6cd42cda6e"
+          "bytes": 40037,
+          "sha256": "sha256:a9740702f155bf1eabe530a8ca7d9a48c8845a00a0c24c7a51eb5d2bbedaa01c"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 40050,
-          "sha256": "sha256:4d5086c5dc4c417dd227af6365cc9cd30d12489abc67a84202a8dd95c79b4a54"
+          "bytes": 40039,
+          "sha256": "sha256:ca3ead988a9eac26e33b57e8551d6d50de1185b531e57df0c41e9bf2020703ed"
         }
       ]
     }

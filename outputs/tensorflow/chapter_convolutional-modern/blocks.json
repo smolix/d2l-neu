@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b2a2c5d32071f2526856cd3e43e91f376a8444acb40ad1bbe8634817d4a7adb1",
+    "d2l_lib_fingerprint": "sha256:170c39ac62ad347bf8e7db8415af9e58220098d23cc10ab7bdc4e20da97039a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 32889,
-          "sha256": "sha256:44ec3f39f39c3be2d1555193993e077fd8ed38655e420f46c67c688c744ffd47"
+          "bytes": 33284,
+          "sha256": "sha256:74c6a90a155bffd0fc35bf97e8793be307c723199bf2261909cfdd96de7a9880"
         }
       ]
     },
@@ -74,12 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t (1, 5, 5, 10)\nGlobalAveragePooling2D output shape:\t (1, 10)\nFlatten output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nGlobalAveragePooling2D output shape:\t (1, 10)\nFlatten output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -91,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31888,
-          "sha256": "sha256:85775343e9908e2a518ee116e703e86b22647f459c7b415599eda6d6d7d44603"
+          "bytes": 30124,
+          "sha256": "sha256:1efc26d8d25c41ba379df28db1e77f36a7f59fe2185b331fae3e6b3839908c20"
         }
       ]
     },

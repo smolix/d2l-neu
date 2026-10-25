@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b2a2c5d32071f2526856cd3e43e91f376a8444acb40ad1bbe8634817d4a7adb1",
+    "d2l_lib_fingerprint": "sha256:170c39ac62ad347bf8e7db8415af9e58220098d23cc10ab7bdc4e20da97039a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 31826,
-          "sha256": "sha256:6bb89488a506b702f5a8daf40e85cbd5b6c9031da763c7b235d38efa9f6a3ebc"
+          "bytes": 31829,
+          "sha256": "sha256:589a8a85e57fc15f6c3db357b986380852533b747c6e686101f6855cad790d08"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 31805,
-          "sha256": "sha256:293441e9a65b50504fab0675c9abbe999d807a5d3fbfcdc878963f1a1e6112e6"
+          "bytes": 31598,
+          "sha256": "sha256:935c0d6de522dee1236668160671de02e2234ec35721f6987b980d1d162f44f6"
         }
       ]
     },
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.921\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.912\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 params, val acc 0.926\n"
+          "text": "VGG-style: 583,594 params, val acc 0.922\n"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.002011895179748535"
+          "text": "0.0017843842506408691"
         }
       ]
     }

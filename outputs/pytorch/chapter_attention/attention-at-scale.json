@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:26c163c25eaf134b70b97ec90c20d63a56d0276a56a65f85899d523d4b37ed8a",
+    "d2l_lib_fingerprint": "sha256:114b1bcc0593c83fa7f2e3a25320e7e635d63602ebb88854e808e19c71c77da5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048:   0.13 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\nn = 16384:   7.37 ms\n"
+          "text": "n =  2048:   0.12 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\nn = 16384:   7.37 ms\n"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
           "bytes": 31289,
-          "sha256": "sha256:088b1fbcd1aa9ae244b3fd20ab09a0eece75ff5f7902f6b23e135fb0f2b2a5f1"
+          "sha256": "sha256:d8abc97efaca894a08fea918096ebef34cbf8b635da48c200b3a36634bbf59c1"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:  19.78 ms, peak memory  4112.1 MiB\nfused:   1.04 ms, peak memory    16.5 MiB\n"
+          "text": "naive:  19.82 ms, peak memory  4112.1 MiB\nfused:   1.09 ms, peak memory    16.5 MiB\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
           "bytes": 18052,
-          "sha256": "sha256:ce318bddaade8f746d2d78e61512f40906ac4184a948d2e37f5eebe7f0e9d530"
+          "sha256": "sha256:ceb27391eb4232fad21307c8e93c66cbe3ee366cc93ed9ca23293012eab8df2a"
         }
       ]
     },
@@ -102,7 +102,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
           "bytes": 103391,
-          "sha256": "sha256:9d12a1c8a0f5a10d148626bfc5bd5058f33ff264207a2b8b9943658a6abfa090"
+          "sha256": "sha256:1495199931e4ffade15f191f2398beafc006471645796fd4e06644f12b263a61"
         }
       ]
     },
@@ -146,8 +146,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 54929,
-          "sha256": "sha256:dcec798f2de314f2eb1fe1dd22c066a953764f6dac33524b2bac8103a3d7d0a4"
+          "bytes": 55126,
+          "sha256": "sha256:be462d3bac1368f101eedcabc2d10041f521baa53dd0075e54f3585caf014d20"
         }
       ]
     }

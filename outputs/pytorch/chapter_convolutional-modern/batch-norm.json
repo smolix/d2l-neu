@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6562016dc4169c791ac539a92cad7c29692101707a6bf2cb59ecc46a5f14c7ff",
+    "d2l_lib_fingerprint": "sha256:6202b1c79fdc356124abd9876c642f6ac0ef65178db8f0ba5602c8707a51926f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 33329,
-          "sha256": "sha256:53823603ff869b1e6abf8c0a9a3743e037a7e9e05ca0877b68b435862673a87a"
+          "bytes": 33198,
+          "sha256": "sha256:d1dccf27968c0a3006ce5591eab661bf44d0e3ab35cb2d9341dd3dab69f51b8d"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([1.9355, 1.6967, 1.4165, 1.9164, 2.3258, 0.9615], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([ 1.4221,  0.8988, -0.4212,  1.5148,  0.6682, -0.4927], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor([2.0475, 2.2633, 1.5248, 1.8654, 1.9842, 1.8530], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([ 0.0055, -0.1598, -0.0209, -1.2165, -0.9064,  1.4977], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 33923,
-          "sha256": "sha256:8b96f76a87ebaae35941d473c14f3f43e16241716008e1e11be0c3d731a5d5c8"
+          "bytes": 33321,
+          "sha256": "sha256:05736735a39b4b1e1b12f94f452e4d95cefdd7ceea514c559a7555b40643c7d4"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(2.9802e-08, grad_fn=<MaxBackward1>),\n tensor(1.0000, grad_fn=<MeanBackward0>),\n True)"
+          "text": "(tensor(2.0489e-08, grad_fn=<MaxBackward1>),\n tensor(1.0000, grad_fn=<MeanBackward0>),\n True)"
         }
       ]
     }

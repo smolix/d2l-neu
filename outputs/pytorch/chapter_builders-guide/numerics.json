@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:dcb5e387ac80ff5e04379e213a8454150ef71c72ce4e404f952ad70f99567691",
+    "d2l_lib_fingerprint": "sha256:0df2a044191ebe63f8f35b206c7d55f74339b85ac2968017a7c1eeecbc87fb3d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,14 +103,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.815, val acc 0.737, 0.37s\nbf16: loss 0.815, val acc 0.738, 1.40s\n"
+          "text": "fp32: loss 0.815, val acc 0.737, 0.36s\nbf16: loss 0.815, val acc 0.738, 1.56s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
           "bytes": 26252,
-          "sha256": "sha256:33f72e85fceb44ac6703d5d7d18705dabd562c899427ba882bae5d9e0be9f09b"
+          "sha256": "sha256:7c28a39904e842747157c6eb5458880040fffe5aeb526edaad483733cd07cf45"
         }
       ]
     },

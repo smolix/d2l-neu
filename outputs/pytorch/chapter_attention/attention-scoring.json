@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3fe572f366966fd200462b2562a1921b6ea7ada5d67434959d6eb352846276bd",
+    "d2l_lib_fingerprint": "sha256:6eac0962c15a822bbef14b641c34f34acf4d25401b9d4dd1a3c533ede577483a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
           "bytes": 25631,
-          "sha256": "sha256:370309715449595c72195f5fabbdbbf803146c6286aec50572328ae7e52e143e"
+          "sha256": "sha256:e112d6581428df0c8b183d907e0d71e5baaca03c3e26f5d5820a9c841a9e5a0e"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
           "bytes": 16481,
-          "sha256": "sha256:3f2937c45266e97e29fb40f9ae04605cb929550d5f4a6c5d04f607f7eb08845d"
+          "sha256": "sha256:7c7243b96521ca7b1e6aa753658d37fc72b60f4ff65d84148fbf26113bcd4fd1"
         }
       ]
     },
@@ -84,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 19827,
-          "sha256": "sha256:ea21dbe65cf27e93f584137bfe9370ff848b0058f520ba7c785eb80615ebb144"
+          "sha256": "sha256:1b7cd596102cc8e1916dbc177d55fe89952d2cceab93f7eacb5a17b6fe891e9a"
         }
       ]
     },
@@ -112,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 14822,
-          "sha256": "sha256:a2c1f87bfab88dd7d10b988fb928f098db5d6cea01cb77fc013c4bcbb7e3f372"
+          "sha256": "sha256:adc2ad7bd743fd746a957d91aecceaa9f6358e769514145d63a491b8bb3b5d1b"
         }
       ]
     },

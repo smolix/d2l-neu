@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ccc885e55ea4d33b4d4b93f1bf023fc92ad6263127aeadb5d57ef23392868e93",
+    "d2l_lib_fingerprint": "sha256:2dee45049fa43d1c11cbf870cc99ac73fe1e27f74da1ef590f9d8fa45a8e31f9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -108,14 +108,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.712, val acc 0.760, 0.97s\nbf16: loss 0.710, val acc 0.760, 0.94s\n"
+          "text": "fp32: loss 0.712, val acc 0.760, 0.76s\nbf16: loss 0.710, val acc 0.763, 0.79s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 28528,
-          "sha256": "sha256:6f0650083b2709e0dc0dc14ea1f631fd5363ed52fe87653a7947ab9433a7386a"
+          "bytes": 28526,
+          "sha256": "sha256:69e09204a3bbced8d0f3b3e6de01fd4de7136a466c70af0054631d6a7dc18782"
         }
       ]
     },

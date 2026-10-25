@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d9224a6a6aec4b6a92c2b951df3fea87842f0cfacd340fb687ede674b21074ff",
+    "d2l_lib_fingerprint": "sha256:d0d09ae6359c86ed489ef13dc76c8014a5a6c9094b0835cfabf123efc5260c70",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4829, 0.5542, 0.5931],\n        [0.9897, 0.7838, 0.1760]], device='cuda:1')"
+          "text": "tensor([[0.2699, 0.2606, 0.0697],\n        [0.7179, 0.5463, 0.5331]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.4829, 1.5542, 1.5931],\n        [1.9897, 1.7838, 1.1760]], device='cuda:1')"
+          "text": "tensor([[1.2699, 1.2606, 1.0697],\n        [1.7179, 1.5463, 1.5331]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.3571],\n        [-0.3571]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.0682],\n        [0.0682]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0010 sec\ntime until they all finished:     0.0767 sec\n"
+          "text": "time to queue 32 matrix products: 0.0009 sec\ntime until they all finished:     0.0777 sec\n"
         }
       ]
     },
@@ -191,12 +191,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:              0.596 ms\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "pinned, non-blocking copy:  0.368 ms\n"
+          "text": "pageable copy:              0.776 ms\npinned, non-blocking copy:  0.370 ms\n"
         }
       ]
     },
@@ -214,7 +209,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
           "bytes": 30517,
-          "sha256": "sha256:af7fd5bcc80e68d63879fc4ddb87f0c361562491b6b1034d03c6f9e50a028d1b"
+          "sha256": "sha256:7e7955b336803ced7cb04f27535c78d6b6639bf8512254b08666a28cad053658"
         }
       ]
     }

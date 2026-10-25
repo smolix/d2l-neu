@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:302de03eff98e762ed939a80b12e66988ab2703c7882960cd954e797492c436a",
+    "d2l_lib_fingerprint": "sha256:309f361bdb3292fd723d49bbfb79c56fa91344f61b29c2bb406185703b657c60",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 35222,
-          "sha256": "sha256:3e006f8bb668813069f0078e186684ce5074667f22e78bb1f378fd55352ec18b"
+          "bytes": 31302,
+          "sha256": "sha256:d391ee7f4b051f672e3583d1120fae65bd0f9b0a044ebb6917790c6179ce8209"
         }
       ]
     }

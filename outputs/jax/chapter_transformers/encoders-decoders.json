@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:706227925dd2f60db78b9aad0161ea8b7413e8a219892973e77ba9c102fd30bb",
+    "d2l_lib_fingerprint": "sha256:c8c2416d69da3653ccaa6be614b63e799a31cc300ef18257a190cf735ad64a22",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked loss at step 500/1000/2000: 1.96/1.34/1.03\n"
+          "text": "masked loss at step 500/1000/2000: 1.88/1.33/1.02\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at position 0: 2.02, at position 63: 2.15, interior mean: 1.04\n"
+          "text": "loss at position 0: 2.04, at position 63: 2.14, interior mean: 1.05\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 22231,
-          "sha256": "sha256:4a96b81dec11e51c72c3a82450604a2d66610a49a1d3fe15d0bfb9017aefbc0d"
+          "bytes": 22233,
+          "sha256": "sha256:0fea18e45121dafdc6a84f2aadb3876bc7e55769f46300fa6120d1de15371131"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time _raveller for so it will be con'... -> 't' 0.99, 'f' 0.00, 'd' 0.00\n'the time trave_ler for so it will be con'... -> 'l' 0.97, ' ' 0.01, 'o' 0.01\n'the time traveller for so it w_ll be con'... -> 'e' 0.61, 'i' 0.26, 'a' 0.12\n"
+          "text": "'the time _raveller for so it will be con'... -> 't' 0.95, 'f' 0.02, 'd' 0.01\n'the time trave_ler for so it will be con'... -> 'l' 0.96, ' ' 0.02, 'b' 0.00\n'the time traveller for so it w_ll be con'... -> 'i' 0.44, 'e' 0.40, 'a' 0.13\n"
         }
       ]
     },
@@ -135,8 +135,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
-          "bytes": 37719,
-          "sha256": "sha256:6e25e65f33b47c2d5d7b21fa1ca377741d5ecb9a11d686010220c46a7a7815e1"
+          "bytes": 37723,
+          "sha256": "sha256:02ca9352f23b2ad7cd7734fa67a659492ec51bb1a59a5011bc1f0a03f077df80"
         }
       ]
     },
@@ -158,29 +158,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   0.21 ms, perceiver  0.17 ms\n"
+          "text": "N= 1024: self-attention   0.25 ms, perceiver  0.16 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 2048: self-attention   0.64 ms, perceiver  0.27 ms\n"
+          "text": "N= 2048: self-attention   0.68 ms, perceiver  0.27 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention   2.69 ms, perceiver  0.24 ms\n"
+          "text": "N= 4096: self-attention   3.09 ms, perceiver  0.16 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention  10.02 ms, perceiver  0.30 ms\n"
+          "text": "N= 8192: self-attention  11.55 ms, perceiver  0.21 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 31187,
-          "sha256": "sha256:2116affa5092714c8a3b38ea4f726b87afe9b8258b786c708139abe73d821b6e"
+          "bytes": 31191,
+          "sha256": "sha256:4f73fc64f880505ad3f6dde308b7f7b11e8ab05347b8eb666632c07ca3595713"
         }
       ]
     }

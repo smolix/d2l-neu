@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0e7908a51a74e0a84628f27be5d0052610b780f9565327c0a73ae8cb67270358",
+    "d2l_lib_fingerprint": "sha256:0e6dae976528a094f9b089e908c5d1887c806b8f16cc60a4b75d37fee1bb46df",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,22 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\n"
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "function output shape:\t (1, 14, 14, 6)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "function output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\n"
+          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\nfunction output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\n"
         },
         {
           "type": "stream",
@@ -67,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37874,
-          "sha256": "sha256:a7d5f46d79d5eba8e94871ef4c36338c02c211c80aee3d398f63057e84a31f94"
+          "bytes": 37878,
+          "sha256": "sha256:2aa7e0812a0c263f70d4b9dd53979528c2b51bfb2b84d3eb502e84b8251a0fc3"
         }
       ]
     }

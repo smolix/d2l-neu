@@ -501,7 +501,7 @@ for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
 
 :numref:`tab_dws_vs_dense` reports one seeded run per framework; accuracies
 are rounded to the half point, and single entries can move by a point or two
-from one re-execution to the next.
+(JAX, by up to three) from one re-execution to the next.
 
 :Mini-MobileNet against a dense VGG-style network at matched parameter count
 (Fashion-MNIST at $96 \times 96$, 10 epochs; test accuracy, one seeded run
@@ -510,14 +510,14 @@ per framework, rounded).
 
 | Model | Parameters | Multiply-adds | PyTorch | JAX | TensorFlow |
 |---|---:|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | ≈91% | ≈90.5% | ≈92% |
-| VGG-style control | 583,594 | 384.9 million | ≈92% | ≈86% | ≈92.5% |
+| Mini-MobileNet | 542,474 | 50.3 million | ≈91.5% | ≈89.5% | ≈91% |
+| VGG-style control | 583,594 | 384.9 million | ≈90.5% | ≈88% | ≈92.5% |
 
-The two models have comparable accuracy in this small experiment: apart from
-the JAX VGG-style run, whose validation accuracy dips in the final epoch after
-reaching about 92%, every run of both architectures falls in a band of roughly
-90–92.5%, and which of the two comes out ahead varies with the framework and
-the seed. The accuracy
+The two models have comparable accuracy in this small experiment: the PyTorch
+and TensorFlow runs of both architectures fall in a band of roughly 90–93%;
+the JAX runs, whose validation accuracy dips in the final epochs after
+reaching about 91–92%, end at 87–91%; and which of the two comes out ahead
+varies with the framework and the seed. The accuracy
 difference lies within run-to-run noise, and no conclusion should be built on it. The stable
 result is computational. At this parameter budget the separable network
 performs about $7.7\times$ fewer multiply-adds, but its epochs run only about
@@ -889,7 +889,7 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
 1. [code] **Arithmetic intensity.** ● `MiniMobileNet` performs about
    $7.7\times$ fewer multiply-adds than `VGGSmall` in
    :numref:`tab_dws_vs_dense`, yet its epochs in the PyTorch run are only
-   about 1.5 times faster.
+   about 2 times faster.
     1. Measure the forward-pass time of both networks on a batch of 128
        images. Count how many multiply-adds a $3 \times 3$ depthwise
        convolution performs per weight and per input activation, compare

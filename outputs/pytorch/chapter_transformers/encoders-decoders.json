@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3d65ff8a5354abed2cba0fc2e48cbfc1f6eebf671964a998b8564a7504c9f788",
+    "d2l_lib_fingerprint": "sha256:5f8ec55968ae9e1a36a43f30b84e1c5fe38dd06327122522198e27057e7b7276",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked accuracy 0.65\nloss at position 0: 2.06, at position 63: 2.09, interior mean: 1.10\n"
+          "text": "masked accuracy 0.65\nloss at position 0: 2.06, at position 63: 2.08, interior mean: 1.11\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 22694,
-          "sha256": "sha256:3b15fb5fc856356682b3bf2df691359194b078fb453d9191d079f924a30a0eed"
+          "bytes": 22687,
+          "sha256": "sha256:8435f38928ed54e8ccee845e213ae655fd36f002ebb6715b60d8e888628399c7"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time _raveller for so it will be con'... -> 't' 0.92, 'g' 0.03, 'f' 0.01\n'the time trave_ler for so it will be con'... -> 'l' 0.99, ' ' 0.00, 'r' 0.00\n'the time traveller for so it w_ll be con'... -> 'i' 0.65, 'e' 0.28, 'a' 0.05\n"
+          "text": "'the time _raveller for so it will be con'... -> 't' 0.90, 'g' 0.04, 'c' 0.02\n'the time trave_ler for so it will be con'... -> 'l' 0.99, ' ' 0.00, 'r' 0.00\n'the time traveller for so it w_ll be con'... -> 'i' 0.60, 'e' 0.32, 'a' 0.05\n"
         }
       ]
     },
@@ -126,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
           "bytes": 38529,
-          "sha256": "sha256:c3a79eac62fef329f24d196e552cf7e7a01de5d5bb62429ab929d4b8198213be"
+          "sha256": "sha256:4eff390022abae160048017d94946bdc04c78f04d0b2d015febafb7a8474baeb"
         }
       ]
     },
@@ -148,24 +148,24 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   0.93 ms, perceiver  1.31 ms\nN= 2048: self-attention   1.84 ms, perceiver  1.30 ms\n"
+          "text": "N= 1024: self-attention   0.99 ms, perceiver  1.49 ms\nN= 2048: self-attention   1.62 ms, perceiver  1.43 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention   6.29 ms, perceiver  1.32 ms\n"
+          "text": "N= 4096: self-attention   5.57 ms, perceiver  1.49 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention  22.27 ms, perceiver  1.35 ms\n"
+          "text": "N= 8192: self-attention  19.82 ms, perceiver  1.43 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 30202,
-          "sha256": "sha256:aa715352766e4f820a15fe6e4328af61da13b5fd9031e3901eb906af0406cd3a"
+          "bytes": 30009,
+          "sha256": "sha256:9b661f9fd42514234b1d66b8572d5855c3fedda66cd3ca60891e88c27054c664"
         }
       ]
     }

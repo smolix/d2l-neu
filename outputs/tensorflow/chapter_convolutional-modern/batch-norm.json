@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b2a2c5d32071f2526856cd3e43e91f376a8444acb40ad1bbe8634817d4a7adb1",
+    "d2l_lib_fingerprint": "sha256:170c39ac62ad347bf8e7db8415af9e58220098d23cc10ab7bdc4e20da97039a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 32850,
-          "sha256": "sha256:a9c09b82b851717573ecbc48a2c7cea1c6592c694a498569193583792dba1185"
+          "bytes": 31662,
+          "sha256": "sha256:5b6666be629e1d1258c6ef754e62a955c1207273f6df5e1631c7b2af86442659"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.9798453, 2.8552275, 1.6253699, 3.1501236, 3.6733193, 3.0973344],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 1.8181866, -0.9490892,  1.239106 , -2.863343 ,  2.415717 ,\n        -1.8288672], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.3640335, 4.8439093, 2.5448506, 2.369902 , 1.6752651, 3.206294 ],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 1.7618008 , -2.5543418 , -2.108875  , -1.5923527 , -0.18457751,\n         2.9800878 ], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 32856,
-          "sha256": "sha256:238f6907798b2c6110230749c398917703a9b3bdeb6b6e53d0252c13a013f5b2"
+          "bytes": 32268,
+          "sha256": "sha256:6f8aed53f06beee462ecaa31a3d9396ba8604344b74225ae6e3c4cbfbef114db"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989842772483826>,\n True)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.073364496231079e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9990009665489197>,\n True)"
         }
       ]
     }

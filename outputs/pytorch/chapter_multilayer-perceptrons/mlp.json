@@ -9,116 +9,29 @@
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:0d940350cf91c1da12d2cde6e517443c0fd15d9cd04dd67f1631483d1ee6155b",
+      "code_fingerprint": "sha256:c3683bed11388a05343b052be2879b6bb8c6eafc8a068fc63df86b601d7dd28c",
       "kind": "text",
       "outputs": []
     },
     "mlp-xor": {
-      "code_fingerprint": "sha256:937419362ca49b7c23bbfa8ee647c07743ce4af95c0c20046bca12015b5be5e4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([[0., 0., 0.],\n       [0., 1., 1.],\n       [1., 0., 1.],\n       [1., 1., 0.]])"
-        }
-      ]
-    },
-    "mlp-region-count": {
-      "code_fingerprint": "sha256:88c2a462efda7c679b1ba617a2397c276f01b9965d16c14f0c4dd79174b4b624",
+      "code_fingerprint": "sha256:021865d8980e1c47488dba54b9a798f6d3a96fb89d3ca64ceeeec450bca3139f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "depth 1: mean pieces = [2.8, 4.5, 7.8, 14.3],  D+1 = [3, 5, 9, 17]\n"
-        },
+          "text": "x = [0 0], h = [0 0], o = 0\nx = [0 1], h = [1 0], o = 1\nx = [1 0], h = [1 0], o = 1\nx = [1 1], h = [2 1], o = 0\n"
+        }
+      ]
+    },
+    "mlp-sigmoid-and-tanh": {
+      "code_fingerprint": "sha256:370598a8f619564bf01cf8ffd73884c4ab278efed586c8d635e3cf2dcb694873",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "depth 2: mean pieces = [3.2, 7.5, 14.2, 27.8],  D+1 = [3, 5, 9, 17]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "depth 3: mean pieces = [3.0, 8.9, 19.5, 39.5],  D+1 = [3, 5, 9, 17]\n"
-        }
-      ]
-    },
-    "mlp-relu-function-1": {
-      "code_fingerprint": "sha256:4cb2f6def574869c3786dbe71bda7d095d40e3061711985c4242fa0feb3754fe",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-relu-function-1-1.svg",
-          "bytes": 16904,
-          "sha256": "sha256:81719d52ccae3f2f38e380d21b132fa5eaac18be2fced66d2e9856d38d91d4eb"
-        }
-      ]
-    },
-    "mlp-relu-function-2": {
-      "code_fingerprint": "sha256:7272fa2c04646ea62d1649415d9c9674ac97a7c0ac6e3186645814baabfece11",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-relu-function-2-1.svg",
-          "bytes": 21206,
-          "sha256": "sha256:71be76fc2117517a5bcedcba3381ee5790b289b57c7b12eecdb9f54adf4a3302"
-        }
-      ]
-    },
-    "mlp-sigmoid-function-1": {
-      "code_fingerprint": "sha256:c7a06b625ff6f0a7e97ecbfb03fbba0f48b7f61f7046fe06432300d042acca2b",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21785,
-          "sha256": "sha256:61110470e79d1047c070a3125e22bf8603c34f4880df4f89d9bae1a234a05808"
-        }
-      ]
-    },
-    "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:f3b39d10addd4f8e9b8f7b8e9ae9f1081c21f39403da2a1661aa0c70641efcfc",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24520,
-          "sha256": "sha256:4dcf9c4aecbfdde3dc1a03322d8374180ff481760a841ea2b76c7546bde96ca6"
-        }
-      ]
-    },
-    "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:6092f94603974413200dd06be304835583a66f6ce88230ddb998a5f4ccc7bf12",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20176,
-          "sha256": "sha256:595957f0b8b9e90c41b557c8892d411ad43c333240caa557386e7f18216711b2"
-        }
-      ]
-    },
-    "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:154de28466691382618c08816d2a8098d19662c66123355882b0f6a2dfdca874",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-tanh-function-2-1.svg",
-          "bytes": 22744,
-          "sha256": "sha256:21a261ed8ed3bcc887470376aa3ef485a39d4e4fc520496466c7ce025bf79713"
+          "text": "ReLU      0.0000  0.0000  0.0000  1.0000  1.0000\nsigmoid   0.0177  0.1966  0.2500  0.1966  0.0177\ntanh      0.0013  0.4200  1.0000  0.4200  0.0013\nGELU     -0.0005 -0.0833  0.5000  1.0833  1.0005\n"
         }
       ]
     }

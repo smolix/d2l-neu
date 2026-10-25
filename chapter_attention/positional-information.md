@@ -1025,7 +1025,7 @@ Character-level Time Machine, context 128, 3000 steps each:
 @!positional-information-the-experiment-2
 
 - Training length: RoPE best (~5), learned close behind, sinusoidal ≈
-  ALiBi (~7--8), NoPE worst (~9).
+  ALiBi (~7), NoPE worst (~9).
 - Length 512: absolute schemes and RoPE degrade substantially because offsets
   above 127 were not observed during training.
 - **ALiBi: flat.** NoPE: flat, from a weaker start.

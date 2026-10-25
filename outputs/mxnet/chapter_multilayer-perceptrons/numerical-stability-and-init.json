@@ -9,49 +9,59 @@
   },
   "cells": {
     "numerical-stability-and-init-numerical-stability-and-initialization": {
-      "code_fingerprint": "sha256:d0231af3630a799671c9fe5f4c9f8174b62ae291774f09d65ef3bfee51528a45",
+      "code_fingerprint": "sha256:14382e7fbf1e28043783dcd45765f911feeff8b50f91dec4a3206fbf5c5e7143",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-vanishing-gradients": {
-      "code_fingerprint": "sha256:edfdb7bc3493cab468410131032feec9fac764510f565be62bc0b59e5b80d05e",
+      "code_fingerprint": "sha256:70e5dbc3fb86d0179cf7c58a673903e43b1249083b935f53850952f846e6ffb3",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:ce6cd45bb15478e1685a1879f2d1ff3221906ee7241ce0698f2051b2ae775b20",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "[05:10:54] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "name": "stdout",
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.0e-17\nReLU, N(0, 1): gradient mean square at layer 1: 6.8e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.1e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26183,
-          "sha256": "sha256:e1163d344a75e246938a98eb227a69667a11203f0a00eb17b0543b6ff12a55ec"
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
+          "bytes": 34435,
+          "sha256": "sha256:5b201b8303699a3333bf6a530a375b79f8cfade501e41b8c21df36932e588af9"
         }
       ]
     },
-    "numerical-stability-and-init-exploding-gradients": {
-      "code_fingerprint": "sha256:6798690574826a8d10fb69675f3bf08184847911097e5b3e131ef379ed6c92d9",
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:81cb3af02039f4a86cc9643c7a9f930484023da2c84368beae4c11d7883338db",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N(0, 0.01²): activations at layer 10: 1.7e-19, gradient at layer 1: 8.8e-18\nXavier: activations at layer 10: 1.3e-03, gradient at layer 1: 2.6e-03\nHe: activations at layer 10: 1.4e+00, gradient at layer 1: 1.0e+00\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 31031,
+          "sha256": "sha256:084ab2f8b2e82bea9cfc35f3131a3e7186fb4b72c38e83b2a56be63ad85b20f7"
+        }
+      ]
+    },
+    "numerical-stability-and-init-symmetry-among-hidden-units": {
+      "code_fingerprint": "sha256:83b1283108b950536f8589037ad93c55968ab34718da1a1c74634334c609fae4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix [[ 2.1634572  -0.9771438   0.297977   -0.10363755]\n [-0.65460837 -0.54670674  1.5953101  -1.1206263 ]\n [-0.7824805  -0.17443965  0.30432945 -0.78311837]\n [ 1.7633882  -1.4568369   0.54670686  0.83152324]]\nafter multiplying 100 matrices [[-1.6062642e+20 -1.2434712e+20 -2.1403774e+17  4.8630580e+20]\n [ 2.5770965e+19  1.9950262e+19  3.4356204e+16 -7.8023087e+19]\n [ 6.6591407e+19  5.1550950e+19  8.8740604e+16 -2.0160932e+20]\n [-1.0299650e+20 -7.9733540e+19 -1.3726534e+17  3.1182783e+20]]\n"
-        }
-      ]
-    },
-    "numerical-stability-and-init-depth-sweep": {
-      "code_fingerprint": "sha256:577ae1af9b6c03894b789c0fddb3a7983301df8a3707c99975bd98466f1788d1",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31002,
-          "sha256": "sha256:189394a6ab2ce00b04ddf98799dc56a8d154dda29e538daee50bc2307b1a7d13"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.24\n"
         }
       ]
     }

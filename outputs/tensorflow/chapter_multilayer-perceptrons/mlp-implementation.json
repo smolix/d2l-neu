@@ -4,58 +4,96 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e4e84cf95cbde6787ca7e04843df6b96bb054c491cf580fcd4a40240c586c854",
+    "d2l_lib_fingerprint": "sha256:560c81b297a498219febfdbdb1c0e69324d604af75a19360a6104cf3a9f8b740",
     "max_inline_bytes": 0
   },
   "cells": {
     "mlp-implementation-implementation-of-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "code_fingerprint": "sha256:7a995a612c02a7752db79cbc39ad4e7d46d3b1b1b7c60be501ff18be109aa8a2",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-initializing-model-parameters": {
-      "code_fingerprint": "sha256:2ae9638cdcad33aa4fc39dd3883478d209dbf07ec6d387f5dca1964c2f0c4731",
+      "code_fingerprint": "sha256:8f5db19e93b10e3bc62aea03f1a0d064cb61b1133017dfc3387a50caa78fbe75",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-model-1": {
-      "code_fingerprint": "sha256:5889a2385e9f3a5803d2c34aadd170c15d698194d1f3fe7094ee83d31c1abdcb",
+      "code_fingerprint": "sha256:0ede74fd36f3e46e2028e3366f8e0a982f3184c1ad1cfb08c99f826516d5aa8b",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-model-2": {
-      "code_fingerprint": "sha256:3fcc4e9f6bd4c6a8b268c96627ac84298b648d7da32e937cf080f4e6ded17edb",
+      "code_fingerprint": "sha256:eccf9ed43424ca674fed3a84aca3b43e09b24300338e88e92d74b05ef2d4f8fa",
       "kind": "text",
       "outputs": []
     },
+    "mlp-implementation-checks-before-training": {
+      "code_fingerprint": "sha256:57d4d329924dc2f9b00700a1124360f78857db2a91e7b7780ad3e9e74b86be29",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H: (8, 256) O: (8, 10)\nloss 2.299, fraction of active units 0.50\n"
+        }
+      ]
+    },
     "mlp-implementation-training": {
-      "code_fingerprint": "sha256:aec591138c74e9f9cf4d228a9d195bc5095f191d638193398c06bf32d18c8aef",
+      "code_fingerprint": "sha256:f130f5a387bd666c20eeae7880dcea7f10dc35b324532573b76999b6db714136",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 37752,
-          "sha256": "sha256:f7978895cb86a9ea536199926ed88973aed758c582f388a7eb5aa6e87b21658f"
+          "bytes": 39917,
+          "sha256": "sha256:0436f6db6b610038cb75c3f0322371d58f39ae3f389c53cb10043abe4892a7da"
         }
       ]
     },
     "mlp-implementation-model-2-2": {
-      "code_fingerprint": "sha256:2f88647ba46de1c3ea3f2c6635f8b8110918f38ff74291874e21c73cd0b76bb1",
+      "code_fingerprint": "sha256:f4b37d47c47cefaf5d42677f0777835b9d78703b69ad5dcc4f819db90cb0eaf4",
       "kind": "text",
       "outputs": []
     },
-    "mlp-implementation-training-2": {
-      "code_fingerprint": "sha256:303b24976dc250d74639988239e8ad27163939ffcb27d551d6b3485679b6c422",
+    "mlp-implementation-accuracy-1": {
+      "code_fingerprint": "sha256:2fb62e87deab9f258ee7a4aef56d34d19f21a4f6c22db518edd36066bf333692",
+      "kind": "text",
+      "outputs": []
+    },
+    "mlp-implementation-accuracy-2": {
+      "code_fingerprint": "sha256:c4ced35fb6bf7ce6c1f5ed293cd7620ad4d627d49c80867516811977aad9a1a6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 39122,
-          "sha256": "sha256:cf4785f55888f041acd478ea190fa3413fc7a4949aea4fb8f9e122532bc0e36a"
+          "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
+          "bytes": 29487,
+          "sha256": "sha256:e790aa01715feb548120ef93d0a3192fecdfe6fb535eb86355198c07e34e7c2d"
+        }
+      ]
+    },
+    "mlp-implementation-accuracy-3": {
+      "code_fingerprint": "sha256:8f181e789384678c33755820620d51fd21566877b0a3825872131b2f92ecb011",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.864\n  concise MLP: 0.863\n  softmax regression: 0.837\n"
+        }
+      ]
+    },
+    "mlp-implementation-parameters-computation-and-time": {
+      "code_fingerprint": "sha256:a100ae514f670b77e304a575070d39f65acb564ae1b21b9ce450bddcf1edbc7b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "concise MLP: 0.8 s per epoch\nsoftmax regression: 0.7 s per epoch\n"
         }
       ]
     }

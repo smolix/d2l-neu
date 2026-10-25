@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 24897,
-          "sha256": "sha256:db827c65857f03f3110cceff58484396087587f14831c7a5094803f1f5dd5e78"
+          "bytes": 24884,
+          "sha256": "sha256:9c2bb8934473972c11ac91fe7d9e5d7010b994443d58e22a76bcdf048ee43cb0"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller I had recognized\\ntheir\\nand, and I was in the Time\n    Traveller, and, and then a gallery, and I was in the sounds of the\n    earthormany, and I was in'\n"
+          "text": "'the time travellernight. I had\\nlittle lawn, I had come to the dier, I saw\n    a faintysicalived to findive of a\\nback were\\nmasp, and in the first,'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"it seemed to me that the Time Machine was a little people. It was not a\n    falltiees. The Time Machine was a fallinging\\nface, and so, and I was in\n    the Time Traveller. 'I'mointing\"\n"
+          "text": "\"it seemed to me that the\\nsunning, and the faintaiting at the time. I felt\n    a certain sing. It was a\\nlittle lawn. I'm the three the soft palace,\n    and then I saw\"\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.82, distinct-3 0.89: 'the time traveller I had\n    recognized\\ntheir\\nand, and I was in the Time Traveller, and, and then a\n    gallery, and I was in the sounds of the'\n"
+          "text": "k=1, score -4.84, distinct-3 1.00: 'the time travellernight. I had\\nlittle\n    lawn, I had come to the dier, I saw a faintysicalived to findive of\n    a\\nback were'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.69, distinct-3 0.79: \"the time traveller, and in my\n    mind.\\n\\n'Then I heard a question. But I was singularly preass.\\n\\n'Then\n    I heard a\"\n"
+          "text": "k=4, score -3.78, distinct-3 1.00: \"the time travellernight. I don't know it\n    was meing to my mind.\\n\\n'I think I have to a charors. I was in a\n    gallery,\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.88, distinct-3 0.92: 'it seemed to me that the Time Machine\n    was a little people. It was not a falltiees. The Time Machine was a\n    fallinging\\nface, and so, and I was in the'\n"
+          "text": "k=1, score -4.87, distinct-3 1.00: \"it seemed to me that the\\nsunning, and\n    the faintaiting at the time. I felt a certain sing. It was a\\nlittle\n    lawn. I'm the three the\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.92, distinct-3 1.00: \"it seemed to me that the Time Traveller.\n    'I'mfortable, 'I suppose I was nothing to me, and is a trailiently, and\n    I was singul\"\n"
+          "text": "k=4, score -3.82, distinct-3 1.00: \"it seemed to me that I had\\nlittle lawn.\n    I'm the three-Dimension.\\n\\n'I think I have to a charors. As I did not\"\n"
         }
       ]
     },
@@ -115,14 +115,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7780da5af7a0>"
+          "text": "<matplotlib.legend.Legend at 0x73e21e831b20>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 52912,
-          "sha256": "sha256:1b791f57536057a0f194137aa6d6ee63beb0f5bfcd9364ff9f582314d58571b9"
+          "bytes": 52536,
+          "sha256": "sha256:dece3f2bc534330ce477f70cbff190bc4f7662be23c114cced43a8740f27694c"
         }
       ]
     },
@@ -133,12 +133,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.41, top-k keeps 20, top-p keeps 68, min-p keeps 6\n"
+          "text": "'the time traveller': top prob 0.24, top-k keeps 20, top-p keeps 17, min-p keeps 10\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'it seemed to me that': top prob 0.20, top-k keeps 20, top-p keeps 79, min-p keeps 12\n"
+          "text": "'it seemed to me that': top prob 0.13, top-k keeps 20, top-p keeps 106, min-p keeps 18\n"
         }
       ]
     },
@@ -149,17 +149,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time traveller I had recominnericiaes, and I had seen and, and I\n    had\\nlittle intru anyly three-bers, and in my head, and that had not\n    mind\\nlooking my'\n"
+          "text": "T=0.5: 'the time traveller, and\\nthe each other. I judged to the other, and\n    in the die. Appare. I felt a second I was in a moment him to me. I could\n    not appearere of the'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time traveller a bigar areight; in my Lter of impressinger\n    popted so of petell upon theitlock a woro Th the dark.\\n\\'fter \" began\n    he advent acrossside a thing'\n"
+          "text": "T=1.0: 'the time travellerse. I never towards talling have\n    peculiattatingless to me. I found them was air suchilstal recqual. And\n    comvery weitut them. I not to assu sp'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: \"the time traveller as decay�� she mo through�icalone found my'syllow\n    contrle,\\nplebt onerame� op ar nightreak great whal table cle� put\n    lookedreivainer other onress d per\"\n"
+          "text": "T=2.0: \"the time travellerir Four offoreult?iveitherove along to�\\n\n    chanookass white be last,\\nryous bet b downR reec last--' imp all his\n    onetedong what shaack down of com\\x1cist beaut across\"\n"
         }
       ]
     },
@@ -170,27 +170,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.85): 'the time traveller I had recognized\\ntheir\\nand,\n    and I was in the Time Traveller, and, and then a gallery, and I was in\n    the sounds of the earthormany, and I was in'\n"
+          "text": " greedy (distinct-3 1.00): 'the time travellernight. I had\\nlittle lawn, I\n    had come to the dier, I saw a faintysicalived to findive of a\\nback\n    were\\nmasp, and in the first,'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller a bigar areight; in my Lter\n    of impressinger popted so of petell upon theitlock a woro Th the\n    dark.\\n\\'fter \" began he advent acrossside a thing'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellerse. I never towards talling\n    have peculiattatingless to me. I found them was air suchilstal recqual.\n    And comvery weitut them. I not to assu sp'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): \"the time traveller, and in a n I found exploired\n    and missed the table.\\n\\n'I took atalked be and realizegrently enough of\n    goneity, a chin. And teve\"\n"
+          "text": "  top-k (distinct-3 1.00): 'the time travellers and toubt that night of\n    thising reashed the belour. With\\ncuwlted ragice to\\nman, but that this\n    for me inscause to cal.\\nA'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time traveller of Space, it Weena the other\n    said on cfir of constredge of a men\\nuponer sawated haing one, and\n    seemed a very and woreet simprevy impressing to with'\n"
+          "text": "  top-p (distinct-3 1.00): 'the time travellers that the habove\\nfact to and\n    deping up in either to take you well. I reressinged the machine, and \"le\n    the Psychologistveryly the grace.\\nE it peopleanud'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time traveller, and in a fladred by richsed\n    the conditions that making my hands. As that live, and that there was\n    none. I waitary, and soep, I did not car'\n"
+          "text": "  min-p (distinct-3 1.00): 'the time traveller, and\\nthey of it. I did so I\n    he to see\\nof a deculation of\\nmfirched the Eloian bokeible? I had seen;\n    the pbues not the'\n"
         }
       ]
     }

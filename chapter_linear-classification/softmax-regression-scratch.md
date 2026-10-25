@@ -207,10 +207,10 @@ draws a new one on every run.
 %%tab pytorch
 class SoftmaxRegressionScratch(d2l.Classifier):
     """Softmax regression implemented from scratch."""
-    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
+    def __init__(self, num_inputs, num_outputs, lr, std=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W = nn.Parameter(d2l.normal(0, sigma, (num_inputs, num_outputs)))
+        self.W = nn.Parameter(d2l.normal(0, std, (num_inputs, num_outputs)))
         self.b = nn.Parameter(d2l.zeros(num_outputs))
 ```
 
@@ -218,11 +218,11 @@ class SoftmaxRegressionScratch(d2l.Classifier):
 %%tab mxnet
 class SoftmaxRegressionScratch(d2l.Classifier):
     """Softmax regression implemented from scratch."""
-    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
+    def __init__(self, num_inputs, num_outputs, lr, std=0.01):
         super().__init__()
         self.save_hyperparameters()
         self.W = gluon.Parameter('W', shape=(num_inputs, num_outputs),
-                                 init=init.Normal(sigma))
+                                 init=init.Normal(std))
         self.b = gluon.Parameter('b', shape=(num_outputs,), init=init.Zero())
         self.initialize()
 ```
@@ -231,10 +231,10 @@ class SoftmaxRegressionScratch(d2l.Classifier):
 %%tab tensorflow
 class SoftmaxRegressionScratch(d2l.Classifier):
     """Softmax regression implemented from scratch."""
-    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01):
+    def __init__(self, num_inputs, num_outputs, lr, std=0.01):
         super().__init__()
         self.save_hyperparameters()
-        normal = tf.keras.initializers.RandomNormal(mean=0, stddev=sigma)
+        normal = tf.keras.initializers.RandomNormal(mean=0, stddev=std)
         self.W = self.add_weight(name='W', shape=(num_inputs, num_outputs),
                                  initializer=normal)
         self.b = self.add_weight(name='b', shape=(num_outputs,),
@@ -245,12 +245,12 @@ class SoftmaxRegressionScratch(d2l.Classifier):
 %%tab jax
 class SoftmaxRegressionScratch(d2l.Classifier):
     """Softmax regression implemented from scratch."""
-    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01, rngs=None):
+    def __init__(self, num_inputs, num_outputs, lr, std=0.01, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.W = nnx.Param(
-            rngs.params.normal((num_inputs, num_outputs)) * sigma)
+            rngs.params.normal((num_inputs, num_outputs)) * std)
         self.b = nnx.Param(jnp.zeros(num_outputs))
 ```
 

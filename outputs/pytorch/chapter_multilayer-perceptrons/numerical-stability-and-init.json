@@ -14,39 +14,54 @@
       "outputs": []
     },
     "numerical-stability-and-init-vanishing-gradients": {
-      "code_fingerprint": "sha256:69c1091f1ba0d31e57681e7e855d142f88a19f6ee850bd963a963928dbc4d8f6",
-      "kind": "asset",
+      "code_fingerprint": "sha256:7c475864b56c8c77f434f51b4bed2cb6c04101ffffc6211c95b582885b8d2093",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:0ffd18f3c445baea1b9197bcc71e6c28858ac5b78322eae3ce38fd8483e855b0",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.9e-18\nReLU, N(0, 1): gradient mean square at layer 1: 7.9e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.8e-12\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26193,
-          "sha256": "sha256:cc4b3cf689209867b8bdad17323858c6b23a43569e0ff6946dbb338060606da7"
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
+          "bytes": 34439,
+          "sha256": "sha256:1dca965807e2a462227b4d33ec35c4279a5055ca2a838e07c6aa7a508b09a79b"
         }
       ]
     },
-    "numerical-stability-and-init-exploding-gradients": {
-      "code_fingerprint": "sha256:f7002ee79f1974ca7a35ceee819b47cdc5e026958842e9e6b1c91e68d251faf5",
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:7acc3c01cae5078fe8ab826c9e9aa60b9724b68e9f03a0ed702aa5a0f09c1310",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N(0, 0.01²): activations at layer 10: 1.4e-19, gradient at layer 1: 9.3e-18\nXavier: activations at layer 10: 1.4e-03, gradient at layer 1: 2.1e-03\nHe: activations at layer 10: 6.1e-01, gradient at layer 1: 1.0e+00\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 30066,
+          "sha256": "sha256:dd9a1fcfe54b5fa8c35a8c6f6922e82e67028a460b419e7a3083f0aac3af50de"
+        }
+      ]
+    },
+    "numerical-stability-and-init-symmetry-among-hidden-units": {
+      "code_fingerprint": "sha256:47d230dcb06fadf1601c53529982345f49c24b4b6f36e8a779ddb87a2b968da5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tensor([[-0.5613, -0.5231,  0.5676, -0.7617],\n        [ 0.4817,  1.8070,  0.5064,  0.2858],\n        [-0.6077,  0.4195, -0.2181, -0.2558],\n        [ 1.3009,  1.4697, -1.0649, -1.5289]])\nafter multiplying 100 matrices\n tensor([[-1.0601e+23, -1.5386e+23, -4.2673e+23,  2.3719e+23],\n        [ 3.8756e+23,  5.6246e+23,  1.5600e+24, -8.6711e+23],\n        [ 2.4790e+23,  3.5977e+23,  9.9784e+23, -5.5463e+23],\n        [ 1.7444e+24,  2.5315e+24,  7.0214e+24, -3.9027e+24]])\n"
-        }
-      ]
-    },
-    "numerical-stability-and-init-depth-sweep": {
-      "code_fingerprint": "sha256:8c41f1e56a2963e6a1e695d6df26ec910e537323b0af1a87a39cf5087379708a",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31001,
-          "sha256": "sha256:f056f95894b5ad073eaa2e652773db91df0d7e86998fc32fa37cb6411cc8a607"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.20\n"
         }
       ]
     }

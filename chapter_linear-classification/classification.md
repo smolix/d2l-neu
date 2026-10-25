@@ -206,8 +206,7 @@ The MXNet default needs the model's parameters. Gluon's `collect_params`
 finds the parameters declared as Gluon `Parameter`s, such as those of the
 implementation from scratch in the next section, which reads their values
 with `data()`. It misses plain arrays with attached gradients, which the
-implementation of a multilayer perceptron from scratch in
-:numref:`sec_mlp-implementation` uses. `get_scratch_params` collects
+recurrent language model from scratch in :numref:`sec_rnn-scratch` uses. `get_scratch_params` collects
 such arrays by searching the attributes of a model and of its submodules,
 and `parameters` returns Gluon's parameters if there are any and the plain
 arrays otherwise. Since this code

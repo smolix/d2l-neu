@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 31033,
-          "sha256": "sha256:863ff4ac261ee28e09a6927136835e2a3f3cdc37ed415cc86eab38fc87e80932"
+          "bytes": 30230,
+          "sha256": "sha256:80bfa5311c77ce1f233b4e8e374fe7f86d6532c706ab41e99f15190fa3c454df"
         }
       ]
     },
@@ -69,14 +69,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean cosine similarity: grid neighbors 0.03, distant positions -0.03\n"
+          "text": "mean cosine similarity: grid neighbors 0.03, distant positions -0.02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 108161,
-          "sha256": "sha256:398364978d4d6dd831d9b93c36c85ab9d140d29cde335e95f30c4ec6bc39cef8"
+          "bytes": 107913,
+          "sha256": "sha256:c8369798a4a41b24b3823ac76aaa4d9889be3f23779f084e7c76a03cc6ab0b6d"
         }
       ]
     },
@@ -93,13 +93,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 33076,
-          "sha256": "sha256:ced7a7a4fd0aed3d46564e084902ddb1ff86dec5b826951a0e37f97f9836de81"
+          "bytes": 32479,
+          "sha256": "sha256:fcd41481a798dc14fbb84736dd48df4333510b352d1af4e88abee7b1304af34f"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.91\nViT: 6.5M parameters, validation accuracy 0.87\n"
+          "text": "CNN: 6.5M parameters, validation accuracy 0.88\nViT: 6.5M parameters, validation accuracy 0.87\n"
         }
       ]
     }

@@ -495,7 +495,8 @@ class Averager:
 @nnx.jit
 def _trainer_train_step(model, optimizer, batch):
     def loss_fn(model):
-        out = d2l.as_metrics(model.training_step(batch))
+        out = collections.OrderedDict(
+            d2l.as_metrics(model.training_step(batch)))
         return out['loss'], out
     grads, out = nnx.grad(loss_fn, has_aux=True)(model)
     optimizer.update(model, grads)
@@ -503,7 +504,8 @@ def _trainer_train_step(model, optimizer, batch):
 
 @nnx.jit
 def _trainer_validation_step(model, batch):
-    return d2l.as_metrics(model.validation_step(batch))
+    return collections.OrderedDict(
+        d2l.as_metrics(model.validation_step(batch)))
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.

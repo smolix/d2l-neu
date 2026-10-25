@@ -9,121 +9,29 @@
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:1c084aa30d5d666fb4a2901fec7f8b0ab01902b8a760b8f98cfe3c5aba472ffc",
+      "code_fingerprint": "sha256:ee7fdd24df2030cd7c89ee742285b6ab7c25f66a6923fcd8cf4beb73417b1a4f",
       "kind": "text",
       "outputs": []
     },
     "mlp-xor": {
-      "code_fingerprint": "sha256:284454eedf0737ad6c0698cc0716f01435141923d6bec86d64e41bd399f7bafb",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([[0., 0., 0.],\n       [0., 1., 1.],\n       [1., 0., 1.],\n       [1., 1., 0.]])"
-        }
-      ]
-    },
-    "mlp-region-count": {
-      "code_fingerprint": "sha256:001a11de575b99e0ca37f850d006d6ae2ef3f0252e0d4fbef42671a85cb5c659",
+      "code_fingerprint": "sha256:28d10dad6efc6dc496301225e48d4a014e885c45d367a4b6b83d954e73aee7fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "depth 1: mean pieces = [2.8, 4.5, 7.8, 14.3],  D+1 = [3, 5, 9, 17]\n"
-        },
+          "text": "x = [0 0], h = [0 0], o = 0\nx = [0 1], h = [1 0], o = 1\nx = [1 0], h = [1 0], o = 1\nx = [1 1], h = [2 1], o = 0\n"
+        }
+      ]
+    },
+    "mlp-sigmoid-and-tanh": {
+      "code_fingerprint": "sha256:d5016f05701d8fcaacc3b6bb16864bbc762d5493800c633aa4f1665e811e14a4",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "depth 2: mean pieces = [3.2, 7.5, 14.2, 27.8],  D+1 = [3, 5, 9, 17]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "depth 3: mean pieces = [3.0, 8.9, 19.5, 39.5],  D+1 = [3, 5, 9, 17]\n"
-        }
-      ]
-    },
-    "mlp-relu-function-1": {
-      "code_fingerprint": "sha256:1ac68cc7fa352d396c64ff3c5ef2a3a7a202372443dbf2547468474bc7f55d36",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-relu-function-1-1.svg",
-          "bytes": 16908,
-          "sha256": "sha256:5e2a3f0a928da447575b81821427a9aab7bf7f4922f7914080385d8a8e3969cb"
-        }
-      ]
-    },
-    "mlp-relu-function-2": {
-      "code_fingerprint": "sha256:8b34495fdb6d1d72269bc559f39d264dd197f4d512de2b8ecc8cc5c896f90de7",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[05:10:51] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-relu-function-2-1.svg",
-          "bytes": 21200,
-          "sha256": "sha256:8a2e34f6f33d2172968937e993a9375f03e823f267c29e99987f5327459fc2a3"
-        }
-      ]
-    },
-    "mlp-sigmoid-function-1": {
-      "code_fingerprint": "sha256:0a948feb9c70e188b3e5c5f978e7066b6f38bfd1f7da38ed328e532d9c39b2bc",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21782,
-          "sha256": "sha256:bdaa6efa994b81aa205ca5c1cf3baa0ae1eb3cc79201b584bd8061f1d47aa3ea"
-        }
-      ]
-    },
-    "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:d214bc8a7f6dca00c0f5813aa30595805bec21666b517cf7a7a3bae7e175fb03",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24514,
-          "sha256": "sha256:bc17c2c6824375d4a73f990c81c9b8b1abfd65ec777b2be7e7de094d460ce9d0"
-        }
-      ]
-    },
-    "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:64087bfa23bf8e95b9198d39a2ba8abd11f0269de0b761182eceb4b8f99d89fa",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20176,
-          "sha256": "sha256:ab8eeb51e0b80c9b45372e6d10cf04c0f4c872112196b0c5227abade14dff19c"
-        }
-      ]
-    },
-    "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:670e0fa59529bbad05f086eed48367605b87218c3facb1dc1f11258a808e67ed",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mlp/mlp-tanh-function-2-1.svg",
-          "bytes": 22737,
-          "sha256": "sha256:610321253c66a78f3f60f691d0a7245a5e4054d47df3c396b950ce293a405668"
+          "text": "ReLU      0.0000  0.0000  0.0000  1.0000  1.0000\nsigmoid   0.0177  0.1966  0.2500  0.1966  0.0177\ntanh      0.0013  0.4200  1.0000  0.4200  0.0013\nGELU     -0.0005 -0.0833  0.5000  1.0833  1.0005\n"
         }
       ]
     }

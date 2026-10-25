@@ -1,5 +1,10 @@
 # Chapter Overview — chapter_multilayer-perceptrons
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> the sections now carry 49 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 Best external sources by a wide margin: Simon Prince's "Understanding Deep
 Learning" (verified against the book's own text) has numbered end-of-chapter
 problems that map almost one-to-one onto this chapter's math-heavy sections —

@@ -9,23 +9,34 @@
   },
   "cells": {
     "backprop-forward-propagation-backward-propagation-and-computational-graphs": {
-      "code_fingerprint": "sha256:f2f90afe993679dbb0ed3b7bbde4f765c8b8f5f624f52965120a9ad1f3e2b3b4",
+      "code_fingerprint": "sha256:bce96c04ae9844e62f51541f370ba682375822e84a0e20d3f0991af4975742e7",
       "kind": "text",
       "outputs": []
     },
     "backprop-verify": {
-      "code_fingerprint": "sha256:255adf44cba53942459b69bf0b415f01b5539774637a3d002c436f15b997aab5",
+      "code_fingerprint": "sha256:1951b7ffbe933e842a89760682323c703dcb31955053a41cfdd45fe14bef88da",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = 2.0, dL/dW2 = [[ 0. -4.]], dL/dh = [-4.  2.]\ndL/dz = [-0.  2.], dL/dW1 =\n[[0. 0.]\n [2. 4.]]\n"
-        },
+          "text": "L = 2.0, dL/db2 = [-2.], dL/db1 = [0. 2.]\ndL/dW2 =\n[[ 0.]\n [-4.]]\ndL/dW1 =\n[[0. 2.]\n [0. 4.]]\n"
+        }
+      ]
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-1": {
+      "code_fingerprint": "sha256:95607e87242787b8b9c1276c9d12eff6770cbafedb0a3468b4ec3abef1e2e247",
+      "kind": "text",
+      "outputs": []
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-2": {
+      "code_fingerprint": "sha256:43534565120518d39104b3dde946658aa4a77d4c9d9b5ae08826a23115cfab59",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "[05:10:43] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "name": "stdout",
+          "text": "W1: relative difference 4.0e-16\nb1: relative difference 4.2e-16\nW2: relative difference 3.0e-16\nb2: relative difference 5.9e-16\n"
         }
       ]
     }

@@ -429,7 +429,7 @@ print(f'ECE: {ece:.3f}')
 
 About half of the predictions fall into the top bin, with a mean
 confidence near 0.97, and 97% to 98% of them are correct. The two lowest
-bins hold between a handful and about 60 predictions, too few for a reliable
+bins hold between a handful and about 70 predictions, too few for a reliable
 accuracy. From confidence 0.3 up, every bin holds hundreds of predictions,
 and its accuracy lies near its mean confidence, in most bins slightly
 above it. The reliability diagram shows the bins with at least 100
@@ -847,7 +847,7 @@ be below $1/10$.
 
 @!softmax-regression-concise-calibration-2
 
-- The two lowest bins hold at most about 60 predictions: their accuracy is
+- The two lowest bins hold at most about 70 predictions: their accuracy is
   noise.
 - From 0.3 up, hundreds of predictions per bin; accuracy near the
   confidence, in most bins slightly above it.

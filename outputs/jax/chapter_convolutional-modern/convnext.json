@@ -46,15 +46,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 40191,
-          "sha256": "sha256:3c14c45aa337b72c37197f6c2e1e9e41e7e445125e6187f30c714f9133248597"
+          "bytes": 40750,
+          "sha256": "sha256:621e3a9820d72df4f5607076efd6355082af3c176fcae50d874a7143b109b333"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 40000,
-          "sha256": "sha256:3ab1524d9d60d6873b132b393b8e961e2fa0cc6aa8e87d0a2993bcac5b64a3e2"
+          "bytes": 39403,
+          "sha256": "sha256:feb9a8ddab9c8ca33d1505734c1b7d2b18d6557da570ecad79d2f96a371e9a94"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'ConvNeXt': 0.9226, 'compact ResNet-18': 0.9425}"
+          "text": "{'ConvNeXt': 0.919, 'compact ResNet-18': 0.9444}"
         }
       ]
     }

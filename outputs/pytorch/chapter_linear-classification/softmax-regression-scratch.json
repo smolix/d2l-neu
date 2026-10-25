@@ -49,17 +49,17 @@
       ]
     },
     "softmax-regression-scratch-the-model-1": {
-      "code_fingerprint": "sha256:855e72e970ebe03b7f50d02e1af51aded117ec0deb6f96d218ec99fabb922d1b",
+      "code_fingerprint": "sha256:e47a80c21d4e35370fdf9af2400e030f298c50cffd67994091c8aac09cf3bc4c",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-scratch-the-model-2": {
-      "code_fingerprint": "sha256:19964fd8a13ace68e7ca33075eb4aa4f77c255486dbb818cb0bd288cd2c76b4b",
+      "code_fingerprint": "sha256:7a368ebce30f6765d3d247865f02e7fa4c2ab855891d5f761c9a8f619989ab30",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-scratch-the-cross-entropy-loss-1": {
-      "code_fingerprint": "sha256:040bc6e7079c727beff698771f3c561d4d12ab68c721283e5bf01460bd41920f",
+      "code_fingerprint": "sha256:5cf7827f57bdbd0d49a98a51e946f5ed8a9e9dbfe7966d9e7c8e917ea752256a",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "softmax-regression-scratch-the-cross-entropy-loss-2": {
-      "code_fingerprint": "sha256:06f5be305eca8a5da1312b11d62da1dd99528045894cce2aa020e4c513ace7c6",
+      "code_fingerprint": "sha256:ea0e5fbe35a1d877f94d267c8fe23e75f6c155241a9e17f72110a03893d84230",
       "kind": "text",
       "outputs": [
         {
@@ -79,59 +79,59 @@
       ]
     },
     "softmax-regression-scratch-the-cross-entropy-loss-3": {
-      "code_fingerprint": "sha256:225e449749468be8ae702a3d5d6be5f80b42b08078913216e440a29232b8faae",
+      "code_fingerprint": "sha256:c9ebdd1864602dd862223019aa2906ab21ab54952ce26d2a65ada7de2c468d25",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-scratch-training": {
-      "code_fingerprint": "sha256:d71199d3b191117d1e9b245f9d93f99befdc9bf68487052fbb7a6ca4ab8f2cba",
+      "code_fingerprint": "sha256:e052b7d0fefc4957c3a5265f5251f305ea6a56079a35f118de28cc1ae9f5de27",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33131,
-          "sha256": "sha256:f9a724f6f759522b9b1a628abd30998fdd691fc4e07c9716f00e58b7db23cd9c"
+          "bytes": 33111,
+          "sha256": "sha256:f681faf0af4325c0c0fc8904dd18464393675e21610c0b94a52691da8d2308de"
         }
       ]
     },
     "softmax-regression-scratch-prediction-accuracy": {
-      "code_fingerprint": "sha256:51cd7114dd14244ad0c9d03caa0655020bbb062169f0bc72cc874a527db49094",
+      "code_fingerprint": "sha256:a2156c6ba52bfcd283de0d8cc4fd65cbb06990a0dee601a377078bac863321a1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.49928076171875, 'acc': 0.8227}"
+          "text": "{'loss': 0.476286767578125, 'acc': 0.8365}"
         }
       ]
     },
     "softmax-regression-scratch-prediction-1": {
-      "code_fingerprint": "sha256:7dc69d10b71e8c03c71c8d7efe07b65dedff5f0cabfd39a548679bd5b1fbd938",
+      "code_fingerprint": "sha256:754c6ae9d6dbfb1a5f85e44be1ab4602c43aaed12447393833fb792d424a1870",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "41 of 256 wrong\n"
+          "text": "37 of 256 wrong\n"
         }
       ]
     },
     "softmax-regression-scratch-prediction-2": {
-      "code_fingerprint": "sha256:5e37d7c52192820b71bc810a7821cf67a25324bc3d56c30ca8d344f69401abad",
+      "code_fingerprint": "sha256:46f3d038e9ec78795fb6032a53a45aa96f39b3f3a069fb42c761490b488be217",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 46562,
-          "sha256": "sha256:cc5c9572c47f548daace17e0c9a4bbe77b206fd4399c99639e271bae07b4c16a"
+          "bytes": 47852,
+          "sha256": "sha256:04a50d6e58f4cabee560fb75ce47926d497c7c758f48b62bdf8f6615f83a1926"
         }
       ]
     },
     "softmax-regression-scratch-the-confusion-matrix-1": {
-      "code_fingerprint": "sha256:a5a4c3381a0818e2ba7fd9a5d6e9095b5e5c3e7255fe283e188c36f1a1802b49",
+      "code_fingerprint": "sha256:b8d1a064122ae74b0cfc1cb1828135947c622a69495411ea4d61a5c702e87f73",
       "kind": "text",
       "outputs": [
         {
@@ -141,15 +141,15 @@
       ]
     },
     "softmax-regression-scratch-prediction-confusion": {
-      "code_fingerprint": "sha256:8b1045050b903d02ee2b3acfaa6ab5f9c15cbad23eb9b74964c257147764e14b",
+      "code_fingerprint": "sha256:dc5176d40e3e04f105bafd98f66d105a94d3726129741187110094e3c421f735",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21531,
-          "sha256": "sha256:6ceccd5d7ba631a884cb67dbe26463b6401672096905182430b0fc5f27e7cb30"
+          "bytes": 21518,
+          "sha256": "sha256:95ace3fc9f91c5687ddd038826bc1af432e4ee69ba97253e7b30d20a02b56120"
         }
       ]
     }

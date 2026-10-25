@@ -9,12 +9,12 @@
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:6063c6c46d5226c8850d4ec9b7ed830d44f27169a26d053b55a0576c43e80ca0",
+      "code_fingerprint": "sha256:e7651985537442dc37629c87701c3810ee7a04adf2d0b7e7c895b491e3c07446",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:065762dfc10185a2772c8d75c4c7d8e1e45ef53deab5e36d89675c6d8b412963",
+      "code_fingerprint": "sha256:f7abd833433c20d9cd89174257d78f1f3bc9dcc0a874e2b58eab8914bcc1520b",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:96b49a27505eaeb5f5f91ddfc41f2200a55ff9c5149f5da0b1cc32d8fd8c2741",
+      "code_fingerprint": "sha256:8889efe582126e86fabd24b54b315d9bed5dd5e044078b1cdd552af2657c620b",
       "kind": "text",
       "outputs": [
         {
@@ -33,8 +33,13 @@
         }
       ]
     },
+    "saving-loading-code-execution-on-load-1": {
+      "code_fingerprint": "sha256:3f7c7d343c3a98252347de2a99f18e88521af8824c2d1db82b78005543d9a5fa",
+      "kind": "text",
+      "outputs": []
+    },
     "saving-loading-safetensors-the-interchange-format-1": {
-      "code_fingerprint": "sha256:14ab27a1b89ed15d05226b8574f66cb787f03a5c42fe3f1e3ba953add6a808fe",
+      "code_fingerprint": "sha256:c81c8d337f69e8157fa35fab591e0b128529d50b4cd633202ca04de6e5d1169a",
       "kind": "text",
       "outputs": [
         {
@@ -45,18 +50,18 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-2": {
-      "code_fingerprint": "sha256:e37ba6fa56c8274c931df1ecafa94bd984f136b064172eae5374afe3b913bb2c",
+      "code_fingerprint": "sha256:133eb754d7c47a0ad0bf0bf38927b941a1533283f463ad71be6dbc049eb7a56a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "UnpicklingError Weights only load failed. This file can still be loaded, to do so you have two options, do those steps only if you trust the source of the checkpoint. \n"
+          "text": "UnpicklingError Weights only load failed\n"
         }
       ]
     },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:69ffa875157ee56e0fc3a02e95efc9fbe1d1bfa6783ac58d0d14aeb40ead7f85",
+      "code_fingerprint": "sha256:13207186291d59174e3a65ca6491977b14c1fde6d4ec53223049a0e76027bedb",
       "kind": "text",
       "outputs": [
         {
@@ -66,79 +71,85 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:a3c82728d30fd645a1fd86157cf3937aca977fc91b72369b799dea0c8849fb3e",
+      "code_fingerprint": "sha256:10cc781d139da09c3c5ac05d1cada1695ff3d3007e37809a0388e5b574bb7fe0",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "{'dtype': 'F32', 'shape': [256, 20], 'data_offsets': [1024, 21504]}"
+          "type": "stream",
+          "name": "stdout",
+          "text": "header length: 296 bytes\nhidden.bias        F32 [256]      bytes [0, 1024]\nhidden.weight      F32 [256, 20]  bytes [1024, 21504]\noutput.bias        F32 [10]       bytes [21504, 21544]\noutput.weight      F32 [10, 256]  bytes [21544, 31784]\n"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-1": {
-      "code_fingerprint": "sha256:9bf90027466353461e7e8aa8f90b6b44887add5ca0146b652e008249d5a67be3",
+      "code_fingerprint": "sha256:1981e41954f0ded3f5cb554922be004e29a55305de86890c9f0be3b12ec91fa0",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-training-checkpoints-1": {
+      "code_fingerprint": "sha256:8352b81164335735113cf270fd5a14d5d889d968dc9dd7f027c11c23d5c198f3",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:02554eeee63680909cbb5c29c9f243eda0c98985244f24b4c788be413bd16ce7",
+      "code_fingerprint": "sha256:cecf39ac7bede2600e2645f536a7c02430e69f6249c9cc0f1cb79af373829eb9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.0016"
+          "text": "0.0026"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:4777e08b45791abf09ade2ed9b8d46cd46f969d869aea15e9932a307e781482b",
+      "code_fingerprint": "sha256:3f712be3ad82bdf4637a69a95df5b63489cdbd01174b8b38d8fb7e29c4c55ac7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 47291.83 -> restored 0.0016'"
+          "text": "'perturbed 51955.01 -> restored 0.0026'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:8aa10533086392e4edf6fdf069fa7f78ee8015969f8dafee2356510154bfd093",
+      "code_fingerprint": "sha256:69fae26206a52b606094b1020ac063373ee7ec09c64ed233187c3250f8ff3a2b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0016, 0.0016, 0.0015, 0.0015, 0.0015]\nfresh optimizer: [0.0016, 3.8324, 0.2922, 1.0421, 1.845]\n"
+          "text": "saved optimizer: [0.0026, 0.0025, 0.0025, 0.0024, 0.0024]\nfresh optimizer: [0.0026, 3.4392, 0.3, 1.4699, 1.3784]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:ce3f12285e6671237df28cf20e08372302aebbf42399ff60b605f438dfdd6ac2",
+      "code_fingerprint": "sha256:7a8bd81069f41235fa7d8685a642028298ed98a1b8aacc8b6af4e88f95bfdd34",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Linear(in_features=512, out_features=10, bias=True)"
+          "text": "Linear(in_features=2048, out_features=10, bias=True)"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:31cad785552c24a691e76a1ca96349239bb4003df807a2b5b17a8d4da99fc0e3",
+      "code_fingerprint": "sha256:e7bb28748bf79b4ea1717aae0cf975a3fa14a7795aaa4066019b4f004aa2ede4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "missing by block: {'layer4': 25, 'fc': 2}\nunexpected: []\n"
+          "text": "missing by block: {'layer4': 50, 'fc': 2}\nunexpected: []\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:485787cc6d8327bf2d5cf0dc7914a513eee42623e2cefc672fda898a18aeece5",
+      "code_fingerprint": "sha256:7b618535eaa04f530c834f72ff56cec0bf8e0c35aa8a44138e92733a7ddf1d5f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'5130 trainable of 11181642'"
+          "text": "'20490 trainable of 23528522'"
         }
       ]
     }

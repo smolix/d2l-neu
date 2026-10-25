@@ -9,17 +9,17 @@
   },
   "cells": {
     "custom-layers-custom-layers-and-functions": {
-      "code_fingerprint": "sha256:906cb0f02aa430d037f27f662abfc9087f7b2b62487d5d9ece0d09d64a45eb6a",
+      "code_fingerprint": "sha256:9b7378274e40dea1e5d40819b4e5d9f8c0be979301c102231efb83157fb92fdf",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-1": {
-      "code_fingerprint": "sha256:ce5e01e9da7eac3d14def1197e3c213d0ff27304ddbde3882659c14c2276eaf2",
+      "code_fingerprint": "sha256:703940b704aff86cdcfa927dabbf442e7b60df18ee95924cb856b66cebc1621b",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-2": {
-      "code_fingerprint": "sha256:f1a9fb27a0a7f090a8db348ec85aa6fcf4a8865f0abaa102c79332cf1bced86e",
+      "code_fingerprint": "sha256:8605724cdd1c99781b65a2748f6228082733abd1108c1b3bca77f18aba3af38e",
       "kind": "text",
       "outputs": [
         {
@@ -29,42 +29,42 @@
       ]
     },
     "custom-layers-layers-without-parameters-3": {
-      "code_fingerprint": "sha256:17f71168240595c2216bac685bb4586ffd0c3dd396836a8043172dcbf2c049ac",
+      "code_fingerprint": "sha256:440e29967233426bdcd19712ab8b0395d7424783e02f6bb8b3ee1b354900ebde",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(7.72161e-10)"
+          "text": "array(3.7292125e-10)"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:c4769a2d14f4eeaf0431be14172731ed8925ee652132c141c5d59a5244e33b71",
+      "code_fingerprint": "sha256:4f6c03f9c614b756aecce38956beade631624e190e634d7746c21c7d3af486da",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:aa543ef5be12869f55ba9fe721c7cab1525f0696162ae01c45ba9d2acec88946",
+      "code_fingerprint": "sha256:bcf265e5f6ee6408f6675f1a70dfcc2a6c2c82d10212720c08971aebda667738",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([1.        , 0.99999994, 1.        , 1.        ])"
+          "text": "array([[0.8485281, 1.1313708],\n       [0.8485281, 1.1313708]])"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:d7814893ddab9d0c61e2c051b7895b3649ca00c2c172bef038feaa98e4fe1115",
+      "code_fingerprint": "sha256:af18d28705613aa1d203e7e04cf1a434444b0926c5b54f3b0839a3bec0cc3376",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'gain': Parameter (shape=(8,), dtype=<class 'numpy.float32'>)}"
+          "text": "{'gain': Parameter (shape=(2,), dtype=<class 'numpy.float32'>)}"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:3a71f9aee086e037afb06bd87d1860d1fdbcbcf250caa385b760f3623ee625d4",
+      "code_fingerprint": "sha256:d2fcadf0e60ef1efe7ebbaf03c19587005861969929ca7ab788051458382c072",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:349782404d1bceefa92c361a7974fb71b47411c32c6d3582a853cdbcd84de03d",
+      "code_fingerprint": "sha256:466a627c2c3728995a7158b5d984e9e05b6974c297886a2d1e687fb1296a230a",
       "kind": "text",
       "outputs": [
         {
@@ -84,23 +84,23 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:d823c3a06ce94c4cfa1853b10e8667cfa8c4c052de4add3d4f53eb446aceb0ef",
+      "code_fingerprint": "sha256:49345520888ba32a0aa8f28739148526c08ac9613e64cf7e15637b9cb418cad5",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:960ccd1a76b2641e76643ac758d59c8bbbd872c1a481a5e8a567de5a4df193ee",
+      "code_fingerprint": "sha256:61f5824fad10dbe037fad348e45e89831c5d6de94bdc8ed932a4b99c87010a2b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]]\n{'mask': Constant (shape=(8, 8), dtype=float32)}\n"
+          "text": "{'W': Constant (shape=(20, 64), dtype=float32), 'b': Constant (shape=(64,), dtype=float32)}\nFalse True\n"
         }
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:9c3c6743110414fbd6cc8e3c61c668bd38040b89414e9a6b0f1c19e831e71b23",
+      "code_fingerprint": "sha256:b2cb8382153f396f329decd6ee51c55f946bc9afe5990a84d93c5528da89b199",
       "kind": "text",
       "outputs": [
         {
@@ -110,12 +110,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:8c4512c6de7397665067e6396887df6ed33810eb7bfda6055450e26fb2f90095",
+      "code_fingerprint": "sha256:feea3c125b5f30090d9355940f40fca7e68c4cc2b4debe99db842bfa863c059c",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:468dbf3ba18c760a2399133f1501c5e20f34505e0b51fddd3f3a3dc03b859217",
+      "code_fingerprint": "sha256:bade46d53baaa405118299ae83e9844108fa88e1ba50c3f8496976870ab78e2d",
       "kind": "text",
       "outputs": [
         {

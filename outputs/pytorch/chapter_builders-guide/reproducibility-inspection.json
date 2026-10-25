@@ -14,7 +14,7 @@
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:0d23345e4971592417eb6769a112519ba41b2db7e833cff80dee3f33b81b06c0",
+      "code_fingerprint": "sha256:bbea907b8f126153f7c128ed702479c0f918dc0f69777f937a3b4277c2167a5c",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:43a3717c42251855a1b5c8b7dfb8495c397071ad78449db2cc64ad01f317b19c",
+      "code_fingerprint": "sha256:2af56fb8465e87f7114f9554a0a10dad4439acfc9e39d95b45e2c8fb1fbf0b62",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "reproducibility-inspection-dataloader-workers-2": {
-      "code_fingerprint": "sha256:7ef401adaa89facba88541b8fd47a4b94b33c3fd6cc5af6041be71859b000054",
+      "code_fingerprint": "sha256:947a5ecd8bad52930d7ffd664d0448d4d192729a653c8c2c6c4452b1c7bd8a10",
       "kind": "text",
       "outputs": [
         {
@@ -47,51 +47,62 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:40e3acfedf185f106b75caf8852f0335a8ffe7f9a1c9156108674854e012ba4b",
+      "code_fingerprint": "sha256:16af8e93e28217c1bdfdb4d6994058ee95989e29b97cfa8a72a583ce27bb804e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor(False) -0.000244140625\n"
+          "text": "1.0 0.0\n"
         }
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:adc4adc228775950f04948a5b211685f0d0a5ab042da237acef8a0f0d58a3c69",
+      "code_fingerprint": "sha256:0c4ee0372c532d052a43df17500ee608720e8bd324ee07b00c9dd276713f2bd2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation, but you set 'torch\n"
+          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation\n"
         }
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:286e1acae41a1adfb2100f7586e28b1a34b2868beec99209338b70a8c3dafa4c",
+      "code_fingerprint": "sha256:3aec483e188fd2ea8047781259dceca321b583b2aaccd29524e5cdb72ae824c1",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:df14a58d9c88ff12ca319a8891531f95b9297aafe9dc3d368ec9ce089c4be4d3",
+      "code_fingerprint": "sha256:7c0f5bc56146a35f0a51548d9f43251f29b69da5be34d9a01292c1168ae05b7d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.60\nResidualBlock   std 0.62\nResidualBlock   std 0.66\nResidualBlock   std 0.68\nResidualBlock   std 0.69\nResidualBlock   std 0.72\nResidualBlock   std 0.74\nResidualBlock   std 0.77\nResidualBlock   std 0.78\nLinear          std 0.48\n"
+          "text": "Linear          std 0.69\nResidualBlock   std 0.85\nResidualBlock   std 1.02\nResidualBlock   std 1.28\nResidualBlock   std 1.51\nResidualBlock   std 1.88\nResidualBlock   std 2.29\nResidualBlock   std 2.63\nResidualBlock   std 3.44\nLinear          std 3.86\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:64b82d6113acc6e710163b0e5ed7684cbad03721f4e171c44f4f8d4513c12d68",
+      "code_fingerprint": "sha256:58440f5273b4321587848051a331f87b07323d0e8834ac7857dd5b2999f2a05d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "first non-finite output in 3.body.0\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-backward-hooks-and-beyond": {
+      "code_fingerprint": "sha256:9b9add479bda22f2594f3207dfd6f8f62e5e47b493a88e4ae5a4be3771ff200d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weight 11.2, bias 1.91\n"
         }
       ]
     }

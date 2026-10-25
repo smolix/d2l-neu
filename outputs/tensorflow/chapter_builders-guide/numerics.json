@@ -9,12 +9,12 @@
   },
   "cells": {
     "numerics-numerics-dtypes-and-mixed-precision": {
-      "code_fingerprint": "sha256:426746a025430c830ddc83a1bd6e8daae7cf05b9464ccb4dd8aa60f9c4e68cb0",
+      "code_fingerprint": "sha256:be3429a867e7a9f92ae13747d5e04a7cd8fc00f458da3aad9cf3d14471d35973",
       "kind": "text",
       "outputs": []
     },
     "numerics-the-dtype-zoo-1": {
-      "code_fingerprint": "sha256:056b143f26b88a48186da34e3f5dfa7f65613821fa582ceebc23e38c7f8f1c55",
+      "code_fingerprint": "sha256:0b1e523821d436b401427c2ca7f50bd9a6e4adb6ce1169fec22b9fd77ea9b39e",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "numerics-the-dtype-zoo-2": {
-      "code_fingerprint": "sha256:0f11f0e5159f53bff199abd41686bb1cc0d5ee554da0ecec4f73b1ae375cf7a2",
+      "code_fingerprint": "sha256:884e84badf4a0896b840d03f4d1428e82814b8d30ad1e9db11a856562ae8ab8a",
       "kind": "text",
       "outputs": [
         {
@@ -34,8 +34,19 @@
         }
       ]
     },
+    "numerics-rounding-of-small-updates": {
+      "code_fingerprint": "sha256:fb305e817d95345ad35d12b9d84bc071c34c8d40c77e787e875d932c6f3c2e13",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 : 1.0010000, 1.0001000\nbfloat16: 1.0000000, 1.0000000\nfloat16 : 1.0009766, 1.0000000\n"
+        }
+      ]
+    },
     "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
-      "code_fingerprint": "sha256:805bd807f2c9d32cb2b211d8dafd2fe77f2f88877892efbbf323ce59828ad1b2",
+      "code_fingerprint": "sha256:7cd92c85f6579f91581adf2fdb22420312666aa1f191f6ac5a1654042d9e9a3f",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +57,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-1": {
-      "code_fingerprint": "sha256:9fc6bcf727eeba967b38438fbc7d4639dde8a836c75176b1b0583c9f12c6236d",
+      "code_fingerprint": "sha256:9c6fc9202956b685e5ce7444841f5a1b28163c319ecd7d195b19ad026e37b1bb",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +72,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-2": {
-      "code_fingerprint": "sha256:8db9a1dffdb012818cc599cfc3005743c7eb564b932fe1e68146d168429d0e24",
+      "code_fingerprint": "sha256:eb54cff6ecdb709b78bb2c79bc82fbf789160632b9fcf81ef586f9f2523d1035",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +82,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-3": {
-      "code_fingerprint": "sha256:e3143aebb61807b5ddfccabf90b7cee0e350c385da6ff18690c587c86749efd0",
+      "code_fingerprint": "sha256:4a58615fdfb1338aab51eaf0bbb7462213f39042add183724082df27e5d6e1f1",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +93,7 @@
       ]
     },
     "numerics-mixed-precision-training-1": {
-      "code_fingerprint": "sha256:06dcdc43cc8a33121beeb0c18b80df934a4b233c20fe6bd812db5c0979bf2ec2",
+      "code_fingerprint": "sha256:75499f11fdd4657c019a8faba5514a24c7feae76241ccae5162f8b6c9aec829a",
       "kind": "text",
       "outputs": [
         {
@@ -92,35 +103,35 @@
       ]
     },
     "numerics-mixed-precision-training-2": {
-      "code_fingerprint": "sha256:75a5f64c4daeb7b8db17602a5918c3acc4b7829ceaf6e7da87292e866cfa9f4c",
+      "code_fingerprint": "sha256:7d5a9982a49da9aab0b6a1aae91fa3579bbccae88186f255efcd4f5ea7147c2e",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:b1b4307ec395dfae91e35b5d30435f0d41095146c3bc177adc1cbbdb4142cd08",
+      "code_fingerprint": "sha256:ab613af97401c62dc0c3b52c9c4680178059d473f93a22c4bd3a65fe4db84f40",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:1baa5b1ffeb27adb329b1c18acccb444ccb4c7fae2377dc4ab167f73b758e38a",
+      "code_fingerprint": "sha256:69c74bd4b231184813ace86c80bfd87663ed38aeec9293f069c8623c88dc516f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.712, val acc 0.760, 0.76s\nbf16: loss 0.710, val acc 0.763, 0.79s\n"
+          "text": "validation accuracy: fp32 0.655, bf16 0.654\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 28526,
-          "sha256": "sha256:69e09204a3bbced8d0f3b3e6de01fd4de7136a466c70af0054631d6a7dc18782"
+          "bytes": 27028,
+          "sha256": "sha256:b6dddb11643573cae03711f979a1d77a3ba079729ca520751148742d857de360"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:d19b9bd07ea29cedf4cff841e2fe398b6bc3f9f558ae5c042c6f3a365b9246ab",
+      "code_fingerprint": "sha256:fed363a9cc57407aeb597e8c02f1e7c7c32b8b7219bd37dbdce2c7b5da139300",
       "kind": "text",
       "outputs": [
         {
@@ -129,8 +140,19 @@
         }
       ]
     },
+    "numerics-loss-scaling-for-fp16-3": {
+      "code_fingerprint": "sha256:da05139eba3730d70067953fa9eb38091f556f0cec47110c8f222773e55c3798",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scale     1: 31.6% subnormal, 0.15% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+        }
+      ]
+    },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:a2dd8179480a27f09ccaa70788199361272b785ef0006f6853635ae4c402f26d",
+      "code_fingerprint": "sha256:802bdb355af4cdc2940e69a7dde08d6f0bd30ae93561d5e127695e46e010be3c",
       "kind": "text",
       "outputs": [
         {
@@ -140,7 +162,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:e3457c8cb1bf786f44c9313fa9c32512b20875196ad0b152ddb73865d98bae1e",
+      "code_fingerprint": "sha256:dbb4b69287fce804b46d4271a39f7ae13a73b47838c035f9612769dd8d9fdeb5",
       "kind": "text",
       "outputs": [
         {
@@ -150,7 +172,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:f51d5c04f68d16da6207cf135c92e5cf0cdd205705b6e109c3ba2aa8c8e0bc0e",
+      "code_fingerprint": "sha256:5bc141642eca55620a302b5ac2c405a318c9cd481ed71135395e7bca277d41b2",
       "kind": "text",
       "outputs": [
         {

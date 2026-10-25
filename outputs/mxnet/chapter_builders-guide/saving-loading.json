@@ -9,12 +9,12 @@
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:25699b1695cc5482c31d3787e37dca1be2b56cd8c0a880e0a9070dd19ffe2efb",
+      "code_fingerprint": "sha256:3c3835f59a5c6eca5c0c06beaea85f3914926f81fba0890ae75bd6edc7402dc7",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:a69b169a7bca683ab960a01635c658b785cd51c5adef1dbbbba6965d128c4acb",
+      "code_fingerprint": "sha256:2542466fc200212e192344e56e62d0f2df93db7f393886328c7615e37fdcb9ec",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:7b8d6ceffaf632b45e81dbaa51f4a6103708101de07a92caec694c12450161c3",
+      "code_fingerprint": "sha256:fcebf889169011b717f557d85e6303afaf092e77b8757f593c8d6603f5b4a299",
       "kind": "text",
       "outputs": [
         {
@@ -33,8 +33,35 @@
         }
       ]
     },
+    "saving-loading-code-execution-on-load-1": {
+      "code_fingerprint": "sha256:652887546047779b6b519c5dc3130723619c1067499ef5c77bafa3b1466c8b14",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-safetensors-the-interchange-format-1": {
+      "code_fingerprint": "sha256:22de73a0ee01e6d6a2c688733bd4bd3fc3366adf96d613f5fa3d014827b188a1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "*** payload executed while loading ***\n"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-2": {
+      "code_fingerprint": "sha256:8df9fd925172864343a8ae62bb2c64f0b2c74cfe2ab0e2b786f39add2de9cb3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ValueError Object arrays cannot be loaded when allow_pickle=False\n"
+        }
+      ]
+    },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:b95751aa52d1073e5cea17ff176afa53fcd5af51b733d0506a9c706880ecd693",
+      "code_fingerprint": "sha256:74440b7af287f339b607cc7ff54be40cdc7090ec8d904587bd08d0559d5c10d1",
       "kind": "text",
       "outputs": [
         {
@@ -44,79 +71,85 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:9181c1ec79e1458128c68bd80c7cd4a2ca9299eb0afdbf981b981cadb42477a8",
+      "code_fingerprint": "sha256:5b3f432db2278efeb16aa3202927ce51d075ade9693836fec917c3677b462b7d",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "{'dtype': 'F32', 'shape': [256, 20], 'data_offsets': [1024, 21504]}"
+          "type": "stream",
+          "name": "stdout",
+          "text": "header length: 296 bytes\nhidden.bias        F32 [256]      bytes [0, 1024]\nhidden.weight      F32 [256, 20]  bytes [1024, 21504]\noutput.bias        F32 [10]       bytes [21504, 21544]\noutput.weight      F32 [10, 256]  bytes [21544, 31784]\n"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-1": {
-      "code_fingerprint": "sha256:5c98c088656fe9b7b1c39cfdc1959055ef92745fc2c4bb17d493c10e24769ccf",
+      "code_fingerprint": "sha256:121ac63bedba04b0544d93333f61748b355309a3c1320335314a1935fbf12c1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-training-checkpoints-1": {
+      "code_fingerprint": "sha256:22dd1dc2d1d400f29c9f3c9489fd8bdb822ab9ff618f77d55415e3d3fac47692",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:67b46c36e918115fb7a8ad0175718e3140dec42b9ae14364624d467a57d8ba6c",
+      "code_fingerprint": "sha256:d21263f2a25858c93108578db2402c77cf0d68a1d2a3ad93060ea5940727154d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.0018"
+          "text": "0.0037"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:7e3e38b7b46f74a547bcf4f8a881385dc6d888a4767b3c5ca84773f3fb889701",
+      "code_fingerprint": "sha256:2b0a94d2d2c231d7a9930248ae1d3c03bd1f3de7fb8b0f4c10a29fe6450dd52c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 49008.15 -> restored 0.0018'"
+          "text": "'perturbed 56556.86 -> restored 0.0037'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:c41b2d84a63ef7086f7ae64d1d4aa392fc851a7b937ab865dba1d2c8a6a217dc",
+      "code_fingerprint": "sha256:9b3f9397eecc81f7e4e3feba1f72f5c870a78ca01350ea9bdbff5477aacada7d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0018, 0.0018, 0.0017, 0.0017, 0.0017]\nfresh optimizer: [0.0018, 3.6124, 0.1789, 1.1589, 1.8473]\n"
+          "text": "saved optimizer: [0.0037, 0.0036, 0.0036, 0.0034, 0.0033]\nfresh optimizer: [0.0037, 3.6238, 0.4771, 1.406, 1.8951]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:503682e0e3635896b2e9aa9e989a2d37c45b4f9f17df002b289ccd0c11bddfad",
+      "code_fingerprint": "sha256:c892b794480880930d1894f0a199a575fa0131e44d1b8b7746198fff8734baba",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Dense(512 -> 10, linear)"
+          "text": "Dense(2048 -> 10, linear)"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:4be3cd6d5215eeb5711cda8c19e7e0b74d3413c2a4c063b9acadf4923e25a42c",
+      "code_fingerprint": "sha256:42e1ba70f8f318925fd9df38c8cdfc3058e78e74f4f4bdb9eb4e9ce3dedab615",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "missing by block: {'features.8': 21, 'output.bias': 1, 'output.weight': 1}\nunexpected: []\n"
+          "text": "missing by block: {'features.7': 56, 'output': 2}\nunexpected: []\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:9029a54abb1514d996b11c5ba49683d1ccfcaa9e518e25f78bd2f3c4bce13055",
+      "code_fingerprint": "sha256:3c064bd40a973166fa935e5a6e88c80e838dd4d802d403423798dac8adbad643",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'5130 trainable of 11187926'"
+          "text": "'20490 trainable of 23547402'"
         }
       ]
     }

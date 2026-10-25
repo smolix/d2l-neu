@@ -34,37 +34,37 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-1.8626e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-5.5879e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:b3317145f514516eea48fa7ad5ec002896ae8ced0d295dd07d7a7d4724a454c7",
+      "code_fingerprint": "sha256:3ad7c7e75831990b61db9691069a8211fb60a4a8b77ca530cabc8f6f435b6916",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:96eac7be4ec48abf88865d07a561e2898de35f3713c588baf6d686843102559d",
+      "code_fingerprint": "sha256:fb2849f6ab3286808dadec6f3aa8d65a1ac31d7741f247190cf0e44d26cc08b2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([1.0000, 1.0000, 1.0000, 1.0000], grad_fn=<MeanBackward1>)"
+          "text": "tensor([[0.8485, 1.1314],\n        [0.8485, 1.1314]], grad_fn=<DivBackward0>)"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:3eb56a11fa123c9079197aca41480cebd2fe0abcc3baa860ebe3ac4b910a55f2",
+      "code_fingerprint": "sha256:8e73e8d14999d038b0c08d9e9dbad56f7929e700a1d0969e30cad093640fe5a5",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('gain',\n  Parameter containing:\n  tensor([1., 1., 1., 1., 1., 1., 1., 1.], requires_grad=True))]"
+          "text": "[('gain',\n  Parameter containing:\n  tensor([1., 1.], requires_grad=True))]"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:aafce3375673e4d9493ca27008761d4441fefa68b657cd0e3fc00ad46f081664",
+      "code_fingerprint": "sha256:94325941768605aa82ebb3dcd772aeddbdb6208538f391212b0d6dd431fe4a02",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:928e0e2c2a5f4d01d7afbd7d260f670fc21b0f4742c5a16ac7a9ad418a0fd6ff",
+      "code_fingerprint": "sha256:4120abcd7d4194f617f3c4ae0dd0f1476a0958a94a48c2fdfd13b2e4ed74509e",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-4": {
-      "code_fingerprint": "sha256:3a980f087c18e0848c3de921d85943cd19ca247f375d25ecea91d89ef4caeb8f",
+      "code_fingerprint": "sha256:76ba082b0a93f9df1f6f8265de4be8a8c5ddc567a93ac6049abc69da61089ba8",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:df11f970d196c440ecd21fd30ad0fcdb8600dd563d181323522d8aa5f52bb9a3",
+      "code_fingerprint": "sha256:4c9795e81d648c67bcc3e23a724b1231764c01e75082115cbfa755204ff3e177",
       "kind": "text",
       "outputs": [
         {
@@ -104,23 +104,23 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:2f7abb736596e1d9d9037320392366d4302d1e0ba7aaf91e0e033633d3ae4263",
+      "code_fingerprint": "sha256:8d9d9fbab9b2878a1166471e738c6b551539dbb0295bf4cab0abcd738fdaff93",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:c0820d23b3e9d372f9381487d846d0e5ac6761e98931a30a6227783b60d903c5",
+      "code_fingerprint": "sha256:7e8c0778498517baa7f1a619f12d8e7d50f010504667e198fdca76b73ff40e86",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0., -inf, -inf],\n        [0., 0., -inf],\n        [0., 0., 0.]])\n[] ['mask']\n"
+          "text": "[] ['W', 'b']\nFalse True\n"
         }
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:5f19a9abb76974bca9f7ef0c01e7dc5e2e4d0d7ea6fc3fe4f1d250f681bd363c",
+      "code_fingerprint": "sha256:95f7b413e9983fb6d950a42a63cdb758017abc7fba789097575a86dc2cf8e156",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +130,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:49492ecbe64b7052449d85251bea70ecc8a8c5b8fc5e9a85a6560316c4299da4",
+      "code_fingerprint": "sha256:0ff048c1e5f5bec82cb0723e5975d6c8d95de26f7426a56aa0b9c5f44b3c57cb",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:2519f824e9fd43364236b34c8e477f34a37bff8e94a915d13df8e8830b1b8773",
+      "code_fingerprint": "sha256:a156b19dd1932bed909fa8a71b4d10b3d16d7ea225da427fdd4247ea95fb79bc",
       "kind": "text",
       "outputs": [
         {

@@ -85,12 +85,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:988e50fa9a076ced2bdc8da8c0ddfd0afd51d1a577b86f31bf8ce1b77c55acbf",
+      "code_fingerprint": "sha256:043f096b07324ca6ae715c3d1327da793a0d47377f66028df7fdae2852d1d03f",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:76ff40026a6c15a3ae3ef215ed3d246b427e1a83120bbc9970787f2f50ac949e",
+      "code_fingerprint": "sha256:9e7776dfad2e3eee03b1137b02edf0a0923115696c737d57e6b9d4880c3e0b0f",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:c30f82077621daa082ab8f3c546e6b154c8f894ef1f4e9b603a754753e0a913a",
+      "code_fingerprint": "sha256:c9e88ef32f0a9d27d2040c1d2bd79267ba18ef19ad2d41f613ed6534c102f582",
       "kind": "text",
       "outputs": [
         {
@@ -109,8 +109,19 @@
         }
       ]
     },
+    "model-construction-forward-is-just-python-4": {
+      "code_fingerprint": "sha256:5095c1b231d1a5e84b0d4cb5979e923c782dfbe736790b631bf55d5c5e1657cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.Tensor(0.14250875, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
+        }
+      ]
+    },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:3406ef800b7706ab4aed484ddb5e21fb1326fffe65b0043b688a6d8698b9116d",
+      "code_fingerprint": "sha256:4d8d83f6d0e1f569400bc9912ddab990470a3df65f69b06eb9661d8eb2112803",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +131,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:55f6fd61351bda9edec16d6bb8e02761d6758ef01421f386cbac5e45bcc79802",
+      "code_fingerprint": "sha256:288b01c802ccf6ab80a2383c22f8d165286d01c81e64e3c93535d4afc7427246",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +141,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:62b109c950fd4623cd707f5c9fc5bf627942c5d31e081f5d4c552ad63f98d9b1",
+      "code_fingerprint": "sha256:94503d336298bcbfc83eb388a8218d68eb4bba5f0127f6de8fa7363350421421",
       "kind": "text",
       "outputs": [
         {
@@ -140,43 +151,22 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:80c8a955a21f623fb24376c7865704c6562896471aa4086302520c6f3ad1f551",
+      "code_fingerprint": "sha256:c1a3d59c5f3f8ea90d5aa4fc9c3e2eb8d770961e6bb39ed04fdb9ddb1c70c12e",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:694874c33f31e0bc7c86a40c49a1e774be3c9c07deb32a1fb5ba2d90d8e7a24b",
+      "code_fingerprint": "sha256:ce58a5a79a42f57f069d3a9ecf8ef966680189c53b57ebf5d50366f68b77653e",
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Model: \"sequential_9\"\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓\n┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃\n┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩\n│ dense_25 (Dense)                │ (None, 256)            │       200,960 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_1                │ (None, 256)            │       131,584 │\n│ (ResidualBlock)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_2                │ (None, 256)            │       131,584 │\n│ (ResidualBlock)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_3                │ (None, 256)            │       131,584 │\n│ (ResidualBlock)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_4                │ (None, 256)            │       131,584 │\n│ (ResidualBlock)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_26 (Dense)                │ (None, 10)             │         2,570 │\n└─────────────────────────────────┴────────────────────────┴───────────────┘\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " Total params: 729,866 (2.78 MB)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " Trainable params: 729,866 (2.78 MB)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " Non-trainable params: 0 (0.00 B)\n"
+          "type": "execute_result",
+          "text": "[('sequential_9/dense_26/kernel', (784, 256)),\n ('sequential_9/dense_26/bias', (256,)),\n ('sequential_9/residual_block_1/sequential_5/dense_18/kernel', (256, 256)),\n ('sequential_9/residual_block_1/sequential_5/dense_18/bias', (256,))]"
         }
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:e2f208db59d019d4b1efd162db53c40ba3c75b7db336bb3b46ad23855ff49db0",
+      "code_fingerprint": "sha256:e83580e3d6374868749a924c8e1aa685fc6130ee2f2aec0f0f442443f79f3f29",
       "kind": "text",
       "outputs": [
         {
@@ -186,18 +176,18 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:2c04718e06e82b208db755a54906c6583136abbed57ec3ab650f30f775c7cf1d",
+      "code_fingerprint": "sha256:9b26272d606d6c5caccdfbecdfb3a6b306ee45199157ce3c27dcafa258c24ebd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

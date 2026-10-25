@@ -29,42 +29,42 @@
       ]
     },
     "custom-layers-layers-without-parameters-3": {
-      "code_fingerprint": "sha256:bc57190e55fd5f1ab5430575f45e7e1d40c48b59e776c3b5f05a595e68227a2d",
+      "code_fingerprint": "sha256:3f90e85a901cd473bb5141fcd98008dae77995f9ea2d17121c6d8fedc9079ad7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(-2.3283064e-09, dtype=float32)"
+          "text": "Array(1.8626451e-09, dtype=float32)"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:5b76b07bd2bbc0783b3c463d1e44abb1ebe7d02c727d6a23c930789e01f9d423",
+      "code_fingerprint": "sha256:1e84194ea8be73a2ec026d41cb1cafaff9e1a6d6d72ffbde47664f9f597d6c06",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:b2e95309e47fd2048722b75569491cf228eda31e23c7e9f7e45d3da3dc4b5e6f",
+      "code_fingerprint": "sha256:51c3584d010cf7b7705e742baf79c363984375936c4073f52b13cdbd88e944a9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([1.       , 0.9999998, 1.0000001, 1.0000001], dtype=float32)"
+          "text": "Array([[0.84852815, 1.1313709 ],\n       [0.84852815, 1.1313709 ]], dtype=float32)"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:ebe35952cd1b49550066b3465e0d04306bf712da9788578449fdb5c5326ccc4c",
+      "code_fingerprint": "sha256:6c6bc2067ba423fe9747250d70bcba05d41e68db1af166a65a898abb4cf644f4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "State({\n  'gain': Param( # 8 (32 B)\n    value=Array([1., 1., 1., 1., 1., 1., 1., 1.], dtype=float32)\n  )\n})"
+          "text": "State({\n  'gain': Param( # 2 (8 B)\n    value=Array([1., 1.], dtype=float32)\n  )\n})"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:aef149d725e6256f2e7ac1d7c0857c3de7e1218186e2a6adfdaa5f7557a114c5",
+      "code_fingerprint": "sha256:a849f53f72dd065214c86c0fc484395bbfa422947cdab84037a206412e389622",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:fd499fc8c7fe545197d88763f19a9b3aaeaa1f3b3bd38c9360a5ab5284750805",
+      "code_fingerprint": "sha256:049ad58924998c6aef0de6c09d68e30dbf75f51da6f2c256574e07c3d567305d",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-4": {
-      "code_fingerprint": "sha256:7b4fdd43a924abc528d26a09d7e824ba9e3ff2f49d5b9603ca4c3d4694e074e9",
+      "code_fingerprint": "sha256:c278d82e46e574f73668eea61d970c0b977e97983a64bd90f3d130ad82165c78",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:ebd36b53cc89d9e7a54da623ceb3e08db40cf243d4c06e64e8ea2c4722ebd490",
+      "code_fingerprint": "sha256:8cad90443f161625cc6f089489c0498c56362bf0b9d6d946d898cef07886dbde",
       "kind": "text",
       "outputs": [
         {
@@ -104,23 +104,23 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:ae564c75a950ceb5c312f03727d86c56f29cb633fa6b47cbd55215b52ae150f1",
+      "code_fingerprint": "sha256:09a8b200570ca2ee92716f7b4d9705e386cea4c45fe00fd343aaf33e8e0a2a11",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:380182f596131a2287e90aed09e18e7f871e9ad6f9d870b5ffca29318ac34ed4",
+      "code_fingerprint": "sha256:cfa30abf4aebfc6ee200074b05d1247e0c59dd133dce9493733ff6e125b85e15",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]]\nState({}) State({\n  'mask': Buffer( # 64 (64 B)\n    value=Array([[False,  True,  True,  True,  True,  True,  True,  True],\n           [False, False,  True,  True,  True,  True,  True,  True],\n           [False, False, False,  True,  True,  True,  True,  True],\n           [False, False, False, False,  True,  True,  True,  True],\n           [False, False, False, False, False,  True,  True,  True],\n           [False, False, False, False, False, False,  True,  True],\n           [False, False, False, False, False, False, False,  True],\n           [False, False, False, False, False, False, False, False]],      dtype=bool)\n  )\n})\n"
+          "text": "State({}) ['W', 'b']\nFalse True\n"
         }
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:00951d26e331f1dc44726cca41f511088dda272cc088e098802436a948eb0e6b",
+      "code_fingerprint": "sha256:558f2efbb0ac94953d922ae28020e2dae0e03ca55ad88e8821823f6d1af0145f",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +130,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:856f9e520cfb27357a4c1cecfb0bece8a067bb9e7f413686e43a961366f1ca7a",
+      "code_fingerprint": "sha256:0720129d5f76cc6da18bed7fc86e8799e2e77595f9b8dde38b5215fdb63e1f9c",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:f46991450928fd0dfcb40638c6dc2269051d8d60f1d56e3f38fc011dcee4aa95",
+      "code_fingerprint": "sha256:1fb0bedf85eaa1d6b38dc8822ba83612dcb7922d378b301d099d87c9309b3f0d",
       "kind": "text",
       "outputs": [
         {
@@ -145,7 +145,7 @@
       ]
     },
     "custom-layers-custom-gradients-4": {
-      "code_fingerprint": "sha256:3886c780cc275ba637be54e2b5181808583c04ffaf3ce19aa814ff71ff505e35",
+      "code_fingerprint": "sha256:bd6e72fdcce40076520d8c01d17e32244867e3fb805f6977c5f1412993369f3b",
       "kind": "text",
       "outputs": [
         {

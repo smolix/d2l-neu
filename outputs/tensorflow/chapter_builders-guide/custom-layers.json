@@ -9,17 +9,17 @@
   },
   "cells": {
     "custom-layers-custom-layers-and-functions": {
-      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "code_fingerprint": "sha256:d5576281663b61cade0871a2222c05f0e4901273f26e4207c8c09d9e6bc18c16",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-1": {
-      "code_fingerprint": "sha256:8f3bc03bf3cd0276f1a65d4fe442d9f736f7ea0c1c7e28705db5aafc63f30026",
+      "code_fingerprint": "sha256:c52870cb1b8196045d63d69ade219295a4eff4c2685bb23ba133933595af7bec",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-without-parameters-2": {
-      "code_fingerprint": "sha256:0e44c42439a4f8568c10828f65b162383b1a353403f96cdd4226d7b9ba202a52",
+      "code_fingerprint": "sha256:961b7d79eac956fbfe9c1db0f503cc9a9e925c9ac79705cdc1aa76439297579e",
       "kind": "text",
       "outputs": [
         {
@@ -29,42 +29,42 @@
       ]
     },
     "custom-layers-layers-without-parameters-3": {
-      "code_fingerprint": "sha256:2722d6c24ba1ee569c0f435bda4bd3ff1935abeab760ce09e5c1456f7b7c541d",
+      "code_fingerprint": "sha256:ef5473779b2584d6981036bf60115f5608001849bb0495dc272ec6c6f3f0023f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=4.190951585769653e-09>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=2.3283064365386963e-09>"
         }
       ]
     },
     "custom-layers-layers-with-parameters-rmsnorm-1": {
-      "code_fingerprint": "sha256:1c7532614ac73658b720cc9cd43f2d8bf65549f9f39135328f2c2d057a602366",
+      "code_fingerprint": "sha256:ca231404be388ec287e315eb5995440cd6c81af4dc5e1fa784b92a7879669fce",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-layers-with-parameters-rmsnorm-2": {
-      "code_fingerprint": "sha256:9b466d0dc5d828e600d5c14fb2bf3208e2bd8dc341bae8945a0b1f4eb3ad99f9",
+      "code_fingerprint": "sha256:d8d90cf030c0d1d43263d36c01645523303c5b77696817b3e83e49a1b7453d2c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.99999994, 0.99999994, 1.        , 0.99999994], dtype=float32)"
+          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[0.84852815, 1.1313709 ],\n       [0.84852815, 1.1313709 ]], dtype=float32)>"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-1": {
-      "code_fingerprint": "sha256:7a0f4afccfe337719323df247be1cdbd50a1d4f28edb7c3cf4d618274c3cd7bb",
+      "code_fingerprint": "sha256:86fab5d9f8c1b391b242e488326a7455572f7b171c79e03918f2283be08eaf6f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[<Variable path=rms_norm/gain, shape=(8,), dtype=float32, value=[1. 1. 1. 1. 1. 1. 1. 1.]>]"
+          "text": "[<Variable path=rms_norm/gain, shape=(2,), dtype=float32, value=[1. 1.]>]"
         }
       ]
     },
     "custom-layers-the-composability-guarantee-2": {
-      "code_fingerprint": "sha256:0a0daea447ff77416eb533065b933410ebbadb96e42e8a0e335a7eceb2225b64",
+      "code_fingerprint": "sha256:c4146f6da88d84287595ad6712a48d1cdcdbef2161ff6fd0194eb4b233b84ccc",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "custom-layers-the-composability-guarantee-3": {
-      "code_fingerprint": "sha256:da27498f1b7301dbb4099b9e64184827efe336b0096c3d1710cf317ecac50ba8",
+      "code_fingerprint": "sha256:35353930fa5d05102d6bfa2d6cb3ceeb9b6ea0c4645ead9c2d219bb8d28f8a5c",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:735ca6949823515b4b72b90ca38f2ea87a6fbf5947400fc8643f9dcbfd55a66c",
+      "code_fingerprint": "sha256:ea524ac2c6d281f30028c46b11601ac90e1dd12d54526b5939a0a1580c90b0eb",
       "kind": "text",
       "outputs": [
         {
@@ -94,23 +94,23 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:ef36048181943fec0b52faa234e89576d6be9c9d5e55f732897e29b8a88bc6d1",
+      "code_fingerprint": "sha256:4607ce934c80823963875281beebf8967ba652a4e19c88995f955d680ca8a496",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:8c41265b2f9bc058db081aafe816d1cdf8c518295a8ab0c56ce92c90a7881ea7",
+      "code_fingerprint": "sha256:f34b8bebcce52064cce1ceb12f6187bbd2012ea1a41ab2edae60f2fffa4ad5c9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(\n[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]], shape=(3, 3), dtype=float32)\n[] ['mask']\n"
+          "text": "[] ['W', 'b']\nFalse True\n"
         }
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:afcbbe25f153222003b96a96c798f1765c852c6a8009bb9aac6ff9432fa0e2d2",
+      "code_fingerprint": "sha256:3d7a72161d02c6cde6c48f8e2c58ca0beecfb41571872e8b12f9534f9f03a1cd",
       "kind": "text",
       "outputs": [
         {
@@ -120,12 +120,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:ec99c4244cd3260c42b21efb4fbc5b1d0bf7ccc0a756c1d9b0852d9faa6d9553",
+      "code_fingerprint": "sha256:f4e72efaa41c8f45fbb3e56ca5213a10edd3bbb184a6b3f5baa93b7307bf0667",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:b77cda6282c63ec2f043a9ee33ef0798a366ed50898c8eb004353e2afa09479d",
+      "code_fingerprint": "sha256:9d57342733c8d66b6fe5eeee14f843b1ce432fd520e93fcdb2fd835f3e2bcd0f",
       "kind": "text",
       "outputs": [
         {

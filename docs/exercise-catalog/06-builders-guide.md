@@ -1,5 +1,10 @@
 # Chapter Overview — chapter_builders-guide
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> each section now carries 5–7 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 Best external source, by a wide margin: CMU 10-714/714 "Deep Learning Systems" (dlsyscourse.org),
 whose students build the `needle` framework from scratch — it has a direct homework analogue for
 6 of 8 sections (autograd/custom ops in HW1, init/modules/optimizers in HW2, a CPU+CUDA NDArray

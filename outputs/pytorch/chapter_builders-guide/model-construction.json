@@ -24,7 +24,7 @@
       ]
     },
     "model-construction-the-module-abstraction-2": {
-      "code_fingerprint": "sha256:2dd2ac8eab5b961e72dbc106961aa03ac4b0f5cf201982f78e7ef844c2646e46",
+      "code_fingerprint": "sha256:5eab3ad7c97b1116dfa212fea13a378232ca828b93d57e39ce8f4a753feb9608",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +34,12 @@
       ]
     },
     "model-construction-the-module-abstraction-3": {
-      "code_fingerprint": "sha256:49c9067bcf24e58b37a4c356f1a7ff23aa067355f3afa701c43964e0d5e01517",
+      "code_fingerprint": "sha256:fa8a8119c6f4e19ac04d7ff7f3714396efdbdf23fd8b7b56dc5900b71e433be8",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-4": {
-      "code_fingerprint": "sha256:6a7dff600fd764e1a34de85d25f3823ff67d231e05627fc0c1d1a088c1b85047",
+      "code_fingerprint": "sha256:27d83139c085925bd8394de93b1275e9202bf7bffbcf169218fa080a1b818626",
       "kind": "text",
       "outputs": [
         {
@@ -49,12 +49,12 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-1": {
-      "code_fingerprint": "sha256:9eb8f7fdbde97a76248c253b63600343b61b18dbe758eda594a6d8405e9c5398",
+      "code_fingerprint": "sha256:0ce2162ea2ddf0a237fcaab128047d5d3ba6276b52567275a1d0273166d20b6e",
       "kind": "text",
       "outputs": []
     },
     "model-construction-sequential-and-friends-containers-2": {
-      "code_fingerprint": "sha256:db0312cf58d61e20af153c23ba3aa9312a3e7fa21abf6074ee830eaa4113ebe1",
+      "code_fingerprint": "sha256:05a3ea9c853235eb8f7580bc4458600615b5052b248bd7d53774e56ddd772d0d",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:7a29de021e8218a3bdc5a8c44f657fe83b6364e8655ad5323ecea3b13312c882",
+      "code_fingerprint": "sha256:8edc38d4a14bb0a20695d870196d501d17b8403d8b7006e24d56129a3b51c576",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:7330e3f13b1382da7ba1bb85e58b667bf5414ae98fd447e250eb9a39bee53611",
+      "code_fingerprint": "sha256:380ec566dfe448433943c88d995bfbcc7c9dbde2308a550e8ec34fdac8592d0f",
       "kind": "text",
       "outputs": [
         {
@@ -84,12 +84,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:02f24e896502f5e62abf22b94ad395358dfc699c2abd703050e5f5d4f1ea0566",
+      "code_fingerprint": "sha256:4682fc8f49adf28f438415978ff03b5eec52714c45e865133232e8128a80090e",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:3ad977b7053eac2e4eddbb94a96747eb5e71da1c1741f3b4f23f10cc0a3ca705",
+      "code_fingerprint": "sha256:11161f0c6f1e0011033278cdc5d75a59ccf6756e7f6647ef29dda3278a47de3c",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:c33d281f20c7f3933ced457cbc6bbbfde10026364300b410dabd7907899cfa0d",
+      "code_fingerprint": "sha256:67e4e6ea856ab5b6cb11e71e66f627ca6c619cf766f296821fc1413a2894b3a0",
       "kind": "text",
       "outputs": [
         {
@@ -109,7 +109,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:c0cd8cab1818490bd293d6051655faa61091dea508b5aa989c97fb5680607be6",
+      "code_fingerprint": "sha256:3ece8f11e0fd22ae8768e4e4ba9b9bc2b30c53d2da766cb7a1d9ccf0a8965765",
       "kind": "text",
       "outputs": [
         {
@@ -119,7 +119,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:da79c6e799375d78b92b05ad43b93e620daf0689bea9f86b7573fa264bd4cced",
+      "code_fingerprint": "sha256:be2927e078b1c0ad8df4b5192cade887cf1e763c0aa511ca6afb856d6252e05a",
       "kind": "text",
       "outputs": [
         {
@@ -129,12 +129,12 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-3": {
-      "code_fingerprint": "sha256:0f9f186b920024fd10514d0502c708f8f3b5438379842459665e00fcf6aa68d1",
+      "code_fingerprint": "sha256:f95c56ae97741b95d9f440cfcec80a2f7c9add240c084ac27dfe97ddf1fd7ab1",
       "kind": "text",
       "outputs": []
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:82ea2855955d15810daaa2b0893f6e4cbd9a6fc3e8dcbd1c0a3ca3bbf2f549f9",
+      "code_fingerprint": "sha256:0a1fc5271123379482e48e33a73b424dcafa8790ca66db742024b60c4ace1e1c",
       "kind": "text",
       "outputs": [
         {
@@ -144,22 +144,22 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:cd780fc868e167e69c61a65e49c5be2c58bea1bce2e0da1495a14fda89cf96bf",
+      "code_fingerprint": "sha256:66dbaee38c9debfbefaf0836f645287009784a72034d49356465c81cd644cc97",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:43208a5d458630dea2abc182e781187b4eee64e4be6a09c9a2c3ca8ba329f07b",
+      "code_fingerprint": "sha256:748def8a995a68aa4c9162d88cfeccf3fd769f70adbbad21ca72366d0e511806",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Sequential(\n  (0): Linear(in_features=784, out_features=256, bias=True)\n  (1): ResidualBlock(\n    (body): Sequential(\n      (0): Linear(in_features=256, out_features=256, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=256, out_features=256, bias=True)\n    )\n  )\n  (2): ResidualBlock(\n    (body): Sequential(\n      (0): Linear(in_features=256, out_features=256, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=256, out_features=256, bias=True)\n    )\n  )\n  (3): ResidualBlock(\n    (body): Sequential(\n      (0): Linear(in_features=256, out_features=256, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=256, out_features=256, bias=True)\n    )\n  )\n  (4): ResidualBlock(\n    (body): Sequential(\n      (0): Linear(in_features=256, out_features=256, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=256, out_features=256, bias=True)\n    )\n  )\n  (5): Linear(in_features=256, out_features=10, bias=True)\n)"
+          "text": "[('0.weight', (256, 784)),\n ('0.bias', (256,)),\n ('1.body.0.weight', (256, 256)),\n ('1.body.0.bias', (256,))]"
         }
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:25529a8013d98b0c023b06243da4e57185719f6bb26383dd231c1d050a461096",
+      "code_fingerprint": "sha256:b9d0ef99a6cf0518ab39110c8951ac45e949a194fb1ae649ce7bafe5b6e9fc9a",
       "kind": "text",
       "outputs": [
         {
@@ -169,13 +169,13 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:975a3d1d5cacbc8f77e2b3f51e2a6662ac5b8032437d2fbbeb5018a8188875bb",
+      "code_fingerprint": "sha256:1fe27073de27dd34cb910605c0398c253537f9448a52dba7b17b6ec28ab30061",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\nd_hidden=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\nnum_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

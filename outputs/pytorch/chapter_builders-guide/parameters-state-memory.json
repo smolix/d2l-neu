@@ -14,7 +14,7 @@
       "outputs": []
     },
     "parameters-state-memory-accessing-parameters-1": {
-      "code_fingerprint": "sha256:a2ddd7e31d6fcb39fe3fb1cf66ffe03b09b208315f4ab278db8766a0c3822952",
+      "code_fingerprint": "sha256:3e8f9e2db474c3a9e9977c176022959b0305de938a535f41af3af54dc9ce961e",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-2": {
-      "code_fingerprint": "sha256:abd595987bd6149b32bbf592218d66ddec25debcb6f602d4d4d8542371a0b7eb",
+      "code_fingerprint": "sha256:e12dd9015f7a30595cf1fe3d116f06d984ac5aaae2dc8b4035fec2c6f1369206",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-3": {
-      "code_fingerprint": "sha256:3c2e11e811357954e51fb393e4d71e83dcde70cdccec44f259871220cf8d055e",
+      "code_fingerprint": "sha256:399c47085f7678c060e3ebb3693508d3cc35540483e2503301d1ead4b93aef10",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-4": {
-      "code_fingerprint": "sha256:6c0825b4bbe8979ffb27dd710e86b9f55550daf98dff956b6692426678d58d84",
+      "code_fingerprint": "sha256:c246b2f981b8a6ffe72b8595ba95fc24b742a0502ae56fd1229815e41a3764c9",
       "kind": "text",
       "outputs": [
         {
@@ -54,17 +54,17 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-5": {
-      "code_fingerprint": "sha256:c6d263b2772edfbe389ff178ed9b5c7eacd3cf0f9a2b8a75bdbff6b0de8bf026",
+      "code_fingerprint": "sha256:5a2c5306fd787d0fae929470b4181d6f9d5381f76b2e86151096d85815ea300e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('0.weight', torch.Size([64, 20])),\n ('0.bias', torch.Size([64])),\n ('1.body.0.weight', torch.Size([64, 64])),\n ('1.body.0.bias', torch.Size([64])),\n ('1.body.2.weight', torch.Size([64, 64])),\n ('1.body.2.bias', torch.Size([64])),\n ('2.body.0.weight', torch.Size([64, 64])),\n ('2.body.0.bias', torch.Size([64])),\n ('2.body.2.weight', torch.Size([64, 64])),\n ('2.body.2.bias', torch.Size([64])),\n ('3.weight', torch.Size([10, 64])),\n ('3.bias', torch.Size([10]))]"
+          "text": "(12,\n [('1.body.0.weight', torch.Size([64, 64])),\n  ('1.body.0.bias', torch.Size([64])),\n  ('1.body.2.weight', torch.Size([64, 64])),\n  ('1.body.2.bias', torch.Size([64]))])"
         }
       ]
     },
     "parameters-state-memory-accessing-parameters-6": {
-      "code_fingerprint": "sha256:c35ce92c8c259ea0997c093adf3323237bc43185fc9c55d21ab43016c0994d5b",
+      "code_fingerprint": "sha256:14a74be153dfd91f650c2298ef7d3fdb1c3b097bd4f1bcda2f303a5dee6129da",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-1": {
-      "code_fingerprint": "sha256:965004cbd27f908f041fa7ce90ba6787bf5436c813f2abd8ab4459468454c3c3",
+      "code_fingerprint": "sha256:e493566c53a56a8089d631a01dabe23c3333dcca2f8b4f379416f74cce9d6065",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-2": {
-      "code_fingerprint": "sha256:34e46ebbb961467eb3d348e7807260c8d4c59fef338eacea07e91df8dac27797",
+      "code_fingerprint": "sha256:499aa076cc8056352c4f42ee65b21af56c19d93c542e1849ad9e05c9eebeb6a1",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:5e901b574bdd25e9f294c9457b076d0a1a99037bda9e1fb1646061b86ef538fb",
+      "code_fingerprint": "sha256:b7fb8c7cafa08092f169dc729b2fc9a3539aeea45cb19c737535187695ce1b8c",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:e71977047e00a449af44415431def129550bd0842cef04bef29e9e354cf7e742",
+      "code_fingerprint": "sha256:3360e45bc7d76baae9589bb27d630231f0342b0876feb416e2dc245f238e5010",
       "kind": "text",
       "outputs": [
         {
@@ -115,7 +115,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:1042e8548768cce68e0f4b0153823bdd039dd2a77970ccdea7c567922e3f05df",
+      "code_fingerprint": "sha256:9886a639b6f2b1a00a3f8998952a88d90d19f3b52321a8ab97515b7d162b4ff7",
       "kind": "text",
       "outputs": [
         {
@@ -126,7 +126,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:51e4b968625650b6fff0ea73065e3a5337b5e72a2cff2fa07cfdfed550772adf",
+      "code_fingerprint": "sha256:9af467c835d33e1587ae7889aaecece927c31a87367d1e31e3649dc2790a4fd2",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +136,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:b66b2612bfce19f95504cb7a423aa119c1e5f1fdf5e8dbd68e9ebfd2984c9be9",
+      "code_fingerprint": "sha256:8b16a5a5e5ef507e0e4137d535411bb967d3e2d850269208fb761040947aba49",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +146,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:f7a4f1be8ec08b323e516d38746d2c3f5b828a72ae243ec66cb75e0cbd2388e2",
+      "code_fingerprint": "sha256:94d58bd14c5ca49ef00aef58ea29d9cff45283648afa5da947a368eec9778d7f",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +156,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-3": {
-      "code_fingerprint": "sha256:0a6707ed7cc7d6a80b21673f53eebbecefba2a1cc62c3deec7aca03e85b41c07",
+      "code_fingerprint": "sha256:8fc1f4613d1d115709e7cbe4c9806515b3508f4ba64272a3ba9889a5c58719b5",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:1754fd896120f9131671153c73f3eb1d5fde0eb973d92edfecd19477c27c3962",
+      "code_fingerprint": "sha256:7986e81788567e96560bd6caef9d92f1cc89b9e257752bd299078080ea5dfab9",
       "kind": "text",
       "outputs": [
         {
@@ -176,7 +176,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:093a5a72b919b77df5b9b10f0d05d9e94b4a792fb27717ed7efb23767d16c1af",
+      "code_fingerprint": "sha256:7ce1a54182bad57644e8e73065e0f5e2eab2c834067d8b219e74c4914e5cf9cc",
       "kind": "text",
       "outputs": [
         {
@@ -186,7 +186,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:74bd319d1580baef4b241906bd112e605b082d2eb5ef92d74df82e2a48af6fc7",
+      "code_fingerprint": "sha256:a1e934f89f9dc9a0917162331d7bd76b396db5bdb2349c01e53e2d6407aa47e0",
       "kind": "text",
       "outputs": [
         {
@@ -196,7 +196,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-3": {
-      "code_fingerprint": "sha256:910499472a69b8d91349a96e961119c76e61855ea85f850ded8c2269de067350",
+      "code_fingerprint": "sha256:c351a9a611c8e498cf118c9eff8aef4b67babe588a2ead3d4b6994140e92b1d9",
       "kind": "text",
       "outputs": [
         {
@@ -206,7 +206,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:50d7efcc309d15e78c7565eb62ee348f451fa6987b2a3d5603e5437436eb0d69",
+      "code_fingerprint": "sha256:e5bd1d5815460ae8768ac544042935c9126a5760603f6db5ef1382779273299c",
       "kind": "text",
       "outputs": [
         {
@@ -216,12 +216,12 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:9e0b2b4efad508481ad838ccfe716448a4ae66a6e60dc75a1b15838321d09b49",
+      "code_fingerprint": "sha256:dddc762ea7700670beb492cf9d1615b2f7c1ebff5f6523e02a9a18e70e2249cd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.6190201640129089"
+          "text": "0.36855900287628174"
         }
       ]
     }

@@ -9,12 +9,12 @@
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "code_fingerprint": "sha256:0b594735b99cb285d67da00ae1dbf0308f5b5b2edd2fca6cf28e320e40b040a9",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:d3adf0c1e4c5650c6095dca05e82cc77814eaa127165afa91c6e03c84865a733",
+      "code_fingerprint": "sha256:78e88c765d56a37d94f5f51c554e5f42e384c6991466ed75b635111c23c58716",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:cb2f4ef1be92420c942894768dad074136aec708349b742768648a9591588406",
+      "code_fingerprint": "sha256:1a982777a58ac95f1c77979e0b98fe7ca841382cd285256968da57e1797b862a",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "reproducibility-inspection-dataloader-workers-3": {
-      "code_fingerprint": "sha256:86f4f7e78db3b475dd0e470c82a82da193a9309d377a29821550f5b6f5848b2f",
+      "code_fingerprint": "sha256:cfc17766fa8c1aa4b0cf2ad6eed94ddc336b24852c5a7c2e439c3d1cdaabc1ba",
       "kind": "text",
       "outputs": [
         {
@@ -47,18 +47,18 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:13aefdf56588f275c8c2217ecf2143d2b5ff866d8d1dcd22748444f2696e451c",
+      "code_fingerprint": "sha256:cf3cc1db08da6edd200e993ede40009cd34e866be83e3d24c97773280e5f7b71",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False -0.000152587890625\n"
+          "text": "1.0 0.0\n"
         }
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:67ac46a4852400a86cf8eb9df585b510038f147c3df4fe4e30b3d588c3299ea6",
+      "code_fingerprint": "sha256:4e8f93512bb42bb894f2527cc9d0cc2205b22f0aecc45cc2fbad8852df5d7b5e",
       "kind": "text",
       "outputs": [
         {
@@ -69,23 +69,23 @@
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:be7f833382c6a7d4b2203a8576e01ffd84f068986123e8c270e20c9ac696fe4a",
+      "code_fingerprint": "sha256:52ec82b4ad4282ea3891f60d2936f50b6266d7f73487e375d889021aa43ab3dd",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:88fa452fab6ef33c9f8de24b849dc0f4c809bc6cdc4078ce5fac5f5197fba2c5",
+      "code_fingerprint": "sha256:266481b9cc2dd91dbbe1e82136bdf237fbcaceac6eede7542077f0507c99453b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.67\nResidualBlock   std 0.86\nResidualBlock   std 1.03\nResidualBlock   std 1.26\nResidualBlock   std 1.53\nResidualBlock   std 1.86\nResidualBlock   std 2.23\nResidualBlock   std 2.80\nResidualBlock   std 3.60\nDense           std 3.93\n"
+          "text": "Dense           std 0.71\nResidualBlock   std 0.84\nResidualBlock   std 1.01\nResidualBlock   std 1.24\nResidualBlock   std 1.50\nResidualBlock   std 1.91\nResidualBlock   std 2.23\nResidualBlock   std 2.98\nResidualBlock   std 3.73\nDense           std 4.47\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:c146d293704c860dbc21a04e9f0e14a8818365f3e1c6c6b369a401129a67a1a0",
+      "code_fingerprint": "sha256:678f9392fc65e0673e8d442e2f1c72ef656a0e029130059bea50d055cf4d05fe",
       "kind": "text",
       "outputs": [
         {
@@ -96,13 +96,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:7400c4dc5f7db1fc5d010844fc5f0f43b683145a42901e6a6023764ca7f49ffb",
+      "code_fingerprint": "sha256:56adc92a37fdfafda2ff9139fa15f855b4bef0a1ee1f6cdea9e28959412652b2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sequential_5/dense_11/kernel 13.867950439453125\nsequential_5/dense_11/bias 2.8245253562927246\n"
+          "text": "kernel 26, bias 6.38\n"
         }
       ]
     }

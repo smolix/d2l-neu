@@ -9,12 +9,12 @@
   },
   "cells": {
     "model-construction-modules-and-model-construction": {
-      "code_fingerprint": "sha256:d1f5daf245e5a6cad65b33e2ef53a054ddaf11c520297862bb2b81d4f0aa161f",
+      "code_fingerprint": "sha256:035cc4b808aef09dd24f26119f9a8403c6a54950a6a8c3cd9f1dcad584a789c9",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-1": {
-      "code_fingerprint": "sha256:395db41f01c689b47821ecee5584b2fc84812f8c929bb914de4791e1680c91ea",
+      "code_fingerprint": "sha256:42bafe330ccbfd1bb8c0a7f4fa68ede7d20ebf82099ac53bc469ac2e2579b233",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "model-construction-the-module-abstraction-2": {
-      "code_fingerprint": "sha256:f80746f4ce78892f9fc582ffb3152067c79cc729358f6592e6d7478985855e26",
+      "code_fingerprint": "sha256:16c7ad9b30afac2d7e827bbbed4eb51255dcfb32efb95c7fc6725c0d2e9e154e",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +34,12 @@
       ]
     },
     "model-construction-the-module-abstraction-3": {
-      "code_fingerprint": "sha256:45a4571a2134024b7d7a66854e5972bb8dc35097fbd99b3bfb506cea98961a68",
+      "code_fingerprint": "sha256:6019d9b53f5b4470f9c15b5e5508d59b3baf1700b117df0ed4e59204aa46928d",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-4": {
-      "code_fingerprint": "sha256:ca069b6df67cd0228414aeaf0d24a5c72c5f2f24e739c3d782857ef943c75502",
+      "code_fingerprint": "sha256:d6d07ce7cca970fe140274d082860b085fc02f9499a2cbd623a5071cd99cd823",
       "kind": "text",
       "outputs": [
         {
@@ -49,12 +49,12 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-1": {
-      "code_fingerprint": "sha256:1cdccba385d2cbcc734acec401339a4dda9a163c84f30c89c34fe5eff2d2a042",
+      "code_fingerprint": "sha256:9fb4a3d6d9b2c455b44c67cfc4a6b66ae34d73ccbc9bc3531aed29bb7925bb2b",
       "kind": "text",
       "outputs": []
     },
     "model-construction-sequential-and-friends-containers-2": {
-      "code_fingerprint": "sha256:4e13fee44e74f187e677a4308697291f4d338ab1a54cdf83196f61b4055def55",
+      "code_fingerprint": "sha256:3ad3d07039abdd63d0b1d582325e2e3c4480f9b6463b1afce9307a89d22aecc4",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:9e7cf65faa02ed6bde774e8a018c36cf2ed256ffa002975ade7bcdd3b2985550",
+      "code_fingerprint": "sha256:ea15dd31dfb1caad3626f683ab194bf760fab96ec1b20a90386182bb3acc8b12",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:f6a0a126e2a9fe43d4b0412682069ec3f5c55255c215e10a75fb8af7a6d116b2",
+      "code_fingerprint": "sha256:789ebc1c6452d275b889d5c1e3257d4b39069f5d516dfeb7c629191428700de1",
       "kind": "text",
       "outputs": [
         {
@@ -89,12 +89,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:44e861923f89d462b0ea86a5f33776b59cdc862d7615b556d90d58bcbee03d8a",
+      "code_fingerprint": "sha256:4186ff8336bc3ebcfbd775dfe59c845f2c6c568a612ecc98ab284a30ed0d14b4",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:67931af52e02ddfd3622d6ceab4e07592ec4e5c7b96838886ff6aed1defbde4a",
+      "code_fingerprint": "sha256:2a9acf1babc5b29445639a292a4bdec0701588c8b2e909b07f1e0c99f71eae61",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:849f8648204a5ecf81042e6f8fc7e5cda7499e2a138e74bbbb40a8fe31764b1e",
+      "code_fingerprint": "sha256:beb4610ce0736db5de73e12060e6b279b24e28d6fabcb83387ba59965f2b8255",
       "kind": "text",
       "outputs": [
         {
@@ -114,27 +114,27 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:fd2ba47320716f1bd39dd69513c940f5c931ca927208b2f2dd8b864a4e50343f",
+      "code_fingerprint": "sha256:2b5dc1ba2529bd14807666fba2a714433894411c19450cc1808d5be90077d6ff",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'0.weight': Parameter (shape=(256, -1), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, -1), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+          "text": "{'0.weight': (256, -1),\n '0.bias': (256,),\n '1.weight': (10, -1),\n '1.bias': (10,)}"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:f52d69313a18c5911db26e812a205cddb37856c7bdc2c9d006684e61d069d97b",
+      "code_fingerprint": "sha256:c982faad3d80fcd99a21e60f5a2184b255a35fdbbdb8c795c1c96326cb32c5aa",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'0.weight': Parameter (shape=(256, 20), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, 256), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+          "text": "{'0.weight': (256, 20),\n '0.bias': (256,),\n '1.weight': (10, 256),\n '1.bias': (10,)}"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:11e34c6165e7a65338a49113a41eb0e3c266823d21a37725e27ba79e21e15f7f",
+      "code_fingerprint": "sha256:bb2575c1721249ed99c09bb48d877be615b67fe53f747d24d387406d53ca791c",
       "kind": "text",
       "outputs": [
         {
@@ -144,22 +144,22 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:fce740c76b097b985a906927591adf27c99f985694cfba2bb09a59c5525215e5",
+      "code_fingerprint": "sha256:b861442ac237a4a03c54738eeb2dd21127c39f264350cc4ee7f3a67d20913335",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:9e1395959ef8fb4b4026d1149f6fa3fcc478215f496ae6924560bc5046a34f32",
+      "code_fingerprint": "sha256:fde40be4b2cf1e7bd7b9bf2d41bc808dce97dddf0ba87bf1642cc3c0b29d7465",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Sequential(\n  (0): Dense(784 -> 256, linear)\n  (1): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (2): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (3): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (4): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (5): Dense(256 -> 10, linear)\n)"
+          "text": "[('0.weight', (256, 784)),\n ('0.bias', (256,)),\n ('1.body.0.weight', (256, 256)),\n ('1.body.0.bias', (256,))]"
         }
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:27840a7c44675c64c80ce125b3dd7c00cbb120a3b19da572db64b2f8d07011a0",
+      "code_fingerprint": "sha256:92f6247672618d64db76bbeda7ab85931a0882cdaebdc714ba7f33c41ed3458e",
       "kind": "text",
       "outputs": [
         {
@@ -169,13 +169,13 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:cd537decc7006a402593bfd5b34d10a7fb201cf90a993b14bc6c8c1e6a71de53",
+      "code_fingerprint": "sha256:c8ffec89549c4e983434d6222fe0ea12406ea7ceae3b826edd0b85812b04947b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\nd_hidden=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\nnum_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

@@ -112,8 +112,54 @@ def fig_conv_depthwise():
     save(d.fig, "arch-conv-depthwise")
 
 
+def fig_lenet_vert():
+    """The LeNet of sec_lenet as a vertical spine (input at the bottom), in the
+    pill style of img/arch-alexnet.svg: an encoder panel and a head panel, with
+    the shape of the tensor on each arrow."""
+    from arch_diagrams import (Diagram, PILL_H, PILL_STEP, ACCENT_TINT,
+                               CONTAINER_FILL, LABEL_BAND)
+    encoder = ["5×5 Conv, 6, pad 2, sigmoid", "2×2 AvgPool, stride 2",
+               "5×5 Conv, 16, sigmoid", "2×2 AvgPool, stride 2"]
+    head = ["Flatten", "Dense 120, sigmoid", "Dense 84, sigmoid", "Dense 10"]
+    # shape of each op's output, channels@height×width
+    shapes = ["6@28×28", "6@14×14", "16@10×10", "16@5×5",
+              "400", "120", "84", "10"]
+    gap = 58                      # extra rise between the two panels
+    d = Diagram(330, 520)
+    x = 120
+    pw = max(d.pill_width(s) for s in encoder + head) + 4
+    y0 = 70
+    ys = [y0 + i * PILL_STEP for i in range(4)]
+    ys += [ys[-1] + gap + PILL_STEP + i * PILL_STEP for i in range(4)]
+    pad_x, pad_lo = 18, PILL_H / 2 + 14
+    pad_hi = PILL_H / 2 + LABEL_BAND - 8
+    # one accent per figure: the encoder is the new idea, the head is neutral
+    for lo, hi, tint, label in ((0, 3, ACCENT_TINT, "convolutional encoder"),
+                                (4, 7, CONTAINER_FILL, "dense head")):
+        panel = (x - pw / 2 - pad_x, ys[lo] - pad_lo,
+                 x + pw / 2 + pad_x, ys[hi] + pad_hi)
+        d.container(*panel, fill=tint)
+        d.stage_label(panel[0] + 12, panel[3] - 8, label)
+    y_anchor = y0 - pad_lo - 34
+    d.anchor(x, y_anchor, "28×28 image")
+    d.arrow(x, y_anchor + 12, ys[0] - PILL_H / 2)
+    x_note = x + pw / 2 + pad_x + 8
+    for i, (op, y) in enumerate(zip(encoder + head, ys)):
+        d.pill(x, y, op, w=pw)
+        y_next = ys[i + 1] - PILL_H / 2 if i < 7 else ys[-1] + 70
+        d.arrow(x, y + PILL_H / 2, y_next)
+        if i in (3, 7):   # arrow leaves a panel: note beside its free part
+            y_lo = y + pad_hi
+            y_hi = ys[i + 1] - pad_lo if i < 7 else y_next
+            d.shape_note(x + 8, 0.5 * (y_lo + y_hi), shapes[i])
+        else:             # arrow inside a panel: note in the right margin
+            d.shape_note(x_note, 0.5 * (y + ys[i + 1]), shapes[i])
+    save(d.fig, "lenet-vert")
+
+
 if __name__ == "__main__":
     fig_conv_dilation()
     fig_conv_depthwise()
+    fig_lenet_vert()
     from arch_diagrams import WRITTEN
     print("\n".join(WRITTEN))

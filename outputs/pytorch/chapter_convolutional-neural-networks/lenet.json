@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c375fbc246d4f6b266121f3383be0a133c69bb861f3122d5868f6b014b9e2d64",
+    "d2l_lib_fingerprint": "sha256:478c65ed8f74eb1cfacc0b0d9d5e95d55598f76e4447068bb302c3d708ac52af",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,15 +35,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:f61c0c97d2f79d7dc4d711a34843e38c897e5730db2e0a5f86d58482f3c4766d",
+      "code_fingerprint": "sha256:50cc386c747d33a99ea3cb13fd1e7702bfcf21c8417300239a2bcad665d1f752",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21507,
-          "sha256": "sha256:58647e141139a103a1c9b7f85820629805672a7e67e764c3b9391e37573df7a5"
+          "bytes": 37867,
+          "sha256": "sha256:741e88ca634e06710edbc29e0f8aa31ea98c3ca7534cc042401e869f3d36e08e"
         }
       ]
     }

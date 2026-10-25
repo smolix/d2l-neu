@@ -1278,9 +1278,7 @@ else:
 
 Without checkpointing, the peak includes activations from all sixteen blocks.
 With four-block segments, it includes the four segment inputs plus the
-recomputed activations of one segment, at the cost of recomputation, which slows
-the step by an amount that ranges from nothing measurable (JAX here) to less
-than a factor of two. This
+recomputed activations of one segment, at the cost of a slower step. This
 tradeoff can enable training when stored activations would otherwise exceed
 device memory, and it is widely used in large Transformer training runs.
 

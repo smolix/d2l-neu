@@ -39,6 +39,7 @@ import tarfile
 import time
 import requests
 import zipfile
+import gzip
 import hashlib
 d2l = sys.modules[__name__]
 
@@ -468,10 +469,16 @@ class FashionMNIST(d2l.DataModule):
                                            num_workers=self.num_workers)
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
+        """Show the images of a batch in grayscale, titled by their labels.
+
+        Defined in :numref:`sec_fashion_mnist`"""
         X, y = batch
-        if not labels:
+        if labels is None:
             labels = self.text_labels(y)
-        d2l.show_images(X.squeeze(1), nrows, ncols, titles=labels)
+        X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
+        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
+            for image in ax.get_images():
+                image.set_cmap('gray')
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -508,26 +515,6 @@ def cross_entropy(y_hat, y):
     p = y_hat[list(range(len(y_hat))), y].clamp(min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_softmax_scratch`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -537,6 +524,12 @@ class SoftmaxRegression(d2l.Classifier):
         self.save_hyperparameters()
         self.net = nn.Sequential(nn.Flatten(),
                                  nn.LazyLinear(num_outputs))
+
+    def weight_init(self, module):
+        # The Trainer calls this after the lazy layer has learned its shape
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, std=0.01)
+            nn.init.zeros_(module.bias)
 
     def forward(self, X):
         return self.net(X)
@@ -4666,6 +4659,26 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
         if titles:
             ax.set_title(titles[i])
     return axes
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None,
+                  figsize=(2.5, 2.5), cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_utils`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
 
 def linreg(X, w, b):
     """The linear regression model.

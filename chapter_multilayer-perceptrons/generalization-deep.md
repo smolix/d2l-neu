@@ -394,8 +394,8 @@ remains an active research problem.
 
     Here $\epsilon(f)$ is the population error, $\epsilon_\mathcal{S}(f)$ is
     the training error, and the term $B$ depends only on $\mathcal{F}$, $n$,
-    and $\delta$, as the gap $\alpha$ of the VC bound in
-    :numref:`chap_classification_generalization` does. Suppose that training
+    and $\delta$, as the term $c\sqrt{(v + \log(1/\delta))/n}$ of the VC
+    bound in :numref:`chap_classification_generalization` does. Suppose that training
     finds a member of an MLP class $\mathcal{F}$ with zero training error on
     the 60,000 Fashion-MNIST training images, both with the true labels and
     with labels drawn uniformly at random from the 10 classes, independently

@@ -4,22 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:faf94e747e103fd697f0033ccefe6e0afdefe92e86f16735d91a88b7f935a2db",
+    "d2l_lib_fingerprint": "sha256:b55a2ce86336dbd552b4ac32c2c03f8c62c4f2e795dfffcca3ec642bf7a5fb13",
     "max_inline_bytes": 0
   },
   "cells": {
     "softmax-regression-concise-concise-implementation-of-softmax-regression": {
-      "code_fingerprint": "sha256:632344ea07cf4001b097f73bdc20545edd6e2b2b65c5af0680f8244748085073",
+      "code_fingerprint": "sha256:3d188095ff2ee7bdbe4abd6150b846636eddb80b4c3f693e6fb90d7a87588450",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-concise-defining-the-model": {
-      "code_fingerprint": "sha256:17697916b22bf05744d4fa20577698cfe1fb19b7f73333ef41f1747814af3b1c",
+      "code_fingerprint": "sha256:908cf15df8bfe2d764dce2f92cb8a0d48bc19e1438f63edacf3d57e4a0aceb8d",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-concise-lse-vs-max": {
-      "code_fingerprint": "sha256:973dd751edc3e02d7dd0f94f53f0aecd071bd93f370f0847b17e9b27a0f064eb",
+      "code_fingerprint": "sha256:71fbce31fefb05cd04caba652c9116a6c474316d4e96639561dde3d7d0c0b218",
       "kind": "asset",
       "outputs": [
         {
@@ -27,25 +27,54 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20594,
-          "sha256": "sha256:9260c5f7c88cc976b040d05fa74d9bc00bb9d44e98187873670e7caa8b8f0abf"
+          "sha256": "sha256:3c05dbcacc054a29ae9d1d171f8991edb0b267412a9616a20b38987fcfd2913b"
         }
       ]
     },
     "softmax-regression-concise-softmax-revisited": {
-      "code_fingerprint": "sha256:d28dc644b848e32c70fedd411f77324d82d0079e5503753144c08da399feea7c",
+      "code_fingerprint": "sha256:4fa4f58870a2417a4763ef35160590cdc14c1f4c41f8ca9283a449c42d9eb3c5",
       "kind": "text",
       "outputs": []
     },
     "softmax-regression-concise-training": {
-      "code_fingerprint": "sha256:6f6f5744f0464fc537c43ffb9dde389db7bc4be1717e01ac822ec71d9b624c61",
+      "code_fingerprint": "sha256:7356e6dc87078031be9e6ece48c7a39301904db3b120e951cde37e8daac21cb2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 32474,
-          "sha256": "sha256:01fa9eb0db11daa850b7217a87a04213465872e0d7ff051ce853882096f1cbac"
+          "bytes": 33131,
+          "sha256": "sha256:d384ca61dd45e13b2c8b3aae1b7105da19f73469d8238952d568a020339d9ab2"
+        }
+      ]
+    },
+    "softmax-regression-concise-calibration-1": {
+      "code_fingerprint": "sha256:883927f338a99e83306b110f7992f0ff02bda0f68f5635b72eb0514afcc6ff72",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-calibration-2": {
+      "code_fingerprint": "sha256:2a32ec81ad99a29c0bb1bd974ece790d75b95010c37b89e625a2811db027ac2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "confidence 0.1 to 0.2:    1 predictions, mean 0.168, accuracy 0.000\nconfidence 0.2 to 0.3:   47 predictions, mean 0.270, accuracy 0.234\nconfidence 0.3 to 0.4:  269 predictions, mean 0.360, accuracy 0.428\nconfidence 0.4 to 0.5:  662 predictions, mean 0.455, accuracy 0.470\nconfidence 0.5 to 0.6:  986 predictions, mean 0.549, accuracy 0.551\nconfidence 0.6 to 0.7:  982 predictions, mean 0.651, accuracy 0.668\nconfidence 0.7 to 0.8: 1015 predictions, mean 0.753, accuracy 0.787\nconfidence 0.8 to 0.9: 1347 predictions, mean 0.854, accuracy 0.884\nconfidence 0.9 to 1.0: 4691 predictions, mean 0.973, accuracy 0.975\nECE: 0.013\n"
+        }
+      ]
+    },
+    "softmax-regression-concise-calibration-3": {
+      "code_fingerprint": "sha256:ac1af526fc469ba7580c21edbdea8bb9b7ddbc4922224e5c82e605eb89809029",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-concise/softmax-regression-concise-calibration-3-1.svg",
+          "bytes": 29014,
+          "sha256": "sha256:3eb5c8a31db18ddc20c2bfcc646e86f4592c4a76a5a9d66290818581e2ed5aee"
         }
       ]
     }

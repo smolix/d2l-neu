@@ -503,16 +503,16 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
    :exlabel:`ex_mdl-naive-bayes-duplicated-features`
 
 1. [code] **Label shift.** Under label
-   shift (:numref:`sec_environment-and-distribution-shift`), the test prior $q(y)$
-   differs from the training prior $p(y)$, while $p(\mathbf x\mid y)$ stays
+   shift (:numref:`sec_environment-and-distribution-shift`), the target prior $p_T(y)$
+   differs from the source prior $p_S(y)$, while $p(\mathbf x\mid y)$ stays
    the same.
-    1. Show that the posterior under the test prior is
-       $q(y\mid\mathbf x)\propto p(y\mid\mathbf x)\,q(y)/p(y)$. Why does naive
+    1. Show that the posterior under the target prior is
+       $p_T(y\mid\mathbf x)\propto p_S(y\mid\mathbf x)\,p_T(y)/p_S(y)$. Why does naive
        Bayes need no retraining to use it?
     1. Build a test set in which digit $4$ makes up $90\%$ of the images:
        keep all test images of digit $4$ and draw the others at random from
        the remaining digits. Compare the accuracy of `predict` with that of
-       the corrected rule of (a), with $q(4)=0.9$ and $q(y)=1/90$ for every
+       the corrected rule of (a), with $p_T(4)=0.9$ and $p_T(y)=1/90$ for every
        other digit.
    :exlabel:`ex_mdl-naive-bayes-label-shift`
 

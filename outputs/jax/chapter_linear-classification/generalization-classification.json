@@ -14,28 +14,39 @@
       "outputs": []
     },
     "generalization-classification-the-test-set-2": {
-      "code_fingerprint": "sha256:2f1b8b170ebfc9eb06ed10f63785bc55ab7914f9a81be964e87484a1422ae263",
+      "code_fingerprint": "sha256:83b678062948f0d6718ba431205a5ca02739371b7bbb24f9a40b089f501b6633",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
-          "bytes": 34254,
-          "sha256": "sha256:e68045d89e136c7eff048efb07a119502c3d1780650b78cb8cd6f90c39df524e"
+          "bytes": 33883,
+          "sha256": "sha256:8ac7255384f460fd43594a4c07bb739858f4b6bdb51c504f16fed3b37c4ceddb"
         }
       ]
     },
     "generalization-classification-test-set-reuse-1": {
-      "code_fingerprint": "sha256:4eb9088423f679d4cb960ae97fb8c88ca040f87d774be135cffdc780f97b49d3",
+      "code_fingerprint": "sha256:34efbae377fbb3a2622b519ebf09b9611f10c52a650b4eede4ac076a71f01fb1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 31658,
-          "sha256": "sha256:fe298ecd12032de3aeef9c27be5597dd41030dc37678217d5e4016673c7a0315"
+          "bytes": 38158,
+          "sha256": "sha256:812b3f87d97757933a812da9d7cedc4230617577b7cb18dff5f2a088bb87a2f5"
+        }
+      ]
+    },
+    "generalization-classification-adaptive-overfitting": {
+      "code_fingerprint": "sha256:88a4a446b7a1944be687f51f604b0c8c3314fb0c40ad0f31776c12c0c9ae6d08",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "majority vote: 0.736, best single guesser: 0.546\n"
         }
       ]
     }

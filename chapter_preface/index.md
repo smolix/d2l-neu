@@ -362,6 +362,7 @@ import tarfile
 import time
 import requests
 import zipfile
+import gzip
 import hashlib
 d2l = sys.modules[__name__]
 ```

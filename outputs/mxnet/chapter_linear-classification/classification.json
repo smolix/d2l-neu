@@ -9,37 +9,38 @@
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:06f4e6fd864c63a5f98af02d27e21b6dafcd0ef323e38f3f4b731d4bf159664f",
+      "code_fingerprint": "sha256:bbabe2a833030ec0a55db795c69d891a4f952fa8c38fd6a7c4ce126c26adbd31",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:da2232d092b11b6e904a6c723dac37ecee4e3aeee29f87f0e697269bf8f5b9b3",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:1f15eaa238916a095e379a9454f42df272af60b258fba7442bd8acb3a2d18915",
+      "code_fingerprint": "sha256:a0d5549d3e8d97890b13be9c33eb90615d83f17a96449df5f570396d65080573",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:bdcf445fafe8bd57cd7195baad6eb9e01c44f8934bce2f78c56eeb35fb36c2f5",
+      "code_fingerprint": "sha256:3936203ba894840a906e7df1d43a9de1ca0331978e565392f9d497fa96394498",
+      "kind": "text",
+      "outputs": []
+    },
+    "classification-the-classifier-class-2": {
+      "code_fingerprint": "sha256:66fbf40d705beb69737a2de1ed7f63f12b11eeddb5d7e7a4984611d03c3fdcc8",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-2": {
-      "code_fingerprint": "sha256:28540b925f2bfb158b8e8c3e7994f798cc8c93605389f14a680244aacb4f805b",
+      "code_fingerprint": "sha256:14038e6b05b5bf51c5a87e888d672f95c3a692118b70a7de6cfc6562942ab6c5",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:323108aa0576e7b9df7245bcc4d60c3ed82c0bcc23933a545d9a6d946cfdb375",
+      "code_fingerprint": "sha256:05b07cf2c20a9d848b612e18e62ac414517c50755454fd470582b46c81f88417",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(0.99, 0.0)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "always healthy: accuracy 0.990, recall 0.000, precision nan\nscreening test: accuracy 0.950, recall 0.900, precision 0.154\n"
         }
       ]
     }

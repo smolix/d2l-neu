@@ -162,6 +162,14 @@ QUIET_ENV = {
 CPU_ONLY_ENV = {
     "TF_CPP_MIN_LOG_LEVEL": "3",
     "JAX_PLATFORMS": "cpu",
+    # MXNet bug: every autograd backward() builds placeholder contexts with
+    # Context::Create(DeviceType(-1), 0); -1 passes its `dev_type & kGPU` test,
+    # so CudaLibChecks() prints "GPU context requested, but no GPUs found" on a
+    # host with the GPUs hidden (src/imperative/imperative_utils.h:1083,
+    # include/mxnet/base.h:397, src/base.cc:48). The real fix belongs in the
+    # smolix/mxnet wheel (smolix/mxnet#101); with no GPU visible the check has
+    # nothing to do.
+    "MXNET_CUDA_LIB_CHECKING": "0",
 }
 
 # Notebooks that use multiple GPUs or test GPU availability across devices.

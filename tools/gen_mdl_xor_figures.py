@@ -28,101 +28,91 @@ BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIG
 
 
 def fig_xor():
-    """XOR is not linearly separable, but one ReLU hidden layer fixes it.
+    """XOR is not linearly separable, but a hidden layer of two ReLU units
+    makes it so.
 
-    Left: the four inputs of the unit square, coloured by XOR label
-    (class 0 = same bits, class 1 = differing bits).  No straight line
-    separates the two orange corners from the two blue ones; we draw one
-    candidate line and shade its (wrong) decision, to make the failure visible.
+    Both panels show the hand-built network of mlp.md,
+        h = ReLU(x W1 + b1),  W1 = [[1, 1], [1, 1]],  b1 = (0, -1),
+        o = h1 - 2 h2,
+    whose output equals the XOR label on the four corners of the unit
+    square (asserted below).
 
-    Right: the SAME four points after the hidden layer
-        h = ReLU(X W1 + b1),  W1 = [[1,1],[1,1]],  b1 = (0, -1),
-    a textbook construction.  The map sends the two class-1 corners (0,1) and
-    (1,0) onto the *same* hidden point (1, 0), so the cloud becomes linearly
-    separable: a single line h1 - 2 h2 = 1/2 now splits the classes, i.e. the
-    output neuron O = h1 - 2 h2 reproduces XOR.  Everything is computed.
+    Left, input space: the corners labeled by XOR.  The network predicts
+    class 1 where o > 1/2.  Since o depends on x only through s = x1 + x2
+    (it is the tent ReLU(s) - 2 ReLU(s - 1)), this region is the band
+    1/2 < x1 + x2 < 3/2 between two parallel lines: a boundary that no single
+    line can draw.
+
+    Right, hidden space: the same corners after the hidden layer.  The two
+    class-1 corners land on the same point (1, 0), and the single line
+    h1 - 2 h2 = 1/2 separates the classes.  Both panels share one scale
+    (equal aspect, width ratios = x spans), and both use the same colors:
+    blue = class 0, orange = class 1, green = the decision boundary.
     """
-    # XOR truth table.  label = x1 XOR x2.
+    T = fl.T
     X = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
-    y = np.array([0, 1, 1, 0])  # XOR
-
-    # Hand-built hidden layer (Goodfellow et al., Deep Learning, sec 6.1).
+    y = np.array([0, 1, 1, 0])                     # XOR labels
     W1 = np.array([[1.0, 1.0], [1.0, 1.0]])
     b1 = np.array([0.0, -1.0])
-    H = np.maximum(X @ W1 + b1, 0.0)          # ReLU hidden features
-    # Output neuron O = H @ w2 + b2 must realise XOR.
     w2 = np.array([1.0, -2.0])
-    b2 = 0.0
-    O = H @ w2 + b2
-    assert np.allclose((O > 0.5).astype(int), y), (H, O)   # the net IS XOR
+    H = np.maximum(X @ W1 + b1, 0.0)
+    o = H @ w2
+    assert np.array_equal(o, y), o                 # the network IS XOR
+    print("  hidden H =", H.tolist(), " output o =", o.tolist())
 
-    col = {0: BLUE, 1: ORANGE}
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.8, 4.2))
+    fill = {0: T.BLUE.base, 1: T.ORANGE.base}
+    tint = {0: T.BLUE.tint, 1: T.ORANGE.tint}
+    line_kw = dict(color=T.GREEN.base, lw=T.SW_LINE, ls=(0, (4, 3)), zorder=3)
+    lx, ly = (-0.5, 1.5), (-0.5, 1.5)              # input-space window
+    hx, hy = (-0.5, 2.5), (-0.5, 1.5)              # hidden-space window
+    fig, (axa, axb) = plt.subplots(
+        1, 2, figsize=(7.0, 2.9),
+        gridspec_kw=dict(width_ratios=[lx[1] - lx[0], hx[1] - hx[0]],
+                         wspace=0.28))
 
-    # ---- (a) input space: not linearly separable ----------------------------
-    # the caption already says "Left: ... no line separates the two classes",
-    # so no redundant "(a)/(b)" title is drawn on either panel
-    # two candidate separators, each of which gets one corner wrong: the point
-    # is that the orange diagonal and the blue diagonal cannot be split at once
-    xs = np.array([-0.4, 1.4])
-    axa.plot(xs, 1.5 - xs, "--", color=GRAY, lw=1.5)
-    axa.plot(xs, 0.5 - xs + 1.0, "--", color=GRAY, lw=1.5, alpha=0.0)  # spacing
-    axa.plot([-0.4, 1.4], [0.5, 0.5], "--", color=GRAY, lw=1.5)
-    axa.text(1.95, 0.95, "two candidate\nlines, each\nmisclassifies\na corner",
-             color=GRAY, fontsize=12, ha="center", va="center")
-    for (x1, x2), lab in zip(X, y):
-        axa.plot(x1, x2, "o", color=col[lab], ms=18, zorder=5)
-        axa.text(x1, x2, "0" if lab == 0 else "1", color="white",
-                 fontsize=12, fontweight="bold", ha="center", va="center",
-                 zorder=6)
-    axa.set_xlabel("$x_1$"); axa.set_ylabel("$x_2$")
+    def corner(ax, p, lab, text=None, dx=0.0, dy=0.0, **kw):
+        ax.plot(*p, "o", color=fill[lab], ms=16, zorder=5)
+        ax.text(*p, str(lab), color="white", fontsize=13, fontweight="bold",
+                ha="center", va="center", zorder=6)
+        if text:
+            ax.text(p[0] + dx, p[1] + dy, text, color=T.INK, fontsize=15,
+                    zorder=6, **kw)
+
+    # ---- left: input space, decision band of the network ----------------
+    xs = np.array(lx)
+    axa.fill_between(xs, ly[0], ly[1], color=tint[0], lw=0, zorder=0)
+    axa.fill_between(xs, 0.5 - xs, 1.5 - xs, color=tint[1], lw=0, zorder=1)
+    axa.plot(xs, 0.5 - xs, **line_kw)
+    axa.plot(xs, 1.5 - xs, **line_kw)
+    for p, lab in zip(X, y):
+        corner(axa, p, lab)
+    axa.set_xlim(*lx); axa.set_ylim(*ly)
     axa.set_xticks([0, 1]); axa.set_yticks([0, 1])
-    axa.set_xlim(-0.5, 2.55); axa.set_ylim(-0.6, 1.6)
-    axa.set_aspect("equal")
-    axa.spines["top"].set_visible(False)
-    axa.spines["right"].set_visible(False)
+    axa.set_xlabel("$x_1$"); axa.set_ylabel("$x_2$", rotation=0,
+                                            labelpad=12)
 
-    # ---- (b) hidden space: separable, with the two class-1 corners merged ----
-    # the caption already gives the hidden-map formula, so no redundant title
-    # the separating line  h1 - 2 h2 = 1/2  (the output neuron's decision)
-    h1s = np.array([-0.4, 2.4])
-    h2_line = (h1s - 0.5) / 2.0
-    axb.fill_between(h1s, h2_line, 1.6, color=BLUE, alpha=0.07, lw=0)
-    axb.fill_between(h1s, -0.6, h2_line, color=ORANGE, alpha=0.07, lw=0)
-    axb.plot(h1s, h2_line, "--", color=GREEN, lw=1.6)
-    # sits on the upper (blue-side) stretch of the line, between the merged
-    # point and (1,1) -- clear of both corner labels and the (1,1) marker
-    axb.text(1.3, 0.75, r"$h_1-2h_2=\frac{1}{2}$", color=GREEN, fontsize=12,
-             ha="center", va="center", rotation=np.degrees(np.arctan2(0.5, 1.0)),
-             rotation_mode="anchor")
-    # plot hidden points; the two class-1 corners coincide at the same point,
-    # so draw ONE combined label for them instead of two stacked ones (which
-    # crowded into the sloped line at this font size)
-    seen: dict[tuple[float, float], int] = {}
-    for (h1, h2), lab, (x1, x2) in zip(H, y, X):
-        key = (round(h1, 6), round(h2, 6))
-        seen[key] = seen.get(key, 0) + 1
-        axb.plot(h1, h2, "o", color=col[lab], ms=17, zorder=5)
-        if seen[key] == 1 and list(H.tolist()).count([h1, h2]) == 1:
-            # a point hit by only one input: label it normally
-            axb.text(h1 + 0.20, h2 + 0.26, f"$({x1:.0f},{x2:.0f})$", color=col[lab],
-                     fontsize=12, ha="left", va="center", zorder=6)
-    axb.text(1.0, -0.45, "$(0,1),(1,0)$", color=ORANGE, fontsize=12,
-             ha="center", va="center", zorder=6)
-    axb.annotate("both class-1\ncorners land\non one point",
-                 xy=(1.0, 0.0), xytext=(0.15, 1.25),
-                 fontsize=12, color=GRAY, ha="center", va="center",
-                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0))
-    axb.set_xlabel("$h_1$"); axb.set_ylabel("$h_2$")
+    # ---- right: hidden space, one separating line -----------------------
+    hs = np.array(hx)
+    line = (hs - 0.5) / 2.0                        # h1 - 2 h2 = 1/2
+    axb.fill_between(hs, line, hy[1], color=tint[0], lw=0, zorder=0)
+    axb.fill_between(hs, hy[0], line, color=tint[1], lw=0, zorder=0)
+    axb.plot(hs, line, **line_kw)
+    corner(axb, H[0], 0, "(0, 0)", dx=0.0, dy=0.24, ha="center",
+           va="bottom")
+    corner(axb, H[1], 1, "(0, 1), (1, 0)", dx=0.0, dy=-0.24, ha="center",
+           va="top")
+    corner(axb, H[3], 0, "(1, 1)", dx=0.0, dy=0.24, ha="center",
+           va="bottom")
+    axb.set_xlim(*hx); axb.set_ylim(*hy)
     axb.set_xticks([0, 1, 2]); axb.set_yticks([0, 1])
-    axb.set_xlim(-0.5, 2.55); axb.set_ylim(-0.6, 1.6)
-    axb.set_aspect("equal")
-    axb.spines["top"].set_visible(False)
-    axb.spines["right"].set_visible(False)
+    axb.set_xlabel("$h_1$"); axb.set_ylabel("$h_2$", rotation=0,
+                                            labelpad=12)
 
-    print("  XOR hidden features H =\n", H)
-    print("  output O =", O, " -> class", (O > 0.5).astype(int), " (target", y, ")")
-    fig.subplots_adjust(wspace=0.32)
+    for ax in (axa, axb):
+        ax.set_aspect("equal")
+        ax.spines["left"].set_color(T.INK)
+        ax.spines["bottom"].set_color(T.INK)
+        ax.tick_params(colors=T.INK, labelsize=14)
     fl.save(fig, "mdl-mlp-xor")
 
 

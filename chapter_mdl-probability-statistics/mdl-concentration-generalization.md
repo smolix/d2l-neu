@@ -571,7 +571,8 @@ $$
 because if this supremum is at most $t$ then *every* function's empirical risk
 is trustworthy to $t$, including whichever one the learner happens to pick.
 Bounds on this supremum are called **uniform convergence** bounds, and they
-are the classical mechanics that :numref:`sec_generalization_deep` waves at.
+are the classical guarantees that :numref:`sec_generalization_deep` finds
+vacuous for a trained MLP.
 The *test-set reuse* discussed in
 :numref:`chap_classification_generalization` is the same trap: an analyst who
 evaluates many models on one test set and reports the best is a learner whose
@@ -869,9 +870,9 @@ convergence requires this shape, however. In some interpolating regimes, test
 error peaks near the point where training error first reaches zero and then
 falls as the model grows. This behavior is called **double descent**
 :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`.
-:numref:`sec_generalization_deep` surveys empirical examples in deep learning.
-Here we analyze one controlled random-features regression experiment. Its
-conditioning and minimum-norm mechanisms are exact for this construction; they
+:numref:`subsec_double_descent` measures it for random ReLU features on
+Fashion-MNIST. Here we analyze the same construction on synthetic data, where
+its conditioning and minimum-norm mechanisms can be computed exactly; they
 should not be read as a general explanation of deep-network generalization.
 
 ### The Minimum-Norm Mechanism
@@ -881,7 +882,7 @@ The smallest such model is **random-features regression**
 built from randomness (ours will be $\phi(\mathbf x)=\mathrm{ReLU}
 (\mathbf V\mathbf x)$ with a random frozen $\mathbf V$, a one-hidden-layer
 network whose first layer is never trained) and fit only the linear head
-$\mathbf w\in\mathbb{R}^p$ by least squares on $n$ training points. The
+$\mathbf w\in\mathbb{R}^p$ by least squares on $n$ training points.
 We vary the feature count $p$ across the interpolation threshold $p=n$.
 The fitted model behaves differently below, at, and above this threshold.
 Write $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$ for the feature matrix

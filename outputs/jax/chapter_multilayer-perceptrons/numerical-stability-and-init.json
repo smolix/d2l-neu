@@ -9,44 +9,59 @@
   },
   "cells": {
     "numerical-stability-and-init-numerical-stability-and-initialization": {
-      "code_fingerprint": "sha256:883b0b706c9858bad6fdd53194cb0ac0cd8ae1371762abd66038277c1c96fecc",
+      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-and-init-vanishing-gradients": {
-      "code_fingerprint": "sha256:b17f282122aa925d23ae7eb63f1ec42bfba1aff6b1a1871e49c1f3c3668abfb7",
-      "kind": "asset",
+      "code_fingerprint": "sha256:eb46f8636ee5fa7ce83c75c3680d6163e2c97ac399be40856e0f4eeff146774f",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerical-stability-and-init-exploding-gradients": {
+      "code_fingerprint": "sha256:ae569f2a6778f43eeb6622346f8b532ba662ab8a376e3ec984d6f99b78bda125",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.3e-18\nReLU, N(0, 1): gradient mean square at layer 1: 8.4e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.8e-12\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26188,
-          "sha256": "sha256:806cfdf1cc724bc823ca4f57b60c6d351b02723b71fe823c37ef142c6928dfcd"
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
+          "bytes": 34439,
+          "sha256": "sha256:3be7424843543735728938914643dd037d89ce8f0f59630b5bec464c3f0dbaf1"
         }
       ]
     },
-    "numerical-stability-and-init-exploding-gradients": {
-      "code_fingerprint": "sha256:526d707d831f8efdda346a67e88db6ab32c25f12e5a6305dfdb6dad2b9d0d439",
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:1ac98d201043145e274ec5f2742f4c28785f223027222e322d01d0fadd2b308a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N(0, 0.01²): activations at layer 10: 1.1e-19, gradient at layer 1: 8.8e-18\nXavier: activations at layer 10: 1.4e-03, gradient at layer 1: 2.2e-03\nHe: activations at layer 10: 9.7e-01, gradient at layer 1: 9.6e-01\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 31009,
+          "sha256": "sha256:8dc951b319e0c0d3ce244e0d10d2ddd8468ac5b633ce0232d1832c5e4e929559"
+        }
+      ]
+    },
+    "numerical-stability-and-init-symmetry-among-hidden-units": {
+      "code_fingerprint": "sha256:3f5dacb7e58be0b232ac5f371f729faef059dee9eaf5fbff0ce19ba8fc71cd12",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n [[-2.4424558  -2.0356805   0.20554423 -0.3535502 ]\n [-0.76197404 -1.1785518  -1.1482196   0.29716578]\n [-1.3105359   2.1302025  -0.18957235  0.96401215]\n [-1.3011001  -0.7486938  -0.3729984   0.4427907 ]]\nafter multiplying 100 matrices\n [[ 3.35691989e+22  1.62960807e+23  1.05114213e+23 -1.30175178e+23]\n [ 3.68540817e+22  1.78907297e+23  1.15400147e+23 -1.42913484e+23]\n [ 2.58827815e+22  1.25647115e+23  8.10458151e+22 -1.00368401e+23]\n [ 3.11850833e+22  1.51387186e+23  9.76488936e+22 -1.20930000e+23]]\n"
-        }
-      ]
-    },
-    "numerical-stability-and-init-depth-sweep": {
-      "code_fingerprint": "sha256:99f4af15d1304af0cdc33885af9db96cb210a67d7cf8eef4ac289a27790ed0e5",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31007,
-          "sha256": "sha256:5110509f33c7c172f741f850056eb84b84f346b36364ee66002ccbcdd8d89e29"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.14\n"
         }
       ]
     }

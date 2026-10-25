@@ -1,310 +1,399 @@
 #!/usr/bin/env python3
-"""Generate the illustrative figure(s) for the backpropagation section
-(``chapter_multilayer-perceptrons/backprop.md``) in the one shared house style
-defined in ``gen_mdl_figures.py``.
+"""Generate the computational-graph figures of the backpropagation section
+(``chapter_multilayer-perceptrons/backprop.md``).
 
-The section's worked example pushes concrete numbers through a tiny 2-2-1 ReLU
-network.  This figure draws that example as a computational graph, with the
-forward pass in black and the backward pass overlaid in blue, so the "full"
-backprop treatment carries a figure at least as informative as the autograd
-preview in :numref:`sec_autograd`.  The numbers are *computed* here (not typed
-by hand) so the picture is guaranteed to agree with the prose.
+Three figures, drawn with the deterministic SVG composer (figstyle.svg) in the
+visual grammar of the computational graphs of the automatic differentiation
+section (``img/autograd-comp-graph.svg``): rounded nodes, parameters on a gray
+fill, the forward pass in blue (the ``stream`` role), the backward pass in red
+(the ``grad`` role), values in black and gradients in red inside the nodes.
 
-Run with the repo's pytorch venv (matplotlib + numpy are available):
+* ``mdl-mlp-backprop-small``  -- e = (a + b) c with its forward values and
+  backward gradients (the smallest worked example).
+* ``mdl-mlp-forward-graph``   -- the forward graph of the one-hidden-layer MLP
+  with weight decay, with the shape of every node for the MLP of the
+  implementation section (n examples, 784 inputs, 256 hidden units, 10 classes).
+* ``mdl-mlp-backprop-graph``  -- the section's 2-2-1 worked example: the same
+  graph with every value and every gradient.
+
+Every number is computed here, so the pictures cannot drift from the prose.
+Coordinates are px (1 SVG unit = 1 CSS px), y downward.  Run with the repo's
+pytorch venv (it has fontTools):
 
     .venv-pytorch/bin/python tools/gen_mdl_backprop_figures.py
 
-All figures are written to ``img/mdl-mlp-<id>.svg``.  The script is idempotent:
-re-running overwrites byte-for-byte.
+The output is byte-idempotent.
 """
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 
+import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
-np, plt = fl.np, fl.plt
-BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+from figstyle import tokens as T  # noqa: E402
+from figstyle.svg import Figure, Span, var  # noqa: E402
+from figstyle.textmetrics import measure  # noqa: E402
 
-from matplotlib.patches import FancyBboxPatch
+FWD = T.BLUE.base        # forward pass: arrows and their labels
+BWD = T.RED.base         # backward pass: arrows
+GRAD = T.RED.dark        # gradient values and backward labels (text grade)
+EDGE = T.MUTED           # node outlines
+SW = 2.0                 # arrow stroke (pairs of arrows run 16 px apart)
+FS_VAL = 15.0            # values and gradients, monospace
+OFF = 8.0                # half-distance between a forward/backward arrow pair
 
-# Black for the forward pass (matches autograd-comp-graph.svg's forward arrows);
-# the shared BLUE carries the backward pass.
-FWD = "#15181C"
-
-
-def _num(x):
-    x = float(x) + 0.0          # normalize -0.0 -> 0.0
-    if abs(x) < 1e-9:
-        x = 0.0
-    return f"{x:.0f}" if abs(x - round(x)) < 1e-9 else f"{x:g}"
+WRITTEN: list[str] = []
 
 
-def _fmt_vec(v):
-    """Compact bracketed row, integers shown without a trailing .0."""
-    return "[" + ",\\ ".join(_num(x) for x in np.ravel(v)) + "]"
+# --------------------------------------------------------------------------- #
+# Text helpers                                                                #
+# --------------------------------------------------------------------------- #
+
+def bold(text):
+    """A vector or matrix symbol (bold upright, as in the prose)."""
+    return Span(text, "b")
 
 
-def _matrix2x2(ax, cx, cy, M, color, fontsize=12):
-    """Draw a 2x2 matrix of numbers flanked by drawn square brackets, centred at
-    (cx, cy).  mathtext has no matrix environment, so we lay it out by hand; this
-    keeps the figure self-contained and crisp."""
-    M = np.asarray(M, float)
-    col_dx, row_dy = 0.34, 0.30
-    cols = [cx - col_dx, cx + col_dx]
-    rows = [cy + row_dy, cy - row_dy]
-    for i in range(2):
-        for j in range(2):
-            ax.text(cols[j], rows[i], _num(M[i, j]), ha="center", va="center",
-                    fontsize=fontsize, color=color)
-    bx, by = col_dx + 0.30, row_dy + 0.18      # bracket half-extent
-    tick = 0.12
-    for sx, x_in in [(-1, +1), (+1, -1)]:       # left then right bracket
-        bxx = cx + sx * bx
-        ax.plot([bxx, bxx], [cy - by, cy + by], color=color, lw=1.3)
-        ax.plot([bxx, bxx + x_in * tick], [cy + by, cy + by], color=color, lw=1.3)
-        ax.plot([bxx, bxx + x_in * tick], [cy - by, cy - by], color=color, lw=1.3)
+def sup(text):
+    return Span(text, "r", script=+1)
+
+
+def W(layer):
+    return [bold("W"), sup(f"({layer})")]
+
+
+def num(x):
+    """Integer-valued float -> string with a true minus sign; -0 -> 0."""
+    x = float(np.ravel(x)[0]) + 0.0
+    return f"{x:.0f}".replace("-", "−") if x != 0 else "0"
+
+
+def span_width(spans, size):
+    total = 0.0
+    for sp in spans:
+        fam, sty = {"r": ("sans", "regular"), "b": ("sans", "bold"),
+                    "i": ("sans", "italic"), "m": ("mono", "regular")}[sp.kind]
+        total += measure(sp.text, size * (0.72 if sp.script else 1.0),
+                         fam, sty).width
+    return total
+
+
+def label(f, x, y, parts, *, size=T.FS_SMALL, color=T.INK, anchor="middle"):
+    """Typeset spans, where the string "ODOT" draws a Hadamard-product circle
+    (the bundled fonts have no U+2299)."""
+    if all(isinstance(p, Span) for p in parts):
+        parts = [parts]
+    r = 0.30 * size
+    widths = [2 * r + 0.25 * size if p == "ODOT" else span_width(p, size)
+              for p in parts]
+    total = sum(widths)
+    x0 = {"middle": x - total / 2, "end": x - total}.get(anchor, x)
+    for p, w in zip(parts, widths):
+        if p == "ODOT":
+            cx, cy = x0 + w / 2, y
+            f.circle(cx, cy, r, fill=T.PAPER, stroke=color, sw=1.2)
+            f.circle(cx, cy, 1.3, fill=color, stroke=None, sw=0)
+        else:
+            f.text(x0, y, p, size=size, color=color, anchor="start")
+        x0 += w
+
+
+# --------------------------------------------------------------------------- #
+# Graph helpers                                                               #
+# --------------------------------------------------------------------------- #
+
+class Node:
+    """A rounded node: a title row, then rows of (text, color) or matrices."""
+
+    def __init__(self, f, cx, cy, title, rows=(), *, w=84.0, h=None,
+                 param=False, title_size=T.FS_LABEL):
+        self.cx, self.cy, self.w = cx, cy, w
+        heights = [r.get("h", 20.0) for r in rows]
+        self.h = h or (34.0 + sum(heights) + (8.0 if rows else 0.0))
+        x0, y0 = cx - w / 2, cy - self.h / 2
+        f.rect(x0, y0, w, self.h, fill=T.PANEL if param else T.PAPER,
+               stroke=EDGE, sw=T.SW_BOX, r=T.R_BLOCK)
+        f.text(cx, y0 + 18.0, title, size=title_size)
+        if rows:
+            f.line(x0 + 10, y0 + 34.0, x0 + w - 10, y0 + 34.0,
+                   stroke=T.HAIRLINE, sw=1.5)
+        y = y0 + 38.0
+        for r, hh in zip(rows, heights):
+            if "matrix" in r:
+                matrix(f, cx, y + hh / 2, r["matrix"], r["color"])
+            elif "spans" in r:
+                f.text(cx, y + hh / 2, r["spans"], size=T.FS_SMALL,
+                       color=r["color"])
+            else:
+                f.text(cx, y + hh / 2, [Span(r["text"], "m")], size=FS_VAL,
+                       color=r["color"])
+            y += hh
+        self.l, self.r = x0, x0 + w
+        self.t, self.b = y0, y0 + self.h
+
+
+def matrix(f, cx, cy, M, color):
+    """A small matrix of integers in monospace, between drawn brackets."""
+    M = np.atleast_2d(M)
+    rows = [" ".join(f"{num(x):>2}" for x in row) for row in M]
+    lh = 17.0
+    width = max(measure(s, FS_VAL, "mono").width for s in rows)
+    for i, s in enumerate(rows):
+        f.text(cx, cy + (i - (len(rows) - 1) / 2) * lh, [Span(s, "m")],
+               size=FS_VAL, color=color)
+    hx, hy = width / 2 + 5, len(rows) * lh / 2 + 1
+    for sgn in (-1, 1):
+        x = cx + sgn * hx
+        f.polyline([(x - sgn * 4, cy - hy), (x, cy - hy), (x, cy + hy),
+                    (x - sgn * 4, cy + hy)], stroke=color, sw=1.3)
+
+
+def legend(f, x, y, text, color, anchor="start", var_last=False):
+    """A bold legend line; ``var_last`` sets its last word as a variable."""
+    if var_last:
+        head, tail = text.rsplit(" ", 1)
+        spans = [Span(head + " ", "b"), Span(tail, "i")]
+    else:
+        spans = [Span(text, "b")]
+    f.text(x, y, spans, size=T.FS_SMALL, color=color, anchor=anchor)
+
+
+def h_pair(f, a, b, y, *, fwd=None, bwd=None, back=True):
+    """Forward arrow a -> b above y, backward arrow b -> a below y, with
+    optional labels (lists of spans) above and below the pair."""
+    x0, x1 = a.r + 3, b.l - 3
+    f.arrow(x0, y - OFF, x1, y - OFF, stroke=FWD, sw=SW)
+    if back:
+        f.arrow(x1, y + OFF, x0, y + OFF, stroke=BWD, sw=SW)
+    xm = (x0 + x1) / 2
+    if fwd:
+        label(f, xm, y - OFF - 14, fwd, color=FWD)
+    if bwd:
+        label(f, xm, y + OFF + 15, bwd, color=GRAD)
+
+
+def v_pair(f, top, bottom, x, *, bwd=None, back=True):
+    """Forward arrow down from a parameter node into its layer; backward arrow
+    up beside it, labelled on the right."""
+    y0, y1 = top.b + 3, bottom.t - 3
+    f.arrow(x - OFF, y0, x - OFF, y1, stroke=FWD, sw=SW)
+    if back:
+        f.arrow(x + OFF, y1, x + OFF, y0, stroke=BWD, sw=SW)
+    if bwd:
+        label(f, x + OFF + 8, (y0 + y1) / 2, bwd, color=GRAD, anchor="start")
+
+
+def save(f, name, desc):
+    path = f.save(name, desc=desc)
+    WRITTEN.append(path)
+
+
+# --------------------------------------------------------------------------- #
+# e = (a + b) c                                                               #
+# --------------------------------------------------------------------------- #
+
+def fig_backprop_small():
+    """POINT: the backward pass visits the nodes in reverse order; an addition
+    passes its incoming gradient unchanged, a multiplication scales it by the
+    other input, whose forward value must therefore be kept."""
+    a, b, c = 2.0, 1.0, -3.0
+    u = a + b
+    e = u * c
+    de = 1.0
+    du, dc = de * c, de * u          # multiply: scale by the other input
+    da, db = du * 1.0, du * 1.0      # add: pass through
+    assert (u, e, da, db, dc) == (3.0, -9.0, -3.0, -3.0, 3.0)
+
+    f = Figure()
+    w = 108.0
+
+    def node(cx, cy, title, v, g):
+        return Node(f, cx, cy, title,
+                    [dict(text=num(v), color=T.INK),
+                     dict(text=num(g), color=GRAD)], w=w)
+
+    na = node(60, 60, [var("a")], a, da)
+    nb = node(60, 220, [var("b")], b, db)
+    nu = node(290, 140, [var("u"), Span(" = "), var("a"), Span(" + "),
+                         var("b")], u, du)
+    nc = node(290, 300, [var("c")], c, dc)
+    ne = node(520, 220, [var("e"), Span(" = "), var("u"), Span(" · "),
+                         var("c")], e, de)
+
+    def edge(src, dst, side, bwd_label):
+        """Arrow pair on the line between two node centers.  ``side`` = +1
+        puts the backward arrow below the forward one (in screen terms),
+        -1 above; its label goes further out on the same side."""
+        dx, dy = dst.cx - src.cx, dst.cy - src.cy
+        L = math.hypot(dx, dy)
+        ux, uy = dx / L, dy / L
+        nx, ny = -uy, ux                      # unit normal, pointing down
+        t0 = (w / 2) / abs(dx)                # leave src through its side
+        t1 = 1 - (w / 2) / abs(dx)
+        p0 = (src.cx + dx * t0 + 3 * ux, src.cy + dy * t0 + 3 * uy)
+        p1 = (src.cx + dx * t1 - 3 * ux, src.cy + dy * t1 - 3 * uy)
+        fo, bo = -side * OFF, side * OFF
+        f.arrow(p0[0] + nx * fo, p0[1] + ny * fo,
+                p1[0] + nx * fo, p1[1] + ny * fo, stroke=FWD, sw=SW)
+        f.arrow(p1[0] + nx * bo, p1[1] + ny * bo,
+                p0[0] + nx * bo, p0[1] + ny * bo, stroke=BWD, sw=SW)
+        mx, my = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+        lo = side * (OFF + 17)
+        label(f, mx + nx * lo, my + ny * lo, bwd_label, color=GRAD)
+
+    times = Span("×")
+    edge(na, nu, +1, [times, Span("1")])
+    edge(nb, nu, -1, [times, Span("1")])
+    edge(nu, ne, +1, [times, var("c")])
+    edge(nc, ne, -1, [times, var("u")])
+
+    legend(f, 6, 300, "forward pass: values", FWD)
+    legend(f, 6, 324, "backward pass: gradients of e", GRAD, var_last=True)
+    save(f, "mdl-mlp-backprop-small",
+         "Computational graph of e = (a + b) c at a = 2, b = 1, c = -3 with "
+         "forward values and backward gradients.")
+
+
+# --------------------------------------------------------------------------- #
+# The MLP: forward graph and the worked example                               #
+# --------------------------------------------------------------------------- #
+
+XS = [50.0, 204.0, 358.0, 512.0, 666.0]   # x of X, Z, H, O, L (both figures)
+
+
+def fig_forward_graph():
+    """POINT: the forward pass of a one-hidden-layer MLP with weight decay is
+    a graph whose nodes are the layer's intermediate values; each weight
+    reaches the objective along two paths (the loss and the penalty), and the
+    shapes say what the values cost to keep."""
+    f = Figure()
+    yc = 330.0
+
+    def chain(cx, title, shape):
+        return Node(f, cx, yc, title, [dict(text=shape, color=T.MUTED)])
+
+    nX = chain(XS[0], [bold("X")], "n×784")
+    nZ = chain(XS[1], [bold("Z")], "n×256")
+    nH = chain(XS[2], [bold("H")], "n×256")
+    nO = chain(XS[3], [bold("O")], "n×10")
+    nL = chain(XS[4], [var("L")], "scalar")
+
+    yp = 205.0
+    nW1 = Node(f, XS[1], yp, W(1), [dict(text="784×256", color=T.MUTED)],
+               param=True)
+    nW2 = Node(f, XS[3], yp, W(2), [dict(text="256×10", color=T.MUTED)],
+               param=True)
+    ys = 80.0
+    ns = Node(f, XS[2], ys, [var("s")],
+              [dict(spans=[Span("penalty")], color=T.MUTED)])
+    nJ = Node(f, XS[4], ys, [var("J")],
+              [dict(spans=[var("L"), Span(" + "), var("s")], color=T.MUTED)])
+
+    for a, b, lab in [(nX, nZ, None), (nZ, nH, [var("ϕ")]),
+                      (nH, nO, None), (nO, nL, None)]:
+        x0, x1 = a.r + 3, b.l - 3
+        f.arrow(x0, yc, x1, yc, stroke=FWD, sw=SW)
+        if lab:
+            label(f, (x0 + x1) / 2, yc - 16, lab, color=FWD)
+    for nW, n in [(nW1, nZ), (nW2, nO)]:
+        f.arrow(n.cx, nW.b + 3, n.cx, n.t - 3, stroke=FWD, sw=SW)
+    # both weights also feed the weight-decay penalty s (a fork)
+    for nW, sx in [(nW1, ns.l + 20), (nW2, ns.r - 20)]:
+        f.arrow(nW.cx, nW.t - 3, sx, ns.b + 3, stroke=FWD, sw=SW)
+    f.arrow(ns.r + 3, ys, nJ.l - 3, ys, stroke=FWD, sw=SW)
+    f.arrow(nL.cx, nL.t - 3, nL.cx, nJ.b + 3, stroke=FWD, sw=SW)
+
+    legend(f, XS[0] - 42, ys, "forward pass", FWD)
+    save(f, "mdl-mlp-forward-graph",
+         "Forward computational graph of a one-hidden-layer MLP with weight "
+         "decay, with the shape of every node.")
 
 
 def fig_backprop_graph():
-    r"""The section's worked example as a computational graph.
-
-    Network: x -> z = W1 x -> h = relu(z) -> o = W2 h -> L = 1/2 (o-y)^2,
-    with lambda = 0 (no regularization, to keep the picture about the chain
-    rule).  Forward values flow left-to-right in black; backpropagation flows
-    right-to-left in blue, each return arrow labelled with the gradient that
-    arrives there, and the two parameter gradients drop off below their nodes.
-    Every number is recomputed here so the figure cannot drift from the text."""
-    # --- recompute the worked example exactly (single source of truth) ---
-    x = np.array([1.0, 2.0])
-    W1 = np.array([[1.0, -1.0], [0.0, 1.0]])
-    W2 = np.array([[2.0, -1.0]])
+    """POINT: the worked example, with every forward value and every
+    gradient; the backward pass reaches W(2) before W(1), and the inactive
+    first hidden unit zeros the first column of the gradient of W(1)."""
+    X = np.array([[1.0, 2.0]])
+    W1 = np.array([[1.0, 0.0], [-1.0, 1.0]])
+    W2 = np.array([[2.0], [-1.0]])
     y = 0.0
+    Z = X @ W1
+    H = np.maximum(Z, 0.0)
+    O = H @ W2
+    L = 0.5 * float(((O - y) ** 2).sum())
+    G_O = O - y
+    dW2 = H.T @ G_O
+    G_H = G_O @ W2.T
+    G_Z = G_H * (Z > 0)
+    dW1 = X.T @ G_Z
+    assert L == 2.0 and np.allclose(dW1, [[0, 2], [0, 4]])
+    assert np.allclose(dW2, [[0], [-4]]) and np.allclose(G_Z, [[0, 2]])
 
-    z = W1 @ x                       # [-1, 2]
-    h = np.maximum(0.0, z)           # [0, 2]   (first unit dead)
-    o = float((W2 @ h)[0])           # -2
-    L = 0.5 * (o - y) ** 2           # 2
+    f = Figure()
+    yc = 330.0
 
-    dLdo = o - y                     # -2
-    dLdW2 = dLdo * h                 # [0, -4]
-    dLdh = (W2.T * dLdo).ravel()     # [-4, 2]
-    relu_grad = (z > 0).astype(float)
-    dLdz = dLdh * relu_grad          # [0, 2]
-    dLdW1 = np.outer(dLdz, x)        # [[0,0],[2,4]]
+    def chain(cx, title, value, grad=None):
+        """A value node; 1 x 2 rows are drawn as bracketed matrices, as in
+        the prose (parentheses would denote column vectors)."""
+        def row(v, color):
+            if v is None:
+                return dict(text="", color=color, h=24.0)
+            if isinstance(v, np.ndarray):
+                return dict(matrix=v, color=color, h=24.0)
+            return dict(text=v, color=color, h=24.0)
+        return Node(f, cx, yc, title, [row(value, T.INK), row(grad, GRAD)])
 
-    # sanity: the values the prose asserts
-    assert L == 2.0
-    assert np.allclose(dLdW2, [0.0, -4.0])
-    assert np.allclose(dLdz, [0.0, 2.0])
-    assert np.allclose(dLdW1, [[0.0, 0.0], [2.0, 4.0]])
+    nX = chain(XS[0], [bold("X")], X)
+    nZ = chain(XS[1], [bold("Z")], Z, G_Z)
+    nH = chain(XS[2], [bold("H")], H, G_H)
+    nO = chain(XS[3], [var("o")], num(O), num(G_O))
+    nL = chain(XS[4], [var("L")], num(L), "1")
 
-    fig, ax = plt.subplots(figsize=(11.2, 4.2))
-    ax.set_xlim(0, 16)
-    ax.set_ylim(0, 6)
-    ax.set_aspect("equal")
-    ax.axis("off")
+    yp = 160.0
+    mrow = dict(h=40.0)
+    nW1 = Node(f, XS[1], yp, W(1),
+               [dict(matrix=W1, color=T.INK, **mrow),
+                dict(matrix=dW1, color=GRAD, **mrow)], param=True)
+    nW2 = Node(f, XS[3], yp, W(2),
+               [dict(matrix=W2, color=T.INK, **mrow),
+                dict(matrix=dW2, color=GRAD, **mrow)], param=True)
 
-    yc = 3.4                        # node-row centre
-    bw, bh = 2.05, 1.05             # node box size
-    centres = [1.55, 5.0, 8.0, 11.0, 14.3]   # x of x, z, h, o, L
+    T_ = sup("T")
+    h_pair(f, nX, nZ, yc, back=False)
+    h_pair(f, nZ, nH, yc, fwd=[Span("ReLU")],
+           bwd=["ODOT", [Span(" "), var("ϕ"), Span("′("), bold("Z"),
+                         Span(")")]])
+    h_pair(f, nH, nO, yc, bwd=[[Span("· "), bold("W"), sup("(2)T")]])
+    h_pair(f, nO, nL, yc, fwd=[[Span("½("), var("o"), Span(" − "),
+                                var("y"), Span(")"), sup("2")]],
+           bwd=[[var("o"), Span(" − "), var("y")]])
+    v_pair(f, nW1, nZ, XS[1], bwd=[[bold("X"), T_, Span(" ·")]])
+    v_pair(f, nW2, nO, XS[3], bwd=[[bold("H"), T_, Span(" ·")]])
 
-    def node(cx, name, value, color):
-        x0, y0 = cx - bw / 2, yc - bh / 2
-        for fc, a in [(color, 0.12), ("none", 1.0)]:
-            ax.add_patch(FancyBboxPatch(
-                (x0, y0), bw, bh,
-                boxstyle="round,pad=0.02,rounding_size=0.12",
-                linewidth=1.8, edgecolor=color, facecolor=fc, alpha=a))
-        ax.text(cx, yc + 0.20, name, ha="center", va="center",
-                fontsize=13, color=color)
-        ax.text(cx, yc - 0.27, value, ha="center", va="center",
-                fontsize=12, color=GRAY, usetex=False)
-        return dict(l=x0, r=x0 + bw, cx=cx)
-
-    nx = node(centres[0], r"$\mathbf{x}$", f"${_fmt_vec(x)}$", GREEN)
-    nz = node(centres[1], r"$\mathbf{z}$", f"${_fmt_vec(z)}$", BLUE)
-    nh = node(centres[2], r"$\mathbf{h}$", f"${_fmt_vec(h)}$", BLUE)
-    no = node(centres[3], r"$o$", f"${o:.0f}$", BLUE)
-    nL = node(centres[4], r"$L$", f"${L:.0f}$", ORANGE)
-    nodes = [nx, nz, nh, no, nL]
-
-    # --- forward arrows (black, above the row), labelled with the operation ---
-    fwd_ops = [r"$\times\,\mathbf{W}^{(1)}$", r"$\phi=\mathrm{ReLU}$",
-               r"$\times\,\mathbf{W}^{(2)}$", r"$\frac{1}{2}(o-y)^2$"]
-    yf = yc + bh / 2 + 0.05
-    for (a, b), op in zip(zip(nodes[:-1], nodes[1:]), fwd_ops):
-        x0, x1 = a["r"] + 0.12, b["l"] - 0.12
-        fl.arrow(ax, (x0, yf), (x1, yf), color=FWD, lw=2.0, mut=13)
-        ax.text((x0 + x1) / 2, yf + 0.34, op, ha="center", va="bottom",
-                fontsize=11.5, color=FWD)
-
-    # --- backward arrows (blue, below the row), labelled with the gradient ---
-    back_lbls = [
-        r"$\frac{\partial L}{\partial \mathbf{z}}=" + _fmt_vec(dLdz) + "$",
-        r"$\frac{\partial L}{\partial \mathbf{h}}=" + _fmt_vec(dLdh) + "$",
-        r"$\frac{\partial L}{\partial o}=" + f"{dLdo:.0f}" + "$",
-        r"seed $1$",
-    ]
-    yb = yc - bh / 2 - 0.05
-    for (a, b), lbl in zip(zip(nodes[:-1], nodes[1:]), back_lbls):
-        x0, x1 = b["l"] - 0.12, a["r"] + 0.12
-        fl.arrow(ax, (x0, yb), (x1, yb), color=BLUE, lw=2.0, mut=13)
-        ax.text((x0 + x1) / 2, yb - 0.30, lbl, ha="center", va="top",
-                fontsize=11.5, color=BLUE)
-
-    # --- parameter gradients (the payoff) drop off below their layers, blue ---
-    y_drop_tip = yc - bh / 2 - 1.30
-    y_lbl = y_drop_tip - 0.30
-    for n in (nz, no):
-        ax.annotate("", xy=(n["cx"], y_drop_tip), xytext=(n["cx"], yb - 0.05),
-                    arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.6,
-                                    shrinkA=0, shrinkB=0, mutation_scale=12))
-
-    # dL/dW1 is a 2x2 matrix: label on the left, hand-laid matrix on the right
-    ax.text(nz["cx"] - 0.30, y_lbl - 0.30,
-            r"$\frac{\partial L}{\partial \mathbf{W}^{(1)}}=$",
-            ha="right", va="center", fontsize=13, color=BLUE)
-    _matrix2x2(ax, nz["cx"] + 0.62, y_lbl - 0.30, dLdW1, BLUE, fontsize=12)
-
-    # dL/dW2 is a row vector
-    ax.text(no["cx"], y_lbl,
-            r"$\frac{\partial L}{\partial \mathbf{W}^{(2)}}=" + _fmt_vec(dLdW2) + "$",
-            ha="center", va="top", fontsize=13, color=BLUE)
-
-    # --- corner direction labels, echoing autograd-comp-graph.svg ---
-    ax.text(centres[0] - bw / 2, yc + 1.55, r"forward $\rightarrow$",
-            ha="left", va="center", fontsize=11, color=FWD, fontweight="bold")
-    ax.text(centres[-1] + bw / 2, yc - 1.55, r"$\leftarrow$ backward",
-            ha="right", va="center", fontsize=11, color=BLUE, fontweight="bold")
-
-    fl.save(fig, "mdl-mlp-backprop-graph")
+    legend(f, XS[2], nW1.t + 10, "forward pass: values", FWD, anchor="middle")
+    legend(f, XS[2], nW1.t + 34, "backward pass: gradients of L", GRAD,
+           anchor="middle", var_last=True)
+    save(f, "mdl-mlp-backprop-graph",
+         "The worked example as a computational graph with forward values and "
+         "backward gradients.")
 
 
-def fig_mdl_mlp_forward_graph():
-    r"""Computational graph of the *forward* pass, in the same house style as
-    :func:`fig_backprop_graph` so the two read as a matched pair.
-
-    This replaces the legacy hand-drawn ``forward.svg`` (black/white
-    glyph-outline squares-and-circles).  It draws the full forward computation
-    the section describes, including the weight-decay branch:
-
-        x --(x W1)--> z --(phi)--> h --(x W2)--> o --(loss)--> L
-        W1, W2 --(reg)--> s,   then   J = L + s.
-
-    Everything flows left-to-right and bottom-to-top, in black (``FWD``): this is
-    the forward pass *only*, with no backward (blue) sweep.  Node shapes,
-    palette roles (GREEN input, BLUE intermediates, ORANGE loss/objective, GRAY
-    given parameters), fonts, box size, and the ``fl.arrow`` helper match the
-    backprop graph exactly.  No numbers are shown here: the figure is the
-    schematic the prose calls for, and its numeric twin is the backprop graph."""
-    fig, ax = plt.subplots(figsize=(11.2, 5.6))
-    ax.set_xlim(0, 16)
-    ax.set_ylim(0, 8.0)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    bw, bh = 2.05, 1.05             # node box size -- identical to backprop graph
-    y_chain = 1.45                  # row A (bottom): the x -> ... -> L chain
-    y_param = 4.20                  # row B (middle): the weight matrices
-    y_obj = 6.55                    # row C (top): regularizer s, objective J
-    centres = [1.55, 5.0, 8.0, 11.0, 14.3]   # x of x, z, h, o, L (as backprop)
-
-    def node(cx, cy, name, color):
-        """A rounded node box with a single symbol, in the shared house style:
-        the same FancyBboxPatch + twin-fill look as the backprop graph's
-        ``node``, minus the numeric value caption (this figure is schematic)."""
-        x0, y0 = cx - bw / 2, cy - bh / 2
-        for fc, a in [(color, 0.12), ("none", 1.0)]:
-            ax.add_patch(FancyBboxPatch(
-                (x0, y0), bw, bh,
-                boxstyle="round,pad=0.02,rounding_size=0.12",
-                linewidth=1.8, edgecolor=color, facecolor=fc, alpha=a))
-        ax.text(cx, cy, name, ha="center", va="center",
-                fontsize=13, color=color)
-        return dict(l=x0, r=x0 + bw, cx=cx, t=y0 + bh, b=y0, cy=cy)
-
-    # --- row A: main chain, input -> intermediates -> loss ---
-    nx = node(centres[0], y_chain, r"$\mathbf{x}$", GREEN)
-    nz = node(centres[1], y_chain, r"$\mathbf{z}$", BLUE)
-    nh = node(centres[2], y_chain, r"$\mathbf{h}$", BLUE)
-    no = node(centres[3], y_chain, r"$\mathbf{o}$", BLUE)
-    nL = node(centres[4], y_chain, r"$L$", ORANGE)
-    chain = [nx, nz, nh, no, nL]
-
-    # forward arrows along the chain (black, above the row), labelled with the op.
-    # The two affine transitions also receive a weight dropping in from above, so
-    # their labels are nudged left of the arrow midpoint to clear that drop-arrow.
-    fwd_ops = [(r"$\times\,\mathbf{W}^{(1)}$", -0.55), (r"$\phi$", 0.0),
-               (r"$\times\,\mathbf{W}^{(2)}$", -0.55), (r"$l(\mathbf{o},y)$", 0.0)]
-    yf = y_chain + bh / 2 + 0.05
-    for (a, b), (op, dx) in zip(zip(chain[:-1], chain[1:]), fwd_ops):
-        x0, x1 = a["r"] + 0.12, b["l"] - 0.12
-        fl.arrow(ax, (x0, yf), (x1, yf), color=FWD, lw=2.0, mut=13)
-        ax.text((x0 + x1) / 2 + dx, yf + 0.30, op, ha="center", va="bottom",
-                fontsize=11.5, color=FWD)
-
-    # --- row B: the weight matrices, sitting above their affine transitions ---
-    # (GRAY = "given" parameters, distinct from the BLUE computed intermediates.)
-    cW1 = (nx["r"] + nz["l"]) / 2        # above the x -> z affine arrow
-    cW2 = (nh["r"] + no["l"]) / 2        # above the h -> o affine arrow
-    nW1 = node(cW1, y_param, r"$\mathbf{W}^{(1)}$", GRAY)
-    nW2 = node(cW2, y_param, r"$\mathbf{W}^{(2)}$", GRAY)
-
-    # Each weight drops straight down into its affine forward-arrow.
-    for nW in (nW1, nW2):
-        fl.arrow(ax, (nW["cx"], nW["b"] - 0.02), (nW["cx"], yf + 0.02),
-                 color=FWD, lw=1.8, mut=12)
-
-    # --- row C: regularizer s (from the weights) and objective J = L + s ---
-    cs = (cW1 + cW2) / 2                 # s centred over the two weight nodes
-    ns = node(cs, y_obj, r"$s$", BLUE)
-    nJ = node(centres[4], y_obj, r"$J$", ORANGE)   # J directly above L
-
-    # Both weights feed up into the regularizer s (the weight-decay branch).
-    for nW in (nW1, nW2):
-        fl.arrow(ax, (nW["cx"], nW["t"] + 0.02), (ns["cx"], ns["b"] - 0.02),
-                 color=FWD, lw=1.8, mut=12)
-    ax.text(cs, ns["t"] + 0.18, r"$\frac{\lambda}{2}\|\cdot\|_\mathrm{F}^2$",
-            ha="center", va="bottom", fontsize=11.5, color=FWD)
-
-    # The objective combines s (rightward) and the loss L (rising):  J = L + s.
-    fl.arrow(ax, (ns["r"] + 0.12, y_obj), (nJ["l"] - 0.12, y_obj),
-             color=FWD, lw=2.0, mut=13)
-    fl.arrow(ax, (nL["cx"], nL["t"] + 0.02), (nJ["cx"], nJ["b"] - 0.02),
-             color=FWD, lw=2.0, mut=13)
-    ax.text((ns["r"] + nJ["l"]) / 2, y_obj + 0.30, r"$J=L+s$",
-            ha="center", va="bottom", fontsize=11.5, color=FWD)
-
-    # --- corner direction label, echoing the backprop graph (forward only) ---
-    ax.text(centres[0] - bw / 2, y_obj + 0.95, r"forward $\rightarrow$",
-            ha="left", va="center", fontsize=11, color=FWD, fontweight="bold")
-
-    fl.save(fig, "mdl-mlp-forward-graph")
-
-
-FIGURES = [fig_backprop_graph, fig_mdl_mlp_forward_graph]
+FIGURES = [fig_backprop_small, fig_forward_graph, fig_backprop_graph]
 
 
 def main():
-    # Verify only the figures THIS script writes (the shared module's WRITTEN
-    # list also tracks the Linear Algebra figures, which we don't run here).
-    start = len(fl.WRITTEN)
     for fn in FIGURES:
         fn()
-    written = fl.WRITTEN[start:]
-    print(f"\nWrote {len(written)} figures to {fl.IMG_DIR}:")
-    for p in written:
+    print(f"Wrote {len(WRITTEN)} figures:")
+    for p in WRITTEN:
         size = os.path.getsize(p)
-        assert os.path.exists(p), f"missing: {p}"
         assert size > 0, f"empty: {p}"
-        with open(p, "r", encoding="utf-8") as fh:
-            assert "<svg" in fh.read(400), f"not valid SVG: {p}"
         print(f"  {os.path.basename(p):32s} {size:>8,d} bytes")
-    print(f"\nAll {len(written)} SVGs verified present, non-empty, valid.")
 
 
 if __name__ == "__main__":

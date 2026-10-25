@@ -14,54 +14,93 @@
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:fb78a58da4d0ad62f2779f295b906e8082de148147991975639480e37c3e28d1",
+      "code_fingerprint": "sha256:f7e58cd83ae932f117b2b90fc638f92599380dbfc0adee41ebe45139b193d8f6",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:88192192d517adb7a890059312f999479839dcf1d98aa13432f8da12f757d5d1",
+      "code_fingerprint": "sha256:acf3034204ca946e5a345179abd8eeea58066cb57c00236e1c85d375f081e4f3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  0.  4.  0.  8.  0.  0. 14.]\n [16.  0. 20. 22.  0. 26.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  0.  0.  0.  0. 10.  0.  0.]\n [16.  0.  0.  0. 24.  0.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean 0.999, variance 0.251\n"
         }
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:5c9667f4b341f79a66b72e5f719756cb2a8fb15a3728fbc06946de1858cb117c",
+      "code_fingerprint": "sha256:2377789efe09d40fa271d61e71ec6ec47c4ad21b3a2d4bcd170099b9137f22d1",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:6911875ceabaf725c322f2dddb6c546b4b6b46c9f75c225a70b357ce0d45c54c",
+      "code_fingerprint": "sha256:b117ec2bfefccd0222a5d28734132ca2cdc2b48f58d24bf2e74cd98059371432",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 38021,
-          "sha256": "sha256:1e92a8681f1ab54df6efba98776cf19558c21b37d77c48e3a8cf39e68f08a305"
+          "bytes": 35721,
+          "sha256": "sha256:82438cb1aff19b0e390e324f977661ba037fc783584d371437ba48adfe4c887c"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:f8947a9796f5456b939a2b816779c7c6b1d0d7c90da3493b9bea11b5d36b6817",
+      "code_fingerprint": "sha256:1821e00907d5054d5c1f2fd9bbb16a7316ac49487e709377704801f54d19c58e",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:ae0f7236b3d2588c0907fd4e1e37d166f7deb59d24d74b98fc2a5f346c66a997",
+      "code_fingerprint": "sha256:00d17327e33a66c4e4204cc5044b50fd05d157dbd5bd4a55332235c5ec74c0cd",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 39306,
-          "sha256": "sha256:682332b3fd602f14442df7d7c036c9f7058618ae3476db7ef642887f3b43b8c4"
+          "bytes": 35724,
+          "sha256": "sha256:5ee0ae9d6d71ab2298aba3c55c7baedebfd5384e733f29dfeee21d791cce58eb"
+        }
+      ]
+    },
+    "dropout-accuracy": {
+      "code_fingerprint": "sha256:6e7c71dd24161334a1d4221178b45e3541fc51aa47d637d6ff5a5f80f3a11e73",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dropout/dropout-accuracy-1.svg",
+          "bytes": 34988,
+          "sha256": "sha256:1cd85254f47fe9c386140928abe0fbf2a817b9d0b14dac7d6ce6a246a9d31359"
+        }
+      ]
+    },
+    "dropout-robustness-to-missing-units-1": {
+      "code_fingerprint": "sha256:eadb3c9e529a28aff0aa4efa13057ebc870cf65e1f094fcebe86ed0f0e2991c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "dropout-robustness-to-missing-units-2": {
+      "code_fingerprint": "sha256:a7efa4b3026e7a3699ed32a75dd58b0ac32452354f8e9fb4910f02b383588a49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trained with dropout: validation accuracy 0.872, with masks 0.858\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trained without dropout: validation accuracy 0.872, with masks 0.767\n"
         }
       ]
     }

@@ -9,18 +9,34 @@
   },
   "cells": {
     "backprop-forward-propagation-backward-propagation-and-computational-graphs": {
-      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "code_fingerprint": "sha256:155b2e0c15ee50d07f2f8bd86ea684c1ee9e25175f43a9651a80ceaf1b5780ea",
       "kind": "text",
       "outputs": []
     },
     "backprop-verify": {
-      "code_fingerprint": "sha256:dbbafb726caf47b2f7b81a78b1fef613e47e40604946c8df0de74d6c0b63127b",
+      "code_fingerprint": "sha256:abffcf22390b22e5471de2f808cbf3e10475a62bfd579e2b9acd2d9c06849e85",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = 2.0, dL/dW2 = tensor([[-0., -4.]]), dL/dh = tensor([-4.,  2.])\ndL/dz = tensor([0., 2.]), dL/dW1 =\ntensor([[0., 0.],\n        [2., 4.]])\n"
+          "text": "L = 2.0, dL/db2 = tensor([-2.]), dL/db1 = tensor([0., 2.])\ndL/dW2 =\ntensor([[ 0.],\n        [-4.]])\ndL/dW1 =\ntensor([[0., 2.],\n        [0., 4.]])\n"
+        }
+      ]
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-1": {
+      "code_fingerprint": "sha256:98cb2256176bf6359e96c07e0bad370b2cb18dff4c3463b34ba7ca65b33b4eba",
+      "kind": "text",
+      "outputs": []
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-2": {
+      "code_fingerprint": "sha256:970853f11ab5c554f03e6f996f0e881068227eb5aee10762c18b703d9ec5e8df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1: relative difference 4.5e-16\nb1: relative difference 2.7e-16\nW2: relative difference 4.1e-16\nb2: relative difference 2.1e-16\n"
         }
       ]
     }

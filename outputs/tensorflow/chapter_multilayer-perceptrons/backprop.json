@@ -14,13 +14,29 @@
       "outputs": []
     },
     "backprop-verify": {
-      "code_fingerprint": "sha256:fd5117cc2a2cf11f4d8baf7988af43359fa2a1d28cd5ffa8897c87cff82a82f0",
+      "code_fingerprint": "sha256:c710193f7e5499e1a8e30cc2e09a7672603fc26f0ec3d9209f56ea77edeecb9a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = 2.0, dL/dW2 = [[-0. -4.]], dL/dh = [-4.  2.]\ndL/dz = [-0.  2.], dL/dW1 =\n[[-0. -0.]\n [ 2.  4.]]\n"
+          "text": "L = 2.0, dL/db2 = [-2.], dL/db1 = [-0.  2.]\ndL/dW2 =\n[[-0.]\n [-4.]]\ndL/dW1 =\n[[-0.  2.]\n [-0.  4.]]\n"
+        }
+      ]
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-1": {
+      "code_fingerprint": "sha256:58dd097608f009d038b4f0d75d055bafe79ea8775248b29b8ea17a3e19e88299",
+      "kind": "text",
+      "outputs": []
+    },
+    "backprop-checking-the-backward-pass-on-a-minibatch-2": {
+      "code_fingerprint": "sha256:36b16e67e2e2d00748deb48a7711ee2fb3e0b41f6184f38317aff23f19f613b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1: relative difference 2.3e-16\nb1: relative difference 1.2e-16\nW2: relative difference 1.8e-16\nb2: relative difference 4.4e-16\n"
         }
       ]
     }

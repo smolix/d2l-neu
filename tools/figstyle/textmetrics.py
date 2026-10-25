@@ -71,9 +71,14 @@ def _metrics(family: str, style: str):
     f = _font(family, style)
     upm = f["head"].unitsPerEm
     os2 = f["OS/2"]
+    cmap = dict(f.getBestCmap())
+    # The book's \phi renders as the stroked phi (U+03D5); Source Sans 3 maps
+    # that code point to its looped form and keeps the stroked one as 'phi.a'.
+    if 0x3D5 in cmap and "phi.a" in f.getGlyphOrder():
+        cmap[0x3D5] = "phi.a"
     return {
         "upm": upm,
-        "cmap": f.getBestCmap(),
+        "cmap": cmap,
         "hmtx": f["hmtx"],
         "ascent": f["hhea"].ascender / upm,
         "descent": -f["hhea"].descender / upm,

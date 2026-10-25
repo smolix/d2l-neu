@@ -57,6 +57,7 @@ import tensorflow as tf
 ```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=5}
 %%tab jax
 %matplotlib inline
+import collections
 from d2l import jax as d2l
 from flax import nnx
 import jax
@@ -589,7 +590,10 @@ the module. We compile one training step (forward pass, loss, gradients, and
 the update `optimizer.update(model, grads)`) into a single function,
 `_trainer_train_step`, with a companion `_trainer_validation_step`. With
 `has_aux=True`, `nnx.grad` differentiates the `'loss'` entry of the step's
-metrics and also returns the whole dictionary. Both functions are defined at
+metrics and also returns the whole dictionary. Both return the metrics as an
+`OrderedDict`: `jit` hands back a plain dictionary with its keys sorted, which
+would draw `acc` before `loss` and give the curves other colors than in the
+other frameworks. Both functions are defined at
 module level, and each is compiled once per minibatch shape in every call of
 `fit`. They receive the two views of the model, for training and for
 evaluation, that `prepare_model` creates in :numref:`sec_oo-design`.
@@ -694,7 +698,8 @@ def validate(self):
 @nnx.jit  #@save
 def _trainer_train_step(model, optimizer, batch):
     def loss_fn(model):
-        out = d2l.as_metrics(model.training_step(batch))
+        out = collections.OrderedDict(
+            d2l.as_metrics(model.training_step(batch)))
         return out['loss'], out
     grads, out = nnx.grad(loss_fn, has_aux=True)(model)
     optimizer.update(model, grads)
@@ -702,7 +707,8 @@ def _trainer_train_step(model, optimizer, batch):
 
 @nnx.jit  #@save
 def _trainer_validation_step(model, batch):
-    return d2l.as_metrics(model.validation_step(batch))
+    return collections.OrderedDict(
+        d2l.as_metrics(model.validation_step(batch)))
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):

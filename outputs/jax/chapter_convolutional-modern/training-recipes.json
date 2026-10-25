@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 29157,
-          "sha256": "sha256:d387dd4cd2ce1d1fcdc479f6e81bd7cc90c289f5ce4fd4809c9ece8f0bc51a68"
+          "sha256": "sha256:ed100dcb92b521e0c4aab7bf1032686feeefa660926dbfff48008782f062f973"
         }
       ]
     },
@@ -49,14 +49,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.91\n"
+          "text": "lambda = 0.22\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 67811,
-          "sha256": "sha256:ad60175c7ec3451c16cd80fd566c146ac62e8a99d63e88f8367c0e649e604bf3"
+          "bytes": 68139,
+          "sha256": "sha256:aa498f0609e5321e8db2b36327f86fea8d99ab5bdcbf5848a29cbabfe3f33ef7"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of samples with a dropped branch: 0.491\n"
+          "text": "fraction of samples with a dropped branch: 0.512\n"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-averaging-weights-1.svg",
-          "bytes": 25647,
-          "sha256": "sha256:92cf1485fc39c56aaf717e09e917a30395b2748cf2df786a99c2418aed36f660"
+          "bytes": 25674,
+          "sha256": "sha256:eace04ef4f7dccd0b94cfdcdab7fb671b8d6d62af4a0ded89f4af121daa3e79b"
         }
       ]
     },
@@ -102,12 +102,12 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-4-1.svg",
-          "bytes": 40162,
-          "sha256": "sha256:403ec0dd10f4744c6a0f5875aa96e73964aff4e05cba68de057246630058a7b8"
+          "bytes": 41904,
+          "sha256": "sha256:e1d9a4d964159af3efc4480904fac3dc601a4ae152164be5756bb5cf60fd5033"
         },
         {
           "type": "execute_result",
-          "text": "0.8962"
+          "text": "0.897"
         }
       ]
     },
@@ -119,12 +119,12 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-5-1.svg",
-          "bytes": 41489,
-          "sha256": "sha256:501655b34283815a6691403749bd339e046ec242a9286513397cd2cdc60c51b5"
+          "bytes": 41999,
+          "sha256": "sha256:624eac1c558e2109ad9261a96701dda8c4f93df76b2168f2acff34c094fa34c4"
         },
         {
           "type": "execute_result",
-          "text": "0.908"
+          "text": "0.9083"
         }
       ]
     },

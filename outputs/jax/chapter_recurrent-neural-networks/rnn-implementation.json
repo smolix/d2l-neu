@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 23561,
-          "sha256": "sha256:a8187ce6599eb45f8919134efcdafb5dcbc51b47bd3c63a0c6f8c4351925bb20"
+          "bytes": 25036,
+          "sha256": "sha256:e6fcdfca4f6fa77e3c2e0b2c2bec42f17a4e1df8bafa8e7ad09752848808688c"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 98.0\n"
+          "text": "validation perplexity 96.4\n"
         }
       ]
     },
@@ -114,7 +114,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.38 bits per byte\n"
+          "text": "2.78 bytes/token, 2.37 bits per byte\n"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time travellert.\\n\\n'In I had\\nafter a\\nmancied I saw\\ngler.\\n\\n'In I\n    had\\nafter a\\nmancied I saw\\ngler.\\n\\n\"\n"
+          "text": "'the time travellercession of\\nthesecurity of\\nthesecurity of\\nthesecurity\n    of\\nthesecurity of\\nthesecurity of\\nthesecurity of\\nthesecurity\n    of\\nthesecur'\n"
         }
       ]
     },
@@ -141,7 +141,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller thought of it, as I did not me that us my in space,\n    backead appancen grizumvince up what ind\nthe time travellerll\nthere I had regreed up.\n\n'I looked round my head, as I had\naested or me\n"
+          "text": "the time travellerated galliculme br of it. They upfareots feucherent; but\n    even held, g conery pass\nthe time travellerticke of a\nsharacter.\n\n'I looked round me.\n\n'What,\nanderest\n"
         }
       ]
     },
@@ -178,8 +178,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 24895,
-          "sha256": "sha256:fcd532b11fd50b4f01e4b5fefeab331e4f619eed0ba25afe1f3ddcc69184d36c"
+          "bytes": 24903,
+          "sha256": "sha256:6c02dc49d42e262e783e1b79e58f1955e1dbc01645e2978c3f65d0d43517b584"
         }
       ]
     },
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 109.4, \"the time traveller, and I was in the thick dust, and in\n    the Time Traveller.\\n\\n'I think I have a starting\\ns\"\n"
+          "text": "perplexity 114.1, \"the time traveller.\\n\\n'Then I was\n    so\\nweerable,\\ntheir\\ndark\\ntheirit, I had\\nt\"\n"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      32.3     98.0\n concise      17.2    109.4\n"
+          "text": "   model  time (s)  val ppl\n scratch      30.3     96.4\n concise      17.7    114.1\n"
         }
       ]
     }

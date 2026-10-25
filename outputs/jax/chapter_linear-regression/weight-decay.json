@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 28073,
-          "sha256": "sha256:1b70943972c3dcb75e3a0ab994d828ddb335ce94b7ccccab3380058eabede2a1"
+          "bytes": 28568,
+          "sha256": "sha256:bba7f6acf200f3dcdee09a83cff0bcead735801e10bcec3aa7890a2800abbfdd"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0205, norm of w 0.146\n"
+          "text": "validation loss 0.0186, norm of w 0.138\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 28181,
-          "sha256": "sha256:98e3197dd91cae690e3ada31ebe529a710ce9d69020c8ec51f4f61f259d94571"
+          "bytes": 29500,
+          "sha256": "sha256:6e4bf61c76d0f319d6dd331213d11f533876edb98acefb3c1fa4622993e53f48"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0091, norm of w 0.042\n"
+          "text": "validation loss 0.0100, norm of w 0.034\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "least squares (  8.55,  -6.55): test 0.010, disagreeing 0.573\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.011\nleast squares ( -4.83,   6.84): test 0.010, disagreeing 0.342\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.011\neigenvalues of X^T X / n: 4.6e-07, 2.1e+00\n"
+          "text": "least squares (  7.86,  -5.87): test 0.010, disagreeing 0.470\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\nleast squares ( -2.67,   4.65): test 0.010, disagreeing 0.142\n        ridge (  0.99,   0.99): test 0.011, disagreeing 0.010\neigenvalues of X^T X / n: 6.1e-07, 1.8e+00\n"
         }
       ]
     },
@@ -104,12 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the other 180 eigenvalues are at most 2e-06\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "mu from 5.6 to 15.3, factors from 0.65 to 0.84, df = 15.1\n"
+          "text": "the other 180 eigenvalues are at most 2e-06\nmu from 5.2 to 16.1, factors from 0.63 to 0.84, df = 15.1\n"
         }
       ]
     },
@@ -120,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0: determined part 0.056, rest 0.134\nlambda = 3: determined part 0.042, rest 0.004\n"
+          "text": "lambda = 0: determined part 0.045, rest 0.131\nlambda = 3: determined part 0.034, rest 0.003\n"
         }
       ]
     },
@@ -137,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 29472,
-          "sha256": "sha256:db2b4c0aa10b68c04828017cc3563241194d5d6ff97ee422cc65a1c93d2d5c75"
+          "bytes": 29778,
+          "sha256": "sha256:78d37b9b1293869dd6818ef669e25d359a9ebf6ddad78175fd7a86bd745ae686"
         }
       ]
     },
@@ -149,7 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0182, norm of w 0.042\n"
+          "text": "validation loss 0.0201, norm of w 0.034\n"
         }
       ]
     }

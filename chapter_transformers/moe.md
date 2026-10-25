@@ -608,7 +608,7 @@ methods produce loads closer to the dashed uniform reference and finish with
 lower training loss than the unbalanced run. This is one 800-step run per
 method and framework, so it establishes neither the frequency of routing
 collapse nor an uncertainty interval for the loss difference. In particular,
-the overlapping final losses of the two balanced methods do not support a
+the gap between the final losses of the two balanced methods does not support a
 quality ranking. The large-scale motivation for the bias controller comes
 from the separate experiments of :citet:`Wang.Gao.Zeng.ea.2024`.
 

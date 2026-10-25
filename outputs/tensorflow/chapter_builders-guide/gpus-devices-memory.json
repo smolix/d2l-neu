@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:c007514687a526dff2bb1a16eff32e04967fdfa3d42793bb19b689df96e0d869",
+    "d2l_lib_fingerprint": "sha256:297c980716248c6ae4104cdda66e811e43ac40d13bb0c64cb83ae4c9d82dc692",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7e1235240900>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e1234103300>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341bfd40>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x733ff8dfb000>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x733fec1fa4c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x733fec1fbc80>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce900>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce680>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce640>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce600>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7340800db280>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x733fec20a680>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x733fec20a400>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x733fec20a3c0>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.44956338, 0.12775362, 0.7496455 ],\n       [0.85422397, 0.7500856 , 0.5636759 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.0451777 , 0.71656656, 0.37614787],\n       [0.72383785, 0.20422935, 0.8078693 ]], dtype=float32)>"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.4495634, 1.1277536, 1.7496455],\n       [1.854224 , 1.7500856, 1.5636759]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.0451777, 1.7165666, 1.3761479],\n       [1.7238379, 1.2042294, 1.8078693]], dtype=float32)>"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-1.8785037],\n       [-1.8785037]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.5509429],\n       [1.5509429]], dtype=float32)>"
         }
       ]
     },
@@ -132,7 +132,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights              160.2 MiB\n+ activations        352.6 MiB\n+ gradients          304.4 MiB\n"
+          "text": "weights              160.2 MiB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "+ activations        352.6 MiB\n+ gradients          304.4 MiB\n"
         },
         {
           "type": "stream",
@@ -164,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2477 MiB, 0.13 sec\ncheckpointing=True   peak   1453 MiB, 0.18 sec\n"
+          "text": "checkpointing=False  peak   2477 MiB, 0.10 sec\ncheckpointing=True   peak   1453 MiB, 0.19 sec\n"
         }
       ]
     },
@@ -175,25 +180,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.1666 sec\n"
+          "text": "time to queue 32 matrix products: 0.0037 sec\ntime until they all finished:     0.0541 sec\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:550462c75d2aee6ce4a5c7d872a52e7d4f71c68eb662803ea8f0b3818e336bf7",
+      "code_fingerprint": "sha256:cca0c15d94a05543a971cef98e41f3cac45ab376e70290d19744150bbe99f601",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:d3538888691891a4b4998afe2742d7f7239a1147543b9f050a6b98eb4202d1bb",
+      "code_fingerprint": "sha256:15e49eae27e82b1a1494e374785683f49509a19549287d4090dbdd7eefbcb495",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 20108,
-          "sha256": "sha256:df8af9235d81b11ab9f3b53a84ea7ef91a5e21835bf1cb8a79ef696e02a37efa"
+          "bytes": 30520,
+          "sha256": "sha256:86172e18787f09190e23960e720e4b9e2339eacbdbc9c5c77aca023e6dd30e9b"
         }
       ]
     }

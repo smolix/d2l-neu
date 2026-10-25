@@ -90,9 +90,14 @@ library function, the prose says in one clause what it does
   `GPT` and `TransformerBlock` with nine to eleven positional flags are the
   pattern to avoid; pass components (`norm=nn.RMSNorm`, `attn_factory=...`)
   instead.
-- **Return values, not side effects.** Training returns a history; evaluation
-  returns a dict. No code reads results back from a plotting object
-  (`model.board.data['val_loss'][-1].y` appears about 15 times today).
+- **Return values, not side effects.** Training keeps a history
+  (`trainer.history`, a dict of per-epoch lists such as
+  `trainer.history['val_loss']`); evaluation returns a dict
+  (`trainer.evaluate(model, data)`). Steps return the loss or a dict of
+  metrics and never plot. No code reads results back from a plotting object;
+  the old `model.board.data['val_loss'][-1].y` scrapes (about 15 before the
+  2026-10 trainer redesign) are gone, and the board belongs to the trainer
+  (`trainer.board.yscale = 'log'`).
 - **One contract for all tabs.** A saved function has the same signature and
   the same return type in every framework. Today the attention modules return a
   tensor in PyTorch and a tuple in JAX, and `update_D` takes a loss object in

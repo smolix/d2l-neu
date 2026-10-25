@@ -626,7 +626,7 @@ for name, cell in cells.items():
 With their default initialization, the LSTM and the GRU recall the symbol
 after 10 steps and are at chance after 50; the LSTM fails, fully or in part,
 already at 20. The plain RNN is erratic: whether it succeeds changes from
-one delay to the next, and beyond 20 steps it never recalls more than half
+one delay to the next, and from 100 steps on it recalls at most about half
 of the symbols. The LSTM and the GRU whose keep gates start near one recall
 it after 200 steps. The architecture is the same in both pairs of rows; only
 the initialization differs. A gate that starts at one half halves the memory
@@ -1227,7 +1227,7 @@ $$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \q
 ::: {.slide title="Recap"}
 | | memory path | delayed recall, default | PTB perplexity |
 |---|---|---|---|
-| RNN | matrix and $\tanh$ | erratic; at most half beyond 20 steps | about 3.1 |
+| RNN | matrix and $\tanh$ | erratic; at most about half from 100 steps | about 3.1 |
 | LSTM | $\mathbf{f}_t \odot \mathbf{c}_{t-1}$ | lost by 20–50 steps | about 2.95 |
 | GRU | $\mathbf{z}_t \odot \mathbf{h}_{t-1}$ | lost by 50 steps | about 3.0 |
 | LSTM, GRU, keep gate | same | held for 200 steps | |

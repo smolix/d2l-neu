@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2c58db432ed27470c2c3ed12678f289b580eb64235b536d20dc73c37f5be06fb",
+    "d2l_lib_fingerprint": "sha256:8a0c8cf06b0ae6fdb98779d50a0d6368d2ada83c123d73005d8739c7b8659b16",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[0.2261, 0.1857, 0.2394, 0.1946, 0.1542],\n         [0.1778, 0.1561, 0.3003, 0.2402, 0.1256]]),\n tensor([1., 1.]))"
+          "text": "(tensor([[0.2630, 0.1302, 0.1419, 0.2042, 0.2606],\n         [0.2590, 0.1598, 0.2366, 0.1659, 0.1787]]),\n tensor([1.0000, 1.0000]))"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22394,
-          "sha256": "sha256:c847a186c5c30304f181371223dfde7cc1ed73a769d7359124c5cb5db1521515"
+          "bytes": 30559,
+          "sha256": "sha256:2838a633e77e122471475b84a68bcd97140c38e7f31c939a6e9d5af99986c37b"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.831\n"
+          "text": "Test accuracy: 0.822\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 48609,
-          "sha256": "sha256:5ba0cc686c09f5b7610f473318d451c3430b6412721d94d8ae59d0c34a49e52d"
+          "bytes": 49797,
+          "sha256": "sha256:83fe60bd7db5d3f91df4d02dc48ef2c75b0597645cdc05e41d2c04b7ea2dda64"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21538,
-          "sha256": "sha256:73b2123ef5bafb7e46e6aad19120af836d918718d86093d9075e185c262da561"
+          "bytes": 21533,
+          "sha256": "sha256:74f63ab6741d4249142063f19dcd5df55657173664e00460194ff1881db93ed5"
         }
       ]
     }

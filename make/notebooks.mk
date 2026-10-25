@@ -143,11 +143,14 @@ $(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS JAX_TOTAL_SLOTS,$(eval $(call _detected,
 # grab 75 % of GPU on init (1.6 GiB instead of ~19 GiB resident). OMP/BLAS=2:
 # trims the unrelated "python" OpenMP pool by ~60 threads.
 #
-# We do NOT set JAX_PLATFORMS=cuda: nearly every JAX training notebook hits
-# d2l.Module.plot(), which calls d2l.cpu() / jax.devices('cpu') to move
-# metrics to host for matplotlib. Restricting to cuda makes those notebooks
-# fail with "Unknown backend cpu". Leaving the CPU backend in costs ~64
-# extra tf_XLAEigen threads (still well under the ulimit headroom).
+# We do NOT set JAX_PLATFORMS=cuda: notebooks call d2l.cpu() /
+# jax.devices('cpu') (e.g. gpus-devices-memory), which fails with "Unknown
+# backend cpu" when the platform list excludes cpu. Until the 2026-10 trainer
+# redesign every training notebook needed it, because d2l.Module.plot moved
+# metrics to the host through d2l.cpu(); the Trainer now converts its epoch
+# sums with float() and needs no CPU backend, but dropping it book-wide is
+# untested. Leaving the CPU backend in costs ~64 extra tf_XLAEigen threads
+# (still well under the ulimit headroom).
 EXTRA_ENV_jax := XLA_PYTHON_CLIENT_PREALLOCATE=false \
                  OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
                  D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS) \

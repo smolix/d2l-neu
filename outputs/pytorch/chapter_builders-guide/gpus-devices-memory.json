@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cf8b96953bcd1b1735f0f20aa246be7086caa9ad2eaa8570e79b665daf7f6f1e",
+    "d2l_lib_fingerprint": "sha256:d9224a6a6aec4b6a92c2b951df3fea87842f0cfacd340fb687ede674b21074ff",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.5733, 0.0055, 0.8154],\n        [0.9569, 0.5189, 0.8101]], device='cuda:1')"
+          "text": "tensor([[0.4829, 0.5542, 0.5931],\n        [0.9897, 0.7838, 0.1760]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.5733, 1.0055, 1.8154],\n        [1.9569, 1.5189, 1.8101]], device='cuda:1')"
+          "text": "tensor([[1.4829, 1.5542, 1.5931],\n        [1.9897, 1.7838, 1.1760]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.0290],\n        [1.0290]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-0.3571],\n        [-0.3571]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2358 MiB, 0.05 sec\ncheckpointing=True   peak   1335 MiB, 0.07 sec\n"
+          "text": "checkpointing=False  peak   2358 MiB, 0.04 sec\ncheckpointing=True   peak   1335 MiB, 0.05 sec\n"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0011 sec\ntime until they all finished:     0.0999 sec\n"
+          "text": "time to queue 32 matrix products: 0.0010 sec\ntime until they all finished:     0.0767 sec\n"
         }
       ]
     },
@@ -191,30 +191,30 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:              0.539 ms\n"
+          "text": "pageable copy:              0.596 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinned, non-blocking copy:  0.386 ms\n"
+          "text": "pinned, non-blocking copy:  0.368 ms\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:a0453419d608972cbcf1a7e0eea40e9cd5e52d6a86c64dd6d56ce3139e7dbeb4",
+      "code_fingerprint": "sha256:43407d54ee83161c79d5417dc69c3bf5d8dfe5979502c9012da6fa5d5af21816",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:fcbb35ebcbc24ca9e35a9d1fa8898aa3c8bf2514e6910469dd53da6134bf8b83",
+      "code_fingerprint": "sha256:4b15767f7806bf485fcec7d90c64618bfdbee9d2d61ed56fd6d9f5418ebc4ab2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 21806,
-          "sha256": "sha256:66e48bc19c9c7bd7f2b1dcc3b86bc900ad9afd4ae8e444a3594b6ecdbfc86945"
+          "bytes": 30517,
+          "sha256": "sha256:af7fd5bcc80e68d63879fc4ddb87f0c361562491b6b1034d03c6f9e50a028d1b"
         }
       ]
     }

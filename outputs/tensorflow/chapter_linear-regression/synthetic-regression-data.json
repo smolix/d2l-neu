@@ -9,70 +9,97 @@
   },
   "cells": {
     "synthetic-regression-data": {
-      "code_fingerprint": "sha256:9e2de9349ddb69727d16476a21493e211662e8982a48d31452d3aaaf6100949d",
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-1": {
-      "code_fingerprint": "sha256:8d9c3918d83973300a98370d11d0ebad2fda1ccbd11fdd324c711571412655dd",
+      "code_fingerprint": "sha256:4aa5f89720202af28bb4aebf77b99b7f77927b1cd6e8cc2e04747dd0e9872991",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-2": {
-      "code_fingerprint": "sha256:4bd9550e9d1f1d29432f229a6d5233b699940327fde21f42f44c9dc44d349518",
+      "code_fingerprint": "sha256:d7c04f7eedc94c88a0aa0abb65e882d654f4c2c889049b5a71e3f05a82ea37f0",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-3": {
-      "code_fingerprint": "sha256:cde7ff929de0ac6562d0d1d81900bdbbc028ad00d09637ac0c37a328d4dc40a9",
+      "code_fingerprint": "sha256:86c2cc58051c320615c5177c0fba31ec53583263b7b4d5b375630e1c276ae719",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: tf.Tensor([-0.84000164  2.662666  ], shape=(2,), dtype=float32) \nlabel: tf.Tensor([-6.5365863], shape=(1,), dtype=float32)\n"
+          "text": "features: (0.8644, -0.6680)\nlabel: 8.1989, noise: -0.0012\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-recovering-the-parameters-1": {
+      "code_fingerprint": "sha256:a68157082b003bbf3c1a8b7a88bb4161bfcd34ea0cddcf210c48dd5fd7df0572",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-regression-data-recovering-the-parameters-2": {
+      "code_fingerprint": "sha256:6113f1dbdd50c73ff90ca9fd2920bf7c3ada01d5df6d9508052dc81f4f6bc4c1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error in w: (-4.9e-04, -9.5e-06)\nerror in b: -7.0e-05\nstandard error: 3.2e-04\n"
         }
       ]
     },
     "synthetic-regression-data-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:d877b0c4ff1f59970cc6591c74f8c879d2373897b538495af6e25b9efcb8476b",
+      "code_fingerprint": "sha256:ca7e59b80dcab1fe95990a08e2e0699ae96bf0cc555d2d3a5a61f45779e80b95",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:e12ef16149b72e4055514c785b9951996bfcd6708fa014328cb8ae250b8a744b",
+      "code_fingerprint": "sha256:6e9a946adb99a236f88d25c921858eafc416ef7a12a38886ead67efb387b6f60",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "X shape: (32, 2) \ny shape: (32, 1)\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-reading-the-data-in-minibatches-1": {
+      "code_fingerprint": "sha256:9ceb083070aaf3ec4a3863d56cfca64ff758f06630f2996ee8154a8d8bf75593",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 minibatches, the last of size 8\nsecond pass: 0 minibatches\n"
         }
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-1": {
-      "code_fingerprint": "sha256:4dee8842d02d17d81c4f903f0ba372b6bd80b9df5783ead3ae42fd8b1c97257c",
+      "code_fingerprint": "sha256:e0d3baf74f2235aa77ae964a19e290a57af540a7bbdbf6df49487184c299ddd5",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-2": {
-      "code_fingerprint": "sha256:786238871ea6fd2c9436d750ac87cd6358871edd19c8f7c38bc0fb724c3f7934",
+      "code_fingerprint": "sha256:70d6a8e563bb7ef52c59e1054cd6cd56476801a58f2e4814e8895413955eb62c",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-3": {
-      "code_fingerprint": "sha256:babb2edb9c97431d6c506d7a8cd0976a8c0f3e545ef1662f363c8408a3e69050",
+      "code_fingerprint": "sha256:55290c439d16193a756ccb93e402e990e5a7cc6a3b06cb9fef3dd412211082ae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X shape: (32, 2) \ny shape: (32, 1)\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 0.24  5.88 -3.14]\na new pass starts with labels [ 7.55 -5.45  4.33]\n"
         }
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-4": {
-      "code_fingerprint": "sha256:51333316c96e86bce4eb37364ebcc5a936babc7cf75c5e09a6945faa39c9df4d",
+      "code_fingerprint": "sha256:c3aea86b50c3353e7cb4743e0ab0ea1ee8a3c68d19b3ef120a4b40ffcd4da1ed",
       "kind": "text",
       "outputs": [
         {

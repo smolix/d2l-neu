@@ -442,7 +442,7 @@ for X_i, y_i in data.val_dataloader():
 print(f'Test accuracy: {float(jnp.concatenate(correct).mean()):.3f}')
 ```
 
-The overall test accuracy comes out at roughly 82--83% (the exact value
+The overall test accuracy comes out at roughly 82--84% (the exact value
 varies a little from run to run), consistent with the training
 curve: the performance of this linear model on Fashion-MNIST. We are more interested in
 the images we label *incorrectly*. We visualize them by
@@ -632,7 +632,7 @@ packages the same computation into framework primitives, including a fused and
 numerically stable loss.
 
 **What this training curve shows.** In the displayed run, 10 epochs of minibatch
-SGD reach roughly 82--83% validation accuracy. The confusion matrix shows that
+SGD reach roughly 82--84% validation accuracy. The confusion matrix shows that
 many remaining errors involve upper-body garments with similar pixel patterns.
 This observation diagnoses the fitted model; it does not establish a universal
 accuracy ceiling for linear classifiers or rule out improvements from different
@@ -983,7 +983,7 @@ shows which class pairs account for many of its errors.
 
 Sweep the whole validation set and average the per-example correct flags
 returned by `accuracy(..., averaged=False)`: the overall test accuracy
-lands at roughly **82--83%** in the displayed run, matching the validation
+lands at roughly **82--84%** in the displayed run, matching the validation
 curve above.
 
 ::: {.d2l-note}
@@ -1071,7 +1071,7 @@ multilayer-perceptrons chapter) can represent nonlinear decision boundaries.
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
   accuracy reporting through the base class.
-- This run reaches **82--83%**; its confusion matrix concentrates errors among
+- This run reaches **82--84%**; its confusion matrix concentrates errors among
   visually similar upper-body garments and, to a lesser extent, footwear.
 - `exp(1000)` = `NaN`: the naive softmax is fragile and clipping does not address the overflow; the concise-softmax-regression section derives the stable approach.
 :::

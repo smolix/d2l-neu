@@ -1,5 +1,10 @@
 # Chapter Overview — chapter_preliminaries
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> the sections now carry 71 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 **Scope:** 7 sections with `## Exercises` (ndarray, pandas, linear-algebra, calculus,
 autograd, probability, lookup-api), book order per `_quarto.yml`; `index.md` has no
 exercises. All 7 are already strong by the prior style review (109-file group audit):

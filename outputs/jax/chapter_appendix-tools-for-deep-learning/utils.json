@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b468765b7d5b13c0031519bd3c81dedbf1a6bb770235f5a675476eef0fff0b4c",
+    "d2l_lib_fingerprint": "sha256:2546a0772403e96760180bd9aa380743d7716d92c0f3981689fb2376305bd659",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,27 +19,27 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:0b820bed23ffb627bc3492c06dc053e803d821e454bbb51573169219b67a0ab5",
+      "code_fingerprint": "sha256:b9ee1e2d3df39052fc7d55c15a5a967f79a9b185b7efc1a20bc99735debf67a4",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:6b03ae32b88358f7888e107498bb26a9a8543fa18344ff28bfcf3f528101515c",
+      "code_fingerprint": "sha256:37c19dfa68646e20c4c49f819ab3877e94d9d33a4436d8d3fbe2cb4dcbd360e1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:f9819f4aed2cee13291ba6b253fcd5102c3d3a8fc2a8c07914e036199d088e93",
+      "code_fingerprint": "sha256:6945b9b9d9ca10e322d719c5d849831becedb6548527d7dea19436f1cc7f6eb1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:ece304724b3860033e82dba2c52bdabbebb10941abb4bd5fe8857a320997a860",
+      "code_fingerprint": "sha256:9f0687f8d92a658da14ab5e6b879f424e0454fa1f86c90e9c740fb4ee0e23bb0",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:471a2baf74200653d4c314e31fdfd44604c608f494a8e780739331e3be267669",
+      "code_fingerprint": "sha256:b43227bdaaecdb6c33a3bbdc22274c584dcd04c1fdc2aae0c45e9cab384a66f9",
       "kind": "text",
       "outputs": []
     }

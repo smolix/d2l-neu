@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:61edd828e15930d136b21d11861a7067a5161176f40e005a431b22553be16230",
+    "d2l_lib_fingerprint": "sha256:3a33d9a49220df369b560e96b4789b620f67190efc586e3f43b6b0db55ebbc28",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,25 +25,20 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 28, 28, 6)\nAveragePooling2D output shape:\t (1, 14, 14, 6)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 10, 10, 16)\nAveragePooling2D output shape:\t (1, 5, 5, 16)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 28, 28, 6)\nAveragePooling2D output shape:\t (1, 14, 14, 6)\nConv2D output shape:\t (1, 10, 10, 16)\nAveragePooling2D output shape:\t (1, 5, 5, 16)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:70ed8f1ee5761ef5f97fb5266760cee52ce79fc423adfce4c855995b70facb0b",
+      "code_fingerprint": "sha256:e144fa62aead3cf6bd3c0da26dd005956341c6e6eec2111461d6ef31b98e1ff5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21489,
-          "sha256": "sha256:eeda41cc0a519515003c756dd4a2733827a8446f43144bde1f00ee714704e5cb"
+          "bytes": 37883,
+          "sha256": "sha256:b186b9d78ab44ca28ab0e092ec0357a9a6c96b624af763984c0290e24d3e848d"
         }
       ]
     }

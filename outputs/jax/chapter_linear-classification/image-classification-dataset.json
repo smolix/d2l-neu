@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c6b5e4fcd25857b2548e2834d0f5bd4b800f3a424a5fd9a0d3309e91e1d364f5",
+    "d2l_lib_fingerprint": "sha256:bff58411eba554c7b6b57d6ec412769fd90b9ea6bd4f343b0c89f77890c71d40",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.62 sec'"
+          "text": "'0.59 sec'"
         }
       ]
     },
@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
           "bytes": 49046,
-          "sha256": "sha256:9c4faeaf523759892fd772f3be1722ba6607e80df8f50fcc824a303cf07064b9"
+          "sha256": "sha256:72b1901d740d7f65e548026e02ea2a757f65dffe05b2dbc7f7cfde7d39596d0d"
         }
       ]
     }

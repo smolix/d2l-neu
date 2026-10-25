@@ -1227,8 +1227,12 @@ constructor does.
 
 :begin_tab:`pytorch`
 The dry run is such a common preamble that we fold it into the `d2l.Module`
-base class from :numref:`sec_oo-design`: run the model once to materialize
-every shape, then optionally apply an initialization function.
+base class from :numref:`sec_oo-design`: run the model once, without tracking
+gradients, to materialize every shape, then optionally apply an
+initialization function to every submodule. The `Trainer` performs the same
+dry run before training whenever a model still has lazy parameters, and it
+applies the model's `weight_init` attribute if the model defines one
+(:numref:`subsec_device_aware_trainer`).
 :end_tab:
 
 :begin_tab:`jax`
@@ -1259,9 +1263,11 @@ completes it:
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
 def apply_init(self, inputs, init=None):
-    self.forward(*inputs)
+    """Run a dry pass to fix lazy shapes, then apply `init`."""
+    with torch.no_grad():
+        self(*inputs)
     if init is not None:
-        self.net.apply(init)
+        self.apply(init)
 ```
 
 :begin_tab:`pytorch`

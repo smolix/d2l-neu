@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:2618a5bb6a9caefaeaf7a775161621c7cf2ae8cdaae6f4baa145e7a96b183ff4",
+    "d2l_lib_fingerprint": "sha256:b2a2c5d32071f2526856cd3e43e91f376a8444acb40ad1bbe8634817d4a7adb1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 20444,
-          "sha256": "sha256:d61fe868b12c1f4c2b8c4f65074cad499ac2ed49c5e0c1d7bde6416675a2828b"
+          "bytes": 32889,
+          "sha256": "sha256:44ec3f39f39c3be2d1555193993e077fd8ed38655e420f46c67c688c744ffd47"
         }
       ]
     },
@@ -74,12 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
         },
         {
           "type": "stream",
@@ -96,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20957,
-          "sha256": "sha256:161067a47cdf0634e860eb183604627d3d2260b633a7d3cc6fb6795601e1c628"
+          "bytes": 31888,
+          "sha256": "sha256:85775343e9908e2a518ee116e703e86b22647f459c7b415599eda6d6d7d44603"
         }
       ]
     },

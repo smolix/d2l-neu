@@ -4,22 +4,22 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:88a9ef3918eec95d73aee96cbcae5ce5a13d1e936cb7fedd7395b3a965c5781d",
+    "d2l_lib_fingerprint": "sha256:faf94e747e103fd697f0033ccefe6e0afdefe92e86f16735d91a88b7f935a2db",
     "max_inline_bytes": 0
   },
   "cells": {
     "lenet-convolutional-neural-networks-lenet": {
-      "code_fingerprint": "sha256:31d5a794ca1c2dd7cb4c5765925dabf00ea2561d3915e2d1ad4e76466c6dfe51",
+      "code_fingerprint": "sha256:ba8b4090845308987ae7b48eada76ea191e1274334e7c2b4553d0b24d372662c",
       "kind": "text",
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:0bec2a2dcab8db135dff0c4ca2b90a87db4ccf295ce677c2459832c81a5ed192",
+      "code_fingerprint": "sha256:ad49fac9a6898f3070d8388d57d75b7074599155f099503a5c58bdea6da108b6",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:368beb5802b0faaa392f5034bfaa3fbb3b83bed2acbfa9514109c9b4d7797837",
+      "code_fingerprint": "sha256:abb3f2bad5c0ab33fad689eec9ccf96e39281a410fe30533e60ae7943f3cae92",
       "kind": "text",
       "outputs": [
         {
@@ -30,15 +30,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:20a9de42c0c8940960653c7aa2d15cb965615e87c6cd500e069aa5ec04a1eda9",
+      "code_fingerprint": "sha256:6ffedd613ff2d0b9d227ecf32db039e90aa50327a3f286aca9e4a44239347462",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21507,
-          "sha256": "sha256:c4c9ec7c39d75fce6862bd29cfed2471ff11572f6392d7e3bc0d61f65c273845"
+          "bytes": 37867,
+          "sha256": "sha256:f1da1c0bbd2c55a1f438343761a4677aaccaaa3f545fce0438f44225f740d63f"
         }
       ]
     }

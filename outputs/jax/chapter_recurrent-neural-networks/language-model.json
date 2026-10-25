@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:bff7287bb364cf09d12780abaced0f47bca740965620ced96677c79deaffa285"
+          "sha256": "sha256:ec0e7afce0ca5054807ce26fc5795db2918fd34c30073798e90a9cad296056b9"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:eaa2b4237088470bb51843efd817c30810092c666fac538a82a4e9a67aebb9b8"
+          "sha256": "sha256:729c9695ecd54bfddc23bad75616ba081340732719e7a03778d1be8d2bdae9b3"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 46 301 299 269 335 296 109 758 620  99]\n [455 419 578 745 360 270 783 351 708  46]] \nY: [[301 299 269 335 296 109 758 620  99 117]\n [419 578 745 360 270 783 351 708  46 533]]\nX[0]: '. That I remember disc'\nY[0]: ' That I remember discu'\n"
+          "text": "X: [[432 409 280 257 101 107 115  46 508 289]\n [324 313 636 969 273 571 601  44 622 838]] \nY: [[409 280 257 101 107 115  46 508 289 665]\n [313 636 969 273 571 601  44 622 838  10]]\nX[0]: ' into his cheeks. His'\nY[0]: ' his cheeks. His gl'\n"
         }
       ]
     }

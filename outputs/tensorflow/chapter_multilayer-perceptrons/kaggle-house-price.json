@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e603e89573bdabfcdba22af9fe3d76d00700430f129d0f63a0a5cb32da44fbdc",
+    "d2l_lib_fingerprint": "sha256:ffb9c6b1745d310c504a3b7c8dc543f4c99452d2b1110ed2eea13feb9c8879c9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,30 +66,30 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:52a9ae4e3542861fe43a60a97f177b812b3a9c594a3a6b646fc44885ae237bd8",
+      "code_fingerprint": "sha256:9853b9ba2dd5b8673bd6f0bc8d6f0be6f1b6ef33312b347dbb2f356d18661071",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:d51af97a187bb76775e06567151fa4c6f7392b618f2a820d14a1f8fe3216a6f1",
+      "code_fingerprint": "sha256:1b8b8c29c9c5a1bdc41cc361dd7cd8fd5e3d4bd38c2eb9398e5c5e420ed0d3cf",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fold validation log mse = [0.0456, 0.0307, 0.0412, 0.0343, 0.0174]\nmean = 0.0339; sd = 0.0109\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31738,
-          "sha256": "sha256:3341469f04288bb2572598511073a723668a6efa5f27928b2d675c56872e1749"
+          "bytes": 41220,
+          "sha256": "sha256:32222401e15bf6d525811fd9efd5eef4d899508a35fdc7fd5465bc1af5593bbf"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fold validation log mse = [0.0381, 0.0267, 0.0519, 0.0333, 0.0221]\nmean = 0.0344; sd = 0.0115\n"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:10abc77cc9ed538081055c3a6a34937dc1ca1f14662a17da5a1d200a8b58e77b",
+      "code_fingerprint": "sha256:23d4d2f5473d863c3662f089c9cb450c56e027c7e2281e5b191f99887e2cde22",
       "kind": "text",
       "outputs": []
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6b854ad88f77ba23ed268b1409aadddfa81901bafe8a8ad6d1982f2d2e596f39",
+    "d2l_lib_fingerprint": "sha256:1c3e6c4e77716af6ea52dad21f3bc464b4b68978aca0f24a37126180ecefbbbe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,30 +66,30 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:849e107be8ca29ce108420a5c13b8cfbbf492a1a299b1d2bf193c2dd593d9666",
+      "code_fingerprint": "sha256:1ff9ec5074cff2b1e2f986723242e5ce163d2ef86cb5d59d7fd30c175d84173b",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:650e0856d5bb7fed5f6205113ad343a57ff10b935830349a22abc3bfaf5f61ca",
+      "code_fingerprint": "sha256:47042a757e1b5eb3b3cbd90098bc48cc731e3f20c386527f94c9475f756d9ca0",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fold validation log mse = [0.0484, 0.0321, 0.0419, 0.0337, 0.0185]\nmean = 0.0349; sd = 0.0113\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31242,
-          "sha256": "sha256:41c21209c3158a049475bedfb307425aac207ebcdb421e468d47dcc0df8378b9"
+          "bytes": 41201,
+          "sha256": "sha256:352215a0ac75da09f28d90a26c2e0c662736a78b7a915b1ce555d7ea1008dfec"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fold validation log mse = [0.0391, 0.0338, 0.0461, 0.0341, 0.0172]\nmean = 0.0340; sd = 0.0107\n"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:d051ce75c6569918d55d45ec8e039f06b6497cf7002acfbea999e742b37aa5ec",
+      "code_fingerprint": "sha256:e5f6f141f4ee37906fb5961cb63026f0b95b5dbe12de5530fe96ad0d647dc7c1",
       "kind": "text",
       "outputs": []
     }

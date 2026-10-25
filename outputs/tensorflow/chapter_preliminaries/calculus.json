@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 33867,
-          "sha256": "sha256:0b9c10cc007462d4eeea9f3badffeac667557402546735e2cc0179a5e95b5449"
+          "sha256": "sha256:0c30d412ccfe10b267e87f43d9442f0069dd53db86e3d1d63d4f98694c20fd62"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22599,
-          "sha256": "sha256:2cf4fa0224a9a1cc618cd63d66374945493ec11efb3bccf28bf4bda075836278"
+          "sha256": "sha256:c48de62b67f2f5ad4eecee069ee69069bdcedf70c51a8975e49cf388b7c7a477"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": []
     },
     "calculus-visualization-utilities-4": {
-      "code_fingerprint": "sha256:40f28b1835277660eeaa6326ab1fbcf9775b4664ce93d8980de8537c64a47458",
+      "code_fingerprint": "sha256:006a0d481c636421bee3325ad1204ae6ed679a0b9866a9d688c88f49b5de4794",
       "kind": "text",
       "outputs": []
     }

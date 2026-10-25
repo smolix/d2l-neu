@@ -1379,9 +1379,8 @@ sits idle until Python catches up. A `print(loss.item())` in the inner loop
 can serialize the whole pipeline this way, once per step, as
 :numref:`fig_bg_async_queue` lays out. The fix is not to give up monitoring
 but to move it off the hot path: keep running statistics on the device and
-transfer them once per epoch, or hand values to a background consumer, which
-is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
-`Trainer` plots the loss.
+transfer them once per epoch, which is what the `Trainer` from
+:numref:`sec_oo-design` does with the losses that the steps return.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1396,9 +1395,8 @@ until Python catches up. A `print(loss.item())` in the inner loop can
 serialize the whole pipeline this way, once per step, as
 :numref:`fig_bg_async_queue` lays out. The fix is not to give up monitoring
 but to move it off the hot path: keep running statistics on the device and
-transfer them once per epoch, or hand values to a background consumer, which
-is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
-`Trainer` plots the loss.
+transfer them once per epoch, which is what the `Trainer` from
+:numref:`sec_oo-design` does with the losses that the steps return.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1411,10 +1409,9 @@ device then sits idle until Python catches up
 timings need). A `print(float(loss))` in the inner loop can serialize the
 whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
 out. The fix is not to give up monitoring but to move it off the hot path:
-keep running statistics on the device and transfer them once per epoch, or
-hand values to a background consumer, which is exactly what our
-`ProgressBoard` from :numref:`sec_oo-design` does when the `Trainer` plots
-the loss.
+keep running statistics on the device and transfer them once per epoch, which
+is what the `Trainer` from :numref:`sec_oo-design` does with the losses that
+the steps return.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1429,11 +1426,10 @@ whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
 out; worse, the conversion to NumPy holds Python's global interpreter lock
 while it waits. The fix is not to give up monitoring but to move it off the
 hot path: keep running statistics on the device and transfer them once per
-epoch, or hand values to a background consumer. In MXNet, our
-`ProgressBoard` from :numref:`sec_oo-design` can take over only the drawing.
-`Module.plot` still converts the loss to NumPy on the training thread at
-every step, because MXNet's engine is not safe for GPU-to-host transfers
-issued from another thread.
+epoch, which is what the `Trainer` from :numref:`sec_oo-design` does with
+the losses that the steps return. The conversion runs on the training thread,
+because MXNet's engine is not safe for GPU-to-host transfers issued from
+another thread.
 :end_tab:
 
 ![Python queues kernels k1 through k4 and races ahead while the GPU works through them serially; loss.item() forces a synchronization point where the CPU blocks until the GPU drains its queue, then both resume.](../img/bg-async-queue.svg)
@@ -1519,7 +1515,11 @@ The full treatment of asynchrony, streams, and multi-device parallelism is in
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
 did not use it. The implementation now applies the placement rules from this
 section: the model moves to the device *once*, before training, and every batch
-streams over per step, at the boundary of the computation.
+streams over per step, at the boundary of the computation. `prepare_model`
+also takes over the dry run of :numref:`sec_lazy_init`: if the model still
+has lazy parameters, it runs the first training batch through the model on
+the device and applies the model's `weight_init` attribute, if there is one,
+before the optimizer is created.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1555,6 +1555,7 @@ boundary of the computation.
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
     self.save_hyperparameters()
     self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+    self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
@@ -1564,11 +1565,13 @@ def prepare_batch(self, batch):
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_model(self, model):
-    model.trainer = self
-    model.board.xlim = [0, self.max_epochs]
+    self.model = model
     if self.gpus:
         model.to(self.gpus[0])
-    self.model = model
+    if any(isinstance(p, nn.parameter.UninitializedParameter)
+           for p in model.parameters()):
+        batch = self.prepare_batch(next(iter(self.train_dataloader)))
+        model.apply_init(batch[:-1], getattr(model, 'weight_init', None))
 ```
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-1}
@@ -1577,6 +1580,7 @@ def prepare_model(self, model):
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
     self.save_hyperparameters()
     self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+    self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
@@ -1591,6 +1595,7 @@ def prepare_batch(self, batch):
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
     self.save_hyperparameters()
     self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+    self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
@@ -1609,6 +1614,7 @@ def prepare_batch(self, batch):
 def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
     self.save_hyperparameters()
     self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+    self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
@@ -1618,31 +1624,30 @@ def prepare_batch(self, batch):
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_model(self, model):
-    model.trainer = self
-    model.board.xlim = [0, self.max_epochs]
+    self.model = model
     if self.gpus:
         model.reset_ctx(self.gpus[0])
         model.set_scratch_params_device(self.gpus[0])
-    self.model = model
 ```
 
 :begin_tab:`pytorch`
 The `min(num_gpus, d2l.num_gpus())` makes the request a ceiling rather than a
-demand: on a machine with no GPU, `self.gpus` is empty, both hooks become
-no-ops, and training proceeds on the CPU. Every `Trainer(num_gpus=1)` you see
-from the next chapter onward relies on this fallback, which is how one
-codebase serves both the laptop you are reading on and a GPU server. As a
-capstone we train a classifier built from this chapter's residual blocks on
-Fashion-MNIST; the `Trainer` places the model, moves each batch, and the
-memory budget of the run is exactly the four-plateau accounting from above.
+demand: on a machine with no GPU, `self.gpus` is empty, neither the model
+nor the batches are moved, and training proceeds on the CPU. Every
+`Trainer(num_gpus=1)` you see from the next chapter onward relies on this
+fallback, which is how one codebase serves both the laptop you are reading
+on and a GPU server. As a capstone we train a classifier built from this
+chapter's residual blocks on Fashion-MNIST; the `Trainer` places the model,
+fixes the shapes of its lazy layers, moves each batch, and the memory budget
+of the run is exactly the four-plateau accounting from above.
 :end_tab:
 
 :begin_tab:`jax`
 The `min(num_gpus, d2l.num_gpus())` makes the request a ceiling rather than a
 demand: on a machine with no GPU, `self.gpus` is empty, `prepare_batch` is a
 no-op, and training proceeds on the CPU. There is no model hook to patch,
-because `fit` initializes the parameters itself and JAX creates them on the
-default device, the GPU whenever one is present. Every `Trainer(num_gpus=1)`
+because the model's constructor creates its parameters and JAX places them on
+the default device, the GPU whenever one is present. Every `Trainer(num_gpus=1)`
 you see from the next chapter onward relies on this fallback, which is how
 one codebase serves both the laptop you are reading on and a GPU server. As a
 capstone we train a classifier built from this chapter's residual blocks on
@@ -1949,7 +1954,7 @@ CPU fallback when no GPU exists.
 1. [code] **Synchronization points.** ● Consider the training run of
    `ResMLPClassifier` in :numref:`subsec_device_aware_trainer` on a GPU.
     1. List every synchronization point in one training step, reading
-       `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Module.plot` as
+       `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Averager` as
        well as the model code. Classify each as unavoidable for a correct
        loop or as an avoidable instrumentation artifact, and justify each
        classification.

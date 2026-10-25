@@ -365,34 +365,15 @@ and return the average validation error. We pass in a
 cross-validation loop can score a linear baseline or an MLP without change.
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
-%%tab pytorch
+%%tab pytorch, mxnet, tensorflow
 def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
+    trainer.board.yscale = 'log'
     for i, data_fold in enumerate(k_fold_data(data, k)):
         model = model_fn()
-        model.board.yscale='log'
-        if i != 0: model.board.display = False
+        trainer.board.display = i == 0  # Plot the first fold only
         trainer.fit(model, data_fold)
-        val_loss.append(float(model.board.data['val_loss'][-1].y))
-        models.append((model, data_fold.test))
-    mean = sum(val_loss) / len(val_loss)
-    sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
-    scores = ', '.join(f'{x:.4f}' for x in val_loss)
-    print(f'fold validation log mse = [{scores}]')
-    print(f'mean = {mean:.4f}; sd = {sd:.4f}')
-    return models
-```
-
-```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
-%%tab mxnet, tensorflow
-def k_fold(trainer, data, k, model_fn):
-    val_loss, models = [], []
-    for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = model_fn()
-        model.board.yscale='log'
-        if i != 0: model.board.display = False
-        trainer.fit(model, data_fold)
-        val_loss.append(float(model.board.data['val_loss'][-1].y))
+        val_loss.append(trainer.history['val_loss'][-1])
         models.append((model, data_fold.test))
     mean = sum(val_loss) / len(val_loss)
     sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
@@ -406,14 +387,14 @@ def k_fold(trainer, data, k, model_fn):
 %%tab jax
 def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
+    trainer.board.yscale = 'log'
     for i, data_fold in enumerate(k_fold_data(data, k)):
         # One-hot vocabularies are fitted within each fold, so the number of
         # input columns can differ slightly between folds.
         model = model_fn(data_fold)
-        model.board.yscale='log'
-        if i != 0: model.board.display = False
+        trainer.board.display = i == 0  # Plot the first fold only
         trainer.fit(model, data_fold)
-        val_loss.append(float(model.board.data['val_loss'][-1].y))
+        val_loss.append(trainer.history['val_loss'][-1])
         models.append((model, data_fold.test))
     mean = sum(val_loss) / len(val_loss)
     sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
@@ -452,7 +433,7 @@ is only meaningful if it is *trained competently*. Plain minibatch SGD on
 these standardized features needs more than a handful of passes to converge,
 so we give the linear model a healthy $100$ epochs at learning rate $0.03$
 (a larger rate diverges on the log-price target). Trained this way the
-linear model already reaches a cross-validated mean squared log error well under $0.05$;
+linear model already reaches a cross-validated mean squared log error under $0.05$;
 stopping at the customary ten epochs would instead leave it badly underfit,
 which would flatter every model we compared against it.
 
@@ -520,11 +501,11 @@ models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
 :begin_tab:`pytorch`
-For the tested configurations, the small MLP does not improve on the linear
-model: in the displayed runs, its mean cross-validated squared log error is
-about $0.036$, against $0.035$ for the linear model.
-The fold-level standard deviations printed above, about $0.015$ and $0.012$,
-are much larger than this difference. This result applies only to the configurations and training budget
+For the tested configurations, the small MLP does not clearly improve on the
+linear model: in the displayed runs, its mean cross-validated squared log error
+is about $0.03$, against roughly $0.035$ for the linear model.
+The fold-level standard deviations printed above, about $0.01$ each,
+are larger than this difference. This result applies only to the configurations and training budget
 tested here. Preprocessing and regularization make the MLP viable on a dataset
 of barely a thousand rows, and a longer training schedule improves both
 baselines. The preceding caveat motivates measuring a gradient-boosted tree
@@ -1095,7 +1076,7 @@ Start with a linear model, a fast baseline, but train it **competently**: 100 ep
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
 In these runs, ten epochs leave the linear model underfit whereas the longer run
-reaches about **0.036**. Comparisons should use a baseline with a validated
+reaches about **0.035**. Comparisons should use a baseline with a validated
 training budget.
 :::
 :::
@@ -1114,7 +1095,7 @@ Start with a linear model through the same K-fold loop, and train it **competent
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Ten epochs of SGD leaves this model badly **underfit**; trained to convergence it reaches $\approx$ **0.036**. An underfit baseline flatters every model compared against it.
+Ten epochs of SGD leaves this model badly **underfit**; trained to convergence it reaches roughly **0.035--0.04**. An underfit baseline flatters every model compared against it.
 :::
 :::
 :::
@@ -1149,8 +1130,8 @@ Same K-fold loop, learning rate, and epoch budget, only the model changes:
 @!kaggle-house-price-mlp-select
 
 ::: {.d2l-note .rule}
-For these configurations, the fold means are about **0.036 linear vs 0.027
-MLP**. Fold dispersion and model-specific tuning are needed to assess the
+For these configurations, the fold means are about **0.035 linear vs 0.03
+MLP**, a gap smaller than the fold-to-fold spread. Fold dispersion and model-specific tuning are needed to assess the
 difference; a tree model remains an untested baseline.
 :::
 :::
@@ -1160,7 +1141,8 @@ difference; a tree model remains an untested baseline.
 
 We next test a small MLP with one 32-unit ReLU hidden layer, dropout $0.1$, and
 weight decay $10^{-4}$. Under the same K-fold loop, learning rate, and epoch
-budget, its fold mean is about $0.027$ versus $0.036$ for the linear baseline.
+budget, its fold mean is about $0.03$ versus $0.035$--$0.04$ for the linear
+baseline.
 
 ::: {.d2l-note .rule}
 This result applies to the tested configurations. A fairer model comparison

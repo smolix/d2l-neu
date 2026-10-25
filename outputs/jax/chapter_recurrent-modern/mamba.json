@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.98\n"
+          "text": "minGRU   accuracy 0.97\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.64\n"
+          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.81\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 37016,
-          "sha256": "sha256:fe54b0b9edfded96868772e268a80f835a324abeb8c6ba1022f8b7a30d5ebe3c"
+          "bytes": 37222,
+          "sha256": "sha256:a1539bc0ff47d566c4c5ce1858dfe40dfa7ebbb66386ab68519618fd74024e7a"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 2.97\n"
+          "text": "Mamba perplexity: 2.99\n"
         }
       ]
     }

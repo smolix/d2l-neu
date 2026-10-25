@@ -40,48 +40,41 @@ import optax
 
 ## The `Classifier` Class
 
-The `Classifier` class reports loss and accuracy for each validation batch.
-These curves are monitoring diagnostics: an unweighted average of batch means
-differs from the exact dataset metric when the final batch is smaller. Final
-evaluation should instead sum per-example losses and correct indicators and
-divide by the total number of examples.
+The `Classifier` class returns two metrics from each validation batch, the
+loss and the accuracy, as a dictionary. The `Trainer` weights each batch by
+its number of examples (:numref:`sec_linear_scratch`), so the validation loss
+and accuracy it reports are the exact means over the validation set, also
+when the last batch is smaller.
 
 :begin_tab:`tensorflow`
-The `_report_val` method mirrors `validation_step`
-but accepts a precomputed `y_hat`,
-so the compiled validation graph
-(see :numref:`sec_linear_scratch`)
-only needs to run the forward pass once.
+As in `Module`, the validation step calls the model with `training=False`.
 :end_tab:
 
 :begin_tab:`jax`
 NNX modules own their parameters and other state. The compiled trainer can
 therefore call the model directly, while NNX tracks updates such as BatchNorm
 running statistics automatically. The validation step returns its two metrics
-to the trainer, which records them outside the compiled computation.
+to the trainer, which averages them outside the compiled computation.
 :end_tab:
 
 ```{.python .input #classification-the-classifier-class-1}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch, mxnet, jax
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
     def validation_step(self, batch):
         Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(Y_hat, batch[-1]), train=False)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('loss', self.loss(y_hat, batch[-1]), train=False)
-        self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
+        return {'loss': self.loss(Y_hat, batch[-1]),
+                'acc': self.accuracy(Y_hat, batch[-1])}
 ```
 
 ```{.python .input #classification-the-classifier-class-1}
-%%tab jax
+%%tab tensorflow
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        return self.loss(Y_hat, batch[-1]), self.accuracy(Y_hat, batch[-1])
+        Y_hat = self(*batch[:-1], training=False)
+        return {'loss': self.loss(Y_hat, batch[-1]),
+                'acc': self.accuracy(Y_hat, batch[-1])}
 ```
 
 By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install it on `d2l.Module` rather than `Classifier` because regression models use the same default; a subclass can still override it (later chapters do exactly that) to switch optimizers.
@@ -139,7 +132,6 @@ The result is a tensor containing entries of 0 (false) and 1 (true).
 Averaging the 0/1 entries yields the fraction correct (or, with `averaged=False`, the raw 0/1 vector).
 
 ```{.python .input #classification-accuracy-1  n=9}
-%%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(Classifier)  #@save
 def accuracy(self, Y_hat, Y, averaged=True):
     """Compute the fraction of correct predictions."""
@@ -150,21 +142,9 @@ def accuracy(self, Y_hat, Y, averaged=True):
 ```
 
 :begin_tab:`jax`
-The NNX version receives the precomputed scores just like the other
-frameworks. The surrounding validation step is compiled, so this small metric
-does not need its own `jit` decorator.
+The surrounding validation step is compiled, so this small metric does not
+need its own `jit` decorator.
 :end_tab:
-
-```{.python .input #classification-accuracy-1  n=9}
-%%tab jax
-@d2l.add_to_class(Classifier)  #@save
-def accuracy(self, Y_hat, Y, averaged=True):
-    """Compute the fraction of correct predictions."""
-    Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-    preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
-    compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
-    return d2l.reduce_mean(compare) if averaged else compare
-```
 
 :begin_tab:`mxnet`
 MXNet's `gluon.Block.collect_params` only finds parameters declared
@@ -234,7 +214,7 @@ every off-diagonal cell isolates one specific kind of error. A confusion matrix 
 
 ## Summary
 
-The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that logs *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class matches the true label, where the predicted class is the $\arg\max$ of the score vector. It is a discrete metric and so cannot serve as a training objective, but it is commonly reported in benchmarks and should be watched alongside the loss when all mistakes have comparable costs. On imbalanced or cost-sensitive problems, accuracy alone can badly mislead; precision, recall, and the confusion matrix break the errors down by kind, and the confusion matrix in particular will return twice more in this chapter.
+The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that returns *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class matches the true label, where the predicted class is the $\arg\max$ of the score vector. It is a discrete metric and so cannot serve as a training objective, but it is commonly reported in benchmarks and should be watched alongside the loss when all mistakes have comparable costs. On imbalanced or cost-sensitive problems, accuracy alone can badly mislead; precision, recall, and the confusion matrix break the errors down by kind, and the confusion matrix in particular will return twice more in this chapter.
 
 
 ## Exercises
@@ -244,7 +224,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
    $0 < r \leq b$. Let $L_\textrm{v}$ be the validation loss, the average of
    the per-example losses over all $n$ examples. Let $\bar{L}_\textrm{v}$ be
    the unweighted average of the per-batch mean losses that
-   `validation_step` computes, and let $l_\textrm{v}^\textrm{last}$ be the
+   `validation_step` returns, and let $l_\textrm{v}^\textrm{last}$ be the
    mean loss of the last batch.
     1. Express $L_\textrm{v}$ in terms of $\bar{L}_\textrm{v}$,
        $l_\textrm{v}^\textrm{last}$, $n$, $b$, and $r$.
@@ -253,7 +233,9 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
        both unbiased estimates of the risk, so that
        $E[L_\textrm{v}] = E[\bar{L}_\textrm{v}]$.
     1. Compare the variances of the two estimates and explain why
-       $L_\textrm{v}$ is preferable for a final evaluation.
+       $L_\textrm{v}$ is preferable for a final evaluation. This is the
+       quantity the `Trainer` reports, since it weights each batch by its
+       number of examples.
 1. **Optimal decisions and rejection.** In a multiclass problem, let
    $l(y, y')$ be the penalty for predicting $y'$ when the true class is
    $y$, and let $p(y \mid x)$ be the probability of class $y$ given the
@@ -432,20 +414,20 @@ training and evaluation procedures are inherited.
 ::: {.slide title="Validation reports loss *and* accuracy" except="jax"}
 [The base class]{.kicker}
 
-The override logs two curves per validation batch, where regression
-logged one:
+The override returns two metrics per validation batch, where regression
+returned one:
 
 @classification-the-classifier-class-1
 
 ::: {.d2l-note}
-Averaging over `num_val_batches` is slightly off on a short last
-batch; we ignore that to keep the code simple.
+The `Trainer` weights each batch by its number of examples, so the epoch
+means are exact even when the last batch is short.
 :::
 :::
 
 ::: {.slide title="Validation under JAX: stateful NNX modules" only="jax"}
 NNX modules own parameters and mutable state; the compiled step returns both
-metrics for the trainer to record:
+metrics for the trainer to average:
 
 @classification-the-classifier-class-1
 :::

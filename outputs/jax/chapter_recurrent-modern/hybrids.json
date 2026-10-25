@@ -51,14 +51,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention   1.00 0.99 0.90 0.67\nGated DeltaNet           1.00 0.99 0.97 0.88\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
+          "text": "gated linear attention   1.00 0.99 0.91 0.70\nGated DeltaNet           1.00 0.99 0.97 0.91\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 35880,
-          "sha256": "sha256:7621f532b76d8d8d8966422674143f442f84954b09a19f2a8c9cef2cede3251f"
+          "bytes": 35878,
+          "sha256": "sha256:4bfe73a00319cd485190a57580fff0602f54808eb98ed254918035b830c7d72b"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.31\n"
+          "text": "attention (TinyLM)   perplexity 3.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.33\n"
+          "text": "hybrid               perplexity 3.32\n"
         }
       ]
     }

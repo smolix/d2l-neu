@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet perplexity: 3.23\n"
+          "text": "Gated DeltaNet perplexity: 3.25\n"
         }
       ]
     }

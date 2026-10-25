@@ -500,8 +500,8 @@ for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
 ```
 
 :numref:`tab_dws_vs_dense` reports one seeded run per framework; accuracies
-are rounded to the half point, which is about the level at which they are
-reproducible from run to run.
+are rounded to the half point, and single entries can move by a point or two
+from one re-execution to the next.
 
 :Mini-MobileNet against a dense VGG-style network at matched parameter count
 (Fashion-MNIST at $96 \times 96$, 10 epochs; test accuracy, one seeded run
@@ -510,16 +510,19 @@ per framework, rounded).
 
 | Model | Parameters | Multiply-adds | PyTorch | JAX | TensorFlow |
 |---|---:|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | ≈91.5% | ≈91% | ≈91.5% |
-| VGG-style control | 583,594 | 384.9 million | ≈91.5% | ≈88.5% | ≈92% |
+| Mini-MobileNet | 542,474 | 50.3 million | ≈91% | ≈90.5% | ≈92% |
+| VGG-style control | 583,594 | 384.9 million | ≈92% | ≈86% | ≈92.5% |
 
-The two models have comparable accuracy in this small experiment: every run
-of both architectures falls in a band of roughly 88.5–92.5%, and which of the
-two comes out ahead varies with the framework and the seed. The accuracy
+The two models have comparable accuracy in this small experiment: apart from
+the JAX VGG-style run, whose validation accuracy dips in the final epoch after
+reaching about 92%, every run of both architectures falls in a band of roughly
+90–92.5%, and which of the two comes out ahead varies with the framework and
+the seed. The accuracy
 difference lies within run-to-run noise, and no conclusion should be built on it. The stable
 result is computational. At this parameter budget the separable network
 performs about $7.7\times$ fewer multiply-adds, but its epochs run only about
-$1.5\times$ faster (in this PyTorch run, 8.9 versus 13.6 seconds). The
+$1.5$–$3\times$ faster in our PyTorch runs (the printed seconds per epoch vary
+with the machine and its load). The
 speedup is far smaller than the operation-count ratio: depthwise
 convolutions perform little arithmetic per byte of memory, so operation
 count and wall-clock time diverge. We return to this systems constraint
@@ -989,7 +992,7 @@ separable one reaches 512:
 Accuracy is comparable across frameworks and seeds; the ordering
 of the two models is noise. Mini-MobileNet uses $7.7\times$ fewer
 multiply-adds (50M vs. 385M), but its epochs are only about
-$2$–$3\times$ faster:
+$1.5$–$3\times$ faster:
 **FLOPs are not latency** (depthwise convolutions are
 memory-bound).
 :::

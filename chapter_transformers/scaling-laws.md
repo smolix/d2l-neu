@@ -656,7 +656,8 @@ on $D$ tokens, the leading training cost is approximately $6ND$: two
 floating-point operations per parameter and token in the forward pass and
 four in the backward pass. Attention-score computation adds a correction
 that remains smaller for the configurations studied here. PyTorch profiling
-and XLA cost analysis confirm the approximation within a few percent. In
+matches the approximation to a fraction of a percent; XLA cost analysis, which
+also counts attention scores, lands about ten percent above it. In
 our five-size experiment with a fixed 5.1-million-character corpus, loss
 initially follows a power law with model size and then departs from it as the
 largest model becomes data-limited. The model

@@ -193,8 +193,9 @@ trajectory from the stable one.
 :begin_tab:`jax`
 The unclipped run makes progress for a moment, then feeds back on itself:
 an oversized step lands the iterate somewhere steeper, the gradient there
-is larger, momentum compounds it, and the loss climbs through four orders
-of magnitude before overflowing within the first couple hundred steps. The
+is larger, momentum compounds it, and the loss climbs through some six
+orders of magnitude within the first hundred-odd steps; the run ends in
+overflow. The
 clipped run, at the identical learning rate, trains to a final loss in the
 range of the tuned runs of :numref:`sec_adam`. The Optax combinator does
 not report how often it fired; the instrumented PyTorch tab counts six

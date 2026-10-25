@@ -154,10 +154,7 @@ class HPOTuner(d2l.HyperParameters):  #@save
             start_time = time.time()
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            if hasattr(error, 'cpu'):
-                error = error.cpu()
-            error = float(d2l.numpy(error))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
@@ -209,9 +206,6 @@ class HPOTuner(d2l.HyperParameters):  #@save
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
             error = self.objective(**config)
-            # Each objective creates a training figure. HPO can evaluate many
-            # configurations, so release completed figures between trials.
-            d2l.plt.close('all')
             error = float(error)
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
@@ -289,8 +283,9 @@ def hpo_objective_lenet(learning_rate, batch_size, max_epochs=10):  #@save
     return validation_error
 ```
 
-We also need to define the configuration space. Moreover, the first configuration
-to be evaluated is the default setting used in :numref:`sec_lenet`.
+We also need to define the configuration space. The first configuration to
+be evaluated is a common default for SGD, a learning rate of 0.1 and
+minibatches of 128.
 
 ```{.python .input #hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2  n=10}
 config_space = {
@@ -320,8 +315,8 @@ board = d2l.ProgressBoard(xlabel="time", ylabel="error")
 for time_stamp, error in zip(
     tuner.cumulative_runtime, tuner.incumbent_trajectory
 ):
-    board.draw(time_stamp, error, "random search", every_n=1)
-board.flush()  # drawing is asynchronous; render the final trajectory
+    board.draw(time_stamp, error, "random search")
+board.show()
 ```
 
 ## Comparing HPO Algorithms
@@ -448,8 +443,7 @@ plot any-time performance later:
 
 ::: {.slide title="Tuning a CNN"}
 Run the abstraction on a real model — a small CNN on
-Fashion-MNIST. Search over learning rate, batch size, and
-network width:
+Fashion-MNIST. Search over learning rate and batch size:
 
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-1
 

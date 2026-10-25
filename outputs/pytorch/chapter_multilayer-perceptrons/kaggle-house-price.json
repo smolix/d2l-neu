@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f22a37f0ea50f1d1e4a38a59f212e30f1c829fae858e9b3e3c719ab61a97a5a4",
+    "d2l_lib_fingerprint": "sha256:0b55478ed41b89653d2565adb6741594ba3ee33439093232f86e8d9d7bcd18db",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,53 +66,53 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:4905e59c0500e81835dbe975508d9db3be9e144ab7b8adccf3d85ff2693799b7",
+      "code_fingerprint": "sha256:df64463d9821de0a8fa0c89d02aabed52d6f66958dc1f758c429dd6ae287a53b",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:efa610c56cb3a9a26be8194a49c4875a72bcb53675654e9982a80f6c2947f9f1",
+      "code_fingerprint": "sha256:69f031f7df6fe7174ca757904a01a05a3c51e130a504a9bce1f0b4940603d369",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fold validation log mse = [0.0543, 0.0293, 0.0412, 0.0337, 0.0204]\nmean = 0.0358; sd = 0.0128\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31920,
-          "sha256": "sha256:e9e8017eb20297915a137e19b300f8d28b361e608c410858aa82a1fc42ebb87c"
+          "bytes": 41205,
+          "sha256": "sha256:93c71edbd06332d33f2b131657663024ea06ba77b68b174d7138da8c4650a7d7"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fold validation log mse = [0.0315, 0.0285, 0.0431, 0.0411, 0.0247]\nmean = 0.0338; sd = 0.0080\n"
         }
       ]
     },
     "kaggle-house-price-mlp-model": {
-      "code_fingerprint": "sha256:dbea556176df8cb5dc0a503f8a3115718424a3ac7bc39cecc45a7b25603d507b",
+      "code_fingerprint": "sha256:86b6e285c6624fb663b63492fcbee11fc95c3f5e560447f683202bc0066a3d72",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-mlp-select": {
-      "code_fingerprint": "sha256:a9d924dd9a3bf014c4a9374c6fc0c26de409803124c6a38fad59f3983be6b040",
+      "code_fingerprint": "sha256:cd80b807ee382112bb54d55af110289f9ece57515d7a92607cc797cc1585771a",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fold validation log mse = [0.0396, 0.0322, 0.0409, 0.0379, 0.0146]\nmean = 0.0330; sd = 0.0108\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-mlp-select-1.svg",
-          "bytes": 32203,
-          "sha256": "sha256:a77ceb5076f24d0543186c54eea037b1ff6be8d5dc4a413e43771e9842341bbb"
+          "bytes": 43675,
+          "sha256": "sha256:4cc38b7523703dfbac1976c09f94aa5eaf9c0b1d49c075858f3d34468b0c4af6"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fold validation log mse = [0.0343, 0.0173, 0.0435, 0.0172, 0.0288]\nmean = 0.0282; sd = 0.0113\n"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:af26e9b5185b667f5b0b9683c7178e0526ee67f112f5c91664020712a18085d9",
+      "code_fingerprint": "sha256:0214b52872013f32c5d3172e8776599996eab1286d887e54f310f3f957717440",
       "kind": "text",
       "outputs": []
     }

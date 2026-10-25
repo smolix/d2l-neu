@@ -137,8 +137,8 @@ def serialize_mxnet_cudnn_init():
 
 
 # Per-framework concurrency cap, layered ON TOP OF the global GPU/CPU slot
-# pools. Today only JAX uses this: with the d2l.Module.plot path requiring
-# the CPU backend, every JAX process keeps the 64-thread tf_XLAEigen pool
+# pools. Today only JAX uses this: since the CPU backend stays enabled (see
+# make/notebooks.mk), every JAX process keeps the 64-thread tf_XLAEigen pool
 # alive, so we throttle JAX further than other frameworks to stay under
 # the user thread limit. Set D2L_<FW>_GPU_SLOTS / D2L_<FW>_CPU_SLOTS=0 (or
 # leave unset) to disable the cap for a framework.

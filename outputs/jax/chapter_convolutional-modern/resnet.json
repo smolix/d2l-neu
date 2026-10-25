@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:4684cdafaf90cf6b01806a4001b6a279b3bbbb1a6b3f6a2cabdc335cb33f12e3",
+    "d2l_lib_fingerprint": "sha256:0e7908a51a74e0a84628f27be5d0052610b780f9565327c0a73ae8cb67270358",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -102,8 +102,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21006,
-          "sha256": "sha256:b56ded761b97e5433e1b2c0d79a40c8cf224175e0790dfd284fe6bf0d1d99ab5"
+          "bytes": 32611,
+          "sha256": "sha256:afbaf5272ff937b5436032e648d7389e92d3418928c9d2a77accc0eea2ae2ca1"
         }
       ]
     },

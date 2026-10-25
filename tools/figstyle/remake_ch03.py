@@ -51,7 +51,7 @@ def fig_fit_linreg():
     line = lambda x: 0.52 * x + 0.9
     ys = line(xs) + resid
 
-    axis_cross(ax, (-0.25, 5.3), (-0.3, 4.4))
+    axis_cross(ax, (-0.25, 5.3), (-0.3, 4.4), color=T.INK)  # black axes
     ax.plot([0.15, 5.05], [line(0.15), line(5.05)], color=T.INK,
             lw=2.4, zorder=3)
     for x, y in zip(xs, ys):
@@ -96,6 +96,22 @@ def fig_singleneuron():
                 XOUT - (R + 2) * math.cos(ang),
                 Y_OUT - (R + 2) * math.sin(ang),
                 stroke=T.FAINT, sw=T.SW_HAIR)
+
+    # one weight per edge, labelled just above the input end of the edge,
+    # on the outer side so the label clears the line (w_2's edge is nearly
+    # vertical, so its label sits to the left)
+    for i, x in enumerate(XIN):
+        if i == 2:
+            continue
+        ang = math.atan2(Y_OUT - Y_IN, XOUT - x)
+        t = R + 30.0                                # distance from the input
+        ex, ey = x + t * math.cos(ang), Y_IN + t * math.sin(ang)
+        side = -1.0 if x < XOUT else 1.0            # outer side of the edge
+        nx, ny = side * math.sin(ang), -side * math.cos(ang)
+        nx, ny = (nx, ny) if nx * side > 0 else (-nx, -ny)
+        f.text(ex + 15.0 * nx, ey + 15.0 * ny,
+               [var("w"), sub("d" if i == 3 else str(i + 1))],
+               size=T.FS_SMALL, color=T.INK)
 
     for i, x in enumerate(XIN):
         if i == 2:                                  # ellipsis column

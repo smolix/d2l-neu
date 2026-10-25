@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:91ecb72a0fc722983ed67c5ab81c79be30077156474a52c24a72d2c6ce899ee0",
+    "d2l_lib_fingerprint": "sha256:884d02450d41ec4a302c7a02ab0be2dbdcb3911e258b91f86a11342754c6984b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 24816,
-          "sha256": "sha256:7245ad9bbf02c9f6cfa06cb0183180315c2440717e7edc94a1236a68eafe7fbf"
+          "bytes": 39343,
+          "sha256": "sha256:1980bf253ec1d764d7ae74aaf2804892aafe9ccb34c89995b21572db84bb95af"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 23819,
-          "sha256": "sha256:e54d1c094eb26704d399a33db5d56e23eaac6948c0630a254d128cb7f2e9174f"
+          "bytes": 40319,
+          "sha256": "sha256:7201d33d7655168262219bec9bc687dd10d692ad2c5b44f1bdc67044c875ed6b"
         }
       ]
     }

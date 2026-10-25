@@ -130,50 +130,10 @@ objective function.
 We begin with a method for computing the validation error of a model.
 
 ```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
-%%tab pytorch
+%%tab pytorch, tensorflow, jax
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
-        self.model.eval()
-        accuracy = 0
-        val_batch_idx = 0
-        for batch in self.val_dataloader:
-            with torch.no_grad():
-                x, y = self.prepare_batch(batch)
-                y_hat = self.model(x)
-                accuracy += self.model.accuracy(y_hat, y)
-            val_batch_idx += 1
-        return 1 - accuracy / val_batch_idx
-```
-
-```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
-%%tab tensorflow
-class HPOTrainer(d2l.Trainer):  #@save
-    def validation_error(self):
-        accuracy = 0
-        val_batch_idx = 0
-        for batch in self.val_dataloader:
-            x, y = self.prepare_batch(batch)
-            y_hat = self.model(x, training=False)
-            accuracy += self.model.accuracy(y_hat, y)
-            val_batch_idx += 1
-        return 1 - accuracy / val_batch_idx
-```
-
-```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
-%%tab jax
-@nnx.jit  #@save
-def hpo_validation_batch(model, batch):
-    _, batch_accuracy = model.validation_step(batch)
-    num_examples = batch[-1].size
-    return jnp.array([batch_accuracy * num_examples, num_examples])
-
-class HPOTrainer(d2l.Trainer):  #@save
-    def validation_error(self):
-        metric = jnp.zeros(2)  # num_correct, num_examples
-        for batch in self.val_dataloader:
-            batch = self.prepare_batch(batch)
-            metric += hpo_validation_batch(self.val_model, batch)
-        return 1 - metric[0] / metric[1]
+        return 1 - self.validate()['acc']
 ```
 
 We optimize validation error with respect to the hyperparameter configuration
@@ -188,7 +148,7 @@ def hpo_objective_softmax_classification(config, max_epochs=8):
     data = d2l.FashionMNIST(batch_size=256)
     model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
     trainer.fit(model=model, data=data)
-    return d2l.numpy(trainer.validation_error())
+    return trainer.validation_error()
 ```
 
 ```{.python .input #hyperopt-intro-the-objective-function-2  n=5}

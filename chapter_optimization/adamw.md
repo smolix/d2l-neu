@@ -414,9 +414,10 @@ show_grids([coupled_tbl, decoupled_tbl],
 Read each heatmap row by row; the two panels share one color scale, the
 best $\lambda$ in each row is set in bold, and each panel's best cell is
 boxed in red. In the AdamW grid the bold entries line up in a single
-column: the best weight decay is the same at every learning rate in the
-grid, and in this single-seed run the same column wins in both frameworks,
-despite the frameworks' different initializations. In the
+column, or nearly so: the best weight decay barely moves with the learning
+rate, and the same column wins in both frameworks, despite the frameworks'
+different initializations (a single-seed $3 \times 3$ grid is noisy, and an
+occasional row can break ranks). In the
 coupled grid the bold entries wander: change $\eta$ and the tuned $\lambda$ is no longer optimal, exactly the joint-tuning burden that
 :citet:`Loshchilov.Hutter.2019` documented on image classifiers, where the
 good region of the coupled $(\eta, \lambda)$ plane is a diagonal band and
@@ -599,7 +600,7 @@ gradient. This rescales regularization separately for each coordinate and
 reverses the intended dependence on gradient scale. AdamW applies the decay outside the preconditioner,
 restoring one $\lambda$ with one meaning. Decoupling does not so much
 improve the best attainable loss as make it findable: in our grid the best
-$\lambda$ stopped depending on the learning rate. At scale, weight decay
+$\lambda$ largely stopped depending on the learning rate. At scale, weight decay
 is less a regularizer than a training-dynamics control that sets the
 effective learning rate through an equilibrium of noise against decay, on
 a timescale set by the product $\eta\lambda$. Decay the matrices; exempt
@@ -783,7 +784,7 @@ panel's best cell boxed in red:
 
 @!adamw-a-grid-twice-4
 
-- For AdamW, the best displayed $\lambda$ is the same at every $\eta$, so
+- For AdamW, the best displayed $\lambda$ is the same at (nearly) every $\eta$, so
   the two hyperparameters can be searched more independently.
 - Coupled: the optimum wanders, and lives 2–3 orders of magnitude lower.
 - Fully tuned, both reach similar loss; decoupling makes the two
@@ -841,7 +842,7 @@ AdamW stores two additional numbers per parameter:
 - $\ell_2$ through Adam ≠ weight decay: the preconditioner changes
   $\lambda$ per coordinate, backwards. AdamW decouples: one $\lambda$,
   one meaning.
-- Decoupled knobs tune **separately**: best $\lambda$ independent of
+- Decoupled knobs tune **separately**: best $\lambda$ nearly independent of
   $\eta$ in our grid.
 - At scale, decay = effective-LR control via the noise–decay equilibrium,
   on timescale $1/(\eta\lambda)$.

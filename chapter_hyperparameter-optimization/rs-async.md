@@ -110,8 +110,8 @@ def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
             trainer.fit(model=model, data=data) 
         else:
             trainer.fit_epoch()
-        validation_error = d2l.numpy(trainer.validation_error().cpu())
-        report(epoch=epoch, validation_error=float(validation_error))
+        validation_error = trainer.validation_error()
+        report(epoch=epoch, validation_error=validation_error)
 ```
 
 Note that the `PythonBackend` of Syne Tune requires dependencies to be imported
@@ -355,9 +355,9 @@ the console transcript.
 :::
 
 ::: {.slide title="Wall-clock advantage"}
-Plot best-seen-vs-time for sync vs async. Async always
-makes progress; sync sits idle while waiting for
-stragglers:
+Learning curves of all trials against wall-clock time. A
+free worker starts the next trial at once, so no worker
+sits idle waiting for stragglers:
 
 @rs-async-visualize-the-asynchronous-optimization-process
 :::

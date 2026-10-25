@@ -1,5 +1,10 @@
 # chapter_linear-regression — Exercise Catalog
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> the sections now carry 58 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 **Chapter overview.** Seven sections carry `## Exercises`: linear-regression (3.1),
 oo-design (3.2), synthetic-regression-data (3.3), linear-regression-scratch (3.4),
 linear-regression-concise (3.5), generalization (3.6), weight-decay (3.7). Per the

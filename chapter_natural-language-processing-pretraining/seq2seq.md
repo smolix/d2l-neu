@@ -237,9 +237,11 @@ class EncoderDecoder(d2l.Classifier):  #@save
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self, enc_X, dec_X, *args, training=None):
-        enc_all_outputs = self.encoder(enc_X, *args, training=training)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
+    # Keras builds a layer by passing the arguments of `call` by name, which
+    # fails for `*args`, so we name the optional source length
+    def call(self, enc_X, dec_X, enc_valid_len=None, training=None):
+        enc_all_outputs = self.encoder(enc_X, enc_valid_len, training=training)
+        dec_state = self.decoder.init_state(enc_all_outputs, enc_valid_len)
         # Return decoder output only
         return self.decoder(dec_X, dec_state, training=training)[0]
 ```
@@ -498,7 +500,7 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
         self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
 
-    def call(self, X, *args):
+    def call(self, X, valid_len=None):
         embs = self.embedding(d2l.transpose(X))
         outputs, state = self.rnn(embs)
         # outputs: (num_steps, batch_size, num_hiddens)
@@ -704,8 +706,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         self.save_hyperparameters()
 
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -720,8 +721,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         self.save_hyperparameters()
 
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
 
     def configure_optimizers(self):
         return tf.keras.optimizers.Adam(learning_rate=self.lr)
@@ -736,8 +736,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         self.save_hyperparameters()
 
     def validation_step(self, batch):
-        Y_hat = self(*batch[:-1])
-        self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         return gluon.Trainer(self.parameters(), 'adam',

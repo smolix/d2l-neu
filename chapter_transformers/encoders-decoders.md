@@ -763,7 +763,7 @@ d2l.show_heatmaps(w[0][None], xlabel='source position',
 
 The maps contain the anti-diagonal predicted by the third panel of
 :numref:`fig_three-wirings`. Averaged over heads, the argmax lands on the
-true source position for well over nine rows in ten, with most of the
+true source position for more than nine rows in ten, with most of the
 softmax mass concentrated there. The cross-attention therefore represents
 the alignment built into the task. As :numref:`sec_multihead-attention`
 noted, such readable attention patterns are the exception rather than the
@@ -1317,7 +1317,7 @@ $O(MN)$ to read, $O(M^2)$ to think — the $N^2$ term never appears
 
 Self-attention: about 4× per doubling of $N$. The Perceiver grows more slowly
 and is over an order of magnitude faster by $N = 8192$; at short inputs its
-fixed latent-processing overhead removes this advantage.
+fixed latent-processing overhead erodes most of this advantage.
 :::
 
 ::: {.slide title="Which wiring when"}

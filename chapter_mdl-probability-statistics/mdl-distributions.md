@@ -1000,6 +1000,255 @@ weights. The exponential family still supplies the likelihood and the link
 functions used by standard deep-learning losses
 :cite:`Bishop.2006,Koller.Friedman.2009`.
 
+### Generalized Linear Models
+:label:`subsec_mdl-glm`
+
+Regression and classification models predict a distribution of a label $y$
+for each input $\mathbf x$. A *generalized linear model* takes that
+distribution from an exponential family and makes its natural parameter a
+linear function of the input, $\boldsymbol\eta = \mathbf W^\top\mathbf x$ (a
+bias is a constant feature). Write $\boldsymbol\mu(\mathbf x) =
+\nabla A(\boldsymbol\eta) = \mathbb E[T(y)\mid\mathbf x]$ for the model's mean
+of the sufficient statistic. The negative log-likelihood of one example is
+$A(\boldsymbol\eta) - \boldsymbol\eta^\top T(y) - \log h(y)$, so by the moment
+property its gradient with respect to $\boldsymbol\eta$ is
+$\boldsymbol\mu(\mathbf x) - T(y)$, and the chain rule through
+$\boldsymbol\eta = \mathbf W^\top\mathbf x$ gives
+
+$$
+\nabla_{\mathbf W}\bigl(-\log p(y\mid\mathbf x)\bigr)
+= \mathbf x\,\bigl(\boldsymbol\mu(\mathbf x) - T(y)\bigr)^\top .
+$$
+:eqlabel:`eq_mdl-glm-gradient`
+
+The gradient is the input times the error of the predicted mean: prediction
+minus observation, whatever the family. The loss is convex in $\mathbf W$,
+since it is the convex function $A$ composed with a linear map, plus a linear
+term. Four families give four familiar models:
+
+| label $y$ | family | $T(y)$ | mean $\boldsymbol\mu(\mathbf x)$ | model |
+|:--|:--|:--|:--|:--|
+| real number | Gaussian, variance 1 | $y$ | $\eta$ | linear regression |
+| yes or no | Bernoulli | $y \in \{0, 1\}$ | $\sigma(\eta)$ | logistic regression |
+| one of $K$ classes | categorical | one-hot $\mathbf y$ | $\mathrm{softmax}(\boldsymbol\eta)$ | softmax regression |
+| count | Poisson | $y$ | $e^{\eta}$ | Poisson regression |
+
+With variance $\sigma^2$ instead of 1, the Gaussian negative log-likelihood
+is $(\hat y - y)^2/(2\sigma^2)$ plus a constant, where $\hat y =
+\mathbf w^\top\mathbf x$: the squared loss of :numref:`sec_linear_regression`
+divided by $\sigma^2$, with the gradient $\mathbf x(\hat y - y)/\sigma^2$. Softmax regression in
+:numref:`sec_softmax` has the gradient $\mathbf x(\hat{\mathbf y} -
+\mathbf y)^\top$ for the same reason. A neural network keeps the last step,
+a linear map into the natural parameters followed by the family's
+negative log-likelihood, and replaces the fixed input $\mathbf x$ by learned
+features. The loss is then no longer convex in the weights, but its
+gradient with respect to the natural parameters is still prediction minus
+observation.
+
+### Origins of the Softmax
+:label:`subsec_mdl-softmax-origins`
+
+The softmax :eqref:`eq_mdl-softmax` turns $K$ logits into class
+probabilities, and the table above lists it as the mean of the categorical
+family. Other maps would also do. Normalizing the softplus values
+$\log(1+e^{z_k})$ instead of $e^{z_k}$ gives positive numbers that sum to
+one and keep the order of the logits. The choice fixes the loss we train
+with and the meaning of a logit: under the softmax,
+$z_i-z_j=\log(p_i/p_j)$ is a log-ratio of probabilities. Three arguments
+from different fields lead to the exponential: a model of noisy choices
+from psychology and economics, the Boltzmann distribution of statistical
+physics, and the exponential family. Each explains a different property of
+the softmax.
+
+**Noisy choices.** Suppose that a decision maker, such as a subject in a
+perception experiment, a shopper, or whoever labels our data, gives each
+option $k$ a score $z_k$ but does not always pick the best one. A simple
+model of this behavior perturbs every score by independent noise
+$\epsilon_k$ and picks the largest perturbed score,
+
+$$
+y = \operatorname*{argmax}_{k}\,(z_k+\epsilon_k).
+$$
+
+The probability of class $k$ is the chance that option $k$ wins this noisy
+contest, so the noise distribution decides its form.
+:citet:`Fechner.1860` analyzed judgments of which of two lifted weights is
+heavier in this way, with Gaussian errors, and :citet:`Thurstone.1927` made
+the model a general law of comparative judgment. With two options and
+$\epsilon_k\sim\mathcal N(0,s^2)$, option 1 wins when
+$\epsilon_2-\epsilon_1<z_1-z_2$. The difference $\epsilon_2-\epsilon_1$ is
+Gaussian with variance $2s^2$, so
+
+$$
+P(y=1) = \Phi\Bigl(\frac{z_1-z_2}{\sqrt2\,s}\Bigr),
+$$
+
+where $\Phi$ is the standard Gaussian CDF. This is the *probit* model: the
+probability depends only on the score difference, measured in units of the
+noise.
+
+With more than two options the probit model has no closed form. Let $\phi$
+be the standard Gaussian density. Option $k$ wins when every other
+perturbed score falls below its own, and averaging this chance over the
+standardized noise $u=\epsilon_k/s$ of option $k$ gives
+
+$$
+P(y=k) = \int_{-\infty}^{\infty}\phi(u)\prod_{j\ne k}\Phi\Bigl(u+\frac{z_k-z_j}{s}\Bigr)\,du .
+$$
+
+For $K>2$ this integral and its gradient must be computed numerically, for
+every example at every training step. If the noise is correlated across
+options, the integral becomes $(K-1)$-dimensional.
+
+Gumbel noise removes the integral. The standard *Gumbel* distribution has
+the CDF $G(x)=\exp(-e^{-x})$. It is the limiting distribution of the
+suitably shifted and scaled maximum of many independent draws from
+distributions such as the Gaussian or the exponential :cite:`Gumbel.1954`,
+and :citet:`McFadden.1974` used it as the noise in models of discrete
+economic choices.
+
+**Proposition (Gumbel noise gives the softmax).** *If
+$\epsilon_1,\dots,\epsilon_K$ are independent standard Gumbel variables,
+the noisy argmax follows the softmax probabilities,*
+
+$$
+P\Bigl(\operatorname*{argmax}_j\,(z_j+\epsilon_j)=k\Bigr) = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} .
+$$
+
+**Proof.** Write $S=\sum_j e^{z_j}$. The perturbed score $z_j+\epsilon_j$
+has the CDF $G(t-z_j)=\exp(-e^{z_j}e^{-t})$. If option $k$ scores
+$t=z_k+\epsilon_k$, it wins with probability
+$\prod_{j\ne k}\exp(-e^{z_j}e^{-t})=\exp\bigl(-(S-e^{z_k})e^{-t}\bigr)$, by
+independence. We multiply by the density
+$e^{z_k}e^{-t}\exp(-e^{z_k}e^{-t})$ of $t$, integrate, and substitute
+$v=e^{-t}$:
+
+$$
+P(y=k) = \int_{-\infty}^{\infty} e^{z_k}e^{-t}\exp\bigl(-Se^{-t}\bigr)\,dt
+= e^{z_k}\int_0^{\infty} e^{-Sv}\,dv = \frac{e^{z_k}}{S} . \quad\blacksquare
+$$
+
+The proof works because a product of Gumbel CDFs is again a Gumbel CDF.
+Over all $K$ options,
+$P\bigl(\max_j(z_j+\epsilon_j)\le t\bigr)=\exp(-Se^{-t})=G(t-\log S)$, so
+the winning score is a standard Gumbel variable shifted by the log-sum-exp
+$\log\sum_j e^{z_j}$. The log-sum-exp is thus a smoothed maximum of the
+logits, and its gradient, the softmax, gives the chance that each option
+attains the maximum. Exercise
+:exref:`ex_mdl-distributions-exponential-races` proves the proposition a
+second way, through races between exponential waiting times.
+
+Read from right to left, the proposition is the Gumbel-max sampler of the
+categorical paragraph above. Because
+$\operatorname{argmax}_k(z_k+T\epsilon_k)=\operatorname{argmax}_k(z_k/T+\epsilon_k)$
+for $T>0$, Gumbel noise of scale $T$ samples from
+$\mathrm{softmax}(\mathbf z/T)$: the amount of noise in the choice acts as
+a temperature.
+
+With two options, the difference of two independent standard Gumbel
+variables has the logistic distribution, whose CDF is the sigmoid
+$\sigma(x)=1/(1+e^{-x})$, so this *logit* model gives
+$P(y=1)=\sigma(z_1-z_2)$. The sigmoid is close to a rescaled Gaussian CDF,
+$|\sigma(1.7x)-\Phi(x)|<0.01$ for all $x$, so fitted probit and logit
+models give nearly the same probabilities and differ mainly in the scale of
+their scores. They part in the tails, which decay like $e^{-x}$ for the
+logistic and like $e^{-x^2/2}$ for the Gaussian. A confidently
+misclassified example therefore costs a negative log-likelihood linear in
+its score difference under the logit model and quadratic under the probit
+model, so mislabeled examples pull a probit fit harder
+(exercise :exref:`ex_mdl-distributions-probit-logit`).
+
+The softmax has one property that is unrealistic for similar options: the
+ratio $p_i/p_j=e^{z_i-z_j}$ does not depend on the other options. If a
+commuter takes the car or a red bus with probability $\tfrac12$ each,
+adding an identical blue bus should leave the car at $\tfrac12$, but a
+softmax with equal scores for the two buses gives all three options
+$\tfrac13$. A probit model with strongly correlated noise for the two buses
+keeps the car near $\tfrac12$, which is why economists accept its
+integrals for such choices.
+
+**The Boltzmann distribution.** A physical system in thermal equilibrium at
+temperature $T$, such as a molecule in a gas, occupies a state $k$ of
+energy $E_k$ with probability
+
+$$
+p_k = \frac{\exp\bigl(-E_k/(k_{\mathrm B}T)\bigr)}{\sum_j \exp\bigl(-E_j/(k_{\mathrm B}T)\bigr)},
+$$
+
+where $k_{\mathrm B}$ is Boltzmann's constant. Low-energy states are the
+most probable, and the temperature sets how strongly they are preferred.
+Boltzmann found this law for the molecules of a gas, and
+:citet:`Gibbs.1902` made it the basis of statistical mechanics. If we
+measure temperature in units of energy, so that $k_{\mathrm B}=1$, and set
+$E_k=-z_k$, the law becomes $\mathrm{softmax}(\mathbf z/T)$. A logit is a
+negative energy, and the most probable class is the state of lowest energy.
+As $T\to0$ the distribution concentrates on the largest logit, the argmax;
+as $T\to\infty$ it becomes uniform.
+
+Maximum entropy explains the exponential without appeal to physics
+:cite:`Jaynes.1957`. By :numref:`subsec_mdl-max-entropy-derivation`, the
+distribution of largest entropy with prescribed expected values of some
+statistics is proportional to the exponential of a linear combination of
+those statistics, with the Lagrange multipliers as coefficients. On $K$
+states with the single constraint $\sum_k p_kE_k=\bar E$, the maximizer is
+therefore $p_k\propto\exp(-E_k/T)$, with $-1/T$ as the multiplier. The
+softmax is thus the least committal distribution over the classes among
+all those with a given average logit $\sum_k p_kz_k$. The higher the
+required average, the lower the temperature. As $T$ falls from $\infty$ to
+$0$, the average logit rises from the mean of the logits to their maximum.
+
+*Energy-based models* take the physical reading literally
+:cite:`LeCun.Chopra.Hadsell.ea.2006,Ranzato.Boureau.Chopra.ea.2007`. They
+learn an energy $E(\mathbf x,y)$ for every pair of input and output and set
+$p(y\mid\mathbf x)\propto\exp(-E(\mathbf x,y))$. A classifier is the case
+$E(\mathbf x,k)=-z_k(\mathbf x)$, in which the normalizing sum has only $K$
+terms. When $y$ ranges over images or sentences, the sum has far too many
+terms to compute, and avoiding it is the central problem of energy-based
+learning.
+
+**The exponential family.** The third derivation is the one this section
+has already made. With the class coded as a one-hot vector $\mathbf y$, the
+categorical distribution with probabilities $\mathrm{softmax}(\mathbf z)$
+reads
+
+$$
+P(\mathbf y) = \exp\bigl(\mathbf z^\top\mathbf y - A(\mathbf z)\bigr),
+\qquad
+A(\mathbf z) = \log\sum_{k=1}^K e^{z_k}.
+$$
+
+This is an exponential family :eqref:`eq_mdl-exp_family` with the logits as
+natural parameters, the one-hot vector as sufficient statistic, and the
+log-sum-exp as log-partition function. By the moment property
+:eqref:`eq_mdl-exp_family_moment`, the softmax is its mean map,
+$\nabla A(\mathbf z)=\mathrm{softmax}(\mathbf z)=\mathbb E[\mathbf y]$
+(exercise :exref:`ex_mdl-distributions-minimal-categorical` works out the
+details). This view explains how the softmax trains: as
+:numref:`subsec_mdl-glm` showed, its negative log-likelihood is convex in
+the logits and has the gradient $\mathrm{softmax}(\mathbf z)-\mathbf y$.
+The three derivations agree on the function. Noisy choices give the labels
+a generative model and an exact sampler, the Boltzmann distribution gives
+the temperature and the maximum-entropy reading, and the exponential family
+gives the convex loss and its gradient.
+
+**Geometry of the argmax.** Under every derivation the most probable class
+has the largest logit, so a linear model
+$z_k(\mathbf x)=\mathbf w_k^\top\mathbf x+b_k$ assigns class $j$ to the
+region $\{\mathbf x : z_j(\mathbf x)\ge z_k(\mathbf x)\text{ for all }k\}$.
+This region is an intersection of $K-1$ halfspaces, hence a convex
+polyhedron, possibly empty. Two classes tie on the hyperplane
+$z_j(\mathbf x)=z_k(\mathbf x)$. For three classes the tie hyperplanes are
+linearly dependent, since $(z_1-z_2)+(z_2-z_3)=z_1-z_3$, so a point on two
+of them lies on the third. In the plane, two tie lines that are not
+parallel meet in a point, which then lies on the third line as well
+(:numref:`fig_mdl-clf-decision-regions`); if two of the lines are parallel,
+so is the third. In general, all $K$ scores tie on the solutions of $K-1$
+affine equations in $\mathbb R^d$, a set of dimension $d-K+1$ for generic
+weights and empty when $K>d+1$, so four classes in the plane generically
+share no point. In the noisy-choice model, ties have probability zero under
+any continuous noise, so the argmax is unique and the class probabilities
+sum to one.
+
 ## Conjugate Priors
 
 The distributions above model observations, but Bayesian inference also
@@ -1194,6 +1443,12 @@ object whose mean and covariance the table states.
   and $A$ is convex. Thus its negative log-likelihood is convex in the natural
   parameters; with an affine parameter map this yields a convex generalized
   linear model, whereas a neural-network parameterization remains nonconvex.
+  In such a model the gradient is the input times prediction minus
+  observation, which is why linear, logistic, softmax, and Poisson regression
+  share one training rule.
+* The **softmax** arises three ways: as the choice under Gumbel-perturbed scores
+  (Gaussian noise gives the probit model instead), as the Boltzmann distribution
+  at temperature $T$, and as the mean map of the categorical family.
 * Every exponential-family likelihood has a **conjugate prior**: the **Beta** for the
   Bernoulli/binomial, the **Gamma** for the Poisson, the **Dirichlet** for the
   categorical/multinomial. Bayesian updating then just adds the data's sufficient
@@ -1290,6 +1545,36 @@ object whose mean and covariance the table states.
        $\mathbb E\,|x-\mu|$ and $\operatorname{Var}|x-\mu|$. Check the result
        against the Laplace variance $2b^2$.
    :exlabel:`ex_mdl-distributions-log-partition-moments`
+
+1. [code] **Probit and logit.** For two classes with the score difference
+   $m=z_1-z_2$, the logit model gives $P(y=1)=\sigma(m)$ and the probit model
+   with noise scale $s$ gives $P(y=1)=\Phi\bigl(m/(\sqrt2\,s)\bigr)$
+   (:numref:`subsec_mdl-softmax-origins`).
+    1. Show that the difference of two independent standard Gumbel variables
+       has the CDF $\sigma(x)$. The standard Gumbel distribution has variance
+       $\pi^2/6$. Find the scale $c$ for which the distribution with CDF
+       $\sigma(cx)$ has variance 1, like the standard Gaussian.
+    1. Find numerically the scale $c$ that minimizes
+       $\max_x|\sigma(cx)-\Phi(x)|$, and the value of this maximum. Why is
+       this scale smaller than the one of (a)?
+    1. An example of class 2 lies on the wrong side of the decision
+       boundary, with $m>0$. Show that its negative log-likelihood
+       $-\log\sigma(-m)$ under the logit model lies between $m$ and
+       $m+e^{-m}$, and that its derivative with respect to $m$ is less than
+       1. Use the bounds
+       $\frac{x}{1+x^2}\,\phi(x)\le1-\Phi(x)\le\frac{\phi(x)}{x}$ for $x>0$ to
+       show that its negative log-likelihood
+       $-\log\Phi\bigl(-m/(\sqrt2\,s)\bigr)$ under the probit model grows like
+       $m^2/(4s^2)$, and that its derivative grows linearly in $m$.
+    1. Draw 100 inputs $x\sim\mathcal N(1,1)$ of class 1 and 100 inputs
+       $x\sim\mathcal N(-1,1)$ of class 2, and let $m=wx+b$. Fit $(w,b)$ by
+       maximum likelihood under both models. Then add three examples at
+       $x=6$ labeled as class 2, and fit again. For each model, compute the
+       ratio of the slope $w$ with these mislabeled examples to the slope
+       without them, and explain the difference between the models with (c).
+       Compute $\log\Phi$ with a numerically stable routine such as
+       `scipy.special.log_ndtr`.
+   :exlabel:`ex_mdl-distributions-probit-logit`
 
 1. **Gamma--Poisson mixture.** Let the Poisson rate itself be random,
    $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density of

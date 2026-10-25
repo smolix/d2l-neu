@@ -628,8 +628,8 @@ d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],
 For S4D, the contributions rise smoothly toward the query: the most recent
 inputs dominate, whatever they are, and a symbol 800 steps back contributes
 no more than the fillers next to it. For Mamba, the contributions spike at
-the four symbols, one to three orders of magnitude above the fillers around
-them, wherever the symbols sit. Two thirds to four fifths of Mamba's state
+the four symbols, some three to four orders of magnitude above the fillers
+around them, wherever the symbols sit. Two thirds to four fifths of Mamba's state
 comes from the windows of four positions that start at the symbols, which
 cover less than 2% of the sequence; for S4D the same windows contribute at
 most 2%. The selective SSM writes the symbols and lets the fillers pass.

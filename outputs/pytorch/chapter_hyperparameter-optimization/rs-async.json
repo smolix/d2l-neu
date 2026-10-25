@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3c1759ffb328d9ce7562124a2a1c01a74b52ac1fd23b7c613ef643f76c0c564",
+    "d2l_lib_fingerprint": "sha256:e62e614713586e1f8bc0db7ce535e2e32f12500d5fb83a5d0d3a40c31baf5994",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,32 +14,32 @@
       "outputs": []
     },
     "rs-async-objective-function": {
-      "code_fingerprint": "sha256:fda816b31876c13e7271dcc0975a3a2ec36c64f17fc1cfb26f1b59fe5eb27cbf",
+      "code_fingerprint": "sha256:57634ae84ea85b2a849ce2d8276ba4b0adf0d7f9255ac98241221297e820e35f",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-1": {
-      "code_fingerprint": "sha256:7f1fd109065991581ff6f71ecbd86bba41ccad277e082bbddc40b8600d6c831f",
+      "code_fingerprint": "sha256:1acf80bc4ff6226f9cc86f011df6df2365d8182eec432dbc800030d5b6cd421b",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-2": {
-      "code_fingerprint": "sha256:34c11df69dbb21658b46a809b000b8d0542f3d45338690ef8eafb426f87a13cb",
+      "code_fingerprint": "sha256:2173872bb1f28db21f5b8f3892893399cb1cad5c6a20b384539302533910aabb",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-3": {
-      "code_fingerprint": "sha256:5c978915898779f0c9239de684a35a6ac502e901510ecb274c208b965b29308b",
+      "code_fingerprint": "sha256:a55c882f1581276f2b93fa576641f9d61336da4593e41806c4d0758514cc8b5c",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-4": {
-      "code_fingerprint": "sha256:ad4620fdad30452fe903f9a32205dcd249168ab69ffa14e2baa80a0898aaa2b7",
+      "code_fingerprint": "sha256:6db0d92a06c5ff5a6f59da185ef86e3700705e305cf385a4cd6d6c29c2f9b298",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-5": {
-      "code_fingerprint": "sha256:dfe18c3a084b4ac47c395420722f72a90a84c42d7e605aadafa93fd5fbc7ccff",
+      "code_fingerprint": "sha256:067f33ee3abf1a8e750c5c51d867014800f194d057b98eb98a3b9f45728d1b16",
       "kind": "text",
       "outputs": [
         {
@@ -50,23 +50,23 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "Master random_seed = 2638694478\n"
+          "text": "Master random_seed = 2233502727\n"
         }
       ]
     },
     "rs-async-asynchronous-scheduler-6": {
-      "code_fingerprint": "sha256:273244fb4cd40d6aa086ca5ec32ba6e87231e36f322812a204d83cbfd281fb04",
+      "code_fingerprint": "sha256:bfaff48b80737f416112b1260e042d1eaca4aeec70bcdb31e88540a2b676076e",
       "kind": "text",
       "outputs": []
     },
     "rs-async-asynchronous-scheduler-7": {
-      "code_fingerprint": "sha256:523b514979bcad00ac082742514c26dbbfd7ddae12317d713de6c43adf6ed260",
+      "code_fingerprint": "sha256:5a1a608f8379e8eb4d9e4eb5747fb5431046d545025bb557cc0bc171a5bccfdb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stderr",
-          "text": "tuning status (last metric is reported)\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10   10.0          0.280459    44.753314\n        1  Completed    10       0.240758         219          10   10.0          0.280960    37.129126\n        2  Completed    10       0.222754         200          10   10.0          0.243500    38.301592\n        3  Completed    10       0.347567         143          10   10.0          0.200188    41.172781\n        4  Completed    10       0.101985         232          10   10.0          0.349203    33.739312\n        5  Completed    10       0.193218         185          10   10.0          0.278870    36.570239\n        6  Completed    10       0.183617         194          10   10.0          0.267901    34.742792\n        7  Completed    10       0.185613         204          10   10.0          0.333726    34.712364\n        8  Completed    10       0.142081         167          10   10.0          0.259044    37.321123\n        9  Completed    10       0.114251         167          10   10.0          0.321378    36.538984\n       10  Completed    10       0.061270         120          10   10.0          0.340972    44.803714\n       11  Completed    10       0.011350         228          10   10.0          0.899912    33.125725\n       12  Completed    10       0.209165         148          10   10.0          0.267786    35.652675\n       13  Completed    10       0.059932          99          10   10.0          0.330264    46.444955\n       14  Completed    10       0.017030         103          10   10.0          0.900931    46.363883\n       15  Completed    10       0.040260         245          10   10.0          0.899843    30.031446\n       16  Completed    10       0.171192         177          10   10.0          0.268039    36.049028\n       17  Completed    10       0.244983         230          10   10.0          0.256288    31.837707\n       18  Completed    10       0.012781         122          10   10.0          0.900020    45.181601\n       19  Completed    10       0.093589         226          10   10.0          0.374494    33.107807\n       20  Completed    10       0.097770         231          10   10.0          0.432516    32.813827\n       21  Completed    10       0.407014          93          10   10.0          0.181081    52.382483\n       22  Completed    10       0.053437         134          10   10.0          0.371888    41.764668\n       23  Completed    10       0.022643         186          10   10.0          0.900037    35.542164\n       24  Completed    10       0.041850         162          10   10.0          0.620505    35.994132\n       25  Completed    10       0.145590          75          10   10.0          0.199503    57.293912\n       26  Completed    10       0.323062         100          10   10.0          0.163700    46.090754\n       27  Completed    10       0.248451         126          10   10.0          0.236939    36.924861\n       28  Completed    10       0.012172          47          10   10.0          0.813991    82.979417\n       29  Completed    10       0.041992         137          10   10.0          0.430202    36.962107\n       30  Completed    10       0.106116         160          10   10.0          0.298214    34.496831\n       31  Completed    10       0.066478         183          10   10.0          0.466716    32.533329\n       32 InProgress     6       0.051722         116          10    6.0          0.867585    25.166667\n       33 InProgress     3       0.010723         205          10    3.0          0.900000     9.815159\n       34 InProgress     0       0.076891          81          10      -                 -            -\n3 trials running, 32 finished (32 until the end), 541.61s wallclock-time\n\n"
+          "text": "tuning status (last metric is reported)\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10     10            0.2634    42.030676\n        1  Completed    10       0.054652         241          10     10            0.8275    33.031437\n        2  Completed    10       0.339775          82          10     10            0.1589    55.181972\n        3  Completed    10       0.683802         173          10     10            0.1712    34.532909\n        4  Completed    10       0.077034         216          10     10            0.4680    31.581026\n        5  Completed    10       0.016809         140          10     10            0.9000    37.572489\n        6  Completed    10       0.495217          51          10     10            0.1424    81.234908\n        7  Completed    10       0.415403         217          10     10            0.2140    33.340144\n        8  Completed    10       0.148819         182          10     10            0.2673    37.128662\n        9  Completed    10       0.053790         222          10     10            0.4711    34.212807\n       10  Completed    10       0.024605         197          10     10            0.9000    34.428421\n       11  Completed    10       0.098384         175          10     10            0.3135    38.277737\n       12  Completed    10       0.616594         152          10     10            0.1640    40.581748\n       13  Completed    10       0.100236         112          10     10            0.2605    43.749330\n       14  Completed    10       0.026866          54          10     10            0.3334    73.263594\n       15  Completed    10       0.222529         166          10     10            0.2478    35.519083\n       16  Completed    10       0.544803         159          10     10            0.1964    36.508326\n       17  Completed    10       0.336407          66          10     10            0.1613    71.494607\n       18  Completed    10       0.747072         121          10     10            0.1577    51.100718\n       19  Completed    10       0.049722         233          10     10            0.9000    36.992688\n       20  Completed    10       0.079357         184          10     10            0.3736    49.116563\n       21  Completed    10       0.014301          75          10     10            0.8394    96.873735\n       22  Completed    10       0.043960          56          10     10            0.2729   110.803291\n       23  Completed    10       0.010293         210          10     10            0.9000    50.989681\n       24  Completed    10       0.262581         152          10     10            0.2161    43.055282\n       25 InProgress     9       0.456341          76          10      9            0.1538    61.370654\n       26 InProgress     5       0.034043          54          10      5            0.4296    46.654219\n       27 InProgress     2       0.064539         129          10      2            0.9000    10.979099\n3 trials running, 25 finished (25 until the end), 541.78s wallclock-time\n\n"
         },
         {
           "type": "stream",
@@ -81,30 +81,30 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "Tuning finished, results of trials can be found on syne-tune/python-entrypoint-2026-10-23-16-21-56-308\n"
+          "text": "Tuning finished, results of trials can be found on syne-tune/python-entrypoint-2026-10-24-11-57-07-745\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "--------------------\nResource summary (last result is reported):\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10     10          0.280459    44.753314\n        1  Completed    10       0.240758         219          10     10          0.280960    37.129126\n        2  Completed    10       0.222754         200          10     10          0.243500    38.301592\n        3  Completed    10       0.347567         143          10     10          0.200188    41.172781\n        4  Completed    10       0.101985         232          10     10          0.349203    33.739312\n        5  Completed    10       0.193218         185          10     10          0.278870    36.570239\n        6  Completed    10       0.183617         194          10     10          0.267901    34.742792\n        7  Completed    10       0.185613         204          10     10          0.333726    34.712364\n        8  Completed    10       0.142081         167          10     10          0.259044    37.321123\n        9  Completed    10       0.114251         167          10     10          0.321378    36.538984\n       10  Completed    10       0.061270         120          10     10          0.340972    44.803714\n       11  Completed    10       0.011350         228          10     10          0.899912    33.125725\n       12  Completed    10       0.209165         148          10     10          0.267786    35.652675\n       13  Completed    10       0.059932          99          10     10          0.330264    46.444955\n       14  Completed    10       0.017030         103          10     10          0.900931    46.363883\n       15  Completed    10       0.040260         245          10     10          0.899843    30.031446\n       16  Completed    10       0.171192         177          10     10          0.268039    36.049028\n       17  Completed    10       0.244983         230          10     10          0.256288    31.837707\n       18  Completed    10       0.012781         122          10     10          0.900020    45.181601\n       19  Completed    10       0.093589         226          10     10          0.374494    33.107807\n       20  Completed    10       0.097770         231          10     10          0.432516    32.813827\n       21  Completed    10       0.407014          93          10     10          0.181081    52.382483\n       22  Completed    10       0.053437         134          10     10          0.371888    41.764668\n       23  Completed    10       0.022643         186          10     10          0.900037    35.542164\n       24  Completed    10       0.041850         162          10     10          0.620505    35.994132\n       25  Completed    10       0.145590          75          10     10          0.199503    57.293912\n       26  Completed    10       0.323062         100          10     10          0.163700    46.090754\n       27  Completed    10       0.248451         126          10     10          0.236939    36.924861\n       28  Completed    10       0.012172          47          10     10          0.813991    82.979417\n       29  Completed    10       0.041992         137          10     10          0.430202    36.962107\n       30  Completed    10       0.106116         160          10     10          0.298214    34.496831\n       31  Completed    10       0.066478         183          10     10          0.466716    32.533329\n       32  Completed    10       0.051722         116          10     10          0.411464    43.220762\n       33  Completed    10       0.010723         205          10     10          0.900084    32.238930\n       34  Completed    10       0.076891          81          10     10          0.251127    60.246663\n       35  Completed    10       0.010293         226          10     10          0.900179    32.985970\n       36  Completed    10       0.286313         195          10     10          0.222306    33.865186\n       37  Completed    10       0.049401         109          10     10          0.360221    37.669883\n       38  Completed    10       0.610027          51          10     10          0.144520    67.413653\n       39  Completed    10       0.087577          33          10     10          0.202553    97.973408\n       40  Completed    10       0.852720          81          10     10          0.134266    45.793062\n       41  Completed    10       0.620693         145          10     10          0.172510    32.231864\n       42  Completed    10       0.813647          54          10     10          0.394584    74.237206\n       43  Completed    10       0.473125         191          10     10          0.216432    33.780516\n       44  Completed    10       0.089344         220          10     10          0.376028    32.441350\n       45  Completed    10       0.103380         137          10     10          0.276097    36.330781\n       46  Completed    10       0.680171          98          10     10          0.196454    46.978837\n       47  Completed    10       0.057030         194          10     10          0.428003    31.684674\n       48  Completed    10       0.010647         105          10     10          0.899841    48.244355\n       49  Completed    10       0.069457         207          10     10          0.450915    33.959789\n       50  Completed    10       0.555910         163          10     10          0.282113    37.579721\n       51  Completed    10       0.357308         204          10     10          0.283921    34.321887\n       52  Completed    10       0.118688         245          10     10          0.340896    32.094957\n       53 InProgress     3       0.406228          40          10      3          0.198400    26.441265\n       54 InProgress     1       0.013002         120          10      1          0.899603     4.889095\n       55 InProgress     1       0.054251         146          10      1          0.900122     4.323872\n3 trials running, 53 finished (53 until the end), 903.75s wallclock-time\n\nvalidation_error: best 0.1342657208442688 for trial-id 40\n--------------------\n"
+          "text": "--------------------\nResource summary (last result is reported):\n trial_id     status  iter  learning_rate  batch_size  max_epochs  epoch  validation_error  worker-time\n        0  Completed    10       0.100000         128          10   10.0            0.2634    42.030676\n        1  Completed    10       0.054652         241          10   10.0            0.8275    33.031437\n        2  Completed    10       0.339775          82          10   10.0            0.1589    55.181972\n        3  Completed    10       0.683802         173          10   10.0            0.1712    34.532909\n        4  Completed    10       0.077034         216          10   10.0            0.4680    31.581026\n        5  Completed    10       0.016809         140          10   10.0            0.9000    37.572489\n        6  Completed    10       0.495217          51          10   10.0            0.1424    81.234908\n        7  Completed    10       0.415403         217          10   10.0            0.2140    33.340144\n        8  Completed    10       0.148819         182          10   10.0            0.2673    37.128662\n        9  Completed    10       0.053790         222          10   10.0            0.4711    34.212807\n       10  Completed    10       0.024605         197          10   10.0            0.9000    34.428421\n       11  Completed    10       0.098384         175          10   10.0            0.3135    38.277737\n       12  Completed    10       0.616594         152          10   10.0            0.1640    40.581748\n       13  Completed    10       0.100236         112          10   10.0            0.2605    43.749330\n       14  Completed    10       0.026866          54          10   10.0            0.3334    73.263594\n       15  Completed    10       0.222529         166          10   10.0            0.2478    35.519083\n       16  Completed    10       0.544803         159          10   10.0            0.1964    36.508326\n       17  Completed    10       0.336407          66          10   10.0            0.1613    71.494607\n       18  Completed    10       0.747072         121          10   10.0            0.1577    51.100718\n       19  Completed    10       0.049722         233          10   10.0            0.9000    36.992688\n       20  Completed    10       0.079357         184          10   10.0            0.3736    49.116563\n       21  Completed    10       0.014301          75          10   10.0            0.8394    96.873735\n       22  Completed    10       0.043960          56          10   10.0            0.2729   110.803291\n       23  Completed    10       0.010293         210          10   10.0            0.9000    50.989681\n       24  Completed    10       0.262581         152          10   10.0            0.2161    43.055282\n       25  Completed    10       0.456341          76          10   10.0            0.1494    67.977699\n       26  Completed    10       0.034043          54          10   10.0            0.2824    91.613814\n       27  Completed    10       0.064539         129          10   10.0            0.4582    46.792097\n       28  Completed    10       0.019507         237          10   10.0            0.9000    35.370727\n       29  Completed    10       0.381938          48          10   10.0            0.1414    79.498291\n       30  Completed    10       0.018019         174          10   10.0            0.9000    39.028952\n       31  Completed    10       0.186769         175          10   10.0            0.2688    35.432499\n       32  Completed    10       0.317112         200          10   10.0            0.2237    31.591429\n       33  Completed    10       0.031156          38          10   10.0            0.2755    94.827536\n       34  Completed    10       0.324676          61          10   10.0            0.1592    66.778848\n       35  Completed    10       0.011803          92          10   10.0            0.9000    50.124325\n       36  Completed    10       0.192810         165          10   10.0            0.2799    37.825403\n       37  Completed    10       0.222201         166          10   10.0            0.2568    38.283365\n       38  Completed    10       0.201335         110          10   10.0            0.2242    47.121973\n       39  Completed    10       0.719917         231          10   10.0            0.2217    37.874681\n       40  Completed    10       0.222825         205          10   10.0            0.2798    39.264833\n       41  Completed    10       0.532149         184          10   10.0            0.2206    44.469882\n       42  Completed    10       0.171808         205          10   10.0            0.3048    43.088324\n       43  Completed    10       0.018978         237          10   10.0            0.9000    42.239762\n       44 InProgress     4       0.329899         119          10    4.0            0.3233    32.323044\n       45 InProgress     1       0.027293         187          10    1.0            0.9000    10.610174\n       46 InProgress     0       0.077264          86          10      -                 -            -\n3 trials running, 44 finished (44 until the end), 904.03s wallclock-time\n\nvalidation_error: best 0.14139999999999997 for trial-id 29\n--------------------\n"
         }
       ]
     },
     "rs-async-asynchronous-scheduler-8": {
-      "code_fingerprint": "sha256:9fe1aecc5f25c98af8886bd9858177fc248b6d6efc2c1a3c80f2a0aa5d9c5b7a",
+      "code_fingerprint": "sha256:d114d269e2c01bb73df474238839b9f2203bd18bcef37773788136cb326b7627",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rs-async/rs-async-asynchronous-scheduler-8-1.svg",
-          "bytes": 29416,
-          "sha256": "sha256:c27f586e57965c33e3677d2afa6c715f627a552fb53b299624158a47e773cf60"
+          "bytes": 28615,
+          "sha256": "sha256:bb872c25b6fdb87f2e4d298ccda20c38e09fdd81c974e459b1902d1b8f93aca0"
         }
       ]
     },
     "rs-async-visualize-the-asynchronous-optimization-process": {
-      "code_fingerprint": "sha256:e6585b85b05936e050989394cf3de9de32a96cf14dedce1211ed40ecb159fbcd",
+      "code_fingerprint": "sha256:cfcbfd1390aebcf21698af4e41fffc334d8eeac9f672c9fa08827531d0384361",
       "kind": "mixed",
       "outputs": [
         {
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rs-async/rs-async-visualize-the-asynchronous-optimization-process-1.svg",
-          "bytes": 103940,
-          "sha256": "sha256:48686410da3e797a26051c8764e99ef0c6da57614c0e40b0e03b4c16d5e1c3c2"
+          "bytes": 88917,
+          "sha256": "sha256:328415bba6c2121e337f4da7eaab5030f221896d6f24246038a36cff2ab050d4"
         }
       ]
     }

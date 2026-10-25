@@ -393,7 +393,8 @@ d2l.plot([data.time[data.tau:], data.time[data.num_train+data.tau:]],
          'x', legend=['1-step preds', 'multistep preds'], figsize=(6, 3))
 ```
 
-The forecast collapses to a near-constant within a few steps.
+The forecast soon stops following the oscillation and settles to a
+near-constant.
 The reason is error accumulation.
 Say that after one step we have some error $\epsilon_1 = \bar\epsilon$.
 That error now perturbs the *input* of the next step,

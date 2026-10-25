@@ -283,9 +283,10 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-In the displayed run, training reaches about 83--84% validation accuracy, close
-to the from-scratch implementation in :numref:`sec_softmax_scratch`. The shorter
-program changes the implementation interface, not the underlying linear model.
+In the displayed run, validation accuracy peaks at about 83--85% (a single
+epoch can dip a few points lower), close to the from-scratch implementation in
+:numref:`sec_softmax_scratch`. The shorter program changes the implementation
+interface, not the underlying linear model.
 
 
 ## Summary
@@ -657,7 +658,7 @@ Same Fashion-MNIST, same 10 epochs, same `Trainer`:
 :::
 
 ::: {.col .narrow}
-In the displayed run, validation accuracy is **~83–84%**, close to the
+In the displayed run, validation accuracy peaks at **~83–85%**, close to the
 from-scratch model in the softmax-from-scratch section. The implementation uses
 a stable fused loss rather than explicit softmax followed by clipping.
 :::

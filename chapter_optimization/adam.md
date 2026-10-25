@@ -670,8 +670,8 @@ print(f'final perplexity: SGD {math.exp(final_loss(sgd_lm[best_sgd])):.2f}, '
 Tuned Adam beats tuned SGD ("tuned" here and below meaning the best of the
 coarse four-point grid) by a wide margin, roughly 20% in final training
 loss in our runs, and the gap is not a transient: Adam's curve is
-below SGD's at every point after the first few dozen steps and is still
-opening at the end. No rate in our grid rescued SGD: the sweep found its
+below SGD's at every point after the first few dozen steps and stays
+below it to the end. No rate in our grid rescued SGD: the sweep found its
 best, and the next one diverged. On this problem, per-coordinate
 scaling is worth more than any amount of step-size tuning.
 

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:49dc95ea288fa7b7200396de1cbbbb449e7fa29b123c99f5ea2418a1fe3b9697",
+    "d2l_lib_fingerprint": "sha256:10d6021027c71c5726c3e24c56027c95cbf92a1a555b1fd68337f6b8d9cf6121",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  0.50  1.00  0.48  0.12  0.12\n"
+          "text": "RNN               1.00  0.50  1.00  1.00  0.12  0.12\n"
         },
         {
           "type": "stream",

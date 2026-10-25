@@ -260,7 +260,7 @@ print(f'after 500 steps of Adam: {ns_500:.0f}')
 Three readings, all of which we will use. First, the magnitudes: at these
 model and dataset sizes the noise scale is small — tens of examples for the
 CNN and single-digit sequence counts for the language model at
-initialization, rising to several hundred examples and on the order of a
+initialization, rising to hundreds of examples and on the order of a
 hundred sequences by step 500. The batch sizes used in the preceding experiments fall near or above these
 estimates, depending on the checkpoint. Second, the growth: within those 500
 steps the CNN's noise scale grows severalfold and the language model's by
@@ -492,7 +492,7 @@ d2l.plot(cnn_bs, [cnn_steps,
 The CNN shows a similar pattern: the first quadrupling remains near the
 reference line, after which the gap widens. At the top of the
 range a further quadrupling of the batch (a quadrupling of the compute per
-step) cuts the step count by at most a third, and in some runs the count
+step) cuts the step count by about a third at most, and in some runs the count
 rises instead, a sign we will explain in the next part. By then the example count is several times its small-batch minimum:
 additional compute still reduces sequential steps, but with substantially
 lower data efficiency.
@@ -643,9 +643,11 @@ Both plots have a broad minimum and a sharp increase on the
 right, and growing the batch slides the basin rightward. For SGD the best
 region moves by roughly the batch ratio, a factor of four to eight in our
 runs — retuning from scratch at $b=64$ finds nothing better than what the
-linear rule predicts from $b=8$. For Adam the basin moves by only a factor
-of about two to four; applying the *linear* rule to Adam ($8\times$, the
-rightmost points of the upper curve) lands measurably past the optimum. The
+linear rule predicts from $b=8$. For Adam the basin is flatter, so a single
+run locates its minimum less precisely; it typically moves by a factor of
+about two to four, and applying the *linear* rule to Adam ($8\times$, the
+rightmost points of the upper curve) gains nothing over the square-root
+rule and in some runs lands measurably past the optimum. The
 basins are broad, which is itself worth remembering: near the optimum,
 being wrong by a factor of two costs little, and the rules are aids for
 crossing large batch-size ratios, not precision instruments.
@@ -927,7 +929,7 @@ Single seeded runs, read qualitatively.
 @!batch-size-the-cnn
 
 At the top of the range a quadrupled batch — quadrupled compute per step —
-cuts the step count by at most a third, and in some runs the count rises;
+cuts the step count by about a third at most, and in some runs the count rises;
 examples-to-target sits several times above its minimum.
 :::
 
@@ -963,7 +965,8 @@ Loss vs. $\eta$ at $b=8$ and $b=64$, fixed example budget:
 @!batch-size-learning-rate-rules-3
 
 - SGD's basin moves by roughly the batch ratio; Adam's by roughly its
-  square root — the linear rule applied to Adam overshoots.
+  square root — the linear rule applied to Adam gains nothing and can
+  overshoot.
 - Basins are broad: rules are for crossing large ratios, not fine tuning.
 :::
 

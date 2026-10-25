@@ -30,12 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rope: max |full - cached| = 7.00e-07\n"
+          "text": "rope: max |full - cached| = 8.05e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned: max |full - cached| = 6.26e-07\n"
+          "text": "learned: max |full - cached| = 5.66e-07\n"
         }
       ]
     },
@@ -51,29 +51,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  512: naive  16.28 ms/token, cached 12.82 ms/token\n"
+          "text": "n=  512: naive  19.53 ms/token, cached 17.53 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 1024: naive  27.45 ms/token, cached 15.99 ms/token\n"
+          "text": "n= 1024: naive  24.75 ms/token, cached 13.25 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 2048: naive  59.99 ms/token, cached 15.55 ms/token\n"
+          "text": "n= 2048: naive  32.47 ms/token, cached 12.75 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 4096: naive 150.15 ms/token, cached 17.30 ms/token\n"
+          "text": "n= 4096: naive  83.07 ms/token, cached 11.83 ms/token\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-same-logits-measured-2-1.svg",
-          "bytes": 24788,
-          "sha256": "sha256:2b9e73f0ef7b1e9d18e17128f52435b2c973cbded2e98631e039d03917f3e194"
+          "bytes": 26163,
+          "sha256": "sha256:51eabf9c6e874cc7b5af306372da75d0da784b0d1f7c27cc3ed0a34e451b5c8f"
         }
       ]
     },
@@ -84,12 +84,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens after a 3584-token prompt: 50.0s =   5.1 tokens/s\n"
+          "text": "naive : 256 tokens after a 3584-token prompt: 29.3s =   8.7 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens after a 3584-token prompt: 17.1s =  14.9 tokens/s\n"
+          "text": "cached: 256 tokens after a 3584-token prompt: 13.3s =  19.2 tokens/s\n"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 2048 tokens in   58 ms =  35101 tokens/s\ndecode:  one token in  16.97 ms =     59 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
+          "text": "prefill: 2048 tokens in   33 ms =  61431 tokens/s\ndecode:  one token in  13.84 ms =     72 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
         }
       ]
     },
@@ -148,22 +148,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=8: best validation loss 1.53, cache 12.0 KiB per token\n"
+          "text": "H_kv=8: best validation loss 1.52, cache 12.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=4: best validation loss 1.51, cache  6.0 KiB per token\n"
+          "text": "H_kv=4: best validation loss 1.53, cache  6.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=2: best validation loss 1.52, cache  3.0 KiB per token\n"
+          "text": "H_kv=2: best validation loss 1.55, cache  3.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=1: best validation loss 1.53, cache  1.5 KiB per token\n"
+          "text": "H_kv=1: best validation loss 1.50, cache  1.5 KiB per token\n"
         }
       ]
     },

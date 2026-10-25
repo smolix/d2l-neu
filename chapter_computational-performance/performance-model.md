@@ -306,9 +306,9 @@ and the per-step read stalls that pipeline on top. The exact margin is
 framework- and workload-dependent; the rule is not: **synchronize once per
 minibatch at most, and only when the host actually needs the value** —
 accumulate metrics on the device and read them at logging boundaries. (The
-`d2l` training loops used throughout this book go a step further: they
-hand each logged value to the plotting board, which performs the
-device-to-host conversion on a background thread, off the training loop.)
+`d2l.Trainer` of the Basics chapters follows this rule: the training and
+validation steps return device values, the trainer sums them on the device,
+and it reads each sum once per epoch.)
 
 Since every timing in this chapter needs the same three-step discipline —
 warm up, synchronize, then time — we package it once. Warmup matters

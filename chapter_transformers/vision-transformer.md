@@ -355,12 +355,12 @@ if tab.selected('pytorch'):
 if tab.selected('jax'):
     vit_params = sum(p.size for p in
                      jax.tree.leaves(nnx.state(model, nnx.Param)))
-vit_acc = float(model.board.data['val_acc'][-1].y)
+vit_acc = trainer.history['val_acc'][-1]
 print(f'ViT: {vit_params/1e6:.1f}M parameters, '
       f'validation accuracy {vit_acc:.2f}')
 ```
 
-The model trains without drama to a validation accuracy of about 86–87%.
+The model trains without drama to a validation accuracy of about 85–87%.
 Keep that number in mind; we will shortly see what a CNN of the same size
 does with the same ten epochs.
 
@@ -495,7 +495,7 @@ if tab.selected('pytorch'):
 if tab.selected('jax'):
     cnn_params = sum(p.size for p in
                      jax.tree.leaves(nnx.state(cnn, nnx.Param)))
-cnn_acc = float(cnn.board.data['val_acc'][-1].y)
+cnn_acc = trainer.history['val_acc'][-1]
 print(f'CNN: {cnn_params/1e6:.1f}M parameters, '
       f'validation accuracy {cnn_acc:.2f}')
 print(f'ViT: {vit_params/1e6:.1f}M parameters, '
@@ -504,7 +504,7 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, '
 
 At the same parameter count, with the same data and number of epochs, the
 CNN performs better by several points, about 90–92% against the ViT's
-86–87%, a margin well beyond the run-to-run noise of these ten-epoch runs.
+85–87%, a margin well beyond the run-to-run noise of these ten-epoch runs.
 The result is consistent with an advantage from the convolutional prior at
 this scale, although the comparison does not isolate that cause. Locality
 and translation

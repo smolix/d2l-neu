@@ -1512,8 +1512,8 @@ JAX: growing shapes would recompile every step — preallocate
 
 ::: {.slide title="Reading the curve"}
 - Naive grows with context ($2Nn$); cached stays **flat**.
-- About $5\times$ at a 4k context in our runs, doubling with every further
-  doubling of context.
+- About $6$--$7\times$ at a 4k context in our runs, widening with every
+  further doubling of context.
 - Curves *merge* at short context: a 12-block step is launch-bound there —
   the cache removes a term that grows, not a constant factor.
 

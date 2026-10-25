@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e164cc454d0f47d29a1889282b21a8e0684f1bf04203ffe3dc835354347f10c8",
+    "d2l_lib_fingerprint": "sha256:43b4bd40fd6a3bae37b253e6e6d84a9737ab533d6edf1198e806e9c9b43ecddb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 5.576e+10 (ratio 0.72)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.256e+11 (ratio 0.97)\nbackward / forward = 3.05\n"
+          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 8.480e+10 (ratio 1.10)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.547e+11 (ratio 1.10)\nbackward / forward = 2.00\n"
         }
       ]
     },
@@ -58,22 +58,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.20\n"
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.20\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=128, 3 blocks:  0.59M parameters, train 1.17, validation 1.17\n"
+          "text": "d=128, 3 blocks:  0.59M parameters, train 1.18, validation 1.18\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
+          "text": "d=192, 4 blocks:  1.77M parameters, train 1.12, validation 1.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.07, validation 1.08\n"
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
         },
         {
           "type": "stream",
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 35130,
-          "sha256": "sha256:f2caa9528419671c6b674864b06c16c9db8384e50d4c1cfa82fd047d7b75600b"
+          "bytes": 32687,
+          "sha256": "sha256:50afe84bca833392e34212987e366e4b886344cc6aab1b61909e501ffe40bad5"
         }
       ]
     },
@@ -112,7 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nQwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
         }
       ]
     }

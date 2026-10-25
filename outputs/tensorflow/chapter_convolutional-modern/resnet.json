@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:61edd828e15930d136b21d11861a7067a5161176f40e005a431b22553be16230",
+    "d2l_lib_fingerprint": "sha256:3a33d9a49220df369b560e96b4789b620f67190efc586e3f43b6b0db55ebbc28",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 24, 24, 64)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
         },
         {
           "type": "stream",
@@ -92,8 +97,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 22714,
-          "sha256": "sha256:aa4ccc3cb0efc48ee31e55693a4009028a9c3c0b4c6240f419f8a16432eca324"
+          "bytes": 31821,
+          "sha256": "sha256:de2703243184a879be4b394ea1bb8a4b6ccf74dda374e0e2d7023ae2e9960c5f"
         }
       ]
     },

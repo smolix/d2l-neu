@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.042\n"
+          "text": "clipped at 1.0: final loss 1.026\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 25522,
-          "sha256": "sha256:7416654b22617176357bac22b6f8ef5a4c2a9d00eb989e09553ec9bf56dcc41d"
+          "bytes": 40305,
+          "sha256": "sha256:08f1495abb8c2067feda45085c28422f76a8fbef24689dad80fb518c96a75f8c"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.903, EMA 0.910\n"
+          "text": "final test accuracy: live 0.899, EMA 0.913\n"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24051,
-          "sha256": "sha256:3905cc62e8c449069ae947ca14e74644b8f9f267b205598f3da00854a7c90e90"
+          "bytes": 22795,
+          "sha256": "sha256:8a8703c297d5f16975a8ac1bb43b90cf02cfcb189d135a4f4555294180b5ddae"
         }
       ]
     }

@@ -262,24 +262,12 @@ cell's `num_inputs`, since the cell consumes what the embedding produces. We
 initialize the embedding rows at unit scale, taking over the role the one-hot
 1s used to play, while the output projection starts near zero, so the initial
 next-token distribution is close to uniform, with perplexity near
-$|\mathcal{V}|$ before the first update. Since we evaluate with perplexity
-(:numref:`subsec_perplexity`), the training and validation steps plot it in
-place of raw loss.
-
-:begin_tab:`tensorflow`
-The compiled training and validation steps (see :numref:`sec_linear_scratch`)
-return the raw loss, so we override the `_report_train` and `_report_val`
-hooks that the trainer calls with those values, plotting perplexity instead
-of loss.
-:end_tab:
-
-:begin_tab:`jax`
-The training and validation steps run inside `@nnx.jit` and only return the
-mean loss: plotting from inside them would hand the board a JAX tracer.
-`Trainer.fit_epoch` plots the materialized loss eagerly outside jit, and we
-override `plot` to relabel that value as perplexity for parity with the
-other tabs.
-:end_tab:
+$|\mathcal{V}|$ before the first update. The model inherits the
+cross-entropy loss from `Classifier`, averaged over all tokens of a batch.
+Its validation step returns only this loss, since the token accuracy that
+`Classifier` would add is not what we monitor. The loss is the logarithm of
+the perplexity (:numref:`subsec_perplexity`), so the trainer's mean
+validation loss gives the validation perplexity after one exponentiation.
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
 %%tab pytorch
@@ -298,14 +286,8 @@ class RNNLMScratch(d2l.Classifier):  #@save
                 self.rnn.num_hiddens, self.vocab_size) * self.rnn.sigma)
         self.b_q = nn.Parameter(d2l.zeros(self.vocab_size))
 
-    def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=True)
-        return l
-
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 ```
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
@@ -325,14 +307,8 @@ class RNNLMScratch(d2l.Classifier):  #@save
         for param in self.get_scratch_params():
             param.attach_grad()
 
-    def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=True)
-        return l
-
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=False)
+        return self.loss(self(*batch[:-1]), batch[-1])
 ```
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
@@ -351,11 +327,8 @@ class RNNLMScratch(d2l.Classifier):  #@save
             (self.rnn.num_hiddens, self.vocab_size)) * self.rnn.sigma)
         self.b_q = tf.Variable(d2l.zeros(self.vocab_size))
 
-    def _report_train(self, loss):
-        self.plot('ppl', d2l.exp(loss), train=True)
-
-    def _report_val(self, y_hat, batch):
-        self.plot('ppl', d2l.exp(self.loss(y_hat, batch[-1])), train=False)
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
 ```
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
@@ -373,21 +346,8 @@ class RNNLMScratch(d2l.Classifier):  #@save
             (rnn.num_hiddens, vocab_size)) * rnn.sigma)
         self.b_q = nnx.Param(jnp.zeros(vocab_size))
 
-    def training_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1]), batch[-1])
-
-    def plot(self, key, value, train):
-        # The train/val steps run inside `@nnx.jit` and only return the mean
-        # loss: plotting a tracer from there would crash the board's drawing
-        # thread. `Trainer.fit_epoch` instead calls this with the materialized
-        # loss (outside jit), which we relabel as perplexity for parity with
-        # the other tabs.
-        if key == 'loss':
-            key, value = 'ppl', d2l.exp(value)
-        super().plot(key, value, train)
 ```
 
 The minibatches sampled by our data pipeline have shape (`batch_size`,
@@ -537,7 +497,9 @@ concatenated into one giant vector.
 The method below attaches to the `d2l.Trainer` class (see
 :numref:`sec_linear_scratch`): whenever a positive `gradient_clip_val` is
 set, `fit_epoch` invokes it after the backward pass and before the parameter
-update, rescaling each parameter's gradient in place.
+update, rescaling each parameter's gradient in place. The scale factor
+$\min(1, \theta/\|\mathbf{g}\|)$ is computed on the device, so clipping
+does not force a synchronization with Python.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -549,7 +511,8 @@ the optimizer.
 :end_tab:
 
 :begin_tab:`jax`
-In the JAX trainer, clipping is not a separate method call: `fit` chains
+In the JAX trainer, clipping is not a separate method call:
+`prepare_optimizer` chains
 `optax.clip_by_global_norm(gradient_clip_val)` in front of the optimizer, so
 every update is clipped inside the jitted training step. The method below
 implements the same projection explicitly. The trainer never calls it; we
@@ -564,10 +527,10 @@ def clip_gradients(self, grad_clip_val, model):
     params = model.parameters()
     if not isinstance(params, list):
         params = [p.data() for p in params.values()]
-    norm = math.sqrt(sum((p.grad ** 2).sum() for p in params))
-    if norm > grad_clip_val:
-        for param in params:
-            param.grad[:] *= grad_clip_val / norm
+    norm = np.sqrt(sum((p.grad ** 2).sum() for p in params))
+    scale = np.minimum(grad_clip_val / norm, 1.0)  # no `if` on the host
+    for param in params:
+        param.grad[:] *= scale
 ```
 
 ```{.python .input #rnn-implementation-gradient-clipping}
@@ -575,10 +538,10 @@ def clip_gradients(self, grad_clip_val, model):
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, model):
     params = [p for p in model.parameters() if p.requires_grad]
-    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
-    if norm > grad_clip_val:
-        for param in params:
-            param.grad[:] *= grad_clip_val / norm
+    norm = torch.sqrt(sum(torch.sum(p.grad ** 2) for p in params))
+    scale = torch.clamp(grad_clip_val / norm, max=1.0)  # no `if` on the host
+    for param in params:
+        param.grad.mul_(scale)
 ```
 
 ```{.python .input #rnn-implementation-gradient-clipping}
@@ -653,33 +616,23 @@ with d2l.try_gpu():
 
 ```{.python .input #rnn-implementation-training-3}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
-model.board.yscale = 'log'  # perplexity spans orders of magnitude
+ppl_init = math.exp(trainer.evaluate(model, data)['loss'])
+print(f'initial validation perplexity {ppl_init:.0f}')
 t0 = time.time()
 trainer.fit(model, data)
 t_scratch = time.time() - t0
 ```
 
-Since perplexity ranges over orders of magnitude during training, we plot it
-on a logarithmic axis. The curve starts near the vocabulary size, exactly
-the near-uniform initial model we constructed, and falls fast; at this
-aggressive learning rate the first few updates can transiently overshoot
-(clipping keeps the overshoot from becoming divergence, as an exercise
-invites you to verify). Let's read off the final validation perplexity.
+Before training, the validation perplexity is close to the vocabulary size,
+as expected from the near-uniform initial model we constructed. The board
+plots the mean cross-entropy per token, the logarithm of the perplexity,
+which falls fast; at this aggressive learning rate the first few updates can
+transiently overshoot (clipping keeps the overshoot from becoming
+divergence, as an exercise invites you to verify). The final validation
+perplexity is the exponential of the last validation loss.
 
 ```{.python .input #rnn-implementation-training-4}
-%%tab pytorch, mxnet, tensorflow
-ppl_scratch = float(model.board.data['val_ppl'][-1].y)
-print(f'validation perplexity {ppl_scratch:.1f}')
-```
-
-```{.python .input #rnn-implementation-training-4}
-%%tab jax
-total_loss = num_tokens = 0
-for X_val, y_val in data.val_dataloader():
-    losses = model.loss(model(X_val), y_val, averaged=False)
-    total_loss += float(losses.sum())
-    num_tokens += losses.size
-ppl_scratch = math.exp(total_loss / num_tokens)
+ppl_scratch = math.exp(trainer.history['val_loss'][-1])
 print(f'validation perplexity {ppl_scratch:.1f}')
 ```
 
@@ -899,7 +852,8 @@ class RNN(d2l.Module):  #@save
     def __init__(self, num_inputs, num_hiddens):
         super().__init__()
         self.save_hyperparameters()
-        self.rnn = gluon.rnn.RNN(num_hiddens)
+        # Gluon's default activation is ReLU; use the tanh of RNNScratch
+        self.rnn = gluon.rnn.RNN(num_hiddens, activation='tanh')
 
     def forward(self, inputs, H=None):
         if H is None:
@@ -1049,38 +1003,32 @@ Training is the same call as before, with the same hyperparameters.
 
 ```{.python .input #rnn-implementation-concise-implementation-5}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
-model.board.yscale = 'log'
 t0 = time.time()
 trainer.fit(model, data)
 t_concise = time.time() - t0
 ```
 
 The trained model reaches a validation perplexity in the same range as the
-from-scratch implementation, somewhat higher in some frameworks, and its
-samples read the same.
+from-scratch implementation, though somewhat higher, and its samples read
+the same.
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab pytorch, mxnet
-ppl_concise = float(model.board.data['val_ppl'][-1].y)
+ppl_concise = math.exp(trainer.history['val_loss'][-1])
 pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu())
 d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab tensorflow
-ppl_concise = float(model.board.data['val_ppl'][-1].y)
+ppl_concise = math.exp(trainer.history['val_loss'][-1])
 pred = model.predict('the time traveller', 30, data.tokenizer)
 d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab jax
-total_loss = num_tokens = 0
-for X_val, y_val in data.val_dataloader():
-    losses = model.loss(model(X_val), y_val, averaged=False)
-    total_loss += float(losses.sum())
-    num_tokens += losses.size
-ppl_concise = math.exp(total_loss / num_tokens)
+ppl_concise = math.exp(trainer.history['val_loss'][-1])
 pred = model.predict('the time traveller', 30, data.tokenizer)
 d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
@@ -1114,21 +1062,21 @@ one fused library kernel.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The margin here is smaller than in the PyTorch tab, and it moves around
-from run to run. The reason is that Keras provides no fused GPU kernel for
-the vanilla `SimpleRNN` (only its LSTM and GRU layers have one), so both
-versions execute as `tf.function`-compiled graphs of per-step operations,
-and neither enjoys a fused advantage. Fused kernels win when they exist;
+The concise layer is faster here too, but the margin moves around from
+run to run, and it does not come from kernel fusion: Keras provides no fused
+GPU kernel for the vanilla `SimpleRNN` (only its LSTM and GRU layers have
+one), so both versions execute as `tf.function`-compiled graphs of per-step
+operations, and neither enjoys a fused advantage. Fused kernels win when they exist;
 the LSTM and GRU layers of :numref:`chap_modern_rnn` show the speedup this
 layer is missing.
 :end_tab:
 
 :begin_tab:`jax`
-The gap is modest here because both versions are JIT-compiled end to end:
-our scratch loop is unrolled and fused by XLA just like the library cell,
-and the remaining difference is mostly compilation and dispatch overhead.
-The comparison is starker in eager frameworks, where the scratch loop pays a
-Python-level launch cost at every time step.
+Here the gap has a different source, because both versions are
+JIT-compiled end to end: our scratch loop is unrolled and fused by XLA just
+like the library cell, and the remaining difference is mostly compilation
+and dispatch overhead. In eager frameworks, by contrast, the scratch loop
+pays a Python-level launch cost at every time step.
 :end_tab:
 
 At this model size the absolute difference is seconds. At the scale of
@@ -1334,8 +1282,8 @@ The equivalence, verified:
 :::
 
 ::: {.slide title="Wrapping as a language model"}
-Embedding in, vocab-sized projection out; plot perplexity
-instead of loss:
+Embedding in, vocab-sized projection out; validation reports the loss
+alone, whose exponential is the perplexity:
 
 @rnn-implementation-from-token-ids-to-embeddings-1
 :::
@@ -1362,7 +1310,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\math
 @rnn-implementation-gradient-clipping
 
 (PyTorch/MXNet: called by `fit_epoch`; TF: inside the compiled
-step; JAX: `optax.clip_by_global_norm` does it inside `fit`.)
+step; JAX: `optax.clip_by_global_norm`, chained in by the trainer.)
 :::
 
 ::: {.slide title="Training"}
@@ -1385,12 +1333,12 @@ Fresh zero state per window = **truncated BPTT**:
 
 . . .
 
-Val ppl ~90–100 over 1,024 tokens vs. char-level ppl ~7 over 27:
+Val ppl ~80–100 over 1,024 tokens vs. char-level ppl ~7 over 27:
 **not comparable**. Convert to bits per byte:
 
 @rnn-implementation-training-5
 
-~2.4 bpb beats the char-trigram baseline's 2.68 bpb: the "worse"
+~2.3–2.4 bpb beats the char-trigram baseline's 2.68 bpb: the "worse"
 perplexity is the better language model.
 :::
 
@@ -1449,9 +1397,10 @@ Same trainer, same data:
 
 - PyTorch/MXNet: fused kernel wins ~2–3×; per-step launch
   overhead dominates at this size.
-- JAX: both versions JIT-compile; the gap is small.
-- TF: `SimpleRNN` has **no** fused GPU kernel; the compiled
-  scratch loop matches it.
+- JAX: both versions JIT-compile; the gap is compile and
+  dispatch overhead.
+- TF: `SimpleRNN` has **no** fused GPU kernel; the margin
+  is not fusion and varies run to run.
 :::
 
 ::: {.slide title="Recap"}

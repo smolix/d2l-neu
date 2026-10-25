@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:befd0d5f1dfbda5356813858d1d8a9d90de966e8bd43964dc7bd85e0f03f2fd1",
+    "d2l_lib_fingerprint": "sha256:73748dcda68c7b2c8f7d73bb0c327b5be9c5e20f49208d001454fac0a868824e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,15 +51,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20517,
-          "sha256": "sha256:c3b348832106764e9b79140c0ad8510cb49c1c6724a2d95acdee60ed6cbf1522"
+          "bytes": 31825,
+          "sha256": "sha256:6158503759a2807673fa03e6358cf45df8b3e1681979b8ccaef7f85fddc07d40"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20512,
-          "sha256": "sha256:cda6054f84d9bb1ec442f7f5f6f3e19962b95d60439f3a540530cb959993c5ba"
+          "bytes": 33694,
+          "sha256": "sha256:932e6488faeec5b10b70d56286b4ec7f1fed88be0d924cbdace0b7be93959c0a"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.914, 9.7 s/epoch\nVGG-style: 583,594 params, val acc 0.899, 29.9 s/epoch\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.911, 8.4 s/epoch\nVGG-style: 583,594 params, val acc 0.920, 14.3 s/epoch\n"
         }
       ]
     },

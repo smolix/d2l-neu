@@ -128,7 +128,6 @@ with d2l.try_gpu():
 
 ```{.python .input #decoding-a-model-to-decode-from-3}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
-model.board.yscale = 'log'
 trainer.fit(model, data)
 ```
 
@@ -335,7 +334,7 @@ myopia of the four-token example above. It remains an approximate search,
 though, so on a given prefix a wider beam can occasionally come back
 *worse*. And yet look at the text. The continuations it returns fall back
 on the same phrase again and again, sometimes into a literal loop, and the
-wider beam's distinct-3 numbers drop below the greedy ones and far below
+wider beam's distinct-3 numbers often drop below the greedy ones and below
 the values sampling will achieve, sharply so in some frameworks: the extra
 search buys a higher-probability loop to be stuck in. This is the
 degeneration mechanism at work: the better a maximizer gets, the deeper
@@ -545,7 +544,9 @@ d2l.plt.legend()
 The adaptivity argument is now checkable: apply the same dials after two
 different prefixes and compare the kept sets. Top-$k$ keeps twenty tokens
 regardless. The other two rules track the model's confidence: the more
-certain the model, the smaller the top-$p$ and min-$p$ sets tend to be.
+certain the model, the smaller the min-$p$ set, while the top-$p$ set
+depends on the whole head of the distribution and follows the top
+probability only loosely.
 (How confident the model is after a given prefix varies from training run
 to training run; the printed top probability tells you what this one
 thinks.) That is the behavior we wanted: strict where the model is sure,
@@ -819,7 +820,7 @@ most probable one discards the diversity we asked for.
 :::
 
 ::: {.slide title="A common decoding interface"}
-Train the RNN language model of 9.5 with the same procedure, then wrap it: token ids in, NumPy
+Train the RNN language model of the RNN-implementation section with the same procedure, then wrap it: token ids in, NumPy
 logits for the next token out. Every strategy below is plain Python
 against this interface:
 
@@ -868,8 +869,8 @@ $$\frac{1}{L^\alpha} \sum_{t=m+1}^{m+L} \log P(x_t \mid x_{<t}),
 
 $k = 4$ *usually* finds sequences the model scores **higher** (it is an
 approximate search, so not always), and those are the ones that circle back
-on a phrase, sometimes a **literal loop** (distinct-3 drops, sharply in
-some tabs). For open-ended text the argmax is the wrong target; search
+on a phrase, sometimes a **literal loop** (distinct-3 often drops, sharply
+in some tabs). For open-ended text the argmax is the wrong target; search
 cannot fix that. Large beams even hurt MT. Beam
 search survives where its assumptions hold: ASR, MT, constrained decoding.
 :::
@@ -920,8 +921,8 @@ with the head; min-$p$: horizontal cut that rides the model's confidence.
 ::: {.slide title="Fixed and adaptive truncation"}
 @decoding-one-distribution-three-cutoffs-2
 
-The more confident the model, the smaller the kept sets, and min-$p$
-tightens the fastest; top-$k$ keeps 20 no matter what.
+The more confident the model, the smaller the min-$p$ set; top-$p$
+follows confidence only loosely; top-$k$ keeps 20 no matter what.
 :::
 
 ::: {.slide title="The same prefix under every strategy"}

@@ -117,8 +117,19 @@ logging.getLogger("syne_tune.tuner").addFilter(_DropPerTrialNoise())
 
 ## Objective Function
 
-We will use *Syne Tune* with the same objective function as in
-:numref:`sec_rs_async`.
+We use *Syne Tune* with the objective function of :numref:`sec_rs_async`,
+changed in one respect: after every epoch it reports the validation loss as
+well as the validation error, and ASHA decides on the loss. At each rung,
+Syne Tune stops a trial whose metric exceeds a quantile of the values
+recorded there so far (the median at the first rung) and lets every other
+trial continue, including one whose metric equals the quantile. The error is
+a poor basis for this rule because it ties. After two epochs, a LeNet with a
+small learning rate has often not started to learn: it predicts the same
+class for every image, and since each class makes up a tenth of the
+validation set, its error is exactly 0.9. When more than half of the trials
+at the first rung share this value, the median is 0.9 as well, and none of
+them is stopped. The cross-entropy loss is continuous and does not tie, so
+the rule stops the intended fraction of the trials at every rung.
 
 ```{.python .input #sh-async-objective-function-1  n=54}
 def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
@@ -126,7 +137,7 @@ def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
     from syne_tune import Reporter
 
     model = d2l.LeNet(lr=learning_rate, num_classes=10)
-    trainer = d2l.HPOTrainer(max_epochs=1, num_gpus=1)
+    trainer = d2l.Trainer(max_epochs=1, num_gpus=1)
     data = d2l.FashionMNIST(batch_size=batch_size)
     model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
     report = Reporter()
@@ -136,8 +147,9 @@ def hpo_objective_lenet_synetune(learning_rate, batch_size, max_epochs):
             trainer.fit(model=model, data=data)
         else:
             trainer.fit_epoch()
-        validation_error = d2l.numpy(trainer.validation_error().cpu())
-        report(epoch=epoch, validation_error=float(validation_error))
+        metrics = trainer.validate()
+        report(epoch=epoch, validation_loss=metrics['loss'],
+               validation_error=1 - metrics['acc'])
 ```
 
 We will also use the same configuration space as before:
@@ -185,7 +197,7 @@ random search.
 
 ```{.python .input #sh-async-asynchronous-scheduler-2  n=56}
 mode = "min"
-metric = "validation_error"
+metric = "validation_loss"
 resource_attr = "epoch"
 
 scheduler = ASHA(
@@ -231,7 +243,8 @@ full 10 epochs, first needs to train 1, then 2, then 4, then 8 epochs, each
 time starting from scratch. This type of pause-and-resume scheduling can be
 implemented efficiently by checkpointing the training state after each epoch,
 but we avoid this extra complexity here. After the experiment has finished,
-we can retrieve and plot results.
+we can retrieve the results and plot the best validation loss found so far
+against wall-clock time.
 
 ```{.python .input #sh-async-asynchronous-scheduler-4  n=59}
 d2l.set_figsize()
@@ -241,10 +254,10 @@ e.plot()
 
 ## Visualize the Optimization Process
 
-Once more, we visualize the learning curves of every trial (each color in the plot represents a trial). Compare this to
+Once more, we visualize the learning curves of every trial, in terms of the validation error (each color in the plot represents a trial). Compare this to
 asynchronous random search in :numref:`sec_rs_async`. As we have seen for
-successive halving in :numref:`sec_mf_hpo`, most of the trials are stopped
-at 1 or 2 epochs ($r_{\mathrm{min}}$ or $\eta * r_{\mathrm{min}}$). However, trials do not stop
+successive halving in :numref:`sec_mf_hpo`, many of the trials are stopped
+early, at or shortly after a rung level ($r_{\mathrm{min}}$, $\eta r_{\mathrm{min}}$, $\ldots$). However, trials do not stop
 at the same point, because they require different amount of time per epoch. If
 we ran standard successive halving instead of ASHA, we would need to synchronize
 our workers, before we can promote configurations to the next rung level.
@@ -260,7 +273,7 @@ for trial_id in results.trial_id.unique():
         marker="o"
     )
 d2l.plt.xlabel("wall-clock time")
-d2l.plt.ylabel("objective function")
+d2l.plt.ylabel("validation error")
 ```
 
 ## Summary
@@ -282,13 +295,13 @@ than the loss of the suboptimal decision making.
     1. Show that at least $\eta^K$ trials must finish at rung $r_{\mathrm{min}}$ before any trial reaches $r_{\mathrm{max}}$, as in synchronous successive halving.
     2. In the stopping variant that the code runs, the first trial to reach a rung always continues, since a single recorded value does not determine a cutoff. How many trials must finish at $r_{\mathrm{min}}$ before the first trial can reach $r_{\mathrm{max}}$?
     3. What do the two answers imply for the incumbent trajectory early in a run?
-3. Asynchronous decisions are based on the results that have arrived so far. Assume that the errors of the trials at a rung are independent draws from a continuous distribution and arrive in random order.
+3. Asynchronous decisions are based on the results that have arrived so far. Assume that the metric values of the trials at a rung are independent draws from a continuous distribution, as the validation losses are, and arrive in random order.
     1. In the promotion variant, the first promotion from a rung promotes the best of the first $\eta$ results. Show that, for a large rung, this trial belongs to the best fraction $1/\eta$ of all trials at the rung with probability $1-(1-1/\eta)^\eta$. Evaluate this probability for $\eta = 2, 3, 4$ and find its limit as $\eta \to \infty$.
-    2. In the stopping variant, the $k$-th trial to reach rung $r_j$ continues if its error is at most `np.quantile(values, q)`, where `values` holds the $k$ errors recorded at the rung so far, its own included, and $q = r_j/r_{j+1}$. Show that it continues with probability $(\lfloor (k-1)q \rfloor + 1)/k$, and evaluate this for $q = 1/2$ and $k = 1, \ldots, 5$. Which trials of a run benefit from this?
+    2. In the stopping variant, the $k$-th trial to reach rung $r_j$ continues if its validation loss is at most `np.quantile(values, q)`, where `values` holds the $k$ losses recorded at the rung so far, its own included, and $q = r_j/r_{j+1}$. Show that it continues with probability $(\lfloor (k-1)q \rfloor + 1)/k$, and evaluate this for $q = 1/2$ and $k = 1, \ldots, 5$. Which trials of a run benefit from this?
     3. From `e.results`, compute for each of the rung levels 2, 4 and 8 the fraction of the trials that reached the rung and were not stopped there, leaving out trials that were still running when the time limit was reached. Count a trial as stopped at rung $r_j$ if its last reported epoch lies between $r_j$ and the next rung level, since a stop decision can arrive an epoch late. Compare the fractions with $r_j/r_{j+1}$.
 4. The text argues that the early decisions of ASHA do little harm because the ranking of configurations is often consistent across rung levels. Test this claim with the learning curves of asynchronous random search in :numref:`sec_rs_async`, where every trial was trained for 10 epochs and reported its validation error after every epoch. Load these results with `load_experiment` and the name of that tuning run.
     1. For the trials that completed 10 epochs, compute the Spearman rank correlation (`scipy.stats.spearmanr`) between the errors after 2 and after 10 epochs, and between the errors after 4 and after 10 epochs.
-    2. Replay these trials, in the order in which they reached each rung, through the stopping rule of this section's run: rung levels 2, 4 and 8, continuation fractions $1/2$, $1/2$ and $4/5$, and the first trial at a rung always continues. Ignore that stopping a trial would have changed the timing of later trials. How many of the trials whose error after 10 epochs lies within 0.02 of the best would have been stopped, and at which rungs?
+    2. Replay these trials, in the order in which they reached each rung, through the stopping rule of this section's run, applied to the validation error, the only metric that run recorded: rung levels 2, 4 and 8, continuation fractions $1/2$, $1/2$ and $4/5$, the first trial at a rung always continues, and a trial whose error equals the cutoff continues. Ignore that stopping a trial would have changed the timing of later trials. How many of the trials whose error after 10 epochs lies within 0.02 of the best would have been stopped, and at which rungs?
     3. Repeat the replay with `grace_period=4`, which gives the rung levels 4 and 8 with continuation fractions $1/2$ and $4/5$. Report the number of epochs that each replay trains and whether the best trial survives.
 5. Implement the promotion variant of ASHA in the API of :numref:`sec_api_hpo`, as a subclass `ASHAScheduler` of `d2l.HPOScheduler` with the arguments `searcher`, `eta`, `r_min` and `r_max` and the rung levels of `d2l.SuccessiveHalvingScheduler`. Its `update` records each result at its rung. Its `suggest` scans the rungs from the top down and returns the first configuration that is among the best $\lfloor m/\eta \rfloor$ of the $m$ results at its rung and has not been promoted yet, with `max_epochs` set to the next rung level. If there is no such configuration, it returns a new one at $r_{\mathrm{min}}$.
     1. Test the scheduler with `d2l.HPOTuner`, `d2l.RandomSearcher` and the configuration space of :numref:`sec_mf_hpo_sh`, on a synthetic objective that returns at once: an error that depends on `learning_rate`, decreases with `max_epochs`, and carries a little noise.
@@ -330,9 +343,12 @@ family as the random-search deck. The only new idea is that
 :::
 
 ::: {.slide title="Objective with Epochs as Budget"}
-The objective reports validation error after every epoch, so the
-scheduler can decide whether to stop, continue, or promote a trial
-without waiting for full training:
+The objective reports the validation loss and error after every
+epoch, so the scheduler can decide whether to stop, continue, or
+promote a trial without waiting for full training. ASHA ranks by the
+loss: a LeNet that has not started to learn predicts one class and has
+error exactly 0.9, and when most trials tie there, the median cutoff
+stops none of them.
 
 @sh-async-objective-function-1
 :::

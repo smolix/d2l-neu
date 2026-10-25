@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0535cf7d068a4fa831fa3683b609f2cca38058c4367e69cb81a070ee7e0b058a",
+    "d2l_lib_fingerprint": "sha256:9a4f3556a34f20d5a10d7db55c9b2f1ecc29f898ba9bf8d8c195f977c87533cc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,74 +14,99 @@
       "outputs": []
     },
     "hyperopt-intro-the-objective-function-1": {
-      "code_fingerprint": "sha256:fda836a7996aa21d9cbae34c3bd037d922e72ab221864ec4bf547c6775130a53",
+      "code_fingerprint": "sha256:495abd7af3739534afe9b6b58288b106ce66874847d3fd93f764921954cb57f5",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-the-objective-function-2": {
-      "code_fingerprint": "sha256:ce95b0a4c21eac5240c6e0b4ce4c2c1370e7d14bfbf510b750d80e7a069b8dab",
+      "code_fingerprint": "sha256:f6dbeb93c3ab1f2eb669294d7db708a346bf78b3bdc21bc3f24481c7901b4542",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-the-configuration-space": {
-      "code_fingerprint": "sha256:acf63ae5270a8b2080a58a29f4109a3b85f6aa8c5a46ad1661446412ee24fcb9",
+      "code_fingerprint": "sha256:7d7bb7328c4e8b2d46348c650dcd42093b4da83e62927d96ab90fac794258201",
       "kind": "text",
       "outputs": []
     },
     "hyperopt-intro-random-search-1": {
-      "code_fingerprint": "sha256:b4e16a832f02c9ae4405baa08f08c319dbf0d90353d3a6ec98f50cfc029cf318",
+      "code_fingerprint": "sha256:15ff9a524732dbd6d1e05197611de38a52c765990d88e2203d80c82138090681",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.23759996891021729\n"
+          "text": "Trial 0: learning_rate = 0.00131228307359488\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-1.svg",
-          "bytes": 19834,
-          "sha256": "sha256:087473f7e1f11e7cce57acd0f73fb39f25b0eaa95f3a77f56c2eff0c046a5d60"
+          "bytes": 28692,
+          "sha256": "sha256:a820b759132ed0a29ccfa89e858e9b40f446698bd368d6b79110602fcd47587c"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    validation_error = 0.18999999999999995\nTrial 1: learning_rate = 0.0022671959023368043\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-2.svg",
-          "bytes": 20362,
-          "sha256": "sha256:44f645764b3694791104f94254aa80f2dcd088d3a1c6e1026e5c01f4ecce7138"
+          "bytes": 32054,
+          "sha256": "sha256:7b5fb88b23bf48f1fea3492f0c288faaa621049fbf3ef2fdfc1cf0df960c3f68"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    validation_error = 0.18120000000000003\nTrial 2: learning_rate = 0.00014203920437810615\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-3.svg",
-          "bytes": 21398,
-          "sha256": "sha256:3726799b8fca21baf1a4986eabe9e89242e4ca7465faa9da1711e1d33a5ee698"
+          "bytes": 31660,
+          "sha256": "sha256:f737b1cf076405c0640d03f9fff0e5d335b4a86c975620eec0d9e63a3eb51374"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    validation_error = 0.29159999999999997\nTrial 3: learning_rate = 0.0031558241201460994\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-4.svg",
-          "bytes": 19319,
-          "sha256": "sha256:266450c631c05d999b9771cd9cdfc7da8cf292fae9cb072d3cb536edb19ebf7e"
+          "bytes": 30487,
+          "sha256": "sha256:39b86b81a105416340d36986a6816dbaf478cadc1efd253ac5297c8b7d160f26"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    validation_error = 0.17589999999999995\nTrial 4: learning_rate = 0.00019142565528743497\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-5.svg",
-          "bytes": 21408,
-          "sha256": "sha256:89ee4ce01fc3df22bf46fc464b9cea76d9837bc0e1ef403cf5b6489b2624337c"
+          "bytes": 31493,
+          "sha256": "sha256:4f4d818f39ad2c414f821bd34f4999d31d215f9b8849a98e89d9f1025bac64bf"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    validation_error = 0.26890000000000003\n"
         }
       ]
     },
     "hyperopt-intro-random-search-2": {
-      "code_fingerprint": "sha256:f1554cde8e7924df172805cf88124d479b5750d2b33b6540807af172dfe6abb6",
+      "code_fingerprint": "sha256:d6b27bdf09bd92fa952e0945a93909508ee7204daadebbf280b6c98dbc710b0d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal learning rate = 0.0027601563755533984\n"
+          "text": "optimal learning rate = 0.0031558241201460994\n"
         }
       ]
     }

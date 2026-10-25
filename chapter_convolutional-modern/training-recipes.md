@@ -585,7 +585,7 @@ class RecipeTrainer(d2l.Trainer):
     def fit_epoch(self):
         for group in self.optim.param_groups:
             group['lr'] = self.model.lr_at(self.epoch, self.max_epochs)
-        super().fit_epoch()
+        return super().fit_epoch()
 
 class ClassicRecipe(ResNet18):
     """Recipe A, ca. 2015: SGD with momentum, step decay, plain loss."""
@@ -611,9 +611,7 @@ class ModernRecipe(ResNet18):
     def training_step(self, batch):
         X, y_a, y_b, lam = mixup(*batch, alpha=0.2)
         y_hat = self(X)
-        l = lam * self.loss(y_hat, y_a) + (1 - lam) * self.loss(y_hat, y_b)
-        self.plot('loss', l, train=True)
-        return l
+        return lam * self.loss(y_hat, y_a) + (1 - lam) * self.loss(y_hat, y_b)
 ```
 
 We give the modern recipe a 1.5x longer budget (45 epochs versus 30), since longer training is itself part of the recipe, and evaluate both on the untouched 10,000-image test set.
@@ -1041,8 +1039,8 @@ AdamW + cosine warmup + label smoothing + Mixup, 45 epochs:
 
 | Implementation | Recipe A | Recipe B |
 |:--|:--|:--|
-| PyTorch | ≈90.5% | ≈91% |
-| JAX | ≈90.5% | ≈91% |
+| PyTorch | ≈90.5% | ≈91.5% |
+| JAX | ≈90% | ≈91% |
 
 . . .
 

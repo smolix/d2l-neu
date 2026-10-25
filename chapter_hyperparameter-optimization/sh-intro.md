@@ -383,7 +383,7 @@ budget on fewer, better configurations.
 ::: {.slide title="Running it"}
 @sh-intro-successive-halving-5
 
-The run evaluates 30 configurations across increasing
+The run evaluates 30 trials across increasing
 budgets. For lecture, keep the code visible but suppress the
 intermediate animation frames; the next slide shows the
 resulting incumbent trajectory.

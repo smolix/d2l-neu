@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7fc532d4bb7b51742431cfaf4f21274a434cc6b053cb0dbedeab2809a1e69b08",
+    "d2l_lib_fingerprint": "sha256:82ffded9cceecb2fb5faac52067f8113b915ffc8a46ae70fc064d908068e2088",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,72 +24,72 @@
       "outputs": []
     },
     "decoding-a-model-to-decode-from-3": {
-      "code_fingerprint": "sha256:c9a0c068b234f24b33eab4f3e9b55368ae15ada9e4ebb3550925454e70b48a69",
+      "code_fingerprint": "sha256:b2a9567248a5f95669372341e0df49e71b8aeb5fc649667b0f2223f0519b610d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 18938,
-          "sha256": "sha256:ae654992a4a9ebe83a1f28ffa134ac279901cf39a20b38f0c7da5e72e25715fe"
+          "bytes": 25622,
+          "sha256": "sha256:db9947ac83ea658c5c3f10ee7687200ee3b0b4fcae7d1e46edd86e3a82794d71"
         }
       ]
     },
     "decoding-a-model-to-decode-from-4": {
-      "code_fingerprint": "sha256:1ec545754b07730ed6ac151dd3e165c5980987c1443db2aece9064129ef4ff5e",
+      "code_fingerprint": "sha256:d35dc623867629bf6e83eeadc48481269a622630d39a08036e144646d3314bba",
       "kind": "text",
       "outputs": []
     },
     "decoding-greedy-decoding": {
-      "code_fingerprint": "sha256:2d7f0c941d8a1f3de8a4b5ad2c74c8266191e4c4dca258f2af1ddb3e11e18692",
+      "code_fingerprint": "sha256:b5fe0d3dc4ac009a71cd66fb0d1f8781950e7b61b548909e3968952c67d40453",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller, and the floor, but the little people. The\\ndvers.\\n\\n'I\n    had the slope, and the faintly, and the finger and\\ncame a\\nlittleength\"\n\"it seemed to me that the Time Traveller, 'I wondering to me.\\n\\n'I had the\n    Time Traveller. 'I wonderful, and soft\\nwondering.\\n\\n'Then I heard a\n    bign\"\n"
+          "text": "\"the time travellere. It was not been\\nsuch a course of the falling, and the\n    Time Traveller. 'I wondering and\\npresented. The\\ndark, and I was so\n    much\\ntheir\"\n\"it seemed to me that I was a faint and practy _dels, and I was so\n    much\\ntheir'sane. I had a voysical side of the slope of a chaircity\"\n"
         }
       ]
     },
     "decoding-beam-search-1": {
-      "code_fingerprint": "sha256:95b451db8ec7505211b08a4485e7d452e877db40e331db69b41cbc45384ce736",
+      "code_fingerprint": "sha256:fab270afe271aa073431cd9ce07304d466839e841767f46450b0106d92874bfc",
       "kind": "text",
       "outputs": []
     },
     "decoding-beam-search-2": {
-      "code_fingerprint": "sha256:66731740d45389064a7ec0f137978cf66303ef04951ab17ebc2a0b4b56b2df16",
+      "code_fingerprint": "sha256:f53df0f844243d479694e4bdf69c99c940b90985619d1a829452efca6f3b289e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.84, distinct-3 0.89: \"the time traveller, and the floor, but\n    the little people. The\\ndvers.\\n\\n'I had the slope, and the faintly, and\n    the finger and\"\nk=4, score -3.61, distinct-3 0.71: \"the time travellerlish of the Time\n    Traveller.\\n\\n'Then I hesitated, and the floor of the morning.\\n\\n'Then\n    I hesitated, and the\"\n"
+          "text": "k=1, score -4.70, distinct-3 1.00: \"the time travellere. It was not\n    been\\nsuch a course of the falling, and the Time Traveller. 'I wondering\n    and\\npresented. The\\nd\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.19, distinct-3 0.84: \"it seemed to me that the Time Traveller,\n    'I wondering to me.\\n\\n'I had the Time Traveller. 'I wonderful, and\n    soft\\nwondering.\\n\\n\"\n"
+          "text": "k=4, score -3.66, distinct-3 0.92: \"the time traveller.\\n\\n'Then I\n    remember\\npossibly complete. You cannoticiar.\\n\\n'There I could\n    not\\nday\"\nk=1, score -5.25, distinct-3 1.00: \"it seemed to me that I was a faint and\n    practy _dels, and I was so much\\ntheir'sane. I had a voysical side of\n    the\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.58, distinct-3 0.63: \"it seemed to me that the Time\n    Traveller.\\n\\n'Then I hesitated, and the floor of the morning.\\n\\n'Then\n    I hesitated, and the floor\"\n"
+          "text": "k=4, score -3.77, distinct-3 1.00: \"it seemed to me that I was dusty and\n    there is the Time Traveller.\\n\\n'Then I remember\\npossibly complete. You\n    cannoticie,\"\n"
         }
       ]
     },
     "decoding-a-unified-sampler-1": {
-      "code_fingerprint": "sha256:13d5aaff3c907f69a282e40149b7f0cc420caf2b38d93c00d5616301b7dbf3d9",
+      "code_fingerprint": "sha256:c55a1df9bec49b2fdcb5e6f52df2758503b77bf5bc7e5b34b888a3459b7db126",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-2": {
-      "code_fingerprint": "sha256:f5b3fe961c8c0a44c668e99d0b8914bb875e8d2372b401cc2e02984073436736",
+      "code_fingerprint": "sha256:a9d3b84e33825c8f03c93c361566cdc743a3785a1ef8925f002335f77190c651",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-3": {
-      "code_fingerprint": "sha256:84d57f94828b084772398cf2e4985acf4a3d40028b0e4b28c5ea5dd41d8b111a",
+      "code_fingerprint": "sha256:91dd902e9305da6cefdb9237149b4c1382a60cb43fd8f815c5caa9f8463d26ac",
       "kind": "text",
       "outputs": [
         {
@@ -100,62 +100,62 @@
       ]
     },
     "decoding-one-distribution-three-cutoffs-1": {
-      "code_fingerprint": "sha256:3368bd88658c65e654a32955fcf807f99c28acfeb3778bd8b9bf713227ece19e",
+      "code_fingerprint": "sha256:d979070a852eb0bf071a22921d7fef45a12b712e386f95fddee7cdca9c1dd681",
       "kind": "mixed",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x72180970c560>"
+          "text": "<matplotlib.legend.Legend at 0x7089e428ae70>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 50819,
-          "sha256": "sha256:7571385a9f16b77e92846b5061c72238779daa4b245b48a706f98b592fd74c16"
+          "bytes": 50156,
+          "sha256": "sha256:f7fbfa922d0b9e311e525762242ec3f91b0f6c4e9452440bdeeec7fe868bb246"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:8938df11d1f6ba77aee6c8d53707ed36d17471703db71370c142030609517d2b",
+      "code_fingerprint": "sha256:44142a603ad4b034bfb10d41f44dbe0bdbe58b05c9c0f36c5ab2642f9d55dc71",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.20, top-k keeps 20, top-p keeps 105, min-p keeps 16\n'it seemed to me that': top prob 0.34, top-k keeps 20, top-p keeps 77, min-p keeps 7\n"
+          "text": "'the time traveller': top prob 0.16, top-k keeps 20, top-p keeps 66, min-p keeps 19\n'it seemed to me that': top prob 0.27, top-k keeps 20, top-p keeps 73, min-p keeps 8\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:2b2994bd180e965b2c31c682261f7ded0c56bdc5639cf06a2aab5ce4ddc55a03",
+      "code_fingerprint": "sha256:c86bde61446624964f211e707231577cecc17bf04e85b470418d0b71caed9450",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time traveller, and the fruits, and lessoninging in the room,\n    and the faintness of the horhalmittented me with a meven of the wrong.\n    His being was'\nT=1.0: 'the time travelleretaned the Uivep dayp what dead thing. Wekly\n    wanted to under over cour� jvest! I had _ered--ous tables perhaps,\n    standing need of the rest'\nT=2.0: \"the time travellerec what the w left� worss made minorese perhaps\n    thestur\\x05ose_ ouref curro Y!ib�ped n for their haering wor all\n    our�ished u; Psychologist him moreren's poss fromff\"\n"
+          "text": "T=0.5: 'the time traveller. I could not knowiculture of that\\nthenoon, and\n    the course of a kind of pheways, and sooned. The Editorceied. I was in a\n    strong, and then'\nT=1.0: 'the time travellerion of the fad anyness ed conf planmently\n    understone were delicate any and at last�ought offary muralred\n    and\\npemasted for the buildings be a numting'\nT=2.0: \"the time travellerust!'\\n place� travellith inc never Medical Man\n    grey braelte sat among tak.' shnt handshat fut black po set E with y\n    allnd mylingortate people fe should resu�. knowhat W\"\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:8362c36a25289d280ca1b9452596a80a120da2475d4114a223c0b5010d6e3e1a",
+      "code_fingerprint": "sha256:3d04741fbe0b293ed37047b8cf62c8801c6f5aaacb8261ceee22e6e44539cb51",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.92): \"the time traveller, and the floor, but the\n    little people. The\\ndvers.\\n\\n'I had the slope, and the faintly, and the\n    finger and\\ncame a\\nlittleength\"\n"
+          "text": " greedy (distinct-3 1.00): \"the time travellere. It was not been\\nsuch a\n    course of the falling, and the Time Traveller. 'I wondering\n    and\\npresented. The\\ndark, and I was so much\\ntheir\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time travelleretaned the Uivep dayp what\n    dead thing. Wekly wanted to under over cour� jvest! I had _ered--ous\n    tables perhaps, standing need of the rest'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellerion of the fad anyness ed conf\n    planmently understone were delicate any and at last�ought offary\n    muralred and\\npemasted for the buildings be a numting'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time traveller from her. The scient drabes\n    the little people was the great\\ncame to the stren of a machine\n    betweenth, and smiling the other slossalquisyst, I sawing'\n  top-p (distinct-3 1.00): \"the time traveller it.\\n\\n'Oy. A people without\n    my mind there was bl disconditions that shelic grew from his little\n    sways and deckverthewe of my\\nlanter intoion g\"\n  min-p (distinct-3 0.90): \"the time traveller to doing, was even that that\n    were hundred were faded in my mind.\\n\\n'Sold upon a moment. To me\n    to\\nmistry.\\n\\n'Sold leaves, like\"\n"
+          "text": "  top-k (distinct-3 1.00): 'the time travellerred\\nandplacationh the pering.\n    In the factuess of the Time Traveller, for a fastltervividly a standing\n    through my heading\\nmyself withmatigng'\n  top-p (distinct-3 1.00): \"the time travellerly, and the skyup and upon a\n    convey.'\\n\\n'You of a travageimal sucl gallery was the thing\\nna hat\n    them steadanc. It lay--wven\"\n  min-p (distinct-3 1.00): \"the time travellerred. I was late, I went it\n    might have invilization, and cutes.\\n\\n'Houtly. 'Ofast portitment\n    cheosss, and trution of\\n\"\n"
         }
       ]
     }

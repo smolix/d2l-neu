@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31530,
-          "sha256": "sha256:f8273988c8d6e5783ef9678b102272ea3aba1dd5f2c690b28485d3a43b163528"
+          "bytes": 32317,
+          "sha256": "sha256:f8f0ee394336d4b91f8f0f42d20ca946e284299cde0f8edd6d292a312db6aff9"
         }
       ]
     },
@@ -70,12 +70,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.67\n"
+          "text": "perplexity with the state reset: 10.74\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gates above 0.5: 53%, above 0.9: 26%\n"
+          "text": "gates above 0.5: 52%, above 0.9: 25%\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.36\n"
+          "text": "S4D perplexity: 3.37\n"
         }
       ]
     }

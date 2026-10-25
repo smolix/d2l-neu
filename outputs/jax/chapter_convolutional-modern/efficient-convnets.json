@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:88ebe5ce8c1fc951d6e3558009348d5d3a207e94229e1c1fc113717a4aee97e9",
+    "d2l_lib_fingerprint": "sha256:43995c6ab1386c3af68c0d8f1bc3d6de3d3dde29885473dabaa359f20410a31f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,15 +51,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20492,
-          "sha256": "sha256:8955f61d65fc141313d31c67db60d4c62bc8b8ccea0c1149e96bc805262cebeb"
+          "bytes": 35697,
+          "sha256": "sha256:5b2e446f5320da71098b63c147d39c4ebfff40f485155bcd32c722d701cfeee8"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20521,
-          "sha256": "sha256:ae98141fc3c8102979a9aa25c6a8b3afd39c284e6a18963a9f840a855585c6fc"
+          "bytes": 34296,
+          "sha256": "sha256:e750e06e3dd84c2cd550c4e02b91757e6d7967cfdeb25fec1da910616fa0f10c"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.898\nVGG-style: 583,594 params, val acc 0.870\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.903\nVGG-style: 583,594 params, val acc 0.862\n"
         }
       ]
     },

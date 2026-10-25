@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:38e3789e2107a909162da91a6841cd6fc3dcbb22cfa8d65bcd2afcd811fa1ee7",
+    "d2l_lib_fingerprint": "sha256:080b50857fa9a8af6b09a30cd6bb49c09609e4f76cd157b3ff3239e335677011",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39841,
-          "sha256": "sha256:bbab3dd75fee4455600932e5d2d5274f1afea5cea747201864781c95a12d9937"
+          "bytes": 40417,
+          "sha256": "sha256:0c02fdf596c50b6cdb4328aa38758c2cc392157d464126b7d59b37e68cafa2d8"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 20313,
-          "sha256": "sha256:fe0751c9310f36b2dd3a3c1d7a3e985c902399d09c5d61736f018d7d37229a6f"
+          "bytes": 22194,
+          "sha256": "sha256:4d346de1f716333e4f77010694e378e395cec3946d628cf0f3b691008c192330"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68702,
-          "sha256": "sha256:6517579dda9d2716d7a72d6efd45c289e5cbd2b9b29b675f9ce4da7066925b8c"
+          "bytes": 67972,
+          "sha256": "sha256:04b9a2743259e296e6a2391f12dd0523aa6b9fca854c463c137c1a96f92d113f"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 46014,
-          "sha256": "sha256:dab0d5450d131a4971c496c4b6bcb2823c8ba03ac410c339d3c5ff2c1f67a4a9"
+          "bytes": 45578,
+          "sha256": "sha256:277863f75963372994fecf8d7f2e0f080803d745092a40f795f1e31a11ab7c26"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105871,
-          "sha256": "sha256:2925a34e57b699f369c6cfd29fcf1e37e6d62eebb90369f3c9d7a0a6fe12f0eb"
+          "bytes": 104122,
+          "sha256": "sha256:df52b5ec8731b9d5acbe79dbefbe3e6c0396413133345d3f356aeac6c9753d1d"
         }
       ]
     }

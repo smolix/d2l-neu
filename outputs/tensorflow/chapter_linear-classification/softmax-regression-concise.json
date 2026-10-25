@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:91ecb72a0fc722983ed67c5ab81c79be30077156474a52c24a72d2c6ce899ee0",
+    "d2l_lib_fingerprint": "sha256:884d02450d41ec4a302c7a02ab0be2dbdcb3911e258b91f86a11342754c6984b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20598,
-          "sha256": "sha256:8147859de061dd54f4974e8c2f8c2e24d825ab79f4d9d59462ca895d1fec71b3"
+          "sha256": "sha256:a4eaaf9b0dd74c0c2566e11bd1a988bbf84de2c736cd9c5a9f67a98c38f6b786"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 22397,
-          "sha256": "sha256:e317b78c09e29727c2112357123eab1404397be751cebce0ad4cfc6228f241da"
+          "bytes": 33129,
+          "sha256": "sha256:23001ed3a40b589a8b88f02af78885f1eee65cddbe636e1ae0858cce6fa3e41a"
         }
       ]
     }

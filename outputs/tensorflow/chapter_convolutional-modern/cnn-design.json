@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ea422dc40d5f4df0ae6d77083ee4b4a7f96540580c4c42e29bf1ccbc7eb6ccc8",
+    "d2l_lib_fingerprint": "sha256:a210bb8ea71001f7b8c5ae661a45658a14367c16e84edb821c3e10d7f995a918",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\nActivation output shape:\t (1, 48, 48, 32)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Activation output shape:\t (1, 48, 48, 32)\n"
         },
         {
           "type": "stream",
@@ -72,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 19971,
-          "sha256": "sha256:123c3eb68970b9f03e2b23cb404668b11c29ca7956cd233f8c42f1d6d8678891"
+          "bytes": 30852,
+          "sha256": "sha256:2d9ed2e778bcbf004669f05aa964632cf31280b5472e6fb2240aac69e628ba96"
         }
       ]
     }

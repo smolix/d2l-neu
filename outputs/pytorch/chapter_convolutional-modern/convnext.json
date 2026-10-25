@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:aaf75c218b65feed16fc77d51210b7c0319729175ca1f2417f588d28eb675246",
+    "d2l_lib_fingerprint": "sha256:eb974f235e400786da19e669bde01a9c373f207dc31bc8edaace55e1da6c7e9f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,38 +34,38 @@
       ]
     },
     "convnext-recipe": {
-      "code_fingerprint": "sha256:d0e8e791b75671478dbd201082f10fd1961a276b5f01b97809ca8b9f1d0b63b9",
+      "code_fingerprint": "sha256:e3407e2803394a2ac3a20e63b81b42d0f12534ebfdd1ee13b224022e7b7468eb",
       "kind": "text",
       "outputs": []
     },
     "convnext-train": {
-      "code_fingerprint": "sha256:76a2029424aace6ae014c541f1825354f09cac04b412148dc40b741e18a820d3",
+      "code_fingerprint": "sha256:e5932486997efb1c5d3fb37c83eae1dbd3eff8fb44ab0fe4507469fd08059dd1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 23624,
-          "sha256": "sha256:471562b6619ae59ab40a148aaeef263f2c65e6087fd385569074a523d65ea202"
+          "bytes": 37789,
+          "sha256": "sha256:ca6042f4205f2673549a5e6997778f13f346374caefd0b0d0158dcb8a5675183"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 24845,
-          "sha256": "sha256:7bff14d44fee627a3857f950c1307a0405d4ce7c8abd9619b8a1d1583ec59b00"
+          "bytes": 39559,
+          "sha256": "sha256:582be357c1f9618d6baae3e00caec6c93ddf45a8834e3e426e658a8076cb4e15"
         }
       ]
     },
     "convnext-eval": {
-      "code_fingerprint": "sha256:c8f0a4f171c6566a20e8b19f2b1be354ae260ea2a881e3969bd12b3dabcac8c6",
+      "code_fingerprint": "sha256:695c6135b3c82cd08c3d28153808f0174aff11b3823b88d14d45eb6857d919ea",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.924\ncompact ResNet-18: 3,348,320 parameters, val acc 0.945\n"
+          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.923\ncompact ResNet-18: 3,348,320 parameters, val acc 0.943\n"
         }
       ]
     }

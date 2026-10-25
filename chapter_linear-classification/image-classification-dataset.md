@@ -322,9 +322,9 @@ system; it is not guaranteed to be faster than training.
    were reshuffled every epoch as well.
     1. Explain whether the validation loss and accuracy, averaged over all
        10,000 validation examples, would change.
-    1. `Module.plot` draws one validation point per epoch, the unweighted
-       mean of the per-batch values. Explain whether this point would
-       change.
+    1. The `Trainer` weights each validation batch by its number of
+       examples. Suppose it took the unweighted mean of the per-batch
+       values instead. Explain whether that mean would change.
     1. Explain whether the images that `visualize` shows for the first
        validation batch would change.
 
@@ -429,7 +429,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the dataset we will class
 - **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
 
 ::: {.d2l-note}
-Under the configuration in the softmax-from-scratch section, the linear model reaches about **82%** accuracy; later chapters compare more expressive models on the same data.
+Under the configuration in the softmax-from-scratch section, the linear model reaches about **82–84%** accuracy; later chapters compare more expressive models on the same data.
 :::
 :::
 

@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 45692,
-          "sha256": "sha256:95432a279425281936f404e02f9a7f93ccf9ca2f47aa07658284001ee8787387"
+          "sha256": "sha256:96cdd9f3d4704173454bf9ef8e338fe07ef421504650842133f71e19506c7020"
         }
       ]
     },
@@ -90,27 +90,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence        49.27 ms\n"
+          "text": "recurrence        48.65 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dual               0.23 ms\n"
+          "text": "dual               0.20 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 16       0.15 ms\n"
+          "text": "chunks of 16       0.10 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 64       0.15 ms\n"
+          "text": "chunks of 64       0.11 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 256      0.18 ms\n"
+          "text": "chunks of 256      0.11 ms\n"
         }
       ]
     },
@@ -136,7 +136,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.27\n"
+          "text": "gated linear attention perplexity: 3.24\n"
         }
       ]
     }

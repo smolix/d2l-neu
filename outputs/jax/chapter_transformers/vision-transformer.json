@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f632bdb60f498870e2895ceb324f11b6b6a04d4667d98b6515f21c960974b252",
+    "d2l_lib_fingerprint": "sha256:417d307dc2f3fe21f2450ea07faadaecae7d2eea177269408fc8608855246011",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,60 +46,60 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 19973,
-          "sha256": "sha256:5550266d1e84b18e8e4891d505cf506a04aad071f23fea2abd96eec6d83472b8"
+          "bytes": 31643,
+          "sha256": "sha256:0ae9ea01c621b43796ff0bf281a21ee00ba70df4e1b7d09f7e604f783a8be3e3"
         }
       ]
     },
     "vision-transformer-a-first-run-2": {
-      "code_fingerprint": "sha256:6c1f66097abc2ad33588f399849c2d87b80bfbc146d08fd690cd918763850dd1",
+      "code_fingerprint": "sha256:1198699a081aa2315722f032667e95a3a1a68d57739c3dc93854bce0d7a0922b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ViT: 6.5M parameters, validation accuracy 0.84\n"
+          "text": "ViT: 6.5M parameters, validation accuracy 0.86\n"
         }
       ]
     },
     "vision-transformer-do-the-position-embeddings-discover-the-grid": {
-      "code_fingerprint": "sha256:ccc917adbc3cdf8621eb04717b5979dd5f403cc47f18fb3b6069c782ae8cde52",
+      "code_fingerprint": "sha256:24f98f1957a1bcf9163c0eea42e30285f75ad2dbe09a7200a66d3589fbb4f570",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean cosine similarity: grid neighbors 0.04, distant positions -0.03\n"
+          "text": "mean cosine similarity: grid neighbors 0.04, distant positions -0.02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 108850,
-          "sha256": "sha256:e66e88a86948d6c24adf65c86c06c4556211838fdb713e305aced2a862702c94"
+          "bytes": 107301,
+          "sha256": "sha256:c81c5b1717e4ba10ca612c786dd8b8e957477be21635ef4399f56185235c8d6d"
         }
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
-      "code_fingerprint": "sha256:72b107b2ba4d21193e005981617fce5dcf2966c3e837e64bf82fb09733f87786",
+      "code_fingerprint": "sha256:7c938ecbb40d455c5d86e0dd4f4907cc467b16cbf9f4f39acde58ea69e8a2c64",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
-      "code_fingerprint": "sha256:bc66772cb78f2451b8c732c08ebfb63a270837c43fe737f03be1c1ef6189294a",
+      "code_fingerprint": "sha256:e2241c2f3e82a506c7f3cdec4d9beceac8f2bee9572bb401b0be88502f098185",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.91\nViT: 6.5M parameters, validation accuracy 0.84\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 20498,
-          "sha256": "sha256:d48117523e90d43982914b46c2f74de67d9c742d96749d05b5aa69fde9affb15"
+          "bytes": 32475,
+          "sha256": "sha256:2f3f5c934aef2da5bb8f95fdd073a427070ecb238d9062014766db7e9eac4535"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CNN: 6.5M parameters, validation accuracy 0.91\nViT: 6.5M parameters, validation accuracy 0.86\n"
         }
       ]
     }

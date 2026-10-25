@@ -9,12 +9,12 @@
   },
   "cells": {
     "init-initialization": {
-      "code_fingerprint": "sha256:4486cdf3f7cc7e79b17c26fe938b989a56d86a33545411bc04a270d2cb774a0d",
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
       "kind": "text",
       "outputs": []
     },
     "init-defaults-and-when-to-override-them": {
-      "code_fingerprint": "sha256:7c888482c61fec658076372b5d26462c03af2830e411e48e333a36205e76c981",
+      "code_fingerprint": "sha256:e1894924724c2b9f406cc239c2ef113d043c82e65406270c90529533168e11a8",
       "kind": "text",
       "outputs": [
         {
@@ -25,79 +25,81 @@
       ]
     },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:f1377699a781c212d50c86c10a6256122abdc2b2d335080d04181f78c8687636",
+      "code_fingerprint": "sha256:bd893ce154fcf933252931702ca188e1c03f4ee205d6f91befbd285570c5230b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([ 1.3090e-02,  7.2679e-03, -8.8525e-05,  9.0255e-03]), tensor(0.))"
+          "text": "(tensor([-0.0106,  0.0072,  0.0025, -0.0005]), tensor(0.))"
         }
       ]
     },
     "init-applying-initializers-2": {
-      "code_fingerprint": "sha256:c5bcf86e3662cb8bf2f88fef783329a658ef573734af8de665959cb0b7e74102",
+      "code_fingerprint": "sha256:63176f098d37ee15c4184745a058788c1382a63e1a3f248ecc849117688c8f84",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([ 0.6055, -0.2622, -0.1840,  0.2908]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
-        }
-      ]
-    },
-    "init-truncated-normals": {
-      "code_fingerprint": "sha256:1c3f888f2fcf0877c52ea8457a6aa7c81b58f9413fd3bef69174fd5ded6f9740",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0952\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "(tensor([-0.1470,  0.4604, -0.1119, -0.0631]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:eca29f464380b031e4d98073d590eee67919c2108fbcc720c511e6f35ab15a99",
+      "code_fingerprint": "sha256:5f021eba97831eabe6d24c4547a044d4edeb57e8d2ff6407ef6d063dab65d160",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:9343320778a6eba0a2041dd7f66647ec960ffea8a1a10411d07d89b4471ee137",
+      "code_fingerprint": "sha256:64d2f3c39e485f0cc1a57716cd1dbef1d26c7f133bade636a16c998e01cedff4",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:3f14df74ecdb8f447e7f1e4b56450f3716a5e927b0b6099326c5507ecec05b78",
+      "code_fingerprint": "sha256:8a340cbbc9ac1303fa3de91d640ae8d27f7d4a874d0b9d6422bc6cdc0376706f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  N  unscaled    scaled      zero\n  2      1.97      1.53     0.993\n  8      13.6      1.54      1.01\n 32  3.37e+04      1.65     0.993\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "init/init-watching-the-variance-compound-3-1.svg",
+          "bytes": 35719,
+          "sha256": "sha256:04ee3d4c3937bfa849079d74ad888f0b40b9cc94c082f54abbf1473785c55aba"
+        }
+      ]
+    },
+    "init-truncated-normals": {
+      "code_fingerprint": "sha256:14d29c8f6e9e8b6baa54fdc4075c24f7c76903dedfa4198c210d279683dd3668",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N   default    scaled      zero\n  2      2.81      1.91         1\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  8      83.5      2.38         1\n 32  6.37e+07      2.63         1\n"
+          "text": "normal:    std 0.0200, max weight 0.1145\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:0ec3e152444613cdc0868b76886065767a7d56e4b64ee8136ad3cb5f12fd109a",
+      "code_fingerprint": "sha256:5d481c00fcd41890ac4405758ad8a4d81d68026a481d2aad10dea17129492077",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.0000, -0.0000, -8.7540,  0.0000],\n        [ 0.0000, -6.8736,  0.0000, -0.0000]], grad_fn=<SliceBackward0>)"
+          "text": "tensor([[-8.8706,  6.8751, -7.1066, -6.0690],\n        [ 8.8984,  7.9882, -0.0000, -7.2693]])"
         }
       ]
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:b8aeb6b54a29a85723a1599469b45033a34a96fc677b825084da9561e808d7a5",
+      "code_fingerprint": "sha256:7f8a50179d623254ec919e53b7ec0dd3838822941a9febeef6410fcd2626e9ec",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42.0000,  1.0000, -7.7540,  1.0000], grad_fn=<SelectBackward0>)"
+          "text": "tensor([42.0000,  7.8751, -6.1066, -5.0690])"
         }
       ]
     }

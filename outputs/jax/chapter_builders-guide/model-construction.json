@@ -14,7 +14,7 @@
       "outputs": []
     },
     "model-construction-the-module-abstraction-1": {
-      "code_fingerprint": "sha256:4e127e10bccc2b66925ba21ef1f3345af789c3beffcfe6e85169191d3bb5fbb6",
+      "code_fingerprint": "sha256:8da8a2bd6d67c70b558a244f134b7a1ece07a58ba523ecb37be62971c1649c6e",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "model-construction-the-module-abstraction-2": {
-      "code_fingerprint": "sha256:b84c12ec750a7a0f24c86c3dccd53f27bdfbac6247adea83b95a70c183b6b7d6",
+      "code_fingerprint": "sha256:db4b6762673aa6d1a712d7edeefaf22c88e670a6bb6974305cc5d5e79c842383",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +34,12 @@
       ]
     },
     "model-construction-the-module-abstraction-3": {
-      "code_fingerprint": "sha256:70b9c5f406e0420bf35575cf37791bf61108840f28d2b5b38fced995f0c59461",
+      "code_fingerprint": "sha256:3a76950fc49eba434d241319b26ca83ea98ad9f5f4b4893da3b7ebb3bfbb06e0",
       "kind": "text",
       "outputs": []
     },
     "model-construction-the-module-abstraction-4": {
-      "code_fingerprint": "sha256:6e26d9f3266a402eb0926cf5eedc4ebb81aa7e88ddb58218a6acd3903eeffcb3",
+      "code_fingerprint": "sha256:c130cb705d238d23773698184e75631e96a2e12cd931d7507bc1d03e3947a415",
       "kind": "text",
       "outputs": [
         {
@@ -49,12 +49,12 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-1": {
-      "code_fingerprint": "sha256:e35d9106ae898ea972d9c46e93cfd2d4c89c7035f0483e3b2c536fdfe971da0f",
+      "code_fingerprint": "sha256:c7155e13ac8b12c71e0b796a3d2ef7df31d090db57385afc2dec71074624c9fd",
       "kind": "text",
       "outputs": []
     },
     "model-construction-sequential-and-friends-containers-2": {
-      "code_fingerprint": "sha256:6ce04ca6091d258581369d0b4f82a4cb21ff52b47a61e5788b13058649f1d034",
+      "code_fingerprint": "sha256:8bcebf10871676819ad1fc414f640128667ab84346d9e08fc82fabefe9ef1cad",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:90aef30e2e4e9c9a4c95c8d1ebf8872baa7e22f02fd48f899eabb9a401eb637f",
+      "code_fingerprint": "sha256:8b9cb286fd0774f4c81465524ec4432d02c3b59bb642cce6458e517a60771cf0",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:8b4626ea2268655e13e5624fd0584b8fbb8c1cd71e083c7f16e6e8bd5de3b24a",
+      "code_fingerprint": "sha256:268ca6639d0518c5bf97f91f420353e80291d441e944f19c1e14ea89c12c0ac7",
       "kind": "text",
       "outputs": [
         {
@@ -85,12 +85,12 @@
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:0ada79a5a008a5e6e84d29e62d42b333a110427e976841bb28c4b95d98adcaaf",
+      "code_fingerprint": "sha256:7a9ffb89318df93cd76df1d789433fa314e8e9f3b9984df66ec2724d4e98612f",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:8a9f652c15bf3d5ea62c779cba65cda1ef44de527eb240cb3018be6e4648f5de",
+      "code_fingerprint": "sha256:2f8ff08edff0d0939cc619d9f7a5755139864fb3e06086d414b02f5e842bff90",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:14aba603feec8eb60b455b29091e84f358501a207f0de76f9f2263a9cc36ce40",
+      "code_fingerprint": "sha256:94822ac8c0ee2be6837807177c4730aba75a6c4bc8ce084d8afdae724b517e11",
       "kind": "text",
       "outputs": [
         {
@@ -110,17 +110,18 @@
       ]
     },
     "model-construction-forward-is-just-python-4": {
-      "code_fingerprint": "sha256:112d3fd8a35387d4616a7acd801c846cc333f063a02d722b61f57d328410a4d2",
+      "code_fingerprint": "sha256:512e3a2fad5b84f2cc3c3253186acf8c4f9b4fa6cb0bdf69bcdef82bc6dbe3fd",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "Array(-0.05208473, dtype=float32)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.017718628\nTracerBoolConversionError\n"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:8dfc398fce353b053714217f661e0e4a462ef15f625a515f1878da587672b78e",
+      "code_fingerprint": "sha256:de3b84cda4504edd7a9290affb8032c516e25775c1f0c4311956e2de7d579d4f",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +131,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:c14a7649725e51d91eff0493965a59746e85b2a67299c72189a1fdc1b6dbfaab",
+      "code_fingerprint": "sha256:dbfdb83e1f097626d493b11940a5547c215ed783d2009ccd07f7f2f8f114e03c",
       "kind": "text",
       "outputs": [
         {
@@ -140,22 +141,22 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:ca3b6fee08a17d16da7c93fbbbcbb596f4043556469b87e070fd269e3f79e67a",
+      "code_fingerprint": "sha256:59ea063ec0228d23d6374f040360031342899a11ec0e6c1a74c5258ece28fddf",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:960d15e75987ebc4d20bd657b235cb5c4c223b3a76d9c6d0bdce682d13f16295",
+      "code_fingerprint": "sha256:31a6020e33c7ce47e9cde831d4fde91edaa36642788f3bbac1a419cc32cb4c41",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[(('blocks', 0, 'body', 'layers', 0, 'bias'), (256,)),\n (('blocks', 0, 'body', 'layers', 0, 'kernel'), (256, 256)),\n (('blocks', 0, 'body', 'layers', 2, 'bias'), (256,)),\n (('blocks', 0, 'body', 'layers', 2, 'kernel'), (256, 256)),\n (('blocks', 1, 'body', 'layers', 0, 'bias'), (256,)),\n (('blocks', 1, 'body', 'layers', 0, 'kernel'), (256, 256)),\n (('blocks', 1, 'body', 'layers', 2, 'bias'), (256,)),\n (('blocks', 1, 'body', 'layers', 2, 'kernel'), (256, 256)),\n (('blocks', 2, 'body', 'layers', 0, 'bias'), (256,)),\n (('blocks', 2, 'body', 'layers', 0, 'kernel'), (256, 256)),\n (('blocks', 2, 'body', 'layers', 2, 'bias'), (256,)),\n (('blocks', 2, 'body', 'layers', 2, 'kernel'), (256, 256)),\n (('blocks', 3, 'body', 'layers', 0, 'bias'), (256,)),\n (('blocks', 3, 'body', 'layers', 0, 'kernel'), (256, 256)),\n (('blocks', 3, 'body', 'layers', 2, 'bias'), (256,)),\n (('blocks', 3, 'body', 'layers', 2, 'kernel'), (256, 256)),\n (('out', 'bias'), (10,)),\n (('out', 'kernel'), (256, 10)),\n (('proj', 'bias'), (256,)),\n (('proj', 'kernel'), (784, 256))]"
+          "text": "[(('layers', 0, 'bias'), (256,)),\n (('layers', 0, 'kernel'), (784, 256)),\n (('layers', 1, 'body', 'layers', 0, 'bias'), (256,)),\n (('layers', 1, 'body', 'layers', 0, 'kernel'), (256, 256))]"
         }
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:883b46599bd22a2cea20d728e11b105e793ec220c74137f0d410db11c910a5c3",
+      "code_fingerprint": "sha256:8078e6a87cdf5e35fcfd71ec791b075daa695c2b7ab81a5e7f7d34811c4b103d",
       "kind": "text",
       "outputs": [
         {
@@ -165,18 +166,18 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:2e1911d3250c46ba1af394e398b505beb7c2f81d5a3019d0d0dd6cfd27e82bba",
+      "code_fingerprint": "sha256:193e89148d810d37f2123c69d9fa41f296a825f93195c5f606c018c5e27a9126",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d_hidden=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

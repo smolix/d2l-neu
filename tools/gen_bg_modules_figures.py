@@ -66,63 +66,6 @@ def box(ax, cx, cy, w, h, color, head, sub=None, fontsize=13, subsize=11,
                 left=(cx - w / 2, cy), right=(cx + w / 2, cy))
 
 
-def elbow(ax, parent_pt, child_pts, y_trunk, color=GRAY, lw=1.3):
-    """Tree connector: a vertical drop from ``parent_pt`` to a horizontal
-    trunk at ``y_trunk``, then a vertical drop from the trunk into each of
-    ``child_pts``.  Plain lines (no arrowheads): this is a "contains"
-    hierarchy, not a data-flow diagram."""
-    px, py = parent_pt
-    ax.plot([px, px], [py, y_trunk], color=color, lw=lw, zorder=1,
-            solid_capstyle="round")
-    xs = [c[0] for c in child_pts]
-    ax.plot([min(xs), max(xs)], [y_trunk, y_trunk], color=color, lw=lw,
-            zorder=1, solid_capstyle="round")
-    for cx, cy in child_pts:
-        ax.plot([cx, cx], [y_trunk, cy], color=color, lw=lw, zorder=1,
-                solid_capstyle="round")
-
-
-# =========================================================================== #
-# 1. model-construction.md: the module tree                                  #
-# =========================================================================== #
-
-def fig_module_tree():
-    """Replaces the old hand-drawn ``blocks.svg``.  Bottom row: small layer
-    boxes; grouped into block boxes; composing into one model box at top.
-    Plain "contains" connectors (no arrowheads) since this is a hierarchy, not
-    a data-flow graph.  Colour encodes tree level (layer/block/model), echoing
-    "layers compose into blocks, blocks compose into models; every model is a
-    tree.\""""
-    fig, ax = plt.subplots(figsize=(8.0, 4.6))
-
-    model = box(ax, 6.0, 6.05, 3.0, 0.85, ORANGE, "model", fontsize=14)
-
-    block_xs = [2.2, 6.0, 9.8]
-    blocks = [box(ax, bx, 3.85, 2.6, 0.8, GREEN, "block", fontsize=12.5)
-              for bx in block_xs]
-
-    layer_offsets = [-0.98, 0.0, 0.98]
-    layer_rows = []
-    for bx in block_xs:
-        row = [box(ax, bx + off, 1.5, 0.72, 0.52, BLUE, "layer", fontsize=10)
-               for off in layer_offsets]
-        layer_rows.append(row)
-
-    elbow(ax, model["bottom"], [b["top"] for b in blocks], y_trunk=5.30)
-    for blk, row in zip(blocks, layer_rows):
-        elbow(ax, blk["bottom"], [l["top"] for l in row], y_trunk=2.55)
-
-    ax.set_xlim(0.55, 11.45)
-    ax.set_ylim(0.95, 6.75)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    fl.save(fig, "bg-module-tree")
-
-
-# =========================================================================== #
-# 2. parameters-state-memory.md, "Tied Parameters": one shared matrix         #
-# =========================================================================== #
-
 def fig_weight_tying():
     """One shared weight matrix W (a tall V x d rectangle) referenced from two
     call sites: the embedding (token id -> row of W) and the output head
@@ -182,84 +125,7 @@ def fig_weight_tying():
 # 3. parameters-state-memory.md, "Counting Parameters, Counting Bytes"        #
 # =========================================================================== #
 
-def fig_memory_ledger():
-    """Two aligned horizontal stacked bars, same width-per-byte, so areas
-    compare honestly: fp32 Adam training (weights 4 + grads 4 + m 4 + v 4 =
-    16 B) above mixed-precision / ZeRO-style training (fp16 weight 2 + fp16
-    grad 2 + fp32 master weight 4 + m 4 + v 4 = 16 B).  The right half (the
-    two Adam moments) is byte-identical and pixel-aligned between the two
-    bars; only the left half (weights/gradients) differs."""
-    fig, ax = plt.subplots(figsize=(8.4, 3.6))
-
-    bar_h = 0.85
-    y_top, y_bot = 3.05, 1.05
-
-    def seg(y, x0, w, color, alpha, label, leader=False, label_dx=0.0):
-        ax.add_patch(Rectangle((x0, y), w, bar_h, facecolor=color, alpha=alpha,
-                               edgecolor="white", lw=1.4, zorder=2))
-        cx = x0 + w / 2
-        if leader:
-            # elbow leader: a short stub straight up from the segment centre,
-            # then a jog to ``label_dx`` away from it so two adjacent narrow
-            # (2-byte) segments' labels don't collide with each other.
-            lx = cx + label_dx
-            yk = y + bar_h + 0.20
-            ax.plot([cx, cx], [y + bar_h, yk], color="black", lw=1.0, zorder=3)
-            ax.plot([cx, lx], [yk, yk], color="black", lw=1.0, zorder=3)
-            ax.plot([lx, lx], [yk, y + bar_h + 0.42], color="black", lw=1.0,
-                    zorder=3)
-            ax.text(lx, y + bar_h + 0.52, label, ha="center", va="bottom",
-                    fontsize=11, color="black")
-        else:
-            ax.text(cx, y + bar_h / 2, label, ha="center", va="center",
-                    fontsize=11.5, color="black")
-
-    # row 1: fp32 Adam, 4 equal 4-byte segments
-    seg(y_top, 0, 4, BLUE, 0.55, "weights\n4 B")
-    seg(y_top, 4, 4, ORANGE, 0.55, "grads\n4 B")
-    seg(y_top, 8, 4, GREEN, 0.55, "$m$\n4 B")
-    seg(y_top, 12, 4, GRAY, 0.55, "$v$\n4 B")
-    ax.text(-0.35, y_top + bar_h / 2, "fp32 Adam", ha="right", va="center",
-            fontsize=12.5, color="black")
-    ax.text(16.35, y_top + bar_h / 2, "16 B", ha="left", va="center",
-            fontsize=12.5, color="black", fontweight="bold")
-
-    # row 2: mixed precision / ZeRO -- same total width (16 units), narrow
-    # 2-byte segments get a leader line so their labels don't get truncated
-    seg(y_bot, 0, 2, BLUE, 0.30, "fp16 wt\n2 B", leader=True, label_dx=-0.7)
-    seg(y_bot, 2, 2, ORANGE, 0.30, "fp16 grad\n2 B", leader=True, label_dx=0.9)
-    seg(y_bot, 4, 4, BLUE, 0.55, "fp32 master\n4 B")
-    seg(y_bot, 8, 4, GREEN, 0.55, "$m$\n4 B")
-    seg(y_bot, 12, 4, GRAY, 0.55, "$v$\n4 B")
-    ax.text(-0.35, y_bot + bar_h / 2, "mixed precision\n(ZeRO)", ha="right",
-            va="center", fontsize=12.5, color="black")
-    ax.text(16.35, y_bot + bar_h / 2, "16 B", ha="left", va="center",
-            fontsize=12.5, color="black", fontweight="bold")
-
-    # shared byte axis below both bars (black, per house style)
-    y_axis = y_bot - 0.30
-    ax.plot([0, 16], [y_axis, y_axis], color="black", lw=1.1)
-    for k in range(0, 17, 4):
-        ax.plot([k, k], [y_axis - 0.06, y_axis + 0.06], color="black", lw=1.1)
-        ax.text(k, y_axis - 0.20, f"{k} B", ha="center", va="top",
-                fontsize=10.5, color="black")
-
-    ax.set_xlim(-3.3, 18.3)
-    ax.set_ylim(y_axis - 0.55, y_top + bar_h + 0.45)
-    # NOT equal aspect: with an x-span of ~22 units and a y-span of ~5, a
-    # square-pixel constraint would squeeze the whole drawing into a thin
-    # strip of the figure height, blowing the (fixed-point-size) labels up
-    # relative to the row spacing and running them into each other. This is a
-    # bar chart, not a geometric mapping, so free aspect is the right choice.
-    ax.set_aspect("auto")
-    ax.axis("off")
-    fl.save(fig, "bg-memory-ledger")
-
-
-# NB: bg-residual-block was restyled to the gallery look and now lives in
-# tools/gen_bg_arch_figures.py (kept separate so the two families don't share
-# global rcParams).
-FIGURES = [fig_module_tree, fig_weight_tying, fig_memory_ledger]
+FIGURES = [fig_weight_tying]
 
 
 def main():

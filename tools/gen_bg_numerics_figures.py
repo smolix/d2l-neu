@@ -134,7 +134,7 @@ def fig_amp_loop():
     """Mixed-precision training as a dataflow loop. fp32 master weights (blue)
     are cast to bf16 (orange) for the forward pass and its bf16 activations;
     the loss accumulates back in fp32 (autocast pins reductions there); the
-    backward pass produces bf16 gradients; the optimizer step reads those
+    backward pass produces the gradients; the optimizer step reads those
     gradients but updates the fp32 master copy, closing the cycle. A dashed
     note marks where the fp16 variant needs one extra move, scaling the loss
     up before backward and the gradients back down before the step."""
@@ -147,13 +147,18 @@ def fig_amp_loop():
     # decreasing z-order left->right so each connector's tail tucks BEHIND its
     # (opaque) source box while its head stays in FRONT of the target box
     zb = [24, 20, 16, 12, 8]
-    master = box(ax, xs[0], y, w, h, "fp32 master", "weights", BLUE, zorder=zb[0])
+    fs = dict(title_fs=14, sub_fs=13)  # legible at column width
+    master = box(ax, xs[0], y, w, h, "fp32 master", "weights", BLUE,
+                 zorder=zb[0], **fs)
     bf16w = box(ax, xs[1], y, w, h, "cast to bf16", "weights", ORANGE,
-                zorder=zb[1])
+                zorder=zb[1], **fs)
     fwd = box(ax, xs[2], y, w, h, "forward", "bf16 activations", ORANGE,
-              zorder=zb[2])
-    loss = box(ax, xs[3], y, w, h, "loss", "fp32 accumulate", BLUE, zorder=zb[3])
-    bwd = box(ax, xs[4], y, w, h, "backward", "bf16 grads", ORANGE, zorder=zb[4])
+              zorder=zb[2], **fs)
+    loss = box(ax, xs[3], y, w, h, "loss", "in fp32", BLUE, zorder=zb[3],
+               **fs)
+    # under autocast the parameter gradients are fp32 (the parameters are)
+    bwd = box(ax, xs[4], y, w, h, "backward", "gradients", ORANGE,
+              zorder=zb[4], **fs)
 
     for (a, b), za in zip([(master, bf16w), (bf16w, fwd), (fwd, loss),
                            (loss, bwd)], [22, 18, 14, 10]):
@@ -190,7 +195,7 @@ def fig_amp_loop():
     # label sits just above the arc's apex: a small gap, no dead band
     ax.text((p0[0] + p1[0]) / 2, apex_y + 0.14,
             "optimizer step: update fp32 master weights", ha="center",
-            va="bottom", fontsize=12.5, color=GREEN)
+            va="bottom", fontsize=14, color=GREEN)
 
     # fp16-only note, hung below the backward box (where unscaling happens)
     # with a short dashed leader so it reads as attached, not adrift
@@ -202,7 +207,7 @@ def fig_amp_loop():
     ax.text(note_x, note_y,
             "fp16 only: scale the loss up before backward,\n"
             "unscale the gradients back down before the step",
-            ha="center", va="center", fontsize=11, color=GRAY,
+            ha="center", va="center", fontsize=13, color="black",
             bbox=dict(boxstyle="round,pad=0.35", fc="white", ec=GRAY,
                       lw=1.0, ls="--", alpha=0.95))
 
@@ -215,85 +220,6 @@ def fig_amp_loop():
 
 # =========================================================================== #
 # 6.3 Initialization: residual-stream variance under output scaling          #
-# =========================================================================== #
-
-def _residual_stream_panel(ax, scaled, n_blocks=3):
-    """One stream with n_blocks additive taps. Unscaled: the stream thickens
-    and darkens left to right as variance compounds. Scaled: the stream stays
-    a constant width and shade, since each contribution is cut by 1/sqrt(N).
-
-    Drawn LARGE: three taps only, thick strokes, 13-15pt labels, and tight
-    limits so the drawing fills the panel at column width."""
-    x0, x1 = 0.4, 7.6
-    taps = np.linspace(x0 + 1.3, x1 - 0.9, n_blocks)   # 1.7, 4.2, 6.7
-
-    # the stream itself: a sequence of segments whose linewidth (and,
-    # unscaled, shade) grows after each tap
-    bounds = [x0] + list(taps) + [x1]
-    for k in range(len(bounds) - 1):
-        if scaled:
-            lw, alpha = 8.0, 0.55
-        else:
-            lw = 8.0 + 5.5 * k
-            alpha = 0.32 + 0.16 * k
-        ax.plot(bounds[k:k + 2], [0, 0], color=BLUE, lw=lw, alpha=alpha,
-                solid_capstyle="butt", zorder=2)
-
-    for k, tx in enumerate(taps):
-        by = -1.85
-        bw, bh = 1.45, 1.0
-        ax.add_patch(FancyBboxPatch((tx - bw / 2, by - bh / 2), bw, bh,
-                     boxstyle="round,pad=0.02,rounding_size=0.12",
-                     linewidth=1.5, edgecolor=GRAY, facecolor=LIGHT,
-                     alpha=0.6, zorder=3))
-        ax.text(tx, by, rf"$f_{k+1}$", ha="center", va="center", fontsize=15,
-                color="black", zorder=4)
-        fl.arrow(ax, (tx, by + bh / 2), (tx, -0.16), color=GRAY, lw=2.0,
-                 mut=13)
-        # the join node on the stream
-        ax.plot([tx], [0], "o", mfc="white", mec="black", ms=19, mew=1.6,
-                zorder=5)
-        ax.text(tx, 0.0, r"$\oplus$", ha="center", va="center", fontsize=14,
-                color="black", zorder=6)
-        if scaled:
-            # offset to the side of the up-arrow (not centred on it), so the
-            # label never crosses the line it annotates
-            ax.text(tx + 0.28, -0.85, r"$\times\,1/\sqrt{N}$",
-                    ha="left", va="center", fontsize=13, color=ORANGE,
-                    zorder=4)
-
-    label = (r"variance $\sim O(1)$" if scaled else r"variance $\sim N$")
-    color = GREEN if scaled else ORANGE
-    # verdict label above the (thick) right end of the stream, inside the box
-    ax.text(x1 + 0.55, 0.72, label, ha="right", va="center", fontsize=15,
-            color=color)
-    ax.text(x0 - 0.12, 0.55, r"$\mathbf{x}_0$", ha="right", va="center",
-            fontsize=15, color="black")
-    fl.arrow(ax, (x1, 0), (x1 + 0.6, 0), color=BLUE, lw=6.0, mut=20,
-             alpha=(0.55 if scaled else 0.32 + 0.16 * n_blocks))
-
-    ax.set_xlim(x0 - 1.05, x1 + 0.75)
-    ax.set_ylim(-2.5, 1.05)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-
-def fig_residual_stream():
-    """A residual stream with three additive block contributions, unscaled
-    (left) versus scaled by 1/sqrt(N) (right). Each block contributes O(1)
-    variance to the stream it joins; left uncorrected the stream's variance
-    compounds like N, visualized as a thickening, darkening line, while
-    scaling each contribution tames it back to O(1), a stream of constant
-    width and shade."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.2, 3.4))
-    fig.subplots_adjust(wspace=0.06)
-    _residual_stream_panel(axa, scaled=False)
-    _residual_stream_panel(axb, scaled=True)
-    fl.save(fig, "bg-residual-stream")
-
-
-# =========================================================================== #
-# 6.4 Custom layers: the straight-through estimator                          #
 # =========================================================================== #
 
 def fig_ste():
@@ -341,7 +267,6 @@ def fig_ste():
 if __name__ == "__main__":
     fig_float_formats()
     fig_amp_loop()
-    fig_residual_stream()
     fig_ste()
     print(f"wrote {len(fl.WRITTEN)} figures:")
     for p in fl.WRITTEN:

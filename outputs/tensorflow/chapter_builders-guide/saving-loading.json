@@ -9,22 +9,22 @@
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:e7a8bfbfa85bb75e1c6948378efb55882e935b0d0d032eef72b14387faf0449b",
+      "code_fingerprint": "sha256:46ee31c229a37aa0115c6c6a823a477e65f59b4ae9e2cc5f3d595467a4a9e54e",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:947ad0f26c52f9f5bb683bdca34702b7ac45ad48bfa327694b2f562b7a04d70e",
+      "code_fingerprint": "sha256:6fbd9219c16ebc81ae6388b267a52a65e97909f4121b280124cfce5e4d68e915",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'x': <tf.Tensor: shape=(4,), dtype=int32, numpy=array([0, 1, 2, 3], dtype=int32)>,\n 'y': <tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 0., 0., 0.], dtype=float32)>}"
+          "text": "{'x': array([0, 1, 2, 3], dtype=int32),\n 'y': array([0., 0., 0., 0.], dtype=float32)}"
         }
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:abd82d0aa269fbd0895c7d8bad99e0dcffc47725c9bac5b879a023479bc0ab77",
+      "code_fingerprint": "sha256:25b86cf992b27f9c203ad1790f6366778d581a63158158bd8985f84c4b507f16",
       "kind": "text",
       "outputs": [
         {
@@ -33,85 +33,118 @@
         }
       ]
     },
+    "saving-loading-code-execution-on-load-1": {
+      "code_fingerprint": "sha256:588646c89fdcdc046d277e1c8f841be5b7bee4959a296858c6b221353a33dc01",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-safetensors-the-interchange-format-1": {
+      "code_fingerprint": "sha256:47627e106c140e2db4600ba00669f554f3d4607c2b6af5edb8d6b83fe79e448e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "*** payload executed while loading ***\n"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-2": {
+      "code_fingerprint": "sha256:420ed54778999b7ea6a373bd39021f4792c04fecbf96a2770749edd34ad59b91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ValueError Object arrays cannot be loaded when allow_pickle=False\n"
+        }
+      ]
+    },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:25c33c7789201c92e660a3ccefbb2631084355320ed39907ef8b52082ed5aea4",
+      "code_fingerprint": "sha256:7aa30b52c3e4faed8933227edb460ac286e22642ab3f25e5c687e9403f75118b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=True>"
+          "text": "True"
         }
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:25328ba4438744e7755719ba376d52ac28958cf884e7c25442bd60815e49a809",
+      "code_fingerprint": "sha256:3fe254cb46e3d7b62f70a1fa53333e0b74d1a9abbc125023969a4ec83951fc76",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "{'dtype': 'F32', 'shape': [20, 256], 'data_offsets': [1024, 21504]}"
+          "type": "stream",
+          "name": "stdout",
+          "text": "header length: 312 bytes\nmlp/hidden/bias    F32 [256]      bytes [0, 1024]\nmlp/hidden/kernel  F32 [20, 256]  bytes [1024, 21504]\nmlp/output/bias    F32 [10]       bytes [21504, 21544]\nmlp/output/kernel  F32 [256, 10]  bytes [21544, 31784]\n"
         }
       ]
     },
+    "saving-loading-training-checkpoints-1": {
+      "code_fingerprint": "sha256:8459da4514680432b1bcad43bbb041a5aed044d997f5f1a71e3cb91bf30f0e89",
+      "kind": "text",
+      "outputs": []
+    },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:923c94bf18d4973d295a8c89d32499434b309adc4ff2d302cc52b05071200dce",
+      "code_fingerprint": "sha256:32a8f0268040278ae1c2a04353b7676aa66fa62e491949d2c261409f6b4392bb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "('run-tf-1', 0.0023)"
+          "text": "('run-tf-1', 0.0024)"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:2bc927a32da58639ffaa43094a7c47ecac5bfbfe75a72ba274224e7736eeda95",
+      "code_fingerprint": "sha256:b88b1672de0140ce42c31328e0a97a7798e52b61eee6d4bdfd23acc27aceae19",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 53413.53 -> restored 0.0023'"
+          "text": "'perturbed 55361.47 -> restored 0.0024'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:38732ffc4cc4cad73c1aa9712e1d6c1155f619b14f3d9bff7d79fc7cdfee5f83",
+      "code_fingerprint": "sha256:9ed4a6b68dd2b2b8228e7a13de33db660a2905b3e8584c55b8fbbd18b84ed340",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0023, 0.0022, 0.0022, 0.0021, 0.002]\nfresh optimizer: [0.0023, 1.8522, 0.4375, 0.8502, 0.6858]\n"
+          "text": "saved optimizer: [0.0024, 0.0024, 0.0023, 0.0023, 0.0022]\nfresh optimizer: [0.0024, 3.1116, 0.2542, 0.9462, 1.5385]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:66791a84c816c1a8a9e5f1f3e4c367a6bfa99c6daaa8e8f231550f44b65b5230",
+      "code_fingerprint": "sha256:73580b9d8776c9dd87bd4ca287cad5d27bac8af3f0bee1a6e272c715109753fd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<Dense name=head, built=True>"
+          "text": "TensorShape([2048, 10])"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:64f4b8458798bd724bd4c1188b6dac0988868f10334ed0bceb16eca8b25a161a",
+      "code_fingerprint": "sha256:82277a74acab05762d79209993ba7f98fa30fd2e78173130f6d98dceafa4eceb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "A total of 1 objects could not be loaded. Example error message for object <Dense name=head, built=True>:\nThe shape of the target variable and the shape of the target value in `variable.assign(value)` must match. variable.shape=(1280, 10), Received: value.shape=(1280, 101).\n"
+          "text": "missing by block: {'conv5': 60, 'head': 2}\nunexpected: []\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:52715533209fda13357c5cfab6538158f14dbf79edb09fd43e155558e4ea90bf",
+      "code_fingerprint": "sha256:bc86e9cfefdc39f05053c6034a95e0563fa5201cf7aac08de1c43974edb66eba",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'12810 trainable of 2270794'"
+          "text": "'20490 trainable of 23555082'"
         }
       ]
     }

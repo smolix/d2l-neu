@@ -3,79 +3,83 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Numerics: Dtypes and Mixed Precision
+# Number Formats and Mixed Precision
 :label:`sec_numerics`
 
-Every tensor has a shape, a device, and a *dtype*, the numeric format of its
-entries. Modern accelerators can multiply 16-bit matrices faster and store them
-in half the memory of 32-bit matrices, so training systems choose numeric
-formats deliberately. This section compares their range and precision,
-explains dtype conversion and promotion, and develops mixed-precision training,
-which retains 32-bit master parameters while using lower precision for suitable
-operations. The representation of floating-point numbers is treated in
-:numref:`sec_mdl-numerical-stability-conditioning`; here the emphasis is on
-library behavior and practical failure modes.
+A model with 8 billion parameters needs 32 GB to store its weights in the
+32-bit floating-point format we have used so far, and 16 GB in a 16-bit
+format. Recent GPUs also multiply 16-bit matrices at a multiple of their
+32-bit rate. Halving the bits halves memory and memory traffic, but it makes
+the numbers coarser. In the 16-bit format fp16, $300^2$ is already infinite,
+and in the 16-bit format bf16, adding 0.001 to a weight of 1 leaves the
+weight at 1. A training run that ignores this either fills with `inf` and
+NaN or stops learning, without an error message in either case.
 
-Storage dtype, compute dtype, and accumulation dtype are separate choices. The
-principles below are stable, but autocast eligibility, matmul defaults, loss-
-scaler behavior, and hardware support vary by accelerator and library release.
-Treat the API cells as examples for the book's tested environment and inspect
-the corresponding runtime documentation when reproducing them elsewhere.
+This section shows how to compute in 16 bits without these failures. Every
+tensor has a *dtype*, the number format of its entries, and each format
+trades *range*, how large and how small its numbers can be, against
+*precision*, how finely it resolves them. Mixed-precision training keeps a
+32-bit copy of the weights, so that small updates are not lost, and runs the
+expensive matrix multiplications in 16 bits. With fp16 it also scales the
+loss, so that small gradients do not round to zero.
+:numref:`sec_parameters` counted the bytes per parameter of a training run;
+this section changes the bytes per number. The code runs on any device. The
+speed of 16-bit arithmetic needs a GPU with 16-bit matrix units, and
+:numref:`sec_use_gpu` moves computation there.
 
+```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
+%%tab mxnet
+import random
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab pytorch
+import random
 import torch
-import time
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 ```
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
+%%tab tensorflow
+import random
+import ml_dtypes
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab jax
 import jax
-import time
 from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
-%%tab tensorflow
-import ml_dtypes
-import time
-import tensorflow as tf
-from d2l import tensorflow as d2l
-```
-
-```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
-%%tab mxnet
-from mxnet import autograd, gluon, np, npx
-import time
-from mxnet.gluon import nn
-from d2l import mxnet as d2l
-npx.set_np()
-```
-
 ## Floating-Point Formats
 
-Half-precision (`float16`, "fp16") uses half the storage of fp32 and is
-supported by fast arithmetic on many accelerators. Its largest representable
-number is 65504. Squaring 300, a value that can occur as an unnormalized logit
-or an intermediate in a variance computation, already exceeds that range:
+### Range and Precision
+
+Squaring 300 in the two 16-bit formats shows the two ways in which a format
+can fail. A value of 300 is unremarkable in a network: an unnormalized logit
+or an intermediate result of a variance computation can be that large.
+
+```{.python .input #numerics-the-dtype-zoo-1}
+%%tab mxnet
+x = mnp.array(300.0)
+x.astype('float16')**2
+```
 
 ```{.python .input #numerics-the-dtype-zoo-1}
 %%tab pytorch
 x = torch.tensor(300.0)
 x.to(torch.float16)**2, x.to(torch.bfloat16)**2
-```
-
-```{.python .input #numerics-the-dtype-zoo-1}
-%%tab jax
-x = jnp.array(300.0)
-x.astype(jnp.float16)**2, x.astype(jnp.bfloat16)**2
 ```
 
 ```{.python .input #numerics-the-dtype-zoo-1}
@@ -85,27 +89,31 @@ tf.cast(x, tf.float16)**2, tf.cast(x, tf.bfloat16)**2
 ```
 
 ```{.python .input #numerics-the-dtype-zoo-1}
-%%tab mxnet
-x = np.array(300.0)
-x.astype('float16')**2
+%%tab jax
+x = jnp.array(300.0)
+x.astype(jnp.float16)**2, x.astype(jnp.bfloat16)**2
 ```
 
-fp16 overflows to `inf`. The second format, `bfloat16` ("bf16", brain
-floating point), returns 90112: wrong in the fourth digit, since the exact
-square is 90000, but finite. The two formats spend the same 16 bits
-differently. fp16 uses 5 exponent bits and 10 mantissa bits: fine-grained
-steps, tiny range. bf16 keeps fp32's full 8 exponent bits and pays with a
-7-bit mantissa: fp32's range, coarse steps. The example above demonstrates
-both consequences.
-
 :begin_tab:`mxnet`
-The MXNet cell shows only the first half of the demo, because `mx.np` arrays
-come in `float16`, `float32`, and `float64` and nothing else. bfloat16 exists
-deeper in the engine (the `mxnet.amp` module lists it as a cast target) but is
-not a storage dtype you can `astype` an array to, so we state the bf16 result
-from the format definition. The fp16 half is unchanged: 300
-squared overflows to `inf`.
+MXNet arrays come in `float16`, `float32`, and `float64` but not in
+bfloat16, so the cell squares only in fp16. In bf16 the result would be
+90112.
 :end_tab:
+
+The format fp16 (*half precision*) overflows to `inf`: its largest number
+is 65504. The format bf16 (*brain floating point*) returns 90112 instead of
+90000, a finite result that is wrong in the fourth digit. Both formats
+spend 16 bits, but they divide them differently. A normal floating-point
+number is stored as a sign bit $s$, an exponent $e$, and a mantissa of $t$
+bits that encodes a fraction $f \in [0, 1)$, and its value is
+
+$$x = (-1)^s \cdot 2^{e} \cdot (1 + f).$$
+
+The exponent bits set the range of $e$, and so how large and how small $|x|$
+can be. The mantissa bits set the precision: between 1 and 2, adjacent
+numbers are $2^{-t}$ apart, and between $2^e$ and $2^{e+1}$ they are
+$2^{e-t}$ apart, so the relative spacing is the same at every scale. The
+formats in use are:
 
 | format | sign | exponent | mantissa |
 |:-------|-----:|---------:|---------:|
@@ -115,18 +123,33 @@ squared overflows to `inf`.
 | fp16   | 1    | 5        | 10       |
 | fp8 (e4m3) | 1 | 4       | 3        |
 
-:numref:`fig_bg_float-formats` draws the same table as bit layouts, aligned
-at the sign bit so the total widths compare directly: fp32 spends its 32 bits
-on a wide mantissa, while bf16 keeps fp32's 8-bit exponent but pays for it
-with a narrow 7-bit mantissa, and fp16 inverts the trade.
+bf16 keeps the 8 exponent bits of fp32 and cuts the mantissa to 7 bits, so it
+has the range of fp32 and coarse steps. fp16 keeps 10 mantissa bits and only 5
+exponent bits: finer steps, much smaller range. :numref:`fig_bg_float-formats`
+draws the table as bit layouts. The tf32 row is a mode of matrix
+multiplication rather than a storage format, and we return to it below. The
+fp8 row is used for inference and, with extra scaling machinery, for training
+on the newest accelerators; this book stops at 16 bits, and an exercise
+examines fp8. :numref:`sec_mdl-numerical-stability-conditioning` treats the
+floating-point representation itself, including rounding and subnormal
+numbers, in more detail.
 
-![Bit layouts of the five formats in the table above, aligned at the sign bit so a wider bar means more total bits: fp32 is the widest, tf32 shares fp32's exponent but truncates the mantissa to 10 bits, and fp16 trades exponent bits for mantissa bits that bf16 spends the other way.](../img/bg-float-formats.svg)
+![Bit layouts of the formats in the table, aligned at the sign bit, so that a longer bar means more bits: tf32 shares the 8-bit exponent of fp32 but has a 10-bit mantissa, and fp16 and bf16 split the same 16 bits in opposite ways.](../img/bg-float-formats.svg)
 :label:`fig_bg_float-formats`
 
-`finfo` reports what each bit budget buys. Three numbers matter: `max`,
-the overflow threshold; `tiny`, the smallest *normal* value, below which
-subnormal values provide a short, progressively less precise tail before zero;
-and `eps`, the relative step size between adjacent representable values near 1.
+The function `finfo` reports what each bit budget gives. Three of its numbers
+matter here: `max`, the largest finite value; `tiny`, the smallest *normal*
+value, below which the format switches to *subnormal* numbers, whose
+precision falls with every halving until they reach zero; and `eps`, the
+spacing $2^{-t}$ of representable numbers just above 1.
+
+```{.python .input #numerics-the-dtype-zoo-2}
+%%tab mxnet
+for dtype in ('float32', 'float16'):
+    fi = mnp.finfo(dtype)
+    print(f'{dtype:10} max {fi.max:10.3e}  tiny {fi.smallest_normal:9.3e}'
+          f'  eps {fi.eps:8.3e}')
+```
 
 ```{.python .input #numerics-the-dtype-zoo-2}
 %%tab pytorch
@@ -134,14 +157,6 @@ for dtype in (torch.float32, torch.bfloat16, torch.float16):
     fi = torch.finfo(dtype)
     print(f'{str(dtype):15} max {fi.max:10.3e}  tiny {fi.tiny:9.3e}'
           f'  eps {fi.eps:8.3e}')
-```
-
-```{.python .input #numerics-the-dtype-zoo-2}
-%%tab jax
-for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
-    fi = jnp.finfo(dtype)
-    print(f'{fi.dtype.name:10} max {float(fi.max):10.3e}'
-          f'  tiny {float(fi.tiny):9.3e}  eps {float(fi.eps):8.3e}')
 ```
 
 ```{.python .input #numerics-the-dtype-zoo-2}
@@ -153,67 +168,102 @@ for dtype in (tf.float32, tf.bfloat16, tf.float16):
 ```
 
 ```{.python .input #numerics-the-dtype-zoo-2}
-%%tab mxnet
-for dtype in ('float32', 'float16'):
-    fi = np.finfo(dtype)
-    print(f'{dtype:10} max {fi.max:10.3e}  tiny {fi.smallest_normal:9.3e}'
-          f'  eps {fi.eps:8.3e}')
+%%tab jax
+for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
+    fi = jnp.finfo(dtype)
+    print(f'{fi.dtype.name:10} max {float(fi.max):10.3e}'
+          f'  tiny {float(fi.tiny):9.3e}  eps {float(fi.eps):8.3e}')
 ```
 
+:begin_tab:`mxnet`
+`mnp.finfo` follows the naming of the Python array API, which calls the
+smallest normal value `smallest_normal` rather than `tiny`. For bf16, which
+MXNet does not store, the numbers are the same as in the other tabs: `max`
+$3.39 \times 10^{38}$, `tiny` $1.18 \times 10^{-38}$, and `eps`
+$2^{-7} \approx 0.0078$.
+:end_tab:
+
 :begin_tab:`tensorflow`
-TensorFlow has no `finfo` of its own (the `tf.experimental.numpy` one chokes
-on bfloat16). The numbers live one level down, in `ml_dtypes`, the small
-NumPy-extension package that defines the bfloat16 scalar type TensorFlow
-depends on; each `tf` dtype hands over its NumPy counterpart via
+TensorFlow has no `finfo` of its own for bf16. The numbers come from
+`ml_dtypes`, the small package that defines the bf16 type TensorFlow uses,
+and each `tf` dtype hands over its NumPy counterpart through
 `as_numpy_dtype`.
 :end_tab:
 
-:begin_tab:`mxnet`
-`mx.np.finfo` follows the array-API naming, so the smallest normal value is
-the field `smallest_normal` rather than `tiny`; it passes the dtype to NumPy
-and repackages the result. NumPy knows no bfloat16 and MXNet
-stores none, so the loop covers fp32 and fp16 and we state bf16's numbers for
-the record: `max` $3.39 \times 10^{38}$ and `tiny` $1.18 \times 10^{-38}$,
-matching fp32's exponent range, with `eps` $2^{-7} \approx 0.0078$.
-:end_tab:
+bf16 has the `tiny` of fp32 and nearly the same `max`, because it has the same
+exponent bits. Its `eps` of 0.0078 means two to three significant decimal
+digits. fp16 resolves three to four digits, overflows above 65504, turns
+subnormal below about $6.1 \times 10^{-5}$, and has no positive number below
+$2^{-24} \approx 6.0 \times 10^{-8}$. Activations and gradients of a network
+span many orders of magnitude, and too little range turns them into `inf` or
+zero, while too little precision only adds rounding error. This is why bf16 is
+the preferred 16-bit format for training on hardware that supports it. fp16
+remains in use on older GPUs and for inference.
 
-bf16 matches fp32's `tiny` and has nearly the same `max`: its shared exponent
-width gives the same normal exponent range, while its shorter mantissa makes
-the largest finite value slightly smaller. Its `eps` of 0.0078 means two to
-three significant decimal digits. fp16 resolves about three to four digits,
-overflows at 65504, enters the subnormal range below about
-$6.10 \times 10^{-5}$, and reaches zero only below about
-$5.96 \times 10^{-8}$. The tradeoff is precision against range. In deep
-learning workloads, activations and gradients can span many orders of
-magnitude. Insufficient range produces `inf`, while lower mantissa precision
-introduces rounding error that must be evaluated for the model and task. On
-accelerators with native bf16 support, that exponent range often makes bf16
-preferable to fp16 for training. Older
-devices and deployment targets may instead favor fp16 or another format.
+### Rounding of Small Updates
 
-### TF32: What Happens to fp32 Matrix Multiplication
+The coarse steps of bf16 matter most for the weights. An update of gradient
+descent changes a weight by $\eta g$, which is often $10^{-3}$ or less of the
+weight's own size. Under round-to-nearest, an increment smaller than half the
+spacing of the numbers near the weight is lost entirely. We add $10^{-3}$ and
+$10^{-4}$ to a weight of 1 in each format:
 
-The second row of the table, tf32, is not a storage dtype; you cannot create a
-tensor of it. It is a compute mode of NVIDIA tensor cores (Ampere generation
-and later): matrix-multiply inputs are rounded to a 10-bit mantissa while
-keeping fp32's exponent, and products are accumulated in fp32. Your tensors
-stay fp32; only the arithmetic inside the multiplication runs faster and
-slightly less precisely. Most of our frameworks expose a switch for it:
+```{.python .input #numerics-rounding-of-small-updates}
+%%tab mxnet
+w = mnp.array(1.0)
+for dtype in ('float32', 'float16'):
+    print(f'{dtype:8}: {float(w.astype(dtype) + 1e-3):.7f}, '
+          f'{float(w.astype(dtype) + 1e-4):.7f}')
+```
+
+```{.python .input #numerics-rounding-of-small-updates}
+%%tab pytorch
+w = torch.tensor(1.0)
+for dtype in (torch.float32, torch.bfloat16, torch.float16):
+    print(f'{str(dtype):14}: {float(w.to(dtype) + 1e-3):.7f}, '
+          f'{float(w.to(dtype) + 1e-4):.7f}')
+```
+
+```{.python .input #numerics-rounding-of-small-updates}
+%%tab tensorflow
+w = tf.constant(1.0)
+for dtype in (tf.float32, tf.bfloat16, tf.float16):
+    print(f'{dtype.name:8}: {float(tf.cast(w, dtype) + 1e-3):.7f}, '
+          f'{float(tf.cast(w, dtype) + 1e-4):.7f}')
+```
+
+```{.python .input #numerics-rounding-of-small-updates}
+%%tab jax
+w = jnp.array(1.0)
+for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
+    print(f'{jnp.dtype(dtype).name:8}: {float(w.astype(dtype) + 1e-3):.7f}, '
+          f'{float(w.astype(dtype) + 1e-4):.7f}')
+```
+
+In fp32 both updates register. In bf16, whose numbers near 1 are
+$2^{-7} \approx 0.0078$ apart, both round back to 1. In fp16, with spacing
+$2^{-10} \approx 0.00098$, the larger update survives, rounded to one step,
+and the smaller one is lost. A model whose weights are stored in 16 bits can
+therefore stop learning even though its gradients are correct. This is the
+first reason why training keeps the weights in fp32.
+
+### TF32 Matrix Multiplication
+
+On NVIDIA GPUs of the Ampere generation and later, an fp32 matrix
+multiplication can take a shortcut through the 16-bit matrix units, the
+*tensor cores*. In this *tf32* mode, the inputs are rounded to a 10-bit
+mantissa while keeping the 8-bit exponent of fp32, and the products are
+summed in fp32. The tensors stay fp32; only the arithmetic inside the
+multiplication becomes faster and less precise, with results that typically
+differ from true fp32 in the third or fourth significant digit. The
+frameworks differ in whether they use it by default:
 
 ```{.python .input #numerics-tf32-what-happens-to-fp32-matrix-multiplication}
 %%tab pytorch
 print(torch.get_float32_matmul_precision())
 torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
-print(torch.get_float32_matmul_precision(),
-      torch.backends.cuda.matmul.allow_tf32)
+print(torch.get_float32_matmul_precision())
 torch.set_float32_matmul_precision('highest')  # restore the default
-```
-
-```{.python .input #numerics-tf32-what-happens-to-fp32-matrix-multiplication}
-%%tab jax
-print(jax.config.jax_default_matmul_precision)
-with jax.default_matmul_precision('tensorfloat32'):
-    print(jax.config.jax_default_matmul_precision)
 ```
 
 ```{.python .input #numerics-tf32-what-happens-to-fp32-matrix-multiplication}
@@ -224,126 +274,61 @@ print(tf.config.experimental.tensor_float_32_execution_enabled())
 tf.config.experimental.enable_tensor_float_32_execution(True)  # the default
 ```
 
-:begin_tab:`pytorch`
-The default is `'highest'`: fp32 matrix multiplications compute in true fp32
-and the tensor-core shortcut stays off. Setting `'high'` opts in (it also
-flips the older `allow_tf32` flag; they are two views of one setting). PyTorch
-1.7 through 1.11 enabled tf32 *by default*, and the default changed to off in
-1.12. Older tutorials can therefore describe behavior that differs from an
-installed version; the check above reports the setting used by the current
-process. For many training workloads, `'high'` improves tensor-core throughput
-without a material accuracy change because products still accumulate in fp32.
-Validate that choice for the model and task, and keep `'highest'` for
-ill-conditioned linear algebra or bitwise reproduction.
-:end_tab:
-
-:begin_tab:`jax`
-The unset config (`None`) means "let the backend pick", and on tensor-core
-GPUs XLA's pick for fp32 matrix multiplications is the fast tf32 path: the
-opposite polarity from PyTorch, which today makes you opt in. You opt *out*
-by requesting `'float32'` (or `'highest'`), and the setting is a scoped
-context manager rather than a global flag, so a numerically delicate block
-can demand full precision without touching the rest of the program.
-Individual operations accept the same choice per call, as in
-`jnp.dot(A, B, precision='float32')`. On the CPU this notebook runs on there
-are no tensor cores and every setting computes plain fp32, which is why the
-cell above changes nothing but the config value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu`. For many training workloads, tf32
-improves throughput without a material accuracy change because products still
-accumulate in fp32. Validate that choice for the model and task; request
-`'float32'` for ill-conditioned linear algebra or bitwise reproduction.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The getter answers `True`: TensorFlow turns tf32 on by default wherever the
-hardware supports it, the polarity JAX shares and today's PyTorch inverts,
-so an fp32 matrix multiplication on an Ampere-or-later GPU is already taking
-the fast path unless you say otherwise. The switch is global, not scoped: a
-numerically delicate block disables it, computes, and restores it, as the
-cell does. On the CPU this notebook runs on there are no tensor cores and
-the flag changes nothing beyond its own value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu`. For many training workloads, the
-default improves throughput without a material accuracy change because
-products still accumulate in fp32. Validate that choice for the model and
-task; disable it for ill-conditioned linear algebra or bitwise reproduction.
-:end_tab:
+```{.python .input #numerics-tf32-what-happens-to-fp32-matrix-multiplication}
+%%tab jax
+print(jax.config.jax_default_matmul_precision)
+with jax.default_matmul_precision('float32'):
+    print(jax.config.jax_default_matmul_precision)
+```
 
 :begin_tab:`mxnet`
-MXNet is the exception: no cell here, because no user-facing switch exists.
-Nothing in the Python API reads or sets the fp32-matmul precision; whether an
-fp32 matrix multiplication takes the tensor-core shortcut is decided below
-MXNet, by the CUDA libraries the wheel links against. If you need the
-guarantees the other tabs configure (true-fp32 matmuls for ill-conditioned
-linear algebra, or bit-for-bit reproduction), MXNet does not give you the
-knob; the available workaround is to do that computation in `float64` or
-outside the framework.
+MXNet has no switch for tf32. Whether an fp32 matrix multiplication uses
+tensor cores is decided by the CUDA libraries it calls. Where full fp32
+precision matters, compute in `float64`.
 :end_tab:
-
-### Below 16 Bits
-
-Production inference pushes further down: int8 quantization is standard for
-serving, and fp8 training (a 4-bit-exponent variant for the forward pass, a
-5-bit-exponent variant for gradients, with per-tensor scaling) runs on
-H100-class hardware :cite:`Micikevicius.Stosic.Burgess.ea.2022`. Both require
-calibration machinery beyond a dtype argument, so for this book 16 bits is the
-floor; the exercises let you inspect the fp8 format's `finfo`.
-
-:begin_tab:`jax`
-The fp8 pair already ships in `jnp` (`jnp.float8_e4m3fn` for the forward
-pass, the wider-range `jnp.float8_e5m2` for gradients), and `jnp.finfo` reads
-them like any other float; what still lives in specialized libraries is the
-per-tensor scaling that makes them trainable.
-:end_tab:
-
-:begin_tab:`tensorflow`
-TensorFlow 2.21 ships no fp8 dtype. The formats exist one level down, in the
-same `ml_dtypes` package that supplied our `finfo`
-(`ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)` reads them), but no `tf` dtype
-wraps them; fp8 work in the TensorFlow world happens in specialized
-libraries.
-:end_tab:
-
-:begin_tab:`mxnet`
-MXNet ships no fp8 dtype at any level: not in `mx.np`, not in the engine's
-dtype tables. For this tab the 16-bit floor is not a book decision but a hard
-one; fp8 experiments mean leaving the framework.
-:end_tab:
-
-## Dtype Rules: Promotion, Parameters, and Casts
 
 :begin_tab:`pytorch`
-What happens when dtypes meet in one expression? For plain tensors, PyTorch
-promotes to the type that can represent both:
-:end_tab:
-
-:begin_tab:`jax`
-What happens when dtypes meet in one expression? For plain arrays, JAX
-promotes to a common type that can represent both:
+The default `'highest'` computes fp32 matrix multiplications in full fp32.
+Setting `'high'` allows tf32.
 :end_tab:
 
 :begin_tab:`tensorflow`
-What happens when dtypes meet in one expression? For plain tensors,
-TensorFlow refuses to guess. There is no promotion; an operation whose
-inputs disagree raises on the spot:
+TensorFlow uses tf32 by default wherever the hardware supports it. The switch
+is global, so the cell turns it off and on again.
 :end_tab:
 
-:begin_tab:`mxnet`
-What happens when dtypes meet in one expression? For plain arrays, MXNet
-promotes to the type that can represent both:
+:begin_tab:`jax`
+The default `None` lets the backend choose, and on GPUs with tensor cores it
+chooses tf32 for fp32 matrix multiplications. The context manager
+`jax.default_matmul_precision('float32')` requests full fp32 for the code
+inside it, and a single call accepts the same choice, as in
+`jnp.dot(A, B, precision='float32')`.
 :end_tab:
+
+For training, the difference that tf32 makes is usually smaller than the
+noise between runs. Ill-conditioned linear algebra, such as solving a nearly singular
+system, and checks of results against a reference are cases for full fp32.
+
+## Dtype Promotion and Model Casting
+
+### Promotion
+
+What dtype does an expression get when its operands disagree? We add an fp16
+tensor to an fp32 tensor, to a Python float, and to an integer tensor:
+
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
+%%tab mxnet
+x16 = mnp.ones(3, dtype='float16')
+x32 = mnp.ones(3, dtype='float32')
+((x16 + x32).dtype, (x16 + 1.0).dtype,
+ mnp.result_type(x16, mnp.ones(3, dtype='int32')))
+```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
 %%tab pytorch
 x16 = torch.ones(3, dtype=torch.float16)
 x32 = torch.ones(3, dtype=torch.float32)
 (x16 + x32).dtype, (x16 + 1.0).dtype, (x16 + torch.arange(3)).dtype
-```
-
-```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
-%%tab jax
-x16 = jnp.ones(3, dtype=jnp.float16)
-x32 = jnp.ones(3, dtype=jnp.float32)
-(x16 + x32).dtype, (x16 + 1.0).dtype, (x16 + jnp.arange(3)).dtype
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
@@ -358,126 +343,154 @@ except tf.errors.InvalidArgumentError as e:
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
-%%tab mxnet
-x16 = np.ones(3, dtype='float16')
-x32 = np.ones(3, dtype='float32')
-((x16 + x32).dtype, (x16 + 1.0).dtype,
- np.result_type(x16, np.ones(3, dtype='int32')))
+%%tab jax
+x16 = jnp.ones(3, dtype=jnp.float16)
+x32 = jnp.ones(3, dtype=jnp.float32)
+(x16 + x32).dtype, (x16 + 1.0).dtype, (x16 + jnp.arange(3)).dtype
 ```
 
+:begin_tab:`mxnet, pytorch, jax`
+Two float tensors promote to the wider format, so an fp16 computation that
+meets one stray fp32 tensor continues in fp32 and needs twice the memory
+from then on. Python scalars are *weak*: they take the dtype of the tensor
+instead of promoting it, so a literal such as `x + 1.0` keeps low-precision
+code in low precision. An integer tensor does not promote a float tensor
+either: the result keeps the float's dtype.
+:end_tab:
+
+:begin_tab:`mxnet`
+The third expression asks the promotion table directly through
+`result_type`.
+:end_tab:
+
 :begin_tab:`pytorch, jax`
-Mixing two float tensors upcasts to the wider one, so an fp16 pipeline with a
-stray fp32 tensor quietly becomes fp32 from that point on, doubling downstream
-memory. Python scalars and integer tensors are *weak*: they adopt the float
-tensor's dtype instead of dragging it up, which is why sprinkling literals
-like `x + 1.0` into low-precision code is harmless. (Mixing fp16 with bf16
-promotes to fp32, since neither contains the other.)
+fp16 and bf16 together promote to fp32, since neither contains the other.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Only the Python scalar got through: literals like `x + 1.0` are cast to the
-tensor's dtype, so sprinkling them into low-precision code is harmless.
-Everything else, float with float or float with integer, is an error at the
-first operation that touches both. This strictness guards against exactly
-the failure that promotion invites in promotion-based libraries, where an fp16
-pipeline with a stray fp32 tensor quietly becomes fp32 from that point on,
-doubling downstream memory; in TensorFlow the stray tensor cannot travel one
-op. The price is that every intended conversion is spelled `tf.cast`.
+TensorFlow does not promote. A Python scalar is cast to the dtype of the
+tensor, so a literal such as `x + 1.0` keeps low-precision code in low
+precision, but two tensors of different dtypes raise an error at the first
+operation that combines them. A stray fp32 tensor therefore cannot silently
+turn an fp16 computation into an fp32 one, as it can in libraries that
+promote; the cost is that every intended conversion is written as `tf.cast`.
 :end_tab:
 
-:begin_tab:`mxnet`
-Mixing two float arrays upcasts to the wider one, so an fp16 pipeline with a
-stray fp32 array quietly becomes fp32 from that point on, doubling downstream
-memory. Python scalars are *weak*: they adopt the array's dtype instead of
-dragging it up, which is why sprinkling literals like `x + 1.0` into
-low-precision code is harmless. Integer arrays behave the same way, and the
-wheel's source says where the rule comes from: its promotion table is
-annotated "PyTorch convention: the floating operand keeps its width
-regardless of the integer operand". The third expression asks that table
-directly through `np.result_type` rather than running a mixed-integer kernel.
-:end_tab:
+### Casting a Model
 
-:begin_tab:`pytorch`
-Module parameters play by a stricter rule: layers do not promote, they demand
-a matching input dtype and raise otherwise. To change a model's dtype you cast
-the whole module; `net.to(dtype)` (or the shorthand `net.bfloat16()`) converts
-every parameter and buffer in place. The byte accounting of
-:numref:`sec_parameters` composes with dtype through `element_size()`:
-:end_tab:
-
-:begin_tab:`jax`
-Parameters bring a second rule, and in Flax NNX it is written into every layer's
-constructor. A layer takes two dtype arguments: `param_dtype`, the storage
-format `init` creates parameters in (default fp32), and `dtype`, the format
-the forward pass computes in (default `None`, which promotes parameters and
-inputs to a common type, the same rule as above). Since parameters form a
-filterable state tree, casting a model means mapping over `nnx.Param` while
-leaving counters and running statistics alone. The byte accounting of
-:numref:`sec_parameters` composes with dtype through `itemsize`:
-:end_tab:
-
-:begin_tab:`tensorflow`
-Keras layers package this strictness behind a *dtype policy*: every layer
-carries a `variable_dtype`, the format its weights are stored in, and a
-`compute_dtype`, the format its forward pass runs in, both fp32 by default.
-The constructor argument `dtype='bfloat16'` sets the pair at once, so
-"casting the model" is a construction-time choice rather than an in-place
-conversion. The byte accounting of :numref:`sec_parameters` composes with
-dtype through the dtype's size in bytes:
-:end_tab:
-
-:begin_tab:`mxnet`
-Parameters bring a second rule: Gluon operators demand that input and weight
-dtypes agree (type inference unifies them and errors on a mismatch), so to
-change a model's dtype you cast the whole block. `net.cast('float16')`
-converts every parameter recursively, children included; inputs you cast
-yourself. The byte accounting of :numref:`sec_parameters` composes with
-dtype through the parameter array's `itemsize`:
-:end_tab:
+Parameters are tensors too, so a model can be stored in 16 bits. We use the
+MLP of :numref:`sec_mlp-implementation` throughout this section: a hidden
+layer of 256 ReLU units between the 784 pixels of a Fashion-MNIST image and
+10 outputs, with weights drawn from $\mathcal{N}(0, 0.01^2)$ and zero biases.
+Its 203,530 parameters take 814,120 bytes in fp32.
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
-%%tab pytorch
-net = nn.Sequential(nn.Flatten(), nn.Linear(784, 256), nn.ReLU(),
-                    nn.Linear(256, 10))
+%%tab mxnet
+def mlp():
+    net = nn.Sequential()
+    net.add(nn.Dense(256, activation='relu'), nn.Dense(10))
+    net.initialize(init.Normal(sigma=0.01))
+    return net
+
 def param_bytes(net):
-    return sum(p.numel() * p.element_size() for p in net.parameters())
+    return sum(p.data().size * p.data().dtype.itemsize
+               for p in net.collect_params().values())
+
+net = mlp()
+X = mnp.random.normal(size=(8, 1, 28, 28))
+net(X)  # Initialization is deferred until the first call
 param_bytes(net)
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
-%%tab jax
-net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
-                     nnx.Linear(784, 256, rngs=nnx.Rngs(0)), nnx.relu,
-                     nnx.Linear(256, 10, rngs=nnx.Rngs(1)))
-def param_bytes(model):
-    return sum(p.size * p.dtype.itemsize
-               for _, p in nnx.state(model, nnx.Param).flat_state())
+%%tab pytorch
+def mlp():
+    net = nn.Sequential(nn.Flatten(), nn.Linear(784, 256), nn.ReLU(),
+                        nn.Linear(256, 10))
+    for layer in net[1], net[3]:
+        nn.init.normal_(layer.weight, std=0.01)
+        nn.init.zeros_(layer.bias)
+    return net
+
+def param_bytes(net):
+    return sum(p.numel() * p.element_size() for p in net.parameters())
+
+net = mlp()
 param_bytes(net)
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
 %%tab tensorflow
-net = tf.keras.Sequential([tf.keras.layers.Flatten(),
-                           tf.keras.layers.Dense(256, activation='relu'),
-                           tf.keras.layers.Dense(10)])
-net(tf.zeros((1, 28, 28, 1)))  # build the weights
+def mlp(dtype=None):
+    normal = tf.keras.initializers.RandomNormal  # one instance per layer
+    return tf.keras.Sequential([
+        tf.keras.layers.Flatten(dtype=dtype),
+        tf.keras.layers.Dense(256, activation='relu', dtype=dtype,
+                              kernel_initializer=normal(stddev=0.01)),
+        tf.keras.layers.Dense(10, dtype=dtype,
+                              kernel_initializer=normal(stddev=0.01))])
+
 def param_bytes(net):
     return sum(w.shape.num_elements() * tf.as_dtype(w.dtype).size
                for w in net.weights)
+
+net = mlp()
+net(tf.zeros((1, 28, 28, 1)))  # The first call creates the weights
 param_bytes(net)
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
-%%tab mxnet
-net = nn.Sequential()
-net.add(nn.Dense(256, activation='relu'), nn.Dense(10))
-net.initialize()
-X = np.random.normal(size=(8, 1, 28, 28))
-net(X)  # materialize the weights (initialization is deferred)
-def param_bytes(net):
-    return sum(p.data().size * p.data().dtype.itemsize
-               for p in net.collect_params().values())
+%%tab jax
+def mlp(rngs, dtype=None):
+    normal = nnx.initializers.normal(0.01)
+    return nnx.Sequential(
+        lambda x: x.reshape((x.shape[0], -1)),
+        nnx.Linear(784, 256, kernel_init=normal, dtype=dtype, rngs=rngs),
+        nnx.relu,
+        nnx.Linear(256, 10, kernel_init=normal, dtype=dtype, rngs=rngs))
+
+def param_bytes(model):
+    return sum(p.size * p.dtype.itemsize
+               for _, p in nnx.state(model, nnx.Param).flat_state())
+
+net = mlp(nnx.Rngs(d2l.get_key()))
 param_bytes(net)
+```
+
+:begin_tab:`mxnet`
+Gluon operators require the input and the weights to have the same dtype, so
+to change the dtype of a model we cast the whole block:
+`net.cast('float16')` converts every parameter, including those of nested
+blocks. Inputs we cast ourselves.
+:end_tab:
+
+:begin_tab:`pytorch`
+Layers do not promote: they require the input to have the dtype of their
+weights and raise an error otherwise. To change the dtype of a model we cast
+the whole module; `net.to(dtype)`, or the shorthand `net.bfloat16()`,
+converts every parameter and buffer.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A Keras layer has a *dtype policy* with two parts: `variable_dtype`, the
+format of its weights, and `compute_dtype`, the format of its forward pass,
+both fp32 by default. The argument `dtype='bfloat16'` sets both, so a bf16
+model is chosen when it is constructed rather than converted afterwards.
+`mlp` passes its `dtype` argument to every layer.
+:end_tab:
+
+:begin_tab:`jax`
+A Flax NNX layer takes two dtype arguments: `param_dtype`, the format in
+which it stores its parameters (fp32 by default), and `dtype`, the format in
+which it computes (by default `None`, which promotes parameters and input to a
+common type by the rule above). To cast a model we map over its `nnx.Param`
+state and leave other state alone.
+:end_tab:
+
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
+%%tab mxnet
+net.cast('float16')
+print(net(X.astype('float16')).dtype, param_bytes(net))
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
@@ -492,6 +505,13 @@ print(net(X.bfloat16()).dtype, param_bytes(net))
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
+%%tab tensorflow
+net16 = mlp(dtype='bfloat16')
+X = tf.random.normal((8, 28, 28, 1))
+print(net16(X).dtype, param_bytes(net16))
+```
+
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
 %%tab jax
 graph, params = nnx.split(net, nnx.Param)
 params16 = jax.tree.map(lambda p: p.astype(jnp.bfloat16), params)
@@ -501,214 +521,164 @@ print(net16(X).dtype, param_bytes(net16))
 print(net16(X.astype(jnp.bfloat16)).dtype)
 ```
 
-```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
-%%tab tensorflow
-net = tf.keras.Sequential([
-    tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(256, activation='relu', dtype='bfloat16'),
-    tf.keras.layers.Dense(10, dtype='bfloat16')])
-X = tf.random.normal((8, 28, 28, 1))
-print(net(X).dtype, param_bytes(net))
-```
-
-```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
-%%tab mxnet
-net.cast('float16')
-print(net(X.astype('float16')).dtype, param_bytes(net))
-```
-
-:begin_tab:`pytorch`
-The parameter footprint halves, inference works, and the error message shows
-the strictness: the fp32 input was refused rather than silently converted.
+:begin_tab:`mxnet`
+The parameters take half the bytes and the output is fp16. Feeding the fp32
+`X` to the fp16 network would raise an error, the same strictness as in
+PyTorch.
 :end_tab:
 
-:begin_tab:`jax`
-The parameter footprint halves, but look at the first output: fp32. With
-`dtype=None` the layer promoted the bf16 parameters and the fp32 input to a
-common type, so casting the parameters alone bought memory but not 16-bit
-compute; the fp32 input dragged the arithmetic straight back up. Feeding a
-bf16 input (second line) keeps the whole forward pass in bf16, and so does
-constructing the layers with `dtype=jnp.bfloat16`, which pins the compute
-format regardless of what comes in. Nothing is refused and nothing raises:
-in flax the dtype story is promotion plus two explicit arguments.
+:begin_tab:`pytorch`
+The parameters take half the bytes, and the forward pass runs in bf16. The
+error message shows the strictness: the fp32 input was refused rather than
+converted.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The parameter footprint halves, and note what did not happen: no error,
-although we fed an fp32 input to a bf16 model. The strictness of the
-previous cell lives at the level of raw operations; a Keras layer casts
-floating-point inputs to its `compute_dtype` at the door, so by the time
-any op runs, the dtypes already agree. The layer's policy decides the
-arithmetic, not the input, and both faces of TensorFlow serve the same end:
-ops refuse to guess, layers make the choice explicit at construction.
+The parameters take half the bytes, and the fp32 input raised no error: a
+Keras layer casts floating-point inputs to its `compute_dtype` before
+computing. Raw operations refuse to guess, while layers fix the dtype when
+they are constructed.
 :end_tab:
 
-:begin_tab:`mxnet`
-The parameter footprint halves and the forward pass returns fp16. The input
-was cast too: feed the fp32 `X` to the fp16 network and type inference
-refuses the mismatch, the same strictness as PyTorch with the error raised
-one level lower, by the operator. (No `Flatten` layer either; Gluon's
-`Dense` flattens trailing dimensions by default.)
+:begin_tab:`jax`
+The parameters take half the bytes, but the first output is fp32. With
+`dtype=None` the layers promoted the bf16 parameters and the fp32 input to
+fp32, so casting the parameters saved memory but not compute. A bf16 input
+(second line) keeps the forward pass in bf16, as does constructing the
+layers with `dtype=jnp.bfloat16`.
 :end_tab:
 
-For *inference*, casting a model can halve parameter memory, but its effect
-on predictions must be evaluated for the model and task. For *training*,
-casting all parameters to 16 bits can suppress small updates. A single
-optimizer update changes a weight by roughly $\eta \cdot g$, often a factor
-$10^{-4}$ or less of the weight's own magnitude, and under round-to-nearest an
-increment smaller than half the spacing of representable values at the weight
-rounds to no change at all; for weights in $[1, 2)$ that spacing is `eps`. With
-bf16's `eps` of 0.0078, small updates can round away; in fp16, small gradients
-can underflow first. Mixed-precision training therefore retains fp32 master
-weights while performing selected computations in 16 bits.
+For *inference*, a cast model needs half the memory for its parameters, and
+whether its predictions are still good enough must be checked for the model
+and task. For *training*, the rounding experiment above has already shown
+what goes wrong: updates that are small relative to the weights are lost when
+the weights are stored in 16 bits.
 
 ## Mixed-Precision Training
 
-Mixed-precision training :cite:`Micikevicius.Narang.Alben.ea.2018` splits the
-work: parameters stay in fp32 (the *master weights*, so that small updates
-still register), while the expensive operations of the forward and backward
-pass run in a 16-bit dtype.
+### Master Weights and 16-Bit Compute
 
-:begin_tab:`pytorch`
-You do not annotate anything per layer. Inside a
-`torch.autocast` context, each eligible operation consults a built-in policy:
-matrix multiplications and convolutions, which dominate compute and map onto
-tensor cores, run in the low dtype, while selected sensitive operations such
-as cross-entropy run in fp32. Unlisted operations run in their input dtype, so
-a custom reduction over a low-precision tensor still needs an explicit fp32
-cast. PyTorch maintains the eligibility lists, and inputs are cast on the fly.
+*Mixed-precision training* :cite:`Micikevicius.Narang.Alben.ea.2018`
+separates storage from computation. The parameters stay in fp32, the
+*master weights*, so that every update registers. The matrix multiplications
+of the forward and backward pass, which account for most of the computation,
+run in a 16-bit format, and so do the activations they produce. Reductions
+such as the loss are computed in fp32. :numref:`fig_bg_amp-loop` shows one
+step.
+
+![One step of mixed-precision training: the fp32 master weights are cast to bf16 for the forward pass, which produces bf16 activations; the loss is computed in fp32; the backward pass produces gradients, and the optimizer applies them to the fp32 master weights. With fp16, the loss is also scaled up before the backward pass and the gradients are scaled back down before the update.](../img/bg-amp-loop.svg)
+:label:`fig_bg_amp-loop`
+
+:begin_tab:`mxnet`
+Gluon assigns the two halves to two objects. We cast the *network* to fp16,
+and ask the *optimizer* to keep fp32 master weights with the flag
+`multi_precision=True`. The optimizer then holds an fp32 copy of every fp16
+weight, applies each update to that copy, and writes the rounded fp16 value
+back to the network. MXNet arrays have no bf16 dtype, so the MXNet tab uses
+fp16 throughout this section.
 :end_tab:
 
-:begin_tab:`jax`
-In Flax NNX this split is not a context manager; it is the pair of constructor
-arguments from the previous section. Leave `param_dtype` at its fp32 default
-and set `dtype=jnp.bfloat16`, and each layer stores fp32 parameters while its
-matrix multiplication runs in bf16: master weights and 16-bit compute, spelled
-out in the layer definition. There is no built-in per-operation policy to
-consult, and the flip side of that explicitness is that anything you compute
-outside the model, such as the loss reduction, stays in whatever dtype you
-give it; we cast logits to fp32 before the loss for exactly the reason the
-policy-based frameworks pin reductions there.
+:begin_tab:`pytorch`
+Inside a `torch.autocast` context, every operation consults a built-in
+policy. Matrix multiplications and convolutions run in the 16-bit dtype, a
+list of sensitive operations such as `cross_entropy` runs in fp32, and other
+operations run in the dtype of their inputs. The parameters are not
+touched; each eligible operation casts its inputs as it runs.
 :end_tab:
 
 :begin_tab:`tensorflow`
-In Keras the split is one global switch,
-`tf.keras.mixed_precision.set_global_policy('mixed_bfloat16')`. Every layer
-constructed afterwards gets the policy pair fp32 `variable_dtype`, bf16
-`compute_dtype`: master weights and 16-bit arithmetic, decided per layer
-rather than per operation. Two cautions follow from "constructed
-afterwards". The policy is consulted when a layer is built, so set it before
-creating the model, and it is global state, so we reset it to `'float32'` at
-the end of every cell that flips it, or it would silently reshape every
-model built later in this notebook. What you compute outside the layers,
-such as the loss, follows no policy; we cast logits to fp32 before the loss
-for exactly the reason the autocast frameworks pin reductions there.
+In Keras the split is the global policy `'mixed_bfloat16'`. Every layer
+constructed while it is set gets fp32 `variable_dtype` and bf16
+`compute_dtype`. The policy is global state, so we set it just before we
+construct a model and reset it to `'float32'` right after. The loss is
+computed outside the layers and follows no policy; we cast the logits to fp32
+before computing it.
 :end_tab:
 
-:begin_tab:`mxnet`
-Gluon predates per-operation autocasting, and its recipe is the original
-low-ceremony one from the first mixed-precision papers, with the two halves
-assigned to different objects: cast the *network* to fp16, and ask the
-*optimizer* to keep the fp32 master weights. The second half is one flag,
-`multi_precision=True` among the optimizer parameters. With it, the updater
-allocates an fp32 copy of every fp16 weight, accumulates each update into
-that copy in full precision, and writes the rounded fp16 version back to the
-network; without it, the optimizer warns that accumulating in fp16 risks
-poor accuracy or slow convergence. (An `mxnet.amp` module with per-operation
-lists in the PyTorch style also exists, for fp16 and bf16 targets, but this
-book does not exercise it.)
+:begin_tab:`jax`
+In Flax NNX the split is the pair of constructor arguments from above: leave
+`param_dtype` at fp32 and set `dtype=jnp.bfloat16`, and each layer stores
+fp32 parameters and computes in bf16. Everything outside the layers, such as
+the loss, stays in the dtype we give it; we cast the logits to fp32 before
+computing it.
 :end_tab:
 
-:numref:`fig_bg_amp-loop` draws the resulting loop, and with it the
-distinction that matters: casting a whole model puts everything in one dtype,
-whereas mixed precision keeps fp32 master weights that a 16-bit forward and
-backward pass read from and write back to.
-
-![The mixed-precision training loop: fp32 master weights are cast to bf16 for the forward pass and its bf16 activations, the loss accumulates back in fp32, the backward pass produces bf16 gradients, and the optimizer step reads those gradients but updates the fp32 master copy, closing the cycle; the fp16 variant additionally scales the loss up before backward and unscales the gradients back down before the step.](../img/bg-amp-loop.svg)
-:label:`fig_bg_amp-loop`
+```{.python .input #numerics-mixed-precision-training-1}
+%%tab mxnet
+net = mlp()
+net(X)
+net.cast('float16')
+trainer = gluon.Trainer(net.collect_params(), 'sgd',
+                        {'learning_rate': 0.1, 'multi_precision': True})
+loss = gluon.loss.SoftmaxCrossEntropyLoss()
+with autograd.record():
+    l = loss(net(X.astype('float16')), mnp.zeros(8)).mean()
+l.backward()
+trainer.step(1)
+master = trainer._updaters[0].states[0][0]  # The fp32 master copy
+net[0].weight.data().dtype, master.dtype
+```
 
 ```{.python .input #numerics-mixed-precision-training-1}
 %%tab pytorch
-net = nn.Sequential(nn.Flatten(), nn.Linear(784, 256), nn.ReLU(),
-                    nn.Linear(256, 10))
+net = mlp()
 with torch.autocast('cpu', dtype=torch.bfloat16):
     Y = net(X)
 Y.dtype, net[1].weight.dtype
 ```
 
 ```{.python .input #numerics-mixed-precision-training-1}
-%%tab jax
-net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
-                     nnx.Linear(784, 256, dtype=jnp.bfloat16,
-                                rngs=nnx.Rngs(0)), nnx.relu,
-                     nnx.Linear(256, 10, dtype=jnp.bfloat16,
-                                rngs=nnx.Rngs(1)))
-net(X).dtype, jax.tree.leaves(nnx.state(net, nnx.Param))[0].dtype
-```
-
-```{.python .input #numerics-mixed-precision-training-1}
 %%tab tensorflow
 tf.keras.mixed_precision.set_global_policy('mixed_bfloat16')
-net = tf.keras.Sequential([tf.keras.layers.Flatten(),
-                           tf.keras.layers.Dense(256, activation='relu'),
-                           tf.keras.layers.Dense(10)])
-Y = net(X)
+net = mlp()
 tf.keras.mixed_precision.set_global_policy('float32')
+Y = net(X)
 Y.dtype, net.layers[1].kernel.dtype
 ```
 
 ```{.python .input #numerics-mixed-precision-training-1}
-%%tab mxnet
-net = nn.Sequential()
-net.add(nn.Dense(256, activation='relu'), nn.Dense(10))
-net.initialize()
-net.cast('float16')
-trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                        {'learning_rate': 0.1, 'multi_precision': True})
-loss = gluon.loss.SoftmaxCrossEntropyLoss()
-with autograd.record():
-    l = loss(net(X.astype('float16')), np.zeros(8)).mean()
-l.backward()
-trainer.step(1)
-master = trainer._updaters[0].states[0][0]  # the fp32 master copy
-net[0].weight.data().dtype, master.dtype
+%%tab jax
+net = mlp(nnx.Rngs(d2l.get_key()), dtype=jnp.bfloat16)
+net(X).dtype, jax.tree.leaves(nnx.state(net, nnx.Param))[0].dtype
 ```
 
-:begin_tab:`pytorch`
-Compute in bf16, storage in fp32: exactly the opposite split from
-`net.bfloat16()`. The first argument names the device type the computation
-runs on; on a GPU you would write `torch.autocast('cuda', ...)` and nothing
-else changes.
+:begin_tab:`mxnet`
+The network holds fp16 weights and the optimizer holds the fp32 master copy.
+The copy is created at the first update, so the cell takes one training step
+and then reads it from the optimizer's internal state.
 :end_tab:
 
-:begin_tab:`jax`
-Compute in bf16, storage in fp32: exactly the opposite split from casting the
-parameter tree, and the fp32 input no longer drags anything up because
-`dtype` pins the compute format. Note what the cell did not need: no context
-manager, no device argument. The same constructor arguments mean the same
-thing on CPU, GPU, and TPU.
+:begin_tab:`pytorch`
+The output is bf16 and the weights are fp32: the opposite of `net.bfloat16()`.
+The first argument of `autocast` names the device type; on a GPU it is
+`'cuda'`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Compute in bf16, storage in fp32: exactly the opposite split from
-`dtype='bfloat16'`. A global policy sets this split before construction, so
-individual layers need no policy argument. There is no device argument; the same policy means the same
-thing on CPU, GPU, and TPU.
+The output is bf16 and the weights are fp32: the opposite of
+`mlp(dtype='bfloat16')`.
 :end_tab:
 
-:begin_tab:`mxnet`
-Storage in fp16, master copy in fp32, with the two halves assigned to the
-network and optimizer. Gluon keeps fp16 parameters in the network, so the
-forward pass needs no machinery at all, and hides the fp32 master weights in
-the updater's state; the demonstration has to take one training step first
-(the master copy is allocated lazily) and then reaches into that internal
-state to show it. The practical consequence is identical: forward and
-backward run in 16 bits, the update accumulates in fp32.
+:begin_tab:`jax`
+The output is bf16 and the parameters are fp32: the opposite of casting the
+parameter tree. The fp32 input does not promote the computation, because
+`dtype` fixes the compute format.
 :end_tab:
 
-The following experiment compares accuracy under fp32 and 16-bit compute.
-It trains the same MLP on Fashion-MNIST from the same initialization and on
-the same batches:
+### Training in fp32 and in 16 Bits
+
+Does 16-bit computation change what the model learns? We train the MLP for
+100 minibatch steps of size 256 on Fashion-MNIST, once in fp32 and once with
+mixed precision. Both runs see the same minibatches in the same order and
+start from the same weights, drawn with one random seed.
+
+```{.python .input #numerics-mixed-precision-training-2}
+%%tab mxnet
+data = d2l.FashionMNIST(batch_size=256)
+loader = gluon.data.DataLoader(data.train, batch_size=256)
+batches = [b for b, _ in zip(loader, range(100))]
+val_batch = next(iter(gluon.data.DataLoader(data.val, batch_size=1024)))
+```
 
 ```{.python .input #numerics-mixed-precision-training-2}
 %%tab pytorch
@@ -716,18 +686,6 @@ data = d2l.FashionMNIST(batch_size=256)
 loader = torch.utils.data.DataLoader(data.train, batch_size=256)
 batches = [b for b, _ in zip(loader, range(100))]
 val_batch = next(iter(torch.utils.data.DataLoader(data.val, batch_size=1024)))
-```
-
-```{.python .input #numerics-mixed-precision-training-2}
-%%tab jax
-data = d2l.FashionMNIST(batch_size=256)
-images, labels = data.train
-batches = [(jnp.asarray(images[k:k+256], jnp.float32) / 255,
-            jnp.asarray(labels[k:k+256], jnp.int32))
-           for k in range(0, 100 * 256, 256)]
-val_images, val_labels = data.val
-val_batch = (jnp.asarray(val_images[:1024, :, :, None], jnp.float32) / 255,
-             jnp.asarray(val_labels[:1024], jnp.int32))
 ```
 
 ```{.python .input #numerics-mixed-precision-training-2}
@@ -743,80 +701,69 @@ val_batch = (tf.constant(val_images[:1024, :, :, None], tf.float32) / 255,
 ```
 
 ```{.python .input #numerics-mixed-precision-training-2}
-%%tab mxnet
+%%tab jax
 data = d2l.FashionMNIST(batch_size=256)
-loader = gluon.data.DataLoader(data.train, batch_size=256)
-batches = [b for b, _ in zip(loader, range(100))]
-val_batch = next(iter(gluon.data.DataLoader(data.val, batch_size=1024)))
+images, labels = data.train
+batches = [(jnp.asarray(images[k:k+256], jnp.float32) / 255,
+            jnp.asarray(labels[k:k+256], jnp.int32))
+           for k in range(0, 100 * 256, 256)]
+val_images, val_labels = data.val
+val_batch = (jnp.asarray(val_images[:1024, :, :, None], jnp.float32) / 255,
+             jnp.asarray(val_labels[:1024], jnp.int32))
+```
+
+```{.python .input #numerics-mixed-precision-training-3}
+%%tab mxnet
+def train(dtype, seed):
+    npx.random.seed(seed)  # The same initial weights in both runs
+    net = mlp()
+    net(batches[0][0])  # Create the weights in fp32, then cast them
+    net.cast(dtype)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {
+        'learning_rate': 0.1, 'multi_precision': dtype == 'float16'})
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+    losses = []
+    for X, y in batches:
+        with autograd.record():
+            logits = net(X.astype(dtype)).astype('float32')
+            l = loss(logits, y).mean()
+        l.backward()
+        trainer.step(1)
+        losses.append(l)
+    Xv, yv = val_batch
+    accuracy = float((net(Xv.astype(dtype)).argmax(axis=1) == yv).mean())
+    return [float(l) for l in losses], accuracy
 ```
 
 ```{.python .input #numerics-mixed-precision-training-3}
 %%tab pytorch
-def train(amp):
-    torch.manual_seed(0)  # identical init and data order for both runs
-    net = nn.Sequential(nn.Flatten(), nn.Linear(784, 256), nn.ReLU(),
-                        nn.Linear(256, 10))
-    opt = torch.optim.SGD(net.parameters(), lr=0.1)
+def train(mixed, seed):
+    torch.manual_seed(seed)  # The same initial weights in both runs
+    net = mlp()
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.1)
     losses = []
-    start = time.perf_counter()
     for X, y in batches:
-        with torch.autocast('cpu', dtype=torch.bfloat16, enabled=amp):
+        with torch.autocast('cpu', dtype=torch.bfloat16, enabled=mixed):
             loss = F.cross_entropy(net(X), y)
+        optimizer.zero_grad()
         loss.backward()
-        opt.step()
-        opt.zero_grad()
-        losses.append(loss.item())
-    elapsed = time.perf_counter() - start
+        optimizer.step()
+        losses.append(loss.detach())
     Xv, yv = val_batch
     with torch.no_grad():
         accuracy = (net(Xv).argmax(1) == yv).float().mean().item()
-    return losses, accuracy, elapsed
-```
-
-```{.python .input #numerics-mixed-precision-training-3}
-%%tab jax
-def train(mixed):
-    dtype = jnp.bfloat16 if mixed else jnp.float32
-    net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
-                         nnx.Linear(784, 256, dtype=dtype,
-                                    rngs=nnx.Rngs(0)), nnx.relu,
-                         nnx.Linear(256, 10, dtype=dtype,
-                                    rngs=nnx.Rngs(1)))
-    # param_dtype stays fp32, so the same key gives identical init either way
-    optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
-    @nnx.jit
-    def step(model, optimizer, X, y):
-        def loss_fn(model):
-            logits = model(X).astype(jnp.float32)
-            return optax.softmax_cross_entropy_with_integer_labels(
-                logits, y).mean()
-        loss, grads = nnx.value_and_grad(loss_fn)(model)
-        optimizer.update(model, grads)
-        return loss
-    losses = []
-    start = time.perf_counter()
-    for X, y in batches:
-        loss = step(net, optimizer, X, y)
-        losses.append(float(loss))
-    loss.block_until_ready()
-    elapsed = time.perf_counter() - start
-    Xv, yv = val_batch
-    accuracy = float((net(Xv).argmax(1) == yv).mean())
-    return losses, accuracy, elapsed
+    return torch.stack(losses).tolist(), accuracy
 ```
 
 ```{.python .input #numerics-mixed-precision-training-3}
 %%tab tensorflow
-def train(mixed):
-    tf.keras.utils.set_random_seed(0)  # identical init for both runs
-    tf.keras.mixed_precision.set_global_policy(
-        'mixed_bfloat16' if mixed else 'float32')
-    net = tf.keras.Sequential([tf.keras.layers.Flatten(),
-                               tf.keras.layers.Dense(256, activation='relu'),
-                               tf.keras.layers.Dense(10)])
-    opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+def train(policy, seed):
+    tf.keras.utils.set_random_seed(seed)  # The same initial weights
+    tf.keras.mixed_precision.set_global_policy(policy)
+    net = mlp()
+    tf.keras.mixed_precision.set_global_policy('float32')
+    optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
     losses = []
-    start = time.perf_counter()
     for X, y in batches:
         with tf.GradientTape() as tape:
             logits = tf.cast(net(X), tf.float32)
@@ -824,130 +771,142 @@ def train(mixed):
                 tf.keras.losses.sparse_categorical_crossentropy(
                     y, logits, from_logits=True))
         grads = tape.gradient(loss, net.trainable_variables)
-        opt.apply_gradients(zip(grads, net.trainable_variables))
-        losses.append(float(loss))
-    elapsed = time.perf_counter() - start
+        optimizer.apply_gradients(zip(grads, net.trainable_variables))
+        losses.append(loss)
     Xv, yv = val_batch
-    accuracy = float(tf.reduce_mean(tf.cast(
-        tf.argmax(net(Xv), axis=1, output_type=yv.dtype) == yv, tf.float32)))
-    tf.keras.mixed_precision.set_global_policy('float32')
-    return losses, accuracy, elapsed
+    y_hat = tf.argmax(net(Xv), axis=1, output_type=yv.dtype)
+    accuracy = float(tf.reduce_mean(tf.cast(y_hat == yv, tf.float32)))
+    return [float(l) for l in losses], accuracy
 ```
 
 ```{.python .input #numerics-mixed-precision-training-3}
-%%tab mxnet
-def train(mixed):
-    npx.random.seed(0)
-    net = nn.Sequential()
-    net.add(nn.Dense(256, activation='relu'), nn.Dense(10))
-    net.initialize()
-    net(batches[0][0])  # materialize the weights, identical for both runs
-    if mixed:
-        net.cast('float16')
-    trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                            {'learning_rate': 0.1,
-                             'multi_precision': mixed})
-    loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    losses = []
-    start = time.perf_counter()
-    for X, y in batches:
-        if mixed:
-            X = X.astype('float16')
-        with autograd.record():
-            l = loss(net(X), y).mean()
-        l.backward()
-        trainer.step(1)
-        losses.append(float(l))
-    elapsed = time.perf_counter() - start
+%%tab jax
+@nnx.jit
+def train_step(model, optimizer, X, y):
+    def loss_fn(model):
+        logits = model(X).astype(jnp.float32)
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits, y).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(model)
+    optimizer.update(model, grads)
+    return loss
+
+def train(dtype, key):
+    net = mlp(nnx.Rngs(key), dtype)  # The same key gives the same weights
+    optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
+    losses = [train_step(net, optimizer, X, y) for X, y in batches]
     Xv, yv = val_batch
-    if mixed:
-        Xv = Xv.astype('float16')
-    accuracy = float((net(Xv).argmax(axis=1) == yv).mean())
-    return losses, accuracy, elapsed
+    accuracy = float((net(Xv).argmax(1) == yv).mean())
+    return [float(l) for l in losses], accuracy
+```
+
+:begin_tab:`mxnet`
+The loss values stay on the device during training and are converted to
+Python numbers once, at the end. Converting every step would force the
+program to wait for each step to finish, a cost that :numref:`sec_use_gpu`
+examines.
+:end_tab:
+
+:begin_tab:`pytorch`
+The loss values stay on the device during training and are converted to
+Python numbers once, at the end. Converting every step would force the
+program to wait for each step to finish, a cost that :numref:`sec_use_gpu`
+examines.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The loss values stay on the device during training and are converted to
+Python numbers once, at the end. Converting every step would force the
+program to wait for each step to finish, a cost that :numref:`sec_use_gpu`
+examines.
+:end_tab:
+
+:begin_tab:`jax`
+The parameters are created in fp32 in both runs, because `param_dtype`
+keeps its default, so the same key gives the same initial weights. The loss
+values stay on the device during training and are converted to Python
+numbers once, at the end; converting every step would force the program to
+wait for each step to finish, a cost that :numref:`sec_use_gpu` examines.
+:end_tab:
+
+```{.python .input #numerics-mixed-precision-training-4}
+%%tab mxnet
+seed = random.randrange(2**31)  # One random draw, shared by both runs
+loss32, acc32 = train('float32', seed)
+loss16, acc16 = train('float16', seed)
+print(f'validation accuracy: fp32 {acc32:.3f}, fp16 {acc16:.3f}')
+d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
+         legend=['fp32', 'fp16 with fp32 master weights'])
 ```
 
 ```{.python .input #numerics-mixed-precision-training-4}
 %%tab pytorch
-loss32, acc32, sec32 = train(amp=False)
-loss16, acc16, sec16 = train(amp=True)
-print(f'fp32: loss {loss32[-1]:.3f}, val acc {acc32:.3f}, {sec32:.2f}s')
-print(f'bf16: loss {loss16[-1]:.3f}, val acc {acc16:.3f}, {sec16:.2f}s')
+seed = random.randrange(2**31)  # One random draw, shared by both runs
+loss32, acc32 = train(False, seed)
+loss16, acc16 = train(True, seed)
+print(f'validation accuracy: fp32 {acc32:.3f}, bf16 {acc16:.3f}')
 d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
          legend=['fp32', 'bf16 autocast'])
 ```
 
 ```{.python .input #numerics-mixed-precision-training-4}
-%%tab jax
-loss32, acc32, sec32 = train(mixed=False)
-loss16, acc16, sec16 = train(mixed=True)
-print(f'fp32: loss {loss32[-1]:.3f}, val acc {acc32:.3f}, {sec32:.2f}s')
-print(f'bf16: loss {loss16[-1]:.3f}, val acc {acc16:.3f}, {sec16:.2f}s')
-d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
-         legend=['fp32', 'bf16 compute'])
-```
-
-```{.python .input #numerics-mixed-precision-training-4}
 %%tab tensorflow
-loss32, acc32, sec32 = train(mixed=False)
-loss16, acc16, sec16 = train(mixed=True)
-print(f'fp32: loss {loss32[-1]:.3f}, val acc {acc32:.3f}, {sec32:.2f}s')
-print(f'bf16: loss {loss16[-1]:.3f}, val acc {acc16:.3f}, {sec16:.2f}s')
+seed = random.randrange(2**31)  # One random draw, shared by both runs
+loss32, acc32 = train('float32', seed)
+loss16, acc16 = train('mixed_bfloat16', seed)
+print(f'validation accuracy: fp32 {acc32:.3f}, bf16 {acc16:.3f}')
 d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
          legend=['fp32', 'mixed_bfloat16'])
 ```
 
 ```{.python .input #numerics-mixed-precision-training-4}
-%%tab mxnet
-loss32, acc32, sec32 = train(mixed=False)
-loss16, acc16, sec16 = train(mixed=True)
-print(f'fp32: loss {loss32[-1]:.3f}, val acc {acc32:.3f}, {sec32:.2f}s')
-print(f'fp16: loss {loss16[-1]:.3f}, val acc {acc16:.3f}, {sec16:.2f}s')
+%%tab jax
+key = d2l.get_key()  # One random key, shared by both runs
+loss32, acc32 = train(jnp.float32, key)
+loss16, acc16 = train(jnp.bfloat16, key)
+print(f'validation accuracy: fp32 {acc32:.3f}, bf16 {acc16:.3f}')
 d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
-         legend=['fp32', 'fp16 multi_precision'])
+         legend=['fp32', 'bf16 compute'])
 ```
 
-The two curves lie on top of each other and their validation accuracies agree:
-16-bit rounding perturbs each step slightly, so the trajectories are not
-bitwise identical, but they descend at the same rate to the same place. The
-reported time reflects this CPU-sized experiment: bf16
-may be no faster, and can be slower when casting overhead dominates. The
-wall-clock payoff appears on accelerators with native 16-bit matrix units and
-in models large enough to occupy them; speedup depends on hardware, shapes,
-and the input pipeline (we turn to GPUs in :numref:`sec_use_gpu`). Activations
-still occupy half the memory. Note what mixed
-precision does *not* buy: the master weights and any Adam state remain fp32,
-so the parameter and optimizer terms in the memory arithmetic of
-:numref:`sec_parameters` do not shrink. The savings are in activations
-and speed.
+The two loss curves lie on top of each other, and the validation accuracies
+agree to within about half a percentage point. Rounding in 16 bits perturbs
+every step slightly, so the two runs are not identical, but they descend at
+the same rate to the same place. We did not time the runs. The speed of
+16-bit arithmetic depends on matrix units that compute in 16 bits, as the
+tensor cores of recent GPUs do, and on models large enough to keep them busy;
+an exercise in :numref:`sec_use_gpu` measures it. Mixed precision also does
+not shrink everything: the master weights and the optimizer state remain
+fp32, so the bytes per parameter counted in :numref:`sec_parameters` stay
+the same. What it saves is the memory of the activations, which are stored
+in 16 bits, and the time of the matrix multiplications.
 
 :begin_tab:`mxnet`
-Two footnotes for this tab. The 16-bit format here is fp16, not bf16, so the
-agreement of the curves also leans on the next subsection: with plain SGD on
-a well-scaled loss the gradients stay inside fp16's range, which is why no
-loss scaling was needed. And CPUs have no fast fp16 path, so the mixed run
-above is *slower* than fp32 on this machine; as for the other tabs, the
-speed argument is a GPU argument.
+The MXNet tab computes in fp16 rather than bf16, and it needed no loss
+scaling: with plain SGD on this well-scaled loss, the gradients stay inside
+the range of fp16. The next subsection explains when they do not.
 :end_tab:
 
 ### Loss Scaling for fp16
 :label:`subsec_loss_scaling`
 
-With bf16, the recipe above is complete. fp16 has one more failure mode, and
-it is the opposite end of the axis from the overflow that opened this section:
-*gradient underflow*. Many gradients are small. Below about
-$6.10 \times 10^{-5}$ fp16 uses increasingly coarse subnormals, and below
-about $5.96 \times 10^{-8}$ values round to zero:
+With bf16, the recipe above is complete. fp16 fails at the other end of its
+range as well: small gradients *underflow*. Below about
+$6.1 \times 10^{-5}$ fp16 stores numbers as subnormals with fewer and fewer
+significant bits, and below about $3 \times 10^{-8}$ it rounds them to zero.
+A gradient of $10^{-8}$ vanishes, but the same gradient multiplied by
+$2^{16}$ is stored without trouble:
+
+```{.python .input #numerics-loss-scaling-for-fp16-1}
+%%tab mxnet
+g = mnp.array(1e-8)
+g.astype('float16'), (g * 2**16).astype('float16')
+```
 
 ```{.python .input #numerics-loss-scaling-for-fp16-1}
 %%tab pytorch
 g = torch.tensor(1e-8)
 g.half(), (g * 2**16).half()
-```
-
-```{.python .input #numerics-loss-scaling-for-fp16-1}
-%%tab jax
-g = jnp.array(1e-8)
-g.astype(jnp.float16), (g * 2**16).astype(jnp.float16)
 ```
 
 ```{.python .input #numerics-loss-scaling-for-fp16-1}
@@ -957,172 +916,233 @@ tf.cast(g, tf.float16), tf.cast(g * 2**16, tf.float16)
 ```
 
 ```{.python .input #numerics-loss-scaling-for-fp16-1}
-%%tab mxnet
-g = np.array(1e-8)
-g.astype('float16'), (g * 2**16).astype('float16')
+%%tab jax
+g = jnp.array(1e-8)
+g.astype(jnp.float16), (g * 2**16).astype(jnp.float16)
 ```
 
-The gradient vanishes, yet the same value scaled by $2^{16}$ is perfectly
-representable. That is the idea of *loss scaling*: multiply the loss by a
-large constant before backpropagation, so that by linearity every gradient is
-scaled into representable territory, then divide the gradients by the same
-constant before the optimizer step.
+How many real gradients are that small? We compute the gradient of the loss
+with respect to the first-layer weights of the MLP, on the first minibatch,
+in fp32, and count the nonzero entries that fp16 could store only as
+subnormals or zeros, with and without a factor of $2^{16}$:
 
-:begin_tab:`pytorch`
-`torch.amp.GradScaler` automates it,
-choosing the scale dynamically: start high, shrink when scaled gradients
-overflow to `inf` (skipping that step), grow back periodically.
+```{.python .input #numerics-loss-scaling-for-fp16-3}
+%%tab mxnet
+net = mlp()
+X, y = batches[0]
+net(X)
+with autograd.record():
+    l = gluon.loss.SoftmaxCrossEntropyLoss()(net(X), y).mean()
+l.backward()
+g = net[0].weight.grad().reshape(-1)
+g = g[g != 0]
+for scale in (1, 2**16):
+    print(f'scale {scale:5}: '
+          f'{float((mnp.abs(g * scale) < 2**-14).mean()):.1%} subnormal, '
+          f'{float(((g * scale).astype("float16") == 0).mean()):.2%} zero')
+```
+
+```{.python .input #numerics-loss-scaling-for-fp16-3}
+%%tab pytorch
+net = mlp()
+X, y = batches[0]
+F.cross_entropy(net(X), y).backward()
+g = net[1].weight.grad.flatten()
+g = g[g != 0]
+for scale in (1, 2**16):
+    print(f'scale {scale:5}: '
+          f'{((g * scale).abs() < 2**-14).float().mean():.1%} subnormal, '
+          f'{((g * scale).half() == 0).float().mean():.2%} zero')
+```
+
+```{.python .input #numerics-loss-scaling-for-fp16-3}
+%%tab tensorflow
+net = mlp()
+X, y = batches[0]
+with tf.GradientTape() as tape:
+    loss = tf.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(
+        y, net(X), from_logits=True))
+g = tf.reshape(tape.gradient(loss, net.layers[1].kernel), -1)
+g = g[g != 0]
+for scale in (1, 2**16):
+    subnormal = tf.reduce_mean(tf.cast(tf.abs(g * scale) < 2**-14, tf.float32))
+    zero = tf.reduce_mean(tf.cast(tf.cast(g * scale, tf.float16) == 0,
+                                  tf.float32))
+    print(f'scale {scale:5}: {float(subnormal):.1%} subnormal, '
+          f'{float(zero):.2%} zero')
+```
+
+```{.python .input #numerics-loss-scaling-for-fp16-3}
+%%tab jax
+net = mlp(nnx.Rngs(d2l.get_key()))
+X, y = batches[0]
+def loss_fn(model):
+    return optax.softmax_cross_entropy_with_integer_labels(
+        model(X), y).mean()
+g = nnx.grad(loss_fn)(net)['layers'][1]['kernel'][...].reshape(-1)
+g = g[g != 0]
+for scale in (1, 2**16):
+    print(f'scale {scale:5}: '
+          f'{float((jnp.abs(g * scale) < 2**-14).mean()):.1%} subnormal, '
+          f'{float(((g * scale).astype(jnp.float16) == 0).mean()):.2%} zero')
+```
+
+About a third of the nonzero first-layer gradients lie below the smallest
+normal fp16 number, $2^{-14} \approx 6.1 \times 10^{-5}$, and about two in a
+thousand would round to zero. Multiplied by $2^{16}$, none is that
+small, and none comes near the overflow threshold of 65504 either. This is
+the idea of *loss scaling*. We multiply the loss by a large constant $S$
+before the backward pass, and because differentiation is linear, every
+gradient is multiplied by $S$ as well. Before the update, we divide the
+gradients by $S$ in fp32, where the small values are representable. The
+update is unchanged; only the gradients in between are kept in a range that
+fp16 can store.
+
+A fixed $S$ that is too large makes large gradients overflow to `inf`. The
+standard remedy chooses $S$ dynamically: start high, and whenever the scaled
+gradients contain `inf` or NaN, skip that update and halve $S$; after a run
+of clean steps, double it again.
+
+:begin_tab:`mxnet`
+Gluon's `Trainer` has no automatic loss scaling. A fixed scale takes two
+changes: call `(2**10 * l).backward()` instead of `l.backward()`, and
+`trainer.step(2**10)` instead of `trainer.step(1)`, since the argument of
+`step` divides the gradients before the update. The dynamic version lives in
+the `mxnet.amp` module, which this book does not use.
 :end_tab:
 
-:begin_tab:`jax`
-optax ships no automatic scaler, and JAX code rarely misses it. The idiom
-grew up on TPUs where bf16 is the native 16-bit format, and bf16 needs no
-scaling: its normal exponent range matches fp32 and covers the magnitudes
-encountered in ordinary training. The recipe of this section,
-`dtype=jnp.bfloat16` over fp32
-parameters, is therefore already complete, and we deliberately skip fp16 loss
-scaling. If old hardware ever forces fp16 on you, the two multiplications are
-yours to write: scale the loss inside `loss_fn`, divide the gradients before
-`optax.apply_updates`.
+:begin_tab:`pytorch`
+`torch.amp.GradScaler` implements dynamic loss scaling. The loop below trains
+the MLP for 20 steps with fp16 autocast:
 :end_tab:
 
 :begin_tab:`tensorflow`
-In Keras loss scaling is the `'mixed_float16'` policy plus an optimizer
-wrapper. Under that policy, `model.compile` wraps whatever optimizer you
-pass in `tf.keras.mixed_precision.LossScaleOptimizer`, which chooses the
-scale dynamically: start high, shrink when scaled gradients overflow to
-`inf` (skipping that step), grow back periodically. `model.fit` users
-therefore get correct fp16 training without touching anything; a custom
-loop applies the wrapper itself, multiplies with its `scale_loss` before
-taking gradients, and lets the wrapped optimizer unscale and skip bad steps.
-None of this machinery exists for `'mixed_bfloat16'` because none is needed:
-bf16's normal exponent range matches fp32 and avoids fp16's narrow-range
-failure in ordinary training. Hence the modern default our training cell followed: prefer
-`'mixed_bfloat16'` where the hardware supports it, and reach for
-`'mixed_float16'` plus the scaler only on older accelerators.
+Keras implements dynamic loss scaling in
+`tf.keras.mixed_precision.LossScaleOptimizer`, which wraps an optimizer.
+Under the policy `'mixed_float16'`, `model.compile` applies the wrapper
+automatically, so `model.fit` trains correctly in fp16 without further
+changes. A custom loop wraps the optimizer itself, multiplies the loss with
+the wrapper's `scale_loss` before computing gradients, and lets the wrapped
+optimizer divide them and skip bad steps.
 :end_tab:
 
-:begin_tab:`mxnet`
-Gluon's `Trainer` has no scaler; a static loss scale is two edits you own.
-Multiply: `(2**10 * l).backward()` instead of `l.backward()`. Divide:
-`trainer.step(2**10)` instead of `trainer.step(1)`, because the step's
-argument rescales gradients by its inverse before the update. The scale is
-yours to choose, too low and small gradients still flush to zero, too high
-and large ones overflow; the dynamic grow-and-shrink version the other
-frameworks automate lives in the `mxnet.amp` module mentioned earlier, which
-is where to look if the manual recipe stops being enough.
+:begin_tab:`jax`
+Optax provides no automatic loss scaling, and JAX code rarely needs it: JAX
+grew up on TPUs, whose native 16-bit format is bf16. If you must train in
+fp16, the two multiplications are yours to write: scale the loss inside
+`loss_fn`, and divide the gradients before `optimizer.update`.
 :end_tab:
 
 ```{.python .input #numerics-loss-scaling-for-fp16-2}
 %%tab pytorch
-torch.manual_seed(0)
-net = nn.Sequential(nn.Flatten(), nn.Linear(784, 256), nn.ReLU(),
-                    nn.Linear(256, 10))
-opt = torch.optim.SGD(net.parameters(), lr=0.1)
+net = mlp()
+optimizer = torch.optim.SGD(net.parameters(), lr=0.1)
 scaler = torch.amp.GradScaler('cpu')
 for X, y in batches[:20]:
     with torch.autocast('cpu', dtype=torch.float16):
         loss = F.cross_entropy(net(X), y)
-    scaler.scale(loss).backward()  # gradients of (scale * loss)
-    scaler.step(opt)               # unscale, check for inf/nan, then step
-    scaler.update()
-    opt.zero_grad()
+    optimizer.zero_grad()
+    scaler.scale(loss).backward()  # Gradients of S * loss
+    scaler.step(optimizer)         # Divide by S, skip the step on inf/NaN
+    scaler.update()                # Adjust S
 print(f'loss {loss.item():.3f}, loss scale {scaler.get_scale():.0f}')
 ```
 
 :begin_tab:`pytorch`
-Keep the two failure modes straight: `GradScaler` exists to prevent gradient
-*underflow*; its `inf`/NaN check handles overflow as a side effect by skipping
-the bad step. bf16 normally needs no scaler, because its normal exponent range
-matches fp32 and avoids fp16's narrow-range failure. Hence the modern default:
-on hardware with bf16 support (Ampere and later GPUs, TPUs, recent CPUs), use
-bf16 autocast and stop there; reach for fp16 plus `GradScaler` only on older
-accelerators.
+The scale starts at $2^{16}$ and stays there, because no step overflowed.
+Two rules apply when the loop does more. `scaler.unscale_(optimizer)` may be
+called at most once per step, so a loop that divides the gradients early,
+for instance to clip them, must not divide them again to log them. Under
+gradient accumulation, call `scaler.update()` once per effective batch, after
+the last micro-step.
 :end_tab:
+
+On hardware that supports bf16, which includes recent GPUs, TPUs, and recent
+CPUs, the standard choice is therefore bf16 mixed precision without loss
+scaling. fp16 with loss scaling remains for older GPUs.
 
 ## Numerical Failure Modes
 
-This section examines common sources of non-finite results and inaccurate
-reductions.
+Three failures account for most numerical trouble in 16-bit code: an overflow
+that later appears as NaN, an exponential that overflows before the result
+does, and a long sum that loses its small terms.
 
-**Trace NaNs to earlier non-finite values.** NaNs often follow an overflow to
-`inf`, because arithmetic involving infinite values can produce NaN:
+### From Overflow to NaN
+
+A NaN in the loss is often the second symptom. The first is an overflow to
+`inf`, and arithmetic on infinite values produces NaN:
 
 ```{.python .input #numerics-when-numerics-bite-1}
-%%tab pytorch
-s = torch.tensor(60000., dtype=torch.float16) * 2  # overflows
+%%tab mxnet
+s = mnp.array(60000., dtype='float16') * 2  # Overflows
 s, s - s
 ```
 
 ```{.python .input #numerics-when-numerics-bite-1}
-%%tab jax
-s = jnp.array(60000., dtype=jnp.float16) * 2  # overflows
+%%tab pytorch
+s = torch.tensor(60000., dtype=torch.float16) * 2  # Overflows
 s, s - s
 ```
 
 ```{.python .input #numerics-when-numerics-bite-1}
 %%tab tensorflow
-s = tf.constant(60000., dtype=tf.float16) * 2  # overflows
+s = tf.constant(60000., dtype=tf.float16) * 2  # Overflows
 s, s - s
 ```
 
 ```{.python .input #numerics-when-numerics-bite-1}
-%%tab mxnet
-s = np.array(60000., dtype='float16') * 2  # overflows
+%%tab jax
+s = jnp.array(60000., dtype=jnp.float16) * 2  # Overflows
 s, s - s
 ```
 
-An overflow can occur many operations before a NaN appears in the loss, and
-a parameter update containing NaN makes subsequent results non-finite. Check
-ranges first: is any computation in fp16, and are intermediate values in the
-$10^4$ regime and approaching the 65504 ceiling? Then evaluate other causes,
-including the learning rate.
-
-:begin_tab:`pytorch`
-Under autocast with
-`GradScaler`, the gradient check catches the `inf` in the very step it occurs
-and skips the update. This behavior also supports using the framework's
-mixed-precision utilities during debugging.
-:end_tab:
-
-:begin_tab:`jax`
-JAX can identify the first operation that produces NaN: set
-`jax.config.update('jax_debug_nans', True)` and execution stops with an error
-at the first operation whose output is NaN. When the check detects a NaN, it
-reruns jitted code operation by operation. Use this check as a debugging mode,
-not as the default execution mode.
-:end_tab:
-
-:begin_tab:`tensorflow`
-TensorFlow can identify the first operation that produces a non-finite
-value. Call
-`tf.debugging.enable_check_numerics()` and execution stops with an
-`InvalidArgumentError` at the first operation whose output contains `inf` or
-NaN. The check wraps
-every operation, so treat it as a debugging mode, not a default.
-:end_tab:
+The overflow can happen many operations before the NaN reaches the loss, and
+once an update contains NaN, every later result does too. When a loss turns
+NaN, check ranges first: does any computation run in fp16, and do
+intermediate values approach its maximum of 65504? Only then look for other
+causes, such as a learning rate that is too large.
 
 :begin_tab:`mxnet`
 MXNet has no switch that stops at the first bad operation, so the search is
-manual: bisect with `np.isnan(x).any()` and `np.isinf(x).any()` probes after
-suspect stages, starting from the loss and walking upstream. The
-diagnose-in-order advice above matters all the more when the tooling will
-not do the walking for you.
+manual: insert checks such as `mnp.isnan(x).any()` and `mnp.isinf(x).any()`
+after suspect stages, starting from the loss and moving upstream.
 :end_tab:
 
-**Use a stable log-sum-exp implementation.** The direct evaluation of
-$\log \sum_i \exp(x_i)$ overflows long before the answer does:
+:begin_tab:`pytorch`
+Under autocast with `GradScaler`, the check for `inf` and NaN in the
+gradients catches an overflow in the step where it occurs and skips the
+update.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.debugging.enable_check_numerics()` makes TensorFlow stop with an error at
+the first operation whose output contains `inf` or NaN. The check wraps every
+operation and slows execution, so it is a debugging mode, not a default.
+:end_tab:
+
+:begin_tab:`jax`
+`jax.config.update('jax_debug_nans', True)` makes JAX stop with an error at
+the first operation whose output is NaN; for compiled code, it reruns the
+function operation by operation to find it. The check slows execution, so it
+is a debugging mode, not a default.
+:end_tab:
+
+### Log-Sum-Exp
+
+The direct evaluation of $\log \sum_i \exp(x_i)$ overflows long before its
+result does:
+
+```{.python .input #numerics-when-numerics-bite-2}
+%%tab mxnet
+x = mnp.array([12.0, 11.0, 10.0], dtype='float16')
+m = x.max()
+mnp.log(mnp.exp(x).sum()), m + mnp.log(mnp.exp(x - m).sum())
+```
 
 ```{.python .input #numerics-when-numerics-bite-2}
 %%tab pytorch
 x = torch.tensor([12.0, 11.0, 10.0], dtype=torch.float16)
 x.exp().sum().log(), torch.logsumexp(x, dim=0)
-```
-
-```{.python .input #numerics-when-numerics-bite-2}
-%%tab jax
-x = jnp.array([12.0, 11.0, 10.0], dtype=jnp.float16)
-jnp.log(jnp.exp(x).sum()), jax.scipy.special.logsumexp(x)
 ```
 
 ```{.python .input #numerics-when-numerics-bite-2}
@@ -1132,52 +1152,57 @@ tf.math.log(tf.reduce_sum(tf.exp(x))), tf.math.reduce_logsumexp(x)
 ```
 
 ```{.python .input #numerics-when-numerics-bite-2}
-%%tab mxnet
-x = np.array([12.0, 11.0, 10.0], dtype='float16')
-m = x.max()
-np.log(np.exp(x).sum()), m + np.log(np.exp(x - m).sum())
+%%tab jax
+x = jnp.array([12.0, 11.0, 10.0], dtype=jnp.float16)
+jnp.log(jnp.exp(x).sum()), jax.scipy.special.logsumexp(x)
 ```
 
-The result is 12.4, but the intermediate $e^{12}$ exceeds 65504. The
-subtract-the-max shift from :numref:`sec_numerical_stability` avoids this
-overflow. Prefer a tested library implementation when one is available.
+The result is about 12.4, but the intermediate value $e^{12} \approx 163{,}000$
+exceeds 65504. The remedy is the one we used for the softmax in
+:numref:`subsec_softmax-implementation-revisited`: subtract the largest
+entry $m$ before exponentiating and add it back afterwards,
 
-:begin_tab:`pytorch`
-`torch.logsumexp`, `F.log_softmax`, and `F.cross_entropy` all build the shift
-in.
+$$\log \sum_i \exp(x_i) = m + \log \sum_i \exp(x_i - m).$$
+
+Every exponent on the right is at most 0, so no term exceeds 1, and the
+largest term equals 1, so the sum cannot underflow to zero either.
+
+:begin_tab:`mxnet`
+`mx.np` has no `logsumexp`, so the cell writes the shift out. Inside a model,
+`npx.log_softmax` and Gluon's `SoftmaxCrossEntropyLoss` apply it.
 :end_tab:
 
-:begin_tab:`jax`
-`jax.scipy.special.logsumexp`, `jax.nn.log_softmax`, and optax's
-cross-entropy losses all build the shift in.
+:begin_tab:`pytorch`
+`torch.logsumexp`, `F.log_softmax`, and `F.cross_entropy` all apply the shift.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`tf.math.reduce_logsumexp`, `tf.nn.log_softmax`, and Keras's cross-entropy
-losses with `from_logits=True` all build the shift in.
+`tf.math.reduce_logsumexp`, `tf.nn.log_softmax`, and the Keras cross-entropy
+losses with `from_logits=True` all apply the shift.
 :end_tab:
 
-:begin_tab:`mxnet`
-`mx.np` ships no `logsumexp`, so this is the one tab where the cell writes
-the shift explicitly: subtract the maximum before exponentiating, then add
-it back outside the log. Within a model, `npx.log_softmax` and Gluon's
-`SoftmaxCrossEntropyLoss` build the same shift in.
+:begin_tab:`jax`
+`jax.scipy.special.logsumexp`, `jax.nn.log_softmax`, and the cross-entropy
+losses of optax all apply the shift.
 :end_tab:
 
-**Accumulate in fp32.** Long sums in a 16-bit dtype drift, because once the
-running total is large, each small increment falls below the spacing of
-representable values and is partly or wholly rounded away:
+### Accumulation in fp32
+
+A long sum in a 16-bit format drifts: once the running total is large, each
+small increment falls below half the spacing of the numbers near the total
+and is rounded away, in whole or in part. We add $10^{-3}$ ten million times:
+
+```{.python .input #numerics-when-numerics-bite-3}
+%%tab mxnet
+x = mnp.full((10**7,), 1e-3, dtype='float16')
+(x.cumsum()[-1], x.cumsum(dtype='float32')[-1],
+ x.cumsum(dtype='float64')[-1])
+```
 
 ```{.python .input #numerics-when-numerics-bite-3}
 %%tab pytorch
 x = torch.full((10**7,), 1e-3, dtype=torch.float16)
 x.cumsum(0)[-1], x.cumsum(0, dtype=torch.float32)[-1]
-```
-
-```{.python .input #numerics-when-numerics-bite-3}
-%%tab jax
-x = jnp.full((10**7,), 1e-3, dtype=jnp.float16)
-x.cumsum()[-1], x.astype(jnp.float32).cumsum()[-1]
 ```
 
 ```{.python .input #numerics-when-numerics-bite-3}
@@ -1188,140 +1213,92 @@ x = tf.fill([10**7], tf.constant(1e-3, tf.float16))
 ```
 
 ```{.python .input #numerics-when-numerics-bite-3}
-%%tab mxnet
-x = np.full((10**7,), 1e-3, dtype='float16')
-(x.cumsum()[-1], x.cumsum(dtype='float32')[-1],
- x.cumsum(dtype='float64')[-1])
+%%tab jax
+x = jnp.full((10**7,), 1e-3, dtype=jnp.float16)
+x.cumsum()[-1], x.astype(jnp.float32).cumsum()[-1]
 ```
 
-:begin_tab:`pytorch`
-The fp16 running total is short by about 2 percent; keeping the *accumulator*
-in fp32 while the data stays fp16 recovers the exact answer. Means over large
-batches, epoch-level loss totals, and variance computations all follow this
-pattern, and it is precisely why autocast pins reductions and normalizations
-to fp32. When you write your own, pass `dtype=torch.float32` to the reduction.
-:end_tab:
-
-:begin_tab:`jax`
-The two totals disagree in the fourth digit. The fp32 accumulation, 10004, is
-the exact sum of the stored values (0.001 itself rounds to the nearest fp16,
-which is why the answer is not 10000); the fp16 accumulation drifts above it.
-The drift is milder than a naive sequential loop would produce, because XLA
-evaluates the scan as a tree, which keeps the partial sums small, but it is
-drift all the same and it grows with the length of the sum. Means over large
-batches, epoch-level loss totals, and variance computations all follow this
-pattern, and it is why our training loop cast logits to fp32 before the loss.
-When you write your own reduction over 16-bit data, upcast first, as the
-second expression does.
-:end_tab:
-
-:begin_tab:`tensorflow`
-TensorFlow's implementation loses enough fp16 increments to land at 8192,
-well below the 10004.04 sum of the stored values. Its fp32 accumulation reaches
-10004.04 to the displayed precision, and fp64 supplies the reference value.
-The result is implementation-dependent because a parallel prefix sum groups
-terms differently from a left-to-right loop, but the lesson is stable: the
-fp16 accumulator loses small increments as partial sums grow. Means over large
-batches, epoch-level loss totals, and variance computations all follow this
-pattern. Choose an accumulator wide relative to the length of the sum, and
-prefer `tf.reduce_sum` when you need only the total so the library can use an
-accurate reduction tree rather than materializing every prefix.
-:end_tab:
+The stored value of $10^{-3}$ in fp16 is slightly larger than $10^{-3}$, so
+the exact sum of the stored values is 10004.04, not 10000. The fp16 totals
+miss it, by an amount that depends on the order in which the library adds
+the terms: a left-to-right loop stalls at 4, where the spacing of fp16
+exceeds twice the increment, while the parallel prefix sums of GPUs and
+compilers keep their partial sums small and drift less. An fp32 running
+total, with the data still in fp16, does much better. A left-to-right loop
+ends about 2% low, because near $10^4$ the spacing of fp32 numbers,
+$2^{-10} \approx 0.00098$, is about the size of one increment, so each
+increment is rounded to one step; a tree-shaped sum is accurate to about
+four digits or better. An fp64 total is exact. Means over large batches, loss totals over an epoch,
+and variances all follow this pattern, which is why mixed-precision recipes
+compute reductions and normalization layers in fp32. When you write a
+reduction over 16-bit data yourself, give it an fp32 accumulator.
 
 :begin_tab:`mxnet`
-`cumsum`'s `dtype` argument sets the accumulator while the data stays fp16.
-The fp16 total stalls early: once the running sum reaches 4, fp16's spacing
-exceeds twice the increment and every further increment rounds to no change, so
-essentially all ten million remaining terms contribute nothing. The fp32
-accumulator does far better but is not immune, since near $10^4$ fp32's own
-spacing is about 0.001, the size of one increment; the fp64 accumulator
-returns 10004.04, the exact sum of the stored values (0.001 itself rounds to
-the nearest fp16, which is why the answer is not 10000). Means over large
-batches, epoch-level loss totals, and variance computations all follow this
-pattern; when you write your own reduction over 16-bit data, hand it a wide
-accumulator, as the second and third expressions do.
+The argument `dtype` of `cumsum` sets the accumulator while the data stay
+fp16. MXNet sums left to right on the CPU, so its fp16 total stalls at 4 and
+its fp32 total ends about 2% low.
 :end_tab:
 
 :begin_tab:`pytorch`
-Two details constrain scaler bookkeeping. `scaler.unscale_(opt)` may be
-called at most once per step, so if you unscale to clip gradients, do not unscale again
-to log them, or `scaler.update()` will raise. And under gradient accumulation,
-call `scaler.update()` once per *effective* batch, after the last micro-step,
-not once per micro-step.
-:end_tab:
-
-:begin_tab:`jax`
-The bf16-first recipe has no loss scale to manage, so there is no scaler
-bookkeeping to get wrong; gradient clipping and accumulation compose as plain
-optax transformations.
+The argument `dtype` of `cumsum` sets the accumulator while the data stay
+fp16.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The bf16-first recipe has no loss scale to manage. If older hardware pushes
-you to `'mixed_float16'`, prefer `model.fit`, which owns the
-`LossScaleOptimizer` bookkeeping end to end; in a custom loop the
-scale-the-loss, unscale-the-gradients pairing is yours to keep straight.
+The fp64 accumulator returns the exact sum of the stored values. When only
+the total is needed, `tf.reduce_sum` lets the library choose an accurate
+summation order instead of computing every prefix.
 :end_tab:
 
-:begin_tab:`mxnet`
-The `multi_precision` setting belongs to the *optimizer*, so it must appear
-in the optimizer parameters when the `Trainer` is created. Casting the network
-alone trains with fp16 accumulation; the optimizer reports this condition in
-a warning.
+:begin_tab:`jax`
+The second expression converts the data to fp32 before summing.
 :end_tab:
 
-Finally, do not expect bitwise equality across
-numeric configurations: tf32 versus fp32, or mixed precision on versus off,
-differ in the last bits by design. What reproducibility you can demand, and
-how to get it, is the subject of :numref:`sec_repro`.
+These failures share one cause: a 16-bit format has too little range or too
+little precision for one intermediate value, even when the inputs and the
+result are representable. Mixed precision also changes results in their last
+bits by design, so a run with tf32 or mixed precision never matches an fp32
+run bit for bit. Which runs can be expected to agree exactly, and how to make
+them agree, is the subject of :numref:`sec_repro`.
 
 ## Summary
 
-A dtype determines range and precision. Among the 16-bit formats, fp16 provides
-more precision but less range, whereas bf16 retains the exponent range of fp32
-with fewer significand bits.
+A floating-point format divides its bits between the exponent, which sets
+its range, and the mantissa, which sets its precision. Of the two 16-bit
+formats, fp16 has more precision and much less range, while bf16 has the
+range of fp32 and only two to three significant digits. Stored in 16 bits,
+weights lose updates that are small relative to their size, so mixed-precision
+training keeps fp32 master weights and runs the matrix multiplications and
+activations in 16 bits; on the MLP, its loss curve matches that of fp32
+training. fp16 additionally needs loss scaling, which multiplies the loss and
+divides the gradients by the same factor so that small gradients do not
+underflow; bf16 does not. Exponentials and long sums are computed in stable
+forms and with fp32 accumulators.
 
-:begin_tab:`pytorch`
-Casting a model (`net.bfloat16()`) converts its parameters and is the tool
-for inference; training instead uses autocast, which keeps fp32 master
-weights and runs matrix multiplications in 16 bits under a per-operation
-policy. fp16 training additionally needs `GradScaler` to stop small gradients
-from underflowing to zero; bf16 does not.
+:begin_tab:`mxnet`
+In Gluon, `net.cast('float16')` casts a model, and the optimizer flag
+`multi_precision=True` adds the fp32 master weights for training. MXNet has
+no bf16 arrays and no automatic loss scaling in the `Trainer`.
 :end_tab:
 
-:begin_tab:`jax`
-In flax the storage and compute formats are the two constructor arguments of
-every layer: casting a model for inference means bf16 in both (or one
-`tree.map` over the parameters), while mixed-precision training sets
-`dtype=jnp.bfloat16` and leaves `param_dtype` at fp32, combining master
-weights with 16-bit matrix multiplications without a context manager. On
-supported hardware, bf16 usually avoids the loss scaling required by fp16.
+:begin_tab:`pytorch`
+In PyTorch, `net.bfloat16()` casts a model, `torch.autocast` runs eligible
+operations in 16 bits over fp32 parameters, and `torch.amp.GradScaler` scales
+the loss for fp16.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow's raw ops never promote; a dtype mismatch raises at the first
-operation, and Keras layers resolve this by casting inputs to their dtype
-policy, the pair of storage and compute formats fixed at construction.
-`dtype='bfloat16'` sets both and casts a model for inference;
-`set_global_policy('mixed_bfloat16')` keeps fp32 master weights over bf16
-compute (reset the policy when you are done, because it is global). fp16 training additionally needs
-the loss scaling that `LossScaleOptimizer` automates under
-`'mixed_float16'`; bf16 does not.
+In TensorFlow, raw operations never promote, and a Keras layer fixes its
+storage and compute dtypes when it is constructed: `dtype='bfloat16'` casts a
+layer, the global policy `'mixed_bfloat16'` gives fp32 weights with bf16
+compute, and `LossScaleOptimizer` scales the loss for fp16.
 :end_tab:
 
-:begin_tab:`mxnet`
-Casting a model (`net.cast('float16')`) converts its parameters recursively
-and is the tool for inference. Training keeps the cast network but adds
-`multi_precision=True` to the optimizer parameters, which maintains fp32
-master weights inside the updater: 16-bit forward and backward,
-full-precision accumulation. The rest of the modern menu is not on offer in
-this archived framework: no bf16 array dtype, no tf32 switch, no fp8, and
-loss scaling is either two manual lines or the unexercised `mxnet.amp`
-module.
+:begin_tab:`jax`
+In Flax NNX, every layer takes a storage dtype, `param_dtype`, and a compute
+dtype, `dtype`; mixed precision sets `dtype=jnp.bfloat16` and leaves
+`param_dtype` at fp32, without any context manager.
 :end_tab:
-
-When numerical results become non-finite or inaccurate, inspect ranges,
-use a stable `logsumexp` implementation, and accumulate long sums in fp32.
 
 ## Exercises
 
@@ -1334,15 +1311,12 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
        is rounded from the master copy after every update. Predict the
        final values of both copies.
 
-1. **Mixed-precision memory.** :numref:`sec_parameters` quotes three
-   per-parameter ledgers: 16 bytes for fp32 Adam, 18 bytes when an fp16
-   working copy of the weights is kept, and 16 bytes for the ZeRO
-   convention with fp16 gradients. The recipe of this section keeps the
-   master weights and Adam's moments in fp32. Suppose that `train` used
-   Adam instead of SGD.
-    1. Does the recipe keep a working copy of the weights between steps,
-       and in which dtype does it store the gradients? Give the total bytes
-       per parameter and name the ledger it matches.
+1. **Mixed-precision memory.** Training with Adam in fp32 stores 16 bytes per
+   parameter: 4 for the weight, 4 for its gradient, and 8 for the two moment
+   estimates of Adam. Suppose that `train` used Adam instead of SGD.
+    1. In which dtype does the mixed-precision recipe of your framework store
+       the weights, the gradients, and the moments between steps? Give the
+       total bytes per parameter, and say whether mixed precision reduces it.
     1. Count as stored activations the input of each linear layer and the
        logits. For the MLP of `train`, convert the per-example count to
        bytes in fp32 and in the 16-bit format `train` uses. At which batch
@@ -1382,18 +1356,19 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
        their mean exceed the fp16 maximum, and at what standard deviation
        does their sum over the $d$ entries exceed it?
 
+:begin_tab:`mxnet`
+5. **The e4m3fn format.** ● The fp8 format `float8_e4m3fn` has one sign
+   bit, 4 exponent bits with bias 7, and 3 mantissa bits. Derive its
+   `tiny` and `eps` and compare them with those of fp16 and bf16. Explain
+   the name `e4m3fn`. A format with the same bit layout that followed the
+   IEEE convention would reserve the all-ones exponent for `inf` and NaN.
+   Compute that format's largest finite value, and explain how
+   `float8_e4m3fn` reaches a largest finite value of 448 instead.
+:end_tab:
+
 :begin_tab:`pytorch`
 5. [code] **The e4m3fn format.** ● Print `torch.finfo(torch.float8_e4m3fn)`
    and compare its `max`, `tiny` and `eps` with those of fp16 and bf16.
-   Explain the name `e4m3fn`. A format with a 4-bit exponent and a 3-bit
-   mantissa that followed the IEEE convention would reserve the all-ones
-   exponent for `inf` and NaN. Compute that format's largest finite value,
-   and explain how `e4m3fn` reaches a `max` of 448 instead.
-:end_tab:
-
-:begin_tab:`jax`
-5. [code] **The e4m3fn format.** ● Print `jnp.finfo(jnp.float8_e4m3fn)` and
-   compare its `max`, `tiny` and `eps` with those of fp16 and bf16.
    Explain the name `e4m3fn`. A format with a 4-bit exponent and a 3-bit
    mantissa that followed the IEEE convention would reserve the all-ones
    exponent for `inf` and NaN. Compute that format's largest finite value,
@@ -1410,12 +1385,324 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
    how `e4m3fn` reaches a `max` of 448 instead.
 :end_tab:
 
-:begin_tab:`mxnet`
-5. **The e4m3fn format.** ● The fp8 format `float8_e4m3fn` has one sign
-   bit, 4 exponent bits with bias 7, and 3 mantissa bits. Derive its
-   `tiny` and `eps` and compare them with those of fp16 and bf16. Explain
-   the name `e4m3fn`. A format with the same bit layout that followed the
-   IEEE convention would reserve the all-ones exponent for `inf` and NaN.
-   Compute that format's largest finite value, and explain how
-   `float8_e4m3fn` reaches a largest finite value of 448 instead.
+:begin_tab:`jax`
+5. [code] **The e4m3fn format.** ● Print `jnp.finfo(jnp.float8_e4m3fn)` and
+   compare its `max`, `tiny` and `eps` with those of fp16 and bf16.
+   Explain the name `e4m3fn`. A format with a 4-bit exponent and a 3-bit
+   mantissa that followed the IEEE convention would reserve the all-ones
+   exponent for `inf` and NaN. Compute that format's largest finite value,
+   and explain how `e4m3fn` reaches a `max` of 448 instead.
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.5]{.kicker}
+
+Number Formats and Mixed Precision<br>**range and precision · rounding of updates · master weights · loss scaling**
+:::
+:::
+
+::: {.slide title="16 Bits Halve an 8B Model, but Square 300 to Infinity"}
+[The problem]{.kicker}
+
+- **Memory:** 8 billion weights take 32 GB in fp32 and 16 GB in a 16-bit
+  format; recent GPUs also multiply 16-bit matrices at a multiple of their
+  fp32 rate.
+- **Range:** in fp16, $300^2 = \infty$; its largest number is 65504.
+- **Precision:** in bf16, $1 + 0.001 = 1$; the update is lost.
+
+::: {.d2l-note .warn}
+Neither failure raises an error: the loss turns NaN, or training stops
+improving.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read range and precision off a format's exponent and mantissa bits;
+- predict when an update or a gradient is rounded away;
+- explain dtype promotion and what casting a model does;
+- train with fp32 master weights and 16-bit compute, and say what it saves;
+- size a loss scale for fp16, and fix overflow, log-sum-exp, and long sums.
+
+**The idea:** keep what must be precise (weights, sums) in fp32, compute the
+rest in 16 bits. **Running example:** an 8B-parameter model, and the
+Fashion-MNIST MLP (784–256–10, 203,530 parameters).
+:::
+
+::: {.slide title="Number Formats, between Custom Layers and Saving"}
+[Where this fits]{.kicker}
+
+| section | adds |
+|---|---|
+| Modules and Model Construction | a model is a tree of modules, built from a config |
+| Parameters, State, and Memory | parameters, buffers, bytes per parameter |
+| Initialization | library defaults, custom initializers, residual depth |
+| Custom Layers and Functions | new layers, state, and custom gradients |
+| **Number Formats and Mixed Precision** | **dtypes, mixed precision, loss scaling** |
+| Saving, Loading, and Pretrained Weights | safe files, checkpoints, pretrained weights |
+| GPUs, Devices, and Memory | placement, asynchrony, training memory |
+| Reproducibility and Inspection | seeds, determinism, hooks |
+
+Uses the Fashion-MNIST MLP and 16 bytes per parameter; skips fp8, int8, and timings.
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Floating-Point Formats]{.dtitle}
+
+[range · precision · rounding]{.dsub}
+:::
+:::
+
+::: {.slide title="Exponent Bits Set the Range, Mantissa Bits the Precision"}
+[Floating-point formats]{.kicker}
+
+$$x = (-1)^s \cdot 2^{e} \cdot (1 + f), \qquad f \in [0, 1) \text{ stored in } t \text{ bits}.$$
+
+Neighbors in $[2^e, 2^{e+1})$ are $2^{e-t}$ apart: the same *relative*
+spacing $2^{-t}$ at every scale.
+
+| format | exponent | mantissa $t$ | largest | spacing at 1 |
+|---|---:|---:|---:|---:|
+| fp32 | 8 | 23 | $3.4 \times 10^{38}$ | $1.2 \times 10^{-7}$ |
+| bf16 | 8 | 7 | $3.4 \times 10^{38}$ | $0.0078$ |
+| fp16 | 5 | 10 | $65504$ | $0.00098$ |
+:::
+
+::: {.slide title="fp16 and bf16 Split the Same 16 Bits in Opposite Ways"}
+[Floating-point formats]{.kicker}
+
+![](../img/bg-float-formats.svg){width=85%}
+
+- bf16: fp32's exponent, so fp32's range, and two to three digits.
+- fp16: three to four digits, overflow above 65504, subnormal below
+  $6.1 \times 10^{-5}$, zero below $3 \times 10^{-8}$.
+:::
+
+::: {.slide title="finfo Reports max, tiny, and eps"}
+[Floating-point formats]{.kicker}
+
+@!numerics-the-dtype-zoo-2
+
+- `max`: largest finite value; `tiny`: smallest *normal* value, below which
+  precision decays (subnormals); `eps`: spacing just above 1.
+- Gradients span many orders of magnitude: too little range gives `inf` or
+  0, too little precision only rounding error. Hence bf16 for training.
+:::
+
+::: {.slide title="An Update Smaller Than Half the Spacing Is Lost"}
+[Rounding of small updates]{.kicker}
+
+Add $10^{-3}$ and $10^{-4}$ to a weight of 1:
+
+@!numerics-rounding-of-small-updates
+
+- Spacing near 1: bf16 $2^{-7} \approx 0.0078$, both updates vanish; fp16
+  $2^{-10} \approx 0.00098$, $10^{-3}$ becomes one step, $10^{-4}$ vanishes.
+
+::: {.d2l-note .rule}
+Updates are often $10^{-3}$ of a weight or less: weights stay in fp32.
+:::
+:::
+
+::: {.slide title="TF32: fp32 Tensors, a 10-Bit Mantissa inside the Matrix Product"}
+[TF32]{.kicker}
+
+On NVIDIA GPUs since Ampere, an fp32 matrix product may round its inputs to
+10 mantissa bits and sum in fp32: faster, three to four digits. The tensors
+stay fp32.
+
+| framework | default for fp32 matrix products |
+|---|---|
+| PyTorch | full fp32 (`'highest'`); `'high'` allows tf32 |
+| TensorFlow | tf32 on |
+| JAX | backend's choice: tf32 on such GPUs |
+| MXNet | no switch |
+:::
+
+::: {.slide title="Check: Which Updates Survive in bf16?"}
+[Check]{.kicker}
+
+In bf16, which of these change the stored value?
+
+1. $1 + 0.005$
+2. $1000 + 1$
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Near 1 the spacing is $2^{-7} \approx 0.0078$; 0.005 exceeds half
+of it, so the sum rounds up to $1.0078$. Between 512 and 1024 the spacing is
+$2^{9-7} = 4$; an increment of 1 is below half of it and is lost.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Promotion and Casting]{.dtitle}
+
+[what dtype an expression gets · halving a model]{.dsub}
+:::
+:::
+
+::: {.slide title="Two Floats Promote to the Wider; Python Scalars Do Not Promote"}
+[Promotion]{.kicker}
+
+fp16 + fp32, fp16 + 1.0, fp16 + integer tensor:
+
+@!numerics-dtype-rules-promotion-parameters-and-casts-1
+
+- One stray fp32 tensor turns an fp16 computation into fp32: twice the
+  memory from then on.
+- Python scalars are *weak*: `x + 1.0` keeps the dtype of `x`.
+- TensorFlow does not promote: mixed tensors raise an error.
+:::
+
+::: {.slide title="Casting the MLP Halves Its 814,120 Bytes"}
+[Casting a model]{.kicker}
+
+@!numerics-dtype-rules-promotion-parameters-and-casts-3
+
+- 203,530 parameters: 814,120 bytes in fp32, 407,060 in 16 bits.
+- Layers demand matching dtypes (or cast at the door, in Keras).
+- Good for inference, if the predictions survive; bad for training,
+  because small updates round away.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Mixed-Precision Training]{.dtitle}
+
+[master weights · 16-bit compute · loss scaling]{.dsub}
+:::
+:::
+
+::: {.slide title="fp32 Master Weights, 16-Bit Matrix Products, fp32 Loss"}
+[Mixed precision]{.kicker}
+
+![](../img/bg-amp-loop.svg){width=95%}
+
+PyTorch `autocast` · Keras policy `'mixed_bfloat16'` · Flax `dtype=bf16`
+with `param_dtype=fp32` · Gluon `cast('float16')` + `multi_precision=True`.
+:::
+
+::: {.slide title="Same Weights, Same Minibatches: the fp32 and 16-Bit Runs Agree"}
+[Mixed precision]{.kicker}
+
+MLP, 100 SGD steps of 256 Fashion-MNIST images, one random seed for both:
+
+@!numerics-mixed-precision-training-4
+
+Validation accuracies agree to within about half a point.
+:::
+
+::: {.slide title="Mixed Precision Does Not Make the 8B Model Fit"}
+[Running example]{.kicker}
+
+| per parameter, Adam | fp32 training | mixed precision |
+|---|---:|---:|
+| weights (fp32 master) | 4 B | 4 B |
+| gradients | 4 B | 4 B |
+| two moment estimates | 8 B | 8 B |
+| **8B parameters** | **128 GB** | **128 GB** |
+
+- Saved: activations (stored in 16 bits) and matrix-product time.
+- Not saved: weights, gradients, optimizer state.
+:::
+
+::: {.slide title="A Third of the First-Layer Gradients Are Subnormal in fp16"}
+[Loss scaling]{.kicker}
+
+Nonzero first-layer gradients of the MLP, first minibatch:
+
+@!numerics-loss-scaling-for-fp16-3
+
+$$\nabla (S \cdot L) = S \cdot \nabla L: \quad \text{scale the loss by } S, \text{ divide the gradients by } S \text{ in fp32.}$$
+
+Dynamic scaling: halve $S$ and skip the step on `inf`/NaN; double after a
+run of clean steps. bf16 needs none of this.
+:::
+
+::: {.slide title="Check: Does This Gradient Survive?"}
+[Check]{.kicker}
+
+A gradient entry is $2 \times 10^{-6}$. Stored in fp16, is it exact,
+subnormal, or zero? With $S = 2^{16}$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $2 \times 10^{-6}$ lies between $3 \times 10^{-8}$ and
+$6.1 \times 10^{-5}$: subnormal, with only about 5 significant bits. Times
+$2^{16}$ it is about $0.13$, a normal number with full fp16 precision.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Numerical Failure Modes]{.dtitle}
+
+[overflow · log-sum-exp · accumulation]{.dsub}
+:::
+:::
+
+::: {.slide title="A NaN Is Often the Second Symptom of an Overflow"}
+[Failure modes]{.kicker}
+
+$60000 \cdot 2$ in fp16, then $s - s$:
+
+@!numerics-when-numerics-bite-1
+
+When the loss turns NaN: does anything run in fp16, and do intermediate
+values approach 65504? Then check the learning rate.
+:::
+
+::: {.slide title="Subtract the Max before Exponentiating"}
+[Failure modes]{.kicker}
+
+@!numerics-when-numerics-bite-2
+
+$$\log \sum_i \exp(x_i) = m + \log \sum_i \exp(x_i - m), \qquad m = \max_i x_i.$$
+
+$e^{12} \approx 163{,}000 > 65504$; after the shift every term is at most 1.
+:::
+
+::: {.slide title="Ten Million Additions of 0.001 Need a Wide Accumulator"}
+[Failure modes]{.kicker}
+
+@!numerics-when-numerics-bite-3
+
+- Exact sum of the stored values: 10004.04.
+- fp16 totals drift or stall (a left-to-right sum stops at 4).
+- fp32 totals: about 2% low left to right, about four digits as a tree;
+  fp64: exact.
+- Reductions and normalization layers run in fp32 in every mixed-precision
+  recipe.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Formats:** exponent bits set range, mantissa bits precision; bf16 has
+  fp32's range and spacing 0.0078 at 1, fp16 overflows at 65504.
+- **Updates:** $1 + 0.001 = 1$ in bf16, so weights stay in fp32.
+- **Mixed precision:** fp32 master weights, 16-bit products; the MLP's loss
+  curves coincide; the 8B model still needs 128 GB with Adam.
+- **Loss scaling:** a third of the MLP's first-layer gradients are subnormal
+  in fp16; $S = 2^{16}$ lifts them all.
+- **Failures:** NaN follows overflow; shift log-sum-exp; sum in fp32.
+
+**Next:** saving a model, and later placing its bytes on a GPU.
+:::

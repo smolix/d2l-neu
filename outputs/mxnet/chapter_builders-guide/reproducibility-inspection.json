@@ -9,12 +9,12 @@
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:26e16ea8b6067067336399528fa3e634c2a6eeb41efa53952046c46e94f03158",
+      "code_fingerprint": "sha256:b5f4f801c339f31588762855c11341064ce5b8b2b562856904f291e6558ecca1",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:83c187d824d9aeffd62cfd98583849a5acb25658ea2cb75f217ee6b6a71acc56",
+      "code_fingerprint": "sha256:462112db92b4eb12e970aa3468b8eb737b0ad0efa304ff8ef788e89cb958fead",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:0e47de2cd0f61a7e6f9fb5359eda72949b542e003f39d994974179f498581483",
+      "code_fingerprint": "sha256:a92548ed588c79a956d688bbcf051c6badb59c1cdac6a3dd1c29ecfa0b5c1b51",
       "kind": "text",
       "outputs": [
         {
@@ -36,40 +36,51 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:155949a2142acbd4342e088e189509ebe5c2cabc9c5d17dc69c75ac40d203585",
+      "code_fingerprint": "sha256:6e9826b4fcc7d333d9644faf18ec5f35a1baae8a56fa68741802beba33b3cbed",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False 1.0\n"
+          "text": "1.0 0.0\n"
         }
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:4cae9ffd8292752418d9be6426db6898a9e7d44dd8fcb5b5cc50e2f14b26bc7b",
+      "code_fingerprint": "sha256:e197c601ba430fe8d41b7360e71ac717b795caf91db790f787a45dcb7c9c8ee5",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:34e9850201f27c435584f6e9a24837507cd71be807658531d02f414e24de32c9",
+      "code_fingerprint": "sha256:07493ed11b5af4f9244176c20a596d5e66ac330deeaa12526e90558ec83d229f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.68\nResidualBlock   std 0.83\nResidualBlock   std 1.03\nResidualBlock   std 1.21\nResidualBlock   std 1.46\nResidualBlock   std 1.83\nResidualBlock   std 2.28\nResidualBlock   std 2.75\nResidualBlock   std 3.43\nDense           std 4.41\n"
+          "text": "Dense           std 0.68\nResidualBlock   std 0.84\nResidualBlock   std 0.99\nResidualBlock   std 1.19\nResidualBlock   std 1.45\nResidualBlock   std 1.81\nResidualBlock   std 2.15\nResidualBlock   std 2.84\nResidualBlock   std 3.24\nDense           std 4.40\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:26cdd5e4e52476af7f109a05931ebab9a2dedcb080cdfaeb8e24725609b60a31",
+      "code_fingerprint": "sha256:c81045e664c6034fbb1f1fb0d8da442dee69dfb9df376271161a482bd7a92f7b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "first non-finite output in 3.body.1\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-backward-hooks-and-beyond": {
+      "code_fingerprint": "sha256:902d2931242de8e9fd39ae6283a19e05477b27a17473ff6d215cd25a210af858",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weight 21, bias 4.7\n"
         }
       ]
     }

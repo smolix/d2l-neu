@@ -57,96 +57,90 @@ def leader(ax, p, q, color=GRAY, lw=0.9, ls="-"):
 # =========================================================================== #
 
 def fig_safetensors_layout():
-    """The safetensors file as one horizontal byte-strip: an 8-byte header
-    length, then a JSON header naming each tensor's dtype/shape/byte range,
-    then the raw tensor bytes packed back to back with no gaps.  Two of the
-    raw-tensor sub-spans are labelled with the exact byte ranges quoted in the
-    JSON excerpt, tied to their location in the bar by thin leader lines, so
-    the figure reads left to right exactly as the file does on disk."""
-    fig, ax = plt.subplots(figsize=(11.4, 4.3))
-
+    """The safetensors file of the section's MLP as one horizontal byte strip:
+    an 8-byte header length, the JSON header, then the raw bytes of the four
+    tensors back to back in the order safetensors writes them (sorted by
+    name).  The byte offsets under the data region are the real
+    ``data_offsets`` of that file (float32, hidden 256 x 20, output 10 x 256),
+    and the JSON excerpt quotes the real start of its header.  Widths
+    are schematic, not to byte scale."""
+    fig, ax = plt.subplots(figsize=(10.0, 3.9))
+    T = fl.T
     y0, h = 0.0, 1.0
 
-    # --- section widths: everything abuts (no gap) -- the file itself has no
-    # padding between the length prefix, the header, and the tensor bytes.
-    w_len = 0.7
-    w_hdr = 4.8
-    # raw-bytes region subdivided: [other][hidden.weight][output.bias][other],
-    # abutting so hidden.weight's span ends exactly where output.bias's begins
-    # -- the "back to back, no holes" packing the offsets encode.
-    w_other0, w_hw, w_ob, w_other1 = 1.5, 3.0, 0.45, 1.85
-    w_raw = w_other0 + w_hw + w_ob + w_other1
-
-    x_len0 = 0.0
-    x_hdr0 = x_len0 + w_len
+    # segment widths (schematic); everything abuts: the file has no padding
+    w_len, w_hdr = 0.75, 5.0
+    tensors = [  # name, width, start offset, end offset, accent
+        ("hidden.bias", 0.55, 0, 1024, T.GREEN),
+        ("hidden.weight", 3.0, 1024, 21504, T.BLUE),
+        ("output.bias", 0.35, 21504, 21544, T.GREEN),
+        ("output.weight", 1.9, 21544, 31784, T.BLUE),
+    ]
+    x_hdr0 = w_len
     x_raw0 = x_hdr0 + w_hdr
-    x_other0_0 = x_raw0
-    x_hw0 = x_other0_0 + w_other0
-    x_ob0 = x_hw0 + w_hw
-    x_other1_0 = x_ob0 + w_ob
-    x_end = x_raw0 + w_raw
+    x = x_raw0
+    spans = []
+    for name, w, a, b, acc in tensors:
+        spans.append((name, x, w, a, b, acc))
+        x += w
+    x_end = x
 
-    # header-length cell
-    ax.add_patch(Rectangle((x_len0, y0), w_len, h, facecolor=GRAY, alpha=0.35,
-                           edgecolor="black", lw=1.3, zorder=3))
-    # JSON header block
-    ax.add_patch(Rectangle((x_hdr0, y0), w_hdr, h, facecolor=ORANGE, alpha=0.15,
-                           edgecolor="black", lw=1.3, zorder=3))
-    # raw tensor bytes: faint background for "other tensors", then the two
-    # highlighted, named sub-spans
-    ax.add_patch(Rectangle((x_other0_0, y0), w_other0, h, facecolor=BLUE,
-                           alpha=0.10, edgecolor="black", lw=1.3, zorder=3))
-    ax.add_patch(Rectangle((x_hw0, y0), w_hw, h, facecolor=BLUE, alpha=0.55,
-                           edgecolor="black", lw=1.3, zorder=3))
-    ax.add_patch(Rectangle((x_ob0, y0), w_ob, h, facecolor=GREEN, alpha=0.55,
-                           edgecolor="black", lw=1.3, zorder=3))
-    ax.add_patch(Rectangle((x_other1_0, y0), w_other1, h, facecolor=BLUE,
-                           alpha=0.10, edgecolor="black", lw=1.3, zorder=3))
+    def rect(x0, w, face, edge):
+        ax.add_patch(Rectangle((x0, y0), w, h, facecolor=face, edgecolor=edge,
+                               lw=1.3, zorder=3))
 
-    # "..." markers over the unlabelled other-tensor spans
-    ax.text(x_other0_0 + w_other0 / 2, y0 + h / 2, r"$\cdots$", color=GRAY,
-            fontsize=13, ha="center", va="center", zorder=4)
-    ax.text(x_other1_0 + w_other1 / 2, y0 + h / 2, r"$\cdots$", color=GRAY,
-            fontsize=13, ha="center", va="center", zorder=4)
+    rect(0.0, w_len, T.PANEL, fl.INK)
+    rect(x_hdr0, w_hdr, T.ORANGE.tint, fl.INK)
+    for name, x0, w, a, b, acc in spans:
+        rect(x0, w, acc.tint, fl.INK)
 
-    # header-length label, above, with a leader line down to its cell
-    lx = x_len0 + w_len / 2
-    ax.text(lx, 2.55, "8 bytes:\nheader length\n(LE u64)", color="black",
-            fontsize=11, ha="center", va="bottom")
-    leader(ax, (lx, 2.5), (lx, h))
-
-    # JSON header excerpt, rendered as small monospace text inside its box
-    hx = x_hdr0 + 0.12
-    ax.text(hx, y0 + 0.74, r'"hidden.weight": {"dtype": "F32",', color="black",
-            fontsize=8.7, ha="left", va="center", family="monospace", zorder=4)
-    ax.text(hx, y0 + 0.50, r'  "shape": [256, 20],', color="black",
-            fontsize=8.7, ha="left", va="center", family="monospace", zorder=4)
-    ax.text(hx, y0 + 0.26, r'  "data_offsets": [0, 20480]}, ...', color="black",
-            fontsize=8.7, ha="left", va="center", family="monospace", zorder=4)
-    ax.text(x_hdr0 + w_hdr / 2, 1.55, "JSON header\n(name, dtype, shape, byte offsets)",
-            color=ORANGE, fontsize=11, ha="center", va="bottom")
+    # labels above the bar
+    lx = w_len / 2
+    ax.text(lx, 1.55, "8 bytes:\nheader\nlength", color=fl.INK, fontsize=12,
+            ha="center", va="bottom")
+    leader(ax, (lx, 1.5), (lx, h))
+    ax.text(x_hdr0 + w_hdr / 2, 1.55, "JSON header", color=T.ORANGE.dark,
+            fontsize=13, ha="center", va="bottom")
     leader(ax, (x_hdr0 + w_hdr / 2, 1.5), (x_hdr0 + w_hdr / 2, h))
 
-    # labelled sub-spans, each with a leader line down to its slice of the bar
-    hw_cx = x_hw0 + w_hw / 2
-    ax.text(hw_cx, 2.55, '"hidden.weight"\n[0, 20480)', color=BLUE, fontsize=11,
-            ha="center", va="bottom")
-    leader(ax, (hw_cx, 2.5), (hw_cx, h))
+    # JSON excerpt inside the header box: the real start of the header, which
+    # lists the tensors in the order of their names
+    hx = x_hdr0 + 0.12
+    for k, line in enumerate(['{"hidden.bias": {"dtype": "F32",',
+                              '   "shape": [256],',
+                              '   "data_offsets": [0, 1024]},',
+                              ' "hidden.weight": {...}, ...}']):
+        ax.text(hx, y0 + 0.86 - 0.24 * k, line, color=fl.INK, fontsize=9.5,
+                ha="left", va="center", family="monospace", zorder=4)
 
-    ob_cx = x_ob0 + w_ob / 2
-    ax.text(ob_cx + 1.55, 3.35, '"output.bias"\n[20480, 20520)', color=GREEN,
-            fontsize=11, ha="center", va="bottom")
-    leader(ax, (ob_cx + 1.15, 3.28), (ob_cx, h))
+    # tensor names: inside the wide boxes, above (with a leader) the narrow ones
+    for name, x0, w, a, b, acc in spans:
+        cx = x0 + w / 2
+        if w > 1.5:
+            ax.text(cx, y0 + h / 2, name, color=acc.dark, fontsize=12,
+                    ha="center", va="center", zorder=4)
+    for name, dx, ty in (("hidden.bias", -0.15, 1.55), ("output.bias", 0.55, 1.55)):
+        x0, w = [(s[1], s[2]) for s in spans if s[0] == name][0]
+        cx = x0 + w / 2
+        acc = [s[5] for s in spans if s[0] == name][0]
+        ax.text(cx + dx, ty, name, color=acc.dark, fontsize=12, ha="center",
+                va="bottom")
+        leader(ax, (cx + dx, ty - 0.05), (cx, h))
 
-    # overall label under the whole raw-bytes region
-    ax.text(x_raw0 + w_raw / 2, -0.28, "raw tensor bytes, back to back, no holes",
-            color="black", fontsize=12, ha="center", va="top")
+    # real byte offsets (from the start of the data) under the boundaries
+    for x0, off in ((spans[0][1], 0), (spans[1][1], 1024),
+                    (spans[2][1], 21504), (x_end, 31784)):
+        ax.plot([x0, x0], [y0, y0 - 0.14], color=fl.INK, lw=1.1, zorder=2)
+        ax.text(x0, y0 - 0.2, f"{off:,}", color=fl.INK, fontsize=11.5,
+                ha="center", va="top")
+    ax.text((x_raw0 + x_end) / 2, -0.72,
+            "tensor bytes, back to back (offsets in bytes)",
+            color=fl.INK, fontsize=12, ha="center", va="top")
+    ax.text(0.0, -0.72, "widths not to scale", color=fl.INK,
+            fontsize=10.5, ha="left", va="top", style="italic")
 
-    ax.text(x_end, -0.85, "(schematic; widths not to byte scale)", color=GRAY,
-            fontsize=9.5, ha="right", va="top", style="italic")
-
-    ax.set_xlim(-0.3, x_end + 0.3)
-    ax.set_ylim(-1.25, 3.9)
+    ax.set_xlim(-0.15, x_end + 0.35)
+    ax.set_ylim(-1.15, 2.45)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "bg-safetensors-layout")
@@ -158,13 +152,13 @@ def fig_safetensors_layout():
 
 def fig_checkpoint_contents():
     """One checkpoint file with five labelled compartments, each paired by a
-    horizontal arrow to what it restores on resume: model state_dict to
-    weights, optimizer state to momentum/moments, RNG state to data order and
+    horizontal arrow to what it restores on resume: model state to
+    weights, optimizer state to Adam's two running averages, RNG state to data order and
     dropout, step to schedule position, config to architecture.  Rows are
     aligned left to right so the five arrows run level and never cross."""
     rows = [
-        ("model\nstate_dict", "weights"),
-        ("optimizer\nstate", "momentum /\nmoments"),
+        ("model\nstate", "weights"),
+        ("optimizer\nstate", "Adam's two\naverages"),
         ("RNG\nstate", "data order and\ndropout"),
         ("step", "schedule\nposition"),
         ("config", "architecture"),
@@ -226,22 +220,21 @@ def fig_hooks():
     that can capture, check, or modify -- all without editing ``forward``."""
     fig, ax = plt.subplots(figsize=(10.6, 4.6))
 
-    stages = [
-        ("input", LIGHT, "-", "black"),
-        ("pre-hooks", ORANGE, "--", ORANGE),
-        ("forward", BLUE, "-", BLUE),
-        ("hooks", ORANGE, "--", ORANGE),
-        ("output", LIGHT, "-", "black"),
+    T = fl.T
+    stages = [  # label, fill, line style, edge
+        ("input", T.PANEL, "-", fl.INK),
+        ("pre-hooks", T.ORANGE.tint, "--", T.ORANGE.base),
+        ("forward", T.BLUE.tint, "-", T.BLUE.base),
+        ("hooks", T.ORANGE.tint, "--", T.ORANGE.base),
+        ("output", T.PANEL, "-", fl.INK),
     ]
     w, h = 1.85, 1.05
     xs = [0.0, 2.35, 4.70, 7.05, 9.40]
     y = 0.0
 
     for x, (label, fill, ls, edge) in zip(xs, stages):
-        alpha_fill = 0.55 if fill is LIGHT else 0.20
         box(ax, x, y, w, h, label, facecolor=fill, edgecolor=edge, ls=ls,
-            lw=1.8, fontsize=13)
-        ax.patches[-1].set_alpha(alpha_fill)
+            lw=1.8, fontsize=14)
 
     for x0, x1 in zip(xs[:-1], xs[1:]):
         fl.arrow(ax, (x0 + w / 2 + 0.06, y), (x1 - w / 2 - 0.06, y),
@@ -262,7 +255,7 @@ def fig_hooks():
              lw=1.8, mut=13)
     box(ax, hx, y - h / 2 - 1.55, 3.3, 0.95,
         "observer:\ncapture, check, modify", facecolor="white",
-        edgecolor=GRAY, ls="--", lw=1.4, fontsize=11.5, color="black")
+        edgecolor=GRAY, ls="--", lw=1.4, fontsize=13, color="black")
 
     ax.set_xlim(xs[0] - w / 2 - 0.3, xs[-1] + w / 2 + 0.3)
     ax.set_ylim(y - h / 2 - 2.25, yb + 0.75)

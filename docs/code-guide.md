@@ -143,7 +143,7 @@ already in the book:
 - Muon as a `torch.optim.Optimizer` subclass and as an
   `optax.GradientTransformation` (`muon.md:314`, `:333`).
 - A straight-through estimator as `autograd.Function` and as `custom_vjp`
-  (`custom-layers.md:864`, `:877`).
+  (cell `custom-layers-custom-gradients-2` in `custom-layers.md`).
 - A preallocated KV cache with `dynamic_update_slice` under `jit`, against a
   growing `torch.cat` (`kv-cache.md:219`).
 

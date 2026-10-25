@@ -20,7 +20,7 @@ from __future__ import annotations
 import os
 
 from arch_diagrams import (
-    Diagram, save, WRITTEN,
+    Diagram, save, WRITTEN, NOTE_FS,
     ACCENT, ACCENT_TINT, INK, GRAY_TEXT,
     PILL_H, PILL_STEP, PLUS_R, LABEL_BAND,
 )
@@ -51,8 +51,11 @@ def fig_residual_block():
 
     d = Diagram(W, H)
     d.container(*panel, fill=ACCENT_TINT)
-    # two lines so the label clears the black output arrow on the spine
-    d.stage_label(panel[0] + 14, panel[3] - 9, "Residual\nBlock")
+    # two lines so the label clears the black output arrow on the spine;
+    # black text (house rule for labels), otherwise as d.stage_label
+    d.ax.text(panel[0] + 14, panel[3] - 9, "RESIDUAL\nBLOCK",
+              fontsize=NOTE_FS, color=INK, family="Source Sans 3",
+              ha="left", va="top", zorder=8)
 
     # spine: input anchor -> body ops -> ⊕ -> output
     y_anchor = panel[1] - 34
@@ -64,10 +67,12 @@ def fig_residual_block():
     d.arrow(x, ys[-1] + PILL_H / 2, y_plus - PLUS_R)
 
     # identity skip: leave below the first pill, up the side, into the ⊕.
-    # Label sits fully to the right, outside the blue panel.
+    # Label runs up along the skip line, in the gap to the panel edge.
     y_branch = y0 - PILL_H / 2 - 11
     d.skip(x, y_branch, y_plus, x_out)
-    d.shape_note(panel[2] + 12, 0.5 * (y_branch + y_plus), "identity", ha="left")
+    d.ax.text(x_out + 6, 0.5 * (y_branch + y_plus), "identity",
+              fontsize=NOTE_FS + 1, color=INK, family="Source Sans 3",
+              style="italic", rotation=90, ha="left", va="center", zorder=8)
 
     # sum leaves the top
     y_top_arrow = panel[3] + 28

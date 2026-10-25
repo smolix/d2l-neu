@@ -6,13 +6,33 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Reproducibility and Inspection
 :label:`sec_repro`
 
-Repeated training runs can produce different loss curves because their
-random streams or arithmetic differ. Evaluating a code change therefore
-requires an inventory of random-number sources and determinism controls. When
-two runs disagree or a loss becomes NaN, layer-level inspection can locate the
-first divergent or non-finite value without changing the model's computation.
-This chapter treats reproducibility first, then model inspection through call
-wrappers and hooks.
+Suppose we change one line of a training script and the validation accuracy
+of a Fashion-MNIST classifier rises by 0.3 points. Before we credit the
+change, we need to know how much two runs of the unchanged script differ.
+For the classifiers of :numref:`chap_classification` and
+:numref:`chap_perceptrons`, they differ by a few tenths of a point, because
+each run draws different initial weights and visits the examples in a
+different order. A run that fails is a second problem of the same kind. If
+the loss turns into NaN after hours of training, we want to repeat the run
+exactly up to that point and then look inside the model to see which layer
+produced the first non-finite number.
+
+This section first makes runs repeatable. Every random draw comes from a
+generator whose sequence of numbers is fixed by a seed, so seeding the
+generators fixes the draws; repeating a run bit for bit also requires that
+the arithmetic adds numbers in a fixed order. The section then looks inside
+running models with *hooks*, functions that observe each layer of an
+unmodified model as it computes. The two halves depend on each other: a
+measurement taken inside a model can be compared across two versions of the
+code only if the runs differ in nothing but that code.
+
+```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
+%%tab mxnet
+import random
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+npx.set_np()
+```
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab pytorch
@@ -24,86 +44,104 @@ from torch.utils.data import DataLoader, TensorDataset
 ```
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
+%%tab tensorflow
+import random
+import tensorflow as tf
+```
+
+```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab jax
 import jax
 from jax import numpy as jnp
 from flax import nnx
 import optax
+from d2l import jax as d2l
 ```
 
-```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
-%%tab tensorflow
-import tensorflow as tf
-```
-
-```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
-%%tab mxnet
-from mxnet import autograd, gluon, init, np, npx
-from mxnet.gluon import nn
-npx.set_np()
-```
-
-## Seeds and Randomness
+## Seeds and Random Number Generators
 :label:`subsec_seeds_randomness`
 
-Randomness enters a training run in more places than you might list on a
-first try: initialization draws every weight (:numref:`sec_init_param`),
-dropout samples a fresh mask at each step
-:cite:`Srivastava.Hinton.Krizhevsky.ea.2014`, the data loader shuffles
-examples differently in every epoch, augmentations sample crops and flips,
-and loader workers can perform these operations in parallel. Each random
-operation consults a pseudorandom number generator whose output sequence is
-fixed by its seed. Seeding every relevant generator fixes those random streams;
-bitwise repetition also requires deterministic arithmetic and a stable
-software and hardware configuration.
+Randomness enters a training run in more places than one might list at
+first: initialization draws every weight (:numref:`sec_init_param`), dropout
+draws a new mask at every step, the data loader shuffles the examples
+differently in every epoch, data augmentation draws crops and flips, and
+parallel loader workers do some of this work in separate processes. Each
+draw comes from a *pseudorandom number generator*, a deterministic algorithm
+whose sequence of outputs is fixed by its starting state, the *seed*.
+Seeding every generator that a run consults therefore fixes every draw.
 
-:begin_tab:`pytorch`
-In PyTorch, `torch.manual_seed(k)` seeds the global generator on the CPU
-*and* on every CUDA device. It does not touch Python's `random` module or
-NumPy, which keep their own global generators (`random.seed`,
-`np.random.seed`), nor NumPy `Generator` objects created by
-`np.random.default_rng`, which carry their own seeds. The function below
-draws everything, weights, data, and shuffling, from torch's global
-generator, so one call fixes the random draws in this function:
+### Global Seeds
+
+PyTorch, TensorFlow, and MXNet each keep a global generator that their
+random functions consult unless told otherwise; JAX has none.
+
+:begin_tab:`mxnet`
+MXNet keeps one global generator per device. `mnp.random.seed(k)` seeds all
+of them in one call, so initialization, sampling, and dropout are fixed on
+every device. It does not seed Python's `random` module or NumPy's global
+generator, which keep their own state; this matters once the data pipeline
+uses them. The function below draws everything, weights and data, from
+MXNet's generators, so one call fixes all its draws:
 :end_tab:
 
-:begin_tab:`jax`
-JAX has no global generator to seed. Every random operation takes a *key*,
-a value that fully determines its output: `jax.random.normal(key, shape)`
-returns the same numbers every time it is called with that key, and fresh
-randomness comes only from deriving fresh keys with `jax.random.split`. The
-function below turns its seed into one key and splits it three ways, one
-key each for initialization, inputs, and targets, so the seed fixes the
-random draws in this function:
+:begin_tab:`pytorch`
+`torch.manual_seed(k)` seeds PyTorch's global generator on the CPU and on
+every GPU. It does not seed Python's `random` module or NumPy's global
+generator (`random.seed`, `np.random.seed`), nor NumPy generator objects
+created with `np.random.default_rng`, which carry seeds of their own. The
+function below draws everything, weights and data, from PyTorch's
+generator, so one call fixes all its draws:
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow collapses the inventory to one call:
 `tf.keras.utils.set_random_seed(k)` seeds Python's `random` module, NumPy's
-global generator, and TensorFlow's global generator together, the three a
-typical training script consults. It does not reach generators that carry
-their own state (`tf.random.Generator` objects, NumPy `Generator` objects
-from `np.random.default_rng`), each of which has its own seed. The function
-below draws everything, weights and data alike, from the seeded global
-state, so one call fixes the random draws in this function:
+global generator, and TensorFlow's global generator in one call, the three
+that a typical training script consults. It does not seed generator objects
+that carry their own state, `tf.random.Generator` objects and NumPy
+generators from `np.random.default_rng`. The function below draws everything,
+weights and data, from the seeded global state, so one call fixes all its
+draws:
 :end_tab:
 
-:begin_tab:`mxnet`
-MXNet keeps one global generator per device. `np.random.seed(k)` (MXNet's
-`np`, an alias of `mx.random.seed`) seeds all of them in one call, each
-from the seed and its device id, so initialization, sampling, and dropout
-are pinned on every device at once (pass `device=` instead to bring a
-single generator to a device-independent state). It does not touch
-Python's `random` module or NumPy's legacy global generator, which keep
-their own state, a gap that will matter when the data pipeline enters. The
-function below draws everything, weights and data alike, from MXNet's
-seeded generators, so one call fixes the random draws in this function:
+:begin_tab:`jax`
+JAX has no global generator. Every random function takes a *key*, a value
+that determines its output: `jax.random.normal(key, shape)` returns the same
+numbers every time it is called with the same key, and new randomness comes
+only from deriving new keys with `jax.random.split`. The function below
+turns its seed into one key and splits it three ways, one key each for
+initialization, inputs, and targets, so the seed fixes all its draws:
 :end_tab:
+
+```{.python .input #reproducibility-inspection-seeds-and-randomness}
+%%tab mxnet
+def train_once(seed):
+    mnp.random.seed(seed)  # seeds the generator on every device
+    net = nn.Sequential()
+    net.add(nn.Dense(32, activation='relu'), nn.Dense(1))
+    net.initialize()
+    trainer = gluon.Trainer(net.collect_params(),
+                            'sgd', {'learning_rate': 0.1})
+    X = mnp.random.normal(0, 1, (128, 20))
+    y = mnp.random.normal(0, 1, (128, 1))
+    for _ in range(5):
+        with autograd.record():
+            loss = ((net(X) - y) ** 2).mean()
+        loss.backward()
+        trainer.step(1)  # the loss is already a mean
+    return loss.item(), net[0].weight.data().copy()
+
+loss_a, w_a = train_once(seed=0)
+loss_b, w_b = train_once(seed=0)
+loss_c, _ = train_once(seed=1)
+print('same seed, identical loss and weights:',
+      loss_a == loss_b, bool((w_a == w_b).all()))
+print('different seed:', loss_a, 'vs', loss_c)
+```
 
 ```{.python .input #reproducibility-inspection-seeds-and-randomness}
 %%tab pytorch
 def train_once(seed):
-    torch.manual_seed(seed)  # seeds the CPU and every CUDA device
+    torch.manual_seed(seed)  # seeds the CPU and every GPU
     net = nn.Sequential(nn.Linear(20, 32), nn.ReLU(), nn.Linear(32, 1))
     opt = torch.optim.SGD(net.parameters(), lr=0.1)
     X, y = torch.randn(128, 20), torch.randn(128, 1)
@@ -119,6 +157,31 @@ loss_b, w_b = train_once(seed=0)
 loss_c, _ = train_once(seed=1)
 print('same seed, identical loss and weights:',
       loss_a == loss_b, torch.equal(w_a, w_b))
+print('different seed:', loss_a, 'vs', loss_c)
+```
+
+```{.python .input #reproducibility-inspection-seeds-and-randomness}
+%%tab tensorflow
+def train_once(seed):
+    tf.keras.utils.set_random_seed(seed)  # seeds Python, NumPy, and TF
+    with tf.device('/CPU:0'):  # see Deterministic Arithmetic below
+        net = tf.keras.Sequential([
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(1)])
+        opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+        X, y = tf.random.normal((128, 20)), tf.random.normal((128, 1))
+        for _ in range(5):
+            with tf.GradientTape() as tape:
+                loss = tf.reduce_mean((net(X) - y) ** 2)
+            grads = tape.gradient(loss, net.trainable_variables)
+            opt.apply_gradients(zip(grads, net.trainable_variables))
+        return float(loss), tf.identity(net.layers[0].kernel)
+
+loss_a, w_a = train_once(seed=0)
+loss_b, w_b = train_once(seed=0)
+loss_c, _ = train_once(seed=1)
+print('same seed, identical loss and weights:',
+      loss_a == loss_b, bool(tf.reduce_all(w_a == w_b)))
 print('different seed:', loss_a, 'vs', loss_c)
 ```
 
@@ -143,197 +206,172 @@ loss_a, w_a = train_once(seed=0)
 loss_b, w_b = train_once(seed=0)
 loss_c, _ = train_once(seed=1)
 print('same seed, identical loss and weights:',
-      loss_a == loss_b, jnp.array_equal(w_a, w_b))
+      bool(loss_a == loss_b), bool(jnp.array_equal(w_a, w_b)))
 print('different seed:', loss_a, 'vs', loss_c)
 ```
 
-```{.python .input #reproducibility-inspection-seeds-and-randomness}
-%%tab tensorflow
-def train_once(seed):
-    tf.keras.utils.set_random_seed(seed)  # seeds Python, NumPy, and TF
-    with tf.device('/CPU:0'):  # GPU kernels are not bitwise-deterministic
-        net = tf.keras.Sequential([
-            tf.keras.layers.Dense(32, activation='relu'),
-            tf.keras.layers.Dense(1)])
-        opt = tf.keras.optimizers.SGD(learning_rate=0.1)
-        X, y = tf.random.normal((128, 20)), tf.random.normal((128, 1))
-        for _ in range(5):
-            with tf.GradientTape() as tape:
-                loss = tf.reduce_mean((net(X) - y) ** 2)
-            grads = tape.gradient(loss, net.trainable_variables)
-            opt.apply_gradients(zip(grads, net.trainable_variables))
-        return float(loss), tf.identity(net.layers[0].kernel)
+The two runs with seed 0 agree *bitwise*, down to the last bit of the loss
+and of every weight: same initial weights, same data, same gradients, same
+operations in the same order. The run with seed 1 ends with a different
+loss.
 
-loss_a, w_a = train_once(seed=0)
-loss_b, w_b = train_once(seed=0)
-loss_c, _ = train_once(seed=1)
-print('same seed, identical loss and weights:',
-      loss_a == loss_b, bool(tf.reduce_all(w_a == w_b)))
-print('different seed:', loss_a, 'vs', loss_c)
-```
-
-```{.python .input #reproducibility-inspection-seeds-and-randomness}
-%%tab mxnet
-def train_once(seed):
-    np.random.seed(seed)  # seeds the generator on every device
-    net = nn.Sequential()
-    net.add(nn.Dense(32, activation='relu'), nn.Dense(1))
-    net.initialize()
-    trainer = gluon.Trainer(net.collect_params(),
-                            'sgd', {'learning_rate': 0.1})
-    X = np.random.normal(0, 1, (128, 20))
-    y = np.random.normal(0, 1, (128, 1))
-    for _ in range(5):
-        with autograd.record():
-            loss = ((net(X) - y) ** 2).mean()
-        loss.backward()
-        trainer.step(1)  # loss is a mean already: no batch-size rescale
-    return loss.item(), net[0].weight.data().copy()
-
-loss_a, w_a = train_once(seed=0)
-loss_b, w_b = train_once(seed=0)
-loss_c, _ = train_once(seed=1)
-print('same seed, identical loss and weights:',
-      loss_a == loss_b, bool((w_a == w_b).all()))
-print('different seed:', loss_a, 'vs', loss_c)
-```
-
-The two seeded runs agree *bitwise*, down to the last floating-point bit:
-same initial weights, same data, same gradients, same operations in the
-same order. One detail deserves a flag: we pinned the TensorFlow run to
-the CPU. On a GPU the same seeded code produces equal losses but weights
-that differ in their last bits — the reason emerges in the next section.
+:begin_tab:`tensorflow`
+We placed the TensorFlow run on the CPU. On a GPU, the same seeded code
+gives equal losses but, in some runs, weights that differ in their last
+bits; :numref:`subsec_deterministic_arithmetic` explains why.
+:end_tab:
 
 ### Generator Objects
 
-:begin_tab:`pytorch`
-A single global stream couples every consumer, so inserting
-one extra random call (a new layer's initialization, a stray `torch.randn`
-while debugging) shifts everything drawn after it. A `torch.Generator` is a
-private stream with its own seed. Here a data split stays fixed no matter
-what else consumes randomness in between:
+A single global generator couples all the code that draws from it. Inserting
+one extra random call, a new layer's initialization or a stray draw while
+debugging, shifts every number drawn after it, so the data split, the
+initialization, and the dropout masks all change at once. A *generator
+object* is a private stream with its own seed, which unrelated draws cannot
+shift.
+
+:begin_tab:`mxnet`
+MXNet has no generator objects, and no sampling function accepts one. The
+substitute is to seed again immediately before the draws that must stay
+fixed. Seeding again also resets the stream for everything drawn after it,
+which a private stream would not do:
 :end_tab:
 
-:begin_tab:`jax`
-A single shared stream couples every consumer, so
-inserting one extra random call shifts everything drawn after it. In JAX
-the keys *are* the generator objects: each key is a private stream you
-hold as a value, and `jax.random.split` manufactures as many independent
-streams as you need. The property a private stream is supposed to
-protect, that unrelated draws elsewhere cannot shift yours, holds by
-construction, because no draw advances any shared state. Here an
-unrelated draw between two uses of the same key changes nothing:
+:begin_tab:`pytorch`
+A `torch.Generator` is such a stream. Here a random permutation, say a split
+of a dataset into training and validation examples, stays fixed no matter
+what else draws from the global generator in between:
 :end_tab:
 
 :begin_tab:`tensorflow`
-A single global stream couples every consumer, so inserting
-one extra random call shifts everything drawn after it. A
-`tf.random.Generator` is a private stream with its own seed. Here a data
-split stays fixed no matter what else consumes randomness in between (the
-generator has no permutation method, so the example sorts random uniforms):
+A `tf.random.Generator` is such a stream. Here a random permutation, say a
+split of a dataset into training and validation examples, stays fixed no
+matter what else draws from the global generator in between (the generator
+has no permutation method, so we sort uniform random numbers):
 :end_tab:
 
-:begin_tab:`mxnet`
-A single global stream couples every consumer, so inserting
-one extra random call shifts everything drawn after it. MXNet offers no
-private stream to retreat to: there is no generator object, and no
-sampling function takes one. The substitute is seeding discipline: re-seed
-immediately before the draws that must be pinned. It works, at a price the
-private stream does not charge, since re-seeding also resets the stream
-for everything drawn after it:
+:begin_tab:`jax`
+In JAX the keys are the generator objects: each key is a private stream that
+we hold as a value, and `jax.random.split` produces as many independent
+streams as we need. No draw changes any shared state, so unrelated draws
+cannot shift ours. Here a draw with another key between two uses of the
+same key changes nothing:
 :end_tab:
+
+```{.python .input #reproducibility-inspection-generator-objects}
+%%tab mxnet
+mnp.random.seed(42)
+split = mnp.arange(10)
+mnp.random.shuffle(split)  # mnp has no permutation; shuffle in place
+_ = mnp.random.normal(0, 1, (1000,))  # unrelated draws from the same stream
+mnp.random.seed(42)  # seed again where the draws must stay fixed
+split_again = mnp.arange(10)
+mnp.random.shuffle(split_again)
+print(bool((split == split_again).all()), split)
+```
 
 ```{.python .input #reproducibility-inspection-generator-objects}
 %%tab pytorch
 g = torch.Generator().manual_seed(42)
 split = torch.randperm(10, generator=g)
-_ = torch.randn(1000)  # unrelated consumption of the global stream
+_ = torch.randn(1000)  # unrelated draws from the global generator
 split_again = torch.randperm(10, generator=g.manual_seed(42))
 print(torch.equal(split, split_again), split)
-```
-
-```{.python .input #reproducibility-inspection-generator-objects}
-%%tab jax
-key_split, key_other = jax.random.split(jax.random.key(42))
-split = jax.random.permutation(key_split, 10)
-_ = jax.random.normal(key_other, (1000,))  # unrelated draw, its own key
-split_again = jax.random.permutation(key_split, 10)
-print(jnp.array_equal(split, split_again), split)
 ```
 
 ```{.python .input #reproducibility-inspection-generator-objects}
 %%tab tensorflow
 g = tf.random.Generator.from_seed(42)
 split = tf.argsort(g.uniform((10,)))  # a random permutation from g's stream
-_ = tf.random.normal((1000,))  # unrelated consumption of the global stream
+_ = tf.random.normal((1000,))  # unrelated draws from the global generator
 split_again = tf.argsort(tf.random.Generator.from_seed(42).uniform((10,)))
 print(bool(tf.reduce_all(split == split_again)), split.numpy())
 ```
 
 ```{.python .input #reproducibility-inspection-generator-objects}
-%%tab mxnet
-np.random.seed(42)
-split = np.arange(10)
-np.random.shuffle(split)  # mx.np has no permutation; shuffle in place
-_ = np.random.normal(0, 1, (1000,))  # unrelated consumption of the stream
-np.random.seed(42)  # re-seed at the boundary that must be pinned
-split_again = np.arange(10)
-np.random.shuffle(split_again)
-print(bool((split == split_again).all()), split)
+%%tab jax
+key_split, key_other = jax.random.split(jax.random.key(42))
+split = jax.random.permutation(key_split, 10)
+_ = jax.random.normal(key_other, (1000,))  # unrelated draws, their own key
+split_again = jax.random.permutation(key_split, 10)
+print(bool(jnp.array_equal(split, split_again)), split)
 ```
 
-:begin_tab:`pytorch`
-Most sampling functions accept `generator=`, and so does `DataLoader`,
-where it controls the shuffle order. We use that below.
+:begin_tab:`mxnet`
+Gluon has no `generator=` argument: code that must own its randomness owns a
+seed instead and calls `mnp.random.seed` itself, resetting everything drawn
+after it.
 :end_tab:
 
-:begin_tab:`jax`
-Every function in `jax.random` takes the key as its first argument; there
-is no variant that consults hidden state.
+:begin_tab:`pytorch`
+Most sampling functions accept `generator=`, and so does `DataLoader`, where
+it sets the shuffle order. We use that next.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Sampling methods live on the generator itself (`g.normal`, `g.uniform`), so
-a consumer that should own its randomness takes a `Generator` argument. The
-input pipeline instead takes a seed directly, which we use next.
+code that must own its randomness takes a `Generator` argument. The input
+pipeline instead takes a seed directly, which we use next.
 :end_tab:
-
-:begin_tab:`mxnet`
-There is no `generator=` argument anywhere in Gluon: a consumer that must
-own its randomness owns a seed instead and calls `np.random.seed` itself,
-accepting the reset of everything drawn after it.
-:end_tab:
-
-### DataLoader Workers
 
 :begin_tab:`jax`
-Parallel loader workers still need separate random streams. With explicit
-keys, those streams are visible in the program: a worker's randomness is
-whatever key you hand it, so you split one key
-into per-worker keys (`jax.random.split(key, num_workers)`), refresh them
-each epoch by folding in the epoch number (`jax.random.fold_in`), and two
-workers can share a stream only if the code visibly passes the same key
-twice. JAX programs usually borrow their input
-pipeline from NumPy, PyTorch, or `tf.data`, and those loaders bring their
-own worker-seeding contract. When you do that, configure the loader's
-workers from one base seed and refresh them each epoch.
+Every function in `jax.random` takes the key as its first argument; no
+variant consults hidden state.
+:end_tab:
+
+### Data Loader Workers
+
+Data loaders often prepare minibatches in parallel *worker* processes. A
+worker that draws random numbers, for data augmentation for instance, needs
+a stream of its own. Two failures are common. If every worker starts as a copy of the
+main process, as with the *fork* start method, Linux's default before
+Python 3.14, the workers inherit the same generator
+state and apply the same "random" augmentations. If each worker seeds itself
+from the operating system's entropy, no two runs agree.
+
+:begin_tab:`mxnet`
+Gluon's `DataLoader` runs `num_workers > 0` on a pool of worker processes,
+each started as a copy of the main process, NumPy's generator state
+included. The pool does not seed the workers, and Gluon has no hook for a
+worker initializer. Per-worker randomness therefore has to live in the
+dataset: seeding a generator from the example's index inside `__getitem__`
+makes the augmentation a function of the example, whichever worker computes
+it. The shuffle order of `DataLoader(shuffle=True)` comes from NumPy's
+global generator, so fixing it takes `np.random.seed`; MXNet's seed does
+not reach it.
 :end_tab:
 
 :begin_tab:`pytorch`
-`DataLoader` creates a distinct torch seed for every worker from a base seed
-and the worker id. Current PyTorch also initializes Python's `random` module
-and NumPy's legacy global generator in each worker. This covers common dataset
-code, but it cannot discover generator objects owned by a dataset or a
-third-party library. Those sources still need an explicit worker initializer.
-The loader's `generator` controls both its base seed and the shuffled index
-order, so one generator can pin the whole input pipeline.
+`DataLoader` gives every worker its own PyTorch seed, derived from a base
+seed and the worker's index, and seeds Python's `random` module and NumPy's
+global generator in each worker from it. It cannot reach generator objects
+that a dataset or a library creates for itself; those need a *worker
+initializer*, a function that the loader calls once in each new worker. The
+loader's `generator` sets both the base seed and the shuffle order, so one
+generator fixes the whole input pipeline. The initializer below follows
+PyTorch's reproducibility notes. For `random` and NumPy it repeats what the
+loader already does; it shows where a dataset's own generator objects would
+be replaced:
 :end_tab:
 
-:begin_tab:`pytorch`
-The initializer below makes that boundary explicit. It is also the place to
-replace custom generator objects stored on `info.dataset`; seeding NumPy's
-global generator cannot affect an existing `np.random.default_rng()` object.
-The recipe follows PyTorch's reproducibility notes:
+:begin_tab:`tensorflow`
+`tf.data` avoids both failures by design. It runs its parallel work in
+threads of one process, so no worker inherits a copied generator, and its
+randomness is an explicit argument, `Dataset.shuffle(buffer_size,
+seed=...)`. With the default `reshuffle_each_iteration=True`, a seeded
+pipeline produces a *different* order in each epoch, but the same sequence
+of orders every time the pipeline is built:
+:end_tab:
+
+:begin_tab:`jax`
+With explicit keys, the workers' streams appear in the program: a worker's
+randomness is whatever key we hand it. We split one key into per-worker keys
+with `jax.random.split(key, num_workers)` and derive new ones in each epoch
+with `jax.random.fold_in(key, epoch)`, which mixes the epoch number into the
+key. Two workers can share a stream only if the code passes them the same
+key. JAX programs often borrow their input pipeline from PyTorch or
+`tf.data`; such loaders bring their own rules for seeding workers, given in
+the tabs of those frameworks.
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-dataloader-workers-2}
@@ -345,37 +383,14 @@ def seed_worker(worker_id):
 
 g = torch.Generator().manual_seed(0)
 data = TensorDataset(torch.arange(8))
-# num_workers=0 keeps this notebook cell portable. In a training script,
-# num_workers>0 invokes seed_worker once in each worker process.
+# num_workers=0 keeps this cell portable; with num_workers > 0, each
+# worker process calls seed_worker once when it starts
 loader = DataLoader(data, batch_size=4, shuffle=True, num_workers=0,
                     worker_init_fn=seed_worker, generator=g)
 print([batch[0].tolist() for batch in loader])
 g.manual_seed(0)
 print([batch[0].tolist() for batch in loader])
 ```
-
-:begin_tab:`pytorch`
-Resetting the generator reproduces the exact shuffle order. With workers
-enabled, `seed_worker` derives the legacy NumPy and Python streams from the
-same base seed. A dataset-owned `Generator` needs to be replaced there as
-well.
-:end_tab:
-
-:begin_tab:`tensorflow`
-A reproducibility failure in process-based data loaders occurs when parallel
-workers inherit or independently reseed a generator: on fork-based
-loaders every child starts with a byte-for-byte copy of the parent's NumPy
-state, so all workers apply the same "random" augmentations, or each child
-seeds itself from entropy and no two runs agree. `tf.data` sidesteps the
-bug class by construction: the pipeline parallelizes with threads inside
-one process, so there is no forked child to inherit a stale copy, and its
-randomness is an explicit argument, `Dataset.shuffle(buffer, seed=...)`,
-not an ambient global that a seeding call may or may not reach. What
-remains is choosing what the seed means across epochs. With the default
-`reshuffle_each_iteration=True`, a seeded pipeline produces a *different*
-order on each pass but the same *sequence* of orders every time the
-pipeline is rebuilt, fresh shuffles per epoch, repeatable across runs:
-:end_tab:
 
 ```{.python .input #reproducibility-inspection-dataloader-workers-3}
 %%tab tensorflow
@@ -386,176 +401,140 @@ ds = tf.data.Dataset.range(8).shuffle(8, seed=0).batch(4)
 print([b.numpy().tolist() for b in ds])  # rebuilt pipeline: epoch 1 again
 ```
 
-:begin_tab:`tensorflow`
-Both alternatives are explicit choices rather than accidents:
-`reshuffle_each_iteration=False` freezes one order for every epoch, and
-leaving `seed` unset draws fresh orders each run. One knob remains that
-trades reproducibility away on purpose: parallel `map` and `interleave`
-accept `deterministic=False`, which hands elements on in completion order
-for speed; the default `True` keeps the pipeline's output order fixed.
+:begin_tab:`pytorch`
+Seeding the generator again reproduces the shuffle order.
 :end_tab:
 
-:begin_tab:`mxnet`
-Gluon's `DataLoader` runs `num_workers > 0` on a pool of worker
-*processes*, so the fork-inheritance lesson applies verbatim: on Linux
-each worker starts as a copy of the parent, NumPy state included, and the
-pool's initializer does no seeding at all; it only ships the dataset and
-the `set_np` flags to the child (see `_worker_initializer` in
-`gluon/data/dataloader.py`). There is no `worker_init_fn` equivalent to
-bridge the gap, and the pool outlives any one epoch. Two consequences.
-First, deliberate per-worker seeding has to live in the dataset itself:
-make augmentation a deterministic function of the sample by seeding from
-the sample index inside `__getitem__`, and it stops mattering which
-worker runs it. Second, the source shows that the shuffle order of
-`DataLoader(shuffle=True)` is drawn from NumPy's legacy global generator (`RandomSampler` calls `numpy.random.shuffle`), so pinning it
-takes a NumPy seed; MXNet's own seed does not reach it.
+:begin_tab:`tensorflow`
+`reshuffle_each_iteration=False` keeps one order for every epoch, and
+leaving `seed` unset draws new orders in each run. Parallel `map` and
+`interleave` also accept `deterministic=False`, which passes elements on in
+the order they finish, for speed; the default, `True`, keeps the order of
+the output fixed.
 :end_tab:
 
 ### Randomness as a Value
 
-The worker failures above arise from generator state that is copied or shared
-without appearing in the data flow. In an explicit-PRNG design such as JAX,
-randomness is instead passed through the program as a value: every random
-operation takes a key, using the same key twice yields the same numbers, and
-independent streams are obtained by splitting a key. A key can still be reused
-incorrectly, but the duplication is visible in the program's data flow. This
-design requires every function that uses randomness to accept and split keys. PyTorch's
-global seed is the convenient version of the same contract, one implicit
-key that everything shares; generator objects recover the explicit version
-where it matters.
+The worker failures above arise because the state of a generator is copied
+or shared without appearing in the program's data flow. JAX makes randomness
+a value instead: every random function takes a key, the same key gives the
+same numbers, and independent streams come from splitting a key. A key can
+still be reused by mistake, but the reuse is visible in the code. The cost
+is that every function that draws random numbers must accept a key and pass
+split keys on. A global seed is the convenient form of the same contract: one
+implicit key that all code shares. Generator objects recover the explicit
+form where it matters.
 
-:begin_tab:`jax`
-The two cells above are this design in action: `train_once` turned one
-seed into one key and split it, and reusing a key reproduced the
-permutation bit for bit.
+:begin_tab:`mxnet`
+MXNet stands at the implicit end: global streams per device, no generator
+objects, and no stateless functions. Seeding once at the start, and again at
+any point where draws must stay fixed, is all it offers.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch offers both forms: the global generator, and `torch.Generator`
+objects passed to the functions that should use them.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow ships both designs side by side: the stateful API above (a
-global generator plus `tf.random.Generator` objects) and a stateless
-family in which the key is an argument:
-`tf.random.stateless_normal(shape, seed=[k1, k2])` returns the same
-numbers for the same seed pair by definition. The explicit `seed=`
-arguments of `tf.data` are the same idea applied to the input pipeline.
+TensorFlow offers both forms: the stateful functions above, with a global
+generator and `tf.random.Generator` objects, and stateless functions that
+take the key as an argument, such as
+`tf.random.stateless_normal(shape, seed=[k1, k2])`, which returns the same
+numbers for the same pair of seeds.
 :end_tab:
 
-:begin_tab:`mxnet`
-MXNet sits at the fully implicit end of this spectrum: per-device global
-streams, no generator objects, no stateless variants. Seeding discipline,
-one call up front and a re-seed at any boundary that must be pinned, is
-the entire toolkit.
+:begin_tab:`jax`
+The two cells above use this design: `train_once` turned one seed into one
+key and split it, and reusing a key reproduced the permutation.
 :end_tab:
 
-## Deterministic Arithmetic and Performance
+## Deterministic Arithmetic
+:label:`subsec_deterministic_arithmetic`
 
 Seeding fixes which numbers the program draws. It does not fix how the
-arithmetic evaluates. Floating-point addition is not associative
-(:numref:`sec_numerics`), so summing the same numbers in a different
-order or grouping may give a different answer:
+arithmetic combines them. Floating-point addition is not associative
+(:numref:`sec_numerics`): every sum is rounded to the nearest representable
+number, so adding the same numbers in a different order can give a different
+result.
+
+The smallest example takes three float32 numbers. Near $10^8$, adjacent
+float32 numbers are 8 apart, so $-10^8 + 1$ rounds back to $-10^8$:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
-%%tab pytorch
-torch.manual_seed(0)
-x = torch.randn(1_000_000)
-s_fwd, s_rev = x.sum(), x.flip(0).sum()  # same numbers, different order
-print(s_fwd == s_rev, (s_fwd - s_rev).item())
+%%tab mxnet
+a, b, c = [mnp.array(v, dtype='float32') for v in (1e8, -1e8, 1.0)]
+print(float((a + b) + c), float(a + (b + c)))  # same numbers, regrouped
 ```
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
-%%tab jax
-x = jax.random.normal(jax.random.key(0), (1_000_000,))
-s_fwd, s_rev = x.sum(), x[::-1].sum()  # same numbers, different order
-print(s_fwd == s_rev, (s_fwd - s_rev).item())
+%%tab pytorch
+a, b, c = [torch.tensor(v, dtype=torch.float32) for v in (1e8, -1e8, 1.0)]
+print(float((a + b) + c), float(a + (b + c)))  # same numbers, regrouped
 ```
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
 %%tab tensorflow
-x = tf.random.Generator.from_seed(0).normal((1_000_000,))
-s_fwd = tf.reduce_sum(x)
-s_rev = tf.reduce_sum(x[::-1])  # same numbers, different order
-print(bool(s_fwd == s_rev), float(s_fwd - s_rev))
+a, b, c = [tf.constant(v, dtype=tf.float32) for v in (1e8, -1e8, 1.0)]
+print(float((a + b) + c), float(a + (b + c)))  # same numbers, regrouped
 ```
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
-%%tab mxnet
-a, b, c = [np.array([v], dtype='float32') for v in (1e8, -1e8, 1.0)]
-s_left, s_right = (a + b) + c, a + (b + c)  # same numbers, regrouped
-print(bool(s_left == s_right), float(s_left - s_right))
+%%tab jax
+a, b, c = [jnp.array(v, dtype=jnp.float32) for v in (1e8, -1e8, 1.0)]
+print(float((a + b) + c), float(a + (b + c)))  # same numbers, regrouped
 ```
 
-:begin_tab:`pytorch`
-On a CPU the summation order is at least fixed, so seeded runs repeat. On a
-GPU it often is not: kernels built on atomic additions (`scatter_add`, some
-convolution and embedding backward passes) commit their partial sums in
-whatever order threads happen to finish, so two seeded runs on the *same
-machine* can differ in the last bits, and after enough training steps, in
-the loss curve. `torch.use_deterministic_algorithms(True)` is the switch
-that forbids this: operations with a deterministic implementation use it
-(often at some speed cost), and operations without one raise a
-`RuntimeError` rather than returning nondeterministic results. On CUDA you must additionally
-set the environment variable `CUBLAS_WORKSPACE_CONFIG=:4096:8`, or cuBLAS
-matrix multiplications themselves raise. A related but narrower setting is
-`torch.backends.cudnn.benchmark`: when true, cuDNN times several
-convolution algorithms on the first batch and keeps the winner, and since
-the winner can change from run to run, reproducibility work sets it to
-`False` (its sibling `cudnn.deterministic` covers convolutions only and is
-subsumed by the global switch).
+Regrouping changes the result from 1 to 0. In a long sum the effect is
+smaller but of the same kind: adding a million random numbers forward and
+backward usually gives results that differ in their last bits.
+
+On a CPU, the order in which one operation adds its numbers is usually fixed
+for a given number of threads, so a seeded run repeats. On a GPU, many
+threads add partial sums at the same time, and some operations combine them
+with *atomic additions*, which commit each partial sum in whatever order the
+threads happen to finish. Examples are the gradients of an embedding lookup
+or of a scatter operation, some convolution gradients, and some reductions.
+Two seeded runs on the same machine can then differ in the last bits of
+their weights, and over many training steps such differences grow until the
+loss curves differ visibly. Each framework except MXNet has a switch that
+replaces such operations with deterministic ones, which add in a fixed order
+and are often slower.
+
+:begin_tab:`mxnet`
+MXNet has no such switch. On a GPU, bitwise repetition requires avoiding the
+operations whose kernels add in a varying order.
 :end_tab:
 
-:begin_tab:`jax`
-For the *drawn numbers*, JAX's answer is structural. Its PRNG is
-counter-based (Threefry): a draw is a pure function of the key and the
-requested shape, not of any evolving state, so the same key produces the
-same numbers on CPU, GPU, and TPU alike (the documented caveat is that
-JAX does not promise identical bits *across its own releases*). Arithmetic determinism depends on the backend and operation. The CPU
-operations used by `train_once` above produced bitwise agreement in this
-environment. On GPU, some XLA kernels commit partial sums via atomic
-additions in whatever order threads finish, the same last-bits
-nondeterminism as elsewhere; setting the environment variable
-`XLA_FLAGS=--xla_gpu_deterministic_ops=true` before JAX initializes
-forces deterministic implementations, at a speed cost we have not
-measured here. There is no error-raising mode: the flag substitutes
-deterministic kernels rather than refusing nondeterministic ones.
+:begin_tab:`pytorch`
+`torch.use_deterministic_algorithms(True)` is the switch. Operations that
+have a deterministic implementation use it; operations without one raise a
+`RuntimeError` instead of returning nondeterministic results. On a GPU, the
+environment variable `CUBLAS_WORKSPACE_CONFIG=:4096:8` must also be set, or
+matrix multiplications raise as well. The backward pass of 3-D average
+pooling on a GPU has no deterministic implementation:
 :end_tab:
 
 :begin_tab:`tensorflow`
-On a CPU the summation order inside one operation is at least fixed, so
-seeded runs repeat; the bitwise agreement of `train_once` above is exactly
-that. On a GPU it often is not: kernels built on atomic additions (segment
-sums, the scatter-add behind `tf.gather`'s gradient) commit their partial
-sums in whatever order threads happen to finish, so two seeded runs on the
-*same machine* can differ in the last bits, and after enough training
-steps, in the loss curve. `tf.config.experimental.enable_op_determinism()`
-is the switch that forbids this: operations with a deterministic
-implementation use it (often at some speed cost), operations without one
-raise `tf.errors.UnimplementedError` rather than returning nondeterministic results, and
-stateful random operations refuse to run without a seed, since an
-operation that seeds itself from entropy is nondeterminism by another
-name. Two properties follow from its design. It is meant to be called at
-program start, before any operation runs, because it configures kernels as
-they are created and nothing already executed is redone. And there is no
-call that turns it off short of a fresh process. We can still demonstrate
-the seed rule mid-flight by clearing the global seed:
+`tf.config.experimental.enable_op_determinism()` is the switch. Operations
+that have a deterministic implementation use it, and operations without one
+raise `tf.errors.UnimplementedError`. Random operations must then have a
+seed, since an operation that seeds itself from the operating system is
+nondeterministic too. The switch is meant to be called when the program
+starts, because it affects operations as they are created, and nothing turns
+it off again short of a new process. We can still demonstrate the seed rule
+by clearing the global seed:
 :end_tab:
 
-:begin_tab:`mxnet`
-We regroup three numbers rather than reversing a million, because MXNet's
-`sum` accumulates in double precision and its result is impressively
-insensitive to element order — the associativity failure is a property of
-the *format*, and the three-line version exhibits it in any framework.
-On a CPU the summation order inside one operation is at least fixed, so
-seeded runs repeat; the bitwise agreement of `train_once` above is exactly
-that. On a GPU it often is not: kernels built on atomic additions commit
-their partial sums in whatever order threads happen to finish, so two
-seeded runs on the *same machine* can differ in the last bits, and after
-enough training steps, in the loss curve. MXNet ships no switch that
-forbids this and no error-raising mode. The one lever it does have is the
-analogue of cuDNN benchmark mode: by default cuDNN times several
-convolution algorithms on the first batch and keeps the winner, and since
-the winner can change from run to run, reproducibility work sets the
-environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT=0` (before any
-operator runs) to pin the algorithm choice. Beyond that, staying away
-from operations whose kernels are nondeterministic is up to you.
+:begin_tab:`jax`
+JAX's random numbers are reproducible across devices: a draw is a function
+of the key and the shape only, so the same key gives the same numbers on
+CPU, GPU, and TPU (JAX does not promise the same bits across its own
+releases). For arithmetic, the operations of `train_once` added in a fixed
+order on the GPU too. Setting the environment variable
+`XLA_FLAGS=--xla_gpu_deterministic_ops=true` before JAX starts replaces
+GPU operations that add in a varying order with deterministic ones; unlike
+the switches of PyTorch and TensorFlow, it does not raise errors.
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-2}
@@ -566,10 +545,10 @@ if torch.cuda.is_available():
         x = torch.randn(1, 1, 2, 2, 2, requires_grad=True, device='cuda')
         nn.AvgPool3d(1)(x).sum().backward()
     except RuntimeError as e:
-        print(str(e).split('.')[0])
+        print(str(e).split(', but')[0])
 else:
-    print('CPU run: every kernel used above is already deterministic;',
-          'on CUDA, ops lacking a deterministic kernel raise RuntimeError')
+    print('CPU run: every kernel used here is deterministic;',
+          'on a GPU, operations without a deterministic kernel raise')
 torch.use_deterministic_algorithms(False)
 ```
 
@@ -581,145 +560,83 @@ try:
     tf.random.normal((2,))
 except RuntimeError as e:
     print(str(e).split('.')[0])
-tf.random.set_seed(0)  # determinism stays on; reseed and continue
+# determinism stays on and needs a seed, though not a particular one
+tf.keras.utils.set_random_seed(random.SystemRandom().getrandbits(31))
 ```
 
-This guarantee has a narrow scope. No framework promises bitwise agreement
-across releases, platforms, or CPU versus GPU: it holds only for a
-pinned machine, library version, and flag configuration. That makes bitwise
-reproducibility a *debugging* tool, the setting that lets you bisect
-exactly where two runs diverge. The *scientific* goal is statistical
-reproducibility: the same conclusions across seeds, reported as a mean and
-spread over several runs rather than a single run. The distinction mirrors
-:numref:`sec_numerics`: changing dtype changes results in the last bits by
-design, and a conclusion that does not persist across reasonable seeds or
-numeric configurations requires further evidence.
+Bitwise agreement holds only for one machine, one library version, and one
+configuration of these switches; no framework promises it across releases,
+across hardware, or between CPU and GPU. Bitwise reproducibility is
+therefore a tool for debugging: it lets us find the step at which two runs
+first differ. The scientific goal is weaker and more robust. A conclusion,
+such as "the change raises accuracy", should hold across seeds, so we report
+the mean and the spread over several runs rather than one run. As with the
+number formats of :numref:`sec_numerics`, a conclusion that changes with the
+seed or with the last bits of the arithmetic needs more evidence.
 
-## Inspecting Model Execution with Hooks
+## Model Inspection with Hooks
 
-Reproducibility determines whether a run can be repeated; inspection determines
-where a particular run produced an unexpected value. Hooks address the second
-question without changing the model's mathematical computation.
+A repeatable run tells us that a problem will recur, not where it arises.
+To find out, we observe what each layer computes during the run. Editing the
+`forward` method of every layer to print or store its output is tedious, and
+impossible for a model that came from a library or a checkpoint whose code
+we do not want to change. A *hook* is a function that the framework calls at
+a fixed point of each layer's computation, from outside the layer's code.
 
-:begin_tab:`pytorch`
-In :numref:`sec_model_construction` we noted that `net(X)` does not call
-`forward` directly: it calls `__call__`, which wraps `forward` with extra
-machinery. Hooks are that machinery, exposed. Calling
-`module.register_forward_hook(f)` arranges for `f(module, inputs, output)`
-to run after every forward pass of that module, with no change to the
-model's source, which matters precisely when the model came from a library
-or a checkpoint you do not want to edit.
-:numref:`fig_bg_hooks` draws the wrapper as a pipeline: hooks slot into the
-gap the `__call__` wrapper already leaves around `forward`, so an observer
-can capture, check, or modify without a single line of the model changing.
+:begin_tab:`mxnet`
+In :numref:`sec_model_construction` we saw that `net(X)` does not call
+`forward` directly: it calls `__call__`, which wraps `forward`. Hooks run in
+that wrapper. `block.register_forward_hook(f)` arranges for
+`f(block, inputs, output)` to run after every forward pass of the block,
+and `register_forward_pre_hook` before it. :numref:`fig_bg_hooks` shows where
+they run. Gluon ignores the value a hook returns, so its hooks observe
+but cannot modify the output. Gluon's own `Block.summary()` builds its table
+of layers by registering a forward hook on every block.
 :end_tab:
 
-:begin_tab:`jax`
-NNX can wrap a module call with `nnx.capture`, recording the return value of
-each submodule method alongside the model output without changing the model's
-source. That matters
-precisely when the model came from a library or a checkpoint you do not
-want to edit. :numref:`fig_bg_hooks` draws the general picture: an
-observation point in the gap the call wrapper already leaves around each
-module's computation, from which an observer can capture or check
-without a single line of the model changing.
+:begin_tab:`pytorch`
+In :numref:`sec_model_construction` we saw that `net(X)` does not call
+`forward` directly: it calls `__call__`, which wraps `forward`. Hooks run in
+that wrapper. `module.register_forward_hook(f)` arranges for
+`f(module, inputs, output)` to run after every forward pass of the module,
+and `register_forward_pre_hook` before it. :numref:`fig_bg_hooks` shows where
+they run. A forward hook that returns a value replaces the module's output.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras wraps `call` with a `__call__` too (it handles building, dtype
-casting, and masks), but the wrapper exposes no observation point: nothing
-can be attached to an unmodified model after the fact, and observing a
-black-box model from a library or a checkpoint without touching its code
-has no TensorFlow equivalent. Two idioms reach the same measurements with
-a little structure. In a *functional* model every
-intermediate tensor is a first-class object, so a second `tf.keras.Model`
-over the same graph can declare any internal tensor as an output. This
-secondary model shares all weights and adds no computation. When you own the
-model's code, an overridden `call` can stash or check
-the requested values as it runs. :numref:`fig_bg_hooks` still describes the
-computation order, but TensorFlow requires observation outputs to be declared
-in the model structure.
+Keras also wraps `call` in a `__call__` method, but the wrapper offers no
+hooks: nothing can be attached to an unmodified model to observe it. Two
+idioms reach the same measurements. In a *functional* model, built by
+calling layers on symbolic inputs, every intermediate tensor is an object we
+can name, so a second `tf.keras.Model` over the same graph can return any of
+them as an output; it shares all weights with the first. When we own the
+model's code, an overridden `call` can record the values we want.
+:numref:`fig_bg_hooks` shows where a hook would run; in TensorFlow the
+observation points must be built into the model.
 :end_tab:
 
-:begin_tab:`mxnet`
-In :numref:`sec_model_construction` we noted that `net(X)` does not
-call `forward` directly: it calls `__call__`, which wraps `forward` with
-extra machinery. Hooks are that machinery, exposed. Calling
-`block.register_forward_hook(f)` arranges for `f(block, inputs, output)`
-to run after every forward pass of that block, and
-`register_forward_pre_hook` attaches before it, with no change to the
-model's source, which matters precisely when the model came from a
-library or a checkpoint you do not want to edit. Gluon itself relies on
-the mechanism: `Block.summary()` builds its per-layer table by
-registering a forward hook on every block. :numref:`fig_bg_hooks` draws
-the wrapper as a pipeline: the `__call__` wrapper invokes hooks around
-`forward`, allowing an observer to capture or check values without modifying
-the model source (Gluon's contract is
-observe-only: a hook's return value is ignored, so unlike PyTorch's it
-cannot modify the output).
+:begin_tab:`jax`
+`nnx.capture` wraps a call of a model and records, alongside the output, the
+value that every submodule returned, without any change to the model's code.
+:numref:`fig_bg_hooks` shows where such an observation point sits in the
+computation of each module.
 :end_tab:
 
 ![The `__call__` wrapper as a pipeline: input flows through pre-hooks, then forward, then hooks, to the output, with the two hook stages dashed and orange against forward's solid blue, and a side arrow from the hooks stage to an observer that can capture, check, or modify.](../img/bg-hooks.svg)
 :label:`fig_bg_hooks`
 
-We reuse the residual stack of
-:numref:`sec_model_construction`, rebuilt compactly:
-
-```{.python .input #reproducibility-inspection-hooks-looking-inside}
-%%tab pytorch
-class ResidualBlock(nn.Module):
-    def __init__(self, num_hiddens):
-        super().__init__()
-        self.body = nn.Sequential(nn.Linear(num_hiddens, num_hiddens),
-                                  nn.ReLU(),
-                                  nn.Linear(num_hiddens, num_hiddens))
-
-    def forward(self, X):
-        return X + self.body(X)
-
-torch.manual_seed(0)
-net = nn.Sequential(nn.Linear(20, 64),
-                    *[ResidualBlock(64) for _ in range(8)],
-                    nn.Linear(64, 10))
-```
-
-```{.python .input #reproducibility-inspection-hooks-looking-inside}
-%%tab jax
-class ResidualBlock(nnx.Module):
-    def __init__(self, num_hiddens, rngs):
-        self.body = nnx.Sequential(
-            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs), nnx.relu,
-            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs))
-
-    def __call__(self, X):
-        return X + self.body(X)
-
-rngs = nnx.Rngs(0)
-net = nnx.Sequential(nnx.Linear(20, 64, rngs=rngs),
-                     *[ResidualBlock(64, rngs) for _ in range(8)],
-                     nnx.Linear(64, 10, rngs=rngs))
-X = jax.random.normal(jax.random.key(1), (256, 20))
-```
-
-```{.python .input #reproducibility-inspection-hooks-looking-inside}
-%%tab tensorflow
-def residual_block(X, num_hiddens):
-    body = tf.keras.Sequential([
-        tf.keras.layers.Dense(num_hiddens, activation='relu'),
-        tf.keras.layers.Dense(num_hiddens)])
-    return X + body(X)
-
-tf.keras.utils.set_random_seed(0)
-inputs = tf.keras.Input(shape=(20,))
-taps = [tf.keras.layers.Dense(64)(inputs)]  # keep every intermediate tensor
-for _ in range(8):
-    taps.append(residual_block(taps[-1], 64))
-outputs = tf.keras.layers.Dense(10)(taps[-1])
-net = tf.keras.Model(inputs, outputs)
-```
+As a test model we use a stack of eight residual blocks of width 64 between
+an input layer with 20 inputs and an output layer with 10 outputs. The block
+is the residual block of :numref:`sec_model_construction`, unchanged: it adds
+the output of a small network, its *body*, to its input: $\mathbf{h} = \mathbf{x} +
+\textrm{body}(\mathbf{x})$, where the body is a linear layer, a ReLU, and a
+second linear layer. In every framework the weights start from Xavier
+initialization (:numref:`subsec_xavier`) and the biases at zero.
 
 ```{.python .input #reproducibility-inspection-hooks-looking-inside}
 %%tab mxnet
+mnp.random.seed(random.SystemRandom().getrandbits(31))  # unpin the demo seed
+
 class ResidualBlock(nn.Block):
     def __init__(self, num_hiddens):
         super().__init__()
@@ -730,18 +647,104 @@ class ResidualBlock(nn.Block):
     def forward(self, X):
         return X + self.body(X)
 
-np.random.seed(0)
 net = nn.Sequential()
 net.add(nn.Dense(64), *[ResidualBlock(64) for _ in range(8)], nn.Dense(10))
-net.initialize(init.Xavier())  # variance-preserving, as in the init chapter
+net.initialize(init.Xavier())  # Xavier weights, zero biases
 ```
 
-### Capturing Activation Statistics
+```{.python .input #reproducibility-inspection-hooks-looking-inside}
+%%tab pytorch
+torch.seed()  # a fresh random seed: the demos above left one pinned
+
+class ResidualBlock(nn.Module):
+    def __init__(self, num_hiddens):
+        super().__init__()
+        self.body = nn.Sequential(nn.Linear(num_hiddens, num_hiddens),
+                                  nn.ReLU(),
+                                  nn.Linear(num_hiddens, num_hiddens))
+
+    def forward(self, X):
+        return X + self.body(X)
+
+net = nn.Sequential(nn.Linear(20, 64),
+                    *[ResidualBlock(64) for _ in range(8)],
+                    nn.Linear(64, 10))
+for m in net.modules():
+    if isinstance(m, nn.Linear):  # Xavier weights, zero biases
+        nn.init.xavier_uniform_(m.weight)
+        nn.init.zeros_(m.bias)
+```
+
+```{.python .input #reproducibility-inspection-hooks-looking-inside}
+%%tab tensorflow
+def dense(num_outputs, **kwargs):  # Xavier weights, zero biases
+    return tf.keras.layers.Dense(
+        num_outputs, kernel_initializer='glorot_uniform', **kwargs)
+
+class ResidualBlock(tf.keras.layers.Layer):
+    def __init__(self, num_hiddens, **kwargs):
+        super().__init__(**kwargs)
+        self.body = tf.keras.Sequential([
+            dense(num_hiddens, activation='relu'), dense(num_hiddens)])
+
+    def call(self, X):
+        return X + self.body(X)
+
+inputs = tf.keras.Input(shape=(20,))
+taps = [dense(64)(inputs)]  # keep every intermediate tensor
+for _ in range(8):
+    taps.append(ResidualBlock(64)(taps[-1]))
+outputs = dense(10)(taps[-1])
+net = tf.keras.Model(inputs, outputs)
+```
+
+```{.python .input #reproducibility-inspection-hooks-looking-inside}
+%%tab jax
+xavier = nnx.initializers.xavier_uniform()  # biases start at zero
+
+class ResidualBlock(nnx.Module):
+    def __init__(self, num_hiddens, *, rngs):
+        self.body = nnx.Sequential(
+            nnx.Linear(num_hiddens, num_hiddens, kernel_init=xavier,
+                       rngs=rngs),
+            nnx.relu,
+            nnx.Linear(num_hiddens, num_hiddens, kernel_init=xavier,
+                       rngs=rngs))
+
+    def __call__(self, X):
+        return X + self.body(X)
+
+rngs = nnx.Rngs(d2l.get_key())
+net = nnx.Sequential(nnx.Linear(20, 64, kernel_init=xavier, rngs=rngs),
+                     *[ResidualBlock(64, rngs=rngs) for _ in range(8)],
+                     nnx.Linear(64, 10, kernel_init=xavier, rngs=rngs))
+X = jax.random.normal(d2l.get_key(), (256, 20))
+```
+
+### Activation Statistics
 :label:`subsec_activation_stats`
 
 The initialization experiments of :numref:`sec_init_param` measured the
-standard deviation of activations at every depth. The same measurement
-takes a few lines on an unmodified model:
+standard deviation of the activations at every depth. With hooks, the same
+measurement takes a few lines on an unmodified model. We record the standard
+deviation of each layer's output on a minibatch of 256 standard normal
+inputs.
+
+```{.python .input #reproducibility-inspection-capturing-activation-statistics}
+%%tab mxnet
+stats, handles = [], []
+
+def record(block, inputs, output):
+    stats.append((type(block).__name__, output.std().item()))
+
+for m in net:
+    handles.append(m.register_forward_hook(record))
+net(mnp.random.normal(0, 1, (256, 20)))
+for h in handles:
+    h.detach()
+for name, std in stats:
+    print(f'{name:15s} std {std:.2f}')
+```
 
 ```{.python .input #reproducibility-inspection-capturing-activation-statistics}
 %%tab pytorch
@@ -760,15 +763,6 @@ for name, std in stats:
 ```
 
 ```{.python .input #reproducibility-inspection-capturing-activation-statistics}
-%%tab jax
-_, inter = nnx.capture(
-    net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
-for k, layer in enumerate(net.layers):
-    out = inter['layers'][k]['__call__'][0]
-    print(f'{type(layer).__name__:15s} std {out.std():.2f}')
-```
-
-```{.python .input #reproducibility-inspection-capturing-activation-statistics}
 %%tab tensorflow
 probe = tf.keras.Model(inputs, taps + [outputs])  # same layers, same weights
 X = tf.random.normal((256, 20))
@@ -778,79 +772,100 @@ for name, out in zip(names, probe(X)):
 ```
 
 ```{.python .input #reproducibility-inspection-capturing-activation-statistics}
-%%tab mxnet
-stats, handles = [], []
-
-def record(block, inputs, output):
-    stats.append((type(block).__name__, output.std().item()))
-
-for m in net:
-    handles.append(m.register_forward_hook(record))
-net(np.random.normal(0, 1, (256, 20)))
-for h in handles:
-    h.detach()
-for name, std in stats:
-    print(f'{name:15s} std {std:.2f}')
+%%tab jax
+_, inter = nnx.capture(
+    net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
+for k, layer in enumerate(net.layers):
+    out = inter['layers'][k]['__call__'][0]
+    print(f'{type(layer).__name__:15s} std {out.std():.2f}')
 ```
 
-The residual stream's spread grows block by block, since each block adds
-its body's output on top of the stream. That is exactly the depth effect
-that motivated the scaled initializations of :numref:`sec_init_param`,
-measured here without touching the model.
+The standard deviation grows from block to block, from about 0.7 after the
+input layer to roughly 3 to 4 after the eighth block. Each block adds its
+body's output to its input, and the two are nearly uncorrelated, so their
+variances add. With Xavier initialization the body's output has about half
+the variance of its input: the first linear layer keeps the variance, the
+ReLU halves the mean square, and the second linear layer keeps it again. The
+variance therefore grows by a factor of about 1.5 per block, and the
+standard deviation by about $\sqrt{1.5} \approx 1.22$. This growth with
+depth is why the residual branches of deep networks are often initialized
+with smaller weights (:numref:`sec_init_param`).
 
-:begin_tab:`pytorch`
-Two rules keep hooks safe. First, *detach before you stash*: the hook above
-stores `output.detach().std()`; storing `output` itself would keep the
-autograd graph of every forward pass alive until `stats` is cleared, a
-memory leak that grows with each batch. Second, *keep the handle and call*
-`handle.remove()`: a hook stays registered for the module's lifetime
-otherwise, adding overhead to later forward passes and retaining any tensors
-that it stores.
+:begin_tab:`mxnet`
+Two rules keep hooks safe. First, *detach before storing*: the hook above
+reduces the output to a Python number at once. A hook that stores arrays
+should store `output.detach()`, because inside `autograd.record` a stored
+output keeps the computation graph of every forward pass in memory until
+the list is cleared. Second, *keep the handle and detach it*:
+`register_forward_hook` returns a handle, and the hook stays registered for
+the block's lifetime unless we call `handle.detach()`. Hooks run in the
+Python `__call__` wrapper, so they do not fire inside a block that was
+compiled with `hybridize()`; we observe blocks without hybridizing them.
 :end_tab:
 
-:begin_tab:`jax`
-Nothing here needs detaching or removing: the captured intermediates are
-ordinary arrays with no autograd graph attached, the dictionary exists
-for this one call, and no observer stays registered on the model. The
-`method_outputs=nnx.Intermediate` argument records every method return. For
-finer control, a module can call
-`self.sow(nnx.Intermediate, 'name', value)` at selected points, and
-`nnx.capture(model, nnx.Intermediate)` then returns only those named values.
+:begin_tab:`pytorch`
+Two rules keep hooks safe. First, *detach before storing*: the hook above
+stores `output.detach().std()`. Storing `output` itself would keep the
+autograd graph of every forward pass in memory until `stats` is cleared, a
+leak that grows with every minibatch. Second, *keep the handle and remove
+it*: a hook stays registered for the module's lifetime unless we call
+`handle.remove()`, slowing every later forward pass and keeping alive any
+tensors it stores.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Nothing needs detaching and nothing needs removing: `probe` shares the
-original model's layers and weights outright, its outputs are ordinary
-tensors with no gradient tape attached, and no observer stays registered
-anywhere, because the "hook" is another model output. The limitation is
-structural: a secondary inspection model requires a functional graph. A
-subclassed model whose `call` is imperative Python has no symbolic intermediate
-tensors to expose, so its `call` method must record the requested values
-explicitly.
+Nothing needs to be detached or removed: `probe` shares the original model's
+layers and weights, its outputs are ordinary tensors outside any gradient
+tape, and no observer stays attached to the model. The method requires a
+functional model. A subclassed model, whose `call` is ordinary Python code,
+has no symbolic intermediate tensors to return, so its `call` must record
+the values itself.
 :end_tab:
 
-:begin_tab:`mxnet`
-Two rules keep hooks safe. First, *detach before you stash*: the hook
-above reduces the output to a Python float on the spot; a hook that
-stores arrays should store `output.detach()` (add `.copy()` if the array
-may later be updated in place), because under `autograd.record` a stashed
-output keeps the computation graph of every forward pass alive until the
-list is cleared. Second, *keep the handle and call* `handle.detach()`:
-`register_forward_hook` returns a `HookHandle`, and the hook stays
-registered for the block's lifetime otherwise (the handle also works as a
-context manager that detaches on exit). One caveat specific to Gluon:
-hooks live in the Python `__call__` wrapper, so `hybridize()` warns that
-hooks on the children of a hybridized block will not fire; keep a block
-unhybridized while observing it.
+:begin_tab:`jax`
+Nothing needs to be detached or removed: the captured values are ordinary
+arrays, the dictionary exists for this one call, and no observer stays
+attached to the model. `method_outputs=nnx.Intermediate` records the return
+value of every module call. For finer control, a module can call
+`self.sow(nnx.Intermediate, 'name', value)` at chosen points in its
+computation, and `nnx.capture(model, nnx.Intermediate)` then returns only
+those values.
 :end_tab:
 
 ### A NaN Finder
 :label:`subsec_nan_finder`
 
 When a loss becomes NaN at step 40,000, the useful question is which layer
-produced the first non-finite value. Checking every leaf module's output for finiteness can identify the first
-affected layer in one forward pass. The example injects a NaN into a weight
-deep in the stack:
+produced the first non-finite value. A hook on every layer that checks its
+output for infinities and NaNs answers it in one forward pass: the first
+hook to fire names the layer, because hooks fire in the order the layers
+compute. To test this, we put a NaN into one weight of the fourth layer of
+the stack, the third residual block:
+
+```{.python .input #reproducibility-inspection-a-nan-finder}
+%%tab mxnet
+def make_finite_check(name):
+    def check(block, inputs, output):
+        if not mnp.isfinite(output).all():
+            raise RuntimeError(f'first non-finite output in {name}')
+    return check
+
+leaves = ([('0', net[0])]
+          + [(f'{k}.body.{j}', net[k].body[j])
+             for k in range(1, 9) for j in (0, 1)]
+          + [('9', net[9])])
+handles = [blk.register_forward_hook(make_finite_check(name))
+           for name, blk in leaves]
+saved = net[3].body[1].weight.data()[0, 0].item()
+net[3].body[1].weight.data()[0, 0] = float('nan')  # break one layer
+try:
+    net(mnp.random.normal(0, 1, (2, 20)))
+except RuntimeError as e:
+    print(e)
+for h in handles:
+    h.detach()
+net[3].body[1].weight.data()[0, 0] = saved  # restore the weight
+```
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab pytorch
@@ -862,10 +877,10 @@ def make_finite_check(name):
 
 handles = [m.register_forward_hook(make_finite_check(name))
            for name, m in net.named_modules()
-           if len(list(m.children())) == 0]
+           if len(list(m.children())) == 0]  # leaf modules only
 saved = net[3].body[0].weight[0, 0].item()
 with torch.no_grad():
-    net[3].body[0].weight[0, 0] = float('nan')  # sabotage one layer
+    net[3].body[0].weight[0, 0] = float('nan')  # break one layer
 try:
     net(torch.randn(2, 20))
 except RuntimeError as e:
@@ -873,13 +888,37 @@ except RuntimeError as e:
 for h in handles:
     h.remove()
 with torch.no_grad():
-    net[3].body[0].weight[0, 0] = saved  # net is shared; undo the sabotage
+    net[3].body[0].weight[0, 0] = saved  # restore the weight
+```
+
+```{.python .input #reproducibility-inspection-a-nan-finder}
+%%tab tensorflow
+class Checked(tf.keras.Model):
+    def __init__(self, layers):
+        super().__init__()
+        self.seq, self.first_bad = layers, None  # a plain list is tracked
+
+    def call(self, X):
+        for layer in self.seq:
+            X = layer(X)
+            if self.first_bad is None and not bool(
+                    tf.reduce_all(tf.math.is_finite(X))):
+                self.first_bad = layer.name
+        return X
+
+checked = Checked([dense(64)]
+                  + [ResidualBlock(64, name=f'block{k}') for k in range(1, 9)]
+                  + [dense(10)])
+_ = checked(tf.random.normal((2, 20)))  # build the weights
+checked.seq[3].body.layers[0].kernel[0, 0].assign(float('nan'))  # break one
+_ = checked(tf.random.normal((2, 20)))
+print('first non-finite output in', checked.first_bad)
 ```
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab jax
 saved = net.layers[3].body.layers[0].kernel[0, 0]
-net.layers[3].body.layers[0].kernel[0, 0] = float('nan')
+net.layers[3].body.layers[0].kernel[0, 0] = float('nan')  # break one layer
 _, inter = nnx.capture(
     net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
 
@@ -895,163 +934,102 @@ for path, module in nnx.iter_modules(net):
             print('first non-finite output in', path)
             break
 
-net.layers[3].body.layers[0].kernel[0, 0] = saved  # net is shared; undo the sabotage
+net.layers[3].body.layers[0].kernel[0, 0] = saved  # restore the weight
 ```
 
-```{.python .input #reproducibility-inspection-a-nan-finder}
-%%tab tensorflow
-class ResidualBlock(tf.keras.layers.Layer):
-    def __init__(self, num_hiddens, **kwargs):
-        super().__init__(**kwargs)
-        self.body = tf.keras.Sequential([
-            tf.keras.layers.Dense(num_hiddens, activation='relu'),
-            tf.keras.layers.Dense(num_hiddens)])
-
-    def call(self, X):
-        return X + self.body(X)
-
-class Checked(tf.keras.Model):
-    def __init__(self, layers):
-        super().__init__()
-        self.seq, self.first_bad = layers, None  # a plain list is tracked
-
-    def call(self, X):
-        for layer in self.seq:
-            X = layer(X)
-            if self.first_bad is None and not bool(
-                    tf.reduce_all(tf.math.is_finite(X))):
-                self.first_bad = layer.name
-        return X
-
-tf.keras.utils.set_random_seed(0)
-checked = Checked([tf.keras.layers.Dense(64)]
-                  + [ResidualBlock(64, name=f'block{k}') for k in range(1, 9)]
-                  + [tf.keras.layers.Dense(10)])
-_ = checked(tf.random.normal((2, 20)))  # build the weights
-kernel = checked.seq[3].body.layers[0].kernel
-kernel[0, 0].assign(float('nan'))  # sabotage one layer
-_ = checked(tf.random.normal((2, 20)))
-print('first non-finite output in', checked.first_bad)
-```
-
-```{.python .input #reproducibility-inspection-a-nan-finder}
-%%tab mxnet
-def make_finite_check(name):
-    def check(block, inputs, output):
-        if not np.isfinite(output).all():
-            raise RuntimeError(f'first non-finite output in {name}')
-    return check
-
-leaves = ([('0', net[0])]
-          + [(f'{k}.body.{j}', net[k].body[j])
-             for k in range(1, 9) for j in (0, 1)]
-          + [('9', net[9])])
-handles = [blk.register_forward_hook(make_finite_check(name))
-           for name, blk in leaves]
-saved = net[3].body[1].weight.data()[0, 0].item()
-net[3].body[1].weight.data()[0, 0] = float('nan')  # sabotage one layer
-try:
-    net(np.random.normal(0, 1, (2, 20)))
-except RuntimeError as e:
-    print(e)
-for h in handles:
-    h.detach()
-net[3].body[1].weight.data()[0, 0] = saved  # net is shared; undo the sabotage
-```
-
-:begin_tab:`pytorch`
-The report names module `3.body.0`, the layer containing the injected NaN,
-without requiring manual per-layer print statements.
+:begin_tab:`mxnet`
+The report names `3.body.1`, the layer that holds the NaN. Gluon blocks carry
+no path names and there is no `named_modules`, so we list the leaves
+ourselves. We put the NaN into the *second* linear layer of the block:
+Gluon's `Dense(..., activation='relu')` applies the ReLU inside the same
+kernel, and that kernel maps NaN to 0, so a NaN in the first layer would be
+gone before any hook saw it. A hook must sit where the condition it checks
+is still visible.
 :end_tab:
 
-:begin_tab:`jax`
-We inspect the captured outputs of linear modules in object-graph order, which
-matches execution order for this sequential network. The report names
-`('layers', 3, 'body', 'layers', 0)`, the layer containing the injected NaN,
-without requiring manual per-layer print statements.
+:begin_tab:`pytorch`
+The report names `3.body.0`, the layer that holds the NaN, without a single
+print statement in the model.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The report names `block3`, the layer containing the injected NaN, without
-requiring manual per-layer print statements. The check runs on every forward pass until you edit it out of
-`call`, the price of building observation into the model rather than
-attaching it from outside. For temporary diagnosis, TensorFlow also provides this behavior through a
-switch: `tf.debugging.enable_check_numerics()` instruments
-every operation and reports the first one to produce an inf or NaN.
-:end_tab:
-
-:begin_tab:`mxnet`
-The report names block `3.body.1`, the layer containing the injected NaN,
-without requiring manual per-layer print statements. Two Gluon-specific
-details appear in the setup. First, blocks carry no path names and there is no
-`named_modules` equivalent, so the example constructs the list of leaves
-explicitly. Second, it injects the NaN into the block's *second* dense layer:
-Gluon's fused `Dense(..., activation='relu')` kernel maps NaN to $0$, so a NaN
-before the fused activation can be replaced before a hook observes it.
-Diagnostic hooks must therefore be placed where the target condition remains
-observable. Registration order does not matter: hooks fire in execution order,
-so the first completed forward with a non-finite output identifies the
-affected block.
-:end_tab:
-
-### Backward Hooks and Beyond
-
-:begin_tab:`pytorch`
-Gradients get the same treatment.
-`module.register_full_backward_hook(f)` runs
-`f(module, grad_input, grad_output)` after the module's gradients are
-computed, which is how you log activation-gradient norms or catch an explosion
-at its source. A returned replacement changes `grad_input`; it does not edit
-the module's parameter gradients. Use this API rather than the older
-`register_backward_hook`, which is deprecated and unreliable for modules with
-multiple inputs. Like forward hooks, it returns a handle to remove and should
-detach anything it stores. For the specific job of
-extracting intermediate features from a standard vision backbone,
-torchvision's `create_feature_extractor` is the production upgrade: it
-traces the model with `torch.fx` and returns a module that outputs the
-requested internal nodes directly, provided the model is traceable, whereas
-hooks work on anything.
+The report names `block3`, the block that holds the NaN. Because the check
+is part of `call`, it runs on every forward pass until we edit it out, the
+price of building observation into the model. For a temporary search,
+`tf.debugging.enable_check_numerics()` checks the output of every operation
+and reports the first one that produces an infinity or a NaN.
 :end_tab:
 
 :begin_tab:`jax`
-Gradients need no hook at all, because they are not events that fire
-inside a backward pass: `nnx.grad` returns them as a tree of values in
-the same shape as the parameters. To log per-layer gradient norms, catch
-exploding gradients at their source, or experiment with per-layer
-clipping, compute the gradient tree and inspect or transform it like any
-other data:
+The report names `('layers', 3, 'body', 'layers', 0)`, the layer that holds
+the NaN. We checked the captured outputs of the linear layers in the order
+of the module tree, which for this sequential network is the order in which
+they compute. For a search during training, `jax.config.update('jax_debug_nans',
+True)` makes JAX raise an error at the first operation that produces a NaN.
+:end_tab:
+
+### Gradient Inspection
+
+Gradients can be inspected in the same way, for instance to log the size of
+each layer's gradient or to find where the gradients start to explode. As a
+loss we take the mean squared output of the stack on a minibatch of 256
+standard normal inputs.
+
+:begin_tab:`mxnet`
+Gluon has no backward hooks, so nothing can observe gradients *while* the
+backward pass computes them. After `loss.backward()`, however, every
+parameter's gradient is available as `param.grad()`, and per-layer gradient
+norms are a loop over `net.collect_params()`. Code that must act between the
+backward pass and the update goes into the training step; Gluon's `Trainer`
+splits `step` into `allreduce_grads` and `update` so that such code can
+stand between them. Here are the gradient norms of the first linear layer
+of the third residual block:
+:end_tab:
+
+:begin_tab:`pytorch`
+`module.register_full_backward_hook(f)` runs `f(module, grad_input,
+grad_output)` while the backward pass runs, once the gradients with respect
+to the module's inputs are computed. A hook that returns a value replaces
+`grad_input`. Like a forward hook, a backward hook returns a handle to
+remove and should detach anything it stores. The gradients of the
+parameters themselves are available after the backward pass as `p.grad`.
+Here are the gradient norms of the first linear layer of the third residual
+block:
 :end_tab:
 
 :begin_tab:`tensorflow`
-There are no backward hooks, but gradients do not need them:
-`tf.GradientTape` already hands back the gradient of every variable as a
-value. To log per-layer gradient norms, catch exploding gradients at their
-source, or experiment with per-layer clipping, compute the gradients and
-inspect or transform them like any other data. For extracting features from a
-pretrained backbone, a secondary functional model provides the required output:
-`tf.keras.Model(backbone.input, backbone.get_layer('avg_pool').output)`
-turns any functional backbone into a feature extractor by naming the
-tensor you want.
+TensorFlow has no backward hooks and needs none: `tf.GradientTape` returns
+the gradient of every variable as a value, which we inspect or transform
+like any other tensor. Here are the gradient norms of the first linear layer
+of the third residual block:
 :end_tab:
 
-:begin_tab:`mxnet`
-Gluon has no backward hooks: nothing can be attached to observe gradients
-*as* the backward pass computes them. What it has is post-hoc inspection,
-and for most debugging that is enough: after `loss.backward()` every
-parameter's gradient sits in `param.grad()`, so to log per-layer gradient
-norms or catch an explosion you iterate `net.collect_params()` and read
-them like any other array. What post-hoc inspection cannot do is act
-*during* the pass, so per-layer gradient inspection in the style of
-exercise :exref:`ex_reproducibility-inspection-gradient-norms` is written into the training step instead; Gluon's `Trainer`
-splits `step` into `allreduce_grads` and `update` precisely so that such
-code can stand between them.
+:begin_tab:`jax`
+JAX needs no backward hooks: `nnx.grad` returns the gradients as a tree of
+values with the same structure as the parameters, which we inspect or
+transform like any other data. Here are the gradient norms of the first
+linear layer of the third residual block:
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
-%%tab jax
-grads = nnx.grad(lambda model: (model(X) ** 2).mean())(net)
-norms = jax.tree_util.tree_map(jnp.linalg.norm, grads)
-print(norms['layers'][3]['body']['layers'][0])
+%%tab mxnet
+X = mnp.random.normal(0, 1, (256, 20))
+with autograd.record():
+    loss = (net(X) ** 2).mean()
+loss.backward()
+layer = net[3].body[0]  # block 3, first layer
+print(f'weight {float(mnp.linalg.norm(layer.weight.grad())):.3g}, '
+      f'bias {float(mnp.linalg.norm(layer.bias.grad())):.3g}')
+```
+
+```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
+%%tab pytorch
+X = torch.randn(256, 20)
+net.zero_grad()
+(net(X) ** 2).mean().backward()
+layer = net[3].body[0]  # block 3, first layer
+print(f'weight {layer.weight.grad.norm().item():.3g}, '
+      f'bias {layer.bias.grad.norm().item():.3g}')
 ```
 
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
@@ -1059,87 +1037,102 @@ print(norms['layers'][3]['body']['layers'][0])
 with tf.GradientTape() as tape:
     loss = tf.reduce_mean(net(X) ** 2)
 grads = tape.gradient(loss, net.trainable_variables)
-for v, g in list(zip(net.trainable_variables, grads))[10:12]:
-    print(v.path, float(tf.norm(g)))  # block 3's first layer
+kernel, bias = grads[10:12]  # block 3, first layer
+print(f'kernel {float(tf.norm(kernel)):.3g}, bias {float(tf.norm(bias)):.3g}')
 ```
+
+```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
+%%tab jax
+grads = nnx.grad(lambda model: (model(X) ** 2).mean())(net)
+layer = grads['layers'][3]['body']['layers'][0]  # block 3, first layer
+print(f"kernel {float(jnp.linalg.norm(layer['kernel'][...])):.3g}, "
+      f"bias {float(jnp.linalg.norm(layer['bias'][...])):.3g}")
+```
+
+We can now repeat a run bit for bit on one machine, say which sources of
+randomness and which operations stand in the way, and observe any layer of
+an unmodified model during a run. What these tools cannot do is make two
+different machines agree, or decide on their own whether a difference
+between two runs matters; for that we compare results across seeds.
 
 ## Summary
 
-Reproducibility requires an inventory of random streams and arithmetic:
-initialization, dropout, shuffling, augmentation, and loader workers each use
-a generator, while deterministic kernels are required for bitwise repetition.
-
-:begin_tab:`pytorch`
-`torch.manual_seed` covers torch's CPU and CUDA generators; NumPy and
-`random` need their own seeds in the main process. `DataLoader` derives
-distinct worker seeds and a supplied `generator` pins the shuffle order;
-`worker_init_fn` also configures generator objects that the loader cannot
-discover. Seeding fixes random streams but does not determine arithmetic.
-`torch.use_deterministic_algorithms(True)` additionally requests deterministic
-implementations and raises on operations that cannot comply.
-:end_tab:
-
-:begin_tab:`jax`
-The JAX PRNG portion of the inventory is explicit: the same key gives the same
-draws, and independent JAX streams come from `jax.random.split`. A whole
-program must still inventory Python `random`, NumPy, data loaders, host callbacks, and
-external libraries. Keys make JAX draws repeatable but do not determine
-arithmetic. The CPU operations tested in this chapter were deterministic in this environment;
-on GPU, `--xla_gpu_deterministic_ops=true` requests deterministic kernels.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.keras.utils.set_random_seed` covers Python's `random`, NumPy, and
-TensorFlow's global generator in one call; `tf.random.Generator` objects
-and `Dataset.shuffle(seed=...)` carry their seeds explicitly. Seeding fixes
-random streams but does not determine arithmetic.
-`tf.config.experimental.enable_op_determinism()` additionally requests
-deterministic implementations,
-raising on operations that cannot comply; enable it near program startup,
-before creating operations.
-:end_tab:
-
-:begin_tab:`mxnet`
-`np.random.seed` covers MXNet's generator on every device in one call;
-NumPy's legacy global generator and Python's `random` need their own seeds,
-and Gluon's loader consults NumPy for its shuffle order while offering no per-worker
-seeding hook, so worker randomness must be pinned inside the dataset.
-Seeding fixes random streams but does not determine arithmetic. MXNet has no
-determinism switch, only the autotuning control
-`MXNET_CUDNN_AUTOTUNE_DEFAULT=0`.
-:end_tab:
-
-Bitwise agreement is a debugging tool;
-conclusions that hold across seeds are the scientific goal.
-
-:begin_tab:`pytorch`
-For looking
-inside a model, forward and backward hooks observe any module without
-editing it, subject to two rules: detach what you stash, and remove the
-handle.
-:end_tab:
-
-:begin_tab:`jax`
-For looking inside a model, `nnx.capture(..., method_outputs=...)` returns
-submodule outputs from an unmodified call, `sow` records named values from
-the inside, and gradients are values from `nnx.grad` you inspect
-directly.
-:end_tab:
-
-:begin_tab:`tensorflow`
-For looking inside a model there is no hook to attach: declare the tensors
-you want as extra outputs of a functional model, or override `call` where
-you own the code, and read gradients as values from `tf.GradientTape`.
-:end_tab:
-
-:begin_tab:`mxnet`
-For looking inside a model, forward hooks and pre-hooks observe any block
-without editing it, subject to two rules: detach what you stash, and
-detach the `HookHandle` when done. Backward hooks do not exist; gradients
-are read after the fact from `param.grad()`.
-:end_tab:
+Every random draw in a training run comes from a generator fixed by a seed:
+initialization, dropout, shuffling, augmentation, and loader workers all
+consult one. Seeding each generator the run uses fixes the draws, and private
+generator objects or explicit keys keep unrelated draws from shifting them.
+Seeding does not fix the arithmetic: floating-point addition depends on the
+order of the terms, and some GPU operations add in a varying order, so
+bitwise repetition also needs deterministic operations and holds only on one
+machine and one software version. It is a tool for debugging; scientific
+conclusions should hold across seeds. Hooks, or their equivalents in each
+framework, observe the outputs and gradients of every layer of an unmodified
+model, which turns questions such as "where did the first NaN appear?" into
+one forward pass.
 
 ## Exercises
+
+:begin_tab:`mxnet`
+1. [code] **Block ablation.** Gluon ignores a hook's return value, so an
+   output-replacing hook cannot be written.
+    1. Zero the output of one residual block's body by editing
+       `ResidualBlock.forward`, which turns the block into the identity,
+       and measure the relative change in `net`'s output on a fixed batch.
+       Repeat for every block, and rank the blocks by this change.
+    1. Rebuild `net` three more times with new random weights and repeat
+       the ranking. State whether the conclusion "block $k$ matters most"
+       survives, and what evidence such a claim would need.
+2. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
+   output of block $k$ of `net`, with each variance taken over all
+   entries. On one batch, record for every `ResidualBlock` the variance of
+   $\mathbf{x}_k$ with `register_forward_pre_hook` (the pre-hook receives
+   the argument tuple, so unpack it), of $\mathbf{h}_k$ with
+   `register_forward_hook`, and of $\mathbf{b}_k$ with a forward hook on
+   its `body`. The standard deviations in the table of
+   :numref:`subsec_activation_stats` grow because each block adds its
+   body's output to the stream. Measure how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
+3. [code] **Seeds and data loading.** ● Extend `train_once` to load its
+   data through Gluon's `DataLoader` with `shuffle=True` and
+   `num_workers=4`, keeping the single `mnp.random.seed(seed)` call at its
+   top. MXNet has no generator objects, so the dataset uses NumPy: it adds
+   noise to each example inside `__getitem__`, drawn from an
+   `np.random.default_rng()` object created in the dataset's constructor.
+    1. Predict whether two runs with the same seed agree on the shuffle
+       order and on the noise, and whether the four workers draw the same
+       noise. Justify each prediction from where that randomness is drawn,
+       then verify all three.
+    1. Gluon has no worker initializer. Make the noise a deterministic
+       function of the sample by seeding a generator from the sample index
+       inside `__getitem__`, fix the shuffle order, and verify that two
+       runs now agree. Then check whether an example's noise changes from
+       one epoch to the next.
+4. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   `net` and train it with SGD at learning rate 1 on the mean squared
+   error between its output and standard normal targets, using one fixed
+   batch of 256 standard normal inputs. Report the first step at which a
+   layer's output is non-finite, and the first such layer by depth. Check
+   the loss at every step as well, and report whether it becomes
+   non-finite before any layer output does.
+5. [code] **Gradient norms.** ● Rebuild `net`, multiply the weight of
+   every `Dense` layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. After `loss.backward()`, read each parameter's gradient through
+       `net.collect_params()` and compute per-block parameter-gradient
+       norms. To obtain each block's output gradient, run the stack one
+       block at a time, attaching gradients to the intermediate outputs.
+       Plot both families of norms against depth.
+    1. Express the gradient of a linear layer's weight through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
+   :exlabel:`ex_reproducibility-inspection-gradient-norms`
+:end_tab:
 
 :begin_tab:`pytorch`
 1. [code] **Block ablation.** A forward hook that returns a value
@@ -1148,9 +1141,9 @@ are read after the fact from `param.grad()`.
        which turns the block into the identity, and measure the relative
        change in `net`'s output on a fixed batch. Repeat for every block,
        and rank the blocks by this change.
-    1. Rebuild `net` from three other seeds and repeat the ranking. State
-       whether the conclusion "block $k$ matters most" survives the change
-       of seed, and what evidence such a claim would need.
+    1. Rebuild `net` three more times with new random weights and repeat
+       the ranking. State whether the conclusion "block $k$ matters most"
+       survives, and what evidence such a claim would need.
 2. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
    $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
    output of block $k$, with each variance taken over all entries. On one
@@ -1209,6 +1202,67 @@ are read after the fact from `param.grad()`.
    that no module hook observes.
 :end_tab:
 
+:begin_tab:`tensorflow`
+1. [code] **Block ablation.** Keras has no hook mechanism that could
+   replace a layer's output.
+    1. Zero the output of one residual block's body by editing the `call`
+       of `ResidualBlock`, which turns the block into the identity, and
+       measure the relative change in the output of a freshly built
+       `Checked` model on a fixed batch. Repeat for every
+       block, and rank the blocks by this change.
+    1. Rebuild the model three more times with new random weights and
+       repeat the ranking. State whether the conclusion "block $k$ matters
+       most" survives, and what evidence such a claim would need.
+2. [code] **Residual variance budget.** Override `call` in
+   `ResidualBlock` so that it stashes the
+   variance of its input, of its body's output, and of its own output, and
+   run a freshly built `Checked` model on one batch. Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote these three tensors for block
+   $k$, with each variance taken over all entries. The standard deviations
+   in the table of :numref:`subsec_activation_stats` grow because each
+   block adds its body's output to the stream. Measure how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
+3. [code] **Seeds and data loading.** ● Work in a fresh process, since the
+   section has already called `enable_op_determinism`, which cannot be
+   undone. Build a `tf.data` pipeline over `Dataset.range(64)` that
+   shuffles with `shuffle(64, seed=0)` and adds noise to each element in a
+   `map` with `num_parallel_calls=4`, and start every run with
+   `tf.keras.utils.set_random_seed(0)`.
+    1. Draw the noise from NumPy's global generator through
+       `tf.numpy_function`. Predict whether two runs attach the same noise
+       to the same element under the default `deterministic=True`, and
+       justify the prediction from where the randomness is drawn. Verify
+       over five runs.
+    1. Repeat the five runs twice more: once with
+       `tf.config.experimental.enable_op_determinism()` called at program
+       start, and once without it but with the noise drawn by
+       `tf.random.stateless_normal`, seeded from the element's value.
+       Explain each outcome.
+4. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   the `Checked` model and train it with SGD at learning rate 1 on the
+   mean squared error between its output and standard normal targets,
+   using one fixed batch of 256 standard normal inputs. Report the first
+   step at which a layer's output is non-finite, and the first such layer
+   by depth. Check the loss at every step as well, and report whether it
+   becomes non-finite before any layer output does.
+5. [code] **Gradient norms.** ● Rebuild `net`, multiply the kernel of
+   every `Dense` layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. Under a `tf.GradientTape`, record each block's output tensor and
+       request the gradient of the loss with respect to those outputs
+       alongside the trainable variables. Compute both families of norms
+       per block and plot them against depth.
+    1. Express the gradient of a linear layer's kernel through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
+   :exlabel:`ex_reproducibility-inspection-gradient-norms`
+:end_tab:
+
 :begin_tab:`jax`
 1. [code] **Block ablation.** `sow` records intermediates but cannot change
    them, so an output-replacing hook cannot be written.
@@ -1216,9 +1270,9 @@ are read after the fact from `param.grad()`.
        `ResidualBlock.__call__`, which turns the block into the identity,
        and measure the relative change in `net`'s output on a fixed batch.
        Repeat for every block, and rank the blocks by this change.
-    1. Rebuild `net` from three other seeds and repeat the ranking. State
-       whether the conclusion "block $k$ matters most" survives the change
-       of seed, and what evidence such a claim would need.
+    1. Rebuild `net` three more times with new random weights and repeat
+       the ranking. State whether the conclusion "block $k$ matters most"
+       survives, and what evidence such a claim would need.
 2. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
    $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
    output of block $k$, with each variance taken over all entries. Collect
@@ -1272,127 +1326,345 @@ are read after the fact from `param.grad()`.
    collect it with `nnx.capture(net, nnx.Intermediate)`.
 :end_tab:
 
-:begin_tab:`tensorflow`
-1. [code] **Block ablation.** Keras has no hook mechanism that could
-   replace a layer's output.
-    1. Zero the output of one residual block's body by editing the `call`
-       of the `ResidualBlock` used
-       in `Checked` (:numref:`subsec_nan_finder`), which turns the block into the
-       identity, and measure the relative change in the output of a
-       freshly built `Checked` model on a fixed batch. Repeat for every
-       block, and rank the blocks by this change.
-    1. Rebuild the model from three other seeds and repeat the ranking.
-       State whether the conclusion "block $k$ matters most" survives the
-       change of seed, and what evidence such a claim would need.
-2. [code] **Residual variance budget.** Override `call` in the
-   `ResidualBlock` of :numref:`subsec_nan_finder` so that it stashes the
-   variance of its input, of its body's output, and of its own output, and
-   run a freshly built `Checked` model on one batch. Let $\mathbf{x}_k$,
-   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote these three tensors for block
-   $k$, with each variance taken over all entries. The standard deviations
-   in the table of :numref:`subsec_activation_stats` grow because each
-   block adds its body's output to the stream. Measure how closely
+<!-- slides -->
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §5.8]{.kicker}
 
-   holds for every block, and name the term this equation omits.
-3. [code] **Seeds and data loading.** ● Work in a fresh process, since the
-   section has already called `enable_op_determinism`, which cannot be
-   undone. Build a `tf.data` pipeline over `Dataset.range(64)` that
-   shuffles with `shuffle(64, seed=0)` and adds noise to each element in a
-   `map` with `num_parallel_calls=4`, and start every run with
-   `tf.keras.utils.set_random_seed(0)`.
-    1. Draw the noise from NumPy's global generator through
-       `tf.numpy_function`. Predict whether two runs attach the same noise
-       to the same element under the default `deterministic=True`, and
-       justify the prediction from where the randomness is drawn. Verify
-       over five runs.
-    1. Repeat the five runs twice more: once with
-       `tf.config.experimental.enable_op_determinism()` called at program
-       start, and once without it but with the noise drawn by
-       `tf.random.stateless_normal`, seeded from the element's value.
-       Explain each outcome.
-4. [code] **Divergence monitor.** ● Turn the finiteness check of
-   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
-   the `Checked` model and train it with SGD at learning rate 1 on the
-   mean squared error between its output and standard normal targets,
-   using one fixed batch of 256 standard normal inputs. Report the first
-   step at which a layer's output is non-finite, and the first such layer
-   by depth. Check the loss at every step as well, and report whether it
-   becomes non-finite before any layer output does.
-5. [code] **Gradient norms.** ● Rebuild `net`, multiply the kernel of
-   every `Dense` layer inside its residual blocks by 3, and use the mean
-   squared output on a fixed batch as the loss.
-    1. Under a `tf.GradientTape`, record each block's output tensor and
-       request the gradient of the loss with respect to those outputs
-       alongside the trainable variables. Compute both families of norms
-       per block and plot them against depth.
-    1. Express the gradient of a linear layer's kernel through the layer's
-       input and its output gradient. Use this expression to explain why
-       the two depth profiles differ, and state which family to monitor for
-       an exploding backward signal.
-   :exlabel:`ex_reproducibility-inspection-gradient-norms`
-:end_tab:
+Reproducibility and Inspection<br>**seeds · generators · deterministic arithmetic · hooks**
+:::
+:::
 
-:begin_tab:`mxnet`
-1. [code] **Block ablation.** Gluon ignores a hook's return value, so an
-   output-replacing hook cannot be written.
-    1. Zero the output of one residual block's body by editing
-       `ResidualBlock.forward`, which turns the block into the identity,
-       and measure the relative change in `net`'s output on a fixed batch.
-       Repeat for every block, and rank the blocks by this change.
-    1. Rebuild `net` from three other seeds and repeat the ranking. State
-       whether the conclusion "block $k$ matters most" survives the change
-       of seed, and what evidence such a claim would need.
-2. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
-   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
-   output of block $k$ of `net`, with each variance taken over all
-   entries. On one batch, record for every `ResidualBlock` the variance of
-   $\mathbf{x}_k$ with `register_forward_pre_hook` (the pre-hook receives
-   the argument tuple, so unpack it), of $\mathbf{h}_k$ with
-   `register_forward_hook`, and of $\mathbf{b}_k$ with a forward hook on
-   its `body`. The standard deviations in the table of
-   :numref:`subsec_activation_stats` grow because each block adds its
-   body's output to the stream. Measure how closely
+::: {.slide title="A 0.3-Point Gain Means Nothing If Two Runs Differ by as Much"}
+[The problem]{.kicker}
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+- A one-line change raises Fashion-MNIST validation accuracy by 0.3 points.
+- Two runs of the **unchanged** script already differ by a few tenths: new
+  initial weights, a new order of examples.
+- A loss that turns into NaN at step 40,000: which layer produced the first
+  non-finite number?
 
-   holds for every block, and name the term this equation omits.
-3. [code] **Seeds and data loading.** ● Extend `train_once` to load its
-   data through Gluon's `DataLoader` with `shuffle=True` and
-   `num_workers=4`, keeping the single `np.random.seed(seed)` call at its
-   top. MXNet's `np` has no generator objects, so import official NumPy as
-   `onp`. The dataset adds noise to each example inside `__getitem__`,
-   drawn from an `onp.random.default_rng()` object created in the
-   dataset's constructor.
-    1. Predict whether two runs with the same seed agree on the shuffle
-       order and on the noise, and whether the four workers draw the same
-       noise. Justify each prediction from where that randomness is drawn,
-       then verify all three.
-    1. Gluon has no worker initializer. Make the noise a deterministic
-       function of the sample by seeding a generator from the sample index
-       inside `__getitem__`, pin the shuffle order, and verify that two runs
-       now agree. Then check whether an example's noise changes from one
-       epoch to the next.
-4. [code] **Divergence monitor.** ● Turn the finiteness check of
-   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
-   `net` and train it with SGD at learning rate 1 on the mean squared
-   error between its output and standard normal targets, using one fixed
-   batch of 256 standard normal inputs. Report the first step at which a
-   layer's output is non-finite, and the first such layer by depth. Check
-   the loss at every step as well, and report whether it becomes
-   non-finite before any layer output does.
-5. [code] **Gradient norms.** ● Rebuild `net`, multiply the weight of
-   every `Dense` layer inside its residual blocks by 3, and use the mean
-   squared output on a fixed batch as the loss.
-    1. After `loss.backward()`, read each parameter's gradient through
-       `net.collect_params()` and compute per-block parameter-gradient
-       norms. To obtain each block's output gradient, run the stack one
-       block at a time, attaching gradients to the intermediate outputs.
-       Plot both families of norms against depth.
-    1. Express the gradient of a linear layer's weight through the layer's
-       input and its output gradient. Use this expression to explain why
-       the two depth profiles differ, and state which family to monitor for
-       an exploding backward signal.
-   :exlabel:`ex_reproducibility-inspection-gradient-norms`
-:end_tab:
+::: {.d2l-note}
+We need runs that repeat exactly, and a way to look inside a run without
+editing the model.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- list where randomness enters a run, and fix it with seeds;
+- keep unrelated draws from shifting yours with generator objects or keys;
+- explain why seeded GPU runs can still differ, and turn that off;
+- measure every layer of an unmodified model with hooks;
+- find the first layer that produces a NaN in one forward pass.
+
+**Running example:** a stack of eight residual blocks of width 64, Xavier
+initialization, a minibatch of 256 standard normal inputs.
+:::
+
+::: {.slide title="Reproducibility Closes the Chapter on How Models Run"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Modules and Model Construction | a model is a tree of modules, built from a config |
+| Parameters, State, and Memory | parameters, buffers, bytes per parameter |
+| Initialization | library defaults, custom initializers, residual depth |
+| Custom Layers and Functions | new layers, state, and custom gradients |
+| Number Formats and Mixed Precision | dtypes, mixed precision, loss scaling |
+| Saving, Loading, and Pretrained Weights | safe files, checkpoints, pretrained weights |
+| GPUs, Devices, and Memory | placement, asynchrony, training memory |
+| **Reproducibility and Inspection** | **seeds, determinism, hooks** |
+:::
+
+::: {.col .narrow}
+- **Uses:** `__call__` wrapping `forward`, residual blocks, Xavier
+  initialization, rounding in float32.
+- **Skips:** profilers; agreement across machines.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Seeds and Generators]{.dtitle}
+
+[fixing every random draw]{.dsub}
+:::
+:::
+
+::: {.slide title="Randomness Enters a Run in Five Places"}
+[Seeds · inventory]{.kicker}
+
+| source | draws |
+|---|---|
+| initialization | every weight |
+| dropout | a new mask at every step |
+| data loader | a new order of examples in every epoch |
+| augmentation | crops, flips |
+| loader workers | any of the above, in other processes |
+
+::: {.d2l-note}
+Each draw comes from a *pseudorandom number generator*: a deterministic
+algorithm whose outputs are fixed by its starting state, the **seed**.
+:::
+:::
+
+::: {.slide title="One Seed Repeats a Run Bit for Bit"}
+[Seeds · global seed]{.kicker}
+
+Five SGD steps on a small MLP, run twice with seed 0 and once with seed 1:
+
+@!reproducibility-inspection-seeds-and-randomness
+
+- Same initial weights, same data, same operations in the same order.
+- Bitwise: every bit of the loss and of every weight agrees.
+:::
+
+::: {.slide title="torch.manual_seed Covers PyTorch, Not NumPy or random" only="pytorch"}
+[Seeds · coverage]{.kicker}
+
+- `torch.manual_seed(k)`: PyTorch's generator on the CPU and every GPU.
+- Not covered: Python's `random`, NumPy's global generator, and
+  `np.random.default_rng()` objects, which seed themselves.
+- `DataLoader` workers get their own seeds from a base seed; generator
+  objects inside a dataset need a `worker_init_fn`.
+:::
+
+::: {.slide title="set_random_seed Covers Python, NumPy, and TensorFlow" only="tensorflow"}
+[Seeds · coverage]{.kicker}
+
+- `tf.keras.utils.set_random_seed(k)`: Python's `random`, NumPy's global
+  generator, and TensorFlow's global generator.
+- Not covered: `tf.random.Generator` objects and `np.random.default_rng()`
+  objects, which carry their own state.
+- `tf.data` takes its seed as an argument: `shuffle(buffer, seed=...)`.
+:::
+
+::: {.slide title="mnp.random.seed Covers MXNet on Every Device, Not NumPy" only="mxnet"}
+[Seeds · coverage]{.kicker}
+
+- `mnp.random.seed(k)`: MXNet's generator on every device.
+- Not covered: Python's `random` and NumPy's global generator, from which
+  Gluon's `DataLoader` draws its shuffle order.
+- No generator objects: seed again where draws must stay fixed.
+:::
+
+::: {.slide title="JAX Has No Global Generator: Keys Are Values" only="jax"}
+[Seeds · keys]{.kicker}
+
+- `jax.random.normal(key, shape)`: the same key gives the same numbers.
+- New randomness only from `jax.random.split(key, n)` or
+  `jax.random.fold_in(key, i)`.
+- A seed becomes one key; `train_once` splits it into keys for
+  initialization, inputs, and targets.
+:::
+
+::: {.slide title="A Private Generator Ignores Unrelated Draws"}
+[Seeds · generator objects]{.kicker}
+
+One global stream couples all code: one extra draw shifts every later
+number. A private stream does not move:
+
+@reproducibility-inspection-generator-objects
+:::
+
+::: {.slide title="Loader Workers Need Their Own Streams"}
+[Seeds · workers]{.kicker}
+
+| what happens | result |
+|---|---|
+| workers start as copies of the main process | all apply the same "random" augmentations |
+| workers seed themselves from the OS | no two runs agree |
+| each worker's seed derived from one base seed | repeatable and distinct |
+
+::: {.d2l-note}
+Derive every worker's stream from one base seed, and refresh it per epoch.
+:::
+:::
+
+::: {.slide title="Check: Does the Seed Fix This Noise?"}
+[Check]{.kicker}
+
+A script seeds the framework's generator at its top. Its dataset adds noise
+drawn from `np.random.default_rng()`, created in the dataset's constructor.
+Do two runs see the same noise?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. `default_rng()` without an argument seeds itself from the
+operating system, and no framework seed reaches it. Pass it a seed derived
+from the run's seed, per worker.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Deterministic Arithmetic]{.dtitle}
+
+[the same numbers, added in a different order]{.dsub}
+:::
+:::
+
+::: {.slide title="Floating-Point Addition Is Not Associative"}
+[Arithmetic · rounding]{.kicker}
+
+@reproducibility-inspection-determinism-and-its-price-1
+
+- Near $10^8$, adjacent float32 numbers are 8 apart: $-10^8 + 1$ rounds
+  to $-10^8$.
+- A million random numbers summed forward and backward usually differ in
+  the last bits.
+:::
+
+::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run"}
+[Arithmetic · GPUs]{.kicker}
+
+- *Atomic additions* commit partial sums in the order threads finish.
+- Seeded runs on one GPU then differ in the last bits, later in the loss.
+
+| framework | switch to deterministic operations |
+|---|---|
+| PyTorch | `torch.use_deterministic_algorithms(True)`; raises if none exists |
+| TensorFlow | `tf.config.experimental.enable_op_determinism()` |
+| JAX | `XLA_FLAGS=--xla_gpu_deterministic_ops=true` |
+| MXNet | none |
+:::
+
+::: {.slide title="Bitwise Repetition Is for Debugging; Conclusions Must Hold across Seeds"}
+[Arithmetic · scope]{.kicker}
+
+- Bitwise agreement holds for one machine, one library version, one set of
+  switches; not across hardware or releases.
+- Use it to find the first step at which two runs differ.
+- A claim like "the change raises accuracy" needs the mean and spread over
+  several seeds.
+
+::: {.d2l-note}
+A conclusion that changes with the seed, or with the last bits of the
+arithmetic, needs more evidence.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Hooks]{.dtitle}
+
+[observing a model from outside its code]{.dsub}
+:::
+:::
+
+::: {.slide title="A Hook Runs inside the Call, around the Layer's Computation"}
+[Hooks · mechanism]{.kicker}
+
+![`__call__` runs pre-hooks, `forward`, then hooks; an observer captures, checks, or modifies.](../img/bg-hooks.svg)
+
+- PyTorch and MXNet: `register_forward_hook`; TensorFlow: extra outputs of
+  a functional model; JAX: `nnx.capture`.
+- No line of the model changes.
+:::
+
+::: {.slide title="The Spread Grows by a Factor of About 1.22 per Residual Block"}
+[Hooks · activation statistics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!reproducibility-inspection-capturing-activation-statistics
+:::
+
+::: {.col}
+- Standard deviation of each layer's output, 256 standard normal inputs,
+  Xavier initialization.
+- About 0.7 after the input layer, roughly 3 to 4 after eight blocks.
+:::
+:::
+:::
+
+::: {.slide title="Variances Add, and the Body Has Half the Variance of Its Input"}
+[Hooks · why 1.22]{.kicker}
+
+$\mathbf{h} = \mathbf{x} + \textrm{body}(\mathbf{x})$, with $\mathbf{x}$ and
+$\textrm{body}(\mathbf{x})$ nearly uncorrelated:
+
+$$\textrm{Var}[\mathbf{h}] \approx \textrm{Var}[\mathbf{x}] + \textrm{Var}[\textrm{body}(\mathbf{x})] \approx \textrm{Var}[\mathbf{x}] + \tfrac{1}{2}\textrm{Var}[\mathbf{x}].$$
+
+- Xavier keeps the variance through each linear layer; ReLU halves the mean
+  square.
+- Variance $\times 1.5$ per block, standard deviation $\times\sqrt{1.5}
+  \approx 1.22$; eight blocks: $1.5^4 \approx 5$.
+:::
+
+::: {.slide title="Check: How Deep Before the Spread Grows a Hundredfold?"}
+[Check]{.kicker}
+
+The standard deviation grows by $\sqrt{1.5}$ per block. After how many
+blocks is it 100 times its value at the input of the stack?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $1.5^{k/2} = 100$ gives $k = 2\log 100/\log 1.5 \approx 22.7$:
+about 23 blocks. Deep residual networks scale their residual branches down
+for this reason.
+:::
+:::
+:::
+
+::: {.slide title="A Finiteness Check on Every Layer Names the First NaN"}
+[Hooks · NaN finder]{.kicker}
+
+One NaN placed in a weight of the third residual block; a check on every
+layer raises at the first non-finite output:
+
+@!reproducibility-inspection-a-nan-finder
+
+- Hooks fire in the order the layers compute, so the first to fire names
+  the layer.
+- One forward pass, no print statements in the model.
+:::
+
+::: {.slide title="Gradients Are Values to Inspect"}
+[Hooks · gradients]{.kicker}
+
+Norms of the gradients of the first linear layer in the third block, loss
+= mean squared output:
+
+@!reproducibility-inspection-backward-hooks-and-beyond
+
+- PyTorch also offers backward hooks, which run during the backward pass.
+- JAX and TensorFlow return the gradients as values; MXNet stores them in
+  `param.grad()`.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Seeds** fix every draw of a generator; list every generator a run uses,
+  workers included.
+- **Generator objects and keys** keep unrelated draws from shifting yours.
+- **Arithmetic:** $(10^8 - 10^8) + 1 = 1$ but $10^8 + (-10^8 + 1) = 0$ in
+  float32; GPU atomics vary the order.
+:::
+
+::: {.col}
+- **Bitwise** repetition is for debugging; conclusions need several seeds.
+- **Hooks** observe any layer from outside: the spread grows by about 1.22
+  per block, and one pass finds the first NaN.
+:::
+:::
+
+**Next:** the chapters on convolutional networks, where these tools debug
+models with millions of parameters.
+:::

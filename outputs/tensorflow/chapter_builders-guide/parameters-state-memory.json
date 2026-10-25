@@ -9,12 +9,12 @@
   },
   "cells": {
     "parameters-state-memory-parameters-state-and-memory": {
-      "code_fingerprint": "sha256:7c1785a8bfa875612421051c8d63773a597611c06a2b62f660f0cd07cfc835ea",
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
       "kind": "text",
       "outputs": []
     },
     "parameters-state-memory-accessing-parameters-1": {
-      "code_fingerprint": "sha256:b464965a99203c1d0c8abb521ddd7b82aab8cec9c64b8be592c47e436b300b16",
+      "code_fingerprint": "sha256:8d89ebd6da7a89de40c968fa390e1f0aa9f3b8ad9762faf35d3dead1bb24c229",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-2": {
-      "code_fingerprint": "sha256:bf45cc2b6b9fe7675e339e212a66f23ee36e18b00ddcff1042ab5bf8e6a4d42a",
+      "code_fingerprint": "sha256:ebfddde932c5e770dddad4ad933ce209a5941156e7dfbf13918d1e09c1be20c6",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-3": {
-      "code_fingerprint": "sha256:b642040c13f97318e94ebb100ac4dfc801c18911b9762c82383ff28d110fbca4",
+      "code_fingerprint": "sha256:897233870094cc6fb2c2068486b76ef67dfc0656c0c2f27f90269939fb26ca59",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-4": {
-      "code_fingerprint": "sha256:095885b21e6caa946c381b565b7cddf5b919d216aace77ff5d8cae95e318c313",
+      "code_fingerprint": "sha256:04cab728eee063fffcc306d86cae0af9c142c0774ac4fb80e5631c69d15bf65b",
       "kind": "text",
       "outputs": [
         {
@@ -54,17 +54,17 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-5": {
-      "code_fingerprint": "sha256:92c23ca13e4cf4b0b38a3edf86a8e1ea1d8fdf151272984d2e8e0c937c8b7a5f",
+      "code_fingerprint": "sha256:1fed9191e3ec7653086004c2d7214a55c3c75ba3d816c34207ed27dd3bea1b68",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('sequential_2/dense/kernel', TensorShape([20, 64])),\n ('sequential_2/dense/bias', TensorShape([64])),\n ('sequential_2/residual_block/sequential/dense_1/kernel',\n  TensorShape([64, 64])),\n ('sequential_2/residual_block/sequential/dense_1/bias', TensorShape([64])),\n ('sequential_2/residual_block/sequential/dense_2/kernel',\n  TensorShape([64, 64])),\n ('sequential_2/residual_block/sequential/dense_2/bias', TensorShape([64])),\n ('sequential_2/residual_block_1/sequential_1/dense_3/kernel',\n  TensorShape([64, 64])),\n ('sequential_2/residual_block_1/sequential_1/dense_3/bias',\n  TensorShape([64])),\n ('sequential_2/residual_block_1/sequential_1/dense_4/kernel',\n  TensorShape([64, 64])),\n ('sequential_2/residual_block_1/sequential_1/dense_4/bias',\n  TensorShape([64])),\n ('sequential_2/dense_5/kernel', TensorShape([64, 10])),\n ('sequential_2/dense_5/bias', TensorShape([10]))]"
+          "text": "(12,\n [('sequential_2/residual_block/sequential/dense_1/kernel',\n   TensorShape([64, 64])),\n  ('sequential_2/residual_block/sequential/dense_1/bias', TensorShape([64])),\n  ('sequential_2/residual_block/sequential/dense_2/kernel',\n   TensorShape([64, 64])),\n  ('sequential_2/residual_block/sequential/dense_2/bias', TensorShape([64]))])"
         }
       ]
     },
     "parameters-state-memory-accessing-parameters-6": {
-      "code_fingerprint": "sha256:18a612c994d39f78a4a9c3a27ab34080ef0036b4f7f92f8ce3cbcfb5bb2f289c",
+      "code_fingerprint": "sha256:b95804ac22ab596e117f7bba1f2d6c97ab46aa7b4286f6a62d863d1bd2b11b66",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-1": {
-      "code_fingerprint": "sha256:ce1d2b385f27f13d53cc95c3e53b38e9488271e0a050e057a98fefd916a7b0d7",
+      "code_fingerprint": "sha256:02850ae60a3173afc274a81ef744723ab3773deb0f00eb1a1f7fe0226f1e1b09",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-2": {
-      "code_fingerprint": "sha256:ab45ff01542234628a469c419dfce8bc161a23bc012f5fc3e6f025ad98af20ac",
+      "code_fingerprint": "sha256:e11a590cb200cc9239c678801138b44fd18cd541f3bcc10ef8bf6b46f7e09049",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:e579f178f4220c7ad0d473f4e5ba4adb6fed33a42283115f1fc815f6f42942fd",
+      "code_fingerprint": "sha256:ded7059aa5bb387741b030fceab96aed0f57d349b2a1b8d0e50a760ff5566439",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:06e05f99717dc04aef43e5ae6fe81467708e7f7141cc503952c08091e7145c5d",
+      "code_fingerprint": "sha256:83cbefabc0938fade62a311ba070c7e49c30edc39be32ab52c8714ec7be3f91c",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +114,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:36121c4f51363bfc690e67cce85e3adee5087e3389a79fbdde2c7d2716bf1591",
+      "code_fingerprint": "sha256:1df88c15beb1ccbbc590ce6d5ed74e268bc239f3c1619d302a842b54b0b9d7aa",
       "kind": "text",
       "outputs": [
         {
@@ -125,7 +125,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:3bc21391cf86cb4dece672917ed07a4d73f8c91c970f878e2a1ab5f16755ea73",
+      "code_fingerprint": "sha256:8b6e7acba49a7696b9795efa9b662d381f602b66115a221b7168efc0f36bc091",
       "kind": "text",
       "outputs": [
         {
@@ -135,17 +135,17 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:2b84b759717db778d13182b2667cdd24924f0311c045d0a5262792bd79626e32",
+      "code_fingerprint": "sha256:13a862873cacca0a4901dd512180be79d9bb7d0fef43f397815dd8c84ac8e319",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('tiny_lm/embedding/embeddings', (100, 16)),\n ('tiny_lm/dense_7/kernel', (16, 16)),\n ('tiny_lm/dense_7/bias', (16,))]"
+          "text": "[('toy_lm/embedding/embeddings', (100, 16)),\n ('toy_lm/dense_7/kernel', (16, 16)),\n ('toy_lm/dense_7/bias', (16,))]"
         }
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:272685a459dc617cb40e0dbe04e1092af0d69bdf47f8320fd58dcba9a05a487f",
+      "code_fingerprint": "sha256:d5c29dd420a76417239e0ff1e99a1cdb4ba17b69201fce0aef10504fa027f3e1",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:ef4f22958819e2068228580e459510b4a345044de727cdf8f07275411dc844c5",
+      "code_fingerprint": "sha256:cf6c55c85454918b7949ef7f593bb20c643626f32e519a018d78d914936791d6",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +165,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:5ae55c22afef4c3e8fa57e4f826f0f83713fdf19ef75bf65e02fcdcba128aeca",
+      "code_fingerprint": "sha256:d4bcdaffef18053336565aeb18df8c578fc5e8d3a615c0e75cba4777bcaf6fa0",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +175,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:e491162f8fb292f41ecf048cbabaaf39f2a27c24c2c33cd2444ac78fc825f8a6",
+      "code_fingerprint": "sha256:eb48a5f5919327494fb30faef991c212fb142556cf1fbb165e56bfad1a8f3c67",
       "kind": "text",
       "outputs": [
         {
@@ -185,7 +185,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-3": {
-      "code_fingerprint": "sha256:1d0edf3754f9a980e2f1c3241b98ca367f38d03f180ce03e92c7d1ba71659cbe",
+      "code_fingerprint": "sha256:5e635dab6f8ba51722bc9af17f9f8622577344b03013b01280593948103647f2",
       "kind": "text",
       "outputs": [
         {
@@ -195,7 +195,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:a871208df52dd4b8245d07c776ca87803f498a45147e229a72543a6516130079",
+      "code_fingerprint": "sha256:ae201dd846bbdd0fec84a32beccbb8a172b354b6d3b81e3c1c607ddbbfe13261",
       "kind": "text",
       "outputs": [
         {
@@ -205,12 +205,12 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:806223dac25674496a4e16709a92a4dba529f77fa36bfd6656eccde33a746db2",
+      "code_fingerprint": "sha256:6c538ccaa370b95c7b36a86f62287dd9e1704d4ee90c74f04c4fd582aa6077f7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.3095071613788605"
+          "text": "0.3685559630393982"
         }
       ]
     }

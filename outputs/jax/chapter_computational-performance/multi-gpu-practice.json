@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:22d03d7e2e236215571db16d6a9996f524375027367814ae32da269a753eff75",
+    "d2l_lib_fingerprint": "sha256:5baea2d27e52a601657309e0da14afb885ec13222ff55543ae0a7845d38508da",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one sharded step: loss 2.47\nthe batch, split along its leading axis:\n┌──────────────────────────────────────────────────────────────────────────────┐\n│                                    GPU 0                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 1                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 2                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 3                                     │\n└──────────────────────────────────────────────────────────────────────────────┘\n"
+          "text": "one sharded step: loss 2.78\nthe batch, split along its leading axis:\n┌──────────────────────────────────────────────────────────────────────────────┐\n│                                    GPU 0                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 1                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 2                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 3                                     │\n└──────────────────────────────────────────────────────────────────────────────┘\n"
         },
         {
           "type": "stream",
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "36 all-reduce ops in the compiled step; the largest sums 6.4M floats:\n%all-reduce-start.34 = f32[6447680]{0} all-reduce-start(%wrapped_concatenate.34), channe ...\n"
+          "text": "68 all-reduce ops in the compiled step; the largest sums 6.4M floats:\n%all-reduce-start.66 = f32[6447680]{0} all-reduce-start(%wrapped_concatenate.2), channel ...\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2668 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4391 samples/s, 1.65x, 82% weak-scaling efficiency\n4 GPU(s): 8018 samples/s, 3.01x, 75% weak-scaling efficiency\n"
+          "text": "1 GPU(s): 2598 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4276 samples/s, 1.65x, 82% weak-scaling efficiency\n4 GPU(s): 7822 samples/s, 3.01x, 75% weak-scaling efficiency\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 9.2e-05\n"
+          "text": "max update difference, k=1 vs k=2: 9.1e-05\n"
         }
       ]
     }

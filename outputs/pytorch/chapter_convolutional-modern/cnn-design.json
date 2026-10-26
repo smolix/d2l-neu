@@ -4,37 +4,37 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8aac20d8b30e780f52e3c0b8f586db9ac11c44937ecc1b48c3575c5e2b3d352f",
+    "d2l_lib_fingerprint": "sha256:6a516f8cf1a89f665495755472358b0ffb5f67ebee83cfc549ae0a1fc14a15de",
     "max_inline_bytes": 0
   },
   "cells": {
     "cnn-design-designing-convolutional-network-architectures": {
-      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:dbc81cc38f4e27c0a1049476ac5c5a83c92903c7793525a48a65369294a291cc",
+      "code_fingerprint": "sha256:5fe556fa605735bf4272667fa1356e32a41198019f29783c8d70cd2a586ce396",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:895caf95b431414e830ce485bf1d013d4f421bedfb5054ccb1de42c23c74b82c",
+      "code_fingerprint": "sha256:e5313332ff298cd1d872a4e2b81e26d951789848d04015fc81b74eadbefd8850",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:26849e0e718c3171ccce797c9da43609e07c78112a3b95eeb5fd4cf759212f76",
+      "code_fingerprint": "sha256:33991a2d4cd92abe42ccc73a2fb0403934e3600be903fb1d52313f848e8ca770",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:d0beb714c90e532bc1f556f767baa27b7a601fe3288e97e9a9fec6fbd874b40b",
+      "code_fingerprint": "sha256:d354488c510beca44fcd1292bb28b37d1c734941237f8835b9d79939c030f9bf",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:78988a092c01651b7395e6f234b9c06ef3cb2fb647c7c15d8821af941fb4fc59",
+      "code_fingerprint": "sha256:28866a013beeda92e5a2e019197b0066501c1d1be42c4041995ce5e3d2b4cc51",
       "kind": "text",
       "outputs": [
         {
@@ -44,26 +44,42 @@
         }
       ]
     },
-    "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:6e11bb33629bfb604317387e21b5e6a04a4e5182d9e7740d8121cfe40c3b4947",
+    "cnn-design-training-1": {
+      "code_fingerprint": "sha256:b90086c8a9c345b88c483712443398e691cba8e67f472af25d68790a56314e77",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "torch.Size([2, 32, 16, 16])"
-        }
-      ]
+      "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:44d641d1e5fe65503cd5c31ceb2b21e804d966fb679400bc1b144d4da56358b6",
+      "code_fingerprint": "sha256:dd161072fce36423b2b2281bfe3f573f8d6e5bdf835190e89fbaf70f9a9281e8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 30403,
-          "sha256": "sha256:729cf1ae70903ac5205fcdd06060962b3aa59b68a5c792ffc5b2af9fd5544a44"
+          "bytes": 32645,
+          "sha256": "sha256:959957bd02e9955675ee943ff0ef90fbbed108421e1b898aa4a94428319062be"
+        }
+      ]
+    },
+    "cnn-design-training-2": {
+      "code_fingerprint": "sha256:e3eb74a6f435aa95feadae7169b8ce90f04bc0653869acbfee5d5e95b7f93203",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "115,642 parameters, validation accuracy 0.897\n"
+        }
+      ]
+    },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:b8ccd9fc201cdb08c4b79d2b403fd68008b2af4bcad17556463f3597f619b018",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 32, 16, 16])"
         }
       ]
     }

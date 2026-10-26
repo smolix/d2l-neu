@@ -637,6 +637,15 @@ class LeNet(d2l.Classifier):
         if type(module) in (nn.Linear, nn.Conv2d):
             nn.init.zeros_(module.bias)
 
+def cosine_warmup(t, num_steps, warmup_steps):
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
+
+    Defined in :numref:`sec_batch_norm`"""
+    if t < warmup_steps:
+        return t / warmup_steps
+    progress = (t - warmup_steps) / (num_steps - warmup_steps)
+    return 0.5 * (1 + math.cos(math.pi * progress))
+
 class Residual(nn.Module):
     """The Residual block of ResNet models.
 
@@ -680,7 +689,7 @@ class ResNeXtBlock(nn.Module):
         self.bn2 = nn.LazyBatchNorm2d()
         self.bn3 = nn.LazyBatchNorm2d()
         if use_1x1conv:
-            self.conv4 = nn.LazyConv2d(num_channels, kernel_size=1, 
+            self.conv4 = nn.LazyConv2d(num_channels, kernel_size=1,
                                        stride=strides)
             self.bn4 = nn.LazyBatchNorm2d()
         else:
@@ -693,6 +702,30 @@ class ResNeXtBlock(nn.Module):
         if self.conv4:
             X = self.bn4(self.conv4(X))
         return F.relu(Y + X)
+
+def num_params(model):
+    """The number of trainable parameters.
+
+    Defined in :numref:`sec_efficient_cnns`"""
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def mixup(X, y, alpha):
+    """Mix a minibatch with a shuffled copy; return both label sets.
+
+    Defined in :numref:`sec_training_recipes`"""
+    lam = random.betavariate(alpha, alpha)
+    perm = torch.randperm(X.shape[0], device=X.device)
+    return lam * X + (1 - lam) * X[perm], y, y[perm], lam
+
+def drop_path(Y, p, training):
+    """Zero each example of Y with probability p, rescale the rest.
+
+    Defined in :numref:`sec_training_recipes`"""
+    if not training or p == 0:
+        return Y
+    shape = (Y.shape[0],) + (1,) * (Y.ndim - 1)  # One draw per example
+    keep = torch.rand(shape, device=Y.device) > p
+    return Y * keep / (1 - p)
 
 class TimeMachine(d2l.DataModule):
     """The Time Machine dataset.

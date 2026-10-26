@@ -4,66 +4,82 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:309f361bdb3292fd723d49bbfb79c56fa91344f61b29c2bb406185703b657c60",
+    "d2l_lib_fingerprint": "sha256:6d05a51a460d76eb351b2445749992caa2f7b14f5548f6148ce24daec1c9675d",
     "max_inline_bytes": 0
   },
   "cells": {
     "cnn-design-designing-convolutional-network-architectures": {
-      "code_fingerprint": "sha256:f60fd6d6dfbdfe4a49fcc022d4ae129379ced67d3be7c82b38ba8e5fcb743997",
+      "code_fingerprint": "sha256:632344ea07cf4001b097f73bdc20545edd6e2b2b65c5af0680f8244748085073",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:f12471c40a6080375f0666c99faad4a316b0b0dbfd35fe2521d946ab96e5a4a3",
+      "code_fingerprint": "sha256:800698df16ad39aff4aa411cc11a4214575573b29b24c52f5afd5cb034d2aaae",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:3a5a9f55b2ae30e324f5e4a2a644ca83bac08b298173b47a0d55eab9f088b9c6",
+      "code_fingerprint": "sha256:a3f8ef65b0cec77fd1ade29bd788f1dd0141e99944745cc4c75dac1a436fb904",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:d2dc8da579ced1cadb32f9d24f7e3db34f04fa001ef81e79a7586cdaaa84cd91",
+      "code_fingerprint": "sha256:8710c25561155f493a7439805e2ef1e1af2024971393b5d4d818812fbc8208fa",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:05d6ded274cf8ec9526e5005f43bdc1994fb34d5f2b023405f74c8904f895d30",
+      "code_fingerprint": "sha256:d9837bf5af47e733ba4c5825dee6980a190aee7ea0b14b364deb33a0f74a2e5e",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:e5a8d5959da2c179b05b57d6d345cf0e7d78e2d476b5be78094e9ae0ff3c8ea7",
+      "code_fingerprint": "sha256:a3df6d7b3f02ccceb5de25f3e593b2aa8925fb1ad1a0d4e163b30faf88930433",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 32, 48, 48)\nSequential output shape:\t (1, 32, 24, 24)\nSequential output shape:\t (1, 80, 12, 12)\nGlobalAvgPool2D output shape:\t (1, 80, 1, 1)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential output shape:\t (1, 32, 48, 48)\nHybridSequential output shape:\t (1, 32, 24, 24)\nHybridSequential output shape:\t (1, 80, 12, 12)\nGlobalAvgPool2D output shape:\t (1, 80, 1, 1)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
-    "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:59018e8cb8328728d2fde994867daf931c9ffbedd740d9c67d7573198add056a",
+    "cnn-design-training-1": {
+      "code_fingerprint": "sha256:58b8f3f74dcc251321cb7f78f6c73b19108b3ac917666c1310f0187092b88d84",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(2, 32, 16, 16)"
-        }
-      ]
+      "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:1248f061d999f86a2d250f024ac7d8ae54d49586be5217a1c1bde2c65c3d8760",
+      "code_fingerprint": "sha256:6911a225d82debb5f36f81a8eff5e315e09ee0917a3110c86a4d2df43dd8b9cc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 35695,
-          "sha256": "sha256:31d23e76bef72ed53f7a390b0e56b4c5ea76ad6bc10fee5d73ea3f38bd123e52"
+          "bytes": 32963,
+          "sha256": "sha256:c6509c41f8302605a9a58c942af09370adee76d0bb569c8ae3b5b980c7ccb4f5"
+        }
+      ]
+    },
+    "cnn-design-training-2": {
+      "code_fingerprint": "sha256:c0a3ab3fc3705ade8f4eb0e98887b9911470ebdca813cb187f943326bde6b829",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "115,642 parameters, validation accuracy 0.898\n"
+        }
+      ]
+    },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:97c98d00deabd9d9844132e1d6b45914010e6aed2a7825d77a284fe610b3d0c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 32, 16, 16)"
         }
       ]
     }

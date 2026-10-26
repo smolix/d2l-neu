@@ -10,6 +10,7 @@ LABEL_BAND of headroom under each panel label, axis-aligned leaders only,
 repeat braces span their full panel.
 """
 
+from arch_diagrams import SANS as SANS_FONT
 from arch_diagrams import (
     Diagram, save,
     ACCENT, ACCENT_TINT, ACCENT2, ACCENT2_TINT, INK, CONTAINER_FILL,
@@ -28,7 +29,7 @@ BLOCK_LABEL_BAND = 12     # extra headroom inside a tinted block for its label
 # --------------------------------------------------------------------------- #
 
 def fig_resnet_vs_convnext_block():
-    W, H = 800, 590
+    W, H = 720, 590
     d = Diagram(W, H)
 
     y_anchor = 30                # input-x anchor (shared)
@@ -76,14 +77,14 @@ def fig_resnet_vs_convnext_block():
                   "3×3 Conv, 64", "BatchNorm", "ReLU",
                   "1×1 Conv, 256", "BatchNorm"]
     ys_l, y_plus_l, panel_l = column(xl, resnet_ops, pw_l, ACCENT2_TINT,
-                                     "ResNet-50 bottleneck block",
+                                     "ResNet-50 block",
                                      extra_after_plus="ReLU")
     d.shape_note(xl - 14, 62, "(256, 56×56)", ha="right")
 
     # ----- right: ConvNeXt block (accent 1, blue) --------------------------- #
-    xr, pw_r = 570, 122
+    xr, pw_r = 490, 122
     nxt_ops = [("7×7 ", "Depthwise", " Conv, 96"), "LayerNorm",
-               "1×1 Conv, 384", "GELU", "1×1 Conv, 96"]
+               "1×1 Conv, 384", "GELU", "1×1 Conv, 96", "Layer scale γ"]
     ys_r, y_plus_r, panel_r = column(xr, nxt_ops, pw_r, ACCENT_TINT,
                                      "ConvNeXt block", novelty_idx=0)
     d.shape_note(xr + 14, 62, "(96, 56×56)", ha="left")
@@ -249,8 +250,8 @@ def _blocked_column(d, x, groups, pw, y0, outer_label, anchor_text="input x",
 
 
 # --------------------------------------------------------------------------- #
-# 8.1: LeNet-5 vs AlexNet (two-column comparison, activations folded into     #
-# the layer pills; the story is scale + ReLU + dropout).                      #
+# 7.1: LeNet (ch. 6 version) vs AlexNet (two-column comparison, activations  #
+# folded into the layer pills; the story is scale + ReLU + dropout).          #
 # --------------------------------------------------------------------------- #
 
 def _plain_column(d, x, ops, pw, tint, label, y0, novelty_idx=None,
@@ -286,7 +287,11 @@ def _plain_column(d, x, ops, pw, tint, label, y0, novelty_idx=None,
 
 
 def fig_alexnet():
-    W, H = 860, 760
+    # Both columns show the networks as the book builds them for
+    # Fashion-MNIST (single-channel input, ten classes): the LeNet of the
+    # previous chapter and the AlexNet of sec_alexnet, so every layer and
+    # count can be checked against the code.
+    W, H = 790, 760
     d = Diagram(W, H)
     y0 = 116
 
@@ -296,22 +301,22 @@ def fig_alexnet():
                  "Dense 120, sigmoid", "Dense 84, sigmoid", "Dense 10"]
     xl, pw_l = 200, 168
     ys_l, panel_l, _ = _plain_column(
-        d, xl, lenet_ops, pw_l, ACCENT2_TINT, "LeNet-5 (1998)", y0,
+        d, xl, lenet_ops, pw_l, ACCENT2_TINT, "LeNet", y0,
         anchor_text="28×28 image")
 
     alex_ops = [("", "11×11", " Conv, 96, s4, ReLU"),
                 "3×3 MaxPool, s2",
                 "5×5 Conv, 256, pad 2, ReLU", "3×3 MaxPool, s2",
-                "3×3 Conv, 384, ReLU", "3×3 Conv, 384, ReLU",
-                "3×3 Conv, 256, ReLU", "3×3 MaxPool, s2",
+                "3×3 Conv, 384, pad 1, ReLU", "3×3 Conv, 384, pad 1, ReLU",
+                "3×3 Conv, 256, pad 1, ReLU", "3×3 MaxPool, s2",
                 "Flatten",
                 "Dense 4096, ReLU", "Dropout 0.5",
                 "Dense 4096, ReLU", "Dropout 0.5",
-                "Dense 1000"]
-    xr, pw_r = 560, 178
+                "Dense 10"]
+    xr, pw_r = 490, 196
     ys_r, panel_r, _ = _plain_column(
-        d, xr, alex_ops, pw_r, ACCENT_TINT, "AlexNet (2012)", y0,
-        novelty_idx=0, anchor_text="224×224×3 image")
+        d, xr, alex_ops, pw_r, ACCENT_TINT, "AlexNet", y0,
+        novelty_idx=0, anchor_text="224×224 image")
 
     # callouts (horizontal leaders at target height)
     pr_edge = xr + pw_r / 2 + 4
@@ -323,13 +328,12 @@ def fig_alexnet():
         [("ReLU everywhere:", INK, 1)],
         [("no saturating sigmoids", INK, 1)],
     ], target=(pr_edge, ys_r[4]), leader_from=(W - 138, ys_r[4]), ha="right")
-    # whole-network capacity note in the empty space above the short column;
-    # vertical leader down onto the LeNet panel top
+    # whole-network capacity note in the empty space above the short column
     y_note = panel_l[3] + 96
     d.callout(60, y_note, [
-        [("LeNet-5 has ", INK, 1), ("~60k", ACCENT2, 1),
+        [("LeNet has ", INK, 1), ("62k", ACCENT2, 1),
          (" parameters;", INK, 1)],
-        [("AlexNet has ", INK, 1), ("~60M", ACCENT, 1),
+        [("AlexNet has ", INK, 1), ("47M", ACCENT, 1),
          (" parameters", INK, 1)],
     ], ha="left")
 
@@ -337,41 +341,40 @@ def fig_alexnet():
 
 
 # --------------------------------------------------------------------------- #
-# 8.2: AlexNet vs VGG-11 — blocks as the unit of design.                      #
+# 7.2: AlexNet vs VGG-11 — blocks as the unit of design.                      #
 # --------------------------------------------------------------------------- #
 
 def fig_vgg():
-    W, H = 900, 1170
+    # Both columns show the networks for single-channel 224x224 images and
+    # ten classes, as sec_vgg builds them; the shared dense head is drawn as
+    # one pill so that the comparison stays on the convolutional body.
+    W, H = 880, 900
     d = Diagram(W, H)
     y0 = 116
+    head = ["Flatten", "Dense 4096, 4096, 10"]
 
     # left: AlexNet as one unstructured run of ops (no inner blocks)
     alex_ops = ["11×11 Conv, 96, s4, ReLU", "3×3 MaxPool, s2",
                 "5×5 Conv, 256, pad 2, ReLU", "3×3 MaxPool, s2",
-                "3×3 Conv, 384, ReLU", "3×3 Conv, 384, ReLU",
-                "3×3 Conv, 256, ReLU", "3×3 MaxPool, s2",
-                "Flatten",
-                "Dense 4096, ReLU", "Dropout 0.5",
-                "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]
-    xl, pw_l = 210, 178
+                "3×3 Conv, 384, pad 1, ReLU", "3×3 Conv, 384, pad 1, ReLU",
+                "3×3 Conv, 256, pad 1, ReLU", "3×3 MaxPool, s2"] + head
+    xl, pw_l = 190, 196
     _, panel_l, _ = _blocked_column(
-        d, xl, [{"ops": alex_ops}], pw_l, y0, "AlexNet: 14 hand-set layers",
-        anchor_text="224×224×3 image")
+        d, xl, [{"ops": alex_ops}], pw_l, y0, "AlexNet",
+        anchor_text="224×224 image")
 
     # right: VGG-11 as five repeated blocks + head
     def vgg_block(c, n):
-        return {"ops": [f"3×3 Conv, {c}, ReLU"] * n + ["2×2 MaxPool, s2"],
-                "tint": True, "repeat": None}
+        return {"ops": [f"3×3 Conv, {c}, pad 1, ReLU"] * n
+                + ["2×2 MaxPool, s2"], "tint": True, "repeat": None}
 
     groups = [vgg_block(64, 1), vgg_block(128, 1), vgg_block(256, 2),
-              vgg_block(512, 2), vgg_block(512, 2),
-              {"ops": ["Flatten", "Dense 4096, ReLU", "Dropout 0.5",
-                       "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]}]
-    groups[0]["ops"][0] = ("", "3×3", " Conv, 64, ReLU")   # novelty
-    xr, pw_r = 600, 150
+              vgg_block(512, 2), vgg_block(512, 2), {"ops": head}]
+    groups[0]["ops"][0] = ("", "3×3", " Conv, 64, pad 1, ReLU")   # novelty
+    xr, pw_r = 500, 186
     _, panel_r, lay = _blocked_column(
-        d, xr, groups, pw_r, y0, "VGG-11: five blocks, one pattern",
-        anchor_text="224×224×3 image", novelty_at=(0, 0))
+        d, xr, groups, pw_r, y0, "VGG-11",
+        anchor_text="224×224 image", novelty_at=(0, 0))
 
     # callouts (horizontal, at target height)
     blk3_mid = 0.5 * (lay[2][2] + lay[2][3])
@@ -380,59 +383,57 @@ def fig_vgg():
         [("is the ", INK, 1), ("block", ACCENT, 1),
          (", not the layer", INK, 1)],
     ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, blk3_mid),
-        leader_from=(W - 168, blk3_mid), ha="right")
+        leader_from=(W - 178, blk3_mid), ha="right")
     y_conv2 = lay[3][1][0]
     d.callout(W - 8, y_conv2 + LH / 2, [
         [("Two stacked ", INK, 1), ("3×3", ACCENT, 1), (" convs", INK, 1)],
         [("see 5×5, with fewer weights", INK, 1)],
     ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, y_conv2),
-        leader_from=(W - 180, y_conv2), ha="right")
-    # capacity note above the shorter AlexNet column
+        leader_from=(W - 200, y_conv2), ha="right")
+    # depth note above the shorter AlexNet column
     y_note = panel_l[3] + 96
-    d.callout(60, y_note, [
-        [("Deeper and narrower wins:", INK, 1)],
+    d.callout(40, y_note, [
         [("VGG-11 has ", INK, 1), ("8", ACCENT, 1),
-         (" conv layers to AlexNet's ", INK, 1), ("5", ACCENT2, 1)],
-    ], target=(140, panel_l[3] + 4), leader_from=(140, y_note - 2 * LH + 6),
-        ha="left")
+         (" convolutions,", INK, 1)],
+        [("AlexNet ", INK, 1), ("5", ACCENT2, 1)],
+    ], ha="left")
 
     save(d.fig, "arch-vgg")
 
 
 # --------------------------------------------------------------------------- #
-# 8.2: NiN — the head question: dense layers vs 1×1 convs + global pooling.   #
+# 7.2: NiN — the head question: dense layers vs 1×1 convs + global pooling.   #
 # --------------------------------------------------------------------------- #
 
 def fig_nin():
-    W, H = 920, 500
+    W, H = 880, 500
     d = Diagram(W, H)
     y0 = 116
 
     # left: the VGG-style dense head
     xl, pw_l = 260, 140
     head_ops = ["Flatten", "Dense 4096, ReLU", "Dropout 0.5",
-                "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]
+                "Dense 4096, ReLU", "Dropout 0.5", "Dense 10"]
     _, panel_l, lay_l = _blocked_column(
         d, xl, [{"ops": head_ops}], pw_l, y0, "VGG head",
         anchor_text="(512, 7×7) features")
 
-    # right: the NiN head — last NiN block + global average pooling
-    xr, pw_r = 615, 150
-    groups = [{"ops": ["3×3 Conv, 10, ReLU", "1×1 Conv, 10, ReLU",
-                       "1×1 Conv, 10, ReLU"],
+    # right: the end of NiN: dropout, last NiN block, global average pooling
+    xr, pw_r = 575, 150
+    groups = [{"ops": ["Dropout 0.5"]},
+              {"ops": ["3×3 Conv, 10, ReLU", "1×1 Conv, 10, ReLU",
+                       "1×1 Conv, 10"],
                "tint": True, "label": "NiN block"},
-              {"ops": [("", "Global AvgPool", ""), "Flatten"]}]
+              {"ops": [("", "Global AvgPool", "")]}]
     _, panel_r, lay_r = _blocked_column(
-        d, xr, groups, pw_r, y0, "NiN head",
-        anchor_text="(384, 5×5) features", novelty_at=(1, 0))
+        d, xr, groups, pw_r, y0, "End of NiN",
+        anchor_text="(384, 5×5) features", novelty_at=(2, 0))
 
     # shape notes in the empty middle gap, fully outside the NiN grey box
     d.shape_note(panel_r[0] - 8,
-                 0.5 * (lay_r[0][3] + lay_r[1][1][0] - PILL_H / 2) + 1,
+                 0.5 * (lay_r[1][3] + lay_r[2][1][0] - PILL_H / 2) + 1,
                  "(10, 5×5)", ha="right")
-    d.shape_note(panel_r[0] - 8,
-                 0.5 * (lay_r[1][1][0] + lay_r[1][1][1]),
-                 "(10, 1×1)", ha="right")
+    d.shape_note(xr + 14, panel_r[3] + 14, "10 scores")
 
     # callouts
     y_dense = lay_l[0][1][1]
@@ -442,7 +443,7 @@ def fig_nin():
         [("live in this head", INK, 1)],
     ], target=(xl - pw_l / 2 - 4, y_dense), leader_from=(148, y_dense),
         ha="left")
-    y_gap = lay_r[1][1][0]
+    y_gap = lay_r[2][1][0]
     d.callout(W - 48, y_gap + LH / 2, [
         [("No parameters at all:", INK, 1)],
         [("one channel per class", INK, 1)],
@@ -456,7 +457,8 @@ def fig_nin():
 # 8.4: ResNet residual block — identity vs projection shortcut.               #
 # --------------------------------------------------------------------------- #
 
-def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None):
+def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
+                     top="ReLU"):
     """Residual block column: ops on the spine, skip from below the first
     pill into a ⊕ one step above the last pill; ``shortcut_pill`` (str) puts
     an op on the skip path (projection variant).  Returns (ys, y_plus)."""
@@ -495,45 +497,99 @@ def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None):
         d.skip(x, y_branch, y_plus, x_out)
 
     d.arrow(x, y_plus + PLUS_R, y_relu - PILL_H / 2)
-    d.pill(x, y_relu, "ReLU", w=pw)
+    d.pill(x, y_relu, top, w=pw)
     d.arrow(x, y_relu + PILL_H / 2, panel[3] + 30)
     d.anchor(x, y_anchor, "input x")
     return ys, y_plus
 
 
 def fig_resnet_block():
-    W, H = 980, 480
+    W, H = 850, 480
     d = Diagram(W, H)
     y0 = 116
     ops = ["3×3 Conv, BatchNorm", "ReLU", "3×3 Conv, BatchNorm"]
 
-    xl, pw = 230, 138
+    xl, pw = 210, 138
     ys_l, y_plus_l = _residual_column(
-        d, xl, ops, pw, ACCENT_TINT, "Identity shortcut", y0)
-    xr = 560
+        d, xl, ops, pw, ACCENT_TINT, "Identity\nshortcut", y0)
+    xr = 470
     ys_r, y_plus_r = _residual_column(
-        d, xr, ops, pw, ACCENT_TINT, "Projection shortcut", y0,
+        d, xr, ops, pw, ACCENT_TINT, "Projection\nshortcut", y0,
         shortcut_pill="1×1 Conv")
 
     d.callout(8, y_plus_l + LH, [
-        [("The new wiring:", INK, 1)],
-        [("output is ", INK, 1), ("x + f(x)", ACCENT, 1), (",", INK, 1)],
-        [("so f learns a correction", INK, 1)],
-    ], target=(xl - PLUS_R - 4, y_plus_l), leader_from=(196, y_plus_l),
+        [("The sum is ", INK, 1), ("x + g(x)", ACCENT, 1), (",", INK, 1)],
+        [("so g learns", INK, 1)],
+        [("a correction", INK, 1)],
+    ], target=(xl - PLUS_R - 4, y_plus_l), leader_from=(116, y_plus_l),
         ha="left")
     y_mid = 0.5 * ((y0 - PILL_H / 2 - 11) + y_plus_r)
-    d.callout(W - 2, y_mid + LH / 2, [
-        [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv matches shape", INK, 1)],
-        [("when channels or stride change", INK, 1)],
-    ], target=(xr + 126 + 47, y_mid), leader_from=(W - 216, y_mid),
+    d.callout(W - 2, y_mid + LH, [
+        [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv matches", INK, 1)],
+        [("the shape when the", INK, 1)],
+        [("channels or stride change", INK, 1)],
+    ], target=(xr + 126 + 47, y_mid), leader_from=(W - 160, y_mid),
         ha="right")
 
     save(d.fig, "arch-resnet-block")
 
 
 # --------------------------------------------------------------------------- #
+# 8.4: Regular vs residual block — the residual block learns g(x) = f(x) - x. #
+# --------------------------------------------------------------------------- #
+
+def fig_residual_concept():
+    W, H = 600, 470
+    d = Diagram(W, H)
+    y0 = 116
+    ops = ["Weight layer", "Activation", "Weight layer"]
+    pw = 128
+    xl, xr = 110, 370
+    ys_r, y_plus = _residual_column(
+        d, xr, ops, pw, ACCENT_TINT, "Residual\nblock", y0, top="Activation")
+    # Regular block: same rhythm and height, no shortcut, no addition
+    y_top = y_plus + PILL_STEP
+    panel = (xl - pw / 2 - 22, y0 - PILL_H / 2 - 23, xl + pw / 2 + 22,
+             y_top + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=CONTAINER_FILL)
+    d.stage_label(panel[0] + 14, panel[3] - 9, "Regular\nblock")
+    y_anchor = panel[1] - 36
+    d.arrow(xl, y_anchor + 14, ys_r[0] - PILL_H / 2)
+    for i, (op, y) in enumerate(zip(ops, ys_r)):
+        d.pill(xl, y, op, w=pw)
+        if i < len(ops) - 1:
+            d.arrow(xl, y + PILL_H / 2, ys_r[i + 1] - PILL_H / 2)
+    d.arrow(xl, ys_r[-1] + PILL_H / 2, y_top - PILL_H / 2)
+    d.pill(xl, y_top, "Activation", w=pw)
+    d.arrow(xl, y_top + PILL_H / 2, panel[3] + 30)
+    d.anchor(xl, y_anchor, "input x")
+
+    def math(x, y, text, color=INK):
+        d.ax.text(x, y, text, fontsize=12.5, color=color, family=SANS_FONT,
+                  style="italic", ha="left", va="center", zorder=8)
+
+    # regular: the stack itself must produce f(x)
+    math(xl + 12, y_plus, "f(x)")
+    # residual: the stack produces g(x); the sum is f(x) = g(x) + x
+    math(xr + 12, 0.5 * (ys_r[-1] + PILL_H / 2 + y_plus - PLUS_R),
+         "g(x)", color=ACCENT)
+    math(xr + 14, 0.5 * (y_plus + PLUS_R + y_top - PILL_H / 2),
+         "f(x) = g(x) + x")
+    math(xr + 96, 0.5 * (ys_r[0] + y_plus), "x")
+
+    save(d.fig, "arch-residual-concept")
+
+
+# --------------------------------------------------------------------------- #
 # 8.4: ResNeXt block — grouped bottleneck.                                    #
 # --------------------------------------------------------------------------- #
+
+def _note(d, x, y, text, ha="left"):
+    """Black italic shape note (annotation text is black, house rule)."""
+    from arch_diagrams import NOTE_FS, SANS
+    d.ax.text(x, y, text, fontsize=NOTE_FS, color=INK, family=SANS,
+              style="italic", ha=ha, va="center", zorder=8)
+
 
 def fig_resnext_block():
     W, H = 620, 520
@@ -568,12 +624,13 @@ def fig_resnext_block():
     d.pill(x, y_relu, "ReLU", w=pw)
     d.arrow(x, y_relu + PILL_H / 2, panel[3] + 30)
     d.anchor(x, y_anchor, "input x")
-    d.shape_note(x - 90, y_anchor + 26, "(256, h×w)", ha="right")
+    _note(d, x - 90, y_anchor + 26, "(256, H×W)", ha="right")
 
     d.callout(8, ys[2] + LH / 2, [
-        [("32", ACCENT, 1), (" parallel paths", INK, 1)],
-        [("for the price of one", INK, 1)],
-    ], target=(x - pw / 2 - 15, ys[2]), leader_from=(126, ys[2]), ha="left")
+        [("32", ACCENT, 1), (" groups of 4 channels:", INK, 1)],
+        [("1/32", ACCENT, 1), (" of the weights", INK, 1)],
+        [("of a dense 3×3 conv", INK, 1)],
+    ], target=(x - pw / 2 - 15, ys[2]), leader_from=(150, ys[2]), ha="left")
 
     save(d.fig, "arch-resnext-block")
 
@@ -621,9 +678,9 @@ def fig_densenet_block():
     cat_skip(0.5 * (ys[1] + ys[2]) + 1, ys[3], 136)
 
     # channel growth beside the spine
-    d.shape_note(x + 14, y_anchor + 26, "(64, h×w)")
-    d.shape_note(x + pw / 2 + 30, 0.5 * (ys[1] + ys[2]), "(96, h×w)")
-    d.shape_note(x + 14, panel[3] + 18, "(128, h×w)")
+    _note(d, x + 14, y_anchor + 26, "(64, H×W)")
+    _note(d, x + pw / 2 + 30, 0.5 * (ys[1] + ys[2]), "(96, H×W)")
+    _note(d, x + 14, panel[3] + 18, "(128, H×W)")
 
     d.callout(8, ys[1] + LH, [
         [("Inputs are appended,", INK, 1)],
@@ -641,7 +698,7 @@ def fig_densenet_block():
 # --------------------------------------------------------------------------- #
 
 def fig_resnet18():
-    W, H = 680, 800
+    W, H = 640, 800
     d = Diagram(W, H)
     x, pw = 250, 150
     y0 = 116
@@ -665,25 +722,19 @@ def fig_resnet18():
     xs = outer[2] + 8               # just outside the grey outer container
     def between(a, b):
         return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
-    d.shape_note(xs, between(0, 1) - 4, "(64, 24×24)")
-    d.shape_note(xs, between(1, 2) - 4, "(64, 24×24)")
-    d.shape_note(xs, between(2, 3) - 4, "(128, 12×12)")
-    d.shape_note(xs, between(3, 4) - 4, "(256, 6×6)")
-    d.shape_note(xs, between(4, 5) - 4, "(512, 3×3)")
+    _note(d, xs, between(0, 1) - 4, "(64, 24×24)")
+    _note(d, xs, between(1, 2) - 4, "(64, 24×24)")
+    _note(d, xs, between(2, 3) - 4, "(128, 12×12)")
+    _note(d, xs, between(3, 4) - 4, "(256, 6×6)")
+    _note(d, xs, between(4, 5) - 4, "(512, 3×3)")
 
-    y_s3 = 0.5 * (lay[3][2] + lay[3][3])
-    d.callout(W - 8, y_s3 + LH / 2, [
-        [("Each stage halves the resolution", INK, 1)],
-        [("and doubles the channels", INK, 1)],
-    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s3),
-        leader_from=(W - 208, y_s3), ha="right")
-    y_s1 = 0.5 * (lay[1][2] + lay[1][3])
-    d.callout(W - 8, y_s1 + LH / 2, [
-        [("First block of stages 2–4", INK, 1)],
-        [("uses the ", INK, 1), ("projection", ACCENT, 1),
-         (" variant, s2", INK, 1)],
-    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s1),
-        leader_from=(W - 190, y_s1), ha="right")
+    y_s2 = 0.5 * (lay[2][2] + lay[2][3])
+    d.callout(W - 8, y_s2 + LH, [
+        [("Stages 2–4 open with the", INK, 1)],
+        [("projection", ACCENT, 1), (" block, stride 2:", INK, 1)],
+        [("resolution ÷2, channels ×2", INK, 1)],
+    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s2),
+        leader_from=(W - 178, y_s2), ha="right")
 
     save(d.fig, "arch-resnet18")
 
@@ -746,18 +797,28 @@ def fig_convnext():
 # --------------------------------------------------------------------------- #
 
 def fig_dws_block():
-    W, H = 640, 440
+    import matplotlib.pyplot as plt
+    from arch_diagrams import SANS
+    # Subscripts as mathtext set in the book font (it has no subscript i/o).
+    with plt.rc_context({"mathtext.fontset": "custom", "mathtext.rm": SANS,
+                         "mathtext.it": f"{SANS}:italic",
+                         "mathtext.bf": f"{SANS}:bold"}):
+        _fig_dws_block()
+
+
+def _fig_dws_block():
+    W, H = 600, 440
     d = Diagram(W, H)
     x, pw = 250, 172
     y0 = 116
 
-    ops = [("3×3 ", "Depthwise", " Conv, c"), "BatchNorm, ReLU",
-           "1×1 Conv, c′", "BatchNorm, ReLU"]
+    ops = [("3×3 ", "Depthwise", r" Conv, $c_\mathrm{i}$"), "BatchNorm, ReLU",
+           r"1×1 Conv, $c_\mathrm{o}$", "BatchNorm, ReLU"]
     ys = [y0 + i * PILL_STEP for i in range(len(ops))]
     panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23, x + pw / 2 + 22,
              ys[-1] + PILL_H / 2 + LABEL_BAND)
     d.container(*panel, fill=ACCENT_TINT)
-    d.stage_label(panel[0] + 14, panel[3] - 9, "Depthwise-separable block")
+    d.stage_label(panel[0] + 14, panel[3] - 9, "Separable block")
 
     y_anchor = panel[1] - 36
     d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
@@ -771,8 +832,8 @@ def fig_dws_block():
             d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
     d.arrow(x, ys[-1] + PILL_H / 2, panel[3] + 30)
     d.anchor(x, y_anchor, "input x")
-    d.shape_note(x - 96, y_anchor + 26, "(c, h×w)", ha="right")
-    d.shape_note(x + 14, panel[3] + 18, "(c′, h×w)")
+    d.shape_note(x - 96, y_anchor + 26, r"($c_\mathrm{i}$, h×w)", ha="right")
+    d.shape_note(x + 14, panel[3] + 18, r"($c_\mathrm{o}$, h×w)")
 
     d.callout(W - 8, ys[0] + LH / 2, [
         [("Spatial filtering,", INK, 1)],
@@ -784,10 +845,11 @@ def fig_dws_block():
         [("one position at a time", INK, 1)],
     ], target=(x + pw / 2 + 4, ys[2]), leader_from=(W - 158, ys[2]),
         ha="right")
-    d.callout(8, ys[1] + LH / 2, [
-        [("Together: ", INK, 1), ("1/c′ + 1/9", ACCENT, 1)],
+    y_mid = 0.5 * (ys[1] + ys[2])  # no leader: the note covers the whole block
+    d.callout(8, y_mid + LH / 2, [
+        [("Together: ", INK, 1), (r"1/$c_\mathrm{o}$ + 1/9", ACCENT, 1)],
         [("of a dense 3×3 conv", INK, 1)],
-    ], target=(x - pw / 2 - 4, ys[1]), leader_from=(136, ys[1]), ha="left")
+    ], ha="left")
 
     save(d.fig, "arch-dws-block")
 
@@ -861,24 +923,54 @@ def fig_repvgg_reparam():
 
 
 # --------------------------------------------------------------------------- #
+# 7.5: RepVGG kernel algebra -- three folded kernels add to one (mechanics     #
+# grid family; one output channel o and the input channel i = o).             #
+# --------------------------------------------------------------------------- #
+
+def fig_repvgg_kernels():
+    from arch_diagrams import MechDiagram
+    cell, gap = 26.0, 19.0
+    W3 = [[1, 0, 2], [0, 1, 1], [2, 1, 0]]       # the 3x3 branch, folded
+    W1 = [[0, 0, 0], [0, 3, 0], [0, 0, 0]]       # the 1x1 branch, padded
+    I = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]        # the identity, i = o
+    fused = [[W3[r][c] + W1[r][c] + I[r][c] for c in range(3)]
+             for r in range(3)]
+    panels = [(W3, "3×3 branch"), (W1, "1×1 branch, padded"),
+              (I, "identity"), (fused, "fused")]
+    d = MechDiagram(4 * 3 * cell + 6 * gap + 40, 3 * cell + 52)
+    y, ty = 20, 20 + 3 * cell + 10
+    x = 20
+    for k, (K, title) in enumerate(panels):
+        values = {(r, c): str(K[r][c]) for r in range(3) for c in range(3)}
+        shaded = {(r, c) for r in range(3) for c in range(3) if K[r][c]}
+        w, _ = d.grid(x, y, 3, 3, cell, shaded=shaded, values=values,
+                      title=title, title_y=ty)
+        x += w + gap
+        if k < len(panels) - 1:
+            d.op(x, y + 1.5 * cell, "=" if k == 2 else "+")
+            x += gap
+    save(d.fig, "arch-repvgg-kernels")
+
+
+# --------------------------------------------------------------------------- #
 # 8.8: AnyNet design space (symbolic stem/body/head).                         #
 # --------------------------------------------------------------------------- #
 
 def fig_anynet():
-    W, H = 680, 760
+    W, H = 590, 760
     d = Diagram(W, H)
-    x, pw = 260, 170
+    x, pw = 230, 190
     y0 = 116
 
     groups = [
-        {"ops": ["3×3 Conv, w₀, s2"]},
-        {"ops": ["Residual bottleneck, w₁"], "tint": True, "repeat": "d₁",
+        {"ops": ["3×3 Conv, c₀, s2"]},
+        {"ops": ["ResNeXt block, c₁, g₁, k₁"], "tint": True, "repeat": "d₁",
          "label": "Stage 1"},
-        {"ops": ["Residual bottleneck, w₂"], "tint": True, "repeat": "d₂",
+        {"ops": ["ResNeXt block, c₂, g₂, k₂"], "tint": True, "repeat": "d₂",
          "label": "Stage 2"},
-        {"ops": ["Residual bottleneck, w₃"], "tint": True, "repeat": "d₃",
+        {"ops": ["ResNeXt block, c₃, g₃, k₃"], "tint": True, "repeat": "d₃",
          "label": "Stage 3"},
-        {"ops": ["Residual bottleneck, w₄"], "tint": True, "repeat": "d₄",
+        {"ops": ["ResNeXt block, c₄, g₄, k₄"], "tint": True, "repeat": "d₄",
          "label": "Stage 4"},
         {"ops": ["Global AvgPool", "Dense n"]},
     ]
@@ -889,37 +981,130 @@ def fig_anynet():
     xs = outer[2] + 8               # just outside the grey outer container
     def between(a, b):
         return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
-    d.shape_note(xs, between(0, 1) - 4, "(w₀, r/2 × r/2)")
-    d.shape_note(xs, between(1, 2) - 4, "(w₁, r/4 × r/4)")
-    d.shape_note(xs, between(2, 3) - 4, "(w₂, r/8 × r/8)")
-    d.shape_note(xs, between(3, 4) - 4, "(w₃, r/16 × r/16)")
-    d.shape_note(xs, between(4, 5) - 4, "(w₄, r/32 × r/32)")
+    d.shape_note(xs, between(0, 1) - 4, "(c₀, r/2 × r/2)")
+    d.shape_note(xs, between(1, 2) - 4, "(c₁, r/4 × r/4)")
+    d.shape_note(xs, between(2, 3) - 4, "(c₂, r/8 × r/8)")
+    d.shape_note(xs, between(3, 4) - 4, "(c₃, r/16 × r/16)")
+    d.shape_note(xs, between(4, 5) - 4, "(c₄, r/32 × r/32)")
 
     y_s2 = 0.5 * (lay[2][2] + lay[2][3])
-    d.callout(W - 8, y_s2 + LH / 2, [
-        [("The knobs: per-stage depth ", INK, 1), ("d", ACCENT, 1),
-         (",", INK, 1)],
-        [("width ", INK, 1), ("w", ACCENT, 1),
-         (", and the block shape", INK, 1)],
+    d.callout(W - 8, y_s2 + 1.5 * LH, [
+        [("Per stage: depth ", INK, 1), ("d", ACCENT, 1), (",", INK, 1)],
+        [("width ", INK, 1), ("c", ACCENT, 1), (",", INK, 1)],
+        [("group width ", INK, 1), ("g", ACCENT, 1), (",", INK, 1)],
+        [("bottleneck ratio ", INK, 1), ("k", ACCENT, 1)],
     ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s2),
-        leader_from=(W - 246, y_s2), ha="right")
+        leader_from=(W - 152, y_s2), ha="right")
 
     save(d.fig, "arch-anynet")
 
 
+# --------------------------------------------------------------------------- #
+# 8.3: Normalization axes — which numbers share one mean and variance.        #
+# --------------------------------------------------------------------------- #
+
+def fig_norm_axes():
+    """Five (N, C, H·W) cubes; the shaded cells share one mean/variance."""
+    from matplotlib.patches import Polygon
+    from arch_diagrams import FAMILY_BLUE
+    from figstyle import tokens as T
+
+    NC, NH, NN = 6, 5, 4         # channels (across), positions (up), examples (depth)
+    cell = 13.0                  # front-face cell size
+    dx, dy = 8.5, 6.5            # oblique offset per example (depth)
+    gap = 44.0
+    cube_w = NC * cell + NN * dx
+    W = 5 * cube_w + 4 * gap + 40
+    H = 200
+    d = Diagram(W, H)
+    grid_c, edge_c = T.FAINT, INK
+
+    def quad(pts, shaded):
+        d.ax.add_patch(Polygon(pts, closed=True,
+                               facecolor=FAMILY_BLUE if shaded else "white",
+                               edgecolor=grid_c, lw=0.6, zorder=3))
+
+    panels = [
+        ("Batch norm", lambda n, c, h: c == 2),
+        ("Layer norm", lambda n, c, h: n == 0),
+        ("Group norm", lambda n, c, h: n == 0 and c in (2, 3)),
+        ("Instance norm", lambda n, c, h: n == 0 and c == 2),
+        ("Layer norm per position", lambda n, c, h: n == 0 and h == 2),
+    ]
+    y0 = 52.0                    # bottom of the front face
+    for k, (title, sel) in enumerate(panels):
+        x0 = 30 + k * (cube_w + gap)
+
+        def P(c, h, n):          # front-bottom-left corner of cell (c, h, n)
+            return (x0 + c * cell + n * dx, y0 + h * cell + n * dy)
+
+        # top face (h = NH), cells (c, n), back to front
+        for n in reversed(range(NN)):
+            for c in range(NC):
+                quad([P(c, NH, n), P(c + 1, NH, n), P(c + 1, NH, n + 1),
+                      P(c, NH, n + 1)], sel(n, c, NH - 1))
+        # right face (c = NC), cells (n, h)
+        for n in reversed(range(NN)):
+            for h in range(NH):
+                quad([P(NC, h, n), P(NC, h, n + 1), P(NC, h + 1, n + 1),
+                      P(NC, h + 1, n)], sel(n, NC - 1, h))
+        # front face (n = 0), cells (c, h)
+        for c in range(NC):
+            for h in range(NH):
+                quad([P(c, h, 0), P(c + 1, h, 0), P(c + 1, h + 1, 0),
+                      P(c, h + 1, 0)], sel(0, c, h))
+        # outline of the cube
+        outline = [P(0, 0, 0), P(NC, 0, 0), P(NC, 0, NN), P(NC, NH, NN),
+                   P(0, NH, NN), P(0, NH, 0), P(0, 0, 0)]
+        d.ax.plot(*zip(*outline), color=edge_c, lw=1.1, zorder=5)
+        d.ax.plot(*zip(P(0, NH, 0), P(NC, NH, 0), P(NC, 0, 0)),
+                  color=edge_c, lw=1.1, zorder=5)
+        d.ax.plot(*zip(P(NC, NH, 0), P(NC, NH, NN)), color=edge_c, lw=1.1,
+                  zorder=5)
+        # axis labels
+        fs = 12.5
+        d.ax.text(P(NC / 2, 0, 0)[0], y0 - 12, "C", fontsize=fs,
+                  color=INK, family="Source Sans 3", style="italic",
+                  ha="center", va="center", zorder=8)
+        d.ax.text(x0 - 8, y0 + NH * cell / 2, "H·W", fontsize=fs,
+                  color=INK, family="Source Sans 3", style="italic",
+                  ha="right", va="center", zorder=8)
+        xn, yn = P(NC, 0, NN / 2)
+        d.ax.text(xn + 7, yn - 5, "N", fontsize=fs, color=INK,
+                  family="Source Sans 3", style="italic", ha="left",
+                  va="center", zorder=8)
+        # panel title below
+        d.ax.text(x0 + cube_w / 2 - 4, y0 - 36, title, fontsize=13,
+                  color=INK, family="Source Sans 3", ha="center",
+                  va="center", zorder=8)
+
+    save(d.fig, "arch-norm-axes")
+
+
+FIGURES = {
+    "arch-resnet-vs-convnext-block": fig_resnet_vs_convnext_block,
+    "arch-inception-block": fig_inception_block,
+    "arch-alexnet": fig_alexnet,
+    "arch-vgg": fig_vgg,
+    "arch-nin": fig_nin,
+    "arch-resnet-block": fig_resnet_block,
+    "arch-resnext-block": fig_resnext_block,
+    "arch-densenet-block": fig_densenet_block,
+    "arch-resnet18": fig_resnet18,
+    "arch-convnext": fig_convnext,
+    "arch-dws-block": fig_dws_block,
+    "arch-repvgg-reparam": fig_repvgg_reparam,
+    "arch-repvgg-kernels": fig_repvgg_kernels,
+    "arch-anynet": fig_anynet,
+    "arch-norm-axes": fig_norm_axes,
+    "arch-residual-concept": fig_residual_concept,
+}
+
+
 if __name__ == "__main__":
-    fig_resnet_vs_convnext_block()
-    fig_inception_block()
-    fig_alexnet()
-    fig_vgg()
-    fig_nin()
-    fig_resnet_block()
-    fig_resnext_block()
-    fig_densenet_block()
-    fig_resnet18()
-    fig_convnext()
-    fig_dws_block()
-    fig_repvgg_reparam()
-    fig_anynet()
+    import sys
+    # Optional figure ids on the command line regenerate only those figures.
+    for name in sys.argv[1:] or FIGURES:
+        FIGURES[name]()
     from arch_diagrams import WRITTEN
     print("\n".join(WRITTEN))

@@ -1,5 +1,12 @@
 # Chapter overview — chapter_convolutional-modern
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> each section now carries 6–9 exercises (batch-norm gained running averages and
+> recomputed statistics; resnet gained plain networks; efficient-convnets gained
+> equal arithmetic; blocks gained NiN without 1×1 convolutions and the VGG-16 count).
+> The dispositions below describe the pre-pass lists and stay as provenance for the
+> external sources; the source `.md` files are authoritative.
+
 Best external source by far: "Understanding Deep Learning" (Prince), ch. 10-11 — verified directly against the local `udl_book.txt`, it has genuine, previously-untapped problems on AlexNet/VGG parameter and receptive-field accounting (10.16-10.19) and batch-norm/residual derivations (11.1-11.8), the richest vein found for this chapter. Stanford CS231n (Lecture 6/9 "CNN Architectures"; Assignment 2 Q2 Batch Norm, Q5 open-ended CIFAR-10 design) and Michigan EECS 498-007 (Assignment 3) cover the same ground but mostly as implementation tasks, not distinct reasoning problems. MIT 6.5940 (Song Han) has an on-topic, verified lab for cnn-design.md (Lab 3, Neural Architecture Search) but, despite being the suggested source, no dedicated lecture/lab on classic efficient-CNN architectures (MobileNet/ShuffleNet) turned up — a genuine gap. "Bag of Tricks" and ConvNeXt are already the book's own paper citations; no course was found assigning their ablation tables as homework, so they contribute paper-provenance, not course-exercise-tradition. convnext.md, efficient-convnets.md, and cnn-design.md have essentially no external homework tradition at all (2019-2022 papers, too recent/specialized for standard syllabi) — this chapter's own exercises are already the strongest tradition here, confirming the prior style review's "excellent, fully-quantitative" rating for those three files plus resnet.md and training-recipes.md (35 of 52 current exercises need no rewrite). batch-norm.md is the chapter's weak point (5 of 7 items vague or "Can you...?" filler) and gains the most from a genuine new addition (UDL's batch-norm backward-pass derivation). Totals: 8 sections, 52 current exercises (keep 41, rewrite 8, drop 3), 53 proposed problems.
 
 ---

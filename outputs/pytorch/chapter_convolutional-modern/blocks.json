@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6202b1c79fdc356124abd9876c642f6ac0ef65178db8f0ba5602c8707a51926f",
+    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,23 +14,28 @@
       "outputs": []
     },
     "vgg-vgg-blocks": {
-      "code_fingerprint": "sha256:8da0fb7b611726c133a89ed8092d56b84258b57e1779bef6be7e8fec5870c59e",
+      "code_fingerprint": "sha256:4949f2d0117df6e91f8970a0af05b3bceb4e386b0e7dd5d3403649d33f6be330",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:d8bdd049b49b3fa0fb6068ef890fd38cda8437501b4fea16492114d1e8788012",
+      "code_fingerprint": "sha256:ebe4c99a2dd50ec688d99c00626773b1c6d1d052d1f967abe88cce662ebf408d",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:2d7a6499683fb3f4d1a180537af811b6e1f9b213a5590178164e867c8645c322",
+      "code_fingerprint": "sha256:14284492635463b46524c02ee4d3172d1b4782b5f6146517fef4baa0a69f4994",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\nSequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
+          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
         },
         {
           "type": "stream",
@@ -40,30 +45,30 @@
       ]
     },
     "vgg-training": {
-      "code_fingerprint": "sha256:e858e9312b0220b23e6fada05ba9dbebc447367b883a01a8f8b926ca46b7b7ac",
+      "code_fingerprint": "sha256:a33bd7e9007bc2c2b3ab44bc48f46465d94ae210e3a224d94fabf0505f101058",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 30554,
-          "sha256": "sha256:998830875132b60fc2d9689d87fa7ba3e6b8235710ed87e2e47fbe649b0bb62b"
+          "bytes": 33255,
+          "sha256": "sha256:e824bc469052b2ec54a5bc962db8abf695f7743353bcbb08c606eaa6096441d4"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:4aba6d933cce0448fe10bb5b77cf19a0d8d1b0ef2b12c3461388e67b32cec300",
+      "code_fingerprint": "sha256:8611a406f50a58d92ccd7e30d9d7adfe9c2d004eaea161ca97f9e35f59975c1c",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:cc18e6bb58fb91ec6103fe76c11a78819ec3bc3f8632fb4ffc1a0332b3386c3b",
+      "code_fingerprint": "sha256:2d44c0280bac6cac97cca5af92759205c2ece346fcfd773467f0f5506c7a3b08",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:d95bb8bf7515c76a3d37c814e8149f00cec777feaebcd54e7b9ef150e14ac092",
+      "code_fingerprint": "sha256:8eef117bf6119b07baaaaa59d993182475c8a5ce48dc19455aae5bbe13734ffc",
       "kind": "text",
       "outputs": [
         {
@@ -74,41 +79,64 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:12b807d61607d528d30584cd124e7bbabdc568988ff2475954403ea6cb01512a",
+      "code_fingerprint": "sha256:cb9d9987093904cbb066c33882a48da6160be5a58f44f4fdfa4b2c619ce7319b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 30653,
-          "sha256": "sha256:7f0ee0062599164fdf295bac4fa42555ab6d23f8366f0c3c5d68b7042a59c373"
+          "bytes": 33971,
+          "sha256": "sha256:2e431bf7f6fd40403e5d3943cf2b63686ebd6d45fac4296e3015acb2e786f078"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:f02ef5cb9ecb0b9f4ebc43bd724ffd56d18ddde1bacc773c088fd2af90e4c887",
+      "code_fingerprint": "sha256:e3e3e10aa24301b585183b2d5b718330ba7d2bfc93ff35717bb290c62038488c",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:82ade5554fb40efc177339907b10f0edbf6c6e425b155f6344d1f7da4c20a140",
+      "code_fingerprint": "sha256:1d00dd6309ba4cf53de9790f9131b389aa3f54ffb3130690442e42882f544d12",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:dc42396615e594907e65713ec85d2fcad0f0b01edfd083a8a25fe5173ddab7f6",
+      "code_fingerprint": "sha256:446ec31ec7002908cc1f9566c1a955d0340b3165495612ae6202a8370a705035",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:55f99cef9e14caae04f4ffeeb4681c374ea349176f3de81de2f9304cc79a6cf1",
+      "code_fingerprint": "sha256:5aba60a85ca992309acb5c18e0b7d865735a8673111f65a9188ab932a66cd4b8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "Sequential output shape:\t torch.Size([1, 192, 12, 12])\nSequential output shape:\t torch.Size([1, 480, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 480, 6, 6])\nSequential output shape:\t torch.Size([1, 832, 6, 6])\nMaxPool2d output shape:\t torch.Size([1, 832, 3, 3])\nSequential output shape:\t torch.Size([1, 1024, 3, 3])\nSequential output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "blocks-stem-body-and-head-3": {
+      "code_fingerprint": "sha256:316ad8acaa315d052a9b631ceb569040f57a900adb0bbe3f7851abe1c9198374",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
+          "bytes": 31424,
+          "sha256": "sha256:8c1bf92aba069e28a39c37aeee205f09a9230f1c3a6d62f0b7b1e8e6d1eafdcd"
+        }
+      ]
+    },
+    "blocks-comparing-the-networks": {
+      "code_fingerprint": "sha256:0094f4e7b5fbec52c968f797bf3c734ac18420149425983b3991854b0f091e4d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'VGG': 0.901, 'NiN': 0.84, 'GoogLeNet': 0.882}"
         }
       ]
     }

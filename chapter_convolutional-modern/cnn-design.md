@@ -6,28 +6,41 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutional Network Design Spaces
 :label:`sec_cnn-design`
 
-Every architecture in this chapter was designed by hand. AlexNet (:numref:`sec_alexnet`) established that deep networks beat feature engineering; VGG (:numref:`sec_vgg`) organized convolutions into repeated blocks of $3 \times 3$ kernels; NiN (:numref:`sec_nin`) mixed channels with $1 \times 1$ convolutions and aggregated with global pooling; GoogLeNet (:numref:`sec_googlenet`) combined branches of different convolution widths; ResNet (:numref:`sec_resnet`) rebiased networks towards the identity mapping, making great depth trainable; and ResNeXt (:numref:`subsec_resnext`) added grouped convolutions for a better parameter--computation trade-off. This *network engineering* succeeded, but each step depended on the intuition of its designers rather than on any systematic exploration of the space of possible networks.
+Most networks in this chapter were designed by hand, and each design fixes a
+few numbers for every stage: how many blocks it repeats, how many channels
+they produce, and what the block looks like. ResNet-18 repeats its blocks
+$(2, 2, 2, 2)$ times across four stages, ResNet-50 $(3, 4, 6, 3)$ times, and
+ConvNeXt-T $(3, 3, 9, 3)$ times. ResNet's depths come with no stated rule,
+and ConvNeXt-T's were copied from Swin and checked once. The choices interact: at a fixed
+budget of computation, a deeper stage must be narrower, and a block with
+grouped convolutions can afford more channels than one without. Trying every
+combination is out of the question. With only two values for each of the
+16 numbers that describe the networks of this section, there are
+$2^{16} = 65{,}536$ variants, each needing its own training run. And a
+single good network, however it was found, does not say which of its
+choices mattered, so nothing carries over to a new compute budget or a new
+block.
 
-One alternative is *neural architecture search* (NAS)
-:cite:`zoph2016neural,liu2018darts`: define a search space, then use
-reinforcement learning, evolutionary algorithms, or gradient-based
-relaxations to select an architecture by estimated performance. EfficientNet
-is a prominent result of this approach :cite:`tan2019efficientnet`. NAS can
-require substantial computation, and a selected network does not by itself
-explain which design principles made it effective.
-
-:citet:`Radosavovic.Kosaraju.Girshick.ea.2020` propose instead to design the
-*space* from which networks are sampled. A distribution over architectures is
-parameterized so that typical samples perform well. This is cheaper than a
-large NAS procedure and exposes regularities shared by many architectures. The
-resulting constraints define the RegNetX and RegNetY families.
+Neural architecture search (NAS), which found EfficientNet's base network
+(:numref:`sec_efficient_cnns`), automates the hand design. It selects from
+a set of candidate networks the one with the best estimated accuracy, by
+reinforcement learning, evolution, or a gradient-based relaxation
+:cite:`zoph2016neural,liu2018darts`. The first NAS methods trained
+thousands of candidates, and like hand design, NAS returns one network
+rather than a reason. Compound scaling then grows that network to larger
+budgets, but it scales a fixed design rather than explaining it. :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` compare whole
+*design spaces* instead: populations of networks defined by a template and
+a few constraints. They sample networks from a space, train each briefly,
+and keep a constraint if it improves the error distribution of the whole
+population. The constraints that survive are design rules, and the networks
+that satisfy all of them form the RegNet family. We build the template,
+read the evidence for each rule, and train a small RegNet on Fashion-MNIST.
 
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import np, npx, init
+from mxnet import gluon, init, npx
 from mxnet.gluon import nn
-
 npx.set_np()
 ```
 
@@ -36,13 +49,15 @@ npx.set_np()
 from d2l import torch as d2l
 import torch
 from torch import nn
-from torch.nn import functional as F
 ```
 
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
+# Keras compiles each eager call of a grouped convolution anew and warns
+# about the retracing; it is harmless here
+tf.get_logger().setLevel('ERROR')
 ```
 
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
@@ -50,29 +65,75 @@ from d2l import tensorflow as d2l
 from d2l import jax as d2l
 from flax import nnx
 import jax
+import optax
 ```
 
 ## The AnyNet Design Space
 :label:`subsec_the-anynet-design-space`
 
-Following :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`, we first need a template for the family of networks to explore. A commonality of the designs in this chapter is that networks consist of a *stem*, a *body*, and a *head*. The stem performs initial image processing, often via convolutions with a larger window size. The body carries out the bulk of the transformation from raw images to object representations; it consists of multiple *stages* that operate on the image at decreasing resolutions, each stage built from one or more *blocks*. The head converts the result into the desired output, for instance via a softmax regressor for multiclass classification. This pattern is common to all networks from VGG to ResNeXt; for generic AnyNet networks, :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` used the ResNeXt block of :numref:`fig_resnext_block`.
+The networks of this chapter share one template. A *stem* processes the raw
+image with one or a few convolutions and usually lowers its resolution. A
+*body* of *stages* does most of the work: each stage operates at one
+resolution and repeats one kind of *block*, and each new stage halves the
+resolution and widens the channels. A *head* turns the last feature map into
+class scores; since NiN (:numref:`sec_nin`) it has been global average
+pooling, followed since GoogLeNet by a linear layer.
 
-![The AnyNet design space: a stem, a body of four stages, and a head. Each stage container holds $\mathit{d_i}$ ResNeXt blocks producing $\mathit{c_i}$ channels; the first block of a stage halves the resolution. The $(\mathit{c}, \mathit{r})$ annotations give the number of channels $\mathit{c}$ and the resolution $\mathit{r} \times \mathit{r}$ at each point. Design choices per stage $\mathit{i}$: depth $\mathit{d_i}$, output channels $\mathit{c_i}$, number of groups $\mathit{g_i}$, and bottleneck ratio $\mathit{k_i}$.](../img/arch-anynet.svg)
+### Stage Parameters of Hand-Designed Networks
+
+:numref:`tab_hand_designed_stages` lists the stages of four networks from
+this chapter. Their widths double from stage to stage in every row. Their
+depths follow no visible rule.
+
+:Stage depths and widths of four hand-designed networks (ImageNet versions).
+:label:`tab_hand_designed_stages`
+
+| Network | Blocks per stage | Output channels per stage | Block |
+|:--|:--|:--|:--|
+| ResNet-18 (:numref:`sec_resnet`) | 2, 2, 2, 2 | 64, 128, 256, 512 | two $3 \times 3$ convolutions |
+| ResNet-50 :cite:`He.Zhang.Ren.ea.2016` | 3, 4, 6, 3 | 256, 512, 1024, 2048 | $1 \times 1$, $3 \times 3$, $1 \times 1$ bottleneck |
+| ResNeXt-50 (:numref:`subsec_resnext`) | 3, 4, 6, 3 | 256, 512, 1024, 2048 | bottleneck with 32 groups |
+| ConvNeXt-T (:numref:`sec_convnext`) | 3, 3, 9, 3 | 96, 192, 384, 768 | $7 \times 7$ depthwise, inverted bottleneck |
+
+The *AnyNet* design space of :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
+fixes the template and leaves these numbers free
+(:numref:`fig_anynet_full`). The stem is one $3 \times 3$ convolution with
+stride 2 and $c_0 = 32$ output channels, followed by batch normalization and
+a ReLU. In the paper it reads RGB images; ours reads the single channel of
+Fashion-MNIST. The body has four stages, and stage $i$ repeats one block
+$d_i$ times. The block is the ResNeXt block of
+:numref:`fig_resnext_block`: a $1 \times 1$ convolution narrows the $c_i$
+channels of the stage to $c_i / k_i$, a $3 \times 3$ convolution processes
+them in groups of $g_i$ channels each, and a second $1 \times 1$ convolution
+restores $c_i$ channels; batch normalization follows each convolution, and a
+residual connection adds the input. The first block of each stage halves the
+resolution with stride 2 and passes its shortcut through a $1 \times 1$
+convolution so that the shapes match. The head is global average pooling and
+one fully connected layer.
+
+![The AnyNet design space: a stem, a body of four stages, and a head. Stage $\mathit{i}$ repeats a ResNeXt block $\mathit{d_i}$ times; the first block of each stage halves the resolution. The annotations give the number of channels and the resolution after each part for an $\mathit{r} \times \mathit{r}$ input; the head outputs $\mathit{n}$ class scores. The free choices per stage are the depth $\mathit{d_i}$, the width $\mathit{c_i}$, the group width $\mathit{g_i}$, and the bottleneck ratio $\mathit{k_i}$.](../img/arch-anynet.svg)
 :label:`fig_anynet_full`
 
-We now examine the structure of :numref:`fig_anynet_full`. The stem takes RGB images (3 channels) and applies a $3 \times 3$ convolution with a stride of $2$, followed by batch norm, halving the resolution from $r \times r$ to $r/2 \times r/2$ and producing $c_0$ channels that serve as input to the body.
+Each stage has four free numbers: its depth $d_i$, its width $c_i$, the
+bottleneck ratio $k_i \geq 1$, and the group width $g_i$, the number of
+channels per group. The paper's $g_i$ counts channels per group, whereas $g$
+in :numref:`subsec_resnext` counted groups; the `groups` argument of
+`d2l.ResNeXtBlock` keeps the latter meaning. Four stages give 16 numbers. The paper samples depths up
+to 16, widths up to 1024 in multiples of 8, bottleneck ratios from
+$\{1, 2, 4\}$, and group widths from the powers of two up to 32, which makes
+about $(16 \cdot 128 \cdot 3 \cdot 6)^4 \approx 2 \times 10^{18}$ networks.
+For $224 \times 224$ ImageNet images the stem and the four stages each halve
+the resolution, so the body ends at $224 / 2^5 = 7$ pixels on a side.
 
-Since the network is designed for ImageNet images of shape $224 \times 224 \times 3$, the body reduces this to $7 \times 7 \times c_4$ through 4 stages (recall that $224 / 2^{1+4} = 7$), each with an eventual stride of $2$. The head is entirely standard: global average pooling, as in NiN (:numref:`sec_nin`), followed by a fully connected layer emitting an $n$-dimensional vector for $n$-class classification.
+### Implementing AnyNet
 
-Most of the design decisions live in the body. Each stage begins with a block that halves the resolution using a stride of $2$ (the rightmost in :numref:`fig_anynet_full`); to match shapes, its residual branch passes through a $1 \times 1$ convolution. This block is followed by a variable number of ResNeXt blocks that leave both resolution and channel count unchanged. Each block may narrow its internal channels by a bottleneck ratio $k_i \geq 1$, affording $c_i/k_i$ channels inside the block for stage $i$ (as the experiments will show, this is not really effective and should be skipped). Since we use ResNeXt blocks, we must also pick the number of groups $g_i$ for grouped convolutions at stage $i$.
-
-This seemingly generic design space still leaves many parameters: block widths $c_0, \ldots c_4$, depths per stage $d_1, \ldots d_4$, bottleneck ratios $k_1, \ldots k_4$, and numbers of groups $g_1, \ldots g_4$, a total of 17 parameters and an unreasonably large number of configurations to explore. We will need tools to reduce this design space effectively. But first, let's implement the generic design.
+The stem is a three-layer sequential block.
 
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab mxnet
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
-        net = nn.Sequential()
+        net = nn.HybridSequential()
         net.add(nn.Conv2D(num_channels, kernel_size=3, padding=1, strides=2),
                 nn.BatchNorm(), nn.Activation('relu'))
         return net
@@ -89,17 +150,24 @@ class AnyNet(d2l.Classifier):
 
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab tensorflow
+def he_init():  # He initialization; Keras needs one instance per layer
+    return tf.keras.initializers.VarianceScaling(2.0, 'fan_in',
+                                                 'untruncated_normal')
+
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
         return tf.keras.models.Sequential([
+            tf.keras.layers.ZeroPadding2D(1),  # Symmetric, as in PyTorch
             tf.keras.layers.Conv2D(num_channels, kernel_size=3, strides=2,
-                                   padding='same'),
-            tf.keras.layers.BatchNormalization(),
+                                   kernel_initializer=he_init()),
+            tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
             tf.keras.layers.Activation('relu')])
 ```
 
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab jax
+he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+
 class AnyNet(d2l.Classifier):
     def __init__(self, arch, stem_channels, lr=0.1, num_classes=10,
                  in_channels=1, rngs=None):
@@ -111,19 +179,22 @@ class AnyNet(d2l.Classifier):
     def stem(self, in_channels, num_channels, rngs):
         return nnx.Sequential(
             nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                     strides=(2, 2), padding=(1, 1), rngs=rngs),
-            nnx.BatchNorm(num_channels, rngs=rngs), nnx.relu)
+                     strides=(2, 2), padding=(1, 1), kernel_init=he,
+                     rngs=rngs),
+            nnx.BatchNorm(num_channels, momentum=0.9,
+                          use_fast_variance=False, rngs=rngs), nnx.relu)
 ```
 
-Each stage consists of `depth` ResNeXt blocks,
-where `num_channels` specifies the block width.
-Note that the first block halves the height and width of input images.
+A stage repeats `d2l.ResNeXtBlock` from :numref:`subsec_resnext`. Its
+arguments are the width $c_i$, the number of groups, and `bot_mul`
+$= 1/k_i$; the group width is the bottleneck width $c_i/k_i$ divided by the
+number of groups. Only the first block of the stage has stride 2.
 
 ```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab mxnet
 @d2l.add_to_class(AnyNet)
 def stage(self, depth, num_channels, groups, bot_mul):
-    net = nn.Sequential()
+    net = nn.HybridSequential()
     for i in range(depth):
         if i == 0:
             net.add(d2l.ResNeXtBlock(
@@ -178,8 +249,26 @@ def stage(self, depth, num_channels, groups, bot_mul, in_channels, rngs):
     return nnx.Sequential(*blk)
 ```
 
-Putting the network stem, body, and head together,
-we complete the implementation of AnyNet.
+The network is the stem, one stage per entry of the tuple `arch`, and the
+head. Each entry of `arch` holds the four numbers
+`(depth, num_channels, groups, bot_mul)` of one stage. Every convolution and
+linear layer starts from He initialization (normal with variance
+$2/n_\textrm{in}$, :numref:`subsec_he_init`) with zero biases.
+
+```{.python .input #cnn-design-the-anynet-design-space-3}
+%%tab mxnet
+@d2l.add_to_class(AnyNet)
+def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
+    super(AnyNet, self).__init__()
+    self.save_hyperparameters()
+    self.net = nn.HybridSequential()
+    self.net.add(self.stem(stem_channels))
+    for s in arch:
+        self.net.add(self.stage(*s))
+    self.net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
+    self.net.initialize(init.MSRAPrelu('in', 0))  # He initialization
+    self.net.hybridize()  # Compile the network into one graph
+```
 
 ```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab pytorch
@@ -193,21 +282,13 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
     self.net.add_module('head', nn.Sequential(
         nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
         nn.LazyLinear(num_classes)))
-    self.net.apply(d2l.init_cnn)
-```
 
-```{.python .input #cnn-design-the-anynet-design-space-3}
-%%tab mxnet
 @d2l.add_to_class(AnyNet)
-def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
-    super(AnyNet, self).__init__()
-    self.save_hyperparameters()
-    self.net = nn.Sequential()
-    self.net.add(self.stem(stem_channels))
-    for i, s in enumerate(arch):
-        self.net.add(self.stage(*s))
-    self.net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
-    self.net.initialize(init.Xavier())
+def weight_init(self, module):
+    # The Trainer calls this after the first minibatch fixed the shapes
+    if type(module) in (nn.Linear, nn.Conv2d):
+        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+        nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #cnn-design-the-anynet-design-space-3}
@@ -216,12 +297,12 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
 def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
     super(AnyNet, self).__init__()
     self.save_hyperparameters()
-    self.net = self.stem(stem_channels)
-    for i, s in enumerate(arch):
+    self.net = tf.keras.models.Sequential([self.stem(stem_channels)])
+    for s in arch:
         self.net.add(self.stage(*s))
     self.net.add(tf.keras.models.Sequential([
         tf.keras.layers.GlobalAvgPool2D(),
-        tf.keras.layers.Dense(units=num_classes)]))
+        tf.keras.layers.Dense(num_classes, kernel_initializer=he_init())]))
 ```
 
 ```{.python .input #cnn-design-the-anynet-design-space-3}
@@ -235,88 +316,138 @@ def create_net(self, in_channels, rngs):
         stage_channels = s[1]
     layers.append(nnx.Sequential(
         lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
-        nnx.Linear(stage_channels, self.num_classes, rngs=rngs)))
+        nnx.Linear(stage_channels, self.num_classes, kernel_init=he,
+                   rngs=rngs)))
     return nnx.Sequential(*layers)
 ```
 
-## Distributions and Parameters of Design Spaces
+## Comparing Design Spaces
 :label:`subsec_design_space_distributions`
 
-Parameters of a design space are hyperparameters of networks in that design space. Consider the problem of identifying good parameters in the AnyNet design space. We could try to find the *single best* parameter choice for a given amount of computation (e.g., FLOPs). But even with only *two* possible choices per parameter, we would have to explore $2^{17} = 131072$ combinations. Moreover, exhaustive search provides little guidance about *how* to design a network: add a new stage type or operation and we start from scratch, and training stochasticity (rounding, shuffling) means no two runs produce exactly the same result anyway. A better strategy is to determine general guidelines for how parameter choices should be related, e.g., that the bottleneck ratio, the number of channels, blocks, and groups, or their change between stages, should be governed by a collection of simple rules. The approach in :citet:`radosavovic2019network` relies on the following four assumptions:
+Two design spaces can be compared without finding the best network in
+either. :citet:`radosavovic2019network` make four assumptions that let
+a population of briefly trained networks stand in for the space:
 
-1. General design principles actually exist, so that many networks satisfying them offer good performance. Consequently, identifying a *distribution* over networks is a sensible strategy: there are many good needles in the haystack.
-1. We need not train networks to convergence to assess whether they are good; intermediate results are reliable guidance for final accuracy. Using such approximate proxies to optimize an objective is referred to as multi-fidelity optimization :cite:`forrester2007multi`. Design optimization is thus carried out based on the accuracy achieved after only a few passes through the dataset, reducing the cost significantly.
-1. Results obtained at a smaller scale (with fewer blocks and channels) generalize to larger ones, so optimization is carried out on structurally similar but smaller networks; only at the end do we verify that the resulting networks also perform well at scale.
-1. Aspects of the design can be approximately factorized, so that their effect on the outcome can be inferred somewhat independently.
+1. Good design principles exist, so that many networks satisfying them
+   perform well. A distribution over networks is then a sensible object to
+   optimize: there are many good needles in the haystack.
+1. Accuracy after a few passes through the data ranks networks nearly as
+   accuracy after full training does. Optimizing with such cheap
+   approximations of the objective is called *multi-fidelity optimization*
+   :cite:`forrester2007multi`.
+1. Results for small networks carry over to larger ones, so the search can
+   run at a low compute budget and be checked at a high one at the end.
+1. The effects of different design choices are roughly independent, so each
+   can be studied separately.
 
-These assumptions allow us to test many networks cheaply: we *sample* uniformly from the space of configurations and then judge a choice of design-space parameters by the *distribution* of errors it produces. Denote by $F(e)$ the cumulative distribution function (CDF) for errors committed by networks of a given design space, drawn using probability distribution $p$. That is,
+Under these assumptions we sample $n$ networks from a space, train each, and
+record its error. The *empirical cumulative distribution function* (CDF) of
+the errors $e_1, \ldots, e_n$ gives, for every threshold $e$, the fraction of
+sampled networks whose error is at most $e$:
 
-$$F(e, p) \stackrel{\textrm{def}}{=} P_{\textrm{net} \sim p} \{e(\textrm{net}) \leq e\}.$$
-
-Our goal is to find a distribution $p$ over *networks* such that most networks have a very low error rate and the support of $p$ is concise. Computing $F$ exactly is infeasible, so we resort to a sample of networks $\mathcal{Z} \stackrel{\textrm{def}}{=} \{\textrm{net}_1, \ldots \textrm{net}_n\}$ (with errors $e_1, \ldots, e_n$, respectively) drawn from $p$ and use the empirical CDF $\hat{F}(e, \mathcal{Z})$ instead:
-
-$$\hat{F}(e, \mathcal{Z}) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(e_i \leq e).$$
+$$\hat{F}(e) = \frac{1}{n}\sum_{j=1}^n \mathbf{1}(e_j \leq e).$$
 :eqlabel:`eq_edf`
 
-If the empirical CDF for one sampled design space lies above another, a larger
-fraction of its sampled networks achieve any given error threshold. This is an
-estimate of first-order stochastic dominance under the paper's sampling and
-training protocol, not a universal ranking of architectures. Under that
-protocol, tying the bottleneck ratios $k_i=k$ produces a CDF nearly
-indistinguishable from the original space (first panel of
-:numref:`fig_regnet-fig`). Tying the group widths, the number of channels per
-group, across stages has similarly little
-visible effect in the second panel. Together these constraints remove six
-parameters from the design space.
+A curve that rises early belongs to a space in which many networks reach low
+error. If the curve of one space lies above that of another at every $e$, a
+random network from the first space is at least as likely as one from the
+second to beat any threshold. This compares populations, not best networks:
+the best network of the two spaces may be the same.
 
-![Empirical error CDFs for sampled design spaces under the protocol of :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`. The panels compare the original AnyNet space with spaces that tie bottleneck ratios, tie group widths, or constrain widths and depths to increase across stages. Upward shifts indicate that more sampled models fall below a given error threshold; overlapping curves indicate no resolved difference at this sample size.](../img/regnet-fig.png)
+:citet:`Radosavovic.Kosaraju.Girshick.ea.2020` sample 500 networks from each
+space at a budget of about 400 million multiply-adds (the paper's 400 MFLOPs),
+train each for 10 epochs on
+ImageNet, and compare the CDFs in :numref:`fig_regnet-fig`. Each step adds
+one constraint to the unconstrained AnyNetX$_A$ space. Using one bottleneck
+ratio $k$ for all stages (AnyNetX$_B$) and then also one group width $g$
+(AnyNetX$_C$) leaves the curve where it was: the mean error moves from 49.0%
+to 49.2% and 49.4%. These two constraints remove six of the 16 numbers at no
+measurable cost, so the space becomes smaller and easier to search. Requiring
+widths to increase across stages, $c_{i+1} \geq c_i$, lowers the mean error
+of the sampled networks from 49.4% to 43.2%, while equal or decreasing
+widths raise it to 56.1% and 63.2%. Requiring depths to increase as well,
+$d_{i+1} \geq d_i$, lowers it a little further, to 42.7%. Constant or
+decreasing depths raise it.
+
+![Error CDFs of design spaces, reproduced from :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`: 500 networks sampled from each space, each trained for 10 epochs on ImageNet at about 400 million multiply-adds. Legends give the minimum and mean top-1 error in percent; $w_i$ is the paper's symbol for the width $c_i$. Top: one bottleneck ratio for all stages (AnyNetX$_B$) against none (AnyNetX$_A$), then one group width as well (AnyNetX$_C$). Bottom: widths that increase, stay equal, or decrease across stages; then depths that do the same in the space with increasing widths (AnyNetX$_D$).](../img/regnet-fig.png)
 :label:`fig_regnet-fig`
 
-The next constraints require channels and depths to increase across stages:
-$c_i\geq c_{i-1}$ and $d_i\geq d_{i-1}$. In the third and fourth panels,
-these constrained spaces shift the sampled error CDF upward under the same
-protocol. The experiment supports retaining the constraints in this search
-space; it does not prove that every task or block family benefits from them.
+The evidence is specific to the paper's block, budget, and training
+protocol. It supports keeping the constraints in this search space; it does
+not prove that every task or block family benefits from them.
 
 ## RegNet
 :label:`subsec_regnet`
 
-The resulting $\textrm{AnyNetX}_E$ design space consists of simple networks
-following easy-to-interpret design principles:
+### Design Principles
 
-* Share the bottleneck ratio $k_i = k$ for all stages $i$;
-* Share the group width, the number of channels per group, across all stages;
-* Increase network width across stages: $c_{i} \leq c_{i+1}$;
-* Increase network depth across stages: $d_{i} \leq d_{i+1}$.
+The constraints that survived define the AnyNetX$_E$ space:
 
-The `RegNetX32` implementation below simplifies the second principle: it
-shares the number of groups across stages rather than the group width.
+* one bottleneck ratio $k$ for all stages;
+* one group width $g$ for all stages;
+* widths that do not decrease across stages, $c_{i} \leq c_{i+1}$;
+* depths that do not decrease across stages, $d_{i} \leq d_{i+1}$.
 
-It remains to pick specific values for the parameters of the $\textrm{AnyNetX}_E$ design space. Studying the best-performing networks from its distribution shows that network width ideally increases linearly with the block index $j$ across the network, i.e., $c_j \approx c_0 + c_a j$ with slope $c_a > 0$; since block width can only change per stage, we arrive at a piecewise constant function engineered to match this dependence. Experiments also show that a bottleneck ratio of $k = 1$ performs best, i.e., we are advised not to use bottlenecks at all.
+The best networks of AnyNetX$_E$ share one more regularity. If we number the
+blocks $j = 0, 1, \ldots$ through the whole body, the width of block $j$
+grows roughly linearly; in the paper's symbols,
 
-We refer the interested reader to :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` for the design of specific networks at different amounts of computation. For instance, an effective 32-layer RegNetX variant is given by $k = 1$ (no bottleneck), $g = 16$ groups in every grouped convolution (group widths 2 and 5), with $c_1 = 32$ and $c_2 = 80$ channels for the first and second stage, respectively, chosen to be $d_1=4$ and $d_2=6$ blocks deep. These design principles continue to hold at larger scale, and they carry over to the Squeeze-and-Excitation variant (RegNetY) that adds a global channel activation :cite:`Hu.Shen.Sun.2018`, which we describe below.
+$$u_j = w_0 + w_a j,$$
+
+with an initial width $w_0$ and a slope $w_a > 0$. Since all blocks of a
+stage share one width, RegNet snaps each $u_j$ to a nearby value on a
+geometric grid; blocks that land on the same value form a stage, which turns
+the line into a staircase (problem :exref:`ex_cnn-design-quantized-widths`
+works one out). A further analysis of the resulting space finds that its
+best networks use $k = 1$: the block does not narrow its channels at all.
+The *RegNetX* family consists of the networks with quantized linear widths
+and $k = 1$. It is described by a handful of numbers per compute budget
+instead of 16, and :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` report
+that RegNet models match or beat EfficientNet at equal multiply-adds under
+the same training setup while running up to five times faster on GPUs.
+
+### RegNetX32 on Fashion-MNIST
+
+We now build a small network that follows the rules. Fashion-MNIST images,
+upsampled to $96 \times 96$ as in :numref:`sec_resnet`, are small: after the
+stem and four stages the map would be $3 \times 3$. We therefore use two
+stages. The stem has 32 channels; stage 1 has $d_1 = 4$ blocks of width
+$c_1 = 32$ and stage 2 has $d_2 = 6$ blocks of width $c_2 = 80$, so widths and
+depths increase; $k = 1$. Counting one stem convolution, three convolutions
+per block, and the linear head gives 32 layers. One simplification breaks a
+rule: both stages use 16 groups, so the group widths are 2 and 5 channels
+rather than one shared value (problem :exref:`ex_cnn-design-vionet`
+restores it).
 
 ```{.python .input #cnn-design-regnet-1}
-%%tab pytorch, mxnet, tensorflow
+%%tab mxnet, pytorch, tensorflow
 class RegNetX32(AnyNet):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None):
         stem_channels, groups, bot_mul = 32, 16, 1
         depths, channels = (4, 6), (32, 80)
         super().__init__(
             ((depths[0], channels[0], groups, bot_mul),
              (depths[1], channels[1], groups, bot_mul)),
             stem_channels, lr, num_classes)
+        self.num_steps = num_steps  # Length of the learning-rate schedule
 ```
 
 ```{.python .input #cnn-design-regnet-1}
 %%tab jax
 class RegNetX32(AnyNet):
-    def __init__(self, lr=0.1, num_classes=10, in_channels=1, rngs=None):
-        super().__init__(((4, 32, 16, 1), (6, 80, 16, 1)), 32,
-                         lr, num_classes, in_channels, rngs)
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None,
+                 in_channels=1, rngs=None):
+        stem_channels, groups, bot_mul = 32, 16, 1
+        depths, channels = (4, 6), (32, 80)
+        super().__init__(
+            ((depths[0], channels[0], groups, bot_mul),
+             (depths[1], channels[1], groups, bot_mul)),
+            stem_channels, lr, num_classes, in_channels, rngs)
+        self.num_steps = num_steps  # Length of the learning-rate schedule
 ```
 
-We can see that each RegNetX stage progressively reduces resolution and increases output channels.
+Each stage halves the resolution and widens the channels: $96 \to 48$ in the
+stem, then 24 and 12 in the two stages.
 
 ```{.python .input #cnn-design-regnet-2}
 %%tab mxnet, pytorch
@@ -325,10 +456,7 @@ RegNetX32().layer_summary((1, 1, 96, 96))
 
 ```{.python .input #cnn-design-regnet-2}
 %%tab tensorflow
-import logging
-tf.get_logger().setLevel(logging.ERROR)
 RegNetX32().layer_summary((1, 96, 96, 1))
-tf.get_logger().setLevel(logging.WARNING)
 ```
 
 ```{.python .input #cnn-design-regnet-2}
@@ -336,12 +464,107 @@ tf.get_logger().setLevel(logging.WARNING)
 RegNetX32().layer_summary((1, 96, 96, 1))
 ```
 
+How well does a network built from these rules do at a small scale? We
+train it as we trained ResNet-18 in :numref:`sec_resnet`: Fashion-MNIST at
+$96 \times 96$, minibatches of 128, and 10 epochs of minibatch SGD whose
+rate rises linearly over the first epoch and then decays to zero along a
+cosine (`d2l.cosine_warmup` of :numref:`sec_batch_norm`, stepped after every
+minibatch). Only the peak rate differs: 0.1 instead of 0.01. The small
+network needs the larger rate; with a peak of 0.05 it ends near 88%.
+
+```{.python .input #cnn-design-training-1}
+%%tab mxnet
+@d2l.add_to_class(AnyNet)
+def configure_optimizers(self):
+    warmup = self.num_steps // 10
+    schedule = lambda t: self.lr * d2l.cosine_warmup(  # MXNet counts
+        t - 1, self.num_steps, warmup)  # updates from 1
+    return gluon.Trainer(self.collect_params(), 'sgd', {
+        'learning_rate': None, 'lr_scheduler': schedule})
+```
+
+```{.python .input #cnn-design-training-1}
+%%tab pytorch
+@d2l.add_to_class(AnyNet)
+def configure_optimizers(self):
+    optim = torch.optim.SGD(self.parameters(), lr=self.lr)
+    warmup = self.num_steps // 10
+    schedule = torch.optim.lr_scheduler.LambdaLR(
+        optim, lambda t: d2l.cosine_warmup(t, self.num_steps, warmup))
+    return optim, schedule  # The Trainer steps it after every minibatch
+```
+
+```{.python .input #cnn-design-training-1}
+%%tab tensorflow
+@d2l.add_to_class(AnyNet)
+def configure_optimizers(self):
+    warmup = self.num_steps // 10
+    schedule = lambda: self.lr * d2l.cosine_warmup(
+        optim.iterations, self.num_steps, warmup)
+    optim = tf.keras.optimizers.SGD(schedule)
+    return optim
+```
+
+```{.python .input #cnn-design-training-1}
+%%tab jax
+@d2l.add_to_class(AnyNet)
+def configure_optimizers(self):
+    warmup = self.num_steps // 10
+    return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
+        t, self.num_steps, warmup))
+```
+
+```{.python .input #cnn-design-training}
+%%tab mxnet, pytorch, jax
+data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
+model = RegNetX32(lr=0.1, num_steps=10 * len(data.train_dataloader()))
+trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+trainer.fit(model, data)
+```
+
+```{.python .input #cnn-design-training}
+%%tab tensorflow
+data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
+trainer = d2l.Trainer(max_epochs=10)
+with d2l.try_gpu():
+    model = RegNetX32(lr=0.1, num_steps=10 * len(data.train_dataloader()))
+    trainer.fit(model, data)
+```
+
+We count the parameters of the trained network and read off its final
+validation accuracy.
+
+```{.python .input #cnn-design-training-2}
+print(f'{d2l.num_params(model):,} parameters, validation accuracy '
+      f'{trainer.history["val_acc"][-1]:.3f}')
+```
+
+RegNetX32 has 115,642 parameters and reaches about 90% validation accuracy
+after 10 epochs in every framework. That is within about a point of the
+90–91% of the ResNet-18 in :numref:`sec_resnet`, with about 1% of its 11.2
+million parameters. A network assembled from a few rules and four numbers per
+stage is thus a strong baseline at this scale. The rules did not come from
+Fashion-MNIST, and the comparison is not controlled: the two networks differ
+in depth, width, block, and peak learning rate.
+
 ### Squeeze-and-Excitation Gates
 :label:`subsec_se`
 
-The global channel activation that turns RegNetX into RegNetY is the *squeeze-and-excitation* (SE) gate :cite:`Hu.Shen.Sun.2018`. A convolution mixes information locally; an SE gate lets the network reweight entire channels based on global context. It *squeezes* each channel to a single number by global average pooling, passes the resulting vector of $c$ channel summaries through a two-layer bottleneck MLP with a sigmoid output (the *excitation*), and multiplies each channel of the input by its gate value. The extra cost is negligible, about $2c^2/r$ parameters for reduction ratio $r$ and almost no FLOPs, since the MLP acts on a pooled vector rather than on the feature map. This is a simple form of attention, computed per channel rather than per location; the general mechanism is the subject of :numref:`chap_attention`. The gate outlived its namesake network: EfficientNet :cite:`tan2019efficientnet` and most of the mobile architectures of :numref:`sec_efficient_cnns` include SE blocks.
+RegNetY adds one component to every block of RegNetX: a
+*squeeze-and-excitation* (SE) gate :cite:`Hu.Shen.Sun.2018`. A convolution
+mixes information within a small window; an SE gate lets the network
+reweight whole channels based on the entire image. It *squeezes* each
+channel to one number by global average pooling, passes the resulting
+vector of $c$ channel summaries through a two-layer MLP with a hidden
+width of $c/r$ and a sigmoid output (the *excitation*), and multiplies each
+channel of the input by its gate value in $(0, 1)$. The MLP has about
+$2c^2/r$ weights for a reduction ratio $r$ and acts on one vector per image,
+not on the feature map, so it adds almost no computation. It is a simple form
+of attention, computed per channel rather than per position
+(:numref:`chap_attention` develops the general mechanism). EfficientNet
+:cite:`tan2019efficientnet` also places an SE gate in every block.
 
-An SE gate is only a few lines: pool, two dense layers, rescale.
+An SE gate is a few lines: pool, two dense layers, rescale.
 
 ```{.python .input #cnn-design-squeeze-and-excitation-gates}
 %%tab mxnet
@@ -413,66 +636,25 @@ X = jax.random.normal(d2l.get_key(), (2, 16, 16, 32))
 SE(32)(X).shape
 ```
 
-The output has the same shape as the input: an SE gate can be dropped into any block, which is exactly how RegNetY, EfficientNet, and their successors use it.
-
-## Training
-
-We train the 32-layer RegNetX on Fashion-MNIST as before.
-
-```{.python .input #cnn-design-training}
-%%tab mxnet, pytorch, jax
-model = RegNetX32(lr=0.05)
-trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
-data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
-trainer.fit(model, data)
-```
-
-```{.python .input #cnn-design-training}
-%%tab tensorflow
-trainer = d2l.Trainer(max_epochs=10)
-data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
-with d2l.try_gpu():
-    model = RegNetX32(lr=0.05)
-    trainer.fit(model, data)
-```
-
-## Comparing Convnets and Vision Transformers
-:label:`subsec_cnn_big_picture`
-
-For most of a decade, the networks in this chapter defined the state of the art in computer vision. Then came vision Transformers (:numref:`sec_vision-transformer`) :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021,touvron2021training`, which have far weaker inductive biases towards locality and translation equivariance (:numref:`sec_why-conv`). They surpassed CNNs on large-scale image classification, and it became common to read that convolution was obsolete. The evidence that has accumulated since is more precise.
-
-Controlled comparisons give a more qualified account of scaling. When
-convolutional networks receive modern training recipes and the same compute
-budget as vision Transformers, they can remain competitive: NFNets :cite:`brock2021nfnet` match ViT accuracy at equal compute when pretrained at JFT-4B scale :cite:`smith2023convnets`, and modernizing the recipe (:numref:`sec_training_recipes`) and architecture of a ResNet yields ConvNeXt (:numref:`sec_convnext`) :cite:`liu2022convnet`, which is competitive with contemporary Transformers. The apparent gap between the two families around 2021 was mostly a gap in recipe and scale, not in representational power.
-
-The two families now serve overlapping but distinct regimes. Transformers are
-common in foundation-scale pretraining and multimodal systems because they
-integrate with the tooling, scaling infrastructure, and language models built
-around the same architecture (:numref:`sec_large-pretraining-transformers`).
-Convolutional networks remain effective for latency-constrained and edge
-deployment, small datasets, and many dense-prediction tasks. In medical image
-segmentation, the self-configuring convolutional U-Net nnU-Net performs
-strongly in controlled benchmarks :cite:`isensee2021nnunet`. And convolutions persist *inside* Transformers: Whisper, for example, feeds its Transformer encoder from a convolutional stem :cite:`radford2023whisper`. :numref:`sec_efficient_cnns` covers the deployment side of this division in detail.
-
-The same pattern holds beyond classification. Diffusion image generators moved from convolutional U-Nets to diffusion Transformers at the frontier :cite:`peebles2023dit`, while convolutional U-Nets remain standard in deployed and smaller systems.
-
-The comparison suggests that locality and translation equivariance can improve
-data efficiency, while large-scale pretraining can let less constrained models
-learn useful spatial regularities. The balance depends on data, compute,
-latency, and task; neither architecture family dominates every regime.
-:numref:`chap_transformers` develops the alternative architecture in full.
+The output has the shape of the input, so an SE gate can be inserted into
+any block without changing the rest of the network. For $c = 32$ and $r = 4$
+the gate has $2 \cdot 32^2 / 4 = 512$ weights plus 40 biases.
 
 ## Summary
 
-AnyNet turns architecture design into a distribution over block depths,
-widths, group widths, and bottleneck ratios. Under the RegNet sampling and
-training protocol, tying several stage parameters preserves the observed error
-distribution, while increasing widths and depths across stages improves it.
-RegNet further constrains stage widths to a quantized linear rule, producing a
-small, interpretable family rather than one selected network. These conclusions
-are empirical and depend on the block family, compute budget, and training
-recipe; the exercise below tests whether they survive a change to ConvNeXt
-blocks.
+Hand-designed networks fix their stage depths and widths by intuition, and a
+single good network does not reveal which of its choices mattered. A design
+space is a population of networks defined by a template, here AnyNet: a stem,
+four stages of ResNeXt blocks with a free depth, width, group width, and
+bottleneck ratio each, and a head. Comparing the error distributions of
+briefly trained samples shows that one bottleneck ratio and one group width
+for all stages cost nothing, while widths and depths that grow across stages
+help. RegNet adds a bottleneck ratio of 1 and widths that grow linearly with
+the block index, which turns 16 free numbers into a few. The rules were
+derived for one block family, budget, and training protocol; whether they
+hold for other blocks, such as those of ConvNeXt or of the vision
+transformers of :numref:`chap_transformers`, is a question the same method
+can answer (problem :exref:`ex_cnn-design-convnext-space`).
 
 ## Exercises
 
@@ -487,11 +669,9 @@ blocks.
 1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
    turn the observation that width should grow linearly with the block index
    into a rule with three numbers. For $d$ blocks, the target width of block
-   $j$ is
-   $$u_j = w_0 + w_a\, j, \qquad j = 0, \ldots, d-1,$$
-   the linear rule $c_j \approx c_0 + c_a j$ of :numref:`subsec_regnet` with
-   intercept $w_0$ and slope $w_a$. Each block is snapped to a geometric grid
-   with ratio $w_m$,
+   $j$ is the linear rule of :numref:`subsec_regnet`,
+   $$u_j = w_0 + w_a\, j, \qquad j = 0, \ldots, d-1.$$
+   Each block is snapped to a geometric grid with ratio $w_m$,
    $$s_j = \operatorname{round}\left(\frac{\log(u_j / w_0)}{\log w_m}\right), \qquad w_j = w_0\, w_m^{s_j}.$$
    Blocks with equal $w_j$ form one stage.
     1. For $d = 13$, $w_0 = 24$, $w_a = 36.44$, and $w_m = 2.49$, compute the
@@ -500,9 +680,10 @@ blocks.
        configuration in the paper.
     1. Describe how the number of stages, and how closely $w_j$ tracks
        $u_j$, change as $w_m \to 1$ and as $w_m$ grows large.
-    1. A shared group width, the number of channels per group, must divide
-       every stage width. Which of your widths violate this for a group
-       width of 16, and how would you adjust them?
+    1. A shared group width must divide every stage width. Which of your
+       widths violate this for a group width of 16, and how would you adjust
+       them?
+   :exlabel:`ex_cnn-design-quantized-widths`
 
 1. [code] **RegNetY.** RegNetY adds the `SE` gate of :numref:`subsec_se` to
    every block. Insert `SE` into `d2l.ResNeXtBlock` after its grouped
@@ -512,9 +693,7 @@ blocks.
        $2c^2/r$ per gate and verify it against the model.
     1. Compare validation accuracy and time per epoch with `RegNetX32`.
        Where does the extra time come from, given that the gate adds almost
-       no floating point operations?
-    1. Sweep the reduction ratio over $r \in \{1, 4, 16\}$. How sensitive
-       are accuracy and parameter count to $r$?
+       no multiply-adds?
 
 1. **Design spaces versus architecture search.** Neural architecture search
    :cite:`zoph2016neural,liu2018darts` selects one network from a search
@@ -535,18 +714,19 @@ blocks.
    per group, are 2 and 5. Build a baseline with the depths and widths of
    `RegNetX32` and one group width of 16 shared by both stages. Then
    implement variants of the baseline that each violate one design
-   principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at roughly
+   principle of AnyNetX$_E$ (:numref:`subsec_regnet`) at roughly
    matched parameter count: widths that decrease across stages, depths
    that decrease across stages, group widths that differ between stages,
    and bottleneck ratios that differ between stages.
     1. Report validation accuracy for each violation against the baseline.
-    1. Which of depth $d_i$, width $c_i$, group width, and bottleneck ratio
-       $k_i$ matters most here?
+    1. Which of depth $d_i$, width $c_i$, group width $g_i$, and bottleneck
+       ratio $k_i$ matters most here?
     1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
        did the sampled design spaces of
        :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` also find harmless,
        and why does one network per violation give weaker evidence than an
        error CDF?
+   :exlabel:`ex_cnn-design-vionet`
 
 1. [extended] **Proxy reliability.** ● The method of
    :numref:`subsec_design_space_distributions` assumes that accuracy after a
@@ -554,7 +734,7 @@ blocks.
    over to larger networks. Test both with eight configurations sampled from
    a two-stage AnyNet space with $d_i \in \{2, 4, 6\}$,
    $c_i \in \{16, 32, 64, 128\}$ subject to $c_1 \le c_2$, a number of groups
-   $g \in \{4, 8\}$ shared by both stages (the `groups` argument of
+   in $\{4, 8\}$ shared by both stages (the `groups` argument of
    `d2l.ResNeXtBlock`), and $k = 1$. The *rank correlation* of two rankings
    is the correlation between the positions the networks occupy in them.
     1. Train each configuration for 10 epochs on Fashion-MNIST at
@@ -583,6 +763,7 @@ blocks.
        $96 \times 96$ and plot the three empirical CDFs :eqref:`eq_edf`.
        Which differences are resolved at 16 samples per space?
     1. Which of the RegNet design principles survive the change of block?
+   :exlabel:`ex_cnn-design-convnext-space`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/7462)
@@ -602,117 +783,264 @@ blocks.
 
 <!-- slides -->
 
-::: {.slide title="From hand design to design spaces"}
-We've seen a sequence of hand-designed architectures
-(LeNet → AlexNet → VGG → GoogLeNet → ResNet → DenseNet),
-each a **hypothesis** about what makes nets work.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §7.8]{.kicker}
 
-Can we design networks more **systematically**?
+Convolutional Network Design Spaces<br>**the AnyNet template · comparing error distributions · RegNet rules · a small RegNet on Fashion-MNIST**
+:::
 :::
 
-::: {.slide title="RegNet: design space search"}
-**RegNet** (Radosavovic et al., 2020):
+::: {.slide title="Hand-Designed Networks Choose Their Stage Depths Without a Rule"}
+[The problem]{.kicker}
 
-- Define a parametric **design space** (`AnyNet`): same
-  template, free hyperparameters.
-- **Sample many** networks, train each briefly, see how
-  accuracy correlates with hyperparameter choices.
-- Constrain the design space based on what works.
+| network | blocks per stage | channels per stage |
+|---|---|---|
+| ResNet-18 | 2, 2, 2, 2 | 64, 128, 256, 512 |
+| ResNet-50 | 3, 4, 6, 3 | 256, 512, 1024, 2048 |
+| ConvNeXt-T | 3, 3, 9, 3 | 96, 192, 384, 768 |
 
-Simple closed-form rules ("width grows linearly with stage")
-outperform years of expert tuning.
+- Widths double every stage; depths follow no visible rule.
+- Two values for each of 16 stage numbers: $2^{16} = 65{,}536$ networks
+  to train.
+
+::: {.d2l-note .warn}
+Which choices matter, and do they carry over to a new budget?
+:::
 :::
 
-::: {.slide title="The AnyNet design space"}
-![The AnyNet design space.](../img/arch-anynet.svg){width=76%}
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
 
-Stem (low-level conv) → 4 stages of residual blocks → head
-(global pool + linear). Each stage's depth, width, group count
-are free parameters:
+- describe a family of networks as a template with free numbers;
+- compare two design spaces by the error distribution of their samples;
+- state the RegNet rules and the evidence behind each;
+- build a RegNet instance from four numbers per stage and train it.
 
-@cnn-design-designing-convolutional-network-architectures
-
+**Running example:** parameters and accuracy on Fashion-MNIST, a 32-layer
+RegNetX with 116k parameters against the 11.2M-parameter ResNet-18.
 :::
 
-::: {.slide title="AnyNet stem"}
-The stem is deliberately plain: one stride-2 3×3 convolution,
-BatchNorm, ReLU. Its job is to halve resolution and create the
-first feature channels before the repeated stages begin.
+::: {.slide title="From Single Networks to Rules for Families"}
+[Where this fits]{.kicker}
 
-@cnn-design-the-anynet-design-space-1
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| AlexNet | learned features, ReLU, dropout, GPUs |
+| VGG, NiN, GoogLeNet | blocks, 1 × 1 convolutions, global pooling |
+| Normalization Layers | batch, layer, group normalization |
+| ResNet, ResNeXt, DenseNet | residual connections make depth trainable |
+| Efficient Convnets | separable blocks, scaling, re-parameterization |
+| Training Recipes | schedules, augmentation, weight averaging |
+| ConvNeXt | a ResNet modernized one change at a time |
+| **Design Spaces (RegNet)** | **rules from populations of networks** |
 :::
 
-::: {.slide title="AnyNet stage"}
-Each stage repeats the same ResNeXt block. The first block uses
-stride 2 and a 1×1 skip projection to change resolution and
-channel count; the rest preserve shape.
-
-@cnn-design-the-anynet-design-space-2
+::: {.col .narrow}
+- **Uses:** the ResNeXt block (grouped bottleneck), stem-body-head,
+  He initialization.
+- **Skips:** neural architecture search algorithms.
+:::
+:::
 :::
 
-::: {.slide title="AnyNet assembly"}
-The architecture tuple supplies `(depth, channels, groups,
-bottleneck)` per stage. The head is the now-standard global
-average pool + linear classifier.
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
 
-@cnn-design-the-anynet-design-space-3
+[The AnyNet Design Space]{.dtitle}
+
+[one template, sixteen free numbers]{.dsub}
+:::
 :::
 
-::: {.slide title="RegNet design-space evidence"}
-![Comparing error empirical distribution functions of design spaces.](../img/regnet-fig.png){width=82%}
-
-RegNet narrows AnyNet with simple constraints: stage widths grow
-approximately linearly, bottleneck ratios stay fixed, and group widths
-are shared across stages. The result is a smaller search space with
-better probability of good models.
+::: {.slide title="AnyNet: Stem, Four Stages of ResNeXt Blocks, Head"}
+![The AnyNet design space.](../img/arch-anynet.svg){width=52%}
 :::
 
-::: {.slide title="A RegNetX-3.2GF instance"}
-The paper's empirical findings collapse to: **width grows
-linearly with stage**, depth stays roughly constant, ResNeXt-style
-groups. A scaled-down version for Fashion-MNIST:
+::: {.slide title="Four Numbers per Stage Give About 2 × 10¹⁸ Networks"}
+[AnyNet]{.kicker}
 
-@cnn-design-regnet-1
+| per stage | symbol | sampled values |
+|---|---|---|
+| depth | $d_i$ | 1 … 16 |
+| width | $c_i$ | 8 … 1024, multiples of 8 |
+| bottleneck ratio | $k_i$ | 1, 2, 4 |
+| group width (channels per group) | $g_i$ | 1, 2, 4, …, 32 |
 
-. . .
-
-@cnn-design-regnet-2
+Four stages: 16 numbers, $(16 \cdot 128 \cdot 3 \cdot 6)^4 \approx 2 \times 10^{18}$
+networks.
 :::
 
-::: {.slide title="Training"}
-@cnn-design-training
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-The architecture is competitive with hand-designed ResNets at
-similar parameter counts, and the **discovery process** scales
-trivially with compute.
+[Comparing Design Spaces]{.dtitle}
+
+[populations of briefly trained networks]{.dsub}
+:::
 :::
 
-::: {.slide title="The big picture: ConvNets vs. Transformers"}
-- Vision Transformers overtook CNNs on large-scale
-  classification around 2021.
-- The scaling resolution: with modern recipes and equal compute,
-  **ConvNets match ViTs** (NFNets at JFT-4B scale; ConvNeXt).
-- Much of the 2021 gap reflected **recipe + scale**, not
-  representational power.
+::: {.slide title="Judge a Space by the Error Distribution of Its Samples"}
+[Comparison]{.kicker}
+
+Sample $n$ networks, train each briefly, record errors $e_1, \ldots, e_n$:
+
+$$\hat{F}(e) = \frac{1}{n}\sum_{j=1}^n \mathbf{1}(e_j \leq e)$$
+
+- $\hat{F}(e)$: fraction of sampled networks with error at most $e$.
+- A curve that lies higher is a space where good networks are common.
+- Paper: 500 networks per space, 10 ImageNet epochs, about 400M multiply-adds.
+
+Assumes: short runs rank networks as long runs do; small results carry
+over to large.
 :::
 
-::: {.slide title="The division of labor (2026)"}
-- **Transformers**: foundation-scale pretraining, multimodal
-  stacks, billion-scale image-text corpora.
-- **ConvNets**: edge/latency, small data, dense prediction
-  (nnU-Net remains strong in medical segmentation).
-- Conv stems persist *inside* Transformers (Whisper); diffusion
-  moved U-Net → DiT at the frontier, conv U-Nets deployed widely.
-- Inductive bias is a **data-efficiency dial**, not a ceiling.
+::: {.slide title="Tying k and g Costs Nothing; Growing Widths and Depths Helps"}
+[Comparison]{.kicker}
+
+![Error CDFs of sampled design spaces; legends give minimum and mean error (%); w is the paper's symbol for width.](../img/regnet-fig.png){width=70%}
+:::
+
+::: {.slide title="Growing Widths Cut the Mean Error from 49.4% to 43.2%"}
+[Comparison]{.kicker}
+
+| constraint added | mean top-1 error |
+|---|--:|
+| none (AnyNetX$_A$) | 49.0% |
+| one bottleneck ratio $k$ | 49.2% |
+| one group width $g$ | 49.4% |
+| widths grow, $c_{i+1} \ge c_i$ | **43.2%** |
+| (widths equal / shrink) | 56.1% / 63.2% |
+| depths grow, $d_{i+1} \ge d_i$ | **42.7%** |
+
+Six of 16 numbers removed at no cost, then two constraints that help.
+
+[Radosavovic et al., 2020; 500 networks per space, 10 ImageNet epochs]{.small}
+:::
+
+::: {.slide title="Check: How Many Free Numbers Are Left?"}
+[Check]{.kicker}
+
+AnyNet has 16 numbers. After one $k$ and one $g$ for all four stages, how
+many remain? Why can a design-space comparison not name the best network?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 4 depths + 4 widths + one $k$ + one $g$ = 10. The CDF compares
+populations; the best network of two spaces may be the same one.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[RegNet]{.dtitle}
+
+[rules, an instance, and a training run]{.dsub}
+:::
+:::
+
+::: {.slide title="RegNet: No Bottleneck, Widths That Grow Linearly with Block Index"}
+[RegNet]{.kicker}
+
+- AnyNetX$_E$: one $k$, one $g$, $c_i \le c_{i+1}$, $d_i \le d_{i+1}$.
+- Best sampled networks: $k = 1$, and block $j$ has width about
+  $u_j = w_0 + w_a j$.
+- Snap each $u_j$ to a geometric grid; equal widths form a stage: a
+  staircase.
+- **RegNetX**: these rules; a handful of numbers per compute budget
+  instead of 16.
+
+[Radosavovic et al., 2020: beats EfficientNet at equal multiply-adds, up to 5× faster on GPUs]{.small}
+:::
+
+::: {.slide title="RegNetX32: Two Stages, Four Numbers Each"}
+[RegNet]{.kicker}
+
+| stage | depth $d$ | width $c$ | groups | $k$ | resolution |
+|---|--:|--:|--:|--:|--:|
+| stem | | 32 | | | 48×48 |
+| 1 | 4 | 32 | 16 | 1 | 24×24 |
+| 2 | 6 | 80 | 16 | 1 | 12×12 |
+
+- widths and depths grow; $k = 1$ (no bottleneck)
+- 1 stem conv + 10 blocks × 3 convs + 1 linear = **32 layers**
+- one simplification: shared *number* of groups, so group widths 2 and 5
+:::
+
+::: {.slide title="Each Stage Halves the Resolution: 96 → 48 → 24 → 12"}
+[RegNet]{.kicker}
+
+@!cnn-design-regnet-2
+:::
+
+::: {.slide title="Ten Epochs with a Cosine Schedule: About 90%, No Final Dip"}
+[RegNet]{.kicker}
+
+@!cnn-design-training
+
+Same schedule as ResNet-18 (warmup over the first epoch, cosine to 0), peak
+rate 0.1 instead of 0.01.
+:::
+
+::: {.slide title="RegNetX32 Comes Within a Point of ResNet-18 with 1% of Its Parameters"}
+[RegNet]{.kicker}
+
+| | parameters | validation accuracy, 10 epochs |
+|---|--:|--:|
+| ResNet-18 (hand-designed) | 11.2M | 90–91% |
+| RegNetX32 (four numbers per stage) | 0.116M | ≈ 90% |
+
+@!cnn-design-training-2
+
+Not a controlled comparison: depth, width, block, and peak rate differ.
+:::
+
+::: {.slide title="RegNetY Adds a Squeeze-and-Excitation Gate to Every Block"}
+[RegNet]{.kicker}
+
+- **Squeeze:** average each of the $c$ channels over all positions.
+- **Excite:** MLP $c \to c/r \to c$ with a sigmoid output: one gate in
+  $(0, 1)$ per channel.
+- **Scale:** multiply each channel by its gate.
+- Cost: about $2c^2/r$ weights, acting on one vector per image: almost no
+  arithmetic.
+- Attention over channels instead of positions.
+:::
+
+::: {.slide title="Check: The Cost of an SE Gate"}
+[Check]{.kicker}
+
+An SE gate on $c = 256$ channels with $r = 4$. How many weights? How many
+multiply-adds per image, compared with one $3 \times 3$ convolution
+$256 \to 256$ on a $14 \times 14$ map?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $2 \cdot 256^2 / 4 = 32{,}768$ weights and as many
+multiply-adds. The convolution does
+$9 \cdot 256^2 \cdot 196 \approx 116$M: the gate adds 0.03%.
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Modern architecture design = **search over a parametric
-  design space**, not heroic engineering.
-- AnyNet specifies the template (stem / 4 stages / head); the
-  empirical search picks widths, depths, and groups.
-- Resulting networks (RegNet) match or beat hand-designed
-  rivals with simpler, more interpretable rules.
-- The same philosophy (fit simple laws to populations of models)
-  drives today's scaling-law-guided design.
+[Wrap-up]{.kicker}
+
+- **Design space:** a template (stem, stages, head) with free numbers;
+  AnyNet has 16.
+- **Comparison:** error CDFs of 500 briefly trained samples per space.
+- **Rules:** one $k$ and one $g$ (free), widths and depths that grow
+  (49.4% → 42.7% mean error), $k = 1$, linear widths.
+- **Fashion-MNIST:** RegNetX32, 116k parameters, ≈ 90% after 10 epochs:
+  within about a point of ResNet-18 with 1% of its parameters.
+- Rules hold for the block, budget, and protocol they were fitted on.
+
+**Next:** RNNs and sequence models.
 :::

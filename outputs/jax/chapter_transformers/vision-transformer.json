@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:1974d653ec32f55690e9f1a1d171e21eeb2fc8dc8ffd8619600ac443b2364c15",
+    "d2l_lib_fingerprint": "sha256:14d502089831bd24ce736a4fc9687bc80f9d8c4f876b9d2d6670a6c2b6b7ec24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 30230,
-          "sha256": "sha256:80bfa5311c77ce1f233b4e8e374fe7f86d6532c706ab41e99f15190fa3c454df"
+          "bytes": 32301,
+          "sha256": "sha256:3024ae3b95e70714c407bb80cf73887b49cbef8518c2e872c575b5f7fcc27f31"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ViT: 6.5M parameters, validation accuracy 0.87\n"
+          "text": "ViT: 6.5M parameters, validation accuracy 0.85\n"
         }
       ]
     },
@@ -69,14 +69,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean cosine similarity: grid neighbors 0.03, distant positions -0.02\n"
+          "text": "mean cosine similarity: grid neighbors 0.04, distant positions -0.03\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 107913,
-          "sha256": "sha256:c8369798a4a41b24b3823ac76aaa4d9889be3f23779f084e7c76a03cc6ab0b6d"
+          "bytes": 108059,
+          "sha256": "sha256:f6eca6ad6fbb0ecb7aa9ae6c67863ed88bac4cae0277f9eab5fe6006c14e5af8"
         }
       ]
     },
@@ -93,13 +93,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 32479,
-          "sha256": "sha256:fcd41481a798dc14fbb84736dd48df4333510b352d1af4e88abee7b1304af34f"
+          "bytes": 34417,
+          "sha256": "sha256:d0a61b05d83c026f8a7d0d90d7cccfd09b13357fac97377e53b1af44c932d57b"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.88\nViT: 6.5M parameters, validation accuracy 0.87\n"
+          "text": "CNN: 6.5M parameters, validation accuracy 0.90\nViT: 6.5M parameters, validation accuracy 0.85\n"
         }
       ]
     }

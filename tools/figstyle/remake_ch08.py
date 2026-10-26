@@ -56,7 +56,7 @@ def fig_functionclasses():
         parts.append(f'<path d="{d}" fill="{T.GOLD.tint}"'
                      f' stroke="{T.GOLD.base}" stroke-width="1.2"/>')
     f.raw(f'<g transform="scale({S})">' + "".join(parts) + "</g>",
-          0, 0, 465 * S, 191 * S)
+          0, 0, 465 * S, 174 * S)
 
     def flabel(x, y, n, color=T.INK):
         f.text(x * S, y * S, [Span("F", "i"), sub(str(n))],
@@ -78,10 +78,7 @@ def fig_functionclasses():
     for x in (232.0, 391.5):     # just right of each star (edges at 228/388)
         f.text(x * S, 14 * S, [var("f"), Span("*", "r", script=1)],
                size=T.FS_LABEL, anchor="start")
-    f.text(125 * S, 182 * S, "non-nested function classes",
-           size=T.FS_LABEL, color=T.INK)
-    f.text(371 * S, 182 * S, "nested function classes",
-           size=T.FS_LABEL, color=T.INK)
+    # No panel titles: the caption names the two panels (left, right).
 
     f.save("functionclasses", out_dir=IMG,
            desc="Non-nested versus nested function classes around f*.")

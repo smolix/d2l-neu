@@ -626,23 +626,43 @@ class LeNet(d2l.Classifier):
             tf.keras.layers.Dense(84), tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.Dense(num_classes)])
 
+def cosine_warmup(t, num_steps, warmup_steps):
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
+
+    Defined in :numref:`sec_batch_norm`"""
+    t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
+    progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    return (tf.minimum(t / warmup_steps, 1)
+            * 0.5 * (1 + tf.cos(math.pi * progress)))
+
 class Residual(tf.keras.Model):
     """The Residual block of ResNet models.
 
     Defined in :numref:`sec_resnet`"""
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super().__init__()
-        self.conv1 = tf.keras.layers.Conv2D(num_channels, padding='same',
-                                            kernel_size=3, strides=strides)
+        # He initialization, one initializer instance per layer
+        he = lambda: tf.keras.initializers.VarianceScaling(
+            2.0, 'fan_in', 'untruncated_normal')
+        # Pad 1 on every side, as the other frameworks do: Keras' 'same'
+        # pads only right and bottom when the stride is 2 and sizes are even
+        self.conv1 = tf.keras.Sequential([
+            tf.keras.layers.ZeroPadding2D(1),
+            tf.keras.layers.Conv2D(num_channels, kernel_size=3,
+                                   strides=strides, kernel_initializer=he())])
         self.conv2 = tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-                                            padding='same')
+            padding='same', kernel_initializer=he())
         self.conv3 = None
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = tf.keras.layers.Conv2D(num_channels, kernel_size=1,
-                                                strides=strides)
-        self.bn1 = tf.keras.layers.BatchNormalization()
-        self.bn2 = tf.keras.layers.BatchNormalization()
+                strides=strides, kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5, as in the other
+        # frameworks (the Keras defaults are 0.99 and 1e-3)
+        self.bn1 = tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                      epsilon=1e-5)
+        self.bn2 = tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                      epsilon=1e-5)
 
     def call(self, X):
         Y = tf.keras.activations.relu(self.bn1(self.conv1(X)))
@@ -660,18 +680,26 @@ class ResNeXtBlock(tf.keras.Model):
                  strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
-        self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1)
-        self.conv2 = tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
-                                            padding="same",
-                                            groups=groups)
-        self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1)
-        self.bn1 = tf.keras.layers.BatchNormalization()
-        self.bn2 = tf.keras.layers.BatchNormalization()
-        self.bn3 = tf.keras.layers.BatchNormalization()
+        # He initialization, one initializer instance per layer
+        he = lambda: tf.keras.initializers.VarianceScaling(
+            2.0, 'fan_in', 'untruncated_normal')
+        self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1,
+                                            kernel_initializer=he())
+        self.conv2 = tf.keras.Sequential([  # Pad 1 on every side
+            tf.keras.layers.ZeroPadding2D(1),
+            tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
+                                   groups=groups, kernel_initializer=he())])
+        self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1,
+                                            kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5, as in the other
+        # frameworks (the Keras defaults are 0.99 and 1e-3)
+        bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                        epsilon=1e-5)
+        self.bn1, self.bn2, self.bn3 = bn(), bn(), bn()
         if use_1x1conv:
             self.conv4 = tf.keras.layers.Conv2D(num_channels, 1,
-                                                strides=strides)
-            self.bn4 = tf.keras.layers.BatchNormalization()
+                strides=strides, kernel_initializer=he())
+            self.bn4 = bn()
         else:
             self.conv4 = None
 
@@ -682,6 +710,32 @@ class ResNeXtBlock(tf.keras.Model):
         if self.conv4:
             X = self.bn4(self.conv4(X))
         return tf.keras.activations.relu(Y + X)
+
+def num_params(model):
+    """The number of trainable parameters.
+
+    Defined in :numref:`sec_efficient_cnns`"""
+    return sum(int(tf.size(w)) for w in model.trainable_variables)
+
+def mixup(X, y, alpha):
+    """Mix a minibatch with a shuffled copy; return both label sets.
+
+    Defined in :numref:`sec_training_recipes`"""
+    g1, g2 = tf.random.gamma([], alpha), tf.random.gamma([], alpha)
+    lam = g1 / (g1 + g2)  # Beta(alpha, alpha) as a ratio of Gammas
+    perm = tf.random.shuffle(tf.range(tf.shape(X)[0]))
+    return (lam * X + (1 - lam) * tf.gather(X, perm),
+            y, tf.gather(y, perm), lam)
+
+def drop_path(Y, p, training):
+    """Zero each example of Y with probability p, rescale the rest.
+
+    Defined in :numref:`sec_training_recipes`"""
+    if not training or p == 0:
+        return Y
+    shape = [tf.shape(Y)[0]] + [1] * (len(Y.shape) - 1)
+    keep = tf.random.uniform(shape) > p
+    return Y * tf.cast(keep, Y.dtype) / (1 - p)
 
 class TimeMachine(d2l.DataModule):
     """The Time Machine dataset.

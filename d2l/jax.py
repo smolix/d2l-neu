@@ -695,6 +695,14 @@ class LeNet(d2l.Classifier):
             nnx.sigmoid,
             nnx.Linear(84, num_classes, kernel_init=kernel_init, rngs=rngs))
 
+def cosine_warmup(t, num_steps, warmup_steps):
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
+
+    Defined in :numref:`sec_batch_norm`"""
+    progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    return (jnp.minimum(t / warmup_steps, 1)
+            * 0.5 * (1 + jnp.cos(jnp.pi * progress)))
+
 class Residual(nnx.Module):
     """The Residual block of ResNet models.
 
@@ -703,19 +711,27 @@ class Residual(nnx.Module):
                  in_channels=None, rngs=None):
         in_channels = num_channels if in_channels is None else in_channels
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        # He initialization; biases start at zero (the Flax default)
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+        # padding=1 on every side, as in the other frameworks ('SAME' pads
+        # only right and bottom when the stride is 2 and sizes are even)
         self.conv1 = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                              padding='same', strides=strides, rngs=rngs)
+                              padding=1, strides=strides,
+                              kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(num_channels, num_channels, kernel_size=(3, 3),
-                              padding='same', rngs=rngs)
+                              padding='same', kernel_init=he, rngs=rngs)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or any(s != 1 for s in strides):
             self.conv3 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  rngs=rngs)
+                                  kernel_init=he, rngs=rngs)
         else:
             self.conv3 = None
-        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
-        self.bn2 = nnx.BatchNorm(num_channels, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance, as in the other
+        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
+        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                     rngs=rngs)
+        self.bn1, self.bn2 = bn(num_channels), bn(num_channels)
 
     def __call__(self, X):
         Y = nnx.relu(self.bn1(self.conv1(X)))
@@ -734,22 +750,27 @@ class ResNeXtBlock(nnx.Module):
         in_channels = num_channels if in_channels is None else in_channels
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         bot_channels = int(round(num_channels * bot_mul))
+        # He initialization; biases start at zero (the Flax default)
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         self.conv1 = nnx.Conv(in_channels, bot_channels, kernel_size=(1, 1),
-                              strides=(1, 1), rngs=rngs)
+                              strides=(1, 1), kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(bot_channels, bot_channels,
                               kernel_size=(3, 3), strides=strides,
-                              padding='same', feature_group_count=groups,
-                              rngs=rngs)
-        self.conv3 = nnx.Conv(bot_channels, num_channels,
-                              kernel_size=(1, 1), strides=(1, 1), rngs=rngs)
-        self.bn1 = nnx.BatchNorm(bot_channels, rngs=rngs)
-        self.bn2 = nnx.BatchNorm(bot_channels, rngs=rngs)
-        self.bn3 = nnx.BatchNorm(num_channels, rngs=rngs)
+                              padding=1, feature_group_count=groups,
+                              kernel_init=he, rngs=rngs)
+        self.conv3 = nnx.Conv(bot_channels, num_channels, kernel_size=(1, 1),
+                              strides=(1, 1), kernel_init=he, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance, as in the other
+        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
+        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                     rngs=rngs)
+        self.bn1, self.bn2 = bn(bot_channels), bn(bot_channels)
+        self.bn3 = bn(num_channels)
         if use_1x1conv:
             self.conv4 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  rngs=rngs)
-            self.bn4 = nnx.BatchNorm(num_channels, rngs=rngs)
+                                  kernel_init=he, rngs=rngs)
+            self.bn4 = bn(num_channels)
         else:
             self.conv4 = None
 
@@ -760,6 +781,31 @@ class ResNeXtBlock(nnx.Module):
         if self.conv4:
             X = self.bn4(self.conv4(X))
         return nnx.relu(Y + X)
+
+def num_params(model):
+    """The number of trainable parameters.
+
+    Defined in :numref:`sec_efficient_cnns`"""
+    return sum(p.size for _, p in nnx.state(model, nnx.Param).flat_state())
+
+def mixup(key, X, y, alpha):
+    """Mix a minibatch with a shuffled copy; return both label sets.
+
+    Defined in :numref:`sec_training_recipes`"""
+    key_lam, key_perm = jax.random.split(key)
+    lam = jax.random.beta(key_lam, alpha, alpha)
+    perm = jax.random.permutation(key_perm, X.shape[0])
+    return lam * X + (1 - lam) * X[perm], y, y[perm], lam
+
+def drop_path(key, Y, p, training):
+    """Zero each example of Y with probability p, rescale the rest.
+
+    Defined in :numref:`sec_training_recipes`"""
+    if not training or p == 0:
+        return Y
+    shape = (Y.shape[0],) + (1,) * (Y.ndim - 1)  # One draw per example
+    keep = jax.random.bernoulli(key, 1 - p, shape)
+    return Y * keep / (1 - p)
 
 class TimeMachine(d2l.DataModule):
     """The Time Machine dataset.

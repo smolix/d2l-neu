@@ -4,78 +4,85 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6202b1c79fdc356124abd9876c642f6ac0ef65178db8f0ba5602c8707a51926f",
+    "d2l_lib_fingerprint": "sha256:d065c715689fa00563ed3a3b7ddaef352270f5dc00a0b8b3a3f576b2e1bb7e2d",
     "max_inline_bytes": 0
   },
   "cells": {
     "batch-norm-batch-normalization": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:c300cb7caa408dc7ccf57efc672503edaa3feca7c3ff5bcdf5d9df44c9ad7dd8",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:ed61ebe4bbe75993b215afa940b23136b04c68e2578ae4a9507f0fe7cb3f4621",
+      "code_fingerprint": "sha256:05840465437c3689898b6554ea5fae790117953f84cf89a0d2db684699688417",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:93b00cdb6c6849e2cbb7caca4fc2b7a570ee3c29afcdc32464ff0b9316ba783b",
+      "code_fingerprint": "sha256:e9d6d6115d9d23540db92d63ad4be3a02f6932832a2e08a74a94898e5906fd7f",
       "kind": "text",
       "outputs": []
     },
-    "batch-norm-lenet-with-batch-normalization-1": {
-      "code_fingerprint": "sha256:096a768d40152a764fa946e88d6d8d69328e91854479802f4a91b900cd54843e",
-      "kind": "text",
-      "outputs": []
-    },
-    "batch-norm-lenet-with-batch-normalization-3": {
-      "code_fingerprint": "sha256:58ff2f891a40223f4655a93cf15b5d616008efd8790f28a14341530ba1e51196",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 33198,
-          "sha256": "sha256:d1dccf27968c0a3006ce5591eab661bf44d0e3ab35cb2d9341dd3dab69f51b8d"
-        }
-      ]
-    },
-    "batch-norm-lenet-with-batch-normalization-4": {
-      "code_fingerprint": "sha256:3ca87498631154a1968c7a2c78b42758f2f66dd426797fbcd9eeeb8d3505b939",
+    "batch-norm-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:a2e09a03e99abe452e4133b396cd9ea8f6fece5fa694a8d72aa83fe7c96003d3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([2.0475, 2.2633, 1.5248, 1.8654, 1.9842, 1.8530], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([ 0.0055, -0.1598, -0.0209, -1.2165, -0.9064,  1.4977], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor(2.4617e-07),\n tensor(1.0000),\n tensor(9.5367e-07),\n tensor([0.1998, 0.1991, 0.2010, 0.2013, 0.1992, 0.1996]))"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:2a93222c9f1310e4f0efd3fdcb67433abbf0658f4550d1ce5b866340b2672e7a",
+      "code_fingerprint": "sha256:09efaf2de88c65d062ee8eccb03f6050e01b92669f38944e0ef8cf5b40bdd891",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-cosine-warmup": {
+      "code_fingerprint": "sha256:73c36a405b30552f198338e42852da347ee7625308d9e3b989b991fb731a24b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-cosine-sgd": {
+      "code_fingerprint": "sha256:4ecbeab0c458f0c601f0b6eeafde0b8191e6e27f303be1bfdb61092a38df04d3",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:af08511a19f397308aaec88ba9ea3e37acf6926d9871cbf97e2d50c45ec31c1c",
+      "code_fingerprint": "sha256:d0f5d3bd8f07dda8369853cd47e1c532aff4a140e3affaa08024ad28ea7a4789",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-norm-lenet-with-batch-normalization-5": {
+      "code_fingerprint": "sha256:48364a226ba21195252d16fed23691d86e5450094afbfcd49aa9dddb5ca99e8d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 33321,
-          "sha256": "sha256:05736735a39b4b1e1b12f94f452e4d95cefdd7ceea514c559a7555b40643c7d4"
+          "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
+          "bytes": 24487,
+          "sha256": "sha256:ee2459cdb1209d09901852ab9bb3b2c737cf9b251e6ccb5e71d1e482c9858f99"
         }
       ]
     },
-    "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:7b65980d4fb178befae7ba3c4c88982def43f602b2e9e7ef8f45a9a1aeaba536",
+    "batch-norm-lenet-with-batch-normalization-6": {
+      "code_fingerprint": "sha256:269e3a4fa44203658d9bda36e480a3da347c9c4ae47e21062fabb1841780b459",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(2.0489e-08, grad_fn=<MaxBackward1>),\n tensor(1.0000, grad_fn=<MeanBackward0>),\n True)"
+          "text": "{'CosineLeNet': 0.608, 'BNLeNet': 0.887}"
+        }
+      ]
+    },
+    "batch-norm-group-normalization": {
+      "code_fingerprint": "sha256:e607fb4cbc6f6d8c268cbdd3a313b4db1e5c80f0c6df9c52417d856a7aef1221",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(4.0978e-08), tensor(1.0000), tensor(0.))"
         }
       ]
     }

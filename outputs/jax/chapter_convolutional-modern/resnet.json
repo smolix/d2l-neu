@@ -4,22 +4,22 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0e6dae976528a094f9b089e908c5d1887c806b8f16cc60a4b75d37fee1bb46df",
+    "d2l_lib_fingerprint": "sha256:8f8d73c1e93164a46cbe51926d7bc48f31324586c9f0dce6e372278061b5490c",
     "max_inline_bytes": 0
   },
   "cells": {
     "resnet-residual-networks-resnet-and-resnext": {
-      "code_fingerprint": "sha256:b5a0257e48a9d5a894c4943f40b39334f65cb496cddf322e8030beca04325f3f",
+      "code_fingerprint": "sha256:5b4a35ae481dd7e5762686db7d806aef6ed0abb7111a82dd92271c2f46f1ef02",
       "kind": "text",
       "outputs": []
     },
     "resnet-residual-blocks-1": {
-      "code_fingerprint": "sha256:024a2d516cd15ce549a4e4521ca4ffa32b7907de100aede766e394f8bf5bd290",
+      "code_fingerprint": "sha256:8575d5f6cf4c456f0103f953ff8ea4d7430ce781f3e4e3a7924cfa98c77be2f0",
       "kind": "text",
       "outputs": []
     },
     "resnet-residual-blocks-2": {
-      "code_fingerprint": "sha256:79fcbb22b3acd95cf4c88f8dd60877bba0cc3d42b597b8c94f43254ae860f72a",
+      "code_fingerprint": "sha256:c641089f6b5d82729446ddc5e1f5752e795e6659797ff4feb7b66b1707a31af3",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "resnet-residual-blocks-3": {
-      "code_fingerprint": "sha256:9e792416ef36b9d586ceb93e0d2ea8daf8d8b4404247ddd8b2c5c684d2f28da5",
+      "code_fingerprint": "sha256:c9c6f50da1874b4185d09f788e5d741d755af9a713e3c62031ae713c6f84a516",
       "kind": "text",
       "outputs": [
         {
@@ -39,27 +39,27 @@
       ]
     },
     "resnet-resnet-model-1": {
-      "code_fingerprint": "sha256:113ec25aa8919c0955aedb63e86b593363f017c4fb14df3ce9ab2f0af0dcdfea",
+      "code_fingerprint": "sha256:56acb9571f75f557dd7a9fb29f43dd20b3a8cd1c0d7be948fad3ca349e1ad7b2",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-2": {
-      "code_fingerprint": "sha256:eea161c9f3462c650faf0bdd242bf5993837ba09d212d06718956091744401ac",
+      "code_fingerprint": "sha256:770e58c175ffbb8c9e042880c6e5de3bd0b2fd679e8f2f521422d5c44275c95f",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-3": {
-      "code_fingerprint": "sha256:2020ffdedd8d48d4a64904b512fe5e9c2d196493d74d9e83c9223d95f82e3f0c",
+      "code_fingerprint": "sha256:bdae0460729244a74b77e67cc3894edf5508d1704fe57e3ee5370d7de2e9c299",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-4": {
-      "code_fingerprint": "sha256:ec0987274c69e7bd18099174cd57e410edd3f0e5d9eba7e8561b697b5037237c",
+      "code_fingerprint": "sha256:398f5cf81785e420ccabea680a4bcb01e38eae59e0d7fe6a0280e115f1ac8142",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-5": {
-      "code_fingerprint": "sha256:729ab677f1994607242aa52d157b9ec9ec7191a3083e9b7eca80940e790ba57f",
+      "code_fingerprint": "sha256:7b6500237d0094c072a81ebc152d0b2e3bdb139383ca689c8be6b0cbc6722d43",
       "kind": "text",
       "outputs": [
         {
@@ -94,26 +94,41 @@
         }
       ]
     },
+    "resnet-training-schedule": {
+      "code_fingerprint": "sha256:8d309092f05660b7068fc6ea4ec5af1bfa46f532ed345fa12df0e9f3c16f53a0",
+      "kind": "text",
+      "outputs": []
+    },
     "resnet-training": {
-      "code_fingerprint": "sha256:63d497a0cbb88ff20a1a1cf7ee45ae4708f5ebf5a4f55ac198c09265f3153c92",
+      "code_fingerprint": "sha256:b72318dc9e40c0d318465145a33e1fcabb3866db9ca60f42d66813ffa3fe7420",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 33066,
-          "sha256": "sha256:0d86b5e5469e0d62d804ca219f8eafff4b33eb803464ceb996a6286cf584224f"
+          "bytes": 31860,
+          "sha256": "sha256:0420cebd74ca78e430d1598da1e7b60ea89d5852ebe71fea6693258b545d02f5"
+        }
+      ]
+    },
+    "resnet-training-readout": {
+      "code_fingerprint": "sha256:fe5ec0cd00920dedbe51333dfabf2ab3a5b1a3a691f20ff47afc24563f92321d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.909"
         }
       ]
     },
     "resnet-resnext-1": {
-      "code_fingerprint": "sha256:9ebc7f29c4c87fb6e576eb7f7f45b5d36860ea2e3384d33a1f88706f36dc1194",
+      "code_fingerprint": "sha256:5affd880a4d0ce52fec3f5349d9692c4831b6dbcbea7af755bf2ec33147c72cb",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnext-2": {
-      "code_fingerprint": "sha256:1b958d85fa4d968be5a556febdd56ef82be9f384e6e7718026c6f97921d2cc6a",
+      "code_fingerprint": "sha256:182eb3bf1531e98015096e0fdedb16f0d9ef8fc50adb0cf709b7b8a6c1744cd2",
       "kind": "text",
       "outputs": [
         {
@@ -123,17 +138,17 @@
       ]
     },
     "densenet-dense-blocks-1": {
-      "code_fingerprint": "sha256:0f755b62f42998de8212cab904d9e2afaffb438aef8e31fa8349bd35b13b65cf",
+      "code_fingerprint": "sha256:c39ecda22c70d811d2917b4cb1ea28598ef606e94a940f1c6a9db4c24604c352",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-2": {
-      "code_fingerprint": "sha256:f4a439985a01276e4478210e674fd45613ec30da36a825b7bacfe7d8ba66c1fa",
+      "code_fingerprint": "sha256:9991506d390c5781b62a4a8bbc1525ff533f7935cef7f989c3d343a62f5fae87",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-3": {
-      "code_fingerprint": "sha256:16efd5b435dfad8efb5ecc1c84c3db059e47eb586c8ec509ea00ee83261df26a",
+      "code_fingerprint": "sha256:608d93af0c5eb8a2dca8a9df2bfe9ce2edfc05c9b9411947f502852b0c40e105",
       "kind": "text",
       "outputs": [
         {
@@ -143,12 +158,12 @@
       ]
     },
     "densenet-transition-layers-1": {
-      "code_fingerprint": "sha256:c4caf714f5c2069985de7fde04def9f5962ecfc967aa9afb3f946bed092bc1af",
+      "code_fingerprint": "sha256:9aa3e6e63479d1810e96dec3bad613748984b35c9abbe50a95f3f94441c465e4",
       "kind": "text",
       "outputs": []
     },
     "densenet-transition-layers-2": {
-      "code_fingerprint": "sha256:67fd6ff546e415e30ac730cb28f717886eb375efb527718b94c7af6395fbcc07",
+      "code_fingerprint": "sha256:690f81f9165f76c43cf6b973857306dfc36b083e7037852e08cc3be4a93af5fd",
       "kind": "text",
       "outputs": [
         {

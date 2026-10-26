@@ -9,17 +9,17 @@
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:8408f15e1356b9baf8e39a49cbf12ceb6727122a0d9258a51dd68e545ee6875a",
+      "code_fingerprint": "sha256:ba8b4090845308987ae7b48eada76ea191e1274334e7c2b4553d0b24d372662c",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:b0fcf669068332bbe36583a5bf536a1b49bcc93eefc22c070e6331422f8119f6",
+      "code_fingerprint": "sha256:b9147b9c715fbf7fec7c0898f382cfd9ec6e2a35fb873c801c95b4d65bdc426f",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:e80463cecdc806f901c4f644afc7d07b6315966f80442b9c798ae220bed0636b",
+      "code_fingerprint": "sha256:fdf18598a80cf071830ca60e333b07200cb4cece72a7cd606f7f7a15b4634450",
       "kind": "text",
       "outputs": [
         {
@@ -30,15 +30,15 @@
       ]
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:b0005fca7f1b0bab692769783a1d4dc2b48dbbfa7f537786af8f476104f2ffda",
+      "code_fingerprint": "sha256:0acbbb95a237b18e75e5114154b074ecc0d6a9accaed4641c9616b9dd5e87b5c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 31287,
-          "sha256": "sha256:19e60895e5df0163def58ff4c9292cbd938516231482b3682a8257fc241664a2"
+          "bytes": 33861,
+          "sha256": "sha256:e1a5ef552e467b8d2cd394153ccba112e3010920aae72256e8a8bc22c5bc9f84"
         }
       ]
     }

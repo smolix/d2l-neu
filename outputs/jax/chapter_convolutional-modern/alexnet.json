@@ -14,12 +14,12 @@
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:c3a5a2c30b05a4373de8d5035652ab0ae718c97b531975f53a50ef356872eddf",
+      "code_fingerprint": "sha256:476a9561a566261441554c8721a7d8c50fdf63d94d9b381f23ec56dec6fc6dd8",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:3f076747018792154cb7ed158c152cc9dc7b14d56a281f0f3a252d3cb586ffcb",
+      "code_fingerprint": "sha256:6ab1c162cd211300dced3adbcb6b233c90630a5fd4ee315055f2aa71beb16b35",
       "kind": "text",
       "outputs": [
         {
@@ -70,15 +70,15 @@
       ]
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:eb22b1e71523ebcb8fa7c6accbf281ffe7a105df1296b05e13ffe6fdd0eafc97",
+      "code_fingerprint": "sha256:383215731f0f466ed6f6f46e145201a15a86d357bab789e5729a5c2396042984",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32162,
-          "sha256": "sha256:138abc944251ab6762face0311cbe46235c4ddcff83a051cba7552b699a480fd"
+          "bytes": 33861,
+          "sha256": "sha256:1802e4cd5a4a94f6b253d79c4b25e787cf7982ad9bf68cb54f38531c56a3f8a4"
         }
       ]
     }

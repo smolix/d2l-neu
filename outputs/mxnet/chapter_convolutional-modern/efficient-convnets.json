@@ -4,27 +4,27 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:c3e2445788eb249ffdfa6cf8aa2d2415c17a82047ed9faced4c713aa2a349a2e",
+    "d2l_lib_fingerprint": "sha256:43a5103700c4d2f0c7db5d57aac7959982bb2b642ef452f084c9faca29c24dcd",
     "max_inline_bytes": 0
   },
   "cells": {
     "efficient-convnets-imports": {
-      "code_fingerprint": "sha256:885bfe3e0f92d04e677429a98805980488d8d8411df0b53fcfcf816135ff08ea",
+      "code_fingerprint": "sha256:e992032d69f1f83e77ed3c4336156be4df812196c2fdaf34a94e85ce7ea169bb",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:9fff91f33aedc767b736f4cb7e16c27d288a4dfb854b7b1483557015000a235a",
+      "code_fingerprint": "sha256:a9fbcc4e5405fb41e9c876aedf2cbb2f889c9542ac6f36687d5d94fdf410629d",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:5d452c2a99e324a99f13c53255ebc3e36fab5c1cef33a7604bb85b91a62d0ca2",
+      "code_fingerprint": "sha256:d28add895036be9262460d3f5ea0ef528296db82d414577edca7a94e485898f7",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:2287b451164ce9300e5e86ddd2a15646ee861bae884d8d5aed07113ac87e6475",
+      "code_fingerprint": "sha256:e487d05008548651efa89f36e96890d55f075e71b45d7c76b4b11247930ce034",
       "kind": "text",
       "outputs": [
         {
@@ -33,23 +33,74 @@
         }
       ]
     },
-    "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:6543b9ad3537171e662c288fd34f97e8854cf257f26dc2e1813aaa954e7b2798",
+    "efficient-convnets-training-and-comparison-1": {
+      "code_fingerprint": "sha256:dc33b1a37cc757310a3c2244dc7f0b599c9309b260ce4668e756e9b67f0fe191",
       "kind": "text",
       "outputs": []
     },
-    "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:f4cffc0b0c14aa1c81afa55415723ca62c6a32dd7952748645f21b6958df19d9",
-      "kind": "text",
-      "outputs": []
-    },
-    "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:e31de428afeb237b9d6500cb03750c8b5c73deec20adce9123bd7b28aa604f3c",
+    "efficient-convnets-arithmetic-accuracy-and-time-1": {
+      "code_fingerprint": "sha256:2db0573be69eb3b72195b3048f333320b0db05a64c2c622880982d545e78c2bd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "1.9073486328125e-06"
+          "text": "({'Mini-MobileNet': 50259968, 'VGG-style': 384861440}, 7.657415142007253)"
+        }
+      ]
+    },
+    "efficient-convnets-training-and-comparison-2": {
+      "code_fingerprint": "sha256:83e477bfa8f1330dc5bf998d3a0b82dee690c1775dfef50b363ea9985f2b8c57",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
+          "bytes": 34426,
+          "sha256": "sha256:677026d574b3266c9b3c3eed0b9718619b46bfed3e4a5aaef9e9d27c95a877f8"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
+          "bytes": 32423,
+          "sha256": "sha256:77b31dfa09771493efd34bf953cccaa3c05c8e4fa2bf3206bcc315f8890cc7c3"
+        }
+      ]
+    },
+    "efficient-convnets-training-and-comparison-4": {
+      "code_fingerprint": "sha256:ab07f9b8d050d04f59b0fafc4a87ba3e6fd900e695232625e9f56c48d890fb3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.917, 2.3 ms per batch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.937, 5.6 ms per batch\n"
+        }
+      ]
+    },
+    "efficient-convnets-the-repvgg-block": {
+      "code_fingerprint": "sha256:3056fe638f02d861378eba29173a496b64954af6d720b79aed411a5f04697fc7",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-fusing-the-branches-1": {
+      "code_fingerprint": "sha256:f28f64b41d9ff74aae96bc14a79dd843c08389353364419a76bb2e41922e417f",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-fusing-the-branches-2": {
+      "code_fingerprint": "sha256:27168b7cb8b026180703e823c679e05739a5eda453a9a8d2b0855facb0b6adaa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3.337860107421875e-06"
         }
       ]
     }

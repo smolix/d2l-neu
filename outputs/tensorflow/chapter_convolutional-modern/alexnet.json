@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:170c39ac62ad347bf8e7db8415af9e58220098d23cc10ab7bdc4e20da97039a0",
+    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,41 +14,36 @@
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:e04b5d2f3dbfa244b3e72b15ed46d421368b3dca560eb200d4ed97c8641daa1e",
+      "code_fingerprint": "sha256:63ef21ddb3b6b987956f699155fd960aca03ea37b265798c9522762770d29755",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:c729adecf91fb8fd35c3d6666e301ec10f75ac6284b7a847b1ed502f98b90923",
+      "code_fingerprint": "sha256:a5a599d92ad4dd5bcfd79047bb08df1fab69b715ec073ecf2e681e215e24e06b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\n"
+          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nConv2D output shape:\t (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Dense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:5ffc38e1a6464197a6953397c838217b56037b47646a67c824125d7ef034d5b6",
+      "code_fingerprint": "sha256:52a8f0c94a50c2d9953cf3e4847bbc57d7aa4a69542bff050b46efbc5301d0b0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 31294,
-          "sha256": "sha256:b1662d902fe8ab223614511048eb6909b0ef2e957c3de2c548f0e183bba1e7b5"
+          "bytes": 34592,
+          "sha256": "sha256:93de95fe8ac9241c163f6448a10933f1e508de3a43a6ddf1bd6760eaa979dcd7"
         }
       ]
     }

@@ -688,7 +688,16 @@ class LeNet(d2l.Classifier):
             nn.Dense(num_classes))
         self.net.initialize(init.Xavier())
 
-class Residual(nn.Block):
+def cosine_warmup(t, num_steps, warmup_steps):
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
+
+    Defined in :numref:`sec_batch_norm`"""
+    if t < warmup_steps:
+        return t / warmup_steps
+    progress = (t - warmup_steps) / (num_steps - warmup_steps)
+    return 0.5 * (1 + math.cos(math.pi * progress))
+
+class Residual(nn.HybridBlock):
     """The Residual block of ResNet models.
 
     Defined in :numref:`sec_resnet`"""
@@ -713,7 +722,7 @@ class Residual(nn.Block):
             X = self.conv3(X)
         return npx.relu(Y + X)
 
-class ResNeXtBlock(nn.Block):
+class ResNeXtBlock(nn.HybridBlock):
     """The ResNeXt block.
 
     Defined in :numref:`sec_resnet`"""
@@ -723,7 +732,7 @@ class ResNeXtBlock(nn.Block):
         bot_channels = int(round(num_channels * bot_mul))
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
                                strides=1)
-        self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1, 
+        self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1,
                                strides=strides, groups=groups)
         self.conv3 = nn.Conv2D(num_channels, kernel_size=1, padding=0,
                                strides=1)
@@ -744,6 +753,32 @@ class ResNeXtBlock(nn.Block):
         if self.conv4:
             X = self.bn4(self.conv4(X))
         return npx.relu(Y + X)
+
+def num_params(model):
+    """The number of trainable parameters.
+
+    Defined in :numref:`sec_efficient_cnns`"""
+    return sum(p.data().size for p in model.collect_params().values()
+               if p.grad_req != 'null')
+
+def mixup(X, y, alpha):
+    """Mix a minibatch with a shuffled copy; return both label sets.
+
+    Defined in :numref:`sec_training_recipes`"""
+    lam = random.betavariate(alpha, alpha)
+    perm = d2l.tensor(random.sample(range(X.shape[0]), X.shape[0]),
+                      dtype='int32', device=X.device)
+    return lam * X + (1 - lam) * X[perm], y, y[perm], lam
+
+def drop_path(Y, p):
+    """Zero each example of Y with probability p, rescale the rest.
+
+    Defined in :numref:`sec_training_recipes`"""
+    if p == 0:
+        return Y
+    # Dropout with one draw per example (shared along all other axes); it
+    # reads the training mode at run time, also when hybridized
+    return npx.dropout(Y, p=p, axes=tuple(range(1, Y.ndim)))
 
 class TimeMachine(d2l.DataModule):
     """The Time Machine dataset.

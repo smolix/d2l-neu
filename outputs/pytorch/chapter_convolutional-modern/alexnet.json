@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6202b1c79fdc356124abd9876c642f6ac0ef65178db8f0ba5602c8707a51926f",
+    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:0ebfffb0c85fd61e8497f3ef0dd6fa58c6e3b3034836484aafbb63baf7a81700",
+      "code_fingerprint": "sha256:5e7c84ea880fd5b3f24cf1d600ffe5a7e8e57f4302323a663d7137d6a1b6d2ae",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:3980e12b7034648fd2b2cb487a7329e90af21e54bbb768245714586ab2602c1c",
+      "code_fingerprint": "sha256:a838f94b1eb9f1d9ab1e47520a291bc95df33c8816dc305c888338cc8c67207c",
       "kind": "text",
       "outputs": [
         {
@@ -35,15 +35,15 @@
       ]
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:0a9bbc12a09ac8e642ad430903fb9fdf29836298f8d64865c7313a2df4f8b37e",
+      "code_fingerprint": "sha256:6ed6607283a48a6ec69edaf7a78aefe284da9b48e3e1d4748319d3f1ffb342de",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 31293,
-          "sha256": "sha256:151328cae53f2187628ac72960265dd82e01b8913ab7aa8db87fbc05a27ed756"
+          "bytes": 34598,
+          "sha256": "sha256:1deab39bc198d0d3e4cd3c53089b5fb76a3c8d20eccc334595cfb2f086ee946f"
         }
       ]
     }

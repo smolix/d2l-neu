@@ -258,6 +258,10 @@ HEAVY_GPU_NOTEBOOKS = {
     # fine-tuning: ResNet18 features at 224×224, batch=128, XLA-fused
     # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.
     ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,
+    # 7.1/7.2: AlexNet, VGG and NiN at 224×224, batch 128 peak at ~13 GiB in
+    # MXNet's memory pool (PyTorch ~4 GiB); 1-slot runs OOM when sharing a GPU.
+    ("mxnet", "chapter_convolutional-modern/alexnet.ipynb"): 2,
+    ("mxnet", "chapter_convolutional-modern/blocks.ipynb"): 2,
 }
 
 

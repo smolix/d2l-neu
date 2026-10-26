@@ -665,7 +665,7 @@ def corr2d(X, K):
     return Y
 
 class LeNet(d2l.Classifier):
-    """The LeNet-5 model.
+    """The layout of LeNet-5, with sigmoid activations and average pooling.
 
     Defined in :numref:`sec_lenet`"""
     def __init__(self, lr=0.1, num_classes=10, kernel_init=None, rngs=None):
@@ -674,16 +674,21 @@ class LeNet(d2l.Classifier):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         kernel_init = (nnx.initializers.xavier_uniform() if kernel_init is None
                        else kernel_init)
+
+        def avg_pool(x):  # 2x2 windows, stride 2
+            return nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+
+        def flatten(x):
+            return x.reshape((x.shape[0], -1))
+
         self.net = nnx.Sequential(
-            nnx.Conv(1, 6, kernel_size=(5, 5), padding='SAME',
-                     kernel_init=kernel_init, rngs=rngs),
-            nnx.sigmoid,
-            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+            nnx.Conv(1, 6, kernel_size=(5, 5), padding=2,
+                     kernel_init=kernel_init, rngs=rngs), nnx.sigmoid,
+            avg_pool,
             nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID',
-                     kernel_init=kernel_init, rngs=rngs),
-            nnx.sigmoid,
-            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
-            lambda x: x.reshape((x.shape[0], -1)),  # flatten
+                     kernel_init=kernel_init, rngs=rngs), nnx.sigmoid,
+            avg_pool,
+            flatten,
             nnx.Linear(400, 120, kernel_init=kernel_init, rngs=rngs),
             nnx.sigmoid,
             nnx.Linear(120, 84, kernel_init=kernel_init, rngs=rngs),

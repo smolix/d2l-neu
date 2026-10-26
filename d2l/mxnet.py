@@ -670,7 +670,7 @@ def corr2d(X, K):
     return Y
 
 class LeNet(d2l.Classifier):
-    """The LeNet-5 model.
+    """The layout of LeNet-5, with sigmoid activations and average pooling.
 
     Defined in :numref:`sec_lenet`"""
     def __init__(self, lr=0.1, num_classes=10):
@@ -678,13 +678,13 @@ class LeNet(d2l.Classifier):
         self.save_hyperparameters()
         self.net = nn.Sequential()
         self.net.add(
-            nn.Conv2D(channels=6, kernel_size=5, padding=2,
-                      activation='sigmoid'),
+            nn.Conv2D(6, kernel_size=5, padding=2), nn.Activation('sigmoid'),
             nn.AvgPool2D(pool_size=2, strides=2),
-            nn.Conv2D(channels=16, kernel_size=5, activation='sigmoid'),
+            nn.Conv2D(16, kernel_size=5), nn.Activation('sigmoid'),
             nn.AvgPool2D(pool_size=2, strides=2),
-            nn.Dense(120, activation='sigmoid'),
-            nn.Dense(84, activation='sigmoid'),
+            nn.Flatten(),
+            nn.Dense(120), nn.Activation('sigmoid'),
+            nn.Dense(84), nn.Activation('sigmoid'),
             nn.Dense(num_classes))
         self.net.initialize(init.Xavier())
 

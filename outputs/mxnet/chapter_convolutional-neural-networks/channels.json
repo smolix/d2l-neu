@@ -9,17 +9,17 @@
   },
   "cells": {
     "channels-multiple-input-and-multiple-output-channels": {
-      "code_fingerprint": "sha256:ed8a6f56d5898c1ec83d5c44dcb459e7b8c627dc8fd6e67e0d2b1d4c860e832e",
+      "code_fingerprint": "sha256:24663c8f35fd36689b606dcf64da08e2e389230b97b09a7be6ef6cb5f9fc369f",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-input-channels-1": {
-      "code_fingerprint": "sha256:38ce063f20e6b68749634562170222bc2bcd175bfff32e1ded8e38aac4a1b835",
+      "code_fingerprint": "sha256:fc56625d2070ac44b0be1879f84cb06e55f07b2df098e69c0b6a3c99b6d2aef2",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-input-channels-2": {
-      "code_fingerprint": "sha256:2251ea47b0b69f7d7f55b610f0472f04bb0e078dde7c0cc3401430e93c126f5b",
+      "code_fingerprint": "sha256:008b7637a5c9bd2f9e0c8db411a533915014c837f74c64f48e2dabfc42f517c2",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "channels-multiple-output-channels-1": {
-      "code_fingerprint": "sha256:09098e976537fcd1d64efded197aad6064f535fb30faee84e91dcc1cb3ee8bfa",
+      "code_fingerprint": "sha256:7299eb89e259c9675ffb95d342a9eb8ddb88cc827246ace8559db7f522ec4e60",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-output-channels-2": {
-      "code_fingerprint": "sha256:3a653084035ef966aa22451e9989f41b1428ccad42d847f2aa8c4527b3205655",
+      "code_fingerprint": "sha256:c29149e2279f97b1c7f1b8f58e4157d844a8c91aa896ed94ae9b0de1a539e367",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "channels-multiple-output-channels-3": {
-      "code_fingerprint": "sha256:6bf54d244a1a5da0af30c5b9f9a625e00af8e7e619e38cce02a4c3d86bc08f78",
+      "code_fingerprint": "sha256:a9ff1ea52149d455448239b80fa24dc6ef782989ba40266701b224313e8eab47",
       "kind": "text",
       "outputs": [
         {
@@ -54,17 +54,22 @@
       ]
     },
     "channels-1-times-1-convolutional-layer-1": {
-      "code_fingerprint": "sha256:76d93ad3f9f0518bc30ed6fdebac3a1a85ff4aae9625e983abbf93d13fc54096",
+      "code_fingerprint": "sha256:616085b3de4bdf3bb32638e3fd975227ceaa2451836f520c6a7a949fc63b0512",
       "kind": "text",
       "outputs": []
     },
     "channels-1-times-1-convolutional-layer-2": {
-      "code_fingerprint": "sha256:5885de1e99ceb969aad8eb5329cba4c876bf56e6b127a34cea30db6676c88fc1",
+      "code_fingerprint": "sha256:0a585a2305dd939a6b58a10a8136b42f4cf022fd35c7559df24360448502fc1b",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "1.7881393432617188e-07"
+        }
+      ]
     },
     "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
-      "code_fingerprint": "sha256:026a166a3bf8c4c1bcee917dd06583bcaf12ced56264d37eacf375a3dfd29c18",
+      "code_fingerprint": "sha256:c5f2381ac88524aa681728c977bec51319ea31ff11512edc86c126d42cdef5fd",
       "kind": "text",
       "outputs": [
         {

@@ -14,12 +14,12 @@
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:1100d3560c29e21d9beb0ceb085bd4f5e0fd4f0bcb21f541cebece53224e2078",
+      "code_fingerprint": "sha256:542400e589cf95d53eda88ec1086f6ae3bd11bc3601a5c058acd01b532a0c5e5",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:26865084acdfddcedeef56fc1d69af67bc24f9c9554e3fefa75bbe3466cabc9e",
+      "code_fingerprint": "sha256:80071da443de8591da228270365fad2d2b08d2d8c5f32b5e34beacdeb8499220",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:2ff8a35ea208ac2b2b0e3d8eef98e71883cf830c338f8d19cfadbda592786468",
+      "code_fingerprint": "sha256:1927a800ce890e3a64fc35180065a3178114583d3cdbcc17380f68649b8e8199",
       "kind": "text",
       "outputs": [
         {
@@ -38,8 +38,19 @@
         }
       ]
     },
+    "pooling-tolerance-to-small-shifts": {
+      "code_fingerprint": "sha256:c3573ada8d3c57121f04dce12c3b99733e64e39d299a8aed9440ec7a31ceafd6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "response at (1, 0): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 1): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 2): max [[0.0, 1.0], [0.0, 0.0]] avg [[0.0, 0.25], [0.0, 0.0]]\n"
+        }
+      ]
+    },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:3eb99d957b549a2d254bd0d3148aa98b3a374afd657594a36f2dc9ec7a00dbd7",
+      "code_fingerprint": "sha256:02c8922ec5e0fd0aff853e9e59d383b0bcafa7697baf13fef362574b4e455cc4",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +60,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:8a12ec5ae613f6650acc913ef2a465d1666fbb17f84c676f157acc66bb07c0ef",
+      "code_fingerprint": "sha256:673d333860ae142d46d44dd716c162031ee01f4bdf399ff8a2ed1582be5f16d1",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +70,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:044f705fa386505def5117105c5cfb62deb56c6400d7d11c4f66a4ac3c56fbe9",
+      "code_fingerprint": "sha256:02c2fd6c51a37fba9eb0cd887a084ad5b1408c6de3ff4cb37621a73a92199db8",
       "kind": "text",
       "outputs": [
         {
@@ -68,8 +79,18 @@
         }
       ]
     },
+    "pooling-padding-and-stride-5": {
+      "code_fingerprint": "sha256:97cc71d5a1c8fc2df816cdb9ed67b1287fc0bf8a25159c5ab42eee89b50aaa42",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[[-11.,  -9.],\n          [ -3.,  -1.]]]])"
+        }
+      ]
+    },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:31a29c2bc3a4bde10bccc4b71c1cc357958a45a49f957d25e83aa5194efe3cc0",
+      "code_fingerprint": "sha256:5ce4cc479b6f329da332766b87b001fceff7d83bac1ffb888da9f757bab44658",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +100,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:4b320f6cf5ac0b4bd9f4558dca5dbae423f014335226fcab6f2615e923581e58",
+      "code_fingerprint": "sha256:10923bfc3437e73da23bc5bc4915c3fb97f3a9d6b2129fbe3ec06d892887f75d",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +110,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:8807734b7e699e6214a94922db8c198df73acedba013c26453e688f526024800",
+      "code_fingerprint": "sha256:1e8ea1040cca8bd168922ab1b66ab72fec95cdb1330cff8b53cab2992948d304",
       "kind": "text",
       "outputs": [
         {

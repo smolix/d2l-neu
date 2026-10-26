@@ -9,17 +9,17 @@
   },
   "cells": {
     "conv-layer-convolutions-for-images": {
-      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
+      "code_fingerprint": "sha256:a7fd8b5373586c013db88b683e166649063779d03f9f451bf4c76ec98989804c",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-1": {
-      "code_fingerprint": "sha256:2654ef4107c0f37a96096d176ffa3e8113a4ab1c03ed1a5ddc2eaaae1cbe6124",
+      "code_fingerprint": "sha256:898c41dc76cb7ec75632e04d1b5bafec7f5cd869970c17cb2f388ebe7c2a821d",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-2": {
-      "code_fingerprint": "sha256:bcd5a9389b4037511a61d36f3d02311a7b22379318ad4ccef4965d61fe9576fc",
+      "code_fingerprint": "sha256:1ab3f6ef7d2ad1f6e02bb0b8425b802996b4a6bab8a1970c4239b94cd76347ad",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,22 @@
       ]
     },
     "conv-layer-convolutional-layers": {
-      "code_fingerprint": "sha256:c02c349ed218846a92cc21ab11701606b7c4d04e1c4d70522a15edf1424c8057",
+      "code_fingerprint": "sha256:462c3bbb56cf8d30e94fdc0918ab3a61514054182d1335270cf3a1b737a2904c",
       "kind": "text",
       "outputs": []
     },
+    "conv-layer-the-layer-1": {
+      "code_fingerprint": "sha256:4707b230b55dd5ccfb6929bc82ec3450afb31dbbecbcd476e203f01eccc295ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((2, 2), (5, 7))"
+        }
+      ]
+    },
     "conv-layer-object-edge-detection-in-images-1": {
-      "code_fingerprint": "sha256:be30894ed06036823df4c4af81ec1a1fb36a1e306446bb841f358934bfbc84f4",
+      "code_fingerprint": "sha256:4a2a94d3d40de1e8d52772e724c77598bf022a47e43028f71393ffb4e80d8842",
       "kind": "text",
       "outputs": [
         {
@@ -44,12 +54,12 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-2": {
-      "code_fingerprint": "sha256:4b8c3017e5ef34d0c2d798798cc446d31304b92d9c85ac45ad4ed0d9498ae1bb",
+      "code_fingerprint": "sha256:0674b9ff24aea1296322bd9a49c63291b6351437d09eca3c330f484de1318f9e",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-3": {
-      "code_fingerprint": "sha256:167c2f419433598c70fc31a61dc5dc01bdb3c0599d0e9da0b3428361fb38e1a2",
+      "code_fingerprint": "sha256:99841b68cb736dfa8e62a0479a189d093764147fded3060d1253426880faa07f",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +69,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-4": {
-      "code_fingerprint": "sha256:90796f37e25ea48d8dc32f9542517233444c2d1145339d5952ba16e48b2c09c7",
+      "code_fingerprint": "sha256:700e02746d9dd45d371532bad37d7b9da793e1e485f735f61d1e0c99b7e5ac92",
       "kind": "text",
       "outputs": [
         {
@@ -69,28 +79,28 @@
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:d0b177a1ad7adc751242dde043594d16ed64ea20daace5bdb17835d1b8ae050e",
+      "code_fingerprint": "sha256:6c6d554e3584513e3fe8dac0a690eb83d7472e016a652801f52678adb43d9afe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 4.868\nepoch 4, loss 0.817\nepoch 6, loss 0.137\nepoch 8, loss 0.023\nepoch 10, loss 0.004\n"
+          "text": "step 0, loss 12.000\nstep 3, loss 0.825\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:52c450fa6932d85aa32ab75fcfd90c155cc85a96ab0b431b0c5255dc85c677ec",
+      "code_fingerprint": "sha256:fcd5187be6e203f175066f2f12d1c442998520aae30cfd25d0c599d918d4caa7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.98822   , -0.98883337]], dtype=float32)"
+          "text": "Array([[ 0.98819196, -0.98875034]], dtype=float32)"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:028927a6d4ce22d77d8cb495dbd22fb0988f9f8166a8b8a01b17f91b25f13cac",
+      "code_fingerprint": "sha256:f2def2cd3b2aceb482445c6d0d9d32c6649b212d39b51e5d1f0ec144ce41fb37",
       "kind": "text",
       "outputs": [
         {

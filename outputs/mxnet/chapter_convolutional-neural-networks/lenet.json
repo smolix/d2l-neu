@@ -14,31 +14,31 @@
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:ad49fac9a6898f3070d8388d57d75b7074599155f099503a5c58bdea6da108b6",
+      "code_fingerprint": "sha256:37338ca86f83a8239d4b4bf89c7d343c07ad10c4a4cd45b69cd62029914bacf6",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:abb3f2bad5c0ab33fad689eec9ccf96e39281a410fe30533e60ae7943f3cae92",
+      "code_fingerprint": "sha256:723d4f2678442f583b1e1db9a7486023447eeca5300038b1b4f57fabadbd87d2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 6, 28, 28)\nAvgPool2D output shape:\t (1, 6, 14, 14)\nConv2D output shape:\t (1, 16, 10, 10)\nAvgPool2D output shape:\t (1, 16, 5, 5)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 6, 28, 28)\nActivation output shape:\t (1, 6, 28, 28)\nAvgPool2D output shape:\t (1, 6, 14, 14)\nConv2D output shape:\t (1, 16, 10, 10)\nActivation output shape:\t (1, 16, 10, 10)\nAvgPool2D output shape:\t (1, 16, 5, 5)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nActivation output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nActivation output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:6ffedd613ff2d0b9d227ecf32db039e90aa50327a3f286aca9e4a44239347462",
+      "code_fingerprint": "sha256:f649f123b0fc6f311eabd3dec5703330ed3e6b57f46723ea9ca33d347db849ec",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37866,
-          "sha256": "sha256:36005020fe7469b480b49e8cb443a12f2ae86462da17483e49ed0d74d3b30837"
+          "bytes": 37865,
+          "sha256": "sha256:320bfc8c4aa8b1282b80ab94957b556b58963fd1d0ca7ae7c4e4b45faf711175"
         }
       ]
     }

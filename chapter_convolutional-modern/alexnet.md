@@ -540,7 +540,7 @@ Five conv layers (11×11 → 5×5 → three 3×3) with max-pooling, then two
 
 ::: {.slide title="Shape inspection"}
 Walk a single 224×224 image through the network and print each
-block's output shape, from 224×224 down to 6×6 at 256 channels:
+block's output shape, from 224×224 down to 5×5 at 256 channels:
 
 @alexnet-capacity-control-and-preprocessing-2
 :::

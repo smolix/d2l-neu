@@ -4,17 +4,22 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:1039a3dcd6d6575eaf0896e2720bfdcbe64aaf2b9ca4c6d98ff6dd48f879fc92",
     "max_inline_bytes": 0
   },
   "cells": {
     "padding-and-strides-padding-and-stride": {
-      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "kind": "text",
+      "outputs": []
+    },
+    "padding-and-strides-zero-padding-1": {
+      "code_fingerprint": "sha256:32955bb0250499915824a8204cbc43bc01ad4e53cd193e21734c63ccd2178bec",
       "kind": "text",
       "outputs": []
     },
     "padding-and-strides-padding-1": {
-      "code_fingerprint": "sha256:b5b5cccd99ed170fac10cac4f102205ac0690c24d282471a0ad9216f7f1df8f1",
+      "code_fingerprint": "sha256:74b2fff17dd3e9a5974fd30838d6bbd8de181daecd71e6c55c4043aea269b04e",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +29,7 @@
       ]
     },
     "padding-and-strides-padding-2": {
-      "code_fingerprint": "sha256:9b1a2d59346d5ea67f1905b0465c2a47ea08ab2cbe0f1efcded2775f709b3e95",
+      "code_fingerprint": "sha256:b1cde0ca852ce496f28eefc7517a259d7e34c989816559bee39f6f3e91e9e716",
       "kind": "text",
       "outputs": [
         {
@@ -33,8 +38,18 @@
         }
       ]
     },
+    "padding-and-strides-padding-values": {
+      "code_fingerprint": "sha256:2d15f175ab09c883db4b9f07a77a28e927bbaa3f0edfeafcbcb345a8fd83ce73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(5, 5), dtype=float32, numpy=\narray([[4., 6., 6., 6., 4.],\n       [6., 9., 9., 9., 6.],\n       [6., 9., 9., 9., 6.],\n       [6., 9., 9., 9., 6.],\n       [4., 6., 6., 6., 4.]], dtype=float32)>"
+        }
+      ]
+    },
     "padding-and-strides-stride-1": {
-      "code_fingerprint": "sha256:552ac322ca2e310c7d81d846f0e78fab7417e66b55dfcf9812507b972fae89c0",
+      "code_fingerprint": "sha256:b0a0ba44baddd9f7f48fc0dcb871eb8165a14b79fb61cb54655aec361cc17b27",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +59,7 @@
       ]
     },
     "padding-and-strides-stride-2": {
-      "code_fingerprint": "sha256:3a383d08d25feacdeeb6a5c398b4d13134bc977d2bf531f11e12894063bd45d4",
+      "code_fingerprint": "sha256:253493029d8a637fba01cf13338848d74e50b2b536af24d77204250cb948764f",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +69,7 @@
       ]
     },
     "padding-and-strides-dilation": {
-      "code_fingerprint": "sha256:db7ff75aba488c1228e272b390f253bb83fb7f07979c2c3facb08532bea475e8",
+      "code_fingerprint": "sha256:b7f3942658041ab9064c86547e77fc1132d044069e973ce9b9b3a1e3d6738e7f",
       "kind": "text",
       "outputs": [
         {

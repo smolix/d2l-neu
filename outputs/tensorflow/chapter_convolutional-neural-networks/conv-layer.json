@@ -29,12 +29,22 @@
       ]
     },
     "conv-layer-convolutional-layers": {
-      "code_fingerprint": "sha256:de5bcf85739aad95269821a1a616845c5a0003a63547fa6d24c5af90846a2592",
+      "code_fingerprint": "sha256:5ac2b93d1d74540420775cdbe02d0c53e579f666fb0381be5207259eac46c080",
       "kind": "text",
       "outputs": []
     },
+    "conv-layer-the-layer-1": {
+      "code_fingerprint": "sha256:32d6c5f302ef1516e9e53a7acbc7c07078f788457d2e5a3aa62b4d94c191a3f5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([2, 2]), TensorShape([5, 7]))"
+        }
+      ]
+    },
     "conv-layer-object-edge-detection-in-images-1": {
-      "code_fingerprint": "sha256:170e00a68c124d1c4ed3b574fc01faa4f0a03ac6624de88654e59019628cd2b4",
+      "code_fingerprint": "sha256:9736501d9e18ed841e28702cf1c9aac83aaa3dd00b2be2cf347405a42e3ec8ef",
       "kind": "text",
       "outputs": [
         {
@@ -44,12 +54,12 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-2": {
-      "code_fingerprint": "sha256:3aa910362adc0da34a519ee910c5d79c156c4ae2ae52b8b2fc2c220e04c8e5e1",
+      "code_fingerprint": "sha256:519e2b116928aa8c45e9cfbd5980c0437894853d4a63935eb6db6fbc321b700d",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-3": {
-      "code_fingerprint": "sha256:2c7efd02cb2b90a07e8b3ba284dcfb605f6306d15185caa709a7e87a77e1aebd",
+      "code_fingerprint": "sha256:86a947f9784262c19e225e931679cef6909a5a46e07f20c7d9095abdc83abb93",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +69,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-4": {
-      "code_fingerprint": "sha256:72b3925c8e2a4fe992eb660d21477f15eb471488c8a4f53ebe646ecfa5a01808",
+      "code_fingerprint": "sha256:7d572c9eb031148aa5071c3aa77357c7f065f0d84a0300de3cfc30fc2a2e6e94",
       "kind": "text",
       "outputs": [
         {
@@ -69,28 +79,28 @@
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:8f85500c92e9e906714591f446709ea0f178d8c2becb7228f2ce187bec676bc3",
+      "code_fingerprint": "sha256:e9e540a9103af6f550d96fbb3b24d7d4b7f85fd5bc82f6925bf9d753ee229666",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 6.750\nepoch 4, loss 1.474\nepoch 6, loss 0.387\nepoch 8, loss 0.122\nepoch 10, loss 0.044\n"
+          "text": "step 0, loss 11.788\nstep 3, loss 0.812\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:a0cb20656f0e78d56a89e0f7cb14eac1d49b6d2f6bfa1a07944b62854962b6ac",
+      "code_fingerprint": "sha256:b2d1f60ccd8e6887f8aab023af664ac6c4ecbd3542a28ad96a478836d89980f3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 1.0085659, -0.9674023]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9890286, -0.9882092]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:73822112c04b5897df62a1a021ea06ad78b6cd38df3c7d784031b007be83f7ee",
+      "code_fingerprint": "sha256:b95cd2122f14d955eb2d59ef35ccd153d73db5c9df68b0c58bfab8bba4810d1f",
       "kind": "text",
       "outputs": [
         {

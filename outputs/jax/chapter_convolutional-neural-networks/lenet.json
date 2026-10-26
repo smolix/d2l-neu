@@ -14,33 +14,28 @@
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:09cb83dd1fb5f39b55edd47df1176cd4add4823e9999a1ec0b96c8036ae7481b",
+      "code_fingerprint": "sha256:5b70aac3c101a0f7cfd5d7007db8858ffba7f6235b3d6b784d0aec6fc78d56fd",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:620e6d8f9da8a42dc8765ef6c852c01152eedad61c2e9d47382a150b9465fc18",
+      "code_fingerprint": "sha256:f7f4f8be80991bc83881f5b35ab3af4308233832b0783ad19dc93fbc367379ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\n"
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "function output shape:\t (1, 14, 14, 6)\n"
+          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\nfunction output shape:\t (1, 5, 5, 16)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "function output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\n"
+          "text": "function output shape:\t (1, 400)\n"
         },
         {
           "type": "stream",
@@ -60,15 +55,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:604e7e8b6923c4ba67a33258c2d88cb219a1c92e6014519d60de173cfe2a8d17",
+      "code_fingerprint": "sha256:fc616332bad2de32ffa0eef7248aeda039a050d59f4a86e1a7b5205cf567e6ee",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37860,
-          "sha256": "sha256:a2315dc4dd8d64b35f8d72ff58137e28ba1cbc339b0a9b971b8c40cbf6a3448a"
+          "bytes": 37867,
+          "sha256": "sha256:1afce90ab2c95ecb7a5282de126be7800ac4ca44ea31b9b0420b627025372ca1"
         }
       ]
     }

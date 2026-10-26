@@ -9,17 +9,17 @@
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:ed8a6f56d5898c1ec83d5c44dcb459e7b8c627dc8fd6e67e0d2b1d4c860e832e",
+      "code_fingerprint": "sha256:24663c8f35fd36689b606dcf64da08e2e389230b97b09a7be6ef6cb5f9fc369f",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:cda2b86b05ba328531d1f94d071cb8f74b640ac8b48b2178cb39719906bf940b",
+      "code_fingerprint": "sha256:b3335204ae95ba2160a8c3d28bfe966657ff8ae312f29d559a42b5880b753396",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:6da1d77b609596712425b744814df253900290b206453a010be7f46d027cd983",
+      "code_fingerprint": "sha256:3e0d0b5c21f513083a579d30b0e85925d5d7e74ef619ee47cd26eb7260b3845d",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:813a37b98d25175b2e6783da8acae2faa774d76b43c940c90d5b22679b4846e8",
+      "code_fingerprint": "sha256:1fed0f93c469c1a59f84179e696bf22033afcbc14c8ecedf5a1a1256c84bd335",
       "kind": "text",
       "outputs": [
         {
@@ -38,8 +38,19 @@
         }
       ]
     },
+    "pooling-tolerance-to-small-shifts": {
+      "code_fingerprint": "sha256:1b03e0c4973b4eef6fa89fe539ec85de8ab137354254bfbbcb70a2af3c999989",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "response at (1, 0): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 1): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 2): max [[0.0, 1.0], [0.0, 0.0]] avg [[0.0, 0.25], [0.0, 0.0]]\n"
+        }
+      ]
+    },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:57c7b3e7a35759c1832a6de1312e70cdd3353e242115bf0f7f00e34eae205e32",
+      "code_fingerprint": "sha256:5808d2be91301f59b38f7935a0380d50c557e6a26012f41d0d4c5176ddbba7f6",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +60,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:dfc57d2fea5daa143f811e4a395f852f3a08a64b5643989383c3b36fce3facc7",
+      "code_fingerprint": "sha256:09e0eb802497f060e78fe20fd46ca260b0ee0ecc28523ecc21a1b7d6d8d66a24",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +70,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:60bd7ac4f77c8ce82bdd0946f383c715bc5edb5398a5e4dd574776f6a8092cb1",
+      "code_fingerprint": "sha256:bb444af4256bd737dcd9011eb3d241bf28c5affa5e5c65d66ad270d39b309fad",
       "kind": "text",
       "outputs": [
         {
@@ -68,8 +79,18 @@
         }
       ]
     },
+    "pooling-padding-and-stride-5": {
+      "code_fingerprint": "sha256:820abcc2d776a17bc7adf5a36f397b1dbfd292e72c9529c3da24f5f68c0cfd0b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[[[-11.,  -9.],\n         [ -3.,  -1.]]]])"
+        }
+      ]
+    },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:01b6f7f9d471adcab66cd443d17135bde26d1b2425c626410a705576fa955d99",
+      "code_fingerprint": "sha256:334a7b3adf4a696d0f2d216ed907a5a8407b6c353dcbc2b8a0f83aaf158b5cfc",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +100,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:15be1af5a19237a226bbc365729b0400f4ee9214dd1b342706b0346c1394d9e9",
+      "code_fingerprint": "sha256:09f400c339025ec42c482f5b9c522bf1ed3158dbf0af9a71438116cda0fb9060",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +110,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:8a66d441652752dede7a3da1eadc6acd7d23ae0ac316eec39078cf582bc82df3",
+      "code_fingerprint": "sha256:90df69ebe1f42d340ef06dae8d4912708427a6947c8193521ad4d861970e2599",
       "kind": "text",
       "outputs": [
         {

@@ -608,22 +608,22 @@ def corr2d(X, K):
     return Y
 
 class LeNet(d2l.Classifier):
-    """The LeNet-5 model.
+    """The layout of LeNet-5, with sigmoid activations and average pooling.
 
     Defined in :numref:`sec_lenet`"""
     def __init__(self, lr=0.1, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(filters=6, kernel_size=5,
-                                   activation='sigmoid', padding='same'),
+            tf.keras.layers.Conv2D(6, kernel_size=5, padding='same'),
+            tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
-            tf.keras.layers.Conv2D(filters=16, kernel_size=5,
-                                   activation='sigmoid'),
+            tf.keras.layers.Conv2D(16, kernel_size=5),
+            tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(120, activation='sigmoid'),
-            tf.keras.layers.Dense(84, activation='sigmoid'),
+            tf.keras.layers.Dense(120), tf.keras.layers.Activation('sigmoid'),
+            tf.keras.layers.Dense(84), tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.Dense(num_classes)])
 
 class Residual(tf.keras.Model):

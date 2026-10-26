@@ -19,12 +19,12 @@
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:d47062e72ced00c84c3a2f0423c35bce61f37514f37e48ecace228bf41a5bce9",
+      "code_fingerprint": "sha256:7b8022af7c83a7cc52f2e29c79c15bdf0b76a7a98b71b4f96771ac4ba633fdac",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:740f398b964eca08851e79c49a1ac3c716dfc91971067bf8c8c1564df97d2c9f",
+      "code_fingerprint": "sha256:c8ee0ca01ec3f81a11451599c6750c7704b29b237d6f3f2695b8f09cbcc4f416",
       "kind": "text",
       "outputs": [
         {
@@ -35,15 +35,15 @@
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:50cc386c747d33a99ea3cb13fd1e7702bfcf21c8417300239a2bcad665d1f752",
+      "code_fingerprint": "sha256:fcb60430e55abf04c2560ba6e34ef34cb069b5e93641a84f3f7f7366b6bf0303",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37880,
-          "sha256": "sha256:d76f8c38c873febd3d9408b085df2e1a32e578a8ee2adf18bcfb3252ac881727"
+          "bytes": 37859,
+          "sha256": "sha256:2cbbb1af63305f9deaea0e1259c082f33146e8b88ff10ad3d4da3371b241943b"
         }
       ]
     }

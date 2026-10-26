@@ -102,8 +102,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 33678,
-          "sha256": "sha256:611f81db193f3cba94ab76a7ffb35c4231c071db6a55fe4160f1344a12263fbb"
+          "bytes": 33066,
+          "sha256": "sha256:0d86b5e5469e0d62d804ca219f8eafff4b33eb803464ceb996a6286cf584224f"
         }
       ]
     },

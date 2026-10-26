@@ -1,5 +1,10 @@
 # Chapter Overview — Convolutional Neural Networks
 
+> **Status (2026-10 book pass).** The book pass rewrote this chapter's exercises;
+> each section now carries 6–7 exercises. The dispositions below describe the
+> pre-pass lists and stay as provenance for the external sources; the source
+> `.md` files are authoritative.
+
 Six files (`why-conv`, `conv-layer`, `padding-and-strides`, `channels`,
 `pooling`, `lenet`), 38 existing exercises, all in bare `1.`-list legacy
 style with no names/tags (per the group style review). Best external

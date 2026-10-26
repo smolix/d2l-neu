@@ -46,6 +46,14 @@ def vals(A):
             for c in range(A.shape[1])}
 
 
+def star_op(d, x, y, fs=17.0):
+    """The cross-correlation operator ⋆ between panels, centered at (x, y).
+    Drawn as Computer Modern math (the prose's symbol): Source Sans 3 has
+    no ⋆ glyph, and a plain * would read as true convolution."""
+    d.ax.text(x, y, r"$\star$", fontsize=1.25 * fs, color=INK,
+              math_fontfamily="cm", ha="center", va="center", zorder=8)
+
+
 def window(r0, c0, h=2, w=2):
     return {(r, c) for r in range(r0, r0 + h) for c in range(c0, c0 + w)}
 
@@ -64,7 +72,7 @@ def fig_correlation():
     w, _ = d.grid(x, 20, 3, 3, CELL, shaded=window(0, 0), values=vals(X33),
                   title="Input", title_y=TY)
     x += w + OP
-    d.op(x, 59, "*")
+    star_op(d, x, 59)
     x += OP
     w, _ = d.grid(x, 33, 2, 2, CELL, shaded=window(0, 0), values=vals(K22),
                   title="Kernel", title_y=TY)
@@ -86,7 +94,7 @@ def fig_conv_pad():
                   values=vals(Xp), title="Input (padded)", title_y=TY)
     d.grid(x + CELL, 20 + CELL, 3, 3, CELL, frame_only=True)
     x += w + OP
-    d.op(x, 85, "*")
+    star_op(d, x, 85)
     x += OP
     w, _ = d.grid(x, 59, 2, 2, CELL, shaded=window(0, 0), values=vals(K22),
                   title="Kernel", title_y=TY)
@@ -112,7 +120,7 @@ def fig_conv_stride():
                   values=vals(Xp), title="Input (padded)", title_y=TY)
     d.grid(x + CELL, 20 + CELL, 3, 3, CELL, frame_only=True)
     x += w + OP
-    d.op(x, 85, "*")
+    star_op(d, x, 85)
     x += OP
     w, _ = d.grid(x, 59, 2, 2, CELL, shaded=window(0, 0), values=vals(K),
                   title="Kernel", title_y=TY)
@@ -140,7 +148,7 @@ def fig_conv_multi_in():
     d.ax.text(x + (3 * CELL + OFF) / 2, TY, "Input", fontsize=GRID_FS,
               color=INK, family=SANS, ha="center", va="bottom", zorder=6)
     x += 3 * CELL + OFF + OP
-    d.op(x, 80, "*")
+    star_op(d, x, 80)
     x += OP
     d.grid(x + OFF, 55 + OFF, 2, 2, CELL, shaded=window(0, 0),
            values=vals(K1), zorder=2)
@@ -154,11 +162,11 @@ def fig_conv_multi_in():
     # right: the two per-channel products, '+' between the KERNELS
     c = 21.0
     d.grid(x, 104, 3, 3, c, shaded=window(0, 0), values=vals(X1))
-    d.op(x + 3 * c + 13, 135, "*", fs=14)
+    star_op(d, x + 3 * c + 13, 135, fs=14)
     kx = x + 3 * c + 26
     d.grid(kx, 114, 2, 2, c, shaded=window(0, 0), values=vals(K1))
     d.grid(x, 8, 3, 3, c, shaded=window(0, 0), values=vals(X0))
-    d.op(x + 3 * c + 13, 39, "*", fs=14)
+    star_op(d, x + 3 * c + 13, 39, fs=14)
     d.grid(kx, 18, 2, 2, c, shaded=window(0, 0), values=vals(K0))
     d.op(kx + c, 88, "+")                     # between the two kernels
     x = kx + 2 * c + OP
@@ -189,7 +197,7 @@ def fig_conv_1x1():
     d.ax.text(x + tw / 2, TY, "Input", fontsize=GRID_FS, color=INK,
               family=SANS, ha="center", va="bottom", zorder=6)
     x += tw + OP
-    d.op(x, 85, "*")
+    star_op(d, x, 85)
     x += OP
 
     # kernel: TWO groups of three 1x1 weights (one group per output channel)

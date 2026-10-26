@@ -6,36 +6,28 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutional Neural Networks (LeNet)
 :label:`sec_lenet`
 
-We can now combine convolution, pooling, and fully connected layers into a
-complete image classifier. In our earlier experiments with image data, we applied
-a linear model with softmax regression (:numref:`sec_softmax_scratch`)
-and an MLP (:numref:`sec_mlp-implementation`)
-to pictures of clothing in the Fashion-MNIST dataset.
-Both models first flattened each image from a $28\times28$ matrix into a
-$784$-dimensional vector and processed it with fully connected layers. Such
-layers treat the pixels as an unordered list: shuffling the pixels in the same
-way in every image would not change what the MLP can learn. After 30 epochs,
-the MLP reached about 87% validation accuracy.
-Convolutional layers instead preserve the spatial organization and share
-parameters across locations, so they need far fewer parameters. This section
-asks whether a network built from them also classifies the images more
-accurately.
+The MLP of :numref:`sec_mlp-implementation` classifies Fashion-MNIST images
+with about 87% validation accuracy after 30 epochs, using about 204,000
+parameters. It flattens each $28\times28$ image into a vector of 784 numbers
+before its first layer. Shuffling the pixels in the same way in every image
+would therefore not change what it can learn: the MLP does not know which
+pixels are neighbors, and it must learn a pattern separately at every
+position where the pattern can occur. The convolutional layers of this
+chapter keep the spatial layout and use the same kernel at every position,
+so they need far fewer parameters. This section builds a complete
+classifier from convolutions, pooling, and fully connected layers and asks
+whether it is also more accurate than the MLP, under the same loss,
+optimizer, and number of epochs.
 
-We answer it with *LeNet*, one of the early CNNs to demonstrate strong
-performance on a practical computer vision task.
-The model was introduced by (and named for) Yann LeCun,
-then a researcher at AT&T Bell Labs,
-for the purpose of recognizing handwritten digits in images :cite:`LeCun.Bottou.Bengio.ea.1998`.
-This work represented the culmination
-of a decade of research developing the technology;
-LeCun's team published the first study to successfully
-train CNNs via backpropagation :cite:`LeCun.Boser.Denker.ea.1989`.
-
-LeNet matched the performance of support vector machines, then a dominant
-approach to handwritten-digit recognition, with an error rate below 1% per
-digit. Variants were deployed to read handwritten amounts on bank checks and
-deposit slips. The deployment demonstrated that a trained convolutional model
-could replace a substantial hand-engineered recognition pipeline.
+The network we build is *LeNet*, after Yann LeCun, who developed it with his
+colleagues at AT&T Bell Labs to recognize handwritten digits
+:cite:`LeCun.Bottou.Bengio.ea.1998`. It was the result of a decade of work
+that began with an early convolutional network for images trained end to
+end by backpropagation :cite:`LeCun.Boser.Denker.ea.1989`. LeNet-5, the version of 1998, reached an
+error rate below 1% on handwritten digits, on par with the support vector
+machines of the time, and variants of it read the handwritten amounts on
+bank checks in commercial systems. It showed that a network trained from
+examples could replace a hand-engineered recognition pipeline.
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab mxnet
@@ -54,8 +46,8 @@ from torch import nn
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab tensorflow
-import tensorflow as tf
 from d2l import tensorflow as d2l
+import tensorflow as tf
 ```
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
@@ -65,56 +57,67 @@ from flax import nnx
 from jax import numpy as jnp
 ```
 
-## LeNet
+## The LeNet Architecture
 
-At a high level, LeNet (LeNet-5) consists of two parts:
-(i) a convolutional encoder consisting of two convolutional layers; and
-(ii) a dense block consisting of three fully connected layers.
-The architecture is summarized in :numref:`img_lenet`.
+LeNet consists of two parts, shown in :numref:`img_lenet`: a convolutional
+encoder with two convolutional layers, and a dense block with three fully
+connected layers.
 
-![Data flow in LeNet. The input is a handwritten digit, the output is a probability over 10 possible outcomes.](../img/lenet.svg)
+![Data flow in LeNet on one $28\times28$ Fashion-MNIST image, with the feature maps drawn to scale. Each shaded window produces the dark unit it points to in the next layer. The three fully connected layers have 120, 84, and 10 outputs.](../img/lenet.svg)
 :label:`img_lenet`
 
-The basic units in each convolutional block
-are a convolutional layer, a sigmoid activation function,
-and a subsequent average pooling operation.
-ReLUs and max-pooling were not part of LeNet-5 and had not yet become the
-standard choices for trained CNNs.
-Each convolutional layer uses a $5\times 5$ kernel.
-These layers map spatially arranged inputs
-to a number of two-dimensional feature maps, typically
-increasing the number of channels.
-The first convolutional layer has 6 output channels,
-while the second has 16.
-Each $2\times2$ pooling operation (stride 2)
-reduces dimensionality by a factor of $4$ via spatial downsampling.
-The convolutional block emits an output with shape (batch size, number
-of channels, height, width) in the PyTorch/MXNet convention; TensorFlow
-and JAX use the channels-last layout (batch, height, width, channels).
+Each convolutional block consists of a convolutional layer with a
+$5\times5$ kernel, a sigmoid activation, and $2\times2$ average pooling with
+stride 2. The first convolutional layer has 6 output channels and the second
+has 16, so the number of channels grows while each pooling layer halves the
+height and the width. The encoder's output has shape (batch size, channels,
+height, width) in MXNet and PyTorch; TensorFlow and JAX put the channels
+last.
 
-To pass the convolutional block's output to the dense block, we flatten each
-example. This transforms the four-dimensional tensor into a matrix whose first
-axis indexes examples and whose second axis contains the flattened features.
-LeNet's dense block has three fully connected layers,
-with 120, 84, and 10 outputs, respectively.
-Because we are still performing classification,
-the 10-dimensional output layer corresponds
-to the number of possible output classes.
+The dense block needs one vector per example, so we first flatten the
+encoder's output into a matrix with one row per example. Its three fully
+connected layers have 120, 84, and 10 outputs. The last layer has one output
+per class, as in softmax regression.
 
-Modern frameworks express LeNet as a `Sequential` block containing the layers
-described above. We use Xavier initialization, introduced in
-:numref:`subsec_xavier`, in all four frameworks.
+This is the common teaching version of LeNet-5, not an exact reproduction.
+The network of 1998 had the same alternating convolutions and pooling and
+the same 6, 16, 120, and 84 channels and hidden units, but it used a scaled
+tanh as activation, pooling with a trainable weight and bias, partial
+connections between the two convolutional layers, and radial-basis output
+units. It also took $32\times32$ images, larger than the $28\times28$ MNIST
+digits it classified, so that features near the border of a digit, such as
+the end of a stroke, could fall at the center of the receptive field of a
+unit in the last convolutional layer. Our first convolutional layer pads
+its $28\times28$ input by two pixels on each side, which gives it the same
+$32\times32$ extent and the $28\times28$ output of the original.
+
+In a framework, LeNet is a `Sequential` container of these layers. We use
+Xavier initialization (:numref:`subsec_xavier`) for the weights and zero
+biases in all four frameworks.
+
+:begin_tab:`mxnet`
+`initialize(init.Xavier())` draws the weights from Xavier's uniform
+distribution; the biases start at zero, Gluon's default.
+:end_tab:
 
 :begin_tab:`pytorch`
 Lazy layers have no weights until the first minibatch fixes their shapes, so
-the model cannot initialize them in its constructor. Before training, we
-therefore call `apply_init` (:numref:`sec_lazy_init`), which runs one
-minibatch through the model and then applies `init_cnn` to every layer.
+the model cannot initialize them in its constructor. As in
+:numref:`sec_lazy_init`, the `Trainer` runs one minibatch through the model
+and then calls the model's `weight_init` method on every layer. For LeNet
+this method applies `init_cnn`, which draws Xavier-uniform weights, and sets
+the biases to zero.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Xavier initialization, under the name `glorot_uniform`, is the Keras default
-for convolutional and dense layers, so the model needs no initialization code.
+Xavier initialization, under the name `glorot_uniform`, and zero biases are
+the Keras defaults for convolutional and dense layers, so the model needs no
+initialization code.
+:end_tab:
+
+:begin_tab:`jax`
+NNX layers draw their weights in the constructor. We pass Xavier's uniform
+initializer to each layer; the biases start at zero, the Flax default.
 :end_tab:
 
 ```{.python .input #lenet-1}
@@ -126,9 +129,29 @@ def init_cnn(module):  #@save
 ```
 
 ```{.python .input #lenet-2}
+%%tab mxnet
+class LeNet(d2l.Classifier):  #@save
+    """The layout of LeNet-5, with sigmoid activations and average pooling."""
+    def __init__(self, lr=0.1, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = nn.Sequential()
+        self.net.add(
+            nn.Conv2D(6, kernel_size=5, padding=2), nn.Activation('sigmoid'),
+            nn.AvgPool2D(pool_size=2, strides=2),
+            nn.Conv2D(16, kernel_size=5), nn.Activation('sigmoid'),
+            nn.AvgPool2D(pool_size=2, strides=2),
+            nn.Flatten(),
+            nn.Dense(120), nn.Activation('sigmoid'),
+            nn.Dense(84), nn.Activation('sigmoid'),
+            nn.Dense(num_classes))
+        self.net.initialize(init.Xavier())
+```
+
+```{.python .input #lenet-2}
 %%tab pytorch
 class LeNet(d2l.Classifier):  #@save
-    """The LeNet-5 model."""
+    """The layout of LeNet-5, with sigmoid activations and average pooling."""
     def __init__(self, lr=0.1, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
@@ -141,68 +164,59 @@ class LeNet(d2l.Classifier):  #@save
             nn.LazyLinear(120), nn.Sigmoid(),
             nn.LazyLinear(84), nn.Sigmoid(),
             nn.LazyLinear(num_classes))
-```
 
-```{.python .input #lenet-2}
-%%tab mxnet
-class LeNet(d2l.Classifier):  #@save
-    """The LeNet-5 model."""
-    def __init__(self, lr=0.1, num_classes=10):
-        super().__init__()
-        self.save_hyperparameters()
-        self.net = nn.Sequential()
-        self.net.add(
-            nn.Conv2D(channels=6, kernel_size=5, padding=2,
-                      activation='sigmoid'),
-            nn.AvgPool2D(pool_size=2, strides=2),
-            nn.Conv2D(channels=16, kernel_size=5, activation='sigmoid'),
-            nn.AvgPool2D(pool_size=2, strides=2),
-            nn.Dense(120, activation='sigmoid'),
-            nn.Dense(84, activation='sigmoid'),
-            nn.Dense(num_classes))
-        self.net.initialize(init.Xavier())
+    def weight_init(self, module):
+        # The Trainer calls this after the first minibatch fixed the shapes
+        init_cnn(module)  # Xavier-uniform weights
+        if type(module) in (nn.Linear, nn.Conv2d):
+            nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #lenet-2}
 %%tab tensorflow
 class LeNet(d2l.Classifier):  #@save
-    """The LeNet-5 model."""
+    """The layout of LeNet-5, with sigmoid activations and average pooling."""
     def __init__(self, lr=0.1, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(filters=6, kernel_size=5,
-                                   activation='sigmoid', padding='same'),
+            tf.keras.layers.Conv2D(6, kernel_size=5, padding='same'),
+            tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
-            tf.keras.layers.Conv2D(filters=16, kernel_size=5,
-                                   activation='sigmoid'),
+            tf.keras.layers.Conv2D(16, kernel_size=5),
+            tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.AvgPool2D(pool_size=2, strides=2),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(120, activation='sigmoid'),
-            tf.keras.layers.Dense(84, activation='sigmoid'),
+            tf.keras.layers.Dense(120), tf.keras.layers.Activation('sigmoid'),
+            tf.keras.layers.Dense(84), tf.keras.layers.Activation('sigmoid'),
             tf.keras.layers.Dense(num_classes)])
 ```
 
 ```{.python .input #lenet-2}
 %%tab jax
 class LeNet(d2l.Classifier):  #@save
-    """The LeNet-5 model."""
+    """The layout of LeNet-5, with sigmoid activations and average pooling."""
     def __init__(self, lr=0.1, num_classes=10, kernel_init=None, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs', 'kernel_init'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         kernel_init = (nnx.initializers.xavier_uniform() if kernel_init is None
                        else kernel_init)
+
+        def avg_pool(x):  # 2x2 windows, stride 2
+            return nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+
+        def flatten(x):
+            return x.reshape((x.shape[0], -1))
+
         self.net = nnx.Sequential(
-            nnx.Conv(1, 6, kernel_size=(5, 5), padding='SAME',
-                     kernel_init=kernel_init, rngs=rngs),
-            nnx.sigmoid,
-            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+            nnx.Conv(1, 6, kernel_size=(5, 5), padding=2,
+                     kernel_init=kernel_init, rngs=rngs), nnx.sigmoid,
+            avg_pool,
             nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID',
-                     kernel_init=kernel_init, rngs=rngs),
-            nnx.sigmoid,
-            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
-            lambda x: x.reshape((x.shape[0], -1)),  # flatten
+                     kernel_init=kernel_init, rngs=rngs), nnx.sigmoid,
+            avg_pool,
+            flatten,
             nnx.Linear(400, 120, kernel_init=kernel_init, rngs=rngs),
             nnx.sigmoid,
             nnx.Linear(120, 84, kernel_init=kernel_init, rngs=rngs),
@@ -210,22 +224,14 @@ class LeNet(d2l.Classifier):  #@save
             nnx.Linear(84, num_classes, kernel_init=kernel_init, rngs=rngs))
 ```
 
-This is the classic teaching version of LeNet-5, with sigmoid activations
-and average pooling. It is not an exact reproduction: the 1998 network used a
-scaled tanh, trainable subsampling, partial connections between the two
-convolutional layers, and radial-basis output units. Its alternating
-convolution--pooling structure and its 6, 16, 120, and 84 channels and hidden
-units are those of LeNet-5.
+## Layer Shapes
 
-To check that the operations line up with :numref:`img_lenet_vert`, we pass a
-single-channel (black and white) $28 \times 28$ image through the network and
-print the output shape after each layer.
-
-:begin_tab:`jax`
-Because an NNX model already owns its initialized layers, we can pass an array
-through the callables stored in `Sequential` and print each intermediate shape
-directly.
-:end_tab:
+:numref:`img_lenet_vert` lists the layers in compressed notation, with the
+shape of the tensor that passes between them. To check that the code builds
+this network, we pass a single-channel $28 \times 28$ image through it and
+print the output shape after each layer. The method `layer_summary` does this
+for any classifier whose layers sit in a sequential container `net`; the
+next chapter uses it for larger networks.
 
 ![Compressed notation for LeNet. Beside each arrow is the shape of the tensor it carries, as channels@height×width.](../img/lenet-vert.svg)
 :label:`img_lenet_vert`
@@ -269,98 +275,95 @@ model = LeNet()
 model.layer_summary((1, 28, 28, 1))
 ```
 
-Every convolutional and pooling layer except the first convolutional layer
-reduces the height and width of the representation.
-The first convolutional layer uses two pixels of padding
-to compensate for the reduction in height and width
-that would otherwise result from using a $5 \times 5$ kernel.
-As an aside, the image size of $28 \times 28$ pixels in the original
-MNIST OCR dataset is a result of *trimming* two pixel rows (and columns) from the
-original scans that measured $32 \times 32$ pixels. This was done primarily to
-save space (a 30% reduction) at a time when megabytes mattered.
+The shapes follow the rules of :numref:`sec_padding`. A $5\times5$ kernel
+without padding shrinks the height and the width by 4. The first
+convolutional layer pads by 2 on each side and keeps $28\times28$; the second
+has no padding and turns $14\times14$ into $10\times10$. Each pooling layer
+halves the height and the width, from 28 to 14 and from 10 to 5. Meanwhile
+the number of channels grows from 1 to 6 to 16, so the encoder trades spatial
+resolution for channels. The flattened output has $16 \times 5 \times 5 =
+400$ entries, and the fully connected layers reduce it to 120, 84, and
+finally one output per class.
 
-In contrast, the second convolutional layer forgoes padding,
-and thus the height and width are both reduced by four pixels.
-As we go up the stack of layers,
-the number of channels increases layer-over-layer
-from 1 in the input to 6 after the first convolutional layer
-and 16 after the second convolutional layer.
-However, each pooling layer halves the height and width.
-Finally, each fully connected layer reduces dimensionality,
-ultimately emitting an output whose dimension
-matches the number of classes.
+## Parameters and Multiply-Adds
 
+The shapes give the size and the cost of every layer. A convolutional layer
+with $c_\textrm{i}$ input channels, $c_\textrm{o}$ output channels, and a
+$k\times k$ kernel has $c_\textrm{i} c_\textrm{o} k^2$ weights and
+$c_\textrm{o}$ biases. It applies each weight once at every output position,
+so it performs $c_\textrm{i} c_\textrm{o} k^2$ multiply-adds per output
+position. A fully connected layer uses each of its weights once per example.
+:numref:`tab_lenet_cost` applies these counts to LeNet.
+
+:Parameters and multiply-adds per example of the layers of LeNet. Pooling and activation layers have no parameters.
+:label:`tab_lenet_cost`
+
+| layer | output | parameters | multiply-adds |
+|:--|:--|--:|--:|
+| $5\times5$ convolution, 1 to 6 channels | 6@28×28 | $150 + 6 = 156$ | $150 \times 784 = 117{,}600$ |
+| $5\times5$ convolution, 6 to 16 channels | 16@10×10 | $2{,}400 + 16 = 2{,}416$ | $2{,}400 \times 100 = 240{,}000$ |
+| fully connected, 400 to 120 | 120 | $48{,}000 + 120 = 48{,}120$ | $48{,}000$ |
+| fully connected, 120 to 84 | 84 | $10{,}080 + 84 = 10{,}164$ | $10{,}080$ |
+| fully connected, 84 to 10 | 10 | $840 + 10 = 850$ | $840$ |
+| total | | $61{,}706$ | $416{,}520$ |
+
+The two kinds of layers divide the work in opposite ways. The convolutional
+layers hold 4% of the parameters and perform 86% of the multiply-adds,
+because each of their weights is used at every position of a feature map.
+The first fully connected layer holds 78% of the parameters and performs 12%
+of the multiply-adds. Compared with the MLP, which has 203,530 parameters and
+performs about 203,000 multiply-adds per image, LeNet has fewer than a third
+of the parameters and performs about twice the arithmetic.
 
 ## Training
 
 We now train LeNet on Fashion-MNIST with the loss and the optimizer of the
-MLP, cross-entropy minimized by minibatch stochastic gradient descent, and for
-the same 30 epochs. Does the convolutional network reach a higher validation
-accuracy than the MLP?
-
-LeNet has fewer than a third of the MLP's parameters, yet it performs about
-twice as many multiply-adds per image, because each convolution kernel is
-applied at every position of its input. Using a GPU can accelerate training.
-The `d2l.Trainer` class handles device placement and the training loop
-(:numref:`subsec_device_aware_trainer`).
+MLP, cross-entropy minimized by minibatch stochastic gradient descent, for
+the same 30 epochs, with minibatches of 128 images.
 
 The learning rate needs more care than for the MLP. The derivative of the
-sigmoid, $\sigma'(x) = \sigma(x)(1 - \sigma(x))$, is at most $1/4$, and the
-gradient that reaches the first convolutional layer has passed backward
-through four sigmoids, each of which multiplies it by at most $1/4$. With the
-MLP's learning rate of 0.1, LeNet therefore learns slowly: its validation
-accuracy stays near chance for the first two or three epochs, and after 10
-epochs it is still below that of the MLP. We use a learning rate of 2.0
-instead. Even then, the accuracy can sit near chance for the first epochs
-before it climbs.
+sigmoid, $\sigma'(x) = \sigma(x)(1 - \sigma(x))$, is at most $1/4$. The
+gradient that reaches the weights of the first convolutional layer passes
+backward through four sigmoids, after each of the four hidden layers, and
+each multiplies it by at most $1/4$. At the MLP's learning rate of 0.1, LeNet
+therefore learns slowly: its validation accuracy stays at chance for the
+first two to four epochs and reaches only about 73% after 10. We use a
+learning rate of 2.0 instead, twenty times larger.
+
+The `Trainer` moves the model and every minibatch to the GPU, if there is
+one, as in :numref:`subsec_device_aware_trainer`.
 
 ```{.python .input #lenet-training}
-%%tab pytorch
-trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
-data = d2l.FashionMNIST(batch_size=128)
-model = LeNet(lr=2.0)
-model.apply_init([next(iter(data.get_dataloader(True)))[0]], init_cnn)
-trainer.fit(model, data)
-```
-
-```{.python .input #lenet-training}
-%%tab mxnet, jax
 trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128)
 model = LeNet(lr=2.0)
 trainer.fit(model, data)
 ```
 
-```{.python .input #lenet-training}
-%%tab tensorflow
-trainer = d2l.Trainer(max_epochs=30)
-data = d2l.FashionMNIST(batch_size=128)
-with d2l.try_gpu():
-    model = LeNet(lr=2.0)
-    trainer.fit(model, data)
-```
-
-After 30 epochs, LeNet reaches a validation accuracy of about 89--90%. The MLP
-of :numref:`sec_mlp-implementation` reached about 87% after the same number of
-epochs, with more than three times as many parameters. A convolution kernel
-learns a local pattern once and detects it at every position, whereas the MLP
-must learn the pattern separately for each position at which it occurs.
+Even at this learning rate the validation accuracy can stay at chance, 10%,
+before it climbs; how long it stays there varies from run to run, from no
+epoch at all to several, in every framework. After 30 epochs LeNet reaches a
+validation accuracy of about 88--90%, against about 87% for the MLP, with fewer than a third of the
+MLP's parameters. A convolution kernel learns a local pattern once and
+detects it at every position, whereas the MLP must learn the pattern
+separately for each position at which it occurs.
 
 ## Summary
 
 LeNet combines a convolutional encoder, in which the resolution shrinks while
-the number of channels grows, with a small dense classification head. Trained
-with the loss, the optimizer, and the 30 epochs of the MLP of
-:numref:`sec_mlp-implementation`, it reaches about 89--90% validation accuracy
-on Fashion-MNIST, against about 87% for the MLP, with fewer than a third of
-the MLP's parameters. Its sigmoid activations need a learning rate twenty
-times that of the MLP, because each sigmoid shrinks the backward gradient by a
-factor of at least four. Modern frameworks also make LeNet's implementation
-substantially shorter than the specialized systems required for the original
-experiments :cite:`Bottou.Le-Cun.1988`.
+the number of channels grows, with a small fully connected head. Its
+convolutional layers hold few parameters and do most of the arithmetic; the
+first fully connected layer holds most of the parameters. Trained with the
+loss, the optimizer, and the 30 epochs of the MLP of
+:numref:`sec_mlp-implementation`, it reaches about 88--90% validation
+accuracy on Fashion-MNIST, against about 87% for the MLP, with fewer than a
+third of the MLP's parameters. Its sigmoid activations need a learning rate
+twenty times that of the MLP, because each sigmoid shrinks the backward
+gradient by a factor of at least four.
 
-The overall encoder--classifier organization remains common, although modern
-networks replace most of LeNet's individual components:
+The encoder followed by a classifier head remains the organization of most
+convolutional networks, although modern networks replace most of LeNet's
+components:
 
 :Component substitutions from LeNet to modern CNNs.
 :label:`tab_lenet_modern`
@@ -373,11 +376,9 @@ networks replace most of LeNet's individual components:
 | dense head on flattened features | global average pooling plus one linear layer | removes most of the parameters (the $400 \times 120$ block here) |
 | Xavier initialization | He initialization | variance matched to the ReLU |
 
-The next chapter examines these changes through AlexNet
-(:numref:`sec_alexnet`), NiN (:numref:`sec_nin`), batch normalization
-(:numref:`sec_batch_norm`), and ResNet (:numref:`sec_resnet`). He
-initialization, introduced in :numref:`sec_init_param`, accompanies the use of
-ReLU activations.
+The next chapter makes these changes one at a time, starting with AlexNet
+(:numref:`sec_alexnet`), and asks what each one contributes as networks grow
+much deeper.
 
 ## Exercises
 
@@ -398,8 +399,9 @@ ReLU activations.
        across a minibatch. The derivation of Xavier initialization in
        :numref:`subsec_xavier` assumes inputs with zero mean and no
        nonlinearity. Use the mean of the sigmoid's output and its slope
-       $\sigma'(0) = 1/4$ to explain your measurements and the learning
-       rate that `LeNet` needs.
+       $\sigma'(0) = 1/4$ to explain your measurements, the learning
+       rate that `LeNet` needs, and the epochs at chance at the start of
+       its training.
    :exlabel:`ex_lenet-modern-components`
 
 1. [code] **Original MNIST.** Write an `MNIST` data class by adapting
@@ -455,27 +457,19 @@ ReLU activations.
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6.*
 
-1. [code] **The dense head.** ● :numref:`tab_lenet_modern` states that
-   replacing the dense head with global average pooling removes most of
-   LeNet's parameters.
-    1. Using the weight count of :numref:`sec_channels`, one bias per
-       output channel or unit, and the layer shapes of
-       :numref:`img_lenet_vert`, count the parameters of the two
-       convolutional layers combined, of the $400 \times 120$ dense layer,
-       and of all of `LeNet`. What fraction of the total do the
-       convolutional layers account for, and what fraction the
-       $400 \times 120$ layer?
+1. [code] **The dense head.** ● :numref:`tab_lenet_cost` shows that the
+   first fully connected layer holds 78% of LeNet's parameters.
     1. Replace the entire dense head, from the flatten through the output
        layer, by global average pooling followed by a single linear layer
        from 16 to 10 units. How many parameters does the network now
-       have? Before training, predict whether the test accuracy changes
-       by more than one percentage point relative to `LeNet`; then
+       have? Before training, predict whether the validation accuracy
+       changes by more than one percentage point relative to `LeNet`; then
        retrain and compare.
     1. Instead connect the flattened 400-dimensional convolutional output
-       directly to a ten-way linear output layer. Retrain, and compare the
-       accuracy of the two reduced heads with each other and with your
-       prediction. What does the comparison say about where LeNet's
-       capacity is used?
+       directly to a ten-way linear output layer. How many parameters does
+       this network have? Retrain, and compare the accuracy of the two
+       reduced heads with each other and with your prediction. What does
+       the comparison say about where LeNet's capacity is used?
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
@@ -499,132 +493,357 @@ ReLU activations.
 
 <!-- slides -->
 
-::: {.slide title="The MLP ignores which pixels are neighbors"}
-The MLP of the previous chapter flattens each 28×28 Fashion-MNIST image into
-784 numbers. **Shuffling the pixels the same way in every image would not
-change what it can learn.**
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §6.6]{.kicker}
 
-- 256 hidden units, about 204k parameters
-- 30 epochs of SGD → **≈ 87%** validation accuracy
+LeNet<br>**convolutional encoder · layer shapes · parameters and multiply-adds · training against the MLP**
+:::
+:::
 
+::: {.slide title="The MLP Reaches 87% with 204k Parameters and Ignores Which Pixels Are Neighbors"}
+[The problem]{.kicker}
+
+- The MLP flattens each 28×28 Fashion-MNIST image into 784 numbers.
+- Shuffling the pixels the same way in every image would not change what
+  it can learn.
+- It must learn a pattern separately at every position where it occurs.
+- 784 → 256 → 10: 203,530 parameters, **≈ 87%** validation accuracy
+  after 30 epochs.
+
+::: {.d2l-note .warn}
 Can a network that keeps the 2-D layout do better with fewer parameters?
 :::
-
-::: {.slide title="LeNet set the CNN template"}
-**LeNet-5** (Yann LeCun et al., 1989; deployed in the 1990s) recognized
-handwritten digits on bank checks.
-
-Its organization, a **convolutional encoder** in which spatial dimensions
-shrink and channels grow followed by a **dense head**, influenced many later
-CNN architectures.
 :::
 
-::: {.slide title="Spatial size shrinks while channels grow"}
-![LeNet data flow on a 28×28 handwritten digit.](../img/lenet.svg){width=92%}
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- trace the shapes through a stack of convolutions and pooling;
+- count the parameters and multiply-adds of every layer;
+- build LeNet as a sequential container;
+- choose a learning rate for a network of sigmoids;
+- compare LeNet with the MLP under the same training budget.
+
+**Running example:** one 28×28 Fashion-MNIST image, and a table of
+parameters, multiply-adds, and accuracy for the MLP and LeNet.
 :::
 
-::: {.slide title="Two conv blocks, three dense layers"}
-- Conv1: 1→6 channels, 5×5 kernel, padding 2 (28→28), sigmoid
-- AvgPool: 2×2, stride 2 → 14×14
-- Conv2: 6→16 channels, 5×5, no padding → 10×10, sigmoid
-- AvgPool: 2×2, stride 2 → 5×5
-- Flatten → 16·5·5 = 400 → 120 → 84 → 10 logits
+::: {.slide title="Putting the Pieces Together, After Pooling"}
+[Where this fits]{.kicker}
 
-LeNet-5 itself used a scaled tanh; the sigmoid σ(x) = ½(1 + tanh(x/2)) is
-the same S-curve, shifted to positive outputs and flatter at 0.
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| From Fully Connected Layers to Convolutions | locality and translation equivariance give convolution |
+| Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
+| Padding, Stride, and Dilation | output size and how far each unit sees |
+| Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
+| Pooling | downsampling and tolerance to small shifts |
+| **Convolutional Neural Networks (LeNet)** | **a complete CNN on Fashion-MNIST** |
 :::
 
-::: {.slide title="Pooling halves the resolution; channels go 1 → 6 → 16"}
-![Shapes as channels@height×width.](../img/lenet-vert.svg){width=23%}
+::: {.col .narrow}
+- **Uses:** every layer of this chapter; the MLP, `Classifier`, and
+  `Trainer`; Xavier initialization.
+- **Skips:** ReLU, normalization, and deeper networks (next chapter).
+:::
+:::
 :::
 
-::: {.slide title="Pyramid shape, dense bottleneck"}
-- **Pyramid shape:** spatial dimensions halve at each pooling layer while the
-  number of channels increases. Many later CNNs retain this pattern.
-- **The bottleneck is the flatten:** `400 × 120 = 48000`
-  weights from conv block to first dense layer. Modern
-  CNNs replace the dense stack with *global average
-  pooling*, which is much cheaper.
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The LeNet Architecture]{.dtitle}
+
+[two convolutional blocks and a dense head]{.dsub}
+:::
 :::
 
-::: {.slide title="LeNet in code"}
-@lenet-2
+::: {.slide title="LeNet Maps a 28×28 Image to 10 Scores with 62k Parameters"}
+[Architecture]{.kicker}
+
+![LeNet on one 28×28 image; each shaded window produces the dark unit it points to.](../img/lenet.svg){width=95%}
+
+Spatial size shrinks, channels grow: a convolutional **encoder**, then a
+fully connected **head**.
 :::
 
-::: {.slide title="Xavier init, applied after the dry run" only="pytorch"}
-Lazy layers get their weights from the first minibatch, so `apply_init`
-runs one minibatch through the model and then applies `init_cnn`:
+::: {.slide title="Two Convolutional Blocks, Then Three Fully Connected Layers"}
+[Architecture]{.kicker}
+
+- Conv 5×5, 1 → 6 channels, padding 2 (28 → 28), sigmoid
+- Average pool 2×2, stride 2 → 14×14
+- Conv 5×5, 6 → 16 channels, no padding (14 → 10), sigmoid
+- Average pool 2×2, stride 2 → 5×5
+- Flatten: 16·5·5 = 400 → 120 → 84 → 10 logits, sigmoids between
+
+Initialization: Xavier weights, zero biases, in every framework.
+:::
+
+::: {.slide title="This Is LeNet-5's Layout, Not LeNet-5"}
+[Architecture]{.kicker}
+
+LeNet-5 (LeCun, Bottou, Bengio, Haffner, 1998) had the same layout and
+widths 6, 16, 120, 84, but
+
+- a scaled tanh, $1.7159 \tanh(2x/3)$, instead of the sigmoid;
+- pooling with a trainable weight and bias;
+- partial connections between the two convolutional layers;
+- radial-basis output units.
+
+::: {.d2l-note}
+It took **32×32** inputs for 28×28 digits. Our padding of 2 gives the
+first layer the same extent and the same 28×28 output.
+:::
+:::
+
+::: {.slide title="LeNet Is One Sequential Container" only="mxnet"}
+[Architecture]{.kicker}
+
+```{.python #lenet-exercises-1}
+self.net.add(
+    nn.Conv2D(6, kernel_size=5, padding=2), nn.Activation('sigmoid'),
+    nn.AvgPool2D(pool_size=2, strides=2),
+    nn.Conv2D(16, kernel_size=5), nn.Activation('sigmoid'),
+    nn.AvgPool2D(pool_size=2, strides=2),
+    nn.Flatten(),
+    nn.Dense(120), nn.Activation('sigmoid'),
+    nn.Dense(84), nn.Activation('sigmoid'),
+    nn.Dense(num_classes))
+self.net.initialize(init.Xavier())
+```
+:::
+
+::: {.slide title="LeNet Is One Sequential Container" only="pytorch"}
+[Architecture]{.kicker}
+
+```{.python #lenet-exercises-2}
+self.net = nn.Sequential(
+    nn.LazyConv2d(6, kernel_size=5, padding=2), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.LazyConv2d(16, kernel_size=5), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Flatten(),
+    nn.LazyLinear(120), nn.Sigmoid(),
+    nn.LazyLinear(84), nn.Sigmoid(),
+    nn.LazyLinear(num_classes))
+```
+:::
+
+::: {.slide title="LeNet Is One Sequential Container" only="tensorflow"}
+[Architecture]{.kicker}
+
+```{.python #lenet-exercises-3}
+layers = tf.keras.layers
+self.net = tf.keras.models.Sequential([
+    layers.Conv2D(6, kernel_size=5, padding='same'),
+    layers.Activation('sigmoid'), layers.AvgPool2D(2, strides=2),
+    layers.Conv2D(16, kernel_size=5),
+    layers.Activation('sigmoid'), layers.AvgPool2D(2, strides=2),
+    layers.Flatten(),
+    layers.Dense(120), layers.Activation('sigmoid'),
+    layers.Dense(84), layers.Activation('sigmoid'),
+    layers.Dense(num_classes)])
+```
+
+Excerpt of the class; `layers` abbreviates `tf.keras.layers`.
+:::
+
+::: {.slide title="LeNet Is One Sequential Container" only="jax"}
+[Architecture]{.kicker}
+
+```{.python #lenet-exercises-4}
+self.net = nnx.Sequential(
+    nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **init), nnx.sigmoid,
+    avg_pool,
+    nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **init),
+    nnx.sigmoid, avg_pool,
+    flatten,
+    nnx.Linear(400, 120, **init), nnx.sigmoid,
+    nnx.Linear(120, 84, **init), nnx.sigmoid,
+    nnx.Linear(84, num_classes, **init))
+```
+
+Excerpt of the class: `init` stands for `kernel_init=xavier_uniform()`
+and `rngs`; `avg_pool` and `flatten` are two-line functions.
+:::
+
+::: {.slide title="Xavier Init, Applied After the First Minibatch" only="pytorch"}
+[Architecture]{.kicker}
+
+Lazy layers learn their shapes from the first minibatch. The `Trainer`
+then calls the model's `weight_init` on every layer. LeNet's applies
+`init_cnn` and sets every bias to zero:
 
 @lenet-1
 :::
 
-::: {.slide title="Tracing shapes through the network"}
-A dummy 28×28 single-channel input, shape after each layer
-(28→28→14→10→5→flatten→120→84→10, as in the diagram):
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Shapes, Parameters, and Multiply-Adds]{.dtitle}
+
+[where the weights live, and where the arithmetic happens]{.dsub}
+:::
+:::
+
+::: {.slide title="The Encoder Trades Resolution for Channels"}
+[Shapes]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+![Shapes as channels@height×width.](../img/lenet-vert.svg){width=55%}
+:::
+
+::: {.col}
+`layer_summary` on one 28×28 image:
 
 @!lenet-3
 :::
-
-::: {.slide title="Sigmoid layers need a 20× larger learning rate"}
-σ′(x) = σ(x)(1 − σ(x)) ≤ ¼, and the gradient reaching Conv1 passes
-backward through **four** sigmoids:
-
-- each multiplies it by at most ¼
-- at the MLP's learning rate 0.1, LeNet sits near chance for 2–3 epochs
-  and trails the MLP after 10
-
-**Use learning rate 2.0.**
+:::
 :::
 
-::: {.slide title="Same loss, optimizer, and 30 epochs as the MLP"}
-Cross-entropy and SGD; only the model and the learning rate change:
+::: {.slide title="Check: 6@14×14 Through Sixteen 5×5 Filters"}
+[Check]{.kicker}
 
-@lenet-training
+No padding, stride 1. Output shape? Parameters? Multiply-adds?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $14 - 5 + 1 = 10$: **16@10×10**. Weights
+$6 \cdot 16 \cdot 25 = 2{,}400$, plus 16 biases. Each weight is used at
+all $10 \cdot 10$ positions: **240,000** multiply-adds.
+:::
+:::
 :::
 
-::: {.slide title="LeNet beats the MLP with a third of the parameters"}
-| | MLP (256 hidden) | LeNet |
-|---|---|---|
-| parameters | ≈ 204k | ≈ 62k |
+::: {.slide title="Convolutions Hold 4% of the Parameters and Do 86% of the Arithmetic"}
+[Parameters and multiply-adds]{.kicker}
+
+| layer | parameters | multiply-adds |
+|---|--:|--:|
+| conv 5×5, 1 → 6 | 156 | 117,600 |
+| conv 5×5, 6 → 16 | 2,416 | 240,000 |
+| dense 400 → 120 | **48,120** (78%) | 48,000 |
+| dense 120 → 84 | 10,164 | 10,080 |
+| dense 84 → 10 | 850 | 840 |
+| total | 61,706 | 416,520 |
+
+A convolution weight is used at every position; a dense weight once per
+image.
+:::
+
+::: {.slide title="LeNet Has a Third of the MLP's Parameters and Twice Its Arithmetic"}
+[Parameters and multiply-adds]{.kicker}
+
+| | MLP (784 → 256 → 10) | LeNet |
+|---|--:|--:|
+| parameters | 203,530 | 61,706 |
+| multiply-adds per image | ≈ 0.20M | ≈ 0.42M |
+
+::: {.d2l-note .rule}
+Weight sharing decouples the two: parameters scale with the kernel,
+arithmetic with the kernel times the number of positions.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Training]{.dtitle}
+
+[same loss, optimizer, and epochs as the MLP]{.dsub}
+:::
+:::
+
+::: {.slide title="Four Sigmoids Shrink the Gradient: Learning Rate 2.0 Instead of 0.1"}
+[Training]{.kicker}
+
+- $\sigma'(x) = \sigma(x)(1 - \sigma(x)) \le \tfrac14$.
+- The gradient reaching the first convolution passes backward through
+  **four** sigmoids, each multiplying it by at most ¼.
+- At the MLP's rate 0.1: chance for 2–4 epochs, ≈ 73% validation
+  accuracy after 10.
+
+**Use 2.0, twenty times the MLP's rate.**
+:::
+
+::: {.slide title="Same Loss, Optimizer, and 30 Epochs as the MLP"}
+[Training]{.kicker}
+
+Cross-entropy, minibatch SGD, 128 images per minibatch; only the model
+and the learning rate change:
+
+@-lenet-training
+:::
+
+::: {.slide title="Validation Accuracy Climbs to About 90% After a Short Plateau"}
+[Training]{.kicker}
+
+@!lenet-training
+
+At chance (10%) for up to several epochs, then about 88–90% after 30.
+:::
+
+::: {.slide title="LeNet Beats the MLP with a Third of the Parameters"}
+[Training]{.kicker}
+
+| | MLP | LeNet |
+|---|--:|--:|
+| parameters | 203,530 | 61,706 |
 | multiply-adds per image | ≈ 0.20M | ≈ 0.42M |
 | learning rate | 0.1 | 2.0 |
-| validation accuracy, 30 epochs | ≈ 87% | ≈ 89–90% |
+| validation accuracy, 30 epochs | ≈ 87% | ≈ 88–90% |
 
 **A kernel learns a local pattern once and detects it at every position.**
 :::
 
-::: {.slide title="Check: fewer parameters, more arithmetic"}
-LeNet has a third of the MLP's parameters but does twice the multiply-adds
-per image. Why?
+::: {.slide title="Thirty Years Changed the Components, Not the Template"}
+[Beyond this deck]{.kicker}
 
-. . .
+| LeNet | modern CNNs |
+|---|---|
+| sigmoid | ReLU, GELU |
+| average pooling | max-pooling, strided convolution |
+| no normalization | batch or layer normalization |
+| dense head on flattened features | global average pooling + 1 linear layer |
+| Xavier initialization | He initialization |
 
-Each convolution weight is reused at every output position: conv2's
-16·6·25 = 2,400 weights × 10·10 positions = 240,000 multiply-adds. A dense
-weight is used once per image.
+The next chapter makes these changes one at a time. The *encoder + head*
+organization stays.
 :::
 
-::: {.slide title="Thirty years changed most components, not the template"}
-| LeNet (this deck) | Modern (2020s) |
-|---|---|
-| sigmoid activation | ReLU / GELU |
-| average pooling | max pool / strided conv |
-| no normalization | BatchNorm / LayerNorm |
-| dense head | global average pool + 1 linear |
-| Xavier init | He init |
-| 5 layers, ~60k params | 50+ layers, millions of params |
+::: {.slide title="Check: A 3×3 Convolution, 64 → 128 Channels, on 56×56"}
+[Check]{.kicker}
 
-Each substitution is a section of the next chapter, Modern CNNs. The
-*convolutional encoder + head* organization stays.
+Padding 1, stride 1. Parameters? Multiply-adds per image?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Weights $64 \cdot 128 \cdot 9 = 73{,}728$, plus 128 biases.
+Output 128@56×56, so $73{,}728 \cdot 3{,}136 \approx 231$M multiply-adds:
+about 550 times all of LeNet, with more parameters than all of LeNet.
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- LeNet-5 demonstrated a CNN in a deployed recognition system.
-- Template: conv encoder (spatial ↓, channels ↑) → flatten → dense head.
-- Sigmoids shrink gradients by ≥ 4× per layer: LeNet needs learning rate
-  2.0, twenty times the MLP's.
-- Then, in the MLP's 30 epochs: ≈ 89–90% vs ≈ 87%, with a third of the
+[Wrap-up]{.kicker}
+
+- **LeNet:** conv encoder (28×28 → 5×5, 1 → 16 channels) → flatten →
+  120 → 84 → 10.
+- **Counting:** a conv layer has $c_\textrm{i} c_\textrm{o} k^2$ weights
+  and uses each at every output position.
+- **Split:** convolutions 4% of the 61,706 parameters and 86% of the
+  416,520 multiply-adds.
+- **Training:** sigmoids need learning rate 2.0, twenty times the MLP's.
+- **Result:** ≈ 88–90% against ≈ 87% for the MLP, with a third of the
   parameters.
-- The next chapter swaps every component for its modern
-  equivalent and goes much deeper.
+
+**Next:** modern convolutional networks, one component at a time.
 :::

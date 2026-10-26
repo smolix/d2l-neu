@@ -9,17 +9,17 @@
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "code_fingerprint": "sha256:b55ba3372374b9ca375efbeb252dc0c688711b7c949bbdcda7c8e762e79a5e0e",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:887a2fa32274b2f226bb4939b24e93952e31a627ae139ec9225096fc13b172e5",
+      "code_fingerprint": "sha256:7cf709a48d2bb28c5882681bf37c8bb4872ed5c7f5430df1f6755c2140bf7768",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:07fbc467fe22eb6b45a601d1251710a8cdd19e8d83727697e7b40c69441147e8",
+      "code_fingerprint": "sha256:6cf2c1248194895836dd52e4b733f30d5559e283761489ff4db434241e4a815d",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:09a56560cb8c05a7b09164f17d8f8056c54e92d287ec01ab5779056a64210ec1",
+      "code_fingerprint": "sha256:81fa4c5b805c9e04abdd1e36b8fce156542214565ccf563d097215b0cac81bb6",
       "kind": "text",
       "outputs": [
         {
@@ -38,8 +38,19 @@
         }
       ]
     },
+    "pooling-tolerance-to-small-shifts": {
+      "code_fingerprint": "sha256:8ea05b1970ed7174c158edca153e419fd28dcd8f2cf5da369067c4b700f187d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "response at (1, 0): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 1): max [[1.0, 0.0], [0.0, 0.0]] avg [[0.25, 0.0], [0.0, 0.0]]\nresponse at (1, 2): max [[0.0, 1.0], [0.0, 0.0]] avg [[0.0, 0.25], [0.0, 0.0]]\n"
+        }
+      ]
+    },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:b58c6e804581e3a0b5bf450e9bb7f79bee59f04096f82979f680da83f012314d",
+      "code_fingerprint": "sha256:efa6d0be611068760ad66ff454202afb9ab56ade3a2919fe465b940262251f5c",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +60,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:4a2d8e18c2e354dedde01a090b63d0e621b76003bce63ce8d93fd19b997ca3ff",
+      "code_fingerprint": "sha256:6a7b787a5b63803d2443dc7a9bbcc2686664f2c1589eb051a1461a484b6fa023",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +70,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:6e85a0c322cb74ee3450976c876b0498c6efad763a79353f99b9aa457e9ed354",
+      "code_fingerprint": "sha256:40c757348ea589b7de70a439e45bf26c8bb7252ab7fc2a8a3f8867fb2c8a3e74",
       "kind": "text",
       "outputs": [
         {
@@ -68,8 +79,18 @@
         }
       ]
     },
+    "pooling-padding-and-stride-5": {
+      "code_fingerprint": "sha256:d1685a99e85d9c391d82fbf1fc9c7e0644085110c0eeac5dd99f4051ddeb4a11",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 2, 2, 1), dtype=float32, numpy=\narray([[[[-11.],\n         [ -9.]],\n\n        [[ -3.],\n         [ -1.]]]], dtype=float32)>"
+        }
+      ]
+    },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:eea3d72ce859dc236256905540ec636404d639f908295a383935263ac9b89b62",
+      "code_fingerprint": "sha256:8385957a8929b3d6a9a81c81ce90273b4b82b5cbd3d6f708f9f46512214f8ced",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +100,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:691cf8f6cb2600a7169b4db8cc94ccffbc7e6578704b1f0f5daa20c606c4ad0e",
+      "code_fingerprint": "sha256:e6af040fd192cf59504cc7866d9f0127756a9eb6de8799787809ad64cc544559",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +110,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:4f3ff85982f84b484927de67fcaff5b3e3971307f5bd947dae8d38bc758b468c",
+      "code_fingerprint": "sha256:35c2a0b87c05b803404081f4fb928e5fa1455d856e92dd5f09db576d5aaa7cb4",
       "kind": "text",
       "outputs": [
         {

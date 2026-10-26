@@ -14,12 +14,12 @@
       "outputs": []
     },
     "channels-multiple-input-channels-1": {
-      "code_fingerprint": "sha256:2423bdbf17562c039f776ce1c8d5d2fad5edb1f635be71ee5611b2582c7c4101",
+      "code_fingerprint": "sha256:15d628cfd363952b6dac0d08395b4e8abf13d993e32e0782f82c92bff85c3865",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-input-channels-2": {
-      "code_fingerprint": "sha256:3ed616134dc5555cc82c122575843d8a7d8666e3db43b281e41b2dc8035e4d5e",
+      "code_fingerprint": "sha256:7c35d7a47c73bc91c692745ee270e0c3784215adcf5b1357377cd0053e946553",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "channels-multiple-output-channels-1": {
-      "code_fingerprint": "sha256:5a45ef15156e772c904679bd8a3a44e9db1c760f4a05ba40dad241b1325a0d8c",
+      "code_fingerprint": "sha256:dbb84576d10cbb20dd58bcaa7b793a2492173953aabec95ac086baf523fa58a0",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-output-channels-2": {
-      "code_fingerprint": "sha256:cf8d5bbeb8cc09129cf3b4863759e75582e808cd1a38f4f36e1598b98c286062",
+      "code_fingerprint": "sha256:dda7cf5a97f4a7ae38eaac8025aeedf8748ae795a578867bbfd4d8e909078b05",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "channels-multiple-output-channels-3": {
-      "code_fingerprint": "sha256:8f2259daed8bb8ed9f4404ff736c8a55a2a07982959740dd9356d04a8e9112c8",
+      "code_fingerprint": "sha256:576d1ffb1aeb5d8643a4479ef218578c3997260da8be6c9ac5d2048a42a9eb80",
       "kind": "text",
       "outputs": [
         {
@@ -54,17 +54,22 @@
       ]
     },
     "channels-1-times-1-convolutional-layer-1": {
-      "code_fingerprint": "sha256:43457b3eda9031d20be9e55013eba947f91bedbccdc72b054c92cddb558d075e",
+      "code_fingerprint": "sha256:255ebf72e02ab0d1005aa4011b63016bde693dd7e43a5b15e10517bb5c9e68d9",
       "kind": "text",
       "outputs": []
     },
     "channels-1-times-1-convolutional-layer-2": {
-      "code_fingerprint": "sha256:668592ad933a82f073aaf5b801d99c57713ee0def8f59f4e427cc2bd737fce1d",
+      "code_fingerprint": "sha256:72f767cbe776142b4c83948843c201e976adfc7f4f8d039446cef55d990c2fcc",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.0"
+        }
+      ]
     },
     "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
-      "code_fingerprint": "sha256:fab7c7a13b3ebf9e939b433a5523451e2c792b1bcb5d7f32565a8944b1271f84",
+      "code_fingerprint": "sha256:45ac1284ff5ee5a8c7c4b6a5b3187b9bdb6939f3ad2b3296bf4d8fa4f727ac67",
       "kind": "text",
       "outputs": [
         {

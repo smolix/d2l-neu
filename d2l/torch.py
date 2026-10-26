@@ -615,7 +615,7 @@ def init_cnn(module):
         nn.init.xavier_uniform_(module.weight)
 
 class LeNet(d2l.Classifier):
-    """The LeNet-5 model.
+    """The layout of LeNet-5, with sigmoid activations and average pooling.
 
     Defined in :numref:`sec_lenet`"""
     def __init__(self, lr=0.1, num_classes=10):
@@ -630,6 +630,12 @@ class LeNet(d2l.Classifier):
             nn.LazyLinear(120), nn.Sigmoid(),
             nn.LazyLinear(84), nn.Sigmoid(),
             nn.LazyLinear(num_classes))
+
+    def weight_init(self, module):
+        # The Trainer calls this after the first minibatch fixed the shapes
+        init_cnn(module)  # Xavier-uniform weights
+        if type(module) in (nn.Linear, nn.Conv2d):
+            nn.init.zeros_(module.bias)
 
 class Residual(nn.Module):
     """The Residual block of ResNet models.

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b2fc804b35d91f895a0300c3383162c0350afe036db481383073a3b38accee37",
+    "d2l_lib_fingerprint": "sha256:ad7a47c0880c678bfacc7369091e47ab840b4eb54c4d063721ce1e57d2dba859",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,61 +66,61 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-1.svg",
-          "bytes": 29420,
-          "sha256": "sha256:4d904cc81aab1a6c5716b7ea4a700910054df13a867dd342de03c147a492f915"
+          "bytes": 29419,
+          "sha256": "sha256:49471b477c481ec864fc477b6e57af5c206ab2fcef565fc4d0ea13c0b2d26c33"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.28390000000000004, runtime = 40.85792374610901\nTrial 1: config = {'learning_rate': np.float64(0.022838536179829765), 'batch_size': 248}\n"
+          "text": "    error = 0.2702, runtime = 39.83277869224548\nTrial 1: config = {'learning_rate': np.float64(0.09304014004764317), 'batch_size': 88}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-2.svg",
-          "bytes": 33191,
-          "sha256": "sha256:8db66582e70f4f6738fc6e8bcafc7c027d2961c15522cc2d37c11abf6f3b4178"
+          "bytes": 29423,
+          "sha256": "sha256:c812362e41ac9edc0c3b2d17af1d1ca3f6241a9fac097162a2a63c1188cf3b65"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.9, runtime = 29.672913312911987\nTrial 2: config = {'learning_rate': np.float64(0.05591289495999547), 'batch_size': 101}\n"
+          "text": "    error = 0.25, runtime = 42.56920123100281\nTrial 2: config = {'learning_rate': np.float64(0.017931129437540577), 'batch_size': 35}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-3.svg",
-          "bytes": 29413,
-          "sha256": "sha256:1b4988613a951c5a1706b89d421bb8e791a3d7c08099ba0fd06e69a4aa952caa"
+          "bytes": 29414,
+          "sha256": "sha256:b9a13f60dae3a2af12956751ae1bad863f33b3f1113d4d1bdc1b45d098b1d0c5"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.3234, runtime = 35.336153507232666\nTrial 3: config = {'learning_rate': np.float64(0.7160000885111375), 'batch_size': 169}\n"
+          "text": "    error = 0.3319, runtime = 64.29097938537598\nTrial 3: config = {'learning_rate': np.float64(0.12706240942981314), 'batch_size': 83}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-4.svg",
-          "bytes": 29755,
-          "sha256": "sha256:c1380d6151ec31e70df1d2bfb8addeb4f8266fc0e4a6a6239cf59e09d5a8d46c"
+          "bytes": 30649,
+          "sha256": "sha256:6b4c2785a67f06be4c5144f192863f09bf91d5ca0981204c4d287590094b0ef0"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2006, runtime = 28.298007488250732\nTrial 4: config = {'learning_rate': np.float64(0.2022095681097244), 'batch_size': 239}\n"
+          "text": "    error = 0.22260000000000002, runtime = 80.74448299407959\nTrial 4: config = {'learning_rate': np.float64(0.060013570415755293), 'batch_size': 130}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-5.svg",
-          "bytes": 29418,
-          "sha256": "sha256:c16b7b2dcb2fc0e423d2155cbde51c7b63bf826c96f829fda859281f68b0b03e"
+          "bytes": 34550,
+          "sha256": "sha256:cf9bd76376831ec62506a2c7b2569a9df6cb4ad27fc2649799d3bca4755ac1eb"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.36619999999999997, runtime = 29.297906398773193\n"
+          "text": "    error = 0.38049999999999995, runtime = 39.6606240272522\n"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 22144,
-          "sha256": "sha256:2bf08ade2e5a7dec9f710cfb08f9fc7ad240e0229a254c1f335ae72c37cd6a3c"
+          "bytes": 22038,
+          "sha256": "sha256:e45065e0a5cb043b518fab03f1530313bf6eeac0862adf0cb67fb2fbbf2d37d8"
         }
       ]
     }

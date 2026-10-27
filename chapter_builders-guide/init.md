@@ -28,7 +28,7 @@ training has started.
 
 The right initialization therefore depends on the architecture, not only on
 each layer, and we need a way to apply a chosen rule to chosen parameters of
-a model. This section first shows what each framework does when we choose
+a model. This section first shows what the framework does when we choose
 nothing, and then how to apply initializers to a whole model or to parts of
 it. With these tools it fixes the residual network, by scaling down or
 zeroing the last layer of each branch. It ends with initializers beyond the
@@ -74,21 +74,11 @@ from flax import nnx
 
 ## Library Defaults
 
-Every framework initializes a layer when we do not, and the four defaults
-differ:
-
-| Library | Default for a dense layer's weight |
-|:--|:--|
-| MXNet Gluon | $U(-0.07, 0.07)$, whatever the shape of the layer; zero bias |
-| PyTorch | $U(-1/\sqrt{n_\textrm{in}},\, 1/\sqrt{n_\textrm{in}})$, bias likewise |
-| Keras (TensorFlow) | Xavier uniform, $U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$; zero bias |
-| Flax (JAX) | truncated normal with standard deviation $1/\sqrt{n_\textrm{in}}$; zero bias |
-
-Three of the four scale with the size of the layer. None of them is He
-initialization, so in general none keeps the scale of a deep stack of ReLU
-layers (:numref:`sec_numerical_stability`). We check the default of our framework
-on a layer with 512 inputs and 256 outputs. A uniform distribution on
-$[-b, b]$ has standard deviation $b/\sqrt{3}$.
+A framework initializes a layer when we do not, with a fixed default rule.
+The default is not He initialization, so in general it does not keep the
+scale of a deep stack of ReLU layers (:numref:`sec_numerical_stability`). We
+check the default on a layer with 512 inputs and 256 outputs. A uniform
+distribution on $[-b, b]$ has standard deviation $b/\sqrt{3}$.
 
 :begin_tab:`mxnet`
 Gluon separates construction from initialization: `nn.Dense(256)` carries no
@@ -503,7 +493,7 @@ We now check the three predictions by measurement. `WideResidualBlock` is
 the residual block of :numref:`sec_model_construction` with its branch
 widened fourfold and an explicit initialization: the gain of the output
 projection is a constructor argument, and each layer gets its own normal
-initializer, so that all four frameworks draw from the same distributions:
+initializer with the standard deviation that the predictions assume:
 
 ```{.python .input #init-watching-the-variance-compound-1}
 %%tab mxnet
@@ -561,14 +551,16 @@ class WideResidualBlock(tf.keras.layers.Layer):
 class WideResidualBlock(nnx.Module):
     def __init__(self, d, out_gain, *, rngs):
         normal = nnx.initializers.normal
-        self.fc1 = nnx.Linear(d, 4 * d, kernel_init=normal(math.sqrt(2 / d)),
-                              rngs=rngs)
-        self.fc2 = nnx.Linear(4 * d, d,
-                              kernel_init=normal(out_gain / math.sqrt(4 * d)),
-                              rngs=rngs)
+        self.body = nnx.Sequential(
+            nnx.Linear(d, 4 * d, kernel_init=normal(math.sqrt(2 / d)),
+                       rngs=rngs),
+            nnx.relu,
+            nnx.Linear(4 * d, d,
+                       kernel_init=normal(out_gain / math.sqrt(4 * d)),
+                       rngs=rngs))
 
     def __call__(self, X):
-        return X + self.fc2(nnx.relu(self.fc1(X)))
+        return X + self.body(X)
 ```
 
 The function below stacks `num_blocks` blocks of width 64, feeds them 256
@@ -662,9 +654,9 @@ unusable initialization before training begins.
 ## Custom Initializers and Direct Edits
 
 Beyond the defaults, models use initializers of other shapes: truncated
-normals, which three of the four frameworks provide, and arbitrary
-distributions, which we write ourselves. Sometimes we also set values by
-hand. Every framework has an interface for writing an initializer.
+normals and arbitrary distributions, which we write ourselves when the
+library lacks them. Sometimes we also set values by hand. An initializer
+we write ourselves has a fixed interface:
 
 :begin_tab:`mxnet`
 In Gluon, an initializer is a subclass of `init.Initializer` whose
@@ -706,9 +698,9 @@ rescaling and others do not.
 :begin_tab:`mxnet`
 `mxnet.init` provides no truncated normal, so we write the drawing function.
 It draws normal values and redraws every entry that lands outside two
-standard deviations until none does, the same discard-and-redraw rule that
-Keras uses. Wrapped in an `init.Initializer` subclass, as in the next
-subsection, it becomes an initializer:
+standard deviations until none does, a discard-and-redraw rule. Wrapped in
+an `init.Initializer` subclass, as in the next subsection, it becomes an
+initializer:
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -973,9 +965,9 @@ normalization layers of :numref:`sec_batch_norm`.
 
 ## Summary
 
-Every framework initializes its layers by default, with rules that differ
-across frameworks and that are not He initialization, so a model whose
-behavior matters sets its initialization explicitly. Initializers are
+A framework initializes its layers by default, with a fixed rule that is
+not He initialization, so a model whose behavior matters sets its
+initialization explicitly. Initializers are
 applied over the tree of a model: as constructor arguments, as a function
 applied to every submodule, or by assigning new values to selected
 parameters. The per-layer rules of :numref:`sec_numerical_stability` are
@@ -985,8 +977,8 @@ the gain of the branch's output projection. With $g = 1$ the standard
 deviation grows by $\sqrt{2}$ per block; scaling the output projection by
 $1/\sqrt{N}$ bounds the growth by $\sqrt{e}$ at any depth $N$, and a zero
 output projection makes every block start as the identity. Truncated normals
-bound the largest weights, and custom distributions take a few lines in
-every framework.
+bound the largest weights, and custom distributions take a few lines of
+code.
 
 ## Exercises
 
@@ -1083,11 +1075,12 @@ every framework.
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
    and `'linear'`.
-    1. Check both on a $256 \times 512$ weight by mean, standard deviation,
-       and range: the normal initializer against the explicit normal
-       initializers of `WideResidualBlock`, and the uniform initializer against
-       its predicted bound and standard deviation. Explain any difference
-       in range.
+    1. Check both on the weight of a layer with 512 inputs and 256
+       outputs by mean, standard deviation, and range: the normal
+       initializer against the explicit normal initializers of
+       `WideResidualBlock`, and the uniform initializer against its
+       predicted bound and standard deviation. Explain any difference in
+       range.
     1. Apply your normal initializer to the stack of
        :numref:`subsec_variance_across_depth` with the `'relu'` gain on
        both layers of every block. Predict the factor by which each block
@@ -1204,15 +1197,46 @@ branch $64 \to 256 \to 64$, fed 256 examples from $\mathcal{N}(0, 1)$.
 :::
 :::
 
-::: {.slide title="Four Frameworks, Four Defaults, None of Them He"}
+::: {.slide title="The Default Initialization Is Not He" only="mxnet"}
 [Library defaults]{.kicker}
 
-| library | dense weight |
-|---|---|
-| Gluon | $U(\pm 0.07)$, whatever the shape |
-| PyTorch | $U(\pm 1/\sqrt{n_\textrm{in}})$, bias likewise |
-| Keras | Xavier uniform, $U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$ |
-| Flax | truncated normal, std $1/\sqrt{n_\textrm{in}}$ |
+Gluon `Dense`: weight $U(\pm 0.07)$, whatever the shape of the layer; zero
+bias.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="pytorch"}
+[Library defaults]{.kicker}
+
+PyTorch `nn.Linear`: weight and bias $U(\pm 1/\sqrt{n_\textrm{in}})$.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="tensorflow"}
+[Library defaults]{.kicker}
+
+Keras `Dense`: Xavier (Glorot) uniform,
+$U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$; zero bias.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="jax"}
+[Library defaults]{.kicker}
+
+Flax `nnx.Linear`: LeCun normal, truncated at two standard deviations and
+rescaled to standard deviation $1/\sqrt{n_\textrm{in}}$; zero bias.
 
 A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
 standard deviation $b/\sqrt{3}$):
@@ -1235,7 +1259,7 @@ initialization explicitly.
 :::
 :::
 
-::: {.slide title="Check: How Fast Does PyTorch's Default Shrink Ten ReLU Layers?"}
+::: {.slide title="Check: How Fast Does a Uniform Default Shrink Ten ReLU Layers?"}
 [Check]{.kicker}
 
 Ten layers $512 \to 512$, weights from $U(\pm 1/\sqrt{n_\textrm{in}})$, zero
@@ -1402,7 +1426,7 @@ $\sigma = 0.02$, a million draws, plain and truncated at $\pm 0.04$:
 @!init-truncated-normals
 :::
 
-::: {.slide title="A Custom Initializer Is a Few Lines in Every Framework"}
+::: {.slide title="A Custom Initializer Is a Few Lines of Code"}
 [A custom distribution]{.kicker}
 
 Half of the weights zero, the others with magnitude in $[5, 10]$: draw from
@@ -1430,8 +1454,8 @@ weight?
 ::: {.d2l-note}
 **Answer.** The cut lowers the standard deviation by the factor 0.88, so
 the rescaling multiplies by $1/0.88 \approx 1.14$: the bound
-$0.04$ becomes about $0.0455$, or $2.27\sigma$. Flax's default LeCun normal
-does this.
+$0.04$ becomes about $0.0455$, or $2.27\sigma$. A truncated LeCun normal
+initializer does this.
 :::
 :::
 :::
@@ -1439,8 +1463,8 @@ does this.
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- **Defaults** differ across frameworks and none is He; set the
-  initialization explicitly.
+- **Defaults** are fixed rules, not He; set the initialization
+  explicitly.
 - **Applying:** constructor arguments, a function over every submodule, or
   assignment to chosen parameters.
 - **Residual blocks** multiply the mean square by $1 + g^2$: with $g = 1$

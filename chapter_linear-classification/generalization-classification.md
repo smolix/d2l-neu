@@ -513,6 +513,19 @@ their generalization is certified with held-out data.
        strategy needs to distinguish all $2^n$ labelings.
    :exlabel:`ex_generalization-classification-leaking-test-set`
 
+1. [code] **A validation split for Fashion-MNIST.** The chapter selected
+   models on the 10,000 test images. Hold out 10,000 of the 60,000 training
+   images as a validation split instead, and train softmax regression on
+   the remaining 50,000.
+    1. Choose the learning rate from $\{0.01, 0.03, 0.1, 0.3, 1\}$ by its
+       accuracy on the validation split.
+    1. Evaluate the selected model once on the test images, and compare its
+       test accuracy with its validation accuracy. Is the difference within
+       the radius of the 95% interval for 10,000 examples?
+    1. Explain why the test accuracy, measured once after the choice, is an
+       unbiased estimate for the selected model, while the best validation
+       accuracy is not.
+
 1. **VC dimension of linear classifiers.** ● Consider the linear classifiers
    $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on
    $\mathbb{R}^d$.

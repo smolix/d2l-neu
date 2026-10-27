@@ -434,9 +434,9 @@ def get_net(devices):
     # There are 120 output categories
     finetune_net.output_new.add(nn.Dense(120))
     # Initialize the output network
-    finetune_net.output_new.initialize(init.Xavier(), ctx=devices)
+    finetune_net.output_new.initialize(init.Xavier(), device=devices)
     # Distribute the model parameters to the CPUs or GPUs used for computation
-    finetune_net.reset_ctx(devices)
+    finetune_net.reset_device(devices)
     return finetune_net
 ```
 
@@ -878,7 +878,7 @@ train(net, train_valid_iter, None, num_epochs, lr, wd, devices, lr_period,
 
 preds = []
 for data, label in test_iter:
-    output_features = net.features(data.as_in_ctx(devices[0]))
+    output_features = net.features(data.to_device(devices[0]))
     output = npx.softmax(net.output_new(output_features))
     preds.extend(output.asnumpy())
 ids = sorted(os.listdir(

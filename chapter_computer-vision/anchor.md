@@ -92,10 +92,10 @@ The above method of generating anchor boxes is implemented in the following `mul
 def multibox_prior(data, sizes, ratios):
     """Generate anchor boxes with different shapes centered on each pixel."""
     in_height, in_width = data.shape[-2:]
-    device, num_sizes, num_ratios = data.ctx, len(sizes), len(ratios)
+    device, num_sizes, num_ratios = data.device, len(sizes), len(ratios)
     boxes_per_pixel = (num_sizes + num_ratios - 1)
-    size_tensor = d2l.tensor(sizes, ctx=device)
-    ratio_tensor = d2l.tensor(ratios, ctx=device)
+    size_tensor = d2l.tensor(sizes, device=device)
+    ratio_tensor = d2l.tensor(ratios, device=device)
     # Offsets are required to move the anchor to the center of a pixel. Since
     # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
     offset_h, offset_w = 0.5, 0.5
@@ -103,8 +103,8 @@ def multibox_prior(data, sizes, ratios):
     steps_w = 1.0 / in_width  # Scaled steps in x-axis
 
     # Generate all center points for the anchor boxes
-    center_h = (d2l.arange(in_height, ctx=device) + offset_h) * steps_h
-    center_w = (d2l.arange(in_width, ctx=device) + offset_w) * steps_w
+    center_h = (d2l.arange(in_height, device=device) + offset_h) * steps_h
+    center_w = (d2l.arange(in_width, device=device) + offset_w) * steps_w
     shift_x, shift_y = d2l.meshgrid(center_w, center_h)
     shift_x, shift_y = shift_x.reshape(-1), shift_y.reshape(-1)
 
@@ -554,7 +554,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     jaccard = box_iou(anchors, ground_truth)
     # Initialize the tensor to hold the assigned ground-truth bounding box for
     # each anchor
-    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, ctx=device)
+    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, device=device)
     # Assign ground-truth bounding boxes according to the threshold
     max_ious, indices = np.max(jaccard, axis=1), np.argmax(jaccard, axis=1)
     anc_i = np.nonzero(max_ious >= iou_threshold)[0]
@@ -726,7 +726,7 @@ def multibox_target(anchors, labels):
     """Label anchor boxes using ground-truth bounding boxes."""
     batch_size, anchors = labels.shape[0], anchors.squeeze(0)
     batch_offset, batch_mask, batch_class_labels = [], [], []
-    device, num_anchors = anchors.ctx, anchors.shape[0]
+    device, num_anchors = anchors.device, anchors.shape[0]
     for i in range(batch_size):
         label = labels[i, :, :]
         anchors_bbox_map = assign_anchor_to_bbox(
@@ -735,9 +735,9 @@ def multibox_target(anchors, labels):
                                             axis=-1)), (1, 4)).astype('int32')
         # Initialize class labels and assigned bounding box coordinates with
         # zeros
-        class_labels = d2l.zeros(num_anchors, dtype=np.int32, ctx=device)
+        class_labels = d2l.zeros(num_anchors, dtype=np.int32, device=device)
         assigned_bb = d2l.zeros((num_anchors, 4), dtype=np.float32,
-                                ctx=device)
+                                device=device)
         # Label classes of anchor boxes using their assigned ground-truth
         # bounding boxes. If an anchor box is not assigned any, we label its
         # class as background (the value remains zero)
@@ -1044,7 +1044,7 @@ def nms(boxes, scores, iou_threshold):
                       boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
         inds = np.nonzero(iou <= iou_threshold)[0]
         B = B[inds + 1]
-    return np.array(keep, dtype=np.int32, ctx=boxes.ctx)
+    return np.array(keep, dtype=np.int32, device=boxes.device)
 ```
 
 ```{.python .input #anchor-predicting-bounding-boxes-with-non-maximum-suppression-2}
@@ -1132,7 +1132,7 @@ with a concrete example right after the implementation.
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
                        pos_threshold=0.009999999):
     """Predict bounding boxes using non-maximum suppression."""
-    device, batch_size = cls_probs.ctx, cls_probs.shape[0]
+    device, batch_size = cls_probs.device, cls_probs.shape[0]
     anchors = np.squeeze(anchors, axis=0)
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
     out = []
@@ -1142,7 +1142,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
         predicted_bb = offset_inverse(anchors, offset_pred)
         keep = nms(predicted_bb, conf, nms_threshold)
         # Find all non-`keep` indices and set the class to background
-        all_idx = np.arange(num_anchors, dtype=np.int32, ctx=device)
+        all_idx = np.arange(num_anchors, dtype=np.int32, device=device)
         combined = d2l.concat((keep, all_idx))
         unique, counts = np.unique(combined, return_counts=True)
         non_keep = unique[counts == 1]

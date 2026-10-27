@@ -102,7 +102,8 @@ NNX layers create their parameters when they are constructed, so
 `nnx.Linear` needs the number of inputs, $28 \times 28 = 784$, up front.
 `kernel_init` sets the distribution of the weights, and the bias starts at
 0. `forward` flattens each minibatch of $(n, 28, 28, 1)$ images into
-$n \times 784$ inputs.
+$n \times 784$ inputs. For images of another size, pass the number of
+pixels as `num_inputs`, for instance 1,024 for $32 \times 32$ images.
 :end_tab:
 
 ```{.python .input #softmax-regression-concise-defining-the-model}

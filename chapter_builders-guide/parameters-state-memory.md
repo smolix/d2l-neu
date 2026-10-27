@@ -28,6 +28,7 @@ from training.
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
 %%tab mxnet
+import math
 import os
 from mxnet import autograd, gluon, np as mnp, npx
 from mxnet.gluon import nn
@@ -482,7 +483,7 @@ class Whitener(nn.Module):
         return self.out((X - self.mean) / self.std)
 
 sample = torch.randn(100, 4) * torch.arange(1., 5.)
-whiten = Whitener(sample.mean(0), sample.std(0))
+whiten = Whitener(sample.mean(0), sample.std(0, correction=0))
 list(whiten.state_dict())
 ```
 
@@ -698,6 +699,8 @@ whiten.mean.device
 
 ## Training Memory
 
+### Bytes per Parameter
+
 How much memory does training our specimen take? For the parameters and
 what the optimizer stores about them, the answer follows from three counts
 per parameter: the weight itself, its gradient, and the optimizer's state
@@ -832,6 +835,121 @@ per parameter, the same floor. Automatic casting in the frameworks keeps the
 weights and gradients in fp32 and makes 16-bit copies operation by
 operation, which also stores 16 bytes per parameter. A multiplier therefore
 means little until we know the dtype of each tensor.
+
+### Counting Without Allocating
+:label:`subsec_count_without_alloc`
+
+Every count so far read the shapes of tensors that already existed. For the
+8B model this order is backwards: to learn whether its 32 GB of weights fit
+in memory, we would first have to allocate them. The count needs only the
+shape and the dtype of each parameter, and both follow from the arguments of
+the constructors. Take one layer of the 8B model, its output layer, which
+maps a hidden state of width 4,096 to scores for the 128,256 tokens of its
+vocabulary. Its weight has $4096 \times 128{,}256 = 525{,}336{,}576$
+entries, 2.1 GB in fp32. We create the layer without its data and count.
+
+:begin_tab:`mxnet`
+Gluon separates constructing a layer from initializing it. A `Dense`
+layer that is given `in_units` knows the shape of its weight when it is
+constructed, but holds no data until `initialize()` is called, so reading
+the shapes allocates nothing:
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch's *meta* device holds tensors that have a shape and a dtype but no
+data. Inside `with torch.device('meta'):`, a constructor creates its
+parameters on that device, so the module is complete except for its
+values:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras creates the variables of a layer when it builds the layer, at its
+first call or through an explicit `build`, and each variable holds its data
+from the moment it is created. An unbuilt layer holds no variables, so we
+compute the count from the shapes: the kernel of a `Dense` layer has the
+shape (inputs, units).
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.eval_shape` runs a constructor abstractly: each array operation in it
+computes only the shape and the dtype of its result. The module it returns
+holds a `jax.ShapeDtypeStruct` in place of each array:
+:end_tab:
+
+```{.python .input #parameters-state-memory-counting-without-allocating-1}
+%%tab mxnet
+head = nn.Dense(128256, in_units=4096, use_bias=False)   # not initialized
+n_head = sum(math.prod(p.shape) for p in head.collect_params().values())
+print(head.weight, f'{n_head:,} parameters, '
+      f'{4 * n_head / 1e9:.1f} GB in fp32')
+```
+
+```{.python .input #parameters-state-memory-counting-without-allocating-1}
+%%tab pytorch
+with torch.device('meta'):
+    head = nn.Linear(4096, 128256, bias=False)   # shapes, no data
+n_head = sum(p.numel() for p in head.parameters())
+print(head.weight.device, f'{n_head:,} parameters, '
+      f'{4 * n_head / 1e9:.1f} GB in fp32')
+```
+
+```{.python .input #parameters-state-memory-counting-without-allocating-1}
+%%tab tensorflow
+head = tf.keras.layers.Dense(128256, use_bias=False)   # not built
+n_head = 4096 * head.units   # kernel shape: (inputs, units)
+print(head.weights, f'{n_head:,} parameters, '
+      f'{4 * n_head / 1e9:.1f} GB in fp32')
+```
+
+```{.python .input #parameters-state-memory-counting-without-allocating-1}
+%%tab jax
+key = d2l.get_key()   # drawn outside the abstract trace
+head = nnx.eval_shape(lambda: nnx.Linear(
+    4096, 128256, use_bias=False, rngs=nnx.Rngs(key)))
+leaves = jax.tree.leaves(nnx.state(head, nnx.Param))
+n_head = sum(x.size for x in leaves)
+print(leaves, f'{n_head:,} parameters, {4 * n_head / 1e9:.1f} GB in fp32')
+```
+
+:begin_tab:`mxnet`
+The weight has its shape and no data: reading it with `head.weight.data()`
+raises an error that the parameter has not been initialized. `initialize()`
+allocates the 2.1 GB once we decide to.
+:end_tab:
+
+:begin_tab:`pytorch`
+A meta tensor has no storage. To use the model, `to_empty(device=...)`
+allocates its parameters on a device without filling them, and an
+initializer or a checkpoint fills them. Large pretrained models are loaded
+this way, so that each weight is written once, from the file, instead of
+first being drawn at random and then overwritten. On our specimen:
+:end_tab:
+
+:begin_tab:`tensorflow`
+The list of weights is empty. Calling the layer on an input of width 4,096,
+or calling `head.build((None, 4096))`, creates the kernel and allocates the
+2.1 GB.
+:end_tab:
+
+:begin_tab:`jax`
+No array was created and no random number drawn. Calling the constructor
+itself, outside `nnx.eval_shape`, allocates the arrays and draws their
+initial values.
+:end_tab:
+
+```{.python .input #parameters-state-memory-counting-without-allocating-2}
+%%tab pytorch
+with torch.device('meta'):
+    clone = nn.Sequential(nn.Linear(20, 64), ResidualBlock(64),
+                          ResidualBlock(64), nn.Linear(64, 10))
+clone = clone.to_empty(device='cpu')   # memory, no values yet
+clone.load_state_dict(net.state_dict())
+torch.equal(clone(X), net(X))
+```
+
+Applied to every layer of the 8B model, the same count gives its 8 billion
+parameters, and with them the 32 GB of weights and the 128 GB of training
+state, without allocating a byte.
 
 ## Shared, Frozen, and Averaged Parameters
 
@@ -1178,12 +1296,14 @@ parameters trainable:
 :end_tab:
 
 :begin_tab:`jax`
-In NNX, freezing happens in the optimizer: a parameter is frozen when no
-update reaches it. `optax.multi_transform` routes each leaf to a
-transformation chosen by a label, and `optax.set_to_zero()` turns every
-gradient it receives into a zero update. On a fresh copy of our residual
-MLP, labeling everything but the output layer `'freeze'` leaves 650 of
-18,634 parameters trainable:
+NNX parameters carry no flag; a parameter is frozen when it is left out of
+differentiation and out of the optimizer. A *filter*, a predicate on the
+path and the type of each variable, selects the trainable parameters, and
+both consumers take it: `nnx.grad` with `argnums=nnx.DiffState(0,
+trainable)` differentiates with respect to the selected parameters only,
+and `nnx.Optimizer(..., wrt=trainable)` keeps state for them and updates
+only them. On a fresh copy of our residual MLP, the filter that selects the
+output layer, `layers[3]`, leaves 650 of 18,634 parameters trainable:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-1}
@@ -1230,17 +1350,13 @@ finetune = nnx.Sequential(nnx.Linear(20, 64, rngs=rngs),
                           ResidualBlock(64, rngs=rngs),
                           nnx.Linear(64, 10, rngs=rngs))
 
-def labels(params):
-    return jax.tree_util.tree_map_with_path(
-        lambda path, _: ('train' if "['layers'][3]" in
-                         jax.tree_util.keystr(path) else 'freeze'), params)
+trainable = nnx.All(nnx.Param, lambda path, _: path[:2] == ('layers', 3))
 
-pure_params = nnx.to_pure_dict(nnx.state(finetune, nnx.Param))
-pure_labels = labels(pure_params)
-n_train = sum(x.size for x, l in zip(jax.tree_util.tree_leaves(pure_params),
-                                     jax.tree_util.tree_leaves(pure_labels))
-              if l == 'train')
-(n_train, sum(x.size for x in jax.tree_util.tree_leaves(pure_params)))
+def count(state):
+    return sum(x.size for x in jax.tree.leaves(state))
+
+n_train = count(nnx.state(finetune, trainable))
+(n_train, count(nnx.state(finetune, nnx.Param)))
 ```
 
 :begin_tab:`mxnet`
@@ -1262,10 +1378,8 @@ head and nothing else:
 :end_tab:
 
 :begin_tab:`jax`
-The optimizer receives the whole tree together with the labels, and
-`multi_transform` routes each leaf: Adam updates the leaves labeled
-`'train'`, and `set_to_zero` the others. One step then moves the head and
-nothing else:
+The optimizer and `nnx.grad` receive the same filter. One Adam step then
+moves the head and nothing else:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
@@ -1305,12 +1419,11 @@ head_opt.apply_gradients(zip(tape.gradient(loss, finetune.trainable_weights),
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
 %%tab jax
-tx = optax.multi_transform(
-    {'train': optax.adam(0.1), 'freeze': optax.set_to_zero()}, labels)
-optimizer = nnx.Optimizer(finetune, tx, wrt=nnx.Param)
+head_opt = nnx.Optimizer(finetune, optax.adam(0.1), wrt=trainable)
 before = nnx.to_pure_dict(nnx.state(finetune, nnx.Param))
-grads = nnx.grad(lambda model: model(X).sum())(finetune)
-optimizer.update(finetune, grads)
+grads = nnx.grad(lambda model: model(X).sum(),
+                 argnums=nnx.DiffState(0, trainable))(finetune)
+head_opt.update(finetune, grads)
 stepped = nnx.to_pure_dict(nnx.state(finetune, nnx.Param))
 jax.tree_util.tree_map(lambda a, b: bool((a != b).any()), before, stepped)
 ```
@@ -1347,12 +1460,15 @@ backbone now leaves its moments, 8 bytes per frozen parameter, allocated:
 
 :begin_tab:`jax`
 Only the two leaves under `layers[3]`, the head's kernel and bias, changed.
-Freezing has two more effects, on optimizer memory and on running
-statistics, and the explicit state tree makes both visible. First, does
-`multi_transform` allocate Adam's moments, 8 bytes per parameter, for leaves
-it never updates? No: it hands each inner transformation only the leaves of
-its group and empty placeholders for the rest, so `opt_state` holds moments
-for the 650 trainable parameters only:
+The frozen layers received no gradient at all: `grads` holds the two leaves
+of the head and nothing else. Because `head_opt` was built over the same
+filter, it holds Adam's moments for the 650 trainable parameters only.
+Freezing has two more effects that raise no error. First, it does not
+reclaim optimizer state that already exists. A freeze in NNX is a filter
+given to a new optimizer. An optimizer built over all parameters keeps its
+moments, 8 bytes per parameter, for as long as it is kept. The optimizer
+`optimizer`, which took one step on `net` when we counted its moments above,
+still holds all of them:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
@@ -1383,9 +1499,11 @@ moments == 2 * n
 
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
 %%tab jax
-moments = sum(x.size for x in jax.tree_util.tree_leaves(optimizer.opt_state)
-              if hasattr(x, 'ndim') and x.ndim > 0)
-moments == 2 * n_train
+def moments(opt):
+    return sum(x.size for x in jax.tree.leaves(opt.opt_state)
+               if hasattr(x, 'ndim') and x.ndim > 0)
+
+moments(head_opt) == 2 * n_train, moments(optimizer) == 2 * n
 ```
 
 :begin_tab:`mxnet`
@@ -1406,19 +1524,20 @@ by the *forward pass* whenever the layer is in training mode. Freeze a
 
 :begin_tab:`tensorflow`
 Second, batch normalization. Its running statistics are non-trainable
-weights that the forward pass updates in training mode. In the other
-frameworks, freezing the layer's scale and shift leaves these updates
-running, since they never pass through the optimizer. Keras treats this case
-specially: setting `trainable = False` on a `BatchNormalization` layer also
-switches its forward pass to inference mode, so the statistics stay fixed
-even when the layer is called with `training=True`:
+weights that the forward pass updates in training mode. Freezing only the
+layer's scale and shift would leave these updates running, since they never
+pass through the optimizer. Keras treats this case specially: setting
+`trainable = False` on a `BatchNormalization` layer also switches its
+forward pass to inference mode, so the statistics stay fixed even when the
+layer is called with `training=True`:
 :end_tab:
 
 :begin_tab:`jax`
 Second, freezing governs `nnx.Param` state only. Batch normalization keeps
 its running statistics as `nnx.BatchStat` variables and updates them in a
-training-mode forward pass. Freeze the layer's scale and bias, and the
-statistics still change, because they never pass through the optimizer:
+training-mode forward pass. No gradient and no optimizer is involved: the
+forward pass alone moves the statistics, so leaving `scale` and `bias` out
+of the trainable filter cannot stop it:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
@@ -1448,7 +1567,7 @@ torch.allclose(bn.running_mean, before)
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
 %%tab tensorflow
-bn = tf.keras.layers.BatchNormalization()
+bn = tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
 _ = bn(tf.zeros((8, 4)), training=True)   # build, then freeze
 bn.trainable = False
 before = tf.identity(bn.moving_mean)
@@ -1458,7 +1577,8 @@ bool(tf.reduce_all(bn.moving_mean == before))
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
 %%tab jax
-bn = nnx.BatchNorm(4, use_running_average=False, momentum=0.9, rngs=rngs)
+bn = nnx.BatchNorm(4, use_running_average=False, momentum=0.9,
+                   use_fast_variance=False, rngs=rngs)
 before = bn.mean[...]
 bn(jax.random.normal(rngs(), (8, 4)) + 3)   # training mode
 bool(jnp.allclose(bn.mean, before))
@@ -1490,8 +1610,8 @@ fine-tuning, set both.
 :end_tab:
 
 :begin_tab:`jax`
-The optimizer labels and `use_running_average` are independent switches: the
-first stops parameter updates, the second stops the forward pass from
+The trainable filter and `use_running_average` are independent switches:
+the first stops parameter updates, the second stops the forward pass from
 updating running statistics. To keep a BatchNorm layer fixed during
 fine-tuning we need both. `nnx.view(model, use_running_average=True)`
 switches the mode on a view of the whole model.
@@ -1583,8 +1703,9 @@ float(tf.reduce_max(tf.abs(ema[-1] - finetune.layers[-1].bias)))
 %%tab jax
 avg = stepped   # start from the current weights
 for _ in range(5):
-    grads = nnx.grad(lambda model: model(X).sum())(finetune)
-    optimizer.update(finetune, grads)
+    grads = nnx.grad(lambda model: model(X).sum(),
+                     argnums=nnx.DiffState(0, trainable))(finetune)
+    head_opt.update(finetune, grads)
     current = nnx.to_pure_dict(nnx.state(finetune, nnx.Param))
     avg = optax.incremental_update(current, avg, step_size=0.1)
 float(jnp.abs(avg['layers'][3]['bias']
@@ -1592,9 +1713,9 @@ float(jnp.abs(avg['layers'][3]['bias']
 ```
 
 The printed number is the gap between the averaged and the current bias of
-the head, and every framework prints the same value, 0.3686, on every run.
-We can predict it. The loss is the sum of the outputs, so the gradient of each bias entry is
-the batch size, 2, at every step. Adam divides its first moment by the
+the head, and it is 0.3686 on every run. We can predict it. The loss is the
+sum of the outputs, so the gradient of each bias entry is the batch size,
+2, at every step. Adam divides its first moment by the
 square root of its second, so a gradient that never changes moves each entry
 by the learning rate, 0.1, per step. If the weights move by 0.1 per step, the
 gap $e$ between the average and the weights obeys $e \leftarrow 0.9\,(e +
@@ -1734,10 +1855,11 @@ statistics in training mode.
 
 5. [code] **Tying and freezing.** Consider the tied `ToyLM` of this
    section.
-    1. Label the embedding table `'freeze'` and every other leaf `'train'`
-       in `optax.multi_transform`. How many parameters are trained, and can
-       the head still adapt? What does this show about the interaction
-       between tying and freezing?
+    1. Leave the embedding table out of the trainable filter, for example
+       with `nnx.All(nnx.Param, nnx.Not(nnx.PathContains('emb')))`, and
+       pass the filter to `nnx.grad` and `nnx.Optimizer`. How many
+       parameters are trained, and can the head still adapt? What does
+       this show about the interaction between tying and freezing?
     1. Starting from the values of `lm`, build a model whose embedding stays
        fixed while its head adapts, and verify both properties after one
        update. How many parameters does it store and how many does it
@@ -1753,9 +1875,8 @@ statistics in training mode.
     1. Freeze everything except the output layer, and build the optimizer
        over the output layer only. How many bytes does the persistent state
        take now, and does it fit on one 80 GB GPU?
-    1. Suppose instead that the optimizer was built over all parameters
-       and took one step before the freeze, as with `net` in the section
-       on frozen parameters (:numref:`subsec_freezing`). How many bytes
+    1. Suppose instead that an optimizer built over all parameters took
+       one step before the freeze and is kept afterwards. How many bytes
        remain allocated, and does the state still fit?
 
 <!-- slides -->
@@ -1948,6 +2069,20 @@ Name the dtype of every tensor before quoting a multiplier.
 :::
 :::
 
+::: {.slide title="The 8B Output Layer, Counted without Allocating Its 2.1 GB"}
+[Counting without allocating]{.kicker}
+
+The output layer of the 8B model, $4096 \times 128{,}256$. Build it without
+data and read the shapes:
+
+@parameters-state-memory-counting-without-allocating-1
+
+::: {.d2l-note}
+Shapes and dtypes follow from the constructor arguments. Memory is
+allocated only when the values are needed.
+:::
+:::
+
 ::: {.slide title="Check: How Many 80 GB GPUs Hold the 8B Model's Training State?"}
 [Check]{.kicker}
 
@@ -2026,7 +2161,7 @@ Checked numerically:
 - Freeze all but the output layer: 650 of 18,634 parameters train, and one
   step moves only the head.
 - An optimizer built over the head alone holds moments for 650 parameters.
-- Freezing *after* Adam has stepped leaves all its moments allocated:
+- An optimizer that stepped before the freeze keeps all its moments:
 
 @!parameters-state-memory-freezing-parameters-3
 :::

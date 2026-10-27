@@ -491,9 +491,9 @@ def forward(self, inputs, H_C=None):
     if H_C is None:
         # Initial state with shape: (batch_size, num_hiddens)
         H = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                      ctx=inputs.ctx)
+                      device=inputs.device)
         C = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                      ctx=inputs.ctx)
+                      device=inputs.device)
     else:
         H, C = H_C
     outputs = []
@@ -549,7 +549,7 @@ class LSTM(d2l.RNN):  #@save
 
     def forward(self, inputs, H_C=None):
         if H_C is None:
-            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
+            H_C = self.rnn.begin_state(inputs.shape[1], device=inputs.device)
         return self.rnn(inputs, H_C)
 ```
 

@@ -256,8 +256,7 @@ class SoftmaxRegressionScratch(d2l.Classifier):
 
 ### The Forward Pass
 
-A minibatch of $n$ images arrives as a tensor of shape $(n, 1, 28, 28)$ in
-PyTorch and MXNet and $(n, 28, 28, 1)$ in TensorFlow and JAX
+A minibatch of $n$ images arrives as a four-dimensional tensor
 (:numref:`sec_fashion_mnist`). The method `forward` reshapes it into the
 $n \times 784$ matrix $\mathbf{X}$, one flattened image per row, computes the
 logits $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$, with the bias added
@@ -266,7 +265,20 @@ which pixels are neighbors. The model cannot use that information; the
 convolutional networks of :numref:`chap_cnn` do.
 
 :begin_tab:`mxnet`
-The MXNet version reads the values of the parameters with `data()`.
+The minibatch has shape $(n, 1, 28, 28)$, channels first. The MXNet version
+reads the values of the parameters with `data()`.
+:end_tab:
+
+:begin_tab:`pytorch`
+The minibatch has shape $(n, 1, 28, 28)$, channels first.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The minibatch has shape $(n, 28, 28, 1)$, channels last.
+:end_tab:
+
+:begin_tab:`jax`
+The minibatch has shape $(n, 28, 28, 1)$, channels last.
 :end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-model-2}
@@ -290,15 +302,15 @@ def forward(self, X):
 The loss of one example is the negative logarithm of the probability that
 the model assigns to its true class, $l = -\log \hat{y}_y$
 (:numref:`sec_softmax`). For a minibatch we need, from each row of
-$\hat{\mathbf{Y}}$, the entry in the column of that example's label.
-Indexing does this without a loop: a list of row indices together with the
-vector of labels picks one entry per row. In code the labels are class
-indices counted from 0. Here are two examples with three classes and labels
-0 and 2:
+$\hat{\mathbf{Y}}$, the entry in the column of that example's label. The
+indexing of :numref:`sec_ndarray` does this without a loop: the row
+positions together with the vector of labels pick one entry per row. In code
+the labels are class indices counted from 0. Here are two examples with
+three classes and labels 0 and 2:
 
 :begin_tab:`tensorflow`
-TensorFlow tensors do not support this kind of indexing. `tf.gather` with
-`batch_dims=1` picks, in each row, the entry at that row's label.
+As in :numref:`sec_ndarray`, `tf.gather` with `batch_dims=1` picks, in each
+row, the entry at that row's label.
 :end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
@@ -349,8 +361,7 @@ cross_entropy(y_hat, y)
 %%tab jax
 def cross_entropy(y_hat, y):  #@save
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
-                                     axis=1).squeeze(-1), min=1e-12)
+    p = jnp.clip(y_hat[jnp.arange(len(y_hat)), y], min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 cross_entropy(y_hat, y)
@@ -499,8 +510,8 @@ d2l.show_heatmaps(d2l.reshape(C, (1, 1, 10, 10)), xlabel='true class',
 The diagonal shows how often each class is recognized. Trousers, bags, and
 the three kinds of shoes are recognized about 90% of the time or more, and
 shirts only 40% to 70% of the time. The errors form two groups. The
-tops, T-shirts, pullovers, coats, and shirts (columns 0, 2, 4, and 6), trade
-most of their errors among themselves, and nearly all of the largest
+four tops (T-shirts, pullovers, coats, and shirts; columns 0, 2, 4, and 6)
+trade most of their errors among themselves, and nearly all of the largest
 entries off the diagonal lie in this group: shirts taken for T-shirts,
 pullovers, or coats, and pullovers and coats taken for each other. Sandals,
 sneakers, and ankle boots (columns 5, 7, and 9) form a second, smaller

@@ -224,9 +224,9 @@ implications:
    :exlabel:`ex_software-ecosystem-rating-gaps`
 
 1. **Error bars for small evaluations.** Two models A and B answer the
-   same 25 items of your task. A answers 19 items correctly and B answers
-   16. On 5 items A is right and B is wrong, and on 2 items B is right and
-   A is wrong. The analysis follows :citet:`Miller.2024`.
+   same 25 items of your task. A answers 19 items correctly and B
+   answers 16. On 5 items A is right and B is wrong, and on 2 items B is
+   right and A is wrong. The analysis follows :citet:`Miller.2024`.
     1. Compute the standard error of each accuracy and a 95% confidence
        interval for each.
     1. Compute the standard error of the difference in accuracy twice:

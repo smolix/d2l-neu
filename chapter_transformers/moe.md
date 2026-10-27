@@ -584,7 +584,7 @@ for ax, (name, u) in zip(axes, results.items()):
     ax.set_xlabel('expert')
     ax.set_title(name)
 axes[0].set_ylabel('fraction of tokens')
-axes[0].legend()
+axes[0].legend();
 ```
 
 ```{.python .input #moe-three-runs-one-budget-4}
@@ -599,7 +599,7 @@ for ax, (name, u) in zip(axes, results.items()):
     ax.set_xlabel('expert')
     ax.set_title(name)
 axes[0].set_ylabel('fraction of tokens')
-axes[0].legend()
+axes[0].legend();
 ```
 
 In the displayed seed, the unbalanced run assigns most tokens to a few experts

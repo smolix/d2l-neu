@@ -144,12 +144,11 @@ def corr2d(X, K):  #@save
 def corr2d(X, K):  #@save
     """Compute 2D cross-correlation."""
     h, w = K.shape
-    Y = tf.Variable(tf.zeros((X.shape[0] - h + 1, X.shape[1] - w + 1)))
-    for i in range(Y.shape[0]):
-        for j in range(Y.shape[1]):
-            Y[i, j].assign(tf.reduce_sum(
-                X[i: i + h, j: j + w] * K))
-    return Y
+    # Build Y from its entries, so that gradients flow through it
+    return tf.stack([
+        tf.stack([tf.reduce_sum(X[i: i + h, j: j + w] * K)
+                  for j in range(X.shape[1] - w + 1)])
+        for i in range(X.shape[0] - h + 1)])
 ```
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-1}
@@ -348,10 +347,9 @@ should detect. Can gradient descent find the kernel from the input `X` and the
 desired output `Y` alone? We start from a random $1 \times 2$ kernel, drawn
 from $\mathcal{N}(0, 0.01^2)$, measure the squared error between the layer's
 output and `Y`, summed over all 42 output positions, and take 10 gradient
-steps with learning rate 0.03. Instead of `Conv2D` we use the framework's
-built-in convolutional layer, which computes the same cross-correlation in one
-fast operation and supports automatic differentiation in every framework. We
-omit the bias, which the edge map does not need.
+steps with learning rate 0.03. Instead of `Conv2D` we use the built-in
+convolutional layer, which computes the same cross-correlation in one fast
+operation. We omit the bias, which the edge map does not need.
 
 ```{.python .input #conv-layer-learning-a-kernel-1}
 %%tab mxnet
@@ -488,10 +486,10 @@ reproduces `corr2d`.
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 h, w = K.shape
-p_h, p_w = X.shape[0] - h + 1, X.shape[1] - w + 1
+h_o, w_o = X.shape[0] - h + 1, X.shape[1] - w + 1
 patches = d2l.stack([d2l.reshape(X[i:i + h, j:j + w], (-1,))
-                     for i in range(p_h) for j in range(p_w)])
-Y_mat = d2l.reshape(d2l.matmul(patches, d2l.reshape(K, (-1, 1))), (p_h, p_w))
+                     for i in range(h_o) for j in range(w_o)])
+Y_mat = d2l.reshape(d2l.matmul(patches, d2l.reshape(K, (-1, 1))), (h_o, w_o))
 Y_mat, d2l.reduce_sum(d2l.abs(Y_mat - corr2d(X, K)))
 ```
 
@@ -514,8 +512,14 @@ torch.allclose(patches_unfold, patches)
 ```
 
 The same idea also works in the opposite direction. Instead of unfolding the
-input, we can unroll the kernel into a sparse, banded matrix that multiplies
-the flattened image; the exercises explore this view.
+input, we can unroll the kernel into a sparse, banded matrix $\mathbf{W}$
+that multiplies the flattened image; the exercises explore this view. The
+banded matrix also describes the backward pass: the gradient of a loss
+$\ell$ with respect to the input is $\mathbf{W}^\top$ times the flattened
+$\partial\ell/\partial\mathbf{Y}$, and an exercise below shows that this
+product, like the gradient with respect to the kernel, is again a
+cross-correlation. :numref:`sec_transposed_conv` makes multiplication by
+$\mathbf{W}^\top$ a layer of its own, the transposed convolution.
 
 ## Feature Maps and Receptive Fields
 

@@ -122,31 +122,36 @@ print('Feature extractor output shape:',
 
 ```{.python .input #fcn-the-model-1}
 #@tab tensorflow
-# Note: keras.applications does not bundle a ResNet-18; it only ships
-# ResNet-50/101/152. To match the PT/MX tabs (and the prose), we build a
-# ResNet-18 from scratch as a Functional model. Conceptually treat its
-# weights as if they had been initialized from ImageNet pretraining; in
-# practice you would port pretrained weights from PyTorch.
+# keras.applications ships ResNet-50/101/152 but no ResNet-18, so we build
+# a ResNet-18 as a Functional model. Its weights are random here; in
+# practice you would load weights pretrained on ImageNet.
+def _bn():  # Running averages decay 0.9, epsilon 1e-5
+    return keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
+
 def _resnet_block(x, num_channels, strides=1, use_1x1conv=False):
+    # Pad 1 on every side: 'same' pads only right and bottom when the
+    # stride is 2 and the sizes are even
+    y = keras.layers.ZeroPadding2D(1)(x)
     y = keras.layers.Conv2D(num_channels, 3, strides=strides,
-                            padding='same', use_bias=False)(x)
-    y = keras.layers.BatchNormalization()(y)
+                            use_bias=False)(y)
+    y = _bn()(y)
     y = keras.layers.ReLU()(y)
     y = keras.layers.Conv2D(num_channels, 3, strides=1,
                             padding='same', use_bias=False)(y)
-    y = keras.layers.BatchNormalization()(y)
+    y = _bn()(y)
     if use_1x1conv:
         x = keras.layers.Conv2D(num_channels, 1, strides=strides,
                                 use_bias=False)(x)
-        x = keras.layers.BatchNormalization()(x)
+        x = _bn()(x)
     return keras.layers.ReLU()(y + x)
 
 inputs = keras.Input(shape=(None, None, 3))
-x = keras.layers.Conv2D(64, 7, strides=2, padding='same',
-                        use_bias=False)(inputs)
-x = keras.layers.BatchNormalization()(x)
+x = keras.layers.ZeroPadding2D(3)(inputs)  # Pad every side
+x = keras.layers.Conv2D(64, 7, strides=2, use_bias=False)(x)
+x = _bn()(x)
 x = keras.layers.ReLU()(x)
-x = keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(x)
+x = keras.layers.ZeroPadding2D(1)(x)  # Zeros are safe after a ReLU
+x = keras.layers.MaxPool2D(pool_size=3, strides=2)(x)
 x = _resnet_block(x, 64)
 x = _resnet_block(x, 64)
 x = _resnet_block(x, 128, strides=2, use_1x1conv=True)
@@ -160,7 +165,7 @@ features = _resnet_block(x, 512)
 pooled = keras.layers.GlobalAveragePooling2D()(features)
 logits = keras.layers.Dense(1000)(pooled)
 pretrained_net = keras.Model(inputs=inputs, outputs=logits)
-# Show the last few layers (matches the spirit of the PT/MX displays)
+# Show the last few layers
 pretrained_net.layers[-3:]
 ```
 
@@ -603,7 +608,7 @@ of the predicted class for all the pixels.
 #@tab mxnet
 num_epochs, lr, wd, devices = 5, 0.001, 1e-3, d2l.try_all_gpus()
 loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
-net.reset_ctx(devices)
+net.reset_device(devices)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': lr, 'wd': wd})
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
@@ -712,7 +717,7 @@ in each channel and transform the image into the four-dimensional input format r
 def predict(img):
     X = test_iter._dataset.normalize_image(img)
     X = np.expand_dims(X.transpose(2, 0, 1), axis=0)
-    pred = net(X.as_in_ctx(devices[0])).argmax(axis=1)
+    pred = net(X.to_device(devices[0])).argmax(axis=1)
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
@@ -754,7 +759,7 @@ To visualize the predicted class of each pixel, we map the predicted class back 
 ```{.python .input #fcn-prediction-2}
 #@tab mxnet
 def label2image(pred):
-    colormap = np.array(d2l.VOC_COLORMAP, ctx=devices[0], dtype='uint8')
+    colormap = np.array(d2l.VOC_COLORMAP, device=devices[0], dtype='uint8')
     X = pred.astype('int32')
     return colormap[X, :]
 ```

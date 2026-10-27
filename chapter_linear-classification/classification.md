@@ -174,10 +174,8 @@ with other optimizers.
 %%tab mxnet
 @d2l.add_to_class(d2l.Module)  #@save
 def configure_optimizers(self):
-    params = self.parameters()
-    if isinstance(params, list):
-        return d2l.SGD(params, self.lr)
-    return gluon.Trainer(params, 'sgd', {'learning_rate': self.lr})
+    return gluon.Trainer(self.collect_params(), 'sgd',
+                         {'learning_rate': self.lr})
 ```
 
 ```{.python .input #classification-the-classifier-class-2}
@@ -202,42 +200,12 @@ def configure_optimizers(self):
 ```
 
 :begin_tab:`mxnet`
-The MXNet default needs the model's parameters. Gluon's `collect_params`
-finds the parameters declared as Gluon `Parameter`s, such as those of the
-implementation from scratch in the next section, which reads their values
-with `data()`. It misses plain arrays with attached gradients, which the
-recurrent language model from scratch in :numref:`sec_rnn-scratch` uses. `get_scratch_params` collects
-such arrays by searching the attributes of a model and of its submodules,
-and `parameters` returns Gluon's parameters if there are any and the plain
-arrays otherwise. Since this code
-becomes part of the `d2l` library, `np` in this section is MXNet's array
-module, as it is in the library.
+The MXNet default hands the parameters that `collect_params` finds to a
+Gluon `Trainer` with the SGD update rule. `collect_params` lists every
+parameter declared as a Gluon `Parameter`, including those of a model
+written from scratch, such as the one in the next section, which reads their
+values with `data()`.
 :end_tab:
-
-```{.python .input #classification-accuracy-2  n=10}
-%%tab mxnet
-@d2l.add_to_class(d2l.Module)  #@save
-def get_scratch_params(self):
-    # collect_params() only finds Parameters declared via Gluon's Parameter
-    # API. For from-scratch models that store weights as bare np.ndarrays, we
-    # walk the object's attributes recursively and gather those instead.
-    params = []
-    for attr in dir(self):
-        a = getattr(self, attr)
-        if isinstance(a, np.ndarray):
-            params.append(a)
-        if isinstance(a, d2l.Module):
-            params.extend(a.get_scratch_params())
-    return params
-
-@d2l.add_to_class(d2l.Module)  #@save
-def parameters(self):
-    # Return the Gluon ParameterDict when the model uses Gluon layers; fall
-    # back to the bare-array scan for from-scratch implementations.
-    params = self.collect_params()
-    return params if isinstance(params, dict) and len(
-        params.keys()) else self.get_scratch_params()
-```
 
 ## Beyond Accuracy
 :label:`subsec_beyond-accuracy`
@@ -340,7 +308,10 @@ $$N_{ij} = \sum_{m=1}^n \mathbf{1}\big(\hat{y}^{(m)} = i\big)\, \mathbf{1}\big(y
 :eqlabel:`eq_confusion-matrix`
 
 counts the examples of class $j$ predicted as class $i$: rows are predicted
-classes and columns true classes, as in the table above. The diagonal holds
+classes and columns true classes, as in the table above. Not every library
+agrees: scikit-learn's `confusion_matrix` stores the transpose, with the
+true classes in the rows, so check the orientation before reading off recall
+and precision. The diagonal holds
 the correct predictions, so the accuracy is the sum of the diagonal divided
 by $n$. Each off-diagonal entry counts one kind of mistake, and costs
 $\kappa_{ij}$ for predicting $i$ when the class is $j$ weight these entries
@@ -350,6 +321,11 @@ the examples of class $j$ that are predicted as class $i$, an estimate of
 $P(\hat{y} = i \mid y = j)$. Its diagonal holds the recall of each class.
 :numref:`sec_softmax_scratch` computes these matrices for a classifier
 trained on Fashion-MNIST and reads off which garments it confuses.
+
+:begin_tab:`tensorflow`
+`tf.math.confusion_matrix` also puts the true classes in the rows and the
+predicted classes in the columns, the transpose of $\mathbf{N}$.
+:end_tab:
 
 ### Calibration
 
@@ -362,6 +338,11 @@ if its probabilities match frequencies, so that of all predictions made
 with confidence 0.9, 90% are correct, and noted that networks trained on
 cross-entropy tend to be overconfident. The *confidence* of a prediction is
 the probability of the predicted class, the largest predicted probability.
+A check of the confidence covers only that one probability. The threshold
+rule :eqref:`eq_cost-threshold` needs $p(\textrm{sick})$ itself to be
+calibrated, also when it is small, and we check it the same way, binning the
+examples by $p(\textrm{sick})$ and comparing each bin with the fraction of
+sick patients in it.
 
 To check calibration on validation data, we sort the examples into bins by
 their confidence, for instance $[0.5, 0.7)$, $[0.7, 0.9)$, and $[0.9, 1]$, and
@@ -513,6 +494,13 @@ checks whether the predicted probabilities can be trusted.
        give.
     1. Show that a classifier whose scores are independent of the labels
        traces the diagonal in expectation.
+    1. For $\mu = 2$, plot the *precision-recall curve*, precision against
+       recall as $\tau$ sweeps, once with equal numbers of positives and
+       negatives and once with positives making up 1% of the examples
+       (keep 1000 negatives and draw 10 positives, or reweight). Explain why
+       the ROC curve does not change with the prevalence while the
+       precision-recall curve drops, and which of the two describes the
+       screening test of this section better.
    :exlabel:`ex_classification-roc-curves`
 1. [code] **AUC as ranking probability.** ● This problem uses the ROC
    curves and simulated scores of problem :exref:`ex_classification-roc-curves`.

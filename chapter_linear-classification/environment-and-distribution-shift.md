@@ -129,6 +129,20 @@ given the same browsing history. When the inputs keep their distribution, as
 in the right column of :numref:`fig_mdl-clf-shift-types`, unlabeled target
 data cannot reveal such a change: it is a partial version of the label flip.
 
+Data often consist of groups, such as patients from different hospitals, or
+photographs of water birds and land birds, each on water or on land. When
+the groups appear in different proportions in training and in deployment,
+we speak of *subpopulation shift*, which resembles label shift with groups
+in place of classes. A classifier can reach a high average accuracy by
+relying on a *spurious* feature that agrees with the label in the large
+groups, such as the background behind a bird, and fail on a small group in
+which the two disagree :cite:`Sagawa.Koh.Hashimoto.ea.2020`. The average
+accuracy hides such a failure. The *worst-group accuracy*, the lowest
+accuracy over the groups, reveals it, and benchmarks of distribution shifts
+in the wild report it :cite:`Koh.Sagawa.Marklund.ea.2021`. When the groups
+are known, reweighting the training examples by group, as the correction of
+label shift below reweights them by class, is a first remedy.
+
 ## Covariate Shift Correction
 :label:`subsec_covariate-shift-correction`
 
@@ -326,7 +340,11 @@ def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
 Steps 1 and 2 train the domain classifier on the pooled inputs. For two
 Gaussians with the same covariance, the logarithm of the density ratio is
 linear in $\mathbf{x}$, here $2x_1 - 2$, so logistic regression can
-represent the true weights and we can check what it learns. The cell also
+represent the true weights and we can check what it learns. (For the same
+reason, a classifier that models each class by a Gaussian with a shared
+covariance and applies Bayes' rule has linear decision boundaries. Such
+*generative* classifiers, which model $p(\mathbf{x} \mid y)$ instead of
+$p(y \mid \mathbf{x})$, are the subject of :numref:`sec_mdl-naive_bayes`.) The cell also
 reports the largest weight and the effective sample size, with and without
 clipping at $c = 5$.
 
@@ -496,7 +514,12 @@ when the classifier gets the majority of each class right,
 $C_{jj} > \frac{1}{2}$ for every $j$ (exercise
 :exref:`ex_environment-and-distribution-shift-label-shift-system`); when
 $\mathbf{C}$ is nearly singular, small sampling errors in $\boldsymbol{\mu}$
-become large errors in $\mathbf{p}_T$. Adjusting a classifier to new class
+and in the estimated $\mathbf{C}$ become large errors in $\mathbf{p}_T$.
+For a rare class the solution can even come out negative. In the simulation
+above with a prevalence of 1% instead of 10% and 1,000 target examples,
+about 30% of the runs estimate a negative fraction of sick patients. In
+practice one sets negative estimates to 0 and rescales the others to sum to
+1, or solves a least-squares problem restricted to proportions. Adjusting a classifier to new class
 proportions goes back at least to :citet:`Saerens.Latinne.Decaestecker.2002`;
 :citet:`Lipton.Wang.Smola.2018` showed that the confusion-matrix estimate is
 consistent for any fixed classifier with invertible $\mathbf{C}$.

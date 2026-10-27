@@ -274,7 +274,7 @@ use, with their derivatives.
 
 The ReLU passes positive pre-activations unchanged and sets negative ones to
 zero. Its derivative is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$, where
-the ReLU has no derivative, the frameworks use 0, a choice that rarely
+the ReLU has no derivative, the built-in ReLU uses 0, a choice that rarely
 matters because a pre-activation is seldom exactly zero. For every positive
 pre-activation, however large, the gradient passes through a ReLU unit
 unchanged. This is the main reason why the ReLU replaced the sigmoid,
@@ -297,7 +297,12 @@ distribution. Since $\Phi(z)$ rises smoothly from 0 for very negative $z$ to
 1 for very positive $z$, the GELU matches the ReLU for $|z|$ beyond about 3
 and rounds off its corner in between. Its slope at $z = 0$ is 1/2, and
 unlike the ReLU it dips below zero, to about $-0.17$ near $z = -0.75$. Many
-transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`.
+transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. Some
+libraries compute it by default with an approximation built from the tanh,
+which differs from $z\,\Phi(z)$ by less than $5 \cdot 10^{-4}$. A close
+relative, the *SiLU* $z\,\sigma(z)$ with the sigmoid $\sigma$ of the next
+subsection, is used in a gated form, SwiGLU, by many recent language models
+(:numref:`sec_transformer-block`).
 
 ### Sigmoid and Tanh
 
@@ -380,17 +385,17 @@ for name, phi in activations.items():
 z = jnp.array([-4.0, -1.0, 0.0, 1.0, 4.0])
 activations = {'ReLU': jax.nn.relu, 'sigmoid': jax.nn.sigmoid,
                'tanh': jnp.tanh,
-               # the exact GELU, z * Phi(z), as in the other frameworks
+               # z * Phi(z) exactly; the default is a tanh approximation
                'GELU': lambda z: jax.nn.gelu(z, approximate=False)}
 for name, phi in activations.items():
     grad = jax.grad(lambda z: phi(z).sum())(z)
     print(f'{name:8s}', ' '.join(f'{g:7.4f}' for g in grad.tolist()))
 ```
 
-The ReLU passes a gradient of 0 or 1, and every framework uses 0 at
-$z = 0$. The sigmoid passes at most 1/4 of the gradient and tanh at most all
-of it, but at $z = \pm 4$ both are saturated, passing 0.018 and 0.0013 of
-it. The GELU passes a small negative gradient at $z = -1$.
+The ReLU passes a gradient of 0 or 1, with 0 at $z = 0$. The sigmoid passes
+at most 1/4 of the gradient and tanh at most all of it, but at $z = \pm 4$
+both are saturated, passing 0.018 and 0.0013 of it. The GELU passes a small
+negative gradient at $z = -1$.
 
 ## Expressive Power
 
@@ -411,19 +416,20 @@ there.
 ![Approximation by hinges. Left: three hidden units, each contributing a hinge $a_j\,\mathrm{ReLU}(x - t_j)$ whose joint $t_j$ is marked. Right: a line plus the three hinges is a polyline with 4 pieces (blue) that follows a smooth target (gray); the shaded area is the error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
 :label:`fig_mdl-mlp-uat-hinges`
 
-The approximation result for one input follows. A continuous function $f$
-on a closed interval changes by less than any given $\epsilon > 0$ between
+The approximation result for one input follows. A continuous function $f$ on
+a closed interval changes by less than any given $\epsilon > 0$ between
 points that are close enough together. The polyline through the values of
 $f$ at such closely spaced points therefore stays within $\epsilon$ of $f$
 on the whole interval, and a hidden layer with one unit per joint computes
-it. The same
-conclusion holds for any number of inputs, on any closed and bounded set,
-and for every continuous activation function that is not a polynomial
-:cite:`Cybenko.1989,Leshno.Lin.Pinkus.ea.1993`. Polynomials must be
+it. The same conclusion holds for any number of inputs, on any closed and
+bounded set, and for every continuous activation function that is not a
+polynomial (:citet:`Cybenko.1989` for sigmoids,
+:citet:`Leshno.Lin.Pinkus.ea.1993` in general). Polynomials must be
 excluded, because with a polynomial activation function the network computes
-a polynomial of bounded degree, and such polynomials cannot approximate every
-continuous function. This result is the *universal approximation theorem*.
-Exercise :exref:`ex_mlp-one-hidden-layer` proves it for two inputs.
+a polynomial of bounded degree, and such polynomials cannot approximate
+every continuous function. This result is the *universal approximation
+theorem*. Exercise :exref:`ex_mlp-one-hidden-layer` proves it for two
+inputs.
 
 ### Limits of the Theorem
 
@@ -857,7 +863,7 @@ Left: $\phi(z)$. Right: $\phi'(z)$, on one shared scale.
 [Activation functions]{.kicker}
 
 $\mathrm{ReLU}(z) = \max(z, 0)$; its derivative is 1 for $z > 0$ and 0 for
-$z < 0$, and the frameworks use 0 at $z = 0$.
+$z < 0$, and the built-in ReLU uses 0 at $z = 0$.
 
 - No saturation for $z > 0$, one comparison: the default for hidden layers.
 - **Dead unit:** $z < 0$ on every example gives zero gradient forever. The
@@ -949,7 +955,8 @@ The theorem guarantees that good weights exist, not that we can find or
 trust them.
 :::
 
-Sources: Cybenko (1989); Leshno, Lin, Pinkus, and Schocken (1993).
+Sources: Cybenko (1989) for sigmoids; Leshno, Lin, Pinkus, and Schocken
+(1993) in general.
 :::
 
 ::: {.slide title="Depth Multiplies Linear Pieces; Width Only Adds Them"}

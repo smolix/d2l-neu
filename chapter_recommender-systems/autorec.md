@@ -173,7 +173,7 @@ test_iter = gluon.data.DataLoader(np.array(train_inter_mat), shuffle=False,
                                   num_workers=d2l.get_dataloader_workers())
 # Model initialization, training, and evaluation
 net = AutoRec(500, num_users)
-net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
+net.initialize(device=devices, force_reinit=True, init=mx.init.Normal(0.01))
 lr, num_epochs, wd, optimizer = 0.002, 25, 1e-5, 'adam'
 loss = gluon.loss.L2Loss()
 trainer = gluon.Trainer(net.collect_params(), optimizer,

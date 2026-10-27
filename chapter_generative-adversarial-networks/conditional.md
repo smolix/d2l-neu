@@ -590,7 +590,10 @@ class FeatureCNN(nnx.Module):
         self.convs = nnx.List(
             [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
              for c_in, c_out in zip(widths[:-1], widths[1:])])
-        self.norms = nnx.List([nnx.BatchNorm(c, rngs=rngs)
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
                                for c in widths[1:]])
         self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
 

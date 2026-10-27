@@ -129,6 +129,15 @@ draw only 20 training examples, so that high degrees have room to overfit,
 and 1,000 test examples, enough to estimate the generalization error of the
 models that fit well to within a few percent.
 
+Because we generated the data, we know the error that no model can beat, the
+noise variance $\sigma^2$. Real data do not reveal it, and the usual
+reference there is the variance of the labels, $\textrm{Var}(y)$, which is
+the mean squared error of predicting the mean label for every input. A model
+is useful only if its mean squared error falls clearly below
+$\textrm{Var}(y)$; one minus the ratio of the two, the fraction of the
+variance that the model explains, is the *coefficient of determination*
+$R^2$.
+
 ```{.python .input #generalization-polynomial-curve-fitting-1}
 %%tab pytorch
 %matplotlib inline
@@ -300,6 +309,10 @@ because every cross term has an expectation of zero: $\textrm{bias}(x)$ is a
 constant, $\epsilon$ and $v$ have mean zero, and $\epsilon$ is independent
 of $v$, which depends only on the training noise. The mathematics appendix
 derives the decomposition for general estimators (:numref:`sec_mdl-statistics`).
+The expectation here holds the training inputs fixed and redraws only the
+noise. Averaging the risk of the fitted model over random training sets,
+inputs included, adds the variation that comes from the choice of inputs, so
+on average the variance is somewhat larger.
 
 We can compute both terms in our experiment. The least-squares weights
 $\hat{\mathbf{w}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -37,20 +37,20 @@ C 73.238935 151.026669 65.931178 144.655894 57.304792 140.674484
    <g id="patch_3">
     <path d="M 15.050945 185.8382 
 Q 135.944689 185.8382 255.832202 185.8382 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 249.032202 182.4382 
 L 255.832202 185.8382 
 L 249.032202 189.2382 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 36.46 213.097469 
 Q 36.46 115.613157 36.46 19.135076 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 33.06 25.935076 
 L 36.46 19.135076 
 L 39.86 25.935076 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 36.46 185.8382 

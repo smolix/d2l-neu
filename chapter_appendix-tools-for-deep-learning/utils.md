@@ -78,16 +78,7 @@ with dots, so that a one-epoch run is still visible.
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
 #@save
 import os
-from matplotlib import ticker
 from matplotlib.figure import Figure
-
-def set_log_ticks(axis):  #@save
-    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades."""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
-    axis.set_minor_formatter(ticker.NullFormatter())
 
 @d2l.add_to_class(d2l.ProgressBoard)  #@save
 def show(self, final=True):
@@ -121,7 +112,7 @@ def _plot(self, ax):
     ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
     if self.xlim: ax.set_xlim(self.xlim)
     if self.ylim: ax.set_ylim(self.ylim)
-    if self.yscale == 'log': set_log_ticks(ax.yaxis)
+    if self.yscale == 'log': d2l.set_log_ticks(ax.yaxis)
     if acc_ax is not None: acc_ax.set_ylabel('accuracy')
     lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
     labels = [line.get_label() for line in lines]
@@ -245,18 +236,18 @@ def load_data_fashion_mnist(batch_size, resize=None):  #@save
 def evaluate_accuracy_gpu(net, data_iter, device=None):  #@save
     """Compute the accuracy for a model on a dataset using a GPU."""
     if not device:  # Query the first device where the first parameter is on
-        device = list(net.collect_params().values())[0].list_ctx()[0]
+        device = list(net.collect_params().values())[0].list_device()[0]
     # No. of correct predictions, no. of predictions
     metric = d2l.Accumulator(2)
     for X, y in data_iter:
-        X, y = X.as_in_ctx(device), y.as_in_ctx(device)
+        X, y = X.to_device(device), y.to_device(device)
         metric.add(d2l.accuracy(net(X), y), d2l.size(y))
     return metric[0] / metric[1]
 
 #@save
 def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
     """Train a model with a GPU (defined in Chapter 6)."""
-    net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
+    net.initialize(force_reinit=True, device=device, init=init.Xavier())
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     trainer = gluon.Trainer(net.collect_params(),
                             'sgd', {'learning_rate': lr})
@@ -269,7 +260,7 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
         for i, (X, y) in enumerate(train_iter):
             timer.start()
             # Here is the major difference from `d2l.train_epoch_ch3`
-            X, y = X.as_in_ctx(device), y.as_in_ctx(device)
+            X, y = X.to_device(device), y.to_device(device)
             with autograd.record():
                 y_hat = net(X)
                 l = loss(y_hat, y)
@@ -502,76 +493,32 @@ def squared_loss(y_hat, y):  #@save
     """Squared loss."""
     return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
 
-def load_array(data_arrays, batch_size, is_train=True):  #@save
-    """Construct a JAX-compatible data iterator.
+class ArrayDataLoader(d2l.ArrayLoader):  #@save
+    """`d2l.ArrayLoader` that yields JAX arrays and also accepts a dataset.
 
-    For training, the last partial batch is dropped so every minibatch
-    has the same shape — this lets a `@jax.jit`'d step function compile
-    once per epoch instead of recompiling for the smaller last batch.
-    Validation iterators yield all batches (the last may be smaller),
-    matching how PyTorch / TF / MXNet behave.
-    """
-    # Keep dataset storage on the host. Only minibatches need to be transferred
-    # to an accelerator, and host-side indexing avoids launching a device gather
-    # for every array in every minibatch.
-    data_arrays = tuple(np.asarray(a) for a in data_arrays)
-    n = data_arrays[0].shape[0]
-    indices = np.arange(n)
-    last = n - (n % batch_size) if is_train else n
-    def data_iter():
-        if is_train:
-            np.random.shuffle(indices)
-            # Shuffle each full field once, then transfer contiguous slices.
-            # This avoids a separate fancy-index gather for every field and
-            # every minibatch.
-            epoch_arrays = tuple(a[indices] for a in data_arrays)
-        else:
-            epoch_arrays = data_arrays
-        for i in range(0, last, batch_size):
-            yield tuple(jnp.array(a[i: min(i + batch_size, n)])
-                        for a in epoch_arrays)
-    class DataIter:
-        def __iter__(self):
-            return data_iter()
-        def __len__(self):
-            return last // batch_size if is_train else (n + batch_size - 1) // batch_size
-    return DataIter()
-
-class ArrayDataLoader:  #@save
-    """A simple data loader for JAX that batches arrays or dataset objects."""
-    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False,
-                 **kwargs):
-        if len(args) == 1 and hasattr(args[0], '__len__') and hasattr(args[0], '__getitem__'):
-            dataset = args[0]
-            items = [dataset[i] for i in range(len(dataset))]
+    Pass the arrays as positional arguments, or one dataset object with
+    `__len__` and `__getitem__` whose items are tuples of fields. Like
+    `d2l.ArrayLoader`, it keeps the last, partial minibatch unless
+    `drop_last=True`."""
+    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False):
+        if len(args) == 1 and not hasattr(args[0], 'shape'):  # A dataset
+            items = [args[0][i] for i in range(len(args[0]))]
             if isinstance(items[0], (tuple, list)):
-                self.arrays = tuple(np.array([item[j] for item in items])
-                                    for j in range(len(items[0])))
+                args = tuple(np.array([item[j] for item in items])
+                             for j in range(len(items[0])))
             else:
-                self.arrays = (np.array(items),)
-        else:
-            self.arrays = tuple(np.asarray(a) for a in args)
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.drop_last = drop_last
+                args = (np.array(items),)
+        super().__init__(args, batch_size, shuffle=shuffle,
+                         drop_last=drop_last)
 
     def __iter__(self):
-        n = self.arrays[0].shape[0]
-        indices = np.arange(n)
-        if self.shuffle:
-            np.random.shuffle(indices)
-        for i in range(0, n, self.batch_size):
-            end = i + self.batch_size
-            if self.drop_last and end > n:
-                break
-            batch_idx = indices[i:min(end, n)]
-            yield tuple(jnp.array(a[batch_idx]) for a in self.arrays)
+        for batch in super().__iter__():
+            yield tuple(jnp.asarray(a) for a in batch)
 
-    def __len__(self):
-        n = self.arrays[0].shape[0]
-        if self.drop_last:
-            return n // self.batch_size
-        return (n + self.batch_size - 1) // self.batch_size
+def load_array(data_arrays, batch_size, is_train=True):  #@save
+    """Minibatches of JAX arrays, reshuffled each pass if is_train."""
+    return d2l.ArrayDataLoader(*data_arrays, batch_size=batch_size,
+                               shuffle=is_train)
 
 class Animator:  #@save
     """For plotting data in animation."""
@@ -676,8 +623,9 @@ def evaluate_accuracy(net, data_iter):  #@save
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-10}
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
-    """Plot a list of images."""
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,  #@save
+                cmap=None):
+    """Plot a list of images (cmap colors single-channel images)."""
     figsize = (num_cols * scale, num_rows * scale)
     _, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize)
     axes = axes.flatten()
@@ -686,7 +634,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img)
+        ax.imshow(img, cmap=cmap)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:
@@ -1060,7 +1008,7 @@ class MaskedSoftmaxCELoss(gluon.loss.SoftmaxCELoss):
 #@save
 def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
     """Train a model for sequence to sequence."""
-    net.initialize(init.Xavier(), force_reinit=True, ctx=device)
+    net.initialize(init.Xavier(), force_reinit=True, device=device)
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': lr})
     loss = MaskedSoftmaxCELoss()
@@ -1071,9 +1019,9 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
         for batch in data_iter:
             X, X_valid_len, Y, Y_valid_len = [
-                x.as_in_ctx(device) for x in batch]
-            bos = np.array(
-                [tgt_vocab['<bos>']] * Y.shape[0], ctx=device).reshape(-1, 1)
+                x.to_device(device) for x in batch]
+            bos = np.array([tgt_vocab['<bos>']] * Y.shape[0],
+                           device=device).reshape(-1, 1)
             dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
             with autograd.record():
                 Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -1094,14 +1042,15 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     """Predict for sequence to sequence."""
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
         src_vocab['<eos>']]
-    enc_valid_len = np.array([len(src_tokens)], ctx=device)
+    enc_valid_len = np.array([len(src_tokens)], device=device)
     src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # Add the batch axis
-    enc_X = np.expand_dims(np.array(src_tokens, ctx=device), axis=0)
+    enc_X = np.expand_dims(np.array(src_tokens, device=device), axis=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
     dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
     # Add the batch axis
-    dec_X = np.expand_dims(np.array([tgt_vocab['<bos>']], ctx=device), axis=0)
+    dec_X = np.expand_dims(
+        np.array([tgt_vocab['<bos>']], device=device), axis=0)
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)

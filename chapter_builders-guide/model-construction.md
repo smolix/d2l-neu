@@ -197,9 +197,29 @@ by all of them.
 
 A sequential container only expresses a chain. For any other wiring we
 subclass the module class and write two methods: a constructor that creates
-the children, and a forward method that applies them to the input. The
-forward method is called `forward` in PyTorch and Gluon, `call` in Keras,
-and `__call__` in NNX. Here is the same MLP once more:
+the children, and a forward method that applies them to the input.
+
+:begin_tab:`mxnet`
+In Gluon the forward method is `forward`.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch the forward method is `forward`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In Keras the forward method is `call`. The `d2l.Module` of earlier chapters
+defines `call` to run `forward`, which is why its subclasses wrote
+`forward`; a plain Keras layer implements `call` directly.
+:end_tab:
+
+:begin_tab:`jax`
+In NNX the forward method is `__call__`. The `d2l.Module` of earlier
+chapters defines `__call__` to run `forward`, which is why its subclasses
+wrote `forward`; a plain NNX module implements `__call__` directly.
+:end_tab:
+
+Here is the same MLP once more:
 
 ```{.python .input #model-construction-the-module-abstraction-3}
 %%tab mxnet
@@ -432,8 +452,8 @@ net(X).shape
 ### Layers in a Plain List
 
 Now suppose we store the layers in an ordinary Python list. The forward
-method can still loop over the list, but the list is not a module, and the
-four frameworks react to it in four different ways.
+method can still loop over the list, but the list itself is not a module.
+Does the framework still find the layers inside it?
 
 :begin_tab:`mxnet`
 The block below keeps its layers in a plain list. `net.initialize()` walks
@@ -451,8 +471,7 @@ because the attribute scan looks inside lists:
 :end_tab:
 
 :begin_tab:`jax`
-NNX needs the graph-aware `nnx.List` for a list of modules. With it, the
-model is complete:
+The module below keeps its layers in a plain list:
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-3}
@@ -508,17 +527,18 @@ net(X).shape, sum(int(tf.size(v)) for v in net.trainable_variables)
 
 ```{.python .input #model-construction-sequential-and-friends-containers-3}
 %%tab jax
-class ListMLP(nnx.Module):
+class PlainListMLP(nnx.Module):
     def __init__(self, rngs):
-        self.layers = nnx.List([nnx.Linear(20, 256, rngs=rngs),
-                                nnx.Linear(256, 10, rngs=rngs)])
+        self.layers = [nnx.Linear(20, 256, rngs=rngs),
+                       nnx.Linear(256, 10, rngs=rngs)]  # Plain list
 
     def __call__(self, X):
         return self.layers[1](nnx.relu(self.layers[0](X)))
 
-net = ListMLP(nnx.Rngs(d2l.get_key()))
-state = nnx.state(net, nnx.Param)
-net(X).shape, sum(x.size for _, x in state.flat_state())
+try:
+    net = PlainListMLP(nnx.Rngs(d2l.get_key()))
+except ValueError as e:
+    print(e)
 ```
 
 :begin_tab:`mxnet`
@@ -567,11 +587,10 @@ of the model, and a later assignment fails at once:
 :end_tab:
 
 :begin_tab:`jax`
-All 7,946 parameters are present: 20 · 256 + 256 in the hidden layer and
-256 · 10 + 10 in the output layer. A plain Python list of modules is
-rejected outright, because NNX would otherwise treat the list as fixed
-configuration and hide the parameters inside it. The error lists the
-repairs, among them `nnx.List` and `nnx.data`:
+NNX rejects the plain list when the model is constructed. It would
+otherwise treat the list as fixed configuration and hide the parameters
+inside it. The error lists the repairs, among them `nnx.List` and
+`nnx.data`. With the graph-aware `nnx.List`, the model is complete:
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
@@ -607,15 +626,14 @@ except ValueError as e:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
 %%tab jax
-class PlainListSequential(nnx.Module):
-    def __init__(self, *modules):
-        self.modules = list(modules)  # Modules in a plain list: rejected
+class ListMLP(PlainListMLP):
+    def __init__(self, rngs):
+        self.layers = nnx.List([nnx.Linear(20, 256, rngs=rngs),
+                                nnx.Linear(256, 10, rngs=rngs)])
 
-try:
-    net = PlainListSequential(
-        nnx.Linear(20, 10, rngs=nnx.Rngs(d2l.get_key())))
-except ValueError as e:
-    print(e)
+net = ListMLP(nnx.Rngs(d2l.get_key()))
+state = nnx.state(net, nnx.Param)
+net(X).shape, sum(x.size for _, x in state.flat_state())
 ```
 
 :begin_tab:`mxnet`
@@ -648,9 +666,10 @@ model silently ignores it.
 :end_tab:
 
 :begin_tab:`jax`
-NNX supplies `nnx.List` and `nnx.Dict` for collections of modules. A
-misdeclared child fails when the model is constructed, not after a training
-run that updated nothing.
+All 7,946 parameters are present: 20 · 256 + 256 in the hidden layer and
+256 · 10 + 10 in the output layer. NNX supplies `nnx.List` and `nnx.Dict`
+for collections of modules. A misdeclared child fails when the model is
+constructed, not after a training run that updated nothing.
 :end_tab:
 
 ## Forward Computation
@@ -1824,31 +1843,62 @@ loop in the forward method.
   list trains the outer layers only, on the CPU without an error.
 :::
 
-::: {.slide title="Keras and NNX Find the Layers in a List" only="tensorflow,jax"}
+::: {.slide title="Keras Finds the Layers in a List" only="tensorflow"}
 [Containers]{.kicker}
 
 @!model-construction-sequential-and-friends-containers-3
 
 - All $20 \cdot 256 + 256 + 256 \cdot 10 + 10 = 7{,}946$ parameters are
   present.
-- Keras scans lists and dictionaries assigned to attributes; NNX needs its
-  `nnx.List` and rejects a plain list of modules.
+- Keras scans lists and dictionaries assigned to attributes, so it needs no
+  list container.
 :::
 
-::: {.slide title="Four Frameworks React to a Plain List in Four Ways"}
+::: {.slide title="Keras Rejects a Layer Added after the Variables Exist" only="tensorflow"}
 [Containers]{.kicker}
 
-| framework | plain list of layers | registered alternative |
-|---|---|---|
-| PyTorch | no warning: 0 parameters | `nn.ModuleList`, `nn.ModuleDict` |
-| Gluon | a warning names the attribute | `register_child` |
-| Keras | tracked like an attribute | (none needed) |
-| NNX | error at construction | `nnx.List`, `nnx.Dict` |
+@model-construction-sequential-and-friends-containers-4
 
-::: {.d2l-note}
-Keras guards a different mistake: adding a layer after the variables
-exist fails at the assignment.
+All state is created in `__init__` or in `build`. A later change to the
+structure fails at the assignment, not silently in training.
 :::
+
+::: {.slide title="NNX Rejects a Plain List of Modules" only="jax"}
+[Containers]{.kicker}
+
+@-model-construction-sequential-and-friends-containers-3
+
+- Construction fails with a `ValueError`. The list would otherwise count as
+  fixed configuration and hide the parameters inside it.
+- The message lists the repairs, among them `nnx.List` and `nnx.data`.
+:::
+
+::: {.slide title="With nnx.List the Model Holds All 7,946 Parameters" only="jax"}
+[Containers]{.kicker}
+
+@model-construction-sequential-and-friends-containers-4
+
+`nnx.List` and `nnx.Dict` hold collections of modules. A misdeclared child
+fails at construction, not after a training run that updated nothing.
+:::
+
+::: {.slide title="nn.ModuleList Registers the List: All 7,946 Parameters" only="pytorch"}
+[Containers]{.kicker}
+
+@model-construction-sequential-and-friends-containers-4
+
+`nn.ModuleList` and `nn.ModuleDict` register their children and supply no
+forward method: we write the loop, which suits blocks that are not a plain
+chain.
+:::
+
+::: {.slide title="register_child Registers Each Layer: All 7,946 Parameters" only="mxnet"}
+[Containers]{.kicker}
+
+@model-construction-sequential-and-friends-containers-4
+
+Gluon has no list container. Children are registered through attributes,
+through `nn.Sequential`, or one at a time with `register_child`.
 :::
 
 ::: {.slide title="Check: Which Layers Does the Optimizer Train?" only="pytorch,mxnet"}
@@ -1977,20 +2027,45 @@ After one minibatch of 20 features:
 - The cost: the input width of every layer is written out.
 :::
 
-::: {.slide title="Initialization Follows a Dry Run"}
+::: {.slide title="Initialization Follows a Dry Run" only="mxnet"}
 [Shapes and configs]{.kicker}
 
 - A lazy parameter cannot be counted or initialized with a scale that
   depends on its number of inputs.
 - *Dry run*: one forward pass on a representative minibatch, output
   discarded; then the initializer.
+- In Gluon, `initialize(init)` records the initializer, and the first
+  forward pass applies it.
+:::
 
-| framework | how the initializer is applied |
-|---|---|
-| PyTorch | `model.apply_init([X], init)`: dry run, then `apply` |
-| Gluon | `initialize(init)` records it; the first pass applies it |
-| Keras | `kernel_initializer=` per layer, used by `build` |
-| NNX | `kernel_init=` per layer, used by the constructor |
+::: {.slide title="Initialization Follows a Dry Run" only="pytorch"}
+[Shapes and configs]{.kicker}
+
+- A lazy parameter cannot be counted or initialized with a scale that
+  depends on its number of inputs.
+- *Dry run*: one forward pass on a representative minibatch, output
+  discarded; then the initializer.
+- In PyTorch, `model.apply_init([X], init)` runs the dry run, then
+  `apply`.
+:::
+
+::: {.slide title="Initialization Follows a Dry Run" only="tensorflow"}
+[Shapes and configs]{.kicker}
+
+- A lazy parameter cannot be counted or initialized with a scale that
+  depends on its number of inputs.
+- *Dry run*: one forward pass on a representative minibatch, output
+  discarded; then the initializer.
+- In Keras, `kernel_initializer=` is given per layer and used by `build`
+  at the first call.
+:::
+
+::: {.slide title="NNX Initializes in the Constructor" only="jax"}
+[Shapes and configs]{.kicker}
+
+- Every layer knows both widths when it is constructed, so it draws its
+  parameters there: no dry run is needed.
+- `kernel_init=` per layer chooses the rule.
 :::
 
 ::: {.slide title="A Checkpoint Holds Arrays; the Config Holds the Choices"}
@@ -2045,8 +2120,8 @@ blocks.
 
 - **Module:** parameters, registered children, a forward method. A model
   is a tree; a parameter's name is its path, such as `1.body.0.weight`.
-- **Registration:** attribute assignment and containers. A plain list
-  hides layers: 0 of 7,946 parameters in PyTorch, a warning in Gluon.
+- **Registration:** attribute assignment and containers. Layers that the
+  registry cannot reach are never trained, saved, or moved.
 - **Forward:** ordinary Python; the residual block is $\mathbf{x} +
   f(\mathbf{x})$. Compiled steps forbid control flow on array values.
 - **Lazy layers:** input width from the first minibatch, initialization

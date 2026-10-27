@@ -14,7 +14,7 @@ $\mathbb{Z}$.
 
 * $x$: a scalar
 * $\mathbf{x}$: a vector
-* $(x_1, \ldots, x_n)$: the column vector with entries $x_1, \ldots, x_n$, written inline
+* $(x_1, \ldots, x_n)$: the column vector with entries $x_1, \ldots, x_n$, written inline; the entries of a matrix row are listed the same way, as in "the rows $(0, 1, 2)$ and $(3, 4, 5)$"
 * $\mathbf{X}$: a matrix
 * $\mathsf{X}$: a general tensor
 * $\mathbf{I}$: the identity matrix (of some given dimension), i.e., a square matrix with $1$ on all diagonal entries and $0$ on all off-diagonals

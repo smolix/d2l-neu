@@ -105,18 +105,23 @@ $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS))) &: \
 -include $(addsuffix /MANIFEST.mk,$(addprefix _notebooks/,$(FRAMEWORKS)))
 
 # Per-notebook .d files capture each notebook's actual `d2l.<symbol>`
-# usage and translate it into shard-file dependencies. With these, editing
-# one `#@save` block invalidates only the notebooks that reference its
-# symbol — not every notebook in the framework. The scan is fast (~1s)
-# and runs whenever a source .md or the shard set changes.
+# usage and translate it into shard-file dependencies, closed transitively
+# over the library's own references (d2l.Trainer pulls in ProgressBoard,
+# ...). With these, editing one `#@save` block invalidates exactly the
+# notebooks that reach its symbol, directly or through other symbols — not
+# every notebook in the framework. The scan is fast (~1s) and runs whenever
+# a source .md or a shard changes.
 DEP_FILES := $(foreach fw,$(FRAMEWORKS),$(patsubst %.executed,%.d,$(EXECUTED_$(fw))))
 
 # A single rule emits every .d file (grouped output for one invocation).
 # Depends on the source .md set so per-notebook .d files refresh when a
-# notebook adds/removes a d2l.X reference, AND on the per-framework shard
-# manifests so we pick up new/removed symbols.
+# notebook adds/removes a d2l.X reference, on the per-framework shard
+# manifests so we pick up new/removed symbols, AND on the shards themselves:
+# a .d lists the transitive closure of the library's call graph, so a shard
+# edit that adds or drops a reference to another symbol changes it.
+# (build_lib.py rewrites a shard only when its content changes.)
 $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
-        $(wildcard d2l/_blocks/*/MANIFEST.mk)
+        $(wildcard d2l/_blocks/*/MANIFEST.mk) $(wildcard d2l/_blocks/*/*.py)
 	@python3 tools/scan_d2l_usage.py \
 		--source $(SOURCE) --output-dir _notebooks --shard-dir d2l/_blocks
 

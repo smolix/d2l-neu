@@ -107,8 +107,9 @@ _FIG_RE = re.compile(
 # this is a build-time filesystem lookup, not a runtime href.
 DIAGRAM_DIR = Path('img/auto')
 
-# Match @d2l.add_to_class(...) decorator on its own line.
-_ADD_TO_CLASS_RE = re.compile(r'^@d2l\.add_to_class\([^)]*\)\s*$')
+# Match an @d2l.add_to_class(...) decorator line (nested parens and a trailing
+# comment allowed). The bare @add_to_class of the oo-design lesson is kept.
+_ADD_TO_CLASS_RE = re.compile(r'^@d2l\.add_to_class\(.*\)\s*(?:#.*)?$')
 
 
 def index_source_cells(text):

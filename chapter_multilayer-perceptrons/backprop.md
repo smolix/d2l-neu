@@ -221,18 +221,19 @@ $$
 \begin{aligned}
 \frac{\partial J}{\partial \mathbf{O}} &= \frac{1}{n}\bigl(\hat{\mathbf{Y}} - \mathbf{Y}\bigr), \\
 \frac{\partial J}{\partial \mathbf{W}^{(2)}} &= \mathbf{H}^\top \frac{\partial J}{\partial \mathbf{O}} + \lambda \mathbf{W}^{(2)}, \qquad
-\frac{\partial J}{\partial \mathbf{b}^{(2)}} = \mathbf{1}^\top \frac{\partial J}{\partial \mathbf{O}}, \\
+\frac{\partial J}{\partial \mathbf{b}^{(2)}} = \Bigl(\frac{\partial J}{\partial \mathbf{O}}\Bigr)^\top \mathbf{1}, \\
 \frac{\partial J}{\partial \mathbf{H}} &= \frac{\partial J}{\partial \mathbf{O}}\, \mathbf{W}^{(2)\top}, \\
 \frac{\partial J}{\partial \mathbf{Z}} &= \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}), \\
 \frac{\partial J}{\partial \mathbf{W}^{(1)}} &= \mathbf{X}^\top \frac{\partial J}{\partial \mathbf{Z}} + \lambda \mathbf{W}^{(1)}, \qquad
-\frac{\partial J}{\partial \mathbf{b}^{(1)}} = \mathbf{1}^\top \frac{\partial J}{\partial \mathbf{Z}}.
+\frac{\partial J}{\partial \mathbf{b}^{(1)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}}\Bigr)^\top \mathbf{1}.
 \end{aligned}
 $$
 :eqlabel:`eq_backprop-mlp`
 
 Here $\mathbf{1} \in \mathbb{R}^n$ is the vector of all ones, so
-$\mathbf{1}^\top \mathbf{G}$ sums the rows of $\mathbf{G}$. Read from top to
-bottom, :eqref:`eq_backprop-mlp` answers the two questions for the MLP. The
+$\mathbf{G}^\top \mathbf{1}$ sums the rows of $\mathbf{G}$ into a column
+vector, of the shape of the bias. Read from top to bottom,
+:eqref:`eq_backprop-mlp` answers the two questions for the MLP. The
 gradients reach the output layer first and the hidden layer last, and no
 line computes $\partial J / \partial \mathbf{X}$, because nothing below the
 input needs it. The values that the lines read are $\hat{\mathbf{Y}}$,
@@ -874,7 +875,7 @@ gradient needs the input, so $\mathbf{X}$ must be kept.
 $\mathbf{G} = \partial J/\partial \mathbf{Z}$:
 
 $$\frac{\partial J}{\partial \mathbf{A}} = \mathbf{G}, \qquad
-  \frac{\partial J}{\partial \mathbf{b}} = \mathbf{1}^\top \mathbf{G}.$$
+  \frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top \mathbf{1}.$$
 
 The sum runs over the $n$ examples. Nothing is stored.
 :::

@@ -116,9 +116,9 @@ print(raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 `MSSubClass` encodes the type of dwelling as a number, `MSZoning` the zoning
 of the lot as a category, and `LotFrontage` the length of the lot's street
 front in feet; `SaleType` and `SaleCondition` describe the sale. Of the 79
-attributes, 36 are numerical and 43 categorical, and 19 have missing
-entries. Most of these mean that a feature is absent: `PoolQC`, the quality
-of the pool, is missing for 1,453 houses, which have no pool. The first
+attributes, 36 are stored as numbers and 43 as categories, and 19 have
+missing entries. Most of these mean that a feature is absent: `PoolQC`, the
+quality of the pool, is missing for 1,453 houses, which have no pool. The first
 column, `Id`, numbers the rows. The competition defines it as an identifier,
 so we do not use it as a feature. Identifiers are not always harmless: an
 identifier assigned in order of collection may correlate with time, and
@@ -155,15 +155,17 @@ penalizes all weights alike, would penalize the coefficients of
 small-valued features more. We therefore *standardize* each numerical
 feature: with $\mu$ and $s$ the mean and the standard deviation of the
 feature over the training rows, we replace its value $x$ by
-$(x - \mu)/s$. Every standardized feature has mean 0 and variance 1 on the
-training rows.
+$(x - \mu)/s$. Every standardized feature has mean 0 and variance 1 over
+the training rows where it is observed.
 
 A missing numerical value is then replaced by 0, the mean of the
 standardized feature. This is *mean imputation*: we assume that a missing
 value is typical. For `LotFrontage`, missing for 259 houses, this is a fair
-guess. For features whose absence means something, such as the year in
-which a garage was built, it is not, and exercise
-:exref:`ex_kaggle-house-mean-imputation` examines the bias it introduces.
+guess. The filled column keeps its mean of 0, and its variance falls
+slightly below 1, to about 0.82 for `LotFrontage`. For features whose
+absence means something, such as the year in which a garage was built, it is
+not, and exercise :exref:`ex_kaggle-house-mean-imputation` examines the bias
+it introduces.
 
 ### Categorical Features
 
@@ -178,6 +180,17 @@ encoding*. We add one more indicator per feature for a missing value, so that
 "no pool" gets its own column. `pandas` computes this encoding with
 `get_dummies`.
 
+A column stored as numbers is not always a quantity. `MSSubClass` codes the
+type of dwelling with numbers from 20 to 190: 20 stands for a one-story
+house built in 1946 or later, 60 for a two-story house of the same period,
+and 90 for a duplex. The differences between these codes measure nothing,
+but with one weight on the standardized column, the prediction of a linear
+model would change in proportion to them. We therefore convert the codes to
+strings before the encoding, and `MSSubClass` becomes a categorical feature
+with 15 indicators for the codes in the training table and one for a
+missing value. The model thus sees 35 numerical and 44 categorical
+attributes.
+
 ### Fitting on the Training Rows
 
 Each preprocessing step uses statistics of the data: the means and standard
@@ -188,7 +201,8 @@ rows on which we measure the error, information about those rows would enter
 the model before it is evaluated, and the error estimate would be too
 optimistic. This is called *leakage*. A category that does not occur in the
 training rows gets no column, so a house with such a value has all of that
-feature's indicators equal to 0.
+feature's indicators equal to 0. The `MSSubClass` code 150, for example,
+occurs in the test table but not in the training table.
 
 The function `preprocess` fits the transformation on the table `train` and
 applies it to `train` and to any further tables. It returns NumPy arrays of
@@ -198,6 +212,7 @@ features, without the identifier and the price.
 def preprocess(train, *others):
     """Fit the feature preprocessing on train; apply it to all tables."""
     frames = [df.drop(columns=['Id', 'SalePrice'], errors='ignore')
+                .astype({'MSSubClass': str})  # A code, not a quantity
               for df in (train, *others)]
     numeric = frames[0].select_dtypes(include='number').columns
     mean, std = frames[0][numeric].mean(), frames[0][numeric].std()
@@ -209,7 +224,7 @@ def preprocess(train, *others):
 ```
 
 Fitted on the whole training table, the encoding turns the 79 attributes
-into 330 features:
+into 345 features:
 
 ```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
 X_train, X_test = preprocess(raw_train, raw_test)
@@ -290,10 +305,20 @@ the result of a separate pass over the training folds. The square root of
 the mean squared error of the log prices is the RMSE of the competition. The
 function prints the training and validation RMSE averaged over the rounds,
 together with the smallest and the largest validation RMSE of a single fold,
-and returns the average validation RMSE. The argument `make_model` builds a model for a given
-number of input features. Frameworks with lazy layers ignore the number;
-JAX needs it, and the number of features varies slightly from round to
-round because each round fits its own set of categories.
+and returns the average validation RMSE. The argument `make_model` builds a
+model for a given number of input features. This number varies slightly
+from round to round, between about 335 and 345, because each round fits its
+own set of categories.
+
+:begin_tab:`mxnet, pytorch, tensorflow`
+The layers of our models infer their number of inputs from the first
+minibatch, so the models built here ignore the argument.
+:end_tab:
+
+:begin_tab:`jax`
+NNX layers need their number of inputs when they are constructed, so the
+models built here pass the argument on to their first layer.
+:end_tab:
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 def k_fold(folds, make_model, max_epochs=100):
@@ -327,27 +352,8 @@ model, with minibatches of 64 houses at learning rate 0.02 for 100 epochs.
 A baseline is only useful if it is trained as carefully as the models it is
 compared with, so it gets the same budget.
 
-:begin_tab:`pytorch`
-`d2l.LinearRegression` leaves PyTorch's default initialization in place, a
-uniform distribution whose width depends on the number of inputs. We add the
-`weight_init` method that the `Trainer` applies to lazy layers, so that the
-model starts like the linear models of the other frameworks.
-:end_tab:
-
 ```{.python .input #kaggle-house-price-model-selection-linear}
-%%tab pytorch
-class LinearRegression(d2l.LinearRegression):
-    """d2l.LinearRegression with N(0, 0.01^2) weights and a zero bias."""
-    def weight_init(self, module):
-        if isinstance(module, nn.Linear):
-            nn.init.normal_(module.weight, std=0.01)
-            nn.init.zeros_(module.bias)
-
-make_linear = lambda num_inputs: LinearRegression(lr=0.02)
-```
-
-```{.python .input #kaggle-house-price-model-selection-linear}
-%%tab mxnet, tensorflow
+%%tab mxnet, pytorch, tensorflow
 make_linear = lambda num_inputs: d2l.LinearRegression(lr=0.02)
 ```
 
@@ -373,8 +379,8 @@ more precisely than either error alone.
 
 Can an MLP do better? Our MLP has one hidden layer of 64 ReLU units and one
 output, He-initialized weights (:numref:`subsec_he_init`), and zero biases.
-It reuses the squared loss of `LinearRegression`. With about 330
-features it has about 21,000 parameters, eighteen times as many as there are
+It reuses the squared loss of `LinearRegression`. With about 340
+features it has about 22,000 parameters, nineteen times as many as there are
 training houses in a round, so we expect it to fit the training folds
 closely, including their noise. Weight decay with strength `wd`
 (:numref:`sec_weight_decay`) limits this; as there, we decay the weights but
@@ -563,9 +569,10 @@ the following chapters turn to.
 
 A table of mixed numerical and categorical attributes becomes a matrix of
 features by three steps: standardize the numerical features, replace their
-missing values by the mean, and encode the categories as indicator features,
-with one more indicator for a missing value. All statistics of these steps
-come from the training rows only; otherwise the error estimate leaks
+missing values by the mean, and encode the categories, including numbers
+that only name categories, as indicator features, with one more indicator
+for a missing value. All statistics of these steps come from the training
+rows only; otherwise the error estimate leaks
 information from the rows it is computed on. Prices matter relative to
 their size, so we predict their logarithms with the squared loss, which
 trains the model on the square of the competition's score, and we center
@@ -598,6 +605,18 @@ cross-validation selects, it predicts the log prices with an RMSE of 0.13 to
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 2.*
    :exlabel:`ex_kaggle-house-mean-imputation`
+1. [code] **Numbers that name categories.** `preprocess` encodes
+   `MSSubClass` as a category because its codes name types of dwelling.
+    1. Find the other numerical columns with at most a dozen distinct
+       values, among them `MoSold`, `YrSold`, `OverallQual`, and
+       `OverallCond`. For each, decide whether its values are quantities,
+       ordered levels, or names, and whether one weight on the standardized
+       value can express its effect on the log price. Which of them is
+       cyclic, so that its largest and smallest values are neighbors?
+    1. One-hot encode the columns that you judged to be categories, and
+       compare the cross-validated RMSE of the linear model and of the
+       selected MLP with that of this section on the same folds. Is the
+       difference larger than the variation between random splits?
 1. [code] **Scaling the features and the target.** Remove the
    standardization from `preprocess`. Because `fillna(0)` imputes the
    column mean only for standardized columns, fill missing numerical values
@@ -724,7 +743,7 @@ Predicting House Prices on Kaggle<br>**tabular data · preprocessing · log RMSE
 | | Fashion-MNIST | Ames house prices |
 |---|---|---|
 | examples with labels | 60,000 | 1,460 |
-| inputs | 784 pixels in $[0, 1]$ | 36 numbers, 43 categories |
+| inputs | 784 pixels in $[0, 1]$ | 35 numbers, 44 categories |
 | missing values | none | in 19 attributes |
 | label | one of 10 classes | a price, range 22× |
 
@@ -805,6 +824,8 @@ larger replacement for teaching datasets such as Boston Housing.
 
 - `MSZoning`, `SaleType`: categories. `LotFrontage`: feet, missing for 259
   houses.
+- `MSSubClass`: a dwelling-type code stored as a number (20 to 190);
+  we encode it as a category.
 - Most gaps mean "absent": `PoolQC` is missing for the 1,453 houses
   without a pool.
 - `Id` numbers the rows and is not a feature.
@@ -886,6 +907,7 @@ a gap means "no garage".
 ```{.python #kaggle-house-price-exercises}
 def preprocess(train, *others):
     frames = [df.drop(columns=['Id', 'SalePrice'], errors='ignore')
+                .astype({'MSSubClass': str})  # A code, not a quantity
               for df in (train, *others)]
     numeric = frames[0].select_dtypes(include='number').columns
     mean, std = frames[0][numeric].mean(), frames[0][numeric].std()
@@ -902,7 +924,7 @@ statistics that include validation rows make the error estimate optimistic.
 :::
 :::
 
-::: {.slide title="79 Attributes Become About 330 Features"}
+::: {.slide title="79 Attributes Become 345 Features"}
 [Preprocessing · result]{.kicker}
 
 @!kaggle-house-price-data-preprocessing-3
@@ -951,7 +973,7 @@ Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
 - The five-fold mean moves by one or two hundredths between random splits.
 :::
 
-::: {.slide title="An MLP with 64 Units: About 21,000 Parameters for 1,168 Houses"}
+::: {.slide title="An MLP with 64 Units: About 22,000 Parameters for 1,168 Houses"}
 [Model selection · the MLP]{.kicker}
 
 - One hidden layer of 64 ReLUs, one output; He initialization, zero biases.
@@ -959,7 +981,7 @@ Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
 - Weight decay `wd` on the weights, not on the biases.
 
 ::: {.d2l-note}
-Eighteen parameters per training house: expect it to fit their noise
+Nineteen parameters per training house: expect it to fit their noise
 unless something restrains it.
 :::
 :::

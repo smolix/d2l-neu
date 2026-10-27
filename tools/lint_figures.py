@@ -16,10 +16,13 @@ Output format matches tools/lint_source.py — `path:line:col: error|warning: ms
 Exit: 1 if any ERROR (or, with --strict, any WARNING); else 0.
 
 Checks
-  ERROR  image references ../img/<id>.svg that does not exist
-  ERROR  image caption contains '[' or ']' (truncates markdown alt-text, detaches
-         the label) — write matrices as \\begin{smallmatrix}…\\end{smallmatrix}
-  ERROR  image not immediately followed by a :label:`fig_…` line
+  ERROR  image references a ../img/ file that does not exist
+  ERROR  image caption holds an unbalanced or nested '[' / ']' (truncates the
+         alt-text, detaches the label); one balanced level ($[a,b]$) is fine —
+         write matrices as \\begin{smallmatrix}…\\end{smallmatrix}
+  ERROR  image not immediately followed by a :label: line (`:width:` /
+         `:height:` may come between); book text only: slide images, after
+         `<!-- slides -->`, take no label
   WARN   referenced SVG carries a date/timestamp (non-idempotent; noisy diffs)
   WARN   notebook code cell contains figure-DRAWING primitives (should be a
          pre-generated figure, not inline matplotlib)
@@ -36,12 +39,18 @@ import re
 import sys
 
 # ── patterns ────────────────────────────────────────────────────────────────
-IMG_WELL_FORMED = re.compile(r'!\[[^\[\]]*\]\((\.\./img/[^)]+)\)')
+# A caption may hold one level of balanced brackets ($[a,b]$, $E[R]$), never
+# an unbalanced or nested one (CLAUDE.md "Gotchas").
+IMG_WELL_FORMED = re.compile(
+    r'!\[(?:[^\[\]]|\[[^\[\]]*\])*\]\((\.\./img/[^)]+)\)')
 IMG_LOOSE = re.compile(r'!\[')
 URL_IN_LINE = re.compile(r'\((\.\./img/[^)]+)\)')
-LABEL_LINE = re.compile(r'^\s*:label:`(fig_[^`]+)`\s*$')
+LABEL_LINE = re.compile(r'^\s*:label:`([^`]+)`\s*$')
+SIZE_LINE = re.compile(r'^\s*:(?:width|height):`[^`]*`\s*$')
 NUMREF = re.compile(r':numref:`(fig_[^`]+)`')
 FENCE = re.compile(r'^```')
+SLIDES_MARKER = '<!-- slides -->'
+SLIDE_FIG = re.compile(r'^@fig:([a-z][a-z0-9-]*)(?:@\w+)?\s*$')
 SVG_DATE = re.compile(r'<dc:date>|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}')
 # Drawing primitives that mean "this cell draws a figure" rather than "this cell
 # computes/plots a teaching result" (d2l.plot / plt.plot of computed data is fine).
@@ -65,8 +74,15 @@ def lint_file(path, issues, referenced):
     fence_buf, fence_start = [], 0
     has_generated_fig = False
     has_drawing_cell = False
+    in_slides = False   # after `<!-- slides -->`: deck images need no :label:
 
     for i, line in enumerate(lines, 1):
+        if not in_fence and line.startswith(SLIDES_MARKER):
+            in_slides = True
+        if in_slides and not in_fence:
+            m = SLIDE_FIG.match(line.strip())
+            if m:                              # `@fig:<id>` inlines img/auto/<id>.svg
+                referenced.add(m.group(1))
         if FENCE.match(line):
             if in_fence:                       # closing fence → inspect the cell
                 body = '\n'.join(fence_buf)
@@ -86,7 +102,7 @@ def lint_file(path, issues, referenced):
             continue
 
         if IMG_LOOSE.search(line) and URL_IN_LINE.search(line):
-            has_generated_fig = True
+            has_generated_fig = has_generated_fig or not in_slides
             url = URL_IN_LINE.search(line).group(1)
             stem = os.path.splitext(os.path.basename(url))[0]
             referenced.add(stem)
@@ -96,13 +112,14 @@ def lint_file(path, issues, referenced):
                     "image caption contains '[' or ']' (truncates alt-text and "
                     "detaches the :label:); write matrices as "
                     "\\begin{smallmatrix}…\\end{smallmatrix}"))
-            # file existence
-            svg = os.path.join(root, 'img', f'{stem}.svg')
-            if not os.path.exists(svg):
+            # file existence (the referenced file, whatever its extension)
+            target = os.path.join(root, url[len('../'):])
+            svg = target if target.endswith('.svg') else None
+            if not os.path.exists(target):
                 issues.append((path, i, 1, 'error',
-                    f'references ../img/{stem}.svg which does not exist '
+                    f'references {url} which does not exist '
                     f'(run tools/gen_mdl_figures.py?)'))
-            else:
+            elif svg:
                 try:
                     head = open(svg, encoding='utf-8', errors='replace').read(4000)
                     if SVG_DATE.search(head):
@@ -111,15 +128,19 @@ def lint_file(path, issues, referenced):
                             'churn in git; regenerate via save() (metadata Date:None)'))
                 except OSError:
                     pass
-            # the label must be on the next non-empty line
+            # the label must be on the next non-empty line (book text only:
+            # a slide shows the image under the slide title, with no label)
+            if in_slides:
+                continue
             j = i
-            while j < len(lines) and lines[j].strip() == '':
+            while j < len(lines) and (lines[j].strip() == ''
+                                      or SIZE_LINE.match(lines[j])):
                 j += 1
             m = LABEL_LINE.match(lines[j]) if j < len(lines) else None
             if not m:
                 issues.append((path, i, 1, 'error',
-                    'image not immediately followed by a :label:`fig_…` line '
-                    '(the label will not attach)'))
+                    'image not immediately followed by a :label: line '
+                    '(:width:/:height: may come between)'))
 
     if has_generated_fig and has_drawing_cell:
         issues.append((path, 1, 1, 'warning',

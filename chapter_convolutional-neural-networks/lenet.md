@@ -70,9 +70,23 @@ Each convolutional block consists of a convolutional layer with a
 $5\times5$ kernel, a sigmoid activation, and $2\times2$ average pooling with
 stride 2. The first convolutional layer has 6 output channels and the second
 has 16, so the number of channels grows while each pooling layer halves the
-height and the width. The encoder's output has shape (batch size, channels,
-height, width) in MXNet and PyTorch; TensorFlow and JAX put the channels
-last.
+height and the width.
+
+:begin_tab:`mxnet`
+The encoder's output has shape (batch size, channels, height, width).
+:end_tab:
+
+:begin_tab:`pytorch`
+The encoder's output has shape (batch size, channels, height, width).
+:end_tab:
+
+:begin_tab:`tensorflow`
+The encoder's output has shape (batch size, height, width, channels).
+:end_tab:
+
+:begin_tab:`jax`
+The encoder's output has shape (batch size, height, width, channels).
+:end_tab:
 
 The dense block needs one vector per example, so we first flatten the
 encoder's output into a matrix with one row per example. Its three fully
@@ -84,16 +98,19 @@ The network of 1998 had the same alternating convolutions and pooling and
 the same 6, 16, 120, and 84 channels and hidden units, but it used a scaled
 tanh as activation, pooling with a trainable weight and bias, partial
 connections between the two convolutional layers, and radial-basis output
-units. It also took $32\times32$ images, larger than the $28\times28$ MNIST
-digits it classified, so that features near the border of a digit, such as
-the end of a stroke, could fall at the center of the receptive field of a
-unit in the last convolutional layer. Our first convolutional layer pads
-its $28\times28$ input by two pixels on each side, which gives it the same
-$32\times32$ extent and the $28\times28$ output of the original.
+units. Its 120-unit layer was formally a $5\times5$ convolution, which on
+its $5\times5$ input equals a fully connected layer. It also took
+$32\times32$ images. The MNIST digits fit in a $20\times20$ box within the
+$28\times28$ images, so in the larger input even features near the border
+of a digit, such as the end of a stroke, could fall at the center of the
+receptive field of a unit in the last convolutional layer. Our first
+convolutional layer pads its $28\times28$ input by two pixels on each side,
+which gives it the same $32\times32$ extent and the $28\times28$ output of
+the original.
 
 In a framework, LeNet is a `Sequential` container of these layers. We use
 Xavier initialization (:numref:`subsec_xavier`) for the weights and zero
-biases in all four frameworks.
+biases.
 
 :begin_tab:`mxnet`
 `initialize(init.Xavier())` draws the weights from Xavier's uniform
@@ -168,7 +185,7 @@ class LeNet(d2l.Classifier):  #@save
     def weight_init(self, module):
         # The Trainer calls this after the first minibatch fixed the shapes
         init_cnn(module)  # Xavier-uniform weights
-        if type(module) in (nn.Linear, nn.Conv2d):
+        if type(module) in (nn.Linear, nn.Conv2d) and module.bias is not None:
             nn.init.zeros_(module.bias)
 ```
 
@@ -243,8 +260,9 @@ def layer_summary(self, X_shape):
     X = d2l.randn(*X_shape)
     for layer in self.net:
         X = layer(X)
-        print(layer.__class__.__name__, 'output shape:\t', X.shape)
-        
+        name = getattr(layer, '__name__', type(layer).__name__)
+        print(f'{name:<22} {tuple(X.shape)}')
+
 model = LeNet()
 model.layer_summary((1, 1, 28, 28))
 ```
@@ -256,7 +274,8 @@ def layer_summary(self, X_shape):
     X = d2l.normal(X_shape)
     for layer in self.net.layers:
         X = layer(X)
-        print(layer.__class__.__name__, 'output shape:\t', X.shape)
+        name = getattr(layer, '__name__', type(layer).__name__)
+        print(f'{name:<22} {tuple(X.shape)}')
 
 model = LeNet()
 model.layer_summary((1, 28, 28, 1))
@@ -269,7 +288,9 @@ def layer_summary(self, X_shape):
     X = jnp.zeros(X_shape)
     for layer in self.net.layers:
         X = layer(X)
-        print(layer.__class__.__name__, 'output shape:\t', X.shape)
+        # Activations and pooling are plain functions: print their names
+        name = getattr(layer, '__name__', type(layer).__name__)
+        print(f'{name:<22} {tuple(X.shape)}')
 
 model = LeNet()
 model.layer_summary((1, 28, 28, 1))
@@ -342,7 +363,7 @@ trainer.fit(model, data)
 
 Even at this learning rate the validation accuracy can stay at chance, 10%,
 before it climbs; how long it stays there varies from run to run, from no
-epoch at all to several, in every framework. After 30 epochs LeNet reaches a
+epoch at all to several. After 30 epochs LeNet reaches a
 validation accuracy of about 88--90%, against about 87% for the MLP, with fewer than a third of the
 MLP's parameters. A convolution kernel learns a local pattern once and
 detects it at every position, whereas the MLP must learn the pattern
@@ -393,12 +414,13 @@ much deeper.
     1. Make both changes together, and call the result the modernized
        LeNet. Which of the two changes accounts for most of the difference
        in accuracy?
-    1. ● At initialization, measure for `LeNet` and for the modernized
-       LeNet the norm of the gradient of the loss with respect to the first
-       convolutional kernel, and the standard deviation of the logits
-       across a minibatch. The derivation of Xavier initialization in
-       :numref:`subsec_xavier` assumes inputs with zero mean and no
-       nonlinearity. Use the mean of the sigmoid's output and its slope
+    1. ● With the weights the model has at the start of training, measure
+       for `LeNet` and for the modernized LeNet the norm of the gradient of
+       the loss with respect to the first convolutional kernel, and the
+       standard deviation of the logits across a minibatch. The derivation
+       of Xavier initialization in :numref:`subsec_xavier` assumes inputs
+       with zero mean and no nonlinearity. Use the mean of the sigmoid's
+       output and its slope
        $\sigma'(0) = 1/4$ to explain your measurements, the learning
        rate that `LeNet` needs, and the epochs at chance at the start of
        its training.
@@ -591,12 +613,15 @@ widths 6, 16, 120, 84, but
 
 - a scaled tanh, $1.7159 \tanh(2x/3)$, instead of the sigmoid;
 - pooling with a trainable weight and bias;
+- a 120-unit layer that was formally a 5×5 convolution, on its 5×5 input
+  the same as a dense layer;
 - partial connections between the two convolutional layers;
 - radial-basis output units.
 
 ::: {.d2l-note}
-It took **32×32** inputs for 28×28 digits. Our padding of 2 gives the
-first layer the same extent and the same 28×28 output.
+It took **32×32** inputs for digits that fit in 20×20 within 28×28 MNIST
+images. Our padding of 2 gives the first layer the same extent and the same
+28×28 output.
 :::
 :::
 

@@ -55,9 +55,6 @@ from torch import nn
 %%tab tensorflow
 import tensorflow as tf
 from d2l import tensorflow as d2l
-# Keras compiles each eager call of a grouped convolution anew and warns
-# about the retracing; it is harmless here
-tf.get_logger().setLevel('ERROR')
 ```
 
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
@@ -77,7 +74,12 @@ image with one or a few convolutions and usually lowers its resolution. A
 resolution and repeats one kind of *block*, and each new stage halves the
 resolution and widens the channels. A *head* turns the last feature map into
 class scores; since NiN (:numref:`sec_nin`) it has been global average
-pooling, followed since GoogLeNet by a linear layer.
+pooling, followed since GoogLeNet by a linear layer. ResNet's body has four
+stages, which end at $1/4$, $1/8$, $1/16$, and $1/32$ of the input
+resolution. Detection and segmentation networks read features from all four
+stages, coarse ones for large objects and fine ones for small objects
+(:numref:`sec_multiscale-object-detection`), which is one reason this layout
+has persisted from ResNet to ConvNeXt.
 
 ### Stage Parameters of Hand-Designed Networks
 
@@ -134,7 +136,8 @@ The stem is a three-layer sequential block.
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
         net = nn.HybridSequential()
-        net.add(nn.Conv2D(num_channels, kernel_size=3, padding=1, strides=2),
+        net.add(nn.Conv2D(num_channels, kernel_size=3, padding=1, strides=2,
+                          use_bias=False),
                 nn.BatchNorm(), nn.Activation('relu'))
         return net
 ```
@@ -144,7 +147,8 @@ class AnyNet(d2l.Classifier):
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
         return nn.Sequential(
-            nn.LazyConv2d(num_channels, kernel_size=3, stride=2, padding=1),
+            nn.LazyConv2d(num_channels, kernel_size=3, stride=2, padding=1,
+                          bias=False),
             nn.LazyBatchNorm2d(), nn.ReLU())
 ```
 
@@ -157,8 +161,9 @@ def he_init():  # He initialization; Keras needs one instance per layer
 class AnyNet(d2l.Classifier):
     def stem(self, num_channels):
         return tf.keras.models.Sequential([
-            tf.keras.layers.ZeroPadding2D(1),  # Symmetric, as in PyTorch
+            tf.keras.layers.ZeroPadding2D(1),  # Pad every side
             tf.keras.layers.Conv2D(num_channels, kernel_size=3, strides=2,
+                                   use_bias=False,
                                    kernel_initializer=he_init()),
             tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
             tf.keras.layers.Activation('relu')])
@@ -179,8 +184,8 @@ class AnyNet(d2l.Classifier):
     def stem(self, in_channels, num_channels, rngs):
         return nnx.Sequential(
             nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                     strides=(2, 2), padding=(1, 1), kernel_init=he,
-                     rngs=rngs),
+                     strides=(2, 2), padding=(1, 1), use_bias=False,
+                     kernel_init=he, rngs=rngs),
             nnx.BatchNorm(num_channels, momentum=0.9,
                           use_fast_variance=False, rngs=rngs), nnx.relu)
 ```
@@ -253,7 +258,9 @@ The network is the stem, one stage per entry of the tuple `arch`, and the
 head. Each entry of `arch` holds the four numbers
 `(depth, num_channels, groups, bot_mul)` of one stage. Every convolution and
 linear layer starts from He initialization (normal with variance
-$2/n_\textrm{in}$, :numref:`subsec_he_init`) with zero biases.
+$2/n_\textrm{in}$, :numref:`subsec_he_init`). The convolutions have no
+bias, since batch normalization follows each of them; the linear layers
+start with zero biases.
 
 ```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab mxnet
@@ -288,7 +295,8 @@ def weight_init(self, module):
     # The Trainer calls this after the first minibatch fixed the shapes
     if type(module) in (nn.Linear, nn.Conv2d):
         nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-        nn.init.zeros_(module.bias)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #cnn-design-the-anynet-design-space-3}
@@ -315,10 +323,13 @@ def create_net(self, in_channels, rngs):
         layers.append(self.stage(*s, stage_channels, rngs))
         stage_channels = s[1]
     layers.append(nnx.Sequential(
-        lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
+        global_avg_pool,
         nnx.Linear(stage_channels, self.num_classes, kernel_init=he,
                    rngs=rngs)))
     return nnx.Sequential(*layers)
+
+def global_avg_pool(X):  # Average over height and width (NHWC)
+    return X.mean(axis=(1, 2))
 ```
 
 ## Comparing Design Spaces
@@ -539,13 +550,13 @@ print(f'{d2l.num_params(model):,} parameters, validation accuracy '
       f'{trainer.history["val_acc"][-1]:.3f}')
 ```
 
-RegNetX32 has 115,642 parameters and reaches about 90% validation accuracy
-after 10 epochs in every framework. That is within about a point of the
-90–91% of the ResNet-18 in :numref:`sec_resnet`, with about 1% of its 11.2
-million parameters. A network assembled from a few rules and four numbers per
-stage is thus a strong baseline at this scale. The rules did not come from
-Fashion-MNIST, and the comparison is not controlled: the two networks differ
-in depth, width, block, and peak learning rate.
+RegNetX32 has 113,674 parameters and reaches about 90% validation accuracy
+after 10 epochs. That is within about a point of the 90–91% of the ResNet-18
+in :numref:`sec_resnet`, with about 1% of its 11.2 million parameters. A
+network assembled from a few rules and four numbers per stage is thus a strong
+baseline at this scale. The rules did not come from Fashion-MNIST, and the
+comparison is not controlled: the two networks differ in depth, width, block,
+and peak learning rate.
 
 ### Squeeze-and-Excitation Gates
 :label:`subsec_se`
@@ -568,10 +579,10 @@ An SE gate is a few lines: pool, two dense layers, rescale.
 
 ```{.python .input #cnn-design-squeeze-and-excitation-gates}
 %%tab mxnet
-class SE(nn.Block):
+class SE(nn.HybridBlock):
     def __init__(self, num_channels, ratio=4):
         super().__init__()
-        self.fc = nn.Sequential()
+        self.fc = nn.HybridSequential()
         self.fc.add(nn.Dense(num_channels // ratio, activation='relu'),
                     nn.Dense(num_channels, activation='sigmoid'))
 
@@ -606,8 +617,10 @@ class SE(tf.keras.Model):
     def __init__(self, num_channels, ratio=4):
         super().__init__()
         self.fc = tf.keras.Sequential([
-            tf.keras.layers.Dense(num_channels // ratio, activation='relu'),
-            tf.keras.layers.Dense(num_channels, activation='sigmoid')])
+            tf.keras.layers.Dense(num_channels // ratio, activation='relu',
+                                  kernel_initializer=he_init()),
+            tf.keras.layers.Dense(num_channels, activation='sigmoid',
+                                  kernel_initializer=he_init())])
 
     def call(self, X):
         s = self.fc(tf.reduce_mean(X, axis=(1, 2)))
@@ -622,9 +635,9 @@ class SE(nnx.Module):
     def __init__(self, num_channels, ratio=4, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.squeeze = nnx.Linear(num_channels, num_channels // ratio,
-                                  rngs=rngs)
+                                  kernel_init=he, rngs=rngs)
         self.excite = nnx.Linear(num_channels // ratio, num_channels,
-                                 rngs=rngs)
+                                 kernel_init=he, rngs=rngs)
 
     def __call__(self, X):
         s = X.mean(axis=(1, 2))
@@ -818,7 +831,7 @@ Which choices matter, and do they carry over to a new budget?
 - build a RegNet instance from four numbers per stage and train it.
 
 **Running example:** parameters and accuracy on Fashion-MNIST, a 32-layer
-RegNetX with 116k parameters against the 11.2M-parameter ResNet-18.
+RegNetX with 114k parameters against the 11.2M-parameter ResNet-18.
 :::
 
 ::: {.slide title="From Single Networks to Rules for Families"}
@@ -995,7 +1008,7 @@ rate 0.1 instead of 0.01.
 | | parameters | validation accuracy, 10 epochs |
 |---|--:|--:|
 | ResNet-18 (hand-designed) | 11.2M | 90–91% |
-| RegNetX32 (four numbers per stage) | 0.116M | ≈ 90% |
+| RegNetX32 (four numbers per stage) | 0.114M | ≈ 90% |
 
 @!cnn-design-training-2
 
@@ -1038,7 +1051,7 @@ $9 \cdot 256^2 \cdot 196 \approx 116$M: the gate adds 0.03%.
 - **Comparison:** error CDFs of 500 briefly trained samples per space.
 - **Rules:** one $k$ and one $g$ (free), widths and depths that grow
   (49.4% → 42.7% mean error), $k = 1$, linear widths.
-- **Fashion-MNIST:** RegNetX32, 116k parameters, ≈ 90% after 10 epochs:
+- **Fashion-MNIST:** RegNetX32, 114k parameters, ≈ 90% after 10 epochs:
   within about a point of ResNet-18 with 1% of its parameters.
 - Rules hold for the block, budget, and protocol they were fitted on.
 

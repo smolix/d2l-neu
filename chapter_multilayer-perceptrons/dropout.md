@@ -63,9 +63,9 @@ from jax import numpy as jnp
 ### Simplicity and Robustness
 
 Classical arguments for generalization favor simple functions, and so far
-we have measured simplicity in two ways: by the number of features, such as
-the degree of the polynomial features in
-:numref:`sec_generalization_basics`, and by the norm of the weights, which
+we have measured simplicity in two ways: by the number of features, as with
+the polynomials of :numref:`subsec_polynomial-curve-fitting`, whose degree
+sets how many weights a fit has, and by the norm of the weights, which
 weight decay keeps small. A third measure is robustness. A good image
 classifier should not change its prediction when a little noise is added to
 the pixels, so we may train it on noisy pixels and ask it to predict the
@@ -183,7 +183,7 @@ argument, and each call needs a fresh one (:numref:`sec_ndarray`).
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
     if dropout == 1: return mnp.zeros_like(X)
-    mask = mnp.random.uniform(0, 1, X.shape, ctx=X.ctx) >= dropout
+    mask = mnp.random.uniform(0, 1, X.shape, device=X.device) >= dropout
     return mask.astype(X.dtype) * X / (1.0 - dropout)
 ```
 
@@ -267,8 +267,7 @@ the second. We register the parameters with the framework as in
 :numref:`subsec_he_init` recommends for ReLU layers: each weight matrix is
 drawn from a normal distribution with mean 0 and variance $2/n_\textrm{in}$,
 where $n_\textrm{in}$ is the number of inputs of the layer, and each bias
-starts at 0, in every framework. The model applies dropout only while it is
-being trained.
+starts at 0. The model applies dropout only while it is being trained.
 
 :begin_tab:`mxnet`
 `autograd.is_training()` is true inside the `autograd.record()` block in
@@ -437,12 +436,18 @@ below it, at about 0.32, while the validation loss levels off near 0.35.
 
 ### Concise Implementation
 
-Each framework provides dropout as a layer that takes the dropout
+The framework provides dropout as a layer that takes the dropout
 probability as its argument. The layer applies :eqref:`eq_dropout` while the
 model is being trained and passes its input through unchanged otherwise, so
 the model needs no test for the training mode. We place a dropout layer
 after the activation function of each hidden layer and initialize the
 weights as in the scratch implementation.
+
+:begin_tab:`mxnet`
+`init.Xavier` with `magnitude=2` and `factor_type='in'` draws weights with
+variance $2/n_\textrm{in}$, from a normal distribution if
+`rnd_type='gaussian'`.
+:end_tab:
 
 :begin_tab:`pytorch`
 The `Trainer` initializes the lazy layers through the model's `weight_init`
@@ -457,16 +462,12 @@ an instance created without a seed returns the same random values on every
 call, so layers that shared one would start from related weights.
 :end_tab:
 
-:begin_tab:`mxnet`
-`init.Xavier` with `magnitude=2` and `factor_type='in'` draws weights with
-variance $2/n_\textrm{in}$, from a normal distribution if
-`rnd_type='gaussian'`.
-:end_tab:
-
 :begin_tab:`jax`
 `variance_scaling(2.0, 'fan_in', 'normal')` draws normal weights with
 variance $2/n_\textrm{in}$. NNX dropout layers draw their keys from `rngs`,
-and `nnx.view` switches them off for evaluation, as for the scratch model.
+and `nnx.view` switches them off for evaluation, as for the scratch model;
+it reaches them inside `nnx.Sequential` as well. The method `forward`
+flattens each image before the sequence of layers.
 :end_tab:
 
 ```{.python .input #dropout-concise-implementation-1}
@@ -534,20 +535,16 @@ class DropoutMLP(d2l.Classifier):
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        self.lin1 = nnx.Linear(num_inputs, num_hiddens_1, kernel_init=he,
-                               rngs=rngs)
-        self.drop1 = nnx.Dropout(dropout_1, rngs=rngs)
-        self.lin2 = nnx.Linear(num_hiddens_1, num_hiddens_2, kernel_init=he,
-                               rngs=rngs)
-        self.drop2 = nnx.Dropout(dropout_2, rngs=rngs)
-        self.lin3 = nnx.Linear(num_hiddens_2, num_outputs, kernel_init=he,
-                               rngs=rngs)
+        self.net = nnx.Sequential(
+            nnx.Linear(num_inputs, num_hiddens_1, kernel_init=he, rngs=rngs),
+            nnx.relu, nnx.Dropout(dropout_1, rngs=rngs),
+            nnx.Linear(num_hiddens_1, num_hiddens_2, kernel_init=he,
+                       rngs=rngs),
+            nnx.relu, nnx.Dropout(dropout_2, rngs=rngs),
+            nnx.Linear(num_hiddens_2, num_outputs, kernel_init=he, rngs=rngs))
 
     def forward(self, X):
-        X = X.reshape((X.shape[0], -1))
-        X = self.drop1(nnx.relu(self.lin1(X)))
-        X = self.drop2(nnx.relu(self.lin2(X)))
-        return self.lin3(X)
+        return self.net(X.reshape((X.shape[0], -1)))  # Flatten each image
 ```
 
 We train it with the same settings as the scratch model, with a trainer of
@@ -623,8 +620,10 @@ def masked_accuracy(model, data, trainer):
 %%tab tensorflow
 def masked_accuracy(model, data, trainer):
     """Validation accuracy with the dropout masks of training switched on."""
+    mode = model.training  # A call with training=True overwrites it
     correct = [model.accuracy(model(X, training=True), y, averaged=False)
                for X, y in map(trainer.prepare_batch, data.val_dataloader())]
+    model.training = mode  # Restore the previous mode
     return float(d2l.reduce_mean(d2l.concat(correct, 0)))
 ```
 
@@ -730,13 +729,16 @@ Dropout kept the large fully connected layers of the image classifiers of
 the early 2010s, among them AlexNet (:numref:`sec_alexnet`), from
 overfitting. Later convolutional networks rely more on data augmentation,
 batch normalization (:numref:`sec_batch_norm`), and weight decay, and use
-dropout sparingly. Its placement matters: dropout before a batch
-normalization layer changes the variance of that layer's inputs between
-training and test, because the mean square of a dropped unit is $1/(1 - p)$
-times that of the unit itself, and this mismatch hurts accuracy
-:cite:`Li.Chen.Hu.ea.2019`. Transformers typically apply dropout with
-probabilities around 0.1 to their attention weights and to the outputs of
-their layers. Models that see each training example only once, as large
+dropout sparingly. Networks with residual connections (:numref:`sec_resnet`)
+often drop whole residual branches for a training example instead of single
+units, a variant called *stochastic depth* :cite:`huang2016stochasticdepth`
+(:numref:`sec_training_recipes`). The placement of dropout matters: dropout
+before a batch normalization layer changes the variance of that layer's
+inputs between training and test, because the mean square of a dropped unit
+is $1/(1 - p)$ times that of the unit itself, and this mismatch hurts
+accuracy :cite:`Li.Chen.Hu.ea.2019`. Transformers typically apply dropout
+with probabilities around 0.1 to their attention weights and to the outputs
+of their layers. Models that see each training example only once, as large
 language models do, have little opportunity to memorize, and are often
 trained without dropout.
 
@@ -775,6 +777,19 @@ its effect.
        switched on. After training, evaluate the loss on the training images
        with the masks switched off, and compare the gap between training and
        validation loss for the networks trained with and without dropout.
+1. **Dropout and He initialization.** The He initialization of
+   :numref:`subsec_he_init` chooses the variance of the weights so that the
+   mean square of the pre-activations stays the same from layer to layer.
+    1. During training, by what factor does dropout with probability $p$
+       change the mean square of the pre-activations of the next layer?
+       Give the factor for each of the two dropout layers of this section's
+       model.
+    1. In a network with $L$ hidden layers, each followed by dropout with
+       probability $p$, how does the factor grow with $L$? Should the
+       initialization correct for it, given that the network runs without
+       dropout at test time? Relate your answer to the mismatch between
+       training and test that dropout causes before a batch normalization
+       layer.
 1. [code] **Dropout and label noise.** In
    :numref:`subsec_early_stopping`, an MLP trained on 1,000 Fashion-MNIST
    images, of which 20% had their label redrawn at random, fit the
@@ -793,7 +808,10 @@ its effect.
     1. Training runs for 20 epochs over the 60,000 Fashion-MNIST training
        images, and a fresh mask is drawn for every example. How many joint
        masks are sampled during training, and what fraction of all joint
-       masks is that? How likely is it that any mask is drawn twice?
+       masks is that? How likely is it that any mask is drawn twice? The
+       masks are not equally likely, since the first layer drops units with
+       probability 0.2: bound the probability that two draws coincide by
+       the probability of the most likely joint mask.
     1. Using these numbers, explain in what sense dropout does, and does
        not, train an ensemble of all these networks.
 1. [code] **Monte Carlo dropout.** Instead of switching dropout off at test

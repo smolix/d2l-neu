@@ -45,7 +45,8 @@ import os
 import time
 
 # XLA's NCCL buffer registration fails harmlessly on this P2P-less box;
-# opt out rather than let every collective print the warning (see 13.6).
+# opt out rather than let every collective print the warning
+# (see the multi-GPU practice section).
 os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ```
 
@@ -88,7 +89,7 @@ The benchmark contract is fixed throughout the section:
 |:--|:--|
 | hardware | this book's four 24-GB RTX 4090 GPUs; single-GPU tests use one card |
 | model | six GPT blocks, width 512, character vocabulary, context 128 |
-| data | *Time Machine* batches, reshuffled; incomplete batches are dropped |
+| data | *Time Machine* batches, reshuffled; the incomplete last batch is dropped so every timed step has one shape |
 | optimizer | AdamW at $10^{-3}$ unless a cell states otherwise |
 | metric | end-to-end training tokens/s, including input staging and optimizer update |
 | timing | fixed shapes, synchronization, 60 warm-up and 100 timed steps by default |
@@ -167,21 +168,20 @@ close with a device sync:
 :end_tab:
 
 :begin_tab:`jax`
-Before comparing optimizations, the measurement must be trustworthy. The
-traps that corrupted early drafts of the PyTorch tab have JAX
-counterparts, only sharper. A changed batch shape here does not cost a
-mere retrace — it triggers a full XLA recompilation, seconds long,
-*inside* the timing window; the stream above rounds every epoch down to
-whole batches so a jitted step compiles once
-(:numref:`sec_compilation`'s shape specialization). The stream also
-does something the PyTorch tab does not need to: it stages the corpus —
-all 5 MB of it — on the device once and shuffles *there*. The book's
-stock `tf.data` loader is perfectly adequate for every training loop so
-far, but it costs a millisecond-and-change of host work per batch, and
-an early draft of this section timed the configurations through it: invisible
-next to the un-jitted baseline, it silently taxed the fastest configurations
-below by roughly a quarter — the bottleneck had moved *off the GPU and
-into the input pipeline*, exactly the failure mode
+Before comparing optimizations, the measurement must be trustworthy, and
+several traps corrupted early drafts of this section. A changed batch shape
+triggers a full XLA recompilation, seconds long, *inside* the timing window;
+the stream above rounds every epoch down to whole batches so a jitted step
+compiles once (:numref:`sec_compilation`'s shape specialization). The stream
+also stages the corpus, all 5 MB of it, on the device once and shuffles
+*there*. The book's stock loader, `d2l.ArrayLoader`
+(:numref:`sec_synthetic-regression-data`), keeps the arrays on the host and
+copies every minibatch to the device. That is adequate for every training
+loop so far, but it puts host work into every step, and an early draft of
+this section timed the configurations through a host-side loader: invisible
+next to the un-jitted baseline, the per-batch host work silently taxed the
+fastest configurations below by roughly a quarter. The bottleneck had moved
+*off the GPU and into the input pipeline*, exactly the failure mode
 :numref:`sec_perf_model` warned about. Finally, asynchronous dispatch
 means a window that does not close on `block_until_ready` measures how
 fast Python *enqueues* work, not how fast the device finishes it, and
@@ -391,7 +391,7 @@ residue is tf32 matmuls re-associated by fusion, not a wrong answer).
 :begin_tab:`jax`
 **Configuration 1 — jit the whole step (:numref:`sec_compilation`).** The configuration is
 one transformation: `nnx.jit` captures the loss, the gradients, *and* the
-optimizer update — 13.3's whole-step lesson — and the training step
+optimizer update (the whole-step lesson of :numref:`sec_compilation`), and the training step
 becomes a single compiled program. Whole-step JIT is the practical JAX
 baseline, so cumulative ratios start here. The correctness check comes first:
 the jitted forward must produce
@@ -444,8 +444,8 @@ The first call takes several seconds to compile. Steady-state throughput is
 roughly twenty times the un-jitted result — the two-orders-of-magnitude pattern
 :numref:`sec_compilation` measured on its toy step, compressed here
 because this model's larger kernels partly amortize dispatch. The compiled
-program can now be classified by its limiting resource. The profile the
-PyTorch tab reads is one tool; the compiler's own accounting is the more
+program can now be classified by its limiting resource. A profiler trace
+is one tool; the compiler's own accounting is the more
 natural one in JAX (:numref:`sec_memory_precision` used the same trick
 for memory): lower the step, compile it, and ask the compiled object
 what it plans to execute —
@@ -557,8 +557,8 @@ emits fp32: flax modules record a *compute dtype* at construction
 inputs and parameters to that dtype. The
 installed bf16 arrays were therefore promoted back to fp32 at the first
 layer, and downstream computation remained fp32. This configuration changed
-array storage but not compute precision. This is the JAX tab's version of the PyTorch tab's
-corrupted-measurement traps, and it is nastier for being *silent*: no
+array storage but not compute precision. Like the measurement traps above,
+it corrupts a result, and it is nastier for being *silent*: no
 error, no warning, a plausible number. The timing and one dtype check
 detected the error. Threading bf16 for real takes two more steps. First,
 set the compute dtype the modules remember, not just the arrays. Second,
@@ -876,7 +876,7 @@ refinement before trusting the measurement: the serial sum is a *floor* —
 DDP overlaps its bucketed allreduce under backward
 (:numref:`fig_ddp_overlap`), so the measurement can land above the
 serial prediction, and how far above measures the overlap. We reuse
-13.6's sidecar idiom on this very model (eager, per-rank batch 64 — weak
+the sidecar idiom of :numref:`sec_multi_gpu_concise` on this very model (eager, per-rank batch 64 — weak
 scaling, the convention of :numref:`subsec_mg-accounting`; each rank
 streams its own batches, so this is a throughput measurement, not a
 convergence claim):
@@ -897,13 +897,13 @@ unlike a convolutional ResNet it offers little extra compute to hide
 communication behind. Summing the two terms, :eqref:`eq_dp_cost` predicts
 limited scaling: at $k=2$, throughput barely exceeds the single-GPU
 result, and at $k=4$ it remains under half of linear scaling. The mechanism,
-though, is 13.6's declarative recipe at its cleanest: build a mesh,
+though, is the declarative recipe of :numref:`sec_multi_gpu_concise` at its cleanest: build a mesh,
 replicate the state, shard the batch, and feed the **unchanged** jitted
 step — no launcher, no sidecar script, no rank files; one process, three
 annotations. (One version note: the mesh names its axis `Auto` — under
 this JAX version's explicit-sharding types the embedding's gather cannot
 infer an output layout, and `Auto` hands the whole layout problem back to
-GSPMD, which is exactly 13.6's semantics.) Per-device batch 64 — weak
+GSPMD, which is exactly the semantics of :numref:`sec_multi_gpu_concise`.) Per-device batch 64 — weak
 scaling, the convention of :numref:`subsec_mg-accounting`; fresh shuffled
 batches each step, so this is a throughput measurement, not a convergence
 claim:
@@ -972,7 +972,7 @@ def ddp_gpt_tokens(k):
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
 %%tab jax
 def dp_setup(k, make_model):
-    """13.6's recipe: replicate the state, shard the batch, jit unchanged."""
+    """Data parallel: replicate the state, shard the batch, jit unchanged."""
     mesh = jax.make_mesh((k,), ('data',),
                          axis_types=(jax.sharding.AxisType.Auto,))
     P = jax.sharding.PartitionSpec
@@ -1000,7 +1000,7 @@ def dp_tokens(k, step, make_model, src, warmup=20, timed=40):
 ```{.python .input #fast-transformer-rungs-each-one-measured-8}
 %%tab pytorch
 n_bytes = 4 * sum(p.numel() for p in model.parameters())
-beta = 4.5e9   # NCCL allreduce, effective bytes/device/s on this box (13.5)
+beta = 4.5e9   # NCCL allreduce bytes/device/s on this box, measured earlier
 t_comm, t_cmp = 2 * n_bytes / beta, 64 * 128 / tput0
 print(f'per step: t_comm ~ {1e3 * t_comm:.0f} ms vs '
       f't_compute ~ {1e3 * t_cmp:.0f} ms')
@@ -1015,7 +1015,7 @@ for k in (k for k in (2, 4) if k <= d2l.num_gpus()):
 ```{.python .input #fast-transformer-rungs-each-one-measured-8}
 %%tab jax
 n_bytes = 4 * n_params
-beta = 4.5e9   # psum, effective bytes/device/s on this box (13.5)
+beta = 4.5e9   # psum bytes/device/s on this box, measured earlier
 t_comm, t_cmp = 2 * n_bytes / beta, 64 * 128 / tput1
 print(f'per step: t_comm ~ {1e3 * t_comm:.0f} ms vs '
       f't_compute ~ {1e3 * t_cmp:.0f} ms')
@@ -1051,17 +1051,16 @@ throughput may fall below the one-GPU result because the model omits some
 costs: the global batch stages through one device before scattering,
 and the collective must still be scheduled. At $k=4$ the shortfall
 widens — the floor was priced with the $\beta$ measured at two GPUs, and
-four ranks hammering the same host path do not sustain that constant
-(the PyTorch tab's sidecar sees the same sag). Nor does overlap rescue
+four ranks hammering the same host path do not sustain that constant.
+Nor does overlap rescue
 it: XLA emits overlap-capable collectives, but overlap needs compute to
 hide behind, and this configuration has none to spare. Communication-hungry is
 the diagnosis, and it was written down *before* anything ran. On an
 NVLink box the same accounting predicts near-linear scaling — the
 constant changes, the method does not. And here the one-process,
-annotate-the-layout model pays a dividend the sidecar cannot: stacking
+annotate-the-layout model pays a dividend: stacking
 data parallelism on the *full* sequence — bf16, batch 512 — is one more
-loop over the same helpers, so we run the measurement the PyTorch tab
-leaves as an exercise. The step performs eight times more compute with the
+loop over the same helpers, so we run that measurement too. The step performs eight times more compute with the
 same 76 MB of gradient communication, so :eqref:`eq_dp_cost` predicts much
 better efficiency:
 :end_tab:
@@ -1183,7 +1182,7 @@ for _ in range(300):
         loss = F.cross_entropy(learner_c(X).reshape(-1, vocab_size),
                                Y.reshape(-1))
     loss.backward(); opt_l.step()
-    losses.append(loss.detach())       # no host read in the hot loop (13.1)
+    losses.append(loss.detach())       # no host read in the hot loop
 losses = torch.stack(losses).cpu()
 first, last = losses[:20].mean(), losses[-20:].mean()
 print(f'smoothed loss: first 20 steps {first:.2f} -> last 20 steps {last:.2f}')
@@ -1197,7 +1196,7 @@ opt_l = nnx.Optimizer(learner, optax.adamw(1e-3), wrt=nnx.Param)
 losses = []
 for _ in range(300):
     X, Y = next(big_stream)
-    losses.append(step_bf16(learner, opt_l, X, Y))  # no host read (13.1)
+    losses.append(step_bf16(learner, opt_l, X, Y))  # no host read here
 losses = jnp.stack(losses)
 first, last = losses[:20].mean(), losses[-20:].mean()
 print(f'smoothed loss: first 20 steps {first:.2f} -> last 20 steps {last:.2f}')
@@ -1268,8 +1267,8 @@ model, one configuration at a time.
   straight back, which the attention kernel refuses loudly. The naive
   cast measured exactly like fp32; one dtype print exposed it. The
   masters, the gradients, and the Adam state stay fp32 by construction.
-* Measurement is a technique too, and it can fail: the stock `tf.data`
-  loader silently taxed the fastest configurations (fixed by staging the 5 MB
+* Measurement is a technique too, and it can fail: a host-side loader
+  silently taxed the fastest configurations (fixed by staging the 5 MB
   corpus on device), and re-timing one cached batch flatters throughput
   by double-digit percent. Both had to be fixed before the cumulative comparison
   meant anything.
@@ -1279,7 +1278,7 @@ model, one configuration at a time.
   plan said we did not need. Knowing when a technique does not apply is
   the method too.
 * Data parallelism is predicted before it is measured: with $\beta$ from
-  13.5's measured `psum`, :eqref:`eq_dp_cost` prices the $k=2$ gain at
+  the `psum` measured in :numref:`sec_multi_gpu`, :eqref:`eq_dp_cost` prices the $k=2$ gain at
   roughly nothing — the measurement lands at or below that floor — and
   $k=4$ falls well short of the floor as the host-staged fabric sags.
   Declarative sharding then makes rerunning the *fast* configuration a
@@ -1483,9 +1482,8 @@ Apply the chapter's profile--change--verify procedure to the GPT of ch. 11.
 Each bar changes one mechanism and inherits the previous settings.
 
 Subject: `d2l.GPT`, width **512** (~19M params), char *Time
-Machine*, context 128, end-to-end tokens/s. Same model and
-metric as the PyTorch tab — the sequence will look nothing like
-it. That contrast is the lesson.
+Machine*, context 128, end-to-end tokens/s. Each step of the
+sequence is chosen by what the last measurement shows.
 :::
 
 ::: {.slide title="Profile Your Experiment First" only="pytorch"}
@@ -1505,10 +1503,11 @@ Traps that corrupted early drafts — JAX edition:
 
 - a changed shape is not a retrace, it is a **recompile** →
   whole batches only, one shape
-- the stock `tf.data` loader reduced throughput by about one quarter →
-  stage the 5 MB corpus **on device**, shuffle there
+- a host-side loader (copying each batch from host memory) reduced
+  throughput by about one quarter → stage the 5 MB corpus **on device**,
+  shuffle there
 - no `block_until_ready`, no measurement — you timed the
-  *enqueue* (§13.1)
+  *enqueue*
 - never re-time one cached batch: the GPU serves it from
   cache; use fresh data for each timing.
 :::
@@ -1539,9 +1538,9 @@ Ask the compiler what it plans to run:
 
 @fast-transformer-rungs-each-one-measured-5
 
-About a third of the tf32 roof (§13.2): not overhead-starved,
-not saturated — a mixed workload. Cheapest next configuration on §13.4's
-sequence: **bf16** — double the roof, half the bytes.
+About a third of the tf32 roof: not overhead-starved,
+not saturated — a mixed workload. Cheapest next configuration in the
+memory-and-precision sequence: **bf16** — double the roof, half the bytes.
 :::
 
 ::: {.slide title="Successive Optimizations" only="pytorch"}
@@ -1577,8 +1576,7 @@ Masters and grads stay fp32. No `GradScaler`.
 64 — the ~15 GiB plan is traffic, a memory wall. bf16 at 64
 was flat — a dispatch wall. Together: most of 2×, ~43 TFLOP/s.
 Measure configurations cumulatively. Checkpointing then reduces throughput by
-about one tenth while saving memory that is not limiting this run, as in the
-PyTorch tab.
+about one tenth while saving memory that is not limiting this run.
 :::
 
 ::: {.slide title="Aggregate Results" only="pytorch"}
@@ -1602,7 +1600,7 @@ that loss still decreases under the final configuration.
 
 ::: {.slide title="Predict, Then Measure: Data Parallel" only="pytorch"}
 Transformer params ∝ compute ⇒ ~76 MB of gradients per step
-with little compute to hide them. The cost model (§13.5) gives
+with little compute to hide them. The two-term cost model gives
 a **no-overlap floor**; DDP's bucketing buys back some overlap.
 
 @fast-transformer-rungs-each-one-measured-8
@@ -1613,7 +1611,7 @@ host-staged fabric provides less bandwidth. NVLink changes the constant, not the
 :::
 
 ::: {.slide title="Predict, Then Measure: Data Parallel" only="jax"}
-~76 MB of gradients vs §13.5's measured `psum` β ⇒ the
+~76 MB of gradients vs the measured `psum` β ⇒ the
 two-term cost model prices $k=2$ at **no gain at all**. Then
 measure: mesh + shard the batch + the *unchanged* jitted step —
 no launcher, no sidecar.

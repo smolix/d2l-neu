@@ -138,9 +138,11 @@ def vgg_block(num_convs, in_channels, out_channels, init):
                                padding=(1, 1), **init))
         layers.append(nnx.relu)
         in_channels = out_channels
-    layers.append(lambda x: nnx.max_pool(
-        x, window_shape=(2, 2), strides=(2, 2)))
+    layers.append(max_pool)
     return nnx.Sequential(*layers)
+
+def max_pool(x):  # 2x2 windows, stride 2
+    return nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
 ```
 
 ### The VGG Network
@@ -259,13 +261,23 @@ class VGG(d2l.Classifier):
         height, width = (n // 2 ** len(arch) for n in input_shape[:2])
         self.net = nnx.Sequential(
             *conv_blks,
-            lambda x: x.reshape((x.shape[0], -1)),  # flatten
+            flatten,
             nnx.Linear(height * width * in_channels, 4096, **init), nnx.relu,
             nnx.Dropout(0.5, rngs=rngs),
             nnx.Linear(4096, 4096, **init), nnx.relu,
             nnx.Dropout(0.5, rngs=rngs),
             nnx.Linear(4096, num_classes, **init))
+
+def flatten(x):  # One vector per example
+    return x.reshape((x.shape[0], -1))
 ```
+
+:begin_tab:`jax`
+`VGG` takes the image size as `input_shape`, since NNX layers need their
+input sizes when they are built: the first fully connected layer reads
+$h w c$ numbers for a final feature map of $h \times w$ pixels and $c$
+channels.
+:end_tab:
 
 VGG-11, the smallest network of the paper, has five blocks: one convolution
 each in the first two and two in the other three, with 64, 128, 256, 512,
@@ -393,19 +405,22 @@ def nin_block(in_channels, out_channels, kernel_size, strides, padding,
 
 ### Global Average Pooling
 
-NiN uses the kernel sizes and channel counts of AlexNet's first layers:
-blocks with $11 \times 11$, $5 \times 5$, and $3 \times 3$ convolutions and
-96, 256, and 384 channels, each followed by $3 \times 3$ max-pooling with
-stride 2. Then it differs. Its last block has as many output channels as
-there are classes, ten for Fashion-MNIST, and *global average pooling*
-averages each of these channels over all positions. The ten averages are the
-logits. The head therefore has no parameters at all: the last block must
-learn to make the channel of the correct class large on average over the
-image. Its last $1 \times 1$ convolution outputs these class scores directly,
-without a ReLU, and `nin_block` takes the flag `final` to drop it. A ReLU
-there would switch a class off for good: once a class's pre-activations are
-negative at every position of every image, its logit is 0, its gradient is
-zero, and training can never bring it back.
+NiN uses the kernel sizes and channel counts of AlexNet's first layers: blocks
+with $11 \times 11$, $5 \times 5$, and $3 \times 3$ convolutions and 96, 256,
+and 384 channels, each followed by $3 \times 3$ max-pooling with stride 2.
+Then it differs. Its last block has as many output channels as there are
+classes, ten for Fashion-MNIST, and *global average pooling* averages each of
+these channels over all positions. The ten averages are the logits. The head
+therefore has no parameters at all: the last block must learn to make the
+channel of the correct class large on average over the image. Its last
+$1 \times 1$ convolution outputs these class scores directly, without a ReLU,
+and `nin_block` takes the flag `final` to drop it. A ReLU there would switch a
+class off for good: once a class's pre-activations are negative at every
+position of every image, its logit is 0, its gradient is zero, and training
+can never bring it back. Our last block is a simplification of the original
+network, whose last block stays wide, with 1,024 channels on ImageNet and 192
+on CIFAR-10, until its final $1 \times 1$ convolution maps them to one channel
+per class; ours narrows the whole block to ten channels.
 
 Global average pooling has a second property. A convolution commutes with
 translations, so shifting the input shifts each feature map, and an average
@@ -499,7 +514,10 @@ class NiN(d2l.Classifier):
             nnx.Dropout(0.5, rngs=rngs),
             nin_block(384, num_classes, (3, 3), (1, 1), (1, 1), init,
                       final=True),
-            lambda x: x.mean(axis=(1, 2)))  # global average pooling
+            global_avg_pool)
+
+def global_avg_pool(x):  # Average over height and width (NHWC)
+    return x.mean(axis=(1, 2))
 ```
 
 We check the shapes on one $224 \times 224$ image.
@@ -517,7 +535,7 @@ NiN().layer_summary((1, 224, 224, 1))
 The resolution falls from 224 to 54, 26, 12, and 5, as in AlexNet, and the
 last block emits ten channels of $5 \times 5$, which the pooling reduces to
 ten numbers. NiN has 2.0 million parameters, 4% of AlexNet's, and performs
-760 million multiply-adds per image, a little less than AlexNet's 938
+762 million multiply-adds per image, a little less than AlexNet's 938
 million: the $1 \times 1$ convolutions add arithmetic to the body while the
 head disappears.
 
@@ -764,7 +782,7 @@ class GoogleNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         layers = tf.keras.layers
-        # Pad symmetrically, as the other tabs do; 'same' pads unevenly
+        # Pad 1 on every side: 'same' pads unevenly at stride 2
         pool = lambda: tf.keras.Sequential([layers.ZeroPadding2D(1),
                                             layers.MaxPool2D(3, strides=2)])
         stem = tf.keras.Sequential([
@@ -792,9 +810,11 @@ class GoogleNet(d2l.Classifier):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         init = dict(kernel_init=he, rngs=rngs)
-        # Pad symmetrically, as the other tabs do; 'SAME' pads unevenly
-        pool = lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2),
-                                      padding=((1, 1), (1, 1)))
+
+        def pool(x):  # 3x3 windows, stride 2; 'SAME' would pad unevenly
+            return nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2),
+                                padding=((1, 1), (1, 1)))
+
         stem = nnx.Sequential(
             nnx.Conv(1, 64, kernel_size=(7, 7), strides=(2, 2), padding=3,
                      **init), nnx.relu, pool,
@@ -808,7 +828,7 @@ class GoogleNet(d2l.Classifier):
                 blocks.append(Inception(in_channels, c1, c2, c3, c4, init))
                 in_channels = c1 + c2[1] + c3[1] + c4
             body.append(nnx.Sequential(*blocks))
-        head = nnx.Sequential(lambda x: x.mean(axis=(1, 2)),
+        head = nnx.Sequential(global_avg_pool,
                               nnx.Linear(in_channels, num_classes, **init))
         self.net = nnx.Sequential(stem, body[0], pool, body[1], pool,
                                   body[2], head)
@@ -845,12 +865,11 @@ trainer.fit(model, data)
 val_acc['GoogLeNet'] = trainer.history['val_acc']
 ```
 
-GoogLeNet ends at a validation accuracy of 86–90% after 10 epochs. Like
-NiN's, its validation accuracy rises and falls by a few points from
-one epoch to the next in every framework, while AlexNet's and VGG's dip
-by about a point at most, so the last epoch of a run can land anywhere in that
-range. Its training loss, about 0.27 after 10 epochs, is as low as
-AlexNet's.
+GoogLeNet ends at a validation accuracy of 86–90% after 10 epochs. Like NiN's,
+its validation accuracy rises and falls by a few points from one epoch to the
+next, while AlexNet's and VGG's dip by about a point at most, so the last
+epoch of a run can land anywhere in that range. Its training loss, about 0.27
+after 10 epochs, is as low as AlexNet's.
 
 ## Comparing the Networks
 
@@ -868,7 +887,7 @@ this section and AlexNet, all trained on Fashion-MNIST with SGD at learning
 rate 0.01 for 10 epochs, together with LeNet and the counts of parameters
 and multiply-adds at the input size used for training.
 
-:Parameters, multiply-adds, and Fashion-MNIST validation accuracy of the networks of :numref:`sec_lenet`, :numref:`sec_alexnet`, and this section. Multiply-adds are per image at the training input size. Accuracies are means over the last five of 10 epochs, with the range over several runs in four frameworks; for LeNet, the final accuracy after 30 epochs.
+:Parameters, multiply-adds, and Fashion-MNIST validation accuracy of the networks of :numref:`sec_lenet`, :numref:`sec_alexnet`, and this section. Multiply-adds are per image at the training input size. Accuracies are means over the last five of 10 epochs, with the range over several runs; for LeNet, the final accuracy after 30 epochs.
 :label:`tab_blocks_scoreboard`
 
 | network | input | parameters | multiply-adds | validation accuracy |
@@ -879,7 +898,7 @@ and multiply-adds at the input size used for training.
 | NiN | $224 \times 224$ | 2.0M | 762M | 81–85% |
 | GoogLeNet | $96 \times 96$ | 6.0M | 276M | 86–89% |
 
-Three observations hold in every framework. First, the parameters of a
+Three observations hold across repeated runs. First, the parameters of a
 dense head add little accuracy here: NiN and GoogLeNet, which replace it by
 global average pooling, have 23 and 8 times fewer parameters than AlexNet and
 stay within a few points of it. Second, arithmetic alone does not decide
@@ -890,7 +909,7 @@ with an eighth of its parameters and less than a third of its arithmetic,
 although it sees $96 \times 96$ images instead of $224 \times 224$. Ten
 epochs on upsampled $28 \times 28$ images are a small test; on ImageNet, in
 the challenge of 2014, GoogLeNet won with about 7 million parameters per
-network and a lower error than VGG, whose networks had up to 138 million.
+network and a lower error than VGG, whose networks had up to 144 million.
 
 The three networks contributed the parts from which convolutional networks
 are still assembled. VGG made the repeated block the unit of design and a
@@ -975,7 +994,7 @@ within a few points of AlexNet with a small fraction of its parameters.
        `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
        `lr=0.01` on images resized to $56 \times 56$ and to $84 \times 84$.
        The input size of the first fully connected layer changes with the
-       resolution (the JAX `VGG` takes the image size as `input_shape`).
+       resolution.
        Compare validation accuracy and time per epoch with the same model
        trained at $224 \times 224$, and give the spatial size of the
        feature map that enters the fully connected layers at each of the
@@ -1303,8 +1322,8 @@ multiply-adds fall by the same factor.
 
 @!blocks-stem-body-and-head-3
 
-Validation accuracy moves by a few points from epoch to epoch in every
-framework, as NiN's does; the mean over the last 5 epochs is 86–89%.
+Validation accuracy moves by a few points from epoch to epoch, as NiN's
+does; the mean over the last 5 epochs is 86–89%.
 :::
 
 ::: {.slide title="The Dense Head Adds Little Accuracy; VGG Is Most Accurate at Half of AlexNet's Arithmetic"}
@@ -1319,7 +1338,7 @@ framework, as NiN's does; the mean over the last 5 epochs is 86–89%.
 | GoogLeNet | 96×96 | 6.0 M | 276 M | 86–89% |
 
 Mean validation accuracy over the last 5 of 10 epochs (LeNet: final);
-SGD at 0.01 and He initialization in all four frameworks.
+SGD at 0.01 and He initialization.
 :::
 
 ::: {.slide title="Recap"}

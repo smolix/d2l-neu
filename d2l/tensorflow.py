@@ -8,6 +8,12 @@ import numpy as np
 import tensorflow as tf
 import keras
 
+# TensorFlow's Python logger prints performance hints as warnings, e.g.
+# "5 out of the last 5 calls to <function> triggered tf.function retracing"
+# for every eager grouped convolution. They are not errors, and in a notebook
+# they land in the cell output; errors still surface as exceptions.
+tf.get_logger().setLevel('ERROR')
+
 # Enumerating physical GPUs calls cuInit even in TensorFlow's CPU runtime.
 # An explicit CPU selection must therefore skip GPU discovery entirely.
 if _os.environ.get('CUDA_VISIBLE_DEVICES') not in ('', '-1'):
@@ -45,17 +51,23 @@ def resnet18(num_classes, in_channels=1):
                 blk.add(d2l.Residual(num_channels))
         return blk
 
-    # Smaller conv, no max-pool (same as the PT version)
+    # He initialization, one initializer instance per layer
+    he = lambda: tf.keras.initializers.VarianceScaling(
+        2.0, 'fan_in', 'untruncated_normal')
+    # Small stem conv without bias (the batch normalization after it removes
+    # it) and no max-pooling. Running averages decay 0.9 and epsilon is 1e-5
+    # (the Keras defaults are 0.99 and 1e-3)
     net = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
-        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same',
+                               use_bias=False, kernel_initializer=he()),
+        tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
         tf.keras.layers.Activation('relu'),
         resnet_block(64, 2, first_block=True),
         resnet_block(128, 2),
         resnet_block(256, 2),
         resnet_block(512, 2),
         tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(num_classes),
+        tf.keras.layers.Dense(num_classes, kernel_initializer=he()),
     ])
     return net
 
@@ -67,6 +79,7 @@ from IPython import display
 import json
 import math
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import os
 import pandas as pd
@@ -98,6 +111,26 @@ def set_figsize(figsize=(3.5, 2.5)):
     use_svg_display()
     d2l.plt.rcParams['figure.figsize'] = figsize
 
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_calculus`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib.
 
@@ -105,6 +138,9 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
     if legend:
         axes.legend(legend)
     axes.grid()
@@ -185,7 +221,7 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
     def call(self, X, *args, training=None, **kwargs):
         if training is not None:
             self.training = training
-        return self.forward(X, *args)
+        return self.forward(X, *args, **kwargs)
 
     def training_step(self, batch):
         """The loss on one batch, or a dict of metrics with key 'loss'."""
@@ -254,21 +290,24 @@ class Trainer(d2l.HyperParameters):
         self.board.show()
 
     def record(self, split, metrics, x):
-        for name, value in metrics.items():
-            self.history[f'{split}_{name}'].append(value)
-            self.board.draw(x, value, f'{split}_{name}')
+        for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+            self.history[f'{split}_{name}'].append(metrics[name])
+            self.board.draw(x, metrics[name], f'{split}_{name}')
 
     def evaluate(self, model, data):
         """Validation metrics of `model` on `data`, averaged over examples.
 
         Defined in :numref:`sec_oo-design`"""
-        self.prepare_data(data)
+        self.train_dataloader = None
+        self.val_dataloader = data.val_dataloader()
         self.prepare_model(model)
         return self.validate()
 
     def prepare_model(self, model):
         self.model = model
-        batch = self.prepare_batch(next(iter(self.train_dataloader)))
+        loader = (self.train_dataloader if self.train_dataloader is not None
+                  else self.val_dataloader)  # `evaluate` has no training data
+        batch = self.prepare_batch(next(iter(loader)))
         model(*batch[:-1], training=False)  # Keras creates the variables here
         self._train_step = tf.function(self.train_step, reduce_retracing=True)
         self._val_step = tf.function(self.val_step, reduce_retracing=True)
@@ -276,7 +315,7 @@ class Trainer(d2l.HyperParameters):
     def train_step(self, batch):
         with tf.GradientTape() as tape:
             out = d2l.as_metrics(self.model.training_step(batch))
-        params = self.model.trainable_variables or tape.watched_variables()
+        params = self.model.trainable_variables
         grads = tape.gradient(out['loss'], params)
         if self.gradient_clip_val > 0:
             grads = self.clip_gradients(self.gradient_clip_val, grads)
@@ -374,7 +413,7 @@ class ProgressBoard(d2l.HyperParameters):
         ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
         if self.xlim: ax.set_xlim(self.xlim)
         if self.ylim: ax.set_ylim(self.ylim)
-        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if self.yscale == 'log': d2l.set_log_ticks(ax.yaxis)
         if acc_ax is not None: acc_ax.set_ylabel('accuracy')
         lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
         labels = [line.get_label() for line in lines]
@@ -448,8 +487,9 @@ class Averager:
         self.n += n
 
     def mean(self):
-        """One host synchronization per metric."""
-        return {name: float(s) / self.n for name, s in self.sums.items()}
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.
@@ -504,9 +544,7 @@ class FashionMNIST(d2l.DataModule):
         if labels is None:
             labels = self.text_labels(y)
         X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
-        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
-            for image in ax.get_images():
-                image.set_cmap('gray')
+        d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -539,7 +577,8 @@ class Classifier(d2l.Module):
         X = d2l.normal(X_shape)
         for layer in self.net.layers:
             X = layer(X)
-            print(layer.__class__.__name__, 'output shape:\t', X.shape)
+            name = getattr(layer, '__name__', type(layer).__name__)
+            print(f'{name:<22} {tuple(X.shape)}')
 
 def cross_entropy(y_hat, y):
     p = tf.gather(y_hat, y, batch_dims=1)
@@ -600,12 +639,11 @@ def corr2d(X, K):
 
     Defined in :numref:`sec_conv_layer`"""
     h, w = K.shape
-    Y = tf.Variable(tf.zeros((X.shape[0] - h + 1, X.shape[1] - w + 1)))
-    for i in range(Y.shape[0]):
-        for j in range(Y.shape[1]):
-            Y[i, j].assign(tf.reduce_sum(
-                X[i: i + h, j: j + w] * K))
-    return Y
+    # Build Y from its entries, so that gradients flow through it
+    return tf.stack([
+        tf.stack([tf.reduce_sum(X[i: i + h, j: j + w] * K)
+                  for j in range(X.shape[1] - w + 1)])
+        for i in range(X.shape[0] - h + 1)])
 
 class LeNet(d2l.Classifier):
     """The layout of LeNet-5, with sigmoid activations and average pooling.
@@ -631,9 +669,9 @@ def cosine_warmup(t, num_steps, warmup_steps):
 
     Defined in :numref:`sec_batch_norm`"""
     t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
+    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return (tf.minimum(t / warmup_steps, 1)
-            * 0.5 * (1 + tf.cos(math.pi * progress)))
+    return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
 
 class Residual(tf.keras.Model):
     """The Residual block of ResNet models.
@@ -644,31 +682,33 @@ class Residual(tf.keras.Model):
         # He initialization, one initializer instance per layer
         he = lambda: tf.keras.initializers.VarianceScaling(
             2.0, 'fan_in', 'untruncated_normal')
-        # Pad 1 on every side, as the other frameworks do: Keras' 'same'
-        # pads only right and bottom when the stride is 2 and sizes are even
+        # No conv biases: the batch normalization after each conv removes
+        # them. conv1 pads 1 on every side: 'same' pads only right and bottom
+        # when the stride is 2 and the sizes are even
         self.conv1 = tf.keras.Sequential([
             tf.keras.layers.ZeroPadding2D(1),
             tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-                                   strides=strides, kernel_initializer=he())])
+                                   strides=strides, use_bias=False,
+                                   kernel_initializer=he())])
         self.conv2 = tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-            padding='same', kernel_initializer=he())
+            padding='same', use_bias=False, kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5 (the Keras defaults are
+        # 0.99 and 1e-3)
+        bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                        epsilon=1e-5)
         self.conv3 = None
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = tf.keras.layers.Conv2D(num_channels, kernel_size=1,
-                strides=strides, kernel_initializer=he())
-        # Running averages decay 0.9 and epsilon 1e-5, as in the other
-        # frameworks (the Keras defaults are 0.99 and 1e-3)
-        self.bn1 = tf.keras.layers.BatchNormalization(momentum=0.9,
-                                                      epsilon=1e-5)
-        self.bn2 = tf.keras.layers.BatchNormalization(momentum=0.9,
-                                                      epsilon=1e-5)
+                strides=strides, use_bias=False, kernel_initializer=he())
+            self.bn3 = bn()
+        self.bn1, self.bn2 = bn(), bn()
 
     def call(self, X):
         Y = tf.keras.activations.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3 is not None:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return tf.keras.activations.relu(Y)
 
@@ -680,25 +720,28 @@ class ResNeXtBlock(tf.keras.Model):
                  strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
-        # He initialization, one initializer instance per layer
+        # He initialization, one initializer instance per layer; no conv
+        # biases, since the batch normalization after each conv removes them
         he = lambda: tf.keras.initializers.VarianceScaling(
             2.0, 'fan_in', 'untruncated_normal')
         self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1,
-                                            kernel_initializer=he())
+            use_bias=False, kernel_initializer=he())
         self.conv2 = tf.keras.Sequential([  # Pad 1 on every side
             tf.keras.layers.ZeroPadding2D(1),
             tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
-                                   groups=groups, kernel_initializer=he())])
+                                   groups=groups, use_bias=False,
+                                   kernel_initializer=he())])
         self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1,
-                                            kernel_initializer=he())
-        # Running averages decay 0.9 and epsilon 1e-5, as in the other
-        # frameworks (the Keras defaults are 0.99 and 1e-3)
+            use_bias=False, kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5 (the Keras defaults are
+        # 0.99 and 1e-3)
         bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
                                                         epsilon=1e-5)
         self.bn1, self.bn2, self.bn3 = bn(), bn(), bn()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = tf.keras.layers.Conv2D(num_channels, 1,
-                strides=strides, kernel_initializer=he())
+                strides=strides, use_bias=False, kernel_initializer=he())
             self.bn4 = bn()
         else:
             self.conv4 = None
@@ -975,11 +1018,13 @@ class RNNScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W_xh = tf.Variable(d2l.normal(
-            (num_inputs, num_hiddens)) * sigma)
-        self.W_hh = tf.Variable(d2l.normal(
-            (num_hiddens, num_hiddens)) * sigma)
-        self.b_h = tf.Variable(d2l.zeros(num_hiddens))
+        normal = tf.keras.initializers.RandomNormal(stddev=sigma)
+        self.W_xh = self.add_weight(
+            name='W_xh', shape=(num_inputs, num_hiddens), initializer=normal)
+        self.W_hh = self.add_weight(
+            name='W_hh', shape=(num_hiddens, num_hiddens), initializer=normal)
+        self.b_h = self.add_weight(name='b_h', shape=(num_hiddens,),
+                                   initializer='zeros')
 
     def forward(self, inputs, state=None):
         if state is None:
@@ -1015,11 +1060,15 @@ class RNNLMScratch(d2l.Classifier):
         self.init_params()
 
     def init_params(self):
-        self.W_e = tf.Variable(d2l.normal(
-            (self.vocab_size, self.rnn.num_inputs)))
-        self.W_hq = tf.Variable(d2l.normal(
-            (self.rnn.num_hiddens, self.vocab_size)) * self.rnn.sigma)
-        self.b_q = tf.Variable(d2l.zeros(self.vocab_size))
+        self.W_e = self.add_weight(
+            name='W_e', shape=(self.vocab_size, self.rnn.num_inputs),
+            initializer=tf.keras.initializers.RandomNormal(stddev=1))
+        self.W_hq = self.add_weight(
+            name='W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            initializer=tf.keras.initializers.RandomNormal(
+                stddev=self.rnn.sigma))
+        self.b_q = self.add_weight(name='b_q', shape=(self.vocab_size,),
+                                   initializer='zeros')
 
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1], training=False), batch[-1])
@@ -2725,25 +2774,22 @@ class BasicScheduler(HPOScheduler):
 class HPOTuner(d2l.HyperParameters):
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            error = float(error)
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 
     def bookkeeping(self, config: dict, error: float, runtime: float):
         self.records.append({"config": config, "error": error, "runtime": runtime})
@@ -2831,18 +2877,7 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         return [x[0] for x in sorted_rung[:n]]
 
 import os
-from matplotlib import ticker
 from matplotlib.figure import Figure
-
-def set_log_ticks(axis):
-    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
-    axis.set_minor_formatter(ticker.NullFormatter())
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a TensorFlow data iterator.
@@ -2945,8 +2980,9 @@ def evaluate_accuracy(net, data_iter):
         metric.add(accuracy(net(X), y), d2l.size(y))
     return metric[0] / metric[1]
 
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None):
+    """Plot a list of images (cmap colors single-channel images).
 
     Defined in :numref:`sec_utils`"""
     figsize = (num_cols * scale, num_rows * scale)
@@ -2957,7 +2993,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img)
+        ax.imshow(img, cmap=cmap)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:

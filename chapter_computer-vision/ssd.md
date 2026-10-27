@@ -407,13 +407,16 @@ def down_sample_blk(in_channels, out_channels):
 class DownSampleBlk(nnx.Module):
     def __init__(self, in_channels, out_channels, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        # Running averages decay 0.9; the variance is computed in two passes
+        bn = lambda: nnx.BatchNorm(out_channels, momentum=0.9,
+                                   use_fast_variance=False, rngs=rngs)
         self.layers = nnx.List([
             nnx.Conv(in_channels, out_channels, (3, 3), padding='same',
                      rngs=rngs),
-            nnx.BatchNorm(out_channels, rngs=rngs), nnx.relu,
+            bn(), nnx.relu,
             nnx.Conv(out_channels, out_channels, (3, 3), padding='same',
                      rngs=rngs),
-            nnx.BatchNorm(out_channels, rngs=rngs), nnx.relu])
+            bn(), nnx.relu])
 
     def __call__(self, x):
         for layer in self.layers:
@@ -429,7 +432,8 @@ def down_sample_blk(num_channels):
     for _ in range(2):
         blk.add(keras.layers.Conv2D(num_channels, kernel_size=3,
                                     padding='same'))
-        blk.add(keras.layers.BatchNormalization())
+        # Running averages decay 0.9 and epsilon is 1e-5
+        blk.add(keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5))
         blk.add(keras.layers.ReLU())
     blk.add(keras.layers.MaxPool2D(pool_size=2, strides=2))
     return blk
@@ -936,7 +940,7 @@ the optimization algorithm.
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab mxnet
 device, net = d2l.try_gpu(), TinySSD(num_classes=1)
-net.initialize(init=init.Xavier(), ctx=device)
+net.initialize(init=init.Xavier(), device=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': 0.2, 'wd': 5e-4})
 ```
@@ -950,7 +954,9 @@ trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab jax
 net = TinySSD(num_classes=1)
-optimizer = nnx.Optimizer(net, optax.sgd(learning_rate=0.2), wrt=nnx.Param)
+optimizer = nnx.Optimizer(net, optax.chain(optax.add_decayed_weights(5e-4),
+                                           optax.sgd(learning_rate=0.2)),
+                          wrt=nnx.Param)
 train_net = nnx.view(net, use_running_average=False)
 eval_net = nnx.view(net, use_running_average=True)
 ```
@@ -1132,8 +1138,8 @@ for epoch in range(num_epochs):
     metric = d2l.Accumulator(4)
     for features, target in train_iter:
         timer.start()
-        X = features.as_in_ctx(device)
-        Y = target.as_in_ctx(device)
+        X = features.to_device(device)
+        Y = target.to_device(device)
         with autograd.record():
             # Generate multiscale anchor boxes and predict their classes and
             # offsets
@@ -1240,7 +1246,7 @@ for epoch in range(num_epochs):
     bbox_mae = float(bbox_abs_total / bbox_total)
     animator.add(epoch + 1, (cls_err, bbox_mae))
 print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
-print(f'{len(train_iter) * batch_size / timer.stop():.1f} examples/sec on '
+print(f'{len(train_iter.arrays[0]) / timer.stop():.1f} examples/sec on '
       f'{str(jax.devices()[0])}')
 ```
 
@@ -1357,7 +1363,7 @@ to remove similar predicted bounding boxes.
 ```{.python .input #ssd-prediction-2}
 #@tab mxnet
 def predict(X):
-    anchors, cls_preds, bbox_preds = net(X.as_in_ctx(device))
+    anchors, cls_preds, bbox_preds = net(X.to_device(device))
     cls_probs = npx.softmax(cls_preds).transpose(0, 2, 1)
     output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
     idx = [i for i, row in enumerate(output[0]) if row[0] != -1]
@@ -1422,7 +1428,7 @@ def display(img, output, threshold):
         if score < threshold:
             continue
         h, w = img.shape[:2]
-        bbox = [row[2:6] * np.array((w, h, w, h), ctx=row.ctx)]
+        bbox = [row[2:6] * np.array((w, h, w, h), device=row.device)]
         d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
 
 display(img, output, threshold=0.9)

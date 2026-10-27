@@ -248,9 +248,9 @@ net = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
 # Per-block init: Gluon 2.0's Xavier rejects 1D weights, and the fused LSTM
 # has 1D internal weights. Initialize Xavier on the 2D blocks; let the LSTM
 # use its default initializer.
-net.embedding.initialize(init.Xavier(), ctx=devices)
-net.encoder.initialize(ctx=devices)
-net.decoder.initialize(init.Xavier(), ctx=devices)
+net.embedding.initialize(init.Xavier(), device=devices)
+net.encoder.initialize(device=devices)
+net.decoder.initialize(init.Xavier(), device=devices)
 ```
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
@@ -406,7 +406,7 @@ We define the following function to predict the sentiment of a text sequence usi
 #@save
 def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence."""
-    sequence = np.array(vocab[sequence.split()], ctx=d2l.try_gpu())
+    sequence = np.array(vocab[sequence.split()], device=d2l.try_gpu())
     label = np.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 ```

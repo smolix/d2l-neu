@@ -511,10 +511,13 @@ def sinusoidal_embedding(t, dim):  #@save
 class ResBlock(nnx.Module):  #@save
     """Two 3x3 convolutions with group normalization and an added embedding."""
     def __init__(self, c_in, c_out, emb_dim, rngs):
-        self.norm1 = nnx.GroupNorm(c_in, num_groups=8, rngs=rngs)
+        # epsilon 1e-5 and a two-pass variance in every group normalization
+        self.norm1 = nnx.GroupNorm(c_in, num_groups=8, epsilon=1e-5,
+                                   use_fast_variance=False, rngs=rngs)
         self.conv1 = nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
         self.emb = nnx.Linear(emb_dim, c_out, rngs=rngs)
-        self.norm2 = nnx.GroupNorm(c_out, num_groups=8, rngs=rngs)
+        self.norm2 = nnx.GroupNorm(c_out, num_groups=8, epsilon=1e-5,
+                                   use_fast_variance=False, rngs=rngs)
         self.conv2 = nnx.Conv(c_out, c_out, (3, 3), padding='SAME', rngs=rngs)
         self.skip = (nnx.Conv(c_in, c_out, (1, 1), rngs=rngs) if c_in != c_out
                      else None)
@@ -534,15 +537,18 @@ class UNet(nnx.Module):  #@save
         self.emb2 = nnx.Linear(emb_dim, emb_dim, rngs=rngs)
         self.inc = nnx.Conv(in_channels, ch, (3, 3), padding='SAME', rngs=rngs)
         self.down1 = ResBlock(ch, ch, emb_dim, rngs)                   # 28 x 28
-        self.pool1 = nnx.Conv(ch, ch, (3, 3), strides=2, padding='SAME',
+        # Strided convs pad 1 on every side: 'SAME' pads only right and
+        # bottom when the stride is 2 and the sizes are even
+        self.pool1 = nnx.Conv(ch, ch, (3, 3), strides=2, padding=1,
                               rngs=rngs)                                # -> 14 x 14
         self.down2 = ResBlock(ch, 2 * ch, emb_dim, rngs)
         self.pool2 = nnx.Conv(2 * ch, 2 * ch, (3, 3), strides=2,
-                              padding='SAME', rngs=rngs)                # -> 7 x 7
+                              padding=1, rngs=rngs)                     # -> 7 x 7
         self.mid = ResBlock(2 * ch, 2 * ch, emb_dim, rngs)
         self.up1 = ResBlock(4 * ch, ch, emb_dim, rngs)                 # 14 x 14
         self.up0 = ResBlock(2 * ch, ch, emb_dim, rngs)                 # 28 x 28
-        self.norm = nnx.GroupNorm(ch, num_groups=8, rngs=rngs)
+        self.norm = nnx.GroupNorm(ch, num_groups=8, epsilon=1e-5,
+                                  use_fast_variance=False, rngs=rngs)
         self.outc = nnx.Conv(ch, out_channels, (3, 3), padding='SAME', rngs=rngs)
 
     def __call__(self, x, t, cond=None):

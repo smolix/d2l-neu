@@ -161,7 +161,11 @@ and multiplying the weights by $1 - \eta\lambda$ in every step are the same
 operation. Frameworks implement weight decay inside the optimizer rather
 than in the loss, as we will see at the end of this section. The two forms
 differ for optimizers that rescale each coordinate of the gradient, which
-exercise :exref:`ex_weight-decay-shrinkage-vs-penalty` explores.
+exercise :exref:`ex_weight-decay-shrinkage-vs-penalty` explores. An update
+that shrinks the weights directly, whatever the optimizer does with the
+gradient, is called *decoupled weight decay* :cite:`Loshchilov.Hutter.2019`;
+:numref:`sec_adamw` shows why the distinction matters for adaptive
+optimizers and for momentum.
 
 ### The $\ell_1$ Penalty and Sparsity
 
@@ -353,7 +357,8 @@ def train_scratch(lambd, data):
     return model, trainer.history['val_loss'][-1], norm
 ```
 
-Without the penalty, the model overfits.
+Without the penalty, the model fits the training labels exactly, yet its
+validation loss stays high.
 
 ```{.python .input #weight-decay-training-without-regularization}
 model_0, val_loss, norm = train_scratch(0, data)
@@ -367,7 +372,8 @@ The training loss falls by many orders of magnitude, to below $10^{-7}$:
 the model fits all 20 training labels. The validation loss barely moves
 and stays near 0.02. Twenty labels pin down only 20 of the 200 directions
 in weight space, so fitting them exactly barely improves the validation
-loss. Now we add the penalty, with $\lambda = 3$.
+loss; why, and why the penalty helps, is the subject of
+:numref:`subsec_wd-shrinkage`. Now we add the penalty, with $\lambda = 3$.
 
 ```{.python .input #weight-decay-using-weight-decay}
 model_3, val_loss, norm = train_scratch(3, data)
@@ -683,7 +689,10 @@ $\frac{1}{2} \cdot 0.018 = 0.009$. The regularized model comes close to
 this limit. Started from $\mathbf{w} = \mathbf{0}$, the unpenalized model
 does about as well: its undetermined part stays zero, and its validation
 loss is about 0.01, like that of the model with $\lambda = 3$ (exercise
-:exref:`ex_weight-decay-starting-point`). In this experiment, weight decay
+:exref:`ex_weight-decay-starting-point`). As
+:numref:`subsec_implicit_regularization` shows, gradient descent on the
+squared loss started from zero converges, when it converges at all, to the
+interpolating solution of smallest norm. In this experiment, weight decay
 helped by removing the random initialization from the directions that 20
 examples cannot see. Its other effect, damping the directions that the data
 determine poorly, is what the duplicated features showed, and no choice of
@@ -709,7 +718,7 @@ PyTorch optimizers take a `weight_decay` argument, which adds
 `weight_decay` times the parameter to its gradient. Passing the parameters
 in two groups decays the weight `net.weight` but not the bias `net.bias`.
 As in :numref:`sec_linear_concise`, we initialize the weights from
-$\mathcal{N}(0, 0.01^2)$ and the bias with zero, like the other frameworks.
+$\mathcal{N}(0, 0.01^2)$ and the bias with zero.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -774,9 +783,9 @@ def is_matrix(params):
     return jax.tree.map(lambda p: p.ndim > 1, params)
 
 class WeightDecay(d2l.LinearRegression):
-    def __init__(self, wd, num_inputs, lr):
-        super().__init__(num_inputs, lr)
-        self.save_hyperparameters()
+    def __init__(self, wd, num_inputs, lr, rngs=None):
+        super().__init__(num_inputs, lr, rngs)
+        self.save_hyperparameters(ignore=['rngs'])
 
     def configure_optimizers(self):
         return optax.chain(
@@ -800,7 +809,7 @@ trainer = d2l.Trainer(max_epochs=30)
 trainer.board.yscale = 'log'
 model = WeightDecay(wd=6, lr=0.005)
 model(data.X[:1])  # Creates the parameters of the lazy layer
-nn.init.normal_(model.net.weight, std=0.01)  # As in the other frameworks
+nn.init.normal_(model.net.weight, std=0.01)
 nn.init.zeros_(model.net.bias)
 trainer.fit(model, data)
 norm = float(torch.linalg.vector_norm(model.get_w_b()[0]))
@@ -891,7 +900,9 @@ started from zero, the unpenalized model does about as well.
        into a gradient step on $L$ followed by the penalty step, and modify
        the penalty step so that it sets $w_j$ to zero whenever it would
        change the sign of $w_j$. Relate the result to the feature selection
-       that lasso performs.
+       that lasso performs. The modified step is *soft-thresholding*, the
+       proximal step of the $\ell_1$ norm
+       (:numref:`subsec_mdl-proximal-operators`).
 
 1. **Shrinkage versus penalty.** Weight decay can be applied by shrinking
    the weights before the gradient step or by adding

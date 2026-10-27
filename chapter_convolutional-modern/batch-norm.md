@@ -183,25 +183,29 @@ leaves them unchanged, so it computes a fixed affine function of each
 feature. Dropout (:numref:`sec_dropout`) also has two modes: it zeroes units
 during training and passes them through unchanged at prediction time.
 
-The frameworks call $\rho$ the *momentum* of the layer, a name unrelated to
-the momentum method of optimization, and they disagree on both its meaning
-and its default. In MXNet, Keras, and Flax the momentum is $\rho$, with
-default 0.9 in MXNet and 0.99 in Keras and Flax; PyTorch's momentum is
-$1 - \rho$, with default 0.1. Keras also uses $\epsilon = 10^{-3}$ by
-default. Throughout this chapter we use $\rho = 0.9$ and $\epsilon = 10^{-5}$
-in every framework and pass them explicitly where a default differs, so that
-the four frameworks train the same network. A larger $\rho$ averages over
-more steps, during which the weights keep changing, so early in training its
-estimates lag behind the network that the training mode sees.
+Framework layers call $\rho$ or $1 - \rho$ the *momentum* of the layer, a name
+unrelated to the momentum method of optimization. Throughout this chapter we
+use $\rho = 0.9$ and $\epsilon = 10^{-5}$ and pass them explicitly where the
+layer's defaults differ. A larger $\rho$ averages over more steps, during
+which the weights keep changing, so early in training its estimates lag behind
+the network that the training mode sees.
 
 ## Implementation from Scratch
 
 The function `batch_norm` implements :eqref:`eq_batchnorm` and
 :eqref:`eq_bn_running` for both modes. For a fully connected layer it
 averages over the examples; for a convolutional layer, over the examples and
-the positions. MXNet and PyTorch store images as (examples, channels,
-height, width), so the channel axis is 1; TensorFlow and JAX put the
-channels last.
+the positions, one mean per channel.
+
+:begin_tab:`mxnet, pytorch`
+Images are stored as (examples, channels, height, width), so the channel
+axis is 1.
+:end_tab:
+
+:begin_tab:`tensorflow, jax`
+Images are stored as (examples, height, width, channels), so the channel
+axis is the last.
+:end_tab:
 
 ```{.python .input #batch-norm-implementation-from-scratch-1}
 %%tab mxnet
@@ -492,8 +496,11 @@ sigmoid and $2 \times 2$ average pooling, then fully connected layers with
 120, 84, and 10 outputs, sigmoids between them. Its weights start from
 Xavier initialization and its biases at zero, as in LeNet. `BNLeNet` inserts
 a batch normalization layer after each of the four hidden layers, before its
-sigmoid. This adds a scale and a shift for each of the $6 + 16 + 120 + 84 =
-226$ normalized features, 452 parameters on top of LeNet's 61,706.
+sigmoid, and drops the biases of these layers: batch normalization subtracts
+the mean of each feature, which removes any bias added before it, and its
+shift $\beta$ takes over the role of the bias. Each of the
+$6 + 16 + 120 + 84 = 226$ normalized features thus trades one bias for a
+scale and a shift, 226 parameters on top of LeNet's 61,706.
 
 ```{.python .input #batch-norm-concise-implementation-1}
 %%tab mxnet
@@ -503,14 +510,17 @@ class BNLeNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.HybridSequential()
-        self.net.add(
-            nn.Conv2D(6, kernel_size=5, padding=2), nn.BatchNorm(),
-            nn.Activation('sigmoid'), nn.AvgPool2D(pool_size=2, strides=2),
-            nn.Conv2D(16, kernel_size=5), nn.BatchNorm(),
+        self.net.add(  # No biases before batch normalization
+            nn.Conv2D(6, kernel_size=5, padding=2, use_bias=False),
+            nn.BatchNorm(), nn.Activation('sigmoid'),
+            nn.AvgPool2D(pool_size=2, strides=2),
+            nn.Conv2D(16, kernel_size=5, use_bias=False), nn.BatchNorm(),
             nn.Activation('sigmoid'), nn.AvgPool2D(pool_size=2, strides=2),
             nn.Flatten(),
-            nn.Dense(120), nn.BatchNorm(), nn.Activation('sigmoid'),
-            nn.Dense(84), nn.BatchNorm(), nn.Activation('sigmoid'),
+            nn.Dense(120, use_bias=False), nn.BatchNorm(),
+            nn.Activation('sigmoid'),
+            nn.Dense(84, use_bias=False), nn.BatchNorm(),
+            nn.Activation('sigmoid'),
             nn.Dense(num_classes))
         self.net.initialize(init.Xavier())
         self.net.hybridize()  # Compile the network into one graph
@@ -523,14 +533,16 @@ class BNLeNet(d2l.Classifier):
     def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
-        self.net = nn.Sequential(
-            nn.LazyConv2d(6, kernel_size=5, padding=2), nn.LazyBatchNorm2d(),
-            nn.Sigmoid(), nn.AvgPool2d(kernel_size=2, stride=2),
-            nn.LazyConv2d(16, kernel_size=5), nn.LazyBatchNorm2d(),
-            nn.Sigmoid(), nn.AvgPool2d(kernel_size=2, stride=2),
+        self.net = nn.Sequential(  # No biases before batch normalization
+            nn.LazyConv2d(6, kernel_size=5, padding=2, bias=False),
+            nn.LazyBatchNorm2d(), nn.Sigmoid(),
+            nn.AvgPool2d(kernel_size=2, stride=2),
+            nn.LazyConv2d(16, kernel_size=5, bias=False),
+            nn.LazyBatchNorm2d(), nn.Sigmoid(),
+            nn.AvgPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.LazyLinear(120), nn.LazyBatchNorm1d(), nn.Sigmoid(),
-            nn.LazyLinear(84), nn.LazyBatchNorm1d(), nn.Sigmoid(),
+            nn.LazyLinear(120, bias=False), nn.LazyBatchNorm1d(), nn.Sigmoid(),
+            nn.LazyLinear(84, bias=False), nn.LazyBatchNorm1d(), nn.Sigmoid(),
             nn.LazyLinear(num_classes))
 
     weight_init = d2l.LeNet.weight_init  # Xavier weights, zero biases
@@ -544,16 +556,18 @@ class BNLeNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         layers = tf.keras.layers
-        def bn():  # rho = 0.9 and epsilon = 1e-5, as in the other frameworks
+        def bn():  # rho = 0.9 and epsilon = 1e-5
             return layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
-        self.net = tf.keras.models.Sequential([
-            layers.Conv2D(6, kernel_size=5, padding='same'), bn(),
-            layers.Activation('sigmoid'), layers.AvgPool2D(2, strides=2),
-            layers.Conv2D(16, kernel_size=5), bn(),
+        self.net = tf.keras.models.Sequential([  # No biases before BN
+            layers.Conv2D(6, kernel_size=5, padding='same', use_bias=False),
+            bn(), layers.Activation('sigmoid'), layers.AvgPool2D(2, strides=2),
+            layers.Conv2D(16, kernel_size=5, use_bias=False), bn(),
             layers.Activation('sigmoid'), layers.AvgPool2D(2, strides=2),
             layers.Flatten(),
-            layers.Dense(120), bn(), layers.Activation('sigmoid'),
-            layers.Dense(84), bn(), layers.Activation('sigmoid'),
+            layers.Dense(120, use_bias=False), bn(),
+            layers.Activation('sigmoid'),
+            layers.Dense(84, use_bias=False), bn(),
+            layers.Activation('sigmoid'),
             layers.Dense(num_classes)])
 ```
 
@@ -568,15 +582,21 @@ class BNLeNet(d2l.Classifier):
         init = dict(kernel_init=nnx.initializers.xavier_uniform(), rngs=rngs)
         bn = lambda n: nnx.BatchNorm(n, momentum=0.9,  # rho = 0.9
                                      use_fast_variance=False, rngs=rngs)
-        pool = lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+        nb = dict(use_bias=False, **init)  # No biases before BN
+
+        def avg_pool(x):  # 2x2 windows, stride 2
+            return nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+
+        def flatten(x):  # One vector per example
+            return x.reshape((x.shape[0], -1))
+
         self.net = nnx.Sequential(
-            nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **init), bn(6),
-            nnx.sigmoid, pool,
-            nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **init),
-            bn(16), nnx.sigmoid, pool,
-            lambda x: x.reshape((x.shape[0], -1)),  # Flatten
-            nnx.Linear(400, 120, **init), bn(120), nnx.sigmoid,
-            nnx.Linear(120, 84, **init), bn(84), nnx.sigmoid,
+            nnx.Conv(1, 6, kernel_size=(5, 5), padding=2, **nb), bn(6),
+            nnx.sigmoid, avg_pool,
+            nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID', **nb),
+            bn(16), nnx.sigmoid, avg_pool, flatten,
+            nnx.Linear(400, 120, **nb), bn(120), nnx.sigmoid,
+            nnx.Linear(120, 84, **nb), bn(84), nnx.sigmoid,
             nnx.Linear(84, num_classes, **init))
 ```
 
@@ -594,14 +614,16 @@ one operator at a time.
 `LazyBatchNorm1d` each feature of a two-axis one. Their defaults,
 `momentum=0.1` and `eps=1e-5`, are our $\rho = 0.9$ and $\epsilon$.
 `BNLeNet` reuses LeNet's `weight_init`, which the Trainer applies after
-the first minibatch has fixed the shapes.
+the first minibatch has fixed the shapes; only the output layer has a bias
+for it to set to zero.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Keras' `BatchNormalization` defaults to `momentum=0.99` and
 `epsilon=1e-3`, so we pass $\rho = 0.9$ and $\epsilon = 10^{-5}$. Its
 `momentum` is $\rho$, as in our implementation. Xavier initialization
-(`glorot_uniform`) and zero biases are the Keras defaults.
+(`glorot_uniform`) and a zero bias for the output layer are the Keras
+defaults.
 :end_tab:
 
 :begin_tab:`jax`
@@ -610,7 +632,7 @@ $\rho = 0.9$; its `epsilon` defaults to $10^{-5}$. By default it also
 computes the variance in one pass, as the mean of the squares minus the
 square of the mean, which loses precision when the mean is large compared
 with the standard deviation; `use_fast_variance=False` selects the two-pass
-formula of the other frameworks. As in LeNet, the first
+formula, which subtracts the mean before squaring. As in LeNet, the first
 convolution pads by 2 and the second does not (Flax pads to `'SAME'` by
 default), so the flattened output has $16 \cdot 5 \cdot 5 = 400$ entries.
 :end_tab:
@@ -621,7 +643,7 @@ have changed since. While the weights still move quickly, the running
 averages describe a slightly different network from the one we evaluate.
 With a constant learning rate of 0.1, the prediction-mode validation
 accuracy of BN-LeNet drops by ten points or more in single epochs of some
-runs, the last epoch included, in every framework. We therefore let the
+runs, the last epoch included. We therefore let the
 learning rate decay to zero during training: as the rate shrinks, the
 weights stop moving and the running averages catch up with them. A common
 schedule has two phases. A linear *warmup* raises the rate from zero to the
@@ -655,18 +677,18 @@ def cosine_warmup(t, num_steps, warmup_steps):  #@save
 def cosine_warmup(t, num_steps, warmup_steps):  #@save
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
     t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
+    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return (tf.minimum(t / warmup_steps, 1)
-            * 0.5 * (1 + tf.cos(math.pi * progress)))
+    return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
 ```
 
 ```{.python .input #batch-norm-cosine-warmup}
 %%tab jax
 def cosine_warmup(t, num_steps, warmup_steps):  #@save
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
+    warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return (jnp.minimum(t / warmup_steps, 1)
-            * 0.5 * (1 + jnp.cos(jnp.pi * progress)))
+    return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
 ```
 
 `BNLeNet` steps this schedule after every minibatch, with a warmup of one
@@ -763,14 +785,14 @@ d2l.plot(list(range(1, 11)), list(curves.values()), 'epoch',
 {name: round(acc[-1], 3) for name, acc in curves.items()}  # After 10 epochs
 ```
 
-LeNet sits at chance, 10%, for the first two to five epochs, and after
-ten it reaches between 40% and 65%, depending on how long it stayed at
-chance. With batch normalization the same network is near 70% or above after
-the first epoch and reaches about 88% after ten, close to the 88--90% that
-LeNet reaches with twenty times the learning rate and three times the
-epochs. Its curve ends without the dips of a constant learning rate. Batch normalization added 452 parameters and a few
-operations per activation; it changed the scale of every layer's signal and
-gradient, not the capacity of the network.
+LeNet sits at chance, 10%, for the first two to five epochs, and after ten it
+reaches between 40% and 65%, depending on how long it stayed at chance. With
+batch normalization the same network is near 70% or above after the first
+epoch and reaches about 88% after ten, close to the 88--90% that LeNet reaches
+with twenty times the learning rate and three times the epochs. Its curve ends
+without the dips of a constant learning rate. Batch normalization added 226
+parameters and a few operations per activation; it changed the scale of every
+layer's signal and gradient, not the capacity of the network.
 
 Why batch normalization helps so much is less settled than what it computes.
 :citet:`Ioffe.Szegedy.2015` attributed its effect to reducing *internal
@@ -902,7 +924,10 @@ on ImageNet with 32 images per GPU, :citet:`wu2018groupnorm` report a top-1
 error of 23.6% with batch normalization and 24.1% with group normalization.
 With 2 images per GPU the error of batch normalization rises to 34.7%, while
 that of group normalization stays at 24.1%. Group normalization is therefore
-common where minibatches are small, as in detection and segmentation.
+common where minibatches are small, as in detection and segmentation. When
+training runs on several GPUs, *synchronized* batch normalization is another
+remedy: it computes the statistics over the global minibatch of all devices
+instead of each device's share (:numref:`sec_multi_gpu_concise`).
 
 ### Normalizer-Free Networks
 
@@ -911,10 +936,19 @@ network under control. Normalizer-free networks (NFNets)
 :cite:`brock2021nfnet` train ResNet-style networks without any normalization
 layer, to an ImageNet accuracy that was the best reported at the time for
 a model trained on ImageNet alone. They standardize the weights of each
-convolution instead of its outputs, and they clip a gradient whose norm is large relative to the norm
-of the weights it updates. Without batch statistics, the network computes
-the same function in training and at prediction time and its examples are
-independent.
+convolution instead of its outputs. Output channel $o$ of a convolution with
+$c_\textrm{i}$ input channels and a $k \times k$ kernel has
+$n_\textrm{in} = c_\textrm{i} k^2$ weights $\mathbf{w}_o$; with their mean
+$\mu_o$ and standard deviation $\sigma_o$, the convolution uses
+$$\hat{\mathbf{w}}_o = g_o \, \frac{\mathbf{w}_o - \mu_o}{\sigma_o \sqrt{n_\textrm{in}}}$$
+with a learnable gain $g_o$. Before the gain, the standardized weights have
+mean 0 and variance $1/n_\textrm{in}$ for any $\mathbf{w}_o$, so they keep
+throughout training the scale that a careful initialization
+(:numref:`subsec_he_init`) sets only at the start; NFNets multiply them by a
+further constant that depends on the activation function. NFNets also clip a
+gradient whose norm is large relative to the norm of the weights it updates.
+Without batch statistics, the network computes the same function in training
+and at prediction time and its examples are independent.
 
 ## Summary
 
@@ -934,9 +968,12 @@ connections to train much deeper networks.
 
 ## Exercises
 
-1. **Bias before batch norm.** Should we remove the bias parameter from
-   the fully connected layer or the convolutional layer before the batch
-   normalization? Justify your answer from :eqref:`eq_batchnorm`.
+1. **Bias before batch norm.** `BNLeNet` builds its four normalized layers
+   without a bias. Show from :eqref:`eq_batchnorm` that adding a bias
+   $\mathbf{b}$ before the normalization changes neither the output in
+   training mode nor the gradient with respect to the weights, and that the
+   gradient with respect to $\mathbf{b}$ is zero. What happens to such a
+   bias in prediction mode?
 1. [code] **Learning-rate ceiling.** Train LeNet (:numref:`sec_lenet`) and
    `BNLeNet` for 10 epochs at learning rates 0.1, 0.3, 1, 3, and 10. Plot
    the final validation accuracy of both models against the learning rate
@@ -965,9 +1002,8 @@ connections to train much deeper networks.
        weights, averaging the minibatch statistics with equal weights. Plot
        both validation curves, add the curve of this section's cosine
        schedule, and explain the differences.
-    1. Repeat the second part with $\rho = 0.99$ (in PyTorch,
-       `momentum=0.01`). Does a longer memory remove the difference? Why
-       or why not?
+    1. Repeat the second part with $\rho = 0.99$. Does a longer memory
+       remove the difference? Why or why not?
 1. [code] **Minibatch coupling.** The output of batch normalization for
    one example depends on the other examples in its minibatch. Train
    `BNLeNet` as in this section. Measure its validation accuracy in
@@ -975,8 +1011,8 @@ connections to train much deeper networks.
    images, and then in training mode with validation batches of one image.
    Measure in prediction mode first, since every training-mode forward
    pass updates the running estimates. Explain the three accuracies.
-   PyTorch refuses a training-mode minibatch of one example; explain why,
-   and measure with minibatches of two instead.
+   If the layer refuses a training-mode minibatch of one example, explain
+   why, and measure with minibatches of two instead.
 1. [code] **Small-batch training.** ● Build a variant of `BNLeNet` that
    uses group normalization with two groups after each convolutional layer
    and layer normalization (:numref:`subsec_layer-normalization-in-bn`)
@@ -1063,7 +1099,7 @@ Can we fix the scale of every layer's signal inside the network?
   of the weights;
 - count the numbers behind each mean in a convolutional layer;
 - tell training mode from prediction mode, and set the running-average
-  decay the same way in every framework;
+  decay $\rho$ and $\epsilon$ explicitly;
 - choose between batch, layer, and group normalization.
 
 **Running example:** LeNet against LeNet with batch normalization on
@@ -1198,18 +1234,45 @@ $$\hat\mu \leftarrow \rho\,\hat\mu + (1-\rho)\,\hat\mu_\mathcal{B}, \qquad
 Like dropout: one layer, two behaviors.
 :::
 
-::: {.slide title="Four Frameworks, Three Conventions: We Set ρ = 0.9 and ε = 10⁻⁵ Everywhere"}
+::: {.slide title="The Layer's Momentum Argument Is the Decay: We Use ρ = 0.9, ε = 10⁻⁵" only="mxnet"}
 [Two modes]{.kicker}
 
-| framework | `momentum` means | default | we pass |
-|---|---|--:|---|
-| MXNet | $\rho$ | 0.9 | (default) |
-| PyTorch | $1 - \rho$ | 0.1 | (default) |
-| Keras | $\rho$ | 0.99, $\epsilon = 10^{-3}$ | 0.9, $10^{-5}$ |
-| Flax | $\rho$ | 0.99 | 0.9 |
+- Gluon's `BatchNorm`: `momentum` is $\rho$, default 0.9.
+- `epsilon` defaults to $10^{-5}$.
+- The defaults are our values; we pass nothing.
 
-Unrelated to the momentum of optimization. With mismatched defaults the
-four frameworks train different networks.
+Unrelated to the momentum of optimization.
+:::
+
+::: {.slide title="The Layer's Momentum Argument Is the Decay: We Use ρ = 0.9, ε = 10⁻⁵" only="pytorch"}
+[Two modes]{.kicker}
+
+- `BatchNorm2d`: `momentum` is $1 - \rho$, default 0.1, i.e. $\rho = 0.9$.
+- `eps` defaults to $10^{-5}$.
+- The defaults are our values; we pass nothing.
+
+Unrelated to the momentum of optimization.
+:::
+
+::: {.slide title="The Layer's Momentum Argument Is the Decay: We Use ρ = 0.9, ε = 10⁻⁵" only="tensorflow"}
+[Two modes]{.kicker}
+
+- Keras' `BatchNormalization`: `momentum` is $\rho$, default 0.99.
+- `epsilon` defaults to $10^{-3}$.
+- We pass `momentum=0.9, epsilon=1e-5`.
+
+Unrelated to the momentum of optimization.
+:::
+
+::: {.slide title="The Layer's Momentum Argument Is the Decay: We Use ρ = 0.9, ε = 10⁻⁵" only="jax"}
+[Two modes]{.kicker}
+
+- Flax's `nnx.BatchNorm`: `momentum` is $\rho$, default 0.99.
+- `epsilon` defaults to $10^{-5}$.
+- We pass `momentum=0.9`, and `use_fast_variance=False` for the
+  two-pass variance.
+
+Unrelated to the momentum of optimization.
 :::
 
 ::: {.slide}
@@ -1304,10 +1367,12 @@ Running means moved $1 - \rho$, a tenth of the way, from 0 toward 2.
 - Conv 5×5, 6 channels, pad 2 → **BN** → sigmoid → avg-pool
 - Conv 5×5, 16 channels → **BN** → sigmoid → avg-pool
 - Dense 120 → **BN** → sigmoid; Dense 84 → **BN** → sigmoid; Dense 10
-- Xavier weights, zero biases, as in LeNet
+- Xavier weights, as in LeNet; no bias before BN (the mean subtraction
+  would remove it, and $\beta$ takes its place)
 
-$6 + 16 + 120 + 84 = 226$ features: **452** parameters ($\gamma$,
-$\beta$) on top of LeNet's 61,706, plus 452 running statistics.
+$6 + 16 + 120 + 84 = 226$ features: 226 biases out, 452 parameters
+($\gamma$, $\beta$) in, **226** more than LeNet's 61,706, plus 452
+running statistics.
 :::
 
 ::: {.slide title="A Learning Rate That Decays to Zero Lets the Running Averages Catch Up"}
@@ -1329,7 +1394,7 @@ $\beta$) on top of LeNet's 61,706, plus 452 running statistics.
 @!batch-norm-lenet-with-batch-normalization-5
 
 Validation accuracy after 10 epochs: LeNet 40–65% (it sits at chance
-for 2–5 epochs), BN-LeNet **≈ 88%** in every framework.
+for 2–5 epochs), BN-LeNet **≈ 88%**.
 :::
 
 ::: {.slide title="Check: Batch Normalization with a Minibatch of One"}
@@ -1341,8 +1406,8 @@ receives a minibatch of a single example. What does it output?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** Each value equals its own mean, so every standardized
-feature is 0 and the layer outputs $\beta$, whatever the input (PyTorch
-raises an error instead). A convolutional channel still averages over
+feature is 0 and the layer outputs $\beta$, whatever the input (some
+layers raise an error instead). A convolutional channel still averages over
 positions, but noisily.
 :::
 :::
@@ -1403,9 +1468,9 @@ Source: Wu and He (2018).
 - **Scale invariance:** weights × $a$ → gradient ÷ $a$; one learning rate
   for all layers.
 - **LeNet, base rate 0.1, cosine decay, 10 epochs:** 40–65% without,
-  ≈ 88% with, for 452 extra parameters.
-- **Two modes:** running averages with $\rho = 0.9$, $\epsilon = 10^{-5}$
-  in every framework.
+  ≈ 88% with, for 226 extra parameters.
+- **Two modes:** running averages with $\rho = 0.9$, $\epsilon = 10^{-5}$,
+  set explicitly.
 - **Small minibatches:** layer or group normalization, statistics within
   each example.
 

@@ -174,10 +174,10 @@ The encoded example contains one integer index per categorical field and a binar
    predicts $q=p/(p+r(1-p))$, where $p$ is the click probability under the
    original log, and that recovering $p$ amounts to adding $\ln r$ to the
    model's logit.
-1. Build the vocabulary with `min_threshold` equal to 1, 4 (the default), and
-   16. For each, report the number of embedding rows `sum(field_dims)` and the
-   fraction of test feature values that fall back to their field's default
-   index. Which fields does the threshold affect most?
+1. Build the vocabulary with `min_threshold` equal to 1, 4 (the default),
+   and 16. For each, report the number of embedding rows `sum(field_dims)`
+   and the fraction of test feature values that fall back to their field's
+   default index. Which fields does the threshold affect most?
 1. Instead of a vocabulary, a model can hash each (field, value) pair to one
    of $B$ rows of a shared table. Show that hashing $n$ distinct pairs
    uniformly occupies $B\big(1-(1-1/B)^n\big)$ rows in expectation, so that

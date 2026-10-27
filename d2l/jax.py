@@ -66,6 +66,7 @@ from IPython import display
 import json
 import math
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import os
 import pandas as pd
@@ -104,6 +105,26 @@ def set_figsize(figsize=(3.5, 2.5)):
     use_svg_display()
     d2l.plt.rcParams['figure.figsize'] = figsize
 
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_calculus`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib.
 
@@ -111,6 +132,9 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
     if legend:
         axes.legend(legend)
     axes.grid()
@@ -248,15 +272,16 @@ class Trainer(d2l.HyperParameters):
         self.board.show()
 
     def record(self, split, metrics, x):
-        for name, value in metrics.items():
-            self.history[f'{split}_{name}'].append(value)
-            self.board.draw(x, value, f'{split}_{name}')
+        for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+            self.history[f'{split}_{name}'].append(metrics[name])
+            self.board.draw(x, metrics[name], f'{split}_{name}')
 
     def evaluate(self, model, data):
         """Validation metrics of `model` on `data`, averaged over examples.
 
         Defined in :numref:`sec_oo-design`"""
-        self.prepare_data(data)
+        self.train_dataloader = None
+        self.val_dataloader = data.val_dataloader()
         self.prepare_model(model)
         return self.validate()
 
@@ -268,13 +293,6 @@ class Trainer(d2l.HyperParameters):
         self.val_model = nnx.view(model, deterministic=True,
                                   use_running_average=True,
                                   raise_if_not_found=False)
-
-    def prepare_optimizer(self, model):
-        tx = model.configure_optimizers()
-        if self.gradient_clip_val > 0:
-            tx = optax.chain(optax.clip_by_global_norm(self.gradient_clip_val),
-                             tx)
-        self.optim = nnx.Optimizer(model, tx, wrt=nnx.Param)
 
     def fit_epoch(self):
         metrics = d2l.Averager()
@@ -300,12 +318,18 @@ class Trainer(d2l.HyperParameters):
             batch = [d2l.to(a, self.gpus[0]) for a in batch]
         return batch
 
-    def clip_gradients(self, grad_clip_val, grads):
-        grad_leaves, _ = jax.tree_util.tree_flatten(grads)
-        norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in grad_leaves))
-        clip = lambda grad: jnp.where(norm < grad_clip_val,
-                                      grad, grad * (grad_clip_val / norm))
-        return jax.tree_util.tree_map(clip, grads)
+    def prepare_optimizer(self, model):
+        val = self.gradient_clip_val
+        key = (jax.tree.structure(model), type(model).configure_optimizers, val)
+        if key not in d2l.optimizer_cache:
+            tx = model.configure_optimizers()
+            if val > 0:  # The closure holds only val, not the trainer
+                clip = lambda grads, params: clip_gradients(val, grads)
+                tx = optax.chain(optax.stateless(clip), tx)
+            d2l.optimizer_cache.clear()
+            d2l.optimizer_cache[key] = tx
+        self.optim = nnx.Optimizer(model, d2l.optimizer_cache[key],
+                                   wrt=nnx.Param)
 
 class ProgressBoard(d2l.HyperParameters):
     """Curves that grow during training; `show` redraws them.
@@ -361,7 +385,7 @@ class ProgressBoard(d2l.HyperParameters):
         ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
         if self.xlim: ax.set_xlim(self.xlim)
         if self.ylim: ax.set_ylim(self.ylim)
-        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if self.yscale == 'log': d2l.set_log_ticks(ax.yaxis)
         if acc_ax is not None: acc_ax.set_ylabel('accuracy')
         lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
         labels = [line.get_label() for line in lines]
@@ -371,6 +395,8 @@ class ProgressBoard(d2l.HyperParameters):
         elif lines:
             ax.legend(lines, labels)
         ax.grid()
+
+optimizer_cache = {}  # The most recent optax transformation, by its key
 
 class SyntheticRegressionData(d2l.DataModule):
     """Synthetic data for linear regression.
@@ -422,19 +448,6 @@ class ArrayLoader:
             start = i * self.batch_size
             batch_indices = order[start : start + self.batch_size]
             yield tuple(a[batch_indices] for a in self.arrays)
-
-class TensorFlowDataLoader:
-    """Expose a tf.data.Dataset as re-iterable NumPy batches.
-
-    Defined in :numref:`sec_synthetic-regression-data`"""
-    def __init__(self, dataset):
-        self.dataset = dataset
-
-    def __iter__(self):
-        return self.dataset.as_numpy_iterator()
-
-    def __len__(self):
-        return len(self.dataset)
 
 class LinearRegressionScratch(d2l.Module):
     """The linear regression model implemented from scratch.
@@ -489,14 +502,14 @@ class Averager:
         self.n += n
 
     def mean(self):
-        """One host synchronization per metric."""
-        return {name: float(s) / self.n for name, s in self.sums.items()}
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 
 @nnx.jit
 def _trainer_train_step(model, optimizer, batch):
     def loss_fn(model):
-        out = collections.OrderedDict(
-            d2l.as_metrics(model.training_step(batch)))
+        out = d2l.as_metrics(model.training_step(batch))
         return out['loss'], out
     grads, out = nnx.grad(loss_fn, has_aux=True)(model)
     optimizer.update(model, grads)
@@ -504,8 +517,7 @@ def _trainer_train_step(model, optimizer, batch):
 
 @nnx.jit
 def _trainer_validation_step(model, batch):
-    return collections.OrderedDict(
-        d2l.as_metrics(model.validation_step(batch)))
+    return d2l.as_metrics(model.validation_step(batch))
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.
@@ -549,7 +561,7 @@ class FashionMNIST(d2l.DataModule):
         X, y = self.train if train else self.val
         X = tf.expand_dims(X, axis=3) / 255  # Channel axis last; values in [0, 1]
         resize = lambda X, y: (tf.image.resize(X, self.resize), y)
-        return d2l.TensorFlowDataLoader(tf.data.Dataset.from_tensor_slices(
+        return TensorFlowDataLoader(tf.data.Dataset.from_tensor_slices(
             (X, tf.cast(y, tf.int32))).shuffle(len(y) if train else 1).batch(
                 self.batch_size).map(resize))
 
@@ -561,9 +573,20 @@ class FashionMNIST(d2l.DataModule):
         if labels is None:
             labels = self.text_labels(y)
         X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
-        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
-            for image in ax.get_images():
-                image.set_cmap('gray')
+        d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
+
+class TensorFlowDataLoader:
+    """Expose a tf.data.Dataset as re-iterable NumPy batches.
+
+    Defined in :numref:`sec_fashion_mnist`"""
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __iter__(self):
+        return self.dataset.as_numpy_iterator()
+
+    def __len__(self):
+        return len(self.dataset)
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -593,12 +616,13 @@ class Classifier(d2l.Module):
         X = jnp.zeros(X_shape)
         for layer in self.net.layers:
             X = layer(X)
-            print(layer.__class__.__name__, 'output shape:\t', X.shape)
+            # Activations and pooling are plain functions: print their names
+            name = getattr(layer, '__name__', type(layer).__name__)
+            print(f'{name:<22} {tuple(X.shape)}')
 
 def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
-    p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
-                                     axis=1).squeeze(-1), min=1e-12)
+    p = jnp.clip(y_hat[jnp.arange(len(y_hat)), y], min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
 class SoftmaxRegression(d2l.Classifier):
@@ -699,9 +723,9 @@ def cosine_warmup(t, num_steps, warmup_steps):
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
 
     Defined in :numref:`sec_batch_norm`"""
+    warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return (jnp.minimum(t / warmup_steps, 1)
-            * 0.5 * (1 + jnp.cos(jnp.pi * progress)))
+    return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
 
 class Residual(nnx.Module):
     """The Residual block of ResNet models.
@@ -710,34 +734,38 @@ class Residual(nnx.Module):
     def __init__(self, num_channels, use_1x1conv=False, strides=(1, 1),
                  in_channels=None, rngs=None):
         in_channels = num_channels if in_channels is None else in_channels
+        strides = (strides, strides) if isinstance(strides, int) else strides
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        # He initialization; biases start at zero (the Flax default)
+        # He initialization; no conv biases, since the batch normalization
+        # after each conv removes them
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        # padding=1 on every side, as in the other frameworks ('SAME' pads
-        # only right and bottom when the stride is 2 and sizes are even)
+        # padding=1 on every side: 'SAME' pads only right and bottom when the
+        # stride is 2 and the sizes are even
         self.conv1 = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                              padding=1, strides=strides,
+                              padding=1, strides=strides, use_bias=False,
                               kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(num_channels, num_channels, kernel_size=(3, 3),
-                              padding='same', kernel_init=he, rngs=rngs)
+                              padding='same', use_bias=False,
+                              kernel_init=he, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance (the Flax
+        # defaults are 0.99 and a one-pass variance)
+        bn = lambda: nnx.BatchNorm(num_channels, momentum=0.9,
+                                   use_fast_variance=False, rngs=rngs)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or any(s != 1 for s in strides):
             self.conv3 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  kernel_init=he, rngs=rngs)
+                                  use_bias=False, kernel_init=he, rngs=rngs)
+            self.bn3 = bn()
         else:
             self.conv3 = None
-        # Running averages decay 0.9 and a two-pass variance, as in the other
-        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
-        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
-                                     rngs=rngs)
-        self.bn1, self.bn2 = bn(num_channels), bn(num_channels)
+        self.bn1, self.bn2 = bn(), bn()
 
     def __call__(self, X):
         Y = nnx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return nnx.relu(Y)
 
@@ -748,28 +776,33 @@ class ResNeXtBlock(nnx.Module):
     def __init__(self, num_channels, groups, bot_mul, use_1x1conv=False,
                  strides=(1, 1), in_channels=None, rngs=None):
         in_channels = num_channels if in_channels is None else in_channels
+        strides = (strides, strides) if isinstance(strides, int) else strides
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         bot_channels = int(round(num_channels * bot_mul))
-        # He initialization; biases start at zero (the Flax default)
+        # He initialization; no conv biases, since the batch normalization
+        # after each conv removes them
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         self.conv1 = nnx.Conv(in_channels, bot_channels, kernel_size=(1, 1),
-                              strides=(1, 1), kernel_init=he, rngs=rngs)
+                              strides=(1, 1), use_bias=False,
+                              kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(bot_channels, bot_channels,
                               kernel_size=(3, 3), strides=strides,
                               padding=1, feature_group_count=groups,
-                              kernel_init=he, rngs=rngs)
+                              use_bias=False, kernel_init=he, rngs=rngs)
         self.conv3 = nnx.Conv(bot_channels, num_channels, kernel_size=(1, 1),
-                              strides=(1, 1), kernel_init=he, rngs=rngs)
-        # Running averages decay 0.9 and a two-pass variance, as in the other
-        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
+                              strides=(1, 1), use_bias=False,
+                              kernel_init=he, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance (the Flax
+        # defaults are 0.99 and a one-pass variance)
         bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
                                      rngs=rngs)
         self.bn1, self.bn2 = bn(bot_channels), bn(bot_channels)
         self.bn3 = bn(num_channels)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or any(s != 1 for s in strides):
             self.conv4 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  kernel_init=he, rngs=rngs)
+                                  use_bias=False, kernel_init=he, rngs=rngs)
             self.bn4 = bn(num_channels)
         else:
             self.conv4 = None
@@ -1127,6 +1160,16 @@ class RNNLMScratch(d2l.Classifier):
                            (logits - logits.max()) / temperature]
                 outputs.append(rng.choices(range(len(weights)), weights)[0])
         return tok.decode(outputs)
+
+def clip_gradients(grad_clip_val, grads):
+    """Rescale the gradients to global norm at most grad_clip_val.
+
+    Defined in :numref:`sec_rnn-scratch`"""
+    grad_leaves, _ = jax.tree_util.tree_flatten(grads)
+    norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in grad_leaves))
+    clip = lambda grad: jnp.where(norm < grad_clip_val,
+                                  grad, grad * (grad_clip_val / norm))
+    return jax.tree_util.tree_map(clip, grads)
 
 class RNN(nnx.Module):
     """The RNN model implemented with high-level APIs.
@@ -2392,11 +2435,16 @@ class ResNet18(nnx.Module):
     """A slightly modified ResNet-18 (small stem, no max-pool).
 
     Defined in :numref:`sec_multi_gpu_concise`"""
-    def __init__(self, num_classes=10, rngs=None):
+    def __init__(self, num_classes=10, in_channels=1, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+        # Stem conv without bias (the batch normalization after it removes
+        # it); running averages decay 0.9, two-pass variance
         self.net = nnx.Sequential(
-            nnx.Conv(1, 64, (3, 3), (1, 1), padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
+            nnx.Conv(in_channels, 64, (3, 3), (1, 1), padding='same',
+                     use_bias=False, kernel_init=he, rngs=rngs),
+            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
+                          rngs=rngs), nnx.relu,
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
@@ -2409,7 +2457,7 @@ class ResNet18(nnx.Module):
                          in_channels=256, rngs=rngs),
             d2l.Residual(512, in_channels=512, rngs=rngs),
             lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
+            nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 
     def __call__(self, x):
         return self.net(x)
@@ -2901,10 +2949,13 @@ class ResBlock(nnx.Module):
 
     Defined in :numref:`sec_diffusion-annealed`"""
     def __init__(self, c_in, c_out, emb_dim, rngs):
-        self.norm1 = nnx.GroupNorm(c_in, num_groups=8, rngs=rngs)
+        # epsilon 1e-5 and a two-pass variance in every group normalization
+        self.norm1 = nnx.GroupNorm(c_in, num_groups=8, epsilon=1e-5,
+                                   use_fast_variance=False, rngs=rngs)
         self.conv1 = nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
         self.emb = nnx.Linear(emb_dim, c_out, rngs=rngs)
-        self.norm2 = nnx.GroupNorm(c_out, num_groups=8, rngs=rngs)
+        self.norm2 = nnx.GroupNorm(c_out, num_groups=8, epsilon=1e-5,
+                                   use_fast_variance=False, rngs=rngs)
         self.conv2 = nnx.Conv(c_out, c_out, (3, 3), padding='SAME', rngs=rngs)
         self.skip = (nnx.Conv(c_in, c_out, (1, 1), rngs=rngs) if c_in != c_out
                      else None)
@@ -2926,15 +2977,18 @@ class UNet(nnx.Module):
         self.emb2 = nnx.Linear(emb_dim, emb_dim, rngs=rngs)
         self.inc = nnx.Conv(in_channels, ch, (3, 3), padding='SAME', rngs=rngs)
         self.down1 = ResBlock(ch, ch, emb_dim, rngs)                   # 28 x 28
-        self.pool1 = nnx.Conv(ch, ch, (3, 3), strides=2, padding='SAME',
+        # Strided convs pad 1 on every side: 'SAME' pads only right and
+        # bottom when the stride is 2 and the sizes are even
+        self.pool1 = nnx.Conv(ch, ch, (3, 3), strides=2, padding=1,
                               rngs=rngs)                                # -> 14 x 14
         self.down2 = ResBlock(ch, 2 * ch, emb_dim, rngs)
         self.pool2 = nnx.Conv(2 * ch, 2 * ch, (3, 3), strides=2,
-                              padding='SAME', rngs=rngs)                # -> 7 x 7
+                              padding=1, rngs=rngs)                     # -> 7 x 7
         self.mid = ResBlock(2 * ch, 2 * ch, emb_dim, rngs)
         self.up1 = ResBlock(4 * ch, ch, emb_dim, rngs)                 # 14 x 14
         self.up0 = ResBlock(2 * ch, ch, emb_dim, rngs)                 # 28 x 28
-        self.norm = nnx.GroupNorm(ch, num_groups=8, rngs=rngs)
+        self.norm = nnx.GroupNorm(ch, num_groups=8, epsilon=1e-5,
+                                  use_fast_variance=False, rngs=rngs)
         self.outc = nnx.Conv(ch, out_channels, (3, 3), padding='SAME', rngs=rngs)
 
     def __call__(self, x, t, cond=None):
@@ -4378,25 +4432,22 @@ class BasicScheduler(HPOScheduler):
 class HPOTuner(d2l.HyperParameters):
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            error = float(error)
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 
     def bookkeeping(self, config: dict, error: float, runtime: float):
         self.records.append({"config": config, "error": error, "runtime": runtime})
@@ -4484,18 +4535,7 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         return [x[0] for x in sorted_rung[:n]]
 
 import os
-from matplotlib import ticker
 from matplotlib.figure import Figure
-
-def set_log_ticks(axis):
-    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
-    axis.set_minor_formatter(ticker.NullFormatter())
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None):
@@ -4573,79 +4613,35 @@ def squared_loss(y_hat, y):
     Defined in :numref:`sec_utils`"""
     return (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
 
-def load_array(data_arrays, batch_size, is_train=True):
-    """Construct a JAX-compatible data iterator.
+class ArrayDataLoader(d2l.ArrayLoader):
+    """`d2l.ArrayLoader` that yields JAX arrays and also accepts a dataset.
 
-    For training, the last partial batch is dropped so every minibatch
-    has the same shape — this lets a `@jax.jit`'d step function compile
-    once per epoch instead of recompiling for the smaller last batch.
-    Validation iterators yield all batches (the last may be smaller),
-    matching how PyTorch / TF / MXNet behave.
+    Pass the arrays as positional arguments, or one dataset object with
+    `__len__` and `__getitem__` whose items are tuples of fields. Like
+    `d2l.ArrayLoader`, it keeps the last, partial minibatch unless
 
     Defined in :numref:`sec_utils`"""
-    # Keep dataset storage on the host. Only minibatches need to be transferred
-    # to an accelerator, and host-side indexing avoids launching a device gather
-    # for every array in every minibatch.
-    data_arrays = tuple(np.asarray(a) for a in data_arrays)
-    n = data_arrays[0].shape[0]
-    indices = np.arange(n)
-    last = n - (n % batch_size) if is_train else n
-    def data_iter():
-        if is_train:
-            np.random.shuffle(indices)
-            # Shuffle each full field once, then transfer contiguous slices.
-            # This avoids a separate fancy-index gather for every field and
-            # every minibatch.
-            epoch_arrays = tuple(a[indices] for a in data_arrays)
-        else:
-            epoch_arrays = data_arrays
-        for i in range(0, last, batch_size):
-            yield tuple(jnp.array(a[i: min(i + batch_size, n)])
-                        for a in epoch_arrays)
-    class DataIter:
-        def __iter__(self):
-            return data_iter()
-        def __len__(self):
-            return last // batch_size if is_train else (n + batch_size - 1) // batch_size
-    return DataIter()
-
-class ArrayDataLoader:
-    """A simple data loader for JAX that batches arrays or dataset objects.
-
-    Defined in :numref:`sec_utils`"""
-    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False,
-                 **kwargs):
-        if len(args) == 1 and hasattr(args[0], '__len__') and hasattr(args[0], '__getitem__'):
-            dataset = args[0]
-            items = [dataset[i] for i in range(len(dataset))]
+    def __init__(self, *args, batch_size=32, shuffle=False, drop_last=False):
+        if len(args) == 1 and not hasattr(args[0], 'shape'):  # A dataset
+            items = [args[0][i] for i in range(len(args[0]))]
             if isinstance(items[0], (tuple, list)):
-                self.arrays = tuple(np.array([item[j] for item in items])
-                                    for j in range(len(items[0])))
+                args = tuple(np.array([item[j] for item in items])
+                             for j in range(len(items[0])))
             else:
-                self.arrays = (np.array(items),)
-        else:
-            self.arrays = tuple(np.asarray(a) for a in args)
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.drop_last = drop_last
+                args = (np.array(items),)
+        super().__init__(args, batch_size, shuffle=shuffle,
+                         drop_last=drop_last)
 
     def __iter__(self):
-        n = self.arrays[0].shape[0]
-        indices = np.arange(n)
-        if self.shuffle:
-            np.random.shuffle(indices)
-        for i in range(0, n, self.batch_size):
-            end = i + self.batch_size
-            if self.drop_last and end > n:
-                break
-            batch_idx = indices[i:min(end, n)]
-            yield tuple(jnp.array(a[batch_idx]) for a in self.arrays)
+        for batch in super().__iter__():
+            yield tuple(jnp.asarray(a) for a in batch)
 
-    def __len__(self):
-        n = self.arrays[0].shape[0]
-        if self.drop_last:
-            return n // self.batch_size
-        return (n + self.batch_size - 1) // self.batch_size
+def load_array(data_arrays, batch_size, is_train=True):
+    """Minibatches of JAX arrays, reshuffled each pass if is_train.
+
+    Defined in :numref:`sec_utils`"""
+    return d2l.ArrayDataLoader(*data_arrays, batch_size=batch_size,
+                               shuffle=is_train)
 
 class Animator:
     """For plotting data in animation.
@@ -4750,8 +4746,9 @@ def evaluate_loss(net, data_iter, loss):
         metric.add(d2l.reduce_sum(l), d2l.size(l))
     return metric[0] / metric[1]
 
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None):
+    """Plot a list of images (cmap colors single-channel images).
 
     Defined in :numref:`sec_utils`"""
     figsize = (num_cols * scale, num_rows * scale)
@@ -4762,7 +4759,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img)
+        ax.imshow(img, cmap=cmap)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:

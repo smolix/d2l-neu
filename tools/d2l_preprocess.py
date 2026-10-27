@@ -233,9 +233,16 @@ def group_code_tabs(blocks, primary):
                 if is_fw_specific(blocks[i]):
                     cb = blocks[i]
                     fws = [t.strip() for t in cb.tab.split(',')]
-                    # If any listed framework already has content in this
-                    # tabset, start a new one (separate code cell).
-                    if any(fw in tabset.tabs for fw in fws if fw in FRAMEWORKS):
+                    # Start a new tabset (separate code cell) when a listed
+                    # framework already has content in this one, or when the
+                    # cell id changes: the per-framework variants of one cell
+                    # share its id, so a different id is a different cell
+                    # (lenet's PyTorch-only init_cnn must not share a tabset
+                    # with the MXNet LeNet class that follows it).
+                    ids = {x for x in tabset.ids.values() if x is not None}
+                    if (any(fw in tabset.tabs for fw in fws if fw in FRAMEWORKS)
+                            or (cb.cell_id is not None and ids
+                                and cb.cell_id not in ids)):
                         result.append(tabset)
                         tabset = CodeTabSet()
                     for fw in fws:

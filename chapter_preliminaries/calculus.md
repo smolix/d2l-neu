@@ -37,6 +37,7 @@ problem of generalization, which later chapters take up.
 %%tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 from mxnet import np as mnp, npx
 import numpy as np
@@ -47,6 +48,7 @@ npx.set_np()
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import numpy as np
 import torch
@@ -56,6 +58,7 @@ import torch
 %%tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import numpy as np
 import tensorflow as tf
@@ -65,6 +68,7 @@ import tensorflow as tf
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 from jax import numpy as jnp
 import numpy as np
@@ -211,7 +215,8 @@ h32 = jnp.asarray(h, dtype=jnp.float32)
 ```
 
 We draw the two error curves with `d2l.plot`, which plots several curves in
-one figure and which we define at the end of this section. Two reference
+one figure and which we define at the end of this section
+(:numref:`subsec_calculus-plotting`). Two reference
 lines show the truncation error $3h$ and the bound $\epsilon / h$ on the
 rounding error in float32.
 
@@ -641,12 +646,16 @@ gradient then costs a small multiple of the cost of computing the loss,
 whatever the number of parameters.
 
 ## Plotting Utilities
+:label:`subsec_calculus-plotting`
 
 The plots in this section were drawn by `d2l.plot`, which later sections
-reuse; none of its code is needed to follow the calculus. The comment
-`#@save` stores a definition in the `d2l` package so that later sections can
-call it. The first cell sets the format and size of a figure and the labels,
-ranges, and scales of its axes.
+reuse; none of its code is needed to follow the calculus. In the book's
+source files these definitions carry the marker `#@save`, which copies them
+into the `d2l` package so that later sections can call them as `d2l.plot`
+and so on. The first cell sets the format and size of a figure
+and the labels, ranges, and scales of its axes. On a logarithmic scale,
+`set_log_ticks` labels all ticks of an axis in one format: as plain numbers
+such as 0.01 when these are short, and as powers of 10 otherwise.
 
 ```{.python .input #calculus-visualization-utilities-1}
 def use_svg_display():  #@save
@@ -658,12 +667,33 @@ def set_figsize(figsize=(3.5, 2.5)):  #@save
     use_svg_display()
     d2l.plt.rcParams['figure.figsize'] = figsize
 
+def set_log_ticks(axis):  #@save
+    """Label all major ticks of a log axis in one format."""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
 #@save
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib."""
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
     if legend:
         axes.legend(legend)
     axes.grid()

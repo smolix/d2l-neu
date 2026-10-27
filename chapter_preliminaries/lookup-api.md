@@ -6,16 +6,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-The call `torch.ones(2, 3)` returns a $2 \times 3$ matrix of ones. The call
-`tf.ones(2, 3)` returns a vector of two ones of an integer type and raises no
-error, while `jax.numpy.ones(2, 3)` and `mxnet.np.ones(2, 3)` raise an
-error. The four functions have the same name and the same purpose, yet they
-read their arguments differently. No book can record such details for every
-function. The main module of PyTorch alone defines about a thousand public
-names and `jax.numpy` about four hundred, and new releases add names and
-deprecate others. This book explains the functions it uses, but every
-project soon needs a function that the book never mentions, or uses a
-familiar one in an unfamiliar way.
+A call can look harmless and still do something other than what we meant. The
+call `ones(2, 3)` looks like a request for a $2 \times 3$ matrix of ones,
+but whether it is one depends on how the function reads its arguments, and
+only the function's signature says what each argument means.
+
+:begin_tab:`mxnet`
+In MXNet, `mnp.ones(2, 3)` raises an error, while `mnp.ones((2, 3))`
+returns the matrix.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch, `torch.ones(2, 3)` returns the matrix, while
+`torch.ones(shape=(2, 3))` raises an error.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow, `tf.ones(2, 3)` raises no error, yet it returns a vector of
+two ones of an integer type rather than a $2 \times 3$ matrix.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, `jnp.ones(2, 3)` raises an error, while `jnp.ones((2, 3))` returns
+the matrix.
+:end_tab:
+
+No book can record such details for every function. The main module of a
+deep learning framework defines several hundred to a thousand public names,
+and new releases add names and deprecate others. This book explains the
+functions it uses, but every project soon needs a function that the book
+never mentions, or uses a familiar one in an unfamiliar way.
 
 Instead of a list, we need a procedure that finds out reliably what a
 function does. This section describes one with four steps, shown in
@@ -24,7 +44,7 @@ inspect the arguments and the documentation of a candidate, read the
 reference pages or the source code when the documentation leaves a question
 open, and verify the behavior with a small example whose result we
 predicted. All four steps work inside a notebook, and at the end of the
-section they explain the four results above.
+section they explain the result above.
 
 ![Four steps for finding out what a function does: discover the names that a module defines, inspect the signature and docstring of a candidate, read the reference documentation or the source code, and verify the behavior with a small example. A result that contradicts the prediction, or answers a question that the prediction left open, sends us back to read further.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
@@ -170,29 +190,52 @@ argument written as `name=value` has a default value and may be omitted.
 Arguments that follow a lone `*` can be passed only by keyword. An argument
 written as `*name` collects any number of positional arguments.
 
-The signatures of `ones` in the four frameworks begin as follows:
+With these conventions, the signature predicts what `ones(2, 3)` does
+before we run it:
 
-| Framework | Signature |
-|---|---|
-| PyTorch | `ones(*size, *, out=None, dtype=None, ...)` |
-| TensorFlow | `ones(shape, dtype=tf.float32, name=None, layout=None)` |
-| JAX | `ones(shape, dtype=None, *, device=None, ...)` |
-| MXNet | `ones(shape, dtype=None, order='C', device=None)` |
+:begin_tab:`mxnet`
+The signature `ones(shape, dtype=None, order='C', device=None)` takes the
+shape as a single argument and the data type as the second positional
+argument. In `mnp.ones(2, 3)`, the 2 therefore becomes the shape and the 3
+the data type. The integer 3 is not a data type, so we predict an error.
+:end_tab:
 
-PyTorch collects all positional arguments into the shape, and it accepts the
-data type only by keyword. The other three frameworks take the shape as a
-single argument and the data type as the second positional argument, so they
-read 2 as the shape and 3 as the data type. We therefore predict a
-$2 \times 3$ matrix from `ones(2, 3)` in PyTorch, and a call that takes the
-integer 3 for a data type in the other three frameworks.
+:begin_tab:`pytorch`
+The signature `ones(*size, *, out=None, dtype=None, ...)` collects all
+positional arguments into the shape `size`, and the data type follows the
+lone `*`, so it can be passed only by keyword. In `torch.ones(2, 3)`, both
+numbers therefore become the shape, and we predict a $2 \times 3$ matrix of
+ones of the default type, `float32`. The signature also has no argument
+named `shape`, which is why `torch.ones(shape=(2, 3))` fails.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The signature `ones(shape, dtype=tf.float32, name=None, layout=None)` takes
+the shape as a single argument and the data type as the second positional
+argument. In `tf.ones(2, 3)`, the 2 therefore becomes the shape and the 3
+the data type. We predict a vector of two ones, of whatever type the integer
+3 names, or an error if it names none; the signature cannot tell which.
+:end_tab:
+
+:begin_tab:`jax`
+The signature `ones(shape, dtype=None, *, device=None, ...)` takes the
+shape as a single argument and the data type as the second positional
+argument. In `jnp.ones(2, 3)`, the 2 therefore becomes the shape and the 3
+the data type. The integer 3 is not a data type, so we predict an error.
+:end_tab:
 
 In a notebook, two shortcuts show the same documentation. Appending `?` to
 a name, as in `ones?`, shows the docstring in a separate pane, and appending
 `??` also shows the source code of the function. The source answers
 questions that a docstring leaves open, such as how an argument is converted
 or checked. Only functions written in Python have source code to show. Many
-core functions, `torch.ones` among them, are compiled from C++, and for
-those `??` shows the docstring alone.
+core functions are compiled from C++, and for those `??` shows the
+docstring alone.
+
+:begin_tab:`pytorch`
+`torch.ones` is one of them: `help(torch.ones)` calls it a built-in
+function.
+:end_tab:
 
 When the docstring is not enough, the framework's reference documentation
 describes every public function on a page of its own, and its tutorials show
@@ -277,23 +320,43 @@ except TypeError as e:
 print('ones((2, 3)) has shape', jnp.ones((2, 3)).shape)
 ```
 
-The predictions hold in all four frameworks. PyTorch returns a $2 \times 3$
-matrix of `float32` ones. JAX and MXNet cannot interpret the integer 3 as a
-data type, so the call fails; the message of JAX even names the likely
-intent. TensorFlow also takes 3 for the data type, but our prediction left
-open which type the integer 3 names: the result is a vector of two `int32`
-ones, and no error is raised. The source answers this question. The first
-statement in the body of `tf.ones`, visible with `tf.ones??`, passes `dtype`
-to `tf.as_dtype`. This function accepts not only type objects but also the
-integers that TensorFlow uses internally to number its types, and
-`tf.as_dtype(3)` is `tf.int32`. A call written with PyTorch in mind thus
-runs in TensorFlow and computes something else.
+:begin_tab:`mxnet`
+The prediction holds: MXNet cannot interpret the integer 3 as a data type,
+so the call fails. The last line of the output shows the call that we
+meant: `mnp.ones((2, 3))`, with the shape passed as one tuple, returns a
+$2 \times 3$ matrix.
+:end_tab:
 
-In all four frameworks, `ones((2, 3))`, with the shape passed as one tuple,
-returns a $2 \times 3$ matrix, as the last line of the output shows. More
-generally, when a result contradicts the prediction, or answers a question
-that the prediction left open, we go around the loop again: we read further,
-in the reference documentation or the source, and test the new prediction.
+:begin_tab:`pytorch`
+The prediction holds: a $2 \times 3$ matrix of `float32` ones. The last
+line of the output shows that `torch.ones((2, 3))`, with the shape passed as
+one tuple, returns the same matrix. The docstring explains why: `size` can
+be a variable number of integers or a single list or tuple.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The call raises no error and returns a vector of two `int32` ones, so the
+integer 3 names a type. Our prediction left open which type, and the
+source answers this. The first statement in the body of `tf.ones`, visible
+with `tf.ones??`, passes `dtype` to `tf.as_dtype`. This function accepts not
+only type objects but also the integers that TensorFlow uses internally to
+number its types, and `tf.as_dtype(3)` is `tf.int32`. A call meant to make a
+$2 \times 3$ matrix thus runs and computes something else. The last line of
+the output shows the call that we meant: `tf.ones((2, 3))`, with the shape
+passed as one tuple, returns the $2 \times 3$ matrix.
+:end_tab:
+
+:begin_tab:`jax`
+The prediction holds: JAX cannot interpret the integer 3 as a data type, so
+the call fails, and the error message even names the likely intent. The
+last line of the output shows the call that we meant: `jnp.ones((2, 3))`,
+with the shape passed as one tuple, returns a $2 \times 3$ matrix.
+:end_tab:
+
+More generally, when a result contradicts the prediction, or answers a
+question that the prediction left open, we go around the loop again: we
+read further, in the reference documentation or the source, and test the
+new prediction.
 
 Coding assistants answer many such questions directly. Asked for a
 $2 \times 3$ tensor of ones, an assistant proposes a call, and the call
@@ -301,8 +364,8 @@ usually looks plausible. Such a suggestion is a candidate, and it goes
 through the same steps as a name we found ourselves: we check that the name
 exists, for example with `dir` or `hasattr`, read its signature, predict the
 result, and run a small example. The last step matters most, because a
-wrong suggestion need not fail: `tf.ones(2, 3)` names a function that
-exists, fits its signature, and runs, yet computes something else.
+wrong suggestion need not fail: it can name a function that exists, fit
+its signature, and run, yet compute something else.
 
 The four steps let us find out what a function does without leaving the
 notebook, and the last step makes the answer reliable, whether it came from
@@ -313,14 +376,13 @@ probability, and a way to find what the book leaves out.
 
 ## Summary
 
-No text can record the details of every function in a deep learning
-framework, and functions with the same name differ between frameworks:
-`ones(2, 3)` returns a $2 \times 3$ matrix in PyTorch, a vector of two
-integer ones in TensorFlow, and an error in JAX and MXNet. Four steps settle
-such questions from within a notebook. `dir` and Tab completion discover the
-names that a module defines, and `help` and `?` show the signature and the
-docstring of a candidate. The reference documentation and `??` supply the
-details that the docstring omits, and a small example whose result we
+No text can record the details of every function in a deep learning framework,
+and a call that looks harmless, such as `ones(2, 3)`, may read its arguments
+differently than we assume; the signature says what each argument means. Four
+steps settle such questions from within a notebook. `dir` and Tab completion
+discover the names that a module defines, and `help` and `?` show the signature
+and the docstring of a candidate. The reference documentation and `??` supply
+the details that the docstring omits, and a small example whose result we
 predicted verifies our reading. Suggestions from coding assistants are
 candidates that go through the same steps.
 
@@ -399,10 +461,12 @@ candidates that go through the same steps.
    standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
    :numref:`sec_pandas` standardized columns with the pandas method `std`.
    Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
-   once with `pd.Series.std` and once with `tf.math.reduce_std`. Use
-   `help` on both functions to find out how each one sets the divisor,
-   state the default divisor of each, and check both results against a
-   hand computation. Then make the two results agree.
+   once with `pd.Series.std` and once with `tf.math.reduce_std`, and
+   check both results against a hand computation. Use `help` on both
+   functions. State the default divisor of `pd.Series.std` and the
+   argument that changes it. `tf.math.reduce_std` has no divisor
+   argument: infer its divisor from the example in its docstring. Then
+   change the pandas call so that the two results agree.
 1. [code] **Checking a coding assistant's answer.** Ask a coding
    assistant the two questions below. Check each function it names in
    three steps: `dir` or `hasattr` shows that the name exists, `help` or
@@ -502,18 +566,64 @@ A procedure for finding out what a function does<br>**discover · inspect · rea
 :::
 :::
 
-::: {.slide title="Same Name, Different Behavior: ones(2, 3)"}
+::: {.slide title="torch.ones(2, 3) Works; torch.ones(shape=(2, 3)) Fails" only="pytorch"}
 [The problem]{.kicker}
 
 | call | result |
 |---|---|
 | `torch.ones(2, 3)` | shape (2, 3), `float32` |
-| `tf.ones(2, 3)` | shape (2,), `int32`, no error |
-| `jax.numpy.ones(2, 3)` | `TypeError` |
-| `mxnet.np.ones(2, 3)` | `TypeError` |
+| `torch.ones(shape=(2, 3))` | `TypeError` |
 
-- `torch` alone defines about 1,000 public names, `jax.numpy` about 400.
+- `torch` alone defines about 1,000 public names.
 - Releases add names and deprecate others.
+
+::: {.d2l-note}
+Memorizing fails. We need a procedure that finds out what a call does.
+:::
+:::
+
+::: {.slide title="tf.ones(2, 3) Runs but Returns Two int32 Ones" only="tensorflow"}
+[The problem]{.kicker}
+
+| call | result |
+|---|---|
+| `tf.ones((2, 3))` | shape (2, 3), `float32` |
+| `tf.ones(2, 3)` | shape (2,), `int32`, no error |
+
+- The main module `tf` alone defines about 300 public names.
+- Releases add names and deprecate others.
+
+::: {.d2l-note}
+Memorizing fails. We need a procedure that finds out what a call does.
+:::
+:::
+
+::: {.slide title="jnp.ones(2, 3) Fails; jnp.ones((2, 3)) Works" only="jax"}
+[The problem]{.kicker}
+
+| call | result |
+|---|---|
+| `jnp.ones((2, 3))` | shape (2, 3), `float32` |
+| `jnp.ones(2, 3)` | `TypeError` |
+
+- `jax.numpy` alone defines about 400 public names.
+- Releases add names and deprecate others.
+
+::: {.d2l-note}
+Memorizing fails. We need a procedure that finds out what a call does.
+:::
+:::
+
+::: {.slide title="mnp.ones(2, 3) Fails; mnp.ones((2, 3)) Works" only="mxnet"}
+[The problem]{.kicker}
+
+| call | result |
+|---|---|
+| `mnp.ones((2, 3))` | shape (2, 3), `float32` |
+| `mnp.ones(2, 3)` | `TypeError` |
+
+- `mxnet.np` alone defines about 340 public names.
+- The documentation of the retired project is thin in places.
 
 ::: {.d2l-note}
 Memorizing fails. We need a procedure that finds out what a call does.
@@ -530,7 +640,7 @@ Memorizing fails. We need a procedure that finds out what a call does.
 - design a small test that could prove your reading wrong;
 - check a coding assistant's suggestion.
 
-**Running example:** `ones` in four frameworks.
+**Running example:** `ones(2, 3)`: what does each argument mean?
 :::
 
 ::: {.slide title="Documentation Covers What the Book Leaves Out"}
@@ -698,54 +808,148 @@ Which distributions can we sample from? `dir` lists the names in
 ::: {.slide title="Three Conventions Decode a Signature"}
 [Inspect]{.kicker}
 
-| written | meaning | in `ones` |
-|---|---|---|
-| `dtype=None` | a default: may be omitted | all four |
-| after a lone `*` | keyword only | PyTorch's `dtype`, JAX's `device` |
-| `*size` | any number of positional arguments | PyTorch's shape |
-
-| framework | signature of `ones` |
+| written | meaning |
 |---|---|
-| PyTorch | `ones(*size, *, out=None, dtype=None, ...)` |
-| TensorFlow | `ones(shape, dtype=tf.float32, name=None, layout=None)` |
-| JAX | `ones(shape, dtype=None, *, device=None, ...)` |
-| MXNet | `ones(shape, dtype=None, order='C', device=None)` |
+| `dtype=None` | a default: the argument may be omitted |
+| after a lone `*` | keyword only |
+| `*size` | collects any number of positional arguments |
+
+::: {.d2l-note}
+The signature says which argument receives each value of a call, before
+we run it.
+:::
 :::
 
-::: {.slide title="The Signatures Predict ones(2, 3) Before Any Run"}
+::: {.slide title="The Signature Predicts torch.ones(2, 3) Before Any Run" only="pytorch"}
 [Inspect]{.kicker}
 
-Bind the two positional arguments of `ones(2, 3)`:
+`ones(*size, *, out=None, dtype=None, ...)`
 
-| framework | `2` goes to | `3` goes to | prediction |
-|---|---|---|---|
-| PyTorch | `size` | `size` | a 2 × 3 matrix, default type |
-| TensorFlow | `shape` | `dtype` | two ones, of "type 3" |
-| JAX | `shape` | `dtype` | "type 3": an error? |
-| MXNet | `shape` | `dtype` | "type 3": an error? |
+| value | goes to | why |
+|---|---|---|
+| `2` | `size` | `*size` collects positional arguments |
+| `3` | `size` | the same |
+| a type | `dtype` | only by keyword, after the lone `*` |
 
-- `*size` collects both numbers into the shape.
-- A single `shape` takes only the 2, so the 3 lands in `dtype`.
+- Prediction: a $2 \times 3$ matrix of the default type, `float32`.
+- No argument is named `shape`: `ones(shape=(2, 3))` must fail.
+:::
+
+::: {.slide title="The Signature Predicts tf.ones(2, 3) Before Any Run" only="tensorflow"}
+[Inspect]{.kicker}
+
+`ones(shape, dtype=tf.float32, name=None, layout=None)`
+
+| value | goes to | why |
+|---|---|---|
+| `2` | `shape` | first positional argument |
+| `3` | `dtype` | second positional argument |
+
+- Prediction: two ones, of "type 3", or an error.
 
 ::: {.d2l-note}
 One question stays open: which type, if any, does the integer 3 name?
 :::
 :::
 
-::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix Everywhere?"}
+::: {.slide title="The Signature Predicts jnp.ones(2, 3) Before Any Run" only="jax"}
+[Inspect]{.kicker}
+
+`ones(shape, dtype=None, *, device=None, ...)`
+
+| value | goes to | why |
+|---|---|---|
+| `2` | `shape` | first positional argument |
+| `3` | `dtype` | second positional argument |
+
+- Prediction: 3 is not a data type, so the call fails.
+- The shape belongs in one argument: `jnp.ones((2, 3))`.
+:::
+
+::: {.slide title="The Signature Predicts mnp.ones(2, 3) Before Any Run" only="mxnet"}
+[Inspect]{.kicker}
+
+`ones(shape, dtype=None, order='C', device=None)`
+
+| value | goes to | why |
+|---|---|---|
+| `2` | `shape` | first positional argument |
+| `3` | `dtype` | second positional argument |
+
+- Prediction: 3 is not a data type, so the call fails.
+- The shape belongs in one argument: `mnp.ones((2, 3))`.
+:::
+
+::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix?" only="pytorch"}
 [Check]{.kicker}
 
-Use the signatures to predict, for each framework:
+Use the signature `ones(*size, *, out=None, dtype=None, ...)` to predict:
 
-1. `ones(2, 3)`
-2. `ones((2, 3))`
-3. `ones(shape=(2, 3))`
-4. `ones([2, 3])`
+1. `torch.ones(2, 3)`
+2. `torch.ones((2, 3))`
+3. `torch.ones(shape=(2, 3))`
+4. `torch.ones(size=(2, 3))`
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answers.** (1) PyTorch only. (2) All four. (3) All but PyTorch, whose
-signature has no argument `shape`. (4) All four.
+**Answers.** (1), (2), and (4) make the matrix: `size` takes several
+integers or one tuple, also by keyword. (3) fails: no argument is named
+`shape`.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix?" only="tensorflow"}
+[Check]{.kicker}
+
+Use the signature `ones(shape, dtype=tf.float32, ...)` to predict:
+
+1. `tf.ones(2, 3)`
+2. `tf.ones((2, 3))`
+3. `tf.ones(shape=(2, 3))`
+4. `tf.ones(size=(2, 3))`
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (2) and (3) make the matrix. (1) passes 3 as the data type.
+(4) fails: no argument is named `size`.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix?" only="jax"}
+[Check]{.kicker}
+
+Use the signature `ones(shape, dtype=None, *, device=None, ...)` to predict:
+
+1. `jnp.ones(2, 3)`
+2. `jnp.ones((2, 3))`
+3. `jnp.ones(shape=(2, 3))`
+4. `jnp.ones(size=(2, 3))`
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (2) and (3) make the matrix. (1) passes 3 as the data type
+and fails. (4) fails: no argument is named `size`.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Calls Make a 2 × 3 Matrix?" only="mxnet"}
+[Check]{.kicker}
+
+Use the signature `ones(shape, dtype=None, order='C', device=None)` to
+predict:
+
+1. `mnp.ones(2, 3)`
+2. `mnp.ones((2, 3))`
+3. `mnp.ones(shape=(2, 3))`
+4. `mnp.ones(size=(2, 3))`
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (2) and (3) make the matrix. (1) passes 3 as the data type
+and fails. (4) fails: no argument is named `size`.
 :::
 :::
 :::
@@ -760,45 +964,83 @@ signature has no argument `shape`. (4) All four.
 :::
 :::
 
-::: {.slide title="The First Line of help Says Whether ?? Can Show Source"}
+::: {.slide title="torch.ones Is Compiled, So ?? Shows No Source" only="pytorch"}
 [Read]{.kicker}
 
 `ones?` shows the docstring in a pane; `ones??` adds the source, which
 answers what a docstring leaves open: how an argument is converted or
 checked.
 
-| framework | `help(ones)` begins | `ones??` shows |
-|----------|--------------------------------------------|------------------|
-| PyTorch | built-in function ones in module torch | docstring only (C++) |
-| TensorFlow | function ones in module tensorflow.python.ops.array_ops | Python source |
-| JAX | function ones in module jax.numpy | Python source |
-| MXNet | function ones in module mxnet.numpy | Python source |
+- `help(torch.ones)` begins "built-in function ones in module torch":
+  compiled from C++, so `??` shows the docstring only.
+- Then the [API reference](https://docs.pytorch.org/docs/stable/index.html)
+  has a page per public function; the
+  [tutorials](https://docs.pytorch.org/tutorials/beginner/basics/intro.html)
+  show functions in use.
 
 ::: {.d2l-note}
-For `tf.ones`, the source will answer the question our prediction left
-open: which type the integer 3 names.
+Not sure which module holds a function? The reference's search box
+searches all of them.
 :::
 :::
 
-::: {.slide title="Each Framework's Reference Has a Page per Public Function"}
+::: {.slide title="tf.ones Is Python, So ?? Shows Its Source" only="tensorflow"}
 [Read]{.kicker}
 
-| framework | reference | worked examples |
-|---|---|---|
-| PyTorch | [API reference](https://docs.pytorch.org/docs/stable/index.html) | [tutorials](https://docs.pytorch.org/tutorials/beginner/basics/intro.html) |
-| TensorFlow | [API reference](https://www.tensorflow.org/api_docs/python/tf) | [tutorials](https://www.tensorflow.org/tutorials) |
-| JAX | [API reference](https://docs.jax.dev/en/latest/jax.html) | [tutorials](https://docs.jax.dev/en/latest/tutorials.html) |
-| MXNet | [`mxnet.np` reference](https://mxnet.apache.org/versions/master/api/python/docs/api/np/index.html) | [tutorials](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/index.html) |
+`ones?` shows the docstring in a pane; `ones??` adds the source, which
+answers what a docstring leaves open: how an argument is converted or
+checked.
 
-- Not sure which module holds a function? The reference's search box
-  searches all of them.
-- MXNet was retired in 2023. Its site still serves the documentation of
-  version 2.0, whose NumPy-style interface the book uses; the pages of
-  1.9.1 describe the older `mx.nd`.
+- `help(tf.ones)` begins "function ones in module
+  tensorflow.python.ops.array_ops": Python source, which `??` shows.
+- The [API reference](https://www.tensorflow.org/api_docs/python/tf) has a
+  page per public function; the [tutorials](https://www.tensorflow.org/tutorials)
+  show functions in use.
 
 ::: {.d2l-note}
-Where the documentation is thin or out of date, a small test in a notebook
-is the more reliable reference.
+The source will answer the question our prediction left open: which type
+the integer 3 names.
+:::
+:::
+
+::: {.slide title="jnp.ones Is Python, So ?? Shows Its Source" only="jax"}
+[Read]{.kicker}
+
+`ones?` shows the docstring in a pane; `ones??` adds the source, which
+answers what a docstring leaves open: how an argument is converted or
+checked.
+
+- `help(jnp.ones)` begins "function ones in module jax.numpy": Python
+  source, which `??` shows.
+- The [API reference](https://docs.jax.dev/en/latest/jax.html) has a page
+  per public function; the
+  [tutorials](https://docs.jax.dev/en/latest/tutorials.html) show functions
+  in use.
+
+::: {.d2l-note}
+Not sure which module holds a function? The reference's search box
+searches all of them.
+:::
+:::
+
+::: {.slide title="mnp.ones Is Python, So ?? Shows Its Source" only="mxnet"}
+[Read]{.kicker}
+
+`ones?` shows the docstring in a pane; `ones??` adds the source, which
+answers what a docstring leaves open: how an argument is converted or
+checked.
+
+- `help(mnp.ones)` begins "function ones in module mxnet.numpy": Python
+  source, which `??` shows.
+- MXNet was retired in 2023. Its site still serves the
+  [`mxnet.np` reference](https://mxnet.apache.org/versions/master/api/python/docs/api/np/index.html)
+  and [tutorials](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/index.html)
+  of version 2.0, which the book uses; the pages of 1.9.1 describe the
+  older `mx.nd`.
+
+::: {.d2l-note}
+Where the documentation is thin, a small test in a notebook is the more
+reliable reference.
 :::
 :::
 
@@ -815,11 +1057,11 @@ prediction is a test.
 :::
 :::
 
-::: {.slide title="tf.ones(2, 3) Runs Because tf.as_dtype(3) Is tf.int32"}
+::: {.slide title="tf.ones(2, 3) Runs Because tf.as_dtype(3) Is tf.int32" only="tensorflow"}
 [Read again]{.kicker}
 
-The prediction held in all four frameworks, but left TensorFlow's type
-open. The first statement of `tf.ones`, seen with `tf.ones??`:
+The run left the type open. The first statement of `tf.ones`, seen with
+`tf.ones??`:
 
 `dtype = dtypes.as_dtype(dtype).base_dtype`
 
@@ -828,8 +1070,8 @@ open. The first statement of `tf.ones`, seen with `tf.ones??`:
 - So `tf.ones(2, 3)` returns two `int32` ones, and raises no error.
 
 ::: {.d2l-note .warn}
-A call written with PyTorch in mind runs in TensorFlow and computes
-something else. `ones((2, 3))` works in all four.
+A call meant to make a $2 \times 3$ matrix runs and computes something
+else. `tf.ones((2, 3))` makes the matrix.
 :::
 :::
 
@@ -862,23 +1104,71 @@ Check every suggested call like a name you found yourself:
 3. a small run gives the predicted result.
 
 ::: {.d2l-note .warn}
-A wrong suggestion need not fail: `tf.ones(2, 3)` names a function that
-exists, fits its signature, and runs, yet computes something else.
+A wrong suggestion need not fail: it can name a function that exists, fit
+its signature, and run, yet compute something else.
 :::
 :::
 
-::: {.slide title="Check: Which Step Catches It?"}
+::: {.slide title="Check: Which Step Catches It?" only="pytorch"}
 [Check]{.kicker}
 
 1. The suggested function does not exist in your version.
 2. The suggestion passes `shape=(2, 3)` to `torch.ones`.
+3. `torch.ones((2, 3)).sum(0)` was meant to give the two row sums.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the
+signature has no argument named `shape`. (3) Verify: the call runs
+and returns three column sums.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Step Catches It?" only="tensorflow"}
+[Check]{.kicker}
+
+1. The suggested function does not exist in your version.
+2. The suggestion passes `size=(2, 3)` to `tf.ones`.
 3. `tf.ones(2, 3)` was meant as a $2 \times 3$ matrix.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the signature
-has no argument named `shape`. (3) Only verify: the call runs and returns
-two `int32` ones.
+**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the
+signature has no argument named `size`. (3) Verify: the call runs
+and returns two `int32` ones.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Step Catches It?" only="jax"}
+[Check]{.kicker}
+
+1. The suggested function does not exist in your version.
+2. The suggestion passes `size=(2, 3)` to `jnp.ones`.
+3. `jnp.ones((2, 3)).sum(0)` was meant to give the two row sums.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the
+signature has no argument named `size`. (3) Verify: the call runs
+and returns three column sums.
+:::
+:::
+:::
+
+::: {.slide title="Check: Which Step Catches It?" only="mxnet"}
+[Check]{.kicker}
+
+1. The suggested function does not exist in your version.
+2. The suggestion passes `size=(2, 3)` to `mnp.ones`.
+3. `mnp.ones((2, 3)).sum(0)` was meant to give the two row sums.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the
+signature has no argument named `size`. (3) Verify: the call runs
+and returns three column sums.
 :::
 :::
 :::
@@ -889,9 +1179,9 @@ two `int32` ones.
 | step | tool | in the example |
 |--------|--------------|------------------------------|
 | discover | `dir`, Tab | the distributions a library can sample from |
-| inspect | `help`, `?` | `ones(*size, ...)` against `ones(shape, dtype, ...)` |
-| read | reference pages, `??` | `tf.ones` passes 3 to `tf.as_dtype`: `int32` |
-| verify | a predicted small run | `ones(2, 3)`: (2, 3), (2,) `int32`, or an error |
+| inspect | `help`, `?` | the signature says where the 2 and the 3 of `ones(2, 3)` go |
+| read | reference pages, `??` | the source answers what the docstring leaves open |
+| verify | a predicted small run | print the shape and type of `ones(2, 3)`, or its error |
 
 - A test is a run whose result could have contradicted the prediction.
 - An assistant's suggestion goes through the same four steps.

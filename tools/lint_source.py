@@ -23,6 +23,11 @@ Checks performed (per file):
   - A continuation line of a list item that begins with a cross-reference
     followed by `.` or `)` (warn): pandoc reads `@sec-x.`, `@sec-x)` or
     `(@sec-x)` there as the start of a new block, which splits the item.
+  - `:begin_tab:` / `:end_tab:` sharing a line with other text (error):
+    the marker then renders literally.
+  - A wrapped list-item line that starts `<n>. ` or `<n>) ` (warn): pandoc
+    starts a new (or nested) list item there. `1.` and the next sibling
+    number are exempt.
   - Cell-ID derivation drift (warn): the existing ID no longer matches
     the slug derivation from its surrounding section.
 
@@ -189,6 +194,12 @@ def lint_file(path: Path, corpus_labels=None):
 
     # ── List continuation lines that start with a cross-reference ──
     issues += _check_xref_line_starts(path, lines)
+
+    # ── Tab markers sharing their line with text ──
+    issues += _check_tab_marker_lines(path, lines)
+
+    # ── A wrapped list-item line that pandoc reads as a new list item ──
+    issues += _check_numbered_line_starts(path, lines)
 
     # ── Optional: cross-corpus label uniqueness ──
     if corpus_labels is not None:
@@ -435,6 +446,106 @@ def _check_xref_line_starts(path, lines):
                 '`.` or `)`, which pandoc reads as a new block; rewrap so '
                 'the reference does not begin the line'))
         prev_blank = False
+    return issues
+
+
+_TAB_MARKER_RE = re.compile(r':begin_tab:`[^`]*`|:end_tab:')
+
+
+def _check_tab_marker_lines(path, lines):
+    """`:begin_tab:` and `:end_tab:` must each stand alone on their line.
+
+    The prose-tab converters match `:begin_tab:`fw`` followed directly by a
+    newline and `:end_tab:` at the start of a line. Text after
+    `:begin_tab:`fw`` or before `:end_tab:` defeats the match, and the
+    marker renders literally (or swallows the text) in HTML, notebooks and
+    the PDF. Markers quoted inside inline code are ignored.
+    """
+    issues = []
+    in_fence = False
+    for i, line in enumerate(lines, start=1):
+        if not in_fence:
+            if _FENCE_OPEN_RE.match(line) and not line.startswith('````'):
+                in_fence = True
+                continue
+        else:
+            if _FENCE_CLOSE_RE.match(line):
+                in_fence = False
+            continue
+        bare = re.sub(r'``[^`]*``', '', line)
+        for m in _TAB_MARKER_RE.finditer(bare):
+            before = bare[:m.start()]
+            # A marker inside inline code (an odd number of backticks
+            # before it) is quoted syntax, not a marker.
+            if before.count('`') % 2:
+                continue
+            if before.strip() or bare[m.end():].strip():
+                issues.append(Issue(path, i, m.start() + 1, 'error',
+                    f'`{m.group(0)}` must stand alone on its line; text '
+                    f'beside it makes the marker render literally'))
+    return issues
+
+
+_LIST_MARKER_RE = re.compile(r'^(\s*)(?:(\d+)[.)]|[-*+])(?:\s|$)')
+
+
+def _check_numbered_line_starts(path, lines):
+    """Warn on a wrapped list-item line that pandoc reads as a new list item.
+
+    Inside a list item, a line that begins `<n>. ` or `<n>) ` starts a list
+    item even without a blank line before it: indented deeper, it opens a
+    nested ordered list numbered from n; at the item's own indent it becomes
+    the next sibling item and the number is lost. An exercise wrapped as
+    "... each of width" / "   256. Before running anything ..." rendered as
+    an ordered list starting at 256 in the middle of the exercise. A line
+    starting `1. ` is left alone (almost always a list the author meant),
+    as is a sibling item numbered one past the previous item. Outside lists
+    pandoc does not interrupt a paragraph this way, so plain paragraphs are
+    not checked. Rewrap so the number does not begin the line.
+    """
+    issues = []
+    in_fence = False
+    in_math = False
+    items = {}          # marker indent → last number (int) or 'ul'
+    prev_text = False   # previous line is non-blank text (no blank between)
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if line.lstrip().startswith('```'):
+            in_fence = not in_fence
+            prev_text = False
+            continue
+        if in_fence:
+            continue
+        if stripped == '$$' or (stripped.startswith('$$')
+                                and not stripped.endswith('$$')):
+            in_math = not in_math
+            continue
+        if in_math:
+            if stripped.endswith('$$'):
+                in_math = False
+            continue
+        if not stripped:
+            prev_text = False
+            continue
+        m = _LIST_MARKER_RE.match(line)
+        if m:
+            indent, num = len(m.group(1)), m.group(2)
+            if prev_text and items and num and num != '1':
+                if indent in items:
+                    last = items[indent]
+                    bad = last == 'ul' or int(num) != last + 1
+                else:
+                    bad = True
+                if bad:
+                    issues.append(Issue(path, i, indent + 1, 'warning',
+                        f'list-item line starts with `{num}{line[indent + len(num)]}`'
+                        f'; pandoc reads it as a new list item numbered '
+                        f'{num}. Rewrap so the number does not begin the line'))
+            items = {k: v for k, v in items.items() if k <= indent}
+            items[indent] = int(num) if num else 'ul'
+        elif not line[0].isspace() and (not prev_text or stripped.startswith('#')):
+            items = {}   # an unindented block after a blank line ends the list
+        prev_text = True
     return issues
 
 

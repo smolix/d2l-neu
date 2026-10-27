@@ -191,7 +191,7 @@ def preprocess(img, image_shape):
     return np.expand_dims(img.transpose(2, 0, 1), axis=0)
 
 def postprocess(img):
-    img = img[0].as_in_ctx(rgb_std.ctx)
+    img = img[0].to_device(rgb_std.device)
     return (img.transpose(1, 2, 0) * rgb_std + rgb_mean).clip(0, 1)
 ```
 
@@ -677,7 +677,7 @@ Gram matrices for the style image at various style layers, `styles_Y_gram`, are 
 #@tab mxnet
 def get_inits(X, device, lr, styles_Y):
     gen_img = SynthesizedImage(X.shape)
-    gen_img.initialize(init.Constant(X), ctx=device, force_reinit=True)
+    gen_img.initialize(init.Constant(X), device=device, force_reinit=True)
     trainer = gluon.Trainer(gen_img.collect_params(), 'adam',
                             {'learning_rate': lr})
     styles_Y_gram = [gram(Y) for Y in styles_Y]
@@ -851,7 +851,7 @@ We use the content image to initialize the synthesized image.
 ```{.python .input #neural-style-training-2}
 #@tab mxnet
 device, image_shape = d2l.try_gpu(), (450, 300)
-net.reset_ctx(device)
+net.reset_device(device)
 content_X, contents_Y = get_contents(image_shape, device)
 _, styles_Y = get_styles(image_shape, device)
 output = train(content_X, contents_Y, styles_Y, device, 0.9, 500, 50)

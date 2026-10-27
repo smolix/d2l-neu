@@ -72,8 +72,9 @@ Seeding every generator that a run consults therefore fixes every draw.
 
 ### Global Seeds
 
-PyTorch, TensorFlow, and MXNet each keep a global generator that their
-random functions consult unless told otherwise; JAX has none.
+Where the random functions get their state from is the first thing to know
+about a framework: a global generator that they consult unless told
+otherwise, or keys passed explicitly.
 
 :begin_tab:`mxnet`
 MXNet keeps one global generator per device. `mnp.random.seed(k)` seeds all
@@ -497,9 +498,9 @@ threads happen to finish. Examples are the gradients of an embedding lookup
 or of a scatter operation, some convolution gradients, and some reductions.
 Two seeded runs on the same machine can then differ in the last bits of
 their weights, and over many training steps such differences grow until the
-loss curves differ visibly. Each framework except MXNet has a switch that
-replaces such operations with deterministic ones, which add in a fixed order
-and are often slower.
+loss curves differ visibly. The remedy is a switch that replaces such
+operations with deterministic ones, which add in a fixed order and are often
+slower.
 
 :begin_tab:`mxnet`
 MXNet has no such switch. On a GPU, bitwise repetition requires avoiding the
@@ -533,8 +534,8 @@ CPU, GPU, and TPU (JAX does not promise the same bits across its own
 releases). For arithmetic, the operations of `train_once` added in a fixed
 order on the GPU too. Setting the environment variable
 `XLA_FLAGS=--xla_gpu_deterministic_ops=true` before JAX starts replaces
-GPU operations that add in a varying order with deterministic ones; unlike
-the switches of PyTorch and TensorFlow, it does not raise errors.
+GPU operations that add in a varying order with deterministic ones; it
+does not raise errors.
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-2}
@@ -630,8 +631,8 @@ an input layer with 20 inputs and an output layer with 10 outputs. The block
 is the residual block of :numref:`sec_model_construction`, unchanged: it adds
 the output of a small network, its *body*, to its input: $\mathbf{h} = \mathbf{x} +
 \textrm{body}(\mathbf{x})$, where the body is a linear layer, a ReLU, and a
-second linear layer. In every framework the weights start from Xavier
-initialization (:numref:`subsec_xavier`) and the biases at zero.
+second linear layer. The weights start from Xavier initialization
+(:numref:`subsec_xavier`) and the biases at zero.
 
 ```{.python .input #reproducibility-inspection-hooks-looking-inside}
 %%tab mxnet
@@ -989,12 +990,15 @@ of the third residual block:
 :begin_tab:`pytorch`
 `module.register_full_backward_hook(f)` runs `f(module, grad_input,
 grad_output)` while the backward pass runs, once the gradients with respect
-to the module's inputs are computed. A hook that returns a value replaces
+to the module's inputs are computed. Both arguments are tuples with one
+gradient per input or output of the module, so the gradient with respect to
+a block's output is `grad_output[0]`. A hook that returns a value replaces
 `grad_input`. Like a forward hook, a backward hook returns a handle to
 remove and should detach anything it stores. The gradients of the
 parameters themselves are available after the backward pass as `p.grad`.
-Here are the gradient norms of the first linear layer of the third residual
-block:
+Here are the norms of the gradients with respect to the output of each
+residual block, recorded by hooks, and the gradient norms of the first
+linear layer of the third residual block:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1025,8 +1029,18 @@ print(f'weight {float(mnp.linalg.norm(layer.weight.grad())):.3g}, '
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
 %%tab pytorch
 X = torch.randn(256, 20)
+grad_norms, handles = [], []
+def record(module, grad_input, grad_output):
+    grad_norms.append(grad_output[0].norm().item())  # store a number
+for block in net[1:-1]:
+    handles.append(block.register_full_backward_hook(record))
 net.zero_grad()
 (net(X) ** 2).mean().backward()
+for h in handles:
+    h.remove()
+# The hooks fire in backward order, last block first
+print('block output gradients:',
+      ' '.join(f'{g:.3g}' for g in reversed(grad_norms)))
 layer = net[3].body[0]  # block 3, first layer
 print(f'weight {layer.weight.grad.norm().item():.3g}, '
       f'bias {layer.bias.grad.norm().item():.3g}')
@@ -1526,18 +1540,40 @@ from the run's seed, per worker.
   the last bits.
 :::
 
-::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run"}
+::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run" only="mxnet"}
 [Arithmetic · GPUs]{.kicker}
 
 - *Atomic additions* commit partial sums in the order threads finish.
 - Seeded runs on one GPU then differ in the last bits, later in the loss.
+- MXNet has no switch to deterministic operations: bitwise repetition on
+  a GPU means avoiding the operations whose kernels add in a varying order.
+:::
 
-| framework | switch to deterministic operations |
-|---|---|
-| PyTorch | `torch.use_deterministic_algorithms(True)`; raises if none exists |
-| TensorFlow | `tf.config.experimental.enable_op_determinism()` |
-| JAX | `XLA_FLAGS=--xla_gpu_deterministic_ops=true` |
-| MXNet | none |
+::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run" only="pytorch"}
+[Arithmetic · GPUs]{.kicker}
+
+- *Atomic additions* commit partial sums in the order threads finish.
+- Seeded runs on one GPU then differ in the last bits, later in the loss.
+- The switch: `torch.use_deterministic_algorithms(True)`. Operations
+  without a deterministic implementation raise a `RuntimeError`.
+:::
+
+::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run" only="tensorflow"}
+[Arithmetic · GPUs]{.kicker}
+
+- *Atomic additions* commit partial sums in the order threads finish.
+- Seeded runs on one GPU then differ in the last bits, later in the loss.
+- The switch: `tf.config.experimental.enable_op_determinism()`.
+  Operations without a deterministic implementation raise an error.
+:::
+
+::: {.slide title="On a GPU, Atomic Additions Change the Order from Run to Run" only="jax"}
+[Arithmetic · GPUs]{.kicker}
+
+- *Atomic additions* commit partial sums in the order threads finish.
+- Seeded runs on one GPU then differ in the last bits, later in the loss.
+- The switch: `XLA_FLAGS=--xla_gpu_deterministic_ops=true`, set before
+  JAX starts.
 :::
 
 ::: {.slide title="Bitwise Repetition Is for Debugging; Conclusions Must Hold across Seeds"}
@@ -1565,13 +1601,43 @@ arithmetic, needs more evidence.
 :::
 :::
 
-::: {.slide title="A Hook Runs inside the Call, around the Layer's Computation"}
+::: {.slide title="A Hook Runs inside the Call, around the Layer's Computation" only="mxnet"}
 [Hooks · mechanism]{.kicker}
 
 ![`__call__` runs pre-hooks, `forward`, then hooks; an observer captures, checks, or modifies.](../img/bg-hooks.svg)
 
-- PyTorch and MXNet: `register_forward_hook`; TensorFlow: extra outputs of
-  a functional model; JAX: `nnx.capture`.
+- `block.register_forward_hook(f)` runs `f(block, inputs, output)` after
+  every forward pass; Gluon ignores the return value.
+- No line of the model changes.
+:::
+
+::: {.slide title="A Hook Runs inside the Call, around the Layer's Computation" only="pytorch"}
+[Hooks · mechanism]{.kicker}
+
+![`__call__` runs pre-hooks, `forward`, then hooks; an observer captures, checks, or modifies.](../img/bg-hooks.svg)
+
+- `module.register_forward_hook(f)` runs `f(module, inputs, output)` after
+  every forward pass; a returned value replaces the output.
+- No line of the model changes.
+:::
+
+::: {.slide title="Keras Has No Hooks; a Functional Model Exposes Intermediate Outputs" only="tensorflow"}
+[Hooks · mechanism]{.kicker}
+
+![`__call__` runs pre-hooks, `forward`, then hooks; an observer captures, checks, or modifies.](../img/bg-hooks.svg)
+
+- Keras offers no hooks. A second functional model over the same graph
+  returns intermediate tensors as extra outputs and shares all weights.
+- In TensorFlow the observation points must be built into the model.
+:::
+
+::: {.slide title="A Hook Runs inside the Call, around the Layer's Computation" only="jax"}
+[Hooks · mechanism]{.kicker}
+
+![`__call__` runs pre-hooks, `forward`, then hooks; an observer captures, checks, or modifies.](../img/bg-hooks.svg)
+
+- `nnx.capture` wraps a call and records the value every submodule
+  returned.
 - No line of the model changes.
 :::
 
@@ -1633,7 +1699,7 @@ layer raises at the first non-finite output:
 - One forward pass, no print statements in the model.
 :::
 
-::: {.slide title="Gradients Are Values to Inspect"}
+::: {.slide title="Gradients Are Values to Inspect" except="pytorch"}
 [Hooks · gradients]{.kicker}
 
 Norms of the gradients of the first linear layer in the third block, loss
@@ -1641,9 +1707,24 @@ Norms of the gradients of the first linear layer in the third block, loss
 
 @!reproducibility-inspection-backward-hooks-and-beyond
 
-- PyTorch also offers backward hooks, which run during the backward pass.
-- JAX and TensorFlow return the gradients as values; MXNet stores them in
-  `param.grad()`.
+- After the backward pass every parameter's gradient can be read; per-layer
+  norms are a loop over the parameters.
+- Code that must act between the backward pass and the update goes into the
+  training step.
+:::
+
+::: {.slide title="Backward Hooks Observe Gradients during the Backward Pass" only="pytorch"}
+[Hooks · gradients]{.kicker}
+
+Loss = mean squared output. Hooks record the gradient norm at each block's
+output; then the gradient norms of the first linear layer in the third
+block:
+
+@!reproducibility-inspection-backward-hooks-and-beyond
+
+- `register_full_backward_hook(f)` calls `f(module, grad_input,
+  grad_output)`; `grad_output[0]` is the gradient at the block's output.
+- Hooks fire in backward order, last block first. Remove the handles.
 :::
 
 ::: {.slide title="Recap"}

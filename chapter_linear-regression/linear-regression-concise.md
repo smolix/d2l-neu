@@ -90,7 +90,8 @@ input that the layer receives. We use the lazy version. In deeper networks
 the number of inputs of a layer is the number of outputs of the layer before
 it, and working it out by hand is tedious. A lazy layer has no parameters
 until its first call, so we initialize them after that call, just before
-training.
+training. The method `weight_init` states this initialization once, for any
+linear layer it is given.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -107,8 +108,7 @@ keys from which the layer draws its initial weights. The parameters exist as
 soon as the constructor returns. `kernel_init` sets the distribution of the
 weights, and the bias starts at zero by default. If no `rngs` is given, the
 model takes a key from `d2l.get_key()`, whose stream starts from a new random
-seed on every run, as the random number generators of the other frameworks
-do.
+seed on every run.
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-model-1}
@@ -119,6 +119,11 @@ class LinearRegression(d2l.Module):  #@save
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
+
+    def weight_init(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, std=0.01)
+            nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #linear-regression-concise-defining-the-model-1}
@@ -176,8 +181,8 @@ factor of 2 returns when we choose the learning rate.
 :begin_tab:`mxnet`
 Gluon has no mean squared error loss. Its `L2Loss` computes
 $\frac{1}{2}(\hat{y} - y)^2$ for each example, our scratch loss before the
-average. To compute the same loss as the other frameworks, we double it and
-average over the minibatch. `L2Loss` first reshapes the labels to the shape
+average. To compute the mean squared error, we double it and average over
+the minibatch. `L2Loss` first reshapes the labels to the shape
 of the predictions, so labels of shape $(32,)$ cannot be broadcast against
 predictions of shape $(32, 1)$ into a $32 \times 32$ matrix of differences.
 :end_tab:
@@ -336,7 +341,10 @@ Before training we call the model once on one example. This call creates
 the parameters of the lazy layer, which we then initialize as in the
 scratch model with functions from `nn.init`. Without these lines the layer
 would keep PyTorch's default initialization, a uniform distribution whose
-width shrinks with the number of inputs.
+width shrinks with the number of inputs. The trainer of this chapter does
+not call `weight_init`; the trainer of :numref:`sec_use_gpu` does, after the
+first call, so later chapters train `LinearRegression` with the same
+initialization without these lines.
 :end_tab:
 
 We also put the trainer's plot, `trainer.board`, on a logarithmic scale, so
@@ -400,6 +408,26 @@ Since we generated the data, we can also compare the learned parameters with
 $\mathbf{w}^*$ and $b^*$. The scratch model kept its parameters as `self.w`
 and `self.b`. Here they belong to the layer, and `get_w_b` reads them out of
 `net`.
+
+:begin_tab:`mxnet`
+`nn.Dense` stores its weight as a $1 \times d$ row, so the comparison below
+reshapes it to the shape of $\mathbf{w}^*$.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.Linear` stores its weight as a $1 \times d$ row, so the comparison below
+reshapes it to the shape of $\mathbf{w}^*$.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`Dense` stores its weight, the `kernel`, as a $d \times 1$ column, so the
+comparison below reshapes it to the shape of $\mathbf{w}^*$.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.Linear` stores its weight, the `kernel`, as a $d \times 1$ column, so
+the comparison below reshapes it to the shape of $\mathbf{w}^*$.
+:end_tab:
 
 ```{.python .input #linear-regression-concise-training-2}
 %%tab pytorch
@@ -742,7 +770,7 @@ Same minimizer; every gradient doubles.
 | doubled `L2Loss` | $\frac{1}{\vert\mathcal{B}\vert}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | $2g$ |
 
 `L2Loss` includes the $\frac{1}{2}$; doubling it gives the mean squared
-error of the other frameworks.
+error.
 :::
 
 ::: {.slide title="Check: A Summed Loss"}

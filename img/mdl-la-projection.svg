@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -49,20 +49,20 @@ L 118.184892 117.773969
    <g id="patch_2">
     <path d="M 13.932004 135.032727 
 Q 113.724768 135.032727 212.511301 135.032727 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 205.711301 131.632727 
 L 212.511301 135.032727 
 L 205.711301 138.432727 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
     <path d="M 26.138182 151.972656 
 Q 26.138182 82.951492 26.138182 14.936558 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 22.738182 21.736558 
 L 26.138182 14.936558 
 L 29.538182 21.736558 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 26.138182 135.032727 
@@ -397,20 +397,20 @@ L 367.635264 102.214752
    <g id="patch_6">
     <path d="M 269.597459 135.032727 
 Q 369.390222 135.032727 468.176755 135.032727 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 461.376755 131.632727 
 L 468.176755 135.032727 
 L 461.376755 138.432727 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 281.803636 151.972656 
 Q 281.803636 82.951492 281.803636 14.936558 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 278.403636 21.736558 
 L 281.803636 14.936558 
 L 285.203636 21.736558 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_8">
     <path d="M 281.803636 135.032727 

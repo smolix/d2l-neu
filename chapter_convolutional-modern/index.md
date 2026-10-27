@@ -7,8 +7,8 @@ Sigmoid units shrink the gradient at every layer, a deeper plain network
 ends up with a *higher* training error than a shallower one, and every new
 layer needs its own width, kernel size, and initialization chosen by hand.
 Between 2012 and 2016 a series of ideas removed these obstacles one at a
-time, and the networks that won ImageNet grew from 8 layers to more than
-150. Later progress came as much from how networks are trained, and from
+time, and the networks that won ImageNet grew from 8 layers to more than 150.
+Later progress came as much from how networks are trained, and from
 studying whole families of networks, as from new layers. Telling these
 sources apart matters whenever we compare two published results or design a
 network for a new problem.
@@ -28,9 +28,8 @@ accuracy comes from the training procedure rather than the architecture.
 change at a time. :numref:`sec_cnn-design` asks what rules appear when we
 study populations of networks instead of single designs.
 
-Every network in the chapter is trained on Fashion-MNIST in all four
-frameworks, with the same model and training procedure in every framework;
-ImageNet results are quoted from the papers. Vision transformers
+Every network in the chapter is trained on Fashion-MNIST; ImageNet results are
+quoted from the papers. Vision transformers
 :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` now lead many large-scale
 benchmarks and follow in :numref:`chap_transformers`. Convnets remain the
 default where data are limited, latency matters, or every pixel needs a
@@ -110,8 +109,8 @@ What made deep convnets trainable<br>
 - Reported accuracies mix architecture with the training procedure.
 
 ::: {.d2l-note}
-Between 2012 and 2016 ImageNet winners grew from 8 layers to more than
-150. Which ideas made that possible, and which gains came from training?
+Between 2012 and 2016 ImageNet winners grew from 8 layers to more than 150.
+Which ideas made that possible, and which gains came from training?
 :::
 :::
 
@@ -125,8 +124,7 @@ Between 2012 and 2016 ImageNet winners grew from 8 layers to more than
 - trade accuracy for arithmetic with depthwise-separable convolutions;
 - separate the effect of a training recipe from that of an architecture.
 
-**Running example:** every network trained on Fashion-MNIST, with the same
-model and procedure in all four frameworks.
+**Running example:** every network trained on Fashion-MNIST.
 :::
 
 ::: {.slide title="Map of the Chapter"}

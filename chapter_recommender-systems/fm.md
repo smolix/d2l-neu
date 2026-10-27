@@ -131,7 +131,7 @@ Afterwards, we train the model. The learning rate is set to 0.02 and the embeddi
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = FM(train_data.field_dims, num_factors=20)
-net.initialize(init.Xavier(), ctx=devices)
+net.initialize(init.Xavier(), device=devices)
 lr, num_epochs, optimizer = 0.02, 30, 'adam'
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {'learning_rate': lr})

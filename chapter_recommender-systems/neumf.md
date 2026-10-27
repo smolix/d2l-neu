@@ -415,7 +415,7 @@ devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
 # Xavier gives the GMF and MLP branches comparable initial activation scales.
 # The model returns raw scores; BPR applies a sigmoid to their difference.
-net.initialize(ctx=devices, force_reinit=True, init=mx.init.Xavier())
+net.initialize(device=devices, force_reinit=True, init=mx.init.Xavier())
 ```
 
 ```{.python .input #neumf-training-and-evaluating-the-model-3  n=8}

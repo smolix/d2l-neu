@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -86,20 +86,20 @@ L 174.6 7.2
    <g id="patch_2">
     <path d="M 9.199182 118.8 
 Q 118.798827 118.8 227.392242 118.8 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 220.592242 115.4 
 L 227.392242 118.8 
 L 220.592242 122.2 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
     <path d="M 118.8 228.400818 
 Q 118.8 118.801173 118.8 10.207758 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 115.4 17.007758 
 L 118.8 10.207758 
 L 122.2 17.007758 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- null space -->
@@ -550,20 +550,20 @@ L 440.115 11.85
    <g id="patch_4">
     <path d="M 277.039182 118.8 
 Q 386.638827 118.8 495.232242 118.8 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 488.432242 115.4 
 L 495.232242 118.8 
 L 488.432242 122.2 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 386.64 228.400818 
 Q 386.64 118.801173 386.64 10.207758 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
     <path d="M 383.24 17.007758 
 L 386.64 10.207758 
 L 390.04 17.007758 
-" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- column space -->

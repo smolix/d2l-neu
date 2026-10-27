@@ -14,8 +14,9 @@ by two pixels, so after $L$ such layers a unit sees a $(2L+1)\times(2L+1)$
 patch. Covering a $28\times28$ Fashion-MNIST image takes fourteen layers. If
 every second layer is followed by a $2\times2$ step that halves the
 resolution, each later kernel reaches twice as far in the input
-(:numref:`subsec_stride_rf`), and six $3\times3$ convolutions with two such
-steps already see a $32\times32$ patch.
+(:numref:`subsec_stride_rf`), and each $2\times2$ window adds its own extent
+(:eqref:`eq_receptive_field` with $k=s=2$). Six $3\times3$ convolutions with
+two such steps then see a $32\times32$ patch.
 
 A second problem appears at the bottom of the network. The edge detector of
 :numref:`sec_conv_layer` responds at the pixel where the edge lies. Shift the
@@ -77,7 +78,11 @@ neighboring pixels and so smooths out variation from pixel to pixel.
 Max-pooling was proposed in cognitive neuroscience as a model of how the
 visual cortex might aggregate evidence hierarchically for object recognition
 :cite:`Riesenhuber.Poggio.1999`, and an earlier version had been used in
-speech recognition :cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. In the
+speech recognition :cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. The
+Neocognitron :cite:`Fukushima.1980` summarized neighborhoods earlier still.
+It alternated layers of feature detectors with layers of complex cells. A
+complex cell responded when one detector fired anywhere in a small
+neighborhood, so its output tolerated small shifts of the input. In the
 networks of the 2010s, max-pooling became the usual choice between
 convolutions, and average pooling the usual choice at the end of a network.
 
@@ -111,13 +116,13 @@ the window by more than one position at a time; we need it below.
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab mxnet, pytorch
 def pool2d(X, pool_size, mode='max', stride=1):
-    p_h, p_w = pool_size
-    Y = d2l.zeros(((X.shape[0] - p_h) // stride + 1,
-                   (X.shape[1] - p_w) // stride + 1))
+    k_h, k_w = pool_size
+    Y = d2l.zeros(((X.shape[0] - k_h) // stride + 1,
+                   (X.shape[1] - k_w) // stride + 1))
     for i in range(Y.shape[0]):
         for j in range(Y.shape[1]):
-            window = X[i * stride: i * stride + p_h,
-                       j * stride: j * stride + p_w]
+            window = X[i * stride: i * stride + k_h,
+                       j * stride: j * stride + k_w]
             Y[i, j] = window.max() if mode == 'max' else window.mean()
     return Y
 ```
@@ -125,28 +130,25 @@ def pool2d(X, pool_size, mode='max', stride=1):
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab tensorflow
 def pool2d(X, pool_size, mode='max', stride=1):
-    p_h, p_w = pool_size
-    Y = tf.Variable(tf.zeros(((X.shape[0] - p_h) // stride + 1,
-                              (X.shape[1] - p_w) // stride + 1)))
-    for i in range(Y.shape[0]):
-        for j in range(Y.shape[1]):
-            window = X[i * stride: i * stride + p_h,
-                       j * stride: j * stride + p_w]
-            Y[i, j].assign(tf.reduce_max(window) if mode == 'max'
-                           else tf.reduce_mean(window))
-    return Y
+    k_h, k_w = pool_size
+    reduce = tf.reduce_max if mode == 'max' else tf.reduce_mean
+    # Build Y from its entries, so that gradients flow through it
+    return tf.stack([
+        tf.stack([reduce(X[i: i + k_h, j: j + k_w])
+                  for j in range(0, X.shape[1] - k_w + 1, stride)])
+        for i in range(0, X.shape[0] - k_h + 1, stride)])
 ```
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab jax
 def pool2d(X, pool_size, mode='max', stride=1):
-    p_h, p_w = pool_size
-    Y = jnp.zeros(((X.shape[0] - p_h) // stride + 1,
-                   (X.shape[1] - p_w) // stride + 1))
+    k_h, k_w = pool_size
+    Y = jnp.zeros(((X.shape[0] - k_h) // stride + 1,
+                   (X.shape[1] - k_w) // stride + 1))
     for i in range(Y.shape[0]):
         for j in range(Y.shape[1]):
-            window = X[i * stride: i * stride + p_h,
-                       j * stride: j * stride + p_w]
+            window = X[i * stride: i * stride + k_h,
+                       j * stride: j * stride + k_w]
             Y = Y.at[i, j].set(window.max() if mode == 'max'
                                else window.mean())
     return Y
@@ -236,7 +238,8 @@ TensorFlow prefers, and is optimized for, the *channels-last* layout
 :end_tab:
 
 :begin_tab:`jax`
-Flax also uses the channels-last layout (batch, height, width, channels).
+Flax layers take the *channels-last* layout (batch, height, width,
+channels).
 :end_tab:
 
 ```{.python .input #pooling-padding-and-stride-1}
@@ -251,15 +254,27 @@ X = d2l.reshape(d2l.arange(16, dtype=d2l.float32), (1, 4, 4, 1))
 X
 ```
 
-Pooling summarizes a region, so by default the frameworks set the stride
-equal to the window shape: the windows then tile the input without
-overlapping. A $3\times3$ window on the $4\times4$ input fits once, and the
-output is the maximum of the top-left $3\times3$ block, 10. Pooling has no
-parameters, so the layer needs no initialization.
+Pooling summarizes a region, so the usual stride equals the window shape:
+the windows then tile the input without overlapping. A $3\times3$ window on
+the $4\times4$ input fits once, and the output is the maximum of the
+top-left $3\times3$ block, 10. Pooling has no parameters, so the layer needs
+no initialization.
+
+:begin_tab:`mxnet`
+The stride of `nn.MaxPool2D` defaults to the window shape.
+:end_tab:
+
+:begin_tab:`pytorch`
+The stride of `nn.MaxPool2d` defaults to the window shape.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The stride of `tf.keras.layers.MaxPool2D` defaults to the window shape.
+:end_tab:
 
 :begin_tab:`jax`
-Flax's `nnx.max_pool` is an exception: its stride defaults to 1, so the code
-passes `strides` explicitly.
+The stride of `nnx.max_pool` defaults to 1, so the code passes `strides`
+equal to the window shape.
 :end_tab:
 
 ```{.python .input #pooling-padding-and-stride-2}
@@ -343,6 +358,33 @@ pool(X - 16)
 Each output is 16 below the previous one. Zero padding would have produced
 0 in the three windows that touch the padding, since 0 exceeds every real
 entry there.
+
+Average pooling has no neutral padding value. If the padded positions count
+as zeros in the mean, they pull the outputs at the border toward 0; the
+alternative is to average only the real entries under each window.
+
+:begin_tab:`mxnet`
+`nn.AvgPool2D` counts the padded zeros by default
+(`count_include_pad=True`); `count_include_pad=False` averages only the real
+entries.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.AvgPool2d` counts the padded zeros by default
+(`count_include_pad=True`); `count_include_pad=False` averages only the real
+entries.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.keras.layers.AvgPool2D` with `padding='same'` averages only the real
+entries under each window.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.avg_pool` counts the padded zeros by default
+(`count_include_pad=True`); `count_include_pad=False` averages only the real
+entries.
+:end_tab:
 
 Pooling windows can also have different heights and widths, here a
 $2\times3$ window with stride $(2, 3)$ and one column of padding on the
@@ -686,11 +728,11 @@ windows absorb more shifts and keep less resolution.
 :::
 :::
 
-::: {.slide title="Framework Pooling Layers Default to Stride Equal to the Window"}
+::: {.slide title="With Stride Equal to the Window, Pooling Windows Tile the Input"}
 [Padding and stride]{.kicker}
 
-The windows then tile the input without overlap. On the $4\times4$
-input $0, \ldots, 15$:
+The usual pooling stride is the window shape: no window overlaps another.
+On the $4\times4$ input $0, \ldots, 15$:
 
 @pooling-padding-and-stride-2
 
@@ -718,6 +760,8 @@ Adding a constant to every input must add it to every output. On `X - 16`
 
 - Each output is $5, 7, 13, 15$ minus 16.
 - Zero padding would give 0 in the three windows that touch the padding.
+- Average pooling has no neutral value: counted padded zeros pull border
+  means toward 0, unless the layer averages only the real entries.
 :::
 
 ::: {.slide title="Each Channel Is Pooled Separately" except="tensorflow,jax"}
@@ -775,8 +819,8 @@ the input.
 
 - **Pooling** replaces each window by its max or mean; no parameters;
   one channel at a time.
-- **Shapes** follow the convolution formula; framework layers default to
-  stride = window.
+- **Shapes** follow the convolution formula; stride = window tiles the
+  input.
 - **Padding** for max-pooling is $-\infty$: pooling `X - 16` returns the
   outputs minus 16.
 - **Tolerance:** a $2\times2$, stride-2 pool absorbs a one-pixel shift

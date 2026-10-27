@@ -96,17 +96,17 @@ the learning rate `lr`, finds registered parameters by itself, so the model
 needs no `configure_optimizers` of its own. The argument `std` sets the
 standard deviation of the initial weights.
 
-:begin_tab:`pytorch`
-`nn.Parameter` registers each tensor with the module, so
-`model.parameters()` lists `W1`, `b1`, `W2`, and `b2`, and the default
-optimizer, `torch.optim.SGD`, updates them.
-:end_tab:
-
 :begin_tab:`mxnet`
 A Gluon `Parameter` assigned as an attribute of a block is registered with
 it, so `model.collect_params()` lists the four arrays, and the default
 optimizer, Gluon's `Trainer` with the `'sgd'` update, updates them.
 `initialize` allocates their values, which `data()` returns.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.Parameter` registers each tensor with the module, so
+`model.parameters()` lists `W1`, `b1`, `W2`, and `b2`, and the default
+optimizer, `torch.optim.SGD`, updates them.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -128,19 +128,6 @@ model draws a new one on every run.
 :end_tab:
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
-%%tab pytorch
-class MLPScratch(d2l.Classifier):
-    """An MLP with one hidden layer, implemented from scratch."""
-    def __init__(self, num_inputs, num_outputs, num_hiddens, lr, std=0.01):
-        super().__init__()
-        self.save_hyperparameters()
-        self.W1 = nn.Parameter(d2l.normal(0, std, (num_inputs, num_hiddens)))
-        self.b1 = nn.Parameter(d2l.zeros(num_hiddens))
-        self.W2 = nn.Parameter(d2l.normal(0, std, (num_hiddens, num_outputs)))
-        self.b2 = nn.Parameter(d2l.zeros(num_outputs))
-```
-
-```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab mxnet
 class MLPScratch(d2l.Classifier):
     """An MLP with one hidden layer, implemented from scratch."""
@@ -155,6 +142,19 @@ class MLPScratch(d2l.Classifier):
                                   init=normal)
         self.b2 = gluon.Parameter('b2', shape=(num_outputs,), init=zero)
         self.initialize()
+```
+
+```{.python .input #mlp-implementation-initializing-model-parameters}
+%%tab pytorch
+class MLPScratch(d2l.Classifier):
+    """An MLP with one hidden layer, implemented from scratch."""
+    def __init__(self, num_inputs, num_outputs, num_hiddens, lr, std=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W1 = nn.Parameter(d2l.normal(0, std, (num_inputs, num_hiddens)))
+        self.b1 = nn.Parameter(d2l.zeros(num_hiddens))
+        self.W2 = nn.Parameter(d2l.normal(0, std, (num_hiddens, num_outputs)))
+        self.b2 = nn.Parameter(d2l.zeros(num_outputs))
 ```
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
@@ -202,9 +202,31 @@ We write the activation function ourselves instead of calling the
 framework's built-in function. The ReLU keeps the positive entries and
 zeros the others, so it multiplies each entry $z$ by 1 if $z > 0$ and by 0
 otherwise. In this form automatic differentiation gives the derivative 0 at
-$z = 0$, as for the built-in ReLU of every framework
-(:numref:`subsec_activation-functions`); for $\max(z, 0)$ it would give
-$1/2$ or 1 there, depending on the framework.
+$z = 0$, the value that the built-in ReLU uses
+(:numref:`subsec_activation-functions`).
+
+:begin_tab:`mxnet`
+Written as `mnp.maximum(X, 0)`, the ReLU would get the derivative 1 at
+$z = 0$.
+:end_tab:
+
+:begin_tab:`pytorch`
+Written as `torch.maximum(X, torch.zeros_like(X))`, the ReLU would get the
+derivative $1/2$ at $z = 0$: PyTorch splits the gradient of `maximum`
+equally between two equal arguments. `torch.clamp(X, min=0)` would give 1.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Written as `tf.maximum(X, 0)`, the ReLU would get the derivative 1 at
+$z = 0$: TensorFlow passes the gradient of `maximum` to its first argument
+when the two arguments are equal.
+:end_tab:
+
+:begin_tab:`jax`
+Written as `jnp.maximum(X, 0)`, the ReLU would get the derivative $1/2$ at
+$z = 0$: JAX splits the gradient of `maximum` equally between two equal
+arguments.
+:end_tab:
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
@@ -251,18 +273,6 @@ The MXNet version reads the values of the parameters with `data()`.
 :end_tab:
 
 ```{.python .input #mlp-implementation-model-2}
-%%tab pytorch, tensorflow, jax
-@d2l.add_to_class(MLPScratch)
-def hidden(self, X):
-    X = d2l.reshape(X, (-1, self.num_inputs))  # One flattened image per row
-    return relu(d2l.matmul(X, self.W1) + self.b1)
-
-@d2l.add_to_class(MLPScratch)
-def forward(self, X):
-    return d2l.matmul(self.hidden(X), self.W2) + self.b2  # The logits
-```
-
-```{.python .input #mlp-implementation-model-2}
 %%tab mxnet
 @d2l.add_to_class(MLPScratch)
 def hidden(self, X):
@@ -272,6 +282,18 @@ def hidden(self, X):
 @d2l.add_to_class(MLPScratch)
 def forward(self, X):
     return d2l.matmul(self.hidden(X), self.W2.data()) + self.b2.data()
+```
+
+```{.python .input #mlp-implementation-model-2}
+%%tab pytorch, tensorflow, jax
+@d2l.add_to_class(MLPScratch)
+def hidden(self, X):
+    X = d2l.reshape(X, (-1, self.num_inputs))  # One flattened image per row
+    return relu(d2l.matmul(X, self.W1) + self.b1)
+
+@d2l.add_to_class(MLPScratch)
+def forward(self, X):
+    return d2l.matmul(self.hidden(X), self.W2) + self.b2  # The logits
 ```
 
 ### Checks before Training
@@ -330,15 +352,15 @@ parameters.
 
 A fully connected layer of the framework holds a weight matrix and a bias
 vector and computes the affine map of one layer, as in the concise softmax
-regression of :numref:`sec_softmax_concise`. The concise MLP puts four
-operations into the framework's sequential container, which applies them in
-order: flattening, a fully connected layer with 256 outputs, the ReLU, and a
-fully connected layer with 10 outputs. Compared with `SoftmaxRegression`, it
-adds the hidden layer and the ReLU. We initialize it like the scratch model,
-with weights of standard deviation 0.01 and zero biases, in every framework.
-Without this choice each framework would draw the weights from a default
-distribution of its own. The four defaults differ, so the scratch and the
-concise model would start from different scales.
+regression of :numref:`sec_softmax_concise`. The concise MLP applies four
+operations in order: flattening, a fully connected layer with 256 outputs,
+the ReLU, and a fully connected layer with 10 outputs. The framework's
+sequential container holds the layers that perform them. Compared with
+`SoftmaxRegression`, the model adds the hidden layer and the ReLU. We
+initialize it like the scratch model, with weights of standard deviation
+0.01 and zero biases. The framework's default initialization would draw the
+weights from a distribution of its own, and the scratch and the concise
+model would start from different scales.
 
 :begin_tab:`mxnet`
 The `Dense` layer flattens its input itself, and its argument `activation`
@@ -369,6 +391,19 @@ are constructed, so each `nnx.Linear` needs its number of inputs up front.
 :end_tab:
 
 ```{.python .input #mlp-implementation-model-2-2}
+%%tab mxnet
+class MLP(d2l.Classifier):
+    """An MLP with one hidden layer, built from framework layers."""
+    def __init__(self, num_outputs, num_hiddens, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = nn.Sequential()
+        self.net.add(nn.Dense(num_hiddens, activation='relu'),
+                     nn.Dense(num_outputs))
+        self.net.initialize(init.Normal(sigma=0.01))
+```
+
+```{.python .input #mlp-implementation-model-2-2}
 %%tab pytorch
 class MLP(d2l.Classifier):
     """An MLP with one hidden layer, built from framework layers."""
@@ -383,19 +418,6 @@ class MLP(d2l.Classifier):
         if isinstance(module, nn.Linear):
             nn.init.normal_(module.weight, std=0.01)
             nn.init.zeros_(module.bias)
-```
-
-```{.python .input #mlp-implementation-model-2-2}
-%%tab mxnet
-class MLP(d2l.Classifier):
-    """An MLP with one hidden layer, built from framework layers."""
-    def __init__(self, num_outputs, num_hiddens, lr):
-        super().__init__()
-        self.save_hyperparameters()
-        self.net = nn.Sequential()
-        self.net.add(nn.Dense(num_hiddens, activation='relu'),
-                     nn.Dense(num_outputs))
-        self.net.initialize(init.Normal(sigma=0.01))
 ```
 
 ```{.python .input #mlp-implementation-model-2-2}
@@ -550,8 +572,8 @@ registered parameter arrays, the ReLU written by hand, and a forward
 pass of two lines that returns logits. A forward pass through the untrained
 model checks the shapes, a loss near $\log 10 \approx 2.30$, and that about
 half of the hidden units are active. The concise version stacks the same
-operations in the framework's sequential container, with the same
-initialization in every framework. On Fashion-MNIST, after 30 epochs, the
+operations in the framework's sequential container, with the
+initialization of the scratch model. On Fashion-MNIST, after 30 epochs, the
 hidden layer of 256 units raises the validation accuracy from about 84% to
 about 87%, with 26 times the parameters and multiply-adds of softmax
 regression and, on a GPU, about the same training time per epoch.
@@ -592,7 +614,8 @@ regression and, on a GPU, about the same training time per epoch.
    is then reduced to the scalar
    $t = \operatorname{ReLU}(\mathbf{x}\mathbf{w}^{(1)} + b^{(1)}) \geq 0$,
    and the logits are $\mathbf{o} = t\, \mathbf{w}^{(2)} + \mathbf{b}^{(2)}$
-   with $\mathbf{w}^{(2)}, \mathbf{b}^{(2)} \in \mathbb{R}^{1 \times 10}$.
+   with $\mathbf{w}^{(2)} \in \mathbb{R}^{1 \times 10}$ and
+   $\mathbf{b}^{(2)} \in \mathbb{R}^{10}$.
     1. Show that each class is predicted on at most one interval of $t$, and
        that the order of these intervals along the $t$ axis is fixed by the
        entries of $\mathbf{w}^{(2)}$. Describe the regions of input space
@@ -630,9 +653,9 @@ regression and, on a GPU, about the same training time per epoch.
        How much do the curves differ, and does the difference persist as
        training continues? Relate your observation to the scale of the
        hidden activations and the logits on the first forward pass.
-    1. Extend `MLPScratch` to two and to four hidden layers, each of width
-       256. Before running anything, predict which depth is more sensitive
-       to the standard deviation, and why.
+    1. Extend `MLPScratch` to two and to four hidden layers, each of
+       width 256. Before running anything, predict which depth is more
+       sensitive to the standard deviation, and why.
     1. Sweep the standard deviation over
        $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both depths. For each depth,
        report the range for which the network reaches at least 70%
@@ -768,7 +791,19 @@ The width $h$ is a hyperparameter: training does not choose it.
 :::
 :::
 
-::: {.slide title="Random Weights Keep the Hidden Units Different"}
+::: {.slide title="Random Weights Keep the Hidden Units Different" except="tensorflow"}
+[From scratch]{.kicker}
+
+Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, as for softmax regression.
+
+- **Why random:** if all weights of a layer were equal, every hidden unit
+  would compute the same activation and receive the same gradient. The
+  units would stay identical: one unit, 256 times.
+- **Why small:** the logits start near 0, so every class gets probability
+  about 1/10.
+:::
+
+::: {.slide title="Random Weights Keep the Hidden Units Different" only="tensorflow"}
 [From scratch]{.kicker}
 
 Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, as for softmax regression.
@@ -780,24 +815,68 @@ Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, as for softmax regression.
   about 1/10.
 
 ::: {.d2l-note .warn}
-Keras: one initializer object returns the same values on every call. Shared
+A Keras initializer object returns the same values on every call. Shared
 by $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$, it would make
 $\mathbf{W}^{(2)}$ repeat the first entries of $\mathbf{W}^{(1)}$. Give each
 weight its own.
 :::
 :::
 
-::: {.slide title="Registered Parameters Need No Optimizer Code"}
+::: {.slide title="Registered Parameters Need No Optimizer Code" only="mxnet"}
 [From scratch]{.kicker}
 
 The default minibatch SGD of `Module` finds every registered array:
 
-| framework | parameter type | found via |
-|---|---|---|
-| PyTorch | `nn.Parameter(tensor)` | `model.parameters()` |
-| TensorFlow | `self.add_weight(...)` | `model.trainable_variables` |
-| MXNet | `gluon.Parameter(...)`, read with `data()` | `model.collect_params()` |
-| JAX | `nnx.Param(array)` | `nnx.state(model)` |
+- A `gluon.Parameter(...)` assigned as an attribute is registered with the
+  block; `initialize` allocates it, and `data()` reads its value.
+- `model.collect_params()` lists the four arrays, and Gluon's `Trainer`
+  with the `'sgd'` update updates them.
+
+::: {.d2l-note}
+Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
+deviation of the weights.
+:::
+:::
+
+::: {.slide title="Registered Parameters Need No Optimizer Code" only="pytorch"}
+[From scratch]{.kicker}
+
+The default minibatch SGD of `Module` finds every registered array:
+
+- `nn.Parameter(tensor)` registers a tensor with the module.
+- `model.parameters()` lists the four arrays, and `torch.optim.SGD`
+  updates them.
+
+::: {.d2l-note}
+Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
+deviation of the weights.
+:::
+:::
+
+::: {.slide title="Registered Parameters Need No Optimizer Code" only="tensorflow"}
+[From scratch]{.kicker}
+
+The default minibatch SGD of `Module` finds every registered array:
+
+- `self.add_weight(...)` creates a variable and registers it with the
+  Keras model.
+- `model.trainable_variables` lists the four arrays, and Keras's `SGD`
+  updates them.
+
+::: {.d2l-note}
+Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
+deviation of the weights.
+:::
+:::
+
+::: {.slide title="Registered Parameters Need No Optimizer Code" only="jax"}
+[From scratch]{.kicker}
+
+The default minibatch SGD of `Module` finds every registered array:
+
+- `nnx.Param(array)` marks an array as a trainable parameter.
+- `nnx.state(model)` contains the four arrays, and `optax.sgd` updates
+  them.
 
 ::: {.d2l-note}
 Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
@@ -814,8 +893,7 @@ Written by hand instead of calling the built-in function: each entry times
 @mlp-implementation-model-1
 
 ::: {.d2l-note}
-The derivative at $z = 0$ is then 0, as for every built-in ReLU. Written as
-$\max(z, 0)$, autograd would give $1/2$ or 1 there, by framework.
+The derivative at $z = 0$ is then 0, the value that the built-in ReLU uses.
 :::
 :::
 
@@ -895,17 +973,14 @@ epochs instead of 10.
 :::
 :::
 
-::: {.slide title="The Same Model Is Four Operations in a Sequential Container"}
+::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="mxnet"}
 [Framework layers]{.kicker}
 
 Flatten, fully connected to 256, ReLU, fully connected to 10:
 
-| framework | container and layers | initialization |
-|---|---|---|
-| PyTorch | `nn.Sequential(Flatten, LazyLinear, ReLU, LazyLinear)` | `weight_init` hook, after the first forward pass |
-| TensorFlow | `Sequential([Flatten, Dense(relu), Dense])` | a `RandomNormal` per layer |
-| MXNet | `nn.Sequential(Dense(relu), Dense)` | `initialize(init.Normal(0.01))` |
-| JAX | `nnx.Sequential(Linear, relu, Linear)` | `kernel_init=normal(0.01)` |
+- `nn.Sequential()` with `Dense(256, activation='relu')` and `Dense(10)`;
+  `Dense` flattens its input itself.
+- Initialization: `initialize(init.Normal(sigma=0.01))`.
 
 ::: {.d2l-note}
 The layers hold the parameters, and the container fixes the order of the
@@ -913,22 +988,101 @@ operations: nothing to name or register by hand.
 :::
 :::
 
-::: {.slide title="Framework Defaults Would Start the Four Tabs at Different Scales"}
+::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="pytorch"}
 [Framework layers]{.kicker}
 
-Standard deviation of the default initial weights, for 784 and for 256
-inputs:
+Flatten, fully connected to 256, ReLU, fully connected to 10:
 
-| framework | default | layer 1 | layer 2 |
-|---|---|---:|---:|
-| PyTorch | uniform, bound $1/\sqrt{\text{inputs}}$ | 0.021 | 0.036 |
-| TensorFlow | Glorot uniform | 0.044 | 0.087 |
-| MXNet | uniform on $[-0.07, 0.07]$ | 0.040 | 0.040 |
-| JAX | LeCun normal | 0.036 | 0.0625 |
+- `nn.Sequential(nn.Flatten(), nn.LazyLinear(256), nn.ReLU(),
+  nn.LazyLinear(10))`.
+- Initialization: the `Trainer` calls `weight_init` after the first
+  forward pass, once the lazy layers know their shapes.
+
+::: {.d2l-note}
+The layers hold the parameters, and the container fixes the order of the
+operations: nothing to name or register by hand.
+:::
+:::
+
+::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="tensorflow"}
+[Framework layers]{.kicker}
+
+Flatten, fully connected to 256, ReLU, fully connected to 10:
+
+- `Sequential([Flatten(), Dense(256, activation='relu'), Dense(10)])`.
+- Initialization: a `RandomNormal(stddev=0.01)` per layer, since one
+  initializer object repeats its values.
+
+::: {.d2l-note}
+The layers hold the parameters, and the container fixes the order of the
+operations: nothing to name or register by hand.
+:::
+:::
+
+::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="jax"}
+[Framework layers]{.kicker}
+
+Flatten, fully connected to 256, ReLU, fully connected to 10:
+
+- `nnx.Sequential(nnx.Linear(784, 256), nnx.relu, nnx.Linear(256, 10))`;
+  `forward` flattens each image first.
+- Initialization: `kernel_init=nnx.initializers.normal(0.01)`.
+
+::: {.d2l-note}
+The layers hold the parameters, and the container fixes the order of the
+operations: nothing to name or register by hand.
+:::
+:::
+
+::: {.slide title="The Default Initialization Would Start at a Different Scale" only="mxnet"}
+[Framework layers]{.kicker}
+
+- `initialize()` by default: uniform on $[-0.07, 0.07]$ for every layer.
+- Standard deviation 0.040 in both layers, against 0.01 in the scratch
+  model.
 
 ::: {.d2l-note .rule}
-Every tab sets $\mathcal{N}(0, 0.01^2)$ and zero biases, as the scratch
-model does, so all implementations start from the same distribution.
+`init.Normal(sigma=0.01)` and zero biases match the scratch model, so both
+implementations start from the same distribution.
+:::
+:::
+
+::: {.slide title="The Default Initialization Would Start at a Different Scale" only="pytorch"}
+[Framework layers]{.kicker}
+
+- `nn.LazyLinear` by default: uniform with bound $1/\sqrt{\text{inputs}}$.
+- Standard deviation 0.021 for 784 inputs, 0.036 for 256 inputs, against
+  0.01 in the scratch model.
+
+::: {.d2l-note .rule}
+`weight_init` sets $\mathcal{N}(0, 0.01^2)$ and zero biases, as the scratch
+model does, so both implementations start from the same distribution.
+:::
+:::
+
+::: {.slide title="The Default Initialization Would Start at a Different Scale" only="tensorflow"}
+[Framework layers]{.kicker}
+
+- `Dense` by default: Glorot uniform, variance $2/(\text{inputs} + \text{outputs})$.
+- Standard deviation 0.044 for the first layer (784 to 256), 0.087 for the
+  second (256 to 10), against 0.01 in the scratch model.
+
+::: {.d2l-note .rule}
+A `RandomNormal(stddev=0.01)` per layer and zero biases match the scratch
+model, so both implementations start from the same distribution.
+:::
+:::
+
+::: {.slide title="The Default Initialization Would Start at a Different Scale" only="jax"}
+[Framework layers]{.kicker}
+
+- `nnx.Linear` by default: LeCun normal, variance $1/\text{inputs}$.
+- Standard deviation 0.036 for 784 inputs, 0.0625 for 256 inputs, against
+  0.01 in the scratch model.
+
+::: {.d2l-note .rule}
+`kernel_init=normal(0.01)` and zero biases match the scratch model, so both
+implementations start from the same distribution.
 :::
 :::
 
@@ -1023,7 +1177,7 @@ $784 \cdot 1024 + 1024 \cdot 10 = 813{,}056$ multiply-adds: 4 times the
 - **Checks:** shapes $8 \times 256$ and $8 \times 10$, loss
   $\log 10 \approx 2.30$, half of the units active.
 - **Concise:** flatten, linear, ReLU, linear in a sequential container, with
-  the same initialization in every framework.
+  the initialization of the scratch model.
 - **Result after 30 epochs:** about 87% against 84% for softmax regression;
   26 times the parameters and multiply-adds, about the same time per epoch
   on a GPU.

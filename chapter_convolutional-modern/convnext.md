@@ -216,12 +216,25 @@ The layer normalization of ConvNeXt normalizes the channels at each spatial
 position separately, as a transformer normalizes each patch vector. In a
 channels-last layout (examples, height, width, channels) this is the default
 layer normalization over the last axis, and a $1 \times 1$ convolution is a
-linear layer applied to that axis. TensorFlow and JAX store images
-channels-last, so their blocks use the library layers directly. PyTorch
-stores them channels-first, and its block permutes to channels-last and back.
-MXNet keeps channels-first and normalizes over `axis=1`. Following the
-paper, every convolution and linear layer starts with weights drawn from a
-normal distribution with standard deviation 0.02 and zero biases.
+linear layer applied to that axis. Following the paper, every convolution
+and linear layer starts with weights drawn from a normal distribution with
+standard deviation 0.02 and zero biases.
+
+:begin_tab:`mxnet`
+Images are stored channels-first, so the block normalizes over `axis=1` and
+keeps its $1 \times 1$ convolutions as convolutions.
+:end_tab:
+
+:begin_tab:`pytorch`
+Images are stored channels-first, so the block permutes to channels-last for
+the layer normalization and the two linear layers and permutes back
+afterwards.
+:end_tab:
+
+:begin_tab:`tensorflow, jax`
+Images are stored channels-last, so the block uses the library's layer
+normalization and dense layers directly.
+:end_tab:
 
 ```{.python .input #convnext-block}
 %%tab mxnet
@@ -455,11 +468,14 @@ class ConvNeXt(d2l.Classifier):
                 layers.append(ConvNeXtBlock(c, drop_prob=rates[b], rngs=rngs))
                 b += 1
             c_prev = c
-        layers += [lambda x: x.mean(axis=(1, 2)),  # Global average pooling
+        layers += [global_avg_pool,
                    nnx.LayerNorm(c_prev, epsilon=1e-6, rngs=rngs),
                    nnx.Linear(c_prev, num_classes, kernel_init=w_init,
                               rngs=rngs)]
         self.net = nnx.Sequential(*layers)
+
+def global_avg_pool(X):  # Average over height and width (NHWC)
+    return X.mean(axis=(1, 2))
 ```
 
 We train on Fashion-MNIST upsampled to $64 \times 64$. Such an input leaves
@@ -499,7 +515,7 @@ d2l.num_params(model)
 The network has 3,376,450 parameters, about a third of the 11.2 million of
 the ResNet-18 that :numref:`sec_resnet` trained on Fashion-MNIST. Because a
 single wrongly sized layer changes it, the count is a sensitive check of any
-reimplementation, ours included: all four frameworks agree on it.
+reimplementation, ours included.
 
 ## A Parameter-Matched Comparison
 
@@ -642,7 +658,8 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.HybridSequential()
-        self.net.add(nn.Conv2D(base, kernel_size=7, strides=2, padding=3),
+        self.net.add(nn.Conv2D(base, kernel_size=7, strides=2, padding=3,
+                               use_bias=False),
                      nn.BatchNorm(), nn.Activation('relu'),
                      nn.MaxPool2D(pool_size=3, strides=2, padding=1))
         for i, c in enumerate((base, 2 * base, 4 * base, 8 * base)):
@@ -662,7 +679,8 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
     def __init__(self, num_steps, lr=2e-3, num_classes=10, base=35):
         super().__init__()
         self.save_hyperparameters()
-        layers = [nn.LazyConv2d(base, kernel_size=7, stride=2, padding=3),
+        layers = [nn.LazyConv2d(base, kernel_size=7, stride=2, padding=3,
+                                bias=False),
                   nn.LazyBatchNorm2d(), nn.ReLU(),
                   nn.MaxPool2d(kernel_size=3, stride=2, padding=1)]
         for i, c in enumerate((base, 2 * base, 4 * base, 8 * base)):
@@ -678,7 +696,8 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
         # The Trainer calls this after the first minibatch fixed the shapes
         if type(module) in (nn.Conv2d, nn.Linear):
             nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-            nn.init.zeros_(module.bias)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #convnext-recipe-2}
@@ -693,8 +712,9 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.ZeroPadding2D(3),  # Symmetric, as in PyTorch
+            tf.keras.layers.ZeroPadding2D(3),  # Pad every side
             tf.keras.layers.Conv2D(base, kernel_size=7, strides=2,
+                                   use_bias=False,
                                    kernel_initializer=he_init()),
             tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
             tf.keras.layers.Activation('relu'),
@@ -723,11 +743,9 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
         self.rngs = rngs
         w_init = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         layers = [nnx.Conv(1, base, (7, 7), strides=(2, 2), padding=3,
-                           kernel_init=w_init, rngs=rngs),
+                           use_bias=False, kernel_init=w_init, rngs=rngs),
                   nnx.BatchNorm(base, momentum=0.9, use_fast_variance=False,
-                                rngs=rngs), nnx.relu,
-                  lambda x: nnx.max_pool(x, (3, 3), (2, 2),
-                                         padding=((1, 1), (1, 1)))]
+                                rngs=rngs), nnx.relu, max_pool]
         c_prev = base
         for i, c in enumerate((base, 2 * base, 4 * base, 8 * base)):
             for j in range(2):
@@ -736,10 +754,13 @@ class CompactResNet18(ModernRecipe, d2l.Classifier):
                     c, use_1x1conv=down, strides=(2, 2) if down else (1, 1),
                     in_channels=c_prev, rngs=rngs))
                 c_prev = c
-        layers += [lambda x: x.mean(axis=(1, 2)),  # Global average pooling
+        layers += [global_avg_pool,
                    nnx.Linear(c_prev, num_classes, kernel_init=w_init,
                               rngs=rngs)]
         self.net = nnx.Sequential(*layers)
+
+def max_pool(X):  # 3x3 windows, stride 2, padding 1
+    return nnx.max_pool(X, (3, 3), (2, 2), padding=((1, 1), (1, 1)))
 ```
 
 We train both networks for 20 epochs on the full Fashion-MNIST training set
@@ -778,25 +799,24 @@ for name, model in models.items():
           f'validation accuracy {accuracy[name]:.3f}')
 ```
 
-:Validation accuracy of the scaled-down ConvNeXt and a ResNet-18 with the same number of parameters and nearly the same multiply-adds per $64 \times 64$ image, after 20 epochs of the modern recipe on Fashion-MNIST (rounded; the same in all four frameworks).
+:Validation accuracy of the scaled-down ConvNeXt and a ResNet-18 with the same number of parameters and nearly the same multiply-adds per $64 \times 64$ image, after 20 epochs of the modern recipe on Fashion-MNIST (rounded).
 :label:`tab_convnext_local`
 
 | Model | Parameters | Multiply-adds | Validation accuracy |
 |:--|--:|--:|--:|
 | ConvNeXt | 3,376,450 | 44.3M | ≈ 92% |
-| Compact ResNet-18 | 3,348,320 | 43.2M | ≈ 94% |
+| Compact ResNet-18 | 3,346,675 | 43.2M | ≈ 94% |
 
-The compact ResNet-18 is ahead by about two points in every framework and
-every run, and both validation curves level off over the last epochs as the
-learning rate decays to zero.
-The result is specific to this setting. Every change on the roadmap was
-selected on 1.3 million ImageNet images at $224 \times 224$. Our control
-matches both the parameters and the arithmetic: counting the multiply-adds
-of every convolution and linear layer for one $64 \times 64$ image gives
-44.3 million for the ConvNeXt and 43.2 million for the ResNet. It does not
-match the running time. What the experiment shows is that ConvNeXt's design
-choices do not transfer automatically to a small grayscale task; it does not
-rank convolutional architectures in general.
+The compact ResNet-18 is ahead by about two points in every run, and both
+validation curves level off over the last epochs as the learning rate decays
+to zero. The result is specific to this setting. Every change on the roadmap
+was selected on 1.3 million ImageNet images at $224 \times 224$. Our control
+matches both the parameters and the arithmetic: counting the multiply-adds of
+every convolution and linear layer for one $64 \times 64$ image gives 44.3
+million for the ConvNeXt and 43.2 million for the ResNet. It does not match
+the running time. What the experiment shows is that ConvNeXt's design choices
+do not transfer automatically to a small grayscale task; it does not rank
+convolutional architectures in general.
 
 ## Limits and Open Problems
 
@@ -897,9 +917,10 @@ of parameters is about two points more accurate than our ConvNeXt.
    and $\bar{g}$ the mean of $g_1, \ldots, g_C$. GRN rescales each channel
    by its normalized response and adds a learnable per-channel affine term
    and a residual,
-   $$\mathrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g}} \mathbf{X}_c + \beta_c + \mathbf{X}_c,$$
-   with $\gamma_c$ and $\beta_c$ initialized to zero so that the layer
-   starts as the identity.
+   $$\mathrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g} + \epsilon} \mathbf{X}_c + \beta_c + \mathbf{X}_c,$$
+   with a small $\epsilon$ against division by zero ($10^{-6}$ in the
+   paper's code), and with $\gamma_c$ and $\beta_c$ initialized to zero so
+   that the layer starts as the identity.
     1. Implement GRN in about five lines and insert it into `ConvNeXtBlock`
        after the GELU, dropping layer scale.
     1. Retrain under the recipe of the comparison in
@@ -1140,7 +1161,7 @@ $$\mathbf{Y} = \mathbf{X} + \boldsymbol{\gamma} \odot \mathbf{W}_2\, \mathrm{GEL
   $10^{-6}$: every block starts as the identity.
 - **Stochastic depth:** drop the branch per example with probability $p$,
   scale kept branches by $1/(1-p)$.
-- Weights $\sim \mathcal{N}(0, 0.02^2)$, zero biases, in every framework.
+- Weights $\sim \mathcal{N}(0, 0.02^2)$, zero biases.
 :::
 
 ::: {.slide title="Our Fashion-MNIST ConvNeXt Has 3,376,450 Parameters"}
@@ -1151,7 +1172,7 @@ $$\mathbf{Y} = \mathbf{X} + \boldsymbol{\gamma} \odot \mathbf{W}_2\, \mathrm{GEL
 
 @!convnext-params
 
-Identical in all four frameworks: one wrongly sized layer would change it.
+A sensitive check: one wrongly sized layer would change it.
 About a third of ResNet-18's 11.2M.
 :::
 
@@ -1188,8 +1209,8 @@ About a third of ResNet-18's 11.2M.
 | ConvNeXt | 3.38M | 44.3M | ≈ 92% |
 | compact ResNet-18 | 3.35M | 43.2M | ≈ 94% |
 
-Same in all four frameworks. The roadmap was selected on ImageNet at
-224 px; its choices need not transfer to 64 px grayscale images.
+The roadmap was selected on ImageNet at 224 px; its choices need not
+transfer to 64 px grayscale images.
 :::
 
 ::: {.slide title="Check: Where Did Swin's Five Points Come From?"}

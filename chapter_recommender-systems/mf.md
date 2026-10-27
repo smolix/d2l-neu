@@ -243,7 +243,7 @@ devices = d2l.try_all_gpus()
 num_users, num_items, train_iter, test_iter = d2l.split_and_load_ml100k(
     test_ratio=0.1, batch_size=512)
 net = MF(30, num_users, num_items)
-net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
+net.initialize(device=devices, force_reinit=True, init=mx.init.Normal(0.01))
 lr, num_epochs, wd, optimizer = 0.002, 20, 1e-5, 'adam'
 # `gluon.loss.L2Loss()` returns 0.5 * MSE, so with identical `lr` MX would
 # train at half the effective gradient of PT's `nn.MSELoss()`. Scale by 2
@@ -271,8 +271,8 @@ Below, we use the trained model to predict the rating that a user (ID 20) might 
 
 ```{.python .input #mf-training-and-evaluating-the-model-3  n=6}
 #@tab mxnet
-scores = net(np.array([20], dtype='int', ctx=devices[0]),
-             np.array([30], dtype='int', ctx=devices[0]))
+scores = net(np.array([20], dtype='int', device=devices[0]),
+             np.array([30], dtype='int', device=devices[0]))
 scores
 ```
 

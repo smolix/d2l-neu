@@ -8,8 +8,8 @@ natural order, this is appropriate. For images it discards the most useful
 thing we know about them: which pixels are neighbors.
 
 The cost shows up in the number of parameters. Consider a classifier that
-tells cats from dogs in one-megapixel photographs. Each input has $10^6$
-dimensions, so even a hidden layer of only 1000 units needs
+tells cats from dogs in one-megapixel grayscale photographs. Each input
+has $10^6$ dimensions, so even a hidden layer of only 1000 units needs
 $10^6 \times 10^3 = 10^9$ weights. In 32-bit floating point these weights
 alone take 4 GB, before gradients and optimizer state are stored. A billion
 parameters are also far more than any collection of labeled pet photographs
@@ -184,7 +184,7 @@ contain convolutional layers are called *convolutional neural networks*
 (CNNs). The matrix $\mathbf{K}$ is the layer's *convolution kernel*, also
 called its *filter*, and its entries are the layer's weights. Local feature
 detectors that are shared across positions go back to the Neocognitron
-:cite:`Fukushima.1982`.
+:cite:`Fukushima.1980`.
 
 The reduction from $10^{12}$ to a few hundred parameters comes from
 restricting the class of functions, not from a more economical way to
@@ -261,6 +261,13 @@ $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o}$ weights and $c_\textrm{o}$ biases.
 A layer with a $3 \times 3$ kernel from an RGB image to 64 channels has
 $9 \cdot 3 \cdot 64 + 64 = 1{,}792$ parameters, whatever the size of the
 image.
+
+Nothing in this derivation depends on the grid having two axes. On a
+one-dimensional grid, such as the samples of an audio signal or the tokens
+of a text, the kernel slides along one axis; on a three-dimensional grid,
+such as the frames of a video or a medical scan, it slides along three.
+:numref:`sec_sentiment_cnn` classifies text with one-dimensional
+convolutions.
 
 ![A Waldo detector: the response of a kernel that matches Waldo peaks at his location (image courtesy of William Murphy (Infomatique)).](../img/waldo-mask.jpg)
 :width:`400px`
@@ -393,7 +400,7 @@ From Fully Connected Layers to Convolutions<br>**translation equivariance · loc
 ::: {.slide title="A Dense Layer on a Megapixel Photo Needs a Billion Weights"}
 [The problem]{.kicker}
 
-Tell cats from dogs in one-megapixel photographs:
+Tell cats from dogs in one-megapixel grayscale photographs:
 
 - Each input has $10^6$ pixels. A hidden layer of only 1000 units needs
   $10^6 \times 10^3 = 10^9$ weights: 4 GB in float32.

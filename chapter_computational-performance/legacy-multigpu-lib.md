@@ -13,10 +13,13 @@ symbols:
   * `d2l.split_batch` (mxnet): `chapter_natural-language-processing-applications/natural-language-inference-attention.md`, `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog}.md`
   * `d2l.resnet18` (tensorflow, mxnet): `chapter_computer-vision/image-augmentation.md`, `chapter_computer-vision/kaggle-cifar10.md`
   * `d2l.evaluate_accuracy_gpus` (mxnet): `chapter_computer-vision/{image-augmentation,kaggle-cifar10}.md`
-The code remains byte-for-byte identical to its pre-rebuild form in
-`multiple-gpus.md` / `multiple-gpus-concise.md`, preserving the committed
-outputs without another capture. This file and its symbols can be removed when
-Chapters 17–19 drop their TensorFlow and MXNet tabs.
+`split_batch` and `evaluate_accuracy_gpus` remain byte-for-byte identical to
+their pre-rebuild form in `multiple-gpus.md` / `multiple-gpus-concise.md`.
+`resnet18` has since changed (2026-10, issue #101: bias-free stem conv,
+BatchNorm decay 0.9 and epsilon 1e-5, He initialization in the tensorflow
+stem and head), so its consumers need a re-capture. This file and its
+symbols can be removed when Chapters 17–19 drop their TensorFlow and MXNet
+tabs.
 -->
 
 <!-- These labels are NOT rendered (this file is build-only, absent from
@@ -68,8 +71,10 @@ def resnet18(num_classes):  #@save
 
     net = nn.Sequential()
     # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1),
+    # removes the max-pooling layer. The stem conv has no bias: the batch
+    # normalization after it removes it
+    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1,
+                      use_bias=False),
             nn.BatchNorm(), nn.Activation('relu'))
     net.add(resnet_block(64, 2, first_block=True),
             resnet_block(128, 2),
@@ -93,17 +98,23 @@ def resnet18(num_classes, in_channels=1):  #@save
                 blk.add(d2l.Residual(num_channels))
         return blk
 
-    # Smaller conv, no max-pool (same as the PT version)
+    # He initialization, one initializer instance per layer
+    he = lambda: tf.keras.initializers.VarianceScaling(
+        2.0, 'fan_in', 'untruncated_normal')
+    # Small stem conv without bias (the batch normalization after it removes
+    # it) and no max-pooling. Running averages decay 0.9 and epsilon is 1e-5
+    # (the Keras defaults are 0.99 and 1e-3)
     net = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
-        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same',
+                               use_bias=False, kernel_initializer=he()),
+        tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
         tf.keras.layers.Activation('relu'),
         resnet_block(64, 2, first_block=True),
         resnet_block(128, 2),
         resnet_block(256, 2),
         resnet_block(512, 2),
         tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(num_classes),
+        tf.keras.layers.Dense(num_classes, kernel_initializer=he()),
     ])
     return net
 ```

@@ -120,8 +120,8 @@ def clean_axes(ax, lim=None, hide=False, equal=True):
         ax.spines["right"].set_visible(False)
 
 
-def axis_cross(ax, xr, yr, color=GRAY, lw=0.9):
-    """Draw faint x/y axes through the origin for a schematic plane."""
+def axis_cross(ax, xr, yr, color=INK, lw=0.9):
+    """Draw thin black x/y axes through the origin for a schematic plane."""
     ax.annotate("", xy=(xr[1], 0), xytext=(xr[0], 0),
                 arrowprops=dict(arrowstyle="->", color=color, lw=lw))
     ax.annotate("", xy=(0, yr[1]), xytext=(0, yr[0]),
@@ -147,7 +147,7 @@ def fig_vectors():
     XR, YR = (-0.9, 4.3), (-1.2, 3.2)
 
     # (a) point with dashed coordinate drops; black axes for readability
-    axis_cross(axa, XR, YR, color=GRAY)
+    axis_cross(axa, XR, YR)
     p = np.array([3.0, 2.0])
     axa.plot(*p, "o", color=BLUE, ms=8, zorder=5)
     axa.plot([p[0], p[0]], [0, p[1]], "--", color=LIGHT, lw=1.2)
@@ -161,7 +161,7 @@ def fig_vectors():
     # (b) same vector as a translation-invariant arrow in three places -- one
     # color, since every arrow *is* the same vector.  Bases chosen so all three
     # copies fit the shared box and stay clear of one another.
-    axis_cross(axb, XR, YR, color=GRAY)
+    axis_cross(axb, XR, YR)
     v = np.array([3.0, 2.0])
     # the third base is nudged right off the line through the other two, so the
     # arrows do not all line up
@@ -184,7 +184,7 @@ def fig_vector_add():
     v = np.array([1.0, 2.0])
     LBL = 16                                  # larger labels, readable at figure size
     LIM = ((-0.5, 4.7), (-0.45, 3.25))        # trimmed box: axes don't overshoot content
-    axis_cross(ax, (-0.4, 4.6), (-0.35, 3.15), color=GRAY)
+    axis_cross(ax, (-0.4, 4.6), (-0.35, 3.15))
     arrow(ax, (0, 0), u, color=BLUE, lw=2.2)
     arrow(ax, u, u + v, color=ORANGE, lw=2.2)
     arrow(ax, (0, 0), u + v, color=GREEN, lw=2.4)
@@ -221,7 +221,7 @@ def fig_span():
     # (a) span of a single vector: the line {t v}
     v = R @ np.array([2.0, 1.0])
     t0, t1 = -1.6, 2.9
-    axis_cross(axa, XR, YR, color=GRAY)
+    axis_cross(axa, XR, YR)
     axa.plot([t0 * v[0], t1 * v[0]], [t0 * v[1], t1 * v[1]], "--",
              color=GRAY, lw=1.4)
     arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
@@ -249,7 +249,7 @@ def fig_span():
         p0, p1 = coeffs[0] * u + b * w, coeffs[-1] * u + b * w
         axb.plot([p0[0], p1[0]], [p0[1], p1[1]], color=LIGHT, lw=0.9)
     x = 2 * u + w  # (4.5, 3.5)
-    axis_cross(axb, XR, YR, color=GRAY)
+    axis_cross(axb, XR, YR)
     # dashed parallelogram construction: 2u -> x and w -> x
     axb.plot([2 * u[0], x[0]], [2 * u[1], x[1]], "--", color=GRAY, lw=1.4)
     axb.plot([w[0], x[0]], [w[1], x[1]], "--", color=GRAY, lw=1.4)
@@ -278,7 +278,7 @@ def fig_angle():
     w = np.array([1.2, 2.6])
     LBL = 17                       # larger vector/angle symbols
     LIM = ((-0.5, 3.9), (-0.6, 3.0))
-    axis_cross(ax, (-0.4, 3.8), (-0.5, 2.9), color=GRAY)
+    axis_cross(ax, (-0.4, 3.8), (-0.5, 2.9))
     arrow(ax, (0, 0), v, color=BLUE, lw=2.4)
     arrow(ax, (0, 0), w, color=ORANGE, lw=2.4)
     a1 = np.degrees(np.arctan2(v[1], v[0]))
@@ -314,7 +314,7 @@ def fig_projection():
     wn = w / np.linalg.norm(w)
     proj_len = float(v @ wn)
     proj = proj_len * wn
-    axis_cross(axa, XR, YR, color=GRAY)
+    axis_cross(axa, XR, YR)
     arrow(axa, (0, 0), w, color=ORANGE, lw=2.2)
     arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
     # projection as a thick segment along w
@@ -335,7 +335,7 @@ def fig_projection():
     # (b) equality: v collinear with w, residual vanishes
     w2 = np.array([3.4, 1.3])
     v2 = 0.62 * w2  # collinear
-    axis_cross(axb, XR, YR, color=GRAY)
+    axis_cross(axb, XR, YR)
     arrow(axb, (0, 0), w2, color=ORANGE, lw=2.2)
     axb.plot([0, 0.86 * v2[0]], [0, 0.86 * v2[1]], color=GREEN, lw=5, solid_capstyle="round",
              zorder=2)
@@ -390,7 +390,7 @@ def fig_hyperplane():
              color=BLUE, fontsize=FML, ha="center", va="center",
              rotation=line_rot, rotation_mode="anchor")
 
-    axis_cross(axa, (-1.9, 3.3), (-1.1, 2.8), color=GRAY)
+    axis_cross(axa, (-1.9, 3.3), (-1.1, 2.8))
     arrow(axa, (0, 0), w, color=ORANGE, lw=2.4)
     vlabel(axa, (w[0] + 0.20, w[1] + 0.12), r"$\mathbf{w}$", color=ORANGE,
            ha="left", fontsize=LBL)
@@ -567,7 +567,7 @@ def fig_null_collapse():
     for k in range(-n, n + 1):
         axa.plot([k, k], [-n, n], color=LIGHT, lw=0.9)
         axa.plot([-n, n], [k, k], color=LIGHT, lw=0.9)
-    axis_cross(axa, (-2.3, 2.3), (-2.3, 2.3), color=GRAY)
+    axis_cross(axa, (-2.3, 2.3), (-2.3, 2.3))
     # null-space line span{(1, 2)} (dashed): inputs sent to the origin
     axa.plot([-1.15, 1.15], [-2.3, 2.3], "--", color=INK, lw=1.6)
     axa.text(-1.28, -1.62, r"null space", color=INK,
@@ -581,7 +581,7 @@ def fig_null_collapse():
     clean_axes(axa, lim=((-2.3, 2.3), (-2.3, 2.3)), hide=True)
 
     # --- (b) image plane: everything lands on the column space y = 2x ---
-    axis_cross(axb, (-4.8, 4.8), (-4.8, 4.8), color=GRAY)
+    axis_cross(axb, (-4.8, 4.8), (-4.8, 4.8))
     # column space = span of the columns = the line y = 2x
     axb.plot([-2.3, 2.3], [-4.6, 4.6], color=GRAY, lw=5, alpha=0.5,
              solid_capstyle="round", zorder=1)
@@ -699,7 +699,7 @@ def fig_eig_ellipse():
                     ha=ha, va="center")
         m = 3.0
         clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
-        axis_cross(ax, (-m, m), (-m, m), color=GRAY)
+        axis_cross(ax, (-m, m), (-m, m))
     save(fig, "mdl-la-eig-ellipse")
 
 
@@ -853,7 +853,7 @@ def fig_power_iter():
     n_it = 6
     cmap = BLUE_CMAP(np.linspace(0.10, 0.95, n_it + 1))
     # all the iterates live in the first quadrant -- show only that
-    axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32), color=GRAY)
+    axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32))
     # dominant eigenvector reference ray (first quadrant only)
     axa.plot([0, 1.28 * dom[0]], [0, 1.28 * dom[1]],
              color=INK, lw=1.0, ls="--")
@@ -977,7 +977,7 @@ def fig_svd_action():
 
     for ax in axes:
         clean_axes(ax, lim=lim, hide=True)
-        axis_cross(ax, (-mx, mx), (-my, my), color=GRAY)
+        axis_cross(ax, (-mx, mx), (-my, my))
     save(fig, "mdl-la-svd-action")
 
 

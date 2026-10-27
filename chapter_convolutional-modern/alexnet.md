@@ -191,16 +191,16 @@ trained; :numref:`sec_training_recipes` returns to it.
 
 ### Implementation
 
-The code mirrors :numref:`fig_alexnet` from bottom to top. We initialize
-the weights explicitly so that all four frameworks start from the same
-distribution. LeNet's Xavier initialization keeps the variance of the
-activations constant through linear layers; a ReLU sets about half of its
-inputs to zero and halves the second moment of what passes through it. *He
-initialization* (:numref:`subsec_he_init`) compensates by doubling the
-variance: every weight of a layer with $n_\textrm{in}$ inputs per output is
-drawn from a normal distribution with mean zero and variance
-$2/n_\textrm{in}$, where $n_\textrm{in} = c_\textrm{i} k^2$ for a
-convolution. All biases start at zero.
+The code mirrors :numref:`fig_alexnet` from bottom to top. We initialize the
+weights explicitly instead of relying on the library's defaults. LeNet's
+Xavier initialization keeps the variance of the activations constant through
+linear layers; a ReLU sets about half of its inputs to zero and halves the
+second moment of what passes through it. *He initialization*
+(:numref:`subsec_he_init`) compensates by doubling the variance: every weight
+of a layer with $n_\textrm{in}$ inputs per output is drawn from a normal
+distribution with mean zero and variance $2/n_\textrm{in}$, where
+$n_\textrm{in} = c_\textrm{i} k^2$ for a convolution. All biases start at
+zero.
 
 :begin_tab:`mxnet`
 `init.MSRAPrelu('in', 0)` draws normal weights with variance
@@ -321,6 +321,9 @@ class AlexNet(d2l.Classifier):
         def max_pool(x):  # 3x3 windows, stride 2
             return nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2))
 
+        def flatten(x):  # One vector per example
+            return x.reshape((x.shape[0], -1))
+
         self.net = nnx.Sequential(
             nnx.Conv(1, 96, kernel_size=(11, 11), strides=4, padding='VALID',
                      **init), nnx.relu, max_pool,
@@ -330,7 +333,7 @@ class AlexNet(d2l.Classifier):
             nnx.Conv(384, 384, kernel_size=(3, 3), **init), nnx.relu,
             nnx.Conv(384, 256, kernel_size=(3, 3), **init), nnx.relu,
             max_pool,
-            lambda x: x.reshape((x.shape[0], -1)),  # flatten 5x5x256
+            flatten,  # 5 x 5 x 256 values per image
             nnx.Linear(5 * 5 * 256, 4096, **init), nnx.relu,
             nnx.Dropout(0.5, rngs=rngs),
             nnx.Linear(4096, 4096, **init), nnx.relu,
@@ -772,7 +775,7 @@ The dense head is 170 MB in float32 and does 5% of the work.
 - Upsampling multiplies the pixels by 64 and adds no information; it
   keeps the architecture unchanged.
 - Minibatch SGD, 128 images, learning rate 0.01; He-normal weights
-  (variance $2/n_\textrm{in}$), zero biases in every framework.
+  (variance $2/n_\textrm{in}$), zero biases.
 :::
 
 ::: {.slide title="AlexNet Matches LeNet's Accuracy in a Third of the Epochs"}

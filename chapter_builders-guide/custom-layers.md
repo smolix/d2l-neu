@@ -701,11 +701,10 @@ class Buffer(nnx.Variable):
     pass
 
 class RandomFeatures(nnx.Module):
-    def __init__(self, d, num_features):
-        key_W, key_b = jax.random.split(d2l.get_key())
-        self.W = Buffer(jax.random.normal(key_W, (d, num_features)))
+    def __init__(self, d, num_features, *, rngs):
+        self.W = Buffer(jax.random.normal(rngs.params(), (d, num_features)))
         self.b = Buffer(
-            2 * jnp.pi * jax.random.uniform(key_b, (num_features,)))
+            2 * jnp.pi * jax.random.uniform(rngs.params(), (num_features,)))
 
     def __call__(self, X):
         return jnp.sqrt(2 / self.b.shape[0]) * jnp.cos(X @ self.W + self.b)
@@ -753,7 +752,9 @@ print(before, bool(tf.reduce_all(feats(X) == fresh(X))))
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab jax
-feats, fresh = RandomFeatures(20, 64), RandomFeatures(20, 64)
+rngs = nnx.Rngs(d2l.get_key())
+feats = RandomFeatures(20, 64, rngs=rngs)
+fresh = RandomFeatures(20, 64, rngs=rngs)
 X = jax.random.normal(d2l.get_key(), (4, 20))
 before = bool(jnp.array_equal(feats(X), fresh(X)))
 nnx.update(fresh, nnx.state(feats))
@@ -1003,21 +1004,78 @@ outside, where the clipped output does not change. The surrogate is a
 modeling choice, and the right one depends on the quantizer it stands in
 for.
 
+For this particular rule there is also a shortcut without a hand-written
+backward pass. A *stop-gradient* operation is the identity in the forward
+pass and has derivative zero in the backward pass, so
+$X + \textrm{stop}(\textrm{round}(X) - X)$ computes $\textrm{round}(X)$ in
+the forward pass while the backward pass sees only the leading $X$. The
+general mechanism is needed when the surrogate is not the identity, such as
+the clipping rule above.
+
+:begin_tab:`mxnet`
+In MXNet the stop-gradient operation is `npx.stop_gradient`. The two
+definitions agree in value and in gradient:
+:end_tab:
+
 :begin_tab:`pytorch`
-For this particular rule there is also a shortcut without a new class.
-`detach()` returns a tensor with the same values that autograd treats as a
-constant, so `X + (X.round() - X).detach()` computes `X.round()` in the
-forward pass while the backward pass sees only the leading `X`.
+In PyTorch the stop-gradient operation is the method `detach()`, which
+returns a tensor with the same values that autograd treats as a constant.
+The two definitions agree in value and in gradient:
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow the stop-gradient operation is `tf.stop_gradient`. The two
+definitions agree in value and in gradient:
 :end_tab:
 
 :begin_tab:`jax`
-For this particular rule there is also a shortcut without `custom_vjp`.
-`jax.lax.stop_gradient` is an identity whose derivative is zero, so
-`X + stop_gradient(round(X) - X)` computes `round(X)` in the forward pass
-while the backward pass sees only the leading `X`. The general mechanism is
-needed when the surrogate is not the identity, such as the clipping rule
-above. The two definitions agree in value and in gradient:
+In JAX the stop-gradient operation is `jax.lax.stop_gradient`. The two
+definitions agree in value and in gradient:
 :end_tab:
+
+```{.python .input #custom-layers-custom-gradients-4}
+%%tab mxnet
+def round_ste2(X):
+    return X + npx.stop_gradient(mnp.round(X) - X)
+
+def grad_of(f):
+    with autograd.record():
+        y = (f(w) * mnp.array([1.0, 2.0, 3.0])).sum()
+    y.backward()
+    return w.grad.copy()
+
+(bool(mnp.allclose(RoundSTE()(w), round_ste2(w))),
+ bool(mnp.allclose(grad_of(lambda X: RoundSTE()(X)), grad_of(round_ste2))))
+```
+
+```{.python .input #custom-layers-custom-gradients-4}
+%%tab pytorch
+def round_ste2(X):
+    return X + (X.round() - X).detach()
+
+def grad_of(f):
+    w.grad = None
+    (f(w) * torch.tensor([1.0, 2.0, 3.0])).sum().backward()
+    return w.grad
+
+(torch.allclose(RoundSTE.apply(w), round_ste2(w)),
+ torch.allclose(grad_of(RoundSTE.apply), grad_of(round_ste2)))
+```
+
+```{.python .input #custom-layers-custom-gradients-4}
+%%tab tensorflow
+def round_ste2(X):
+    return X + tf.stop_gradient(tf.round(X) - X)
+
+def grad_of(f):
+    with tf.GradientTape() as tape:
+        y = tf.reduce_sum(f(w) * tf.constant([1.0, 2.0, 3.0]))
+    return tape.gradient(y, w)
+
+allclose = tf.experimental.numpy.allclose
+(bool(allclose(round_ste(w), round_ste2(w))),
+ bool(allclose(grad_of(round_ste), grad_of(round_ste2))))
+```
 
 ```{.python .input #custom-layers-custom-gradients-4}
 %%tab jax
@@ -1061,19 +1119,22 @@ tested against its definition, is the implementation.
 :begin_tab:`mxnet`
 In Gluon, `gluon.Parameter` holds learned state, `gluon.Constant` holds
 buffers, and `autograd.Function` supplies a backward rule, with one fresh
-instance per call.
+instance per call; `npx.stop_gradient` covers the straight-through case in
+one expression.
 :end_tab:
 
 :begin_tab:`pytorch`
 In PyTorch, `nn.Parameter` holds learned state, `register_buffer` registers
 buffers, and `torch.autograd.Function` supplies a backward rule, invoked
-through `apply`.
+through `apply`; `detach()` covers the straight-through case in one
+expression.
 :end_tab:
 
 :begin_tab:`tensorflow`
 In Keras, `add_weight` creates learned state, `add_weight(trainable=False)`
 creates buffers, and `@tf.custom_gradient` lets a function return its own
-backward rule.
+backward rule; `tf.stop_gradient` covers the straight-through case in one
+expression.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1428,7 +1489,7 @@ that, and what fraction of the model?
 :::
 :::
 
-::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One"}
+::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="mxnet"}
 [RMSNorm]{.kicker}
 
 | check | how | result |
@@ -1436,7 +1497,55 @@ that, and what fraction of the model?
 | found | list the parameters | the gain |
 | contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
 | saved | copy the state into a clone | identical outputs |
-| moved | move (or, in Keras, place) the model on the GPU | gain and output on the GPU |
+| moved | `initialize(device=...)` places it; `reset_device` moves it | the gain where the model is |
+
+::: {.d2l-note}
+Not one line of `RMSNorm` handles these four tasks: registering the gain
+is enough.
+:::
+:::
+
+::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="pytorch"}
+[RMSNorm]{.kicker}
+
+| check | how | result |
+|---|---|---|
+| found | list the parameters | the gain |
+| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
+| saved | copy the state into a clone | identical outputs |
+| moved | `.to(device)` on the model | gain and output on the GPU |
+
+::: {.d2l-note}
+Not one line of `RMSNorm` handles these four tasks: registering the gain
+is enough.
+:::
+:::
+
+::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="tensorflow"}
+[RMSNorm]{.kicker}
+
+| check | how | result |
+|---|---|---|
+| found | list the parameters | the gain |
+| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
+| saved | copy the state into a clone | identical outputs |
+| placed | `add_weight` creates the gain on the default device | placed like a built-in weight |
+
+::: {.d2l-note}
+Not one line of `RMSNorm` handles these four tasks: registering the gain
+is enough.
+:::
+:::
+
+::: {.slide title="Registration Makes the Custom Layer Behave Like a Built-in One" only="jax"}
+[RMSNorm]{.kicker}
+
+| check | how | result |
+|---|---|---|
+| found | list the parameters | the gain |
+| contained | Linear, RMSNorm, Linear in a container | output $4 \times 2$ |
+| saved | copy the state into a clone | identical outputs |
+| moved | `jax.device_put` of the state, then `nnx.update` | gain and output on the GPU |
 
 ::: {.d2l-note}
 Not one line of `RMSNorm` handles these four tasks: registering the gain
@@ -1489,13 +1598,22 @@ $$\mathbf{Z} = \sqrt{2/D}\, \cos(\mathbf{X}\mathbf{W} + \mathbf{b})$$
   layer different features.
 :::
 
-::: {.slide title="A Buffer Is Registered State That Receives No Gradient" except="tensorflow,jax"}
+::: {.slide title="A Buffer Is Registered State That Receives No Gradient" only="mxnet"}
 [Buffers]{.kicker}
 
 @-custom-layers-precomputed-state-buffers-1
 
-Buffers: `register_buffer` in PyTorch, `gluon.Constant` in Gluon,
-`add_weight(trainable=False)` in Keras, an `nnx.Variable` subclass in NNX.
+`gluon.Constant`: registered with the block, so saved and moved; it
+receives no gradient. `forward` computes the cosine features.
+:::
+
+::: {.slide title="A Buffer Is Registered State That Receives No Gradient" only="pytorch"}
+[Buffers]{.kicker}
+
+@-custom-layers-precomputed-state-buffers-1
+
+`register_buffer`: in the state dict, so saved and moved; not among the
+parameters, so never trained. `forward` computes the cosine features.
 :::
 
 ::: {.slide title="A Buffer Is Registered State That Receives No Gradient" only="tensorflow"}
@@ -1524,11 +1642,10 @@ class Buffer(nnx.Variable):
     pass
 
 class RandomFeatures(nnx.Module):
-    def __init__(self, d, num_features):
-        key_W, key_b = jax.random.split(d2l.get_key())
-        self.W = Buffer(jax.random.normal(key_W, (d, num_features)))
+    def __init__(self, d, num_features, *, rngs):
+        self.W = Buffer(jax.random.normal(rngs.params(), (d, num_features)))
         self.b = Buffer(
-            2 * jnp.pi * jax.random.uniform(key_b, (num_features,)))
+            2 * jnp.pi * jax.random.uniform(rngs.params(), (num_features,)))
 ```
 
 `Buffer` is part of the state, so saved and moved; an optimizer for

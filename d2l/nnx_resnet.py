@@ -30,14 +30,16 @@ class Bottleneck(nnx.Module):
                  *, rngs):
         self.conv0 = nnx.Conv(in_channels, channels, (1, 1), use_bias=False,
                               rngs=rngs)
-        self.bn0 = nnx.BatchNorm(channels, use_running_average=True, rngs=rngs)
+        self.bn0 = nnx.BatchNorm(channels, use_running_average=True,
+                                 momentum=0.9, use_fast_variance=False, rngs=rngs)
         self.conv1 = nnx.Conv(channels, channels, (3, 3), strides=stride,
                               padding=1, use_bias=False, rngs=rngs)
-        self.bn1 = nnx.BatchNorm(channels, use_running_average=True, rngs=rngs)
+        self.bn1 = nnx.BatchNorm(channels, use_running_average=True,
+                                 momentum=0.9, use_fast_variance=False, rngs=rngs)
         self.conv2 = nnx.Conv(channels, 4 * channels, (1, 1), use_bias=False,
                               rngs=rngs)
         self.bn2 = nnx.BatchNorm(4 * channels, use_running_average=True,
-                                 rngs=rngs)
+                                 momentum=0.9, use_fast_variance=False, rngs=rngs)
         self.downsample = downsample
 
     def __call__(self, X):
@@ -55,7 +57,7 @@ class Downsample(nnx.Module):
         self.conv = nnx.Conv(in_channels, out_channels, (1, 1), strides=stride,
                              use_bias=False, rngs=rngs)
         self.bn = nnx.BatchNorm(out_channels, use_running_average=True,
-                                rngs=rngs)
+                                momentum=0.9, use_fast_variance=False, rngs=rngs)
 
     def __call__(self, X):
         return self.bn(self.conv(X))
@@ -84,7 +86,8 @@ class ResNet50(nnx.Module):
     def __init__(self, num_classes=1000, *, rngs):
         self.stem_conv = nnx.Conv(3, 64, (7, 7), strides=2, padding=3,
                                   use_bias=False, rngs=rngs)
-        self.stem_bn = nnx.BatchNorm(64, use_running_average=True, rngs=rngs)
+        self.stem_bn = nnx.BatchNorm(64, use_running_average=True,
+                                     momentum=0.9, use_fast_variance=False, rngs=rngs)
         self.stages = nnx.List([
             BlockGroup(64, 64, 3, 1, rngs=rngs),
             BlockGroup(256, 128, 4, 2, rngs=rngs),

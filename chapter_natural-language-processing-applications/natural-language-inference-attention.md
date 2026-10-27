@@ -574,7 +574,7 @@ and load the GloVe embedding to initialize vectors of input tokens.
 #@tab mxnet
 embed_size, num_hiddens, devices = 100, 200, d2l.try_all_gpus()
 net = DecomposableAttention(vocab, embed_size, num_hiddens)
-net.initialize(init.Xavier(), ctx=devices)
+net.initialize(init.Xavier(), device=devices)
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
 net.embedding.weight.set_data(embeds)
@@ -714,8 +714,8 @@ Finally, define the prediction function to output the logical relationship betwe
 #@save
 def predict_snli(net, vocab, premise, hypothesis):
     """Predict the logical relationship between the premise and hypothesis."""
-    premise = np.array(vocab[premise], ctx=d2l.try_gpu())
-    hypothesis = np.array(vocab[hypothesis], ctx=d2l.try_gpu())
+    premise = np.array(vocab[premise], device=d2l.try_gpu())
+    hypothesis = np.array(vocab[hypothesis], device=d2l.try_gpu())
     label = np.argmax(net([premise.reshape((1, -1)),
                            hypothesis.reshape((1, -1))]), axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \

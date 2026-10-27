@@ -28,6 +28,7 @@ from IPython import display
 import json
 import math
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import os
 import pandas as pd
@@ -65,6 +66,26 @@ def set_figsize(figsize=(3.5, 2.5)):
     use_svg_display()
     d2l.plt.rcParams['figure.figsize'] = figsize
 
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_calculus`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib.
 
@@ -72,6 +93,9 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
     if legend:
         axes.legend(legend)
     axes.grid()
@@ -217,15 +241,16 @@ class Trainer(d2l.HyperParameters):
         self.board.show()
 
     def record(self, split, metrics, x):
-        for name, value in metrics.items():
-            self.history[f'{split}_{name}'].append(value)
-            self.board.draw(x, value, f'{split}_{name}')
+        for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+            self.history[f'{split}_{name}'].append(metrics[name])
+            self.board.draw(x, metrics[name], f'{split}_{name}')
 
     def evaluate(self, model, data):
         """Validation metrics of `model` on `data`, averaged over examples.
 
         Defined in :numref:`sec_oo-design`"""
-        self.prepare_data(data)
+        self.train_dataloader = None
+        self.val_dataloader = data.val_dataloader()
         self.prepare_model(model)
         return self.validate()
 
@@ -278,7 +303,9 @@ class Trainer(d2l.HyperParameters):
             model.to(self.gpus[0])
         if any(isinstance(p, nn.parameter.UninitializedParameter)
                for p in model.parameters()):
-            batch = self.prepare_batch(next(iter(self.train_dataloader)))
+            loader = (self.train_dataloader if self.train_dataloader is not None
+                      else self.val_dataloader)  # `evaluate` has no training data
+            batch = self.prepare_batch(next(iter(loader)))
             model.apply_init(batch[:-1], getattr(model, 'weight_init', None))
 
     def clip_gradients(self, grad_clip_val, model):
@@ -342,7 +369,7 @@ class ProgressBoard(d2l.HyperParameters):
         ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
         if self.xlim: ax.set_xlim(self.xlim)
         if self.ylim: ax.set_ylim(self.ylim)
-        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if self.yscale == 'log': d2l.set_log_ticks(ax.yaxis)
         if acc_ax is not None: acc_ax.set_ylabel('accuracy')
         lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
         labels = [line.get_label() for line in lines]
@@ -419,8 +446,9 @@ class Averager:
         self.n += n
 
     def mean(self):
-        """One host synchronization per metric."""
-        return {name: float(s) / self.n for name, s in self.sums.items()}
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.
@@ -430,6 +458,11 @@ class LinearRegression(d2l.Module):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
+
+    def weight_init(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, std=0.01)
+            nn.init.zeros_(module.bias)
 
     def loss(self, y_hat, y):
         fn = nn.MSELoss()
@@ -476,9 +509,7 @@ class FashionMNIST(d2l.DataModule):
         if labels is None:
             labels = self.text_labels(y)
         X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
-        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
-            for image in ax.get_images():
-                image.set_cmap('gray')
+        d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -508,7 +539,8 @@ class Classifier(d2l.Module):
         X = d2l.randn(*X_shape)
         for layer in self.net:
             X = layer(X)
-            print(layer.__class__.__name__, 'output shape:\t', X.shape)
+            name = getattr(layer, '__name__', type(layer).__name__)
+            print(f'{name:<22} {tuple(X.shape)}')
 
 def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
@@ -634,7 +666,7 @@ class LeNet(d2l.Classifier):
     def weight_init(self, module):
         # The Trainer calls this after the first minibatch fixed the shapes
         init_cnn(module)  # Xavier-uniform weights
-        if type(module) in (nn.Linear, nn.Conv2d):
+        if type(module) in (nn.Linear, nn.Conv2d) and module.bias is not None:
             nn.init.zeros_(module.bias)
 
 def cosine_warmup(t, num_steps, warmup_steps):
@@ -652,13 +684,16 @@ class Residual(nn.Module):
     Defined in :numref:`sec_resnet`"""
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super().__init__()
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
-                                   stride=strides)
-        self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1)
+                                   stride=strides, bias=False)
+        self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
+                                   bias=False)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1,
-                                       stride=strides)
+                                       stride=strides, bias=False)
+            self.bn3 = nn.LazyBatchNorm2d()
         else:
             self.conv3 = None
         self.bn1 = nn.LazyBatchNorm2d()
@@ -668,7 +703,7 @@ class Residual(nn.Module):
         Y = F.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return F.relu(Y)
 
@@ -680,17 +715,21 @@ class ResNeXtBlock(nn.Module):
                  strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
-        self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1)
+        # No conv biases: the batch normalization after each conv removes them
+        self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1,
+                                   bias=False)
         self.conv2 = nn.LazyConv2d(bot_channels, kernel_size=3,
                                    stride=strides, padding=1,
-                                   groups=groups)
-        self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1)
+                                   groups=groups, bias=False)
+        self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1,
+                                   bias=False)
         self.bn1 = nn.LazyBatchNorm2d()
         self.bn2 = nn.LazyBatchNorm2d()
         self.bn3 = nn.LazyBatchNorm2d()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = nn.LazyConv2d(num_channels, kernel_size=1,
-                                       stride=strides)
+                                       stride=strides, bias=False)
             self.bn4 = nn.LazyBatchNorm2d()
         else:
             self.conv4 = None
@@ -2225,9 +2264,11 @@ def resnet18(num_classes, in_channels=1):
         return nn.Sequential(*blk)
 
     # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
+    # removes the max-pooling layer. The stem conv has no bias: the batch
+    # normalization after it removes it
     net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1,
+                  bias=False),
         nn.BatchNorm2d(64),
         nn.ReLU())
     net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
@@ -4143,24 +4184,22 @@ class BasicScheduler(HPOScheduler):
 class HPOTuner(d2l.HyperParameters):
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
             error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 
     def bookkeeping(self, config: dict, error: float, runtime: float):
         self.records.append({"config": config, "error": error, "runtime": runtime})
@@ -4491,18 +4530,7 @@ class CTRDataset(torch.utils.data.Dataset):
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
 
 import os
-from matplotlib import ticker
 from matplotlib.figure import Figure
-
-def set_log_ticks(axis):
-    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
-    axis.set_minor_formatter(ticker.NullFormatter())
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
                 ylim=None):
@@ -4680,8 +4708,9 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
     print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
           f'on {str(device)}')
 
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None):
+    """Plot a list of images (cmap colors single-channel images).
 
     Defined in :numref:`sec_utils`"""
     figsize = (num_cols * scale, num_rows * scale)
@@ -4692,7 +4721,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img)
+        ax.imshow(img, cmap=cmap)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:

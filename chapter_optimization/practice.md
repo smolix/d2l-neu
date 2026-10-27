@@ -289,6 +289,7 @@ def net_fn():
     def init_weights(m):
         if type(m) in (nn.Linear, nn.Conv2d):
             nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
     model.apply(init_weights)
     return model
 
@@ -304,16 +305,19 @@ xavier = nnx.initializers.xavier_uniform()
 class Net(nnx.Module):
     def __init__(self, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        # Running averages decay 0.9; the variance is computed in two passes
+        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                     rngs=rngs)
         self.conv1 = nnx.Conv(1, 6, kernel_size=(5, 5), padding='same',
                               kernel_init=xavier, rngs=rngs)
-        self.bn1 = nnx.BatchNorm(6, rngs=rngs)
+        self.bn1 = bn(6)
         self.conv2 = nnx.Conv(6, 16, kernel_size=(5, 5), padding='valid',
                               kernel_init=xavier, rngs=rngs)
-        self.bn2 = nnx.BatchNorm(16, rngs=rngs)
+        self.bn2 = bn(16)
         self.fc1 = nnx.Linear(16 * 5 * 5, 120, kernel_init=xavier, rngs=rngs)
-        self.bn3 = nnx.BatchNorm(120, rngs=rngs)
+        self.bn3 = bn(120)
         self.fc2 = nnx.Linear(120, 84, kernel_init=xavier, rngs=rngs)
-        self.bn4 = nnx.BatchNorm(84, rngs=rngs)
+        self.bn4 = bn(84)
         self.fc3 = nnx.Linear(84, 10, kernel_init=xavier, rngs=rngs)
 
     def __call__(self, x):
@@ -533,11 +537,19 @@ now grade the experiment log alongside the final loss, emphasizing that the expe
 ## Topics Covered Elsewhere
 
 Three method families were left out on purpose. Sharpness-aware
-minimization takes an inner ascent step before each descent step to seek
-the flat minima whose connection to generalization
-:numref:`sec_generalization_deep` discussed; it doubles the gradient cost,
-and the cited results establish improvements mainly in vision tasks rather
-than large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
+minimization (SAM) takes an inner ascent step before each descent step to steer
+training toward *flat minima*, where the loss changes little when the
+weights are perturbed. The motivation is the hypothesis that flat minima
+generalize better than sharp ones, and that link is debated: sharpness
+depends on the parametrization. Multiplying the weights and biases of one
+ReLU layer by a factor and the weights of the next layer by its reciprocal
+leaves the network's function unchanged, yet a large enough factor makes
+the minimum as sharp as we like :cite:`Dinh.Pascanu.Bengio.ea.2017`. The generalization
+gap once attributed to sharp minima reached with large minibatches also
+largely closes once the learning rate and training length are retuned
+(:numref:`sec_batch_size`). SAM doubles the gradient cost, and the cited
+results establish improvements mainly in vision tasks rather than
+large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
 Variance-reduction methods of the SVRG family have an elegant theory for
 finite sums but have not produced consistent improvements on deep networks;
 :numref:`sec_mdl-variance-reduction` presents the theory

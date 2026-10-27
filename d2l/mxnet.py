@@ -6,6 +6,7 @@ DATA_HUB = dict()
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
 
 from mxnet import autograd, context, gluon, image, init, np, npx
+mnp = np  # Notebooks write MXNet arrays as mnp (np is NumPy there)
 from mxnet.gluon import nn, rnn
 from mxnet.gluon.data.vision import transforms
 
@@ -43,8 +44,10 @@ def resnet18(num_classes):
 
     net = nn.Sequential()
     # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1),
+    # removes the max-pooling layer. The stem conv has no bias: the batch
+    # normalization after it removes it
+    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1,
+                      use_bias=False),
             nn.BatchNorm(), nn.Activation('relu'))
     net.add(resnet_block(64, 2, first_block=True),
             resnet_block(128, 2),
@@ -78,6 +81,7 @@ from IPython import display
 import json
 import math
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import os
 import pandas as pd
@@ -109,6 +113,26 @@ def set_figsize(figsize=(3.5, 2.5)):
     use_svg_display()
     d2l.plt.rcParams['figure.figsize'] = figsize
 
+def set_log_ticks(axis):
+    """Label all major ticks of a log axis in one format.
+
+    Defined in :numref:`sec_calculus`"""
+    lo, hi = axis.get_view_interval()
+    if 0 < lo and hi < 100 * lo:  # Under two decades: ticks at 1, 2, 5
+        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
+    ticks = axis.get_major_locator().tick_values(lo, hi)
+    plain = all(1e-4 <= t < 1e5 for t in ticks if lo <= t <= hi)
+
+    def label(v, _):
+        if plain:  # 0.001, 0.01, ..., 10000
+            return f'{v:g}'
+        m, k = f'{v:.3e}'.split('e')  # 2.500e-05 -> '2.500', '-05'
+        m, power = f'{float(m):g}', f'10^{{{int(k)}}}'  # '2.5', '10^{-5}'
+        return f'${power}$' if m == '1' else f'${m}\\times{power}$'
+
+    axis.set_major_formatter(ticker.FuncFormatter(label))
+    axis.set_minor_formatter(ticker.NullFormatter())
+
 def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     """Set the axes for matplotlib.
 
@@ -116,6 +140,9 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
     axes.set_xscale(xscale), axes.set_yscale(yscale)
     axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    for axis, scale in ((axes.xaxis, xscale), (axes.yaxis, yscale)):
+        if scale == 'log':
+            set_log_ticks(axis)
     if legend:
         axes.legend(legend)
     axes.grid()
@@ -197,42 +224,8 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
-        params = self.parameters()
-        if isinstance(params, list):
-            return d2l.SGD(params, self.lr)
-        return gluon.Trainer(params, 'sgd', {'learning_rate': self.lr})
-
-    def get_scratch_params(self):
-        # collect_params() only finds Parameters declared via Gluon's Parameter
-        # API. For from-scratch models that store weights as bare np.ndarrays, we
-        # walk the object's attributes recursively and gather those instead.
-        params = []
-        for attr in dir(self):
-            a = getattr(self, attr)
-            if isinstance(a, np.ndarray):
-                params.append(a)
-            if isinstance(a, d2l.Module):
-                params.extend(a.get_scratch_params())
-        return params
-
-    def parameters(self):
-        # Return the Gluon ParameterDict when the model uses Gluon layers; fall
-        # back to the bare-array scan for from-scratch implementations.
-        params = self.collect_params()
-        return params if isinstance(params, dict) and len(
-            params.keys()) else self.get_scratch_params()
-
-    def set_scratch_params_device(self, device):
-        for attr in dir(self):
-            a = getattr(self, attr)
-            if isinstance(a, np.ndarray):
-                setattr(self, attr, a.as_in_ctx(device))
-                getattr(self, attr).attach_grad()
-            if isinstance(a, d2l.Module):
-                a.set_scratch_params_device(device)
-            if isinstance(a, list):
-                for elem in a:
-                    elem.set_scratch_params_device(device)
+        return gluon.Trainer(self.collect_params(), 'sgd',
+                             {'learning_rate': self.lr})
 
 def as_metrics(out):
     """A step returns a loss or a dict of metrics; return a dict.
@@ -290,20 +283,21 @@ class Trainer(d2l.HyperParameters):
         self.board.show()
 
     def record(self, split, metrics, x):
-        for name, value in metrics.items():
-            self.history[f'{split}_{name}'].append(value)
-            self.board.draw(x, value, f'{split}_{name}')
+        for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+            self.history[f'{split}_{name}'].append(metrics[name])
+            self.board.draw(x, metrics[name], f'{split}_{name}')
 
     def evaluate(self, model, data):
         """Validation metrics of `model` on `data`, averaged over examples.
 
         Defined in :numref:`sec_oo-design`"""
-        self.prepare_data(data)
+        self.train_dataloader = None
+        self.val_dataloader = data.val_dataloader()
         self.prepare_model(model)
         return self.validate()
 
     def fit_epoch(self):
-        metrics = d2l.Averager()
+        metrics, previous = d2l.Averager(), None
         for batch in map(self.prepare_batch, self.train_dataloader):
             with autograd.record():
                 out = d2l.as_metrics(self.model.training_step(batch))
@@ -312,6 +306,9 @@ class Trainer(d2l.HyperParameters):
                 self.clip_gradients(self.gradient_clip_val, self.model)
             self.optim.step(1)
             metrics.add(out, len(batch[-1]))
+            if previous is not None:  # Python stays one step ahead at most
+                previous.wait_to_read()
+            previous = out['loss']
         return metrics.mean()
 
     def validate(self):
@@ -327,20 +324,17 @@ class Trainer(d2l.HyperParameters):
         self.board = d2l.ProgressBoard(xlabel='epoch', ylabel='loss')
 
     def prepare_batch(self, batch):
-        if self.gpus:
-            batch = [d2l.to(a, self.gpus[0]) for a in batch]
-        return batch
+        device = self.gpus[0] if self.gpus else d2l.cpu()
+        return [a.to_device(device) for a in batch]
 
     def prepare_model(self, model):
         self.model = model
         if self.gpus:
-            model.reset_ctx(self.gpus[0])
-            model.set_scratch_params_device(self.gpus[0])
+            model.reset_device(self.gpus[0])
 
     def clip_gradients(self, grad_clip_val, model):
-        params = model.parameters()
-        if not isinstance(params, list):
-            params = [p.data() for p in params.values()]
+        params = [p.data() for p in model.collect_params().values()
+                  if p.grad_req != 'null']
         norm = np.sqrt(sum((p.grad ** 2).sum() for p in params))
         scale = np.minimum(grad_clip_val / norm, 1.0)  # no `if` on the host
         for param in params:
@@ -400,7 +394,7 @@ class ProgressBoard(d2l.HyperParameters):
         ax.set_xscale(self.xscale), ax.set_yscale(self.yscale)
         if self.xlim: ax.set_xlim(self.xlim)
         if self.ylim: ax.set_ylim(self.ylim)
-        if self.yscale == 'log': set_log_ticks(ax.yaxis)
+        if self.yscale == 'log': d2l.set_log_ticks(ax.yaxis)
         if acc_ax is not None: acc_ax.set_ylabel('accuracy')
         lines = list(ax.get_lines()) + list(acc_ax.get_lines() if acc_ax else [])
         labels = [line.get_label() for line in lines]
@@ -474,8 +468,9 @@ class Averager:
         self.n += n
 
     def mean(self):
-        """One host synchronization per metric."""
-        return {name: float(s) / self.n for name, s in self.sums.items()}
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 
 class LinearRegression(d2l.Module):
     """Linear regression built from framework components.
@@ -548,9 +543,7 @@ class FashionMNIST(d2l.DataModule):
         if labels is None:
             labels = self.text_labels(y)
         X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
-        for ax in d2l.show_images(X, nrows, ncols, titles=labels):
-            for image in ax.get_images():
-                image.set_cmap('gray')
+        d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 
 class Classifier(d2l.Module):
     """The base class of classification models.
@@ -581,7 +574,8 @@ class Classifier(d2l.Module):
         X = d2l.randn(*X_shape)
         for layer in self.net:
             X = layer(X)
-            print(layer.__class__.__name__, 'output shape:\t', X.shape)
+            name = getattr(layer, '__name__', type(layer).__name__)
+            print(f'{name:<22} {tuple(X.shape)}')
 
 def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
@@ -703,13 +697,16 @@ class Residual(nn.HybridBlock):
     Defined in :numref:`sec_resnet`"""
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super().__init__()
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
-                               strides=strides)
-        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
+                               strides=strides, use_bias=False)
+        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
+                               use_bias=False)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = nn.Conv2D(num_channels, kernel_size=1,
-                                   strides=strides)
+                                   strides=strides, use_bias=False)
+            self.bn3 = nn.BatchNorm()
         else:
             self.conv3 = None
         self.bn1 = nn.BatchNorm()
@@ -719,7 +716,7 @@ class Residual(nn.HybridBlock):
         Y = npx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         return npx.relu(Y + X)
 
 class ResNeXtBlock(nn.HybridBlock):
@@ -730,18 +727,20 @@ class ResNeXtBlock(nn.HybridBlock):
                  use_1x1conv=False, strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
-                               strides=1)
+                               strides=1, use_bias=False)
         self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1,
-                               strides=strides, groups=groups)
+                               strides=strides, groups=groups, use_bias=False)
         self.conv3 = nn.Conv2D(num_channels, kernel_size=1, padding=0,
-                               strides=1)
+                               strides=1, use_bias=False)
         self.bn1 = nn.BatchNorm()
         self.bn2 = nn.BatchNorm()
         self.bn3 = nn.BatchNorm()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = nn.Conv2D(num_channels, kernel_size=1,
-                                   strides=strides)
+                                   strides=strides, use_bias=False)
             self.bn4 = nn.BatchNorm()
         else:
             self.conv4 = None
@@ -1018,10 +1017,13 @@ class RNNScratch(d2l.Module):
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W_xh = d2l.randn(num_inputs, num_hiddens) * sigma
-        self.W_hh = d2l.randn(
-            num_hiddens, num_hiddens) * sigma
-        self.b_h = d2l.zeros(num_hiddens)
+        self.W_xh = gluon.Parameter('W_xh', shape=(num_inputs, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.W_hh = gluon.Parameter('W_hh', shape=(num_hiddens, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.b_h = gluon.Parameter('b_h', shape=(num_hiddens,),
+                                   init=init.Zero())
+        self.initialize()
 
     def forward(self, inputs, state=None):
         if state is None:
@@ -1030,8 +1032,9 @@ class RNNScratch(d2l.Module):
                               ctx=inputs.ctx)
         outputs = []
         for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
-            state = d2l.tanh(d2l.matmul(X, self.W_xh) +
-                             d2l.matmul(state, self.W_hh) + self.b_h)
+            state = d2l.tanh(d2l.matmul(X, self.W_xh.data()) +
+                             d2l.matmul(state, self.W_hh.data()) +
+                             self.b_h.data())
             outputs.append(state)
         return outputs, state
 
@@ -1058,22 +1061,27 @@ class RNNLMScratch(d2l.Classifier):
         self.init_params()
 
     def init_params(self):
-        self.W_e = d2l.randn(self.vocab_size, self.rnn.num_inputs)
-        self.W_hq = d2l.randn(
-            self.rnn.num_hiddens, self.vocab_size) * self.rnn.sigma
-        self.b_q = d2l.zeros(self.vocab_size)
-        for param in self.get_scratch_params():
-            param.attach_grad()
+        self.W_e = gluon.Parameter(
+            'W_e', shape=(self.vocab_size, self.rnn.num_inputs),
+            init=init.Normal(1))
+        self.W_hq = gluon.Parameter(
+            'W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            init=init.Normal(self.rnn.sigma))
+        self.b_q = gluon.Parameter('b_q', shape=(self.vocab_size,),
+                                   init=init.Zero())
+        for param in (self.W_e, self.W_hq, self.b_q):  # The cell has its own
+            param.initialize()
 
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def embedding(self, X):
         # Output shape: (num_steps, batch_size, num_inputs)
-        return self.W_e[X.T]
+        return self.W_e.data()[X.T]
 
     def output_layer(self, rnn_outputs):
-        outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
+        outputs = [d2l.matmul(H, self.W_hq.data()) + self.b_q.data()
+                   for H in rnn_outputs]
         return d2l.stack(outputs, 1)
 
     def forward(self, X, state=None):
@@ -1406,7 +1414,7 @@ class Seq2Seq(d2l.EncoderDecoder):
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
-        return gluon.Trainer(self.parameters(), 'adam',
+        return gluon.Trainer(self.collect_params(), 'adam',
                              {'learning_rate': self.lr})
 
 def chrf(pred, label, n=6, beta=2):
@@ -1677,7 +1685,7 @@ class BERTEncoder(nn.Block):
         # Shape of `X` remains unchanged in the following code snippet:
         # (batch size, max sequence length, `num_hiddens`)
         X = self.token_embedding(tokens) + self.segment_embedding(segments)
-        X = X + self.pos_embedding.data(ctx=X.ctx)[:, :X.shape[1], :]
+        X = X + self.pos_embedding.data(device=X.device)[:, :X.shape[1], :]
         for blk in self.blks:
             X = blk(X, valid_lens)
         return X
@@ -1970,7 +1978,7 @@ def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence.
 
     Defined in :numref:`sec_sentiment_rnn`"""
-    sequence = np.array(vocab[sequence.split()], ctx=d2l.try_gpu())
+    sequence = np.array(vocab[sequence.split()], device=d2l.try_gpu())
     label = np.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 
@@ -2056,8 +2064,8 @@ def predict_snli(net, vocab, premise, hypothesis):
     """Predict the logical relationship between the premise and hypothesis.
 
     Defined in :numref:`sec_natural-language-inference-attention`"""
-    premise = np.array(vocab[premise], ctx=d2l.try_gpu())
-    hypothesis = np.array(vocab[hypothesis], ctx=d2l.try_gpu())
+    premise = np.array(vocab[premise], device=d2l.try_gpu())
+    hypothesis = np.array(vocab[hypothesis], device=d2l.try_gpu())
     label = np.argmax(net([premise.reshape((1, -1)),
                            hypothesis.reshape((1, -1))]), axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
@@ -2076,8 +2084,8 @@ def train_batch_ch13(net, features, labels, loss, trainer, devices,
     for l in ls:
         l.backward()
     # The `True` flag allows parameters with stale gradients, which is useful
-    # later (e.g., in fine-tuning BERT). `1` (not `labels.shape[0]`) so the raw
-    # sum-gradient is applied — matches PyTorch's `trainer.step()` semantics.
+    # later (e.g., in fine-tuning BERT). `1` (not `labels.shape[0]`) so that
+    # the summed gradient is applied without rescaling.
     trainer.step(1, ignore_stale_grad=True)
     train_loss_sum = sum([float(l.sum()) for l in ls])
     train_acc_sum = sum(d2l.accuracy(pred_shard, y_shard)
@@ -2156,10 +2164,10 @@ def multibox_prior(data, sizes, ratios):
 
     Defined in :numref:`sec_anchor`"""
     in_height, in_width = data.shape[-2:]
-    device, num_sizes, num_ratios = data.ctx, len(sizes), len(ratios)
+    device, num_sizes, num_ratios = data.device, len(sizes), len(ratios)
     boxes_per_pixel = (num_sizes + num_ratios - 1)
-    size_tensor = d2l.tensor(sizes, ctx=device)
-    ratio_tensor = d2l.tensor(ratios, ctx=device)
+    size_tensor = d2l.tensor(sizes, device=device)
+    ratio_tensor = d2l.tensor(ratios, device=device)
     # Offsets are required to move the anchor to the center of a pixel. Since
     # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
     offset_h, offset_w = 0.5, 0.5
@@ -2167,8 +2175,8 @@ def multibox_prior(data, sizes, ratios):
     steps_w = 1.0 / in_width  # Scaled steps in x-axis
 
     # Generate all center points for the anchor boxes
-    center_h = (d2l.arange(in_height, ctx=device) + offset_h) * steps_h
-    center_w = (d2l.arange(in_width, ctx=device) + offset_w) * steps_w
+    center_h = (d2l.arange(in_height, device=device) + offset_h) * steps_h
+    center_w = (d2l.arange(in_width, device=device) + offset_w) * steps_w
     shift_x, shift_y = d2l.meshgrid(center_w, center_h)
     shift_x, shift_y = shift_x.reshape(-1), shift_y.reshape(-1)
 
@@ -2244,7 +2252,7 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     jaccard = box_iou(anchors, ground_truth)
     # Initialize the tensor to hold the assigned ground-truth bounding box for
     # each anchor
-    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, ctx=device)
+    anchors_bbox_map = np.full((num_anchors,), -1, dtype=np.int32, device=device)
     # Assign ground-truth bounding boxes according to the threshold
     max_ious, indices = np.max(jaccard, axis=1), np.argmax(jaccard, axis=1)
     anc_i = np.nonzero(max_ious >= iou_threshold)[0]
@@ -2278,7 +2286,7 @@ def multibox_target(anchors, labels):
     Defined in :numref:`sec_anchor`"""
     batch_size, anchors = labels.shape[0], anchors.squeeze(0)
     batch_offset, batch_mask, batch_class_labels = [], [], []
-    device, num_anchors = anchors.ctx, anchors.shape[0]
+    device, num_anchors = anchors.device, anchors.shape[0]
     for i in range(batch_size):
         label = labels[i, :, :]
         anchors_bbox_map = assign_anchor_to_bbox(
@@ -2287,9 +2295,9 @@ def multibox_target(anchors, labels):
                                             axis=-1)), (1, 4)).astype('int32')
         # Initialize class labels and assigned bounding box coordinates with
         # zeros
-        class_labels = d2l.zeros(num_anchors, dtype=np.int32, ctx=device)
+        class_labels = d2l.zeros(num_anchors, dtype=np.int32, device=device)
         assigned_bb = d2l.zeros((num_anchors, 4), dtype=np.float32,
-                                ctx=device)
+                                device=device)
         # Label classes of anchor boxes using their assigned ground-truth
         # bounding boxes. If an anchor box is not assigned any, we label its
         # class as background (the value remains zero)
@@ -2332,14 +2340,14 @@ def nms(boxes, scores, iou_threshold):
                       boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
         inds = np.nonzero(iou <= iou_threshold)[0]
         B = B[inds + 1]
-    return np.array(keep, dtype=np.int32, ctx=boxes.ctx)
+    return np.array(keep, dtype=np.int32, device=boxes.device)
 
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
                        pos_threshold=0.009999999):
     """Predict bounding boxes using non-maximum suppression.
 
     Defined in :numref:`sec_anchor`"""
-    device, batch_size = cls_probs.ctx, cls_probs.shape[0]
+    device, batch_size = cls_probs.device, cls_probs.shape[0]
     anchors = np.squeeze(anchors, axis=0)
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
     out = []
@@ -2349,7 +2357,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
         predicted_bb = offset_inverse(anchors, offset_pred)
         keep = nms(predicted_bb, conf, nms_threshold)
         # Find all non-`keep` indices and set the class to background
-        all_idx = np.arange(num_anchors, dtype=np.int32, ctx=device)
+        all_idx = np.arange(num_anchors, dtype=np.int32, device=device)
         combined = d2l.concat((keep, all_idx))
         unique, counts = np.unique(combined, return_counts=True)
         non_keep = unique[counts == 1]
@@ -2831,18 +2839,7 @@ class CTRDataset(gluon.data.Dataset):
         return feat + self.offsets, np.array(self.data[idx]['y'])
 
 import os
-from matplotlib import ticker
 from matplotlib.figure import Figure
-
-def set_log_ticks(axis):
-    """Plain labels on a log axis; 1-2-5 ticks if it spans < 2 decades.
-
-    Defined in :numref:`sec_utils`"""
-    lo, hi = axis.get_view_interval()
-    if 0 < lo and hi < 100 * lo:
-        axis.set_major_locator(ticker.LogLocator(subs=(1, 2, 5)))
-    axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f'{v:g}'))
-    axis.set_minor_formatter(ticker.NullFormatter())
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a Gluon data iterator.
@@ -2894,11 +2891,11 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
 
     Defined in :numref:`sec_utils`"""
     if not device:  # Query the first device where the first parameter is on
-        device = list(net.collect_params().values())[0].list_ctx()[0]
+        device = list(net.collect_params().values())[0].list_device()[0]
     # No. of correct predictions, no. of predictions
     metric = d2l.Accumulator(2)
     for X, y in data_iter:
-        X, y = X.as_in_ctx(device), y.as_in_ctx(device)
+        X, y = X.to_device(device), y.to_device(device)
         metric.add(d2l.accuracy(net(X), y), d2l.size(y))
     return metric[0] / metric[1]
 
@@ -2906,7 +2903,7 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
     """Train a model with a GPU (defined in Chapter 6).
 
     Defined in :numref:`sec_utils`"""
-    net.initialize(force_reinit=True, ctx=device, init=init.Xavier())
+    net.initialize(force_reinit=True, device=device, init=init.Xavier())
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     trainer = gluon.Trainer(net.collect_params(),
                             'sgd', {'learning_rate': lr})
@@ -2919,7 +2916,7 @@ def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
         for i, (X, y) in enumerate(train_iter):
             timer.start()
             # Here is the major difference from `d2l.train_epoch_ch3`
-            X, y = X.as_in_ctx(device), y.as_in_ctx(device)
+            X, y = X.to_device(device), y.to_device(device)
             with autograd.record():
                 y_hat = net(X)
                 l = loss(y_hat, y)
@@ -2959,8 +2956,9 @@ def evaluate_accuracy(net, data_iter):
         metric.add(accuracy(net(X), y), d2l.size(y))
     return metric[0] / metric[1]
 
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
-    """Plot a list of images.
+def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
+                cmap=None):
+    """Plot a list of images (cmap colors single-channel images).
 
     Defined in :numref:`sec_utils`"""
     figsize = (num_cols * scale, num_rows * scale)
@@ -2971,7 +2969,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):
             img = d2l.numpy(img)
         except:
             pass
-        ax.imshow(img)
+        ax.imshow(img, cmap=cmap)
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
         if titles:
@@ -3280,7 +3278,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
     """Train a model for sequence to sequence.
 
     Defined in :numref:`sec_utils`"""
-    net.initialize(init.Xavier(), force_reinit=True, ctx=device)
+    net.initialize(init.Xavier(), force_reinit=True, device=device)
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': lr})
     loss = MaskedSoftmaxCELoss()
@@ -3291,9 +3289,9 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
         for batch in data_iter:
             X, X_valid_len, Y, Y_valid_len = [
-                x.as_in_ctx(device) for x in batch]
-            bos = np.array(
-                [tgt_vocab['<bos>']] * Y.shape[0], ctx=device).reshape(-1, 1)
+                x.to_device(device) for x in batch]
+            bos = np.array([tgt_vocab['<bos>']] * Y.shape[0],
+                           device=device).reshape(-1, 1)
             dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
             with autograd.record():
                 Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -3315,14 +3313,15 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     Defined in :numref:`sec_utils`"""
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [
         src_vocab['<eos>']]
-    enc_valid_len = np.array([len(src_tokens)], ctx=device)
+    enc_valid_len = np.array([len(src_tokens)], device=device)
     src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # Add the batch axis
-    enc_X = np.expand_dims(np.array(src_tokens, ctx=device), axis=0)
+    enc_X = np.expand_dims(np.array(src_tokens, device=device), axis=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
     dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
     # Add the batch axis
-    dec_X = np.expand_dims(np.array([tgt_vocab['<bos>']], ctx=device), axis=0)
+    dec_X = np.expand_dims(
+        np.array([tgt_vocab['<bos>']], device=device), axis=0)
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)
@@ -3484,9 +3483,9 @@ class LSTMScratch(d2l.Module):
         if H_C is None:
             # Initial state with shape: (batch_size, num_hiddens)
             H = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                          ctx=inputs.ctx)
+                          device=inputs.device)
             C = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                          ctx=inputs.ctx)
+                          device=inputs.device)
         else:
             H, C = H_C
         outputs = []
@@ -3513,7 +3512,7 @@ class LSTM(d2l.RNN):
 
     def forward(self, inputs, H_C=None):
         if H_C is None:
-            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
+            H_C = self.rnn.begin_state(inputs.shape[1], device=inputs.device)
         return self.rnn(inputs, H_C)
 
 class GRU(d2l.RNN):
@@ -3553,7 +3552,7 @@ abs = np.abs
 eye = np.eye
 numpy = lambda x, *args, **kwargs: x.asnumpy(*args, **kwargs)
 reshape = lambda x, *args, **kwargs: x.reshape(*args, **kwargs)
-to = lambda x, *args, **kwargs: x.as_in_context(*args, **kwargs)
+to = lambda x, *args, **kwargs: x.to_device(*args, **kwargs)
 reduce_sum = lambda x, *args, **kwargs: x.sum(*args, **kwargs)
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
 astype = lambda x, *args, **kwargs: x.astype(*args, **kwargs)

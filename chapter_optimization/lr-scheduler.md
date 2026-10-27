@@ -37,14 +37,14 @@ show schedule effects. A LeNet-style convolutional network on Fashion-MNIST
 noise, real overfitting, and a real stability ceiling. We apply the small
 standard modernizations: ReLU activations, max-pooling, and batch
 normalization (:numref:`sec_batch_norm`) after every hidden layer. We also
-pin the initialization to Xavier (:numref:`subsec_xavier`) in both
-frameworks. Neither choice is
+set the initialization explicitly: Xavier (:numref:`subsec_xavier`) for the
+weights and zero for the biases. Neither choice is
 cosmetic. Without normalization this network's survivable learning-rate
 range is narrow and seed-dependent: near its edge, identical settings live
 or die by initialization and data-order luck, and every comparison below
-would be a coin flip. And PyTorch and Flax draw different default
-initializations, so with defaults left in place the two framework tabs
-would disagree exactly where this section looks.
+would be a coin flip. Default initializations differ across libraries and
+versions, and the stability edge that this section probes depends on the
+scale of the initial weights.
 
 ```{.python .input #lr-scheduler-a-testbed-1}
 %%tab pytorch
@@ -142,6 +142,7 @@ def net_fn():
     def init_weights(m):
         if type(m) in (nn.Linear, nn.Conv2d):
             nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
     model.apply(init_weights)
     return model
 
@@ -189,16 +190,19 @@ xavier = nnx.initializers.xavier_uniform()
 class Net(nnx.Module):
     def __init__(self, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        # Running averages decay 0.9; the variance is computed in two passes
+        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                     rngs=rngs)
         self.conv1 = nnx.Conv(1, 6, kernel_size=(5, 5), padding='same',
                               kernel_init=xavier, rngs=rngs)
-        self.bn1 = nnx.BatchNorm(6, rngs=rngs)
+        self.bn1 = bn(6)
         self.conv2 = nnx.Conv(6, 16, kernel_size=(5, 5), padding='valid',
                               kernel_init=xavier, rngs=rngs)
-        self.bn2 = nnx.BatchNorm(16, rngs=rngs)
+        self.bn2 = bn(16)
         self.fc1 = nnx.Linear(16 * 5 * 5, 120, kernel_init=xavier, rngs=rngs)
-        self.bn3 = nnx.BatchNorm(120, rngs=rngs)
+        self.bn3 = bn(120)
         self.fc2 = nnx.Linear(120, 84, kernel_init=xavier, rngs=rngs)
-        self.bn4 = nnx.BatchNorm(84, rngs=rngs)
+        self.bn4 = bn(84)
         self.fc3 = nnx.Linear(84, 10, kernel_init=xavier, rngs=rngs)
 
     def __call__(self, x):

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:0264980674f43432d252e29e5d3f5fcf40ad0aa5f7a92644fee503f693f3379b",
+    "d2l_lib_fingerprint": "sha256:4ed6a95e1901a523f1d792af2c6bae3ec24afd7e25d2219c16f2b93e188840c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,12 +29,12 @@
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:2107024aee69d9f9d77d7295cdd5be28a394f7cf8d7709e4c7e7a9c3933a65fb",
+      "code_fingerprint": "sha256:0b52ef95ca118897513b815b5271c42f3fabcf913f6b7b54757b9635d668e896",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:a98bf69ed8b7f368f12fa2f4dee6f7800b7c1e8c8640e4305e429a5e032bd6ec",
+      "code_fingerprint": "sha256:9dc0cec8ac0bc3fcab51e2249db5e1f9799d4c26ec18d8ca4ec8911120849b08",
       "kind": "text",
       "outputs": [
         {
@@ -45,46 +45,75 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 24, 24, 32)\n"
+          "text": "Sequential             (1, 24, 24, 64)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 12, 12, 80)\nSequential             (1, 10)\n"
+          "text": "Sequential             (1, 12, 12, 160)\nSequential             (1, 10)\n"
         }
       ]
     },
     "cnn-design-training-1": {
-      "code_fingerprint": "sha256:19f6b45c1e85ea36e5ab89f76a8c1999440b4c4e0df94ccdd33ee8cfc0a46e41",
+      "code_fingerprint": "sha256:c98f07f1564b3791eeba4015fe741fda0abf97f5928ef5c7c2e32976738f963b",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:a328496bbcb526e8b389c8d79a63fa0bfdc38c36ddd767f7f81a542317a4b8b4",
+      "code_fingerprint": "sha256:a33f1f2be5ed71ac2c596d12353798cf65e8266fbefc833e4f1265c2186ddd1b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 33047,
-          "sha256": "sha256:1f052e0aa9d24ecb1f16593bd8308dca51af80892742ee1593c8c381fd31e37f"
+          "bytes": 31162,
+          "sha256": "sha256:f4bf5c1aa83715592ff4e9345e00af3a648a410e8faf459c3c1439174fc88968"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:34f75ff97c597f89c70e92e063eb54dc9b5eab7ff03b3cb7b584321323be1b0a",
+      "code_fingerprint": "sha256:0c45e529a228fa061720561f9f185ea62bef0beffa2d0ce9533a2247fe6633f1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "113,674 parameters, validation accuracy 0.898\n"
+          "text": "519,658 parameters, validation accuracy 0.937\n"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:8f150e73c0c8118f351c1c59e1fa8485d5906534aa1599f2134c42f11c304f05",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:1cb71080b6bb0453c15963070908f81c8972e3d365166a7711a088cdd432fba3",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
+          "bytes": 35122,
+          "sha256": "sha256:393901952feb24df3545ca5526ec4db11189f4e83f0adb5aa7b8db7862f9a43e"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-3": {
+      "code_fingerprint": "sha256:d0f7df8d94d784d1508e675d6385318f4827a1aaf565fd7b7d98d185d38cefff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "11,175,370 parameters, validation accuracy 0.941\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:bda1a7e4a0807dfa74357e0b9c5d1ee01ee99b07feedef8f60a83521ca3e3b67",
+      "code_fingerprint": "sha256:f4d90edec9b2e4a1f47ad2512ef9cc4cc98b46f8b130ddabd9ee5f297a8c9f5b",
       "kind": "text",
       "outputs": [
         {

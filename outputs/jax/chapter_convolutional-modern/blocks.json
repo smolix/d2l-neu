@@ -4,27 +4,27 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0e5537791cec6d7a789339bc7ff85146a307d8c5bf7ab63032b79ffaef09e6e2",
+    "d2l_lib_fingerprint": "sha256:063d9bc8bfdbfa5e4e2595d70f1dc86346eca149a3106d26c17cf40f1d5bbd07",
     "max_inline_bytes": 0
   },
   "cells": {
     "blocks-imports": {
-      "code_fingerprint": "sha256:a7fd8b5373586c013db88b683e166649063779d03f9f451bf4c76ec98989804c",
+      "code_fingerprint": "sha256:76014e5f38e484d0b4ebea92ad3024a4050b1bc34ae91a403facd65b0bf0954a",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-blocks": {
-      "code_fingerprint": "sha256:6eaed095ceb8c062993c3b09953fe0ba9c3e33989e633fc87762b40ad39f49c1",
+      "code_fingerprint": "sha256:1d4a9894898e7593c85ab180a60db0a2a2d2992cd0444bf2cab5e584a1ed87dc",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:6f7d2fe7ec38bb536e11f82fce210c1bf79fb1ee9e0310d16fd3a04f678b745a",
+      "code_fingerprint": "sha256:1445eac018f6df4ba97334f22db97ce70bc5d040e9aff229c5f524f9f719eadb",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:c8067857d499bbf42db1f2140253ef5605158fdb11ade0deecf8911374451be0",
+      "code_fingerprint": "sha256:22cf0ab7ced493ee3d2d2a7fd71b71afc0142df0a5ee02309a7fe8b8f7ed5767",
       "kind": "text",
       "outputs": [
         {
@@ -74,31 +74,36 @@
         }
       ]
     },
+    "blocks-training-1": {
+      "code_fingerprint": "sha256:b7d289ee9c8bf361d7e005e8f482abe41be4384b6d92b11917952f28ee5eddc1",
+      "kind": "text",
+      "outputs": []
+    },
     "vgg-training": {
-      "code_fingerprint": "sha256:695a92ae26eb1cfa877b6256e99dac215c26be70225598d8f81202b59ff7fca0",
+      "code_fingerprint": "sha256:495b189b53f78c7aa264c621edc612e114a22a1e564525fb675c635f5799e125",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33359,
-          "sha256": "sha256:fe45868e2caddfd165cca96ea0f60647bbcab62420dc96dd36c6d0f58fffd2a7"
+          "bytes": 32566,
+          "sha256": "sha256:3a95c4ed796ec9095e9bd2e5af37fe4277f2fa7304d4e8693d66294c4226de40"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:f772c9f1228df6952e1c4685e3d1f0f891b2638d3d79cbe4e2f1e019082156ee",
+      "code_fingerprint": "sha256:fbcf3338be1a3c2d0efefa1f6861bb661a544550684a750e688c6bd06da17b45",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:d5758b5f334ce688ef510159bd90a2ed08a25185e9ce1434024842e65eb287fa",
+      "code_fingerprint": "sha256:b949a72a41f32c91d92b8c229679471cdf78aef9d3f021ded585201bfbd00b4f",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:ed6f24a87c3995acd2ba2612bd94d0bad877bbfa3c78177f334c10c5184813ec",
+      "code_fingerprint": "sha256:e3eab1d5d4205e6a5adf9eecc941661dc2b8fc5b1c64878e13450e7220dfa3f5",
       "kind": "text",
       "outputs": [
         {
@@ -129,35 +134,35 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:e736758687a1a68107a89ab68f50eab9540d4387b5cc3dc8d665f1f94db4389b",
+      "code_fingerprint": "sha256:cf238a33e5f20d265177c894ff434e6e44a792bd965270cb315e01e811c77354",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 34394,
-          "sha256": "sha256:189f0471b030ac575d4c2333ba0b61944a3b1158f7b291d75f2b14152430d71d"
+          "bytes": 30745,
+          "sha256": "sha256:792c8e24edc80714b50310549c25f195f86043ffeda8776b001596b28974f245"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:f4d08dda52d8a9bfdfced40a6d3f887677cb6e269df76eec53c5d74bc1fe4791",
+      "code_fingerprint": "sha256:fec5cf07238838c500f09e1d01eaf88bae5c0b822180702186065409ecaabec6",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:773e15f97396eca2d2f81cbdbe6be43fef8f921530532ecc27f42a7da4686b8a",
+      "code_fingerprint": "sha256:9ea572af03c4332604d8866476626bb723ca0810155623d9c2f1a0d66eb2b64d",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:4c95630f473cf364263039448a24400f1ee9aad1192e573ff82600107747a15a",
+      "code_fingerprint": "sha256:3151ce7e9dde98d527e48c4c2c991223af5a483020a6cd5b9819a39f40edda19",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:b110839de8f14b4b7bbc87c986b8eedc712ff01b38a62514221a0227de96d3d0",
+      "code_fingerprint": "sha256:689c9d3cc3e9b62cbcd8f4c82dcd92fb5ac45b37f14e3dc93a6dcbfd0ddd2992",
       "kind": "text",
       "outputs": [
         {
@@ -188,25 +193,25 @@
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:ee663783ad6f66c2477d057c94ae524b27f6b31e880d36ff9f1d4e28692fd8c7",
+      "code_fingerprint": "sha256:6d0dca12e806c1f051a0f1bb2def391575215cef1e307c0715d577fab5070663",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 30668,
-          "sha256": "sha256:15a0729ac9a8a189bade641e67be8e13f21839492cf48e2d5085dc51b8481b26"
+          "bytes": 33647,
+          "sha256": "sha256:623ddb74d327b164fa3044189e49a34b2d8e73eca47362cd6ae9e9459150a291"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:5d518d56cac758902153c32c13216f06ac0ac37b31cadf96689325fb8e92e427",
+      "code_fingerprint": "sha256:064af2869d29237cac87de8df96758f9d1ff33b7b66c4384c2104603d3b2f254",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.902, 'NiN': 0.793, 'GoogLeNet': 0.879}"
+          "text": "{'VGG': 0.918, 'NiN': 0.876, 'GoogLeNet': 0.907}"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3a2e47bea8c5f4542a6d858e2292839843c4a411bf88fb4c24cf50c1872a6384",
+    "d2l_lib_fingerprint": "sha256:6f671e7178d1376d4648a1fb393e7323a8a5b30ea78d52b026b53a6cbbd9d148",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(6.0897094e-08, dtype=float32),\n Array(0.9999989, dtype=float32),\n Array(4.7683716e-07, dtype=float32),\n Array([0.19803339, 0.19981427, 0.19967994, 0.20176147, 0.20134337,\n        0.20175634], dtype=float32))"
+          "text": "(Array(6.249365e-08, dtype=float32),\n Array(0.999999, dtype=float32),\n Array(0., dtype=float32),\n Array([0.19940217, 0.1998103 , 0.1994694 , 0.1977193 , 0.20088926,\n        0.19926246], dtype=float32))"
         }
       ]
     },
@@ -38,51 +38,46 @@
       "kind": "text",
       "outputs": []
     },
-    "batch-norm-cosine-warmup": {
-      "code_fingerprint": "sha256:c05d0fcf5b5b30dfb91540ac96063aafae9cd5dd0e0dedc0e8e8a3694986ed6a",
-      "kind": "text",
-      "outputs": []
-    },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:9c0014b2ef7e001672987645472f6f3046ef2e1523804e991b2c67646bf91984",
+      "code_fingerprint": "sha256:42088d87ec4f975cbd1b6dceae6c825989003cd2d3779fd9cdc4dbc193011086",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:44e1b375dcef5ffd77d0dc7429b41ee9afcc7d8e9297c1b577434c899a44e171",
+      "code_fingerprint": "sha256:a7fccedc386575819c304c58efe5403233e3ec27b53810dbeef4c8c300d9d2ad",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:6868e15cb34d405d88551016c28e497ab4374cd13be81d8fa4727eff84644699",
+      "code_fingerprint": "sha256:59b20901edf8f52153e959ae4317c03f88fb1c0d78dae9cca030447a3a530d22",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24473,
-          "sha256": "sha256:eb179c279dc82d5b67bf845e78d6ad54eb4401ac701ceff4371af27882e6b714"
+          "bytes": 24484,
+          "sha256": "sha256:176126263456fb4c96c4e184471b1fe06b4f65b246a58cb2f0bf02c18818919b"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:953bb601675484a9b6e1116f24575c5fadb944304ac936503981ceb1896d8ebc",
+      "code_fingerprint": "sha256:506be9fe2ae605e8a6c6437cc1e4ced4f0c798f1873b391af131f5c0e3702573",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.585, 'BNLeNet': 0.886}"
+          "text": "{'CosineLeNet': 0.62, 'BNLeNet': 0.887}"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:b230272487473b33314608b008456ffcdf29a9099d53bdc5a38b6b936ded330b",
+      "code_fingerprint": "sha256:fde5af7c6407fd71fb04b11698083699ed08c08bd67f36fa8a90d4445d5a72ec",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(2.9802322e-08, dtype=float32),\n Array(0.9999899, dtype=float32),\n Array(2.3841858e-07, dtype=float32))"
+          "text": "(Array(2.4214387e-08, dtype=float32),\n Array(0.99998987, dtype=float32),\n Array(2.3841858e-07, dtype=float32))"
         }
       ]
     }

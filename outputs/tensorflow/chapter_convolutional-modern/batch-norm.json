@@ -4,85 +4,80 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:4d0677646a13eae78a0f2d809c8532821cce10199af53172521123a6b343eb7d",
+    "d2l_lib_fingerprint": "sha256:9d98aa0c94140ad425e78bc5b1e6777df2ed0aaabf68aa378b29a7331572696d",
     "max_inline_bytes": 0
   },
   "cells": {
     "batch-norm-batch-normalization": {
-      "code_fingerprint": "sha256:1700b6428fea148f9f44411adc64767da9bca71f5752d872ecfacddedcde85ea",
+      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:fd2250cdfd71f87f5249adcd8368c4a618f12f43508a909ce9cece8db2eaaf67",
+      "code_fingerprint": "sha256:7fb05eb16dd1e9474ccde627263bae94669b0151b161486bca840cf0ba0c3c09",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:7929f542b4aec09c67f8fd2471d9a5e989c568ad35251de11fd856eb684fc2de",
+      "code_fingerprint": "sha256:5df483440921cfbd59ab45d338cb8ae5b11822581ee673393641fbc63659f957",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:4b1cba8839c8762cfeb542aa092ee83faa4b8110d02c483bcbc2080e347eff7a",
+      "code_fingerprint": "sha256:7038c600c26450363790536d3056733677db9af29ca4a8d75e1be5718036f48f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(4.4399378396065003e-08,\n 0.9999989867210388,\n 4.76837158203125e-07,\n array([0.20069563, 0.2009865 , 0.19959573, 0.2017235 , 0.19953084,\n        0.2002116 ], dtype=float32))"
+          "text": "(3.596045416998095e-08,\n 0.9999988675117493,\n 4.76837158203125e-07,\n array([0.20056832, 0.20095508, 0.20071502, 0.20042889, 0.20048666,\n        0.20050357], dtype=float32))"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:432581848ea80a2ec6f7f11ee68256dbba0657892f01ed13c2318b8fd233d745",
-      "kind": "text",
-      "outputs": []
-    },
-    "batch-norm-cosine-warmup": {
-      "code_fingerprint": "sha256:871a82fc5e62bcec906cdc3f772878a8437acd847f90a23e09097061bd6000b9",
+      "code_fingerprint": "sha256:02f0e3471fb041bf76aaeca2a0bd6f7aa7f0c30eb4412784945983c13ff53110",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:9c718daf7a234204acd74b4234e74b78ab4975fcf51034a4122a2ec0fc0a3976",
+      "code_fingerprint": "sha256:e1bc099d20a51d88a4fd8567d17c64a54bf3e11d26c3d60aa245ec3f412104f8",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:ad686fc3da0d10396265fd3bb073bd3ed288c4041851885389d48cf8ff25c904",
+      "code_fingerprint": "sha256:ebb0bdc2d9db3cca204972b9380edb518e960495b3a84edd873e994734660556",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:b39105795e0bd9e349c4586e497b21220742d89db6f0f8276943742c316cd360",
+      "code_fingerprint": "sha256:fb5085f0cece173a8afc994daad370081657c303e4b1a62401d42131424b5b11",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24487,
-          "sha256": "sha256:9316dc5ce6e047bde40aa6a159580ca1b264c54a36735157008ef86a33ba9734"
+          "bytes": 24489,
+          "sha256": "sha256:db5d3bed35f1bd9a3c89e7a1b9951a8eb2de9455fb41a89762bc0b832e9547bb"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:ab0afa547a6ef69b7f63707c98f6d26356b297e267f3b7e1bd5a944aba4b1187",
+      "code_fingerprint": "sha256:0e97d2ad8689b5ef49a5fedb4ad4d0a5eb3521a0fc54829d03e31bf63c25685b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.626, 'BNLeNet': 0.884}"
+          "text": "{'CosineLeNet': 0.645, 'BNLeNet': 0.887}"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:bda784e0b21db2ab5dbae1955067f507de799851f4a285a9293d38f599a4b60f",
+      "code_fingerprint": "sha256:805cd12108d1aba31b9bda11e935f0c4a2618563edb38c15f4a241d15a46061c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999899864196777>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.384185791015625e-07>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.421438694000244e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999896883964539>,\n <tf.Tensor: shape=(), dtype=float32, numpy=5.960464477539063e-08>)"
         }
       ]
     }

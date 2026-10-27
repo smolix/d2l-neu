@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:820816c4c1863d4737279ae5e5dcd4be3a560b6f501fccb5efc7a40a55f2e479",
+    "d2l_lib_fingerprint": "sha256:dddf78f36261378a6915ffc233961125d6973ebc844211526d95ce0d36f0f675",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 2.280 sec/epoch\n"
+          "text": "loss: 0.243, 3.918 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-2-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:6952086e999e021e6df42a26a021afcf0d5273d4f2f391cd9989577cf9b51103"
+          "bytes": 18781,
+          "sha256": "sha256:586739d0d1a9579dd597dba3ef5b8a6486071ade71fb4490ffcf30f5fa1abfb3"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.419 sec/epoch\n"
+          "text": "loss: 0.243, 0.428 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-3-1.svg",
-          "bytes": 18706,
-          "sha256": "sha256:71184fee9dabe507ac12aa56a0222e4aa2aa60b296952a593fb198663c5b8d01"
+          "bytes": 18733,
+          "sha256": "sha256:03b61f293425aa2d5cd9da23b28da7237064519c974fba3c88c9b6552c5aff86"
         }
       ]
     },
@@ -65,80 +65,80 @@
       "outputs": []
     },
     "adamw-one-number-two-meanings": {
-      "code_fingerprint": "sha256:286593b5e4bb795b365f16f7d9cc2e21219038b00888bd52937dd73275ae3871",
+      "code_fingerprint": "sha256:f8ca1e57e07136fb08ef3edb2dd8edf7c2f0d4c8b44c0a47476ba9694d690b51",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-one-number-two-meanings-1.svg",
-          "bytes": 25749,
-          "sha256": "sha256:4ccf5a5540b8f7fb9a1eda0344afbd5f693a3bf5959d89557910b3c345c23f01"
+          "bytes": 25752,
+          "sha256": "sha256:8c62b27ede5142e596b4f3ae27fc4faa674990bc5ef0501cdbf05f2ac7b8e4a1"
         }
       ]
     },
     "adamw-a-grid-twice-1": {
-      "code_fingerprint": "sha256:1c22240acb05d72de4601eda5ce2f106defb85b49b63bec40b76ae965a8ac032",
+      "code_fingerprint": "sha256:a7feb9ccc72d583be54689daf4ef6371778545e5acc00bb0b6eecd4438d2d642",
       "kind": "text",
       "outputs": []
     },
     "adamw-a-grid-twice-2": {
-      "code_fingerprint": "sha256:0b94c8a27222877d9b7bb3ec001174634f48baedc5287b8c4a8d7b660eb53002",
+      "code_fingerprint": "sha256:27d6865a20939b13cf6718c7748130bb898e53c06c7b49f10f3f400a32368be7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.63 2.27 2.18\n"
+          "text": "3.18 2.09 2.34\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.21 2.19 2.37\n"
+          "text": "3.99 2.63 2.35\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.77 2.32 2.37\n"
+          "text": "4.13 2.15 2.34\n"
         }
       ]
     },
     "adamw-a-grid-twice-3": {
-      "code_fingerprint": "sha256:e520939eefbb0939e45431eecfaca1aecaadc1ae0f2d8cbfa2769d58a32625db",
+      "code_fingerprint": "sha256:ad3accc717fc9c1d6245f5ee505b25f8f63cece3533b62bd1a7b44420ec613ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.66 2.30 2.45\n"
+          "text": "2.85 2.07 2.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.11 2.27 2.57\n"
+          "text": "3.21 2.27 2.52\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.08 2.32 2.57\n"
+          "text": "2.70 2.30 2.52\n"
         }
       ]
     },
     "adamw-a-grid-twice-4": {
-      "code_fingerprint": "sha256:0d8e76e6962d9a346b94c8bbc66e9f7fad869cbd341dd66c76d441aecd9e5f6a",
+      "code_fingerprint": "sha256:a6d70e020547ad7aa4d803e060664cb9aaa941761027a84e6f3d6eba34634de6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-a-grid-twice-4-1.svg",
-          "bytes": 40973,
-          "sha256": "sha256:2edf1d8b8130a2d449588414c9332537ce345a4269d985610fef94639d8ae975"
+          "bytes": 41375,
+          "sha256": "sha256:626ecb1ecfdc4a18d19785ac9510a6c9412a5c05f8db2c504e300bb3fee3c04c"
         }
       ]
     },
     "adamw-what-not-to-decay-1": {
-      "code_fingerprint": "sha256:ca80e56bc26de0f82a4f48dbaf7cfb02738da5035f2fe57ab8e2c3be699be8f6",
+      "code_fingerprint": "sha256:db60b876a608ee2daf9fb9e3f904894185f73ec0ede6de59919e731cd049f784",
       "kind": "text",
       "outputs": [
         {
@@ -149,25 +149,25 @@
       ]
     },
     "adamw-what-not-to-decay-2": {
-      "code_fingerprint": "sha256:88760389d620fa29ae466b2f8c692e5e62e6105b210f5ce26467412987b1dc20",
+      "code_fingerprint": "sha256:28ff1028bc8bd9565e11056f049fcf557ee7c4d2fce01b10faf00db2a86203ca",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.79\n"
+          "text": "perplexity per character: 2.55\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-what-not-to-decay-2-1.svg",
-          "bytes": 19375,
-          "sha256": "sha256:d099084c49d24db7d71c904dc7ebf832d69bd29cb12521de2f657744711a744a"
+          "bytes": 19369,
+          "sha256": "sha256:9c1ccb1970e2f1acf05a1faa276f8b90dba3b0874872c642d8577b0539593fc8"
         }
       ]
     },
     "adamw-optimizer-state-and-memory": {
-      "code_fingerprint": "sha256:62529592c6f8a40490d57e878a473be6fa484b01d905ca182e80832109f2d49e",
+      "code_fingerprint": "sha256:c2becb6b3bf456aead5e7641cae134925e0722f108b14088f6993a8679cd8da7",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1e67b0efc6b8ab96eb2a6b6cbd0b5e5a76bf905ffbe64c033170b49f67330c73",
+    "d2l_lib_fingerprint": "sha256:ca4bbe29e668543a690ec7c90cd6e69b7293a7aa8674c9cca6df6d54309e9d5b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,15 +51,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 34282,
-          "sha256": "sha256:f8b3482eeb56d99c5733e58cac252a9aa15092bc4b5d77784bde4864712054d0"
+          "bytes": 34870,
+          "sha256": "sha256:f8c03761d8293ea28757d60c0547e07504afb9a9eca9e055006e95a6182d1a89"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 34873,
-          "sha256": "sha256:6cea94f32a5626e2976680c5b4c5f378f05cf5f60eb35e5d09f04cb2539f3b33"
+          "bytes": 35461,
+          "sha256": "sha256:26764b062b7e876c611feb808a3e566e5cee616caaa949f9302c769d6d29d1f1"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.914\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.940\n"
+          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.914\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.939\n"
         }
       ]
     }

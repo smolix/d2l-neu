@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6a1492f5d1818751443a410715a6d654a7231fc27a6c1c1d67531b4c2bbfad27",
+    "d2l_lib_fingerprint": "sha256:1e37c399b9dfacd3316cecb9c4d6c28a1f04c33a4a76008a483198a27b9c3fab",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,15 +51,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 34276,
-          "sha256": "sha256:9c3664b67393d728890eec5f5aac856866a521fceff0a1f8488defafb306fc70"
+          "bytes": 35484,
+          "sha256": "sha256:fd0553ffea58148a824dfba1c9eee0f60779029e1f2b65c5818e088df025cdb5"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 35469,
-          "sha256": "sha256:b0e638f914a9ccf3cff4472047803c05d46bedf393551dd1d26826b40261eb3b"
+          "bytes": 34878,
+          "sha256": "sha256:65a5260a4f999585cd3bbab5a7f66d033af60851e09ee67e69574e261633bdff"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.915\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.938\n"
+          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.915\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.942\n"
         }
       ]
     }

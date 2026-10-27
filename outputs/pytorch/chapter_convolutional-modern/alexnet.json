@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:417242eb8b1f572b3e0b38f4be850b0eaf3088934ff77235ea86d8e51bc4c502",
+    "d2l_lib_fingerprint": "sha256:1f30d4cdcd5c7b08533812664fa0681b32651cc6d4585bd2fea1fa85d342946e",
     "max_inline_bytes": 0
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:c300cb7caa408dc7ccf57efc672503edaa3feca7c3ff5bcdf5d9df44c9ad7dd8",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:5e7c84ea880fd5b3f24cf1d600ffe5a7e8e57f4302323a663d7137d6a1b6d2ae",
+      "code_fingerprint": "sha256:0fbf051f63a36e3826e7da95278f9ce2b49bceb95031db3f04dd971d1c00d30d",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:a838f94b1eb9f1d9ab1e47520a291bc95df33c8816dc305c888338cc8c67207c",
+      "code_fingerprint": "sha256:8c1648124a0d2ea97ca94df0b7c7011394b2d78689000dbb37f15eb9a29c9db8",
       "kind": "text",
       "outputs": [
         {
@@ -34,16 +34,26 @@
         }
       ]
     },
+    "alexnet-training-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:e2c098ba6e82582f1ea60d91b041995a0734e80e59ef74193df97279290027fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-training-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:3123e3ff5bc70bbeb2e0d4454b252a64c9b10d9d5aad4eb39b6d3eb28d034e37",
+      "kind": "text",
+      "outputs": []
+    },
     "alexnet-training": {
-      "code_fingerprint": "sha256:6ed6607283a48a6ec69edaf7a78aefe284da9b48e3e1d4748319d3f1ffb342de",
+      "code_fingerprint": "sha256:379078e8b7b89961f690b04b44343a605d9568b02ab79d1f19fbe7a280b4f9c6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 35079,
-          "sha256": "sha256:365a14bbc3a023e2c083d801da3d29cf5549010bddb33c97923f31e08ba8075b"
+          "bytes": 32564,
+          "sha256": "sha256:49100e8df64c752251bedcef33cf64bb2bb9a4212dae6efecd8e4ef2ff84a076"
         }
       ]
     }

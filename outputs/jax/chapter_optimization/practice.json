@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0881651914c618b8be0fc9f00e0ba3a091f5bc0483af03a8d504704d2a6aae24",
+    "d2l_lib_fingerprint": "sha256:8c05041d92c5c39db40135586bcac50aa4caf8422af2aa88ecc5fd07f5bd9959",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,7 +24,7 @@
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:4e89ec9c42e46eb0e276659f6da51833402e8b07fc0c9fb684a89f81d11dd249",
+      "code_fingerprint": "sha256:7d4c572823611eceb37eb6f1bf97729834621db3bea2c7cff207cf260650a818",
       "kind": "text",
       "outputs": [
         {
@@ -35,49 +35,49 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.036\n"
+          "text": "clipped at 1.0: final loss 1.006\n"
         }
       ]
     },
     "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:9f80921be44527ba954205f6594e80af92aa2911240cc4c6e0724716dc94a235",
+      "code_fingerprint": "sha256:f79f3e2ad4c252ee4c3256bbba44e6276d789a756f76723cae4b91d67ee83e79",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 37838,
-          "sha256": "sha256:b78ac7d97d778a20a8e8251b24fa4538561384f9311911bb67eb97ac86f7bf09"
+          "bytes": 27096,
+          "sha256": "sha256:1aafe1ea571f3fce1dc211e4d8f81d4bbdf1bf5c37ca20b6fbba38a1d62a29bd"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:d8c9b879a46e02ebeaf9506c0aab99fdb363c2eac623a02f59b2b66a958c1044",
+      "code_fingerprint": "sha256:f6d34b71221391f9644d2badcbf167ccea93838b899a59db2e5d16fdb1e252f9",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:41f867bb009ad9b7c9f347643ea174dbe976b71d5bbd7c4d7703705c4ef17f62",
+      "code_fingerprint": "sha256:0abb57fb0de6e09d6b6ded91338c3d39672e5dcba904a1e070bbe15432803791",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.894, EMA 0.911\n"
+          "text": "final test accuracy: live 0.808, EMA 0.910\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:f8cf519d03cab2dd7f6ef04ad27f0bbe69d06cf6090234914253b236a1afe273",
+      "code_fingerprint": "sha256:d57588543b22c1e6dac016f75dacfb794e8fd4f09c7b1e1e8a3ac841858fb099",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 22760,
-          "sha256": "sha256:779c4b3d7e25cc0023c9bc3df320cf6725b34a0281ab3293c71cd68126512bb0"
+          "bytes": 24013,
+          "sha256": "sha256:95b413c5e53282d85d8849741384bb5239caacba922389ac3a4e2f298b8f28a9"
         }
       ]
     }

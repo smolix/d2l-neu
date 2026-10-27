@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31450,
-          "sha256": "sha256:93be82eb783864e290c2ed191b02bfed57a60ddc4baa45d81707938696d235ef"
+          "sha256": "sha256:819320f9b3690e119a027f81642d3e6233779bdf681dcb421b5fed852f5fd5a6"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:977ef02ed6d16dd296067ae6a1452fbff6f30b33ec59ca75f63ec033f8e347b4"
+          "sha256": "sha256:33072e7aafb8b9e8507fcaa0b8b14e460f39cbdfb1e5f61361eda56f87c6d3d4"
         }
       ]
     },
@@ -67,13 +67,13 @@
       "outputs": []
     },
     "positional-information-rotary-position-embeddings-2": {
-      "code_fingerprint": "sha256:981a7fbccba4169a3ed3029721f5d60d87aeb75652dbfb7180916516aab30da2",
+      "code_fingerprint": "sha256:368f257ad1c39575832f78b6529f7d6fdc57b6c214f8c1c5d9f4e947ba7bc8b9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 1.5e-03\nRoPE, all positions shifted by  17: max score change 1.7e-03\nRoPE, all positions shifted by 480: max score change 1.8e-03\n"
+          "text": "RoPE, all positions shifted by   1: max score change 1.4e-06\nRoPE, all positions shifted by  17: max score change 1.7e-06\nRoPE, all positions shifted by 480: max score change 1.8e-05\n"
         },
         {
           "type": "stream",
@@ -83,56 +83,56 @@
       ]
     },
     "positional-information-an-attention-only-language-model": {
-      "code_fingerprint": "sha256:9fc9f34934136a7e6e2a5eb3211905aecc9522b90c3f4c5234cee7eb7cbe6d15",
+      "code_fingerprint": "sha256:230dd9338833264e40b3be1c231e645135c0a5108d54b5c064628813cbec9ce4",
       "kind": "text",
       "outputs": []
     },
     "positional-information-the-experiment-1": {
-      "code_fingerprint": "sha256:ac9965902922fe50e0b90bb2921eb0124997fc02eae963598bac67a72f4d6679",
+      "code_fingerprint": "sha256:aefbaf0b0bb99d41b06f8f39ec63cc9d542b0e0dbcde54d3c2ac55fde0ae86ff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 1.83\n"
+          "text": "   learned: final training loss 1.86\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 2.08\n"
+          "text": "sinusoidal: final training loss 2.10\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 1.58\n"
+          "text": "      rope: final training loss 1.55\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 1.96\n"
+          "text": "     alibi: final training loss 1.98\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      none: final training loss 2.23\n"
+          "text": "      none: final training loss 2.24\n"
         }
       ]
     },
     "positional-information-the-experiment-2": {
-      "code_fingerprint": "sha256:a8b08768da21fca03abe06a197608f5d1cb8e11d53014b1103f9bb03deaffcfc",
+      "code_fingerprint": "sha256:16a3b394bcc3af915b82c378110672d1d86b68549a9fc275e2ccec7bd015008e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned:     6.2     42.8    117.7\nsinusoidal:     7.8     19.0     45.2\n      rope:     5.1     14.8     95.5\n     alibi:     7.0      7.0      7.0\n      none:     9.1      9.3      9.4\n"
+          "text": "   learned:     6.2     20.8     37.1\nsinusoidal:     7.9     24.3     48.1\n      rope:     5.0     16.4     77.9\n     alibi:     7.2      7.1      7.1\n      none:     9.1      9.3      9.4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-the-experiment-2-1.svg",
-          "bytes": 30359,
-          "sha256": "sha256:cd21d1aaf90f285efe0c0f3461325ecdfaa35e99c21f92b23554c7f4ecf1b3d7"
+          "bytes": 29465,
+          "sha256": "sha256:5a152b7ad4d47cd82288c9b40eb8beea81b5cbeef82fb855217261d46c8b171b"
         }
       ]
     }

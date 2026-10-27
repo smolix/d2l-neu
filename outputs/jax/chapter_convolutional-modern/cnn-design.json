@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:4f5238418db6edf01cef7fa5674e1004061492ba85008a4fd74e1371aa086e2d",
+    "d2l_lib_fingerprint": "sha256:f026e580636b470e716268fa02b1cbdec5fa38f2d17d3de8e524814bd2043d42",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,12 +29,12 @@
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:e105946ed1dccd9ed0ac4b76116bbfef051ea8744c0bc682eb7213d05bcd8380",
+      "code_fingerprint": "sha256:815e1245b5818c9f32685c2350e8b4e183e5890cf53aeaaf879b546380769a49",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:2774a0c85694c77d0cc227d7566d5e096f42146589bc4057096b74ef46754771",
+      "code_fingerprint": "sha256:9b9b00feeb8f288543e68b0a8f0321915a57e08634e4796ce01a2c660e728f0b",
       "kind": "text",
       "outputs": [
         {
@@ -45,12 +45,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 24, 24, 32)\n"
+          "text": "Sequential             (1, 24, 24, 64)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 12, 12, 80)\n"
+          "text": "Sequential             (1, 12, 12, 160)\n"
         },
         {
           "type": "stream",
@@ -60,36 +60,65 @@
       ]
     },
     "cnn-design-training-1": {
-      "code_fingerprint": "sha256:419c850a13d6ba73099ffb3b431324a309906285402392c1f4360aac2e1a4383",
+      "code_fingerprint": "sha256:68dcebf0e4389a99484545286c659d24a2a2ea41ab079f0213b0dc3d790041ce",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:fd15b41e93381de023574da2a8bb2af7f639452f0231a09bcf474d6d4190c663",
+      "code_fingerprint": "sha256:eb6194408cf66fa9503175de5056855f98091f98a444a84fece30d4ff65cce7b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 33642,
-          "sha256": "sha256:514d4ef203e7b499433d8a8eb01bafa0ea74a75d6d163b2fdf7e6e067787b146"
+          "bytes": 31927,
+          "sha256": "sha256:1ec829c2b46c8b7ee7880ea51032762006f1fe272243ec57bd57def1c7581052"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:0974d1027701ab52411488f57ec11a90532ac313ecdc5b4ae5d7d029a3eb0ad9",
+      "code_fingerprint": "sha256:25d4f57bdcff593eef3c088d71282326c555b9248012513f396971135c2bb6ea",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "113,674 parameters, validation accuracy 0.898\n"
+          "text": "519,658 parameters, validation accuracy 0.938\n"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:da712eb930f339bba8cc2e7ba3ab46cc6d26ddc07449e9076c1c161d4d74cf16",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:a0936f47cefc8d3c3fa678cc8a53f5ee52e7c2f91d0afd1e1c80abfc9346bd06",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
+          "bytes": 33622,
+          "sha256": "sha256:bf0386b66a81186b56ce19ff315b7cd198e8db51620c08f8f5b9516bdd4b029c"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-3": {
+      "code_fingerprint": "sha256:dba6e4dc2c7c04c3242d68f808ae924c9b13286f0b444341145ab87a46204218",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "11,175,370 parameters, validation accuracy 0.940\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:58eaf5c2ff30ce287c3a32a0055ad512477d76161a5d11dbc89cd5c45e7d1590",
+      "code_fingerprint": "sha256:c2c5ff8394c6b52daa488f232b034cb3f830227f0a78c9eaaccb487d28bbccde",
       "kind": "text",
       "outputs": [
         {

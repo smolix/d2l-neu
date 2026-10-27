@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:417242eb8b1f572b3e0b38f4be850b0eaf3088934ff77235ea86d8e51bc4c502",
+    "d2l_lib_fingerprint": "sha256:8aef632ca1d03a713ebd18fd3961c34976c62e678ba33149e72cd84ad5f60a60",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,12 +19,12 @@
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:ebe4c99a2dd50ec688d99c00626773b1c6d1d052d1f967abe88cce662ebf408d",
+      "code_fingerprint": "sha256:0681cdcdb79980d5635f6017750c8bcfe4738eadb7f53ecdb064ca6c52b69a70",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:14284492635463b46524c02ee4d3172d1b4782b5f6146517fef4baa0a69f4994",
+      "code_fingerprint": "sha256:0500cc34775708274d8933ba091248a459d413e368130383f9d432561a1f9832",
       "kind": "text",
       "outputs": [
         {
@@ -39,31 +39,36 @@
         }
       ]
     },
+    "blocks-training-1": {
+      "code_fingerprint": "sha256:f92a2390f70001f091ebe0bd545111665b298d9a7a8862e63ffe61ffdfedfa67",
+      "kind": "text",
+      "outputs": []
+    },
     "vgg-training": {
-      "code_fingerprint": "sha256:a33bd7e9007bc2c2b3ab44bc48f46465d94ae210e3a224d94fabf0505f101058",
+      "code_fingerprint": "sha256:f872fc375e34b560f123d4289dc7dc6c4301ec6064bb01123a715cfa9e8a2b52",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33365,
-          "sha256": "sha256:e924d1167e3c29e46e120e6c2de955dd6bc9d4e46be8db661cdeb76f6ecac054"
+          "bytes": 33681,
+          "sha256": "sha256:cbfc1d7dd9df911473e6d04ea77bf220fecbb6a49aac0b1d9793b7ce24b268b1"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:8611a406f50a58d92ccd7e30d9d7adfe9c2d004eaea161ca97f9e35f59975c1c",
+      "code_fingerprint": "sha256:fa6f0d203ccbad2e5e604b6e6ee7075e416a71a852979d5d8e94a1311465fd12",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:2d44c0280bac6cac97cca5af92759205c2ece346fcfd773467f0f5506c7a3b08",
+      "code_fingerprint": "sha256:ddfdb414592f71d037e9601046c94a864e8c5e4054d193683be885c1c836da22",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:8eef117bf6119b07baaaaa59d993182475c8a5ce48dc19455aae5bbe13734ffc",
+      "code_fingerprint": "sha256:67201332ca7318b2c1024e2dad25b782ae2dd849e45662b018d072ff9d52c0ff",
       "kind": "text",
       "outputs": [
         {
@@ -74,35 +79,35 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:cb9d9987093904cbb066c33882a48da6160be5a58f44f4fdfa4b2c619ce7319b",
+      "code_fingerprint": "sha256:3f76e3cc07d6bf89c7178400fd5e8f2eab5965b9b0bb16d5812ed7630c553630",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 29508,
-          "sha256": "sha256:13f6f18ab1bf9d57b58801e148f3274d125e08f13d058a455d6006ac9197ec48"
+          "bytes": 30950,
+          "sha256": "sha256:32a22644fe3dcedbadaa51ed0a037eaa51fff0f012d2167176f7651f4cdbbbca"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:e3e3e10aa24301b585183b2d5b718330ba7d2bfc93ff35717bb290c62038488c",
+      "code_fingerprint": "sha256:d815a91844f7051a04a3690232a7e65b560bfe2e4dfcd235f9cff0da5cef8496",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:1d00dd6309ba4cf53de9790f9131b389aa3f54ffb3130690442e42882f544d12",
+      "code_fingerprint": "sha256:c5d0a359a2e622715cbd828bbbec7534e80763cb646b9c8e487d877219b625c1",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:446ec31ec7002908cc1f9566c1a955d0340b3165495612ae6202a8370a705035",
+      "code_fingerprint": "sha256:6029663d7930ffea94be42d3098777724ccf71dfbada6e5f5a2981e7b8e48afe",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:5aba60a85ca992309acb5c18e0b7d865735a8673111f65a9188ab932a66cd4b8",
+      "code_fingerprint": "sha256:25cc967e8933c24c23a81033e0c8e651cccc7d13e336bb5cb29fc481b7ed2b7c",
       "kind": "text",
       "outputs": [
         {
@@ -113,25 +118,25 @@
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:316ad8acaa315d052a9b631ceb569040f57a900adb0bbe3f7851abe1c9198374",
+      "code_fingerprint": "sha256:f4dcaa6eeb166becec2f60606777dd5324bf39d79617bb6692d772fa027de1ff",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 31961,
-          "sha256": "sha256:37c59d26ad6cf252dbce5daf0a8da653cd785df2906c5ff9fb2c2d67c10bfe6e"
+          "bytes": 33397,
+          "sha256": "sha256:b3cbee64a9cc9471822f4729861a02cf3d28608ce3631a07353db67243f61f95"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:0094f4e7b5fbec52c968f797bf3c734ac18420149425983b3991854b0f091e4d",
+      "code_fingerprint": "sha256:1b08b803271950a71fd9e900fac625541d652c344dae73be4c9f9eabef8a775e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.899, 'NiN': 0.815, 'GoogLeNet': 0.879}"
+          "text": "{'VGG': 0.919, 'NiN': 0.865, 'GoogLeNet': 0.906}"
         }
       ]
     }

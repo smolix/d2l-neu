@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 24746,
-          "sha256": "sha256:94d3987be960b799a347530e57ed63f852e9d58f210126a82ccff674b104536e"
+          "bytes": 24720,
+          "sha256": "sha256:f78e1877ea178ae8ab7777725b4a0f0d584f0d79d8c38a881a2e6c5fdbd322c2"
         }
       ]
     },
@@ -38,12 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
-          "bytes": 30656,
-          "sha256": "sha256:1e0bf8cd0f37ead1cf22f99ddad132b66e87926a2ae774c4c744fa450b96511a"
+          "bytes": 30576,
+          "sha256": "sha256:dd7d2a209c29d7e197fc6d58e378757c9ea4d80e521c5762ef2e2d0fa6a27cf2"
         }
       ]
     },
@@ -158,8 +158,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114616,
-          "sha256": "sha256:659eb5650bb344e7021fefaa3ce1415492c24556049f4b659b3b3b3e35d5ea03"
+          "bytes": 1114562,
+          "sha256": "sha256:3a24a24d1283b8f251da63368d061ea1bb6e56384e399119499ab8e9bf38dcb9"
         }
       ]
     },
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 21840,
-          "sha256": "sha256:a3627ba2b8fe990e83e034d930a6e93d35a5aad49f99d901ecbb5da7c99d9671"
+          "bytes": 26235,
+          "sha256": "sha256:a4d6dab772522515099cdd2a2546ebc7390f687ba47fd129a529c90d596d8d52"
         }
       ]
     },

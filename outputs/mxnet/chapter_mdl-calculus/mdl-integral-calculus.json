@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 43741,
-          "sha256": "sha256:d5a5915776226b084e4e9fba35b61cb937e66c32026d7b4b0a9d36fc88b5fcfb"
+          "bytes": 43551,
+          "sha256": "sha256:c233ea4cf99e6ce05bcacf95c7fbea099102ac6774d947d74b78e340e9669445"
         }
       ]
     },

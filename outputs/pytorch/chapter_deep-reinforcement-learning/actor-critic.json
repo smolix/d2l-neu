@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d0c5a689e5bc5c4243af8b16b506117d0a37185e82e952fd8ac5f79288285876",
+    "d2l_lib_fingerprint": "sha256:cba5c91df90848db1fe06686dc0d2de52225220a2527e9cab7f533bcab3f3f34",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
-          "bytes": 44301,
-          "sha256": "sha256:76f22ea13a1db24aa782887d4c9e4f4da1a69d8080693f2fb4831d64dcd76cf8"
+          "bytes": 44352,
+          "sha256": "sha256:6459f6ff3dc1bc2030c115d39290999c2b943c24c417af2272f690ae4cadb7d9"
         }
       ]
     },
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
-          "bytes": 28528,
-          "sha256": "sha256:a41871a0a3cd5f7f8110785a125528d8788467f912fd3418d2694ec517485920"
+          "bytes": 28443,
+          "sha256": "sha256:64e4c54a6448fcb8224c18b016b967cf0a3c9613b7f32230644d420a6d3dde46"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
-          "bytes": 29842,
-          "sha256": "sha256:3c53afffed49203dcb7baa4377ede1e5c904bf50e3e8e3bb6c15d043b5b00ace"
+          "bytes": 29758,
+          "sha256": "sha256:a32b0bc6a3d8db66c56248fa8738c1d4fef30eddde6a7c36373e677b8081065b"
         }
       ]
     },
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
-          "bytes": 46544,
-          "sha256": "sha256:ae2ceeb808880c0d26f24112b1c58ffe95fa5f000c3ec80e2117dd0d6b2e801f"
+          "bytes": 46477,
+          "sha256": "sha256:0ecebcc26098a2092692fae5fd6ac3bb24753a6276621e600c4db7a7c3b58edd"
         }
       ]
     },

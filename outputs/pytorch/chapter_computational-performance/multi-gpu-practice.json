@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2dd1bc3ce573dfaeea130ff56f022c3607083d783c1b98adc9898db900e657c4",
+    "d2l_lib_fingerprint": "sha256:1c0b326fcd30aa33b0a11772c43a0ffb9efd29debebbb826639cb131d463b2a2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,64 +14,64 @@
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-1": {
-      "code_fingerprint": "sha256:7345ebeca6fa589209229ed9429db8510600cee786424214e5ec4f5ad91f4f47",
+      "code_fingerprint": "sha256:9e38aabd52076970115ac78c974c24cc80d3b4824ff1aef99f46a7ac9fc5de17",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-2": {
-      "code_fingerprint": "sha256:bc547aaf40bf12a5e8c1b87e0ef28238abacb0dda2399268ef4bcd4630d64033",
+      "code_fingerprint": "sha256:21bdf7992dcd7d2ad66a4275235c79cfd730ea399d2ca3247ec54033087835d3",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-3": {
-      "code_fingerprint": "sha256:f8a887e73b523b3abd1fd6bcaaffef72fe70aca8b0d0fc20d222d81d659c2578",
+      "code_fingerprint": "sha256:2c113d060d55ae45d13a382f5cf11c8adf5365b0c636d275f1e5967d4786b35a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2102 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3708 samples/s, 1.76x, 88% weak-scaling efficiency\n4 GPU(s): 6924 samples/s, 3.29x, 82% weak-scaling efficiency\n"
+          "text": "1 GPU(s): 2202 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3858 samples/s, 1.75x, 88% weak-scaling efficiency\n4 GPU(s): 7190 samples/s, 3.27x, 82% weak-scaling efficiency\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-3-1.svg",
-          "bytes": 19024,
-          "sha256": "sha256:d5cd30143259e6a64600e7286fa41e1ce58141911cd111473a4cc1a91187c0a3"
+          "bytes": 18937,
+          "sha256": "sha256:5fbb29768138a0078a03a06646676ffbaf5a271f027b744dbffe634f739d16b2"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-4": {
-      "code_fingerprint": "sha256:c354b3c38bdd8930e5c1348c561c000c4ee737003b3a4910e975e09a3b0ab9bd",
+      "code_fingerprint": "sha256:a7c0a9723191f6daae0b73cb633da6ccaf449574a5eef6d7ed2a9cc5d927a22b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2088 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3702 samples/s, 1.77x, 89% strong-scaling efficiency\n4 GPU(s): 5875 samples/s, 2.81x, 70% strong-scaling efficiency\n"
+          "text": "1 GPU(s): 2194 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3860 samples/s, 1.76x, 88% strong-scaling efficiency\n4 GPU(s): 6052 samples/s, 2.76x, 69% strong-scaling efficiency\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 27156,
-          "sha256": "sha256:ace2b51b7b41f272fd2d638512f7ccf6fe2edc402f35645e31b7a3b18f19901c"
+          "bytes": 27034,
+          "sha256": "sha256:437ae0754691d3ac6f33357eeb61cfe3334c901957f379d0591e33898689b2e0"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-5": {
-      "code_fingerprint": "sha256:49e0497f74a913efefd13f4074b46aac370d35300625eb6d962a52369f963e82",
+      "code_fingerprint": "sha256:f9f314bacf5f6eb6feb90e4e5703a4c03ac3664f97693b0a7f94ae794ede701d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 133, no_sync 117)\n"
+          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 127, no_sync 112)\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-6": {
-      "code_fingerprint": "sha256:3b0bee440bfc0df864ddfd162e7c9bb5b171cdc03f8f7afc189b98764e6b73b8",
+      "code_fingerprint": "sha256:45e4df5146fdfc84a159928c424bec8dcdc8157e2ddc1097c6bf226e6259fc45",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
-      "code_fingerprint": "sha256:8a9db47e8f2f736a8040b847102099e1ec783c454573a94e82c58f62ddb590b6",
+      "code_fingerprint": "sha256:d7ef5aed8f2caa1dcb830490c2a10c27237399bdc758ff6d6ddf7e35f5858898",
       "kind": "text",
       "outputs": [
         {

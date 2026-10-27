@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:11b6eeddbc059a3c165ce9467f428c9147eba3dc8e829503cab6ddfa4ecba80d",
+    "d2l_lib_fingerprint": "sha256:b8b69f90ca9d76e063aba36f4010970e140cb2e917d9ce966bce64bf85a9f0fd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[ 0.05894137,  0.02919267, -0.02309755,  0.00290553],\n        [ 0.06833787,  0.04527909, -0.05539911, -0.03376235],\n        [ 0.02966202, -0.00788733, -0.04601707, -0.01842976]],\n\n       [[-0.01289444, -0.03605414,  0.01122338,  0.06889229],\n        [ 0.01583111, -0.03330534, -0.02329686,  0.01381379],\n        [-0.0615192 , -0.02636361,  0.01047096,  0.05616725]]])"
+          "text": "array([[[-0.06639533, -0.01287765,  0.00532482, -0.02542389],\n        [ 0.06494678,  0.00024079,  0.03634312, -0.02769705],\n        [-0.00825508,  0.04080474,  0.00803983,  0.05466178]],\n\n       [[-0.04013707,  0.00449167, -0.02185843, -0.01618076],\n        [ 0.01836278, -0.00513641,  0.01181911, -0.04641785],\n        [-0.02488808,  0.05890778, -0.04873683, -0.00564661]]])"
         }
       ]
     },
@@ -80,36 +80,36 @@
       "outputs": []
     },
     "word2vec-pretraining-defining-the-training-loop-1": {
-      "code_fingerprint": "sha256:44a18ede30364171f4e05104803ef4fb4fc7f01ddc0aeac97e8d110913b39102",
+      "code_fingerprint": "sha256:6efb308bb1e0af570ee4da41f938a0f7becc32350b3836b175cdbda45c57e05d",
       "kind": "text",
       "outputs": []
     },
     "word2vec-pretraining-defining-the-training-loop-2": {
-      "code_fingerprint": "sha256:e79740b7e56305f6133cf13383a5a4adf6cd0480c68f352a0a070294eb701aa7",
+      "code_fingerprint": "sha256:1a3f478e0020c11a7dc0f3a26dca36a41794d9cfb41e4b02cdb2bd06d269a51b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.408, 42029.4 tokens/sec on gpu(0)\n"
+          "text": "loss 0.408, 43472.1 tokens/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 18343,
-          "sha256": "sha256:feceef0e6cdc38c9fc9afee1c4ab985935be61e0309af8c7aad26a5655582e76"
+          "bytes": 18527,
+          "sha256": "sha256:fd1e4c11dd798d2c5377f1125e143b466c352e367f58fbfe78f582b5f7ef9d95"
         }
       ]
     },
     "word2vec-pretraining-applying-word-embeddings": {
-      "code_fingerprint": "sha256:e6621f8b0dd5cc6e42aa804cc9144be73a35462cc72dc73635a10a750e9fc19a",
+      "code_fingerprint": "sha256:76b272a5c614a2a67ec136fa4c235e2a96392479a944b9e531ed8d3914b5ed98",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.600: intel\ncosine sim=0.576: microprocessor\ncosine sim=0.568: semiconductors\n"
+          "text": "cosine sim=0.643: microprocessor\ncosine sim=0.594: chips\ncosine sim=0.578: intel\n"
         }
       ]
     }

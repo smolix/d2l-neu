@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:87fabb523ba7f6d6986a599b03b9e3493277d56a4c5f33d7001eff9fa596255b",
+    "d2l_lib_fingerprint": "sha256:efc5ac20b18c7b2d93c3c2ffc1cfe3955260d2992f1250f8361a47fe55c53179",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-the-noise-level-trades-bias-against-variance-2-1.png",
-          "bytes": 184625,
-          "sha256": "sha256:daed61b48757f3eeccf0a6fece55971912479448686592472f1d6dfd61835d84"
+          "bytes": 185020,
+          "sha256": "sha256:3816d7014a44e25f129246a19f51ac13918f4c39295ef3e0cba8326f9a3fbf50"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-denoising-images-2-1.png",
-          "bytes": 110658,
-          "sha256": "sha256:5e967363c690b55591c5aae256511bf6c6387e847cff829238ea93a1cac1b60b"
+          "bytes": 111151,
+          "sha256": "sha256:82938775129e7362808aefc83d858b257be838903da369be5611214719a42da2"
         }
       ]
     }

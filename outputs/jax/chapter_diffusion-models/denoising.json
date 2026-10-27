@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:657c49dce9d4dae3fd8a021eceb9843a4c5c406ce1b6212c75fbf94c1e992591",
+    "d2l_lib_fingerprint": "sha256:6bb2c3fc59e736d78bc6e1df9b194fca697d6d1b611a064a8edeb7231130bf95",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-the-noise-level-trades-bias-against-variance-2-1.png",
-          "bytes": 184437,
-          "sha256": "sha256:f073abb52db3da8f7ea25e07755f0d274cae337f8b2f255c32063da07997a92b"
+          "bytes": 184386,
+          "sha256": "sha256:47f521a18a38bb7af7262ed67f62292aeefa5273d34abffb8665e7ffd13f3122"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-denoising-images-2-1.png",
-          "bytes": 108942,
-          "sha256": "sha256:aa8987bf43326661a7eb357f447fccc1abdb80d02add6b95a22088bf4d189155"
+          "bytes": 109412,
+          "sha256": "sha256:2fdf0a05dc5b89f0f58b409197add20741c854c72190a00c7f3ecbfe65bb8b78"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1dee994e73a83a9f8617e14ee25e2e1d18494ab841f283da26219f2b4c068170",
+    "d2l_lib_fingerprint": "sha256:0067ee6f3e7bd6299215afb6d03593436f666a36c58e67798d937c22ca010085",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
-          "bytes": 33996,
-          "sha256": "sha256:866c253a45c143eecd5a3efa7a8492e7b26e57912048f341511fd9c1aa764f9d"
+          "bytes": 31816,
+          "sha256": "sha256:3f4da8a6e9487733fe0d8c8ed3f23192a460a66d9738d2cae0b7604acc09a770"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
-          "bytes": 45605,
-          "sha256": "sha256:6fb6dccd4834a1e33823765eb0de85ee490ea4e6f75fd6076afb82a224aaa463"
+          "bytes": 43128,
+          "sha256": "sha256:0fa7c4b8af6ed78516ede84da1ff15c689633529956a2b818e3de40e0efa3c2e"
         }
       ]
     },
@@ -109,7 +109,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -130,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[835 314 385 100 684  44 554 275  10 111]\n [545 491 260 419 578  44 688 319 275 260]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[314 385 100 684  44 554 275  10 111 325]\n [491 260 419 578  44 688 319 275 260 293]], shape=(2, 10), dtype=int32)\nX[0]: ' sat behind him, looking\\no'\nY[0]: ' behind him, looking\\nover'\n"
+          "text": "X: tf.Tensor(\n[[360 844  46  10  10  39  87 299 335 281]\n [287 561 945 656 331 572 292 612  10  10]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[844  46  10  10  39  87 299 335 281 278]\n [561 945 656 331 572 292 612  10  10  39]], shape=(2, 10), dtype=int32)\nX[0]: \"ilby.\\n\\n'What reas\"\nY[0]: \"by.\\n\\n'What reason\"\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-5.5879e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-4.6566e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -141,6 +141,16 @@
         {
           "type": "execute_result",
           "text": "tensor([1., 2., 3.])"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-4": {
+      "code_fingerprint": "sha256:ba0bd3e28da2c2ea36e3ac0e5a123586acb598cd08699163770e3d67884d60e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, True)"
         }
       ]
     }

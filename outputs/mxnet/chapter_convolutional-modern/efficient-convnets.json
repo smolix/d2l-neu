@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:43a5103700c4d2f0c7db5d57aac7959982bb2b642ef452f084c9faca29c24dcd",
+    "d2l_lib_fingerprint": "sha256:f3cdb89a23eb17a4a9989739b22de2bf083e30c4a021e9168806ef4789fbd5c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,15 +56,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 34426,
-          "sha256": "sha256:677026d574b3266c9b3c3eed0b9718619b46bfed3e4a5aaef9e9d27c95a877f8"
+          "bytes": 33791,
+          "sha256": "sha256:b4acb9c7bcc96791a64524838e7cd2c163cd302a796653e31948e495486df736"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 32423,
-          "sha256": "sha256:77b31dfa09771493efd34bf953cccaa3c05c8e4fa2bf3206bcc315f8890cc7c3"
+          "bytes": 31932,
+          "sha256": "sha256:4a4dfa818e13fa4b490b939cad5a7bf1955d877d4ab10f55ed3cb0160e17e91f"
         }
       ]
     },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.917, 2.3 ms per batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.916, 2.6 ms per batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.937, 5.6 ms per batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.940, 5.7 ms per batch\n"
         }
       ]
     },
@@ -90,12 +90,12 @@
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:f28f64b41d9ff74aae96bc14a79dd843c08389353364419a76bb2e41922e417f",
+      "code_fingerprint": "sha256:8b1c10fa0532d9167ac704a5ef3248d17494f061ffd2821cef4d52e3f57c1008",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:27168b7cb8b026180703e823c679e05739a5eda453a9a8d2b0855facb0b6adaa",
+      "code_fingerprint": "sha256:fe376852a58d50921b9158fc9650b5c6c04b01b8731401663c08efb338057f82",
       "kind": "text",
       "outputs": [
         {

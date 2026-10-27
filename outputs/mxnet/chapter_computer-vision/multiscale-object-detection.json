@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "d2l_lib_fingerprint": "sha256:3d8a50330742d703a87c59be597712d90ab8a97e5f2dbb3c611d5ee5067fba14",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
-          "bytes": 100148,
-          "sha256": "sha256:58af3426fcbb908d4f54770e59e7df96312997b217aef8d284f411be8d4a99bf"
+          "bytes": 99885,
+          "sha256": "sha256:f7d387b9706e90cdacfd80548c34fda93f6562c2384c01891f99df805646a402"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
-          "bytes": 90278,
-          "sha256": "sha256:99bf7f653281b63bf44159c072aaae6a53eb3a05bdf6f8e8f315a65b4f241d15"
+          "bytes": 90003,
+          "sha256": "sha256:73b0045efe325a20d5a583596f04e7a4c3d0130cb61ea43fcf265b73efde9c9a"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
-          "bytes": 87821,
-          "sha256": "sha256:c312403202c45adc81cec809024774507e9c6bda54a228451f63eaa9bde31be0"
+          "bytes": 87546,
+          "sha256": "sha256:4ac47f3af32bb7e33656437ae599ae0f9a04571c1306d5d6d66eb62270ae1967"
         }
       ]
     }

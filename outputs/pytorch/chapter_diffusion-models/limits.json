@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "limits/limits-quadrature-1-1.png",
-          "bytes": 25783,
-          "sha256": "sha256:8746d872c4d9bdbf9503993511d88dcca48b6780a0e2bb8dbd4a2508df942dd2"
+          "bytes": 28010,
+          "sha256": "sha256:0871add70b01b1a2f49502d7df1768d5bb4811ad1807bf125a06c575819a263b"
         }
       ]
     },

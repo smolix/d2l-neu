@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1039a3dcd6d6575eaf0896e2720bfdcbe64aaf2b9ca4c6d98ff6dd48f879fc92",
+    "d2l_lib_fingerprint": "sha256:1cad189d25f12e2112b27ceb0974457d59f31fd7846bb683e30fef48dd277dd8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "transposed-conv-basic-operation-1": {
-      "code_fingerprint": "sha256:b5d129619cac2602c7c6400ca41c8036aadf3c59ec01722efc17d013542746f8",
+      "code_fingerprint": "sha256:d279139fe428a28d837dfb685584938f70d2411a7b8e34c0c0fbdd3a40d0ded0",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-2": {
-      "code_fingerprint": "sha256:a58bb7e28e9f988f0c5f1a0eeec5f39ab35871321f7bc3a016276d28d6d6eddb",
+      "code_fingerprint": "sha256:672d9fd0b0503b7f1bfedbc7b05fdfc1d427a8bd6031663e5b43d8a556c4a332",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "transposed-conv-basic-operation-3": {
-      "code_fingerprint": "sha256:b1c7d04df99c222e0ef5d207e162492be94b02ae0ea57573306e9c4d89777f70",
+      "code_fingerprint": "sha256:d5e67e88d2de40ebe6c11dff8c9d3c3d0cf1fda3a9b9e6717b3c812fc3554493",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-1": {
-      "code_fingerprint": "sha256:0f2cc827f025f08cacbee348f518482469252e672bf12bf387859a5f7c2ed8e4",
+      "code_fingerprint": "sha256:7d8563cea944ebf51c864f54abf11b465e229a577650baf92ac98aff9b3c2fd3",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-2": {
-      "code_fingerprint": "sha256:450d1f83547a773b9872631a9441bb849728c1d6aa30f1bb4596780a83697650",
+      "code_fingerprint": "sha256:be6cb97ef658b72a34e40757b85d8a7789369cb98d96c11fe342aa1c0d6cddf6",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-3": {
-      "code_fingerprint": "sha256:43b18fe1d4122fd42f5c9e3711ff6acdafa81a595d5f85bda6957fa78c848be3",
+      "code_fingerprint": "sha256:76f0b13430bc11ef156b21cac02e06251c4a99b3339f7d4413ae217e0951fa34",
       "kind": "text",
       "outputs": [
         {
@@ -69,17 +69,17 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:e87e65280a7406b4d3e07c67ba02dfed114be3809ce3b6fbdabc71ef742922bf",
+      "code_fingerprint": "sha256:47f3ac6d74af2dd09e3725b7c457ab1da81d1c856df7fc1113db910485fae3ee",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[27., 37.],\n       [57., 67.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[27., 37.],\n       [57., 67.]], dtype=float32)>"
         }
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:95f92078db40a480540384b844cd6d497765e0abe41f723578b57153b23d092b",
+      "code_fingerprint": "sha256:7241e0a7aba9def3b2f2be271f795d04b7d58b768fcd7e2c691604e9752be32f",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:033c4f9ad0303c651cd54f3c672ebdf00eb96becb833db1883ee153b5e24cd71",
+      "code_fingerprint": "sha256:962e0edf44b98c9eb907f8b10d352026c497c07ef04a78b90b53cc68183c2439",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:52684ff0a73b74780601f85f90d5b63b0f4bcc500b69a49c85b5ea9850ff0f6b",
+      "code_fingerprint": "sha256:765882a3fbc69b077fedd4e5b71f25ddf8c0b0c59a2b7e606710cada4d4533b5",
       "kind": "text",
       "outputs": [
         {

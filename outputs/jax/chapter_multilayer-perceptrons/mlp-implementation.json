@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8abc0302f52f012fa240519e02ced8d8dc9d8828682bf115a140304bc7b13866",
+    "d2l_lib_fingerprint": "sha256:486a6ce5d46503d37732d212d64b8a9140d1c0d2d9bb02d07ca52c6858c69178",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.297, fraction of active units 0.46\n"
+          "text": "loss 2.309, fraction of active units 0.48\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 40035,
-          "sha256": "sha256:438a7639dc49469c84dbe3cd2d4de7199116b2b95d56583a85ed40444e5f2dc9"
+          "bytes": 40227,
+          "sha256": "sha256:4d599b700af393c7ee84817965db061233ae5c3c07ccba4160795830bfa90c91"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 30325,
-          "sha256": "sha256:8057e66e0f60853e7f1b5371de2146b5962b5bd7bab843f0f6d0ebca83baada8"
+          "bytes": 32319,
+          "sha256": "sha256:5a136d505d9445203fa27ade10b6a6d30bd63f560df595985116265a6464115b"
         }
       ]
     },
@@ -87,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.863\n  concise MLP: 0.866\n  softmax regression: 0.840\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.868\n  concise MLP: 0.868\n  softmax regression: 0.840\n"
         }
       ]
     },

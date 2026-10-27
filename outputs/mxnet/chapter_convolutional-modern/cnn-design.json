@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:6d05a51a460d76eb351b2445749992caa2f7b14f5548f6148ce24daec1c9675d",
+    "d2l_lib_fingerprint": "sha256:a589f40cd8714e25f4b04952471a5d7927891e80e77414881737b92954a8feba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,67 +14,67 @@
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:800698df16ad39aff4aa411cc11a4214575573b29b24c52f5afd5cb034d2aaae",
+      "code_fingerprint": "sha256:c9949f31f84c8eaf6668d470084d8e2f51ac728c0c367d6011ba38809f786cdb",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:a3f8ef65b0cec77fd1ade29bd788f1dd0141e99944745cc4c75dac1a436fb904",
+      "code_fingerprint": "sha256:d43275a4e4d77f2e79fdbea8865e145211c503fa3ecb3411bff95fc1ca262a29",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:8710c25561155f493a7439805e2ef1e1af2024971393b5d4d818812fbc8208fa",
+      "code_fingerprint": "sha256:e5432bae64c0eccb347c3baf0d33b7951cdf58b9a3bda08b02de04b24d38d70d",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:d9837bf5af47e733ba4c5825dee6980a190aee7ea0b14b364deb33a0f74a2e5e",
+      "code_fingerprint": "sha256:a87fbd443e2be010dec7b8754e78f4decd5ba2bd5f707ce6d117a94cfe2d0846",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:a3df6d7b3f02ccceb5de25f3e593b2aa8925fb1ad1a0d4e163b30faf88930433",
+      "code_fingerprint": "sha256:a91d72a3d4b4da0615431f178e110554dc5737baacb337e397e88914827dcc9f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 32, 48, 48)\nHybridSequential output shape:\t (1, 32, 24, 24)\nHybridSequential output shape:\t (1, 80, 12, 12)\nGlobalAvgPool2D output shape:\t (1, 80, 1, 1)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 32, 48, 48)\nHybridSequential       (1, 32, 24, 24)\nHybridSequential       (1, 80, 12, 12)\nGlobalAvgPool2D        (1, 80, 1, 1)\nDense                  (1, 10)\n"
         }
       ]
     },
     "cnn-design-training-1": {
-      "code_fingerprint": "sha256:58b8f3f74dcc251321cb7f78f6c73b19108b3ac917666c1310f0187092b88d84",
+      "code_fingerprint": "sha256:8e4f36ce4a5c224b92454381eea362ee33f011ba561c906f52e1ae84216a6785",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:6911a225d82debb5f36f81a8eff5e315e09ee0917a3110c86a4d2df43dd8b9cc",
+      "code_fingerprint": "sha256:3a52d2719cf3e5516c274c9a31b868a067a88d6941bab04b2a28196c63d204f2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32963,
-          "sha256": "sha256:c6509c41f8302605a9a58c942af09370adee76d0bb569c8ae3b5b980c7ccb4f5"
+          "bytes": 33645,
+          "sha256": "sha256:b6fde2e84a4eef89ebe272f3697ac28f8392159228b2c91b6b5a15c998b84bdc"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:c0a3ab3fc3705ade8f4eb0e98887b9911470ebdca813cb187f943326bde6b829",
+      "code_fingerprint": "sha256:31b58fb21258bc9379389b2b4e60d09fcd463c99c95dc1586ead0871792ac1b4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "115,642 parameters, validation accuracy 0.898\n"
+          "text": "113,674 parameters, validation accuracy 0.897\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:97c98d00deabd9d9844132e1d6b45914010e6aed2a7825d77a284fe610b3d0c2",
+      "code_fingerprint": "sha256:f2708d94e996f824c570187edc2c616b9a0b9f3e9603e97360ab8d283925265e",
       "kind": "text",
       "outputs": [
         {

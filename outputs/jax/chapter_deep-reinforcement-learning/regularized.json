@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:77cc8101e9c8bb5e8cf3e45ceb1da8d156de616369dbe278fe45dc3ca015ad6d",
+    "d2l_lib_fingerprint": "sha256:3f1a0800604465c68bb42ac40465f594f544b30421c4da9412e46fb79d35950f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,8 +53,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
-          "bytes": 24458,
-          "sha256": "sha256:0b967afe128914c54c6dd32b06b898cd95421203e820ec68c656d3ef1e12cb93"
+          "bytes": 24568,
+          "sha256": "sha256:0969350d83d1aebbc5c171e7fa44d4825a2d371f3227314d385c2f462192b631"
         }
       ]
     },
@@ -65,7 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
         }
       ]
     },
@@ -115,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
-          "bytes": 23413,
-          "sha256": "sha256:85396ac5858c015f3e29ff7191a281553646f48d0f9abee34f7b98ddb830ebbc"
+          "bytes": 23371,
+          "sha256": "sha256:3f3a3143d36c2b964d5ca245062155c000ec81f8a65045302dbcf510299e9e6e"
         }
       ]
     }

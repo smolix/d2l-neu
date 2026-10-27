@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -116,7 +116,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(0.14250875, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
+          "text": "tf.Tensor(0.113871574, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
         }
       ]
     },
@@ -182,12 +182,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "num_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\nnum_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

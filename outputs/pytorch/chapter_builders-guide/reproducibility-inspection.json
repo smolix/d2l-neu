@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.69\nResidualBlock   std 0.85\nResidualBlock   std 1.02\nResidualBlock   std 1.28\nResidualBlock   std 1.51\nResidualBlock   std 1.88\nResidualBlock   std 2.29\nResidualBlock   std 2.63\nResidualBlock   std 3.44\nLinear          std 3.86\n"
+          "text": "Linear          std 0.69\nResidualBlock   std 0.85\nResidualBlock   std 1.06\nResidualBlock   std 1.34\nResidualBlock   std 1.61\nResidualBlock   std 1.95\nResidualBlock   std 2.47\nResidualBlock   std 3.18\nResidualBlock   std 4.17\nLinear          std 4.53\n"
         }
       ]
     },
@@ -96,13 +96,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:9b9add479bda22f2594f3207dfd6f8f62e5e47b493a88e4ae5a4be3771ff200d",
+      "code_fingerprint": "sha256:dfe975571c06f877f1fd171c4036710fcfc8e2d5da1726df637ff99f783d8c10",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weight 11.2, bias 1.91\n"
+          "text": "block output gradients: 1.51 1.22 0.948 0.724 0.558 0.42 0.325 0.253\nweight 21.1, bias 4.43\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
+    "d2l_lib_fingerprint": "sha256:417242eb8b1f572b3e0b38f4be850b0eaf3088934ff77235ea86d8e51bc4c502",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,17 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\n"
+          "text": "Sequential             (1, 64, 112, 112)\nSequential             (1, 128, 56, 56)\nSequential             (1, 256, 28, 28)\nSequential             (1, 512, 14, 14)\nSequential             (1, 512, 7, 7)\nFlatten                (1, 25088)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Linear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 10])\n"
+          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 10)\n"
         }
       ]
     },
@@ -52,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33255,
-          "sha256": "sha256:e824bc469052b2ec54a5bc962db8abf695f7743353bcbb08c606eaa6096441d4"
+          "bytes": 33365,
+          "sha256": "sha256:e924d1167e3c29e46e120e6c2de955dd6bc9d4e46be8db661cdeb76f6ecac054"
         }
       ]
     },
@@ -74,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 96, 54, 54])\nMaxPool2d output shape:\t torch.Size([1, 96, 26, 26])\nSequential output shape:\t torch.Size([1, 256, 26, 26])\nMaxPool2d output shape:\t torch.Size([1, 256, 12, 12])\nSequential output shape:\t torch.Size([1, 384, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 384, 5, 5])\nDropout output shape:\t torch.Size([1, 384, 5, 5])\nSequential output shape:\t torch.Size([1, 10, 5, 5])\nAdaptiveAvgPool2d output shape:\t torch.Size([1, 10, 1, 1])\nFlatten output shape:\t torch.Size([1, 10])\n"
+          "text": "Sequential             (1, 96, 54, 54)\nMaxPool2d              (1, 96, 26, 26)\nSequential             (1, 256, 26, 26)\nMaxPool2d              (1, 256, 12, 12)\nSequential             (1, 384, 12, 12)\nMaxPool2d              (1, 384, 5, 5)\nDropout                (1, 384, 5, 5)\nSequential             (1, 10, 5, 5)\nAdaptiveAvgPool2d      (1, 10, 1, 1)\nFlatten                (1, 10)\n"
         }
       ]
     },
@@ -86,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 33971,
-          "sha256": "sha256:2e431bf7f6fd40403e5d3943cf2b63686ebd6d45fac4296e3015acb2e786f078"
+          "bytes": 29508,
+          "sha256": "sha256:13f6f18ab1bf9d57b58801e148f3274d125e08f13d058a455d6006ac9197ec48"
         }
       ]
     },
@@ -113,7 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 192, 12, 12])\nSequential output shape:\t torch.Size([1, 480, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 480, 6, 6])\nSequential output shape:\t torch.Size([1, 832, 6, 6])\nMaxPool2d output shape:\t torch.Size([1, 832, 3, 3])\nSequential output shape:\t torch.Size([1, 1024, 3, 3])\nSequential output shape:\t torch.Size([1, 10])\n"
+          "text": "Sequential             (1, 192, 12, 12)\nSequential             (1, 480, 12, 12)\nMaxPool2d              (1, 480, 6, 6)\nSequential             (1, 832, 6, 6)\nMaxPool2d              (1, 832, 3, 3)\nSequential             (1, 1024, 3, 3)\nSequential             (1, 10)\n"
         }
       ]
     },
@@ -125,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 31424,
-          "sha256": "sha256:8c1bf92aba069e28a39c37aeee205f09a9230f1c3a6d62f0b7b1e8e6d1eafdcd"
+          "bytes": 31961,
+          "sha256": "sha256:37c59d26ad6cf252dbce5daf0a8da653cd785df2906c5ff9fb2c2d67c10bfe6e"
         }
       ]
     },
@@ -136,7 +131,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.901, 'NiN': 0.84, 'GoogLeNet': 0.882}"
+          "text": "{'VGG': 0.899, 'NiN': 0.815, 'GoogLeNet': 0.879}"
         }
       ]
     }

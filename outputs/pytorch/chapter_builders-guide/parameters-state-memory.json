@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,7 +74,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-1": {
-      "code_fingerprint": "sha256:e493566c53a56a8089d631a01dabe23c3333dcca2f8b4f379416f74cce9d6065",
+      "code_fingerprint": "sha256:7f5610b16a0920c6272dc3db4ca228630a7679d3ce6d8f09dea7de10c00518ec",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-2": {
-      "code_fingerprint": "sha256:499aa076cc8056352c4f42ee65b21af56c19d93c542e1849ad9e05c9eebeb6a1",
+      "code_fingerprint": "sha256:f134797bb7c09a548a69ae9f7a0e2f70bc504bc175b044ae59e76cbf3fb2f880",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:b7fb8c7cafa08092f169dc729b2fc9a3539aeea45cb19c737535187695ce1b8c",
+      "code_fingerprint": "sha256:52a6bbeca583b362d01153dcd117b4936056d107996c1c79c54bb8377eea71a0",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:3360e45bc7d76baae9589bb27d630231f0342b0876feb416e2dc245f238e5010",
+      "code_fingerprint": "sha256:0f530f09265adeaf14f432abf63dd9d4979963a15eabf9472e3002c2bb3df0c3",
       "kind": "text",
       "outputs": [
         {
@@ -115,7 +115,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:9886a639b6f2b1a00a3f8998952a88d90d19f3b52321a8ab97515b7d162b4ff7",
+      "code_fingerprint": "sha256:64bcf65ee60cee2aa530ad7475cd0a71b22a14bc097ea7122c68ec7a3ebbb89d",
       "kind": "text",
       "outputs": [
         {
@@ -126,7 +126,28 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:9af467c835d33e1587ae7889aaecece927c31a87367d1e31e3649dc2790a4fd2",
+      "code_fingerprint": "sha256:3c8cc0b4d43a27b84b403ab2db914fafa44410a91b68db16ecb40e4d524db590",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-without-allocating-1": {
+      "code_fingerprint": "sha256:315ffade963271bb846cf28eaee23a220c2406188080e4f1d34535ba9b40b5a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "meta 525,336,576 parameters, 2.1 GB in fp32\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-without-allocating-2": {
+      "code_fingerprint": "sha256:22a4561aa28b4e68a1ad2c5586adc47d8cdc31b5227c599b5007de43fcf0aa0e",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +157,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:8b16a5a5e5ef507e0e4137d535411bb967d3e2d850269208fb761040947aba49",
+      "code_fingerprint": "sha256:c7cfdf1ae657dad3153bb3b55632a4568eddbf4876f24eeed277ad3adf2757bf",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +167,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:94d58bd14c5ca49ef00aef58ea29d9cff45283648afa5da947a368eec9778d7f",
+      "code_fingerprint": "sha256:b864aeecc79d15a4468e4da788999d61459a412b2d47310a88d78173b9753012",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +177,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-3": {
-      "code_fingerprint": "sha256:8fc1f4613d1d115709e7cbe4c9806515b3508f4ba64272a3ba9889a5c58719b5",
+      "code_fingerprint": "sha256:f67846ec0388c59066260e097a529192851ed2e8914ed7c76c41b622e6fa5abb",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +187,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:7986e81788567e96560bd6caef9d92f1cc89b9e257752bd299078080ea5dfab9",
+      "code_fingerprint": "sha256:a13ff110425c2cf808a8f8948dc236c2124d6ed21c68cf8de2543dcf3abbcd64",
       "kind": "text",
       "outputs": [
         {
@@ -176,7 +197,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:7ce1a54182bad57644e8e73065e0f5e2eab2c834067d8b219e74c4914e5cf9cc",
+      "code_fingerprint": "sha256:2c695ec4497177507ddeebd37dc00bbaf8ddadacdcf2d18b259c0402e8787882",
       "kind": "text",
       "outputs": [
         {
@@ -186,7 +207,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:a1e934f89f9dc9a0917162331d7bd76b396db5bdb2349c01e53e2d6407aa47e0",
+      "code_fingerprint": "sha256:820b9523b400e31bbcb1075fab078df6b2561c39aec058bda10c7a1826b7f605",
       "kind": "text",
       "outputs": [
         {
@@ -196,7 +217,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-3": {
-      "code_fingerprint": "sha256:c351a9a611c8e498cf118c9eff8aef4b67babe588a2ead3d4b6994140e92b1d9",
+      "code_fingerprint": "sha256:487de13346a871b9e26de5e7270cdae5cd1f1f778fa2746fbc96c3a420271c07",
       "kind": "text",
       "outputs": [
         {
@@ -206,7 +227,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:e5bd1d5815460ae8768ac544042935c9126a5760603f6db5ef1382779273299c",
+      "code_fingerprint": "sha256:1b3bbe54dfac58fe105b558b141e348eb8a7bbf18107ae13e2cee7f9dc876c0a",
       "kind": "text",
       "outputs": [
         {
@@ -216,7 +237,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:dddc762ea7700670beb492cf9d1615b2f7c1ebff5f6523e02a9a18e70e2249cd",
+      "code_fingerprint": "sha256:4e02f0db03b3354e0f65db7a260a17bdf509ef621b7c6ae72a287c6186e90045",
       "kind": "text",
       "outputs": [
         {

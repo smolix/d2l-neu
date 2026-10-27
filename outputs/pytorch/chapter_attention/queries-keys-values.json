@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f1f1aa84e025923bce423a953edbb0acc204150dc83c2a057bf6047ea3b7c34e",
+    "d2l_lib_fingerprint": "sha256:d3be79f81633782ae4643c8d496a5c784c731a96eefca26b2f00b88cfde0c234",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-visualizing-attention-weights-1.svg",
-          "bytes": 18256,
-          "sha256": "sha256:647700876dda75f437fcd8b0708093a80b65bf2cd1a30de7571492515558468a"
+          "bytes": 18202,
+          "sha256": "sha256:e9c5b4cf6e1d4e59683899a756b8aae522f4638ca08366b0a424b12fb4aa04f4"
         }
       ]
     },
@@ -39,8 +39,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-2-1.svg",
-          "bytes": 33287,
-          "sha256": "sha256:9e15263c96c45e34735571f2fc65b8164def69948da8e9a148a764c78cc8d70c"
+          "bytes": 33184,
+          "sha256": "sha256:8fa7f440f4e57dfa6f2ce0a6b1162cccc155d64725107b5bf1247ce1551d9243"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 38662,
-          "sha256": "sha256:7c5b7a4494123079819192acdde4c016c13761856e5eedbf93f745205ff23196"
+          "bytes": 38567,
+          "sha256": "sha256:1534d84497f472e339ae9036c4e1e164042d4d41e3d61c614653cd0f8ba408ea"
         }
       ]
     }

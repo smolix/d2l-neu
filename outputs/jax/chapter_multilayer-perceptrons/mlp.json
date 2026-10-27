@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
       ]
     },
     "mlp-sigmoid-and-tanh": {
-      "code_fingerprint": "sha256:c8f598ac471bedcb6f76b3f0b71f72c6e9a37a928c7b1e93488e309bc4059a8f",
+      "code_fingerprint": "sha256:bd204a932aaea334d1d503f42da2c56f68a3b8ed8a953c4048d52d6ca73cf16a",
       "kind": "text",
       "outputs": [
         {

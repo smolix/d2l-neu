@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20942,
-          "sha256": "sha256:d4f4a8d8ce30afb9aed637cbc1711966822dcbd043e9a05f9152415aafd32ab7"
+          "bytes": 20911,
+          "sha256": "sha256:03673a4bc012b45eea4ab197df6e2e116840fce66c39fa831e2511f6e2d28573"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 30558,
-          "sha256": "sha256:b6972e0c212113958e709c17f34359fb9639cbf3c8975c0d0b91bb797d13d1ac"
+          "bytes": 30496,
+          "sha256": "sha256:c4647ebaa7a1c9a6fc1fcbe511ed959b36d7cf18957be40ede5d038431239aa5"
         }
       ]
     },

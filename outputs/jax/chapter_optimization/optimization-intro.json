@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f50aca06339ee96c4e6e3f876dc36ce5c5a11da5ee5870af53fcde1d66d78c89",
+    "d2l_lib_fingerprint": "sha256:b41c08653f15874696bbe37c22dabdb8b3f3c3472cedb0e9164d7b2837610df1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
-          "bytes": 25400,
-          "sha256": "sha256:9f14e48c6356cff7e2062dbe0347369dd6caf2f9a1eea47ae70571901141629f"
+          "bytes": 25304,
+          "sha256": "sha256:0bc5143bd2b15f41233c83d29b13790ce33c6f89bee555dd1ba310e03168b50d"
         }
       ]
     }

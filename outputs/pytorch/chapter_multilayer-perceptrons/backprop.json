@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1: relative difference 4.5e-16\nb1: relative difference 2.7e-16\nW2: relative difference 4.1e-16\nb2: relative difference 2.1e-16\n"
+          "text": "W1: relative difference 3.9e-16\nb1: relative difference 3.4e-16\nW2: relative difference 4.1e-16\nb2: relative difference 2.2e-16\n"
         }
       ]
     }

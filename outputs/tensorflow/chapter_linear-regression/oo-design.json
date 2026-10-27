@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:11722a5f599ff82a66d12de75d5f28a9b57ad91193e3be230d5d312dd12b8a05",
+    "d2l_lib_fingerprint": "sha256:72b13463dd02b8b6e08947d180a0db62df8d457d716e0cfb0470112e513ddfcc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,37 +51,37 @@
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:074002a491de61c54d55952c5c70677325894eb3f22c4ae772c8eaeb2d39c38c",
+      "code_fingerprint": "sha256:e85a381450aae44f666dd441f0d094eba10d9da7950525c5f5b4cd803a599560",
       "kind": "text",
       "outputs": []
     },
     "oo-design-models-1": {
-      "code_fingerprint": "sha256:4af0b0a725199ffc0edc81c9557c5d9b4c34c989c945942263ea92714b728086",
+      "code_fingerprint": "sha256:8a1fe7bf393aca4650a0c73c30a0babdb702ed9a5d5345d1ba5fdcc263a47c1f",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:7e94d99ad6c437ae4d5e70b26d233e92a2ea2a07a0546363bf1d21401df41834",
+      "code_fingerprint": "sha256:e4db9e852426b1ecd69c0d555286e43d09141ace3943c0eb9e2dcf17c4cab97d",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:afc7bc5fec02cd7e05ffb12cabb3c25838fd4a81031e69ed7f21afaf18e0a293",
+      "code_fingerprint": "sha256:3847ed74483ca13b032d9ee8fa0ac6e7d9af04ff7310c7fd8e61e5111e25d697",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-1": {
-      "code_fingerprint": "sha256:16307766a54c3480a300dc36f7086ba3a5f935dd158b768429e7a345afe807c5",
+      "code_fingerprint": "sha256:eabfcf67aa9c7ae5c0e42c0092110a0b9c188bdd3a586c4f1b83511e396283e7",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:754a87c72b49735d18aab35837e63ef5b8a06325b177962a105397edc603cf19",
+      "code_fingerprint": "sha256:96356de43644b2f5a57d636bb23cd9d410246c4531e6436cebca9992178b11c6",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-2": {
-      "code_fingerprint": "sha256:e3a8af8ccf6c971f24a65da21a1cc6b16ad998a1c97306a9905fde64fc6fe36f",
+      "code_fingerprint": "sha256:3dad657eec0c5d28298728643abcf7686bb2cf25062db4416ef9c90c184caddf",
       "kind": "text",
       "outputs": []
     }

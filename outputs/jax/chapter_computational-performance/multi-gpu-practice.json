@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:5baea2d27e52a601657309e0da14afb885ec13222ff55543ae0a7845d38508da",
+    "d2l_lib_fingerprint": "sha256:c71adb386531ca631ce5b18aa1355a728ba5582d3cedadc039dc7f139cd7cd7f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,12 +19,12 @@
       ]
     },
     "multi-gpu-practice-ddp-really-run-1": {
-      "code_fingerprint": "sha256:7818065abe5b5501d000e77ac07f14341f1b1c25b237de500e38b8481c558dcd",
+      "code_fingerprint": "sha256:a984029776ca2c5b096ca7d77c076a5dadca424dfe3c0aa9d5a4e0990edf83be",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
-      "code_fingerprint": "sha256:093002165671ede48e4341fd3c57b51495490a4025a73f3b80953eb40da06b25",
+      "code_fingerprint": "sha256:72582bc5104cc45a9ee840400ee800dbe5ccd0ae63aba61f67e0d65966e2aed3",
       "kind": "text",
       "outputs": [
         {
@@ -35,18 +35,18 @@
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-1": {
-      "code_fingerprint": "sha256:7065d6e122dd35a7a0df249b7b36e36228c44e55371d44201de4bf8d13f4dff3",
+      "code_fingerprint": "sha256:d68da5f5cec91b2883b9c2804547031e796ebe2d954e0cb7864f25b22418b1e3",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-2": {
-      "code_fingerprint": "sha256:10072f3689350931c96558422bdcccc2fa290d0c623f7551cd223ca7160ee36a",
+      "code_fingerprint": "sha256:8c0ef81d70fe47042b184a046242ba487960c395b8eb5285dac17f70fc76d593",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one sharded step: loss 2.78\nthe batch, split along its leading axis:\n┌──────────────────────────────────────────────────────────────────────────────┐\n│                                    GPU 0                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 1                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 2                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 3                                     │\n└──────────────────────────────────────────────────────────────────────────────┘\n"
+          "text": "one sharded step: loss 2.84\nthe batch, split along its leading axis:\n┌──────────────────────────────────────────────────────────────────────────────┐\n│                                    GPU 0                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 1                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 2                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 3                                     │\n└──────────────────────────────────────────────────────────────────────────────┘\n"
         },
         {
           "type": "stream",
@@ -56,35 +56,35 @@
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3": {
-      "code_fingerprint": "sha256:a272d731a46283be4501776055d3b43bbdc8e900c54e9e207b390ebdd31dc1b7",
+      "code_fingerprint": "sha256:7e51e3971b631329dc88effad216c8d3c33cae0933119503ddb598782db3f807",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "68 all-reduce ops in the compiled step; the largest sums 6.4M floats:\n%all-reduce-start.66 = f32[6447680]{0} all-reduce-start(%wrapped_concatenate.2), channel ...\n"
+          "text": "76 all-reduce ops in the compiled step; the largest sums 6.4M floats:\n%all-reduce-start.74 = f32[6444288]{0} all-reduce-start(%wrapped_concatenate.6), channel ...\n"
         }
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4": {
-      "code_fingerprint": "sha256:ed745f16aa2e6d9d1644da1347dabce80908d5df2c6191b08b166740c89b03d6",
+      "code_fingerprint": "sha256:7872ca577011b6aee74710bf94af8e2a1f3e596a5772bc503bb8b165789f85c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2598 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4276 samples/s, 1.65x, 82% weak-scaling efficiency\n4 GPU(s): 7822 samples/s, 3.01x, 75% weak-scaling efficiency\n"
+          "text": "1 GPU(s): 2550 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4191 samples/s, 1.64x, 82% weak-scaling efficiency\n4 GPU(s): 7669 samples/s, 3.01x, 75% weak-scaling efficiency\n"
         }
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5": {
-      "code_fingerprint": "sha256:45412644c79191b2cfb91c0d22f0086bca94f866cd8266a80a2152c769de0840",
+      "code_fingerprint": "sha256:38a5c8b83a86ec438c1efaf487a0e03bf362ebe0d355348a62f02bdf88322535",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 9.1e-05\n"
+          "text": "max update difference, k=1 vs k=2: 2.2e-04\n"
         }
       ]
     }

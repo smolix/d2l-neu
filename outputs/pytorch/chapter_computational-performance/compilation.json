@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "d2l_lib_fingerprint": "sha256:a72da0ee337474339fcdec521e5df0714c3595fa56b36c1ba431a86a4bdeffb6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first compiled step: 1.9 s\neager: 3.13 ms/call\ncompiled: 2.14 ms/call\n"
+          "text": "first compiled step: 0.3 s\neager: 2.65 ms/call\ncompiled: 2.08 ms/call\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.34 ms/call\nreduce-overhead: 0.31 ms/call\n"
+          "text": "eager: 2.38 ms/call\nreduce-overhead: 0.31 ms/call\n"
         }
       ]
     }

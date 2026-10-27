@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c331c425e61294a34df98bc5aa3a46f822d5b083c2df77144f35a38e6963aaf2",
+    "d2l_lib_fingerprint": "sha256:ffc56a61fbd157b29f780f52a22cfe5ffc074d9221968ce0e49301a2b367efac",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
-          "bytes": 89462,
-          "sha256": "sha256:7adc1b25ef62fcff93f6124b6b6b383e234033746c985bbbc9f77d7d58b72362"
+          "bytes": 89312,
+          "sha256": "sha256:3c1adee77bfb689d00f0fef85c1134f41c5a9593d2444410228db4d725fad71c"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 140281,
-          "sha256": "sha256:d06ebbefc13860be8cd0b1e8842513df2192d0767ccd19068c61508cb88edcda"
+          "bytes": 140833,
+          "sha256": "sha256:5a3b51cd992f2877e8ef4fdf9e9a9e16f0680fc59edb50020294fbb2ad9cc4eb"
         }
       ]
     }

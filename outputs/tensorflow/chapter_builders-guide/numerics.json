@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:2dee45049fa43d1c11cbf870cc99ac73fe1e27f74da1ef590f9d8fa45a8e31f9",
+    "d2l_lib_fingerprint": "sha256:30e5f8d4727bfeb09e80d69641870929e5e28b5113dbc37c38328724ba6d9a5e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -119,14 +119,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.655, bf16 0.654\n"
+          "text": "validation accuracy: fp32 0.653, bf16 0.654\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 27028,
-          "sha256": "sha256:b6dddb11643573cae03711f979a1d77a3ba079729ca520751148742d857de360"
+          "bytes": 27290,
+          "sha256": "sha256:e6a57f2d91da2370936d0a7e9da25ce0ab473db9bcb931327a4dc825c1639fab"
         }
       ]
     },
@@ -147,12 +147,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 31.6% subnormal, 0.15% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.5% subnormal, 0.20% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+        }
+      ]
+    },
+    "numerics-loss-scaling-for-fp16-2": {
+      "code_fingerprint": "sha256:6a72f5833744114105739570dc326908f5f29cf42008bceaa616883ca14a200b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 2.028, loss scale 32768\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:802bdb355af4cdc2940e69a7dde08d6f0bd30ae93561d5e127695e46e010be3c",
+      "code_fingerprint": "sha256:875c73ceeb79b9c59c9f0305f79968ed5283a6d691660cf068b293b333b61b74",
       "kind": "text",
       "outputs": [
         {
@@ -162,7 +173,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:dbb4b69287fce804b46d4271a39f7ae13a73b47838c035f9612769dd8d9fdeb5",
+      "code_fingerprint": "sha256:fa2226ac73b30f491b0fa473fc6d888bb2a83250292400b5ae0cd88a32c87cc3",
       "kind": "text",
       "outputs": [
         {
@@ -172,7 +183,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:5bc141642eca55620a302b5ac2c405a318c9cd481ed71135395e7bca277d41b2",
+      "code_fingerprint": "sha256:a55924cc1066b5d6f324579df2b9245a6b5d6d1cfe29b901b213257f07203132",
       "kind": "text",
       "outputs": [
         {

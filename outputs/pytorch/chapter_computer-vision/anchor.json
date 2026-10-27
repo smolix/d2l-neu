@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:16f8343167d56bceabee5a66fdbe44ccc1589577db05e17890535e7c2eeadcdb",
+    "d2l_lib_fingerprint": "sha256:7a47251ffc9851008d4bfa639705229cf878112e46112c8fe743a4318c0cb8c1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
-          "bytes": 95750,
-          "sha256": "sha256:b263a65c2b636c603fe4bdf47f965f7a68fcdf1e7987c9c3c57e046941ea0f41"
+          "bytes": 95474,
+          "sha256": "sha256:196ffeda362124498ff7908558089e6543b1ca139e6ab642a980119f911339cf"
         }
       ]
     },
@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
-          "bytes": 94721,
-          "sha256": "sha256:a83daee0e8774b95f8a815aa974c8d63fea82418680cd81b4751c3c10d0c4cd4"
+          "bytes": 94453,
+          "sha256": "sha256:bb0303cc89c21ef79e69647545cdac6ee2e0bf5a6a22eb6eee127e3cf24aebfc"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
-          "bytes": 96403,
-          "sha256": "sha256:5a34ab68ede3e4d8ae42dfbeca9ca866541d6b3f9e3a0fb7d47bd35e4c127b1e"
+          "bytes": 96130,
+          "sha256": "sha256:9536003b6afd32da1f7953297b64582d0b1160889cdb0979de72852be8b8b11c"
         }
       ]
     },
@@ -180,8 +180,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
-          "bytes": 93212,
-          "sha256": "sha256:e33de213a30e574a27a8b744c1772ba914af09f849cccd7982b30cbabbfee7d3"
+          "bytes": 92938,
+          "sha256": "sha256:3003184917b7c9a10ba4073900af4f89c2e0ea6da18da203a889497404778044"
         }
       ]
     }

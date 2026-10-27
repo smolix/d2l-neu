@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
-          "bytes": 29488,
-          "sha256": "sha256:380e5c222d1fd9db654e10cab25a3d933c79987d50f7a2b608edded2e9d75e6f"
+          "bytes": 33102,
+          "sha256": "sha256:c8fc78520f0c2675f537641bba44ccc01bc4b473deab868f57c63639d3108081"
         }
       ]
     },
@@ -71,17 +71,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.19553\niter 100  loss 0.00013\n"
+          "text": "iter   0  loss 1.27689\niter 100  loss 0.00012\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 200  loss 0.00005\niter 300  loss 0.00000\niter 400  loss 0.00024\n"
+          "text": "iter 200  loss 0.00003\niter 300  loss 0.00001\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean endpoint error: 0.0128\n"
+          "text": "iter 400  loss 0.00000\nmean endpoint error: 0.0017\n"
         }
       ]
     },

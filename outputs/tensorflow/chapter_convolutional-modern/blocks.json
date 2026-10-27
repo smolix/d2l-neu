@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
+    "d2l_lib_fingerprint": "sha256:e90829b86fe845d825a42d728ae89ee914d2b13c7b2401c9f42c46317dc1933d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,12 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 112, 112, 64)\nSequential output shape:\t (1, 56, 56, 128)\n"
+          "text": "Sequential             (1, 112, 112, 64)\nSequential             (1, 56, 56, 128)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\nFlatten output shape:\t (1, 25088)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33260,
-          "sha256": "sha256:716c0557d8022a0b166375e7fd093b8c7ec8e0a4085b3d07d72461e5ace35e2e"
+          "bytes": 33354,
+          "sha256": "sha256:884630006e99bbd98f7bb68f6a304b66fd6f30047863b61b90bece7770d67649"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nGlobalAveragePooling2D output shape:\t (1, 10)\n"
+          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nSequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nSequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\nSequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 33512,
-          "sha256": "sha256:1dcf0eb9c9d2e46be0272473f87fb38ecbd462d9ee22bceea4172e8a131c8eaa"
+          "bytes": 34395,
+          "sha256": "sha256:076a7787be34c7cc2fd700b318ee5c6c57d4a0c0a42f44cf30172331c15550ef"
         }
       ]
     },
@@ -97,56 +97,56 @@
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:bb7ceef2137a2e6d2bfa633770779516b75416aeb891fcf9df26524daac652f8",
+      "code_fingerprint": "sha256:add44042c45a725ba047e68eafede4cd2f451525e045ce782d22b28c84ac9108",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:23fa4faca88fafa6a5fd670b0cebde14f75819dc077138a24d7f650e86cbd1ef",
+      "code_fingerprint": "sha256:207b829b4f5d235632fb20cce797502f74ac375e0800ec67e8090d64203a6cff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 12, 12, 192)\n"
+          "text": "Sequential             (1, 12, 12, 192)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 12, 12, 480)\nSequential output shape:\t (1, 6, 6, 480)\n"
+          "text": "Sequential             (1, 12, 12, 480)\nSequential             (1, 6, 6, 480)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 6, 6, 832)\nSequential output shape:\t (1, 3, 3, 832)\n"
+          "text": "Sequential             (1, 6, 6, 832)\nSequential             (1, 3, 3, 832)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 3, 3, 1024)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential             (1, 3, 3, 1024)\nSequential             (1, 10)\n"
         }
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:58ff1bc0261454a2710f2f30072ed6d6c442d4c556f5c4a07b6678527e7b57ce",
+      "code_fingerprint": "sha256:b014022dd8717d7512333599b2185c262aa5c5faba2a9e649b02c966532e1bf3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 31857,
-          "sha256": "sha256:2f4a0e9880e2a34731aa9beb308b866077f11eca72de3fb75e1031929ea115fa"
+          "bytes": 31527,
+          "sha256": "sha256:2540f0c7fc7aa9510908571a9f772a81e7809d769c3262a5d25308cd53b9de54"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:7f5e1f1318962aaa716b18dd4150c955202bfc45b98230d479483c04cd9cd434",
+      "code_fingerprint": "sha256:6970d303e6608c7a0b1c43b4ece7535b2d8016b3adbd765eacfb2d5480bce674",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.902, 'NiN': 0.822, 'GoogLeNet': 0.877}"
+          "text": "{'VGG': 0.901, 'NiN': 0.832, 'GoogLeNet': 0.881}"
         }
       ]
     }

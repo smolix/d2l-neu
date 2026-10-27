@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b7b23c195ef4e8c7b8a30176ca8c45d927e6e550c8921cdc6e4b593d2fd8e1b6",
+    "d2l_lib_fingerprint": "sha256:6c4250142ba0922e7bc26c3cdf2ec888b49ad25d961e11e24cd9e9ce056ace21",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,67 +35,67 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Trial 0: learning_rate = 0.008820142153290121\n"
+          "text": "Trial 0: learning_rate = 0.0009126679933045684\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-1.svg",
-          "bytes": 29906,
-          "sha256": "sha256:98589f00d35ca4ac81d0d71568231b0ad72ad33f84dd1f0ccfb0630f30143fed"
+          "bytes": 30735,
+          "sha256": "sha256:ec37959ad6e120f6da1191e1bfd4682d518cece55c654a159fce4a3e69cf3c70"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.16510000000000002\nTrial 1: learning_rate = 0.00011717723820423153\n"
+          "text": "    validation_error = 0.19879999999999998\nTrial 1: learning_rate = 0.2069595540612826\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-2.svg",
-          "bytes": 29524,
-          "sha256": "sha256:e6aa0769ca3eefe6ac6ebceaaeadbff4dde59a8855b70c9265c6dad877e81abe"
+          "bytes": 32853,
+          "sha256": "sha256:1b34b0d52c56612e6197679c17ee9a7e9c85c4c47b123351c11c9d93b8a0d5a3"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.29710000000000003\nTrial 2: learning_rate = 0.0002352924787679658\n"
+          "text": "    validation_error = 0.2601\nTrial 2: learning_rate = 0.00025771471236514173\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-3.svg",
-          "bytes": 30763,
-          "sha256": "sha256:07b116df85be78aee8b7c6ff1b0c932eba1bdc85be111456e30ab2a166f6af87"
+          "bytes": 30871,
+          "sha256": "sha256:02433907240213c11a37a5a5b9e2861de4d0fb567ad0dfb8e1da5fc54b5793a8"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.25549999999999995\nTrial 3: learning_rate = 0.006327663249386916\n"
+          "text": "    validation_error = 0.2479\nTrial 3: learning_rate = 0.975616195702381\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-4.svg",
-          "bytes": 29907,
-          "sha256": "sha256:b76be6b1a7c8a49eecb6c21dad12336b2ea55b96b2930bcc443b55e78859e018"
+          "bytes": 30857,
+          "sha256": "sha256:fe2a8e3e5334e969c62eca9eaa2ffe59578f2017bed9c7eaa27c2bbf479e385e"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.17020000000000002\nTrial 4: learning_rate = 0.000916866728074042\n"
+          "text": "    validation_error = 0.2784\nTrial 4: learning_rate = 0.000219745483642484\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-5.svg",
-          "bytes": 30630,
-          "sha256": "sha256:87429b3de2611178ebfa84d347ecba51f904908caf43101b30cf5bd919287781"
+          "bytes": 30864,
+          "sha256": "sha256:8b99d06bd7c24781484421740ac413e7a53cd43b5aa314ad78cde8c55311afea"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.1996\n"
+          "text": "    validation_error = 0.25780000000000003\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal learning rate = 0.008820142153290121\n"
+          "text": "optimal learning rate = 0.0009126679933045684\n"
         }
       ]
     }

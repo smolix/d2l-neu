@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "d2l_lib_fingerprint": "sha256:e3003897987dc03b11748f679203016004a3dbe502841b17b4609bbed1537562",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
-          "bytes": 26305,
-          "sha256": "sha256:f67b2f1530d3ba9ee6d7800bef40bf276dfb3b682e1296c29e2bb0754d10a74e"
+          "bytes": 26279,
+          "sha256": "sha256:16169c2518be75c51fa327faaea13eb9f71c1186410f35ae7321f19c6144b714"
         }
       ]
     },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 37358,
-          "sha256": "sha256:599dbc68d5071771a1fbfc0402ec501b2af7508f0ea506e0a2baf3fbeb49e9c8"
+          "bytes": 37269,
+          "sha256": "sha256:f31f240d518148b1804f6babfd425a73249c7a3d8bdb05894c50036348c014b9"
         }
       ]
     },

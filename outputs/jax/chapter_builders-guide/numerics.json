@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ae8e02fedfbc5e1d071c1d3001e69760aee2c3768f972397bf34b95d448c2715",
+    "d2l_lib_fingerprint": "sha256:be1311af82f7b41648b04f64d75853284f8ab8d858e9ea5e662e18ea61ba08a7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -124,14 +124,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.653, bf16 0.653\n"
+          "text": "validation accuracy: fp32 0.649, bf16 0.653\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26087,
-          "sha256": "sha256:bbbd850ffe4619522cb62322523dc5bba812c1d8991107e15c00c0e5d04212b6"
+          "bytes": 26045,
+          "sha256": "sha256:85e037e48f96face2e1140fed28e71beacf261dd594a48c696598c96d42fb5cc"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 33.6% subnormal, 0.19% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 33.3% subnormal, 0.21% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
@@ -177,7 +177,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:0054b169cf4f1815978e615f5fa992f58eac3ca13cc29434eba271b64c05d9dd",
+      "code_fingerprint": "sha256:ad24cf9e121f43fed0c8bd62c924d4a346f4de0077155c98391368bfade31da6",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33273,
-          "sha256": "sha256:6f7e473376f6f3ba9f5387d923d0e989a8612cafec39a8cac57aa63a7a7385b5"
+          "bytes": 33104,
+          "sha256": "sha256:b7b06419c17c6b04dd8166e04574d7b21e21e528803fa75f90f5e4386befc7f7"
         }
       ]
     },

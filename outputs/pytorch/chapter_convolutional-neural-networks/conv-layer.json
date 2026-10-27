@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:c08929ea94192c8d65a4751d6dcfdf22b91304077d05ca63bf1cdb4d0e8134a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 12.243\nstep 3, loss 0.842\nstep 6, loss 0.058\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.708\nstep 3, loss 0.808\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,12 +95,12 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9878, -0.9889]])"
+          "text": "tensor([[ 0.9867, -0.9905]])"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:af5848cf8a2fcb7703702f1068f70197c7ea201bcc9faa3dc199be33dab2347a",
+      "code_fingerprint": "sha256:41a9920950378dddc3a217ebad50ccb42c176318ae4564acc918af2c138e3867",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-2": {
-      "code_fingerprint": "sha256:4a144db7759e780671dedee484cb710ae626433467274f538084c9c017b7782d",
+      "code_fingerprint": "sha256:3cd97d064b0b13088d832400cfb7459253d2d19f5591ad95d6550bf6cd688e90",
       "kind": "text",
       "outputs": [
         {

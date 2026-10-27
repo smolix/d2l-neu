@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b4d3bca9d55063b0bdef911fe0d7c55277a737bb45d01b19539fa8fe9c068a0f",
+    "d2l_lib_fingerprint": "sha256:06e31827bfd53aab51754062d42f1ae353b48653838bc6df7d6722686efc46fa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -16,8 +16,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
-          "bytes": 142658,
-          "sha256": "sha256:2402c4d08cef273f049ffb48a47d75ed0ec8c8541fb7e4750b3c35423fcce61b"
+          "bytes": 141388,
+          "sha256": "sha256:c7d29e6d8cec9b7e96811f38ceafff4deeb2ac84d27da46fdcddc12e350bc657"
         }
       ]
     },
@@ -29,91 +29,91 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
-          "bytes": 196603,
-          "sha256": "sha256:134e8828a785f07ac8de85f59553058c185c1a845b1ea3961e5e93c99e953571"
+          "bytes": 194577,
+          "sha256": "sha256:397bc350743d6ce52e7c752f052f98c20bfbb51bc5b00c31825cb284ee3d3a39"
         }
       ]
     },
     "neural-style-preprocessing-and-postprocessing": {
-      "code_fingerprint": "sha256:4d311c4de1178cc64981a8439ce1b96b487dace6fcfa63b8116c1da294059fec",
+      "code_fingerprint": "sha256:b5e177157893283ca38eb24a20d6e3a727a9380d756c7d88937d444e08aaa2f8",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-1": {
-      "code_fingerprint": "sha256:6ef59ec9ad14faf0119615cd017753fa5eee084659cc61e9944c49fd53f551c1",
+      "code_fingerprint": "sha256:41f01c5e9a8a034a822624b88f07769d364eaea629f24cc70f459a0ac3fe0b9c",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-2": {
-      "code_fingerprint": "sha256:a4593a92f0673b43ba5164819e7cbcfd45c8fec0b355a794ba7f84815a564b25",
+      "code_fingerprint": "sha256:a1794398d672b4b33819a55bcbb5b7633bed3826236a193ea31bc5d9c46ae8dd",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-3": {
-      "code_fingerprint": "sha256:c38a8f48374a1b85397717055ef38db07457ebd7fc3b8c354c6efbd2b0872a10",
+      "code_fingerprint": "sha256:fe0114e94d5b5e6e9941729f91b2b27cf0e9a360ed09cc4caf8458e9448795e3",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-4": {
-      "code_fingerprint": "sha256:ac44cdafebb1440358ee799c5b4c6e78013b7112dd7b44b4c210eeef4e51e69f",
+      "code_fingerprint": "sha256:2055abe7865e5b53d08119ee593eea93a56c38f0395173018e9d45832ce6cdeb",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-5": {
-      "code_fingerprint": "sha256:77509b0e075c9dd08fa3358d674e96a46aab0d782086ad4cfe621d55b2cbb937",
+      "code_fingerprint": "sha256:ec1b3c274225b361ce3f3c5d99fad3c262b673c04188d2750c5493bc24062b98",
       "kind": "text",
       "outputs": []
     },
     "neural-style-content-loss": {
-      "code_fingerprint": "sha256:37d67f52d8683031e585634bc7fb5b8e25035b3c1458392ce4121baf13f69ddb",
+      "code_fingerprint": "sha256:20e853e0a3a1220a8ab1e19f899aad5d90a23b6de87c3a1f9f9d2f169346f2a7",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-1": {
-      "code_fingerprint": "sha256:d7f4921befd30cabde0b97c1d76dbc9042c60b484ee063ffc0eb9667dee3cc10",
+      "code_fingerprint": "sha256:ecfe06c88c84af194cb1eae19c088dc1e7bc659d40c68e7cc086ed61809b08c9",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-2": {
-      "code_fingerprint": "sha256:fa3a3984ff51abf16229ae603e853b3836ec02b61971501d94aa2ce06220d48f",
+      "code_fingerprint": "sha256:d5f36175036487a7cec7b2bfaa15972584da1493cf0c29b755eb437f9a0c42b7",
       "kind": "text",
       "outputs": []
     },
     "neural-style-total-variation-loss": {
-      "code_fingerprint": "sha256:574da99e124c7b03fe40853b49c7b07d58a1c87ae93228517cfc9e7d40775d5e",
+      "code_fingerprint": "sha256:bc646fd4cfa582d850a02de2617b1c1677012a47b27828b51c83916a5620a1f7",
       "kind": "text",
       "outputs": []
     },
     "neural-style-loss-function": {
-      "code_fingerprint": "sha256:8b2db6594b77c5c94e1bd5adcec561702e21504105b1a2f8eae095c541797110",
+      "code_fingerprint": "sha256:bb3ca60a4af54da15e6f3c3654eac0df2032ddbaf78422bb5ff0d117a7eefae9",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-1": {
-      "code_fingerprint": "sha256:791b08610bb4d7d181f9c6811818f79c2e687e0f1c72bc447ce5c8e93f063807",
+      "code_fingerprint": "sha256:fe7b96e6481f8760535e80a72bd1b4fd98d1f4bddd4f1e3ee5247f2ebec00bdc",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-2": {
-      "code_fingerprint": "sha256:49cd602fb8a23b3c6d8e260f25eced6203860151754eccf1b4340ee4bcc60f2c",
+      "code_fingerprint": "sha256:a6f5556e184e5e34bfedec0ebad55b6b3ed247ed3cac1c61ca14e14c02d67683",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-1": {
-      "code_fingerprint": "sha256:73b42fa72c087b3d1be12b9bf6d9b0ccd4abd1cc8fda8541c577605facce1f0c",
+      "code_fingerprint": "sha256:05af4f9f88ec3173f832d091045619b1845f592245073368a30befcfc179e35c",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-2": {
-      "code_fingerprint": "sha256:24d059841f6ddb944ba15abf036410b32c57450dbdada3ab078b24ffd1ad844d",
+      "code_fingerprint": "sha256:90b68d1671aafe549461db4c9d78397a7aaaf03f75d00409ace69880db91b224",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 180795,
-          "sha256": "sha256:4201d54638ba19366c48332a64270ad1b636f5255898f958b2e27eb278a0463a"
+          "bytes": 179679,
+          "sha256": "sha256:c271e4f0984d8bf2c363f53132fb5b843b9882e5c848e1d2983a88ee764d91b2"
         }
       ]
     }

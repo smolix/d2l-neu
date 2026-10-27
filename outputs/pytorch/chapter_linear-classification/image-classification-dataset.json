@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:413a41683fc86df84c31d1feb51bb0b869a533e90e8b38acb9120bbe6b7b8aac",
+    "d2l_lib_fingerprint": "sha256:b517f28fcb904dafe1bdd189a0beb5afd2b6d4a36eb2c4ac028fa6dfef6e9e48",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,25 +65,25 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'3.00 sec'"
+          "text": "'2.37 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:734f1f186907960c86250f38044a2d32c1dc2adffd4e1e42d31c5417f6597afa",
+      "code_fingerprint": "sha256:234f4cf7570ece4615ab45a6f77bfc863092cfad17e1ca1f9ed1c397df1015e9",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-inspecting-the-images-1": {
-      "code_fingerprint": "sha256:e6e13dcbff421a845567be67ad7b96cd23fe12dda22fbda86c8166f46a590917",
+      "code_fingerprint": "sha256:0abc53970b64425e15ef5842e7999ea659ad6720ff3fd09a4aa010540f9d4e23",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
-          "bytes": 70527,
-          "sha256": "sha256:480163924434b55f81b9074ee590505b4d0ceaec2b98af2637c7a11c6d26e923"
+          "bytes": 70405,
+          "sha256": "sha256:0448021af384f36ae6f60523ae90d42cc145a452596cfef0b29129cbc2efabd1"
         }
       ]
     }

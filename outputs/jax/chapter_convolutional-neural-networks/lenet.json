@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0e6dae976528a094f9b089e908c5d1887c806b8f16cc60a4b75d37fee1bb46df",
+    "d2l_lib_fingerprint": "sha256:30cad164c4a2055ab4894e09ba7cb62eed923f0002b43d9815a051b60b7643a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,51 +19,46 @@
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:f7f4f8be80991bc83881f5b35ab3af4308233832b0783ad19dc93fbc367379ef",
+      "code_fingerprint": "sha256:df598ef970afa88dbb3c3c414d22020e57cac6170f848ea2404680c104452576",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\n"
+          "text": "Conv                   (1, 28, 28, 6)\nsigmoid                (1, 28, 28, 6)\navg_pool               (1, 14, 14, 6)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\nfunction output shape:\t (1, 5, 5, 16)\n"
+          "text": "Conv                   (1, 10, 10, 16)\nsigmoid                (1, 10, 10, 16)\navg_pool               (1, 5, 5, 16)\nflatten                (1, 400)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "function output shape:\t (1, 400)\n"
+          "text": "Linear                 (1, 120)\nsigmoid                (1, 120)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t (1, 120)\nPjitFunction output shape:\t (1, 120)\n"
+          "text": "Linear                 (1, 84)\nsigmoid                (1, 84)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t (1, 84)\nPjitFunction output shape:\t (1, 84)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Linear output shape:\t (1, 10)\n"
+          "text": "Linear                 (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:fc616332bad2de32ffa0eef7248aeda039a050d59f4a86e1a7b5205cf567e6ee",
+      "code_fingerprint": "sha256:8b8cf8082e7c8323528ff47784b94585ffa2c2b8af3049d789ba2ec79a54a887",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37867,
-          "sha256": "sha256:1afce90ab2c95ecb7a5282de126be7800ac4ca44ea31b9b0420b627025372ca1"
+          "bytes": 38063,
+          "sha256": "sha256:0fddba6779c1cd4a9f18866bd88e649dae054cc8189163a8c58c301493a89c2c"
         }
       ]
     }

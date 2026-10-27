@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:04a024f7a3f33f70bd4e6b259fbf284e8664e3c4bd51a14f8be2fe4e13a743a2",
+    "d2l_lib_fingerprint": "sha256:9f0a94af9a47bf735a8167fc54238e44f927d3a2468d7bf3d8a4034669153384",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "score-matching/score-matching-sliced-score-matching-2-1.png",
-          "bytes": 192782,
-          "sha256": "sha256:f30b1ebc3859a4f1d3fafc4d7924b0aa7c84bf33ee0b9b8d59b5699b48ab72d7"
+          "bytes": 190708,
+          "sha256": "sha256:00b49de7c9fa80a7fb3c3b33cb07a609ba59e85438058bacb9d3ed69ea5b1fbd"
         }
       ]
     },

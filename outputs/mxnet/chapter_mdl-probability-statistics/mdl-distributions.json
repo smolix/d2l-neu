@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
-          "bytes": 25789,
-          "sha256": "sha256:39841143968d3d68b2ee5c6208038716d1784bbbb00d756afa6c885b7db5999c"
+          "bytes": 25748,
+          "sha256": "sha256:1fd61980220a1c1e0ad232afbefa99ef4fa9fba91507990ba903c0f8dedc36d6"
         }
       ]
     },
@@ -123,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
-          "bytes": 32712,
-          "sha256": "sha256:1913734b23b22eb88d3fe774c2c3ee6c37da8a6659c77b304ca69601ccaaddea"
+          "bytes": 32694,
+          "sha256": "sha256:5505a1b5fd8eb7ca2db85e788a30df2833f34c34c2a79641fb4ed08fc88a7355"
         }
       ]
     },

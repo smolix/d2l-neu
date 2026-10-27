@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,7 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -116,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29558,
-          "sha256": "sha256:d6985107159e2d0e41c53819a8dc213ed85d2151f1abb066153d95cec654bd88"
+          "bytes": 29383,
+          "sha256": "sha256:d5387a2fc4e6fdc94236a73eb9a8a573b065bce09f7a88f6b19e0a60e96023d6"
         }
       ]
     }

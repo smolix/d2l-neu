@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:42ea1162926e27b40ded334d4fb3c2a5e49441ed9084726aa2405fb1414219e0",
+    "d2l_lib_fingerprint": "sha256:2190c07eb89ab75758e010b8e4cf600ebb3f1b970c709c5bb23251687a08dda6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.18\n"
+          "text": "S4D      accuracy 0.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.97\n"
+          "text": "minGRU   accuracy 0.99\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.81\n"
+          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.80\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 37222,
-          "sha256": "sha256:a1539bc0ff47d566c4c5ce1858dfe40dfa7ebbb66386ab68519618fd74024e7a"
+          "bytes": 35675,
+          "sha256": "sha256:ade04f359d28d41beca75da2db66ab111e2055676008a59ee969ae5dfa6009f7"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 2.99\n"
+          "text": "Mamba perplexity: 2.97\n"
         }
       ]
     }

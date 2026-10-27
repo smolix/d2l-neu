@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:37013f8f588241e3afd51a041ab132182179c08066a47b5e8743bf115c6e5b93",
+    "d2l_lib_fingerprint": "sha256:35278423875a0723bf31feb276f4a09e25447c65dfafbadad6e592b1a38aaaca",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                         self CUDA    %  us/call CPU total calls\naten::mm                                    68.2ms 50.0    146.6    18.9ms   465\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    20.2ms   155\nMmBackward0                                  0.0ms  0.0      0.0    18.0ms   155\naten::linear                                 0.0ms  0.0      0.0     8.5ms   155\naten::matmul                                 0.0ms  0.0      0.0     7.2ms   155\naten::mul                                   16.7ms 12.3     25.3    13.7ms   660\nself CUDA total 136.4ms, self CPU total 135.9ms\n"
+          "text": "                                         self CUDA    %  us/call CPU total calls\naten::mm                                    69.3ms 50.2    149.0    18.8ms   465\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    20.3ms   155\nMmBackward0                                  0.0ms  0.0      0.0    18.0ms   155\naten::linear                                 0.0ms  0.0      0.0     8.4ms   155\naten::matmul                                 0.0ms  0.0      0.0     7.1ms   155\naten::mul                                   16.8ms 12.2     25.4    13.9ms   660\nself CUDA total 137.9ms, self CPU total 136.2ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R0 eager: 275572 tokens/s\n"
+          "text": "R0 eager: 263915 tokens/s\n"
         }
       ]
     },
@@ -52,12 +52,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first (compiling) step: 11.8 s\n"
+          "text": "first (compiling) step: 1.9 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R1 compiled: 344977 tokens/s (1.25x)\n"
+          "text": "R1 compiled: 345848 tokens/s (1.31x)\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                         self CUDA    %  us/call CPU total calls\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    55.1ms     5\nCompiledFunctionBackward                     0.0ms  0.0      0.0    54.6ms     5\n## Call CompiledFxGraph fdcdeefsm5ww...      0.0ms  0.0      0.0    53.3ms     5\naten::mm                                    69.2ms 55.5    150.4    19.3ms   460\nTorch-Compiled Region: 0/0                   0.0ms  0.0      0.0    14.7ms     5\nself CUDA total 124.6ms, self CPU total 118.9ms\n"
+          "text": "                                         self CUDA    %  us/call CPU total calls\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    51.2ms     5\nCompiledFunctionBackward                     0.0ms  0.0      0.0    50.8ms     5\n## Call CompiledFxGraph fdcdeefsm5ww...      0.0ms  0.0      0.0    49.9ms     5\naten::mm                                    69.1ms 55.4    150.2    18.3ms   460\nTorch-Compiled Region: 0/0                   0.0ms  0.0      0.0    14.2ms     5\nself CUDA total 124.6ms, self CPU total 118.6ms\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R2 +bf16: 470528 tokens/s (1.36x)\n"
+          "text": "R2 +bf16: 492816 tokens/s (1.42x)\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R3 +batch-up (512): 621396 tokens/s (1.32x), peak 8.6 GiB (fp32 control: 16.6 GiB)\n"
+          "text": "R3 +batch-up (512): 606486 tokens/s (1.23x), peak 8.6 GiB (fp32 control: 16.6 GiB)\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                         self CUDA    %  us/call CPU total calls\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    73.3ms     5\nCompiledFunctionBackward                     0.0ms  0.0      0.0    72.9ms     5\n## Call CompiledFxGraph fqqnnoosg4xs...      0.0ms  0.0      0.0    71.5ms     5\naten::mm                                   237.7ms 44.7    511.1    19.1ms   465\nTorch-Compiled Region: 0/2                   0.0ms  0.0      0.0    23.9ms     5\nself CUDA total 532.0ms, self CPU total 528.7ms\n"
+          "text": "                                         self CUDA    %  us/call CPU total calls\nautograd::engine::evaluate_function:...      0.0ms  0.0      0.0    73.9ms     5\nCompiledFunctionBackward                     0.0ms  0.0      0.0    73.5ms     5\n## Call CompiledFxGraph fqqnnoosg4xs...      0.0ms  0.0      0.0    72.2ms     5\naten::mm                                   237.5ms 44.7    510.8    19.1ms   465\nTorch-Compiled Region: 0/2                   0.0ms  0.0      0.0    23.5ms     5\nself CUDA total 531.5ms, self CPU total 528.0ms\n"
         }
       ]
     },
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R4 +checkpoint: 547722 tokens/s (0.88x), peak 3.1 GiB\n"
+          "text": "R4 +checkpoint: 548191 tokens/s (0.90x), peak 3.1 GiB\n"
         }
       ]
     },
@@ -122,46 +122,46 @@
       "outputs": []
     },
     "fast-transformer-rungs-each-one-measured-8": {
-      "code_fingerprint": "sha256:e3fe42d3e0e0d39894d71058a3471262fd9b98cf5c4d84cedd85ce9cdc63e496",
+      "code_fingerprint": "sha256:f8aab57c6f8da79252ff624f7b833a96297258588f121b72b464ef29b7ce51f4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 30 ms\n"
+          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 31 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=2: no-overlap floor 259k tokens/s, measured 297k (1.08x of one GPU)\n"
+          "text": "R5 k=2: no-overlap floor 254k tokens/s, measured 297k (1.13x of one GPU)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=4: no-overlap floor 518k tokens/s, measured 455k (1.65x of one GPU)\n"
+          "text": "R5 k=4: no-overlap floor 507k tokens/s, measured 454k (1.72x of one GPU)\n"
         }
       ]
     },
     "fast-transformer-the-waterfall": {
-      "code_fingerprint": "sha256:2d1b5a121be78aece6c370a57ad8e021ca3f864994fd74757d5b2a545ff3c066",
+      "code_fingerprint": "sha256:f7d5269e2d9c0d02160d7a8371928b2c149ae61bcd5ba0d006a0322ea62cd447",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cumulative, R0 -> R3: 2.25x\n"
+          "text": "cumulative, R0 -> R3: 2.30x\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
-          "bytes": 24996,
-          "sha256": "sha256:5ad6020aae4f97991d04b9589a62b569f1b1b311791681dfa1dba733fee6c134"
+          "bytes": 25177,
+          "sha256": "sha256:0be0c964c8c7d2fb9f0e0c4fbfec13e6f59718ed70db056a3d5c0522c638f8ff"
         }
       ]
     },
     "fast-transformer-the-waterfall-1": {
-      "code_fingerprint": "sha256:b200096f85ae9550e3634effbd18f9c1d5fc9e085b39db9c87f486ea166c89c0",
+      "code_fingerprint": "sha256:ec2eaf2077c1bb9573bbd9dc737ab02a8c5281d073994d70c3eb83463812e9ed",
       "kind": "text",
       "outputs": [
         {

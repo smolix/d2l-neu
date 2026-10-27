@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,12 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n"
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": "  10.00       0.2840         5.55e-17            10.0000\n"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
-          "bytes": 26638,
-          "sha256": "sha256:eedaf44d4f5d99b5311359241f0ef78aa93cd6c00ae6ac2a27ff3e5311130bb2"
+          "bytes": 26582,
+          "sha256": "sha256:1e44439eb4ee3bec480f54876ea0341483d09ea78b189f50b2596ce4a19e9f61"
         }
       ]
     }

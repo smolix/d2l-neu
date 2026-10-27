@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "d2l_lib_fingerprint": "sha256:cfb4f97f4bb04c3c867fc7a8d49e264d449fbe7753a2f697218864da710f4ed7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,8 +32,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
-          "bytes": 24434,
-          "sha256": "sha256:b8254ee05908e620b1465a733ae9e671d2e47dfdc15f692e9e5985dbc716ead7"
+          "bytes": 24357,
+          "sha256": "sha256:a00ba3a81d645420e1563c3f4aea4c94b9e720a9437fb47b28fb5fac2aaf6ecc"
         }
       ]
     },
@@ -44,12 +44,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 (tf32 off): 22.03 ms/call\ntf32: 15.02 ms/call\n"
+          "text": "fp32 (tf32 off): 21.87 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16 autocast: 9.58 ms/call\n"
+          "text": "tf32: 15.18 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16 autocast: 9.52 ms/call\n"
         }
       ]
     },
@@ -60,12 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "store all: peak 4318 MB, fwd+bwd 54.1 ms\n"
+          "text": "store all: peak 4318 MB, fwd+bwd 53.9 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointed: peak 2306 MB, fwd+bwd 63.1 ms\n"
+          "text": "checkpointed: peak 2306 MB, fwd+bwd 62.8 ms\n"
         }
       ]
     },
@@ -76,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 1.19e-07\n"
+          "text": "max gradient difference: 1.49e-07\n"
         }
       ]
     }

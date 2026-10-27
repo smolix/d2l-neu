@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:bfbbd0352013ec9ea06fe9864a4c07ed403121e71503bc6160f579d3bb7babeb",
+    "d2l_lib_fingerprint": "sha256:e1959d6f87095cf548e2c35badb7a4b521d9df126ca730118ee79cc8b981aa98",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
-          "bytes": 100148,
-          "sha256": "sha256:f2c32c3e9b57bc51031ad7707025f040f7ce088b8cb0f7215bbbec9e6dd0e90e"
+          "bytes": 99885,
+          "sha256": "sha256:5c6d802c22131298e57786682f47904e3d0ec35bb23f7d04786dd97a8b063336"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
-          "bytes": 90278,
-          "sha256": "sha256:0b217ab32c2c4625af1e9fda719ed7dac6fb19d4bac832c58215178dbe98a6b1"
+          "bytes": 90003,
+          "sha256": "sha256:7ea2927057fe186cdf5d1811ce8f69fbed031de5313e31281951766ba42ebe49"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
-          "bytes": 87821,
-          "sha256": "sha256:ee3674f997c8dd65bacd138c988c46726f927e973ec99f2a5e58ccdacabdebde"
+          "bytes": 87546,
+          "sha256": "sha256:8dc9f6e397f165014db526a5e36c85049a509a5c5547472d873ccd53531e567b"
         }
       ]
     }

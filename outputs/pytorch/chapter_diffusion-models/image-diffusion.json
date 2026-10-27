@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b9b0fccf5617a5a45da52b6db4ca3ee048a6a7bb4cf53f6a0b57b172c09b2484",
+    "d2l_lib_fingerprint": "sha256:c97c554e5576adc28536300a60f0af6901d53ba10709a044a502a05b0d12a8d3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
-          "bytes": 130268,
-          "sha256": "sha256:18b49dc5c8565d6074ada4e6bc53516382211cedd0f21e439adb6977c8b6afa8"
+          "bytes": 130381,
+          "sha256": "sha256:1338beabee07ec10b129fd74e59d8cf21309065461fa22c42b029e4b698d03b6"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classifier test accuracy: 0.887\n"
+          "text": "classifier test accuracy: 0.888\n"
         }
       ]
     },
@@ -112,15 +112,15 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
-          "bytes": 98433,
-          "sha256": "sha256:2735fe05f529e03e5e1f4ac97428393fee30f8a30730e5bc606dfb5885b55669"
+          "bytes": 98369,
+          "sha256": "sha256:dbb045d77e7556ea91c899287c6b8a190b292294b24c739eb75896469d46b0c5"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
-          "bytes": 93008,
-          "sha256": "sha256:ab54e68e162e16ed218e764e0a90d0e8cc8e9e18bc5a41139e463d6bc0d34bd8"
+          "bytes": 93102,
+          "sha256": "sha256:d473d92b531a9a0a15ad95dbfe928c06c5721f06e92ed14a9ad695cd73935a93"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy classifier test accuracy: 0.850 at t = 0, 0.599 at t = 500\n"
+          "text": "noisy classifier test accuracy: 0.853 at t = 0, 0.592 at t = 500\n"
         }
       ]
     },
@@ -147,31 +147,31 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.475                  18.48\n"
+          "text": "  1.0            0.475                  18.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.788                  15.90\n"
+          "text": "  4.0            0.762                  15.89\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10.0            0.850                  15.03\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+          "text": " 10.0            0.900                  15.06\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
-          "bytes": 107095,
-          "sha256": "sha256:59fc77d665038a05edbc7691d0f9235cc623ade33e57d4b740e0df12007fde11"
+          "bytes": 107230,
+          "sha256": "sha256:81e18ddb7d423521cb4c835ce2871faad9060b28be728e85e5f20d00047b30e3"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
-          "bytes": 90381,
-          "sha256": "sha256:2d3bd8e98db6c332db3ac09192f2ea5d1a64ae123dfad8fcd1877c01c7a1810b"
+          "bytes": 90284,
+          "sha256": "sha256:90f1b2f6f5658a03b9a1e749702daa2e0f0080740e02db0d1af395e6543e0c4c"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
-          "bytes": 26638,
-          "sha256": "sha256:45663c4db1d765b5ac37df8cb9ab5bde8d6320efad6c396d67157aec56945211"
+          "bytes": 26582,
+          "sha256": "sha256:71765765ebf52dac58b9fd7f4c7330065daf0dd1437e7c4411a4803477814c25"
         }
       ]
     }

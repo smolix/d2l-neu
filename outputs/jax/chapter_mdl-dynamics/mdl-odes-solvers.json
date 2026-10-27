@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
-          "bytes": 29488,
-          "sha256": "sha256:04a4f3c2ece9e3688e0a3dc712e436ece947aa2df16c2432ce360bc00a630df5"
+          "bytes": 33102,
+          "sha256": "sha256:e1fcdcd359530b0820ac37d95bea2bc4dfd256cb56dfa1ba03fb867a7a8c80a3"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
-          "bytes": 40773,
-          "sha256": "sha256:b7cf156c391f3c0df6fc2cf68687ad67b0935376399e346d3da9432656a7734a"
+          "bytes": 38784,
+          "sha256": "sha256:29d6cab2c3a56e38d0951d9db87196d0fa814c3145eea3b59e0427aadad9dfd2"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:da66054ebffe9a9cfaa36011ba0da3a8aa91e82ee9b33cf39b37dd5ff5a0bf8c",
+    "d2l_lib_fingerprint": "sha256:280c53a832c1e3c30b2335006a6d8faea28f6297e7a5616d1da65b53c691c7ef",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -72,17 +72,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   32        0.061      0.010          0.311\n"
+          "text": "   32        0.061      0.010          0.311\n    8        0.076      0.039          0.283\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    8        0.076      0.039          0.283\n    2        0.165      0.157          0.171\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    1        0.302      0.314          0.057\n"
+          "text": "    2        0.165      0.157          0.171\n    1        0.302      0.314          0.057\n"
         }
       ]
     },
@@ -94,8 +89,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
-          "bytes": 14125,
-          "sha256": "sha256:a97c53494b20c190b420587527d6d34d87fee85c213f43d2123a8fefbeeb52ec"
+          "bytes": 19034,
+          "sha256": "sha256:e6317afc355b686f4a5a10678d3db394aac8e86552515dd49bf540907cba8efd"
         }
       ]
     },
@@ -106,27 +101,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step   0: loss 0.672 nats per pixel\n"
+          "text": "step   0: loss 0.664 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 200: loss 0.165 nats per pixel\n"
+          "text": "step 200: loss 0.166 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 400: loss 0.148 nats per pixel\n"
+          "text": "step 400: loss 0.147 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 600: loss 0.127 nats per pixel\n"
+          "text": "step 600: loss 0.128 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "held-out bound: 0.183 bits per pixel; independent pixels: 0.708 bits per pixel\n"
+          "text": "held-out bound: 0.184 bits per pixel; independent pixels: 0.708 bits per pixel\n"
         }
       ]
     },
@@ -137,28 +132,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: training images 0.0037, 100-step samples 0.0076, 4-step samples 0.0243\n"
+          "text": "speckles: training images 0.0037, 100-step samples 0.0078, 4-step samples 0.0246\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 78968,
-          "sha256": "sha256:3c1d7325c4f68718c06c4964c42a3603b50237cb07d19c09658b8befdabb97ef"
+          "bytes": 83204,
+          "sha256": "sha256:ccd732c00f2de6520bec369292ec8330554569f167a92bb4af51176acc83455e"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 164374,
-          "sha256": "sha256:059e8da23e920971b2c9ad6512fb7d5d1d2990235088d8ebf5a18eab52304266"
+          "bytes": 170024,
+          "sha256": "sha256:ea7fb7b684663e4847e31ff0c37840096fb3fc975444207594d5c6941579ebb5"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 158833,
-          "sha256": "sha256:d89629b148176f59451a00eaaa28342f4ae47fba2abcf11364c63d7a716d878a"
+          "bytes": 171447,
+          "sha256": "sha256:aa91b52ee3c3713363a08e33ee1f72ab98c723e342afe17ebc11af7f039f6c3c"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
-          "bytes": 105300,
-          "sha256": "sha256:a2e067b945e1dac9f781dc3389839e032dd016bb8df9199e1c58a43b5d6bb8fb"
+          "bytes": 105256,
+          "sha256": "sha256:ad4d71bc247f21116b63d0ff1ace5c15b9d615266fe1d9bcc1d00b6fc0d0c425"
         }
       ]
     },
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
-          "bytes": 84296,
-          "sha256": "sha256:164714ce25494d5d8b6f767ebb2d12e092fa56dc9122fee2d1ffe9ee9c3b0e5c"
+          "bytes": 84225,
+          "sha256": "sha256:c017fc2aa8dc4b85fdd7a21bde80827c73a92e34cd6d5736fd197ceee4046025"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
-          "bytes": 35310,
-          "sha256": "sha256:ad7df0c6bab9d25fef52c9fb714c6dcd4461f1cea9c082a8458661f02e88618b"
+          "bytes": 36386,
+          "sha256": "sha256:ee8ae6f914c3038c45439e90dd493519d1ee77e2ff7063c2ee729bc8df04f486"
         }
       ]
     },
@@ -124,8 +124,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
-          "bytes": 121863,
-          "sha256": "sha256:cd12170ce3f6ce8a06ed80894c93fe53960ff4101d599115b007907b4b141714"
+          "bytes": 121806,
+          "sha256": "sha256:0bf69e26f0bceffd7bd8f097a91747f950f978b2fe8a45a776f4d4d434e2b03b"
         }
       ]
     },
@@ -142,8 +142,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
-          "bytes": 36032,
-          "sha256": "sha256:62cea0482a91cebe88f70ea7bc8b9b0e50e3a56b3bc55695cdc6564a45440bea"
+          "bytes": 35950,
+          "sha256": "sha256:47f9920ddf8a086b5e252d811f202f36953534a3b4256c7898ae56b5026671fa"
         }
       ]
     },

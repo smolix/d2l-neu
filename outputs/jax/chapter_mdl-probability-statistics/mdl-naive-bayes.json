@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:25cd0d4ec9c432c2f409c8f178fb6ca5d2af2bdf731cd05b371fc1a763af6de2",
+    "d2l_lib_fingerprint": "sha256:b1e5c89645be76a5adae47093774ceddb95012e11ef535a54a007e5208a7e6ae",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47953,
-          "sha256": "sha256:1f40c01ba14a6594d8d66558bf2eb596611e30172f3eea1758c0384a48978d84"
+          "bytes": 47723,
+          "sha256": "sha256:368b749ab1f817ad7941ab31a0d5401dd5c5ad4e0b83cdf2d59505171d890fbb"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
-          "bytes": 22680,
-          "sha256": "sha256:6e9a61b3acc69b8332112b5785db58e84525b1a0d6c27b58997b8e61dfc488f5"
+          "bytes": 22645,
+          "sha256": "sha256:481b2982ca7a3645c925b4eb769bc42f564d7e70476f8443b4e07cb557cb2a50"
         }
       ]
     },

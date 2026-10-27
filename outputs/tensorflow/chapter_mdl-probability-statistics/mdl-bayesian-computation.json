@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:99a35223ee947c42334d7c03d38900cff7b11355c77779d75c2ca1200dc93ff8",
+    "d2l_lib_fingerprint": "sha256:1407edd4b51c9f762c61ad8189be0f91ebc86a653db2ae449cd14369059c0377",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
-          "bytes": 89462,
-          "sha256": "sha256:0c81242822c633321b0bd1f020750b9ceaf6f5e34ca7444bf2d27b4d4de928cd"
+          "bytes": 89312,
+          "sha256": "sha256:6fc89c9a403bd9a30df07a4e2bd78c5b7ace018e0d157e66d6b8b8cc70ea744c"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 140281,
-          "sha256": "sha256:50116f5c854fa1197774ca2487197d1eae88ebea1565b5da20df670e78ddad01"
+          "bytes": 140833,
+          "sha256": "sha256:54eebd0c7a60b8b62c8574f67ba88a600980c11c84c8e675b17dd93381fb4deb"
         }
       ]
     }

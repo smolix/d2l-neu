@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33273,
-          "sha256": "sha256:47efb86aaaff37e8616251ae546d1c1e2ca15488258754db71d2587b75b81c8a"
+          "bytes": 33104,
+          "sha256": "sha256:5b5effabae7474d1fcff8320d522d2a5d1fbd6e0ae6d59a37af31b8a3e9267b4"
         }
       ]
     },

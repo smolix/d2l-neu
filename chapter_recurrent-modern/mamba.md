@@ -899,7 +899,7 @@ $B = 64$, $T = 1024$, $H = 96$, $N = 16$, 32-bit floats.
 :::
 
 ::: {.col .fig .big}
-![](../img/mdl-modernrnn-mamba-block.svg){width=92%}
+![](../img/mdl-modernrnn-mamba-block.svg){width=72%}
 :::
 :::
 :::

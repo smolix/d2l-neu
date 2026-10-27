@@ -4,17 +4,17 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
     "max_inline_bytes": 0
   },
   "cells": {
     "preface-code-1": {
-      "code_fingerprint": "sha256:b7d1eb156f4fecd25155f907ed5ba8b47228d8fa5e10daea53d038fbd7fa2205",
+      "code_fingerprint": "sha256:8b1495fb249a791aa754ee2917d3714070bfae83eeb36e7c620aeea27cde6b9d",
       "kind": "text",
       "outputs": []
     },
     "preface-code-2": {
-      "code_fingerprint": "sha256:6405a1247616e57541cd83c6aa2af4829075f0c4ae4834a5a1822420a29bee68",
+      "code_fingerprint": "sha256:60927cd02abbe801cabb4cbe1e109911b9e32152e94ae59bc1d6db8f0d15537a",
       "kind": "text",
       "outputs": []
     }

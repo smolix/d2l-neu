@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6ef2b6edc4ab63254f5a63ef15e38a0a65c00045eff14f1d1c742f756ba65ad6",
+    "d2l_lib_fingerprint": "sha256:ac22f8156a16311b71f6704a8df4e6dc74b8cc6bbe529ec2fa973008a30ec643",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -100,8 +100,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
-          "bytes": 28525,
-          "sha256": "sha256:acda04feee7a0f612e8bf03ff6b6cac970cb9069aec8c92e307d80ee09ecaa58"
+          "bytes": 28996,
+          "sha256": "sha256:c8ec68ccec55b7d4bb7fc732649ea24a7d80a3a1ab8c4e82737ecb45d7ae10d2"
         }
       ]
     },
@@ -118,8 +118,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-why-this-is-not-a-defect-of-the-fit-1.svg",
-          "bytes": 36015,
-          "sha256": "sha256:cfaf424560325e11af70e4d82ea4f47b1b7ec062f66ae04ece84f9ec7cd89fe1"
+          "bytes": 36125,
+          "sha256": "sha256:f1ee66008423ab434fe860fcd592365f762c235b694ff1c78534548420042e1e"
         }
       ]
     },

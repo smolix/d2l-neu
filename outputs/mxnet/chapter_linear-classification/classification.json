@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:65fd318642204610eee3116a7ba0b3293d69a1164d2c7582f4b471cdf7e2bbf4",
+    "d2l_lib_fingerprint": "sha256:838f776a47c9635b2cdd65000d941c273785df7bc69a50d5e30d95eed9f5fbdc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,17 +24,12 @@
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:66fbf40d705beb69737a2de1ed7f63f12b11eeddb5d7e7a4984611d03c3fdcc8",
-      "kind": "text",
-      "outputs": []
-    },
-    "classification-accuracy-2": {
-      "code_fingerprint": "sha256:14038e6b05b5bf51c5a87e888d672f95c3a692118b70a7de6cfc6562942ab6c5",
+      "code_fingerprint": "sha256:4f005b97e4657e016dd2264f9a4840cee40536f8a75715eaabcceb2886418f2f",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:05b07cf2c20a9d848b612e18e62ac414517c50755454fd470582b46c81f88417",
+      "code_fingerprint": "sha256:31d76782d1b56dd400f24752bbdb4e8c22b92831d5dec235eaf8e93bc188ab7f",
       "kind": "text",
       "outputs": [
         {

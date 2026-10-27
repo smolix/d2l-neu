@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 24746,
-          "sha256": "sha256:630d8bd0db682126ef81dd869c0a58cbef7bd86e3f1461ef0229fbdf569c0b03"
+          "bytes": 24720,
+          "sha256": "sha256:873ae3367f42fb8215d5b0d5e49ea9d77b2bf11c5e1e8f08806de7082111275a"
         }
       ]
     },
@@ -38,7 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -82,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
-          "bytes": 30656,
-          "sha256": "sha256:a3e14b94304b595fdde87734ce5eb69231009b0b14c18b70d8191e4810233776"
+          "bytes": 30576,
+          "sha256": "sha256:fa7741a543c0e95ee9a8144d4184b4aac2ed14c31871339548b122fd724b674f"
         }
       ]
     },
@@ -153,8 +158,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114821,
-          "sha256": "sha256:85ff46718aeb5914f3547750f38b4ecc712d0ddc06a907b13814a412af6c40ef"
+          "bytes": 1114767,
+          "sha256": "sha256:bcf26e740ba9f3fc20aada2ea4fc47c22d3b6f7114329ddc215a5aa607632731"
         }
       ]
     },
@@ -197,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 24043,
-          "sha256": "sha256:1c77b20a58744fbd50e23e75f70450335ab4c3767bcd52764043964954f33b80"
+          "bytes": 25546,
+          "sha256": "sha256:b87f4e53124ec001ffdbb7713a2695c4b53dd42cc538e7954fbe890fa6b6caa8"
         }
       ]
     },

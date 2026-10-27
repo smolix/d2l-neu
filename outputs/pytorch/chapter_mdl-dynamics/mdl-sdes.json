@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
-          "bytes": 105300,
-          "sha256": "sha256:7c96a89799100f6be45e53189368655485d27691a0dde17629ca1a970fd97099"
+          "bytes": 105256,
+          "sha256": "sha256:8ca5b5c679173cd65b13f736531da16396221a5496fff2980acf65fd78514df1"
         }
       ]
     },
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
-          "bytes": 84296,
-          "sha256": "sha256:5de455cce5569e22f8a19081cdae007dc04e642da846bdfac4c8d2cbe00480d6"
+          "bytes": 84225,
+          "sha256": "sha256:558eaa2060bb57d9252b892a1f18b12b1b811c9e4152a66ac170a71a7dc42606"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
-          "bytes": 35310,
-          "sha256": "sha256:e4147a7316a1fc5dbd8e5bd38abedfcb0a702b1583f2af93ab9d7bd3c8428544"
+          "bytes": 36386,
+          "sha256": "sha256:e5c694a1fcbf9cda4e9758b33515a20d13b4877295d8b710396af05641b086dc"
         }
       ]
     },
@@ -118,19 +118,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.5:  mean  1.2237 vs  1.2131,   std 0.4997 vs 0.5060\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=1.0:  mean  0.7336 vs  0.7358,   std 0.5912 vs 0.5918\nt=2.0:  mean  0.2712 vs  0.2707,   std 0.6304 vs 0.6305\nt=4.0:  mean  0.0406 vs  0.0366,   std 0.6399 vs 0.6363\nfraction of paths inside the +-2 sigma band at t=4: 0.952   (Gaussian: 0.954)\n"
+          "text": "t=0.5:  mean  1.2237 vs  1.2131,   std 0.4997 vs 0.5060\nt=1.0:  mean  0.7336 vs  0.7358,   std 0.5912 vs 0.5918\nt=2.0:  mean  0.2712 vs  0.2707,   std 0.6304 vs 0.6305\nt=4.0:  mean  0.0406 vs  0.0366,   std 0.6399 vs 0.6363\nfraction of paths inside the +-2 sigma band at t=4: 0.952   (Gaussian: 0.954)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
-          "bytes": 121863,
-          "sha256": "sha256:7b15fab49a0af44cac829b1d69169298318439bafbdfc887c8875cfbfdead66b"
+          "bytes": 121806,
+          "sha256": "sha256:53a510e42c5ddf8b977fe2d290eda657e43f8d5718bf423af7f8cfe0fdf2cc98"
         }
       ]
     },
@@ -147,8 +142,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
-          "bytes": 36032,
-          "sha256": "sha256:3728b0f40e5b6346287b3a0e84b4cc61346b3203c5aa45381c6c0d60789f3c4d"
+          "bytes": 35950,
+          "sha256": "sha256:b5adb77bdab26a5cd0388f4862d40f4d89789c9748924a0627998029bcc30489"
         }
       ]
     },

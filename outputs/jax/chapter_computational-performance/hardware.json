@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "d2l_lib_fingerprint": "sha256:dbc4fd0696a83261eac661a9ba63fb8b69226b0d30b0d85ebc09bed8c0bf6041",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "device_put: 1.0 GB/s\n"
+          "text": "device_put: 0.9 GB/s\n"
         }
       ]
     }

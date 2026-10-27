@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
+    "d2l_lib_fingerprint": "sha256:e90829b86fe845d825a42d728ae89ee914d2b13c7b2401c9f42c46317dc1933d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nConv2D output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nConv2D output shape:\t (1, 12, 12, 384)\n"
+          "text": "Conv2D                 (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nConv2D                 (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nConv2D                 (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 12, 12, 384)\nConv2D output shape:\t (1, 12, 12, 256)\nMaxPooling2D output shape:\t (1, 5, 5, 256)\nFlatten output shape:\t (1, 6400)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D                 (1, 12, 12, 384)\nConv2D                 (1, 12, 12, 256)\nMaxPooling2D           (1, 5, 5, 256)\nFlatten                (1, 6400)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 34592,
-          "sha256": "sha256:93de95fe8ac9241c163f6448a10933f1e508de3a43a6ddf1bd6760eaa979dcd7"
+          "bytes": 35757,
+          "sha256": "sha256:2fae61214e7b73219117a2ba98ea8b75cc76d94e1168587b42d5be1ecf0c4146"
         }
       ]
     }

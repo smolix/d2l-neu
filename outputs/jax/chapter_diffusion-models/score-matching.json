@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d2fa4e4ae1a1b1d3cd188cfd08a8a22a9deb195ff52d862cec357c9fbf7e257b",
+    "d2l_lib_fingerprint": "sha256:b2bb1ff35663b2df96c6f7ec22232cad3eb0c3f29c76276b857b9c7b1df192cf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "score-matching/score-matching-sliced-score-matching-2-1.png",
-          "bytes": 193116,
-          "sha256": "sha256:943fa8ee6a188402940913cb8c114c30f2e9dd6ff095bd5e25ed094459cbe5d9"
+          "bytes": 192694,
+          "sha256": "sha256:b5e7a1884e42de5d7d0d8ed3abeb800106ffc2e995b94ec5b3d8525f81315725"
         }
       ]
     },

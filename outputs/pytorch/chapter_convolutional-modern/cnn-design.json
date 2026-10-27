@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6a516f8cf1a89f665495755472358b0ffb5f67ebee83cfc549ae0a1fc14a15de",
+    "d2l_lib_fingerprint": "sha256:3768d99df264e3a9a49cdef8742a513289a8cd38f2f925e1be2593473a258d8a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,67 +14,67 @@
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:5fe556fa605735bf4272667fa1356e32a41198019f29783c8d70cd2a586ce396",
+      "code_fingerprint": "sha256:bd38df3c434c3d0b66e081d22f04cbc6a2cb089aeca84d80347ef322272aaa83",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:e5313332ff298cd1d872a4e2b81e26d951789848d04015fc81b74eadbefd8850",
+      "code_fingerprint": "sha256:ebcff99b6f94aa49058ccd5b16aeacfc6935647135e2a5a4c9f0851befda2a14",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:33991a2d4cd92abe42ccc73a2fb0403934e3600be903fb1d52313f848e8ca770",
+      "code_fingerprint": "sha256:1e510f738c18fca3161562c871906761d5ab9502a628b0261dd740cd5c5f2411",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:d354488c510beca44fcd1292bb28b37d1c734941237f8835b9d79939c030f9bf",
+      "code_fingerprint": "sha256:50fd847ecbd30e1e0171ca12bb0adad9d20e52c0182a831ba75896b95393fa82",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:28866a013beeda92e5a2e019197b0066501c1d1be42c4041995ce5e3d2b4cc51",
+      "code_fingerprint": "sha256:01b4c0f82135971dd1b7629b6b711f01ce9c4867e56cea78050f36e58e5dc2af",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 32, 48, 48])\nSequential output shape:\t torch.Size([1, 32, 24, 24])\nSequential output shape:\t torch.Size([1, 80, 12, 12])\nSequential output shape:\t torch.Size([1, 10])\n"
+          "text": "Sequential             (1, 32, 48, 48)\nSequential             (1, 32, 24, 24)\nSequential             (1, 80, 12, 12)\nSequential             (1, 10)\n"
         }
       ]
     },
     "cnn-design-training-1": {
-      "code_fingerprint": "sha256:b90086c8a9c345b88c483712443398e691cba8e67f472af25d68790a56314e77",
+      "code_fingerprint": "sha256:ee838244e708ce7e04418bb0bfee3e4419d4b170e6b1098ba58ffc3067d57eb9",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:dd161072fce36423b2b2281bfe3f573f8d6e5bdf835190e89fbaf70f9a9281e8",
+      "code_fingerprint": "sha256:192ffa9c572634d205e522e7f80c9782fc55c00960e24c9f56c7261ee19ccf2d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32645,
-          "sha256": "sha256:959957bd02e9955675ee943ff0ef90fbbed108421e1b898aa4a94428319062be"
+          "bytes": 33390,
+          "sha256": "sha256:316d6ef724ca4f71a2f37a0aeccfbaeef9b159255308b4d798b1faccae438a6c"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:e3eb74a6f435aa95feadae7169b8ce90f04bc0653869acbfee5d5e95b7f93203",
+      "code_fingerprint": "sha256:d6199fdb3a72c65055b0cc52d233acf0f6e067196d7cf5ac0079c41922e12755",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "115,642 parameters, validation accuracy 0.897\n"
+          "text": "113,674 parameters, validation accuracy 0.899\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:b8ccd9fc201cdb08c4b79d2b403fd68008b2af4bcad17556463f3597f619b018",
+      "code_fingerprint": "sha256:8b998496b68857db2dd746000847bd65229ba4ff2a0183d1de29369919d5d65d",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ea201a1927ee5077f24af126f4bdbd39086d059ccf5df0e868a38808d252efce",
+    "d2l_lib_fingerprint": "sha256:6f2c93232a5a78a6c9becaaa71ba349740881bd18593cdc2450f7e5fb0acab93",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,8 +32,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
-          "bytes": 30593,
-          "sha256": "sha256:43446b16615e32fb3850ace3e7d523f8392780a282f7bfb19990c4fc2af51e00"
+          "bytes": 30548,
+          "sha256": "sha256:b10f70cbe7026afab4f51ee398948f98b32bde94901a6e5153509853c0978a25"
         }
       ]
     },
@@ -59,14 +59,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.09\n"
+          "text": "lambda = 0.32\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 67531,
-          "sha256": "sha256:fcc459392983538764a0c3103734da78ba7b3d587bc6cc5c327b5a52388bc1f0"
+          "bytes": 65949,
+          "sha256": "sha256:af74510de3ef9bc8e5e55bbc038b8d1bcad3747c49a182b4799af1fccc7932b1"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of examples with a dropped branch: 0.501\n"
+          "text": "fraction of examples with a dropped branch: 0.521\n"
         }
       ]
     },
@@ -89,52 +89,52 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-averaging-weights-1.svg",
-          "bytes": 25605,
-          "sha256": "sha256:33e59551fc7a7c4eb4c15bc743e9edb1a66cbe252a47290e7e8e1886fb0c50f2"
+          "bytes": 25641,
+          "sha256": "sha256:76603318f514657a41600bdc057636b502aac1c211aa9bde370c4cd65abcc1ab"
         }
       ]
     },
     "training-recipes-one-network-two-recipes-1": {
-      "code_fingerprint": "sha256:63fca87f0b0b3b2ffcc4d81b1ce212c2187f66f853025c0b313eb9a30298ed2b",
+      "code_fingerprint": "sha256:c1066fcadb5a36e9d7f7cd98039a59161234a10193985d61100b2ca9332f264a",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-one-network-two-recipes-2": {
-      "code_fingerprint": "sha256:c0452a402df638389ea240b1b3a4b0e83bee939cb9ff9014c14d44458fdcd7f3",
+      "code_fingerprint": "sha256:6dc89f1789a0d6310b18a2554325ac77804298fb357c69b8d82f9c8d385465a5",
       "kind": "text",
       "outputs": []
     },
     "training-recipes-one-network-two-recipes-4": {
-      "code_fingerprint": "sha256:47f1d8d073db9d66f7783129ad3c03afcb169496549188e410d6516032af7ab6",
+      "code_fingerprint": "sha256:fad65ad42dd22689b52063c7089221f2df980c688811f4c667bbabb74660e9a6",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-4-1.svg",
-          "bytes": 41502,
-          "sha256": "sha256:84182d2241b4f5565fe59cc1d48960fa46e4c9c13355b97047d59a737da39cd2"
+          "bytes": 39387,
+          "sha256": "sha256:ec45b31f93c0b63a124957d7b9af20e4eaee288fce61d992520ec7110188b3d3"
         },
         {
           "type": "execute_result",
-          "text": "0.8964"
+          "text": "0.8956"
         }
       ]
     },
     "training-recipes-one-network-two-recipes-5": {
-      "code_fingerprint": "sha256:6f4eb505fdd2eccfe2fff58bef2a58ea2bae5f38351ba3176248a75b79df04d3",
+      "code_fingerprint": "sha256:82684413e7f501a2ffc6d63af9bbcbb9fd03c7a7210b8b6ae2c16adaade0b894",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-one-network-two-recipes-5-1.svg",
-          "bytes": 43457,
-          "sha256": "sha256:1599ba1ddf079ee0e9833a5863a3af3b978f924633867725629741fb13dfe532"
+          "bytes": 43694,
+          "sha256": "sha256:48ca1aae4fcd12bf2365f0d5ebcd13a38f4407eecefe8bc496670772ba198351"
         },
         {
           "type": "execute_result",
-          "text": "0.9073"
+          "text": "0.9088"
         }
       ]
     }

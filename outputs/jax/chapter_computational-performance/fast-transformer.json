@@ -4,12 +4,12 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6ac1adf59431bb8eb86256f35887e0c3fa439f28c7b496de5a95430c296de3e2",
+    "d2l_lib_fingerprint": "sha256:86faac77a583ad4ed1b6cf35eb3acf9c62f3a9a75ae72121abfa2512469b8f11",
     "max_inline_bytes": 0
   },
   "cells": {
     "fast-transformer-case-study-making-a-transformer-fast": {
-      "code_fingerprint": "sha256:774ff3c6fa112f5214db139d9f2bcc3d2934c875b8e260b0498884f2e74cd6b5",
+      "code_fingerprint": "sha256:09fedfa63b147094e6669ffaf196b6cea6f6104d119ebcae8cd79226198da75d",
       "kind": "text",
       "outputs": [
         {
@@ -19,7 +19,7 @@
       ]
     },
     "fast-transformer-the-subject-1": {
-      "code_fingerprint": "sha256:09c539aff8ddf5eb424d34e3f3dca971c78580c6dec7de0776281f0407de3d27",
+      "code_fingerprint": "sha256:35e724417c618219f726d808ef223978556328a9b0f6129ced3bac7665c32700",
       "kind": "text",
       "outputs": [
         {
@@ -30,50 +30,50 @@
       ]
     },
     "fast-transformer-the-subject-2": {
-      "code_fingerprint": "sha256:b5829158c49b2afd018ae683f3d39f290eb2765e1bc4692ff6892ef273621d49",
+      "code_fingerprint": "sha256:f286c643ef1ac85cc024cd2aeed09a361ef19db0d65a34486cca0fda4fc22082",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-the-subject-3": {
-      "code_fingerprint": "sha256:debebca658220b3749c0717054fe1bde8215b07d087830b7096023303f84ca35",
+      "code_fingerprint": "sha256:c673b7aa63bc86f5df8ade40a94d28a8e7175d6e84f70f82321dcb672ee7f7a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 control @512 (clocked up front): 200824 tokens/s, plan 15.1 GiB\n"
+          "text": "fp32 control @512 (clocked up front): 199303 tokens/s, plan 15.1 GiB\n"
         }
       ]
     },
     "fast-transformer-rung-0-baseline-profiled": {
-      "code_fingerprint": "sha256:903219f4946ecdbcb7c51b5cc6a7779a92698c41eb3d5df88b60006631ffb273",
+      "code_fingerprint": "sha256:bb85662034adc46dbbe744aef3d2d08f30e04558c970c79d6312c9aff7eb8d84",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R0 un-jitted: 13727 tokens/s\n"
+          "text": "R0 un-jitted: 13872 tokens/s\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-1": {
-      "code_fingerprint": "sha256:17c3ba7c752f9482a440509cd9ad0406f65294743ee70ab44934ea045c334533",
+      "code_fingerprint": "sha256:ffa68f4e8e8383dbcd13e8f5a480fe7271ac87a2fcca6b57b20881346356a1fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first (compiling) step: 7.3 s\n"
+          "text": "first (compiling) step: 6.9 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R1 jit: 256016 tokens/s (19x)\n"
+          "text": "R1 jit: 255674 tokens/s (18x)\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-5": {
-      "code_fingerprint": "sha256:9f6b8cb38ffb83c4663f76a9f69eb27c1e3cf4c63f734703e3f58552f7b621f2",
+      "code_fingerprint": "sha256:d63858f13f3e61a5006ceab8a33404b16574bef6b730c968a0354af2420f0496",
       "kind": "text",
       "outputs": [
         {
@@ -84,13 +84,13 @@
       ]
     },
     "fast-transformer-rungs-each-one-measured-2": {
-      "code_fingerprint": "sha256:9ac126285c76aa42379b3cc37ff7947ce2fbe3131e0c7f116a3f8af0d5979a7a",
+      "code_fingerprint": "sha256:f70c29a223ff6a3b09fd04e91a2a227fe9e4fab6012998908b1efd3fac6129d6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"bf16\", naive cast: 250430 tokens/s (0.98x)\n"
+          "text": "\"bf16\", naive cast: 250312 tokens/s (0.98x)\n"
         },
         {
           "type": "stream",
@@ -100,7 +100,7 @@
       ]
     },
     "fast-transformer-rungs-each-one-measured-9": {
-      "code_fingerprint": "sha256:55d31d910dd3a366570a0150008d67ffb8ef48691b8958c3d59b1308d013c3e5",
+      "code_fingerprint": "sha256:8c23a3a3ad2ad7baa2517f3a408e343d00b182978ccf090fb7051adb0418b0df",
       "kind": "text",
       "outputs": [
         {
@@ -116,39 +116,39 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R2 +bf16, threaded: 233928 tokens/s (0.91x)\n"
+          "text": "R2 +bf16, threaded: 273526 tokens/s (1.07x)\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-3": {
-      "code_fingerprint": "sha256:96d58b0d582275b7d9ec64cc9a303378ceb601ae2c43fe4c6004d1b50fadb2a2",
+      "code_fingerprint": "sha256:3dc25796d46fee2e2ce28e7ad3e2ac50a4b987029812b6057e0e733aa1310cfd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R3 +batch-up (512): 434277 tokens/s (1.86x), 44 TFLOP/s achieved\nfp32 control at 512: 200824 tokens/s -> bf16 pays 2.16x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
+          "text": "R3 +batch-up (512): 438433 tokens/s (1.60x), 45 TFLOP/s achieved\nfp32 control at 512: 199303 tokens/s -> bf16 pays 2.20x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-4": {
-      "code_fingerprint": "sha256:6c72253473f5c259a29002efde9546615110bcc3f3b95de5ee1a951926bcc567",
+      "code_fingerprint": "sha256:a471d23bbe92b8014f07f1be530d0bb4a74f19ee34860d14b33677645423a8ad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R4 +checkpoint: 379212 tokens/s (0.87x), planned temp 1.8 GiB\n"
+          "text": "R4 +checkpoint: 378189 tokens/s (0.86x), planned temp 1.8 GiB\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-7": {
-      "code_fingerprint": "sha256:ada79d6819ca92f068f9fc49bb21db83de514dbf75c61c1a57586002b4a6b103",
+      "code_fingerprint": "sha256:e3f50a30d29ed410e4055fc45421eed383dfb71c574648703924295093b21092",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-rungs-each-one-measured-8": {
-      "code_fingerprint": "sha256:53b4f72c4509ae24366f790d4b80783b56d9f7b0d4305f0772d92bd9bc9cdc01",
+      "code_fingerprint": "sha256:3cbf19bd2176aa772fbfe401cb2cb421e9338ffabb5052a65e366807321d44ba",
       "kind": "text",
       "outputs": [
         {
@@ -159,51 +159,51 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=2: no-overlap floor 250k tokens/s, measured 200k (0.78x of one GPU)\n"
+          "text": "R5 k=2: no-overlap floor 250k tokens/s, measured 201k (0.78x of one GPU)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=4: no-overlap floor 500k tokens/s, measured 298k (1.16x of one GPU)\n"
+          "text": "R5 k=4: no-overlap floor 499k tokens/s, measured 299k (1.17x of one GPU)\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-10": {
-      "code_fingerprint": "sha256:6373c490101fa9b9c5223ce4488b60d10e94180454e2e3557eb930b3bcde8a77",
+      "code_fingerprint": "sha256:676b5c19e511646d2f96afeba245e080048d8f73fa9c3c056ed4af337b298a09",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=2: 512k tokens/s (59% weak-scaling efficiency)\n"
+          "text": "fast config, k=2: 516k tokens/s (59% weak-scaling efficiency)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=4: 980k tokens/s (56% weak-scaling efficiency)\n"
+          "text": "fast config, k=4: 981k tokens/s (56% weak-scaling efficiency)\n"
         }
       ]
     },
     "fast-transformer-the-waterfall": {
-      "code_fingerprint": "sha256:0bbc8d9c129e341fbfa36ac1e450a08d013c2aed0e7af3e9157313e4cdb9714a",
+      "code_fingerprint": "sha256:c6d78f53c60ed23e9523469cbfa94ed3ca4afcb9f7a305591dbcbb6c2a2676e7",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cumulative, R1 -> R3: 1.70x (and R0 -> R3: 32x)\n"
+          "text": "cumulative, R1 -> R3: 1.71x (and R0 -> R3: 32x)\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
-          "bytes": 23965,
-          "sha256": "sha256:9fa3c943901fee42d588f133c385bb6e203febdff1e0c5ecef5696f351b4b541"
+          "bytes": 23702,
+          "sha256": "sha256:dcbadeb23f556de6caf6f90ff3b04342602f3c326d98ff577794f766eb5ca943"
         }
       ]
     },
     "fast-transformer-the-waterfall-1": {
-      "code_fingerprint": "sha256:6520eb09bf17c1e92b13ba581fd6cbe808b57313878411510d9619b0141e1b0a",
+      "code_fingerprint": "sha256:925bdf0d4da11ed4c5ca3ebb31f36562919f6c098b8a5ca513af637df9cdbf83",
       "kind": "text",
       "outputs": [
         {

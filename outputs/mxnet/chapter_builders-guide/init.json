@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "range [-0.0700, 0.0700], predicted bound 0.0700\nstd 0.0403, predicted 0.0404\nbias all zero: True\n"
+          "text": "range [-0.0700, 0.0700], predicted bound 0.0700\nstd 0.0405, predicted 0.0404\nbias all zero: True\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-0.00891372, -0.00400125,  0.00166264,  0.00713233]), array(0.))"
+          "text": "(array([-5.3609875e-03,  1.1589489e-02,  2.1191216e-05,  1.1758380e-02]),\n array(0.))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-0.69740146, -0.70651615,  0.22857523,  0.17208767]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+          "text": "(array([ 0.4821511 , -0.03323567, -0.69498956, -0.5297704 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.99      1.43     0.997\n  8      17.5      1.56     0.999\n 32   5.8e+04      1.69         1\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.03       1.5      1.01\n  8      14.7      1.69      1.01\n 32  6.45e+04      1.63      1.01\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37653,
-          "sha256": "sha256:343f5da71cdb5eb5d06fad0ed87b9d8246a8c4d73ea9d0bbc80ae081622c7851"
+          "bytes": 37522,
+          "sha256": "sha256:b2fd9cf79c49688c5e058050f7f5502bb289625c2df6acb1259fba53c19401b4"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1006\n"
+          "text": "normal:    std 0.0200, max weight 0.0982\n"
         },
         {
           "type": "stream",
@@ -94,7 +94,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-6.2641377, -0.       , -0.       , -0.       ],\n       [ 0.       ,  0.       , -0.       ,  9.345652 ]])"
+          "text": "array([[-7.602658 ,  9.152859 , -0.       , -8.024243 ],\n       [ 6.7942104, -0.       ,  0.       , -5.563192 ]])"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([42.,  1.,  1.,  1.])"
+          "text": "array([42.       , 10.152859 ,  1.       , -7.0242434])"
         }
       ]
     }

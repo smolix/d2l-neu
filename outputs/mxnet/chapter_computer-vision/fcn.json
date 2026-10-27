@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a9f2efd713dc8894445531e3f6d918fdee8b888b7b96955dcdd0727beae95c41",
+    "d2l_lib_fingerprint": "sha256:1dace5843e01e1a91777169b8675dcd3a42a8efc5273b2fded15097ebbd2f31b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
-          "bytes": 86064,
-          "sha256": "sha256:ccd164862c71ce772be1c76a4c6d0719a2daf3449af6cc6c58eeafad978b2924"
+          "bytes": 85889,
+          "sha256": "sha256:cb911bbff8e103883ffb2e0091545913bd2108c07874886ea697b3d27bbc6c95"
         }
       ]
     },
@@ -98,43 +98,43 @@
       ]
     },
     "fcn-training": {
-      "code_fingerprint": "sha256:f48eccf24b29e99a9a8ccf52b0c7aa4b3d6ade459797e368a57bc392acc2c476",
+      "code_fingerprint": "sha256:7d41c7a391d4e39fa46cfd9f729e3cc33f2edfb96812e51e9ef2f2b43a93ea39",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.381, train acc 0.879, test acc 0.846\n63.9 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.359, train acc 0.885, test acc 0.843\n174.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25062,
-          "sha256": "sha256:0d70ed6835287916c4f5e6740865a8af65427b40b6a4fdcafb636fb2212a2175"
+          "bytes": 25009,
+          "sha256": "sha256:6f1ed051c142f6c4a5d9389b4350d1732c59123d04511b45cc028867335a55c9"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:7be67260ab38e4a863008b518bd9b16b7abc49ccbb3768caa16eca3677ec0abf",
+      "code_fingerprint": "sha256:f27298238cbea6ebfde9f26685b1f716eb4770bb1b6808b5a602d2109bdc4a4a",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:37dfc5c4690ca78651bd80b0ff7bce1a989fc61aaf43f4d549fc1bca3c64cd35",
+      "code_fingerprint": "sha256:ae960ee774530eb85e03254c59d6a157297a84f4ffa02b8098c78e5f3f6b01c9",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:493660221e5345cd99f1c6accff00df074673b2da4e54ab59fa250efe7fc8120",
+      "code_fingerprint": "sha256:6dd2ebdf5f04de5a6bc4fc2c21a09881119b3071bab6df3ab238126759a2e39f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 155569,
-          "sha256": "sha256:c63baed5ce76f08d204e4ed65c9299fafa3eb87cd90861b106c846dbcd5a4645"
+          "bytes": 156782,
+          "sha256": "sha256:a9a53da508cfec4181bd3d5c2ad55ba7dc9b8e86886272c08e31829d8eddbcee"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
+    "d2l_lib_fingerprint": "sha256:3f25a627a9af00e3335a080df231f90a8411a724f6f7bca74c9f099a059bdac4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  0.  0.  0.  0. 10.  0.  0.]\n [16.  0.  0.  0. 24.  0.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  2.  4.  6.  0. 10. 12. 14.]\n [16. 18. 20. 22.  0. 26. 28.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 0.999, variance 0.251\n"
+          "text": "mean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35721,
-          "sha256": "sha256:82438cb1aff19b0e390e324f977661ba037fc783584d371437ba48adfe4c887c"
+          "bytes": 35253,
+          "sha256": "sha256:5c594c4cca621fcaf9204f680efbb09ee365b58db7612ad85fd889e14aa51bb4"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35724,
-          "sha256": "sha256:5ee0ae9d6d71ab2298aba3c55c7baedebfd5384e733f29dfeee21d791cce58eb"
+          "bytes": 37056,
+          "sha256": "sha256:1bcdfb118cd01958c038c5e1ce8c5ea8364f2822563519279d9a7fcb1e3c9c9e"
         }
       ]
     },
@@ -78,29 +78,29 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 34988,
-          "sha256": "sha256:1cd85254f47fe9c386140928abe0fbf2a817b9d0b14dac7d6ce6a246a9d31359"
+          "bytes": 35712,
+          "sha256": "sha256:121ba1cc8998259ab0e9743792acb9da791cefb2fd80f59fb37ff68790d8258b"
         }
       ]
     },
     "dropout-robustness-to-missing-units-1": {
-      "code_fingerprint": "sha256:eadb3c9e529a28aff0aa4efa13057ebc870cf65e1f094fcebe86ed0f0e2991c6",
+      "code_fingerprint": "sha256:a30f5014744263a9e793513aaf49093da040ba9de1aa3cbeb26f99cd338a58c5",
       "kind": "text",
       "outputs": []
     },
     "dropout-robustness-to-missing-units-2": {
-      "code_fingerprint": "sha256:a7efa4b3026e7a3699ed32a75dd58b0ac32452354f8e9fb4910f02b383588a49",
+      "code_fingerprint": "sha256:89cab9d6e3fa9e2f695ff20b8d5bfc50917bc21c96b1a9adf118cdb38b267a24",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.872, with masks 0.858\n"
+          "text": "trained with dropout: validation accuracy 0.872, with masks 0.857\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.872, with masks 0.767\n"
+          "text": "trained without dropout: validation accuracy 0.868, with masks 0.775\n"
         }
       ]
     }

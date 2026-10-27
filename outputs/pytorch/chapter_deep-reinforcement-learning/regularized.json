@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b6d40e5540d1c4e64f2686cd498cd6979cbcc60057ef5d6ab36b2cccee226b4a",
+    "d2l_lib_fingerprint": "sha256:cefa559aea85d3336ebe98afa453e55bf80a27ecab0607cf939b57fcc66ee305",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,8 +53,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
-          "bytes": 24458,
-          "sha256": "sha256:898d98888b964e3f1f763e1cd1d78986301df377ac1a1b303a784f03c7f99f19"
+          "bytes": 24568,
+          "sha256": "sha256:83c59659f1b5ca2ad88edfb8a277caa92f98ed0c6d2597b33125fa04290319e9"
         }
       ]
     },
@@ -65,7 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
         }
       ]
     },
@@ -115,8 +120,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
-          "bytes": 23413,
-          "sha256": "sha256:aa7b46944ec640472af479486e6f2dc5592ca7d520f7a2b7994a4f0301188208"
+          "bytes": 23371,
+          "sha256": "sha256:8a6fc5729e90a05662a2cf89bc448abbc563f81e16b6a309e699c33359eb1c5e"
         }
       ]
     }

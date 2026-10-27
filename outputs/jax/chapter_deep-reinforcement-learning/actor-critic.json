@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:a56ec6e56338d2fdde9eeec206d8827a4149f3b10510cf0295eca63cbd5a08b3",
+    "d2l_lib_fingerprint": "sha256:78eece85e1cdf0ba2803a35cb9fed00e8a39e78ed455a91b815dfcc9f5854d90",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
-          "bytes": 44289,
-          "sha256": "sha256:714e57a3eafaf3bec67a96b3baaa7e065930e595c7e701ee12ab865904007c5c"
+          "bytes": 44280,
+          "sha256": "sha256:4ff0f9320e8cdcae06ccadd58de7827c5eab828ebf2b519b0c56554f98434fab"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [9, 4, 5]\n        actor-critic: longest stretch of perfect batches, per seed: [28, 21, 3]\n"
+          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [12, 10, 5]\n        actor-critic: longest stretch of perfect batches, per seed: [28, 21, 3]\n"
         }
       ]
     },
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
-          "bytes": 27707,
-          "sha256": "sha256:46222ccd8454363c2fa00d0b5a9cd0974418576077d88142c419e6e2313095d4"
+          "bytes": 27660,
+          "sha256": "sha256:a72952a21472db0dc18cabdc8783da8a5f460e1e80eaffb526f0449f41d2d291"
         }
       ]
     },
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
-          "bytes": 29828,
-          "sha256": "sha256:3d74c65e0cdf2676a5f46b2cf245d65ce67e58b3443323cfc7beec9d5f1c8ca6"
+          "bytes": 29738,
+          "sha256": "sha256:b1ec81d4c91c10b8a7ecf56ba9108777e94c98128fa4f0de5101cdd77c854f03"
         }
       ]
     },
@@ -158,8 +158,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
-          "bytes": 46192,
-          "sha256": "sha256:098c83179392fcd9d7f456599a4610f30d965b5729d0a4a720af383253542275"
+          "bytes": 46118,
+          "sha256": "sha256:8888ecb9d0f86dadc2e9772291a955918559df5c853c247ce2b3c5b81878f47b"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:521c314d2dd8d57acf6f9bcaa7bebade0f4726788b67720ef68db8bc8b2c43c8",
+    "d2l_lib_fingerprint": "sha256:b727df17d363bfd780bb65e67c72e5659d4e72e2cf935f79db1c577ada45df7e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,12 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rope: max |full - cached| = 8.05e-07\n"
+          "text": "rope: max |full - cached| = 9.83e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned: max |full - cached| = 5.66e-07\n"
+          "text": "learned: max |full - cached| = 9.24e-07\n"
         }
       ]
     },
@@ -51,29 +51,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  512: naive  19.53 ms/token, cached 17.53 ms/token\n"
+          "text": "n=  512: naive  13.01 ms/token, cached 15.42 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 1024: naive  24.75 ms/token, cached 13.25 ms/token\n"
+          "text": "n= 1024: naive  16.38 ms/token, cached 11.07 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 2048: naive  32.47 ms/token, cached 12.75 ms/token\n"
+          "text": "n= 2048: naive  35.25 ms/token, cached 19.74 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 4096: naive  83.07 ms/token, cached 11.83 ms/token\n"
+          "text": "n= 4096: naive  79.27 ms/token, cached 11.14 ms/token\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-same-logits-measured-2-1.svg",
-          "bytes": 26163,
-          "sha256": "sha256:51eabf9c6e874cc7b5af306372da75d0da784b0d1f7c27cc3ed0a34e451b5c8f"
+          "bytes": 22142,
+          "sha256": "sha256:324b37fc5d280e924ba041dcbf3372f5bee15264de138049c1902e906d9c3a3e"
         }
       ]
     },
@@ -84,12 +84,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens after a 3584-token prompt: 29.3s =   8.7 tokens/s\n"
+          "text": "naive : 256 tokens after a 3584-token prompt: 25.7s =  10.0 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens after a 3584-token prompt: 13.3s =  19.2 tokens/s\n"
+          "text": "cached: 256 tokens after a 3584-token prompt: 14.2s =  18.0 tokens/s\n"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 2048 tokens in   33 ms =  61431 tokens/s\ndecode:  one token in  13.84 ms =     72 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
+          "text": "prefill: 2048 tokens in   36 ms =  56724 tokens/s\ndecode:  one token in  20.97 ms =     48 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
         }
       ]
     },
@@ -148,12 +148,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=8: best validation loss 1.52, cache 12.0 KiB per token\n"
+          "text": "H_kv=8: best validation loss 1.54, cache 12.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=4: best validation loss 1.53, cache  6.0 KiB per token\n"
+          "text": "H_kv=4: best validation loss 1.54, cache  6.0 KiB per token\n"
         },
         {
           "type": "stream",
@@ -163,7 +163,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=1: best validation loss 1.50, cache  1.5 KiB per token\n"
+          "text": "H_kv=1: best validation loss 1.52, cache  1.5 KiB per token\n"
         }
       ]
     },

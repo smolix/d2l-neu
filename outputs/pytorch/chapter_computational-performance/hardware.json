@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "d2l_lib_fingerprint": "sha256:a72da0ee337474339fcdec521e5df0714c3595fa56b36c1ba431a86a4bdeffb6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 14.9 GB/s\npinned: 26.0 GB/s\n"
+          "text": "pageable: 14.4 GB/s\npinned: 25.2 GB/s\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2546a0772403e96760180bd9aa380743d7716d92c0f3981689fb2376305bd659",
+    "d2l_lib_fingerprint": "sha256:fb465d2c07ec65de16e78f1e029aafc5aa96c9a3ca69fa3f5ab983ec152b63dd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,32 +19,32 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:b9ee1e2d3df39052fc7d55c15a5a967f79a9b185b7efc1a20bc99735debf67a4",
+      "code_fingerprint": "sha256:e73b887947deea8870c12c8771a4840685443af211d444c90566d7eff301d6a1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:37c19dfa68646e20c4c49f819ab3877e94d9d33a4436d8d3fbe2cb4dcbd360e1",
+      "code_fingerprint": "sha256:b9cba09e2e9cba74df33302fcbf30ee86676fb43829f7433020c1fd4ce905e73",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:6945b9b9d9ca10e322d719c5d849831becedb6548527d7dea19436f1cc7f6eb1",
+      "code_fingerprint": "sha256:7fb9291246006e9586ebc655d4c7a630a98276fea46f9e520238a6ccaa989474",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:9f0687f8d92a658da14ab5e6b879f424e0454fa1f86c90e9c740fb4ee0e23bb0",
+      "code_fingerprint": "sha256:6a7488987bfa2f4cba9befa0f28b305fd2fdfeeac6171aea9fe97172d4722a11",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:ea03170c3c17f756153d2a527d514ed4d8e8f07376da5104f6f3e8ab4e72e734",
+      "code_fingerprint": "sha256:7b638162362c94b85aef0acbadef014d3d96d6bc3c631d5d723eaf1c9d44e0b8",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:63f7bee91c4d6bde7d6e9e1ea0231807e65ed2776701940b3964079db96b3117",
+      "code_fingerprint": "sha256:8b0bf638cef714cc912ed846b524de05b5adf56bfff3475eee0d7fe5a31cf065",
       "kind": "text",
       "outputs": []
     }

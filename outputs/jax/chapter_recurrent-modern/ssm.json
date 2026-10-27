@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:570cd9f4318d84c0af56afc5a38b1d18fb3918a19deca00f77ccfe0c042daa42",
+    "d2l_lib_fingerprint": "sha256:9af7393b0a9b7b6716f4909fb2f00fdd6ffc3928f988fe933b46c8dec58ea713",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 32317,
-          "sha256": "sha256:f8f0ee394336d4b91f8f0f42d20ca946e284299cde0f8edd6d292a312db6aff9"
+          "bytes": 33000,
+          "sha256": "sha256:7fd0a89fb6ae230850de355645b230c519de669c606c86be7364abd3287f5747"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.74\n"
+          "text": "perplexity with the state reset: 10.58\n"
         },
         {
           "type": "stream",
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.37\n"
+          "text": "S4D perplexity: 3.35\n"
         }
       ]
     }

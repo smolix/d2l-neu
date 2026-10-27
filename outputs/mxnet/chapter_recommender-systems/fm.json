@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2669eb458c2e664d460778a7cdac77382ba1d91692fe66f4903ba0c146d9ce52",
+    "d2l_lib_fingerprint": "sha256:4d311ea0e638a87fa89225c008e16ce7909b57ae1354aa66a53b7ee733320a22",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,20 +24,20 @@
       "outputs": []
     },
     "fm-train-the-model": {
-      "code_fingerprint": "sha256:a69aab0ef353e46c2f4ab5a10209b6ad2cdf847f996da0adcbac5dcec9baccb1",
+      "code_fingerprint": "sha256:a0dd54fc7550c24db8cf9cf4b73ddf57f5fd4ca00b07f2a6668dea502fc0fcb9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.003, train acc 1.000, test acc 0.927\n92167.2 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.003, train acc 1.000, test acc 0.925\n154161.9 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 29766,
-          "sha256": "sha256:d9c8f017989c6a58da49b49f8885fec9d60f3c863c3c0a02f4972b0bb394e06d"
+          "bytes": 29867,
+          "sha256": "sha256:bbce7e26b6e4ed73c45981858b302f0186e9803536d59a5051188d0e5d7f6d44"
         }
       ]
     }

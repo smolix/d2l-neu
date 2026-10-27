@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8fac576fefd25e0df6632ae98935b905c054c19284a3e1b1bb7dc360142109c3",
+    "d2l_lib_fingerprint": "sha256:a5a078ba4eb8c2dbfb427aa747b9603d5880fe3ad1fd8adb49b8381b235c04fb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 379571,
-          "sha256": "sha256:9e439c37d458dfba499bf2a9d71f52a6468fdd330431a3770069353f5f754cc1"
+          "bytes": 437312,
+          "sha256": "sha256:b55f79ea9e7cf36c3e88f2106f4913b2270fa0425ccc8b29a55af2c60896cfaa"
         }
       ]
     }

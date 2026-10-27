@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4fa9930146eb92f7e2374c1085ae24e7640e3ea1805d2db5cd0da1be8672f89a",
+    "d2l_lib_fingerprint": "sha256:691766c1ae95b47d8e241092965aef3c375688a301910ae05a676ffa03e42efe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.7179, 0.6649)\nlabel: 3.3689, noise: -0.0062\n"
+          "text": "features: (1.5536, -0.0816)\nlabel: 7.5742, noise: -0.0103\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (-4.7e-04, -5.3e-04)\nerror in b: -3.2e-04\nstandard error: 3.2e-04\n"
+          "text": "error in w: (6.8e-04, -6.3e-04)\nerror in b: 2.5e-04\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -94,12 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "second pass: 32 minibatches\na new pass starts with labels [0.97 6.48 4.63]\na new pass starts with labels [-1.39  1.01  4.32]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 6.8  -1.48  8.22]\na new pass starts with labels [ 1.55  4.04 -0.98]\n"
         }
       ]
     },

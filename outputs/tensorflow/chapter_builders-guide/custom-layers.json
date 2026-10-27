@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=2.3283064365386963e-09>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.0>"
         }
       ]
     },
@@ -131,6 +131,16 @@
         {
           "type": "execute_result",
           "text": "<tf.Tensor: shape=(3,), dtype=float32, numpy=array([1., 2., 3.], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-4": {
+      "code_fingerprint": "sha256:c0483d473884f946fc9f58cc75b438f25911d767f2af03f98f41a8b09da8c747",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, True)"
         }
       ]
     }

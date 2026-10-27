@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:dcb62ada7485f7a4b7c730446493d04a3f9b82eecbcb6aa3adf8493810f3eece",
+    "d2l_lib_fingerprint": "sha256:e6cf305aceeaa21f6a01c429058cae08233b31957c47663ffe79d154d40c59f9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
-          "bytes": 33996,
-          "sha256": "sha256:fef9f8cbad55fc896d60917ea44c2c47c1df73f031bb20569531bd458d4205c6"
+          "bytes": 31816,
+          "sha256": "sha256:fda2a75813efb53991c761340ec36d934b3e28b54ab5dfb05466ad213f7d287e"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
-          "bytes": 45605,
-          "sha256": "sha256:7233295965553b6fbeb98e40184fb38dad34a57d31c1e9934b3ad83441cb02e7"
+          "bytes": 43128,
+          "sha256": "sha256:140fb4d6f1ad2bb935a0f7d7f84e251e7974485601821e05c3c9c17809bb325e"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[115, 278, 279, 292, 330, 292, 260, 964, 111, 498],\n        [409, 519, 668, 260, 421, 387, 284,  10, 808, 458]]) \nY: tensor([[278, 279, 292, 330, 292, 260, 964, 111, 498, 282],\n        [519, 668, 260, 421, 387, 284,  10, 808, 458, 260]])\nX[0]: 'son besides the Doct'\nY[0]: 'on besides the Doctor'\n"
+          "text": "X: tensor([[657,  44, 266, 548, 275, 421, 281, 567, 100, 317],\n        [304, 261, 268, 719,  63,  10,  79, 114, 442, 404]]) \nY: tensor([[ 44, 266, 548, 275, 421, 281, 567, 100, 317, 310],\n        [261, 268, 719,  63,  10,  79, 114, 442, 404, 258]])\nX[0]: ' man, making spasmodic'\nY[0]: ', making spasmodic e'\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -134,18 +134,29 @@
         }
       ]
     },
+    "parameters-state-memory-counting-without-allocating-1": {
+      "code_fingerprint": "sha256:0d63734191743760c9f9197cc6d352f18f2d6f69533714b6aea87db16435f877",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[] 525,336,576 parameters, 2.1 GB in fp32\n"
+        }
+      ]
+    },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:13a862873cacca0a4901dd512180be79d9bb7d0fef43f397815dd8c84ac8e319",
+      "code_fingerprint": "sha256:dfdb567717c9ab1fd1ac7150a4e6cf773dba1d1286b9f5ef399656d5b60b4cca",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('toy_lm/embedding/embeddings', (100, 16)),\n ('toy_lm/dense_7/kernel', (16, 16)),\n ('toy_lm/dense_7/bias', (16,))]"
+          "text": "[('toy_lm/embedding/embeddings', (100, 16)),\n ('toy_lm/dense_8/kernel', (16, 16)),\n ('toy_lm/dense_8/bias', (16,))]"
         }
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:d5c29dd420a76417239e0ff1e99a1cdb4ba17b69201fce0aef10504fa027f3e1",
+      "code_fingerprint": "sha256:6e4580bafb15b58f5aa33fb324d95eb5c37e08fea64fcb02562423908fbd368c",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +166,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:cf6c55c85454918b7949ef7f593bb20c643626f32e519a018d78d914936791d6",
+      "code_fingerprint": "sha256:14bced90a3b3ba7a93098bf949c4a46b755cd758d0f43b8b1ca2b960010ab394",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +176,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:d4bcdaffef18053336565aeb18df8c578fc5e8d3a615c0e75cba4777bcaf6fa0",
+      "code_fingerprint": "sha256:eda0d6e2e3a5932b900d831b46771555571c87c976e74781552baff0127481c6",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +186,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:eb48a5f5919327494fb30faef991c212fb142556cf1fbb165e56bfad1a8f3c67",
+      "code_fingerprint": "sha256:b063fa933c2b80b6b2556885b0d9deb73357af2d52f2c170bf270889ab91bd98",
       "kind": "text",
       "outputs": [
         {
@@ -185,7 +196,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-3": {
-      "code_fingerprint": "sha256:5e635dab6f8ba51722bc9af17f9f8622577344b03013b01280593948103647f2",
+      "code_fingerprint": "sha256:3d609ed2d7c86ce971072e2df3c430e444007a52575b6fdfa721dabc10a047dc",
       "kind": "text",
       "outputs": [
         {
@@ -195,7 +206,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:ae201dd846bbdd0fec84a32beccbb8a172b354b6d3b81e3c1c607ddbbfe13261",
+      "code_fingerprint": "sha256:b926d4b3e7f2d3c014e569b22da4543eeaa8082ebc28953ad8ff274c8be7dffe",
       "kind": "text",
       "outputs": [
         {
@@ -205,7 +216,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:6c538ccaa370b95c7b36a86f62287dd9e1704d4ee90c74f04c4fd582aa6077f7",
+      "code_fingerprint": "sha256:b973850819ec7d118e56b314ab1d02780872ebd97991899dd0d97354d70dfbce",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f2843e654a0d9bf02ae11b968fe888dbafc946264d7d147bab5c6ac2fc876194",
+    "d2l_lib_fingerprint": "sha256:a5f8dc742b1791aec5bb385624b03b5bb97b43aed2fb373df54544c00443509d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
-          "bytes": 23523,
-          "sha256": "sha256:c75dfcb9258c52ae053f2aeeb89e68491af4ce121ceb1874923b0f0af547aa82"
+          "bytes": 25179,
+          "sha256": "sha256:7256a0790b82537983d4ae9e6624933b0d9801383f204661f7fe55bf82f646a1"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
-          "bytes": 35578,
-          "sha256": "sha256:d97a19a7d26d18a70b79ab95a50f7362802512f8730680e36e98c723cce53e2b"
+          "bytes": 35485,
+          "sha256": "sha256:08006e44dae6f1d2e7ae844579a4f830c99e59be34fc99c47df39571daf0f21a"
         }
       ]
     },
@@ -140,8 +140,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
-          "bytes": 30052,
-          "sha256": "sha256:d6e278a1d2d3fbd44433c69fe8fa3342c8c66c25150f1173c9a773f3f4765b60"
+          "bytes": 29941,
+          "sha256": "sha256:836f18fec0c3d0fe36078445275a3a25400418f5a5ec9c0c16ed1c61588dee59"
         }
       ]
     },
@@ -179,8 +179,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
-          "bytes": 35946,
-          "sha256": "sha256:ec20d491f5b18dd2b9b7fc0e19707615bac881325579d0c8ac7f8396434e9469"
+          "bytes": 35831,
+          "sha256": "sha256:f9f45bebaf593409212837cc63351dc3644cb9406e374db0fb5ad79f0e46a4e3"
         }
       ]
     }

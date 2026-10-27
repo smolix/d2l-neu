@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6656ee3e90aac52d6bfc602453552aa8707b2932e181af36f840261f2aef8bbe",
+    "d2l_lib_fingerprint": "sha256:476469832716e11c849f207064a7cf695bdf85b3761a0b30b5af2d1147462467",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
-          "bytes": 35079,
-          "sha256": "sha256:fb7852dafa5c0467c192a3f857ed7f19464cd09f02cc6478d6be86f6048b666d"
+          "bytes": 35140,
+          "sha256": "sha256:498d44032f4d2d167cad89d2b32530b143593b4b5e0f5e846c408bdc518af456"
         }
       ]
     },
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
-          "bytes": 35520,
-          "sha256": "sha256:3558b87c9a96acc394ffc01f74612dd135da7bd477bfbced4fa94157332f9a25"
+          "bytes": 35440,
+          "sha256": "sha256:6d51edbe19fc22351d5cd63faefa5bcf37f24eff0e2096c8d6f584243dba6777"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
-          "bytes": 52051,
-          "sha256": "sha256:1b3b4db6a575dd2e0ee3b57c37059f2ec74a9172e604ecda9c07711f0e04fc52"
+          "bytes": 52000,
+          "sha256": "sha256:5175c33462cf7cfa7a4298f6b0c262a662ee650e5f67677876e75848a53747cc"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
-          "bytes": 30183,
-          "sha256": "sha256:79a3fbb84231f03bb0224e26981a4331ea6c645d3d305426f37bf70c73d573ab"
+          "bytes": 30261,
+          "sha256": "sha256:57c5e24d2fb721021166d8e53a360743dc053aaa8fbe4afb2321e1754a779ca3"
         }
       ]
     },

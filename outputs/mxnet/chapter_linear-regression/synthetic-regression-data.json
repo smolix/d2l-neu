@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:7bd9345bc35e81a6544e27b7662bd19ff3228accd7bb49e4a4b2959d8b8ec485",
+    "d2l_lib_fingerprint": "sha256:9cac9ed12b2bed7236381cecefe782e3f9049db97b91af3426fa509a38c75322",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (-0.1953, -2.2027)\nlabel: 11.3007, noise: 0.0021\n"
+          "text": "features: (1.1638, 1.1484)\nlabel: 2.6114, noise: -0.0116\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (6.3e-05, -1.7e-04)\nerror in b: 2.4e-04\nstandard error: 3.2e-04\n"
+          "text": "error in w: (4.2e-04, 6.5e-04)\nerror in b: 1.7e-05\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [13.2  11.79  5.84]\na new pass starts with labels [ 1.81  9.33 13.24]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [7.74 7.17 3.53]\na new pass starts with labels [ 3.31 14.91 -1.23]\n"
         }
       ]
     },

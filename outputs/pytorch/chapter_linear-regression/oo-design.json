@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f2b36a119bfced02da44d657b3e82c63fa3d91501053953ce9222a4931e6d6a2",
+    "d2l_lib_fingerprint": "sha256:6da5b70ed53b8f8f10eca8c427ba57b6b9519a3648cda026bd34d958dfca54cb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,22 +71,22 @@
       "outputs": []
     },
     "oo-design-training-1": {
-      "code_fingerprint": "sha256:1e16ddd800c0dd4babf5b11524beee3430dafe77cb628370272d5f5e20e6926d",
+      "code_fingerprint": "sha256:de2e564acc4e07576237c4babad6b07120d286a587e31bb2b5e058892b2f6cfe",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:1b071824570c343ed07df306c0edf247c7bebfbb5b297b18e53606ccccccc9e0",
+      "code_fingerprint": "sha256:61efdbf67312ba16867dcad3234575858ee1704624972cb104d773d292dd85d3",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-2": {
-      "code_fingerprint": "sha256:2acd8185283ffa3326e64bad7d948588c8bca264eee46d374f5ae092d0de4527",
+      "code_fingerprint": "sha256:4b33c9ae0648ef99d95a6afbd8c41767bb2ac841b345e4a78f32b45a6e191eb3",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-3": {
-      "code_fingerprint": "sha256:be59d9f8fff0a43b4092e7f285bac4fe4242f99afef4b0ce7d8a8fad3bd56c31",
+      "code_fingerprint": "sha256:4bcb96f77efe963018a709c5a16dafb286c8daf69631848695ec06b332ad167f",
       "kind": "text",
       "outputs": []
     }

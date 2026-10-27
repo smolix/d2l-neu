@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:10d6021027c71c5726c3e24c56027c95cbf92a1a555b1fd68337f6b8d9cf6121",
+    "d2l_lib_fingerprint": "sha256:1bdf65104d75ba25302350225cba6100a374c1f4705035771dfa272c0c94b92d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 6.0e-08\n"
+          "text": "max difference: 8.9e-08\n"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  0.50  1.00  1.00  0.12  0.12\n"
+          "text": "RNN               1.00  0.50  1.00  0.51  0.12  0.12\n"
         },
         {
           "type": "stream",

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f3761f4a4413c1b743a1b9d9cf7f640ea4474d9380179e8156112c9d6aa313cc",
+    "d2l_lib_fingerprint": "sha256:6e2b8faa9194c95821cf014f201ef9b1ba6a705546050b487da1405e231fa151",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 28568,
-          "sha256": "sha256:bba7f6acf200f3dcdee09a83cff0bcead735801e10bcec3aa7890a2800abbfdd"
+          "bytes": 28883,
+          "sha256": "sha256:6bf555b03e38c5dea117ed1441e907366968a98504344441da2309a10257736a"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0186, norm of w 0.138\n"
+          "text": "validation loss 0.0142, norm of w 0.121\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 29500,
-          "sha256": "sha256:6e4bf61c76d0f319d6dd331213d11f533876edb98acefb3c1fa4622993e53f48"
+          "bytes": 28497,
+          "sha256": "sha256:4d182a9a6627ff5a1c26460c21cf6e9bb01a1ec3635258e5795de696c16dc5af"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0100, norm of w 0.034\n"
+          "text": "validation loss 0.0095, norm of w 0.039\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "least squares (  7.86,  -5.87): test 0.010, disagreeing 0.470\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\nleast squares ( -2.67,   4.65): test 0.010, disagreeing 0.142\n        ridge (  0.99,   0.99): test 0.011, disagreeing 0.010\neigenvalues of X^T X / n: 6.1e-07, 1.8e+00\n"
+          "text": "least squares ( 13.26, -11.24): test 0.011, disagreeing 1.518\n        ridge (  1.00,   1.00): test 0.011, disagreeing 0.011\nleast squares ( 13.60, -11.60): test 0.011, disagreeing 1.607\n        ridge (  0.99,   0.99): test 0.011, disagreeing 0.011\neigenvalues of X^T X / n: 4.1e-07, 1.6e+00\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the other 180 eigenvalues are at most 2e-06\nmu from 5.2 to 16.1, factors from 0.63 to 0.84, df = 15.1\n"
+          "text": "the other 180 eigenvalues are at most 2e-06\nmu from 4.7 to 16.1, factors from 0.61 to 0.84, df = 15.0\n"
         }
       ]
     },
@@ -115,36 +115,36 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0: determined part 0.045, rest 0.131\nlambda = 3: determined part 0.034, rest 0.003\n"
+          "text": "lambda = 0: determined part 0.051, rest 0.109\nlambda = 3: determined part 0.039, rest 0.003\n"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:2e2b8e6a9fe907e15f24c07e8edab8db48d1a372b92e8ce092c5e5fb9ec4d417",
+      "code_fingerprint": "sha256:5ab3124872011c8ae802e757e9bfca8e95214ce8411fda626621d061520caebf",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:1b51133ee37c18aec9f777f7556bfb6add32d550ce09ca8ffba8940505f4ca87",
+      "code_fingerprint": "sha256:4242362b28ee5d6045c9dc38caa5b1df9fceeac861f19c1ec2dab3ade18c4513",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 29778,
-          "sha256": "sha256:78d37b9b1293869dd6818ef669e25d359a9ebf6ddad78175fd7a86bd745ae686"
+          "bytes": 29286,
+          "sha256": "sha256:a5feaa6efeba13792e29b138b44d2dd3ad433a840e86b7df8663684b3cdbe78b"
         }
       ]
     },
     "weight-decay-concise-implementation-3": {
-      "code_fingerprint": "sha256:bf83f0638f2fc7e378941923872858c5c3d553aea0638b10148716b6d7c8e991",
+      "code_fingerprint": "sha256:7e0b812e0d40a935bf8044914f79a475b4993b9e403b415fc3259b819df9f142",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0201, norm of w 0.034\n"
+          "text": "validation loss 0.0190, norm of w 0.038\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1db41ab2e8a778aada409faccfce65f1fb6e6de31c51c9e35d2e68bdd466314d",
+    "d2l_lib_fingerprint": "sha256:7963961b3ceb6e468e2f9b2507a90cd720800084a2afcb46962fdf52ef79fefa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 30814,
-          "sha256": "sha256:e12d7a903df66af5bcd5f7736b44af39874b7b65d373e99a23de63494ad40317"
+          "bytes": 30477,
+          "sha256": "sha256:e742c23506744b42a2e3a1e9c6078528c5e568bcdb846662296f0b016f412c62"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 26566,
-          "sha256": "sha256:21e12604b76e9684e32b7bc77b51d87add44e8cd696d99906b6905965777bf9a"
+          "bytes": 28643,
+          "sha256": "sha256:960237bacd96d9b0d4f98c6613a1ff6c7ec0a822473c4684e22f5977e99926ab"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 26431,
-          "sha256": "sha256:c2a616d4727992db7a56e6911058c85c243228fcf36109a6f35563568a64ff67"
+          "bytes": 26277,
+          "sha256": "sha256:91988da10647fc2078291a9a969822eefaa1ddb607ff51e0c9c0507543890519"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 30896,
-          "sha256": "sha256:0c5a0e3e5e154afd0bc426afe27864f53372514a1cb2e7445644f0180b743469"
+          "bytes": 30540,
+          "sha256": "sha256:b1e983f8b3c4de3c8e35ff0d1799f5eab1b401466dfd63358c08ae183ec8273c"
         }
       ]
     }

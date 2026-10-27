@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4e4213c9bbce29cc5781d01c7df60f6ac4ca26919ea9c861491cac377a158ff5",
+    "d2l_lib_fingerprint": "sha256:8b5e0bc8c487e3ec9a465b67c9a5cbd1f5d52a797dfcc45f344d7eed51a23bac",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
-          "bytes": 45692,
-          "sha256": "sha256:486b3d31b2b32bcfc950e0054a600f865d1cd8514957b996d965461c65815be8"
+          "bytes": 46679,
+          "sha256": "sha256:834d4ebdb025c791a5b01b59b312ae21b4de09ad95f0255614f4a2525961be69"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       236.71 ms\ndual               1.02 ms\nchunks of 16       1.11 ms\nchunks of 64       0.95 ms\nchunks of 256      0.79 ms\n"
+          "text": "recurrence       233.94 ms\ndual               1.09 ms\nchunks of 16       1.11 ms\nchunks of 64       0.94 ms\nchunks of 256      0.86 ms\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,12 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Adam reaches f < 1e-8 at k = 344"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n"
+          "text": "Adam reaches f < 1e-8 at k = 344\n"
         }
       ]
     },
@@ -121,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29558,
-          "sha256": "sha256:bb7e17a36015c5e608b4d825a5bb8d3b38f67fe3b85dfde54b53e713f9c953e1"
+          "bytes": 29383,
+          "sha256": "sha256:67ebda174205bd953a8e83b03f824d3e6fdba05f111c2120065d54f078a88f49"
         }
       ]
     }

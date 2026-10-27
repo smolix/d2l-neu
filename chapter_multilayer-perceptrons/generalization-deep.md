@@ -568,7 +568,7 @@ The two kinds of training images are fit at very different speeds. After 20
 epochs the network reproduces the labels of 80% to 90% of the correctly
 labeled images, but those of fewer than one in five of the mislabeled ones.
 Validation accuracy peaks in this first phase, within the first 40 epochs. Then
-the network memorizes the wrong labels, nearly all of them after 100 to 160
+the network memorizes the wrong labels, nearly all of them after about 100 to 160
 epochs, and validation accuracy declines by several points. Memorizing the
 mislabeled examples costs accuracy on new images.
 
@@ -1105,7 +1105,7 @@ The minimum-norm fit is $\frac{4}{5}\mathbf{h} = (0.8, 1.6)$, norm $1.79$.
 
 - After 20 epochs: 80–90% of the clean labels fit, under 20% of the
   wrong ones. Validation accuracy peaks in this phase.
-- Then the wrong labels are memorized, nearly all after 100–160 epochs;
+- Then the wrong labels are memorized, nearly all after about 100–160 epochs;
   validation accuracy drops several points.
 :::
 

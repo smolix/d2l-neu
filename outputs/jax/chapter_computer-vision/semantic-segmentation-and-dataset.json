@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:bf3203d36f7e08c733bcc81b8c33a7b6dc9c836ae257939f760b9e073b67ed1b",
+    "d2l_lib_fingerprint": "sha256:c9b68e7bdb3e510f1bf58d68e8479bda789e21c6b726e6b4fe17ed8ee4139d28",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4-1.png",
-          "bytes": 85851,
-          "sha256": "sha256:1639419ab915ec86a8a9da76de89c98a7be7f6a74bb5b62c8e5b25d97e99f950"
+          "bytes": 85518,
+          "sha256": "sha256:888d9b59cfe2eb7bd177bb96f052b98ec13fb80cfb2397141232eb3cec19f253"
         }
       ]
     },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 76893,
-          "sha256": "sha256:5bc7159f4c8ebfe12b8a32cd9ac41af5fb194dce0fd1a8caeefc6acc46512095"
+          "bytes": 77788,
+          "sha256": "sha256:95b3f79dd3a7d4b011ee9f3b00360a164477d26695990c6c18fcdd09bb6da414"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:df739bccc1dc2d553cee1b5baa2406f4deb26c80118afe4659565f771af3678d",
+    "d2l_lib_fingerprint": "sha256:6d220ad73ba7feabc67a345a80b9ae16e2e9c07c74fbdf93299768357df9b9fc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
-          "bytes": 23523,
-          "sha256": "sha256:4f9f267d7f515856a31c17cb856ae4bf9480840e0d7156f1af7e536f776695b8"
+          "bytes": 25179,
+          "sha256": "sha256:5e4ec68c63dfa3955640cade9fae19148a7aaf9d7f9f37bff4bcec5418cb70f8"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
-          "bytes": 35575,
-          "sha256": "sha256:1e43d3feeec6af76d883df8ace52b8dba48f1b8f76d8a2fc0cc71cf717ed0ad6"
+          "bytes": 35482,
+          "sha256": "sha256:137a62f7b82032b9d2506b263433ed5674974a77b2579f3daabc8062708f5e10"
         }
       ]
     },
@@ -108,7 +108,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n no target network, seed 0: greedy return over 100 episodes 10\n no target network, seed 1: greedy return over 100 episodes 9\n no target network, seed 2: greedy return over 100 episodes 9\n"
+          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n no target network, seed 0: greedy return over 100 episodes 10\n no target network, seed 1: greedy return over 100 episodes 9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " no target network, seed 2: greedy return over 100 episodes 9\n"
         }
       ]
     },
@@ -125,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
-          "bytes": 29535,
-          "sha256": "sha256:2c37c1dc26e1af05d2ee75bc6d5fd38bc92bff7b830b46ad844d9ce6c78b688a"
+          "bytes": 29454,
+          "sha256": "sha256:d096f99257dad847a2d8806e25a879dea371203da45dfb173b00e495006c0bd1"
         }
       ]
     },
@@ -164,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
-          "bytes": 35449,
-          "sha256": "sha256:b1925e57795f3353420780053c37c6943cef33853c28e2c49a1b4787e7400689"
+          "bytes": 35349,
+          "sha256": "sha256:c269e9ce00c6807d04bc9226f2d2ba458737951be5f16a546e386fce5da9b1d1"
         }
       ]
     }

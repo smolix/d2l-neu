@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8f9704341e07ade2d127fd8c56820ca3268ce0bd15fa19a67c07d4289a3bc48b",
+    "d2l_lib_fingerprint": "sha256:a958ac56921f27fafdb5ce866dfe2c5ab219ef4721175791537d4ebf94f7238f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "fine-tuning/fine-tuning-reading-the-dataset-3-1.png",
-          "bytes": 230491,
-          "sha256": "sha256:a5c6b85d4c4745eb1acdcaca56e31252ce7dfb5a4ed2cdba68254a8c96eb71a2"
+          "bytes": 230590,
+          "sha256": "sha256:03a2fa567cf3f549b498513701b5d1785eacc2ae9bcc94c2d11a14caf5aefc2e"
         }
       ]
     },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.166, train acc 0.939, test acc 0.930\n1887.2 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.250, train acc 0.909, test acc 0.916\n1907.9 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25101,
-          "sha256": "sha256:a12247d17d67503538550f7de94cda944605b8339678fb4a6f56c1abc3b799f0"
+          "bytes": 25005,
+          "sha256": "sha256:54b6e365cf33223fec32ec5a69147061fe279a7d87d3172e36de3abf8f1c4749"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.357, train acc 0.842, test acc 0.870\n2087.2 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.359, train acc 0.846, test acc 0.854\n2109.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25065,
-          "sha256": "sha256:94680eba5020c334368d9d318ca529b4a679746463e2337207d261ddba97193d"
+          "bytes": 25016,
+          "sha256": "sha256:7c3fb2ef173f5e32d52c923b807055f7e4240f11315210efcd010dd866a8681c"
         }
       ]
     },

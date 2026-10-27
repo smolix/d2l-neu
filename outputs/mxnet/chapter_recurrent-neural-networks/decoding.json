@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:96428c06f46c4dad8363717e677777719b039ca276dc5035bd11c80004bf2b52",
+    "d2l_lib_fingerprint": "sha256:6f08b51309b2d4ecc8d72cd74775c08b51a920afd58baaa23b3afd1778dfa5ee",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 25629,
-          "sha256": "sha256:312efe519089544e58896f239aec924734e83ebb166423e4538fb91b84801c79"
+          "bytes": 25697,
+          "sha256": "sha256:8e1b926f63b943221a6c6523a40cc3900560169ef72b49e914012e0fb800b0d2"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time travellergs.\\n\\n'In the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In\n    the\\nsunrice.\\n\\n'In the\\ns\"\n\"it seemed to me that the Time Traveller.\\n\\n'In the\\nsunrice.\\n\\n'In\n    the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In the\\n\"\n"
+          "text": "\"the time travellerter. I felt a moment I was in a premiument\\n\\n'In my\n    mind.\\n\\n'In a moment I was inferm, and I had seen. I was nothinged to\"\n\"it seemed to me that the dinner in the mereossibly, and the faintly, and in\n    a moment.\\n\\n'In a moment I was inferm, and I had seen. I was nothinged\n    to\"\n"
         }
       ]
     },
@@ -64,17 +64,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.12, distinct-3 0.39: \"the time travellergs.\\n\\n'In\n    the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In the\\nsunric\"\n"
+          "text": "k=1, score -4.76, distinct-3 0.84: \"the time travellerter. I felt a moment I\n    was in a premiument\\n\\n'In my mind.\\n\\n'In a moment I was inferm, and I\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.72, distinct-3 0.76: \"the time\n    travellergs.\\n\\n'Someticularlyar.\\n\\n'Someticulture.\\n\\n'Then I\\ntowards\n    the war\"\nk=1, score -4.05, distinct-3 0.42: \"it seemed to me that the Time\n    Traveller.\\n\\n'In the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In the\\nsunr\"\n"
+          "text": "k=4, score -3.71, distinct-3 0.84: \"the time travellerter.\\n\\n'As I did not\n    seemate.\\n\\n'There I found a seen.\\n\\n'Somember to me.\\n\\n'I\"\nk=1, score -4.87, distinct-3 0.97: \"it seemed to me that the dinner in the\n    mereossibly, and the faintly, and in a moment.\\n\\n'In a moment I was\n    inferm, and I\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.57, distinct-3 0.76: \"it seemed to me that the Time\n    Traveller.\\n\\n'Someticulture.\\n\\n'Then I\\ntowards the\n    warnature.\\n\\n'Somet\"\n"
+          "text": "k=4, score -3.96, distinct-3 0.89: \"it seemed to me that the dinner-\n    greeness.\\n\\n'As I did not seemate.\\n\\n'There I found a seen.\\n\\n'Somem\"\n"
         }
       ]
     },
@@ -100,77 +100,78 @@
       ]
     },
     "decoding-one-distribution-three-cutoffs-1": {
-      "code_fingerprint": "sha256:06b3b74862c8c391b70c2765e83977fa26413aac0a7801c127b8b192a8523418",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:507e8cb91812ac7eb40291ae83dabd8bffac427080683915ea656b9e755ee588",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x724c8d9ae540>"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 48720,
-          "sha256": "sha256:42281da9b5c765dd8c180cdec3f0b2f391c146476da9aec25d9d0af813ef15be"
+          "bytes": 48776,
+          "sha256": "sha256:ec85fbc494ecb4f601245b0e0ceb03e4a304fdc7991ae2d23e5bc1d3817e3fe5"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:18de6846cb0dd6a827e7c4b4247c09d74fc85c3c588cb6a6c91dbfc9aa0f9093",
+      "code_fingerprint": "sha256:b2f7836e6d6c0436f551e9592edd7fd40c5f47bcbc9536ee69c00a8a2d8d5814",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.18, top-k keeps 20, top-p keeps 74, min-p keeps 17\n'it seemed to me that': top prob 0.36, top-k keeps 20, top-p keeps 110, min-p keeps 7\n"
+          "text": "'the time traveller': top prob 0.16, top-k keeps 20, top-p keeps 117, min-p keeps 23\n'it seemed to me that': top prob 0.15, top-k keeps 20, top-p keeps 182, min-p keeps 24\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:764233d7e08f757d78bdcbefa82789ee7c9cb63a3ff980f8cf464bd64cb4463d",
+      "code_fingerprint": "sha256:6a2e97998d9cf65d73afec6d390a030fa728d5b590a2025df0d2db6c95304f5e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time travellervered\\ninfect to makevincial\\nlittle new\n    my\\ntime.\\nThen I to his\\nsunditions of\\nthese was on the\\ndeak and into\n    my mind.\\n'\n"
+          "text": "T=0.5: \"the time travellerumph of chair. As I remember--of painful.\\n\\n'As I\n    fl overred.\\n\\n'And the cuter. It was so muchorngs.\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time travellernds, but wereapant that a yip saviled humed it was\n    a very cattle�sit regreatity. What is sintaked his expcovered went\n    dimensions as'\n"
+          "text": "T=1.0: \"the time travelleril of the Time I ob tattered possed. One\n    Weena'sering, to gettingoricgicalwain would throacter. Stalance things\n    flight frently f an. The\\nar\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: \"the time traveller rificeelt� cre Tx�ish. certain\\nide witharkould\n    beforept\\nto sle thaness rounduse� thingere mofulve car,' down very7�ell\n    again we stru even inst where that seitsu\"\n"
+          "text": "T=2.0: 'the time travellerrut my f o thereiveready upof let there wasing\n    backred pl of rosel flackpp\\nib minute another off towards sct grew\n    little lct min slow happedch she with up sadd fut b diff'\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:86fe045ffabea005cf26afe55b81675993d9fed2ceea80e12cdc507213ddce49",
+      "code_fingerprint": "sha256:ac49622035ced2c9673a94bd0e76ff011b5b6eaf1c8d027021da1045c4b9b44d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.31): \"the time travellergs.\\n\\n'In\n    the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In the\\nsunrice.\\n\\n'In the\\ns\"\n"
+          "text": " greedy (distinct-3 0.88): \"the time travellerter. I felt a moment I was in\n    a premiument\\n\\n'In my mind.\\n\\n'In a moment I was inferm, and I had\n    seen. I was nothinged to\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time travellernds, but wereapant that a yip\n    saviled humed it was a very cattle�sit regreatity. What is sintaked his\n    expcovered went dimensions as'\n"
+          "text": "  T=1.0 (distinct-3 1.00): \"the time travelleril of the Time I ob tattered\n    possed. One Weena'sering, to gettingoricgicalwain would throacter.\n    Stalance things flight frently f an. The\\nar\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time travellererved, in his old it for a\n    close with the future-tight and the\\nintived. Theteilby, the\n    breal\\nmeapp, and the fam, I was\\nha'\n  top-p (distinct-3 1.00): 'the time traveller, in\\ntheon areect time in\n    studged about\\ncontromsted to the machineloay in bethesed it into the\n    Time Traveller, but in my presention of it, and set to them. But'\n"
+          "text": "  top-k (distinct-3 1.00): 'the time traveller; and I had some exacticeven\n    this illourth, who had been no great hear a great\\nstirapon--ases and it\n    was a lcend\\nfromcnaced in the p'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time travellererient, to carromback to me\n    with the delsing my face, I was doubt spent\\nfaster. That\\nand\n    howeverpassvage from the same\\nAndust'\n"
+          "text": "  top-p (distinct-3 1.00): 'the time travellerto to the\\nsule deses that an\n    agal_ as you can coiling a plekinse, st more--fances, it\\nwas all\n    neithertoelianished, with a childat'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  min-p (distinct-3 1.00): \"the time traveller to be\\nmensen ponys, and\n    more\\ncontinnerensions.\\n\\n'Soper of tall of mere was one hand to my\n    gesture, but, as they were med myself\"\n"
         }
       ]
     }

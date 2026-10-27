@@ -4,17 +4,17 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
     "max_inline_bytes": 0
   },
   "cells": {
     "preface-code-1": {
-      "code_fingerprint": "sha256:b7d1eb156f4fecd25155f907ed5ba8b47228d8fa5e10daea53d038fbd7fa2205",
+      "code_fingerprint": "sha256:8b1495fb249a791aa754ee2917d3714070bfae83eeb36e7c620aeea27cde6b9d",
       "kind": "text",
       "outputs": []
     },
     "preface-code-2": {
-      "code_fingerprint": "sha256:cff984b0cbdcfa4b9ef93ba8721983d7fa974eee9df1d2b13ebd4a94974553b7",
+      "code_fingerprint": "sha256:e4620bd41f0835fde6d83dd2efcaccdbd2efc01e6c6470534e80fa414e6d2c11",
       "kind": "text",
       "outputs": []
     }

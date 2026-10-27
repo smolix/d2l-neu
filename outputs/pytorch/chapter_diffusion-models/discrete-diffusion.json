@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:86209c8814f0b665540d43a95e966dd01816b95f87a1deaec64b5148f02100d9",
+    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -72,12 +72,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    8        0.079      0.039          0.282\n"
+          "text": "    8        0.079      0.039          0.282\n    2        0.175      0.157          0.163\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    2        0.175      0.157          0.163\n    1        0.327      0.314          0.062\n"
+          "text": "    1        0.327      0.314          0.062\n"
         }
       ]
     },
@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
-          "bytes": 14285,
-          "sha256": "sha256:a993406d661f110a000288ce0b1ef1c2e69ed1c8f48a2c1d89a676e008699fda"
+          "bytes": 19286,
+          "sha256": "sha256:e55c9ffa5eb64f4e97b4e51bcc73ed1690d155a9839dd71e7f13c6dfec6d606a"
         }
       ]
     },
@@ -138,22 +138,22 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 80520,
-          "sha256": "sha256:679d435f2831995a6f05c11c8ddd8d8e32b03f27e0386e8e690dcdfa6cf33caf"
+          "bytes": 82825,
+          "sha256": "sha256:206f63dbbc250e1f8466edf0660c2a8311ac8a135ed967fdfd4e299f060114c6"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 166824,
-          "sha256": "sha256:9af7f27415a5f82c91aa619a4fead8269af565029d5e889dd39ea999490acef6"
+          "bytes": 170839,
+          "sha256": "sha256:322c8041e9a5c415a439ab508e5471d95989ff93b55ac273efd344637aff4e99"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 163237,
-          "sha256": "sha256:e4e3ff0fa0adf163523b7c3de0a71c1a9493a80472773b88648b4277bed7b66d"
+          "bytes": 177266,
+          "sha256": "sha256:df740fda9dff0e427ee732b9c07f1e105681b442fe7019e3aaa10c897ad17783"
         }
       ]
     }

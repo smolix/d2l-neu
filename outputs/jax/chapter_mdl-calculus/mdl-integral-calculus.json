@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 44497,
-          "sha256": "sha256:7a0f515f476cf90c1642df0d092a004443c41ae39c340f30d408615978540a7f"
+          "bytes": 44182,
+          "sha256": "sha256:d03dafe906afa9816c349f91971f98593130b6707706790a3c4830dc670923bb"
         }
       ]
     },

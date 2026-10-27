@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:7e6865cad96c7556e444654ca1eb07b2f125d512c113f82fc4020115a6d94a39",
+    "d2l_lib_fingerprint": "sha256:4a28464cb3c169ccc5b516692db61f3e747454a09bf2df0a7c141616b34aebd6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.356, 162470.1 tokens/sec\n"
+          "text": "loss 0.355, 88235.8 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 15679,
-          "sha256": "sha256:392f1736019379fc617a978d33acf98a1e12b85fbd5892f941a97f8b833ea53f"
+          "bytes": 15761,
+          "sha256": "sha256:ebdf7395556d14658b6cd1ae565c59abe74ca3732eb4cf274e1638e3d96fe64a"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.589: memory\ncosine sim=0.561: intel\ncosine sim=0.532: chips\n"
+          "text": "cosine sim=0.502: gen-probe\ncosine sim=0.454: motorola\ncosine sim=0.443: memory\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3b320dd577d64a54d24f520595c8a22dc0e84277e836c84b37481b1aee74a795",
+    "d2l_lib_fingerprint": "sha256:ae62e7183495805b438ed50ea7dcb024930b8273b306cc6ca91c22425a5e6bf8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 96, 54, 54)\nMaxPool2D output shape:\t (1, 96, 26, 26)\nConv2D output shape:\t (1, 256, 26, 26)\nMaxPool2D output shape:\t (1, 256, 12, 12)\nConv2D output shape:\t (1, 384, 12, 12)\nConv2D output shape:\t (1, 384, 12, 12)\nConv2D output shape:\t (1, 256, 12, 12)\nMaxPool2D output shape:\t (1, 256, 5, 5)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D                 (1, 96, 54, 54)\nMaxPool2D              (1, 96, 26, 26)\nConv2D                 (1, 256, 26, 26)\nMaxPool2D              (1, 256, 12, 12)\nConv2D                 (1, 384, 12, 12)\nConv2D                 (1, 384, 12, 12)\nConv2D                 (1, 256, 12, 12)\nMaxPool2D              (1, 256, 5, 5)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 33861,
-          "sha256": "sha256:e1a5ef552e467b8d2cd394153ccba112e3010920aae72256e8a8bc22c5bc9f84"
+          "bytes": 34097,
+          "sha256": "sha256:bdf19ca57ae38db521b198c5a6b499103551c4a3ba18568f2179f1619959c5ac"
         }
       ]
     }

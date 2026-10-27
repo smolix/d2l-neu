@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
-          "bytes": 37132,
-          "sha256": "sha256:c85809531fcc834160546523f84f3012e6b91691f1489af6e955465390c884da"
+          "bytes": 37131,
+          "sha256": "sha256:e29c6377a34bcbcdfb3c17a8b9fc604d677dfd9b3414d9af7bc1e98320c2f2bf"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-5-1.svg",
-          "bytes": 289762,
-          "sha256": "sha256:3cd2db5dc7c6cb04b8bacca1b9c987c3512cea82dc3d1d430ffbfc8dbbd35759"
+          "bytes": 289797,
+          "sha256": "sha256:98770acc2741d231a729710419919dbd4aad85cb85ccc50ce6baea9b07032c18"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
-          "bytes": 40279,
-          "sha256": "sha256:655163f262ca50e27c8f2e5ba2a6b454371417cb2e7f3986171a127d3197202d"
+          "bytes": 39892,
+          "sha256": "sha256:11e9a8213e6153ec5c3dfabdd17e9820280a788ece8ae38d9b15c98c9204c728"
         }
       ]
     },
@@ -117,8 +117,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-what-each-critic-estimates-1.svg",
-          "bytes": 228523,
-          "sha256": "sha256:641ad235bf2f18bb619e7b5e998858a6c8434e8b425efa6be8b000040377704a"
+          "bytes": 228422,
+          "sha256": "sha256:0c85f772683dc138441a7715c87f39a181458aa06f0f52c2b70220c67d1d570c"
         }
       ]
     },
@@ -141,8 +141,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-recovering-the-ratio-by-duality-2-1.svg",
-          "bytes": 27245,
-          "sha256": "sha256:36832a4166382598f1c3824c4339926830fa0b7e8acedee07117ffec9f8df374"
+          "bytes": 27195,
+          "sha256": "sha256:74590d547d2b3d2ea5e6ca9748c26070b8217cafaffb8514dd426d69e87cb51c"
         }
       ]
     }

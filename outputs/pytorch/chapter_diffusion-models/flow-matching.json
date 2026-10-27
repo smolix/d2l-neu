@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:86209c8814f0b665540d43a95e966dd01816b95f87a1deaec64b5148f02100d9",
+    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
-          "bytes": 30000,
-          "sha256": "sha256:90cd290f681274bdbb1762af2c3b85317517d05fd78ff3e387f23a2f6afb96e3"
+          "bytes": 33771,
+          "sha256": "sha256:4bdffac19c1ebf69e76722d302105fdfbc99e5a78b4609030a03d9589293d82e"
         }
       ]
     },
@@ -97,8 +97,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 128137,
-          "sha256": "sha256:fbd4570f9b1870b8980476baee17d358c349b965e33d89bc5df2e133b63dc42e"
+          "bytes": 128291,
+          "sha256": "sha256:ddd01b387f320686c4040885eeac8de687bb57d59e6a88ae0809ba1a07606be5"
         }
       ]
     }

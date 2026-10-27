@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8784af4c729cbf892f9b5a7efac6a50e3b5b07902946238c8e48a234854f8b79",
+    "d2l_lib_fingerprint": "sha256:cbbb1bc6a996ae427add0d47ea9e8cf2bf19d849ce413265a35e3713f97360bc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,57 +14,57 @@
       "outputs": []
     },
     "linear-regression-concise-defining-the-model-1": {
-      "code_fingerprint": "sha256:86c41ca6c5b38afba788056dc9833ed17acf6308f12e15f8edcf6f35e3ac1a87",
+      "code_fingerprint": "sha256:963ca1b04e2e87e602f8f7c0a90db5d0638eb0a60baf45df1b62b7b782c984dc",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-loss-function": {
-      "code_fingerprint": "sha256:07deb62c55043915f8c944dea71f9006f5465892e9796ec215470b78bcc908b7",
+      "code_fingerprint": "sha256:9a5247b8bfe3ac227bfddd67afca7cefffd9c8c5dfddefb64237a4ee936c3a69",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-optimization-algorithm": {
-      "code_fingerprint": "sha256:fca034d8f0c4ed0b5afd709cd0c2c5b211c8c33a1e101642078e5504ddf85db2",
+      "code_fingerprint": "sha256:7cad84978092fdd0ee57e5c96788335e82d6fa224ac332f7e4cdb167ce4291a0",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:1d0acf2404d68c99baa6f90d2e55af33d1430f2fea60b75f07d38b89c4fd4e1b",
+      "code_fingerprint": "sha256:440bba4c7ba8580392913a2774885f9e1306ded7d0ec03a0356ce3d827b49c06",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 33663,
-          "sha256": "sha256:678d6098f51b50903b9562d40887e8296936023de656f0182f4a461363ed0d29"
+          "bytes": 33760,
+          "sha256": "sha256:52e6f04b2dc346104b561455c391894f453769877eb95b149a7f9ecefb4c8656"
         }
       ]
     },
     "linear-regression-concise-training-4": {
-      "code_fingerprint": "sha256:728d275bb63ef4cad3adc23b902560393c5fbf22727f68fe750c35d6a16573c9",
+      "code_fingerprint": "sha256:ad0c4e01061da706be0d0a3844175664063aa8a2cbc5e879f5a9542e74592ff7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 9.95e-05\n"
+          "text": "validation loss: 1.02e-04\n"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:5b49ccbd0474f5de07959937679b9503a344b9ab3041873ed8ed3e2722bf00b9",
+      "code_fingerprint": "sha256:00277bfde6fd1955710211e334ec1d4418cf2f2e7f3f3e8ef041fc3361664318",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:e1a09f8cf16b76bfa952f404e5b6f5f833ca8608f02810ce3a28dbb30ed3a432",
+      "code_fingerprint": "sha256:1165eb2e2a8bed9ebf97a1284afbd3b95fec37c510d056aab1c519cf3cfbb567",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -4.8e-04, 1.3e-04\nerror in b: -3.4e-04\n"
+          "text": "error in w: -5.5e-04, 6.3e-04\nerror in b: -6.7e-04\n"
         }
       ]
     }

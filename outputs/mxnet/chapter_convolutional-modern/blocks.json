@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3b320dd577d64a54d24f520595c8a22dc0e84277e836c84b37481b1aee74a795",
+    "d2l_lib_fingerprint": "sha256:ae62e7183495805b438ed50ea7dcb024930b8273b306cc6ca91c22425a5e6bf8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 64, 112, 112)\nHybridSequential output shape:\t (1, 128, 56, 56)\nHybridSequential output shape:\t (1, 256, 28, 28)\nHybridSequential output shape:\t (1, 512, 14, 14)\nHybridSequential output shape:\t (1, 512, 7, 7)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 64, 112, 112)\nHybridSequential       (1, 128, 56, 56)\nHybridSequential       (1, 256, 28, 28)\nHybridSequential       (1, 512, 14, 14)\nHybridSequential       (1, 512, 7, 7)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33261,
-          "sha256": "sha256:e791268eb8ba7ef301aa48e6e83cccbe4c8e3bd5b1d9ce2e0fb77f2f6c0e46b9"
+          "bytes": 33370,
+          "sha256": "sha256:0c3c50d8e38b7a4cdca42667ffa44765de4c6163dcb5f03388e4125ee27d9f8d"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 96, 54, 54)\nMaxPool2D output shape:\t (1, 96, 26, 26)\nHybridSequential output shape:\t (1, 256, 26, 26)\nMaxPool2D output shape:\t (1, 256, 12, 12)\nHybridSequential output shape:\t (1, 384, 12, 12)\nMaxPool2D output shape:\t (1, 384, 5, 5)\nDropout output shape:\t (1, 384, 5, 5)\nHybridSequential output shape:\t (1, 10, 5, 5)\nGlobalAvgPool2D output shape:\t (1, 10, 1, 1)\nFlatten output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 96, 54, 54)\nMaxPool2D              (1, 96, 26, 26)\nHybridSequential       (1, 256, 26, 26)\nMaxPool2D              (1, 256, 12, 12)\nHybridSequential       (1, 384, 12, 12)\nMaxPool2D              (1, 384, 5, 5)\nDropout                (1, 384, 5, 5)\nHybridSequential       (1, 10, 5, 5)\nGlobalAvgPool2D        (1, 10, 1, 1)\nFlatten                (1, 10)\n"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31636,
-          "sha256": "sha256:b1de2cbecbfeb4e9d25686691352ef172d1aeadc393175d39b1b8708dfc75024"
+          "bytes": 33354,
+          "sha256": "sha256:a4e84b6b66fa671a74313128d45bc15b5716e46f155de561ffb337808f22af49"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 192, 12, 12)\nHybridSequential output shape:\t (1, 480, 12, 12)\nMaxPool2D output shape:\t (1, 480, 6, 6)\nHybridSequential output shape:\t (1, 832, 6, 6)\nMaxPool2D output shape:\t (1, 832, 3, 3)\nHybridSequential output shape:\t (1, 1024, 3, 3)\nGlobalAvgPool2D output shape:\t (1, 1024, 1, 1)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 192, 12, 12)\nHybridSequential       (1, 480, 12, 12)\nMaxPool2D              (1, 480, 6, 6)\nHybridSequential       (1, 832, 6, 6)\nMaxPool2D              (1, 832, 3, 3)\nHybridSequential       (1, 1024, 3, 3)\nGlobalAvgPool2D        (1, 1024, 1, 1)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 32839,
-          "sha256": "sha256:15e376b992a9e7b4f7c5c98ddcc2bb042023d12763608be2e1ef9fef432318ef"
+          "bytes": 32937,
+          "sha256": "sha256:26d1bd1e18355b32fa261252757d75eb8e51fcd8636971c0174c00c61b6abcb1"
         }
       ]
     },
@@ -126,7 +126,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.9, 'NiN': 0.838, 'GoogLeNet': 0.865}"
+          "text": "{'VGG': 0.901, 'NiN': 0.852, 'GoogLeNet': 0.874}"
         }
       ]
     }

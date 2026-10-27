@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:88064e532ddb5e3803a261d41a741976c026b6dc305131926b7290abc5364980",
+    "d2l_lib_fingerprint": "sha256:67d10bee04bc84055c9b2015a7f7fbc785a05212d58334fb8f3975b0116ca935",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -39,38 +39,38 @@
       "outputs": []
     },
     "convnext-recipe-2": {
-      "code_fingerprint": "sha256:b66197c242d5d1545a92ef7ed1a6b347234b1b901102086f8d7f0060d3d59dcf",
+      "code_fingerprint": "sha256:3f1ec8d0af59e5e061fa6ac8775b32b2870af4746d2363f5b9d03c3015ce7649",
       "kind": "text",
       "outputs": []
     },
     "convnext-train": {
-      "code_fingerprint": "sha256:9a24a6b74e08f11fe3b0e9d4cc10c8f71677a1fa6dd13c50c147ec70443e7f9e",
+      "code_fingerprint": "sha256:ac99e3cffc7f21567a0987aef8d1af35a4132868de72596e7ce580c2f778abb4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 35343,
-          "sha256": "sha256:0cf1ca37c7ca9d94f68fcde3e73ee92de7d9cf58143b4cb4f1ed1dfee199141c"
+          "bytes": 34280,
+          "sha256": "sha256:4d62c6fddf75e27880ba93cac85e1aedfcbf4cd16bfcb1898dbca45d0027adee"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 34141,
-          "sha256": "sha256:f45a2384168bf130a9065282ad7d77231def9bf01638046f5ac57d2a3268293d"
+          "bytes": 34883,
+          "sha256": "sha256:1511e9ad407fc22de4a118270024016d8497be9211482053d63350ef2b594d2f"
         }
       ]
     },
     "convnext-eval": {
-      "code_fingerprint": "sha256:66b1258259eb606b292543876653dfd36a74a25b8def238f738b8326b1193d38",
+      "code_fingerprint": "sha256:1dd892f9a9fe334307d0f34b0498e986f3cffd9246c8007f8e0fc24104f23d2a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.918\ncompact ResNet-18: 3,348,320 parameters, validation accuracy 0.936\n"
+          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.914\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.938\n"
         }
       ]
     }

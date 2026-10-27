@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:229e8d8d62abb8daacb809438bfdd11a05b1b0a9466fa9abfd8f35ad6448778d",
+    "d2l_lib_fingerprint": "sha256:baf11d769fe98dbd263e544c04d684d72958973a26c9987c87bc3b94cc633e73",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "movielens/movielens-statistics-of-the-dataset-2-1.png",
-          "bytes": 20776,
-          "sha256": "sha256:0bbb3cb4eec9f19958539767abde59bcf12b0cb66f5d96e85ca8ff9f248dbe93"
+          "bytes": 20480,
+          "sha256": "sha256:2ffc98dafeea14dfe2445adc260ae4b67dcb44e1ad1a556c26826d32053616dc"
         }
       ]
     },

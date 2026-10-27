@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
-          "bytes": 25789,
-          "sha256": "sha256:423c21039dcbd9a3ff5435d4553d68ee16d48a21ed261733fbd3ba31d35625d9"
+          "bytes": 25748,
+          "sha256": "sha256:ffec919aa3443476a9dc287542aac3866485d9da7149e55554a0e1827099a2d5"
         }
       ]
     },
@@ -123,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
-          "bytes": 32712,
-          "sha256": "sha256:61a5cd0ee0f85164aa6403201b97f4674c781c0a02fa5be611459aabdec08288"
+          "bytes": 32694,
+          "sha256": "sha256:1fd24e5cfe8a6a599d9201bee0298bd15038b53086431d8abccfb5290fb16676"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e471edf2a8efb26c151098515beac87ce5a52d284c4d57f027904971c9346fbf",
+    "d2l_lib_fingerprint": "sha256:a33b25038898418893fc3d7d1c4dd0e4d6d350bbd0419bdccab528ecb9adec68",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
-          "bytes": 88350,
-          "sha256": "sha256:d9fa1d7f85964884b048df69875978672b7da2a6b377f429714bb67c1cf10464"
+          "bytes": 102947,
+          "sha256": "sha256:b494db779383c86e2b42484a395944d907cf484e0b62dbb72bfd48daa2675cd8"
         }
       ]
     },
@@ -118,8 +118,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 180546,
-          "sha256": "sha256:8703b557acc25558925989740754caa1788d623217db67f13db946153ac6f0ec"
+          "bytes": 180462,
+          "sha256": "sha256:896c37f93cee7b72606c0dd432432c95a337cdb9fb038c59c89da441e7d93162"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one example at a time:  142.276 ms\nall examples at once:     0.165 ms\nspeedup: 862x\n"
+          "text": "one example at a time:   88.637 ms\nall examples at once:     0.214 ms\nspeedup: 415x\n"
         }
       ]
     }

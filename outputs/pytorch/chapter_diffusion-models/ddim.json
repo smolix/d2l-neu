@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:86209c8814f0b665540d43a95e966dd01816b95f87a1deaec64b5148f02100d9",
+    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,8 +58,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-experiments-on-the-running-example-4-1.png",
-          "bytes": 75415,
-          "sha256": "sha256:9332d6693a25653ba615dde23cd83c4c48f9776f1d562a6d7d730aed0d2f2432"
+          "bytes": 78747,
+          "sha256": "sha256:e6e373eb08db0aab4882be8ef62851ad90fc682bee7ec41d9962158bcfdadc24"
         }
       ]
     },
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-2-1.png",
-          "bytes": 60657,
-          "sha256": "sha256:9a0853901596601976e617f3b4c74cfde3497eda7a867f8dcd6397d5e685a48c"
+          "bytes": 60640,
+          "sha256": "sha256:66c7c8e503816eaf8adf9a5cd305c02c8051d979afc3f46d087916665d3840be"
         }
       ]
     },
@@ -100,8 +100,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-3-1.png",
-          "bytes": 25001,
-          "sha256": "sha256:7aa3c7d98de2b3d73274349362c3d138fd7a35ed3f078720056e74348589b839"
+          "bytes": 24911,
+          "sha256": "sha256:53c8f210676a0fe790c8661d9fbe78598b3f4cfd59a708bedda0d9830b362894"
         }
       ]
     }

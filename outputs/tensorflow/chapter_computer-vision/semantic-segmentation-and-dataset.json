@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:323d6ba6760cff6c7b1e69cf778d6da88eb79bd518ca4a18f2d31a645bb1d999",
+    "d2l_lib_fingerprint": "sha256:4ddbf694321b5370fd7ec6147ce023b893c30e1c98fa7207b010782dabe63176",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4-1.png",
-          "bytes": 85851,
-          "sha256": "sha256:1639419ab915ec86a8a9da76de89c98a7be7f6a74bb5b62c8e5b25d97e99f950"
+          "bytes": 85518,
+          "sha256": "sha256:888d9b59cfe2eb7bd177bb96f052b98ec13fb80cfb2397141232eb3cec19f253"
         }
       ]
     },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "semantic-segmentation-and-dataset/semantic-segmentation-and-dataset-data-preprocessing-2-1.png",
-          "bytes": 80668,
-          "sha256": "sha256:18642c7f8740c89b58dead1b7fd5af8d2bd6baca55f8d2e309cedc09ac63f7cc"
+          "bytes": 78815,
+          "sha256": "sha256:918be2454066936597b219c3b33a7b35ca636f1c4de879876e31647ba97e8e64"
         }
       ]
     },

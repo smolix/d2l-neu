@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "d2l_lib_fingerprint": "sha256:dbc4fd0696a83261eac661a9ba63fb8b69226b0d30b0d85ebc09bed8c0bf6041",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.42 ms/call\ncompiled: 0.16 ms/call\n"
+          "text": "eager: 1.48 ms/call\ncompiled: 0.16 ms/call\n"
         }
       ]
     },
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ahead-of-time compile: 4.4 s\n"
+          "text": "ahead-of-time compile: 2.9 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 17.12 ms/call\ncompiled: 0.18 ms/call\n"
+          "text": "eager: 19.01 ms/call\ncompiled: 0.18 ms/call\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 8.90 ms/call\njit: 0.29 ms/call\n"
+          "text": "eager: 8.83 ms/call\njit: 0.26 ms/call\n"
         }
       ]
     }

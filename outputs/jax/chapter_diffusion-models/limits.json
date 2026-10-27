@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "limits/limits-quadrature-1-1.png",
-          "bytes": 26580,
-          "sha256": "sha256:77f394465d4ef5b4d7257bc1515313f5f87678fe91f9545092d28f170065b124"
+          "bytes": 28863,
+          "sha256": "sha256:08925551deaa969b23d6beb9bc9a89fa40556e2617c38bd4a307ac19e05fab8a"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
+    "d2l_lib_fingerprint": "sha256:417242eb8b1f572b3e0b38f4be850b0eaf3088934ff77235ea86d8e51bc4c502",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2d output shape:\t torch.Size([1, 96, 54, 54])\nReLU output shape:\t torch.Size([1, 96, 54, 54])\nMaxPool2d output shape:\t torch.Size([1, 96, 26, 26])\nConv2d output shape:\t torch.Size([1, 256, 26, 26])\nReLU output shape:\t torch.Size([1, 256, 26, 26])\nMaxPool2d output shape:\t torch.Size([1, 256, 12, 12])\nConv2d output shape:\t torch.Size([1, 384, 12, 12])\nReLU output shape:\t torch.Size([1, 384, 12, 12])\nConv2d output shape:\t torch.Size([1, 384, 12, 12])\nReLU output shape:\t torch.Size([1, 384, 12, 12])\nConv2d output shape:\t torch.Size([1, 256, 12, 12])\nReLU output shape:\t torch.Size([1, 256, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 256, 5, 5])\nFlatten output shape:\t torch.Size([1, 6400])\n"
+          "text": "Conv2d                 (1, 96, 54, 54)\nReLU                   (1, 96, 54, 54)\nMaxPool2d              (1, 96, 26, 26)\nConv2d                 (1, 256, 26, 26)\nReLU                   (1, 256, 26, 26)\nMaxPool2d              (1, 256, 12, 12)\nConv2d                 (1, 384, 12, 12)\nReLU                   (1, 384, 12, 12)\nConv2d                 (1, 384, 12, 12)\nReLU                   (1, 384, 12, 12)\nConv2d                 (1, 256, 12, 12)\nReLU                   (1, 256, 12, 12)\nMaxPool2d              (1, 256, 5, 5)\nFlatten                (1, 6400)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 10])\n"
+          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 10)\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 34598,
-          "sha256": "sha256:1deab39bc198d0d3e4cd3c53089b5fb76a3c8d20eccc334595cfb2f086ee946f"
+          "bytes": 35079,
+          "sha256": "sha256:365a14bbc3a023e2c083d801da3d29cf5549010bddb33c97923f31e08ba8075b"
         }
       ]
     }

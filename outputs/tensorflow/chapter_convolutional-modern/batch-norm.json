@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3b04b8b22dc3a31617d5196d4cb43d7d281e4c42e8011a733025a3c96a834b48",
+    "d2l_lib_fingerprint": "sha256:4d0677646a13eae78a0f2d809c8532821cce10199af53172521123a6b343eb7d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,60 +29,60 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(5.916749401535526e-08,\n 0.9999988675117493,\n 7.152557373046875e-07,\n array([0.19983041, 0.19846967, 0.2020803 , 0.20106755, 0.1994072 ,\n        0.19973338], dtype=float32))"
+          "text": "(4.4399378396065003e-08,\n 0.9999989867210388,\n 4.76837158203125e-07,\n array([0.20069563, 0.2009865 , 0.19959573, 0.2017235 , 0.19953084,\n        0.2002116 ], dtype=float32))"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:e6a1bef24da09f14b35eb0379256c283cca2d341acc2724ae7ea8cf2a5be61b0",
+      "code_fingerprint": "sha256:432581848ea80a2ec6f7f11ee68256dbba0657892f01ed13c2318b8fd233d745",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-warmup": {
-      "code_fingerprint": "sha256:6f0d87acc06a655ef3e1e5166061bb2d61e928dff8db3a4180d75aec93a49ea1",
+      "code_fingerprint": "sha256:871a82fc5e62bcec906cdc3f772878a8437acd847f90a23e09097061bd6000b9",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-cosine-sgd": {
-      "code_fingerprint": "sha256:244e5e7186d01aeb4f0cb69ad380494600b5056324e995e0532664d942f3bb6c",
+      "code_fingerprint": "sha256:9c718daf7a234204acd74b4234e74b78ab4975fcf51034a4122a2ec0fc0a3976",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:9c406e8fefbab91f2c7de6cf3e4c1b633630f0ff8b64c6f038218d095240052f",
+      "code_fingerprint": "sha256:ad686fc3da0d10396265fd3bb073bd3ed288c4041851885389d48cf8ff25c904",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-5": {
-      "code_fingerprint": "sha256:075c30197d94082a6bfe97bf01264ae1e60fd87ca88bccf4256ea4790c73b171",
+      "code_fingerprint": "sha256:b39105795e0bd9e349c4586e497b21220742d89db6f0f8276943742c316cd360",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24489,
-          "sha256": "sha256:d12094905ce21267bbd40cd8897571cfb7625d354247bd6695092027c66f62e1"
+          "bytes": 24487,
+          "sha256": "sha256:9316dc5ce6e047bde40aa6a159580ca1b264c54a36735157008ef86a33ba9734"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-6": {
-      "code_fingerprint": "sha256:409549c5e1751581d4c598f062e7d0e67b4fa1a05f30a86d06f9609900974c24",
+      "code_fingerprint": "sha256:ab0afa547a6ef69b7f63707c98f6d26356b297e267f3b7e1bd5a944aba4b1187",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.593, 'BNLeNet': 0.887}"
+          "text": "{'CosineLeNet': 0.626, 'BNLeNet': 0.884}"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:bf3e42f119c4b9f421831a0ac0e64df9e1f2dd146ceee2b485d69c0e6dd9cd5d",
+      "code_fingerprint": "sha256:bda784e0b21db2ab5dbae1955067f507de799851f4a285a9293d38f599a4b60f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.2351741790771484e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999898076057434>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.384185791015625e-07>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9999899864196777>,\n <tf.Tensor: shape=(), dtype=float32, numpy=2.384185791015625e-07>)"
         }
       ]
     }

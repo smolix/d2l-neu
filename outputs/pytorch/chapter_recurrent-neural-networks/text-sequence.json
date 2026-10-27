@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9a786ef27cc573231f1a54848db98a659c9d314ede2ab7006a368e594cf2a1d8",
+    "d2l_lib_fingerprint": "sha256:866ec71916ca38aa1991fbc55614035344333c909eabee5cc63122574e1aaa27",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
-          "bytes": 19053,
-          "sha256": "sha256:a048d149f71436c5f9acae2ca9d7ddb4be64376170f77b44544e60be72008a78"
+          "bytes": 20688,
+          "sha256": "sha256:74963ba909d1acfe869c4e9e40327632b3488130b4b95e9512a785f02be267e6"
         }
       ]
     },
@@ -245,8 +245,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-fertility-digits-and-glitch-tokens-1-1.svg",
-          "bytes": 25538,
-          "sha256": "sha256:dd515a62bb84f742150dd1d646204425e2fe26973fd35fd607f842dad9d7bcc8"
+          "bytes": 25486,
+          "sha256": "sha256:6dbbb32e6867c281a435c19d6bdda917e953fa434eebc5a795b081b34ec9242e"
         }
       ]
     },

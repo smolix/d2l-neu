@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
-          "bytes": 31472,
-          "sha256": "sha256:b07cd6f10628fd7ee521edcd313c2ef5735040238d3644e3632803ba0cada915"
+          "bytes": 31734,
+          "sha256": "sha256:07507295fbce87f7064e6da046179746e6a254da515757876dc8417b95ea73cb"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
-          "bytes": 33075,
-          "sha256": "sha256:4e3cfbd90f9fce2027f6a5186d5a6ea179001998f426de598bda4e16a8e3a9ef"
+          "bytes": 32503,
+          "sha256": "sha256:b1efa06929025f85990f44290f5e80fad2d0911d3b179413e9f5d515154bc4b2"
         }
       ]
     }

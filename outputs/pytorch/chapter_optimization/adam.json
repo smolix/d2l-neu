@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3203b45e22f878261f755794adf29f09ce0869c613350cd3da002e67d5874ca8",
+    "d2l_lib_fingerprint": "sha256:e76d8d9b99c1f04f6885ee97ba4e6a52999212acc129d2939825c27c76de9e4c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
-          "bytes": 23580,
-          "sha256": "sha256:ee4082c990cc7d873da9b5833c031fbe0e74dc83e6fdd0ba66da95f8a177205c"
+          "bytes": 23483,
+          "sha256": "sha256:94b4a97e00dd07b0fb9088d65852dc80f8ee20790f65cab679658ca11270ffca"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
-          "bytes": 23588,
-          "sha256": "sha256:650843361c1e8304da60980de31572b752321425da26cc78356fa3857ca053dd"
+          "bytes": 23503,
+          "sha256": "sha256:56481f808941e784f3505cc8822756c591ba0e3753738e742582fc8e63e2ffe5"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.097 sec/epoch\n"
+          "text": "loss: 0.243, 0.124 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-4-1.svg",
-          "bytes": 18784,
-          "sha256": "sha256:8669e37a333baeb4f73b1ae1ad9678ddbbb073389f32c23e596038d7fdc590b6"
+          "bytes": 18792,
+          "sha256": "sha256:766b35f71b65b6645286eabaf4f85979ada3b061e23a041db405caca14b8ccce"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
-          "bytes": 23590,
-          "sha256": "sha256:ed397b9f56cb6d6e9245040e60c6fed0586ee2573f3df5a5b6a403328f54347d"
+          "bytes": 23497,
+          "sha256": "sha256:b6403cba387d5dcaed1ee71e497e11d1a4f36e94fe6fcb187fc2fdee79010b00"
         }
       ]
     },
@@ -102,14 +102,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.073 sec/epoch\n"
+          "text": "loss: 0.244, 0.075 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-3-1.svg",
-          "bytes": 18779,
-          "sha256": "sha256:e881376d2b0b0be07a2b63e03c2876e0ec7cb118d53ad06f7808742075cf8ac4"
+          "bytes": 18782,
+          "sha256": "sha256:94ad7506fd3e769062691bfc12367512532c20630a512396330bccef963c6c04"
         }
       ]
     },
@@ -125,14 +125,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.082 sec/epoch\n"
+          "text": "loss: 0.244, 0.079 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-2-1.svg",
-          "bytes": 18776,
-          "sha256": "sha256:38fe7c8637fc1167f1dd6e4728577ea1b716cd57421cd6cb2732bef68485d751"
+          "bytes": 18783,
+          "sha256": "sha256:cf0b295e986b4f99fcb1b252746b18723314d8c71ec86485614c534baf6551fb"
         }
       ]
     },
@@ -143,14 +143,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.081 sec/epoch\n"
+          "text": "loss: 0.243, 0.079 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-3-1.svg",
-          "bytes": 18626,
-          "sha256": "sha256:1dda09034b4d378b8052e8cc659be38eaf0e3909594d6864b3205694fbc24ee7"
+          "bytes": 18696,
+          "sha256": "sha256:1f19866d6e6dabfdabfb74522e4171b1a5653128f00b4d22e7a388bc69d5f21c"
         }
       ]
     },
@@ -192,14 +192,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.77\n"
+          "text": "perplexity per character: 2.41\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-a-tiny-language-model-6-1.svg",
-          "bytes": 19447,
-          "sha256": "sha256:bb259bdb337a62a072cd16670a50f86fe111d8a6d9c5c0a01d49e8aa7e921f81"
+          "bytes": 19375,
+          "sha256": "sha256:4f049ce0f34e1e704536c8c9fdb6b824d231991faedcb82c9cc468580238f928"
         }
       ]
     },
@@ -246,12 +246,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.915\n"
+          "text": "lr 0.003: final loss 0.914\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.980\n"
+          "text": "lr 0.01: final loss 0.963\n"
         }
       ]
     },
@@ -262,14 +262,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final perplexity: SGD 2.92, Adam 2.50\n"
+          "text": "final perplexity: SGD 2.92, Adam 2.49\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 29657,
-          "sha256": "sha256:b3ad1d077553ba9c3c63d514b91bb55aeef8ca2b505d3517fbc02ce3a8bf562a"
+          "bytes": 29567,
+          "sha256": "sha256:a40f6bf6abb1198bdd97b13bdc4f1a61fb4fe57bdfb696d758ffb968a9c737a4"
         }
       ]
     },
@@ -343,8 +343,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-same-race-on-a-cnn-4-1.svg",
-          "bytes": 29890,
-          "sha256": "sha256:5a1604b1bd5c4029e097eb7886f8495bce0700b4b5cff9183dbaa918415f9c35"
+          "bytes": 29817,
+          "sha256": "sha256:f908b2802ceead9c351c406d14ef628ceee4abff6600f467a6f6efd6d080d183"
         }
       ]
     }

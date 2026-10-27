@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,7 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -116,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29558,
-          "sha256": "sha256:03c67abc2289f97f7869e1605f0ecb0a5b7f440394437126a93e90c00fd524c5"
+          "bytes": 29383,
+          "sha256": "sha256:eff726112667421e624bcb5bebf55816f865c1d09f5a2157da075787364a19c3"
         }
       ]
     }

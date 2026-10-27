@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
-          "bytes": 105300,
-          "sha256": "sha256:fd994a95143f7edfa1720ef99abbff1f60dca3aefea292611b922fd717abe54d"
+          "bytes": 105256,
+          "sha256": "sha256:b737dbd208c0078a9ab940acb0612aeafc01ad0b2b2ca9fd704897ce67883458"
         }
       ]
     },
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
-          "bytes": 84296,
-          "sha256": "sha256:6d130047bb9fd90be90ca4bda3281625ab25e2afa542f2ab6306f377d86abdce"
+          "bytes": 84225,
+          "sha256": "sha256:bb858262b1cb4f4b006c04d75d75a8b3a42c449d2436d9644bac94323e7c9998"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
-          "bytes": 35310,
-          "sha256": "sha256:f438de22c6fd6f91c8c48b4ef21a307bf4a377814ff31f2f62f519d1ce9a306e"
+          "bytes": 36386,
+          "sha256": "sha256:3b3d042afa4a5acbe375c85f4837a5d56a34be9e096012306c910b2719cb0b5f"
         }
       ]
     },
@@ -124,8 +124,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
-          "bytes": 121863,
-          "sha256": "sha256:3f9761e77d1a5070a7254a0c0467b13caab814fd80173988763005f48ae1a22b"
+          "bytes": 121806,
+          "sha256": "sha256:b6d35b9d05b5070cf97757fe48a1d6e13e63d9ed1428bd3c112eed03da83d69f"
         }
       ]
     },
@@ -142,8 +142,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
-          "bytes": 36032,
-          "sha256": "sha256:96be04fc662eb741006b703746eb72d86fdeedab6b0c2136dbde772955204d1c"
+          "bytes": 35950,
+          "sha256": "sha256:21be8c51fa0660e8b9a2c3f9cfbea841ef32638cd981a69fb52c88022605b72e"
         }
       ]
     },

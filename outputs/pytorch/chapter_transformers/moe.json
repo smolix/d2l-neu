@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:32699e57ee703f73d2173e54ec5ed624f5ab507206adb1e3dcc46a0461d188f4",
+    "d2l_lib_fingerprint": "sha256:948b202161abf32065e00e60df28d12507cf2f989a59862c63db4e5f1fc135b8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,45 +61,41 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  no balancing: training loss 0.72, experts under 2% usage: 4 of 16\n"
+          "text": "  no balancing: training loss 0.73, experts under 2% usage: 4 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.67, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.65, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          bias: training loss 0.52, experts under 2% usage: 0 of 16\n"
+          "text": "          bias: training loss 0.51, experts under 2% usage: 0 of 16\n"
         }
       ]
     },
     "moe-three-runs-one-budget-4": {
-      "code_fingerprint": "sha256:9added2a8f846bbf141ca85412f8620c997ef79056350af2f0e501664ee6d3bb",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:5ce03cb5bd6e25ace97f8aaa32ee0cf2298d03f2ac3c3a97be20e290acadb353",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x72d1c87c4ce0>"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44164,
-          "sha256": "sha256:ec448a235e677847b196aa36acfd4e50844d61707bd16c0f23e9bedc7442627e"
+          "bytes": 44048,
+          "sha256": "sha256:28b65abd14313b048193ce0db072c276839373eab759735a422bdfd092e6187f"
         }
       ]
     },
     "moe-a-mixture-of-experts-gpt": {
-      "code_fingerprint": "sha256:9768baa9ae5c56cf338fbf5cd9232375cf02e9967b91feedaa2cd316c29b1aef",
+      "code_fingerprint": "sha256:0e565d258034a9ea22bbb0fc9efb9936d6143511cf68a0e956a2811bad1708e6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense:  3.16M parameters (3.16M active), best validation 1.51, final training loss 0.20\n"
+          "text": "dense:  3.16M parameters (3.16M active), best validation 1.51, final training loss 0.21\n"
         },
         {
           "type": "stream",

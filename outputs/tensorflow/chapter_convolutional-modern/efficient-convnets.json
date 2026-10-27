@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7a041417282f59be61cb9b9142cb4e0283522553f59fb1d513d71954b0eeb294",
+    "d2l_lib_fingerprint": "sha256:e90829b86fe845d825a42d728ae89ee914d2b13c7b2401c9f42c46317dc1933d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,17 +14,17 @@
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:33bbfcd85159ec8aa72e0bef18a9b0489f551ebef4d0221a039099f4c05d356e",
+      "code_fingerprint": "sha256:35789a9136cf7ca236783df31d9d6e1015e7175811b60933a51f3ce445380926",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:506dafaad657f9df3d4cf38c4d549adbc0bd647533d2e4270220f7ffb40a317b",
+      "code_fingerprint": "sha256:831036a50a725721ed61dd7c7bba1b05d26c76c8d8e60fee5e438aa6d87b09bb",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:e605ef9f2638243a585edb7d53f438648278289c027be582647bbeb46e946ce3",
+      "code_fingerprint": "sha256:77de37511d9623b4ac9f0369fb21c2035c7515d04914f609eba276e992dc983a",
       "kind": "text",
       "outputs": [
         {
@@ -34,12 +34,12 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:e99b72dad22092b4eebf77b866208f0b95d387686111436ee26103cdb11759ce",
+      "code_fingerprint": "sha256:455a7a7a1715379a3fa1bae107f22da0c12e5dc71811d7b03e516c27487014bb",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-arithmetic-accuracy-and-time-1": {
-      "code_fingerprint": "sha256:cb603dfef8fefd3099272d76d2e0a386a61a9aeaa174dc36ba3b8e2d7af752b1",
+      "code_fingerprint": "sha256:ebed0a5648beffb750fda8f6e9f53c99ec5b1b5f05d4b698a410a74880f74ddc",
       "kind": "text",
       "outputs": [
         {
@@ -49,53 +49,53 @@
       ]
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:145f0eeb0d94cff52a1789f8f624a3afd183685665fc1db85ed1248ab54b04ad",
+      "code_fingerprint": "sha256:4e9a4f85d5bc972036521403345bbc109e0608174a8396d437c48c6be1fa43ec",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 32480,
-          "sha256": "sha256:65ab05d96076c57cba50fcc35bda75b6126a2ae020aa287fbf4ca1b04cb6a8b9"
+          "bytes": 33985,
+          "sha256": "sha256:59a15da0cda124fb58bd3ddc1ce7da657e0b07cc38859ad68ce36f8a2442f8d8"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 31827,
-          "sha256": "sha256:bef5219ba8652b3d65077286f15ccd79354b265d82fcff6ed6398a50b84c10fe"
+          "bytes": 33327,
+          "sha256": "sha256:3e7e480a198ce5ba455dd4c31b4bed27d32440fb78b57405e1025c4f57f48ff7"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:74ff91c0bdb4ac8dfdb54c6aca29dca1302fe9b2a858530fbbd3b41f58cce19b",
+      "code_fingerprint": "sha256:525485d959629d99206cf34314cd31a939a5e032c2e3fe5dceba02c8d66a50b8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.918, 1.5 ms per batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.913, 1.4 ms per batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.936, 3.2 ms per batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.936, 3.1 ms per batch\n"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:f3ff0e5605c7a154f513ac59244f308944e97a0cd7ee87a4e0256ea3cac45943",
+      "code_fingerprint": "sha256:bfddc36399b25e6806c44af949da34f72017357983b017e4b6ffa752a37564be",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:227d1c75af522f2fdc6526eba1f8d0a398ffe241b1ab8b55cc65198ec1bb4596",
+      "code_fingerprint": "sha256:4b8596e0ac156da3b8e61248fa727de1b369b9888dd6928cf4bc2e846fc7e3fe",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:88e134286bd91ecfedb4430d699011876730982b1cc1f091b61af310b47073d3",
+      "code_fingerprint": "sha256:100cc36a32414c3a3aefb4b1a2994cdb5d6e74c193bde4328f2b54b55b691db5",
       "kind": "text",
       "outputs": [
         {

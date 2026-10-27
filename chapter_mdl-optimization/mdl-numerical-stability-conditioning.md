@@ -339,9 +339,8 @@ the small logits, while the direct calculation returns three `NaN` values.
 Exact agreement at the bit level is not guaranteed:
 :eqref:`eq_mdl-opt-softmax-shift` is an identity over real numbers, but the
 two evaluation orders may round differently. The values agree to the displayed
-precision. On most builds the final equality check returns `True`; on one
-NumPy build, the first entries differ by one unit in the last place
-($0.09003058$ versus $0.09003057$). Thus the algebraic identity constrains the
+precision, but the final equality check returns `False`: the first entries
+differ by one unit in the last place ($0.09003058$ versus $0.09003057$). Thus the algebraic identity constrains the
 exact values, not every intermediate rounding. Library implementations of
 `softmax` apply maximum subtraction internally and should generally be used in
 place of direct exponentiation.
@@ -422,8 +421,8 @@ fp32 and its negative logarithm becomes infinite.
 The following cell compares the two routes for a two-class problem in which
 the label is the unlikely class and the logit gap is $t$. The exact loss is
 $\log(1+e^t)\approx t$. Depending on the library, the probability-based
-calculation exhibits subnormal rounding error, returns `inf`, or silently
-clips the probability.
+calculation first suffers subnormal rounding error or goes straight to
+`inf`.
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab mxnet
@@ -455,8 +454,8 @@ for t in [20.0, 60.0, 103.0, 104.0]:
     y = tf.constant([0])                         # label = the unlikely class
     from_logits = tf.keras.losses.sparse_categorical_crossentropy(
         y, logits, from_logits=True)[0]
-    from_probs = tf.keras.losses.sparse_categorical_crossentropy(
-        y, tf.nn.softmax(logits), from_logits=False)[0]
+    probs = tf.nn.softmax(logits)                # stable softmax, then...
+    from_probs = -tf.math.log(probs[0, 0])       # ...take the log yourself
     print(f'{t:5.0f}  {float(from_logits):15.4f}  {float(from_probs):15.4f}')
 ```
 
@@ -491,11 +490,16 @@ gap $104$ the probability underflows to exactly $0$ and the loss is `inf`.
 
 :begin_tab:`tensorflow`
 The from-logits column reads $20$, $60$, $103$, $104$: exact at every gap.
-The from-probabilities column never produces an `inf` or a `NaN`, which
-makes its failure the hardest kind to notice: Keras clips probabilities to
-$[10^{-7},\, 1 - 10^{-7}]$ before taking the log, so every row reads
-$16.1181 = -\log 10^{-7}$, a loss (and therefore a gradient) that silently
-stopped depending on the model the moment the true loss exceeded about $16$.
+The from-probabilities column matches at gaps $20$ and $60$; at gap $103$,
+where $e^{-t}$ would survive only as a *subnormal* number, the softmax does
+not linger in the subnormal range and the probability underflows to exactly
+$0$, and at gap $104$ the underflow is unconditional, so the loss reads
+`inf` at both gaps. The Keras loss
+`sparse_categorical_crossentropy(..., from_logits=False)` hides the same
+failure instead of reporting it: it clips probabilities to
+$[10^{-7},\, 1 - 10^{-7}]$ before taking the log, so it returns
+$16.1181 = -\log 10^{-7}$ at every gap above about $16$, a loss (and
+therefore a gradient) that silently stopped depending on the model.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1503,9 +1507,8 @@ Cross-entropy can be computed directly from logits with one stable lse:
 $$-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y.$$
 
 The via-probabilities route forces the loss through the representable
-range of probabilities and **fails in one of three ways**, depending on
-the library: subnormal noise before `inf`, `inf` outright, or a silent
-clip:
+range of probabilities and **fails**: depending on the library,
+subnormal noise before `inf`, or `inf` outright:
 
 @!numerical-stability-conditioning-cross-entropy
 :::
@@ -1565,10 +1568,12 @@ The label is the *unlikely* class, so the true loss is the logit gap.
 From logits it is exact at every gap; via probabilities it fails:
 
 ::: {.d2l-note .warn}
-**TensorFlow.** Keras clips probabilities to
-$[10^{-7}, 1{-}10^{-7}]$, so every row reads $16.1181 = -\log 10^{-7}$.
-No `inf`, no `NaN`: the gradient just silently stopped depending on
-the model.
+**TensorFlow.** The softmax does not linger in the subnormal range:
+$e^{-t}$ underflows to exactly $0$ already at gap $103$, and the loss
+reads `inf` at gaps $103$ and $104$. Keras'
+`sparse_categorical_crossentropy(..., from_logits=False)` instead clips
+probabilities to $[10^{-7}, 1{-}10^{-7}]$ and returns $16.1181$ at every
+large gap: no `inf`, but a gradient that no longer depends on the model.
 :::
 
 Losses and likelihoods should remain in log space until probabilities are

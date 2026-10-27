@@ -427,18 +427,26 @@ class TinyLM(nnx.Module):  #@save
                  max_len=64, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.num_heads = num_heads
-        self.token_emb = nnx.Embed(vocab_size, d_model, rngs=rngs)
-        self.pos_emb = nnx.Embed(max_len, d_model, rngs=rngs)
+        def linear(d_in, d_out):
+            a = 1 / math.sqrt(d_in)  # Weights and biases ~ U(-a, a)
+            init = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
+                              rngs=rngs)
+        def embed(n):  # Embedding rows ~ N(0, I)
+            return nnx.Embed(n, d_model, rngs=rngs,
+                             embedding_init=nnx.initializers.normal(1.0))
+        def norm():
+            return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
+        self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
         self.blks = nnx.List([nnx.Dict(
-            norm1=nnx.LayerNorm(d_model, rngs=rngs),
-            qkv=nnx.Linear(d_model, 3 * d_model, rngs=rngs),
-            proj=nnx.Linear(d_model, d_model, rngs=rngs),
-            norm2=nnx.LayerNorm(d_model, rngs=rngs),
-            mlp1=nnx.Linear(d_model, 4 * d_model, rngs=rngs),
-            mlp2=nnx.Linear(4 * d_model, d_model, rngs=rngs))
+            norm1=norm(), qkv=linear(d_model, 3 * d_model),
+            proj=linear(d_model, d_model), norm2=norm(),
+            mlp1=linear(d_model, 4 * d_model),
+            mlp2=linear(4 * d_model, d_model))
             for _ in range(num_blks)])
-        self.norm = nnx.LayerNorm(d_model, rngs=rngs)
-        self.head = nnx.Linear(d_model, vocab_size, rngs=rngs)
+        self.norm = norm()
+        self.head = linear(d_model, vocab_size)
 
     def attention(self, blk, X):
         B, T, D = X.shape
@@ -451,7 +459,8 @@ class TinyLM(nnx.Module):  #@save
         H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
         for blk in self.blks:
             H = H + self.attention(blk, blk['norm1'](H))
-            H = H + blk['mlp2'](jax.nn.gelu(blk['mlp1'](blk['norm2'](H))))
+            H = H + blk['mlp2'](jax.nn.gelu(blk['mlp1'](blk['norm2'](H)),
+                                            approximate=False))
         return self.head(self.norm(H))
 ```
 
@@ -650,7 +659,7 @@ adam_lm = run_lm(optax.adam, lrs=[3e-4, 1e-3, 3e-3, 1e-2])
 ```
 
 On this grid, SGD's best learning rate sits directly below a divergent one:
-moving one grid point higher produces a NaN loss. Adam's optimum is interior,
+moving one grid point higher, the loss diverges (printed as `inf`). Adam's optimum is interior,
 with stable neighboring rates on both sides. This experiment establishes the
 difference for this model and grid; it does not by itself identify gradient
 tails as the cause or characterize all transformers. We compare the best rate found for each method:
@@ -713,10 +722,15 @@ fashion = d2l.FashionMNIST(batch_size=256)
 class FashionCNN(nnx.Module):
     def __init__(self, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), rngs=rngs)
-        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), rngs=rngs)
-        self.fc1 = nnx.Linear(64 * 7 * 7, 128, rngs=rngs)
-        self.fc2 = nnx.Linear(128, 10, rngs=rngs)
+        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
+            a = 1 / math.sqrt(fan_in)
+            f = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return dict(kernel_init=f, bias_init=f, rngs=rngs)
+        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
+        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
+        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
+        self.fc2 = nnx.Linear(128, 10, **init(128))
 
     def __call__(self, X):
         X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),

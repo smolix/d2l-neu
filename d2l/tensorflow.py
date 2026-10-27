@@ -667,7 +667,7 @@ class LeNet(d2l.Classifier):
 def cosine_warmup(t, num_steps, warmup_steps):
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
 
-    Defined in :numref:`sec_batch_norm`"""
+    Defined in :numref:`sec_alexnet`"""
     t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
     warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)

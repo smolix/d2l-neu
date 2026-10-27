@@ -196,17 +196,18 @@ on the others.
 
 A step schedule holds the learning rate constant for tens of epochs and then
 divides it by 10, an abrupt change whose two times are extra
-hyperparameters. The modern default is the schedule we used for batch
-normalization in :numref:`sec_batch_norm`: a linear *warmup* from zero to the
-base rate $\eta_0$ over the first $t_\textrm{w}$ steps, then the
-half-cosine *decay* :eqref:`eq_cosine_warmup` to zero at the last step $T$.
+hyperparameters. The modern default is the schedule with which we have
+trained the networks of this chapter since AlexNet (:numref:`sec_alexnet`): a
+linear *warmup* from zero to the base rate $\eta_0$ over the first
+$t_\textrm{w}$ steps, then the half-cosine *decay* :eqref:`eq_cosine_warmup`
+to zero at the last step $T$.
 Warmup exists because a freshly
 initialized network can produce large, badly scaled gradients, and a few
 steps at small rates let the running statistics of batch normalization and
 of the optimizer settle before full-size updates arrive. The long tail of
 small rates lets the noisy iterates settle into a region of low loss, and
 there is no time of a drop to tune. The function `d2l.cosine_warmup(t,
-num_steps, warmup_steps)` of :numref:`sec_batch_norm` returns the factor by
+num_steps, warmup_steps)` of :numref:`sec_alexnet` returns the factor by
 which the schedule multiplies the base rate at step $t$; the optimizer
 updates the rate after every minibatch. We plot it next to the step decay of
 the 2015 recipe, each over the budget it gets in the experiment later in

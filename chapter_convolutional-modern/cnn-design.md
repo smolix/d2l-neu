@@ -419,26 +419,30 @@ the same training setup while running up to five times faster on GPUs.
 
 ### RegNetX32 on Fashion-MNIST
 
-We now build a small network that follows the rules. Fashion-MNIST images,
-upsampled to $96 \times 96$ as in :numref:`sec_resnet`, are small: after the
-stem and four stages the map would be $3 \times 3$. We therefore use two
-stages. The stem has 32 channels; stage 1 has $d_1 = 4$ blocks of width
-$c_1 = 32$ and stage 2 has $d_2 = 6$ blocks of width $c_2 = 80$, so widths and
-depths increase; $k = 1$. Counting one stem convolution, three convolutions
-per block, and the linear head gives 32 layers. One simplification breaks a
-rule: both stages use 16 groups, so the group widths are 2 and 5 channels
-rather than one shared value (problem :exref:`ex_cnn-design-vionet`
-restores it).
+We now build a small network that follows the rules and compare it with
+ResNet-18. Fashion-MNIST images, upsampled to $96 \times 96$ as in
+:numref:`sec_resnet`, carry only $28 \times 28$ pixels of detail, and the
+stem and one stage already bring them to $24 \times 24$. The four stages of
+the paper's ImageNet models would put the last two on $6 \times 6$ and
+$3 \times 3$ maps; we use two stages, which keep every block at
+$24 \times 24$ or $12 \times 12$ (problem :exref:`ex_cnn-design-four-stages`
+tries four). The stem has 32 channels; stage 1 has $d_1 = 4$
+blocks of width $c_1 = 64$ and stage 2 has $d_2 = 6$ blocks of width
+$c_2 = 160$, so widths and depths increase. The bottleneck ratio is $k = 1$,
+and both stages share the group width $g = 16$, so their $3 \times 3$
+convolutions have $64/16 = 4$ and $160/16 = 10$ groups. Counting one stem
+convolution, three convolutions per block, and the linear head gives 32
+layers.
 
 ```{.python .input #cnn-design-regnet-1}
 %%tab mxnet, pytorch, tensorflow
 class RegNetX32(AnyNet):
     def __init__(self, lr=0.1, num_classes=10, num_steps=None):
-        stem_channels, groups, bot_mul = 32, 16, 1
-        depths, channels = (4, 6), (32, 80)
-        super().__init__(
-            ((depths[0], channels[0], groups, bot_mul),
-             (depths[1], channels[1], groups, bot_mul)),
+        stem_channels, group_width, bot_mul = 32, 16, 1
+        depths, channels = (4, 6), (64, 160)
+        super().__init__(  # The number of groups is c_i / g
+            tuple((d, c, c // group_width, bot_mul)
+                  for d, c in zip(depths, channels)),
             stem_channels, lr, num_classes)
         self.num_steps = num_steps  # Length of the learning-rate schedule
 ```
@@ -448,11 +452,11 @@ class RegNetX32(AnyNet):
 class RegNetX32(AnyNet):
     def __init__(self, lr=0.1, num_classes=10, num_steps=None,
                  in_channels=1, rngs=None):
-        stem_channels, groups, bot_mul = 32, 16, 1
-        depths, channels = (4, 6), (32, 80)
-        super().__init__(
-            ((depths[0], channels[0], groups, bot_mul),
-             (depths[1], channels[1], groups, bot_mul)),
+        stem_channels, group_width, bot_mul = 32, 16, 1
+        depths, channels = (4, 6), (64, 160)
+        super().__init__(  # The number of groups is c_i / g
+            tuple((d, c, c // group_width, bot_mul)
+                  for d, c in zip(depths, channels)),
             stem_channels, lr, num_classes, in_channels, rngs)
         self.num_steps = num_steps  # Length of the learning-rate schedule
 ```
@@ -475,13 +479,27 @@ RegNetX32().layer_summary((1, 96, 96, 1))
 RegNetX32().layer_summary((1, 96, 96, 1))
 ```
 
-How well does a network built from these rules do at a small scale? We
-train it as we trained ResNet-18 in :numref:`sec_resnet`: Fashion-MNIST at
-$96 \times 96$, minibatches of 128, and 10 epochs of minibatch SGD whose
-rate rises linearly over the first epoch and then decays to zero along a
-cosine (`d2l.cosine_warmup` of :numref:`sec_batch_norm`, stepped after every
-minibatch). Only the peak rate differs: 0.1 instead of 0.01. The small
-network needs the larger rate; with a peak of 0.05 it ends near 88%.
+Counted as for AlexNet in :numref:`sec_alexnet`, with each weight of a
+convolution applied once at every output position, RegNetX32 performs 112
+million multiply-adds per $96 \times 96$ image. ResNet-18 performs 319
+million, almost three times as many.
+
+How well does a network built from these rules do against ResNet-18? We
+train on Fashion-MNIST at $96 \times 96$ with minibatches of 128 for 10
+epochs, with the learning-rate schedule of this chapter: the rate rises
+linearly to a peak of 0.1 over the first epoch and then decays to zero
+along a cosine (`d2l.cosine_warmup` of :numref:`sec_alexnet`, stepped after
+every minibatch). The optimizer is that of
+:citet:`Radosavovic.Kosaraju.Girshick.ea.2020` and of recipe A in
+:numref:`sec_training_recipes`: SGD with momentum 0.9, which steps along an
+exponentially weighted sum of recent gradients, so that its steps are up to
+$1/(1 - 0.9) = 10$ times longer than plain SGD steps at the same rate
+(:numref:`sec_momentum`), and a weight decay that is added to the gradient
+(:numref:`sec_weight_decay`). The paper uses a decay of $5 \times 10^{-5}$
+for 100 epochs of ImageNet. For 10 epochs of Fashion-MNIST we use
+$10^{-3}$: of the decays $5 \times 10^{-5}$, $5 \times 10^{-4}$,
+$10^{-3}$, and $2 \times 10^{-3}$, it gives RegNetX32 its best accuracy
+and ResNet-18 one as good as any other.
 
 ```{.python .input #cnn-design-training-1}
 %%tab mxnet
@@ -491,14 +509,16 @@ def configure_optimizers(self):
     schedule = lambda t: self.lr * d2l.cosine_warmup(  # MXNet counts
         t - 1, self.num_steps, warmup)  # updates from 1
     return gluon.Trainer(self.collect_params(), 'sgd', {
-        'learning_rate': None, 'lr_scheduler': schedule})
+        'learning_rate': None, 'lr_scheduler': schedule,
+        'momentum': 0.9, 'wd': 1e-3})  # wd: weight decay in the gradient
 ```
 
 ```{.python .input #cnn-design-training-1}
 %%tab pytorch
 @d2l.add_to_class(AnyNet)
 def configure_optimizers(self):
-    optim = torch.optim.SGD(self.parameters(), lr=self.lr)
+    optim = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=0.9,
+                            weight_decay=1e-3)  # Decay added to the gradient
     warmup = self.num_steps // 10
     schedule = torch.optim.lr_scheduler.LambdaLR(
         optim, lambda t: d2l.cosine_warmup(t, self.num_steps, warmup))
@@ -507,12 +527,22 @@ def configure_optimizers(self):
 
 ```{.python .input #cnn-design-training-1}
 %%tab tensorflow
+class CoupledSGD(tf.keras.optimizers.SGD):
+    """SGD that adds weight decay to the gradient (L2 regularization)."""
+    def __init__(self, weight_decay, **kwargs):
+        super().__init__(**kwargs)
+        self.l2 = weight_decay
+
+    def apply_gradients(self, grads_and_vars):
+        return super().apply_gradients(
+            [(g + self.l2 * v, v) for g, v in grads_and_vars])
+
 @d2l.add_to_class(AnyNet)
 def configure_optimizers(self):
     warmup = self.num_steps // 10
     schedule = lambda: self.lr * d2l.cosine_warmup(
         optim.iterations, self.num_steps, warmup)
-    optim = tf.keras.optimizers.SGD(schedule)
+    optim = CoupledSGD(1e-3, learning_rate=schedule, momentum=0.9)
     return optim
 ```
 
@@ -521,9 +551,17 @@ def configure_optimizers(self):
 @d2l.add_to_class(AnyNet)
 def configure_optimizers(self):
     warmup = self.num_steps // 10
-    return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
-        t, self.num_steps, warmup))
+    schedule = lambda t: self.lr * d2l.cosine_warmup(
+        t, self.num_steps, warmup)
+    return optax.chain(optax.add_decayed_weights(1e-3),  # In the gradient
+                       optax.sgd(schedule, momentum=0.9))
 ```
+
+:begin_tab:`tensorflow`
+The `weight_decay` argument of a Keras optimizer shrinks the weights
+directly, outside the momentum buffer. `CoupledSGD`, as in recipe A of
+:numref:`sec_training_recipes`, adds the decay to the gradient instead.
+:end_tab:
 
 ```{.python .input #cnn-design-training}
 %%tab mxnet, pytorch, jax
@@ -550,13 +588,191 @@ print(f'{d2l.num_params(model):,} parameters, validation accuracy '
       f'{trainer.history["val_acc"][-1]:.3f}')
 ```
 
-RegNetX32 has 113,674 parameters and reaches about 90% validation accuracy
-after 10 epochs. That is within about a point of the 90–91% of the ResNet-18
-in :numref:`sec_resnet`, with about 1% of its 11.2 million parameters. A
-network assembled from a few rules and four numbers per stage is thus a strong
-baseline at this scale. The rules did not come from Fashion-MNIST, and the
-comparison is not controlled: the two networks differ in depth, width, block,
-and peak learning rate.
+For a fair comparison, ResNet-18 must be trained with the same optimizer.
+It fits the AnyNet template: its stem is a $7 \times 7$ convolution with
+stride 2, batch normalization, a ReLU, and $3 \times 3$ max-pooling with
+stride 2, and its four stages repeat the residual block `d2l.Residual` of
+:numref:`sec_resnet` twice each. The first block of every stage after the
+first halves the resolution. Overriding `stem` and `stage` therefore gives
+the network of :numref:`sec_resnet`, and it inherits the optimizer that we
+attached to `AnyNet`. Each entry of `arch` now holds a depth, a width, and
+the stride of the stage's first block.
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-1}
+%%tab mxnet
+class ResNet18(AnyNet):
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None):
+        super().__init__(((2, 64, 1), (2, 128, 2), (2, 256, 2), (2, 512, 2)),
+                         64, lr, num_classes)
+        self.num_steps = num_steps
+
+    def stem(self, num_channels):
+        net = nn.HybridSequential()
+        net.add(nn.Conv2D(num_channels, kernel_size=7, strides=2, padding=3,
+                          use_bias=False),
+                nn.BatchNorm(), nn.Activation('relu'),
+                nn.MaxPool2D(pool_size=3, strides=2, padding=1))
+        return net
+
+    def stage(self, depth, num_channels, stride):
+        net = nn.HybridSequential()
+        net.add(d2l.Residual(num_channels, use_1x1conv=stride > 1,
+                             strides=stride))
+        for _ in range(depth - 1):
+            net.add(d2l.Residual(num_channels))
+        return net
+```
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-1}
+%%tab pytorch
+class ResNet18(AnyNet):
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None):
+        super().__init__(((2, 64, 1), (2, 128, 2), (2, 256, 2), (2, 512, 2)),
+                         64, lr, num_classes)
+        self.num_steps = num_steps
+
+    def stem(self, num_channels):
+        return nn.Sequential(
+            nn.LazyConv2d(num_channels, kernel_size=7, stride=2, padding=3,
+                          bias=False),
+            nn.LazyBatchNorm2d(), nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+
+    def stage(self, depth, num_channels, stride):
+        blk = [d2l.Residual(num_channels, use_1x1conv=stride > 1,
+                            strides=stride)]
+        blk += [d2l.Residual(num_channels) for _ in range(depth - 1)]
+        return nn.Sequential(*blk)
+```
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-1}
+%%tab tensorflow
+class ResNet18(AnyNet):
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None):
+        super().__init__(((2, 64, 1), (2, 128, 2), (2, 256, 2), (2, 512, 2)),
+                         64, lr, num_classes)
+        self.num_steps = num_steps
+
+    def stem(self, num_channels):
+        return tf.keras.models.Sequential([
+            tf.keras.layers.ZeroPadding2D(3),  # Pad every side
+            tf.keras.layers.Conv2D(num_channels, kernel_size=7, strides=2,
+                                   use_bias=False,
+                                   kernel_initializer=he_init()),
+            tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
+            tf.keras.layers.Activation('relu'),
+            tf.keras.layers.ZeroPadding2D(1),  # Zeros are safe after a ReLU
+            tf.keras.layers.MaxPool2D(pool_size=3, strides=2)])
+
+    def stage(self, depth, num_channels, stride):
+        net = tf.keras.models.Sequential()
+        net.add(d2l.Residual(num_channels, use_1x1conv=stride > 1,
+                             strides=stride))
+        for _ in range(depth - 1):
+            net.add(d2l.Residual(num_channels))
+        return net
+```
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-1}
+%%tab jax
+class ResNet18(AnyNet):
+    def __init__(self, lr=0.1, num_classes=10, num_steps=None,
+                 in_channels=1, rngs=None):
+        super().__init__(((2, 64, 1), (2, 128, 2), (2, 256, 2), (2, 512, 2)),
+                         64, lr, num_classes, in_channels, rngs)
+        self.num_steps = num_steps
+
+    def stem(self, in_channels, num_channels, rngs):
+        return nnx.Sequential(
+            nnx.Conv(in_channels, num_channels, kernel_size=(7, 7),
+                     strides=(2, 2), padding=3, use_bias=False,
+                     kernel_init=he, rngs=rngs),
+            nnx.BatchNorm(num_channels, momentum=0.9,
+                          use_fast_variance=False, rngs=rngs), nnx.relu,
+            max_pool)
+
+    def stage(self, depth, num_channels, stride, in_channels, rngs):
+        blk = [d2l.Residual(num_channels, use_1x1conv=stride > 1,
+                            strides=(stride, stride), in_channels=in_channels,
+                            rngs=rngs)]
+        blk += [d2l.Residual(num_channels, in_channels=num_channels,
+                             rngs=rngs) for _ in range(depth - 1)]
+        return nnx.Sequential(*blk)
+
+def max_pool(X):  # 3x3 windows, stride 2, padding 1 on every side
+    return nnx.max_pool(X, window_shape=(3, 3), strides=(2, 2),
+                        padding=((1, 1), (1, 1)))
+```
+
+We train it on the same data for the same 10 epochs.
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-2}
+%%tab mxnet, pytorch, jax
+model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
+trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+trainer.fit(model, data)
+```
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-2}
+%%tab tensorflow
+trainer = d2l.Trainer(max_epochs=10)
+with d2l.try_gpu():
+    model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
+    trainer.fit(model, data)
+```
+
+```{.python .input #cnn-design-regnetx32-on-fashion-mnist-3}
+print(f'{d2l.num_params(model):,} parameters, validation accuracy '
+      f'{trainer.history["val_acc"][-1]:.3f}')
+```
+
+ResNet-18 has 11,175,370 parameters, RegNetX32 519,658, and both reach
+about 94% validation accuracy after 10 epochs. Over three or more runs in
+each framework, the accuracies of the two networks spread over the same
+range, from about 93.7% to 94.2%, so the difference between the two printed
+accuracies is run-to-run noise. A network assembled
+from a few rules and four numbers per stage thus matches the hand-designed
+one with about a third of its multiply-adds and less than 5% of its 11.2
+million parameters. The comparison is not controlled in every respect: the
+two networks differ in depth, width, and block, and the rules did not come
+from Fashion-MNIST.
+
+The optimizer is part of the result. With the plain SGD of
+:numref:`sec_resnet`, the same RegNetX32 ends near 91%, while ResNet-18
+reaches 93%. :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` found and
+tested their rules with SGD with momentum and weight decay, and that is the
+setting in which RegNetX32 matches ResNet-18.
+
+Larger members of the design space gain nothing on a dataset this easy.
+The paper's four-stage RegNetX-400MF, -800MF, and -1.6GF have 4.8 to 8.3
+million parameters and perform 72 to 293 million multiply-adds per
+$96 \times 96$ image. Trained with the same recipe, they end between 93%
+and 94%, provided the last batch normalization of each block starts with a
+scale of zero, so that every block starts as the identity (a technique
+listed in :numref:`sec_training_recipes`; Nesterov's variant of momentum,
+the default in the paper's code, has the same effect). Without it, some
+runs of the
+16- and 22-block RegNetX-800MF and -400MF start badly and end a point or
+more lower. ResNet-18 gains nothing from 30 epochs instead of 10, and
+random crops and flips lower the accuracy of every network we tried in 10
+epochs. At this scale the dataset, not the architecture, limits the
+accuracy to about 94%.
+
+Fewer multiply-adds do not make RegNetX32 faster to train: on a GPU, an
+epoch takes half again to nearly twice as long as one of ResNet-18. Timed
+layer by layer, a grouped $3 \times 3$ convolution with 16 channels per
+group runs at a quarter to a tenth of the arithmetic rate of a dense one,
+because the GPU library runs it with generic kernels that do not use the
+GPU's matrix-multiply units. RegNetX32 also launches about 1.6 times as many
+small kernels per step as ResNet-18 for its 33 convolutions and their
+normalizations and activations. Kernels that ran grouped convolutions at
+the rate of dense ones, fused with the normalization and activation after
+them, would bring a step down to about the time of ResNet-18's.
+:citet:`Radosavovic.Kosaraju.Girshick.ea.2020` compare RegNetX with ResNet
+at equal numbers of activations, the values that all convolutions output
+for one image, and find similar GPU times there. Their GPU advantage of up
+to five times is over EfficientNet, whose activations grow in proportion to
+its multiply-adds.
 
 ### Squeeze-and-Excitation Gates
 :label:`subsec_se`
@@ -663,8 +879,13 @@ bottleneck ratio each, and a head. Comparing the error distributions of
 briefly trained samples shows that one bottleneck ratio and one group width
 for all stages cost nothing, while widths and depths that grow across stages
 help. RegNet adds a bottleneck ratio of 1 and widths that grow linearly with
-the block index, which turns 16 free numbers into a few. The rules were
-derived for one block family, budget, and training protocol; whether they
+the block index, which turns 16 free numbers into a few. On Fashion-MNIST, a
+32-layer RegNetX with 0.52 million parameters matches the accuracy of
+ResNet-18, about 94%, with a third of its multiply-adds, when both are
+trained with the paper's optimizer: SGD with momentum and weight decay.
+Larger RegNetX models gain nothing on a dataset this easy. The rules were
+derived for one block family, budget, and training protocol;
+whether they
 hold for other blocks, such as those of ConvNeXt or of the vision
 transformers of :numref:`chap_transformers`, is a question the same method
 can answer (problem :exref:`ex_cnn-design-convnext-space`).
@@ -678,6 +899,7 @@ can answer (problem :exref:`ex_cnn-design-convnext-space`).
    Fashion-MNIST at $96 \times 96$. Work out the feature-map size at which
    each stage operates and explain what a $3 \times 3$ convolution computes
    on the last one.
+   :exlabel:`ex_cnn-design-four-stages`
 
 1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
    turn the observation that width should grow linearly with the block index
@@ -722,16 +944,14 @@ can answer (problem :exref:`ex_cnn-design-convnext-space`).
        single architecture is selected by a proxy score, and what can go
        wrong when a design space is constrained by rules fitted to a sample?
 
-1. [code] **VioNet.** ● `RegNetX32` passes `groups=16`, the number of
-   groups, to stages of width 32 and 80, so its group widths, the channels
-   per group, are 2 and 5. Build a baseline with the depths and widths of
-   `RegNetX32` and one group width of 16 shared by both stages. Then
-   implement variants of the baseline that each violate one design
-   principle of AnyNetX$_E$ (:numref:`subsec_regnet`) at roughly
-   matched parameter count: widths that decrease across stages, depths
-   that decrease across stages, group widths that differ between stages,
-   and bottleneck ratios that differ between stages.
-    1. Report validation accuracy for each violation against the baseline.
+1. [code] **VioNet.** ● Implement variants of `RegNetX32` that each
+   violate one design principle of AnyNetX$_E$ (:numref:`subsec_regnet`)
+   at roughly matched parameter count: widths that decrease across stages,
+   depths that decrease across stages, group widths that differ between
+   stages, and bottleneck ratios that differ between stages.
+    1. Report validation accuracy for each violation against `RegNetX32`.
+       Train every network three times: runs of one network differ by a
+       few tenths of a point.
     1. Which of depth $d_i$, width $c_i$, group width $g_i$, and bottleneck
        ratio $k_i$ matters most here?
     1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
@@ -740,6 +960,17 @@ can answer (problem :exref:`ex_cnn-design-convnext-space`).
        and why does one network per violation give weaker evidence than an
        error CDF?
    :exlabel:`ex_cnn-design-vionet`
+
+1. [code] **The optimizer.** With plain SGD at a peak rate of 0.1,
+   `RegNetX32` ends several points below the accuracy it reaches with
+   momentum and weight decay.
+    1. Train it with momentum 0.9 and no weight decay, and with plain SGD
+       at peaks of 0.1 and 1.0. Which change accounts for most of the gain?
+    1. Show that when the gradient stays constant, SGD with momentum
+       $\beta$ at rate $\eta$ eventually takes the same steps as plain SGD
+       at rate $\eta / (1 - \beta)$. Do your runs agree?
+    1. Repeat the comparison for `ResNet18`. Does it gain as much from
+       the change of optimizer?
 
 1. [extended] **Proxy reliability.** ● The method of
    :numref:`subsec_design_space_distributions` assumes that accuracy after a
@@ -830,8 +1061,8 @@ Which choices matter, and do they carry over to a new budget?
 - state the RegNet rules and the evidence behind each;
 - build a RegNet instance from four numbers per stage and train it.
 
-**Running example:** parameters and accuracy on Fashion-MNIST, a 32-layer
-RegNetX with 114k parameters against the 11.2M-parameter ResNet-18.
+**Running example:** a 32-layer RegNetX with 0.52M parameters against the
+11.2M-parameter ResNet-18 on Fashion-MNIST, both trained with one recipe.
 :::
 
 ::: {.slide title="From Single Networks to Rules for Families"}
@@ -976,15 +1207,16 @@ populations; the best network of two spaces may be the same one.
 ::: {.slide title="RegNetX32: Two Stages, Four Numbers Each"}
 [RegNet]{.kicker}
 
-| stage | depth $d$ | width $c$ | groups | $k$ | resolution |
+| stage | depth $d$ | width $c$ | groups $c/g$ | $k$ | resolution |
 |---|--:|--:|--:|--:|--:|
 | stem | | 32 | | | 48×48 |
-| 1 | 4 | 32 | 16 | 1 | 24×24 |
-| 2 | 6 | 80 | 16 | 1 | 12×12 |
+| 1 | 4 | 64 | 4 | 1 | 24×24 |
+| 2 | 6 | 160 | 10 | 1 | 12×12 |
 
-- widths and depths grow; $k = 1$ (no bottleneck)
+- widths and depths grow; $k = 1$ (no bottleneck); one group width $g = 16$
 - 1 stem conv + 10 blocks × 3 convs + 1 linear = **32 layers**
-- one simplification: shared *number* of groups, so group widths 2 and 5
+- two stages: Fashion-MNIST has 28 × 28 pixels of detail
+- 0.52M parameters, 112M multiply-adds per image (ResNet-18: 11.2M, 319M)
 :::
 
 ::: {.slide title="Each Stage Halves the Resolution: 96 → 48 → 24 → 12"}
@@ -993,26 +1225,70 @@ populations; the best network of two spaces may be the same one.
 @!cnn-design-regnet-2
 :::
 
-::: {.slide title="Ten Epochs with a Cosine Schedule: About 90%, No Final Dip"}
+::: {.slide title="Ten Epochs with Momentum and Weight Decay: About 94%"}
 [RegNet]{.kicker}
 
 @!cnn-design-training
 
-Same schedule as ResNet-18 (warmup over the first epoch, cosine to 0), peak
-rate 0.1 instead of 0.01.
+The paper's optimizer, SGD with momentum 0.9, with weight decay $10^{-3}$
+added to the gradient; warmup over the first epoch to a peak of 0.1, cosine
+to 0.
 :::
 
-::: {.slide title="RegNetX32 Comes Within a Point of ResNet-18 with 1% of Its Parameters"}
+::: {.slide title="ResNet-18 Is an AnyNet with Its Own Stem and Block"}
 [RegNet]{.kicker}
 
-| | parameters | validation accuracy, 10 epochs |
-|---|--:|--:|
-| ResNet-18 (hand-designed) | 11.2M | 90–91% |
-| RegNetX32 (four numbers per stage) | 0.114M | ≈ 90% |
+| | stem | block | stages (depth, width) |
+|---|---|---|---|
+| RegNetX32 | 3 × 3, stride 2 | grouped bottleneck, $k = 1$, $g = 16$ | (4, 64), (6, 160) |
+| ResNet-18 | 7 × 7, stride 2, max-pool | two 3 × 3 convolutions | (2, 64), (2, 128), (2, 256), (2, 512) |
+
+- override `stem` and `stage`; the head and the optimizer are inherited
+- same data, schedule, momentum 0.9, weight decay $10^{-3}$: a fair comparison
+:::
+
+::: {.slide title="RegNetX32 Matches ResNet-18 with a Third of Its Multiply-Adds"}
+[RegNet]{.kicker}
+
+| same optimizer and schedule | parameters | multiply-adds | accuracy, 10 epochs |
+|---|--:|--:|--:|
+| ResNet-18 (hand-designed) | 11.2M | 319M | ≈ 94% |
+| RegNetX32 (four numbers per stage) | 0.52M | 112M | ≈ 94% |
 
 @!cnn-design-training-2
 
-Not a controlled comparison: depth, width, block, and peak rate differ.
+@!cnn-design-regnetx32-on-fashion-mnist-3
+
+With plain SGD instead (no momentum, no decay): ResNet-18 93%, RegNetX32
+about 91%. The design rules were found under the paper's optimizer.
+:::
+
+::: {.slide title="Larger RegNets Gain Nothing: Fashion-MNIST Saturates Near 94%"}
+[RegNet]{.kicker}
+
+| same recipe, 10 epochs | parameters | multiply-adds | accuracy |
+|---|--:|--:|--:|
+| RegNetX32 | 0.52M | 112M | ≈ 94% |
+| RegNetX-400MF / -800MF / -1.6GF (four stages) | 4.8–8.3M | 72–293M | 93–94% |
+| ResNet-18 | 11.2M | 319M | ≈ 94% |
+
+- the deep four-stage models need the last BN scale of each block at 0
+  (blocks start as the identity); without it some runs lose a point or more
+- ResNet-18: no gain from 30 epochs; crops and flips lower every network
+:::
+
+::: {.slide title="A Third of the Multiply-Adds, Yet Slower Steps on a GPU"}
+[RegNet]{.kicker}
+
+- an epoch of RegNetX32 takes 1.5–2× as long as one of ResNet-18
+- grouped 3 × 3 convolution, 16 channels per group: 1/4 to 1/10 of the
+  arithmetic rate of a dense one (generic kernels, no matrix units)
+- about 1.6× as many small kernels per step (33 convolutions, each with
+  normalization and activation)
+- grouped kernels at the dense rate, fused with what follows: about
+  ResNet-18's step time
+- the paper's 5× GPU speedup is against EfficientNet, not ResNet
+
 :::
 
 ::: {.slide title="RegNetY Adds a Squeeze-and-Excitation Gate to Every Block"}
@@ -1051,8 +1327,8 @@ $9 \cdot 256^2 \cdot 196 \approx 116$M: the gate adds 0.03%.
 - **Comparison:** error CDFs of 500 briefly trained samples per space.
 - **Rules:** one $k$ and one $g$ (free), widths and depths that grow
   (49.4% → 42.7% mean error), $k = 1$, linear widths.
-- **Fashion-MNIST:** RegNetX32, 114k parameters, ≈ 90% after 10 epochs:
-  within about a point of ResNet-18 with 1% of its parameters.
+- **Fashion-MNIST:** RegNetX32, 0.52M parameters, ≈ 94% after 10 epochs:
+  matches ResNet-18 trained the same way with a third of its multiply-adds.
 - Rules hold for the block, budget, and protocol they were fitted on.
 
 **Next:** RNNs and sequence models.

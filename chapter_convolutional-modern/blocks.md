@@ -31,7 +31,7 @@ can be compared on one table.
 ```{.python .input #blocks-imports}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import init, np as mnp, npx
+from mxnet import gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
@@ -55,6 +55,7 @@ import tensorflow as tf
 from d2l import jax as d2l
 from flax import nnx
 from jax import numpy as jnp
+import optax
 ```
 
 ## VGG: Blocks as the Unit of Design
@@ -190,7 +191,7 @@ streams to every layer.
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab mxnet
 class VGG(d2l.Classifier):
-    def __init__(self, arch, lr=0.1, num_classes=10):
+    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.HybridSequential()
@@ -206,7 +207,7 @@ class VGG(d2l.Classifier):
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab pytorch
 class VGG(d2l.Classifier):
-    def __init__(self, arch, lr=0.1, num_classes=10):
+    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         conv_blks = [vgg_block(num_convs, out_channels)
@@ -226,7 +227,7 @@ class VGG(d2l.Classifier):
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab tensorflow
 class VGG(d2l.Classifier):
-    def __init__(self, arch, lr=0.1, num_classes=10):
+    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         layers = tf.keras.layers
@@ -244,7 +245,7 @@ class VGG(d2l.Classifier):
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab jax
 class VGG(d2l.Classifier):
-    def __init__(self, arch, lr=0.1, num_classes=10,
+    def __init__(self, arch, lr=0.1, num_steps=4690, num_classes=10,
                  input_shape=(224, 224, 1), rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
@@ -314,22 +315,64 @@ channels in every block: 16, 32, 64, 128, and 128. It performs 512 million
 multiply-adds per image, 470 million of them in the convolutions: about half
 of AlexNet's 938 million. Everything else
 follows :numref:`sec_alexnet`: images upsampled to $224 \times 224$,
-minibatches of 128, 10 epochs of SGD with learning rate 0.01.
+minibatches of 128, and 10 epochs of SGD whose learning rate rises linearly
+to a peak of 0.03 over the first epoch and then decays to zero along the
+half-cosine :eqref:`eq_cosine_warmup`, stepped after every minibatch. VGG
+gets the same `configure_optimizers` as AlexNet.
+
+```{.python .input #blocks-training-1}
+%%tab mxnet
+@d2l.add_to_class(VGG)
+def configure_optimizers(self):
+    schedule = lambda t: self.lr * d2l.cosine_warmup(  # MXNet counts from 1
+        t - 1, self.num_steps, self.num_steps // 10)
+    return gluon.Trainer(self.collect_params(), 'sgd', {
+        'learning_rate': None, 'lr_scheduler': schedule})
+```
+
+```{.python .input #blocks-training-1}
+%%tab pytorch
+@d2l.add_to_class(VGG)
+def configure_optimizers(self):
+    optim = torch.optim.SGD(self.parameters(), lr=self.lr)
+    schedule = torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
+        d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
+    return optim, schedule  # The Trainer steps it after every minibatch
+```
+
+```{.python .input #blocks-training-1}
+%%tab tensorflow
+@d2l.add_to_class(VGG)
+def configure_optimizers(self):
+    schedule = lambda: self.lr * d2l.cosine_warmup(
+        optim.iterations, self.num_steps, self.num_steps // 10)
+    optim = tf.keras.optimizers.SGD(schedule)
+    return optim
+```
+
+```{.python .input #blocks-training-1}
+%%tab jax
+@d2l.add_to_class(VGG)
+def configure_optimizers(self):
+    return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
+        t, self.num_steps, self.num_steps // 10))
+```
 
 ```{.python .input #vgg-training  n=8}
-model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.01)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.03,
+            num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 val_acc = {'VGG': trainer.history['val_acc']}  # for the comparison below
 ```
 
-The narrow VGG reaches a validation accuracy of about 90–91%, about a point
-above AlexNet with half of its arithmetic, and the training and validation
-losses stay close. Narrowing the blocks shrank the convolutions to 0.6 million
-parameters, but the head still maps $128 \times 7 \times 7 = 6272$ numbers
-to 4096 units and holds 42.5 million of the network's 43.1 million
-parameters: 99%. Blocks organized the body of the network; the head is
+The narrow VGG reaches a validation accuracy of about 92%, half a point to a
+point above AlexNet with half of its arithmetic, and the training and
+validation losses stay close. Narrowing the blocks shrank the convolutions
+to 0.6 million parameters, but the head still maps
+$128 \times 7 \times 7 = 6272$ numbers to 4096 units and holds 42.5 million
+of the network's 43.1 million parameters: 99%. Blocks organized the body of the network; the head is
 untouched.
 
 ## NiN: $1 \times 1$ Convolutions and Global Average Pooling
@@ -432,7 +475,7 @@ by contrast, has a separate weight for every position.
 ```{.python .input #nin-nin-model-1}
 %%tab mxnet
 class NiN(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.HybridSequential()
@@ -455,7 +498,7 @@ class NiN(d2l.Classifier):
 ```{.python .input #nin-nin-model-1}
 %%tab pytorch
 class NiN(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.Sequential(
@@ -477,7 +520,7 @@ class NiN(d2l.Classifier):
 ```{.python .input #nin-nin-model-1}
 %%tab tensorflow
 class NiN(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
@@ -496,7 +539,7 @@ class NiN(d2l.Classifier):
 ```{.python .input #nin-nin-model-1}
 %%tab jax
 class NiN(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
@@ -541,28 +584,38 @@ head disappears.
 
 ### Training
 
-We train NiN with the procedure of AlexNet and VGG: images upsampled to
-$224 \times 224$, minibatches of 128, and 10 epochs of SGD with learning
-rate 0.01.
+We train NiN with the procedure of AlexNet and VGG, so it takes VGG's
+`configure_optimizers`: images upsampled to $224 \times 224$, minibatches of
+128, and 10 epochs of SGD whose learning rate warms up to a peak of 0.03
+over the first epoch and then decays to zero. Of the peaks we tried, 0.03 is
+the largest at which NiN trains reliably: at 0.05 an occasional run stays
+near chance for several epochs, and at 0.1 some runs diverge.
 
 ```{.python .input #nin-training}
-model = NiN(lr=0.01)
+NiN.configure_optimizers = VGG.configure_optimizers  # AlexNet's schedule
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = NiN(lr=0.03, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 val_acc['NiN'] = trainer.history['val_acc']
 ```
 
-NiN ends at a validation accuracy between about 78% and 87% after the same 10
-epochs, with 4% of AlexNet's parameters. Its accuracy is still rising at epoch
-10, so where a run lands depends mostly on how quickly it leaves the first
-plateau: most runs end at 83--87%, a few points below AlexNet and VGG, while a
-run that leaves the plateau slowly ends near 80%. Its training loss ends
-between 0.4 and 0.55, against about 0.27 for AlexNet, and its validation loss
-stays close to it: in 10 epochs NiN fits the training data less well, and it
-does not overfit. The two ideas that NiN introduced outlived the network:
-$1 \times 1$ convolutions for mixing channels, and global average pooling as
-the head of a convolutional network.
+NiN ends at a validation accuracy of 84–88% after the same 10 epochs, a few
+points below AlexNet and VGG, with 4% of AlexNet's parameters. Its training
+loss ends between 0.3 and 0.45, against about 0.22 for AlexNet, and its
+validation loss stays close to it: in 10 epochs NiN fits the training data
+less well, and it does not overfit.
+
+NiN is also the network that depends most on the learning-rate schedule.
+Trained for 10 epochs at a constant rate of 0.01, it is still improving at
+the end, and where a run ends, anywhere between about 78% and 87%, depends
+on how quickly it leaves its first plateau. The warmup allows a peak three
+times higher, which lets a slow start catch up, and the decay removes the
+drops of single late epochs.
+
+The two ideas that NiN introduced outlived the network: $1 \times 1$
+convolutions for mixing channels, and global average pooling as the head of
+a convolutional network.
 
 ## GoogLeNet: Multi-Branch Blocks
 :label:`sec_googlenet`
@@ -732,7 +785,8 @@ composes the stem, the three groups with pooling in between, and the head.
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab mxnet
 class GoogleNet(d2l.Classifier):
-    def __init__(self, arch=googlenet_arch, lr=0.1, num_classes=10):
+    def __init__(self, arch=googlenet_arch, lr=0.1, num_steps=4690,
+                 num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         pool = lambda: nn.MaxPool2D(pool_size=3, strides=2, padding=1)
@@ -757,7 +811,8 @@ class GoogleNet(d2l.Classifier):
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab pytorch
 class GoogleNet(d2l.Classifier):
-    def __init__(self, arch=googlenet_arch, lr=0.1, num_classes=10):
+    def __init__(self, arch=googlenet_arch, lr=0.1, num_steps=4690,
+                 num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         pool = lambda: nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -779,7 +834,8 @@ class GoogleNet(d2l.Classifier):
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab tensorflow
 class GoogleNet(d2l.Classifier):
-    def __init__(self, arch=googlenet_arch, lr=0.1, num_classes=10):
+    def __init__(self, arch=googlenet_arch, lr=0.1, num_steps=4690,
+                 num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         layers = tf.keras.layers
@@ -804,8 +860,8 @@ class GoogleNet(d2l.Classifier):
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab jax
 class GoogleNet(d2l.Classifier):
-    def __init__(self, arch=googlenet_arch, lr=0.1, num_classes=10,
-                 rngs=None):
+    def __init__(self, arch=googlenet_arch, lr=0.1, num_steps=4690,
+                 num_classes=10, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
@@ -854,59 +910,58 @@ GoogleNet().layer_summary((1, 96, 96, 1))
 
 GoogLeNet is the deepest network of this section: 22 layers with weights lie
 on its longest path, three in the stem, two in each of the nine Inception
-blocks, and the output layer. We train it with the same procedure as the
-other three networks, on $96 \times 96$ images, at which its 6.0 million
-parameters perform 276 million multiply-adds per image.
+blocks, and the output layer. We train it with the same procedure and the
+same `configure_optimizers` as the other three networks, on
+$96 \times 96$ images, at which its 6.0 million parameters perform 276
+million multiply-adds per image.
 
 ```{.python .input #blocks-stem-body-and-head-3}
-model = GoogleNet(lr=0.01)
+GoogleNet.configure_optimizers = VGG.configure_optimizers
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
+model = GoogleNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 val_acc['GoogLeNet'] = trainer.history['val_acc']
 ```
 
-GoogLeNet ends at a validation accuracy of 86–90% after 10 epochs. Like NiN's,
-its validation accuracy rises and falls by a few points from one epoch to the
-next, while AlexNet's and VGG's dip by about a point at most, so the last
-epoch of a run can land anywhere in that range. Its training loss, about 0.27
-after 10 epochs, is as low as AlexNet's.
+GoogLeNet ends at a validation accuracy of about 91% after 10 epochs, as
+AlexNet does. Its training loss, below 0.2 after 10 epochs, is lower than
+AlexNet's, and its validation loss, about 0.25, is the same.
 
 ## Comparing the Networks
 
-Since the validation accuracy of NiN and GoogLeNet swings from epoch to
-epoch, we compare the networks by their mean validation accuracy over the
-last five of the 10 epochs, which varies far less from run to run than the
-last epoch alone:
+Since the learning rate decays to zero, the validation accuracy of every
+network changes little over the last epochs, and we compare the networks by
+their accuracy after the last epoch:
 
 ```{.python .input #blocks-comparing-the-networks}
-{name: round(sum(acc[-5:]) / 5, 3) for name, acc in val_acc.items()}
+{name: round(acc[-1], 3) for name, acc in val_acc.items()}  # After 10 epochs
 ```
 
-:numref:`tab_blocks_scoreboard` collects these means for the networks of
-this section and AlexNet, all trained on Fashion-MNIST with SGD at learning
-rate 0.01 for 10 epochs, together with LeNet and the counts of parameters
-and multiply-adds at the input size used for training.
+:numref:`tab_blocks_scoreboard` collects these accuracies for the networks
+of this section and AlexNet, all trained on Fashion-MNIST for 10 epochs with
+the same schedule, together with LeNet and the counts of parameters and
+multiply-adds at the input size used for training.
 
-:Parameters, multiply-adds, and Fashion-MNIST validation accuracy of the networks of :numref:`sec_lenet`, :numref:`sec_alexnet`, and this section. Multiply-adds are per image at the training input size. Accuracies are means over the last five of 10 epochs, with the range over several runs; for LeNet, the final accuracy after 30 epochs.
+:Parameters, multiply-adds, and Fashion-MNIST validation accuracy of the networks of :numref:`sec_lenet`, :numref:`sec_alexnet`, and this section. Multiply-adds are per image at the training input size. Accuracies are after 10 epochs, as ranges over repeated runs; a single value means that the runs agree to within half a point. LeNet's are after 30 epochs at a constant learning rate.
 :label:`tab_blocks_scoreboard`
 
 | network | input | parameters | multiply-adds | validation accuracy |
 |:--|:--|--:|--:|:--|
-| LeNet | $28 \times 28$ | 0.06M | 0.4M | 88–90% (final, 30 epochs) |
-| AlexNet | $224 \times 224$ | 46.8M | 938M | 89% |
-| VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 90% |
-| NiN | $224 \times 224$ | 2.0M | 762M | 76–85% |
-| GoogLeNet | $96 \times 96$ | 6.0M | 276M | 86–89% |
+| LeNet | $28 \times 28$ | 0.06M | 0.4M | 88–90% (30 epochs) |
+| AlexNet | $224 \times 224$ | 46.8M | 938M | 91% |
+| VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 91.5–92% |
+| NiN | $224 \times 224$ | 2.0M | 762M | 84–88% |
+| GoogLeNet | $96 \times 96$ | 6.0M | 276M | 91% |
 
 Three observations hold across repeated runs. First, the parameters of a
 dense head add little accuracy here: NiN and GoogLeNet, which replace it by
-global average pooling, have 23 and 8 times fewer parameters than AlexNet and
-stay within a few points of it in most runs. Second, arithmetic alone does not decide
-accuracy: the narrow VGG is the most accurate network with about half of
-AlexNet's multiply-adds, while NiN performs almost as many as AlexNet and
-fits the training data more slowly. Third, GoogLeNet comes close to AlexNet
-with an eighth of its parameters and less than a third of its arithmetic,
+global average pooling, have 23 and 8 times fewer parameters than AlexNet;
+GoogLeNet matches its accuracy, and NiN ends a few points below it. Second,
+arithmetic alone does not decide accuracy: the narrow VGG is the most
+accurate network with about half of AlexNet's multiply-adds, while NiN
+performs almost as many as AlexNet and fits the training data more slowly.
+Third, GoogLeNet matches AlexNet with less than a third of its arithmetic,
 although it sees $96 \times 96$ images instead of $224 \times 224$. Ten
 epochs on upsampled $28 \times 28$ images are a small test; on ImageNet, in
 the challenge of 2014, GoogLeNet won with about 7 million parameters per
@@ -944,8 +999,8 @@ by global average pooling with no parameters. GoogLeNet runs kernels of
 several sizes in parallel, makes them affordable with $1 \times 1$
 reductions, and organizes the network into stem, body, and head. Under the
 same training procedure on Fashion-MNIST, the narrow VGG is the most
-accurate of the four, and NiN and GoogLeNet usually come within a few points
-of AlexNet with a small fraction of its parameters.
+accurate of the four; GoogLeNet matches AlexNet and NiN ends a few points
+below it, each with a small fraction of its parameters.
 
 ## Exercises
 
@@ -992,10 +1047,10 @@ of AlexNet with a small fraction of its parameters.
    $28 \times 28$, and the training runs of this section upsample them
    eightfold to $224 \times 224$, which spends computation without adding
    information.
-    1. Train `VGG` with
+    1. Train `VGG` as in this section, with
        `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
-       `lr=0.01` on images resized to $56 \times 56$ and to $84 \times 84$.
-       The input size of the first fully connected layer changes with the
+       `lr=0.03`, on images resized to $56 \times 56$ and to
+       $84 \times 84$. The input size of the first fully connected layer changes with the
        resolution.
        Compare validation accuracy and time per epoch with the same model
        trained at $224 \times 224$, and give the spatial size of the
@@ -1082,7 +1137,7 @@ How should a deeper network be designed, and does it need the head at all?
 - compare four networks trained the same way.
 
 **Running example:** the Fashion-MNIST scoreboard. AlexNet: 46.8 M
-parameters, 938 M multiply-adds, ≈ 89–90%.
+parameters, 938 M multiply-adds, ≈ 91%.
 :::
 
 ::: {.slide title="Three Networks of 2013–2014 Organized the Convnet"}
@@ -1217,12 +1272,13 @@ holds 42.5 M of 43.1 M parameters: **99%**. The convolutions shrank to
 :::
 :::
 
-::: {.slide title="The Quarter-Width VGG Reaches About 90–91% at Half of AlexNet's Arithmetic"}
+::: {.slide title="The Quarter-Width VGG Reaches About 92% at Half of AlexNet's Arithmetic"}
 [VGG]{.kicker}
 
 @!vgg-training
 
-Same procedure as AlexNet: 224×224, SGD at 0.01, 10 epochs.
+Same procedure as AlexNet: 224×224, 10 epochs of SGD, warmup over the
+first epoch to a peak of 0.03, cosine decay to 0.
 :::
 
 ::: {.slide}
@@ -1265,14 +1321,24 @@ The average does not change when a shift permutes the positions.
   938 M.
 :::
 
-::: {.slide title="NiN Reaches 78–87% With 4% of AlexNet's Parameters"}
+::: {.slide title="NiN Reaches 84–88% With 4% of AlexNet's Parameters"}
 [NiN]{.kicker}
 
 @!nin-training
 
-Same procedure as AlexNet and VGG. Training loss 0.4–0.55 against
-AlexNet's ≈ 0.27: NiN fits more slowly, is still improving at epoch 10, and
-does not overfit. A slow start costs a run several points.
+Same procedure as AlexNet and VGG. Training loss 0.3–0.45 against
+AlexNet's ≈ 0.22: NiN fits more slowly and does not overfit.
+:::
+
+::: {.slide title="NiN Needs the Warmup and the Decay Most"}
+[NiN]{.kicker}
+
+- Constant rate 0.01: still improving at epoch 10; a run ends anywhere
+  between ≈ 78% and 87%, depending on how fast it leaves its first plateau.
+- Warmup + cosine, peak 0.03: 84–88%; a slow start catches up, and the
+  decay removes single-epoch drops at the end.
+- Higher peaks fail: at 0.05 an occasional run stays near chance for
+  several epochs; at 0.1 some runs diverge.
 :::
 
 ::: {.slide}
@@ -1319,13 +1385,13 @@ multiply-adds fall by the same factor.
 - Branch widths: a hand-chosen tuple, stored as data like VGG's `arch`.
 :::
 
-::: {.slide title="GoogLeNet Ends at 86–90% With 6 M Parameters, at 96×96"}
+::: {.slide title="GoogLeNet Ends at About 91% With 6 M Parameters, at 96×96"}
 [GoogLeNet]{.kicker}
 
 @!blocks-stem-body-and-head-3
 
-Validation accuracy moves by a few points from epoch to epoch, as NiN's
-does; the mean over the last 5 epochs is 86–89%.
+AlexNet's accuracy with an eighth of its parameters and less than a third
+of its arithmetic.
 :::
 
 ::: {.slide title="The Dense Head Adds Little Accuracy; VGG Is Most Accurate at Half of AlexNet's Arithmetic"}
@@ -1334,13 +1400,13 @@ does; the mean over the last 5 epochs is 86–89%.
 | network | input | parameters | multiply-adds | accuracy |
 |---|---|--:|--:|---|
 | LeNet (30 epochs, lr 2.0) | 28×28 | 0.06 M | 0.4 M | 88–90% |
-| AlexNet | 224×224 | 46.8 M | 938 M | 89% |
-| VGG, quarter width | 224×224 | 43.1 M | 512 M | 90% |
-| NiN | 224×224 | 2.0 M | 762 M | 76–85% |
-| GoogLeNet | 96×96 | 6.0 M | 276 M | 86–89% |
+| AlexNet | 224×224 | 46.8 M | 938 M | 91% |
+| VGG, quarter width | 224×224 | 43.1 M | 512 M | 91.5–92% |
+| NiN | 224×224 | 2.0 M | 762 M | 84–88% |
+| GoogLeNet | 96×96 | 6.0 M | 276 M | 91% |
 
-Mean validation accuracy over the last 5 of 10 epochs (LeNet: final);
-SGD at 0.01 and He initialization.
+Validation accuracy after 10 epochs (LeNet: 30); SGD with warmup to 0.03
+and cosine decay, He initialization.
 :::
 
 ::: {.slide title="Recap"}
@@ -1352,9 +1418,9 @@ SGD at 0.01 and He initialization.
   replaces a head that held over 90% of the weights.
 - **GoogLeNet:** parallel kernel sizes, 1×1 reductions (the 5×5 branch
   10× cheaper), stem–body–head.
-- **Fashion-MNIST** (last-5-epoch means): narrow VGG 90%; NiN and
-  GoogLeNet mostly within a few points of AlexNet's 89% with 23× and 8× fewer
-  parameters.
+- **Fashion-MNIST** (one schedule for all): narrow VGG 92%; GoogLeNet
+  matches AlexNet's 91% with 8× fewer parameters, NiN ends a few points
+  below with 23× fewer.
 
 **Next:** normalization layers, which let much deeper networks train.
 :::

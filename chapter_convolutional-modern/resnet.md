@@ -674,13 +674,19 @@ ResNet18().layer_summary((1, 96, 96, 1))
 ### Training
 
 We train ResNet-18 on Fashion-MNIST, upsampled to $96 \times 96$ pixels,
-with minibatches of 128 images and 10 epochs. As for LeNet with batch
-normalization in :numref:`sec_batch_norm`, the learning rate rises linearly
-to 0.01 over the first epoch and then decays to zero along a half-cosine,
-`d2l.cosine_warmup`, stepped after every minibatch. With a constant rate,
-the running averages of the batch normalization layers trail the changing
-weights, and the validation accuracy of single epochs, the last one
-included, drops by up to ten points in some runs.
+with minibatches of 128 images and 10 epochs. The learning rate follows the
+schedule of the earlier networks of this chapter (`d2l.cosine_warmup` of
+:numref:`sec_alexnet`): it rises linearly over the first epoch and then
+decays to zero along a half-cosine, stepped after every minibatch. Only the
+peak differs: 0.1 instead of 0.03. Batch normalization makes the larger peak
+safe. Every convolution is followed by a normalization, so a step that
+scales up the weights of a convolution does not scale up its normalized
+output, and the gradient that reaches those weights shrinks as they grow
+(:numref:`sec_batch_norm`). The networks of :numref:`sec_blocks` have no
+normalization, and NiN diverges at a peak of 0.1 in some runs. ResNet-18
+gains from the larger peak: at 0.03 it ends about a point lower. The decay
+matters too: with a constant rate of 0.1, the validation accuracy moves by
+up to a few points from one epoch to the next and ends lower.
 
 ```{.python .input #resnet-training-schedule}
 %%tab mxnet
@@ -722,7 +728,7 @@ def configure_optimizers(self):
 
 ```{.python .input #resnet-training}
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
-model = ResNet18(lr=0.01, num_steps=10 * len(data.train_dataloader()))
+model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 ```
@@ -731,12 +737,15 @@ trainer.fit(model, data)
 round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs
 ```
 
-After 10 epochs ResNet-18 reaches a validation accuracy of 90--91%, and its
-last epochs change it by less than half a point. Its training loss falls to
-about 0.07, well below its validation loss of 0.27--0.28: with 11.2 million
+After 10 epochs ResNet-18 reaches a validation accuracy of about 93%, and
+its last three epochs change it by less than a point. That is about a point
+above the quarter-width VGG, the best network of :numref:`sec_blocks`, at
+$96 \times 96$ instead of $224 \times 224$ pixels. Its training loss falls
+below 0.01, far below its validation loss of about 0.27: with 11.2 million
 parameters for 60,000 training images, the network fits the training data
-better than new data. More data, data augmentation, and regularization reduce
-this gap; the training recipes of :numref:`sec_training_recipes` combine them.
+almost perfectly and new data much less well. More data, data augmentation,
+and regularization reduce this gap; the training recipes of
+:numref:`sec_training_recipes` combine them.
 
 ## ResNeXt and DenseNet
 
@@ -1271,8 +1280,9 @@ ones, although they could represent the same functions. A residual block
 computes its input plus a learned correction, so that the identity is the
 block with zero correction, and the shortcut gives the gradient a direct
 path to every block. Stacked in four stages with batch normalization,
-residual blocks give ResNet-18, which reaches 90--91% validation accuracy
-on Fashion-MNIST in 10 epochs, and the same template scales to 152 layers.
+residual blocks give ResNet-18, which trains at a peak learning rate of 0.1
+and reaches about 93% validation accuracy on Fashion-MNIST in 10 epochs, and
+the same template scales to 152 layers.
 ResNeXt replaces the middle convolution of a bottleneck block by a grouped
 convolution, which makes the block wider at the same cost, and DenseNet
 concatenates the outputs of its layers instead of adding them, which reuses
@@ -1464,7 +1474,8 @@ Source: He et al. (2016).
 - state when a larger model is guaranteed to fit at least as well;
 - build a residual block, with an identity or a 1×1 shortcut;
 - assemble ResNet-18 and count its 18 layers and 11.2M parameters;
-- train it on Fashion-MNIST;
+- train it on Fashion-MNIST at the larger learning rate that batch
+  normalization allows;
 - compute what grouped convolutions save (ResNeXt) and what
   concatenation costs (DenseNet).
 
@@ -1632,14 +1643,27 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 @resnet-resnet-model-2
 :::
 
-::: {.slide title="ResNet-18 Reaches 90–91% on Fashion-MNIST in 10 Epochs"}
+::: {.slide title="Batch Normalization Lets ResNet-18 Train at a Peak Rate of 0.1"}
+[ResNet-18]{.kicker}
+
+- Schedule of AlexNet and VGG: linear warmup over the first epoch, then
+  cosine decay to 0, stepped after every minibatch.
+- Peak 0.1 instead of 0.03.
+- A normalization follows every convolution: scaling up the convolution's
+  weights leaves its normalized output unchanged, and the gradient that
+  reaches those weights shrinks as they grow.
+- Without normalization, NiN diverges at a peak of 0.1 in some runs.
+- ResNet-18 at a peak of 0.03 ends about a point lower.
+:::
+
+::: {.slide title="ResNet-18 Reaches About 93% on Fashion-MNIST in 10 Epochs"}
 [ResNet-18]{.kicker}
 
 @!resnet-training
 
-Base rate 0.01 with cosine decay to 0, minibatch 128, 96×96 pixels.
-Training loss ≈ 0.07, validation loss 0.27–0.28: 11.2M parameters for 60,000
-images.
+Peak rate 0.1, minibatch 128, 96×96 pixels. About a point above the
+quarter-width VGG at 224×224. Training loss below 0.01, validation loss
+≈ 0.27: 11.2M parameters for 60,000 images.
 :::
 
 ::: {.slide}
@@ -1705,7 +1729,8 @@ quadratically: at $n = 24$, 10,368 against 3,072. One reason addition won.
 - **Nesting:** extra layers cannot hurt the best fit if they can be the
   identity; a residual block makes the identity $g = 0$.
 - **ResNet-18:** stem, 4 stages × 2 blocks, pooling head; 11.2M
-  parameters; 90–91% on Fashion-MNIST in 10 epochs.
+  parameters; peak rate 0.1, which batch normalization makes safe; about
+  93% on Fashion-MNIST in 10 epochs.
 - **ResNeXt:** grouped 3×3 between 1×1s, $1/g$ of the cost.
 - **DenseNet:** concatenation reuses features, at a quadratic memory
   cost.

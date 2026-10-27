@@ -67,6 +67,7 @@ import tensorflow as tf
 import keras
 import numpy as np
 from PIL import Image
+from safetensors.numpy import load_file
 ```
 
 ## The Model
@@ -122,49 +123,59 @@ print('Feature extractor output shape:',
 
 ```{.python .input #fcn-the-model-1}
 #@tab tensorflow
-# keras.applications ships ResNet-50/101/152 but no ResNet-18, so we build
-# a ResNet-18 as a Functional model. Its weights are random here; in
-# practice you would load weights pretrained on ImageNet.
-def _bn():  # Running averages decay 0.9, epsilon 1e-5
-    return keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
+# keras.applications ships no ResNet-18, so we build one as a Functional
+# model and load ImageNet weights from the Hugging Face checkpoint
+# microsoft/resnet-18. `hf` maps each checkpoint prefix to its (conv, bn).
+hf = {}
 
-def _resnet_block(x, num_channels, strides=1, use_1x1conv=False):
-    # Pad 1 on every side: 'same' pads only right and bottom when the
+def _conv_bn(x, prefix, num_channels, kernel_size, strides=1):
+    # Pad k//2 on every side: 'same' pads only right and bottom when the
     # stride is 2 and the sizes are even
-    y = keras.layers.ZeroPadding2D(1)(x)
-    y = keras.layers.Conv2D(num_channels, 3, strides=strides,
-                            use_bias=False)(y)
-    y = _bn()(y)
-    y = keras.layers.ReLU()(y)
-    y = keras.layers.Conv2D(num_channels, 3, strides=1,
-                            padding='same', use_bias=False)(y)
-    y = _bn()(y)
+    if kernel_size > 1:
+        x = keras.layers.ZeroPadding2D(kernel_size // 2)(x)
+    conv = keras.layers.Conv2D(num_channels, kernel_size, strides=strides,
+                               use_bias=False)
+    # Running averages decay 0.9, epsilon 1e-5
+    bn = keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
+    hf[prefix] = (conv, bn)
+    return bn(conv(x))
+
+def _resnet_block(x, prefix, num_channels, strides=1, use_1x1conv=False):
+    y = keras.layers.ReLU()(_conv_bn(x, prefix + '.layer.0', num_channels, 3,
+                                     strides))
+    y = _conv_bn(y, prefix + '.layer.1', num_channels, 3)
     if use_1x1conv:
-        x = keras.layers.Conv2D(num_channels, 1, strides=strides,
-                                use_bias=False)(x)
-        x = _bn()(x)
+        x = _conv_bn(x, prefix + '.shortcut', num_channels, 1, strides)
     return keras.layers.ReLU()(y + x)
 
 inputs = keras.Input(shape=(None, None, 3))
-x = keras.layers.ZeroPadding2D(3)(inputs)  # Pad every side
-x = keras.layers.Conv2D(64, 7, strides=2, use_bias=False)(x)
-x = _bn()(x)
+x = _conv_bn(inputs, 'resnet.embedder.embedder', 64, 7, strides=2)
 x = keras.layers.ReLU()(x)
 x = keras.layers.ZeroPadding2D(1)(x)  # Zeros are safe after a ReLU
 x = keras.layers.MaxPool2D(pool_size=3, strides=2)(x)
-x = _resnet_block(x, 64)
-x = _resnet_block(x, 64)
-x = _resnet_block(x, 128, strides=2, use_1x1conv=True)
-x = _resnet_block(x, 128)
-x = _resnet_block(x, 256, strides=2, use_1x1conv=True)
-x = _resnet_block(x, 256)
-x = _resnet_block(x, 512, strides=2, use_1x1conv=True)
-features = _resnet_block(x, 512)
-# Mirror the structure of torchvision.models.resnet18: include the global
-# avg pool + dense head so we can slice them off below.
+for i, (num_channels, strides) in enumerate(
+        [(64, 1), (128, 2), (256, 2), (512, 2)]):
+    stage = f'resnet.encoder.stages.{i}.layers'
+    x = _resnet_block(x, f'{stage}.0', num_channels, strides,
+                      use_1x1conv=strides > 1)
+    x = _resnet_block(x, f'{stage}.1', num_channels)
+features = x
 pooled = keras.layers.GlobalAveragePooling2D()(features)
-logits = keras.layers.Dense(1000)(pooled)
-pretrained_net = keras.Model(inputs=inputs, outputs=logits)
+dense = keras.layers.Dense(1000)
+pretrained_net = keras.Model(inputs=inputs, outputs=dense(pooled))
+
+weights = load_file(d2l.download(
+    'https://huggingface.co/microsoft/resnet-18/resolve/'
+    '65a5785d9156231087c481e0c7dd33a5ff6f7e3e/model.safetensors',
+    '../data/resnet-18', 'd905ba97ebcd156c13e528cd1731bd23406979e3'))
+for prefix, (conv, bn) in hf.items():
+    # Checkpoint kernels are (out, in, h, w); Keras expects (h, w, in, out)
+    conv.set_weights([weights[f'{prefix}.convolution.weight'].transpose(
+        2, 3, 1, 0)])
+    bn.set_weights([weights[f'{prefix}.normalization.{name}'] for name in
+                    ('weight', 'bias', 'running_mean', 'running_var')])
+dense.set_weights([weights['classifier.1.weight'].T,
+                   weights['classifier.1.bias']])
 # Show the last few layers
 pretrained_net.layers[-3:]
 ```
@@ -690,14 +701,21 @@ for epoch in range(num_epochs):
 
 ```{.python .input #fcn-training}
 #@tab tensorflow
-# Loss: SparseCategoricalCrossentropy over per-pixel logits (NHWC -> NHW).
-# Full fine-tuning of the entire network (backbone + head) to match the
-# PyTorch tab.
+# Each image's loss is the mean of its per-pixel cross-entropies, and an SGD
+# step follows the gradient of the minibatch SUM of these image losses. Keras
+# therefore logs `loss` per minibatch; the per-pixel cross-entropy is
+# reported as a metric. The whole network (backbone + head) is fine-tuned.
+class PixelLoss(keras.losses.Loss):
+    def call(self, y, logits):
+        return tf.reduce_mean(keras.losses.sparse_categorical_crossentropy(
+            y, logits, from_logits=True), axis=(1, 2))
+
 num_epochs, lr, wd = 5, 0.001, 1e-3
 fcn_net.compile(
     optimizer=keras.optimizers.SGD(learning_rate=lr, weight_decay=wd),
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy'],
+    loss=PixelLoss(reduction='sum'),
+    metrics=['accuracy', keras.metrics.SparseCategoricalCrossentropy(
+        name='pixel_ce', from_logits=True)],
     # Keras may otherwise select XLA automatically. For this unusually large
     # transposed convolution, XLA's cuDNN autotuning can take tens of minutes
     # before the first training step and offers no benefit to this example.

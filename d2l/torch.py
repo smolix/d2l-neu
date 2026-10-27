@@ -672,7 +672,7 @@ class LeNet(d2l.Classifier):
 def cosine_warmup(t, num_steps, warmup_steps):
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
 
-    Defined in :numref:`sec_batch_norm`"""
+    Defined in :numref:`sec_alexnet`"""
     if t < warmup_steps:
         return t / warmup_steps
     progress = (t - warmup_steps) / (num_steps - warmup_steps)

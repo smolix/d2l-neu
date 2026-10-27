@@ -125,8 +125,7 @@ def clipped(tx, max_norm=1.0):
 :label:`subsec_practice-nan`
 
 :numref:`sec_adam` swept SGD with momentum on `TinyLM` and found a knife's
-edge: the best learning rate sat one grid point below one that returned
-NaN. This divergent grid point provides a direct test of whether clipping can
+edge: the best learning rate sat one grid point below one that diverged. This divergent grid point provides a direct test of whether clipping can
 prevent the observed numerical failure. We rerun it with and without
 clipping, changing nothing else.
 
@@ -162,7 +161,7 @@ print(f'clipping changed the update on {fired} of {len(optimizer.norms)} '
 curves = {}
 for clip in (False, True):
     model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
-    tx = optax.sgd(0.3, momentum=0.9)
+    tx = optax.sgd(1.0, momentum=0.9)
     if clip:
         tx = clipped(tx)
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
@@ -192,15 +191,16 @@ trajectory from the stable one.
 :end_tab:
 
 :begin_tab:`jax`
-The unclipped run makes progress for a moment, then feeds back on itself:
-an oversized step lands the iterate somewhere steeper, the gradient there
-is larger, momentum compounds it, and the loss climbs by several
-orders of magnitude within the first hundred-odd steps; the run ends in
-overflow. The
-clipped run, at the identical learning rate, trains to a final loss in the
-range of the tuned runs of :numref:`sec_adam`. The Optax combinator does
-not report how often it fired; the instrumented PyTorch tab counts six
-interventions in two thousand steps, and the picture here is the same.
+The unclipped run makes normal progress for a few steps, then feeds back on
+itself: an oversized step lands the iterate somewhere steeper, the gradient
+there is larger, momentum compounds it, and within two dozen steps the loss
+has climbed by many orders of magnitude and overflows. The clipped run, at
+the identical learning rate, trains to a final loss at or slightly below the
+tuned unclipped run of :numref:`sec_adam`. The Optax combinator does not
+report how often it fired. Measured separately, the median gradient norm is
+about 0.3, far below the threshold, and clipping changes the update on only
+about ten of the two thousand steps. In these paired runs, those few
+interventions separate the divergent trajectory from the stable one.
 :end_tab:
 
 This count illustrates clipping used as a guard: most updates remain
@@ -741,8 +741,8 @@ divergent point, with and without the guard:
 
 ::: {.slide title="Frequency of clipping"}
 The instrumented run: median gradient norm ~0.3, threshold 1.0 —
-**clipping changed the update on only a handful of the 2,000 steps** (6 in
-our run).
+**clipping changed the update on only a handful of the 2,000 steps** (6 to
+11 in our runs).
 
 - Language-model gradient noise is heavy-tailed
   (Zhang et al., 2020); the guard exists for the tail.

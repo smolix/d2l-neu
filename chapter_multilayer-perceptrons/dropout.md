@@ -558,7 +558,7 @@ concise_trainer.fit(concise, data)
 ```
 
 The concise model reaches the same validation accuracy as the scratch
-model, about 87%.
+model, about 87%, up to the same movement from one epoch to the next.
 
 ## Effects of Dropout
 
@@ -650,11 +650,19 @@ for name, net, t in (('with dropout', model, trainer),
           f'with masks {masked_accuracy(net, data, t):.3f}')
 ```
 
-Both networks end with a validation accuracy of about 84% to 88%. The
-accuracy moves by a point or more from one epoch to the next, more than the
-difference between the two networks, and which of them is ahead changes from
-run to run. On Fashion-MNIST, with this network and 20 epochs of training,
-dropout does not make the MLP more accurate. With the masks switched on,
+Both networks end with a validation accuracy of about 84% to 88%, and which
+of them is ahead changes from run to run. The value after a single epoch is
+noisy. The learning rate stays at 0.1 to the end of training, so the
+minibatch noise keeps moving the parameters, and the validation accuracy
+wobbles by about a point from one epoch to the next, with occasional dips of
+several points; averaged over the last five epochs, both networks reach about
+85% to 87%. The fix is to decay the learning rate toward the end of
+training, so that the last steps are small and the parameters settle, and to
+warm it up over the first steps, which allows a larger rate in between;
+:numref:`sec_scheduler` introduces these schedules.
+
+On Fashion-MNIST, with this network and 20 epochs of training, dropout does
+not make the MLP more accurate. With the masks switched on,
 however, the two networks behave very differently. The network trained with
 dropout loses about 1 to 2 points of accuracy. The network trained without
 dropout loses about 8 to 12 points. Its units have learned to work in the
@@ -1118,8 +1126,12 @@ differs:
 
 - Final validation accuracy: about 84–88% for both networks; which one is
   ahead changes from run to run.
-- Accuracy moves by a point or more between epochs: on this dataset and
-  budget, dropout does not raise accuracy.
+- One epoch is a noisy measurement: at a constant learning rate the
+  accuracy wobbles by about a point per epoch, with larger dips.
+  Over the last five epochs both average about 85–87%.
+- Fix: decay the learning rate toward the end (and warm it up at the
+  start); see the section on learning-rate schedules.
+- On this dataset and budget, dropout does not raise accuracy.
 :::
 
 ::: {.slide title="Without Dropout, Removing Units Costs 8 to 12 Points"}

@@ -722,7 +722,7 @@ class LeNet(d2l.Classifier):
 def cosine_warmup(t, num_steps, warmup_steps):
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0.
 
-    Defined in :numref:`sec_batch_norm`"""
+    Defined in :numref:`sec_alexnet`"""
     warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
     progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
     return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
@@ -1443,18 +1443,26 @@ class TinyLM(nnx.Module):
                  max_len=64, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.num_heads = num_heads
-        self.token_emb = nnx.Embed(vocab_size, d_model, rngs=rngs)
-        self.pos_emb = nnx.Embed(max_len, d_model, rngs=rngs)
+        def linear(d_in, d_out):
+            a = 1 / math.sqrt(d_in)  # Weights and biases ~ U(-a, a)
+            init = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
+                              rngs=rngs)
+        def embed(n):  # Embedding rows ~ N(0, I)
+            return nnx.Embed(n, d_model, rngs=rngs,
+                             embedding_init=nnx.initializers.normal(1.0))
+        def norm():
+            return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
+        self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
         self.blks = nnx.List([nnx.Dict(
-            norm1=nnx.LayerNorm(d_model, rngs=rngs),
-            qkv=nnx.Linear(d_model, 3 * d_model, rngs=rngs),
-            proj=nnx.Linear(d_model, d_model, rngs=rngs),
-            norm2=nnx.LayerNorm(d_model, rngs=rngs),
-            mlp1=nnx.Linear(d_model, 4 * d_model, rngs=rngs),
-            mlp2=nnx.Linear(4 * d_model, d_model, rngs=rngs))
+            norm1=norm(), qkv=linear(d_model, 3 * d_model),
+            proj=linear(d_model, d_model), norm2=norm(),
+            mlp1=linear(d_model, 4 * d_model),
+            mlp2=linear(4 * d_model, d_model))
             for _ in range(num_blks)])
-        self.norm = nnx.LayerNorm(d_model, rngs=rngs)
-        self.head = nnx.Linear(d_model, vocab_size, rngs=rngs)
+        self.norm = norm()
+        self.head = linear(d_model, vocab_size)
 
     def attention(self, blk, X):
         B, T, D = X.shape
@@ -1467,7 +1475,8 @@ class TinyLM(nnx.Module):
         H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
         for blk in self.blks:
             H = H + self.attention(blk, blk['norm1'](H))
-            H = H + blk['mlp2'](jax.nn.gelu(blk['mlp1'](blk['norm2'](H))))
+            H = H + blk['mlp2'](jax.nn.gelu(blk['mlp1'](blk['norm2'](H)),
+                                            approximate=False))
         return self.head(self.norm(H))
 
 def train_lm(model, data, optimizer, num_steps):

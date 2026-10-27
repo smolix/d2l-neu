@@ -34,7 +34,6 @@ example.
 ```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
 from d2l import mxnet as d2l
-import math
 from mxnet import autograd, gluon, init, np as mnp, npx
 from mxnet.gluon import nn
 npx.set_np()
@@ -43,7 +42,6 @@ npx.set_np()
 ```{.python .input #batch-norm-batch-normalization}
 %%tab pytorch
 from d2l import torch as d2l
-import math
 import torch
 from torch import nn
 ```
@@ -51,7 +49,6 @@ from torch import nn
 ```{.python .input #batch-norm-batch-normalization}
 %%tab tensorflow
 from d2l import tensorflow as d2l
-import math
 import tensorflow as tf
 ```
 
@@ -645,53 +642,13 @@ With a constant learning rate of 0.1, the prediction-mode validation
 accuracy of BN-LeNet drops by ten points or more in single epochs of some
 runs, the last epoch included. We therefore let the
 learning rate decay to zero during training: as the rate shrinks, the
-weights stop moving and the running averages catch up with them. A common
-schedule has two phases. A linear *warmup* raises the rate from zero to the
-base rate $\eta_0$ over the first $t_\textrm{w}$ steps, and a half-cosine
-then lowers it to zero at the last step $T$:
+weights stop moving and the running averages catch up with them. We use the
+schedule with which we trained AlexNet (:numref:`sec_alexnet`): a linear
+warmup from zero to the peak rate over the first $t_\textrm{w}$ steps, then
+the half-cosine :eqref:`eq_cosine_warmup` down to zero at the last step, as
+computed by `d2l.cosine_warmup`.
 
-$$
-\eta_t = \frac{\eta_0}{2} \left(1 + \cos \frac{\pi (t - t_{\textrm{w}})}{T - t_{\textrm{w}}}\right)
-\quad \textrm{for } t \geq t_{\textrm{w}}.
-$$
-:eqlabel:`eq_cosine_warmup`
-
-At $t = t_\textrm{w}$ the cosine is 1 and the rate is $\eta_0$; halfway
-through the decay it is $\eta_0/2$; at $t = T$ it is zero. The warmup keeps
-the first updates of a freshly initialized network small. The function
-`cosine_warmup` returns the factor by which the schedule multiplies the base
-rate at step $t$; we save it in the `d2l` package for later sections.
-
-```{.python .input #batch-norm-cosine-warmup}
-%%tab mxnet, pytorch
-def cosine_warmup(t, num_steps, warmup_steps):  #@save
-    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
-    if t < warmup_steps:
-        return t / warmup_steps
-    progress = (t - warmup_steps) / (num_steps - warmup_steps)
-    return 0.5 * (1 + math.cos(math.pi * progress))
-```
-
-```{.python .input #batch-norm-cosine-warmup}
-%%tab tensorflow
-def cosine_warmup(t, num_steps, warmup_steps):  #@save
-    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
-    t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
-    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
-    progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
-```
-
-```{.python .input #batch-norm-cosine-warmup}
-%%tab jax
-def cosine_warmup(t, num_steps, warmup_steps):  #@save
-    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
-    warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
-    progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
-    return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
-```
-
-`BNLeNet` steps this schedule after every minibatch, with a warmup of one
+`BNLeNet` steps the schedule after every minibatch, with a warmup of one
 tenth of the `num_steps` steps of training. For a fair comparison, LeNet
 gets the same schedule through a subclass.
 
@@ -699,7 +656,7 @@ gets the same schedule through a subclass.
 %%tab mxnet
 @d2l.add_to_class(BNLeNet)
 def configure_optimizers(self):
-    schedule = lambda t: self.lr * cosine_warmup(  # MXNet counts from 1
+    schedule = lambda t: self.lr * d2l.cosine_warmup(  # MXNet counts from 1
         t - 1, self.num_steps, self.num_steps // 10)
     return gluon.Trainer(self.collect_params(), 'sgd', {
         'learning_rate': None, 'lr_scheduler': schedule})
@@ -718,7 +675,7 @@ class CosineLeNet(d2l.LeNet):
 def configure_optimizers(self):
     optim = torch.optim.SGD(self.parameters(), lr=self.lr)
     schedule = torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
-        cosine_warmup(t, self.num_steps, self.num_steps // 10)))
+        d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
     return optim, schedule  # The Trainer steps it after every minibatch
 
 class CosineLeNet(d2l.LeNet):
@@ -733,7 +690,7 @@ class CosineLeNet(d2l.LeNet):
 %%tab tensorflow
 @d2l.add_to_class(BNLeNet)
 def configure_optimizers(self):
-    schedule = lambda: self.lr * cosine_warmup(
+    schedule = lambda: self.lr * d2l.cosine_warmup(
         optim.iterations, self.num_steps, self.num_steps // 10)
     optim = tf.keras.optimizers.SGD(schedule)
     return optim
@@ -750,7 +707,7 @@ class CosineLeNet(d2l.LeNet):
 %%tab jax
 @d2l.add_to_class(BNLeNet)
 def configure_optimizers(self):
-    return optax.sgd(lambda t: self.lr * cosine_warmup(
+    return optax.sgd(lambda t: self.lr * d2l.cosine_warmup(
         t, self.num_steps, self.num_steps // 10))
 
 class CosineLeNet(d2l.LeNet):

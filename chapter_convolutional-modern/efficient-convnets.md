@@ -232,11 +232,11 @@ the class scores. We train with stochastic gradient descent with momentum 0.9,
 which steps along an exponentially weighted sum of recent gradients instead of
 the latest gradient alone; when successive gradients agree, its steps are about
 $1/(1-0.9) = 10$ times longer than plain gradient steps at the same rate
-(:numref:`sec_momentum` treats momentum fully). This optimizer, with
-momentum and a higher rate, is stronger than the plain SGD of
+(:numref:`sec_momentum` treats momentum fully). This optimizer, whose
+momentum lengthens its steps, is stronger than the plain SGD of
 :numref:`sec_resnet`, so the accuracies below are not comparable with
-ResNet-18's there. As for batch normalization in
-:numref:`sec_batch_norm`, the learning rate decays to zero along a half cosine,
+ResNet-18's there. As for the networks of this chapter since AlexNet
+(:numref:`sec_alexnet`), the learning rate decays to zero along a half cosine,
 here without warmup: it starts at `lr` and reaches zero after the `num_steps`
 minibatches of training (4,690 for 10 epochs). With a constant rate the test
 accuracy wobbles by one to three points from epoch to epoch; the decay makes

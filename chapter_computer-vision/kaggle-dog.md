@@ -845,7 +845,9 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab jax
-num_epochs, lr, wd = 10, 1e-4, 1e-4
+# The pooled features of this ResNet-50 are small (about 0.04 on average per
+# coordinate), so the output network needs a learning rate of 1e-3 to train
+num_epochs, lr, wd = 10, 1e-3, 1e-4
 lr_period, lr_decay = 2, 0.9
 backbone, output_net = get_net()
 output_net = train(backbone, output_net, train_iter, valid_iter, num_epochs,

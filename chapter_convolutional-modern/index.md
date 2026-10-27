@@ -147,12 +147,12 @@ Which ideas made that possible, and which gains came from training?
 
 | section | result on Fashion-MNIST |
 |---|---|
-| AlexNet | 46.8M parameters; about 90% in a third of LeNet's epochs |
-| VGG, NiN, GoogLeNet | 76–90% with parameter counts from 2M to 43M |
+| AlexNet | 46.8M parameters; about 91% in a third of LeNet's epochs |
+| VGG, NiN, GoogLeNet | 84–92% with parameter counts from 2M to 43M |
 | Normalization Layers | LeNet + batch norm about 88% where plain LeNet stalls |
-| ResNet, ResNeXt, DenseNet | ResNet-18, 11.2M parameters, 90–91% |
+| ResNet, ResNeXt, DenseNet | ResNet-18, 11.2M parameters, about 93% |
 | Efficient Convnets | Mini-MobileNet: 7.7× fewer multiply-adds, about 2 points lower |
 | Training Recipes | the modern recipe wins every paired run, by 0.5–1.5 points |
 | ConvNeXt | 2 points below a matched ResNet-18 at this scale |
-| Design Spaces (RegNet) | within a point of ResNet-18 with 1% of its parameters |
+| Design Spaces (RegNet) | about 94%, like ResNet-18 trained the same way, with a third of its multiply-adds |
 :::

@@ -401,6 +401,7 @@ class SelectiveSSM(nn.Module):  #@save
         self.W_dt = nn.Linear(H, H)  # Step size per channel
         self.W_B = nn.Linear(H, N, bias=False)  # Write vector
         self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
         with torch.no_grad():  # Start at softplus(bias) = dt for every input
             self.W_dt.weight.zero_()
@@ -481,8 +482,9 @@ class Mamba(nn.Module):  #@save
         self.W_in = nn.Linear(num_hiddens, 2 * H)
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)
         self.W_out = nn.Linear(H, num_hiddens)
+        d2l.init_lecun(self)
+        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -629,11 +631,11 @@ For S4D, the contributions rise smoothly toward the query: the most recent
 inputs dominate, whatever they are, and a symbol 800 steps back contributes
 no more than the fillers next to it. For Mamba, the contributions spike at
 the four symbols, some three to four orders of magnitude above the fillers
-around them, wherever the symbols sit. The windows of four positions that
-start at the symbols cover less than 2% of the sequence, yet they supply
-many times that share of Mamba's state, in most runs more than half of it;
-much of the rest comes from the last few positions before the query. For
-S4D the same windows supply at most 2%. The selective SSM writes the
+around them, wherever the symbols sit. Half to four fifths of Mamba's state
+comes from the windows of four positions that start at the symbols, which
+cover less than 2% of the sequence; much of the rest comes from the last
+few positions before the query. For S4D the same windows supply at most
+2%. The selective SSM writes the
 symbols and lets the fillers pass.
 
 ### Language Modeling
@@ -690,8 +692,8 @@ the step size acts as the gate of a gated recurrent network, while the state
 keeps $N$ numbers per channel and starts with the multi-timescale
 initialization of S4D. Mamba solves selective copying over a thousand filler
 tokens, which the minGRU nearly solves and S4D does not. In the trained
-model, most of the state at the query comes from the few positions after
-each symbol. The selective model can no longer be computed as a convolution,
+model, half or more of the state at the query comes from the few positions
+after each symbol. The selective model can no longer be computed as a convolution,
 but its update is still affine in the state, so a scan trains it, and the
 gradient of the scan is a second scan, run backward. The Mamba layer wraps
 the selective SSM in projections, a short convolution, and a gate, and it is

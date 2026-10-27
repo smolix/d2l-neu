@@ -442,6 +442,19 @@ The model embeds the tokens in 32 dimensions, runs one recurrent layer with
 The library's recurrent layers return their outputs together with their
 final state; a small wrapper keeps only the outputs, which is the
 interface that all sequence layers of this chapter share.
+
+The chapter's models initialize their own linear and convolutional layers
+with `init_lecun`. It draws the weights from the LeCun normal distribution,
+of variance $1/n_\textrm{in}$ (:numref:`sec_numerical_stability`), and sets
+the biases to zero. A projection then passes on the variance of its
+input, so signals keep their scale through the projections, gates, and
+residual blocks of these models. The default of `nn.Linear` draws weights and biases
+uniformly from $[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, a weight
+variance of $1/(3 n_\textrm{in})$; with it, whether gated linear attention
+learns the recall task of :numref:`sec_hybrids` depends on the random seed.
+Biases with a purpose, such as the gate biases of later sections, are set
+after `init_lecun`. The library's recurrent layers keep their own
+initialization, which the experiments below study.
 :end_tab:
 
 :begin_tab:`jax`
@@ -452,6 +465,16 @@ this chapter share.
 
 ```{.python .input #lstm-delayed-recall-2}
 %%tab pytorch
+def init_lecun(module):  #@save
+    """LeCun normal weights and zero biases for all linear and conv layers."""
+    for layer in module.modules():
+        if isinstance(layer, (nn.Linear, nn.Conv1d)):
+            fan_in = layer.weight[0].numel()  # Inputs of one output unit
+            nn.init.normal_(layer.weight, std=fan_in ** -0.5)
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)
+    return module
+
 class Recurrent(nn.Module):  #@save
     """A batch-first recurrent layer that returns only its outputs."""
     def __init__(self, rnn):
@@ -469,7 +492,7 @@ class RecallModel(nn.Module):  #@save
         self.embedding = nn.Embedding(vocab_size, num_inputs)
         nn.init.normal_(self.embedding.weight, std=num_inputs ** -0.5)
         self.layer = layer
-        self.head = nn.Linear(num_hiddens, num_outputs)
+        self.head = init_lecun(nn.Linear(num_hiddens, num_outputs))
 
     def forward(self, X):
         return self.head(self.layer(self.embedding(X))[:, -1])
@@ -676,6 +699,8 @@ class SeqLM(nn.Module):  #@save
             nn.Linear(4 * d, d)) for _ in mixers])
         self.norm = nn.LayerNorm(d)
         self.head = nn.Linear(d, vocab_size)
+        for module in (self.mlps, self.head):  # Mixers initialize themselves
+            init_lecun(module)
 
     def forward(self, X):
         H = self.embedding(X)  # (batch_size, num_steps, num_hiddens)
@@ -1141,7 +1166,7 @@ $\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1} = \textrm{diag}(\mathbf{f}_t)
 :::
 
 ::: {.slide title="One Matrix Product Computes All Four Gates"}
-```python
+```{.python #lstm-exercises}
 for x in X.unbind(1):  # One time step at a time
     i, f, c_tilde, o = (x @ W_x + h @ W_h + b).chunk(4, -1)
     c = sigmoid(f) * c + sigmoid(i) * tanh(c_tilde)

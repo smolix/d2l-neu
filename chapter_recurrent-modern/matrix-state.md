@@ -548,10 +548,11 @@ class GatedLinearAttention(nn.Module):  #@save
         self.num_heads, self.chunk_size = num_heads, chunk_size
         self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=False)
         self.W_a = nn.Linear(num_hiddens, num_heads)  # Decay gate
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=False)
+        d2l.init_lecun(self)
         tau = torch.logspace(math.log10(4), math.log10(256), num_heads)
         with torch.no_grad():  # Initial decays 1 - 1/tau
             self.W_a.bias.copy_(torch.log(tau - 1))
-        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=False)
 
     def split_heads(self, Z):
         """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
@@ -656,8 +657,8 @@ better than S4D (3.35), behind the LSTM and the GRU (about 3.0) and Mamba
 task the matrix memory does not help much, as the models of
 :numref:`sec_ssm` suggested: predicting the next character rarely requires
 looking up a pair stored a hundred characters earlier. The tasks of
-:numref:`sec_hybrids` do, and there the size and the write rule of the
-memory decide the outcome.
+:numref:`sec_hybrids` do, and there the size of the memory limits how
+much it can recall.
 
 One limitation is built into every model in this section. A write adds
 $\mathbf{v}_t \mathbf{k}_t^\top$ to the memory, whatever the memory already

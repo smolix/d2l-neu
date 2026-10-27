@@ -434,6 +434,7 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
     def __init__(self, num_hiddens, num_heads, chunk_size=64):
         super().__init__(num_hiddens, num_heads, chunk_size)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
+        d2l.init_lecun(self.W_beta)
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
@@ -479,8 +480,8 @@ model = d2l.SeqLM(len(data.vocab), 128, [GatedDeltaNet(
 print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-Gated DeltaNet reaches a perplexity of about 3.2, the same as gated linear
-attention to two digits. On this task the write rule
+Gated DeltaNet reaches a perplexity of about 3.25, the same as gated linear
+attention. On this task the write rule
 matters little: most predictions depend on the last few characters, and
 few keys need to be rebound within a window of 128 characters. The
 difference shows where a task requires it, in the overwrite measurement
@@ -722,7 +723,7 @@ orthogonal to $\mathbf{k}_t$ are untouched.
 :::
 
 ::: {.slide title="The Delta Rule Rebinds Every Key"}
-```python
+```{.python #deltanet-exercises}
 additive = lambda S, k, v: S + np.outer(v, k)
 delta = lambda S, k, v: S + np.outer(v - S @ k, k)
 ```

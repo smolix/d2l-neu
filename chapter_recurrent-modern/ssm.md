@@ -389,6 +389,7 @@ class MinGRU(nn.Module):  #@save
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
         self.W_h = nn.Linear(num_inputs, num_hiddens)  # Candidate state
+        d2l.init_lecun(self)
 
     def coefficients(self, X):
         """Decays a_t and writes b_t of the linear recurrence."""
@@ -1160,7 +1161,7 @@ Associative, and a block of a thousand steps is still **one pair**.
 ::: {.slide title="A Scan Combines With a Doubling Stride"}
 ![](../img/mdl-modernrnn-scan-tree.svg){width=60%}
 
-```python
+```{.python #ssm-exercises}
 s = 1
 while s < T:  # Combine each position with the one s steps back
     a, b = (cat(a[:s], a[:-s] * a[s:]),

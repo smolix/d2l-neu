@@ -553,15 +553,16 @@ trainer.fit(model, data)
 val_acc['NiN'] = trainer.history['val_acc']
 ```
 
-NiN ends at a validation accuracy between about 80% and 87%, a few points
-below AlexNet and VGG after the same 10 epochs, with 4% of AlexNet's
-parameters; its accuracy is still rising at epoch 10, so where a run lands
-depends mostly on how quickly it leaves the first plateau. Its training loss
-ends near 0.4, against about 0.27 for AlexNet, and its validation loss stays
-close to it: in 10 epochs NiN fits the training data less well, and it does
-not overfit. The two ideas that NiN introduced outlived the
-network: $1 \times 1$ convolutions for mixing channels, and global average
-pooling as the head of a convolutional network.
+NiN ends at a validation accuracy between about 78% and 87% after the same 10
+epochs, with 4% of AlexNet's parameters. Its accuracy is still rising at epoch
+10, so where a run lands depends mostly on how quickly it leaves the first
+plateau: most runs end at 83--87%, a few points below AlexNet and VGG, while a
+run that leaves the plateau slowly ends near 80%. Its training loss ends
+between 0.4 and 0.55, against about 0.27 for AlexNet, and its validation loss
+stays close to it: in 10 epochs NiN fits the training data less well, and it
+does not overfit. The two ideas that NiN introduced outlived the network:
+$1 \times 1$ convolutions for mixing channels, and global average pooling as
+the head of a convolutional network.
 
 ## GoogLeNet: Multi-Branch Blocks
 :label:`sec_googlenet`
@@ -895,13 +896,13 @@ and multiply-adds at the input size used for training.
 | LeNet | $28 \times 28$ | 0.06M | 0.4M | 88–90% (final, 30 epochs) |
 | AlexNet | $224 \times 224$ | 46.8M | 938M | 89% |
 | VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 90% |
-| NiN | $224 \times 224$ | 2.0M | 762M | 81–85% |
+| NiN | $224 \times 224$ | 2.0M | 762M | 76–85% |
 | GoogLeNet | $96 \times 96$ | 6.0M | 276M | 86–89% |
 
 Three observations hold across repeated runs. First, the parameters of a
 dense head add little accuracy here: NiN and GoogLeNet, which replace it by
 global average pooling, have 23 and 8 times fewer parameters than AlexNet and
-stay within a few points of it. Second, arithmetic alone does not decide
+stay within a few points of it in most runs. Second, arithmetic alone does not decide
 accuracy: the narrow VGG is the most accurate network with about half of
 AlexNet's multiply-adds, while NiN performs almost as many as AlexNet and
 fits the training data more slowly. Third, GoogLeNet comes close to AlexNet
@@ -942,8 +943,9 @@ connected head, which holds over 90% of the parameters of AlexNet and VGG,
 by global average pooling with no parameters. GoogLeNet runs kernels of
 several sizes in parallel, makes them affordable with $1 \times 1$
 reductions, and organizes the network into stem, body, and head. Under the
-same training procedure on Fashion-MNIST, the narrow VGG is the most accurate of the four, and NiN and GoogLeNet come
-within a few points of AlexNet with a small fraction of its parameters.
+same training procedure on Fashion-MNIST, the narrow VGG is the most
+accurate of the four, and NiN and GoogLeNet usually come within a few points
+of AlexNet with a small fraction of its parameters.
 
 ## Exercises
 
@@ -1263,14 +1265,14 @@ The average does not change when a shift permutes the positions.
   938 M.
 :::
 
-::: {.slide title="NiN Reaches 80–87% With 4% of AlexNet's Parameters"}
+::: {.slide title="NiN Reaches 78–87% With 4% of AlexNet's Parameters"}
 [NiN]{.kicker}
 
 @!nin-training
 
-Same procedure as AlexNet and VGG. Training loss ≈ 0.4 against AlexNet's
-≈ 0.27: NiN fits more slowly, is still improving at epoch 10, and does not
-overfit.
+Same procedure as AlexNet and VGG. Training loss 0.4–0.55 against
+AlexNet's ≈ 0.27: NiN fits more slowly, is still improving at epoch 10, and
+does not overfit. A slow start costs a run several points.
 :::
 
 ::: {.slide}
@@ -1334,7 +1336,7 @@ does; the mean over the last 5 epochs is 86–89%.
 | LeNet (30 epochs, lr 2.0) | 28×28 | 0.06 M | 0.4 M | 88–90% |
 | AlexNet | 224×224 | 46.8 M | 938 M | 89% |
 | VGG, quarter width | 224×224 | 43.1 M | 512 M | 90% |
-| NiN | 224×224 | 2.0 M | 762 M | 81–85% |
+| NiN | 224×224 | 2.0 M | 762 M | 76–85% |
 | GoogLeNet | 96×96 | 6.0 M | 276 M | 86–89% |
 
 Mean validation accuracy over the last 5 of 10 epochs (LeNet: final);
@@ -1351,7 +1353,7 @@ SGD at 0.01 and He initialization.
 - **GoogLeNet:** parallel kernel sizes, 1×1 reductions (the 5×5 branch
   10× cheaper), stem–body–head.
 - **Fashion-MNIST** (last-5-epoch means): narrow VGG 90%; NiN and
-  GoogLeNet within a few points of AlexNet's 89% with 23× and 8× fewer
+  GoogLeNet mostly within a few points of AlexNet's 89% with 23× and 8× fewer
   parameters.
 
 **Next:** normalization layers, which let much deeper networks train.

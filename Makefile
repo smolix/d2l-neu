@@ -196,25 +196,18 @@ rebuild-book-artifacts:
 	@# over-committed RAM on <128 GiB boxes → rc=137; 24 GiB starved a full
 	@# framework render → rc=133. See detect_resources.py.)
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
-	@# HTML is LIGHT (~8 GiB V8, quarto's default heap); PDFs are HEAVY (~48 GiB
-	@# each, RAM-capped to RENDER_JOBS). Render html CONCURRENTLY with the
-	@# full-width heavy PDF pool — html as its own light make, pdfs at
-	@# -j$(RENDER_JOBS) — so all RENDER_JOBS PDFs run at once instead of html
-	@# stealing a heavy slot (which forced one PDF to wait a whole slot-time).
-	@# Folding html into the same -j pool with -j(RENDER_JOBS+1) would be unsafe
-	@# on smaller boxes (make could then run RENDER_JOBS+1 *heavy* PDFs → OOM),
-	@# so keep them as two makes. They share no buildable target here: lib+venvs
-	@# are already built, html owns .preprocess.stamp + chapter_*.qmd, pdfs own
-	@# _pdf/<fw> — and the html recipe no longer stages _book/pdf (the pdf rule
-	@# self-stages) — so the two concurrent makes never race. Peak RAM ≈
-	@# RENDER_JOBS×heap + ~8 GiB.
-	@$(MAKE) html & HTML_PID=$$!; \
-	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs; PDF_RC=$$?; \
-	wait $$HTML_PID; HTML_RC=$$?; \
-	if [ $$PDF_RC -ne 0 ] || [ $$HTML_RC -ne 0 ]; then \
-		echo "ERROR: concurrent html/pdf render failed (html=$$HTML_RC pdf=$$PDF_RC)"; \
-		exit 1; \
-	fi
+	@# HTML first, then the PDFs; never both at once. At startup `quarto render`
+	@# walks the WHOLE project tree for resource files (projectResourceFiles in
+	@# quarto.js globs `**/*.quarto_ipynb` and excludes only the output dir _book/),
+	@# so it descends into _pdf/<fw>/, where each concurrent PDF render creates
+	@# and deletes its book-latex/ scratch dir. A dir listed and then removed
+	@# before its stat aborts the html render with "NotFound: stat
+	@# _pdf/<fw>/_pdf/book-latex" (2026-10-27, logs/fixround-allquick.log).
+	@# _quarto.yml has no setting that excludes a directory from that walk.
+	@# Serializing costs one html render (~15 min); the PDFs still run
+	@# RENDER_JOBS at once (HEAVY, ~48 GiB V8 each, RAM-capped by RENDER_JOBS).
+	$(MAKE) html
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
 	@# Stage _slides/ → _book/slides/ unconditionally. The html recipe also calls
 	@# integrate_slides.sh, but ONLY when it actually runs: if the slide render
 	@# above rebuilt decks while _book/index.html was already up to date (edit a

@@ -859,7 +859,7 @@ be below $1/10$.
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-- Half of the predictions have confidence above 0.9, and 97% to 98% of
+- About half of the predictions have confidence above 0.9; 97% to 98% of
   them are right.
 - Overall: mean confidence about 81%, accuracy about 83%, slightly
   underconfident.

@@ -33,7 +33,15 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 	@python3 tools/audit_outputs.py --verify-fresh || \
 		{ echo "Outputs stale — re-run + 'make capture-outputs', or 'make render-fresh'."; exit 1; }
 	@echo "=== Building HTML book ==="
-	@{ \
+	@# `set -e` makes the block stop at the first failing step (a failed quarto
+	@# render used to be followed by the post-processing steps, whose exit status
+	@# the block returned); pipefail (.SHELLFLAGS) carries that failure through
+	@# the `| tee`. On failure, delete the target: quarto or integrate_slides.sh
+	@# may already have written or touched _book/index.html, and make would then
+	@# treat the failed render as current (2026-10-27, logs/fixround-allquick.log).
+	@# Test $$? on its own line: a `|| …` after the pipeline would switch
+	@# `set -e` off inside the block (bash ignores it left of `||`).
+	@{ set -e; \
 		if [ -d outputs ] || [ -d _notebooks ]; then \
 			echo "Injecting notebook outputs (store preferred, _notebooks fallback)..."; \
 			python3 tools/inject_outputs.py html; \
@@ -46,10 +54,12 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		python3 tools/fix_crossref_numbers.py .; \
 		python3 tools/add_cfasync.py _book; \
 		tools/integrate_slides.sh; \
-		: 'PDFs are staged into _book/pdf by the pdf rule (PDF_RULE) itself,'; \
-		: 'so html no longer copies them here — avoids a same-file cp race'; \
-		: 'when html and pdfs render concurrently (rebuild-book-artifacts).'; \
-	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
+		: 'PDFs are staged into _book/pdf by the pdf rule (PDF_RULE) itself.'; \
+	} 2>&1 | tee $(LOGDIR)/html-$(TS).log; rc=$$?; \
+	if [ $$rc -ne 0 ]; then \
+		rm -f $@; echo "ERROR: HTML render failed; see $(LOGDIR)/html-$(TS).log"; \
+		exit $$rc; \
+	fi
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 

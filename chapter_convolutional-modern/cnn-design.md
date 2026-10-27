@@ -588,7 +588,7 @@ class SE(nn.HybridBlock):
 
     def forward(self, X):
         s = self.fc(X.mean(axis=(2, 3)))
-        return X * s.reshape(s.shape + (1, 1))
+        return X * npx.reshape(s, (-2, -2, 1, 1))  # Keep any batch size
 
 se = SE(32)
 se.initialize()

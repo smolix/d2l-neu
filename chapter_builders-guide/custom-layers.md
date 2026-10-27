@@ -1044,8 +1044,11 @@ def grad_of(f):
     y.backward()
     return w.grad.copy()
 
-(bool(mnp.allclose(RoundSTE()(w), round_ste2(w))),
- bool(mnp.allclose(grad_of(lambda X: RoundSTE()(X)), grad_of(round_ste2))))
+def close(a, b):  # mnp.allclose would fall back to NumPy with a warning
+    return bool(mnp.abs(a - b).max() < 1e-6)
+
+(close(RoundSTE()(w), round_ste2(w)),
+ close(grad_of(lambda X: RoundSTE()(X)), grad_of(round_ste2)))
 ```
 
 ```{.python .input #custom-layers-custom-gradients-4}

@@ -88,7 +88,7 @@ Predicting a category, and knowing when to trust the prediction<br>
 ::: {.slide title="A Category Is Not a Number"}
 [The problem]{.kicker}
 
-- Regress on the codes 0–9 of ten garments and a prediction of 5.5 lands
+- Regress on the codes 1–10 of ten garments and a prediction of 5.5 lands
   between coat and sandal: the number means nothing.
 - **Accuracy can mislead:** for a disease 1% of patients have, the rule
   "always healthy" is right 99% of the time and finds no one.

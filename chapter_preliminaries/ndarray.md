@@ -1595,14 +1595,13 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 ::: {.slide title="Index Tensors Pick Entries; Masks Select or Replace Them"}
 [Indexing]{.kicker}
 
-`X` holds $0, \ldots, 11$ as a $3 \times 4$ matrix.
-
-::: {.cols}
-::: {.col}
-One entry per row, at columns $(3, 0, 2)$:
+`X` holds $0, \ldots, 11$ as a $3 \times 4$ matrix. An index tensor picks
+one entry per row, at columns $(3, 0, 2)$:
 
 @ndarray-indexing-and-slicing-5
 
+::: {.cols}
+::: {.col}
 A boolean mask selects; the result is a vector:
 
 @ndarray-indexing-and-slicing-6
@@ -1619,15 +1618,13 @@ A boolean mask selects; the result is a vector:
 ::: {.slide title="Assignment Writes Into the Tensor" except="jax,tensorflow"}
 [Writing]{.kicker}
 
+Training overwrites parameters at every step. Indexing on the left writes
+one element, then a slice, in place. The second output, `x`, from which `X`
+was reshaped, shows whether `reshape` shared memory:
+
 ::: {.cols .vc}
 ::: {.col}
-Training overwrites parameters at every step. Indexing on the left writes
-one element, then a whole slice, in place:
-
 @ndarray-indexing-and-slicing-2
-
-The second output, `x`, is the vector that `X` was reshaped from: it shows
-whether `reshape` shared memory.
 
 @ndarray-indexing-and-slicing-3
 :::

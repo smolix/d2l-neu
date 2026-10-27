@@ -363,11 +363,11 @@ trainer.fit(model, data)
 
 Even at this learning rate the validation accuracy can stay at chance, 10%,
 before it climbs; how long it stays there varies from run to run, from no
-epoch at all to several. After 30 epochs LeNet reaches a
-validation accuracy of about 88--90%, against about 87% for the MLP, with fewer than a third of the
-MLP's parameters. A convolution kernel learns a local pattern once and
-detects it at every position, whereas the MLP must learn the pattern
-separately for each position at which it occurs.
+epoch at all to several. After 30 epochs LeNet reaches a validation
+accuracy of about 88--90%, against about 87% for the MLP, with fewer than a
+third of the MLP's parameters. A convolution kernel learns a local pattern
+once and detects it at every position, whereas the MLP must learn the
+pattern separately for each position at which it occurs.
 
 ## Summary
 

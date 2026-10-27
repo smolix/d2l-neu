@@ -369,9 +369,10 @@ linear_rmse = k_fold(folds, make_linear)
 The linear model predicts the validation folds with an RMSE of about 0.15,
 a typical error of about 15% of the price, against about 0.11 on its
 training folds. Single folds differ a lot: within one run, the best fold
-has an RMSE of 0.11 to 0.14 and the worst one of 0.18 to 0.24, depending on
+has an RMSE of 0.11 to 0.13 and the worst one of 0.16 to 0.24, depending on
 which houses they contain. The mean over the five folds varies far less, by
-one or two hundredths from one random split to the next. Models evaluated on the same folds share
+one or two hundredths from one random split to the next, occasionally more.
+Models evaluated on the same folds share
 much of this variation, so the difference between two of them is measured
 more precisely than either error alone.
 
@@ -501,17 +502,17 @@ for wd in (0, 0.01, 0.03, 0.1, 0.3):
 ```
 
 Without weight decay, the MLP fits the training folds more closely than the
-linear model, with a training RMSE of about 0.095 against 0.11, but it
-predicts the validation folds worse, at 0.15 to 0.18: it has fit noise. From
-a weight decay of 0.01 on, the training RMSE rises, from about 0.095 to about
+linear model, with a training RMSE of about 0.09 against 0.11, but it
+predicts the validation folds worse, at 0.16 to 0.18: it has fit noise. From
+a weight decay of 0.03 on, the training RMSE rises, from about 0.09 to about
 0.16 at 0.3. The validation RMSE first falls, to between 0.13 and 0.145 at a
-weight decay of 0.03, with 0.1 nearly as good, and then rises again, to about 0.17 at 0.3, where the MLP no
-longer fits even the training folds as well as the linear model does. This is the
-U-shaped curve of :numref:`sec_generalization_basics`, traced here by the
-strength of weight decay instead of the degree of a polynomial. At its
-minimum, the MLP beats the linear model on the same folds in every run, by
-about 0.01 to 0.02, which lowers the typical error from about 15% to about 14% of
-the price.
+weight decay of 0.03, with 0.1 nearly as good, and then rises again, to
+about 0.17 at 0.3, where the MLP no longer fits even the training folds as
+well as the linear model does. This is the U-shaped curve of
+:numref:`sec_generalization_basics`, traced here by the strength of weight
+decay instead of the degree of a polynomial. At its minimum, the MLP beats
+the linear model on the same folds in every run, typically by about 0.01,
+which lowers the typical error from about 15% to about 14% of the price.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
@@ -969,7 +970,7 @@ Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
 
 @!kaggle-house-price-a-linear-baseline-1
 
-- Training RMSE about 0.11; the best fold 0.11–0.14, the worst 0.18–0.24.
+- Training RMSE about 0.11; the best fold 0.11–0.13, the worst 0.16–0.24.
 - The five-fold mean moves by one or two hundredths between random splits.
 :::
 
@@ -992,7 +993,7 @@ unless something restrains it.
 @!kaggle-house-price-mlp-select
 
 ::: {.d2l-note}
-Training RMSE rises from a weight decay of 0.01 on; validation RMSE falls,
+Training RMSE rises from a weight decay of 0.03 on; validation RMSE falls,
 then rises.
 :::
 :::
@@ -1000,15 +1001,15 @@ then rises.
 ::: {.slide title="The Sweep Traces the U-Curve of Generalization"}
 [Model selection · reading]{.kicker}
 
-- **No decay:** fits training folds better than the linear model (0.095 vs
-  0.11), validates worse (0.15–0.18 vs about 0.15): it fits noise.
+- **No decay:** fits training folds better than the linear model (0.09 vs
+  0.11), validates worse (0.16–0.18 vs about 0.15): it fits noise.
 - **0.03:** 0.13–0.145, a typical error of about 14% of the price.
 - **0.3:** fits even the training folds worse than the linear model: it
   underfits.
 
 ::: {.d2l-note}
-On the same folds, the selected MLP beats the linear model in every run, by
-about 0.01 to 0.02.
+On the same folds, the selected MLP beats the linear model in every run,
+typically by about 0.01.
 :::
 :::
 
@@ -1079,7 +1080,7 @@ the pipeline stays the same.
 
 ::: {.col}
 - **Linear:** validation RMSE about 0.15.
-- **MLP, 64 units:** 0.15–0.18 without weight decay, 0.13–0.145 with 0.03.
+- **MLP, 64 units:** 0.16–0.18 without weight decay, 0.13–0.145 with 0.03.
 - **Submit:** retrain the selected model on all houses.
 :::
 :::

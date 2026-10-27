@@ -362,7 +362,7 @@ print(f'largest weight: {beta.max():.0f}; effective sample size: '
 In every run the learned $h$ is close to $2x_1 - 2$, with coefficients
 within about 0.3 of $(2, 0, -2)$. The weights spread over several orders of
 magnitude: the largest ranges from about 20 to several hundred between runs,
-occasionally more than 1,000. The effective sample size is at most about 130
+occasionally more than 1,000. The effective sample size is at most about 150
 of the 1,000 source examples, sometimes below ten, and clipping at $c = 5$
 raises it to about 200.
 
@@ -1002,7 +1002,7 @@ $\log \beta = 2x_1 - 2$, linear, so logistic regression can represent it.
 
 ::: {.d2l-note}
 In every run the coefficients lie within about 0.3 of $(2, 0, -2)$. The
-effective sample size is at most about 130 of 1,000, sometimes below 10;
+effective sample size is at most about 150 of 1,000, sometimes below 10;
 clipping at 5 raises it to about 200.
 :::
 :::

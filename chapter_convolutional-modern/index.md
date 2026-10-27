@@ -148,7 +148,7 @@ Which ideas made that possible, and which gains came from training?
 | section | result on Fashion-MNIST |
 |---|---|
 | AlexNet | 46.8M parameters; about 90% in a third of LeNet's epochs |
-| VGG, NiN, GoogLeNet | 81–90% with parameter counts from 2M to 43M |
+| VGG, NiN, GoogLeNet | 76–90% with parameter counts from 2M to 43M |
 | Normalization Layers | LeNet + batch norm about 88% where plain LeNet stalls |
 | ResNet, ResNeXt, DenseNet | ResNet-18, 11.2M parameters, 90–91% |
 | Efficient Convnets | Mini-MobileNet: 7.7× fewer multiply-adds, about 2 points lower |

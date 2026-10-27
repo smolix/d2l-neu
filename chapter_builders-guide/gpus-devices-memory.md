@@ -402,7 +402,7 @@ print((X + Y).device)
 try:
     print(X + Y)
 except ValueError as e:
-    print(str(e).splitlines()[0])
+    print(str(e).split('. ')[0])  # The first sentence names the problem
 ```
 
 :begin_tab:`mxnet`

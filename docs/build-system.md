@@ -854,7 +854,7 @@ request. Those run through the aggregate targets:
 |---|---|---|
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
-| `make rebuild-book-artifacts` | `slides` (parallel, per-deck-incremental) → then **`html` ∥ `pdfs` concurrently** (html as its own light make; the 4 PDFs at `-j$(RENDER_JOBS)`, so all render at once and finish hidden under the longer HTML render) → `notebook-zips` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
+| `make rebuild-book-artifacts` | `slides` (parallel, per-deck-incremental) → **`html`** → **`pdfs`** (the PDFs at `-j$(RENDER_JOBS)`, all at once). html and pdfs are serialized: a concurrent PDF render breaks the html render's startup tree walk (§6.8) → `notebook-zips` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
 | `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
 | `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
 | `make hosted-env-locks` | Regenerate `hosted/hosted-lock-*.json` and `hosted/constraints-*.txt` from `uv.lock`. | No |
@@ -1192,8 +1192,9 @@ Each dispatch shells **`make <stamp>`** with the chosen device(s) in
 duplication); `run_one_notebook._run_once` runs on the assignment and **skips its
 own flock** (the self-locking path + `serialize_dataset_prep` remain the fallback
 for a direct `make _notebooks/<fw>/<x>.executed`). For **jax** the scheduler also
-sets `XLA_PYTHON_CLIENT_MEM_FRACTION = slots×7.5 GiB / card-VRAM` (jax
-preallocates; others allocate on demand). Two race guards, both because each
+sets `XLA_PYTHON_CLIENT_MEM_FRACTION = slots×7.5 GiB / card-VRAM`, or 0.94 on a
+card the job holds entirely (whole-box and whole-card reservations;
+`docs/notebook-scheduler.md` §3.3) (jax preallocates; others allocate on demand). Two race guards, both because each
 notebook is a *separate* make process:
 
 - **No concurrent lib rebuild:** the dispatch passes `-o .preprocess.stamp -o
@@ -1261,13 +1262,40 @@ the **previous** render's deck set. That is how a `make deploy` shipped a
 `_book/` missing the seven new RL decks in every framework — caught only by
 `check-all-artifacts` (§6.9), which is exactly the silent-deck-drop class it
 exists to catch. `rebuild-book-artifacts` therefore calls
-`tools/integrate_slides.sh` **unconditionally** after the html∥pdf block. It is
-safe there (slides are finished and html has joined, so nothing races the
+`tools/integrate_slides.sh` **unconditionally** after the html and pdf renders. It is
+safe there (slides and html are finished, so nothing races the
 `rm -rf`/`rsync`) and idempotent (one extra rsync when html already staged).
 Note the gate's expected-deck set is *store-driven*: a PyTorch-only chapter like
 RL generates decks for all four frameworks but is only asserted for pytorch, so
 a missing deck in a framework with no `outputs/` tree for that chapter will not
 trip it.
+
+**html and pdfs never render at the same time (2026-10-27).**
+`rebuild-book-artifacts` used to run `make html` concurrently with the PDF fleet.
+At startup `quarto render` collects project resource files by globbing the
+**whole project tree** (`projectResourceFiles` in `quarto.js` expands
+`**/*.quarto_ipynb`, excluding only the output dir `_book/`), so it walks into
+`_pdf/<fw>/`, where every running PDF render creates and deletes its
+`_pdf/<fw>/_pdf/book-latex/` scratch dir. A directory listed and then removed
+before its `stat` aborts the html render with
+`ERROR: NotFound: … stat '…/_pdf/jax/_pdf/book-latex'`
+(`logs/fixround-allquick.log`). `_quarto.yml` has no option that excludes a
+directory from this walk, so the recipe serializes: `html`, then `pdfs` at
+`-j$(RENDER_JOBS)`. The same walk covers `_slides/` and `_notebooks/`; do not
+run `make html` while slides render or notebooks execute either.
+
+**A failed html render is not marked built.** The html recipe runs its steps
+(inject → manifests → `quarto render` → `fix_crossref_numbers.py` →
+`add_cfasync.py` → `integrate_slides.sh`) in one `{ …; } | tee` block. Before
+2026-10-27 that block returned the exit status of its *last* step, so a failed
+quarto render was followed by the post-processing steps, which succeeded, and
+`integrate_slides.sh` touched `_book/index.html`; make then treated the failed
+render as current, and `rebuild-book-artifacts` reported success. The block now
+starts with `set -e` (pipefail carries the failure through `tee`), and on
+failure the recipe deletes `_book/index.html` so the next `make html` renders
+again. The recipe tests `$?` after the pipeline instead of appending
+`|| { rm …; }`: bash ignores `set -e` in every command left of a `||`, including
+the commands inside the block.
 
 ### 6.9 Makefile layout, extracted scripts & artifact-phase timing
 
@@ -1356,10 +1384,11 @@ inventory and rationale.
 **Artifact-phase timing** (from-scratch, post-notebook-execution, on the 4×4090
 box, rendering from the committed store): `clean` ~4 s · **build (`all-quick`)
 ~14.7 min** [lib ~3 s · notebook regen ~65 s · slides ~60 s cold (0 s when
-unchanged — per-deck hash) · **`html` ∥ `pdfs` ~12.3 min**, HTML-bound: all four
-PDFs render concurrently in ~6 min, hidden under the HTML render · notebook-zips
-~9 s] · colab publish ~45 s · R2 upload ~12 s. **Total ≈ 15.7 min.** HTML is the
-bottleneck (single `quarto render`, §6.8); everything else is ≤1 min or hidden.
+unchanged — per-deck hash) · `html` ~12.3 min · then `pdfs` ~6 min (all four
+concurrently) · notebook-zips ~9 s] · colab publish ~45 s · R2 upload ~12 s.
+These timings predate serializing html and pdfs (2026-10-27, §6.8), which adds
+the ~6 min PDF render to the total (then ≈ 22 min). HTML is the bottleneck
+(single `quarto render`, §6.8); everything else is ≤6 min.
 
 **Incrementality (2026-07-22).** The committed store
 (`outputs/<fw>/<chapter>/<stem>.json`) is a tracked prerequisite of the HTML book

@@ -1115,6 +1115,11 @@ class RNN(d2l.Module):
         self.rnn = tf.keras.layers.SimpleRNN(
             num_hiddens, return_sequences=True, return_state=True)
 
+    # Keras builds the layer by calling `call` with named arguments, which
+    # `Module.call(X, *args)` cannot pass on, so we name the state here
+    def call(self, inputs, H=None, training=None):
+        return self.forward(inputs, H)
+
     def forward(self, inputs, H=None):
         # The keras layer is batch-major: transpose in and out
         outputs, H = self.rnn(tf.transpose(inputs, perm=[1, 0, 2]), H)

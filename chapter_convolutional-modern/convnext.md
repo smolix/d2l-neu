@@ -804,7 +804,7 @@ for name, model in models.items():
 
 | Model | Parameters | Multiply-adds | Validation accuracy |
 |:--|--:|--:|--:|
-| ConvNeXt | 3,376,450 | 44.3M | ≈ 92% |
+| ConvNeXt | 3,376,450 | 44.3M | ≈ 91.5% |
 | Compact ResNet-18 | 3,346,675 | 43.2M | ≈ 94% |
 
 The compact ResNet-18 is ahead by about two points in every run, and both
@@ -1206,7 +1206,7 @@ About a third of ResNet-18's 11.2M.
 
 | | parameters | multiply-adds | validation accuracy |
 |---|--:|--:|--:|
-| ConvNeXt | 3.38M | 44.3M | ≈ 92% |
+| ConvNeXt | 3.38M | 44.3M | ≈ 91.5% |
 | compact ResNet-18 | 3.35M | 43.2M | ≈ 94% |
 
 The roadmap was selected on ImageNet at 224 px; its choices need not
@@ -1249,7 +1249,7 @@ beyond.
 - **Recipe:** 2.7 of the 5.9 points.
 - **Block:** 7×7 depthwise (positions) → LN → 1×1 expand 4× → GELU →
   1×1 project (channels), layer scale, residual.
-- **Fashion-MNIST, 3.4M parameters:** ConvNeXt ≈ 92%, ResNet-18 ≈ 94%:
+- **Fashion-MNIST, 3.4M parameters:** ConvNeXt ≈ 91.5%, ResNet-18 ≈ 94%:
   design choices are selected for a regime.
 
 **Next:** rules for whole families of networks, from populations of

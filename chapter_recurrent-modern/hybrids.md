@@ -287,8 +287,8 @@ d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
 
 With 8 pairs, every model recalls nearly all values. As the number of pairs
 grows, the two recurrent models lose more of them. At 64 pairs, gated linear
-attention recalls only two thirds to four fifths of the values, depending on
-the run, and Gated DeltaNet about nine in ten or more: its corrected writes
+attention recalls only half to four fifths of the values, depending on the
+run, and Gated DeltaNet about nine in ten or more: its corrected writes
 lose less of the state to interference, but its losses still grow with the
 number of pairs. Attention recalls nearly
 every pair at every load, and so does the hybrid, although three of its four

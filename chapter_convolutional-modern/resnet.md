@@ -733,7 +733,7 @@ round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs
 
 After 10 epochs ResNet-18 reaches a validation accuracy of 90--91%, and its
 last epochs change it by less than half a point. Its training loss falls to
-about 0.1, well below its validation loss of about 0.27: with 11.2 million
+about 0.07, well below its validation loss of 0.27--0.28: with 11.2 million
 parameters for 60,000 training images, the network fits the training data
 better than new data. More data, data augmentation, and regularization reduce
 this gap; the training recipes of :numref:`sec_training_recipes` combine them.
@@ -1638,7 +1638,7 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 @!resnet-training
 
 Base rate 0.01 with cosine decay to 0, minibatch 128, 96×96 pixels.
-Training loss ≈ 0.1, validation loss ≈ 0.27: 11.2M parameters for 60,000
+Training loss ≈ 0.07, validation loss 0.27–0.28: 11.2M parameters for 60,000
 images.
 :::
 

@@ -370,10 +370,11 @@ print(f'validation loss {val_loss:.4f}, norm of w {norm:.3f}')
 
 The training loss falls by many orders of magnitude, to below $10^{-7}$:
 the model fits all 20 training labels. The validation loss barely moves
-and stays near 0.02. Twenty labels pin down only 20 of the 200 directions
-in weight space, so fitting them exactly barely improves the validation
-loss; why, and why the penalty helps, is the subject of
-:numref:`subsec_wd-shrinkage`. Now we add the penalty, with $\lambda = 3$.
+and stays near 0.02, between about 0.015 and 0.025 from run to run.
+Twenty labels pin down only 20 of the 200 directions in weight space, so
+fitting them exactly barely improves the validation loss; why, and why
+the penalty helps, is the subject of :numref:`subsec_wd-shrinkage`. Now
+we add the penalty, with $\lambda = 3$.
 
 ```{.python .input #weight-decay-using-weight-decay}
 model_3, val_loss, norm = train_scratch(3, data)
@@ -387,8 +388,8 @@ The training curve now shows the penalized loss, which levels off at about
 $10^{-3}$ to $10^{-2}$, since small weights cannot fit the training labels
 exactly. The validation loss falls steadily, to about 0.01, roughly half
 its value without the penalty, and the norm of the weights shrinks from
-about 0.14 to between 0.02 and 0.06. Each run draws new data, so the
-numbers vary from run to run, but these comparisons do not.
+between 0.12 and 0.16 to between 0.02 and 0.06. Each run draws new data,
+so the numbers vary from run to run, but these comparisons do not.
 
 ## Shrinkage Along Eigenvectors
 :label:`subsec_wd-shrinkage`
@@ -668,8 +669,9 @@ for lambd, model in ((0, model_0), (3, model_3)):
           f'rest {float(mnp.linalg.norm(w - w_data)):.3f}')
 ```
 
-Without the penalty, the undetermined part has norm about 0.13, the size of
-the random initialization in 180 directions, $0.01\sqrt{180} \approx 0.134$.
+Without the penalty, the undetermined part has norm about 0.13 (0.11 to
+0.15 from run to run), the size of the random initialization in 180
+directions, $0.01\sqrt{180} \approx 0.134$.
 For a new input $\mathbf{x}$ with standard normal features, this part adds
 its dot product with $\mathbf{x}$ to the prediction, an error with variance
 equal to its squared norm, about 0.018. With the factor $\frac{1}{2}$ of our
@@ -848,7 +850,8 @@ print(f'validation loss {trainer.history["val_loss"][-1]:.4f}, '
 ```
 
 The weights end with a norm between 0.02 and 0.06, as in the scratch run
-at $\lambda = 3$, and well below the 0.14 of the run without the penalty.
+at $\lambda = 3$, and well below the 0.12 to 0.16 of the run without the
+penalty.
 The validation loss, a mean squared error without the factor $\frac{1}{2}$,
 is near 0.02, which corresponds to 0.01 on the scale of our loss. The
 training curve now shows the plain mean squared error rather than the
@@ -1237,8 +1240,8 @@ squared loss, comparable across $\lambda$.
 ::: {.col}
 - $\lambda = 0$, 30 epochs, $\eta = 0.01$: 120 steps.
 - Training loss below $10^{-7}$: all 20 labels fit.
-- Validation loss stays near **0.02**.
-- Norm of $\mathbf{w}$ about 0.14.
+- Validation loss stays near **0.02** (0.015 to 0.025 between runs).
+- Norm of $\mathbf{w}$: 0.12 to 0.16.
 :::
 
 ::: {.col .fig .big}
@@ -1255,7 +1258,7 @@ squared loss, comparable across $\lambda$.
 - The training curve shows the penalized loss, about $10^{-3}$ to
   $10^{-2}$.
 - Validation loss falls to about **0.01**.
-- Norm of $\mathbf{w}$: 0.02 to 0.06 (0.14 at $\lambda = 0$).
+- Norm of $\mathbf{w}$: 0.02 to 0.06 (0.12 to 0.16 at $\lambda = 0$).
 :::
 
 ::: {.col .fig .big}

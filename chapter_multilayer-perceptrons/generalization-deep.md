@@ -213,7 +213,7 @@ d2l.plot(list(range(1, 201)), curves, 'epoch', 'accuracy',
          fmts=('C0-', 'C1-', 'C0--', 'C1--'), figsize=(5, 3))
 d2l.plt.legend(['train, true labels', 'test, true labels',
                 'train, random labels', 'test, random labels'],
-               loc='center right', bbox_to_anchor=(1, 0.4))
+               loc='center right', bbox_to_anchor=(1, 0.4));
 ```
 
 With true labels, training accuracy passes 99% after 60 to 90 epochs, and
@@ -401,12 +401,11 @@ for h in (200, 900, 1000, 1100, 10000):
           f'norm of W2 {norm[h]:6.1f}')
 ```
 
-At the threshold the smallest singular value is typically about a hundred
-times smaller than at 1,100 hidden units, and for some draws of the features
-several hundred times smaller. The norm of the solution jumps from about
-50 at 900 units to several hundred or more, often thousands, against about 40
-at 1,100 units and 3 at 10,000. Beyond
-the threshold, the norm can only shrink as units are added: an exact fit with
+At the threshold the smallest singular value is tens to hundreds of times
+smaller than at 1,100 hidden units, depending on the draw of the features.
+The norm of the solution jumps from about 50 at 900 units to several hundred
+or more, often thousands, against about 40 at 1,100 units and 3 at 10,000.
+Beyond the threshold, the norm can only shrink as units are added: an exact fit with
 $h$ hidden units remains an exact fit with $h + 1$ (give the new unit zero
 weight), so the smallest norm among the exact fits cannot grow. The
 mathematics appendix analyzes this mechanism in a smaller example
@@ -566,7 +565,7 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
 ```
 
 The two kinds of training images are fit at very different speeds. After 20
-epochs the network reproduces the labels of more than 80% of the correctly
+epochs the network reproduces the labels of 80% to 90% of the correctly
 labeled images, but those of fewer than one in five of the mislabeled ones.
 Validation accuracy peaks in this first phase, within the first 40 epochs. Then
 the network memorizes the wrong labels, nearly all of them after 100 to 160
@@ -1104,7 +1103,7 @@ The minimum-norm fit is $\frac{4}{5}\mathbf{h} = (0.8, 1.6)$, norm $1.79$.
 ::: {.col .narrow}
 1,000 images, 20% of labels redrawn: about 18% wrong.
 
-- After 20 epochs: over 80% of the clean labels fit, under 20% of the
+- After 20 epochs: 80–90% of the clean labels fit, under 20% of the
   wrong ones. Validation accuracy peaks in this phase.
 - Then the wrong labels are memorized, nearly all after 100–160 epochs;
   validation accuracy drops several points.

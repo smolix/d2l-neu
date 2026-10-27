@@ -665,17 +665,17 @@ handled by the encoding.
 ::: {.slide title="One-Hot Encoding Adds a 0/1 Column per Category"}
 [Categories]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 @-pandas-encoding-categorical-features-1
 
+::: {.cols .vc}
+::: {.col}
 - Codes 0, 1, 2 for `Slate`, `Tile`, missing would invent an order.
 - One-hot: all categories are equally far apart.
 - `dummy_na=True`: "missing" gets its own column.
 - Two values only: one 0/1 column suffices.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:pandas-onehot
 :::
 :::

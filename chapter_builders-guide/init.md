@@ -919,7 +919,7 @@ net[0].weight.data[0]
 w = net.layers[0].kernel
 w.assign(w + 1)
 w[0, 0].assign(42)
-w[:, 0]
+w[:, 0].numpy()
 ```
 
 ```{.python .input #init-custom-initializers-2}

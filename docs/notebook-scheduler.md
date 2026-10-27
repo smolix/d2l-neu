@@ -220,8 +220,16 @@ items behind it keep the pools full; it starts on a later round when a gap opens
 - **JAX only:** because JAX preallocates, the scheduler also sets
   `XLA_PYTHON_CLIENT_MEM_FRACTION = clamp(spg × 7.5 GiB / card_VRAM, 0.05, 0.95)`
   so a JAX process is capped to exactly the slots it reserved (e.g. 1 slot on a
-  24 GiB card → 0.31; 2 slots → 0.63). PyTorch/TF/MXNet allocate on demand and
-  need no fraction.
+  24 GiB card → 0.31; 2 of 3 slots → 0.63). A card whose slots are **all**
+  reserved by the job (whole-box `('gpu','all','all')`, `('gpu', n, 'all')`, or
+  *spg* equal to that card's capacity) gets the full-card fraction
+  `FULL_CARD_MEM_FRACTION = 0.94` instead, whatever the slot count; the rest of
+  the card is left to the CUDA context and cuDNN/cuBLAS workspaces. Before
+  2026-10-27 the slot formula applied there too, which tied a whole-box job's
+  arena to `D2L_GPU_SLOTS_PER`: under `2,2,2,2` the JAX fast-transformer got
+  0.62 (15 GiB) and OOMed at its 13.5 GiB fp32 step, while `3,3,3,3` gave 0.94.
+  With several cards the tightest card sets the fraction. PyTorch/TF/MXNet
+  allocate on demand and need no fraction.
 
 Releasing on completion returns the slots to their GPUs / CPU pool and wakes the
 loop.

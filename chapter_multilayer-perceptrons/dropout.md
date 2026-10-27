@@ -650,14 +650,14 @@ for name, net, t in (('with dropout', model, trainer),
           f'with masks {masked_accuracy(net, data, t):.3f}')
 ```
 
-Both networks end with a validation accuracy of about 85% to 88%. The
+Both networks end with a validation accuracy of about 84% to 88%. The
 accuracy moves by a point or more from one epoch to the next, more than the
 difference between the two networks, and which of them is ahead changes from
 run to run. On Fashion-MNIST, with this network and 20 epochs of training,
 dropout does not make the MLP more accurate. With the masks switched on,
 however, the two networks behave very differently. The network trained with
 dropout loses about 1 to 2 points of accuracy. The network trained without
-dropout loses about 9 to 12 points. Its units have learned to work in the
+dropout loses about 8 to 12 points. Its units have learned to work in the
 combinations present during training and fail when some of their partners
 are missing: they are co-adapted. Dropout removes this dependence among the
 units, and here it does so without changing the accuracy of the full
@@ -699,7 +699,7 @@ during training, and no such closed form exists.
 The masked accuracies measured above confirm the effect that dropout was
 designed to have. The units of the network trained without dropout work
 only in the combinations in which they were trained: removing some of them
-at random costs about 9 to 12 points of accuracy. The units of the network
+at random costs about 8 to 12 points of accuracy. The units of the network
 trained with dropout do not depend on each other in this way.
 It does not follow that independent units generalize better. On
 Fashion-MNIST the network with co-adapted units is as accurate as the
@@ -1116,13 +1116,13 @@ differs:
 
 @!dropout-robustness-to-missing-units-2
 
-- Final validation accuracy: about 85–88% for both networks; which one is
+- Final validation accuracy: about 84–88% for both networks; which one is
   ahead changes from run to run.
 - Accuracy moves by a point or more between epochs: on this dataset and
   budget, dropout does not raise accuracy.
 :::
 
-::: {.slide title="Without Dropout, Removing Units Costs 9 to 12 Points"}
+::: {.slide title="Without Dropout, Removing Units Costs 8 to 12 Points"}
 [Effects · robustness]{.kicker}
 
 Switch the masks of training ($p = 0.2$, $0.5$) on in both trained networks,
@@ -1131,7 +1131,7 @@ with their final parameters:
 | trained | final accuracy | with masks | loss |
 |---|---:|---:|---:|
 | with dropout | 85–88% | 83–87% | 1–2 points |
-| without dropout | 86–88% | 74–78% | 9–12 points |
+| without dropout | 84–88% | 74–78% | 8–12 points |
 
 ::: {.d2l-note}
 Units trained without dropout work only in the combinations they were
@@ -1224,9 +1224,9 @@ are $2^{512} \approx 10^{154}$ masks.
 :::
 
 ::: {.col}
-- **Fashion-MNIST, 2 × 256, 20 epochs:** about 85–88% with and without
+- **Fashion-MNIST, 2 × 256, 20 epochs:** about 84–88% with and without
   dropout; with masks on, the same parameters lose 1–2 points with dropout,
-  9–12 without.
+  8–12 without.
 - **Linear model:** dropout = weight decay scaled by $x_j^2$.
 :::
 :::

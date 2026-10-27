@@ -242,6 +242,9 @@ WHOLE_BOX_NOTEBOOKS = {
 # GPU. (syne-tune itself only honours CUDA_VISIBLE_DEVICES with the patch
 # that tools/check_runtime_deps.py applies to the pytorch venv.)
 FULL_CARD_NOTEBOOKS = {
+    # Times the memory/speed trade-offs of checkpointing and copies across two
+    # GPUs; a shared card skews the timings the prose quotes.
+    "chapter_builders-guide/gpus-devices-memory.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
 }

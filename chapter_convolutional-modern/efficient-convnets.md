@@ -695,7 +695,7 @@ forward-pass time ratio over repeated runs).
 
 | Model | Parameters | Multiply-adds | Test accuracy | Forward time |
 |---|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | 91.5–92% | 1 |
+| Mini-MobileNet | 542,474 | 50.3 million | 91–92% | 1 |
 | VGG-style | 583,594 | 384.9 million | 93.5–94% | 2–3.5 |
 
 At the same parameter budget the dense network is about two points more
@@ -1095,7 +1095,7 @@ Efficient convnets treat cost as a design objective alongside accuracy.
 Depthwise-separable convolutions cut the arithmetic of a layer to
 $1/c_\textrm{o} + 1/k^2$ of a dense convolution, and the inverted bottleneck
 arranges them so that the tensors kept between blocks are the narrow ones.
-On Fashion-MNIST, a mini-MobileNet comes within two points of a dense
+On Fashion-MNIST, a mini-MobileNet comes about two points short of a dense
 network with the same number of parameters while performing 7.7 times fewer
 multiply-adds, but its forward pass is only 2 to 3.5 times faster, because
 depthwise convolutions perform little arithmetic per value they read from
@@ -1384,7 +1384,7 @@ initialization, same head:
 @!efficient-convnets-training-and-comparison-4
 
 ::: {.d2l-note}
-Repeated runs: mini-MobileNet 91.5–92%, VGG-style
+Repeated runs: mini-MobileNet 91–92%, VGG-style
 93.5–94%, with 7.7× the arithmetic. At equal arithmetic (widths ÷2.8) the
 dense net would have 76k parameters against 542k.
 :::
@@ -1561,7 +1561,7 @@ $\gamma_o = 1$, $\beta_o = 0$. What are the folded kernel and bias?
 
 - Separable layer: $1/c_\textrm{o} + 1/k^2$ of a dense one; dense blocks
   would need 4.7M weights instead of 0.53M.
-- Equal parameters: 50.3M vs 384.9M multiply-adds, 91.5–92% vs 93.5–94%,
+- Equal parameters: 50.3M vs 384.9M multiply-adds, 91–92% vs 93.5–94%,
   yet only 2–3.5× less time (depthwise layers are memory-bound).
 - Compound scaling: cost $d\,w^2 r^2$, $\alpha\beta^2\gamma^2\approx 2$.
 - RepVGG: fold BN, pad $1\times 1$ and identity to $3\times 3$, add;

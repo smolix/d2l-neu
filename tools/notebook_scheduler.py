@@ -58,6 +58,10 @@ from runtime_env import notebook_resource, file_uses_gpu
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS_DIR = ROOT / "_notebooks"
 FRAMEWORKS = ["pytorch", "tensorflow", "jax", "mxnet"]
+# XLA arena of a JAX job that holds every slot of a card. The rest of the card
+# (~1.5 GiB on 24 GiB) is left to the CUDA context and the cuDNN/cuBLAS
+# workspaces, which live outside the arena.
+FULL_CARD_MEM_FRACTION = 0.94
 
 
 def _detect(key):
@@ -329,12 +333,16 @@ class Scheduler:
         env = {}
         if it.fw == "jax":   # jax preallocates: cap to the slots we reserved.
             # Per-GPU fraction, tightest (min) across chosen cards so no GPU is
-            # over-committed. Strict generalization of the old scalar formula:
-            # when per_gpu_spg is constant this reduces to spg*mib/min(vram_g),
-            # byte-for-byte the previous formula, for any n_gpus. Whole-box
-            # (per_gpu_spg == gpu_cap) reduces to 1.0, capped to 0.95.
+            # over-committed: spg*mib/vram_g for a share of a card. A card whose
+            # slots are ALL reserved (whole-box, n whole cards, or spg equal to
+            # the card's capacity) belongs to this job alone, so it gets the
+            # full-card fraction whatever the slot count. The slot formula
+            # would tie the arena to D2L_GPU_SLOTS_PER: whole-box fast-transformer
+            # got 2*7680/24564 = 0.62 under SLOTS_PER=2,2,2,2 and OOMed at a
+            # 13.5 GiB step (2026-10-27) while passing at 3,3,3,3 (0.94).
             frac = min(0.95, max(0.05, min(
-                (s * self.mib_per_slot) / self.gpu_vram[g]
+                FULL_CARD_MEM_FRACTION if s >= self.gpu_cap[g]
+                else (s * self.mib_per_slot) / self.gpu_vram[g]
                 for g, s in zip(chosen, per_gpu_spg))))
             env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{frac:.2f}"
         self.fw_inflight[it.fw] += 1

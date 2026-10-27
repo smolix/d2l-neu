@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 44497,
-          "sha256": "sha256:c6b2597f00ceb2997db2f909efeafa8ba2d2ab46cbc69515f82024cc7d3b4f2e"
+          "bytes": 44182,
+          "sha256": "sha256:dcaea6b53a3fe1889db1135ec89eb7b1dd7b4ed0f547754575d4daafceaf583c"
         }
       ]
     },

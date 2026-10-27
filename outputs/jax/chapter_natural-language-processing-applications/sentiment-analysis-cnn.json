@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8c1553d8860ced5491a0be14a1c445b5d05a7a692b8180e354d753fe8e9f3205",
+    "d2l_lib_fingerprint": "sha256:424e4a150e26beb36b273cbb518925b088d1249ce47adb25ff1db31aeb336270",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,27 +60,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.658, train acc 0.658, test acc 0.811\n"
+          "text": "epoch 1, loss 0.607, train acc 0.683, test acc 0.816\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.412, train acc 0.810, test acc 0.835\n"
+          "text": "epoch 2, loss 0.401, train acc 0.819, test acc 0.842\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.344, train acc 0.850, test acc 0.853\n"
+          "text": "epoch 3, loss 0.335, train acc 0.856, test acc 0.848\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.281, train acc 0.884, test acc 0.867\n"
+          "text": "epoch 4, loss 0.273, train acc 0.889, test acc 0.866\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.217, train acc 0.917, test acc 0.873\n"
+          "text": "epoch 5, loss 0.209, train acc 0.919, test acc 0.871\n"
         }
       ]
     },

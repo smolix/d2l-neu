@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1f1363817068490ffe23f091ecd8cb682f3051db22e2b2964a1858937df262ad",
+    "d2l_lib_fingerprint": "sha256:41f5d7b7ab4917bb3db2f522ca19b6a9093945ee0266b9af923f322173fb6ca6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,62 +19,62 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:2a3aceea1f048444fe6d990a5f1c7623d5214fa09b830ffed9df94ed8c509d66",
+      "code_fingerprint": "sha256:edba17578d5d5e949c553e6b3e638c832428ae67032af7bce939c847df9c9e17",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:95ffbc0211b77de5eb204a3b36734215d15422bea3d55754d3ae9841582a9101",
+      "code_fingerprint": "sha256:bbe6486151bf70540919f181a2fb49170fdd9644faa6d9e0ad61649ff4b2e23c",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-9": {
-      "code_fingerprint": "sha256:742349b14aeba120fe6d562646da131926ca5a7860d539d23b499fcd209d61f1",
+      "code_fingerprint": "sha256:867a773e8342179e563747fa963d2c618b554758f922ca43a005aab7c4d9d801",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:9d5fd5064147281a56059f28735ee9f75f3616849696faf0fbc39abebac903a4",
+      "code_fingerprint": "sha256:ecdedd3c6a5126665dca1fd0c53fda8d0950468a326d917f3958c768f3afb060",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:244425e971770626c915e639709a9e899c1ab3220a0a494387bcf6607e6905b1",
+      "code_fingerprint": "sha256:b53705dba272ee7cb74bfa2eda698adde157cf7c62e36b965f98c3e7f9175676",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-11": {
-      "code_fingerprint": "sha256:088c687d419c558756ec5f8ccf873a1a95a6eee5119ffc85829bce90720dfd76",
+      "code_fingerprint": "sha256:1778f07f5ad47fbd2d6c37b84fdb51431061b7683f5ad28827245e8543c1c7e4",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:9661a4cce5252b8122765cc0075666d07144780ab267fe2741a6250e0bfb690c",
+      "code_fingerprint": "sha256:1c580d9a890b7b2e2b7a72ed8bcfb6fbf16c6919fc199e71ee22eb88e801cfc0",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-13": {
-      "code_fingerprint": "sha256:22d9d31c6c426ac5cd4179d19dbdbd5b243f1fdd40e778fffeffb5aa932ea53e",
+      "code_fingerprint": "sha256:4c3fa946cfb05d2b7a201f51091d6902158308c0e3e6854e5a1bd59759f29580",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-14": {
-      "code_fingerprint": "sha256:60cdd48c80ce161a680edb65e6fd2cd3be119fb84db4cb2ab0c50ce43ab885b7",
+      "code_fingerprint": "sha256:66838c94615fcc4d879b69ae695582e6821f4d7b237bf41736f3ed1245129778",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-15": {
-      "code_fingerprint": "sha256:40ab715b21326cb886edfc4a78fd17f9d580895d93770d10325ce2d22f282a77",
+      "code_fingerprint": "sha256:73c31b584596d1a11d9f189083841a05e4a913ee0ed4cdac0a96727814823c5f",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-16": {
-      "code_fingerprint": "sha256:3ce968a454cd124eab4b75c1ca2d0938a9465380679bad76267f5b7d0be02dee",
+      "code_fingerprint": "sha256:7a319864e21b68ba24afabbfb787fae2f28652bca63dd206987ab6f77fbf5788",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-17": {
-      "code_fingerprint": "sha256:b3220a0f912f47e8f406bebef2dc2f024de4904120d9071d5abcb213752832ee",
+      "code_fingerprint": "sha256:9fdfc20975280f18b0d7130cd42edb136e7dd1797bcf26eab7b3389f7066d1fe",
       "kind": "text",
       "outputs": []
     }

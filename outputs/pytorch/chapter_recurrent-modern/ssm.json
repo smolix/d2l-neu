@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0edbfc7846a3f0ed8a964a3d9526d3ed5cc26db87dcb7ec08338d35a5101ef56",
+    "d2l_lib_fingerprint": "sha256:80bd99c821ba78496b817577d5b3065b15a40eda25a6153609bd9aa6c703bd3d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 4.8e-07\n"
+          "text": "max deviation: 9.5e-07\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 30062,
-          "sha256": "sha256:857f97612da392623eabcbe42aa195129a94eaa9559ff2edc2b53a86da38e5f1"
+          "bytes": 31533,
+          "sha256": "sha256:ef0e16148a3c106a154ae92f58735c53347f20f86a7802a5f14194d12babf1e2"
         }
       ]
     },

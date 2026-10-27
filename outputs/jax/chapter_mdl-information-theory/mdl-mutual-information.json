@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
-          "bytes": 27873,
-          "sha256": "sha256:d59bc6faefc7482649a352e99a730c83a755c9af7ba572b8fe927f8d55538f56"
+          "bytes": 27802,
+          "sha256": "sha256:e5edf1e84d09a3f978cc5795c46b9d5c69d71fe121c0b3ccceed735f689e290c"
         }
       ]
     },
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
-          "bytes": 29955,
-          "sha256": "sha256:3c8e09979f678272174c8aef5fe7f20b7e44b01a1ffec4a41427f89c37a70b46"
+          "bytes": 29876,
+          "sha256": "sha256:1a7624a35d111d1cbd75ef389811baf38e3ee16e4fb57f2ead13d5eaea43a554"
         }
       ]
     },
@@ -163,7 +163,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.405 nats\n"
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.404 nats\n"
         },
         {
           "type": "stream",
@@ -190,8 +190,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
-          "bytes": 31736,
-          "sha256": "sha256:a2e2182d87c30ba38de7e083e948d76e552ebcce68a79468305cbb8b42bb926c"
+          "bytes": 31646,
+          "sha256": "sha256:039a7e8edb1daeeb5e770fa0711b039cfb9773a3dc59f1d0241ad4921c0bae16"
         }
       ]
     },

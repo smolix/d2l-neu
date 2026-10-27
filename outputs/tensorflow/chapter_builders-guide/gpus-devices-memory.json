@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ba39424edc033d2923e2dac5b279e0a7746043b40665b64f11a3fedc85b7dcc4",
+    "d2l_lib_fingerprint": "sha256:de45551a9649faecf0c21d66a196ac55449c14a1564e09834493af7e1f38ce7c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x787f999f5800>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x787f99bb7e80>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x787f90263d00>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x748176476680>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x74810500c080>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x748104094880>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x787f90272b40>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x787f90272880>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x787f90272840>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x787f90272800>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x748104097000>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d80>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d40>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d00>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.40711343, 0.9326489 , 0.5076287 ],\n       [0.80205274, 0.7795856 , 0.60180473]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.82228184, 0.720204  , 0.95189404],\n       [0.33173   , 0.18658495, 0.7490263 ]], dtype=float32)>"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.4071134, 1.9326489, 1.5076287],\n       [1.8020527, 1.7795856, 1.6018047]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.8222818, 1.720204 , 1.951894 ],\n       [1.33173  , 1.186585 , 1.7490263]], dtype=float32)>"
         }
       ]
     },
@@ -111,7 +111,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[2.6058688],\n       [2.6058688]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-0.6435734],\n       [-0.6435734]], dtype=float32)>"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0024 sec\ntime until they all finished:     0.0535 sec\n"
+          "text": "time to queue 32 matrix products: 0.0025 sec\ntime until they all finished:     0.0535 sec\n"
         }
       ]
     },
@@ -191,12 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1152 MiB,  24.7 ms per step\n"
+          "text": "checkpointing=False  step memory  1152 MiB,  24.4 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   512 MiB,  29.9 ms per step\n"
+          "text": "checkpointing=True   step memory   512 MiB,  30.2 ms per step\n"
         }
       ]
     },
@@ -213,8 +213,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 30641,
-          "sha256": "sha256:94b88490aa7a19cca2788b5e3b073e85dd557966e8c799a9b0812473cf76af3b"
+          "bytes": 30333,
+          "sha256": "sha256:885ec54218457f2f87ff571c3fd0a130d4a339e5afcead1cae8d380714755ac6"
         },
         {
           "type": "execute_result",

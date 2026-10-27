@@ -382,7 +382,7 @@ The training loop is defined below. Because of the existence of padding, the cal
 ```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab mxnet
 def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
-    net.initialize(ctx=device, force_reinit=True)
+    net.initialize(device=device, force_reinit=True)
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': lr})
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
@@ -393,7 +393,7 @@ def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
         timer, num_batches = d2l.Timer(), len(data_iter)
         for i, batch in enumerate(data_iter):
             center, context_negative, mask, label = [
-                data.as_in_ctx(device) for data in batch]
+                data.to_device(device) for data in batch]
             with autograd.record():
                 pred = skip_gram(center, context_negative, net[0], net[1])
                 l = (loss(pred.reshape(label.shape), label, mask) *
@@ -673,8 +673,8 @@ get_similar_tokens('chip', 3, embed_v)
 <!-- slides -->
 
 ::: {.slide title="word2vec Pretraining"}
-The skip-gram model with negative sampling, Mikolov et al.
-2013. Each word has *two* embedding vectors:
+The skip-gram model with negative sampling (Mikolov et al., 2013).
+Each word has *two* embedding vectors:
 
 - $\mathbf{v}_w$ — its embedding *as a center word*.
 - $\mathbf{u}_w$ — its embedding *as a context word*.

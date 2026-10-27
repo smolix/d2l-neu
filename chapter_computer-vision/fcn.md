@@ -67,6 +67,7 @@ import tensorflow as tf
 import keras
 import numpy as np
 from PIL import Image
+from safetensors.numpy import load_file
 ```
 
 ## The Model
@@ -122,45 +123,60 @@ print('Feature extractor output shape:',
 
 ```{.python .input #fcn-the-model-1}
 #@tab tensorflow
-# Note: keras.applications does not bundle a ResNet-18; it only ships
-# ResNet-50/101/152. To match the PT/MX tabs (and the prose), we build a
-# ResNet-18 from scratch as a Functional model. Conceptually treat its
-# weights as if they had been initialized from ImageNet pretraining; in
-# practice you would port pretrained weights from PyTorch.
-def _resnet_block(x, num_channels, strides=1, use_1x1conv=False):
-    y = keras.layers.Conv2D(num_channels, 3, strides=strides,
-                            padding='same', use_bias=False)(x)
-    y = keras.layers.BatchNormalization()(y)
-    y = keras.layers.ReLU()(y)
-    y = keras.layers.Conv2D(num_channels, 3, strides=1,
-                            padding='same', use_bias=False)(y)
-    y = keras.layers.BatchNormalization()(y)
+# keras.applications ships no ResNet-18, so we build one as a Functional
+# model and load ImageNet weights from the Hugging Face checkpoint
+# microsoft/resnet-18. `hf` maps each checkpoint prefix to its (conv, bn).
+hf = {}
+
+def _conv_bn(x, prefix, num_channels, kernel_size, strides=1):
+    # Pad k//2 on every side: 'same' pads only right and bottom when the
+    # stride is 2 and the sizes are even
+    if kernel_size > 1:
+        x = keras.layers.ZeroPadding2D(kernel_size // 2)(x)
+    conv = keras.layers.Conv2D(num_channels, kernel_size, strides=strides,
+                               use_bias=False)
+    # Running averages decay 0.9, epsilon 1e-5
+    bn = keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)
+    hf[prefix] = (conv, bn)
+    return bn(conv(x))
+
+def _resnet_block(x, prefix, num_channels, strides=1, use_1x1conv=False):
+    y = keras.layers.ReLU()(_conv_bn(x, prefix + '.layer.0', num_channels, 3,
+                                     strides))
+    y = _conv_bn(y, prefix + '.layer.1', num_channels, 3)
     if use_1x1conv:
-        x = keras.layers.Conv2D(num_channels, 1, strides=strides,
-                                use_bias=False)(x)
-        x = keras.layers.BatchNormalization()(x)
+        x = _conv_bn(x, prefix + '.shortcut', num_channels, 1, strides)
     return keras.layers.ReLU()(y + x)
 
 inputs = keras.Input(shape=(None, None, 3))
-x = keras.layers.Conv2D(64, 7, strides=2, padding='same',
-                        use_bias=False)(inputs)
-x = keras.layers.BatchNormalization()(x)
+x = _conv_bn(inputs, 'resnet.embedder.embedder', 64, 7, strides=2)
 x = keras.layers.ReLU()(x)
-x = keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(x)
-x = _resnet_block(x, 64)
-x = _resnet_block(x, 64)
-x = _resnet_block(x, 128, strides=2, use_1x1conv=True)
-x = _resnet_block(x, 128)
-x = _resnet_block(x, 256, strides=2, use_1x1conv=True)
-x = _resnet_block(x, 256)
-x = _resnet_block(x, 512, strides=2, use_1x1conv=True)
-features = _resnet_block(x, 512)
-# Mirror the structure of torchvision.models.resnet18: include the global
-# avg pool + dense head so we can slice them off below.
+x = keras.layers.ZeroPadding2D(1)(x)  # Zeros are safe after a ReLU
+x = keras.layers.MaxPool2D(pool_size=3, strides=2)(x)
+for i, (num_channels, strides) in enumerate(
+        [(64, 1), (128, 2), (256, 2), (512, 2)]):
+    stage = f'resnet.encoder.stages.{i}.layers'
+    x = _resnet_block(x, f'{stage}.0', num_channels, strides,
+                      use_1x1conv=strides > 1)
+    x = _resnet_block(x, f'{stage}.1', num_channels)
+features = x
 pooled = keras.layers.GlobalAveragePooling2D()(features)
-logits = keras.layers.Dense(1000)(pooled)
-pretrained_net = keras.Model(inputs=inputs, outputs=logits)
-# Show the last few layers (matches the spirit of the PT/MX displays)
+dense = keras.layers.Dense(1000)
+pretrained_net = keras.Model(inputs=inputs, outputs=dense(pooled))
+
+weights = load_file(d2l.download(
+    'https://huggingface.co/microsoft/resnet-18/resolve/'
+    '65a5785d9156231087c481e0c7dd33a5ff6f7e3e/model.safetensors',
+    '../data/resnet-18', 'd905ba97ebcd156c13e528cd1731bd23406979e3'))
+for prefix, (conv, bn) in hf.items():
+    # Checkpoint kernels are (out, in, h, w); Keras expects (h, w, in, out)
+    conv.set_weights([weights[f'{prefix}.convolution.weight'].transpose(
+        2, 3, 1, 0)])
+    bn.set_weights([weights[f'{prefix}.normalization.{name}'] for name in
+                    ('weight', 'bias', 'running_mean', 'running_var')])
+dense.set_weights([weights['classifier.1.weight'].T,
+                   weights['classifier.1.bias']])
+# Show the last few layers
 pretrained_net.layers[-3:]
 ```
 
@@ -603,7 +619,7 @@ of the predicted class for all the pixels.
 #@tab mxnet
 num_epochs, lr, wd, devices = 5, 0.001, 1e-3, d2l.try_all_gpus()
 loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
-net.reset_ctx(devices)
+net.reset_device(devices)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': lr, 'wd': wd})
 d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
@@ -685,14 +701,21 @@ for epoch in range(num_epochs):
 
 ```{.python .input #fcn-training}
 #@tab tensorflow
-# Loss: SparseCategoricalCrossentropy over per-pixel logits (NHWC -> NHW).
-# Full fine-tuning of the entire network (backbone + head) to match the
-# PyTorch tab.
+# Each image's loss is the mean of its per-pixel cross-entropies, and an SGD
+# step follows the gradient of the minibatch SUM of these image losses. Keras
+# therefore logs `loss` per minibatch; the per-pixel cross-entropy is
+# reported as a metric. The whole network (backbone + head) is fine-tuned.
+class PixelLoss(keras.losses.Loss):
+    def call(self, y, logits):
+        return tf.reduce_mean(keras.losses.sparse_categorical_crossentropy(
+            y, logits, from_logits=True), axis=(1, 2))
+
 num_epochs, lr, wd = 5, 0.001, 1e-3
 fcn_net.compile(
     optimizer=keras.optimizers.SGD(learning_rate=lr, weight_decay=wd),
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy'],
+    loss=PixelLoss(reduction='sum'),
+    metrics=['accuracy', keras.metrics.SparseCategoricalCrossentropy(
+        name='pixel_ce', from_logits=True)],
     # Keras may otherwise select XLA automatically. For this unusually large
     # transposed convolution, XLA's cuDNN autotuning can take tens of minutes
     # before the first training step and offers no benefit to this example.
@@ -712,7 +735,7 @@ in each channel and transform the image into the four-dimensional input format r
 def predict(img):
     X = test_iter._dataset.normalize_image(img)
     X = np.expand_dims(X.transpose(2, 0, 1), axis=0)
-    pred = net(X.as_in_ctx(devices[0])).argmax(axis=1)
+    pred = net(X.to_device(devices[0])).argmax(axis=1)
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
@@ -754,7 +777,7 @@ To visualize the predicted class of each pixel, we map the predicted class back 
 ```{.python .input #fcn-prediction-2}
 #@tab mxnet
 def label2image(pred):
-    colormap = np.array(d2l.VOC_COLORMAP, ctx=devices[0], dtype='uint8')
+    colormap = np.array(d2l.VOC_COLORMAP, device=devices[0], dtype='uint8')
     X = pred.astype('int32')
     return colormap[X, :]
 ```

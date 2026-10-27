@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:f1dd95f3761b25cfc73e00821d5fbe3f6f163e4063f23fcad5e42bedc6974ede",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.5275229813297905), np.float64(0.5275229813297904))"
+          "text": "(np.float64(0.5367258227802602), np.float64(0.5367258227802602))"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.670  (biased)\nE[divide by n-1] = 4.005  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.665  (biased)\nE[divide by n-1] = 3.997  (unbiased)\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
-          "bytes": 32404,
-          "sha256": "sha256:61c57232b7fef02faeeade2692b31d2c74403f644109ca8214a56582fe69b1f6"
+          "bytes": 32334,
+          "sha256": "sha256:35334564e75c8366eb5cc4913fe76cb3e634d2b84c9f5a25403772b51f22b842"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(-0.058937244640887385), np.float64(0.06520843631841951))"
+          "text": "(np.float64(-0.043485117969899414), np.float64(0.07881385217914236))"
         }
       ]
     },

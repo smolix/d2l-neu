@@ -434,9 +434,9 @@ def get_net(devices):
     # There are 120 output categories
     finetune_net.output_new.add(nn.Dense(120))
     # Initialize the output network
-    finetune_net.output_new.initialize(init.Xavier(), ctx=devices)
+    finetune_net.output_new.initialize(init.Xavier(), device=devices)
     # Distribute the model parameters to the CPUs or GPUs used for computation
-    finetune_net.reset_ctx(devices)
+    finetune_net.reset_device(devices)
     return finetune_net
 ```
 
@@ -845,7 +845,9 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab jax
-num_epochs, lr, wd = 10, 1e-4, 1e-4
+# The pooled features of this ResNet-50 are small (about 0.04 on average per
+# coordinate), so the output network needs a learning rate of 1e-3 to train
+num_epochs, lr, wd = 10, 1e-3, 1e-4
 lr_period, lr_decay = 2, 0.9
 backbone, output_net = get_net()
 output_net = train(backbone, output_net, train_iter, valid_iter, num_epochs,
@@ -878,7 +880,7 @@ train(net, train_valid_iter, None, num_epochs, lr, wd, devices, lr_period,
 
 preds = []
 for data, label in test_iter:
-    output_features = net.features(data.as_in_ctx(devices[0]))
+    output_features = net.features(data.to_device(devices[0]))
     output = npx.softmax(net.output_new(output_features))
     preds.extend(output.asnumpy())
 ids = sorted(os.listdir(

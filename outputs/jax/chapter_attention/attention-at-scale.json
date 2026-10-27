@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:63fe58618192304d724de10653952b665bceda48e7d8c7d72e0a8cf1190ad75f",
+    "d2l_lib_fingerprint": "sha256:b9cf7efe4fe51bb6232c1f43709be59b6ea55592e715201498e445aeb6cfa6ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,12 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048:   0.19 ms\nn =  4096:   0.36 ms\nn =  8192:   1.37 ms\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n = 16384:   4.89 ms\n"
+          "text": "n =  2048:   0.22 ms\nn =  4096:   0.42 ms\nn =  8192:   1.52 ms\nn = 16384:   5.10 ms\n"
         }
       ]
     },
@@ -79,8 +74,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
-          "bytes": 34205,
-          "sha256": "sha256:e3a42853d4d99d5116a20768892625a6817cd4b24374915e87790a1f7bbaee9b"
+          "bytes": 31534,
+          "sha256": "sha256:1ceed649f11bf4d946d6396ca4c57b2d85741fa0ca214c6225ead67c9542011f"
         }
       ]
     },
@@ -91,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:   9.68 ms, XLA temp  4096.0 MiB\nfused:   1.39 ms, XLA temp     0.0 MiB\n"
+          "text": "naive:   9.81 ms, XLA temp  4096.0 MiB\nfused:   1.49 ms, XLA temp     0.0 MiB\n"
         }
       ]
     },
@@ -103,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
-          "bytes": 18056,
-          "sha256": "sha256:96a70851765f68c4d55a73a4fbf7f0819fd0bc576de24f149c8cd99c67a3b02f"
+          "bytes": 18022,
+          "sha256": "sha256:0ffe1dc1646279801bba4d28eb5cfb6395532025b69d504d450eaa4092d5ba8c"
         }
       ]
     },
@@ -121,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
-          "bytes": 103391,
-          "sha256": "sha256:a0a1a33fbb29471d48e91c54c4bab07d284487ae4d4c89d9f6584f000b87224d"
+          "bytes": 102152,
+          "sha256": "sha256:2422d86a7bb1f50ff12993986c1bf5f71a8487e166c436d898216bbe82a3a3a4"
         }
       ]
     },
@@ -166,8 +161,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 54308,
-          "sha256": "sha256:467dc1aec9eab01c577ddc5aa307a85fdcfe7f69c4e126549a65c448c087a5ee"
+          "bytes": 59711,
+          "sha256": "sha256:1e25f5e7c98b49ee9ed04839d90d7b629558a9698da7fb3969a8b5aa17bb9709"
         }
       ]
     }

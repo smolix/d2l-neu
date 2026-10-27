@@ -125,8 +125,7 @@ def clipped(tx, max_norm=1.0):
 :label:`subsec_practice-nan`
 
 :numref:`sec_adam` swept SGD with momentum on `TinyLM` and found a knife's
-edge: the best learning rate sat one grid point below one that returned
-NaN. This divergent grid point provides a direct test of whether clipping can
+edge: the best learning rate sat one grid point below one that diverged. This divergent grid point provides a direct test of whether clipping can
 prevent the observed numerical failure. We rerun it with and without
 clipping, changing nothing else.
 
@@ -162,7 +161,7 @@ print(f'clipping changed the update on {fired} of {len(optimizer.norms)} '
 curves = {}
 for clip in (False, True):
     model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
-    tx = optax.sgd(0.3, momentum=0.9)
+    tx = optax.sgd(1.0, momentum=0.9)
     if clip:
         tx = clipped(tx)
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
@@ -192,15 +191,16 @@ trajectory from the stable one.
 :end_tab:
 
 :begin_tab:`jax`
-The unclipped run makes progress for a moment, then feeds back on itself:
-an oversized step lands the iterate somewhere steeper, the gradient there
-is larger, momentum compounds it, and the loss climbs by several
-orders of magnitude within the first hundred-odd steps; the run ends in
-overflow. The
-clipped run, at the identical learning rate, trains to a final loss in the
-range of the tuned runs of :numref:`sec_adam`. The Optax combinator does
-not report how often it fired; the instrumented PyTorch tab counts six
-interventions in two thousand steps, and the picture here is the same.
+The unclipped run makes normal progress for a few steps, then feeds back on
+itself: an oversized step lands the iterate somewhere steeper, the gradient
+there is larger, momentum compounds it, and within two dozen steps the loss
+has climbed by many orders of magnitude and overflows. The clipped run, at
+the identical learning rate, trains to a final loss at or slightly below the
+tuned unclipped run of :numref:`sec_adam`. The Optax combinator does not
+report how often it fired. Measured separately, the median gradient norm is
+about 0.3, far below the threshold, and clipping changes the update on only
+about ten of the two thousand steps. In these paired runs, those few
+interventions separate the divergent trajectory from the stable one.
 :end_tab:
 
 This count illustrates clipping used as a guard: most updates remain
@@ -289,6 +289,7 @@ def net_fn():
     def init_weights(m):
         if type(m) in (nn.Linear, nn.Conv2d):
             nn.init.xavier_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
     model.apply(init_weights)
     return model
 
@@ -304,16 +305,19 @@ xavier = nnx.initializers.xavier_uniform()
 class Net(nnx.Module):
     def __init__(self, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        # Running averages decay 0.9; the variance is computed in two passes
+        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
+                                     rngs=rngs)
         self.conv1 = nnx.Conv(1, 6, kernel_size=(5, 5), padding='same',
                               kernel_init=xavier, rngs=rngs)
-        self.bn1 = nnx.BatchNorm(6, rngs=rngs)
+        self.bn1 = bn(6)
         self.conv2 = nnx.Conv(6, 16, kernel_size=(5, 5), padding='valid',
                               kernel_init=xavier, rngs=rngs)
-        self.bn2 = nnx.BatchNorm(16, rngs=rngs)
+        self.bn2 = bn(16)
         self.fc1 = nnx.Linear(16 * 5 * 5, 120, kernel_init=xavier, rngs=rngs)
-        self.bn3 = nnx.BatchNorm(120, rngs=rngs)
+        self.bn3 = bn(120)
         self.fc2 = nnx.Linear(120, 84, kernel_init=xavier, rngs=rngs)
-        self.bn4 = nnx.BatchNorm(84, rngs=rngs)
+        self.bn4 = bn(84)
         self.fc3 = nnx.Linear(84, 10, kernel_init=xavier, rngs=rngs)
 
     def __call__(self, x):
@@ -533,11 +537,19 @@ now grade the experiment log alongside the final loss, emphasizing that the expe
 ## Topics Covered Elsewhere
 
 Three method families were left out on purpose. Sharpness-aware
-minimization takes an inner ascent step before each descent step to seek
-the flat minima whose connection to generalization
-:numref:`sec_generalization_deep` discussed; it doubles the gradient cost,
-and the cited results establish improvements mainly in vision tasks rather
-than large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
+minimization (SAM) takes an inner ascent step before each descent step to steer
+training toward *flat minima*, where the loss changes little when the
+weights are perturbed. The motivation is the hypothesis that flat minima
+generalize better than sharp ones, and that link is debated: sharpness
+depends on the parametrization. Multiplying the weights and biases of one
+ReLU layer by a factor and the weights of the next layer by its reciprocal
+leaves the network's function unchanged, yet a large enough factor makes
+the minimum as sharp as we like :cite:`Dinh.Pascanu.Bengio.ea.2017`. The generalization
+gap once attributed to sharp minima reached with large minibatches also
+largely closes once the learning rate and training length are retuned
+(:numref:`sec_batch_size`). SAM doubles the gradient cost, and the cited
+results establish improvements mainly in vision tasks rather than
+large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
 Variance-reduction methods of the SVRG family have an elegant theory for
 finite sums but have not produced consistent improvements on deep networks;
 :numref:`sec_mdl-variance-reduction` presents the theory
@@ -729,8 +741,8 @@ divergent point, with and without the guard:
 
 ::: {.slide title="Frequency of clipping"}
 The instrumented run: median gradient norm ~0.3, threshold 1.0 —
-**clipping changed the update on only a handful of the 2,000 steps** (6 in
-our run).
+**clipping changed the update on only a handful of the 2,000 steps** (6 to
+11 in our runs).
 
 - Language-model gradient noise is heavy-tailed
   (Zhang et al., 2020); the guard exists for the tail.

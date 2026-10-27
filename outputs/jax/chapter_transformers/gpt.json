@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:521c314d2dd8d57acf6f9bcaa7bebade0f4726788b67720ef68db8bc8b2c43c8",
+    "d2l_lib_fingerprint": "sha256:aec4d9d50005d534738985f323b64e97a182a5c35ec530759899f29f4ec5872a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.32; best validation 1.47 at step 200\n"
+          "text": "final: train 0.15, validation 3.36; best validation 1.47 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18995,
-          "sha256": "sha256:a02991139502401ed76113f2552d67cf4566646c2fd9615cd6315582b553b214"
+          "bytes": 18928,
+          "sha256": "sha256:32828fc48235eb54d59faa53388663c6b5a2953f8a70d37112083da4b4b29ae3"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.96/1.49/1.09/0.50\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.89/1.42/1.03/0.34\n"
         },
         {
           "type": "stream",
@@ -75,17 +75,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller holding the lamp aloft i intend to\n    explore time is that plain i was never more serious in my life none of\n    us quite knew '\n"
+          "text": "T=1.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knife and fork\n    with a grunt an'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller had more than a touch of whim among his\n    elements and we distrusted him things that would have made the frame of\n    a less c'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller pushed his plate away and looked round\n    us i suppose i must apologize he said i was simply starving i ve had a\n    most amazi'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller holding the lamp alofgetting my feet\n    then the time traveller put forth his finger towards the lever no he\n    said suddenly '\n"
+          "text": "T=2.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knifes conveyed\n    as well as you'\n"
         }
       ]
     },

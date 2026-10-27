@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2917da6f6ae8637eb80f7f228b8c3de6206c4a9cf13671df3351b1613a97ad52",
+    "d2l_lib_fingerprint": "sha256:c5ae7d5b5e97a6fd56c35052aad90e9ba438058cbadf1eb100e049788d75bf78",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 3.000             0.0017             0.076\n 0.766             0.0296             1.122\n 0.196             0.1071             3.430\n 0.050             2.4424             3.950\n"
+          "text": " 3.000             0.0017             0.076\n 0.766             0.0296             1.122\n 0.196             0.1071             3.430\n 0.050             2.4389             3.950\n"
         }
       ]
     },
@@ -79,52 +79,47 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
-          "bytes": 86805,
-          "sha256": "sha256:7e28fd9fc2a77a9020ca655319572be8a1fa71343fd3562437c32f79f0b6cdf4"
+          "bytes": 101733,
+          "sha256": "sha256:c18df4efbfadf2123d9b9abcc0f4f83e6a53119818c438f8c53fca2bb456a018"
         }
       ]
     },
     "annealed-langevin-a-noise-conditional-network-for-images-1": {
-      "code_fingerprint": "sha256:f11fed793f054bd137ca7177308b8e724038e69bf0a000a72c4d2408fcda7d46",
+      "code_fingerprint": "sha256:5703248c035270efdb882905930b23c9d3190b3cdee7675af2b4b2ba79ad642b",
       "kind": "text",
       "outputs": []
     },
     "annealed-langevin-a-noise-conditional-network-for-images-2": {
-      "code_fingerprint": "sha256:a9fe2a644237ac792354dce8e8e101ea9a4b59e93b196e76a6c2b3825b70c499",
+      "code_fingerprint": "sha256:91ece866d6d02d1890bf5c24eeca0f1fd2462f77e445c7d0c172c41cf6f7237b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.110\n"
+          "text": "final training loss: 0.112\n"
         }
       ]
     },
     "annealed-langevin-a-noise-conditional-network-for-images-3": {
-      "code_fingerprint": "sha256:077a11b50e11db272fafdfce65bd866460b14140a63316eb16b84d87a2a06755",
+      "code_fingerprint": "sha256:3a39f94c13f20df33388dabc0b2c5d660e5aa5c2f92cfcd6b6ee6615814553f4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.09: per-pixel squared error noisy 0.009, denoised 0.003\n"
+          "text": "sigma = 0.09: per-pixel squared error noisy 0.009, denoised 0.003\nsigma = 0.43: per-pixel squared error noisy 0.186, denoised 0.025\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.43: per-pixel squared error noisy 0.186, denoised 0.025\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.158\n"
+          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.162\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 180631,
-          "sha256": "sha256:14b25101c357dc6b12aa100ae63b1af3463ca9d93ee0ab8d3e08b89d70c0e561"
+          "bytes": 182416,
+          "sha256": "sha256:14a38a1f40d61c62aa3ee3b5d405f3c05a9640a0e98d9b42cc76653a0bf6a2d1"
         }
       ]
     }

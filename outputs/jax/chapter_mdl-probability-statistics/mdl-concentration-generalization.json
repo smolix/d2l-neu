@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
-          "bytes": 31472,
-          "sha256": "sha256:2d695ff0bcf450f7a33ad4e7c0c01e395fd1683b54153c09e5e2d5f31e380f9d"
+          "bytes": 31734,
+          "sha256": "sha256:d8abf75977d9bf26493cddd7235d68ce9f44fd3140e7a7b016f305ffe9919293"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
-          "bytes": 33075,
-          "sha256": "sha256:4424cf179cc0e263798a8b0370734dd972a7b2b351a9b51374add91cc305a2e5"
+          "bytes": 32503,
+          "sha256": "sha256:303380d7e28280cdb33e85dd517320f549e4ed7ce2eabca40965d46cd3bf6304"
         }
       ]
     }

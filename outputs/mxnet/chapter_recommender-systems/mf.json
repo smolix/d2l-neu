@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2686645ba4047cda788736808ef2ca8e84ca9e91d4b93adbce0762131117d57f",
+    "d2l_lib_fingerprint": "sha256:0103b05ebd2301ea0c7f1ffe53b555cf0da0c68ce651ccd0ddb3b05ee5364541",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,30 +29,30 @@
       "outputs": []
     },
     "mf-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:441e73b394254cf782e96f168c7c038a75fd8bdcb581e43f9e1a4fb4d4299345",
+      "code_fingerprint": "sha256:4b2dd7c90920ccceb97c4d77cfe6da4437a574e656200b4c0995765ddb2ba649",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.131, test RMSE 1.057\n196696.8 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.127, test RMSE 1.060\n209485.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
-          "bytes": 21541,
-          "sha256": "sha256:bcf8cc2418c7e91933e9ebd3ab934c63d5c9172d04aeb22197b1309ba0620450"
+          "bytes": 21496,
+          "sha256": "sha256:95dc47f2742e2c15a427595b7caf9ccdbdef5a2b766d343bd7c2c832ad4cc29e"
         }
       ]
     },
     "mf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:24e2559b6ec4acd6c90d9474e635baaa1513030d228299569ca8708c10155d29",
+      "code_fingerprint": "sha256:16f165f28b0eac573e82892cd5cda82ed9e0003ba3452bbd068aa09aabe24541",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([2.9661608], device=gpu(0))"
+          "text": "array([2.5955799], device=gpu(0))"
         }
       ]
     }

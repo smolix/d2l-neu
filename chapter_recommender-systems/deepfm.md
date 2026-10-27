@@ -124,7 +124,7 @@ test_iter = gluon.data.DataLoader(
     num_workers=d2l.get_dataloader_workers())
 devices = d2l.try_all_gpus()
 net = DeepFM(field_dims, num_factors=10, mlp_dims=[30, 20, 10])
-net.initialize(init.Xavier(), ctx=devices)
+net.initialize(init.Xavier(), device=devices)
 lr, num_epochs, optimizer = 0.01, 30, 'adam'
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {'learning_rate': lr})

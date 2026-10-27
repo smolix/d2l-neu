@@ -115,13 +115,10 @@ def trans_conv(X, K):
 ```{.python .input #transposed-conv-basic-operation-1}
 #@tab tensorflow
 def trans_conv(X, K):
-    h, w = K.shape
-    Y = tf.Variable(d2l.zeros((X.shape[0] + h - 1, X.shape[1] + w - 1)))
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            Y[i: i + h, j: j + w].assign(
-                Y[i: i + h, j: j + w] + X[i, j] * K)
-    return Y.value()
+    n_h, n_w = X.shape
+    # Add each scaled kernel X[i, j] * K, zero-padded into place at (i, j)
+    return tf.add_n([tf.pad(X[i, j] * K, [[i, n_h - 1 - i], [j, n_w - 1 - j]])
+                     for i in range(n_h) for j in range(n_w)])
 ```
 
 ```{.python .input #transposed-conv-basic-operation-1}
@@ -386,15 +383,9 @@ W
 ```{.python .input #transposed-conv-connection-to-matrix-transposition-2}
 #@tab tensorflow
 def kernel2matrix(K):
-    k = tf.Variable(d2l.zeros(5))
-    W = tf.Variable(d2l.zeros((4, 9)))
-    k[:2].assign(K[0, :])
-    k[3:5].assign(K[1, :])
-    W[0, :5].assign(k)
-    W[1, 1:6].assign(k)
-    W[2, 3:8].assign(k)
-    W[3, 4:].assign(k)
-    return W.value()
+    k = tf.concat([K[0, :], d2l.zeros(1), K[1, :]], 0)  # length 5
+    # Row r holds k shifted right by the r-th window offset 0, 1, 3, 4
+    return tf.stack([tf.pad(k, [[s, 4 - s]]) for s in (0, 1, 3, 4)])
 
 W = kernel2matrix(K)
 W

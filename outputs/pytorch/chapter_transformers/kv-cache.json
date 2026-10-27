@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:60405b30ab5b91c86d65d0b4cbf1763f553fec35c2203d1c47491157739db74c",
+    "d2l_lib_fingerprint": "sha256:76277ac30d321ebd94f7bffbc50a206861eee2cccf4735fbf25d5d9aeb4a30e5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,29 +46,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  512: naive  19.34 ms/token, cached 10.05 ms/token\n"
+          "text": "n=  512: naive   9.81 ms/token, cached  9.63 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 1024: naive  34.58 ms/token, cached 10.60 ms/token\n"
+          "text": "n= 1024: naive  10.35 ms/token, cached  9.54 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 2048: naive  71.70 ms/token, cached 15.50 ms/token\n"
+          "text": "n= 2048: naive  21.18 ms/token, cached  9.47 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 4096: naive 159.52 ms/token, cached 25.95 ms/token\n"
+          "text": "n= 4096: naive  47.70 ms/token, cached  9.46 ms/token\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-same-logits-measured-2-1.svg",
-          "bytes": 25802,
-          "sha256": "sha256:0944a3e1f175027acc77ad3746c88fa2593964a849c85889f28a28f993a43d60"
+          "bytes": 22584,
+          "sha256": "sha256:15742e2b523132ccebd21107b4ad139e5dad65cfc4bdff491dcb84b850cd06e5"
         }
       ]
     },
@@ -79,12 +79,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens after a 3584-token prompt: 38.3s =   6.7 tokens/s\n"
+          "text": "naive : 256 tokens after a 3584-token prompt: 11.2s =  22.9 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens after a 3584-token prompt:  7.9s =  32.6 tokens/s\n"
+          "text": "cached: 256 tokens after a 3584-token prompt:  2.6s =  98.6 tokens/s\n"
         }
       ]
     },
@@ -95,12 +95,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: allocator grew   72.0 MiB, formula says   72.0 MiB\nn=2048: allocator grew  144.0 MiB, formula says  144.0 MiB\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n=4096: allocator grew  288.0 MiB, formula says  288.0 MiB\n"
+          "text": "n=1024: allocator grew   72.0 MiB, formula says   72.0 MiB\nn=2048: allocator grew  144.0 MiB, formula says  144.0 MiB\nn=4096: allocator grew  288.0 MiB, formula says  288.0 MiB\n"
         }
       ]
     },
@@ -111,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 2048 tokens in   73 ms =  28162 tokens/s\ndecode:  one token in  15.65 ms =     64 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
+          "text": "prefill: 2048 tokens in   22 ms =  95022 tokens/s\ndecode:  one token in   9.49 ms =    105 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
         }
       ]
     },
@@ -213,12 +208,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3836\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "window 256 + 4 sink tokens: loss 3.76, perplexity 43\nfull attention:            loss 3.58, perplexity 36\n"
+          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3836\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\nwindow 256 + 4 sink tokens: loss 3.76, perplexity 43\nfull attention:            loss 3.58, perplexity 36\n"
         }
       ]
     }

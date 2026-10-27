@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2fe0ea0311422645ffaddbf22ae12d653a961f118dd4617a36b81550c706bd2a",
+    "d2l_lib_fingerprint": "sha256:880f6a916af487bdd9f479498d0b1138aa65684728b44fc8468d4b5dafed3f73",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.152, test hit rate 0.349, test AUC 0.882\n17.0 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.155, test hit rate 0.341, test AUC 0.877\n17.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22608,
-          "sha256": "sha256:80f5fee714878076a6b8eaf3a2ca78ed04d634ab1cbecd395dfdb2e0da095d5f"
+          "bytes": 22571,
+          "sha256": "sha256:abf01b701b60562da996ff92f32223612f7ab57cab8a8ea937d631c70cf64936"
         }
       ]
     }

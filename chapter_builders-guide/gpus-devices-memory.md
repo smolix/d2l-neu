@@ -29,7 +29,7 @@ code runs, not how fast it runs on a GPU.
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab mxnet
 import time
-from mxnet import init, np, npx
+from mxnet import init, np as mnp, npx
 from mxnet.gluon import nn
 from d2l import mxnet as d2l
 npx.set_np()
@@ -44,7 +44,7 @@ from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
 from d2l import torch as d2l
 
-torch.set_float32_matmul_precision('high')  # tf32, as in the other frameworks
+torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 ```
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
@@ -67,11 +67,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-:begin_tab:`mxnet`
-This section defines functions that become part of the `d2l` library, so in
-the MXNet tab `np` is MXNet's array module, as it is in the library.
-:end_tab:
-
 ## Devices and Placement
 
 ### Device Objects
@@ -85,8 +80,9 @@ using it.
 The CPU is `npx.cpu()`, and it stands for all CPU cores and all of main
 memory. `npx.gpu(i)` is the GPU with index $i$ and its memory, and
 `npx.gpu()` is `npx.gpu(0)`. MXNet 1.x called this object a *context*, and
-most MXNet code online writes `ctx=`; MXNet 2.0 renamed it to *device* and
-accepts both spellings.
+most MXNet code online writes `ctx=`, `.ctx`, and `as_in_ctx`; MXNet 2.0
+renamed it to *device*, still accepts the old spellings, most of them with
+a deprecation warning, and this book uses the new ones.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -248,8 +244,8 @@ placement rules below carry over to the others.
 ### Arrays on Devices
 
 :begin_tab:`mxnet`
-By default, arrays are created on the CPU. The property `ctx`, or its newer
-name `device`, tells where an array lives.
+By default, arrays are created on the CPU. The property `device` tells where
+an array lives.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -270,8 +266,8 @@ lives.
 
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-1}
 %%tab mxnet
-x = np.array([1, 2, 3])
-x.ctx
+x = mnp.array([1, 2, 3])
+x.device
 ```
 
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-1}
@@ -293,7 +289,7 @@ x.device
 ```
 
 :begin_tab:`mxnet`
-To create an array on another device, pass the argument `ctx`. Creating data
+To create an array on another device, pass the argument `device`. Creating data
 directly on the device where it is used is better than creating it on the
 CPU and copying it: the array then never occupies main memory or crosses the
 bus between CPU and GPU.
@@ -323,7 +319,7 @@ they meet committed arrays.
 
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-2}
 %%tab mxnet
-X = np.ones((2, 3), ctx=try_gpu())
+X = mnp.ones((2, 3), device=try_gpu())
 X
 ```
 
@@ -352,7 +348,7 @@ without the second device.
 
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-3}
 %%tab mxnet
-Y = np.random.uniform(size=(2, 3), ctx=try_gpu(1))
+Y = mnp.random.uniform(size=(2, 3), device=try_gpu(1))
 Y
 ```
 
@@ -406,7 +402,7 @@ print((X + Y).device)
 try:
     print(X + Y)
 except ValueError as e:
-    print(str(e).splitlines()[0])
+    print(str(e).split('. ')[0])  # The first sentence names the problem
 ```
 
 :begin_tab:`mxnet`
@@ -497,9 +493,8 @@ Y + Z
 
 :begin_tab:`mxnet`
 What if `Z` already lives on the target device? `copyto` copies anyway, into
-fresh memory on the same device. The method `as_in_ctx` (in MXNet 2.0 also
-`to_device`) returns the array itself in that case, so calling it
-defensively costs nothing:
+fresh memory on the same device. The method `to_device` returns the array
+itself in that case, so calling it defensively costs nothing:
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -521,7 +516,7 @@ Comparing the memory addresses confirms that no copy was made:
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-3}
 %%tab mxnet
-Z.as_in_ctx(try_gpu(1)) is Z
+Z.to_device(try_gpu(1)) is Z
 ```
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-3}
@@ -543,7 +538,7 @@ device.
 
 :begin_tab:`mxnet`
 A Gluon model allocates its parameters at the first forward pass, when the
-input shapes are known, and `initialize(ctx=...)` names the device on which
+input shapes are known, and `initialize(device=...)` names the device on which
 they are then created. One call therefore places the whole model.
 :end_tab:
 
@@ -568,7 +563,7 @@ together.
 %%tab mxnet
 net = nn.Sequential()
 net.add(nn.Dense(1))
-net.initialize(ctx=try_gpu())
+net.initialize(device=try_gpu())
 net(X)
 ```
 
@@ -599,7 +594,7 @@ computed and stored there too. The parameters report where they live:
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
 %%tab mxnet
-net[0].weight.data().ctx
+net[0].weight.data().device
 ```
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
@@ -621,9 +616,9 @@ jax.tree_util.tree_map(lambda p: p.device, nnx.state(net))
 Two rules keep a model on its device. Create the `gluon.Trainer` after
 `initialize`, so that the optimizer state is created next to the parameters
 it updates. And when `forward` needs a new array, create it on the input's
-device (`np.zeros(n, ctx=X.ctx)`) rather than on the CPU. To move a model
-that is already initialized, `net.reset_ctx(device)` reassigns every
-parameter.
+device (`mnp.zeros(n, device=X.device)`) rather than on the CPU. To move a
+model that is already initialized, `net.reset_device(device)` reassigns
+every parameter.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -666,12 +661,12 @@ issued them, and when the device has finished them.
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
 %%tab mxnet
-A = np.random.normal(size=(4096, 4096), ctx=try_gpu())
-np.dot(A, A)
+A = mnp.random.normal(size=(4096, 4096), device=try_gpu())
+mnp.dot(A, A)
 npx.waitall()  # Warm up and wait
 t = time.perf_counter()
 for _ in range(32):
-    B = np.dot(A, A)
+    B = mnp.dot(A, A)
 print(f'time to queue 32 matrix products: {time.perf_counter() - t:.4f} sec')
 npx.waitall()
 print(f'time until they all finished:     {time.perf_counter() - t:.4f} sec')
@@ -732,8 +727,8 @@ MXNet's execution engine is asynchronous on the CPU as well as on a GPU, and
 CUDA operations are asynchronous, and `torch.cuda.synchronize()` waits until
 every queued operation on the GPU has finished. Operations on the CPU run
 synchronously, which is why the cell needs a GPU. The imports cell allows
-tf32 for fp32 matrix products (:numref:`sec_numerics`), the default of the
-other frameworks, so that the timings of this section compare across tabs.
+tf32 for fp32 matrix products (:numref:`sec_numerics`), so that the matrix
+products timed in this section run on the tensor cores.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -780,7 +775,7 @@ directly, and only then transfers them; Python waits throughout.
 
 :begin_tab:`mxnet`
 MXNet treats pinned memory as a device of its own: an array created with
-`ctx=npx.cpu_pinned()` lives in pinned memory, so its copy to the GPU skips
+`device=npx.cpu_pinned()` lives in pinned memory, so its copy to the GPU skips
 the extra step, and `gluon.data.DataLoader(..., pin_memory=True)` places every
 minibatch there. `copyto` is queued like any other operation, so Python can
 prepare the next minibatch while the copy runs.
@@ -899,7 +894,7 @@ if num_gpus() > 0:
         npx.waitall()
         free, _ = npx.gpu_memory_info(0)
         print(f'{tag}: {(free_start - free) / 2**20:7.1f} MiB more used')
-    big = np.zeros((256, 1024, 1024), ctx=gpu())  # 1 GiB of float32
+    big = mnp.zeros((256, 1024, 1024), device=gpu())  # 1 GiB of float32
     report('after creating big')
     del big
     report('after deleting it ')
@@ -1006,14 +1001,17 @@ so it stores them until the backward pass has used them. Their size grows
 with the minibatch size and with the width of every layer, while $16N$ does
 not. We measure the terms for an MLP with three hidden layers of width 4096
 on inputs of width 1024, $N \approx 3.8 \times 10^7$ parameters, so that
-$4N \approx 144$ MiB, at a minibatch size of 4096.
+$4N \approx 144$ MiB, at a minibatch size of 4096. The activations that
+backpropagation keeps are mainly the outputs of the three hidden layers,
+each a $4096 \times 4096$ array of fp32 numbers, 64 MiB apiece: 192 MiB in
+all, about a third more than the weights.
 
 :begin_tab:`mxnet`
 MXNet has no counter of live bytes, and its pool keeps freed blocks, so the
-device-wide count cannot separate the terms. This measurement appears in the
-other tabs. The accounting holds in MXNet too, with one difference in timing:
-Gluon allocates the gradient of each parameter at `initialize`, so the $4N$
-bytes of gradients are there from the start.
+device-wide count cannot separate the terms, and this tab measures nothing
+here. The accounting itself holds, with one point of timing: Gluon
+allocates the gradient of each parameter at `initialize`, so the $4N$ bytes
+of gradients are there from the start.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1268,10 +1266,14 @@ def run_stack(graphdef, states, X, use_checkpoint=False, segment_size=4):
 ```
 
 :begin_tab:`mxnet`
-MXNet has no activation checkpointing: neither `mxnet.autograd` nor Gluon
-offers a transformation that recomputes the forward pass during the backward
-pass. The code of this subsection therefore appears only in the other tabs,
-and in MXNet the minibatch size remains the control over activation memory.
+MXNet has no per-segment activation checkpointing: neither `mxnet.autograd`
+nor Gluon offers a transformation that recomputes the forward pass of a
+chosen segment during the backward pass. There is only a global switch: the
+environment variable `MXNET_BACKWARD_DO_MIRROR=1`, read when the process
+starts, lets MXNet drop some intermediate results of a hybridized graph and
+recompute them during the backward pass, with no control over which ones.
+This tab therefore has no code in this subsection, and the minibatch size
+remains the control over activation memory.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1293,8 +1295,8 @@ as `segment` but tells the tape to store only its input, and reruns
 in `run_stack` has finished, `segment` receives its blocks as a default
 argument, which is evaluated when the function is defined; a plain closure
 would look up the loop variable at the time of the call and rerun the last
-segment's blocks for every segment. Unlike its PyTorch counterpart,
-`tf.recompute_grad` does not save the state of the random number generator,
+segment's blocks for every segment. `tf.recompute_grad` does not save the
+state of the random number generator,
 so a segment with stateful dropout can draw a different mask when it is
 recomputed.
 :end_tab:
@@ -1478,9 +1480,12 @@ memory of the device, and it is common in the training of large transformers.
 :begin_tab:`mxnet`
 In :numref:`sec_oo-design` the `Trainer` accepted an argument `num_gpus` and
 did not use it. Now it applies the rules of this section: it moves the
-model's parameters to the device *once*, before training, with `reset_ctx`,
-which works even while Gluon's parameters still wait for their shapes; and it
-moves every minibatch at the start of its step.
+model's parameters to the device *once*, before training, with
+`reset_device`, which works even while Gluon's parameters still wait for
+their shapes; and it moves every minibatch at the start of its step, to the
+CPU when there is no GPU. A `DataLoader` with worker processes delivers its
+minibatches in shared memory, `cpu_shared(0)`, and a hybridized model
+refuses inputs that are not on the device of its parameters, `cpu(0)`.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1490,7 +1495,9 @@ to the device *once*, before training, and moves every minibatch at the start
 of its step. `prepare_model` also runs the dry pass of :numref:`sec_lazy_init`:
 if the model still has lazy parameters, it runs the first training minibatch
 through the model on the device and applies the model's `weight_init`
-function, if it has one, before the optimizer is created.
+function, if it has one, before the optimizer is created. A model built
+from layers with fixed shapes initializes itself in its constructor;
+`weight_init` is not called for it.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1522,16 +1529,14 @@ def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_batch(self, batch):
-    if self.gpus:
-        batch = [d2l.to(a, self.gpus[0]) for a in batch]
-    return batch
+    device = self.gpus[0] if self.gpus else d2l.cpu()
+    return [a.to_device(device) for a in batch]
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_model(self, model):
     self.model = model
     if self.gpus:
-        model.reset_ctx(self.gpus[0])
-        model.set_scratch_params_device(self.gpus[0])
+        model.reset_device(self.gpus[0])
 ```
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-1}
@@ -1555,7 +1560,9 @@ def prepare_model(self, model):
         model.to(self.gpus[0])
     if any(isinstance(p, nn.parameter.UninitializedParameter)
            for p in model.parameters()):
-        batch = self.prepare_batch(next(iter(self.train_dataloader)))
+        loader = (self.train_dataloader if self.train_dataloader is not None
+                  else self.val_dataloader)  # `evaluate` has no training data
+        batch = self.prepare_batch(next(iter(loader)))
         model.apply_init(batch[:-1], getattr(model, 'weight_init', None))
 ```
 
@@ -1594,32 +1601,9 @@ def prepare_batch(self, batch):
 ```
 
 The expression `min(num_gpus, d2l.num_gpus())` makes the request an upper
-limit rather than a demand. On a machine without a GPU, `self.gpus` is empty,
-nothing is moved, and training runs on the CPU. Every `Trainer(num_gpus=1)`
-in the rest of the book relies on this fallback.
-
-:begin_tab:`mxnet`
-Scratch implementations in later chapters keep some parameters as plain
-arrays rather than Gluon `Parameter`s. `reset_ctx` does not see them, so
-`d2l.Module` gains a method that searches the model's attributes for such
-arrays and moves them.
-:end_tab:
-
-```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-2}
-%%tab mxnet
-@d2l.add_to_class(d2l.Module)  #@save
-def set_scratch_params_device(self, device):
-    for attr in dir(self):
-        a = getattr(self, attr)
-        if isinstance(a, np.ndarray):
-            setattr(self, attr, a.as_in_ctx(device))
-            getattr(self, attr).attach_grad()
-        if isinstance(a, d2l.Module):
-            a.set_scratch_params_device(device)
-        if isinstance(a, list):
-            for elem in a:
-                elem.set_scratch_params_device(device)
-```
+limit rather than a demand. On a machine without a GPU, `self.gpus` is
+empty, nothing is moved to a GPU, and training runs on the CPU. Every
+`Trainer(num_gpus=1)` in the rest of the book relies on this fallback.
 
 To see the `Trainer` at work, we train a classifier built from the residual
 blocks of :numref:`subsec_activation_checkpointing` on Fashion-MNIST for five
@@ -1654,7 +1638,7 @@ class ResMLPClassifier(d2l.Classifier):
 model = ResMLPClassifier()
 trainer = d2l.Trainer(max_epochs=5, num_gpus=1)
 trainer.fit(model, d2l.FashionMNIST(batch_size=256))
-model.net[0].weight.data().ctx
+model.net[0].weight.data().device
 ```
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-2}
@@ -1757,7 +1741,7 @@ CPU when no GPU is present.
 
 :begin_tab:`mxnet`
 MXNet reports only device-wide memory, through `npx.gpu_memory_info`, and has
-no activation checkpointing.
+no per-segment activation checkpointing.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1776,8 +1760,8 @@ explicit copies are a discipline rather than a rule the framework enforces.
    Where does the prediction break down, and what did it omit?
 
 :begin_tab:`mxnet`
-2. **Checkpointing arithmetic.** MXNet has no recompute-during-backward
-   transform, so work out the schedule of
+2. **Checkpointing arithmetic.** MXNet has no per-segment
+   recompute-during-backward transform, so work out the schedule of
    :numref:`fig_bg_activation_checkpoint` on paper for a stack of sixteen
    `ResidualBlock`s of width 1024 at batch size 8192.
     1. Name the arrays inside one block that the backward pass must keep,
@@ -1958,16 +1942,29 @@ runs, fits, and keeps the GPU busy.
 - `try_gpu(10)` on two GPUs returns the CPU: the code runs anywhere.
 :::
 
-::: {.slide title="Arrays on Two GPUs Do Not Add"}
+::: {.slide title="Arrays on Two GPUs Do Not Add" except="tensorflow"}
 [Copying between devices]{.kicker}
 
 `X` on GPU 0, `Y` on GPU 1, then `X + Y`:
 
 @!gpus-devices-memory-copying-between-devices-4
 
-- PyTorch, JAX, and MXNet raise an error; TensorFlow copies one operand
-  silently.
-- A copy between devices is slow next to arithmetic: a silent copy hides a
+- The addition raises an error: the framework does not choose a device for
+  the result.
+- A copy between devices is slow next to arithmetic: a silent copy would
+  hide a cost where it occurs.
+:::
+
+::: {.slide title="Arrays on Two GPUs Add after a Silent Copy" only="tensorflow"}
+[Copying between devices]{.kicker}
+
+`X` on GPU 0, `Y` on GPU 1, then `X + Y`:
+
+@!gpus-devices-memory-copying-between-devices-4
+
+- TensorFlow's default device policy copies one operand silently;
+  `tf.config.experimental.set_device_policy('explicit')` makes it an error.
+- A copy between devices is slow next to arithmetic: the silent copy hides a
   cost where it occurs.
 :::
 
@@ -2090,8 +2087,8 @@ and vanish after the backward pass.
   $8N$: 16 bytes per parameter.
 - Activations: stored by the forward pass for the backward pass; they grow
   with the minibatch size and the layer widths.
-- MXNet reports only device-wide memory, so the other frameworks' decks
-  show the four readings of one step.
+- MXNet reports only device-wide memory, so the four terms cannot be read
+  off separately.
 :::
 
 ::: {.slide title="Will It Fit? The 8B Model on a 24 GB GPU"}
@@ -2130,14 +2127,16 @@ one step beyond parameters and input:
 Checkpointed gradients equal the ordinary ones.
 :::
 
-::: {.slide title="MXNet Has No Checkpointing; the Minibatch Size Is the Control" only="mxnet"}
+::: {.slide title="MXNet Has No Per-Segment Checkpointing; the Minibatch Size Is the Control" only="mxnet"}
 [Activation checkpointing]{.kicker}
 
-- Neither `autograd` nor Gluon can recompute a segment during the backward
-  pass.
-- In the other frameworks, 16 residual blocks of width 1024 at minibatch
-  8192 need about 1.1 GiB per step, and 0.4 to 0.5 GiB with segments of four,
-  for about a quarter more time.
+- Neither `autograd` nor Gluon can recompute a chosen segment during the
+  backward pass.
+- `MXNET_BACKWARD_DO_MIRROR=1` recomputes some results of a hybridized
+  graph, globally, without control over which ones.
+- Per-segment checkpointing of $K$ blocks in segments of about $\sqrt{K}$
+  keeps only the segment inputs and one segment's activations, for one
+  extra forward pass.
 :::
 
 ::: {.slide title="Check: How Many Activations at the Peak?"}
@@ -2183,7 +2182,7 @@ afterwards the parameters are on the GPU (on the CPU if there is none):
 @!gpus-devices-memory-the-trainer-now-with-devices-3
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Recap" only="mxnet"}
 [Wrap-up]{.kicker}
 
 - **Placement:** every array has a device; copy explicitly, once, at the
@@ -2192,8 +2191,24 @@ afterwards the parameters are on the GPU (on the CPU if there is none):
   warm-up, waits, and repetitions.
 - **Memory:** 16 bytes per parameter for Adam in fp32, so the 8B model needs
   128 GB, plus activations that scale with the minibatch.
-- **Checkpointing:** 16 blocks, segments of 4: step memory from about 1.1 GiB to
-  0.4 to 0.5 GiB, for about a quarter more time.
+- **Checkpointing:** no per-segment API in MXNet; the minibatch size
+  controls activation memory.
+- **Trainer:** model once, minibatches per step, CPU fallback.
+
+**Next:** when two runs of the same code give the same result.
+:::
+
+::: {.slide title="Recap" except="mxnet"}
+[Wrap-up]{.kicker}
+
+- **Placement:** every array has a device; copy explicitly, once, at the
+  boundary; `try_gpu` falls back to the CPU.
+- **Asynchrony:** Python queues 32 large products in milliseconds; time with
+  warm-up, waits, and repetitions.
+- **Memory:** 16 bytes per parameter for Adam in fp32, so the 8B model needs
+  128 GB, plus activations that scale with the minibatch.
+- **Checkpointing:** 16 blocks, segments of 4: step memory from about 1.1 GiB
+  to 0.4 to 0.5 GiB, for about a quarter more time.
 - **Trainer:** model once, minibatches per step, CPU fallback.
 
 **Next:** when two runs of the same code give the same result.

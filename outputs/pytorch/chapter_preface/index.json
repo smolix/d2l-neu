@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
     "preface-code-1": {
-      "code_fingerprint": "sha256:b7d1eb156f4fecd25155f907ed5ba8b47228d8fa5e10daea53d038fbd7fa2205",
+      "code_fingerprint": "sha256:8b1495fb249a791aa754ee2917d3714070bfae83eeb36e7c620aeea27cde6b9d",
       "kind": "text",
       "outputs": []
     },
     "preface-code-2": {
-      "code_fingerprint": "sha256:289ccb3eee87c661e88c104bb16cb19676a6561f7c26489873d4c54e95092f51",
+      "code_fingerprint": "sha256:02c332e4f8a09c9eb625954309091ec4351cc5506a29000e3111d9675344693a",
       "kind": "text",
       "outputs": []
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d2fa4e4ae1a1b1d3cd188cfd08a8a22a9deb195ff52d862cec357c9fbf7e257b",
+    "d2l_lib_fingerprint": "sha256:b2bb1ff35663b2df96c6f7ec22232cad3eb0c3f29c76276b857b9c7b1df192cf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddpm/ddpm-ancestral-sampling-2-1.png",
-          "bytes": 150524,
-          "sha256": "sha256:c940b873efcf7ef74d3376bb0ab602a908b8fa2746117b74dbf4139db674ff34"
+          "bytes": 162390,
+          "sha256": "sha256:6d24d14296ce24dd43dd4131900613128c86a8eecb1b9114317b9baf38683dbe"
         }
       ]
     }

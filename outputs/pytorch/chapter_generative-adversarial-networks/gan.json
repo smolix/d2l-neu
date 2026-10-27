@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:466f0b94997ac13c8a28c447febda96dc5c61e0f5433ad65855df3cb49e0962d",
+    "d2l_lib_fingerprint": "sha256:17584488e0539af10bd4ed266471b067a3f0740a02ce05b9530fa8f2cedea818",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-data-and-models-1-1.svg",
-          "bytes": 20902,
-          "sha256": "sha256:157b6dfc8cc97838e6dbe99318331c5001c887339b243213a5780fb2125e2d63"
+          "bytes": 20870,
+          "sha256": "sha256:e3b2b8c6cd302821abd344a2d29a98673072d5c1eedcaa25cbf59792e5875a95"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-2-1.svg",
-          "bytes": 58232,
-          "sha256": "sha256:70697cf32dc6a108d362d36ea75815e2a93b40fc6ac1d0cbff7a74e7a8cefd4a"
+          "bytes": 58361,
+          "sha256": "sha256:fc9d2c970d61c1ad24009c3f8f9f9ea2959bc5181e4944bd18a27e1486527618"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-verifying-the-optimal-critic-2-1.svg",
-          "bytes": 61452,
-          "sha256": "sha256:01e9161bf6e97c03b719aa386fe7bd253300fae57de587838fdae35eb56f4bb3"
+          "bytes": 61441,
+          "sha256": "sha256:6d510010852da1d421d90edbed6be08f3e6d0e87ecb82c862319ae7dc03b2f6f"
         }
       ]
     },
@@ -126,8 +126,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-versus-non-saturating-training-2-1.svg",
-          "bytes": 169617,
-          "sha256": "sha256:b2dd135f6eb4617d49a3302530e7326659d80be72dc51b282c47f92e9827ddd3"
+          "bytes": 169529,
+          "sha256": "sha256:c315b27ec7f5d21511112a5c3d317e4e40fb76c6e9776b2fb3892b06677057ba"
         }
       ]
     }

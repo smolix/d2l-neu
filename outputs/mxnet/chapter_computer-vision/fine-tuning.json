@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:82a9739d9aff13a4d36d9d4c323066f38c28f95b07ffa094461f49edf1bdb026",
+    "d2l_lib_fingerprint": "sha256:65168c8a1c07dd04e7d851c5759791c89707dc318ada1fdeb20e03fd35a6e783",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "fine-tuning/fine-tuning-reading-the-dataset-3-1.png",
-          "bytes": 230491,
-          "sha256": "sha256:a5c6b85d4c4745eb1acdcaca56e31252ce7dfb5a4ed2cdba68254a8c96eb71a2"
+          "bytes": 230590,
+          "sha256": "sha256:03a2fa567cf3f549b498513701b5d1785eacc2ae9bcc94c2d11a14caf5aefc2e"
         }
       ]
     },
@@ -62,53 +62,53 @@
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-1": {
-      "code_fingerprint": "sha256:755c58a6909d49ecddbfac6e545e76037df6fbd49d536e2ba65c3a627e5b66cc",
+      "code_fingerprint": "sha256:c8f4a5eb31b438a4c57db47891a29b843d983c37df28b4a808930d46d38b265c",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-2": {
-      "code_fingerprint": "sha256:4a1aa44f90bc9f9398e7ab69f4c6676c1df0e6d71b6f8fe0cb6ff63c4653503f",
+      "code_fingerprint": "sha256:4d64acf130aa17b5b09f1daac68d1281c740632fb03ef808f66b30c013d476b8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.271, train acc 0.913, test acc 0.910\n625.2 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.456, train acc 0.882, test acc 0.943\n317.9 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25091,
-          "sha256": "sha256:01287253de3568911f8df91863da765c4e9d216d38666ece5deedca81512882b"
+          "bytes": 24954,
+          "sha256": "sha256:5255f5860515ba7902cc6c96c388109d0dac59d9f5fd6e08b5af9760fb86ed7c"
         }
       ]
     },
     "fine-tuning-fine-tuning-the-model-3": {
-      "code_fingerprint": "sha256:8b40256a3dd3435e45a43d7def605751a446b14f665a76e7522bebbdf1f11619",
+      "code_fingerprint": "sha256:22c7d7287166b620926a4ec0aa5ad15b37517ddb073ed41c822f83bfbfd971b3",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.353, train acc 0.847, test acc 0.866\n586.9 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.381, train acc 0.833, test acc 0.846\n338.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25162,
-          "sha256": "sha256:08307044a5deef47db2f17e2ab7e72bad1bcf2fc088141fb4d936eec4d573582"
+          "bytes": 25121,
+          "sha256": "sha256:2e162c5ba1787668d498ad7352e7d19684f3af51c28b6102eb5d81ad3d1f0931"
         }
       ]
     },
     "fine-tuning-exercises-1": {
-      "code_fingerprint": "sha256:25d895b295671d4ab29e52f40761bcae886645de121cdfd745772105bf9a4208",
+      "code_fingerprint": "sha256:e4719d0bbc5605c4abb254498c9aee0637f2d04b58f192ca8fbbdab36dda9a53",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-exercises-2": {
-      "code_fingerprint": "sha256:ac4aeafb5bf566c26336f7d35966102352ebaf5bd0e8d8b770350b5abb27bafb",
+      "code_fingerprint": "sha256:8291c39eff8f176698cf7a658a1faaea3ea066d789e13478a5c1485791626ec2",
       "kind": "text",
       "outputs": [
         {

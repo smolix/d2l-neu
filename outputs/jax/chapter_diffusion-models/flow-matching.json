@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:da66054ebffe9a9cfaa36011ba0da3a8aa91e82ee9b33cf39b37dd5ff5a0bf8c",
+    "d2l_lib_fingerprint": "sha256:280c53a832c1e3c30b2335006a6d8faea28f6297e7a5616d1da65b53c691c7ef",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,12 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned field,   4 Euler steps: mode weights [0.617, 0.26, 0.124], spread 0.51, stray 0.153\n"
+          "text": "learned field,   4 Euler steps: mode weights [0.617, 0.26, 0.124], spread 0.51, stray 0.152\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned field,   2 Euler steps: mode weights [0.78, 0.18, 0.041], spread 0.76, stray 0.278\n"
+          "text": "learned field,   2 Euler steps: mode weights [0.779, 0.181, 0.041], spread 0.76, stray 0.278\n"
         },
         {
           "type": "stream",
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
-          "bytes": 30948,
-          "sha256": "sha256:7a4bbc561eb1fd290ff7d9232ef4a09526cfbc97e7bf5f809b7999eda4b244b3"
+          "bytes": 34663,
+          "sha256": "sha256:1f2b71f6dc8546f83c4f6672e9d701938585cda971c3451a778ba70883f1c4ec"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.273\n"
+          "text": "final training loss: 0.271\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 133753,
-          "sha256": "sha256:060d42099a9d3d766850036867d3f12ebf719fdf944fc42377d01aeaa074a298"
+          "bytes": 132070,
+          "sha256": "sha256:473e11d7ea0d27f957812dfbdadff01ef9249020146b7e07da32832a63a9af05"
         }
       ]
     }

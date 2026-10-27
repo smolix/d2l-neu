@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c4992b563df24af4ca21e3243f81b50850e9118a176594ed56decf194783dca4",
+    "d2l_lib_fingerprint": "sha256:4453bcd6446d5610d52f5ba5a764331f605c370af7b8cb3b0415d023020c2eca",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
-          "bytes": 23686,
-          "sha256": "sha256:5aefed6f900d69352ee17888ba72f3e533682b397d1ceacdbcadd0e1f2cea55c"
+          "bytes": 23583,
+          "sha256": "sha256:0a2b1f5db02f9972b37c8c5d8c6eac41e9bfdbae48f6db2bacbc0662b2d2f7a1"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
-          "bytes": 23700,
-          "sha256": "sha256:9072cfa1a84eee74ce0c823e9a28138871230b88b74bb6bb03f3ca0c7b9fa635"
+          "bytes": 23605,
+          "sha256": "sha256:04ccc728dcb79eb635cd025b9da108d48359cd1ced06b15242011352ea9a1e06"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 1.429 sec/epoch\n"
+          "text": "loss: 0.243, 1.891 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-4-1.svg",
-          "bytes": 18784,
-          "sha256": "sha256:d8540f0e822172bf9d0e4509846400ef043c5b8e371f32c1c0473ead042a56d7"
+          "bytes": 18792,
+          "sha256": "sha256:73ef6e1de8ec7654e193f51cc5ec8eea8c125d425e6522ccabab826a6f5d4c04"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
-          "bytes": 23700,
-          "sha256": "sha256:11b749ab8b08007f6e6e70b41970d88b26f583e11132e54c132397b5bc8d3de4"
+          "bytes": 23593,
+          "sha256": "sha256:d906fcb7816cea6404c9cf89c5b64fd08a28b0071080df029fb02e35ae23efe6"
         }
       ]
     },
@@ -102,14 +102,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.417 sec/epoch\n"
+          "text": "loss: 0.245, 0.439 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-3-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:f3fdcf2383c464a29321e496f6c62b010d83501a111dfa5c8f5c34fef62f45e0"
+          "bytes": 18786,
+          "sha256": "sha256:d0088ec7b25603da0047de398ad1945c9ddace9e83d315a92175d9bf4b945492"
         }
       ]
     },
@@ -125,14 +125,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.636 sec/epoch\n"
+          "text": "loss: 0.243, 0.694 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-2-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:c7179673faa07e92edc48aa508c65c5caa2ee327a2da361b38d1001550f0cbf0"
+          "bytes": 18784,
+          "sha256": "sha256:54b0f8218a94fa3a224f6836d8b2f828f3c9fd42f35bc4c1eb37d459e2217542"
         }
       ]
     },
@@ -143,14 +143,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.405 sec/epoch\n"
+          "text": "loss: 0.243, 0.413 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-3-1.svg",
-          "bytes": 18704,
-          "sha256": "sha256:02e5b3c2f7820424e7f5fd751db59d47b8bd86781496120168fafba19533acde"
+          "bytes": 18710,
+          "sha256": "sha256:55de58a9c59497ececaca74444a24d60aaefd4e189ea78b6e319bff8ff5a1b55"
         }
       ]
     },
@@ -160,12 +160,12 @@
       "outputs": []
     },
     "adam-a-tiny-language-model-2": {
-      "code_fingerprint": "sha256:c890b263e854086ed1a90a6f2d9750e8e1d3fece2038bc93655e0f8b0d3cd133",
+      "code_fingerprint": "sha256:f7a6645da2688a39e64849928a00d8ddf12adddbabb4729fbf9fe85977912603",
       "kind": "text",
       "outputs": []
     },
     "adam-a-tiny-language-model-3": {
-      "code_fingerprint": "sha256:46c1b228e22fb3c7f7f12e3b9d170405b38c5d6c3f42dde9f49d258b2d86bd8c",
+      "code_fingerprint": "sha256:4cb8cb1583f92fdf080a210d6a92bb200fc2f5708ce20cdafbd21be03190fad2",
       "kind": "text",
       "outputs": [
         {
@@ -176,51 +176,51 @@
       ]
     },
     "adam-a-tiny-language-model-4": {
-      "code_fingerprint": "sha256:0c152a67706ba29fc267556a7a87ae253a767ccdbb35c1d4665d3687c8b40c69",
+      "code_fingerprint": "sha256:78e8d189106e04d7ba58df93759841f56f764be23c3d1010fa7737b91f1f306d",
       "kind": "text",
       "outputs": []
     },
     "adam-a-tiny-language-model-5": {
-      "code_fingerprint": "sha256:2dab8623e107a6ca06ab98eafaf2ff02052523b4771b705f809a8619f0a77a3d",
+      "code_fingerprint": "sha256:461dcbcb4dc4df2c8eb5e85a0b4d141966ee8174e5dccdbf51161dd9346dd468",
       "kind": "text",
       "outputs": []
     },
     "adam-a-tiny-language-model-6": {
-      "code_fingerprint": "sha256:be4196c20e561f731ddcaebb6d5626ce92806789317eebb3742e5a35c45df8ef",
+      "code_fingerprint": "sha256:4ba8690da732905aa7ffca75692acc50ab87342c717822d2f997a58ae8fb02dc",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.91\n"
+          "text": "perplexity per character: 2.52\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-a-tiny-language-model-6-1.svg",
-          "bytes": 19447,
-          "sha256": "sha256:c4359e5bc6813d172f13950bb8e5885193c03b42f3d5419880cd0ffcef715cf3"
+          "bytes": 19379,
+          "sha256": "sha256:73fb3c95cf178e43e2818ebf1110da00136f7264fd5346f2b9cff88c6f2b2c5f"
         }
       ]
     },
     "adam-the-race-on-the-language-model-1": {
-      "code_fingerprint": "sha256:959d92f582d5c7cbb3d944ab0dd74fabafccb0cf0d7ceb4d0423244add438b03",
+      "code_fingerprint": "sha256:cf141aed276f3127285f104f51ed082618269486074d044ce3d079a02e8ffbf1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 1.341\n"
+          "text": "lr 0.03: final loss 1.983\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 1.241\n"
+          "text": "lr 0.1: final loss 1.444\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss inf\n"
+          "text": "lr 0.3: final loss 1.077\n"
         },
         {
           "type": "stream",
@@ -230,121 +230,121 @@
       ]
     },
     "adam-the-race-on-the-language-model-2": {
-      "code_fingerprint": "sha256:27d33dc89a55daf11c7e7471a8f271ab39d7a7ec60f731fce7b1d0e54793a964",
+      "code_fingerprint": "sha256:10ec82fdca464b7d57781202d22313d98a1a56de2c3eee3e02ff5676dcec6f45",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 1.311\n"
+          "text": "lr 0.0003: final loss 1.509\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.032\n"
+          "text": "lr 0.001: final loss 1.144\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.082\n"
+          "text": "lr 0.003: final loss 0.888\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 2.304\n"
+          "text": "lr 0.01: final loss 1.000\n"
         }
       ]
     },
     "adam-the-race-on-the-language-model-3": {
-      "code_fingerprint": "sha256:d094c9801b93382d1041a448c44f08d2e39704af51d7bb0da05f5448cf583249",
+      "code_fingerprint": "sha256:a00bb721312d00e502e442c16dfc10088372470b5a36dd4b17ef48b6fb230fed",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final perplexity: SGD 3.46, Adam 2.81\n"
+          "text": "final perplexity: SGD 2.94, Adam 2.43\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 31164,
-          "sha256": "sha256:31ff3628cea0cf880b7ec0ed5164dab0d12cf71a772a1e8807425d9d53446844"
+          "bytes": 29561,
+          "sha256": "sha256:c4ea466ca048e4a793c483372a74d6e2902d90864c7b3493ae00528406c92e47"
         }
       ]
     },
     "adam-the-same-race-on-a-cnn-1": {
-      "code_fingerprint": "sha256:e1964ddf3338cee5ab448bca669c12e785ada63fa06e0e9a0e4b266d139ba351",
+      "code_fingerprint": "sha256:a4ad93fe7985c7539461ce8a169cb9e3a74b1f9e1bb3d879e06208587975c510",
       "kind": "text",
       "outputs": []
     },
     "adam-the-same-race-on-a-cnn-2": {
-      "code_fingerprint": "sha256:4ba784e5f3be81d1f24a5c3d0f8954a9bdffe357b0f65c835adbaf51d33605a8",
+      "code_fingerprint": "sha256:c991db1a7a898e60e2d92d17e7ec73b03896f5369e8378cc20d4a6d07af17013",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.243, test accuracy 0.886\n"
+          "text": "lr 0.01: final loss 0.291, test accuracy 0.890\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 0.176, test accuracy 0.911\n"
+          "text": "lr 0.03: final loss 0.217, test accuracy 0.906\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 0.137, test accuracy 0.917\n"
+          "text": "lr 0.1: final loss 0.155, test accuracy 0.913\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.207, test accuracy 0.891\n"
+          "text": "lr 0.3: final loss 2.306, test accuracy 0.100\n"
         }
       ]
     },
     "adam-the-same-race-on-a-cnn-3": {
-      "code_fingerprint": "sha256:e25644b128560a46f92d00294cac1d52c3268e5d1e5ed1f52bcad1a2922970f5",
+      "code_fingerprint": "sha256:1ca52472e5092db972c9af4817065bcb75ee41b4700219e2bd346a67368a2522",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 0.240, test accuracy 0.903\n"
+          "text": "lr 0.0003: final loss 0.272, test accuracy 0.891\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.155, test accuracy 0.911\n"
+          "text": "lr 0.001: final loss 0.200, test accuracy 0.909\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.093, test accuracy 0.916\n"
+          "text": "lr 0.003: final loss 0.122, test accuracy 0.920\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.169, test accuracy 0.905\n"
+          "text": "lr 0.01: final loss 0.201, test accuracy 0.910\n"
         }
       ]
     },
     "adam-the-same-race-on-a-cnn-4": {
-      "code_fingerprint": "sha256:1ecaf11c44413b483b564645629260195a834e6319757b853aeb7cba352a4b4a",
+      "code_fingerprint": "sha256:2b529778f2a35fe0c2eeb22b6a5f5965bccea9e237747fa7b899560b771f6455",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy: SGD 0.917, Adam 0.916\n"
+          "text": "test accuracy: SGD 0.913, Adam 0.920\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-same-race-on-a-cnn-4-1.svg",
-          "bytes": 28984,
-          "sha256": "sha256:1e08f4c3a5393e816c0f644f3b1d4f12ace649c01be0139139fd54ea4d548940"
+          "bytes": 29841,
+          "sha256": "sha256:2a0699fb045d51037e0894349c6787d52cb610982542f65709883dbaca2028e0"
         }
       ]
     }

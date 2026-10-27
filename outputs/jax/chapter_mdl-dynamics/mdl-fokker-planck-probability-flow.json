@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
-          "bytes": 71874,
-          "sha256": "sha256:7834f0cd6aa43cd62b8201c5cee6a0fbf60a78ab235cb7c0a208e1b4dd3dbc89"
+          "bytes": 71801,
+          "sha256": "sha256:9235bccb2947777216d120d8f71c7725e453dfb9c3161339c15cf045cbd80719"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
-          "bytes": 245349,
-          "sha256": "sha256:2307653b95d6bde590dce86ce1d6cdfdc3e60f375687f4311d2cdaf2f0486dbf"
+          "bytes": 245140,
+          "sha256": "sha256:0ed18073d222c5fef727db278c9d7c404f624be05360c5ca3d68fd86e058d91d"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
-          "bytes": 25825,
-          "sha256": "sha256:df748d10d4c2b3c6d48981c44d5d014d9a7509a7a522f142f3b7988590a7b043"
+          "bytes": 25799,
+          "sha256": "sha256:48b5fc75b0518b6549fc159f004a97fe7bb941e755950b25782b609271a74a1b"
         }
       ]
     },
@@ -118,8 +118,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
-          "bytes": 43149,
-          "sha256": "sha256:3dc940a319a1e79ffe2033851f8315bf72105dcaae385641a6b99e726521f928"
+          "bytes": 43160,
+          "sha256": "sha256:51abd79cdd8cb3b54fdd26ce419f87830aa5f543c5425b218ed3b7acd1275f1a"
         }
       ]
     }

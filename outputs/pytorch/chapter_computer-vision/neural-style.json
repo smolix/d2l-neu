@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1810fc717f7c1029ee0214e9978fd890f3455a8c6c6a1ae4ceab6d44c60a0a30",
+    "d2l_lib_fingerprint": "sha256:a97daef9ff027061a7c6d2acc295fca372093281dc9e0b3fea34abb1478ab5a6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -16,8 +16,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
-          "bytes": 142658,
-          "sha256": "sha256:935a7080d90906be6dbfd75cdea7d62e93d38dc899f247e68479988fcd54c2e4"
+          "bytes": 141388,
+          "sha256": "sha256:7555eea497b231472ceb24818024e9fd25edd14048d13aa4b9e580e949665d37"
         }
       ]
     },
@@ -29,8 +29,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
-          "bytes": 196603,
-          "sha256": "sha256:2a87c93d83467024a4d602cd702ecbd6a107ceeffdefdc68f968c0664cb07f41"
+          "bytes": 194577,
+          "sha256": "sha256:07789fc8760927cf16b7176b8747682f08b1715f4beae957ed63e202395613fe"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 145751,
-          "sha256": "sha256:b0bd0018f99c8be32e01a1b04c584695f4c5cdd302610cb0b110695914a5d9de"
+          "bytes": 144993,
+          "sha256": "sha256:cf5b4c9768cf868663d5289f8dd623471ca209a18c2949fa88ed8eac11319e25"
         }
       ]
     }

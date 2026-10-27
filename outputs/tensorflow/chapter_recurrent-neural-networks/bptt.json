@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
-          "bytes": 35174,
-          "sha256": "sha256:d4e9057bc0951fc0772fc2e41182169eabd55c81c81c57a73fb03d02df707969"
+          "bytes": 34827,
+          "sha256": "sha256:e69d6ea601c360e327a0baeea54b358392a96c389327857fc7dc5788ef076d55"
         }
       ]
     }

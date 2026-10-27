@@ -90,17 +90,9 @@ The implementation follows the formula: one call of `corr2d` per channel,
 then a sum.
 
 ```{.python .input #channels-multiple-input-channels-1}
-%%tab mxnet, pytorch, jax
 def corr2d_multi_in(X, K):
     """Cross-correlate each channel of X with its channel of K and add."""
     return sum(d2l.corr2d(x, k) for x, k in zip(X, K))
-```
-
-```{.python .input #channels-multiple-input-channels-1}
-%%tab tensorflow
-def corr2d_multi_in(X, K):
-    """Cross-correlate each channel of X with its channel of K and add."""
-    return tf.reduce_sum([d2l.corr2d(x, k) for x, k in zip(X, K)], axis=0)
 ```
 
 With the input and kernel of :numref:`fig_conv_multi_in`, the first output
@@ -131,13 +123,37 @@ Every output channel reads every input channel, each through a kernel of its
 own. This is the layer :eqref:`eq_conv-layer-channels` of
 :numref:`sec_why-conv`, written channel by channel: $\mathbf{K}_{o,c}$ is its
 $k_\textrm{h}\times k_\textrm{w}$ slice for input channel $c$ and output
-channel $o$ (there called $d$), and libraries store the kernel axes in the
-order $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
-Networks usually increase the number of channels as strides or pooling
-reduce the resolution, trading spatial detail for more kinds of features at
-each position. The channels are trained jointly, so one feature, such as an
-edge at some orientation, may be spread over several channels instead of
-occupying one.
+channel $o$ (there called $d$). Networks usually increase the number of
+channels as strides or pooling reduce the resolution, trading spatial detail
+for more kinds of features at each position. The channels are trained
+jointly, so one feature, such as an edge at some orientation, may be spread
+over several channels instead of occupying one.
+
+:begin_tab:`mxnet`
+Gluon stores this kernel as
+$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$ and
+its layers take channels-first inputs, (example, channel, height, width).
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch stores this kernel as
+$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$ and
+its layers take channels-first inputs, (example, channel, height, width).
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras stores this kernel as
+$k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
+index order of :eqref:`eq_conv-layer-channels`, and its layers take
+channels-last inputs, (example, height, width, channel).
+:end_tab:
+
+:begin_tab:`jax`
+Flax stores this kernel as
+$k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
+index order of :eqref:`eq_conv-layer-channels`, and its layers take
+channels-last inputs, (example, height, width, channel).
+:end_tab:
 
 The implementation applies `corr2d_multi_in` once per output channel and
 stacks the results.
@@ -187,8 +203,14 @@ kernels in :numref:`sec_why-conv` has 1,792 parameters. A layer deeper in,
 from 256 to 256 channels with $3\times 3$ kernels, has 590,080 parameters,
 and on a $56\times 56$ output it performs
 $56^2\cdot 589{,}824 \approx 1.8\times 10^9$ multiply-adds for a single
-image. Reducing the factor $c_\textrm{i} c_\textrm{o}$ is the subject of the
-rest of the section.
+image. Training also keeps each layer's output,
+$h_\textrm{o} w_\textrm{o} c_\textrm{o}$ values per example, for the backward
+pass (:numref:`subsec_memory_during_training`). This activation memory is
+largest in the early layers, where the resolution is high and the weights are few:
+the 3-to-64-channel layer with a $224\times 224$ output keeps
+$224^2\cdot 64 \approx 3.2\times 10^6$ values per example, against its 1,792
+parameters. Reducing the factor $c_\textrm{i} c_\textrm{o}$ is the subject of
+the rest of the section.
 
 ## The $1\times 1$ Convolution
 :label:`subsec_1x1`
@@ -336,6 +358,18 @@ channels and its depthwise-separable factorization, without biases. Both map
 the input to an output of the same shape, and
 :eqref:`eq_depthwise_sep_ratio` predicts a ratio of parameter counts of
 $(1/128 + 1/9)^{-1} \approx 8.4$.
+
+:begin_tab:`tensorflow`
+Keras layers take channels-last inputs, (example, height, width, channel),
+so `X` below has shape $(1, 32, 32, c_\textrm{i})$, while the functions
+written above put the channel first.
+:end_tab:
+
+:begin_tab:`jax`
+Flax layers take channels-last inputs, (example, height, width, channel),
+so `X` below has shape $(1, 32, 32, c_\textrm{i})$, while the functions
+written above put the channel first.
+:end_tab:
 
 ```{.python .input #channels-grouped-depthwise-and-depthwise-separable-convolutions}
 %%tab mxnet

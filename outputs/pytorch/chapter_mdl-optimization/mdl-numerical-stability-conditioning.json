@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
-          "bytes": 40773,
-          "sha256": "sha256:0b0d4546749438b6ba7a7df428e395a4a655019deecd03e87f70c17563770db9"
+          "bytes": 38784,
+          "sha256": "sha256:cc731c620aec1d8af954dbf73d698be6dc08569dd2fdd154b969160b9d988180"
         }
       ]
     }

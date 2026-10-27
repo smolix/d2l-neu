@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 100456,
-          "sha256": "sha256:133567d270d4b5c7b7cd2151d25f6b906b674e090c19ca146bdf295fcab268da"
+          "bytes": 99919,
+          "sha256": "sha256:6696ca7262a8d5297eabef8a7d4cf58717923b93860926d988ab4e055617b8c9"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 28838,
-          "sha256": "sha256:d6759a0ae92784197ab615dc99f577dea65d204b7d5d478eebac61351b4b0039"
+          "bytes": 28737,
+          "sha256": "sha256:7b164926d26a885bc5c61b4a371e3e394bd0bf2a2876d7be822a88df4d56956f"
         }
       ]
     }

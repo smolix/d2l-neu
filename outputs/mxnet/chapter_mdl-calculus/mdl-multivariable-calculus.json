@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,11 +32,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "autograd gradient: [0.33333334 0.6666667 ]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[05:07:46] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -48,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13735,
-          "sha256": "sha256:56dcc363c52d08663bbe06bee0394af2d534a4ca92ca008f2a0a3620312f0568"
+          "bytes": 13693,
+          "sha256": "sha256:fb5d3d2599635c264c2fa18ecb2d5d4145353e26e4128b7002df65736c50198a"
         }
       ]
     },

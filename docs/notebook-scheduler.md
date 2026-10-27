@@ -90,8 +90,21 @@ that peaks above 7.5 GiB on a card must be marked for 2 slots on that card.
 
 Resolution order in `notebook_resource`:
 
-0. `rel ∈ GPU_ONLY_NOTEBOOKS` → `('gpu', 1, 1)`; `rel ∈ CPU_ONLY_NOTEBOOKS` →
-   `('cpu',)`; `rel ∈ WHOLE_BOX_NOTEBOOKS` → `('gpu', 'all', 'all')` — a
+0. `rel ∈ GPU_ONLY_NOTEBOOKS` or `(fw, rel) ∈ GPU_FRAMEWORK_NOTEBOOKS` →
+   `('gpu', 1, 1)`; `rel ∈ CPU_ONLY_NOTEBOOKS` → `('cpu',)`. The
+   per-framework set overrides a CPU-only listing for one framework: the JAX
+   versions of the ch. 17 diffusion notebooks (annealed-langevin, ddim,
+   flow-matching, discrete-diffusion) took 31–51 min on a CPU slot under the
+   build's thread caps (#95), while the PyTorch versions stay on CPU (of
+   these, annealed-langevin took 6 min and flow-matching 11 min; ddim and
+   discrete-diffusion were not timed separately). JAX picks up the visible GPU without code changes.
+   `run_one_notebook.notebook_mode` and `file_uses_gpu` honour the same set,
+   so the single-notebook `make -B …executed` path agrees with the scheduler.
+   `scan_notebook_manifests.source_execution_class` takes the framework too,
+   so the Make stamp lists (`EXECUTED_GPU_jax`) and the freshness gate's
+   capability tiers (build-system.md §3.3a) classify these JAX notebooks as
+   `gpu`: a CPU-only host defers them like any GPU notebook.
+   `rel ∈ WHOLE_BOX_NOTEBOOKS` → `('gpu', 'all', 'all')` — a
    notebook that scales over every visible GPU (a `jax.sharding.Mesh` over
    `jax.devices()`, `torchrun --nproc-per-node` up to the device count). They
    run on any k ≥ 2; whole-box is used so the captured scaling tables include
@@ -207,8 +220,16 @@ items behind it keep the pools full; it starts on a later round when a gap opens
 - **JAX only:** because JAX preallocates, the scheduler also sets
   `XLA_PYTHON_CLIENT_MEM_FRACTION = clamp(spg × 7.5 GiB / card_VRAM, 0.05, 0.95)`
   so a JAX process is capped to exactly the slots it reserved (e.g. 1 slot on a
-  24 GiB card → 0.31; 2 slots → 0.63). PyTorch/TF/MXNet allocate on demand and
-  need no fraction.
+  24 GiB card → 0.31; 2 of 3 slots → 0.63). A card whose slots are **all**
+  reserved by the job (whole-box `('gpu','all','all')`, `('gpu', n, 'all')`, or
+  *spg* equal to that card's capacity) gets the full-card fraction
+  `FULL_CARD_MEM_FRACTION = 0.94` instead, whatever the slot count; the rest of
+  the card is left to the CUDA context and cuDNN/cuBLAS workspaces. Before
+  2026-10-27 the slot formula applied there too, which tied a whole-box job's
+  arena to `D2L_GPU_SLOTS_PER`: under `2,2,2,2` the JAX fast-transformer got
+  0.62 (15 GiB) and OOMed at its 13.5 GiB fp32 step, while `3,3,3,3` gave 0.94.
+  With several cards the tightest card sets the fraction. PyTorch/TF/MXNet
+  allocate on demand and need no fraction.
 
 Releasing on completion returns the slots to their GPUs / CPU pool and wakes the
 loop.

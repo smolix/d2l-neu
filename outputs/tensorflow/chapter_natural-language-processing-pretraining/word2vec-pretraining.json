@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:bd6adac143a2b584d6fbadf88482fc1c3728ad915db76303bbebcc04b1312a94",
+    "d2l_lib_fingerprint": "sha256:07b5367951dd43b10fda839558b7f000b71d6febe075d8ce06ce450e6f814340",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[-0.04151698, -0.03583597,  0.04420729, -0.02421569],\n        [ 0.01333817,  0.0380681 ,  0.03323035,  0.0492775 ],\n        [-0.04634574, -0.03625959,  0.04695994, -0.02775402]],\n\n       [[ 0.0162068 ,  0.02130096, -0.024206  ,  0.04411862],\n        [-0.03573716,  0.01764676,  0.00692587,  0.01018107],\n        [-0.01070843, -0.01083444,  0.03973091, -0.01144012]]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3, 4), dtype=float32, numpy=\narray([[[ 0.04988625,  0.0315623 ,  0.02147159, -0.01249343],\n        [ 0.03999526, -0.02782297,  0.047308  , -0.03700668],\n        [-0.00600325, -0.01444433,  0.00192362, -0.02909371]],\n\n       [[ 0.00208194,  0.02990625,  0.01493193, -0.02716471],\n        [ 0.03941957, -0.04464657, -0.03179147,  0.00776939],\n        [ 0.04734982, -0.03792436,  0.0014086 , -0.0402679 ]]],\n      dtype=float32)>"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.406, 129193.0 tokens/sec\n"
+          "text": "loss 0.406, 134508.6 tokens/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17542,
-          "sha256": "sha256:b41bfd79e4664862fe0b5c23218adff86986ff752a621df862109e0dc0c77644"
+          "bytes": 17724,
+          "sha256": "sha256:ca5b4e84d4a3676b8570cb12d18af66cce18edd29f07fff8f878c7279c1fb070"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.609: chips\ncosine sim=0.593: desktop\ncosine sim=0.564: nec\n"
+          "text": "cosine sim=0.727: microprocessor\ncosine sim=0.697: intel\ncosine sim=0.665: mainframe\n"
         }
       ]
     }

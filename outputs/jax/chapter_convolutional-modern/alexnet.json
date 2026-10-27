@@ -4,81 +4,91 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2a962b3d7355aa2ff0b6c1c42b786fa19adfc50bae1da3af38d95aade3f6e22e",
+    "d2l_lib_fingerprint": "sha256:30cad164c4a2055ab4894e09ba7cb62eed923f0002b43d9815a051b60b7643a0",
     "max_inline_bytes": 0
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:a7fd8b5373586c013db88b683e166649063779d03f9f451bf4c76ec98989804c",
+      "code_fingerprint": "sha256:76014e5f38e484d0b4ebea92ad3024a4050b1bc34ae91a403facd65b0bf0954a",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:476a9561a566261441554c8721a7d8c50fdf63d94d9b381f23ec56dec6fc6dd8",
+      "code_fingerprint": "sha256:30843a3a9feadb77dbd2481cbff9908152926ca8b3aac80b470ab9c25de2d12a",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:6ab1c162cd211300dced3adbcb6b233c90630a5fd4ee315055f2aa71beb16b35",
+      "code_fingerprint": "sha256:748ae4a4c4ced9263fdb4079ef08bb26be4292b0e85b1655e5c2ddd00a5a2c32",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 54, 54, 96)\ncustom_jvp output shape:\t (1, 54, 54, 96)\nfunction output shape:\t (1, 26, 26, 96)\n"
+          "text": "Conv                   (1, 54, 54, 96)\nrelu                   (1, 54, 54, 96)\nmax_pool               (1, 26, 26, 96)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 26, 26, 256)\ncustom_jvp output shape:\t (1, 26, 26, 256)\nfunction output shape:\t (1, 12, 12, 256)\n"
+          "text": "Conv                   (1, 26, 26, 256)\nrelu                   (1, 26, 26, 256)\nmax_pool               (1, 12, 12, 256)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 12, 12, 384)\ncustom_jvp output shape:\t (1, 12, 12, 384)\n"
+          "text": "Conv                   (1, 12, 12, 384)\nrelu                   (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 12, 12, 384)\ncustom_jvp output shape:\t (1, 12, 12, 384)\n"
+          "text": "Conv                   (1, 12, 12, 384)\nrelu                   (1, 12, 12, 384)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 12, 12, 256)\ncustom_jvp output shape:\t (1, 12, 12, 256)\nfunction output shape:\t (1, 5, 5, 256)\nfunction output shape:\t (1, 6400)\n"
+          "text": "Conv                   (1, 12, 12, 256)\nrelu                   (1, 12, 12, 256)\nmax_pool               (1, 5, 5, 256)\nflatten                (1, 6400)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\n"
+          "text": "Linear                 (1, 4096)\nrelu                   (1, 4096)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dropout output shape:\t (1, 4096)\n"
+          "text": "Dropout                (1, 4096)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t (1, 4096)\ncustom_jvp output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\n"
+          "text": "Linear                 (1, 4096)\nrelu                   (1, 4096)\nDropout                (1, 4096)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t (1, 10)\n"
+          "text": "Linear                 (1, 10)\n"
         }
       ]
     },
+    "alexnet-training-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:0cc82aa3ebb9ea23837f2a4a5679389a2b29bbf53e3447e1d8952910308d10fd",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-training-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:dc0d696eff0db7d2f23f9c4d9ddffde06994eaa80334f91d232426ce0945bade",
+      "kind": "text",
+      "outputs": []
+    },
     "alexnet-training": {
-      "code_fingerprint": "sha256:383215731f0f466ed6f6f46e145201a15a86d357bab789e5729a5c2396042984",
+      "code_fingerprint": "sha256:47777338ad6b1e6f30f2e91417fff674233d417926cb61914ac216d7ebd1f349",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 33861,
-          "sha256": "sha256:1802e4cd5a4a94f6b253d79c4b25e787cf7982ad9bf68cb54f38531c56a3f8a4"
+          "bytes": 34321,
+          "sha256": "sha256:cc3aaf4a1199f07d7f1b06533cbf8dff5e2fdfd05f7c4459b9048e468f7f8f60"
         }
       ]
     }

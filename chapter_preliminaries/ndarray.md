@@ -75,6 +75,7 @@ import tensorflow as tf
 
 ```{.python .input #ndarray-getting-started-1}
 %%tab jax
+import random
 import jax
 from jax import numpy as jnp
 ```
@@ -183,7 +184,7 @@ integers from 0 to 255. The data type determines how much memory a tensor
 needs: the minibatch of images takes 200,704 bytes as `uint8` and four times as
 much, about 0.8 MB, as `float32`. Large models also compute with 16-bit
 floating-point numbers, which halve the memory again at some cost in
-precision.
+precision (:numref:`sec_numerics`).
 
 :begin_tab:`mxnet`
 MXNet creates `float32` arrays by default, even from integers, so the `arange`
@@ -263,7 +264,8 @@ tf.random.normal(shape=[3, 4])
 ```{.python .input #ndarray-getting-started-8}
 %%tab jax
 # A key determines the sample: the same key always gives the same numbers
-jax.random.normal(jax.random.key(0), (3, 4))
+key = jax.random.key(random.getrandbits(32))  # A new seed on each run
+jax.random.normal(key, (3, 4))
 ```
 
 Random numbers differ from one run to the next. For debugging, and for
@@ -387,7 +389,8 @@ images.shape, images.dtype
 ```{.python .input #ndarray-initial-values-2}
 %%tab jax
 # 256 grayscale images of 28 x 28 pixels, each pixel an integer in [0, 255]
-images = jax.random.randint(jax.random.key(1), (256, 1, 28, 28), 0, 256,
+key, subkey = jax.random.split(key)
+images = jax.random.randint(subkey, (256, 1, 28, 28), 0, 256,
                             dtype=jnp.uint8)
 images.shape, images.dtype
 ```
@@ -470,6 +473,42 @@ JAX arrays cannot be changed in place, so whether `reshape` copies the data
 cannot change any result.
 :end_tab:
 
+Reshaping can also add or remove an axis of length 1, which leaves the
+elements and their order unchanged. The first image of the minibatch,
+`images[0]`, has shape $(1, 28, 28)$. A model that expects minibatches needs
+it as a minibatch of one image, of shape $(1, 1, 28, 28)$, while a plot
+needs a $28 \times 28$ matrix without the channel axis. The index `None`
+inserts an axis of length 1, and `squeeze` removes one:
+
+:begin_tab:`mxnet`
+The function `mnp.expand_dims(image, 0)` inserts the axis as well.
+:end_tab:
+
+:begin_tab:`pytorch`
+The method `image.unsqueeze(0)` inserts the axis as well.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow, `tf.expand_dims(image, 0)` inserts the axis as well, and
+`squeeze` is the function `tf.squeeze`.
+:end_tab:
+
+:begin_tab:`jax`
+The function `jnp.expand_dims(image, 0)` inserts the axis as well.
+:end_tab:
+
+```{.python .input #ndarray-reshaping-2}
+%%tab mxnet, pytorch, jax
+image = images[0]
+image[None].shape, image.squeeze(0).shape
+```
+
+```{.python .input #ndarray-reshaping-2}
+%%tab tensorflow
+image = images[0]
+image[None].shape, tf.squeeze(image, 0).shape
+```
+
 ### Indexing and Slicing
 
 As with Python lists, we select elements of a tensor by *indexing*. Indices
@@ -498,10 +537,93 @@ column 14 of every image:
 images[0].shape, images[:32].shape, images[:, 0, 14, 14].shape
 ```
 
+An index can also be a tensor. Two tensors of integer positions, one for the
+rows and one for the columns, select one element for each pair of
+positions. This picks one entry from every row, as when we read off the
+score that a classifier gives to the correct category of each image. The
+matrix `X` holds the numbers 0 to 11 row by row, so the rows $(0, 1, 2)$ and
+the columns $(3, 0, 2)$ read `X[0, 3]`, `X[1, 0]`, and `X[2, 2]`, which are
+3, 4, and 10:
+
+:begin_tab:`tensorflow`
+TensorFlow tensors do not accept tensors of positions as an index. The
+function `tf.gather` with `batch_dims=1` picks, in every row of `X`, the
+entry at the position that `cols` gives for that row:
+:end_tab:
+
+```{.python .input #ndarray-indexing-and-slicing-5}
+%%tab mxnet
+rows, cols = mnp.arange(3), mnp.array([3, 0, 2])
+X[rows, cols]
+```
+
+```{.python .input #ndarray-indexing-and-slicing-5}
+%%tab pytorch
+rows, cols = torch.arange(3), torch.tensor([3, 0, 2])
+X[rows, cols]
+```
+
+```{.python .input #ndarray-indexing-and-slicing-5}
+%%tab tensorflow
+cols = tf.constant([3, 0, 2])
+tf.gather(X, cols, batch_dims=1)
+```
+
+```{.python .input #ndarray-indexing-and-slicing-5}
+%%tab jax
+rows, cols = jnp.arange(3), jnp.array([3, 0, 2])
+X[rows, cols]
+```
+
+A tensor of booleans with the shape of `X`, a *mask*, selects the elements
+of `X` where it is `True`. The comparison `X > 2` compares every element of
+`X` with 2 and gives such a mask, and the operator `&` combines two masks
+elementwise into one that is `True` where both are (*and*); `|` gives *or*.
+The selected elements need not form rows and columns, so the result is a
+vector:
+
+:begin_tab:`jax`
+The length of the result depends on the values in the mask, so indexing
+with a mask works only outside functions compiled with `jax.jit`, which
+later chapters use for training steps. The function `where` below gives a
+result of fixed shape and works everywhere.
+:end_tab:
+
+```{.python .input #ndarray-indexing-and-slicing-6}
+mask = (X > 2) & (X < 8)
+X[mask]
+```
+
+To keep the shape instead, `where(mask, A, B)` takes the elements of `A`
+where the mask is `True` and those of `B` elsewhere. A single number in
+place of `A` or `B` stands for that number at every position, so the
+following sets every element outside the mask to 0:
+
+```{.python .input #ndarray-indexing-and-slicing-7}
+%%tab mxnet
+mnp.where(mask, X, 0)
+```
+
+```{.python .input #ndarray-indexing-and-slicing-7}
+%%tab pytorch
+torch.where(mask, X, 0)
+```
+
+```{.python .input #ndarray-indexing-and-slicing-7}
+%%tab tensorflow
+tf.where(mask, X, 0)
+```
+
+```{.python .input #ndarray-indexing-and-slicing-7}
+%%tab jax
+jnp.where(mask, X, 0)
+```
+
 ### Writing Elements
 
 :begin_tab:`mxnet, pytorch`
-An index on the left side of an assignment writes elements in place:
+An index on the left side of an assignment writes elements in place. We
+display `x`, from which `X` was reshaped, as well:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -520,7 +642,7 @@ position $(1, 2)$, and leaves `X` unchanged:
 ```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab mxnet, pytorch
 X[1, 2] = 17
-X
+X, x
 ```
 
 ```{.python .input #ndarray-indexing-and-slicing-2}
@@ -644,8 +766,8 @@ The type has changed from `uint8` to `float32`, and the first four pixels of
 the first image, integers from 0 to 255, have become numbers between 0
 and 1.
 
-Comparisons are elementwise too. They return a tensor of booleans that is
-`True` where the comparison holds:
+Comparisons, such as `X > 2` above, are elementwise too. They return a
+tensor of booleans that is `True` where the comparison holds:
 
 ```{.python .input #ndarray-operations-4}
 x == y
@@ -860,6 +982,32 @@ tf.concat([X, Y], axis=0), tf.concat([X, Y], axis=1)
 X = jnp.arange(12, dtype=jnp.float32).reshape(3, 4)
 Y = jnp.array([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
+```
+
+*Stacking* joins tensors of the same shape along a new axis instead. This is
+how a minibatch arises from single examples: stacking 256 images of shape
+$(1, 28, 28)$ gives the minibatch of shape $(256, 1, 28, 28)$. Stacking `X`
+and `Y` along a new axis 0 gives shape $(2, 3, 4)$, and along a new last
+axis, shape $(3, 4, 2)$:
+
+```{.python .input #ndarray-concatenation-1}
+%%tab mxnet
+mnp.stack([X, Y]).shape, mnp.stack([X, Y], axis=2).shape
+```
+
+```{.python .input #ndarray-concatenation-1}
+%%tab pytorch
+torch.stack((X, Y)).shape, torch.stack((X, Y), dim=2).shape
+```
+
+```{.python .input #ndarray-concatenation-1}
+%%tab tensorflow
+tf.stack([X, Y]).shape, tf.stack([X, Y], axis=2).shape
+```
+
+```{.python .input #ndarray-concatenation-1}
+%%tab jax
+jnp.stack((X, Y)).shape, jnp.stack((X, Y), axis=2).shape
 ```
 
 ## Memory and Conversion
@@ -1444,14 +1592,38 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 :::
 :::
 
+::: {.slide title="Index Tensors Pick Entries; Masks Select or Replace Them"}
+[Indexing]{.kicker}
+
+`X` holds $0, \ldots, 11$ as a $3 \times 4$ matrix. An index tensor picks
+one entry per row, at columns $(3, 0, 2)$:
+
+@ndarray-indexing-and-slicing-5
+
+::: {.cols}
+::: {.col}
+A boolean mask selects; the result is a vector:
+
+@ndarray-indexing-and-slicing-6
+:::
+
+::: {.col}
+`where` replaces the elements outside the mask; the shape stays:
+
+@ndarray-indexing-and-slicing-7
+:::
+:::
+:::
+
 ::: {.slide title="Assignment Writes Into the Tensor" except="jax,tensorflow"}
 [Writing]{.kicker}
 
+Training overwrites parameters at every step. Indexing on the left writes
+one element, then a slice, in place. The second output, `x`, from which `X`
+was reshaped, shows whether `reshape` shared memory:
+
 ::: {.cols .vc}
 ::: {.col}
-Training overwrites parameters at every step. Indexing on the left writes
-one element, then a whole slice, in place:
-
 @ndarray-indexing-and-slicing-2
 
 @ndarray-indexing-and-slicing-3
@@ -1602,6 +1774,8 @@ Predict the shape of the result, or an error.
 ::: {.col}
 - Two minibatches of 256 images along axis 0: one minibatch of 512.
 - All other axes must agree.
+- `stack` joins along a new axis: 256 images of shape $(1, 28, 28)$ give
+  the minibatch $(256, 1, 28, 28)$.
 :::
 
 ::: {.col .fig}
@@ -1761,6 +1935,8 @@ much memory is in use at the peak?
 | the data type sets the bytes per element | `uint8`: 0.2 MB; `float32`: 0.8 MB |
 | an integer index drops its axis; a slice keeps it | `images[0]`: $(1, 28, 28)$ |
 | reshape keeps the order; $-1$ infers a length | `reshape(256, -1)`: $(256, 784)$ |
+| `None` adds an axis of length 1; `squeeze` removes one | `images[0]`: $(1, 28, 28)$ to $(1, 1, 28, 28)$ or $(28, 28)$ |
+| a mask selects elements; `where` replaces them | `X[(X > 2) & (X < 8)]` |
 | elementwise operations act at every position | `images / 255` |
 | broadcasting: align right; equal or 1 | $(256, 784)$ with $(256, 1)$, not $(256,)$ |
 | `Y = Y + X` allocates new memory | 4 GB per copy of $10^9$ parameters |

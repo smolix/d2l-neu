@@ -97,7 +97,7 @@ JAX has no global random state. The constructor therefore takes a key,
 splits it into two, and draws $\mathbf{X}$ and $\boldsymbol{\epsilon}$ from
 different keys. The same key always produces the same dataset. Without a
 key, the constructor draws one from a new seed, so that each run generates
-a new dataset, as in the other frameworks.
+a new dataset.
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-1}
@@ -206,13 +206,14 @@ parameters exactly.
 
 For our data the matrix $\mathbf{X}^\top\mathbf{X}$ is simple. Its entries
 are sums over the $n$ examples of products of two columns. On the diagonal
-each product is a squared feature, with mean $1$, or the square of the
-constant $1$, so these sums are close to $n$. Off the diagonal the products
-have mean $0$, because the features are independent with mean $0$, and a
-sum of $n$ independent terms of variance $1$ has standard deviation only
-$\sqrt{n}$. For $n = 1{,}000$ the diagonal entries are $1{,}000$ for the
-column of ones and about $1{,}000 \pm 45$ for the features, and the entries
-off the diagonal are about $0 \pm 32$. With
+each product is either the square of the constant $1$ or a squared feature
+$z^2$, with mean $1$ and variance $E[z^4] - 1 = 3 - 1 = 2$ for a standard
+normal $z$. These sums are therefore close to $n$, within about
+$\sqrt{2n}$. Off the diagonal the products have mean $0$, because the
+features are independent with mean $0$, and variance $1$, so a sum of $n$ of
+them has standard deviation only $\sqrt{n}$. For $n = 1{,}000$ the diagonal
+entries are $1{,}000$ for the column of ones and about $1{,}000 \pm 45$ for
+the features, and the entries off the diagonal are about $0 \pm 32$. With
 $\mathbf{X}^\top\mathbf{X} \approx n\mathbf{I}$, the estimation error
 becomes an average over the training examples,
 
@@ -414,17 +415,17 @@ For data that are already in memory as tensors, we add the method
 `get_tensorloader` to the base class `DataModule`, so that every such
 dataset can use it. It takes a tuple of tensors whose first axis indexes the
 examples, keeps the examples selected by `indices`, and returns a loader
-that shuffles them if `train` is true. In PyTorch, TensorFlow, and MXNet
-this is the framework's own loader; JAX has none, so there we write a short
-class of our own.
+that shuffles them if `train` is true. Where the framework provides such a
+loader, `get_tensorloader` returns it; otherwise we write a short class of
+our own.
 
 :begin_tab:`jax`
 `ArrayLoader` keeps the arrays on the host as NumPy arrays and yields each
 minibatch as NumPy arrays, which JAX functions accept and move to the
 device. When it shuffles, it splits a new key off its own key on every pass
 and draws the order from that key, so that every pass has a new order and
-no key is used twice. Like the loaders of the other frameworks, it keeps the
-last, partial minibatch unless we ask it to drop it. The compiled training
+no key is used twice. It keeps the last, partial minibatch unless we ask it
+to drop it. The compiled training
 and validation steps, which we write in :numref:`sec_linear_scratch`, are
 compiled once for every new input shape, so the last minibatch costs one
 more compilation of each step per run, not one per epoch.
@@ -562,26 +563,6 @@ len(loader)
 
 From now on, every `DataModule` that holds its data as tensors serves them
 through `get_tensorloader`.
-
-:begin_tab:`jax`
-The library also keeps the class `TensorFlowDataLoader`, which gives a
-pipeline built with TensorFlow's `tf.data` the same interface. Only the
-Fashion-MNIST pipeline of :numref:`sec_fashion_mnist` uses it.
-:end_tab:
-
-```{.python .input #synthetic-regression-data-reusable-data-loaders-2}
-%%tab jax
-class TensorFlowDataLoader:  #@save
-    """Expose a tf.data.Dataset as re-iterable NumPy batches."""
-    def __init__(self, dataset):
-        self.dataset = dataset
-
-    def __iter__(self):
-        return self.dataset.as_numpy_iterator()
-
-    def __len__(self):
-        return len(self.dataset)
-```
 
 We now have a dataset whose true parameters we know, the size of the error
 that its noise alone causes, about $3 \times 10^{-4}$, and a loader that
@@ -949,7 +930,7 @@ eps = jax.random.normal(key2, (n, 1)) * noise
 
 - $\mathbf{X}$ and $\boldsymbol{\epsilon}$ come from two different keys.
 - The same key always produces the same dataset; without a key, each run
-  generates a new one, as in the other frameworks.
+  generates a new one.
 :::
 
 ::: {.slide title="Check: Which Loss Do the True Parameters Reach?"}

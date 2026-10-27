@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cd5c4312c4b71802bcf6a717c9c1269ca990e31e0e4663b23d92df94bc632691",
+    "d2l_lib_fingerprint": "sha256:7c39550f9dbecabc38eccc259703c8157787bed25ec0c741ad0c8327db2706ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-1-1.svg",
-          "bytes": 24274,
-          "sha256": "sha256:b3e89a6c73765b4fd8d8b05e83a760cc64f134114caf1a208940ba36ca99f143"
+          "bytes": 24368,
+          "sha256": "sha256:7d7ff14381158c03ecba5b9ab2f31b2fe71991f14249322ba665c7a03ac10e16"
         }
       ]
     },
@@ -39,8 +39,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-3-1.svg",
-          "bytes": 55479,
-          "sha256": "sha256:d06a4e84afd804633d93da85a8651455e60a7d8b743f3b34b02b952f79a7135d"
+          "bytes": 55447,
+          "sha256": "sha256:c68a2d1f054f23b755df799cd26e41d553d17da59bd5e2db400a548dc6e5f352"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-5-1.svg",
-          "bytes": 59860,
-          "sha256": "sha256:93769e5138d12e41c88ed0dbbf8338384526dad50077be4684ab746387a6aa11"
+          "bytes": 59782,
+          "sha256": "sha256:a611b0b514f198bcc462bcea42e12fb3fceb342c7416565f9909cf2c63551562"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-worked-example-from-scratch-7-1.svg",
-          "bytes": 112704,
-          "sha256": "sha256:49a1a0c0f94175cb84223d2f5cc420077dec48005789500c3a830dd886d92636"
+          "bytes": 112630,
+          "sha256": "sha256:e04ecceb9750555961b42ff750154d1a96ee6d4631b92d276ed2435f6e897468"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-inference/gp-inference-making-life-easy-with-gpytorch-5-1.svg",
-          "bytes": 63801,
-          "sha256": "sha256:d2d2002621a6677398994993a766830b69ee75c15cf2fad92fb4d8ae970d727a"
+          "bytes": 63737,
+          "sha256": "sha256:42092fd051e722e7c5ccdcd6269c8d1144018a8c37c7fd17bc0206abf78bfc66"
         }
       ]
     }

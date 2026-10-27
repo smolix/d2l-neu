@@ -629,10 +629,12 @@ For S4D, the contributions rise smoothly toward the query: the most recent
 inputs dominate, whatever they are, and a symbol 800 steps back contributes
 no more than the fillers next to it. For Mamba, the contributions spike at
 the four symbols, some three to four orders of magnitude above the fillers
-around them, wherever the symbols sit. Two thirds to four fifths of Mamba's state
-comes from the windows of four positions that start at the symbols, which
-cover less than 2% of the sequence; for S4D the same windows contribute at
-most 2%. The selective SSM writes the symbols and lets the fillers pass.
+around them, wherever the symbols sit. The windows of four positions that
+start at the symbols cover less than 2% of the sequence, yet they supply
+many times that share of Mamba's state, in most runs more than half of it;
+much of the rest comes from the last few positions before the query. For
+S4D the same windows supply at most 2%. The selective SSM writes the
+symbols and lets the fillers pass.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -897,7 +899,7 @@ $B = 64$, $T = 1024$, $H = 96$, $N = 16$, 32-bit floats.
 :::
 
 ::: {.col .fig .big}
-![](../img/mdl-modernrnn-mamba-block.svg){width=92%}
+![](../img/mdl-modernrnn-mamba-block.svg){width=72%}
 :::
 :::
 :::

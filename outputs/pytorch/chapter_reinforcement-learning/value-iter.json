@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9a2504c31ddc68ee4d20c3b5b0d2d9dd0e2380f9f684316a309f08184d1aecbe",
+    "d2l_lib_fingerprint": "sha256:d1c8b958a9525b6d690d962036017f54ed3b0f12ed31e28fa5ece0159ef7f937",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "value-iter/value-iter-value-iteration-2-1.png",
-          "bytes": 6954,
-          "sha256": "sha256:5e8475adf45f2eaf478b2aa3bcdc8767c1cfb59a847678c6c351dee8d972a12a"
+          "bytes": 7587,
+          "sha256": "sha256:4a0f2c621b418c183d2dcf6ab8e2c3ebea1147eac7512be0821654fb5e8dc799"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
-          "bytes": 28730,
-          "sha256": "sha256:5cd07ddc8538a041bc980b4c702451c7fad8c2b039ef2802c1444220b5e4e819"
+          "bytes": 28636,
+          "sha256": "sha256:746f528aa85d064b8ae5ee100c8bbf5b8e30ea47f5f956a4411a97018ced06ed"
         }
       ]
     },

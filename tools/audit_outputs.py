@@ -9,7 +9,13 @@ notebook. A notebook is STALE iff, relative to the current source/environment:
   - its `framework_version` changed, OR
   - its `d2l_lib_fingerprint` changed (a #@save symbol it uses was edited), OR
   - any cell's prefix-inclusive `code_fingerprint` changed (its code, or an
-    earlier cell's code, was edited).
+    earlier cell's code, was edited), OR
+  - it has no manifest at all: a source file that produces a notebook for the
+    framework and has executable Python cells for it, but was never captured
+    (a new section, or one that gained its first code cells). Read from the
+    sources, so it needs no generated notebooks.
+    These are HARD-stale: `--stale` lists them and `--verify-fresh` fails on
+    them (subject to the host-capability tiers, like any HARD-stale notebook).
 
 Severity follows the storage split (§3.3):
   - a stale cell with an INLINE (text) output is a HARD error — the printed value
@@ -159,15 +165,84 @@ def audit_manifest(repo_root, nb_root, manifest_path, fw):
     return rec
 
 
+_FENCE_RE = re.compile(r'^```(.*)$')
+
+
+def source_code_cells(md_path, fw):
+    """Number of executable Python cells *md_path* has for framework *fw*.
+
+    Read from the source, so it needs no generated notebook: a `{.python
+    .input}` fence that is not the d2lbook tab boilerplate, untagged or with
+    a tab that names *fw* (or `all`).
+    """
+    from d2l_preprocess import extract_tab, is_boilerplate, is_python_block
+    lines = Path(md_path).read_text(encoding='utf-8').split('\n')
+    n, i = 0, 0
+    while i < len(lines):
+        m = _FENCE_RE.match(lines[i])
+        if not m or lines[i].startswith('````'):
+            i += 1
+            continue
+        info, body = m.group(1).strip(), []
+        i += 1
+        while i < len(lines) and not re.match(r'^```\s*$', lines[i]):
+            body.append(lines[i])
+            i += 1
+        i += 1
+        if (not is_python_block(info) or '.input' not in info
+                or is_boilerplate(body)):
+            continue
+        tab, _ = extract_tab(body)
+        if tab is None or tab == 'all' or fw in [
+                t.strip() for t in tab.split(',')]:
+            n += 1
+    return n
+
+
+def unmanifested_notebooks(repo_root, store_dir, nb_root, fw):
+    """Records for notebooks that have code cells but no manifest yet.
+
+    A section that gains its first code cells (or a new section) produces a
+    notebook that was never captured. Nothing in the store describes it, so a
+    manifest-driven audit would never see it: it is reported here as stale
+    (HARD, since every one of its outputs is missing from the book). The set
+    comes from the SOURCES, not from `_notebooks/`, so the rule also works on
+    a fresh clone or a render box where no notebook was ever generated: every
+    `chapter_*/*.md` that produces a notebook for *fw* (`file_frameworks`, as
+    gen_notebooks decides) and has an executable Python cell for *fw*.
+    """
+    from build_lib import LIB_ONLY_FILES
+    from scan_notebook_manifests import file_frameworks
+    lib_only = set(LIB_ONLY_FILES)
+    records = []
+    for md in sorted(repo_root.glob('chapter_*/*.md')):
+        source = str(md.relative_to(repo_root))
+        if source in lib_only or fw not in file_frameworks(md):
+            continue
+        if (store_dir / fw / Path(source).with_suffix('.json')).exists():
+            continue
+        n = source_code_cells(md, fw)
+        if not n:
+            continue
+        records.append({
+            'framework': fw, 'source': source, 'manifest': None,
+            'stale': True, 'hard_stale': True, 'no_manifest': True,
+            'reasons': [f'no manifest: {n} code cell(s) never captured'],
+            'orphaned': [], 'missing': [], 'notebook_present':
+                (nb_root / fw / Path(source).with_suffix('.ipynb')).exists(),
+        })
+    return records
+
+
 def collect(repo_root, store_dir, nb_root, frameworks):
     records = []
     for fw in frameworks:
         fw_dir = store_dir / fw
-        if not fw_dir.exists():
-            continue
-        for manifest_path in sorted(fw_dir.glob('chapter_*/*.json')):
-            records.append(
-                audit_manifest(repo_root, nb_root, manifest_path, fw))
+        if fw_dir.exists():
+            for manifest_path in sorted(fw_dir.glob('chapter_*/*.json')):
+                records.append(
+                    audit_manifest(repo_root, nb_root, manifest_path, fw))
+        records.extend(unmanifested_notebooks(repo_root, store_dir, nb_root, fw))
     return records
 
 
@@ -390,9 +465,11 @@ def main():
 
     stale = [r for r in records if r['stale']]
     hard = [r for r in records if r['hard_stale']]
+    unmanifested = [r for r in records if r.get('no_manifest')]
     orphaned = [r for r in records if r['orphaned']]
     missing = [r for r in records if r['missing']]
-    no_nb = [r for r in records if not r['notebook_present']]
+    no_nb = [r for r in records
+             if not r['notebook_present'] and not r.get('no_manifest')]
     # `no_nb` is a warning, NOT an integrity error: a pure CPU-only render box has
     # the committed store but no generated _notebooks/, and must still render. The
     # freshness gate only bites where the notebooks exist (an author's dev box, or
@@ -408,6 +485,8 @@ def main():
                          for r in orphaned},
             'missing': {f"{r['framework']}:{r['source']}": r['missing']
                         for r in missing},
+            'no_manifest': [r['source'] + f" [{r['framework']}]"
+                            for r in unmanifested],
         }, indent=2))
         return 1 if integrity_err else 0
 
@@ -444,6 +523,12 @@ def main():
               f'(in store, gone from notebook):')
         for r in orphaned[:10]:
             print(f'      {r["framework"]:11} {r["source"]}: {", ".join(r["orphaned"][:6])}')
+
+    if unmanifested:
+        print(f'\n  ✗ {len(unmanifested)} notebook(s) with code cells but NO '
+              f'manifest (never captured — execute and capture them):')
+        for r in unmanifested[:10]:
+            print(f'      {r["framework"]:11} {r["source"]}')
 
     if missing:
         print(f'\n  ⚠ {len(missing)} manifest(s) MISSING cells '
@@ -494,7 +579,7 @@ def main():
         blocked, deferred = [], []
         for r in hard:
             rel = Path(r['source'])
-            cls = source_execution_class(repo_root / rel, rel)
+            cls = source_execution_class(repo_root / rel, rel, r['framework'])
             (deferred if gpus < NEED.get(cls, 0) else blocked).append((r, cls))
         if deferred:
             print(f'\n  ⚠ {len(deferred)} stale notebook(s) need more GPUs than '

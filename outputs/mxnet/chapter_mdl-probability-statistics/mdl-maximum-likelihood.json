@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20942,
-          "sha256": "sha256:cdcff04e31df24ed73ee87b88e87f41bd761c070a1457372600a400a9bac6704"
+          "bytes": 20911,
+          "sha256": "sha256:9bd0269ca00a6378fa72653ab908ed7ad3c8c2c7791babe8105ca1d749794690"
         }
       ]
     },
@@ -30,11 +30,6 @@
       "code_fingerprint": "sha256:8c22502c2a71a2a900cfc62f382ef400d57f918637a7ef987cd3c0b15bbc2bbb",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[05:10:22] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"
@@ -49,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
-          "bytes": 30558,
-          "sha256": "sha256:c8775c61cd39b551cbba098852b5179c2b9d382c35d7a7faaa3628142a49fbd5"
+          "bytes": 30496,
+          "sha256": "sha256:1e673adb277c535cb275e5c92fc335f7d5f8d12fccc090f9aec325f16d04a955"
         }
       ]
     },

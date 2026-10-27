@@ -463,7 +463,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5):
     test_iter = gluon.data.DataLoader(
         test_imgs.transform_first(test_augs), batch_size)
     devices = d2l.try_all_gpus()
-    net.reset_ctx(devices)
+    net.reset_device(devices)
     net.hybridize()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {
@@ -509,13 +509,12 @@ def _make_tf_dataset(img_dir, preprocess, batch_size, shuffle=False):
         batch_size=None, shuffle=shuffle)
     ds = ds.map(lambda x, y: (preprocess(x), y),
                 num_parallel_calls=tf.data.AUTOTUNE)
-    # Keep fixed shapes for training, but evaluate every test example.
-    ds = ds.batch(batch_size, drop_remainder=shuffle).prefetch(tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return ds
 
-# If `param_group=True`, the head is updated with a learning rate ten times
-# larger than the pretrained backbone (mirroring the PyTorch tab); otherwise
-# all parameters are trained at the same rate (used for `scratch_net`).
+# If `param_group=True`, the head learns ten times faster than the
+# pretrained backbone; otherwise all parameters are trained at the same rate
+# (used for `scratch_net`).
 def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
                       param_group=True, update_batch_stats=False,
                       momentum=0.0):
@@ -571,14 +570,13 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
         return (jnp.argmax(logits, axis=-1) == y).sum()
 
     for epoch in range(num_epochs):
-        total_loss, total_acc, n_batches = (jnp.array(0.0),
-                                            jnp.array(0.0), 0)
+        total_loss, total_acc, n_train = jnp.array(0.0), jnp.array(0.0), 0
         for x, y in train_ds:
             x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
             loss, acc = train_step(train_net, optimizer, x, y)
-            total_loss += loss
-            total_acc += acc
-            n_batches += 1
+            total_loss += loss * len(y)  # Weight each minibatch by its size
+            total_acc += acc * len(y)
+            n_train += len(y)
         test_correct, test_examples = jnp.array(0), 0
         for x, y in test_ds:
             x = jnp.asarray(x.numpy()); y = jnp.asarray(y.numpy())
@@ -586,8 +584,8 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
             test_examples += len(y)
         total_loss, total_acc, test_correct = jax.device_get(
             (total_loss, total_acc, test_correct))
-        print(f'epoch {epoch + 1}, loss {float(total_loss) / n_batches:.3f}, '
-              f'train acc {float(total_acc) / n_batches:.3f}, '
+        print(f'epoch {epoch + 1}, loss {float(total_loss) / n_train:.3f}, '
+              f'train acc {float(total_acc) / n_train:.3f}, '
               f'test acc {float(test_correct) / max(test_examples, 1):.3f}')
 
     return net
@@ -602,7 +600,7 @@ def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
         batch_size=None, shuffle=shuffle)
     ds = ds.map(lambda x, y: (augs(x, training=True), y),
                 num_parallel_calls=tf.data.AUTOTUNE)
-    ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return ds
 
 def _checkpointed_backbone(base):
@@ -629,9 +627,8 @@ def _checkpointed_backbone(base):
         return pool(h)
     return forward
 
-# If `param_group=True`, the head (classifier Dense) is updated with a
-# learning rate ten times larger than the backbone, mirroring the PyTorch
-# fine-tuning recipe. `momentum` is forwarded to both SGD optimizers; the
+# If `param_group=True`, the head (classifier Dense) learns ten times
+# faster than the backbone. `momentum` is forwarded to both SGD optimizers; the
 # from-scratch baseline uses momentum=0.9 because plain SGD cannot train a
 # randomly-initialised ResNet-50 on 2 000 images in five epochs.
 def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
@@ -643,6 +640,12 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
     # Backbone always trainable; discriminative LR (head at 10x) applied
     # by routing gradients to two separate optimizers below.
     net.layers[0].trainable = True
+    # Running averages of the batch statistics decay 0.9 per step (the
+    # Keras default is 0.99). tf.recompute_grad runs the forward pass twice
+    # per step, so the averages update twice: 0.9 ** 0.5 per update
+    for layer in net.layers[0].layers:
+        if isinstance(layer, keras.layers.BatchNormalization):
+            layer.momentum = 0.9 ** 0.5
     head_layer = net.layers[-1]
     head_vars = head_layer.trainable_variables
     head_var_ids = {id(v) for v in head_vars}
@@ -688,12 +691,12 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
     for epoch in range(num_epochs):
         acc_metric.reset_state()
         val_acc_metric.reset_state()
-        total_loss, n_batches = 0.0, 0
-        for x, y in train_ds:
-            total_loss += float(train_step(x, y)); n_batches += 1
+        total_loss, n_train = 0.0, 0
+        for x, y in train_ds:  # Weight each minibatch by its size
+            total_loss += float(train_step(x, y)) * len(y); n_train += len(y)
         for x, y in test_ds:
             test_step(x, y)
-        print(f'epoch {epoch + 1}, loss {total_loss / max(n_batches, 1):.3f}, '
+        print(f'epoch {epoch + 1}, loss {total_loss / max(n_train, 1):.3f}, '
               f'train acc {float(acc_metric.result()):.3f}, '
               f'test acc {float(val_acc_metric.result()):.3f}')
 ```
@@ -744,9 +747,6 @@ train_fine_tuning(scratch_net, 5e-4, param_group=False)
 #@tab jax
 print('scratch baseline')
 scratch_net = ResNet50(num_classes=2, rngs=nnx.Rngs(2))
-# On this tiny dataset the running statistics must adapt much faster than the
-# ImageNet default.
-scratch_net = nnx.view(scratch_net, momentum=0.5, raise_if_not_found=False)
 scratch_net = train_fine_tuning(
     scratch_net, 1e-3, num_epochs=6, param_group=False,
     update_batch_stats=True, momentum=0.9)
@@ -758,16 +758,6 @@ scratch_net = train_fine_tuning(
 scratch_base = keras.applications.ResNet50(
     weights=None, include_top=False, pooling='avg',
     input_shape=(IMG_SIZE, IMG_SIZE, 3))
-# Keras' default BatchNormalization momentum (0.99) means the moving
-# mean/variance never catch up to the actual activation statistics within
-# five epochs of ~15 batches each, so the from-scratch model would look
-# like random noise at evaluation time (train acc rises, test acc stays
-# ~0.5). Lowering momentum to 0.5 lets the running stats track the small
-# dataset; the pretrained fine-tuning path keeps the default because its
-# moving stats are already calibrated on ImageNet.
-for layer in scratch_base.layers:
-    if isinstance(layer, keras.layers.BatchNormalization):
-        layer.momentum = 0.5
 scratch_net = keras.Sequential([
     scratch_base,
     keras.layers.Dense(2, kernel_initializer='glorot_uniform',

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c40f066d5dcead837cb6d49ecde39cd59d3cc2364946f47ffc01646ac218b77a",
+    "d2l_lib_fingerprint": "sha256:30a9c6011abec648f2d716b5d35cad371c0853cfe21e2ec250c3943b8ad7778a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
-          "bytes": 247382,
-          "sha256": "sha256:6a1243a5e7c78cc89998be69f94ba77d67de0f9eca3bacb1c3dbb814c941177f"
+          "bytes": 247473,
+          "sha256": "sha256:f3c288b6d32b69234f92c1539b0247e63d1cb98e2e69786b67ee03cd5712dfb6"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
-          "bytes": 38089,
-          "sha256": "sha256:6659398bd29b425f0a9106827a489043e7a245f10f0025dddc07a1fecb214fd1"
+          "bytes": 38183,
+          "sha256": "sha256:9d0ba6e91f7147acb0f3cc59e2b9406a9e4e9b457b6978b2f277e4ce294dba6f"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
-          "bytes": 706464,
-          "sha256": "sha256:e558e71c8501357423641b55bcdb510c9f6adca8a8d8ea8da437b66acb68d240"
+          "bytes": 707108,
+          "sha256": "sha256:f9e2702a2b9614a132afb3802d7f49e7bf5f88daab68ed47efefa9848c313d41"
         }
       ]
     },
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
-          "bytes": 535592,
-          "sha256": "sha256:422b70fd379de5b9ecd978c23c06c6166644d5383d6fbe977b7046dac6e42e73"
+          "bytes": 537916,
+          "sha256": "sha256:1d9b3d8629822a07c4f4557353d2f1095711aa79d1d0db1bb755016330baf8b4"
         }
       ]
     }

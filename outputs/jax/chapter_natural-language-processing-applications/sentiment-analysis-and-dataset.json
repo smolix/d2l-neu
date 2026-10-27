@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:fdb0321834ccfca9e6df3c45042dc0cb5d19c4787956c317bea17c2d61d6752c",
+    "d2l_lib_fingerprint": "sha256:c2a1c7d8a85d0c897e64ccef75fb9ebb1209e8ffc2afdea0311d59c9c2b782fd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
-          "bytes": 20893,
-          "sha256": "sha256:b2f5d39d45380c3d83a1319574e1f95d9e9845974f28c92d1adbe3cf428f2f28"
+          "bytes": 20698,
+          "sha256": "sha256:ce5a66046da6070e158778a395e42d4a42f6979e4d356426d325de0a363e424e"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: (64, 500) , y: (64,)\n# batches: 390\n"
+          "text": "X: (64, 500) , y: (64,)\n# batches: 391\n"
         }
       ]
     },

@@ -4,46 +4,56 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
+    "d2l_lib_fingerprint": "sha256:1f30d4cdcd5c7b08533812664fa0681b32651cc6d4585bd2fea1fa85d342946e",
     "max_inline_bytes": 0
   },
   "cells": {
     "alexnet-deep-convolutional-neural-networks-alexnet": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+      "code_fingerprint": "sha256:c300cb7caa408dc7ccf57efc672503edaa3feca7c3ff5bcdf5d9df44c9ad7dd8",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-1": {
-      "code_fingerprint": "sha256:5e7c84ea880fd5b3f24cf1d600ffe5a7e8e57f4302323a663d7137d6a1b6d2ae",
+      "code_fingerprint": "sha256:0fbf051f63a36e3826e7da95278f9ce2b49bceb95031db3f04dd971d1c00d30d",
       "kind": "text",
       "outputs": []
     },
     "alexnet-capacity-control-and-preprocessing-2": {
-      "code_fingerprint": "sha256:a838f94b1eb9f1d9ab1e47520a291bc95df33c8816dc305c888338cc8c67207c",
+      "code_fingerprint": "sha256:8c1648124a0d2ea97ca94df0b7c7011394b2d78689000dbb37f15eb9a29c9db8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2d output shape:\t torch.Size([1, 96, 54, 54])\nReLU output shape:\t torch.Size([1, 96, 54, 54])\nMaxPool2d output shape:\t torch.Size([1, 96, 26, 26])\nConv2d output shape:\t torch.Size([1, 256, 26, 26])\nReLU output shape:\t torch.Size([1, 256, 26, 26])\nMaxPool2d output shape:\t torch.Size([1, 256, 12, 12])\nConv2d output shape:\t torch.Size([1, 384, 12, 12])\nReLU output shape:\t torch.Size([1, 384, 12, 12])\nConv2d output shape:\t torch.Size([1, 384, 12, 12])\nReLU output shape:\t torch.Size([1, 384, 12, 12])\nConv2d output shape:\t torch.Size([1, 256, 12, 12])\nReLU output shape:\t torch.Size([1, 256, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 256, 5, 5])\nFlatten output shape:\t torch.Size([1, 6400])\n"
+          "text": "Conv2d                 (1, 96, 54, 54)\nReLU                   (1, 96, 54, 54)\nMaxPool2d              (1, 96, 26, 26)\nConv2d                 (1, 256, 26, 26)\nReLU                   (1, 256, 26, 26)\nMaxPool2d              (1, 256, 12, 12)\nConv2d                 (1, 384, 12, 12)\nReLU                   (1, 384, 12, 12)\nConv2d                 (1, 384, 12, 12)\nReLU                   (1, 384, 12, 12)\nConv2d                 (1, 256, 12, 12)\nReLU                   (1, 256, 12, 12)\nMaxPool2d              (1, 256, 5, 5)\nFlatten                (1, 6400)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 10])\n"
+          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 10)\n"
         }
       ]
     },
+    "alexnet-training-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:e2c098ba6e82582f1ea60d91b041995a0734e80e59ef74193df97279290027fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "alexnet-training-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:3123e3ff5bc70bbeb2e0d4454b252a64c9b10d9d5aad4eb39b6d3eb28d034e37",
+      "kind": "text",
+      "outputs": []
+    },
     "alexnet-training": {
-      "code_fingerprint": "sha256:6ed6607283a48a6ec69edaf7a78aefe284da9b48e3e1d4748319d3f1ffb342de",
+      "code_fingerprint": "sha256:379078e8b7b89961f690b04b44343a605d9568b02ab79d1f19fbe7a280b4f9c6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 34598,
-          "sha256": "sha256:1deab39bc198d0d3e4cd3c53089b5fb76a3c8d20eccc334595cfb2f086ee946f"
+          "bytes": 32564,
+          "sha256": "sha256:49100e8df64c752251bedcef33cf64bb2bb9a4212dae6efecd8e4ef2ff84a076"
         }
       ]
     }

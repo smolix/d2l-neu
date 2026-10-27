@@ -203,7 +203,7 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
                          num_blks, dropout, max_len)
     # Load pretrained BERT parameters
     bert.load_parameters(os.path.join(data_dir, 'pretrained.params'),
-                         ctx=devices)
+                         device=devices)
     return bert, vocab
 ```
 
@@ -751,7 +751,7 @@ All the parameters of the pretrained BERT encoder (`net.encoder`) and the hidden
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab mxnet
 net = BERTClassifier(bert)
-net.output.initialize(ctx=devices)
+net.output.initialize(device=devices)
 ```
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}

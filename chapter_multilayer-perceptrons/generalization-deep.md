@@ -44,6 +44,16 @@ train on 1,000 Fashion-MNIST images, which gives the MLP about 200
 parameters per image.
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
+%%tab mxnet
+%matplotlib inline
+import numpy as np
+from mxnet import init, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
+
+```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab pytorch
 %matplotlib inline
 import numpy as np
@@ -66,16 +76,6 @@ from d2l import tensorflow as d2l
 import numpy as np
 from flax import nnx
 from d2l import jax as d2l
-```
-
-```{.python .input #generalization-deep-fitting-random-labels-1}
-%%tab mxnet
-%matplotlib inline
-import numpy as np
-from mxnet import init, npx
-from mxnet.gluon import nn
-from d2l import mxnet as d2l
-npx.set_np()
 ```
 
 We draw 2,000 training images at random, 1,000 to train on and 1,000 to hold
@@ -131,6 +131,19 @@ at first (:numref:`sec_mlp-implementation`); its biases start at zero. Its
 inputs are already flattened.
 
 ```{.python .input #generalization-deep-fitting-random-labels-4}
+%%tab mxnet
+class MLP(d2l.Classifier):
+    def __init__(self, num_hiddens, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = nn.Sequential()
+        self.net.add(nn.Dense(num_hiddens, activation='relu'), nn.Dense(10))
+        # Normal weights with variance 2 / fan_in; biases stay zero
+        self.net.initialize(init.Xavier(rnd_type='gaussian', factor_type='in',
+                                        magnitude=2))
+```
+
+```{.python .input #generalization-deep-fitting-random-labels-4}
 %%tab pytorch
 class MLP(d2l.Classifier):
     def __init__(self, num_hiddens, lr):
@@ -169,25 +182,10 @@ class MLP(d2l.Classifier):
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        self.hidden = nnx.Linear(num_inputs, num_hiddens, kernel_init=he,
-                                 rngs=rngs)
-        self.output = nnx.Linear(num_hiddens, 10, kernel_init=he, rngs=rngs)
-
-    def forward(self, X):
-        return self.output(nnx.relu(self.hidden(X)))
-```
-
-```{.python .input #generalization-deep-fitting-random-labels-4}
-%%tab mxnet
-class MLP(d2l.Classifier):
-    def __init__(self, num_hiddens, lr):
-        super().__init__()
-        self.save_hyperparameters()
-        self.net = nn.Sequential()
-        self.net.add(nn.Dense(num_hiddens, activation='relu'), nn.Dense(10))
-        # Normal weights with variance 2 / fan_in; biases stay zero
-        self.net.initialize(init.Xavier(rnd_type='gaussian', factor_type='in',
-                                        magnitude=2))
+        self.net = nnx.Sequential(
+            nnx.Linear(num_inputs, num_hiddens, kernel_init=he, rngs=rngs),
+            nnx.relu,
+            nnx.Linear(num_hiddens, 10, kernel_init=he, rngs=rngs))
 ```
 
 `corrupt` replaces each label, with probability `fraction`, by a class drawn
@@ -215,7 +213,7 @@ d2l.plot(list(range(1, 201)), curves, 'epoch', 'accuracy',
          fmts=('C0-', 'C1-', 'C0--', 'C1--'), figsize=(5, 3))
 d2l.plt.legend(['train, true labels', 'test, true labels',
                 'train, random labels', 'test, random labels'],
-               loc='center right', bbox_to_anchor=(1, 0.4))
+               loc='center right', bbox_to_anchor=(1, 0.4));
 ```
 
 With true labels, training accuracy passes 99% after 60 to 90 epochs, and
@@ -302,17 +300,31 @@ training images with $h$ hidden units, and $\mathbf{Y} \in \mathbb{R}^{n
 \times 10}$ their one-hot labels. Fitting chooses the output weights
 $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times 10}$ to minimize the squared
 error summed over all entries, $\|\mathbf{H}\mathbf{W}^{(2)} -
-\mathbf{Y}\|_F^2$. Each output is a separate
-least-squares problem with $n$ equations and $h$ unknowns. For $h < n$ it
-has a unique solution, which usually misses some labels. At $h = n$ the
-matrix $\mathbf{H}$ is square and, like almost every random square matrix,
-invertible, so exactly one solution reproduces every label. For $h > n$
-there are infinitely many solutions that reproduce every label, and we take
-the one of smallest norm. `np.linalg.lstsq` returns this solution in all
-three cases. The width $h = n$, at which an exact fit first becomes
-possible, is the *interpolation threshold*. A network whose hidden layer
-stays at its random initialization is called a *random-features* model
-:cite:`Rahimi.Recht.2007`.
+\mathbf{Y}\|_F^2$.
+
+Each output is a separate least-squares problem with $n$ equations and $h$
+unknowns. The MLP of :numref:`subsec_random_labels` fitted 1,000 random
+labels with 256 hidden units because all of its 203,530 parameters were
+trained. With the hidden layer frozen, each output keeps only its $h$
+weights, so an exact fit of $n$ labels needs $h \geq n$. For $h < n$ the
+least-squares problem has a unique solution, which usually misses some
+labels. At $h = n$ the matrix $\mathbf{H}$ is square. Once we remove the
+hidden units that are active on almost no images, as described below, it is
+invertible like almost every random square matrix, so exactly one solution
+reproduces every label. For $h > n$ there are infinitely many solutions that
+reproduce every label, and we take the one of smallest norm.
+`np.linalg.lstsq` returns this solution in all three cases. The width
+$h = n$, at which an exact fit first becomes possible, is the
+*interpolation threshold*.
+
+A network whose hidden layer stays at its random initialization is called a
+*random-features* model :cite:`Rahimi.Recht.2007`. Very wide networks
+trained with small steps stay close to a linear model of this kind, built
+from the gradients at their initialization; this is the *lazy* or *neural
+tangent* regime :cite:`Jacot.Gabriel.Hongler.2018`. Networks used in
+practice also change their features during training. :numref:`sec_scaling`
+shows how width-dependent learning rates keep this feature learning from
+vanishing as networks grow wider.
 
 We compute the hidden representation once for 10,000 hidden units; the model
 with $h$ units uses its first $h$ columns. Since all pixels are nonnegative, a
@@ -389,12 +401,11 @@ for h in (200, 900, 1000, 1100, 10000):
           f'norm of W2 {norm[h]:6.1f}')
 ```
 
-At the threshold the smallest singular value is typically about a hundred
-times smaller than at 1,100 hidden units, and for some draws of the features
-several hundred times smaller. The norm of the solution jumps from about
-50 at 900 units to several hundred or more, often thousands, against about 40
-at 1,100 units and 3 at 10,000. Beyond
-the threshold, the norm can only shrink as units are added: an exact fit with
+At the threshold the smallest singular value is tens to hundreds of times
+smaller than at 1,100 hidden units, depending on the draw of the features.
+The norm of the solution jumps from about 50 at 900 units to several hundred
+or more, often thousands, against about 40 at 1,100 units and 3 at 10,000.
+Beyond the threshold, the norm can only shrink as units are added: an exact fit with
 $h$ hidden units remains an exact fit with $h + 1$ (give the new unit zero
 weight), so the smallest norm among the exact fits cannot grow. The
 mathematics appendix analyzes this mechanism in a smaller example
@@ -554,10 +565,10 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
 ```
 
 The two kinds of training images are fit at very different speeds. After 20
-epochs the network reproduces the labels of more than 80% of the correctly
+epochs the network reproduces the labels of 80% to 90% of the correctly
 labeled images, but those of fewer than one in five of the mislabeled ones.
 Validation accuracy peaks in this first phase, within the first 40 epochs. Then
-the network memorizes the wrong labels, nearly all of them after 100 to 160
+the network memorizes the wrong labels, nearly all of them after about 100 to 160
 epochs, and validation accuracy declines by several points. Memorizing the
 mislabeled examples costs accuracy on new images.
 
@@ -1092,9 +1103,9 @@ The minimum-norm fit is $\frac{4}{5}\mathbf{h} = (0.8, 1.6)$, norm $1.79$.
 ::: {.col .narrow}
 1,000 images, 20% of labels redrawn: about 18% wrong.
 
-- After 20 epochs: over 80% of the clean labels fit, under 20% of the
+- After 20 epochs: 80–90% of the clean labels fit, under 20% of the
   wrong ones. Validation accuracy peaks in this phase.
-- Then the wrong labels are memorized, nearly all after 100–160 epochs;
+- Then the wrong labels are memorized, nearly all after about 100–160 epochs;
   validation accuracy drops several points.
 :::
 

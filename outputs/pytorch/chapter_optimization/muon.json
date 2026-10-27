@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:466855cecfcab270f7d03ed842c47e6cb236eaa2fc244874bfc0e2bad546c1cf",
+    "d2l_lib_fingerprint": "sha256:31ab97edd56e8480f54caa178854a0bf38cc095ba3dedd78d84598f05975ebee",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
-          "bytes": 30186,
-          "sha256": "sha256:6a2a165b58cf04204f94cdd02729e3bee9e557c7981b9701be8fa77abbe34d8a"
+          "bytes": 31417,
+          "sha256": "sha256:09634d286e4dcbbf34fda57eb79c03ba68b3df544e6214b33613fe5ca7dedfd7"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.971\n"
+          "text": "lr 0.01: final loss 0.985\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.830\n"
+          "text": "lr 0.01: final loss 0.827\n"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 28627,
-          "sha256": "sha256:b9d1f846544c9f18c554c68aeeb0c84d708593c6f4e921769aece6ffdf1bfb6f"
+          "bytes": 28520,
+          "sha256": "sha256:fed82b37966697c8a1cbed4ed9b3cb12f8f0f2072e84667a754c6a0db24e4474"
         }
       ]
     },
@@ -192,8 +192,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-same-race-on-a-cnn-3-1.svg",
-          "bytes": 28752,
-          "sha256": "sha256:646868c0c031fa0c775ec8aacf343ceaa30320ed311de527dd14662a6e141a95"
+          "bytes": 28650,
+          "sha256": "sha256:cc78d0e0deed053df382f8e8c8ef8eaa3b609da607df13be2593d858ddfb569a"
         }
       ]
     },
@@ -204,7 +204,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss 0.835\n"
+          "text": "final loss 0.826\n"
         }
       ]
     }

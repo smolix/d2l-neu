@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2957b82eec9df5fcefa09cf2e7dc85262b808472d5438ab3b01fb3a09d60764a",
+    "d2l_lib_fingerprint": "sha256:34d7101f90389302918546563facb9c2f62d18fd3871040c0c4d06e282a93049",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,7 +64,18 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-3": {
-      "code_fingerprint": "sha256:8b9cb286fd0774f4c81465524ec4432d02c3b59bb642cce6458e517a60771cf0",
+      "code_fingerprint": "sha256:a614d676e31de73bfab6f0f4dc2f61c499a54f4970174a93c18fc33ebd5bad6c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Found data on value of type '<class 'list'>' assigned to static attribute 'layers' of Pytree type '<class '__main__.PlainListMLP'>'. Static attributes should not contain data values. Consider one of the following options:\n\n1. If the attribute is meant to be static, remove the data values of type(s):\n\n  Linear\n\n2. If the attribute is meant to be data, wrap the value with nnx.data  on assignment:\n\n  _.layers = nnx.data(...)\n\n3. Alternatively, annotate the class attribute with nnx.data:\n\n  class PlainListMLP(Module):\n    layers: list = nnx.data()\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n\n5. Disable pytree for this class:\n\n  class PlainListMLP(Module, pytree=False):\n\n\n"
+        }
+      ]
+    },
+    "model-construction-sequential-and-friends-containers-4": {
+      "code_fingerprint": "sha256:fc6189b55b579cc791f7a0460e85a97e3284bbe50f6fb1b8f898af6178583356",
       "kind": "text",
       "outputs": [
         {
@@ -73,24 +84,13 @@
         }
       ]
     },
-    "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:268ca6639d0518c5bf97f91f420353e80291d441e944f19c1e14ea89c12c0ac7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Found data on value of type '<class 'list'>' assigned to static attribute 'modules' of Pytree type '<class '__main__.PlainListSequential'>'. Static attributes should not contain data values. Consider one of the following options:\n\n1. If the attribute is meant to be static, remove the data values of type(s):\n\n  Linear\n\n2. If the attribute is meant to be data, wrap the value with nnx.data  on assignment:\n\n  _.modules = nnx.data(...)\n\n3. Alternatively, annotate the class attribute with nnx.data:\n\n  class PlainListSequential(Module):\n    modules: list = nnx.data()\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n\n5. Disable pytree for this class:\n\n  class PlainListSequential(Module, pytree=False):\n\n\n"
-        }
-      ]
-    },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:7a9ffb89318df93cd76df1d789433fa314e8e9f3b9984df66ec2724d4e98612f",
+      "code_fingerprint": "sha256:0f57933b49becdff015ed8873eaca581098c984833d7f9b3f9dc3c2ecebb240c",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:2f8ff08edff0d0939cc619d9f7a5755139864fb3e06086d414b02f5e842bff90",
+      "code_fingerprint": "sha256:7f4cc4b47c567672f99ac220c0f280dcae02c4ba709d266a63f0c069f14e535d",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:94822ac8c0ee2be6837807177c4730aba75a6c4bc8ce084d8afdae724b517e11",
+      "code_fingerprint": "sha256:e23820e4f82ff6bf58e76cd61548e3bf1eeabebc0d41a7f58d419a9d95972492",
       "kind": "text",
       "outputs": [
         {
@@ -110,18 +110,18 @@
       ]
     },
     "model-construction-forward-is-just-python-4": {
-      "code_fingerprint": "sha256:512e3a2fad5b84f2cc3c3253186acf8c4f9b4fa6cb0bdf69bcdef82bc6dbe3fd",
+      "code_fingerprint": "sha256:99022476e4f1e1296cf3daf1096624b7d4e9619c12d4a7844957bb37c4370858",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.017718628\nTracerBoolConversionError\n"
+          "text": "0.10833369\nTracerBoolConversionError\n"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:de3b84cda4504edd7a9290affb8032c516e25775c1f0c4311956e2de7d579d4f",
+      "code_fingerprint": "sha256:fbf9996981de7105bec6754da9d15e8493b4b7316b97a8b414cbcf931580e948",
       "kind": "text",
       "outputs": [
         {
@@ -131,7 +131,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:dbfdb83e1f097626d493b11940a5547c215ed783d2009ccd07f7f2f8f114e03c",
+      "code_fingerprint": "sha256:1e423fd96de2a076ffbec73799370f90b13d6e88a3a257970956d0da3d4dc366",
       "kind": "text",
       "outputs": [
         {
@@ -141,12 +141,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:59ea063ec0228d23d6374f040360031342899a11ec0e6c1a74c5258ece28fddf",
+      "code_fingerprint": "sha256:b48e93a822b1d78a18208a18a6b89118a86cef5bee85f6bc2a9ffea2a591d003",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:31a6020e33c7ce47e9cde831d4fde91edaa36642788f3bbac1a419cc32cb4c41",
+      "code_fingerprint": "sha256:782bac4f1153897af2723d138240157d5a17452f37ef114b2a1641a096df85ae",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +156,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:8078e6a87cdf5e35fcfd71ec791b075daa695c2b7ab81a5e7f7d34811c4b103d",
+      "code_fingerprint": "sha256:a8e19de6497928ff2c5d1192b10ee7c8adda8fa8791d7550ceec3e57ce2d21cc",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:193e89148d810d37f2123c69d9fa41f296a825f93195c5f606c018c5e27a9126",
+      "code_fingerprint": "sha256:a33a3809260424983d64a04558dff69a4f41f46e315ef20ca1ee8b080231f7a1",
       "kind": "text",
       "outputs": [
         {

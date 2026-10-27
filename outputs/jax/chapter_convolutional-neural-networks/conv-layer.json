@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:b52ecc34beb157ac80d4d84a3e2608ca2939d5ec55553e7b1233fa89a15462bc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 12.000\nstep 3, loss 0.825\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 12.100\nstep 3, loss 0.832\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,12 +95,12 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.98819196, -0.98875034]], dtype=float32)"
+          "text": "Array([[ 0.98869485, -0.988151  ]], dtype=float32)"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:f2def2cd3b2aceb482445c6d0d9d32c6649b212d39b51e5d1f0ec144ce41fb37",
+      "code_fingerprint": "sha256:7f5ca53c0a7eb0f0f6b8fa7c7d358a35ee2d47c43f6788622a8a2a32b3697a52",
       "kind": "text",
       "outputs": [
         {

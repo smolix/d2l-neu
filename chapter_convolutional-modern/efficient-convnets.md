@@ -133,7 +133,7 @@ original block rather than the inverted bottleneck because it shows the
 factorization most directly. The function below builds the pair of
 :numref:`fig_dws_block`; a stride of 2 downsamples. Every convolution in the
 networks of this section is followed by batch normalization, which has its
-own shift, so the convolutions carry no bias. Each tab initializes all
+own shift, so the convolutions carry no bias. We initialize all
 convolution and linear weights with the He initialization of
 :numref:`sec_numerical_stability`, a normal distribution with variance
 $2/n_\textrm{in}$, where $n_\textrm{in}$ is the number of inputs to each
@@ -183,7 +183,7 @@ def he_init():
 def dws_block(out_channels, strides=1):
     """Depthwise 3x3 and pointwise 1x1 convolutions, each with BN and ReLU."""
     return tf.keras.Sequential([
-        tf.keras.layers.ZeroPadding2D(1),  # Pad 1 on every side, as in PyTorch
+        tf.keras.layers.ZeroPadding2D(1),  # Pad 1 on every side
         tf.keras.layers.DepthwiseConv2D(  # Each unit sees n_in = 3 x 3 inputs
             3, strides, use_bias=False,
             depthwise_initializer=tf.keras.initializers.RandomNormal(
@@ -199,6 +199,9 @@ def dws_block(out_channels, strides=1):
 ```{.python .input #efficient-convnets-a-mini-mobilenet-1}
 %%tab jax
 he_init = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+
+def global_avg_pool(X):  # Average over height and width (NHWC)
+    return X.mean(axis=(1, 2))
 
 class DWSBlock(nnx.Module):
     """Depthwise 3x3 and pointwise 1x1 convolutions, each with BN and ReLU."""
@@ -229,13 +232,16 @@ the class scores. We train with stochastic gradient descent with momentum 0.9,
 which steps along an exponentially weighted sum of recent gradients instead of
 the latest gradient alone; when successive gradients agree, its steps are about
 $1/(1-0.9) = 10$ times longer than plain gradient steps at the same rate
-(:numref:`sec_momentum` treats momentum fully). As for batch normalization in
-:numref:`sec_batch_norm`, the learning rate decays to zero along a half cosine,
+(:numref:`sec_momentum` treats momentum fully). This optimizer, whose
+momentum lengthens its steps, is stronger than the plain SGD of
+:numref:`sec_resnet`, so the accuracies below are not comparable with
+ResNet-18's there. As for the networks of this chapter since AlexNet
+(:numref:`sec_alexnet`), the learning rate decays to zero along a half cosine,
 here without warmup: it starts at `lr` and reaches zero after the `num_steps`
 minibatches of training (4,690 for 10 epochs). With a constant rate the test
 accuracy wobbles by one to three points from epoch to epoch; the decay makes
-the accuracy at the end of training reproducible. Each framework provides this
-schedule as a built-in.
+the accuracy at the end of training reproducible. The schedule is a built-in
+of the framework.
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-2}
 %%tab mxnet
@@ -334,7 +340,7 @@ class MiniMobileNet(d2l.Classifier):
         for c_out, strides in arch:
             layers.append(DWSBlock(c, c_out, strides, rngs=rngs))
             c = c_out
-        layers += [lambda X: X.mean(axis=(1, 2)),  # Global average pooling
+        layers += [global_avg_pool,
                    nnx.Linear(c, num_classes, kernel_init=he_init,
                               rngs=rngs)]
         self.net = nnx.Sequential(*layers)
@@ -513,8 +519,8 @@ class VGGSmall(d2l.Classifier):
                                          use_fast_variance=False, rngs=rngs),
                            nnx.relu]
                 c = c_out
-            layers.append(lambda X: nnx.max_pool(X, (2, 2), (2, 2)))
-        layers += [lambda X: X.mean(axis=(1, 2)),  # Global average pooling
+            layers.append(max_pool)
+        layers += [global_avg_pool,
                    nnx.Linear(c, num_classes, kernel_init=he_init,
                               rngs=rngs)]
         self.net = nnx.Sequential(*layers)
@@ -522,6 +528,9 @@ class VGGSmall(d2l.Classifier):
     def configure_optimizers(self):
         schedule = optax.cosine_decay_schedule(self.lr, self.num_steps)
         return optax.sgd(schedule, momentum=0.9)
+
+def max_pool(X):  # 2x2 windows, stride 2
+    return nnx.max_pool(X, (2, 2), (2, 2))
 ```
 
 Before training, we count the arithmetic. A convolution with "same"
@@ -675,18 +684,18 @@ for name, model in models.items():
           f'{forward_ms(model):.1f} ms per batch')
 ```
 
-:numref:`tab_dws_vs_dense` collects the results. The accuracies are the
-range over repeated runs in all four frameworks, and the time ratio is the
-range of the VGG-style network's forward time divided by the mini-MobileNet's.
+:numref:`tab_dws_vs_dense` collects the results. The accuracies are the range
+over repeated runs, and the time ratio is the range of the VGG-style network's
+forward time divided by the mini-MobileNet's.
 
 :Mini-MobileNet against a dense VGG-style network with about the same number
 of parameters (Fashion-MNIST at $96 \times 96$, 10 epochs; test accuracy and
-forward-pass time ratio over three runs in each framework).
+forward-pass time ratio over repeated runs).
 :label:`tab_dws_vs_dense`
 
 | Model | Parameters | Multiply-adds | Test accuracy | Forward time |
 |---|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | 91.5–92% | 1 |
+| Mini-MobileNet | 542,474 | 50.3 million | 91–92% | 1 |
 | VGG-style | 583,594 | 384.9 million | 93.5–94% | 2–3.5 |
 
 At the same parameter budget the dense network is about two points more
@@ -904,15 +913,16 @@ def fuse_bn(W, bn, eps=1e-5):
 
 def fuse_block(blk):
     c = blk.conv3.weight.shape[0]
-    W1 = mnp.zeros((c, c, 3, 3))
+    device = blk.conv3.weight.data().device  # Build the fused layer there
+    W1 = mnp.zeros((c, c, 3, 3), device=device)
     W1[:, :, 1, 1] = blk.conv1.weight.data().reshape(c, c)
-    I = mnp.zeros((c, c, 3, 3))
-    I[:, :, 1, 1] = mnp.eye(c)
+    I = mnp.zeros((c, c, 3, 3), device=device)
+    I[:, :, 1, 1] = mnp.eye(c, device=device)
     W3, b3 = fuse_bn(blk.conv3.weight.data(), blk.bn3)
     W1, b1 = fuse_bn(W1, blk.bn1)
     W0, b0 = fuse_bn(I, blk.bn0)
     fused = nn.Conv2D(c, kernel_size=3, padding=1, in_channels=c)
-    fused.initialize()
+    fused.initialize(device=device)
     fused.weight.set_data(W3 + W1 + W0)
     fused.bias.set_data(b3 + b1 + b0)
     return fused
@@ -930,10 +940,10 @@ def fuse_block(blk):
     c = blk.conv3.weight.shape[0]
     W3, b3 = fuse_bn(blk.conv3.weight, blk.bn3)
     W1, b1 = fuse_bn(F.pad(blk.conv1.weight, (1, 1, 1, 1)), blk.bn1)
-    I = torch.zeros(c, c, 3, 3)
+    I = torch.zeros_like(W3)  # On the device of the block
     I[torch.arange(c), torch.arange(c), 1, 1] = 1.0
     W0, b0 = fuse_bn(I, blk.bn0)
-    fused = nn.Conv2d(c, c, kernel_size=3, padding=1)
+    fused = nn.Conv2d(c, c, kernel_size=3, padding=1, device=W3.device)
     fused.weight.copy_(W3 + W1 + W0)
     fused.bias.copy_(b3 + b1 + b0)
     return fused
@@ -1085,7 +1095,7 @@ Efficient convnets treat cost as a design objective alongside accuracy.
 Depthwise-separable convolutions cut the arithmetic of a layer to
 $1/c_\textrm{o} + 1/k^2$ of a dense convolution, and the inverted bottleneck
 arranges them so that the tensors kept between blocks are the narrow ones.
-On Fashion-MNIST, a mini-MobileNet comes within two points of a dense
+On Fashion-MNIST, a mini-MobileNet comes about two points short of a dense
 network with the same number of parameters while performing 7.7 times fewer
 multiply-adds, but its forward pass is only 2 to 3.5 times faster, because
 depthwise convolutions perform little arithmetic per value they read from
@@ -1374,7 +1384,7 @@ initialization, same head:
 @!efficient-convnets-training-and-comparison-4
 
 ::: {.d2l-note}
-All four frameworks, repeated runs: mini-MobileNet 91.5–92%, VGG-style
+Repeated runs: mini-MobileNet 91–92%, VGG-style
 93.5–94%, with 7.7× the arithmetic. At equal arithmetic (widths ÷2.8) the
 dense net would have 76k parameters against 542k.
 :::
@@ -1387,8 +1397,8 @@ dense net would have 76k parameters against 542k.
   multiply-adds per input value read. Enough to keep a GPU busy.
 - Depthwise $3\times 3$: 9 multiply-adds per value read. The GPU waits on
   memory.
-- Forward pass, batch of 128: the VGG-style network takes 2–3.5× as long
-  in every framework.
+- Forward pass, batch of 128: the VGG-style network takes 2–3.5× as
+  long.
 
 ::: {.d2l-note .warn}
 Multiply-adds are a proxy for time. How good a proxy depends on the
@@ -1551,7 +1561,7 @@ $\gamma_o = 1$, $\beta_o = 0$. What are the folded kernel and bias?
 
 - Separable layer: $1/c_\textrm{o} + 1/k^2$ of a dense one; dense blocks
   would need 4.7M weights instead of 0.53M.
-- Equal parameters: 50.3M vs 384.9M multiply-adds, 91.5–92% vs 93.5–94%,
+- Equal parameters: 50.3M vs 384.9M multiply-adds, 91–92% vs 93.5–94%,
   yet only 2–3.5× less time (depthwise layers are memory-bound).
 - Compound scaling: cost $d\,w^2 r^2$, $\alpha\beta^2\gamma^2\approx 2$.
 - RepVGG: fold BN, pad $1\times 1$ and identity to $3\times 3$, add;

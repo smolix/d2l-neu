@@ -135,8 +135,10 @@ class G_block(nnx.Module):
             kernel_size=(kernel_size, kernel_size),
             strides=(strides, strides), padding=padding, use_bias=False,
             kernel_init=nnx.initializers.normal(0.02), rngs=rngs)
-        self.batch_norm = nnx.BatchNorm(out_channels,
-                                        scale_init=bn_scale_init, rngs=rngs)
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.batch_norm = nnx.BatchNorm(
+            out_channels, momentum=0.9, use_fast_variance=False,
+            scale_init=bn_scale_init, rngs=rngs)
 
     def __call__(self, X):
         return nnx.relu(self.batch_norm(self.conv2d_trans(X)))
@@ -236,8 +238,10 @@ class D_block(nnx.Module):
             kernel_size=(kernel_size, kernel_size),
             strides=(strides, strides), padding=padding, use_bias=False,
             kernel_init=nnx.initializers.normal(0.02), rngs=rngs)
-        self.batch_norm = nnx.BatchNorm(out_channels,
-                                        scale_init=bn_scale_init, rngs=rngs)
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.batch_norm = nnx.BatchNorm(
+            out_channels, momentum=0.9, use_fast_variance=False,
+            scale_init=bn_scale_init, rngs=rngs)
 
     def __call__(self, X):
         return nnx.leaky_relu(self.batch_norm(self.conv2d(X)),
@@ -941,7 +945,10 @@ class FeatureCNN(nnx.Module):
         self.convs = nnx.List(
             [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
              for c_in, c_out in zip(widths[:-1], widths[1:])])
-        self.norms = nnx.List([nnx.BatchNorm(c, rngs=rngs)
+        # Running averages decay 0.9; the variance is computed in two passes
+        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
+                                             use_fast_variance=False,
+                                             rngs=rngs)
                                for c in widths[1:]])
         self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
 

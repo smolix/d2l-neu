@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
-          "bytes": 71874,
-          "sha256": "sha256:3c19ea2e9fcee477792a64ec1d7023390a0b5e963a66457f2a76350cdeffecee"
+          "bytes": 71801,
+          "sha256": "sha256:1e12a88e8a2a254a5f75064d4d5c333d5008d99daf21f38d0c894c55ea34ab54"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
-          "bytes": 245349,
-          "sha256": "sha256:26f0c36128b1632728a0917b046ac4a95cf645dba7a73f20c88fc50aaf938610"
+          "bytes": 245140,
+          "sha256": "sha256:c9e733f18c1742da1ddd306cfef90435715e28ea4f6fe76eee0a9b0db7ce73a2"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
-          "bytes": 25825,
-          "sha256": "sha256:3a39dd5d955afe467b34030aa60ddc414d1d52a1deedb7509d57b8fff45f5bbc"
+          "bytes": 25799,
+          "sha256": "sha256:52f0e9a2cdafb968b204606f4a6d6d2db570beab3c36617acb0618e94eb53023"
         }
       ]
     },
@@ -118,8 +118,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
-          "bytes": 43149,
-          "sha256": "sha256:9df1f1157772a22855b4ddbe0451113cd1035cb6c0c7569f520030de8c90f3ed"
+          "bytes": 43160,
+          "sha256": "sha256:bb6a971a8ee41b298ac66caeb24360ae1a431ed677d23a3d47a83439c0b07716"
         }
       ]
     }

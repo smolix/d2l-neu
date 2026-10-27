@@ -208,8 +208,8 @@ ranking because exposure is missing-not-at-random.
 
 Two pairwise losses for this:
 
-- **BPR** (Bayesian Personalized Ranking, Rendle et al.
-  2009) — log-sigmoid of score margin:
+- **BPR** (Bayesian Personalized Ranking, Rendle et al. 2009) —
+  log-sigmoid of score margin:
   $-\log \sigma(\hat r_{ui} - \hat r_{uj})$ for sampled
   negatives $j$.
 - **Hinge** — max-margin variant:

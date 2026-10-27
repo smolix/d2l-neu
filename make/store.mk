@@ -26,10 +26,12 @@ verify-outputs-fresh:
 # freshness-disagreement trap on a tmp fixture and asserts all three defenses:
 # the audit flags the lib-stale stamp, `refresh-stale`'s stamp-removal forces a
 # re-run, and the capture-side guard refuses to bless the stale outputs. Never
-# touches the committed store. See docs/build-system.md §3.3.
+# touches the committed store. See docs/build-system.md §3.3. Also runs
+# tools/test_freshness_deps.py: shard naming, the transitive .d closure, and
+# the no-manifest rule (§3.4).
 test-trap:
 	@mkdir -p $(LOGDIR)
-	@python3 tools/test_refresh_stale_trap.py 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
+	@{ python3 tools/test_refresh_stale_trap.py && python3 tools/test_freshness_deps.py; } 2>&1 | tee $(LOGDIR)/test-trap-$(TS).log
 
 # Re-execute exactly what the audit reports stale, then re-capture those files.
 # Execution goes through the unified scheduler (parallel GPU/CPU dispatch),

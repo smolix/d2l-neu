@@ -37,7 +37,8 @@ AlexNet's parameters sit in two fully connected layers.
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=2}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import init, npx
+import math
+from mxnet import gluon, init, npx
 from mxnet.gluon import nn
 npx.set_np()
 ```
@@ -45,6 +46,7 @@ npx.set_np()
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=3}
 %%tab pytorch
 from d2l import torch as d2l
+import math
 import torch
 from torch import nn
 ```
@@ -52,6 +54,7 @@ from torch import nn
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=4}
 %%tab tensorflow
 from d2l import tensorflow as d2l
+import math
 import tensorflow as tf
 ```
 
@@ -60,6 +63,7 @@ import tensorflow as tf
 from d2l import jax as d2l
 from flax import nnx
 from jax import numpy as jnp
+import optax
 ```
 
 ## Learned Features, Data, and Hardware
@@ -191,16 +195,16 @@ trained; :numref:`sec_training_recipes` returns to it.
 
 ### Implementation
 
-The code mirrors :numref:`fig_alexnet` from bottom to top. We initialize
-the weights explicitly so that all four frameworks start from the same
-distribution. LeNet's Xavier initialization keeps the variance of the
-activations constant through linear layers; a ReLU sets about half of its
-inputs to zero and halves the second moment of what passes through it. *He
-initialization* (:numref:`subsec_he_init`) compensates by doubling the
-variance: every weight of a layer with $n_\textrm{in}$ inputs per output is
-drawn from a normal distribution with mean zero and variance
-$2/n_\textrm{in}$, where $n_\textrm{in} = c_\textrm{i} k^2$ for a
-convolution. All biases start at zero.
+The code mirrors :numref:`fig_alexnet` from bottom to top. We initialize the
+weights explicitly instead of relying on the library's defaults. LeNet's
+Xavier initialization keeps the variance of the activations constant through
+linear layers; a ReLU sets about half of its inputs to zero and halves the
+second moment of what passes through it. *He initialization*
+(:numref:`subsec_he_init`) compensates by doubling the variance: every weight
+of a layer with $n_\textrm{in}$ inputs per output is drawn from a normal
+distribution with mean zero and variance $2/n_\textrm{in}$, where
+$n_\textrm{in} = c_\textrm{i} k^2$ for a convolution. All biases start at
+zero.
 
 :begin_tab:`mxnet`
 `init.MSRAPrelu('in', 0)` draws normal weights with variance
@@ -229,7 +233,7 @@ initializer; Flax initializes biases to zero.
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab mxnet
 class AlexNet(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.HybridSequential()
@@ -252,7 +256,7 @@ class AlexNet(d2l.Classifier):
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab pytorch
 class AlexNet(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.Sequential(
@@ -278,7 +282,7 @@ class AlexNet(d2l.Classifier):
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab tensorflow
 class AlexNet(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10):
         super().__init__()
         self.save_hyperparameters()
         layers = tf.keras.layers
@@ -310,7 +314,8 @@ class AlexNet(d2l.Classifier):
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1}
 %%tab jax
 class AlexNet(d2l.Classifier):
-    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+    def __init__(self, lr=0.1, num_steps=4690, num_classes=10,
+                 rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
         rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
@@ -321,6 +326,9 @@ class AlexNet(d2l.Classifier):
         def max_pool(x):  # 3x3 windows, stride 2
             return nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2))
 
+        def flatten(x):  # One vector per example
+            return x.reshape((x.shape[0], -1))
+
         self.net = nnx.Sequential(
             nnx.Conv(1, 96, kernel_size=(11, 11), strides=4, padding='VALID',
                      **init), nnx.relu, max_pool,
@@ -330,7 +338,7 @@ class AlexNet(d2l.Classifier):
             nnx.Conv(384, 384, kernel_size=(3, 3), **init), nnx.relu,
             nnx.Conv(384, 256, kernel_size=(3, 3), **init), nnx.relu,
             max_pool,
-            lambda x: x.reshape((x.shape[0], -1)),  # flatten 5x5x256
+            flatten,  # 5 x 5 x 256 values per image
             nnx.Linear(5 * 5 * 256, 4096, **init), nnx.relu,
             nnx.Dropout(0.5, rngs=rngs),
             nnx.Linear(4096, 4096, **init), nnx.relu,
@@ -404,25 +412,123 @@ Upsampling multiplies the number of pixels by 64 without adding
 information; we accept the cost to train the architecture as it is.
 
 We train with minibatch SGD for 10 epochs, a third of LeNet's 30, with
-minibatches of 128 images and a learning rate of 0.01. LeNet's sigmoids
-needed a learning rate of 2.0 to move its first layers at all; with ReLUs the
-gradient no longer shrinks at every layer, and a much smaller rate suffices.
+minibatches of 128 images. LeNet's sigmoids needed a learning rate of 2.0 to
+move its first layers at all; with ReLUs the gradient no longer shrinks at
+every layer, and a much smaller rate suffices.
+
+We also change the learning rate during training, as AlexNet's authors did:
+they divided it by 10 whenever the validation error stopped improving. At
+the start the weights are random, and a full-size step can throw the network
+into a region from which it recovers only slowly. At the end, a large rate
+keeps the weights jumping around a good solution instead of settling into
+it. A common schedule handles both ends. A linear *warmup* raises the rate
+from zero to its peak $\eta_0$ over the first $t_\textrm{w}$ steps, and a
+half-cosine then lowers it to zero at the last step $T$:
+
+$$
+\eta_t = \frac{\eta_0}{2} \left(1 + \cos \frac{\pi (t - t_{\textrm{w}})}{T - t_{\textrm{w}}}\right)
+\quad \textrm{for } t \geq t_{\textrm{w}}.
+$$
+:eqlabel:`eq_cosine_warmup`
+
+At $t = t_\textrm{w}$ the cosine is 1 and the rate is $\eta_0$; halfway
+through the decay it is $\eta_0/2$; at $t = T$ it is zero. Since the first
+steps are small, the peak can be higher than a rate that would be safe from
+the first step on; we use 0.03. The function `cosine_warmup` returns the
+factor by which the schedule multiplies the peak rate at step $t$; we save
+it in the `d2l` package for later sections. :numref:`sec_scheduler`
+compares learning-rate schedules in depth.
+
+```{.python .input #alexnet-training-on-fashion-mnist-1}
+%%tab mxnet, pytorch
+def cosine_warmup(t, num_steps, warmup_steps):  #@save
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
+    if t < warmup_steps:
+        return t / warmup_steps
+    progress = (t - warmup_steps) / (num_steps - warmup_steps)
+    return 0.5 * (1 + math.cos(math.pi * progress))
+```
+
+```{.python .input #alexnet-training-on-fashion-mnist-1}
+%%tab tensorflow
+def cosine_warmup(t, num_steps, warmup_steps):  #@save
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
+    t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
+    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
+    progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
+```
+
+```{.python .input #alexnet-training-on-fashion-mnist-1}
+%%tab jax
+def cosine_warmup(t, num_steps, warmup_steps):  #@save
+    """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
+    warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
+    progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
+```
+
+`AlexNet` steps the schedule after every minibatch. Its argument
+`num_steps` is $T$, the number of minibatches in the whole run, and the
+warmup covers the first tenth of them: one epoch of the ten.
+
+```{.python .input #alexnet-training-on-fashion-mnist-2}
+%%tab mxnet
+@d2l.add_to_class(AlexNet)
+def configure_optimizers(self):
+    schedule = lambda t: self.lr * cosine_warmup(  # MXNet counts from 1
+        t - 1, self.num_steps, self.num_steps // 10)
+    return gluon.Trainer(self.collect_params(), 'sgd', {
+        'learning_rate': None, 'lr_scheduler': schedule})
+```
+
+```{.python .input #alexnet-training-on-fashion-mnist-2}
+%%tab pytorch
+@d2l.add_to_class(AlexNet)
+def configure_optimizers(self):
+    optim = torch.optim.SGD(self.parameters(), lr=self.lr)
+    schedule = torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
+        cosine_warmup(t, self.num_steps, self.num_steps // 10)))
+    return optim, schedule  # The Trainer steps it after every minibatch
+```
+
+```{.python .input #alexnet-training-on-fashion-mnist-2}
+%%tab tensorflow
+@d2l.add_to_class(AlexNet)
+def configure_optimizers(self):
+    schedule = lambda: self.lr * cosine_warmup(
+        optim.iterations, self.num_steps, self.num_steps // 10)
+    optim = tf.keras.optimizers.SGD(schedule)
+    return optim
+```
+
+```{.python .input #alexnet-training-on-fashion-mnist-2}
+%%tab jax
+@d2l.add_to_class(AlexNet)
+def configure_optimizers(self):
+    return optax.sgd(lambda t: self.lr * cosine_warmup(
+        t, self.num_steps, self.num_steps // 10))
+```
 
 ```{.python .input #alexnet-training  n=8}
-model = AlexNet(lr=0.01)
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
+model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-AlexNet reaches a validation accuracy of about 89–90% after 10 epochs, and
-the training and validation losses stay close throughout. LeNet reaches about
-88–90% after 30 epochs. On these images the larger network reaches LeNet's
-accuracy in a third of the epochs but does not classify much better, while
-it performs 2,250 times the arithmetic per image: the upsampled
-$224 \times 224$ images hold no more information than the $28 \times 28$
-originals. AlexNet's extra capacity helps on ImageNet, whose images
-carry far more detail and whose 1000 classes are far harder to tell apart.
+AlexNet reaches a validation accuracy of about 91% after 10 epochs, with a
+training loss of about 0.22 and a validation loss of about 0.25. Over the last
+epochs, as the learning rate approaches zero, the accuracy changes by less
+than a point from one epoch to the next, so the last epoch is a fair summary
+of the run.
+LeNet reaches about 88–90% after 30 epochs. On these images the larger
+network passes LeNet's accuracy in a third of the epochs, but only by a
+point or two, while it performs 2,250 times the arithmetic per image: the
+upsampled $224 \times 224$ images hold no more information than the
+$28 \times 28$ originals. AlexNet's extra capacity helps on ImageNet, whose
+images carry far more detail and whose 1000 classes are far harder to tell
+apart.
 
 The count of :numref:`tab_alexnet_cost` also shows where that capacity sits.
 Nine of every ten parameters belong to the fully connected head, which
@@ -440,8 +546,9 @@ activations, max-pooling, and dropout; ImageNet's 1.2 million labeled images
 and two GPUs made a network of 60 million parameters trainable in days.
 Counting its layers shows that the convolutions perform 95% of the
 arithmetic while the fully connected head holds 92% of the parameters. On
-Fashion-MNIST, AlexNet matches LeNet's accuracy in a third of the epochs at
-2,250 times the arithmetic per image.
+Fashion-MNIST, trained with a learning rate that warms up and then decays to
+zero, AlexNet passes LeNet's accuracy by a point or two in a third of the
+epochs, at 2,250 times the arithmetic per image.
 
 ## Exercises
 
@@ -695,7 +802,7 @@ channels.
 - Sigmoid: $\sigma'(x) = \sigma(x)(1 - \sigma(x)) \le \tfrac14$; the
   $K$ sigmoid factors on the backward path multiply to at most $4^{-K}$.
 - ReLU: $\max(x, 0)$ has derivative 1 for every $x > 0$.
-- LeNet needed learning rate 2.0; AlexNet trains with 0.01.
+- LeNet needed learning rate 2.0; AlexNet trains with a peak of 0.03.
 - Small CIFAR-10 convnet: 25% training error **6× faster** with ReLU
   than with tanh.
 :::
@@ -761,7 +868,21 @@ The dense head is 170 MB in float32 and does 5% of the work.
 | parameters | 61,706 | 46.8 M |
 | multiply-adds per image | 0.42 M | 938 M |
 | activation | sigmoid | ReLU |
-| learning rate, epochs | 2.0, 30 | 0.01, 10 |
+| learning rate, epochs | 2.0, 30 | peak 0.03, 10 |
+:::
+
+::: {.slide title="Warm Up, Then Decay the Learning Rate to Zero"}
+[Training]{.kicker}
+
+- **Warmup:** the rate rises linearly from 0 to its peak $\eta_0$ over
+  the first $t_\textrm{w}$ steps. Small first steps while the weights are
+  random; the peak can then be higher.
+- **Decay:** a half-cosine from $\eta_0$ to 0 at the last step $T$:
+  $\eta_t = \tfrac{\eta_0}{2}\bigl(1 + \cos\tfrac{\pi(t - t_\textrm{w})}{T - t_\textrm{w}}\bigr)$.
+  Small last steps let the weights settle.
+- AlexNet's authors divided the rate by 10 by hand; the cosine does it
+  smoothly, with nothing to tune but $\eta_0$ and $t_\textrm{w}$.
+- Stepped after every minibatch; warmup over the first epoch of 10.
 :::
 
 ::: {.slide title="Upsample 28×28 to 224×224 and Train for 10 Epochs"}
@@ -771,16 +892,16 @@ The dense head is 170 MB in float32 and does 5% of the work.
 
 - Upsampling multiplies the pixels by 64 and adds no information; it
   keeps the architecture unchanged.
-- Minibatch SGD, 128 images, learning rate 0.01; He-normal weights
-  (variance $2/n_\textrm{in}$), zero biases in every framework.
+- Minibatch SGD, 128 images, peak learning rate 0.03; He-normal weights
+  (variance $2/n_\textrm{in}$), zero biases.
 :::
 
-::: {.slide title="AlexNet Matches LeNet's Accuracy in a Third of the Epochs"}
+::: {.slide title="AlexNet Passes LeNet's Accuracy in a Third of the Epochs"}
 [Training]{.kicker}
 
 @!alexnet-training
 
-About 89–90% after 10 epochs; LeNet reaches 88–90% after 30.
+About 91% after 10 epochs; LeNet reaches 88–90% after 30.
 :::
 
 ::: {.slide title="Check: How Large Is the 6400 × 4096 Matrix?"}
@@ -808,8 +929,8 @@ the arithmetic.
   dense head.
 - **Cost:** convolutions do 95% of the 938 M multiply-adds; the head holds
   92% of the 46.8 M parameters.
-- **Fashion-MNIST:** ≈ 89–90% in 10 epochs, LeNet's accuracy at 2,250×
-  the arithmetic.
+- **Fashion-MNIST:** ≈ 91% in 10 epochs with warmup and cosine decay, a
+  point or two above LeNet at 2,250× the arithmetic.
 
 **Next:** blocks, and networks without the giant dense head.
 :::

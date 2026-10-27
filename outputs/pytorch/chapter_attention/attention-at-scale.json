@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:114b1bcc0593c83fa7f2e3a25320e7e635d63602ebb88854e808e19c71c77da5",
+    "d2l_lib_fingerprint": "sha256:8150fbb1b11c45abe8f6fd51a809f0e98a15252b6cf79102998939a734778012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048:   0.12 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\nn = 16384:   7.37 ms\n"
+          "text": "n =  2048:   0.13 ms\nn =  4096:   0.49 ms\nn =  8192:   1.84 ms\nn = 16384:   7.47 ms\n"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
-          "bytes": 31289,
-          "sha256": "sha256:d8abc97efaca894a08fea918096ebef34cbf8b635da48c200b3a36634bbf59c1"
+          "bytes": 28795,
+          "sha256": "sha256:95774bb98afe20504f68cc9649bb7e3bed663562b214526f941f24a69d9306a3"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:  19.82 ms, peak memory  4112.1 MiB\nfused:   1.09 ms, peak memory    16.5 MiB\n"
+          "text": "naive:  19.82 ms, peak memory  4112.1 MiB\nfused:   1.06 ms, peak memory    16.5 MiB\n"
         }
       ]
     },
@@ -83,8 +83,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
-          "bytes": 18052,
-          "sha256": "sha256:ceb27391eb4232fad21307c8e93c66cbe3ee366cc93ed9ca23293012eab8df2a"
+          "bytes": 18018,
+          "sha256": "sha256:876c56394a94d6abf5bb6487f2d162dbba75d7f7f93287159f8844b6115ff33a"
         }
       ]
     },
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
-          "bytes": 103391,
-          "sha256": "sha256:1495199931e4ffade15f191f2398beafc006471645796fd4e06644f12b263a61"
+          "bytes": 102152,
+          "sha256": "sha256:95701eff768e581d01d0f265cf37fa04265dee8fcd128b37222359e7e1135f39"
         }
       ]
     },
@@ -146,8 +146,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 55126,
-          "sha256": "sha256:be462d3bac1368f101eedcabc2d10041f521baa53dd0075e54f3585caf014d20"
+          "bytes": 55027,
+          "sha256": "sha256:753161e4212785174bfa412e6048fceb928f04f783a9fd51071e2a25a0c7b6a6"
         }
       ]
     }

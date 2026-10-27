@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:aebec2776edb0e510b26c3f0e1ff44589ad7e3914e9b13a5e57e78eb5064f34b",
+    "d2l_lib_fingerprint": "sha256:f7cf716cdb93557a95244692bcfa32fcd9cf0fa906a69148e8e6f5656d0c0339",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.79, 1.00 sec/epoch on 1 GPU(s)\n"
+          "text": "test acc 0.77, 1.13 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.79, 1.15 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.74, 1.09 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "psum 5.22 GB/s effective over 102.9 ms\n"
+          "text": "psum 6.81 GB/s effective over 78.9 ms\n"
         }
       ]
     }

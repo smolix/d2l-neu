@@ -56,6 +56,7 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
+import optax
 import random
 import time
 ```
@@ -76,7 +77,9 @@ $\mathbf{W}_{\textrm{xh}}$, the hidden-to-hidden weights
 $\mathbf{W}_{\textrm{hh}}$, and the bias $\mathbf{b}_\textrm{h}$. The number
 of hidden units `num_hiddens` is a tunable hyperparameter, and `num_inputs`
 is the width of the vectors arriving at each step, which will shortly be the
-embedding dimension.
+embedding dimension. As in :numref:`sec_linear_scratch`, we register the
+weights with the framework's parameter type, so that the optimizer finds
+them and the trainer can move them to a GPU.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-1}
 %%tab pytorch
@@ -99,10 +102,13 @@ class RNNScratch(d2l.Module):  #@save
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W_xh = d2l.randn(num_inputs, num_hiddens) * sigma
-        self.W_hh = d2l.randn(
-            num_hiddens, num_hiddens) * sigma
-        self.b_h = d2l.zeros(num_hiddens)
+        self.W_xh = gluon.Parameter('W_xh', shape=(num_inputs, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.W_hh = gluon.Parameter('W_hh', shape=(num_hiddens, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.b_h = gluon.Parameter('b_h', shape=(num_hiddens,),
+                                   init=init.Zero())
+        self.initialize()
 ```
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-1}
@@ -112,11 +118,13 @@ class RNNScratch(d2l.Module):  #@save
     def __init__(self, num_inputs, num_hiddens, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        self.W_xh = tf.Variable(d2l.normal(
-            (num_inputs, num_hiddens)) * sigma)
-        self.W_hh = tf.Variable(d2l.normal(
-            (num_hiddens, num_hiddens)) * sigma)
-        self.b_h = tf.Variable(d2l.zeros(num_hiddens))
+        normal = tf.keras.initializers.RandomNormal(stddev=sigma)
+        self.W_xh = self.add_weight(
+            name='W_xh', shape=(num_inputs, num_hiddens), initializer=normal)
+        self.W_hh = self.add_weight(
+            name='W_hh', shape=(num_hiddens, num_hiddens), initializer=normal)
+        self.b_h = self.add_weight(name='b_h', shape=(num_hiddens,),
+                                   initializer='zeros')
 ```
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-1}
@@ -138,10 +146,20 @@ The forward computation loops over the outermost axis of `inputs`, whose
 shape is (`num_steps`, `batch_size`, `num_inputs`), applying the recurrence
 :eqref:`rnn_h_with_state` once per time step and collecting the hidden state
 at every step. When no initial state is supplied we start from zeros. The
-explicit Python loop is the deliberately readable teaching form, and we keep
-it in every tab including JAX; the gated cells of :numref:`chap_modern_rnn`
-swap the JAX loop for `jax.lax.scan`, trading that clarity for acceptable JIT
-compilation time.
+explicit Python loop over time steps is the readable form of the recurrence.
+
+:begin_tab:`jax`
+When the training step is compiled, the Python loop is unrolled into one
+copy of the cell per time step, so the compilation time grows with the
+number of steps. The gated cells of :numref:`chap_modern_rnn` use
+`jax.lax.scan` instead, which compiles the cell once, at the cost of a less
+direct reading.
+:end_tab:
+
+:begin_tab:`mxnet`
+The MXNet version reads the values of the parameters with `data()`, here and
+in the language model below.
+:end_tab:
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-2}
 %%tab pytorch
@@ -169,8 +187,9 @@ def forward(self, inputs, state=None):
                           ctx=inputs.ctx)
     outputs = []
     for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
-        state = d2l.tanh(d2l.matmul(X, self.W_xh) +
-                         d2l.matmul(state, self.W_hh) + self.b_h)
+        state = d2l.tanh(d2l.matmul(X, self.W_xh.data()) +
+                         d2l.matmul(state, self.W_hh.data()) +
+                         self.b_h.data())
         outputs.append(state)
     return outputs, state
 ```
@@ -300,12 +319,16 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.init_params()
 
     def init_params(self):
-        self.W_e = d2l.randn(self.vocab_size, self.rnn.num_inputs)
-        self.W_hq = d2l.randn(
-            self.rnn.num_hiddens, self.vocab_size) * self.rnn.sigma
-        self.b_q = d2l.zeros(self.vocab_size)
-        for param in self.get_scratch_params():
-            param.attach_grad()
+        self.W_e = gluon.Parameter(
+            'W_e', shape=(self.vocab_size, self.rnn.num_inputs),
+            init=init.Normal(1))
+        self.W_hq = gluon.Parameter(
+            'W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            init=init.Normal(self.rnn.sigma))
+        self.b_q = gluon.Parameter('b_q', shape=(self.vocab_size,),
+                                   init=init.Zero())
+        for param in (self.W_e, self.W_hq, self.b_q):  # The cell has its own
+            param.initialize()
 
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1]), batch[-1])
@@ -321,11 +344,15 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.init_params()
 
     def init_params(self):
-        self.W_e = tf.Variable(d2l.normal(
-            (self.vocab_size, self.rnn.num_inputs)))
-        self.W_hq = tf.Variable(d2l.normal(
-            (self.rnn.num_hiddens, self.vocab_size)) * self.rnn.sigma)
-        self.b_q = tf.Variable(d2l.zeros(self.vocab_size))
+        self.W_e = self.add_weight(
+            name='W_e', shape=(self.vocab_size, self.rnn.num_inputs),
+            initializer=tf.keras.initializers.RandomNormal(stddev=1))
+        self.W_hq = self.add_weight(
+            name='W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            initializer=tf.keras.initializers.RandomNormal(
+                stddev=self.rnn.sigma))
+        self.b_q = self.add_weight(name='b_q', shape=(self.vocab_size,),
+                                   initializer='zeros')
 
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1], training=False), batch[-1])
@@ -368,7 +395,7 @@ def embedding(self, X):
 @d2l.add_to_class(RNNLMScratch)  #@save
 def embedding(self, X):
     # Output shape: (num_steps, batch_size, num_inputs)
-    return self.W_e[X.T]
+    return self.W_e.data()[X.T]
 ```
 
 ```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
@@ -424,6 +451,22 @@ tensor that lines up with the target array. The `forward` method chains the
 three parts together.
 
 ```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab mxnet
+@d2l.add_to_class(RNNLMScratch)  #@save
+def output_layer(self, rnn_outputs):
+    outputs = [d2l.matmul(H, self.W_hq.data()) + self.b_q.data()
+               for H in rnn_outputs]
+    return d2l.stack(outputs, 1)
+
+@d2l.add_to_class(RNNLMScratch)  #@save
+def forward(self, X, state=None):
+    embs = self.embedding(X)
+    rnn_outputs, _ = self.rnn(embs, state)
+    return self.output_layer(rnn_outputs)
+```
+
+```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab pytorch, tensorflow, jax
 @d2l.add_to_class(RNNLMScratch)  #@save
 def output_layer(self, rnn_outputs):
     outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
@@ -511,22 +554,23 @@ the optimizer.
 :end_tab:
 
 :begin_tab:`jax`
-In the JAX trainer, clipping is not a separate method call:
-`prepare_optimizer` chains
-`optax.clip_by_global_norm(gradient_clip_val)` in front of the optimizer, so
-every update is clipped inside the jitted training step. The method below
-implements the same projection explicitly. The trainer never calls it; we
-show it so you can see, in the same style as the other tabs, exactly what
-the `optax` transformation computes.
+The function `clip_gradients` below returns the rescaled gradients. The JAX
+trainer of :numref:`sec_linear_scratch` updates the parameters with an optax
+transformation inside its compiled training step, so we apply the clipping
+there too: whenever a positive `gradient_clip_val` is set,
+`prepare_optimizer` wraps `clip_gradients` with `optax.stateless`, which
+turns a function of the gradients into an optax transformation, and chains
+it in front of the model's optimizer. The scale factor is computed on the
+device. The clipping threshold joins the key of `optimizer_cache`, so that a
+later `fit` with the same model and threshold reuses the compiled step.
 :end_tab:
 
 ```{.python .input #rnn-implementation-gradient-clipping}
 %%tab mxnet
 @d2l.add_to_class(d2l.Trainer)  #@save
 def clip_gradients(self, grad_clip_val, model):
-    params = model.parameters()
-    if not isinstance(params, list):
-        params = [p.data() for p in params.values()]
+    params = [p.data() for p in model.collect_params().values()
+              if p.grad_req != 'null']
     norm = np.sqrt(sum((p.grad ** 2).sum() for p in params))
     scale = np.minimum(grad_clip_val / norm, 1.0)  # no `if` on the host
     for param in params:
@@ -558,13 +602,27 @@ def clip_gradients(self, grad_clip_val, grads):
 
 ```{.python .input #rnn-implementation-gradient-clipping}
 %%tab jax
-@d2l.add_to_class(d2l.Trainer)  #@save
-def clip_gradients(self, grad_clip_val, grads):
+def clip_gradients(grad_clip_val, grads):  #@save
+    """Rescale the gradients to global norm at most grad_clip_val."""
     grad_leaves, _ = jax.tree_util.tree_flatten(grads)
     norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in grad_leaves))
     clip = lambda grad: jnp.where(norm < grad_clip_val,
                                   grad, grad * (grad_clip_val / norm))
     return jax.tree_util.tree_map(clip, grads)
+
+@d2l.add_to_class(d2l.Trainer)  #@save
+def prepare_optimizer(self, model):
+    val = self.gradient_clip_val
+    key = (jax.tree.structure(model), type(model).configure_optimizers, val)
+    if key not in d2l.optimizer_cache:
+        tx = model.configure_optimizers()
+        if val > 0:  # The closure holds only val, not the trainer
+            clip = lambda grads, params: clip_gradients(val, grads)
+            tx = optax.chain(optax.stateless(clip), tx)
+        d2l.optimizer_cache.clear()
+        d2l.optimizer_cache[key] = tx
+    self.optim = nnx.Optimizer(model, d2l.optimizer_cache[key],
+                               wrt=nnx.Param)
 ```
 
 ## Training
@@ -872,6 +930,11 @@ class RNN(d2l.Module):  #@save
         self.rnn = tf.keras.layers.SimpleRNN(
             num_hiddens, return_sequences=True, return_state=True)
 
+    # Keras builds the layer by calling `call` with named arguments, which
+    # `Module.call(X, *args)` cannot pass on, so we name the state here
+    def call(self, inputs, H=None, training=None):
+        return self.forward(inputs, H)
+
     def forward(self, inputs, H=None):
         # The keras layer is batch-major: transpose in and out
         outputs, H = self.rnn(tf.transpose(inputs, perm=[1, 0, 2]), H)
@@ -1046,37 +1109,33 @@ for name, t, p in [('scratch', t_scratch, ppl_scratch),
 ```
 
 :begin_tab:`pytorch`
-The framework layer wins by a wide margin. The reason is kernel fusion: our
-scratch loop launches several small GPU operations per time step from
-Python, and at this model size the per-launch overhead dwarfs the
-arithmetic, while `nn.RNN` executes the whole unrolled recurrence inside one
-fused library kernel.
+The framework layer is faster. On a GPU, `nn.RNN` runs the whole recurrence
+in one fused cuDNN kernel, while our scratch loop launches several small GPU
+operations per time step from Python, and at this model size the cost of
+each launch outweighs the arithmetic it starts.
 :end_tab:
 
 :begin_tab:`mxnet`
-The framework layer wins by a comfortable margin. The reason is kernel
-fusion: our scratch loop launches several small GPU operations per time step
-from Python, and at this model size the per-launch overhead dwarfs the
-arithmetic, while `rnn.RNN` executes the whole unrolled recurrence inside
-one fused library kernel.
+The framework layer is faster. On a GPU, `rnn.RNN` runs the whole recurrence
+in one fused cuDNN kernel, while our scratch loop launches several small GPU
+operations per time step from Python, and at this model size the cost of
+each launch outweighs the arithmetic it starts.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The concise layer is faster here too, but the margin moves around from
-run to run, and it does not come from kernel fusion: Keras provides no fused
-GPU kernel for the vanilla `SimpleRNN` (only its LSTM and GRU layers have
-one), so both versions execute as `tf.function`-compiled graphs of per-step
-operations, and neither enjoys a fused advantage. Fused kernels win when they exist;
-the LSTM and GRU layers of :numref:`chap_modern_rnn` show the speedup this
-layer is missing.
+The concise layer is faster, but not because of a fused kernel: Keras has no
+fused GPU kernel for `SimpleRNN` (only its LSTM and GRU layers have one), so
+both versions run as `tf.function`-compiled graphs of per-step operations.
+The margin therefore varies from run to run. The LSTM and GRU layers of
+:numref:`chap_modern_rnn` use fused kernels.
 :end_tab:
 
 :begin_tab:`jax`
-Here the gap has a different source, because both versions are
-JIT-compiled end to end: our scratch loop is unrolled and fused by XLA just
-like the library cell, and the remaining difference is mostly compilation
-and dispatch overhead. In eager frameworks, by contrast, the scratch loop
-pays a Python-level launch cost at every time step.
+Both versions are compiled by XLA into one program per training step, so
+neither launches operations from Python at each time step. Our scratch cell
+is unrolled into one copy per time step, while `nnx.RNN` scans a single
+compiled copy of the cell over the steps; the difference in time comes
+mostly from compilation and dispatch, not from the arithmetic.
 :end_tab:
 
 At this model size the absolute difference is seconds. At the scale of
@@ -1300,17 +1359,33 @@ shape smoke test: `(batch, steps)` ids in,
 @rnn-implementation-the-output-layer-2
 :::
 
-::: {.slide title="Gradient clipping"}
+::: {.slide title="Gradient clipping" except="jax"}
 Backprop through $T$ steps multiplies $T$ Jacobians, one
-explosion-prone product. **Clip** the gradient onto a ball of
-radius $\theta$ before each update:
-
-$$\mathbf{g} \leftarrow \min\!\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}.$$
+explosion-prone product. **Clip** the gradient onto a ball of radius
+$\theta$, $\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|)\,\mathbf{g}$,
+between the backward pass and every update:
 
 @rnn-implementation-gradient-clipping
+:::
 
-(PyTorch/MXNet: called by `fit_epoch`; TF: inside the compiled
-step; JAX: `optax.clip_by_global_norm`, chained in by the trainer.)
+::: {.slide title="Gradient clipping" only="jax"}
+Backprop through $T$ steps multiplies $T$ Jacobians. **Clip** the gradient
+onto a ball of radius $\theta$,
+$\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|)\,\mathbf{g}$:
+
+```{.python #rnn-implementation-exercises}
+def clip_gradients(grad_clip_val, grads):
+    norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in jax.tree.leaves(grads)))
+    return jax.tree.map(lambda g: jnp.where(
+        norm < grad_clip_val, g, g * (grad_clip_val / norm)), grads)
+
+# In Trainer.prepare_optimizer, when gradient_clip_val > 0:
+clip = lambda grads, params: clip_gradients(val, grads)
+tx = optax.chain(optax.stateless(clip), tx)
+```
+
+- The clipping runs inside the compiled training step, in front of the
+  model's optimizer.
 :::
 
 ::: {.slide title="Training"}
@@ -1392,15 +1467,36 @@ Same trainer, same data:
 @rnn-implementation-concise-implementation-6
 :::
 
-::: {.slide title="Scratch vs. concise, measured"}
+::: {.slide title="Scratch vs. concise, measured" only="pytorch"}
 @rnn-implementation-scratch-versus-concise-measured
 
-- PyTorch/MXNet: fused kernel wins ~2–3×; per-step launch
-  overhead dominates at this size.
-- JAX: both versions JIT-compile; the gap is compile and
-  dispatch overhead.
-- TF: `SimpleRNN` has **no** fused GPU kernel; the margin
-  is not fusion and varies run to run.
+- `nn.RNN` runs the recurrence in one fused cuDNN kernel.
+- The scratch loop launches several small operations per time
+  step; at this size launch overhead outweighs the arithmetic.
+:::
+
+::: {.slide title="Scratch vs. concise, measured" only="mxnet"}
+@rnn-implementation-scratch-versus-concise-measured
+
+- `rnn.RNN` runs the recurrence in one fused cuDNN kernel.
+- The scratch loop launches several small operations per time
+  step; at this size launch overhead outweighs the arithmetic.
+:::
+
+::: {.slide title="Scratch vs. concise, measured" only="tensorflow"}
+@rnn-implementation-scratch-versus-concise-measured
+
+- `SimpleRNN` has **no** fused GPU kernel: both versions are
+  compiled graphs of per-step operations.
+- The margin is not fusion, and it varies from run to run.
+:::
+
+::: {.slide title="Scratch vs. concise, measured" only="jax"}
+@rnn-implementation-scratch-versus-concise-measured
+
+- Both versions compile into one XLA program per step.
+- The scratch cell is unrolled per time step; `nnx.RNN` scans one
+  copy. The gap is compilation and dispatch, not arithmetic.
 :::
 
 ::: {.slide title="Recap"}

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
-          "bytes": 31472,
-          "sha256": "sha256:a434853cc0464f28ac0207065fb897c104e3ec5137bfc5796cd078fa1317308f"
+          "bytes": 31734,
+          "sha256": "sha256:81b3a06a5be70f18b1d530ca6f5c84529798b8a6775e76123c5eef55f37a2403"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
-          "bytes": 33075,
-          "sha256": "sha256:a52546a45d62b2d6397384a10cb0d8451fbef09dc1b165211c11ae36297d5198"
+          "bytes": 32503,
+          "sha256": "sha256:14eb3c09ce4c63464fd9272e50d5f9cd31f628cedec5d2c9e917b62ad421ee59"
         }
       ]
     }

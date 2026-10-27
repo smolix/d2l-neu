@@ -66,23 +66,31 @@ activations are still full.](../img/mdl-perf-memory-anatomy.svg)
 :label:`fig_memory_anatomy`
 
 Add the constant terms: training a model with Adam costs about
-$4P + 4P + 8P = 16P$ bytes *before a single activation* — sixteen bytes
-per parameter, the number to carry in your head. (Mixed precision, below,
-nudges this to roughly 18–20 by keeping some tensors in two formats; it
-still saves memory overall, because activations, the dominant term,
-halve.) The shape of :numref:`fig_memory_anatomy` is the other half of the
-lesson: activations *accumulate* through the forward pass and are *freed*
-as the backward pass consumes them, so peak memory occurs early in
-backward — which is exactly the moment activation checkpointing will
-target.
+$4P + 4P + 8P = 16P$ bytes *before a single activation* — sixteen bytes per
+parameter, the number to carry in your head. (Mixed precision, below, nudges this to
+roughly 18–20 by keeping some tensors in two formats; it still saves memory
+overall, because activations, the dominant term, halve.) Counting $P$ need
+not allocate anything: a model built with shapes but no data reports the
+shape of every parameter (:numref:`subsec_count_without_alloc`). The shape
+of :numref:`fig_memory_anatomy` is the other half of the lesson: activations
+*accumulate* through the forward pass and are *freed* as the backward pass
+consumes them, so peak memory occurs early in backward — which is exactly
+the moment activation checkpointing will target.
 
 ## Measuring Memory
 :label:`subsec_mp-measuring`
 
-The frameworks expose this memory allocation differently. PyTorch keeps
-running *counters* you query at runtime; JAX lets the compiler *plan*
-memory ahead of time and reports the plan. Start with PyTorch's counters,
-the numbers the anatomy table predicts:
+We now measure the anatomy on a stack of six linear layers of width 2048.
+
+:begin_tab:`pytorch`
+PyTorch keeps running *counters* that we query at runtime. We start with
+them, and compare them with the numbers the anatomy table predicts:
+:end_tab:
+
+:begin_tab:`jax`
+JAX lets the compiler *plan* memory ahead of time and reports the plan. We
+read it after compiling a gradient step, below.
+:end_tab:
 
 ```{.python .input #memory-precision-measuring-memory-1}
 %%tab pytorch
@@ -355,13 +363,14 @@ step runs only about 15–20% longer, comfortably under the one-extra-forward bo
 backward pass dominates the step. It is a trade you make when memory is
 the binding constraint: checkpointing normally costs time, and its
 purpose is memory (the rare configurations where recomputation beats a
-cache-hostile stash do not change the rule). JAX exposes the same
-mechanism as `jax.checkpoint` (equivalently `jax.remat`), with a nicer
-knob: policies like `checkpoint_dots` let you say *which* intermediates to
-keep, and `jax.remat`'s companion tools let you *watch* what was saved —
-the introspection theme JAX does uniquely well. The trade is identical;
-the interface reflects each framework's temperament, imperative versus
-declarative.
+cache-hostile stash do not change the rule).
+
+:begin_tab:`jax`
+In JAX the mechanism is `jax.checkpoint` (equivalently `jax.remat`).
+Policies such as `jax.checkpoint_policies.checkpoint_dots` choose *which*
+intermediates to keep, and `jax.ad_checkpoint.print_saved_residuals` lists
+what was saved.
+:end_tab:
 
 ## Gradient Accumulation
 :label:`subsec_mp-accumulation`
@@ -577,8 +586,8 @@ are added.
     1. `torch.amp.GradScaler` starts at $S = 2^{16}$. Where does this
        factor lie in the window of the previous sub-problem? The gradient
        of the loss with respect to a logit is the difference between the
-       predicted and the target probability, divided by the batch size of
-       2048. How does the window move if the batch grows to 32,768
+       predicted and the target probability, divided by the batch size,
+       here 2048. How does the window move if the batch grows to 32,768
        examples? Explain why a static loss scale that works for one
        workload can fail for another.
 :end_tab:

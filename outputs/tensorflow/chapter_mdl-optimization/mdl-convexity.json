@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33273,
-          "sha256": "sha256:44752ece580d0c34b4501c8726c5399ccaf71073bdda98bb62896f2314ce522f"
+          "bytes": 33104,
+          "sha256": "sha256:4f700c7305daf45f2ed759b8f52abd17469602bfcc4a71273b2f2eb989ffb760"
         }
       ]
     },

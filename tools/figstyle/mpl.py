@@ -211,11 +211,12 @@ def clean_axes(ax, lim=None, hide=False, equal=True):
         ax.spines["right"].set_visible(False)
 
 
-def axis_cross(ax, xr, yr, *, color=T.MUTED, lw=T.SW_HAIR):
-    """Faint x/y axes through the origin for a schematic plane.
+def axis_cross(ax, xr, yr, *, color=T.INK, lw=T.SW_HAIR):
+    """Thin x/y axes through the origin for a schematic plane.
 
-    Structure is neutral: the house style draws coordinate scaffolding in
-    MUTED gray, never full black, so the colored data reads as figure.
+    Coordinate axes are black (T.INK), like axis and annotation text (author
+    ruling, 2026-10-24; CLAUDE.md figure checklist item 1); the hairline
+    weight keeps them from competing with the colored data.
     """
     ax.annotate("", xy=(xr[1], 0), xytext=(xr[0], 0),
                 arrowprops=dict(arrowstyle="-|>", color=color, lw=lw,

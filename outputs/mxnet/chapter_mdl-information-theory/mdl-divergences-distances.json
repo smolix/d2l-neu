@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
-          "bytes": 37614,
-          "sha256": "sha256:463f632282ec918e8e421e866e6416de07d45cfb599f7d2b9fb05eebed61c406"
+          "bytes": 37856,
+          "sha256": "sha256:fb136d7f10718629aa5722696a201522eab17d38f07eaff4de573f401f4c90e1"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
-          "bytes": 35917,
-          "sha256": "sha256:472c8bbaab851631c4a1269d580b912ceaef26e25d6c5add08635f61afdbb95d"
+          "bytes": 35886,
+          "sha256": "sha256:5911f6464c2d58c44e1e08dd8aabe7bddca3064e4ceecc0b50e2851fea0ced37"
         }
       ]
     },

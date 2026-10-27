@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:01fcce081c218f611f0d186eecc98d4c885365fba83adc268d7c1be241ec09a6",
+    "d2l_lib_fingerprint": "sha256:1e37c399b9dfacd3316cecb9c4d6c28a1f04c33a4a76008a483198a27b9c3fab",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -39,38 +39,38 @@
       "outputs": []
     },
     "convnext-recipe-2": {
-      "code_fingerprint": "sha256:30a626716d950ae56f803c9c8523a6b56133cf722b9b28d6ab45edbd2851f462",
+      "code_fingerprint": "sha256:349fb4837e1959411db727b003a4878f5918c16cb71c37f52959cb64ee2586e7",
       "kind": "text",
       "outputs": []
     },
     "convnext-train": {
-      "code_fingerprint": "sha256:41eac640567143f5b8df89f1686c26b5c41a58356b346612ca8f0d60d5a725b5",
+      "code_fingerprint": "sha256:aa1ab4ce5fe8db2c8797d59cc71d30f73cbb31ddcbb804972889802c6be1112c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 34748,
-          "sha256": "sha256:dc1020410011d9157d6b71b128bf9cd8514078d231d2c5d0e9484392b3f86ef1"
+          "bytes": 35484,
+          "sha256": "sha256:fd0553ffea58148a824dfba1c9eee0f60779029e1f2b65c5818e088df025cdb5"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 35331,
-          "sha256": "sha256:8e6d27e0eb160b5fa8913e0c544550ac54b6a2354208ac6c637d8a373eb94999"
+          "bytes": 34878,
+          "sha256": "sha256:65a5260a4f999585cd3bbab5a7f66d033af60851e09ee67e69574e261633bdff"
         }
       ]
     },
     "convnext-eval": {
-      "code_fingerprint": "sha256:8b6b4de59a56fad211867b3f5cdc8ccb345ac53a01d1c0a47082ace23666bc3a",
+      "code_fingerprint": "sha256:95e6d1a678e22988a30eabb608ff85a8e96694177fb9dd93f4c97ef99aa2a106",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.918\ncompact ResNet-18: 3,348,320 parameters, validation accuracy 0.936\n"
+          "text": "ConvNeXt: 3,376,450 parameters, validation accuracy 0.915\ncompact ResNet-18: 3,346,675 parameters, validation accuracy 0.942\n"
         }
       ]
     }

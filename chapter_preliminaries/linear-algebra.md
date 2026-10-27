@@ -63,6 +63,7 @@ import tensorflow as tf
 
 ```{.python .input #linear-algebra}
 %%tab jax
+import random
 import jax
 from jax import numpy as jnp
 ```
@@ -121,8 +122,9 @@ $$\mathbf{x} =\begin{bmatrix}x_{1} \\ \vdots \\ x_{n}\end{bmatrix},$$
 :eqlabel:`eq_vec_def`
 
 where the scalar $x_i$ is its $i^\textrm{th}$ element. In running text we
-write the same column vector as $\mathbf{x} = (x_1, \ldots, x_n)$. In code,
-a vector is a tensor with one axis:
+write the same column vector as $\mathbf{x} = (x_1, \ldots, x_n)$, and we
+list the entries of a matrix row the same way, as in "the rows $(0, 1, 2)$
+and $(3, 4, 5)$". In code, a vector is a tensor with one axis:
 
 ```{.python .input #linear-algebra-vectors-1}
 %%tab mxnet
@@ -304,7 +306,9 @@ images.shape, X.shape
 
 ```{.python .input #linear-algebra-tensors}
 %%tab jax
-images = jax.random.uniform(jax.random.key(0), (256, 1, 28, 28))
+key = jax.random.key(random.getrandbits(32))  # A new seed on each run
+key, subkey = jax.random.split(key)
+images = jax.random.uniform(subkey, (256, 1, 28, 28))
 X = images.reshape(256, -1)  # One row of 784 pixels per image
 images.shape, X.shape
 ```
@@ -397,8 +401,8 @@ sum_A, sum_A.shape
 
 :begin_tab:`pytorch`
 PyTorch's own names for the arguments `axis` and `keepdims` are `dim` and
-`keepdim`. Its reductions accept both spellings, so the cells that this
-section shares with MXNet and JAX use the NumPy names.
+`keepdim`. Its reductions accept both spellings, and the code in this book
+uses both.
 :end_tab:
 
 Each row of the quotient now sums to 1:
@@ -641,6 +645,10 @@ B = jnp.ones((3, 4))
 A @ B
 ```
 
+For tensors with more than two axes, `@` treats the leading axes as a
+batch and multiplies the matrices formed by the last two axes pair by
+pair: shapes $(5, 2, 3)$ and $(5, 3, 4)$ give shape $(5, 2, 4)$.
+
 Now the classifier itself, with small random weights in place of trained
 ones. Its prediction for an image is the category with the largest score,
 the position of the maximum along axis 1, which `argmax` computes:
@@ -671,8 +679,8 @@ O.shape, tf.argmax(O, axis=1).shape
 
 ```{.python .input #linear-algebra-matrix-matrix-products-1}
 %%tab jax
-key = jax.random.key(1)
-W = 0.01 * jax.random.normal(key, (784, 10))  # Column j: category j
+key, subkey = jax.random.split(key)
+W = 0.01 * jax.random.normal(subkey, (784, 10))  # Column j: category j
 b = jnp.zeros(10)                             # Entry j: category j
 O = X @ W + b                                 # Row i: image i
 O.shape, O.argmax(axis=1).shape
@@ -1301,17 +1309,19 @@ their layers close to 1.
    multiplies a random starting vector by a matrix and rescales the
    result to length 1 after every step, for the symmetric matrix
    $\mathbf{A}$ with rows $(1, 2, 3)$, $(2, 0, 4)$, and $(3, 4, 5)$.
-    1. Report the first iteration at which the cosine similarity between
-       successive iterates exceeds $0.999$. Compare the final vector with
-       the eigenvector of the largest eigenvalue returned by `eigh`, and
-       explain why the two may differ in sign.
+    1. Report the first iteration at which the absolute value of the
+       cosine similarity between successive iterates exceeds $0.999$.
+       Compare the final vector with the eigenvector of the largest
+       eigenvalue returned by `eigh`, and explain why the two may differ
+       in sign.
     1. Measure the factor by which the sine of the angle between the
        iterate and that eigenvector shrinks per step. Express it in terms
        of the eigenvalues of $\mathbf{A}$, and use it to explain the
        iteration count from the first part.
     1. Run the same iteration on $\mathbf{A} - 9\mathbf{I}$, where
        $\mathbf{I}$ is the identity matrix. Which eigenvalue and
-       eigenvector does it find now, and why?
+       eigenvector does it find now? What happens to the sign of
+       successive iterates? Explain both.
 
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),

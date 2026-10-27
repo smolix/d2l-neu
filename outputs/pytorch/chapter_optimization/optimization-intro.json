@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:34796f76541ff7727b8c8ac09fba1aa2b8799c3d007c68e3ad107d3b509a5858",
+    "d2l_lib_fingerprint": "sha256:673dbd45cb277f5754cb5ea6074735186bf592e579af29d815a2417ece0e551c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
-          "bytes": 25279,
-          "sha256": "sha256:7c274528264d427c33aeb377127226b33ea191ebfabcd96f5ccc25d8a810f502"
+          "bytes": 25191,
+          "sha256": "sha256:0d67a0e15c3014a83f97d49c19da6a610c7a1b8ef68d3040233cf56a02a0b0e9"
         }
       ]
     }

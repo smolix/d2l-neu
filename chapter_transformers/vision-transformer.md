@@ -443,7 +443,7 @@ class CompactResNet(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.Sequential(
-            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3),
+            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3, bias=False),
             nn.LazyBatchNorm2d(), nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
             d2l.Residual(64), d2l.Residual(64),
@@ -455,6 +455,13 @@ class CompactResNet(d2l.Classifier):
 
     def forward(self, X):
         return self.net(X)
+
+    def weight_init(self, module):
+        # The Trainer calls this after the first minibatch fixed the shapes
+        if type(module) in (nn.Linear, nn.Conv2d):
+            nn.init.kaiming_normal_(module.weight, nonlinearity='relu')  # He
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-1}
@@ -464,13 +471,17 @@ class CompactResNet(d2l.Classifier):
     def __init__(self, lr=0.01, num_classes=10, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rngs'])
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         self.net = nnx.Sequential(
-            nnx.Conv(1, 64, kernel_size=(7, 7), strides=(2, 2),
-                     padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
-            lambda x: nnx.max_pool(x, window_shape=(3, 3),
-                                   strides=(2, 2), padding='same'),
+            # Pad 3 on every side: with stride 2 on even sizes, 'same' pads
+            # one more row and column at the bottom and right
+            nnx.Conv(1, 64, kernel_size=(7, 7), strides=(2, 2), padding=3,
+                     use_bias=False, kernel_init=he, rngs=rngs),
+            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
+                          rngs=rngs), nnx.relu,
+            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2),
+                                   padding=((1, 1), (1, 1))),
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, strides=(2, 2), in_channels=64, rngs=rngs),
@@ -479,7 +490,7 @@ class CompactResNet(d2l.Classifier):
             d2l.Residual(256, in_channels=256, rngs=rngs),
             d2l.Residual(512, strides=(2, 2), in_channels=256, rngs=rngs),
             lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
+            nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 
     def forward(self, X):
         return self.net(X)

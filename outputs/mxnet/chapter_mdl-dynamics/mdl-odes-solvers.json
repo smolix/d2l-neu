@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
-          "bytes": 29488,
-          "sha256": "sha256:0519ec11befb2536db2627ae1868a0fbd77b90651bd712131df41d0f9c0cda49"
+          "bytes": 33102,
+          "sha256": "sha256:2a660f252f36a94dca3717e30db6d0c64092504911f51d4f95142287671f28f7"
         }
       ]
     },
@@ -72,11 +72,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "iter   0  loss 1.27961\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[05:08:07] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",

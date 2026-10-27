@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
-          "bytes": 37614,
-          "sha256": "sha256:0a562e9f249238b0fa9cd6bcfd7b21cbe180c6d88e989cb0f8ca29b76b51b59d"
+          "bytes": 37856,
+          "sha256": "sha256:4339137063bee4b3cfbb0e6d628aa5d8e5b0373dcf0d8c3c9a9c677d0ea36916"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
-          "bytes": 35917,
-          "sha256": "sha256:f1ed6e29e5699c162dbdbb42cec550f52fd3e4446d9f549a4c5d102ec17ecc76"
+          "bytes": 35886,
+          "sha256": "sha256:ea372d4b7f9b46fc8f1772e68da0d15e27a6d933067ff3fdaad4606c13a969c5"
         }
       ]
     },

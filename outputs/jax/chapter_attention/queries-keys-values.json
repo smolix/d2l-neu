@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:63fe58618192304d724de10653952b665bceda48e7d8c7d72e0a8cf1190ad75f",
+    "d2l_lib_fingerprint": "sha256:b9cf7efe4fe51bb6232c1f43709be59b6ea55592e715201498e445aeb6cfa6ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-visualizing-attention-weights-1.svg",
-          "bytes": 18256,
-          "sha256": "sha256:52acafb0ee29029c917d5f9538f300decd7f19d0e51ef85ce4b7cba3c7e1b4bf"
+          "bytes": 18202,
+          "sha256": "sha256:482812f898ac2fa1a773a30e9dfa69df0630e960939938ed8eb28e5550f5e8ec"
         }
       ]
     },
@@ -39,8 +39,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-2-1.svg",
-          "bytes": 34348,
-          "sha256": "sha256:7b5ac864e77ac4ac7806c7f77520d37424fab58f25dff082d68103da0ad3472d"
+          "bytes": 34298,
+          "sha256": "sha256:3c58d0769df0feaa76211d23544c41a930157b5cfab30634c5ecfd3540249d57"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 38726,
-          "sha256": "sha256:90896968eececf14a7d9af426ea6f419456c9b23da6148b83af13e480f06c29d"
+          "bytes": 38660,
+          "sha256": "sha256:6325770057ca7d6e8bfe2449d5165a45d93c2a915d5fb6357bc74a03ac199abd"
         }
       ]
     }

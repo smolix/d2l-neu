@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13735,
-          "sha256": "sha256:90dba2efcba3bbf22ec8fa01e9230a9168cb1e83504ddb1a9645d07964865748"
+          "bytes": 13693,
+          "sha256": "sha256:ebbf3f2027ea3fc7b7edb36a8fce4afe45df1903752d3bd5e4e1c9cd6d3a03e2"
         }
       ]
     },

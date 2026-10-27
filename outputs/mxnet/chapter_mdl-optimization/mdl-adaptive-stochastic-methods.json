@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\nsgd        -0.954   -0.986   -0.995   -0.998\n"
+          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sgd        -0.954   -0.986   -0.995   -0.998\n"
         }
       ]
     },
@@ -94,12 +99,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant       9.53e-02       9.19e-02\nc/k decay      2.82e-03       1.94e-03\n"
+          "text": "constant       9.53e-02       9.19e-02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\nWSD 80/20      9.53e-02       5.48e-03\n"
+          "text": "c/k decay      2.82e-03       1.94e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine         8.71e-03       1.58e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
         }
       ]
     },
@@ -111,8 +126,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29558,
-          "sha256": "sha256:cca3c0cce63850d166fccc1f9af29d303feae0eccaf0aeeb63d15b1c7f086acc"
+          "bytes": 29383,
+          "sha256": "sha256:857bd547865c8b8ee7cd89cfff63cbf88a808dad8a63de523120872b39b730b2"
         }
       ]
     }

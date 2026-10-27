@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cd8931f6f027a8a4544ab6f0f3978173e9d3c1f38c619728259b411ab24ef2a7",
+    "d2l_lib_fingerprint": "sha256:fba631fee2b15028893cde561a75655b13b9a61a7a7261a1e86681b88bbd6ba8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
-          "bytes": 247382,
-          "sha256": "sha256:1b076aee38d5917d183646d7a5ff73b024ea4c450e77a09172377f3c6ec424d1"
+          "bytes": 247473,
+          "sha256": "sha256:95d348d4efb8948f380df84b0991fb812cb8c97c2f00425df189773bcbf1a2fe"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
-          "bytes": 38089,
-          "sha256": "sha256:3ddc4e63a7d375a5d4872c0fc9e4cc66a74fdad45859ee5dd77e5c2bf7cd1b37"
+          "bytes": 38183,
+          "sha256": "sha256:9c26d2c78fdc0cf11e940e119c9e2143cf154f62adc1ff663ba27016b2a23908"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
-          "bytes": 706464,
-          "sha256": "sha256:8781f3a8d615ba7e780255d4fc4e869319bf50d1e99c7dc8db5c9f9564226503"
+          "bytes": 707108,
+          "sha256": "sha256:0a1d08ab4c4881fd90e40fbc1acb511414addbedebf86a506826f033e0a68650"
         }
       ]
     },
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
-          "bytes": 535592,
-          "sha256": "sha256:69632004be46fe8fee6b375894096af78cc63ceb82882603e078d2ca87daf646"
+          "bytes": 537916,
+          "sha256": "sha256:5680db9e3e80068469511895e060290c623b1692e03ff2341c040b2251c3028c"
         }
       ]
     }

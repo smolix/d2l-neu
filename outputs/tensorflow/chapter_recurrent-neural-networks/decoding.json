@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6c74b3f3cec4de01a1a0405f77f095006970ef80b6af32c8be6e7e81a182bf43",
+    "d2l_lib_fingerprint": "sha256:11e0c5d4e724a7ec133bb1a177d9c9ed0e12b9f1fa5e7ee16de28782e77f7ba3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 25838,
-          "sha256": "sha256:cd20c1a9d030268216068b2a039701ca4c49b01c76019835b1efba739705f739"
+          "bytes": 25898,
+          "sha256": "sha256:7694582b2fb81a9cd82b1f7006da83f079c186910411dcd722dd2d577cf39d36"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller of my\\nfoxs, and\\nI could not\\nwere a\\nmake a\\nmbing to\n    me.\\n\\n'I was a\\nmade\\nI had been\\nafter a lamp\\nthe\"\n"
+          "text": "'the time traveller, as I could seeed. I felt assume,\\nand theing up, as I\n    could\\ntowards the silar\\nand a walked to the\\ndeors. I was not\\nb'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"it seemed to me that the\\nflities to be, and\\nsurface,\\nand I was reton\n    it.\\n\\n'I was a\\nmade\\nI had been\\nafter a lamp\\ntheir in a\"\n"
+          "text": "'it seemed to me that the Time Traveller,\\nand a walked to the\\ndimensions.\n    The Editor, I had a fram, and the Time Traveller, to the\\ndimensions.\n    The Editor, I had a fram'\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.75, distinct-3 0.95: \"the time traveller of my\\nfoxs, and\\nI\n    could not\\nwere a\\nmake a\\nmbing to me.\\n\\n'I was a\\nmade\\nI had\"\n"
+          "text": "k=1, score -4.64, distinct-3 0.95: 'the time traveller, as I could seeed. I\n    felt assume,\\nand theing up, as I could\\ntowards the silar\\nand a walked\n    to the\\n'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.70, distinct-3 0.66: \"the time traveller of our own\n    time,\\nands, there are a\\nlittle lawn.\\n\\n'There I found a\\nlittle\n    lawn.\\n\\n'There I found a\"\n"
+          "text": "k=4, score -3.99, distinct-3 0.47: \"the time traveller, as I could\n    seeed.\\n\\n'Then I had told of it.\\n\\n'Then I had told of it.\\n\\n'Then I\n    had told\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.78, distinct-3 1.00: \"it seemed to me that the\\nflities to be,\n    and\\nsurface,\\nand I was reton it.\\n\\n'I was a\\nmade\\nI had been\\na\"\n"
+          "text": "k=1, score -4.73, distinct-3 0.82: 'it seemed to me that the Time\n    Traveller,\\nand a walked to the\\ndimensions. The Editor, I had a fram,\n    and the Time Traveller, to the\\ndimensions'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.50, distinct-3 0.63: \"it seemed to me that\\ngoides.\\n\\n'Then I\n    was a\\nlittle lawn.\\n\\n'There I found a\\nlittle lawn.\\n\\n'Then I\"\n"
+          "text": "k=4, score -3.84, distinct-3 0.79: \"it seemed to me that the Time\n    Traveller\\nfrom the\\ntriculture, for the Time Traveller.\\n\\n'As the Time\n    Traveller.\\n\\n'As I had seen. I was\"\n"
         }
       ]
     },
@@ -110,82 +110,78 @@
       ]
     },
     "decoding-one-distribution-three-cutoffs-1": {
-      "code_fingerprint": "sha256:fcb6545a47be0400cf61550ce5bbf150744868e675c6d73fefd5993668f3678f",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:d24b6164acf8918c02492da911da99ddc5708682595a4f3dd5b6e4895c1e5042",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x762499ac2d80>"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 48170,
-          "sha256": "sha256:b6f3ec85b12965bf87dfab439c2c38212f22e41f3038540d78984e8067bf147b"
+          "bytes": 50236,
+          "sha256": "sha256:529656d5c56604ad367803fba46124b0780e604f5627415ddfb1e4887f03a4bc"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:6cd1403dfa732bffdb4172223625515f6883c02c334dc4631730ac46cbea473e",
+      "code_fingerprint": "sha256:bf222a53499ad11dbf9332a59f2b22ce2c29f6794f4d7c8e1d8f6b85457c9637",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.23, top-k keeps 20, top-p keeps 176, min-p keeps 14\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 135, min-p keeps 27\n"
+          "text": "'the time traveller': top prob 0.61, top-k keeps 20, top-p keeps 66, min-p keeps 2\n'it seemed to me that': top prob 0.29, top-k keeps 20, top-p keeps 92, min-p keeps 6\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:85f1cb35f9f34646b5b09e565f6305b0b61901190b898300265282db374a6cc6",
+      "code_fingerprint": "sha256:330b24f6fa9ffed8a64a7c1c0ad2fc8b60682695b10a9d633ad53a789b927d47",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time traveller of my\\nfutil beautiful and\\ngreal\\nand\n    recognized\\nsuryis thought together the\\nshalled the leaps of\\nthe\n    laying\\ntheseu'\n"
+          "text": "T=0.5: \"the time traveller, as I could not,' said the Time\n    Traveller.\\n\\n'What, I saw the\\nfeer, I conted low, as I hesitated, a\n    flowers, I found a filed to turn\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: \"the time traveller lay.\\n'gres was cleace there was see and in\n    speoness of\\npowa fl�\\x17. W my handsing sure is c ro incred was it iss,\n    until I could all\"\n"
+          "text": "T=1.0: \"the time traveller had space, be such in dightsoluteensions with a\n    time I trded.\\n\\n'It deser broter h handsthe that I went one, my feel\n    soon pit deted harans of\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time travellerical slins muchear sase cont look like the at last\n    ho! ro liness where and now tVnder poOrowadene very sat a ruck anybum\n    stoodep more before imve yZ Ier aate'\n"
+          "text": "T=2.0: 'the time traveller go would becoD\\x01ra kble liage. cl I thing herli\n    whatownreaden as att know grain strangeIt diff Weenaiseoxapp getd about\n    wheologicalay mindears; theorlocks v--d our'\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:6e2e8b7e237cef455f3076dd20a7cf561696b62647d71d5babad601c8dfef1d0",
+      "code_fingerprint": "sha256:1c2fa4eca26a29896496ebdaad89fdecea0ded4f10a3d75af720230c642fa6ed",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.96): \"the time traveller of my\\nfoxs, and\\nI could\n    not\\nwere a\\nmake a\\nmbing to me.\\n\\n'I was a\\nmade\\nI had been\\nafter a\n    lamp\\nthe\"\n"
+          "text": " greedy (distinct-3 0.96): 'the time traveller, as I could seeed. I felt\n    assume,\\nand theing up, as I could\\ntowards the silar\\nand a walked to\n    the\\ndeors. I was not\\nb'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): \"the time traveller lay.\\n'gres was cleace there\n    was see and in speoness of\\npowa fl�\\x17. W my handsing sure is c ro\n    incred was it iss, until I could all\"\n"
+          "text": "  T=1.0 (distinct-3 1.00): \"the time traveller had space, be such in\n    dightsoluteensions with a time I trded.\\n\\n'It deser broter h handsthe\n    that I went one, my feel soon pit deted harans of\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time travellerter to\n    the\\nintryterm\\nsecurity secestionred it was to\\nthe line of\\nI tried\n    not know some by\\nwasfltinct\\nbremarcend on the pecor'\n"
+          "text": "  top-k (distinct-3 1.00): \"the time traveller, in the sameer viived the\n    wholeversen. You cannot see the real existive from the cloeet, but, but\n    sushed it. That\\n\\n'But the Morlocks\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): \"the time traveller came to me. I wouldard on\n    that most us a hazous, which\\nfelt, the least.\\nO neareion,\\nand perfor\n    with my gruit, and as I have trust's\\nt\"\n"
+          "text": "  top-p (distinct-3 1.00): 'the time traveller, that I was as conerutk as\n    one thinging a half a\\nbres, its qu\\nthe fighelect to me, in some\n    ocestay to come that the fruy of a fren'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 0.96): \"the time travellerw.\\n\\n'Now,\\na coning before\n    of\\nthe Time Traveller.\\n\\n'Soci\\nif\\nexvolutionground startn bars was\n    a\\nnoter to be. They\"\n"
+          "text": "  min-p (distinct-3 1.00): 'the time traveller,\\nand the way ocessity I saw\n    a perfectly herry, in\\nthe impvised, there. The Upper-world people came\n    a moment I was sensations, or so as the new'\n"
         }
       ]
     }

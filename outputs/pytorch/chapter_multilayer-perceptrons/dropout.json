@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:27e6f93162679ca586b8723c72b29903cb4886adb9a64c1bf9aaa57ef8558cdb",
+    "d2l_lib_fingerprint": "sha256:06ae3fc0673e7ce667e186e2ea486a4bf42138d06596e07f1a669799834c1443",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8.,  0., 12.,  0.],\n        [16.,  0.,  0., 22.,  0.,  0.,  0., 30.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  0.,  4.,  6.,  8., 10.,  0.,  0.],\n        [16.,  0.,  0., 22., 24., 26.,  0., 30.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35716,
-          "sha256": "sha256:2996478ac1ba268581da888c5ecd945813b5eb06857e8602ff13987ab3d68506"
+          "bytes": 36455,
+          "sha256": "sha256:153543c9ee272e6ad04bb4ccd04b97f6e3bf810325c88a1095d9ce09b2bf10f2"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 36332,
-          "sha256": "sha256:09aa361458b7cebd25a920a35c8e614221ccd6099303279d04bf76f1183d4f33"
+          "bytes": 35840,
+          "sha256": "sha256:3c4bbc333f19bbd96c8ea986bdba02ef30964e552fa29ffad82f4a5764c5c4f3"
         }
       ]
     },
@@ -73,8 +73,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 34991,
-          "sha256": "sha256:14ee65f6110bd82c9a15e365acf42d6f1e0b4cf97ecb1aafddb90c1fa7fdaae6"
+          "bytes": 36093,
+          "sha256": "sha256:67ffc33cea11b7229d952ad4dc5c96ae91ebfb4d62074b2a2e221292f9c7114e"
         }
       ]
     },
@@ -90,12 +90,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.875, with masks 0.860\n"
+          "text": "trained with dropout: validation accuracy 0.877, with masks 0.867\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.878, with masks 0.765\n"
+          "text": "trained without dropout: validation accuracy 0.866, with masks 0.775\n"
         }
       ]
     }

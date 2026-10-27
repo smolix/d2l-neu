@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:5d930ffdbee3b280b411bea86b7ed6b5b647ac43b87f5039fab47e39805984ac",
+    "d2l_lib_fingerprint": "sha256:2a2c9c7031b7198b8654bfb6f0da8cd42443d7d9d4fc56e2e6fbd5e4dc9a45ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "resnet-residual-blocks-1": {
-      "code_fingerprint": "sha256:25d6d20eea3b9e7e23869ab12ef9b400995eedad0a87a4c76e0b641ba852422c",
+      "code_fingerprint": "sha256:3640e40bbcc63ae72728324d13d85ef0163854829babb39dc5ad470f191c6c92",
       "kind": "text",
       "outputs": []
     },
     "resnet-residual-blocks-2": {
-      "code_fingerprint": "sha256:94fc0a7e80467de3d2b6112536388d07e5a05bb604cc8699ee699d98136e60c0",
+      "code_fingerprint": "sha256:8376be715cac528603dfb1dfbdd8a053e66e86ba6330cb63b355ad608b7ce8c3",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "resnet-residual-blocks-3": {
-      "code_fingerprint": "sha256:98cc735993ae8e261603bd7a4dba5d9674ffb16299c62f4593046cac43bf23c5",
+      "code_fingerprint": "sha256:55b29c2ac5367a157d1639f30fd6e86f4b99ccd45ac8a7119a191097a973674e",
       "kind": "text",
       "outputs": [
         {
@@ -39,71 +39,71 @@
       ]
     },
     "resnet-resnet-model-1": {
-      "code_fingerprint": "sha256:b93a77b900dc9dda2c8e09bef864cdd16ace53c8a46f0ed2d2a9a4c00abbf456",
+      "code_fingerprint": "sha256:22117cf816a0c3a26fe80573158e1acdef1c0a1f3c951da2bfef8b005a0c1a3d",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-2": {
-      "code_fingerprint": "sha256:6c7ee3650b0102e0f695042c59c8b959d5e924df6dd17797a8ee537dce07a368",
+      "code_fingerprint": "sha256:7b055dfa7a9fd225d40de92952b1ad47b76b37c66f2d49dd2dad7fdee28a1276",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-3": {
-      "code_fingerprint": "sha256:fa8abd2f58626968906dacaea81e2107709d56db20c36c2af6379362fa8121e6",
+      "code_fingerprint": "sha256:e1c3ca51a1beaa7811b555ee817e8d3eff82a1dbec69218878c78b94d247c01b",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-4": {
-      "code_fingerprint": "sha256:9f21e0cdc932101c4a2a552dfb6feae4f076d087c29cabfd4416db82f86175c3",
+      "code_fingerprint": "sha256:cde82a0ecdac06e885cae2b07a051d9c1ce3c1b610fe77dce069e4b1dbd71ecb",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-5": {
-      "code_fingerprint": "sha256:da0fe098ff5f16ed7f9bd313e95b8b7bd89256e65c6d0875b53c9c01dad1a4a9",
+      "code_fingerprint": "sha256:ff42b5d56de826fb21fa71e9d478f337de04d90d5d448946c4ccb9973919054f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 64, 24, 24)\nHybridSequential output shape:\t (1, 64, 24, 24)\nHybridSequential output shape:\t (1, 128, 12, 12)\nHybridSequential output shape:\t (1, 256, 6, 6)\nHybridSequential output shape:\t (1, 512, 3, 3)\nGlobalAvgPool2D output shape:\t (1, 512, 1, 1)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 64, 24, 24)\nHybridSequential       (1, 64, 24, 24)\nHybridSequential       (1, 128, 12, 12)\nHybridSequential       (1, 256, 6, 6)\nHybridSequential       (1, 512, 3, 3)\nGlobalAvgPool2D        (1, 512, 1, 1)\nDense                  (1, 10)\n"
         }
       ]
     },
     "resnet-training-schedule": {
-      "code_fingerprint": "sha256:d20773f2806b97b7c7fbf7fb3f9022a9798f377035db9d0813d27318a4797b09",
+      "code_fingerprint": "sha256:95b3ce07cf78c9c69182e25916168675bff4d653a710a85a54dcac106756157f",
       "kind": "text",
       "outputs": []
     },
     "resnet-training": {
-      "code_fingerprint": "sha256:83f218d821184f415cd01474527c483e75d082fd963e74991d1f5b49f2fe520b",
+      "code_fingerprint": "sha256:e5d27d55dd3ca00ac0803cdfac3d11237a0f145fea18dae05587bdd8d153897a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 33062,
-          "sha256": "sha256:62142e18a0301a3720aac65d998e5a1fb5173852a815324524728be70255b999"
+          "bytes": 30626,
+          "sha256": "sha256:663eed5c92adb81a82d94f740133495f4dc7e2b72ff04012695092ad44daa568"
         }
       ]
     },
     "resnet-training-readout": {
-      "code_fingerprint": "sha256:64d5f59def290c02817030186e0bf0a24907d00036373d707b10d72b2a0be979",
+      "code_fingerprint": "sha256:0a104bb42bffb6eaf97fa9d4bb705893e53ea183c4775d385a8624384737b32e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.905"
+          "text": "0.93"
         }
       ]
     },
     "resnet-resnext-1": {
-      "code_fingerprint": "sha256:54b5d11de376630c92afc7d1ba91f6de3aae8698af8d3ce0ddc4e0a5e9cd4f95",
+      "code_fingerprint": "sha256:23f7f6de54aeb9740aac20e64aa3cb47d8ba24f0cfe7a3e620d595abd08f7667",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnext-2": {
-      "code_fingerprint": "sha256:217897fd3e835b4f422237aa5ed4c2026c12e65d64d62f10d819e1cb2fe09fb6",
+      "code_fingerprint": "sha256:b3afe3b63c56bcd918530d9a5976448bfbac335735e25b007d1e209db98701a0",
       "kind": "text",
       "outputs": [
         {
@@ -113,17 +113,17 @@
       ]
     },
     "densenet-dense-blocks-1": {
-      "code_fingerprint": "sha256:dea1a51247b94ce6492ea334750a40a9fa1ac46bf6fc315aa3c0f3608cde247c",
+      "code_fingerprint": "sha256:c9e67912954b8435c23b9392e2f56a8bc0acc1d1e1a7fd2119ae9c2450dc7bca",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-2": {
-      "code_fingerprint": "sha256:e9e528bfbefd391ff1b91006c5a99ab892fb32abc444de8a5c9117c38afdb381",
+      "code_fingerprint": "sha256:d4b1af4256ec3c1d3fccb04f3cf2844739c707a1717132cb45fe0c92859bde8d",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-3": {
-      "code_fingerprint": "sha256:c6fbd04981b7f772bcbf28632579859650753fac7420485f21b6b67c7f5aefe6",
+      "code_fingerprint": "sha256:cd80704bb8c3d4b5ccd9a3f4effeb6f1c98c5de76d83cc0ec77b40f781b843c9",
       "kind": "text",
       "outputs": [
         {
@@ -133,12 +133,12 @@
       ]
     },
     "densenet-transition-layers-1": {
-      "code_fingerprint": "sha256:64cc28c92fb08e86608c91650700df561f46ae6ff6c0499186fe33e91fec6fd9",
+      "code_fingerprint": "sha256:df21662701fe3435e2121cefbcac143d6073d90e5e0d2478a8e1eaf41c79718b",
       "kind": "text",
       "outputs": []
     },
     "densenet-transition-layers-2": {
-      "code_fingerprint": "sha256:4b6c4812cfa5cd9c589c3ef7e18f6920b960ef08900f05260ba79ecfa6888ca9",
+      "code_fingerprint": "sha256:7c5bcdda2cba28f1dbc5df244d937a755d8f9781d1910066f9f2a12d7d96ee71",
       "kind": "text",
       "outputs": [
         {

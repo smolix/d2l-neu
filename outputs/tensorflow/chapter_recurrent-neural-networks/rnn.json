@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:6ba4e1608e082afa8a63b66722d3168a3a42e18b30ded239d5902b37602a9512",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-1.6800554 ,  2.1037657 ,  2.491911  , -1.2626163 ],\n       [ 4.023058  , -2.6165724 ,  2.001754  , -0.32579148],\n       [-1.0445031 , -0.5849824 , -2.4261868 , -0.13642092]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-2.7756472 , -1.7689174 ,  2.9926558 , -4.2504654 ],\n       [-0.56018233,  0.10487883, -1.5701048 ,  7.3006177 ],\n       [ 3.7051232 ,  0.311452  ,  0.13687007, -3.8150792 ]],\n      dtype=float32)>"
         }
       ]
     },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-1.6800554 ,  2.1037657 ,  2.4919112 , -1.2626164 ],\n       [ 4.023058  , -2.6165726 ,  2.001754  , -0.32579142],\n       [-1.044503  , -0.58498234, -2.426187  , -0.13642097]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-2.7756472 , -1.7689174 ,  2.9926558 , -4.2504654 ],\n       [-0.56018203,  0.10487878, -1.5701048 ,  7.3006177 ],\n       [ 3.705123  ,  0.31145203,  0.13687003, -3.8150792 ]],\n      dtype=float32)>"
         }
       ]
     }

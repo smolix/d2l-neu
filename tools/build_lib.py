@@ -360,6 +360,25 @@ def _block_defined_names(code):
     return names
 
 
+def _block_shard_names(code):
+    """Return the module-level names a block defines, in source order.
+
+    Only *unindented* `class`/`def`/assignment lines count: a helper `def`
+    nested inside a function or method body is not a library symbol. (The
+    `plot` block defines a nested `has_one_axis`; naming the shard after it
+    hid `plot` from every notebook's dependency list.) Each returned name gets
+    its own shard, so a block that defines two top-level symbols is tracked
+    under both.
+    """
+    names = []
+    for line in code.split('\n'):
+        m = (re.match(r'(?:class|def)\s+(\w+)', line)
+             or re.match(r'(\w+)\s*(?::[^=]*)?=(?!=)', line))
+        if m and m.group(1) not in names:
+            names.append(m.group(1))
+    return names
+
+
 def _block_d2l_references(code):
     """Return the set of d2l.X symbols this block references (bases + calls).
 
@@ -640,7 +659,8 @@ def reorder_blocks_by_dependency(blocks):
     return [blocks[i] for i in order]
 
 
-def build_library(src_dir, output_file, framework, lib_config, files):
+def build_library(src_dir, output_file, framework, lib_config, files,
+                  extra_modules=None):
     """Build a framework-specific library file."""
     print(f'  Extracting #@save blocks for {framework}...')
 
@@ -667,7 +687,7 @@ def build_library(src_dir, output_file, framework, lib_config, files):
     if output_path.exists():
         existing = output_path.read_text()
         preamble_for_scan = (existing[:existing.index('#####')]
-                             if 'WARNING' in existing else existing)
+                             if '#####' in existing else existing)
     alias_code = generate_aliases(lib_config)
     extra_names = _block_defined_names(preamble_for_scan) | _block_defined_names(alias_code)
 
@@ -685,7 +705,7 @@ def build_library(src_dir, output_file, framework, lib_config, files):
     output_path = Path(output_file)
     if output_path.exists():
         existing = output_path.read_text()
-        if 'WARNING' in existing:
+        if '#####' in existing:
             preamble = existing[:existing.index('#####')]
         elif existing.strip():
             preamble = existing
@@ -725,19 +745,52 @@ def build_library(src_dir, output_file, framework, lib_config, files):
     shard_dir = output_path.parent / '_blocks' / fw_tag
     shard_dir.mkdir(parents=True, exist_ok=True)
 
-    # Collect new symbols and their content.
+    # Collect new symbols and their content. Every module-level name a block
+    # defines gets a shard holding the whole block (see _block_shard_names).
+    # If two blocks still claim one name (a symbol redefined inside a
+    # multi-name block, which deduplicate_blocks leaves alone), the shard
+    # holds both blocks, so an edit to either flags the name's users.
+    shard_code = OrderedDict()
+    # Hand-written module code that every notebook of this framework imports:
+    # the preamble of d2l/<fw>.py and the #@save blocks that define no library
+    # name (the preface imports, `import regex`, ...). It goes into one shard,
+    # `_preamble`, that scan_d2l_usage.py adds to every notebook's list.
+    shard_code['_preamble'] = [preamble] if preamble else []
+    for code, label, source in all_blocks:
+        # `d2l = sys.modules[__name__]` (preface imports) is the module's
+        # self-alias, not a symbol.
+        names = [n for n in _block_shard_names(code) if n != 'd2l']
+        if not names:
+            # `d2l.DATA_HUB['x'] = ...` entries go to the shard of the
+            # container they fill (DATA_HUB, reached through `download`);
+            # anything else (imports) goes to the preamble shard.
+            m = re.match(r'(?:d2l\.)?(\w+)\[', code.lstrip())
+            names = [m.group(1)] if m else ['_preamble']
+        for name in names:
+            shard_code.setdefault(name, []).append(code)
+    # config.ini aliases (`reshape = torch.reshape`, ...): one shard per name,
+    # after any block of the same name (the alias is emitted last and wins).
+    for line in aliases.split('\n'):
+        m = re.match(r'(\w+)\s*=', line)
+        if m:
+            shard_code.setdefault(m.group(1), []).append(line)
+    # Hand-written modules next to the libraries (d2l/nnx_resnet.py, imported
+    # as `from d2l.nnx_resnet import ...`): a shard named after the module,
+    # which the notebook scan matches through the text `d2l.nnx_resnet`.
+    for mod in extra_modules or ():
+        shard_code.setdefault(Path(mod).stem, []).append(
+            Path(mod).read_text(encoding='utf-8').rstrip('\n'))
+    if not shard_code['_preamble']:
+        del shard_code['_preamble']
     seen_shards = set()
     n_shard_written = 0
-    for code, label, source in all_blocks:
-        names = _block_defined_names(code)
-        if not names:
-            continue
-        # Pick the first defined name as the primary symbol; multi-name
-        # blocks (rare, e.g. tuple assignments) collapse to one shard.
-        primary = sorted(names)[0]
-        shard_path = shard_dir / f'{primary}.py'
+    for name, codes in shard_code.items():
+        if len(codes) > 1 and name not in ('_preamble', 'DATA_HUB'):
+            print(f'  note: {len(codes)} blocks define {name}; '
+                  f'shard {name}.py holds all of them')
+        shard_path = shard_dir / f'{name}.py'
         seen_shards.add(shard_path.name)
-        new = (code + '\n').encode('utf-8')
+        new = ('\n\n'.join(codes) + '\n').encode('utf-8')
         if shard_path.exists() and shard_path.read_bytes() == new:
             continue
         shard_path.write_bytes(new)
@@ -804,6 +857,12 @@ def main():
         init_dst.write_text(init_src.read_text())
         print(f'Copied __init__.py')
 
+    # Hand-written modules in the source d2l/ package besides the four
+    # generated libraries (d2l/nnx_resnet.py). They get a dependency shard.
+    lib_stems = {'__init__', 'torch', 'tensorflow', 'jax', 'mxnet'}
+    extra_modules = sorted(p for p in (args.source / 'd2l').glob('*.py')
+                           if p.stem not in lib_stems)
+
     # Build each framework
     for fw in args.frameworks:
         fw_tab = fw
@@ -831,7 +890,8 @@ def main():
             with open(output_file, 'w') as f:
                 f.write(preamble)
 
-        build_library(args.source, output_file, fw_tab, lib_config, files)
+        build_library(args.source, output_file, fw_tab, lib_config, files,
+                      extra_modules)
 
     # Copy setup.py
     setup_src = args.source / 'setup.py'

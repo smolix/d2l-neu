@@ -351,6 +351,7 @@ from IPython import display
 import json
 import math
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib_inline import backend_inline
 import os
 import pandas as pd

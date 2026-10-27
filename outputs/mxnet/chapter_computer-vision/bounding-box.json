@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "d2l_lib_fingerprint": "sha256:cc5415005e34b0466a7a9fe26702541408ad2ec1eed4085c60a15d94f53edfc3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
-          "bytes": 87007,
-          "sha256": "sha256:8f84be2148542f6211a281ef1ab652092de3cf75193b2e6abad93211844e4340"
+          "bytes": 86732,
+          "sha256": "sha256:d48f667416212004931dc7de5308d0538cf2a212b2f35165f3b4d44586f38e80"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
-          "bytes": 87556,
-          "sha256": "sha256:c8104afa3bb54c501e0eecf6e258dde7f7b424afa69bb83b8c29c6beccf5f602"
+          "bytes": 87281,
+          "sha256": "sha256:53ea727ee5d079e32893115cf68d167634121be335c22fe8fed821ef6de91381"
         }
       ]
     }

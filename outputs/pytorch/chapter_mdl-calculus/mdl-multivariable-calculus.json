@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13735,
-          "sha256": "sha256:64036f53dc385da30f727f2c946f8d9dfd794eff56be7b8b8cc5e44facb3139c"
+          "bytes": 13693,
+          "sha256": "sha256:3a487df7445f474f941f657cecf85336d1f37c72626465dbec0aee5ee35cf527"
         }
       ]
     },

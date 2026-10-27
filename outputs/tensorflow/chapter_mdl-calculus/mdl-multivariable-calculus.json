@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13735,
-          "sha256": "sha256:efb9f2c337d3141cc711b3455adfef690f1126320f3285dae71a58bd696bd5c4"
+          "bytes": 13693,
+          "sha256": "sha256:87bdcb66c1fdb91b0d4c7ef88fc32514a029246c40f6181e67563e7ea54b84b5"
         }
       ]
     },

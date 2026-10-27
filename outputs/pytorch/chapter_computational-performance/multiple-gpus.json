@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:79c7afe0cffd90ae6bf73727550b2462146c63d9669392b78cba2bb04dbc09a9",
+    "d2l_lib_fingerprint": "sha256:e7b2cd17b0a7c530b9bed2ac8b6f439b8fe787f0d4854a99af883781a48de87c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 1.40e-09\n"
+          "text": "max update difference, k=1 vs k=2: 1.86e-09\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.78, 1.54 sec/epoch on 1 GPU(s)\n"
+          "text": "test acc 0.78, 1.62 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.78, 1.74 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.70, 2.06 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "allreduce 18.02 GB/s effective over 29.8 ms\n"
+          "text": "allreduce 20.35 GB/s effective over 26.4 ms\n"
         }
       ]
     }

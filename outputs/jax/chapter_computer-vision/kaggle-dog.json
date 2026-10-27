@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:59923dde8389f17cb37d17ee1b30a35d89e5db2312d3c84af932cbaf94222024",
+    "d2l_lib_fingerprint": "sha256:03a2556b987afe5182395e9f736b64294bcaddf68ac0bcc6a52d3302de43050f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -80,38 +80,38 @@
       "outputs": []
     },
     "kaggle-dog-training-and-validating-the-model": {
-      "code_fingerprint": "sha256:6e1fb4a5cdf559a8023ea315b9e7a68181e0659bbe91f8699ed94c710f47f81d",
+      "code_fingerprint": "sha256:59211f22fb64d4638d3860ebedb57f3f3b35f8de893778d10eddb43c31e6655b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 4.281, valid loss 4.361\n2055.6 examples/sec\n"
+          "text": "train loss 0.369, valid loss 0.606\n1908.1 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 25031,
-          "sha256": "sha256:b79cfa126ecb413ae09c5f9cd4395338a41202aa1053f6244dfe97c7b9477089"
+          "bytes": 23240,
+          "sha256": "sha256:1397423d7070a2fd421ef76b1917e659682cd6cf16043d1bfcc49a6a99061fdc"
         }
       ]
     },
     "kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle": {
-      "code_fingerprint": "sha256:cbbb3397a30426e6ade65fe491329222f9bdd6484e9d83b5bbdab48983bbefe7",
+      "code_fingerprint": "sha256:049b32dd783934c6e8e71c6c8aac3bc331afab5fb6f64c673948d0f193837057",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 4.199\n5465.2 examples/sec\n"
+          "text": "train loss 0.325\n5254.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 19980,
-          "sha256": "sha256:eb4c1fdf60c4d161fc9e0d06ef0f186acfb6d8d2b37ca35c03244eb6e4c7d7fc"
+          "bytes": 20974,
+          "sha256": "sha256:de70eb18357efdc673e6ba033cc37fc86a3bbbaf5c4c041e9a3976b887c2af3a"
         }
       ]
     }

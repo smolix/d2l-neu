@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:f1dd95f3761b25cfc73e00821d5fbe3f6f163e4063f23fcad5e42bedc6974ede",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 1.96 x1 +0.07 x2 -1.92   (true log-ratio: 2 x1 - 2)\nlargest weight: 104; effective sample size: 48 of 1000, 222 if clipped at 5\n"
+          "text": "learned h(x) = 2.16 x1 -0.13 x2 -2.18   (true log-ratio: 2 x1 - 2)\nlargest weight: 96; effective sample size: 34 of 1000, 199 if clipped at 5\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.519   source accuracy 0.841\nweighted    target accuracy 0.943   source accuracy 0.813\nclipped     target accuracy 0.931   source accuracy 0.828\nalways predicting the most common target class: 0.698\n"
+          "text": "unweighted  target accuracy 0.584   source accuracy 0.856\nweighted    target accuracy 0.938   source accuracy 0.828\nclipped     target accuracy 0.943   source accuracy 0.837\nalways predicting the most common target class: 0.720\n"
         }
       ]
     },
@@ -53,8 +53,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 791525,
-          "sha256": "sha256:4371221549a8ea690aba7ef7750e1686ae98d4766e663f91474e497e28ca48f6"
+          "bytes": 793634,
+          "sha256": "sha256:f09586330defcf6dafede6b14ff89dcd5657326dec5a6efad14d5356cd8a84b1"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "C = [[0.83, 0.15], [0.17, 0.85]]   mu = [0.767, 0.233]\nestimated target p(y) = [0.902, 0.098]\n"
+          "text": "C = [[0.85, 0.15], [0.15, 0.85]]   mu = [0.772, 0.228]\nestimated target p(y) = [0.884, 0.116]\n"
         }
       ]
     }

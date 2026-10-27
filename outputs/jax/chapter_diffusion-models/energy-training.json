@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "d2l_lib_fingerprint": "sha256:68a0144f7ecd77002ee856082d4eb643acaa9d85ca8fffb62868a12f60769519",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-the-running-example-2-1.svg",
-          "bytes": 223654,
-          "sha256": "sha256:d08237e9eb6f96ae37a62810fbf79ab47bd1d9311b20d257c813f40e21a23ebe"
+          "bytes": 223637,
+          "sha256": "sha256:e732142f248dbe1a96e343e4b4dd9946e208bc81ce7f4073b681583414631b69"
         }
       ]
     },
@@ -106,12 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test NLL every 500 steps: [2.632, 2.513, 2.55, 2.539, 2.489, 2.486]\n"
+          "text": "test NLL every 500 steps: [2.632, 2.524, 2.495, 2.519, 2.502, 2.488]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final acceptance rate 0.28; mode weights of the chains [0.529, 0.288, 0.183]\n"
+          "text": "final acceptance rate 0.28; mode weights of the chains [0.555, 0.271, 0.175]\n"
         }
       ]
     },
@@ -123,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
-          "bytes": 297505,
-          "sha256": "sha256:3cf8d6c7fa4a21686e51bddf4d80cdbb3c1047c94b944677fce552c1fa8662b0"
+          "bytes": 298271,
+          "sha256": "sha256:30a013ad279d7fea9f510aebc174b695003df49a9b341fd51cc698eda75febed"
         }
       ]
     }

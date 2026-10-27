@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:519b879ed6d2c4e1ae0f26631c51a17595da9cb52447fff1141876af723f4088",
+    "d2l_lib_fingerprint": "sha256:ef8c4bc00257b0681346c0cec4680f3473c06b227becfa9a8421fbca615299c4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25628,
-          "sha256": "sha256:2098ef531be4bdec22326556ead90610d9a659aefc58e15411690436820d8900"
+          "bytes": 22252,
+          "sha256": "sha256:5868f800021356c9e84e1f17914ffbcd1870a5ad23fdd60aec569a24d674fd26"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 84.3\n"
+          "text": "validation perplexity 95.2\n"
         }
       ]
     },
@@ -114,7 +114,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.30 bits per byte\n"
+          "text": "2.78 bytes/token, 2.37 bits per byte\n"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller, and the same clos, and the same clos, and the same\n    clos, and the same clos, and the same clos, and the same clos, and the\n    same clos,'\n"
+          "text": "'the time travellerrice,\\nand I\\nwas was a silent Man,\\nand I\\nwas was a\n    silent Man,\\nand I\\nwas was a silent Man,\\nand I\\nwas was a silent'\n"
         }
       ]
     },
@@ -141,7 +141,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller very grad I had recomon rare it. Then I had followings\n    them would beliing their dser I should got\nthe time traveller had been a four of the familing the past for a children I\n    could see no doubt, and their eyes\n"
+          "text": "the time travellersured the\nsurpleasist at Filite exp weremberhad exparlytoo inc upon the\npook myselfress\nthe time travellerter.\n\n'I think I saw the\npoints, in this strength of the\nface, had been\n"
         }
       ]
     },
@@ -166,7 +166,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasatherlingsitant about� timeness lastreat looked@ allensereadyious flhaps endanc'"
+          "text": "'it hasghtorlocks\\x12 peics get k firstsolise� never\\x0fr get round� hands she'"
         }
       ]
     },
@@ -178,8 +178,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 22205,
-          "sha256": "sha256:1c6d13dc1c0ce8f92ba8c7794ef80170ef96bfc066718a4fefb622badb6235e0"
+          "bytes": 22254,
+          "sha256": "sha256:b3279ce5afb99935f0482061fa1b36296daabacc9052bce2f5646ae5497086a0"
         }
       ]
     },
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 102.6, \"the time travellermbled.\\n\\n'In the little people, and I\n    was a certain simpleasant substance, and the\"\n"
+          "text": "perplexity 105.0, \"the time travellermiting\\nmatter\n    and\\nfrom\\nshaveying\\nafter.\\n\\n'In a\\ndis\"\n"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      17.0     84.3\n concise       7.6    102.6\n"
+          "text": "   model  time (s)  val ppl\n scratch      17.4     95.2\n concise       5.3    105.0\n"
         }
       ]
     }

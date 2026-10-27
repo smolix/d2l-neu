@@ -206,6 +206,8 @@ def group_into_units(fences):
       cell per framework — if a new cell's framework is already in the
       current unit, a new unit starts (matches group_code_tabs behavior
       in d2l_preprocess.py).
+    - A unit also ends when the next cell already carries a different id
+      (group_code_tabs splits on an id change too).
 
     The "broken" flag on a fence indicates non-blank content appeared
     between this fence and the previous Python fence; it forces a new
@@ -231,8 +233,12 @@ def group_into_units(fences):
                 and is_fw_specific(cur[-1]['tab'])):
             new_fws = {t.strip() for t in f['tab'].split(',')
                        if t.strip() in FRAMEWORKS}
-            if new_fws & fws_in_unit(cur):
-                # Collision: this framework is already in the unit. Start fresh.
+            cur_ids = {extract_existing_id(c['info']) for c in cur} - {None}
+            f_id = extract_existing_id(f['info'])
+            if (new_fws & fws_in_unit(cur)
+                    or (f_id and cur_ids and f_id not in cur_ids)):
+                # Collision: this framework is already in the unit, or the
+                # cell already carries another id.
                 units.append(cur)
                 cur = [f]
             else:

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2f066454120d7a35fbb9688bd30dd070a4909e1757fe767af454809d10d03034",
+    "d2l_lib_fingerprint": "sha256:89586832f96d91bd591d8dde550a21e1dfaf1e7f6bf2f89d411918a566f60182",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,7 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped (PPO): 0 of 8 seeds end dead; casualties []\n      no clip: 7 of 8 seeds end dead; casualties [0, 1, 2, 3, 5, 6, 7]\n"
+          "text": "clipped (PPO): 0 of 8 seeds end dead; casualties []\n      no clip: 5 of 8 seeds end dead; casualties [0, 2, 3, 5, 6]\n"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
-          "bytes": 35126,
-          "sha256": "sha256:470705fe2b2a45e7f343ab1867b83b1f902534ce77b13a2ba96f94dae8bc62b0"
+          "bytes": 35129,
+          "sha256": "sha256:f0eb43f57ffe6ea7e713c7a1c3f8feb6463240c9baa447e581b438291ff1a9f2"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped (PPO): ratio checks outside the band: 5.0% across all epochs\n               5.1% at the last epoch of each batch\n      no clip: ratio checks outside the band: 13.8% across all epochs\n               19.5% at the last epoch of each batch\n"
+          "text": "clipped (PPO): ratio checks outside the band: 5.0% across all epochs\n               5.1% at the last epoch of each batch\n      no clip: ratio checks outside the band: 15.8% across all epochs\n               22.3% at the last epoch of each batch\n"
         }
       ]
     },
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
-          "bytes": 35533,
-          "sha256": "sha256:c8788c68c59c424951ece3c4505eff7670cfd7721d5743dab639cddd0ce16611"
+          "bytes": 35442,
+          "sha256": "sha256:b75d2f80e896829fdb3dc4ab4412830c88090d40b21a57f5b3b6191e9e67df7a"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
-          "bytes": 50368,
-          "sha256": "sha256:c57030f7ab9f774d439d8e70c4eba1a5ec4be5ac98a046be4ff514cd2a04445b"
+          "bytes": 50392,
+          "sha256": "sha256:ab391e5035be98e6a09660819f32e279ebe7ca4941ba5722f6a00fdb13212966"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
-          "bytes": 31589,
-          "sha256": "sha256:002fea7c9b03404ec386e00bf7ca84ad00dc1adf61a32e744cbfccbc3e12d808"
+          "bytes": 31646,
+          "sha256": "sha256:45d9695f0b2f4976e24f0dda7947c680ad582e075b997234a08bcbca20e08a7f"
         }
       ]
     },

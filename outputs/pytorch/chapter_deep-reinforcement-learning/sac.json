@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:687b50f121e2c60fc61e5a82a3575f9fcca07e5c026b3bdb78a509a1b5e2ad30",
+    "d2l_lib_fingerprint": "sha256:ced72d9cec6c0c8e27668d6990324c165f16882ffbae46daedfeb4987926eb68",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -94,8 +94,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
-          "bytes": 34711,
-          "sha256": "sha256:4328f15626b7b69e05b43a635e163289edc4a0fd79a364a739b29e4483598c59"
+          "bytes": 34614,
+          "sha256": "sha256:439097700dbc9446ad5a508524e7f9c50d92c08f8bc28baf45ecaa831d3cc16d"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
-          "bytes": 34937,
-          "sha256": "sha256:6c0e07fe9a599f8757cc202f8f057ccb47491411f1477b9f9e89820cc7f312a8"
+          "bytes": 34818,
+          "sha256": "sha256:c1d53c95586350c7e0057ca808c12b6766786596030735ae3e39c0a884fd0dc0"
         }
       ]
     },

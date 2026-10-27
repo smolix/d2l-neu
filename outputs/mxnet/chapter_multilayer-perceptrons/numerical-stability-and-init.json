@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.0e-17\nReLU, N(0, 1): gradient mean square at layer 1: 6.8e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.1e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.6e-18\nReLU, N(0, 1): gradient mean square at layer 1: 9.0e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.0e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34435,
-          "sha256": "sha256:5b201b8303699a3333bf6a530a375b79f8cfade501e41b8c21df36932e588af9"
+          "bytes": 34706,
+          "sha256": "sha256:bca707aae03bcdecb146c7aa5f9eb3036cbec9d1852604e1fa2a27679f55e7e9"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 1.7e-19, gradient at layer 1: 8.8e-18\nXavier: activations at layer 10: 1.3e-03, gradient at layer 1: 2.6e-03\nHe: activations at layer 10: 1.4e+00, gradient at layer 1: 1.0e+00\n"
+          "text": "N(0, 0.01²): activations at layer 10: 1.7e-19, gradient at layer 1: 1.1e-17\nXavier: activations at layer 10: 7.3e-04, gradient at layer 1: 2.2e-03\nHe: activations at layer 10: 1.2e+00, gradient at layer 1: 1.2e+00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31031,
-          "sha256": "sha256:084ab2f8b2e82bea9cfc35f3131a3e7186fb4b72c38e83b2a56be63ad85b20f7"
+          "bytes": 31923,
+          "sha256": "sha256:c4108792ee8660c4d2abcc0dc4232f1b39734cfbf72db822f086458a4e03b0fb"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.24\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.13\n"
         }
       ]
     }

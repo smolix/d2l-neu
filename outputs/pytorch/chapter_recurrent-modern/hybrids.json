@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5b3aadcdbe8a8d729aa9242d1ef6ee2f07cec74d3fcfe7f39731f072e50401b3",
+    "d2l_lib_fingerprint": "sha256:1700d9596d18c59ca778a3eb25063b5b67dae615a72006392e1a4b2bf21c92a8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 34056,
-          "sha256": "sha256:c20354b846e6547896bf520e85e3ec22b876b1d7a682c7576b48bfa0b25a2957"
+          "bytes": 34012,
+          "sha256": "sha256:37d40b666ba4150d58f20e4b7c50b61db8f73e03d547997abbf19ccdf8bc5a1e"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.28\n"
+          "text": "hybrid               perplexity 3.29\n"
         }
       ]
     }

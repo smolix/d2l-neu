@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:565b4dffd7f5a43388235bfadf1c724b13d89e8cb69c5f03de8ee0616d5574f0",
+    "d2l_lib_fingerprint": "sha256:518597e4d94032df233db7630cb170a899cf0b67cba3639d7159fbba3605446e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
-          "bytes": 33996,
-          "sha256": "sha256:736298f0eb6eb4bff01f98a6b966f1cd2da96eaf499b64fde441a1570dce8101"
+          "bytes": 31816,
+          "sha256": "sha256:0d23e576def3c06ed911f1ea4f60ee505c08df9691160e20bdbfc38b81795880"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
-          "bytes": 45605,
-          "sha256": "sha256:6386fd0a47764f7b5fb4a1b0df4383d0a92d6f09fd4557c0a097281cfb150ee1"
+          "bytes": 43128,
+          "sha256": "sha256:0b398eaf7758bc0b7efe3c8e78f5d80b80f89c0f401c99ca4a5cabccb7d052e6"
         }
       ]
     },
@@ -109,7 +109,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -130,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[109. 439. 417. 317.  10.  98. 281. 289. 612.  10.]\n [612.  10.  10.  39.  78. 297.  44. 316. 442. 523.]] \nY: [[439. 417. 317.  10.  98. 281. 289. 612.  10.  10.]\n [ 10.  10.  39.  78. 297.  44. 316. 442. 523. 764.]]\nX[0]: \"munistic\\nbasis.'\\n\"\nY[0]: \"unistic\\nbasis.'\\n\\n\"\n"
+          "text": "X: [[268.  44. 996. 310. 281. 105. 268. 474. 759. 375.]\n [ 44. 657. 667.  10. 943. 330. 260. 964. 111. 498.]] \nY: [[ 44. 996. 310. 281. 105. 268. 474. 759. 375. 612.]\n [657. 667.  10. 943. 330. 260. 964. 111. 498. 282.]]\nX[0]: 'er, far easier down than up'\nY[0]: \", far easier down than up.'\"\n"
         }
       ]
     }

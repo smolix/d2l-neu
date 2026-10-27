@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
-          "bytes": 25789,
-          "sha256": "sha256:c2861f9458d8aecb6e18b1d34d66dfd8b88c37c15ec24fea8d8761ac6fef02d1"
+          "bytes": 25748,
+          "sha256": "sha256:b3bca8e7b1f151eeaf32136727c157920c5fe2d39871d10a9f7f0bfc9a5798f4"
         }
       ]
     },
@@ -123,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
-          "bytes": 32712,
-          "sha256": "sha256:97c5f674c7988ca252596fd3b836d12788cb5318e03a6276f1c534dcdcd6c06b"
+          "bytes": 32694,
+          "sha256": "sha256:8b240994e2fd60b7117a14db7ec046753f5e5ea724ceb53f5abc53eb5392d5a9"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d72fe058d7b4456497c1fbc9663a218787d0db351a628d9ea52d3679f6bba31c",
+    "d2l_lib_fingerprint": "sha256:44a4a2d83ae20fd0571f910a04b40d18510b5ffcaa299b1b2d3ff2ddd3144335",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,8 +68,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
-          "bytes": 33996,
-          "sha256": "sha256:ec0e7afce0ca5054807ce26fc5795db2918fd34c30073798e90a9cad296056b9"
+          "bytes": 31816,
+          "sha256": "sha256:59698380544d2688ddb444c74d58470aac067d18ed239ea1b75083180f445c89"
         }
       ]
     },
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
-          "bytes": 45605,
-          "sha256": "sha256:729c9695ecd54bfddc23bad75616ba081340732719e7a03778d1be8d2bdae9b3"
+          "bytes": 43128,
+          "sha256": "sha256:7308a6ba50bd3cec70892125c24ab0a032e55971630d8214bafdafc7b87dd210"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[432 409 280 257 101 107 115  46 508 289]\n [324 313 636 969 273 571 601  44 622 838]] \nY: [[409 280 257 101 107 115  46 508 289 665]\n [313 636 969 273 571 601  44 622 838  10]]\nX[0]: ' into his cheeks. His'\nY[0]: ' his cheeks. His gl'\n"
+          "text": "X: [[286 259 824 667  10  10  39  87 989 518]\n [258 349 521 422 289 953  44 277 688 934]] \nY: [[259 824 667  10  10  39  87 989 518 365]\n [349 521 422 289 953  44 277 688 934 331]]\nX[0]: \" dinner?'\\n\\n'Where's\"\nY[0]: \"inner?'\\n\\n'Where's--\"\n"
         }
       ]
     }

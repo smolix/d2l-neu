@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0511, predicted 0.0510\nbias all zero: True\n"
+          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0510, predicted 0.0510\nbias all zero: True\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-0.01759385, -0.00070117,  0.00715853,  0.00459181], dtype=float32),\n np.float32(0.0))"
+          "text": "(array([ 0.00355028, -0.00209997,  0.0083052 , -0.00900818], dtype=float32),\n np.float32(0.0))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-0.05030024,  0.45937067, -0.08808976, -0.2340509 ], dtype=float32),\n array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
+          "text": "(array([ 0.70371   , -0.11054933,  0.35995823, -0.5708897 ], dtype=float32),\n array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 1), dtype=float32, numpy=\narray([[ 0.6817255 ],\n       [-0.25945348],\n       [ 0.31439674]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 1), dtype=float32, numpy=\narray([[ 0.75912344],\n       [-0.47575566],\n       [ 0.7950257 ]], dtype=float32)>"
         }
       ]
     },
@@ -71,14 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.02       1.5         1\n  8      14.6      1.54      0.99\n 32  1.04e+05      1.61         1\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.06      1.55      1.01\n  8      16.7      1.54         1\n 32  2.74e+04       1.7         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37456,
-          "sha256": "sha256:3845b00a4d2702be4976b274f4f265c57ca380655b2fe31a1906a1acdc28075e"
+          "bytes": 34549,
+          "sha256": "sha256:96ed59ed531be6554baf0c7c16d15f34d8a04bf073c6f85e941b7408b1ea5a81"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1019\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.1071\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -99,17 +99,17 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4, 2), dtype=float32, numpy=\narray([[ 8.968954 ,  0.       ],\n       [ 0.       ,  8.144999 ],\n       [-7.8131747, -7.189715 ],\n       [-0.       ,  0.       ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(4, 2), dtype=float32, numpy=\narray([[ 0.       ,  8.848469 ],\n       [ 0.       , -8.039222 ],\n       [ 0.       ,  9.464287 ],\n       [ 5.6196384, -0.       ]], dtype=float32)>"
         }
       ]
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:dc6540aec4f946163133d29b13d5a34554a533a4ed94698054f831258fc92634",
+      "code_fingerprint": "sha256:1bafcce9630d5003c47c4b4f042e28417d4b70fe26658b05a0a0d1d3c83b6a76",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([42.       ,  1.       , -6.8131747,  1.       ], dtype=float32)>"
+          "text": "array([42.       ,  1.       ,  1.       ,  6.6196384], dtype=float32)"
         }
       ]
     }

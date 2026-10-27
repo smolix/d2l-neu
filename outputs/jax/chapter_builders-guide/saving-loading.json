@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:8d0456322a75fc5093b268dfcda995a5125dd018bd2e5ae4e01b257918b1639e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -92,7 +92,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(100, 0.0013)"
+          "text": "(100, 0.0015)"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 68664.38 -> restored 0.0013'"
+          "text": "'perturbed 51901.42 -> restored 0.0015'"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0013, 0.0013, 0.0012, 0.0012, 0.0011]\nfresh optimizer: [0.0013, 1.514, 0.6364, 0.791, 0.4262]\n"
+          "text": "saved optimizer: [0.0015, 0.0015, 0.0014, 0.0014, 0.0013]\nfresh optimizer: [0.0015, 2.8153, 0.2833, 1.2559, 1.0484]\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:06dd79ca95afba5d04bc09fbf5721a3be99cac31d7002ecb02ccbbc04aacc431",
+      "code_fingerprint": "sha256:29864f36182b73144c692b72673fa10c850d463b379ea357b11517ef3e992986",
       "kind": "text",
       "outputs": [
         {

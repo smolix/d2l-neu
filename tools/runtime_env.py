@@ -43,6 +43,21 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/discrete-diffusion.ipynb",
 }
 
+# (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
+# run on a GPU slot. ch. 17 (#95): the PyTorch diffusion notebooks meet the
+# "minutes on a laptop CPU" budget (annealed-langevin 6 min, flow-matching 11
+# min, 2026-10-25 batch run), but the JAX versions took 31-51 min on CPU under
+# the build's thread caps (flow-matching 51, ddim 51, discrete-diffusion 38,
+# annealed-langevin 31). JAX places arrays on the default backend, so with a GPU
+# visible these notebooks use it without code changes; the PyTorch versions
+# stay on CPU slots.
+GPU_FRAMEWORK_NOTEBOOKS = {
+    ("jax", "chapter_diffusion-models/annealed-langevin.ipynb"),
+    ("jax", "chapter_diffusion-models/ddim.ipynb"),
+    ("jax", "chapter_diffusion-models/flow-matching.ipynb"),
+    ("jax", "chapter_diffusion-models/discrete-diffusion.ipynb"),
+}
+
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
 # scan is textual, so it is unreliable in BOTH directions: a notebook that never
 # names a device reads as CPU (JAX places arrays on the default backend
@@ -227,6 +242,9 @@ WHOLE_BOX_NOTEBOOKS = {
 # GPU. (syne-tune itself only honours CUDA_VISIBLE_DEVICES with the patch
 # that tools/check_runtime_deps.py applies to the pytorch venv.)
 FULL_CARD_NOTEBOOKS = {
+    # Times the memory/speed trade-offs of checkpointing and copies across two
+    # GPUs; a shared card skews the timings the prose quotes.
+    "chapter_builders-guide/gpus-devices-memory.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
 }
@@ -292,7 +310,7 @@ def notebook_resource(framework, rel, uses_gpu):
     data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each;
     whole-box notebooks (WHOLE_BOX_NOTEBOOKS) take every GPU, fully.
     """
-    if rel in GPU_ONLY_NOTEBOOKS:
+    if rel in GPU_ONLY_NOTEBOOKS or (framework, rel) in GPU_FRAMEWORK_NOTEBOOKS:
         return ('gpu', 1, 1)
     if rel in CPU_ONLY_NOTEBOOKS:
         return ('cpu',)
@@ -331,6 +349,12 @@ def file_uses_gpu(filepath, siblings_root):
     except ValueError:
         _rel = ()
     if _rel and Path(*_rel).as_posix() in GPU_ONLY_NOTEBOOKS:
+        return True
+    try:
+        _fw = filepath.relative_to(siblings_root).parts[0]
+    except (ValueError, IndexError):
+        _fw = None
+    if _rel and (_fw, Path(*_rel).as_posix()) in GPU_FRAMEWORK_NOTEBOOKS:
         return True
     try:
         text = filepath.read_text(encoding="utf-8")

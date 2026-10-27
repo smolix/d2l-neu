@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
+    "d2l_lib_fingerprint": "sha256:f1dd95f3761b25cfc73e00821d5fbe3f6f163e4063f23fcad5e42bedc6974ede",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
-          "bytes": 26257,
-          "sha256": "sha256:48d3aeeef8a2d18a48cf7217f202bd4e4d542f4517cecef2d4b5967e2e64cf06"
+          "bytes": 26207,
+          "sha256": "sha256:e73bdecb2afa67ac7aff6e3173e0d38f23dd1d89c6e6249663639ba95e856403"
         }
       ]
     },
@@ -69,8 +69,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 40875,
-          "sha256": "sha256:e77e3aa29b6e3b773557f0a119caa7c378ccc4c1d19253ecb71265354f77821b"
+          "bytes": 40833,
+          "sha256": "sha256:d5db00c07c771c3b56828441157366fcb687dbfc8f0fb7b0542df06b35c2b196"
         }
       ]
     },

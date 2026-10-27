@@ -19,7 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-from runtime_env import CPU_ONLY_NOTEBOOKS, GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS
+from runtime_env import (CPU_ONLY_NOTEBOOKS, GPU_FRAMEWORK_NOTEBOOKS,
+                         GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS)
 from build_lib import LIB_ONLY_FILES
 
 
@@ -76,7 +77,7 @@ def notebook_rel(rel):
     return rel.with_suffix('.ipynb').as_posix()
 
 
-def source_execution_class(md_path, rel):
+def source_execution_class(md_path, rel, framework=None):
     """Classify the notebook produced from *md_path* as cpu/gpu/multi-gpu.
 
     The Make-visible manifest is generated before notebooks necessarily
@@ -86,6 +87,8 @@ def source_execution_class(md_path, rel):
     conservative behavior for all frameworks produced from the file.
     """
     nb_rel = notebook_rel(rel)
+    if (framework, nb_rel) in GPU_FRAMEWORK_NOTEBOOKS:
+        return 'gpu'   # one framework's variant of a CPU-only file (#95)
     if nb_rel in CPU_ONLY_NOTEBOOKS:
         return 'cpu'
     if nb_rel in MULTI_GPU_NOTEBOOKS:
@@ -130,8 +133,8 @@ def main():
             # Build-only lib-extraction source: scanned by `make lib` for
             # #@save blocks, but never generated or executed as a notebook.
             continue
-        mode = source_execution_class(md, rel)
         for fw in file_frameworks(md):
+            mode = source_execution_class(md, rel, fw)
             per_fw[fw]['all'].append(rel)
             per_fw[fw][mode].append(rel)
 

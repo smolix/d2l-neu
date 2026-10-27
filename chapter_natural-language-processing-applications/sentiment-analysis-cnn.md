@@ -438,7 +438,7 @@ It has 3 convolutional layers with kernel widths of 3, 4, and 5, all with 100 ou
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
 net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
-net.initialize(init.Xavier(), ctx=devices)
+net.initialize(init.Xavier(), device=devices)
 ```
 
 ```{.python .input #sentiment-analysis-cnn-defining-the-model-2}

@@ -538,7 +538,7 @@ d2l.plt.axhline(0.05 * probs[0], color='C3', ls=':',
                 label=f'min-p=0.05: keep {n_m}')
 d2l.plt.xlabel('token rank')
 d2l.plt.ylabel('probability')
-d2l.plt.legend()
+d2l.plt.legend();
 ```
 
 The adaptivity argument is now checkable: apply the same dials after two

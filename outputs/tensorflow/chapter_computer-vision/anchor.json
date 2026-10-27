@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:09c6ec3caf3efd96764269d6f1cce8182b28b1a2f9b0e951a67a328ecd1696d8",
+    "d2l_lib_fingerprint": "sha256:7a41542b5f85b3c2cab2c479ea90cc7decc8fa46d16469e4ee4878871ee105e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
-          "bytes": 95779,
-          "sha256": "sha256:0079a96a78ffeef79622d01f75a58418cff5ae6d245ee51a01b83f7513b67000"
+          "bytes": 95482,
+          "sha256": "sha256:523600df00492f0a1cbda1308755de6beea73447a5bd855cf2f1487ab4d44053"
         }
       ]
     },
@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
-          "bytes": 94721,
-          "sha256": "sha256:e3c01d505906c04f67d349b459f85089a5855320a72eb9253b52ebd2aefe36d5"
+          "bytes": 94453,
+          "sha256": "sha256:5d190a9bb812d84c58f10bb7dda88bceea8d2d24c6b62c98a4128f49989b175c"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
-          "bytes": 96403,
-          "sha256": "sha256:80e799c0f5395ef5ccfe37d469390ea87a93c4641f8435ceaa1e8f4fa2b0f576"
+          "bytes": 96130,
+          "sha256": "sha256:a82f0ade943b495c8331e427c71f8cf7a3d6cf24c12c5763911622a6d802db93"
         }
       ]
     },
@@ -180,8 +180,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
-          "bytes": 93212,
-          "sha256": "sha256:a0d65c3546783fa67fbaef1e1cb80139d89be77c9b29afd72731c60bf31ed5e3"
+          "bytes": 92938,
+          "sha256": "sha256:6fff6f4cf64e2d14eeb655f768484eb76cc79c527395d17714c73c2d2aa8b3a3"
         }
       ]
     }

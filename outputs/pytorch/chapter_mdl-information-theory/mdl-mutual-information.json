@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
-          "bytes": 27873,
-          "sha256": "sha256:b2c84639222a2ed0266341a929db43f0d6fd4585050414d8ef781e7363f94758"
+          "bytes": 27802,
+          "sha256": "sha256:2675d14609500d80f27faf642ff75cb5c9a3a5f8725b16b5e0895cb72e17e31a"
         }
       ]
     },
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
-          "bytes": 29955,
-          "sha256": "sha256:41b090afef8c063b4054ed3e81cbc3b148823a3124463ecde603f16735b25006"
+          "bytes": 29876,
+          "sha256": "sha256:0fcd87aad7fc8ba10629d663f7a8735af97da19eb863493064913217930a1b50"
         }
       ]
     },
@@ -180,8 +180,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
-          "bytes": 31736,
-          "sha256": "sha256:b112b3d402c03063cfd3af26c1ffd5d2bbe99c573b6d4e8833091e9682c1437e"
+          "bytes": 31646,
+          "sha256": "sha256:64c2dd2d002e0f7785fc86e1ae885f4651e7906872c39925e1941c473711e62f"
         }
       ]
     },

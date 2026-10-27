@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e6babf23da627c3d60f9eabc79b7dd51735039265a1867be1e7b0e672422d17c",
+    "d2l_lib_fingerprint": "sha256:1f30d4cdcd5c7b08533812664fa0681b32651cc6d4585bd2fea1fa85d342946e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,31 +19,31 @@
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:7b8022af7c83a7cc52f2e29c79c15bdf0b76a7a98b71b4f96771ac4ba633fdac",
+      "code_fingerprint": "sha256:fefddf8feaa6fee44ac9f298526f7556d3a4f80aa141d631c3e5adc42f628969",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:c8ee0ca01ec3f81a11451599c6750c7704b29b237d6f3f2695b8f09cbcc4f416",
+      "code_fingerprint": "sha256:95ea02b631b6c8c7117bd72c575664a67d699a3710e89e5d4042e61fcf338515",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2d output shape:\t torch.Size([1, 6, 28, 28])\nSigmoid output shape:\t torch.Size([1, 6, 28, 28])\nAvgPool2d output shape:\t torch.Size([1, 6, 14, 14])\nConv2d output shape:\t torch.Size([1, 16, 10, 10])\nSigmoid output shape:\t torch.Size([1, 16, 10, 10])\nAvgPool2d output shape:\t torch.Size([1, 16, 5, 5])\nFlatten output shape:\t torch.Size([1, 400])\nLinear output shape:\t torch.Size([1, 120])\nSigmoid output shape:\t torch.Size([1, 120])\nLinear output shape:\t torch.Size([1, 84])\nSigmoid output shape:\t torch.Size([1, 84])\nLinear output shape:\t torch.Size([1, 10])\n"
+          "text": "Conv2d                 (1, 6, 28, 28)\nSigmoid                (1, 6, 28, 28)\nAvgPool2d              (1, 6, 14, 14)\nConv2d                 (1, 16, 10, 10)\nSigmoid                (1, 16, 10, 10)\nAvgPool2d              (1, 16, 5, 5)\nFlatten                (1, 400)\nLinear                 (1, 120)\nSigmoid                (1, 120)\nLinear                 (1, 84)\nSigmoid                (1, 84)\nLinear                 (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:fcb60430e55abf04c2560ba6e34ef34cb069b5e93641a84f3f7f7366b6bf0303",
+      "code_fingerprint": "sha256:d7e15fe73531b7baa9897a162bd2168f81a7b6fc89a891344b0c00059f39e194",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37859,
-          "sha256": "sha256:2cbbb1af63305f9deaea0e1259c082f33146e8b88ff10ad3d4da3371b241943b"
+          "bytes": 39985,
+          "sha256": "sha256:85f67c128929344a6ede3a1e2c46cc439f7fa8f5c08b6253f3007c5c1615b2df"
         }
       ]
     }

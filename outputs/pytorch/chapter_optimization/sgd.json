@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f39fda113b7f77e0f24d4479e95578ed403bbc23dc2551963723e50990c5a462",
+    "d2l_lib_fingerprint": "sha256:9f12c8b25cd19c9bc15407a4a4b1b656838a2d0696c890ab7a9c1030568b7068",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.378101, x2: 0.177863\n"
+          "text": "epoch 50, x1: -0.040808, x2: 0.112019\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23442,
-          "sha256": "sha256:ca63b56cd9737212a44d41d32977333bfb7c0256d9fa74f3ed4993ed88e97757"
+          "bytes": 23373,
+          "sha256": "sha256:f24cad5a570a31d3869ad325096a5a42cfedb80427dc4b38a713715d9b2351bd"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.907831, x2: -0.022228\n"
+          "text": "epoch 1000, x1: -0.851458, x2: -0.076365\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 123788,
-          "sha256": "sha256:4d0185147a4f9bc661f32587f9e244f45f49048d1d8f70307d999ca5f2ed77b4"
+          "bytes": 123618,
+          "sha256": "sha256:770072f6746e95066108f7e3abad65be6e5a7c0913df02b8be9a566017ebd7b3"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.058757, x2: 0.031384\n"
+          "text": "epoch 50, x1: 0.075178, x2: 0.050447\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23442,
-          "sha256": "sha256:7fda2f17e37a721b3604856cebd70308fd7a857fdf706f599436dae4fdbb1737"
+          "bytes": 23355,
+          "sha256": "sha256:196edc56b54d27b56d3d7666c44772c244ef094284e50730f5bfd71f88036c36"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30049,
-          "sha256": "sha256:3dfef4540a2b3f3499f052d21fa172193ba3e902a0b2bea1795c23944e4fa74d"
+          "bytes": 28310,
+          "sha256": "sha256:890341377601bfbd678f711297440c519ea5c5754163f92aecfb0951208aad18"
         }
       ]
     }

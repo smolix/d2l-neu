@@ -34,9 +34,7 @@ We first let the framework compute the gradient of the line model and
 compare it with $(2, 4)$. We then control which operations are
 recorded, differentiate programs with loops and branches, differentiate a
 derivative, and finally see why frameworks walk the record backward rather
-than forward. The four frameworks of this book offer different interfaces to
-the same idea, so the framework tabs differ more in this section than in most
-others.
+than forward.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
@@ -394,7 +392,7 @@ _, vjp = jax.vjp(losses, w)  # vjp maps v to J^T v
 vjp(jnp.ones(3))[0]  # v = 1
 ```
 
-All four frameworks return $(2, 4)$, the gradient of the total loss.
+The result is $(2, 4)$, the gradient of the total loss.
 Choosing instead $\mathbf{v} = \mathbf{e}_j$, the coordinate vector with a
 $1$ in position $j$ and $0$ elsewhere (:numref:`sec_linear-algebra`), makes
 the backward pass return the gradient of $u_j$ alone, which is row $j$ of the
@@ -845,7 +843,11 @@ forward sweeps, one per column.
 We fill the Jacobian of the line model's errors
 $\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ both ways. The
 errors are $m = 3$ outputs of $n = 2$ inputs, and their Jacobian is
-$\mathbf{X}$, so reverse mode needs three sweeps and forward mode two.
+$\mathbf{X}$, so reverse mode needs three sweeps and forward mode two. The
+rows of the $k \times k$ identity matrix `eye(k)` are the coordinate vectors
+$\mathbf{e}_1, \ldots, \mathbf{e}_k$, so a loop over its rows supplies one
+coordinate vector per sweep, and `stack` joins the results into a matrix
+(:numref:`sec_ndarray`).
 
 :begin_tab:`mxnet`
 MXNet implements only reverse mode. Passing $\mathbf{v}$ to `backward`

@@ -137,5 +137,5 @@ Each step needs one tool, and each section of this chapter supplies one.
 | Linear Algebra | the same minibatch as $\mathbf{X} \in \mathbb{R}^{256 \times 784}$; 7,850 parameters |
 | Calculus, Automatic Differentiation | the line model: inputs 0, 1, 2 with labels 1, 1, 0 |
 | Probability and Statistics | a coin with 56 heads in 100 tosses; an HIV test |
-| Documentation | `ones` in four frameworks |
+| Documentation | what `ones(2, 3)` does, from its signature |
 :::

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 100456,
-          "sha256": "sha256:d727e6b6264b24b5ccf4fd7dc97ea25c244b0c780abc14f14272cc585c43adaf"
+          "bytes": 99919,
+          "sha256": "sha256:04f432dd4536152e46e7d8cc317cfe0494606597a97e44333c8425d4c4631718"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 28838,
-          "sha256": "sha256:eada655337c0589368df96918b2365c3c2e0f9ff632c0460afed094c563eef75"
+          "bytes": 28737,
+          "sha256": "sha256:8320f7bce1e1c2b95afecfab05af9ee58cb938bf23f691d9915bfba2d27fb18a"
         }
       ]
     }

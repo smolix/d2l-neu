@@ -249,11 +249,11 @@ the hash. This signal pinpoints *which* cells drifted.
 **(b) Notebook-level provenance** (stored once per manifest, compared whole):
 
 - **`d2l_lib_fingerprint`** — hash of exactly the `d2l/_blocks/<fw>/*.py` block
-  files this notebook uses, read straight from its existing `.d` file
-  (`tools/scan_d2l_usage.py` already emits one per notebook → per-symbol block
-  paths). A `#@save` change therefore marks *precisely* the notebooks that use
-  the changed symbol stale — replacing CLAUDE.md's "when in doubt rerun all
-  frameworks."
+  files this notebook uses, directly or through other library symbols, read
+  straight from its `.d` file (`tools/scan_d2l_usage.py` emits one per notebook
+  → per-symbol block paths, closed transitively, §3.4). A `#@save` change
+  therefore marks *precisely* the notebooks that reach the changed symbol
+  stale — replacing CLAUDE.md's "when in doubt rerun all frameworks."
 - **`framework_version`** — the installed framework version, keyed on the
   PEP 440 **public** version only (`tools/capture_outputs.py:public_version`
   strips the local build segment, e.g. `torch==2.11.0+cu128` → `torch==2.11.0`).
@@ -269,7 +269,8 @@ the hash. This signal pinpoints *which* cells drifted.
 
 A notebook is **stale** iff either provenance key differs from the current
 environment, **or** any cell's recomputed `code_fingerprint` differs from the
-stored one. (A provenance mismatch marks the whole notebook; a code-fingerprint
+stored one, **or** it has code cells and no manifest at all (never captured,
+§3.4). (A provenance mismatch marks the whole notebook; a code-fingerprint
 mismatch marks that cell and — being prefix-inclusive — its successors.) This is:
 
 - **Randomness-immune** — a training plot that *would* look different on a re-run
@@ -326,64 +327,98 @@ listing the deferred notebooks and render from the store meanwhile.
 CLAUDE.md says a library rebuild "can affect notebooks outside the edited file
 and outside the edited framework — rerun all plausibly affected notebooks; when
 unsure, rerun all frameworks." The `d2l_lib_fingerprint` in each manifest
-narrows that guesswork to the symbols a notebook references, and
-`audit_outputs.py --stale` names that set. It is not the exact blast radius:
-two gaps (verified against the code, 2026-10-24) mean some library edits
-change a notebook's outputs without flagging it.
+replaces that guesswork: it covers the library code a notebook can reach
+(with the exceptions listed below), and `audit_outputs.py --stale` names the
+notebooks a library edit invalidates.
 
-**How the fingerprint is computed.** `tools/scan_d2l_usage.py` collects the
-textual `d2l.<name>` references in a notebook's code cells and keeps those
-that match a shard file `d2l/_blocks/<fw>/<name>.py`; it writes them to the
-notebook's `.d` file. `capture_outputs.d2l_lib_fingerprint` hashes exactly
-those shards (path and bytes). `build_lib.py` merges `@d2l.add_to_class`
-methods into their class's shard, so `Trainer.py` holds `fit_epoch`,
-`prepare_batch`, `clip_gradients` and the ch. 5 device overrides.
+**Shards.** `tools/build_lib.py` writes, next to each `d2l/<fw>.py`, one shard
+file `d2l/_blocks/<fw>/<name>.py` per module-level name a `#@save` block
+defines: every *unindented* `class`, `def` or assignment
+(`_block_shard_names`). A helper `def` nested inside a function body is not a
+library symbol and names no shard. A block that defines two top-level symbols
+is written to both shards; if two blocks define the same name, that shard
+holds both. `build_lib.py` merges `@d2l.add_to_class` methods into their
+class's block first, so `Trainer.py` holds `fit_epoch`, `prepare_batch`,
+`clip_gradients` and the ch. 5 device overrides. A shard is rewritten only
+when its content changes. Four kinds of library code that name no symbol get
+shards too:
 
-**Gap 1: the fingerprint is not transitive.** Library-internal references
-are not followed. A notebook that calls `d2l.Trainer` depends on
-`Trainer.py`, but not on `ProgressBoard.py`, `Module.py`, `Averager.py`,
-`as_metrics.py`, or the JAX `_trainer_train_step.py` /
-`_trainer_validation_step.py` that the trainer calls; a notebook that calls
-`d2l.hpo_objective_lenet` does not depend on `HPOTrainer.py` or `Trainer.py`.
-An edit to such an inner symbol alone (for example to `ProgressBoard`, which
-draws every training figure) changes the outputs of all its indirect users
-and flags none of them. Until the scanner follows references inside shards,
-force those re-runs by hand: delete the users' `.executed` stamps (find them
-with `grep -l` over `_notebooks/<fw>/**/*.d` for the outer symbol) before
-`make refresh-stale`. Example from the 2026-10 trainer redesign: the TF
-`sh-intro` notebook calls only `d2l.hpo_objective_lenet`, whose shard did not
-change, yet every training run inside it did.
+- `_preamble.py`: the hand-written header of `d2l/<fw>.py` (everything above
+  the `#####   WARNING` line: the TF logger level, the MXNet `mnp` alias,
+  `nn_Module`, ...) plus every `#@save` block that defines no module-level
+  name (the preface imports, `import regex`, the utils.md imports). Every
+  notebook of the framework depends on it, since `import d2l` runs it; it has
+  no outgoing edges in the closure.
+- `DATA_HUB.py`: the `d2l.DATA_HUB['name'] = (...)` entries, reached through
+  `download`, which reads `DATA_HUB`.
+- One shard per config.ini alias (`reshape.py` holds `reshape =
+  torch.reshape`), so `d2l.reshape` users depend on it.
+- One shard per hand-written module next to the libraries, named after the
+  module: `d2l/nnx_resnet.py` → `nnx_resnet.py`, matched by the notebook text
+  `from d2l.nnx_resnet import ...`.
 
-**Gap 2: shard naming bug (`tools/build_lib.py`).** A shard is named after
-`sorted(_block_defined_names(code))[0]`, and `_block_defined_names` also
-collects *indented* (nested) `def`s. A block whose alphabetically first name
-is a nested helper gets that helper's name: the `plot` block (ch. 1
-`calculus.md`) contains the nested `has_one_axis`, so its shard is
-`has_one_axis.py`; no notebook references `d2l.has_one_axis`, so **no
-notebook depends on `d2l.plot`**, and an edit to `plot` flags nothing. As of
-2026-10-24 the bug hides 8 PyTorch symbols (`plot`, `GPT`, `train_ch6`,
-`train_concise_ch11`, `subsample`, `show_bboxes`, `preprocess_nmt`,
-`read_snli`), 7 TensorFlow, 6 MXNet and 18 JAX symbols (including
-`linear_scan`, `train_ch11`, `update_D`, `update_G`). Two blocks can also
-collide on one shard name: PyTorch `train_ch6` and `train_concise_ch11` both
-become `init_weights.py`, JAX `train_lm` and `recall_step` both become
-`loss_fn.py`. The last writer wins, so `make lib` rewrites those shards on
-every run and the other block's users are fingerprinted against the wrong
-code. Consequences for authors until the fix lands:
+**The dependency list is transitive.** `tools/scan_d2l_usage.py` collects the
+textual `d2l.<name>` references in a notebook's code cells, keeps those with a
+shard, and then closes the set over the library's own references: a shard
+references another symbol either as `d2l.X` or as a bare module global
+(`_trainer_train_step(...)` inside the JAX `Trainer.fit_epoch`).
+`shard_references` finds both with `ast` and `symtable`, so a parameter or
+local variable that happens to share a symbol's name does not count. The
+closure goes on to a fixed point and is written to the notebook's `.d` file;
+`capture_outputs.d2l_lib_fingerprint` hashes exactly those shards (path and
+bytes), and Make uses the same list as the `.executed` stamp's prerequisites.
+Examples: `d2l.Trainer` pulls in `ProgressBoard`, `Averager`, `as_metrics`,
+`HyperParameters`, `num_gpus`, `gpu`, `set_log_ticks`, `use_svg_display` (and
+in JAX `_trainer_train_step`, `_trainer_validation_step`); `d2l.resnet18`
+pulls in `Residual`; `d2l.hpo_objective_lenet` pulls in `HPOTrainer`,
+`Trainer`, `LeNet`, `FashionMNIST` and their closures.
 
-- Put exactly one top-level symbol in each `#@save` block. Two top-level
-  `class`/`def`s in one block name the shard after the alphabetically first
-  one and drop every user of the other from the gate.
-- After editing `plot` or another hidden symbol, force its users' re-runs by
-  hand (as for Gap 1).
+What the fingerprint still does not see:
 
-Planned fix (batch 2 of the trainer redesign, together with the log-axis
-changes to `d2l.plot`, not before): take a shard's name from the first
-*unindented* `class`/`def` of the block. Fixing the naming changes shard
-paths and therefore flags every user of a renamed shard (about 218 notebooks),
-which is why it waits for a re-run that changes those figures anyway. Making
-the scanner follow references inside shards (Gap 1) is a separate decision,
-since it widens the radius of every `Module` edit.
+- `d2l/__init__.py` and package versions other than the framework's own
+  (matplotlib, numpy, pandas, ...): an edit or upgrade there flags nothing.
+- Data files under `data/` and remote datasets: a changed download changes
+  outputs without changing any shard.
+
+What the closure does not follow: a method a notebook calls on an object it got
+from elsewhere is covered only through the class's own shard (the notebook
+names `d2l.Classifier`, whose shard names its base `d2l.Module`, and so on).
+A library function that receives another symbol as an argument (a model
+class passed to `Trainer.fit`) depends on it only through the notebook that
+passes it, which is the notebook that is flagged anyway.
+
+The `.d` files are regenerated whenever a source `.md` or any shard changes
+(`make/notebooks.mk`, `$(DEP_FILES)`); the scan takes about a second.
+
+**History (fixed 2026-10, #94).** Until then the list was not transitive (the
+JAX legend fix in `_trainer_validation_step` flagged none of the 27 JAX
+notebooks that train with `d2l.Trainer`; a `d2l.Residual` change missed the
+TF/MXNet users of `d2l.resnet18`), and a shard was named after
+`sorted(names)[0]` over all names including nested `def`s: the `plot` block
+became `has_one_axis.py`, so no notebook depended on `d2l.plot`, and two
+blocks could collide on one shard (PyTorch `train_ch6` and
+`train_concise_ch11` both became `init_weights.py`). That hid 8 PyTorch, 7
+TensorFlow, 6 MXNet and 18 JAX symbols. The fix changed the dependency list
+of all 622 notebooks (every notebook now also depends on `_preamble.py`;
+the renaming and the closure alone changed 481), so the first audit after
+`make lib` reports all of them stale once. The full re-run planned with the
+fix refreshes them.
+
+**A notebook without a manifest is stale.** A source that produces a
+notebook for a framework (`file_frameworks`, the generator's own rule) and has
+an executable `{.python .input}` cell for it, but has no
+`outputs/<fw>/…json` (a new section, or one that gained its first code cells),
+was never captured. `audit_outputs.py` reports it as HARD-stale ("no
+manifest"): `--stale` and `--stale-stamps` list it, and `--verify-fresh` fails
+on it under the host-capability tiers of §3.3a. The rule reads the sources,
+not `_notebooks/`, so it also works on a fresh clone where no notebook was
+generated. (The other staleness rules compare against the generated notebooks
+and stay silent where those are absent; the human report lists such
+manifests.)
+
+Tests: `tools/test_freshness_deps.py` (run by `make test-trap`) covers the
+shard naming, the closure, the preamble/DATA_HUB/alias/module shards and the
+no-manifest rule on tmp fixtures.
 
 ### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
 
@@ -819,7 +854,7 @@ request. Those run through the aggregate targets:
 |---|---|---|
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
-| `make rebuild-book-artifacts` | `slides` (parallel, per-deck-incremental) → then **`html` ∥ `pdfs` concurrently** (html as its own light make; the 4 PDFs at `-j$(RENDER_JOBS)`, so all render at once and finish hidden under the longer HTML render) → `notebook-zips` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
+| `make rebuild-book-artifacts` | `slides` (parallel, per-deck-incremental) → **`html`** → **`pdfs`** (the PDFs at `-j$(RENDER_JOBS)`, all at once). html and pdfs are serialized: a concurrent PDF render breaks the html render's startup tree walk (§6.8) → `notebook-zips` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
 | `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
 | `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
 | `make hosted-env-locks` | Regenerate `hosted/hosted-lock-*.json` and `hosted/constraints-*.txt` from `uv.lock`. | No |
@@ -1157,8 +1192,9 @@ Each dispatch shells **`make <stamp>`** with the chosen device(s) in
 duplication); `run_one_notebook._run_once` runs on the assignment and **skips its
 own flock** (the self-locking path + `serialize_dataset_prep` remain the fallback
 for a direct `make _notebooks/<fw>/<x>.executed`). For **jax** the scheduler also
-sets `XLA_PYTHON_CLIENT_MEM_FRACTION = slots×7.5 GiB / card-VRAM` (jax
-preallocates; others allocate on demand). Two race guards, both because each
+sets `XLA_PYTHON_CLIENT_MEM_FRACTION = slots×7.5 GiB / card-VRAM`, or 0.94 on a
+card the job holds entirely (whole-box and whole-card reservations;
+`docs/notebook-scheduler.md` §3.3) (jax preallocates; others allocate on demand). Two race guards, both because each
 notebook is a *separate* make process:
 
 - **No concurrent lib rebuild:** the dispatch passes `-o .preprocess.stamp -o
@@ -1226,13 +1262,40 @@ the **previous** render's deck set. That is how a `make deploy` shipped a
 `_book/` missing the seven new RL decks in every framework — caught only by
 `check-all-artifacts` (§6.9), which is exactly the silent-deck-drop class it
 exists to catch. `rebuild-book-artifacts` therefore calls
-`tools/integrate_slides.sh` **unconditionally** after the html∥pdf block. It is
-safe there (slides are finished and html has joined, so nothing races the
+`tools/integrate_slides.sh` **unconditionally** after the html and pdf renders. It is
+safe there (slides and html are finished, so nothing races the
 `rm -rf`/`rsync`) and idempotent (one extra rsync when html already staged).
 Note the gate's expected-deck set is *store-driven*: a PyTorch-only chapter like
 RL generates decks for all four frameworks but is only asserted for pytorch, so
 a missing deck in a framework with no `outputs/` tree for that chapter will not
 trip it.
+
+**html and pdfs never render at the same time (2026-10-27).**
+`rebuild-book-artifacts` used to run `make html` concurrently with the PDF fleet.
+At startup `quarto render` collects project resource files by globbing the
+**whole project tree** (`projectResourceFiles` in `quarto.js` expands
+`**/*.quarto_ipynb`, excluding only the output dir `_book/`), so it walks into
+`_pdf/<fw>/`, where every running PDF render creates and deletes its
+`_pdf/<fw>/_pdf/book-latex/` scratch dir. A directory listed and then removed
+before its `stat` aborts the html render with
+`ERROR: NotFound: … stat '…/_pdf/jax/_pdf/book-latex'`
+(`logs/fixround-allquick.log`). `_quarto.yml` has no option that excludes a
+directory from this walk, so the recipe serializes: `html`, then `pdfs` at
+`-j$(RENDER_JOBS)`. The same walk covers `_slides/` and `_notebooks/`; do not
+run `make html` while slides render or notebooks execute either.
+
+**A failed html render is not marked built.** The html recipe runs its steps
+(inject → manifests → `quarto render` → `fix_crossref_numbers.py` →
+`add_cfasync.py` → `integrate_slides.sh`) in one `{ …; } | tee` block. Before
+2026-10-27 that block returned the exit status of its *last* step, so a failed
+quarto render was followed by the post-processing steps, which succeeded, and
+`integrate_slides.sh` touched `_book/index.html`; make then treated the failed
+render as current, and `rebuild-book-artifacts` reported success. The block now
+starts with `set -e` (pipefail carries the failure through `tee`), and on
+failure the recipe deletes `_book/index.html` so the next `make html` renders
+again. The recipe tests `$?` after the pipeline instead of appending
+`|| { rm …; }`: bash ignores `set -e` in every command left of a `||`, including
+the commands inside the block.
 
 ### 6.9 Makefile layout, extracted scripts & artifact-phase timing
 
@@ -1321,10 +1384,11 @@ inventory and rationale.
 **Artifact-phase timing** (from-scratch, post-notebook-execution, on the 4×4090
 box, rendering from the committed store): `clean` ~4 s · **build (`all-quick`)
 ~14.7 min** [lib ~3 s · notebook regen ~65 s · slides ~60 s cold (0 s when
-unchanged — per-deck hash) · **`html` ∥ `pdfs` ~12.3 min**, HTML-bound: all four
-PDFs render concurrently in ~6 min, hidden under the HTML render · notebook-zips
-~9 s] · colab publish ~45 s · R2 upload ~12 s. **Total ≈ 15.7 min.** HTML is the
-bottleneck (single `quarto render`, §6.8); everything else is ≤1 min or hidden.
+unchanged — per-deck hash) · `html` ~12.3 min · then `pdfs` ~6 min (all four
+concurrently) · notebook-zips ~9 s] · colab publish ~45 s · R2 upload ~12 s.
+These timings predate serializing html and pdfs (2026-10-27, §6.8), which adds
+the ~6 min PDF render to the total (then ≈ 22 min). HTML is the bottleneck
+(single `quarto render`, §6.8); everything else is ≤6 min.
 
 **Incrementality (2026-07-22).** The committed store
 (`outputs/<fw>/<chapter>/<stem>.json`) is a tracked prerequisite of the HTML book

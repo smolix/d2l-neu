@@ -76,7 +76,7 @@ we define a small BERT, using 2 layers, 128 hidden units, and 2 self-attention h
 net = d2l.BERTModel(len(vocab), num_hiddens=128, ffn_num_hiddens=256,
                     num_heads=2, num_blks=2, dropout=0.2)
 devices = d2l.try_all_gpus()
-net.initialize(init.Xavier(), ctx=devices)
+net.initialize(init.Xavier(), device=devices)
 loss = gluon.loss.SoftmaxCELoss()
 ```
 
@@ -453,10 +453,10 @@ in `tokens_a` and `tokens_b`.
 #@tab mxnet
 def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
-    token_ids = np.expand_dims(np.array(vocab[tokens], ctx=devices[0]),
+    token_ids = np.expand_dims(np.array(vocab[tokens], device=devices[0]),
                                axis=0)
-    segments = np.expand_dims(np.array(segments, ctx=devices[0]), axis=0)
-    valid_len = np.expand_dims(np.array(len(tokens), ctx=devices[0]), axis=0)
+    segments = np.expand_dims(np.array(segments, device=devices[0]), axis=0)
+    valid_len = np.expand_dims(np.array(len(tokens), device=devices[0]), axis=0)
     encoded_X, _, _ = net(token_ids, segments, valid_len)
     return encoded_X
 ```

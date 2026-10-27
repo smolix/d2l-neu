@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3a857365474f792e64a9b5b4af3f6339f011adca446f017693f3b04fdbd9687",
+    "d2l_lib_fingerprint": "sha256:95dae7adaf66112987868eb76c04e8664625d3ff1dbe3d08d1d46877c5b67724",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -16,8 +16,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
-          "bytes": 142658,
-          "sha256": "sha256:33a75def8a232c1b0a864ebc750c292a41eeacb00e96be9fc9ef21ad46bc6113"
+          "bytes": 141388,
+          "sha256": "sha256:9c5c8123edc32f49df0fc8baf697b93626270de328ab0809d4f0e95b84d0d480"
         }
       ]
     },
@@ -29,8 +29,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
-          "bytes": 196603,
-          "sha256": "sha256:09bac26cc95a18c82b2c22b9615eb9d6fedf0b3f4145fee2d8d30b661af6abeb"
+          "bytes": 194577,
+          "sha256": "sha256:a30ab08d2393836074bdd6e38b98222b3a28893046116b232bc580bf67d37eb1"
         }
       ]
     },
@@ -111,14 +111,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, content 0.865, style 1.601, TV 5.059, total 7.526\nepoch 100, content 0.529, style 0.643, TV 3.821, total 4.993\nepoch 150, content 0.454, style 0.500, TV 3.157, total 4.112\nepoch 200, content 0.420, style 0.432, TV 2.824, total 3.675\nepoch 250, content 0.400, style 0.389, TV 2.633, total 3.421\nepoch 300, content 0.386, style 0.360, TV 2.512, total 3.258\nepoch 350, content 0.375, style 0.339, TV 2.431, total 3.145\nepoch 400, content 0.367, style 0.324, TV 2.373, total 3.064\nepoch 450, content 0.361, style 0.312, TV 2.331, total 3.005\nepoch 500, content 0.357, style 0.303, TV 2.300, total 2.960\n"
+          "text": "epoch 50, content 0.870, style 1.610, TV 5.068, total 7.547\nepoch 100, content 0.531, style 0.643, TV 3.827, total 5.000\nepoch 150, content 0.456, style 0.501, TV 3.164, total 4.121\nepoch 200, content 0.423, style 0.433, TV 2.830, total 3.685\nepoch 250, content 0.402, style 0.390, TV 2.638, total 3.430\nepoch 300, content 0.388, style 0.361, TV 2.516, total 3.265\nepoch 350, content 0.378, style 0.340, TV 2.434, total 3.152\nepoch 400, content 0.370, style 0.324, TV 2.377, total 3.071\nepoch 450, content 0.364, style 0.313, TV 2.335, total 3.012\nepoch 500, content 0.360, style 0.304, TV 2.304, total 2.967\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 176141,
-          "sha256": "sha256:84e3b6d76d0bbf7ab68045edc4473ad56ec9e68c077aa797783e57ab45d6e8e0"
+          "bytes": 175514,
+          "sha256": "sha256:abeb8d64294c2f965c0ccb7a393620639cb3914159e7a0a1de27c07eb805491e"
         }
       ]
     }

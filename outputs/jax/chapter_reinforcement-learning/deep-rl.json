@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:4ba3e6a356238e1ed58daa9e2ce55bbe415e79dde879503d933541948dccaf35",
+    "d2l_lib_fingerprint": "sha256:f7559be8bdb0f0b724a6850a33900478502c10b09c9cdd29ae4babb0b07b4535",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
-          "bytes": 35692,
-          "sha256": "sha256:0470a75dc60f151e10a3ac5c7a20c78f962c4a5a3536108fc401423263b40670"
+          "bytes": 35587,
+          "sha256": "sha256:67a475ab0c6cc0bf1a58e4da1f195bacbd3743453737c72a0266b7cd5c6c62ec"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
-          "bytes": 52746,
-          "sha256": "sha256:abe464df5c195ea2e282031ca21afc152fd58b030e58b4e445ee75d2c41754eb"
+          "bytes": 52656,
+          "sha256": "sha256:43f2ccb45f55bb559541328f62cc53046a8887da0bd0c7ad157bd12206120f8a"
         }
       ]
     },
@@ -100,8 +100,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
-          "bytes": 31681,
-          "sha256": "sha256:242e97472d94f675183fc254912bb785e1a6714f4f92d1eaa297c6f53257bb24"
+          "bytes": 31630,
+          "sha256": "sha256:c5b640a4e66faf8796b2aae9450afbeceed9a05e26b21fc10f817d289f83682a"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:4c39da7cda837be86d9f74f51c31881a629ed6775e67646fcaa118b387da2301",
+    "d2l_lib_fingerprint": "sha256:30d8cc36880336814f13100de7f78253c309aec1166a4cc374eacce3e066b697",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -116,45 +116,45 @@
       ]
     },
     "ssd-reading-the-dataset-and-initializing-the-model-2": {
-      "code_fingerprint": "sha256:516f1af2e68d756c06958592d5bb150cb29a28d37e52fe8cb8b67ea3360735f3",
+      "code_fingerprint": "sha256:01fa8a76fb7b4fac64dabe1ecd2ebf2f3a934956cc40b64dbfae9a2c22ef5616",
       "kind": "text",
       "outputs": []
     },
     "ssd-defining-loss-and-evaluation-functions-1": {
-      "code_fingerprint": "sha256:9cffdbe2b9c5afe30690462cf602a75bde233e01459ddce61b040dd8cf35e683",
+      "code_fingerprint": "sha256:f1b9b181f0259dee301de3c5a7c0a1cfc7c43e695ae08d167ff5195b92574af2",
       "kind": "text",
       "outputs": []
     },
     "ssd-defining-loss-and-evaluation-functions-2": {
-      "code_fingerprint": "sha256:70d53571441b2b1540bc02bde48a1fc7d26967f91369bfbdc6ceb1e233881898",
+      "code_fingerprint": "sha256:42ac60bfd7a4c18823535ad0a16adba6c47f9071d7302c0e8d5820c1c29d99da",
       "kind": "text",
       "outputs": []
     },
     "ssd-training-the-model": {
-      "code_fingerprint": "sha256:8e03ef3aae732537992283534e3026a672d8d05427e24d38ba2e1ea61aa14306",
+      "code_fingerprint": "sha256:440a31ef8e789c9ac25aa5acce689a0c349f5409d152adc149f7359dddf5ddf4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class err 3.45e-03, bbox mae 3.72e-03\n3287.9 examples/sec on gpu(0)\n"
+          "text": "class err 3.42e-03, bbox mae 3.62e-03\n2874.0 examples/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-training-the-model-1.svg",
-          "bytes": 20096,
-          "sha256": "sha256:4e4532798637a31d5e63c2575a04faa8ddc3b880c93f1bb8ab19fe38f74b9001"
+          "bytes": 19187,
+          "sha256": "sha256:19b7cf096b4d1321007fefe4d812cc7d5553032f32274f693757153e69f6c32d"
         }
       ]
     },
     "ssd-prediction-1": {
-      "code_fingerprint": "sha256:8f80254868e5aaa68bd5c1055b2e84894175c1121133a41293b48ff0a24914ff",
+      "code_fingerprint": "sha256:424be0c0a6dddd4013accfb1f43c3a9d7975ea9dc20b66deca8be9ba2607714a",
       "kind": "text",
       "outputs": []
     },
     "ssd-prediction-2": {
-      "code_fingerprint": "sha256:87d84693ec9c081666bc7f202c10f6f12e0abb29353945bf355b2aceab55559d",
+      "code_fingerprint": "sha256:80ab7abf3df3eba7f31cb4022f2f3c48bd850049a728ddc18cc6085f28f5685a",
       "kind": "text",
       "outputs": [
         {
@@ -165,41 +165,41 @@
       ]
     },
     "ssd-prediction-3": {
-      "code_fingerprint": "sha256:42de3041578ead67cbdd647ad607028d6a1a5b5f3f3c4b468146f0af11585fb8",
+      "code_fingerprint": "sha256:5a4756dc5c3f18404dc72baf283b90958be83c72ec54620c46b07cad8ac89471",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-prediction-3-1.svg",
-          "bytes": 421716,
-          "sha256": "sha256:6ffa6083a6bffe19a888d61641548814b75f7aa4011471e85899bd8dd7c2e271"
+          "bytes": 421706,
+          "sha256": "sha256:163676878debbc01550456e776d9f018702dfcc3c5d7fdc83ee78f01327ce8f5"
         }
       ]
     },
     "ssd-exercises-1": {
-      "code_fingerprint": "sha256:7d35b0b4d836f53c1728fa8ab2a4e5ab054b41619488b3ce81f9d4cf6451e463",
+      "code_fingerprint": "sha256:d5987863ecbe8ce8e0618a0d2bb62fef5c94c7031e9ebc7d17e535a34c5237f1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-1-1.svg",
-          "bytes": 18956,
-          "sha256": "sha256:72461a49ef6f2b05a4ba4575604d744549f4c45314cd2ba805438baa58ef6b93"
+          "bytes": 18864,
+          "sha256": "sha256:5dc27a391192a005cde01f0736f54175e555134b23a13cafc354c6a3eb6613ea"
         }
       ]
     },
     "ssd-exercises-2": {
-      "code_fingerprint": "sha256:9db04deda1aa3c5e824c4c76d8b9c95e02fa3dfe4afa760c6c99c7b827a505f2",
+      "code_fingerprint": "sha256:02b43a64d11cc7f2479068924cc679a62d2cc262ad5f39267753ca00a6c2b66d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-2-1.svg",
-          "bytes": 24994,
-          "sha256": "sha256:d19014c5d8d8699f68fccd0129fd1b00d79ab85f40f6039c4a0b24c77d752162"
+          "bytes": 24909,
+          "sha256": "sha256:26925d90280d02c775733c137987374e0320ab0200d6d7008a4c08c51655be85"
         }
       ]
     }

@@ -116,9 +116,11 @@ def resnet18(num_classes, in_channels=1):
         return nn.Sequential(*blk)
 
     # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
+    # removes the max-pooling layer. The stem conv has no bias: the batch
+    # normalization after it removes it
     net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1,
+                  bias=False),
         nn.BatchNorm2d(64),
         nn.ReLU())
     net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
@@ -136,11 +138,16 @@ def resnet18(num_classes, in_channels=1):
 #@save
 class ResNet18(nnx.Module):
     """A slightly modified ResNet-18 (small stem, no max-pool)."""
-    def __init__(self, num_classes=10, rngs=None):
+    def __init__(self, num_classes=10, in_channels=1, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
+        # Stem conv without bias (the batch normalization after it removes
+        # it); running averages decay 0.9, two-pass variance
         self.net = nnx.Sequential(
-            nnx.Conv(1, 64, (3, 3), (1, 1), padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
+            nnx.Conv(in_channels, 64, (3, 3), (1, 1), padding='same',
+                     use_bias=False, kernel_init=he, rngs=rngs),
+            nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
+                          rngs=rngs), nnx.relu,
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
@@ -153,7 +160,7 @@ class ResNet18(nnx.Module):
                          in_channels=256, rngs=rngs),
             d2l.Residual(512, in_channels=512, rngs=rngs),
             lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
+            nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 
     def __call__(self, x):
         return self.net(x)

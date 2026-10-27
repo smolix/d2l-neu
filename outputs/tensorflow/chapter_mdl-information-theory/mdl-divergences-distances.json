@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,8 +48,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
-          "bytes": 37614,
-          "sha256": "sha256:507722a8e909a2f810a73c37195b25cb9bc5c2b01f68996f66b7b5f2abd88bcd"
+          "bytes": 37856,
+          "sha256": "sha256:2fba76b0fdd80a777a8a9bcb796eab560d0055f2a4a2b7a7a7ef7a2ed8b174d3"
         }
       ]
     },
@@ -99,8 +99,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
-          "bytes": 35917,
-          "sha256": "sha256:b6f078f9ebca9315cdc33bad0c25c4e85401d87a06ea6eefd96514ee298fd2b9"
+          "bytes": 35886,
+          "sha256": "sha256:3375e51541282bf0f29783ed3f1660ff1dce6940e579ee690fb226b44491c60f"
         }
       ]
     },

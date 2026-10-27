@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.69\nResidualBlock   std 0.86\nResidualBlock   std 1.07\nResidualBlock   std 1.35\nResidualBlock   std 1.57\nResidualBlock   std 1.80\nResidualBlock   std 2.17\nResidualBlock   std 2.56\nResidualBlock   std 3.17\nLinear          std 4.14\n"
+          "text": "Linear          std 0.69\nResidualBlock   std 0.83\nResidualBlock   std 1.03\nResidualBlock   std 1.27\nResidualBlock   std 1.60\nResidualBlock   std 1.98\nResidualBlock   std 2.34\nResidualBlock   std 2.93\nResidualBlock   std 3.70\nLinear          std 5.11\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kernel 18.4, bias 3.23\n"
+          "text": "kernel 26.6, bias 5.3\n"
         }
       ]
     }

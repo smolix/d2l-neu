@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "d2l_lib_fingerprint": "sha256:dbc4fd0696a83261eac661a9ba63fb8b69226b0d30b0d85ebc09bed8c0bf6041",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,17 +31,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 (tf32 off): 20.73 ms/call\n"
+          "text": "fp32 (tf32 off): 20.05 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 13.55 ms/call\n"
+          "text": "tf32: 12.98 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 6.97 ms/call\n"
+          "text": "bf16: 6.74 ms/call\n"
         }
       ]
     },
@@ -52,12 +52,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "store all: compiler temp 3230 MB, fwd+bwd 52.1 ms\n"
+          "text": "store all: compiler temp 3230 MB, fwd+bwd 50.9 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 60.3 ms\n"
+          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 58.9 ms\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 3.81e-06\n"
+          "text": "max gradient difference: 1.91e-06\n"
         }
       ]
     }

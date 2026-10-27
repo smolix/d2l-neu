@@ -365,11 +365,11 @@ d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
 The loop's time grows in proportion to the length: each step is a separate
 small computation that must finish before the next one starts. The scan is
 faster at every length, by a factor between several and a hundred depending
-on the length and the framework. Its time does not follow the length: while
-its rounds of arithmetic are too small to keep the GPU busy, more positions
-cost little extra time, and once the GPU is full, the total amount of work
-sets the time. Where this happens depends on how each framework compiles the
-scan. The scan changes how we train,
+on the length. Its time does not follow the length: while its rounds of
+arithmetic are too small to keep the GPU busy, more positions cost little
+extra time, and once the GPU is full, the total amount of work sets the
+time. Where this happens depends on how the scan is compiled. The scan
+changes how we train,
 not how we generate: at inference the model still applies
 :eqref:`eq_affine_recurrence` once per token, in constant memory.
 
@@ -497,7 +497,7 @@ print(f'gates above 0.5: {(Z > 0.5).mean():.0%}, '
       f'above 0.9: {(Z > 0.9).mean():.0%}')
 ```
 
-Resetting the state raises the perplexity from about 3.2 to about 10.7, so
+Resetting the state raises the perplexity from about 3.2 to more than 10, so
 the model relies heavily on what it remembers: the next character is hard
 to predict from the current one alone. About half of the gate values in
 the first layer exceed 0.5, and about a quarter exceed 0.9, which keeps the
@@ -1195,7 +1195,7 @@ Penn Treebank: minGRU about 3.2, GRU 3.0.
 
 @!ssm-a-linear-recurrent-language-model-4
 
-- Reset the state at every step: perplexity jumps to about 10.7.
+- Reset the state at every step: perplexity jumps to more than 10.
 - About a quarter of the gates exceed 0.9 (half-life of 7 steps or more);
   each is chosen by the current character.
 :::

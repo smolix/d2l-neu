@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "d2l_lib_fingerprint": "sha256:6c1f1984b3cbc24c78a22af455ac259bf4ac815b3339ce8c3bad933206cc39ea",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "convergence/convergence-phase-portraits-1.png",
-          "bytes": 58675,
-          "sha256": "sha256:4a8d1710ee0ffa514bad420f6094fd2e73e9c980bc430346ac2e526fdee8f0c7"
+          "bytes": 60204,
+          "sha256": "sha256:e792dcaba952fa2cd654bcbecd55f44b1d7126d2bf0d03eb4aa70d9ae0911d6f"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.png",
-          "bytes": 156716,
-          "sha256": "sha256:16c22a637b171ac282fce925a1f9ec21886e18168a94c0b9b16b79c0263de62e"
+          "bytes": 167325,
+          "sha256": "sha256:9d047ac70307c8dc7538e08a69894762bc72cc0fc63c0955f8e06cf8733b3e6a"
         }
       ]
     }

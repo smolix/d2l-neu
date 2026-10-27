@@ -262,8 +262,9 @@ $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \ha
 The loss is minus the logarithm of the probability that the model assigns to
 the true class. It is called the *cross-entropy loss*, for a reason we give
 below. For the logits $(1.0, 2.2, 0.3)$ and an image of a chicken, the loss is
-$-\log 0.69 = 0.37$. Had the image shown a dog, to which the model gives
-probability 0.10, the loss would be $-\log 0.10 = 2.27$.
+$-\log 0.69 \approx 0.37$. Had the image shown a dog, to which the model
+gives probability $0.103$ (0.10 after rounding), the loss would be
+$-\log 0.103 \approx 2.27$.
 
 Since every $\hat{y}_j$ lies between 0 and 1, the loss is never negative. It
 is 0 only if the model gives the true class probability 1, which finite
@@ -382,9 +383,12 @@ confident $(0.9, 0.1)$ costs $0.98$ nats. By Gibbs' inequality, the expected
 loss is smallest when the model reports the true probabilities, so
 cross-entropy rewards honest probabilities rather than exaggerated ones. For
 the same reason the loss accepts labels that are themselves distributions,
-such as the fractions of annotators who chose each class: the formula
-:eqref:`eq_l_cross_entropy` applies unchanged with a probability vector in
-place of the one-hot $\mathbf{y}$.
+such as the fractions of annotators who chose each class: the first form of
+:eqref:`eq_l_cross_entropy`, $-\sum_j y_j \log \hat{y}_j$, applies
+unchanged with a probability vector in place of the one-hot $\mathbf{y}$
+(the second form, $-\log \hat{y}_y$, needs a one-hot label). *Label
+smoothing* (:numref:`sec_training_recipes`) uses this to soften one-hot
+targets, which limits how far training pushes the logits apart.
 
 ## Accuracy and Confidence
 
@@ -440,12 +444,15 @@ from 0.51 to 0.99 changes no decision, but lowers the loss from 0.67 to
 
 ### Calibration and Temperature
 
-This reward for confidence has a cost. Suppose that some parameters classify
-every training example correctly. Multiplying $\mathbf{W}$ and $\mathbf{b}$
+On a finite training set, this reward for confidence has a cost. Suppose
+that some parameters classify every training example correctly. Multiplying $\mathbf{W}$ and $\mathbf{b}$
 by a constant larger than 1 multiplies every margin by it and lowers every
 loss, so the training loss has no minimum, and gradient descent keeps
 growing the weights (exercise :exref:`ex_softmax-regression-separable`).
-Large gaps between logits mean predicted probabilities close to 0 and 1. A
+The weights grow without bound, but their direction converges: gradient
+descent tends toward the separator with the largest margin
+:cite:`Soudry.Hoffer.Nacson.ea.2018`, a form of implicit regularization
+that :numref:`subsec_implicit_regularization` returns to. Large gaps between logits mean predicted probabilities close to 0 and 1. A
 model is *calibrated* if its probabilities match frequencies: of all
 predictions made with confidence 0.9, 90% are correct. Models trained by
 minimizing cross-entropy are often not calibrated, and deep networks tend to
@@ -500,10 +507,11 @@ $-\log \hat{y}_y$, just as Gaussian noise gave the squared loss for
 regression, and its gradient with respect to the logits is again prediction
 minus label, $\hat{\mathbf{y}} - \mathbf{y}$. Cross-entropy is minimized in
 expectation by the true class probabilities, and it bounds the number of
-errors by a smooth function that gradient descent can follow. Because it
-keeps rewarding confidence, trained models are often overconfident; dividing
-the logits by a temperature corrects the confidence without changing any
-decision.
+errors by a smooth function that gradient descent can follow. On training
+examples that it already classifies correctly, the loss keeps rewarding
+confidence, so models that fit their training data are often overconfident
+on new data; dividing the logits by a temperature fitted on held-out data
+corrects the confidence without changing any decision.
 
 ## Exercises
 
@@ -854,7 +862,7 @@ true class. Independent examples, then $-\log$:
 
 $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$$
 
-- Chicken: $-\log 0.69 = 0.37$. Dog: $-\log 0.10 = 2.27$.
+- Chicken: $-\log 0.69 \approx 0.37$. Dog: $-\log 0.103 \approx 2.27$.
 - Always $\ge 0$; 0 only with certainty; $\to \infty$ for a confident
   mistake.
 :::

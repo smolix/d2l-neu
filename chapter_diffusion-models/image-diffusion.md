@@ -357,8 +357,10 @@ print(f'classifier test accuracy: {acc:.3f}')
 %%tab jax
 class Classifier(nnx.Module):
     def __init__(self, rngs):
-        self.c1 = nnx.Conv(1, 32, (3, 3), strides=2, padding='SAME', rngs=rngs)
-        self.c2 = nnx.Conv(32, 64, (3, 3), strides=2, padding='SAME', rngs=rngs)
+        # padding=1 on every side: 'SAME' pads only right and bottom when the
+        # stride is 2 and the sizes are even
+        self.c1 = nnx.Conv(1, 32, (3, 3), strides=2, padding=1, rngs=rngs)
+        self.c2 = nnx.Conv(32, 64, (3, 3), strides=2, padding=1, rngs=rngs)
         self.l1 = nnx.Linear(64 * 49, 128, rngs=rngs)
         self.l2 = nnx.Linear(128, 10, rngs=rngs)
 
@@ -517,8 +519,10 @@ print(f'noisy classifier test accuracy: {acc_clean:.3f} at t = 0, '
 class NoisyClassifier(nnx.Module):
     """A classifier of noisy images; the noise level enters as a second channel."""
     def __init__(self, rngs):
-        self.c1 = nnx.Conv(2, 32, (3, 3), strides=2, padding='SAME', rngs=rngs)
-        self.c2 = nnx.Conv(32, 64, (3, 3), strides=2, padding='SAME', rngs=rngs)
+        # padding=1 on every side: 'SAME' pads only right and bottom when the
+        # stride is 2 and the sizes are even
+        self.c1 = nnx.Conv(2, 32, (3, 3), strides=2, padding=1, rngs=rngs)
+        self.c2 = nnx.Conv(32, 64, (3, 3), strides=2, padding=1, rngs=rngs)
         self.l1 = nnx.Linear(64 * 49, 128, rngs=rngs)
         self.l2 = nnx.Linear(128, 10, rngs=rngs)
 

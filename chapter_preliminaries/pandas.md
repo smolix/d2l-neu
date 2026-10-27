@@ -290,18 +290,21 @@ The largest home, in row 6, has 5 rooms and 2,600 square feet. After
 standardization these entries are 1.89 and 1.70: in both columns the home
 lies 1.7 to 1.9 standard deviations above the mean, and the two numbers can
 now be compared directly. The imputed room counts have become 0, because
-mean imputation placed them at the mean of the column.
+mean imputation placed them at the mean of the column. Imputation also
+shrank the standard deviation of `NumRooms` from 1.11, that of the seven
+observed counts, to 0.91. The three imputed entries sit at the mean and add
+no spread, so every standardized room count moves farther from 0. With the
+observed spread, the largest home would score 1.54 instead of 1.89.
 
-All statistics in this section, the means used for imputation and the means
-and standard deviations used for standardization, were computed from all ten
-homes. In practice we hold back part of the data to test a trained model,
-and the test has to imitate data that the model has never seen. The
-statistics must therefore be computed from the training data alone and then
-applied, unchanged, to the test data. Computing them from all the data lets
-information about the test data *leak* into training, and the test then
-overstates how well the model will do on new data.
-:numref:`sec_kaggle_house` follows this rule on a real dataset of home
-prices.
+All statistics in this section, the means used for imputation and the means and
+standard deviations used for standardization, were computed from the whole
+table, with no homes held out. In practice we hold back part of the data to
+test a trained model, and the test has to imitate data that the model has never
+seen. The statistics must therefore be computed from the training data alone
+and then applied, unchanged, to the test data. Computing them from all the data
+lets information about the test data *leak* into training, and the test then
+overstates how well the model will do on new data. :numref:`sec_kaggle_house`
+follows this rule on a real dataset of home prices.
 
 ### Conversion to Tensors
 
@@ -662,17 +665,17 @@ handled by the encoding.
 ::: {.slide title="One-Hot Encoding Adds a 0/1 Column per Category"}
 [Categories]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 @-pandas-encoding-categorical-features-1
 
+::: {.cols .vc}
+::: {.col}
 - Codes 0, 1, 2 for `Slate`, `Tile`, missing would invent an order.
 - One-hot: all categories are equally far apart.
 - `dummy_na=True`: "missing" gets its own column.
 - Two values only: one 0/1 column suffices.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:pandas-onehot
 :::
 :::

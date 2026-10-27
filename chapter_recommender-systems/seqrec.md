@@ -363,7 +363,7 @@ Now, let's train the model. We use the same setting as NeuMF, including learning
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = Caser(10, num_users, num_items, L)
-net.initialize(ctx=devices, force_reinit=True, init=mx.init.Normal(0.01))
+net.initialize(device=devices, force_reinit=True, init=mx.init.Normal(0.01))
 lr, num_epochs, wd, optimizer = 0.04, 8, 1e-5, 'adam'
 loss = d2l.BPRLoss()
 trainer = gluon.Trainer(net.collect_params(), optimizer,

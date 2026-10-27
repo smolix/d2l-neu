@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
-          "bytes": 35174,
-          "sha256": "sha256:a3b4b09c1be1c7622fd5ae252a627ecd52d3c49feea5569dac93027e3917e677"
+          "bytes": 34827,
+          "sha256": "sha256:8638f9cc8f4dd919ee66d209bef1690341ed6f46be94357687f5d4319bb0989c"
         }
       ]
     }

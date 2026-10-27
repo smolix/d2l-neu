@@ -4,129 +4,134 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3b320dd577d64a54d24f520595c8a22dc0e84277e836c84b37481b1aee74a795",
+    "d2l_lib_fingerprint": "sha256:2a2c9c7031b7198b8654bfb6f0da8cd42443d7d9d4fc56e2e6fbd5e4dc9a45ce",
     "max_inline_bytes": 0
   },
   "cells": {
     "blocks-imports": {
-      "code_fingerprint": "sha256:0246882503c8cb188161d99198b5225f966cc2ab33bbc9e5c6d5e153dc471000",
+      "code_fingerprint": "sha256:fefff311e252f73c5256a68ce63ca706643768d7c14efc10ae615bcb57ca80f1",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-blocks": {
-      "code_fingerprint": "sha256:d2ee8dd70f8cd94d3fc1c7f7ba7f2928d93ece577b2e622d1526ae6494765dd6",
+      "code_fingerprint": "sha256:d1453a1be37e8c596f184ad308b3fc6fcb7b24c5030d487db54e91aff1411d4c",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:46de5cca68f6c33489a7a3650c9332458c3f44749a29b7c1f31f888d1130b81e",
+      "code_fingerprint": "sha256:2444d05a4f2000b65998d2353b944e847cd5ab7d951ee5657b59f31b4b0c8ee0",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:5f12cf83a72a74b94f02deafe10a8e43c0b5287feca47282a8eec93dab4c5814",
+      "code_fingerprint": "sha256:080eff4694617e1147b2799c2820939ca36707807968c26db3f4b2bf64179fb5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 64, 112, 112)\nHybridSequential output shape:\t (1, 128, 56, 56)\nHybridSequential output shape:\t (1, 256, 28, 28)\nHybridSequential output shape:\t (1, 512, 14, 14)\nHybridSequential output shape:\t (1, 512, 7, 7)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 4096)\nDropout output shape:\t (1, 4096)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 64, 112, 112)\nHybridSequential       (1, 128, 56, 56)\nHybridSequential       (1, 256, 28, 28)\nHybridSequential       (1, 512, 14, 14)\nHybridSequential       (1, 512, 7, 7)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
+    "blocks-training-1": {
+      "code_fingerprint": "sha256:5d38fb86654ee94d96a06c5859db6dc17bd3ce345b67bee5af25ec53e0c75bfa",
+      "kind": "text",
+      "outputs": []
+    },
     "vgg-training": {
-      "code_fingerprint": "sha256:33cf589173efbcc901bf8bd2941c41f4f9780bbf92383514e774355d5fe35230",
+      "code_fingerprint": "sha256:3ba1ca5b8a1efb3667753224dba85e32d5aeed62b899725822acf7deeb796063",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33261,
-          "sha256": "sha256:e791268eb8ba7ef301aa48e6e83cccbe4c8e3bd5b1d9ce2e0fb77f2f6c0e46b9"
+          "bytes": 32566,
+          "sha256": "sha256:b949151377601ee209e553a1ad5761b28374384a29a983299b4a765fda75948f"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:bacec445bbafa66d806518915090cda99c4183204962e09edbc4d9c09024f258",
+      "code_fingerprint": "sha256:03958607709568aa7c37a6cea778b0468b4940b2cddb2bab5a1809cdf4fd9c6a",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:d29a2f84f8aa544ca603b831c1429b51cc682ece015f1075e0a1a68fc6c23b9e",
+      "code_fingerprint": "sha256:f60c41188ff1b2beae50efb68a05cfacd95fc35499b3f13025c5cc3e4ab7e030",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:e985d6f363ce6cbd7d5e4045c653feeef550db4a01a52cca2eb05ce56b16ea60",
+      "code_fingerprint": "sha256:c4aeacaf0ab876c21e856cf915e5e9d2a4bf88937175f7897348f5fadee60c40",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 96, 54, 54)\nMaxPool2D output shape:\t (1, 96, 26, 26)\nHybridSequential output shape:\t (1, 256, 26, 26)\nMaxPool2D output shape:\t (1, 256, 12, 12)\nHybridSequential output shape:\t (1, 384, 12, 12)\nMaxPool2D output shape:\t (1, 384, 5, 5)\nDropout output shape:\t (1, 384, 5, 5)\nHybridSequential output shape:\t (1, 10, 5, 5)\nGlobalAvgPool2D output shape:\t (1, 10, 1, 1)\nFlatten output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 96, 54, 54)\nMaxPool2D              (1, 96, 26, 26)\nHybridSequential       (1, 256, 26, 26)\nMaxPool2D              (1, 256, 12, 12)\nHybridSequential       (1, 384, 12, 12)\nMaxPool2D              (1, 384, 5, 5)\nDropout                (1, 384, 5, 5)\nHybridSequential       (1, 10, 5, 5)\nGlobalAvgPool2D        (1, 10, 1, 1)\nFlatten                (1, 10)\n"
         }
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:861b09b8f624a518d845776ded1b9e6aa68c522d2bca8259196c53780030ec4f",
+      "code_fingerprint": "sha256:0592909186654eee5d44f291c777e3cf7cad7ef74c2dd289fe30892f25304c22",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31636,
-          "sha256": "sha256:b1de2cbecbfeb4e9d25686691352ef172d1aeadc393175d39b1b8708dfc75024"
+          "bytes": 29707,
+          "sha256": "sha256:5786349a13f1b4a291a3ed06c61d2d5da7d4c6aa325fd690abd5f8bac0cfd341"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:4209c3b74c223988160cc40e841708bce6c9619834564b73d2e9d74d1bc39cd6",
+      "code_fingerprint": "sha256:d5e22161586c85a138fe81f628fefadfaa3222caa3540001cac38c7067a845a6",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:e54fe4df3846538cc1e8cb73b9f468fdd963f228b076726a2ba32d24286ae00c",
+      "code_fingerprint": "sha256:dfead1b4c3497b7ec1a7d281a4eefbda3e48c825d5307234adee945b4b5ea53c",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:c9f28f376c3a9f24dd3f2d0ec17c566f8bafb3e2cadcd9d80c929818e9ab2be4",
+      "code_fingerprint": "sha256:de7218c08cae530a44a1ad75bad8d4e22f888690eee5d86588dc6b08d474f9e9",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:74a67d357798643938a046d5d1954062f6367ac7327d3b3ce1719319f58c8a50",
+      "code_fingerprint": "sha256:e1bf016b2aaa0a9dd8e6845949284b28a80398696c0c72aceaf3e9f15f129dca",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "HybridSequential output shape:\t (1, 192, 12, 12)\nHybridSequential output shape:\t (1, 480, 12, 12)\nMaxPool2D output shape:\t (1, 480, 6, 6)\nHybridSequential output shape:\t (1, 832, 6, 6)\nMaxPool2D output shape:\t (1, 832, 3, 3)\nHybridSequential output shape:\t (1, 1024, 3, 3)\nGlobalAvgPool2D output shape:\t (1, 1024, 1, 1)\nDense output shape:\t (1, 10)\n"
+          "text": "HybridSequential       (1, 192, 12, 12)\nHybridSequential       (1, 480, 12, 12)\nMaxPool2D              (1, 480, 6, 6)\nHybridSequential       (1, 832, 6, 6)\nMaxPool2D              (1, 832, 3, 3)\nHybridSequential       (1, 1024, 3, 3)\nGlobalAvgPool2D        (1, 1024, 1, 1)\nDense                  (1, 10)\n"
         }
       ]
     },
     "blocks-stem-body-and-head-3": {
-      "code_fingerprint": "sha256:82c1c25d5f8332986d19c58331a502f7010a193c2db75dec234ea5def5c0ffd5",
+      "code_fingerprint": "sha256:46c430d29340bd307e582e2c2805ee4fe9700a4e340305bb3a975779cb2b92e0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 32839,
-          "sha256": "sha256:15e376b992a9e7b4f7c5c98ddcc2bb042023d12763608be2e1ef9fef432318ef"
+          "bytes": 31936,
+          "sha256": "sha256:d47b261581c6b4f615c32774c4d1724666c7e9bbe375727d04c9a064ad088d63"
         }
       ]
     },
     "blocks-comparing-the-networks": {
-      "code_fingerprint": "sha256:5b4f7fdc1cda07f9adf21850642429ede1182157915e21ce41d4bdf049d779f9",
+      "code_fingerprint": "sha256:76daf6d83696ba33ca00ab6ccbc54b1073e4edf1c77bdd2d8c0030753050d203",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.9, 'NiN': 0.838, 'GoogLeNet': 0.865}"
+          "text": "{'VGG': 0.919, 'NiN': 0.878, 'GoogLeNet': 0.911}"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 24746,
-          "sha256": "sha256:30f501ef8671564fc7f346342bd0b54add68644f11894e8d6b6a8d23296e4078"
+          "bytes": 24720,
+          "sha256": "sha256:bb219fe22a2b0e3185f7507d98d3a6b5c2302d6e5e12cb4f03f236bac9bf1d03"
         }
       ]
     },
@@ -38,12 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -87,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
-          "bytes": 30656,
-          "sha256": "sha256:2591fe33b55c5a970780928b34daacdfd83179725b12c0b25dbbf9ed467e7c4b"
+          "bytes": 30576,
+          "sha256": "sha256:7a45f3c3876eb880dce8d05364ffa372840daa3c23bd9b131d6690ed3d70d54f"
         }
       ]
     },
@@ -125,11 +120,6 @@
         },
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "[05:08:35] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "step 1000: CFM loss 1.590\n"
         },
@@ -163,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114875,
-          "sha256": "sha256:a5716275252418974e260cb9f5bc9069597ea989e19c83bbbfc66299bfd03984"
+          "bytes": 1114821,
+          "sha256": "sha256:39f758276ec7f0e6f9ed8b13576c104f13f4d52ca626a0b01271f60f4ff7bacc"
         }
       ]
     },
@@ -207,8 +197,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 24637,
-          "sha256": "sha256:9f48c4b7c3d6e9fc8c9f5e71570270f229d14c3a8749b4865131f33a8a450d5a"
+          "bytes": 26142,
+          "sha256": "sha256:8cf798df14330cf081207ee0bc8581621688263e40a423334390e44709f56883"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e209ec67820bda05845f46a9c49c99ba55d41c32367214c5f2e63e97beb23cb7",
+    "d2l_lib_fingerprint": "sha256:012eb2b05fbb3547b81329efe30bee4e2f7a73a4bc24a09fe31f2009b180ab9c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -81,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 35016,
-          "sha256": "sha256:8d7ca5b42f874d1f8e6fc12831b2c626a697275aab3a4c75fa9952381af87f10"
+          "bytes": 34880,
+          "sha256": "sha256:bd9a30357d455e7abf9ae6df406ca4cc814697902445f8bc66c70c19ca99076a"
         }
       ]
     },
@@ -94,8 +94,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 176525,
-          "sha256": "sha256:01cdb9eea48628915d052e014bca6ea381473cf0242d11613bfcf4a0e741b713"
+          "bytes": 174026,
+          "sha256": "sha256:0e55151db7dd5daf1ea0c1756e9d8fa74fa5520bdf3dd7f1cd2b7ce8e1dcdc54"
         }
       ]
     },
@@ -118,8 +118,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
-          "bytes": 21053,
-          "sha256": "sha256:70379bac45ce7b1acae4d8df9470257ebd83b87c73869e7a9bfc5b8228c169d4"
+          "bytes": 21002,
+          "sha256": "sha256:3013c8643a2cddd482721ef2f634545bc7b82678c8c144b088b8818aa8d2055c"
         }
       ]
     },
@@ -136,8 +136,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 41000,
-          "sha256": "sha256:9e84f40159de66547ccb2b23cca7acd0cb35c62aefd25dbc9e1b5d090b730219"
+          "bytes": 40981,
+          "sha256": "sha256:224dee2c1658ed8971ea3fbf1e38f8726ff944eb7b4555c685dffe6847d4299d"
         }
       ]
     }

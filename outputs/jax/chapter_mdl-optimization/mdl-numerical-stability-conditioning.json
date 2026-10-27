@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
-          "bytes": 40773,
-          "sha256": "sha256:5ae632fcc228fc7859b23e661e0eed56d72ca6b0e780cf9d37a5e8547ed09992"
+          "bytes": 38784,
+          "sha256": "sha256:c37e10865e05f634a50eb84a100318de6d96ebd2d119b54b996f9747d4ee72ae"
         }
       ]
     }

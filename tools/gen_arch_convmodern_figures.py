@@ -460,8 +460,9 @@ def fig_nin():
 def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
                      top="ReLU"):
     """Residual block column: ops on the spine, skip from below the first
-    pill into a ⊕ one step above the last pill; ``shortcut_pill`` (str) puts
-    an op on the skip path (projection variant).  Returns (ys, y_plus)."""
+    pill into a ⊕ one step above the last pill; ``shortcut_pill`` (a str, or
+    a list of str stacked top to bottom) puts ops on the skip path
+    (projection variant).  Returns (ys, y_plus)."""
     ys = [y0 + i * PILL_STEP for i in range(len(ops))]
     y_plus = ys[-1] + PILL_STEP
     y_relu = y_plus + PILL_STEP
@@ -482,11 +483,18 @@ def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
 
     y_branch = y0 - PILL_H / 2 - 11
     if shortcut_pill:
+        pills = ([shortcut_pill] if isinstance(shortcut_pill, str)
+                 else list(shortcut_pill))
         y_mid = 0.5 * (y_branch + y_plus)
+        ys_s = [y_mid + (i - (len(pills) - 1) / 2) * PILL_STEP
+                for i in range(len(pills))]
         d.line([(x, y_branch), (x_out, y_branch),
-                (x_out, y_mid - PILL_H / 2)])
-        d.pill(x_out, y_mid, shortcut_pill, w=None)
-        d.line([(x_out, y_mid + PILL_H / 2), (x_out, y_plus)])
+                (x_out, ys_s[0] - PILL_H / 2)])
+        for i, (op, y) in enumerate(zip(pills, ys_s)):
+            d.pill(x_out, y, op, w=None)
+            if i < len(pills) - 1:
+                d.arrow(x_out, y + PILL_H / 2, ys_s[i + 1] - PILL_H / 2)
+        d.line([(x_out, ys_s[-1] + PILL_H / 2), (x_out, y_plus)])
         d.op_circle(x, y_plus)
         d.ax.annotate(
             "", xy=(x + PLUS_R, y_plus), xytext=(x_out, y_plus),
@@ -515,7 +523,7 @@ def fig_resnet_block():
     xr = 470
     ys_r, y_plus_r = _residual_column(
         d, xr, ops, pw, ACCENT_TINT, "Projection\nshortcut", y0,
-        shortcut_pill="1×1 Conv")
+        shortcut_pill=["1×1 Conv", "BatchNorm"])
 
     d.callout(8, y_plus_l + LH, [
         [("The sum is ", INK, 1), ("x + g(x)", ACCENT, 1), (",", INK, 1)],
@@ -523,12 +531,13 @@ def fig_resnet_block():
         [("a correction", INK, 1)],
     ], target=(xl - PLUS_R - 4, y_plus_l), leader_from=(116, y_plus_l),
         ha="left")
-    y_mid = 0.5 * ((y0 - PILL_H / 2 - 11) + y_plus_r)
-    d.callout(W - 2, y_mid + LH, [
+    # The callout points at the 1x1 conv, the lower of the two shortcut pills
+    y_conv = 0.5 * ((y0 - PILL_H / 2 - 11) + y_plus_r) - PILL_STEP / 2
+    d.callout(W - 2, y_conv + LH, [
         [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv matches", INK, 1)],
         [("the shape when the", INK, 1)],
         [("channels or stride change", INK, 1)],
-    ], target=(xr + 126 + 47, y_mid), leader_from=(W - 160, y_mid),
+    ], target=(xr + 126 + 40, y_conv), leader_from=(W - 160, y_conv),
         ha="right")
 
     save(d.fig, "arch-resnet-block")

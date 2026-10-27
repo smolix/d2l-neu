@@ -12,10 +12,11 @@ draws its initial weights from a normal distribution with standard deviation
 same way, does not learn. The backward pass of :numref:`sec_backprop`
 multiplies the gradient by one transposed weight matrix per layer on its way
 down to the first layer, and with weights this small each multiplication
-shrinks the gradient about ninefold. By the time it reaches the first layer,
-the gradient is smaller than at the top by a factor of more than $10^8$, and
-the first layers barely change. With weights of standard deviation 1, each
-multiplication enlarges the gradient instead, and the updates overshoot.
+shrinks the magnitude of the gradient about ninefold. By the time it reaches
+the first layer, the gradient is smaller than at the top by a factor of more
+than $10^8$, and the first layers barely change. With weights of standard
+deviation 1, each multiplication enlarges the gradient instead, and the
+updates overshoot.
 
 Whether a deep network can be trained at all thus depends on the scale of
 its initial weights, and the right scale depends on the width of each layer
@@ -293,16 +294,32 @@ an initialization that is too large.
 
 ### Default Initialization
 
-Every framework initializes the weights of a layer when we do not, and the
-defaults differ. PyTorch draws the weights of a linear layer uniformly from
-the interval $[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, where
-$n_\textrm{in}$ is the number of inputs of the layer; Keras uses the Xavier
-initialization derived below; Flax draws the weights with variance
-$1/n_\textrm{in}$; and Gluon draws them uniformly from $[-0.07, 0.07]$
-whatever the size of the layer. None of these defaults is designed for a deep
-stack of ReLU layers, and a model whose behavior should not depend on the
-framework has to set its initialization explicitly, as this book does. The
-variance argument that follows says which scale to choose.
+A framework initializes the weights of a layer when we do not. Its default
+is not designed for a deep stack of ReLU layers, so this book sets the
+initialization of its models explicitly. The variance argument that follows
+says which scale to choose. Below, $n_\textrm{in}$ is the number of inputs
+of a layer.
+
+:begin_tab:`mxnet`
+Gluon's `initialize` draws the weights uniformly from $[-0.07, 0.07]$,
+whatever the size of the layer, and sets the biases to 0.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.Linear` draws its weights and its biases uniformly from the interval
+$[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, so the weights have
+variance $1/(3 n_\textrm{in})$.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A Keras `Dense` layer draws its weights from the uniform version of the
+Xavier initialization derived below and sets its biases to 0.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.Linear` draws its weights from a truncated normal distribution with
+variance $1/n_\textrm{in}$, called LeCun normal, and sets its biases to 0.
+:end_tab:
 
 ### Xavier Initialization
 :label:`subsec_xavier`
@@ -387,14 +404,21 @@ variance of the linear case:
 
 $$\tau^2 = \frac{2}{n_\textrm{in}}.$$
 
-This is *He initialization* :cite:`He.Zhang.Ren.ea.2015`, also called Kaiming
-initialization, the standard choice for networks with ReLU activations. For
-the backward pass, :eqref:`eq_grad-factor` with $E[\phi'(z)^2] = 1/2$ gives
-the same condition with $n_\textrm{out}$ in place of $n_\textrm{in}$, and
-for layers of equal width the two coincide. For the first layer of the MLP
-of :numref:`sec_mlp-implementation`, He initialization gives
-$\tau = \sqrt{2/784} \approx 0.05$. Xavier and He differ by the factor 2 and
-by which fan size they use. The rule of thumb is Xavier for tanh and He for
+This is *He initialization* :cite:`He.Zhang.Ren.ea.2015`, also called
+Kaiming initialization, the standard choice for networks with ReLU
+activations. For the backward pass, :eqref:`eq_grad-factor` with
+$E[\phi'(z)^2] = 1/2$ gives the same condition with $n_\textrm{out}$ in
+place of $n_\textrm{in}$, and for layers of equal width the two coincide.
+The factor 2 compensates for the ReLU between two layers. A network has one
+weight layer more than it has ReLU layers, so one layer receives the factor
+without a ReLU to undo it. In the count above it is the output layer, whose
+logits have twice the mean square of the activations below them. In the
+count of pre-activations of :citet:`He.Zhang.Ren.ea.2015` it is the first
+layer. Either way the scale is off by a single factor of 2, which does not
+compound with depth. For the first layer of the MLP of
+:numref:`sec_mlp-implementation`, He initialization gives
+$\tau = \sqrt{2/784} \approx 0.05$. Xavier and He differ by the factor 2
+and by which fan size they use. The rule of thumb is Xavier for tanh and He for
 ReLU, and most libraries provide both as named initializers.
 
 ### Activations and Gradients across Depth
@@ -944,18 +968,60 @@ Ten ReLU layers of width 256; mean square of the activations per layer:
 @!numerical-stability-and-init-depth-sweep
 :::
 
-::: {.slide title="No Framework Defaults to He"}
+::: {.slide title="The Default Initialization Is Not He" only="mxnet"}
 [Default initialization]{.kicker}
 
-| framework | default weights | ReLU factor at width 256 |
-|---|---|---|
-| PyTorch | $U(\pm 1/\sqrt{n_\textrm{in}})$ | $1/6$ |
-| Keras | Xavier, uniform | $1/2$ |
-| Flax | variance $1/n_\textrm{in}$ | $1/2$ |
-| Gluon | $U(\pm 0.07)$ | $\approx 0.21$ |
+- Gluon's `initialize` draws weights from $U(\pm 0.07)$, whatever the
+  width, and sets the biases to 0: weight variance $0.07^2/3$.
+- Per ReLU layer of width 256, the mean square of the activations is
+  multiplied by $\tfrac{1}{2} \cdot 256 \cdot 0.07^2/3 \approx 0.21$.
 
 ::: {.d2l-note .rule}
-All four shrink a deep plain ReLU stack. Set the initialization
+A deep plain ReLU stack shrinks under this default. Set the initialization
+explicitly; this book does.
+:::
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="pytorch"}
+[Default initialization]{.kicker}
+
+- `nn.Linear` draws weights and biases from
+  $U(\pm 1/\sqrt{n_\textrm{in}})$: weight variance $1/(3 n_\textrm{in})$.
+- Per ReLU layer of width 256, the weights multiply the mean square of the
+  activations by $\tfrac{1}{2} \cdot 256 \cdot \tfrac{1}{3 \cdot 256} = 1/6$
+  (biases aside).
+
+::: {.d2l-note .rule}
+A deep plain ReLU stack shrinks under this default. Set the initialization
+explicitly; this book does.
+:::
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="tensorflow"}
+[Default initialization]{.kicker}
+
+- A Keras `Dense` layer draws its weights from the uniform Xavier
+  distribution, variance $2/(n_\textrm{in} + n_\textrm{out})$, and sets
+  its biases to 0.
+- Per ReLU layer of width 256, the mean square of the activations is
+  multiplied by $\tfrac{1}{2} \cdot 256 \cdot \tfrac{2}{512} = 1/2$.
+
+::: {.d2l-note .rule}
+A deep plain ReLU stack shrinks under this default. Set the initialization
+explicitly; this book does.
+:::
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="jax"}
+[Default initialization]{.kicker}
+
+- `nnx.Linear` draws its weights from LeCun normal, a truncated normal with
+  variance $1/n_\textrm{in}$, and sets its biases to 0.
+- Per ReLU layer of width 256, the mean square of the activations is
+  multiplied by $\tfrac{1}{2} \cdot 256 \cdot \tfrac{1}{256} = 1/2$.
+
+::: {.d2l-note .rule}
+A deep plain ReLU stack shrinks under this default. Set the initialization
 explicitly; this book does.
 :::
 :::

@@ -313,14 +313,16 @@ print(f'additive sinusoidal, shifted by  17: max score change '
 T, d = 32, 64
 key1, key2 = jax.random.split(jax.random.key(0))
 q, k = jax.random.normal(key1, (T, d)), jax.random.normal(key2, (T, d))
+# Full float32 matmuls: GPU default (TF32) round-off would hide the check
+dot = lambda a, b: jnp.matmul(a, b.T, precision='highest') / math.sqrt(d)
 
-scores = lambda off: rope(q, off) @ rope(k, off).T / math.sqrt(d)
+scores = lambda off: dot(rope(q, off), rope(k, off))
 for off in (1, 17, 480):
     print(f'RoPE, all positions shifted by {off:>3}: max score change '
           f'{jnp.abs(scores(off) - scores(0)).max():.1e}')
 
 P = sinusoidal_encoding(600, d)
-added = lambda off: (q + P[off:off+T]) @ (k + P[off:off+T]).T / math.sqrt(d)
+added = lambda off: dot(q + P[off:off+T], k + P[off:off+T])
 print(f'additive sinusoidal, shifted by  17: max score change '
       f'{jnp.abs(added(17) - added(0)).max():.1e}')
 ```

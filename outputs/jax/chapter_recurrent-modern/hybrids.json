@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:03450d72ab483c54500a32181b423098dbb73197c2d24036c4f40b748105fc34",
+    "d2l_lib_fingerprint": "sha256:107f709410848a489e4a88cf1442dfc0b8a9fd0bba860c9511ebdfeab4b0ee49",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,14 +51,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention   1.00 0.99 0.91 0.70\nGated DeltaNet           1.00 0.99 0.97 0.91\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
+          "text": "gated linear attention   1.00 0.99 0.93 0.73\nGated DeltaNet           1.00 0.99 0.97 0.90\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 35878,
-          "sha256": "sha256:4bfe73a00319cd485190a57580fff0602f54808eb98ed254918035b830c7d72b"
+          "bytes": 34998,
+          "sha256": "sha256:8c0939870e09012b8e832952da46ecf3c7217fdf6718727bf27f6c03800d3b78"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.30\n"
+          "text": "attention (TinyLM)   perplexity 3.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.32\n"
+          "text": "hybrid               perplexity 3.33\n"
         }
       ]
     }

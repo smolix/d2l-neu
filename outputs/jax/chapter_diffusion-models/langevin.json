@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:fe57fd8964087c9113b73852396bfbfc371a44615e9f6e6b388063b7c0c4ab61",
+    "d2l_lib_fingerprint": "sha256:4a4c97ea324889562552e868f7d7e0b8c89a80a11bcc56e995b78aed124d6c8a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-sampling-with-the-true-score-2-1.svg",
-          "bytes": 139708,
-          "sha256": "sha256:dbdd64323508e168a3d477eaf6ab95f6ed7943cf39b7710b15e0b62a3cdd19bf"
+          "bytes": 139780,
+          "sha256": "sha256:6154e939a7b2362f4c9aba40970489ae377a524f63ffcf5e9f8d52e6468cf36a"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-gaussian-smoothing-and-its-price-2-1.svg",
-          "bytes": 353952,
-          "sha256": "sha256:3900f7df0c510e2dbe0c8617982cd87b09a790b9e5317f44951adcdc09189a80"
+          "bytes": 353869,
+          "sha256": "sha256:8638227f91af8dacaf324fc2de17d763242f3e0b04f570d02a1ff200619550b2"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:ab705051a4c066c4e24067ca8cf6a98c6588a881f7b99cf2cf6bd40d6c8f6ad0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,27 +14,27 @@
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-1": {
-      "code_fingerprint": "sha256:5f88db89c7bffe038b78bb1b70080f27f8b03d0d8779ed62abd41fa5756670dc",
+      "code_fingerprint": "sha256:081b264868463206da8726fd7c8ea9fe3d26afc61905ea0d1e793a00c4b468fc",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-2": {
-      "code_fingerprint": "sha256:6374872d6ceb69c1432a70344da3e071773287617381ae91f926e723306db8a8",
+      "code_fingerprint": "sha256:9888994004860e86504eab9ea80ad78175839ec8bc01ce63d06d7b9a711d6e25",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Variable 'Variable:0' shape=(2, 2) dtype=float32, numpy=\narray([[19., 25.],\n       [37., 43.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[19., 25.],\n       [37., 43.]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-convolutional-layers": {
-      "code_fingerprint": "sha256:5ac2b93d1d74540420775cdbe02d0c53e579f666fb0381be5207259eac46c080",
+      "code_fingerprint": "sha256:221d0db8218982a49617781ecf146eade5eaecee973fd1ca095af9cc5d51912d",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-layer-1": {
-      "code_fingerprint": "sha256:32d6c5f302ef1516e9e53a7acbc7c07078f788457d2e5a3aa62b4d94c191a3f5",
+      "code_fingerprint": "sha256:6c4fa348e6ba2cf701d518febd969b76a8d1bbdab61242054d950375b32cb40f",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-1": {
-      "code_fingerprint": "sha256:9736501d9e18ed841e28702cf1c9aac83aaa3dd00b2be2cf347405a42e3ec8ef",
+      "code_fingerprint": "sha256:06482150a8c3a229dfe09b7f6a64bf3d8d265730c820dafea98f02d0edb47e59",
       "kind": "text",
       "outputs": [
         {
@@ -54,53 +54,53 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-2": {
-      "code_fingerprint": "sha256:519e2b116928aa8c45e9cfbd5980c0437894853d4a63935eb6db6fbc321b700d",
+      "code_fingerprint": "sha256:5ef97e3c283ddc855402c2c7a2391ee1e47604487688c5a446bf5dd97ab86747",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-3": {
-      "code_fingerprint": "sha256:86a947f9784262c19e225e931679cef6909a5a46e07f20c7d9095abdc83abb93",
+      "code_fingerprint": "sha256:e6c463a62b4f0afcaf8a0d3cad2319edba475c8df39c178d4a9504a598b9bbbb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Variable 'Variable:0' shape=(6, 7) dtype=float32, numpy=\narray([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(6, 7), dtype=float32, numpy=\narray([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-object-edge-detection-in-images-4": {
-      "code_fingerprint": "sha256:7d572c9eb031148aa5071c3aa77357c7f065f0d84a0300de3cfc30fc2a2e6e94",
+      "code_fingerprint": "sha256:34e04c7ae47ae14d4001c47f130697d3332b605d9680a492c6d1937e78a3b267",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Variable 'Variable:0' shape=(8, 5) dtype=float32, numpy=\narray([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(8, 5), dtype=float32, numpy=\narray([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:e9e540a9103af6f550d96fbb3b24d7d4b7f85fd5bc82f6925bf9d753ee229666",
+      "code_fingerprint": "sha256:8c9f58e87c6ff81ecd33ef5eddb688462bdb3ea50a621bcbe08266cb274fa488",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.788\nstep 3, loss 0.812\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 11.709\nstep 3, loss 0.805\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:b2d1f60ccd8e6887f8aab023af664ac6c4ecbd3542a28ad96a478836d89980f3",
+      "code_fingerprint": "sha256:a22306c7ff1f8fab431207d1d27865e320b716a667405a83839610d53518dde8",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9890286, -0.9882092]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.98935825, -0.9879587 ]], dtype=float32)>"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:b95cd2122f14d955eb2d59ef35ccd153d73db5c9df68b0c58bfab8bba4810d1f",
+      "code_fingerprint": "sha256:2605e8d99ecb1191c837a4cf0091594d759c049606693c1121149671a6fb46aa",
       "kind": "text",
       "outputs": [
         {

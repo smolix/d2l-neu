@@ -104,8 +104,8 @@ tensor with values in $[0, 1]$.
 :begin_tab:`mxnet`
 Gluon downloads its own copy of Fashion-MNIST, but that copy is split
 differently from the published dataset: most of its 10,000 test images are
-training images of the published dataset. To train and test on the same
-examples as the other frameworks, we read the published files ourselves.
+training images of the published dataset. To train and test on the
+published split, we read the published files ourselves.
 Each file is compressed with gzip and starts with a short header, 16 bytes
 for images and 8 bytes for labels, followed by one byte per pixel or label.
 `transform_first` then resizes each image and converts it into an array
@@ -244,16 +244,31 @@ full minibatches and once more for the shorter last one.
 :end_tab:
 
 :begin_tab:`jax`
-JAX has no loader for image datasets, so we build the same `tf.data`
-pipeline as in TensorFlow: it adds a channel axis to the images, scales them
+JAX has no loader for image datasets, so we build a pipeline with
+TensorFlow's `tf.data`: it adds a channel axis to the images, scales them
 to $[0, 1]$, pairs them with the labels, shuffles them with a buffer that
-holds all training examples, groups them into minibatches, and resizes each
-minibatch. `d2l.TensorFlowDataLoader` (:numref:`sec_synthetic-regression-data`)
-then yields each minibatch as NumPy arrays, which JAX functions accept.
-The `Trainer` compiles its training step once for the full minibatches and
-once more for the shorter last one, since JAX compiles a function anew for
-each input shape.
+holds all training examples (a uniformly random order, drawn anew on every
+pass), groups them into minibatches, and resizes each minibatch. The class
+`TensorFlowDataLoader` wraps the pipeline: iterating over it yields each
+minibatch as NumPy arrays, which JAX functions accept, and `len` gives the
+number of minibatches. The `Trainer` compiles its training step once for
+the full minibatches and once more for the shorter last one, since JAX
+compiles a function anew for each input shape.
 :end_tab:
+
+```{.python .input #image-classification-dataset-reading-minibatches-1}
+%%tab jax
+class TensorFlowDataLoader:  #@save
+    """Expose a tf.data.Dataset as re-iterable NumPy batches."""
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __iter__(self):
+        return self.dataset.as_numpy_iterator()
+
+    def __len__(self):
+        return len(self.dataset)
+```
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab mxnet
@@ -292,7 +307,7 @@ def get_dataloader(self, train):
     X, y = self.train if train else self.val
     X = tf.expand_dims(X, axis=3) / 255  # Channel axis last; values in [0, 1]
     resize = lambda X, y: (tf.image.resize(X, self.resize), y)
-    return d2l.TensorFlowDataLoader(tf.data.Dataset.from_tensor_slices(
+    return TensorFlowDataLoader(tf.data.Dataset.from_tensor_slices(
         (X, tf.cast(y, tf.int32))).shuffle(len(y) if train else 1).batch(
             self.batch_size).map(resize))
 ```
@@ -364,9 +379,7 @@ def visualize(self, batch, nrows=1, ncols=8, labels=None):
     if labels is None:
         labels = self.text_labels(y)
     X = d2l.reshape(X, (-1, *self.resize))  # Drop the channel axis
-    for ax in d2l.show_images(X, nrows, ncols, titles=labels):
-        for image in ax.get_images():
-            image.set_cmap('gray')
+    d2l.show_images(X, nrows, ncols, titles=labels, cmap='gray')
 ```
 
 Here are the first 16 images of the validation set, which the validation
@@ -393,12 +406,12 @@ next section.
 Fashion-MNIST has 60,000 training and 10,000 test images of garments in 10
 classes, grayscale with $28 \times 28$ pixels. It is small enough to train
 on in minutes, and hard enough that better models score visibly higher,
-unlike MNIST. The class `FashionMNIST` loads the same published files in all
-four frameworks, and its loaders deliver images as floats in $[0, 1]$ and
-labels as class indices; the training loader reshuffles every epoch, and
-both loaders keep the last, incomplete minibatch. A minibatch of images is a
-four-dimensional tensor, $(n, c, h, w)$ in PyTorch and MXNet and
-$(n, h, w, c)$ in TensorFlow and JAX. Before training, we look at the images
+unlike MNIST. The class `FashionMNIST` loads the published files, and its
+loaders deliver images as floats in $[0, 1]$ and labels as class indices;
+the training loader reshuffles every epoch, and both loaders keep the last,
+incomplete minibatch. A minibatch of images is a four-dimensional tensor,
+with one axis each for the examples, the channels, the height, and the
+width. Before training, we look at the images
 with their labels, and we check that loading an epoch takes less time than
 training on it.
 
@@ -611,8 +624,7 @@ for every comparison stops being an unbiased test.
 - Gluon ships a copy of Fashion-MNIST, split differently from the published
   dataset: about 80% of its 10,000 test images are **training** images of
   the published one.
-- Results on it cannot be compared with the other frameworks, or with
-  published numbers.
+- Results on it cannot be compared with published numbers.
 - So `FashionMNIST.read` opens the published files: a 16-byte header, then
   $28 \times 28 = 784$ bytes per image (8 bytes and one byte per label for
   the labels).
@@ -763,8 +775,8 @@ rescales. 4 shows in neither: count the images per epoch.
 | step | running example |
 |---|---|
 | dataset | 60,000 + 10,000 garments, 10 classes, $28 \times 28$ gray |
-| same data in all four frameworks | the published files; test images as validation |
-| minibatch | $(64, 1, 28, 28)$ or $(64, 28, 28, 1)$, floats in $[0, 1]$ |
+| split | the published split; test images as validation |
+| minibatch | 64 images as a four-dimensional tensor, floats in $[0, 1]$ |
 | epoch | 938 minibatches, the last of 32 images, different each time |
 | checks | loader time against training time; a gallery with labels |
 

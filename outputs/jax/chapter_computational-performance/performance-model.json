@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive timer: 0.58 ms   with block_until_ready: 8.72 ms\n"
+          "text": "naive timer: 0.65 ms   with block_until_ready: 8.73 ms\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.871 s   read once: 0.285 s\n"
+          "text": "read every step: 0.914 s   read once: 0.336 s\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4096-matmul: 0.84 ms/call"
+          "text": "4096-matmul: 0.85 ms/call"
         }
       ]
     },
@@ -68,14 +68,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['256: 0.4', '512: 3.2', '1024: 20.8', '2048: 130.2', '4096: 160.9', '8192: 176.9']\n"
+          "text": "['256: 0.3', '512: 3.2', '1024: 25.5', '2048: 141.6', '4096: 161.0', '8192: 172.2']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
-          "bytes": 25455,
-          "sha256": "sha256:04bc98d3507194fbb3e723f580f75a914a13fa194a3d40e33505affe1533230c"
+          "bytes": 26530,
+          "sha256": "sha256:f4a2c4c4cf9ef02224c3990b281caf460045cf87c1926e58d530477b395eb82f"
         }
       ]
     },
@@ -86,12 +86,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.26 ms/call\nmul: 0.27 ms/call\nsin: 0.16 ms/call\n"
+          "text": "add: 0.19 ms/call\nmul: 0.16 ms/call\nsin: 0.16 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigmoid: 0.16 ms/call\n"
+          "text": "sigmoid: 0.15 ms/call\n"
         }
       ]
     },
@@ -102,12 +102,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 op: 0.27 ms/call\n"
+          "text": "1 op: 0.18 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain: 1.34 ms/call\n"
+          "text": "chain: 1.29 ms/call\n"
         }
       ]
     },

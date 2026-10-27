@@ -116,30 +116,44 @@ connection* or *shortcut connection*.
 ![A regular block (left) must learn the mapping $f(\mathbf{x})$ directly. A residual block (right) learns the residual mapping $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the input back, so the identity mapping $f(\mathbf{x}) = \mathbf{x}$ corresponds to $g(\mathbf{x}) = 0$.](../img/arch-residual-concept.svg)
 :label:`fig_residual_block`
 
-The shortcut also helps the gradient. The Jacobian of $\mathbf{x} +
-g(\mathbf{x})$ with respect to $\mathbf{x}$ is $\mathbf{I} +
-\partial g / \partial \mathbf{x}$. In a stack of such blocks, the gradient
-of the loss reaches every block through the chain of identity terms, without
-passing through the convolutions of the blocks above it. Two things remain
-on this path in ResNet: the ReLU after each addition, which blocks the
-gradient wherever the sum is negative, and the $1 \times 1$ convolutions on
-the shortcuts of the downsampling blocks. The pre-activation design of the
-exercises removes the ReLU. In a plain network the gradient must pass
+The shortcut also helps the gradient. The Jacobian of
+$\mathbf{x} + g(\mathbf{x})$ with respect to $\mathbf{x}$ is
+$\mathbf{I} + \partial g / \partial \mathbf{x}$. In a stack of such blocks,
+the gradient of the loss reaches every block through the chain of identity
+terms, without passing through the convolutions of the blocks above it. Two
+things remain on this path in ResNet: the ReLU after each addition, which
+blocks the gradient wherever the sum is negative, and the $1 \times 1$
+convolutions, with their batch normalization, on the shortcuts of the
+downsampling blocks. The pre-activation design of the exercises removes the
+ReLU: it normalizes at the start of the branch, adds at its end, and leaves
+the identity path untouched. The pre-norm transformer block of
+:numref:`sec_transformer-block` has the same layout, and the ConvNeXt block of
+:numref:`sec_convnext` also leaves its identity path untouched, with no
+activation after the addition. In a plain network the gradient must pass
 through every layer and is scaled by each.
 
-ResNet's residual block follows VGG's design of $3 \times 3$ convolutions.
-It has two $3 \times 3$ convolutional layers with the same number of output
+ResNet's residual block follows VGG's design of $3 \times 3$ convolutions. It
+has two $3 \times 3$ convolutional layers with the same number of output
 channels. Each convolution is followed by batch normalization, and the first
-also by a ReLU. The block adds its input to the output of the second batch
-normalization and applies a final ReLU. Because that ReLU sets negative
-values to zero, a block whose branch outputs zero is the identity only on
-inputs that are already nonnegative. Every block of the network receives
-such inputs, since each one follows a ReLU.
-The output of the two convolutions must have the shape of the input so that
-they can be added. When a block changes the number of channels or halves the
-resolution, a $1 \times 1$ convolution with the same stride transforms the
-input on the shortcut to the new shape. The class `Residual` implements both
-cases.
+also by a ReLU. The convolutions have no bias: batch normalization subtracts
+the mean of each channel and would remove it. The block adds its input to the
+output of the second batch normalization and applies a final ReLU. Because
+that ReLU sets negative values to zero, a block whose branch outputs zero is
+the identity only on inputs that are already nonnegative. Every block of the
+network receives such inputs, since each one follows a ReLU. The output of the
+two convolutions must have the shape of the input so that they can be added.
+When a block changes the number of channels or halves the resolution, a
+$1 \times 1$ convolution with the same stride, followed by batch
+normalization, transforms the input on the shortcut to the new shape. With
+stride 2, this convolution reads only one of every four input positions.
+:citet:`He.Zhang.Zhang.ea.2019` therefore average-pool the input of the
+shortcut with a $2 \times 2$ window and stride 2 and then apply a $1 \times 1$
+convolution with stride 1, so that every position contributes; they call the
+result *ResNet-D*. In the bottleneck blocks of ResNet-50 they also move the
+stride from the first $1 \times 1$ convolution of the branch, which has the
+same problem, to the $3 \times 3$ one. We keep the original shortcut; an
+exercise builds the ResNet-D version. The class `Residual` implements both the
+identity and the $1 \times 1$ shortcut.
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
@@ -147,13 +161,16 @@ class Residual(nn.HybridBlock):  #@save
     """The Residual block of ResNet models."""
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super().__init__()
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
-                               strides=strides)
-        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
+                               strides=strides, use_bias=False)
+        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
+                               use_bias=False)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = nn.Conv2D(num_channels, kernel_size=1,
-                                   strides=strides)
+                                   strides=strides, use_bias=False)
+            self.bn3 = nn.BatchNorm()
         else:
             self.conv3 = None
         self.bn1 = nn.BatchNorm()
@@ -163,7 +180,7 @@ class Residual(nn.HybridBlock):  #@save
         Y = npx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         return npx.relu(Y + X)
 ```
 
@@ -173,13 +190,16 @@ class Residual(nn.Module):  #@save
     """The Residual block of ResNet models."""
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super().__init__()
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
-                                   stride=strides)
-        self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1)
+                                   stride=strides, bias=False)
+        self.conv2 = nn.LazyConv2d(num_channels, kernel_size=3, padding=1,
+                                   bias=False)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1,
-                                       stride=strides)
+                                       stride=strides, bias=False)
+            self.bn3 = nn.LazyBatchNorm2d()
         else:
             self.conv3 = None
         self.bn1 = nn.LazyBatchNorm2d()
@@ -189,7 +209,7 @@ class Residual(nn.Module):  #@save
         Y = F.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return F.relu(Y)
 ```
@@ -203,31 +223,33 @@ class Residual(tf.keras.Model):  #@save
         # He initialization, one initializer instance per layer
         he = lambda: tf.keras.initializers.VarianceScaling(
             2.0, 'fan_in', 'untruncated_normal')
-        # Pad 1 on every side, as the other frameworks do: Keras' 'same'
-        # pads only right and bottom when the stride is 2 and sizes are even
+        # No conv biases: the batch normalization after each conv removes
+        # them. conv1 pads 1 on every side: 'same' pads only right and bottom
+        # when the stride is 2 and the sizes are even
         self.conv1 = tf.keras.Sequential([
             tf.keras.layers.ZeroPadding2D(1),
             tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-                                   strides=strides, kernel_initializer=he())])
+                                   strides=strides, use_bias=False,
+                                   kernel_initializer=he())])
         self.conv2 = tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-            padding='same', kernel_initializer=he())
+            padding='same', use_bias=False, kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5 (the Keras defaults are
+        # 0.99 and 1e-3)
+        bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
+                                                        epsilon=1e-5)
         self.conv3 = None
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or strides != 1:
             self.conv3 = tf.keras.layers.Conv2D(num_channels, kernel_size=1,
-                strides=strides, kernel_initializer=he())
-        # Running averages decay 0.9 and epsilon 1e-5, as in the other
-        # frameworks (the Keras defaults are 0.99 and 1e-3)
-        self.bn1 = tf.keras.layers.BatchNormalization(momentum=0.9,
-                                                      epsilon=1e-5)
-        self.bn2 = tf.keras.layers.BatchNormalization(momentum=0.9,
-                                                      epsilon=1e-5)
+                strides=strides, use_bias=False, kernel_initializer=he())
+            self.bn3 = bn()
+        self.bn1, self.bn2 = bn(), bn()
 
     def call(self, X):
         Y = tf.keras.activations.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3 is not None:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return tf.keras.activations.relu(Y)
 ```
@@ -239,34 +261,38 @@ class Residual(nnx.Module):  #@save
     def __init__(self, num_channels, use_1x1conv=False, strides=(1, 1),
                  in_channels=None, rngs=None):
         in_channels = num_channels if in_channels is None else in_channels
+        strides = (strides, strides) if isinstance(strides, int) else strides
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        # He initialization; biases start at zero (the Flax default)
+        # He initialization; no conv biases, since the batch normalization
+        # after each conv removes them
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
-        # padding=1 on every side, as in the other frameworks ('SAME' pads
-        # only right and bottom when the stride is 2 and sizes are even)
+        # padding=1 on every side: 'SAME' pads only right and bottom when the
+        # stride is 2 and the sizes are even
         self.conv1 = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                              padding=1, strides=strides,
+                              padding=1, strides=strides, use_bias=False,
                               kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(num_channels, num_channels, kernel_size=(3, 3),
-                              padding='same', kernel_init=he, rngs=rngs)
+                              padding='same', use_bias=False,
+                              kernel_init=he, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance (the Flax
+        # defaults are 0.99 and a one-pass variance)
+        bn = lambda: nnx.BatchNorm(num_channels, momentum=0.9,
+                                   use_fast_variance=False, rngs=rngs)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
         if use_1x1conv or any(s != 1 for s in strides):
             self.conv3 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  kernel_init=he, rngs=rngs)
+                                  use_bias=False, kernel_init=he, rngs=rngs)
+            self.bn3 = bn()
         else:
             self.conv3 = None
-        # Running averages decay 0.9 and a two-pass variance, as in the other
-        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
-        bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
-                                     rngs=rngs)
-        self.bn1, self.bn2 = bn(num_channels), bn(num_channels)
+        self.bn1, self.bn2 = bn(), bn()
 
     def __call__(self, X):
         Y = nnx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         Y += X
         return nnx.relu(Y)
 ```
@@ -281,7 +307,7 @@ before the final ReLU. With `use_1x1conv=True` or a stride other than 1 it
 adds the input after a $1 \times 1$ convolution, which adjusts the channels
 and the resolution. :numref:`fig_resnet_block` shows the two variants.
 
-![The two variants of the ResNet block: with an identity shortcut when input and output shapes match (left), and with a $1 \times 1$ convolution on the shortcut that adjusts channels and resolution so that the addition is defined (right).](../img/arch-resnet-block.svg)
+![The two variants of the ResNet block: with an identity shortcut when input and output shapes match (left), and with a $1 \times 1$ convolution and batch normalization on the shortcut that adjust channels and resolution so that the addition is defined (right).](../img/arch-resnet-block.svg)
 :label:`fig_resnet_block`
 
 A block with matching shapes maps a minibatch of four three-channel
@@ -360,7 +386,8 @@ ResNet adds batch normalization after the convolution.
 class ResNet(d2l.Classifier):
     def b1(self):
         net = nn.HybridSequential()
-        net.add(nn.Conv2D(64, kernel_size=7, strides=2, padding=3),
+        net.add(nn.Conv2D(64, kernel_size=7, strides=2, padding=3,
+                          use_bias=False),
                 nn.BatchNorm(), nn.Activation('relu'),
                 nn.MaxPool2D(pool_size=3, strides=2, padding=1))
         return net
@@ -371,7 +398,7 @@ class ResNet(d2l.Classifier):
 class ResNet(d2l.Classifier):
     def b1(self):
         return nn.Sequential(
-            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3),
+            nn.LazyConv2d(64, kernel_size=7, stride=2, padding=3, bias=False),
             nn.LazyBatchNorm2d(), nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
@@ -379,7 +406,8 @@ class ResNet(d2l.Classifier):
         # The Trainer calls this after the first minibatch fixed the shapes
         if type(module) in (nn.Linear, nn.Conv2d):
             nn.init.kaiming_normal_(module.weight, nonlinearity='relu')  # He
-            nn.init.zeros_(module.bias)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 ```
 
 ```{.python .input #resnet-resnet-model-1}
@@ -391,8 +419,9 @@ def he_init():  # He initialization; Keras needs one instance per layer
 class ResNet(d2l.Classifier):
     def b1(self):
         return tf.keras.models.Sequential([
-            tf.keras.layers.ZeroPadding2D(3),  # Pad every side, as elsewhere
+            tf.keras.layers.ZeroPadding2D(3),  # Pad every side
             tf.keras.layers.Conv2D(64, kernel_size=7, strides=2,
+                                   use_bias=False,
                                    kernel_initializer=he_init()),
             tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
             tf.keras.layers.Activation('relu'),
@@ -414,11 +443,13 @@ class ResNet(d2l.Classifier):
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         return nnx.Sequential(
             nnx.Conv(in_channels, 64, kernel_size=(7, 7), strides=(2, 2),
-                     padding=3, kernel_init=he, rngs=rngs),
+                     padding=3, use_bias=False, kernel_init=he, rngs=rngs),
             nnx.BatchNorm(64, momentum=0.9, use_fast_variance=False,
-                          rngs=rngs), nnx.relu,
-            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2),
-                                   padding=((1, 1), (1, 1))))
+                          rngs=rngs), nnx.relu, max_pool)
+
+def max_pool(X):  # 3x3 windows, stride 2, padding 1 on every side
+    return nnx.max_pool(X, window_shape=(3, 3), strides=(2, 2),
+                        padding=((1, 1), (1, 1)))
 ```
 
 The body consists of four *stages*, each a sequence of residual blocks with
@@ -491,7 +522,8 @@ of channels of each stage. Since the network uses ReLU activations, its
 weights start from He initialization, which draws them with variance
 $2/n_\textrm{in}$ for a layer with $n_\textrm{in}$ inputs per output and
 keeps the scale of the activations from layer to layer
-(:numref:`subsec_he_init`); all biases start at zero.
+(:numref:`subsec_he_init`). The only bias, that of the output layer, starts
+at zero.
 
 ```{.python .input #resnet-resnet-model-3}
 %%tab mxnet
@@ -547,19 +579,22 @@ def create_net(self, in_channels, rngs):
                                  first_block=(i == 0), rngs=rngs))
         stage_channels = num_channels
     layers.append(nnx.Sequential(
-        lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
+        global_avg_pool,
         nnx.Linear(stage_channels, self.num_classes, rngs=rngs,
                    kernel_init=nnx.initializers.variance_scaling(
                        2.0, 'fan_in', 'normal'))))
     return nnx.Sequential(*layers)
+
+def global_avg_pool(X):  # Average over height and width (NHWC)
+    return X.mean(axis=(1, 2))
 ```
 
 :begin_tab:`mxnet`
 `init.MSRAPrelu('in', 0)` is He initialization: it draws the weights of every
 convolutional and dense layer from a normal distribution with variance
-$2/n_\textrm{in}$; biases start at zero, and the scale and shift of each
-batch normalization layer at 1 and 0. The network is built from
-`HybridBlock`s, and `hybridize()` compiles it into a single graph, which
+$2/n_\textrm{in}$; the bias of the output layer starts at zero, and the scale
+and shift of each batch normalization layer at 1 and 0. The network is built
+from `HybridBlock`s, and `hybridize()` compiles it into a single graph, which
 MXNet executes several times faster than one operator at a time.
 :end_tab:
 
@@ -568,21 +603,23 @@ As for LeNet in :numref:`sec_lenet`, the Trainer calls the model's
 `weight_init` once the first minibatch has fixed the shapes of the lazy
 layers. It applies He initialization (`kaiming_normal_`) to every
 convolutional and fully connected layer, including those inside the
-`Residual` blocks, and sets the biases to zero.
+`Residual` blocks, and sets the bias of the output layer to zero; the
+convolutions have none.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `VarianceScaling(2.0, 'fan_in', 'untruncated_normal')` is He
 initialization. Keras initializers without a seed repeat their values when
 one instance is shared, so every layer gets its own; `Residual` does the
-same internally. Biases start at zero, the Keras default.
+same internally. The bias of the output layer starts at zero, the Keras
+default.
 :end_tab:
 
 :begin_tab:`jax`
 NNX layers draw their weights when they are constructed, so every layer,
 including those inside `Residual`, receives He initialization
-(`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`; biases
-start at zero.
+(`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`; the
+bias of the output layer starts at zero.
 :end_tab:
 
 With two blocks in each of the four stages we obtain ResNet-18. Each stage
@@ -637,13 +674,19 @@ ResNet18().layer_summary((1, 96, 96, 1))
 ### Training
 
 We train ResNet-18 on Fashion-MNIST, upsampled to $96 \times 96$ pixels,
-with minibatches of 128 images and 10 epochs. As for LeNet with batch
-normalization in :numref:`sec_batch_norm`, the learning rate rises linearly
-to 0.01 over the first epoch and then decays to zero along a half-cosine,
-`d2l.cosine_warmup`, stepped after every minibatch. With a constant rate,
-the running averages of the batch normalization layers trail the changing
-weights, and the validation accuracy of single epochs, the last one
-included, drops by up to ten points in some runs.
+with minibatches of 128 images and 10 epochs. The learning rate follows the
+schedule of the earlier networks of this chapter (`d2l.cosine_warmup` of
+:numref:`sec_alexnet`): it rises linearly over the first epoch and then
+decays to zero along a half-cosine, stepped after every minibatch. Only the
+peak differs: 0.1 instead of 0.03. Batch normalization makes the larger peak
+safe. Every convolution is followed by a normalization, so a step that
+scales up the weights of a convolution does not scale up its normalized
+output, and the gradient that reaches those weights shrinks as they grow
+(:numref:`sec_batch_norm`). The networks of :numref:`sec_blocks` have no
+normalization, and NiN diverges at a peak of 0.1 in some runs. ResNet-18
+gains from the larger peak: at 0.03 it ends about a point lower. The decay
+matters too: with a constant rate of 0.1, the validation accuracy moves by
+up to a few points from one epoch to the next and ends lower.
 
 ```{.python .input #resnet-training-schedule}
 %%tab mxnet
@@ -685,7 +728,7 @@ def configure_optimizers(self):
 
 ```{.python .input #resnet-training}
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
-model = ResNet18(lr=0.01, num_steps=10 * len(data.train_dataloader()))
+model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 ```
@@ -694,12 +737,14 @@ trainer.fit(model, data)
 round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs
 ```
 
-After 10 epochs ResNet-18 reaches a validation accuracy of 90--91% in every
-framework, and its last epochs change it by less than half a point. Its
-training loss falls to about 0.1, well below its validation loss of about
-0.27: with 11.2 million parameters for 60,000 training images, the network
-fits the training data better than new data. More data, data
-augmentation, and regularization reduce this gap; the training recipes of
+After 10 epochs ResNet-18 reaches a validation accuracy of about 93%, and
+its last three epochs change it by less than a point. That is about a point
+above the quarter-width VGG, the best network of :numref:`sec_blocks`, at
+$96 \times 96$ instead of $224 \times 224$ pixels. Its training loss falls
+below 0.01, far below its validation loss of about 0.27: with 11.2 million
+parameters for 60,000 training images, the network fits the training data
+almost perfectly and new data much less well. More data, data augmentation,
+and regularization reduce this gap; the training recipes of
 :numref:`sec_training_recipes` combine them.
 
 ## ResNeXt and DenseNet
@@ -741,7 +786,9 @@ reduces the $c$ channels of the input to $b$ *bottleneck* channels, and the
 second restores $c$ channels. The $1 \times 1$ convolutions cost
 $\mathcal{O}(c b)$ multiply-adds per position and the grouped $3 \times 3$
 convolution $\mathcal{O}(b^2 / g)$. The shortcut is an identity or, when the
-block changes the shape, a $1 \times 1$ convolution as in `Residual`. On
+block changes the shape, a $1 \times 1$ convolution followed by batch
+normalization, as in `Residual`. The stride of a downsampling block sits on
+the $3 \times 3$ convolution, not on the first $1 \times 1$ one. On
 ImageNet, a ResNeXt-50 with 32 groups has about the parameters and the
 arithmetic of ResNet-50 and lowers its top-1 error from 23.9% to 22.2%
 :cite:`Xie.Girshick.Dollar.ea.2017`.
@@ -752,7 +799,8 @@ arithmetic of ResNet-50 and lowers its top-1 error from 23.9% to 22.2%
 The class `ResNeXtBlock` takes the number of output channels `num_channels`
 ($c$), the number of groups `groups` ($g$), and `bot_mul`, the ratio $b/c$
 of bottleneck channels to output channels. As in `Residual`,
-`use_1x1conv=True, strides=2` halves the height and the width.
+`strides=2` halves the height and the width and switches on the
+$1 \times 1$ convolution on the shortcut.
 
 ```{.python .input #resnet-resnext-1}
 %%tab mxnet
@@ -762,18 +810,20 @@ class ResNeXtBlock(nn.HybridBlock):  #@save
                  use_1x1conv=False, strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.Conv2D(bot_channels, kernel_size=1, padding=0,
-                               strides=1)
+                               strides=1, use_bias=False)
         self.conv2 = nn.Conv2D(bot_channels, kernel_size=3, padding=1,
-                               strides=strides, groups=groups)
+                               strides=strides, groups=groups, use_bias=False)
         self.conv3 = nn.Conv2D(num_channels, kernel_size=1, padding=0,
-                               strides=1)
+                               strides=1, use_bias=False)
         self.bn1 = nn.BatchNorm()
         self.bn2 = nn.BatchNorm()
         self.bn3 = nn.BatchNorm()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = nn.Conv2D(num_channels, kernel_size=1,
-                                   strides=strides)
+                                   strides=strides, use_bias=False)
             self.bn4 = nn.BatchNorm()
         else:
             self.conv4 = None
@@ -795,17 +845,21 @@ class ResNeXtBlock(nn.Module):  #@save
                  strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
-        self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1)
+        # No conv biases: the batch normalization after each conv removes them
+        self.conv1 = nn.LazyConv2d(bot_channels, kernel_size=1, stride=1,
+                                   bias=False)
         self.conv2 = nn.LazyConv2d(bot_channels, kernel_size=3,
                                    stride=strides, padding=1,
-                                   groups=groups)
-        self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1)
+                                   groups=groups, bias=False)
+        self.conv3 = nn.LazyConv2d(num_channels, kernel_size=1, stride=1,
+                                   bias=False)
         self.bn1 = nn.LazyBatchNorm2d()
         self.bn2 = nn.LazyBatchNorm2d()
         self.bn3 = nn.LazyBatchNorm2d()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = nn.LazyConv2d(num_channels, kernel_size=1,
-                                       stride=strides)
+                                       stride=strides, bias=False)
             self.bn4 = nn.LazyBatchNorm2d()
         else:
             self.conv4 = None
@@ -827,25 +881,28 @@ class ResNeXtBlock(tf.keras.Model):  #@save
                  strides=1):
         super().__init__()
         bot_channels = int(round(num_channels * bot_mul))
-        # He initialization, one initializer instance per layer
+        # He initialization, one initializer instance per layer; no conv
+        # biases, since the batch normalization after each conv removes them
         he = lambda: tf.keras.initializers.VarianceScaling(
             2.0, 'fan_in', 'untruncated_normal')
         self.conv1 = tf.keras.layers.Conv2D(bot_channels, 1, strides=1,
-                                            kernel_initializer=he())
+            use_bias=False, kernel_initializer=he())
         self.conv2 = tf.keras.Sequential([  # Pad 1 on every side
             tf.keras.layers.ZeroPadding2D(1),
             tf.keras.layers.Conv2D(bot_channels, 3, strides=strides,
-                                   groups=groups, kernel_initializer=he())])
+                                   groups=groups, use_bias=False,
+                                   kernel_initializer=he())])
         self.conv3 = tf.keras.layers.Conv2D(num_channels, 1, strides=1,
-                                            kernel_initializer=he())
-        # Running averages decay 0.9 and epsilon 1e-5, as in the other
-        # frameworks (the Keras defaults are 0.99 and 1e-3)
+            use_bias=False, kernel_initializer=he())
+        # Running averages decay 0.9 and epsilon 1e-5 (the Keras defaults are
+        # 0.99 and 1e-3)
         bn = lambda: tf.keras.layers.BatchNormalization(momentum=0.9,
                                                         epsilon=1e-5)
         self.bn1, self.bn2, self.bn3 = bn(), bn(), bn()
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or strides != 1:
             self.conv4 = tf.keras.layers.Conv2D(num_channels, 1,
-                strides=strides, kernel_initializer=he())
+                strides=strides, use_bias=False, kernel_initializer=he())
             self.bn4 = bn()
         else:
             self.conv4 = None
@@ -866,28 +923,33 @@ class ResNeXtBlock(nnx.Module):  #@save
     def __init__(self, num_channels, groups, bot_mul, use_1x1conv=False,
                  strides=(1, 1), in_channels=None, rngs=None):
         in_channels = num_channels if in_channels is None else in_channels
+        strides = (strides, strides) if isinstance(strides, int) else strides
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         bot_channels = int(round(num_channels * bot_mul))
-        # He initialization; biases start at zero (the Flax default)
+        # He initialization; no conv biases, since the batch normalization
+        # after each conv removes them
         he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'normal')
         self.conv1 = nnx.Conv(in_channels, bot_channels, kernel_size=(1, 1),
-                              strides=(1, 1), kernel_init=he, rngs=rngs)
+                              strides=(1, 1), use_bias=False,
+                              kernel_init=he, rngs=rngs)
         self.conv2 = nnx.Conv(bot_channels, bot_channels,
                               kernel_size=(3, 3), strides=strides,
                               padding=1, feature_group_count=groups,
-                              kernel_init=he, rngs=rngs)
+                              use_bias=False, kernel_init=he, rngs=rngs)
         self.conv3 = nnx.Conv(bot_channels, num_channels, kernel_size=(1, 1),
-                              strides=(1, 1), kernel_init=he, rngs=rngs)
-        # Running averages decay 0.9 and a two-pass variance, as in the other
-        # frameworks (the Flax defaults are 0.99 and a one-pass variance)
+                              strides=(1, 1), use_bias=False,
+                              kernel_init=he, rngs=rngs)
+        # Running averages decay 0.9 and a two-pass variance (the Flax
+        # defaults are 0.99 and a one-pass variance)
         bn = lambda n: nnx.BatchNorm(n, momentum=0.9, use_fast_variance=False,
                                      rngs=rngs)
         self.bn1, self.bn2 = bn(bot_channels), bn(bot_channels)
         self.bn3 = bn(num_channels)
-        if use_1x1conv:
+        # Auto-enable 1x1 conv when downsampling so the residual shape matches.
+        if use_1x1conv or any(s != 1 for s in strides):
             self.conv4 = nnx.Conv(in_channels, num_channels,
                                   kernel_size=(1, 1), strides=strides,
-                                  kernel_init=he, rngs=rngs)
+                                  use_bias=False, kernel_init=he, rngs=rngs)
             self.bn4 = bn(num_channels)
         else:
             self.conv4 = None
@@ -961,7 +1023,9 @@ block with two layers.
 A DenseNet alternates *dense blocks*, which concatenate, with *transition
 layers*, which reduce the accumulated channels. Each convolution in a dense
 block is preceded by batch normalization and a ReLU, the "normalization,
-activation, convolution" order that the exercises explore for ResNet.
+activation, convolution" order that the exercises explore for ResNet. The
+convolutions have no bias, since every layer that reads their output starts
+with batch normalization.
 
 ```{.python .input #densenet-dense-blocks-1}
 %%tab mxnet
@@ -969,7 +1033,8 @@ def conv_block(num_channels):
     blk = nn.Sequential()
     blk.add(nn.BatchNorm(),
             nn.Activation('relu'),
-            nn.Conv2D(num_channels, kernel_size=3, padding=1))
+            nn.Conv2D(num_channels, kernel_size=3, padding=1,
+                      use_bias=False))
     return blk
 ```
 
@@ -978,7 +1043,7 @@ def conv_block(num_channels):
 def conv_block(num_channels):
     return nn.Sequential(
         nn.LazyBatchNorm2d(), nn.ReLU(),
-        nn.LazyConv2d(num_channels, kernel_size=3, padding=1))
+        nn.LazyConv2d(num_channels, kernel_size=3, padding=1, bias=False))
 ```
 
 ```{.python .input #densenet-dense-blocks-1}
@@ -988,7 +1053,7 @@ def conv_block(num_channels):
         tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
         tf.keras.layers.ReLU(),
         tf.keras.layers.Conv2D(num_channels, kernel_size=3,
-                               padding='same')])
+                               padding='same', use_bias=False)])
 ```
 
 ```{.python .input #densenet-dense-blocks-1}
@@ -998,7 +1063,7 @@ class ConvBlock(nnx.Module):
         self.bn = nnx.BatchNorm(in_channels, momentum=0.9,
                                 use_fast_variance=False, rngs=rngs)
         self.conv = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
-                             padding=(1, 1), rngs=rngs)
+                             padding=(1, 1), use_bias=False, rngs=rngs)
 
     def __call__(self, X):
         return self.conv(nnx.relu(self.bn(X)))
@@ -1127,7 +1192,7 @@ pooling of stride 2.
 def transition_block(num_channels):
     blk = nn.Sequential()
     blk.add(nn.BatchNorm(), nn.Activation('relu'),
-            nn.Conv2D(num_channels, kernel_size=1),
+            nn.Conv2D(num_channels, kernel_size=1, use_bias=False),
             nn.AvgPool2D(pool_size=2, strides=2))
     return blk
 ```
@@ -1137,7 +1202,7 @@ def transition_block(num_channels):
 def transition_block(num_channels):
     return nn.Sequential(
         nn.LazyBatchNorm2d(), nn.ReLU(),
-        nn.LazyConv2d(num_channels, kernel_size=1),
+        nn.LazyConv2d(num_channels, kernel_size=1, bias=False),
         nn.AvgPool2d(kernel_size=2, stride=2))
 ```
 
@@ -1147,7 +1212,7 @@ def transition_block(num_channels):
     return tf.keras.models.Sequential([
         tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5),
         tf.keras.layers.ReLU(),
-        tf.keras.layers.Conv2D(num_channels, kernel_size=1),
+        tf.keras.layers.Conv2D(num_channels, kernel_size=1, use_bias=False),
         tf.keras.layers.AvgPool2D(pool_size=2, strides=2)])
 ```
 
@@ -1158,8 +1223,8 @@ class TransitionBlock(nnx.Module):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.bn = nnx.BatchNorm(in_channels, momentum=0.9,
                                 use_fast_variance=False, rngs=rngs)
-        self.conv = nnx.Conv(in_channels, num_channels,
-                             kernel_size=(1, 1), rngs=rngs)
+        self.conv = nnx.Conv(in_channels, num_channels, kernel_size=(1, 1),
+                             use_bias=False, rngs=rngs)
 
     def __call__(self, X):
         X = self.conv(nnx.relu(self.bn(X)))
@@ -1215,8 +1280,9 @@ ones, although they could represent the same functions. A residual block
 computes its input plus a learned correction, so that the identity is the
 block with zero correction, and the shortcut gives the gradient a direct
 path to every block. Stacked in four stages with batch normalization,
-residual blocks give ResNet-18, which reaches 90--91% validation accuracy
-on Fashion-MNIST in 10 epochs, and the same template scales to 152 layers.
+residual blocks give ResNet-18, which trains at a peak learning rate of 0.1
+and reaches about 93% validation accuracy on Fashion-MNIST in 10 epochs, and
+the same template scales to 152 layers.
 ResNeXt replaces the middle convolution of a bottleneck block by a grouped
 convolution, which makes the block wider at the same cost, and DenseNet
 concatenates the outputs of its layers instead of adding them, which reuses
@@ -1265,8 +1331,8 @@ part of nearly every deep architecture, including the transformers of
    :numref:`fig_functionclasses` applies to a deeper network when each
    added block can represent the identity on every input it receives.
    Every `Residual` block in `ResNet18` receives nonnegative inputs.
-    1. Set the weights and bias of `conv2` in a `Residual` block with an
-       identity shortcut to zero. Determine the output of `bn2` in
+    1. Set the weights of `conv2` in a `Residual` block with an identity
+       shortcut to zero. Determine the output of `bn2` in
        training mode and in prediction mode, and decide in each mode
        whether the block is then the identity on nonnegative inputs.
        Name parameter values of `bn2` that make the block the identity
@@ -1315,6 +1381,19 @@ part of nearly every deep architecture, including the transformers of
     1. Override `block` in a subclass of `ResNet` so that it stacks
        bottleneck blocks, build ResNet-50, and compare its parameter count
        with ResNet-34's.
+
+1. [code] **ResNet-D shortcut.** In a downsampling `Residual` block, the
+   stride-2 $1 \times 1$ convolution on the shortcut reads one of every
+   four input positions. :citet:`He.Zhang.Zhang.ea.2019` replace it by
+   $2 \times 2$ average pooling with stride 2, followed by a stride-1
+   $1 \times 1$ convolution and batch normalization.
+    1. Implement this shortcut in a subclass of `Residual` and check on a
+       random input that the new block has the same output shape and the
+       same number of parameters as the original one.
+    1. Build a ResNet-18 from the new block and train it with the settings
+       of this section. Compare its validation accuracy with that of
+       `ResNet18` over several runs of each network. Is the difference
+       larger than the variation between runs?
 
 1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
    block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
@@ -1395,7 +1474,8 @@ Source: He et al. (2016).
 - state when a larger model is guaranteed to fit at least as well;
 - build a residual block, with an identity or a 1×1 shortcut;
 - assemble ResNet-18 and count its 18 layers and 11.2M parameters;
-- train it on Fashion-MNIST;
+- train it on Fashion-MNIST at the larger learning rate that batch
+  normalization allows;
 - compute what grouped convolutions save (ResNeXt) and what
   concatenation costs (DenseNet).
 
@@ -1498,8 +1578,9 @@ $$\frac{\partial(\mathbf{x} + g(\mathbf{x}))}{\partial \mathbf{x}} =
 
 ![Two 3×3 convolutions with batch norm; ReLU after the first and after the addition.](../img/arch-resnet-block.svg){width=90%}
 
-The 1×1 convolution has the block's stride, so it matches both channels
-and resolution.
+The 1×1 convolution (with batch norm) has the block's stride, so it
+matches channels and resolution. At stride 2 it reads one of every four
+positions; ResNet-D average-pools 2×2 first.
 :::
 
 ::: {.slide title="Same Shape In and Out, or Twice the Channels at Half the Resolution"}
@@ -1513,7 +1594,7 @@ and resolution.
 ::: {.slide title="Check: Is a Residual Block with a Zero Branch the Identity?"}
 [Check]{.kicker}
 
-Set the weights and bias of `conv2` to zero. The block computes
+Set the weights of `conv2` to zero. The block computes
 $\textrm{ReLU}(\textrm{BN}_2(0) + \mathbf{x})$. Is it the identity?
 
 ::: {.fragment .fade-up}
@@ -1552,7 +1633,7 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 
 | model | blocks per stage | parameters |
 |---|---|--:|
-| ResNet-18 (Fashion-MNIST) | 2, 2, 2, 2 | 11,178,378 |
+| ResNet-18 (Fashion-MNIST) | 2, 2, 2, 2 | 11,175,370 |
 | ResNet-34 | 3, 4, 6, 3 | (exercise) |
 :::
 
@@ -1562,14 +1643,27 @@ $\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
 @resnet-resnet-model-2
 :::
 
-::: {.slide title="ResNet-18 Reaches 90–91% on Fashion-MNIST in 10 Epochs"}
+::: {.slide title="Batch Normalization Lets ResNet-18 Train at a Peak Rate of 0.1"}
+[ResNet-18]{.kicker}
+
+- Schedule of AlexNet and VGG: linear warmup over the first epoch, then
+  cosine decay to 0, stepped after every minibatch.
+- Peak 0.1 instead of 0.03.
+- A normalization follows every convolution: scaling up the convolution's
+  weights leaves its normalized output unchanged, and the gradient that
+  reaches those weights shrinks as they grow.
+- Without normalization, NiN diverges at a peak of 0.1 in some runs.
+- ResNet-18 at a peak of 0.03 ends about a point lower.
+:::
+
+::: {.slide title="ResNet-18 Reaches About 93% on Fashion-MNIST in 10 Epochs"}
 [ResNet-18]{.kicker}
 
 @!resnet-training
 
-Base rate 0.01 with cosine decay to 0, minibatch 128, 96×96 pixels.
-Training loss ≈ 0.1, validation loss ≈ 0.27: 11.2M parameters for 60,000
-images.
+Peak rate 0.1, minibatch 128, 96×96 pixels. About a point above the
+quarter-width VGG at 224×224. Training loss below 0.01, validation loss
+≈ 0.27: 11.2M parameters for 60,000 images.
 :::
 
 ::: {.slide}
@@ -1635,7 +1729,8 @@ quadratically: at $n = 24$, 10,368 against 3,072. One reason addition won.
 - **Nesting:** extra layers cannot hurt the best fit if they can be the
   identity; a residual block makes the identity $g = 0$.
 - **ResNet-18:** stem, 4 stages × 2 blocks, pooling head; 11.2M
-  parameters; 90–91% on Fashion-MNIST in 10 epochs.
+  parameters; peak rate 0.1, which batch normalization makes safe; about
+  93% on Fashion-MNIST in 10 epochs.
 - **ResNeXt:** grouped 3×3 between 1×1s, $1/g$ of the cost.
 - **DenseNet:** concatenation reuses features, at a quadratic memory
   cost.

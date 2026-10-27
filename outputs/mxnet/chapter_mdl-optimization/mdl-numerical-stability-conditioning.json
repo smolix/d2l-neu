@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
-          "bytes": 40773,
-          "sha256": "sha256:a7ccff9cdd81cbd37f52cca4e546922e6cd6906e343ce90cebe706f11706863e"
+          "bytes": 38784,
+          "sha256": "sha256:2cc77a04f15a6ae4197760626ad16ab0e840f6128fc0049b79aa3760aa40d9ee"
         }
       ]
     }

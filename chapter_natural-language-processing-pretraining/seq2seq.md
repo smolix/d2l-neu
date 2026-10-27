@@ -739,7 +739,7 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
-        return gluon.Trainer(self.parameters(), 'adam',
+        return gluon.Trainer(self.collect_params(), 'adam',
                              {'learning_rate': self.lr})
 ```
 

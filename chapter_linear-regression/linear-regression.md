@@ -410,7 +410,11 @@ it :cite:`Li.Zhang.Chen.ea.2014`. Because the minibatch is drawn at random,
 its average gradient equals the full gradient in expectation; in the
 language of :numref:`sec_prob`, it is an unbiased estimate. Its variance
 falls in proportion to $1/|\mathcal{B}|$, since the variance of an average
-of independent draws is the variance of one draw divided by their number.
+of independent draws is the variance of one draw divided by their number
+(for draws with replacement; the loaders of this book draw without
+replacement within an epoch, which changes this only slightly when
+$|\mathcal{B}|$ is much smaller than the number of examples, as
+:numref:`sec_sgd` discusses).
 The update of *minibatch stochastic gradient descent* is
 
 $$(\mathbf{w},b) \leftarrow (\mathbf{w},b) - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \nabla_{(\mathbf{w},b)}\, l^{(i)}(\mathbf{w},b).$$
@@ -897,6 +901,10 @@ block of the deep networks to come.
 
 :begin_tab:`tensorflow`
 [Discussions](https://d2l.discourse.group/t/259)
+:end_tab:
+
+:begin_tab:`jax`
+[Discussions](https://d2l.discourse.group/t/17973)
 :end_tab:
 
 <!-- slides -->

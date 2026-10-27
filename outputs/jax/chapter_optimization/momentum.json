@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:bf6d5febbb99d107858c773168067c564b96ae5661c9db908dc571af74274095",
+    "d2l_lib_fingerprint": "sha256:35b74e1e8c245833652860da71fea97d76bba2d6232acb74d91a4bcdf028cdaa",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
-          "bytes": 24074,
-          "sha256": "sha256:ac540cd6c0fe65a4670ad4e76456d07dfca1fb9d7189281026e57296e413b78a"
+          "bytes": 23973,
+          "sha256": "sha256:83e182bc5a2b4a50b7e17b4a12ec5f4cc43054c1ce138daa7d4c95b826459e5a"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-2-1.svg",
-          "bytes": 22614,
-          "sha256": "sha256:18c595abf74249b1689db55c72af2acfc4df34d64ba1b895e4e1f0a1d2725801"
+          "bytes": 22596,
+          "sha256": "sha256:9c31c37f5fe8c0ee33381a13857e85e9d735a786d440a2058a887fd87f8f9723"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
-          "bytes": 22548,
-          "sha256": "sha256:001cbb54b9a162e2b7ce3203782926df0f8efa51b6a7bc81436119e477f21ad1"
+          "bytes": 22457,
+          "sha256": "sha256:adbfeef596d738c82c8a2cc4efd05c8e7b5c050b97420286c5c2527ccba8b1c8"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-2-1.svg",
-          "bytes": 22556,
-          "sha256": "sha256:aa25e851bb48a3f3eedf170d47a90fd0ee9c151a415dfaf188002718f5f242e7"
+          "bytes": 22463,
+          "sha256": "sha256:c340f0710fc3d27dde07abbd8899ec65365460edd87374a4ffb07fb3c4c27af5"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-effective-sample-weight-1.svg",
-          "bytes": 25361,
-          "sha256": "sha256:4a0c929503f5ce53781c293c193193660588b271c68ea5dc0c3af50438eefb63"
+          "bytes": 25314,
+          "sha256": "sha256:a6d7ec341f246485a344fa9f56fd397b441a463e2b56d393978844601d02c90e"
         }
       ]
     },
@@ -111,8 +111,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-acceleration-and-damping-1.svg",
-          "bytes": 24588,
-          "sha256": "sha256:6b4b10ce5f2801d9db0a3e83b10c390b4363a6eb8e135ca6dc9a400db9796e1c"
+          "bytes": 24555,
+          "sha256": "sha256:183a779e686983e9a3cddda0feafa7b90af34faaeefd01c27665b6ccd79622db"
         }
       ]
     },
@@ -133,14 +133,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 1.135 sec/epoch\n"
+          "text": "loss: 0.243, 1.621 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 18781,
-          "sha256": "sha256:626bae21dc89146b419f2839daf8cf790ee59a6261fdc068799a101e8c9ce666"
+          "bytes": 18791,
+          "sha256": "sha256:7e18a3f32b5290c0822168ca07e886831a426cb09ff1acd5d29485531b89c9e5"
         }
       ]
     },
@@ -151,14 +151,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.320 sec/epoch\n"
+          "text": "loss: 0.246, 0.347 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-4-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:345f08d0816f0437d436960cfcfb10e31ac2e3ef1eba345c11bddfa7b47d3162"
+          "bytes": 18790,
+          "sha256": "sha256:ef9229444a2bf2a766f28c6f90b0f2266ba6db1ea642b9bca7dea5601289fc73"
         }
       ]
     },
@@ -169,14 +169,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.302 sec/epoch\n"
+          "text": "loss: 0.245, 0.316 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-5-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:ca0966ab3e956dfccd0fff6bd67d62bb4fbbe97a4d2b22bb26bf0814bb257d3a"
+          "bytes": 18791,
+          "sha256": "sha256:a749d990cfd597e4660e2befa4248d1503f091d5a1ae138f101e6070ef5f675f"
         }
       ]
     },
@@ -187,14 +187,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.324 sec/epoch\n"
+          "text": "loss: 0.244, 0.367 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-concise-implementation-1.svg",
-          "bytes": 18775,
-          "sha256": "sha256:3e4555f7d9da2efea97981b879581b3a169f5a6d4782653ab8197775486a7570"
+          "bytes": 18780,
+          "sha256": "sha256:6b2c7b57deb3114e4fc14ecc13147f7396c3bf487c5758567b196ec459214700"
         }
       ]
     },
@@ -211,8 +211,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
-          "bytes": 23702,
-          "sha256": "sha256:b26bb1bb0be09615d6a699edfecde04bb93af4b6749bb0bdaaf99491160ee3a1"
+          "bytes": 23591,
+          "sha256": "sha256:2dbc38dbd6f8975a86a4384cc384b56500727c7f56d8e8f703648398dc58f5cf"
         }
       ]
     },
@@ -223,14 +223,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.316 sec/epoch\n"
+          "text": "loss: 0.245, 0.340 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-2-1.svg",
-          "bytes": 18776,
-          "sha256": "sha256:c469d2eb5c2d2e54bbbf9264902b8e3afc5ce1ee5d8d477d30f8821c00b23c04"
+          "bytes": 18785,
+          "sha256": "sha256:655d1d4850bdff9ee2de566c98d27bfd1589a99beb3995133038fc231475e70d"
         }
       ]
     }

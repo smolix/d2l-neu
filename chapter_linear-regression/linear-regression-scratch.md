@@ -57,7 +57,6 @@ import tensorflow as tf
 ```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=5}
 %%tab jax
 %matplotlib inline
-import collections
 from d2l import jax as d2l
 from flax import nnx
 import jax
@@ -116,7 +115,7 @@ trainable variables, so that their gradients can be computed
 `nnx.state(model)` contains `w` and `b`, and `nnx.grad` differentiates with
 respect to them. The argument `rngs` supplies the random key for the
 initialization; without it, the model takes a key from the `d2l` library,
-which draws a new random seed on every run, as the other frameworks do.
+which draws a new random seed on every run.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-defining-the-model-1  n=6}
@@ -272,8 +271,7 @@ with autograd.record():
 loss.backward()
 r = model(X) - y                             # One error per example
 by_hand = mnp.concatenate([X.T @ r, r.sum(0, keepdims=True)]) / len(y)
-by_autograd = mnp.concatenate([model.w.data().grad,
-                               model.b.data().grad[None]])
+by_autograd = mnp.concatenate([model.w.grad(), model.b.grad()[None]])
 print('gradient:', d2l.numpy(by_autograd).reshape(-1).round(4))
 print(f'largest difference: {float(abs(by_hand - by_autograd).max()):.1g}')
 ```
@@ -521,7 +519,8 @@ device has finished all the work queued for it (:numref:`sec_oo-design`), so
 the steps return values that stay on the device. `Averager` adds up each
 metric on the device and converts the sums into Python numbers once per
 epoch, in `mean`. It weights each minibatch by its size, so the shorter last
-minibatch counts correctly.
+minibatch counts correctly, and it lists the loss first and the other
+metrics in alphabetical order, the order in which `record` stores them.
 
 ```{.python .input #linear-regression-scratch-training-5}
 class Averager:  #@save
@@ -535,8 +534,9 @@ class Averager:  #@save
         self.n += n
 
     def mean(self):
-        """One host synchronization per metric."""
-        return {name: float(s) / self.n for name, s in self.sums.items()}
+        """One host synchronization per metric; the loss comes first."""
+        names = sorted(self.sums, key=lambda name: (name != 'loss', name))
+        return {name: float(self.sums[name]) / self.n for name in names}
 ```
 
 ### Training and Validation Passes
@@ -564,7 +564,13 @@ the validation metrics without recording.
 gradients, updates the parameters, and adds the minibatch metrics to an
 `Averager`. We pass a batch size of 1 to `step`, because our loss is already
 a mean. The line on gradient clipping, which limits the size of the
-gradient, serves later chapters. `validate` computes the validation metrics;
+gradient, serves later chapters. After queuing a step, Python waits with
+`wait_to_read` until the device has computed the loss of the previous
+minibatch. Without such a wait, Python can queue the steps of a whole epoch
+ahead of the device, and the memory for their intermediate results grows
+with the queue. With it, the device always has the current step to work on,
+so it never waits for Python, and no loss is converted into a Python number
+before the end of the epoch. `validate` computes the validation metrics;
 outside `autograd.record()` nothing is recorded.
 :end_tab:
 
@@ -573,12 +579,12 @@ A function compiled into a graph with `tf.function` runs much faster than
 the same operations issued one at a time from Python. `prepare_model`, which
 replaces the one of :numref:`sec_oo-design`, therefore compiles the training
 step (the model's `training_step`, the gradients, and the update) and the
-validation step, once per call of `fit`. It first runs one forward pass,
-because Keras creates a layer's variables only when the layer first sees
-data. The compiled steps return their metrics as tensors, which `fit_epoch`
-and `validate` average. Gradient clipping, which limits the size of the
-gradient, serves later chapters, and the fallback to the variables that the
-tape watched serves models whose variables Keras does not track.
+validation step, once per call of `fit`. It first runs one forward pass on a
+training minibatch, or on a validation minibatch when `evaluate` supplies no
+training data, because Keras creates a layer's variables only when the layer
+first sees data. The compiled steps return their metrics as tensors, which
+`fit_epoch` and `validate` average. Gradient clipping, which limits the size
+of the gradient, serves later chapters.
 :end_tab:
 
 :begin_tab:`jax`
@@ -590,13 +596,14 @@ the module. We compile one training step (forward pass, loss, gradients, and
 the update `optimizer.update(model, grads)`) into a single function,
 `_trainer_train_step`, with a companion `_trainer_validation_step`. With
 `has_aux=True`, `nnx.grad` differentiates the `'loss'` entry of the step's
-metrics and also returns the whole dictionary. Both return the metrics as an
-`OrderedDict`: `jit` hands back a plain dictionary with its keys sorted, which
-would draw `acc` before `loss` and give the curves other colors than in the
-other frameworks. Both functions are defined at
-module level, and each is compiled once per minibatch shape in every call of
-`fit`. They receive the two views of the model, for training and for
-evaluation, that `prepare_model` creates in :numref:`sec_oo-design`.
+metrics and also returns the whole dictionary. Both functions are defined at
+module level and receive the two views of the model, for training and for
+evaluation, that `prepare_model` creates in :numref:`sec_oo-design`. `jit`
+compiles a function anew for every new minibatch shape and every new
+structure of its arguments, which includes the optax transformation inside
+the optimizer. Since `prepare_optimizer` reuses the most recent
+transformation, a second `fit` of a model with the same structure and
+hyperparameters runs the steps compiled by the first.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-training-2  n=16}
@@ -633,7 +640,7 @@ def validate(self):
 %%tab mxnet
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
-    metrics = d2l.Averager()
+    metrics, previous = d2l.Averager(), None
     for batch in map(self.prepare_batch, self.train_dataloader):
         with autograd.record():
             out = d2l.as_metrics(self.model.training_step(batch))
@@ -642,6 +649,9 @@ def fit_epoch(self):
             self.clip_gradients(self.gradient_clip_val, self.model)
         self.optim.step(1)
         metrics.add(out, len(batch[-1]))
+        if previous is not None:  # Python stays one step ahead at most
+            previous.wait_to_read()
+        previous = out['loss']
     return metrics.mean()
 
 @d2l.add_to_class(d2l.Trainer)  #@save
@@ -658,7 +668,9 @@ def validate(self):
 @d2l.add_to_class(d2l.Trainer)  #@save
 def prepare_model(self, model):
     self.model = model
-    batch = self.prepare_batch(next(iter(self.train_dataloader)))
+    loader = (self.train_dataloader if self.train_dataloader is not None
+              else self.val_dataloader)  # `evaluate` has no training data
+    batch = self.prepare_batch(next(iter(loader)))
     model(*batch[:-1], training=False)  # Keras creates the variables here
     self._train_step = tf.function(self.train_step, reduce_retracing=True)
     self._val_step = tf.function(self.val_step, reduce_retracing=True)
@@ -667,7 +679,7 @@ def prepare_model(self, model):
 def train_step(self, batch):
     with tf.GradientTape() as tape:
         out = d2l.as_metrics(self.model.training_step(batch))
-    params = self.model.trainable_variables or tape.watched_variables()
+    params = self.model.trainable_variables
     grads = tape.gradient(out['loss'], params)
     if self.gradient_clip_val > 0:
         grads = self.clip_gradients(self.gradient_clip_val, grads)
@@ -698,8 +710,7 @@ def validate(self):
 @nnx.jit  #@save
 def _trainer_train_step(model, optimizer, batch):
     def loss_fn(model):
-        out = collections.OrderedDict(
-            d2l.as_metrics(model.training_step(batch)))
+        out = d2l.as_metrics(model.training_step(batch))
         return out['loss'], out
     grads, out = nnx.grad(loss_fn, has_aux=True)(model)
     optimizer.update(model, grads)
@@ -707,8 +718,7 @@ def _trainer_train_step(model, optimizer, batch):
 
 @nnx.jit  #@save
 def _trainer_validation_step(model, batch):
-    return collections.OrderedDict(
-        d2l.as_metrics(model.validation_step(batch)))
+    return d2l.as_metrics(model.validation_step(batch))
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
@@ -875,7 +885,12 @@ after ten epochs the loss is still about 2 to 3, as the prediction
 $16.6 \times 0.997^{640} \approx 2.4$ says. At $\eta = 0.3$ the loss
 reaches the floor within the first epoch. At $\eta = 3$ every step
 multiplies the parameter error by about $-2$, and the loss overflows to
-`inf` or `nan`.
+`inf` or `nan`. The factor $1 - \eta$ exceeds 1 in magnitude once
+$\eta > 2$, so learning rates above about 2 diverge. The limit is 2 because
+every feature has variance 1. A feature scaled by $s > 1$ multiplies the
+curvature of the loss along its weight by $s^2$ and lowers the limit to
+about $2/s^2$, which is one reason why inputs are standardized
+(:numref:`sec_pandas`).
 
 We have written every component of training by hand and checked the result
 against an answer known in advance. The loss reaches the noise floor at the
@@ -1349,7 +1364,8 @@ def add(self, metrics, n):
     self.n += n
 
 def mean(self):                      # one host sync per metric
-    return {k: float(s) / self.n for k, s in self.sums.items()}
+    names = sorted(self.sums, key=lambda k: (k != 'loss', k))
+    return {k: float(self.sums[k]) / self.n for k in names}
 ```
 
 ::: {.d2l-note}
@@ -1379,13 +1395,17 @@ return metrics.mean()                        # one sync per epoch
 [The loop · simplified]{.kicker}
 
 ```{.python #linear-regression-scratch-exercises-2}
+previous = None
 for batch in self.train_dataloader:
     with autograd.record():
         loss = self.model.training_step(batch)  # 1. forward, loss
     loss.backward()                             # 2.+3. overwrite
     self.optim.step(1)                          # 4. update
     metrics.add({'loss': loss}, len(batch[-1]))
-return metrics.mean()                           # one sync per epoch
+    if previous is not None:                    # queue: one step long
+        previous.wait_to_read()
+    previous = loss
+return metrics.mean()                           # one read per epoch
 ```
 
 `validate` runs the same loop without recording or updates.

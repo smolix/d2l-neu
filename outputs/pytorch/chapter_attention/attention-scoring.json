@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6eac0962c15a822bbef14b641c34f34acf4d25401b9d4dd1a3c533ede577483a",
+    "d2l_lib_fingerprint": "sha256:13daf7714fdae4e39c239c386b8e6e485f2b6ce68b708cdba2457285ffc7d1a7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25631,
-          "sha256": "sha256:e112d6581428df0c8b183d907e0d71e5baaca03c3e26f5d5820a9c841a9e5a0e"
+          "bytes": 25282,
+          "sha256": "sha256:44419bdc4828068adb16a95f4f569153347ae24a86a218af34142fab9c63852b"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
-          "bytes": 16481,
-          "sha256": "sha256:7c7243b96521ca7b1e6aa753658d37fc72b60f4ff65d84148fbf26113bcd4fd1"
+          "bytes": 16423,
+          "sha256": "sha256:31289326cd18250f1c37cb7bfdf1093919a8b83ca4cf4fe0632e6778665842db"
         }
       ]
     },
@@ -83,8 +83,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 19827,
-          "sha256": "sha256:1b7cd596102cc8e1916dbc177d55fe89952d2cceab93f7eacb5a17b6fe891e9a"
+          "bytes": 19762,
+          "sha256": "sha256:318fb89aba4ae20ddee43f7344333abeaa2968623ad5f5587190384311706f20"
         }
       ]
     },
@@ -111,8 +111,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
-          "bytes": 14822,
-          "sha256": "sha256:adc2ad7bd743fd746a957d91aecceaa9f6358e769514145d63a491b8bb3b5d1b"
+          "bytes": 14767,
+          "sha256": "sha256:9f6ddf1bed00601c619e054b28fcbb164df7642dedf2e574bfb4d0002e4c16c5"
         }
       ]
     },

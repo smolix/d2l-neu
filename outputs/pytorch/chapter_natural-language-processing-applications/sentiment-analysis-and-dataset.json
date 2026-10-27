@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a03b7a79654c13b15b3b97ccebccc1c755f26a117eeb915f8ee4995532350169",
+    "d2l_lib_fingerprint": "sha256:356d905916d075ef7b605d4d5e8e988bdea4028545496af22d4df3c8bea545ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
-          "bytes": 20893,
-          "sha256": "sha256:338c7efab9f6e48730c2e80cbce2da000cc81afaac95ead99e5da054b325803f"
+          "bytes": 20698,
+          "sha256": "sha256:0038dd441ccf8ff036e2825cb4ebdb46748014057610784244f7b650cae0980e"
         }
       ]
     },

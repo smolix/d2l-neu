@@ -152,7 +152,8 @@ def comp_conv2d(conv2d, X):
 ```
 
 An $8\times 8$ input, a $3\times 3$ kernel, and one pixel of padding on every
-side ($p_\textrm{h}=p_\textrm{w}=2$) should give an $8\times 8$ output.
+side ($p_\textrm{h}=p_\textrm{w}=2$ in total; padding arguments in code count
+the rows or columns on each side, here 1) should give an $8\times 8$ output.
 
 ```{.python .input #padding-and-strides-padding-1}
 %%tab mxnet
@@ -217,14 +218,17 @@ Keras `Conv2D` accepts only `padding='valid'`, which means no padding, and
 `padding='same'`, which pads so that the output has $\lceil n/s\rceil$ rows
 and columns for stride $s$. At stride 1 and odd kernel sizes this is the
 symmetric padding $(k-1)/2$ used above. Other amounts of padding take a
-separate `ZeroPadding2D` layer, as in the stride example below.
+separate `ZeroPadding2D` layer, which pads each side by a given amount,
+followed by `padding='valid'`, as in the stride examples below. Keras layers
+take channels-last inputs: (example, height, width, channel).
 :end_tab:
 
 :begin_tab:`jax`
 `nnx.Conv` accepts `'SAME'`, `'VALID'`, one integer for every side, or one
 integer per spatial axis, as used above. It also accepts `'REFLECT'` and
-`'CIRCULAR'`, which pad with mirrored or wrapped-around values. Its inputs are channels-last:
-(example, height, width, channel).
+`'CIRCULAR'`, which pad with mirrored or wrapped-around values. Its default
+is `padding='SAME'`, so the code passes `'VALID'` wherever no padding is
+wanted. Its inputs are channels-last: (example, height, width, channel).
 :end_tab:
 
 ### Padding Values
@@ -253,8 +257,7 @@ d2l.corr2d(F.pad(img, (1, 1, 1, 1)), d2l.ones((3, 3)))
 ```{.python .input #padding-and-strides-padding-values}
 %%tab tensorflow
 img = d2l.ones((5, 5))
-Y = d2l.corr2d(tf.pad(img, [[1, 1], [1, 1]]), d2l.ones((3, 3)))
-tf.convert_to_tensor(Y)  # corr2d returns a tf.Variable
+d2l.corr2d(tf.pad(img, [[1, 1], [1, 1]]), d2l.ones((3, 3)))
 ```
 
 ```{.python .input #padding-and-strides-padding-values}
@@ -311,8 +314,8 @@ $p_\textrm{h}=k_\textrm{h}-1$, the number of rows is
 $\lfloor (n_\textrm{h}-1)/s_\textrm{h}\rfloor+1=\lceil n_\textrm{h}/s_\textrm{h}\rceil$:
 stride $s$ divides the resolution by $s$, rounding up.
 
-The most common strided layer has a $3\times 3$ kernel, padding 1, and stride
-2. It halves an $8\times 8$ input to $4\times 4$.
+The most common strided layer has a $3\times 3$ kernel, padding 1 on each
+side, and stride 2. It halves an $8\times 8$ input to $4\times 4$.
 
 ```{.python .input #padding-and-strides-stride-1}
 %%tab mxnet
@@ -328,7 +331,9 @@ comp_conv2d(conv2d, X).shape
 
 ```{.python .input #padding-and-strides-stride-1}
 %%tab tensorflow
-conv2d = tf.keras.layers.Conv2D(1, kernel_size=3, padding='same', strides=2)
+conv2d = tf.keras.Sequential([
+    tf.keras.layers.ZeroPadding2D(padding=1),
+    tf.keras.layers.Conv2D(1, kernel_size=3, padding='valid', strides=2)])
 comp_conv2d(conv2d, X).shape
 ```
 
@@ -338,6 +343,13 @@ conv2d = nnx.Conv(1, 1, kernel_size=(3, 3), padding=1, strides=2,
                   rngs=nnx.Rngs(d2l.get_key()))
 comp_conv2d(conv2d, X).shape
 ```
+
+:begin_tab:`tensorflow`
+At stride 2 on an input of even size, `padding='same'` pads one row and
+column at the bottom and right but none at the top and left, so output $i$
+is centered on input pixel $2i+1$ rather than $2i$. `ZeroPadding2D(1)`
+followed by `padding='valid'` pads both sides by 1.
+:end_tab:
 
 The settings can also differ between the axes. A $3\times 5$ kernel with
 padding $(0, 1)$ on each side and stride $(3, 4)$ gives
@@ -379,9 +391,25 @@ to one output per channel. This *patchify* layer is how vision transformers
 turn an image into a sequence of patches, and some convolutional networks
 begin the same way.
 
-When height and width use the same setting, we speak of padding $p$ (in
-total, so $p/2$ on each side, which is the number the libraries take) and
-stride $s$. By default, padding is 0 and stride is 1.
+When height and width use the same setting, we speak of padding $p$ and
+stride $s$.
+
+:begin_tab:`mxnet`
+`nn.Conv2D` defaults to padding 0 and stride 1.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.LazyConv2d` defaults to padding 0 and stride 1.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.keras.layers.Conv2D` defaults to `padding='valid'`, no padding, and
+stride 1.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.Conv` defaults to `padding='SAME'` and stride 1.
+:end_tab:
 
 ### Stride and the Receptive Field
 :label:`subsec_stride_rf`
@@ -497,7 +525,9 @@ discards nothing. This matters for *dense prediction* tasks such as semantic
 segmentation, which assigns a label to every pixel and thus needs both wide
 context and full resolution, and dilated convolutions are widely used there
 :cite:`yu2016dilated`. Their cost is that every layer computes its outputs at
-full resolution.
+full resolution. A network that downsamples with strides can instead restore
+the resolution at its end with learned upsampling, the transposed
+convolution of :numref:`sec_transposed_conv`.
 
 ![Receptive field of the top unit of three stacked layers with kernel size 3, in one dimension. Cells are the positions each layer computes, shaded cells those the top unit depends on, and lines the kernel's taps. (a) Strides 2, 2, 1: layer 1 keeps every second position, layers 2 and 3 every fourth. (b) Stride 1 with dilations 1, 2, 4: every layer keeps all positions. Both top units see the same 15 input pixels.](../img/conv-rf-towers.svg)
 :label:`fig_conv_rf_towers`

@@ -97,12 +97,13 @@ draws that do not influence one another, such as $n$ tosses of a coin. We
 pass $n$ and the vector of probabilities, here $(0.5, 0.5)$ for heads and
 tails, and receive the count of each outcome.
 
-:begin_tab:`jax` JAX keeps no hidden random state. Every sampler takes a
-key, and the same key always produces the same draws
-(:numref:`sec_ndarray`). To obtain fresh randomness, we split a key into new
-keys and use each of them once. Like the samplers of the other frameworks,
-which draw their seed from the operating system, we start from a key with a
-random seed, so each run of this section gives new counts. :end_tab:
+:begin_tab:`jax`
+JAX keeps no hidden random state. Every sampler takes a key, and the same key
+always produces the same draws (:numref:`sec_ndarray`). To obtain fresh
+randomness, we split a key into new keys and use each of them once. We start
+from a key whose seed Python's `random` module draws afresh on each run, so
+each run of this section gives new counts.
+:end_tab:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab mxnet
@@ -192,6 +193,9 @@ jax.random.multinomial(subkey, 10000, fair_probs) / 10000
 
 We can also follow a single estimate as the tosses accumulate. After each
 toss, we divide the number of heads so far by the number of tosses so far.
+The cumulative sum `cumsum` gives the number of heads so far, and a tensor
+filled with the constant $0.5$ draws the line $P(\textrm{heads}) = 0.5$ for
+comparison.
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab mxnet
@@ -206,7 +210,7 @@ d2l.plot(mnp.arange(1, n + 1), [estimates, mnp.full(n, 0.5)], 'tosses',
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab pytorch
 n = 10000
-tosses = (torch.rand(n) < 0.5).float()  # 1 is heads, 0 is tails
+tosses = (torch.rand(n) < 0.5).to(torch.float32)  # 1 is heads, 0 is tails
 estimates = tosses.cumsum(dim=0) / torch.arange(1, n + 1)
 d2l.plot(torch.arange(1, n + 1), [estimates, torch.full((n,), 0.5)],
          'tosses', 'frequency of heads',
@@ -296,10 +300,12 @@ function from the sample space to a set of values. It can be much coarser
 than the outcome. The number of heads in 100 tosses takes 101 values, while
 the sample space holds $2^{100}$ sequences of tosses. Each value $v$ of a
 random variable $X$ defines an event, the set of outcomes for which $X = v$,
-so $P(X = v)$ is defined. The function that maps every value $v$ to
-$P(X = v)$ is the *distribution* of $X$, written $P(X)$. A range of values is
-an event too: $P(1 \leq X \leq 3)$ is the probability that $X$ takes a value
-between 1 and 3.
+so $P(X = v)$ is defined. A range of values is an event too:
+$P(1 \leq X \leq 3)$ is the probability that $X$ takes a value between 1 and
+3. In general, the *distribution* of $X$ assigns the probability
+$P(X \in A)$ to every set $A$ of values. For a variable with finitely or
+countably many values, the map $v \mapsto P(X = v)$, its *probability mass
+function*, determines the distribution, and we write it as $P(X)$.
 
 ### Discrete and Continuous Variables
 
@@ -548,7 +554,10 @@ Since we have a complete model of how the data arise, we can check the
 calculation by simulation. We draw the HIV status of two million patients,
 apply both tests to each patient, and compute the fraction of infected
 patients among those whose tests are both positive. Each draw compares a
-uniform random number with a probability, as in our first coin toss.
+uniform random number with a probability, as in our first coin toss. The
+function `where` picks, for each patient, the probability that matches the
+HIV status, and indexing with the mask `D1 & D2` keeps the patients whose
+tests are both positive (:numref:`sec_ndarray`).
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab mxnet
@@ -565,7 +574,7 @@ n = 2000000
 H = torch.rand(n) < 0.0015
 D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
 D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
-H[D1 & D2].float().mean()  # Exact value: 0.8307
+H[D1 & D2].to(torch.float32).mean()  # Exact value: 0.8307
 ```
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
@@ -769,8 +778,8 @@ d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'tosses n',
 ```{.python .input #probability-a-simple-example-tossing-coins-6}
 %%tab pytorch
 ns = [10, 100, 1000, 10000]
-stds = [float((torch.rand(1000, n) < 0.5).float().mean(dim=1).std())
-        for n in ns]
+stds = [float((torch.rand(1000, n) < 0.5).to(torch.float32)
+              .mean(dim=1).std()) for n in ns]
 d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'tosses n',
          'std of frequency', legend=['simulation', r'$0.5/\sqrt{n}$'],
          xscale='log', yscale='log', fmts=('o', '-'))
@@ -832,7 +841,8 @@ fraction_as_far(56, 100), fraction_as_far(5600, 10000)
 def fraction_as_far(heads, n, num_experiments=1000):
     """Fraction of fair-coin experiments at least as far from n/2 as heads."""
     counts = (torch.rand(num_experiments, n) < 0.5).sum(dim=1)
-    return ((counts - n / 2).abs() >= abs(heads - n / 2)).float().mean()
+    far = (counts - n / 2).abs() >= abs(heads - n / 2)
+    return far.to(torch.float32).mean()
 
 fraction_as_far(56, 100), fraction_as_far(5600, 10000)
 ```

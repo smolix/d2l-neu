@@ -714,8 +714,8 @@ def train_batch_ch13(net, features, labels, loss, trainer, devices,
     for l in ls:
         l.backward()
     # The `True` flag allows parameters with stale gradients, which is useful
-    # later (e.g., in fine-tuning BERT). `1` (not `labels.shape[0]`) so the raw
-    # sum-gradient is applied — matches PyTorch's `trainer.step()` semantics.
+    # later (e.g., in fine-tuning BERT). `1` (not `labels.shape[0]`) so that
+    # the summed gradient is applied without rescaling.
     trainer.step(1, ignore_stale_grad=True)
     train_loss_sum = sum([float(l.sum()) for l in ls])
     train_acc_sum = sum(d2l.accuracy(pred_shard, y_shard)
@@ -946,7 +946,7 @@ and finally calls the `train_ch13` function just defined to train and evaluate t
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab mxnet
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
-net.initialize(init=init.Xavier(), ctx=devices)
+net.initialize(init=init.MSRAPrelu('in', 0), device=devices)  # He initialization
 
 def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
@@ -960,46 +960,27 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab pytorch
 batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10, 3)
-net.apply(d2l.init_cnn)
+
+def init_he(module):  # He initialization, zero biases
+    if type(module) in (nn.Linear, nn.Conv2d):
+        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
 
 def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
     test_iter = load_cifar10(False, test_augs, batch_size)
     loss = nn.CrossEntropyLoss(reduction="none")
+    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
+    net.apply(init_he)
     trainer = torch.optim.Adam(net.parameters(), lr=lr)
-    net(next(iter(train_iter))[0])
     train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
 
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab jax
 batch_size = 256
-
-class ResNet18(nnx.Module):
-    def __init__(self, num_classes=10, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.net = nnx.Sequential(
-            nnx.Conv(3, 64, kernel_size=(3, 3), strides=(1, 1),
-                     padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         in_channels=64, rngs=rngs),
-            d2l.Residual(128, in_channels=128, rngs=rngs),
-            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         in_channels=128, rngs=rngs),
-            d2l.Residual(256, in_channels=256, rngs=rngs),
-            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         in_channels=256, rngs=rngs),
-            d2l.Residual(512, in_channels=512, rngs=rngs),
-            lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
-
-    def __call__(self, x):
-        return self.net(x)
-
-net = ResNet18(num_classes=10)
+net = d2l.ResNet18(num_classes=10, in_channels=3)
 
 def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     train_iter = load_cifar10(True, train_aug_fn, batch_size)

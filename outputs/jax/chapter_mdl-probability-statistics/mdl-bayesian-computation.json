@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f5d7090a5b7d03e006d515e58a4c2391432249930c336617e4ae7426e0d892ad",
+    "d2l_lib_fingerprint": "sha256:37c165fb5419e7ff12d8b0764b11fdfb67fde00c0a1067f2bb42996525df2c1b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,12 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain 1: acceptance rate=0.525\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "chain 2: acceptance rate=0.526\n"
+          "text": "chain 1: acceptance rate=0.525\nchain 2: acceptance rate=0.526\n"
         },
         {
           "type": "stream",
@@ -85,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
-          "bytes": 89462,
-          "sha256": "sha256:61740fa3294f93313cfb4fb7717c58378fda3e327d6f9c48ced4ee66a04ea6e3"
+          "bytes": 89312,
+          "sha256": "sha256:b966987c8f66096d05a890a0a66777bca6528824e5da08db23fabf1e045c6d14"
         }
       ]
     },
@@ -109,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
-          "bytes": 140281,
-          "sha256": "sha256:70062ff8bb302fd271322da222cba1bd5f679c678117b8ea0600d6ff65c4666c"
+          "bytes": 140833,
+          "sha256": "sha256:ea7d15e51a810891659504a66f927be2c6e38016524ff11af616c1df784a6a18"
         }
       ]
     }

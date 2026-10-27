@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:81c02e2eaea6b81f75ba6d432f4b69b22ffef6893ec3b5dff789a8664f910377",
+    "d2l_lib_fingerprint": "sha256:f817f93bac15223759a478a786209ce923df3f2453d55a05c6e4ea1600559c89",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47953,
-          "sha256": "sha256:99b58ce935469bcda9b028f694eb010a5c6a2622bd839d0ddc2c6ef34a48bc54"
+          "bytes": 47723,
+          "sha256": "sha256:d6234e24874aa736cdfc8f7a2a3632832189acfd3ec31e2df1940c5b35037597"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
-          "bytes": 22680,
-          "sha256": "sha256:ad888a1bba85777030cba7926bbb5c4a437a9101074dc9ff0747272500f497e3"
+          "bytes": 22645,
+          "sha256": "sha256:cb5992cb9786c7ebae1e16c5f4ff1cb0dabf361f0b168f59255a38bc42f80033"
         }
       ]
     },

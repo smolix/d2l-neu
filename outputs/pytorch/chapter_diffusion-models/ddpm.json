@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:04a024f7a3f33f70bd4e6b259fbf284e8664e3c4bd51a14f8be2fe4e13a743a2",
+    "d2l_lib_fingerprint": "sha256:9f0a94af9a47bf735a8167fc54238e44f927d3a2468d7bf3d8a4034669153384",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddpm/ddpm-ancestral-sampling-2-1.png",
-          "bytes": 152577,
-          "sha256": "sha256:be8105e5c390b61846c8f1e21faa1f33b3956624210cadd09b0ab1309f76b318"
+          "bytes": 164611,
+          "sha256": "sha256:0a068e829fb4242a74ccfd2a3360abbc44d74ec724df0b60e05339d513c5c470"
         }
       ]
     }

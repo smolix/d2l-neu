@@ -141,24 +141,22 @@ distributed HPO cases.
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
             error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 ```
 
 ```{.python .input #hyperopt-api-tuner  n=7}
@@ -166,25 +164,22 @@ class HPOTuner(d2l.HyperParameters):  #@save
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            error = float(error)
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 ```
 
 ```{.python .input #hyperopt-api-tuner  n=7}
@@ -192,25 +187,22 @@ class HPOTuner(d2l.HyperParameters):  #@save
 class HPOTuner(d2l.HyperParameters):  #@save
     def __init__(self, scheduler: HPOScheduler, objective: callable):
         self.save_hyperparameters()
-        # Bookkeeping results for plotting
-        self.incumbent = None
-        self.incumbent_error = None
-        self.incumbent_trajectory = []
-        self.cumulative_runtime = []
-        self.current_runtime = 0
-        self.records = []
+        self.incumbent, self.incumbent_error = None, None  # Best so far
+        self.incumbent_trajectory, self.records = [], []
+        self.cumulative_runtime, self.current_runtime = [], 0
 
     def run(self, number_of_trials):
         for i in range(number_of_trials):
             start_time = time.time()
             config = self.scheduler.suggest()
-            print(f"Trial {i}: config = {config}")
-            error = self.objective(**config)
-            error = float(error)
+            print(f"Trial {i}: " + ", ".join(  # Floats to 4 significant digits
+                f"{k} = {v:.4g}" if isinstance(v, float) else f"{k} = {v}"
+                for k, v in config.items()))
+            error = float(self.objective(**config))
             self.scheduler.update(config, error)
             runtime = time.time() - start_time
             self.bookkeeping(config, error, runtime)
-            print(f"    error = {error}, runtime = {runtime}")
+            print(f"    error = {error:.4f}, runtime = {runtime:.1f} s")
 ```
 
 ## Bookkeeping the Performance of HPO Algorithms

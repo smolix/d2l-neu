@@ -422,62 +422,58 @@ we train the model on the combined training set and validation set to make full 
 ```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab mxnet
 train_iter, train_valid_iter = [gluon.data.DataLoader(
-    dataset.transform_first(transform_train), batch_size, shuffle=True,
-    last_batch='discard') for dataset in (train_ds, train_valid_ds)]
+    dataset.transform_first(transform_train), batch_size, shuffle=True)
+    for dataset in (train_ds, train_valid_ds)]
 
 valid_iter = gluon.data.DataLoader(
-    valid_ds.transform_first(transform_test), batch_size, shuffle=False,
-    last_batch='discard')
+    valid_ds.transform_first(transform_test), batch_size, shuffle=False)
 
 test_iter = gluon.data.DataLoader(
-    test_ds.transform_first(transform_test), batch_size, shuffle=False,
-    last_batch='keep')
+    test_ds.transform_first(transform_test), batch_size, shuffle=False)
 ```
 
 ```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab pytorch
 train_iter, train_valid_iter = [torch.utils.data.DataLoader(
-    dataset, batch_size, shuffle=True, drop_last=True)
+    dataset, batch_size, shuffle=True)
     for dataset in (train_ds, train_valid_ds)]
 
-valid_iter = torch.utils.data.DataLoader(valid_ds, batch_size, shuffle=False,
-                                         drop_last=True)
+valid_iter = torch.utils.data.DataLoader(valid_ds, batch_size, shuffle=False)
 
-test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False,
-                                        drop_last=False)
+test_iter = torch.utils.data.DataLoader(test_ds, batch_size, shuffle=False)
 ```
 
 ```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab jax
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
-              .shuffle(10000).batch(batch_size, drop_remainder=True)
+              .shuffle(10000).batch(batch_size)
               .prefetch(tf.data.AUTOTUNE))
 train_valid_iter = (train_valid_ds.map(transform_train_fn,
                     num_parallel_calls=tf.data.AUTOTUNE)
-                    .shuffle(10000).batch(batch_size, drop_remainder=True)
+                    .shuffle(10000).batch(batch_size)
                     .prefetch(tf.data.AUTOTUNE))
 valid_iter = (valid_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
-              .batch(batch_size, drop_remainder=True)
+              .batch(batch_size)
               .prefetch(tf.data.AUTOTUNE))
 test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
-             .batch(batch_size, drop_remainder=False)
+             .batch(batch_size)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
 ```{.python .input #kaggle-cifar10-reading-the-dataset-2}
 #@tab tensorflow
 train_iter = (train_ds.map(transform_train_fn, num_parallel_calls=tf.data.AUTOTUNE)
-              .shuffle(10000).batch(batch_size, drop_remainder=True)
+              .shuffle(10000).batch(batch_size)
               .prefetch(tf.data.AUTOTUNE))
 train_valid_iter = (train_valid_ds.map(transform_train_fn,
                     num_parallel_calls=tf.data.AUTOTUNE)
-                    .shuffle(10000).batch(batch_size, drop_remainder=True)
+                    .shuffle(10000).batch(batch_size)
                     .prefetch(tf.data.AUTOTUNE))
 valid_iter = (valid_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
-              .batch(batch_size, drop_remainder=True)
+              .batch(batch_size)
               .prefetch(tf.data.AUTOTUNE))
 test_iter = (test_ds.map(transform_test_fn, num_parallel_calls=tf.data.AUTOTUNE)
-             .batch(batch_size, drop_remainder=False)
+             .batch(batch_size)
              .prefetch(tf.data.AUTOTUNE))
 ```
 
@@ -495,12 +491,15 @@ This is for improving computational efficiency.
 class Residual(nn.HybridBlock):
     def __init__(self, num_channels, use_1x1conv=False, strides=1):
         super(Residual, self).__init__()
+        # No conv biases: the batch normalization after each conv removes them
         self.conv1 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
-                               strides=strides)
-        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1)
+                               strides=strides, use_bias=False)
+        self.conv2 = nn.Conv2D(num_channels, kernel_size=3, padding=1,
+                               use_bias=False)
         if use_1x1conv:
             self.conv3 = nn.Conv2D(num_channels, kernel_size=1,
-                                   strides=strides)
+                                   strides=strides, use_bias=False)
+            self.bn3 = nn.BatchNorm()
         else:
             self.conv3 = None
         self.bn1 = nn.BatchNorm()
@@ -510,7 +509,7 @@ class Residual(nn.HybridBlock):
         Y = npx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
-            X = self.conv3(X)
+            X = self.bn3(self.conv3(X))
         return npx.relu(Y + X)
 ```
 
@@ -522,7 +521,8 @@ Next, we define the ResNet-18 model.
 #@tab mxnet
 def resnet18(num_classes):
     net = nn.HybridSequential()
-    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1),
+    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1,
+                      use_bias=False),
             nn.BatchNorm(), nn.Activation('relu'))
 
     def resnet_block(num_channels, num_residuals, first_block=False):
@@ -543,17 +543,27 @@ def resnet18(num_classes):
 ```
 
 :begin_tab:`mxnet`
-We use Xavier initialization described in :numref:`subsec_xavier` before training begins.
+Before training begins we initialize the weights with He initialization
+(:numref:`subsec_he_init`), which suits networks with ReLU activations.
 :end_tab:
 
 :begin_tab:`pytorch`
-We define the ResNet-18 model described in
-:numref:`sec_resnet`.
+We use the ResNet-18 model `d2l.resnet18` with a three-channel input and
+initialize its weights with He initialization (:numref:`subsec_he_init`),
+which suits networks with ReLU activations. The lazy layers learn their
+shapes from one minibatch before the weights are initialized.
+:end_tab:
+
+:begin_tab:`tensorflow`
+We use the ResNet-18 model `d2l.resnet18` with a three-channel input. Its
+weights start from He initialization (:numref:`subsec_he_init`), which
+suits networks with ReLU activations.
 :end_tab:
 
 :begin_tab:`jax`
-We define the ResNet-18 model described in
-:numref:`sec_resnet` using Flax.
+We use the ResNet-18 model `d2l.ResNet18` with a three-channel input. Its
+weights start from He initialization (:numref:`subsec_he_init`), which
+suits networks with ReLU activations.
 :end_tab:
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
@@ -561,7 +571,7 @@ We define the ResNet-18 model described in
 def get_net(devices):
     num_classes = 10
     net = resnet18(num_classes)
-    net.initialize(ctx=devices, init=init.Xavier())
+    net.initialize(device=devices, init=init.MSRAPrelu('in', 0))  # He
     return net
 
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -569,9 +579,17 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab pytorch
+def init_weights(module):  # He initialization, zero biases
+    if type(module) in (nn.Linear, nn.Conv2d):
+        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+
 def get_net():
     num_classes = 10
     net = d2l.resnet18(num_classes, 3)
+    net(next(iter(train_iter))[0])  # Fix the shapes of the lazy layers
+    net.apply(init_weights)
     return net
 
 loss = nn.CrossEntropyLoss(reduction="none")
@@ -579,54 +597,8 @@ loss = nn.CrossEntropyLoss(reduction="none")
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab jax
-class Residual(nnx.Module):
-    def __init__(self, in_channels, num_channels, use_1x1conv=False,
-                 strides=1, *, rngs):
-        stride = (strides, strides)
-        self.conv1 = nnx.Conv(in_channels, num_channels, (3, 3),
-                              strides=stride, padding='same', rngs=rngs)
-        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
-        self.conv2 = nnx.Conv(num_channels, num_channels, (3, 3),
-                              padding='same', rngs=rngs)
-        self.bn2 = nnx.BatchNorm(num_channels, rngs=rngs)
-        self.conv3 = (nnx.Conv(in_channels, num_channels, (1, 1),
-                               strides=stride, rngs=rngs)
-                      if use_1x1conv else None)
-
-    def __call__(self, X):
-        Y = nnx.relu(self.bn1(self.conv1(X)))
-        Y = self.bn2(self.conv2(Y))
-        if self.conv3 is not None:
-            X = self.conv3(X)
-        return nnx.relu(Y + X)
-
-class ResNet18(nnx.Module):
-    def __init__(self, num_classes=10, *, rngs):
-        self.stem = nnx.List([
-            nnx.Conv(3, 64, (3, 3), padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs), nnx.relu])
-        channels = [64, 128, 256, 512]
-        blocks, in_channels = [], 64
-        for i, num_channels in enumerate(channels):
-            for j in range(2):
-                strides = 2 if i > 0 and j == 0 else 1
-                use_1x1conv = i > 0 and j == 0
-                blocks.append(Residual(in_channels, num_channels,
-                                       use_1x1conv, strides, rngs=rngs))
-                in_channels = num_channels
-        self.blocks = nnx.List(blocks)
-        self.head = nnx.Linear(512, num_classes, rngs=rngs)
-
-    def __call__(self, X):
-        for layer in self.stem:
-            X = layer(X)
-        for block in self.blocks:
-            X = block(X)
-        X = jnp.mean(X, axis=(1, 2))  # Global average pooling
-        return self.head(X)
-
 def get_net():
-    return ResNet18(num_classes=10, rngs=nnx.Rngs(0))
+    return d2l.ResNet18(num_classes=10, in_channels=3)
 
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
@@ -634,41 +606,8 @@ def loss_fn(logits, labels):
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab tensorflow
-def _resnet_block(x, num_filters, strides=1):
-    """A single residual block with Keras functional API."""
-    shortcut = x
-    x = keras.layers.Conv2D(num_filters, 3, strides=strides,
-                            padding='same', use_bias=False)(x)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.Activation('relu')(x)
-    x = keras.layers.Conv2D(num_filters, 3, padding='same',
-                            use_bias=False)(x)
-    x = keras.layers.BatchNormalization()(x)
-    if strides != 1 or shortcut.shape[-1] != num_filters:
-        shortcut = keras.layers.Conv2D(num_filters, 1, strides=strides,
-                                       use_bias=False)(shortcut)
-        shortcut = keras.layers.BatchNormalization()(shortcut)
-    x = keras.layers.Add()([x, shortcut])
-    x = keras.layers.Activation('relu')(x)
-    return x
-
 def get_net():
-    inputs = keras.Input(shape=(32, 32, 3))
-    x = keras.layers.Conv2D(64, 3, strides=1, padding='same',
-                            use_bias=False)(inputs)
-    x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.Activation('relu')(x)
-    for _ in range(2):
-        x = _resnet_block(x, 64)
-    x = _resnet_block(x, 128, strides=2)
-    x = _resnet_block(x, 128)
-    x = _resnet_block(x, 256, strides=2)
-    x = _resnet_block(x, 256)
-    x = _resnet_block(x, 512, strides=2)
-    x = _resnet_block(x, 512)
-    x = keras.layers.GlobalAveragePooling2D()(x)
-    outputs = keras.layers.Dense(10)(x)
-    return keras.Model(inputs, outputs)
+    return d2l.resnet18(10, 3)
 
 loss = keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
@@ -764,11 +703,9 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 #@tab jax
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
-    # `optax.exponential_decay.transition_steps` and Keras's
-    # `ExponentialDecay.decay_steps` count *gradient-update steps*, not
-    # epochs — unlike PyTorch's `StepLR(step_size=lr_period)`, which the
-    # PT tab steps once per epoch. Scale by `num_batches` so all four
-    # frameworks decay the LR every `lr_period` *epochs*.
+    # `optax.exponential_decay` counts gradient-update steps, not epochs.
+    # Scale by `num_batches` so that the learning rate decays every
+    # `lr_period` epochs.
     num_batches = int(train_iter.cardinality().numpy())
     schedule = optax.exponential_decay(
         init_value=lr, transition_steps=lr_period * num_batches,
@@ -841,11 +778,9 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
 #@tab tensorflow
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
-    # Keras's `ExponentialDecay.decay_steps` counts *gradient-update
-    # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`
-    # in the PT tab, which the PT loop steps once per epoch. Scale by
-    # `num_batches` so all four frameworks decay the LR every
-    # `lr_period` *epochs*.
+    # Keras's `ExponentialDecay` counts gradient-update steps, not epochs.
+    # Scale by `num_batches` so that the learning rate decays every
+    # `lr_period` epochs.
     num_batches = sum(1 for _ in train_iter)
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=lr,
@@ -924,11 +859,6 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 #@tab pytorch
 devices, num_epochs, lr, wd = d2l.try_all_gpus(), 20, 0.001, 5e-4
 lr_period, lr_decay, net = 4, 0.9, get_net()
-net(next(iter(train_iter))[0])
-def init_weights(module):
-    if type(module) in [nn.Linear, nn.Conv2d]:
-        nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-net.apply(init_weights)
 train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 ```
@@ -964,7 +894,7 @@ train(net, train_valid_iter, None, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 
 for X, _ in test_iter:
-    y_hat = net(X.as_in_ctx(devices[0]))
+    y_hat = net(X.to_device(devices[0]))
     preds.extend(y_hat.argmax(axis=1).astype(int).asnumpy())
 sorted_ids = list(range(1, len(test_ds) + 1))
 sorted_ids.sort(key=lambda x: str(x))
@@ -976,7 +906,6 @@ df.to_csv('submission.csv', index=False)
 ```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab pytorch
 net, preds = get_net(), []
-net(next(iter(train_valid_iter))[0])
 train(net, train_valid_iter, None, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
 
@@ -1153,7 +1082,7 @@ Folder-based dataset + the augmentation pipelines:
 No transfer learning this time — CIFAR-10 is small enough
 to train from scratch. The core unit is the same residual
 block from the ResNet chapter: two 3×3 convs plus an
-identity or 1×1 projection shortcut.
+identity shortcut or a 1×1 projection with batch norm.
 
 @kaggle-cifar10-defining-the-model-1
 :::
@@ -1175,10 +1104,9 @@ dimensions; the final dense layer emits 10 class logits:
 :::
 
 ::: {.slide title="Framework model contract"}
-Across frameworks, `get_net` returns the same contract:
-input minibatches of CIFAR-10 images, output logits with
-shape `(batch, 10)`, and cross-entropy as the training
-loss.
+`get_net` returns a ResNet-18 that maps a minibatch of
+CIFAR-10 images to logits of shape `(batch, 10)`;
+cross-entropy is the training loss.
 
 @kaggle-cifar10-defining-the-model-3
 :::

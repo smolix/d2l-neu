@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8e6153ea7ac101918b75733f99f33316e25bd9c1709adc55c1829790511a24b6",
+    "d2l_lib_fingerprint": "sha256:da03c2768b1ee005e2a6e79e283fa0a30ab871ef17ec5af9ff0f7eca8f3ca042",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (1.3297, -0.4729)\nlabel: 8.4667, noise: -0.0006\n"
+          "text": "features: (0.3637, -0.1650)\nlabel: 5.4902, noise: 0.0017\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (-3.2e-05, -1.5e-04)\nerror in b: 9.5e-07\nstandard error: 3.2e-04\n"
+          "text": "error in w: (-1.3e-04, 1.0e-04)\nerror in b: 1.5e-04\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -99,7 +99,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [8.26 7.5  7.28]\na new pass starts with labels [2.9  9.27 8.29]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 2.26  8.6  -1.48]\na new pass starts with labels [-3.16 14.05  0.4 ]\n"
         }
       ]
     },
@@ -112,11 +112,6 @@
           "text": "32"
         }
       ]
-    },
-    "synthetic-regression-data-reusable-data-loaders-2": {
-      "code_fingerprint": "sha256:5e39d4c8bc79b47cffced3d6525a6f2367a1ea677e0ad913e7cbd3f66caadda2",
-      "kind": "text",
-      "outputs": []
     }
   }
 }

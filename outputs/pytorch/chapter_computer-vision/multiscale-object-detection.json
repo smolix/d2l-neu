@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f71bf1a43c8757e3596b22f4da518f79110221e88a7244707dcddbf0a5ff3a26",
+    "d2l_lib_fingerprint": "sha256:fdb87858fb5a88822194cf423e2d7ff2de4b0c1a36c1babb8b6764922fd50a67",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
-          "bytes": 100148,
-          "sha256": "sha256:eea2c2ccb7d1355b517bbac71798cbc7441503efa223ee9b7b268ffbe8f3edd8"
+          "bytes": 99885,
+          "sha256": "sha256:489abfcf56eb17fde9e5438571f8b87cecc50632614b96c708abed872ce6ab5e"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
-          "bytes": 90278,
-          "sha256": "sha256:c9a73b4d5bc55059d501a2969882a1e326e4edaa3523ecfcb97e187bf11317b8"
+          "bytes": 90003,
+          "sha256": "sha256:0a7ef3c4216acffb328b02b565ce7eef295bb26de41b1a43d082eebef90021b7"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
-          "bytes": 87821,
-          "sha256": "sha256:42c516893a264094801fbeda59049f9570d890b4e8d47f29a7e50830fca4b04d"
+          "bytes": 87546,
+          "sha256": "sha256:01004396eb145b72c8e9f39c52ab08d0a4bb77ba1924b3094250993603919537"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:f7f2410e801c4cc20ac7ec43721fb1aade8f88eb816edee66b66c9ee0149d008",
+    "d2l_lib_fingerprint": "sha256:91b330217074f1144787ed9f471e12646b0ae0df0a94130aa93ad5e4a222b227",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -70,20 +70,20 @@
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:04ad6a6b7686012b99235a689d0d7826597db2bd141502a37627c8878d036294",
+      "code_fingerprint": "sha256:c230ffafda5a65ff735ccad5eddd53059d138069682acaea36bc9671a07b8b03",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-inspecting-the-images-1": {
-      "code_fingerprint": "sha256:1e2ce560dac152f36803f0d07c966c68d33cf041168cff1346e7a769a72b8a28",
+      "code_fingerprint": "sha256:583ae0e1d54d26a7202904216aa2264b2fa6934d995ecdc25f0ca9ed696e806e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
-          "bytes": 70527,
-          "sha256": "sha256:4c8b0e3ff1aea1b7dcecc065c5c2c4dd4107dd42d7fba269380632c5246bb1e3"
+          "bytes": 70405,
+          "sha256": "sha256:fd6c37ad6e1d9e7c7e94a8a97bfc93116770d60ef829f01a09613a90f92e386b"
         }
       ]
     }

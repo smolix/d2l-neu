@@ -160,6 +160,6 @@ example:** the Fashion-MNIST scoreboard on the next slide.
 | Backpropagation | a minibatch of 256 stores 1.1 MB of activations next to 0.8 MB of weights |
 | Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$ |
 | Generalization in Deep Learning | 100% training accuracy on random labels, chance on test images |
-| Dropout | with its masks on, the dropout network loses 1–2 points, the plain one 9–12 |
+| Dropout | with its masks on, the dropout network loses 1–2 points, the plain one 8–12 |
 | Predicting House Prices on Kaggle | RMSE of log prices: about 0.15 for a linear model, about 0.14 for an MLP |
 :::

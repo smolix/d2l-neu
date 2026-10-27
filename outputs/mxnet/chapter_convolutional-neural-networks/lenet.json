@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b55a2ce86336dbd552b4ac32c2c03f8c62c4f2e795dfffcca3ec642bf7a5fb13",
+    "d2l_lib_fingerprint": "sha256:55757e1b91d89b25cdf2ffd2bc0a1e3495eec15049562a51bc325d82b3f5cd7f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,26 +19,26 @@
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:723d4f2678442f583b1e1db9a7486023447eeca5300038b1b4f57fabadbd87d2",
+      "code_fingerprint": "sha256:2f6da736166afc83f5db619b79af368b5e82edf2fe83f3b7fb36f144e8ddc199",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 6, 28, 28)\nActivation output shape:\t (1, 6, 28, 28)\nAvgPool2D output shape:\t (1, 6, 14, 14)\nConv2D output shape:\t (1, 16, 10, 10)\nActivation output shape:\t (1, 16, 10, 10)\nAvgPool2D output shape:\t (1, 16, 5, 5)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nActivation output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nActivation output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D                 (1, 6, 28, 28)\nActivation             (1, 6, 28, 28)\nAvgPool2D              (1, 6, 14, 14)\nConv2D                 (1, 16, 10, 10)\nActivation             (1, 16, 10, 10)\nAvgPool2D              (1, 16, 5, 5)\nFlatten                (1, 400)\nDense                  (1, 120)\nActivation             (1, 120)\nDense                  (1, 84)\nActivation             (1, 84)\nDense                  (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:f649f123b0fc6f311eabd3dec5703330ed3e6b57f46723ea9ca33d347db849ec",
+      "code_fingerprint": "sha256:05427543502002ebf1663c2ca4a3ef17ac2d6c3589fa790fd3efe24a368e8c6b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 37865,
-          "sha256": "sha256:320bfc8c4aa8b1282b80ab94957b556b58963fd1d0ca7ae7c4e4b45faf711175"
+          "bytes": 38061,
+          "sha256": "sha256:be5f91e18edfdeb5da3a2310d73b85873b144955d5bab5b3b995a8bffce16b8f"
         }
       ]
     }

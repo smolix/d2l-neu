@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(3.7292125e-10)"
+          "text": "array(-3.7471182e-10)"
         }
       ]
     },
@@ -121,6 +121,16 @@
         {
           "type": "execute_result",
           "text": "array([1., 2., 3.])"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-4": {
+      "code_fingerprint": "sha256:94cf1f6d44dbbf491062f3e8b5fef4357a12777e01847da6c45428b563d0e0e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, True)"
         }
       ]
     }

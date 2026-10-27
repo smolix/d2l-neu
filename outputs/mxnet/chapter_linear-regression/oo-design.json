@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:aa4be36f3fa5c45450b5f55944c6dc85dc5b5e034760ae0213eb802259086d0b",
+    "d2l_lib_fingerprint": "sha256:30357ed2d4bc6e8320d82e3e2402063cad7105b68bf010ffc21d51566654efe3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,17 +71,17 @@
       "outputs": []
     },
     "oo-design-training-1": {
-      "code_fingerprint": "sha256:f3d6e6d319bb26c02c79c4ffa23770c127a279b1331b2a172a34ec76d45eda6d",
+      "code_fingerprint": "sha256:5c88a70f9a72efe714b472503727b848d449d32f0ed48750d6f9ee4293d0b274",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:4a238f10ec01897fa12f2d535b313adf1e914f5c48e6668ae1f0ad6167617832",
+      "code_fingerprint": "sha256:d935f40c6414fdebe846e554fd0348428dccfb828cae27e7244ed6009d8f1a5a",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training-2": {
-      "code_fingerprint": "sha256:0a2aa56f49cb5a51fbd9d91ac06117e77e22d0667e317eea1db2e9084497c187",
+      "code_fingerprint": "sha256:56b86bab470d91425520ec0ea269786af672e61859f541bc0e4802945f2b606f",
       "kind": "text",
       "outputs": []
     }

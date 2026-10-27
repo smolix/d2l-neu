@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6a516f8cf1a89f665495755472358b0ffb5f67ebee83cfc549ae0a1fc14a15de",
+    "d2l_lib_fingerprint": "sha256:b348b0c760fb003f648c6e22784935158af480db663bf66bf3cef1fa15527c43",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,67 +14,96 @@
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:5fe556fa605735bf4272667fa1356e32a41198019f29783c8d70cd2a586ce396",
+      "code_fingerprint": "sha256:bd38df3c434c3d0b66e081d22f04cbc6a2cb089aeca84d80347ef322272aaa83",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:e5313332ff298cd1d872a4e2b81e26d951789848d04015fc81b74eadbefd8850",
+      "code_fingerprint": "sha256:ebcff99b6f94aa49058ccd5b16aeacfc6935647135e2a5a4c9f0851befda2a14",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:33991a2d4cd92abe42ccc73a2fb0403934e3600be903fb1d52313f848e8ca770",
+      "code_fingerprint": "sha256:1e510f738c18fca3161562c871906761d5ab9502a628b0261dd740cd5c5f2411",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:d354488c510beca44fcd1292bb28b37d1c734941237f8835b9d79939c030f9bf",
+      "code_fingerprint": "sha256:0dbe2a12b8d81285853720eebfc2aa6e92072505eac90a8055134d25b0c6cedc",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:28866a013beeda92e5a2e019197b0066501c1d1be42c4041995ce5e3d2b4cc51",
+      "code_fingerprint": "sha256:c467015b5e88adbc6a489742b5cd565683b807cf18e5c32f1f5ec3e3f633212c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 32, 48, 48])\nSequential output shape:\t torch.Size([1, 32, 24, 24])\nSequential output shape:\t torch.Size([1, 80, 12, 12])\nSequential output shape:\t torch.Size([1, 10])\n"
+          "text": "Sequential             (1, 32, 48, 48)\nSequential             (1, 64, 24, 24)\nSequential             (1, 160, 12, 12)\nSequential             (1, 10)\n"
         }
       ]
     },
     "cnn-design-training-1": {
-      "code_fingerprint": "sha256:b90086c8a9c345b88c483712443398e691cba8e67f472af25d68790a56314e77",
+      "code_fingerprint": "sha256:ebd7dd7faab4cb286d053a6c3a246ccf6ecbccf67fcd8b99c343271ed2988c77",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:dd161072fce36423b2b2281bfe3f573f8d6e5bdf835190e89fbaf70f9a9281e8",
+      "code_fingerprint": "sha256:ad0df3dbc21256105cf6eac4d49306748ab5ca40272450abec0b4d3607610020",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 32645,
-          "sha256": "sha256:959957bd02e9955675ee943ff0ef90fbbed108421e1b898aa4a94428319062be"
+          "bytes": 32684,
+          "sha256": "sha256:db037869070912deb977a23cbff22a710a41fc92e22aa4caec6d2905d6e199e5"
         }
       ]
     },
     "cnn-design-training-2": {
-      "code_fingerprint": "sha256:e3eb74a6f435aa95feadae7169b8ce90f04bc0653869acbfee5d5e95b7f93203",
+      "code_fingerprint": "sha256:77b55ae0f31705c8276622d7751707a6d6b49297b5614b1ad77ab906bedb6ea1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "115,642 parameters, validation accuracy 0.897\n"
+          "text": "519,658 parameters, validation accuracy 0.939\n"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-1": {
+      "code_fingerprint": "sha256:03f975e4602de94e866421e08afe9cf3577cab377320ae7252a474fcd92140bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-2": {
+      "code_fingerprint": "sha256:a45471110de8b6a6782c9dc67a0a4cc997d896c8291b6631f7d909674263bdab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
+          "bytes": 33917,
+          "sha256": "sha256:d589081c9c8f6a7f5a0dfcfb340ee07e385769343949bebe6dbb00413057cb22"
+        }
+      ]
+    },
+    "cnn-design-regnetx32-on-fashion-mnist-3": {
+      "code_fingerprint": "sha256:9c29a1689cd6d2513c3f955ad86398e77941ecbf99e0d2bf96581ebac6dadd63",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "11,175,370 parameters, validation accuracy 0.939\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:b8ccd9fc201cdb08c4b79d2b403fd68008b2af4bcad17556463f3597f619b018",
+      "code_fingerprint": "sha256:39fe5b8a2641e70b59ba510707f2fdd3279fd7b89deb6c978a3787a5b2acd958",
       "kind": "text",
       "outputs": [
         {

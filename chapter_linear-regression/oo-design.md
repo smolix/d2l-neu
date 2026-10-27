@@ -79,7 +79,7 @@ from d2l import tensorflow as d2l
 import collections
 from d2l import jax as d2l
 from flax import nnx
-import optax
+import jax
 ```
 
 ## Utilities
@@ -237,7 +237,7 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
     def call(self, X, *args, training=None, **kwargs):
         if training is not None:
             self.training = training
-        return self.forward(X, *args)
+        return self.forward(X, *args, **kwargs)
 
     def training_step(self, batch):
         """The loss on one batch, or a dict of metrics with key 'loss'."""
@@ -296,7 +296,8 @@ detail.
 :begin_tab:`tensorflow`
 `Module` is a subclass of `tf.keras.Model`, the base class of neural
 networks in Keras. Calling an instance runs its method `call`, which we
-redirect to `forward`, the name used throughout the book. The training step
+redirect to `forward`, the name used throughout the book, passing on all
+arguments except `training`. The training step
 passes `training=True` and the validation step `training=False`, as Keras's
 own training loop does. `call` stores this flag in `self.training`, so that
 a forward computation that behaves differently during training, such as the
@@ -424,9 +425,9 @@ def fit(self, model, data):
 
 @d2l.add_to_class(Trainer)  #@save
 def record(self, split, metrics, x):
-    for name, value in metrics.items():
-        self.history[f'{split}_{name}'].append(value)
-        self.board.draw(x, value, f'{split}_{name}')
+    for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+        self.history[f'{split}_{name}'].append(metrics[name])
+        self.board.draw(x, metrics[name], f'{split}_{name}')
 ```
 
 `fit` stores the epoch in the attribute `self.epoch`, so that the methods it
@@ -439,7 +440,10 @@ intermediate redraws.
 `record` appends each mean to `trainer.history`, a dictionary of lists
 whose keys combine the part of the data with the name of the quantity:
 `'train_loss'`, `'val_loss'`, and, for a classifier, `'val_acc'`. `fit`
-itself returns nothing. After training, `trainer.history['val_loss'][-1]` is
+itself returns nothing. `record` takes the loss first and the other metrics
+in alphabetical order, so that a curve keeps its color and line style on the
+board from one model to the next, whatever order a step reports its metrics
+in. After training, `trainer.history['val_loss'][-1]` is
 the validation loss after the last epoch, and code that compares several
 runs reads its results from `trainer.history`.
 
@@ -520,18 +524,20 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 ### Evaluation
 
 Validation metrics are also needed outside `fit`, for instance to evaluate a
-trained model once on a test set. `evaluate` prepares the data and the model
-and returns the means of the metrics of `model` over `data.val_dataloader()`.
-The keys of the dictionary are those that `validation_step` reports, without
-the prefix that `history` adds: `{'loss': ...}` rather than `'val_loss'`.
-Since `prepare_data` also asks for the training loader, `data` must serve
-training data as well.
+trained model once on a test set. `evaluate` asks `data` for its validation
+loader only, readies the model, and returns the means of the metrics of
+`model` over `data.val_dataloader()`. It sets the training loader to `None`,
+so `data` needs no training data, and nothing in the evaluation draws a
+training minibatch. The keys of the dictionary are those that
+`validation_step` reports, without the prefix that `history` adds:
+`{'loss': ...}` rather than `'val_loss'`.
 
 ```{.python .input #oo-design-training-2}
 @d2l.add_to_class(Trainer)  #@save
 def evaluate(self, model, data):
     """Validation metrics of `model` on `data`, averaged over examples."""
-    self.prepare_data(data)
+    self.train_dataloader = None
+    self.val_dataloader = data.val_dataloader()
     self.prepare_model(model)
     return self.validate()
 ```
@@ -555,9 +561,18 @@ after every update.
 In JAX, an optax schedule is passed to the optimizer as its learning rate,
 so `configure_optimizers` returns a single optax transformation with or
 without a schedule. The trainer wraps it in an `nnx.Optimizer`, which keeps
-the state of the optimizer next to the model it updates. If gradient
-clipping is requested, it is chained in front of the optimizer.
-`prepare_model` creates
+the state of the optimizer next to the model it updates. It also keeps the
+most recent transformation in `optimizer_cache`. The key is the structure of
+the model, `jax.tree.structure(model)`, which is everything about the model
+except the values of its arrays, including hyperparameters such as `lr`,
+together with the method `configure_optimizers` itself, so that redefining
+the method gives a new key. A later `fit` of a model with the same structure
+and hyperparameters reuses the transformation, and with it the compiled
+training step of :numref:`sec_linear_scratch`. This is correct only if
+`configure_optimizers` depends on nothing but the model's attributes, as it
+does throughout the book. The cache holds a single entry, because a
+transformation, such as a schedule that reads `self.lr`, may refer to the
+model that created it. `prepare_model` creates
 two *views* of the model, one for training and one for validation, in which
 layers that behave differently during training, such as the dropout of a
 later chapter, are set to the corresponding mode. Both views share the
@@ -598,13 +613,16 @@ def prepare_model(self, model):
                               use_running_average=True,
                               raise_if_not_found=False)
 
+#@save
+optimizer_cache = {}  # The most recent optax transformation, by its key
+
 @d2l.add_to_class(Trainer)  #@save
 def prepare_optimizer(self, model):
-    tx = model.configure_optimizers()
-    if self.gradient_clip_val > 0:
-        tx = optax.chain(optax.clip_by_global_norm(self.gradient_clip_val),
-                         tx)
-    self.optim = nnx.Optimizer(model, tx, wrt=nnx.Param)
+    key = (jax.tree.structure(model), type(model).configure_optimizers)
+    if key not in optimizer_cache:
+        optimizer_cache.clear()  # One entry: it may refer to a model
+        optimizer_cache[key] = model.configure_optimizers()
+    self.optim = nnx.Optimizer(model, optimizer_cache[key], wrt=nnx.Param)
 ```
 
 We now have a training loop that every model in the book can use, but
@@ -623,7 +641,7 @@ steps return the loss, or a dictionary of metrics, and do nothing else. The
 trainer sums them on the device, averages them over the examples of each
 epoch, keeps the epoch means in `trainer.history`, and draws them on its
 progress board; `trainer.evaluate` computes the same means on the validation
-loader of any `DataModule` that also serves training data. New models and
+loader of any `DataModule`. New models and
 datasets are subclasses, written cell by cell with `add_to_class`, and a
 change to training is made in one place.
 
@@ -681,9 +699,8 @@ change to training is made in one place.
    `validate`, `trainer.evaluate(model, data)` returns the metrics of
    `model` over `data.val_dataloader()`. Write a subclass of
    `d2l.SyntheticRegressionData` whose constructor also draws a test set
-   from the same distribution and whose `val_dataloader` serves it; the
-   training loader it inherits is needed because `evaluate` prepares all of
-   the data. Train a model on the original data, and evaluate it once on
+   from the same distribution and whose `val_dataloader` serves it. Train
+   a model on the original data, and evaluate it once on
    the test set after the last epoch. Explain why the test set is evaluated
    once at the end rather than after every epoch like the validation data,
    and what would go wrong if the epoch with the best test loss were
@@ -850,7 +867,7 @@ A minibatch is a tuple `(inputs..., labels)`. The default step computes
 def call(self, X, *args, training=None, **kwargs):
     if training is not None:
         self.training = training
-    return self.forward(X, *args)
+    return self.forward(X, *args, **kwargs)
 
 def training_step(self, batch):
     return self.loss(self(*batch[:-1], training=True), batch[-1])
@@ -965,12 +982,14 @@ A step returns a loss or a dict; `as_metrics` turns both into a dict:
 
 ```{.python #oo-design-exercises-6}
 def record(self, split, metrics, x):
-    for name, value in metrics.items():
-        self.history[f'{split}_{name}'].append(value)
-        self.board.draw(x, value, f'{split}_{name}')
+    for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
+        self.history[f'{split}_{name}'].append(metrics[name])
+        self.board.draw(x, metrics[name], f'{split}_{name}')
 ```
 
 - Keys: `'train_loss'`, `'val_loss'`; a classifier adds `'val_acc'`.
+- The loss comes first, then the other metrics alphabetically: each curve
+  keeps its color from model to model.
 - `fit` returns nothing: read `trainer.history['val_loss'][-1]`.
 :::
 
@@ -1044,15 +1063,15 @@ def training_step(self, batch):
 
 ```{.python #oo-design-exercises-8}
 def evaluate(self, model, data):
-    self.prepare_data(data)
+    self.train_dataloader = None
+    self.val_dataloader = data.val_dataloader()
     self.prepare_model(model)
     return self.validate()
 ```
 
 - Returns `{'loss': ...}`: the keys of `validation_step`, without the
   prefix `'val_'` that `history` adds.
-- `prepare_data` asks for both loaders, so `data` must also serve
-  training data.
+- Only the validation loader is asked for: `data` needs no training data.
 - Typical use: a test set, evaluated once after training.
 :::
 
@@ -1085,7 +1104,9 @@ self.val_model = nnx.view(model, deterministic=True, ...)
 ```
 
 - `nnx.Optimizer` keeps the optimizer state next to the model it updates.
-- With `gradient_clip_val > 0`, clipping is chained in front of `tx`.
+- The last `tx` is cached by `jax.tree.structure(model)` and the method
+  `configure_optimizers`: a later `fit` of a model with the same structure
+  and hyperparameters reuses the compiled training step.
 - The two views share the parameters; layers such as dropout read the
   mode from them.
 :::

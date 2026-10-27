@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:40afaa8b4d7d1de2627970cde3549aa1406002a8f7bb33edba5bcf7f92b85ac9",
+    "d2l_lib_fingerprint": "sha256:14aa38097e464b98525cfd65f1881b3db79cb4db9f1a31b601a0fca28a21a751",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "value-iter/value-iter-value-iteration-2-1.png",
-          "bytes": 6954,
-          "sha256": "sha256:5e8475adf45f2eaf478b2aa3bcdc8767c1cfb59a847678c6c351dee8d972a12a"
+          "bytes": 7587,
+          "sha256": "sha256:4a0f2c621b418c183d2dcf6ab8e2c3ebea1147eac7512be0821654fb5e8dc799"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
-          "bytes": 28730,
-          "sha256": "sha256:a7d4c7ea1e913b734b3316b0b033165c415f114e277241f38fc2fd1b038d9799"
+          "bytes": 28636,
+          "sha256": "sha256:aa90f6424e91437e3d2a1847b88e37cd649a265ab2df9cfc88f2ac400e147f33"
         }
       ]
     },

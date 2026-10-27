@@ -246,8 +246,8 @@ def val_loss(model, data):
 
 ### Interaction between Learning Rate and Decay
 
-First, the size of the problem. We train `TinyLM` twice, each framework at
-its own tuned learning rate from :numref:`sec_adam`, with the standard
+First, the size of the problem. We train `TinyLM` twice, at the tuned
+learning rate 0.003 from :numref:`sec_adam`, with the standard
 $\lambda = 0.1$,
 once as an $\ell_2$ penalty inside Adam's gradient, and once decoupled as
 AdamW. In PyTorch the coupled version is what `Adam`'s `weight_decay`
@@ -274,8 +274,8 @@ def coupled(lr, wd):
     return optax.chain(optax.add_decayed_weights(wd), optax.adam(lr))
 
 curves = {}
-for name, tx in [('Adam + $\\ell_2$', coupled(0.001, 0.1)),
-                 ('AdamW', optax.adamw(0.001, weight_decay=0.1))]:
+for name, tx in [('Adam + $\\ell_2$', coupled(0.003, 0.1)),
+                 ('AdamW', optax.adamw(0.003, weight_decay=0.1))]:
     model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
     curves[name] = d2l.train_lm(model, data, optimizer, num_steps=1000)
@@ -349,8 +349,8 @@ coupled_tbl = sweep(lambda model, lr, wd: torch.optim.Adam(
 
 ```{.python .input #adamw-a-grid-twice-2}
 %%tab jax
-lrs = [3e-4, 1e-3, 3e-3]
-wds_coupled, wds_decoupled = [3e-3, 1e-2, 3e-2], [1, 3, 10]
+lrs = [1e-3, 3e-3, 1e-2]
+wds_coupled, wds_decoupled = [3e-4, 1e-3, 3e-3], [1, 3, 10]
 
 def sweep(make_tx, wds, num_steps=800):
     tbl = []
@@ -415,9 +415,8 @@ Read each heatmap row by row; the two panels share one color scale, the
 best $\lambda$ in each row is set in bold, and each panel's best cell is
 boxed in red. In the AdamW grid the bold entries line up in a single
 column, or nearly so: the best weight decay barely moves with the learning
-rate, and the same column wins in both frameworks, despite the frameworks'
-different initializations (a single-seed $3 \times 3$ grid is noisy, and an
-occasional row can break ranks). In the
+rate (a single-seed $3 \times 3$ grid is noisy, and an occasional row can
+break ranks). In the
 coupled grid the bold entries wander: change $\eta$ and the tuned $\lambda$ is no longer optimal, exactly the joint-tuning burden that
 :citet:`Loshchilov.Hutter.2019` documented on image classifiers, where the
 good region of the coupled $(\eta, \lambda)$ plane is a diagonal band and
@@ -525,7 +524,7 @@ def decay_mask(params):
         lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
 
 optimizer = nnx.Optimizer(
-    model, optax.adamw(0.001, weight_decay=0.1, mask=decay_mask),
+    model, optax.adamw(0.003, weight_decay=0.1, mask=decay_mask),
     wrt=nnx.Param)
 params = nnx.state(model, nnx.Param)
 n_decay = sum(int(p.size) for p, m in zip(

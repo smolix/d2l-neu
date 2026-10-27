@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 100456,
-          "sha256": "sha256:af827eaefbc7ad041cb82c9f48ca8d9e3e349456e81477603e7cb1f17f2b0122"
+          "bytes": 99919,
+          "sha256": "sha256:c4d0f048a9e463e67d9e318d0dea3b0b9b0b6c4a901548fb432eb234bfeb6e3b"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 28838,
-          "sha256": "sha256:7062651ebb86d154a2a14465bf4b4e1cbb69dca1cb7c9e1fd17d409918c0668d"
+          "bytes": 28737,
+          "sha256": "sha256:e965af249f50951fcf8cd53b6d789367f69393cf4808a428e121d0a14283795d"
         }
       ]
     }

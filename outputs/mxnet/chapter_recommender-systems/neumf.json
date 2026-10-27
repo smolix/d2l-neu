@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1250d463b3492e17c7f33c5eed69e075e087e9050d08cb98fbae5ee1be84015a",
+    "d2l_lib_fingerprint": "sha256:8e83f6e3048300ed7042c127725dc9e422d4e4235c412705d7e4d63998e811f4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -44,25 +44,25 @@
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:e9c43a867002c4179d39339762bedec4ad9d4f19c91c589538cb0130ee3b02e2",
+      "code_fingerprint": "sha256:7d56c2d48e1721013c8ad42c291898432e7a20be67ec8b71fd8004f830549da6",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-4": {
-      "code_fingerprint": "sha256:0f3479f3cc10918580c31de7028ceae044cd9844116bb0c4700148651df1add9",
+      "code_fingerprint": "sha256:63221862af551d1ca375b6f7c443ef3b0f811aff402978dacce2d17ea37d7466",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.153, test hit rate 0.363, test AUC 0.882\n13.7 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.159, test hit rate 0.368, test AUC 0.882\n14.0 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22214,
-          "sha256": "sha256:8566431d7b5f82288bc0308ad18f5dcc24962135e570997f58aae72463d9105b"
+          "bytes": 22175,
+          "sha256": "sha256:3c68b82a68aca56e1553ddd8195eb6658e021ba85f59d6a41d53c42b8996615c"
         }
       ]
     }

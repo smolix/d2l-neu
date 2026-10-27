@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b003eea0681d1f0a8e00762f13669f2abbc7115b298978385dc438a818e6a77f",
+    "d2l_lib_fingerprint": "sha256:812d118e95125d8a204dddf81760fc3c0a6d119832189467fd2f641b17b0ca6c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
-          "bytes": 95772,
-          "sha256": "sha256:3db5fab5eb2ed8cdce6c0a7ad76254ac0737f6ddecbe8c0814b37c0a34a0d479"
+          "bytes": 95485,
+          "sha256": "sha256:1512a4688299d18018b7e8f7a6dbfb1c9bdc83e5b3a92a6a92e51744c4b87c62"
         }
       ]
     },
@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
-          "bytes": 94721,
-          "sha256": "sha256:2149d508dc1212fdcbb7d99e962f685bf10ad95e28c421b3c4afe72534405274"
+          "bytes": 94453,
+          "sha256": "sha256:3249a0ec755190356c5077910a1dd9498e1f3f76ec8efd911d9d40da8e7a91b3"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
-          "bytes": 96403,
-          "sha256": "sha256:cbdc9dff5a7c4d33862d7ba9d3cbabc41350ac42a108ee3b24c67865b98a91c8"
+          "bytes": 96130,
+          "sha256": "sha256:4f62fd2cb4f8b5033dc6eda5e646d42498adc84f0b833266156458c7966ee3fb"
         }
       ]
     },
@@ -180,8 +180,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
-          "bytes": 93212,
-          "sha256": "sha256:a1377928fce77d2a052eed6d6765ae45ff7a71149d657dff70179315f754cb94"
+          "bytes": 92938,
+          "sha256": "sha256:9dea09bedf402b00cbae2a2035fccde48f7a7519c364c941a7bfa055c270f59a"
         }
       ]
     }

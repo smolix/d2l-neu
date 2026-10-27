@@ -296,8 +296,8 @@ decode-bound sanity check above.
        contexts of 4K, 32K, and 128K tokens, and give the share of the
        cache in the bytes read per token. At which of these contexts do
        the weights and the cache still fit on the 16 GB card?
-    1. Quantizing the weights from bf16 to 4 bits divides their bytes by
-       4. By what factor does it raise the decode bound at 4K tokens, and
+    1. Quantizing the weights from bf16 to 4 bits divides their bytes
+       by 4. By what factor does it raise the decode bound at 4K tokens, and
        by what factor at 128K tokens? What does this imply for a buyer
        whose workload uses long contexts?
 

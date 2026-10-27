@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:323d6ba6760cff6c7b1e69cf778d6da88eb79bd518ca4a18f2d31a645bb1d999",
+    "d2l_lib_fingerprint": "sha256:4ddbf694321b5370fd7ec6147ce023b893c30e1c98fa7207b010782dabe63176",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "fine-tuning/fine-tuning-reading-the-dataset-3-1.png",
-          "bytes": 230491,
-          "sha256": "sha256:a5c6b85d4c4745eb1acdcaca56e31252ce7dfb5a4ed2cdba68254a8c96eb71a2"
+          "bytes": 230590,
+          "sha256": "sha256:03a2fa567cf3f549b498513701b5d1785eacc2ae9bcc94c2d11a14caf5aefc2e"
         }
       ]
     },
@@ -62,12 +62,12 @@
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-1": {
-      "code_fingerprint": "sha256:a969a16f05b7ea5adc14dc726b4304b23f59c6dad1f9c19b51f0f810154f1bd5",
+      "code_fingerprint": "sha256:e3028f72f99b8ca68d4758b786fc8894647b5d5d9f59ed21e397d83749183724",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-fine-tuning-the-model-2": {
-      "code_fingerprint": "sha256:c858faa22125f49d088b0e7c7e8110b6313848bccef788ea5a048097f449db66",
+      "code_fingerprint": "sha256:e8150d6a90a7ab284e06b4a206183fa30efe9d7166385b5a932932b55a78a2d6",
       "kind": "text",
       "outputs": [
         {
@@ -83,32 +83,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.633, train acc 0.652, test acc 0.878\n"
+          "text": "epoch 1, loss 0.647, train acc 0.650, test acc 0.794\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.384, train acc 0.828, test acc 0.904\n"
+          "text": "epoch 2, loss 0.379, train acc 0.839, test acc 0.870\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.275, train acc 0.893, test acc 0.928\n"
+          "text": "epoch 3, loss 0.276, train acc 0.895, test acc 0.899\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.241, train acc 0.908, test acc 0.928\n"
+          "text": "epoch 4, loss 0.234, train acc 0.916, test acc 0.919\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.208, train acc 0.925, test acc 0.947\n"
+          "text": "epoch 5, loss 0.212, train acc 0.926, test acc 0.926\n"
         }
       ]
     },
     "fine-tuning-fine-tuning-the-model-3": {
-      "code_fingerprint": "sha256:451a8b2cceb5713b4d72211f52a44cea827e04942ab0715f71f066438b981ae9",
+      "code_fingerprint": "sha256:7f6ae6136daddea5e896322d067de5711516cc13480ebe63962e8c0c00c2c5f9",
       "kind": "text",
       "outputs": [
         {
@@ -124,37 +124,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.703, train acc 0.567, test acc 0.504\n"
+          "text": "epoch 1, loss 0.784, train acc 0.510, test acc 0.500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.613, train acc 0.664, test acc 0.643\n"
+          "text": "epoch 2, loss 0.690, train acc 0.576, test acc 0.646\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.522, train acc 0.752, test acc 0.802\n"
+          "text": "epoch 3, loss 0.593, train acc 0.698, test acc 0.659\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.415, train acc 0.826, test acc 0.833\n"
+          "text": "epoch 4, loss 0.483, train acc 0.771, test acc 0.808\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.383, train acc 0.831, test acc 0.837\n"
+          "text": "epoch 5, loss 0.391, train acc 0.822, test acc 0.814\n"
         }
       ]
     },
     "fine-tuning-exercises-1": {
-      "code_fingerprint": "sha256:dfd547b11f9dacb66412e95303686ae53bcf46770f8e3f7ebc600df39bcaadc6",
+      "code_fingerprint": "sha256:609a1c964b60898714a2258d5d0a5db63cd41eef767efef8f23b5e5e2bc5b0c2",
       "kind": "text",
       "outputs": []
     },
     "fine-tuning-exercises-2": {
-      "code_fingerprint": "sha256:57864616fd5a07dfee35ce05d60000673c3a6499593726c299b7c6c8a02afbab",
+      "code_fingerprint": "sha256:16ddb97bf686291f3ce21e6b7a7508a57ea5de78894691e4dcc1283c34e388b1",
       "kind": "text",
       "outputs": [
         {

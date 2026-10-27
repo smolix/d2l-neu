@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "d2l_lib_fingerprint": "sha256:80827b86c8dd9c3d7887090a94798038f2b47c7f7570fc9cdad253b81ddab4be",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
-          "bytes": 18446,
-          "sha256": "sha256:dc5d96b3b2d00424e3b202da39b524cce288e1e1f56c03ec90f93667383eebc9"
+          "bytes": 18395,
+          "sha256": "sha256:3bb893e45219d60d0beba301ca4871a0f67fb39dad22e58887ab328b8f8498ca"
         }
       ]
     },
@@ -55,8 +55,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
-          "bytes": 18444,
-          "sha256": "sha256:9036ddd7108e47af0dd05548246c4321d4f6f3b667334ef2cc62fac11c78e575"
+          "bytes": 18387,
+          "sha256": "sha256:4be5c4041a4d63e5df14b3f1abb8f9b6d0f2752f07747435f36765be3a75a78a"
         }
       ]
     },
@@ -73,8 +73,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
-          "bytes": 17955,
-          "sha256": "sha256:7b81123fcd25a1a91992d6ece747daafc192145c471ddcb7497f010d9af5be84"
+          "bytes": 17906,
+          "sha256": "sha256:dc02315a727f720084fa0fb71927d7bbad95b116f1b35ae347929a7c28af40be"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
-          "bytes": 14950,
-          "sha256": "sha256:e12ae16396e278d86aac91b03e2aa016baf0340cf2301c88919ce8fdb3391541"
+          "bytes": 14912,
+          "sha256": "sha256:889184895f1120dcc5d1f3584520a3f9e90ecdcbcc781fe42a19f7d910a3569b"
         }
       ]
     },
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
-          "bytes": 19701,
-          "sha256": "sha256:6bb777fe5212343c808c0c7b15d79859d8c2a83d42b2195cc8c92efc3e532d2a"
+          "bytes": 19624,
+          "sha256": "sha256:3df0b2b2e19a59cbfc2afe16b531ae74e8d0936e5fa2e30ae3c3e40d68a442b4"
         }
       ]
     },
@@ -137,8 +137,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
-          "bytes": 16481,
-          "sha256": "sha256:c29bcbee1f1fde9b3b8b28a46bb2a424331333825682f1c5aa75556e1e295d4f"
+          "bytes": 16438,
+          "sha256": "sha256:6d5654db23894b5f33a95696886e33fb9ffd12eb8426a14c5a6b5d22d4f2f529"
         }
       ]
     },
@@ -155,8 +155,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
-          "bytes": 16756,
-          "sha256": "sha256:7f314f59a54aeceaf873be4ed2998524500f933592c4f03679bd4401e53843e8"
+          "bytes": 16711,
+          "sha256": "sha256:a1b447a0a61bff5d648edbc5221c5a73c3ccb4367b8f343aa2f58c25b1a02e67"
         }
       ]
     },
@@ -173,8 +173,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
-          "bytes": 14962,
-          "sha256": "sha256:420584a66defb4c65c5c828ab74458a37e775dfd460e4c214733e168261b08ef"
+          "bytes": 14930,
+          "sha256": "sha256:d789565f894a79496842d682f771ca087e992676d91f91c6d0cb8f17133edec1"
         }
       ]
     }

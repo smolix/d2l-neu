@@ -94,7 +94,7 @@ from d2l.nnx_resnet import ResNet50
 ## Model State
 
 A model holds many tensors, so a file format for its state must store a
-collection of named tensors. Every framework has one.
+collection of named tensors, and the framework provides one.
 
 :begin_tab:`mxnet`
 `npx.savez` writes named arrays to one file, and `npx.load` returns them as
@@ -384,9 +384,9 @@ on the way back.
 
 :begin_tab:`tensorflow`
 The variable paths provide the names. `load_file` returns constant tensors,
-which we `assign` to the variables of the new model. `save_file` replaces the
-values of the dictionary passed to it while converting them to NumPy, so we
-pass it a copy.
+which we `assign` to the variables of the new model. `save_file` converts
+the values of the dictionary passed to it to NumPy in place, so we hand it a
+fresh dictionary.
 :end_tab:
 
 :begin_tab:`jax`
@@ -610,7 +610,7 @@ def load_checkpoint(path, model, optimizer=None):  #@save
 
 The experiment trains a small regressor: an MLP with one hidden layer of 64
 units, fit by Adam with learning rate 0.05 to 256 examples of a noisy linear
-function of 20 inputs. In every framework the weights start from Xavier
+function of 20 inputs. The weights start from Xavier
 initialization (:numref:`subsec_xavier`), uniform with variance
 $2/(n_\textrm{in} + n_\textrm{out})$ for a layer with $n_\textrm{in}$ inputs
 and $n_\textrm{out}$ outputs, and the biases start at zero. The
@@ -706,9 +706,10 @@ def build(cfg):
     return net
 
 cfg = Config()
-data = tf.random.normal((256, cfg.num_inputs))
-target = (data @ tf.random.normal((cfg.num_inputs, 1))
-          + 0.1 * tf.random.normal((256, 1)))
+rng = tf.random.Generator.from_non_deterministic_state()  # saved below
+data = rng.normal((256, cfg.num_inputs))
+target = (data @ rng.normal((cfg.num_inputs, 1))
+          + 0.1 * rng.normal((256, 1)))
 loss = tf.keras.losses.MeanSquaredError()
 
 def step(model, opt):
@@ -722,7 +723,6 @@ net = build(cfg)
 opt = tf.keras.optimizers.Adam(cfg.lr)
 for _ in range(100):
     step(net, opt)
-rng = tf.random.Generator.from_non_deterministic_state()
 ckpt = tf.train.Checkpoint(model=net, optimizer=opt, step=tf.Variable(100),
                            rng=rng)
 path = ckpt.save('run-tf')                  # a numbered save: 'run-tf-1'
@@ -944,7 +944,7 @@ print('fresh optimizer:', fresh_losses)
 With the saved optimizer state, training continues where it stopped, and
 the loss keeps decreasing slowly. With a fresh Adam, the loss jumps from a
 few thousandths or less to between about 1 and 6 after a single step, and after four steps
-it is still dozens to hundreds of times higher than at the checkpoint.
+it is still hundreds of times higher than at the checkpoint, or more.
 :eqref:`eq_saving_adam` explains the jump. At the first step of a fresh
 Adam, $\mathbf{m}$ and $\mathbf{v}$ are zero, so the bias-corrected
 averages are $\hat{\mathbf{m}} = \mathbf{g}$ and
@@ -961,10 +961,9 @@ and the steps stay small. Weights alone do not resume a run.
 In practice, many models do not start from random weights. A network trained on a large dataset such as ImageNet, 1.2 million images
 in 1,000 classes, computes features that are useful for other image tasks
 too. To reuse it for a task with 10 classes, we keep all layers except the
-last and replace that one, the *head*, with a new layer of 10 outputs. All
-four frameworks offer ResNet-50 (JAX through the book's own port), a
-convolutional network with about 25
-million parameters, trained on ImageNet. How it computes does not matter
+last and replace that one, the *head*, with a new layer of 10 outputs. Our
+example is ResNet-50, a convolutional network with about 25 million
+parameters, trained on ImageNet. How it computes does not matter
 here: for loading weights it is a model state of a few hundred named
 tensors.
 
@@ -1160,10 +1159,13 @@ fixed.
 :end_tab:
 
 :begin_tab:`jax`
-JAX parameters carry no `requires_grad` flag; what trains is decided by the
-optimizer. We label each parameter `'train'` or `'freeze'`, and
-`optax.multi_transform` applies Adam to the first group and `set_to_zero`,
-which discards the updates, to the second. The batch normalization
+NNX parameters carry no flag; a parameter is frozen when it is left out of
+differentiation and out of the optimizer (:numref:`sec_parameters`). A
+filter selects the trainable parameters, here those whose path passes
+through the head `fc`. The optimizer receives it as `wrt=trainable` and
+keeps Adam's state for those parameters only, and a training step passes
+the same filter to `nnx.grad` as `argnums=nnx.DiffState(0, trainable)`, so
+that the gradient covers the head alone. The batch normalization
 statistics of this ResNet-50 stay fixed as well, because its layers are
 built with `use_running_average=True`.
 :end_tab:
@@ -1204,22 +1206,31 @@ f'{trainable} trainable of {total}'
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
 %%tab jax
-def labels(params):
-    return jax.tree_util.tree_map_with_path(
-        lambda path, _: 'train' if path[0].key == 'fc' else 'freeze', params)
+trainable = nnx.All(nnx.Param, nnx.PathContains('fc'))
+optimizer = nnx.Optimizer(net, optax.adam(1e-3), wrt=trainable)
 
-params = nnx.state(net, nnx.Param)
-tx = optax.multi_transform(
-    {'train': optax.adam(1e-3), 'freeze': optax.set_to_zero()}, labels)
-optimizer = nnx.Optimizer(net, tx, wrt=nnx.Param)
-sizes = jax.tree.leaves(jax.tree.map(jnp.size, params))
-names = jax.tree.leaves(labels(params))
-trainable = sum(int(s) for s, label in zip(sizes, names) if label == 'train')
-f'{trainable} trainable of {sum(int(s) for s in sizes)}'
+def count(state):
+    return sum(x.size for x in jax.tree.leaves(state))
+
+n_train = count(nnx.state(net, trainable))
+f'{n_train} trainable of {count(nnx.state(net, nnx.Param))}'
 ```
 
 Of the more than 23 million parameters of the network, 20,490 remain
 trainable: the $2{,}048 \times 10$ weights and 10 biases of the new head.
+
+:begin_tab:`mxnet`
+The total, 23,547,402, includes 18,880 biases: Gluon's `resnet50_v1` gives
+the two $1 \times 1$ convolutions of each bottleneck block a bias, although
+the batch normalization that follows each of them subtracts any constant
+shift.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The total, 23,555,082, includes 26,560 biases: every convolution of the
+Keras ResNet-50 has one, although the batch normalization that follows each
+of them subtracts any constant shift.
+:end_tab:
 
 We can now save the state of a model, check that a file contains no
 program, resume a training run where it stopped, and load weights that
@@ -1617,8 +1628,8 @@ from its checkpoint for five steps, loss before each step:
 
 - Saved optimizer state: the loss keeps falling slowly from a few
   thousandths or less.
-- Fresh Adam: about 1 to 6 after one step, still dozens to hundreds of
-  times higher after four.
+- Fresh Adam: about 1 to 6 after one step, still hundreds of times
+  higher after four, or more.
 :::
 
 ::: {.slide title="Check: How Far Does the First Fresh Step Move the Weights?"}

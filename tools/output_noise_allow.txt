@@ -27,7 +27,7 @@ tensorflow chapter_builders-guide/numerics.md numerics-dtype-rules-promotion-par
 pytorch chapter_builders-guide/saving-loading.md saving-loading-safetensors-the-interchange-format-2 width  # torch's weights_only refusal, printed verbatim on purpose
 tensorflow chapter_builders-guide/saving-loading.md saving-loading-loading-weights-you-did-not-train-2 width  # Keras' skip_mismatch warning, quoted verbatim; the prose reads the two disagreeing shapes out of its wording
 tensorflow chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-4 width  # Keras' "state after build" refusal, printed on purpose
-jax chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-4 width  # nnx' "data on a static attribute" refusal, printed on purpose
+jax chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-3 width  # nnx' "data on a static attribute" refusal, printed on purpose
 mxnet chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-3 width  # Gluon's unregistered-container warning: the point of the cell
 
 # --- library reprs and status tables with no width knob -------------------

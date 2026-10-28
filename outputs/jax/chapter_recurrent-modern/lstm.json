@@ -9,17 +9,17 @@
   },
   "cells": {
     "lstm-gated-recurrent-networks": {
-      "code_fingerprint": "sha256:40b4244a9ce7920e0f2b2d8824807f599b95d988cda13585774aa31465d961d7",
+      "code_fingerprint": "sha256:cb44f245e695bda1e979ebb5ddaed07581a1e81d4cf23cff73b7e6d1a7bb5dca",
       "kind": "text",
       "outputs": []
     },
     "lstm-implementation-1": {
-      "code_fingerprint": "sha256:44a1e98d5ba7ca5c74c55deee90a8852937aa07226ab0e0df0723f42704cdb29",
+      "code_fingerprint": "sha256:2cd7362bf336844ae49949c0f601fc43182c80cd4628c75e384aadbda65dc7de",
       "kind": "text",
       "outputs": []
     },
     "lstm-implementation-2": {
-      "code_fingerprint": "sha256:d0d6c9925e7c4c823203d0e89023d48e38350854acb8cc775eb038dcb6733968",
+      "code_fingerprint": "sha256:44bf1fd7e12a8fa474b44a782c21af8380dd8e0dab6b99436a4f3182552656a2",
       "kind": "text",
       "outputs": [
         {
@@ -30,12 +30,12 @@
       ]
     },
     "lstm-implementation-and-comparison-1": {
-      "code_fingerprint": "sha256:992205d9c458aef799bc7ac7f4bcab694e9bfce086a5e4c2639d3f94b64b9d77",
+      "code_fingerprint": "sha256:5707a2a097cd3d254c505b13f0270dc4f321d4798a7c86a61fc3dfc9718d4937",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-1": {
-      "code_fingerprint": "sha256:c90061db3b814179e3f6375c513cf3b908a515fc694622bf90e2d4f751e60734",
+      "code_fingerprint": "sha256:39ccac59ab135bc8d06d5e68fe5e2938953052e7461c6fd09b764ad347d1b54a",
       "kind": "text",
       "outputs": [
         {
@@ -46,22 +46,22 @@
       ]
     },
     "lstm-delayed-recall-2": {
-      "code_fingerprint": "sha256:e6b27c37afa199df1e133f942882b47c1bcb46919743f7961df7966e319a6781",
+      "code_fingerprint": "sha256:35d138c7229c7e41ad6555e47bb6a30c8b280b06c45e4e14d947bca3f0f05c3c",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-3": {
-      "code_fingerprint": "sha256:aebe27057a643dd014ed3c35ca1a3efb48b13759cabbd7126f0d6dbf77d0b705",
+      "code_fingerprint": "sha256:788037a4d8f49a41f04e44883709d09e09ac9fb94f206c2870b09aef3028ff21",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-4": {
-      "code_fingerprint": "sha256:76483bd62c569057237c9e1c85ef9d3090e18e209caef18cb7fb78ad83e33acb",
+      "code_fingerprint": "sha256:e9889e37238983ec8679538fe16649d7e08cef8cb84bf5e8d272d6915bcfdaef",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-5": {
-      "code_fingerprint": "sha256:baae5e3d0e5f2da91c75a181d182bb984a46c6205c6a7ede7f41f4d406890a5f",
+      "code_fingerprint": "sha256:7149a5e1065269652f548f0d1630b4348657115eecc8ad5f6d2bed2233a58374",
       "kind": "text",
       "outputs": [
         {
@@ -72,17 +72,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  0.12  0.25  0.43\n"
+          "text": "RNN               1.00  1.00  1.00  0.25  0.63  1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.24  0.12  0.13  0.12\n"
+          "text": "LSTM              1.00  1.00  0.37  0.12  0.12  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.14  0.13\n"
+          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -97,17 +97,17 @@
       ]
     },
     "lstm-deep-recurrent-networks-1": {
-      "code_fingerprint": "sha256:b4f3087b7c87330ab6f5ca3669323902fc33efde61c92013b180224d8d3c83d4",
+      "code_fingerprint": "sha256:511e81bc93704eb6caec19ff88720093bdcf326d72ba9f5260719645f4cd46d5",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-1": {
-      "code_fingerprint": "sha256:688d9d6f05c670f41526103f8f7a9fee14f995663469633b97243669c11b20ed",
+      "code_fingerprint": "sha256:8cbca6bc13d99cd949de529ed4d6f7c22383f07ee6af74f648d6447a0cfbe1c1",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-2": {
-      "code_fingerprint": "sha256:539635b2d511280e25a466c81eb6cfa697702b1aa28ce319caeda677c728a0b2",
+      "code_fingerprint": "sha256:43eb4bcc13f9eee97df3cdde830dd521e2a0631fff092e8417cd8b48d5df28a1",
       "kind": "text",
       "outputs": [
         {
@@ -118,28 +118,28 @@
       ]
     },
     "lstm-character-level-language-modeling-3": {
-      "code_fingerprint": "sha256:ccf84490872d0260ebacb4ad245168abce7cfd2f3fb5c3badb65c7257246ba76",
+      "code_fingerprint": "sha256:71da6ba99f5dda383d7a6e7e1e3b3c7648cf3f08bf0999eef78650a18ae76bcd",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:39685fcfec9d1c85a42b84b9a9a7283837c4025c543306663b3569ced232e765",
+      "code_fingerprint": "sha256:8994803ef9802c661cfc650f5820bec55ca52cd14c86eb707785d580322a93d3",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:93eb9dc209bae88a1ed07c0a5387470cba12da33410139247437f1d617a9d52c",
+      "code_fingerprint": "sha256:3e4bc08e8321989923ab7768dcee7a40618b7727f89944652dce86941440ab8f",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:c3f758dd6675bbbbe9c837c03fe029bca3f7fbf33de00b48ff0b9de7ccaaecbf",
+      "code_fingerprint": "sha256:244355b4638f915e4152471b25b25f840efcc5e7a1e26b4e2fd6c162d59fa80c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,603 parameters   perplexity 3.13\nLSTM    540,979 parameters   perplexity 2.97\nGRU     475,187 parameters   perplexity 2.99\n"
+          "text": "RNN     343,603 parameters   perplexity 3.13\nLSTM    540,979 parameters   perplexity 2.96\nGRU     475,187 parameters   perplexity 3.00\n"
         }
       ]
     }

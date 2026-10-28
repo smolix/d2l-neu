@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1700d9596d18c59ca778a3eb25063b5b67dae615a72006392e1a4b2bf21c92a8",
+    "d2l_lib_fingerprint": "sha256:48882c70ddf8a7c3067fc27c2316de641cc41de3c7fcb3bf6ad03c0991be9a9a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,72 +14,72 @@
       "outputs": []
     },
     "hybrids-associative-recall-1": {
-      "code_fingerprint": "sha256:e1b57dad1650a9660ea676586e0d0f139d3773949eab3b61d64b4482f21624fc",
+      "code_fingerprint": "sha256:48a6a262c6e00ab21f212c25efa371b246055d88ca59769807df2770815e244f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [206  68 350 234] ... [1053 1051 1060 1043]  answers: [10 14 14  4]\n"
+          "text": "tokens: [279   0 283   3  89   1 352   1] ... [283  89 279 352]  answers: [3 1 0 1]\n"
         }
       ]
     },
     "hybrids-four-models-1": {
-      "code_fingerprint": "sha256:9aa3e832c93edad44e168540eafec580b8957f14ef44f14758968a687e48452d",
+      "code_fingerprint": "sha256:b52d9f653e4cfb6c97f34830efc91e84d6a191ad8a34936f0c85a4e3b4e5f4a3",
       "kind": "text",
       "outputs": []
     },
     "hybrids-four-models-2": {
-      "code_fingerprint": "sha256:8ab1366aeabcd3ac7f62b9fa6575014c980bdaa44bd4edfe63e641280c1a63f3",
+      "code_fingerprint": "sha256:55d494d8ede92b779fdcc61feaa604373821441c374d860e3d96ac76fe05f7f2",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:5b5a2cf13288062a6d96a82f6c79e2d9e551e2ff45701dafa2cb5b4d62ec9965",
+      "code_fingerprint": "sha256:4b5fb119834bb50c5bf320705fee7d01299e15f3ac9e76facac22392b3f10ac3",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:f4e6122d65cf63137944257c5ae14184ae7a301754cbfc068c4334c9d3a76c92",
+      "code_fingerprint": "sha256:870731e2a84e81144f315eb1b43f7c74b0305e7634077460c72283f3ab400ec1",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:202483c92be2397ff48914e7831cf80a9b328ab2f977b47fdd9b01221626ad04",
+      "code_fingerprint": "sha256:294d9380e8aaef8ab284da0428c3d1b7860081afeaccfc7ddc4486e2b820f2f0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention   0.99 0.97 0.91 0.79\nGated DeltaNet           1.00 1.00 0.99 0.97\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.97 0.89 0.73 0.58 0.45\nGated DeltaNet           1.00 0.99 0.97 0.89 0.68\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 34012,
-          "sha256": "sha256:37d40b666ba4150d58f20e4b7c50b61db8f73e03d547997abbf19ccdf8bc5a1e"
+          "bytes": 33554,
+          "sha256": "sha256:9f6bb5e405e4d8c3dbf48c5cce71ab72f748dc076600b733b8f5df4fdce76f46"
         }
       ]
     },
     "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:dae0b1214cddae279c8c3599c35b5c6f81f1d84ca41949fabfdd4898b6e7e4b0",
+      "code_fingerprint": "sha256:d50d72bb6b952f81ea0e55053596c137c55112232d568397a8afec709439a9f1",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:32bc5b761b186ba3bf569aa3872fda18e3f8a5698e8a7817da42b2a554264140",
+      "code_fingerprint": "sha256:a6171c38d5c4c81d3b8a797e69845a510db707f233affc5628a2bb25e9fd8e1a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.28\n"
+          "text": "attention (TinyLM)   perplexity 3.29\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.29\n"
+          "text": "hybrid               perplexity 3.17\n"
         }
       ]
     }

@@ -4,22 +4,22 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:85c73503ff1401f89a65b8c5bf3dea986673b0a32815b788fa95983833385493",
+    "d2l_lib_fingerprint": "sha256:940c394256c64d19036189f6d7ca8a655f1f58649c95944b31407f7fbe9a2d5c",
     "max_inline_bytes": 0
   },
   "cells": {
     "matrix-state-matrix-state-recurrences": {
-      "code_fingerprint": "sha256:e2f5a4e059f0d2c6e3e9d43d8c211a2af86bafb0229d73e047ee49885aa79705",
+      "code_fingerprint": "sha256:b43d54cd3c4a56854e6aa5fbeeed685dfee888d43175967d25f324d71e143e8e",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-interference-1": {
-      "code_fingerprint": "sha256:557ec404d4c97fedbdc418750097b8f418b02445bedc6bd496881c2949ecab9f",
+      "code_fingerprint": "sha256:998476f972df3a220b2692538d33a3e4b785f91d896ab46fc2832455a6f5d563",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-interference-2": {
-      "code_fingerprint": "sha256:8ca4c4e5834dbde67b69776f4ed1bbd290b4a80f7828e0208a0d62056ce0fc94",
+      "code_fingerprint": "sha256:a55c9cdc8aa0d627220b33899f2f1f384295f800520b412ca1b8f9438d211f47",
       "kind": "mixed",
       "outputs": [
         {
@@ -32,22 +32,22 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:459ad8546a56b5995065a5cf4434dcb9e354a69f4254aa17460132dee3d7260a"
+          "sha256": "sha256:2f30f5e120ab9efe3c50ece6152235aeca9b7f0d3ac0a880dda8bc202ac408c4"
         }
       ]
     },
     "matrix-state-unrolling-with-decay-1": {
-      "code_fingerprint": "sha256:eeada0d22e47870db3d872715b2804110b411a3b3510ddba1cdfacf55e421ae6",
+      "code_fingerprint": "sha256:9fcd0a07cb82f16040cc4835fbccc2ac1abbb39ea602a205ab8fc0794fc3de42",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-unrolling-with-decay-2": {
-      "code_fingerprint": "sha256:1e24c3b94eaec228d874e69bfa39463db4db582491a9f2770e3b8e538ccb6073",
+      "code_fingerprint": "sha256:43a5f8a7ebcfe1f310379b81719eb3c073b740edd302609bf5e14f56e73e1e62",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-unrolling-with-decay-3": {
-      "code_fingerprint": "sha256:c45243d22390dc20567e7bffc8b1d02272f6b9704bfc5cac2683fabb8ab57dbf",
+      "code_fingerprint": "sha256:cae206008bd412e6ec829f1fc77f37daed65117c7db3682ba9c850f1bb041f2e",
       "kind": "text",
       "outputs": [
         {
@@ -58,85 +58,100 @@
       ]
     },
     "matrix-state-chunked-computation-1": {
-      "code_fingerprint": "sha256:b2615e4d7e89ea50f30ffec90b25d1479aa2c43be029b99d3275811aeaa38041",
+      "code_fingerprint": "sha256:faeba2c49cb75502db7789abfc6cc3b11880fbc321c15decb9c9b2edcca9cbc9",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-chunked-computation-2": {
-      "code_fingerprint": "sha256:7f5286ec176e8cc3d7607f421e5aa85fd5ce0a73150756896f31ff8a857b703d",
+      "code_fingerprint": "sha256:a802b10f062c4ee09077a4a154129080b0abb0a401658ce2f1fd53f885d1b098",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  16: relative deviation 3.1e-07\n"
+          "text": "chunk size  16, decay per step: relative deviation 3.1e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  64: relative deviation 3.9e-07\n"
+          "text": "chunk size  16, decay per key: relative deviation 2.0e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size 256: relative deviation 9.4e-07\n"
+          "text": "chunk size  64, decay per step: relative deviation 3.9e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size  64, decay per key: relative deviation 2.4e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size 256, decay per step: relative deviation 9.4e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size 256, decay per key: relative deviation 8.1e-07\n"
         }
       ]
     },
     "matrix-state-chunked-computation-3": {
-      "code_fingerprint": "sha256:827461c365c49df5d1eee3ebf4121cf1177e6fc710a62adda42baabe063a36fc",
+      "code_fingerprint": "sha256:7ff07790468ffe0b4669a8ef6078d00499a8e958ef46f5c341f5277c71127370",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence        49.92 ms\n"
+          "text": "recurrence        49.72 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dual               0.23 ms\n"
+          "text": "dual               0.64 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 16       0.19 ms\n"
+          "text": "chunks of 16       0.50 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 64       0.18 ms\n"
+          "text": "chunks of 64       0.45 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 256      0.17 ms\n"
+          "text": "chunks of 256      0.49 ms\n"
         }
       ]
     },
     "matrix-state-the-layer-1": {
-      "code_fingerprint": "sha256:eec3fb41fbe5f2f04557ead52fdb74486021f1c9a1cef8c5ce91c5e37797d795",
+      "code_fingerprint": "sha256:6db290ef53677bd38cbfa70def392b5bfb4215e0ed21d4a9365cfe8371f940ea",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-the-layer-2": {
-      "code_fingerprint": "sha256:eab0e04f137640d4061ddaaaf919020470778f069840687b4f7c0154d157dc5a",
+      "code_fingerprint": "sha256:cccaa9952f249f43de1a16f4ea3081c976e708b8debfdbe4057d99d99982edc7",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-1": {
-      "code_fingerprint": "sha256:ba595d77bc92a4ebbfb06b68c67fa9f33b7cc3f03a532ad11dde6f019cf4ec42",
+      "code_fingerprint": "sha256:461158072558d7005bfb840db53529cf716868f7626e9d883dd24fd2ffb51c9f",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-2": {
-      "code_fingerprint": "sha256:4a0e9612025d0f985f77e33ba243e0a9497913399a37dc55e39ffcd5f96d20f4",
+      "code_fingerprint": "sha256:a3603c73a368d566bd3b38ba3a159d3f6112ce346e9d23c5494289570840a749",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.25\n"
+          "text": "gated linear attention perplexity: 3.09\n"
         }
       ]
     }

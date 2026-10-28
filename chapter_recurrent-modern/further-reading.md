@@ -147,8 +147,8 @@ range further.
 
 ### Hybrid Models in Practice
 
-:numref:`sec_hybrids` showed that one attention layer among several
-recurrent ones restores recall. Released models make different choices
+:numref:`sec_hybrids` showed that one attention layer next to a
+recurrent one restores recall. Released models make different choices
 for the ratio and the kind of attention. Griffin
 :cite:`De.Smith.Fernando.ea.2024` alternates a gated diagonal recurrence
 with attention restricted to a local window. Jamba

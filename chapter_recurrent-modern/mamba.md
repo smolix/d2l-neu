@@ -33,6 +33,7 @@ product at a time, which the next section studies in its own right.
 %matplotlib inline
 from d2l import torch as d2l
 import torch
+import math
 from torch import nn
 from torch.nn import functional as F
 ```
@@ -44,7 +45,9 @@ from d2l import jax as d2l
 from flax import nnx
 import jax
 from jax import numpy as jnp
+import math
 import optax
+import random
 ```
 
 ## The Selectivity Problem
@@ -59,7 +62,8 @@ must output the next symbol, in order. Chance accuracy is 1/8. A solution
 must store a token because it is a symbol rather than filler, at whatever
 position it occurs, and keep it for up to a thousand steps; weights that
 depend only on position cannot do this, since the same position holds
-filler in one sequence and a symbol in the next.
+filler in one sequence and a symbol in the next. :citet:`Gu.Dao.2023` use a
+larger version of the task, with longer sequences and more symbols to copy.
 
 ![The selective copying task. A few marked symbols (color) are scattered among filler tokens (grey) at positions that change from sequence to sequence; at the query tokens, the model must output the symbols in order.](../img/mdl-modernrnn-selective-copy.svg)
 :label:`fig_selective_copy`
@@ -100,7 +104,7 @@ def copy_batch(key, batch_size, num_fillers=1024, num_marked=4,
     X = X.at[rows, jnp.sort(positions[:, :num_marked], 1)].set(Y)
     return X, Y
 
-X, Y = copy_batch(jax.random.key(0), 2, num_fillers=12)
+X, Y = copy_batch(jax.random.key(random.getrandbits(32)), 2, num_fillers=12)
 print(X, Y, sep='\n')
 ```
 
@@ -147,17 +151,17 @@ def copy_step(model, optimizer, X, Y):
 def copy_predict(model, X):
     return model(X).argmax(-1)
 
-def train_copy(model, num_steps=2500, lr=3e-3, seed=0):
+def train_copy(model, num_steps=2500, lr=3e-3):
     """Train on fresh batches of selective copying; return test accuracy."""
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
     step = nnx.cached_partial(copy_step, model, optimizer)  # Compile once
     predict = nnx.cached_partial(copy_predict, model)
-    key = jax.random.key(seed)
+    key = jax.random.key(random.getrandbits(32))  # New data every run
     for _ in range(num_steps):
         key, subkey = jax.random.split(key)
         step(*copy_batch(subkey, 64))
-    X, Y = copy_batch(jax.random.key(seed + 1), 1024)
+    X, Y = copy_batch(key, 1024)
     Y_hat = jnp.concatenate([predict(X[i:i + 128])[:, -Y.shape[1]:]
                              for i in range(0, 1024, 128)])
     return float((Y_hat == Y).mean())
@@ -165,7 +169,6 @@ def train_copy(model, num_steps=2500, lr=3e-3, seed=0):
 
 ```{.python .input #mamba-selective-copying-3}
 %%tab pytorch
-torch.manual_seed(0)
 models = {'S4D': d2l.SeqLM(10, 48, [d2l.S4D(48) for _ in range(2)]),
           'minGRU': d2l.SeqLM(10, 48, [d2l.MinGRU(48, 48) for _ in range(2)])}
 for name, model in models.items():
@@ -174,7 +177,7 @@ for name, model in models.items():
 
 ```{.python .input #mamba-selective-copying-3}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 models = {
     'S4D': d2l.SeqLM(10, 48, [d2l.S4D(48, rngs=rngs) for _ in range(2)],
                      rngs=rngs),
@@ -344,20 +347,22 @@ b = torch.randn(2, 100, 8, requires_grad=True)
 w = torch.randn(2, 100, 8)  # A loss that weights every state
 grads_scan = torch.autograd.grad((d2l.linear_scan(a, b) * w).sum(), (a, b))
 grads_adjoint = torch.autograd.grad((adjoint_scan(a, b) * w).sum(), (a, b))
-print('max deviation:', max(float((g1 - g2).abs().max())
-                            for g1, g2 in zip(grads_scan, grads_adjoint)))
+deviation = max(float((g1 - g2).abs().max())
+                for g1, g2 in zip(grads_scan, grads_adjoint))
+print(f'max deviation: {deviation:.1e}')
 ```
 
 ```{.python .input #mamba-training-with-a-scan-2}
 %%tab jax
-key_a, key_b, key_w = jax.random.split(jax.random.key(0), 3)
+key_a, key_b, key_w = jax.random.split(jax.random.key(random.getrandbits(32)),
+                                       3)
 a = jax.random.uniform(key_a, (2, 100, 8))
 b = jax.random.normal(key_b, (2, 100, 8))
 w = jax.random.normal(key_w, (2, 100, 8))  # A loss that weights every state
 grad = lambda scan: jax.grad(lambda a, b: (scan(a, b) * w).sum(), (0, 1))
-print('max deviation:', max(float(jnp.abs(g1 - g2).max()) for g1, g2 in
-                            zip(grad(d2l.linear_scan)(a, b),
-                                grad(adjoint_scan)(a, b))))
+deviation = max(float(jnp.abs(g1 - g2).max()) for g1, g2 in
+                zip(grad(d2l.linear_scan)(a, b), grad(adjoint_scan)(a, b)))
+print(f'max deviation: {deviation:.1e}')
 ```
 
 The two gradients agree to rounding error. The adjoint scan stores two
@@ -383,10 +388,14 @@ a gate, and an output projection returns to width $d$.
 
 The selective SSM holds the rates of its states, three projections that
 compute the step sizes and the write and read vectors from the input, and
-the skip weights $D$. The step sizes are initialized as in S4D: the weights
-that compute them start at zero, and the biases so that the softplus returns
-step sizes log-uniformly distributed between `dt_min` and `dt_max`, whatever
-the input. Training then learns how the step sizes depend on the input.
+the skip weights $D$. As in :citet:`Gu.Dao.2023`, the step sizes come from a
+projection of low rank $R = \lceil H/16 \rceil$, down to $R$ numbers and
+back up to the $H$ channels: the step sizes of the channels move together,
+and the projection costs $2HR$ weights instead of $H^2$. The step sizes are
+initialized as in S4D: the up-projection starts with small weights, uniform
+in $\pm R^{-1/2}$, and the biases so that the softplus of the bias alone
+gives step sizes log-uniformly distributed between `dt_min` and `dt_max`.
+Training then learns how the step sizes depend on the input.
 
 ```{.python .input #mamba-the-layer-1}
 %%tab pytorch
@@ -395,16 +404,18 @@ class SelectiveSSM(nn.Module):  #@save
     the input: N states for each of num_channels channels."""
     def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
-        H, N = num_channels, num_states
+        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
         self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
             torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Linear(H, H)  # Step size per channel
+        self.W_dt = nn.Sequential(  # Step size per channel, through rank R
+            nn.Linear(H, R, bias=False), nn.Linear(R, H))
         self.W_B = nn.Linear(H, N, bias=False)  # Write vector
         self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
-        with torch.no_grad():  # Start at softplus(bias) = dt for every input
-            self.W_dt.weight.zero_()
-            self.W_dt.bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        with torch.no_grad():  # Small up-projection, softplus(bias) = dt
+            nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
+            self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
         self.D = nn.Parameter(torch.ones(H))
 ```
 
@@ -415,14 +426,17 @@ class SelectiveSSM(nnx.Module):  #@save
     the input: N states for each of num_channels channels."""
     def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
                  *, rngs):
-        H, N = num_channels, num_states
+        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
         self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
         def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
             dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
             return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
-        self.W_dt = nnx.Linear(H, H, kernel_init=nnx.initializers.zeros,
-                               bias_init=dt_bias, rngs=rngs)  # Start at dt
+        def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
+            return jax.random.uniform(key, shape, dtype, -R ** -0.5, R ** -0.5)
+        self.W_dt = nnx.Sequential(  # Step size per channel, through rank R
+            nnx.Linear(H, R, use_bias=False, rngs=rngs),
+            nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias, rngs=rngs))
         self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
         self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
         self.D = nnx.Param(jnp.ones(H))
@@ -467,8 +481,12 @@ def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
     return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
 ```
 
-The Mamba layer wraps the selective SSM as described above. Its interface is
-that of the other mixers of the chapter, so it can be used in `d2l.SeqLM`.
+The Mamba layer wraps the selective SSM as described above; like the
+reference implementation, its two projections have no biases. Its
+interface is that of the other mixers of the chapter, so it can be used in
+`d2l.SeqLM`. :citet:`Gu.Dao.2023` stack Mamba layers directly, without the
+MLP between them; we keep the MLP of `d2l.SeqLM`, so that every mixer of
+the chapter sits in the same stack.
 
 ```{.python .input #mamba-the-layer-3}
 %%tab pytorch
@@ -478,11 +496,12 @@ class Mamba(nn.Module):  #@save
                  **ssm_args):
         super().__init__()
         H = expand * num_hiddens
-        self.W_in = nn.Linear(num_hiddens, 2 * H)
+        self.W_in = nn.Linear(num_hiddens, 2 * H, bias=False)
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)
-        self.W_out = nn.Linear(H, num_hiddens)
+        self.W_out = nn.Linear(H, num_hiddens, bias=False)
+        d2l.init_lecun(self)
+        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -502,11 +521,11 @@ class Mamba(nnx.Module):  #@save
     def __init__(self, num_hiddens, num_states=16, expand=2, conv_width=4,
                  *, rngs, **ssm_args):
         H = expand * num_hiddens
-        self.W_in = nnx.Linear(num_hiddens, 2 * H, rngs=rngs)
+        self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
                              padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
         self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
-        self.W_out = nnx.Linear(H, num_hiddens, rngs=rngs)
+        self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -524,7 +543,6 @@ We train a Mamba model with four states per channel, with the setup above.
 
 ```{.python .input #mamba-selective-copying-with-mamba}
 %%tab pytorch
-torch.manual_seed(0)
 models['Mamba'] = d2l.SeqLM(10, 48, [Mamba(48, num_states=4)
                                      for _ in range(2)])
 print(f"Mamba    accuracy {train_copy(models['Mamba']):.2f}")
@@ -532,7 +550,7 @@ print(f"Mamba    accuracy {train_copy(models['Mamba']):.2f}")
 
 ```{.python .input #mamba-selective-copying-with-mamba}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 models['Mamba'] = d2l.SeqLM(10, 48, [Mamba(48, num_states=4, rngs=rngs)
                                      for _ in range(2)], rngs=rngs)
 print(f"Mamba    accuracy {train_copy(models['Mamba']):.2f}")
@@ -595,6 +613,7 @@ with torch.inference_mode():
     U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
     c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
 windows = (positions[:, None] + torch.arange(4, device=device)).flatten()
+windows = windows.unique()  # Windows of nearby symbols may overlap
 windows = windows[windows < X.shape[1]]  # A window may reach past the end
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
@@ -606,7 +625,7 @@ d2l.plot(torch.arange(X.shape[1]),
 
 ```{.python .input #mamba-where-the-state-comes-from-2}
 %%tab jax
-X, _ = copy_batch(jax.random.key(2), 1)
+X, _ = copy_batch(jax.random.key(random.getrandbits(32)), 1)
 X = X[:, :-3]  # Up to the first query token
 positions = jnp.nonzero(X[0] > 1)[0]  # The four symbols
 s4d, mamba = models['S4D'], models['Mamba']
@@ -616,7 +635,7 @@ log_a = jnp.broadcast_to(jnp.log(a_bar), (*E.shape, a_bar.shape[-1]))
 c_s4d = state_contributions(log_a, b_bar * E[..., None])[0]
 U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
 c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
-windows = (positions[:, None] + jnp.arange(4)).flatten()
+windows = jnp.unique((positions[:, None] + jnp.arange(4)).flatten())  # Once
 windows = windows[windows < X.shape[1]]  # A window may reach past the end
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
@@ -625,16 +644,20 @@ d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],
          yscale='log', figsize=(6, 3))
 ```
 
-For S4D, the contributions rise smoothly toward the query: the most recent
-inputs dominate, whatever they are, and a symbol 800 steps back contributes
-no more than the fillers next to it. For Mamba, the contributions spike at
-the four symbols, some three to four orders of magnitude above the fillers
-around them, wherever the symbols sit. The windows of four positions that
-start at the symbols cover less than 2% of the sequence, yet they supply
-many times that share of Mamba's state, in most runs more than half of it;
-much of the rest comes from the last few positions before the query. For
-S4D the same windows supply at most 2%. The selective SSM writes the
-symbols and lets the fillers pass.
+For S4D, the contributions rise smoothly toward the query, and the most
+recent inputs dominate, whatever they are. A symbol may stand out from the
+fillers next to it, because the size of a write depends on the token, but
+its decay does not: a symbol hundreds of steps back still contributes far
+less than the last few fillers. The windows at the symbols supply only a
+few percent of the state, about their share of the positions. For Mamba, the
+contributions spike at the four symbols, far above the fillers around them,
+wherever the symbols sit, and the windows supply many times their share of
+the positions: the selective SSM writes the symbols and lets the fillers
+pass. The task does not determine how much of the state they supply. Runs
+that copy equally well find different solutions, some reserving nearly the
+whole state for the symbols, others leaving a sizable part of it to the
+last few positions before the query, so the printed share changes from run
+to run.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -652,25 +675,25 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 
 ```{.python .input #mamba-language-modeling-2}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128, [Mamba(128) for _ in range(2)])
 print(f'Mamba perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 ```{.python .input #mamba-language-modeling-2}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128,
                   [Mamba(128, rngs=rngs) for _ in range(2)], rngs=rngs)
 print(f'Mamba perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-Mamba reaches a perplexity of about 2.95, level with the LSTM and the GRU
-and well below the minGRU and S4D. It also has the most parameters, about
-635,000 against 540,000 for the LSTM model, so this comparison does not show
-that it uses them better. What it does show is that a model trained entirely
-with scans, and generating with a state of fixed size, models text as well as
-the gated networks that dominated before transformers.
+Mamba reaches a perplexity of about 3.0, level with the LSTM and the GRU
+and well below the minGRU and S4D, with fewer parameters than the LSTM
+model, about 520,000 against 540,000. The low-rank step sizes make the
+difference: a dense projection of $H \times H$ weights would add about
+115,000. A model trained entirely with scans, and generating with a state of
+fixed size, models text as well as the gated networks that dominated before
+transformers.
 
 The state of a selective SSM is an $H \times N$ matrix for every layer, and
 each step adds to it the outer product of the step-scaled input with the
@@ -690,10 +713,11 @@ the step size acts as the gate of a gated recurrent network, while the state
 keeps $N$ numbers per channel and starts with the multi-timescale
 initialization of S4D. Mamba solves selective copying over a thousand filler
 tokens, which the minGRU nearly solves and S4D does not. In the trained
-model, most of the state at the query comes from the few positions after
-each symbol. The selective model can no longer be computed as a convolution,
-but its update is still affine in the state, so a scan trains it, and the
-gradient of the scan is a second scan, run backward. The Mamba layer wraps
+model, the few positions after each symbol supply a part of the state at
+the query many times larger than their share of the positions. The
+selective model can no longer be computed as a convolution, but its update
+is still affine in the state, so a scan trains it, and the gradient of the
+scan is a second scan, run backward. The Mamba layer wraps
 the selective SSM in projections, a short convolution, and a gate, and it is
 a strong language model at this scale.
 
@@ -915,8 +939,8 @@ lengths from the start (like S4D).
 @!mamba-where-the-state-comes-from-2
 
 Size of each position's term in the first layer's state at the query.
-S4D: a smooth curve in distance. Mamba: spikes at the four symbols, wherever
-they sit.
+S4D: weights set by distance, the most recent inputs dominate. Mamba:
+spikes at the four symbols, wherever they sit.
 :::
 
 ::: {.slide title="On Text, Mamba Matches the Gated Networks"}
@@ -925,7 +949,7 @@ they sit.
 | LSTM | about 2.95 | 540 k |
 | minGRU | about 3.2 | 344 k |
 | S4D | about 3.35 | |
-| **Mamba** | **about 2.95** | 635 k |
+| **Mamba** | **about 3.0** | 520 k |
 
 Trained entirely with scans; generates with a fixed-size state.
 :::

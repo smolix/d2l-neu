@@ -238,6 +238,13 @@ specifies a concrete ablation and comparison metric; zero clarity defects flagge
 
 ## chapter_recurrent-modern/matrix-state.md — Matrix-State Recurrences and State Space Duality
 
+**Update (2026-10-28, ch. 12 pass):** the section now has 8 exercises. Exercise 8,
+formerly "[extended] Decay per key coordinate" (generalize `chunked_linear_attention`
+to per-key decays), is replaced by "[code] Diagonal blocks in log space" (when the
+factored within-chunk product overflows in float32, a log-space mask for the
+diagonal blocks, and sub-chunks of 16 that combine the two), because the main text
+now implements per-key decays in `chunked_linear_attention` and `GatedLinearAttention`.
+
 **Topic:** The matrix-valued fast-weight recurrence unifying linear attention,
 RetNet, GLA, and Mamba-2; capacity, decay forms, and the chunked (SSD) algorithm.
 **Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — each item names
@@ -442,6 +449,16 @@ density in the chapter, but no clarity defects flagged.
 ---
 
 ## chapter_recurrent-modern/hybrids.md — Hybrid Architectures
+
+**Update (2026-10-28, ch. 12 pass):** the recall experiment is now two-token MQAR
+(keys from 512, values from 4, 4–64 pairs, 256 tokens; models LL, GG, AA, GA with a
+short convolution in every mixer). The current exercises are: 1 the counting bound;
+2 memory for many users; 3 [code] keys and slots (Gated DeltaNet at 16,000 and 32,000
+steps, 512 vs 128 keys; width 64; the Welch bound for 8 keys in a row of dimension 4
+and how often stored keys share a row among 64 pairs); 4 [code] where and how much
+attention (`AG` vs `GA`; four-block `GGGG`, `GGGA`, `GAGA`); 5 [code] a window
+instead; 6 [code] recall in text. The proposals below refer to an earlier version
+of the section (`RecallModel`, `make_recall`) and need re-targeting.
 
 **Topic:** Interleaving fixed-state (recurrent/linear-attention) and full-attention
 layers to trade cache growth against exact-recall capacity; measured recall sweeps,

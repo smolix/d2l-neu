@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:b567fa3a344515dd773d496fdfdec8e14e810f3b3d809b4defccd42542d4e2b7"
+          "sha256": "sha256:8553a3148c7c96f9ec2cff1709d92d3dc48df630dc3c8d6fc5d08ba9725fd4f5"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:3d4c10f1df07ebe867df91d483b635c38426c1556e7a677e2b3e52f9ac75984e"
+          "sha256": "sha256:6995758f0926f9bec00647c396b2478a06d3cb9d3ff625e7acd944739c38dc10"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.94\n"
+          "text": "sinusoidal: final training loss 1.93\n"
         },
         {
           "type": "stream",
@@ -120,14 +120,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned:     6.0     15.9     26.1\nsinusoidal:     6.7     25.3     48.2\n      rope:     5.1     14.9     69.5\n     alibi:     7.3      7.3      7.2\n      none:     9.2      9.4      9.5\n"
+          "text": "   learned:     6.0     15.9     26.1\nsinusoidal:     6.6     22.9     44.3\n      rope:     5.1     14.9     69.5\n     alibi:     7.3      7.3      7.2\n      none:     9.2      9.4      9.5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-the-experiment-2-1.svg",
-          "bytes": 29257,
-          "sha256": "sha256:843f36845f437a498cbb733fe7973caa712763d15b55ae16d79045a5e2567c27"
+          "bytes": 29266,
+          "sha256": "sha256:8f9ed0ccf3f0e827d00f6340e91a3ce3a8b89060bdba7f3eb8648b834a690868"
         }
       ]
     }

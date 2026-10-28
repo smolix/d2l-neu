@@ -4,33 +4,33 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0bcf7fdd30524e7a361648925fa792ed67ed812efdc799ad896b811be8fc4a5d",
+    "d2l_lib_fingerprint": "sha256:03efcb8308c2471a3d2be1c023cccf985ea25bc1c7e87e9b9976ce1e955afd56",
     "max_inline_bytes": 0
   },
   "cells": {
     "mamba-selective-state-space-models": {
-      "code_fingerprint": "sha256:c38248a0ecf9cdd9707a4826e65ea2c21edf63bdfb707498f792440190542680",
+      "code_fingerprint": "sha256:2868f51b2c1d26a225bb02df43e6da5f96e52c03ffbb062b92d32187c32899e8",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-1": {
-      "code_fingerprint": "sha256:5962af0800c09bdaf3959ff2d675dfdf324c3a51def6dd36fb94fc8b06018df3",
+      "code_fingerprint": "sha256:41872c8ec738d1749de11a39ce4c692c199d28843aeb6ccfa9a2397c8abf3e92",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 8, 5, 3, 0, 0, 0, 0, 0, 0, 0, 9, 1, 1, 1, 1],\n        [6, 0, 0, 0, 2, 8, 0, 0, 7, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[8, 5, 3, 9],\n        [6, 2, 8, 7]])\n"
+          "text": "tensor([[0, 0, 0, 0, 3, 0, 5, 0, 7, 0, 0, 7, 1, 1, 1, 1],\n        [9, 0, 6, 0, 0, 0, 0, 2, 4, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[3, 5, 7, 7],\n        [9, 6, 2, 4]])\n"
         }
       ]
     },
     "mamba-selective-copying-2": {
-      "code_fingerprint": "sha256:a48ea5a53d918e47c483682b33d5433aa5fd766381c9c5b0158e0936f8266a06",
+      "code_fingerprint": "sha256:ae0dbf198f8fff07cb38a2a7f3e4458db1fe06ee337e3b94887fdb80da2101d3",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-3": {
-      "code_fingerprint": "sha256:6fe9974d4ef657192738faa88b5bfe57abb59c88d5af81fc92353c7d52f1441e",
+      "code_fingerprint": "sha256:66cf71087fff0f89a3e79a092d4fbdc1e2fe1250c7c685368044324d0ef67ac9",
       "kind": "text",
       "outputs": [
         {
@@ -41,43 +41,43 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.98\n"
+          "text": "minGRU   accuracy 0.96\n"
         }
       ]
     },
     "mamba-training-with-a-scan-1": {
-      "code_fingerprint": "sha256:2c435a40d3a638ad80eafcdff00a1b246b1313f84f069512ecf856ede265f763",
+      "code_fingerprint": "sha256:3293b2eb35d89244bad43fa9fb31980267fbee09ef2f3a84fb72bbfbe6a6305d",
       "kind": "text",
       "outputs": []
     },
     "mamba-training-with-a-scan-2": {
-      "code_fingerprint": "sha256:b77c0f2268e0bd2f6c1a9f32558bcfb2a0bbdfabcf976833da3ef970034e9e95",
+      "code_fingerprint": "sha256:d2639646664de8feacdd89cf46d061fcce4256b1a1ee453e38ae5db4e3fc0225",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 1.430511474609375e-06\n"
+          "text": "max deviation: 1.9e-06\n"
         }
       ]
     },
     "mamba-the-layer-1": {
-      "code_fingerprint": "sha256:e8fd56ce52b99186bb40d9f232e4851ed59ae45638d52a49bf7138d557a1aa50",
+      "code_fingerprint": "sha256:b327139a5982c360e26cfc21a256711ac8e885121d9b2080217d483a71573801",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-2": {
-      "code_fingerprint": "sha256:f5721322758b121d18d29abc75ec09cc5426e5484cd90e1cdaa5208150838ede",
+      "code_fingerprint": "sha256:7cfa0e25605fc7d19fc450c93492abf5fee8aeb007de621d4e440ed9bbed0bd5",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:555595ea83843036d4bd5a723c81a5ffe3f3294058ae9707987be46e5584ff08",
+      "code_fingerprint": "sha256:a6ec42b9e3ccaf9091a97960959e3402d813f10e7618b97441f8224b1afc098f",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:3d78244a29bde8f1f8ad4f700011f0f5cbc6a8595c30d59fd6eb027ee5cc9b75",
+      "code_fingerprint": "sha256:69918a5c0c8edabac06fb844e48c25cb2867ef9ee139be556799bd79a2a26de9",
       "kind": "text",
       "outputs": [
         {
@@ -88,41 +88,41 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:aa74e5bb6cfabf54113c91ee872a8f6eb5fd20cdc09be57b2a166d4178f4c498",
+      "code_fingerprint": "sha256:a1ffaf1382f31a0f0aa9c695630da11e8cb5ac7b2e82ee913cf42a249a6c781c",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:3db9ea5913a1036994103c2cb82e16aa9b8b6a6bb7aa2036a5e2f685fd4ce6e9",
+      "code_fingerprint": "sha256:998af02217d1a08a6a45bddb7951519f296d72c10ce8b9f3c1cb8a7cb520bd5e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.00\nMamba  share from the symbols: 0.17\n"
+          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.95\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 40896,
-          "sha256": "sha256:87a095c38387f143e03b652b1300f2fb761eb89b08e8cae243741d0ab5b5531d"
+          "bytes": 36722,
+          "sha256": "sha256:cd073927bbeedda18c0988e7d16279a3c91ecedb71ec82572b685f7f1ce10d7f"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:60ad31aa93732cd75ca6534ed368702fe653a909866c304f1434f40bd41b9a7b",
+      "code_fingerprint": "sha256:13b5b4dc0dc5c930907ef550d75bbff94551f883a060b2f225527999c2d12774",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:e7b46a3fc41c11a99968bbba76e1ab74e08e19e36d1df263be05f43a30e1377e",
+      "code_fingerprint": "sha256:41f79c38219db52990555c92fe76d38988edbf85d26d701f83c30000dcbf7a6e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 2.95\n"
+          "text": "Mamba perplexity: 3.01\n"
         }
       ]
     }

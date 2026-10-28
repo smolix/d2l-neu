@@ -46,6 +46,7 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
+import random
 ```
 
 ## Linear Recurrences
@@ -253,11 +254,18 @@ have shape (batch size, number of steps, ...), with time along the second
 axis. The decays are broadcast to the same shape, so decays that are the
 same at every step can be passed once, without the batch and time axes. An
 optional initial state is folded into the first step, since
-$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$. In
-PyTorch, each round combines the sequence with a copy of itself shifted by
-the stride. JAX provides scans as a primitive,
-`jax.lax.associative_scan`, which takes the combine :eqref:`eq_scan_combine`
-as a function and uses a schedule with linear total work.
+$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$.
+
+:begin_tab:`pytorch`
+Each round of the doubling schedule combines the sequence with a copy of
+itself shifted by the stride, a few tensor operations per round.
+:end_tab:
+
+:begin_tab:`jax`
+JAX provides scans as a primitive, `jax.lax.associative_scan`, which takes
+the combine :eqref:`eq_scan_combine` as a function and uses a schedule with
+linear total work.
+:end_tab:
 
 ```{.python .input #ssm-implementation-1}
 %%tab pytorch
@@ -364,8 +372,8 @@ d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
 
 The loop's time grows in proportion to the length: each step is a separate
 small computation that must finish before the next one starts. The scan is
-faster at every length, by a factor between several and a hundred depending
-on the length. Its time does not follow the length: while its rounds of
+faster at every length, by a factor between a few and about a hundred,
+depending on the length. Its time does not follow the length: while its rounds of
 arithmetic are too small to keep the GPU busy, more positions cost little
 extra time, and once the GPU is full, the total amount of work sets the
 time. Where this happens depends on how the scan is compiled. The scan
@@ -389,6 +397,7 @@ class MinGRU(nn.Module):  #@save
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
         self.W_h = nn.Linear(num_inputs, num_hiddens)  # Candidate state
+        d2l.init_lecun(self)
 
     def coefficients(self, X):
         """Decays a_t and writes b_t of the linear recurrence."""
@@ -429,14 +438,13 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-3}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128, [MinGRU(128, 128) for _ in range(2)])
 print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-3}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128,
                   [MinGRU(128, 128, rngs=rngs) for _ in range(2)], rngs=rngs)
 print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
@@ -829,7 +837,7 @@ Here the fillers are all the same token, and the delays are 100 and 1,000
 steps. Identical fillers isolate the question of timescales: a model with
 fixed dynamics cannot ignore random fillers, which the next section
 addresses, but identical ones add only a constant to its state. We compare
-an LSTM and a minGRU with their default initialization, one S4D layer with
+an LSTM and a minGRU whose gates start near one half, one S4D layer with
 64 channels of 16 states, and two controls. The first is an S4D layer whose
 step sizes start between 0.1 and 1, so that its time constants are at most
 about 10 steps. The second is a minGRU whose gate biases are set so that its
@@ -864,7 +872,8 @@ is 0.01.
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
 layers = {
-    'LSTM': lambda: (d2l.Recurrent(nn.LSTM(32, 64, batch_first=True)), 32),
+    'LSTM': lambda: (d2l.Recurrent(d2l.init_lecun(
+        nn.LSTM(32, 64, batch_first=True))), 32),
     'minGRU': lambda: (MinGRU(32, 64), 32),
     'S4D': lambda: (S4D(64), 64),
     'S4D, short timescales': lambda: (S4D(64, dt_min=0.1, dt_max=1.0), 64),
@@ -873,7 +882,6 @@ print(' ' * 23, '  T=100  T=1000')
 for name, layer in layers.items():
     accuracy = []
     for T in [100, 1000]:
-        torch.manual_seed(0)
         layer_T, num_inputs = layer()
         model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs)
         accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
@@ -884,7 +892,9 @@ for name, layer in layers.items():
 ```{.python .input #ssm-long-range-recall-2}
 %%tab jax
 layers = {
-    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(32, 64, rngs=rngs)), 32),
+    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(
+        32, 64, rngs=rngs,
+        recurrent_kernel_init=nnx.initializers.lecun_normal())), 32),
     'minGRU': lambda rngs: (MinGRU(32, 64, rngs=rngs), 32),
     'S4D': lambda rngs: (S4D(64, rngs=rngs), 64),
     'S4D, short timescales': lambda rngs: (
@@ -895,7 +905,7 @@ print(' ' * 23, '  T=100  T=1000')
 for name, layer in layers.items():
     accuracy = []
     for T in [100, 1000]:
-        rngs = nnx.Rngs(0)
+        rngs = nnx.Rngs(random.getrandbits(32))
         layer_T, num_inputs = layer(rngs)
         model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs, rngs=rngs)
         accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
@@ -903,7 +913,7 @@ for name, layer in layers.items():
     print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
 ```
 
-The LSTM and the minGRU with their default initialization are at chance
+The LSTM and the minGRU, with gates that start near one half, are at chance
 already after 100 steps. S4D recalls the symbol after 1,000 steps. The two
 controls show where its advantage comes from. With short time constants,
 S4D recalls the symbol after 100 steps but not after 1,000; given the time
@@ -922,14 +932,13 @@ with 16 states per channel, with the recipe of the minGRU above.
 
 ```{.python .input #ssm-language-modeling}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128, [S4D(128) for _ in range(2)])
 print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 ```{.python .input #ssm-language-modeling}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128, [S4D(128, rngs=rngs) for _ in range(2)],
                   rngs=rngs)
 print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')
@@ -1160,7 +1169,7 @@ Associative, and a block of a thousand steps is still **one pair**.
 ::: {.slide title="A Scan Combines With a Doubling Stride"}
 ![](../img/mdl-modernrnn-scan-tree.svg){width=60%}
 
-```python
+```{.python #ssm-exercises}
 s = 1
 while s < T:  # Combine each position with the one s steps back
     a, b = (cat(a[:s], a[:-s] * a[s:]),

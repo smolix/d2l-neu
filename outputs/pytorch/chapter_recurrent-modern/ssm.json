@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80bd99c821ba78496b817577d5b3065b15a40eda25a6153609bd9aa6c703bd3d",
+    "d2l_lib_fingerprint": "sha256:53b877cf5214800003aca2a30334f60c322ed319c15723b14e059ce6255dc5bc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5e-07\n"
+          "text": "max deviation: 4.8e-07\n"
         }
       ]
     },
@@ -37,76 +37,76 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31533,
-          "sha256": "sha256:ef0e16148a3c106a154ae92f58735c53347f20f86a7802a5f14194d12babf1e2"
+          "bytes": 31135,
+          "sha256": "sha256:4dfde439fd61073ebfb1353dbe43784e04021890cabab8a761e51c1c3dbaf02f"
         }
       ]
     },
     "ssm-a-linear-recurrent-language-model-1": {
-      "code_fingerprint": "sha256:926a542c3191ee91732cbb0d868e1729718487d565dbcdd33a78669cb3e845f5",
+      "code_fingerprint": "sha256:84bb3bf0c96f140783bfd01fd98d7a63500aed78d95bcd53958ffe133a31d724",
       "kind": "text",
       "outputs": []
     },
     "ssm-a-linear-recurrent-language-model-2": {
-      "code_fingerprint": "sha256:16c2aa078c56fb09e1d89d51156fba5a5ded4ad8df44e45f43f9b7b1238f87f0",
+      "code_fingerprint": "sha256:00e610fb97c75a521f1a0ac9765cfb39cb5f017cb82794bcd59eadd34bd8b055",
       "kind": "text",
       "outputs": []
     },
     "ssm-a-linear-recurrent-language-model-3": {
-      "code_fingerprint": "sha256:b75dd6e343774bf650310246c62fd6f9c542036140da591e6419223686d39056",
+      "code_fingerprint": "sha256:bdf5f548d9def4522c4976d962b80aa62b560f4938338ebd8fec1b607ee354e1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU perplexity: 3.17\n"
+          "text": "minGRU perplexity: 3.20\n"
         }
       ]
     },
     "ssm-a-linear-recurrent-language-model-4": {
-      "code_fingerprint": "sha256:e5a774aa6e1b9bd34b1f1244e8f80f79dd76ad187f816e612f3d1dbde9fb895c",
+      "code_fingerprint": "sha256:8753b10aa5b9d97be35669c371a1f2d85a91d83cefa00c7af9f3319164470b1c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.71\ngates above 0.5: 54%, above 0.9: 23%\n"
+          "text": "perplexity with the state reset: 10.74\ngates above 0.5: 53%, above 0.9: 25%\n"
         }
       ]
     },
     "ssm-the-s4d-layer-1": {
-      "code_fingerprint": "sha256:34322e150ce31d933d04ec2f0bd7f0fa18870b99eba5b6e6e48ad5a91395fc75",
+      "code_fingerprint": "sha256:e526f46022205ee8c631cc8b15cff7573406c7f67496e78f3d8162dd9d9ca4ac",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-2": {
-      "code_fingerprint": "sha256:e82d2b3649302e79acf4de1159314baa040c82c8ec0079ba4c5713c581f1b422",
+      "code_fingerprint": "sha256:4e3e239ac9261e22c3c9c17a4f19aa94a81569bfe229d5f4cff2a0b01e27a556",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-3": {
-      "code_fingerprint": "sha256:e7c93edb64c49fe2f1ad53b60a3f8fdb9f47257b08bb9ef56132a1da069803d1",
+      "code_fingerprint": "sha256:e5c3779951f247beba2a5cd2f172277b7da5b5db112fa2b3e61052c4e7c53423",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-4": {
-      "code_fingerprint": "sha256:b1273bf7ccace1cc8b3478922ffc62f3c67015e654df545e05b891a0f718c05b",
+      "code_fingerprint": "sha256:313d0b4fc16aaf7d4b5a1ccc938524e6689c8f93697a2da85ef30b1c1aeab6d7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convolution vs scan: 2.4e-07, convolution vs steps: 2.4e-07\n"
+          "text": "convolution vs scan: 1.2e-07, convolution vs steps: 1.2e-07\n"
         }
       ]
     },
     "ssm-long-range-recall-1": {
-      "code_fingerprint": "sha256:44b7e25d302f0fa18e4a6993d53726a1928d1c8334ffd3f4bd80cf662153eb77",
+      "code_fingerprint": "sha256:94bab99d20efb30761fc1ae33c608bb75143b1f9c75e8c166ee33cee16bdf340",
       "kind": "text",
       "outputs": []
     },
     "ssm-long-range-recall-2": {
-      "code_fingerprint": "sha256:8f4332037a68a65d9f8058704ebccf3c957cec59a4620de7bc2cfb2ca0a3f1b7",
+      "code_fingerprint": "sha256:28fe6d94f97d1560a9143c9fe1d6b391b6bd04a4a3e8fea88bebd8d1666ef642",
       "kind": "text",
       "outputs": [
         {
@@ -142,13 +142,13 @@
       ]
     },
     "ssm-language-modeling": {
-      "code_fingerprint": "sha256:3f91c89c26e3e11b470857fe535c6f5b88e4312b09cebef0d78009ee3c44c6e4",
+      "code_fingerprint": "sha256:b1b4e556a576f91023f61b36707779121034b25cefc50da4b2b79c3438771ada",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.34\n"
+          "text": "S4D perplexity: 3.36\n"
         }
       ]
     }

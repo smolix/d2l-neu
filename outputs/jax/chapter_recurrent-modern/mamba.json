@@ -4,39 +4,39 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2190c07eb89ab75758e010b8e4cf600ebb3f1b970c709c5bb23251687a08dda6",
+    "d2l_lib_fingerprint": "sha256:8adbc3832f4f2ecb0379a50999bae2f035a1ab18841d73e7f1931ec83411be4f",
     "max_inline_bytes": 0
   },
   "cells": {
     "mamba-selective-state-space-models": {
-      "code_fingerprint": "sha256:196859e268a004259681e117f31b170bd48e3250d5386c057e0254d7381ffd06",
+      "code_fingerprint": "sha256:9cd45bf505cdf2b77216e34eb4f5d4efdb2ce81b18819d7a1bf17feaa69a5887",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-1": {
-      "code_fingerprint": "sha256:6fe1b85617c87c6da7c16450867b6d71eb272971aea8802449228d0d21a86e2d",
+      "code_fingerprint": "sha256:7502443b4059455326d18d45ec53bab0993df4a90079c3857c0cce90151bd065",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[9 3 0 0 0 9 0 0 3 0 0 0 1 1 1 1]\n [4 0 0 0 2 0 0 3 7 0 0 0 1 1 1 1]]\n[[9 3 9 3]\n [4 2 3 7]]\n"
+          "text": "[[0 0 2 0 0 0 7 0 6 0 9 0 1 1 1 1]\n [0 9 0 0 8 8 0 8 0 0 0 0 1 1 1 1]]\n[[2 7 6 9]\n [9 8 8 8]]\n"
         }
       ]
     },
     "mamba-selective-copying-2": {
-      "code_fingerprint": "sha256:d40869a946800e0d42020160c40ed189618901f1aff31861a934fb952bd4560a",
+      "code_fingerprint": "sha256:cb3f783b3cb29cd794387ae4bcc88a35af16be99257980a6f2d29efa80282b1f",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-3": {
-      "code_fingerprint": "sha256:1d5ccf9224fc15c0182a8b8aa66529ffa5ccd296e37729ee9af19bbdfe654dba",
+      "code_fingerprint": "sha256:d0ed3c82c51a27408e1fa3647535fa3378b3f25422f237c173ef3fbe39592ca0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.16\n"
         },
         {
           "type": "stream",
@@ -46,38 +46,38 @@
       ]
     },
     "mamba-training-with-a-scan-1": {
-      "code_fingerprint": "sha256:95a4bb68c27304f3135385e7fa311ca98bb0589daff648013e31de4e4e6d4cf6",
+      "code_fingerprint": "sha256:6568e475d4646eb5b6270ef63d4c145253fe230d221715985253103a0a0bf682",
       "kind": "text",
       "outputs": []
     },
     "mamba-training-with-a-scan-2": {
-      "code_fingerprint": "sha256:04c8dfd461111892a0f820dd012234d1796e008ce5187615cf49536a1db8e4d5",
+      "code_fingerprint": "sha256:50c2ab6e759a6f943f6928f16f40e82446435d4870c2614764f558c1480c5167",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5367431640625e-07\n"
+          "text": "max deviation: 9.5e-07\n"
         }
       ]
     },
     "mamba-the-layer-1": {
-      "code_fingerprint": "sha256:750ef51f74a96af433fcf45aa361eacd3413764b92dc461c68ed27817e5472ee",
+      "code_fingerprint": "sha256:92311ad309a7f014f64b9afde8db02306d5e14d2a5022db828486517236d1314",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-2": {
-      "code_fingerprint": "sha256:6e160874b612fcd4f941cea5273f031c3377e51596d4239ef7b3f5026c9aee2b",
+      "code_fingerprint": "sha256:dc2d2c08152451feb33a062db864c24ed6d0dc7ecce8311683d9cd04b274070c",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:ef336d79d370ec84b3003b2836a4d78f759c218ede80a68c552dcda8f2d20d2e",
+      "code_fingerprint": "sha256:647ba1ed074c579023644e14a22844f652e54e8d8069ea2be4d220ef6d3438cd",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:9c571507618cb72a66c23bb00deeccde87aeef8222a34f8a47ef92b4f41c5d44",
+      "code_fingerprint": "sha256:cf03b1fa62b2ea91d3829e26b5002c56519b4f4593f3f3e73a2d88cab79fd5f7",
       "kind": "text",
       "outputs": [
         {
@@ -88,41 +88,41 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:dfec3b2c57c3483fe9834c852c9c58a19e95851226ce26e465b4435914e2797f",
+      "code_fingerprint": "sha256:1d6ff57adc14c8a380852aa9161b1b02f7756527e6b240805ae434886ce7846a",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:99c7630af36a7bb54aeb0706f9ffdd7f34569222f6449ff20e3c7189adfd7522",
+      "code_fingerprint": "sha256:3a2898cd9b38492c02da55cdd7015314e3b00b40888582d135d5a5a6c2cbfbe3",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.80\n"
+          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.75\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 35675,
-          "sha256": "sha256:ade04f359d28d41beca75da2db66ab111e2055676008a59ee969ae5dfa6009f7"
+          "bytes": 36811,
+          "sha256": "sha256:2d4420b24952c3243851395d8abbaf71ceabade449035e3ad5b7bdb91849d46f"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:51670387e6abae91b2a6c30d828810880d4e3c85ea8a87d21fb465dfe8665dc2",
+      "code_fingerprint": "sha256:0cafde79371d3b0002a019d494817d1db63b186864a58bab25e7a5cbdf9638d5",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:68dbc36e083718f8424173e6596a6c11f2f3f3cf656b99a77dce787a7e0c15c0",
+      "code_fingerprint": "sha256:1e919e6e2b36511695f0d90c27e8a15e33b552f35b2c3a090ffc1887058a7ebe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 2.97\n"
+          "text": "Mamba perplexity: 3.00\n"
         }
       ]
     }

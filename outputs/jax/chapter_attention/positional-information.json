@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31450,
-          "sha256": "sha256:819320f9b3690e119a027f81642d3e6233779bdf681dcb421b5fed852f5fd5a6"
+          "sha256": "sha256:0f26a8a648fb17fcf377b5c6139946e2099c5dc73c439bcf23425dba14477a7d"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:33072e7aafb8b9e8507fcaa0b8b14e460f39cbdfb1e5f61361eda56f87c6d3d4"
+          "sha256": "sha256:4a90ae15bbc4008026682cba0c0b2d4a857c2efbf9e2351fd86b8f397069f9f0"
         }
       ]
     },
@@ -94,22 +94,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 1.86\n"
+          "text": "   learned: final training loss 1.79\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 2.10\n"
+          "text": "sinusoidal: final training loss 2.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 1.55\n"
+          "text": "      rope: final training loss 1.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 1.98\n"
+          "text": "     alibi: final training loss 1.97\n"
         },
         {
           "type": "stream",
@@ -125,14 +125,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned:     6.2     20.8     37.1\nsinusoidal:     7.9     24.3     48.1\n      rope:     5.0     16.4     77.9\n     alibi:     7.2      7.1      7.1\n      none:     9.1      9.3      9.4\n"
+          "text": "   learned:     6.1     17.1     28.9\nsinusoidal:     7.9     25.8     48.6\n      rope:     5.2     15.8     83.9\n     alibi:     7.2      7.1      7.1\n      none:     9.1      9.3      9.4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-the-experiment-2-1.svg",
-          "bytes": 29465,
-          "sha256": "sha256:5a152b7ad4d47cd82288c9b40eb8beea81b5cbeef82fb855217261d46c8b171b"
+          "bytes": 29662,
+          "sha256": "sha256:d8ee5df89774adf513dfbfa35e0d9ee1053b43a45506616031ce456d3f44eb0a"
         }
       ]
     }

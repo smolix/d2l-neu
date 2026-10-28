@@ -44,6 +44,7 @@ import jax
 from jax import numpy as jnp
 import math
 import numpy as np
+import random
 ```
 
 ## An Associative Memory
@@ -285,7 +286,8 @@ starting with the recurrence.
 ```{.python .input #matrix-state-unrolling-with-decay-1}
 %%tab pytorch
 def linear_attention_recurrent(Q, K, V, a):
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step."""
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step; a_t
+    may also hold one decay per key coordinate, S_t = S_{t-1} diag(a_t) + ..."""
     S, outputs = Q.new_zeros(V.shape[-1], K.shape[-1]), []
     for q, k, v, a_t in zip(Q, K, V, a):
         S = a_t * S + torch.outer(v, k)
@@ -296,7 +298,8 @@ def linear_attention_recurrent(Q, K, V, a):
 ```{.python .input #matrix-state-unrolling-with-decay-1}
 %%tab jax
 def linear_attention_recurrent(Q, K, V, a):
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step."""
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step; a_t
+    may also hold one decay per key coordinate, S_t = S_{t-1} diag(a_t) + ..."""
     def step(S, inputs):
         q, k, v, a_t = inputs
         S = a_t * S + jnp.outer(v, k)
@@ -403,77 +406,119 @@ memory holds $m \times m$ blocks and one state per chunk instead of a $T
 ![The mask $\mathbf{L}$ of :eqref:`eq_ms-semiseparable` for random decays, partitioned into chunks. Diagonal blocks (blue) are small masked-attention products computed in parallel. Every block below the diagonal (orange) is accounted for by the state passed from chunk to chunk (arrows); the shading fades as the decays compound.](../img/mdl-modernrnn-semiseparable.svg)
 :label:`fig_ms-semiseparable`
 
-The function takes a batch of sequences and the logarithms of the decays.
-Its three parts follow the list above; the decay from the start of a chunk
-to step $t$ is the exponential of a cumulative sum, `cum`, and the decay
-from step $t$ to the end of its chunk is the exponential of a difference.
+A decay per key coordinate, $\mathbf{S}_t = \mathbf{S}_{t-1}
+\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$, as in
+gated linear attention, changes only the first part. Let $c_{tj}$ be the
+sum of $\log \alpha_{rj}$ from the chunk's first step to step $t$. The
+decayed score of query $t$ and key $s \le t$ is then $\sum_j q_{tj}
+k_{sj} \exp(c_{tj} - c_{sj})$: every key coordinate has a mask of its own,
+and no single mask $\mathbf{L}$ multiplies $\mathbf{Q}\mathbf{K}^\top$.
+`decay_mask` computes the $d_k$ masks at once, $d_k m^2$ numbers per chunk.
+
+It is tempting to avoid them. Since $\exp(c_t - c_s) = \exp(c_t)
+\exp(-c_s)$, scaling each query by $\exp(c_t)$ and each key by
+$\exp(-c_s)$ turns the masked product of a chunk into a plain causal one.
+In floating point this fold breaks. The factors $\exp(-c_s)$ grow as the
+decays of a chunk compound and overflow 32-bit floats once those multiply
+to less than $e^{-88}$, and learned gates get there: in gated linear
+attention on the recall task of :numref:`sec_hybrids`, the largest such
+exponent grows from about 20 after 2,000 training steps to between 45 and
+75 after 10,000, and two of three runs of 32,000 steps overflowed. One
+overflow turns the gradients, and then every weight, into NaN, and the run
+sits at chance from then on without raising any error. The function below never forms such
+factors. Every exponential it computes is the decay over a stretch of
+time, $\exp(c_t - c_s)$ with $s \le t$, $\exp(c_t)$, or $\exp(c_m - c_s)$,
+and lies between 0 and 1, however strong the decays get.
+
+The function takes a batch of sequences and the logarithms of the decays,
+one per step or one per key coordinate. Its three parts follow the list
+above; the decay from step $t$ to the end of its chunk is the exponential
+of a difference of the cumulative log decays `cum`.
 
 ```{.python .input #matrix-state-chunked-computation-1}
 %%tab pytorch
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
+    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
+    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
     """
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
-    log_a = log_a.reshape(B, T // m, m)
-    # 1. Within chunks: the dual form on every chunk at once
-    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    if log_a.dim() == 2:  # The same decay for every key coordinate
+        log_a = log_a.unsqueeze(-1)
+    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
+        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
+    else:
+        Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(-1)
-    writes = (V * torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
-              ).mT @ K
-    S = d2l.linear_scan(torch.exp(cum[..., -1:, None]), writes)
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
+    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
     S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    Y = Y + torch.exp(cum).unsqueeze(-1) * (Q @ S.mT)
-    return Y.reshape(B, T, -1)
+    return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 ```
 
 ```{.python .input #matrix-state-chunked-computation-1}
 %%tab jax
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
+    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
+    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
     """
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
-    log_a = log_a.reshape(B, T // m, m)
-    # 1. Within chunks: the dual form on every chunk at once
-    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    if log_a.ndim == 2:  # The same decay for every key coordinate
+        log_a = log_a[..., None]
+    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
+        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
+    else:
+        Y = (L * Q.mT[..., None] * K.mT[..., None, :]).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(-1)
-    writes = (V * jnp.exp(cum[..., -1:] - cum)[..., None]).mT @ K
-    S = d2l.linear_scan(jnp.exp(cum[..., -1:, None]), writes)
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    writes = V.mT @ (K * jnp.exp(cum[:, :, -1:] - cum))
+    S = d2l.linear_scan(jnp.exp(cum[:, :, -1:]), writes)
     S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    Y = Y + jnp.exp(cum)[..., None] * (Q @ S.mT)
-    return Y.reshape(B, T, -1)
+    return (Y + (Q * jnp.exp(cum)) @ S.mT).reshape(B, T, -1)
 ```
 
-The chunked outputs match the recurrence for every chunk size.
+The chunked outputs match the recurrence for every chunk size, with one
+decay per step and with one per key coordinate.
 
 ```{.python .input #matrix-state-chunked-computation-2}
 %%tab pytorch
+a_key = 0.8 + 0.19 * torch.rand(T, d_k)  # One decay per key coordinate
+decays = {'per step': (a, Y),
+          'per key': (a_key, linear_attention_recurrent(Q, K, V, a_key))}
 for m in [16, 64, 256]:
-    Y_chunked = chunked_linear_attention(Q[None], K[None], V[None],
-                                         torch.log(a)[None], m)[0]
-    print(f'chunk size {m:3d}: relative deviation '
-          f'{(Y_chunked - Y).abs().max() / Y.abs().max():.1e}')
+    for name, (decay, Y_ref) in decays.items():
+        Y_chunked = chunked_linear_attention(Q[None], K[None], V[None],
+                                             torch.log(decay)[None], m)[0]
+        print(f'chunk size {m:3d}, decay {name}: relative deviation '
+              f'{(Y_chunked - Y_ref).abs().max() / Y_ref.abs().max():.1e}')
 ```
 
 ```{.python .input #matrix-state-chunked-computation-2}
 %%tab jax
-for m in [16, 64, 256]:
-    with jax.default_matmul_precision('highest'):
-        Y_chunked = chunked_linear_attention(Q[None], K[None], V[None],
-                                             jnp.log(a)[None], m)[0]
-    print(f'chunk size {m:3d}: relative deviation '
-          f'{jnp.abs(Y_chunked - Y).max() / jnp.abs(Y).max():.1e}')
+a_key = 0.8 + 0.19 * jax.random.uniform(jax.random.key(2), (T, d_k))
+with jax.default_matmul_precision('highest'):  # Full float32, not TF32
+    decays = {'per step': (a, Y),  # a_key: one decay per key coordinate
+              'per key': (a_key, linear_attention_recurrent(Q, K, V, a_key))}
+    for m in [16, 64, 256]:
+        for name, (decay, Y_ref) in decays.items():
+            Y_chunked = chunked_linear_attention(
+                Q[None], K[None], V[None], jnp.log(decay)[None], m)[0]
+            print(f'chunk size {m:3d}, decay {name}: relative deviation '
+                  f'{jnp.abs(Y_chunked - Y_ref).max() / jnp.abs(Y_ref).max():.1e}')
 ```
 
 How fast are the three orders? We time them on one sequence of 4,096 steps
@@ -513,7 +558,7 @@ for name, f in forms.items():
 
 The recurrence is the slowest by two orders of magnitude, because its 4,096
 steps run one after another. At this length the dual form and the chunked
-form take about the same time, a millisecond or less. They differ in
+form take similar times, about a millisecond or less. They differ in
 memory: the dual form stores the $T \times T$ matrix of weights, 64 MB per
 head in 32-bit floats, which grows with the square of the length, while
 chunks of 64 store $T \times 64$ weights and one $64 \times 64$ state per
@@ -524,34 +569,66 @@ chunk, about 2 MB, which grows in proportion to the length.
 ### The Layer
 
 A layer built on the decayed matrix memory computes, for every head, a
-query, a key, a value, and a decay from the input, runs the chunked
+query, a key, a value, and decays from the input, runs the chunked
 recurrence, and projects the outputs of all heads back to the model width.
-Three details follow current practice. The decay of each head is
-$a_t = \sigma(\mathbf{w}^\top \mathbf{x}_t + b)$, and the biases $b$ are
-initialized so that the heads start with memories of different lengths,
-$\sigma(b) = 1 - 1/\tau$ with $\tau$ spread log-uniformly from 4 to 256
-steps, as the timescales of :numref:`sec_ssm` were. Queries and keys are
-scaled to unit length, the setting of :eqref:`eq_ms-capacity-law`. And the
-output of each head is normalized to unit root mean square before the
-projection, which keeps its scale independent of how many pairs the memory
-holds. The recurrence itself sits in a method of its own, `memory`, so that
-the next section can replace it. We call the layer *gated linear
-attention*, after the decay gate; :citet:`Yang.Wang.Shen.ea.2024` use the
-name for the variant with one gate per key coordinate.
+We call it *gated linear attention*, after its decay gate, and build it as
+:citet:`Yang.Wang.Shen.ea.2024` and the layers that followed it do. Four
+parts surround the memory; the experiments below and in
+:numref:`sec_hybrids` measure what they contribute:
+
+- *A short convolution.* The projected queries, keys, and values pass
+  through a causal convolution of width 4, one filter per channel, and a
+  SiLU. Each of them can then draw on the few tokens before it, so that a
+  pair spread over neighboring tokens, a name followed by its value, can
+  be written as one key and one value.
+- *Unit queries and keys,* the setting of :eqref:`eq_ms-capacity-law`.
+- *A decay per key coordinate*, $\boldsymbol{\alpha}_t =
+  \sigma(\mathbf{W}_2\mathbf{W}_1\mathbf{x}_t + \mathbf{b})^{1/16}$, computed
+  through a projection of rank 16. The exponent $1/16$ keeps the decays
+  close to one while the gate moves, and the biases start the coordinates
+  with memories of 4 to 256 steps, spread log-uniformly, as the timescales
+  of :numref:`sec_ssm` were.
+- *An output norm and gate.* The output of each head is normalized to unit
+  root mean square, which keeps its scale independent of how many pairs the
+  memory holds, and multiplied by a gate $\textrm{SiLU}(\mathbf{W}_g
+  \mathbf{x}_t)$ before the output projection.
+
+The recurrence sits in a method of its own, `memory`, and the decays in
+`decays`, so that the next section can replace them.
 
 ```{.python .input #matrix-state-the-layer-1}
 %%tab pytorch
 class GatedLinearAttention(nn.Module):  #@save
-    """Multi-head linear attention whose memory decays by an input gate."""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64):
+    """Multi-head linear attention with a gated decay per key coordinate."""
+    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4):
         super().__init__()
+        d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
-        self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=False)
-        self.W_a = nn.Linear(num_hiddens, num_heads)  # Decay gate
-        tau = torch.logspace(math.log10(4), math.log10(256), num_heads)
-        with torch.no_grad():  # Initial decays 1 - 1/tau
-            self.W_a.bias.copy_(torch.log(tau - 1))
-        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=False)
+        self.W_qkv = nn.Linear(d, 3 * d, bias=False)
+        self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
+                              padding=conv_width - 1)  # One filter per channel
+        self.W_a = self.decay_gate(d)
+        self.W_g = nn.Linear(d, d)  # Output gate
+        self.W_o = nn.Linear(d, d, bias=False)
+        d2l.init_lecun(self)
+        self.init_decays(4, 256)
+
+    def decay_gate(self, d, rank=16):
+        """Low-rank projection to one gate per key coordinate."""
+        return nn.Sequential(nn.Linear(d, rank, bias=False), nn.Linear(rank, d))
+
+    def init_decays(self, tau_min, tau_max):
+        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a[-1].bias
+        tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
+        with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
+            b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
+
+    def decays(self, X):
+        """Log decays, (batch_size * num_heads, T, d_k)."""
+        return self.split_heads(F.logsigmoid(self.W_a(X)) / self.gate_scale)
 
     def split_heads(self, Z):
         """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
@@ -566,16 +643,37 @@ class GatedLinearAttention(nn.Module):  #@save
 ```{.python .input #matrix-state-the-layer-1}
 %%tab jax
 class GatedLinearAttention(nnx.Module):  #@save
-    """Multi-head linear attention whose memory decays by an input gate."""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
+    """Multi-head linear attention with a gated decay per key coordinate."""
+    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
+                 *, rngs):
+        d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
-        self.W_qkv = nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=False,
-                                rngs=rngs)
-        tau = jnp.logspace(math.log10(4), math.log10(256), num_heads)
-        self.W_a = nnx.Linear(num_hiddens, num_heads, rngs=rngs,  # Decay gate
-                              bias_init=lambda *_: jnp.log(tau - 1))
-        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=False,
-                              rngs=rngs)
+        self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
+        self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
+                             feature_group_count=3 * d,  # One filter each
+                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+        self.W_a = self.decay_gate(d, rngs)
+        self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
+        self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
+        self.init_decays(4, 256)
+
+    def decay_gate(self, d, rngs, rank=16):
+        """Low-rank projection to one gate per key coordinate."""
+        return nnx.Sequential(nnx.Linear(d, rank, use_bias=False, rngs=rngs),
+                              nnx.Linear(rank, d, rngs=rngs))
+
+    def init_decays(self, tau_min, tau_max):
+        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a.layers[-1].bias
+        tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), b.shape[0])
+        b[...] = -jnp.log(jnp.expm1(self.gate_scale / tau))
+
+    def decays(self, X):
+        """Log decays, (batch_size * num_heads, T, d_k)."""
+        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X))
+                                / self.gate_scale)
 
     def split_heads(self, Z):
         """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
@@ -588,22 +686,24 @@ class GatedLinearAttention(nnx.Module):  #@save
         return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 ```
 
-The forward pass computes the queries, keys, values, and decays of all
-heads, runs the memory, normalizes each head's output, and projects the
-concatenated heads back to the model width.
+The forward pass runs the projections through the convolution and the
+SiLU, splits them into the queries, keys, and values of the heads, scales
+queries and keys to unit length, runs the memory, normalizes and gates the
+output of each head, and projects the concatenated heads back to the model
+width.
 
 ```{.python .input #matrix-state-the-layer-2}
 %%tab pytorch
 @d2l.add_to_class(GatedLinearAttention)  #@save
 def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
     B, T, d = X.shape
-    Q, K, V = (self.split_heads(Z) for Z in self.W_qkv(X).chunk(3, -1))
+    QKV = self.conv(self.W_qkv(X).mT)[..., :T].mT  # Causal: drop the tail
+    Q, K, V = (self.split_heads(Z) for Z in F.silu(QKV).chunk(3, -1))
     Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)  # Unit length
-    log_a = self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
-    Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
-    Y = F.rms_norm(Y, Y.shape[-1:])
+    Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
+    Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)
     Y = Y.reshape(B, self.num_heads, T, -1).transpose(1, 2).reshape(B, T, d)
-    return self.W_o(Y)
+    return self.W_o(Y * F.silu(self.W_g(X)))
 ```
 
 ```{.python .input #matrix-state-the-layer-2}
@@ -611,14 +711,15 @@ def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
 @d2l.add_to_class(GatedLinearAttention)  #@save
 def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
     B, T, d = X.shape
-    Q, K, V = (self.split_heads(Z) for Z in jnp.split(self.W_qkv(X), 3, -1))
-    unit = lambda Z: Z / jnp.linalg.norm(Z, axis=-1, keepdims=True)
+    QKV = jax.nn.silu(self.conv(self.W_qkv(X)))
+    Q, K, V = (self.split_heads(Z) for Z in jnp.split(QKV, 3, -1))
+    unit = lambda Z: Z / jnp.maximum(
+        jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
     Q, K = unit(Q), unit(K)  # Unit length
-    log_a = self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
-    Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
+    Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
     Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
     Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
-    return self.W_o(Y)
+    return self.W_o(Y * jax.nn.silu(self.W_g(X)))
 ```
 
 ### Language Modeling
@@ -636,7 +737,6 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 
 ```{.python .input #matrix-state-language-modeling-2}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128,
                   [GatedLinearAttention(128, num_heads=4) for _ in range(2)])
 print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
@@ -644,20 +744,22 @@ print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 
 ```{.python .input #matrix-state-language-modeling-2}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128, [GatedLinearAttention(
     128, num_heads=4, rngs=rngs) for _ in range(2)], rngs=rngs)
 print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-The model reaches a perplexity of about 3.25, close to the minGRU (3.2) and
-better than S4D (3.35), behind the LSTM and the GRU (about 3.0) and Mamba
-(2.95). On this
-task the matrix memory does not help much, as the models of
+The model reaches a perplexity of about 3.1, better than the minGRU (3.2)
+and S4D (3.35), behind the LSTM, the GRU, and Mamba (about 3.0).
+Much of this comes from the parts around the memory: without the short
+convolution, the SiLU, and the output gate, the same layer reaches only
+about 3.2, and the convolution accounts for most of the difference. The
+matrix memory itself does not help much on this task, as the models of
 :numref:`sec_ssm` suggested: predicting the next character rarely requires
 looking up a pair stored a hundred characters earlier. The tasks of
-:numref:`sec_hybrids` do, and there the size and the write rule of the
-memory decide the outcome.
+:numref:`sec_hybrids` do, and there the size of the memory limits how much
+it can recall.
 
 One limitation is built into every model in this section. A write adds
 $\mathbf{v}_t \mathbf{k}_t^\top$ to the memory, whatever the memory already
@@ -681,8 +783,13 @@ pairs fade. With a scalar decay per head, the outputs equal masked attention
 with a learned, decaying mask, $(\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)
 \mathbf{V}$, and computing this product in chunks, attention within a chunk
 and a recurrence over the chunk boundaries, trains the model with matrix
-products in memory linear in the length. Every write adds, so a key that is
-written twice returns the sum of its values.
+products in memory linear in the length. A decay per key coordinate, as
+in gated linear attention, gives each coordinate a mask of its own;
+computing every decay over a stretch of time keeps all factors at most
+one, while folding the decays into queries and keys overflows. The layer
+surrounds the memory with a short convolution, unit queries and keys, and
+a normalized, gated output. Every write adds, so a key that is written
+twice returns the sum of its values.
 
 ## Exercises
 
@@ -790,21 +897,20 @@ written twice returns the sum of its values.
        Show that the number of pairs whose squared signal $a^{2k}$ exceeds
        this bound is at most about $d_k / e$, whatever $a < 1$ is.
 
-1. [extended] **Decay per key coordinate.** ● Generalize
-   `chunked_linear_attention` to the decay $\mathbf{S}_t = \mathbf{S}_{t-1}
-   \textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$ of
-   gated linear attention :cite:`Yang.Wang.Shen.ea.2024`.
-    1. State which of the three parts of the algorithm change, and give the
-       shapes of their new inputs.
-    1. Implement it with a log-space mask that has one entry per query,
-       key, and key coordinate, and check it against a loop for chunk sizes
-       16, 64, and 256 with decays drawn uniformly from $(0.8, 0.99)$.
-    1. Factor the within-chunk scores instead as $(\mathbf{Q}_c \odot
-       \mathbf{P}_c)(\mathbf{K}_c \oslash \mathbf{P}_c)^\top$, where row $t$
-       of $\mathbf{P}_c$ holds the products of the decays of chunk $c$ up to
-       step $t$ and $\oslash$ divides elementwise. Compare the memory of
-       the two forms at $m = 64$ and $d_k = 64$, and explain why this
-       factorization overflows for long chunks.
+1. [code] **Sub-chunks.** ● The masks of `chunked_linear_attention` with
+   a decay per key coordinate take $d_k m^2$ numbers per chunk.
+    1. Compare their memory with that of a single mask, at $m = 64$ and
+       $d_k = 64$.
+    1. Cut each chunk into sub-chunks of 16 steps. For a query $t$ and a
+       key $s$ in an earlier sub-chunk, let $r$ be the last step before
+       the sub-chunk of $t$, and write $\exp(c_t - c_s) = \exp(c_t - c_r)
+       \exp(c_r - c_s)$. Show that both factors lie in $(0, 1]$, so that
+       the scores between sub-chunks are a plain matrix product of scaled
+       queries and keys that cannot overflow.
+    1. Implement the masks within sub-chunks and the products between them,
+       check the result against the loop for chunk sizes 64 and 256, and
+       compare memory and run time with `chunked_linear_attention`. The
+       kernels of :citet:`Yang.Wang.Shen.ea.2024` work this way.
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -841,7 +947,7 @@ multiply by $\mathbf{q}_t$ to read.
 - compute it in chunks, with matrix products and a short scan.
 
 **Running example:** 64-dimensional random keys; the Penn Treebank
-results (minGRU 3.2, Mamba 2.95).
+results (minGRU 3.2, Mamba 3.0).
 :::
 
 ::: {.slide title="Two Orthogonal Keys Store Two Values Exactly"}
@@ -925,7 +1031,7 @@ masks before exponentiating. At $T = 4096$ it stores 64 MB per head.
 ::: {.slide title="Chunks: Attention Inside, a Scan Across"}
 ::: {.cols .vc}
 ::: {.col}
-1. **Within** chunks of $m$: the dual form, all chunks at once.
+1. **Within** chunks of $m$: masked attention, all chunks at once.
 2. **Across:** each chunk's writes, decayed to its end; a scan over
    $T/m$ matrix states.
 3. **Read:** each step reads the state at its chunk's start.
@@ -939,6 +1045,31 @@ Mostly matrix products; memory $T \times m$ instead of $T \times T$.
 :::
 :::
 
+::: {.slide title="A Decay per Key Coordinate: One Mask per Coordinate"}
+$c_{tj}$: sum of $\log\alpha_{rj}$ from the chunk's start to step $t$.
+
+$$\textrm{score}_{ts} = \sum_j q_{tj}\,k_{sj}\,\exp(c_{tj} - c_{sj}), \qquad s \le t$$
+
+- `decay_mask` builds the $d_k$ masks at once: $d_k m^2$ numbers per chunk.
+- Every exponential is a decay over a stretch of time: $\le 1$.
+- Across chunks: $\exp(c_t)$ on the queries, $\exp(c_m - c_s)$ on the keys,
+  $\exp(c_m)$ on the state, all $\le 1$.
+:::
+
+::: {.slide title="Why Not Fold the Decays Into the Queries and Keys?"}
+$\exp(c_t - c_s) = \exp(c_t)\exp(-c_s)$ turns the masks into one causal
+product. In floating point it breaks:
+
+- $\exp(-c_s)$ overflows once a chunk's decays multiply below $e^{-88}$.
+- Learned gates get there: largest exponent about 20 after 2,000 steps,
+  45–75 after 10,000 (gated linear attention, recall task).
+- One overflow: NaN gradients, NaN weights, accuracy at chance. No error.
+
+::: {.d2l-note .warn}
+A run that sits at chance may be NaN, not a model that cannot learn.
+:::
+:::
+
 ::: {.slide title="Chunks Run as Fast as the Dual Form"}
 @!matrix-state-chunked-computation-3
 
@@ -947,9 +1078,11 @@ orders of magnitude slower.
 :::
 
 ::: {.slide title="Gated Linear Attention: One Layer of This Memory"}
-- Per head: query, key, value, and a decay gate $\sigma(\mathbf{w}^\top\mathbf{x}_t + b)$.
-- Gate biases start at memories of 4 to 256 steps; unit-length keys and
-  queries; outputs normalized.
+- Short causal convolution (width 4) and SiLU on queries, keys, values.
+- Unit-length queries and keys.
+- A decay per key coordinate, $\sigma(\mathbf{W}_2\mathbf{W}_1\mathbf{x}_t +
+  \mathbf{b})^{1/16}$ through rank 16; memories of 4 to 256 steps at the start.
+- Each head's output RMS-normalized, then gated by $\textrm{SiLU}(\mathbf{W}_g\mathbf{x}_t)$.
 - Four heads of 32: a state of 4,096 numbers per layer.
 
 @!matrix-state-language-modeling-2
@@ -959,8 +1092,8 @@ orders of magnitude slower.
 | | write | transition | computed as |
 |---|---|---|---|
 | linear attention | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}$ | recurrence or masked attention |
-| Mamba-2, gated linear attention | $\mathbf{v}\mathbf{k}^\top$ | $a_t\mathbf{S}$ | chunks |
-| GLA (per key coordinate) | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}\,\textrm{diag}(\boldsymbol{\alpha}_t)$ | chunks |
+| RetNet, Mamba-2 | $\mathbf{v}\mathbf{k}^\top$ | $a_t\mathbf{S}$ | chunks |
+| gated linear attention | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}\,\textrm{diag}(\boldsymbol{\alpha}_t)$ | chunks |
 
 Read error $(n-1)/d_k$; decay keeps about $1/(1-a)$ pairs.
 

@@ -384,7 +384,7 @@ The recurrent curves still rise slowly at the end of training. Trained
 twice as long, Gated DeltaNet recalls about 95% of 32 pairs and 80 to 90%
 of 64, and gated linear attention still recalls fewer. With keys drawn
 from 128 possible ones, fewer than the slots, the same long training
-brings Gated DeltaNet above 90% of 64 pairs; the gap to the task with 512 keys is the part of the
+brings Gated DeltaNet to 90% or more of 64 pairs; the gap to the task with 512 keys is the part of the
 curve that the slots explain. The delta rule pays off as the regression
 view of :numref:`sec_deltanet` suggests. An additive memory returns, with
 every value it reads, the values of all stored keys that overlap the query,
@@ -443,7 +443,8 @@ for name, model in models.items():
 ```
 
 The hybrid reaches a perplexity of about 3.15, close to Gated DeltaNet
-alone, and the transformer about 3.3. Language modeling at this scale barely
+alone, and the transformer between about 3.25 and 3.4, depending on the
+run. Language modeling at this scale barely
 registers the difference in recall, because predicting the next character
 of ordinary text rarely requires looking up a pair stored long before. A
 comparison by perplexity alone can therefore miss what a model cannot
@@ -691,7 +692,7 @@ Chance: 1/4. Up to 64 pairs per sequence.
   reference implementation.
 - The hybrid: every pair at every load; attention in almost every run.
 - Twice as long: Gated DeltaNet about 95% of 32 and 80–90% of 64;
-  with 128 possible keys (fewer than the 256 slots), above 90% of 64.
+  with 128 possible keys (fewer than the 256 slots), 90% or more of 64.
 - Corrected writes fit the stored pairs and remove much of the
   interference of overlapping keys.
 :::

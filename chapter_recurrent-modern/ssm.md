@@ -372,8 +372,8 @@ d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
 
 The loop's time grows in proportion to the length: each step is a separate
 small computation that must finish before the next one starts. The scan is
-faster at every length, by a factor between several and a hundred depending
-on the length. Its time does not follow the length: while its rounds of
+faster at every length, by a factor between a few and about a hundred,
+depending on the length. Its time does not follow the length: while its rounds of
 arithmetic are too small to keep the GPU busy, more positions cost little
 extra time, and once the GPU is full, the total amount of work sets the
 time. Where this happens depends on how the scan is compiled. The scan

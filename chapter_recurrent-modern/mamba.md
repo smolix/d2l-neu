@@ -642,10 +642,12 @@ d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],
          yscale='log', figsize=(6, 3))
 ```
 
-For S4D, the contributions rise smoothly toward the query: the most recent
-inputs dominate, whatever they are, and a symbol 800 steps back contributes
-no more than the fillers next to it. The windows at the symbols supply only
-a few percent of the state, about their share of the positions. For Mamba, the
+For S4D, the contributions rise smoothly toward the query, and the most
+recent inputs dominate, whatever they are. A symbol may stand out from the
+fillers next to it, because the size of a write depends on the token, but
+its decay does not: a symbol hundreds of steps back still contributes far
+less than the last few fillers. The windows at the symbols supply only a
+few percent of the state, about their share of the positions. For Mamba, the
 contributions spike at the four symbols, far above the fillers around them,
 wherever the symbols sit, and the windows supply many times their share of
 the positions: the selective SSM writes the symbols and lets the fillers
@@ -935,8 +937,8 @@ lengths from the start (like S4D).
 @!mamba-where-the-state-comes-from-2
 
 Size of each position's term in the first layer's state at the query.
-S4D: a smooth curve in distance. Mamba: spikes at the four symbols, wherever
-they sit.
+S4D: weights set by distance, the most recent inputs dominate. Mamba:
+spikes at the four symbols, wherever they sit.
 :::
 
 ::: {.slide title="On Text, Mamba Matches the Gated Networks"}

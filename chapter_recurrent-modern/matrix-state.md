@@ -552,7 +552,7 @@ for name, f in forms.items():
 
 The recurrence is the slowest by two orders of magnitude, because its 4,096
 steps run one after another. At this length the dual form and the chunked
-form take about the same time, a millisecond or less. They differ in
+form take similar times, about a millisecond or less. They differ in
 memory: the dual form stores the $T \times T$ matrix of weights, 64 MB per
 head in 32-bit floats, which grows with the square of the length, while
 chunks of 64 store $T \times 64$ weights and one $64 \times 64$ state per

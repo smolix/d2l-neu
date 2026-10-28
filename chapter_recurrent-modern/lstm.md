@@ -661,8 +661,8 @@ for name, cell in cells.items():
 
 With their gates starting near one half, the LSTM and the GRU recall the
 symbol after 10 steps and are at chance after 50; in some runs the LSTM
-fails already at 20. The plain RNN is erratic: from 50 steps on, it
-recalls anywhere from none to nearly all of the symbols, and which it is
+recalls only part of the symbols already at 20. The plain RNN is erratic:
+from 50 steps on, it recalls anywhere from none to all of the symbols, and which it is
 changes from run to run and from one delay to the next. The LSTM and the GRU whose keep gates start near one recall
 it after 200 steps. The architecture is the same in both pairs of rows; only
 the initialization differs. A gate that starts at one half halves the memory
@@ -906,7 +906,7 @@ for name, (num_params, ppl) in results.items():
 
 All three models reach validation perplexities between about 2.95 and 3.15. The
 gated networks are a few percent better than the plain one, and the LSTM
-and the GRU cannot be told apart. Character-level language modeling at this
+and the GRU differ by about one percent. Character-level language modeling at this
 scale rewards long memory little: the next character of a word depends
 mostly on the last few characters, which a plain recurrent network keeps
 without difficulty. The delayed recall task isolates long memory, and on it

@@ -28,6 +28,7 @@ from d2l import torch as d2l
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 ```
 
 ```{.python .input #deltanet-the-delta-rule}
@@ -462,8 +463,8 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
     def decay_gate(self, d):
         return nn.Sequential(nn.Linear(d, self.num_heads))  # One per head
 
-    def decays(self, X):
-        return super().decays(X).squeeze(-1)  # (batch_size * num_heads, T)
+    def decays(self, X):  # (batch_size * num_heads, T)
+        return self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
@@ -486,8 +487,8 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
     def decay_gate(self, d, rngs):
         return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
 
-    def decays(self, X):
-        return super().decays(X)[..., 0]  # (batch_size * num_heads, T)
+    def decays(self, X):  # (batch_size * num_heads, T)
+        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]

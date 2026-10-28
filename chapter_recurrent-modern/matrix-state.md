@@ -406,28 +406,34 @@ memory holds $m \times m$ blocks and one state per chunk instead of a $T
 ![The mask $\mathbf{L}$ of :eqref:`eq_ms-semiseparable` for random decays, partitioned into chunks. Diagonal blocks (blue) are small masked-attention products computed in parallel. Every block below the diagonal (orange) is accounted for by the state passed from chunk to chunk (arrows); the shading fades as the decays compound.](../img/mdl-modernrnn-semiseparable.svg)
 :label:`fig_ms-semiseparable`
 
-Within a chunk, the mask itself need not be formed. Let $c_t$ be the sum of
-$\log a_r$ from the chunk's first step to step $t$. The decay from step $s$
-to step $t$ is the decay from the start to $t$ divided by the decay from the
-start to $s$, $L_{ts} = \exp(c_t)\exp(-c_s)$ for $s \le t$. Scaling each
-query by $\exp(c_t)$ and each key by $\exp(-c_s)$ therefore turns the masked
-product of a chunk into a plain causal one. The same factoring handles a
-decay per key coordinate, $\mathbf{S}_t = \mathbf{S}_{t-1}
-\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$, as
-in gated linear attention: $c_t$ becomes a vector of cumulative log decays,
-one per key coordinate, and scales queries and keys coordinate by
-coordinate, which no single mask $\mathbf{L}$ could do. The price is range:
-$\exp(-c_s)$ grows as the decays of a chunk compound, and in 32-bit floats
-it overflows once they multiply to less than about $10^{-38}$. The layer
-below, with chunks of 32 steps and decays that are 16th roots of a sigmoid,
-reaches this only if its gate stays below $10^{-19}$ for a whole chunk;
-production kernels remove the limit by computing the diagonal blocks in log
-space, as an exercise shows.
+A decay per key coordinate, $\mathbf{S}_t = \mathbf{S}_{t-1}
+\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$, as in
+gated linear attention, changes only the first part. Let $c_{tj}$ be the
+sum of $\log \alpha_{rj}$ from the chunk's first step to step $t$. The
+decayed score of query $t$ and key $s \le t$ is then $\sum_j q_{tj}
+k_{sj} \exp(c_{tj} - c_{sj})$: every key coordinate has a mask of its own,
+and no single mask $\mathbf{L}$ multiplies $\mathbf{Q}\mathbf{K}^\top$.
+`decay_mask` computes the $d_k$ masks at once, $d_k m^2$ numbers per chunk.
+
+It is tempting to avoid them. Since $\exp(c_t - c_s) = \exp(c_t)
+\exp(-c_s)$, scaling each query by $\exp(c_t)$ and each key by
+$\exp(-c_s)$ turns the masked product of a chunk into a plain causal one.
+In floating point this fold breaks. The factors $\exp(-c_s)$ grow as the
+decays of a chunk compound and overflow 32-bit floats once those multiply
+to less than $e^{-88}$, and learned gates get there: in gated linear
+attention on the recall task of :numref:`sec_hybrids`, the largest such
+exponent grows from about 20 after 2,000 training steps to between 45 and
+75 after 10,000, and two of three runs of 32,000 steps overflowed. One
+overflow turns the gradients, and then every weight, into NaN, and the run
+sits at chance from then on without raising any error. The function below never forms such
+factors. Every exponential it computes is the decay over a stretch of
+time, $\exp(c_t - c_s)$ with $s \le t$, $\exp(c_t)$, or $\exp(c_m - c_s)$,
+and lies between 0 and 1, however strong the decays get.
 
 The function takes a batch of sequences and the logarithms of the decays,
 one per step or one per key coordinate. Its three parts follow the list
-above, with the cumulative log decays `cum`; the decay from step $t$ to the
-end of its chunk is the exponential of a difference.
+above; the decay from step $t$ to the end of its chunk is the exponential
+of a difference of the cumulative log decays `cum`.
 
 ```{.python .input #matrix-state-chunked-computation-1}
 %%tab pytorch
@@ -441,18 +447,17 @@ def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
     if log_a.dim() == 2:  # The same decay for every key coordinate
         log_a = log_a.unsqueeze(-1)
     Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
-    # 1. Within chunks: decays since the chunk's start scale the queries,
-    #    their inverses scale the keys, and the causal mask does the rest
-    Q_c, K_c = Q * torch.exp(cum), K * torch.exp(-cum)
-    Y = (Q_c @ K_c.mT).tril() @ V
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
     writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
     S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
     S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    return (Y + Q_c @ S.mT).reshape(B, T, -1)
+    return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 ```
 
 ```{.python .input #matrix-state-chunked-computation-1}
@@ -467,18 +472,17 @@ def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
     if log_a.ndim == 2:  # The same decay for every key coordinate
         log_a = log_a[..., None]
     Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
-    # 1. Within chunks: decays since the chunk's start scale the queries,
-    #    their inverses scale the keys, and the causal mask does the rest
-    Q_c, K_c = Q * jnp.exp(cum), K * jnp.exp(-cum)
-    Y = jnp.tril(Q_c @ K_c.mT) @ V
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    Y = (L * Q.mT[..., None] * K.mT[..., None, :]).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
     writes = V.mT @ (K * jnp.exp(cum[:, :, -1:] - cum))
     S = d2l.linear_scan(jnp.exp(cum[:, :, -1:]), writes)
     S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    return (Y + Q_c @ S.mT).reshape(B, T, -1)
+    return (Y + (Q * jnp.exp(cum)) @ S.mT).reshape(B, T, -1)
 ```
 
 The chunked outputs match the recurrence for every chunk size, with one
@@ -592,7 +596,7 @@ class GatedLinearAttention(nn.Module):  #@save
     """Multi-head linear attention with a gated decay per key coordinate."""
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4):
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4):
         super().__init__()
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
@@ -636,7 +640,7 @@ class GatedLinearAttention(nnx.Module):  #@save
     """Multi-head linear attention with a gated decay per key coordinate."""
     gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
 
-    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
                  *, rngs):
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
@@ -741,7 +745,7 @@ print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 The model reaches a perplexity of about 3.1, better than the minGRU (3.2)
-and S4D (3.35), behind the LSTM and the GRU (about 3.0) and Mamba (2.95).
+and S4D (3.35), behind the LSTM, the GRU, and Mamba (about 3.0).
 Much of this comes from the parts around the memory: without the short
 convolution, the SiLU, and the output gate, the same layer reaches only
 about 3.2, and the convolution accounts for most of the difference. The
@@ -773,11 +777,13 @@ pairs fade. With a scalar decay per head, the outputs equal masked attention
 with a learned, decaying mask, $(\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)
 \mathbf{V}$, and computing this product in chunks, attention within a chunk
 and a recurrence over the chunk boundaries, trains the model with matrix
-products in memory linear in the length. Within a chunk the decays factor
-into the queries and keys, which also handles the decay per key coordinate
-of gated linear attention. The layer surrounds the memory with a short
-convolution, unit queries and keys, and a normalized, gated output. Every write adds, so a key that is
-written twice returns the sum of its values.
+products in memory linear in the length. A decay per key coordinate, as
+in gated linear attention, gives each coordinate a mask of its own;
+computing every decay over a stretch of time keeps all factors at most
+one, while folding the decays into queries and keys overflows. The layer
+surrounds the memory with a short convolution, unit queries and keys, and
+a normalized, gated output. Every write adds, so a key that is written
+twice returns the sum of its values.
 
 ## Exercises
 
@@ -885,22 +891,20 @@ written twice returns the sum of its values.
        Show that the number of pairs whose squared signal $a^{2k}$ exceeds
        this bound is at most about $d_k / e$, whatever $a < 1$ is.
 
-1. [code] **Diagonal blocks in log space.** ● The factored product in
-   `chunked_linear_attention` fails when the decays of a chunk compound
-   below the range of 32-bit floats.
-    1. With decays drawn uniformly from $(0.05, 0.5)$, find the smallest
-       chunk size for which the function returns `inf` or `nan`, and
-       explain the value from the largest 32-bit float, about $3.4 \times
-       10^{38}$.
-    1. Compute the diagonal blocks instead from a mask in log space with one
-       entry per query, key, and key coordinate, as `decay_mask` does for one
-       decay per step, and check the result against the loop for chunk sizes
-       16, 64, and 256 with decays per key coordinate. How much memory does
-       this mask take at $m = 64$ and $d_k = 64$?
-    1. Combine the two: cut each chunk into sub-chunks of 16 steps, use the
-       log-space mask within a sub-chunk, and the factored product between
-       sub-chunks, with all decays measured from the start of the later
-       sub-chunk. Show that no factor can now exceed one.
+1. [code] **Sub-chunks.** ● The masks of `chunked_linear_attention` with
+   a decay per key coordinate take $d_k m^2$ numbers per chunk.
+    1. Compare their memory with that of a single mask, at $m = 64$ and
+       $d_k = 64$.
+    1. Cut each chunk into sub-chunks of 16 steps. For a query $t$ and a
+       key $s$ in an earlier sub-chunk, let $r$ be the last step before
+       the sub-chunk of $t$, and write $\exp(c_t - c_s) = \exp(c_t - c_r)
+       \exp(c_r - c_s)$. Show that both factors lie in $(0, 1]$, so that
+       the scores between sub-chunks are a plain matrix product of scaled
+       queries and keys that cannot overflow.
+    1. Implement the masks within sub-chunks and the products between them,
+       check the result against the loop for chunk sizes 64 and 256, and
+       compare memory and run time with `chunked_linear_attention`. The
+       kernels of :citet:`Yang.Wang.Shen.ea.2024` work this way.
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -937,7 +941,7 @@ multiply by $\mathbf{q}_t$ to read.
 - compute it in chunks, with matrix products and a short scan.
 
 **Running example:** 64-dimensional random keys; the Penn Treebank
-results (minGRU 3.2, Mamba 2.95).
+results (minGRU 3.2, Mamba 3.0).
 :::
 
 ::: {.slide title="Two Orthogonal Keys Store Two Values Exactly"}
@@ -1035,19 +1039,28 @@ Mostly matrix products; memory $T \times m$ instead of $T \times T$.
 :::
 :::
 
-::: {.slide title="Within a Chunk, the Decays Factor Into Queries and Keys"}
-$c_t$: sum of $\log a_r$ from the chunk's start to step $t$.
+::: {.slide title="A Decay per Key Coordinate: One Mask per Coordinate"}
+$c_{tj}$: sum of $\log\alpha_{rj}$ from the chunk's start to step $t$.
 
-$$L_{ts} = \exp(c_t)\,\exp(-c_s) \quad (s \le t)$$
+$$\textrm{score}_{ts} = \sum_j q_{tj}\,k_{sj}\,\exp(c_{tj} - c_{sj}), \qquad s \le t$$
 
-- Scale queries by $\exp(c_t)$, keys by $\exp(-c_s)$: a plain causal
-  product, no $m \times m$ table of decays.
-- A decay per key coordinate (GLA): $c_t$ becomes a vector and scales
-  coordinate by coordinate; no single mask $\mathbf{L}$ exists.
+- `decay_mask` builds the $d_k$ masks at once: $d_k m^2$ numbers per chunk.
+- Every exponential is a decay over a stretch of time: $\le 1$.
+- Across chunks: $\exp(c_t)$ on the queries, $\exp(c_m - c_s)$ on the keys,
+  $\exp(c_m)$ on the state, all $\le 1$.
+:::
+
+::: {.slide title="Why Not Fold the Decays Into the Queries and Keys?"}
+$\exp(c_t - c_s) = \exp(c_t)\exp(-c_s)$ turns the masks into one causal
+product. In floating point it breaks:
+
+- $\exp(-c_s)$ overflows once a chunk's decays multiply below $e^{-88}$.
+- Learned gates get there: largest exponent about 20 after 2,000 steps,
+  45–75 after 10,000 (gated linear attention, recall task).
+- One overflow: NaN gradients, NaN weights, accuracy at chance. No error.
 
 ::: {.d2l-note .warn}
-$\exp(-c_s)$ overflows 32-bit floats once a chunk's decays multiply to
-below about $10^{-38}$: keep chunks short and decays near one.
+A run that sits at chance may be NaN, not a model that cannot learn.
 :::
 :::
 

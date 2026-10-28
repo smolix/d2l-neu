@@ -52,6 +52,7 @@ import math
 import numpy as np
 import optax
 import os
+import random
 ```
 
 ## Gates
@@ -383,8 +384,7 @@ class GRU(d2l.RNN):  #@save
     """The multilayer GRU model implemented with high-level APIs."""
     def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
                  rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None \
-            else rngs
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
         self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
         self.num_layers = num_layers
         self.rnns = nnx.List([
@@ -453,26 +453,39 @@ uniformly from $[-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}}]$, a weight
 variance of $1/(3 n_\textrm{in})$; with it, whether gated linear attention
 learns the recall task of :numref:`sec_hybrids` depends on the random seed.
 Biases with a purpose, such as the gate biases of later sections, are set
-after `init_lecun`. The library's recurrent layers keep their own
-initialization, which the experiments below study.
+after `init_lecun`. It also covers the library's recurrent layers, whose
+default draws all weights and biases from the same uniform distribution
+with $n_\textrm{in}$ replaced by the hidden size: their input and recurrent
+matrices get LeCun normal weights, and their biases start at zero.
 :end_tab:
 
 :begin_tab:`jax`
 Flax's `nnx.RNN` turns a recurrent cell into a layer that returns the
 outputs at all steps, which is the interface that all sequence layers of
-this chapter share.
+this chapter share. Flax's linear layers and the input matrices of its
+recurrent cells start with LeCun normal weights and zero biases, the
+convention of all models in this chapter. Its recurrent matrices start as
+random orthogonal matrices by default; we pass `recurrent_kernel_init` to
+give them LeCun normal weights as well.
 :end_tab:
 
 ```{.python .input #lstm-delayed-recall-2}
 %%tab pytorch
 def init_lecun(module):  #@save
-    """LeCun normal weights and zero biases for all linear and conv layers."""
+    """LeCun normal weights and zero biases for all linear, convolutional,
+    and recurrent layers."""
     for layer in module.modules():
         if isinstance(layer, (nn.Linear, nn.Conv1d)):
             fan_in = layer.weight[0].numel()  # Inputs of one output unit
             nn.init.normal_(layer.weight, std=fan_in ** -0.5)
             if layer.bias is not None:
                 nn.init.zeros_(layer.bias)
+        elif isinstance(layer, nn.RNNBase):  # Input and recurrent matrices
+            for name, param in layer.named_parameters():
+                if name.startswith('weight'):
+                    nn.init.normal_(param, std=param.shape[1] ** -0.5)
+                else:
+                    nn.init.zeros_(param)
     return module
 
 class Recurrent(nn.Module):  #@save
@@ -517,7 +530,7 @@ class RecallModel(nnx.Module):  #@save
         return self.head(self.layer(E)[:, -1])
 ```
 
-Besides the three networks with their default initialization, we train an
+Besides the three networks with their gates starting near one half, we train an
 LSTM and a GRU whose gates start out keeping their state: the bias of the
 LSTM's forget gate is set to 5 and that of its input gate to $-5$, and the
 bias of the GRU's update gate to 5. Since $\sigma(5) = 0.993$, these gates
@@ -610,17 +623,16 @@ def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
 
 ```{.python .input #lstm-delayed-recall-5}
 %%tab pytorch
-layers = {'RNN': lambda: nn.RNN(32, 64, batch_first=True),
-          'LSTM': lambda: nn.LSTM(32, 64, batch_first=True),
-          'GRU': lambda: nn.GRU(32, 64, batch_first=True),
-          'LSTM, keep gate': lambda: init_keep_gate(
-              nn.LSTM(32, 64, batch_first=True)),
-          'GRU, keep gate': lambda: init_keep_gate(
-              nn.GRU(32, 64, batch_first=True))}
+layers = {'RNN': lambda: init_lecun(nn.RNN(32, 64, batch_first=True)),
+          'LSTM': lambda: init_lecun(nn.LSTM(32, 64, batch_first=True)),
+          'GRU': lambda: init_lecun(nn.GRU(32, 64, batch_first=True)),
+          'LSTM, keep gate': lambda: init_keep_gate(init_lecun(
+              nn.LSTM(32, 64, batch_first=True))),
+          'GRU, keep gate': lambda: init_keep_gate(init_lecun(
+              nn.GRU(32, 64, batch_first=True)))}
 lengths = [5, 10, 20, 50, 100, 200]
 print(' ' * 16, ' '.join(f'{T:5d}' for T in lengths))
 for name, layer in layers.items():
-    torch.manual_seed(0)
     accuracy = [train_delayed_recall(RecallModel(Recurrent(layer()), 64), T)
                 for T in lengths]
     print(f'{name:16s}', ' '.join(f'{a:5.2f}' for a in accuracy))
@@ -628,29 +640,30 @@ for name, layer in layers.items():
 
 ```{.python .input #lstm-delayed-recall-5}
 %%tab jax
-cells = {'RNN': lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs),
-         'LSTM': lambda rngs: nnx.LSTMCell(32, 64, rngs=rngs),
-         'GRU': lambda rngs: nnx.GRUCell(32, 64, rngs=rngs),
+lecun = {'recurrent_kernel_init': nnx.initializers.lecun_normal()}
+cells = {'RNN': lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **lecun),
+         'LSTM': lambda rngs: nnx.LSTMCell(32, 64, rngs=rngs, **lecun),
+         'GRU': lambda rngs: nnx.GRUCell(32, 64, rngs=rngs, **lecun),
          'LSTM, keep gate': lambda rngs: init_keep_gate(
-             nnx.LSTMCell(32, 64, rngs=rngs)),
+             nnx.LSTMCell(32, 64, rngs=rngs, **lecun)),
          'GRU, keep gate': lambda rngs: init_keep_gate(
-             nnx.GRUCell(32, 64, rngs=rngs))}
+             nnx.GRUCell(32, 64, rngs=rngs, **lecun))}
 lengths = [5, 10, 20, 50, 100, 200]
 print(' ' * 16, ' '.join(f'{T:5d}' for T in lengths))
 for name, cell in cells.items():
     accuracy = []
     for T in lengths:
-        rngs = nnx.Rngs(0)
+        rngs = nnx.Rngs(random.getrandbits(32))
         model = RecallModel(nnx.RNN(cell(rngs)), 64, rngs=rngs)
         accuracy.append(train_delayed_recall(model, T))
     print(f'{name:16s}', ' '.join(f'{a:5.2f}' for a in accuracy))
 ```
 
-With their default initialization, the LSTM and the GRU recall the symbol
-after 10 steps and are at chance after 50; the LSTM fails, fully or in part,
-already at 20. The plain RNN is erratic: whether it succeeds changes from
-one delay to the next, and from 100 steps on it recalls at most about half
-of the symbols. The LSTM and the GRU whose keep gates start near one recall
+With their gates starting near one half, the LSTM and the GRU recall the
+symbol after 10 steps and are at chance after 50; in some runs the LSTM
+fails already at 20. The plain RNN is erratic: from 50 steps on, it
+recalls anywhere from none to nearly all of the symbols, and which it is
+changes from run to run and from one delay to the next. The LSTM and the GRU whose keep gates start near one recall
 it after 200 steps. The architecture is the same in both pairs of rows; only
 the initialization differs. A gate that starts at one half halves the memory
 at every step, so the gradient that would teach it to keep the symbol
@@ -719,11 +732,13 @@ class SeqLM(nnx.Module):  #@save
         self.embedding = nnx.Embed(vocab_size, d, rngs=rngs,  # Unit length
             embedding_init=nnx.initializers.normal(d ** -0.5))
         self.mixers = nnx.List(mixers)
-        self.norms = nnx.List([nnx.LayerNorm(d, rngs=rngs) for _ in mixers])
+        norm = lambda: nnx.LayerNorm(d, epsilon=1e-5, rngs=rngs)
+        self.norms = nnx.List([norm() for _ in mixers])
         self.mlps = nnx.List([nnx.Sequential(
-            nnx.LayerNorm(d, rngs=rngs), nnx.Linear(d, 4 * d, rngs=rngs),
-            nnx.gelu, nnx.Linear(4 * d, d, rngs=rngs)) for _ in mixers])
-        self.norm = nnx.LayerNorm(d, rngs=rngs)
+            norm(), nnx.Linear(d, 4 * d, rngs=rngs),
+            lambda x: nnx.gelu(x, approximate=False),  # Exact GELU
+            nnx.Linear(4 * d, d, rngs=rngs)) for _ in mixers])
+        self.norm = norm()
         self.head = nnx.Linear(d, vocab_size, rngs=rngs)
 
     def __call__(self, X):
@@ -864,8 +879,8 @@ mixers are a plain recurrent layer, an LSTM, and a GRU.
 %%tab pytorch
 results = {}
 for name, layer in {'RNN': nn.RNN, 'LSTM': nn.LSTM, 'GRU': nn.GRU}.items():
-    torch.manual_seed(0)
-    mixers = [Recurrent(layer(128, 128, batch_first=True)) for _ in range(2)]
+    mixers = [Recurrent(init_lecun(layer(128, 128, batch_first=True)))
+              for _ in range(2)]
     model = SeqLM(len(data.vocab), 128, mixers)
     num_params = sum(p.numel() for p in model.parameters())
     results[name] = num_params, fit_lm(model, data)
@@ -876,8 +891,8 @@ for name, layer in {'RNN': nn.RNN, 'LSTM': nn.LSTM, 'GRU': nn.GRU}.items():
 results = {}
 cells = {'RNN': nnx.SimpleCell, 'LSTM': nnx.LSTMCell, 'GRU': nnx.GRUCell}
 for name, cell in cells.items():
-    rngs = nnx.Rngs(0)
-    mixers = [nnx.RNN(cell(128, 128, rngs=rngs)) for _ in range(2)]
+    rngs = nnx.Rngs(random.getrandbits(32))
+    mixers = [nnx.RNN(cell(128, 128, rngs=rngs, **lecun)) for _ in range(2)]
     model = SeqLM(len(data.vocab), 128, mixers, rngs=rngs)
     num_params = sum(p.size for p in jax.tree.leaves(nnx.state(model, nnx.Param)))
     results[name] = num_params, fit_lm(model, data)
@@ -889,7 +904,7 @@ for name, (num_params, ppl) in results.items():
     print(f'{name:5s} {num_params:9,d} parameters   perplexity {ppl:.2f}')
 ```
 
-All three models reach validation perplexities between about 2.95 and 3.1. The
+All three models reach validation perplexities between about 2.95 and 3.15. The
 gated networks are a few percent better than the plain one, and the LSTM
 and the GRU cannot be told apart. Character-level language modeling at this
 scale rewards long memory little: the next character of a word depends
@@ -1209,7 +1224,7 @@ With small weights a gate is $\sigma(b)$.
 :::
 :::
 
-::: {.slide title="Default Gates Lose a Symbol Within 50 Steps"}
+::: {.slide title="Gates at One Half Lose a Symbol Within 50 Steps"}
 Name the first of $T$ tokens; the rest are random fillers. Chance is 0.12.
 
 @!lstm-delayed-recall-5
@@ -1250,9 +1265,9 @@ $$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \q
 :::
 
 ::: {.slide title="Recap"}
-| | memory path | delayed recall, default | PTB perplexity |
+| | memory path | delayed recall, gates at one half | PTB perplexity |
 |---|---|---|---|
-| RNN | matrix and $\tanh$ | erratic; at most about half from 100 steps | about 3.1 |
+| RNN | matrix and $\tanh$ | erratic from 50 steps | about 3.1 |
 | LSTM | $\mathbf{f}_t \odot \mathbf{c}_{t-1}$ | lost by 20–50 steps | about 2.95 |
 | GRU | $\mathbf{z}_t \odot \mathbf{h}_{t-1}$ | lost by 50 steps | about 3.0 |
 | LSTM, GRU, keep gate | same | held for 200 steps | |

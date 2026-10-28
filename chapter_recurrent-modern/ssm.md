@@ -253,11 +253,18 @@ have shape (batch size, number of steps, ...), with time along the second
 axis. The decays are broadcast to the same shape, so decays that are the
 same at every step can be passed once, without the batch and time axes. An
 optional initial state is folded into the first step, since
-$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$. In
-PyTorch, each round combines the sequence with a copy of itself shifted by
-the stride. JAX provides scans as a primitive,
-`jax.lax.associative_scan`, which takes the combine :eqref:`eq_scan_combine`
-as a function and uses a schedule with linear total work.
+$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$.
+
+:begin_tab:`pytorch`
+Each round of the doubling schedule combines the sequence with a copy of
+itself shifted by the stride, a few tensor operations per round.
+:end_tab:
+
+:begin_tab:`jax`
+JAX provides scans as a primitive, `jax.lax.associative_scan`, which takes
+the combine :eqref:`eq_scan_combine` as a function and uses a schedule with
+linear total work.
+:end_tab:
 
 ```{.python .input #ssm-implementation-1}
 %%tab pytorch
@@ -830,7 +837,7 @@ Here the fillers are all the same token, and the delays are 100 and 1,000
 steps. Identical fillers isolate the question of timescales: a model with
 fixed dynamics cannot ignore random fillers, which the next section
 addresses, but identical ones add only a constant to its state. We compare
-an LSTM and a minGRU with their default initialization, one S4D layer with
+an LSTM and a minGRU whose gates start near one half, one S4D layer with
 64 channels of 16 states, and two controls. The first is an S4D layer whose
 step sizes start between 0.1 and 1, so that its time constants are at most
 about 10 steps. The second is a minGRU whose gate biases are set so that its
@@ -865,7 +872,8 @@ is 0.01.
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
 layers = {
-    'LSTM': lambda: (d2l.Recurrent(nn.LSTM(32, 64, batch_first=True)), 32),
+    'LSTM': lambda: (d2l.Recurrent(d2l.init_lecun(
+        nn.LSTM(32, 64, batch_first=True))), 32),
     'minGRU': lambda: (MinGRU(32, 64), 32),
     'S4D': lambda: (S4D(64), 64),
     'S4D, short timescales': lambda: (S4D(64, dt_min=0.1, dt_max=1.0), 64),
@@ -885,7 +893,9 @@ for name, layer in layers.items():
 ```{.python .input #ssm-long-range-recall-2}
 %%tab jax
 layers = {
-    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(32, 64, rngs=rngs)), 32),
+    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(
+        32, 64, rngs=rngs,
+        recurrent_kernel_init=nnx.initializers.lecun_normal())), 32),
     'minGRU': lambda rngs: (MinGRU(32, 64, rngs=rngs), 32),
     'S4D': lambda rngs: (S4D(64, rngs=rngs), 64),
     'S4D, short timescales': lambda rngs: (
@@ -904,7 +914,7 @@ for name, layer in layers.items():
     print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
 ```
 
-The LSTM and the minGRU with their default initialization are at chance
+The LSTM and the minGRU, with gates that start near one half, are at chance
 already after 100 steps. S4D recalls the symbol after 1,000 steps. The two
 controls show where its advantage comes from. With short time constants,
 S4D recalls the symbol after 100 steps but not after 1,000; given the time

@@ -273,15 +273,15 @@ def recall_model(layout, vocab_size, num_hiddens=32):
 Each model is trained once on fresh batches whose number of pairs cycles
 through 4, 8, 16, 32, and 64, with the loss computed at the query
 positions only, and is then tested separately at each number of pairs.
-Training uses AdamW for 8,000 steps of 256 sequences, with gradients
+Training uses AdamW for 16,000 steps of 256 sequences, with gradients
 clipped to norm 1 and the learning rate of :numref:`sec_batch_norm`
-(`d2l.cosine_warmup`): a linear warmup over 400 steps to 0.006, then a
+(`d2l.cosine_warmup`): a linear warmup over 800 steps to 0.006, then a
 half-cosine down to zero.
 
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab pytorch
-def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=8000,
-                 batch_size=256, lr=6e-3, warmup=400):
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
+                 batch_size=256, lr=6e-3, warmup=800):
     """Train on recall batches with a cycling number of pairs; return the
     test accuracy for each number of pairs."""
     device, rng = d2l.try_gpu(), np.random.default_rng()
@@ -323,8 +323,8 @@ def mqar_step(model, optimizer, X, Y):
 def mqar_predict(model, X):
     return model(X).argmax(-1)
 
-def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=8000,
-                 batch_size=256, lr=6e-3, warmup=400):
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_steps=16000,
+                 batch_size=256, lr=6e-3, warmup=800):
     """Train on recall batches with a cycling number of pairs; return the
     test accuracy for each number of pairs."""
     rng = np.random.default_rng()
@@ -364,21 +364,27 @@ d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
 d2l.plt.legend(list(accuracy), loc='lower left', ncol=2)  # Below the curves
 ```
 
-With 4 pairs, attention, the hybrid, and Gated DeltaNet recall nearly every
-value. Beyond that Gated DeltaNet loses pairs, and the more pairs a sequence
-holds, the more it loses: it recalls about four fifths of 32 pairs and
-about three fifths of 64. Gated linear attention recalls fewer at every load, and
-its curve varies more from run to run, because it stays near chance for a
-varying number of steps before it learns the task. Attention recalls every
-pair at every load, and so does the hybrid, although one of its two layers
-is recurrent. Its attention layer looks up the pairs that the recurrent
+With 4 pairs, all four models recall nearly every value. Beyond that Gated
+DeltaNet loses pairs, and the more pairs a sequence holds, the more it
+loses: it recalls about nine tenths of 32 pairs and about seven tenths of
+64. Gated linear attention recalls fewer at every load, and its curve
+varies more from run to run. It first sits on a plateau, recalling about
+half of 4 pairs, for a number of training steps that varies from a few
+thousand to more than ten thousand, and only then learns the task. The
+reference implementation of the layer, from the flash-linear-attention
+library of its authors :cite:`Yang.Wang.Shen.ea.2024`, trained on the same
+task with the same recipe, sits on the same plateau for as long, in one of
+three runs for all 16,000 steps, so the plateau belongs to the model and
+not to our code. The hybrid recalls every pair at every load, although one
+of its two layers is recurrent, and so does attention in almost every run.
+The attention layer of the hybrid looks up the pairs that the recurrent
 state cannot hold.
 
-The recurrent curves are not converged. Trained three times as long, Gated
-DeltaNet recalls about 95% of 32 pairs and about 80% of 64, and gated
-linear attention still recalls fewer. With keys drawn from 128 possible
-ones, fewer than the slots, the same long training brings Gated DeltaNet to
-about 90% of 64 pairs; the gap to the task with 512 keys is the part of the
+The recurrent curves still rise slowly at the end of training. Trained
+twice as long, Gated DeltaNet recalls about 95% of 32 pairs and 80 to 90%
+of 64, and gated linear attention still recalls fewer. With keys drawn
+from 128 possible ones, fewer than the slots, the same long training
+brings Gated DeltaNet above 90% of 64 pairs; the gap to the task with 512 keys is the part of the
 curve that the slots explain. The delta rule pays off as the regression
 view of :numref:`sec_deltanet` suggests. An additive memory returns, with
 every value it reads, the values of all stored keys that overlap the query,
@@ -495,12 +501,12 @@ one value per number of its state: every key needs a slot of its own. When
 the task can ask about more keys than the state has slots, keys that share a
 slot overlap, by at least Welch's bound, and recall falls as the number of
 stored pairs grows. On multi-query associative recall, Gated DeltaNet
-recalls nearly every pair when there are few and about three fifths of 64,
+recalls nearly every pair when there are few and about seven tenths of 64,
 and gated linear attention, whose writes only add, recalls fewer; both
 curves still rise with longer training. Without the short convolution,
 which brings each key together with its value, both recall far less.
-Attention recalls every pair, and so does a hybrid whose second layer is
-attention.
+A hybrid whose second layer is attention recalls every pair, and so does
+attention in almost every run.
 Language-modeling perplexity barely shows the difference. During generation
 only the attention layers keep a cache that grows with the context, so a
 hybrid needs the transformer's cache times its fraction of attention layers,
@@ -535,7 +541,7 @@ models with recurrent layers are hybrids for this reason.
 
 1. [code] **Keys and slots.** The recurrent models of the recall sweep
    have 256 slots and the task draws keys from 512.
-    1. Train Gated DeltaNet for 8,000 and for 24,000 steps, once with keys
+    1. Train Gated DeltaNet for 16,000 and for 32,000 steps, once with keys
        drawn from 512 and once from 128, fewer than the slots. Where do the
        four curves differ? Which differences come from training time and
        which from the number of slots?
@@ -669,7 +675,7 @@ Chance: 1/4. Up to 64 pairs per sequence.
 - Without it, attention must form an induction head over two layers,
   after a plateau of varying length.
 - Decay gates start with memories of 64 to 1,024 steps.
-- Trained once with 4 to 64 pairs, 8,000 steps of 256 sequences; tested
+- Trained once with 4 to 64 pairs, 16,000 steps of 256 sequences; tested
   at each number of pairs.
 :::
 
@@ -678,13 +684,14 @@ Chance: 1/4. Up to 64 pairs per sequence.
 :::
 
 ::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
-- Gated DeltaNet: nearly all of 4 pairs, about four fifths of 32, about
-  three fifths of 64.
-- Gated linear attention: fewer at every load; a plateau of varying length
-  near chance makes it vary from run to run.
-- Attention and the hybrid: every pair at every load.
-- Three times longer: Gated DeltaNet about 95% of 32 and 80% of 64;
-  with 128 possible keys (fewer than the 256 slots), about 90% of 64.
+- Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
+  seven tenths of 64.
+- Gated linear attention: fewer at every load; it first sits on a plateau
+  (about half of 4 pairs) for a varying number of steps, as does the
+  reference implementation.
+- The hybrid: every pair at every load; attention in almost every run.
+- Twice as long: Gated DeltaNet about 95% of 32 and 80–90% of 64;
+  with 128 possible keys (fewer than the 256 slots), above 90% of 64.
 - Corrected writes fit the stored pairs and remove much of the
   interference of overlapping keys.
 :::
@@ -763,7 +770,7 @@ Jamba, 4 attention layers of 32: 4 GB at 256 K tokens, against 32 GB.
 | LSTM, GRU | vector | nonlinear, sequential | short | 3.0 |
 | minGRU | vector | $\mathbf{a}_t\odot\mathbf{h} + \mathbf{b}_t$, scan | | 3.2 |
 | S4D | $d \times N$ | fixed decays, FFT | by distance | 3.35 |
-| Mamba | $H \times N$ | selective decays, scan | selective | 2.95 |
+| Mamba | $H \times N$ | selective decays, scan | selective | 3.0 |
 | gated linear attention | $d_v \times d_k$ | $\mathbf{S}\,\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}\mathbf{k}^\top$, chunks | interference | 3.1 |
 | Gated DeltaNet | $d_v \times d_k$ | delta rule, chunks | rebinds | 3.1 |
 | + one attention layer | + KV cache | | exact | |

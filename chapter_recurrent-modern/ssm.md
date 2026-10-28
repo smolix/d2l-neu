@@ -46,6 +46,7 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
+import random
 ```
 
 ## Linear Recurrences
@@ -437,14 +438,13 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-3}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128, [MinGRU(128, 128) for _ in range(2)])
 print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-3}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128,
                   [MinGRU(128, 128, rngs=rngs) for _ in range(2)], rngs=rngs)
 print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
@@ -882,7 +882,6 @@ print(' ' * 23, '  T=100  T=1000')
 for name, layer in layers.items():
     accuracy = []
     for T in [100, 1000]:
-        torch.manual_seed(0)
         layer_T, num_inputs = layer()
         model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs)
         accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
@@ -906,7 +905,7 @@ print(' ' * 23, '  T=100  T=1000')
 for name, layer in layers.items():
     accuracy = []
     for T in [100, 1000]:
-        rngs = nnx.Rngs(0)
+        rngs = nnx.Rngs(random.getrandbits(32))
         layer_T, num_inputs = layer(rngs)
         model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs, rngs=rngs)
         accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
@@ -933,14 +932,13 @@ with 16 states per channel, with the recipe of the minGRU above.
 
 ```{.python .input #ssm-language-modeling}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128, [S4D(128) for _ in range(2)])
 print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
 ```{.python .input #ssm-language-modeling}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128, [S4D(128, rngs=rngs) for _ in range(2)],
                   rngs=rngs)
 print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')

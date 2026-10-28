@@ -1606,6 +1606,19 @@ class MultiHeadAttention(nnx.Module):
         X = jnp.transpose(X, (0, 2, 1, 3))
         return X.reshape((X.shape[0], X.shape[1], -1))
 
+def rope(x, offset=0):
+    """Rotate feature pairs of x (..., num_steps, d) by position angles.
+
+    Defined in :numref:`sec_positional-information`"""
+    d = x.shape[-1]
+    pos = jnp.arange(x.shape[-2], dtype=jnp.float32) + offset
+    inv_freq = 10000.0 ** (-jnp.arange(0, d, 2) / d)
+    theta = pos[:, None] * inv_freq[None, :]
+    cos, sin = jnp.cos(theta), jnp.sin(theta)
+    x1, x2 = x[..., 0::2], x[..., 1::2]
+    return jnp.stack([x1 * cos - x2 * sin,
+                      x1 * sin + x2 * cos], -1).reshape(x.shape)
+
 class TinyCharLM(nnx.Module):
     """Attention-only character-level language model.
 
@@ -1974,8 +1987,7 @@ class GRU(d2l.RNN):
     Defined in :numref:`sec_gru`"""
     def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
                  rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None \
-            else rngs
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
         self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
         self.num_layers = num_layers
         self.rnns = nnx.List([
@@ -2071,11 +2083,13 @@ class SeqLM(nnx.Module):
         self.embedding = nnx.Embed(vocab_size, d, rngs=rngs,  # Unit length
             embedding_init=nnx.initializers.normal(d ** -0.5))
         self.mixers = nnx.List(mixers)
-        self.norms = nnx.List([nnx.LayerNorm(d, rngs=rngs) for _ in mixers])
+        norm = lambda: nnx.LayerNorm(d, epsilon=1e-5, rngs=rngs)
+        self.norms = nnx.List([norm() for _ in mixers])
         self.mlps = nnx.List([nnx.Sequential(
-            nnx.LayerNorm(d, rngs=rngs), nnx.Linear(d, 4 * d, rngs=rngs),
-            nnx.gelu, nnx.Linear(4 * d, d, rngs=rngs)) for _ in mixers])
-        self.norm = nnx.LayerNorm(d, rngs=rngs)
+            norm(), nnx.Linear(d, 4 * d, rngs=rngs),
+            lambda x: nnx.gelu(x, approximate=False),  # Exact GELU
+            nnx.Linear(4 * d, d, rngs=rngs)) for _ in mixers])
+        self.norm = norm()
         self.head = nnx.Linear(d, vocab_size, rngs=rngs)
 
     def __call__(self, X):
@@ -2250,14 +2264,17 @@ class SelectiveSSM(nnx.Module):
     Defined in :numref:`sec_mamba`"""
     def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
                  *, rngs):
-        H, N = num_channels, num_states
+        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
         self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
         def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
             dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
             return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
-        self.W_dt = nnx.Linear(H, H, kernel_init=nnx.initializers.zeros,
-                               bias_init=dt_bias, rngs=rngs)  # Start at dt
+        def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
+            return jax.random.uniform(key, shape, dtype, -R ** -0.5, R ** -0.5)
+        self.W_dt = nnx.Sequential(  # Step size per channel, through rank R
+            nnx.Linear(H, R, use_bias=False, rngs=rngs),
+            nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias, rngs=rngs))
         self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
         self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
         self.D = nnx.Param(jnp.ones(H))
@@ -2282,11 +2299,11 @@ class Mamba(nnx.Module):
     def __init__(self, num_hiddens, num_states=16, expand=2, conv_width=4,
                  *, rngs, **ssm_args):
         H = expand * num_hiddens
-        self.W_in = nnx.Linear(num_hiddens, 2 * H, rngs=rngs)
+        self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
                              padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
         self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
-        self.W_out = nnx.Linear(H, num_hiddens, rngs=rngs)
+        self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -2307,39 +2324,62 @@ def decay_mask(log_a):
     return jnp.exp(jnp.where(causal, log_L, -jnp.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
+    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
+    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
-    log_a = log_a.reshape(B, T // m, m)
-    # 1. Within chunks: the dual form on every chunk at once
-    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    if log_a.ndim == 2:  # The same decay for every key coordinate
+        log_a = log_a[..., None]
+    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    Y = (L * Q.mT[..., None] * K.mT[..., None, :]).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(-1)
-    writes = (V * jnp.exp(cum[..., -1:] - cum)[..., None]).mT @ K
-    S = d2l.linear_scan(jnp.exp(cum[..., -1:, None]), writes)
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    writes = V.mT @ (K * jnp.exp(cum[:, :, -1:] - cum))
+    S = d2l.linear_scan(jnp.exp(cum[:, :, -1:]), writes)
     S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    Y = Y + jnp.exp(cum)[..., None] * (Q @ S.mT)
-    return Y.reshape(B, T, -1)
+    return (Y + (Q * jnp.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nnx.Module):
-    """Multi-head linear attention whose memory decays by an input gate.
+    """Multi-head linear attention with a gated decay per key coordinate.
 
     Defined in :numref:`sec_matrix-state`"""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
+    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
+                 *, rngs):
+        d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
-        self.W_qkv = nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=False,
-                                rngs=rngs)
-        tau = jnp.logspace(math.log10(4), math.log10(256), num_heads)
-        self.W_a = nnx.Linear(num_hiddens, num_heads, rngs=rngs,  # Decay gate
-                              bias_init=lambda *_: jnp.log(tau - 1))
-        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=False,
-                              rngs=rngs)
+        self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
+        self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
+                             feature_group_count=3 * d,  # One filter each
+                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+        self.W_a = self.decay_gate(d, rngs)
+        self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
+        self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
+        self.init_decays(4, 256)
+
+    def decay_gate(self, d, rngs, rank=16):
+        """Low-rank projection to one gate per key coordinate."""
+        return nnx.Sequential(nnx.Linear(d, rank, use_bias=False, rngs=rngs),
+                              nnx.Linear(rank, d, rngs=rngs))
+
+    def init_decays(self, tau_min, tau_max):
+        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a.layers[-1].bias
+        tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), b.shape[0])
+        b[...] = -jnp.log(jnp.expm1(self.gate_scale / tau))
+
+    def decays(self, X):
+        """Log decays, (batch_size * num_heads, T, d_k)."""
+        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X))
+                                / self.gate_scale)
 
     def split_heads(self, Z):
         """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
@@ -2353,14 +2393,15 @@ class GatedLinearAttention(nnx.Module):
 
     def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
         B, T, d = X.shape
-        Q, K, V = (self.split_heads(Z) for Z in jnp.split(self.W_qkv(X), 3, -1))
-        unit = lambda Z: Z / jnp.linalg.norm(Z, axis=-1, keepdims=True)
+        QKV = jax.nn.silu(self.conv(self.W_qkv(X)))
+        Q, K, V = (self.split_heads(Z) for Z in jnp.split(QKV, 3, -1))
+        unit = lambda Z: Z / jnp.maximum(
+            jnp.linalg.norm(Z, axis=-1, keepdims=True), 1e-12)
         Q, K = unit(Q), unit(K)  # Unit length
-        log_a = self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
-        Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
+        Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
         Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
         Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
-        return self.W_o(Y)
+        return self.W_o(Y * jax.nn.silu(self.W_g(X)))
 
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
@@ -2389,26 +2430,37 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    def chunk(S, c):  # c: one chunk of every sequence
-        Q_c, K_c, W_c, Z_c, L_c, cum_c = c
-        U = W_c - Z_c @ S.mT  # Corrected values
-        read_past = jnp.exp(cum_c)[..., None] * (Q_c @ S.mT)
-        O = read_past + (L_c * (Q_c @ K_c.mT)) @ U
-        to_end = jnp.exp(cum_c[:, -1:] - cum_c)[..., None]
-        S = (jnp.exp(cum_c[:, -1, None, None]) * S
-             + (U * to_end).mT @ K_c)
-        return S, O
-    S = jnp.zeros((B, V.shape[-1], K.shape[-1]))
-    chunks = tuple(X.swapaxes(0, 1) for X in (Q, K, W, Z, L, cum))
-    return jax.lax.scan(chunk, S, chunks)[1].swapaxes(0, 1).reshape(B, T, -1)
+    # Each chunk maps the memory at its start to S A + W_end at its end
+    to_end = jnp.exp(cum[..., -1:] - cum)[..., None]
+    I = jnp.eye(K.shape[-1])
+    A = jnp.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
+    def combine(earlier, later):  # A scan over chunks, with matrix products
+        (A1, W1), (A2, W2) = earlier, later
+        return A1 @ A2, W1 @ A2 + W2
+    W_end = jax.lax.associative_scan(combine, (A, (W * to_end).mT @ K),
+                                     axis=1)[1]
+    S = jnp.concatenate([jnp.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
+    U = W - Z @ S.mT  # Corrected values, with the memory at each start
+    Y = jnp.exp(cum)[..., None] * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
+    return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention whose memory is written by the delta rule.
+    """Gated linear attention with one decay per head, whose memory is
 
     Defined in :numref:`sec_deltanet`"""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
-        super().__init__(num_hiddens, num_heads, chunk_size, rngs=rngs)
+    gate_scale = 1
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
+                 *, rngs):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
+                         rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
+
+    def decay_gate(self, d, rngs):
+        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
+
+    def decays(self, X):  # (batch_size * num_heads, T)
+        return self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]

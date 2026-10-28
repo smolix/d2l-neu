@@ -1468,6 +1468,20 @@ class MultiHeadAttention(d2l.Module):
         X = X.permute(0, 2, 1, 3)
         return X.reshape(X.shape[0], X.shape[1], -1)
 
+def rope(x, offset=0):
+    """Rotate feature pairs of x (..., num_steps, d) by position angles.
+
+    Defined in :numref:`sec_positional-information`"""
+    d = x.shape[-1]
+    pos = torch.arange(x.shape[-2], dtype=torch.float32,
+                       device=x.device) + offset
+    inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
+    theta = pos[:, None] * inv_freq[None, :]
+    cos, sin = torch.cos(theta), torch.sin(theta)
+    x1, x2 = x[..., 0::2], x[..., 1::2]
+    return torch.stack([x1 * cos - x2 * sin,
+                        x1 * sin + x2 * cos], -1).flatten(-2)
+
 class TinyCharLM(nn.Module):
     """Attention-only character-level language model.
 
@@ -1829,6 +1843,24 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
     X[:, 0] = Y
     return X, Y
 
+def init_lecun(module):
+    """LeCun normal weights and zero biases for all linear, convolutional,
+
+    Defined in :numref:`sec_gru`"""
+    for layer in module.modules():
+        if isinstance(layer, (nn.Linear, nn.Conv1d)):
+            fan_in = layer.weight[0].numel()  # Inputs of one output unit
+            nn.init.normal_(layer.weight, std=fan_in ** -0.5)
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)
+        elif isinstance(layer, nn.RNNBase):  # Input and recurrent matrices
+            for name, param in layer.named_parameters():
+                if name.startswith('weight'):
+                    nn.init.normal_(param, std=param.shape[1] ** -0.5)
+                else:
+                    nn.init.zeros_(param)
+    return module
+
 class Recurrent(nn.Module):
     """A batch-first recurrent layer that returns only its outputs.
 
@@ -1850,7 +1882,7 @@ class RecallModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, num_inputs)
         nn.init.normal_(self.embedding.weight, std=num_inputs ** -0.5)
         self.layer = layer
-        self.head = nn.Linear(num_hiddens, num_outputs)
+        self.head = init_lecun(nn.Linear(num_hiddens, num_outputs))
 
     def forward(self, X):
         return self.head(self.layer(self.embedding(X))[:, -1])
@@ -1893,6 +1925,8 @@ class SeqLM(nn.Module):
             nn.Linear(4 * d, d)) for _ in mixers])
         self.norm = nn.LayerNorm(d)
         self.head = nn.Linear(d, vocab_size)
+        for module in (self.mlps, self.head):  # Mixers initialize themselves
+            init_lecun(module)
 
     def forward(self, X):
         H = self.embedding(X)  # (batch_size, num_steps, num_hiddens)
@@ -1970,6 +2004,7 @@ class MinGRU(nn.Module):
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
         self.W_h = nn.Linear(num_inputs, num_hiddens)  # Candidate state
+        d2l.init_lecun(self)
 
     def coefficients(self, X):
         """Decays a_t and writes b_t of the linear recurrence."""
@@ -2057,16 +2092,18 @@ class SelectiveSSM(nn.Module):
     Defined in :numref:`sec_mamba`"""
     def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
-        H, N = num_channels, num_states
+        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
         self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
             torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Linear(H, H)  # Step size per channel
+        self.W_dt = nn.Sequential(  # Step size per channel, through rank R
+            nn.Linear(H, R, bias=False), nn.Linear(R, H))
         self.W_B = nn.Linear(H, N, bias=False)  # Write vector
         self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
-        with torch.no_grad():  # Start at softplus(bias) = dt for every input
-            self.W_dt.weight.zero_()
-            self.W_dt.bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        with torch.no_grad():  # Small up-projection, softplus(bias) = dt
+            nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
+            self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
         self.D = nn.Parameter(torch.ones(H))
 
     def coefficients(self, U):
@@ -2090,11 +2127,12 @@ class Mamba(nn.Module):
                  **ssm_args):
         super().__init__()
         H = expand * num_hiddens
-        self.W_in = nn.Linear(num_hiddens, 2 * H)
+        self.W_in = nn.Linear(num_hiddens, 2 * H, bias=False)
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)
-        self.W_out = nn.Linear(H, num_hiddens)
+        self.W_out = nn.Linear(H, num_hiddens, bias=False)
+        d2l.init_lecun(self)
+        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -2117,40 +2155,61 @@ def decay_mask(log_a):
     return torch.exp(log_L.masked_fill(~causal, -torch.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
+    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
+    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
-    log_a = log_a.reshape(B, T // m, m)
-    # 1. Within chunks: the dual form on every chunk at once
-    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    if log_a.dim() == 2:  # The same decay for every key coordinate
+        log_a = log_a.unsqueeze(-1)
+    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
+    # 1. Within chunks: the dual form, with one mask per key coordinate
+    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
+    Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(-1)
-    writes = (V * torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
-              ).mT @ K
-    S = d2l.linear_scan(torch.exp(cum[..., -1:, None]), writes)
+    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
+    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
     S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
     # 3. Every step reads the state at its chunk's start, decayed to it
-    Y = Y + torch.exp(cum).unsqueeze(-1) * (Q @ S.mT)
-    return Y.reshape(B, T, -1)
+    return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nn.Module):
-    """Multi-head linear attention whose memory decays by an input gate.
+    """Multi-head linear attention with a gated decay per key coordinate.
 
     Defined in :numref:`sec_matrix-state`"""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64):
+    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4):
         super().__init__()
+        d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
-        self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=False)
-        self.W_a = nn.Linear(num_hiddens, num_heads)  # Decay gate
-        tau = torch.logspace(math.log10(4), math.log10(256), num_heads)
-        with torch.no_grad():  # Initial decays 1 - 1/tau
-            self.W_a.bias.copy_(torch.log(tau - 1))
-        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=False)
+        self.W_qkv = nn.Linear(d, 3 * d, bias=False)
+        self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
+                              padding=conv_width - 1)  # One filter per channel
+        self.W_a = self.decay_gate(d)
+        self.W_g = nn.Linear(d, d)  # Output gate
+        self.W_o = nn.Linear(d, d, bias=False)
+        d2l.init_lecun(self)
+        self.init_decays(4, 256)
+
+    def decay_gate(self, d, rank=16):
+        """Low-rank projection to one gate per key coordinate."""
+        return nn.Sequential(nn.Linear(d, rank, bias=False), nn.Linear(rank, d))
+
+    def init_decays(self, tau_min, tau_max):
+        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a[-1].bias
+        tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
+        with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
+            b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
+
+    def decays(self, X):
+        """Log decays, (batch_size * num_heads, T, d_k)."""
+        return self.split_heads(F.logsigmoid(self.W_a(X)) / self.gate_scale)
 
     def split_heads(self, Z):
         """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
@@ -2163,13 +2222,13 @@ class GatedLinearAttention(nn.Module):
 
     def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
         B, T, d = X.shape
-        Q, K, V = (self.split_heads(Z) for Z in self.W_qkv(X).chunk(3, -1))
+        QKV = self.conv(self.W_qkv(X).mT)[..., :T].mT  # Causal: drop the tail
+        Q, K, V = (self.split_heads(Z) for Z in F.silu(QKV).chunk(3, -1))
         Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)  # Unit length
-        log_a = self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
-        Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
-        Y = F.rms_norm(Y, Y.shape[-1:])
+        Y = self.memory(X, Q, K, V, self.decays(X))  # (B * num_heads, T, d / h)
+        Y = F.rms_norm(Y, Y.shape[-1:], eps=1e-6)
         Y = Y.reshape(B, self.num_heads, T, -1).transpose(1, 2).reshape(B, T, d)
-        return self.W_o(Y)
+        return self.W_o(Y * F.silu(self.W_g(X)))
 
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
@@ -2198,23 +2257,38 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    S, outputs = Q.new_zeros(B, V.shape[-1], K.shape[-1]), []
-    for c in range(T // m):
-        U = W[:, c] - Z[:, c] @ S.mT  # Corrected values
-        read_past = torch.exp(cum[:, c]).unsqueeze(-1) * (Q[:, c] @ S.mT)
-        outputs.append(read_past + (L[:, c] * (Q[:, c] @ K[:, c].mT)) @ U)
-        to_end = torch.exp(cum[:, c, -1:] - cum[:, c]).unsqueeze(-1)
-        S = (torch.exp(cum[:, c, -1, None, None]) * S
-             + (U * to_end).mT @ K[:, c])
-    return torch.stack(outputs, 1).reshape(B, T, -1)
+    # Each chunk maps the memory at its start to S A + W_end at its end
+    to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
+    I = torch.eye(K.shape[-1], device=K.device)
+    A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
+    S, W_end = A, (W * to_end).mT @ K
+    s = 1
+    while s < T // m:  # A scan over chunks, with matrix products
+        S, W_end = (torch.cat([S[:, :s], S[:, :-s] @ S[:, s:]], 1),
+                    torch.cat([W_end[:, :s], W_end[:, :-s] @ S[:, s:]
+                               + W_end[:, s:]], 1))
+        s *= 2
+    S = torch.cat([torch.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
+    U = W - Z @ S.mT  # Corrected values, with the memory at each start
+    Y = torch.exp(cum).unsqueeze(-1) * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
+    return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention whose memory is written by the delta rule.
+    """Gated linear attention with one decay per head, whose memory is
 
     Defined in :numref:`sec_deltanet`"""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64):
-        super().__init__(num_hiddens, num_heads, chunk_size)
+    gate_scale = 1
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
+        d2l.init_lecun(self.W_beta)
+
+    def decay_gate(self, d):
+        return nn.Sequential(nn.Linear(d, self.num_heads))  # One per head
+
+    def decays(self, X):  # (batch_size * num_heads, T)
+        return self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)

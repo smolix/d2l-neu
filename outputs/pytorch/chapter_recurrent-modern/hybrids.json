@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1700d9596d18c59ca778a3eb25063b5b67dae615a72006392e1a4b2bf21c92a8",
+    "d2l_lib_fingerprint": "sha256:2ccf43adba0fd19f153a85a80cb7f9280cf149c41b9036a1d7cc9b0592535981",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,61 +14,65 @@
       "outputs": []
     },
     "hybrids-associative-recall-1": {
-      "code_fingerprint": "sha256:e1b57dad1650a9660ea676586e0d0f139d3773949eab3b61d64b4482f21624fc",
+      "code_fingerprint": "sha256:48a6a262c6e00ab21f212c25efa371b246055d88ca59769807df2770815e244f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [206  68 350 234] ... [1053 1051 1060 1043]  answers: [10 14 14  4]\n"
+          "text": "tokens: [471   3 401   3 402   2 461   0] ... [402 401 461 471]  answers: [2 3 0 3]\n"
         }
       ]
     },
     "hybrids-four-models-1": {
-      "code_fingerprint": "sha256:9aa3e832c93edad44e168540eafec580b8957f14ef44f14758968a687e48452d",
+      "code_fingerprint": "sha256:b52d9f653e4cfb6c97f34830efc91e84d6a191ad8a34936f0c85a4e3b4e5f4a3",
       "kind": "text",
       "outputs": []
     },
     "hybrids-four-models-2": {
-      "code_fingerprint": "sha256:8ab1366aeabcd3ac7f62b9fa6575014c980bdaa44bd4edfe63e641280c1a63f3",
+      "code_fingerprint": "sha256:55d494d8ede92b779fdcc61feaa604373821441c374d860e3d96ac76fe05f7f2",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:5b5a2cf13288062a6d96a82f6c79e2d9e551e2ff45701dafa2cb5b4d62ec9965",
+      "code_fingerprint": "sha256:4b5fb119834bb50c5bf320705fee7d01299e15f3ac9e76facac22392b3f10ac3",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:f4e6122d65cf63137944257c5ae14184ae7a301754cbfc068c4334c9d3a76c92",
+      "code_fingerprint": "sha256:870731e2a84e81144f315eb1b43f7c74b0305e7634077460c72283f3ab400ec1",
       "kind": "text",
       "outputs": []
     },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:202483c92be2397ff48914e7831cf80a9b328ab2f977b47fdd9b01221626ad04",
+      "code_fingerprint": "sha256:1aa834106a9fcad2df1b2e561d90a64f4cccc39fdbac11df4e7311b1ce1deb12",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention   0.99 0.97 0.91 0.79\nGated DeltaNet           1.00 1.00 0.99 0.97\nattention                1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.93 0.79 0.58 0.41\nGated DeltaNet           1.00 1.00 0.98 0.90 0.72\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<matplotlib.legend.Legend at 0x7a52d2dae240>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 34012,
-          "sha256": "sha256:37d40b666ba4150d58f20e4b7c50b61db8f73e03d547997abbf19ccdf8bc5a1e"
+          "bytes": 33553,
+          "sha256": "sha256:e25a4bc2867ba88cbfab609c39ad3ec49d27db3589db9769ea22e1251516d120"
         }
       ]
     },
     "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:dae0b1214cddae279c8c3599c35b5c6f81f1d84ca41949fabfdd4898b6e7e4b0",
+      "code_fingerprint": "sha256:8bcf88c6ada2ce0fe1b90d71b918f780a8c1f49e6c34431311a5fc6a637f6d6b",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:32bc5b761b186ba3bf569aa3872fda18e3f8a5698e8a7817da42b2a554264140",
+      "code_fingerprint": "sha256:c266585c1d420deeb4b8f885630b1a3a1eb1b866e3154b28a62f8af6a2983f99",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.29\n"
+          "text": "hybrid               perplexity 3.17\n"
         }
       ]
     }

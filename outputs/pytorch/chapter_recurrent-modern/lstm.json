@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max difference: 8.9e-08\n"
+          "text": "max difference: 6.0e-08\n"
         }
       ]
     },
@@ -46,22 +46,22 @@
       ]
     },
     "lstm-delayed-recall-2": {
-      "code_fingerprint": "sha256:d6a5781e3541c0557cd1738bbaf29825c8c012e129835729f65714748d86720b",
+      "code_fingerprint": "sha256:bac948f81fcf5c7efc147470302a578025338e40fc27897c2c4e471a8e350a5f",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-3": {
-      "code_fingerprint": "sha256:38aa049678624118bb687f365610f157a46285f74429062d0c121463219852e4",
+      "code_fingerprint": "sha256:13d9c893bb39e1fdfeacf65a13c08c22c040c820610b1aa2ab348ec01eaf6a76",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-4": {
-      "code_fingerprint": "sha256:96b1546c50011392211a1726101ce94abc95c1012037b944acff15d3525ccb96",
+      "code_fingerprint": "sha256:6c3fbb5f450b89181f852313427af7d38720990f601e75ce2461c0678da522e1",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-5": {
-      "code_fingerprint": "sha256:95a84905694a6161017438b8079ebbba2dfb4cf1e6b384d79efabb439bc926bc",
+      "code_fingerprint": "sha256:dbc4d15837e057ec954d5c50b2da0ad514374ce39522b6dbf06feb14f5040aaf",
       "kind": "text",
       "outputs": [
         {
@@ -72,12 +72,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  0.50  1.00  0.51  0.12  0.12\n"
+          "text": "RNN               1.00  1.00  1.00  1.00  0.12  0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.13  0.12  0.12  0.12\n"
+          "text": "LSTM              1.00  1.00  0.75  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -97,17 +97,17 @@
       ]
     },
     "lstm-deep-recurrent-networks-1": {
-      "code_fingerprint": "sha256:a5b30ece17dde38bbde174f05dcf48a5db5e30ca6032a66c5b24619a2fc5d15d",
+      "code_fingerprint": "sha256:558e1cc00e65fc844a613dd5c51ddb3e46de898f97e32fa997ebc4636598d044",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-1": {
-      "code_fingerprint": "sha256:45aa6d14d69c2718df01de3b3fd2196bef0183dad88c7f6e92813c6b493eb7d4",
+      "code_fingerprint": "sha256:3ad6be349dbf923a38854fd858a3d9fdda58d240bd37799aeb7f40206124b6f1",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-2": {
-      "code_fingerprint": "sha256:3c59feccb174ff209c0fa37fd47d51b4497fbaaffe55d3a85c3788753de51fc7",
+      "code_fingerprint": "sha256:32d912bc46ed50a0f6ad6dbae53eebc15aa4e8c66b6aca0cfac2ad3878309086",
       "kind": "text",
       "outputs": [
         {
@@ -118,28 +118,28 @@
       ]
     },
     "lstm-character-level-language-modeling-3": {
-      "code_fingerprint": "sha256:0ea798180424252d6bb9613c6324558f06a8d7b5a05bc90af18bfa81f08709f4",
+      "code_fingerprint": "sha256:5c74259645ee32fe36905ba0981b7fdcc65ca35463c811b81c75ab6c649d487f",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:1caee1d8b3d468f941d1d07b8b5b49bff0ccebd8c49c0865f297fb6e0ebc37af",
+      "code_fingerprint": "sha256:4f6c03354042a3187c9481351f2a80a631a98d5938df84adf0a2fd4b5b33c578",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:fe14bff3e6565a97e47824361bed94582b9222e5dde4541012b11935b051a089",
+      "code_fingerprint": "sha256:0d1787991af9d081d76eb133edf7e6adad1b6a084ba3ed9f9f5f262e54d04b7e",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:00b23e3ed28cbb2d8da5b06325bf22469810a333f96d6a5ef083ff21a83720bd",
+      "code_fingerprint": "sha256:6211948ebf1fbee7c22584750675fc0385c46fa3959cda62a674fe48f0686b10",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.11\nLSTM    542,003 parameters   perplexity 2.94\nGRU     475,955 parameters   perplexity 2.97\n"
+          "text": "RNN     343,859 parameters   perplexity 3.14\nLSTM    542,003 parameters   perplexity 2.96\nGRU     475,955 parameters   perplexity 2.99\n"
         }
       ]
     }

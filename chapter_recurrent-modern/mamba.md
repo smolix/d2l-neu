@@ -597,6 +597,7 @@ with torch.inference_mode():
     U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
     c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
 windows = (positions[:, None] + torch.arange(4, device=device)).flatten()
+windows = windows.unique()  # Windows of nearby symbols may overlap
 windows = windows[windows < X.shape[1]]  # A window may reach past the end
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
@@ -618,7 +619,7 @@ log_a = jnp.broadcast_to(jnp.log(a_bar), (*E.shape, a_bar.shape[-1]))
 c_s4d = state_contributions(log_a, b_bar * E[..., None])[0]
 U, _ = mamba.mixers[0].ssm_input(mamba.norms[0](mamba.embedding(X)))
 c_mamba = state_contributions(*mamba.mixers[0].ssm.coefficients(U))[0]
-windows = (positions[:, None] + jnp.arange(4)).flatten()
+windows = jnp.unique((positions[:, None] + jnp.arange(4)).flatten())  # Once
 windows = windows[windows < X.shape[1]]  # A window may reach past the end
 for name, c in [('S4D', c_s4d), ('Mamba', c_mamba)]:
     print(f'{name:6s} share from the symbols: {c[windows].sum() / c.sum():.2f}')
@@ -629,14 +630,16 @@ d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in (c_s4d, c_mamba)],
 
 For S4D, the contributions rise smoothly toward the query: the most recent
 inputs dominate, whatever they are, and a symbol 800 steps back contributes
-no more than the fillers next to it. For Mamba, the contributions spike at
-the four symbols, some three to four orders of magnitude above the fillers
-around them, wherever the symbols sit. Half to four fifths of Mamba's state
-comes from the windows of four positions that start at the symbols, which
-cover less than 2% of the sequence; much of the rest comes from the last
-few positions before the query. For S4D the same windows supply at most
-2%. The selective SSM writes the
-symbols and lets the fillers pass.
+no more than the fillers next to it. The windows at the symbols supply no
+more of the state than their 2% of the positions. For Mamba, the
+contributions spike at the four symbols, far above the fillers around them,
+wherever the symbols sit, and the windows supply many times their share of
+the positions: the selective SSM writes the symbols and lets the fillers
+pass. The task does not determine how much of the state they supply. Runs
+that copy equally well find different solutions, some reserving nearly the
+whole state for the symbols, others leaving a sizable part of it to the
+last few positions before the query, so the printed share changes from run
+to run.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -692,10 +695,11 @@ the step size acts as the gate of a gated recurrent network, while the state
 keeps $N$ numbers per channel and starts with the multi-timescale
 initialization of S4D. Mamba solves selective copying over a thousand filler
 tokens, which the minGRU nearly solves and S4D does not. In the trained
-model, half or more of the state at the query comes from the few positions
-after each symbol. The selective model can no longer be computed as a convolution,
-but its update is still affine in the state, so a scan trains it, and the
-gradient of the scan is a second scan, run backward. The Mamba layer wraps
+model, the few positions after each symbol supply a part of the state at
+the query many times larger than their share of the positions. The
+selective model can no longer be computed as a convolution, but its update
+is still affine in the state, so a scan trains it, and the gradient of the
+scan is a second scan, run backward. The Mamba layer wraps
 the selective SSM in projections, a short convolution, and a gate, and it is
 a strong language model at this scale.
 

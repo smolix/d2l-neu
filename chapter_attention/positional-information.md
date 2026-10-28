@@ -259,7 +259,7 @@ we will use to test the invariance:
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab pytorch
-def rope(x, offset=0):
+def rope(x, offset=0):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
     d = x.shape[-1]
     pos = torch.arange(x.shape[-2], dtype=torch.float32,
@@ -274,7 +274,7 @@ def rope(x, offset=0):
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab jax
-def rope(x, offset=0):
+def rope(x, offset=0):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
     d = x.shape[-1]
     pos = jnp.arange(x.shape[-2], dtype=jnp.float32) + offset

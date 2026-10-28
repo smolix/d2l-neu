@@ -38,6 +38,7 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import numpy as np
+import random
 ```
 
 ## Additive Writes
@@ -300,12 +301,18 @@ def delta_rule_writes(K, V, beta, log_a):  #@save
     return W, Z
 ```
 
-The second passes the memory from chunk to chunk. In each chunk it forms the
-corrected values from the incoming memory, computes the outputs, which read
-the incoming memory and the chunk's own writes, and computes the memory at
-the chunk's end, exactly as the chunked computation of
-:numref:`sec_matrix-state` does with the values $\mathbf{U}$ in place of
-$\mathbf{V}$.
+The second passes the memory from chunk to chunk. Because the corrected
+values $\mathbf{U} = \mathbf{W} - \mathbf{Z}\mathbf{S}_0^\top$ are affine
+in the incoming memory, so is the memory at the chunk's end:
+$\mathbf{S}_0\mathbf{A} + \mathbf{W}_\textrm{end}$, where the $d_k \times
+d_k$ matrix $\mathbf{A}$ is the decay of the chunk minus what its
+corrections remove, and $\mathbf{W}_\textrm{end}$ collects the chunk's own
+writes. Affine maps compose like the steps of the linear recurrences of
+:numref:`sec_ssm`, with matrix products in place of elementwise ones, so a
+scan over the chunks gives the memory at the start of every chunk. From
+these, the corrected values and the outputs of all chunks follow at once,
+as in the chunked computation of :numref:`sec_matrix-state` with the values
+$\mathbf{U}$ in place of $\mathbf{V}$.
 
 ```{.python .input #deltanet-chunked-computation-2}
 %%tab pytorch
@@ -320,15 +327,21 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    S, outputs = Q.new_zeros(B, V.shape[-1], K.shape[-1]), []
-    for c in range(T // m):
-        U = W[:, c] - Z[:, c] @ S.mT  # Corrected values
-        read_past = torch.exp(cum[:, c]).unsqueeze(-1) * (Q[:, c] @ S.mT)
-        outputs.append(read_past + (L[:, c] * (Q[:, c] @ K[:, c].mT)) @ U)
-        to_end = torch.exp(cum[:, c, -1:] - cum[:, c]).unsqueeze(-1)
-        S = (torch.exp(cum[:, c, -1, None, None]) * S
-             + (U * to_end).mT @ K[:, c])
-    return torch.stack(outputs, 1).reshape(B, T, -1)
+    # Each chunk maps the memory at its start to S A + W_end at its end
+    to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
+    I = torch.eye(K.shape[-1], device=K.device)
+    A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
+    S, W_end = A, (W * to_end).mT @ K
+    s = 1
+    while s < T // m:  # A scan over chunks, with matrix products
+        S, W_end = (torch.cat([S[:, :s], S[:, :-s] @ S[:, s:]], 1),
+                    torch.cat([W_end[:, :s], W_end[:, :-s] @ S[:, s:]
+                               + W_end[:, s:]], 1))
+        s *= 2
+    S = torch.cat([torch.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
+    U = W - Z @ S.mT  # Corrected values, with the memory at each start
+    Y = torch.exp(cum).unsqueeze(-1) * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
+    return Y.reshape(B, T, -1)
 ```
 
 ```{.python .input #deltanet-chunked-computation-2}
@@ -344,18 +357,19 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    def chunk(S, c):  # c: one chunk of every sequence
-        Q_c, K_c, W_c, Z_c, L_c, cum_c = c
-        U = W_c - Z_c @ S.mT  # Corrected values
-        read_past = jnp.exp(cum_c)[..., None] * (Q_c @ S.mT)
-        O = read_past + (L_c * (Q_c @ K_c.mT)) @ U
-        to_end = jnp.exp(cum_c[:, -1:] - cum_c)[..., None]
-        S = (jnp.exp(cum_c[:, -1, None, None]) * S
-             + (U * to_end).mT @ K_c)
-        return S, O
-    S = jnp.zeros((B, V.shape[-1], K.shape[-1]))
-    chunks = tuple(X.swapaxes(0, 1) for X in (Q, K, W, Z, L, cum))
-    return jax.lax.scan(chunk, S, chunks)[1].swapaxes(0, 1).reshape(B, T, -1)
+    # Each chunk maps the memory at its start to S A + W_end at its end
+    to_end = jnp.exp(cum[..., -1:] - cum)[..., None]
+    I = jnp.eye(K.shape[-1])
+    A = jnp.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
+    def combine(earlier, later):  # A scan over chunks, with matrix products
+        (A1, W1), (A2, W2) = earlier, later
+        return A1 @ A2, W1 @ A2 + W2
+    W_end = jax.lax.associative_scan(combine, (A, (W * to_end).mT @ K),
+                                     axis=1)[1]
+    S = jnp.concatenate([jnp.zeros_like(W_end[:, :1]), W_end[:, :-1]], 1)
+    U = W - Z @ S.mT  # Corrected values, with the memory at each start
+    Y = jnp.exp(cum)[..., None] * (Q @ S.mT) + (L * (Q @ K.mT)) @ U
+    return Y.reshape(B, T, -1)
 ```
 
 
@@ -423,18 +437,33 @@ A Gated DeltaNet layer is the gated linear attention layer of
 :numref:`sec_matrix-state` with a different memory. It adds one projection,
 which computes a write strength $\beta_t = \sigma(\mathbf{w}^\top
 \mathbf{x}_t + b)$ for every head, and replaces the method `memory` by the
-chunked delta rule. Queries, keys, values, decays, output normalization, and
-the initialization of the decays stay as they were, so that comparing the
-two layers compares their write rules.
+chunked delta rule. Its decay is one number per head, $a_t =
+\sigma(\mathbf{w}_a^\top \mathbf{x}_t + b_a)$, as in
+:citet:`Yang.Kautz.Hatamizadeh.2024`, because the chunked delta rule above
+takes one decay per step; the method `decays` changes accordingly, and its
+biases start the heads with memories of 4 to 256 steps. The short
+convolution, the unit queries and keys, and the output norm and gate stay
+as they were. Unit keys matter more here than before: without them, the
+eigenvalue $1 - \beta_t\|\mathbf{k}_t\|^2$ of the transition can fall
+below $-1$, and the memory can grow without bound.
 
 ```{.python .input #deltanet-the-layer}
 %%tab pytorch
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
-    """Gated linear attention whose memory is written by the delta rule."""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64):
-        super().__init__(num_hiddens, num_heads, chunk_size)
+    """Gated linear attention with one decay per head, whose memory is
+    written by the delta rule."""
+    gate_scale = 1
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
+
+    def decay_gate(self, d):
+        return nn.Sequential(nn.Linear(d, self.num_heads))  # One per head
+
+    def decays(self, X):
+        return super().decays(X).squeeze(-1)  # (batch_size * num_heads, T)
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(torch.sigmoid(self.W_beta(X))).squeeze(-1)
@@ -444,10 +473,21 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
 ```{.python .input #deltanet-the-layer}
 %%tab jax
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
-    """Gated linear attention whose memory is written by the delta rule."""
-    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
-        super().__init__(num_hiddens, num_heads, chunk_size, rngs=rngs)
+    """Gated linear attention with one decay per head, whose memory is
+    written by the delta rule."""
+    gate_scale = 1
+
+    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
+                 *, rngs):
+        super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
+                         rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
+
+    def decay_gate(self, d, rngs):
+        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
+
+    def decays(self, X):
+        return super().decays(X)[..., 0]  # (batch_size * num_heads, T)
 
     def memory(self, X, Q, K, V, log_a):
         beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]
@@ -457,7 +497,7 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
 We train it as the mixer of `d2l.SeqLM` with the recipe of the chapter:
 character-level Penn Treebank, two blocks of width 128 with four heads, and
 `d2l.fit_lm`. The gated linear attention layer reached a perplexity of
-about 3.25 with the same recipe.
+about 3.1 with the same recipe.
 
 ```{.python .input #deltanet-language-modeling-1}
 %%tab pytorch, jax
@@ -466,7 +506,6 @@ data = d2l.PennTreebank(batch_size=64, num_steps=128)
 
 ```{.python .input #deltanet-language-modeling-2}
 %%tab pytorch
-torch.manual_seed(0)
 model = d2l.SeqLM(len(data.vocab), 128,
                   [GatedDeltaNet(128, num_heads=4) for _ in range(2)])
 print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
@@ -474,15 +513,15 @@ print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
 
 ```{.python .input #deltanet-language-modeling-2}
 %%tab jax
-rngs = nnx.Rngs(0)
+rngs = nnx.Rngs(random.getrandbits(32))
 model = d2l.SeqLM(len(data.vocab), 128, [GatedDeltaNet(
     128, num_heads=4, rngs=rngs) for _ in range(2)], rngs=rngs)
 print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-Gated DeltaNet reaches a perplexity of about 3.25, the same as gated linear
-attention. On this task the write rule
-matters little: most predictions depend on the last few characters, and
+Gated DeltaNet reaches a perplexity of about 3.1, the same as gated linear
+attention; without the short convolution, the SiLU, and the output gate it
+reaches only 3.2 to 3.25. On this task the write rule matters little: most predictions depend on the last few characters, and
 few keys need to be rebound within a window of 128 characters. The
 difference shows where a task requires it, in the overwrite measurement
 above and in the recall experiments of the next section.
@@ -706,7 +745,7 @@ The memory has room for every key; it cannot **replace** a value.
 - place every memory of the chapter in one regression table.
 
 **Running example:** the overwrite test above; the Penn Treebank
-results (gated linear attention 3.25).
+results (gated linear attention 3.1).
 :::
 
 ::: {.slide title="Write the Error, Not the Value"}
@@ -769,7 +808,7 @@ $$\mathbf{S}_t = a_t\,\mathbf{S}_{t-1}(\mathbf{I} - \beta_t\mathbf{k}_t\mathbf{k
 - $a_t$ near 0: a new topic, clear everything.
 - $\beta_t$ near 1: rebind one key.
 - In code: gated linear attention with one more projection, for $\beta_t$,
-  and a different `memory` method.
+  one decay per head, and a different `memory` method.
 :::
 
 ::: {.slide title="Chunks Need One Triangular Solve"}
@@ -778,8 +817,10 @@ corrected value $\mathbf{u}_t = \beta_t(\mathbf{v}_t - a_t\mathbf{S}_{t-1}\mathb
 
 $$\mathbf{u}_t + \beta_t\sum_{s<t} L_{ts}(\mathbf{k}_s^\top\mathbf{k}_t)\,\mathbf{u}_s = \beta_t(\mathbf{v}_t - \gamma_t\mathbf{S}_0\mathbf{k}_t)$$
 
-Lower triangular in the $\mathbf{u}_t$: solve once per chunk, then use the
-chunked algorithm of linear attention with $\mathbf{U}$ for $\mathbf{V}$.
+Lower triangular in the $\mathbf{u}_t$: solve once per chunk. The memory at
+a chunk's end is affine in that at its start, $\mathbf{S}_0\mathbf{A} +
+\mathbf{W}_\textrm{end}$: a scan with matrix products passes it across
+chunks.
 
 @!deltanet-chunked-computation-3
 :::
@@ -787,7 +828,7 @@ chunked algorithm of linear attention with $\mathbf{U}$ for $\mathbf{V}$.
 ::: {.slide title="On Text, the Write Rule Matters Little"}
 @!deltanet-language-modeling-2
 
-- Gated linear attention: about 3.25 with the same recipe.
+- Gated linear attention: about 3.1 with the same recipe.
 - Few keys need rebinding within 128 characters; the overwrite test and the
   recall tasks of the next deck show the difference.
 :::

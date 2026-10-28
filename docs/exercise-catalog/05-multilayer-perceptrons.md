@@ -118,7 +118,7 @@ and 9 lack a checkable deliverable, so only those two are rewritten.
 
 ---
 
-## chapter_multilayer-perceptrons/mlp-implementation.md — Implementation of Multilayer Perceptrons
+## chapter_multilayer-perceptrons/mlp-implementation.md — Implementation
 
 **Topic:** Building the same one-hidden-layer Fashion-MNIST MLP from scratch
 and via framework layers, then probing its hyperparameter sensitivity as a

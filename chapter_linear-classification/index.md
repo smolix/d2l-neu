@@ -119,9 +119,9 @@ cost, and be checked against the data it will meet.
 | section | question | adds |
 |---|---|---|
 | Softmax Regression | how does a linear model output class probabilities? | probabilities over classes, cross-entropy |
-| The Image Classification Dataset | which data tell models apart quickly? | Fashion-MNIST in minibatches |
+| Image Classification Data | which data tell models apart quickly? | Fashion-MNIST in minibatches |
 | Measuring Classifiers | what does accuracy hide? | accuracy, costs, calibration, the `Classifier` class |
-| Implementation from Scratch | what does each part look like by hand? | softmax regression by hand |
+| Softmax Regression from Scratch | what does each part look like by hand? | softmax regression by hand |
 | Concise Implementation | how does a framework avoid overflow? | framework layers, a stable loss |
 | Generalization in Classification | how far can we trust a test score? | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | what if deployment data differ? | correcting for shifted data |
@@ -133,9 +133,9 @@ cost, and be checked against the data it will meet.
 | section | running example |
 |---|---|
 | Softmax Regression | a 2×2 image; logits (1.0, 2.2, 0.3) for cat, chicken, dog give probabilities (0.21, 0.69, 0.10) |
-| The Image Classification Dataset | Fashion-MNIST: 60,000 training and 10,000 validation images, 28×28, 10 classes |
+| Image Classification Data | Fashion-MNIST: 60,000 training and 10,000 validation images, 28×28, 10 classes |
 | Measuring Classifiers | a disease 1% have: "always healthy" 99% accurate, a screening test 95% |
-| Implementation from Scratch | 7,850 parameters; about 83% after ten epochs; shirts are confused most |
+| Softmax Regression from Scratch | 7,850 parameters; about 83% after ten epochs; shirts are confused most |
 | Concise Implementation | the same model with a fused loss; confidence matches accuracy within about 2 points |
 | Generalization in Classification | error 0.15 on 10,000 images: ±0.7 points; the best of 10,000 coin flips scores 0.56 |
 | Environment and Distribution Shift | source data shifted by 2 at deployment: 40–65% unweighted, about 95% reweighted |

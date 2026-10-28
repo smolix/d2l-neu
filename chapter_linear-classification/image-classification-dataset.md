@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# The Image Classification Dataset
+# Image Classification Data
 :label:`sec_fashion_mnist`
 
 To develop and compare classifiers we need labeled images, and the choice of
@@ -534,7 +534,7 @@ training on it.
 ::: {.cover}
 [Dive into Deep Learning · §3.2]{.kicker}
 
-The Image Classification Dataset<br>**Fashion-MNIST · minibatches · a look at the images**
+Image Classification Data<br>**Fashion-MNIST · minibatches · a look at the images**
 :::
 :::
 
@@ -575,9 +575,9 @@ of 64 images of $28 \times 28$ pixels, 32-bit floats.
 | section | adds |
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
-| **The Image Classification Dataset** | **Fashion-MNIST in minibatches** |
+| **Image Classification Data** | **Fashion-MNIST in minibatches** |
 | Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Implementation from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand |
 | Concise Implementation | framework layers, a stable loss |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |

@@ -116,7 +116,7 @@
 
 ---
 
-## chapter_recurrent-neural-networks/rnn-implementation.md — Implementing RNN Language Models
+## chapter_recurrent-neural-networks/rnn-implementation.md — Implementing RNNs
 
 **Topic:** An RNN language model built from raw tensor ops (embedding, recurrence, output head) on *The Time Machine* over a 1,024-token BPE vocabulary, then gradient clipping, training, text generation with temperature, and a concise framework-layer version.
 **Current exercises:** 9; disposition: keep 9 (regrouped), rewrite 0, drop 0 — the prior review called this "the longest exercise list in the chapter... all uniformly bare/untagged/unnamed" yet flagged zero clarity defects (every item names a specific hyperparameter, dataset, or metric). Nothing here needs cutting; below we regroup two closely related pairs under nested sub-items to fit the catalog's 5–8-problem format without losing any content.

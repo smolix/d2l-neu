@@ -116,7 +116,7 @@ enough to analyze them.
 |---|---|---|
 | Linear Regression | how does a linear model predict, and how do we fit it? | model, loss, closed form, minibatch SGD |
 | Object-Oriented Design | how do we organize model, data, and training once? | `Module`, `DataModule`, `Trainer` |
-| Synthetic Regression Data | how do we test training when we know the answer? | data with known $\mathbf{w}^*, b^*$ |
+| Synthetic Data | how do we test training when we know the answer? | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | what does each part look like when we write it? | SGD and the training loop by hand |
 | Concise Implementation | which framework parts replace ours? | framework layers and losses |
 | Generalization | when does a good fit predict new data well? | training vs. test error |
@@ -130,7 +130,7 @@ enough to analyze them.
 |---|---|
 | Linear Regression | a 150 m² house, predicted at 480,000 dollars; the three-point line (inputs 0, 1, 2; labels 1, 1, 0) |
 | Object-Oriented Design | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$ in `Module`, `DataModule`, `Trainer` |
-| Synthetic Regression Data | the same $\mathbf{w}^*, b^*$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
+| Synthetic Data | the same $\mathbf{w}^*, b^*$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
 | Implementation from Scratch | minibatches of 32; loss floor $\sigma^2/2 = 5 \times 10^{-5}$ |
 | Concise Implementation | the same data and model, from framework layers |
 | Generalization | 20 noisy samples of a cubic; polynomials of degree 1 to 19 |

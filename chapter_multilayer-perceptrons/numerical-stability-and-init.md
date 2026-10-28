@@ -784,7 +784,7 @@ hidden layers; minibatches of 256.
 | section | adds |
 |---|---|
 | Multilayer Perceptrons | hidden layers, activation functions, universal approximation |
-| Implementation of Multilayer Perceptrons | an MLP trained on Fashion-MNIST |
+| Implementation | an MLP trained on Fashion-MNIST |
 | Backpropagation | how the gradients are computed, and at what memory cost |
 | **Numerical Stability and Initialization** | **vanishing gradients, Xavier and He initialization** |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |

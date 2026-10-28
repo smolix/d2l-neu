@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Number Formats and Mixed Precision
+# Numerical Formats
 :label:`sec_numerics`
 
 A model with 8 billion parameters needs 32 GB to store its weights in the
@@ -1432,7 +1432,7 @@ dtype, `dtype`; mixed precision sets `dtype=jnp.bfloat16` and leaves
 ::: {.cover}
 [Dive into Deep Learning · §5.5]{.kicker}
 
-Number Formats and Mixed Precision<br>**range and precision · rounding of updates · master weights · loss scaling**
+Numerical Formats<br>**range and precision · rounding of updates · master weights · loss scaling**
 :::
 :::
 
@@ -1474,7 +1474,7 @@ Fashion-MNIST MLP (784–256–10, 203,530 parameters).
 | Parameters, State, and Memory | parameters, buffers, bytes per parameter |
 | Initialization | library defaults, custom initializers, residual depth |
 | Custom Layers and Functions | new layers, state, and custom gradients |
-| **Number Formats and Mixed Precision** | **dtypes, mixed precision, loss scaling** |
+| **Numerical Formats** | **dtypes, mixed precision, loss scaling** |
 | Saving, Loading, and Pretrained Weights | safe files, checkpoints, pretrained weights |
 | GPUs, Devices, and Memory | placement, asynchrony, training memory |
 | Reproducibility and Inspection | seeds, determinism, hooks |

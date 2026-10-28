@@ -182,7 +182,7 @@ book-specific.
 
 ---
 
-## chapter_linear-regression/synthetic-regression-data.md — Synthetic Regression Data
+## chapter_linear-regression/synthetic-regression-data.md — Synthetic Data
 
 **Topic:** Building a `SyntheticRegressionData` `DataModule` with known
 ground-truth $\mathbf{w}^*, b^*$, and comparing a hand-rolled minibatch loader
@@ -245,7 +245,7 @@ already better than anything we could add.
 
 ---
 
-## chapter_linear-regression/linear-regression-scratch.md — Linear Regression Implementation from Scratch
+## chapter_linear-regression/linear-regression-scratch.md — Implementation from Scratch
 
 **Topic:** Implementing linear regression with only tensors and autograd —
 parameter init, forward pass, squared loss, a hand-rolled SGD class, and the
@@ -325,7 +325,7 @@ exercise 7, was flagged clean and should stay.
 
 ---
 
-## chapter_linear-regression/linear-regression-concise.md — Concise Implementation of Linear Regression
+## chapter_linear-regression/linear-regression-concise.md — Concise Implementation
 
 **Topic:** Rebuilding the same linear-regression model with framework layers,
 built-in losses, and a built-in `SGD` optimizer, replacing each hand-rolled

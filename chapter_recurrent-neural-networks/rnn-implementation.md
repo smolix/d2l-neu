@@ -1,4 +1,4 @@
-# Implementing RNN Language Models
+# Implementing RNNs
 :label:`sec_rnn-scratch`
 
 This section implements the RNN language model of :numref:`sec_rnn` first
@@ -1283,7 +1283,7 @@ meaningfully better speed.
 
 <!-- slides -->
 
-::: {.slide title="Implementing RNN Language Models"}
+::: {.slide title="Implementing RNNs"}
 An RNN language model on *The Time Machine*, over the 1,024-token
 BPE vocabulary, built twice: from raw tensor ops, then with the
 framework's recurrent layer. Four pieces:

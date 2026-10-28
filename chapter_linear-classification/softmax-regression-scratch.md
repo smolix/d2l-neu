@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Softmax Regression Implementation from Scratch
+# Softmax Regression from Scratch
 :label:`sec_softmax_scratch`
 
 Softmax regression differs from the linear regression of
@@ -700,9 +700,9 @@ images in minibatches of 256; $28 \times 28 = 784$ pixels, 10 classes.
 | section | adds |
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
-| The Image Classification Dataset | Fashion-MNIST in minibatches |
+| Image Classification Data | Fashion-MNIST in minibatches |
 | Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| **Implementation from Scratch** | **softmax regression by hand** |
+| **Softmax Regression from Scratch** | **softmax regression by hand** |
 | Concise Implementation | framework layers, a stable loss |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |

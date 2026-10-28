@@ -66,7 +66,7 @@ guidance.
 
 ---
 
-## chapter_linear-classification/image-classification-dataset.md — The Image Classification Dataset
+## chapter_linear-classification/image-classification-dataset.md — Image Classification Data
 
 **Topic:** Loading, batching, resizing, and benchmarking Fashion-MNIST across four framework backends; channel-first vs. channel-last tensor layout.
 **Current exercises:** 3; disposition: keep 3, rewrite 0, drop 0 — no defects found, and the three existing items are the section's only concrete, checkable engineering tasks.
@@ -129,7 +129,7 @@ guidance.
 
 ---
 
-## chapter_linear-classification/softmax-regression-scratch.md — Softmax Regression Implementation from Scratch
+## chapter_linear-classification/softmax-regression-scratch.md — Softmax Regression from Scratch
 
 **Topic:** Implementing softmax, cross-entropy, and the forward pass from raw tensor ops; training on Fashion-MNIST; reading a confusion matrix.
 **Current exercises:** 6; disposition: keep 4, rewrite 2 (drop 0) — ex. 3 ("is it always good to return the most likely label?") and ex. 4 (large-vocabulary softmax) were flagged as open discussion prompts lacking a deliverable; both get a concrete success criterion.
@@ -154,7 +154,7 @@ guidance.
 
 ---
 
-## chapter_linear-classification/softmax-regression-concise.md — Concise Implementation of Softmax Regression
+## chapter_linear-classification/softmax-regression-concise.md — Concise Implementation
 
 **Topic:** Framework-fused log-softmax + cross-entropy via the log-sum-exp trick; why the model must emit logits, not probabilities.
 **Current exercises:** 4; disposition: keep 3, rewrite 1 (drop 0) — ex. 1's numeric-format question was flagged as ambiguous about whether to answer once or per-format; the rewrite requires an explicit table.

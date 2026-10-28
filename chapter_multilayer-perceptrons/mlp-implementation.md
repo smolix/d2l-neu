@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Implementation of Multilayer Perceptrons
+# Implementation
 :label:`sec_mlp-implementation`
 
 Softmax regression scores each Fashion-MNIST class with a weighted sum of
@@ -689,7 +689,7 @@ regression and, on a GPU, about the same training time per epoch.
 ::: {.cover}
 [Dive into Deep Learning · §4.2]{.kicker}
 
-Implementation of Multilayer Perceptrons<br>**four parameter arrays · checks before training · framework layers · a comparison with softmax regression**
+Implementation<br>**four parameter arrays · checks before training · framework layers · a comparison with softmax regression**
 :::
 :::
 
@@ -740,7 +740,7 @@ against the MLP.
 | section | adds |
 |---|---|
 | Multilayer Perceptrons | hidden layers, activation functions, universal approximation |
-| **Implementation of Multilayer Perceptrons** | **an MLP trained on Fashion-MNIST** |
+| **Implementation** | **an MLP trained on Fashion-MNIST** |
 | Backpropagation | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |

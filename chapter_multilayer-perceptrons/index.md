@@ -142,7 +142,7 @@ example:** the Fashion-MNIST scoreboard on the next slide.
 | section | question | adds |
 |---|---|---|
 | Multilayer Perceptrons | which functions can hidden layers represent? | hidden layers, activation functions, universal approximation |
-| Implementation of Multilayer Perceptrons | what does an MLP cost and gain? | an MLP trained on Fashion-MNIST |
+| Implementation | what does an MLP cost and gain? | an MLP trained on Fashion-MNIST |
 | Backpropagation | how does one backward pass compute every gradient? | how the gradients are computed, and at what memory cost |
 | Numerical Stability and Initialization | why do gradients vanish or explode? | vanishing gradients, Xavier and He initialization |
 | Generalization in Deep Learning | why does a network that can memorize generalize? | memorization, double descent, implicit bias, early stopping |
@@ -156,7 +156,7 @@ example:** the Fashion-MNIST scoreboard on the next slide.
 | section | running example |
 |---|---|
 | Multilayer Perceptrons | XOR computed by two hidden units; at $z = 4$ the sigmoid's slope is 0.018, the ReLU's 1 |
-| Implementation of Multilayer Perceptrons | 203,530 parameters; about 87% against about 84% for softmax regression |
+| Implementation | 203,530 parameters; about 87% against about 84% for softmax regression |
 | Backpropagation | a minibatch of 256 stores 1.1 MB of activations next to 0.8 MB of weights |
 | Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$ |
 | Generalization in Deep Learning | 100% training accuracy on random labels, chance on test images |

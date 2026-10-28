@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:316a9d7553a9d6f754ef2545d677249e0bfbd6fdf3e905e0c3bd16786a1cf148"
+          "sha256": "sha256:2f30f5e120ab9efe3c50ece6152235aeca9b7f0d3ac0a880dda8bc202ac408c4"
         }
       ]
     },
@@ -58,18 +58,18 @@
       ]
     },
     "matrix-state-chunked-computation-1": {
-      "code_fingerprint": "sha256:0df01e973f914cfe18a84e43c01d04f1912cb498ac67d7d38456e8a7326b4eed",
+      "code_fingerprint": "sha256:faeba2c49cb75502db7789abfc6cc3b11880fbc321c15decb9c9b2edcca9cbc9",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-chunked-computation-2": {
-      "code_fingerprint": "sha256:905da81804c17bc5cbc8c1a4c114ddf3e34f633a99fb5cb204601e994db2e62d",
+      "code_fingerprint": "sha256:a802b10f062c4ee09077a4a154129080b0abb0a401658ce2f1fd53f885d1b098",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  16, decay per step: relative deviation 2.4e-07\n"
+          "text": "chunk size  16, decay per step: relative deviation 3.1e-07\n"
         },
         {
           "type": "stream",
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  64, decay per step: relative deviation 3.1e-07\n"
+          "text": "chunk size  64, decay per step: relative deviation 3.9e-07\n"
         },
         {
           "type": "stream",
@@ -99,59 +99,59 @@
       ]
     },
     "matrix-state-chunked-computation-3": {
-      "code_fingerprint": "sha256:67be489785e2f03212eb076007e78835a7ea533fa0b3312bb36075a55cb7e903",
+      "code_fingerprint": "sha256:7ff07790468ffe0b4669a8ef6078d00499a8e958ef46f5c341f5277c71127370",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence        49.82 ms\n"
+          "text": "recurrence        49.72 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dual               0.22 ms\n"
+          "text": "dual               0.64 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 16       0.13 ms\n"
+          "text": "chunks of 16       0.50 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 64       0.14 ms\n"
+          "text": "chunks of 64       0.45 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunks of 256      0.17 ms\n"
+          "text": "chunks of 256      0.49 ms\n"
         }
       ]
     },
     "matrix-state-the-layer-1": {
-      "code_fingerprint": "sha256:2e5d1bfd8f1f93bd472cfb1e1eb23f06e113e644d8ec540b0badedb24815a9fb",
+      "code_fingerprint": "sha256:6db290ef53677bd38cbfa70def392b5bfb4215e0ed21d4a9365cfe8371f940ea",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-the-layer-2": {
-      "code_fingerprint": "sha256:fee95f76add59d6361667b2f9950b99aab9b390d81b9b0a151541674b4daeedd",
+      "code_fingerprint": "sha256:cccaa9952f249f43de1a16f4ea3081c976e708b8debfdbe4057d99d99982edc7",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-1": {
-      "code_fingerprint": "sha256:48374f6a62e140a9ddc692b77eb457890fefb8765eed06b17a79ae0b57147db6",
+      "code_fingerprint": "sha256:461158072558d7005bfb840db53529cf716868f7626e9d883dd24fd2ffb51c9f",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-2": {
-      "code_fingerprint": "sha256:49226b3070517826a8225b0a73500cecb9608d50e967c35cb7bc95693e107006",
+      "code_fingerprint": "sha256:a3603c73a368d566bd3b38ba3a159d3f6112ce346e9d23c5494289570840a749",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.10\n"
+          "text": "gated linear attention perplexity: 3.09\n"
         }
       ]
     }

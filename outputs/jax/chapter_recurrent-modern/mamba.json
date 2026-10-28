@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0 6 0 0 4 0 0 0 2 0 0 9 1 1 1 1]\n [0 0 0 6 3 0 0 0 6 0 9 0 1 1 1 1]]\n[[6 4 2 9]\n [6 3 6 9]]\n"
+          "text": "[[0 0 2 0 0 0 7 0 6 0 9 0 1 1 1 1]\n [0 9 0 0 8 8 0 8 0 0 0 0 1 1 1 1]]\n[[2 7 6 9]\n [9 8 8 8]]\n"
         }
       ]
     },
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.98\n"
+          "text": "minGRU   accuracy 0.99\n"
         }
       ]
     },
@@ -51,33 +51,33 @@
       "outputs": []
     },
     "mamba-training-with-a-scan-2": {
-      "code_fingerprint": "sha256:ded3007945bf2ac164db47207b82dfe748fc26a22305036d1f612fff308df9e2",
+      "code_fingerprint": "sha256:50c2ab6e759a6f943f6928f16f40e82446435d4870c2614764f558c1480c5167",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 9.5367431640625e-07\n"
+          "text": "max deviation: 9.5e-07\n"
         }
       ]
     },
     "mamba-the-layer-1": {
-      "code_fingerprint": "sha256:147dc38757fda9904cd536532e78cf0c500f96b796252112ef32f2976efe6026",
+      "code_fingerprint": "sha256:92311ad309a7f014f64b9afde8db02306d5e14d2a5022db828486517236d1314",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-2": {
-      "code_fingerprint": "sha256:d08e6eea2d911005676959337705ca2b416144b3a47471013e5a4b7a01b3f04c",
+      "code_fingerprint": "sha256:dc2d2c08152451feb33a062db864c24ed6d0dc7ecce8311683d9cd04b274070c",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:6fca12926ca84a66219e5aacb649d25fe73431aa26491eb6cdb2dadc4ffd4b7f",
+      "code_fingerprint": "sha256:647ba1ed074c579023644e14a22844f652e54e8d8069ea2be4d220ef6d3438cd",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:4c93a2c24d4d18b3599a8476694bacb3a4108b0efca9a6c0201e499c044c3a63",
+      "code_fingerprint": "sha256:cf03b1fa62b2ea91d3829e26b5002c56519b4f4593f3f3e73a2d88cab79fd5f7",
       "kind": "text",
       "outputs": [
         {
@@ -88,35 +88,35 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:7e4f203810a1e44fa48f15e038e0607fb8f73bc920f2bcaa35d14979027498ca",
+      "code_fingerprint": "sha256:1d6ff57adc14c8a380852aa9161b1b02f7756527e6b240805ae434886ce7846a",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:308189b83fb7bbc79e3f430573914d2723e187d86bdfeb004276e5b1ac137178",
+      "code_fingerprint": "sha256:3a2898cd9b38492c02da55cdd7015314e3b00b40888582d135d5a5a6c2cbfbe3",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.71\n"
+          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.75\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36689,
-          "sha256": "sha256:72555f8cd23fad770bd9db247851e425e84b7111148a172004c542d65735ed96"
+          "bytes": 36811,
+          "sha256": "sha256:2d4420b24952c3243851395d8abbaf71ceabade449035e3ad5b7bdb91849d46f"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:cb0fbe52be4acdf993dda6d287d5cf9eeaaf1bcacc928017861709665f86c85c",
+      "code_fingerprint": "sha256:0cafde79371d3b0002a019d494817d1db63b186864a58bab25e7a5cbdf9638d5",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:aa9564f68d6b88ddc9396d7fb0d922135170ddfed3bb9d3403ff394515563636",
+      "code_fingerprint": "sha256:1e919e6e2b36511695f0d90c27e8a15e33b552f35b2c3a090ffc1887058a7ebe",
       "kind": "text",
       "outputs": [
         {

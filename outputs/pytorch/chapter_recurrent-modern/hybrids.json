@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2ccf43adba0fd19f153a85a80cb7f9280cf149c41b9036a1d7cc9b0592535981",
+    "d2l_lib_fingerprint": "sha256:48882c70ddf8a7c3067fc27c2316de641cc41de3c7fcb3bf6ad03c0991be9a9a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [471   3 401   3 402   2 461   0] ... [402 401 461 471]  answers: [2 3 0 3]\n"
+          "text": "tokens: [279   0 283   3  89   1 352   1] ... [283  89 279 352]  answers: [3 1 0 1]\n"
         }
       ]
     },
@@ -45,40 +45,36 @@
       "outputs": []
     },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:1aa834106a9fcad2df1b2e561d90a64f4cccc39fdbac11df4e7311b1ce1deb12",
+      "code_fingerprint": "sha256:294d9380e8aaef8ab284da0428c3d1b7860081afeaccfc7ddc4486e2b820f2f0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.93 0.79 0.58 0.41\nGated DeltaNet           1.00 1.00 0.98 0.90 0.72\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
-        },
-        {
-          "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7a52d2dae240>"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.97 0.89 0.73 0.58 0.45\nGated DeltaNet           1.00 0.99 0.97 0.89 0.68\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 33553,
-          "sha256": "sha256:e25a4bc2867ba88cbfab609c39ad3ec49d27db3589db9769ea22e1251516d120"
+          "bytes": 33554,
+          "sha256": "sha256:9f6bb5e405e4d8c3dbf48c5cce71ab72f748dc076600b733b8f5df4fdce76f46"
         }
       ]
     },
     "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:8bcf88c6ada2ce0fe1b90d71b918f780a8c1f49e6c34431311a5fc6a637f6d6b",
+      "code_fingerprint": "sha256:d50d72bb6b952f81ea0e55053596c137c55112232d568397a8afec709439a9f1",
       "kind": "text",
       "outputs": []
     },
     "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:c266585c1d420deeb4b8f885630b1a3a1eb1b866e3154b28a62f8af6a2983f99",
+      "code_fingerprint": "sha256:a6171c38d5c4c81d3b8a797e69845a510db707f233affc5628a2bb25e9fd8e1a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.28\n"
+          "text": "attention (TinyLM)   perplexity 3.29\n"
         },
         {
           "type": "stream",

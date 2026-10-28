@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:908d48578966952ed721c19068544fcabffe2036623b59101f2a321e429473b0"
+          "sha256": "sha256:873ee776ae4149edf9829519b79b2a9e20071a5a6494bc78cb56cafad5aa0a07"
         }
       ]
     },
@@ -58,54 +58,49 @@
       ]
     },
     "matrix-state-chunked-computation-1": {
-      "code_fingerprint": "sha256:11bfd44469d68dd242e24bc706ee08422671d665d863615c8733b3476b2ea935",
+      "code_fingerprint": "sha256:ab95923922b61ee88ab047d76fce5ac283f02430f0db1abe1881b60998109cb5",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-chunked-computation-2": {
-      "code_fingerprint": "sha256:3eeef6fe3a4ad8fa076a090e496652ab807a32b6d9c081b15c668a1e08044ac5",
+      "code_fingerprint": "sha256:6ade0f7a50732808ba0184ffee342e0042610189b1f74caab886d6021ee6e2a1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  16, decay per step: relative deviation 2.2e-07\nchunk size  16, decay per key: relative deviation 2.1e-07\nchunk size  64, decay per step: relative deviation 2.5e-07\nchunk size  64, decay per key: relative deviation 2.1e-07\nchunk size 256, decay per step: relative deviation 8.8e-07\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "chunk size 256, decay per key: relative deviation 6.4e-07\n"
+          "text": "chunk size  16, decay per step: relative deviation 2.2e-07\nchunk size  16, decay per key: relative deviation 2.1e-07\nchunk size  64, decay per step: relative deviation 2.5e-07\nchunk size  64, decay per key: relative deviation 2.1e-07\nchunk size 256, decay per step: relative deviation 8.8e-07\nchunk size 256, decay per key: relative deviation 6.4e-07\n"
         }
       ]
     },
     "matrix-state-chunked-computation-3": {
-      "code_fingerprint": "sha256:a61f77ecd9604c599879323342ffad56c9fbeb4a1a8c4eb46dab90a4c5e57a36",
+      "code_fingerprint": "sha256:831d69e0406e8cbf9eea94556ba31c96069d17f257f9e6a96ab90b8f7578d909",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       237.07 ms\ndual               1.02 ms\nchunks of 16       1.13 ms\nchunks of 64       0.95 ms\nchunks of 256      1.39 ms\n"
+          "text": "recurrence       236.70 ms\ndual               1.02 ms\nchunks of 16       1.10 ms\nchunks of 64       0.94 ms\nchunks of 256      0.78 ms\n"
         }
       ]
     },
     "matrix-state-the-layer-1": {
-      "code_fingerprint": "sha256:f47f9380b024a7e3e24101dd73ce98d6483e33c9e75b1800c4a273afa332c1a9",
+      "code_fingerprint": "sha256:94aae41b53d81bed8c8fad20b7f6df0833cc9d5b28e6a4409bc15ae3e1518bd8",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-the-layer-2": {
-      "code_fingerprint": "sha256:21e92994b65aede26a34d0ef4a762de35f240945bad207872c34fa2e12b38ffc",
+      "code_fingerprint": "sha256:830078ce9287cfbcaeaea3e57ecd764476910ad02f029a00a470e051220fb25d",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-1": {
-      "code_fingerprint": "sha256:fa6f29cd7a0cb75a36f699514b61b614e5e7fe3f0eb30585cf5b01154e29b1e4",
+      "code_fingerprint": "sha256:40da54c591c6bbbdb11a110ac61e232e1c9f4610aafb33bd60292cac6fdbce5b",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-language-modeling-2": {
-      "code_fingerprint": "sha256:ae370a94369a6da0388a9a360047db7fdda0ba2a85b929141c04f9073060418d",
+      "code_fingerprint": "sha256:ee987a1544f4b7cda76ece39d8c7daf44ae09398d3f80d5fb0986299ac902321",
       "kind": "text",
       "outputs": [
         {

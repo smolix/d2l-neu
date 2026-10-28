@@ -361,7 +361,7 @@ for name, acc in accuracy.items():
 d2l.plot(pairs, [list(acc.values()) for acc in accuracy.values()],
          'pairs in the sequence', 'recall accuracy', legend=list(accuracy),
          xscale='log', ylim=(0, 1.05), figsize=(4.5, 3))
-d2l.plt.legend(list(accuracy), loc='lower left', ncol=2)  # Below the curves
+_ = d2l.plt.legend(list(accuracy), loc='lower left', ncol=2)  # Below curves
 ```
 
 With 4 pairs, all four models recall nearly every value. Beyond that Gated

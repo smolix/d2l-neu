@@ -347,20 +347,22 @@ b = torch.randn(2, 100, 8, requires_grad=True)
 w = torch.randn(2, 100, 8)  # A loss that weights every state
 grads_scan = torch.autograd.grad((d2l.linear_scan(a, b) * w).sum(), (a, b))
 grads_adjoint = torch.autograd.grad((adjoint_scan(a, b) * w).sum(), (a, b))
-print('max deviation:', max(float((g1 - g2).abs().max())
-                            for g1, g2 in zip(grads_scan, grads_adjoint)))
+deviation = max(float((g1 - g2).abs().max())
+                for g1, g2 in zip(grads_scan, grads_adjoint))
+print(f'max deviation: {deviation:.1e}')
 ```
 
 ```{.python .input #mamba-training-with-a-scan-2}
 %%tab jax
-key_a, key_b, key_w = jax.random.split(jax.random.key(0), 3)
+key_a, key_b, key_w = jax.random.split(jax.random.key(random.getrandbits(32)),
+                                       3)
 a = jax.random.uniform(key_a, (2, 100, 8))
 b = jax.random.normal(key_b, (2, 100, 8))
 w = jax.random.normal(key_w, (2, 100, 8))  # A loss that weights every state
 grad = lambda scan: jax.grad(lambda a, b: (scan(a, b) * w).sum(), (0, 1))
-print('max deviation:', max(float(jnp.abs(g1 - g2).max()) for g1, g2 in
-                            zip(grad(d2l.linear_scan)(a, b),
-                                grad(adjoint_scan)(a, b))))
+deviation = max(float(jnp.abs(g1 - g2).max()) for g1, g2 in
+                zip(grad(d2l.linear_scan)(a, b), grad(adjoint_scan)(a, b)))
+print(f'max deviation: {deviation:.1e}')
 ```
 
 The two gradients agree to rounding error. The adjoint scan stores two

@@ -2167,7 +2167,10 @@ def chunked_linear_attention(Q, K, V, log_a, chunk_size):
     Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
     # 1. Within chunks: the dual form, with one mask per key coordinate
     L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
-    Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
+    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
+        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
+    else:
+        Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
     # 2. Across chunks: the writes of each chunk, decayed to its end, and
     #    a scan over chunks for the state at every chunk's end
     cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step

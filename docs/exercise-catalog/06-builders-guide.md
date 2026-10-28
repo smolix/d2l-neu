@@ -239,7 +239,7 @@ every item pairs a build task with an explicit verification or comparison step.
 
 ---
 
-## chapter_builders-guide/numerics.md — Numerics: Dtypes and Mixed Precision
+## chapter_builders-guide/numerics.md — Numerical Formats
 
 **Topic:** floating-point dtypes, mixed-precision training with fp32 master weights, loss scaling,
 and normalization's fp32 requirement.

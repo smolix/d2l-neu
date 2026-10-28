@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Concise Implementation of Softmax Regression
+# Concise Implementation
 :label:`sec_softmax_concise`
 
 The implementation of :numref:`sec_softmax_scratch` computes the
@@ -565,7 +565,7 @@ match its accuracy to within about two points.
 ::: {.cover}
 [Dive into Deep Learning · §3.5]{.kicker}
 
-Concise Softmax Regression<br>**a framework layer · the log-sum-exp loss · calibration**
+Concise Implementation<br>**a framework layer · the log-sum-exp loss · calibration**
 :::
 :::
 
@@ -612,9 +612,9 @@ learning rate 0.1, about 83% validation accuracy.
 | section | adds |
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
-| The Image Classification Dataset | Fashion-MNIST in minibatches |
+| Image Classification Data | Fashion-MNIST in minibatches |
 | Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Implementation from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand |
 | **Concise Implementation** | **framework layers, a stable loss** |
 | Generalization in Classification | error bars, test-set reuse, VC dimension |
 | Environment and Distribution Shift | correcting for shifted data |

@@ -963,7 +963,7 @@ synthetic data in the next four decks.
 |---|---|
 | **Linear Regression** | **model, loss, closed form, minibatch SGD** |
 | Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
-| Synthetic Regression Data | data with known $\mathbf{w}^*, b^*$ |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | SGD and the training loop by hand |
 | Concise Implementation | framework layers and losses |
 | Generalization | training vs. test error |

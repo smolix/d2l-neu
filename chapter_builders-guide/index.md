@@ -128,7 +128,7 @@ this chapter opens it up.
 | Parameters, State, and Memory | what state does a model hold, and what does training cost? | parameters, buffers, bytes per parameter |
 | Initialization | how is the state set before training? | library defaults, custom initializers, residual depth |
 | Custom Layers and Functions | what if the library lacks a layer? | new layers, state, and custom gradients |
-| Number Formats and Mixed Precision | which formats can a model compute in? | dtypes, mixed precision, loss scaling |
+| Numerical Formats | which formats can a model compute in? | dtypes, mixed precision, loss scaling |
 | Saving, Loading, and Pretrained Weights | how do we save, resume, and share? | safe files, checkpoints, pretrained weights |
 | GPUs, Devices, and Memory | where does the computation run, and what fills memory? | placement, asynchrony, training memory |
 | Reproducibility and Inspection | when do two runs agree, and how do we look inside? | seeds, determinism, hooks |
@@ -143,7 +143,7 @@ this chapter opens it up.
 | Parameters, State, and Memory | 8B parameters: 32 GB in fp32, about 128 GB to train with Adam |
 | Initialization | 32 residual blocks grow the activations' scale by about $2^{16}$; scaled branches keep it below $\sqrt{e}$ |
 | Custom Layers and Functions | RMSNorm maps (3, 4) and (300, 400) to the same (0.849, 1.131) |
-| Number Formats and Mixed Precision | $300^2$ overflows in fp16 but not in bf16; loss scaling rescues underflowing gradients |
+| Numerical Formats | $300^2$ overflows in fp16 but not in bf16; loss scaling rescues underflowing gradients |
 | Saving, Loading, and Pretrained Weights | 16 GB of bf16 weights against a 96 GB resumable checkpoint |
 | GPUs, Devices, and Memory | activation checkpointing cuts a step from about 1.1 GiB to 0.4–0.5 GiB for about a quarter more time |
 | Reproducibility and Inspection | Xavier activations grow from about 0.7 to 3–4 over eight blocks |

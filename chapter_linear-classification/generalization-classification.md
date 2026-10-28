@@ -643,9 +643,9 @@ regression on Fashion-MNIST, and its 10,000 test images.
 | section | adds |
 |---|---|
 | Softmax Regression | probabilities over classes, cross-entropy |
-| The Image Classification Dataset | Fashion-MNIST in minibatches |
+| Image Classification Data | Fashion-MNIST in minibatches |
 | Measuring Classifiers | accuracy, costs, calibration, the `Classifier` class |
-| Implementation from Scratch | softmax regression by hand |
+| Softmax Regression from Scratch | softmax regression by hand |
 | Concise Implementation | framework layers, a stable loss |
 | **Generalization in Classification** | **error bars, test-set reuse, VC dimension** |
 | Environment and Distribution Shift | correcting for shifted data |

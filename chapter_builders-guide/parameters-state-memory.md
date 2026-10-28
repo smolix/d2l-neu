@@ -1931,7 +1931,7 @@ $\to 10$, with 18,634 parameters; and the 8B model.
 | **Parameters, State, and Memory** | **parameters, buffers, bytes per parameter** |
 | Initialization | library defaults, custom initializers, residual depth |
 | Custom Layers and Functions | new layers, state, and custom gradients |
-| Number Formats and Mixed Precision | dtypes, mixed precision, loss scaling |
+| Numerical Formats | dtypes, mixed precision, loss scaling |
 | Saving, Loading, and Pretrained Weights | safe files, checkpoints, pretrained weights |
 | GPUs, Devices, and Memory | placement, asynchrony, training memory |
 | Reproducibility and Inspection | seeds, determinism, hooks |

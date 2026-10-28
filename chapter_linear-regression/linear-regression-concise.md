@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Concise Implementation of Linear Regression
+# Concise Implementation
 :label:`sec_linear_concise`
 
 In :numref:`sec_linear_scratch` we wrote every part of linear regression
@@ -648,7 +648,7 @@ $\sigma = 0.01$; 1,000 training examples in minibatches of 32.
 |---|---|
 | Linear Regression | model, loss, closed form, minibatch SGD |
 | Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
-| Synthetic Regression Data | data with known $\mathbf{w}^*, b^*$ |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
 | Implementation from Scratch | SGD and the training loop by hand |
 | **Concise Implementation** | **framework layers and losses** |
 | Generalization | training vs. test error |

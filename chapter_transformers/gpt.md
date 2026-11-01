@@ -788,7 +788,7 @@ perplexity check and produces coherent completions for the example prompts.
        different seeds. Compute the *verbatim fraction* of each sample, the
        fraction of its 20-character windows that occur verbatim in the
        training text. As a reference, compute the same fraction for the
-       2,000 characters of the preprocessed corpus from position 103,128 on,
+       2,000 characters of the preprocessed corpus from position 103,256 on,
        which lie beyond both the training and the validation windows.
     1. Retrain the model with the settings of
        :numref:`subsec_gpt-training`, stop at the step at which the

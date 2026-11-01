@@ -35,13 +35,13 @@ from matplotlib.patches import FancyBboxPatch
 
 
 # =========================================================================== #
-# 9.1 "Working with Sequences": autoregression vs. latent autoregression.     #
+# "Working with Sequences": autoregression vs. latent autoregression.         #
 # =========================================================================== #
 
 def fig_ar_vs_latent():
     """Two schematics of how a sequence model makes its input length fixed.
 
-    (left) autoregression: a sliding window of the last tau observations feeds
+    (left) autoregression: a sliding window of the last m observations feeds
     the prediction; older observations are discarded.
     (right) latent autoregression: a recurrent state h_t summarizes the whole
     past in fixed size and is carried forward step by step.
@@ -50,7 +50,7 @@ def fig_ar_vs_latent():
     x-spans, so the panels render at the same height and share one scale.
     """
     fig = plt.figure(figsize=(10.6, 3.5))
-    gs = fig.add_gridspec(1, 2, width_ratios=[8.4, 5.2], wspace=0.12)
+    gs = fig.add_gridspec(1, 2, width_ratios=[8.9, 5.7], wspace=0.12)
     axa = fig.add_subplot(gs[0])
     axb = fig.add_subplot(gs[1])
 
@@ -63,27 +63,27 @@ def fig_ar_vs_latent():
     # a smooth deterministic signal sampled at integer time steps 1..8
     t = np.arange(1, 9)
     y = 1.55 + 0.72 * np.sin(0.85 * t + 0.4)
-    tau_idx = [5, 6, 7]                 # the window: last tau observed points
+    win_idx = [5, 6, 7]                 # the window: last m observed points
     pred_t = 8                          # the step we predict
 
     # faint signal line through the observed points 1..7
     axa.plot(t[:7], y[:7], "-", color=LIGHT, lw=1.6, zorder=1)
     # observed points: earlier ones faded, windowed ones solid blue
     for ti, yi in zip(t[:7], y[:7]):
-        faded = ti < tau_idx[0]
+        faded = ti < win_idx[0]
         axa.plot(ti, yi, "o", color=BLUE, ms=8, zorder=4,
                  alpha=0.30 if faded else 1.0)
 
-    # shade the window over the last tau observations
-    x0, x1 = tau_idx[0] - 0.45, tau_idx[-1] + 0.45
+    # shade the window over the last m observations
+    x0, x1 = win_idx[0] - 0.45, win_idx[-1] + 0.45
     ylo, yhi = 0.55, 2.75
     axa.add_patch(fl.Rectangle((x0, ylo), x1 - x0, yhi - ylo, facecolor=BLUE,
                                alpha=0.10, edgecolor=BLUE, lw=1.4, zorder=2))
     axa.text((x0 + x1) / 2, yhi + 0.16,
-             r"window of length $\tau$", color="black", ha="center",
+             r"window of length $m$", color="black", ha="center",
              va="bottom", fontsize=LBL)
     axa.text((x0 + x1) / 2, ylo - 0.14,
-             r"$x_{t-\tau},\ \ldots,\ x_{t-1}$", color="black", ha="center",
+             r"$x_{t-m},\ \ldots,\ x_{t-1}$", color="black", ha="center",
              va="top", fontsize=LBL)
 
     # the prediction: an open marker at the next step, arrow from the window
@@ -94,14 +94,14 @@ def fig_ar_vs_latent():
     axa.text(pred_t + 0.12, yp + 0.30, r"$\hat{x}_t$", color=GREEN, ha="left",
              va="bottom", fontsize=LBL + 1)
 
-    # a light time axis along the bottom
-    fl.arrow(axa, (0.3, 0.15), (8.5, 0.15), color="black", lw=1.0)
-    axa.text(8.55, 0.15, r"$t$", color="black", ha="left", va="center",
+    # a light time axis along the bottom, below the window's label
+    fl.arrow(axa, (0.3, -0.25), (8.5, -0.25), color="black", lw=1.0)
+    axa.text(8.55, -0.25, r"$t$", color="black", ha="left", va="center",
              fontsize=LBL)
 
     axa.set_title("autoregression", fontsize=TTL, color="black")
     axa.set_xlim(0.1, 9.0)
-    axa.set_ylim(-0.05, 3.45)
+    axa.set_ylim(-0.45, 3.45)
     axa.set_aspect("equal")
     axa.axis("off")
 
@@ -125,10 +125,10 @@ def fig_ar_vs_latent():
         fl.arrow(ax, p + r * d, q - r * d, color=color, lw=lw)
 
     labs_x = [r"$x_1$", r"$x_2$", r"$x_3$"]
-    labs_h = [r"$h_1$", r"$h_2$", r"$h_3$"]
+    labs_h = [r"$\mathbf{h}_1$", r"$\mathbf{h}_2$", r"$\mathbf{h}_3$"]
     for cx, lx, lh in zip(xs, labs_x, labs_h):
         node(axb, cx, y_in, lx, BLUE)
-        node(axb, cx, y_h, lh, ORANGE)
+        node(axb, cx, y_h, lh, TEAL)
         link(axb, (cx, y_in), (cx, y_h))          # x_i -> h_i
 
     for c0, c1 in zip(xs[:-1], xs[1:]):
@@ -148,7 +148,7 @@ def fig_ar_vs_latent():
 
     axb.set_title("latent autoregression", fontsize=TTL, color="black")
     axb.set_xlim(-0.35, 5.35)
-    axb.set_ylim(-0.05, 3.45)
+    axb.set_ylim(-0.45, 3.45)
     axb.set_aspect("equal")
     axb.axis("off")
 
@@ -156,7 +156,7 @@ def fig_ar_vs_latent():
 
 
 # =========================================================================== #
-# 9.2 "From Text to Tokens": granularity spectrum, BPE merge tree, and the    #
+# "From Text to Tokens": granularity spectrum, BPE merge tree, and the        #
 # pre-tokenization pipeline.                                                  #
 # =========================================================================== #
 
@@ -185,14 +185,14 @@ def fig_rnn_granularity_spectrum():
     ax.set_xlabel('vocabulary size', fontsize=14, color='black')
     ax.set_ylabel('sequence length (relative to bytes)', fontsize=13,
                   color='black')
-    ax.tick_params(labelsize=11, colors='black')
+    ax.tick_params(labelsize=12, colors='black')
 
     # The three granularities, as points on the curve.
     ax.plot([256], [1.0], 'o', color=BLUE, ms=8, zorder=4)
     ax.annotate('bytes (vocab 256)', xy=(256, 1.0), xytext=(400, 1.01),
                 fontsize=13, color='black', ha='left', va='center')
-    ax.annotate('long sequences,\nnothing ever\nout of vocabulary',
-                xy=(430, 0.88), fontsize=11, color='black', ha='left', va='top')
+    ax.annotate('long sequences,\nnever out of vocabulary',
+                xy=(430, 0.88), fontsize=13, color='black', ha='left', va='top')
 
     band = (grid >= 512) & (grid <= 2e5)
     ax.fill_between(grid[band], curve[band] - 0.06, curve[band] + 0.06,
@@ -205,9 +205,9 @@ def fig_rnn_granularity_spectrum():
     ax.plot([8e5], [0.19], 's', color=ORANGE, ms=8, zorder=4)
     ax.annotate('words', xy=(8e5, 0.19), xytext=(8e5, 0.30), fontsize=13,
                 color='black', ha='center', va='bottom')
-    ax.annotate('short sequences, but a\nfixed list: rare words fall\n'
-                'out (out of vocabulary)',
-                xy=(6.5e5, 0.65), fontsize=11, color='black', ha='center',
+    ax.annotate('short sequences, but a\nfixed list: rare words\n'
+                'are out of vocabulary',
+                xy=(6.5e5, 0.68), fontsize=13, color='black', ha='center',
                 va='top')
     fl.save(fig, 'mdl-rnn-granularity-spectrum')
 
@@ -342,102 +342,79 @@ def fig_rnn_pretokenization_pipeline():
 
 
 # =========================================================================== #
-# 9.3 "Language Models" (sec_language-model): partitioning a BPE token-id     #
+# "Language Models" (sec_language-model): partitioning a BPE token-id        #
 # stream into overlapping input/target subsequences.                         #
 #                                                                              #
 # One restyled carryover, written under a new house-style name so the old    #
 # hand-drawn SVG (``img/lang-model-data.svg``) is left untouched on disk.    #
 # =========================================================================== #
 
-# The actual first 12 BPE tokens of "The Time Traveller (for so it will be
-# convenient ..." under the section's tokenizer; leading spaces marked "␣".
-_PARTITION_TOKENS = ["The", "␣Time", "␣Traveller", "␣for", "␣so", "␣it",
-                     "␣will", "␣be", "␣con", "ven", "i", "ent"]
-_PARTITION_N = 5             # window length (num_steps)
-_PARTITION_OFFSETS = [0, 6]  # two windows sampled into one minibatch
+# The first 8 tokens of the corpus, from its title line "The Time Machine, by
+# H. G. Wells", under d2l.TimeMachine's BPE-1024 tokenizer (trained on the raw
+# text with the GPT-2 pattern); leading spaces marked "␣".
+_PARTITION_TOKENS = ["The", "␣Time", "␣Machine", ",", "␣by", "␣H", ".", "␣G"]
+_PARTITION_N = 5             # window length T (num_steps)
+_PARTITION_STARTS = [1, 2]   # the first two windows: they overlap in T - 1
 
 
-def _token_row(ax, y, edges, h, fill_upto=None):
-    """One copy of the token stream: monospace text in thin boxes whose width
-    is proportional to the token length (as in the 9.2 tokenizer figures)."""
-    for i, tok in enumerate(_PARTITION_TOKENS):
+def _token_cells(ax, edges, y, h, lo, hi, fc, ec):
+    """Token boxes lo..hi (1-based, inclusive) of the stream at height y:
+    monospace text in boxes whose width grows with the token length."""
+    for i in range(lo - 1, hi):
         x0, x1 = edges[i], edges[i + 1]
-        ax.add_patch(plt.Rectangle((x0, y - h / 2), x1 - x0, h,
-                                   facecolor="white", edgecolor=GRAY,
-                                   linewidth=1.0, zorder=2))
-        ax.text((x0 + x1) / 2, y, tok, ha="center", va="center",
-                fontsize=13, family="monospace", color="black", zorder=4)
-
-
-def _window(ax, edges, lo, hi, y, h, color, label, label_side):
-    """A heavy rounded window outline with faint fill spanning token boxes
-    lo..hi (inclusive), plus its bold subsequence label above/below."""
-    x0, x1 = edges[lo], edges[hi + 1]
-    pad = 0.045
-    ax.add_patch(FancyBboxPatch(
-        (x0 + pad, y - h / 2 - 0.10), x1 - x0 - 2 * pad, h + 0.20,
-        boxstyle="round,pad=0.02,rounding_size=0.09",
-        linewidth=2.2, edgecolor=color, facecolor=color, alpha=0.14,
-        zorder=1))
-    ax.add_patch(FancyBboxPatch(
-        (x0 + pad, y - h / 2 - 0.10), x1 - x0 - 2 * pad, h + 0.20,
-        boxstyle="round,pad=0.02,rounding_size=0.09",
-        linewidth=2.2, edgecolor=color, facecolor="none", zorder=3))
-    ly = y + h / 2 + 0.32 if label_side == "above" else y - h / 2 - 0.34
-    va = "bottom" if label_side == "above" else "top"
-    ax.text((x0 + x1) / 2, ly, label, ha="center", va=va,
-            fontsize=14, color=color, zorder=4)
+        ax.add_patch(plt.Rectangle((x0, y - h / 2), x1 - x0, h, facecolor=fc,
+                                   edgecolor=ec, linewidth=1.2, zorder=2))
+        ax.text((x0 + x1) / 2, y, _PARTITION_TOKENS[i], ha="center",
+                va="center", fontsize=14, family="monospace", color="black",
+                zorder=4)
 
 
 def fig_partitioning():
-    """Partitioning one BPE token-id stream into (input, target) pairs.
+    """The first two (input, target) pairs cut from one BPE token stream.
 
-    Top row: the stream with two sampled length-5 input windows (blue),
-    labelled x_0 and x_6.  Bottom row: the same stream with the target
-    windows (orange), which are the input windows shifted forward by one
-    token.  Position indices x_0 .. x_11 sit between the two rows, shared
-    by both copies since the columns align."""
-    # box edges: width proportional to token length + constant padding
-    widths = [0.185 * len(t) + 0.34 for t in _PARTITION_TOKENS]
+    Top row: the stream x_1, x_2, ... with its position indices.  Below it,
+    one pair of rows per window: the input window (blue) of T = 5 tokens and
+    its target (orange), the same window shifted forward by one token.  The
+    columns align with the stream, so the one-token shift between input and
+    target, and the overlap of consecutive windows in all but one token, can
+    be read off directly."""
+    widths = [0.19 * len(t) + 0.55 for t in _PARTITION_TOKENS]
     edges = np.concatenate([[0.0], np.cumsum(widths)])
-    total = edges[-1]
+    n, T = len(_PARTITION_TOKENS), _PARTITION_N
 
-    h = 0.62                    # token box height
-    y_in, y_tgt = 1.55, -0.10   # the two stream copies
-    fig, ax = plt.subplots(figsize=(11.2, 3.1))
+    h, step = 0.62, 0.82                    # box height, row pitch
+    y_stream, y_idx = 0.0, -0.55
+    rows = [y_idx - 0.75 - k * step - (0.35 if k >= 2 else 0.0)
+            for k in range(4)]              # input 1, target 1, input 2, ...
+    fig, ax = plt.subplots(figsize=(8.0, 4.6))
     ax.set_aspect("equal")
     ax.axis("off")
 
-    _token_row(ax, y_in, edges, h)
-    _token_row(ax, y_tgt, edges, h)
-
-    # shared position indices between the rows (columns align)
-    y_idx = (y_in + y_tgt) / 2
-    for i in range(len(_PARTITION_TOKENS)):
-        ax.text((edges[i] + edges[i + 1]) / 2, y_idx, rf"$x_{{{i}}}$",
-                ha="center", va="center", fontsize=11, color="black")
-
-    # input windows (blue, labels above) and shifted target windows (orange,
-    # labels below)
-    for t in _PARTITION_OFFSETS:
-        _window(ax, edges, t, t + _PARTITION_N - 1, y_in, h, BLUE,
-                rf"$\mathbf{{x}}_{{{t}}}$", "above")
-        _window(ax, edges, t + 1, t + _PARTITION_N, y_tgt, h, ORANGE,
-                rf"$\mathbf{{x}}_{{{t + 1}}}$", "below")
-
-    # row labels on the left, in black per the house checklist
-    ax.text(-0.25, y_in, "inputs", ha="right", va="center", fontsize=13,
-            color="black")
-    ax.text(-0.25, y_tgt, "targets", ha="right", va="center", fontsize=13,
+    # the stream, its position indices, and the row labels (black)
+    _token_cells(ax, edges, y_stream, h, 1, n, "white", GRAY)
+    for i in range(n):
+        ax.text((edges[i] + edges[i + 1]) / 2, y_idx, rf"$x_{{{i + 1}}}$",
+                ha="center", va="center", fontsize=14, color="black")
+    ax.text(-0.3, y_stream, "stream", ha="right", va="center", fontsize=14,
             color="black")
 
-    ax.set_xlim(-1.75, total + 0.15)
-    ax.set_ylim(y_tgt - h / 2 - 0.75, y_in + h / 2 + 0.72)
+    for k, t in enumerate(_PARTITION_STARTS):
+        y_in, y_tgt = rows[2 * k], rows[2 * k + 1]
+        _token_cells(ax, edges, y_in, h, t, t + T - 1, fl.T.BLUE.tint, BLUE)
+        _token_cells(ax, edges, y_tgt, h, t + 1, t + T, fl.T.ORANGE.tint,
+                     ORANGE)
+        ax.text(-0.3, y_in, f"input {k + 1}", ha="right", va="center",
+                fontsize=14, color="black")
+        ax.text(-0.3, y_tgt, f"target {k + 1}", ha="right", va="center",
+                fontsize=14, color="black")
+
+    ax.set_xlim(-2.0, edges[-1] + 0.1)
+    ax.set_ylim(rows[-1] - h / 2 - 0.1, y_stream + h / 2 + 0.1)
     fl.save(fig, "mdl-rnn-partitioning")
 
 
 # =========================================================================== #
-# 9.4 "Recurrent Neural Networks" (sec_rnn): the unrolled RNN and the         #
+# "Recurrent Neural Networks" (sec_rnn): the unrolled RNN and the             #
 # shift-by-one language-model training picture.                              #
 #                                                                              #
 # Two restyled carryovers, written under new house-style names so the old    #
@@ -493,22 +470,22 @@ def fig_unfolded():
                  mut=15)
         fl.arrow(ax, (cx, y_hid + half), (cx, y_out - half), color=GRAY, lw=2.0,
                  mut=15)
-        ax.text(cx + 0.14, (y_in + y_hid) / 2, r"$\mathbf{W}_{xh}$",
-                ha="left", va="center", fontsize=12, color="black")
-        ax.text(cx + 0.14, (y_hid + y_out) / 2, r"$\mathbf{W}_{hq}$",
-                ha="left", va="center", fontsize=12, color="black")
+        ax.text(cx + 0.14, (y_in + y_hid) / 2, r"$\mathbf{W}_\mathrm{xh}$",
+                ha="left", va="center", fontsize=14, color="black")
+        ax.text(cx + 0.14, (y_hid + y_out) / 2, r"$\mathbf{W}_\mathrm{hq}$",
+                ha="left", va="center", fontsize=14, color="black")
 
     # recurrent links between hidden states, labelled W_hh above the shaft
     for cx0, cx1 in zip(xs[:-1], xs[1:]):
         fl.arrow(ax, (cx0 + bw / 2, y_hid), (cx1 - bw / 2, y_hid), color=GRAY,
                  lw=2.0, mut=15)
-        ax.text((cx0 + cx1) / 2, y_hid + 0.24, r"$\mathbf{W}_{hh}$",
-                ha="center", va="bottom", fontsize=12, color="black")
+        ax.text((cx0 + cx1) / 2, y_hid + 0.24, r"$\mathbf{W}_\mathrm{hh}$",
+                ha="center", va="bottom", fontsize=14, color="black")
 
     # dashed continuation stubs, so the chain reads as unbounded in time
-    fl.arrow(ax, (xs[0] - 1.35, y_hid), (xs[0] - bw / 2, y_hid), color=GRAY,
+    fl.arrow(ax, (xs[0] - 1.0, y_hid), (xs[0] - bw / 2, y_hid), color=GRAY,
              lw=1.6, ls="--", mut=13)
-    fl.arrow(ax, (xs[-1] + bw / 2, y_hid), (xs[-1] + 1.35, y_hid), color=GRAY,
+    fl.arrow(ax, (xs[-1] + bw / 2, y_hid), (xs[-1] + 1.0, y_hid), color=GRAY,
              lw=1.6, ls="--", mut=13)
 
     ax.set_xlim(0.2, 9.6)
@@ -518,26 +495,26 @@ def fig_unfolded():
 
 def fig_lm_shift():
     """RNN language model trained by teacher forcing over BPE subword tokens.
-    The input tokens (the, time, mach, ine) feed the recurrence; each hidden
-    state emits a next-token distribution O_t; the target sequence is the input
-    shifted forward by one token (time, mach, ine, by), so the per-step
-    cross-entropy trains the model to predict the next token.  The word
-    'machine' splitting into the two subword tokens 'mach' and 'ine' shows the
-    BPE tokenization of sec_text-sequence."""
+    The input tokens feed the recurrence; each hidden state emits a next-token
+    distribution O_t; the target sequence is the input shifted forward by one
+    token, so the per-step cross-entropy trains the model to predict the next
+    token.  The tokens are what d2l.TimeMachine's BPE-1024 tokenizer produces
+    for the corpus phrase "thing that struck me": "struck" is not in the
+    vocabulary and becomes the two tokens "␣stru" and "ck"."""
     fig, ax = plt.subplots(figsize=(8.8, 5.3))
     ax.set_aspect("equal")
     ax.axis("off")
 
     xs = [2.5, 4.9, 7.3, 9.7]                       # four time steps
     y_in, y_hid, y_out, y_tgt = 0.9, 3.0, 5.1, 6.8  # four rows
-    bw, bh = 1.55, 0.9
-    inp = ["the", "time", "mach", "ine"]
-    tgt = ["time", "mach", "ine", "by"]
+    bw, bh = 1.75, 0.9
+    inp = ["␣thing", "␣that", "␣stru", "ck"]
+    tgt = ["␣that", "␣stru", "ck", "␣me"]
 
     # left-hand row labels (black)
     ax.text(0.15, y_tgt, "targets", ha="left", va="center", fontsize=13,
             color="black")
-    ax.text(0.15, y_out, "predict", ha="left", va="center", fontsize=13,
+    ax.text(0.15, y_out, "outputs", ha="left", va="center", fontsize=13,
             color="black")
     ax.text(0.15, y_hid, "hidden\nstate", ha="left", va="center", fontsize=13,
             color="black", linespacing=1.15)
@@ -546,10 +523,13 @@ def fig_lm_shift():
 
     half = bh / 2
     for i, cx in enumerate(xs):
-        _box(ax, cx, y_in, bw, bh, inp[i], BLUE, fontsize=15)
+        # token boxes: tokens are literal data, so monospace (style guide 5.1)
+        for y, tok, color in ((y_in, inp[i], BLUE), (y_tgt, tgt[i], GRAY)):
+            _box(ax, cx, y, bw, bh, "", color)
+            ax.text(cx, y, tok, ha="center", va="center", fontsize=15,
+                    family="monospace", color="black")
         _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{{{i+1}}}$", TEAL)
         _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{{{i+1}}}$", ORANGE)
-        _box(ax, cx, y_tgt, bw, bh, tgt[i], GRAY, fontsize=15)
         fl.arrow(ax, (cx, y_in + half), (cx, y_hid - half), color=GRAY, lw=2.0,
                  mut=15)
         fl.arrow(ax, (cx, y_hid + half), (cx, y_out - half), color=GRAY, lw=2.0,
@@ -565,34 +545,32 @@ def fig_lm_shift():
 
     # name the per-step loss once, beside the first prediction->target link
     ax.text(xs[0] + 0.18, (y_out + y_tgt) / 2, "loss", ha="left", va="center",
-            fontsize=11, color="black")
+            fontsize=13, color="black")
 
-    # brace under the two subword tokens of "machine"
+    # brace under the two subword tokens of "struck"
     yb = y_in - 0.72
     ax.plot([xs[2] - bw / 2, xs[3] + bw / 2], [yb, yb], color=GRAY, lw=1.3)
     for cx in (xs[2], xs[3]):
         ax.plot([cx, cx], [yb, y_in - half - 0.04], color=GRAY, lw=1.0)
-    ax.text((xs[2] + xs[3]) / 2, yb - 0.30, '"machine"', ha="center", va="top",
-            fontsize=12, color="black")
+    ax.text((xs[2] + xs[3]) / 2, yb - 0.25, 'one word, "struck"',
+            ha="center", va="top", fontsize=13, color="black")
 
-    ax.set_xlim(0.0, 10.6)
-    ax.set_ylim(-0.75, 7.5)
+    ax.set_xlim(0.0, 10.75)
+    ax.set_ylim(-0.85, 7.5)
     fl.save(fig, "mdl-rnn-lm-shift")
 
 
 # =========================================================================== #
-# 9.6 "Backpropagation Through Time" (sec_bptt): the unrolled computational    #
-# graph for BPTT, plus full BPTT vs. regular truncation with the gradient      #
-# chains severed (detached) at segment boundaries.                            #
+# "Backpropagation Through Time" (sec_bptt): the unrolled linear RNN with its  #
+# forward and backward passes, and full BPTT vs. regular truncation, where the #
+# state is carried forward across a segment boundary but the gradient is not. #
 #                                                                              #
-# Two restyled carryovers, written under new house-style names so the old    #
-# hand-drawn SVGs (``img/rnn-bptt.svg``, ``img/truncated-bptt.svg``) are left  #
-# untouched.  In ``fig_truncated_bptt`` the old three-row figure's            #
-# randomized-truncation row is dropped (that strategy is retired from the     #
-# section).                                                                   #
+# Restyled carryovers of the hand-drawn ``img/rnn-bptt.svg`` and              #
+# ``img/truncated-bptt.svg`` (left untouched on disk).  The old figure's      #
+# randomized-truncation row is dropped.                                       #
 # =========================================================================== #
 
-def _segment(ax, x0, x1, yc, h=0.62):
+def _segment(ax, x0, x1, yc, h=0.78):
     """A faint rounded rectangle marking one backpropagation *segment*."""
     ax.add_patch(FancyBboxPatch(
         (x0, yc - h / 2), x1 - x0, h,
@@ -600,186 +578,175 @@ def _segment(ax, x0, x1, yc, h=0.62):
         linewidth=0, facecolor=GRAY, alpha=0.12, zorder=0))
 
 
-def _chain(ax, xs, yc, r=0.085, color=BLUE):
-    """Nodes (green hidden states) linked left-to-right by dependency arrows."""
+def _lanes(ax, xs, yc, back, r=0.09, off=0.13):
+    """Hidden-state nodes at ``xs``: grey forward arrows on the upper lane
+    between every pair, red backward (gradient) arrows on the lower lane
+    between the pairs whose index is in ``back``."""
+    red = fl.T.RED.base
     for x in xs:
         ax.add_patch(plt.Circle((x, yc), r, facecolor=TEAL, edgecolor="none",
-                                 zorder=3))
-    for x0, x1 in zip(xs[:-1], xs[1:]):
-        fl.arrow(ax, (x0 + r + 0.02, yc), (x1 - r - 0.02, yc), color=color,
-                 lw=2.0, mut=13)
+                                zorder=3))
+    for i, (x0, x1) in enumerate(zip(xs[:-1], xs[1:])):
+        fl.arrow(ax, (x0 + r + 0.03, yc + off), (x1 - r - 0.03, yc + off),
+                 color=GRAY, lw=1.8, mut=12)
+        if i in back:
+            fl.arrow(ax, (x1 - r - 0.03, yc - off), (x0 + r + 0.03, yc - off),
+                     color=red, lw=2.0, mut=12)
 
 
 def fig_truncated_bptt():
-    """Two ways of computing the gradient across a token sequence.  TOP: full
-    backpropagation through time -- one unbroken dependency chain spans the
-    whole sequence (a single segment).  BOTTOM: regular truncation -- the
-    sequence is cut into equal-length segments (here tau = 4) and the state is
-    *detached* at every boundary, so the gradient never crosses it."""
-    tokens = ["the", "time", "mach", "ine", "by", "h", "g", "wells"]
+    """Two ways of computing the gradient across a token sequence.  Both rows
+    run the same forward pass (grey): the hidden state is carried from token to
+    token along the whole sequence.  TOP: full backpropagation through time --
+    the gradient (red) flows back along the entire chain.  BOTTOM: regular
+    truncation -- the sequence is cut into equal-length segments and the state
+    is *detached* at every boundary: its value still crosses forward, but no
+    gradient flows back across."""
+    # BPE-1024 tokens of the corpus phrase "the thing that struck me most was"
+    # (d2l.TimeMachine's tokenizer; "␣" marks a leading space)
+    tokens = ["␣the", "␣thing", "␣that", "␣stru", "ck", "␣me", "␣most", "␣was"]
     n = len(tokens)
-    tau = 4                                  # regular-truncation segment length
-    xs = np.linspace(1.15, 9.35, n)
+    seg_len = 4                              # regular-truncation segment length
+    xs = np.linspace(2.35, 10.35, n)
     dx = xs[1] - xs[0]
     pad = 0.42 * dx                          # segment box overhang past the nodes
 
-    y_tok, y_full, y_trunc = 3.02, 2.05, 0.72
+    y_tok, y_full, y_trunc, y_leg = 3.2, 2.2, 0.85, -0.25
 
-    fig, ax = plt.subplots(figsize=(8.8, 3.1))
+    fig, ax = plt.subplots(figsize=(9.6, 3.7))
     ax.set_aspect("equal")
     ax.axis("off")
 
-    # token strip, shared by both rows (black text)
+    # token strip, shared by both rows; row labels on the left (black text)
     for x, tok in zip(xs, tokens):
-        ax.text(x, y_tok, tok, ha="center", va="center", fontsize=13,
+        ax.text(x, y_tok, tok, ha="center", va="center", fontsize=14,
+                family="monospace", color="black")
+    for y, lab in [(y_full, "full"), (y_trunc, "truncated")]:
+        ax.text(0.0, y, lab, ha="left", va="center", fontsize=14,
                 color="black")
 
-    # TOP: full BPTT -- one segment spanning the whole sequence, unbroken chain
+    # TOP: one segment spanning the whole sequence, gradient everywhere
     _segment(ax, xs[0] - pad, xs[-1] + pad, y_full)
-    _chain(ax, xs, y_full)
+    _lanes(ax, xs, y_full, back=range(n - 1))
 
-    # BOTTOM: regular truncation -- equal segments, chain severed at boundaries
-    for s in range(0, n, tau):
-        blk = xs[s:s + tau]
+    # BOTTOM: equal segments; the gradient stops at each boundary
+    cuts = set(range(seg_len - 1, n - 1, seg_len))   # pair index at a boundary
+    for s in range(0, n, seg_len):
+        blk = xs[s:s + seg_len]
         _segment(ax, blk[0] - pad, blk[-1] + pad, y_trunc)
-        _chain(ax, blk, y_trunc)
+    _lanes(ax, xs, y_trunc, back=set(range(n - 1)) - cuts)
+    for i in sorted(cuts):
+        xb = (xs[i] + xs[i + 1]) / 2
+        c, h = (xb, y_trunc - 0.13), 0.11           # a cross where the
+        for sgn in (1, -1):                         # gradient would pass
+            ax.plot([c[0] - h, c[0] + h], [c[1] - sgn * h, c[1] + sgn * h],
+                    color=fl.T.RED.dark, lw=2.4, solid_capstyle="round",
+                    zorder=4)
+        ax.text(xb, y_trunc - 0.6, "detach", ha="center", va="center",
+                fontsize=13, color="black")
 
-    # mark every detached boundary (here just one, between the two segments)
-    for s in range(tau, n, tau):
-        xb = (xs[s - 1] + xs[s]) / 2
-        ax.plot([xb, xb], [y_trunc - 0.31, y_trunc + 0.31], color=ORANGE,
-                lw=2.6, zorder=4)
-        ax.annotate("detach", xy=(xb, y_trunc + 0.33),
-                    xytext=(xb, y_trunc + 0.80), ha="center", va="bottom",
-                    fontsize=11.5, color="black",
-                    arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.3))
+    # legend: the two arrow colours
+    for x0, color, lab in [(2.4, GRAY, "state (forward)"),
+                           (6.2, fl.T.RED.base, "gradient (backward)")]:
+        ends = [(x0, y_leg), (x0 + 0.6, y_leg)]   # red points backwards
+        fl.arrow(ax, *(ends if color == GRAY else ends[::-1]), color=color,
+                 lw=2.0, mut=13)
+        ax.text(x0 + 0.75, y_leg, lab, ha="left", va="center", fontsize=13,
+                color="black")
 
-    ax.set_xlim(xs[0] - pad - 0.35, xs[-1] + pad + 0.35)
-    ax.set_ylim(0.18, 3.42)
+    ax.set_xlim(-0.1, xs[-1] + pad + 0.2)
+    ax.set_ylim(y_leg - 0.35, y_tok + 0.35)
     fl.save(fig, "mdl-rnn-truncated-bptt")
 
 
 def fig_rnn_bptt():
-    """The linear RNN unrolled over three time steps as a computational graph,
-    drawn for the backpropagation-through-time analysis.
+    """The linear RNN of the BPTT section unrolled over three time steps, with
+    the forward pass (grey) and the backward pass (red) drawn side by side.
 
-    Variable boxes -- inputs X_t (blue), hidden states H_t (green), outputs
-    O_t (orange) and the scalar loss L -- alternate with the grey operator
-    circles that produce them; shaded boxes hold the *shared* parameters (the
-    weights W_hx, W_hh feeding every hidden operator; W_qh feeding every output
-    operator; the initial state H_0).  Each hidden state H_t feeds BOTH its
-    output O_t (through the output operator) and the next hidden operator (the
-    recurrence), so the loss gradient -- flowing backwards along the arrows --
-    reaches H_t from its own output and from the step ahead: the
-    product-of-Jacobians path the section studies.  Time runs bottom-to-top so
-    the computation reads left-to-right, X -> H -> O -> L.
-    """
-    fig, ax = plt.subplots(figsize=(10.0, 6.0))
+    Bottom row: inputs X_t (blue); middle row: hidden states H_t (teal); top
+    rows: outputs O_t (orange) and the per-step losses l_t.  Forward arrows
+    carry the weights W_xh, W_hh, W_hq (row-vector layout of the RNN section,
+    H_t = X_t W_xh + H_{t-1} W_hh, O_t = H_t W_hq).  The red arrows run the
+    other way: the gradient reaching H_t is the sum of the one coming down from
+    its own output (through W_hq^T) and the one coming back from H_{t+1}
+    (through W_hh^T), which is the recursion the section unrolls into powers of
+    W_hh^T."""
+    RED = fl.T.RED.base
+    fig, ax = plt.subplots(figsize=(10.2, 5.6))
     ax.set_aspect("equal")
     ax.axis("off")
 
-    ys = [0.9, 3.0, 5.1]                 # time steps t = 1, 2, 3 (bottom -> top)
-    yp = -1.25                           # parameter / initial-state row
-    X, F, H, G, O, LS, LB = 0.75, 2.55, 4.35, 6.15, 7.95, 9.9, 11.35
-    bw, bh, r = 1.3, 0.85, 0.35
-    subs = ["1", "2", "3"]
+    xs = [2.3, 5.6, 8.9]                          # time steps t = 1, 2, 3
+    y_in, y_hid, y_out, y_loss = 0.8, 2.95, 5.1, 6.85
+    bw, bh = 1.2, 0.86
+    lw_box = 0.9                                  # loss boxes are narrower
+    off = 0.2                                     # forward/backward lane offset
+    fs_lab = 15                                   # weight labels on the edges
 
-    def opc(cx, cy):
-        ax.add_patch(plt.Circle((cx, cy), r, facecolor="white", edgecolor=GRAY,
-                                 lw=1.8, zorder=4))
+    def fwd(p, q):
+        fl.arrow(ax, p, q, color=GRAY, lw=2.0, mut=15)
 
-    def pbox(cx, cy, text, w):
-        ax.add_patch(FancyBboxPatch(
-            (cx - w / 2, cy - bh / 2), w, bh,
-            boxstyle="round,pad=0.02,rounding_size=0.12",
-            linewidth=1.6, edgecolor=GRAY, facecolor=GRAY, alpha=0.32, zorder=3))
-        ax.text(cx, cy, text, ha="center", va="center", fontsize=13,
-                fontweight="bold", color="black", zorder=5)
+    def bwd(p, q):
+        fl.arrow(ax, p, q, color=RED, lw=2.2, mut=15)
 
-    def sar(p, q, color=GRAY, lw=1.9, mut=15):
-        fl.arrow(ax, p, q, color=color, lw=lw, mut=mut)
+    # left-hand row labels (black)
+    for y, lab in [(y_loss, "losses"), (y_out, "outputs"),
+                   (y_hid, "hidden\nstate"), (y_in, "inputs")]:
+        ax.text(-1.1, y, lab, ha="left", va="center", fontsize=14,
+                color="black", linespacing=1.15)
 
-    def car(p, q, rad, color=GRAY, lw=1.9, mut=14):
-        ax.annotate("", xy=q, xytext=p,
-                    arrowprops=dict(arrowstyle="->", color=color, lw=lw,
-                                    shrinkA=0, shrinkB=0, mutation_scale=mut,
-                                    connectionstyle=f"arc3,rad={rad}"))
+    for t, cx in enumerate(xs, start=1):
+        _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{t}$", BLUE)
+        _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{t}$", TEAL)
+        _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{t}$", ORANGE)
+        _box(ax, cx, y_loss, lw_box, 0.72, rf"$l_{t}$", GRAY)
+        # forward: X -> H -> O -> l on the right lane
+        fwd((cx + off, y_in + bh / 2), (cx + off, y_hid - bh / 2))
+        fwd((cx + off, y_hid + bh / 2), (cx + off, y_out - bh / 2))
+        fwd((cx + off, y_out + bh / 2), (cx + off, y_loss - 0.36))
+        ax.text(cx + off + 0.14, (y_in + y_hid) / 2, r"$\mathbf{W}_\mathrm{xh}$",
+                ha="left", va="center", fontsize=fs_lab, color="black")
+        ax.text(cx + off + 0.14, (y_hid + y_out) / 2, r"$\mathbf{W}_\mathrm{hq}$",
+                ha="left", va="center", fontsize=fs_lab, color="black")
+        # backward: l -> O -> H on the left lane
+        bwd((cx - off, y_loss - 0.36), (cx - off, y_out + bh / 2))
+        bwd((cx - off, y_out - bh / 2), (cx - off, y_hid + bh / 2))
+        ax.text(cx - off - 0.14, (y_hid + y_out) / 2, r"$\mathbf{W}_\mathrm{hq}^\top$",
+                ha="right", va="center", fontsize=fs_lab, color=fl.T.RED.dark)
 
-    def cb(center, toward, rr=r):
-        """A point on a circle of radius rr toward another point."""
-        c = np.asarray(center, float); o = np.asarray(toward, float)
-        d = o - c
-        return c + rr * d / np.linalg.norm(d)
+    # recurrence: forward on the upper lane, backward on the lower lane
+    for cx0, cx1 in zip(xs[:-1], xs[1:]):
+        fwd((cx0 + bw / 2, y_hid + off), (cx1 - bw / 2, y_hid + off))
+        bwd((cx1 - bw / 2, y_hid - off), (cx0 + bw / 2, y_hid - off))
+        xm = (cx0 + cx1) / 2
+        ax.text(xm, y_hid + off + 0.12, r"$\mathbf{W}_\mathrm{hh}$", ha="center",
+                va="bottom", fontsize=fs_lab, color="black")
+        ax.text(xm, y_hid - off - 0.12, r"$\mathbf{W}_\mathrm{hh}^\top$", ha="center",
+                va="top", fontsize=fs_lab, color=fl.T.RED.dark)
 
-    # ------------------------------------------------------------------ #
-    # column headers (functional; match the sibling unrolled-graph figs) #
-    # ------------------------------------------------------------------ #
-    y_hdr = ys[-1] + bh / 2 + 0.55
-    for cx, lab in [(X, "inputs"), (H, "hidden state"), (O, "outputs"),
-                    (LB, "loss")]:
-        ax.text(cx, y_hdr, lab, ha="center", va="center", fontsize=13,
+    # the initial state enters from the left (forward only)
+    fl.arrow(ax, (xs[0] - 1.15, y_hid + off), (xs[0] - bw / 2, y_hid + off),
+             color=GRAY, lw=1.6, ls="--", mut=13)
+    ax.text(xs[0] - 1.2, y_hid + off, r"$\mathbf{H}_0$", ha="right",
+            va="center", fontsize=fs_lab, color="black")
+
+    # legend: the two arrow colours
+    y_leg = -0.25
+    for x0, color, lab in [(3.0, GRAY, "forward pass"),
+                           (6.3, RED, "backward pass (gradient)")]:
+        ends = [(x0, y_leg), (x0 + 0.7, y_leg)]   # red points backwards
+        fl.arrow(ax, *(ends if color == GRAY else ends[::-1]), color=color,
+                 lw=2.2, mut=15)
+        ax.text(x0 + 0.85, y_leg, lab, ha="left", va="center", fontsize=14,
                 color="black")
 
-    # ------------------------------------------------------------------ #
-    # nodes + the horizontal forward chain, one row per time step        #
-    # ------------------------------------------------------------------ #
-    half = bw / 2
-    for y, s in zip(ys, subs):
-        _box(ax, X, y, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
-        opc(F, y)
-        _box(ax, H, y, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", TEAL)
-        opc(G, y)
-        _box(ax, O, y, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
-        sar((X + half, y), (F - r, y))          # X_t -> f
-        sar((F + r, y), (H - half, y))          # f   -> H_t
-        sar((H + half, y), (G - r, y))          # H_t -> g
-        sar((G + r, y), (O - half, y))          # g   -> O_t
-        sar((O + half, y), cb((LS, ys[1]), (O + half, y)))   # O_t -> loss op
-
-    # loss operator and the scalar loss box
-    opc(LS, ys[1])
-    _box(ax, LB, ys[1], bw, bh, r"$L$", GRAY, text_color="black")
-    sar((LS + r, ys[1]), (LB - half, ys[1]))    # loss op -> L
-
-    # ------------------------------------------------------------------ #
-    # recurrence: H_{t-1} feeds the next hidden operator (up-and-left)    #
-    # ------------------------------------------------------------------ #
-    # H_0, the initial hidden state, is a variable (green box, not shaded); it
-    # sits on the bottom row at the H column and feeds the first hidden operator
-    _box(ax, H, yp, 1.0, bh, r"$\mathbf{H}_0$", TEAL)
-    prev = [(H, yp)] + [(H, y) for y in ys[:-1]]     # H_0, H_1, H_2
-    for (hx, hy), y in zip(prev, ys):
-        start = (hx - 0.30, hy + bh / 2)
-        car(start, cb((F, y), start), rad=0.16, lw=1.7)
-
-    # ------------------------------------------------------------------ #
-    # shared parameters: one box fans out to every operator it drives.   #
-    # The fan-out arrows leave the box at splayed points so they reach    #
-    # the stacked circles without crossing the lower ones.               #
-    # ------------------------------------------------------------------ #
-    def fanout(box_cx, box_w, col_x, label):
-        pbox(box_cx, yp, label, box_w)
-        top = yp + bh / 2
-        # the shared weights feed EVERY operator in the column: a straight
-        # vertical to the adjacent circle, arcs (from splayed departure
-        # points) around it to the higher ones
-        sar((col_x, top), (col_x, ys[0] - r), lw=1.7)
-        for dx, y, ang, rad in [(-0.34, ys[1], 235.0, 0.16),
-                                (-0.54, ys[2], 245.0, 0.12)]:
-            q = (col_x + r * np.cos(np.radians(ang)),
-                 y + r * np.sin(np.radians(ang)))
-            car((box_cx + dx, top), q, rad=rad, lw=1.7)
-
-    fanout(F, 2.05, F, r"$\mathbf{W}_{hx},\mathbf{W}_{hh}$")
-    fanout(G, 1.15, G, r"$\mathbf{W}_{qh}$")
-
-    ax.set_xlim(-0.15, LB + half + 0.2)
-    ax.set_ylim(yp - bh / 2 - 0.2, y_hdr + 0.3)
+    ax.set_xlim(-1.2, xs[-1] + bw / 2 + 0.9)
+    ax.set_ylim(y_leg - 0.4, y_loss + 0.5)
     fl.save(fig, "mdl-rnn-bptt")
 
 
 # =========================================================================== #
-# 9.7 "Decoding and Generation" (sec_decoding): the worked beam-search tree   #
+# "Decoding and Generation" (sec_decoding): the worked beam-search tree       #
 # and the maximization-vs-sampling decoding task map.                        #
 #                                                                              #
 # The beam-search tree is restyled from the retired hand-drawn                #
@@ -875,7 +842,7 @@ def fig_beam_tree():
     handles = [
         Line2D([], [], marker="o", ls="none", markersize=9,
                markerfacecolor=BLUE, markeredgecolor=BLUE,
-               label="kept in the beam ($k = 2$)"),
+               label="kept in the beam ($w = 2$)"),
         Line2D([], [], marker="o", ls="none", markersize=9,
                markerfacecolor="white", markeredgecolor=GRAY,
                label="scored, then pruned"),

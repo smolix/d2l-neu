@@ -1186,7 +1186,7 @@ $(\lambda_2/\lambda_1)^2\approx0.146$, because for a symmetric matrix the
 eigenvectors are orthogonal, so to first order the norm is insensitive to the
 remaining misalignment.
 
-![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (orange), the direction gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$. Right: the ratio of consecutive norms converges to $\lambda_1\approx3.618$, its gap closing at the squared rate $(\lambda_2/\lambda_1)^2\approx0.146$.](../img/mdl-la-power-iter.svg)
+![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (arrows darkening with $k$) swing onto the principal eigenvector $\mathbf{w}_1$ (orange), the direction gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$. Right: the ratio of consecutive norms converges to $\lambda_1\approx3.618$, its gap closing at the squared rate $(\lambda_2/\lambda_1)^2\approx0.146$.](../img/mdl-la-power-iter.svg)
 :label:`fig_mdl-la-power-iter`
 
 Two caveats, both places where the short version above would mislead. First,

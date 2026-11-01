@@ -153,7 +153,9 @@ def fig_oo_classes():
     from matplotlib.patches import FancyBboxPatch
     LH, MID = 0.46, 0.0          # member line height, common centre line
     W_MOD, W_TR, W_DM = 4.7, 4.5, 4.0   # each box clears its longest member
-    GAP_L, GAP_R = 1.75, 2.05    # room for the arrow labels between boxes
+    # room for the arrow labels between boxes: "minibatch(es)" needs ~1.4/1.7
+    # units, so these gaps are the narrowest that keep >= 8 pt clear each side
+    GAP_L, GAP_R = 1.75, 2.05
     PT = 35.0                    # points per data unit: fixes the text/box ratio
     xr = (-0.1, W_MOD + GAP_L + W_TR + GAP_R + W_DM + 0.1)
     yr = (MID - 1.7, MID + 1.7)
@@ -195,14 +197,21 @@ def fig_oo_classes():
              ["train_dataloader()", "val_dataloader()"], GREEN)
 
     lab = dict(ha="center", fontsize=11.5, color=fl.INK)
+    # The rounded boxes are padded by 0.02 and their 1.8 pt borders straddle
+    # that outline.  A tail starts just outside the border (past the round
+    # cap of the 1.8 pt shaft), so no tail is drawn over a border; a tip
+    # ends on the border's centre line, so it visibly lands on the box.
+    TAIL, TIP = 0.02 + 1.8 / PT, 0.02
     # DataModule -> Trainer: the loaders yield minibatches
-    fl.arrow(ax, (dm_l, MID), (tr_r, MID), color=GRAY, lw=1.8)
+    fl.arrow(ax, (dm_l - TAIL, MID), (tr_r + TIP, MID), color=GRAY, lw=1.8)
     ax.text((tr_r + dm_l) / 2, MID + 0.16, "minibatches", va="bottom", **lab)
     # Trainer -> Module: one minibatch per step; Module -> Trainer: the loss
     xm = (mod_r + tr_l) / 2
-    fl.arrow(ax, (tr_l, MID + 0.32), (mod_r, MID + 0.32), color=GRAY, lw=1.8)
+    fl.arrow(ax, (tr_l - TAIL, MID + 0.32), (mod_r + TIP, MID + 0.32),
+             color=GRAY, lw=1.8)
     ax.text(xm, MID + 0.48, "minibatch", va="bottom", **lab)
-    fl.arrow(ax, (mod_r, MID - 0.32), (tr_l, MID - 0.32), color=GRAY, lw=1.8)
+    fl.arrow(ax, (mod_r + TAIL, MID - 0.32), (tr_l - TIP, MID - 0.32),
+             color=GRAY, lw=1.8)
     ax.text(xm, MID - 0.48, "loss", va="top", **lab)
     fl.save(fig, "mdl-linreg-oo-classes")
 
@@ -237,13 +246,13 @@ def fig_loss_menu():
     ax.plot(r, laplace, color=ORANGE, label="Laplace")
     ax.set_xlabel(r"noise $\epsilon$")
     ax.set_ylabel(r"$p(\epsilon)$")
-    ax.legend(loc="upper left", fontsize=13)
+    ax.legend(loc="upper left", fontsize=13, labelspacing=0.3)
     ax.set_xlim(-5, 5)
     ax.set_ylim(0, 0.75)
     # inset fonts match the main tick labels (>= 14 px on a slide at 64%
-    # width); the inset sits right of x = 1.2 so that its tick labels clear
+    # width); the inset sits right of x = 1.45 so that its tick labels clear
     # the two densities
-    axins = ax.inset_axes([0.72, 0.40, 0.27, 0.52])
+    axins = ax.inset_axes([0.745, 0.40, 0.25, 0.52])
     axins.plot(r, gauss, color=BLUE, lw=1.6)
     axins.plot(r, laplace, color=ORANGE, lw=1.6)
     axins.set_yscale("log")
@@ -261,7 +270,7 @@ def fig_loss_menu():
     ax.plot(r, huber, color=GREEN, label=r"Huber ($\delta=1$)")
     ax.set_xlabel(r"error $r = \hat{y} - y$")
     ax.set_ylabel("penalty")
-    ax.legend(loc="upper center", fontsize=13)
+    ax.legend(loc="upper center", fontsize=13, labelspacing=0.3)
     ax.set_xlim(-4, 4)
     ax.set_ylim(0, 6)
 
@@ -315,9 +324,9 @@ def fig_projection():
     ax.text(*(P(other) + [0.52, -0.02]), r"$\mathbf{X}\mathbf{w}$",
             color=T.MUTED, **lab)
     ax.text(*(P(origin) + [-0.3, 0.04]), r"$\mathbf{0}$", color=T.INK, **lab)
-    ax.text(*P((4.75, 2.2, 0)), "column space\n" r"of $\mathbf{X}$",
-            color=T.BLUE.dark, fontsize=T.FS_SMALL, ha="right", va="center",
-            multialignment="right", linespacing=1.1)
+    ax.text(*P((2.6, 2.1, 0)), "column space\n" r"of $\mathbf{X}$",
+            color=T.BLUE.dark, fontsize=T.FS_SMALL, ha="left", va="center",
+            multialignment="left", linespacing=0.7)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "mdl-linreg-projection")
@@ -443,12 +452,12 @@ def fig_gaussian_noise():
             zorder=4)
     for x0 in (1.0, 2.6, 4.2):
         m = line(x0)
-        yy = np.linspace(m - 3 * sigma, m + 3 * sigma, 200)
+        yy = np.linspace(m - 2.5 * sigma, m + 2.5 * sigma, 200)
         bell = x0 + 0.75 * np.exp(-0.5 * ((yy - m) / sigma) ** 2)
         ax.fill_betweenx(yy, x0, bell, color=T.ORANGE.tint, zorder=1)
         ax.plot([x0, x0], [yy[0], yy[-1]], color=T.FAINT, lw=1.2, zorder=2)
         ax.plot(bell, yy, color=T.ORANGE.base, lw=2.0, zorder=2)
-    ax.text(4.25, line(4.2) - 3 * sigma - 0.05, r"$p(y \mid x)$",
+    ax.text(4.25, line(4.2) - 2.5 * sigma - 0.05, r"$p(y \mid x)$",
             color=T.ORANGE.dark, fontsize=16, ha="left", va="top")
     ax.text(5.05, line(4.95) + 0.05, r"$wx + b$", color=T.INK, fontsize=16,
             ha="left", va="center")

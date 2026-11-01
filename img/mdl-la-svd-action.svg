@@ -541,8 +541,8 @@ L 258.06087 37.00362
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_4">
-    <!-- (2) after $\mathbf{V}^\top$ -->
-    <g style="fill: #15181c" transform="translate(218.54087 21.2) scale(0.14 -0.14)">
+    <!-- (2) after $\mathbf{V}^{\!\!\top}$ -->
+    <g style="fill: #15181c" transform="translate(220.15087 21.2) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-537" d="M 256 0 
 L 256 320 
@@ -723,7 +723,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(293.299728 0.084203)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(327.999695 0.084203)"/>
      <use xlink:href="#Cmb10-7a" transform="translate(347.99968 0.084203)"/>
-     <use xlink:href="#Cmsy10-64" transform="translate(441.492292 41.373437) scale(0.7)"/>
+     <use xlink:href="#Cmsy10-64" transform="translate(418.158425 41.373437) scale(0.7)"/>
     </g>
    </g>
   </g>
@@ -1263,7 +1263,7 @@ z
    </g>
    <g id="text_9">
     <!-- $\sigma_2\mathbf{u}_2$ -->
-    <g style="fill: #ff7f0e" transform="translate(560.673572 65.277968) scale(0.14 -0.14)">
+    <g style="fill: #ff7f0e" transform="translate(559.900292 54.54575) scale(0.14 -0.14)">
      <use xlink:href="#Cmmi10-15" transform="translate(0 0.984375)"/>
      <use xlink:href="#Cmr10-31" transform="translate(57.080078 -14.015587) scale(0.7)"/>
      <use xlink:href="#Cmb10-5a" transform="translate(97.800494 0.984375)"/>
@@ -1289,8 +1289,8 @@ L 607.417391 37.00362
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_10">
-    <!-- (4) after $\mathbf{U}=\mathbf{A}$ -->
-    <g style="fill: #15181c" transform="translate(560.687391 21.2) scale(0.14 -0.14)">
+    <!-- (4) after $\mathbf{U}$: $\mathbf{A}\mathbf{x}$ -->
+    <g style="fill: #15181c" transform="translate(562.157391 21.2) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-539" d="M 666 1549 
 L 1946 1549 
@@ -1352,6 +1352,27 @@ Q 1097 513 958 798
 Q 819 1084 819 1453 
 z
 " transform="scale(0.015625)"/>
+      <path id="SourceSans3-Regular-56d" d="M 800 2233 
+Q 640 2233 528 2345 
+Q 416 2457 416 2630 
+Q 416 2816 528 2928 
+Q 640 3040 800 3040 
+Q 954 3040 1066 2928 
+Q 1178 2816 1178 2630 
+Q 1178 2457 1066 2345 
+Q 954 2233 800 2233 
+z
+M 800 -77 
+Q 640 -77 528 35 
+Q 416 147 416 320 
+Q 416 506 528 618 
+Q 640 730 800 730 
+Q 954 730 1066 618 
+Q 1178 506 1178 320 
+Q 1178 147 1066 35 
+Q 954 -77 800 -77 
+z
+" transform="scale(0.015625)"/>
       <path id="Cmb10-56" d="M 225 0 
 L 225 325 
 Q 775 325 794 384 
@@ -1379,6 +1400,39 @@ L 2131 3103
 L 1556 1459 
 z
 " transform="scale(0.015625)"/>
+      <path id="Cmb10-2d" d="M 109 0 
+L 109 325 
+Q 628 325 678 384 
+L 1381 1350 
+L 588 2516 
+L 141 2516 
+L 141 2841 
+L 1606 2841 
+L 1606 2516 
+L 1331 2516 
+L 1766 1881 
+L 2181 2463 
+Q 2181 2491 2072 2503 
+Q 1963 2516 1888 2516 
+L 1888 2841 
+L 3156 2841 
+L 3156 2516 
+Q 2638 2516 2584 2456 
+L 1959 1594 
+L 2816 325 
+L 3272 325 
+L 3272 0 
+L 1797 0 
+L 1797 325 
+L 2075 325 
+L 1575 1063 
+L 1081 378 
+Q 1081 356 1193 340 
+Q 1306 325 1381 325 
+L 1381 0 
+L 109 0 
+z
+" transform="scale(0.015625)"/>
      </defs>
      <use xlink:href="#SourceSans3-Regular-5a2" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-539" transform="translate(30.299973 0.796875)"/>
@@ -1391,8 +1445,10 @@ z
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(293.299728 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(327.999695 0.796875)"/>
      <use xlink:href="#Cmb10-3d" transform="translate(347.99968 0.796875)"/>
-     <use xlink:href="#Cmr10-29" transform="translate(444.904034 0.796875)"/>
-     <use xlink:href="#Cmb10-56" transform="translate(542.589638 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-56d" transform="translate(424.903976 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(449.803955 0.796875)"/>
+     <use xlink:href="#Cmb10-56" transform="translate(469.80394 0.796875)"/>
+     <use xlink:href="#Cmb10-2d" transform="translate(545.292221 0.796875)"/>
     </g>
    </g>
   </g>

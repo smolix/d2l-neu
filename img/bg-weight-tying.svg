@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -609,8 +609,8 @@ z
     </g>
    </g>
    <g id="text_3">
-    <!-- $|V|\times d$ -->
-    <g transform="translate(195.2 143.883939) scale(0.13 -0.13)">
+    <!-- $|V\,|\times d$ -->
+    <g transform="translate(194.095 143.883939) scale(0.13 -0.13)">
      <defs>
       <path id="Cmsy10-2f" d="M 763 -1484 
 L 763 4684 
@@ -733,9 +733,9 @@ z
      </defs>
      <use xlink:href="#Cmsy10-2f"/>
      <use xlink:href="#Cmmi10-7e" transform="translate(27.685547 0)"/>
-     <use xlink:href="#Cmsy10-2f" transform="translate(85.986328 0)"/>
-     <use xlink:href="#Cmsy10-d" transform="translate(133.671932 0)"/>
-     <use xlink:href="#Cmmi10-51" transform="translate(231.357536 0)"/>
+     <use xlink:href="#Cmsy10-2f" transform="translate(102.653376 0)"/>
+     <use xlink:href="#Cmsy10-d" transform="translate(150.33898 0)"/>
+     <use xlink:href="#Cmmi10-51" transform="translate(248.024584 0)"/>
     </g>
    </g>
    <g id="patch_5">

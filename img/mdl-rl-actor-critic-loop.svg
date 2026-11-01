@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -68,15 +68,15 @@ z
 " clip-path="url(#p095d668d38)" style="fill: #eaf6ea; stroke: #2ca02c; stroke-width: 1.7; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
-    <path d="M 206.11872 164.61936 
-L 415.70208 164.61936 
-Q 418.48416 164.61936 418.48416 161.83728 
-L 418.48416 121.49712 
-Q 418.48416 118.71504 415.70208 118.71504 
-L 206.11872 118.71504 
-Q 203.33664 118.71504 203.33664 121.49712 
-L 203.33664 161.83728 
-Q 203.33664 164.61936 206.11872 164.61936 
+    <path d="M 213.07392 164.61936 
+L 422.65728 164.61936 
+Q 425.43936 164.61936 425.43936 161.83728 
+L 425.43936 121.49712 
+Q 425.43936 118.71504 422.65728 118.71504 
+L 213.07392 118.71504 
+Q 210.29184 118.71504 210.29184 121.49712 
+L 210.29184 161.83728 
+Q 210.29184 164.61936 213.07392 164.61936 
 z
 " clip-path="url(#p095d668d38)" style="fill: #ffffff; stroke: #ff7f0e; stroke-width: 1.7; stroke-linejoin: miter"/>
    </g>
@@ -352,17 +352,17 @@ z
    </g>
    <g id="patch_8">
     <path d="M 143.05824 141.6672 
-Q 172.27008 141.6672 199.245852 141.6672 
+Q 175.74768 141.6672 206.201052 141.6672 
 " style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 192.845852 138.4672 
-L 199.245852 141.6672 
-L 192.845852 144.8672 
+    <path d="M 199.801052 138.4672 
+L 206.201052 141.6672 
+L 199.801052 144.8672 
 z
 " style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- $\hat V_w(s_t)$ -->
-    <g style="fill: #2ca02c" transform="translate(155.76758 114.2673) scale(0.115 -0.115)">
+    <g style="fill: #2ca02c" transform="translate(156.86084 107.99811) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-7c" d="M 863 3444 
 L 738 3578 
@@ -519,7 +519,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(247.729301 0.609375)"/>
     </g>
     <!-- $\hat V_w(s_{t+1})$ -->
-    <g style="fill: #2ca02c" transform="translate(149.04008 135.6159) scale(0.115 -0.115)">
+    <g style="fill: #2ca02c" transform="translate(149.25584 129.54561) scale(0.13 -0.13)">
      <use xlink:href="#Cmr10-7c" transform="translate(19.316406 27.609375)"/>
      <use xlink:href="#Cmmi10-7e" transform="translate(0 0.609375)"/>
      <use xlink:href="#Cmmi10-6a" transform="translate(75.394916 -14.390587) scale(0.7)"/>
@@ -1630,7 +1630,7 @@ z
    </g>
    <g id="text_11">
     <!-- $\delta_t = r_t + \gamma \hat V_w(s_{t+1}) - \hat V_w(s_t)$ -->
-    <g transform="translate(226.7379 146.2167) scale(0.135 -0.135)">
+    <g transform="translate(233.6931 146.2167) scale(0.135 -0.135)">
      <defs>
       <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 

@@ -90,7 +90,7 @@ def fig_weight_tying():
                 zorder=2)
     ax.text(mx, my + 0.30, r"$\mathbf{W}$", ha="center", va="center",
             fontsize=20, color="black", zorder=4)
-    ax.text(mx, my - 0.34, r"$|V|\times d$", ha="center", va="center",
+    ax.text(mx, my - 0.34, r"$|V\,|\times d$", ha="center", va="center",
             fontsize=13, color="black", zorder=4)
 
     # both call sites reference the same tensor: draw the arrows FIRST, at a

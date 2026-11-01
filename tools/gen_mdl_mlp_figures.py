@@ -27,6 +27,12 @@ BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIG
 
 from matplotlib.patches import FancyBboxPatch
 
+# matplotlib >= 3.11 sizes a text box by the font's full ascender/descender
+# instead of the ink of "lp", so multi-line text and axis labels sit looser
+# than they did.  These two values restore the tighter spacing.
+LINESP = 0.82   # multi-line label pitch (~1.15 x the 'lp' height, as before)
+XPAD = -1.0     # x-axis label pad (the math label's box now has headroom)
+
 
 def fig_mlp_arch():
     """Data-flow diagram for *this section's* concrete MLP: the batched tensor
@@ -144,7 +150,12 @@ def fig_uat_hinges():
     # ---- left: one hinge per hidden unit -------------------------------
     colors = [BLUE, GREEN, ORANGE]
     for k, (hk, col) in enumerate(zip(hinges, colors)):
-        axl.plot(x, hk, color=col, lw=2.2)
+        # draw each hinge only from its joint rightward: its zero part
+        # coincides with the black axis, and three coloured copies stacked
+        # on the axis would read as a striped band
+        on = x >= joints[k]
+        axl.plot(np.r_[joints[k], x[on]], np.r_[0.0, hk[on]], color=col,
+                 lw=2.2)
         axl.plot([joints[k]], [0], "o", color=col, ms=5, zorder=5,
                  clip_on=False)
         axl.annotate(rf"$t_{k+1}$", xy=(joints[k], 0),
@@ -166,13 +177,15 @@ def fig_uat_hinges():
     axr.plot(x, poly, color=BLUE, lw=2.4, label="sum of hinges")
     axr.fill_between(x, poly, g(x), color=ORANGE, alpha=0.30, lw=0,
                      label="error")
+    # the joints sit ON the polyline, at its kinks (same colours as the
+    # hinges on the left), so each dot marks where one hinge switches on
     for k, col in enumerate(colors):
-        axr.plot([joints[k]], [0], "o", color=col, ms=5, zorder=5,
-                 clip_on=False)
-    axr.axhline(0, color="black", lw=0.9)
+        axr.plot([joints[k]], [g(joints[k])], "o", color=col, ms=6,
+                 zorder=5, mec="white", mew=0.8)
     # the caption states the piece count; no redundant title
-    axr.legend(fontsize=13, loc="upper right", frameon=False)
-    axr.set_ylim(-0.12, 1.18)
+    axr.legend(fontsize=13, loc="upper right", frameon=False,
+               labelspacing=0.25, handleheight=0.6, borderaxespad=0.2)
+    axr.set_ylim(0.0, 1.18)
 
     for ax in (axl, axr):
         ax.set_xlim(lo, hi)
@@ -180,7 +193,7 @@ def fig_uat_hinges():
         ax.set_yticks([])
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_xlabel("$x$", fontsize=15)
+        ax.set_xlabel("$x$", fontsize=15, labelpad=XPAD)
 
     fig.tight_layout()
     fl.save(fig, "mdl-mlp-uat-hinges")
@@ -226,9 +239,9 @@ def fig_grokking():
 
     # curve labels in the empty corners, colored like their curves
     ax.text(0.12, 90, "training\naccuracy", color=ink, fontsize=14,
-            ha="left", va="center", linespacing=1.15)
+            ha="left", va="center", linespacing=LINESP)
     ax.text(5.72, 40, "validation\naccuracy", color=fl.T.BLUE.dark,
-            fontsize=14, ha="left", va="center", linespacing=1.15)
+            fontsize=14, ha="left", va="center", linespacing=LINESP)
 
     # marker labels above the truncated dashed lines
     ax.text(l_mem, 106, "memorization", color=ink, fontsize=14,
@@ -237,7 +250,7 @@ def fig_grokking():
             ha="center", va="bottom")
     ax.text(3.95, 58, "two to three\norders of\nmagnitude\nmore steps",
             color=ink, fontsize=14, ha="center",
-            va="center", linespacing=1.15)
+            va="center", linespacing=LINESP)
 
     # chance level
     ax.axhline(100 * chance, color=fl.T.FAINT, lw=1.0, zorder=1)
@@ -250,7 +263,8 @@ def fig_grokking():
     ax.set_yticklabels(["0%", "50%", "100%"])
     ax.set_xticks([0, 1, 2, 3, 4, 5, 6])
     ax.set_xticklabels([rf"$10^{k}$" for k in range(7)])
-    ax.set_xlabel("optimization steps (log scale)", fontsize=14, color=ink)
+    ax.set_xlabel("optimization steps (log scale)", fontsize=14, color=ink,
+                  labelpad=XPAD)
     ax.set_ylabel("accuracy", fontsize=14, color=ink)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -345,8 +359,8 @@ def fig_activations():
         axd.set_ylim(-0.25, 1.3)
         axd.set_yticks([0, 0.25, 1])
         axd.set_yticklabels(["0", "1/4", "1"])
-    axes[1, 0].set_xlabel("$z$", fontsize=15)
-    axes[1, 1].set_xlabel("$z$", fontsize=15)
+    axes[1, 0].set_xlabel("$z$", fontsize=15, labelpad=XPAD)
+    axes[1, 1].set_xlabel("$z$", fontsize=15, labelpad=XPAD)
 
     # top row: ReLU and GELU
     axf, axd = axes[0]
@@ -355,8 +369,8 @@ def fig_activations():
     lab = dict(fontsize=15, zorder=5)
     axf.text(-3.9, 0.25, "ReLU", color=T.BLUE.dark, ha="left", va="bottom",
              **lab)
-    axf.text(-0.75, -0.36, "GELU", color=T.ORANGE.dark, ha="center", va="top",
-             **lab)
+    axf.text(-0.75, -0.62, "GELU", color=T.ORANGE.dark, ha="center",
+             va="center", **lab)
     axd.text(2.0, 0.83, "ReLU", color=T.BLUE.dark, ha="center", va="top",
              **lab)
     axd.text(-2.2, 0.12, "GELU", color=T.ORANGE.dark, ha="center",
@@ -418,7 +432,7 @@ def fig_depth_folding():
         ax.set_xticks([0, 0.5, 1])
         ax.set_xticklabels(["0", "1/2", "1"])
         ax.set_yticks([0, 1])
-        ax.set_xlabel("$z$", fontsize=16)
+        ax.set_xlabel("$z$", fontsize=16, labelpad=XPAD)
         _black_axes(ax, labelsize=14)
     fl.save(fig, "mdl-mlp-depth-folding")
 

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -31,7 +31,7 @@ z
    <g id="line2d_1">
     <path d="M 53.115429 58.217143 
 L 297.997714 58.217143 
-" clip-path="url(#p6a326fe281)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.5"/>
+" clip-path="url(#p7494a7275e)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.5"/>
    </g>
    <g id="patch_2">
     <path d="M 9.202588 139.844571 
@@ -103,9 +103,9 @@ z
    </g>
    <g id="text_1">
     <!-- $\mathbf{s}$ -->
-    <g style="fill: #15181c" transform="translate(306.160457 62.273393) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(306.160457 63.609143) scale(0.16 -0.16)">
      <defs>
-      <path id="Cmb10-73" d="M 213 44 
+      <path id="Cmb10-52" d="M 213 44 
 L 213 934 
 Q 228 994 294 1013 
 L 459 1013 
@@ -151,14 +151,14 @@ Q 228 -22 213 44
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-73" transform="translate(0 0.6875)"/>
+     <use xlink:href="#Cmb10-52" transform="translate(0 0.6875)"/>
     </g>
    </g>
    <g id="text_2">
     <!-- $\beta = 0$ -->
-    <g style="fill: #15181c" transform="translate(281.497714 45.959057) scale(0.15 -0.15)">
+    <g style="fill: #15181c" transform="translate(281.122714 44.144057) scale(0.15 -0.15)">
      <defs>
-      <path id="Cmmi10-af" d="M 172 -1241 
+      <path id="Cmmi10-23" d="M 172 -1241 
 Q 153 -1241 137 -1219 
 Q 122 -1197 122 -1178 
 L 1106 2778 
@@ -217,7 +217,7 @@ Q 2550 2591 2472 2591
 Q 2181 2591 2106 2553 
 z
 " transform="scale(0.015625)"/>
-      <path id="Cmr10-3d" d="M 481 850 
+      <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 
 Q 359 931 359 978 
 Q 359 1031 393 1068 
@@ -242,7 +242,7 @@ Q 4547 2094 4500 2094
 L 481 2094 
 z
 " transform="scale(0.015625)"/>
-      <path id="Cmr10-30" d="M 1600 -141 
+      <path id="Cmr10-28" d="M 1600 -141 
 Q 816 -141 533 504 
 Q 250 1150 250 2041 
 Q 250 2597 351 3087 
@@ -273,16 +273,16 @@ Q 1325 25 1600 25
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmmi10-af" transform="translate(0 0.484375)"/>
-     <use xlink:href="#Cmr10-3d" transform="translate(74.052734 0.484375)"/>
-     <use xlink:href="#Cmr10-30" transform="translate(169.296875 0.484375)"/>
+     <use xlink:href="#Cmmi10-23" transform="translate(0 0.484375)"/>
+     <use xlink:href="#Cmr10-29" transform="translate(76.494198 0.484375)"/>
+     <use xlink:href="#Cmr10-28" transform="translate(174.179802 0.484375)"/>
     </g>
    </g>
    <g id="text_3">
     <!-- $\beta = 0.5$ -->
-    <g style="fill: #15181c" transform="translate(214.502143 45.959057) scale(0.15 -0.15)">
+    <g style="fill: #15181c" transform="translate(214.127143 44.144057) scale(0.15 -0.15)">
      <defs>
-      <path id="Cmmi10-3a" d="M 538 353 
+      <path id="Cmmi10-33" d="M 538 353 
 Q 538 497 644 600 
 Q 750 703 891 703 
 Q 978 703 1062 656 
@@ -294,7 +294,7 @@ Q 750 0 644 106
 Q 538 213 538 353 
 z
 " transform="scale(0.015625)"/>
-      <path id="Cmr10-35" d="M 556 728 
+      <path id="Cmr10-78" d="M 556 728 
 Q 622 541 758 387 
 Q 894 234 1080 148 
 Q 1266 63 1466 63 
@@ -348,18 +348,18 @@ Q 569 725 556 728
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmmi10-af" transform="translate(0 0.484375)"/>
-     <use xlink:href="#Cmr10-3d" transform="translate(74.052734 0.484375)"/>
-     <use xlink:href="#Cmr10-30" transform="translate(169.296875 0.484375)"/>
-     <use xlink:href="#Cmmi10-3a" transform="translate(219.296875 0.484375)"/>
-     <use xlink:href="#Cmr10-35" transform="translate(246.982422 0.484375)"/>
+     <use xlink:href="#Cmmi10-23" transform="translate(0 0.484375)"/>
+     <use xlink:href="#Cmr10-29" transform="translate(76.494198 0.484375)"/>
+     <use xlink:href="#Cmr10-28" transform="translate(174.179802 0.484375)"/>
+     <use xlink:href="#Cmmi10-33" transform="translate(224.179802 0.484375)"/>
+     <use xlink:href="#Cmr10-78" transform="translate(251.865349 0.484375)"/>
     </g>
    </g>
    <g id="text_4">
     <!-- $\beta = 1$ -->
-    <g style="fill: #15181c" transform="translate(135.414171 45.959057) scale(0.15 -0.15)">
+    <g style="fill: #15181c" transform="translate(134.664171 44.144057) scale(0.15 -0.15)">
      <defs>
-      <path id="Cmr10-31" d="M 594 0 
+      <path id="Cmr10-64" d="M 594 0 
 L 594 225 
 Q 1394 225 1394 428 
 L 1394 3788 
@@ -376,16 +376,16 @@ L 594 0
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmmi10-af" transform="translate(0 0.484375)"/>
-     <use xlink:href="#Cmr10-3d" transform="translate(74.052734 0.484375)"/>
-     <use xlink:href="#Cmr10-31" transform="translate(169.296875 0.484375)"/>
+     <use xlink:href="#Cmmi10-23" transform="translate(0 0.484375)"/>
+     <use xlink:href="#Cmr10-29" transform="translate(76.494198 0.484375)"/>
+     <use xlink:href="#Cmr10-64" transform="translate(174.179802 0.484375)"/>
     </g>
    </g>
    <g id="text_5">
     <!-- $\beta = 2$ -->
-    <g style="fill: #15181c" transform="translate(36.615429 45.959057) scale(0.15 -0.15)">
+    <g style="fill: #15181c" transform="translate(36.240429 44.144057) scale(0.15 -0.15)">
      <defs>
-      <path id="Cmr10-32" d="M 319 0 
+      <path id="Cmr10-31" d="M 319 0 
 L 319 172 
 Q 319 188 331 206 
 L 1325 1306 
@@ -427,16 +427,16 @@ L 319 0
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmmi10-af" transform="translate(0 0.484375)"/>
-     <use xlink:href="#Cmr10-3d" transform="translate(74.052734 0.484375)"/>
-     <use xlink:href="#Cmr10-32" transform="translate(169.296875 0.484375)"/>
+     <use xlink:href="#Cmmi10-23" transform="translate(0 0.484375)"/>
+     <use xlink:href="#Cmr10-29" transform="translate(76.494198 0.484375)"/>
+     <use xlink:href="#Cmr10-31" transform="translate(174.179802 0.484375)"/>
     </g>
    </g>
    <g id="text_6">
     <!-- $\mathbf{k}$ -->
-    <g style="fill: #15181c" transform="translate(222.333714 158.379471) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(222.333714 162.986971) scale(0.16 -0.16)">
      <defs>
-      <path id="Cmb10-6b" d="M 91 0 
+      <path id="Cmb10-2c" d="M 91 0 
 L 91 325 
 L 531 325 
 L 531 3884 
@@ -468,14 +468,14 @@ L 91 0
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-6b" transform="translate(0 0.609375)"/>
+     <use xlink:href="#Cmb10-2c" transform="translate(0 0.609375)"/>
     </g>
    </g>
    <g id="text_7">
     <!-- $\mathbf{k}^{\perp}$ -->
-    <g style="fill: #15181c" transform="translate(182.698971 18.5925) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(182.698971 23.2) scale(0.16 -0.16)">
      <defs>
-      <path id="STIXGeneral-Regular-27c2" d="M 4102 0 
+      <path id="STIXGeneral-Regular-67a" d="M 4102 0 
 L 333 0 
 L 333 422 
 L 2010 422 
@@ -487,14 +487,14 @@ L 4102 0
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-6b" transform="translate(0 0.39375)"/>
-     <use xlink:href="#STIXGeneral-Regular-27c2" transform="translate(69.440703 38.657813) scale(0.7)"/>
+     <use xlink:href="#Cmb10-2c" transform="translate(0 0.368578)"/>
+     <use xlink:href="#STIXGeneral-Regular-67a" transform="translate(70.689878 41.657813) scale(0.7)"/>
     </g>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p6a326fe281">
+  <clipPath id="p7494a7275e">
    <rect x="7.2" y="7.2" width="357.12" height="165.295543"/>
   </clipPath>
  </defs>

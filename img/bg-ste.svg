@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -362,7 +362,7 @@ z
    </g>
    <g id="text_2">
     <!-- identity -->
-    <g style="fill: #565d66" transform="translate(10.903125 60.274) scale(0.12 -0.12)">
+    <g style="fill: #565d66" transform="translate(169.37625 33.478) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-24" d="M 525 0 
 L 525 3110 
@@ -662,13 +662,8 @@ z
   </g>
   <g id="axes_2">
    <g id="line2d_3">
-    <path d="M 284.972727 199.751304 
-L 523.390909 199.751304 
-" clip-path="url(#pc248e6bee7)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
-   </g>
-   <g id="line2d_4">
     <path d="M 284.972727 92.62087 
-L 523.390909 92.62087 
+L 508.489773 92.62087 
 " clip-path="url(#pc248e6bee7)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="patch_4">
@@ -1097,6 +1092,11 @@ z
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(320.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(354.40625 0)"/>
     </g>
+   </g>
+   <g id="line2d_4">
+    <path d="M 284.972727 199.751304 
+L 508.489773 199.751304 
+" clip-path="url(#pc248e6bee7)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
   </g>
  </g>

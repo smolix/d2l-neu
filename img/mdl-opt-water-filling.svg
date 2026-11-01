@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="419.970913pt" height="236.16pt" viewBox="0 0 419.970913 236.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="442.430913pt" height="236.16pt" viewBox="0 0 442.430913 236.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 236.16 
-L 419.970913 236.16 
-L 419.970913 0 
+L 442.430913 236.16 
+L 442.430913 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -124,7 +124,7 @@ L 284.926711 184.008649
    </g>
    <g id="text_1">
     <!-- $n_{1}=0.1$ -->
-    <g transform="translate(23.167886 202.800216) scale(0.11 -0.11)">
+    <g transform="translate(19.697886 204.800216) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-7a" d="M 494 109 
 Q 494 147 500 166 
@@ -273,7 +273,7 @@ z
    </g>
    <g id="text_2">
     <!-- $n_{2}=0.4$ -->
-    <g transform="translate(77.095403 202.800216) scale(0.11 -0.11)">
+    <g transform="translate(73.625403 204.800216) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-31" d="M 319 0 
 L 319 172 
@@ -354,7 +354,7 @@ z
    </g>
    <g id="text_3">
     <!-- $n_{3}=0.8$ -->
-    <g transform="translate(131.022919 202.800216) scale(0.11 -0.11)">
+    <g transform="translate(127.552919 204.800216) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-6e" d="M 609 494 
 Q 759 275 1012 169 
@@ -477,7 +477,7 @@ z
    </g>
    <g id="text_4">
     <!-- dry -->
-    <g style="fill: #565d66" transform="translate(196.368092 76.734865) scale(0.11 -0.11)">
+    <g transform="translate(194.97403 76.082865) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1f" d="M 1587 -77 
 Q 1005 -77 653 348 
@@ -558,7 +558,7 @@ z
    </g>
    <g id="text_5">
     <!-- $n_{4}=1.6$ -->
-    <g transform="translate(184.950436 202.800216) scale(0.11 -0.11)">
+    <g transform="translate(181.480436 204.800216) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-45" d="M 1600 -141 
 Q 1203 -141 937 70 
@@ -626,7 +626,7 @@ z
    </g>
    <g id="text_6">
     <!-- dry -->
-    <g style="fill: #565d66" transform="translate(250.295609 22.793243) scale(0.11 -0.11)">
+    <g transform="translate(248.901547 22.141243) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-1f"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(55.5 0)"/>
      <use xlink:href="#SourceSans3-Regular-34" transform="translate(92.703125 0)"/>
@@ -634,7 +634,7 @@ z
    </g>
    <g id="text_7">
     <!-- $n_{5}=2.5$ -->
-    <g transform="translate(238.877953 202.800216) scale(0.11 -0.11)">
+    <g transform="translate(235.407953 204.800216) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-78" d="M 556 728 
 Q 622 541 758 387 
@@ -700,7 +700,7 @@ z
    </g>
    <g id="text_8">
     <!-- water level $w=1/\mu\approx1.43$ -->
-    <g style="fill: #ff7f0e" transform="translate(289.240913 101.808622) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(289.240913 102.482622) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -1057,8 +1057,8 @@ L 99.580403 109.363563
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="text_9">
-    <!-- $p_2^\star=w-n_2$ -->
-    <g style="fill: #1f77b4" transform="translate(103.730255 132.775108) scale(0.11 -0.11)">
+    <!-- $p_2^\star$ -->
+    <g style="fill: #1f77b4" transform="translate(100.494604 133.786108) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-80" d="M -159 -1241 
 Q -219 -1241 -219 -1159 
@@ -1127,33 +1127,15 @@ L 2579 2144
 L 4256 2336 
 z
 " transform="scale(0.015625)"/>
-      <path id="Cmsy10-11" d="M 653 1472 
-Q 600 1472 565 1512 
-Q 531 1553 531 1600 
-Q 531 1647 565 1687 
-Q 600 1728 653 1728 
-L 4325 1728 
-Q 4375 1728 4408 1687 
-Q 4441 1647 4441 1600 
-Q 4441 1553 4408 1512 
-Q 4375 1472 4325 1472 
-L 653 1472 
-z
-" transform="scale(0.015625)"/>
      </defs>
      <use xlink:href="#Cmmi10-80" transform="translate(0 0.918578)"/>
      <use xlink:href="#STIXGeneral-Regular-4d9" transform="translate(75.553191 42.207813) scale(0.7)"/>
      <use xlink:href="#Cmr10-31" transform="translate(50.292969 -30.326562) scale(0.7)"/>
-     <use xlink:href="#Cmr10-29" transform="translate(164.273661 0.918578)"/>
-     <use xlink:href="#Cmmi10-6a" transform="translate(261.959265 0.918578)"/>
-     <use xlink:href="#Cmsy10-11" transform="translate(353.443697 0.918578)"/>
-     <use xlink:href="#Cmmi10-7a" transform="translate(451.129301 0.918578)"/>
-     <use xlink:href="#Cmr10-31" transform="translate(511.139067 -14.081384) scale(0.7)"/>
     </g>
    </g>
    <g id="text_10">
     <!-- channels, floors at the noise levels $n_i$ -->
-    <g transform="translate(65.517919 220.181405) scale(0.11 -0.11)">
+    <g transform="translate(50.137919 222.181405) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 

@@ -523,7 +523,7 @@ raising them. :numref:`fig_mdl-mlp-max-margin` shows that the approach is
 slow: the training error is zero from the first step, yet the separator is
 still turning after $10^5$ steps.
 
-![Gradient descent on the logistic loss for two separable classes, with separators through the origin. (a) The separators after $t = 1$, $10^2$, and $10^4$ steps (gray to blue) turn toward the maximum-margin separator (black), whose margin is dashed; the two examples closest to it are ringed. (b) The angle between $\mathbf{w}_t$ and the maximum-margin direction keeps shrinking long after every training example is classified correctly.](../img/mdl-mlp-max-margin.svg)
+![Gradient descent on the logistic loss for two separable classes, with separators through the origin. Left: the separators after $t = 1$, $10^2$, and $10^4$ steps (gray to blue) turn toward the maximum-margin separator (black), whose margin is dashed; the two examples closest to it are ringed. Right: the angle between $\mathbf{w}_t$ and the maximum-margin direction keeps shrinking long after every training example is classified correctly.](../img/mdl-mlp-max-margin.svg)
 :label:`fig_mdl-mlp-max-margin`
 
 Both results concern linear models. For deep networks, statements this exact

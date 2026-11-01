@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -31926,45 +31926,6 @@ L 421.444813 202.255126
 L 421.444813 202.255126 
 " clip-path="url(#p5ac711ceb7)" style="fill: none; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.4"/>
    </g>
-   <g id="text_17">
-    <!-- $X_0$ -->
-    <g style="fill: #15181c" transform="translate(56.847613 41.670272) scale(0.115 -0.115)">
-     <defs>
-      <path id="Cmr10-28" d="M 1600 -141 
-Q 816 -141 533 504 
-Q 250 1150 250 2041 
-Q 250 2597 351 3087 
-Q 453 3578 754 3920 
-Q 1056 4263 1600 4263 
-Q 2022 4263 2290 4056 
-Q 2559 3850 2700 3523 
-Q 2841 3197 2892 2823 
-Q 2944 2450 2944 2041 
-Q 2944 1491 2842 1011 
-Q 2741 531 2444 195 
-Q 2147 -141 1600 -141 
-z
-M 1600 25 
-Q 1956 25 2131 390 
-Q 2306 756 2347 1200 
-Q 2388 1644 2388 2144 
-Q 2388 2625 2347 3031 
-Q 2306 3438 2132 3767 
-Q 1959 4097 1600 4097 
-Q 1238 4097 1063 3765 
-Q 888 3434 847 3029 
-Q 806 2625 806 2144 
-Q 806 1788 823 1472 
-Q 841 1156 916 820 
-Q 991 484 1158 254 
-Q 1325 25 1600 25 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#Cmmi10-85" transform="translate(0 0.6875)"/>
-     <use xlink:href="#Cmr10-28" transform="translate(82.8125 -14.312462) scale(0.7)"/>
-    </g>
-   </g>
    <g id="line2d_57">
     <path d="M 53.164813 48.274339 
 L 58.689013 53.816544 
@@ -32025,6 +31986,19 @@ z
    </g>
    <g id="legend_1">
     <g id="patch_5">
+     <path d="M 267.454813 71.754 
+L 411.294813 71.754 
+Q 414.194813 71.754 414.194813 68.854 
+L 414.194813 17.35 
+Q 414.194813 14.45 411.294813 14.45 
+L 267.454813 14.45 
+Q 264.554813 14.45 264.554813 17.35 
+L 264.554813 68.854 
+Q 264.554813 71.754 267.454813 71.754 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
+    <g id="patch_6">
      <path d="M 270.354813 34.75 
 L 299.354813 34.75 
 L 299.354813 24.6 
@@ -32032,7 +32006,7 @@ L 270.354813 24.6
 z
 " style="fill: #ff7f0e; fill-opacity: 0.16; stroke: #ff7f0e; stroke-opacity: 0.16; stroke-width: 2; stroke-linejoin: miter"/>
     </g>
-    <g id="text_18">
+    <g id="text_17">
      <!-- $\pm 2\,\mathrm{std}$ marginal -->
      <g style="fill: #15181c" transform="translate(310.954813 34.75) scale(0.145 -0.145)">
       <defs>
@@ -32396,10 +32370,40 @@ L 284.854813 56.152
 L 299.354813 56.152 
 " style="fill: none; stroke: #2ca02c; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
-    <g id="text_19">
+    <g id="text_18">
      <!-- mean $X_0 e^{-\theta t}$ -->
      <g style="fill: #15181c" transform="translate(310.954813 61.227) scale(0.145 -0.145)">
       <defs>
+       <path id="Cmr10-28" d="M 1600 -141 
+Q 816 -141 533 504 
+Q 250 1150 250 2041 
+Q 250 2597 351 3087 
+Q 453 3578 754 3920 
+Q 1056 4263 1600 4263 
+Q 2022 4263 2290 4056 
+Q 2559 3850 2700 3523 
+Q 2841 3197 2892 2823 
+Q 2944 2450 2944 2041 
+Q 2944 1491 2842 1011 
+Q 2741 531 2444 195 
+Q 2147 -141 1600 -141 
+z
+M 1600 25 
+Q 1956 25 2131 390 
+Q 2306 756 2347 1200 
+Q 2388 1644 2388 2144 
+Q 2388 2625 2347 3031 
+Q 2306 3438 2132 3767 
+Q 1959 4097 1600 4097 
+Q 1238 4097 1063 3765 
+Q 888 3434 847 3029 
+Q 806 2625 806 2144 
+Q 806 1788 823 1472 
+Q 841 1156 916 820 
+Q 991 484 1158 254 
+Q 1325 25 1600 25 
+z
+" transform="scale(0.015625)"/>
        <path id="Cmmi10-3" d="M 1288 -72 
 Q 981 -72 751 87 
 Q 522 247 401 517 
@@ -32508,6 +32512,21 @@ z
       <use xlink:href="#Cmmi10-12" transform="translate(493.257117 41.639062) scale(0.7)"/>
       <use xlink:href="#Cmmi10-30" transform="translate(526.103797 41.639062) scale(0.7)"/>
      </g>
+    </g>
+   </g>
+   <g id="text_19">
+    <g id="patch_7">
+     <path d="M 57.149013 45.055893 
+L 77.589013 45.055893 
+L 77.589013 23.411893 
+L 57.149013 23.411893 
+z
+" style="fill: #ffffff; opacity: 0.85"/>
+    </g>
+    <!-- $X_0$ -->
+    <g style="fill: #15181c" transform="translate(58.689013 38.951893) scale(0.14 -0.14)">
+     <use xlink:href="#Cmmi10-85" transform="translate(0 0.6875)"/>
+     <use xlink:href="#Cmr10-28" transform="translate(82.8125 -14.312462) scale(0.7)"/>
     </g>
    </g>
   </g>

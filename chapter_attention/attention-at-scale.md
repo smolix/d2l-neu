@@ -55,7 +55,7 @@ learnability theorem: shorter paths avoid repeatedly multiplying recurrent
 state Jacobians, but they do not by themselves guarantee that optimization
 will recover a long-range dependency.
 
-![Comparing CNN, RNN, and self-attention architectures.](../img/mdl-attention-cnn-rnn-self-attention.svg)
+![Sequence-layer connectivity. Highlighted edges show how the inputs reach the third output in one layer: a convolution sees a window of $k = 3$ neighbors, a recurrence reaches earlier inputs only by passing information step by step along the chain, and self-attention connects every position directly.](../img/mdl-attention-cnn-rnn-self-attention.svg)
 :label:`fig_cnn-rnn-self-attention`
 
 A convolutional layer with kernel size $k$ and $d$ channels in and out costs

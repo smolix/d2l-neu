@@ -121,21 +121,21 @@ Treating the upper limit as a variable connects integration to
 differentiation. Define the **area-so-far function**
 
 $$
-F(x) = \int_a^x f(y)\,dy,
+F(x) = \int_c^x f(y)\,dy,
 $$
 :eqlabel:`eq_mdl-area-fn`
 
-the signed area accumulated from the left endpoint $a$ out to $x$. This single
+the signed area accumulated from a fixed base point $c$ out to $x$. This single
 function captures *every* definite integral at once: the area over any
-sub-interval is a difference of accumulated areas,
+interval $[a, b]$ is a difference of accumulated areas,
 
 $$
-\int_c^b f(x)\,dx = F(b) - F(c),
+\int_a^b f(x)\,dx = F(b) - F(a),
 $$
 
-since the area out to $b$ minus the area out to $c$ leaves exactly the area
-between them. :numref:`fig_mdl-area-subtract` draws this subtraction,
-accumulating from a base point $c$ at the left edge of the plot.
+since the area out to $b$ minus the area out to $a$ leaves exactly the area
+between them. :numref:`fig_mdl-area-subtract` draws this subtraction, with the
+base point $c$ at the left edge of the plot.
 
 ![The area under $f$ from $a$ to $b$ as the difference of two areas accumulated from a base point $c$ at the plot's left edge: $\int_a^b f\,dx = \int_c^b f\,dx - \int_c^a f\,dx$. Every definite integral is a difference of two values of a single accumulation function.](../img/mdl-cal-sub-area.svg)
 :label:`fig_mdl-area-subtract`

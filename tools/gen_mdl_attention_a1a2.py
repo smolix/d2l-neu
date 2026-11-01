@@ -48,15 +48,18 @@ def fig_kernels():
         ("constant", np.ones_like(x)),
         ("triangular", np.maximum(0.0, 1.0 - np.abs(x))),
     ]
-    fig, axes = plt.subplots(1, 4, sharey=True, figsize=(9, 2.4))
+    fig, axes = plt.subplots(1, 4, sharey=True, figsize=(9, 2.6))
     for ax, (name, y) in zip(axes, kernels):
         ax.plot(x, y, color=BLUE, lw=2.0)
         ax.set_xlim(-2.5, 2.5)
-        ax.set_ylim(0.0, 1.12)
+        # bottom just below 0 so zero stretches of a kernel stay visible
+        # instead of merging with the black x-axis spine
+        ax.set_ylim(-0.06, 1.12)
         ax.set_xticks([-2, -1, 0, 1, 2])
         ax.set_yticks([0, 0.5, 1])
-        ax.tick_params(labelsize=10, colors="black")
-        ax.set_xlabel(name, fontsize=14, color="black")
+        ax.tick_params(labelsize=12, colors="black")
+        ax.set_title(name, fontsize=14, color="black")
+        ax.set_xlabel(r"$q - k$", fontsize=14, color="black")
         for spine in ("left", "bottom"):
             ax.spines[spine].set_color("black")
     axes[0].set_ylabel(r"$\alpha(q, k)$", fontsize=14, color="black")

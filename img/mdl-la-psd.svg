@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -73,7 +73,7 @@ L 105.664825 166.369855
    </g>
    <g id="text_1">
     <!-- $x_1$ -->
-    <g style="fill: #15181c" transform="translate(45.075417 166.542333) rotate(-339.561803) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(42.768083 167.12105) rotate(-339.561803) scale(0.17 -0.17)">
      <defs>
       <path id="Cmmi10-3f" d="M 500 184 
 Q 613 97 819 97 
@@ -167,7 +167,7 @@ L 105.664825 166.369855
    </g>
    <g id="text_2">
     <!-- $x_2$ -->
-    <g style="fill: #15181c" transform="translate(147.140874 166.034893) rotate(-31.921648) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(146.190048 168.215406) rotate(-31.921648) scale(0.17 -0.17)">
      <defs>
       <path id="Cmr10-31" d="M 319 0 
 L 319 172 
@@ -9094,7 +9094,7 @@ L 312.45306 166.369855
    </g>
    <g id="text_3">
     <!-- $x_1$ -->
-    <g style="fill: #15181c" transform="translate(251.863653 166.542333) rotate(-339.561803) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(249.556319 167.12105) rotate(-339.561803) scale(0.17 -0.17)">
      <use xlink:href="#Cmmi10-3f" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmr10-64" transform="translate(57.080078 -14.187462) scale(0.7)"/>
     </g>
@@ -9108,7 +9108,7 @@ L 312.45306 166.369855
    </g>
    <g id="text_4">
     <!-- $x_2$ -->
-    <g style="fill: #15181c" transform="translate(353.929109 166.034893) rotate(-31.921648) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(352.978283 168.215406) rotate(-31.921648) scale(0.17 -0.17)">
      <use xlink:href="#Cmmi10-3f" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmr10-31" transform="translate(57.080078 -14.187462) scale(0.7)"/>
     </g>
@@ -17992,7 +17992,7 @@ L 519.241295 166.369855
    </g>
    <g id="text_5">
     <!-- $x_1$ -->
-    <g style="fill: #15181c" transform="translate(458.651888 166.542333) rotate(-339.561803) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(456.344554 167.12105) rotate(-339.561803) scale(0.17 -0.17)">
      <use xlink:href="#Cmmi10-3f" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmr10-64" transform="translate(57.080078 -14.187462) scale(0.7)"/>
     </g>
@@ -18006,7 +18006,7 @@ L 519.241295 166.369855
    </g>
    <g id="text_6">
     <!-- $x_2$ -->
-    <g style="fill: #15181c" transform="translate(560.717345 166.034893) rotate(-31.921648) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(559.766519 168.215406) rotate(-31.921648) scale(0.17 -0.17)">
      <use xlink:href="#Cmmi10-3f" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmr10-31" transform="translate(57.080078 -14.187462) scale(0.7)"/>
     </g>

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -392,7 +392,7 @@ z
    </g>
    <g id="text_3">
     <!-- naive timer stops here: -->
-    <g style="fill: #ff7f0e" transform="translate(186.308852 42.673855) scale(0.13 -0.13)">
+    <g style="fill: #ad560a" transform="translate(186.308852 42.673855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1c" d="M 1242 -77 
 Q 851 -77 588 153 
@@ -645,7 +645,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(922.390625 0)"/>
     </g>
     <!-- work only enqueued -->
-    <g style="fill: #ff7f0e" transform="translate(186.308852 59.911855) scale(0.13 -0.13)">
+    <g style="fill: #ad560a" transform="translate(186.308852 59.911855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -811,7 +811,7 @@ z
    </g>
    <g id="text_4">
     <!-- synchronize() -->
-    <g style="fill: #2ca02c" transform="translate(390.94179 42.673855) scale(0.13 -0.13)">
+    <g style="fill: #227d22" transform="translate(390.94179 42.673855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -866,7 +866,7 @@ z
      <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(531.90625 0)"/>
     </g>
     <!-- returns here -->
-    <g style="fill: #2ca02c" transform="translate(397.843978 59.911855) scale(0.13 -0.13)">
+    <g style="fill: #227d22" transform="translate(397.843978 59.911855) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-2d"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(33.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(82.296875 0)"/>

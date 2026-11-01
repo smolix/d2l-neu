@@ -68,63 +68,68 @@ def _stream(ax, y0, y1, head=True, x=None):
 
 
 def _elbow(ax, pts, color, lw=1.8, arrow_end=True):
-    """Polyline through pts; arrowhead on the final segment."""
+    """Polyline through pts (mitred corners, butt ends, so nothing overshoots
+    a turn); arrowhead on the final segment."""
     xs, ys = zip(*pts)
-    ax.plot(xs[:-1] + (xs[-2],), ys[:-1] + (ys[-2],), color=color, lw=lw,
-            solid_capstyle="round", zorder=2)
+    ax.plot(xs, ys, color=color, lw=lw, solid_capstyle="butt",
+            solid_joinstyle="miter", zorder=2)
     if arrow_end:
         fl.arrow(ax, pts[-2], pts[-1], color=color, lw=lw, mut=13)
+
+
+# Shared vertical rhythm for both block-anatomy panels: the two sublayers sit
+# at the same heights, so only the norm boxes differ between post-LN and
+# pre-LN.  Box extents are the FancyBboxPatch interiors (pad 0.10 outside).
+PAD = 0.10
+Y_READ = (0.9, 5.6)                 # where each branch reads the stream
+Y_BOX = ((2.0, 3.1), (6.7, 7.8))    # attention / FFN box interiors
+Y_ADD = (3.75, 8.45)                # where each branch writes (the +)
+Y_TOP = 10.6
+BC = 6.9                            # branch column (box centre)
+SUBLAYERS = (("multi-head\nattention", "ORANGE"),
+             ("feed-forward\nnetwork", "GREEN"))
+
+
+def _sublayer(ax, k, prenorm):
+    text, cname = SUBLAYERS[k]
+    col, tint = getattr(fl.T, cname).base, getattr(fl.T, cname).tint
+    y_r, (b0, b1), y_a = Y_READ[k], Y_BOX[k], Y_ADD[k]
+    _box(ax, BX0, BX1, b0, b1, text, tint, col)
+    if prenorm:
+        # norm on the branch, at the read height
+        n1 = BX1 - 2.7
+        _box(ax, BX0, n1, y_r - 0.35, y_r + 0.35, "norm", "white", GRAY)
+        _elbow(ax, [(SX, y_r), (BX0 - PAD, y_r)], col)
+        _elbow(ax, [(n1 + PAD, y_r), (BC, y_r), (BC, b0 - PAD)], col)
     else:
-        ax.plot(xs[-2:], ys[-2:], color=color, lw=lw, zorder=2)
+        _elbow(ax, [(SX, y_r), (BC, y_r), (BC, b0 - PAD)], col)
+    _elbow(ax, [(BC, b1 + PAD), (BC, y_a), (SX + 0.30, y_a)], col)
+    _add_circle(ax, y_a)
 
 
 def _panel_postln(ax):
-    # stream segments (bottom -> top), interrupted by norm boxes on the stream
-    _stream(ax, 0.0, 3.65, head=False)
-    _box(ax, SX - NW / 2, SX + NW / 2, 3.55, 4.45, "norm", "white", GRAY)
-    _stream(ax, 4.35, 8.15, head=False)
-    _box(ax, SX - NW / 2, SX + NW / 2, 8.05, 8.95, "norm", "white", GRAY)
-    _stream(ax, 8.85, 10.6)
-
-    # attention sublayer: read at y=0.9, write into + at y=2.9
-    _box(ax, BX0, BX1, 1.3, 2.5, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
-    _elbow(ax, [(SX, 0.9), (6.9, 0.9), (6.9, 1.2)], ORANGE)
-    _elbow(ax, [(6.9, 2.5), (6.9, 2.9), (SX + 0.30, 2.9)], ORANGE)
-    _add_circle(ax, 2.9)
-
-    # FFN sublayer: read at y=5.4, write into + at y=7.4
-    _box(ax, BX0, BX1, 5.8, 7.0, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
-    _elbow(ax, [(SX, 5.4), (6.9, 5.4), (6.9, 5.7)], GREEN)
-    _elbow(ax, [(6.9, 7.0), (6.9, 7.4), (SX + 0.30, 7.4)], GREEN)
-    _add_circle(ax, 7.4)
-
+    # stream segments (bottom -> top), interrupted by a norm box on the
+    # stream just above each (+)
+    y = 0.0
+    for y_a in Y_ADD:
+        n0, n1 = y_a + 0.68, y_a + 1.28
+        _stream(ax, y, n0, head=False)
+        _box(ax, SX - NW / 2, SX + NW / 2, n0, n1, "norm", "white", GRAY)
+        y = n1
+    _stream(ax, y, Y_TOP)
+    for k in range(2):
+        _sublayer(ax, k, prenorm=False)
     ax.set_title("post-LN (2017)", fontsize=14, color="black")
 
 
 def _panel_preln(ax):
     # one uninterrupted stream: sublayers only add to it
-    _stream(ax, 0.0, 10.6)
-
-    # attention sublayer with norm on the branch
-    _box(ax, BX0, BX1 - 2.7, 0.5, 1.3, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 1.9, 3.1, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
-    _elbow(ax, [(SX, 0.9), (BX0 - 0.10, 0.9)], ORANGE)
-    _elbow(ax, [(BX1 - 2.7, 0.9), (6.9, 0.9), (6.9, 1.8)], ORANGE)
-    _elbow(ax, [(6.9, 3.1), (6.9, 3.5), (SX + 0.30, 3.5)], ORANGE)
-    _add_circle(ax, 3.5)
-
-    # FFN sublayer with norm on the branch
-    _box(ax, BX0, BX1 - 2.7, 5.0, 5.8, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 6.4, 7.6, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
-    _elbow(ax, [(SX, 5.4), (BX0 - 0.10, 5.4)], GREEN)
-    _elbow(ax, [(BX1 - 2.7, 5.4), (6.9, 5.4), (6.9, 6.3)], GREEN)
-    _elbow(ax, [(6.9, 7.6), (6.9, 8.0), (SX + 0.30, 8.0)], GREEN)
-    _add_circle(ax, 8.0)
-
+    _stream(ax, 0.0, Y_TOP)
+    for k in range(2):
+        _sublayer(ax, k, prenorm=True)
     # label the untouched stream
-    ax.text(SX - 0.45, 9.5, "residual\nstream", ha="right", va="center",
+    ax.text(SX - 0.45, 9.8, "residual\nstream", ha="right", va="center",
             fontsize=13, color=BLUE)
-
     ax.set_title("pre-LN (modern)", fontsize=14, color="black")
 
 
@@ -132,7 +137,8 @@ def fig_block_anatomy() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(8.6, 4.6))
     for ax, panel in zip(axes, (_panel_postln, _panel_preln)):
         panel(ax)
-        ax.text(SX + 0.42, 0.12, r"$\mathbf{x}$", ha="left", va="bottom",
+        # input label left of the stream foot, clear of the branch lines
+        ax.text(SX - 0.40, 0.25, r"$\mathbf{x}$", ha="right", va="center",
                 fontsize=14, color="black")
         ax.set_xlim(-0.6, 9.7)
         ax.set_ylim(-0.2, 11.0)
@@ -160,10 +166,16 @@ def _mini_panel(ax, order, stream_norm, title):
     bottom-to-top ('norm'/'attn'); `stream_norm` puts a norm on the stream
     itself after the addition (post-LN)."""
     heights = {"norm": 0.85, "attn": 1.15}
-    gap, y_read, y_top = 0.5, 0.7, 6.4
+    # one fixed height for all four panels: the tallest branch (Gemma 3:
+    # norm, attention, norm) still leaves a clear stretch of stream above
+    # its (+), so the panels are directly comparable
+    # gaps leave every arrow a visible shaft: interiors are 1.25 apart, and
+    # the box pads (0.10 each side) still leave ~1.05 of line + head
+    gap, y_read, y_top = 1.25, 0.6, 9.3
+    mnw = 2.3                          # stream-norm box width (fits "norm")
 
     # branch boxes, bottom to top
-    y, spans = 1.25, []
+    y, spans = y_read + 1.15, []
     for kind in order:
         h = heights[kind]
         spans.append((kind, y, y + h))
@@ -176,7 +188,7 @@ def _mini_panel(ax, order, stream_norm, title):
                             lw=1.5, zorder=5))
         n0, n1 = y_add + 0.72, y_add + 1.57
         _stream(ax, 0.0, n0 + 0.10, head=False, x=MSX)
-        _box(ax, MSX - NW / 2, MSX + NW / 2, n0, n1, "norm", "white", GRAY)
+        _box(ax, MSX - mnw / 2, MSX + mnw / 2, n0, n1, "norm", "white", GRAY)
         _stream(ax, n1 - 0.10, y_top, x=MSX)
     else:
         ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
@@ -186,24 +198,25 @@ def _mini_panel(ax, order, stream_norm, title):
             color="black", zorder=6)
 
     # the branch: read, boxes, write into the +
-    ax.plot([MSX, MBC], [y_read, y_read], color=ORANGE, lw=1.8,
-            solid_capstyle="round", zorder=2)
-    _elbow(ax, [(MBC, y_read), (MBC, spans[0][1] - 0.10)], ORANGE)
+    _elbow(ax, [(MSX, y_read), (MBC, y_read), (MBC, spans[0][1] - 0.10)],
+           ORANGE)
     for kind, y0, y1 in spans:
         if kind == "attn":
             _box(ax, MBX0, MBX1, y0, y1, "attention", fl.T.ORANGE.tint, ORANGE)
         else:
-            _box(ax, MBX0 + 1.1, MBX1 - 1.1, y0, y1, "norm", "white", GRAY)
+            _box(ax, MBC - mnw / 2, MBC + mnw / 2, y0, y1, "norm", "white",
+                 GRAY)
     for (_, _, top), (_, nxt, _) in zip(spans, spans[1:]):
-        _elbow(ax, [(MBC, top), (MBC, nxt - 0.10)], ORANGE)
-    _elbow(ax, [(MBC, spans[-1][2]), (MBC, y_add), (MSX + 0.30, y_add)],
+        _elbow(ax, [(MBC, top + 0.10), (MBC, nxt - 0.10)], ORANGE)
+    _elbow(ax, [(MBC, spans[-1][2] + 0.10), (MBC, y_add), (MSX + 0.30, y_add)],
            ORANGE)
 
-    ax.text(MSX + 0.42, -0.16, r"$\mathbf{x}$", ha="left", va="bottom",
+    # input label left of the stream foot, clear of the branch line
+    ax.text(MSX - 0.40, 0.2, r"$\mathbf{x}$", ha="right", va="center",
             fontsize=14, color="black")
     ax.set_title(title, fontsize=13, color="black")
     ax.set_xlim(-0.5, 8.3)
-    ax.set_ylim(-0.45, 6.6)
+    ax.set_ylim(-0.2, 9.5)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -212,7 +225,7 @@ def _mini_panel(ax, order, stream_norm, title):
 
 
 def fig_norm_taxonomy() -> None:
-    fig, axes = plt.subplots(1, 4, figsize=(10.6, 3.3))
+    fig, axes = plt.subplots(1, 4, figsize=(10.6, 3.6))
     panels = [
         (["attn"], True, "post-LN\n(2017)"),
         (["norm", "attn"], False, "pre-LN\n(default)"),

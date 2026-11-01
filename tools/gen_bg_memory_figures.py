@@ -63,6 +63,26 @@ def tensor_box(ax, cx, cy, label, color, w=1.35, h=0.85, dashed=False):
     return b
 
 
+def mtext(ax, x, y, text, *, fontsize, va="center", pitch=1.15, **kw):
+    """Multi-line label with an exact baseline-to-baseline ``pitch`` (in em).
+
+    matplotlib >= 3.11 gives every line a box of the font's full ascender +
+    descender and centres each line's own ink inside it, so stacked lines with
+    and without ascenders/descenders come out unevenly and loosely spaced.
+    Setting each line on its own baseline keeps the pitch exact.  ``va`` is
+    ``center`` (centre of the cap-height block), ``top`` or ``bottom``."""
+    lines = text.split("\n")
+    p = pitch * fontsize                       # points
+    span = (len(lines) - 1) * p
+    first = {"center": span / 2 - 0.34 * fontsize,
+             "top": -0.72 * fontsize,
+             "bottom": span + 0.22 * fontsize}[va]
+    for k, line in enumerate(lines):
+        ax.annotate(line, (x, y), xytext=(0, first - k * p),
+                    textcoords="offset points", va="baseline",
+                    fontsize=fontsize, annotation_clip=False, **kw)
+
+
 # =========================================================================== #
 # 1. Copying a tensor between two devices, then computing on the result.      #
 # =========================================================================== #
@@ -72,29 +92,32 @@ def fig_copyto():
     GPU 0, Y lives on GPU 1; X.to(gpu(1)) makes a copy Z on GPU 1 (dashed
     outline marks it as a copy, not the original), and Y + Z is then computed
     entirely within GPU 1 -- the picture for "copy explicitly, then add"."""
-    fig, ax = plt.subplots(figsize=(9.7, 3.9))
-    ax.set_xlim(0, 13.0)
-    ax.set_ylim(0, 4.3)
+    fig, ax = plt.subplots(figsize=(10.2, 3.6))
+    ax.set_xlim(0.1, 14.0)
+    ax.set_ylim(0.2, 3.9)
     ax.set_aspect("equal")
     ax.axis("off")
 
     # Shorter device boxes: X, Z, Y all sit on one level (y_row), so a single
     # row plus the result row fits without the tall frames the old layout used.
-    gpu0 = device_box(ax, 0.4, 0.5, 5.1, 3.1, "GPU 0")
-    gpu1 = device_box(ax, 6.9, 0.5, 5.6, 3.1, "GPU 1")
+    # Both devices get the same frame; the gap between them is wide enough to
+    # hold the two-line copy label right above the arrow that crosses it.
+    gpu0 = device_box(ax, 0.4, 0.5, 5.6, 3.1, "GPU 0")
+    gpu1 = device_box(ax, 8.1, 0.5, 5.6, 3.1, "GPU 1")
 
     y_row = 2.3
     X = tensor_box(ax, gpu0["l"] + 1.05, y_row, r"$X$", BLUE)          # left
     Z = tensor_box(ax, gpu1["l"] + 1.05, y_row, r"$Z$", BLUE,          # left
                     dashed=True)
     Y = tensor_box(ax, gpu1["r"] - 1.05, y_row, r"$Y$", ORANGE)        # right
-    result = tensor_box(ax, gpu1["cx"], 1.15, r"$Z+Y$", GREEN, w=1.9)
+    result = tensor_box(ax, gpu1["cx"], 1.15, r"$Y+Z$", GREEN, w=1.9)
 
     # the copy: X (GPU 0) -> Z (GPU 1), a level arrow across the boundary;
-    # its label sits centred ABOVE both device boxes, clear of every box
+    # its label sits in the gap between the devices, just above the arrow
     fl.arrow(ax, (X["r"], y_row), (Z["l"], y_row), color=BLUE, lw=2.2)
-    fl.vlabel(ax, (6.2, gpu0["t"] + 0.30), "explicit copy to GPU 1",
-              color=BLUE, fontsize=13)
+    mtext(ax, (gpu0["r"] + gpu1["l"]) / 2, y_row + 0.16,
+          "explicit copy\nto GPU 1", ha="center", va="bottom", fontsize=13,
+          color=BLUE)
 
     # the compute, entirely inside GPU 1: Z + Y
     fl.arrow(ax, (Z["cx"], Z["b"]), (result["l"] + 0.30, result["t"]),
@@ -116,15 +139,18 @@ def fig_allocator():
     memory_allocated() (live tensors, a further subset).  The gap between the
     middle and inner rectangles is annotated: those are freed blocks the
     allocator kept for reuse instead of returning to the driver."""
-    fig, ax = plt.subplots(figsize=(9.6, 5.6))
-    ax.set_xlim(0, 13.4)
-    ax.set_ylim(0, 6.3)
+    fig, ax = plt.subplots(figsize=(8.8, 4.6))
+    # right limit = end of the "freed blocks kept for reuse" label plus the
+    # same margin the outer frame has on the left (no dead band on the right)
+    ax.set_xlim(0, 12.25)
+    ax.set_ylim(0, 5.0)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    outer = rbox(ax, 0.4, 0.4, 9.2, 5.5, GRAY, alpha=0.05, lw=2.0)
-    middle = rbox(ax, 1.5, 1.1, 7.0, 4.0, BLUE, alpha=0.08, lw=1.8)
-    inner = rbox(ax, 2.9, 1.85, 4.2, 2.6, GREEN, alpha=0.14, lw=1.8)
+    # each ring is only as tall as its title band plus the ring inside it
+    outer = rbox(ax, 0.4, 0.4, 9.2, 4.2, GRAY, alpha=0.05, lw=2.0)
+    middle = rbox(ax, 1.5, 0.9, 7.0, 3.0, BLUE, alpha=0.08, lw=1.8)
+    inner = rbox(ax, 2.9, 1.4, 4.2, 1.6, GREEN, alpha=0.14, lw=1.8)
 
     # one line per ring, each confined to that ring's OWN band (between its
     # box's top edge and the next box in's top edge), so the three titles
@@ -138,18 +164,18 @@ def fig_allocator():
             "blocks reserved by the framework's allocator", ha="center",
             va="center", fontsize=13, color=BLUE)
 
-    ax.text(inner["cx"], inner["t"] - 0.40,
+    ax.text(inner["cx"], inner["cy"],
             "live arrays", ha="center", va="center",
             fontsize=13, color=GREEN)
 
     # gap annotation: a point strictly between the inner and middle rims,
     # clear of both titles, with a leader line out to the label
-    gx, gy = inner["r"] + 0.45, inner["b"] + 0.35
+    gx, gy = (inner["r"] + middle["r"]) / 2, inner["cy"]
     ax.plot([gx], [gy], "o", color=GRAY, ms=5, zorder=5)
-    lx, ly = 11.9, gy
-    ax.plot([gx, lx - 0.05], [gy, ly], color=GRAY, lw=1.0)
-    ax.text(lx, ly, "freed blocks kept\nfor reuse", ha="left", va="center",
-            fontsize=13, color="black")
+    lx, ly = outer["r"] + 0.45, gy
+    ax.plot([gx, lx - 0.1], [gy, ly], color=GRAY, lw=1.0)
+    mtext(ax, lx, ly, "freed blocks\nkept for reuse", ha="left", va="center",
+          fontsize=13, color="black")
 
     fl.save(fig, "bg-allocator")
 
@@ -218,13 +244,13 @@ def fig_activation_checkpoint():
             # rad is scaled inversely with the chord length so EVERY arc
             # (one-layer or two-layer hop) peaks at the same modest height,
             # clear of the "recompute" label above
-            peak_h = 0.30
-            last_ckpt = None
+            # one hop per arc: the segment's forward is re-run from its
+            # checkpoint, layer by layer, so the arcs chain and never overlap
+            peak_h = 0.24
             for i in range(n):
                 if i in filled_idx:
-                    last_ckpt = i
                     continue
-                p0, p1 = xs[last_ckpt], xs[i]
+                p0, p1 = xs[i - 1] + 0.12, xs[i] - 0.12
                 rad = -peak_h / (0.5 * (p1 - p0))
                 arc = FancyArrowPatch((p0, y + 0.10), (p1, y + 0.10),
                                        connectionstyle=f"arc3,rad={rad}",
@@ -255,9 +281,9 @@ def fig_async_queue():
     backlog (the dotted connectors) grows.  Later, `loss.item()` forces a
     synchronization point: the CPU blocks (hatched segment) until the GPU
     drains its queue, marked by the dashed barrier, and only then resumes."""
-    fig, ax = plt.subplots(figsize=(10.8, 4.0))
+    fig, ax = plt.subplots(figsize=(10.8, 3.75))
     ax.set_xlim(-2.6, 14.6)
-    ax.set_ylim(0, 5.4)
+    ax.set_ylim(0, 5.0)  # top = just above the k labels: no dead band
     ax.axis("off")
 
     y_cpu, y_gpu = 4.0, 1.3
@@ -277,11 +303,11 @@ def fig_async_queue():
 
     for k, (ix, s, e) in enumerate(zip(issue_x, starts, ends), start=1):
         ax.plot([ix, ix], [y_cpu, y_cpu + 0.35], color="black", lw=1.6)
-        ax.text(ix, y_cpu + 0.55, f"$k_{k}$", ha="center", va="center",
-                fontsize=12, color="black")
+        ax.text(ix, y_cpu + 0.58, f"$k_{k}$", ha="center", va="center",
+                fontsize=13, color="black")
         rbox(ax, s, y_gpu - 0.30, e - s, 0.60, BLUE, alpha=0.22, lw=1.6)
         ax.text((s + e) / 2, y_gpu, f"$k_{k}$", ha="center", va="center",
-                fontsize=11, color="black")
+                fontsize=13, color="black")
         # dotted connector: issued here, actually runs there (visualizes the
         # growing queue as later kernels start further behind their issue)
         ax.plot([ix, s], [y_cpu - 0.05, y_gpu + 0.30], ":", color=GRAY, lw=1.1)
@@ -290,35 +316,35 @@ def fig_async_queue():
     # sync-point marker further on; left-aligned starting well past the last
     # issue tick so it never crowds the k4 label above it
     fl.arrow(ax, (issue_x[-1], y_cpu), (8.0, y_cpu), color="black", lw=1.8)
-    ax.text(4.3, y_cpu + 0.32, "Python keeps issuing work",
-            ha="left", va="center", fontsize=10.5, color="black")
+    ax.text(4.2, y_cpu + 0.34, "Python keeps issuing work",
+            ha="left", va="center", fontsize=12, color="black")
 
     # the sync point: loss.item()
-    sync_call_x, resume_x = 9.2, 11.0
+    sync_call_x, resume_x = 9.45, 11.0
     ax.plot(sync_call_x, y_cpu, "D", color=ORANGE, ms=8, zorder=5)
-    ax.text(sync_call_x, y_cpu + 0.38, r"loss.item()", ha="center",
-            va="center", fontsize=11.5, color=ORANGE)
+    ax.text(sync_call_x, y_cpu + 0.40, r"loss.item()", ha="center",
+            va="center", fontsize=12.5, color=fl.T.ORANGE.dark)
 
     # blocked: the CPU cannot proceed until the GPU drains the queue
     ax.plot([sync_call_x, resume_x], [y_cpu, y_cpu], color=GRAY, lw=6,
             alpha=0.45, solid_capstyle="butt", zorder=2)
-    ax.text((sync_call_x + resume_x) / 2, y_cpu - 0.42, "blocked",
-            ha="center", va="center", fontsize=10.5, color="black")
+    ax.text((sync_call_x + resume_x) / 2, y_cpu - 0.44, "blocked",
+            ha="center", va="center", fontsize=12, color="black")
 
     # dashed barrier: CPU resumes exactly when the last kernel finishes
     ax.plot([resume_x, resume_x], [y_gpu + 0.32, y_cpu], "--", color=GRAY,
             lw=1.4)
-    ax.text(resume_x + 0.30, 2.65, "synchronize:\nCPU waits", ha="left",
-            va="center", fontsize=11, color="black")
+    mtext(ax, resume_x + 0.30, 2.65, "synchronize:\nCPU waits", ha="left",
+          va="center", fontsize=12, color="black")
 
     # CPU resumes
     fl.arrow(ax, (resume_x, y_cpu), (13.6, y_cpu), color="black", lw=1.8)
-    ax.text(12.6, y_cpu + 0.32, "resumes", ha="center", va="center",
-            fontsize=10.5, color="black")
+    ax.text(12.6, y_cpu + 0.34, "resumes", ha="center", va="center",
+            fontsize=12, color="black")
 
     # time axis
     fl.arrow(ax, (-2.4, 0.35), (14.2, 0.35), color=GRAY, lw=1.2)
-    ax.text(14.2, 0.62, "time", ha="right", va="center", fontsize=11,
+    ax.text(14.2, 0.66, "time", ha="right", va="center", fontsize=12,
             color="black")
 
     fl.save(fig, "bg-async-queue")

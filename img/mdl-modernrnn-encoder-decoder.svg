@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="472.565625pt" height="146.388462pt" viewBox="0 0 472.565625 146.388462" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="469.483125pt" height="86.472pt" viewBox="0 0 469.483125 86.472" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -20,70 +20,70 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 146.388462 
-L 472.565625 146.388462 
-L 472.565625 0 
-L 0 0 
+   <path d="M -0 86.472 
+L 469.483125 86.472 
+L 469.483125 0 
+L -0 0 
 z
 " style="fill: #ffffff"/>
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 75.394038 73.194231 
-Q 88.592885 73.194231 99.77927 73.194231 
+    <path d="M 74.904 48.696 
+Q 88.008 48.696 99.099539 48.696 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 94.57927 70.594231 
-L 99.77927 73.194231 
-L 94.57927 75.794231 
+    <path d="M 93.899539 46.096 
+L 99.099539 48.696 
+L 93.899539 51.296 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
-    <path d="M 185.384423 73.194231 
-Q 231.580385 73.194231 275.763885 73.194231 
+    <path d="M 184.104 48.696 
+Q 229.968 48.696 273.819539 48.696 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 270.563885 70.594231 
-L 275.763885 73.194231 
-L 270.563885 75.794231 
+    <path d="M 268.619539 46.096 
+L 273.819539 48.696 
+L 268.619539 51.296 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
-    <path d="M 361.369038 73.194231 
-Q 383.367115 73.194231 403.352731 73.194231 
+    <path d="M 358.824 48.696 
+Q 380.664 48.696 400.491539 48.696 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 398.152731 70.594231 
-L 403.352731 73.194231 
-L 398.152731 75.794231 
+    <path d="M 395.291539 46.096 
+L 400.491539 48.696 
+L 395.291539 51.296 
 " style="fill: none; stroke: #000000; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
-    <path d="M 105.311423 99.371942 
-L 181.864731 99.371942 
-Q 186.264346 99.371942 186.264346 94.972327 
-L 186.264346 51.416135 
-Q 186.264346 47.016519 181.864731 47.016519 
-L 105.311423 47.016519 
-Q 100.911808 47.016519 100.911808 51.416135 
-L 100.911808 94.972327 
-Q 100.911808 99.371942 105.311423 99.371942 
+    <path d="M 104.6064 74.6856 
+L 180.6096 74.6856 
+Q 184.9776 74.6856 184.9776 70.3176 
+L 184.9776 27.0744 
+Q 184.9776 22.7064 180.6096 22.7064 
+L 104.6064 22.7064 
+Q 100.2384 22.7064 100.2384 27.0744 
+L 100.2384 70.3176 
+Q 100.2384 74.6856 104.6064 74.6856 
 z
-" clip-path="url(#pa1f6f516fe)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#p22fc4621f6)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
-    <path d="M 281.296038 99.371942 
-L 357.849346 99.371942 
-Q 362.248962 99.371942 362.248962 94.972327 
-L 362.248962 51.416135 
-Q 362.248962 47.016519 357.849346 47.016519 
-L 281.296038 47.016519 
-Q 276.896423 47.016519 276.896423 51.416135 
-L 276.896423 94.972327 
-Q 276.896423 99.371942 281.296038 99.371942 
+    <path d="M 279.3264 74.6856 
+L 355.3296 74.6856 
+Q 359.6976 74.6856 359.6976 70.3176 
+L 359.6976 27.0744 
+Q 359.6976 22.7064 355.3296 22.7064 
+L 279.3264 22.7064 
+Q 274.9584 22.7064 274.9584 27.0744 
+L 274.9584 70.3176 
+Q 274.9584 74.6856 279.3264 74.6856 
 z
-" clip-path="url(#pa1f6f516fe)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#p22fc4621f6)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- "They are -->
-    <g transform="translate(16.13149 69.282231) scale(0.12 -0.12)">
+    <g transform="translate(15.894375 44.784) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-575" d="M 634 2758 
 L 531 3827 
@@ -249,7 +249,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(351.5 0)"/>
     </g>
     <!-- watching ." -->
-    <g transform="translate(12.60274 85.194231) scale(0.12 -0.12)">
+    <g transform="translate(12.365625 60.696) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -456,7 +456,7 @@ z
    </g>
    <g id="text_2">
     <!-- Encoder -->
-    <g transform="translate(119.444639 77.912231) scale(0.14 -0.14)">
+    <g transform="translate(118.464562 53.414) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-6" d="M 576 0 
 L 576 4198 
@@ -540,7 +540,7 @@ z
    </g>
    <g id="text_3">
     <!-- Decoder -->
-    <g transform="translate(295.17113 77.912231) scale(0.14 -0.14)">
+    <g transform="translate(292.926437 53.414) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-5" d="M 576 0 
 L 576 4198 
@@ -573,7 +573,7 @@ z
    </g>
    <g id="text_4">
     <!-- "Ils -->
-    <g transform="translate(427.984687 69.282231) scale(0.12 -0.12)">
+    <g transform="translate(424.902187 44.784) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-a" d="M 576 0 
 L 576 4198 
@@ -636,7 +636,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(94.390625 0)"/>
     </g>
     <!-- regardent ." -->
-    <g transform="translate(406.959375 85.194231) scale(0.12 -0.12)">
+    <g transform="translate(403.876875 60.696) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-2d"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(33.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-22" transform="translate(82.296875 0)"/>
@@ -653,7 +653,7 @@ z
    </g>
    <g id="text_5">
     <!-- state -->
-    <g style="fill: #17becf" transform="translate(219.29726 47.284154) scale(0.12 -0.12)">
+    <g style="fill: #0f7a84" transform="translate(217.684875 22.944) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-It-2e" d="M 1043 -77 
 Q 730 -77 435 80 
@@ -801,15 +801,15 @@ C -2.597899 4.473168 -1.326016 5 0 5
 z
 " style="stroke: #17becf"/>
     </defs>
-    <g clip-path="url(#pa1f6f516fe)">
-     <use xlink:href="#mc2ecb39c96" x="231.580385" y="73.194231" style="fill: #17becf; stroke: #17becf"/>
+    <g clip-path="url(#p22fc4621f6)">
+     <use xlink:href="#mc2ecb39c96" x="229.968" y="48.696" style="fill: #17becf; stroke: #17becf"/>
     </g>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="pa1f6f516fe">
-   <rect x="7.2" y="7.2" width="457.56" height="131.988462"/>
+  <clipPath id="p22fc4621f6">
+   <rect x="7.2" y="7.2" width="454.272" height="72.072"/>
   </clipPath>
  </defs>
 </svg>

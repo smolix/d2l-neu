@@ -171,14 +171,16 @@ def clipped(tx, max_norm=1.0):
 ### Preventing a Numerical Failure
 :label:`subsec_practice-nan`
 
-We now rerun the divergent point of that sweep with and without clipping.
-The model is `TinyLM`, the decoder-only transformer of
+We now rerun SGD just above the divergent point of that sweep, at
+$\eta = 1.2$, with and without clipping. At $\eta = 1$ itself an
+occasional run survives its first steps; at $\eta = 1.2$ the unclipped run
+diverges reliably. The model is `TinyLM`, the decoder-only transformer of
 :numref:`subsec_tinylm`: two blocks, about 0.4 million parameters, trained
 to predict the next character of *The Time Machine* from the 64 characters
 before it. The library function `d2l.train_lm` trains it for a fixed number
 of steps on minibatches of 64 sequences and returns the training loss of
 every step. Both runs start from the same initial weights and use SGD with
-momentum 0.9 at $\eta = 1$ for 2,000 steps; they differ only in the
+momentum 0.9 at $\eta = 1.2$ for 2,000 steps; they differ only in the
 clipping. To see how often and when clipping intervenes, we also record the
 global gradient norm before clipping at every step.
 
@@ -216,7 +218,7 @@ model0 = d2l.TinyLM(len(data.vocab))
 curves = {}
 for clip in (False, True):
     model = copy.deepcopy(model0)  # Both runs start from the same weights
-    optimizer = torch.optim.SGD(model.parameters(), lr=1.0, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=1.2, momentum=0.9)
     if clip:
         optimizer = Clipped(optimizer, model.parameters())
     label = 'clipped at 1' if clip else 'unclipped'
@@ -235,7 +237,7 @@ model0 = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()))
 curves = {}
 for clip in (False, True):
     model = nnx.clone(model0)  # Both runs start from the same weights
-    tx = optax.sgd(1.0, momentum=0.9)
+    tx = optax.sgd(1.2, momentum=0.9)
     if clip:
         tx = optax.chain(record_norms(2000), clipped(tx))
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
@@ -258,23 +260,23 @@ d2l.plot(list(range(150)), [curves[k][:150] for k in curves], 'step',
          'training loss', legend=list(curves), yscale='log')
 ```
 
-After a few steps, in some runs a few dozen, the unclipped run begins to
-feed on itself. An oversized step moves the parameters to where the loss is
-steeper, the gradient there is larger, and momentum carries the excess into
-the following steps. Once this starts, the loss grows by six orders of
+After a few steps the unclipped run begins to feed on itself. An
+oversized step moves the parameters to where the loss is steeper, the
+gradient there is larger, and momentum carries the excess into the
+following steps. Once this starts, the loss grows by several orders of
 magnitude within about fifteen steps and then overflows. The clipped run,
 at the same learning rate, trains normally, to a final loss comparable with
 that of the best SGD run in :numref:`sec_adam`, which used a learning rate
-three times smaller.
+four times smaller.
 
 ### Clipping Frequency
 
 The printed counts show how little clipping did to achieve this, and when
 it did it. The median gradient norm of the clipped run is about a third of
 the threshold, and clipping changed the update on only a handful of the
-2,000 steps, all of them among the first dozen or so. These are the steps
+2,000 steps, all of them among the first twenty. These are the steps
 on which the freshly initialized network has its largest gradients. Once
-they are past, the clipped run trains at $\eta = 1$ with clipping idle for
+they are past, the clipped run trains at $\eta = 1.2$ with clipping idle for
 the rest of the 2,000 steps. Here clipping did the job of a warmup, and an
 adaptive one. It shortened exactly those first steps that were too long,
 until the parameters reached a region where the full step is safe, and it
@@ -390,7 +392,7 @@ We test the average on the convolutional network of
 batch normalization after every hidden layer, initialized with Xavier
 weights and zero biases, and trained on Fashion-MNIST in minibatches of 256
 images. At the constant learning rate $\eta = 0.3$, the baseline of that
-section, its test accuracy stops improving after a few epochs and then
+section, its test accuracy gains little after about ten epochs and then
 moves up and down from epoch to epoch. Alongside the live weights we keep
 an EMA with $\alpha = 0.999$, whose window of about 1,000 steps spans
 roughly four epochs of 235 steps each.
@@ -581,9 +583,10 @@ training or let $\alpha$ grow from a small value over the first steps.
 
 Second, once the window has filled, the EMA curve is smooth and runs along
 the top of the live curve. Over the last five epochs the live accuracy
-spans several points, while the EMA's stays within about half a point. The
-live curve shows the noise ball directly: each epoch evaluates a different
-point in it, while the EMA evaluates close to its center.
+jumps by several points, while the EMA's rises steadily, by one to two
+points, and ends at its highest value. The live curve shows the noise ball
+directly: each epoch evaluates a different point in it, while the EMA
+evaluates close to its center.
 
 ### Averaging and Decay
 
@@ -628,11 +631,11 @@ whichever method happens to prefer it.
 
 The optimizer races of :numref:`sec_adam` and :numref:`sec_muon` followed
 this protocol. The optimizer was the scientific hyperparameter. The
-learning rate was the nuisance, retuned for each optimizer on a grid of four
-values spaced by factors of about three. The number of steps, the batch
-size, the model, and the absence of a schedule were fixed and stated, and
-every conclusion holds for that protocol only. At larger scale the same
-design has more nuisance dimensions (the peak learning rate, the decay
+learning rate was the nuisance, retuned for each optimizer on a grid of
+four or five values spaced by factors of about three. The number of steps,
+the batch size, the model, and the absence of a schedule were fixed and
+stated, and every conclusion holds for that protocol only. At larger scale
+the same design has more nuisance dimensions (the peak learning rate, the decay
 horizon, the warmup, and the weight decay), replaces coarse grids by
 quasi-random search, and separates a broad exploration from a narrow final
 sweep.
@@ -687,7 +690,7 @@ with a small budget the peak learning rate is the setting to tune.
 Global-norm clipping with a threshold above the typical gradient norm
 fires only on the first few steps, where the gradients of the fresh
 initialization are largest. Yet it turns a diverging `TinyLM` run at
-$\eta = 1$ into a stable one, acting as an automatic warmup, and in long
+$\eta = 1.2$ into a stable one, acting as an automatic warmup, and in long
 runs it also catches the rare oversized gradients of heavy-tailed noise.
 Spikes that get through are handled by rewinding to a checkpoint and
 skipping the data seen around them. An exponential moving average of the
@@ -734,7 +737,7 @@ retuned and the protocol is stated.
        training at a lower learning rate.
     1. In the demonstration, clipping fired only on the first steps. Remove
        it and instead warm the learning rate up linearly from 0 to
-       $\eta = 1$, once over the first 20 steps and once over the first 100
+       $\eta = 1.2$, once over the first 20 steps and once over the first 100
        steps. Does each run survive? Compare the warmup lengths with the
        last step on which clipping fired, and explain what the two remedies
        have in common and how they differ.
@@ -849,8 +852,8 @@ Source: Chowdhery et al. (2022).
 - average weights with an EMA and choose its window;
 - design an optimizer comparison that survives scrutiny.
 
-**Running example:** `TinyLM` with SGD at $\eta = 1$, the point that
-diverged in the Adam deck; then a LeNet with batch normalization at a
+**Running example:** `TinyLM` with SGD at $\eta = 1.2$, just above the
+point that diverged in the Adam deck; then a LeNet with batch normalization at a
 constant rate.
 :::
 
@@ -942,15 +945,15 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
   `clip_by_global_norm` chained before the optimizer.
 :::
 
-::: {.slide title="At η = 1, Clipping Separates Divergence from Training"}
+::: {.slide title="At η = 1.2, Clipping Separates Divergence from Training"}
 [Gradient clipping · TinyLM, SGD with momentum 0.9]{.kicker}
 
 @!practice-a-nan-averted-3
 
-- Unclipped: after a few steps (in some runs a few dozen) the loss grows
-  $10^6\times$ within about 15 steps and overflows.
+- Unclipped: after a few steps the loss grows by several orders of
+  magnitude within about 15 steps and overflows.
 - Clipped, same initial weights: final loss near the best SGD run at a
-  third of this rate.
+  quarter of this rate.
 :::
 
 ::: {.slide title="Clipping Fired Only on the First Few Steps"}
@@ -958,9 +961,9 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
 
 @!practice-a-nan-averted-2
 
-- A handful of firings, all in the first dozen steps, where the fresh
+- A handful of firings, all in the first twenty steps, where the fresh
   initialization has its largest gradients: an **automatic warmup**.
-- Afterwards a **guard**, idle at $\eta = 1$; in long runs it also
+- Afterwards a **guard**, idle at $\eta = 1.2$; in long runs it also
   catches the heavy tail of the gradient noise.
 - Fires on most steps? Then it is a **brake** that changes the update
   rule: tune $\eta$ and $\theta$ together.
@@ -1077,9 +1080,9 @@ behind, as in the first epochs above.
 - **Scientific:** what the question is about (the optimizer).
 - **Nuisance:** retuned for each scientific value (the learning rate).
 - **Fixed:** held constant, and each one limits the claim.
-- The optimizer races of the Adam and Muon sections: a four-point
-  learning-rate grid per optimizer, spaced by about 3×; steps, batch,
-  model fixed.
+- The optimizer races of the Adam and Muon sections: a four- or
+  five-point learning-rate grid per optimizer, spaced by about 3×; steps,
+  batch, model fixed.
 
 ::: {.d2l-note .warn}
 One shared learning rate favors whichever method happens to prefer it.
@@ -1103,7 +1106,7 @@ One shared learning rate favors whichever method happens to prefer it.
 - **Configure:** recurring settings (AdamW, 0.9/0.95, wd 0.1, clip 1,
   warmup then decay); a small budget goes to the peak rate.
 - **Guard:** clipping at 1 fired only on the first few steps, acting as
-  a warmup, and saved `TinyLM` at $\eta = 1$; spikes that get through:
+  a warmup, and saved `TinyLM` at $\eta = 1.2$; spikes that get through:
   rewind and skip.
 - **Average:** an EMA ($\alpha = 0.999$) at a constant rate reaches a
   decayed schedule's accuracy.

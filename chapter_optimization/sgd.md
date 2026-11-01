@@ -771,7 +771,7 @@ for ax, x, xlabel, ylabel in zip(axes, ['examples', 'time'],
                                  ['loss', None]):
     d2l.plot([h[x] for h in runs.values()], [h['loss'] for h in runs.values()],
              xlabel, ylabel, xscale='log', axes=ax)
-axes[1].legend(list(runs), loc='upper left', bbox_to_anchor=(1, 1))
+axes[1].legend(list(runs), loc='upper left', bbox_to_anchor=(1, 1));
 ```
 
 Measured in examples, the three stochastic runs progress at about the same
@@ -780,9 +780,9 @@ descent lags far behind: after one pass over the data it has made one
 update, the others 15 to 1,500. Measured in seconds, single-example SGD is
 the slowest, because it computes its gradients one example at a time, and
 the batch of 10 lies between it and the batch of 100. Only the batch of
-100 is among the fastest in both views. Gradient descent keeps pace with
-it on the clock only because the dataset is tiny, so that a full gradient
-takes no longer than a few minibatch steps. With millions of
+100 is among the fastest in both views. Gradient descent even pulls ahead
+of it on the clock, but only because the dataset is tiny, so that a full
+gradient takes no longer than a few minibatch steps. With millions of
 examples, one full gradient would take as long as thousands of minibatch
 steps, and gradient descent would lag on the clock as well.
 
@@ -1317,7 +1317,8 @@ loss against examples and training time.
 @!minibatch-sgd-implementation-from-scratch-7
 
 Per example the stochastic runs tie and gradient descent lags; per second
-single examples lag. On millions of examples gradient descent lags on both.
+single examples lag, and on these 1,500 examples gradient descent leads. On
+millions of examples gradient descent lags on both.
 :::
 
 ::: {.slide title="Memory and Batch Normalization Bound the Batch from Above"}

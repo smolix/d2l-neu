@@ -385,14 +385,22 @@ def distance(M, k, coeffs):  # spectral distance from U V^T after k steps
     sigma = jnp.linalg.svd(newton_schulz(M, k, coeffs), compute_uv=False)
     return float(jnp.abs(1 - sigma).max())
 
-U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
-H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # condition number 1000
-d2l.plot(list(range(11)), [[distance(M, k, c) for k in range(11)]
-                           for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)],
-         'iterations', 'distance from orthogonal',
+with jax.default_matmul_precision('highest'):  # float32, not TF32
+    U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
+    H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # condition number 1000
+    curves = [[distance(M, k, c) for k in range(11)]
+              for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)]
+d2l.plot(list(range(11)), curves, 'iterations', 'distance from orthogonal',
          legend=['G, quintic', 'G, Polar Express', 'H, quintic',
                  'H, Polar Express'], yscale='log')
 ```
+
+:begin_tab:`jax`
+On recent GPUs, JAX multiplies `float32` matrices in the faster but less
+precise TF32 format by default. The cell above runs under
+`jax.default_matmul_precision('highest')`, because in TF32 the distance
+would stop falling near $10^{-3}$, the round-off of that format.
+:end_tab:
 
 The tuned quintic stalls at a distance of about $0.32$ on both matrices,
 set by the bottom of its band at $0.68$. Polar Express keeps going: after
@@ -824,7 +832,7 @@ print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
 The two metrics disagree. On training loss the hybrid descends faster and
 ends several times lower: orthogonalized updates drive this small CNN into
 memorizing its training set much sooner. On test accuracy, the metric we
-would deploy on, the two land within about a point of each other. Optimizing
+would deploy on, the two land within half a point of each other. Optimizing
 faster and predicting better are different claims, and on a small task that
 saturates quickly the second changes little. Which of the two optimizers is
 better on this CNN depends on which of the two numbers we report.
@@ -936,8 +944,11 @@ individual rows can differ a lot. Five Newton--Schulz steps add a second
 source of spread, since small singular values have not yet reached $1$. We
 measure both on one gradient of a freshly initialized `TinyLM`, for the four
 hidden matrices of its first block, and report the smallest and largest
-neuron norm, together with the share $\sigma_1 / \|\mathbf{G}\|_F$ of the
-gradient's Frobenius norm that its largest singular value carries.
+neuron norm, together with the gradient's rank and the share
+$\sigma_1 / \|\mathbf{G}\|_F$ of its Frobenius norm that its largest
+singular value carries. The exact orthogonalization keeps only the nonzero
+singular values and sets them to $1$. Newton--Schulz does the same, since
+it leaves zeros at zero.
 
 ```{.python .input #muon-per-neuron-normalization-1}
 %%tab pytorch
@@ -954,11 +965,13 @@ grads = {'qkv': blk['qkv'].weight.grad, 'proj': blk['proj'].weight.grad,
          'mlp1': blk['mlp'][0].weight.grad, 'mlp2': blk['mlp'][2].weight.grad}
 for name, grad in grads.items():
     U_g, s, Vt_g = torch.linalg.svd(grad, full_matrices=False)
-    exact, ns = neuron_norms(U_g @ Vt_g), neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  '
+    r = torch.linalg.matrix_rank(grad)  # drop the zero singular values
+    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
+    ns = neuron_norms(newton_schulz(grad))
+    print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  rank {r:>3}  '
           f'sigma_1/norm {s[0] / grad.norm():.2f}  '
           f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'five NS steps {ns.min():.2f}-{ns.max():.2f}')
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
 ```
 
 ```{.python .input #muon-per-neuron-normalization-1}
@@ -973,25 +986,33 @@ def loss_fn(model, X, Y):
 
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
 X, Y = (jnp.asarray(a) for a in next(iter(data.train_dataloader())))
-blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
+with jax.default_matmul_precision('highest'):  # float32, not TF32
+    blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
 grads = {name: blk[name]['kernel'][...]
          for name in ('qkv', 'proj', 'mlp1', 'mlp2')}
 for name, grad in grads.items():
     U_g, s, Vt_g = jnp.linalg.svd(grad, full_matrices=False)
-    exact, ns = neuron_norms(U_g @ Vt_g), neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  '
+    r = int(jnp.linalg.matrix_rank(grad))  # drop the zero singular values
+    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
+    ns = neuron_norms(newton_schulz(grad))
+    print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  rank {r:>3}  '
           f'sigma_1/norm {s[0] / jnp.linalg.norm(grad):.2f}  '
           f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'five NS steps {ns.min():.2f}-{ns.max():.2f}')
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
 ```
 
 The rows are the projection to queries, keys, and values (`qkv`), the
 attention output (`proj`), and the two MLP layers (`mlp1`, `mlp2`), with
-shapes written as outputs by inputs. The square and wide matrices have unit
-neuron norms under exact orthogonalization, as promised, but five
-Newton--Schulz steps leave them spread over a factor of about 1.2 to 1.8.
-The two tall matrices are uneven even under exact orthogonalization: their
-busiest neurons move two and a half to three times as far as their
+shapes written as outputs by inputs. Not every gradient has full rank. The
+input of `qkv` is a normalized sum of one of 28 token embeddings and one of
+64 position embeddings, so it spans at most $28 + 64 = 92$ dimensions, and
+the `qkv` gradient has rank about 90. The square `proj` falls short as well:
+only about 110 of its 128 singular values count as nonzero. Only the wide
+`mlp2` has full rank, and its neuron norms under exact orthogonalization are
+all $1$, as promised. Those of `proj` stay within about 15% of each other.
+Five Newton--Schulz steps leave both spread over a factor of about 1.2 to
+1.8. The two tall matrices are uneven even under exact orthogonalization:
+their busiest neurons move about two to three times as far as their
 quietest.
 
 After five steps the neuron norms are also well below $1$, between about
@@ -1533,7 +1554,7 @@ Matched tuning at 0.1B–1.2B parameters: matrix methods lead AdamW by about
 @!muon-the-same-race-on-a-cnn-3
 
 - Training loss: several times lower with the hybrid.
-- Test accuracy: within about a point.
+- Test accuracy: within half a point.
 
 ::: {.d2l-note}
 A verdict depends on the workload and on the metric.
@@ -1563,8 +1584,9 @@ Neuron norms (rows of the update) for one TinyLM gradient, block 1:
 
 @!muon-per-neuron-normalization-1
 
-- Tall matrices: uneven even when exact.
-- Five Newton–Schulz steps add spread everywhere.
+- Exact: unit norms only for the full-rank mlp2; uneven for tall mlp1 and
+  rank-90 qkv.
+- Five Newton–Schulz steps (NS_5) add spread everywhere.
 - A fresh gradient is nearly rank one ($\sigma_1 / \|\mathbf{G}\|_F
   \approx 0.98$–$0.99$ for qkv and proj): most σ start below 0.01, so five
   steps leave every neuron norm below 1.

@@ -271,8 +271,9 @@ are their noise scales: the batches of 256 images and 64 sequences that
 train them elsewhere in this chapter lie above these values.
 
 The noise scale also changes, and quickly. After 500 steps that of the CNN
-has grown severalfold, to several hundred images, and that of the language
-model by more than an order of magnitude, to around a hundred sequences. At
+has grown, to between about 100 and 850 images across our runs, and that of
+the language model by more than an order of magnitude, to between about 60
+and 150 sequences. At
 initialization the full gradient is large compared with the disagreement
 between examples. As training removes the easy part of the loss,
 $\|\nabla f\|^2$ shrinks, while the scatter of the per-example gradients
@@ -283,7 +284,7 @@ about two, and more as $\|\nabla f\|^2$ approaches the noise floor of the
 estimator itself. That is precise enough to choose a batch size, but not
 for much more. Nor do the magnitudes carry over to other problems:
 :citet:`kaplan2020scaling` found critical batch sizes, which track the noise
-scale, of around a million tokens for large language models, against a few
+scale, of around a million tokens for large language models, against several
 thousand characters here. What carries over is the concept and its growth
 during training.
 
@@ -447,12 +448,12 @@ d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
-From $b = 4$ to $b = 16$ the measured curve follows the perfect-scaling
-line: four times the batch needs about a quarter of the steps, and the
-example count barely changes. Beyond $b = 64$ the curve bends away from the
-line. The last quadrupling, from 64 to 256 sequences, cuts the step count
-only about in half, and the run consumes two to three times as many
-examples as the runs with the smallest batches.
+Up to $b = 64$ the measured curve runs nearly parallel to the
+perfect-scaling line: each quadrupling of the batch cuts the step count about
+threefold, and the example count grows slowly. Beyond $b = 64$ the curve
+bends away from the line. The last quadrupling, from 64 to 256 sequences,
+cuts the step count only about in half, and the run consumes about three
+times as many examples as the run with the smallest batch.
 
 ### The CNN
 
@@ -502,10 +503,11 @@ d2l.plot(cnn_bs, [cnn_steps,
 ```
 
 The CNN shows the same pattern. The first quadrupling, from 8 to 32 images,
-stays on the perfect-scaling line, and after it the gap widens. At the top
-of the range a further quadrupling of the batch, and with it of the work per
-step, reduces the step count by a third at most and sometimes not at all.
-The example count there stands at roughly ten times its small-batch value.
+stays close to the perfect-scaling line, cutting the step count three- to
+fourfold, and after it the gap widens. At the top of the range a further
+quadrupling of the batch, and with it of the work per step, reduces the step
+count by about a third at most and sometimes not at all. The example count
+there stands at six to twelve times its small-batch value.
 Extra work per step saves few or no steps and multiplies the data consumed.
 
 ### The Critical Batch Size
@@ -536,8 +538,8 @@ for name, (S_min, b_crit) in fits.items():
     print(f'{name:10s}  S_min = {S_min:4.0f} steps  b_crit = {b_crit:4.0f}')
 ```
 
-The fitted critical batch sizes are one to two hundred sequences for
-`TinyLM` and about two hundred images for the CNN, of the same order as the
+The fitted critical batch sizes are about a hundred sequences for `TinyLM`
+and two to four hundred images for the CNN, of the same order as the
 noise scales that each model reached during its first 500 steps. Closer
 agreement is more than :eqref:`eq_steps-examples` promises here: the model
 uses the curvature-weighted noise scale averaged over the whole run, while
@@ -642,7 +644,7 @@ $b = 64$. Every run sees the same budget of 12,800 examples, so the larger
 batch takes eight times fewer steps. If a rule holds, the whole curve of final loss
 against $\eta$ shifts to the right by the predicted factor when the batch
 grows eightfold: by 8 for SGD and by $\sqrt{8} \approx 2.8$ for Adam. Both
-batch sizes lie below the critical batch size of about two hundred images
+batch sizes lie below the critical batch size of two to four hundred images
 that we fitted for the CNN. There extra examples per step still turn into
 fewer steps, so both rules should hold. Because `d2l.train_lm` already
 trains for a fixed number of steps, the sweep takes a few lines. Each sweep
@@ -739,17 +741,18 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-Both plots show a broad minimum and a steep wall on the right, and the
-larger batch moves the basin to the right. For SGD the best learning rate
-moves by a factor of four to eight, close to the batch ratio, so the linear
-rule carried over from $b = 8$ lands within one grid step of the best
-learning rate at $b = 64$. For Adam the basin is flatter, so one run locates
-its minimum less precisely. It moves by a factor of two to four, in line
-with the square-root rule, while the linear rule applied to Adam ($8\times$)
-lands on the rising right side of the $b = 64$ curve. The basins are broad,
-and near the optimum a factor of two in $\eta$ changes the loss little. The
-rules bridge large ratios of batch sizes, and a short sweep around their
-prediction does the fine tuning.
+Both plots show a broad minimum with a wall of failed runs on the right.
+For SGD the larger batch moves the whole basin to the right: the best
+learning rate moves by a factor of four to sixteen, the batch ratio to
+within one grid step, so the linear rule carried over from $b = 8$ lands
+within one grid step of the best learning rate at $b = 64$. For Adam the
+basin is flatter, so one run locates its minimum less precisely, and where
+the wall stands varies from run to run. The best learning rate moves by at
+most a factor of four, and in some runs not at all: well short of the batch
+ratio, as the square-root rule predicts. The basins are broad, and near the
+optimum a factor of two in $\eta$ changes the loss little. The rules bridge
+large ratios of batch sizes, and a short sweep around their prediction does
+the fine tuning.
 
 ### Limits of the Rules
 
@@ -786,7 +789,8 @@ measured.
 :label:`subsec_batch-size-growing`
 
 The noise scale is not a constant of the problem. We measured it growing
-severalfold within 500 steps, and the reason holds at every scale:
+within 500 steps, by more than an order of magnitude for the language model,
+and the reason holds at every scale:
 $\|\nabla f\|$ falls as the easy progress is made, while the disagreement
 between examples persists. A fixed batch size is therefore a compromise. A
 batch chosen for the end of training exceeds the critical batch size at the
@@ -946,9 +950,10 @@ Batch Size<br>
 Train a Fashion-MNIST CNN to a fixed loss with Adam at several batch
 sizes $b$:
 
-- $b = 8 \to 32$: about 4× fewer steps, the same number of examples.
-- $b = 512 \to 2{,}048$: at most a third fewer steps, so 2.7× to 4× the
+- $b = 8 \to 32$: three to four times fewer steps, at most a third more
   examples.
+- $b = 512 \to 2{,}048$: at most about a third fewer steps, so 2.5× to
+  4.5× the examples.
 
 A bigger batch means more work per step. It saves steps only while
 gradient noise was what slowed the optimizer.
@@ -1050,7 +1055,7 @@ $b_{\textrm{noise}} \approx 64$.
 :::
 :::
 
-::: {.slide title="The Noise Scale Grows Severalfold in 500 Steps"}
+::: {.slide title="The Noise Scale Grows Within 500 Steps"}
 CNN (images), then `TinyLM` (64-character sequences), at initialization
 and after 500 steps of Adam:
 
@@ -1089,18 +1094,18 @@ The bend at $b = b_{\textrm{noise}}$ is the **critical batch size**.
 - CNN: target loss 0.35, $b = 8$ to 2,048 images.
 :::
 
-::: {.slide title="TinyLM Follows Perfect Scaling to b = 16, Then Bends"}
+::: {.slide title="TinyLM Saves Steps Steadily up to b = 64, Then Bends"}
 @!batch-size-the-language-model
 
-From 64 to 256 sequences the steps only about halve; examples rise two- to
-threefold.
+Up to $b = 64$ each quadrupling cuts the steps about threefold. From 64 to
+256 sequences the steps only about halve, and the examples about double.
 :::
 
 ::: {.slide title="The CNN Stops Gaining Steps Above a Few Hundred Images"}
 @!batch-size-the-cnn
 
-At 2,048 images, 4× the batch saves a third of the steps at most; examples
-about 10× their minimum.
+At 2,048 images, 4× the batch saves about a third of the steps at most;
+examples six to twelve times their minimum.
 :::
 
 ::: {.slide title="A Straight-Line Fit in 1/b Gives the Critical Batch Size"}
@@ -1151,21 +1156,22 @@ $$\eta(b) = \frac{b}{b_0}\, \eta_0 \;\;\textrm{(SGD)},
   rule expires at the noise scale.
 :::
 
-::: {.slide title="SGD: Eight Times the Batch Moves the Best Rate Four- to Eightfold"}
+::: {.slide title="SGD: Eight Times the Batch Moves the Best Rate About Eightfold"}
 CNN, budget of 12,800 examples, SGD with momentum 0.9:
 
 @!batch-size-learning-rate-rules-2
 
-The basin shifts right by roughly the batch ratio.
+The basin shifts right by the batch ratio to within one grid step (4× to
+16× on this grid).
 :::
 
-::: {.slide title="Adam: The Basin Moves by Roughly the Square Root"}
+::: {.slide title="Adam: The Best Rate Moves Far Less Than the Batch"}
 Same budget, Adam:
 
 @!batch-size-learning-rate-rules-3
 
-$\sqrt{8} \approx 2.8$: the best rate moves two- to fourfold; the linear
-rule (8×) lands on the rising side.
+$\sqrt{8} \approx 2.8$: in a flat basin the best rate moves at most
+fourfold, sometimes not at all, well short of the linear rule's 8×.
 :::
 
 ::: {.slide title="The Rules Fail Past the Noise Scale, at the Ceiling, and Early"}
@@ -1215,10 +1221,10 @@ may lie past the noise scale; warmup protects the first steps.
 - **Noise scale** $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}
   / \|\nabla f\|^2$, from gradient norms at two batch sizes: about a hundred
   images (CNN) and a few sequences (`TinyLM`) at initialization, growing
-  severalfold within 500 steps.
+  within 500 steps (`TinyLM`: more than tenfold).
 - **Steps to a target:** perfect scaling below the critical batch size, a
   floor above; both models fit one hyperbola, $b_{\textrm{crit}}$ about
-  one to two hundred.
+  a hundred sequences (`TinyLM`) and two to four hundred images (CNN).
 - **Learning rate:** linear in $b$ for SGD, $\sqrt{b}$ for Adam; below the
   noise scale, under the ceiling, behind warmup.
 - **Ramps:** the noise scale grows, so large runs grow their batch.

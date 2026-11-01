@@ -1542,6 +1542,8 @@ number returns in its numerical role, measuring error amplification, in
 
 [Discussions](https://d2l.discourse.group/t/gradient-based-optimization)
 
+[Discussions](https://d2l.discourse.group/t/36828)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -933,6 +933,8 @@ placement as options, with replaceable attention and FFN modules.
        not, record the largest absolute output logit of both models at the
        same steps, and decide whether its growth explains the gap.
 
+[Discussions](https://d2l.discourse.group/t/36774)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -371,3 +371,5 @@ implications:
        header from an unknown source. Build one malformed file that
        violates each check, and confirm that your loader rejects all of
        them.
+
+[Discussions](https://d2l.discourse.group/t/36845)

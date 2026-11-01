@@ -438,3 +438,5 @@ recovery must be designed and tested.
        fraction of 1F1B at $d = 8$, 16, and 64. What limits the
        data-parallel degree of a pipelined job at a fixed global batch?
    :exlabel:`ex_training-systems-pipeline-schedules`
+
+[Discussions](https://d2l.discourse.group/t/36846)

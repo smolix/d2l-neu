@@ -1360,6 +1360,8 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36812)
+
 <!-- slides -->
 
 ::: {.slide}

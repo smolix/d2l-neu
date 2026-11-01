@@ -711,6 +711,8 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36799)
+
 <!-- slides -->
 
 ::: {.slide}

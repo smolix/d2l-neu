@@ -577,6 +577,8 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36807)
+
 <!-- slides -->
 
 ::: {.slide}

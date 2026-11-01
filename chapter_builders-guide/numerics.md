@@ -1426,6 +1426,8 @@ dtype, `dtype`; mixed precision sets `dtype=jnp.bfloat16` and leaves
    and explain how `e4m3fn` reaches a `max` of 448 instead.
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36756)
+
 <!-- slides -->
 
 ::: {.slide}

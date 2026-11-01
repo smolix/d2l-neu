@@ -1458,6 +1458,8 @@ hybrid architectures provide further alternatives.
        mean loss for $s = 4$ and for $s = 0$ with that of a full forward
        pass over the most recent 128 characters at every step.
 
+[Discussions](https://d2l.discourse.group/t/36776)
+
 <!-- slides -->
 
 ::: {.slide}

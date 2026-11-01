@@ -1219,6 +1219,8 @@ how to explore whole families of networks systematically.
        distribution of the fused weights, as :citet:`chu2024qarepvgg`
        analyze.
 
+[Discussions](https://d2l.discourse.group/t/36760)
+
 <!-- slides -->
 
 ::: {.slide}

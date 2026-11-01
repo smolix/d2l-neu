@@ -1308,6 +1308,8 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 [Discussions](https://d2l.discourse.group/t/svd)
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36826)
+
 <!-- slides -->
 
 ::: {.slide}

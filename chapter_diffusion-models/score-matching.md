@@ -703,6 +703,8 @@ three or more orders of magnitude below its peak.
        many samples does score matching need at $\mu = 4$ to estimate $\pi$
        as accurately as maximum likelihood does from $1000$ samples?
 
+[Discussions](https://d2l.discourse.group/t/36817)
+
 <!-- slides -->
 
 ::: {.slide}

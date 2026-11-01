@@ -949,6 +949,8 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36805)
+
 <!-- slides -->
 
 ::: {.slide}

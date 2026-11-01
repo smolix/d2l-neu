@@ -814,6 +814,8 @@ production map is :numref:`sec_training_systems`.
        batch 1024, and explain why the batch size raises the limit of the
        previous part while the width does not.
 
+[Discussions](https://d2l.discourse.group/t/36791)
+
 <!-- slides -->
 
 ::: {.slide title="Adding a GPU"}

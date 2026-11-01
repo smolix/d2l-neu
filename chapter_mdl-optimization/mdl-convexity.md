@@ -1649,6 +1649,8 @@ all stand on results proved here.
 
 [Discussions](https://d2l.discourse.group/t/convexity)
 
+[Discussions](https://d2l.discourse.group/t/36830)
+
 <!-- slides -->
 
 ::: {.slide}

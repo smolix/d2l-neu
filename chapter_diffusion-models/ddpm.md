@@ -1066,6 +1066,8 @@ $\sigma_t^2 = \beta_t$.
        bound?
    :exlabel:`ex_ddpm-optimal-variance`
 
+[Discussions](https://d2l.discourse.group/t/36821)
+
 <!-- slides -->
 
 ::: {.slide}

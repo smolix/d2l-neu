@@ -1274,6 +1274,8 @@ analysis for the underlying linear-algebra algorithms.
 
 [Discussions](https://d2l.discourse.group/t/numerical-stability-and-conditioning)
 
+[Discussions](https://d2l.discourse.group/t/36832)
+
 <!-- slides -->
 
 ::: {.slide}

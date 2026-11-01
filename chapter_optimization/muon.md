@@ -989,6 +989,8 @@ and suspicion of round numbers.
        your measurements support the premise that a few large singular
        values dominate?
 
+[Discussions](https://d2l.discourse.group/t/36764)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -227,3 +227,5 @@ complement, so that a sequence and its reverse complement receive consistent
 predictions.
 
 [Discussions](https://d2l.discourse.group/)
+
+[Discussions](https://d2l.discourse.group/t/36786)

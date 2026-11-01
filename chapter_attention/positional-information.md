@@ -902,6 +902,8 @@ to map longer contexts into the trained range.
        the ALiBi result.
    :exlabel:`ex_positional-information-position-interpolation`
 
+[Discussions](https://d2l.discourse.group/t/36771)
+
 <!-- slides -->
 
 ::: {.slide}

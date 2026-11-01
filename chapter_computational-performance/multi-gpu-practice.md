@@ -1113,6 +1113,8 @@ that turn a synchronous step into a queueing problem.
     Problems data_parallel_calcs and tp_calcs.*
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36792)
+
 <!-- slides -->
 
 ::: {.slide title="Limitations of the Hand-Written Loop"}

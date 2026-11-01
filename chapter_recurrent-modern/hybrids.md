@@ -580,6 +580,8 @@ models with recurrent layers are hybrids for this reason.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36785)
+
 <!-- slides -->
 
 ::: {.slide}

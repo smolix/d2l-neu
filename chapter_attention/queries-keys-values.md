@@ -404,6 +404,8 @@ representations of queries and keys.
        properties of the score $a$ that the shared map guarantees and
        separate maps lose.
 
+[Discussions](https://d2l.discourse.group/t/36768)
+
 <!-- slides -->
 
 ::: {.slide}

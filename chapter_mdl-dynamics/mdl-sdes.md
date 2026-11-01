@@ -1334,6 +1334,8 @@ an Euler--Maruyama step with identical coefficients.
 [Discussions](https://d2l.discourse.group/)
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36838)
+
 <!-- slides -->
 
 ::: {.slide}

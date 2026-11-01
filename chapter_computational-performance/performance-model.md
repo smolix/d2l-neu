@@ -810,6 +810,8 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
        the compute-bound regime, measure again, and report which share
        dominates afterward.
 
+[Discussions](https://d2l.discourse.group/t/36787)
+
 <!-- slides -->
 
 ::: {.slide title="Same Chip, Two Orders of Magnitude Apart"}

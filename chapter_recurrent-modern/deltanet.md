@@ -713,6 +713,8 @@ at query time.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36784)
+
 <!-- slides -->
 
 ::: {.slide}

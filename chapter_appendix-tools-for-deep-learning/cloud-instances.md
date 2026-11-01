@@ -350,3 +350,5 @@ credential and a very large invoice.
        furthest off?
 
    *Adapted from Nicki Skafte Detlefsen, [DTU-MLOps](https://skaftenicki.github.io/dtu_mlops/latest/s6_the_cloud/using_the_cloud/), module M21 "Using the Cloud", Compute exercises.*
+
+[Discussions](https://d2l.discourse.group/t/36843)

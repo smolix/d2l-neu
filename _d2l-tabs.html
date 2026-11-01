@@ -496,10 +496,10 @@
     if (skip()) return;
     var urls = buildUrls();
 
-    // (C) — bottom of article. Inserted before any Discourse embed
-    // container the next script appends, so the order on-page is:
+    // (C) — bottom of article, so the order on-page is:
     //   …article body…
     //   share buttons
+    //   previous/next page links
     //   discourse comments
     var main = document.querySelector('main.content');
     if (main) {
@@ -557,8 +557,12 @@
     if (!container) {
       container = document.createElement('div');
       container.id = 'd2l-discourse-embed';
+      // Below the previous/next page links, so that a long discussion does
+      // not push them out of reach; after the article when a page has none.
+      var nav = document.querySelector('nav.page-navigation');
       var main = document.querySelector('main.content');
-      if (main) main.appendChild(container);
+      if (nav) nav.parentNode.insertBefore(container, nav.nextSibling);
+      else if (main) main.appendChild(container);
     }
     container.innerHTML = '';
 

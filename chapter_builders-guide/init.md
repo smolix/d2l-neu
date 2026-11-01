@@ -1120,6 +1120,8 @@ code.
        Plot the calibrated depth-versus-standard-deviation curve next to
        that of the scaled treatment, and explain the difference.
 
+[Discussions](https://d2l.discourse.group/t/36754)
+
 <!-- slides -->
 
 ::: {.slide}

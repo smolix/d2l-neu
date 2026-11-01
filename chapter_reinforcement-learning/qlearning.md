@@ -653,6 +653,8 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36797)
+
 <!-- slides -->
 
 ::: {.slide}

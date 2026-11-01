@@ -1466,6 +1466,8 @@ model, one configuration at a time.
        the GPT, and explain each change by the mechanism that the
        configuration targets.
 
+[Discussions](https://d2l.discourse.group/t/36793)
+
 <!-- slides -->
 
 ::: {.slide title="Cumulative Optimization of a GPT" only="pytorch"}

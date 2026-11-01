@@ -1011,6 +1011,8 @@ reminder.
        budget?
    :exlabel:`ex_mdl-bayesian-computation-higher-dimension`
 
+[Discussions](https://d2l.discourse.group/t/36833)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -764,6 +764,8 @@ from another, with output length equal to the query length.
        this start implies for the early phase of training and for the
        duplicates you observe.
 
+[Discussions](https://d2l.discourse.group/t/36770)
+
 <!-- slides -->
 
 ::: {.slide}

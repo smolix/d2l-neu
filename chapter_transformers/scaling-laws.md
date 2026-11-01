@@ -844,6 +844,8 @@ settings of a shared collection of architectural components.
     [Assignment 3](https://github.com/stanford-cs336/assignment3-scaling/blob/main/cs336_assignment3_scaling.pdf),
     Problem (chinchilla_isoflops).*
 
+[Discussions](https://d2l.discourse.group/t/36780)
+
 <!-- slides -->
 
 ::: {.slide}

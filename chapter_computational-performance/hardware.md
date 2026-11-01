@@ -689,6 +689,8 @@ The following table summarizes the characteristic performance scales:
        and the number of independent chains that would saturate a socket
        with 0.5 TB/s.
 
+[Discussions](https://d2l.discourse.group/t/36788)
+
 <!-- slides -->
 
 ::: {.slide title="Where the Two Numbers Come From"}

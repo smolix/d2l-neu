@@ -165,7 +165,7 @@ exercise :exref:`ex_weight-decay-shrinkage-vs-penalty` explores. An update
 that shrinks the weights directly, whatever the optimizer does with the
 gradient, is called *decoupled weight decay* :cite:`Loshchilov.Hutter.2019`;
 :numref:`sec_adamw` shows why the distinction matters for adaptive
-optimizers and for momentum.
+optimizers.
 
 ### The $\ell_1$ Penalty and Sparsity
 

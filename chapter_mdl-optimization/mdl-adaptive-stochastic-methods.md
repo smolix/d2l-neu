@@ -1278,7 +1278,7 @@ $\eta$ transfers from a small model to a large one.
 
 This section connects the chapter's analysis with commonly used training
 optimizers. The main book shows the methods in
-action (:numref:`sec_sgd` and :numref:`sec_minibatch_sgd` for stochastic
+action (:numref:`sec_sgd` for stochastic and minibatch
 descent, :numref:`sec_momentum` for velocity, :numref:`sec_adam` for the
 adaptive family, :numref:`sec_scheduler` for schedules), while the
 Ghadimi--Lan rate, the diagonal-metric derivation, the bias-correction

@@ -908,8 +908,8 @@ ball** of squared radius proportional to $\eta\,\sigma^2$, as in
 term dominates and SGD makes GD-like linear progress; once the error reaches
 the ball, signal and noise balance, and subsequent iterates continue to fluctuate within the stationary distribution. The radius formula is a design guide: halving $\eta$ halves the
 squared radius (and so does doubling $b$, since $\sigma^2 \mapsto \sigma^2/b$
-by :eqref:`eq_mdl-opt-variance`; step size and batch size are coupled parameters, the coupling behind the practical recipes of
-:numref:`sec_minibatch_sgd`).
+by :eqref:`eq_mdl-opt-variance`; step size and batch size are coupled parameters, the coupling behind the learning-rate rules of
+:numref:`sec_batch_size`).
 
 ![Gradient descent versus SGD on the same strongly convex bowl. The full-batch path converges to the minimizer; fixed-step SGD first descends and then fluctuates inside a noise ball whose squared radius scales like $\eta\sigma^2/(2\lambda)$. Halving the step size shrinks the ball in this model, which motivates decaying schedules under persistent gradient noise.](../img/mdl-opt-sgd-noise-ball.svg)
 :label:`fig_mdl-opt-sgd-noise-ball`
@@ -982,9 +982,8 @@ floor to $1.1 \times 10^{-2}$: the linear-in-$\eta$ noise ball of
 $5.7 \times 10^{-4}$ after the same $4000$ steps and still descending as a
 power law, the straight line on the log-log plot: its early large steps cross
 the valley, and its late small steps shrink the ball. Modern schedules (step
-decay, cosine, and warmup; :numref:`sec_sgd` and
-:numref:`sec_minibatch_sgd`) manage this tradeoff empirically on losses that
-are neither convex nor stationary. Warmup starts with a small $\eta$ and ramps
+decay, cosine, and warmup; :numref:`sec_scheduler`) manage this tradeoff
+empirically on losses that are neither convex nor stationary. Warmup starts with a small $\eta$ and ramps
 it upward. It can reduce early instability while gradient statistics and local
 curvature are changing rapidly, but the quadratic analysis does not establish a
 universal warmup rule for neural networks. Schedules and warmup are discussed in
@@ -1529,7 +1528,7 @@ beyond explicitly inverting a Hessian.
 
 This section is the rate-and-condition-number justification for the main
 book's optimization chapter: :numref:`sec_gd` implements gradient descent,
-:numref:`sec_sgd` and :numref:`sec_minibatch_sgd` develop its stochastic
+:numref:`sec_sgd` develops its stochastic and minibatch
 practice, and :numref:`sec_momentum` and :numref:`sec_adam` introduce
 momentum and adaptive methods;
 the descent lemma, the $\kappa$ and $\sqrt{\kappa}$ laws, the $1/b$

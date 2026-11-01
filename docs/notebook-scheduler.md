@@ -136,7 +136,6 @@ MULTI_GPU_NOTEBOOKS = {            # data-parallel: need 2 GPUs
     "chapter_computational-performance/multiple-gpus-concise.ipynb",
     "chapter_computational-performance/auto-parallelism.ipynb",
     "chapter_computational-performance/async-computation.ipynb",
-    "chapter_optimization/minibatch-sgd.ipynb",
 }
 
 WHOLE_BOX_NOTEBOOKS = {            # every GPU, fully; nothing shares a card

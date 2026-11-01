@@ -12,6 +12,25 @@ light-blue shaded cells, black strokes), via the grid primitives in
 from arch_diagrams import MechDiagram, save, INK, SANS
 
 
+def _lines(d, x, y, lines, fs, va="top", pitch=1.12, **kw):
+    """A multi-line label, one text artist per line at a fixed baseline pitch
+    (``pitch`` × font size).  matplotlib 3.11 sizes ``linespacing`` from the
+    font's full ascent + descent, which spreads Source Sans 3 lines about
+    1.5× wider than the old ``lp``-height rule these layouts were drawn for,
+    and unevenly; single-line artists sharing one ``va`` keep every baseline
+    on the grid."""
+    n = len(lines)
+    step = pitch * fs
+    for i, s in enumerate(lines):
+        if va == "top":
+            yy = y - i * step
+        elif va == "bottom":
+            yy = y + (n - 1 - i) * step
+        else:
+            yy = y + ((n - 1) / 2 - i) * step
+        d.ax.text(x, yy, s, fontsize=fs, va=va, **kw)
+
+
 def fig_conv_dilation():
     """3×3 kernel taps at dilation 1 vs dilation 2 on the same input grid."""
     cell = 20.0
@@ -21,15 +40,15 @@ def fig_conv_dilation():
     y0 = 12
 
     from matplotlib.patches import Rectangle
+    from figstyle import tokens as T
 
     def footprint(x, y, span):
-        """Dashed outline slightly outside the effective footprint so it
-        does not coincide with (and vanish into) the cell borders."""
-        m = 3.5
+        """Heavy accent outline exactly on the footprint's cell boundaries
+        (a thin or dashed line here reads as a doubled grid line)."""
         d.ax.add_patch(Rectangle(
-            (x - m, y - m), span * cell + 2 * m, span * cell + 2 * m,
-            facecolor="none", edgecolor=INK, linewidth=1.3,
-            linestyle=(0, (2.4, 2.4)), zorder=6))
+            (x, y), span * cell, span * cell, facecolor="none",
+            edgecolor=T.GOLD.base, linewidth=3.2, joinstyle="miter",
+            zorder=6))
 
     # left: dilation 1 — contiguous 3×3 footprint, centered on the grid
     x0 = 14
@@ -51,7 +70,7 @@ def fig_conv_dilation():
            cell, shaded={(r, c) for r in range(3) for c in range(3)},
            title=None)
     d.ax.text(xk + 2, y0 + (n * cell) / 2 + 1.5 * cell + 8, "3×3 kernel",
-              fontsize=10.0, color=INK, family=SANS, ha="center",
+              fontsize=12.0, color=INK, family=SANS, ha="center",
               va="bottom")
 
     save(d.fig, "arch-conv-dilation")
@@ -66,47 +85,59 @@ def _star_op(d, x, y, fs=17.0):
 
 def fig_conv_depthwise():
     """Dense conv mixes all channels; depthwise filters each channel
-    separately, then a pointwise 1×1 mixes them."""
+    separately, then a pointwise 1×1 mixes them.  Each row's titles share
+    one baseline, above the tallest panel (the input stack).  As in
+    img/correlation.svg, the shaded input window feeds the shaded output
+    cell(s)."""
+    from arch_diagrams import GRID_FS
     cell = 18.0
     off = 7.0
-    d = MechDiagram(760, 300)
+    d = MechDiagram(760, 320)
+    shade_in = {(r, c) for r in (1, 2, 3) for c in (1, 2, 3)}
+    all3 = {(r, c) for r in range(3) for c in range(3)}
 
-    def stack_h(n_rows, n):
-        return n_rows * cell + 2 * off   # height of a 3-deep stack
+    def titles(ty, items):
+        for x, lines in items:
+            _lines(d, x, ty, lines, GRID_FS, va="bottom", color=INK,
+                   family=SANS, ha="center", zorder=6)
 
     # ---- top row: dense 3×3 convolution ------------------------------------ #
-    y_top = 175
-    d.grid_stack(20, y_top, 3, 5, 5, cell, off,
-                 shaded_front={(r, c) for r in (1, 2, 3) for c in (1, 2, 3)},
-                 title="Input (3 channels)")
+    y_top = 188
+    d.grid_stack(20, y_top, 3, 5, 5, cell, off, shaded_front=shade_in)
     _star_op(d, 146, y_top + 45)
-    d.grid_stack(170, y_top + 18, 3, 3, 3, cell, off,
-                 shaded_front={(r, c) for r in range(3) for c in range(3)},
-                 shade_backs=True, title="3×3 kernel, all 3 channels")
+    d.grid_stack(170, y_top + 18, 3, 3, 3, cell, off, shaded_front=all3,
+                 shade_backs=True)
     d.op(262, y_top + 45, "=")
-    d.grid(288, y_top + 9, 3, 3, cell, title="1 output channel")
+    d.grid(288, y_top + 9, 3, 3, cell, shaded={(1, 1)})
+    titles(y_top + 5 * cell + 2 * off + 10,
+           [(20 + (5 * cell + 2 * off) / 2, ["Input (3 channels)"]),
+            (170 + (3 * cell + 2 * off) / 2, ["3×3 kernel,",
+                                               "all 3 channels"]),
+            (288 + 1.5 * cell, ["1 output channel"])])
 
     # ---- bottom row: depthwise then pointwise ------------------------------- #
     y_bot = 30
-    d.grid_stack(20, y_bot, 3, 5, 5, cell, off,
-                 shaded_front={(r, c) for r in (1, 2, 3) for c in (1, 2, 3)},
-                 title="Input (3 channels)")
+    d.grid_stack(20, y_bot, 3, 5, 5, cell, off, shaded_front=shade_in)
     _star_op(d, 146, y_bot + 45)
     # depthwise: one full 3x3 kernel per channel; wider offset so the three
     # kernels read as separate, each fully active
-    d.grid_stack(164, y_bot + 8, 3, 3, 3, cell, 13.0,
-                 shaded_front={(r, c) for r in range(3) for c in range(3)},
-                 shade_backs=True, title="depthwise: 1 kernel\nper channel")
+    d.grid_stack(164, y_bot + 8, 3, 3, 3, cell, 13.0, shaded_front=all3,
+                 shade_backs=True)
     d.op(262, y_bot + 45, "=")
-    d.grid_stack(288, y_bot + 9, 3, 3, 3, cell, off,
-                 title="3 channels")
+    d.grid_stack(288, y_bot + 9, 3, 3, 3, cell, off, shaded_front={(1, 1)})
     _star_op(d, 392, y_bot + 45)
     # pointwise: a 1x1 kernel spanning all channels
-    d.grid_stack(416, y_bot + 31, 3, 1, 1, cell, off,
-                 shaded_front={(0, 0)}, shade_backs=True,
-                 title="pointwise\n1×1")
+    d.grid_stack(416, y_bot + 31, 3, 1, 1, cell, off, shaded_front={(0, 0)},
+                 shade_backs=True)
     d.op(482, y_bot + 45, "=")
-    d.grid(508, y_bot + 18, 3, 3, cell, title="1 output channel")
+    d.grid(508, y_bot + 18, 3, 3, cell, shaded={(1, 1)})
+    titles(y_bot + 5 * cell + 2 * off + 10,
+           [(20 + (5 * cell + 2 * off) / 2, ["Input (3 channels)"]),
+            (164 + (3 * cell + 2 * 13.0) / 2, ["depthwise: 1 kernel",
+                                                "per channel"]),
+            (288 + (3 * cell + 2 * off) / 2, ["3 channels"]),
+            (416 + (cell + 2 * off) / 2, ["pointwise", "1×1"]),
+            (508 + 1.5 * cell, ["1 output channel"])])
 
     save(d.fig, "arch-conv-depthwise")
 
@@ -188,10 +219,9 @@ def fig_conv_groups():
         on = {(r, q) for r in range(c) for q in range(c) if r // b == q // b}
         d.grid(x0, y0, c, c, cell, shaded=on)
         name = {1: "dense", 8: "depthwise"}.get(g, f"{g} groups")
-        d.ax.text(x0 + side / 2, y0 + side + 8,
-                  f"{name}\n{c * c // g} kernels", fontsize=GRID_FS,
-                  color=INK, family=SANS, ha="center", va="bottom",
-                  linespacing=1.25)
+        _lines(d, x0 + side / 2, y0 + side + 8,
+               [name, f"{c * c // g} kernels"], GRID_FS, va="bottom",
+               color=INK, family=SANS, ha="center")
     d.ax.text(x_lab + side / 2, y0 - 7, "input channel", fontsize=11.0,
               color=INK, family=SANS, ha="center", va="top")
     d.ax.text(x_lab - 7, y0 + side / 2, "output channel", fontsize=11.0,
@@ -204,7 +234,7 @@ def fig_lenet_vert():
     """The LeNet of sec_lenet as a vertical spine (input at the bottom), in the
     pill style of img/arch-alexnet.svg: an encoder panel and a head panel, with
     the shape of the tensor on each arrow."""
-    from arch_diagrams import (Diagram, PILL_H, PILL_STEP, ACCENT_TINT,
+    from arch_diagrams import (Diagram, PILL_H, ACCENT_TINT,
                                CONTAINER_FILL, LABEL_BAND)
     encoder = ["5×5 Conv, 6, pad 2, sigmoid", "2×2 AvgPool, stride 2",
                "5×5 Conv, 16, sigmoid", "2×2 AvgPool, stride 2"]
@@ -212,17 +242,18 @@ def fig_lenet_vert():
     # shape of each op's output, channels@height×width
     shapes = ["6@28×28", "6@14×14", "16@10×10", "16@5×5",
               "400", "120", "84", "10"]
-    gap = 58                      # extra rise between the two panels
-    d = Diagram(330, 520)
+    gap = 47                      # extra rise between the two panels
+    step = PILL_H + 26            # air between pills for one shape note
+    d = Diagram(330, 600)
     x = 120
     pw = max(d.pill_width(s) for s in encoder + head) + 4
     y0 = 70
-    ys = [y0 + i * PILL_STEP for i in range(4)]
-    ys += [ys[-1] + gap + PILL_STEP + i * PILL_STEP for i in range(4)]
+    ys = [y0 + i * step for i in range(4)]
+    ys += [ys[-1] + gap + step + i * step for i in range(4)]
     pad_x, pad_lo = 18, PILL_H / 2 + 14
     pad_hi = PILL_H / 2 + LABEL_BAND - 8
     # one accent per figure: the encoder is the new idea, the head is neutral
-    for lo, hi, tint, label in ((0, 3, ACCENT_TINT, "convolutional encoder"),
+    for lo, hi, tint, label in ((0, 3, ACCENT_TINT, "encoder"),
                                 (4, 7, CONTAINER_FILL, "dense head")):
         panel = (x - pw / 2 - pad_x, ys[lo] - pad_lo,
                  x + pw / 2 + pad_x, ys[hi] + pad_hi)
@@ -231,17 +262,16 @@ def fig_lenet_vert():
     y_anchor = y0 - pad_lo - 34
     d.anchor(x, y_anchor, "28×28 image")
     d.arrow(x, y_anchor + 12, ys[0] - PILL_H / 2)
-    x_note = x + pw / 2 + pad_x + 8
     for i, (op, y) in enumerate(zip(encoder + head, ys)):
         d.pill(x, y, op, w=pw)
         y_next = ys[i + 1] - PILL_H / 2 if i < 7 else ys[-1] + 70
         d.arrow(x, y + PILL_H / 2, y_next)
-        if i in (3, 7):   # arrow leaves a panel: note beside its free part
-            y_lo = y + pad_hi
-            y_hi = ys[i + 1] - pad_lo if i < 7 else y_next
-            d.shape_note(x + 8, 0.5 * (y_lo + y_hi), shapes[i])
-        else:             # arrow inside a panel: note in the right margin
-            d.shape_note(x_note, 0.5 * (y + ys[i + 1]), shapes[i])
+        # every shape note sits just right of its arrow; an arrow that
+        # leaves a panel gets it beside the part outside the panel
+        y_lo = y + (pad_hi if i in (3, 7) else PILL_H / 2)
+        y_hi = ys[i + 1] - (pad_lo if i == 3 else PILL_H / 2) \
+            if i < 7 else y_next
+        d.shape_note(x + 8, 0.5 * (y_lo + y_hi), shapes[i])
     save(d.fig, "lenet-vert")
 
 
@@ -267,9 +297,9 @@ def fig_why_conv_weight_sharing():
     panels = [
         ("fully connected", f"{n * n} weights",
          lambda i, j: dense[i, j]),
-        ("shared", f"{2 * n - 1} weights",
+        ("equivariant", f"{2 * n - 1} weights",
          lambda i, j: by_offset[j - i + n - 1]),
-        ("shared and local", "3 weights",
+        ("equivariant and local", "3 weights",
          lambda i, j: by_offset[j - i + n - 1] if abs(j - i) <= 1 else None),
     ]
     x_left = 30.0
@@ -373,9 +403,9 @@ def fig_lenet():
     from arch_diagrams import FAMILY_BLUE, GRID_FS
     px = 3.0                        # points per pixel
     lw = 1.2
-    d = MechDiagram(800, 215)
+    d = MechDiagram(760, 215)
     y0 = 52.0                       # bottom of every front plane
-    gap = 46.0                      # horizontal air between stages
+    gap = 32.0                      # horizontal air between stages
 
     def plane(x, y, size, z, fill="white"):
         d.ax.add_patch(Rectangle((x, y), size, size, facecolor=fill,
@@ -419,9 +449,8 @@ def fig_lenet():
         return ux + px / 2, uy + px / 2
 
     def op_label(x0, x1, lines):
-        d.ax.text((x0 + x1) / 2, y0 - 12, "\n".join(lines),
-                  fontsize=GRID_FS - 1, color=INK, family=SANS,
-                  ha="center", va="top", linespacing=1.15)
+        _lines(d, (x0 + x1) / 2, y0 - 10, lines, GRID_FS - 1, va="top",
+               pitch=1.08, color=INK, family=SANS, ha="center")
 
     # input: a 28x28 image with a shirt silhouette
     x = 10.0
@@ -436,7 +465,7 @@ def fig_lenet():
     w_in = window(x, y0, 28 * px, 13, 9, 5)
     x_end = x + 28 * px
 
-    x1 = x_end + gap
+    x1 = x_end + gap - 6             # the short first cone needs less air
     c1 = stack(x1, 6, 28, 6.0, "6@28×28")
     cone(w_in, unit(*c1[:3], 15, 11))
     op_label(x_end, x1, ["5×5 conv,", "sigmoid"])
@@ -462,10 +491,10 @@ def fig_lenet():
     # fully connected layers as bars, heights proportional to their widths
     bar_w = 14.0
     y_mid = y0 + 14 * px
-    xs = [s4[3] + gap + 10]
+    xs = [s4[3] + gap + 4]
     heights = [120 * 0.85, 84 * 0.85, 20.0]
-    for _ in heights[1:]:
-        xs.append(xs[-1] + bar_w + gap - 4)
+    for _ in heights[1:]:          # room for the op labels below
+        xs.append(xs[-1] + bar_w + 42)
     prev = (s4[0] + s4[2] / 2, s4[1], s4[1] + s4[2])   # flatten from S4
     for i, (xb, h, name) in enumerate(zip(xs, heights, ("120", "84", "10"))):
         yb, yt = y_mid - h / 2, y_mid + h / 2

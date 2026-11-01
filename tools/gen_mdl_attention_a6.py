@@ -53,8 +53,8 @@ def _curve(ax, tail, tip, color, rad, lw=2.2, ls="-", zorder=2):
 
 def fig_residual_stream() -> None:
     fig, ax = plt.subplots(figsize=(7.6, 4.6))
-    xs = [1.0, 2.9, 4.8]          # stream centers
-    bw = 0.6                       # band width
+    xs = [1.0, 3.0, 5.0]          # stream centers
+    bw = 0.42                      # band width
     y0, y1 = 1.0, 4.1              # band extent
 
     # The streams: light vertical bands with the identity path inside.
@@ -65,7 +65,7 @@ def fig_residual_stream() -> None:
         fl.arrow(ax, (cx, y0 + 0.06), (cx, y1 - 0.06), color=BLUE, lw=1.6,
                  mut=12)
 
-    ax.text(xs[0] - 0.62, 0.5 * (y0 + y1), "residual streams",
+    ax.text(xs[0] - 0.55, 0.5 * (y0 + y1), "residual streams",
             rotation=90, ha="center", va="center", fontsize=13,
             color="black")
 
@@ -85,22 +85,25 @@ def fig_residual_stream() -> None:
 
     # One attention head: the query stream (3) scores every earlier stream
     # (QK, dashed) and receives a value payload from stream 1 (OV, solid).
+    # Labels sit in the gaps between streams, never on a stream.
     qy = 2.15                      # height at which the head reads
-    wy = 3.05                      # height at which it writes back
+    wy = 3.15                      # height at which it writes back
     ax.plot([xs[2], xs[0]], [qy, qy], color=GRAY, ls="--", lw=1.6, zorder=1)
     ax.plot([xs[2], xs[1]], [qy - 0.28, qy - 0.28], color=GRAY, ls="--",
             lw=1.6, zorder=1)
-    ax.text(0.5 * (xs[0] + xs[1]) - 0.28, qy - 0.75,
-            r"QK circuit: where? $\;\alpha_{3j}$",
-            ha="center", fontsize=14, color="black",
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
+    ax.text(0.5 * (xs[1] + xs[2]), qy - 0.48,
+            "QK circuit: where?\n" r"$\alpha_{3j}$",
+            ha="center", va="top", fontsize=14, color="black",
+            linespacing=1.25)
 
-    _curve(ax, (xs[0] + bw / 2, qy), (xs[2] - bw / 2 - 0.02, wy), ORANGE,
-           rad=-0.33)
-    ax.text(0.5 * (xs[0] + xs[2]), 3.62,
-            r"OV circuit: what? $\;\mathbf{W}_{\mathrm{OV}}\mathbf{h}_1$",
-            ha="center", fontsize=14, color="black",
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
+    r_add = 0.11                   # radius of the (+) marker, data units
+    _curve(ax, (xs[0] + 0.04, qy + 0.04), (xs[2] - r_add, wy), ORANGE,
+           rad=-0.30)
+    ax.text(0.5 * (xs[0] + xs[1]), 3.45,
+            "OV circuit: what?\n"
+            r"$\mathbf{W}_{\mathrm{OV}}\mathbf{h}_1$",
+            ha="center", va="bottom", fontsize=14, color="black",
+            linespacing=1.25)
     # The write is an addition into the stream.
     ax.plot([xs[2]], [wy], marker="o", ms=13, mfc="white", mec=ORANGE,
             mew=1.6, zorder=3)
@@ -146,7 +149,7 @@ def fig_induction_circuit() -> None:
     ax.text(0.5 * (xs[3] + xs[4]), 1.14, "copy:\npredict B",
             ha="center", va="bottom", fontsize=13.5, color="black")
 
-    fl.clean_axes(ax, lim=((-0.7, 5.2), (-2.35, 2.2)), hide=True,
+    fl.clean_axes(ax, lim=((-0.6, 4.9), (-2.0, 1.9)), hide=True,
                   equal=False)
     fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
     fl.save(fig, "mdl-attention-induction-circuit")

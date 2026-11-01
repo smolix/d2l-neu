@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -39,7 +39,7 @@ z
    <g id="line2d_1">
     <path d="M 7.2 131.822873 
 L 353.16 131.822873 
-" clip-path="url(#pa5968cd285)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p620563b41b)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="matplotlib.axis_1"/>
    <g id="matplotlib.axis_2"/>
@@ -47,17 +47,7 @@ L 353.16 131.822873
     <path d="M 7.2 166.064911 
 L 329.378331 -1 
 L 329.378331 -1 
-" clip-path="url(#pa5968cd285)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.8"/>
-   </g>
-   <g id="patch_3">
-    <path d="M 7.2 240.048 
-L 7.2 7.2 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
-   </g>
-   <g id="patch_4">
-    <path d="M 7.2 240.048 
-L 353.16 240.048 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
+" clip-path="url(#p620563b41b)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.8"/>
    </g>
    <g id="line2d_3">
     <path d="M 24.294791 248.248 
@@ -119,11 +109,11 @@ L 344.840321 114.663798
 L 351.08008 120.536525 
 L 353.16 122.566007 
 L 353.16 122.566007 
-" clip-path="url(#pa5968cd285)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
+" clip-path="url(#p620563b41b)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="text_1">
     <!-- $x_0$ -->
-    <g style="fill: #15181c" transform="translate(177.034909 100.970517) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(177.034909 101.970517) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-3f" d="M 500 184 
 Q 613 97 819 97 
@@ -277,18 +267,18 @@ L 332.360802 118.398677
 L 346.226934 129.870583 
 L 353.16 135.651691 
 L 353.16 135.651691 
-" clip-path="url(#pa5968cd285)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#p620563b41b)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="legend_1">
     <g id="line2d_5">
-     <path d="M 137.472344 182.54 
-L 148.472344 182.54 
-L 159.472344 182.54 
+     <path d="M 98.256406 172.084 
+L 111.256406 172.084 
+L 124.256406 172.084 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
     <g id="text_2">
      <!-- $f(x)=\sin x$ -->
-     <g style="fill: #15181c" transform="translate(168.272344 186.39) scale(0.11 -0.11)">
+     <g style="fill: #15181c" transform="translate(134.656406 176.634) scale(0.13 -0.13)">
       <defs>
        <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -535,14 +525,14 @@ z
      </g>
     </g>
     <g id="line2d_6">
-     <path d="M 137.472344 202.626 
-L 148.472344 202.626 
-L 159.472344 202.626 
+     <path d="M 98.256406 195.822 
+L 111.256406 195.822 
+L 124.256406 195.822 
 " style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.8"/>
     </g>
     <g id="text_3">
      <!-- tangent (matches value, slope) -->
-     <g style="fill: #15181c" transform="translate(168.272344 206.476) scale(0.11 -0.11)">
+     <g style="fill: #15181c" transform="translate(134.656406 200.372) scale(0.13 -0.13)">
       <defs>
        <path id="SourceSans3-Regular-2f" d="M 1504 -58 
 Q 1005 -58 809 227 
@@ -999,14 +989,14 @@ z
      </g>
     </g>
     <g id="line2d_7">
-     <path d="M 137.472344 222.712 
-L 148.472344 222.712 
-L 159.472344 222.712 
+     <path d="M 98.256406 219.56 
+L 111.256406 219.56 
+L 124.256406 219.56 
 " style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
     </g>
     <g id="text_4">
      <!-- best parabola (matches curvature too) -->
-     <g style="fill: #15181c" transform="translate(168.272344 226.562) scale(0.11 -0.11)">
+     <g style="fill: #15181c" transform="translate(134.656406 224.11) scale(0.13 -0.13)">
       <defs>
        <path id="SourceSans3-Regular-1d" d="M 1901 -77 
 Q 1683 -77 1449 28 
@@ -1110,14 +1100,14 @@ C -1.29895 2.236584 -0.663008 2.5 0 2.5
 z
 " style="stroke: #000000"/>
     </defs>
-    <g clip-path="url(#pa5968cd285)">
+    <g clip-path="url(#p620563b41b)">
      <use xlink:href="#m419cd5582a" x="172.317273" y="80.443689" style="stroke: #000000"/>
     </g>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="pa5968cd285">
+  <clipPath id="p620563b41b">
    <rect x="7.2" y="7.2" width="345.96" height="232.848"/>
   </clipPath>
  </defs>

@@ -7,10 +7,10 @@ Four figures (see ``reviews/gan-implementation-brief.md`` §8):
   * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
     generator, the generated and real batches meeting at the discriminator, and
     the two updates with their opposite goals (replaces the legacy hand-drawn
-    ``img/gan.svg``);
+    ``img/gan.svg``, now deleted);
   * ``mdl-gan-template`` -- the two knobs of the adversarial-objective template
     ``d(p,q) = sup_T {E_p[a(T)] - E_q[b(T)]}``, with GAN/f-GAN, W_1 and MMD
-    placed on the (payoff, critic class) plane and RpGAN lifted off it;
+    placed on the (scoring functions, critic class) plane and RpGAN lifted off it;
   * ``mdl-gan-pairing`` -- single-sample classification against a fixed
     threshold versus pair ranking, with the additive shift flipping the
     verdict on the left and cancelling on the right;
@@ -131,8 +131,9 @@ def fig_architecture():
     _network(12.00, 3.95, 2.62, r"$D$", "discriminator", GREEN)
 
     # --- the score it produces ----------------------------------------------
-    fl.arrow(ax, (13.35, 3.95), (13.92, 3.95), color="black", lw=1.6)
     xs = 14.35
+    # the output arrow ends where it meets the logit axis's 0 tick
+    fl.arrow(ax, (13.35, 3.95), (xs - 0.17, 3.95), color="black", lw=1.6)
     fl.arrow(ax, (xs, 2.55), (xs, 5.42), color="black", lw=1.4, mut=12)
     ax.plot([xs - 0.16, xs + 0.16], [3.98, 3.98], color="black", lw=1.3)
     ax.text(xs + 0.24, 3.98, r"$0$", ha="left", va="center", fontsize=12.5,
@@ -143,21 +144,24 @@ def fig_architecture():
     ax.plot([xs], [3.02], "o", color=ORANGE, ms=8, zorder=5)
     ax.text(xs + 0.24, 3.02, "generated", ha="left", va="center", fontsize=12.5,
             color=ORANGE)
-    ax.text(xs, 5.58, "realness logit", ha="center", va="bottom", fontsize=12.5,
+    # the axis name sits below the axis, clear of the D-update label above
+    ax.text(xs, 2.40, "realness logit", ha="center", va="top", fontsize=12.5,
             color="black")
 
     # --- the two updates, pushing opposite ways -----------------------------
     _curved(ax, (11.52, 4.68), (12.48, 4.68), -1.05, GREEN, lw=1.8, ls="--")
-    ax.text(13.05, 6.05, "update $D$: raise scores on real,\n"
+    ax.text(12.00, 5.40, "update $D$: raise scores on real,\n"
                          "lower them on generated",
             ha="center", va="bottom", fontsize=12.5, color=GREEN)
-    ax.plot([12.90, 12.90], [3.24, 0.30], ls="--", color=ORANGE, lw=1.8)
-    ax.plot([12.90, 4.65], [0.30, 0.30], ls="--", color=ORANGE, lw=1.8)
-    fl.arrow(ax, (4.65, 0.30), (4.65, 1.55), color=ORANGE, lw=1.8, ls="--")
-    ax.text(8.20, 0.46, r"update $G$: gradient flows back through $D$",
-            ha="center", va="bottom", fontsize=12.5, color=ORANGE)
+    # the G-update path runs below the batch captions, its label beneath it
+    yb = 0.10
+    ax.plot([12.90, 12.90], [3.24, yb], ls="--", color=ORANGE, lw=1.8)
+    ax.plot([12.90, 4.65], [yb, yb], ls="--", color=ORANGE, lw=1.8)
+    fl.arrow(ax, (4.65, yb), (4.65, 1.55), color=ORANGE, lw=1.8, ls="--")
+    ax.text(8.78, yb - 0.16, r"update $G$: gradient flows back through $D$",
+            ha="center", va="top", fontsize=12.5, color=ORANGE)
 
-    fl.clean_axes(ax, lim=((0.20, 16.90), (-0.05, 7.05)), hide=True)
+    fl.clean_axes(ax, lim=((0.20, 16.70), (-0.75, 7.05)), hide=True)
     fl.save(fig, "mdl-gan-architecture")
 
 
@@ -166,12 +170,12 @@ def fig_architecture():
 # =========================================================================== #
 
 def fig_template():
-    """One template, two choices: which payoff (a, b) and which critic class.
+    """One template, two choices: which scoring functions (a, b) and which critic class.
     GAN/f-GAN, W_1 and MMD sit at three corners of that plane; RpGAN does not
     sit on it at all, because its objective is quadratic in (p, q)."""
     fig, ax = plt.subplots(figsize=(9.6, 6.0))
 
-    SH = np.array([0.44, 0.40])                  # shear: one unit of payoff
+    SH = np.array([0.44, 0.40])                  # shear: one unit of the scoring-function axis
     U1, V1 = 7.4, 4.9                            # plane extent
 
     def P(u, v):
@@ -181,7 +185,7 @@ def fig_template():
     ax.add_patch(Polygon([P(0, 0), P(U1, 0), P(U1, V1), P(0, V1)],
                          closed=True, fc=LIGHT, alpha=0.22, ec=GRAY, lw=1.2,
                          zorder=1))
-    # the linear-payoff row: every integral probability metric lives here
+    # the linear-scoring row: every integral probability metric lives here
     ax.add_patch(Polygon([P(0, 0.35), P(U1, 0.35), P(U1, 1.75), P(0, 1.75)],
                          closed=True, fc=GRAY, alpha=0.13, ec="none", zorder=2))
     ax.text(*(P(U1, 1.05) + np.array([0.22, 0.0])),
@@ -193,7 +197,7 @@ def fig_template():
     fl.arrow(ax, P(0, 0), P(0, V1 + 0.45), color="black", lw=1.5, mut=15)
     ax.text(*(P(U1 / 2, 0) + np.array([0.0, -0.62])), r"critic class $\mathcal{T}$",
             ha="center", va="top", fontsize=14.5, color="black")
-    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"payoff $(a,b)$",
+    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"scoring functions $(a,b)$",
             ha="right", va="bottom", fontsize=14.5, color="black")
 
     # ticks along each axis
@@ -236,7 +240,7 @@ def fig_template():
             "\nis quadratic in $(p,q)$ — off the plane",
             ha="left", va="center", fontsize=13, color=PURPLE, zorder=7)
 
-    fl.clean_axes(ax, lim=((-1.9, 13.6), (-1.05, 5.2)), hide=True, equal=True)
+    fl.clean_axes(ax, lim=((-0.7, 11.4), (-0.95, 4.4)), hide=True, equal=True)
     fl.save(fig, "mdl-gan-template")
 
 
@@ -246,7 +250,7 @@ def fig_template():
 
 def fig_pairing():
     """Left: a single sample scored against the fixed threshold 0 -- adding a
-    constant c to the critic flips the verdict.  Right: a pair, judged by the
+    constant b to the critic flips the verdict.  Right: a pair, judged by the
     difference of the two scores -- the same constant cancels."""
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.8, 4.4))
 
@@ -266,9 +270,9 @@ def fig_pairing():
         # both columns hold the same samples; only the critic differs
         fl.arrow(ax, (XL + 0.10, -1.62), (XR - 0.10, -1.62), color=GRAY,
                  lw=1.6, mut=13)
-        ax.text((XL + XR) / 2, -1.50, r"every score $+\,c$", ha="center",
+        ax.text((XL + XR) / 2, -1.50, r"every score $+\,b$", ha="center",
                 va="bottom", fontsize=12.5, color=GRAY)
-        for x, lab in [(XL, r"critic $D$"), (XR, r"shifted critic $D+c$")]:
+        for x, lab in [(XL, r"critic $D$"), (XR, r"shifted critic $D+b$")]:
             ax.text(x, -2.02, lab, ha="center", va="top", fontsize=13,
                     color="black")
         ax.text((XL + XR) / 2, 2.50, title, ha="center", va="top",
@@ -280,11 +284,11 @@ def fig_pairing():
     axa.text(6.95, 0.14, "threshold", ha="right", va="bottom", fontsize=12.5,
              color="black")
     for x, y, lab, verdict in [(XL, -0.70, r"$D(x)$", "generated"),
-                               (XR, -0.70 + C, r"$D(x)+c$", "real")]:
+                               (XR, -0.70 + C, r"$D(x)+b$", "real")]:
         axa.plot([x], [y], "o", color=BLUE, ms=11, zorder=5)
-        axa.text(x - 0.16, y, lab, ha="right", va="center", fontsize=13.5,
+        axa.text(x - 0.24, y, lab, ha="right", va="center", fontsize=13.5,
                  color=BLUE)
-        axa.text(x + 0.18, y, f"$\\to$ {verdict}", ha="left", va="center",
+        axa.text(x + 0.24, y, f"$\\to$ {verdict}", ha="left", va="center",
                  fontsize=13, color="black")
     frame(axa, "one sample: is $D(x)$ above $0$?")
 
@@ -294,7 +298,7 @@ def fig_pairing():
                             (DY + sh, ORANGE, r"$D(x')$")]:
             axb.plot([x], [y], "o", color=col, ms=11, zorder=5)
             if not k:                       # the header names the shift; the
-                axb.text(x - 0.16, y, lab, ha="right", va="center",
+                axb.text(x - 0.24, y, lab, ha="right", va="center",
                          fontsize=13.5, color=col)   # second column needs no
         xb = x + 0.26                                # relabelling
         axb.plot([xb, xb], [DY + sh, DX + sh], color="black", lw=1.5)
@@ -335,14 +339,21 @@ def fig_exits():
     ys = [5.25, 3.10, 0.95]                      # the three branch lanes
     bw, bh = 3.34, 0.90
 
-    _box(ax, 1.35, ys[1], 2.40, 1.35, "unstable\nminimax\ntraining", GRAY,
+    _box(ax, 1.05, ys[1], 1.80, 1.35, "unstable\nminimax\ntraining", GRAY,
          fontsize=13.5, lw=1.9)
 
+    # a short trunk leaves the source box; each branch turns off it with a
+    # rounded corner and arrives horizontally at its lane
+    xt = 2.38                                   # x of the branching trunk
+    ax.plot([1.99, xt], [ys[1], ys[1]], color=GRAY, lw=1.7, zorder=4,
+            solid_capstyle="butt")
     for (col, name, steps, cost), y in zip(branches, ys):
-        _curved(ax, (2.58, ys[1] + (0.30 if y > ys[1] else
-                                    (-0.30 if y < ys[1] else 0.0))),
-                (xs[0] - bw / 2 - 0.10, y), 0.0 if y == ys[1] else
-                (-0.18 if y > ys[1] else 0.18), col, lw=1.7)
+        ax.add_patch(FancyArrowPatch(
+            (xt, ys[1]), (xs[0] - bw / 2 - 0.10, y),
+            connectionstyle=("arc3,rad=0" if y == ys[1] else
+                             "angle,angleA=90,angleB=0,rad=14"),
+            arrowstyle="-|>", mutation_scale=15, color=col, lw=1.7,
+            shrinkA=0, shrinkB=0, zorder=4))
         ax.text(xs[0] - bw / 2, y + bh / 2 + 0.16, name, ha="left",
                 va="bottom", fontsize=13.5, color=col)
         for x, s in zip(xs, steps):

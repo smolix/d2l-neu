@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -600,8 +600,8 @@ L 329.983769 -1
 " clip-path="url(#p077dc695d6)" style="fill: none; stroke: #2ca02c; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
-    <path d="M 118.265007 240.048 
-L 118.265007 7.2 
+    <path d="M 118.265007 207.855488 
+L 118.265007 -1 
 " clip-path="url(#p077dc695d6)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 0.8"/>
    </g>
    <g id="patch_3">
@@ -615,17 +615,17 @@ L 384.232 240.048
 " style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="patch_5">
-    <path d="M 266.580413 183.631103 
-Q 237.255553 158.775113 209.210013 135.003485 
+    <path d="M 262.001186 192.979512 
+Q 236.112541 171.036086 211.503216 150.177022 
 " style="fill: none; stroke: #565d66; stroke-width: 1.5; stroke-linecap: round"/>
-    <path d="M 212.198917 141.99394 
-L 209.210013 135.003485 
-L 216.595719 136.806635 
+    <path d="M 214.49212 157.167477 
+L 211.503216 150.177022 
+L 218.888922 151.980172 
 " style="fill: none; stroke: #565d66; stroke-width: 1.5; stroke-linecap: round"/>
    </g>
    <g id="text_3">
-    <!-- shrink toward prior -->
-    <g style="fill: #565d66" transform="translate(162.394481 97.289697) scale(0.11 -0.11)">
+    <!-- shrink toward -->
+    <g style="fill: #15181c" transform="translate(255.618853 152.67327) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2e" d="M 1338 -77 
 Q 998 -77 697 41 
@@ -791,12 +791,19 @@ z
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(436.90625 0)"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(487.3125 0)"/>
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(521.015625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(576.515625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(596.515625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(652.015625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(686.71875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(711.3125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(765.515625 0)"/>
+    </g>
+    <!-- prior mean -->
+    <g style="fill: #15181c" transform="translate(255.618853 167.25927) scale(0.11 -0.11)">
+     <use xlink:href="#SourceSans3-Regular-2b"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(55.5 0)"/>
+     <use xlink:href="#SourceSans3-Regular-24" transform="translate(90.203125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(114.796875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(169 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(203.703125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-28" transform="translate(223.703125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(306.609375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(354.796875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-29" transform="translate(405.203125 0)"/>
     </g>
    </g>
    <g id="text_4">
@@ -990,7 +997,7 @@ z
    </g>
    <g id="text_6">
     <!-- prior mean -->
-    <g style="fill: #565d66" transform="translate(92.970163 227.675354) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(92.970163 227.675354) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-2b"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(55.5 0)"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(90.203125 0)"/>

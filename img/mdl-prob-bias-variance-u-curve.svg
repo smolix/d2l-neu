@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -523,7 +523,7 @@ L 197.298819 192.004037
    </g>
    <g id="text_3">
     <!-- sweet spot -->
-    <g style="fill: #565d66" transform="translate(239.693651 148.200851) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(239.693651 148.200851) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2e" d="M 1338 -77 
 Q 998 -77 697 41 

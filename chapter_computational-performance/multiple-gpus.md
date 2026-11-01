@@ -448,7 +448,8 @@ accounting deliberately ignores.
 accumulates one chunk per device around the ring; all-gather then
 distributes the finished chunks. Each cell counts how many of the four
 contributions a chunk holds; a full chunk (4) is
-complete.](../img/mdl-perf-ring-allreduce.svg)
+complete. An outlined cell is the chunk that GPU received in that
+step.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
 The $2(k-1)/k$ byte count does not determine the transfer rate. On the

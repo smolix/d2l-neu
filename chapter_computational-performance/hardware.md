@@ -80,11 +80,11 @@ near the arithmetic units that use it.
 before the first byte arrives — and spans eight orders of magnitude, from
 a one-nanosecond L1 hit to a sixty-millisecond WAN round trip. Note where
 the highlighted point sits: launching a CUDA kernel costs 5–15 µs of
-latency, thousands of L2 hits' worth, which is why the overhead regime of
+latency, a hundred or more L2 hits' worth, which is why the overhead regime of
 :numref:`sec_perf_model` exists at all and why this chapter keeps returning
 to "fewer, larger operations".
 
-![Representative mid-2026 latencies on a logarithmic nanosecond scale. A CUDA kernel launch takes roughly 5--15 microseconds on the systems summarized here, so many small launches can dominate short kernels.](../img/mdl-perf-latency-ladder.svg)
+![Representative mid-2026 latencies on a logarithmic time scale. A CUDA kernel launch takes roughly 5--15 microseconds on the systems summarized here, so many small launches can dominate short kernels.](../img/mdl-perf-latency-ladder.svg)
 :label:`fig_latency_ladder`
 
 Latency and bandwidth interact through *access patterns*. DRAM delivers

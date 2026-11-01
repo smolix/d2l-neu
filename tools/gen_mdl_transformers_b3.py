@@ -55,18 +55,18 @@ def _score_panel(ax, cached):
     # keys/values strip above the score matrix
     if cached:
         _kv_strip(ax, ys, [(BLUE, 0.30)] * (T - 1) + [(ORANGE, 0.85)])
-        ax.text((T - 1) / 2, ys + 1.25,
+        ax.text((T - 1) / 2, ys + 1.0,
                 r"$\mathbf{k}_{1..t-1}, \mathbf{v}_{1..t-1}$ from the cache",
-                ha="center", va="center", fontsize=13, color="black")
+                ha="center", va="bottom", fontsize=13, color="black")
         ax.text(T + 0.7, ys + 0.4, r"new $\mathbf{k}_t, \mathbf{v}_t$",
                 ha="left", va="center", fontsize=13, color="black")
         fl.arrow(ax, (T + 0.6, ys + 0.4), (T + 0.05, ys + 0.4), color=GRAY,
                  lw=1.3, mut=11)
     else:
         _kv_strip(ax, ys, [(ORANGE, 0.85)] * T)
-        ax.text(T / 2, ys + 1.25,
+        ax.text(T / 2, ys + 1.0,
                 r"all $\mathbf{k}_{1..t}, \mathbf{v}_{1..t}$ recomputed",
-                ha="center", va="center", fontsize=13, color="black")
+                ha="center", va="bottom", fontsize=13, color="black")
     # score matrix: lower triangle
     for i in range(T):
         for j in range(i + 1):
@@ -79,11 +79,13 @@ def _score_panel(ax, cached):
             else:
                 _cell(ax, j, i, ORANGE, 0.85 if i == T - 1 else 0.30)
     if cached:
-        ax.text(2.9, 5.6, "not computed", ha="center", va="center",
-                fontsize=13, color=GRAY, rotation=0,
+        # inside the (dashed) triangle, where it is widest
+        ax.text(3.0, 2.5, "not computed", ha="center", va="center",
+                fontsize=13, color=GRAY,
                 bbox=dict(fc="white", ec="none", pad=2))
-    # arrow from the strip down toward the current score row
-    fl.arrow(ax, (T - 0.15, ys - 0.15), (T - 0.15, 1.35), color=GRAY, lw=1.4,
+    # arrow from the strip down onto the top edge of the current score row
+    # (row t occupies y in [0, 1])
+    fl.arrow(ax, (T - 0.15, ys - 0.15), (T - 0.15, 1.0), color=GRAY, lw=1.4,
              mut=12)
     label = ("one new score row per step" if cached
              else "every score row redone per step")
@@ -129,8 +131,9 @@ def _heads_panel(ax, n_kv, label):
         for x in xs:
             ax.plot([x + w / 2, xc + w / 2], [y_q - 0.06, y_kv + w + 0.06],
                     color=GRAY, lw=1.3, zorder=1)
-    ax.text((H - 1) * gap / 2 + w / 2, y_q + w + 0.55, label, ha="center",
-            va="center", fontsize=14, color="black")
+    # bottom-anchored so descenders (g, p, q, y) clear the query squares
+    ax.text((H - 1) * gap / 2 + w / 2, y_q + w + 0.22, label, ha="center",
+            va="bottom", fontsize=14, color="black")
     ax.set_xlim(-2.15, (H - 1) * gap + w + 0.35)
     ax.set_ylim(-1.35, y_q + w + 1.1)
     ax.set_aspect("equal")

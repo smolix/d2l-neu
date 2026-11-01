@@ -47,7 +47,9 @@ def fig_critical_damping():
         bstar = (1.0 - np.sqrt(eta_lam)) ** 2
         ax.plot([bstar], [_hb_rate(eta_lam, bstar)], "o", color=color, ms=7,
                 zorder=5)
-        ax.axvline(bstar, color=color, lw=0.8, ls=":", alpha=0.6)
+        # the guide stops short of its own beta* tag (an axvline ran through it)
+        ax.plot([bstar, bstar], [0.5, 1.0], color=color, lw=0.8, ls=":",
+                alpha=0.6)
         ax.text(bstar, 1.015, r"$\beta^{*}$", color=color, ha="center",
                 va="bottom", fontsize=14)
         # curve tag sits above the flat left arm of its own curve
@@ -56,19 +58,23 @@ def fig_critical_damping():
     # regime labels for the better-conditioned (blue) curve
     ax.text(0.145, 0.585, "over-damped:\nmonotone, slow", color="black",
             fontsize=12.5, ha="center", va="center")
-    ax.text(0.72, 0.60, "under-damped:\noscillates, rate $\\sqrt{\\beta}$",
+    ax.text(0.785, 0.60, "under-damped:\noscillates, rate $\\sqrt{\\beta}$",
             color="black", fontsize=12.5, ha="center", va="center")
-    ax.annotate("", xy=(0.86, 0.945), xytext=(0.86, 0.80),
+    # the head stops just under the sqrt(beta) curve instead of piercing it
+    ax.annotate("", xy=(0.86, np.sqrt(0.86) - 0.03), xytext=(0.86, 0.77),
                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
-    ax.text(0.875, 0.87, "slower", color="black", fontsize=11.5,
+    ax.text(0.875, 0.835, "slower", color="black", fontsize=11.5,
             ha="left", va="center")
     ax.set_xlim(0.0, 0.97)
     ax.set_ylim(0.5, 1.06)
     ax.set_xlabel(r"momentum $\beta$", fontsize=13, color="black")
     ax.set_ylabel("convergence rate per step", fontsize=13, color="black")
-    ax.tick_params(labelsize=11)
+    # black ticks/spines, like the chapter's other function plots (_fn_axes)
+    ax.tick_params(labelsize=11, colors="black")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color("black")
     fl.save(fig, "mdl-opt-critical-damping")
 
 
@@ -128,33 +134,55 @@ def fig_river_valley():
 
     wsd = _run_valley(split + decay + 30, eta_wsd, noise)
 
-    xs = np.linspace(-0.4, 9.6, 320)
-    ys = np.linspace(-2.2, 2.6, 260)
+    # coarse grid: the fill is smooth, and img/ SVGs are inline (keep small)
+    xs = np.linspace(-0.4, 9.6, 200)
+    ys = np.linspace(-2.35, 2.6, 120)
     X, Y = np.meshgrid(xs, ys)
     Z = _valley_loss(X, Y)
 
     fig, ax = plt.subplots(figsize=(7.4, 3.9))
-    ax.contourf(X, Y, Z, levels=26, cmap="Blues_r", alpha=0.55)
-    ax.plot(xs, _river(xs), color="black", lw=1.0, ls="--", alpha=0.7)
+    # light valley: white floor, walls tinting to blue (the old dark Blues_r
+    # wash buried both the walls and the paths)
+    from matplotlib.colors import LinearSegmentedColormap
+    T = fl.T
+    cmap = LinearSegmentedColormap.from_list(
+        "valley", ["white", T.BLUE.tint, T.BLUE.base])
+    lo = float(Z.min())
+    ax.contourf(X, Y, Z, levels=np.linspace(lo, lo + 16.0, 17), cmap=cmap,
+                alpha=0.55, extend="max")
+    ax.plot(xs, _river(xs), color="black", lw=1.2, ls="--", alpha=0.8,
+            zorder=3)
 
+    # the constant-rate walk keeps drifting far past the frame; end it where
+    # it first reaches the right edge (interpolated) rather than letting it
+    # run out of the picture
+    xr = 9.45
+    k = int(np.argmax(const[:, 0] > xr))
+    a, b = const[k - 1], const[k]
+    const = np.vstack([const[:k], a + (xr - a[0]) / (b[0] - a[0]) * (b - a)])
     ax.plot(const[:, 0], const[:, 1], color=ORANGE, lw=1.3, marker="o",
-            ms=2.2, mew=0, alpha=0.9, zorder=4)
+            ms=2.4, mew=0, alpha=0.9, zorder=4)
     ax.plot(wsd[split:, 0], wsd[split:, 1], color=GREEN, lw=2.6, marker="o",
-            ms=3.0, mew=0, zorder=6)
+            ms=3.2, mew=0, zorder=6)
+    ax.plot(*wsd[-1], "o", color=GREEN, ms=7, zorder=7)
 
     bbox = dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85)
-    ax.text(0.72, 0.82, "warmup", color="black", fontsize=13, ha="left",
-            va="center", bbox=bbox)
-    ax.text(3.9, 2.28, "stable: bounces off the walls,\nstill moves downstream",
-            color="black", fontsize=13, ha="center", va="center", bbox=bbox)
-    ax.text(6.6, -1.75, "decay: settles\nto the floor", color="black",
+    ax.text(0.2, 0.75, "warmup", color="black", fontsize=13, ha="left",
+            va="bottom", bbox=bbox)
+    ax.text(3.6, 1.95, "constant rate: bounces off the walls,\n"
+            "still moves downstream", color=ORANGE, fontsize=13,
+            ha="center", va="center", bbox=bbox)
+    ax.text(7.6, -1.55, "decay: settles\nonto the floor", color=GREEN,
             fontsize=13, ha="center", va="center", bbox=bbox)
-    ax.annotate("", xy=(wsd[-1, 0], wsd[-1, 1] - 0.12), xytext=(6.6, -1.35),
-                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.4))
-    ax.annotate("", xy=(2.1, _river(2.1) - 0.06), xytext=(0.9, -1.9),
+    # tip touches the underside of the settled green cluster (the old tip
+    # stopped on an orange segment); the leader is drawn over the orange path
+    ax.annotate("", xy=(8.27, 0.90), xytext=(8.15, -1.12),
+                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.4),
+                zorder=8)
+    ax.annotate("", xy=(1.5, _river(1.5) - 0.08), xytext=(1.2, -1.62),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.0))
-    ax.text(0.9, -2.02, "the river (valley floor)", color="black",
-            fontsize=12, ha="left", va="top", bbox=bbox)
+    ax.text(0.2, -1.65, "the river (valley floor)", color="black",
+            fontsize=13, ha="left", va="top", bbox=bbox)
 
     ax.set_xlim(-0.4, 9.6)
     ax.set_ylim(-2.35, 2.6)
@@ -194,11 +222,13 @@ def fig_norm_balls():
     ax.fill(sq[:, 0], sq[:, 1], color=BLUE, alpha=0.10, lw=0)
     ax.plot(sq[:, 0], sq[:, 1], color=BLUE, lw=1.4)
     fl.arrow(ax, (0, 0), tuple(g), color=GRAY, lw=2.0)
-    ax.text(g[0] + 0.10, g[1] + 0.08, r"$\mathbf{g}$", color="black",
-            fontsize=15, ha="left", va="bottom")
+    # right of the tip, inside the square: above the tip it sat on the top edge
+    ax.text(g[0] + 0.10, g[1] - 0.12, r"$\mathbf{g}$", color="black",
+            fontsize=15, ha="left", va="center")
     fl.arrow(ax, (0, 0), (-1, -1), color=ORANGE, lw=2.6)
-    ax.text(-1.02, -1.14, r"$-\mathrm{sign}(\mathbf{g})$", color="black",
-            fontsize=13.5, ha="left", va="top")
+    # centred under the corner so it ends left of the vertical axis
+    ax.text(-0.95, -1.12, r"$-\mathrm{sign}(\mathbf{g})$", color="black",
+            fontsize=13.5, ha="center", va="top")
     ax.set_title(r"$\ell_\infty$: keep only the signs", fontsize=13.5,
                  color="black")
 
@@ -208,8 +238,9 @@ def fig_norm_balls():
     ax.plot([0, 1, 1, 0, 0], [0, 0, 1, 1, 0], color=BLUE, lw=1.4)
     sg = (0.92, 0.22)
     ax.plot(*sg, "o", color=GRAY, ms=8)
-    ax.text(sg[0] - 0.04, sg[1] - 0.05, r"$\sigma(\mathbf{G})$", color="black",
-            fontsize=13.5, ha="right", va="top")
+    # left of the dot at its height (below it, the ")" grazed the box edge)
+    ax.text(sg[0] - 0.07, sg[1], r"$\sigma(\mathbf{G})$", color="black",
+            fontsize=13.5, ha="right", va="center")
     ax.plot([sg[0], 1.0], [sg[1], 1.0], color=GRAY, lw=1.0, ls=":")
     ax.plot(1.0, 1.0, "o", color=ORANGE, ms=10, zorder=5)
     ax.text(0.97, 1.06, r"$\mathbf{U}\mathbf{V}^{\!\top}$", color="black",
@@ -222,10 +253,12 @@ def fig_norm_balls():
     ax.set_ylim(-0.12, 1.30)
     ax.set_xticks([0, 1])
     ax.set_yticks([0, 1])
-    ax.tick_params(labelsize=11)
+    ax.tick_params(labelsize=13, colors="black")
     ax.set_aspect("equal")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color("black")
 
     for ax in axes[:2]:
         ax.set_xlim(-1.55, 1.55)
@@ -279,8 +312,11 @@ def fig_risk_gap():
     ax.plot(x[i_f], f[i_f], "o", color=BLUE, ms=7, zorder=5)
     ax.plot(x[i_g], g[i_g], "o", color=ORANGE, ms=7, zorder=5)
 
-    ax.annotate("min of risk", xy=(x[i_f], f[i_f]), xytext=(1.17, -0.70),
-                fontsize=12.5, color="black", ha="center", arrowprops=_ANN)
+    # from the empty lower right: from above, the leader crossed the orange
+    # empirical-risk curve right next to the dot
+    ax.annotate("min of risk", xy=(x[i_f], f[i_f]), xytext=(1.30, -1.17),
+                fontsize=12.5, color="black", ha="left", va="center",
+                arrowprops=dict(_ANN, shrinkB=4))
     ax.annotate("min of\nempirical risk", xy=(x[i_g], g[i_g]),
                 xytext=(0.72, -0.98), fontsize=12.5, color="black",
                 ha="center", arrowprops=_ANN)
@@ -334,8 +370,10 @@ def fig_inflection():
 
 def fig_tanh_flat():
     """f(x)=tanh(x): starting from x=4 the surface is nearly flat
-    (f'(4)=1-tanh^2(4)~=0.0013), so gradient descent barely moves.  The dashed
-    tangent at x=4 shows how flat -- no critical point involved."""
+    (f'(4)=1-tanh^2(4)~=0.0013), so gradient descent barely moves -- no
+    critical point involved.  (A dashed tangent at x=4 used to lie on top of
+    the curve and made that stretch look grey and dashed; the marker and the
+    f'(4) label carry the point.)"""
     x = np.linspace(-2.0, 5.0, 500)
     y = np.tanh(x)
     x0 = 4.0
@@ -343,8 +381,6 @@ def fig_tanh_flat():
     slope = 1 - y0 ** 2                        # 0.00134...
     fig, ax = plt.subplots(figsize=(5.8, 3.7))
     ax.plot(x, y, color=BLUE, lw=2.6)
-    xt = np.array([x0 - 1.3, x0 + 1.0])
-    ax.plot(xt, y0 + slope * (xt - x0), "--", color=GRAY, lw=1.5)
     ax.plot(x0, y0, "o", color=ORANGE, ms=8, zorder=5)
     ax.annotate("vanishing gradient\n" rf"$f'(4)\approx{slope:.4f}$",
                 xy=(x0, y0), xytext=(0.7, 0.1), fontsize=12.5, color="black",
@@ -386,13 +422,19 @@ def fig_saddle():
              ha="center", va="center", bbox=_WBB)
     axc.text(0.24, 0.66, r"max along $y$", color=ORANGE, fontsize=13,
              ha="center", va="center", bbox=_WBB)
-    axc.annotate("saddle", xy=(0, 0), xytext=(-0.9, -0.78), fontsize=12.5,
-                 color="black", ha="left", arrowprops=_ANN)
+    # steeper than the x = -y zero-level diagonal, so the leader neither runs
+    # along that grey line nor has it cut through the word
+    axc.annotate("saddle", xy=(0, 0), xytext=(-0.45, -0.86), fontsize=12.5,
+                 color="black", ha="center", va="center", bbox=_WBB,
+                 arrowprops=dict(_ANN, shrinkB=5))
     axc.set_xlim(-1.0, 1.0)
     axc.set_ylim(-1.0, 1.0)
     axc.set_aspect("equal")
     axc.set_xlabel(r"$x$", fontsize=13, color="black")
-    axc.set_ylabel(r"$y$", fontsize=13, color="black")
+    axc.set_ylabel(r"$y$", fontsize=13, color="black", rotation=0,
+                   labelpad=10)
+    axc.set_xticks([-1, 0, 1])
+    axc.set_yticks([-1, 0, 1])
     axc.tick_params(labelsize=11, colors="black")
     for s in ("top", "right"):
         axc.spines[s].set_visible(False)
@@ -416,6 +458,10 @@ def fig_saddle():
     axs.set_xlim(-1.0, 1.0)
     axs.set_ylim(-1.1, 1.1)
     _fn_axes(axs, "distance from the saddle", r"$z$")
+    axs.set_ylabel(r"$z$", fontsize=13, color="black", rotation=0,
+                   labelpad=10)
+    axs.set_xticks([-1, 0, 1])
+    axs.set_yticks([-1, 0, 1])
 
     fig.subplots_adjust(wspace=0.28)
     fl.save(fig, "mdl-opt-saddle")

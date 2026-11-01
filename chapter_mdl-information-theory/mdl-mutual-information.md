@@ -864,7 +864,7 @@ family: estimators stacked under the true value, trading bias
 for variance, with the contrastive bound we meet next sitting lowest but
 steadiest.
 
-![Variational lower bounds on mutual information, after Poole et al. (2019). Every bound sits at or below the true-MI diagonal, and each fails in its own way as $I$ grows: InfoNCE is low-variance but capped at $\log N$; the decoder-based Barber--Agakov bound is low-variance but biased downward by its decoder's gap (it flattens); and the critic-based bounds lose control of their batch-to-batch spread (shaded band): NWJ's spread grows first while its mean falls below the truth, and the log-of-average in Donsker--Varadhan / MINE adds upward bias and the largest blow-up.](../img/mdl-it-mi-variational-bounds.svg)
+![Variational lower bounds on mutual information, after :citet:`Poole.Oord.Alemi.ea.2019` (schematic). Every bound sits at or below the true-MI diagonal, and each fails in its own way as $I$ grows: InfoNCE is low-variance but capped at $\log N$; the decoder-based Barber--Agakov bound is low-variance but biased downward by its decoder's gap (it flattens); and the critic-based NWJ and Donsker--Varadhan / MINE bounds, drawn as one curve, lose control of their batch-to-batch spread (shaded band), which explodes as $I$ grows.](../img/mdl-it-mi-variational-bounds.svg)
 :label:`fig_mdl-mi-variational-bounds`
 
 ### InfoNCE: Estimation as Classification

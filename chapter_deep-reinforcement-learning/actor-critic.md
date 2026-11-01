@@ -808,6 +808,8 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36801)
+
 <!-- slides -->
 
 ::: {.slide}

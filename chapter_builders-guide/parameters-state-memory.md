@@ -1879,6 +1879,8 @@ statistics in training mode.
        one step before the freeze and is kept afterwards. How many bytes
        remain allocated, and does the state still fit?
 
+[Discussions](https://d2l.discourse.group/t/36753)
+
 <!-- slides -->
 
 ::: {.slide}

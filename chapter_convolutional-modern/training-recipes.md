@@ -1220,6 +1220,8 @@ how far a convnet's architecture itself can be modernized.
        branches it skips at $p_{\max} = 0.5$. Then measure the fraction of
        training time it saves and compare the two.
 
+[Discussions](https://d2l.discourse.group/t/36761)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -1187,6 +1187,8 @@ models of :numref:`sec_ssm`.
        do instead.
    :exlabel:`ex_attention-at-scale-decaying-state`
 
+[Discussions](https://d2l.discourse.group/t/36772)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -1860,6 +1860,8 @@ explicit copies are a discipline rather than a rule the framework enforces.
     *Adapted from the PyTorch documentation
     [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
 
+[Discussions](https://d2l.discourse.group/t/36758)
+
 <!-- slides -->
 
 ::: {.slide}

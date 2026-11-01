@@ -1505,6 +1505,8 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
 [Discussions](https://d2l.discourse.group/)
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36827)
+
 <!-- slides -->
 
 ::: {.slide}

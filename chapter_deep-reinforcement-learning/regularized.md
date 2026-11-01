@@ -541,6 +541,8 @@ Pairwise preferences identify reward differences but not an additive term depend
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36803)
+
 <!-- slides -->
 
 ::: {.slide}

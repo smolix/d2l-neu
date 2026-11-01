@@ -791,6 +791,8 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36804)
+
 <!-- slides -->
 
 ::: {.slide}

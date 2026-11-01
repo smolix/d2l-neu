@@ -778,6 +778,8 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        separates the two explanations, run it, and state which outcome
        would favor the inductive-bias explanation.
 
+[Discussions](https://d2l.discourse.group/t/36778)
+
 <!-- slides -->
 
 ::: {.slide}

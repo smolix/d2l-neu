@@ -1377,6 +1377,8 @@ checked against what was expected.
        leaves either the previous checkpoint or the new one intact, and
        explain each call.
 
+[Discussions](https://d2l.discourse.group/t/36757)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -865,6 +865,8 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36802)
+
 <!-- slides -->
 
 ::: {.slide}

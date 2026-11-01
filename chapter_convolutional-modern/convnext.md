@@ -957,6 +957,8 @@ of parameters is about two points more accurate than our ConvNeXt.
    effect with the 2.7 points that the "Modern training recipe" row of
    :numref:`tab_convnext_roadmap` attributes to the recipe on ImageNet.
 
+[Discussions](https://d2l.discourse.group/t/36762)
+
 <!-- slides -->
 
 ::: {.slide}

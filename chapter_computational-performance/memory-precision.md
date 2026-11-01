@@ -749,6 +749,8 @@ are added.
        micro-batches no larger than its largest one, and measure the tokens
        per second of both schedules.
 
+[Discussions](https://d2l.discourse.group/t/36790)
+
 <!-- slides -->
 
 ::: {.slide title="Memory Components of a Training Step"}

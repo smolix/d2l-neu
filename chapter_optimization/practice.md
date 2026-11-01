@@ -688,6 +688,8 @@ but this decomposition has remained useful for decades.
     1. What would you have concluded about AdamW at batch size 256 had you
        reused the batch-64 learning rate without retuning?
 
+[Discussions](https://d2l.discourse.group/t/36767)
+
 <!-- slides -->
 
 ::: {.slide}

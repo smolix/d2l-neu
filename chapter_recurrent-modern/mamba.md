@@ -801,6 +801,8 @@ a strong language model at this scale.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36782)
+
 <!-- slides -->
 
 ::: {.slide}

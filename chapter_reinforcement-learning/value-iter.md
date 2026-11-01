@@ -586,6 +586,8 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36795)
+
 <!-- slides -->
 
 ::: {.slide}

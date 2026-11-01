@@ -429,3 +429,5 @@ part of what you publish.
        time of an interruption is known in advance? Which part of the
        analysis still applies when random idle disconnects occur as well?
    :exlabel:`ex_hosted-notebooks-checkpoint-interval`
+
+[Discussions](https://d2l.discourse.group/t/36842)

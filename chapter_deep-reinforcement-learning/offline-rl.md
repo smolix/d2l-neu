@@ -588,6 +588,8 @@ On-policy updates estimate expectations under the current policy; importance rat
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36806)
+
 <!-- slides -->
 
 ::: {.slide}

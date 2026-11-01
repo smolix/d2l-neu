@@ -638,6 +638,8 @@ it at all.
        What does a run cost that the exact version did not?
    :exlabel:`ex_limits-annealing`
 
+[Discussions](https://d2l.discourse.group/t/36815)
+
 <!-- slides -->
 
 ::: {.slide}

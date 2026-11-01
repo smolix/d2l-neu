@@ -677,6 +677,8 @@ combine noise levels so that neither side of the trade-off is lost.
        two outputs agree. What does the comparison suggest about why
        `denoiser` generalizes to test images?
 
+[Discussions](https://d2l.discourse.group/t/36818)
+
 <!-- slides -->
 
 ::: {.slide}

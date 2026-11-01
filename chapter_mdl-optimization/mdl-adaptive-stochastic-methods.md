@@ -1299,6 +1299,8 @@ the matrix factorizations of :numref:`sec_mdl-svd-low-rank`.
 
 [Discussions](https://d2l.discourse.group/t/adaptive-stochastic-methods)
 
+[Discussions](https://d2l.discourse.group/t/36829)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -1568,6 +1568,8 @@ rates), and its conditioning consequences continue in
 
 [Discussions](https://d2l.discourse.group/t/constrained-optimization-duality)
 
+[Discussions](https://d2l.discourse.group/t/36831)
+
 <!-- slides -->
 
 ::: {.slide}

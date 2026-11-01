@@ -914,6 +914,8 @@ twice returns the sum of its values.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36783)
+
 <!-- slides -->
 
 ::: {.slide}

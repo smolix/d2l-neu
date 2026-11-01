@@ -696,6 +696,8 @@ require different noise levels, and the next section uses a ladder of them.
        for chains started from `x_one`. When does the correction fail even
        with exact weights?
 
+[Discussions](https://d2l.discourse.group/t/36819)
+
 <!-- slides -->
 
 ::: {.slide}

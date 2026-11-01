@@ -947,6 +947,8 @@ The saturating and non-saturating generator losses have the same fixed point but
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36808)
+
 <!-- slides -->
 
 ::: {.slide}

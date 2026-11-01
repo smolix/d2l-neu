@@ -1326,6 +1326,8 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
    same network in which the floor keeps its true gradient, and explain
    which parameters learn in each case.
 
+[Discussions](https://d2l.discourse.group/t/36755)
+
 <!-- slides -->
 
 ::: {.slide}

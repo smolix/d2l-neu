@@ -572,6 +572,8 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36798)
+
 <!-- slides -->
 
 ::: {.slide}

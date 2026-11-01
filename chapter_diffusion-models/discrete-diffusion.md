@@ -1268,6 +1268,8 @@ data :cite:`Nie.Zhu.You.ea.2025`.
        failures to problem :exref:`ex_discrete-diffusion-pairs-revealed`c.
    :exlabel:`ex_discrete-diffusion-language-model`
 
+[Discussions](https://d2l.discourse.group/t/36825)
+
 <!-- slides -->
 
 ::: {.slide}

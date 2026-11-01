@@ -972,6 +972,8 @@ probes, and weight-level checks in addition to attention maps.
        distances. Which of your results would change if the text contained
        no repeated words, and why?
 
+[Discussions](https://d2l.discourse.group/t/36773)
+
 <!-- slides -->
 
 ::: {.slide}

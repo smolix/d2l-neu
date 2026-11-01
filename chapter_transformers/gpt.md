@@ -894,6 +894,8 @@ perplexity check and produces coherent completions for the example prompts.
        decide whether the argument of :numref:`subsec_gpt-blocks-to-lm`
        holds at this corpus size.
 
+[Discussions](https://d2l.discourse.group/t/36775)
+
 <!-- slides -->
 
 ::: {.slide}

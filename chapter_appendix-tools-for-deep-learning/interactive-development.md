@@ -402,3 +402,5 @@ note the environment and hardware needed to interpret any measurement.
        machines apart?
     1. Write a connection procedure that turns each collision of (b) and (c)
        into an error you notice.
+
+[Discussions](https://d2l.discourse.group/t/36841)

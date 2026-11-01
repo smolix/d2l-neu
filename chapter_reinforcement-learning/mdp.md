@@ -441,6 +441,8 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36794)
+
 <!-- slides -->
 
 ::: {.slide}

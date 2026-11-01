@@ -652,6 +652,8 @@ matched update sizes; the goal of transfer is common to all of them.
        :numref:`subsec_wd-at-scale`, state what your result can and cannot
        say about the cited claim.
 
+[Discussions](https://d2l.discourse.group/t/36766)
+
 <!-- slides -->
 
 ::: {.slide}

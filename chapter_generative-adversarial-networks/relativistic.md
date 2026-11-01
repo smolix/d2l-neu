@@ -489,6 +489,8 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36810)
+
 <!-- slides -->
 
 ::: {.slide}

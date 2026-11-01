@@ -125,7 +125,7 @@ Four composable techniques explain much of serving-engine performance:
 Continuous batching admits new requests and retires finished ones between
 decode steps, keeping the batch nearly full:
 
-![Continuous batching reclaims finished slots and admits waiting requests instead of padding every sequence to the longest output.](../img/tools-continuous-batching.svg)
+![Two batch slots serving requests of 5, 2, 7, and 3 output tokens, as in the toy scheduler below. Static batching pads each batch to its longest member; continuous batching refills a finished slot at the next step and finishes in 9 steps instead of 12.](../img/tools-continuous-batching.svg)
 :label:`fig_tools_continuous_batching`
 
 The toy scheduler below captures the idea in ten lines.

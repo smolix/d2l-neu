@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -1074,7 +1074,7 @@ L 368.882625 217.872
    </g>
    <g id="text_11">
     <!-- maximum uncertainty: $\ln 2 \approx 0.693$ nats -->
-    <g style="fill: #ff7f0e" transform="translate(125.125125 29.321687) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(104.287625 28.506687) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -1583,17 +1583,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 132.138521 171.440329 
-Q 113.047845 154.553796 94.878346 138.482083 
+    <path d="M 135.976876 169.066691 
+Q 115.015625 153.304161 95.037307 138.280781 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 96.632902 142.837716 
-L 94.878346 138.482083 
-L 99.415586 139.691818 
+    <path d="M 97.630708 143.484076 
+L 95.037307 138.280781 
+L 100.755983 139.328037 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_12">
     <!-- $H(0.1) \approx 0.325$ -->
-    <g style="fill: #2ca02c" transform="translate(110.485702 185.268) scale(0.105 -0.105)">
+    <g style="fill: #2ca02c" transform="translate(110.485702 185.268) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-64" d="M 594 0 
 L 594 225 
@@ -1729,7 +1729,7 @@ C -1.428845 2.460243 -0.729309 2.75 0 2.75
 z
 " style="stroke: #1f77b4"/>
     </defs>
-    <g clip-path="url(#pa4b4f76993)">
+    <g>
      <use xlink:href="#mab2ff63f0e" x="62.411856" y="217.872" style="fill: #1f77b4; stroke: #1f77b4"/>
      <use xlink:href="#mab2ff63f0e" x="362.873394" y="217.872" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -287,7 +287,7 @@ z
    </g>
    <g id="text_1">
     <!-- $w$ -->
-    <g style="fill: #15181c" transform="translate(30.177931 43.232517) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(29.097931 44.243517) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-6a" d="M 691 744 
 Q 691 878 727 1053 
@@ -353,7 +353,7 @@ z
    </g>
    <g id="text_2">
     <!-- $x$ -->
-    <g style="fill: #15181c" transform="translate(30.947931 97.108379) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(30.077931 98.119379) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-3f" d="M 500 184 
 Q 613 97 819 97 
@@ -423,7 +423,7 @@ z
    </g>
    <g id="text_3">
     <!-- $y$ -->
-    <g style="fill: #15181c" transform="translate(31.387931 150.984241) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(30.637931 151.995241) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-72" d="M 538 -916 
 Q 672 -1147 1006 -1147 
@@ -486,7 +486,7 @@ z
    </g>
    <g id="text_4">
     <!-- $z$ -->
-    <g style="fill: #15181c" transform="translate(31.552931 204.860103) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(30.847931 205.871103) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-46" d="M 313 -72 
 Q 263 -72 263 -13 
@@ -551,7 +551,7 @@ z
    </g>
    <g id="text_5">
     <!-- $a$ -->
-    <g style="fill: #15181c" transform="translate(117.42431 86.333207) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(116.62931 87.344207) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-79" d="M 1113 -72 
 Q 709 -72 476 233 
@@ -603,7 +603,7 @@ z
    </g>
    <g id="text_6">
     <!-- $b$ -->
-    <g style="fill: #15181c" transform="translate(117.97431 161.759414) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(117.32931 162.770414) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-4b" d="M 1106 -72 
 Q 719 -72 503 231 
@@ -650,7 +650,7 @@ z
    </g>
    <g id="text_7">
     <!-- $u$ -->
-    <g style="fill: #15181c" transform="translate(203.35069 86.333207) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(202.48069 87.344207) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-60" d="M 678 697 
 Q 678 906 734 1126 
@@ -710,7 +710,7 @@ z
    </g>
    <g id="text_8">
     <!-- $v$ -->
-    <g style="fill: #15181c" transform="translate(203.84569 161.759414) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(203.11069 162.770414) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-38" d="M 684 722 
 Q 684 866 718 1037 
@@ -759,7 +759,7 @@ z
    </g>
    <g id="text_9">
     <!-- $f$ -->
-    <g style="fill: #15181c" transform="translate(290.047069 124.04631) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(289.312069 125.05731) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 

@@ -647,7 +647,7 @@ leaves $\boldsymbol{\theta}$ poorly determined. That is precisely what
 parameters: the NLL is a bowl around the MLE, and the inverse of its curvature is
 the ellipse within which the estimate scatters.
 
-![Fisher information is the curvature of the negative log-likelihood. Contours show the NLL for a Gaussian's parameters $(\mu, \sigma)$ over $n=30$ draws from $\mathcal{N}(1, 1.5^2)$; the dot marks the maximum-likelihood estimate, and the overlaid ellipse is the inverse-information covariance $I(\hat\mu,\hat\sigma)^{-1}/n$ that asymptotic normality predicts for the estimate's spread. Per observation $I = \operatorname{diag}(1/\sigma^2,\ 2/\sigma^2)$: the NLL is twice as curved in $\sigma$ as in $\mu$, so the data pin down the scale more tightly than the mean and the ellipse is correspondingly wider along the $\mu$-axis.](../img/mdl-prob-mle-fisher.svg)
+![Fisher information is the curvature of the negative log-likelihood. Contours show the NLL for a Gaussian's parameters $(\mu, \sigma)$ over $n=30$ draws from $\mathcal{N}(1, 1.5^2)$; the dot marks the maximum-likelihood estimate, and the overlaid ellipse is the inverse-information covariance $I(\hat\mu,\hat\sigma)^{-1}/n$ that asymptotic normality predicts for the estimate's spread; drawn dashed, it nearly coincides with the innermost contour, where the NLL lies $\tfrac12$ above its minimum. Per observation $I = \operatorname{diag}(1/\sigma^2,\ 2/\sigma^2)$: the NLL is twice as curved in $\sigma$ as in $\mu$, so the data pin down the scale more tightly than the mean and the ellipse is correspondingly wider along the $\mu$-axis.](../img/mdl-prob-mle-fisher.svg)
 :label:`fig_mdl-prob-mle-fisher`
 
 The curvature intuition extends to a theorem constraining *every* estimator.

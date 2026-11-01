@@ -152,7 +152,7 @@ $$
 $$
 :eqlabel:`eq_mdl-sde-increment`
 
-![One coin-flip walk with steps $\pm\sqrt{\Delta t}$, viewed at $\Delta t = 0.1$, $0.01$, and $0.001$ (the same randomness, successively refined), converging to a Brownian path. The $\pm\sqrt{t}$ and $\pm 2\sqrt{t}$ envelopes show the forced square-root spread: variance $t$ at every resolution.](../img/mdl-dyn-brownian-paths.svg)
+![One coin-flip walk of $1000$ steps $\pm\sqrt{0.001}$, viewed on meshes $\Delta t = 0.1$, $0.01$, and $0.001$ (the same randomness, successively refined; faint gray: the full-resolution path), converging to a Brownian path. The $\pm\sqrt{t}$ and $\pm 2\sqrt{t}$ envelopes show the forced square-root spread: variance $t$ at every resolution.](../img/mdl-dyn-brownian-paths.svg)
 :label:`fig_mdl-dyn-brownian-paths`
 
 The multivariate version $\mathbf{W}_t$ runs one independent scalar
@@ -291,7 +291,7 @@ $$
 
 and mean-square convergence follows. $\blacksquare$
 
-![Running sums of squared increments along one Brownian path for meshes of $n = 16$, $256$, and $4096$ intervals. The sums approach $y = t$, whereas the corresponding sums for the smooth path $\sin 2\pi t$ (gray) approach zero.](../img/mdl-dyn-qv-convergence.svg)
+![Running sums of squared increments along one Brownian path for meshes of $n = 16$, $256$, and $4096$ intervals (darker shades are finer meshes). The sums approach $y = t$, whereas the corresponding sums for the smooth path $\sin 2\pi t$ (gray) approach zero.](../img/mdl-dyn-qv-convergence.svg)
 :label:`fig_mdl-dyn-qv-convergence`
 
 The sum of squared Brownian increments converges to the deterministic elapsed
@@ -625,7 +625,7 @@ latent path, or differentiates through a particular numerical realization.
 :numref:`fig_mdl-dyn-strong-weak` shows the two notions side by side. The
 classical rates :cite:`Kloeden.Platen.1992` are:
 
-![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the same Brownian increments; their endpoint gap contributes to strong error. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black), illustrating weak accuracy. Endpoint-law generation uses the right-hand criterion; coupled-path tasks can require the left-hand one.](../img/mdl-dyn-strong-weak.svg)
+![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the same Brownian increments; the strip below magnifies their gap at the coarse grid times, whose size (the endpoint gap included) is what strong error measures. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black), illustrating weak accuracy. Endpoint-law generation uses the right-hand criterion; coupled-path tasks can require the left-hand one.](../img/mdl-dyn-strong-weak.svg)
 :label:`fig_mdl-dyn-strong-weak`
 
 **Proposition (strong order of Euler--Maruyama).** *Under global Lipschitz

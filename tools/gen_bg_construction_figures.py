@@ -129,6 +129,14 @@ def _rmsnorm(x, g=(1.0, 1.0)):
     return np.asarray(g) * x / np.sqrt((x ** 2).mean(-1, keepdims=True))
 
 
+def _move(ax, tail, tip):
+    """Gray arrow between two dots: tail and tip stop at the dots' rims
+    (shrink in points ~ marker radius), so the head is never hidden."""
+    ax.annotate("", xy=tip, xytext=tail,
+                arrowprops=dict(arrowstyle="-|>", color=fl.GRAY, lw=1.4,
+                                shrinkA=4.5, shrinkB=5.0, mutation_scale=12))
+
+
 def fig_rmsnorm():
     # two inputs on one ray (radii 0.6 and 2.9) land on the same output
     ang = np.radians([30, 30, 118, 215, 297])
@@ -150,7 +158,7 @@ def fig_rmsnorm():
                  [0, max(np.linalg.norm(x), np.linalg.norm(y)) * x[1] /
                   np.linalg.norm(x)],
                  color=fl.LIGHT, lw=1.2, ls="--", zorder=1)
-        fl.arrow(axa, x, y, color=fl.GRAY, lw=1.3, mut=11)
+        _move(axa, x, y)
     axa.scatter(*inputs.T, s=42, color=fl.BLUE, zorder=4)
     axa.scatter(*out.T, s=42, color=fl.ORANGE, zorder=5)
     fl.axis_cross(axa, *lim, color="black")
@@ -167,11 +175,13 @@ def fig_rmsnorm():
     axb.plot(ell[:, 0], ell[:, 1], color=fl.GREEN, lw=2.2, zorder=3)
     outg = _rmsnorm(inputs, g)
     for y, z in zip(out, outg):
-        fl.arrow(axb, y, z, color=fl.GRAY, lw=1.3, mut=11)
+        _move(axb, y, z)
     axb.scatter(*out.T, s=42, color=fl.ORANGE, zorder=4)
     axb.scatter(*outg.T, s=42, color=fl.GREEN, zorder=5)
     fl.axis_cross(axb, *lim, color="black")
-    axb.text(-2.95, -2.35, r"$\mathbf{g} = (1.5,\ 0.5)$",
+    # label hangs below the ellipse's right end (outside both the ellipse and
+    # the dashed circle), mirroring "radius sqrt 2" beside its circle in (a)
+    axb.text(1.3, -0.82, r"$\mathbf{g} = (1.5, 0.5)$",
              color=T.GREEN.dark, fontsize=15, ha="left", va="top")
     fl.clean_axes(axb, lim=lim, hide=True)
 

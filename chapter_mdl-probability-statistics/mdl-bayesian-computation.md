@@ -522,7 +522,7 @@ Computing this approximation requires the posterior mode and its Hessian.
 For large neural networks, the Hessian is commonly approximated by a diagonal,
 Kronecker-factored, or last-layer matrix to reduce computational cost.
 
-![The Laplace approximation is a quadratic fit to the log posterior at its mode. Left: the fit matches value, slope, and curvature at the mode and nothing else. Right: after exponentiating, the implied Gaussian reproduces the peak's location and width but misses the skew — too much mass on one side, a dropped tail on the other.](../img/mdl-prob-bayes-laplace.svg)
+![The Laplace approximation is a quadratic fit to the log posterior at its mode. Left: the fit matches value, slope, and curvature at the mode and nothing else. Right: after exponentiating, the implied Gaussian reproduces the peak's location and width but misses the skew — too much mass on one side, some of it (shaded orange) below the support edge $\theta=0$ where the posterior is zero, and a dropped tail on the other.](../img/mdl-prob-bayes-laplace.svg)
 :label:`fig_mdl-prob-bayes-laplace`
 
 :numref:`fig_mdl-prob-bayes-laplace` shows the scope of the approximation.

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -30,10 +30,10 @@ z
   <g id="axes_1">
    <g id="patch_2">
     <path d="M 17.347546 191.737237 
-L 127.520907 191.737237 
-Q 131.386639 191.737237 131.386639 187.995037 
-L 131.386639 130.458712 
-Q 131.386639 126.716512 127.520907 126.716512 
+L 98.527918 191.737237 
+Q 102.393649 191.737237 102.393649 187.995037 
+L 102.393649 130.458712 
+Q 102.393649 126.716512 98.527918 126.716512 
 L 17.347546 126.716512 
 Q 13.481814 126.716512 13.481814 130.458712 
 L 13.481814 187.995037 
@@ -1306,7 +1306,7 @@ z
    </g>
    <g id="text_7">
     <!-- unstable -->
-    <g transform="translate(48.031922 145.875375) scale(0.135 -0.135)">
+    <g transform="translate(33.535427 145.875375) scale(0.135 -0.135)">
      <use xlink:href="#SourceSans3-Regular-30"/>
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(54.40625 0)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(109.109375 0)"/>
@@ -1317,7 +1317,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(311.921875 0)"/>
     </g>
     <!-- minimax -->
-    <g transform="translate(47.816766 163.776375) scale(0.135 -0.135)">
+    <g transform="translate(33.320271 163.776375) scale(0.135 -0.135)">
      <use xlink:href="#SourceSans3-Regular-28"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(82.90625 0)"/>
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(107.5 0)"/>
@@ -1327,7 +1327,7 @@ z
      <use xlink:href="#SourceSans3-Regular-33" transform="translate(320.109375 0)"/>
     </g>
     <!-- training -->
-    <g transform="translate(50.462977 181.677375) scale(0.135 -0.135)">
+    <g transform="translate(35.966482 181.677375) scale(0.135 -0.135)">
      <use xlink:href="#SourceSans3-Regular-2f"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(33.796875 0)"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(66.09375 0)"/>
@@ -1338,13 +1338,20 @@ z
      <use xlink:href="#SourceSans3-Regular-22" transform="translate(275.09375 0)"/>
     </g>
    </g>
+   <g id="line2d_1">
+    <path d="M 103.360082 159.226875 
+L 122.205526 159.226875 
+" clip-path="url(#p9a704e1a08)" style="fill: none; stroke: #565d66; stroke-width: 1.7"/>
+   </g>
    <g id="patch_18">
-    <path d="M 131.869856 145.193625 
-Q 122.333154 99.749963 143.065418 60.337374 
+    <path d="M 122.205526 159.226875 
+L 122.205526 72.65525 
+Q 122.205526 58.65525 136.205526 58.65525 
+L 142.04961 58.65525 
 " clip-path="url(#p9a704e1a08)" style="fill: none; stroke: #1f77b4; stroke-width: 1.7; stroke-linecap: round"/>
-    <path d="M 137.253832 64.511756 
-L 143.065418 60.337374 
-L 142.917972 67.491272 
+    <path d="M 136.04961 55.65525 
+L 142.04961 58.65525 
+L 136.04961 61.65525 
 z
 " clip-path="url(#p9a704e1a08)" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 1.7; stroke-linecap: round"/>
    </g>
@@ -1730,12 +1737,12 @@ z
     </g>
    </g>
    <g id="patch_19">
-    <path d="M 131.869856 159.226875 
-Q 137.910062 159.226875 142.04961 159.226875 
+    <path d="M 122.205526 159.226875 
+Q 133.077897 159.226875 142.04961 159.226875 
 " clip-path="url(#p9a704e1a08)" style="fill: none; stroke: #ff7f0e; stroke-width: 1.7; stroke-linecap: round"/>
-    <path d="M 135.64961 156.026875 
+    <path d="M 136.04961 156.226875 
 L 142.04961 159.226875 
-L 135.64961 162.426875 
+L 136.04961 162.226875 
 z
 " clip-path="url(#p9a704e1a08)" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 1.7; stroke-linecap: round"/>
    </g>
@@ -1863,12 +1870,14 @@ z
     </g>
    </g>
    <g id="patch_20">
-    <path d="M 131.869856 173.260125 
-Q 122.333154 218.703787 143.065418 258.116376 
+    <path d="M 122.205526 159.226875 
+L 122.205526 245.7985 
+Q 122.205526 259.7985 136.205526 259.7985 
+L 142.04961 259.7985 
 " clip-path="url(#p9a704e1a08)" style="fill: none; stroke: #2ca02c; stroke-width: 1.7; stroke-linecap: round"/>
-    <path d="M 142.917972 250.962478 
-L 143.065418 258.116376 
-L 137.253832 253.941994 
+    <path d="M 136.04961 256.7985 
+L 142.04961 259.7985 
+L 136.04961 262.7985 
 z
 " clip-path="url(#p9a704e1a08)" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 1.7; stroke-linecap: round"/>
    </g>

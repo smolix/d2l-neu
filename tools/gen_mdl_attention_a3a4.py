@@ -50,22 +50,22 @@ def fig_one_head_averages() -> None:
             color="black")
     ax.text(5, w_single[4] + 0.05, r"$\alpha_2$", ha="center", fontsize=14,
             color="black")
-    ax.text(3.5, -0.42,
-            r"output $= W_o\,(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)$"
+    ax.text(3.5, -0.2,
+            r"output $= \mathbf{W}_o\,(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)$"
             "\n— a single mixture",
             ha="center", va="top", fontsize=13, color="black")
 
     ax = axes[1]
-    ax.bar(positions - 0.17, w_head1, width=0.32, color=ORANGE,
-           label="head 1")
-    ax.bar(positions + 0.17, w_head2, width=0.32, color=GREEN,
-           label="head 2")
+    ax.bar(positions - 0.17, w_head1, width=0.32, color=ORANGE)
+    ax.bar(positions + 0.17, w_head2, width=0.32, color=GREEN)
     ax.set_title("two heads: two distributions", fontsize=14, color="black")
-    ax.set_ylim(0, 1.18)          # headroom: the legend clears the bars
-    ax.legend(loc="upper center", fontsize=12, ncol=2,
-              handlelength=1.2, columnspacing=1.0)
-    ax.text(3.5, -0.42,
-            r"output $= W_o\,[\mathbf{h}_1;\, \mathbf{h}_2]$"
+    # label each head directly on its peak (no legend box)
+    ax.text(2 - 0.17, w_head1[1] + 0.04, "head 1", ha="center", va="bottom",
+            fontsize=13, color=fl.T.ORANGE.dark)
+    ax.text(5 + 0.17, w_head2[4] + 0.04, "head 2", ha="center", va="bottom",
+            fontsize=13, color=fl.T.GREEN.dark)
+    ax.text(3.5, -0.2,
+            r"output $= \mathbf{W}_o\,[\mathbf{h}_1;\, \mathbf{h}_2]$"
             "\n— both values recoverable",
             ha="center", va="top", fontsize=13, color="black")
 
@@ -74,14 +74,15 @@ def fig_one_head_averages() -> None:
         ax.set_xticklabels([r"$\mathbf{v}_1$" if p == 2 else
                             (r"$\mathbf{v}_2$" if p == 5 else str(p))
                            for p in positions], fontsize=13, color="black")
-        ax.set_ylim(0, 1.06)
+        ax.set_ylim(0, 1.04)
+        ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
         ax.set_xlim(0.35, 6.65)
-        ax.set_ylabel("attention weight", fontsize=13, color="black")
         ax.tick_params(axis="y", labelsize=11, colors="black")
         ax.spines["left"].set_color("black")
         ax.spines["bottom"].set_color("black")
 
-    fig.subplots_adjust(wspace=0.3, bottom=0.28)
+    axes[0].set_ylabel("attention weight", fontsize=13, color="black")
+    fig.subplots_adjust(wspace=0.22)
     fl.save(fig, "mdl-attention-one-head-averages")
 
 
@@ -106,26 +107,32 @@ def fig_rope_rotation() -> None:
         fl.arrow(ax, (0, 0), tip_q, color=BLUE, lw=2.2)
         fl.arrow(ax, (0, 0), tip_k, color=ORANGE, lw=2.2)
 
-        # Labels radially outward past the arrow tips.
-        for (ang, r, txt, col) in [
-                (ang_q, r_q, rf"$R_{{{i}}}\,\mathbf{{q}}$", BLUE),
-                (ang_k, r_k, rf"$R_{{{j}}}\,\mathbf{{k}}$", ORANGE)]:
-            ax.text((r + 0.30) * np.cos(ang), (r + 0.30) * np.sin(ang),
-                    txt, ha="center", va="center", fontsize=15, color=col)
+        # Labels just outside the unit circle along each arrow's direction,
+        # anchored on the side facing the circle so the text extends outward
+        # and never straddles the circle.
+        for (ang, txt, col) in [
+                (ang_q, rf"$\mathbf{{R}}_{{{i}}}\,\mathbf{{q}}$", BLUE),
+                (ang_k, rf"$\mathbf{{R}}_{{{j}}}\,\mathbf{{k}}$", ORANGE)]:
+            c, s_ = np.cos(ang), np.sin(ang)
+            ha = "left" if c > 0.35 else ("right" if c < -0.35 else "center")
+            va = "bottom" if s_ > 0.35 else ("top" if s_ < -0.35 else "center")
+            ax.text(1.07 * c, 1.07 * s_, txt, ha=ha, va=va, fontsize=15,
+                    color=col)
 
-        # Arc marking the angle between the two vectors; label outside the
-        # circle at the arc's mid-angle, clear of both arrows.
-        arc_r = 0.46
+        # Arc marking the angle between the two vectors, labelled inside the
+        # wedge with its value: (j - i) theta + phi = 2 theta + phi in BOTH
+        # panels, which is the point of the figure.
+        arc_r = 0.40
         arc = np.linspace(ang_q, ang_k, 60)
         ax.plot(arc_r * np.cos(arc), arc_r * np.sin(arc), color=GREEN, lw=2.2)
         mid = 0.5 * (ang_q + ang_k)
-        ax.text(1.16 * np.cos(mid), 1.16 * np.sin(mid),
-                r"$(j\!-\!i)\,\theta + \varphi$",
-                ha="center", va="center", fontsize=14, color=GREEN,
-                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
+        ax.text(0.71 * np.cos(mid), 0.71 * np.sin(mid),
+                rf"${j - i}\theta\!+\!\varphi$",
+                ha="center", va="center", fontsize=15,
+                color=fl.T.GREEN.dark)
 
         ax.set_title(title, fontsize=14, color="black")
-        ax.set_xlim(-1.45, 1.45)
+        ax.set_xlim(-1.62, 1.62)
         ax.set_ylim(-1.12, 1.52)
         ax.set_aspect("equal")
         ax.set_xticks([])

@@ -40,11 +40,17 @@ from matplotlib.patches import FancyBboxPatch, Patch, Rectangle
 
 CELL = 1.0     # grid pitch
 PAD = 0.10     # gap around each cell
+SPLIT_GAP = 0.16   # extra gap at the source/target block boundary
 
 
-def _cell(ax, row, col, color, filled=True):
+def _pos(i, split):
+    """Offset of grid line i (row or column), widened past the split."""
+    return i * CELL + (SPLIT_GAP if split is not None and i >= split else 0.0)
+
+
+def _cell(ax, row, col, color, filled=True, split=None):
     """One grid cell in matrix convention: row 0 at the top."""
-    x, y = col * CELL + PAD, -(row + 1) * CELL + PAD
+    x, y = _pos(col, split) + PAD, -(_pos(row, split) + CELL) + PAD
     w = CELL - 2 * PAD
     if filled:
         ax.add_patch(FancyBboxPatch((x, y), w, w,
@@ -56,22 +62,28 @@ def _cell(ax, row, col, color, filled=True):
                                     fc="none", ec=LIGHT, lw=0.7, zorder=2))
 
 
-def _grid(ax, n, allowed, title):
-    """Draw an n x n attention grid; allowed(row, col) -> color or None."""
+def _grid(ax, n, allowed, title, split=None):
+    """Draw an n x n attention grid; allowed(row, col) -> color or None.
+    `split` widens the gap before row/column `split` (block boundary)."""
     for r in range(n):
         for c in range(n):
             color = allowed(r, c)
-            _cell(ax, r, c, color, filled=color is not None)
-    ax.set_title(title, fontsize=14, color="black", pad=10)
+            _cell(ax, r, c, color, filled=color is not None, split=split)
+    span = _pos(n, split)
     # axis arrows: keys along the top (rightward), queries down the left side
-    fl.arrow(ax, (0, 0.45), (n * CELL, 0.45), color="black", lw=1.2, mut=11)
-    fl.arrow(ax, (-0.45, 0), (-0.45, -n * CELL), color="black", lw=1.2, mut=11)
-    ax.text(n * CELL / 2, 0.75, "key position", ha="center", va="bottom",
+    fl.arrow(ax, (0, 0.45), (span, 0.45), color="black", lw=1.2, mut=11)
+    fl.arrow(ax, (-0.45, 0), (-0.45, -span), color="black", lw=1.2, mut=11)
+    ax.text(span / 2, 0.75, "key position", ha="center", va="bottom",
             fontsize=13, color="black")
-    ax.text(-0.78, -n * CELL / 2, "query position", ha="right", va="center",
+    ax.text(-0.78, -span / 2, "query position", ha="right", va="center",
             fontsize=13, color="black", rotation=90)
-    fl.clean_axes(ax, lim=((-2.4, n * CELL + 0.4), (-n * CELL - 1.7, 1.9)),
+    x0, x1 = -2.4, n * CELL + 0.4 + SPLIT_GAP   # same window in all panels
+    fl.clean_axes(ax, lim=((x0, x1), (-n * CELL - SPLIT_GAP - 1.7, 1.9)),
                   hide=True)
+    # title centred on the grid (not on the axes, which include the
+    # "query position" label on the left)
+    ax.set_title(title, fontsize=14, color="black", pad=10,
+                 x=(span / 2 - x0) / (x1 - x0))
 
 
 def fig_three_wirings():
@@ -88,18 +100,22 @@ def fig_three_wirings():
             return ORANGE
         return GREEN if (c - S) <= (r - S) else None  # causal among targets
 
-    _grid(axes[2], n, encdec, "encoder–decoder")
-    # split lines + source/target group labels on the third panel
+    _grid(axes[2], n, encdec, "encoder–decoder", split=S)
+    # split lines (centred in the widened block gap) + source/target group
+    # labels on the third panel
     ax = axes[2]
-    ax.plot([S * CELL, S * CELL], [0, -n * CELL], color="black", lw=1.0,
+    span, mid = _pos(n, S), S * CELL + SPLIT_GAP / 2
+    ax.plot([mid, mid], [0, -span], color="black", lw=1.0,
             ls=(0, (4, 3)), zorder=4)
-    ax.plot([0, n * CELL], [-S * CELL, -S * CELL], color="black", lw=1.0,
+    ax.plot([0, span], [-mid, -mid], color="black", lw=1.0,
             ls=(0, (4, 3)), zorder=4)
-    for x0, name in ((0, "source"), (S, "target")):
-        ax.text((x0 + S / 2) * CELL, -n * CELL - 0.55, name, ha="center",
+    for c0, name in ((0, "source"), (S, "target")):
+        xc = (_pos(c0, S) + _pos(c0 + S, S) - SPLIT_GAP * (c0 == 0)) / 2
+        ax.text(xc, -span - 0.55, name, ha="center",
                 va="top", fontsize=13, color="black", style="italic")
-    for y0, name in ((0, "source"), (S, "target")):
-        ax.text(n * CELL + 0.35, -(y0 + S / 2) * CELL, name, ha="left",
+    for r0, name in ((0, "source"), (S, "target")):
+        yc = (_pos(r0, S) + _pos(r0 + S, S) - SPLIT_GAP * (r0 == 0)) / 2
+        ax.text(span + 0.35, -yc, name, ha="left",
                 va="center", fontsize=13, color="black", style="italic",
                 rotation=270)
 
@@ -138,17 +154,15 @@ def fig_latent_bottleneck():
     out_x = token_row(OUT_Y, M, 4.75, fl.T.GREEN.tint, pitch=1.15)  # light green
 
     # cross-attention fan: every latent reads every input (thin); one latent's
-    # fan highlighted; arrows follow the information flow, input -> latent
+    # fan highlighted.  Plain lines (flow is bottom -> top): fourteen
+    # arrowheads converging on one box only make a blot.
     for j, lx in enumerate(lat_x):
         for i, ix in enumerate(in_x):
             hot = (j == 1)
-            ax.annotate("", xy=(lx, LAT_Y - SQ / 2 - 0.03),
-                        xytext=(ix, IN_Y + SQ / 2 + 0.03),
-                        arrowprops=dict(arrowstyle="->", color=ORANGE,
-                                        lw=1.3 if hot else 0.8,
-                                        alpha=0.85 if hot else 0.16,
-                                        shrinkA=0, shrinkB=0,
-                                        mutation_scale=9))
+            ax.plot([ix, lx], [IN_Y + SQ / 2 + 0.03, LAT_Y - SQ / 2 - 0.03],
+                    color=ORANGE, lw=1.4 if hot else 0.8,
+                    alpha=0.85 if hot else 0.16, zorder=1 if hot else 0,
+                    solid_capstyle="butt")
 
     # latent self-attention: all-pairs arcs between output latents' inputs
     for j, lx in enumerate(lat_x):
@@ -162,10 +176,11 @@ def fig_latent_bottleneck():
 
     # stage labels on the right, clear of the arrows
     ax.text(11.0, (IN_Y + LAT_Y) / 2 + 0.15,
-            "cross-attention\n$O(MN)$", ha="left", va="center", fontsize=14,
+            "cross-attention\n$O(MNd)$", ha="left", va="center", fontsize=14,
             color="black")
     ax.text(11.0, (LAT_Y + OUT_Y) / 2,
-            "self-attention + FFN\n$O(M^2)$", ha="left", va="center",
+            "$L$ blocks of\nself-attention + FFN\n$O(LM^2d)$", ha="left",
+            va="center",
             fontsize=14, color="black")
 
     # row labels on the left

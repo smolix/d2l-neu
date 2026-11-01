@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="550.08pt" height="197.72pt" viewBox="0 0 550.08 197.72" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="550.08pt" height="199.72pt" viewBox="0 0 550.08 199.72" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -20,8 +20,8 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 197.72 
-L 550.08 197.72 
+   <path d="M 0 199.72 
+L 550.08 199.72 
 L 550.08 0 
 L 0 0 
 z
@@ -29,44 +29,34 @@ z
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 7.2 190.52 
-L 164.752941 190.52 
-L 164.752941 24.2 
-L 7.2 24.2 
+    <path d="M 7.2 192.52 
+L 164.752941 192.52 
+L 164.752941 26.2 
+L 7.2 26.2 
 z
 " style="fill: #ffffff"/>
    </g>
    <g id="matplotlib.axis_1"/>
    <g id="matplotlib.axis_2"/>
    <g id="line2d_1">
-    <path d="M 7.2 107.36 
-L 164.752941 107.36 
-" clip-path="url(#p06bb63d0e0)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 7.2 109.36 
+L 164.752941 109.36 
+" clip-path="url(#paf09c8034d)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_2">
-    <path d="M 85.976471 190.52 
-L 85.976471 24.2 
-" clip-path="url(#p06bb63d0e0)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 85.976471 192.52 
+L 85.976471 26.2 
+" clip-path="url(#paf09c8034d)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
-    <path d="M 10.951261 107.36 
-L 161.001681 107.36 
-L 161.001681 107.36 
-" clip-path="url(#p06bb63d0e0)" style="fill: none; stroke: #565d66; stroke-width: 2.4; stroke-linecap: square"/>
-   </g>
-   <g id="patch_3">
-    <path d="M 7.2 190.52 
-L 7.2 24.2 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
-   </g>
-   <g id="patch_4">
-    <path d="M 7.2 190.52 
-L 164.752941 190.52 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
+    <path d="M 10.951261 109.36 
+L 161.001681 109.36 
+L 161.001681 109.36 
+" clip-path="url(#paf09c8034d)" style="fill: none; stroke: #565d66; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- $f^{(2)}(x)$ -->
-    <g style="fill: #15181c" transform="translate(69.696471 18.2) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(66.736471 20.2) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -280,45 +270,35 @@ z
    </g>
   </g>
   <g id="axes_2">
-   <g id="patch_5">
-    <path d="M 196.263529 190.52 
-L 353.816471 190.52 
-L 353.816471 24.2 
-L 196.263529 24.2 
+   <g id="patch_3">
+    <path d="M 196.263529 192.52 
+L 353.816471 192.52 
+L 353.816471 26.2 
+L 196.263529 26.2 
 z
 " style="fill: #ffffff"/>
    </g>
    <g id="matplotlib.axis_3"/>
    <g id="matplotlib.axis_4"/>
    <g id="line2d_4">
-    <path d="M 196.263529 144.32 
-L 353.816471 144.32 
-" clip-path="url(#p239387da56)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 196.263529 146.32 
+L 353.816471 146.32 
+" clip-path="url(#p81c1b7c99f)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
-    <path d="M 275.04 190.52 
-L 275.04 24.2 
-" clip-path="url(#p239387da56)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 275.04 192.52 
+L 275.04 26.2 
+" clip-path="url(#p81c1b7c99f)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_6">
-    <path d="M 200.01479 51.92 
-L 350.06521 51.92 
-L 350.06521 51.92 
-" clip-path="url(#p239387da56)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
-   </g>
-   <g id="patch_6">
-    <path d="M 196.263529 190.52 
-L 196.263529 24.2 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
-   </g>
-   <g id="patch_7">
-    <path d="M 196.263529 190.52 
-L 353.816471 190.52 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
+    <path d="M 200.01479 53.92 
+L 350.06521 53.92 
+L 350.06521 53.92 
+" clip-path="url(#p81c1b7c99f)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_2">
     <!-- $f^{(1)}(x)$ -->
-    <g style="fill: #15181c" transform="translate(258.76 18.2) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(255.8 20.2) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-64" d="M 594 0 
 L 594 225 
@@ -348,45 +328,35 @@ z
    </g>
   </g>
   <g id="axes_3">
-   <g id="patch_8">
-    <path d="M 385.327059 190.52 
-L 542.88 190.52 
-L 542.88 24.2 
-L 385.327059 24.2 
+   <g id="patch_4">
+    <path d="M 385.327059 192.52 
+L 542.88 192.52 
+L 542.88 26.2 
+L 385.327059 26.2 
 z
 " style="fill: #ffffff"/>
    </g>
    <g id="matplotlib.axis_5"/>
    <g id="matplotlib.axis_6"/>
    <g id="line2d_7">
-    <path d="M 385.327059 107.36 
-L 542.88 107.36 
-" clip-path="url(#pb515ad9004)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 385.327059 109.36 
+L 542.88 109.36 
+" clip-path="url(#pdbe907ae2d)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
-    <path d="M 464.103529 190.52 
-L 464.103529 24.2 
-" clip-path="url(#pb515ad9004)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
+    <path d="M 464.103529 192.52 
+L 464.103529 26.2 
+" clip-path="url(#pdbe907ae2d)" style="fill: none; stroke: #15181c; stroke-linecap: square"/>
    </g>
    <g id="line2d_9">
-    <path d="M 389.078319 179.673043 
-L 539.128739 35.046957 
-L 539.128739 35.046957 
-" clip-path="url(#pb515ad9004)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
-   </g>
-   <g id="patch_9">
-    <path d="M 385.327059 190.52 
-L 385.327059 24.2 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
-   </g>
-   <g id="patch_10">
-    <path d="M 385.327059 190.52 
-L 542.88 190.52 
-" style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
+    <path d="M 389.078319 181.673043 
+L 539.128739 37.046957 
+L 539.128739 37.046957 
+" clip-path="url(#pdbe907ae2d)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_3">
     <!-- $f(x)$ -->
-    <g style="fill: #15181c" transform="translate(453.983529 18.2) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(452.143529 20.2) scale(0.13 -0.13)">
      <use xlink:href="#Cmmi10-57"/>
      <use xlink:href="#Cmr10-77" transform="translate(48.876953 0)"/>
      <use xlink:href="#Cmmi10-3f" transform="translate(87.695312 0)"/>
@@ -396,14 +366,14 @@ L 542.88 190.52
   </g>
  </g>
  <defs>
-  <clipPath id="p06bb63d0e0">
-   <rect x="7.2" y="24.2" width="157.552941" height="166.32"/>
+  <clipPath id="paf09c8034d">
+   <rect x="7.2" y="26.2" width="157.552941" height="166.32"/>
   </clipPath>
-  <clipPath id="p239387da56">
-   <rect x="196.263529" y="24.2" width="157.552941" height="166.32"/>
+  <clipPath id="p81c1b7c99f">
+   <rect x="196.263529" y="26.2" width="157.552941" height="166.32"/>
   </clipPath>
-  <clipPath id="pb515ad9004">
-   <rect x="385.327059" y="24.2" width="157.552941" height="166.32"/>
+  <clipPath id="pdbe907ae2d">
+   <rect x="385.327059" y="26.2" width="157.552941" height="166.32"/>
   </clipPath>
  </defs>
 </svg>

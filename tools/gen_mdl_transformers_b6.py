@@ -76,11 +76,6 @@ def fig_moe():
         if sel:
             fl.arrow(ax, (x_mid, y_rt + 0.36), (x, y_exp - 0.52),
                      color=ORANGE, lw=2.2, mut=13)
-            # in the clear wedge right of the arrow, below the fan lines
-            ax.text(x_mid + 1.62, y_rt + 0.48,
-                    rf"$p_{{{i + 1}}} = {p:.2f}$", ha="left", va="center",
-                    fontsize=14, color="black",
-                    bbox=dict(fc="white", ec="none", pad=1.5))
         else:
             ax.plot([x_mid, x], [y_rt + 0.36, y_exp - 0.52], color=GRAY,
                     lw=1.0, alpha=0.20 + 1.6 * p, zorder=1)
@@ -88,6 +83,10 @@ def fig_moe():
     # output of the selected expert, scaled by its probability
     fl.arrow(ax, (xs[SEL], y_exp + 0.52), (xs[SEL], y_out - 0.18),
              color=ORANGE, lw=2.2, mut=13)
+    # the router weight that scales the output, beside the arrow it scales
+    ax.text(xs[SEL] + 0.22, 0.5 * (y_exp + 0.52 + y_out - 0.18),
+            rf"$\times\, p_{{{SEL + 1}}} = {PROBS[SEL]:.2f}$",
+            ha="left", va="center", fontsize=14, color="black")
     ax.text(xs[SEL], y_out + 0.12,
             rf"$\mathbf{{y}} = p_{{{SEL + 1}}}\,"
             rf"\mathrm{{FFN}}_{{{SEL + 1}}}(\mathbf{{x}})$",

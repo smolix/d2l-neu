@@ -22,6 +22,41 @@ BLOCK_PAD = 12            # horizontal inner-block padding around its pills
 BLOCK_VPAD = 7            # vertical inner-block padding (tighter than horizontal)
 BLOCK_GAP = 14            # vertical gap between stacked groups
 BLOCK_LABEL_BAND = 12     # extra headroom inside a tinted block for its label
+LEADER_MIN = 40           # shortest margin leader (from its target)
+
+
+def _stage_label(d, x, y, text, pitch=1.12):
+    """``d.stage_label`` for labels that wrap: one artist per line at a fixed
+    baseline pitch.  matplotlib 3.11 sizes multi-line text from the font's
+    full ascent + descent, which spreads Source Sans 3 lines ~1.5x and
+    pushes the second line onto the pill below the label band."""
+    from arch_diagrams import NOTE_FS
+    for i, line in enumerate(text.split("\n")):
+        d.stage_label(x, y - i * pitch * NOTE_FS, line)
+
+
+def _callout_width(lines):
+    """Width of a callout's widest line (callouts are bold)."""
+    from arch_diagrams import CALLOUT_FS, text_width
+    return max(sum(text_width(s, CALLOUT_FS, bold=True) for s, _c, _b in segs)
+               for segs in lines)
+
+
+def _note_width(text):
+    from arch_diagrams import NOTE_FS, text_width
+    return text_width(text, NOTE_FS, italic=True)
+
+
+def _right_callouts(d, x_min, items):
+    """Right-margin callouts sharing one right edge, the widest starting at
+    ``x_min``.  ``items`` = [(y_text, lines, target)].  Each dotted leader
+    runs from its target to 6 pt short of its own text block, so no leader
+    dangles across empty margin."""
+    ws = [_callout_width(lines) for _y, lines, _t in items]
+    x_edge = x_min + max(ws)
+    for (y, lines, target), w in zip(items, ws):
+        d.callout(x_edge, y, lines, target=target,
+                  leader_from=(x_edge - w - 6, target[1]), ha="right")
 
 
 # --------------------------------------------------------------------------- #
@@ -179,13 +214,14 @@ def fig_inception_block():
     d.shape_note(xc + 14, y_out - 6, "(256, 28×28)")
 
     # callouts at the bottom margin; straight VERTICAL leaders whose feet
-    # land on the callout text (leader x sits inside the text's span)
+    # land on the callout text (leader x sits inside the text's span) and
+    # whose x is off every branch axis, so no leader continues a flow arrow
     d.callout(132, 26 + LH, [
         [("1×1 convolutions shrink channels", INK, 1)],
         [("before the costly ", INK, 1), ("3×3", ACCENT, 1),
          (" and ", INK, 1), ("5×5", ACCENT, 1)],
-    ], target=(bx[1], y_bus_lo - 6),
-        leader_from=(bx[1], 26 + LH + 9), ha="left")
+    ], target=(bx[1] - 30, y_bus_lo - 6),
+        leader_from=(bx[1] - 30, 26 + LH + 9), ha="left")
     d.callout(bx[3] - 90, 26 + LH, [
         [("Four branches, four scales,", INK, 1)],
         [("one shared input", INK, 1)],
@@ -212,7 +248,7 @@ def _blocked_column(d, x, groups, pw, y0, outer_label, anchor_text="input x",
         ys = [first + i * PILL_STEP for i in range(len(g["ops"]))]
         top = ys[-1] + PILL_H / 2 + vpad + extra_top
         layouts.append((g, ys, y, top))
-        y = top + BLOCK_GAP               # inter-group arrow gap
+        y = top + g.get("gap_after", BLOCK_GAP)   # inter-group arrow gap
     inner_top = layouts[-1][3]
     outer = (x - pw / 2 - BLOCK_PAD - 16, y0 - 20,
              x + pw / 2 + BLOCK_PAD + 16, inner_top + LABEL_BAND)
@@ -227,7 +263,7 @@ def _blocked_column(d, x, groups, pw, y0, outer_label, anchor_text="input x",
             if g.get("repeat"):
                 d.repeat(x - pw / 2 - BLOCK_PAD - 12, bot, top, g["repeat"])
             if g.get("label"):
-                d.stage_label(x - pw / 2 - BLOCK_PAD + 10, top - 5, g["label"])
+                d.stage_label(x - pw / 2 - BLOCK_PAD + 10, top - 3, g["label"])
         for i, (op, yy) in enumerate(zip(g["ops"], ys)):
             if novelty_at == (gi, i):
                 pre, kw, post = op
@@ -371,25 +407,26 @@ def fig_vgg():
     groups = [vgg_block(64, 1), vgg_block(128, 1), vgg_block(256, 2),
               vgg_block(512, 2), vgg_block(512, 2), {"ops": head}]
     groups[0]["ops"][0] = ("", "3×3", " Conv, 64, pad 1, ReLU")   # novelty
-    xr, pw_r = 500, 186
+    xr, pw_r = 470, 186
     _, panel_r, lay = _blocked_column(
         d, xr, groups, pw_r, y0, "VGG-11",
         anchor_text="224×224 image", novelty_at=(0, 0))
 
     # callouts (horizontal, at target height)
     blk3_mid = 0.5 * (lay[2][2] + lay[2][3])
-    d.callout(W - 8, blk3_mid + LH / 2, [
-        [("The unit of design", INK, 1)],
-        [("is the ", INK, 1), ("block", ACCENT, 1),
-         (", not the layer", INK, 1)],
-    ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, blk3_mid),
-        leader_from=(W - 178, blk3_mid), ha="right")
     y_conv2 = lay[3][1][0]
-    d.callout(W - 8, y_conv2 + LH / 2, [
-        [("Two stacked ", INK, 1), ("3×3", ACCENT, 1), (" convs", INK, 1)],
-        [("see 5×5, with fewer weights", INK, 1)],
-    ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, y_conv2),
-        leader_from=(W - 200, y_conv2), ha="right")
+    x_tgt = xr + pw_r / 2 + BLOCK_PAD + 4
+    _right_callouts(d, x_tgt + LEADER_MIN, [
+        (blk3_mid + LH / 2, [
+            [("The unit of design", INK, 1)],
+            [("is the ", INK, 1), ("block", ACCENT, 1),
+             (", not the layer", INK, 1)],
+        ], (x_tgt, blk3_mid)),
+        (y_conv2 + LH / 2, [
+            [("Two stacked ", INK, 1), ("3×3", ACCENT, 1), (" convs", INK, 1)],
+            [("see 5×5, with fewer weights", INK, 1)],
+        ], (x_tgt, y_conv2)),
+    ])
     # depth note above the shorter AlexNet column
     y_note = panel_l[3] + 96
     d.callout(40, y_note, [
@@ -419,20 +456,20 @@ def fig_nin():
         anchor_text="(512, 7×7) features")
 
     # right: the end of NiN: dropout, last NiN block, global average pooling
-    xr, pw_r = 575, 150
+    xr, pw_r = 497, 150           # panels 36 pt apart
     groups = [{"ops": ["Dropout 0.5"]},
               {"ops": ["3×3 Conv, 10, ReLU", "1×1 Conv, 10, ReLU",
                        "1×1 Conv, 10"],
-               "tint": True, "label": "NiN block"},
+               "tint": True, "label": "NiN block", "gap_after": 26},
               {"ops": [("", "Global AvgPool", "")]}]
     _, panel_r, lay_r = _blocked_column(
         d, xr, groups, pw_r, y0, "End of NiN",
         anchor_text="(384, 5×5) features", novelty_at=(2, 0))
 
-    # shape notes in the empty middle gap, fully outside the NiN grey box
-    d.shape_note(panel_r[0] - 8,
-                 0.5 * (lay_r[1][3] + lay_r[2][1][0] - PILL_H / 2) + 1,
-                 "(10, 5×5)", ha="right")
+    # shape notes beside the spine arrows they describe
+    d.shape_note(xr + 8,
+                 0.5 * (lay_r[1][3] + lay_r[2][1][0] - PILL_H / 2),
+                 "(10, 5×5)")
     d.shape_note(xr + 14, panel_r[3] + 14, "10 scores")
 
     # callouts
@@ -444,11 +481,11 @@ def fig_nin():
     ], target=(xl - pw_l / 2 - 4, y_dense), leader_from=(148, y_dense),
         ha="left")
     y_gap = lay_r[2][1][0]
-    d.callout(W - 48, y_gap + LH / 2, [
+    x_tgt = xr + (pw_r + 10) / 2 + 4
+    _right_callouts(d, x_tgt + LEADER_MIN, [(y_gap + LH / 2, [
         [("No parameters at all:", INK, 1)],
         [("one channel per class", INK, 1)],
-    ], target=(xr + (pw_r + 10) / 2 + 4, y_gap), leader_from=(W - 172, y_gap),
-        ha="right")
+    ], (x_tgt, y_gap))])
 
     save(d.fig, "arch-nin")
 
@@ -466,12 +503,19 @@ def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
     ys = [y0 + i * PILL_STEP for i in range(len(ops))]
     y_plus = ys[-1] + PILL_STEP
     y_relu = y_plus + PILL_STEP
-    x_out = x + (126 if shortcut_pill else 88)
-    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23,
-             x_out + (56 if shortcut_pill else 22),
+    if shortcut_pill:
+        pills = ([shortcut_pill] if isinstance(shortcut_pill, str)
+                 else list(shortcut_pill))
+        w_s = max(d.pill_width(p) for p in pills)   # one shared width
+        x_out = x + pw / 2 + 14 + w_s / 2
+        x_right = x_out + w_s / 2 + 14
+    else:
+        x_out = x + 88
+        x_right = x_out + 22
+    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23, x_right,
              y_relu + PILL_H / 2 + LABEL_BAND)
     d.container(*panel, fill=tint)
-    d.stage_label(panel[0] + 14, panel[3] - 9, label)
+    _stage_label(d, panel[0] + 14, panel[3] - 9, label)
 
     y_anchor = panel[1] - 36
     d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
@@ -483,15 +527,13 @@ def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
 
     y_branch = y0 - PILL_H / 2 - 11
     if shortcut_pill:
-        pills = ([shortcut_pill] if isinstance(shortcut_pill, str)
-                 else list(shortcut_pill))
         y_mid = 0.5 * (y_branch + y_plus)
         ys_s = [y_mid + (i - (len(pills) - 1) / 2) * PILL_STEP
                 for i in range(len(pills))]
         d.line([(x, y_branch), (x_out, y_branch),
                 (x_out, ys_s[0] - PILL_H / 2)])
         for i, (op, y) in enumerate(zip(pills, ys_s)):
-            d.pill(x_out, y, op, w=None)
+            d.pill(x_out, y, op, w=w_s)
             if i < len(pills) - 1:
                 d.arrow(x_out, y + PILL_H / 2, ys_s[i + 1] - PILL_H / 2)
         d.line([(x_out, ys_s[-1] + PILL_H / 2), (x_out, y_plus)])
@@ -508,37 +550,45 @@ def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None,
     d.pill(x, y_relu, top, w=pw)
     d.arrow(x, y_relu + PILL_H / 2, panel[3] + 30)
     d.anchor(x, y_anchor, "input x")
-    return ys, y_plus
+    return ys, y_plus, panel, x_out
 
 
 def fig_resnet_block():
-    W, H = 850, 480
+    W, H = 760, 480
     d = Diagram(W, H)
     y0 = 116
     ops = ["3×3 Conv, BatchNorm", "ReLU", "3×3 Conv, BatchNorm"]
 
-    xl, pw = 210, 138
-    ys_l, y_plus_l = _residual_column(
+    # Callouts wrap narrow and the panels sit close, so the figure stays
+    # near column width and its labels stay legible.
+    xl, pw = 182, 138
+    ys_l, y_plus_l, panel_l, _ = _residual_column(
         d, xl, ops, pw, ACCENT_TINT, "Identity\nshortcut", y0)
-    xr = 470
-    ys_r, y_plus_r = _residual_column(
+    xr = panel_l[2] + 26 + pw / 2 + 22
+    ys_r, y_plus_r, panel_r, x_s = _residual_column(
         d, xr, ops, pw, ACCENT_TINT, "Projection\nshortcut", y0,
         shortcut_pill=["1×1 Conv", "BatchNorm"])
 
+    from arch_diagrams import CALLOUT_FS, text_width
+    sum_line = [("x + g(x)", ACCENT, 1), (", so", INK, 1)]
+    w_sum = sum(text_width(t, CALLOUT_FS, bold=True) for t, _c, _b in sum_line)
     d.callout(8, y_plus_l + LH, [
-        [("The sum is ", INK, 1), ("x + g(x)", ACCENT, 1), (",", INK, 1)],
-        [("so g learns", INK, 1)],
+        [("The sum is", INK, 1)],
+        sum_line,
+        [("g learns", INK, 1)],
         [("a correction", INK, 1)],
-    ], target=(xl - PLUS_R - 4, y_plus_l), leader_from=(116, y_plus_l),
-        ha="left")
+    ], target=(xl - PLUS_R - 4, y_plus_l),
+        leader_from=(8 + w_sum + 6, y_plus_l), ha="left")
     # The callout points at the 1x1 conv, the lower of the two shortcut pills
     y_conv = 0.5 * ((y0 - PILL_H / 2 - 11) + y_plus_r) - PILL_STEP / 2
-    d.callout(W - 2, y_conv + LH, [
-        [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv matches", INK, 1)],
-        [("the shape when the", INK, 1)],
-        [("channels or stride change", INK, 1)],
-    ], target=(xr + 126 + 40, y_conv), leader_from=(W - 160, y_conv),
-        ha="right")
+    w_s = d.pill_width("BatchNorm")
+    x_text = panel_r[2] + 20
+    d.callout(x_text, y_conv + LH, [
+        [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv", INK, 1)],
+        [("matches channels", INK, 1)],
+        [("and stride", INK, 1)],
+    ], target=(x_s + w_s / 2 + 4, y_conv),
+        leader_from=(x_text - 6, y_conv), ha="left")
 
     save(d.fig, "arch-resnet-block")
 
@@ -553,15 +603,15 @@ def fig_residual_concept():
     y0 = 116
     ops = ["Weight layer", "Activation", "Weight layer"]
     pw = 128
-    xl, xr = 110, 370
-    ys_r, y_plus = _residual_column(
+    xl, xr = 110, 330
+    ys_r, y_plus, _, _ = _residual_column(
         d, xr, ops, pw, ACCENT_TINT, "Residual\nblock", y0, top="Activation")
     # Regular block: same rhythm and height, no shortcut, no addition
     y_top = y_plus + PILL_STEP
     panel = (xl - pw / 2 - 22, y0 - PILL_H / 2 - 23, xl + pw / 2 + 22,
              y_top + PILL_H / 2 + LABEL_BAND)
     d.container(*panel, fill=CONTAINER_FILL)
-    d.stage_label(panel[0] + 14, panel[3] - 9, "Regular\nblock")
+    _stage_label(d, panel[0] + 14, panel[3] - 9, "Regular\nblock")
     y_anchor = panel[1] - 36
     d.arrow(xl, y_anchor + 14, ys_r[0] - PILL_H / 2)
     for i, (op, y) in enumerate(zip(ops, ys_r)):
@@ -655,7 +705,8 @@ def fig_densenet_block():
     y0 = 116
     pw = 196
 
-    ys = [y0 + i * PILL_STEP for i in range(4)]     # conv1, cat1, conv2, cat2
+    # conv1, cat1, conv2, cat2; extra air above cat1 for its shape note
+    ys = [y0 + i * PILL_STEP + (12 if i >= 2 else 0) for i in range(4)]
     x_l = x - pw / 2 - 58                            # skip rail on the left
 
     panel = (x_l - 22, y0 - PILL_H / 2 - 23, x + pw / 2 + 22,
@@ -688,7 +739,7 @@ def fig_densenet_block():
 
     # channel growth beside the spine
     _note(d, x + 14, y_anchor + 26, "(64, H×W)")
-    _note(d, x + pw / 2 + 30, 0.5 * (ys[1] + ys[2]), "(96, H×W)")
+    _note(d, x + 14, 0.5 * (ys[1] + ys[2]) + 3, "(96, H×W)")
     _note(d, x + 14, panel[3] + 18, "(128, H×W)")
 
     d.callout(8, ys[1] + LH, [
@@ -738,12 +789,13 @@ def fig_resnet18():
     _note(d, xs, between(4, 5) - 4, "(512, 3×3)")
 
     y_s2 = 0.5 * (lay[2][2] + lay[2][3])
-    d.callout(W - 8, y_s2 + LH, [
+    x_min = xs + max(map(_note_width, ("(64, 24×24)", "(128, 12×12)",
+                                       "(256, 6×6)", "(512, 3×3)"))) + 18
+    _right_callouts(d, x_min, [(y_s2 + LH, [
         [("Stages 2–4 open with the", INK, 1)],
         [("projection", ACCENT, 1), (" block, stride 2:", INK, 1)],
         [("resolution ÷2, channels ×2", INK, 1)],
-    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s2),
-        leader_from=(W - 178, y_s2), ha="right")
+    ], (x + pw / 2 + BLOCK_PAD + 4, y_s2))])
 
     save(d.fig, "arch-resnet18")
 
@@ -786,17 +838,19 @@ def fig_convnext():
     d.shape_note(xs, between(6, 7) - 4, "(768, 7×7)")
 
     y_s3 = 0.5 * (lay[5][2] + lay[5][3])
-    d.callout(W - 8, y_s3 + LH / 2, [
-        [("Stage ratio ", INK, 1), ("3:3:9:3", ACCENT, 1), (":", INK, 1)],
-        [("deepest where maps are small", INK, 1)],
-    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s3),
-        leader_from=(W - 200, y_s3), ha="right")
     y_ds = lay[2][1][0]
-    d.callout(W - 8, y_ds + LH / 2, [
-        [("No pooling anywhere:", INK, 1)],
-        [("a strided conv downsamples", INK, 1)],
-    ], target=(x + pw / 2 + 4, y_ds), leader_from=(W - 186, y_ds),
-        ha="right")
+    x_min = xs + max(map(_note_width, ("(96, 56×56)", "(192, 28×28)",
+                                       "(384, 14×14)", "(768, 7×7)"))) + 18
+    _right_callouts(d, x_min, [
+        (y_s3 + LH / 2, [
+            [("Stage ratio ", INK, 1), ("3:3:9:3", ACCENT, 1), (":", INK, 1)],
+            [("deepest where maps are small", INK, 1)],
+        ], (x + pw / 2 + BLOCK_PAD + 4, y_s3)),
+        (y_ds + LH / 2, [
+            [("No pooling in the body:", INK, 1)],
+            [("a strided conv downsamples", INK, 1)],
+        ], (x + pw / 2 + 4, y_ds)),
+    ])
 
     save(d.fig, "arch-convnext")
 
@@ -844,16 +898,16 @@ def _fig_dws_block():
     d.shape_note(x - 96, y_anchor + 26, r"($c_\mathrm{i}$, h×w)", ha="right")
     d.shape_note(x + 14, panel[3] + 18, r"($c_\mathrm{o}$, h×w)")
 
-    d.callout(W - 8, ys[0] + LH / 2, [
-        [("Spatial filtering,", INK, 1)],
-        [("one channel at a time", INK, 1)],
-    ], target=(x + (pw + 14) / 2 + 4, ys[0]), leader_from=(W - 156, ys[0]),
-        ha="right")
-    d.callout(W - 8, ys[2] + LH / 2, [
-        [("Channel mixing,", INK, 1)],
-        [("one position at a time", INK, 1)],
-    ], target=(x + pw / 2 + 4, ys[2]), leader_from=(W - 158, ys[2]),
-        ha="right")
+    _right_callouts(d, x + (pw + 14) / 2 + 4 + LEADER_MIN, [
+        (ys[0] + LH / 2, [
+            [("Spatial filtering,", INK, 1)],
+            [("one channel at a time", INK, 1)],
+        ], (x + (pw + 14) / 2 + 4, ys[0])),
+        (ys[2] + LH / 2, [
+            [("Channel mixing,", INK, 1)],
+            [("one position at a time", INK, 1)],
+        ], (x + pw / 2 + 4, ys[2])),
+    ])
     y_mid = 0.5 * (ys[1] + ys[2])  # no leader: the note covers the whole block
     d.callout(8, y_mid + LH / 2, [
         [("Together: ", INK, 1), (r"1/$c_\mathrm{o}$ + 1/9", ACCENT, 1)],
@@ -997,13 +1051,15 @@ def fig_anynet():
     d.shape_note(xs, between(4, 5) - 4, "(c₄, r/32 × r/32)")
 
     y_s2 = 0.5 * (lay[2][2] + lay[2][3])
-    d.callout(W - 8, y_s2 + 1.5 * LH, [
+    x_min = xs + max(map(_note_width, ("(c₀, r/2 × r/2)", "(c₁, r/4 × r/4)",
+                                       "(c₂, r/8 × r/8)", "(c₃, r/16 × r/16)",
+                                       "(c₄, r/32 × r/32)"))) + 18
+    _right_callouts(d, x_min, [(y_s2 + 1.5 * LH, [
         [("Per stage: depth ", INK, 1), ("d", ACCENT, 1), (",", INK, 1)],
         [("width ", INK, 1), ("c", ACCENT, 1), (",", INK, 1)],
         [("group width ", INK, 1), ("g", ACCENT, 1), (",", INK, 1)],
         [("bottleneck ratio ", INK, 1), ("k", ACCENT, 1)],
-    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s2),
-        leader_from=(W - 152, y_s2), ha="right")
+    ], (x + pw / 2 + BLOCK_PAD + 4, y_s2))])
 
     save(d.fig, "arch-anynet")
 
@@ -1021,7 +1077,7 @@ def fig_norm_axes():
     NC, NH, NN = 6, 5, 4         # channels (across), positions (up), examples (depth)
     cell = 13.0                  # front-face cell size
     dx, dy = 8.5, 6.5            # oblique offset per example (depth)
-    gap = 44.0
+    gap = 18.0                   # axes are named on the first cube only
     cube_w = NC * cell + NN * dx
     W = 5 * cube_w + 4 * gap + 40
     H = 200
@@ -1070,7 +1126,13 @@ def fig_norm_axes():
                   color=edge_c, lw=1.1, zorder=5)
         d.ax.plot(*zip(P(NC, NH, 0), P(NC, NH, NN)), color=edge_c, lw=1.1,
                   zorder=5)
-        # axis labels
+        # panel title below
+        d.ax.text(x0 + cube_w / 2 - 4, y0 - 32, title, fontsize=13,
+                  color=INK, family="Source Sans 3", ha="center",
+                  va="center", zorder=8)
+        if k:
+            continue
+        # axis labels, once: all five cubes show the same (N, C, H·W) scene
         fs = 12.5
         d.ax.text(P(NC / 2, 0, 0)[0], y0 - 12, "C", fontsize=fs,
                   color=INK, family="Source Sans 3", style="italic",
@@ -1081,10 +1143,6 @@ def fig_norm_axes():
         xn, yn = P(NC, 0, NN / 2)
         d.ax.text(xn + 7, yn - 5, "N", fontsize=fs, color=INK,
                   family="Source Sans 3", style="italic", ha="left",
-                  va="center", zorder=8)
-        # panel title below
-        d.ax.text(x0 + cube_w / 2 - 4, y0 - 36, title, fontsize=13,
-                  color=INK, family="Source Sans 3", ha="center",
                   va="center", zorder=8)
 
     save(d.fig, "arch-norm-axes")

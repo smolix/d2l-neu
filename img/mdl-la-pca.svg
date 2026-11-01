@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -1572,8 +1572,21 @@ z
 " style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.8; stroke-linecap: round"/>
    </g>
    <g id="text_14">
+    <g id="patch_6">
+     <path d="M 283.970009 57.742385 
+L 307.853134 57.742385 
+Q 309.953134 57.742385 309.953134 55.642385 
+L 309.953134 37.078385 
+Q 309.953134 34.978385 307.853134 34.978385 
+L 283.970009 34.978385 
+Q 281.870009 34.978385 281.870009 37.078385 
+L 281.870009 55.642385 
+Q 281.870009 57.742385 283.970009 57.742385 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
     <!-- PC1 -->
-    <g style="fill: #ff7f0e" transform="translate(275.911537 55.282453) scale(0.14 -0.14)">
+    <g style="fill: #ff7f0e" transform="translate(283.970009 51.078385) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Bold-11" d="M 493 0 
 L 493 4173 
@@ -1641,7 +1654,7 @@ z
      <use xlink:href="#SourceSans3-Bold-536" transform="translate(117.796875 0)"/>
     </g>
    </g>
-   <g id="patch_6">
+   <g id="patch_7">
     <path d="M 193.451096 113.894687 
 Q 178.920703 91.20676 166.07865 71.155026 
 " style="fill: none; stroke: #2ca02c; stroke-width: 2.8; stroke-linecap: round"/>
@@ -1652,8 +1665,21 @@ z
 " style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2.8; stroke-linecap: round"/>
    </g>
    <g id="text_15">
+    <g id="patch_8">
+     <path d="M 144.707224 65.899227 
+L 168.590349 65.899227 
+Q 170.690349 65.899227 170.690349 63.799227 
+L 170.690349 45.235227 
+Q 170.690349 43.135227 168.590349 43.135227 
+L 144.707224 43.135227 
+Q 142.607224 43.135227 142.607224 45.235227 
+L 142.607224 63.799227 
+Q 142.607224 65.899227 144.707224 65.899227 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
     <!-- PC2 -->
-    <g style="fill: #2ca02c" transform="translate(149.86824 66.336751) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(144.707224 59.235227) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Bold-537" d="M 237 0 
 L 237 582 

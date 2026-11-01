@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -1662,23 +1662,17 @@ z
    </g>
    <g id="line2d_5">
     <path d="M 209.153929 235.842207 
-L 210.674728 233.970966 
-L 212.195527 237.713447 
-L 213.716326 233.970966 
-L 215.237125 237.713447 
-L 216.757924 233.970966 
-L 218.278723 237.713447 
-L 219.799522 235.842207 
-L 221.320321 235.842207 
-" clip-path="url(#pde9d8ba104)" style="fill: none; stroke-dasharray: 1.6,2.64; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.6"/>
+L 213.209393 231.456487 
+L 217.264857 240.227927 
+" clip-path="url(#pde9d8ba104)" style="fill: none; stroke: #565d66; stroke-width: 1.6; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="patch_16">
-    <path d="M 219.799522 235.842207 
-Q 220.559922 235.842207 219.531467 235.842207 
+    <path d="M 217.264857 240.227927 
+Q 219.292589 238.035067 220.105828 237.155602 
 " style="fill: none; stroke: #565d66; stroke-width: 1.6; stroke-linecap: round"/>
-    <path d="M 215.531467 233.842207 
-L 219.531467 235.842207 
-L 215.531467 237.842207 
+    <path d="M 215.921719 238.734598 
+L 220.105828 237.155602 
+L 218.85856 241.450287 
 z
 " style="fill: #565d66; stroke: #565d66; stroke-width: 1.6; stroke-linecap: round"/>
    </g>

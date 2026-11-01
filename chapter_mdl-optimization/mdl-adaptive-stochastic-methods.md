@@ -657,7 +657,7 @@ The following discussion distinguishes proved statements from empirical design
 choices. Three common schedules, drawn in
 :numref:`fig_mdl-opt-schedule-zoo`, are these:
 
-![Four schedules at equal budget on the noisy quadratic used below. A constant step retains a nonzero noise floor; $c/k$ decay is sensitive to $c$; cosine allocates a long tail to small steps; warmup--stable--decay (WSD) keeps a constant plateau before a final decay. The plotted runs include linear warmup, a common empirical choice while an adaptive preconditioner is estimated from few gradients.](../img/mdl-opt-schedule-zoo.svg)
+![Four schedules at equal budget on the noisy quadratic used below. A constant step retains a nonzero noise floor; $c/k$ decay is sensitive to $c$; cosine allocates a long tail to small steps; warmup--stable--decay (WSD) keeps a constant plateau before a final decay. The plotted schedules include linear warmup, a common empirical choice while an adaptive preconditioner is estimated from few gradients.](../img/mdl-opt-schedule-zoo.svg)
 :label:`fig_mdl-opt-schedule-zoo`
 
 **Cosine decay** :cite:`Loshchilov.Hutter.2016` sets

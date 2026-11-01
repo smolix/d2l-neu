@@ -984,7 +984,7 @@ bit: a channel that *always* lies is as good as one that always tells the
 truth, because the receiver can flip every bit. What destroys
 information is not corruption but *unpredictability*.
 
-![Shannon's two operational curves. Left: the Gaussian rate–distortion function — the number of bits per sample needed to reconstruct within squared error $D$; fidelity gets expensive fast, and beyond the source variance no bits are needed at all. Right: the capacity of a binary symmetric channel with flip probability $\varepsilon$; a coin-flip channel carries nothing, while a channel that always flips is again perfect.](../img/mdl-it-capacity-rd.svg)
+![Shannon's two operational curves. Left: the Gaussian rate–distortion function — the rate, in nats per sample, needed to reconstruct within squared error $D$; fidelity gets expensive fast, and beyond the source variance nothing needs to be sent at all. Right: the capacity of a binary symmetric channel with flip probability $\varepsilon$; a coin-flip channel carries nothing, while a channel that always flips is again perfect.](../img/mdl-it-capacity-rd.svg)
 :label:`fig_mdl-it-capacity-rd`
 
 The same mutual-information lens applies when a representation passes through

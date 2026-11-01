@@ -551,7 +551,7 @@ descent reaches the convex minimizer in the first panel but can reach different
 local minima in the second. This algorithmic behavior also depends on
 smoothness and a stable step size.
 
-![Local and global minima. Left: on the illustrated smooth convex objective, gradient descent with the displayed stable step reaches the global minimizer from either start. Right: on a nonconvex objective with two local minima separated by a saddle, the same update can reach different minima from different starts.](../img/mdl-opt-local-equals-global.svg)
+![Local and global minima. Left: on the illustrated smooth convex objective, gradient descent with the displayed stable step reaches the global minimizer from either start. Right: on a nonconvex objective with two local minima separated by a local maximum, the same update can reach different minima from different starts.](../img/mdl-opt-local-equals-global.svg)
 :label:`fig_mdl-opt-local-equals-global`
 
 The same chord argument shows that the minimizer set is convex: if

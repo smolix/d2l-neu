@@ -26,6 +26,7 @@ import gen_mdl_figures as fl  # shared style, palette, helpers, save()
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+INK = fl.INK  # annotation text: black, never gray (house rule 1)
 
 from matplotlib.patches import Circle, FancyArrowPatch  # noqa: E402
 
@@ -59,10 +60,13 @@ def _entropy_venn(ax, *, cx, r, overlap, fill_overlap=True):
     if fill_overlap:
         # Shade the lens (the set-intersection) by clipping one disc to the
         # other -- this is the mutual-information region.
-        clip = Circle(right_c, r, transform=ax.transData)
-        lens = ax.add_patch(Circle(left_c, r, facecolor=ORANGE, alpha=0.45,
-                                edgecolor="none", zorder=2))
-        lens.set_clip_path(clip)
+        # An opaque white lens first, so the orange tint reads as orange
+        # rather than as a muddy blend with the blue and green discs.
+        for fc, al, z in (("white", 1.0, 1.5), (ORANGE, 0.30, 2)):
+            clip = Circle(right_c, r, transform=ax.transData)
+            lens = ax.add_patch(Circle(left_c, r, facecolor=fc, alpha=al,
+                                       edgecolor="none", zorder=z))
+            lens.set_clip_path(clip)
 
     return left_c, right_c
 
@@ -80,16 +84,18 @@ def fig_mi_overlap():
     left_c, right_c = _entropy_venn(ax, cx=cx, r=r, overlap=2 * (r - cx))
 
     # Disc names.
-    fl.vlabel(ax, (left_c[0] - 0.15, r + 0.26), r"$H(X)$", color=BLUE,
-            fontsize=13)
-    fl.vlabel(ax, (right_c[0] + 0.15, r + 0.26), r"$H(Y)$", color=GREEN,
-            fontsize=13)
+    fl.vlabel(ax, (left_c[0] - 0.15, r + 0.28), r"$H(X)$", color=BLUE,
+            fontsize=15)
+    fl.vlabel(ax, (right_c[0] + 0.15, r + 0.28), r"$H(Y)$", color=GREEN,
+            fontsize=15)
 
     # Region labels (terse: this panel emphasises the identities).
-    fl.vlabel(ax, (-cx - 0.58, -0.05), r"$H(X\mid Y)$", color=BLUE, fontsize=12)
-    fl.vlabel(ax, (cx + 0.58, -0.05), r"$H(Y\mid X)$", color=GREEN, fontsize=12)
-    fl.vlabel(ax, (0.0, 0.30), r"$I(X;Y)$", color=ORANGE, fontsize=12.5)
-    fl.vlabel(ax, (0.0, -0.10), "(overlap)", color=GRAY, fontsize=10)
+    fl.vlabel(ax, (-cx - 0.70, -0.05), r"$H(X\mid Y)$", color=fl.T.BLUE.dark,
+              fontsize=14)
+    fl.vlabel(ax, (cx + 0.70, -0.05), r"$H(Y\mid X)$", color=fl.T.GREEN.dark,
+              fontsize=14)
+    fl.vlabel(ax, (0.0, 0.22), r"$I(X;Y)$", color=fl.T.ORANGE.dark, fontsize=14)
+    fl.vlabel(ax, (0.0, -0.20), "(overlap)", color=INK, fontsize=12)
 
     # Brace spanning the union -> joint entropy H(X,Y).
     y_brace = -r - 0.18
@@ -98,7 +104,7 @@ def fig_mi_overlap():
                 arrowprops=dict(arrowstyle="|-|", color="black", lw=1.1,
                                 shrinkA=0, shrinkB=0))
     fl.vlabel(ax, (0.0, y_brace - 0.30), r"joint entropy $H(X,Y)$",
-            color="black", fontsize=12)
+            color="black", fontsize=14)
 
     # The three equivalent identities, set to the right of the diagram.
     eqs = [
@@ -108,11 +114,11 @@ def fig_mi_overlap():
     ]
     x_eq = cx + r + 0.35
     for i, s in enumerate(eqs):
-        ax.text(x_eq, 0.95 - i * 0.62, s, ha="left", va="center", fontsize=11.5,
+        ax.text(x_eq, 0.95 - i * 0.62, s, ha="left", va="center", fontsize=14,
                 color="black")
 
     fl.clean_axes(ax, equal=True, hide=True)
-    ax.set_xlim(-cx - r - 0.55, x_eq + 3.15)
+    ax.set_xlim(-cx - r - 0.55, x_eq + 3.75)
     ax.set_ylim(y_brace - 0.62, r + 0.55)
     fl.save(fig, "mdl-it-mi-overlap")
 
@@ -156,8 +162,9 @@ def fig_mi_variational_bounds():
     ax.plot(I, nce, color=BLUE, lw=2.2,
             label=r"InfoNCE (low var., $\leq \log N$)")
     ax.axhline(logN, color=BLUE, lw=0.9, ls=":")
-    ax.text(I[-1], logN + 0.06, r"$\log N$", color=BLUE, fontsize=9.5,
-            ha="right", va="bottom")
+    # Below the cap: above it the flattening Barber-Agakov curve passes close.
+    ax.text(I[-1], logN - 0.12, r"$\log N$", color=BLUE, fontsize=13,
+            ha="right", va="top")
 
     # Barber-Agakov: low variance but increasingly biased downward (the
     # decoder's KL gap) -- a valid lower bound (always <= the diagonal) whose
@@ -178,21 +185,29 @@ def fig_mi_variational_bounds():
     ax.plot(I, crit_mean, color=ORANGE, lw=2.2,
             label="NWJ / DV (MINE): high variance")
 
-    # Annotate the two regimes.
-    ax.annotate("bias\n(flattens)", xy=(8.5, ba[I.searchsorted(8.5)]),
-                xytext=(8.3, 3.1), color=GREEN, fontsize=9, ha="center",
-                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1))
-    ax.annotate("variance\n(explodes)",
-                xy=(7.5, crit_mean[I.searchsorted(7.5)] - crit_sd[I.searchsorted(7.5)]),
-                xytext=(3.3, 1.0), color=ORANGE, fontsize=9, ha="center",
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1))
+    # Annotate the two regimes, both from the open band under the curves:
+    # the bias arrow rises straight to the Barber-Agakov curve where it is
+    # still under the log N line; the variance arrow to the band's floor.
+    xb = 5.3
+    ax.annotate("bias\n(flattens)", xy=(xb, ba[I.searchsorted(xb)]),
+                xytext=(xb, 2.1), color=GREEN, fontsize=12.5, ha="center",
+                va="center",
+                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1,
+                                shrinkA=6, shrinkB=2))
+    xv = 7.2
+    iv = I.searchsorted(xv)
+    ax.annotate("variance\n(explodes)", xy=(xv, crit_mean[iv] - crit_sd[iv]),
+                xytext=(8.5, 2.3), color=ORANGE, fontsize=12.5, ha="center",
+                va="center",
+                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
+                                shrinkA=6, shrinkB=2))
 
     ax.set_xlabel(r"true mutual information $I(X;Y)$ (nats)")
     ax.set_ylabel("bound estimate (nats)")
     ax.set_xlim(0, 10.0)
     ax.set_ylim(0, 10.4)
     ax.set_aspect("auto")
-    ax.legend(loc="upper left", fontsize=9.5, frameon=True, facecolor="white",
+    ax.legend(loc="upper left", fontsize=12, frameon=True, facecolor="white",
               edgecolor="none", framealpha=0.9)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -219,20 +234,18 @@ def fig_self_info_curve():
     ax.plot([0, 0.5], [ln2, ln2], ls="--", color=GRAY, lw=1.1)
     ax.plot([0.5], [ln2], "o", color=ORANGE, ms=6, zorder=5)
     ax.text(0.52, ln2 + 0.10, r"fair coin: $\ln 2 \approx 0.693$",
-            color=ORANGE, fontsize=10.5, ha="left", va="bottom")
+            color=ORANGE, fontsize=13, ha="left", va="bottom")
 
-    # The certain event: p = 1 carries zero information.  The label sits well
-    # above the curve's shallow tail and the short arrow's whole path stays
-    # at or above the curve, touching it only at the intended target point.
-    ax.plot([1.0], [0.0], "o", color=BLUE, ms=6, zorder=5)
-    ax.annotate(r"certain: $I = 0$", xy=(1.0, 0.0), xytext=(0.92, 0.62),
-                color=BLUE, fontsize=10.5, ha="center", va="center",
-                arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.1))
+    # The certain event: p = 1 carries zero information.  Named above its
+    # dot, clear of the curve's shallow tail, with no arrow.
+    ax.plot([1.0], [0.0], "o", color=BLUE, ms=6, zorder=5, clip_on=False)
+    ax.text(0.93, 0.38, r"certain: $I = 0$", color=BLUE, fontsize=13,
+            ha="center", va="bottom")
 
     # Rare-events annotation along the steep part of the curve.
     ax.annotate("rare events carry\nmore information",
-                xy=(0.06, -np.log(0.06)), xytext=(0.30, 3.0),
-                color=BLUE, fontsize=11, ha="center",
+                xy=(0.06, -np.log(0.06)), xytext=(0.32, 3.0),
+                color=BLUE, fontsize=13, ha="center",
                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.1))
 
     ax.set_xlabel(r"probability $p(x)$")
@@ -262,17 +275,18 @@ def fig_bernoulli_entropy():
     ax.plot([0.5], [ln2], "o", color=ORANGE, ms=6, zorder=5)
     ax.text(0.5, ln2 + 0.045,
             r"maximum uncertainty: $\ln 2 \approx 0.693$ nats",
-            color=ORANGE, fontsize=10.5, ha="center", va="bottom")
+            color=ORANGE, fontsize=13, ha="center", va="bottom")
 
     # A biased coin barely surprises: H(0.1) ~ 0.325 nats.
     h01 = -0.1 * np.log(0.1) - 0.9 * np.log(0.9)
     ax.plot([0.1], [h01], "o", color=GREEN, ms=5.5, zorder=5)
     ax.annotate(r"$H(0.1) \approx 0.325$", xy=(0.1, h01),
-                xytext=(0.16, 0.13), color=GREEN, fontsize=10.5,
+                xytext=(0.16, 0.13), color=GREEN, fontsize=13,
                 arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1))
 
     # Deterministic endpoints carry no surprise.
-    ax.plot([0, 1], [0, 0], "o", color=BLUE, ms=5.5, zorder=5, lw=0)
+    ax.plot([0, 1], [0, 0], "o", color=BLUE, ms=5.5, zorder=5, lw=0,
+            clip_on=False)
 
     ax.set_xlabel(r"heads probability $p$")
     ax.set_ylabel(r"$H(p)$ (nats)")
@@ -305,31 +319,31 @@ def fig_code_length_decomposition():
 
     # The entropy floor you can never beat.
     ax.axhline(H, ls="--", color=GRAY, lw=1.1, zorder=2)
-    ax.text(-0.52, H + 0.04, r"entropy floor $H(P)=1.75$", color=GRAY,
-            fontsize=10.5, ha="left", va="bottom")
+    ax.text(-0.52, H + 0.04, "entropy floor\n" r"$H(P)=1.75$", color=INK,
+            fontsize=13, ha="left", va="bottom")
 
     # In-bar labels.
-    ax.text(x0, H / 2, r"$H(P)$", color="white", fontsize=13, ha="center",
+    ax.text(x0, H / 2, r"$H(P)$", color="white", fontsize=15, ha="center",
             va="center", fontweight="bold")
-    ax.text(x1, H / 2, r"$H(P)$", color="white", fontsize=13, ha="center",
+    ax.text(x1, H / 2, r"$H(P)$", color="white", fontsize=15, ha="center",
             va="center", fontweight="bold")
-    ax.text(x1, H + KL / 2, "KL", color="white", fontsize=10.5, ha="center",
+    ax.text(x1, H + KL / 2, "KL", color="white", fontsize=13, ha="center",
             va="center", fontweight="bold")
 
     # Total above the cross-entropy bar.
-    ax.text(x1, CE + 0.06, r"$\mathrm{CE}=2.0$", color=BLUE, fontsize=11,
+    ax.text(x1, CE + 0.06, r"$\mathrm{CE}=2.0$", color=BLUE, fontsize=14,
             ha="center", va="bottom")
 
     # Waste callout, to the right of the KL box, level with its middle.
     ax.annotate("extra bits = waste", xy=(x1 + w / 2, H + KL / 2),
-                xytext=(x1 + 0.62, H + KL / 2), color=ORANGE, fontsize=10.5,
+                xytext=(x1 + 0.52, H + KL / 2), color=ORANGE, fontsize=13,
                 ha="left", va="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1))
 
     ax.set_xticks([x0, x1])
     ax.set_xticklabels(["matched code\n($Q=P$)", "wrong code\n($Q$ uniform)"])
     ax.set_ylabel("expected code length (bits / symbol)")
-    ax.set_xlim(-0.55, 2.55)
+    ax.set_xlim(-0.55, 2.45)
     ax.set_ylim(0, 2.4)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -345,11 +359,11 @@ def fig_kraft_tree():
     fig, ax = plt.subplots(figsize=(5.7, 4.0))
 
     # Explicit node coordinates (x, y); y is depth (0 at the root, downward).
-    # Every left edge and every right edge shares ONE slope (+-1.0 across
-    # a 1.1 level drop -- the angle the c/d edges had), so the tree reads as
+    # Every left edge and every right edge shares ONE slope (+-1.15 across
+    # a 1.25 level drop), so the tree reads as
     # straight rays; the levels are a touch further apart to keep the chips
     # clear of the internal dots.
-    DX, DY = 1.0, 1.1
+    DX, DY = 1.15, 1.25
     root = (3.0, 0.0)
     nA = (root[0] - DX, -DY)            # leaf, code "0",   depth 1
     i1 = (root[0] + DX, -DY)            # internal
@@ -359,15 +373,15 @@ def fig_kraft_tree():
     nD = (i2[0] + DX, -3 * DY)          # leaf, code "111", depth 3
 
     def edge(a, b, label, to_leaf=False):
-        # Leaf-bound edges stop at the leaf chip's top edge (chips are 0.68
+        # Leaf-bound edges stop at the leaf chip's top edge (chips are 0.84
         # tall, centered on the leaf coordinate) rather than at its center, so
         # the gray line never runs into the "sym"/code text inside the chip.
-        b_draw = (b[0], b[1] + 0.34) if to_leaf else b
+        b_draw = (b[0], b[1] + 0.42) if to_leaf else b
         ax.plot([a[0], b_draw[0]], [a[1], b_draw[1]], color=GRAY, lw=1.6,
                 zorder=1)
         mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
-        ax.text(mx + (-0.16 if label == "0" else 0.16), my + 0.04, label,
-                color=GRAY, fontsize=11, ha="center", va="bottom")
+        ax.text(mx + (-0.2 if label == "0" else 0.2), my + 0.07, label,
+                color=INK, fontsize=13, ha="center", va="bottom")
 
     edge(root, nA, "0", to_leaf=True); edge(root, i1, "1")
     edge(i1, nB, "0", to_leaf=True);   edge(i1, i2, "1")
@@ -383,33 +397,34 @@ def fig_kraft_tree():
     leaves = [(nA, "a", "0", "1/2"), (nB, "b", "10", "1/4"),
               (nC, "c", "110", "1/8"), (nD, "d", "111", "1/8")]
     for (x, y), sym, code, prob in leaves:
-        ax.add_patch(plt.Rectangle((x - 0.58, y - 0.34), 1.16, 0.68,
+        ax.add_patch(plt.Rectangle((x - 0.58, y - 0.42), 1.16, 0.84,
                                    facecolor=BLUE, alpha=0.16, edgecolor=BLUE,
                                    lw=1.6, zorder=4, joinstyle="round"))
-        ax.text(x, y + 0.13, sym, color=BLUE, fontsize=13, ha="center",
+        ax.text(x, y + 0.17, sym, color=BLUE, fontsize=14, ha="center",
                 va="center", fontweight="bold", zorder=5)
-        ax.text(x, y - 0.15, code, color=ORANGE, fontsize=10.5, ha="center",
+        ax.text(x, y - 0.19, code, color=ORANGE, fontsize=13, ha="center",
                 va="center", family="monospace", zorder=5)
-        ax.text(x, y - 0.52, rf"$p={prob}$", color=GRAY, fontsize=9.5,
+        ax.text(x, y - 0.50, rf"$p={prob}$", color=INK, fontsize=12,
                 ha="center", va="top")
 
     # Depth (= code length) guide on the left -- an implicit vertical axis,
     # so its labels are black like any coordinate-axis label.
     for d in (1, 2, 3):
-        ax.text(0.85, -d * DY, rf"$\ell={d}$", color="black", fontsize=10.5,
+        ax.text(0.85, -d * DY, rf"$\ell={d}$", color="black", fontsize=13,
                 ha="right", va="center")
-    ax.text(0.85, 0.0, "root", color="black", fontsize=10.5, ha="right",
+    ax.text(0.85, 0.0, "root", color="black", fontsize=13, ha="right",
             va="center")
 
-    # Well below the "p=1/8" leaf labels (which sit at y=-3.52) so the taller,
+    # Well below the "p=1/8" leaf labels (which sit at y=-4.25) so the taller,
     # bumped-up equation font never touches them.
-    ax.text(3.0, -4.55, r"$\sum_i 2^{-\ell_i} = "
+    # (extra space after the display-size sum: mathtext has no \nolimits)
+    ax.text(3.45, -5.12, r"$\sum_i\;\, 2^{-\ell_i} = "
             r"\frac{1}{2}+\frac{1}{4}+\frac{1}{8}+\frac{1}{8} = 1$"
             "   (Kraft, tight)",
-            color=BLUE, fontsize=11.5, ha="center", va="center")
+            color=BLUE, fontsize=13.5, ha="center", va="center")
 
-    ax.set_xlim(-0.2, 6.6)
-    ax.set_ylim(-4.95, 0.6)
+    ax.set_xlim(-0.2, 7.15)
+    ax.set_ylim(-5.55, 0.45)
     ax.axis("off")
     fl.save(fig, "mdl-it-kraft-tree")
 
@@ -421,7 +436,7 @@ def fig_kraft_tree():
 def _metric_label(ax, pos, text, color):
     """A region entry that is a genuine metric: boxed (see the legend note)."""
     ax.text(pos[0], pos[1], text, color=color, ha="center", va="center",
-            fontsize=10.5,
+            fontsize=13,
             bbox=dict(boxstyle="round,pad=0.28", facecolor="white",
                       edgecolor=GRAY, lw=0.9))
 
@@ -442,16 +457,16 @@ def fig_divergence_taxonomy():
 
     # Family names: outer families labelled above, the middle one below.
     fl.vlabel(ax, (c_f[0] - 0.45, r + 0.30), "f-divergences", color=BLUE,
-              fontsize=12)
+              fontsize=14)
     fl.vlabel(ax, (c_ipm[0], -r - 0.32), "integral probability metrics",
-              color=ORANGE, fontsize=12)
+              color=ORANGE, fontsize=14)
     fl.vlabel(ax, (c_ot[0] + 0.45, r + 0.30), "optimal transport",
-              color=GREEN, fontsize=12)
+              color=GREEN, fontsize=14)
 
     # f-divergence-only members (density-ratio family).
     for y, s in zip((0.82, 0.41, 0.0, -0.41),
                     ("KL", "reverse KL", r"$\chi^2$", "JS")):
-        fl.vlabel(ax, (-2.35, y), s, color=BLUE, fontsize=10.5)
+        fl.vlabel(ax, (-2.35, y), s, color=BLUE, fontsize=13)
     _metric_label(ax, (-2.35, -0.88), r"$H^2$", BLUE)
 
     # Intersections: TV (f-div + IPM) and W1 (IPM + OT).
@@ -465,7 +480,7 @@ def fig_divergence_taxonomy():
     # Legend note distinguishing the genuine metrics.
     fl.vlabel(ax, (0.0, -r - 0.78),
               r"boxed = a genuine metric (for $H^2$: its square root $H$)",
-              color=GRAY, fontsize=10.5)
+              color=INK, fontsize=13)
 
     fl.clean_axes(ax, lim=((-3.6, 3.6), (-r - 1.05, r + 0.62)), hide=True)
     fl.save(fig, "mdl-it-divergence-taxonomy")
@@ -493,21 +508,20 @@ def fig_f_div_generators():
 
     # Every generator touches zero at the no-discrepancy ratio u = 1.
     ax.plot([1.0], [0.0], "o", color="black", ms=6, zorder=6)
-    ax.annotate(r"$f(1) = 0$", xy=(1.0, 0.0), xytext=(1.05, -0.47),
-                fontsize=10, ha="center",
+    ax.annotate(r"$f(1) = 0$", xy=(1.0, 0.0), xytext=(1.08, -0.45),
+                fontsize=13, ha="center",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.1))
 
     ax.axhline(0.0, color=LIGHT, lw=0.9, zorder=0)
     ax.set_xlabel(r"density ratio $u = p/q$")
     ax.set_ylabel(r"generator $f(u)$")
     ax.set_xlim(0.05, 3.0)
-    # Extra headroom (curves still crop at u=3 well below the old 2.5 cap) so
-    # the 3-column legend clears the steep KL/Pearson curves at the top right
-    # instead of sitting on top of them.
     ax.set_ylim(-0.6, 2.95)
-    ax.legend(loc="upper center", ncol=3, fontsize=9.5,
-              handlelength=1.4, columnspacing=0.9, frameon=True,
-              facecolor="white", edgecolor="none", framealpha=0.9)
+    # Legend above the axes: inside, every placement sits on a curve (the
+    # steep KL/Pearson branches fill the top right, the rest the bottom).
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3,
+              fontsize=12, handlelength=1.4, columnspacing=1.2,
+              frameon=False)
     fl.save(fig, "mdl-it-f-div-generators")
 
 
@@ -537,14 +551,14 @@ def fig_f_gan_tangent_bound():
     ax.text(2.52, t * 2.52 - u0 - 0.33, r"slope $t$", color=ORANGE,
             fontsize=14, ha="center", va="center", rotation=25)
 
-    # The y-intercept of the highlighted tangent is the negative conjugate.
-    ax.plot([0.0], [-u0], "o", color=ORANGE, ms=6, zorder=6)
-    ax.annotate(r"$-f^*(t) = -e^{\,t-1}$", xy=(0.0, -u0),
-                xytext=(0.62, -2.15), color=ORANGE, fontsize=14,
-                ha="left", va="center",
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
+    # The y-intercept of the highlighted tangent is the negative conjugate:
+    # named like a tick label, left of the y-spine between the -1 and -2
+    # ticks, so no leader has to cross the dashed tangents.
+    ax.plot([0.0], [-u0], "o", color=ORANGE, ms=6, zorder=7, clip_on=False)
+    ax.text(-0.075, -u0, r"$-f^*(t)$", color=ORANGE, fontsize=14,
+            ha="right", va="center", clip_on=False)
 
-    ax.text(0.16, 2.55, "$f$ = sup of its tangents\n(Fenchel–Young)",
+    ax.text(0.16, 2.55, "$f$ = sup of its tangents\n(biconjugation)",
             color=BLUE, fontsize=14, ha="left", va="center")
 
     ax.axhline(0.0, color=LIGHT, lw=0.9, zorder=0)
@@ -552,7 +566,7 @@ def fig_f_gan_tangent_bound():
     ax.set_ylabel(r"$f(u)$")
     ax.set_xlim(0.0, 3.0)
     ax.set_ylim(-2.5, 3.5)
-    ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.78), fontsize=9.5,
+    ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.78), fontsize=12.5,
               frameon=True, facecolor="white", edgecolor="none",
               framealpha=0.9)
     fl.save(fig, "mdl-it-f-gan-tangent-bound")
@@ -583,31 +597,30 @@ def fig_tv_area():
     # negative padding baked into the ylim just to make room for it).
     cross = x[np.nonzero(np.diff(np.sign(p - q)))[0][0]]
     trans = ax.get_xaxis_transform()
-    # Pushed below the "x" axis label's own row (which sits just under the
-    # tick numbers) so the bar and the axis label text never collide.
-    ax.plot([x[0], cross], [-0.24, -0.24], color=BLUE, lw=4.0,
+    # The strip sits in its own row under the tick numbers, labelled at its
+    # right end on the same row; the "x" axis label drops one row below it.
+    ax.plot([x[0], cross], [-0.17, -0.17], color=BLUE, lw=4.0,
             solid_capstyle="butt", transform=trans, clip_on=False)
     ax.plot([cross, cross], [0, max(p[np.searchsorted(x, cross)], 0.0)],
             ls=":", color=GRAY, lw=1.1)
-    ax.text((x[0] + cross) / 2, -0.33, r"$A^\star = \{p > q\}$",
-            color=BLUE, fontsize=11, ha="center", va="top", transform=trans,
+    ax.text(cross + 0.2, -0.17, r"$A^\star = \{p > q\}$",
+            color=BLUE, fontsize=14, ha="left", va="center", transform=trans,
             clip_on=False)
 
-    # Label moved left so its wide bounding box clears both peaks (p tops out
-    # at 0.40, q at 0.50); the arrow dips into the shaded lens near the
-    # crossing along a gentle arc that stays clear of the p curve's peak.
-    ax.annotate(r"$\mathrm{TV}(P, Q) = \frac{1}{2} \times$ shaded area",
-                xy=(-0.35, 0.235), xytext=(-2.65, 0.545),
-                fontsize=10.5, ha="center", va="bottom",
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2,
-                                connectionstyle="arc3,rad=0.2"))
+    # The TV label sits inside the left lobe of the shaded region (between
+    # q's tail and p's shoulder), so it needs no leader.
+    ax.text(-1.12, 0.14, r"$\mathrm{TV}(P, Q) = \frac{1}{2} \times$"
+            "\nshaded area", fontsize=12.5, ha="center", va="center",
+            linespacing=1.15)
 
-    ax.set_xlabel(r"$x$")
+    # centred under the ticks, one row below the A* strip
+    ax.set_xlabel(r"$x$", labelpad=26)
     ax.set_ylabel("density")
     ax.set_xlim(x[0], x[-1])
-    ax.set_ylim(0, 0.58)
-    ax.set_yticks([0, 0.2, 0.4])
-    ax.legend(loc="upper right", fontsize=9.5, frameon=True, facecolor="white",
+    # Headroom above q's peak (0.50) for the legend.
+    ax.set_ylim(0, 0.68)
+    ax.set_yticks([0, 0.2, 0.4, 0.6])
+    ax.legend(loc="upper right", fontsize=12.5, frameon=True, facecolor="white",
               edgecolor="none", framealpha=0.9)
     fl.save(fig, "mdl-it-tv-area")
 
@@ -630,47 +643,60 @@ def _nw_monotone_plan(p, q):
 
 
 def fig_ot_transport_plan():
-    """Left (two stacked panels): the chapter's six-atom example -- mirrored
-    bar charts with the monotone transport plan's arrows, and the two step
+    """Left (two stacked panels): the chapter's six-atom example -- P above,
+    Q hanging below, the monotone transport plan as ribbons, and the two step
     CDFs with the area between them shaded (W1 = 1.7).  Right: point masses at
     separation d -- JS is frozen at log 2 while W1 = d supplies a gradient.
 
     Output id ``mdl-it-ot-transport-plan``."""
-    fig = plt.figure(figsize=(9.6, 4.6))
+    fig = plt.figure(figsize=(9.6, 4.9))
     gs = fig.add_gridspec(2, 2, width_ratios=[1.25, 1.0],
-                          height_ratios=[1.15, 1.0], hspace=0.55, wspace=0.30)
+                          height_ratios=[1.3, 1.0], hspace=0.42, wspace=0.30)
     axp = fig.add_subplot(gs[0, 0])
-    axc = fig.add_subplot(gs[1, 0])
+    axc = fig.add_subplot(gs[1, 0], sharex=axp)
     axr = fig.add_subplot(gs[:, 1])
 
     atoms = np.arange(6.0)
     p_w = np.array([0.30, 0.20, 0.25, 0.10, 0.10, 0.05])
     q_w = np.array([0.05, 0.10, 0.10, 0.25, 0.20, 0.30])
 
-    # --- (a) mirrored bars + the monotone plan's arrows --------------------
-    axp.bar(atoms, p_w, width=0.5, color=BLUE, alpha=0.75, label=r"$P$")
-    axp.bar(atoms, -q_w, width=0.5, color=GREEN, alpha=0.75, label=r"$Q$")
-    # This zero line is the panel's real coordinate axis (bars read as mass
-    # above/below it, since the y-spine itself sits at the ylim floor, not 0).
-    axp.axhline(0.0, color="black", lw=0.9)
+    # --- (a) P on top, Q hanging below, the plan as ribbons between --------
+    # P_i stands on y = +g, Q_j hangs from y = -g; each nonzero gamma_ij is a
+    # straight ribbon from the bottom of P_i to the top of Q_j whose width is
+    # proportional to the mass it moves (stacked in j-order under P_i and in
+    # i-order over Q_j).  The plan is monotone, so no two ribbons cross.
+    g = 0.17
+    k = 0.5 / 0.30                     # x-width per unit mass (widest bar 0.5)
+    axp.bar(atoms, p_w, width=0.5, bottom=g, color=BLUE, alpha=0.75)
+    axp.bar(atoms, -q_w, width=0.5, bottom=-g, color=GREEN, alpha=0.75)
     plan = _nw_monotone_plan(p_w, q_w)
+    out_edge = atoms - k * p_w / 2     # next free slot under each P_i
+    in_edge = atoms - k * q_w / 2      # next free slot over each Q_j
     for i in range(6):
         for j in range(6):
-            if plan[i, j] > 1e-12 and i != j:
-                axp.add_patch(FancyArrowPatch(
-                    (atoms[i], 0.012), (atoms[j], -0.012),
-                    connectionstyle="arc3,rad=-0.25", arrowstyle="->",
-                    mutation_scale=9, color=GRAY, alpha=0.85,
-                    lw=0.8 + 9.0 * plan[i, j], zorder=4))
-    axp.text(2.0, 0.345, r"plan $\gamma$: move mass $\gamma_{ij}$"
-             r" a distance $|x_i - x_j|$", fontsize=10, ha="center", color=GRAY)
-    axp.set_ylim(-0.40, 0.46)
-    axp.set_yticks([-0.3, 0, 0.3])
-    axp.set_yticklabels(["0.3", "0", "0.3"])
-    axp.set_xticks(atoms)
+            m = plan[i, j]
+            if m <= 1e-12:
+                continue
+            x0a, x0b = out_edge[i], out_edge[i] + k * m
+            x1a, x1b = in_edge[j], in_edge[j] + k * m
+            out_edge[i] += k * m
+            in_edge[j] += k * m
+            axp.fill([x0a, x0b, x1b, x1a], [g, g, -g, -g], color=GRAY,
+                     alpha=0.40, lw=0, zorder=2)
+    axp.text(5.62, g + 0.06, "$P$", color=BLUE, fontsize=14, ha="left",
+             va="center")
+    axp.text(5.62, -g - 0.06, "$Q$", color=GREEN, fontsize=14, ha="left",
+             va="center")
+    axp.text(2.75, g + 0.42, r"plan $\gamma$: ribbon width $\propto$ mass"
+             r" $\gamma_{ij}$ moved",
+             fontsize=12.5, ha="center", va="center", color=INK)
+    axp.set_ylim(-g - 0.33, g + 0.48)
+    axp.set_yticks([-g - 0.3, -g, g, g + 0.3])
+    axp.set_yticklabels(["0.3", "0", "0", "0.3"])
     axp.set_ylabel("mass")
-    axp.legend(loc="upper right", fontsize=9.5, frameon=True, facecolor="white",
-               edgecolor="none", framealpha=0.9)
+    axp.tick_params(labelbottom=False)
+    axp.spines["bottom"].set_visible(False)
+    axp.tick_params(axis="x", length=0)
 
     # --- (b) the two step CDFs; area between them = W1 = 1.7 ---------------
     grid = np.concatenate([atoms, [5.6]])
@@ -684,14 +710,15 @@ def fig_ot_transport_plan():
     # 1.0) with a short arrow dropping into the shaded band; being this wide,
     # any in-band placement lands it on a step riser somewhere (several steps
     # coincide with round fractions), so it is pulled out entirely instead.
-    axc.annotate(r"area $= W_1 = 1.7$", xy=(2.5, 0.55), xytext=(2.5, 1.19),
-                 color=ORANGE, fontsize=11, ha="center", va="center",
+    axc.annotate(r"area = $W_1 = 1.7$", xy=(2.5, 0.55), xytext=(2.5, 1.19),
+                 color=ORANGE, fontsize=12.5, ha="center", va="center",
                  arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
     axc.set_xticks(atoms)
+    axc.set_xlim(-0.45, 5.95)
     axc.set_xlabel(r"$x$")
     axc.set_ylabel("CDF")
     axc.set_ylim(0, 1.32)
-    axc.legend(loc="upper left", fontsize=9.5, frameon=True, facecolor="white",
+    axc.legend(loc="upper left", fontsize=12, frameon=True, facecolor="white",
                edgecolor="none", framealpha=0.9)
 
     # --- (c) point masses at separation d: JS is blind, W1 sees ------------
@@ -700,18 +727,18 @@ def fig_ot_transport_plan():
     axr.plot(d, d, color=GREEN, lw=2.2, label=r"$W_1(\delta_0, \delta_d) = d$")
     axr.plot([0.0, 3.0], [ln2, ln2], color=ORANGE, lw=2.2,
              label=r"$\mathrm{JS}(\delta_0, \delta_d)$")
-    axr.plot([0.0], [ln2], "o", color=ORANGE, mfc="white", ms=6, zorder=5)
-    axr.plot([0.0], [0.0], "o", color=ORANGE, ms=6, zorder=5)
+    axr.plot([0.0], [ln2], "o", color=ORANGE, mfc="white", ms=6, zorder=5,
+             clip_on=False)
+    axr.plot([0.0], [0.0], "o", color=ORANGE, ms=6, zorder=5, clip_on=False)
     axr.set_xlabel(r"separation $d$")
     axr.set_ylabel("divergence (nats)")
     axr.set_xlim(0, 3.0)
     axr.set_ylim(0, 3.1)
 
-    # Line-broken at "no gradient" and left-anchored close to the y-axis, well
-    # left of where the diagonal reaches this height (d = ln2 ~ 0.69), so the
-    # green line never runs through the text.
-    axr.text(-0.05, 1.30, "frozen at $\\log 2$:\nno gradient",
-             color=ORANGE, fontsize=10.5, ha="left", va="top")
+    # Below the JS line and right of the diagonal (which is at d = 0.5 when
+    # this low), the one open wedge wide enough for the two-line label.
+    axr.text(1.05, 0.58, "frozen at $\\log 2$:\nno gradient",
+             color=ORANGE, fontsize=12.5, ha="left", va="top")
     # Rotate to match the diagonal's actual on-screen angle (data slope is 1,
     # but the axes' pixel aspect is not 1:1, so the apparent angle differs
     # from 45 degrees) -- computed from the axes' own data-to-display
@@ -719,9 +746,9 @@ def fig_ot_transport_plan():
     p0 = axr.transData.transform((0.5, 0.5))
     p1 = axr.transData.transform((1.5, 1.5))
     line_angle = np.degrees(np.arctan2(p1[1] - p0[1], p1[0] - p0[0]))
-    axr.text(1.5, 2.4, r"gradient $\pm 1$", color=GREEN, fontsize=10.5,
+    axr.text(2.15, 1.6, r"gradient $\pm 1$", color=GREEN, fontsize=12.5,
              ha="center", va="center", rotation=line_angle)
-    axr.legend(loc="upper left", fontsize=9.5, frameon=True, facecolor="white",
+    axr.legend(loc="upper left", fontsize=12, frameon=True, facecolor="white",
                edgecolor="none", framealpha=0.9)
     fl.save(fig, "mdl-it-ot-transport-plan")
 
@@ -760,16 +787,21 @@ def fig_score_field():
     r = pk / pk.sum(axis=0)
     U = (r * (mus[:, 0, None, None] - Xc)).sum(axis=0)
     V = (r * (mus[:, 1, None, None] - Yc)).sum(axis=0)
-    ax.quiver(Xc, Yc, U, V, color=ORANGE, angles="xy", scale_units="xy",
-              scale=3.4, width=0.0042, zorder=4)
+    # No arrows under the two mean labels (each sits up-and-out from its
+    # mean), so the opaque label boxes never cut an arrow.
+    keep = np.ones(Xc.shape, bool)
+    for mk, dx in zip(mus, (-0.36, 0.36)):
+        keep &= np.hypot(Xc - (mk[0] + dx), Yc - (mk[1] + 0.32)) > 0.55
+    ax.quiver(Xc[keep], Yc[keep], U[keep], V[keep], color=ORANGE, angles="xy",
+              scale_units="xy", scale=3.4, width=0.0042, zorder=4)
 
     # The two means, the attractors of the field.
     for mk, lab, dx in zip(mus, (r"$\mu_1$", r"$\mu_2$"), (-0.36, 0.36)):
         ax.plot(*mk, "o", color="black", mec="white", mew=1.2, ms=7, zorder=6)
-        ax.text(mk[0] + dx, mk[1] + 0.28, lab, fontsize=11, ha="center",
+        ax.text(mk[0] + dx, mk[1] + 0.32, lab, fontsize=14, ha="center",
                 zorder=6, bbox=dict(boxstyle="round,pad=0.15",
                                     facecolor="white", edgecolor="none",
-                                    alpha=0.75))
+                                    alpha=1.0))   # opaque: no arrow ghosts
 
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
@@ -798,11 +830,12 @@ def fig_infonce_pos_neg():
     # --- (a) embedding sketch: anchor, positive, negatives, critic rays ----
     anchor = np.array([-2.1, 0.0])
     pos = np.array([0.7, 0.55])
-    neg = np.column_stack([rng.uniform(0.0, 2.4, N - 1),
-                           rng.uniform(-1.55, 1.55, N - 1)])
-    # Keep the negatives clear of the positive for a readable sketch.
-    neg += 0.34 * (neg - pos) / np.maximum(
-        np.linalg.norm(neg - pos, axis=1, keepdims=True), 1e-9)
+    # Negatives placed by hand (angle, distance from the anchor): their score
+    # rays fan out at least 7 degrees apart, so no ray passes through another
+    # point (the positive included) and no two dots touch.
+    ang = np.radians([26, 19, 3, -7, -15, -23, -31])
+    rad = np.array([3.3, 4.5, 4.0, 2.5, 4.4, 3.5, 3.0])
+    neg = anchor + np.column_stack([rad * np.cos(ang), rad * np.sin(ang)])
 
     for yj in neg:
         axl.plot([anchor[0], yj[0]], [anchor[1], yj[1]], color=LIGHT, lw=1.0,
@@ -817,17 +850,19 @@ def fig_infonce_pos_neg():
     axl.plot(neg[:, 0], neg[:, 1], "o", color=GRAY, ms=7, zorder=4)
 
     axl.text(anchor[0], anchor[1] - 0.34, r"anchor $x$", color=BLUE,
-             fontsize=11, ha="center", va="top")
-    axl.text(pos[0] + 0.10, pos[1] + 0.30, r"positive $y^+ \sim p(y \mid x)$",
-             color=ORANGE, fontsize=10.5, ha="center", va="bottom")
-    axl.text(1.55, -1.62, r"negatives $y_2, \ldots, y_N \sim p(y)$",
-             color=GRAY, fontsize=10.5, ha="center", va="top")
+             fontsize=13, ha="center", va="top")
+    # Above the whole fan of rays (and left of the top negative), so no ray
+    # or dot runs through the label.
+    axl.text(-0.8, 1.55, r"positive $y^+ \sim p(y \mid x)$",
+             color=ORANGE, fontsize=13, ha="center", va="bottom")
+    axl.text(1.2, -1.85, r"negatives $y_2, \ldots, y_N \sim p(y)$",
+             color=INK, fontsize=13, ha="center", va="top")
     # Label a generic critic ray on one of the negatives.
     low = neg[np.argmin(neg[:, 1])]            # the bottom-most negative
-    mid = 0.42 * anchor + 0.58 * low
-    axl.text(mid[0] - 0.12, mid[1] - 0.26, r"scores $f(x, y_j)$", color=GRAY,
-             fontsize=10.5, ha="center", va="top")
-    fl.clean_axes(axl, lim=((-3.0, 3.0), (-2.3, 2.1)), hide=True)
+    mid = 0.35 * anchor + 0.65 * low
+    axl.text(mid[0] - 0.55, mid[1] - 0.30, r"scores $f(x, y_j)$", color=INK,
+             fontsize=13, ha="center", va="top")
+    fl.clean_axes(axl, lim=((-3.0, 3.0), (-2.4, 2.1)), hide=True)
 
     # --- (b) softmax over the N critic scores ------------------------------
     scores = rng.normal(0.0, 1.0, N)
@@ -838,13 +873,13 @@ def fig_infonce_pos_neg():
     axr.bar(np.arange(N), soft, color=colors, alpha=0.85)
     axr.set_xticks(np.arange(N))
     axr.set_xticklabels([r"$y^+$"] + [rf"$y_{j}$" for j in range(2, N + 1)],
-                        fontsize=9)
+                        fontsize=14)
     axr.set_ylabel("softmax probability")
     axr.set_ylim(0, 1.0)
     axr.text(N / 2 - 0.5, 0.92,
              r"$I(X;Y) \geq \log N - \mathcal{L}_{\mathrm{NCE}}"
              r" \;(\leq \log N)$",
-             fontsize=11, ha="center", va="center")
+             fontsize=14, ha="center", va="center")
     fl.save(fig, "mdl-it-infonce-pos-neg")
 
 
@@ -876,20 +911,25 @@ def fig_ib_tradeoff():
     band = 1.02 - ys_v
     cx_inf = np.trapezoid(xs_v * band, xs_v) / np.trapezoid(band, xs_v)
     cy_inf = np.trapezoid((ys_v + 1.02) / 2 * band, xs_v) / np.trapezoid(band, xs_v)
-    ax.text(cx_inf, cy_inf, "infeasible", color=GRAY, fontsize=13, ha="center")
+    ax.text(cx_inf, cy_inf, "infeasible", color=INK, fontsize=13, ha="center")
 
-    ax.plot(I_xz, I_yz, color=BLUE, lw=2.4, label="IB frontier", zorder=4)
+    ax.plot(I_xz, I_yz, color=BLUE, lw=2.4, zorder=4)
+    # Name the curve in place (below its flat tail) instead of a one-entry
+    # legend floating in the empty lower right.
+    ax.text(2.95, 0.70, "IB frontier", color=BLUE, fontsize=13, ha="right",
+            va="top")
     ax.axhline(I_xy, color=GRAY, lw=1.2, ls="--", zorder=3)
     # Centered on the ceiling line, which spans the full panel width.
     ax.text(1.5, I_xy + 0.022,
             r"DPI ceiling $I(X;Y) = -\frac{1}{2}\log(1-\rho^2) \approx 0.830$",
-            color=GRAY, fontsize=12, ha="center", va="bottom")
+            color=INK, fontsize=12.5, ha="center", va="bottom")
 
     # Operating points selected by the multiplier (same grid rule as the
     # notebook cell): argmin of the Lagrangian I(X;Z) - beta I(Y;Z).
     for beta in (1.0, 1.5, 2.0, 4.0, 16.0):
         i = np.argmin(I_xz - beta * I_yz)
-        ax.plot(I_xz[i], I_yz[i], "o", color=ORANGE, ms=6.5, zorder=6)
+        ax.plot(I_xz[i], I_yz[i], "o", color=ORANGE, ms=6.5, zorder=6,
+                clip_on=False)
         if I_xz[i] > 1e-3:
             # beta = 16 sits on the near-flat tail of the frontier, right
             # under the DPI ceiling -- the usual small lower-right offset
@@ -909,56 +949,56 @@ def fig_ib_tradeoff():
     ax.set_ylabel(r"$I(Y;Z)$ (nats)")
     ax.set_xlim(0, 3.0)
     ax.set_ylim(0, 1.02)
-    ax.legend(loc="center right", fontsize=9.5, frameon=True, facecolor="white",
-              edgecolor="none", framealpha=0.9)
     fl.save(fig, "mdl-it-ib-tradeoff")
 
 
 def fig_capacity_rd():
     """Shannon's two operational curves, drawn to be read.  Left: the Gaussian
-    rate--distortion function R(D) = (1/2) log2(sigma^2/D) — the price list for
+    rate--distortion function R(D) = (1/2) log(sigma^2/D) in nats — the price list for
     lossy compression: reconstruction quality is bought with bits, the cost
     explodes as D -> 0, and beyond the source variance silence is free.
     Right: binary-symmetric-channel capacity C = 1 - h2(eps) — what survives
     noise: a clean channel carries one bit, a coin-flip channel carries none,
     and a reliable *flipper* (eps = 1) is again perfect."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.8))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.8),
+                                   gridspec_kw=dict(wspace=0.32))
 
-    # --- left: Gaussian rate-distortion, sigma^2 = 1 ---
+    # --- left: Gaussian rate-distortion, sigma^2 = 1, in NATS (the units
+    # of :eqref:`eq_mdl-gaussian-rd` as the text states it) ---
     D = np.linspace(0.02, 1.45, 600)
-    R = np.where(D < 1.0, 0.5 * np.log2(np.maximum(1.0 / D, 1.0)), 0.0)
+    R = np.where(D < 1.0, 0.5 * np.log(np.maximum(1.0 / D, 1.0)), 0.0)
+    ytop = 2.1
     axa.plot(D, R, color=BLUE, lw=2.6, zorder=4)
     axa.axvline(1.0, color=GRAY, lw=1.0, ls="--", zorder=2)
-    axa.fill_between(D, 0, 2.9, where=D >= 1.0, color=LIGHT, alpha=0.5, lw=0)
-    axa.text(0.10, 2.28, "exact recovery\nis infinitely\nexpensive",
-             color=BLUE, fontsize=10.5, ha="left", va="top")
-    axa.text(1.22, 1.45, "distortion $\\geq\\sigma^2$:\nsend nothing",
-             color=GRAY, fontsize=10.5, ha="center", va="center")
+    axa.fill_between(D, 0, ytop, where=D >= 1.0, color=LIGHT, alpha=0.5, lw=0)
+    axa.text(0.12, 1.71, "exact recovery\nis infinitely\nexpensive",
+             color=BLUE, fontsize=13, ha="left", va="top")
+    axa.text(1.225, 1.05, "$D\\geq\\sigma^2$:\nsend\nnothing",
+             color=INK, fontsize=13, ha="center", va="center")
     axa.set_xlabel(r"allowed distortion $D$  (squared error, $\sigma^2=1$)")
-    axa.set_ylabel(r"rate $R(D)$  (bits/sample)")
+    axa.set_ylabel(r"rate $R(D)$  (nats/sample)")
     axa.set_xlim(0.0, 1.45)
-    axa.set_ylim(0.0, 2.9)
-    axa.set_title("Gaussian rate–distortion", fontsize=12)
+    axa.set_ylim(0.0, ytop)
 
     # --- right: BSC capacity ---
     eps = np.linspace(1e-4, 1 - 1e-4, 600)
     h2 = -(eps * np.log2(eps) + (1 - eps) * np.log2(1 - eps))
     C = 1 - h2
     axb.plot(eps, C, color=ORANGE, lw=2.6, zorder=4)
-    axb.plot([0.5], [0.0], "o", color=ORANGE, ms=6, zorder=5)
+    axb.plot([0.5], [0.0], "o", color=ORANGE, ms=6, zorder=5, clip_on=False)
     axb.annotate("output independent\nof input: $C=0$",
-                 xy=(0.5, 0.0), xytext=(0.5, 0.42), fontsize=10.5,
-                 color="black", ha="center", va="bottom",
-                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
-    axb.text(0.035, 0.90, "clean channel:\none full bit", color="black",
-             fontsize=10.5, ha="left", va="top")
-    axb.text(0.965, 0.90, "reliable flipper:\nalso perfect", color="black",
-             fontsize=10.5, ha="right", va="top")
+                 xy=(0.5, 0.0), xytext=(0.5, 0.42), fontsize=13,
+                 color=INK, ha="center", va="bottom",
+                 arrowprops=dict(arrowstyle="->", color=INK, lw=1.2))
+    # Endpoint labels sit inside the bowl, clear of the steep curve walls.
+    axb.text(0.13, 0.97, "clean channel:\none full bit", color=INK,
+             fontsize=13, ha="left", va="top")
+    axb.text(0.87, 0.97, "reliable flipper:\nalso perfect", color=INK,
+             fontsize=13, ha="right", va="top")
     axb.set_xlabel(r"flip probability $\varepsilon$")
     axb.set_ylabel(r"capacity $C=1-h_2(\varepsilon)$  (bits/use)")
     axb.set_xlim(0, 1)
     axb.set_ylim(0, 1.06)
-    axb.set_title("Binary symmetric channel", fontsize=12)
 
     for ax in (axa, axb):
         ax.spines["top"].set_visible(False)

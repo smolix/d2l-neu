@@ -81,7 +81,7 @@ def fig_soft_lookup() -> None:
     o = w @ V
 
     fig, (axp, axg) = plt.subplots(
-        1, 2, figsize=(12.2, 4.3),
+        1, 2, figsize=(11.4, 4.3),
         gridspec_kw={"width_ratios": [1.95, 1.0]})
 
     # ---------------------------------------------------------------- (a) --- #
@@ -90,8 +90,12 @@ def fig_soft_lookup() -> None:
     axp.axis("off")
     ys = [3.35, 2.05, 0.75]
     xq, xk = 0.85, 2.65
-    xbar0, ulen = 4.15, 1.8                              # unit-bar origin/length
-    xval, xo = 7.7, 9.95
+    xbar0, ulen = 4.4, 1.6                               # unit-bar origin/length
+    xval, xo = 7.2, 9.45
+    # each value arrow lands on its own point of the o box's left edge
+    # (25 / 50 / 75 % of the box height), top value -> top point
+    o_h = 0.9
+    land = [ys[1] + 0.25 * o_h, ys[1], ys[1] - 0.25 * o_h]
 
     # query feeds every key
     _box(axp, xq, ys[1], 1.0, 0.82, r"$\mathbf{q}$", GRAY, fontsize=15)
@@ -102,8 +106,8 @@ def fig_soft_lookup() -> None:
         fl.arrow(axp, (xq + 0.5, ys[1]), (xk - 0.52, yi), color=GRAY, lw=1.6,
                  mut=12)
         # score s_i above the key->weights arrow
-        axp.text((xk + xbar0) / 2 + 0.05, yi + 0.32, rf"$s={s:.1f}$",
-                 ha="center", va="bottom", fontsize=12, color="black")
+        axp.text((xk + 0.52 + xbar0) / 2, yi + 0.07, rf"$s={s:.1f}$",
+                 ha="center", va="bottom", fontsize=12.5, color="black")
         fl.arrow(axp, (xk + 0.52, yi), (xbar0 - 0.06, yi), color=GRAY, lw=1.6,
                  mut=12)
         # unit reference box + weight bar as a fraction of it; alpha ABOVE it
@@ -122,7 +126,7 @@ def fig_soft_lookup() -> None:
         _box(axp, xval, yi, 0.98, 0.74, rf"$\mathbf{{v}}_{{{k}}}$", ci,
              fontsize=14)
         # value contributes to the output, weighted (arrow thickness == alpha)
-        fl.arrow(axp, (xval + 0.5, yi), (xo - 0.82, ys[1]), color=ci,
+        fl.arrow(axp, (xval + 0.5, yi), (xo - 0.97, land[k - 1]), color=ci,
                  lw=1.2 + 5.0 * ww, mut=13)
 
     # column headers / the softmax gate label
@@ -136,11 +140,11 @@ def fig_soft_lookup() -> None:
              ha="center", va="center", fontsize=12.5, color="black")
 
     # output box
-    _box(axp, xo, ys[1], 1.55, 1.06,
-         r"$\mathbf{o}$" "\n" r"$=\sum_i \alpha_i \mathbf{v}_i$", "black",
-         fontsize=13, fc_alpha=0.06)
+    _box(axp, xo, ys[1], 1.85, o_h,
+         r"$\mathbf{o}=\Sigma_i\,\alpha_i \mathbf{v}_i$", "black",
+         fontsize=13.5, fc_alpha=0.06)
 
-    axp.set_xlim(0.1, 11.0)
+    axp.set_xlim(0.1, 10.5)
     axp.set_ylim(-0.4, 4.4)
 
     # ---------------------------------------------------------------- (b) --- #
@@ -148,28 +152,28 @@ def fig_soft_lookup() -> None:
     axg.set_aspect("equal")
     tri = np.vstack([V, V[0]])
     axg.plot(tri[:, 0], tri[:, 1], color=LIGHT, lw=1.4, zorder=1)
-    lab_off = [(-0.05, 0.28), (-0.26, -0.18), (0.26, 0.04)]
-    for vi, ci, off, k in zip(V, cols, lab_off, range(3)):
+    # vertex label = value name + its weight (the spokes stay unlabelled, so
+    # no number sits on a triangle edge or a spoke)
+    lab_pos = [((-0.18, 0.0), "right", "center"),
+               ((-0.18, -0.02), "right", "center"),
+               ((0.0, -0.22), "center", "top")]
+    for vi, ci, (off, ha, va), k in zip(V, cols, lab_pos, range(3)):
         axg.plot([o[0], vi[0]], [o[1], vi[1]], ls="--", color=ci, lw=1.3,
                  alpha=0.8, zorder=2)
         axg.plot(*vi, "o", color=ci, ms=11, zorder=4)
         axg.text(vi[0] + off[0], vi[1] + off[1],
-                 rf"$\mathbf{{v}}_{{{k + 1}}}$", color=ci, fontsize=14,
-                 ha="center", va="center")
-        # weight label near each spoke, nudged toward the value
-        m = o + 0.58 * (vi - o)
-        axg.text(m[0], m[1], rf"${wd[k]:.2f}$", color=ci, fontsize=11.5,
-                 ha="center", va="center",
-                 bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none",
-                           alpha=0.9))
+                 rf"$\mathbf{{v}}_{{{k + 1}}}\ ({wd[k]:.2f})$", color=ci,
+                 fontsize=14, ha=ha, va=va)
     axg.plot(*o, "*", color="black", ms=15, zorder=5)
-    axg.text(o[0] + 0.16, o[1] - 0.26, r"$\mathbf{o}$", color="black",
-             fontsize=14, ha="left", va="top")
-    axg.text(2.55, 2.72, "a convex combination:\n"
-             r"$\mathbf{o}$ lies inside" "\nthe values",
-             ha="center", va="center", fontsize=11.5, color="black")
-    axg.set_xlim(-0.2, 4.0)
-    axg.set_ylim(0.15, 3.15)
+    # "o" right beside its star, in the empty wedge between the v1 and v3
+    # spokes (upper right), clear of all three dashed lines
+    axg.text(o[0] + 0.09, o[1] - 0.09, r"$\mathbf{o}$", color="black",
+             fontsize=15, ha="left", va="top")
+    axg.text(1.75, 3.05, "a convex combination:\n"
+             r"$\mathbf{o}$ lies inside the triangle of values",
+             ha="center", va="bottom", fontsize=13, color="black")
+    axg.set_xlim(-0.6, 4.0)
+    axg.set_ylim(0.1, 3.85)
     axg.axis("off")
 
     fig.subplots_adjust(wspace=0.05)
@@ -200,32 +204,36 @@ def fig_multi_head() -> None:
     qkv = [("Q", BLUE), ("K", BLUE), ("V", BLUE)]
     x_qkv = [x_ell - 0.95, x_ell, x_ell + 0.95]
     bus_y = [y_bus + 0.18, y_bus, y_bus - 0.18]
+    x_off = {"Q": -0.62, "K": 0.0, "V": 0.62}   # tap offset within a head
     for (lab, c), xin, by in zip(qkv, x_qkv, bus_y):
         _box(ax, xin, y_in, 0.8, 0.6, rf"$\mathbf{{{lab}}}$", c, fontsize=13)
         # plain riser joining this stream's bus at a dot (arrowheads are
         # reserved for wires entering boxes)
         ax.plot([xin, xin], [y_in + 0.3, by], color=GRAY, lw=1.5, zorder=1)
         _dot(ax, xin, by, r=0.05)
-        # bus spanning both heads at this stream's height
-        ax.plot([hx[0] - 0.62, hx[1] + 0.62], [by, by], color=GRAY, lw=1.4,
+        # bus at this stream's height, running only from its own head-1 tap
+        # to its own head-2 tap (no stubs, no T-joins onto other taps)
+        off = x_off[lab]
+        ax.plot([hx[0] + off, hx[1] + off], [by, by], color=GRAY, lw=1.4,
                 zorder=1)
 
     # --- two heads: project -> attention ------------------------------------ #
-    for h, cx in enumerate(hx, start=1):
+    # the second column stands for head h (the ellipsis hides heads 2..h-1)
+    for h, cx in zip(("1", "h"), hx):
         # taps from the three buses up into the projection box
         for xin, by in zip([cx - 0.62, cx, cx + 0.62], bus_y):
             _dot(ax, xin, by, r=0.05)
             fl.arrow(ax, (xin, by), (xin, y_proj - 0.33), color=GRAY, lw=1.4,
                      mut=10)
-        _box(ax, cx, y_proj, 2.5, 0.66,
-             rf"project  $\mathbf{{W}}_{{{h}}}^{{Q}},"
-             rf"\mathbf{{W}}_{{{h}}}^{{K}},\mathbf{{W}}_{{{h}}}^{{V}}$",
+        _box(ax, cx, y_proj, 3.0, 0.66,
+             rf"project  $\mathbf{{W}}_{{{h}}}^{{(q)}},"
+             rf"\mathbf{{W}}_{{{h}}}^{{(k)}},\mathbf{{W}}_{{{h}}}^{{(v)}}$",
              BLUE, fontsize=11.5)
         fl.arrow(ax, (cx, y_proj + 0.33), (cx, y_attn - 0.39), color=GRAY,
                  lw=1.7, mut=12)
-        _box(ax, cx, y_attn, 2.5, 0.78,
+        _box(ax, cx, y_attn, 3.0, 0.78,
              "scaled dot-product\nattention", ORANGE, fontsize=11.5)
-        ax.text(cx - 1.18, (y_proj + 0.33 + y_attn - 0.39) / 2, rf"head {h}",
+        ax.text(cx - 1.43, (y_proj + 0.33 + y_attn - 0.39) / 2, rf"head ${h}$",
                 ha="left", va="center", fontsize=12, color="black")
         # attention -> concat
         fl.arrow(ax, (cx, y_attn + 0.39), (cx, y_cat - 0.32), color=GRAY,
@@ -239,11 +247,11 @@ def fig_multi_head() -> None:
             ha="center", va="center", fontsize=12.5, color="black")
 
     # --- concat -> output projection -> output ------------------------------ #
-    _box(ax, x_ell, y_cat, 6.0, 0.64, "concatenate head outputs", GRAY,
+    _box(ax, x_ell, y_cat, 7.1, 0.64, "concatenate head outputs", GRAY,
          fontsize=13)
     fl.arrow(ax, (x_ell, y_cat + 0.32), (x_ell, y_op - 0.33), color=GRAY,
              lw=1.9, mut=13)
-    _box(ax, x_ell, y_op, 3.4, 0.66, r"output projection  $\mathbf{W}^{O}$",
+    _box(ax, x_ell, y_op, 3.4, 0.66, r"output projection  $\mathbf{W}_o$",
          BLUE, fontsize=12.5)
     fl.arrow(ax, (x_ell, y_op + 0.33), (x_ell, y_top - 0.3), color=GRAY,
              lw=1.9, mut=13)
@@ -259,27 +267,34 @@ def fig_multi_head() -> None:
 #    (redesign of cnn-rnn-self-attention.svg)                                 #
 # =========================================================================== #
 
+R_NODE = 0.28                  # node radius
+
+
 def _seq_nodes(ax, n=5):
     """Draw the shared row of n inputs (white) and n outputs (light blue)."""
     xin = np.arange(n)
     y_in, y_out = 0.0, 2.0
     for x in xin:
-        ax.add_patch(Circle((x, y_out), 0.24, facecolor=fl.T.BLUE.tint,
+        ax.add_patch(Circle((x, y_out), R_NODE, facecolor=fl.T.BLUE.tint,
                             edgecolor="black", lw=1.1, zorder=4))
-        ax.add_patch(Circle((x, y_in), 0.24, facecolor="white",
+        ax.add_patch(Circle((x, y_in), R_NODE, facecolor="white",
                             edgecolor="black", lw=1.1, zorder=4))
         ax.text(x, y_in, rf"$x_{{{x + 1}}}$", ha="center", va="center",
-                fontsize=11, zorder=5)
+                fontsize=13.5, zorder=5)
     return xin, y_in, y_out
 
 
 def _edge(ax, x0, y0, x1, y1, color=LIGHT, lw=1.0, highlight=False):
-    if highlight:
-        fl.arrow(ax, (x0, y0 + 0.24), (x1, y1 - 0.24), color=color, lw=lw,
-                 mut=11)
-    else:
-        ax.plot([x0, x1], [y0 + 0.24, y1 - 0.24], color=color, lw=lw,
-                zorder=1)
+    """Edge between two node centres, clipped radially to both circles.
+    No arrowheads: flow is always input (bottom) -> output (top), and up to
+    five heads converging on one small node only collide; the blue colour
+    marks the highlighted edges instead."""
+    d = np.array([x1 - x0, y1 - y0], float)
+    d /= np.linalg.norm(d)
+    a = (x0 + R_NODE * d[0], y0 + R_NODE * d[1])
+    b = (x1 - R_NODE * d[0], y1 - R_NODE * d[1])
+    ax.plot([a[0], b[0]], [a[1], b[1]], color=color, lw=lw,
+            zorder=2 if highlight else 1, solid_capstyle="butt")
 
 
 def fig_cnn_rnn_self_attention() -> None:
@@ -299,13 +314,18 @@ def fig_cnn_rnn_self_attention() -> None:
     ax.set_title("CNN: local window", fontsize=13.5, color="black")
 
     # ---- RNN: a left-to-right recurrent chain ------------------------------ #
+    # highlighted: everything that reaches output 3 -- inputs 1..3, each
+    # entering its own step, carried forward one step at a time
     ax = axes[1]
     xin, y_in, y_out = _seq_nodes(ax, n)
     for j in xin:                                   # input -> its own step
-        _edge(ax, j, y_in, j, y_out, color=GRAY, lw=1.3)
+        hl = (j <= focus)
+        _edge(ax, j, y_in, j, y_out, color=BLUE if hl else LIGHT,
+              lw=1.8 if hl else 1.0, highlight=hl)
     for j in xin[:-1]:                              # recurrent edge along top
-        fl.arrow(ax, (j + 0.24, y_out), (j + 1 - 0.24, y_out), color=BLUE,
-                 lw=1.8, mut=11)
+        hl = (j < focus)
+        fl.arrow(ax, (j + R_NODE, y_out), (j + 1 - R_NODE, y_out),
+                 color=BLUE if hl else LIGHT, lw=1.8 if hl else 1.2, mut=11)
     ax.set_title("RNN: sequential chain", fontsize=13.5, color="black")
 
     # ---- self-attention: all-to-all ---------------------------------------- #
@@ -320,7 +340,7 @@ def fig_cnn_rnn_self_attention() -> None:
 
     for ax in axes:
         ax.set_xlim(-0.7, n - 0.3)
-        ax.set_ylim(-0.7, 2.7)
+        ax.set_ylim(-0.45, 2.6)
         ax.set_aspect("equal")
         ax.axis("off")
     fig.subplots_adjust(wspace=0.08)

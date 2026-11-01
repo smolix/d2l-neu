@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="326.88pt" height="259.898pt" viewBox="0 0 326.88 259.898" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="326.898525pt" height="259.898pt" viewBox="0 0 326.898525 259.898" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 259.898 
-L 326.88 259.898 
-L 326.88 0 
+L 326.898525 259.898 
+L 326.898525 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -50,7 +50,7 @@ L 0 3
      </g>
      <g id="text_1">
       <!-- $x$ -->
-      <g style="fill: #565d66" transform="translate(136.618197 248.46) scale(0.13 -0.13)">
+      <g style="fill: #15181c" transform="translate(136.618197 248.46) scale(0.13 -0.13)">
        <defs>
         <path id="Cmmi10-3f" d="M 500 184 
 Q 613 97 819 97 
@@ -122,21 +122,21 @@ z
    </g>
    <g id="matplotlib.axis_2"/>
    <g id="line2d_2">
-    <path d="M 36.365245 260.898 
-L 255.472863 -1 
-L 255.472863 -1 
+    <path d="M 12.18136 260.898 
+L 282.228442 -1 
+L 282.228442 -1 
 " clip-path="url(#p9e7a648054)" style="fill: none; stroke: #565d66; stroke-opacity: 0.35; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
-    <path d="M 7.2 240.02336 
-L 314.557377 1.26176 
-L 314.557377 1.26176 
+    <path d="M 7.2 232.41576 
+L 314.557377 11.21016 
+L 314.557377 11.21016 
 " clip-path="url(#p9e7a648054)" style="fill: none; stroke: #565d66; stroke-opacity: 0.5; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
-    <path d="M 7.2 212.47584 
-L 314.557377 37.28544 
-L 314.557377 37.28544 
+    <path d="M 7.2 209.57294 
+L 314.557377 41.08154 
+L 314.557377 41.08154 
 " clip-path="url(#p9e7a648054)" style="fill: none; stroke: #565d66; stroke-opacity: 0.65; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
@@ -196,7 +196,7 @@ L 268.176053 -1
    </g>
    <g id="text_2">
     <!-- slope $f'(x)$ -->
-    <g style="fill: #ff7f0e" transform="translate(258.208525 127.616) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(258.208525 128.616) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-2e" d="M 1338 -77 
 Q 998 -77 697 41 
@@ -457,7 +457,7 @@ z
    </g>
    <g id="text_3">
     <!-- $(x,\,f(x))$ -->
-    <g style="fill: #15181c" transform="translate(171.123934 168.272) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(148.584393 158.184) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-2c" d="M 634 -1153 
 Q 634 -1125 659 -1100 
@@ -503,16 +503,18 @@ C -1.03916 1.789267 -0.530406 2 0 2
 z
 " style="stroke: #565d66"/>
     </defs>
-    <g clip-path="url(#p9e7a648054)"/>
+    <g clip-path="url(#p9e7a648054)">
+     <use xlink:href="#m845ccdebd9" x="253.085902" y="27.26312" style="fill: #565d66; stroke: #565d66"/>
+    </g>
    </g>
    <g id="line2d_7">
     <g clip-path="url(#p9e7a648054)">
-     <use xlink:href="#m845ccdebd9" x="222.350164" y="72.89024" style="fill: #565d66; stroke: #565d66"/>
+     <use xlink:href="#m845ccdebd9" x="212.104918" y="84.94536" style="fill: #565d66; stroke: #565d66"/>
     </g>
    </g>
    <g id="line2d_8">
     <g clip-path="url(#p9e7a648054)">
-     <use xlink:href="#m845ccdebd9" x="181.36918" y="113.20128" style="fill: #565d66; stroke: #565d66"/>
+     <use xlink:href="#m845ccdebd9" x="176.246557" y="116.90267" style="fill: #565d66; stroke: #565d66"/>
     </g>
    </g>
    <g id="line2d_9">

@@ -12,7 +12,7 @@ The sections progress from settings with the most information to settings with t
 
 :numref:`chap_deep_rl` continues with bootstrapped critics, controlled reuse of on-policy data, replay buffers, regularized objectives, and offline learning. :numref:`fig_rl_roadmap` organizes the methods in both chapters by what they learn and which data they use.
 
-![Reinforcement-learning methods organized by what they estimate and which data they use. Solid boxes denote methods introduced in this chapter; dashed boxes and gray labels denote methods from :numref:`chap_deep_rl`. Behavior cloning trains on a fixed expert dataset, whereas DAgger trains on learner-generated states relabeled by an expert. Value iteration consumes a known transition kernel rather than sampled transitions. The arrow from policy gradients to PPO denotes limited reuse of recent trajectories through importance ratios.](../img/mdl-rl-roadmap.svg)
+![Reinforcement-learning methods organized by what they estimate and which data they use. Solid boxes denote methods introduced in this chapter; dashed boxes and gray labels denote methods from :numref:`chap_deep_rl`. Behavior cloning trains on a fixed expert dataset, whereas DAgger trains on learner-generated states relabeled by an expert. Value iteration consumes a known transition kernel rather than sampled transitions. The half-length arrow from the on-policy policy-gradient box toward the off-policy column denotes the limited reuse of recent trajectories through importance ratios that PPO performs.](../img/mdl-rl-roadmap.svg)
 :label:`fig_rl_roadmap`
 
 :numref:`tab_rl_map` provides a more detailed guide to the algorithms in both chapters. It records what each method estimates, which data it can use, and where it is introduced.

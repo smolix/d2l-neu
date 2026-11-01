@@ -3,32 +3,33 @@
 (``chapter_recurrent-modern``) in the one shared house style defined in
 ``gen_mdl_figures.py``.
 
-Fifteen figures, by section:
+Ten figures, by section:
 
   * "Gated Recurrent Networks" (sec_lstm) -- the LSTM memory cell and the GRU
-    cell (house-style redraws of the old ``img/lstm-*.svg``/``gru-*.svg``),
-    plus a two-layer deep RNN and a bidirectional RNN (currently
-    unreferenced).
+    cell (house-style redraws of the old ``img/lstm-*.svg``/``gru-*.svg``).
   * "Linear Recurrences and State Space Models" (sec_ssm) -- the parallel
     prefix (doubling) scan, zero-order-hold discretization (rate lambda ->
     decay exp(Delta lambda), and the half-life per step size), and the three
-    equivalent views of a linear SSM; the computed HiPPO-LegS reconstruction
-    and the S4D residual block are kept but currently unreferenced.
-  * "Selective State Space Models" (sec_mamba) -- the selective copying task,
-    the Mamba block, and the "three answers" summary strip.
-  * "Matrix-State Recurrences" -- figures live in
-    ``gen_mdl_ssm_family_figures.py`` (decay ladder, semiseparable mask).
+    equivalent views of a linear SSM.
+  * "Selective State Space Models" (sec_mamba) -- the selective copying task
+    and the Mamba block.
+  * "Matrix-State Recurrences" -- the semiseparable mask lives in
+    ``gen_mdl_ssm_family_figures.py``.
   * "The Delta Rule" -- the geometry of the transition I - beta k k^T.
-  * "Hybrid Architectures" -- figures live in
-    ``gen_mdl_ssm_hybrids_figures.py`` (decode-state cache, layer stacks).
+  * "Hybrid Architectures" -- the decode-state cache plot lives in
+    ``gen_mdl_ssm_hybrids_figures.py``.
+
+(The deep-RNN, bidirectional-RNN, HiPPO-reconstruction, S4D-block and
+"three answers" figures were dropped with the 2026-10 chapter rewrite, which
+no longer references them; see git history.)
 
 The encoder-decoder interface and the unrolled RNN encoder-decoder (teacher
 forcing) are also written here; the seq2seq section of the language-models
 part references them.
 
 The notebooks / prose reference the generated files with no drawing code (like
-the slide SVGs).  Figures that show a *computed* result (e.g. the HiPPO
-reconstruction, the SSM step response) use real numerical computation so the
+the slide SVGs).  Figures that show a *computed* result (e.g. the
+discretization map, the SSM step response) use real numerical computation so the
 pictures are exact, not sketches; purely schematic figures (cell wiring,
 unrolled-graph diagrams, block diagrams, ...) use ``set_aspect("equal")`` and
 the shared drawing helpers (``arrow``/``vlabel``/``clean_axes``/``axis_cross``/
@@ -53,21 +54,20 @@ np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 TEAL = fl.T.TEAL.base      # hidden/cell-state role (guide §4.3)
 PURPLE = fl.T.PURPLE.base  # parameter / second-state role
-RED = fl.T.RED.base
+# coloured *text* uses the dark tone of its accent (guide §2.3, §7.3)
+TEAL_TXT, ORANGE_TXT = fl.T.TEAL.dark, fl.T.ORANGE.dark
 
-from matplotlib.patches import (Circle, ConnectionPatch, FancyArrowPatch,
-                                FancyBboxPatch)
+from matplotlib.patches import Circle, ConnectionPatch, FancyBboxPatch
 
 
 # =========================================================================== #
-# "Gated Recurrent Networks" (sec_lstm): the LSTM cell, the GRU cell, a       #
-# two-layer deep RNN, and a bidirectional RNN.                               #
+# "Gated Recurrent Networks" (sec_lstm): the LSTM cell and the GRU cell.    #
 #                                                                              #
-# Four restyled carryovers, written under new house-style names so the old   #
-# hand-drawn SVGs (``img/lstm-0..3.svg``, ``img/gru-1..3.svg``,              #
-# ``img/deep-rnn.svg``, ``img/birnn.svg``) are left untouched.               #
+# Restyled carryovers, written under new house-style names so the old        #
+# hand-drawn SVGs (``img/lstm-0..3.svg``, ``img/gru-1..3.svg``) are left     #
+# untouched.                                                                 #
 #                                                                              #
-# Colour code (consistent across the four figures and with the ch. 9         #
+# Colour code (consistent across the figures and with the ch. 9              #
 # diagrams): inputs x blue, hidden states h teal (the state role), the LSTM  #
 # cell state c orange, outputs o orange, computation heads and elementwise   #
 # ops grey.                                                                  #
@@ -112,9 +112,9 @@ def fig_lstm_cell():
     ax.axis("off")
 
     y_cell, y_head, y_bus = 5.05, 2.75, 1.15
-    xF, xI, xC, xO = 3.0, 4.5, 5.7, 7.6   # head x-positions
+    xF, xI, xC, xO = 3.0, 4.5, 5.7, 7.45  # head x-positions
     x_prod = (xI + xC) / 2                # i * c~ product column
-    x_out = 8.75                          # output-gate column
+    x_out = 8.55                          # output-gate column
     bw, bh = 1.25, 0.85                   # state-box size
     hw, hh = 0.82, 0.72                   # head-box size
     r = 0.26                              # op-circle radius
@@ -278,109 +278,6 @@ def fig_gru_cell():
     fl.save(fig, "mdl-modernrnn-gru-cell")
 
 
-def fig_deep_rnn():
-    fig, ax = plt.subplots(figsize=(8.6, 5.6))
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    xs = [2.6, 5.4, 8.2]                     # three time steps
-    y_in, y_h1, y_h2, y_out = 0.9, 2.9, 4.9, 6.9
-    bw, bh = 1.35, 0.9
-    subs = ["t-1", "t", "t+1"]
-    half = bh / 2
-
-    ax.text(0.3, y_out, "outputs", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.3, y_h2, "layer 2", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.3, y_h1, "layer 1", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.3, y_in, "inputs", ha="left", va="center", fontsize=13,
-            color="black")
-
-    for cx, s in zip(xs, subs):
-        _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
-        _box(ax, cx, y_h1, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(1)}}$", TEAL)
-        _box(ax, cx, y_h2, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(2)}}$", TEAL)
-        _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
-        for y0, y1 in [(y_in, y_h1), (y_h1, y_h2), (y_h2, y_out)]:
-            fl.arrow(ax, (cx, y0 + half), (cx, y1 - half), color=GRAY, lw=2.0,
-                     mut=15)
-
-    # recurrent links within each hidden layer
-    for y in (y_h1, y_h2):
-        for cx0, cx1 in zip(xs[:-1], xs[1:]):
-            fl.arrow(ax, (cx0 + bw / 2, y), (cx1 - bw / 2, y), color=GRAY,
-                     lw=2.0, mut=15)
-        fl.arrow(ax, (xs[0] - 1.0, y), (xs[0] - bw / 2, y), color=GRAY,
-                 lw=1.6, ls="--", mut=13)
-        fl.arrow(ax, (xs[-1] + bw / 2, y), (xs[-1] + 1.35, y), color=GRAY,
-                 lw=1.6, ls="--", mut=13)
-
-    ax.set_xlim(0.1, 9.8)
-    ax.set_ylim(0.2, 7.6)
-    fl.save(fig, "mdl-modernrnn-deep-rnn")
-
-
-def fig_bi_rnn():
-    fig, ax = plt.subplots(figsize=(8.8, 5.6))
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    xs = [2.6, 5.4, 8.2]                     # three time steps
-    dx = 1.05                                # backward row horizontal offset
-    y_in, y_f, y_b, y_out = 0.9, 2.9, 4.7, 6.7
-    bw, bh = 1.3, 0.9
-    subs = ["t-1", "t", "t+1"]
-    half = bh / 2
-
-    ax.text(0.05, y_out, "outputs", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.05, y_b, "backward", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.05, y_f, "forward", ha="left", va="center", fontsize=13,
-            color="black")
-    ax.text(0.05, y_in, "inputs", ha="left", va="center", fontsize=13,
-            color="black")
-
-    for cx, s in zip(xs, subs):
-        _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
-        _box(ax, cx, y_f, bw, bh,
-             rf"$\overrightarrow{{\mathbf{{H}}}}_{{{s}}}$", TEAL)
-        _box(ax, cx + dx, y_b, bw, bh,
-             rf"$\overleftarrow{{\mathbf{{H}}}}_{{{s}}}$", PURPLE)
-        _box(ax, cx + dx / 2, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
-        # input feeds both directions
-        fl.arrow(ax, (cx, y_in + half), (cx, y_f - half), color=GRAY, lw=2.0,
-                 mut=15)
-        fl.arrow(ax, (cx + 0.55, y_in + half), (cx + dx, y_b - half),
-                 color=GRAY, lw=1.8, mut=13)
-        # both directions feed the concatenated output
-        fl.arrow(ax, (cx, y_f + half), (cx + dx / 2 - 0.12, y_out - half),
-                 color=GRAY, lw=1.8, mut=13)
-        fl.arrow(ax, (cx + dx, y_b + half), (cx + dx / 2 + 0.12, y_out - half),
-                 color=GRAY, lw=1.8, mut=13)
-
-    # forward chain runs left-to-right, backward chain right-to-left
-    for cx0, cx1 in zip(xs[:-1], xs[1:]):
-        fl.arrow(ax, (cx0 + bw / 2, y_f), (cx1 - bw / 2, y_f), color=GRAY,
-                 lw=2.0, mut=15)
-        fl.arrow(ax, (cx1 + dx - bw / 2, y_b), (cx0 + dx + bw / 2, y_b),
-                 color=GRAY, lw=2.0, mut=15)
-    fl.arrow(ax, (xs[0] - 1.3, y_f), (xs[0] - bw / 2, y_f), color=GRAY,
-             lw=1.6, ls="--", mut=13)
-    fl.arrow(ax, (xs[-1] + bw / 2, y_f), (xs[-1] + 1.3, y_f), color=GRAY,
-             lw=1.6, ls="--", mut=13)
-    fl.arrow(ax, (xs[-1] + dx + 1.3, y_b), (xs[-1] + dx + bw / 2, y_b),
-             color=GRAY, lw=1.6, ls="--", mut=13)
-    fl.arrow(ax, (xs[0] + dx - bw / 2, y_b), (xs[0] + dx - 1.3, y_b),
-             color=GRAY, lw=1.6, ls="--", mut=13)
-
-    ax.set_xlim(-0.1, 10.75)
-    ax.set_ylim(0.2, 7.4)
-    fl.save(fig, "mdl-modernrnn-bi-rnn")
-
-
 # =========================================================================== #
 # Encoder-decoder figures (referenced from the language-models part's        #
 # seq2seq section): the encoder-decoder interface, and the unrolled RNN      #
@@ -416,9 +313,9 @@ def _ed_arrow(ax, tail, tip, color="black", lw=1.8, mut=13):
 def fig_encoder_decoder():
     """The encoder-decoder interface: source -> encoder -> state -> decoder ->
     target.  A single horizontal pipeline, one arrow per hand-off."""
-    fig, ax = plt.subplots(figsize=(8.2, 2.5))
+    fig, ax = plt.subplots(figsize=(8.2, 1.3))
     ax.set_xlim(0, 10.4)
-    ax.set_ylim(0, 3.0)
+    ax.set_ylim(0.8, 2.45)
     ax.axis("off")
     ax.set_aspect("equal")
 
@@ -437,7 +334,7 @@ def fig_encoder_decoder():
 
     # the fixed-shape state on the middle hand-off
     ax.text(5.1, y + 0.5, "state", ha="center", va="bottom",
-            fontsize=_ED_SMALL, color=TEAL, fontstyle="italic")
+            fontsize=_ED_SMALL, color=TEAL_TXT, fontstyle="italic")
     ax.plot(5.1, y, "o", color=TEAL, ms=10, zorder=4)
 
     fl.save(fig, "mdl-modernrnn-encoder-decoder")
@@ -448,8 +345,8 @@ def fig_seq2seq():
     source tokens and passes its final state as context to every decoder step;
     the decoder is fed the shifted target (`<bos>` ...) and predicts the target
     shifted left (... `<eos>`)."""
-    fig, ax = plt.subplots(figsize=(10.4, 3.9))
-    ax.set_ylim(0, 5.2)
+    fig, ax = plt.subplots(figsize=(10.4, 3.35))
+    ax.set_ylim(0.75, 5.2)
     ax.axis("off")
     ax.set_aspect("equal")
 
@@ -466,11 +363,11 @@ def fig_seq2seq():
 
     # dashed separator between encoder and decoder
     xsep = (enc_x[-1] + dec_x[0]) / 2
-    ax.plot([xsep, xsep], [0.5, 4.8], ls=(0, (4, 4)), color=LIGHT, lw=1.2)
+    ax.plot([xsep, xsep], [0.85, 4.8], ls=(0, (4, 4)), color=LIGHT, lw=1.2)
     ax.text((enc_x[1] + enc_x[2]) / 2, 4.75, "Encoder", ha="center",
             fontsize=_ED_TXT, color=BLUE)
     ax.text((dec_x[1] + dec_x[2]) / 2, 4.75, "Decoder", ha="center",
-            fontsize=_ED_TXT, color=ORANGE)
+            fontsize=_ED_TXT, color=ORANGE_TXT)
 
     # encoder cells + inputs, left-to-right recurrence
     for i, x in enumerate(enc_x):
@@ -484,11 +381,22 @@ def fig_seq2seq():
     # context state c = encoder final state
     xc = xsep
     ax.plot(xc, yc, "o", color=TEAL, ms=11, zorder=5)
-    ax.text(xc, yc + 0.42, r"$\mathbf{c}$", ha="center", va="bottom",
-            fontsize=_ED_TXT + 1, color=TEAL)
     _ed_arrow(ax, (enc_x[-1] + cw / 2, yc), (xc - 0.16, yc), color=TEAL)
 
-    # decoder cells: teacher-forced input below, prediction above, context in
+    # the context reaches every decoder step along one teal bus above the
+    # cells: up from c, right along the bus, and down into each cell's top
+    # (left of its prediction arrow)
+    y_bus = yc + ch / 2 + 0.38
+    x_drop = [x - 0.3 for x in dec_x]
+    ax.plot([xc, xc, x_drop[-1]], [yc + 0.12, y_bus, y_bus], color=TEAL,
+            lw=1.5, zorder=3, solid_joinstyle="miter")
+    ax.text(xc - 0.12, y_bus, r"$\mathbf{c}$", ha="right", va="center",
+            fontsize=_ED_TXT + 1, color=TEAL_TXT)
+    for xd in x_drop:
+        _ed_arrow(ax, (xd, y_bus), (xd, yc + ch / 2), color=TEAL, lw=1.5,
+                  mut=11)
+
+    # decoder cells: teacher-forced input below, prediction above
     for i, x in enumerate(dec_x):
         _ed_box(ax, x, yc, cw, ch, "", fl.T.ORANGE.tint, ORANGE)
         # teacher-forcing input from below
@@ -504,13 +412,6 @@ def fig_seq2seq():
             _ed_arrow(ax, (xc + 0.16, yc), (x - cw / 2, yc), color=TEAL)
         else:
             _ed_arrow(ax, (dec_x[i - 1] + cw / 2, yc), (x - cw / 2, yc))
-        # context fed at every decoder step (teal, from the state)
-        ax.annotate("", xy=(x, yc + ch / 2 - 0.02),
-                    xytext=(xc, yc + 0.30),
-                    arrowprops=dict(arrowstyle="->", color=TEAL, lw=1.1,
-                                    ls=(0, (3, 3)), shrinkA=2, shrinkB=2,
-                                    connectionstyle="arc3,rad=-0.12"),
-                    zorder=1)
 
     fl.save(fig, "mdl-modernrnn-seq2seq")
 
@@ -518,23 +419,9 @@ def fig_seq2seq():
 # =========================================================================== #
 # "Linear Recurrences and State Space Models" (sec_ssm): the parallel        #
 # prefix (doubling) scan, zero-order-hold discretization, the three         #
-# equivalent views of a linear SSM                                           #
-# (continuous-time ODE, unrolled recurrence, convolution with the            #
-# materialized kernel), a computed HiPPO-LegS online compression /           #
-# reconstruction, and the S4D residual block.                                #
+# equivalent views of a linear SSM (continuous-time ODE, unrolled          #
+# recurrence, convolution with the materialized kernel).                     #
 # =========================================================================== #
-
-def _hippo_legs(N):
-    A = np.zeros((N, N))
-    for n in range(N):
-        for k in range(N):
-            if n > k:
-                A[n, k] = -np.sqrt((2 * n + 1) * (2 * k + 1))
-            elif n == k:
-                A[n, k] = -(n + 1)
-    B = np.sqrt(2 * np.arange(N) + 1.0)
-    return A, B
-
 
 def fig_scan_tree():
     T = 8
@@ -596,7 +483,7 @@ def fig_ssm_discretization():
     exp(-Delta |lambda|) on a log axis with the half-life ln 2 / (Delta |lambda|)
     at four marked points."""
     H = 2.9                                  # common axes height (inches)
-    wA, gAB, wB, gBC, wC = 2.0, 1.15, 3.2, 1.05, 3.7
+    wA, gAB, wB, gBC, wC = 1.85, 0.85, 3.2, 0.95, 2.95
     left, bottom = 0.35, 0.62
     W = left + wA + gAB + wB + gBC + wC + 0.25
     Hf = bottom + H + 0.2
@@ -705,7 +592,11 @@ def fig_ssm_discretization():
     ax.set_yticks([0, 0.5, 1])
     ax.set_yticklabels(["0", "0.5", "1"])
     ax.tick_params(labelsize=13, colors="black")
-    ax.set_xlabel(r"$\Delta|\lambda|$", fontsize=FS, color="black")
+    # matplotlib 3.11.2 gives the 10^{-k} mathtext labels a deeper box, which
+    # pushed the tick labels and the axis label down; pull both back up.
+    ax.tick_params(axis="x", pad=1.5)
+    ax.set_xlabel(r"$\Delta|\lambda|$", fontsize=FS, color="black",
+                  labelpad=-2)
     ax.set_ylabel(r"$\bar{a} = e^{-\Delta|\lambda|}$", fontsize=FS,
                   color="black")
     for s in ("top", "right"):
@@ -725,7 +616,7 @@ def fig_ssm_views():
     ax = ax_ode
     t = np.linspace(0, 10, 400)
     u = ((t > 1.2) & (t < 4.2)).astype(float)
-    # x' = a x + b u with a = -0.9, b = 0.9 (exact first-order response)
+    # h' = a h + b x with a = -0.9, b = 0.9 (exact first-order response)
     a_c, b_c = -0.9, 0.9
     x = np.zeros_like(t)
     for i in range(1, len(t)):
@@ -734,11 +625,11 @@ def fig_ssm_views():
             * b_c * u[i]
     ax.plot(t, u, color=BLUE, lw=1.8)
     ax.plot(t, x, color=TEAL, lw=2.6)
-    ax.text(2.7, 1.12, r"input $u(t)$", fontsize=12.5, color=BLUE,
+    ax.text(2.7, 1.12, r"input $x(t)$", fontsize=12.5, color=BLUE,
             ha="center", va="bottom")
-    ax.text(5.05, 0.82, r"state $x(t)$", fontsize=12.5, color=TEAL,
+    ax.text(5.05, 0.82, r"state $h(t)$", fontsize=12.5, color=TEAL_TXT,
             ha="left", va="bottom")
-    ax.text(7.55, 0.52, r"$\dot{x} = Ax + Bu$", fontsize=14, color="black",
+    ax.text(7.7, 0.52, r"$h' = Ah + Bx$", fontsize=14, color="black",
             ha="center")
     ax.set_xlim(0, 10)
     ax.set_ylim(-0.14, 1.34)
@@ -758,8 +649,8 @@ def fig_ssm_views():
     bw, bh = 1.1, 0.75
     half = bh / 2
     for cx, s in zip(xs, ["t-1", "t", "t+1"]):
-        _box(ax, cx, y_u, bw, bh, rf"$u_{{{s}}}$", BLUE, fontsize=13)
-        _box(ax, cx, y_x, bw, bh, rf"$x_{{{s}}}$", TEAL, fontsize=13)
+        _box(ax, cx, y_u, bw, bh, rf"$x_{{{s}}}$", BLUE, fontsize=13)
+        _box(ax, cx, y_x, bw, bh, rf"$h_{{{s}}}$", TEAL, fontsize=13)
         _box(ax, cx, y_y, bw, bh, rf"$y_{{{s}}}$", ORANGE, fontsize=13)
         fl.arrow(ax, (cx, y_u + half), (cx, y_x - half), color=GRAY, lw=1.8,
                  mut=12)
@@ -791,7 +682,7 @@ def fig_ssm_views():
     y_u, y_ker, y_out = 0.75, 2.05, 4.35
     bw, bh = 0.62, 0.62
     for i, cx in enumerate(xs):
-        _box(ax, cx, y_u, bw, bh, rf"$u_{{{i + 1}}}$", BLUE, fontsize=11,
+        _box(ax, cx, y_u, bw, bh, rf"$x_{{{i + 1}}}$", BLUE, fontsize=12,
              weight="normal", lw=1.4)
     # kernel weights K_0.. over the last inputs (aligned under the output)
     kvals = 0.95 * 0.55 ** np.arange(Tc)
@@ -805,18 +696,19 @@ def fig_ssm_views():
                  color=GRAY, lw=1.2, mut=9)
     ax.plot([xs[0] - 0.3, xs[-1] + 0.3], [y_ker, y_ker], color="black",
             lw=1.0)
-    ax.text(xs[2], y_ker + 0.62, r"$\bar{K}_4$", fontsize=11.5,
-            color="black", ha="right", va="center")
-    ax.text(xs[-1] + 0.28, y_ker + 1.15 * kvals[0], r"$\bar{K}_0$",
-            fontsize=11.5, color="black", ha="left", va="center")
+    # K_4 sits on input x_3 (index Tc - 1 - 2): centred over its short stem
+    ax.text(xs[2], y_ker + 0.5, r"$K_4$", fontsize=12,
+            color="black", ha="center", va="center")
+    ax.text(xs[-1] + 0.28, y_ker + 1.15 * kvals[0], r"$K_0$",
+            fontsize=12, color="black", ha="left", va="center")
     cx_out = xs[-1]
     _box(ax, cx_out, y_out, 0.85, 0.66, rf"$y_{{{Tc}}}$", ORANGE, fontsize=12)
     fl.arrow(ax, (cx_out, y_ker + 1.15 * kvals[0] + 0.16),
              (cx_out, y_out - 0.4), color=GRAY, lw=1.8, mut=12)
-    ax.text(0.35, 4.55, r"$\mathbf{y} = \bar{\mathbf{K}} * \mathbf{u}$",
+    ax.text(0.05, 4.55, r"$\mathbf{y} = \mathbf{K} * \mathbf{x}$",
             fontsize=12.5, color="black", ha="left", va="center")
-    ax.text(0.35, 3.72,
-            r"$\bar{\mathbf{K}} = (\mathbf{C}\bar{\mathbf{B}},"
+    ax.text(0.05, 3.72,
+            r"$\mathbf{K} = (\mathbf{C}\bar{\mathbf{B}},"
             r"\mathbf{C}\bar{\mathbf{A}}\bar{\mathbf{B}},"
             r"\mathbf{C}\bar{\mathbf{A}}^2\bar{\mathbf{B}},\ldots)$",
             fontsize=12, color="black", ha="left", va="center")
@@ -827,127 +719,9 @@ def fig_ssm_views():
     fl.save(fig, "mdl-modernrnn-ssm-views")
 
 
-def fig_hippo_reconstruction():
-    from numpy.polynomial import legendre
-
-    t = np.linspace(1e-3, 1.0, 2000)
-    f = np.sin(8 * t) + 0.5 * np.sin(23 * t) + 0.3 * (t > 0.6)
-
-    fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.2), sharey=True)
-    Ns = [4, 16, 64]                 # one quantity, one accent, all panels
-    dt = t[1] - t[0]
-    for ax, N, color in zip(axes, Ns, [ORANGE] * 3):
-        A, B = _hippo_legs(N)
-        eye = np.eye(N)
-        x = np.zeros(N)
-        for i, ti in enumerate(t):       # bilinear step of x' = (Ax + Bf)/t
-            At = A * (dt / ti)
-            x = np.linalg.solve(eye - At / 2,
-                                (eye + At / 2) @ x + (dt / ti) * B * f[i])
-        rec = np.zeros_like(t)
-        for n in range(N):               # f(s) ~ sum_n x_n sqrt(2n+1) P_n(2s-1)
-            cn = np.zeros(n + 1)
-            cn[n] = 1
-            rec += x[n] * np.sqrt(2 * n + 1) * legendre.legval(2 * t - 1, cn)
-        err = (np.sqrt(np.mean((rec - f) ** 2))
-               / np.sqrt(np.mean(f ** 2)))
-        ax.plot(t, f, color="black", lw=1.3, label="signal $f$")
-        ax.plot(t, rec, color=color, lw=2.4, alpha=0.9,
-                label="reconstruction")
-        ax.text(0.03, 1.92, rf"$N = {N}$, error ${100 * err:.0f}\,\%$",
-                fontsize=13, color="black", ha="left")
-        ax.set_xlim(0, 1)
-        ax.set_ylim(-1.75, 2.45)
-        ax.set_xticks([0, 0.5, 1])
-        ax.set_xticklabels(["0", "0.5", "1"])
-        ax.set_xlabel("$s$", fontsize=13, color="black")
-        ax.tick_params(labelsize=11, colors="black")
-        for s in ("top", "right"):
-            ax.spines[s].set_visible(False)
-        for s in ("left", "bottom"):
-            ax.spines[s].set_color("black")
-    axes[0].set_ylabel("$f(s)$", fontsize=13, color="black")
-    axes[0].legend(fontsize=11, loc="lower left", frameon=False)
-    fig.subplots_adjust(wspace=0.12)
-    fl.save(fig, "mdl-modernrnn-hippo-reconstruction")
-
-
-def fig_ssm_block():
-    fig, ax = plt.subplots(figsize=(8.8, 6.2))
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    cx = 4.1                              # main stack x
-    bw, bh = 3.0, 0.72
-    y_in = 0.55
-    y_ln1, y_ssm, y_add1 = 1.75, 2.95, 4.05
-    y_ln2, y_mlp, y_add2 = 5.15, 6.35, 7.45
-    y_out = 8.55
-    half = bh / 2
-
-    _box(ax, cx, y_in, 4.1, bh, r"input sequence $(T, d)$", BLUE,
-         fontsize=13, weight="normal")
-    _box(ax, cx, y_ln1, bw, bh, "LayerNorm", GRAY, fontsize=13,
-         weight="normal")
-    _box(ax, cx, y_ssm, 3.5, bh, "diagonal SSM (S4D)", TEAL, fontsize=13,
-         weight="normal")
-    _box(ax, cx, y_ln2, bw, bh, "LayerNorm", GRAY, fontsize=13,
-         weight="normal")
-    _box(ax, cx, y_mlp, bw, bh, r"gated MLP", GREEN, fontsize=13,
-         weight="normal")
-    _box(ax, cx, y_out, 4.1, bh, r"output sequence $(T, d)$", BLUE,
-         fontsize=13, weight="normal")
-    _op(ax, cx, y_add1, "+")
-    _op(ax, cx, y_add2, "+")
-
-    # main flow
-    for y0, y1, gap0, gap1 in [
-            (y_in, y_ln1, half, half), (y_ln1, y_ssm, half, half),
-            (y_ssm, y_add1, half, 0.26), (y_add1, y_ln2, 0.26, half),
-            (y_ln2, y_mlp, half, half), (y_mlp, y_add2, half, 0.26),
-            (y_add2, y_out, 0.26, half)]:
-        fl.arrow(ax, (cx, y0 + gap0), (cx, y1 - gap1), color=GRAY, lw=1.9,
-                 mut=13)
-
-    # residual skips (left side)
-    xl = cx - 2.6
-    for y0, y1 in [(( y_in + y_ln1) / 2, y_add1), ((y_add1 + y_ln2) / 2,
-                                                   y_add2)]:
-        ax.plot([cx, xl], [y0, y0], color=GRAY, lw=1.7)
-        ax.plot([xl, xl], [y0, y1], color=GRAY, lw=1.7)
-        fl.arrow(ax, (xl, y1), (cx - 0.26, y1), color=GRAY, lw=1.7, mut=12)
-
-    # annotations on the right
-    xr = cx + 1.85
-    ax.text(xr, y_ssm + 0.02,
-            "$x_t = \\bar{a} \\odot x_{t-1} + \\bar{b}\\, u_t$\n"
-            "$y_t = \\langle c, x_t\\rangle + d\\, u_t$",
-            fontsize=12.5, color="black", ha="left", va="center")
-    ax.text(xr, y_mlp + 0.02,
-            r"$\mathbf{W}_o\,(\mathbf{W}_v \mathbf{y} \odot "
-            r"\sigma(\mathbf{W}_g \mathbf{y}))$",
-            fontsize=12.5, color="black", ha="left", va="center")
-
-    # x L bracket
-    xb = cx + 4.9
-    ax.plot([xb, xb + 0.18], [y_ln1 - half, y_ln1 - half], color="black",
-            lw=1.4)
-    ax.plot([xb + 0.18, xb + 0.18], [y_ln1 - half, y_add2 + 0.26],
-            color="black", lw=1.4)
-    ax.plot([xb, xb + 0.18], [y_add2 + 0.26, y_add2 + 0.26], color="black",
-            lw=1.4)
-    ax.text(xb + 0.44, (y_ln1 + y_add2) / 2, r"$\times\, L$", fontsize=15,
-            color="black", ha="left", va="center")
-
-    ax.set_xlim(0.6, 10.1)
-    ax.set_ylim(0.0, 9.2)
-    fl.save(fig, "mdl-modernrnn-ssm-block")
-
-
 # =========================================================================== #
 # "Selective State Space Models" (sec_mamba): the selective copying          #
-# task, the Mamba block, and the chapter's "three answers" summary strip     #
-# (gate it -> linearize it -> select it).                                    #
+# task and the Mamba block.                                                  #
 # =========================================================================== #
 
 def fig_selective_copy():
@@ -1120,66 +894,6 @@ def fig_mamba_block():
     fl.save(fig, "mdl-modernrnn-mamba-block")
 
 
-def fig_three_answers():
-    fig, ax = plt.subplots(figsize=(11.6, 3.6))
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    pw, ph = 3.55, 3.0                       # panel width/height
-    y_c = 1.62
-    xs = [1.98, 5.93, 9.88]
-    colors = [BLUE, GREEN, ORANGE]
-    titles = ["1. Gate it", "2. Linearize it", "3. Select it"]
-    models = ["LSTM, GRU", "minGRU, S4D", "Mamba"]
-    eqs = [
-        r"$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1}"
-        r" + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$",
-        r"$\mathbf{h}_t = \bar{\mathbf{a}} \odot \mathbf{h}_{t-1}"
-        r" + \bar{\mathbf{b}}\, u_t$",
-        r"$\mathbf{h}_t = \bar{\mathbf{a}}_t \odot \mathbf{h}_{t-1}"
-        r" + \bar{\mathbf{b}}_t$",
-    ]
-    notes = ["gates read the data;\nnonlinear state path",
-             "fixed dynamics;\naffine state path",
-             r"$\bar{\mathbf{a}}_t, \bar{\mathbf{b}}_t$ chosen by $u_t$;"
-             + "\nstill an affine map"]
-    props = [[("content-aware", True), ("parallel training", False)],
-             [("content-aware", False), ("parallel training", True)],
-             [("content-aware", True), ("parallel training", True)]]
-
-    for cx, color, title, model, eq, note, prop in zip(
-            xs, colors, titles, models, eqs, notes, props):
-        x, y = cx - pw / 2, y_c - ph / 2
-        for fc, a in [(color, 0.07), ("none", 1.0)]:
-            ax.add_patch(FancyBboxPatch(
-                (x, y), pw, ph, boxstyle="round,pad=0.03,rounding_size=0.16",
-                linewidth=2.0, edgecolor=color, facecolor=fc, alpha=a))
-        ax.text(cx, y_c + 1.13, title, ha="center", va="center",
-                fontsize=15, fontweight="bold", color="black")
-        ax.text(cx, y_c + 0.72, model, ha="center", va="center",
-                fontsize=12.5, color=GRAY)
-        ax.text(cx, y_c + 0.18, eq, ha="center", va="center", fontsize=12.5,
-                color="black")
-        ax.text(cx, y_c - 0.42, note, ha="center", va="center",
-                fontsize=11.5, color="black")
-        for k, (name, ok) in enumerate(prop):
-            mark = "✓" if ok else "✗"
-            mcol = GREEN if ok else RED
-            yk = y_c - 0.98 - 0.34 * k
-            ax.text(cx - 1.38, yk, mark, ha="center", va="center",
-                    fontsize=13, color=mcol, fontweight="bold")
-            ax.text(cx - 1.16, yk, name, ha="left", va="center",
-                    fontsize=11.5, color="black")
-
-    for x0, x1 in [(xs[0] + pw / 2, xs[1] - pw / 2),
-                   (xs[1] + pw / 2, xs[2] - pw / 2)]:
-        fl.arrow(ax, (x0, y_c), (x1, y_c), color=GRAY, lw=2.0, mut=14)
-
-    ax.set_xlim(0.0, 11.9)
-    ax.set_ylim(-0.15, 3.4)
-    fl.save(fig, "mdl-modernrnn-three-answers")
-
-
 # =========================================================================== #
 # "The Delta Rule" (deltanet): the geometry of the transition I - beta k k^T. #
 # =========================================================================== #
@@ -1235,18 +949,13 @@ def fig_delta_geometry():
 FIGURES = [
     fig_lstm_cell,
     fig_gru_cell,
-    fig_deep_rnn,
-    fig_bi_rnn,
     fig_encoder_decoder,
     fig_seq2seq,
     fig_scan_tree,
     fig_ssm_discretization,
     fig_ssm_views,
-    fig_hippo_reconstruction,
-    fig_ssm_block,
     fig_selective_copy,
     fig_mamba_block,
-    fig_three_answers,
     fig_delta_geometry,
 ]
 

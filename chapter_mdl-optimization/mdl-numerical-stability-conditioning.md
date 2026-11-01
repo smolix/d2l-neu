@@ -915,7 +915,7 @@ measures both at once: for each $\lambda$ it computes
 :eqref:`eq_mdl-opt-ridge-kappa` and *runs* gradient descent to a fixed
 relative tolerance of $10^{-6}$, counting iterations.
 
-![Level sets of the least-squares objective before and after adding the ridge term $\lambda \|\mathbf{w}\|^2$. The penalty lifts every eigenvalue of $\mathbf{A}^\top\mathbf{A}$ by $\lambda$, rounding the elongated valley into a bowl: the condition number drops from $\sigma_1^2/\sigma_n^2$ toward $1$, so linear solves lose fewer digits and gradient descent takes fewer steps.](../img/mdl-opt-conditioning-ellipse.svg)
+![Level sets of the least-squares objective before and after adding the ridge term $\lambda \|\mathbf{w}\|^2$. The penalty lifts every eigenvalue of $\mathbf{A}^\top\mathbf{A}$ by $\lambda$, rounding the elongated valley into a bowl: the condition number drops from $\sigma_1^2/\sigma_n^2$ toward $1$, so linear solves lose fewer digits and gradient descent takes fewer steps (orange: gradient-descent iterates from the same start; green arrows: the principal axes, labeled by their curvatures).](../img/mdl-opt-conditioning-ellipse.svg)
 :label:`fig_mdl-opt-conditioning-ellipse`
 
 ```{.python .input #numerical-stability-conditioning-ridge}

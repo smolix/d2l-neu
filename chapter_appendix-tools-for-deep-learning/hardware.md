@@ -37,7 +37,7 @@ analysis applies.
 Before comparing cards, estimate both sides of the constraint. For
 training, peak memory (:numref:`fig_tools_memory_fit`):
 
-![Peak training memory includes weights, gradients, optimizer state, and activations in addition to parameters.](../img/tools-memory-fit.svg)
+![Peak training memory, roughly to scale for a 7B model trained in BF16 with Adam: gradients, optimizer state, and activations come on top of the parameters, and the total must fit in accelerator memory with headroom to spare.](../img/tools-memory-fit.svg)
 :label:`fig_tools_memory_fit`
 
 ```{.python .input #hardware-memory-estimate}
@@ -74,7 +74,7 @@ the ordering of bandwidth-limited systems. For example, systems with similar
 memory bandwidth can have similar decode rates despite large differences in
 compute throughput and price.
 
-![Discrete GPUs pair modest capacity with very high bandwidth; unified-memory machines invert the trade. The gap in the upper right is where datacenter GPUs live.](../img/tools-hardware-menu.svg)
+![Discrete GPUs pair modest capacity with very high bandwidth; unified-memory machines invert the trade. A rented datacenter GPU (H100) tops the bandwidth axis; nothing on the menu reaches the upper right, where capacity and bandwidth are both high.](../img/tools-hardware-menu.svg)
 :label:`fig_tools_hardware_menu`
 
 :numref:`fig_tools_hardware_menu` plots the July 2026 menu on those two

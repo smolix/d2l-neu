@@ -37,6 +37,9 @@ import gen_mdl_figures as fl
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+INK = fl.INK  # annotation text: black, never gray (house rule 1)
+FAINT = fl.T.FAINT  # direction-field arrows: visible at book width (LIGHT is not)
+WHITE_BOX = dict(facecolor="white", edgecolor="none", alpha=0.85, pad=1.5)
 
 
 # =========================================================================== #
@@ -83,11 +86,12 @@ def fig_ode_field():
     m = 2.2
 
     # velocity field on a grid, arrows scaled to a readable, uniform length
-    g = np.linspace(-m, m, 15)
+    # grid kept inside the window so no edge arrow is cut off
+    g = np.linspace(-m + 0.2, m - 0.2, 14)
     X, Y = np.meshgrid(g, g)
     U = A[0, 0] * X + A[0, 1] * Y
     V = A[1, 0] * X + A[1, 1] * Y
-    ax.quiver(X, Y, U, V, color=LIGHT, angles="xy", pivot="mid",
+    ax.quiver(X, Y, U, V, color=FAINT, alpha=0.6, angles="xy", pivot="mid",
               width=0.004, headwidth=4, headlength=5, zorder=1)
 
     # two integral curves following the field from different starts
@@ -100,16 +104,26 @@ def fig_ode_field():
         # a couple of tangent arrowheads along the curve to show direction
         for frac in (0.10, 0.34):
             i = int(frac * len(path))
-            fl.arrow(ax, path[i], path[i + 12], color=c, lw=0.0, mut=13)
+            fl.arrow(ax, path[i], path[i + 12], color=c, lw=0.0, mut=18)
 
     ax.plot(0, 0, "o", color=GREEN, ms=8, zorder=5)
-    ax.text(0.12, 0.16, "fixed point", color=GREEN, fontsize=11, ha="left")
-    ax.text(starts[0][0], starts[0][1] + 0.18, r"$\mathbf{x}_0$", color=BLUE,
-            fontsize=11.5, ha="center", va="bottom")
+    # Below the spirals (the gap between the blue loop and the orange arc),
+    # with a short leader up to the dot.
+    ax.annotate("fixed point", xy=(0.0, 0.0), xytext=(0.12, -0.72),
+                color=GREEN, fontsize=13, ha="center", va="center",
+                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.2,
+                                shrinkA=4, shrinkB=7))
+    # white-backed over the field arrows, but drawn UNDER the trajectories
+    # (zorder 2 < 3) so a box can never cut a curve
+    lab_box = dict(facecolor="white", edgecolor="none", pad=1.0)
+    ax.text(starts[0][0], starts[0][1] - 0.16, r"$\mathbf{x}_0$", color=BLUE,
+            fontsize=14, ha="center", va="top", bbox=lab_box, zorder=2)
     ax.text(starts[1][0] - 0.12, starts[1][1], r"$\mathbf{x}_0'$", color=ORANGE,
-            fontsize=11.5, ha="right", va="center")
+            fontsize=14, ha="right", va="center", bbox=lab_box, zorder=2)
     ax.text(-m + 0.1, m - 0.1, r"$\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x})$",
-            color="black", fontsize=11, ha="left", va="top")
+            color="black", fontsize=14, ha="left", va="top",
+            bbox=dict(facecolor="white", edgecolor="none", pad=3.0),
+            zorder=6)
 
     ax.set_xlabel("$x_1$")
     ax.set_ylabel("$x_2$")
@@ -154,12 +168,15 @@ def fig_sde_paths():
     ax.plot(t, mean, color=GREEN, lw=2.6, zorder=4,
             label=r"mean $X_0 e^{-\theta t}$")
     ax.plot(0, X0, "o", color="black", ms=6, zorder=5)
-    ax.text(0.04, X0 + 0.06, r"$X_0$", fontsize=11.5, ha="left", va="bottom")
+    ax.text(0.06, X0 + 0.10, r"$X_0$", fontsize=14, ha="left", va="bottom",
+            bbox=WHITE_BOX, zorder=6)
 
     ax.set_xlabel("time $t$")
     ax.set_ylabel("$X_t$")
     ax.set_xlim(0, T)
-    ax.legend(loc="upper right")
+    # White-backed so the faint paths that reach the top right pass behind.
+    ax.legend(loc="upper right", frameon=True, facecolor="white",
+              edgecolor="none", framealpha=0.9)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-sde-paths")
@@ -191,23 +208,24 @@ def fig_fokker_planck_flux():
     ax.fill_between(x[sel], 0, p[sel], color=ORANGE, alpha=0.22, zorder=2)
 
     pa, pb = _gauss(a, mu, var), _gauss(b, mu, var)
-    ax.axvline(a, color=GRAY, lw=1.2, ls="--", zorder=3)
-    ax.axvline(b, color=GRAY, lw=1.2, ls="--", zorder=3)
+    # Boundaries stop below the balance equation, which sits above them.
+    ax.plot([a, a], [0, 0.585], color=GRAY, lw=1.2, ls="--", zorder=3)
+    ax.plot([b, b], [0, 0.585], color=GRAY, lw=1.2, ls="--", zorder=3)
 
     # flux arrows: current f*p crossing each boundary (drift > 0 => rightward).
     # length proportional to the current magnitude at that boundary, but
     # scaled up (and drawn with a thick shaft) so the shaft reads clearly as
     # an arrow and not just an arrowhead.
     scale = 1.9
-    yarr = 0.40
+    yarr = 0.50   # above the curve over both arrow spans
     fl.arrow(ax, (a, yarr), (a + scale * (fdrift * pa), yarr),
              color=GREEN, lw=3.0, mut=14)
     fl.arrow(ax, (b, yarr), (b + scale * (fdrift * pb), yarr),
              color=GREEN, lw=3.0, mut=14)
     # labels placed to the OUTSIDE of each boundary so they clear the arrows
-    ax.text(a - 0.12, yarr, r"$j(a)=f\,p(a)$", color=GREEN, fontsize=11,
+    ax.text(a - 0.12, yarr, r"$j(a)=f\,p(a)$", color=GREEN, fontsize=13.5,
             ha="right", va="center")
-    ax.text(b + 0.58, yarr, r"$j(b)=f\,p(b)$", color=GREEN, fontsize=11,
+    ax.text(b + 0.58, yarr, r"$j(b)=f\,p(b)$", color=GREEN, fontsize=13.5,
             ha="left", va="center")
 
     # mark a, b as explicit ticks (no free-floating text colliding with the axis)
@@ -215,15 +233,15 @@ def fig_fokker_planck_flux():
     ax.set_xticklabels(["$-3$", "$-2$", "$a$", "$b$", "$2$", "$3$"])
     ax.text((a + b) / 2, 0.10,
             r"mass in $[a,b]$",
-            color=ORANGE, fontsize=11.5, ha="center", va="center")
-    ax.text(mu, 0.65,
-            r"$\partial_t\!\!\int_a^b p\,dx = j(a)-j(b)$",
-            color="black", fontsize=11, ha="center", va="center")
+            color=ORANGE, fontsize=13.5, ha="center", va="center")
+    ax.text((a + b) / 2, 0.665,
+            r"$\partial_t\int_a^b p\,dx = j(a)-j(b)$",
+            color="black", fontsize=14, ha="center", va="center")
 
     ax.set_xlabel("$x$")
     ax.set_ylabel("$p(x)$")
     ax.set_xlim(-3.0, 3.0)
-    ax.set_ylim(0.0, 0.72)
+    ax.set_ylim(0.0, 0.74)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-fokker-planck-flux")
@@ -238,7 +256,8 @@ def fig_forward_reverse():
     """Two rows of small 1-D density panels.  Top: the FORWARD noising process
     turns a structured (bimodal) data density into a single Gaussian across a
     few time slices, left->right.  Bottom: the REVERSE process recovers the
-    structured density, right->left.  Each panel is the exact VP-SDE (OU)
+    structured density, read right->left over the same columns (one column =
+    one time t in both rows).  Each panel is the exact VP-SDE (OU)
     marginal of the bimodal mixture: a closed-form mixture of Gaussians, so the
     shapes are computed, not sketched."""
     # bimodal data mixture p_0 = 1/2 N(-1.6, .12) + 1/2 N(1.6, .12)
@@ -260,7 +279,7 @@ def fig_forward_reverse():
         return dens
 
     n = len(ts)
-    fig, axes = plt.subplots(2, n, figsize=(2.05 * n, 4.0), sharex=True,
+    fig, axes = plt.subplots(2, n, figsize=(1.55 * n, 3.5), sharex=True,
                              sharey=True)
 
     # peak height of the data density, for a shared y-scale and arrow placement
@@ -278,37 +297,31 @@ def fig_forward_reverse():
             ax.spines[sp].set_visible(False)
         ax.spines["bottom"].set_color(LIGHT)
 
-    # top row: forward, data (left) -> noise (right)
-    for j, tt in enumerate(ts):
-        c = BLUE if j == 0 else (GRAY if j < n - 1 else ORANGE)
-        panel(axes[0, j], tt, c, 0.18 if 0 < j < n - 1 else 0.30)
-    # bottom row: reverse, noise (left) -> data (right): same densities reversed
-    for j, tt in enumerate(ts[::-1]):
-        jj = n - 1 - j
-        c = ORANGE if j == 0 else (GRAY if j < n - 1 else BLUE)
-        panel(axes[1, j], tt, c, 0.18 if 0 < j < n - 1 else 0.30)
+    # Both rows share the column order: each column is ONE time t, data p_0
+    # on the left, noise p_T on the right.  The forward process reads the top
+    # row left to right; the reverse process reads the bottom row right to
+    # left (the arrows under / over the rows say which way).
+    for i in range(2):
+        for j, tt in enumerate(ts):
+            c = BLUE if j == 0 else (GRAY if j < n - 1 else ORANGE)
+            panel(axes[i, j], tt, c, 0.18 if 0 < j < n - 1 else 0.30)
 
-    axes[0, 0].set_title(r"data $p_0$", fontsize=11.5, color=BLUE)
-    axes[0, n - 1].set_title(r"noise $p_T$", fontsize=11.5, color=ORANGE)
-    axes[1, 0].set_title(r"noise $p_T$", fontsize=11.5, color=ORANGE)
-    axes[1, n - 1].set_title(r"data $p_0$", fontsize=11.5, color=BLUE)
+    axes[0, 0].set_title(r"data $p_0$", fontsize=14, color=BLUE)
+    axes[0, n - 1].set_title(r"noise $p_T$", fontsize=14, color=ORANGE)
 
     # process-direction labels at the row margins
-    axes[0, 0].text(-0.34, 0.5, "forward\n(noising)", transform=axes[0, 0].transAxes,
-                    rotation=90, va="center", ha="center", fontsize=11.5, color=GRAY)
-    axes[1, 0].text(-0.34, 0.5, "reverse\n(score)", transform=axes[1, 0].transAxes,
-                    rotation=90, va="center", ha="center", fontsize=11.5, color=GREEN)
+    axes[0, 0].text(-0.30, 0.5, "forward\n(noising)", transform=axes[0, 0].transAxes,
+                    rotation=90, va="center", ha="center", fontsize=14, color=INK)
+    axes[1, 0].text(-0.30, 0.5, "reverse\n(score)", transform=axes[1, 0].transAxes,
+                    rotation=90, va="center", ha="center", fontsize=14, color=GREEN)
 
-    # Extra top/bottom margin so the direction captions have clean room to
-    # sit below the top edge / above the bottom edge without crowding the
-    # row titles or the panel baselines.
-    fig.subplots_adjust(wspace=0.12, hspace=0.45, left=0.10, right=0.985,
-                        top=0.82, bottom=0.16)
+    fig.subplots_adjust(wspace=0.10, hspace=0.30, left=0.10, right=0.985,
+                        top=0.80, bottom=0.11)
     # big direction arrows spanning each row
     fig.text(0.55, 0.93, r"$\longrightarrow$ add noise $\longrightarrow$",
-             ha="center", fontsize=11, color=GRAY)
-    fig.text(0.55, 0.03, r"$\longleftarrow$ denoise with $\nabla\log p_t$ $\longleftarrow$",
-             ha="center", fontsize=11, color=GREEN)
+             ha="center", fontsize=14, color=INK)
+    fig.text(0.55, 0.0, r"$\longleftarrow$ denoise with $\nabla\log p_t$ $\longleftarrow$",
+             ha="center", fontsize=14, color=GREEN)
 
     fl.save(fig, "mdl-dyn-forward-reverse")
 
@@ -365,23 +378,41 @@ def fig_score_field():
     cap = 4.0
     fac = np.where(mag > cap, cap / mag, 1.0)
     U, Vc = S[..., 0] * fac, S[..., 1] * fac
-    ax.quiver(QX, QY, U, Vc, color=GRAY, angles="xy", pivot="mid",
-              width=0.004, headwidth=4, headlength=5, alpha=0.9, zorder=3)
+    # leave the grid empty under the three labels (formula top left, saddle,
+    # zero-score note) instead of letting their boxes cut arrows in half
+    keep = np.ones(QX.shape, bool)
+    for x0, x1, y0, y1 in ((-3.2, -0.6, 2.5, 3.2), (-1.2, -0.29, 0.07, 0.44),
+                           (1.53, 3.12, -1.97, -1.43)):
+        keep &= ~((QX > x0 - 0.14) & (QX < x1 + 0.14)
+                  & (QY > y0 - 0.14) & (QY < y1 + 0.14))
+    ax.quiver(QX[keep], QY[keep], U[keep], Vc[keep], color=GRAY, angles="xy",
+              pivot="mid", width=0.004, headwidth=4, headlength=5, alpha=0.9,
+              zorder=3)
 
     # mark the two modes (score = 0 there)
     for mu in mus:
         ax.plot(mu[0], mu[1], "o", color=ORANGE, ms=8, zorder=5)
+    # the symmetry point between the modes is a third zero of the score, a
+    # saddle (stable along the line through the modes' perpendicular,
+    # unstable along it): hollow marker, small label
+    mid = mus.mean(axis=0)
+    ax.plot(mid[0], mid[1], "o", mfc="white", mec="black", mew=1.4, ms=7,
+            zorder=5)
+    ax.text(mid[0] - 0.28, mid[1] + 0.32, "saddle", color="black",
+            fontsize=13, ha="right", va="center",
+            bbox=dict(facecolor="white", edgecolor="none", alpha=1.0,
+                      pad=1.5), zorder=6)
     # one annotation, in open low-density space to the lower-right of a mode
     ax.annotate(r"$\nabla\log p=\mathbf{0}$", xy=tuple(mus[1]),
                 xytext=(2.3, -1.7), color="black", fontsize=14,
                 ha="center", va="center",
-                bbox=dict(facecolor="white", edgecolor="none", alpha=0.75,
+                bbox=dict(facecolor="white", edgecolor="none", alpha=1.0,
                           pad=2.0),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.4,
                                 shrinkA=2, shrinkB=6), zorder=6)
     ax.text(-m + 0.15, m - 0.15, r"$\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$",
-            bbox=dict(facecolor="white", edgecolor="none", alpha=0.75,
-                      pad=2.0),
+            bbox=dict(facecolor="white", edgecolor="none", alpha=1.0,
+                      pad=2.0), zorder=6,
             color="black", fontsize=14, ha="left", va="top")
 
     ax.set_xlabel("$x_1$")
@@ -407,8 +438,9 @@ def fig_uniqueness_fan():
 
     # the rest solution x(t) = 0
     ax.plot([0, tmax], [0, 0], color=BLUE, lw=2.6, zorder=4)
-    ax.text(2.45, -0.12, r"$x(t)\equiv 0$", color=BLUE, fontsize=11.5,
-            ha="left", va="top")
+    # Named at its right end, in the column of blade labels.
+    ax.text(tmax + 0.06, 0.0, r"$x(t)\equiv 0$", color=BLUE, fontsize=14,
+            ha="left", va="center")
 
     # one blade per departure time c (exact solution of the IVP)
     for c in (0.0, 0.5, 1.0, 1.5, 2.0):
@@ -416,20 +448,21 @@ def fig_uniqueness_fan():
         ax.plot(t, x, color=ORANGE, lw=1.8, zorder=3)
         ax.plot(c, 0, "o", color=ORANGE, ms=4, zorder=5)
         ax.text(tmax + 0.06, (tmax - c) ** 2 / 4.0, f"$c={c:g}$",
-                color=ORANGE, fontsize=10.5, ha="left", va="center")
+                color=ORANGE, fontsize=13, ha="left", va="center")
 
     ax.text(1.78, 1.55, r"$x_c(t)=(t-c)^2/4$", color=ORANGE,
-            fontsize=10.5, ha="right", va="center")
+            fontsize=14, ha="right", va="center")
     ax.annotate("Lipschitz fails at $x=0$:\nno unique way to leave",
-                xy=(0.03, 0.01), xytext=(0.30, 0.85), fontsize=11,
+                xy=(0.03, 0.01), xytext=(0.18, 0.95), fontsize=13,
                 color="black", ha="left", va="center",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.1,
                                 shrinkA=22, shrinkB=3))
 
     ax.set_xlabel("$t$")
     ax.set_ylabel("$x$")
-    ax.set_xlim(-0.06, 3.55)
-    ax.set_ylim(-0.30, 2.75)
+    ax.set_xlim(-0.06, 3.3)
+    ax.set_ylim(-0.15, 2.75)
+    ax.set_xticks([0, 1, 2, 3])
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-uniqueness-fan")
@@ -454,7 +487,9 @@ def fig_phase_portraits():
          [(0.10, 0.06), (-0.10, 0.03), (0.03, -0.10)], 2.2),
         ("saddle", np.array([[0.5, 1.2], [1.2, 0.5]]),
          r"$\lambda_1>0>\lambda_2$",
-         [(-2.0, 1.8), (2.0, -1.8), (-1.0, -2.0), (1.0, 2.0)], 1.8),
+         # starts just off the stable direction (1,-1): each sweeps in toward
+         # the origin and leaves along the unstable direction (1,1).
+         [(-1.83, 1.85), (-1.85, 1.83), (1.85, -1.83), (1.83, -1.85)], 3.4),
         ("stable spiral", np.array([[-0.5, -1.0], [1.0, -0.5]]),
          r"$\lambda=a\pm ib,\ a<0$",
          [(2.0, 0.2), (-1.5, -1.5)], 7.0),
@@ -469,6 +504,7 @@ def fig_phase_portraits():
     g = np.linspace(-m, m, 11)
     X, Y = np.meshgrid(g, g)
     cols = [BLUE, ORANGE, GREEN, BLUE]
+    saddle_cols = [BLUE, ORANGE, BLUE, ORANGE]
 
     fig, axes = plt.subplots(2, 3, figsize=(8.6, 6.0))
     for ax, (name, A, sig, starts, T) in zip(axes.ravel(), cases):
@@ -477,13 +513,14 @@ def fig_phase_portraits():
         V = A[1, 0] * X + A[1, 1] * Y
         N = np.hypot(U, V)
         N[N == 0] = 1.0
-        ax.quiver(X, Y, U / N, V / N, color=LIGHT, angles="xy", pivot="mid",
-                  width=0.006, headwidth=4, headlength=5, scale=16, zorder=1)
+        ax.quiver(X, Y, U / N, V / N, color=FAINT, alpha=0.6, angles="xy",
+                  pivot="mid", width=0.006, headwidth=4, headlength=5,
+                  scale=16, zorder=1)
 
         def f(t, x, A=A):
             return A @ x
 
-        for x0, c in zip(starts, cols):
+        for x0, c in zip(starts, saddle_cols if name == "saddle" else cols):
             path = _rk4(f, np.array(x0, float), 0.0, T, 600)
             ax.plot(path[:, 0], path[:, 1], color=c, lw=1.9, zorder=3)
             # a direction arrowhead mid-path, only where it is inside the box
@@ -491,16 +528,16 @@ def fig_phase_portraits():
                 i = int(frac * len(path))
                 p, q = path[i], path[i + 6]
                 if np.all(np.abs(q) < 0.94 * m):
-                    fl.arrow(ax, p, q, color=c, lw=0.0, mut=11)
+                    fl.arrow(ax, p, q, color=c, lw=0.0, mut=20)
 
         ax.plot(0, 0, "o", color="black", ms=4, zorder=5)
-        ax.set_title(f"{name}\n{sig}", fontsize=11)
+        ax.set_title(f"{name}\n{sig}", fontsize=14)
         ax.set_xticks([])
         ax.set_yticks([])
         fl.clean_axes(ax, lim=((-m, m), (-m, m)), equal=True)
 
-    fig.subplots_adjust(wspace=0.18, hspace=0.32, left=0.04, right=0.985,
-                        top=0.91, bottom=0.03)
+    fig.subplots_adjust(wspace=0.18, hspace=0.38, left=0.04, right=0.985,
+                        top=0.89, bottom=0.03)
     fl.save(fig, "mdl-dyn-phase-portraits")
 
 
@@ -515,7 +552,7 @@ def fig_resnet_as_euler():
     with the literal update) overlaid on the exact flow (RK4) of the same
     rotation field."""
     fig, (axL, axR) = plt.subplots(
-        1, 2, figsize=(8.4, 4.8), gridspec_kw=dict(width_ratios=[1.0, 1.35]))
+        1, 2, figsize=(7.0, 4.8), gridspec_kw=dict(width_ratios=[1.0, 1.05]))
 
     # -- left: the residual stack ------------------------------------------ #
     sx, bx = 1.1, 2.9                  # skip spine / branch column
@@ -536,7 +573,7 @@ def fig_resnet_as_euler():
         # the + node and the step up to the next state
         axL.add_patch(plt.Circle((sx, ypl), 0.26, fill=False, color="black",
                                  lw=1.2, zorder=3))
-        axL.text(sx, ypl, "+", fontsize=12, ha="center", va="center")
+        axL.text(sx, ypl, "+", fontsize=13, ha="center", va="center")
         fl.arrow(axL, (sx, ypl + 0.26), (sx, y1 - 0.08), color=GRAY, lw=1.6,
                  mut=11)
         # residual branch: out, through f_theta, back into the + node
@@ -545,7 +582,7 @@ def fig_resnet_as_euler():
         axL.add_patch(fl.Rectangle((bx - 0.75, by - 0.38), 1.5, 0.76,
                                    facecolor="white", edgecolor=ORANGE,
                                    lw=1.5, zorder=3))
-        axL.text(bx, by, r"$\mathbf{f}_\theta$", color=ORANGE, fontsize=11,
+        axL.text(bx, by, r"$\mathbf{f}_\theta$", color=ORANGE, fontsize=14,
                  ha="center", va="center", zorder=4)
         axL.plot([bx, bx], [by + 0.38, ypl], color=ORANGE, lw=1.6, zorder=2)
         fl.arrow(axL, (bx, ypl), (sx + 0.26, ypl), color=ORANGE, lw=1.6,
@@ -553,12 +590,12 @@ def fig_resnet_as_euler():
         # state dot + label
         axL.plot(sx, y0, "o", color=BLUE, ms=6, zorder=5)
         axL.text(sx - 0.34, y0, rf"$\mathbf{{x}}_{l}$", color=BLUE,
-                 fontsize=11, ha="right", va="center")
+                 fontsize=14, ha="right", va="center")
     axL.plot(sx, ys[3], "o", color=BLUE, ms=6, zorder=5)
-    axL.text(sx - 0.34, ys[3], r"$\mathbf{x}_3$", color=BLUE, fontsize=11,
+    axL.text(sx - 0.34, ys[3], r"$\mathbf{x}_3$", color=BLUE, fontsize=14,
              ha="right", va="center")
-    axL.text(sx - 0.36, (ys[0] + ys[1]) / 2.0, "identity skip", color=GRAY,
-             fontsize=10.5, ha="right", va="center", rotation=90)
+    axL.text(sx - 0.36, (ys[0] + ys[1]) / 2.0, "identity skip", color=INK,
+             fontsize=13, ha="right", va="center", rotation=90)
 
     # -- right: Euler with h = 1 vs the exact flow -------------------------- #
     A = np.array([[0.0, -0.5], [0.5, 0.0]])    # pure rotation field
@@ -566,18 +603,20 @@ def fig_resnet_as_euler():
     def f(t, x):
         return A @ x
 
-    mR = 3.4
-    g = np.linspace(-mR + 0.2, mR - 0.2, 12)
-    X, Y = np.meshgrid(g, g)
+    # Window on the action: the trajectories live in the right half-plane, so
+    # show the origin (the field's center) at the left edge and crop the
+    # empty left half that used to fill most of the panel.
+    xl, yl = (-0.9, 3.1), (-1.75, 3.15)
+    X, Y = np.meshgrid(np.arange(-0.6, 3.0, 0.55), np.arange(-1.5, 3.1, 0.55))
     axR.quiver(X, Y, A[0, 0] * X + A[0, 1] * Y, A[1, 0] * X + A[1, 1] * Y,
-               color=LIGHT, angles="xy", pivot="mid", width=0.004,
+               color=FAINT, alpha=0.6, angles="xy", pivot="mid", width=0.004,
                headwidth=4, headlength=5, zorder=1)
 
     x0 = np.array([2.0, -1.05])
     smooth = _rk4(f, x0, 0.0, 3.0, 600)
     axR.plot(smooth[:, 0], smooth[:, 1], color=BLUE, lw=2.2, zorder=3)
     i = 320
-    fl.arrow(axR, smooth[i], smooth[i + 6], color=BLUE, lw=0.0, mut=13)
+    fl.arrow(axR, smooth[i], smooth[i + 6], color=BLUE, lw=0.0, mut=18)
 
     E = [x0]                                   # three Euler steps, h = 1
     for _ in range(3):
@@ -590,25 +629,26 @@ def fig_resnet_as_euler():
         p = E[k]
         off = p / np.hypot(*p) * 0.30
         axR.text(p[0] + off[0], p[1] + off[1], rf"$\mathbf{{x}}_{k}$",
-                 color="black" if k == 0 else ORANGE, fontsize=11.5,
+                 color="black" if k == 0 else ORANGE, fontsize=14,
                  ha="center", va="center")
-    axR.text(0.75, -1.7, "exact flow", color=BLUE, fontsize=11.5,
+    axR.plot(0, 0, "o", color=GRAY, ms=4, zorder=2)   # the field's center
+    axR.text(0.85, 0.35, "exact\nflow", color=BLUE, fontsize=14,
              ha="center", va="center")
-    axR.text(-0.9, 3.0, "Euler, $h=1$", color=ORANGE, fontsize=11.5,
+    axR.text(0.75, 2.75, "Euler, $h=1$", color=ORANGE, fontsize=14,
              ha="center", va="center")
 
     axR.set_xticks([])
     axR.set_yticks([])
-    fl.clean_axes(axR, lim=((-mR, mR), (-mR, mR)), equal=True)
+    fl.clean_axes(axR, lim=(xl, yl), equal=True)
 
-    fig.subplots_adjust(left=0.02, right=0.99, top=0.97, bottom=0.06,
-                        wspace=0.10)
+    fig.subplots_adjust(left=0.02, right=0.99, top=0.97, bottom=0.07,
+                        wspace=0.08)
     fig.text(0.5, 0.015,
              r"$\mathbf{x}_{l+1}=\mathbf{x}_l+\mathbf{f}_\theta(\mathbf{x}_l)"
              r"\quad\Leftrightarrow\quad"
              r"\mathbf{x}_{n+1}=\mathbf{x}_n+h\,\mathbf{f}(\mathbf{x}_n)"
              r"\ \ \mathrm{with}\ h=1$",
-             ha="center", fontsize=11)
+             ha="center", fontsize=13)
     fl.save(fig, "mdl-dyn-resnet-as-euler")
 
 
@@ -636,22 +676,27 @@ def fig_brownian_paths():
             ax.plot(tf, s * np.sqrt(tf), color=GRAY, lw=1.0, ls=ls, zorder=2)
             ax.plot(tf, -s * np.sqrt(tf), color=GRAY, lw=1.0, ls=ls, zorder=2)
         if stride > 1:                          # the fine limit path, faint
-            ax.plot(tf, Wf, color=LIGHT, lw=0.9, zorder=1)
+            ax.plot(tf, Wf, color=FAINT, alpha=0.5, lw=0.8, zorder=1)
         ax.plot(tf[::stride], Wf[::stride], color=BLUE,
                 lw=1.6 if stride > 1 else 1.1,
                 marker="o" if stride == 100 else None, ms=3.5, zorder=3)
         ax.set_title(rf"$\Delta t = {dt:g}$  ({n // stride} steps)",
-                     fontsize=11.5)
+                     fontsize=14)
         ax.set_xlabel("$t$")
         ax.set_xlim(0, 1)
+        # three ticks: adjacent panels' "1.00" and "0.00" used to collide
+        ax.set_xticks([0, 0.5, 1])
+        ax.set_xticklabels(["0", "0.5", "1"])
         ax.set_aspect("auto")
         fl.clean_axes(ax, equal=False)
     axes[0].set_ylabel("$W_t$")
     axes[0].set_ylim(-2.35, 2.35)
-    axes[2].text(0.83, 2 * np.sqrt(0.83) + 0.10, r"$\pm 2\sqrt{t}$",
-                 color=GRAY, fontsize=10.5, ha="center", va="bottom")
-    axes[2].text(0.83, np.sqrt(0.83) + 0.10, r"$\pm\sqrt{t}$",
-                 color=GRAY, fontsize=10.5, ha="center", va="bottom")
+    # Each envelope named just below its own curve (above them sits the
+    # panel title).
+    axes[2].text(0.86, 2 * np.sqrt(0.86) - 0.12, r"$\pm 2\sqrt{t}$",
+                 color=INK, fontsize=13, ha="center", va="top")
+    axes[2].text(0.86, np.sqrt(0.86) - 0.17, r"$\pm\sqrt{t}$",
+                 color=INK, fontsize=13, ha="center", va="top")
     fig.subplots_adjust(wspace=0.10, left=0.07, right=0.99, top=0.88,
                         bottom=0.17)
     fl.save(fig, "mdl-dyn-brownian-paths")
@@ -673,30 +718,37 @@ def fig_qv_convergence():
     W = np.concatenate([[0.0], np.cumsum(dW)])
 
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
-    ax.plot([0, 1], [0, 1], color="black", lw=1.3, ls="--", zorder=2,
-            label="$y=t$")
-    for n, a in ((16, 0.32), (256, 0.62), (4096, 1.0)):
+    ax.plot([0, 1], [0, 1], color="black", lw=1.3, ls="--", zorder=2)
+    ax.text(0.83, 0.75, "$y=t$", color=INK, fontsize=14, ha="left",
+            va="top")
+    # Shade encodes the mesh in both families (lighter = coarser); every
+    # curve gets its own legend entry so the reader can map shade to n.
+    qs_runs = []
+    for n, a in ((16, 0.42), (256, 0.7), (4096, 1.0)):
         stride = n_fine // n
         tn = np.linspace(0.0, 1.0, n + 1)
         qv = np.concatenate([[0.0], np.cumsum(np.diff(W[::stride]) ** 2)])
-        ax.plot(tn, qv, color=BLUE, alpha=a, lw=1.7, zorder=3,
-                label=rf"$\sum(\Delta W_i)^2$, $n={n}$")
+        ax.plot(tn, qv, color=BLUE, alpha=a, lw=1.8, zorder=3,
+                label=rf"Brownian $W$, $n={n}$")
         sm = np.sin(2 * np.pi * tn)
         qs = np.concatenate([[0.0], np.cumsum(np.diff(sm) ** 2)])
-        ax.plot(tn, qs, color=GRAY, alpha=a, lw=1.5, zorder=3,
-                label=r"$\sum(\Delta x_i)^2$, $x=\sin 2\pi t$"
-                if n == 16 else None)
+        qs_runs.append((n, tn, qs, a))
 
-    ax.text(1.01, 1.0, r"$\rightarrow t$", color=BLUE, fontsize=11.5,
+    for n, tn, qs, a in qs_runs:
+        ax.plot(tn, qs, color=GRAY, alpha=a, lw=1.6, zorder=3,
+                label=rf"smooth $\sin 2\pi t$, $n={n}$")
+    ax.text(1.01, 1.0, r"$\rightarrow t$", color=BLUE, fontsize=14,
             ha="left", va="center")
-    ax.text(1.01, 0.0, r"$\rightarrow 0$", color=GRAY, fontsize=11.5,
+    ax.text(1.01, 0.0, r"$\rightarrow 0$", color=INK, fontsize=14,
             ha="left", va="center")
     ax.set_xlabel("$t$")
     ax.set_ylabel("running sum of squared increments")
     ax.set_xlim(0, 1)
-    # opaque legend: the rising curves pass underneath, not through the text
-    ax.legend(loc="upper left", fontsize=10, frameon=True, framealpha=1.0,
-              edgecolor="none", facecolor="white")
+    # legend above the axes: inside, it would hide the n = 16 / 256 curves;
+    # column 1 = Brownian sums, column 2 = smooth-path sums
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.02, 1.0), ncol=2,
+              fontsize=12.5, handlelength=1.6, columnspacing=1.6,
+              frameon=False)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-qv-convergence")
@@ -725,16 +777,17 @@ def fig_ou_mean_reversion():
     tg, xg = np.meshgrid(np.arange(0.25, T, 0.5), np.arange(-2.6, 2.7, 0.65))
     U, V = np.ones_like(xg), -theta * xg
     N = np.hypot(U, V)
-    ax.quiver(tg, xg, U / N, V / N, color=LIGHT, angles="xy", pivot="mid",
-              width=0.005, headwidth=4, headlength=5, scale=26, zorder=1)
+    ax.quiver(tg, xg, U / N, V / N, color=FAINT, alpha=0.6, angles="xy",
+              pivot="mid", width=0.005, headwidth=4, headlength=5, scale=26,
+              zorder=1)
 
     # saturating +-2 sigma_t spread band (about the relaxed mean 0)
     std = np.sqrt(sigma ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * t)))
     ax.fill_between(t, -2 * std, 2 * std, color=ORANGE, alpha=0.15, zorder=2)
     ax.plot(t, 2 * std, color=ORANGE, lw=1.3, ls="--", zorder=2)
     ax.plot(t, -2 * std, color=ORANGE, lw=1.3, ls="--", zorder=2)
-    ax.text(2.6, 1.42, r"$\pm 2\sigma_t$ (saturates)", color=ORANGE,
-            fontsize=11, ha="left", va="bottom")
+    ax.text(2.45, 1.42, r"$\pm 2\sigma_t$ (saturates)", color=ORANGE,
+            fontsize=13.5, ha="left", va="bottom")
 
     # Euler-Maruyama sample paths from three different starts
     for x0 in (2.5, -2.0, 0.8):
@@ -764,10 +817,10 @@ def fig_ou_mean_reversion():
     for sp in ("top", "right", "bottom"):
         axd.spines[sp].set_visible(False)
     axd.spines["left"].set_color(LIGHT)
-    axd.set_title("stationary", fontsize=11, color=GREEN)
+    axd.set_title("stationary", fontsize=13.5, color=GREEN)
     axd.text(dens.max() * 0.62, -2.45,
              r"$\mathcal{N}\,\left(0,\frac{\sigma^2}{2\theta}\right)$",
-             color=GREEN, fontsize=11.5, ha="center", va="center")
+             color=GREEN, fontsize=14, ha="center", va="center")
     fl.save(fig, "mdl-dyn-ou-mean-reversion")
 
 
@@ -818,7 +871,11 @@ def fig_noising_denoising():
         w = w / w.sum(axis=1, keepdims=True)
         return -(w[..., None] * D).sum(axis=1) / var
 
-    m = 3.1
+    m = 3.3                       # every point of every cloud fits (max 3.11)
+    # score arrows on a sparse regular grid, all the same length (direction
+    # only); grid points where the score nearly vanishes are skipped
+    gq = np.linspace(-2.2, 2.2, 5)
+    GQ = np.stack(np.meshgrid(gq, gq), axis=-1).reshape(-1, 2)
     fig, axes = plt.subplots(2, 3, figsize=(7.6, 5.3), sharex=True,
                              sharey=True)
     for j, tt in enumerate(ts):
@@ -832,34 +889,36 @@ def fig_noising_denoising():
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_aspect("equal")
-            for sp in ("top", "right", "left"):
+            for sp in ("top", "right", "left", "bottom"):
                 ax.spines[sp].set_visible(False)
-            ax.spines["bottom"].set_color(LIGHT)
             if i == 1 and tt > 0.0:          # score arrows on the noisy panels
-                Q = P[::9]
-                S = score(Q, tt)
-                D = S / np.hypot(S[:, 0], S[:, 1])[:, None] * 0.5
-                ax.quiver(Q[:, 0], Q[:, 1], D[:, 0], D[:, 1], color=GREEN,
-                          angles="xy", scale_units="xy", scale=1.0,
-                          width=0.006, zorder=3)
+                S = score(GQ, tt)
+                mag = np.hypot(S[:, 0], S[:, 1])
+                ok = mag * (1.0 - np.exp(-2 * tt)) > 0.15
+                D = S[ok] / mag[ok, None] * 0.62
+                ax.quiver(GQ[ok, 0] - D[:, 0] / 2, GQ[ok, 1] - D[:, 1] / 2,
+                          D[:, 0], D[:, 1], color=GREEN, angles="xy",
+                          scale_units="xy", scale=1.0, width=0.009,
+                          headwidth=3.5, headlength=4, headaxislength=3.6,
+                          zorder=3)
 
-    axes[0, 0].set_title("$t=0$ (data)", fontsize=11.5, color=BLUE)
-    axes[0, 1].set_title("$t=0.7$", fontsize=11.5, color=GRAY)
-    axes[0, 2].set_title("$t=T$ (noise)", fontsize=11.5, color=ORANGE)
+    axes[0, 0].set_title("$t=0$ (data)", fontsize=14, color=BLUE)
+    axes[0, 1].set_title("$t=0.7$", fontsize=14, color=INK)
+    axes[0, 2].set_title("$t=T$ (noise)", fontsize=14, color=ORANGE)
     axes[0, 0].text(-0.22, 0.5, "forward\n(noising)",
                     transform=axes[0, 0].transAxes, rotation=90,
-                    va="center", ha="center", fontsize=11.5, color=GRAY)
+                    va="center", ha="center", fontsize=14, color=INK)
     axes[1, 0].text(-0.22, 0.5, "reverse\n(score)",
                     transform=axes[1, 0].transAxes, rotation=90,
-                    va="center", ha="center", fontsize=11.5, color=GREEN)
+                    va="center", ha="center", fontsize=14, color=GREEN)
 
     fig.subplots_adjust(wspace=0.08, hspace=0.10, left=0.10, right=0.985,
                         top=0.89, bottom=0.075)
     fig.text(0.545, 0.965, r"$\longrightarrow$ add noise $\longrightarrow$",
-             ha="center", fontsize=11, color=GRAY)
-    fig.text(0.545, 0.022,
+             ha="center", fontsize=14, color=INK)
+    fig.text(0.545, 0.015,
              r"$\longleftarrow$ denoise with $\nabla\log p_t$ $\longleftarrow$",
-             ha="center", fontsize=11, color=GREEN)
+             ha="center", fontsize=14, color=GREEN)
     fl.save(fig, "mdl-dyn-noising-denoising")
 
 
@@ -874,7 +933,7 @@ def fig_fm_paths():
     mean for Gaussian-smoothed segments, and the blue trajectories integrate
     it with RK4 -- they bend at the crossings and never intersect."""
     pairs = ((-1.2, 1.5), (0.0, -1.5), (1.2, 0.2))   # (x_0, x_1) couplings
-    sig = 0.15
+    sig = 0.2
 
     def u(x, tt):
         # marginal velocity: posterior-mean of the conditional velocities
@@ -885,7 +944,10 @@ def fig_fm_paths():
         w = w / w.sum(axis=0)
         return sum(wi * (x1 - x0) for wi, (x0, x1) in zip(w, pairs))
 
-    starts = np.array([-1.35, -1.05, -0.15, 0.15, 1.05, 1.35])
+    # one marginal trajectory per source point: in 1-D the flow preserves
+    # order, so each one bends away at a crossing and ends on a DIFFERENT
+    # target than its own straight segment
+    starts = np.array([p[0] for p in pairs])
     paths = _rk4(lambda tt, x: u(x, tt), starts, 0.0, 1.0, 400)
     tgrid = np.linspace(0.0, 1.0, 401)
 
@@ -893,7 +955,9 @@ def fig_fm_paths():
 
     # straight conditional segments
     for x0, x1 in pairs:
-        ax.plot([0, 1], [x0, x1], color=ORANGE, lw=1.8, ls="--", zorder=2)
+        # dashed on top of the (wider) blue flow, which follows a segment
+        # exactly away from the crossings -- both stay visible there
+        ax.plot([0, 1], [x0, x1], color=ORANGE, lw=1.6, ls="--", zorder=3.5)
         ax.plot(0, x0, "o", color=GRAY, ms=6, zorder=4)
         ax.plot(1, x1, "s", color="black", ms=6, zorder=4)
 
@@ -907,18 +971,22 @@ def fig_fm_paths():
             tc = (b0 - a0) / den
             if 0.02 < tc < 0.98:
                 xc = a0 + (a1 - a0) * tc
-                ax.plot(tc, xc, "x", color="black", ms=9, mew=2.0, zorder=5)
+                ax.plot(tc, xc, "x", color="black", ms=7, mew=1.6, zorder=2.5)
+    # (the crossing marks sit UNDER the flow lines so the gap between the
+    # two bent trajectories at each crossing stays visible)
 
     # curved marginal-flow trajectories
     for k in range(len(starts)):
-        ax.plot(tgrid, paths[:, k], color=BLUE, lw=1.6, zorder=3)
+        ax.plot(tgrid, paths[:, k], color=BLUE, lw=3.0, zorder=3)
 
-    ax.text(0.03, 1.85, "conditional paths: straight, may cross",
-            color=ORANGE, fontsize=11, ha="left", va="center")
-    ax.text(0.97, -1.85, "marginal flow: curved, never crosses",
-            color=BLUE, fontsize=11, ha="right", va="center")
+    # the two path families named together in the open top-left corner (the
+    # bottom left belongs to the crossing note)
+    ax.text(0.03, 2.12, "conditional paths: straight, may cross",
+            color=ORANGE, fontsize=13, ha="left", va="center")
+    ax.text(0.03, 1.80, "marginal flow: curved, never crosses",
+            color=BLUE, fontsize=13, ha="left", va="center")
     ax.annotate("crossing: the posterior\nmean averages velocities",
-                xy=(1.2 / 4.2, -1.2 + 2.7 * 1.2 / 4.2), fontsize=10.5,
+                xy=(1.2 / 4.2, -1.2 + 2.7 * 1.2 / 4.2), fontsize=13,
                 xytext=(0.03, -1.55), color="black", ha="left", va="center",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.0,
                                 shrinkA=2, shrinkB=4))
@@ -927,7 +995,8 @@ def fig_fm_paths():
     ax.set_ylabel("$x$")
     ax.set_xticks([0.0, 0.5, 1.0])
     ax.set_xlim(-0.03, 1.03)
-    ax.set_ylim(-2.05, 2.05)
+    ax.set_ylim(-2.05, 2.3)
+    ax.set_yticks([-2, -1, 0, 1, 2])
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-fm-paths")
@@ -942,9 +1011,12 @@ def fig_time_conventions():
     t = T noise; sampling integrates backwards) above the flow-matching
     convention (t = 0 noise, t = 1 data; sampling integrates forwards), with
     density glyphs at the axis ends and the t -> 1 - t bridge between them."""
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    # Both rows share one grammar: row name at the top left, the clock with
+    # its endpoint densities, and the SAMPLING direction (green) directly
+    # under the clock; the diffusion row adds its training direction above.
+    fig, ax = plt.subplots(figsize=(7.2, 5.0))
     ax.set_xlim(0, 10)
-    ax.set_ylim(0.75, 6.05)
+    ax.set_ylim(-0.1, 6.7)
     ax.axis("off")
 
     xs = np.linspace(-2.6, 2.6, 160)
@@ -962,48 +1034,46 @@ def fig_time_conventions():
         for xx, lab in ((2.0, lab_l), (8.0, lab_r)):
             ax.plot([xx, xx], [base - 0.08, base + 0.08], color="black",
                     lw=1.2)
-            ax.text(xx, base - 0.22, lab, fontsize=11.5, ha="center", va="top")
+            ax.text(xx, base - 0.22, lab, fontsize=14, ha="center", va="top")
+
+    def row(base, name, ticks, left, right, sample_dir, sample_text):
+        """One clock: ``left``/``right`` are (density, color, name)."""
+        clock(base, *ticks)
+        for cx, (dens, col, _) in ((2.0, left), (8.0, right)):
+            glyph(cx, base, dens, col)
+        ax.text(1.05, base + 0.45, left[2], color=left[1], fontsize=13.5,
+                ha="right", va="center")
+        ax.text(8.95, base + 0.45, right[2], color=right[1], fontsize=13.5,
+                ha="left", va="center")
+        tail, tip = (6.7, 3.3) if sample_dir < 0 else (3.3, 6.7)
+        fl.arrow(ax, (tail, base - 0.55), (tip, base - 0.55), color=GREEN,
+                 lw=1.6, mut=12)
+        ax.text(5.0, base - 0.72, sample_text, color=GREEN, fontsize=13.5,
+                ha="center", va="top")
+        ax.text(0.15, base + 1.45, name, fontsize=14, ha="left",
+                va="center")
 
     # -- diffusion: data at t = 0, noise at t = T; sample backwards --------- #
-    bD = 4.45
-    clock(bD, "$0$", "$T$")
-    glyph(2.0, bD, bimodal, BLUE)
-    glyph(8.0, bD, unimodal, ORANGE)
-    ax.text(1.05, bD + 0.45, "data", color=BLUE, fontsize=11, ha="right",
-            va="center")
-    ax.text(8.95, bD + 0.45, "noise", color=ORANGE, fontsize=11, ha="left",
-            va="center")
+    bD = 5.0
+    row(bD, "diffusion", ("$0$", "$T$"), (bimodal, BLUE, "data"),
+        (unimodal, ORANGE, "noise"), -1,
+        "sampling: reverse-time SDE / probability-flow ODE")
     fl.arrow(ax, (3.3, bD + 1.05), (6.7, bD + 1.05), color=GRAY, lw=1.6,
              mut=12)
-    ax.text(5.0, bD + 1.22, "training: noise the data", color=GRAY,
-            fontsize=11, ha="center", va="bottom")
-    fl.arrow(ax, (6.7, bD - 0.55), (3.3, bD - 0.55), color=GREEN, lw=1.6,
-             mut=12)
-    ax.text(5.0, bD - 0.74, "sampling: reverse-time SDE / probability-flow ODE",
-            color=GREEN, fontsize=11, ha="center", va="top")
-    ax.text(0.15, bD + 1.45, "diffusion", fontsize=11, ha="left",
-            va="center")
+    ax.text(5.0, bD + 1.22, "training: noise the data", color=INK,
+            fontsize=13.5, ha="center", va="bottom")
 
     # -- flow matching: noise at t = 0, data at t = 1; sample forwards ------ #
-    bF = 1.35
-    clock(bF, "$0$", "$1$")
-    glyph(2.0, bF, unimodal, ORANGE)
-    glyph(8.0, bF, bimodal, BLUE)
-    ax.text(1.05, bF + 0.45, "noise", color=ORANGE, fontsize=11, ha="right",
-            va="center")
-    ax.text(8.95, bF + 0.45, "data", color=BLUE, fontsize=11, ha="left",
-            va="center")
-    fl.arrow(ax, (3.3, bF + 1.05), (6.7, bF + 1.05), color=GREEN, lw=1.6,
-             mut=12)
-    ax.text(5.0, bF + 1.22,
-            r"sampling: integrate $\dot{\mathbf{x}}"
-            r"=\mathbf{v}_\theta(\mathbf{x},t)$ forwards",
-            color=GREEN, fontsize=11, ha="center", va="bottom")
-    ax.text(0.15, bF + 1.45, "flow matching", fontsize=11, ha="left",
-            va="center")
+    bF = 1.2
+    row(bF, "flow matching", ("$0$", "$1$"), (unimodal, ORANGE, "noise"),
+        (bimodal, BLUE, "data"), +1,
+        r"sampling: integrate $\dot{\mathbf{x}}"
+        r"=\mathbf{v}_\theta(\mathbf{x},t)$ forwards")
 
-    ax.text(5.0, 3.1, r"to compare formulas: $t\ \mapsto\ 1-t$",
-            color="black", fontsize=11, ha="center", va="center")
+    # the bridge between the two clocks, centred in the (widened) gap between
+    # the rows so it reads as belonging to neither
+    ax.text(5.0, 3.32, r"to compare formulas: $t/T\ \mapsto\ 1-t$",
+            color="black", fontsize=13.5, ha="center", va="center")
     fl.save(fig, "mdl-dyn-time-conventions")
 
 
@@ -1038,31 +1108,45 @@ def fig_strong_weak():
     fine = em(X0, dW1, tf_)
     coarse = em(X0, dW1.reshape(n_coarse, -1).sum(axis=1), tc)
 
-    fig, (axL, axR) = plt.subplots(
-        1, 2, figsize=(8.6, 3.7), gridspec_kw=dict(width_ratios=[1.35, 1.0]))
+    fig = plt.figure(figsize=(8.6, 4.1))
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.35, 1.0],
+                          height_ratios=[3.0, 1.3], hspace=0.12, wspace=0.25)
+    axL = fig.add_subplot(gs[0, 0])
+    axG = fig.add_subplot(gs[1, 0], sharex=axL)
+    axR = fig.add_subplot(gs[:, 1])
     axL.plot(tf_, fine, color=BLUE, lw=1.3, zorder=3,
              label=f"fine reference ({n_fine} steps)")
     axL.plot(tc, coarse, color=ORANGE, lw=1.6, marker="o", ms=4, zorder=4,
              label=f"coarse EM ({n_coarse} steps)")
-    # highlight the largest pathwise gap on the coarse grid
-    stride = n_fine // n_coarse
-    gaps = np.abs(coarse - fine[::stride])
-    j = int(gaps.argmax())
-    axL.plot([tc[j], tc[j]], [fine[j * stride], coarse[j]], color=GRAY,
-             lw=1.6, zorder=5)
-    axL.annotate("strong error:\npathwise gap,\nsame noise",
-                 xy=(tc[j], (fine[j * stride] + coarse[j]) / 2),
-                 xytext=(0.70, 1.10), color=GRAY, fontsize=11,
-                 ha="center", va="center",
-                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0,
-                                 shrinkA=2, shrinkB=4))
     axL.plot(0, X0, "o", color="black", ms=5, zorder=5)
-    axL.set_xlabel("$t$")
     axL.set_ylabel("$X_t$")
     axL.set_xlim(0, 1.02)
-    axL.legend(loc="lower left", fontsize=10.5)
+    # room below the path (its minimum is ~0.6, at t = 1) for the legend
+    axL.set_ylim(-0.3, 2.75)
+    axL.set_yticks([1.0, 2.0])
+    axL.tick_params(labelbottom=False)
+    axL.legend(loc="lower center", bbox_to_anchor=(0.5, -0.02),
+               fontsize=12.5, handlelength=1.4, frameon=False)
     axL.set_aspect("auto")
     fl.clean_axes(axL, equal=False)
+
+    # The pathwise gap at the coarse grid times, magnified: at the path scale
+    # it is a few pixels (additive-noise EM is strong order 1), so it gets its
+    # own strip.  Its size is the strong error.
+    stride = n_fine // n_coarse
+    gap = coarse - fine[::stride]
+    axG.axhline(0.0, color=INK, lw=0.9, zorder=1)
+    axG.vlines(tc, 0.0, gap, color=ORANGE, lw=2.0, zorder=2)
+    axG.plot(tc, gap, "o", color=ORANGE, ms=4, zorder=3)
+    axG.set_ylim(-0.025, 0.08)
+    axG.set_yticks([0.0, 0.05])
+    axG.set_yticklabels(["0", "0.05"])
+    axG.set_xlabel("$t$")
+    axG.set_ylabel("gap")
+    axG.text(0.02, 0.079, "strong error: gap at the grid times (magnified)",
+             color=INK, fontsize=12.5, ha="left", va="top")
+    axG.set_aspect("auto")
+    fl.clean_axes(axG, equal=False)
 
     # -- right: terminal laws at both resolutions --------------------------- #
     n_paths = 20000
@@ -1079,8 +1163,8 @@ def fig_strong_weak():
     gx = np.linspace(-2.4, 3.2, 400)
     axR.fill_between(gx, 0, _gauss(gx, m, v), color=GRAY, alpha=0.15, zorder=1)
     axR.plot(gx, _gauss(gx, m, v), color="black", lw=1.0, zorder=2)
-    axR.text(m, 0.70, "weak view:\nthe laws already match", color=GRAY,
-             fontsize=11, ha="center", va="bottom", zorder=4)
+    axR.text(m, 0.70, "weak view:\nthe laws already match", color=INK,
+             fontsize=13, ha="center", va="bottom", zorder=4)
     axR.set_xlabel("$X_T$")
     axR.set_ylabel("terminal density")
     axR.set_xlim(-2.4, 3.2)
@@ -1088,8 +1172,7 @@ def fig_strong_weak():
     axR.set_aspect("auto")
     fl.clean_axes(axR, equal=False)
 
-    fig.subplots_adjust(wspace=0.25, left=0.07, right=0.99, top=0.97,
-                        bottom=0.16)
+    fig.subplots_adjust(left=0.07, right=0.99, top=0.97, bottom=0.14)
     fl.save(fig, "mdl-dyn-strong-weak")
 
 
@@ -1104,7 +1187,8 @@ def fig_lambda_family():
     (probability-flow ODE, smooth), 0.5, and 1 (Anderson's reverse SDE,
     jagged), using the EXACT score of the OU-evolved bimodal mixture (theta=1,
     sigma=sqrt(2), p0 = 1/2 N(-2, 0.25^2) + 1/2 N(2, 0.25^2) -- the section's
-    running example).  Left panel: a few trajectories per lambda.  Right
+    running example).  Left: three stacked panels, the same four
+    trajectories per lambda.  Right
     panel: the three 20k-particle terminal histograms overlaid on the
     analytic p0 -- same marginals, different choreography."""
     theta, sig = 1.0, np.sqrt(2.0)
@@ -1148,28 +1232,36 @@ def fig_lambda_family():
     labs = (r"$\lambda=0$ (PF-ODE)", r"$\lambda=0.5$",
             r"$\lambda=1$ (reverse SDE)")
 
-    fig, (axL, axR) = plt.subplots(
-        1, 2, figsize=(8.6, 3.9), gridspec_kw=dict(width_ratios=[1.6, 1.0]))
+    fig = plt.figure(figsize=(8.6, 4.9))
+    gs = fig.add_gridspec(3, 2, width_ratios=[1.6, 1.0], hspace=0.14,
+                          wspace=0.24)
+    axLs = [fig.add_subplot(gs[0, 0])]
+    axLs += [fig.add_subplot(gs[k, 0], sharex=axLs[0], sharey=axLs[0])
+             for k in (1, 2)]
+    axR = fig.add_subplot(gs[:, 1])
 
-    # -- left: a few trajectories per lambda from the SAME noise draws ------ #
-    rng = np.random.default_rng(1)
-    starts = rng.standard_normal(4)
+    # -- left: one short panel per lambda, the SAME four terminal noise draws
+    # (and the same driving noise) in each, so only the texture changes ---- #
+    starts = np.array([-1.3, -0.35, 0.3, 1.1])
     ss = np.linspace(0.0, T, steps + 1)          # reverse clock s = T - t
-    for lam, c in zip(lams, cols):
+    for ax, lam, c, lab in zip(axLs, lams, cols, labs):
         P = reverse(starts, lam, np.random.default_rng(5))
         for j in range(len(starts)):
-            axL.plot(ss, P[:, j], color=c, lw=1.1 if lam > 0 else 1.8,
-                     alpha=0.85, zorder=3 if lam == 0 else 2)
-    axL.plot(np.zeros(len(starts)), starts, "o", color="black", ms=4,
-             zorder=5)
-    axL.set_xlabel(r"reverse time $s = T - t$ (noise $\rightarrow$ data)")
-    axL.set_ylabel("$x$")
-    axL.set_xlim(0, T)
-    axL.set_ylim(-3.4, 3.4)
-    axL.set_aspect("auto")
-    fl.clean_axes(axL, equal=False)
-    for lam, c, lab, y in zip(lams, cols, labs, (2.55, -2.8, 3.0)):
-        axL.text(1.62, y, lab, color=c, fontsize=11, ha="center", va="center")
+            ax.plot(ss, P[:, j], color=c, lw=1.8 if lam == 0 else 1.2,
+                    zorder=3)
+        ax.plot(np.zeros(len(starts)), starts, "o", color="black", ms=4,
+                zorder=5, clip_on=False)
+        ax.text(0.06, 2.75, lab, color=c, fontsize=13.5, ha="left",
+                va="center", bbox=WHITE_BOX, zorder=6)
+        ax.set_xlim(0, T)
+        ax.set_ylim(-3.4, 3.4)
+        ax.set_yticks([-2, 2])      # a "0" tick would sit among the start dots
+        ax.set_aspect("auto")
+        fl.clean_axes(ax, equal=False)
+    for ax in axLs[:2]:
+        ax.tick_params(labelbottom=False)
+    axLs[1].set_ylabel("$x$")
+    axLs[2].set_xlabel(r"reverse time $s = T - t$ (noise $\rightarrow$ data)")
 
     # -- right: terminal histograms of full clouds, one per lambda ---------- #
     rng = np.random.default_rng(7)
@@ -1183,16 +1275,15 @@ def fig_lambda_family():
     p0 = sum(pi * _gauss(gx, mi, vi) for pi, mi, vi in zip(pis, m0, v0))
     axR.fill_between(gx, 0, p0, color=GRAY, alpha=0.15, zorder=1)
     axR.plot(gx, p0, color="black", lw=1.0, zorder=2)
-    axR.text(0.0, 0.62, "all three land\non the same $p_0$", color=GRAY,
-             fontsize=11, ha="center", va="center")
+    axR.text(0.0, 0.62, "all three land\non the same $p_0$", color=INK,
+             fontsize=13, ha="center", va="center")
     axR.set_xlabel("$x$")
     axR.set_ylabel("terminal density")
     axR.set_xlim(-3.2, 3.2)
     axR.set_aspect("auto")
     fl.clean_axes(axR, equal=False)
 
-    fig.subplots_adjust(wspace=0.24, left=0.075, right=0.99, top=0.97,
-                        bottom=0.16)
+    fig.subplots_adjust(left=0.075, right=0.99, top=0.98, bottom=0.13)
     fl.save(fig, "mdl-dyn-lambda-family")
 
 
@@ -1247,21 +1338,21 @@ def fig_stability_regions():
     ax.plot([-2.0, 0.0], [0.0, 0.0], color=BLUE, lw=3.2,
             solid_capstyle="butt", zorder=4)
     ax.plot(-2.0, 0.0, "|", color=BLUE, ms=11, mew=2.2, zorder=5)
-    ax.text(-1.0, 0.14, r"$-2 < h\lambda < 0$", color=BLUE, fontsize=11,
+    ax.text(-1.0, 0.14, r"$-2 < h\lambda < 0$", color=BLUE, fontsize=13,
             ha="center", va="bottom", zorder=6)
     x_rk4 = -2.785293563405282          # real root of |R_rk4(z)| = 1
     ax.plot(x_rk4, 0.0, "|", color=GREEN, ms=11, mew=2.2, zorder=5)
-    ax.text(-3.35, -0.35, r"$\approx -2.79$", color=GREEN,
-            fontsize=11, ha="center", va="top", zorder=6)
+    ax.text(-3.55, -0.30, r"$\approx{-2.79}$", color=GREEN,
+            fontsize=13, ha="center", va="top", zorder=6)
 
-    ax.text(-1.0, -1.25, "forward Euler", color=BLUE, fontsize=10.5,
+    ax.text(-1.0, -1.3, "forward Euler", color=BLUE, fontsize=13,
             ha="center", va="center", zorder=6)
-    ax.text(-0.30, 3.15, "RK4", color=GREEN, fontsize=10.5,
+    ax.text(-1.0, 1.6, "RK4", color=GREEN, fontsize=13,
             ha="center", va="center", zorder=6)
-    ax.text(1.6, 1.65, "backward Euler:\nunstable only here", color=ORANGE,
-            fontsize=11, ha="center", va="center", zorder=6)
-    ax.text(-4.25, 3.1, "left half-plane:\ntrue solution decays", color="black",
-            fontsize=11, ha="left", va="center", zorder=6)
+    ax.text(1.4, 1.75, "backward Euler:\nunstable only here", color=ORANGE,
+            fontsize=13, ha="center", va="center", zorder=6)
+    ax.text(-4.25, 3.05, "left half-plane:\ntrue solution decays", color="black",
+            fontsize=13, ha="left", va="center", zorder=6)
 
     ax.set_xlabel(r"$\mathrm{Re}(h\lambda)$")
     ax.set_ylabel(r"$\mathrm{Im}(h\lambda)$")
@@ -1283,7 +1374,10 @@ def fig_tweedie():
     the DSM demo's numbers), not sketched."""
     means, var0, sig2 = np.array([-2.0, 2.0]), 0.25, 0.25   # sigma = 0.5
     vs = var0 + sig2                                        # smoothed comp var
-    xt = 0.8                                                # the noisy point
+    # the noisy point: in the valley between the modes (p_sigma's minimum is
+    # at 0), close enough to it that the far mode keeps a visible ~17% of the
+    # posterior -- the bimodal-but-lopsided posterior the caption describes.
+    xt = 0.2
 
     x = np.linspace(-4.0, 4.0, 801)
     p_sigma = 0.5 * (_gauss(x, means[0], vs) + _gauss(x, means[1], vs))
@@ -1309,34 +1403,41 @@ def fig_tweedie():
     ax.plot(x, scale * posterior, color=GREEN, lw=1.9, zorder=4)
     ax.fill_between(x, 0, scale * posterior, color=GREEN, alpha=0.15, zorder=2)
 
-    # the noisy point, the arrow up the score, and the posterior mean
-    yarr = 0.055
-    ax.plot(xt, 0, "o", color=ORANGE, ms=8, zorder=6)
-    ax.plot(x0_hat, 0, "o", color=GREEN, ms=8, zorder=6)
-    ax.axvline(xt, color=ORANGE, lw=1.0, ls="--", alpha=0.6, zorder=2)
-    ax.axvline(x0_hat, color=GREEN, lw=1.0, ls="--", alpha=0.6, zorder=2)
-    fl.arrow(ax, (xt, yarr), (x0_hat, yarr), color=ORANGE, lw=2.4, mut=15)
-
-    ax.text(xt - 0.07, -0.016, r"$\tilde{x}$", color=ORANGE, fontsize=11,
-            ha="right", va="top")
-    ax.text(x0_hat + 0.07, -0.016, r"$\hat{x}_0$", color=GREEN, fontsize=11,
-            ha="left", va="top")
-    ax.text(0.05, 0.095,
-            r"$\sigma^2\,\nabla\log p_\sigma(\tilde{x})$", color=ORANGE,
-            fontsize=11, ha="center", va="center")
-    ax.text(2.75, 0.255, r"$p_\sigma$", color=BLUE, fontsize=11,
+    # the noisy point, the step up the score, and the posterior mean: one
+    # marker row just under the densities, the step arrow running from the
+    # x_tilde dot to the x0_hat dot (stopping at their edges), its name
+    # directly beneath it -- no leader across the curves.
+    yrow = -0.022
+    ax.plot(xt, yrow, "o", color=ORANGE, ms=8, zorder=6, clip_on=False)
+    ax.plot(x0_hat, yrow, "o", color=GREEN, ms=8, zorder=6, clip_on=False)
+    ax.annotate("", xy=(x0_hat, yrow), xytext=(xt, yrow),
+                arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=2.4,
+                                mutation_scale=15, shrinkA=5, shrinkB=5),
+                zorder=5)
+    ax.text(xt - 0.12, yrow, r"$\tilde{x}$", color=ORANGE, fontsize=14,
+            ha="right", va="center")
+    ax.text(x0_hat + 0.12, yrow, r"$\hat{x}_0$", color=GREEN, fontsize=14,
+            ha="left", va="center")
+    ax.text((xt + x0_hat) / 2, yrow - 0.02,
+            r"$\sigma^2\,\nabla\log p_\sigma(\tilde{x})$",
+            color=ORANGE, fontsize=13.5, ha="center", va="top")
+    ax.text(2.95, 0.255, r"$p_\sigma$", color=BLUE, fontsize=14,
             ha="center", va="center")
-    ax.annotate(r"posterior $p(x\mid\tilde{x})$ (rescaled)",
-                xy=(post_means[1] - 0.28, scale * posterior.max() * 0.82),
-                xytext=(-3.9, 0.305), color=GREEN, fontsize=11,
-                ha="left", va="bottom",
+    # posterior label in the empty band between the two smoothed modes,
+    # with a short leader from its lower-right corner down to the
+    # posterior's main bump (clear of the score label below it)
+    ax.annotate("posterior $p(x\\mid\\tilde{x})$\n(rescaled)",
+                xy=(post_means[1] - 0.18, scale * posterior.max() * 0.86),
+                xytext=(-0.1, 0.268), color=GREEN, fontsize=13,
+                ha="center", va="center",
                 arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1,
-                                shrinkA=2, shrinkB=3), zorder=5)
+                                relpos=(0.9, 0.0), shrinkA=2, shrinkB=3),
+                zorder=5)
 
     ax.set_xlabel("$x$")
     ax.set_ylabel("density")
     ax.set_xlim(-4.0, 4.0)
-    ax.set_ylim(-0.045, 0.34)
+    ax.set_ylim(-0.085, 0.34)
     ax.set_yticks([0.0, 0.1, 0.2, 0.3])
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
@@ -1372,7 +1473,7 @@ def fig_ddim_strides():
     # the fine ancestral grid, as faint verticals (every 25th of 1000) -- kept
     # very light (low alpha) so the dense grid reads as texture, not clutter
     for tk in tt[25::25]:
-        ax.axvline(tk, color=LIGHT, lw=0.5, alpha=0.35, zorder=1)
+        ax.axvline(tk, color=LIGHT, lw=0.6, alpha=0.8, zorder=1)
 
     # the curve family (gray), one curve highlighted (blue)
     for k in range(1, 7):
@@ -1384,28 +1485,27 @@ def fig_ddim_strides():
     # DDIM strides: 10 big deterministic steps along the highlighted curve
     idx = np.linspace(T, 0, 11).round().astype(int)
     ax.plot(tt[idx], xb[idx], "o", color=ORANGE, ms=6.5, zorder=5)
-    # direction of sampling: noise -> data (right to left)
-    i = 520
+    # direction of sampling: noise -> data (right to left), midway between
+    # the t = 0.5 and t = 0.6 dots
+    i = 565
     fl.arrow(ax, (tt[i], xb[i]), (tt[i - 14], xb[i - 14]), color=BLUE,
-             lw=0.0, mut=14)
+             lw=0.0, mut=20)
 
     ax.plot(np.zeros(7), x0s, "o", color=GREEN, ms=5, zorder=5)
-    ax.text(0.02, 2.35, "data end: $x_0$", color=GREEN, fontsize=11,
+    ax.text(0.02, 2.35, "data end: $x_0$", color=GREEN, fontsize=13,
             ha="left", va="center")
-    ax.text(0.98, 2.35, r"noise end: $\epsilon$", color=ORANGE, fontsize=11,
+    ax.text(0.98, 2.35, r"noise end: $\epsilon$", color=ORANGE, fontsize=13,
             ha="right", va="center")
     ax.annotate("one sample slides along\nits own curve, 10 strides",
-                xy=(tt[idx[3]], xb[idx[3]]), xytext=(0.42, -2.15),
-                color=ORANGE, fontsize=11, ha="center", va="center",
+                xy=(tt[idx[3]], xb[idx[3]]), xytext=(0.42, -2.1),
+                color=ORANGE, fontsize=13, ha="center", va="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
                                 shrinkA=2, shrinkB=5), zorder=6)
-    # formula and the grid-skipping note stacked in the clear band between the
-    # top labels and the curve bundle, centered for a balanced layout
-    ax.text(0.5, 2.10,
+    # the formula in the clear band between the top labels and the curve
+    # bundle (the caption names the faint verticals)
+    ax.text(0.5, 2.05,
             r"$x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\epsilon$",
-            color="black", fontsize=10.5, ha="center", va="center", zorder=6)
-    ax.text(0.5, 1.65, "skipped ancestral grid times", color="black",
-            fontsize=11, ha="center", va="center")
+            color="black", fontsize=14, ha="center", va="center", zorder=6)
 
     ax.set_xlabel(r"diffusion time $t/T$")
     ax.set_ylabel("$x$")

@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -462,7 +462,7 @@ z
    </g>
    <g id="text_1">
     <!-- all $\mathbf{k}_{1..t}, \mathbf{v}_{1..t}$ recomputed -->
-    <g transform="translate(54.49787 30.199864) scale(0.13 -0.13)">
+    <g transform="translate(54.49787 26.013927) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1c" d="M 1242 -77 
 Q 851 -77 588 153 
@@ -906,11 +906,11 @@ z
    </g>
    <g id="patch_56">
     <path d="M 202.093164 50.644016 
-Q 202.093164 123.346247 202.093164 194.483231 
+Q 202.093164 126.449391 202.093164 200.689519 
 " style="fill: none; stroke: #565d66; stroke-width: 1.4; stroke-linecap: round"/>
-    <path d="M 204.493164 189.683231 
-L 202.093164 194.483231 
-L 199.693164 189.683231 
+    <path d="M 204.493164 195.889519 
+L 202.093164 200.689519 
+L 199.693164 195.889519 
 z
 " style="fill: #565d66; stroke: #565d66; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
@@ -1567,7 +1567,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\mathbf{k}_{1..t-1}, \mathbf{v}_{1..t-1}$ from the cache -->
-    <g transform="translate(298.604097 30.199864) scale(0.13 -0.13)">
+    <g transform="translate(298.604097 26.013927) scale(0.13 -0.13)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -1682,15 +1682,15 @@ z
    </g>
    <g id="text_6">
     <g id="patch_113">
-     <path d="M 323.753621 131.25541 
-L 404.223621 131.25541 
-L 404.223621 110.11741 
-L 323.753621 110.11741 
+     <path d="M 325.526846 186.225389 
+L 405.996846 186.225389 
+L 405.996846 165.087389 
+L 325.526846 165.087389 
 z
 " style="fill: #ffffff"/>
     </g>
     <!-- not computed -->
-    <g style="fill: #565d66" transform="translate(325.703621 125.06741) scale(0.13 -0.13)">
+    <g style="fill: #565d66" transform="translate(327.476846 180.037389) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-29"/>
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(54.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(107.203125 0)"/>
@@ -1707,11 +1707,11 @@ z
    </g>
    <g id="patch_114">
     <path d="M 469.495517 50.644016 
-Q 469.495517 123.346247 469.495517 194.483231 
+Q 469.495517 126.449391 469.495517 200.689519 
 " style="fill: none; stroke: #565d66; stroke-width: 1.4; stroke-linecap: round"/>
-    <path d="M 471.895517 189.683231 
-L 469.495517 194.483231 
-L 467.095517 189.683231 
+    <path d="M 471.895517 195.889519 
+L 469.495517 200.689519 
+L 467.095517 195.889519 
 z
 " style="fill: #565d66; stroke: #565d66; stroke-width: 1.4; stroke-linecap: round"/>
    </g>

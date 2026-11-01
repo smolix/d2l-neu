@@ -782,7 +782,7 @@ the narrow valley, the step size is throttled by the steep direction (to stay
 stable) while the flat direction needs many such small steps to make progress;
 the zig-zag is the visible cost of a large condition number.
 
-![Gradient descent on a well-conditioned quadratic bowl ($\kappa\approx1$, near-circular contours, an almost straight path) versus an ill-conditioned one ($\kappa\gg1$, elongated contours, a zig-zag trajectory across the narrow valley).](../img/mdl-la-condition.svg)
+![Gradient descent on a well-conditioned quadratic bowl ($\kappa=1.3$, near-circular contours, an almost straight path) versus an ill-conditioned one ($\kappa=18$, elongated contours, a zig-zag trajectory across the narrow valley).](../img/mdl-la-condition.svg)
 :label:`fig_mdl-la-condition`
 
 ## The SVD in Modern Deep Learning

@@ -3,7 +3,8 @@
 ``chapter_recurrent-modern`` (12.7 "Hybrid Architectures") in the shared house
 style defined in ``gen_mdl_figures.py``.
 
-Two figures:
+One figure (the "hybrid stacks" schematic was dropped with the 2026-10
+chapter rewrite, which no longer references it; see git history):
 
   * the hybrid cache curve -- persistent decode state against context length
     for a 32-layer model at production width: a pure transformer's KV cache
@@ -11,22 +12,13 @@ Two figures:
     and a 4-of-32 hybrid pays exactly the attention fraction of the
     transformer bill.  All three curves are computed from the KV-cache byte
     formula of the transformers chapter plus the Mamba-2 state-size
-    accounting;
-  * the hybrid stack schematic -- four shipped answers to "where does the
-    attention go": Jamba 52B (attention every 8th layer), Nemotron-H 8B (a
-    strict 11-layer period, never at the front), Samba 3.8B (sliding-window
-    attention on every second layer, no global attention at all), Zamba2 7B
-    (two weight-shared attention blocks re-entered 13 times along an 81-layer
-    Mamba-2 backbone; the released config has num_hidden_layers=81 with 13
-    hybrid positions).  Layer counts and attention positions are the
-    config-verified ones from the section's recipe table, with the model
-    variant named in every label.
+    accounting.
 
 Run with the repo's pytorch venv:
 
     .venv-pytorch/bin/python tools/gen_mdl_ssm_hybrids_figures.py
 
-All figures are written to ``img/mdl-modernrnn-<id>.svg``.
+The figure is written to ``img/mdl-modernrnn-<id>.svg``.
 """
 
 from __future__ import annotations
@@ -40,8 +32,6 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 TEAL = fl.T.TEAL.base   # recurrent/state role (guide §4.3), as in ch. 9/10
-
-from matplotlib.patches import Rectangle
 
 
 # --------------------------------------------------------------------------- #
@@ -101,87 +91,12 @@ def fig_hybrid_cache():
     fl.save(fig, "mdl-modernrnn-hybrid-cache")
 
 
-# --------------------------------------------------------------------------- #
-# Figure 2: where the attention goes (four shipped stacks)                    #
-# --------------------------------------------------------------------------- #
-
-# (name, total layers, dict of special positions).  Positions are 1-indexed
-# from the input; verified against each model's released config / report.
-STACKS = [
-    ("Jamba 52B\n32 layers", 32,
-     {"attn": [4, 12, 20, 28], "swa": [], "shared": []}),
-    ("Nemotron-H 8B\n52 layers", 52,
-     {"attn": [8, 19, 30, 41], "swa": [], "shared": []}),
-    ("Samba 3.8B\n64 layers", 64,
-     {"attn": [], "swa": list(range(2, 65, 2)), "shared": []}),
-    # Zamba2-7B released config: num_hidden_layers=81, 13 hybrid (shared
-    # attention) positions, one every 6 backbone layers.
-    ("Zamba2 7B\n81 layers", 81,
-     {"attn": [], "swa": [], "shared": list(range(6, 82, 6))}),
-]
-
-
-def fig_hybrid_stacks():
-    """Vertical layer stacks, input at the bottom; attention cells stand out."""
-    fig, ax = plt.subplots(figsize=(8.6, 4.8))
-    cell_w, gap = 1.3, 2.4                         # column geometry
-    unit = 1.0                                     # one layer = one unit tall
-
-    for i, (name, n, kinds) in enumerate(STACKS):
-        x0 = i * (cell_w + gap)
-        for layer in range(1, n + 1):
-            y0 = (layer - 1) * unit
-            if layer in kinds["attn"]:
-                color, hatch = ORANGE, None
-            elif layer in kinds["swa"]:
-                color, hatch = GREEN, None
-            elif layer in kinds["shared"]:
-                color, hatch = ORANGE, "///"
-            else:
-                color, hatch = TEAL, None
-            face = color if hatch is None else "none"
-            ax.add_patch(Rectangle(
-                (x0, y0), cell_w, 0.86 * unit, facecolor=face,
-                edgecolor=color, hatch=hatch, lw=0.9,
-                alpha=0.85 if hatch is None else 1.0))
-        ax.text(x0 + cell_w / 2, -4.2, name, ha="center", va="top",
-                fontsize=13, color="black")
-
-    # Input arrow: every stack reads from the bottom -- "never at the front"
-    # is visible as an all-blue base in every column.
-    ax.annotate("", xy=(-1.6, 10.0), xytext=(-1.6, -2.5),
-                arrowprops=dict(arrowstyle="->", color="black", lw=1.4))
-    ax.text(-1.6, -4.2, "input", ha="center", va="top", fontsize=13,
-            color="black")
-
-    # Legend built from proxy patches, outside the stacks on the right; the
-    # tight bounding box in save() crops the canvas to the content.
-    proxies = [
-        (Rectangle((0, 0), 1, 1, facecolor=TEAL, alpha=0.85), "recurrent"),
-        (Rectangle((0, 0), 1, 1, facecolor=ORANGE, alpha=0.85),
-         "full attention"),
-        (Rectangle((0, 0), 1, 1, facecolor=GREEN, alpha=0.85),
-         "sliding-window attention"),
-        (Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=ORANGE,
-                   hatch="///"), "shared attention block"),
-    ]
-    ax.legend([p for p, _ in proxies], [t for _, t in proxies],
-              loc="upper left", bbox_to_anchor=(1.01, 0.92), fontsize=12,
-              handlelength=1.2, handleheight=1.2)
-
-    ax.set_xlim(-2.4, len(STACKS) * (cell_w + gap) - gap + 0.4)
-    ax.set_ylim(-9.5, 82)
-    ax.axis("off")
-    fl.save(fig, "mdl-modernrnn-hybrid-stacks")
-
-
 # =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
 FIGURES = [
     fig_hybrid_cache,
-    fig_hybrid_stacks,
 ]
 
 

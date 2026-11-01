@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:53b877cf5214800003aca2a30334f60c322ed319c15723b14e059ce6255dc5bc",
+    "d2l_lib_fingerprint": "sha256:4eb533e07d325aacb9492a6bda1b8253794e455b1d9f8fa4afd9495f2914477b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
           "bytes": 31135,
-          "sha256": "sha256:4dfde439fd61073ebfb1353dbe43784e04021890cabab8a761e51c1c3dbaf02f"
+          "sha256": "sha256:115d6343f06fbb5607f4b9ebe7e891d458b2d080809c97cdbed696619c2381ac"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.74\ngates above 0.5: 53%, above 0.9: 25%\n"
+          "text": "perplexity with the state reset: 10.80\ngates above 0.5: 54%, above 0.9: 24%\n"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convolution vs scan: 1.2e-07, convolution vs steps: 1.2e-07\n"
+          "text": "convolution vs scan: 2.4e-07, convolution vs steps: 2.4e-07\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.36\n"
+          "text": "S4D perplexity: 3.33\n"
         }
       ]
     }

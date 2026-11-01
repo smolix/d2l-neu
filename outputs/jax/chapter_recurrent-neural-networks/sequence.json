@@ -4,97 +4,129 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:22702dfdd2490c8e21f802b21cb4c4400892f2944de0a43a49a2b7e460ddd1b3",
+    "d2l_lib_fingerprint": "sha256:f4d97e0cb7a76f9bab96b58d82cd05385085b3e624f85ad2be66366d37e92b92",
     "max_inline_bytes": 0
   },
   "cells": {
     "sequence-working-with-sequences": {
-      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "code_fingerprint": "sha256:9d6936e82a5cd0d7d4ccefe1e5d6d13c57ff9b12c20c7b1e03f42c0ef4135479",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-1": {
-      "code_fingerprint": "sha256:b940e546850b7991b5e08319226c2919a679685e6f0b7dba95a586925e8ed161",
+      "code_fingerprint": "sha256:7a214adb9b20cf71ccd4f5a478e61059069de7feb188d728c809a75452ee1980",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-2": {
-      "code_fingerprint": "sha256:2ebbbcaa7547726229831791b1a4369ba6493816ad0270a3d25085cc3c90ba7e",
+      "code_fingerprint": "sha256:27f12a3c1073b805f0ffe3735c6fa68f25309d79a4e60d2172030cc11afe29e1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40599,
-          "sha256": "sha256:334b7c2df7e9e157e450af9b3ab83981b3650601066c409ef2c77c57e2331e93"
+          "bytes": 40398,
+          "sha256": "sha256:98293d8b571555ac16dbae7d3e4e47e458a0da3eec507a23958c0c58930de621"
         }
       ]
     },
     "sequence-training-3": {
-      "code_fingerprint": "sha256:dc00bc11ea727af089be30693960bfd78bcfd3adb2344efc5f868b6aa78343cc",
+      "code_fingerprint": "sha256:a6ca2ac4df9b76a11ef39e01d8d068bc298e1b68bfdb63b65828d874afffae9b",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:dd9bd90f3c8314cb6ce21fdb77e9de178dc7adf3dd807bbc85d9721eb7afa7ef",
+      "code_fingerprint": "sha256:ea3d9d86c0bc20c6383e4c13d1263b62f672fa4ba2d4a5e2eec79a475572b7a2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22246,
-          "sha256": "sha256:1ce95cea256d9cee53edc58a355c79d9a02e2a829ef02691c9f4cd0eed3261a2"
+          "bytes": 22251,
+          "sha256": "sha256:e76b393ca2f841340c492fd75144a5ac18a3d8a837f5036e919e3ad5853e3f51"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:759ad8bbc40e41690c7548adc49ebaca9c6589b67e2a7597241bcad8c9ab53fe",
+      "code_fingerprint": "sha256:70b86f07c0d45dff265ff9624ca715f54b30b8bf114187c5da37c10fe72248c7",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-one-step-ahead-prediction-1": {
+      "code_fingerprint": "sha256:4f9bfd933894aae244b041170e484fcb6e4cff79c992186888cbedf6835e28df",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68081,
-          "sha256": "sha256:782565761bc9cca0f114d05cdf44b8393fc3d1e6e8e552483976316a79e037e6"
+          "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
+          "bytes": 67528,
+          "sha256": "sha256:eef1d3a9f1c501513b55a927f4965822d984be936763b2508882bed86121a08d"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:6b654e7ed9207c0c6c13c512a1be11eb63b1062d9ddb732e3c4f4761524aa2db",
+      "code_fingerprint": "sha256:4ae6e05da07464f4e992dae3f80cf4b1aaffbed724d11f3b9762ff5ee6190f4e",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:8d29ca981f20cbcdf3089a5332a902a9450e093d2a4a97055c42a471c55043df",
+      "code_fingerprint": "sha256:8825980533a4f3ab603fd91a761f1ed7f5d23ba784f48b6ea3de47e0878fa212",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44470,
-          "sha256": "sha256:c8419086c617cb73b9ae3ef8d2da83347114cf2d9b20ae6166a6842319727368"
+          "bytes": 44087,
+          "sha256": "sha256:9b7a0d759ddc7933b93ee0065e6cfb54a827ce29b354f1ea2c28bce60dc690e1"
+        }
+      ]
+    },
+    "sequence-multistep-rollout-1": {
+      "code_fingerprint": "sha256:72d2cae450cfdac2e7dd2499e9b9ed4860c5c5582b331edc76791e85a60d5a0b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weights on x[t-4], ..., x[t-1]: [0.236 0.263 0.259 0.235]\n"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:e58f9a89a59750af2536e6908af6b611946d5be0a191e5efdf79bd0b2303eb5b",
+      "code_fingerprint": "sha256:30e856d004ee2e3b9bfd2216720a932c877593333faf742edd6f1a06f0fdc34c",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:9f0a60c8e6692d607fc59518ada10cf040131311a2ec050853c527b2acc46a8d",
+      "code_fingerprint": "sha256:b42773c0b3413e70207c03bece7abba650f7fb228b267c25ab2d5758081acff3",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-error-accumulation-1": {
+      "code_fingerprint": "sha256:2886ed8d695983200e03d191dbf5f2c15dd4dc5ba4053ad7787ad6501b4bd39d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105052,
-          "sha256": "sha256:3dc9129aece18edea81cda87c82d45bfca901c37b91635b457aec7715c07afd2"
+          "asset": "sequence/sequence-error-accumulation-1-1.svg",
+          "bytes": 105473,
+          "sha256": "sha256:6b52ed7ec22c2681b6ddb16db8aa417a0b967526a7e47a20ea28421d7ecf3d37"
+        }
+      ]
+    },
+    "sequence-error-accumulation-2": {
+      "code_fingerprint": "sha256:256a7664db713e168ae218ab233a2dca4957ddd6b41333106fd15d67e4d634ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 steps ahead: mean squared error 0.051\n 4 steps ahead: mean squared error 0.054\n16 steps ahead: mean squared error 0.064\n64 steps ahead: mean squared error 0.232\nvariance of the series: 0.487\n"
         }
       ]
     }

@@ -4,174 +4,200 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:6f08b51309b2d4ecc8d72cd74775c08b51a920afd58baaa23b3afd1778dfa5ee",
+    "d2l_lib_fingerprint": "sha256:3789d79a0a7f537b82b0c51cd144472bff767f162746419375dcf7f9952afd5e",
     "max_inline_bytes": 0
   },
   "cells": {
     "decoding-decoding-and-generation": {
-      "code_fingerprint": "sha256:9aeb4f96fd9ceb78b224c5faebc3b7dea38989fdda8e08b6800e9df4ae2e8447",
+      "code_fingerprint": "sha256:47f50caeb0ccfc78e5478bcc8d40e4fd11f11483c5c7b2386321e1b664547db7",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-model-to-decode-from-1": {
-      "code_fingerprint": "sha256:f4b3a5bca8eb6b7609e58ff81e2987c5960cd6faebbd9ea9173095dc9446b0ed",
+      "code_fingerprint": "sha256:28301b1c5421cf4686878f18ac17e8cb9d2159941b09ad8e8ebf4def436a56a2",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-model-to-decode-from-2": {
-      "code_fingerprint": "sha256:33cf45a289239d544a74b1023f5a38aabce17aeb33a931317a16e7fc30db885f",
+      "code_fingerprint": "sha256:3b3827d2e43ca532f69969457c577599fb15702f2eb9983fcdd8b4e5b4622c2f",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-model-to-decode-from-3": {
-      "code_fingerprint": "sha256:7681c5ffbcb477f14a0f760e4129dfd21762e0f7b60991207c04c76386e458c3",
-      "kind": "asset",
+      "code_fingerprint": "sha256:35608715a6213ff0d2294b0824e5d260a7f7973018740e6678aad030d48a4674",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 25697,
-          "sha256": "sha256:8e1b926f63b943221a6c6523a40cc3900560169ef72b49e914012e0fb800b0d2"
+          "bytes": 23606,
+          "sha256": "sha256:7757df7ae55788af38bbf7411de02b4fec88a18fdb771451fc83b3e8cb8c4aab"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation perplexity 59.9\n"
         }
       ]
     },
     "decoding-a-model-to-decode-from-4": {
-      "code_fingerprint": "sha256:7408722100dca2a741f952fa0699ad4e6234ef11a33d9d7de0f6fcdbf9305776",
+      "code_fingerprint": "sha256:6953fafe1802f89bcae10bae79904952bd79af8b703a7017ae377c5861bf4188",
       "kind": "text",
       "outputs": []
     },
     "decoding-greedy-decoding": {
-      "code_fingerprint": "sha256:e2e814d533d358498cd768dd8f25e5b4fd81bcfbe297014ca1be0b2b12f75c82",
+      "code_fingerprint": "sha256:3c12921c0af7cde99a2b3ff6447220ed0caa6cd1756ce8aaa99304e624bbf3b2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time travellerter. I felt a moment I was in a premiument\\n\\n'In my\n    mind.\\n\\n'In a moment I was inferm, and I had seen. I was nothinged to\"\n\"it seemed to me that the dinner in the mereossibly, and the faintly, and in\n    a moment.\\n\\n'In a moment I was inferm, and I had seen. I was nothinged\n    to\"\n"
+          "text": "\"The Time Traveller.\\n\\n'I had\\nfrom the\\nshamprise.\\n\\n'I had\\nfrom\n    the\\nshamprise.\\n\\n'I had\\nfrom the\\nshampr\"\n\"It seemed to me that\\nthe Time Traveller.\\n\\n'I had\\nfrom\n    the\\nshamprise.\\n\\n'I had\\nfrom the\\nshamprise.\\n\\n'I had\\nfrom the\\ns\"\n"
         }
       ]
     },
     "decoding-beam-search-1": {
-      "code_fingerprint": "sha256:91901959e1d370a20a22b70928f32a39cd4e447facdc57580dfdffbc3b98abbf",
+      "code_fingerprint": "sha256:3ccfccf8117ca9360d7ee3dd7172562b1170d29d9e086528a84add6095ddba6c",
       "kind": "text",
       "outputs": []
     },
     "decoding-beam-search-2": {
-      "code_fingerprint": "sha256:2056150e7b436e0b6ecd77841dc11c72dd0c32552b28d7830532af93ee2c5ffa",
+      "code_fingerprint": "sha256:2d9c76c0232549a744a3838904efd10faf11464cbeb7589329444e5f08361e68",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.76, distinct-3 0.84: \"the time travellerter. I felt a moment I\n    was in a premiument\\n\\n'In my mind.\\n\\n'In a moment I was inferm, and I\"\n"
+          "text": "w=1, score -4.18: \"The Time Traveller.\\n\\n'I had\\nfrom the\\nshamprise.\\n\\n'I\n    had\\nfrom the\\nsha\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.71, distinct-3 0.84: \"the time travellerter.\\n\\n'As I did not\n    seemate.\\n\\n'There I found a seen.\\n\\n'Somember to me.\\n\\n'I\"\nk=1, score -4.87, distinct-3 0.97: \"it seemed to me that the dinner in the\n    mereossibly, and the faintly, and in a moment.\\n\\n'In a moment I was\n    inferm, and I\"\n"
+          "text": "w=4, score -3.34: \"The Time Traveller.\\n\\n'Then I had\\ndisappeared to\n    me.\\n\\n'Then I had\\ndisappeared\"\nw=1, score -4.14: \"It seemed to me that\\nthe Time Traveller.\\n\\n'I had\\nfrom\n    the\\nshamprise.\\n\\n'I had\\nfrom\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.96, distinct-3 0.89: \"it seemed to me that the dinner-\n    greeness.\\n\\n'As I did not seemate.\\n\\n'There I found a seen.\\n\\n'Somem\"\n"
+          "text": "w=4, score -3.48: \"It seemed to me that\\nwerent.\\n\\n'Then I had\\ndisappeared\n    to me.\\n\\n'Then I could see\\n\"\n"
         }
       ]
     },
     "decoding-a-unified-sampler-1": {
-      "code_fingerprint": "sha256:4fffd73dfbcfaae030fad44804a28566fe32af5af0ddbeee8dce8146d861ab56",
+      "code_fingerprint": "sha256:0f10880cc4d1d7ddbebb4333b1c635c77726409ba8d456f11d5dc1b02f4781c2",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-2": {
-      "code_fingerprint": "sha256:575e6fd60ac6167db5d4e36154cbbd17201349634ee59dc6db7ee88c15434ba5",
+      "code_fingerprint": "sha256:dc6acdb98d7033eb3a8febf83ef9baca34cf87beea1c5f2aad0fa1520da0670c",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-3": {
-      "code_fingerprint": "sha256:342a381219f89276e68ef9755badd34025872a841bb33429cf1305ccbce48543",
+      "code_fingerprint": "sha256:e844b79c9b543bcb2aad383182bf505bd9c926c41ccff0ab7933f3fad837b9f9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1]\n{'p': 0.85} [0, 2, 1, 0, 0, 0, 0, 1, 1, 1, 0, 2, 2, 1, 1]\n{'min_p': 0.5} [1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]\n"
+          "text": "greedy: 0\n{'k': 2} [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0]\n{'p': 0.8} [0, 2, 0, 1, 2, 2, 0, 1, 2, 0, 2, 1, 1, 0, 0]\n{'min_p': 0.5} [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]\n"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-1": {
-      "code_fingerprint": "sha256:507e8cb91812ac7eb40291ae83dabd8bffac427080683915ea656b9e755ee588",
+      "code_fingerprint": "sha256:fb2a17c8bb95884ad9cc7ed0601492f3701e4afcb52ffe9cdd102711fec11b47",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 48776,
-          "sha256": "sha256:ec85fbc494ecb4f601245b0e0ceb03e4a304fdc7991ae2d23e5bc1d3817e3fe5"
+          "bytes": 50792,
+          "sha256": "sha256:7929ebed83c3bbe76f16fe9c7cdf401df5fb9ff4b3d726a56f4e229aae8538bb"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:b2f7836e6d6c0436f551e9592edd7fd40c5f47bcbc9536ee69c00a8a2d8d5814",
+      "code_fingerprint": "sha256:53351624b575557ee46c82bfa73fb9d195b6914cd759aa838befdce7617168ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.16, top-k keeps 20, top-p keeps 117, min-p keeps 23\n'it seemed to me that': top prob 0.15, top-k keeps 20, top-p keeps 182, min-p keeps 24\n"
+          "text": "'The Time Traveller': top probability 0.20, top-k keeps 20, top-p keeps 133, min-p keeps 14\n'The Time': top probability 0.57, top-k keeps 20, top-p keeps 10, min-p keeps 4\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:6a2e97998d9cf65d73afec6d390a030fa728d5b590a2025df0d2db6c95304f5e",
+      "code_fingerprint": "sha256:eb915c686bba26e6dfff5aeddd7cf953a96d81729961b8195e8f0c750d732f0c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: \"the time travellerumph of chair. As I remember--of painful.\\n\\n'As I\n    fl overred.\\n\\n'And the cuter. It was so muchorngs.\\n\"\n"
+          "text": "tau=0.5: \"The Time Traveller.\\n\\n'I had not conveying a charackness of stars\n    to\\nmetrefully\\naturk hothes, but of a peculiar\\nof some she\\ndisn\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: \"the time travelleril of the Time I ob tattered possed. One\n    Weena'sering, to gettingoricgicalwain would throacter. Stalance things\n    flight frently f an. The\\nar\"\n"
+          "text": "tau=1.0: \"The Time Traveller\\nand leiled paturally to\\ndelicate eyes there\n    more gothet upon any\\nckill you\\nwould a\\npedests like the Morlocks fear\n    be. He came\\n\\n'P no\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time travellerrut my f o thereiveready upof let there wasing\n    backred pl of rosel flackpp\\nib minute another off towards sct grew\n    little lct min slow happedch she with up sadd fut b diff'\n"
+          "text": "tau=2.0: 'The Time Traveller p curgeve along towards had ad almost awayful\n    v>�pn world thingsily ac� creatures. I lraveed Weenaather suppive�\n    quilyil turned cle tried never stood_ cillite who--\\\\--'\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:ac49622035ced2c9673a94bd0e76ff011b5b6eaf1c8d027021da1045c4b9b44d",
+      "code_fingerprint": "sha256:1eb74877beb9b7f6b2bd169dbf4d30db3d54b53da7c29da8b496a8c52e3ed600",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.88): \"the time travellerter. I felt a moment I was in\n    a premiument\\n\\n'In my mind.\\n\\n'In a moment I was inferm, and I had\n    seen. I was nothinged to\"\n"
+          "text": "    greedy: \"The Time Traveller.\\n\\n'I had\\nfrom the\\nshamprise.\\n\\n'I\n    had\\nfrom the\\nshamprise.\\n\\n'I had\\nfrom the\\nshampr\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): \"the time travelleril of the Time I ob tattered\n    possed. One Weena'sering, to gettingoricgicalwain would throacter.\n    Stalance things flight frently f an. The\\nar\"\n"
+          "text": "     tau=1: \"The Time Traveller about this survraky. To doubt hands that the\n    ad In. The very interestlesss\\nand, too came out enough.\\n\\n'Were--a\n    that I could see ha aly gallery\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time traveller; and I had some exacticeven\n    this illourth, who had been no great hear a great\\nstirapon--ases and it\n    was a lcend\\nfromcnaced in the p'\n"
+          "text": "  top-k=20: \"The Time Traveller. You cannot see what he went down.\\n\\n'I was\n    silver. The air-ticiolence that\\nthe\\nexploration. The\\nMal\\nof case.\n    And, and\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time travellerto to the\\nsule deses that an\n    agal_ as you can coiling a plekinse, st more--fances, it\\nwas all\n    neithertoelianished, with a childat'\n"
+          "text": " top-p=0.9: 'The Time Traveller had strange. It is constances of refown out\n    of\\na moment lurlaurally. But that is\\nof\\nthe time travell,\\nand asked\n    save forth at\\nmelves shaft.'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): \"the time traveller to be\\nmensen ponys, and\n    more\\ncontinnerensions.\\n\\n'Soper of tall of mere was one hand to my\n    gesture, but, as they were med myself\"\n"
+          "text": "min-p=0.05: \"The Time Traveller.\\n\\n'Fook the phy of his ivory\\nand a harant\n    to make, with the Time Machine, but it was a those pushes.\\n\\n'He came\n    out\\nbut\"\n"
+        }
+      ]
+    },
+    "decoding-evaluating-generated-text": {
+      "code_fingerprint": "sha256:70ef855579fe2de105bf183ada0f48063317421be19959a84c64ab4cbfa24a2d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    greedy: log-prob per token -1.82, distinct-3 0.23\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " beam, w=4: log-prob per token -1.40, distinct-3 0.20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "min-p=0.05: log-prob per token -2.73, distinct-3 0.97\n"
         }
       ]
     }

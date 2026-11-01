@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d5decfdf7bdb554898988d5c707382b19fb2a6f2f31ee6a09a08be098660dadc",
+    "d2l_lib_fingerprint": "sha256:428f026b682a98a40b9614ff1c43a35478b2f1a5d1e9b6138fc41fe2bfd3778d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "25 ms per step: 9.2 TFLOP/s achieved\n"
+          "text": "36 ms per step: 6.5 TFLOP/s achieved\n"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 34214,
-          "sha256": "sha256:126c26ee5f9fff5f7d19587c18102263df3b07edc962945193fee1b353cf10cc"
+          "bytes": 34219,
+          "sha256": "sha256:0559c5d8c821a6221682c3412f867728260fc36cbfa370bd8c7a5845b939ee93"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:bc521d9d9b43a4801a5c5199d7684838fd9a7bd6878438d2c9fa9b7385fac860",
+    "d2l_lib_fingerprint": "sha256:3eb327d704edd8121939629bd62690e2d1cd1d843ca7c20ad5f4b86dbe4234ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,87 +14,119 @@
       "outputs": []
     },
     "sequence-training-1": {
-      "code_fingerprint": "sha256:20d3f6da9c9b396816eb85b91f4953c4fa5e41587200ec1d9528970fc429e705",
+      "code_fingerprint": "sha256:a6cf9b4006ac59fb6cba59959b58bd7cff432cc34e456f208089d17986dfa2c7",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-2": {
-      "code_fingerprint": "sha256:134b024e6e72f588df610c37fafabfbc26d4d5c6b28c38f30e520f9a4add3e1b",
+      "code_fingerprint": "sha256:0605836d9eb7a60f7be9aa1e6eab1a2c8fc181f079c669d2aa67eaa8d299f96e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40355,
-          "sha256": "sha256:6741c571ddc6e025fa847e8e05681797f33ff05e0ebcfaac703c08a65ef13ef8"
+          "bytes": 40535,
+          "sha256": "sha256:8be2416e0edc6769e86eee4e247d188c1671dc44b165052c406ada8027c9c78d"
         }
       ]
     },
     "sequence-training-3": {
-      "code_fingerprint": "sha256:5b097c4016df140e8b5b1a4a4f088548c613f85ae3d9a5e0fd291a0cfb372d4d",
+      "code_fingerprint": "sha256:016738c69cd4cfca66b2742d70d8133acf4d4c52d4cc2500594e0a22d03d68e3",
       "kind": "text",
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:aad95d7026abaaddeda5a38af2838abdab2057724e120028934709446a8db398",
+      "code_fingerprint": "sha256:c5552a937bbceea89f3f6c68483c5ecdfaba14d9034e29952a7ad3fa8fb99bd6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 21434,
-          "sha256": "sha256:c858dc76f8e1708aad46e4710f9afcc8361386d2ec4eabea43662c7d4d477239"
+          "bytes": 22242,
+          "sha256": "sha256:f69c5220c8229bb05964a0c675ade5557f36576e2250de0b8023783bc44d6435"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:b57367a6a0ef61f2480d37d01638c9435652d7f1c6df131fe36e646022b1a79c",
+      "code_fingerprint": "sha256:97200dff325fea9570ca46be8c4db0808094ba322d145e1aae9f82e8e5d55698",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-one-step-ahead-prediction-1": {
+      "code_fingerprint": "sha256:50e9f9729cc3c02c8de806da72b745c67e6cd79e86d42e96a95fc5b6d78cb3db",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68207,
-          "sha256": "sha256:caa5a541e5f4a9aafedf61c0fb17bfb4604b4417c2e0d5a92cda4497dcc4aba8"
+          "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
+          "bytes": 67937,
+          "sha256": "sha256:53ede1ed5dc2dd493a66cbd2b4df88ff3f2fa52817f53c918d6fd9277cdd4925"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:61bde54e5f83bb83afada25dc25a551065b73516d4b53632ca7481f835b18408",
+      "code_fingerprint": "sha256:25b802f977403f4efef4423f88dca8b47cfc40b1aa1afae57212407a423e10a2",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:ff692897e41af54d7c94b850c069ba986cb8974ca2bb8a521ff18d5a41a8c98c",
+      "code_fingerprint": "sha256:3a77c0ce24d5dc3a4fabc82568c30d080844f00d55ca3d1b1f121069d3920269",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44854,
-          "sha256": "sha256:fcfd7a5e3b5b3cb0687e11ebea4734602ba27dae6851dc92305fb6cc9a9d9c5b"
+          "bytes": 44280,
+          "sha256": "sha256:51c9f03b791c08b3f5c2b3d7b06cf2c82089c9b4d877f9e06844b3756d319f5e"
+        }
+      ]
+    },
+    "sequence-multistep-rollout-1": {
+      "code_fingerprint": "sha256:5b730a93fa60434e4d440f64ed4a3daae308c157f1e45b6d9b1d8805f24eb421",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weights on x[t-4], ..., x[t-1]: [0.249 0.237 0.251 0.251]\n"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:d91c6b7b018edc09ccccbb6fe5e5f8876485fc043d1d4d380696c710f485a3d4",
+      "code_fingerprint": "sha256:c07ae1ceaae87bc031cec1a33534d566aa9928b232a541f8b6b88627cc986ba8",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:c454200201b2f104fb2c18aac0fa5774bb993d2b7865ccb76fa233fe4b7fb557",
+      "code_fingerprint": "sha256:9b4335f37584b262810ac79f905dd018381baea3ff671e31042840d069b1287e",
+      "kind": "text",
+      "outputs": []
+    },
+    "sequence-error-accumulation-1": {
+      "code_fingerprint": "sha256:9f9623fdcaf9946b19f8c9aadb880332162212203df116a326a0fb4587469fb2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105132,
-          "sha256": "sha256:d7b19069df03f8266214c872abe39f2567f4a72419086f2c318d0e331f044ad5"
+          "asset": "sequence/sequence-error-accumulation-1-1.svg",
+          "bytes": 104901,
+          "sha256": "sha256:9858f05513973f75da42c76af5882292041773b9039d49c386689c8f9cb5676c"
+        }
+      ]
+    },
+    "sequence-error-accumulation-2": {
+      "code_fingerprint": "sha256:098f055a843f9c15285a7d47e82499f61211be8cd83570170c207faeb47b8455",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 steps ahead: mean squared error 0.053\n 4 steps ahead: mean squared error 0.056\n16 steps ahead: mean squared error 0.071\n64 steps ahead: mean squared error 0.229\nvariance of the series: 0.479\n"
         }
       ]
     }

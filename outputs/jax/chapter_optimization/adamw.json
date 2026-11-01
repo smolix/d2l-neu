@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:dddf78f36261378a6915ffc233961125d6973ebc844211526d95ce0d36f0f675",
+    "d2l_lib_fingerprint": "sha256:0fe08cac8952f6e9fc8e7a3178f06f3f61bef5cc32ee12c5db204ebf1a07fd55",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 3.918 sec/epoch\n"
+          "text": "loss: 0.243, 2.413 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-2-1.svg",
-          "bytes": 18781,
-          "sha256": "sha256:586739d0d1a9579dd597dba3ef5b8a6486071ade71fb4490ffcf30f5fa1abfb3"
+          "bytes": 18783,
+          "sha256": "sha256:86fa14b9d62fe45619344a249f80ef12a54c1c223aa5d2494a20abfdb2752272"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.428 sec/epoch\n"
+          "text": "loss: 0.244, 0.401 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-3-1.svg",
-          "bytes": 18733,
-          "sha256": "sha256:03b61f293425aa2d5cd9da23b28da7237064519c974fba3c88c9b6552c5aff86"
+          "bytes": 18708,
+          "sha256": "sha256:d4258d0a73eb74876454f010164cc34ae21123b777557bba2a587148f7d56be7"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-one-number-two-meanings-1.svg",
-          "bytes": 25752,
-          "sha256": "sha256:8c62b27ede5142e596b4f3ae27fc4faa674990bc5ef0501cdbf05f2ac7b8e4a1"
+          "bytes": 25744,
+          "sha256": "sha256:89c7285c86aed455223185a362668d88cb657c57841d63e646157293925f93e4"
         }
       ]
     },
@@ -89,17 +89,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.18 2.09 2.34\n"
+          "text": "3.40 2.10 2.34\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.99 2.63 2.35\n"
+          "text": "4.24 2.52 2.35\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.13 2.15 2.34\n"
+          "text": "4.04 2.32 2.33\n"
         }
       ]
     },
@@ -110,17 +110,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.85 2.07 2.54\n"
+          "text": "2.89 2.07 2.53\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.21 2.27 2.52\n"
+          "text": "3.19 2.10 2.49\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.70 2.30 2.52\n"
+          "text": "3.03 2.39 2.53\n"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-a-grid-twice-4-1.svg",
-          "bytes": 41375,
-          "sha256": "sha256:626ecb1ecfdc4a18d19785ac9510a6c9412a5c05f8db2c504e300bb3fee3c04c"
+          "bytes": 40515,
+          "sha256": "sha256:36ae1d2a179064dd2d1fc15fbf9f75e82066dee7021c060e353ec2d3a28c1639"
         }
       ]
     },
@@ -155,14 +155,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.55\n"
+          "text": "perplexity per character: 2.59\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-what-not-to-decay-2-1.svg",
-          "bytes": 19369,
-          "sha256": "sha256:9c1ccb1970e2f1acf05a1faa276f8b90dba3b0874872c642d8577b0539593fc8"
+          "bytes": 19380,
+          "sha256": "sha256:fd485017c40869007b1e474d880bbe12bbae69ad604860078e4795f99eb704f7"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e39f54f9b29692079d78fcceea902b9aadb05923d8bae838223d07e8f089dc16",
+    "d2l_lib_fingerprint": "sha256:5b2209c09ef4acdcd3ad7c5fad929f2c51d16eb4746afda480967830f36c4267",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.051\nclipping changed the update on 6 of 2000 steps; median gradient norm 0.31\n"
+          "text": "clipped at 1.0: final loss 1.049\nclipping changed the update on 6 of 2000 steps; median gradient norm 0.31\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 36776,
-          "sha256": "sha256:d5c04ed07267ad167c410b017fd103a124f74e73e19000d6d82109aef0bae48e"
+          "bytes": 36661,
+          "sha256": "sha256:7d6175b89d9b24ccdf0b2638c38bcc119fb341a86613bc05e5c2eb4737cfe366"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.898, EMA 0.913\n"
+          "text": "final test accuracy: live 0.911, EMA 0.912\n"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 23970,
-          "sha256": "sha256:560f1ec104b62b67180f480d4810a9cc2d5eaec9c1902ea36fb1401fb8371af2"
+          "bytes": 24009,
+          "sha256": "sha256:a4672115da50ae2632b99f895a3d1e37895cbf8f45a3ad37881a7d7febc01d7c"
         }
       ]
     }

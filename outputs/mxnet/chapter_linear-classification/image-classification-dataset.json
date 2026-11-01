@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b8325fe862487b248a130fa4af22c2623d8c56802971ba5097f3c21a956d7d51",
+    "d2l_lib_fingerprint": "sha256:38b2bc24d239836e18ef27d99e4a30014d8c67f5898ef1684cd48f934eddddd0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'3.89 sec'"
+          "text": "'3.57 sec'"
         }
       ]
     },
@@ -83,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 70405,
-          "sha256": "sha256:8cfd37d9509055267f40de7d587330472696bb903b5f5c998d448ca896109f46"
+          "sha256": "sha256:975a0583f366a82fdef26eac8dc9116d155622ea8b80821ab2e2d31aaed67677"
         }
       ]
     }

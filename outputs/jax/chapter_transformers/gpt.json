@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:aec4d9d50005d534738985f323b64e97a182a5c35ec530759899f29f4ec5872a",
+    "d2l_lib_fingerprint": "sha256:a0a563e1c1414e4708827e7a806d8adb4f7f5b9e46212352342578b22b79210a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.36; best validation 1.47 at step 200\n"
+          "text": "final: train 0.15, validation 3.47; best validation 1.49 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18928,
-          "sha256": "sha256:32828fc48235eb54d59faa53388663c6b5a2953f8a70d37112083da4b4b29ae3"
+          "bytes": 18931,
+          "sha256": "sha256:3968685c1328fdf8ff3e9a5eac251f6d13508024055cb81d25fb4e18d16d3151"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.89/1.42/1.03/0.34\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.94/1.46/1.05/0.40\n"
         },
         {
           "type": "stream",
@@ -80,12 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller pushed his plate away and looked round\n    us i suppose i must apologize he said i was simply starving i ve had a\n    most amazi'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller hated to have servants waiting at dinner\n    for a hot plate at that the editor turned to his knife and fork with a\n    grunt an'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knifes conveyed\n    as well as you'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor tbe tunnelled round account of\n    the battle ro'\n"
         }
       ]
     },

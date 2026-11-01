@@ -4,32 +4,32 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d16df00c4ba4561e6132cb5dc13cf2405811d36c2eb5b533124cf83aba98bb08",
+    "d2l_lib_fingerprint": "sha256:dbd16e67b0bacda61b6f532275d99fc2c74121e8b5f5b42e00c2d4d663a34f40",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "code_fingerprint": "sha256:223395f72dbb04ac698b00e4573f86b00a2ca36fefe466d6891ad18ec0e28290",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:0f2ad91a57a9010c8630c1e4c43be946621297020e2eee76be5f3eb08dc1ce92",
+      "code_fingerprint": "sha256:1aaaf8d2dcf381911658e1200a45e4c3f3c72bc986608fea36fa82b9b078d829",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-1.1862,  1.2283,  1.7170,  1.1473],\n        [-0.0320, -0.4359,  1.1554,  1.0527],\n        [-4.1026,  1.7014,  1.2979, -0.6496]])"
+          "text": "tensor([[ 2.2847, -0.7043, -1.9597,  0.3881],\n        [-3.0083,  0.2208, -0.0746,  0.3344],\n        [ 0.2956,  0.4721, -2.4217, -0.2506]])"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:afa556081768b572721a1b43056673735691c31d62c0bac8450405fed57c6612",
+      "code_fingerprint": "sha256:79a83dd15df8f26c2eeba637007ee5cd9cbf64fde7d04b4ece1479a03bedd059",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-1.1862,  1.2283,  1.7170,  1.1473],\n        [-0.0320, -0.4359,  1.1554,  1.0527],\n        [-4.1026,  1.7014,  1.2979, -0.6496]])"
+          "text": "2.384185791015625e-07"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:05fdf5d1eb8d34ed6767309a7088ee58f685194a18c2917e69b4a97c9a27613f",
+    "d2l_lib_fingerprint": "sha256:b522510528365a1647d1db58e9182e8684ac3ba20fb02fc13f4d5558d22301f8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20698,
-          "sha256": "sha256:1ea2579483b0f237cbc02cde2f092ba257154bfecdbf176705ae594840a31383"
+          "sha256": "sha256:135a55c5b9fc1257c7cda6c10dce136c7d343c75913b3c10591b389fa453d09c"
         }
       ]
     },

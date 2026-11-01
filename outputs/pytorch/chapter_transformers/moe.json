@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:948b202161abf32065e00e60df28d12507cf2f989a59862c63db4e5f1fc135b8",
+    "d2l_lib_fingerprint": "sha256:cf9ab853a66238094edeadeb3767a6f611326b4f7157482572a1c939c1cf6368",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,12 +61,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  no balancing: training loss 0.73, experts under 2% usage: 4 of 16\n"
+          "text": "  no balancing: training loss 0.72, experts under 2% usage: 3 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.65, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.68, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
@@ -83,8 +83,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44048,
-          "sha256": "sha256:28b65abd14313b048193ce0db072c276839373eab759735a422bdfd092e6187f"
+          "bytes": 44049,
+          "sha256": "sha256:09d2b403a134060ddea09b93036957a201972cae924180de2ab39381992ebd4e"
         }
       ]
     },
@@ -95,12 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense:  3.16M parameters (3.16M active), best validation 1.51, final training loss 0.21\n"
+          "text": "dense:  3.16M parameters (3.16M active), best validation 1.52, final training loss 0.21\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.51, final training loss 0.19\n"
+          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.52, final training loss 0.18\n"
         }
       ]
     }

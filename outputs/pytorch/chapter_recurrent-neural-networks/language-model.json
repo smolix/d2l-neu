@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e6cf305aceeaa21f6a01c429058cae08233b31957c47663ffe79d154d40c59f9",
+    "d2l_lib_fingerprint": "sha256:ba31993babcd3e6189da89bf7246e6c146bf26c66769461e7289db4a23c23bc1",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:0905001ac3534e6811f124bd3a9282dfc9d5cf16a1fba43030f31b8c9267137e",
+      "code_fingerprint": "sha256:ba59e1b56df6fada5983e0b7b4e8f2662e6adef503da06746e48e5153cd8506f",
       "kind": "text",
       "outputs": []
     },
     "language-model-markov-models-and-counting-1": {
-      "code_fingerprint": "sha256:625f87f257188dd5203592b665ea265f8ff4d272d615006fd0bd97022a220f75",
+      "code_fingerprint": "sha256:f38059f5119b41b45d369b829446bdaf678fdf2847af70287abbf9b1fe161129",
       "kind": "text",
       "outputs": [
         {
@@ -24,23 +24,39 @@
       ]
     },
     "language-model-markov-models-and-counting-2": {
-      "code_fingerprint": "sha256:5511ace948a850d190b2f26e04bb436ba5389f0698a00c5aae7b65eba6f942c3",
+      "code_fingerprint": "sha256:1c948d36967f87285c9e53ab938ebfe9a5f9ba65c2bcab62cde16a415319713e",
       "kind": "text",
       "outputs": []
     },
-    "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:bc4d1e496138840089349fdb8032e9bc7b83b61e84eb830268918cc027a0c32e",
+    "language-model-markov-models-and-counting-3": {
+      "code_fingerprint": "sha256:64ef96202a3a722a64106141513daaaabda8985435eddbabe162db3d7220778b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram: the time import meat on and looking they immediately in any up\n    examination some and grew s his narrow fortunate risk matches in their\n    cold good but\n2-gram: the time machine and holding one indeed no refuge there came one\n    direction i saw for which i ve told blank the soil smelt sweet and\n    blackening\n3-gram: the time traveller then when we were i put out my hand i had\n    expected happened the bronze doors as yet i had hitherto seen it was\n"
+          "text": "P(traveller | the time) = 47/87 = 0.54\nP(machine | the time) = 27/87 = 0.31\nP(i | the time) = 6/87 = 0.07\nword pairs followed by a single word in training: 84%\n"
+        }
+      ]
+    },
+    "language-model-sampling-from-n-gram-models-1": {
+      "code_fingerprint": "sha256:33fed65d25b0df5d48cb48354c8efa85f85ff15783dc0e54021253b18b791ce4",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-sampling-from-n-gram-models": {
+      "code_fingerprint": "sha256:7d523718a5f08eb489d61430b2ca8db1f49803f7264341cf72a571a2ea40fd51",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram (longest copied run: 2 words): the time in mockery in violently\n    account raised miles tried me a some green the this without morlocks\n    revolutions traveller enough nursery smoking that panels bushes close\n2-gram (longest copied run: 4 words): the time machine above me to clamber\n    down upon me but even be hard to look at the peculiar risk was very much\n    then when it s\n3-gram (longest copied run: 8 words): the time machine i had started with\n    the same clustering thickets of evergreens the same grey covering then i\n    perceived by this ancient monument of an age\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:d27ebdc062baa76784a3580ffc22e5a53475b7df80191709d3262487cc84cbbc",
+      "code_fingerprint": "sha256:32a7b240704689dd852cab69a76481986cbf31428552c33039d83cee165424f4",
       "kind": "text",
       "outputs": [
         {
@@ -50,8 +66,13 @@
         }
       ]
     },
+    "language-model-kneser-ney-smoothing": {
+      "code_fingerprint": "sha256:00cd207a59a5522eda01d1e57e67271abed7b5b4fc78e9281a641e4b21a48316",
+      "kind": "text",
+      "outputs": []
+    },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:225deda7d2e061a420e8cb13665f72d3141c1e6aa5ebc02bc56fe336c21d410a",
+      "code_fingerprint": "sha256:e7458a96c0cb15cc4be6fd3bf86f8cdce0e37f152c2a2b194c3c9c6026625b75",
       "kind": "text",
       "outputs": [
         {
@@ -60,77 +81,92 @@
         }
       ]
     },
+    "language-model-word-frequency-and-zipf-s-law-4": {
+      "code_fingerprint": "sha256:da5239c203e3236a882f22459bfb7e5ce4e3da54955483d01407f7a021b110f4",
+      "kind": "text",
+      "outputs": []
+    },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:3403ec76d6ed4cbae80eae0dfc5d588018a8d6c253712df340329c6b447843b1",
-      "kind": "asset",
+      "code_fingerprint": "sha256:d6c59b4ffad65630fe42a9b566f8bbed48c5671f83500c8cf35cfcd07596c385",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Zipf exponent s = 1.04\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
-          "bytes": 31816,
-          "sha256": "sha256:fda2a75813efb53991c761340ec36d934b3e28b54ab5dfb05466ad213f7d287e"
+          "bytes": 38137,
+          "sha256": "sha256:9b8d22899e4075a4e23b8a21149c24cf3e883e42510b5ac7db1ec44a3433c8c3"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:6d0c1a06586bc019989650965fdd4ce7fb7a50fe9f4a0f07d90779f62be94a13",
-      "kind": "asset",
+      "code_fingerprint": "sha256:74c5f779f10c2d24d1f328b957d1b3b0a7583652dd2bf0a902681599c7512677",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-grams: s = 1.04, 52% of distinct 1-grams occur once\n2-grams: s = 0.69, 82% of distinct 2-grams occur once\n3-grams: s = 0.47, 95% of distinct 3-grams occur once\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
-          "bytes": 43128,
-          "sha256": "sha256:140fb4d6f1ad2bb935a0f7d7f84e251e7974485601821e05c3c9c17809bb325e"
+          "bytes": 42259,
+          "sha256": "sha256:4d757d0f3ee3feefe7d6565b1becd7b3cd509294e37b46df9316d4001ca82c34"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:90b6b66faa1f941018015640f7ca9a512d8598faf31db6c56d97e956747aea10",
+      "code_fingerprint": "sha256:a6a92078f618bb50664986d078d93c930ffdb66706d67f15c853b750f12383f6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram held-out perplexity:    840.7\n2-gram held-out perplexity:    775.1\n3-gram held-out perplexity:   2618.1\n"
+          "text": "1-gram held-out perplexity: add-alpha   840.7, Kneser-Ney  597.9\n2-gram held-out perplexity: add-alpha   775.1, Kneser-Ney  314.9\n3-gram held-out perplexity: add-alpha  2618.1, Kneser-Ney  302.5\n"
         }
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:b915bcb7220ff7b4ee98329759f5efad3ff60ac84a0eabf2fe00f476a84e2f96",
+      "code_fingerprint": "sha256:b78e173dc81e9617e65ec63ff53d6aabbd7122da7345f1aa181cdf6b29fdd2ab",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokenization   |V|  tokens      ppl   bpb\n"
+          "text": "tokenization   |V|  tokens     ppl   bpb KN bpb\n   character    27   17345     6.4  2.68   2.67\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+          "text": " BPE (1,024)  1024    5509   281.6  2.58   1.90\n        word  4579    3373  2618.1  2.21   1.60\n"
         }
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:31e1bc1ee59e04884220ffc8d14f85d73f6af3e592c43069a0de36969270052c",
+      "code_fingerprint": "sha256:89c405db4792b2584840c5e4eb219f405d5b78bfe388322b61e50a80370a0864",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:e027b1538b6f0a382d6e2493ab81d5c7252a33eab2c9f9ec6baff6f9dd1a0d29",
+      "code_fingerprint": "sha256:ccd50cb7b9d89def0dd54e4706a1ea7ee5abf21035bb739141254428c92c72e6",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:5da8c8211906ed4baa8e149ee2b936d5d5d61732c625b120fdec2e45c77869ca",
+      "code_fingerprint": "sha256:810cedb34c04e7f43c92240c25bb9fef1bd1cb7f9bfe7444db0fee4c602c74c5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[657,  44, 266, 548, 275, 421, 281, 567, 100, 317],\n        [304, 261, 268, 719,  63,  10,  79, 114, 442, 404]]) \nY: tensor([[ 44, 266, 548, 275, 421, 281, 567, 100, 317, 310],\n        [261, 268, 719,  63,  10,  79, 114, 442, 404, 258]])\nX[0]: ' man, making spasmodic'\nY[0]: ', making spasmodic e'\n"
+          "text": "X: tensor([[270, 432, 260, 917, 397, 667,  10, 943, 330, 516],\n        [703,  10, 271, 438, 287,  44, 605, 404, 266, 282]]) \nY: tensor([[432, 260, 917, 397, 667,  10, 943, 330, 516, 360],\n        [ 10, 271, 438, 287,  44, 605, 404, 266, 282, 646]])\nX[0]: \"ed into the future?'\\nsaid F\"\nY[0]: \" into the future?'\\nsaid Fil\"\n"
         }
       ]
     }

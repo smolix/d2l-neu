@@ -14,7 +14,7 @@
       "outputs": []
     },
     "bptt-vanishing-and-exploding-gradients": {
-      "code_fingerprint": "sha256:4b6d432c99844c5eb9fd46293fff9d7690fbc416d9d40117b1c0b0ed18fccd2f",
+      "code_fingerprint": "sha256:70f6d7d769b98fb413d8e3b0eb3e0eccc304906cfe19bbabd02159dc57082f7b",
       "kind": "mixed",
       "outputs": [
         {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
-          "bytes": 34827,
-          "sha256": "sha256:e69d6ea601c360e327a0baeea54b358392a96c389327857fc7dc5788ef076d55"
+          "bytes": 27343,
+          "sha256": "sha256:bdf8853f9e2076794a022fbf83dfdcbc8601b2a73cf7ddc631141a1d3c68d73b"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:03efcb8308c2471a3d2be1c023cccf985ea25bc1c7e87e9b9976ce1e955afd56",
+    "d2l_lib_fingerprint": "sha256:9d48b6a96e3a0fb10e852e51cdb5a2e0d9e1faa5f0fc6f6b6a2bad2e17fa731f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 0, 0, 0, 3, 0, 5, 0, 7, 0, 0, 7, 1, 1, 1, 1],\n        [9, 0, 6, 0, 0, 0, 0, 2, 4, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[3, 5, 7, 7],\n        [9, 6, 2, 4]])\n"
+          "text": "tensor([[4, 0, 0, 3, 0, 9, 0, 0, 0, 0, 0, 8, 1, 1, 1, 1],\n        [0, 6, 5, 0, 0, 0, 9, 0, 3, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[4, 3, 9, 8],\n        [6, 5, 9, 3]])\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.18\n"
+          "text": "S4D      accuracy 0.17\n"
         },
         {
           "type": "stream",
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 1.9e-06\n"
+          "text": "max deviation: 1.4e-06\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.01\nMamba  share from the symbols: 0.95\n"
+          "text": "S4D    share from the symbols: 0.03\nMamba  share from the symbols: 0.94\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36722,
-          "sha256": "sha256:cd073927bbeedda18c0988e7d16279a3c91ecedb71ec82572b685f7f1ce10d7f"
+          "bytes": 40638,
+          "sha256": "sha256:80c76057bd657ea8cb04ff2312cf89e9e8afe23056a43ce354c37ce33a6fc5e8"
         }
       ]
     },

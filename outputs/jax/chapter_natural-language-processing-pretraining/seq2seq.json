@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:34169ed4989ce159b10428751e4527c944ca02cb3dccac7921dab12077501f73",
+    "d2l_lib_fingerprint": "sha256:9f9a2ce532040346b57818cd72b74ba8685199bb9fd82040fe4857b92869cf20",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[3063  423  971  121  115  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 614  560  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2127  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 2313  423  469  306 2791  262 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  748  627  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3491  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [7 4 3]\nshared vocabulary size: 4003\n"
+          "text": "source: [[ 105 1890  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297  705  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  385  607  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  106  585  279 2349  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296 1234  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270 3614  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 5]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:e16d43daa6e5973c8ba2a81ee2cfcf9652ce58d7bf69110643472cb533e12293"
+          "sha256": "sha256:c5f3a968dbdd4b8606c209e57518373f178f9cde4cce9e260b302542553432f2"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 26043,
-          "sha256": "sha256:b4d07924004ffbb74ad5d18be3ad899bd354f118490dc7c5a03cca127381d75b"
+          "bytes": 26054,
+          "sha256": "sha256:fe957dc98fd53bd2017de3953b7c46ad2859240517c740dd0c8885d10e0b3f1e"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis en sécurité .'\n"
+          "text": "i lost . => 'je l’ai perdu .'\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
         }
       ]
     },
@@ -154,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis en sécurité .', chrF 0.320\n"
+          "text": "i lost . => 'je l’ai perdu .', chrF 0.697\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost .     k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+          "text": "i lost .     k=1: 0.70  k=2: 1.00  k=5: 1.00\n"
         },
         {
           "type": "stream",
@@ -185,7 +185,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i'm home .   k=1: 0.32  k=2: 0.32  k=5: 0.32\n"
+          "text": "i'm home .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
         }
       ]
     },
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 25997,
-          "sha256": "sha256:be364d59ef76843397703add7d707fa1ca3f76a50d267dab49250dfb798656a5"
+          "bytes": 24887,
+          "sha256": "sha256:b412d26e8ee2fdda84c91775ecab4de390618c34a6b2ac41a6ce3933136efa2f"
         }
       ]
     }

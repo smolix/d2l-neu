@@ -4,32 +4,32 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:9f272a724756d127e9c041680dced49b762d7cd64d5255a0b7052beca99382b9",
+    "d2l_lib_fingerprint": "sha256:c67f60080ee732d4093ab348e669b35e98823f348a5f8ad2bec329cf9fcaa412",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:a442d00c171620e27eea4777e28fb6fdc1592e7d51d6543e9bed334015577ed3",
+      "code_fingerprint": "sha256:dd36411693013a6306f85ca7a4ac19f1ec8ed5b76c8c12d5b51a884055a03ce7",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:8951636dc1f44546c7dd01f0270413fdc24e8081da4c6b4bd4779d37cf26e827",
+      "code_fingerprint": "sha256:cae8fbfc7b7c0f201c8cb035e0f9bf5bb233611d1c3396830e1a61a0a5afe7ca",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.6637389 , -3.3548982 ,  0.04982018, -1.2180524 ],\n       [-0.09822158, -1.1151924 ,  0.7188148 ,  1.221407  ],\n       [-0.6031358 ,  1.1708505 ,  2.5824444 ,  4.284628  ]])"
+          "text": "array([[ 1.0917643 , -0.7102416 , -0.1592898 , -0.08560205],\n       [ 3.1370606 , -0.05101627,  0.27374947, -1.1621089 ],\n       [ 1.3744601 ,  2.0675814 ,  2.075944  , -1.8013906 ]])"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:bfbdee556cb13f49fcc1bd0c1bfa9e5e17164e3671bc653952e218103645a72c",
+      "code_fingerprint": "sha256:ea2afd064c0bfeb7dea473c95b0fa3f10dd91e8e93c4cac2fd4b934e628fa60c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.6637389 , -3.3548985 ,  0.04982018, -1.2180524 ],\n       [-0.09822157, -1.1151924 ,  0.71881473,  1.221407  ],\n       [-0.6031358 ,  1.1708506 ,  2.5824442 ,  4.284628  ]])"
+          "text": "2.384185791015625e-07"
         }
       ]
     }

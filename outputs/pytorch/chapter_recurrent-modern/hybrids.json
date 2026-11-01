@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:48882c70ddf8a7c3067fc27c2316de641cc41de3c7fcb3bf6ad03c0991be9a9a",
+    "d2l_lib_fingerprint": "sha256:16eec8ee9a2c4a015bc40eabd6d2f9af0193b8cdf817de07826fa809c39995cb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [279   0 283   3  89   1 352   1] ... [283  89 279 352]  answers: [3 1 0 1]\n"
+          "text": "tokens: [266   0 399   3 429   1 336   1] ... [399 336 429 266]  answers: [3 1 1 0]\n"
         }
       ]
     },
@@ -51,14 +51,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.97 0.89 0.73 0.58 0.45\nGated DeltaNet           1.00 0.99 0.97 0.89 0.68\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.99 0.89 0.71 0.54 0.45\nGated DeltaNet           1.00 1.00 0.98 0.91 0.73\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
           "bytes": 33554,
-          "sha256": "sha256:9f6bb5e405e4d8c3dbf48c5cce71ab72f748dc076600b733b8f5df4fdce76f46"
+          "sha256": "sha256:207a43b1824c7bf09e6ee04b42142add1f7e411e3933bcd2ba15f2368e7f401d"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.29\n"
+          "text": "attention (TinyLM)   perplexity 3.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.17\n"
+          "text": "hybrid               perplexity 3.18\n"
         }
       ]
     }

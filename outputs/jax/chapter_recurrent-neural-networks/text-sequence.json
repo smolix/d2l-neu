@@ -9,12 +9,12 @@
   },
   "cells": {
     "text-sequence-converting-raw-text-into-sequence-data": {
-      "code_fingerprint": "sha256:df157e4e03dadb26579f149e7ddf7ca274dd7da4e5b5c1f0b6c6ec1ac1c3b881",
+      "code_fingerprint": "sha256:eb3ab5fdc5169034eb74efcc1bee20ea4f8917276bc8fb29bb1110c48da39fc6",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:47752aadeb225c93310bd3974a41ff116cbcbb2722b75c32f49971ba93df9c17",
+      "code_fingerprint": "sha256:603fd299458d792db61edaddde1c055c1a55717ab77f53bbf992251a73df83b6",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "text-sequence-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:b8cf3f04d48e44b4098a06e55b5d241b018ea035d0634fe9e3bad92991083188",
+      "code_fingerprint": "sha256:97b48a1dd8003f7d048d47834da4500c33d670b0ed4353d4a5f0af7b373005f7",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "text-sequence-tokenization": {
-      "code_fingerprint": "sha256:cfd01ac28365925a6dc2a5fc6db146a2eb132276c4435f409fbc38cf90f4c2db",
+      "code_fingerprint": "sha256:1f5a206fd87de155aba7f44520ac09345410779cb47284e4f56ea8f00de74318",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "text-sequence-two-ends-of-a-spectrum-1": {
-      "code_fingerprint": "sha256:d585fbc9f386b616f04ad64700870fa6fb50a59da899d47271a4cce883e549e6",
+      "code_fingerprint": "sha256:889a6abec556f5b5713489e674d7032076bd529b3ac3df176a7f801a0f860d1d",
       "kind": "text",
       "outputs": [
         {
@@ -55,7 +55,7 @@
       ]
     },
     "text-sequence-text-as-bytes": {
-      "code_fingerprint": "sha256:bf4b3cb692e8a7aef018a63e1a3b4a9a6d305acf36731f39f600b400cf496d56",
+      "code_fingerprint": "sha256:e7805607b1e12bf1ac41069e8f899b0c303db6a4ff4868c31881a65226efcfb5",
       "kind": "text",
       "outputs": [
         {
@@ -66,12 +66,22 @@
       ]
     },
     "text-sequence-implementation-1": {
-      "code_fingerprint": "sha256:82942ba6d08a2d527cec142bc2aa7bb7369c19779447f1dbbec0e88620b18afc",
+      "code_fingerprint": "sha256:f53c9ae0d3ff0abdc5219c2543edc50bf34f5a7c9a91844acc3341c7f5d015d1",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-implementation-3": {
+      "code_fingerprint": "sha256:2c40225ada325ecf158b135c20187166ea783491786a81f60861d9ca590ec7c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-implementation-4": {
+      "code_fingerprint": "sha256:d76ee669bb95fa5960ec990797c78c94ae66bfc1cb1d44b9219fe98c6f349c28",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-implementation-2": {
-      "code_fingerprint": "sha256:eea7e9210ac5b9e42d2b2c6f5858295fadda6e0b2fcd142815ff7933ba870473",
+      "code_fingerprint": "sha256:2f0aa23b572626498e25eb7624dffa4fecead918d24e654644c93ed429922f0e",
       "kind": "text",
       "outputs": [
         {
@@ -82,12 +92,12 @@
       ]
     },
     "text-sequence-encoding-and-decoding-1": {
-      "code_fingerprint": "sha256:bd386e9347ac73bc40066e94edf30b7a7eafdd947ec17887f4c64051b878c6dc",
+      "code_fingerprint": "sha256:466eda860832e300defa9de08ea87ccf19905b09ace8303374691eb058ccf6a8",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-encoding-and-decoding-2": {
-      "code_fingerprint": "sha256:d23455204063769707294cccf2b8bafd3503063e7407af233cb92a38841d1d8a",
+      "code_fingerprint": "sha256:71855453bfab7aa6bb2fc1040e8d1f09f937a627f3a710e7546bc41781fbb785",
       "kind": "text",
       "outputs": [
         {
@@ -102,12 +112,12 @@
       ]
     },
     "text-sequence-training-on-the-time-machine-3": {
-      "code_fingerprint": "sha256:622dce58ee6aadb7f748007bfefcdaedf7b522fc562f42cace22d00759077872",
+      "code_fingerprint": "sha256:a4b796bd837fdffb0a95457c5ce7daebc2a539f3b084488f19829f083f813cda",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-training-on-the-time-machine-1": {
-      "code_fingerprint": "sha256:8186e4a22d602b34c41c1d11e5b65b159893fc08c4e058ef5a6ad03da9213346",
+      "code_fingerprint": "sha256:408de09c9330633211922047e4dc5239fa386fa55dc0c71de2c6f67f0f893cb6",
       "kind": "text",
       "outputs": [
         {
@@ -118,7 +128,7 @@
       ]
     },
     "text-sequence-training-on-the-time-machine-2": {
-      "code_fingerprint": "sha256:73790a74f0ab8d5a513e65a700fd98768eb86c3ae6059ba37ac05dce628a54b5",
+      "code_fingerprint": "sha256:0f49636e73e804189622c546ac7229496e2282e8d0f21b72186dcd8131d36cd0",
       "kind": "asset",
       "outputs": [
         {
@@ -126,12 +136,12 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:356036ca6953b56ef6eda5d9f96083e58187da19ed1150f617045ad979b4a10d"
+          "sha256": "sha256:214af69c7000a89812127d2a7f276c929b68c563035fe2f1bfff41b109984663"
         }
       ]
     },
     "text-sequence-pre-tokenization-telling-bpe-where-words-end-1": {
-      "code_fingerprint": "sha256:bbd5a8f7485c86b208645c67bd208f1e741bbe8acc6ad624cda8c418f0ed5faf",
+      "code_fingerprint": "sha256:85dce5729a8b7962fde99e7106bca65639023c539453d2b1d793be79d3d669f8",
       "kind": "text",
       "outputs": [
         {
@@ -142,7 +152,7 @@
       ]
     },
     "text-sequence-pre-tokenization-telling-bpe-where-words-end-2": {
-      "code_fingerprint": "sha256:6cab776303aa62dd73ff8d074527dd47d1b2a91634e90edca5b708b057612fc0",
+      "code_fingerprint": "sha256:ab7902b9c042c774234768731b7f5e74c4a1e11926466feee350e54e3b1ce4fa",
       "kind": "text",
       "outputs": [
         {
@@ -152,23 +162,23 @@
       ]
     },
     "text-sequence-pre-tokenization-telling-bpe-where-words-end-3": {
-      "code_fingerprint": "sha256:9f694552850d36a62e1ef3d324751f5c5e8a002c15f90169227c1c4bbd2d9005",
+      "code_fingerprint": "sha256:d6c5486c27a723dbdb9622fd15b33dac74d144c27473bc851ffbaed74084c9ec",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "boundary-crossing tokens now: 0\nlongest tokens gained instead: [' Psychologist', 'sychologist', '\n    Traveller', ' Morlocks', ' darkness', ' Machine']\n"
+          "text": "boundary-crossing tokens now: 0\nlongest tokens gained instead: [' Psychologist', 'sychologist', '\n    Traveller', ' Morlocks', ' darkness', ' Machine']\nfirst merges: [b' t', b'he', b' a', b'in', b' the', b' s']\n"
         }
       ]
     },
     "text-sequence-vocabulary-1": {
-      "code_fingerprint": "sha256:cb7582f93de4305abc0958ee3c6c936378f8721a0013e08e06c245597b5d1c32",
+      "code_fingerprint": "sha256:73b3bcf0faf81ade5c23d98ccf9a0b7c50a3a5a38d43513e605ed4efefae6979",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-vocabulary-2": {
-      "code_fingerprint": "sha256:5517acce8ae3e55a60640a9a90c81edd0bdcdfd15cfe94b871029ea3d73a4a09",
+      "code_fingerprint": "sha256:de25a62ea121e25ca8fe37e7359b283bac0a2da821e55035f73c56d6b7ad11c4",
       "kind": "text",
       "outputs": [
         {
@@ -179,7 +189,7 @@
       ]
     },
     "text-sequence-putting-it-all-together": {
-      "code_fingerprint": "sha256:b4b00aee27b22cd7bd23dd5ead408fd03b8d591d4dd8a807cbe300633798337c",
+      "code_fingerprint": "sha256:00089aca081c98077c98329808550b47659af3a5a5379f01c805f5c9dc38a3f8",
       "kind": "text",
       "outputs": [
         {
@@ -189,7 +199,7 @@
       ]
     },
     "text-sequence-special-tokens": {
-      "code_fingerprint": "sha256:b8ab739a9cca7c41b21291ff8ae256e9f4f4db9a14663178fb87fc2d6244a270",
+      "code_fingerprint": "sha256:b268063cffa25024a92a0735f56f4b8e6c545c651b58c5f16373e4ae413921c1",
       "kind": "text",
       "outputs": [
         {
@@ -200,23 +210,28 @@
       ]
     },
     "text-sequence-what-a-production-tokenizer-stores": {
-      "code_fingerprint": "sha256:129689c15569e66e59ca95bd819648ef127270b68630ddbc323d8e2477ca410d",
+      "code_fingerprint": "sha256:3d58723aa88c84ac57b26b9e15542e6b3f7299200a08a808dde8b33b3a0f242a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]\n{'<|endoftext|>': 50256}\n"
+          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n{'<|endoftext|>': 50256}\n"
         }
       ]
     },
     "text-sequence-verifying-our-implementation-1": {
-      "code_fingerprint": "sha256:85c37a2215b3300875f75f12320cb3d6fd59c19c8e844d235e6fde43c15cbba8",
+      "code_fingerprint": "sha256:99117e9ae463ccdbf7eabbc13c7f34cfbf244a3d2ba1833dcddec70e29b5b09f",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-verifying-our-implementation-2": {
-      "code_fingerprint": "sha256:0845f75f6747448a623001b595b8639b082d532b5eb302471c25150f953c4198",
+      "code_fingerprint": "sha256:74a0ff3422a6e605bfa0c578a9e21ef40a6bdfefed786af7f599b8f90d41e864",
       "kind": "text",
       "outputs": [
         {
@@ -227,7 +242,7 @@
       ]
     },
     "text-sequence-verifying-our-implementation-3": {
-      "code_fingerprint": "sha256:a3f6d22cf0a034c0395ab54b1d3cc6f6f0708723bc53f9a070ed85316e2fd5fd",
+      "code_fingerprint": "sha256:11af137519f14abd796b27d7ec696ffd07f3602335075034c7ad04a7a81d2d9e",
       "kind": "text",
       "outputs": [
         {
@@ -238,20 +253,18 @@
       ]
     },
     "text-sequence-fertility-digits-and-glitch-tokens-1": {
-      "code_fingerprint": "sha256:1b29c7ac70beaf699772c21aacba9aa9501c8256592c5d4347ddbf1400fe6b10",
-      "kind": "asset",
+      "code_fingerprint": "sha256:9aa7bdde0752cf1dd3ef62eaaf57566401fd01102075612fa3c0d2845f402862",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "text-sequence/text-sequence-fertility-digits-and-glitch-tokens-1-1.svg",
-          "bytes": 25486,
-          "sha256": "sha256:e38584c9ec1882445cfbbf4ca7d2dd9c245748035e98493c33b4599a7099e388"
+          "type": "stream",
+          "name": "stdout",
+          "text": " English: 1.14 (gpt2), 1.14 (o200k_base) tokens per word\n  German: 2.86 (gpt2), 1.57 (o200k_base) tokens per word\n   Greek: 7.33 (gpt2), 1.89 (o200k_base) tokens per word\n"
         }
       ]
     },
     "text-sequence-fertility-digits-and-glitch-tokens-2": {
-      "code_fingerprint": "sha256:5c9ab78eb90a0adf50537bcff081d9c060d3bc5e553147809cb4bb8b5d468d16",
+      "code_fingerprint": "sha256:ae3839def8451e18309ecd41cd2a4edcd7239f30c558388cf32134dbfa72402f",
       "kind": "text",
       "outputs": [
         {
@@ -262,7 +275,7 @@
       ]
     },
     "text-sequence-fertility-digits-and-glitch-tokens-3": {
-      "code_fingerprint": "sha256:b02efe1d22f849a6b5462e620e2dff524eefc2739056e6551c635b000e84c776",
+      "code_fingerprint": "sha256:4b97a297c2c07875c44ada40d12c314a1fde47e5bd443e11aa9cae328ff9f25a",
       "kind": "text",
       "outputs": [
         {

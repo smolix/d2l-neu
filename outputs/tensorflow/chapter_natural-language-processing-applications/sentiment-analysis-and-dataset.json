@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:b6177e741ba8c4a476be4e18d7dc5ec40cd682c1a78a6471843f69b6346a8642",
+    "d2l_lib_fingerprint": "sha256:e467eaa6480f4ee13c7346ab4f4a17c9f3edb5d7eaa99706c2de2fb6137344b1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20698,
-          "sha256": "sha256:cc9e3ab8695639ecbaf42a05ff625e43480e6adeb1ac9adcec69ada01da35529"
+          "sha256": "sha256:0e3859db210593e40494d5c368f5d9aa437c4bcd182b8301c6c61e3204bd0c0f"
         }
       ]
     },

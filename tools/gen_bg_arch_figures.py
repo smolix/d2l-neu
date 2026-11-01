@@ -21,7 +21,7 @@ import os
 
 from arch_diagrams import (
     Diagram, save, WRITTEN, NOTE_FS,
-    ACCENT, ACCENT_TINT, INK, GRAY_TEXT,
+    ACCENT_TINT, INK, GRAY_TEXT,
     PILL_H, PILL_STEP, PLUS_R, LABEL_BAND,
 )
 
@@ -55,7 +55,8 @@ def fig_residual_block():
     # black text (house rule for labels), otherwise as d.stage_label
     d.ax.text(panel[0] + 14, panel[3] - 9, "RESIDUAL\nBLOCK",
               fontsize=NOTE_FS, color=INK, family="Source Sans 3",
-              ha="left", va="top", zorder=8)
+              ha="left", va="top", zorder=8,
+              linespacing=0.82)    # matplotlib >= 3.11 pitch = full font box
 
     # spine: input anchor -> body ops -> ⊕ -> output
     y_anchor = panel[1] - 34
@@ -80,13 +81,8 @@ def fig_residual_block():
     d.anchor(x, y_top_arrow + 14, "x + body(x)")
     d.anchor(x, y_anchor, "x")
 
-    # explaining text in the right margin (no leader: the ⊕ is self-evident)
-    lh = 12.5 * 1.25
-    d.callout(panel[2] + 12, y_plus + lh, [
-        [("body learns a", INK, 1)],
-        [("correction ", INK, 1), ("body(x)", ACCENT, 1)],
-        [("added back to ", INK, 1), ("x", ACCENT, 1)],
-    ], ha="left")
+    # no side callout: the caption states what the block computes, and the
+    # output label already reads x + body(x)
 
     save(d.fig, "bg-residual-block")
 

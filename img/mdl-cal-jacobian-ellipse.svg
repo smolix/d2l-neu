@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -1035,7 +1035,7 @@ z
    </g>
    <g id="text_1">
     <!-- $\mathbf{x}_0$ -->
-    <g style="fill: #15181c" transform="translate(122.112 102.96) scale(0.11 -0.11)">
+    <g style="fill: #15181c" transform="translate(122.112 102.96) scale(0.13 -0.13)">
      <defs>
       <path id="Cmb10-2d" d="M 109 0 
 L 109 325 
@@ -2138,7 +2138,7 @@ L 436.081534 103.335378
    </g>
    <g id="text_2">
     <!-- $\mathbf{f}$ -->
-    <g style="fill: #1f77b4" transform="translate(459.856498 75.889455) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(459.856498 75.889455) scale(0.13 -0.13)">
      <defs>
       <path id="Cmb10-50" d="M 159 0 
 L 159 325 
@@ -2177,7 +2177,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$ -->
-    <g style="fill: #ff7f0e" transform="translate(368.179233 200.64365) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(363.759233 200.64365) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-77" d="M 1984 -1588 
 Q 1628 -1306 1370 -942 

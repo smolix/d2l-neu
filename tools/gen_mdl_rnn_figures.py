@@ -91,7 +91,8 @@ def fig_ar_vs_latent():
     axa.plot(pred_t, yp, "o", mfc="white", mec=GREEN, mew=2.2, ms=11, zorder=5)
     fl.arrow(axa, (x1, (ylo + yhi) / 2 + 0.15), (pred_t - 0.22, yp),
              color=GREEN, lw=2.0)
-    axa.text(pred_t + 0.12, yp + 0.30, r"$\hat{x}_t$", color=GREEN, ha="left",
+    axa.text(pred_t + 0.12, yp + 0.30, r"$\hat{x}_t$",
+             color=fl.T.GREEN.dark, ha="left",
              va="bottom", fontsize=LBL + 1)
 
     # a light time axis along the bottom, below the window's label
@@ -166,7 +167,7 @@ def fig_rnn_granularity_spectrum():
     anchored at ratios measured on *The Time Machine* (see text-sequence.md);
     the right end flattens toward the ~1 token/word plateau of English text.
     """
-    from scipy.interpolate import PchipInterpolator
+    from scipy.interpolate import make_smoothing_spline
 
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
 
@@ -175,8 +176,18 @@ def fig_rnn_granularity_spectrum():
     # toward the ~0.19 plateau (about one token per English word).
     xs = np.array([256, 512, 1024, 2048, 4096, 5e4, 2e5, 8e5])
     ys = np.array([1.0, 0.459, 0.348, 0.275, 0.221, 0.20, 0.193, 0.19])
+    # Smooth the excess over the plateau, log(y - floor), in log x with a
+    # lightly penalized cubic smoothing spline (C2, so no visible corners;
+    # interpolating in linear y kinks at anchors where the slope changes
+    # abruptly).  Both end points are pinned (heavy weights); the interior
+    # anchors are matched to within 0.005, and the curve stays monotone.
+    floor = 0.185
     grid = np.geomspace(256, 8e5, 400)
-    curve = PchipInterpolator(np.log(xs), ys)(np.log(grid))
+    spline = make_smoothing_spline(
+        np.log(xs), np.log(ys - floor),
+        w=np.array([100.0, 1, 1, 1, 1, 1, 1, 100.0]), lam=0.003)
+    curve = floor + np.exp(spline(np.log(grid)))
+    assert np.all(np.diff(curve) < 0)
 
     ax.plot(grid, curve, color=BLUE, lw=2.5, zorder=3)
     ax.set_xscale('log')
@@ -187,28 +198,26 @@ def fig_rnn_granularity_spectrum():
                   color='black')
     ax.tick_params(labelsize=12, colors='black')
 
-    # The three granularities, as points on the curve.
+    # The three granularities, as points on the curve, each with one
+    # "name: trade-off" label in the same form.
     ax.plot([256], [1.0], 'o', color=BLUE, ms=8, zorder=4)
-    ax.annotate('bytes (vocab 256)', xy=(256, 1.0), xytext=(400, 1.01),
-                fontsize=13, color='black', ha='left', va='center')
-    ax.annotate('long sequences,\nnever out of vocabulary',
-                xy=(430, 0.88), fontsize=13, color='black', ha='left', va='top')
+    ax.text(400, 1.01, 'bytes (vocab 256):\nlong sequences,\n'
+            'never out of vocabulary', fontsize=13, color='black', ha='left',
+            va='top')
 
-    band = (grid >= 512) & (grid <= 2e5)
-    ax.fill_between(grid[band], curve[band] - 0.06, curve[band] + 0.06,
-                    color=BLUE, alpha=0.15, lw=0, zorder=2)
+    x_bpe = 9e3                     # the BPE label points at the curve here
+    y_bpe = np.interp(np.log(x_bpe), np.log(grid), curve)
     ax.annotate('subword (BPE):\nchoose the operating point',
-                xy=(9e3, 0.25), xytext=(4.5e3, 0.52), fontsize=13,
+                xy=(x_bpe, y_bpe + 0.02), xytext=(4.5e3, 0.52), fontsize=13,
                 color='black', ha='center',
                 arrowprops=dict(arrowstyle='->', color='black', lw=1.1))
 
     ax.plot([8e5], [0.19], 's', color=ORANGE, ms=8, zorder=4)
-    ax.annotate('words', xy=(8e5, 0.19), xytext=(8e5, 0.30), fontsize=13,
-                color='black', ha='center', va='bottom')
-    ax.annotate('short sequences, but a\nfixed list: rare words\n'
-                'are out of vocabulary',
-                xy=(6.5e5, 0.68), fontsize=13, color='black', ha='center',
-                va='top')
+    ax.annotate('words:\nshort sequences, but a\nfixed list: rare words\n'
+                'are out of vocabulary', xy=(8e5, 0.225),
+                xytext=(6.5e5, 0.40), fontsize=13, color='black',
+                ha='center', va='bottom',
+                arrowprops=dict(arrowstyle='->', color='black', lw=1.1))
     fl.save(fig, 'mdl-rnn-granularity-spectrum')
 
 
@@ -286,58 +295,63 @@ def fig_rnn_pretokenization_pipeline():
     ]
     sentence = ''.join(c for c, _ in chunks)
 
-    fig, ax = plt.subplots(figsize=(8.6, 3.3))
-    char_w, gap, h = 0.155, 0.20, 0.62
-    y1, y2, y3 = 2.9, 1.55, 0.2
+    # Laid out in points (1 data unit = 1 pt) so box widths can be computed
+    # from the monospace advance: every sub-token gets its own padded box,
+    # so no glyph touches a border, and each chunk box spans exactly the
+    # sub-token boxes beneath it.
+    FS_TOK, FS_RAW = 12, 13
+    adv = 0.602 * FS_TOK               # DejaVu Sans Mono advance (pt)
+    pad, sub_gap, gap, h = 3.5, 3.0, 7.0, 27.0
+    y1, y2, y3 = 134.0, 72.0, 10.0
+    x_arrow, margin = -16.0, 26.0
 
     def digits(s):
         return any(ch.isdigit() for ch in s)
 
+    sub_ws = [[len(sub) * adv + 2 * pad for sub in subs] for _, subs in chunks]
+    chunk_ws = [sum(ws) + (len(ws) - 1) * sub_gap for ws in sub_ws]
+    total = sum(chunk_ws) + (len(chunks) - 1) * gap
+    xlim = (x_arrow - margin / 2, total + 2)
+    ylim = (y3 - h / 2 - 4, y1 + h / 2 + 4)
+    fig = plt.figure(figsize=((xlim[1] - xlim[0]) / 72, (ylim[1] - ylim[0]) / 72))
+    ax = fig.add_axes([0, 0, 1, 1])
+
     # Row 1: the raw string in one long box.
-    total = sum(len(c) for c, _ in chunks) * char_w + (len(chunks) - 1) * gap
-    x0 = 0.0
-    ax.add_patch(plt.Rectangle((x0, y1 - h / 2), total, h, facecolor='white',
+    ax.add_patch(plt.Rectangle((0, y1 - h / 2), total, h, facecolor='white',
                                edgecolor='black', lw=1.1))
-    ax.text(x0 + total / 2, y1, sentence, ha='center', va='center',
-            fontsize=13, family='monospace', color='black')
+    ax.text(total / 2, y1, sentence, ha='center', va='center',
+            fontsize=FS_RAW, family='monospace', color='black')
 
     # Rows 2 and 3: chunk boxes, and sub-token boxes aligned beneath them.
-    x = x0
-    for chunk, subs in chunks:
-        w = len(chunk) * char_w
+    x = 0.0
+    for (chunk, subs), cw, sws in zip(chunks, chunk_ws, sub_ws):
         fc = fl.T.ORANGE.tint if digits(chunk) else fl.T.BLUE.tint
-        shown = chunk.replace(' ', '␣')
-        ax.add_patch(plt.Rectangle((x, y2 - h / 2), w, h, facecolor=fc,
+        ax.add_patch(plt.Rectangle((x, y2 - h / 2), cw, h, facecolor=fc,
                                    edgecolor='black', lw=1.1))
-        ax.text(x + w / 2, y2, shown, ha='center', va='center', fontsize=13,
-                family='monospace', color='black')
+        ax.text(x + cw / 2, y2, chunk.replace(' ', '␣'), ha='center',
+                va='center', fontsize=FS_TOK, family='monospace',
+                color='black')
         sx = x
-        for sub in subs:
-            sw = max(len(sub), 1) * char_w * (w / (len(chunk) * char_w))
-            sw = len(sub) / len(chunk) * w
+        for sub, sw in zip(subs, sws):
             ax.add_patch(plt.Rectangle((sx, y3 - h / 2), sw, h,
                                        facecolor='white', edgecolor=GRAY,
                                        lw=1.1))
             ax.text(sx + sw / 2, y3, sub.replace(' ', '␣'), ha='center',
-                    va='center', fontsize=12, family='monospace',
+                    va='center', fontsize=FS_TOK, family='monospace',
                     color='black')
-            sx += sw
-        x += w + gap
+            sx += sw + sub_gap
+        x += cw + gap
 
-    # Stage arrows + labels on the left margin.
-    ax.annotate('', xy=(-0.35, y2 + h / 2 - 0.05), xytext=(-0.35, y1 - h / 2 + 0.05),
-                arrowprops=dict(arrowstyle='->', color='black', lw=1.3))
-    ax.annotate('', xy=(-0.35, y3 + h / 2 - 0.05), xytext=(-0.35, y2 - h / 2 + 0.05),
-                arrowprops=dict(arrowstyle='->', color='black', lw=1.3))
+    # Stage arrows on the left margin, stage labels between the rows.
+    for ya, yb in ((y1, y2), (y2, y3)):
+        ax.annotate('', xy=(x_arrow, yb + h / 2 - 2), xytext=(x_arrow, ya - h / 2 + 2),
+                    arrowprops=dict(arrowstyle='->', color='black', lw=1.3))
     ax.text(total / 2, (y1 + y2) / 2, 'split with the pre-tokenization regex',
-            ha='center', va='center', fontsize=13, color='black',
-            bbox=dict(facecolor='white', edgecolor='none', pad=1.5))
+            ha='center', va='center', fontsize=13, color='black')
     ax.text(total / 2, (y2 + y3) / 2, 'BPE merges, applied within each chunk',
-            ha='center', va='center', fontsize=13, color='black',
-            bbox=dict(facecolor='white', edgecolor='none', pad=1.5))
+            ha='center', va='center', fontsize=13, color='black')
 
-    fl.clean_axes(ax, lim=((-0.7, total + 0.25), (y3 - 0.55, y1 + 0.55)),
-                  hide=True, equal=False)
+    fl.clean_axes(ax, lim=(xlim, ylim), hide=True, equal=False)
     fl.save(fig, 'mdl-rnn-pretokenization-pipeline')
 
 
@@ -609,7 +623,7 @@ def fig_truncated_bptt():
     seg_len = 4                              # regular-truncation segment length
     xs = np.linspace(2.35, 10.35, n)
     dx = xs[1] - xs[0]
-    pad = 0.42 * dx                          # segment box overhang past the nodes
+    pad = 0.35 * dx                          # segment box overhang past the nodes
 
     y_tok, y_full, y_trunc, y_leg = 3.2, 2.2, 0.85, -0.25
 
@@ -637,7 +651,7 @@ def fig_truncated_bptt():
     _lanes(ax, xs, y_trunc, back=set(range(n - 1)) - cuts)
     for i in sorted(cuts):
         xb = (xs[i] + xs[i + 1]) / 2
-        c, h = (xb, y_trunc - 0.13), 0.11           # a cross where the
+        c, h = (xb, y_trunc - 0.13), 0.09           # a cross where the
         for sgn in (1, -1):                         # gradient would pass
             ax.plot([c[0] - h, c[0] + h], [c[1] - sgn * h, c[1] + sgn * h],
                     color=fl.T.RED.dark, lw=2.4, solid_capstyle="round",
@@ -787,11 +801,12 @@ def fig_beam_tree():
         ax.text(x, y, f"${text}$", ha="center", va="center", fontsize=13,
                 color=col, zorder=4)
 
-    def edge(p, q, kept):
+    def edge(p, q, kept, r0=r + 0.04):
+        """Edge from p to q, trimmed by r0 at p and by the node radius at q."""
         (x0, y0), (x1_, y1_) = p, q
         d = np.hypot(x1_ - x0, y1_ - y0)
         ux, uy = (x1_ - x0) / d, (y1_ - y0) / d
-        ax.plot([x0 + ux * (r + 0.04), x1_ - ux * (r + 0.04)],
+        ax.plot([x0 + ux * r0, x1_ - ux * (r + 0.04)],
                 [y0 + uy * (r + 0.04), y1_ - uy * (r + 0.04)],
                 color=BLUE if kept else GRAY, lw=2.2 if kept else 1.0,
                 alpha=1.0 if kept else 0.45, zorder=2)
@@ -803,14 +818,16 @@ def fig_beam_tree():
         facecolor=GRAY, alpha=0.15, edgecolor="none", zorder=3))
     ax.text(x_root, 0.0, "prefix", ha="center", va="center", fontsize=13,
             color="black", zorder=4)
-    root = (x_root + 0.68, 0.0)
+    # every root edge starts at the midpoint of the box's right edge
+    # (half-width 0.62 plus the 0.02 boxstyle pad)
+    root = (x_root + 0.64, 0.0)
 
     # ---- t = 1: expand the root over the whole vocabulary; keep A and C ----
     kept1 = {"A", "C"}
     pos1 = {}
     for tok, y in zip(tokens, rows5):
         pos1[tok] = (x1, y)
-        edge((root[0] - 0.04, root[1]), (x1, y), tok in kept1)
+        edge(root, (x1, y), tok in kept1, r0=0.0)
         node(x1, y, tok, tok in kept1)
 
     # ---- t = 2: expand A (top five slots) and C (bottom five); keep AB, CE --

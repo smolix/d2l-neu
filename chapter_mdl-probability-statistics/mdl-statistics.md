@@ -353,7 +353,7 @@ For each nonzero effect, power approaches one as $n$ increases and reaches
 $0.8$ at a sample size proportional to $1/\delta^2$. At $\delta=0$, rejection
 occurs with probability $\alpha$, the test's false-positive rate.
 
-![Power of the one-sample two-sided $z$-test at $\alpha=0.05$ as a function of the sample size $n$, one curve per effect size $\delta$. Every curve starts near $\alpha$ and climbs toward $1$; the dashed line marks the conventional target $0.8$, reached at a sample size that scales like $1/\delta^2$: about $8$ samples for $\delta=1$ but nearly $80{,}000$ for $\delta=0.01$.](../img/mdl-prob-power.svg)
+![Power of the one-sample two-sided $z$-test at $\alpha=0.05$ as a function of the sample size $n$, one curve per effect size $\delta$. Small-effect curves start near $\alpha$ (the dotted line), and every curve climbs toward $1$; the dashed line marks the conventional target $0.8$, reached at a sample size that scales like $1/\delta^2$: about $8$ samples for $\delta=1$ but nearly $80{,}000$ for $\delta=0.01$.](../img/mdl-prob-power.svg)
 :label:`fig_mdl-power`
 
 ### Test Statistics, $p$-values, and Significance
@@ -558,7 +558,7 @@ clustered observations require a block, cluster, or other
 structure-preserving bootstrap. Exercise :exref:`ex_mdl-statistics-let-x-1-ldots` gives the classic failure for a
 sample maximum.
 
-![The ordinary iid bootstrap. From one observed sample (top), draw many resamples of the same size with replacement (middle) and recompute the statistic. The replicate histogram (bottom) estimates the sampling distribution near the observed estimate. Its standard deviation estimates standard error; its central quantiles define a percentile interval when the bootstrap validity conditions are appropriate.](../img/mdl-prob-bootstrap.svg)
+![The ordinary iid bootstrap. From one observed sample (top left), draw many resamples of the same size with replacement (bottom left; a tick's height counts how many copies of that observation were drawn) and recompute the statistic. The replicate histogram (right) estimates the sampling distribution near the observed estimate $\hat\theta$ (dashed line). Its standard deviation estimates standard error; its central quantiles define a percentile interval when the bootstrap validity conditions are appropriate.](../img/mdl-prob-bootstrap.svg)
 :label:`fig_mdl-bootstrap`
 
 We now bootstrap the **median** of a skewed sample without using an analytic

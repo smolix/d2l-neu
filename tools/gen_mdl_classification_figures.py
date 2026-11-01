@@ -84,15 +84,15 @@ def fig_loss_accuracy():
         label(0.22, 1.64 - 0.44 * k, nm, ha="left")
         label(1.48, 1.64 - 0.44 * k, f"${v:.1f}$", ha="right")
     # training: softmax -> probabilities -> loss
-    P = box(2.55, y_top - bh / 2, 2.05, bh, T.ORANGE)
+    P = box(2.46, y_top - bh / 2, 2.18, bh, T.ORANGE)
     label(P["cx"], P["cy"], r"$\hat{\mathbf{y}} = ("
-          + ",\\ ".join(f"{v:.2f}" for v in p) + ")$")
+          + ",\\,".join(f"{v:.2f}" for v in p) + ")$")
     Lo = box(5.0, y_top - bh / 2, 1.66, bh, T.ORANGE)
     label(Lo["cx"], Lo["cy"], rf"$-\log {p[y]:.2f} = {loss:.2f}$")
     flow(L["r"], P["l"], y_top, T.ORANGE, "softmax")
     flow(P["r"], Lo["l"], y_top, T.ORANGE)
     # evaluation: argmax -> predicted class -> compared with the label
-    D = box(2.55, y_bot - bh / 2, 2.05, bh, T.BLUE)
+    D = box(2.46, y_bot - bh / 2, 2.18, bh, T.BLUE)
     label(D["cx"], D["cy"], f"predicted: {names[yhat]}")
     A = box(5.0, y_bot - bh / 2, 1.66, bh, T.BLUE)
     label(A["cx"], A["cy"] + 0.12, f"label: {names[y]}", fontsize=13)
@@ -198,13 +198,13 @@ def fig_decision_regions():
         axr.plot([far1[0], far2[0]], [far1[1], far2[1]],
                  color=BLUE if main else GRAY, lw=2.6 if main else 1.4,
                  ls="-" if main else (0, (5, 3)), zorder=2)
-        axr.text(*(lab_row + c * wn), f"{s}", fontsize=14,
+        # the first (lowest) level line names the quantity, y_1 = 0.1;
+        # the others carry the bare value
+        txt = rf"$\hat{{y}}_1 =$ {s}" if s == sigma_levels[0] else f"{s}"
+        axr.text(*(lab_row + c * wn), txt, fontsize=14,
                  color=T.BLUE.dark if main else T.INK, ha="center",
                  va="center", zorder=4,
                  bbox=dict(fc="white", ec="none", pad=1.5))
-    c0 = (np.log(0.1 / 0.9) - b2) / np.linalg.norm(w2)
-    axr.text(*(lab_row + (c0 - 0.75) * wn), r"$\hat{y}_1 =$", fontsize=15,
-             color=T.INK, ha="center", va="center", zorder=4)
     # w_1 - w_2, drawn from a point on the decision boundary
     base = 1.9 * tang
     tip = base + 0.95 * wn
@@ -319,6 +319,7 @@ def fig_density_ratio():
     for ax in (top, bot):
         ax.axvline(x_eq, color=fl.T.FAINT, lw=fl.T.SW_HAIR, ls=":")
     bot.plot([x_eq], [1.0], "o", ms=5, color="black", zorder=5)
+    fig.align_ylabels((top, bot))     # the tick labels differ in width
 
     fl.save(fig, "mdl-clf-density-ratio")
 
@@ -371,9 +372,9 @@ def fig_shift_types():
                      gauss(0.3, 1.1) * sig(3 * (x - 1.2)))],
     }
     # column titles name the shift and the factor of p(x, y) it keeps fixed
-    titles = {"covariate": "covariate shift\n" + r"fixed $p(y \mid x)$",
-              "label": "label shift\n" + r"fixed $p(x \mid y)$",
-              "concept": "concept shift\n" + r"fixed $p(x)$"}
+    titles = {"covariate": ("covariate shift", r"fixed $p(y \mid x)$"),
+              "label": ("label shift", r"fixed $p(x \mid y)$"),
+              "concept": ("concept shift", r"fixed $p(x)$")}
 
     def draw(axes, keys):
         """Fill a 2 x len(keys) grid of panels (rows: source, target)."""
@@ -382,7 +383,14 @@ def fig_shift_types():
                 xb = _shift_panel(axes[row, col], x, *cases[key][row], c0, c1)
                 print(f"  {key:9s} {'source' if row == 0 else 'target'}: "
                       f"boundary at x = {xb:+.2f}")
-            axes[0, col].set_title(titles[key], fontsize=15, linespacing=1.4)
+            # two title lines, each on its own fixed baseline (points above
+            # the panel), so the line positions do not depend on how deep the
+            # math in the second line reaches (p(x) has no "|")
+            for line, rise in zip(titles[key], (33, 13)):
+                axes[0, col].annotate(
+                    line, xy=(0.5, 1.0), xycoords="axes fraction",
+                    xytext=(0, rise), textcoords="offset points",
+                    ha="center", va="baseline", fontsize=15, color=fl.T.INK)
             axes[1, col].set_xlabel(r"$x$")
         axes[0, 0].set_ylabel("source", fontsize=15)
         axes[1, 0].set_ylabel("target", fontsize=15)
@@ -425,17 +433,19 @@ def fig_feedback_loop():
         "data": f.block(xl, yb, "training data hold more crime in A",
                         min_w=w),
     }
-    gap = 6.0
+    # tails start just outside a box's outline (half its stroke), tips land
+    # on the outline itself (style guide 5.3)
+    gap, tip = T.SW_BOX / 2, 0.0
     (mx, my, mw, mh) = boxes["model"]
     (px, py, pw, ph) = boxes["patrol"]
     (rx, ry, rw, rh) = boxes["record"]
     (dx, dy, dw, dh) = boxes["data"]
     # top: model -> patrols; right: patrols -> records; bottom: records ->
     # data; left: data -> model (clockwise)
-    f.arrow(mx + mw + gap, yt, px - gap, yt)
-    f.arrow(xr, py + ph + gap, xr, ry - gap)
-    f.arrow(rx - gap, yb, dx + dw + gap, yb)
-    f.arrow(xl, dy - gap, xl, my + mh + gap)
+    f.arrow(mx + mw + gap, yt, px - tip, yt)
+    f.arrow(xr, py + ph + gap, xr, ry - tip)
+    f.arrow(rx - gap, yb, dx + dw + tip, yb)
+    f.arrow(xl, dy - gap, xl, my + mh + tip)
     lab = dict(size=T.FS_SMALL, color=T.INK)
     f.text((mx + mw + px) / 2, yt - 16, "decision", **lab)
     f.text(xr + 14, (yt + yb) / 2, "observation", anchor="start", **lab)

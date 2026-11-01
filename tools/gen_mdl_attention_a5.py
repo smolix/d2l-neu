@@ -46,8 +46,8 @@ def fig_online_softmax() -> None:
             face, edge, ls, alpha = BLUE, BLUE, "-", 0.22
         elif b == active:              # the one stripe in memory right now
             face, edge, ls, alpha = ORANGE, ORANGE, "-", 0.55
-        else:                          # not yet computed
-            face, edge, ls, alpha = "none", GRAY, "--", 1.0
+        else:                          # not yet computed: blank region
+            continue
         ax.add_patch(Rectangle((x0, 0), bw, side, facecolor=face,
                                edgecolor=edge, linestyle=ls, alpha=alpha,
                                linewidth=1.4))
@@ -61,11 +61,11 @@ def fig_online_softmax() -> None:
             fontsize=13, color="black")
     ax.annotate("", xy=(-0.5, 3.6), xytext=(-0.5, 6.0),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.4))
-    ax.text(-0.85, 4.8, "queries ($n$ rows)", ha="center", va="center",
+    ax.text(-0.98, 4.8, "queries ($n$ rows)", ha="center", va="center",
             fontsize=13, color="black", rotation=90)
 
     ax.text(3.0, -0.75,
-            r"scores $\mathbf{Q}\mathbf{K}^\top\!/\sqrt{d}\,$:"
+            r"scores $\mathbf{Q}\mathbf{K}^{\!\top}\!/\sqrt{d}\,$:"
             " one block at a time",
             ha="center", va="center", fontsize=13.5, color="black")
 
@@ -74,8 +74,8 @@ def fig_online_softmax() -> None:
             va="center", fontsize=13, color="black", bbox=WHITE_BOX)
     ax.text(3.5, 3.0, "current $n \\times c$ block", ha="center",
             va="center", fontsize=13, color="black", rotation=90)
-    ax.text(5.15, 3.0, "not yet\ncomputed", ha="center", va="center",
-            fontsize=13, color=GRAY, bbox=WHITE_BOX)
+    ax.text(0.5 * ((active + 1) * bw + side), 3.0, "not yet\ncomputed",
+            ha="center", va="center", fontsize=12, color=GRAY)
 
     # --- the running state -------------------------------------------------
     sx = 7.7                            # left edge of the state group
@@ -91,14 +91,21 @@ def fig_online_softmax() -> None:
             fontsize=14, color="black")
     ax.text(sx + 1.72, -0.32, r"$\mathbf{O}$", ha="center", va="top",
             fontsize=14, color="black")
-    ax.text(sx + 1.1, -0.95, "running state: $O(nd)$", ha="center",
+    ax.text(sx + 1.1, -1.0, "running state: $\\mathcal{O}(nd)$", ha="center",
             va="top", fontsize=13, color="black")
 
-    # arrow: top of the current stripe -> state group, arcing over the matrix
-    ax.annotate("", xy=(sx - 0.2, 5.75), xytext=(3.55, 6.12),
+    # thin bracket over all three state bars: the arrow lands on it, since
+    # the update rescales and accumulates into m, s, and O together
+    bw_state, yb = sx + 2.19, 6.32
+    ax.plot([sx, sx, bw_state, bw_state], [6.14, yb, yb, 6.14],
+            color="black", lw=1.2, solid_joinstyle="miter")
+    # arrow: top of the current stripe -> state bracket, arcing over the matrix
+    ax.annotate("", xy=(sx + 1.1, yb), xytext=(3.5, 6.12),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.6,
-                                connectionstyle="arc3,rad=-0.22"))
-    ax.text(4.35, 7.05, "rescale by $e^{\\,m - m'}$, accumulate",
+                                shrinkA=0, shrinkB=0,
+                                connectionstyle="arc3,rad=-0.25"))
+    ax.text(0.5 * (3.5 + sx + 1.1), 7.0,
+            "rescale by $e^{\\,m - m'}$, accumulate",
             ha="center", va="bottom", fontsize=13, color="black")
 
     ax.set_xlim(-1.1, 10.0)

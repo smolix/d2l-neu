@@ -92,7 +92,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\mathrm{span}(\mathbf{v})$ -->
-    <g style="fill: #565d66" transform="translate(176.683446 80.044596) rotate(-16.565051) scale(0.14 -0.14)">
+    <g style="fill: #15181c" transform="translate(176.683446 80.044596) rotate(-16.565051) scale(0.14 -0.14)">
      <defs>
       <path id="Cmr10-52" d="M 213 -19 
 L 213 1025 
@@ -378,11 +378,16 @@ L 467.690813 -1
 " clip-path="url(#p795b5037e5)" style="fill: none; stroke: #d9dee4; stroke-width: 0.9; stroke-linecap: square"/>
    </g>
    <g id="line2d_12">
+    <path d="M 403.920881 99.32786 
+L 453.751761 84.50572 
+" clip-path="url(#p795b5037e5)" style="fill: none; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.4"/>
+   </g>
+   <g id="line2d_13">
     <path d="M 453.751761 84.50572 
 L 471.256132 52.17921 
 " clip-path="url(#p795b5037e5)" style="fill: none; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.4"/>
    </g>
-   <g id="line2d_13">
+   <g id="line2d_14">
     <path d="M 371.59437 81.82349 
 L 471.256132 52.17921 
 " clip-path="url(#p795b5037e5)" style="fill: none; stroke-dasharray: 5.18,2.24; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.4"/>
@@ -437,7 +442,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{u}$ -->
-    <g style="fill: #1f77b4" transform="translate(400.603381 114.01986) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(409.035881 110.76486) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-5a" d="M 581 744 
 L 581 2322 
@@ -473,7 +478,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\mathbf{w}$ -->
-    <g style="fill: #ff7f0e" transform="translate(352.93937 80.24049) scale(0.16 -0.16)">
+    <g style="fill: #ff7f0e" transform="translate(357.55 78.84549) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-62" d="M 1356 91 
 L 513 2516 

@@ -112,11 +112,13 @@ def fig_gradient_field():
     ax.set_aspect("equal")
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
-    ax.set_xlabel(r"$w_1$", color="black", fontsize=17)
+    ax.set_xlabel(r"$w_1$", color="black", fontsize=17, labelpad=-3)
     ax.set_ylabel(r"$w_2$", color="black", fontsize=17, rotation=0,
                   labelpad=12)
     for side in ("left", "bottom"):
         ax.spines[side].set_color("black")
+    ax.set_yticks([-1.0, -0.5, 0.0])        # fewer ticks: w = (1, 0) and
+    ax.set_xticks([0.5, 1.0, 1.5, 2.0])      # w2* = -1/2 stay readable
     ax.tick_params(colors="black", labelsize=13)
     save(fig, "calculus-gradient-field", out_dir=IMG)
     shutil.copyfile(os.path.join(IMG, "calculus-gradient-field.svg"),
@@ -140,20 +142,28 @@ def fig_partial_slices():
 
     fig = plt.figure(figsize=(5.4, 4.4))
     ax = fig.add_subplot(projection="3d")
-    ax.view_init(elev=26, azim=-58)
-    g1, g2 = np.meshgrid(np.linspace(0.6, 1.4, 17), np.linspace(-0.4, 0.4, 17))
+    ax.view_init(elev=26, azim=-48)
+    # Draw in call order (no depth sort) so the tangents stay on top of the
+    # wireframe and the slices instead of vanishing behind them.
+    ax.computed_zorder = False
+    # 57 samples, every 8th drawn: mesh lines at 0.6, 0.714, ..., 1.4 and
+    # -0.4, -0.286, ..., 0.4 -- none falls on w1 = 1 or w2 = 0, so no grey
+    # mesh line runs along either slice.
+    g1, g2 = np.meshgrid(np.linspace(0.6, 1.4, 57), np.linspace(-0.4, 0.4, 57))
     ax.plot_wireframe(g1, g2, loss(g1, g2), color=T.FAINT, lw=0.8,
-                      rstride=2, cstride=2)
+                      rstride=8, cstride=8)
     t = np.linspace(0.6, 1.4, 81)
     s2 = np.linspace(-0.4, 0.4, 81)
     ax.plot(t, 0 * t, loss(t, 0), color=T.ORANGE.base, lw=T.SW_LINE)
     ax.plot(1 + 0 * s2, s2, loss(1, s2), color=T.GREEN.base, lw=T.SW_LINE)
-    d = np.linspace(-1, 1, 2)          # dashed tangents at (1, 0): slopes 2, 4
+    # dashed tangents at (1, 0), slopes 2 and 4, drawn last, darker and
+    # heavier than the slices
+    d = np.linspace(-1, 1, 2)
     ax.plot(1 + 0.4 * d, 0 * d, 1 + 2 * 0.4 * d, color=T.ORANGE.dark,
-            lw=T.SW_LINE, ls=(0, (4, 2)))
-    ax.plot(1 + 0 * d, 0.25 * d, 1 + 4 * 0.25 * d, color=T.GREEN.dark,
-            lw=T.SW_LINE, ls=(0, (4, 2)))
-    ax.scatter([1], [0], [1], color=T.INK, s=30, depthshade=False)
+            lw=2.5, ls=(0, (4, 2)))
+    ax.plot(1 + 0 * d, 0.08 + 0.32 * d, 1.32 + 4 * 0.32 * d,
+            color=T.GREEN.dark, lw=2.5, ls=(0, (4, 2)))
+    ax.scatter([1], [0], [1], color=T.INK, s=30, depthshade=False, zorder=6)
     ax.text2D(0.03, 0.90, r"slope $\partial L/\partial w_2 = 4$",
               transform=ax.transAxes, color=T.GREEN.dark, fontsize=15)
     ax.text2D(0.03, 0.82, r"slope $\partial L/\partial w_1 = 2$",

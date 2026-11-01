@@ -660,7 +660,7 @@ derivation applies the preceding projection result to the displacement of
 $\mathbf{x}$ from any point on the hyperplane. These properties are
 illustrated in :numref:`fig_mdl-la-hyperplane`.
 
-![The hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with normal $\mathbf{w}$. Sliding the offset $b$ translates the hyperplane along $\mathbf{w}$ without rotating it; the shaded region is the half-space $\mathbf{w}\cdot\mathbf{x} > b$; and the signed distance from any point to the hyperplane is $(\mathbf{w}\cdot\mathbf{x} - b)/\|\mathbf{w}\|$, the quantity a linear classifier reads off as its margin.](../img/mdl-la-hyperplane.svg)
+![The hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with normal $\mathbf{w}$. Left: in the plane it is a line (dashed) at distance $b/\|\mathbf{w}\|$ from the origin (green), and the shaded region is the half-plane $\mathbf{w}\cdot\mathbf{x} > b$ on the side $\mathbf{w}$ points toward. Right: in three dimensions the same equation defines a plane, with $\mathbf{w}$ normal to it.](../img/mdl-la-hyperplane.svg)
 :label:`fig_mdl-la-hyperplane`
 
 The inequalities $\mathbf{w}\cdot\mathbf{v} > b$ and
@@ -933,7 +933,7 @@ Applying the same reasoning to the integer grid shows that matrix multiplication
 can shear, rotate, reflect, project, and scale directions while preserving
 linear combinations, as shown in :numref:`fig_mdl-la-linear-map`.
 
-![The matrix $\mathbf{A} = \bigl(\begin{smallmatrix}1 & 2 \\ -1 & 3\end{smallmatrix}\bigr)$ acting on the plane. The basis vectors are sent to $\mathbf{A}\mathbf{e}_1 = (1, -1)^\top$ and $\mathbf{A}\mathbf{e}_2 = (2, 3)^\top$, and the entire grid is transported along with them: lines stay lines, the origin stays put, and equally spaced cells stay equally spaced. The shaded unit square maps to the shaded parallelogram, whose area will be the subject of the determinant below.](../img/mdl-la-linear-map.svg)
+![The matrix $\mathbf{A} = \bigl(\begin{smallmatrix}1 & 2 \\ -1 & 3\end{smallmatrix}\bigr)$ acting on the plane. The basis vectors are sent to $\mathbf{A}\mathbf{e}_1 = (1, -1)^\top$ and $\mathbf{A}\mathbf{e}_2 = (2, 3)^\top$, and the entire grid is transported along with them: lines stay lines, the origin stays put, and equally spaced cells stay equally spaced. The shaded unit square maps to the shaded parallelogram, whose area will be the subject of the determinant below. The right panel is drawn at one third the scale of the left, so that the whole image grid fits.](../img/mdl-la-linear-map.svg)
 :label:`fig_mdl-la-linear-map`
 
 The defining restriction is position-independent linearity: the same

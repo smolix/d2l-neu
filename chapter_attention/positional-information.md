@@ -250,7 +250,7 @@ through untouched. (Learned *relative*-position embeddings
 offset vectors into the score; RoPE achieves relative scoring without
 additional learned parameters.)
 
-![Rotary embeddings rotate each two-dimensional feature pair of the query and the key by an angle proportional to position. Shifting both positions by the same amount — here by 3 — rotates both vectors together and leaves the angle between them, and hence the attention score, unchanged. Here $\theta$ is the pair's per-position angle and $\varphi$ the angle between the unrotated query and key.](../img/mdl-attention-rope-rotation.svg)
+![Rotary embeddings rotate each two-dimensional feature pair of the query and the key by an angle proportional to position. Shifting both positions by the same amount — here by 3 — rotates both vectors together and leaves the angle between them ($2\theta + \varphi$ in both panels), and hence the attention score, unchanged. Here $\theta$ is the pair's per-position angle and $\varphi$ the angle between the unrotated query and key.](../img/mdl-attention-rope-rotation.svg)
 :label:`fig_rope-rotation`
 
 The implementation rotates the even/odd feature pairs with precomputed

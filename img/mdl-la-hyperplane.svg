@@ -29,21 +29,21 @@ z
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 208.6969 165.949563 
-L 22.291455 49.446159 
-L 138.794858 -136.959286 
-L 325.200304 -20.455883 
+    <path d="M 395.102346 282.452966 
+L -164.11399 -67.057244 
+L 10.641115 -346.665412 
+L 569.857451 2.844798 
 z
 " clip-path="url(#p14ab68be79)" style="fill: #1f77b4; opacity: 0.1"/>
    </g>
    <g id="line2d_1">
-    <path d="M 208.6969 165.949563 
-L 22.291455 49.446159 
+    <path d="M 298.150693 221.858183 
+L -1 34.889 
 " clip-path="url(#p14ab68be79)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #1f77b4; stroke-width: 1.8"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{w}\!\cdot\!\mathbf{x}=b$ -->
-    <g style="fill: #1f77b4" transform="translate(159.401699 123.754748) rotate(-327.994617) scale(0.14 -0.14)">
+    <g style="fill: #1f77b4" transform="translate(25.763334 72.134778) rotate(-327.994617) scale(0.14 -0.14)">
      <defs>
       <path id="Cmb10-62" d="M 1356 91 
 L 513 2516 
@@ -233,7 +233,7 @@ z
    </g>
    <g id="text_3">
     <!-- $b/\|\mathbf{w}\|$ -->
-    <g style="fill: #2ca02c" transform="translate(43.572543 118.733021) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(50.31618 131.41484) scale(0.14 -0.14)">
      <defs>
       <path id="Cmmi10-62" d="M 359 -1472 
 Q 359 -1453 366 -1447 
@@ -377,23 +377,6 @@ L 493.136389 39.194991
    </g>
   </g>
   <g id="axes_2">
-   <g id="Line3DCollection_1">
-    <path d="M 345.623061 108.450164 
-L 305.297561 164.37192 
-" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
-    <path d="M 345.623061 108.450164 
-L 342.394894 117.185625 
-" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
-    <path d="M 345.623061 108.450164 
-L 337.78914 115.04702 
-" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
-   </g>
-   <g id="text_5">
-    <!-- $\mathbf{w}$ -->
-    <g style="fill: #ff7f0e" transform="translate(345.969181 147.96045) scale(0.15 -0.15)">
-     <use xlink:href="#Cmb10-62" transform="translate(0 0.609375)"/>
-    </g>
-   </g>
    <g id="Poly3DCollection_1">
     <path d="M 376.116116 96.668785 
 L 387.269673 105.418728 
@@ -881,6 +864,41 @@ L 422.947741 178.016004
 L 410.159225 167.765828 
 z
 " clip-path="url(#p044cf5934c)" style="fill: #114365; fill-opacity: 0.4"/>
+   </g>
+   <g id="Path3DCollection_1">
+    <defs>
+     <path id="m841053ce97" d="M 0 2.12132 
+C 0.562581 2.12132 1.102195 1.897805 1.5 1.5 
+C 1.897805 1.102195 2.12132 0.562581 2.12132 0 
+C 2.12132 -0.562581 1.897805 -1.102195 1.5 -1.5 
+C 1.102195 -1.897805 0.562581 -2.12132 0 -2.12132 
+C -0.562581 -2.12132 -1.102195 -1.897805 -1.5 -1.5 
+C -1.897805 -1.102195 -2.12132 -0.562581 -2.12132 0 
+C -2.12132 0.562581 -1.897805 1.102195 -1.5 1.5 
+C -1.102195 1.897805 -0.562581 2.12132 0 2.12132 
+z
+" style="stroke: #ff7f0e; stroke-width: 2"/>
+    </defs>
+    <g clip-path="url(#p044cf5934c)">
+     <use xlink:href="#m841053ce97" x="345.623061" y="108.450164" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2"/>
+    </g>
+   </g>
+   <g id="Line3DCollection_1">
+    <path d="M 374.434401 68.495773 
+L 345.623061 108.450164 
+" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
+    <path d="M 374.434401 68.495773 
+L 370.769222 78.282788 
+" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
+    <path d="M 374.434401 68.495773 
+L 365.740507 75.83789 
+" clip-path="url(#p044cf5934c)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4"/>
+   </g>
+   <g id="text_5">
+    <!-- $\mathbf{w}$ -->
+    <g style="fill: #ff7f0e" transform="translate(380.154838 66.554604) scale(0.15 -0.15)">
+     <use xlink:href="#Cmb10-62" transform="translate(0 0.609375)"/>
+    </g>
    </g>
   </g>
  </g>

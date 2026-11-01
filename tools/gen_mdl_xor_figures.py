@@ -88,7 +88,7 @@ def fig_xor():
         corner(axa, p, lab)
     axa.set_xlim(*lx); axa.set_ylim(*ly)
     axa.set_xticks([0, 1]); axa.set_yticks([0, 1])
-    axa.set_xlabel("$x_1$"); axa.set_ylabel("$x_2$", rotation=0,
+    axa.set_xlabel("$x_1$", labelpad=-1.0); axa.set_ylabel("$x_2$", rotation=0,
                                             labelpad=12)
 
     # ---- right: hidden space, one separating line -----------------------
@@ -97,15 +97,17 @@ def fig_xor():
     axb.fill_between(hs, line, hy[1], color=tint[0], lw=0, zorder=0)
     axb.fill_between(hs, hy[0], line, color=tint[1], lw=0, zorder=0)
     axb.plot(hs, line, **line_kw)
-    corner(axb, H[0], 0, "(0, 0)", dx=0.0, dy=0.24, ha="center",
-           va="bottom")
-    corner(axb, H[1], 1, "(0, 1), (1, 0)", dx=0.0, dy=-0.24, ha="center",
-           va="top")
-    corner(axb, H[3], 0, "(1, 1)", dx=0.0, dy=0.24, ha="center",
-           va="bottom")
+    # centered offsets: va="top"/"bottom" would depend on the font's full
+    # ascender box (matplotlib >= 3.11), which pushes labels into the axes
+    corner(axb, H[0], 0, "(0, 0)", dx=0.0, dy=0.30, ha="center",
+           va="center")
+    corner(axb, H[1], 1, "(0, 1), (1, 0)", dx=0.0, dy=-0.29, ha="center",
+           va="center")
+    corner(axb, H[3], 0, "(1, 1)", dx=0.0, dy=0.29, ha="center",
+           va="center")
     axb.set_xlim(*hx); axb.set_ylim(*hy)
     axb.set_xticks([0, 1, 2]); axb.set_yticks([0, 1])
-    axb.set_xlabel("$h_1$"); axb.set_ylabel("$h_2$", rotation=0,
+    axb.set_xlabel("$h_1$", labelpad=-1.0); axb.set_ylabel("$h_2$", rotation=0,
                                             labelpad=12)
 
     for ax in (axa, axb):

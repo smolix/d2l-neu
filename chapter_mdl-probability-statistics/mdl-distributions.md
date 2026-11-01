@@ -88,7 +88,7 @@ connected chain: each is built from, or is a limit of, the one
 before. :numref:`fig_mdl-prob-discrete-pmfs` shows their shapes side by side so the
 shared bell-like silhouette of the count distributions is visible at a glance.
 
-![A gallery of discrete probability mass functions in one consistent style: $\mathrm{Bernoulli}(0.3)$, a discrete uniform on $\{1,\dots,6\}$, $\mathrm{Binomial}(10,0.4)$, and $\mathrm{Poisson}(4)$. The binomial and Poisson share the same right-skewed bell silhouette, foreshadowing their limiting relationship.](../img/mdl-prob-discrete-pmfs.svg)
+![A gallery of discrete probability mass functions in one consistent style, left to right: $\mathrm{Bernoulli}(0.3)$, a discrete uniform on $\{1,\dots,6\}$, $\mathrm{Binomial}(10,0.4)$, and $\mathrm{Poisson}(4)$. The binomial and Poisson share the same right-skewed bell silhouette, foreshadowing their limiting relationship. The last three panels share a vertical scale; the Bernoulli panel has its own.](../img/mdl-prob-discrete-pmfs.svg)
 :label:`fig_mdl-prob-discrete-pmfs`
 
 ### Bernoulli
@@ -682,7 +682,7 @@ $\boldsymbol\Sigma=\sigma^2\mathbf I$ gives spherical contours and factorizes in
 $d$ independent one-dimensional Gaussians. :numref:`fig_mdl-prob-mvn-contours` draws
 this for a $2\times2$ covariance.
 
-![Samples from a $2$-D Gaussian (blue points) with the elliptical density contours overlaid. The ellipse axes lie along the eigenvectors of the covariance $\boldsymbol\Sigma$ with half-lengths proportional to $\sqrt{\lambda_i}$ (the standard deviation along each principal direction), connecting the multivariate Gaussian directly to the spectral theorem.](../img/mdl-prob-mvn-contours.svg)
+![Samples from a $2$-D Gaussian (blue points) with the elliptical density contours overlaid. The ellipse axes lie along the eigenvectors of the covariance $\boldsymbol\Sigma$ with half-lengths proportional to $\sqrt{\lambda_i}$ (the standard deviation along each principal direction); the orange arrows are the eigenvectors $\mathbf{w}_1,\mathbf{w}_2$ scaled by $2\sqrt{\lambda_i}$. This connects the multivariate Gaussian directly to the spectral theorem.](../img/mdl-prob-mvn-contours.svg)
 :label:`fig_mdl-prob-mvn-contours`
 
 It is the default vector noise and prior because it is *closed under linear maps and
@@ -1343,7 +1343,7 @@ frequency $0.7$, as the pseudo-count calculation predicts.
 flat $\mathrm{Beta}(1,1)$ prior becomes concentrated around the true bias, and
 its width decreases as $1/\sqrt n$.
 
-![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $\theta^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $\theta^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
+![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $p^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $p^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
 :label:`fig_mdl-prob-beta-posterior`
 
 ### Other Conjugate Pairs

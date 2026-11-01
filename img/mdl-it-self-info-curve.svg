@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="366.383406pt" height="276.713659pt" viewBox="0 0 366.383406 276.713659" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="366.421406pt" height="276.713659pt" viewBox="0 0 366.421406 276.713659" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 276.713659 
-L 366.383406 276.713659 
-L 366.383406 0 
+L 366.421406 276.713659 
+L 366.421406 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -1093,7 +1093,7 @@ L 359.183406 219.233659
    </g>
    <g id="text_11">
     <!-- fair coin: $\ln 2 \approx 0.693$ -->
-    <g style="fill: #ff7f0e" transform="translate(201.455406 175.056048) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(201.455406 174.241048) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-21" d="M 614 0 
 L 614 2682 
@@ -1516,18 +1516,9 @@ z
      <use xlink:href="#Cmr10-6e" transform="translate(828.141024 0.59375)"/>
     </g>
    </g>
-   <g id="patch_5">
-    <path d="M 328.39103 197.941153 
-Q 335.747979 207.785558 342.368714 216.644828 
-" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 341.536641 212.023394 
-L 342.368714 216.644828 
-L 338.172323 214.537626 
-" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
-   </g>
    <g id="text_12">
     <!-- certain: $I = 0$ -->
-    <g style="fill: #1f77b4" transform="translate(291.620406 190.914441) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(287.721406 195.469961) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-20" d="M 1702 2758 
 Q 1510 2758 1328 2665 
@@ -1573,18 +1564,18 @@ z
      <use xlink:href="#Cmr10-28" transform="translate(499.881844 0.59375)"/>
     </g>
    </g>
-   <g id="patch_6">
-    <path d="M 91.582907 66.881626 
-Q 79.032747 70.499144 67.664313 73.776036 
+   <g id="patch_5">
+    <path d="M 90.17777 67.192499 
+Q 78.327088 70.651949 67.656969 73.766769 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 72.501511 74.671309 
-L 67.664313 73.776036 
-L 71.28285 70.443441 
+    <path d="M 73.377211 74.805434 
+L 67.656969 73.766769 
+L 71.920047 69.813774 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_13">
     <!-- rare events carry -->
-    <g style="fill: #1f77b4" transform="translate(97.758406 50.497415) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(96.760406 47.845415) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-31" d="M 1197 0 
 L 77 3110 
@@ -1621,7 +1612,7 @@ z
      <use xlink:href="#SourceSans3-Regular-34" transform="translate(648.296875 0)"/>
     </g>
     <!-- more information -->
-    <g style="fill: #1f77b4" transform="translate(95.502547 65.083415) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(94.094391 65.083415) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -1703,7 +1694,7 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #1f77b4"/>
     </defs>
-    <g clip-path="url(#pf5a995a0e1)">
+    <g>
      <use xlink:href="#m02aa2b9f1b" x="344.303406" y="219.233659" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>
    </g>

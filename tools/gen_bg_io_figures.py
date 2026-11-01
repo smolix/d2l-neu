@@ -34,6 +34,25 @@ from matplotlib.patches import FancyBboxPatch, Rectangle
 # --------------------------------------------------------------------------- #
 # Small chapter-local helpers for the schematic box-and-arrow diagrams.       #
 # --------------------------------------------------------------------------- #
+def mtext(ax, x, y, text, *, fontsize, va="center", pitch=1.15, **kw):
+    """Multi-line label with an exact baseline-to-baseline ``pitch`` (in em).
+
+    matplotlib >= 3.11 gives every line a box of the font's full ascender +
+    descender and centres each line's own ink inside it, so stacked lines with
+    and without ascenders/descenders come out unevenly and loosely spaced.
+    Setting each line on its own baseline keeps the pitch exact.  ``va`` is
+    ``center`` (centre of the cap-height block), ``top`` or ``bottom``."""
+    lines = text.split("\n")
+    p = pitch * fontsize                       # points
+    span = (len(lines) - 1) * p
+    first = {"center": span / 2 - 0.34 * fontsize,
+             "top": -0.72 * fontsize,
+             "bottom": span + 0.22 * fontsize}[va]
+    for k, line in enumerate(lines):
+        ax.annotate(line, (x, y), xytext=(0, first - k * p),
+                    textcoords="offset points", va="baseline",
+                    fontsize=fontsize, annotation_clip=False, **kw)
+
 
 def box(ax, cx, cy, w, h, label, facecolor=LIGHT, edgecolor="black", ls="-",
         lw=1.4, fontsize=12, color="black", rounding=0.06):
@@ -42,8 +61,8 @@ def box(ax, cx, cy, w, h, label, facecolor=LIGHT, edgecolor="black", ls="-",
                  boxstyle=f"round,pad=0.0,rounding_size={rounding}",
                  facecolor=facecolor, edgecolor=edgecolor, lw=lw, ls=ls,
                  zorder=3))
-    ax.text(cx, cy, label, ha="center", va="center", fontsize=fontsize,
-            color=color, zorder=4)
+    mtext(ax, cx, cy, label, fontsize=fontsize, ha="center", va="center",
+          color=color, zorder=4)
 
 
 def leader(ax, p, q, color=GRAY, lw=0.9, ls="-"):
@@ -68,12 +87,14 @@ def fig_safetensors_layout():
     T = fl.T
     y0, h = 0.0, 1.0
 
-    # segment widths (schematic); everything abuts: the file has no padding
+    # segment widths (schematic); everything abuts: the file has no padding.
+    # The two bias slivers are wide enough that the offsets at both of their
+    # edges (0 / 1,024 and 21,504 / 21,544) fit side by side on one row.
     w_len, w_hdr = 0.75, 5.0
     tensors = [  # name, width, start offset, end offset, accent
-        ("hidden.bias", 0.55, 0, 1024, T.GREEN),
-        ("hidden.weight", 3.0, 1024, 21504, T.BLUE),
-        ("output.bias", 0.35, 21504, 21544, T.GREEN),
+        ("hidden.bias", 1.0, 0, 1024, T.GREEN),
+        ("hidden.weight", 2.7, 1024, 21504, T.BLUE),
+        ("output.bias", 1.0, 21504, 21544, T.GREEN),
         ("output.weight", 1.9, 21544, 31784, T.BLUE),
     ]
     x_hdr0 = w_len
@@ -96,8 +117,8 @@ def fig_safetensors_layout():
 
     # labels above the bar
     lx = w_len / 2
-    ax.text(lx, 1.55, "8 bytes:\nheader\nlength", color=fl.INK, fontsize=12,
-            ha="center", va="bottom")
+    mtext(ax, lx, 1.55, "8 bytes:\nheader\nlength", color=fl.INK,
+          fontsize=12, ha="center", va="bottom")
     leader(ax, (lx, 1.5), (lx, h))
     ax.text(x_hdr0 + w_hdr / 2, 1.55, "JSON header", color=T.ORANGE.dark,
             fontsize=13, ha="center", va="bottom")
@@ -119,7 +140,7 @@ def fig_safetensors_layout():
         if w > 1.5:
             ax.text(cx, y0 + h / 2, name, color=acc.dark, fontsize=12,
                     ha="center", va="center", zorder=4)
-    for name, dx, ty in (("hidden.bias", -0.15, 1.55), ("output.bias", 0.55, 1.55)):
+    for name, dx, ty in (("hidden.bias", 0.0, 1.55), ("output.bias", 0.0, 1.55)):
         x0, w = [(s[1], s[2]) for s in spans if s[0] == name][0]
         cx = x0 + w / 2
         acc = [s[5] for s in spans if s[0] == name][0]
@@ -129,7 +150,8 @@ def fig_safetensors_layout():
 
     # real byte offsets (from the start of the data) under the boundaries
     for x0, off in ((spans[0][1], 0), (spans[1][1], 1024),
-                    (spans[2][1], 21504), (x_end, 31784)):
+                    (spans[2][1], 21504), (spans[3][1], 21544),
+                    (x_end, 31784)):
         ax.plot([x0, x0], [y0, y0 - 0.14], color=fl.INK, lw=1.1, zorder=2)
         ax.text(x0, y0 - 0.2, f"{off:,}", color=fl.INK, fontsize=11.5,
                 ha="center", va="top")
@@ -171,7 +193,7 @@ def fig_checkpoint_contents():
     fig, ax = plt.subplots(figsize=(9.4, 5.2))
 
     w_left, w_right = 2.3, 2.3
-    x_left, x_right = -3.1, 3.1
+    x_left, x_right = -2.3, 2.3        # arrows ~1.9 wide: no dead air
 
     centers = [y_top - row_h / 2 - i * (row_h + gap) for i in range(n)]
 
@@ -196,13 +218,13 @@ def fig_checkpoint_contents():
                           zorder=1)
     ax.add_patch(wrap)
 
-    ax.text(x_left, y_top + pad + 0.42, "checkpoint file", color="black",
+    ax.text(x_left, y_top + pad + 0.22, "checkpoint file", color="black",
             fontsize=14, ha="center", va="bottom", weight="bold")
-    ax.text(x_right, y_top + pad + 0.42, "restored on resume", color="black",
+    ax.text(x_right, y_top + pad + 0.22, "restored on resume", color="black",
             fontsize=14, ha="center", va="bottom", weight="bold")
 
     ax.set_xlim(x_left - w_left / 2 - pad - 0.3, x_right + w_right / 2 + 0.3)
-    ax.set_ylim(-total_h / 2 - pad - 0.3, y_top + pad + 1.0)
+    ax.set_ylim(-total_h / 2 - pad - 0.3, y_top + pad + 0.8)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "bg-checkpoint-contents")
@@ -251,14 +273,14 @@ def fig_hooks():
 
     # side arrow from the (post-forward) hooks box down to the observer note
     hx = xs[3]
-    fl.arrow(ax, (hx, y - h / 2 - 0.08), (hx, y - h / 2 - 0.85), color=ORANGE,
+    fl.arrow(ax, (hx, y - h / 2 - 0.08), (hx, y - h / 2 - 0.55), color=ORANGE,
              lw=1.8, mut=13)
-    box(ax, hx, y - h / 2 - 1.55, 3.3, 0.95,
+    box(ax, hx, y - h / 2 - 1.05, 3.1, 0.95,
         "observer:\ncapture, check, modify", facecolor="white",
         edgecolor=GRAY, ls="--", lw=1.4, fontsize=13, color="black")
 
     ax.set_xlim(xs[0] - w / 2 - 0.3, xs[-1] + w / 2 + 0.3)
-    ax.set_ylim(y - h / 2 - 2.25, yb + 0.75)
+    ax.set_ylim(y - h / 2 - 1.65, yb + 0.75)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "bg-hooks")

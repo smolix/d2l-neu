@@ -157,7 +157,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\|\mathbf{v}\|\cos\theta$ -->
-    <g style="fill: #2ca02c" transform="translate(54.561145 116.054774) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(56.015455 104.715091) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-2c" d="M 850 -1484 
 L 850 4684 
@@ -354,7 +354,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\mathbf{r}$ -->
-    <g style="fill: #565d66" transform="translate(121.40081 79.715348) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(121.40081 79.715348) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-84" d="M 91 0 
 L 91 325 
@@ -387,6 +387,18 @@ z
      <use xlink:href="#Cmb10-84" transform="translate(0 0.984375)"/>
     </g>
    </g>
+   <g id="text_5">
+    <!-- $\theta$ -->
+    <g style="fill: #15181c" transform="translate(50.062468 122.549135) scale(0.14 -0.14)">
+     <use xlink:href="#Cmmi10-12" transform="translate(0 0.484375)"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.078721 131.106376 
+C 46.582102 128.457743 45.58745 125.92722 44.147636 123.649321 
+C 42.707823 121.371421 40.84882 119.387236 38.669447 117.802237 
+" clip-path="url(#p08b515975b)" style="fill: none; stroke: #15181c; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
   </g>
   <g id="axes_2">
    <g id="line2d_4">
@@ -394,7 +406,7 @@ z
 L 367.635264 102.214752 
 " clip-path="url(#pb5c1b18f74)" style="fill: none; stroke: #2ca02c; stroke-width: 5; stroke-linecap: round"/>
    </g>
-   <g id="patch_6">
+   <g id="patch_7">
     <path d="M 269.597459 135.032727 
 Q 369.390222 135.032727 468.176755 135.032727 
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
@@ -403,7 +415,7 @@ L 468.176755 135.032727
 L 461.376755 138.432727 
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
-   <g id="patch_7">
+   <g id="patch_8">
     <path d="M 281.803636 151.972656 
 Q 281.803636 82.951492 281.803636 14.936558 
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
@@ -412,7 +424,7 @@ L 281.803636 14.936558
 L 285.203636 21.736558 
 " style="fill: none; stroke: #15181c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
-   <g id="patch_8">
+   <g id="patch_9">
     <path d="M 281.803636 135.032727 
 Q 362.290909 104.258182 440.480718 74.362078 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
@@ -422,7 +434,7 @@ L 436.250013 78.977393
 z
 " style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
-   <g id="patch_9">
+   <g id="patch_10">
     <path d="M 281.803636 135.032727 
 Q 331.705745 115.952509 379.10153 97.830591 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
@@ -432,19 +444,19 @@ L 374.870825 102.445906
 z
 " style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
    </g>
-   <g id="text_5">
+   <g id="text_6">
     <!-- $\mathbf{w}$ -->
     <g style="fill: #ff7f0e" transform="translate(445.145455 77.928727) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-62" transform="translate(0 0.609375)"/>
     </g>
    </g>
-   <g id="text_6">
+   <g id="text_7">
     <!-- $\mathbf{v}$ -->
     <g style="fill: #1f77b4" transform="translate(321.784291 105.247055) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-25" transform="translate(0 0.609375)"/>
     </g>
    </g>
-   <g id="text_7">
+   <g id="text_8">
     <!-- $|\mathbf{v}\cdot\mathbf{w}| = \|\mathbf{v}\|\,\|\mathbf{w}\|$ -->
     <g style="fill: #15181c" transform="translate(307.996364 68.732545) scale(0.14 -0.14)">
      <defs>

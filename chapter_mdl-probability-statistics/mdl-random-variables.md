@@ -489,7 +489,7 @@ with *equality*, so no constant smaller than $1/\alpha^2$ could work for every
 distribution. For $p<\tfrac18$ the threshold drops below $2$, both atoms lie
 beyond it, and their combined mass $2p<\tfrac14$ keeps the inequality satisfied.
 
-![Chebyshev's bound on the running three-atom example: masses drawn as vertical bars at $a-2,a,a+2$ with the threshold distance $\alpha\sigma_X=4\sqrt{2p}$ for $\alpha=2$ marked as a horizontal bracket about the mean $a$. The three panels show the regimes $p>1/8$, $p=1/8$ (where the bound is attained with equality), and $p<1/8$ that the text walks through.](../img/mdl-prob-chebyshev.svg)
+![Chebyshev's bound on the running three-atom example: masses drawn as vertical bars at $a-2,a,a+2$ with the threshold distance $\alpha\sigma_X=4\sqrt{2p}$ for $\alpha=2$ marked as a horizontal bracket from $a-\alpha\sigma_X$ to $a+\alpha\sigma_X$. The three panels show the regimes $p>1/8$, $p=1/8$ (where the bound is attained with equality), and $p<1/8$ that the text walks through. Orange atoms lie at or beyond the threshold and count toward the event $|X-a|\ge\alpha\sigma_X$.](../img/mdl-prob-chebyshev.svg)
 :label:`fig_mdl-prob-chebyshev`
 
 ### Means and Variances in the Continuum
@@ -788,7 +788,7 @@ while no cloud changes shape. Covariance carries the units of its arguments;
 only its sign is scale-free, a defect the correlation coefficient below will
 repair.
 
-![Top row: scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right), $Y$ in dollars: negative covariance tilts the cloud down-right, zero leaves it round, positive tilts it up-right. Bottom row: the identical draws with $Y$ restated in cents. Every sample covariance is multiplied by $100$ while each panel's correlation $\rho$ (gray) is unchanged: the magnitude of covariance carries units, only its sign is scale-free.](../img/mdl-prob-covariance.svg)
+![Top row: scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right), $Y$ in dollars: negative covariance tilts the cloud down-right, zero leaves it round, positive tilts it up-right. Bottom row: the identical draws with $Y$ restated in cents. Every sample covariance is multiplied by $100$ while each panel's correlation $\rho$ (in its top corner) is unchanged: the magnitude of covariance carries units, only its sign is scale-free.](../img/mdl-prob-covariance.svg)
 :label:`fig_mdl-prob-covariance`
 
 Two properties we use repeatedly: covariance is *linear in each argument*, with

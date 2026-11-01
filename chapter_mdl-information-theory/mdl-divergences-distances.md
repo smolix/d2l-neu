@@ -369,7 +369,7 @@ $$
 
 with equality when $t$ is the slope of $f$ at $u$, i.e., $t = f'(u)$.
 
-![A convex generator is the upper envelope of its tangent lines. Each tangent of slope t has intercept given by the negative conjugate, so keeping one tangent yields the Fenchel--Young lower bound and taking the supremum over slopes recovers the function exactly. Applied pointwise to the density ratio, this picture is the f-GAN variational bound.](../img/mdl-it-f-gan-tangent-bound.svg)
+![A convex generator, here $f(u)=u\log u$, is the upper envelope of its tangent lines. Each tangent of slope $t$ has intercept given by the negative conjugate $-f^*(t)$ (here $-e^{t-1}$), so keeping one tangent yields the Fenchel--Young lower bound and taking the supremum over slopes recovers the function exactly. Applied pointwise to the density ratio, this picture is the $f$-GAN variational bound.](../img/mdl-it-f-gan-tangent-bound.svg)
 :label:`fig_mdl-f-gan-tangent-bound`
 
 Now do this *pointwise inside the divergence*, letting the slope vary with
@@ -868,7 +868,7 @@ On the point masses,
 $W_1(\delta_0, \delta_d) = |d|$: smooth in $d$, gradient $\pm 1$, exactly
 the training signal the f-divergences withheld.
 
-![Optimal transport between two distributions on the line. Left: the transport plan moves each parcel of mass from source to destination, and the Wasserstein-1 distance is the minimum total mass-times-distance; the shaded area between the two CDFs computes it exactly. Right: for two point masses at separation d, the Jensen--Shannon divergence is frozen at log 2 for every nonzero d while the Wasserstein distance grows linearly: only transport gives a gradient.](../img/mdl-it-ot-transport-plan.svg)
+![Optimal transport between two distributions on the line. Top left: the monotone transport plan moves each parcel of mass from $P$ (top) to $Q$ (bottom), ribbon width proportional to the mass moved; the Wasserstein-1 distance is the minimum total mass-times-distance. Bottom left: the shaded area between the two CDFs computes it exactly. Right: for two point masses at separation $d$, the Jensen--Shannon divergence is frozen at $\log 2$ for every nonzero $d$ while the Wasserstein distance grows linearly: only transport gives a gradient.](../img/mdl-it-ot-transport-plan.svg)
 :label:`fig_mdl-ot-transport-plan`
 
 The primal :eqref:`eq_mdl-w1-primal` is an optimization over joint

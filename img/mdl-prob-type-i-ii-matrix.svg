@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -62,7 +62,7 @@ z
    </g>
    <g id="text_1">
     <!-- correct -->
-    <g style="fill: #2ca02c" transform="translate(98.357172 101.253667) scale(0.11 -0.11)">
+    <g style="fill: #227d22" transform="translate(96.788188 99.783733) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Bold-1e" d="M 1818 -77 
 Q 1370 -77 1008 118 
@@ -192,7 +192,7 @@ z
    </g>
    <g id="text_2">
     <!-- $1-\alpha$ -->
-    <g style="fill: #2ca02c" transform="translate(105.176 124.0698) scale(0.09 -0.09)">
+    <g style="fill: #227d22" transform="translate(102.856 124.7438) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-64" d="M 594 0 
 L 594 225 
@@ -277,7 +277,7 @@ z
    </g>
    <g id="text_3">
     <!-- type I error -->
-    <g style="fill: #ff7f0e" transform="translate(178.723057 101.253667) scale(0.11 -0.11)">
+    <g style="fill: #ad560a" transform="translate(176.246729 99.783733) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Bold-34" d="M 768 -1242 
 Q 627 -1242 521 -1222 
@@ -357,7 +357,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\alpha$  (false positive) -->
-    <g style="fill: #ff7f0e" transform="translate(173.877667 124.0698) scale(0.09 -0.09)">
+    <g style="fill: #ad560a" transform="translate(166.747667 124.7438) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1" transform="scale(0.015625)"/>
       <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
@@ -650,7 +650,7 @@ z
    </g>
    <g id="text_5">
     <!-- type II error -->
-    <g style="fill: #ff7f0e" transform="translate(86.721234 191.600333) scale(0.11 -0.11)">
+    <g style="fill: #ad560a" transform="translate(84.094438 190.1304) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Bold-2f"/>
      <use xlink:href="#SourceSans3-Bold-34" transform="translate(38.296875 0)"/>
      <use xlink:href="#SourceSans3-Bold-2b" transform="translate(90.390625 0)"/>
@@ -668,7 +668,7 @@ z
    </g>
    <g id="text_6">
     <!-- $\beta$  (false negative) -->
-    <g style="fill: #ff7f0e" transform="translate(82.586 214.416467) scale(0.09 -0.09)">
+    <g style="fill: #ad560a" transform="translate(75.246 215.090467) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-23" d="M 172 -1241 
 Q 153 -1241 137 -1219 
@@ -836,7 +836,7 @@ z
    </g>
    <g id="text_7">
     <!-- correct -->
-    <g style="fill: #2ca02c" transform="translate(188.703839 191.600333) scale(0.11 -0.11)">
+    <g style="fill: #227d22" transform="translate(187.134854 190.1304) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Bold-1e"/>
      <use xlink:href="#SourceSans3-Bold-2a" transform="translate(43.90625 0)"/>
      <use xlink:href="#SourceSans3-Bold-2d" transform="translate(99.40625 0)"/>
@@ -848,7 +848,7 @@ z
    </g>
    <g id="text_8">
     <!-- power $1-\beta$ -->
-    <g style="fill: #2ca02c" transform="translate(182.967667 214.416467) scale(0.09 -0.09)">
+    <g style="fill: #227d22" transform="translate(177.857667 215.090467) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -1092,7 +1092,7 @@ z
    </g>
    <g id="text_11">
     <!-- decision -->
-    <g style="fill: #565d66" transform="translate(143.122263 23.387033) scale(0.105 -0.105)">
+    <g style="fill: #15181c" transform="translate(143.122263 23.387033) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-It-1f" d="M 1146 -77 
 Q 736 -77 493 214 
@@ -1345,7 +1345,7 @@ z
    </g>
    <g id="text_14">
     <!-- truth -->
-    <g style="fill: #565d66" transform="translate(29.074067 162.449081) rotate(-90) scale(0.105 -0.105)">
+    <g style="fill: #15181c" transform="translate(29.074067 162.449081) rotate(-90) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-It-2f" d="M 1171 -58 
 Q 774 -58 608 144 

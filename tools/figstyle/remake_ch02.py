@@ -127,7 +127,7 @@ def fig_la_dot():
     from figstyle.mpl import arrow, clean_axes, right_angle, use_style
 
     use_style(hashsalt="figstyle-ch02")
-    fig, ax = plt.subplots(figsize=(4.6, 3.2))
+    fig, ax = plt.subplots(figsize=(4.6, 3.09))   # height matched to the y-span
     x = np.array([3.4, 1.0])
     y = np.array([1.5, 2.7])
     xn = x / np.linalg.norm(x)
@@ -163,7 +163,10 @@ def fig_la_dot():
             fontsize=18, ha="left", va="center")
     ax.text(y[0], y[1] + 0.2, r"$\mathbf{y}$", color=T.ORANGE.dark,
             fontsize=18, ha="center", va="bottom")
-    clean_axes(ax, lim=((-0.45, 4.25), (-0.95, 3.25)), hide=True)
+    # the canvas is the axes box (matplotlib >= 3.11 counts hidden axes in
+    # the tight bbox), so the limits hug the content: the bracket label
+    # bottoms out near y = -0.73
+    clean_axes(ax, lim=((-0.45, 4.25), (-0.80, 3.25)), hide=True)
     _save_both(fig, "linear-algebra-dot")
 
 

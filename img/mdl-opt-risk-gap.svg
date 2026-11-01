@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -786,17 +786,17 @@ L 377.719719 212.328
 " style="fill: none; stroke: #000000; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="patch_5">
-    <path d="M 264.792054 129.612902 
-Q 255.521873 147.881618 246.858796 164.953912 
+    <path d="M 309.02403 178.951733 
+Q 279.157509 173.784607 250.612989 168.846197 
 " style="fill: none; stroke: #000000; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 251.350744 161.626389 
-L 246.858796 164.953912 
-L 246.891947 159.363841 
+    <path d="M 255.113613 172.161976 
+L 250.612989 168.846197 
+L 255.965987 167.235166 
 " style="fill: none; stroke: #000000; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_15">
     <!-- min of risk -->
-    <g transform="translate(243.648987 121.752) scale(0.125 -0.125)">
+    <g transform="translate(312.991719 188.5685) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 

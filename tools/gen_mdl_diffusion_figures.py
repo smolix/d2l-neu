@@ -113,7 +113,7 @@ def fig_energy_density():
     a.set_xlabel("$x$", fontsize=14)
     a.set_ylabel("$E(x)$", fontsize=14)
     a.set_xlim(-4.5, 4.5)
-    a.set_ylim(-0.5, 6.4)
+    a.set_ylim(-1.0, 6.4)
     fl.clean_axes(a, equal=False)
     _black_axes(a)
     # mark the two wells
@@ -138,7 +138,8 @@ def fig_energy_density():
            fontsize=13, color="black")
     b.text(x[i2], p[i2] + 0.02, "taller mode", ha="center", va="bottom",
            fontsize=13, color="black")
-    b.text(3.0, p.max() * 0.62, r"area $= 1$", ha="center", fontsize=13,
+    # inside the shaded region it names, below the valley between the modes
+    b.text(-0.1, 0.045, "area = 1", ha="center", va="center", fontsize=13,
            color="black")
     fig.tight_layout(w_pad=2.5)
     fl.save(fig, "mdl-diffusion-energy-density")
@@ -164,19 +165,21 @@ def fig_contrastive():
     model_pts = np.concatenate([rng.normal(0.6, 0.3, 3), rng.normal(3.0, 0.25, 4),
                                 rng.normal(-2.0, 0.3, 1)])
 
-    fig, ax = plt.subplots(figsize=(7.4, 3.6))
+    fig, ax = plt.subplots(figsize=(7.4, 4.3))
     ax.plot(x, E, color=BLUE, lw=2.2, zorder=2)
     ax.plot(data_pts, Ef(data_pts), "o", color=ORANGE, ms=7, mec=ORANGE,
             zorder=4, label="data $\\mathbf{x} \\sim p_{\\mathrm{data}}$")
     ax.plot(model_pts, Ef(model_pts), "o", mfc="white", mec=GREEN, mew=1.8,
             ms=7, zorder=4, label="model samples $\\mathbf{x} \\sim p_{\\theta}$")
-    # phase arrows: down at the data clusters, up at the model clusters
-    for cx, dy, col in ((-2.0, -0.9, ORANGE), (3.0, 0.9, GREEN)):
+    # phase arrows: down under the data pair at x = -2.15 (clear of the one
+    # model sample that lands on the data near x = -1.9, where the phases
+    # cancel), up at the model cluster
+    for cx, dy, col in ((-2.15, -0.9, ORANGE), (3.0, 0.9, GREEN)):
         y0 = Ef(cx)
         ax.annotate("", xy=(cx, y0 + dy), xytext=(cx, y0 + 0.12 * np.sign(dy)),
                     arrowprops=dict(arrowstyle="-|>", color=col, lw=2.0,
                                     mutation_scale=16), zorder=5)
-    ax.text(-2.0, Ef(-2.0) - 1.15, "positive phase:\nlower $E$ at data",
+    ax.text(-2.15, Ef(-2.15) - 1.15, "positive phase:\nlower $E$ at data",
             ha="center", va="top", fontsize=12.5, color="black")
     ax.text(3.0, 4.4, "negative phase:\nraise $E$ at model samples",
             ha="right", va="bottom", fontsize=12.5, color="black")
@@ -186,7 +189,9 @@ def fig_contrastive():
     ax.set_ylabel("$E_{\\theta}(x)$", fontsize=14)
     ax.set_xlim(-4.5, 4.5)
     ax.set_ylim(-1.6, 6.3)
-    ax.legend(loc="lower left", fontsize=11.5, frameon=False)
+    # legend above the plot, in one row: the plot area holds the phase labels
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2,
+              fontsize=12, frameon=False, handletextpad=0.3, columnspacing=2.0)
     fl.clean_axes(ax, equal=False)
     _black_axes(ax)
     fig.tight_layout()
@@ -226,7 +231,8 @@ def fig_score_field():
 
     a_bot.axhline(0, color="black", lw=0.9)
     a_bot.plot(x, score, color=ORANGE, lw=2.2)
-    a_bot.set_ylim(-9, 9)
+    a_bot.set_ylim(-10.9, 10)          # room below for the score < 0 label
+    a_bot.set_yticks([-10, -5, 0, 5, 10])
     a_bot.set_xlabel("$x$", fontsize=14)
     a_bot.set_ylabel(r"$\frac{d}{dx}\log p(x)$", fontsize=15)
     fl.clean_axes(a_bot, equal=False)
@@ -236,10 +242,13 @@ def fig_score_field():
         a_bot.axvline(m, color=GRAY, lw=0.9, ls=":")
     # labels centered between the dotted mode guides, clear of the curve
     box = dict(fc="white", ec="none", pad=0.4)  # the guides pass behind the text
-    a_bot.text(0.0, 6.3, "score $> 0$:\ntoward the mode", fontsize=11.5,
-               ha="center", va="center", color="black", bbox=box, zorder=3)
-    a_bot.text(0.0, -6.6, "score $< 0$:\ntoward the mode", fontsize=11.5,
-               ha="center", va="center", color="black", bbox=box, zorder=3)
+    # short enough to clear both guides at x = -2 and x = 2
+    a_bot.text(0.0, 6.4, "score > 0:\npoints right", fontsize=12,
+               ha="center", va="center", color="black", bbox=box, zorder=3,
+               linespacing=1.05)
+    a_bot.text(0.0, -7.0, "score < 0:\npoints left", fontsize=12,
+               ha="center", va="center", color="black", bbox=box, zorder=3,
+               linespacing=1.05)
 
     # two-dimensional running example: contours + clipped score arrows
     g = np.linspace(-5, 5, 161)
@@ -308,8 +317,10 @@ def fig_low_density():
                   scale_units="xy", scale=2.2, width=0.0045,
                   color=[BLUE if r > 0.02 else ORANGE for r in rel], zorder=3)
         ax.set_title(title, fontsize=13, color="black")
-        ax.set_xlim(-5, 5)
-        ax.set_ylim(-5, 5)
+        ax.set_xlim(-5.3, 5.3)
+        ax.set_ylim(-5.3, 5.3)
+        ax.set_xticks([-4, -2, 0, 2, 4])
+        ax.set_yticks([-4, -2, 0, 2, 4])
         ax.set_xlabel("$x_1$", fontsize=14)
         fl.clean_axes(ax, equal=True)
         _black_axes(ax)
@@ -330,10 +341,16 @@ def fig_noise_ladder():
     X, Y = np.meshgrid(g, g, indexing="ij")
     pts = np.stack([X.ravel(), Y.ravel()], 1)
     sigmas = [0.0, 0.5, 1.0, 2.0]
-    fig, axes = plt.subplots(1, 4, figsize=(11.5, 3.2))
+    # a compact canvas (about 750 px wide) so the labels stay legible when
+    # the book scales the row to the text width
+    fig, axes = plt.subplots(1, 4, figsize=(8.0, 2.35))
     for ax, sg in zip(axes, sigmas):
         D = np.exp(mixture_logpdf(pts, sigma=sg)).reshape(X.shape)
-        ax.contourf(X, Y, D, levels=12, cmap=fl.BLUE_CMAP)
+        # the lowest level sits just above zero, so empty space stays white
+        # and the valleys visibly fill in as sigma grows
+        levels = np.linspace(0.0, D.max(), 13)
+        levels[0] = 1e-2 * D.max()
+        ax.contourf(X, Y, D, levels=levels, cmap=fl.BLUE_CMAP)
         ax.plot(MIX_MEANS[:, 0], MIX_MEANS[:, 1], "+", color="black", ms=8, mew=1.3)
         title = r"$\sigma = 0$ (data)" if sg == 0 else rf"$\sigma = {sg:g}$"
         ax.set_title(title, fontsize=13.5, color="black")
@@ -343,7 +360,9 @@ def fig_noise_ladder():
         ax.set_yticks([-5, 0, 5])
         fl.clean_axes(ax, equal=True)
         _black_axes(ax)
-    fig.tight_layout(w_pad=1.2)
+        if ax is not axes[0]:          # one shared scale: label it once
+            ax.tick_params(labelleft=False)
+    fig.tight_layout(w_pad=0.8)
     fl.save(fig, "mdl-diffusion-noise-ladder")
 
 
@@ -358,7 +377,7 @@ def fig_forward_reverse():
     labels = [r"$\mathbf{x}_0$", r"$\mathbf{x}_1$", r"$\cdots$",
               r"$\mathbf{x}_{t-1}$", r"$\mathbf{x}_t$", r"$\cdots$", r"$\mathbf{x}_T$"]
     xs = np.arange(len(labels)) * 1.6
-    fig, ax = plt.subplots(figsize=(11.0, 3.4))
+    fig, ax = plt.subplots(figsize=(9.2, 2.8))   # ~700 px: legible at 95% width
     r = 0.42
     for x, lab in zip(xs, labels):
         if lab == r"$\cdots$":
@@ -385,14 +404,15 @@ def fig_forward_reverse():
                     arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=1.9,
                                     mutation_scale=14, connectionstyle="arc3,rad=-0.35"))
     mid = 0.5 * (xs[3] + xs[4])
-    ax.text(mid, 1.55, r"forward: $q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) = \mathcal{N}(\sqrt{1-\beta_t}\,\mathbf{x}_{t-1},\ \beta_t I)$, fixed",
+    ax.text(mid, 1.12, r"forward: $q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) = \mathcal{N}(\sqrt{1-\beta_t}\,\mathbf{x}_{t-1},\ \beta_t I)$, fixed",
             ha="center", va="center", fontsize=13, color=fl.T.BLUE.dark)
-    ax.text(mid, -1.55, r"reverse: $p_{\theta}(\mathbf{x}_{t-1} \mid \mathbf{x}_t) = \mathcal{N}(\mu_{\theta}(\mathbf{x}_t, t),\ \sigma_t^2 I)$, learned",
+    ax.text(mid, -1.12, r"reverse: $p_{\theta}(\mathbf{x}_{t-1} \mid \mathbf{x}_t) = \mathcal{N}(\mu_{\theta}(\mathbf{x}_t, t),\ \sigma_t^2 I)$, learned",
             ha="center", va="center", fontsize=13, color=fl.T.ORANGE.dark)
-    ax.text(xs[0], -0.95, "data", ha="center", va="top", fontsize=12.5, color="black")
-    ax.text(xs[-1], -0.95, "noise", ha="center", va="top", fontsize=12.5, color="black")
+    # endpoint names level with the reverse label, under their nodes
+    ax.text(xs[0], -1.12, "data", ha="center", va="center", fontsize=12.5, color="black")
+    ax.text(xs[-1], -1.12, "noise", ha="center", va="center", fontsize=12.5, color="black")
     ax.set_xlim(xs[0] - 0.9, xs[-1] + 0.9)
-    ax.set_ylim(-2.1, 2.1)
+    ax.set_ylim(-1.45, 1.45)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "mdl-diffusion-forward-reverse")
@@ -421,7 +441,7 @@ def fig_unet():
     cols = [("input\n$28{\\times}28{\\times}1$", 0.0, 1.55, GRAY),
             ("block\n$28{\\times}28{\\times}32$", 2.1, 1.55, BLUE),
             ("block\n$14{\\times}14{\\times}64$", 4.2, 1.0, BLUE),
-            ("bottleneck\n$7{\\times}7{\\times}64$", 6.3, 0.62, PURPLE),
+            ("bottleneck\n$7{\\times}7{\\times}64$", 6.3, 0.76, PURPLE),
             ("block\n$14{\\times}14{\\times}32$", 8.4, 1.0, ORANGE),
             ("block\n$28{\\times}28{\\times}32$", 10.5, 1.55, ORANGE),
             ("output\n$\\hat{\\epsilon}$, $28{\\times}28{\\times}1$", 12.6, 1.55, GRAY)]
@@ -435,7 +455,7 @@ def fig_unet():
         ax.annotate("", xy=(x1 - w / 2, 0), xytext=(x0 + w / 2, 0),
                     arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4,
                                     mutation_scale=12))
-        ax.text((x0 + x1) / 2, 0.16, lab, ha="center", va="bottom", fontsize=10,
+        ax.text((x0 + x1) / 2, 0.12, lab, ha="center", va="bottom", fontsize=11,
                 color="black", linespacing=1.0)
     # skip connections (dashed arcs over the top)
     for (x0, x1, h, rad) in ((2.1, 10.5, 1.55, -0.16), (4.2, 8.4, 1.0, -0.3)):
@@ -443,19 +463,20 @@ def fig_unet():
                     arrowprops=dict(arrowstyle="-|>", color=GREEN, lw=1.5, ls="--",
                                     mutation_scale=12,
                                     connectionstyle=f"arc3,rad={rad}"))
-    ax.text(6.3, 2.05, "skip connections: encoder features are concatenated with decoder features at the same resolution",
+    ax.text(6.3, 1.90, "skip connections: encoder features are concatenated with decoder features at the same resolution",
             ha="center", va="center", fontsize=11.5, color=fl.T.GREEN.dark)
     # time embedding: the box spans every arrow's origin (x from 4.2 to 8.4)
     _ubox(ax, 6.3, -1.8, 6.0, 0.5,
           "time embedding: $t \\mapsto$ sinusoidal features $\\mapsto$ MLP", GRAY, fs=11.5)
-    for x in (2.1, 4.2, 6.3, 8.4, 10.5):
-        ax.annotate("", xy=(x, -0.55 if x != 6.3 else -0.36), xytext=(6.3 - (6.3 - x) * 0.5, -1.55),
+    # each arrow ends on the bottom edge of its own block (box pad 0.02)
+    for _, x, h, _ in cols[1:-1]:
+        ax.annotate("", xy=(x, -h / 2 - 0.02), xytext=(6.3 - (6.3 - x) * 0.5, -1.55),
                     arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.1,
                                     mutation_scale=10))
     ax.text(9.5, -1.8, "added inside every block", ha="left", va="center",
             fontsize=11.5, color="black")
     ax.set_xlim(-0.9, 13.6)
-    ax.set_ylim(-2.2, 2.35)
+    ax.set_ylim(-2.2, 2.15)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "mdl-diffusion-unet")
@@ -479,7 +500,7 @@ def fig_guidance():
     ax.text(-0.1, -0.1, r"$\mathbf{x}_t$", ha="right", va="top", fontsize=14, color="black")
     ax.text(e_u[0] + 0.15, e_u[1] - 0.05, r"$\epsilon_{\theta}(\mathbf{x}_t, t, \varnothing)$ (unconditional)",
             ha="left", va="top", fontsize=12, color="black")
-    ax.text(e_c[0] + 0.15, e_c[1] + 0.08, r"$\epsilon_{\theta}(\mathbf{x}_t, t, c)$ (conditional)",
+    ax.text(e_c[0] + 0.30, e_c[1] + 0.02, r"$\epsilon_{\theta}(\mathbf{x}_t, t, c)$ (conditional)",
             ha="left", va="bottom", fontsize=12, color="black")
     ax.text(e_g[0] - 0.12, e_g[1] + 0.1,
             r"guided: $\epsilon_{\varnothing} + \gamma\,(\epsilon_c - \epsilon_{\varnothing})$, $\gamma > 1$",
@@ -487,8 +508,8 @@ def fig_guidance():
     ax.text(0.5 * (e_u[0] + e_c[0]) + 0.22, 0.5 * (e_u[1] + e_c[1]) - 0.02,
             r"$\epsilon_c - \epsilon_{\varnothing}$", ha="left", va="center", fontsize=12, color="black")
     fl.arrow(ax, e_u, e_c, color=BLUE, lw=1.4, ls="--", mut=11)
-    ax.set_xlim(-0.6, 6.6)
-    ax.set_ylim(-0.8, 4.5)
+    ax.set_xlim(-0.4, 5.5)
+    ax.set_ylim(-0.4, 3.8)
     fl.clean_axes(ax, equal=True, hide=True)
     fl.save(fig, "mdl-diffusion-guidance")
 
@@ -594,12 +615,12 @@ def fig_masking():
                 arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=2.0, mutation_scale=14))
     ax.text(xa - 0.15, y0 - 1.15 * 1.5 + h / 2, "forward:\nmask each token\nwith probability $\\beta_t$;\nmasked stays masked",
             ha="right", va="center", fontsize=11.5, color=fl.T.BLUE.dark)
-    xb = n * (w + gap) + 3.4  # right of the longest row label ("all masked")
+    xb = n * (w + gap) + 3.7  # clear of the longest row label ("all masked")
     ax.annotate("", xy=(xb, y0 + h - 0.1), xytext=(xb, y0 - 3 * 1.15 + 0.1),
                 arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=2.0, mutation_scale=14))
     ax.text(xb + 0.15, y0 - 1.15 * 1.5 + h / 2, "reverse:\nreveal masked tokens\nfrom $p_{\\theta}(x_0^i \\mid \\mathbf{x}_t)$;\nrevealed stays revealed",
             ha="left", va="center", fontsize=11.5, color=fl.T.ORANGE.dark)
-    ax.set_xlim(-4.3, n * (w + gap) + 7.9)
+    ax.set_xlim(-4.3, n * (w + gap) + 8.35)
     ax.set_ylim(y0 - 3 * 1.15 - 0.3, y0 + h + 0.3)
     ax.set_aspect("equal")
     ax.axis("off")

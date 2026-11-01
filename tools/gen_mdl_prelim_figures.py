@@ -91,14 +91,13 @@ def fig_cosine():
         if deg == 90:
             right_angle(ax, (0, 0), u, v, size=0.16)
         elif deg > 0:
-            ax.add_patch(Arc((0, 0), 0.66, 0.66, angle=0, theta1=0,
+            ax.add_patch(Arc((0, 0), 0.42, 0.42, angle=0, theta1=0,
                              theta2=deg, color=GRAY, lw=1.2))
-            # on the true bisector, pushed out well past the arc so the
-            # label's clearance to BOTH bounding rays (u and v) stays large
-            # even for the narrower 60-degree wedge
-            mid = np.deg2rad(deg / 2.0)
-            ax.text(0.68 * np.cos(mid), 0.68 * np.sin(mid),
-                    rf"${deg}\!^\circ$", color=GRAY,
+            # between the angle arc and the unit circle; in the narrow
+            # 60-degree wedge it leans toward u to stay clear of the v ray
+            mid = np.deg2rad(deg / 2.0 if deg > 90 else 0.38 * deg)
+            ax.text(0.56 * np.cos(mid), 0.56 * np.sin(mid),
+                    rf"${deg}\!^\circ$", color=fl.T.INK,
                     ha="center", va="center", fontsize=13)
 
         # annotation: the dot product IS the cosine
@@ -106,8 +105,8 @@ def fig_cosine():
         if val == "-0":
             val = "0"
         ax.set_title(
-            rf"$\mathbf{{u}}^\top \mathbf{{v}} = \cos {deg}\!^\circ = {val}$",
-            fontsize=13.5, pad=8)
+            rf"$\mathbf{{u}}^{{\!\!\top}}\!\mathbf{{v}} = \cos {deg}\!^\circ = {val}$",
+            fontsize=14, pad=2)
 
         clean_axes(ax, lim=((-1.5, 1.45), (-0.32, 1.3)), hide=True)
 
@@ -159,7 +158,7 @@ def fig_eigen():
     whose axes are its eigenvectors, stretched by 3 and 1; a vector off the
     axes (e1 -> S e1 = (2, 1)) is turned.  (right): the directions of
     S^k e1, k = 0..4, turn toward the dominant eigenvector (1, 1).
-    Both panels are square windows so they render at the same height.  No
+    Both windows share one aspect ratio so they render at the same height.  No
     coordinate axes: e1 lies along the x-axis and would vanish into it."""
     S = np.array([[2.0, 1.0], [1.0, 2.0]])
     v3 = np.array([1.0, 1.0]) / np.sqrt(2)          # eigenvalue 3
@@ -171,7 +170,9 @@ def fig_eigen():
     circle = np.stack([np.cos(t), np.sin(t)])
     ell = S @ circle
     # left: unit circle, its image, the eigen-axes, one turned vector
-    L1 = ((-3.3, 3.3), (-3.3, 3.3))
+    # windows share one aspect (6.6 wide x 5.75 tall) so the panels render
+    # at the same height; the bottom is trimmed to the ellipse (y >= -2.12)
+    L1 = ((-3.3, 3.3), (-2.45, 3.3))
     ax1.plot(circle[0], circle[1], color=GRAY, lw=1.5, ls=(0, (4, 3)))
     ax1.plot(ell[0], ell[1], color=BLUE, lw=2.6)
     arrow(ax1, (0, 0), 3 * v3, color=GREEN, lw=2.8)
@@ -191,18 +192,19 @@ def fig_eigen():
              color=fl.T.ORANGE.dark, fontsize=16, ha="left", va="top")
     clean_axes(ax1, lim=L1, hide=True)
     # right: normalized iterates S^k e1 / ||S^k e1|| turn toward (1, 1)
-    L2 = ((-0.3, 1.35), (-0.3, 1.35))
+    L2 = ((-0.3, 1.35), (-0.15, -0.15 + 1.65 * 5.75 / 6.6))
     ax2.plot([0, 1.25 * v3[0]], [0, 1.25 * v3[1]], color=GREEN, lw=1.6,
              ls=(0, (4, 3)))
     x = e1.copy()
     for k, alpha in enumerate((0.35, 0.5, 0.65, 0.82, 1.0)):
         u = x / np.linalg.norm(x)
         arrow(ax2, (0, 0), u, color=BLUE, lw=2.6, alpha=alpha)
-        if k <= 2:                     # k = 0 is horizontal: label below
-            pos, va = ((u[0], u[1] - 0.09), "top") if k == 0 else \
-                ((u[0] + 0.06, u[1] - 0.1), "center")
+        if k <= 2:                     # radially past its own tip; k = 2
+            # dropped a little so it sits level with its own head, not with
+            # the overlapping k = 3, 4 heads above it
+            pos = 1.07 * u + (np.array([0.0, -0.05]) if k == 2 else 0.0)
             ax2.text(pos[0], pos[1], rf"$k = {k}$", color=fl.T.BLUE.dark,
-                     fontsize=15, ha="center" if k == 0 else "left", va=va)
+                     fontsize=15, ha="left", va="center")
         x = S @ x
     ax2.text(1.25 * v3[0] - 0.05, 1.25 * v3[1] + 0.02, r"$(1, 1)$",
              color=fl.T.GREEN.dark, fontsize=16, ha="right", va="bottom")

@@ -198,17 +198,21 @@ def fig_amp_loop():
             va="bottom", fontsize=14, color=GREEN)
 
     # fp16-only note, hung below the backward box (where unscaling happens)
-    # with a short dashed leader so it reads as attached, not adrift
-    note_x, note_y = bwd["cx"] - 0.5, y - 1.55
-    # straight-down dotted leader: note_x lies within the backward box's span,
-    # so a vertical line drops cleanly from its underside onto the note
-    ax.plot([note_x, note_x], [bwd["b"], note_y + 0.55], ":", color=GRAY,
-            lw=1.2, zorder=3)
-    ax.text(note_x, note_y,
+    # with a short dotted leader so it reads as attached, not adrift.  The
+    # note is right-aligned with the backward box (its dashed frame ends where
+    # the box does), so it extends leftward under "loss" instead of widening
+    # the canvas past the last stage.
+    note_y = y - 1.55
+    note_r = bwd["r"] + 0.02 - 0.15  # box edge (incl. pad) minus bbox pad
+    # straight-down dotted leader from the backward box's centre
+    ax.plot([bwd["cx"], bwd["cx"]], [bwd["b"], note_y + 0.45], ":",
+            color=GRAY, lw=1.2, zorder=3)
+    ax.text(note_r, note_y,
             "fp16 only: scale the loss up before backward,\n"
             "unscale the gradients back down before the step",
-            ha="center", va="center", fontsize=13, color="black",
-            bbox=dict(boxstyle="round,pad=0.35", fc="white", ec=GRAY,
+            ha="right", va="center", ma="center", fontsize=13, color="black",
+            linespacing=0.85,   # matplotlib >= 3.11: pitch = full font box
+            bbox=dict(boxstyle="round,pad=0.6", fc="white", ec=GRAY,
                       lw=1.0, ls="--", alpha=0.95))
 
     ax.set_xlim(0.0, 13.9)
@@ -243,7 +247,7 @@ def fig_ste():
     # the staircase hugs the identity line everywhere, so no spot directly on
     # either curve is safe; park the label in the empty top-left corner
     # instead, well clear of both the diagonal and the steps
-    axa.text(-1.9, 1.75, r"identity", color=GRAY, fontsize=12, ha="center",
+    axa.text(1.95, 2.33, r"identity", color=GRAY, fontsize=12, ha="right",
              va="center")
     axa.set_title("forward", fontsize=13, color="black")
     fl.clean_axes(axa, lim=(xr, yr), hide=True)
@@ -251,8 +255,10 @@ def fig_ste():
     # (b) backward: true gradient (a.e. 0) vs STE surrogate (== 1).
     # ylim hugs the two lines (labels inside) and equal aspect is OFF so the
     # panel stretches to the same height as (a): balanced pair, no dead bands.
-    axb.plot(xr, [0, 0], color=BLUE, lw=2.6, zorder=3)
-    axb.plot(xr, [1, 1], color=ORANGE, lw=2.6, zorder=3)
+    # on top of the black x-axis it coincides with, stopping short of the
+    # axis arrowhead, so the zero gradient reads as blue
+    axb.plot((xr[0], xr[1] - 0.3), [0, 0], color=BLUE, lw=2.6, zorder=6)
+    axb.plot((xr[0], xr[1] - 0.3), [1, 1], color=ORANGE, lw=2.6, zorder=3)
     fl.axis_cross(axb, xr, (-0.32, 1.52), color="black")
     axb.text(0.15, 0.12, r"true gradient $\equiv 0$ a.e.", color=BLUE,
              fontsize=12, ha="left", va="bottom")

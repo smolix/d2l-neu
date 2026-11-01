@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:298310c6bc75821fb356f7e25012f9263c097e933d079e8040b93288a803257c",
+    "d2l_lib_fingerprint": "sha256:8d69a1fb420f805d9d6ad557c7773718e1de0246b38e3d1175bc24905da69cb6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,17 +61,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  no balancing: training loss 0.75, experts under 2% usage: 7 of 16\n"
+          "text": "  no balancing: training loss 0.69, experts under 2% usage: 7 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.47, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.41, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          bias: training loss 0.51, experts under 2% usage: 0 of 16\n"
+          "text": "          bias: training loss 0.54, experts under 2% usage: 0 of 16\n"
         }
       ]
     },
@@ -83,8 +83,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44832,
-          "sha256": "sha256:47db9059667f6b6fb8f144ee177dbab8d26a2daad3250b9c616d13f718a05f68"
+          "bytes": 44835,
+          "sha256": "sha256:2f68ceb08933b6c68d87597f54c5dfd44289da5cc7b65c850980ee0e41277526"
         }
       ]
     },
@@ -95,12 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense:  3.16M parameters (3.16M active), best validation 1.48, final training loss 0.20\n"
+          "text": "dense:  3.16M parameters (3.16M active), best validation 1.50, final training loss 0.20\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.48, final training loss 0.17\n"
+          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.50, final training loss 0.18\n"
         }
       ]
     }

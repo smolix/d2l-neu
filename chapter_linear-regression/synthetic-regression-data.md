@@ -34,7 +34,7 @@ a linear model on this dataset and holds its estimates to the threshold.
 ```{.python .input #synthetic-regression-data}
 %%tab mxnet
 from d2l import mxnet as d2l
-from mxnet import gluon, np as mnp, npx
+from mxnet import np as mnp, npx
 npx.set_np()
 ```
 
@@ -415,9 +415,9 @@ For data that are already in memory as tensors, we add the method
 `get_tensorloader` to the base class `DataModule`, so that every such
 dataset can use it. It takes a tuple of tensors whose first axis indexes the
 examples, keeps the examples selected by `indices`, and returns a loader
-that shuffles them if `train` is true. Where the framework provides such a
-loader, `get_tensorloader` returns it; otherwise we write a short class of
-our own.
+that shuffles them if `train` is true. Where the framework provides a
+loader that suits such data, `get_tensorloader` returns it; otherwise we
+write a short class of our own.
 
 :begin_tab:`jax`
 `ArrayLoader` keeps the arrays on the host as NumPy arrays and yields each
@@ -463,6 +463,45 @@ class ArrayLoader:  #@save
             yield tuple(a[batch_indices] for a in self.arrays)
 ```
 
+:begin_tab:`mxnet`
+Gluon's `DataLoader` builds every minibatch one example at a time: it reads
+each example separately and stacks them, so its cost grows with the number
+of examples. For tensors already in memory, our `ArrayLoader` reads each
+minibatch with one indexing operation per tensor, whose cost hardly depends
+on the size of the minibatch. For our minibatches of 32 examples this saves
+little; for the minibatches of 1,024 text windows in
+:numref:`sec_rnn-scratch`, a pass over the data becomes about 50 times
+faster. On every pass `ArrayLoader` draws a new random order of the
+examples when it shuffles, and keeps the stored order otherwise. It cuts
+the order into minibatches and yields each as a tuple of MXNet arrays,
+keeping the last, partial minibatch unless we ask it to drop it.
+:end_tab:
+
+```{.python .input #synthetic-regression-data-reusable-data-loaders-1}
+%%tab mxnet
+class ArrayLoader:  #@save
+    """Minibatches of in-memory arrays, reshuffled each pass if shuffle."""
+    def __init__(self, arrays, batch_size, shuffle=False, drop_last=False):
+        self.arrays = tuple(arrays)
+        self.batch_size, self.shuffle = batch_size, shuffle
+        self.drop_last = drop_last
+
+    def __len__(self):
+        n = len(self.arrays[0])
+        if self.drop_last:
+            return n // self.batch_size
+        return (n + self.batch_size - 1) // self.batch_size
+
+    def __iter__(self):
+        order = mnp.arange(len(self.arrays[0]), dtype='int32')
+        if self.shuffle:  # A new random order on every pass
+            mnp.random.shuffle(order)
+        for i in range(len(self)):
+            start = i * self.batch_size
+            batch_indices = order[start : start + self.batch_size]
+            yield tuple(a[batch_indices] for a in self.arrays)
+```
+
 :begin_tab:`pytorch`
 `TensorDataset` pairs the tensors example by example, and `DataLoader` draws
 minibatches of `batch_size` examples from it, in a new random order on every
@@ -484,9 +523,8 @@ shuffles only for training.
 :end_tab:
 
 :begin_tab:`mxnet`
-`gluon.data.ArrayDataset` pairs the arrays example by example, and
-`gluon.data.DataLoader` draws minibatches of `batch_size` examples from it,
-in a new random order on every pass when `shuffle=True`.
+`get_tensorloader` wraps the selected arrays in an `ArrayLoader` that
+shuffles only for training.
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
@@ -522,9 +560,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
     tensors = tuple(a[indices] for a in tensors)
-    dataset = gluon.data.ArrayDataset(*tensors)
-    return gluon.data.DataLoader(dataset, self.batch_size,
-                                 shuffle=train)
+    return ArrayLoader(tensors, self.batch_size, shuffle=train)
 ```
 
 `SyntheticRegressionData` now serves its two splits through
@@ -589,7 +625,7 @@ loader shuffles the training examples at the start of every epoch and cuts
 them into minibatches, 32 per epoch with the last holding 8 examples. A
 hand-written generator shows the mechanism but can be iterated only once,
 so we use a loader that can be iterated in every epoch and reports its
-length: the framework's own, or in JAX a short class of our own.
+length: the framework's own, or a short class of our own.
 
 
 ## Exercises
@@ -655,11 +691,11 @@ length: the framework's own, or in JAX a short class of our own.
 :begin_tab:`mxnet`
 3. **A partial last minibatch.** With 1,000 examples per split and
    `batch_size=32`, each loader ends a pass with a partial minibatch of 8
-   examples. Gluon's `DataLoader` discards it when given
-   `last_batch='discard'`. The training loader reshuffles every epoch,
-   whereas the validation loader reads in a fixed order. For each loader,
-   state which examples a discarded partial minibatch leaves out over many
-   epochs, and decide for which loader discarding is acceptable.
+   examples. `ArrayLoader` discards it when given `drop_last=True`. The
+   training loader reshuffles every epoch, whereas the validation loader
+   reads in a fixed order. For each loader, state which examples a
+   discarded partial minibatch leaves out over many epochs, and decide for
+   which loader discarding is acceptable.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -696,7 +732,25 @@ length: the framework's own, or in JAX a short class of our own.
        with that of discarding 8 examples in every epoch.
 :end_tab:
 
-:begin_tab:`mxnet, pytorch, tensorflow`
+:begin_tab:`mxnet`
+4. [code] **A loader for every epoch.** `ArrayLoader` and the generator of
+   this section cut the examples into minibatches in the same way, but only
+   `ArrayLoader` can be iterated in every epoch.
+    1. Python distinguishes an *iterable*, whose `__iter__` returns a new
+       iterator on every call, from an *iterator*, whose `__iter__` returns
+       the iterator itself and which is exhausted after one pass. Say
+       which of the two the generator is and which `ArrayLoader` is, and
+       how this explains the empty second pass.
+    1. Check `len` against the number of minibatches that a pass yields,
+       with and without `drop_last`, and check that two passes each visit
+       every training example exactly once, in different orders.
+    1. Time one pass over the 1,000 training examples with `ArrayLoader`
+       and with `gluon.data.DataLoader(gluon.data.ArrayDataset(X, y), 32,
+       shuffle=True)`, which builds each minibatch one example at a time.
+       How does the ratio change with the batch size?
+:end_tab:
+
+:begin_tab:`pytorch, tensorflow`
 4. [code] **A loader for every epoch.** Write a class whose constructor
    takes a tuple of tensors, a batch size, and a flag `shuffle`, and whose
    `__iter__` method yields minibatches as the generator of this section
@@ -1125,7 +1179,7 @@ Our 2,000 examples fit in memory, so we need only the first two rows.
 :::
 :::
 
-::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="pytorch,mxnet"}
+::: {.slide title="A Framework Loader Serves Each Split as a Slice" only="pytorch"}
 [Reusing a loader]{.kicker}
 
 Added to `DataModule`, for any data held as tensors:
@@ -1167,6 +1221,21 @@ JAX has no loader, so `get_tensorloader` wraps the arrays in our
 - A new key split off on every pass: a new order, no key used twice.
 - The last minibatch of 8 is kept: one more compilation per jitted step
   and run, not per epoch.
+:::
+
+::: {.slide title="ArrayLoader Reads Each Minibatch with One Indexing Operation" only="mxnet"}
+[Reusing a loader]{.kicker}
+
+`get_tensorloader` wraps the arrays in our `ArrayLoader`; the new
+`get_dataloader` replaces the generator:
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-1
+
+@synthetic-regression-data-concise-implementation-of-the-data-loader-2
+
+- A new random order on every pass; the last minibatch of 8 is kept.
+- One indexing operation per minibatch, where Gluon's `DataLoader` stacks
+  examples one at a time: about 50× faster for minibatches of 1,024.
 :::
 
 ::: {.slide title="The New Loader Yields 32 Minibatches on Every Pass"}

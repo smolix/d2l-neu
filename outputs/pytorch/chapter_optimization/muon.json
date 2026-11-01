@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:31ab97edd56e8480f54caa178854a0bf38cc095ba3dedd78d84598f05975ebee",
+    "d2l_lib_fingerprint": "sha256:bd7635fcbc2b0317d6c4d889171dc3281c5a668edb9f68ad4fdf26cfcd339d9d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
           "bytes": 31417,
-          "sha256": "sha256:09634d286e4dcbbf34fda57eb79c03ba68b3df544e6214b33613fe5ca7dedfd7"
+          "sha256": "sha256:ce567579efb118ff19da4f5bfaa68a76f22eaf6082529be78461a9b029a0e700"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.913\n"
+          "text": "lr 0.003: final loss 0.912\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.985\n"
+          "text": "lr 0.01: final loss 0.972\n"
         }
       ]
     },
@@ -100,12 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.928\n"
+          "text": "lr 0.003: final loss 0.929\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.827\n"
+          "text": "lr 0.01: final loss 0.830\n"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 28520,
-          "sha256": "sha256:fed82b37966697c8a1cbed4ed9b3cb12f8f0f2072e84667a754c6a0db24e4474"
+          "bytes": 28532,
+          "sha256": "sha256:09359b994eccf515812b6c8b99e072dbe22a418efa3ad6de880d29681663fc89"
         }
       ]
     },
@@ -193,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-same-race-on-a-cnn-3-1.svg",
           "bytes": 28650,
-          "sha256": "sha256:cc78d0e0deed053df382f8e8c8ef8eaa3b609da607df13be2593d858ddfb569a"
+          "sha256": "sha256:e4798a0b1b89875611aea6112126f38d36742528d9ea2c2e35d23f84f23afa9c"
         }
       ]
     },
@@ -204,7 +204,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss 0.826\n"
+          "text": "final loss 0.827\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:55757e1b91d89b25cdf2ffd2bc0a1e3495eec15049562a51bc325d82b3f5cd7f",
+    "d2l_lib_fingerprint": "sha256:5478bdc0c2e4aabeb5e0e1e72b9ffb7166b967c4063d5c3e6bea8a8f687265da",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.8226929 , 0.48218304, 0.2772931 ],\n       [0.75924927, 0.44138584, 0.06515308]], device=gpu(1))"
+          "text": "array([[0.5659049 , 0.38074365, 0.887377  ],\n       [0.74272156, 0.27641395, 0.0451817 ]], device=gpu(1))"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.8226929, 1.482183 , 1.2772931],\n       [1.7592492, 1.4413859, 1.0651531]], device=gpu(1))"
+          "text": "array([[1.5659049, 1.3807436, 1.887377 ],\n       [1.7427216, 1.2764139, 1.0451818]], device=gpu(1))"
         }
       ]
     },
@@ -121,7 +121,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.137788],\n       [0.137788]], device=gpu(0))"
+          "text": "array([[0.01547003],\n       [0.01547003]], device=gpu(0))"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0022 sec\ntime until they all finished:     0.0548 sec\n"
+          "text": "time to queue 32 matrix products: 0.0015 sec\ntime until they all finished:     0.0603 sec\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 31400,
-          "sha256": "sha256:d8587ad2a4a27a36a61017b33de9f41f30c17c5624621391b9608dffe39e96a2"
+          "bytes": 30937,
+          "sha256": "sha256:ee24720c6708f050aed8515d5defab49cd2d130b5709c02430951a736bff9ac6"
         },
         {
           "type": "execute_result",

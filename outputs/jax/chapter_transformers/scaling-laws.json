@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:016fc4a1e3606eb8d1fcdb407677e0f6fee6bc47559960c9d52762b29c607a70",
+    "d2l_lib_fingerprint": "sha256:9308118015d1ccd322edf535e9f73e0194422f35b734d4ead6c6cde9ec918f30",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 8.480e+10 (ratio 1.10)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.289e+11 (ratio 0.99)\nbackward / forward = 1.70\n"
+          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 8.480e+10 (ratio 1.10)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.547e+11 (ratio 1.10)\nbackward / forward = 2.00\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.21\n"
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.20\n"
         },
         {
           "type": "stream",
@@ -68,17 +68,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=192, 4 blocks:  1.77M parameters, train 1.12, validation 1.12\n"
+          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.07, validation 1.08\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=384, 8 blocks: 14.16M parameters, train 1.04, validation 1.07\n"
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
         }
       ]
     },
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
           "bytes": 33333,
-          "sha256": "sha256:110fa5858fd401d17a8c082b39da3c9c42257c7318b1500a42aaa81430caca07"
+          "sha256": "sha256:a522fa1fb3f913390cd296f6edb6852674352aa0b3b3caf11f04545dbbe608d6"
         }
       ]
     },
@@ -107,12 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+          "text": "Mistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nLlama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
         },
         {
           "type": "stream",

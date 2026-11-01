@@ -4,32 +4,32 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6ba4e1608e082afa8a63b66722d3168a3a42e18b30ded239d5902b37602a9512",
+    "d2l_lib_fingerprint": "sha256:c216df587c185b564595c576a08f47070d449df5d85f3df1af95d0e1aed88355",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "code_fingerprint": "sha256:fba0472077f23364c5b2b901dd76d17ef986469969830e14a09cbf233c5a712c",
       "kind": "text",
       "outputs": []
     },
     "rnn-recurrent-neural-networks-with-hidden-states-1": {
-      "code_fingerprint": "sha256:d9a52f7aaebe6b8c91fd7dd9b76f3a301cca247d2643e978b1808f7e8cf6b138",
+      "code_fingerprint": "sha256:f612ea81ebd9545d7fc13aed359f63b1a1ae8fd283cf21b9941ba43b05bfb295",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-2.7756472 , -1.7689174 ,  2.9926558 , -4.2504654 ],\n       [-0.56018233,  0.10487883, -1.5701048 ,  7.3006177 ],\n       [ 3.7051232 ,  0.311452  ,  0.13687007, -3.8150792 ]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.9375417 , -0.67233753,  0.74727005, -0.10658012],\n       [ 0.19722393, -2.876783  ,  0.69922805,  1.2998569 ],\n       [ 1.2050052 , -1.5399815 ,  3.2882867 ,  7.279826  ]],\n      dtype=float32)>"
         }
       ]
     },
     "rnn-recurrent-neural-networks-with-hidden-states-2": {
-      "code_fingerprint": "sha256:73d0d28dd1ac87f20501377051042f245f9e787a91e0cc22f8600934cf0dea8b",
+      "code_fingerprint": "sha256:bb28bbbbe6674ee5e40e894dc2dddf055b16070ccb98aa99c4bd5fe358a5da4d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-2.7756472 , -1.7689174 ,  2.9926558 , -4.2504654 ],\n       [-0.56018203,  0.10487878, -1.5701048 ,  7.3006177 ],\n       [ 3.705123  ,  0.31145203,  0.13687003, -3.8150792 ]],\n      dtype=float32)>"
+          "text": "4.76837158203125e-07"
         }
       ]
     }

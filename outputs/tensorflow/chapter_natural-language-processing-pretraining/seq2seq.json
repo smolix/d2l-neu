@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:ad9eddfe5daf733853232312ed73b6ed5bc0ef963b3a1297c25b32dddbb96d6d",
+    "d2l_lib_fingerprint": "sha256:ae35143478f29dfc9481324fd1c15a37c38898ceb43ed84c1f2cfb61ece6a4bc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tf.Tensor(\n[[ 687 1437  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297 2560  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1189 1899  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001   99   39  281 3598  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296 3566  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  104  322  343  708 1771  262 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 5 4], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
+          "text": "source: tf.Tensor(\n[[ 614  729  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 348  423 1048  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 427  306  419  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  748 2398  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  416 3532  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  697   45  416 3603 3634  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 5 5], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:6c4ed3e3e489ea1608d6bf449624706496a9e374bb6acd1312fda418e57c137e"
+          "sha256": "sha256:1d00a4087840a49df1be7cf9d28b83d8fb638aeb4ce899bec72ee18ed715c738"
         }
       ]
     },
@@ -110,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 27220,
-          "sha256": "sha256:c2074a51cb2d3860b9427be54d0545eba48e580740f4c782d79a80f2a416f34c"
+          "bytes": 27756,
+          "sha256": "sha256:545e3728e81ab9b3e8b0ed8bf61dc1de3ca653da4e26966615ffb162ef490513"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis désolé .'\ni'm home . => 'je suis en toi .'\n"
+          "text": "i lost . => \"j'ai fait .\"\ni'm calm . => 'je suis en poil .'\ni'm home . => 'je suis en poil .'\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis désolé .', chrF 0.367\ni'm home . => 'je suis en toi .', chrF 0.388\n"
+          "text": "i lost . => \"j'ai fait .\", chrF 0.209\ni'm calm . => 'je suis en poil .', chrF 0.381\ni'm home . => 'je suis en poil .', chrF 0.355\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 25990,
-          "sha256": "sha256:7c3f82d0d340e200bad6554594bfb7c5aa58161c57775a2c59238770f143344b"
+          "bytes": 25992,
+          "sha256": "sha256:764148f5d904d70cd0e34afaa347cb5a23d2e1bc46746e241d5f7663d8a516c4"
         }
       ]
     }

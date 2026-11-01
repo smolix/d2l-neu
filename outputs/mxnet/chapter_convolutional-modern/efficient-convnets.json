@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:f3cdb89a23eb17a4a9989739b22de2bf083e30c4a021e9168806ef4789fbd5c1",
+    "d2l_lib_fingerprint": "sha256:32c0d6987f2a86dbdaa50db40e39b5d760bed2e3555b6a0d6f5484937cc26139",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -56,15 +56,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 33791,
-          "sha256": "sha256:b4acb9c7bcc96791a64524838e7cd2c163cd302a796653e31948e495486df736"
+          "bytes": 33990,
+          "sha256": "sha256:414c18b0c6ee27bd3ed3f87770ccaa4c7310e04a8e46d36005e364de5468538f"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 31932,
-          "sha256": "sha256:4a4dfa818e13fa4b490b939cad5a7bf1955d877d4ab10f55ed3cb0160e17e91f"
+          "bytes": 33130,
+          "sha256": "sha256:95c57333efb5cdbd94e37e33df56b9a3f6217ee2b193d424eece38b188657367"
         }
       ]
     },
@@ -75,12 +75,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.916, 2.6 ms per batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, test accuracy 0.915, 3.2 ms per batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.940, 5.7 ms per batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, test accuracy 0.937, 6.3 ms per batch\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "3.337860107421875e-06"
+          "text": "2.86102294921875e-06"
         }
       ]
     }

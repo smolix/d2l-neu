@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:491a103700d1b71998294178d1a0a443880c1aea13cf4d31c7c6cccf32bb6a69",
+    "d2l_lib_fingerprint": "sha256:c10322f06219ce309ceef5d793ca692701f6922ea37639397840702d7f11d1be",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,12 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read 549367 examples\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "read 9824 examples\n"
+          "text": "read 549367 examples\nread 9824 examples\n"
         },
         {
           "type": "execute_result",

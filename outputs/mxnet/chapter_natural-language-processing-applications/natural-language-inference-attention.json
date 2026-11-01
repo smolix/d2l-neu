@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:05849a6fa5418f0d35300aa81d6666dd54edddae0b2dcd00c23dbbdc0110f44b",
+    "d2l_lib_fingerprint": "sha256:2fa9a1fb73d4e9d358d9cd3ea9b8a02d0ad13f230f6958c84a39e04c0864f226",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.512, train acc 0.798, test acc 0.817\n7516.4 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.513, train acc 0.798, test acc 0.820\n5476.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
           "bytes": 26982,
-          "sha256": "sha256:c761fb82aa70d71917f489a720d2e06efd89e3d765fea8316c547cd47d0f7ae9"
+          "sha256": "sha256:150403fd8359f981ffe9fd7f57cfee57484a57f6be6b54f41b7d348affb9ca1c"
         }
       ]
     },

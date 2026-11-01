@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:76277ac30d321ebd94f7bffbc50a206861eee2cccf4735fbf25d5d9aeb4a30e5",
+    "d2l_lib_fingerprint": "sha256:32d12ecd8332ed8636a5adc35e5a215716d32b85ae465cd00291011cd50da798",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,29 +46,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  512: naive   9.81 ms/token, cached  9.63 ms/token\n"
+          "text": "n=  512: naive  12.97 ms/token, cached 10.50 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 1024: naive  10.35 ms/token, cached  9.54 ms/token\n"
+          "text": "n= 1024: naive  23.71 ms/token, cached 10.33 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 2048: naive  21.18 ms/token, cached  9.47 ms/token\n"
+          "text": "n= 2048: naive  48.53 ms/token, cached 10.87 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 4096: naive  47.70 ms/token, cached  9.46 ms/token\n"
+          "text": "n= 4096: naive 108.60 ms/token, cached 17.62 ms/token\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-same-logits-measured-2-1.svg",
-          "bytes": 22584,
-          "sha256": "sha256:15742e2b523132ccebd21107b4ad139e5dad65cfc4bdff491dcb84b850cd06e5"
+          "bytes": 23724,
+          "sha256": "sha256:edbfcc887ba066db95468e4b0c793d024445ab79895ec5943fad665b7a24883a"
         }
       ]
     },
@@ -79,12 +79,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens after a 3584-token prompt: 11.2s =  22.9 tokens/s\n"
+          "text": "naive : 256 tokens after a 3584-token prompt: 25.9s =   9.9 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens after a 3584-token prompt:  2.6s =  98.6 tokens/s\n"
+          "text": "cached: 256 tokens after a 3584-token prompt:  5.1s =  49.8 tokens/s\n"
         }
       ]
     },
@@ -95,7 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: allocator grew   72.0 MiB, formula says   72.0 MiB\nn=2048: allocator grew  144.0 MiB, formula says  144.0 MiB\nn=4096: allocator grew  288.0 MiB, formula says  288.0 MiB\n"
+          "text": "n=1024: allocator grew   72.0 MiB, formula says   72.0 MiB\nn=2048: allocator grew  144.0 MiB, formula says  144.0 MiB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n=4096: allocator grew  288.0 MiB, formula says  288.0 MiB\n"
         }
       ]
     },
@@ -106,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 2048 tokens in   22 ms =  95022 tokens/s\ndecode:  one token in   9.49 ms =    105 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
+          "text": "prefill: 2048 tokens in   49 ms =  41474 tokens/s\ndecode:  one token in  11.06 ms =     90 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
         }
       ]
     },
@@ -143,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=2: best validation loss 1.50, cache  3.0 KiB per token\n"
+          "text": "H_kv=2: best validation loss 1.51, cache  3.0 KiB per token\n"
         },
         {
           "type": "stream",

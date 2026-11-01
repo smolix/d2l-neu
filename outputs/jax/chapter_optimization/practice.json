@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8c05041d92c5c39db40135586bcac50aa4caf8422af2aa88ecc5fd07f5bd9959",
+    "d2l_lib_fingerprint": "sha256:2ff26dfefbd87720fa36787468ed594197945d805ceb1fcf095bf3b5ff9647e0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.006\n"
+          "text": "clipped at 1.0: final loss 1.010\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 27096,
-          "sha256": "sha256:1aafe1ea571f3fce1dc211e4d8f81d4bbdf1bf5c37ca20b6fbba38a1d62a29bd"
+          "bytes": 25917,
+          "sha256": "sha256:af360a56fab95c319528407904049c183e97daf8f20d8c9f1d4cf758d7952ea7"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.808, EMA 0.910\n"
+          "text": "final test accuracy: live 0.877, EMA 0.913\n"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24013,
-          "sha256": "sha256:95b413c5e53282d85d8849741384bb5239caacba922389ac3a4e2f298b8f28a9"
+          "bytes": 24007,
+          "sha256": "sha256:a6e5d0bf5746a6ef318137b78dc118f758b84532819265117e3c729177ff5d89"
         }
       ]
     }

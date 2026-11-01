@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:24fc1020c3089ebb67f54e4dec5a3b0e80d78d4d5ba446d36ccb3f64dbf1b0e4",
+    "d2l_lib_fingerprint": "sha256:70792b1626ae5c5d24ae8d5856d8371ebfc9f8ba15428ca29c8ee73d211cbb6c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [237   1 364   1  38   3 486   0] ... [ 38 237 364 486]  answers: [3 1 1 0]\n"
+          "text": "tokens: [226   3 303   2 290   2  94   2] ... [290  94 226 303]  answers: [2 2 3 2]\n"
         }
       ]
     },
@@ -51,14 +51,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   1.00 0.98 0.90 0.74 0.53\nGated DeltaNet           1.00 1.00 0.97 0.89 0.72\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.99 0.96 0.87 0.66 0.47\nGated DeltaNet           1.00 1.00 0.98 0.92 0.73\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
           "bytes": 33552,
-          "sha256": "sha256:91dfb4b33f21d80e2b26fb816ef1baf4370bcef048c5e043ae7efd19acb8b040"
+          "sha256": "sha256:e58209c75b2d127f547a69fba8537b7c91135ef7338fceeb14e024f92f8dc08b"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.17\n"
+          "text": "hybrid               perplexity 3.16\n"
         }
       ]
     }

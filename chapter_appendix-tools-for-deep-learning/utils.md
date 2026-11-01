@@ -1282,6 +1282,8 @@ alongside it. The MXNet and TensorFlow tabs additionally retain
 it directly; for PyTorch and JAX,
 use `Trainer.validation_step` (or its return value) instead.
 
+[Discussions](https://d2l.discourse.group/t/36849)
+
 <!-- slides -->
 
 ::: {.slide title="The d2l Utility Layer"}

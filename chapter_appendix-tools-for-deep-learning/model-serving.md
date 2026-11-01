@@ -437,3 +437,5 @@ quality as well as latency.
     1. State the largest request rate at which at least 90% of all
        arriving requests meet both SLOs, counting rejected requests as
        misses, and the configuration that achieves it.
+
+[Discussions](https://d2l.discourse.group/t/36847)

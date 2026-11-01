@@ -998,6 +998,8 @@ drops that assumption.
        the errors of the samples, and in cost. Which errors of a trained
        model does each method inherit?
 
+[Discussions](https://d2l.discourse.group/t/36824)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -782,6 +782,8 @@ form used in the original neural alignment model.
        neighbors only when the first belongs to a designated subset of the
        vocabulary, and state what the query would have to depend on.
 
+[Discussions](https://d2l.discourse.group/t/36769)
+
 <!-- slides -->
 
 ::: {.slide}

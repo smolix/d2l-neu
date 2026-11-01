@@ -443,3 +443,5 @@ decode-bound sanity check above.
        compare your prediction errors with the factor of two of the
        summary and with a published number for your hardware from the
        sources of :numref:`subsec_hardware-buyers-current`.
+
+[Discussions](https://d2l.discourse.group/t/36844)

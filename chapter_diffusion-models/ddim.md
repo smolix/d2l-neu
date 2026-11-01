@@ -876,6 +876,8 @@ the continuous-time picture of the next section and of
        statistics at $11$ and $51$ evaluations. Does the gain measured with
        the exact predictor survive the errors of the learned predictor?
 
+[Discussions](https://d2l.discourse.group/t/36823)
+
 <!-- slides -->
 
 ::: {.slide}

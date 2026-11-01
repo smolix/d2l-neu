@@ -791,6 +791,8 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36811)
+
 <!-- slides -->
 
 ::: {.slide}

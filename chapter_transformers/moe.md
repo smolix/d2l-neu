@@ -931,6 +931,8 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        number of available combinations. How much of the added flexibility
        does the model use?
 
+[Discussions](https://d2l.discourse.group/t/36779)
+
 <!-- slides -->
 
 ::: {.slide}

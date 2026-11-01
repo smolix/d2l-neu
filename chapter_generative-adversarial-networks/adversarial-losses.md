@@ -464,6 +464,8 @@ The capacity argument explains the continued use of adversarial terms in diffusi
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36814)
+
 <!-- slides -->
 
 ::: {.slide}

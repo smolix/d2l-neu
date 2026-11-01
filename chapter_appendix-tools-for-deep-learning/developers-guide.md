@@ -390,3 +390,5 @@ artifact — is what changed.
        number of runs of any strategy that names $k$ with probability at
        least 0.95. How close does (c) come?
    :exlabel:`ex_developers-guide-noisy-bisection`
+
+[Discussions](https://d2l.discourse.group/t/36848)

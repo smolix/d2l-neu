@@ -1397,6 +1397,8 @@ the score.
 [Discussions](https://d2l.discourse.group/)
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36839)
+
 <!-- slides -->
 
 ::: {.slide}

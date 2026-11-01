@@ -1340,6 +1340,8 @@ one forward pass.
    collect it with `nnx.capture(net, nnx.Intermediate)`.
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36759)
+
 <!-- slides -->
 
 ::: {.slide}

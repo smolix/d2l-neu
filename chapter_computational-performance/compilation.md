@@ -614,6 +614,8 @@ belong to deployment rather than training.
        array elements moved through memory under one kernel per node and
        under your partition.
 
+[Discussions](https://d2l.discourse.group/t/36789)
+
 <!-- slides -->
 
 ::: {.slide title="Computation Graphs"}

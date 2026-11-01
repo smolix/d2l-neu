@@ -1075,6 +1075,8 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36813)
+
 <!-- slides -->
 
 ::: {.slide}

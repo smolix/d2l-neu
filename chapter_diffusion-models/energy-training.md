@@ -974,6 +974,8 @@ that depends on how well that loop mixes.
        comparison of the two schemes agree with this result? If it does not,
        what differs between the two settings?
 
+[Discussions](https://d2l.discourse.group/t/36816)
+
 <!-- slides -->
 
 ::: {.slide}

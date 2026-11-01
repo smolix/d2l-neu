@@ -598,6 +598,8 @@ DAgger collects states from the learner and obtains expert labels for them, addr
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36796)
+
 <!-- slides -->
 
 ::: {.slide}

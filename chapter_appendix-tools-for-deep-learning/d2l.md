@@ -10,3 +10,5 @@ The generated modules are also available in this book's
 ## Classes
 
 ## Functions
+
+[Discussions](https://d2l.discourse.group/t/36850)

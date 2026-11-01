@@ -1713,6 +1713,8 @@ sampling, and optimization determine how strongly the idealized tendency appears
 [Discussions](https://d2l.discourse.group/t/divergences)
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36835)
+
 <!-- slides -->
 
 ::: {.slide}

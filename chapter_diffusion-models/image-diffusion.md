@@ -978,6 +978,8 @@ chapter rather than replacing it.
        samples of `sample` at $\gamma = 0$ with the same seed.
    :exlabel:`ex_image-diffusion-autoguidance`
 
+[Discussions](https://d2l.discourse.group/t/36822)
+
 <!-- slides -->
 
 ::: {.slide}

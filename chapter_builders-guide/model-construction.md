@@ -1667,6 +1667,8 @@ the model is constructed.
    sites still one object, checked with `is`?
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36752)
+
 <!-- slides -->
 
 ::: {.slide}

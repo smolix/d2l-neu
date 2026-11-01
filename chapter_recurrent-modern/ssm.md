@@ -1085,6 +1085,8 @@ the next section lets the dynamics depend on the input.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36781)
+
 <!-- slides -->
 
 ::: {.slide}

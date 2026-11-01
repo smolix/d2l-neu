@@ -994,6 +994,8 @@ When the supports overlap, all four tested objectives move the generator toward 
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36809)
+
 <!-- slides -->
 
 ::: {.slide}

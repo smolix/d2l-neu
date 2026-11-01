@@ -1342,6 +1342,8 @@ predicts a given network's test error from first principles remains open.
 
 [Discussions](https://d2l.discourse.group/t/concentration-and-generalization)
 
+[Discussions](https://d2l.discourse.group/t/36834)
+
 <!-- slides -->
 
 ::: {.slide}

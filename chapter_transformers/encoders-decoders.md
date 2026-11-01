@@ -1194,6 +1194,8 @@ and decoder-only models for general autoregressive generation.
        latents is no restriction for reversal, and name a sequence task for
        which it would be one.
 
+[Discussions](https://d2l.discourse.group/t/36777)
+
 <!-- slides -->
 
 ::: {.slide}

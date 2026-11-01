@@ -824,6 +824,8 @@ is why serious runs grow their batch during training rather than fixing it.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36765)
+
 <!-- slides -->
 
 ::: {.slide}

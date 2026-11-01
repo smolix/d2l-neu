@@ -718,6 +718,8 @@ them optimizer state.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36763)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -943,6 +943,8 @@ matter of adding a classifier gradient to the score.
        $\gamma$?
    :exlabel:`ex_annealed-langevin-ladder-spacing`
 
+[Discussions](https://d2l.discourse.group/t/36820)
+
 <!-- slides -->
 
 ::: {.slide}

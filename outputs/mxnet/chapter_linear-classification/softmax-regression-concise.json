@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a4bd379bd8829ddcc5e63c39c001032046381f3bb0a75dd659eaa098e4a51566",
+    "d2l_lib_fingerprint": "sha256:696fa753b2d2060924e5b8c69afdd1122e44f0506f437709f20c82966ebe6e0b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20525,
-          "sha256": "sha256:86e41dd5c4904877cc9ffe581862d4c5b5ec46a40de3857d85025afdd53569b2"
+          "sha256": "sha256:a9c5dc08aa18cccb0c0cb66236121e18ae6368b59debd517640a559485c2aa01"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 33223,
-          "sha256": "sha256:eb3850679ac67bfeed39ed023975a498651b9ee40f4f97726c635ad4b91e17ff"
+          "bytes": 33230,
+          "sha256": "sha256:876be5f9793deb056b9dcea500f77a3f3dd6e94be3238649e0e367e82c30fae1"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.188, accuracy 0.000\nconfidence 0.2 to 0.3:   58 predictions, mean 0.268, accuracy 0.310\nconfidence 0.3 to 0.4:  299 predictions, mean 0.361, accuracy 0.398\nconfidence 0.4 to 0.5:  611 predictions, mean 0.454, accuracy 0.480\nconfidence 0.5 to 0.6:  863 predictions, mean 0.549, accuracy 0.594\nconfidence 0.6 to 0.7:  867 predictions, mean 0.652, accuracy 0.691\nconfidence 0.7 to 0.8: 1013 predictions, mean 0.751, accuracy 0.781\nconfidence 0.8 to 0.9: 1397 predictions, mean 0.852, accuracy 0.893\nconfidence 0.9 to 1.0: 4890 predictions, mean 0.973, accuracy 0.975\nECE: 0.020\n"
+          "text": "confidence 0.1 to 0.2:    3 predictions, mean 0.191, accuracy 0.333\nconfidence 0.2 to 0.3:   64 predictions, mean 0.272, accuracy 0.219\nconfidence 0.3 to 0.4:  266 predictions, mean 0.357, accuracy 0.376\nconfidence 0.4 to 0.5:  654 predictions, mean 0.455, accuracy 0.463\nconfidence 0.5 to 0.6:  836 predictions, mean 0.549, accuracy 0.603\nconfidence 0.6 to 0.7:  882 predictions, mean 0.652, accuracy 0.694\nconfidence 0.7 to 0.8:  998 predictions, mean 0.751, accuracy 0.766\nconfidence 0.8 to 0.9: 1424 predictions, mean 0.853, accuracy 0.891\nconfidence 0.9 to 1.0: 4873 predictions, mean 0.972, accuracy 0.976\nECE: 0.018\n"
         }
       ]
     },
@@ -73,8 +73,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-calibration-3-1.svg",
-          "bytes": 29296,
-          "sha256": "sha256:32aff9ae3bcf26729be3b33f09c3f89aa82ae09869a23af3ff017d9501247f70"
+          "bytes": 29292,
+          "sha256": "sha256:2698525df4cbe7d20e57ba5caf9149e4eda1477ede315802383b2f5a57bd2a95"
         }
       ]
     }

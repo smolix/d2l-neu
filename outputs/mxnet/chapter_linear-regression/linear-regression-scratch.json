@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:51140daf8249c99fe41615e911b2ce1b4dc93233360c70b799903e64403faa7e",
+    "d2l_lib_fingerprint": "sha256:0aa9c725814dca3907e03540fd85a22047c12550848d7ccb0063ef7db4820779",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-2.2338  3.5037 -4.6846]\nlargest difference: 0\n"
+          "text": "gradient: [-3.5539  4.6554 -3.3265]\nlargest difference: 0\n"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 34358,
-          "sha256": "sha256:5e9ac868bfe151989222058fe4e7a8e9e6fa327d758e171419ddadae858fbe49"
+          "bytes": 34364,
+          "sha256": "sha256:27f5a0cf5108620c7228c505aaad1ad887191f409bfd7aa6972edd9f62243c4f"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -3.2e-04, 1.1e-03\nerror in b: 2.5e-05\n"
+          "text": "error in w: -1.9e-04, 1.2e-03\nerror in b: -4.4e-04\n"
         }
       ]
     },
@@ -100,17 +100,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.5e+00\n"
+          "text": "lr = 0.003  validation loss: 2.6e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 4.9e-05\n"
+          "text": "lr = 0.03   validation loss: 5.3e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.3    validation loss: 5.0e-05\n"
+          "text": "lr = 0.3    validation loss: 5.3e-05\n"
         },
         {
           "type": "stream",

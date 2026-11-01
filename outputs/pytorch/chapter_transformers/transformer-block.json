@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8783e65773451859466c8da72e146124461c908d8f464e8a981254c7abbb4e4a",
+    "d2l_lib_fingerprint": "sha256:214ea0ffb0011001bb51cef6ce0802fa598370656f6622fac06da125a49cb339",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
           "bytes": 29774,
-          "sha256": "sha256:9ec026bb610bec9133f17fbffbd3472acc751ab28df098240da407e60f824463"
+          "sha256": "sha256:8377ddfe1a6a16ce9b1237ed0371213938f15a7491114946502b99b241ab5956"
         }
       ]
     },
@@ -43,12 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.729 ms\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.739 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RMSNorm: 0.719 ms\n"
+          "text": "RMSNorm: 0.750 ms\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:86faac77a583ad4ed1b6cf35eb3acf9c62f3a9a75ae72121abfa2512469b8f11",
+    "d2l_lib_fingerprint": "sha256:170c7683ce3dc9a6e1bea9072b82558ebf9e40b4f349bab8a667ed107c645c36",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 control @512 (clocked up front): 199303 tokens/s, plan 15.1 GiB\n"
+          "text": "fp32 control @512 (clocked up front): 151743 tokens/s, plan 15.1 GiB\n"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R0 un-jitted: 13872 tokens/s\n"
+          "text": "R0 un-jitted: 13911 tokens/s\n"
         }
       ]
     },
@@ -63,12 +63,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first (compiling) step: 6.9 s\n"
+          "text": "first (compiling) step: 7.1 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R1 jit: 255674 tokens/s (18x)\n"
+          "text": "R1 jit: 205693 tokens/s (15x)\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "XLA counts 765 GFLOP per step; at 32.0 ms per step that is 24 TFLOP/s achieved\n"
+          "text": "XLA counts 765 GFLOP per step; at 39.8 ms per step that is 19 TFLOP/s achieved\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"bf16\", naive cast: 250312 tokens/s (0.98x)\n"
+          "text": "\"bf16\", naive cast: 203239 tokens/s (0.99x)\n"
         },
         {
           "type": "stream",
@@ -116,7 +116,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R2 +bf16, threaded: 273526 tokens/s (1.07x)\n"
+          "text": "R2 +bf16, threaded: 180467 tokens/s (0.88x)\n"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R3 +batch-up (512): 438433 tokens/s (1.60x), 45 TFLOP/s achieved\nfp32 control at 512: 199303 tokens/s -> bf16 pays 2.20x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
+          "text": "R3 +batch-up (512): 349155 tokens/s (1.93x), 36 TFLOP/s achieved\nfp32 control at 512: 151743 tokens/s -> bf16 pays 2.30x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R4 +checkpoint: 378189 tokens/s (0.86x), planned temp 1.8 GiB\n"
+          "text": "R4 +checkpoint: 306052 tokens/s (0.88x), planned temp 1.8 GiB\n"
         }
       ]
     },
@@ -154,17 +154,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 32 ms\n"
+          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 40 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=2: no-overlap floor 250k tokens/s, measured 201k (0.78x of one GPU)\n"
+          "text": "R5 k=2: no-overlap floor 223k tokens/s, measured 180k (0.87x of one GPU)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=4: no-overlap floor 499k tokens/s, measured 299k (1.17x of one GPU)\n"
+          "text": "R5 k=4: no-overlap floor 446k tokens/s, measured 288k (1.40x of one GPU)\n"
         }
       ]
     },
@@ -175,12 +175,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=2: 516k tokens/s (59% weak-scaling efficiency)\n"
+          "text": "fast config, k=2: 499k tokens/s (71% weak-scaling efficiency)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=4: 981k tokens/s (56% weak-scaling efficiency)\n"
+          "text": "fast config, k=4: 948k tokens/s (68% weak-scaling efficiency)\n"
         }
       ]
     },
@@ -191,14 +191,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cumulative, R1 -> R3: 1.71x (and R0 -> R3: 32x)\n"
+          "text": "cumulative, R1 -> R3: 1.70x (and R0 -> R3: 25x)\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
-          "bytes": 23702,
-          "sha256": "sha256:dcbadeb23f556de6caf6f90ff3b04342602f3c326d98ff577794f766eb5ca943"
+          "bytes": 25981,
+          "sha256": "sha256:5f32249f7721dfd682548428fdd2c8672106cf48cab37990ed17eb511c6531e7"
         }
       ]
     },

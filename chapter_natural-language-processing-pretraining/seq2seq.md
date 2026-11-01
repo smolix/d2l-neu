@@ -1006,7 +1006,7 @@ a model of exactly the kind :numref:`chap_transformers` builds.
 ### Beam Search
 
 Greedy decoding commits to the single best token at each step, which need not
-produce the best sequence overall. Beam search keeps the $k$ best prefixes alive.
+produce the best sequence overall. Beam search keeps the $w$ best prefixes alive.
 The decoding toolkit of :numref:`sec_decoding` plugs straight in: everything
 downstream of the model speaks one narrow interface, a `step_fn` mapping the token
 ids so far to NumPy logits for the next token. Here the source is fixed and the
@@ -1135,12 +1135,12 @@ follows.
 1. The dataset uses one shared vocabulary for both languages. Rebuild `MTFraEng`
    with two separate tokenizers, one per language, and compare training loss and
    translation quality. When would separate vocabularies help, and when hurt?
-1. Sweep the beam width $k \in \{1, 2, 4, 8, 16\}$ on the three example
+1. Sweep the beam width $w \in \{1, 2, 4, 8, 16\}$ on the three example
    sentences and on a handful of longer held-out sentences. Where does quality
-   stop improving, and why (recall the large-beam discussion
-   of :numref:`sec_beam-search`)?
-1. `d2l.beam_search` normalizes scores by length raised to $\alpha$. Decode with
-   $\alpha \in \{0, 0.75, 1.5\}$ and relate the lengths of the winning
+   stop improving, and why? Compare the model score of the winning
+   translation with its chrF score (:numref:`sec_beam-search`).
+1. `d2l.beam_search` normalizes scores by length raised to $\beta$ (the argument
+   `alpha`). Decode with $\beta \in \{0, 0.75, 1.5\}$ and relate the lengths of the winning
    translations to :eqref:`eq_beam-search-score`.
 1. Rerun training with the masked loss replaced by a plain cross-entropy over all
    positions, padding included. What happens to the translations, and why?
@@ -1278,8 +1278,8 @@ feed back, stop at `<eos>`):
 
 ::: {.slide title="Beam search" only="pytorch,jax"}
 The decoding toolkit plugs straight in: wrap the decoder in a `step_fn` (source
-fixed, target prefix varies), then `d2l.beam_search`. Greedy is beam size 1;
-score it vs $k = 2, 5$ with chrF:
+fixed, target prefix varies), then `d2l.beam_search`. Greedy is beam width 1;
+score it vs $w = 2, 5$ with chrF:
 
 @seq2seq-step-fn
 

@@ -874,8 +874,11 @@ class TimeMachine(d2l.DataModule):
             corpus, self.vocab = self.tokenizer.encode(raw_text), self.tokenizer
         else:  # 'char': the character-level pipeline
             corpus, self.vocab = self.build(raw_text)
-        array = d2l.tensor([corpus[i:i+num_steps+1]
-                            for i in range(len(corpus)-num_steps)])
+        windows = [corpus[i:i+num_steps+1] for i in range(len(corpus)-num_steps)]
+        # Drop the windows that straddle the split, so that no validation token
+        # is a training target
+        windows = windows[:num_train] + windows[num_train+num_steps:]
+        array = d2l.tensor(windows)
         self.X, self.Y = array[:,:-1], array[:,1:]
 
     def get_dataloader(self, train):
@@ -928,7 +931,9 @@ class BPETokenizer:
             self.pattern, text)
 
     def _merge(self, ids, pair, new_id):
-        """Replace every occurrence of pair in ids by new_id."""
+        """Replace every occurrence of pair in ids by new_id.
+
+        Defined in :numref:`sec_text-sequence`"""
         out, i = [], 0
         while i < len(ids):
             try:  # list.index scans for the next candidate at C speed
@@ -947,7 +952,9 @@ class BPETokenizer:
         return out
 
     def train(self, text):
-        """Learn vocab_size - 256 merges, most frequent pair first."""
+        """Learn vocab_size - 256 merges, most frequent pair first.
+
+        Defined in :numref:`sec_text-sequence`"""
         chunk_freq = collections.Counter(self._chunks(text))
         seqs = [list(chunk.encode('utf-8')) for chunk in chunk_freq]
         for new_id in range(256, self.vocab_size):
@@ -1038,7 +1045,7 @@ class Vocab:
     """Vocabulary for text.
 
     Defined in :numref:`sec_text-sequence`"""
-    def __init__(self, tokens=[], min_freq=0, reserved_tokens=[]):
+    def __init__(self, tokens=(), min_freq=0, reserved_tokens=()):
         # Flatten a 2D list if needed
         if tokens and isinstance(tokens[0], list):
             tokens = [token for line in tokens for token in line]
@@ -1048,7 +1055,7 @@ class Vocab:
                                   reverse=True)
         # The list of unique tokens, ordered by descending frequency.
         # Reserve <unk> at index 0 so vocab[0] is the unknown token.
-        self.idx_to_token = ['<unk>'] + reserved_tokens + [
+        self.idx_to_token = ['<unk>'] + list(reserved_tokens) + [
             token for token, freq in self.token_freqs
             if freq >= min_freq and token not in reserved_tokens]
         self.token_to_idx = {token: idx
@@ -1063,20 +1070,46 @@ class Vocab:
         return [self.__getitem__(token) for token in tokens]
 
     def to_tokens(self, indices):
-        if hasattr(indices, '__len__') and len(indices) > 1:
+        if isinstance(indices, (list, tuple)) or getattr(indices, 'ndim', 0):
             return [self.idx_to_token[int(index)] for index in indices]
-        return self.idx_to_token[indices]
+        return self.idx_to_token[int(indices)]
 
     @property
     def unk(self):  # Index for the unknown token
         return self.token_to_idx['<unk>']
+
+def kneser_ney(train, tokens, vocab_size, n=3):
+    """Interpolated Kneser-Ney log-probabilities (nats) of each of tokens.
+
+    Defined in :numref:`sec_language-model`"""
+    counts = {n: collections.Counter(zip(*(train[i:] for i in range(n))))}
+    for k in range(n - 1, 0, -1):  # Lower orders: continuation counts
+        counts[k] = collections.Counter(g[1:] for g in counts[k + 1])
+    stats = {}
+    for k, c in counts.items():
+        c1, c2 = (sum(x == r for x in c.values()) for r in (1, 2))
+        N, S = collections.Counter(), collections.Counter()
+        for g, x in c.items():
+            N[g[:-1]] += x
+            S[g[:-1]] += 1
+        stats[k] = c, N, S, c1 / max(c1 + 2 * c2, 1)
+    logp = []
+    for i in range(len(tokens)):
+        p = 1 / vocab_size  # Below the unigram: uniform
+        for k in range(1, min(n, i + 1) + 1):
+            c, N, S, D = stats[k]
+            g = tuple(tokens[i - k + 1:i + 1])
+            if N[g[:-1]]:  # An unseen context passes p down unchanged
+                p = (max(c[g] - D, 0) + D * S[g[:-1]] * p) / N[g[:-1]]
+        logp.append(math.log(p))
+    return logp
 
 class RNNScratch(nnx.Module):
     """The RNN model implemented from scratch.
 
     Defined in :numref:`sec_rnn-scratch`"""
     def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
         self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
         self.sigma = sigma
         self.W_xh = nnx.Param(
@@ -1113,52 +1146,54 @@ class RNNLMScratch(d2l.Classifier):
     """The RNN-based language model implemented from scratch.
 
     Defined in :numref:`sec_rnn-scratch`"""
-    def __init__(self, rnn, vocab_size, lr=0.01, rngs=None):
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0,
+                 rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['rnn', 'rngs'])
         self.rnn = rnn
-        rngs = nnx.Rngs(1) if rngs is None else rngs
-        self.W_e = nnx.Param(
-            rngs.params.normal((vocab_size, rnn.num_inputs)))
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.E = nnx.Param(rngs.params.normal((vocab_size, rnn.num_inputs)))
         self.W_hq = nnx.Param(rngs.params.normal(
-            (rnn.num_hiddens, vocab_size)) * rnn.sigma)
+            (rnn.num_hiddens, vocab_size)) * sigma)
         self.b_q = nnx.Param(jnp.zeros(vocab_size))
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+        self.emb_drop = nnx.Dropout(emb_dropout, rngs=rngs)
 
     def validation_step(self, batch):
         return self.loss(self(*batch[:-1]), batch[-1])
 
     def embedding(self, X):
         # Output shape: (num_steps, batch_size, num_inputs)
-        return self.W_e[X.T]
+        return self.E[X.T]
 
     def output_layer(self, rnn_outputs):
-        outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
-        return d2l.stack(outputs, 1)
+        # A list of per-step states, or a tensor whose first axis is time
+        H = d2l.stack(list(rnn_outputs), 1)  # (batch_size, num_steps, num_hiddens)
+        return d2l.matmul(H, self.W_hq) + self.b_q
 
     def forward(self, X, state=None):
-        embs = self.embedding(X)
+        embs = self.emb_drop(self.embedding(X))
         rnn_outputs, _ = self.rnn(embs, state)
-        return self.output_layer(rnn_outputs)
+        H = d2l.stack(list(rnn_outputs), 0)  # (num_steps, batch_size, num_hiddens)
+        return self.output_layer(self.drop(H))
 
-    def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0,
-                rng=None):
+    def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
         model = nnx.view(self, deterministic=True, use_running_average=True,
                          raise_if_not_found=False)
         outputs, state = tok.encode(prefix), None
         for i in range(len(outputs) - 1):  # Warm up on the prefix
             X = d2l.tensor([[outputs[i]]])
             _, state = model.rnn(model.embedding(X), state)
-        rng = random.Random() if rng is None else rng
         for _ in range(num_tokens):  # Generate num_tokens continuation tokens
             X = d2l.tensor([[outputs[-1]]])
             rnn_outputs, state = model.rnn(model.embedding(X), state)
-            logits = d2l.numpy(model.output_layer(rnn_outputs))[0, 0]
-            if temperature == 0:
-                outputs.append(int(logits.argmax()))
-            else:
-                weights = [math.exp(l) for l in
-                           (logits - logits.max()) / temperature]
-                outputs.append(rng.choices(range(len(weights)), weights)[0])
+            logits = model.output_layer(rnn_outputs)[0, 0]
+            if temperature == 0:  # Greedy: the highest-scoring token
+                token = logits.argmax()
+            else:  # Sample from the softmax of logits / temperature
+                token = jax.random.categorical(d2l.get_key(), logits / temperature)
+            outputs.append(int(token))
         return tok.decode(outputs)
 
 def clip_gradients(grad_clip_val, grads):
@@ -1175,12 +1210,15 @@ class RNN(nnx.Module):
     """The RNN model implemented with high-level APIs.
 
     Defined in :numref:`sec_rnn-concise`"""
-    def __init__(self, num_inputs, num_hiddens, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
         self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.rnn = nnx.RNN(
-            nnx.SimpleCell(num_inputs, num_hiddens, rngs=rngs),
-            time_major=True, return_carry=True, rngs=rngs)
+        self.sigma = sigma
+        normal = nnx.initializers.normal(sigma)
+        cell = nnx.SimpleCell(num_inputs, num_hiddens, kernel_init=normal,
+                              recurrent_kernel_init=normal, rngs=rngs)
+        self.rnn = nnx.RNN(cell, time_major=True, return_carry=True,
+                           rngs=rngs)
 
     def __call__(self, inputs, H=None):
         H, outputs = self.rnn(inputs, initial_carry=H)
@@ -1190,15 +1228,21 @@ class RNNLM(d2l.RNNLMScratch):
     """The RNN-based language model implemented with high-level APIs.
 
     Defined in :numref:`sec_rnn-concise`"""
-    def __init__(self, rnn, vocab_size, lr=0.01, rngs=None):
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0,
+                 rngs=None):
         d2l.Classifier.__init__(self)
         self.save_hyperparameters(ignore=['rnn', 'rngs'])
         self.rnn = rnn
-        rngs = nnx.Rngs(2) if rngs is None else rngs
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
         self.emb = nnx.Embed(vocab_size, rnn.num_inputs,
                              embedding_init=nnx.initializers.normal(1.0),
                              rngs=rngs)
-        self.linear = nnx.Linear(rnn.num_hiddens, vocab_size, rngs=rngs)
+        self.linear = nnx.Linear(
+            rnn.num_hiddens, vocab_size,
+            kernel_init=nnx.initializers.normal(sigma), rngs=rngs)
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+        self.emb_drop = nnx.Dropout(emb_dropout, rngs=rngs)
 
     def embedding(self, X):
         return self.emb(X.T)
@@ -1232,51 +1276,6 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
                        reverse=True)[:beam_size]
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
-
-def sample_next(logits, strategy='greedy', temperature=1.0,
-                k=None, p=None, min_p=None, rng=None):
-    """Choose the next token id from a 1-D numpy logits array.
-    strategy: 'greedy' | 'sample' (with optional top-k / top-p / min-p
-
-    Defined in :numref:`sec_beam-search`"""
-    logits = [float(l) for l in logits]
-    if strategy == 'greedy' or temperature == 0:
-        return max(range(len(logits)), key=lambda i: logits[i])
-    m = max(logits)
-    probs = [math.exp((l - m) / temperature) for l in logits]
-    total = sum(probs)
-    probs = [q / total for q in probs]
-    order = sorted(range(len(probs)), key=lambda i: -probs[i])
-    keep = len(order)
-    if k is not None:  # Top-k: the k most probable tokens
-        keep = min(keep, k)
-    if p is not None:  # Top-p: smallest head with cumulative mass >= p
-        mass, n = 0.0, 0
-        while mass < p and n < len(order):
-            mass, n = mass + probs[order[n]], n + 1
-        keep = min(keep, n)
-    if min_p is not None:  # Min-p: within a factor of the top token
-        bar = min_p * probs[order[0]]
-        keep = min(keep, sum(q >= bar for q in probs))
-    kept = order[:keep]
-    rng = random if rng is None else rng
-    r = rng.random() * sum(probs[i] for i in kept)
-    for i in kept:
-        r -= probs[i]
-        if r <= 0:
-            return i
-    return kept[-1]
-
-def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
-    """Autoregressive generation. step_fn(ids: list[int]) -> numpy logits
-
-    Defined in :numref:`sec_beam-search`"""
-    ids = list(prefix)
-    for _ in range(num_tokens):
-        ids.append(sample_next(step_fn(ids), **strategy))
-        if eos_id is not None and ids[-1] == eos_id:
-            break
-    return ids
 
 def train_2d(trainer, steps=20, f_grad=None):
     """Optimize a 2D objective function with a customized trainer.

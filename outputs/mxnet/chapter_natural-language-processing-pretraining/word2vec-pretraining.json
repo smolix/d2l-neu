@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b8b69f90ca9d76e063aba36f4010970e140cb2e917d9ce966bce64bf85a9f0fd",
+    "d2l_lib_fingerprint": "sha256:bc67206ff8cfb255dcad277c31c179ec8d1fef992e42dfea24283f338e19c045",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[-0.06639533, -0.01287765,  0.00532482, -0.02542389],\n        [ 0.06494678,  0.00024079,  0.03634312, -0.02769705],\n        [-0.00825508,  0.04080474,  0.00803983,  0.05466178]],\n\n       [[-0.04013707,  0.00449167, -0.02185843, -0.01618076],\n        [ 0.01836278, -0.00513641,  0.01181911, -0.04641785],\n        [-0.02488808,  0.05890778, -0.04873683, -0.00564661]]])"
+          "text": "array([[[ 0.02053529,  0.0584277 ,  0.01182523, -0.06207497],\n        [ 0.05720233, -0.05868407, -0.03408384, -0.01137782],\n        [-0.03842883, -0.03942104,  0.03683525, -0.01918995]],\n\n       [[ 0.03504028,  0.03916818, -0.0441614 ,  0.05571569],\n        [ 0.03270492, -0.05132381, -0.04446461, -0.05278376],\n        [ 0.03923967, -0.0682333 ,  0.00580961, -0.05220646]]])"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.408, 43472.1 tokens/sec on gpu(0)\n"
+          "text": "loss 0.408, 42013.6 tokens/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 18527,
-          "sha256": "sha256:fd1e4c11dd798d2c5377f1125e143b466c352e367f58fbfe78f582b5f7ef9d95"
+          "bytes": 18537,
+          "sha256": "sha256:2e6f0af19d85cf820f0c643268bd3ebea4fbf62d7674354170961df7eef8d0e1"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.643: microprocessor\ncosine sim=0.594: chips\ncosine sim=0.578: intel\n"
+          "text": "cosine sim=0.646: microprocessor\ncosine sim=0.633: intel\ncosine sim=0.613: computer\n"
         }
       ]
     }

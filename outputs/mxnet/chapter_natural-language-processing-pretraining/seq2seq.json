@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:75037e2b46da55e482a902511a7acaa79d801d8629214cce03096efa2f7ecfc0",
+    "d2l_lib_fingerprint": "sha256:be41df75485c3293c2acdc98a92aedad54073ca8f2d0ae3e4c1d180ac663312a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 427  306  328  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105 1891  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2134  558  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  664   45  416  587  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  106   39  279 2350  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 2333   45  324  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [5 4 4]\nshared vocabulary size: 4003\n"
+          "text": "source: [[3074  399  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297 1008  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 454  560  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  108 1168   45  324  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  106   39  279  485  274  366  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  781  787  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 4]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:724fa5dec4c48386c4752e7a4639a999e9d782ddcd49b31faabfbb4ed1922b4d"
+          "sha256": "sha256:31f32b607c0ecf5807c86b368ac9485c7cda4ac273bbe1289469648de7126184"
         }
       ]
     },
@@ -110,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 27213,
-          "sha256": "sha256:1ae8fdc43ea746b53e9c4ce1bfccd32be5df0fce256fb73a076bfcac348e1248"
+          "bytes": 27220,
+          "sha256": "sha256:39c1672222ac6dfbe85cd397ee62c6c75bd1431b3232d4f25d65278f0847b4c2"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai gagné .\"\ni'm calm . => 'je suis en avance .'\ni'm home . => 'je suis enpu .'\n"
+          "text": "i lost . => 'je me suis amus debout .'\ni'm calm . => 'je suis en la tête .'\ni'm home . => 'je suis en la tête .'\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai gagné .\", chrF 0.204\ni'm calm . => 'je suis en avance .', chrF 0.394\ni'm home . => 'je suis enpu .', chrF 0.329\n"
+          "text": "i lost . => 'je me suis amus debout .', chrF 0.099\ni'm calm . => 'je suis en la tête .', chrF 0.394\ni'm home . => 'je suis en la tête .', chrF 0.307\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 26793,
-          "sha256": "sha256:fd7c2bd5084626a903b136b4069bc2e130e89bb6379a82693c1f4b957f91890e"
+          "bytes": 26139,
+          "sha256": "sha256:9f06f7d93544bead0b6fb8cab7933babdc6920269cc6c3daf3fcd63de39f4b8d"
         }
       ]
     }

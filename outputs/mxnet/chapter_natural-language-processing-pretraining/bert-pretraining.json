@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:3d608eb18ced7c1ef7093fe2ef40fadf041f8aff22dea9afc1f3219da9a3c525",
+    "d2l_lib_fingerprint": "sha256:a144cf40427f854461cbf6703de61777b79c8a299ee85fcb2b3b9b2eb4d52e2b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.630, NSP loss 0.723\n3661.0 sentence pairs/sec on [gpu(0)]\n"
+          "text": "MLM loss 9.646, NSP loss 0.722\n2430.8 sentence pairs/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21501,
-          "sha256": "sha256:c6190caf04bc103f8d5fa259abf176e0bf1e6e28b5660c2315dac3925c4219c7"
+          "bytes": 21485,
+          "sha256": "sha256:b854c76d40af0d131d13e1d780e046cb7045056fef4130491999ac43c0a66786"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n array([ 0.4136677 , -0.01458829, -1.2026805 ], device=gpu(0)))"
+          "text": "((1, 6, 128),\n (1, 128),\n array([ 1.9006537 ,  0.8255379 , -0.25709984], device=gpu(0)))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n array([ 0.9550441 , -0.20248769, -1.584752  ], device=gpu(0)))"
+          "text": "((1, 10, 128),\n (1, 128),\n array([ 1.6834323 ,  0.6855464 , -0.37716052], device=gpu(0)))"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:58d5ebf727cd5010935b5c36c016f47c8f1fc67029ba46ce879335261d5d2c60",
+    "d2l_lib_fingerprint": "sha256:1d2e3a22d32dda4054295d2d09bbeb5cc680581d9873aedd972298e762e7ca54",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  0.  8. 10. 12.  0.]\n [16.  0. 20. 22.  0.  0. 28.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  6.  8. 10. 12. 14.]\n [16. 18.  0. 22.  0. 26.  0.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 36837,
-          "sha256": "sha256:08978caa800b14cfa942c3218707922e58ab1758aaf9345db464f1e66735b126"
+          "bytes": 35851,
+          "sha256": "sha256:4ac86338120511f98e347e6a26336f1ca62d8e74e07b1912b5e5c472ce1900e3"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35249,
-          "sha256": "sha256:a89cf340b68dd0e76b1995da25f6e6d0466f5558548ca9b6d7aae443cce13dd9"
+          "bytes": 35848,
+          "sha256": "sha256:e1b66658aa269e4b787735a62b92fe6dfa059bc67649db5d73aaf341c8e2f1cf"
         }
       ]
     },
@@ -73,8 +73,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35709,
-          "sha256": "sha256:873751a9fd403d5d6d010f183aae85ff19b164201f3afdc569ef03fb523406a6"
+          "bytes": 35250,
+          "sha256": "sha256:740849915c006008e668b18289212e650d8fb677cd9be3752cc7433c3f9b8524"
         }
       ]
     },
@@ -90,12 +90,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.874, with masks 0.862\n"
+          "text": "trained with dropout: validation accuracy 0.863, with masks 0.855\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.839, with masks 0.756\n"
+          "text": "trained without dropout: validation accuracy 0.871, with masks 0.768\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:61edb1e144621f691239d87d55aa6c87d08b561814a114acfe874f57367fedfa",
+    "d2l_lib_fingerprint": "sha256:b75583d998c9f423ca5e9a1adc317967a742d06cea45b461832ec4952fc972a9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.482, train acc 0.808, test acc 0.789\n2530.6 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.479, train acc 0.810, test acc 0.787\n2581.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
-          "bytes": 25142,
-          "sha256": "sha256:6e1af841f552f16cb3026dae49aa3c84b207488b5bdad61504b1ee8be4e87ce2"
+          "bytes": 25140,
+          "sha256": "sha256:acd8babce60af3ed4726fb7b885775f867f367715a692dd5681edc905b9db327"
         }
       ]
     }

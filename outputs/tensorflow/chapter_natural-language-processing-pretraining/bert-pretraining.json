@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a9af6ebffeedefa20e70e9f690dc420fb90f5cf181026fac4cce1a665a178ae7",
+    "d2l_lib_fingerprint": "sha256:2bcaf5590cd3b48e055782904e438e3d8d2fb40fef9ae79fbf7aefd16ee64e57",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.636, NSP loss 0.719\n1019.8 sentence pairs/sec on 1 devices\n"
+          "text": "MLM loss 9.641, NSP loss 0.728\n1003.3 sentence pairs/sec on 1 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
           "bytes": 21498,
-          "sha256": "sha256:56ac67a9c5ce1c5ea9a5c4d3e85933441ae685bd3ff57d8961879f15174ca665"
+          "sha256": "sha256:0062d1caf99bfaa8650ca5e28524f82ee3b76e0e3f6dce83e82d637796f7e715"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([0.1696797, 1.8718587, 0.4234577], dtype=float32))"
+          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([-0.3473855, -0.6398296, -2.89722  ], dtype=float32))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([0.3656215 , 1.9598686 , 0.49475852], dtype=float32))"
+          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([ 0.00581306, -0.4455838 , -2.6847928 ], dtype=float32))"
         }
       ]
     }

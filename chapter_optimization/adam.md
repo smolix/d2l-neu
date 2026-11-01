@@ -584,14 +584,17 @@ def _lm_train_step(model, optimizer, X, Y):
 
 def train_lm(model, data, optimizer, num_steps):  #@save
     """Train a model on next-token prediction for a fixed number of steps."""
-    losses, step = [], 0
+    losses, pending, step = [], [], 0
     while step < num_steps:
         for X, Y in data.train_dataloader():
-            losses.append(_lm_train_step(model, optimizer, jnp.asarray(X),
-                                         jnp.asarray(Y)))
+            pending.append(_lm_train_step(model, optimizer, jnp.asarray(X),
+                                          jnp.asarray(Y)))
             step += 1
+            if len(pending) == 50 or step >= num_steps:  # Sync now and then
+                losses.extend(float(l) for l in jax.device_get(pending))
+                pending = []
             if step >= num_steps:
-                return [float(l) for l in jax.device_get(losses)]
+                return losses
 ```
 
 Three helpers read a run: the final loss, averaged over the last hundred

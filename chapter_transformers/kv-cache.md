@@ -592,12 +592,14 @@ At small batches the measured curves stay below the bound, by the fixed
 cost per step of the previous subsection.
 
 :begin_tab:`pytorch`
-Here the fixed cost dominates the whole range. Each decode step launches
-several hundred small kernels from Python, one or more per operation of
-every block, and launching them takes longer than reading the weights and
-all caches, even at a batch of 64. The time per step therefore hardly
-depends on the batch or the context: the measured throughput grows in
-proportion to the batch at both contexts, far below the bound.
+Here the fixed cost dominates almost the whole range. Each decode step
+launches several hundred small kernels from Python, one or more per
+operation of every block, and launching them takes longer than the GPU
+needs to run them, weight and cache reads included. The time per step
+therefore hardly depends on the batch or the context: the measured
+throughput grows in proportion to the batch, far below the bound. Only at
+64 sequences of 1,024 tokens does the GPU's work, most of it reading the
+caches, catch up with the launches.
 :numref:`sec_compilation` removes this cost by recording the kernels of a
 step once and replaying them (CUDA graphs) or by compiling the step; only
 then does the bound of :eqref:`eq_kv-cache-batch-throughput` appear in the
@@ -1485,8 +1487,8 @@ decode loop follows the bound: at $n = 1024$ little gain beyond $b = 16$.
 Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
 
 - Eager PyTorch launches several hundred kernels per decode step; that
-  takes longer than the memory traffic, even at $b = 64$.
-- So throughput grows $\propto b$ at both contexts; CUDA graphs or
+  takes longer than the GPU's work, except at $b = 64$, $n = 1024$.
+- So throughput grows $\propto b$ almost throughout; CUDA graphs or
   compilation (:numref:`sec_compilation`) expose the bound.
 :::
 

@@ -284,17 +284,26 @@ stretches a trained model to longer contexts.
 %%tab pytorch
 def rope(x, offset=0, base=10000.0, scale=None):  #@save
     """Rotate feature pairs of x (..., num_steps, d) by position angles."""
-    d = x.shape[-1]
-    pos = torch.arange(x.shape[-2], dtype=torch.float32,
-                       device=x.device) + offset
-    omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
-    if scale is not None:  # One angle factor per pair, shape (d/2,)
-        omega = omega * scale
-    theta = pos[:, None] * omega[None, :]
-    cos, sin = torch.cos(theta), torch.sin(theta)
+    n, d = x.shape[-2:]
+    key = (n, d, offset, base, x.device)
+    reuse = scale is None and not torch.is_grad_enabled()
+    if reuse and key in rope_cache:  # Same angles as the previous call
+        cos, sin = rope_cache[key]
+    else:
+        pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
+        omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
+        if scale is not None:  # One angle factor per pair, shape (d/2,)
+            omega = omega * scale
+        theta = pos[:, None] * omega[None, :]
+        cos, sin = torch.cos(theta), torch.sin(theta)
+        if reuse:  # Keep only the newest tables
+            rope_cache.clear()
+            rope_cache[key] = cos, sin
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return torch.stack([x1 * cos - x2 * sin,
                         x1 * sin + x2 * cos], -1).flatten(-2)
+
+rope_cache = {}  #@save
 ```
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
@@ -312,6 +321,19 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
     return jnp.stack([x1 * cos - x2 * sin,
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
+
+:begin_tab:`pytorch`
+The cosines and sines depend on the length, the width, the offset, and
+`base`, but not on the entries of `x`. A model calls `rope` for the queries
+and the keys of every block with the same arguments. When it generates
+text, one token at a time and without gradients, building the tables takes
+about as many small kernel launches as the rotation itself, at every block of
+every step. `rope` therefore keeps the tables of its latest call in
+`rope_cache` and reuses them as long as no gradients are recorded. During
+training it builds them afresh: tables made under `torch.inference_mode`
+cannot enter a backward pass. A `scale` is never cached, since a model may
+change it in place, as :numref:`subsec_pos-context-extension` does.
+:end_tab:
 
 To check :eqref:`eq_rope-goal` numerically, we shift all positions jointly;
 the full RoPE score matrix should not change. For contrast, we run the
@@ -1140,10 +1162,41 @@ $\theta = \omega_m$ per position: the angle between the two vectors, and
 the score, stay the same.
 :::
 
-::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles"}
+::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="pytorch"}
 [Rotary embeddings]{.kicker}
 
-@positional-information-rotary-position-embeddings-1
+~~~python
+def rope(x, offset=0, base=10000.0):
+    n, d = x.shape[-2:]
+    pos = torch.arange(n, dtype=torch.float32) + offset
+    omega = base ** (-torch.arange(0, d, 2) / d)
+    theta = pos[:, None] * omega[None, :]      # (n, d/2) angles
+    cos, sin = torch.cos(theta), torch.sin(theta)
+    x1, x2 = x[..., 0::2], x[..., 1::2]       # even/odd pairs
+    return torch.stack([x1 * cos - x2 * sin,
+                        x1 * sin + x2 * cos], -1).flatten(-2)
+~~~
+
+`d2l.rope` adds per-pair `scale` factors and, during generation, reuses
+the tables of its previous call.
+:::
+
+::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="jax"}
+[Rotary embeddings]{.kicker}
+
+~~~python
+def rope(x, offset=0, base=10000.0):
+    n, d = x.shape[-2:]
+    pos = jnp.arange(n, dtype=jnp.float32) + offset
+    omega = base ** (-jnp.arange(0, d, 2) / d)
+    theta = pos[:, None] * omega[None, :]      # (n, d/2) angles
+    cos, sin = jnp.cos(theta), jnp.sin(theta)
+    x1, x2 = x[..., 0::2], x[..., 1::2]       # even/odd pairs
+    return jnp.stack([x1 * cos - x2 * sin,
+                      x1 * sin + x2 * cos], -1).reshape(x.shape)
+~~~
+
+`d2l.rope` adds per-pair `scale` factors for context extension.
 :::
 
 ::: {.slide title="Shifting All Positions Leaves RoPE Scores Unchanged"}

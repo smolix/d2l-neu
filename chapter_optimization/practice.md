@@ -224,9 +224,8 @@ for clip in (False, True):
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = torch.stack(optimizer.norms)
 fired = torch.nonzero(norms > 1).flatten()  # Steps on which clipping acted
-print(f'clipping changed the update on {len(fired)} of {len(norms)} steps, '
-      f'the last at step {int(fired.max())}; '
-      f'median gradient norm {norms.median():.2f}')
+print(f'clipped {len(fired)} of {len(norms)} steps, the last at step '
+      f'{int(fired.max())}; median gradient norm {norms.median():.2f}')
 ```
 
 ```{.python .input #practice-a-nan-averted-2}
@@ -244,9 +243,9 @@ for clip in (False, True):
     print(f'{label}: final loss {sum(curves[label][-100:]) / 100:.3f}')
 norms = optimizer.opt_state[0]['norms'][...]
 fired = jnp.nonzero(norms > 1)[0]  # Steps on which clipping acted
-print(f'clipping changed the update on {len(fired)} of {len(norms)} steps, '
-      f'the last at step {int(fired.max())}; '
-      f'median gradient norm {float(jnp.median(norms)):.2f}')
+print(f'clipped {len(fired)} of {len(norms)} steps, the last at step '
+      f'{int(fired.max())}; median gradient norm '
+      f'{float(jnp.median(norms)):.2f}')
 ```
 
 The unclipped run ends with a loss of `nan`, "not a number", the value that
@@ -271,8 +270,8 @@ times smaller.
 
 The printed counts show how little clipping did to achieve this, and when
 it did it. The median gradient norm of the clipped run is about a quarter
-of the threshold, and clipping changed the update on fewer than two dozen
-of the 2,000 steps, nearly all of them among the first twenty. These are
+of the threshold, and clipping changed the update on fewer than thirty
+of the 2,000 steps, all of them within the first forty. These are
 the steps on which the freshly initialized network has its largest
 gradients. Once they are past, the clipped run trains at $\eta = 1$ with
 clipping idle for the rest of the 2,000 steps. Here clipping did the job of
@@ -959,7 +958,7 @@ $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \m
 
 @!practice-a-nan-averted-2
 
-- Fewer than two dozen firings, nearly all in the first 20 steps, where
+- Fewer than 30 firings, all within the first 40 steps, where
   the fresh initialization has its largest gradients: an **automatic
   warmup**.
 - Afterwards a **guard**, idle at $\eta = 1$; in long runs it also

@@ -9,8 +9,8 @@ run (:numref:`sec_sgd`). Halving the rate halves the squared radius of
 that cloud, but it also halves the speed at which the iterates approach
 it. The start of training has the opposite problem. The convolutional
 network of this section trains at a learning rate of 7.5 if the rate is
-raised to that value gradually, while a run that starts at 7.5 never
-leaves chance accuracy.
+raised to that value gradually, while a run that starts at 7.5 stays
+close to chance accuracy.
 
 A learning-rate *schedule* addresses both problems. It is a function that
 gives the learning rate $\eta_t$ at each point $t$ of training, and it can
@@ -159,9 +159,10 @@ d2l.plot(np.arange(1, 3001), list(dists.values()), 'step',
 The three decaying schedules start at the larger rate $0.4$ and approach
 the minimum faster than the constant rate $0.1$. While the iterate is far
 away, every schedule makes progress; the curves part once the noise
-dominates. The constant rate stalls near a mean squared distance of
-$0.27$, the sum over both coordinates of the noise ball
-$\eta\sigma^2 / (\lambda(2 - \eta\lambda))$ of :numref:`sec_sgd`.
+dominates. The constant rate stalls at the noise ball
+$\eta\sigma^2 / (\lambda(2 - \eta\lambda))$ of :numref:`sec_sgd`: summed
+over both coordinates it predicts a mean squared distance of $0.27$, and
+the 1,000 runs land within a few hundredths of it.
 Exponential decay does better for a while, then freezes at about $0.13$.
 Its budget, $0.4/(1 - 0.98) = 20$, is enough to cover the starting
 distance, but its rate falls by 2% per step, faster than the iterate can
@@ -475,13 +476,14 @@ both.
 The test accuracies sort the schedules by their final rate. The three that
 end at a rate of about 0.01 or below, exponential, piecewise constant, and
 cosine decay, reach a mean of about 91% over the last five epochs, within
-about half a point of each other, too close to rank them from single runs.
+about a point of each other, too close to rank them from single runs.
 The constant rate ends two to three points lower, and square-root decay,
 whose final rate is still 0.054, lies in between. The second column shows
 why. As the rate falls, the test accuracy settles to a value instead of
 jumping from epoch to epoch: for the three schedules with a small final
-rate it varies by at most a few tenths of a point over the last five
-epochs, against one to two points for the constant rate, and the
+rate its standard deviation over the last five epochs is a few tenths of
+a point at most, against roughly a point or more for the constant rate,
+and the
 checkpoint we keep at the end is as good as any of the last few. Among the
 late-decaying shapes, cosine decay became widespread because it is
 convenient. Besides the peak rate it takes only a final rate, and it has
@@ -519,11 +521,12 @@ $\eta = 7.5$, twenty-five times the baseline:
 _ = train(lambda t: 7.5, num_epochs=10)
 ```
 
-The run stays at chance accuracy. Its loss hovers near
+The run barely moves from chance. Its loss remains above 2, near
 $\log 10 \approx 2.3$, the loss of predicting all ten classes with equal
-probability, and the test accuracy stays near 10%. A loss that stays at
-$\log 10$ means that the network assigns nearly equal probabilities to the
-classes for every image: its output has stopped depending on the input.
+probability, and the test accuracy stays close to the 10% of guessing,
+far below the baseline's. A loss near $\log 10$ means that the network
+assigns nearly equal probabilities to the classes for every image: its
+output has almost stopped depending on the input.
 
 A ramp at the start avoids this failure. The function `warmup` multiplies
 a schedule by a linear ramp from 0 to 1 over its first `num_epochs`
@@ -910,7 +913,8 @@ Schedules<br>**budget and final rate · decay shapes · warmup · warmup–stabl
   Halving $\eta$ halves the squared spread and doubles the time to get
   there.
 - A LeNet with batch normalization on Fashion-MNIST: started at
-  $\eta = 7.5$ it stays at 10% accuracy; ramped up to $7.5$ it trains.
+  $\eta = 7.5$ it stays near chance accuracy; ramped up to $7.5$ it
+  trains.
 
 ::: {.d2l-note .warn}
 The learning rate has to change during training: up at the start, down at
@@ -1052,13 +1056,13 @@ budget, about the constant rate's loss. A final rate near 0.01: about 91%,
 steady from epoch to epoch.
 :::
 
-::: {.slide title="A Cold Start at η = 7.5 Never Leaves Chance"}
+::: {.slide title="A Cold Start at η = 7.5 Stays Near Chance"}
 [Warmup]{.kicker}
 
 @!lr-scheduler-warmup-1
 
-Loss near $\log 10 \approx 2.3$, accuracy near 10%: the output no longer
-depends on the input.
+Loss above 2, near $\log 10 \approx 2.3$; accuracy near chance (10%):
+the output barely depends on the input.
 :::
 
 ::: {.slide title="A Five-Epoch Ramp Trains at the Same Rate"}

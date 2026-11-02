@@ -280,10 +280,10 @@ so are their noise scales: the batches of 256 images and 64 sequences that
 train them elsewhere in this chapter lie above these values.
 
 The noise scale also changes, and quickly. After 500 steps that of the
-language model has grown by a factor of thirty or more, to between about 70
-and 120 sequences across our runs. That of the CNN has grown in most runs,
-but by very different amounts, and lies anywhere between about 70 and 1,000
-images. At initialization the full gradient is large compared with the
+language model has grown by more than an order of magnitude, to between
+about 50 and 200 sequences across our runs. That of the CNN has grown in
+most runs, but by very different amounts, and lies anywhere from several
+dozen to over a thousand images. At initialization the full gradient is large compared with the
 disagreement between examples. As training removes the easy part of the
 loss, $\|\nabla f\|^2$ shrinks, while the scatter of the per-example
 gradients shrinks more slowly. We return to this growth at the end of the
@@ -462,16 +462,25 @@ d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
 ```
 
 The first quadrupling of the batch, from 4 to 16 sequences, runs nearly
-parallel to the perfect-scaling line: it cuts the step count three- to
-nearly fourfold, and the example count grows by a third at most. After it
+parallel to the perfect-scaling line: it cuts the step count about three-
+to nearly fourfold, and the example count grows by at most about 40%. After it
 the curve bends away from the line. The last quadrupling, from 64 to 256
 sequences, cuts the step count only about in half, and the run consumes
-three to four times as many examples as the run with the smallest batch.
+three to five times as many examples as the run with the smallest batch.
 
 ### The CNN
 
 The same experiment on the CNN, with a target loss of 0.35 and batch sizes
-from 8 to 2,048 images:
+from 8 to 2,048 images. The square-root rule sets the learning rate up to
+512 images, and above that we hold it fixed. At 2,048 images the rule would
+double the rate to about 0.011, and there it fails in the way that
+:numref:`subsec_batch-size-limits` describes for the first steps of
+training: Adam's first steps overshoot, the training loss jumps above its
+starting value of $\log 10 \approx 2.3$, and in some runs the network falls
+back to uniform guessing for a few steps and trains more slowly from then
+on. Such a run can need more steps than the run at 512
+images. At the rate of $b = 512$ the first steps stay stable and the large
+batch reaches the target sooner:
 
 ```{.python .input #batch-size-the-cnn}
 %%tab pytorch
@@ -481,8 +490,8 @@ for b in cnn_bs:
     torch.manual_seed(seed)
     fashion_b = d2l.FashionMNIST(batch_size=b)
     model = d2l.FashionCNN().to(device)
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=0.004 * math.sqrt(b / 256))
+    lr = 0.004 * math.sqrt(min(b, 512) / 256)  # Held fixed above 512
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     cnn_steps.append(train_to_target(model, fashion_b, optimizer,
                                      X_f[:8192], y_f[:8192], target=0.35,
                                      max_steps=8000))
@@ -501,9 +510,8 @@ seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in cnn_bs:
     fashion_b = d2l.FashionMNIST(batch_size=b)
     model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
-    optimizer = nnx.Optimizer(model,
-                              optax.adam(0.004 * math.sqrt(b / 256)),
-                              wrt=nnx.Param)
+    lr = 0.004 * math.sqrt(min(b, 512) / 256)  # Held fixed above 512
+    optimizer = nnx.Optimizer(model, optax.adam(lr), wrt=nnx.Param)
     cnn_steps.append(train_to_target(model, fashion_b, optimizer,
                                      X_f[:8192], y_f[:8192], target=0.35,
                                      max_steps=8000))
@@ -516,12 +524,13 @@ d2l.plot(cnn_bs, [cnn_steps,
 ```
 
 The CNN shows the same pattern. The first quadrupling, from 8 to 32 images,
-stays close to the perfect-scaling line, cutting the step count three- to
-fourfold, and after it the gap widens. At the top of the range a further
-quadrupling of the batch, and with it of the work per step, reduces the step
-count by anything from nothing to about half. The example count
-there stands at six to twelve times its small-batch value.
-Extra work per step saves few or no steps and multiplies the data consumed.
+stays close to the perfect-scaling line, cutting the step count about
+three- to fourfold, and after it the gap widens. At the top of the range a
+further quadrupling of the batch, and with it of the work per step, saves
+at most about half of the steps, and the run consumes two to four times the
+examples of the run at 512 images, six to twelve times the small-batch
+value. Past this point, extra work per step saves few steps and multiplies
+the data consumed.
 
 ### The Critical Batch Size
 
@@ -552,7 +561,7 @@ for name, (S_min, b_crit) in fits.items():
 ```
 
 The fitted critical batch sizes are roughly a hundred sequences for
-`TinyLM`, between about 75 and 115 across our runs, and two to four hundred
+`TinyLM`, between about 70 and 120 across our runs, and two to four hundred
 images for the CNN, of the same order as the noise scales that each model
 reached during its first 500 steps. Closer
 agreement is more than :eqref:`eq_steps-examples` promises here: the model
@@ -769,12 +778,13 @@ large ratios of batch sizes, and a short sweep around their prediction does
 the fine tuning.
 
 ### Limits of the Rules
+:label:`subsec_batch-size-limits`
 
 The rules fail in three places. Past the noise scale, the best learning
 rate stops growing, because $\eta_{\textrm{opt}}(b)$ saturates at
-$\eta_{\max}$, and a learning rate scaled further overshoots. The flattening
-at the top of the CNN's steps-to-target sweep is consistent with this
-mechanism, and the exercises reproduce it in isolation.
+$\eta_{\max}$, and a learning rate scaled further overshoots. The CNN sweep
+held its rate fixed above 512 images for this reason, and the exercises
+reproduce the effect on `TinyLM`.
 
 At the stability ceiling, curvature caps the learning rate. Gradient descent
 on a function whose curvature is bounded by $L$ is guaranteed to descend
@@ -880,9 +890,10 @@ grow their batch during training.
        $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + b_{\textrm{noise}}/b)$.
 
 1. [code] **Retuning instead of scaling.** The CNN sweep recorded in
-   `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule rather than
-   retuning it. For each batch size, run a three-point learning-rate grid
-   spaced by factors of two around the rule's value and keep the best
+   `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule, held fixed
+   above 512 images, rather than retuning it. For each batch size, run a
+   three-point learning-rate grid spaced by factors of two around the
+   rule's value and keep the best
    steps-to-target. Which points of the curve move? Refit with `fit_steps`:
    does $b_{\textrm{crit}}$ move, and by more than the difference between
    two repetitions of the original sweep?
@@ -964,10 +975,10 @@ Batch Size<br>
 Train a Fashion-MNIST CNN to a fixed loss with Adam at several batch
 sizes $b$:
 
-- $b = 8 \to 32$: three to four times fewer steps, at most a third more
-  examples.
-- $b = 512 \to 2{,}048$: from no fewer steps to about half as many, so 2× to
-  4× the examples.
+- $b = 8 \to 32$: about three to four times fewer steps, at most about 40%
+  more examples.
+- $b = 512 \to 2{,}048$: at most about half the steps saved, for 2× to 4×
+  the examples.
 
 A bigger batch means more work per step. It saves steps only while
 gradient noise was what slowed the optimizer.
@@ -1101,7 +1112,8 @@ The bend at $b = b_{\textrm{noise}}$ is the **critical batch size**.
 ::: {.slide title="Protocol: One Target, One Seed per Sweep, Rescaled Adam"}
 - Target: a fixed loss on a fixed evaluation subset, checked every 10
   steps (minibatch losses would let noisy small-batch runs cross early).
-- Adam, $\eta$ tuned at an anchor $b_0$, moved by $\eta_0\sqrt{b/b_0}$.
+- Adam, $\eta$ tuned at an anchor $b_0$, moved by $\eta_0\sqrt{b/b_0}$;
+  for the CNN held fixed above 512 images, where it would overshoot.
 - One random seed per sweep: every batch size starts from the same
   initialization.
 - `TinyLM`: held-out target loss 1.9 nats per byte (perplexity 6.7),
@@ -1112,14 +1124,14 @@ The bend at $b = b_{\textrm{noise}}$ is the **critical batch size**.
 ::: {.slide title="TinyLM Saves Steps Nearly Perfectly at Small Batches, Then Bends"}
 @!batch-size-the-language-model
 
-From 4 to 16 sequences the steps fall three- to fourfold. From 64 to 256
+From 4 to 16 sequences the steps fall about three- to fourfold. From 64 to 256
 they only about halve, so the examples about double.
 :::
 
 ::: {.slide title="The CNN Stops Gaining Steps Above a Few Hundred Images"}
 @!batch-size-the-cnn
 
-At 2,048 images, 4× the batch saves between none and half of the steps;
+At 2,048 images, 4× the batch saves at most about half of the steps;
 examples six to twelve times their minimum.
 :::
 
@@ -1236,7 +1248,7 @@ may lie past the noise scale; warmup protects the first steps.
 - **Noise scale** $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}
   / \|\nabla f\|^2$, from gradient norms at two batch sizes: about a hundred
   images (CNN) and about two sequences (`TinyLM`) at initialization,
-  growing within 500 steps (`TinyLM`: thirtyfold or more).
+  growing within 500 steps (`TinyLM`: more than tenfold).
 - **Steps to a target:** perfect scaling below the critical batch size, a
   floor above; both models fit one hyperbola, $b_{\textrm{crit}}$ roughly
   a hundred sequences (`TinyLM`) and two to four hundred images (CNN).

@@ -750,9 +750,8 @@ d2l.plot([list(range(0, 2000, 25))] * 2 + [list(range(250, 2001, 250))] * 2,
          figsize=(5, 3.5))
 for name, lr, vals in [('AdamW', best_adamw, adamw_val[best_adamw]),
                        ('Muon+AdamW', best_muon, muon_val[best_muon])]:
-    print(f'{name:<10} lr {lr:g}: validation loss {vals[1]:.3f} at step 500, '
-          f'{vals[-1]:.3f} at step 2000 ({vals[-1] / math.log(2):.2f} bits '
-          f'per byte)')
+    print(f'{name:<10} lr {lr:g}: validation {vals[1]:.3f} at step 500, '
+          f'{vals[-1]:.3f} at 2000 ({vals[-1] / math.log(2):.2f} bits)')
 ```
 
 Both optimizers have their best rate inside the grid, so the comparison is
@@ -763,9 +762,10 @@ nothing to memorize. The tuned hybrid's validation loss is lower at every
 checkpoint. At step 500 it is about 1.7 nats per byte against about 1.9
 for AdamW. The hybrid reaches 1.6 after 1,000 to 1,250 steps, AdamW after
 1,500 to 2,000, and the hybrid matches AdamW's final validation loss after
-1,250 to 1,500 of the 2,000 steps. At step 2,000 the hybrid is at 1.52 to
-1.53 nats per byte (2.20 to 2.21 bits per byte) and AdamW at 1.56 to 1.58
-(2.25 to 2.27 bits per byte). The gap narrows as training continues but
+1,250 to 1,500 of the 2,000 steps. At step 2,000 the hybrid is a few
+hundredths of a nat ahead, at about 1.52 to 1.55 nats per byte (about 2.2
+bits per byte) against about 1.56 to 1.58 for AdamW (about 2.26 bits per
+byte). The gap narrows as training continues but
 does not close, and the hybrid needs only 58% of AdamW's optimizer state.
 
 A model of 0.47 million parameters demonstrates the mechanism but cannot
@@ -884,7 +884,7 @@ print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
 The two metrics disagree. On training loss the hybrid descends faster and
 ends several times lower: orthogonalized updates drive this small CNN into
 memorizing its training set much sooner. On test accuracy, the metric we
-would deploy on, the two land within half a point of each other. Optimizing
+would deploy on, the two land within a point of each other. Optimizing
 faster and predicting better are different claims, and on a small task that
 saturates quickly the second changes little. Which of the two optimizers is
 better on this CNN depends on which of the two numbers we report.
@@ -946,7 +946,7 @@ print(f'validation loss {val_loss(model, data):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
-The library version lands within about 0.005 of the scratch result, no
+The library version lands within about 0.01 of the scratch result, no
 more than the spread between runs: both compute the update
 :eqref:`eq_muon-update`.
 
@@ -1226,7 +1226,7 @@ polynomials such as Polar Express make the orthogonalization more accurate
 at the same cost, and NorMuon adds Adam's per-unit normalization at the
 level of neurons. On `TinyLM` the tuned hybrid reaches a lower validation
 loss than tuned AdamW at every checkpoint, with under 60% of the optimizer
-state, and on a CNN it optimizes faster while generalizing the same.
+state, and on a CNN it optimizes faster while generalizing about as well.
 Matched-tuning studies put Muon's gain over AdamW at tens of percent,
 shrinking with model size. All of these comparisons held the batch size
 fixed, and the next section asks how large it should be.
@@ -1601,7 +1601,8 @@ $10^{-1}$, no weight decay, scored by validation loss:
 @!muon-the-race-on-the-language-model-3
 
 - Validation loss 1.6: hybrid after 1,000–1,250 steps, AdamW 1,500–2,000.
-- Step 2,000: 1.52–1.53 against 1.56–1.58 nats per byte; the gap narrows.
+- Step 2,000: about 1.52–1.55 against 1.56–1.58 nats per byte; the gap
+  narrows.
 - Matched tuning at 0.1B–1.2B parameters: about 1.4×, shrinking to 1.1×
   (Wen et al., 2025).
 :::
@@ -1612,7 +1613,7 @@ $10^{-1}$, no weight decay, scored by validation loss:
 @!muon-the-same-race-on-a-cnn-3
 
 - Training loss: several times lower with the hybrid.
-- Test accuracy: within half a point.
+- Test accuracy: within a point.
 
 ::: {.d2l-note}
 A verdict depends on the workload and on the metric.
@@ -1685,7 +1686,7 @@ Newton–Schulz couples all rows through $\mathbf{X}\mathbf{X}^\top$:
   $\|\mathbf{G}\|_F$ in $[0.7, 1.13]$; Polar Express converges.
 - $0.2\sqrt{\max(m, n)}$ matches AdamW's RMS: one rate for the hybrid.
 - TinyLM: lower validation loss than tuned AdamW throughout, with 58% of
-  the state; CNN: same test accuracy.
+  the state; CNN: about the same test accuracy.
 - Matched tuning: gains of tens of percent, shrinking with scale.
 
 **Next:** how many examples per step, the batch size.

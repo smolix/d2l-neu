@@ -160,7 +160,7 @@ and a small CNN.
 | Landscapes, Gradient Descent | the valley; a small network at the edge of stability |
 | Stochastic and Minibatch GD | the valley with noisy gradients; linear regression on airfoil data |
 | Momentum | the valley; the airfoil regression |
-| Adam and AdamW | `TinyLM` on *The Time Machine*; `FashionCNN` on Fashion-MNIST |
+| Adam and AdamW | `TinyLM` on the bytes of WikiText-103; `FashionCNN` on Fashion-MNIST |
 | Schedules | the noisy valley; LeNet with batch normalization |
 | Muon, Batch Size | `TinyLM` and `FashionCNN` |
 | Scaling Up | MLPs on Fashion-MNIST, widths 128 to 1,024 |

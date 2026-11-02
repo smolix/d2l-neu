@@ -32,6 +32,9 @@ from d2l import torch as d2l
 import copy
 from functools import partial
 import math
+import numpy as np
+import os
+import pandas as pd
 import random
 import torch
 from torch import nn
@@ -46,7 +49,10 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
+import numpy as np
 import optax
+import os
+import pandas as pd
 import random
 ```
 
@@ -376,15 +382,114 @@ library, and the rest of this chapter trains them.
 
 ### The Language Model
 
-The data is *The Time Machine*, split into characters and batched as in
-:numref:`sec_text-sequence`. Each minibatch holds 64 windows of 64
-characters, and the model predicts every next character, with quality
-measured by perplexity as in :numref:`sec_language-model`.
+The data is WikiText-103 :cite:`Merity.Xiong.Bradbury.ea.2016`, about 100
+million words of Wikipedia articles kept as raw text, with case, digits, and
+punctuation. A run of 2,000 steps on minibatches of 64 windows of 64 tokens
+makes about 8 million predictions. On the 100,000 characters of *The Time
+Machine* each character would be a target about 80 times, and the model
+would memorize the text. Here the training windows start at random offsets
+in the first of the two training files, about 270 million bytes, so a run
+reads about 3% of it and rarely sees the same text twice. The tokens are the
+UTF-8 bytes of the text: the byte-level tokenizer of
+:numref:`sec_text-sequence` without any merges, a vocabulary of 256 tokens,
+so the loss converts directly to bits per byte
+(:numref:`sec_language-model`). Validation windows are consecutive,
+non-overlapping pieces of the official validation split, about 1.1 million
+bytes.
+
+```{.python .input #adam-the-language-model-1}
+%%tab pytorch
+class WikiText103(d2l.DataModule):  #@save
+    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes."""
+    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
+        super().__init__()
+        self.save_hyperparameters()
+        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
+        self.train = self._read('train-00000-of-00002',
+                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+        self.val = self._read('validation-00000-of-00001',
+                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
+        self.train, self.val = self.train[:num_train], self.val[:num_val]
+
+    def _read(self, split, sha1):
+        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+               f'main/wikitext-103-raw-v1/{split}.parquet')
+        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
+                             sha1)
+        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
+        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
+
+    def windows(self, corpus, starts):
+        """Inputs and next-byte targets of the windows at `starts`."""
+        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
+        array = torch.from_numpy(corpus[idx].astype(np.int64))
+        return array[:, :-1], array[:, 1:]
+
+    def train_dataloader(self):  # A pass of minibatches at random offsets
+        n = len(self.train) - self.num_steps
+        for _ in range(n // (self.batch_size * self.num_steps)):
+            yield self.windows(self.train,
+                               torch.randint(n, (self.batch_size,)).numpy())
+
+    def val_dataloader(self):  # Consecutive, non-overlapping windows
+        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
+        for i in range(0, len(starts), self.batch_size):
+            yield self.windows(self.val, starts[i:i + self.batch_size])
+```
+
+```{.python .input #adam-the-language-model-1}
+%%tab jax
+class WikiText103(d2l.DataModule):  #@save
+    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes."""
+    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
+        super().__init__()
+        self.save_hyperparameters()
+        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
+        self.train = self._read('train-00000-of-00002',
+                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+        self.val = self._read('validation-00000-of-00001',
+                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
+        self.train, self.val = self.train[:num_train], self.val[:num_val]
+
+    def _read(self, split, sha1):
+        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+               f'main/wikitext-103-raw-v1/{split}.parquet')
+        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
+                             sha1)
+        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
+        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
+
+    def windows(self, corpus, starts):
+        """Inputs and next-byte targets of the windows at `starts`."""
+        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
+        array = corpus[idx].astype(np.int32)
+        return array[:, :-1], array[:, 1:]
+
+    def train_dataloader(self):  # A pass of minibatches at random offsets
+        n = len(self.train) - self.num_steps
+        rng = np.random.default_rng(random.getrandbits(32))
+        for _ in range(n // (self.batch_size * self.num_steps)):
+            yield self.windows(self.train,
+                               rng.integers(n, size=self.batch_size))
+
+    def val_dataloader(self):  # Consecutive, non-overlapping windows
+        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
+        for i in range(0, len(starts), self.batch_size):
+            yield self.windows(self.val, starts[i:i + self.batch_size])
+```
+
+Both splits are held in memory as arrays of bytes, one byte per token, and
+a minibatch is gathered from them on demand. A training pass draws as many
+windows as the text holds non-overlapping ones, each at an independent
+random offset, so `train_lm` below can run for any number of steps without
+reusing a fixed set of windows.
 
 ```{.python .input #adam-a-tiny-language-model-1}
 %%tab pytorch, jax
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
+data = WikiText103(batch_size=64, num_steps=64)
+print(f'{len(data.train):,} training bytes, '
+      f'{len(data.val):,} validation bytes')
+print(data.vocab.decode(data.train[:300]))
 ```
 
 The model, `TinyLM`, is a *decoder-only transformer*, the architecture of
@@ -392,7 +497,7 @@ The model, `TinyLM`, is a *decoder-only transformer*, the architecture of
 optimizer does not need to know what attention does: it sees a
 differentiable function with parameters of several kinds, and only their
 gradients. The model has learned token and position embeddings, two blocks,
-and a linear head that predicts the next character. Each block has an
+and a linear head that predicts the next byte. Each block has an
 attention layer and a two-layer MLP, each behind a LayerNorm and each with a
 residual connection. The attention computation is a single library call.
 Every linear layer draws its weights and biases uniformly from
@@ -538,7 +643,7 @@ for kind, count in kinds.items():
 print(f'{"total":>37} {sum(kinds.values()):>7}')
 ```
 
-The model has about 0.4 million parameters, 96% of them in the matrices.
+The model has about 0.47 million parameters, 90% of them in the matrices.
 
 ### Training for a Fixed Number of Steps
 
@@ -628,7 +733,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
 losses = train_lm(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
          'step', 'training loss')
-print(f'training perplexity per character: '
+print(f'training perplexity per byte: '
       f'{math.exp(final_loss(losses)):.2f}')
 ```
 
@@ -639,14 +744,15 @@ optimizer = nnx.Optimizer(model, optax.adam(0.003), wrt=nnx.Param)
 losses = train_lm(model, data, optimizer, num_steps=2000)
 d2l.plot(list(range(0, 2000, 25)), [smooth(losses)],
          'step', 'training loss')
-print(f'training perplexity per character: '
+print(f'training perplexity per byte: '
       f'{math.exp(final_loss(losses)):.2f}')
 ```
 
-The model reaches a training perplexity per character of about 2.5, against
-28 for a uniform guess over the 28 tokens of the vocabulary (26 letters, the
-space, and a symbol for unknown characters): it has learned a good deal of
-English spelling.
+The model reaches a training perplexity per byte of about 4.9, or about
+2.3 bits per byte, against 256 for a uniform guess over the bytes: it has
+learned a good deal of English spelling, and its loss is still falling
+slowly when the run ends. Strong language models compress text like this
+to below one bit per byte (:numref:`sec_language-model`).
 
 ### The Image Classifier
 :label:`subsec_fashioncnn`
@@ -714,7 +820,7 @@ channel). As for `TinyLM`, the random stream `rngs` is required.
 With 421,642 parameters, `FashionCNN` is about the same size as
 `TinyLM`. Since `train_lm` only asks a model for logits, it trains the CNN
 unchanged; Fashion-MNIST minibatches of 256 images take the place of the
-character windows. The CNN also needs a test accuracy:
+byte windows. The CNN also needs a test accuracy:
 
 ```{.python .input #adam-the-image-classifier-1}
 %%tab pytorch
@@ -764,7 +870,9 @@ and no weight decay. Each gets a grid of four learning rates spaced by
 factors of about three, and the run with the lowest final training loss
 represents its method. Training loss is the right measure here, because
 the question is which method optimizes faster, not which one generalizes
-better. Below, "tuned" means the best of these four rates.
+better. For the language model the two would agree anyway, since a run
+rarely sees the same text twice. Below, "tuned" means the best of these
+four rates.
 
 ### Comparison on the Language Model
 
@@ -783,10 +891,10 @@ def run_lm(make_optimizer, data, lrs, seed, num_steps=2000):
         print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
     return curves
 
-seed = random.getrandbits(31)
+lm_seed = random.getrandbits(31)
 sgd_lm = run_lm(lambda model, lr: torch.optim.SGD(model.parameters(), lr,
                                                   momentum=0.9),
-                data, lrs=[0.03, 0.1, 0.3, 1.0], seed=seed)
+                data, lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
@@ -800,20 +908,21 @@ def run_lm(make_tx, data, lrs, seed, num_steps=2000):
         print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
     return curves
 
-seed = random.getrandbits(32)
+lm_seed = random.getrandbits(32)
 sgd_lm = run_lm(lambda lr: optax.sgd(lr, momentum=0.9), data,
-                lrs=[0.03, 0.1, 0.3, 1.0], seed=seed)
+                lrs=[0.03, 0.1, 0.3, 1.0], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab pytorch
 adam_lm = run_lm(lambda model, lr: torch.optim.Adam(model.parameters(), lr),
-                 data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
+                 data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=lm_seed)
 ```
 
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab jax
-adam_lm = run_lm(optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2], seed=seed)
+adam_lm = run_lm(optax.adam, data, lrs=[3e-4, 1e-3, 3e-3, 1e-2],
+                 seed=lm_seed)
 ```
 
 SGD's best learning rate sits directly below one at which training
@@ -837,13 +946,16 @@ print(f"Adam reaches SGD's final loss at step "
       f'{steps_to_reach(adam_lm[best_adam], loss_sgd)} of 2000')
 ```
 
-Tuned Adam ends about 0.15 to 0.3 nats below tuned SGD, a perplexity 15 to
-25% lower, and its curve lies below SGD's from the first hundred steps to
-the end. No learning rate in SGD's grid closes the gap: the best one is
-the last stable one. The last line of the output measures the gap in time
-rather than in loss. Adam reaches the loss on which SGD ends between about
-half and two thirds of the way through the run, so it optimizes this model
-about 1.5 to 2 times as fast.
+Tuned Adam ends about 0.05 to 0.17 nats below tuned SGD, a perplexity 5
+to 15% lower, and its curve lies below SGD's from the first hundred steps
+to the end. No learning rate in SGD's grid closes the gap: the best one is
+the last stable one. Most of the variation in the gap comes from SGD.
+Repeated with fresh random draws, tuned Adam ends within about 0.01 nats of
+the same loss every time, while tuned SGD, run just below the rate at
+which it diverges, varies by about 0.1. The last line of the output
+measures the gap in time rather than in loss. Adam reaches the loss on
+which SGD ends between about 40% and 70% of the way through the run, so it
+optimizes this model about 1.4 to 2.4 times as fast.
 
 ### Comparison on a CNN
 
@@ -929,22 +1041,21 @@ it ends well above the run at $\eta = 0.1$. On both models SGD's best rate
 is the largest one that trains reliably. And tuned Adam again reaches a
 lower training loss.
 
-How much lower depends on the measure. Both losses are cross-entropies in
-nats per prediction, so the two gaps are in the same unit, and the gap of
-0.03 to 0.06 nats on the CNN is several times smaller than the gap on the
-language model. A gap of $\Delta$ nats means that the better model
+Both losses are cross-entropies in nats per prediction, so the two gaps
+can be compared directly: 0.03 to 0.06 nats on the CNN, 0.05 to 0.17 on
+the language model. A gap of $\Delta$ nats means that the better model
 assigns, on average, $e^\Delta$ times as much probability to each correct
-answer: about $1.05$ times on the CNN, $1.2$ to $1.3$ times on the
+answer: about $1.05$ times on the CNN, $1.05$ to $1.2$ times on the
 language model.
 
-Measured in time, the question our protocol asks, the two models are much
-closer: on the CNN, Adam reaches SGD's final loss after roughly two thirds
-of the run, about 1.5 times as fast. The CNN's loss curves are flat by then, so a speedup
-of the same size is worth fewer nats. After the first hundred steps the
-two CNN curves run within about a tenth of a nat of each other, and the
-test accuracies of the two tuned runs lie within a point or two of each
-other, between 90% and 92%. On this problem SGD with momentum is a
-competitive choice, which is why it served computer vision for a decade.
+Measured in time, the question our protocol asks, the two models are
+close as well: on the CNN, Adam reaches SGD's final loss after roughly two
+thirds of the run, about 1.5 times as fast, against 1.4 to 2.4 times on
+the language model. After the first hundred steps the two CNN curves run
+within about a tenth of a nat of each other, and the test accuracies of
+the two tuned runs lie within a point or two of each other, between 90%
+and 92%. On this problem SGD with momentum is a competitive choice, which
+is why it served computer vision for a decade.
 
 ### Sources of the Gap
 
@@ -985,11 +1096,15 @@ with different roles and different gradient statistics, all sharing one
 $\eta$ under SGD.
 
 How much each finding explains for `TinyLM` is open, and the model is a
-mild case of the last two. Its characters are far less skewed than the words of a
-word-level vocabulary: even the rarest letter, *j*, appears about twice in
-an average minibatch of 4,096 predictions. And with two blocks of width 128
-it is far smaller than the transformers of these studies. The exercises
-test both explanations on this model.
+mild case of the last two. Its bytes are skewed, but the rare ones carry
+little of the loss. Every lowercase letter appears more than twice in an
+average minibatch of 4,096 predictions. About a hundred byte values, mostly
+pieces of the UTF-8 encodings of non-English characters, appear less than
+once in ten minibatches, but together they make up less than 0.1% of the
+text, whereas the rare words of a word-level vocabulary together make up a
+sizable share of it. And with two blocks of width 128 the model is far
+smaller than the transformers of these studies. The exercises test both
+explanations on this model.
 
 ### Limits of the Variance Estimate
 :label:`subsec_adam-variance-estimate`
@@ -1205,6 +1320,19 @@ d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
 
 The decoupled run trains almost as if there were no decay. The coupled run
 ends more than a nat higher, and after an early dip its loss rises again.
+To read its level, we compare it with a model that ignores the context and
+predicts every byte from its frequency in the training text. The loss of
+that model is the entropy of the byte frequencies:
+
+```{.python .input #adam-coupled-and-decoupled-decay-compared-2}
+%%tab pytorch, jax
+freq = np.bincount(data.train, minlength=256) / len(data.train)
+freq = freq[freq > 0]
+print(f'entropy of the byte frequencies: {-(freq * np.log(freq)).sum():.2f}')
+```
+
+The coupled run ends close to this value: it has lost what it learned
+about the context in its first hundred steps.
 :eqref:`eq_coupled-decay` explains the rise. As training makes progress the
 loss gradients shrink, $\sqrt{\hat{\mathbf{v}}}$ shrinks with them, and the
 penalty, divided by that small number, grows by orders of magnitude. Once
@@ -1220,9 +1348,13 @@ grid instead of one after the other. We measure the held-out loss on a
 grid of three learning rates and several values of $\lambda$ for each
 form, from $10^{-4}$ to $10^{-2}$ for the coupled form and from $0.3$ to
 $10$ for the decoupled one. In a run this short, decay helps only where
-there is overfitting to prevent, so we train on a slice of 8,000 windows
-that the model sees about six times in 800 steps. On the full corpus, 800
-steps would cover only about half of the training windows once.
+there is overfitting to prevent, and on WikiText-103 there is none: 800
+steps read about 1% of the training text. For this grid we therefore make
+the model overfit on purpose, on the kind of text that it would memorize:
+the first 8,000 windows of *The Time Machine*, split into characters as in
+:numref:`sec_text-sequence`. In 800 steps the model sees each window about
+six times, and we measure the held-out loss on the 2,000 windows that
+follow.
 
 ```{.python .input #adamw-a-grid-twice-1}
 %%tab pytorch, jax
@@ -1443,6 +1575,7 @@ the split is the one we counted for `TinyLM`.
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab pytorch
+torch.manual_seed(lm_seed)  # The initialization of the comparison's runs
 model = TinyLM(len(data.vocab))
 decay = [p for name, p in model.named_parameters()
          if p.ndim == 2 and 'emb' not in name]
@@ -1450,7 +1583,7 @@ no_decay = [p for name, p in model.named_parameters()
             if p.ndim != 2 or 'emb' in name]
 optimizer = torch.optim.AdamW([
     {'params': decay, 'weight_decay': 0.1},
-    {'params': no_decay, 'weight_decay': 0.0}], lr=0.003)
+    {'params': no_decay, 'weight_decay': 0.0}], lr=best_adam)
 n_decay = sum(p.numel() for p in decay)
 n = n_decay + sum(p.numel() for p in no_decay)
 print(f'decayed: {n_decay} of {n} parameters')
@@ -1458,14 +1591,14 @@ print(f'decayed: {n_decay} of {n} parameters')
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab jax
-model = TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
+model = TinyLM(len(data.vocab), rngs=nnx.Rngs(lm_seed))  # As in the comparison
 
 def decay_mask(params):  # True for the matrices, False for the rest
     return jax.tree_util.tree_map_with_path(
         lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
 
 optimizer = nnx.Optimizer(
-    model, optax.adamw(0.003, weight_decay=0.1, mask=decay_mask),
+    model, optax.adamw(best_adam, weight_decay=0.1, mask=decay_mask),
     wrt=nnx.Param)
 params = nnx.state(model, nnx.Param)
 n_decay = sum(int(p.size) for p, m in zip(
@@ -1485,9 +1618,10 @@ keyword arguments.
 tree of booleans; only the parameters marked `True` are decayed.
 :end_tab:
 
-About 96% of the parameters are decayed. We train this configuration on
-the full corpus for 2,000 steps and compare it with the tuned Adam run of
-the language-model comparison, which used no decay:
+About 90% of the parameters are decayed. We train this configuration for
+2,000 steps at Adam's tuned learning rate, from the same initialization as
+the runs of the language-model comparison, and compare it with Adam's
+tuned run there, which used no decay:
 
 ```{.python .input #adamw-what-not-to-decay-2}
 %%tab pytorch, jax
@@ -1498,10 +1632,10 @@ print(f'perplexity: AdamW {math.exp(final_loss(losses)):.2f}, '
       f'Adam without decay {math.exp(final_loss(adam_lm[best_adam])):.2f}')
 ```
 
-AdamW ends slightly behind: its perplexity is a few percent higher, 2 to
-12% in our runs. Over 2,000 steps, about one pass over the data, the
-decay, whose horizon $1/(\eta\lambda)$ is longer than the run, mostly
-slows training: there is no overfitting yet for it to prevent.
+AdamW ends slightly behind: its perplexity is about 1 to 2% higher. In
+2,000 steps the model reads about 3% of the training text and does not
+overfit, so the decay, whose horizon $1/(\eta\lambda)$ is longer than the
+run, has nothing to prevent and mostly slows training.
 This is the configuration in which Adam is used today: AdamW, decay on the
 matrices only, and $\lambda$ chosen together with the schedule. What
 remains is its cost in memory.
@@ -1554,10 +1688,10 @@ coordinate's gradient size. The estimate is AdaGrad's running sum of
 squared gradients, made to forget by RMSProp's exponential average. Adam
 combines it with momentum and corrects both averages exactly for their
 start at zero. On a small transformer language model and on a CNN of the
-same size, tuned Adam reaches tuned SGD's final training loss about 1.5
-to 2 times as fast. In nats the gap is several times larger on the
-language model, and on the CNN the test accuracies agree to within a point
-or two. On large transformers
+same size, tuned Adam reaches tuned SGD's final training loss about 1.4
+to 2.4 times as fast and ends a few hundredths to about a sixth of a nat
+lower; on the CNN the test accuracies agree to within a point or two. On
+large transformers
 the gap is far wider, and the best current explanations point to gradient
 scales that differ across coordinates, from heavy-tailed data and from
 dissimilar blocks of the architecture. Under Adam an $\ell_2$ penalty is
@@ -1599,18 +1733,24 @@ time, the subject of :numref:`sec_scheduler`.
     1. What is lost relative to the exact correction, and for which range
        of $t$ does the difference matter?
 
-1. [extended] **Frequent and rare characters.** Following
-   :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the vocabulary of
-   `data` into a frequent and a rare half by corpus frequency and log the
-   training loss of `TinyLM` separately on the two halves under SGD with
-   momentum and under Adam, each at the best learning rate of `sgd_lm` and
-   `adam_lm`.
-    1. Which optimizer makes progress on the rare half, and does the gap of
-       :numref:`subsec_adam-where-wins` come mainly from the rare half, from
-       the frequent half, or from both?
-    1. Rebuild `data` with the default subword tokenization of
-       `d2l.TimeMachine`, whose 1,024-token vocabulary contains rare
-       tokens, repeat the measurement, and compare the two splits.
+1. [extended] **Frequent and rare tokens.** Following
+   :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the 256 byte values of
+   `data` into a frequent and a rare group by their share of the training
+   text, for instance at 0.1%. Under SGD with momentum and under Adam, each
+   at the best learning rate of `sgd_lm` and `adam_lm`, record every 100
+   steps the loss of `TinyLM` on the targets of each group, measured on a
+   fixed set of validation windows.
+    1. Which optimizer makes progress on the rare group, and does the gap
+       of :numref:`subsec_adam-where-wins` come mainly from the rare group,
+       from the frequent group, or from both?
+    1. Repeat the measurement with subword tokens, among which rare
+       tokens make up a larger share of the text. Train a
+       `d2l.BPETokenizer` with 1,024 tokens, the GPT-2 pattern, and no
+       special tokens (:numref:`sec_text-sequence`) on the
+       first million bytes of the training text, encode the first ten
+       million bytes and the validation split with it, store the results
+       in `data.train` and `data.val`, and train `TinyLM` with a
+       vocabulary of 1,024. Compare the two splits.
 
 1. [code] **Per-group learning rates for SGD.** ● The three parameter
    groups of `TinyLM` in :numref:`subsec_tinylm`, embeddings, matrices, and
@@ -1781,8 +1921,8 @@ step from its own gradients?
 - tell an $\ell_2$ penalty from decoupled weight decay under Adam;
 - count the bytes of optimizer state per parameter.
 
-**Running example:** the valley above, then `TinyLM`, a 0.4M-parameter
-transformer on the characters of *The Time Machine*.
+**Running example:** the valley above, then `TinyLM`, a 0.47M-parameter
+transformer on the bytes of WikiText-103.
 :::
 
 ::: {.slide title="One Step Size per Coordinate"}
@@ -1805,7 +1945,7 @@ transformer on the characters of *The Time Machine*.
 :::
 
 ::: {.col .narrow}
-- **Uses:** the valley, momentum $\beta$, weight decay, the character
+- **Uses:** the valley, momentum $\beta$, weight decay, the byte-level
   language model.
 - **Skips:** convergence proofs (appendix), second-order methods.
 :::
@@ -1929,18 +2069,19 @@ framework's.
   model; afterwards we call the library's.
 :::
 
-::: {.slide title="TinyLM and FashionCNN: Two Models of About 0.4M Parameters"}
+::: {.slide title="TinyLM and FashionCNN: Two Models of About 0.45M Parameters"}
 [Two models]{.kicker}
 
 | | `TinyLM` | `FashionCNN` |
 |---|---|---|
-| task | next character, *The Time Machine* | 10 classes, Fashion-MNIST |
+| task | next byte, WikiText-103 | 10 classes, Fashion-MNIST |
 | layers | 2 pre-norm transformer blocks, width 128 | 2 conv-pool stages, 2 linear |
-| parameters | 412,188 | 421,642 |
-| minibatch | 64 windows of 64 characters | 256 images |
+| parameters | 470,784 | 421,642 |
+| minibatch | 64 windows of 64 bytes | 256 images |
 
-`TinyLM`'s groups: embeddings 3%, matrices 96%, vectors (biases,
-LayerNorm) 1%. Both models are in `d2l` and train with `d2l.train_lm`.
+`TinyLM`'s groups: embeddings 9%, matrices 90%, vectors 1%. A run reads
+about 3% of the 270M training bytes and sees almost no text twice. Both
+models are in `d2l` and train with `d2l.train_lm`.
 
 ::: {.d2l-note}
 Protocol: same random initialization, 2,000 steps, constant rate, four
@@ -1948,10 +2089,10 @@ rates per method spaced by about 3×; "tuned" is the lowest final loss.
 :::
 :::
 
-::: {.slide title="Adam Reaches SGD's Final Loss 1.5–2× Faster on Both Models"}
+::: {.slide title="On Both Models, Adam Reaches SGD's Final Loss 1.4–2.4× Faster"}
 ::: {.cols}
 ::: {.col}
-`TinyLM`: gap about 0.15–0.3 nats
+`TinyLM`: gap about 0.05–0.17 nats
 
 @!adam-the-race-on-the-language-model-3
 :::
@@ -1964,20 +2105,21 @@ rates per method spaced by about 3×; "tuned" is the lowest final loss.
 :::
 
 - On both, SGD's best rate is the largest one that trains reliably.
-- The CNN's flat late curve makes the same speedup worth fewer nats; its
-  test accuracies agree within a point or two.
+- The gap varies with SGD: just below divergence, its final loss varies by
+  about 0.1 nats between runs, Adam's by about 0.01.
+- On the CNN, the test accuracies agree within a point or two.
 :::
 
-::: {.slide title="Check: What Does a 0.17-Nat Gap Do to Perplexity?"}
+::: {.slide title="Check: What Does a 0.1-Nat Gap Do to Perplexity?"}
 [Check]{.kicker}
 
-Adam's final loss is 0.17 nats below SGD's. By what factor is Adam's
+Adam's final loss is 0.1 nats below SGD's. By what factor is Adam's
 perplexity lower?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** Perplexity is $e^{\textrm{loss}}$, so the ratio is
-$e^{-0.17} \approx 0.84$: about 16% lower.
+$e^{-0.1} \approx 0.90$: about 10% lower.
 :::
 :::
 :::
@@ -2043,6 +2185,8 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t
 ::: {.slide title="At λ = 0.1, Coupled ℓ2 Ends a Nat Higher; AdamW Tracks No Decay"}
 @!adamw-one-number-two-meanings
 
+- Coupled ends near 3.2 nats, the loss of predicting each byte from its
+  frequency alone: the context it learned early is lost.
 - Progress shrinks $\sqrt{\hat{\mathbf{v}}}$ until $\lambda\mathbf{x}$
   dominates; Adam then normalizes it, and every coordinate shrinks by
   about $\eta$ per step, whatever $\lambda$ is.
@@ -2069,8 +2213,8 @@ saturation.
 :::
 
 ::: {.slide title="In This Grid, AdamW's Best λ Does Not Move with η"}
-Held-out loss after 800 steps on 8,000 windows (about six passes), one
-curve per $\eta$:
+Held-out loss after 800 steps on 8,000 windows of *The Time Machine*
+(about six passes, overfitting on purpose), one curve per $\eta$:
 
 ::: {.cols}
 ::: {.col}
@@ -2097,7 +2241,7 @@ curve per $\eta$:
   3,300 steps; in passes, $\tau = B/(\eta\lambda D)$.
 - So at scale, keep $\eta\lambda$ when $\eta$ changes; our short,
   overfitting grid kept $\lambda$.
-- Decay the matrices only (96% of `TinyLM`). Exempt embeddings (sparse
+- Decay the matrices only (90% of `TinyLM`). Exempt embeddings (sparse
   gradients, decay every step), biases, and LayerNorm.
 
 [D'Angelo et al. 2024; Kosson et al. 2024; Bergsma et al. 2025]{.small}
@@ -2134,8 +2278,8 @@ activations. Half of the 16 GB is $m$ and $v$.
   $\eta = 0.4$ and converges at $\eta = 2$.
 - RMSProp forgets; Adam adds momentum and bias correction, so step 1 is
   exactly $\eta$.
-- Tuned Adam reaches tuned SGD's final loss about 1.5–2× faster on both
-  models; the gap is 0.15–0.3 nats on `TinyLM`, 0.03–0.06 on
+- Tuned Adam reaches tuned SGD's final loss about 1.4–2.4× faster on
+  both models; the gap is 0.05–0.17 nats on `TinyLM`, 0.03–0.06 on
   `FashionCNN`.
 - AdamW decays outside the preconditioner: one $\lambda$ for every
   coordinate. At scale, $\eta\lambda$ sets the effective learning rate.

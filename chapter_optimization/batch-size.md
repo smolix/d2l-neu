@@ -127,43 +127,57 @@ training run, where every data-parallel worker computes a small-batch
 gradient anyway and their average is the large-batch gradient.
 
 We measure the two models of :numref:`subsec_tinylm`. `TinyLM` is a
-two-block decoder-only transformer with about 0.4 million parameters that
-predicts the next character of *The Time Machine* from windows of 64
-characters. `FashionCNN` classifies Fashion-MNIST images with two
-convolution-and-pooling stages and two fully connected layers, also about
-0.4 million parameters. To draw a random minibatch by index, we hold
-each training set in memory as one tensor. For the language model one
-example is a 64-character window, so its noise scale and its batch sizes
-count sequences, each of 64 tokens. Adjacent windows share 63 of their 64
-characters, so these sequences are far from independent pieces of text, and
-the noise scale of the language model describes this sampling scheme rather
-than a count of independent text.
+two-block decoder-only transformer with about 0.47 million parameters
+that predicts the next byte of WikiText-103 text from windows of 64 bytes.
+`FashionCNN` classifies Fashion-MNIST images with two
+convolution-and-pooling stages and two fully connected layers, with about
+0.4 million parameters. For each model a sampling function draws a random
+minibatch of $b$ examples. The Fashion-MNIST images sit on the device as
+one tensor, indexed at random. For the language model one example is a
+window of 64 bytes at a random offset in the training text, so its noise
+scale and its batch sizes count sequences, each of 64 tokens. Two windows
+drawn from 270 million bytes almost never overlap, so the examples of a
+minibatch are close to the independent draws that the estimator assumes.
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab pytorch
 device = d2l.try_gpu()
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
-X_lm = data.X[:data.num_train].to(device)
-Y_lm = data.Y[:data.num_train].to(device)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
 X_f = (fashion.train.data.float() / 255).unsqueeze(1).to(device)
 y_f = fashion.train.targets.to(device)
+
+def sample_fashion(b):  # b random training images
+    i = torch.randint(len(y_f), (b,), device=device)
+    return X_f[i], y_f[i]
+
+def sample_lm(b):  # b windows at random offsets in the training text
+    starts = torch.randint(len(data.train) - data.num_steps, (b,))
+    X, Y = data.windows(data.train, starts.numpy())
+    return X.to(device), Y.to(device)
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
-X_lm, Y_lm = data.X[:data.num_train], data.Y[:data.num_train]
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
 X_f = jnp.asarray(fashion.train[0], jnp.float32)[..., None] / 255
 y_f = jnp.asarray(fashion.train[1], jnp.int32)
+rng = np.random.default_rng(random.getrandbits(32))
+
+def sample_fashion(b):  # b random training images
+    i = rng.integers(len(y_f), size=b)
+    return X_f[i], y_f[i]
+
+def sample_lm(b):  # b windows at random offsets in the training text
+    return data.windows(data.train,
+                        rng.integers(len(data.train) - data.num_steps, size=b))
 ```
 
 The estimator follows the two formulas line by line: average the squared
-gradient norm over many small minibatches and a few large ones, solve for
-the noise power and the signal power, and return their ratio.
+gradient norm over many small minibatches and a few large ones, each drawn
+by `sample`, solve for the noise power and the signal power, and return
+their ratio.
 
 ```{.python .input #batch-size-a-two-batch-estimator-2}
 %%tab pytorch
@@ -177,11 +191,10 @@ def grad_sq_norm(model, X, Y):
                                 list(model.parameters()))
     return sum((g ** 2).sum() for g in grads)
 
-def noise_scale(model, X, Y, b_small=16, b_big=2048, m=400):
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
     def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
-        idx = torch.randint(0, len(Y), (m, b), device=X.device)
-        return torch.stack([grad_sq_norm(model, X[i], Y[i])
-                            for i in idx]).mean()
+        return torch.stack([grad_sq_norm(model, *sample(b))
+                            for _ in range(m)]).mean()
     n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
     tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
@@ -200,17 +213,14 @@ def grad_sq_norm(model, X, Y):
     grads = nnx.grad(ce_loss)(model, X, Y)
     return sum((g ** 2).sum() for g in jax.tree.leaves(grads))
 
-def noise_scale(model, X, Y, key, b_small=16, b_big=2048, m=400):
-    def mean_sq_norm(b, m, key):  # N_b, averaged over m random minibatches
-        idx = jax.random.randint(key, (m, b), 0, len(Y))
-        return jnp.stack([grad_sq_norm(model, X[i], Y[i])
-                          for i in idx]).mean()
-    k_small, k_big = jax.random.split(key)
-    n_small = mean_sq_norm(b_small, m, k_small)
-    n_big = mean_sq_norm(b_big, m // 8, k_big)
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return np.mean([float(grad_sq_norm(model, *sample(b)))
+                        for _ in range(m)])
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
     tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
-    return float(tr_sigma / sq_norm)
+    return tr_sigma / sq_norm
 ```
 
 The noise scale depends on the parameters, so we measure it twice: at
@@ -222,71 +232,72 @@ the CNN as well as the language model. First the CNN:
 ```{.python .input #batch-size-a-two-batch-estimator-3}
 %%tab pytorch
 cnn = d2l.FashionCNN().to(device)
-print(f'noise scale at initialization: {noise_scale(cnn, X_f, y_f):.0f}')
+print(f'noise scale at initialization: '
+      f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.004)
 d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: {noise_scale(cnn, X_f, y_f):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-3}
 %%tab jax
-key_init, key_500 = jax.random.split(jax.random.key(random.getrandbits(32)))
 cnn = d2l.FashionCNN(rngs=nnx.Rngs(random.getrandbits(32)))
 print(f'noise scale at initialization: '
-      f'{noise_scale(cnn, X_f, y_f, key_init):.0f}')
+      f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = nnx.Optimizer(cnn, optax.adam(0.004), wrt=nnx.Param)
 d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: {noise_scale(cnn, X_f, y_f, key_500):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 Then the language model, with smaller probe batches because one example is
-already a sequence of 64 characters:
+already a sequence of 64 bytes:
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab pytorch
 lm = d2l.TinyLM(len(data.vocab)).to(device)
 print(f'noise scale at initialization: '
-      f'{noise_scale(lm, X_lm, Y_lm, b_small=8, b_big=256):.1f}')
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = torch.optim.Adam(lm.parameters(), lr=0.003)
 d2l.train_lm(lm, data, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: '
-      f'{noise_scale(lm, X_lm, Y_lm, b_small=8, b_big=256):.0f}')
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab jax
-key_init, key_500 = jax.random.split(jax.random.key(random.getrandbits(32)))
 lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
-ns_init = noise_scale(lm, X_lm, Y_lm, key_init, b_small=8, b_big=256)
-print(f'noise scale at initialization: {ns_init:.1f}')
+print(f'noise scale at initialization: '
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = nnx.Optimizer(lm, optax.adam(0.003), wrt=nnx.Param)
 d2l.train_lm(lm, data, optimizer, num_steps=500)
-ns_500 = noise_scale(lm, X_lm, Y_lm, key_500, b_small=8, b_big=256)
-print(f'after 500 steps of Adam: {ns_500:.0f}')
+print(f'after 500 steps of Adam: '
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
 
 At initialization the noise scale is about a hundred images for the CNN
-and a few sequences for the language model. Both models are small, and so
-are their noise scales: the batches of 256 images and 64 sequences that
+and about two sequences for the language model. Both models are small, and
+so are their noise scales: the batches of 256 images and 64 sequences that
 train them elsewhere in this chapter lie above these values.
 
-The noise scale also changes, and quickly. After 500 steps that of the CNN
-has grown, to between about 100 and 850 images across our runs, and that of
-the language model by more than an order of magnitude, to between about 60
-and 150 sequences. At
-initialization the full gradient is large compared with the disagreement
-between examples. As training removes the easy part of the loss,
-$\|\nabla f\|^2$ shrinks, while the scatter of the per-example gradients
-shrinks more slowly. We return to this growth at the end of the section.
+The noise scale also changes, and quickly. After 500 steps that of the
+language model has grown by a factor of thirty or more, to between about 70
+and 120 sequences across our runs. That of the CNN has grown in most runs,
+but by very different amounts, and lies anywhere between about 70 and 1,000
+images. At initialization the full gradient is large compared with the
+disagreement between examples. As training removes the easy part of the
+loss, $\|\nabla f\|^2$ shrinks, while the scatter of the per-example
+gradients shrinks more slowly. We return to this growth at the end of the
+section.
 
-The estimate itself is rough. Repeated runs scatter by up to a factor of
-about two, and more as $\|\nabla f\|^2$ approaches the noise floor of the
-estimator itself. That is precise enough to choose a batch size, but not
-for much more. Nor do the magnitudes carry over to other problems:
-:citet:`kaplan2020scaling` found critical batch sizes, which track the noise
-scale, of around a million tokens for large language models, against several
-thousand characters here. What carries over is the concept and its growth
-during training.
+The estimate itself is repeatable. Measured again on the same trained
+model, it changes by less than a third, so the spread between runs comes
+from the runs themselves: after 500 steps of Adam, CNNs trained from
+different seeds sit at points with quite different noise scales. To choose
+a batch size, a value known to within a factor of two is enough. The
+magnitudes do not carry over to other problems: :citet:`kaplan2020scaling`
+found critical batch sizes, which track the noise scale, of around a
+million tokens for large language models, against several thousand bytes
+here. What carries over is the concept and its growth during training.
 
 ## Steps to a Target
 :label:`subsec_batch-size-steps`
@@ -328,9 +339,9 @@ measured agrees with it when the curvature is the same in every direction,
 and serves as a cheap stand-in otherwise.
 
 Our protocol is as follows. The target is a fixed loss, evaluated every ten
-steps on a fixed subset of the training data. For the language model the
-subset is every 48th window, so that its 2,048 sequences cover the whole
-text. Evaluating the loss of the
+steps on a fixed set of examples: the first 8,192 training images for the
+CNN, and for the language model 2,048 windows spread over the whole
+validation split, text that no run trains on. Evaluating the loss of the
 current minibatch instead would let the small-batch runs, whose loss
 estimates fluctuate most, cross the target early by chance. The optimizer is
 Adam. Its learning rate is tuned at an anchor batch size $b_0$ (64 sequences
@@ -401,59 +412,61 @@ def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
 
 ### The Language Model
 
-For `TinyLM` the target is a loss of 1.5 nats per character, a perplexity
-of $e^{1.5} \approx 4.5$ against about 28 for uniform guessing over the
-vocabulary: well into learning, and far from converged. The batch sizes span
-two orders of magnitude, from 4 to 256 sequences.
+For `TinyLM` the target is a held-out loss of 1.9 nats per byte (2.7 bits
+per byte), a perplexity of $e^{1.9} \approx 6.7$ against 256 for
+uniform guessing over the bytes: well into learning, and far from
+converged. The batch sizes span two orders of magnitude, from 4 to 256
+sequences. The data is built once, and only its batch size changes from run
+to run.
 
 ```{.python .input #batch-size-the-language-model}
 %%tab pytorch
+X_val, Y_val = (t.to(device) for t in data.windows(
+    data.val, np.arange(0, len(data.val) - 64, 64)[::8][:2048]))
 lm_bs, lm_steps = [4, 16, 64, 256], []
 seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in lm_bs:
     torch.manual_seed(seed)
-    data_b = d2l.TimeMachine(batch_size=b, num_steps=64,
-                             tokenization='char', num_train=100000)
-    model = d2l.TinyLM(len(data_b.vocab)).to(device)
+    data.batch_size = b
+    model = d2l.TinyLM(len(data.vocab)).to(device)
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=0.003 * math.sqrt(b / 64))
-    lm_steps.append(train_to_target(
-        model, data_b, optimizer, X_lm[::48][:2048], Y_lm[::48][:2048],
-        target=1.5, max_steps=8000))
+    lm_steps.append(train_to_target(model, data, optimizer, X_val, Y_val,
+                                    target=1.9, max_steps=8000))
     print(f'b={b:4d}  steps={lm_steps[-1]:6.0f}  '
           f'examples={b * lm_steps[-1]:8.0f}')
 d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
-         'batch size (sequences)', 'steps to loss 1.5', xscale='log',
+         'batch size (sequences)', 'steps to loss 1.9', xscale='log',
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
 ```{.python .input #batch-size-the-language-model}
 %%tab jax
+X_val, Y_val = data.windows(data.val,
+                            np.arange(0, len(data.val) - 64, 64)[::8][:2048])
 lm_bs, lm_steps = [4, 16, 64, 256], []
 seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in lm_bs:
-    data_b = d2l.TimeMachine(batch_size=b, num_steps=64,
-                             tokenization='char', num_train=100000)
-    model = d2l.TinyLM(len(data_b.vocab), rngs=nnx.Rngs(seed))
+    data.batch_size = b
+    model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
     optimizer = nnx.Optimizer(model,
                               optax.adam(0.003 * math.sqrt(b / 64)),
                               wrt=nnx.Param)
-    lm_steps.append(train_to_target(
-        model, data_b, optimizer, X_lm[::48][:2048], Y_lm[::48][:2048],
-        target=1.5, max_steps=8000))
+    lm_steps.append(train_to_target(model, data, optimizer, X_val, Y_val,
+                                    target=1.9, max_steps=8000))
     print(f'b={b:4d}  steps={lm_steps[-1]:6.0f}  '
           f'examples={b * lm_steps[-1]:8.0f}')
 d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
-         'batch size (sequences)', 'steps to loss 1.5', xscale='log',
+         'batch size (sequences)', 'steps to loss 1.9', xscale='log',
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
-Up to $b = 64$ the measured curve runs nearly parallel to the
-perfect-scaling line: each quadrupling of the batch cuts the step count about
-threefold, and the example count grows slowly. Beyond $b = 64$ the curve
-bends away from the line. The last quadrupling, from 64 to 256 sequences,
-cuts the step count only about in half, and the run consumes about three
-times as many examples as the run with the smallest batch.
+The first quadrupling of the batch, from 4 to 16 sequences, runs nearly
+parallel to the perfect-scaling line: it cuts the step count three- to
+nearly fourfold, and the example count grows by a third at most. After it
+the curve bends away from the line. The last quadrupling, from 64 to 256
+sequences, cuts the step count only about in half, and the run consumes
+three to four times as many examples as the run with the smallest batch.
 
 ### The CNN
 
@@ -506,7 +519,7 @@ The CNN shows the same pattern. The first quadrupling, from 8 to 32 images,
 stays close to the perfect-scaling line, cutting the step count three- to
 fourfold, and after it the gap widens. At the top of the range a further
 quadrupling of the batch, and with it of the work per step, reduces the step
-count by about a third at most and sometimes not at all. The example count
+count by anything from nothing to about half. The example count
 there stands at six to twelve times its small-batch value.
 Extra work per step saves few or no steps and multiplies the data consumed.
 
@@ -538,9 +551,10 @@ for name, (S_min, b_crit) in fits.items():
     print(f'{name:10s}  S_min = {S_min:4.0f} steps  b_crit = {b_crit:4.0f}')
 ```
 
-The fitted critical batch sizes are about a hundred sequences for `TinyLM`
-and two to four hundred images for the CNN, of the same order as the
-noise scales that each model reached during its first 500 steps. Closer
+The fitted critical batch sizes are roughly a hundred sequences for
+`TinyLM`, between about 75 and 115 across our runs, and two to four hundred
+images for the CNN, of the same order as the noise scales that each model
+reached during its first 500 steps. Closer
 agreement is more than :eqref:`eq_steps-examples` promises here: the model
 uses the curvature-weighted noise scale averaged over the whole run, while
 we measured the unweighted ratio at two moments only.
@@ -841,10 +855,10 @@ grow their batch during training.
 
 1. [code] **The noise scale over training.** `noise_scale` of
    :numref:`subsec_batch-size-estimator` measured `TinyLM` at
-   initialization and after 500 steps of Adam. Repeat that run for 3,000
-   steps and measure the noise scale at steps 0, 25, 50, 100, 200, 500,
-   1,000, 2,000, and 3,000. At each checkpoint also record the loss that
-   `eval_loss` reports on `X_lm[::48][:2048]` and `Y_lm[::48][:2048]`.
+   initialization and after 500 steps of Adam. Repeat that run, at batch
+   size 64, for 3,000 steps and measure the noise scale at steps 0, 25, 50,
+   100, 200, 500, 1,000, 2,000, and 3,000. At each checkpoint also record
+   the held-out loss that `eval_loss` reports on `X_val` and `Y_val`.
     1. Plot the noise scale against this loss. Does the growth continue,
        slow down, or reverse?
     1. Under the rule of :numref:`subsec_batch-size-growing`, doubling $b$
@@ -907,7 +921,7 @@ grow their batch during training.
     1. From the checkpoints of problem
        :exref:`ex_batch-size-noise-scale-over-training`, average
        $b_{\textrm{noise}}$ over the training steps before the loss first
-       falls to $1.5$, interpolating linearly between checkpoints.
+       falls to $1.9$, interpolating linearly between checkpoints.
     1. Compare this average with the $b_{\textrm{crit}}$ that `fit_steps`
        returns for `lm_bs` and `lm_steps`. By what factor do the two
        differ?
@@ -952,8 +966,8 @@ sizes $b$:
 
 - $b = 8 \to 32$: three to four times fewer steps, at most a third more
   examples.
-- $b = 512 \to 2{,}048$: at most about a third fewer steps, so 2.5× to
-  4.5× the examples.
+- $b = 512 \to 2{,}048$: from no fewer steps to about half as many, so 2× to
+  4× the examples.
 
 A bigger batch means more work per step. It saves steps only while
 gradient noise was what slowed the optimizer.
@@ -973,8 +987,8 @@ Where do the savings stop, and can we predict that point before training?
   Adam, and say where each rule fails;
 - explain why large runs grow their batch during training.
 
-**Running example:** `TinyLM` (character-level transformer, 0.4M
-parameters) and a Fashion-MNIST CNN (0.4M), trained to a target loss.
+**Running example:** `TinyLM` (byte-level transformer on WikiText-103,
+0.47M parameters) and a Fashion-MNIST CNN (0.4M), trained to a target loss.
 :::
 
 ::: {.slide title="Batch Size Decides How Much Gradient Noise Each Step Removes"}
@@ -1055,8 +1069,8 @@ $b_{\textrm{noise}} \approx 64$.
 :::
 :::
 
-::: {.slide title="The Noise Scale Grows Within 500 Steps"}
-CNN (images), then `TinyLM` (64-character sequences), at initialization
+::: {.slide title="TinyLM's Noise Scale Grows Within 500 Steps"}
+CNN (images), then `TinyLM` (64-byte sequences), at initialization
 and after 500 steps of Adam:
 
 @!batch-size-a-two-batch-estimator-3
@@ -1090,21 +1104,22 @@ The bend at $b = b_{\textrm{noise}}$ is the **critical batch size**.
 - Adam, $\eta$ tuned at an anchor $b_0$, moved by $\eta_0\sqrt{b/b_0}$.
 - One random seed per sweep: every batch size starts from the same
   initialization.
-- `TinyLM`: target loss 1.5 (perplexity 4.5), $b = 4$ to 256 sequences.
+- `TinyLM`: held-out target loss 1.9 nats per byte (perplexity 6.7),
+  $b = 4$ to 256 sequences.
 - CNN: target loss 0.35, $b = 8$ to 2,048 images.
 :::
 
-::: {.slide title="TinyLM Saves Steps Steadily up to b = 64, Then Bends"}
+::: {.slide title="TinyLM Saves Steps Nearly Perfectly at Small Batches, Then Bends"}
 @!batch-size-the-language-model
 
-Up to $b = 64$ each quadrupling cuts the steps about threefold. From 64 to
-256 sequences the steps only about halve, and the examples about double.
+From 4 to 16 sequences the steps fall three- to fourfold. From 64 to 256
+they only about halve, so the examples about double.
 :::
 
 ::: {.slide title="The CNN Stops Gaining Steps Above a Few Hundred Images"}
 @!batch-size-the-cnn
 
-At 2,048 images, 4× the batch saves about a third of the steps at most;
+At 2,048 images, 4× the batch saves between none and half of the steps;
 examples six to twelve times their minimum.
 :::
 
@@ -1220,10 +1235,10 @@ may lie past the noise scale; warmup protects the first steps.
 
 - **Noise scale** $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}
   / \|\nabla f\|^2$, from gradient norms at two batch sizes: about a hundred
-  images (CNN) and a few sequences (`TinyLM`) at initialization, growing
-  within 500 steps (`TinyLM`: more than tenfold).
+  images (CNN) and about two sequences (`TinyLM`) at initialization,
+  growing within 500 steps (`TinyLM`: thirtyfold or more).
 - **Steps to a target:** perfect scaling below the critical batch size, a
-  floor above; both models fit one hyperbola, $b_{\textrm{crit}}$ about
+  floor above; both models fit one hyperbola, $b_{\textrm{crit}}$ roughly
   a hundred sequences (`TinyLM`) and two to four hundred images (CNN).
 - **Learning rate:** linear in $b$ for SGD, $\sqrt{b}$ for Adam; below the
   noise scale, under the ceiling, behind warmup.

@@ -162,7 +162,7 @@ away, every schedule makes progress; the curves part once the noise
 dominates. The constant rate stalls near a mean squared distance of
 $0.27$, the sum over both coordinates of the noise ball
 $\eta\sigma^2 / (\lambda(2 - \eta\lambda))$ of :numref:`sec_sgd`.
-Exponential decay does better for a while, then freezes at about $0.14$.
+Exponential decay does better for a while, then freezes at about $0.13$.
 Its budget, $0.4/(1 - 0.98) = 20$, is enough to cover the starting
 distance, but its rate falls by 2% per step, faster than the iterate can
 follow. Once $\eta_t \lambda$ drops below $0.02$, the iterate no longer
@@ -170,7 +170,7 @@ moves far enough to shed the noise it has collected, and that noise stays. Both 
 $\alpha = 1/2$ the distance falls in proportion to the rate, as the second
 term of :eqref:`eq_scheduler-bias-noise` predicts, although the squares of
 this schedule have an infinite sum. With $\alpha = 1$ it falls like $1/t$
-and ends about eight times closer, with a budget a quarter as large: once
+and ends eight to nine times closer, with a budget a quarter as large: once
 the starting distance has been covered, the final rate decides.
 
 That last observation carries over to deep networks, which do not train
@@ -347,11 +347,11 @@ _, history = train(constant)
 histories = {'constant': history}
 ```
 
-The training loss keeps falling for all 30 epochs. The test accuracy stops
-improving after about ten epochs, and from then on it moves up and down
-from one epoch to the next. The test loss starts to rise: the network fits
-the training images ever more closely, and the closer fit no longer carries
-over to the test images. The
+The training loss keeps falling for all 30 epochs. The test accuracy gains
+little after about ten epochs, and from then on it moves up and down by a
+point or more from one epoch to the next. The test loss drifts upward: the
+network fits the training images ever more closely, and the closer fit no
+longer carries over to the test images. The
 jumps of the test accuracy are the noise ball of the network: at a constant
 rate of 0.3 the weights never settle, and each epoch ends at a different
 point of the cloud.
@@ -421,15 +421,15 @@ for name, r in rates.items():
     budget = r[:-1].mean() * 30  # Left Riemann sum of the area
     print(f'{name:12s} budget {budget:5.2f}, final rate {r[-1]:.3f}')
 d2l.plot(ts, list(rates.values()), 'epoch', 'learning rate')
-d2l.plt.legend(list(rates), loc='upper left', bbox_to_anchor=(1, 1))
+d2l.plt.legend(list(rates), loc='upper left', bbox_to_anchor=(1, 1));
 ```
 
 The shapes fall into two groups. Square-root and exponential decay cut the
 rate early: square-root decay halves it by epoch 3 and exponential decay by
 epoch 7, and both end with a budget of under 3, a third of the constant
 schedule's 9. Piecewise constant and cosine decay keep the rate high for
-longer, reach a budget of about 4.7, and end at $0.01$ or below. Square-root decay is the slowest to
-come down at the end; its final rate, $0.3/\sqrt{31} \approx 0.054$, is
+longer, reach budgets of about 4.8 and 4.7, and end at $0.01$ or below.
+Square-root decay is the slowest to come down at the end; its final rate, $0.3/\sqrt{31} \approx 0.054$, is
 five times that of cosine decay.
 
 ### Five Schedules on the Network
@@ -463,22 +463,29 @@ The two groups separate on the training loss. Square-root and exponential
 decay end with a higher training loss than even the constant rate. Most
 of their budget comes early, and with a third of the constant schedule's
 budget the network has not traveled as far. Piecewise constant and cosine
-decay end with the lowest training loss. They traveled almost as far as
-the constant schedule at its high rate, and then their small final rate
-removed the noise that keeps the constant run's loss up. This is
-:eqref:`eq_scheduler-bias-noise` at work on a network: a schedule needs
-both a large budget and a small final rate, and the shapes that stay high
-for most of the run and decay at the end provide both.
+decay drop below the constant rate as soon as their rate falls, piecewise
+decay abruptly at epoch 15, and they end close to it with about half its
+budget: their small final rate removed the noise that keeps the constant
+run's loss up. The constant rate catches up only in the last epochs, on
+twice the budget. This is :eqref:`eq_scheduler-bias-noise` at work on a
+network: a schedule needs both a large budget and a small final rate, and
+the shapes that stay high for most of the run and decay at the end provide
+both.
 
-The mean test accuracies end within about a point of each other, too
-close to rank the schedules from single runs. What separates the decaying
-schedules from the constant one is the second column, the stability of the
-result: as the rate falls, the test accuracy settles to a value instead of
-jumping from epoch to epoch, and the checkpoint we keep at the end is as
-good as any of the last few epochs. Among the late-decaying shapes,
-cosine decay became widespread because it is convenient. It has a single
-parameter, the peak rate, and no milestones that must be moved whenever
-the budget changes.
+The test accuracies sort the schedules by their final rate. The three that
+end at a rate of about 0.01 or below, exponential, piecewise constant, and
+cosine decay, reach a mean of about 91% over the last five epochs, within
+about half a point of each other, too close to rank them from single runs.
+The constant rate ends two to three points lower, and square-root decay,
+whose final rate is still 0.054, lies in between. The second column shows
+why. As the rate falls, the test accuracy settles to a value instead of
+jumping from epoch to epoch: for the three schedules with a small final
+rate it varies by at most a few tenths of a point over the last five
+epochs, against one to two points for the constant rate, and the
+checkpoint we keep at the end is as good as any of the last few. Among the
+late-decaying shapes, cosine decay became widespread because it is
+convenient. Besides the peak rate it takes only a final rate, and it has
+no milestones that must be moved whenever the budget changes.
 
 ## Warmup
 :label:`subsec_scheduler-warmup`
@@ -618,7 +625,7 @@ d2l.plot(epochs, [histories['warmup + cosine']['train_loss'],
 
 During the long constant phase the training loss of WSD stays above that
 of the cosine run, whose rate is already falling. When the decay starts at
-epoch 24, the WSD loss drops abruptly. The run ends at or below the
+epoch 24, the WSD loss drops abruptly. The run ends at about half the
 training loss of the cosine run, which ran at the peak rate for a smaller
 part of the run, and with a test accuracy in the same range.
 
@@ -739,9 +746,11 @@ remains of the starting distance, which shrinks with the budget $\sum_s
 $\eta_t$. A schedule therefore needs a large budget and a small final
 rate. Exponential decay stops moving too early and keeps the noise it has
 collected; polynomial decay keeps improving. On a network trained for a
-fixed number of epochs, the shapes that stay high and decay late, piecewise constant and cosine, reach a lower
-training loss than both the constant rate and the shapes that decay early,
-and all decaying shapes end with a settled test accuracy. Warmup ramps the
+fixed number of epochs, the shapes that stay high and decay late,
+piecewise constant and cosine, reach a lower training loss than the shapes
+that decay early and match the constant rate's with half its budget. The
+schedules that end at a small rate settle their test accuracy, about two to
+three points above the constant rate's. Warmup ramps the
 rate up at the start and widens the range of usable peak rates.
 Warmup–stable–decay holds the peak for most of the run and decays at the
 end; a decay branched off any checkpoint of its constant phase yields a
@@ -1033,13 +1042,14 @@ $t$ in epochs, advancing by $1/235$ per minibatch of 256 images.
 @!lr-scheduler-four-decay-shapes-2
 :::
 
-::: {.slide title="Late Decay Reaches the Lowest Training Loss"}
+::: {.slide title="A Small Final Rate Settles the Test Accuracy"}
 [Decay on a network]{.kicker}
 
 @!lr-scheduler-decay-schedules-compared-2
 
-Early decay: small budget, highest loss. Late decay: large budget and a
-small final rate. The std column: decayed runs settle.
+Early decay: a third of the budget, the highest loss. Late decay: half the
+budget, about the constant rate's loss. A final rate near 0.01: about 91%,
+steady from epoch to epoch.
 :::
 
 ::: {.slide title="A Cold Start at η = 7.5 Never Leaves Chance"}
@@ -1140,8 +1150,9 @@ or Adam, branch the optimizer state too.
 
 - Error under a schedule: $e^{-2\lambda B_t} x_0^2 + \eta_t \sigma^2/(2\lambda)$.
 - Exponential decay freezes; polynomial decay keeps improving.
-- On the network, late decay (piecewise, cosine) beats early decay and the
-  constant rate in training loss; decayed runs settle.
+- On the network, late decay (piecewise, cosine) beats early decay in
+  training loss; a small final rate settles the test accuracy, two to
+  three points above the constant rate.
 - Warmup: a cold start at 7.5 fails, a five-epoch ramp trains.
 - WSD: a decay off any plateau checkpoint gives a finished model.
 

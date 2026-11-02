@@ -4,7 +4,7 @@
 Every optimizer so far treats the parameters as one long vector of
 coordinates. The networks we train are not built that way. In `TinyLM`, the
 two-block transformer language model of :numref:`subsec_tinylm`, 393,216 of
-the 412,188 parameters, about 95%, sit in eight matrices that multiply
+the 470,784 parameters, about 84%, sit in eight matrices that multiply
 activation vectors. Adam rescales each entry of those matrices on its own and
 never uses the fact that they form a matrix. The gradient of such a matrix is
 typically dominated by a few directions :cite:`Jordan.Jin.Boza.ea.2024`, so a
@@ -385,14 +385,22 @@ def distance(M, k, coeffs):  # spectral distance from U V^T after k steps
     sigma = jnp.linalg.svd(newton_schulz(M, k, coeffs), compute_uv=False)
     return float(jnp.abs(1 - sigma).max())
 
-U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
-H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # condition number 1000
-d2l.plot(list(range(11)), [[distance(M, k, c) for k in range(11)]
-                           for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)],
-         'iterations', 'distance from orthogonal',
+with jax.default_matmul_precision('highest'):  # float32, not TF32
+    U, _, Vt = jnp.linalg.svd(G, full_matrices=False)
+    H = U @ jnp.diag(jnp.logspace(0, -3, 64)) @ Vt  # condition number 1000
+    curves = [[distance(M, k, c) for k in range(11)]
+              for M in (G, H) for c in (QUINTIC, POLAR_EXPRESS)]
+d2l.plot(list(range(11)), curves, 'iterations', 'distance from orthogonal',
          legend=['G, quintic', 'G, Polar Express', 'H, quintic',
                  'H, Polar Express'], yscale='log')
 ```
+
+:begin_tab:`jax`
+On recent GPUs, JAX multiplies `float32` matrices in the faster but less
+precise TF32 format by default. The cell above runs under
+`jax.default_matmul_precision('highest')`, because in TF32 the distance
+would stop falling near $10^{-3}$, the round-off of that format.
+:end_tab:
 
 The tuned quintic stalls at a distance of about $0.32$ on both matrices,
 set by the bottom of its band at $0.68$. Polar Express keeps going: after
@@ -526,8 +534,7 @@ to AdamW. We count both groups in `TinyLM`.
 
 ```{.python .input #muon-dividing-the-census-1}
 %%tab pytorch
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 
 def split_lm(model):
     hidden, rest = [], []
@@ -545,8 +552,7 @@ print(f'AdamW: {len(rest):>2} tensors, '
 
 ```{.python .input #muon-dividing-the-census-1}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
 counts = {'Muon': [0, 0], 'AdamW': [0, 0]}
@@ -560,12 +566,14 @@ for name, (num, size) in counts.items():
     print(f'{name + ":":<6} {num:>2} tensors, {size:>7} parameters')
 ```
 
-The eight hidden matrices hold about 95% of the parameters. The split also
-shrinks the optimizer state. AdamW keeps two buffers per parameter, its
-first and second moment estimates, while Muon keeps one, the momentum
-buffer. With 95% of the parameters on Muon, the hybrid's state is about 52%
-of all-AdamW's. The factory below builds the hybrid. Because of the RMS
-matching in :eqref:`eq_muon-update`, both halves share one learning rate.
+The eight hidden matrices hold about 84% of the parameters. Most of the
+rest sits in the token embedding and the output head, one row or column for
+each of the 256 byte values. The split also shrinks the optimizer state.
+AdamW keeps two buffers per parameter, its first and second moment
+estimates, while Muon keeps one, the momentum buffer. With 84% of the
+parameters on Muon, the hybrid's state is about 58% of all-AdamW's. The
+factory below builds the hybrid. Because of the RMS matching in
+:eqref:`eq_muon-update`, both halves share one learning rate.
 
 ```{.python .input #muon-dividing-the-census-2}
 %%tab pytorch
@@ -618,15 +626,19 @@ version.
 ### Comparison on the Language Model
 :label:`subsec_muon-lm-race`
 
-The protocol follows :numref:`sec_adam`. Each optimizer trains `TinyLM` for
-2,000 steps at a constant learning rate, on a five-point grid of learning
-rates from $10^{-3}$ to $10^{-1}$, and the best final training loss
-speaks for the optimizer. "Tuned" in what follows means the best point of
-this coarse grid and nothing finer. Within each comparison every run
-starts from the same random initialization, drawn anew each time the
-notebook runs. Weight decay is off in both arms, so the only difference
-between them is the direction of the update on the hidden matrices. First
-the baseline, with every parameter on AdamW:
+The protocol follows :numref:`sec_adam`. Each optimizer trains `TinyLM` on
+the bytes of WikiText-103 for 2,000 steps at a constant learning rate, on a
+five-point grid of learning rates from $10^{-3}$ to $10^{-1}$. Every 250
+steps `val_loss` computes the mean cross-entropy per byte over the whole
+validation split, text the model never trains on, and the lowest
+validation loss at step 2,000 speaks for the optimizer. Scoring on held-out
+text keeps an optimizer from winning by memorizing the training text
+faster. "Tuned" in what follows means the best point of this coarse grid
+and nothing finer. Within each comparison every run starts from the same
+random initialization, drawn anew each time the notebook runs. Weight
+decay is off in both arms, so the only difference between them is the
+direction of the update on the hidden matrices. First the baseline, with
+every parameter on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab pytorch
@@ -638,19 +650,35 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-def run_lm(make_optimizer, lrs, seed, num_steps=2000):
-    curves = {}
+def val_loss(model, data):
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    with torch.inference_mode():
+        for X, Y in data.val_dataloader():
+            logits = model(X.to(device))
+            total += nn.functional.cross_entropy(
+                logits.reshape(-1, logits.shape[-1]), Y.to(device).reshape(-1),
+                reduction='sum')
+            count += Y.numel()
+    v = float(total) / count
+    return v if math.isfinite(v) else float('inf')
+
+def run_lm(make_optimizer, lrs, seed, num_steps=2000, every=250):
+    curves, vals = {}, {}
     for lr in lrs:
         torch.manual_seed(seed)  # same initialization and batches per run
         model = d2l.TinyLM(len(data.vocab))
-        curves[lr] = d2l.train_lm(model, data, make_optimizer(model, lr),
-                                  num_steps)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
-    return curves
+        optimizer = make_optimizer(model, lr)
+        curves[lr], vals[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += d2l.train_lm(model, data, optimizer, every)
+            vals[lr].append(val_loss(model, data))
+        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
+    return curves, vals
 
 seed = random.getrandbits(32)  # one draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-adamw_lm = run_lm(
+adamw_lm, adamw_val = run_lm(
     lambda model, lr: torch.optim.AdamW(model.parameters(), lr,
                                         weight_decay=0.0), lrs, seed)
 ```
@@ -665,51 +693,83 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-def run_lm(make_tx, lrs, seed, num_steps=2000):
-    curves = {}
+@nnx.jit
+def loss_sum(model, X, Y):
+    logits = model(X)
+    return optax.softmax_cross_entropy_with_integer_labels(
+        logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).sum()
+
+def val_loss(model, data):
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        total += loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
+        count += Y.size
+    v = float(total) / count
+    return v if math.isfinite(v) else float('inf')
+
+def run_lm(make_tx, lrs, seed, num_steps=2000, every=250):
+    curves, vals = {}, {}
     for lr in lrs:
         model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        curves[lr] = d2l.train_lm(model, data, optimizer, num_steps)
-        print(f'lr {lr:g}: final loss {final_loss(curves[lr]):.3f}')
-    return curves
+        curves[lr], vals[lr] = [], []
+        for _ in range(num_steps // every):
+            curves[lr] += d2l.train_lm(model, data, optimizer, every)
+            vals[lr].append(val_loss(model, data))
+        print(f'lr {lr:g}: validation loss {vals[lr][-1]:.3f}')
+    return curves, vals
 
 seed = random.getrandbits(32)  # one draw, shared by every run below
 lrs = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
-adamw_lm = run_lm(lambda lr: optax.adamw(lr, weight_decay=0.0), lrs, seed)
+adamw_lm, adamw_val = run_lm(lambda lr: optax.adamw(lr, weight_decay=0.0),
+                             lrs, seed)
 ```
 
 The hybrid runs over the same grid from the same initialization:
 
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab pytorch
-muon_lm = run_lm(lambda model, lr: muon_adamw(*split_lm(model), lr),
-                 lrs, seed)
+muon_lm, muon_val = run_lm(
+    lambda model, lr: muon_adamw(*split_lm(model), lr), lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab jax
-muon_lm = run_lm(muon_adamw, lrs, seed)
+muon_lm, muon_val = run_lm(muon_adamw, lrs, seed)
 ```
 
 ```{.python .input #muon-the-race-on-the-language-model-3}
-best_adamw = min(adamw_lm, key=lambda lr: final_loss(adamw_lm[lr]))
-best_muon = min(muon_lm, key=lambda lr: final_loss(muon_lm[lr]))
-d2l.plot(list(range(0, 2000, 25)),
-         [smooth(adamw_lm[best_adamw]), smooth(muon_lm[best_muon])],
-         'step', 'training loss',
-         legend=[f'AdamW, lr {best_adamw:g}',
-                 f'Muon + AdamW, lr {best_muon:g}'])
-print(f'final perplexity: '
-      f'AdamW {math.exp(final_loss(adamw_lm[best_adamw])):.2f}, '
-      f'Muon+AdamW {math.exp(final_loss(muon_lm[best_muon])):.2f}')
+best_adamw = min(adamw_val, key=lambda lr: adamw_val[lr][-1])
+best_muon = min(muon_val, key=lambda lr: muon_val[lr][-1])
+d2l.plot([list(range(0, 2000, 25))] * 2 + [list(range(250, 2001, 250))] * 2,
+         [smooth(adamw_lm[best_adamw]), smooth(muon_lm[best_muon]),
+          adamw_val[best_adamw], muon_val[best_muon]], 'step', 'loss',
+         legend=['AdamW, training', 'Muon + AdamW, training',
+                 'AdamW, validation', 'Muon + AdamW, validation'],
+         fmts=('C0-', 'C1-', 'C0o--', 'C1o--'), ylim=(1.4, 2.6),
+         figsize=(5, 3.5))
+for name, lr, vals in [('AdamW', best_adamw, adamw_val[best_adamw]),
+                       ('Muon+AdamW', best_muon, muon_val[best_muon])]:
+    print(f'{name:<10} lr {lr:g}: validation loss {vals[1]:.3f} at step 500, '
+          f'{vals[-1]:.3f} at step 2000 ({vals[-1] / math.log(2):.2f} bits '
+          f'per byte)')
 ```
 
 Both optimizers have their best rate inside the grid, so the comparison is
-between two tuned methods. The tuned hybrid ends below tuned AdamW and stays
-below it for most of training, while keeping about half the optimizer
-state. A 0.4M-parameter model demonstrates the mechanism but cannot rank
-optimizers. :citet:`Wen.Hall.Ma.ea.2025` tuned ten
+between two tuned methods. The validation loss falls at every checkpoint
+and stays slightly below the training loss: a run reads only a few percent
+of the training text and rarely sees the same text twice, so there is
+nothing to memorize. The tuned hybrid's validation loss is lower at every
+checkpoint. At step 500 it is about 1.7 nats per byte against about 1.9
+for AdamW. The hybrid reaches 1.6 after 1,000 to 1,250 steps, AdamW after
+1,500 to 2,000, and the hybrid matches AdamW's final validation loss after
+1,250 to 1,500 of the 2,000 steps. At step 2,000 the hybrid is at 1.52 to
+1.53 nats per byte (2.20 to 2.21 bits per byte) and AdamW at 1.56 to 1.58
+(2.25 to 2.27 bits per byte). The gap narrows as training continues but
+does not close, and the hybrid needs only 58% of AdamW's optimizer state.
+
+A model of 0.47 million parameters demonstrates the mechanism but cannot
+rank optimizers. :citet:`Wen.Hall.Ma.ea.2025` tuned ten
 optimizers separately at each of four model sizes, from 0.1B to 1.2B
 parameters. The fastest methods all precondition with matrices, Muon among
 them, but their speedup over a well-tuned AdamW falls from about $1.4\times$
@@ -824,7 +884,7 @@ print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
 The two metrics disagree. On training loss the hybrid descends faster and
 ends several times lower: orthogonalized updates drive this small CNN into
 memorizing its training set much sooner. On test accuracy, the metric we
-would deploy on, the two land within about a point of each other. Optimizing
+would deploy on, the two land within half a point of each other. Optimizing
 faster and predicting better are different claims, and on a small task that
 saturates quickly the second changes little. Which of the two optimizers is
 better on this CNN depends on which of the two numbers we report.
@@ -868,8 +928,8 @@ optimizer = MultiOptimizer(
                      weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
     torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
 losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'final loss {final_loss(losses):.3f}, '
-      f'scratch {final_loss(muon_lm[best_muon]):.3f}')
+print(f'validation loss {val_loss(model, data):.3f}, '
+      f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
 ```{.python .input #muon-library-implementations}
@@ -882,12 +942,13 @@ model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
 optimizer = nnx.Optimizer(model, muon_adamw(best_muon, muon=optax_muon),
                           wrt=nnx.Param)
 losses = d2l.train_lm(model, data, optimizer, 2000)
-print(f'final loss {final_loss(losses):.3f}, '
-      f'scratch {final_loss(muon_lm[best_muon]):.3f}')
+print(f'validation loss {val_loss(model, data):.3f}, '
+      f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
-The library version lands on the scratch result, within the variation
-between runs: both compute the update :eqref:`eq_muon-update`.
+The library version lands within about 0.005 of the scratch result, no
+more than the spread between runs: both compute the update
+:eqref:`eq_muon-update`.
 
 ## Relatives and Variants
 
@@ -936,8 +997,11 @@ individual rows can differ a lot. Five Newton--Schulz steps add a second
 source of spread, since small singular values have not yet reached $1$. We
 measure both on one gradient of a freshly initialized `TinyLM`, for the four
 hidden matrices of its first block, and report the smallest and largest
-neuron norm, together with the share $\sigma_1 / \|\mathbf{G}\|_F$ of the
-gradient's Frobenius norm that its largest singular value carries.
+neuron norm, together with the gradient's rank and the share
+$\sigma_1 / \|\mathbf{G}\|_F$ of its Frobenius norm that its largest
+singular value carries. The exact orthogonalization keeps only the nonzero
+singular values and sets them to $1$. Newton--Schulz does the same, since
+it leaves zeros at zero.
 
 ```{.python .input #muon-per-neuron-normalization-1}
 %%tab pytorch
@@ -954,11 +1018,13 @@ grads = {'qkv': blk['qkv'].weight.grad, 'proj': blk['proj'].weight.grad,
          'mlp1': blk['mlp'][0].weight.grad, 'mlp2': blk['mlp'][2].weight.grad}
 for name, grad in grads.items():
     U_g, s, Vt_g = torch.linalg.svd(grad, full_matrices=False)
-    exact, ns = neuron_norms(U_g @ Vt_g), neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  '
+    r = torch.linalg.matrix_rank(grad)  # drop the zero singular values
+    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
+    ns = neuron_norms(newton_schulz(grad))
+    print(f'{name:<4} {grad.shape[0]:>3} x {grad.shape[1]:<3}  rank {r:>3}  '
           f'sigma_1/norm {s[0] / grad.norm():.2f}  '
           f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'five NS steps {ns.min():.2f}-{ns.max():.2f}')
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
 ```
 
 ```{.python .input #muon-per-neuron-normalization-1}
@@ -973,33 +1039,45 @@ def loss_fn(model, X, Y):
 
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
 X, Y = (jnp.asarray(a) for a in next(iter(data.train_dataloader())))
-blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
+with jax.default_matmul_precision('highest'):  # float32, not TF32
+    blk = nnx.grad(loss_fn)(model, X, Y)['blks'][0]
 grads = {name: blk[name]['kernel'][...]
          for name in ('qkv', 'proj', 'mlp1', 'mlp2')}
 for name, grad in grads.items():
     U_g, s, Vt_g = jnp.linalg.svd(grad, full_matrices=False)
-    exact, ns = neuron_norms(U_g @ Vt_g), neuron_norms(newton_schulz(grad))
-    print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  '
+    r = int(jnp.linalg.matrix_rank(grad))  # drop the zero singular values
+    exact = neuron_norms(U_g[:, :r] @ Vt_g[:r])
+    ns = neuron_norms(newton_schulz(grad))
+    print(f'{name:<4} {grad.shape[1]:>3} x {grad.shape[0]:<3}  rank {r:>3}  '
           f'sigma_1/norm {s[0] / jnp.linalg.norm(grad):.2f}  '
           f'exact {exact.min():.2f}-{exact.max():.2f}  '
-          f'five NS steps {ns.min():.2f}-{ns.max():.2f}')
+          f'NS_5 {ns.min():.2f}-{ns.max():.2f}')
 ```
 
 The rows are the projection to queries, keys, and values (`qkv`), the
 attention output (`proj`), and the two MLP layers (`mlp1`, `mlp2`), with
-shapes written as outputs by inputs. The square and wide matrices have unit
-neuron norms under exact orthogonalization, as promised, but five
-Newton--Schulz steps leave them spread over a factor of about 1.2 to 1.8.
+shapes written as outputs by inputs. No gradient has full rank. LayerNorm
+subtracts the mean of each vector, which removes one direction: at
+initialization, where LayerNorm adds no shift, the inputs of `qkv` and `mlp1`
+lie in a subspace of 127 dimensions, and so do the
+gradients that flow back into the outputs of `proj` and `mlp2`, because
+every path from the loss to the residual stream passes through a LayerNorm.
+Each gradient therefore has rank at most 127, and the square `proj` falls
+further short, at about 120. For the wide `mlp2` the missing direction is
+the vector of all ones, which takes the same small share from every row,
+so its neuron norms under exact orthogonalization all equal
+$\sqrt{127/128} \approx 0.996$, as close to $1$ as one lost direction
+allows. Those of `proj` stay within about 10% of each other. Five
+Newton--Schulz steps leave both spread over a factor of about 1.2 to 1.7.
 The two tall matrices are uneven even under exact orthogonalization: their
-busiest neurons move two and a half to three times as far as their
-quietest.
+busiest neurons move about two to three times as far as their quietest.
 
 After five steps the neuron norms are also well below $1$, between about
 $0.2$ and $0.9$. A fresh gradient is close to rank one: for `qkv` and `proj`
-the largest singular value carries about 0.98 to 0.99 of the Frobenius
-norm. After the division by that norm, most of the other singular values
-start below $0.01$, at the left end of :numref:`fig_opt_ns_maps`, and five
-steps do not lift them into the band around $1$. On real gradients, then,
+the largest singular value carries about 0.99 of the Frobenius norm. After
+the division by that norm, most of the other singular values start below
+$0.01$, at the left end of :numref:`fig_opt_ns_maps`, and five steps do not
+lift them into the band around $1$. On real gradients, then,
 the band from $0.7$ to $1.13$ holds only for the singular values above
 about 1% of the Frobenius norm.
 
@@ -1146,12 +1224,12 @@ momentum, and rescales it so that one learning rate serves both Muon and the
 AdamW that handles embeddings, the head, and vectors. Per-step optimal
 polynomials such as Polar Express make the orthogonalization more accurate
 at the same cost, and NorMuon adds Adam's per-unit normalization at the
-level of neurons. On `TinyLM` the tuned hybrid reaches a lower loss than
-tuned AdamW with half the optimizer state, and on a CNN it optimizes faster
-while generalizing the same. Matched-tuning studies put Muon's gain over
-AdamW at tens of percent, shrinking with model size. All of these
-comparisons held the batch size fixed, and the next section asks how large
-it should be.
+level of neurons. On `TinyLM` the tuned hybrid reaches a lower validation
+loss than tuned AdamW at every checkpoint, with under 60% of the optimizer
+state, and on a CNN it optimizes faster while generalizing the same.
+Matched-tuning studies put Muon's gain over AdamW at tens of percent,
+shrinking with model size. All of these comparisons held the batch size
+fixed, and the next section asks how large it should be.
 
 ## Exercises
 
@@ -1179,8 +1257,8 @@ it should be.
 
 1. [code] **How many iterations.** Rerun the tuned hybrid of
    :numref:`subsec_muon-lm-race` with `num_iters=1`, `3`, and `10` in
-   `newton_schulz`, measuring the final loss and the wall-clock time per
-   step.
+   `newton_schulz`, measuring the validation loss and the wall-clock time
+   per step.
     1. Where does quality saturate, and how does the time per step grow
        with the iteration count? Compare the growth with the operation
        count of :numref:`subsec_muon-newton-schulz`, which adds about $m/B$
@@ -1188,8 +1266,8 @@ it should be.
        matrix.
     1. Now pass `coeffs=POLAR_EXPRESS` at five iterations. Does the more
        accurate polar factor of :numref:`subsec_muon-polar-express` change
-       the final loss by more than the difference between two runs of the
-       tuned quintic from different initializations?
+       the validation loss by more than the difference between two runs of
+       the tuned quintic from different initializations?
 
 1. **The Polar Express guarantee.** The recursion
    :eqref:`eq_muon-polar-express` starts from $[\ell_1, u_1] = [10^{-3},
@@ -1218,9 +1296,9 @@ it should be.
        with that of a frequent token's row?
     1. Move `token_emb` into the Muon group, keeping `pos_emb` and the
        output head with AdamW, and rerun the sweep
-       of :numref:`subsec_muon-lm-race`. Compare the best final loss with that
-       of `muon_lm`, and explain the difference with your answer to the
-       previous sub-item.
+       of :numref:`subsec_muon-lm-race`. Compare the best validation loss
+       with that in `muon_val`, and explain the difference with your answer
+       to the previous sub-item.
 
 1. [code] **NorMuon.** Add the per-neuron normalization of
    :eqref:`eq_muon-normuon` to Muon, using `normalize_neurons` from
@@ -1306,11 +1384,11 @@ Muon<br>
 :::
 :::
 
-::: {.slide title="95% of TinyLM's Parameters Sit in Eight Matrices"}
+::: {.slide title="84% of TinyLM's Parameters Sit in Eight Matrices"}
 [The problem]{.kicker}
 
-TinyLM, a two-block transformer on *The Time Machine*: 393,216 of its
-412,188 parameters sit in eight matrices that transform activations,
+TinyLM, a two-block transformer on the bytes of WikiText-103: 393,216 of
+its 470,784 parameters sit in eight matrices that transform activations,
 $\mathbf{y} = \mathbf{W}\mathbf{x}$.
 
 - Adam rescales each entry on its own: it never uses that they form a
@@ -1491,8 +1569,9 @@ AdamW-tuned learning rates carry over (Moonlight, 2025).
 
 @!muon-dividing-the-census-1
 
-- 8 hidden matrices hold 95% of the parameters.
-- Muon keeps one buffer, AdamW two: the hybrid's state is about 52% of
+- 8 hidden matrices hold 84% of the parameters; embeddings and head
+  most of the rest.
+- Muon keeps one buffer, AdamW two: the hybrid's state is about 58% of
   all-AdamW's.
 - RMS matching lets both halves share one learning rate.
 :::
@@ -1513,18 +1592,18 @@ $0.2\sqrt{512} \approx 4.5$: exactly $0.2$.
 :::
 :::
 
-::: {.slide title="On TinyLM the Tuned Hybrid Ends Below Tuned AdamW"}
+::: {.slide title="On TinyLM the Tuned Hybrid Leads Tuned AdamW Throughout"}
 [Muon from scratch]{.kicker}
 
 Same initialization, 2,000 steps, constant rate, grid $10^{-3}$ to
-$10^{-1}$, no weight decay:
+$10^{-1}$, no weight decay, scored by validation loss:
 
 @!muon-the-race-on-the-language-model-3
 
-::: {.d2l-note}
-Matched tuning at 0.1B–1.2B parameters: matrix methods lead AdamW by about
-1.4×, shrinking to 1.1× (Wen et al., 2025).
-:::
+- Validation loss 1.6: hybrid after 1,000–1,250 steps, AdamW 1,500–2,000.
+- Step 2,000: 1.52–1.53 against 1.56–1.58 nats per byte; the gap narrows.
+- Matched tuning at 0.1B–1.2B parameters: about 1.4×, shrinking to 1.1×
+  (Wen et al., 2025).
 :::
 
 ::: {.slide title="On a CNN Muon Optimizes Faster but Predicts the Same"}
@@ -1533,7 +1612,7 @@ Matched tuning at 0.1B–1.2B parameters: matrix methods lead AdamW by about
 @!muon-the-same-race-on-a-cnn-3
 
 - Training loss: several times lower with the hybrid.
-- Test accuracy: within about a point.
+- Test accuracy: within half a point.
 
 ::: {.d2l-note}
 A verdict depends on the workload and on the metric.
@@ -1563,10 +1642,11 @@ Neuron norms (rows of the update) for one TinyLM gradient, block 1:
 
 @!muon-per-neuron-normalization-1
 
-- Tall matrices: uneven even when exact.
-- Five Newton–Schulz steps add spread everywhere.
+- LayerNorm removes one direction: every gradient has rank ≤ 127.
+- Exact: norms all 0.996 for wide mlp2; uneven for tall mlp1 and qkv.
+- Five Newton–Schulz steps (NS_5) add spread everywhere.
 - A fresh gradient is nearly rank one ($\sigma_1 / \|\mathbf{G}\|_F
-  \approx 0.98$–$0.99$ for qkv and proj): most σ start below 0.01, so five
+  \approx 0.99$ for qkv and proj): most σ start below 0.01, so five
   steps leave every neuron norm below 1.
 :::
 
@@ -1604,8 +1684,8 @@ Newton–Schulz couples all rows through $\mathbf{X}\mathbf{X}^\top$:
 - Five quintic Newton–Schulz steps put every σ above 1% of
   $\|\mathbf{G}\|_F$ in $[0.7, 1.13]$; Polar Express converges.
 - $0.2\sqrt{\max(m, n)}$ matches AdamW's RMS: one rate for the hybrid.
-- TinyLM: lower loss than tuned AdamW with about half the state; CNN: same
-  test accuracy.
+- TinyLM: lower validation loss than tuned AdamW throughout, with 58% of
+  the state; CNN: same test accuracy.
 - Matched tuning: gains of tens of percent, shrinking with scale.
 
 **Next:** how many examples per step, the batch size.

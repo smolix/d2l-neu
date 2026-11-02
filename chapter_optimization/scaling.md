@@ -187,14 +187,14 @@ def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
 ### Learning-Rate Sweep
 :label:`subsec_scaling-sweep`
 
-We evaluate four widths and eight learning rates spaced by factors of two,
-one short run per configuration, all from one random seed. The 32 runs stand
+We evaluate four widths and nine learning rates spaced by factors of two,
+one short run per configuration, all from one random seed. The 36 runs stand
 in for the proxy sweep of a large project. They show whether the learning
 rate selected at one width serves the others.
 
 ```{.python .input #scaling-the-sweep}
 widths = [128, 256, 512, 1024]
-lrs = [2 ** k for k in range(-12, -4)]
+lrs = [2 ** k for k in range(-13, -4)]
 seed = random.getrandbits(32)  # One draw for every run of this section
 sp_loss = {w: [train_mlp(MLP, w, lr, seed) for lr in lrs] for w in widths}
 for w in widths:
@@ -205,10 +205,11 @@ d2l.plot(lrs, [sp_loss[w] for w in widths], 'learning rate',
 ```
 
 Each width traces a U: too small a learning rate undertrains, and too large
-a one destabilizes, so that on the right the widest networks climb off the
-top of the chart, where the capped runs sit. The U's do not line up. The
-minimum slides left as the network widens: the best learning rate at width
-1,024 is about eight times smaller than at width 128, and the drift
+a one destabilizes. On the right the wider networks tend to climb fastest,
+in some runs off the top of the chart, where the capped runs sit. The U's do
+not line up. The minimum slides left as the network widens: the best
+learning rate at width 1,024 is four to eight times smaller than at width
+128, and the drift
 continues at larger widths :cite:`Yang.Hu.Babuschkin.ea.2022`. After tuning,
 the wider networks match or beat the narrower ones, so width helps. But the
 best region does not transfer. The width-128 optimum puts the width-1,024
@@ -304,8 +305,8 @@ full table and its pitfalls. Here the whole change is a subclass:
 ```{.python .input #scaling-the-rules}
 %%tab pytorch
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-128 base."""
-    def __init__(self, width, base_width=128):
+    """The same network under muP, relative to a width-1,024 base."""
+    def __init__(self, width, base_width=1024):
         super().__init__(width)
         self.m = width / base_width
 
@@ -325,8 +326,8 @@ class MuMLP(MLP):
 ```{.python .input #scaling-the-rules}
 %%tab jax
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-128 base."""
-    def __init__(self, width, base_width=128, *, rngs):
+    """The same network under muP, relative to a width-1,024 base."""
+    def __init__(self, width, base_width=1024, *, rngs):
         super().__init__(width, rngs=rngs)
         self.m = width / base_width
 
@@ -347,9 +348,19 @@ class MuMLP(MLP):
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
 ```
 
-At the base width $m = 1$, and `MuMLP` is `MLP`. The parametrization
-changes nothing about the model that is tuned, only how its wider siblings
-scale.
+At the base width $m = 1$, and `MuMLP` is `MLP`. Which width serves as the
+base is a free choice. Every choice gives the same dependence on the width;
+choices differ only by constant factors per layer, such as how fast the input
+layer learns relative to the hidden ones and how large the output multiplier
+is. These constants are hyperparameters in their own right, and the
+practitioner's guide tunes them on the proxy along with the learning rate. We
+avoid those extra sweeps by putting the base at the widest member of the
+family, 1,024, where `MuMLP` is the standard network with one learning rate
+for all layers. The narrower members, including the width-128 model that we
+tune, have $m < 1$. A base at width 128 would instead fix the constants where
+they matter least: in our runs it leaves tuned muP at width 1,024 one to
+three hundredths of a nat above tuned standard parametrization. An exercise
+traces which constants make the difference.
 
 ### The Coordinate Check
 :label:`subsec_scaling-coord-check`
@@ -436,8 +447,8 @@ d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
 
 All three layer curves are flat: no layer's update size depends on the
 width anymore. The logits *fall* with width, and this is by design. The
-$1/m$ multiplier starts the logits small, and they grow to order one through
-learning rather than through size. Growth is the unambiguous failure. A flat
+$1/m$ multiplier keeps the logits of the wider networks small at first, and
+they grow to order one through learning rather than through size. Growth is the unambiguous failure. A flat
 or falling curve says only that the forward pass is stable, because the
 check reads the sizes of activations, not whether features are learned.
 Updates that shrink too fast with width would also produce falling curves,
@@ -462,10 +473,11 @@ d2l.plot(lrs, [mup_loss[w] for w in widths], 'learning rate',
          legend=[f'width {w}' for w in widths])
 ```
 
-The width-128 curve repeats the earlier one, because at the base width the
-two parametrizations coincide and the seed is the same. For the other widths
-the minimum no longer drifts left: across the eightfold change in width,
-each grid minimum lies within one grid step of the base-width minimum. To
+The width-1,024 curve repeats the earlier one, because at the base width the
+two parametrizations coincide and the seed is the same. The narrower curves
+have moved to meet it, and the minimum no longer drifts with width: across
+the eightfold change in width, each grid minimum lies within one or two grid
+steps of the width-128 minimum. To
 measure what transfer is worth, we reuse the learning rate selected at width
 128 for width 1,024 and compare the result with the best loss of the
 width-1,024 sweep. We also print the best loss at each width, the result
@@ -481,13 +493,12 @@ for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
 ```
 
 Under muP the transferred learning rate lands within a few percent of the
-best loss at width 1,024. Under standard parametrization it lands about 20%
-above it. This is *hyperparameter transfer*: tune the base model, scale up,
-keep the numbers. Under muP the best loss also falls steadily with width,
-so the widest network, run at a learning rate tuned for the narrowest, is
-the best model of the family. Retuned at each width, standard
-parametrization reaches best losses close to muP's on a family this small,
-where the sweep at width 1,024 is still cheap. Here muP saves that sweep.
+best loss at width 1,024. Under standard parametrization it lands about 10%
+to 20% above it. This is *hyperparameter transfer*: tune the small model,
+scale up, keep the numbers. Under muP the best loss also falls from width
+128 to width 1,024. Retuned at width 1,024, standard parametrization reaches
+the same best loss, because there the two parametrizations coincide. On a
+family this small that sweep is still cheap; muP saves it.
 :citet:`Yang.Hu.Babuschkin.ea.2022` find that the two diverge at larger
 widths: the tuned loss under standard parametrization stops improving, while
 under muP it keeps falling. Transfer concerns the base learning rate, not
@@ -556,11 +567,13 @@ hidden layer's activations in proportion to its fan-in
 the width dependence with per-layer rules: the usual initialization with
 variance $\propto 1/\textrm{fan-in}$, hidden-matrix learning rates divided by
 the width multiplier $m$, logits divided by $m$, and input weights and biases
-left alone. In our family of networks, the best learning rate then stays at
-the base-width value across an eightfold change in width. The coordinate
-check tests such rules in seconds: after a training step, activations should
-follow the width dependence that the parametrization prescribes, without
-unintended growth. In spectral terms, muP makes Adam's updates land at the
+left alone. These rules fix how each layer scales with the width; the choice
+of base width fixes the constant factors. In our family of networks, with
+the base at the widest member, the best learning rate then stays within a
+grid step or two of its width-128 value across an eightfold change in width.
+The coordinate check tests such rules in seconds: after a training step,
+activations should follow the width dependence that the parametrization
+prescribes, without unintended growth. In spectral terms, muP makes Adam's updates land at the
 norm that a layer's shape prescribes, and Muon's orthogonalized updates
 carry part of that scaling by construction.
 
@@ -587,6 +600,16 @@ carry part of that scaling by construction.
        by $m^2$ instead of $m$. Does `coord_check` flag this error? Sweep
        `lrs` at width 1,024 with this variant, and compare its best
        learning rate and best loss with those of `MuMLP` in `mup_loss`.
+
+1. [code] **Choosing the base.** `MuMLP` puts its base at width 1,024, the
+   widest member of the family.
+    1. Rerun the muP sweep with `base_width=128`, so that muP coincides with
+       standard parametrization at the tuned width instead. Does the best
+       learning rate still transfer from width 128 to width 1,024? Compare
+       the best loss at each width with `mup_loss` and `sp_loss`.
+    1. The two bases differ only by constant factors per layer. List them,
+       and find which of them accounts for the difference at width 1,024 by
+       changing one at a time.
 
 1. [code] **Fitting the drift.** Instead of removing the drift, a large
    project can measure it: :citet:`Bi.Chen.Chen.ea.2024` fitted power laws
@@ -674,7 +697,8 @@ Scaling Up<br>
   tune a small proxy, then reuse its settings.
 - Fashion-MNIST MLP, 400 Adam steps: the best learning rate at width
   1,024 is several times smaller than at width 128.
-- Reusing the width-128 optimum at width 1,024 costs about 20% in loss.
+- Reusing the width-128 optimum at width 1,024 costs about 10% to 20% in
+  loss.
 
 ::: {.d2l-note .warn}
 Why does the optimum move, and can a parametrization pin it?
@@ -735,7 +759,7 @@ random seed fixes initialization and minibatches for every run.
 :::
 
 ::: {.slide title="Under SP the Best Learning Rate Slides Left with Width"}
-Eight learning rates × four widths, 400 Adam steps each:
+Nine learning rates × four widths, 400 Adam steps each:
 
 @!scaling-the-sweep
 
@@ -793,6 +817,8 @@ Derived from the infinite-width limit where activations stay $O(1)$
   everything else at `lr`.
 - PyTorch: `torch.optim.Adam` with parameter groups. JAX:
   `optax.multi_transform` with labels from the parameter paths.
+- Base at width 1,024, where muP is SP: any base gives the same width
+  scaling; the base fixes the per-layer constants.
 - Embeddings in a language model count as input weights; attention needs
   $1/d$ instead of $1/\sqrt{d}$; SGD has its own column.
 :::
@@ -829,21 +855,21 @@ width.
 :::
 :::
 
-::: {.slide title="Under muP the Optimum Stays at the Base-Width Value"}
+::: {.slide title="Under muP the Optimum Stops Drifting"}
 Same sweep, same seed, muP:
 
 @!scaling-learning-rate-transfer
 
-Each width's minimum lies within one grid step of width 128's.
+Each width's minimum lies within one or two grid steps of width 128's.
 :::
 
-::: {.slide title="Transfer Costs a Few Percent Under muP, About 20% Under SP"}
+::: {.slide title="Transfer Costs a Few Percent Under muP, 10–20% Under SP"}
 Reuse the width-128 learning rate at width 1,024:
 
 @!scaling-learning-rate-transfer-1
 
-- muP: the best loss falls with width. Retuned SP comes close at these
-  widths; muP saves the sweep.
+- muP: the best loss falls with width. At width 1,024 muP is SP, so
+  retuned SP matches it there; muP saves that sweep.
 - Wider still, SP's tuned loss stops improving while muP's keeps falling.
 - GPT-3 6.7B tuned on a 40M proxy for about 7% of the pretraining compute
   (Yang et al., 2022).
@@ -868,7 +894,7 @@ Healthy layer size: $\|\mathbf{W}\|_2 \asymp \|\Delta\mathbf{W}\|_2 \asymp
 - **Drift:** under SP the best learning rate falls with width, because
   Adam's first step sums $n$ coherent terms.
 - **muP:** hidden learning rate $\eta/m$, logits $\times 1/m$, the rest
-  unchanged; the optimum stays at the base width's value.
+  unchanged; the optimum stops drifting with width.
 - **Coordinate check:** flat or falling activations across widths after
   one step; growth means a scaling error.
 - **Spectral view:** muP sets every update's spectral norm to

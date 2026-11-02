@@ -284,7 +284,7 @@ def _edge(ax, x0, y0, x1, y1, color=LIGHT, lw=1.0, highlight=False):
 
 def fig_cnn_rnn_self_attention() -> None:
     n = 5
-    fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.4))
+    fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.9))
     focus = 2                      # the output whose connections we highlight
 
     # ---- CNN: each output sees a local window (width 3) -------------------- #
@@ -323,9 +323,15 @@ def fig_cnn_rnn_self_attention() -> None:
                   lw=1.6 if hl else 0.8, highlight=hl)
     ax.set_title("self-attention: all-to-all", fontsize=13.5, color="black")
 
-    for ax in axes:
+    # the two quantities of the cost table, one line under each panel
+    notes = [r"path $\mathcal{O}(n/k)$, parallel",
+             r"path $\mathcal{O}(n)$, sequential",
+             r"path $\mathcal{O}(1)$, parallel"]
+    for ax, note in zip(axes, notes):
+        ax.text((n - 1) / 2, -0.62, note, ha="center", va="top",
+                fontsize=13.5, color="black")
         ax.set_xlim(-0.7, n - 0.3)
-        ax.set_ylim(-0.45, 2.6)
+        ax.set_ylim(-1.15, 2.6)
         ax.set_aspect("equal")
         ax.axis("off")
     fig.subplots_adjust(wspace=0.08)

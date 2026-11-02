@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:00eeb9ed76a4cd742fd08b3983dcf3bfdfd5e322d5e6a1f716be52a5d0435247",
+    "d2l_lib_fingerprint": "sha256:4f75f4419e0e8968477675f5050cc29bb6007ab70875f299bdc585cb1cabfed5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -72,17 +72,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  0.13  0.26\n"
+          "text": "RNN               1.00  1.00  1.00  1.00  1.00  0.25\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.24  0.12  0.12  0.11\n"
+          "text": "LSTM              1.00  1.00  0.60  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.13\n"
+          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.13\nLSTM    542,003 parameters   perplexity 2.96\nGRU     475,955 parameters   perplexity 3.00\n"
+          "text": "RNN     343,859 parameters   perplexity 3.14\nLSTM    542,003 parameters   perplexity 2.97\nGRU     475,955 parameters   perplexity 2.98\n"
         }
       ]
     }

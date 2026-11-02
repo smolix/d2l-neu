@@ -129,15 +129,14 @@ book:
         - chapter_optimization/optimization-intro.qmd
         - chapter_optimization/gd.qmd
         - chapter_optimization/sgd.qmd
-        - chapter_optimization/minibatch-sgd.qmd
         - chapter_optimization/momentum.qmd
         - chapter_optimization/adam.qmd
-        - chapter_optimization/adamw.qmd
         - chapter_optimization/lr-scheduler.qmd
         - chapter_optimization/muon.qmd
         - chapter_optimization/batch-size.qmd
         - chapter_optimization/scaling.qmd
         - chapter_optimization/practice.qmd
+        - chapter_optimization/further-reading.qmd
         - chapter_attention/index.qmd
         - chapter_attention/queries-keys-values.qmd
         - chapter_attention/attention-scoring.qmd

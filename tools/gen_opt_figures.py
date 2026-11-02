@@ -47,18 +47,18 @@ def fig_critical_damping():
         bstar = (1.0 - np.sqrt(eta_lam)) ** 2
         ax.plot([bstar], [_hb_rate(eta_lam, bstar)], "o", color=color, ms=7,
                 zorder=5)
-        # the guide stops short of its own beta* tag (an axvline ran through it)
+        # the guide stops short of its own beta_c tag (an axvline ran through it)
         ax.plot([bstar, bstar], [0.5, 1.0], color=color, lw=0.8, ls=":",
                 alpha=0.6)
-        ax.text(bstar, 1.015, r"$\beta^{*}$", color=color, ha="center",
+        ax.text(bstar, 1.015, r"$\beta_{\mathrm{c}}$", color=color, ha="center",
                 va="bottom", fontsize=14)
         # curve tag sits above the flat left arm of its own curve
         ax.text(0.02, _hb_rate(eta_lam, 0.0) + 0.022, tag, color=color,
                 fontsize=13, ha="left", va="bottom")
     # regime labels for the better-conditioned (blue) curve
-    ax.text(0.145, 0.585, "over-damped:\nmonotone, slow", color="black",
+    ax.text(0.145, 0.585, "overdamped:\nmonotone, slow", color="black",
             fontsize=12.5, ha="center", va="center")
-    ax.text(0.785, 0.60, "under-damped:\noscillates, rate $\\sqrt{\\beta}$",
+    ax.text(0.785, 0.60, "underdamped:\noscillates, rate $\\sqrt{\\beta}$",
             color="black", fontsize=12.5, ha="center", va="center")
     # the head stops just under the sqrt(beta) curve instead of piercing it
     ax.annotate("", xy=(0.86, np.sqrt(0.86) - 0.03), xytext=(0.86, 0.77),
@@ -76,6 +76,57 @@ def fig_critical_damping():
     for s in ("left", "bottom"):
         ax.spines[s].set_color("black")
     fl.save(fig, "mdl-opt-critical-damping")
+
+
+def fig_nesterov_lookahead():
+    """One step of heavy-ball and of Nesterov momentum on the valley."""
+    h = np.array([0.2, 4.0])  # curvatures of the valley 0.1 x1^2 + 2 x2^2
+    eta = 0.25
+    x = np.array([-3.0, 0.6])                # current iterate x_{t-1}
+    jump = np.array([0.8, -1.0])             # -eta * beta * v_{t-1}
+    look = x + jump                          # look-ahead point
+    hb = look - eta * h * x                  # gradient taken at x_{t-1}
+    nes = look - eta * h * look              # gradient taken at the look-ahead
+
+    xlim, ylim = (-4.1, 0.9), (-1.35, 1.15)
+    xs = np.linspace(*xlim, 300)
+    ys = np.linspace(*ylim, 240)
+    X, Y = np.meshgrid(xs, ys)
+    fig, ax = plt.subplots(figsize=(6.4, 3.3))
+    ax.contour(X, Y, 0.1 * X ** 2 + 2 * Y ** 2, levels=[0.4, 0.9, 1.6, 2.5],
+               colors=GRAY, linewidths=0.8, alpha=0.5)
+    ax.plot([0], [0], "+", color="black", ms=10, mew=1.5)
+    fl.arrow(ax, x, look, color=GRAY, lw=2.0)
+    fl.arrow(ax, look, hb, color=BLUE, lw=2.2)
+    fl.arrow(ax, look, nes, color=ORANGE, lw=2.2)
+    ax.plot(*x, "o", color="black", ms=7, zorder=5)
+    ax.plot(*look, "o", mfc="white", mec="black", ms=7, mew=1.4, zorder=5)
+    ax.plot(*hb, "o", color=BLUE, ms=7, zorder=5)
+    ax.plot(*nes, "o", color=ORANGE, ms=7, zorder=5)
+
+    box = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.9)
+    ax.text(x[0] - 0.1, x[1] + 0.06, r"$\mathbf{x}_{t-1}$", fontsize=15,
+            color="black", ha="right", va="bottom", bbox=box)
+    ax.text(-2.86, 0.12, "momentum step\n" + r"$-\eta\beta\,\mathbf{v}_{t-1}$",
+            fontsize=13, color="black", ha="right", va="center", bbox=box)
+    ax.text(look[0] - 0.14, look[1] - 0.04, "look-ahead\npoint", fontsize=13,
+            color="black", ha="right", va="top", bbox=box)
+    ax.text(hb[0] + 0.16, hb[1] - 0.02,
+            "heavy ball: gradient at\n" + r"$\mathbf{x}_{t-1}$, overshoots",
+            fontsize=13, color=BLUE, ha="left", va="center", bbox=box)
+    ax.text(nes[0] + 0.16, nes[1] + 0.16,
+            "Nesterov: gradient at the\nlook-ahead point, lands\nnear the floor",
+            fontsize=13, color=ORANGE, ha="left", va="bottom", bbox=box)
+    ax.text(0.02, -0.1, "minimum", fontsize=12, color="black", ha="center",
+            va="top", bbox=box)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for s in ax.spines.values():
+        s.set_visible(False)
+    fl.save(fig, "mdl-opt-nesterov-lookahead")
 
 
 # =========================================================================== #
@@ -275,6 +326,66 @@ def fig_norm_balls():
 
 
 # =========================================================================== #
+# muon.md: Newton--Schulz as a scalar map on each singular value              #
+# =========================================================================== #
+
+NS_CUBIC = [(1.5, -0.5, 0.0)]
+NS_JORDAN = [(3.4445, -4.7750, 2.0315)]
+# Polar Express (Amsel et al., Implementation 1, safety factor folded in).
+NS_POLAR = [(8.2052, -22.9019, 16.4607), (4.0664, -2.8612, 0.5184),
+            (3.9096, -2.8234, 0.5250), (3.2856, -2.4153, 0.4853),
+            (2.2779, -1.6198, 0.3985)]
+
+
+def _ns_map(x, coeffs, steps):
+    for t in range(steps):
+        a, b, c = coeffs[min(t, len(coeffs) - 1)]
+        x = a * x + b * x**3 + c * x**5
+    return x
+
+
+def fig_ns_maps():
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.6, 3.7))
+
+    # --- (a) one step on [0, 1.2] ----------------------------------------- #
+    x = np.linspace(0, 1.2, 400)
+    ax1.axhline(1.0, color=LIGHT, lw=1.0, ls="--")
+    ax1.plot(x, _ns_map(x, NS_CUBIC, 1), color=GREEN, lw=2.2)
+    ax1.plot(x, _ns_map(x, NS_JORDAN, 1), color=BLUE, lw=2.2)
+    ax1.text(1.05, 0.86, "cubic", color=GREEN, fontsize=13, ha="center",
+             va="center")
+    ax1.text(0.74, 1.19, "tuned quintic", color=BLUE, fontsize=13,
+             ha="left", va="bottom")
+    ax1.set_xlim(0, 1.2)
+    ax1.set_ylim(0, 1.32)
+    ax1.set_xticks([0, 0.5, 1.0])
+    ax1.set_yticks([0, 0.5, 1.0])
+    _fn_axes(ax1, r"singular value $\sigma$", r"after one step, $p(\sigma)$")
+
+    # --- (b) five steps, log-spaced inputs ------------------------------- #
+    s = np.logspace(-3, 0, 3000)
+    ax2.axhline(1.0, color=LIGHT, lw=1.0, ls="--")
+    ax2.plot(s, _ns_map(s, NS_CUBIC, 5), color=GREEN, lw=1.8)
+    ax2.plot(s, _ns_map(s, NS_JORDAN, 5), color=BLUE, lw=1.6)
+    ax2.plot(s, _ns_map(s, NS_POLAR, 5), color=ORANGE, lw=1.6)
+    ax2.text(2.2e-2, 0.12, "cubic", color=GREEN, fontsize=13, ha="left",
+             va="center")
+    ax2.text(1.3e-3, 0.27, "tuned quintic", color=BLUE, fontsize=13,
+             ha="left", va="center")
+    ax2.text(1.3e-3, 0.40, "Polar Express", color=ORANGE, fontsize=13,
+             ha="left", va="center")
+    ax2.set_xscale("log")
+    ax2.set_xlim(1e-3, 1)
+    ax2.set_ylim(0, 1.32)
+    ax2.set_yticks([0, 0.5, 1.0])
+    _fn_axes(ax2, r"singular value $\sigma$ (log scale)",
+             r"after five steps")
+
+    fig.subplots_adjust(wspace=0.30)
+    fl.save(fig, "mdl-opt-ns-maps")
+
+
+# =========================================================================== #
 # optimization-intro.md (Landscapes): risk vs empirical risk, the zero-        #
 # gradient traps (local minima, a stationary inflection, a saddle), and a      #
 # flat/saturated region.  Every curve is the real analytic function evaluated  #
@@ -469,8 +580,10 @@ def fig_saddle():
 
 if __name__ == "__main__":
     fig_critical_damping()
+    fig_nesterov_lookahead()
     fig_river_valley()
     fig_norm_balls()
+    fig_ns_maps()
     fig_risk_gap()
     fig_local_minima()
     fig_inflection()

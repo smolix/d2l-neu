@@ -1,5 +1,11 @@
 # Exercise Catalog: chapter_optimization
 
+**Update (2026-11-01, ch. 9 pass):** the chapter now has 10 sections, since
+`minibatch-sgd.md` merged into `sgd.md` and `adamw.md` into `adam.md`, plus
+`further-reading.md` (no exercises). It carries 75 exercises; each entry below
+opens with its current list. The survey that follows describes the earlier
+12-file chapter.
+
 Chapter overview (12 files, 69 existing exercises surveyed against verified external
 sources — every URL below was directly fetched, not inferred):
 
@@ -30,6 +36,8 @@ external material is layered on top, never substituted in.
 ---
 
 ## chapter_optimization/optimization-intro.md — Landscapes
+
+**Update (2026-11-01, ch. 9 pass):** 6 exercises: 1 critical points and plateaus; 2 [code] saddle escape time; 3 [code] an ill-conditioned valley (the best rate and its factor $(\kappa-1)/(\kappa+1)$, compared with `eq_mdl-opt-optimal-step`); 4 [code] learning rate and sharpness; 5 ● permutation-symmetric minima; 6 ● eigenvalues of symmetric random matrices.
 
 **Topic:** What optimization does and doesn't accomplish for deep learning: vanishing gradients, curvature/condition number, noise, and convexity as local approximation and vocabulary.
 **Current exercises:** 5; disposition: keep 3, rewrite 1, drop 1 — the two problematic items are exactly the file's two "Can you...?"/pure-brainstorm items (ex3's sub-question, ex5); the analytical items (permutation-symmetry, Wigner symmetry, valley/condition-number) are strong and kept.
@@ -65,6 +73,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/gd.md — Gradient Descent
 
+**Update (2026-11-01, ch. 9 pass):** 6 exercises: 1 [code] learning-rate sweep; 2 [code] diagonal preconditioning under rotation; 3 [code] absolute-curvature preconditioning; 4 ● certifying the lowest minimum; 5 [code] ● Newton's convergence order; 6 [code] ● stale Hessian factorizations.
+
 **Topic:** 1-D and multivariate gradient descent, Newton's method, and diagonal preconditioning.
 **Current exercises:** 5; disposition: keep 2, rewrite 3 — ex1 (no metric), ex2 (line-search/binary-search terminology conflation), and ex5 (ambiguous "the algorithm above") are the file's three clarity flags; each is salvageable with a concrete deliverable rather than a drop.
 
@@ -92,7 +102,9 @@ external material is layered on top, never substituted in.
 
 ---
 
-## chapter_optimization/sgd.md — Stochastic Gradient Descent
+## chapter_optimization/sgd.md — Stochastic and Minibatch Gradient Descent
+
+**Update (2026-11-01, ch. 9 pass):** `minibatch-sgd.md` is merged into this file, now titled "Stochastic and Minibatch Gradient Descent"; the entry for `minibatch-sgd.md` below is historical. 9 exercises: 1 noise as a random dataset (start at $(-5, -2)$); 2 [code] ● reshuffling versus replacement; 3 [code] ● per-coordinate learning rates; 4 [code] ● gradient variance after training; 5 duplicated data; 6 [code] ● where the time per example levels off; 7 memory traffic of matrix multiplication; 8 unequal micro-batches; 9 [code] ● batch size and learning rate together (`train_sgd` returns a history; part (b) confirms the smoothness constant $L \approx 2.1$ quoted in the text).
 
 **Topic:** Stochastic gradient estimates, dynamic learning rates, and the variance/batch-size relationship.
 **Current exercises:** 6; disposition: keep 4, rewrite 2 — this is a strong, largely well-specified set; only ex4 (open-ended "how would you change the solver") and ex5 ("Can you change $f$...") needed concrete deliverables.
@@ -119,6 +131,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/minibatch-sgd.md — Minibatches
 
+**Update (2026-11-01, ch. 9 pass):** merged into `sgd.md` (label `sec_minibatch_sgd` is now on its "Minibatches" subsection). The proposals below refer to the old file; its surviving exercises are listed under `sgd.md` above.
+
 **Topic:** Vectorization, cache effects, and minibatch gradients as the computational half of the SGD/batch-size story.
 **Current exercises:** 5; disposition: keep 3, rewrite 2 — ex1 (no metric) and ex3 ("what happens?") needed quantified deliverables; ex2, ex4, and ex5 are already precise.
 
@@ -144,6 +158,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/momentum.md — Momentum
 
+**Update (2026-11-01, ch. 9 pass):** 6 exercises: 1 [code] momentum and learning rate together; 2 velocity noise; 3 two forms of Nesterov momentum; 4 ● stability of momentum; 5 [code] ● many eigenvalues; 6 [code] ● momentum under minibatch noise.
+
 **Topic:** Heavy-ball momentum as a leaky gradient average, and Nesterov's look-ahead correction.
 **Current exercises:** 5; disposition: keep 3, rewrite 2 — ex1 (no metric) and ex5 (trailing "experiment with the parameters") are the only soft items; ex2, ex3, ex4 are precise and kept.
 
@@ -168,7 +184,9 @@ external material is layered on top, never substituted in.
 
 ---
 
-## chapter_optimization/adam.md — Adam
+## chapter_optimization/adam.md — Adam and AdamW
+
+**Update (2026-11-01, ch. 9 pass):** `adamw.md` is merged into this file, now titled "Adam and AdamW" (label `sec_adamw` on its "Decoupled Weight Decay" subsection); the entry for `adamw.md` below is historical. 10 exercises: 1 [code] rotating the coordinates (uses `gd_2d(..., eta)` of `sec_gd`); 2 bias correction by initialization; 3 [extended] frequent and rare characters; 4 [code] ● per-group learning rates for SGD; 5 [code] two repairs of the variance estimate (AMSGrad on the uncorrected $v$, as in the paper, and Yogi); 6 [code] the $\epsilon$ ceiling (on the per-coordinate learning rate $\eta/\epsilon$); 7 [code] saturation of coupled decay; 8 [code] ● the fixed-product ridge; 9 [code] ● rotational equilibrium; 10 activations and optimizer state.
 
 **Topic:** AdaGrad → RMSProp → Adam, bias correction, and Adam's failure modes (AMSGrad, Yogi, Adadelta).
 **Current exercises:** 9; disposition: keep 8, rewrite 1 — this is the chapter's longest and, apart from ex1, most rigorously specified set; kept almost entirely, two related items merged into one to fit the format cap.
@@ -201,6 +219,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/adamw.md — AdamW
 
+**Update (2026-11-01, ch. 9 pass):** merged into `adam.md`; the proposals below refer to the old file, and its surviving exercises are listed under `adam.md` above.
+
 **Topic:** Decoupled weight decay vs. $\ell_2$ regularization under Adam's preconditioner.
 **Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the most rigorous file in the chapter per the prior style review (zero clarity flags); kept in full, with one genuinely new addition rather than a replacement.
 
@@ -228,6 +248,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/lr-scheduler.md — Schedules
 
+**Update (2026-11-01, ch. 9 pass):** 8 exercises; piecewise constant decay is folded into exercise 2 as its third item. 1 [code] the constant baseline; 2 [code] schedules on the valley (with `sgd_valley`); 3 [code] polynomial decay on the network; 4 [code] schedule-free SGD; 5 [code] ● warmup length and the stability ceiling; 6 [code] ● branching at several budgets; 7 ● from noise ball to sampler; 8 [code] ● linear decay to zero. Exercise 3 compares with the square-root decay of `subsec_scheduler-decay-shapes`.
+
 **Topic:** Learning-rate schedules: constant baseline, polynomial/square-root decay, warmup, warmup–stable–decay, schedule-free SGD, SGLD.
 **Current exercises:** 6; disposition: keep 5, rewrite 1 — only ex6's "read about SGLD and relate..." phrasing needed a concrete deliverable; the rest are already well-specified.
 
@@ -254,6 +276,8 @@ external material is layered on top, never substituted in.
 ---
 
 ## chapter_optimization/muon.md — Muon
+
+**Update (2026-11-01, ch. 9 pass):** 10 exercises: 1 diagonal-entry bound; 2 [code] the RMS-matching factor; 3 [code] how many iterations; 4 the Polar Express guarantee; 5 [code] embeddings in the Muon group; 6 [code] NorMuon; 7 [code] Lion (on the LM grid $10^{-3}$ to $10^{-1}$); 8 damped orthogonalization; 9 ● Adam without momentum; 10 [code] ● spectral concentration of gradients.
 
 **Topic:** Steepest descent under a chosen norm; the spectral-norm case (Muon) via Newton–Schulz orthogonalization; comparison with AdamW and Lion.
 **Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — zero clarity flags, the most rigorously specified file in the chapter; kept in full.
@@ -283,6 +307,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/batch-size.md — Batch Size
 
+**Update (2026-11-01, ch. 9 pass):** 7 exercises: 1 [code] the noise scale over training (evaluation set `X_lm[::48][:2048]`); 2 [code] past the elbow; 3 [code] retuning instead of scaling; 4 time-optimal and compute-optimal batch size; 5 [code] ● noise scale per parameter group (the groups of `subsec_tinylm`; why `pos_emb` comes out zero); 6 [code] ● the factor-of-two check; 7 [extended] ● measured time-compute tradeoff.
+
 **Topic:** The gradient-noise scale, the steps-to-target-vs-batch-size hyperbola, learning-rate scaling rules, and growing the batch during training.
 **Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — zero clarity flags, and this section's exercises already extend the field's primary methodology further than any external source found.
 
@@ -309,6 +335,8 @@ external material is layered on top, never substituted in.
 
 ## chapter_optimization/scaling.md — Scaling Up
 
+**Update (2026-11-01, ch. 9 pass):** 6 exercises: 1 [code] transfer across seeds; 2 [code] breaking muP on purpose; 3 [code] fitting the drift; 4 [code] ● depth and the coordinate check; 5 ● first update in spectral norm; 6 [code] ● weight decay and parametrization.
+
 **Topic:** Hyperparameter transfer across width via the maximal update parametrization (muP), verified with coordinate checks and transfer sweeps.
 **Current exercises:** 4; disposition: keep 4, rewrite 0, drop 0 — smallest set in the chapter but zero clarity flags; kept whole, extended with two new problems drawn from directly-verified external sources.
 
@@ -334,6 +362,8 @@ external material is layered on top, never substituted in.
 ---
 
 ## chapter_optimization/practice.md — Practice
+
+**Update (2026-11-01, ch. 9 pass):** 7 exercises: 1 the decay timescale (final batch 15,360 sequences; $\tau \approx 0.19$ epochs for DeepSeek-V3, $\approx 0.035$ for OLMo 2); 2 [code] clipping regimes (2.4 is new: linear warmup over 20 and 100 steps in place of clipping); 3 logit drift (with the literal $10^{-4}$); 4 [code] the averaging window; 5 [code] a ten-run budget; 6 defaults against a small budget; 7 [code] ● batch size and the tuned rate.
 
 **Topic:** Combining optimizer, schedule, and noise-control choices into a stable large-scale recipe: gradient clipping, weight averaging, and tuning protocol.
 **Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the best-specified file in the chapter per the prior style review; kept whole, extended with one new problem.

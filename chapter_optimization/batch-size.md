@@ -1,34 +1,36 @@
 # Batch Size
 :label:`sec_batch_size`
 
-Batch size affects both gradient variance and hardware utilization.
-:numref:`sec_sgd` showed that averaging $b$ examples divides the variance by
-$b$, while :numref:`sec_minibatch_sgd` showed that batching amortizes dispatch
-overhead until the device saturates. This leaves a quantitative question:
-when does increasing the batch cease to improve optimization? A larger batch
-costs proportionally more compute per step. If it removes noise the
-optimizer was actually fighting, the run takes proportionally fewer steps
-and total computation remains constant. Otherwise, it evaluates additional
-examples without reducing the number of steps. The transition depends on the
-optimization problem and changes during training.
+Doubling the minibatch from 64 to 128 sequences doubles the work in every
+step. If the run then needs half as many steps to reach the same loss,
+nothing is lost: the total work is unchanged, and on twice as many
+accelerators the run finishes in half the time. If it needs as many steps as
+before, half of the work was spent for nothing. Which of the two happens
+decides how fast a model can be trained, because a run can be shared among
+only as many accelerators as its batch can feed.
 
-This section makes the question quantitative. We define and measure the
-*gradient-noise scale*, the batch size at which the expected squared noise
-in a minibatch gradient equals the squared full-gradient norm; we run the defining experiment of large-batch training,
-steps to a fixed target loss as a function of batch size, on both of the
-chapter's testbeds; we check the standard rules for moving the learning rate
-along with the batch and mark where they fail; and we look at how production
-language-model runs act on all of this by growing the batch during training.
-These experiments characterize the tradeoff between gradient variance and
-the number of examples processed.
+Two facts from earlier sections frame the question. Averaging $b$ examples
+divides the variance of a gradient estimate by $b$ (:numref:`sec_sgd`), and
+an accelerator processes a larger batch in barely more time per step until
+it is fully occupied. A larger batch therefore gives a better gradient at
+little extra cost per step. It saves steps, however, only as long as the
+noise in the gradient was what slowed the optimizer down.
+
+This section turns that observation into numbers. We compare the size of
+the noise in a gradient with the size of the gradient itself, measure the
+ratio on two small models, and use it to predict how the number of steps to
+a target loss falls as the batch grows. We then ask how the learning rate
+must change when the batch does, and why the best batch size grows while a
+model trains.
 
 ```{.python .input #batch-size}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import math
+import numpy as np
+import random
 import torch
-from torch import nn
 from torch.nn import functional as F
 ```
 
@@ -40,137 +42,159 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
+import numpy as np
 import optax
+import random
 ```
 
 ## The Gradient-Noise Scale
 
-### Signal versus Noise
+### Signal and Noise
 
-Write $\nabla f$ for the full-dataset gradient at the current parameters and
-$\boldsymbol{\Sigma}$ for the covariance of a single example's gradient, so
-that $\operatorname{tr} \boldsymbol{\Sigma} =
-\mathbb{E}_i \|\nabla f_i - \nabla f\|^2$ is the total noise power carried
-by one example. A minibatch gradient $\hat{\mathbf{g}}_b$ averaged over $b$
-examples drawn with replacement is unbiased, and its expected squared
-deviation from the truth is the $1/b$ law we measured in :numref:`sec_sgd`:
-$\mathbb{E}\|\hat{\mathbf{g}}_b - \nabla f\|^2 =
-\operatorname{tr} \boldsymbol{\Sigma} / b$. So every minibatch gradient is
-the sum of a signal of squared length $\|\nabla f\|^2$, the same at every
-batch size, and a noise of squared length
-$\operatorname{tr} \boldsymbol{\Sigma} / b$, which shrinks as the batch
-grows. The two parts change places at
+Write $\nabla f$ for the gradient of the training loss over the whole
+dataset at the current parameters, and $\nabla f_i$ for the gradient of the
+loss on example $i$. The per-example gradients scatter around their mean
+$\nabla f$. Their expected squared distance from it,
+
+$$\operatorname{tr} \boldsymbol{\Sigma} = \mathbb{E}_i \|\nabla f_i - \nabla f\|^2,$$
+
+is the *noise power* of one example, the trace of the covariance matrix
+$\boldsymbol{\Sigma}$ of the per-example gradients. A minibatch gradient
+$\hat{\mathbf{g}}_b$ averages $b$ examples drawn independently with
+replacement. It is unbiased, and its noise power is $b$ times smaller,
+because the variance of an average of $b$ independent terms is $1/b$ times
+the variance of one:
+
+$$\mathbb{E}\|\hat{\mathbf{g}}_b - \nabla f\|^2 = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}.$$
+
+This is the $1/b$ law that :numref:`sec_sgd` checked on a small network.
+It splits every minibatch gradient into a *signal* $\nabla f$, whose squared
+length $\|\nabla f\|^2$ is the same at every batch size, and a *noise* whose
+squared length averages $\operatorname{tr} \boldsymbol{\Sigma} / b$ and
+shrinks as the batch grows. The two have equal power at the batch size
 
 $$b_{\textrm{noise}} = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{\|\nabla f\|^2},$$
 :eqlabel:`eq_noise-scale`
 
-the *gradient-noise scale* :cite:`McCandlish.Kaplan.Amodei.ea.2018`. Below
-$b_{\textrm{noise}}$, the expected squared noise exceeds the squared signal,
-and doubling the batch halves that noise power. Above it, the signal
-dominates in this mean-square sense, so further averaging offers diminishing
-returns. The noise scale therefore predicts that increasing the batch up to
-roughly $b_{\textrm{noise}}$ should reduce the number of steps without a
-large increase in total compute; beyond it, the compute cost should grow
-faster than the reduction in steps. The rest of this section tests that prediction.
+called the *gradient-noise scale* :cite:`McCandlish.Kaplan.Amodei.ea.2018`.
+If, say, $\operatorname{tr} \boldsymbol{\Sigma} = 100$ and
+$\|\nabla f\|^2 = 1$, the gradient of a single example carries a hundred
+times more noise power than signal, and a batch of
+$b_{\textrm{noise}} = 100$ examples brings the two to parity.
+
+Below $b_{\textrm{noise}}$ the noise dominates. Doubling the batch halves
+the noise power and gives a markedly better direction, so each step can
+make more progress and fewer steps are needed. Above $b_{\textrm{noise}}$
+the signal dominates, the direction is already nearly right, and further
+averaging removes little error. The noise scale therefore predicts that
+growing the batch up to about $b_{\textrm{noise}}$ reduces the number of
+steps without much increase in total work, and that beyond it the total
+work grows faster than the number of steps falls. The rest of this section
+tests that prediction.
 
 ### A Two-Batch Estimator
 :label:`subsec_batch-size-estimator`
 
-Neither $\operatorname{tr} \boldsymbol{\Sigma}$ nor $\|\nabla f\|^2$ is
-observable from a single minibatch, but both fall out of a quantity that is:
-the squared *norm* of a minibatch gradient. Taking expectations of
+Neither $\operatorname{tr} \boldsymbol{\Sigma}$ nor $\|\nabla f\|^2$ can be
+read off a single minibatch, but both follow from a quantity that can: the
+squared norm of a minibatch gradient. We expand
 $\|\hat{\mathbf{g}}_b\|^2 = \|\nabla f + (\hat{\mathbf{g}}_b - \nabla f)\|^2$
-and using unbiasedness,
+and take expectations. The cross term vanishes because the deviation has
+mean zero, which leaves
 
 $$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 + \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}.$$
 :eqlabel:`eq_sqnorm-bias`
 
-The expected *squared norm* of a minibatch gradient exceeds that of the
-true gradient by exactly the noise power. Measuring the mean squared norm at two batch sizes
-$b_{\textrm{small}} < b_{\textrm{big}}$ gives two linear equations in the
-two unknowns, and solving them yields the estimator below. This is the
-measurement of :numref:`sec_sgd` stripped of its crutch: there we needed the
-full-dataset gradient as ground truth; here two batch sizes suffice, which
-is what makes the noise scale cheap enough that large training runs log it
-continuously (in a data-parallel run, each worker's local gradient supplies
-the small-batch norm for free).
+On average a minibatch gradient is longer than the true gradient, and the
+excess squared length is its noise power. Let $N_b$ denote the mean squared
+norm of minibatch gradients at batch size $b$. Measuring it at a small batch
+size $b_{\textrm{s}}$ and a large one $b_{\textrm{l}}$ gives two linear
+equations in the two unknowns, with the solution
 
-We will measure both testbeds of this chapter: the Fashion-MNIST CNN of
-:numref:`sec_adam` and the `TinyLM` character-level transformer of
-:numref:`subsec_tinylm`, on its usual *Time Machine* data. The setup cell
-assembles the data as indexable tensors, so that a random index set gives a
-random minibatch. One caveat: minibatch indices are drawn independently from the empirical
-set, but adjacent *Time Machine* windows overlap by 63 of 64 characters.
-The estimator therefore treats highly redundant sequences as separate
-examples, so its numerical scale should be interpreted for this sampling
-scheme rather than as a count of independent pieces of text. For the language model one "example" is such a sequence,
-so its noise scale and batch sizes are denominated in sequences (tokens =
-sequences × 64).
+$$
+\operatorname{tr} \boldsymbol{\Sigma} \approx
+\frac{N_{b_{\textrm{s}}} - N_{b_{\textrm{l}}}}{1/b_{\textrm{s}} - 1/b_{\textrm{l}}},
+\qquad
+\|\nabla f\|^2 \approx
+\frac{b_{\textrm{l}} N_{b_{\textrm{l}}} - b_{\textrm{s}} N_{b_{\textrm{s}}}}{b_{\textrm{l}} - b_{\textrm{s}}}.
+$$
+
+The difference of the two mean norms isolates the noise, and the large
+batch, nearly free of noise, pins down the signal. Checking the $1/b$ law
+directly requires the full-dataset gradient as ground truth. This estimator
+needs no full gradient, which makes it cheap enough to log throughout a large
+training run, where every data-parallel worker computes a small-batch
+gradient anyway and their average is the large-batch gradient.
+
+We measure the two models of :numref:`subsec_tinylm`. `TinyLM` is a
+two-block decoder-only transformer with about 0.47 million parameters
+that predicts the next byte of WikiText-103 text from windows of 64 bytes.
+`FashionCNN` classifies Fashion-MNIST images with two
+convolution-and-pooling stages and two fully connected layers, with about
+0.4 million parameters. For each model a sampling function draws a random
+minibatch of $b$ examples. The Fashion-MNIST images sit on the device as
+one tensor, indexed at random. For the language model one example is a
+window of 64 bytes at a random offset in the training text, so its noise
+scale and its batch sizes count sequences, each of 64 tokens. Two windows
+drawn from 270 million bytes almost never overlap, so the examples of a
+minibatch are close to the independent draws that the estimator assumes.
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab pytorch
 device = d2l.try_gpu()
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
-X_lm = data.X[:data.num_train].to(device)
-Y_lm = data.Y[:data.num_train].to(device)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
 X_f = (fashion.train.data.float() / 255).unsqueeze(1).to(device)
 y_f = fashion.train.targets.to(device)
 
-def make_cnn():
-    return nn.Sequential(
-        nn.LazyConv2d(32, kernel_size=3, padding=1), nn.ReLU(),
-        nn.MaxPool2d(2),
-        nn.LazyConv2d(64, kernel_size=3, padding=1), nn.ReLU(),
-        nn.MaxPool2d(2),
-        nn.Flatten(), nn.LazyLinear(128), nn.ReLU(), nn.LazyLinear(10))
+def sample_fashion(b):  # b random training images
+    i = torch.randint(len(y_f), (b,), device=device)
+    return X_f[i], y_f[i]
+
+def sample_lm(b):  # b windows at random offsets in the training text
+    starts = torch.randint(len(data.train) - data.num_steps, (b,))
+    X, Y = data.windows(data.train, starts.numpy())
+    return X.to(device), Y.to(device)
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000)
-X_lm, Y_lm = data.X[:data.num_train], data.Y[:data.num_train]
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 fashion = d2l.FashionMNIST(batch_size=256)
 X_f = jnp.asarray(fashion.train[0], jnp.float32)[..., None] / 255
 y_f = jnp.asarray(fashion.train[1], jnp.int32)
+rng = np.random.default_rng(random.getrandbits(32))
 
-class FashionCNN(nnx.Module):
-    def __init__(self, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), rngs=rngs)
-        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), rngs=rngs)
-        self.fc1 = nnx.Linear(64 * 7 * 7, 128, rngs=rngs)
-        self.fc2 = nnx.Linear(128, 10, rngs=rngs)
+def sample_fashion(b):  # b random training images
+    i = rng.integers(len(y_f), size=b)
+    return X_f[i], y_f[i]
 
-    def __call__(self, X):
-        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
-                         strides=(2, 2))
-        X = X.reshape(X.shape[0], -1)
-        return self.fc2(nnx.relu(self.fc1(X)))
+def sample_lm(b):  # b windows at random offsets in the training text
+    return data.windows(data.train,
+                        rng.integers(len(data.train) - data.num_steps, size=b))
 ```
 
-The estimator follows :eqref:`eq_sqnorm-bias` line by line: average the
-squared gradient norm over many small minibatches and a few large ones,
-solve for the noise power and the signal power, return the ratio.
+The estimator follows the two formulas line by line: average the squared
+gradient norm over many small minibatches and a few large ones, each drawn
+by `sample`, solve for the noise power and the signal power, and return
+their ratio.
 
 ```{.python .input #batch-size-a-two-batch-estimator-2}
 %%tab pytorch
-def grad_sq_norm(model, X, Y):
+def ce_loss(model, X, Y):
     logits = model(X)
-    loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+    return F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
                            Y.reshape(-1))
-    grads = torch.autograd.grad(loss, list(model.parameters()))
+
+def grad_sq_norm(model, X, Y):
+    grads = torch.autograd.grad(ce_loss(model, X, Y),
+                                list(model.parameters()))
     return sum((g ** 2).sum() for g in grads)
 
-def noise_scale(model, X, Y, b_small=16, b_big=2048, m=400):
-    def mean_sq_norm(b, m):
-        idx = torch.randint(0, len(Y), (m, b), device=X.device)
-        return torch.stack([grad_sq_norm(model, X[i], Y[i])
-                            for i in idx]).mean()
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return torch.stack([grad_sq_norm(model, *sample(b))
+                            for _ in range(m)]).mean()
     n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
     tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
@@ -189,110 +213,106 @@ def grad_sq_norm(model, X, Y):
     grads = nnx.grad(ce_loss)(model, X, Y)
     return sum((g ** 2).sum() for g in jax.tree.leaves(grads))
 
-def noise_scale(model, X, Y, key, b_small=16, b_big=2048, m=400):
-    def mean_sq_norm(b, m, key):
-        idx = jax.random.randint(key, (m, b), 0, len(Y))
-        return jnp.stack([grad_sq_norm(model, X[i], Y[i])
-                          for i in idx]).mean()
-    k1, k2 = jax.random.split(key)
-    n_small = mean_sq_norm(b_small, m, k1)
-    n_big = mean_sq_norm(b_big, m // 8, k2)
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return np.mean([float(grad_sq_norm(model, *sample(b)))
+                        for _ in range(m)])
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
     tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
-    return float(tr_sigma / sq_norm)
+    return tr_sigma / sq_norm
 ```
 
-The noise scale depends on the current parameters, so *when* we measure
-matters. We measure twice: at initialization, and after 500 steps of Adam,
-using `d2l.train_lm` from :numref:`sec_adam` (which trains any model that
-maps inputs to logits, the CNN included). First the CNN:
+The noise scale depends on the parameters, so we measure it twice: at
+initialization, and after 500 steps of Adam with `d2l.train_lm` from
+:numref:`sec_adam`. That function streams minibatches and minimizes the
+cross-entropy of a model's outputs for a fixed number of steps, so it trains
+the CNN as well as the language model. First the CNN:
 
 ```{.python .input #batch-size-a-two-batch-estimator-3}
 %%tab pytorch
-torch.manual_seed(0)
-cnn = make_cnn().to(device)
-cnn(X_f[:2])  # Materialize the lazy layers
-print(f'noise scale at initialization: {noise_scale(cnn, X_f, y_f):.0f}')
+cnn = d2l.FashionCNN().to(device)
+print(f'noise scale at initialization: '
+      f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = torch.optim.Adam(cnn.parameters(), lr=0.004)
 d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: {noise_scale(cnn, X_f, y_f):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-3}
 %%tab jax
-cnn = FashionCNN(rngs=nnx.Rngs(0))
+cnn = d2l.FashionCNN(rngs=nnx.Rngs(random.getrandbits(32)))
 print(f'noise scale at initialization: '
-      f'{noise_scale(cnn, X_f, y_f, jax.random.PRNGKey(0)):.0f}')
+      f'{noise_scale(cnn, sample_fashion):.0f}')
 optimizer = nnx.Optimizer(cnn, optax.adam(0.004), wrt=nnx.Param)
 d2l.train_lm(cnn, fashion, optimizer, num_steps=500)
-print(f'after 500 steps of Adam: '
-      f'{noise_scale(cnn, X_f, y_f, jax.random.PRNGKey(1)):.0f}')
+print(f'after 500 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 ```
 
 Then the language model, with smaller probe batches because one example is
-already a 64-character sequence:
+already a sequence of 64 bytes:
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab pytorch
-torch.manual_seed(0)
 lm = d2l.TinyLM(len(data.vocab)).to(device)
 print(f'noise scale at initialization: '
-      f'{noise_scale(lm, X_lm, Y_lm, b_small=8, b_big=256):.1f}')
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
 optimizer = torch.optim.Adam(lm.parameters(), lr=0.003)
 d2l.train_lm(lm, data, optimizer, num_steps=500)
 print(f'after 500 steps of Adam: '
-      f'{noise_scale(lm, X_lm, Y_lm, b_small=8, b_big=256):.0f}')
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab jax
-lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
-ns_init = noise_scale(lm, X_lm, Y_lm, jax.random.PRNGKey(0),
-                      b_small=8, b_big=256)
-print(f'noise scale at initialization: {ns_init:.1f}')
-optimizer = nnx.Optimizer(lm, optax.adam(0.002), wrt=nnx.Param)
+lm = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(random.getrandbits(32)))
+print(f'noise scale at initialization: '
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.1f}')
+optimizer = nnx.Optimizer(lm, optax.adam(0.003), wrt=nnx.Param)
 d2l.train_lm(lm, data, optimizer, num_steps=500)
-ns_500 = noise_scale(lm, X_lm, Y_lm, jax.random.PRNGKey(1),
-                     b_small=8, b_big=256)
-print(f'after 500 steps of Adam: {ns_500:.0f}')
+print(f'after 500 steps of Adam: '
+      f'{noise_scale(lm, sample_lm, b_small=8, b_big=256):.0f}')
 ```
 
-Three readings, all of which we will use. First, the magnitudes: at these
-model and dataset sizes the noise scale is small — tens of examples for the
-CNN and single-digit sequence counts for the language model at
-initialization, rising to hundreds of examples and on the order of a
-hundred sequences by step 500. The batch sizes used in the preceding experiments fall near or above these
-estimates, depending on the checkpoint. Second, the growth: within those 500
-steps the CNN's noise scale grows severalfold and the language model's by
-one to two orders of magnitude, because the full-gradient norm is initially large relative to per-example
-disagreement and then decreases as the easiest improvements are exhausted. We return to
-this in the last part of the section, since it is the fact behind batch-size
-ramps. Third, the caveats: the estimate is itself noisy, increasingly so as
-$\|\nabla f\|^2$ shrinks toward the noise floor of the estimator, and
-repeated runs scatter within a factor of about two, which is precise enough
-for choosing a batch size and not for much else. And the magnitude does not
-transfer across problems: the measurements of
-:citet:`McCandlish.Kaplan.Amodei.ea.2018` across workloads put the noise
-scale for large language models in the millions of tokens,
-against a few thousand characters here. What transfers is the concept and
-the growth during training, not the number.
+At initialization the noise scale is about a hundred images for the CNN
+and about two sequences for the language model. Both models are small, and
+so are their noise scales: the batches of 256 images and 64 sequences that
+train them elsewhere in this chapter lie above these values.
+
+The noise scale also changes, and quickly. After 500 steps that of the
+language model has grown by more than an order of magnitude, to between
+about 50 and 200 sequences across our runs. That of the CNN has grown in
+most runs, but by very different amounts, and lies anywhere from several
+dozen to over a thousand images. At initialization the full gradient is large compared with the
+disagreement between examples. As training removes the easy part of the
+loss, $\|\nabla f\|^2$ shrinks, while the scatter of the per-example
+gradients shrinks more slowly. We return to this growth at the end of the
+section.
+
+The estimate itself is repeatable. Measured again on the same trained
+model, it changes by less than a third, so the spread between runs comes
+from the runs themselves: after 500 steps of Adam, CNNs trained from
+different seeds sit at points with quite different noise scales. To choose
+a batch size, a value known to within a factor of two is enough. The
+magnitudes do not carry over to other problems: :citet:`kaplan2020scaling`
+found critical batch sizes, which track the noise scale, of around a
+million tokens for large language models, against several thousand bytes
+here. What carries over is the concept and its growth during training.
 
 ## Steps to a Target
 :label:`subsec_batch-size-steps`
 
-The noise scale makes a falsifiable claim about training speed. To test it
-we use the standard experimental design of the large-batch literature
-:cite:`Shallue.Lee.Antognini.ea.2019`: fix a target loss, train at a range
-of batch sizes, and count the *steps* each needs to reach the target, along
-with the *examples* processed, which is steps times batch size.
-In the ideal noise-limited regime, doubling $b$ should halve the step count
-and leave the example count unchanged; we call this *perfect scaling*. Once
-$b$ passes the noise scale, further variance reduction does not materially
-reduce the step count. It approaches a floor $S_{\min}$ set by the noiseless dynamics, so additional
-examples yield progressively smaller reductions in the step count. A simple model of a noisy quadratic
-:cite:`McCandlish.Kaplan.Amodei.ea.2018` makes the whole trade-off a single
-hyperbola in the *run-averaged* noise scale, the average of
-$b_{\textrm{noise}}$ over the training steps of the run:
+The noise scale makes a prediction about training speed that could fail, so
+we test it. The test, standard in the study of large-batch training
+:cite:`Shallue.Lee.Antognini.ea.2019`, fixes a target loss, trains at a
+range of batch sizes, and counts the *steps* $S(b)$ that each run needs to
+reach the target and the *examples* $E(b) = b\, S(b)$ that it processes on
+the way. If doubling $b$ halves $S$, the example count stays constant; we
+call this *perfect scaling*. It cannot continue forever. No batch, however
+large, gives a better gradient than the exact one, so the step count
+approaches a floor $S_{\min}$, the number of steps that training with the
+full gradient would need. A model of noisy optimization on a quadratic
+:cite:`McCandlish.Kaplan.Amodei.ea.2018` connects the two limits:
 
 $$
 \frac{S(b)}{S_{\min}} = 1 + \frac{b_{\textrm{noise}}}{b},
@@ -301,45 +321,53 @@ $$
 $$
 :eqlabel:`eq_steps-examples`
 
-with $E(b) = b\, S(b)$ the examples consumed and $E_{\min}$ the
-small-batch limit. Both formulas bend at the same place: at
-$b = b_{\textrm{noise}}$, steps and examples each sit at twice their
-minimum. That elbow is the *critical batch size*, the largest batch that
-still converts additional computation into fewer sequential steps.
+where $E_{\min}$ is the number of examples that a run with very small
+batches consumes, and $b_{\textrm{noise}}$ is the noise scale averaged over
+the run. The step count falls like $1/b$ while $b$ is small compared with
+$b_{\textrm{noise}}$ and levels off at $S_{\min}$ beyond it; the example
+count does the reverse. Because $E = b\,S$, the two minima are tied by
+$E_{\min} = b_{\textrm{noise}} S_{\min}$. With $b_{\textrm{noise}} = 100$,
+for instance, a batch of 10 needs $11\, S_{\min}$ steps but only
+$1.1\, E_{\min}$ examples, and a batch of 1,000 needs $1.1\, S_{\min}$ steps
+but $11\, E_{\min}$ examples. At $b = b_{\textrm{noise}}$ both stand at twice
+their minimum, and the batch size of this bend is called the *critical batch
+size*. Below it, most of the extra work per step turns into fewer steps;
+above it, most of the extra work is wasted.
+In the model, the noise scale weights each direction of parameter space by
+its curvature. The unweighted ratio :eqref:`eq_noise-scale` that we
+measured agrees with it when the curvature is the same in every direction,
+and serves as a cheap stand-in otherwise.
 
-Our protocol, in full: the target is a fixed loss evaluated on a fixed
-subset of the training data every ten steps (evaluating on the noisy
-per-minibatch training loss would bias the small-batch runs, whose loss
-estimates fluctuate most). The optimizer is Adam. Its learning rate is tuned
-by a short grid at an anchor batch size $b_0$ (64 sequences for the language
-model, 256 examples for the CNN) and moved across batch sizes by the
-square-root rule $\eta(b) = \eta_0 \sqrt{b/b_0}$, a common heuristic for
-adaptive methods; the next part of this section states and verifies it. Each configuration uses one fixed seed, so the curves support qualitative
-comparisons rather than uncertainty estimates. The
-harness is `train_lm` from :numref:`sec_adam` with the stopping rule added:
+Our protocol is as follows. The target is a fixed loss, evaluated every ten
+steps on a fixed set of examples: the first 8,192 training images for the
+CNN, and for the language model 2,048 windows spread over the whole
+validation split, text that no run trains on. Evaluating the loss of the
+current minibatch instead would let the small-batch runs, whose loss
+estimates fluctuate most, cross the target early by chance. The optimizer is
+Adam. Its learning rate is tuned at an anchor batch size $b_0$ (64 sequences
+for the language model, 256 images for the CNN) and moved to the other batch
+sizes by the square-root rule $\eta(b) = \eta_0 \sqrt{b / b_0}$, which the
+next part of this section derives and tests. Each sweep draws one random
+seed and starts all its batch sizes from the same initialization, so that
+the differences along a curve come from the batch size and not from the
+draw. The step counts still vary from run to run, and we read only features
+of the curves that recur across runs. The training loop is that of
+`d2l.train_lm`, with the stopping rule added:
 
 ```{.python .input #batch-size-steps-to-a-target}
 %%tab pytorch
 def eval_loss(model, X, Y, chunk=4096):
-    with torch.no_grad():
-        losses = []
-        for i in range(0, len(Y), chunk):
-            logits = model(X[i:i + chunk])
-            losses.append(F.cross_entropy(
-                logits.reshape(-1, logits.shape[-1]),
-                Y[i:i + chunk].reshape(-1)))
-    return torch.stack(losses).mean().item()
+    with torch.inference_mode():
+        return torch.stack([ce_loss(model, X[i:i + chunk], Y[i:i + chunk])
+                            for i in range(0, len(Y), chunk)]).mean().item()
 
 def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
                     max_steps, eval_every=10):
-    model.to(device)
+    """Return the number of steps until the eval loss reaches target."""
     step = 0
     while step < max_steps:
         for X, Y in data.train_dataloader():
-            X, Y = X.to(device), Y.to(device)
-            logits = model(X)
-            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
-                                   Y.reshape(-1))
+            loss = ce_loss(model, X.to(device), Y.to(device))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -354,26 +382,25 @@ def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
 
 ```{.python .input #batch-size-steps-to-a-target}
 %%tab jax
-@nnx.jit
-def eval_chunk(model, X, Y):
-    return ce_loss(model, X, Y)
+eval_chunk = nnx.jit(ce_loss)
 
 def eval_loss(model, X, Y, chunk=4096):
-    return float(jnp.stack([eval_chunk(model, X[i:i + chunk],
-                                       Y[i:i + chunk])
+    return float(jnp.stack([eval_chunk(model, X[i:i + chunk], Y[i:i + chunk])
                             for i in range(0, len(Y), chunk)]).mean())
+
+@nnx.jit
+def train_step(model, optimizer, X, Y):
+    loss, grads = nnx.value_and_grad(ce_loss)(model, X, Y)
+    optimizer.update(model, grads)
+    return loss
 
 def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
                     max_steps, eval_every=10):
-    @nnx.jit
-    def step_fn(model, optimizer, X, Y):
-        loss, grads = nnx.value_and_grad(ce_loss)(model, X, Y)
-        optimizer.update(model, grads)
-        return loss
+    """Return the number of steps until the eval loss reaches target."""
     step = 0
     while step < max_steps:
         for X, Y in data.train_dataloader():
-            step_fn(model, optimizer, jnp.asarray(X), jnp.asarray(Y))
+            train_step(model, optimizer, jnp.asarray(X), jnp.asarray(Y))
             step += 1
             if step % eval_every == 0 and \
                eval_loss(model, X_eval, Y_eval) <= target:
@@ -385,78 +412,86 @@ def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
 
 ### The Language Model
 
-For `TinyLM` the target is a loss of 1.5 per character, a perplexity of
-about 4.5: well into learning, far from converged, and reachable at every
-batch size in this sweep within a minute. The batch sizes span two orders
-of magnitude in sequences.
+For `TinyLM` the target is a held-out loss of 1.9 nats per byte (2.7 bits
+per byte), a perplexity of $e^{1.9} \approx 6.7$ against 256 for
+uniform guessing over the bytes: well into learning, and far from
+converged. The batch sizes span two orders of magnitude, from 4 to 256
+sequences. The data is built once, and only its batch size changes from run
+to run.
 
 ```{.python .input #batch-size-the-language-model}
 %%tab pytorch
-lm_bs = [4, 16, 64, 256]
-lm_steps = []
+X_val, Y_val = (t.to(device) for t in data.windows(
+    data.val, np.arange(0, len(data.val) - 64, 64)[::8][:2048]))
+lm_bs, lm_steps = [4, 16, 64, 256], []
+seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in lm_bs:
-    torch.manual_seed(0)
-    data_b = d2l.TimeMachine(batch_size=b, num_steps=64,
-                             tokenization='char', num_train=100000)
-    model = d2l.TinyLM(len(data_b.vocab))
+    torch.manual_seed(seed)
+    data.batch_size = b
+    model = d2l.TinyLM(len(data.vocab)).to(device)
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=0.003 * math.sqrt(b / 64))
-    lm_steps.append(train_to_target(model, data_b, optimizer, X_lm[:2048],
-                                    Y_lm[:2048], target=1.5,
-                                    max_steps=8000))
+    lm_steps.append(train_to_target(model, data, optimizer, X_val, Y_val,
+                                    target=1.9, max_steps=8000))
     print(f'b={b:4d}  steps={lm_steps[-1]:6.0f}  '
           f'examples={b * lm_steps[-1]:8.0f}')
 d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
-         'batch size (sequences)', 'steps to loss 1.5', xscale='log',
+         'batch size (sequences)', 'steps to loss 1.9', xscale='log',
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
 ```{.python .input #batch-size-the-language-model}
 %%tab jax
-lm_bs = [4, 16, 64, 256]
-lm_steps = []
+X_val, Y_val = data.windows(data.val,
+                            np.arange(0, len(data.val) - 64, 64)[::8][:2048])
+lm_bs, lm_steps = [4, 16, 64, 256], []
+seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in lm_bs:
-    data_b = d2l.TimeMachine(batch_size=b, num_steps=64,
-                             tokenization='char', num_train=100000)
-    model = d2l.TinyLM(len(data_b.vocab), rngs=nnx.Rngs(0))
+    data.batch_size = b
+    model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
     optimizer = nnx.Optimizer(model,
-                              optax.adam(0.002 * math.sqrt(b / 64)),
+                              optax.adam(0.003 * math.sqrt(b / 64)),
                               wrt=nnx.Param)
-    lm_steps.append(train_to_target(model, data_b, optimizer, X_lm[:2048],
-                                    Y_lm[:2048], target=1.5,
-                                    max_steps=8000))
+    lm_steps.append(train_to_target(model, data, optimizer, X_val, Y_val,
+                                    target=1.9, max_steps=8000))
     print(f'b={b:4d}  steps={lm_steps[-1]:6.0f}  '
           f'examples={b * lm_steps[-1]:8.0f}')
 d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
-         'batch size (sequences)', 'steps to loss 1.5', xscale='log',
+         'batch size (sequences)', 'steps to loss 1.9', xscale='log',
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
-From $b=4$ to $b=16$, the measured curve remains close to the
-perfect-scaling reference and the example count changes little. By $b=256$,
-the measured curve is above the reference — steps still fall, but each
-quadrupling of the batch now reduces the step count by half or less, not the
-fourfold cut of perfect scaling, and the examples consumed have more than
-doubled and are climbing. The elbow sits between a few tens and a couple
-of hundred sequences, within a small factor of the noise scale we measured
-mid-training, which is all :eqref:`eq_steps-examples` promises for so
-coarse an estimate.
+The first quadrupling of the batch, from 4 to 16 sequences, runs nearly
+parallel to the perfect-scaling line: it cuts the step count about three-
+to nearly fourfold, and the example count grows by at most about 40%. After it
+the curve bends away from the line. The last quadrupling, from 64 to 256
+sequences, cuts the step count only about in half, and the run consumes
+three to five times as many examples as the run with the smallest batch.
 
 ### The CNN
 
-The identical experiment on the CNN, with a target loss of 0.35 and batch
-sizes from 8 to 2048:
+The same experiment on the CNN, with a target loss of 0.35 and batch sizes
+from 8 to 2,048 images. The square-root rule sets the learning rate up to
+512 images, and above that we hold it fixed. At 2,048 images the rule would
+double the rate to about 0.011, and there it fails in the way that
+:numref:`subsec_batch-size-limits` describes for the first steps of
+training: Adam's first steps overshoot, the training loss jumps above its
+starting value of $\log 10 \approx 2.3$, and in some runs the network falls
+back to uniform guessing for a few steps and trains more slowly from then
+on. Such a run can need more steps than the run at 512
+images. At the rate of $b = 512$ the first steps stay stable and the large
+batch reaches the target sooner:
 
 ```{.python .input #batch-size-the-cnn}
 %%tab pytorch
-cnn_bs = [8, 32, 128, 512, 2048]
-cnn_steps = []
+cnn_bs, cnn_steps = [8, 32, 128, 512, 2048], []
+seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in cnn_bs:
-    torch.manual_seed(0)
+    torch.manual_seed(seed)
     fashion_b = d2l.FashionMNIST(batch_size=b)
-    model = make_cnn()
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=0.004 * math.sqrt(b / 256))
+    model = d2l.FashionCNN().to(device)
+    lr = 0.004 * math.sqrt(min(b, 512) / 256)  # Held fixed above 512
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     cnn_steps.append(train_to_target(model, fashion_b, optimizer,
                                      X_f[:8192], y_f[:8192], target=0.35,
                                      max_steps=8000))
@@ -470,14 +505,13 @@ d2l.plot(cnn_bs, [cnn_steps,
 
 ```{.python .input #batch-size-the-cnn}
 %%tab jax
-cnn_bs = [8, 32, 128, 512, 2048]
-cnn_steps = []
+cnn_bs, cnn_steps = [8, 32, 128, 512, 2048], []
+seed = random.getrandbits(32)  # One initialization for all batch sizes
 for b in cnn_bs:
     fashion_b = d2l.FashionMNIST(batch_size=b)
-    model = FashionCNN(rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(model,
-                              optax.adam(0.004 * math.sqrt(b / 256)),
-                              wrt=nnx.Param)
+    model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
+    lr = 0.004 * math.sqrt(min(b, 512) / 256)  # Held fixed above 512
+    optimizer = nnx.Optimizer(model, optax.adam(lr), wrt=nnx.Param)
     cnn_steps.append(train_to_target(model, fashion_b, optimizer,
                                      X_f[:8192], y_f[:8192], target=0.35,
                                      max_steps=8000))
@@ -489,42 +523,92 @@ d2l.plot(cnn_bs, [cnn_steps,
          legend=['measured', 'perfect scaling'])
 ```
 
-The CNN shows a similar pattern: the first quadrupling remains near the
-reference line, after which the gap widens. At the top of the
-range a further quadrupling of the batch (a quadrupling of the compute per
-step) cuts the step count by about a third at most, and in some runs the count
-rises instead, a sign we will explain in the next part. By then the example count is several times its small-batch minimum:
-additional compute still reduces sequential steps, but with substantially
-lower data efficiency.
+The CNN shows the same pattern. The first quadrupling, from 8 to 32 images,
+stays close to the perfect-scaling line, cutting the step count about
+three- to fourfold, and after it the gap widens. At the top of the range a
+further quadrupling of the batch, and with it of the work per step, saves
+at most about half of the steps, and the run consumes two to four times the
+examples of the run at 512 images, six to twelve times the small-batch
+value. Past this point, extra work per step saves few steps and multiplies
+the data consumed.
 
-### Examples Required to Reach the Target
+### The Critical Batch Size
 
-Replotting both sweeps as examples-to-target puts the two testbeds on one
-axis and states the cost of parallelism directly:
+Both curves have the shape that :eqref:`eq_steps-examples` predicts, and we
+can fit the model to them. Its step count
+$S(b) = S_{\min} + S_{\min} b_{\textrm{crit}} / b$ is linear in $1/b$, so a
+straight-line fit of the measured step counts against $1/b$ returns
+$S_{\min}$ as the intercept and $b_{\textrm{crit}}$ as the ratio of slope to
+intercept. We write $b_{\textrm{crit}}$ for this fitted critical batch size,
+to keep it apart from the noise scale measured from gradients. The fit
+weights each run by the inverse of its step count, so that it matches every
+point to the same relative precision rather than favoring the small-batch
+runs with their large step counts.
 
-```{.python .input #batch-size-the-bill-in-examples}
-d2l.plot([lm_bs, cnn_bs],
-         [[b * s for b, s in zip(lm_bs, lm_steps)],
-          [b * s for b, s in zip(cnn_bs, cnn_steps)]],
-         'batch size', 'examples to target', xscale='log', yscale='log',
-         legend=['TinyLM', 'Fashion-MNIST CNN'])
+```{.python .input #batch-size-the-critical-batch-size-1}
+def fit_steps(bs, steps):
+    """Fit S(b) = S_min (1 + b_crit / b) by least squares in 1/b."""
+    b, S = np.array(bs, dtype=float), np.array(steps, dtype=float)
+    ok = np.isfinite(S)  # Leave out runs that never reached the target
+    slope, S_min = np.polyfit(1 / b[ok], S[ok], 1, w=1 / S[ok])
+    assert S_min > 0, 'step counts never level off: no floor to fit'
+    return S_min, slope / S_min
+
+fits = {'TinyLM': fit_steps(lm_bs, lm_steps),
+        'FashionCNN': fit_steps(cnn_bs, cnn_steps)}
+for name, (S_min, b_crit) in fits.items():
+    print(f'{name:10s}  S_min = {S_min:4.0f} steps  b_crit = {b_crit:4.0f}')
 ```
 
-Each curve is approximately flat in the efficient small-batch regime and
-bends upward near its critical batch size, as :eqref:`eq_steps-examples` predicts. Each point represents a different tradeoff: more total compute
-can buy fewer sequential steps and, with sufficient hardware, less
-wall-clock time. Below the elbow, that tradeoff is favorable; above it,
-progressively more compute is required for each further reduction in steps. Where a given team should sit depends on
-what is scarce, accelerators or days, which is why frontier runs crowd as
-close to their critical batch size as their clusters allow and why the
-exercises ask you to trace this Pareto frontier explicitly.
+The fitted critical batch sizes are roughly a hundred sequences for
+`TinyLM`, between about 70 and 120 across our runs, and two to four hundred
+images for the CNN, of the same order as the noise scales that each model
+reached during its first 500 steps. Closer
+agreement is more than :eqref:`eq_steps-examples` promises here: the model
+uses the curvature-weighted noise scale averaged over the whole run, while
+we measured the unweighted ratio at two moments only.
+
+Dividing each run's steps by $S_{\min}$ and its examples by
+$E_{\min} = b_{\textrm{crit}} S_{\min}$ removes the two fitted constants.
+Multiplying the two equations of :eqref:`eq_steps-examples` after
+subtracting 1 from each shows that, if the model holds, every run of both
+models lies on the single curve
+
+$$\Big(\frac{E}{E_{\min}} - 1\Big)\Big(\frac{S}{S_{\min}} - 1\Big) = 1.$$
+
+```{.python .input #batch-size-the-bill-in-examples}
+x = np.logspace(0.005, 1.3, 100)  # E / E_min along the model curve
+xs, ys = [x], [1 + 1 / (x - 1)]
+for (S_min, b_crit), bs, steps in zip(fits.values(), (lm_bs, cnn_bs),
+                                      (lm_steps, cnn_steps)):
+    xs.append([b * S / (b_crit * S_min) for b, S in zip(bs, steps)])
+    ys.append([S / S_min for S in steps])
+d2l.plot(xs, ys, 'examples / minimum', 'steps / minimum', xscale='log',
+         yscale='log', fmts=('-', 'o', 's'),
+         legend=['model', 'TinyLM', 'FashionCNN'])
+```
+
+Part of this agreement is built in, because each model's two constants were
+fitted to its own four or five runs, and a two-parameter curve can pass
+through any two of them. What the plot tests is the shape: whether a
+step count linear in $1/b$ fits all the runs, with two or three runs per
+model to spare. The runs of both models scatter around the one curve.
+Moving along it trades one resource for the other. Toward the upper left,
+below the critical batch size, a run needs many steps and few examples.
+Toward the lower right, it needs few steps and many examples. More total
+work can thus reduce the number of sequential steps and, with enough
+hardware, the time. Which point is best depends on what is scarce,
+accelerators or days. This is why large training runs pick batch sizes near
+their critical batch size, and why the exercises trace this tradeoff for
+wall-clock time as well as for compute.
 
 ## Learning-Rate Rules
 
-Changing the batch size changes the optimization problem the learning rate
-was tuned for, so $\eta$ has to move with $b$; running the sweep above at a
-fixed $\eta$ would have confounded batch statistics with step-size
-mistuning. Two rules cover practice:
+So far the learning rate moved with the batch by a rule we have not yet
+justified. Some rule is needed, because a learning rate tuned at one batch
+size is tuned for the noise of that batch size. Holding $\eta$ fixed in the
+sweeps above would have mixed the effect of the batch with that of a
+mistuned step. Two rules cover practice:
 
 $$
 \eta(b) = \frac{b}{b_0}\, \eta_0 \;\; \textrm{(SGD)},
@@ -533,76 +617,107 @@ $$
 $$
 :eqlabel:`eq_lr-rules`
 
-The linear rule for SGD :cite:`Goyal.Dollar.Girshick.ea.2017` follows from
-the noise-floor picture of :numref:`sec_sgd`: there we saw SGD stall in a
-noise ball whose squared radius is proportional to $\eta$ times the gradient
-variance. A batch of $b$ divides the variance by $b$, so holding $\eta / b$
-fixed holds the noise ball fixed, and with it the whole stochastic character
-of the trajectory. It is also the small-batch limit of the optimal step
-size in the noisy-quadratic model, $\eta_{\textrm{opt}}(b) =
-\eta_{\max} / (1 + b_{\textrm{noise}}/b)$: linear in $b$ while
-$b \ll b_{\textrm{noise}}$, saturating at $\eta_{\max}$ beyond it — the rule
-announces its own expiry at the noise scale. For Adam and its relatives the
-scaling is weaker. The preconditioner already divides each coordinate by its
-root-mean-square gradient, which itself shrinks as the batch quiets the
-noise. The stochastic-differential-equation analysis of
-:citet:`Malladi.Lyu.Panigrahi.ea.2022` makes the scaling precise: growing
-the batch by a factor $k$ preserves Adam's dynamics if every time constant
-moves together — $\eta' = \sqrt{k}\,\eta$, $\beta_i' = 1 - k(1 - \beta_i)$,
-$\epsilon' = \epsilon / \sqrt{k}$ — which is possible only while
-$k(1 - \beta_i) < 1$, i.e. $k < 10$ at $\beta_1 = 0.9$. Common practice, and
-the sweeps above, move $\eta$ alone; changing only $\eta$ gives the commonly used square-root heuristic rather
-than exact preservation of the full dynamics, and
-:eqref:`eq_lr-rules` states it in that everyday form.
+Here $\eta_0$ is the learning rate tuned at batch size $b_0$. The first rule
+moves the learning rate in proportion to the batch, the second in proportion
+to its square root.
 
-We verify both rules on the CNN with the chapter's usual instrument, a
-learning-rate grid, trained at $b=8$ and $b=64$ on a fixed budget of 12,800
-examples so that both batch sizes see the same data. If a rule holds, the
-whole loss-versus-$\eta$ curve should shift right by the predicted factor —
-$8\times$ for SGD, $\sqrt{8} \approx 2.8\times$ for Adam — when the batch
-grows $8\times$. Since `d2l.train_lm` is already a fixed-step trainer, the
-sweep is a few lines:
+### Linear and Square-Root Scaling
+
+The linear rule for SGD :cite:`Goyal.Dollar.Girshick.ea.2017` follows from
+how SGD behaves near a minimum. With a constant learning rate, SGD does not
+settle at the minimum but fluctuates around it in a *noise ball*. For a
+quadratic with curvature $\lambda$ and gradient noise of variance $\sigma^2$
+per example, :numref:`sec_sgd` found the expected squared distance from the
+minimum to settle at about
+
+$$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda b},$$
+
+where the factor $1/b$ is the $1/b$ law for a minibatch of $b$ examples.
+The noise ball depends on $\eta$ and $b$ only through $\eta / b$. A batch
+$k$ times larger with a learning rate $k$ times larger therefore keeps the
+same noise ball and covers the same distance per example, in $k$ times fewer
+steps. The rule has a limit built in. In the noisy-quadratic model of
+:eqref:`eq_steps-examples`, the best learning rate is
+$\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + b_{\textrm{noise}} / b)$
+:cite:`McCandlish.Kaplan.Amodei.ea.2018`, where $\eta_{\max}$ is the best
+step for the exact gradient. It grows linearly with $b$ while
+$b \ll b_{\textrm{noise}}$ and saturates beyond. The linear rule is the
+small-batch half of this curve, and it stops working at the noise scale.
+
+For Adam the rule is weaker. Adam divides each coordinate of its update by
+the root-mean-square of that coordinate's recent gradients. While the noise
+dominates, that denominator is about the noise amplitude
+$\sigma / \sqrt{b}$, so a $k$ times larger batch shrinks it by $\sqrt{k}$
+and already makes the signal in each step $\sqrt{k}$ times larger. Covering
+the same distance per example in $k$ times fewer steps needs a further
+factor of $\sqrt{k}$, and the square-root rule supplies it. The
+stochastic-differential-equation analysis of
+:citet:`Malladi.Lyu.Panigrahi.ea.2022` makes this precise. Growing the batch
+by a factor $k$ preserves Adam's dynamics if every time constant moves with
+it: $\eta' = \sqrt{k}\,\eta$, $1 - \beta_i' = k(1 - \beta_i)$, and
+$\epsilon' = \epsilon / \sqrt{k}$. The condition on $\beta_i$ can be met only
+while $k(1 - \beta_i) < 1$, that is, for $k < 10$ at $\beta_1 = 0.9$. Common
+practice, and the sweeps of this section, move $\eta$ alone, which is the
+form that :eqref:`eq_lr-rules` states.
+
+### Learning-Rate Sweeps at Two Batch Sizes
+
+We test both rules on the CNN with learning-rate grids at $b = 8$ and
+$b = 64$. Every run sees the same budget of 12,800 examples, so the larger
+batch takes eight times fewer steps. If a rule holds, the whole curve of final loss
+against $\eta$ shifts to the right by the predicted factor when the batch
+grows eightfold: by 8 for SGD and by $\sqrt{8} \approx 2.8$ for Adam. Both
+batch sizes lie below the critical batch size of two to four hundred images
+that we fitted for the CNN. There extra examples per step still turn into
+fewer steps, so both rules should hold. Because `d2l.train_lm` already
+trains for a fixed number of steps, the sweep takes a few lines. Each sweep
+draws one seed, so all its runs start from the same initialization.
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab pytorch
-def final_loss_at(make_optimizer, lrs, b, num_examples=12800):
+def final_loss_at(make_optimizer, lrs, b, seed, num_examples=12800):
+    """Train the CNN once per learning rate; return the final losses."""
     data_b = d2l.FashionMNIST(batch_size=b)
     final = []
     for lr in lrs:
-        torch.manual_seed(0)
-        model = make_cnn().to(device)
-        model(X_f[:2])  # Materialize the lazy layers
+        torch.manual_seed(seed)
+        model = d2l.FashionCNN().to(device)
         d2l.train_lm(model, data_b, make_optimizer(model, lr),
                      num_steps=num_examples // b)
         loss = eval_loss(model, X_f[:8192], y_f[:8192])
         final.append(loss if math.isfinite(loss) else float('nan'))
-        print(f'b={b:3d}  lr={lr:g}  loss={final[-1]:.3f}')
     return final
 ```
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab jax
-def final_loss_at(make_tx, lrs, b, num_examples=12800):
+def final_loss_at(make_tx, lrs, b, seed, num_examples=12800):
+    """Train the CNN once per learning rate; return the final losses."""
     data_b = d2l.FashionMNIST(batch_size=b)
     final = []
     for lr in lrs:
-        model = FashionCNN(rngs=nnx.Rngs(0))
+        model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
         d2l.train_lm(model, data_b, optimizer,
                      num_steps=num_examples // b)
         loss = eval_loss(model, X_f[:8192], y_f[:8192])
         final.append(loss if math.isfinite(loss) else float('nan'))
-        print(f'b={b:3d}  lr={lr:g}  loss={final[-1]:.3f}')
     return final
 ```
+
+First SGD with momentum 0.9, on a grid of learning rates spaced by factors
+of two:
 
 ```{.python .input #batch-size-learning-rate-rules-2}
 %%tab pytorch
 sgd_lrs = [0.003125, 0.00625, 0.0125, 0.025, 0.05, 0.1, 0.2]
 make_sgd = lambda model, lr: torch.optim.SGD(model.parameters(), lr,
                                              momentum=0.9)
-sgd_small = final_loss_at(make_sgd, sgd_lrs, b=8)
-sgd_big = final_loss_at(make_sgd, sgd_lrs, b=64)
+seed = random.getrandbits(32)
+sgd_small = final_loss_at(make_sgd, sgd_lrs, b=8, seed=seed)
+sgd_big = final_loss_at(make_sgd, sgd_lrs, b=64, seed=seed)
+for b, loss in ((8, sgd_small), (64, sgd_big)):
+    print(f'b={b:2d}: best lr {sgd_lrs[np.nanargmin(loss)]:g}')
 d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
@@ -610,21 +725,28 @@ d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
 ```{.python .input #batch-size-learning-rate-rules-2}
 %%tab jax
 sgd_lrs = [0.003125, 0.00625, 0.0125, 0.025, 0.05, 0.1, 0.2]
-sgd_small = final_loss_at(lambda lr: optax.sgd(lr, momentum=0.9),
-                          sgd_lrs, b=8)
-sgd_big = final_loss_at(lambda lr: optax.sgd(lr, momentum=0.9),
-                        sgd_lrs, b=64)
+make_sgd = lambda lr: optax.sgd(lr, momentum=0.9)
+seed = random.getrandbits(32)
+sgd_small = final_loss_at(make_sgd, sgd_lrs, b=8, seed=seed)
+sgd_big = final_loss_at(make_sgd, sgd_lrs, b=64, seed=seed)
+for b, loss in ((8, sgd_small), (64, sgd_big)):
+    print(f'b={b:2d}: best lr {sgd_lrs[np.nanargmin(loss)]:g}')
 d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
+
+Then Adam:
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab pytorch
 adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
             0.0256]
 make_adam = lambda model, lr: torch.optim.Adam(model.parameters(), lr)
-adam_small = final_loss_at(make_adam, adam_lrs, b=8)
-adam_big = final_loss_at(make_adam, adam_lrs, b=64)
+seed = random.getrandbits(32)
+adam_small = final_loss_at(make_adam, adam_lrs, b=8, seed=seed)
+adam_big = final_loss_at(make_adam, adam_lrs, b=64, seed=seed)
+for b, loss in ((8, adam_small), (64, adam_big)):
+    print(f'b={b:2d}: best lr {adam_lrs[np.nanargmin(loss)]:g}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
@@ -633,116 +755,121 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
 %%tab jax
 adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
             0.0256]
-adam_small = final_loss_at(optax.adam, adam_lrs, b=8)
-adam_big = final_loss_at(optax.adam, adam_lrs, b=64)
+seed = random.getrandbits(32)
+adam_small = final_loss_at(optax.adam, adam_lrs, b=8, seed=seed)
+adam_big = final_loss_at(optax.adam, adam_lrs, b=64, seed=seed)
+for b, loss in ((8, adam_small), (64, adam_big)):
+    print(f'b={b:2d}: best lr {adam_lrs[np.nanargmin(loss)]:g}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-Both plots have a broad minimum and a sharp increase on the
-right, and growing the batch slides the basin rightward. For SGD the best
-region moves by roughly the batch ratio, a factor of four to eight in our
-runs — retuning from scratch at $b=64$ finds nothing better than what the
-linear rule predicts from $b=8$. For Adam the basin is flatter, so a single
-run locates its minimum less precisely; it typically moves by a factor of
-about two to four, and applying the *linear* rule to Adam ($8\times$, the
-rightmost points of the upper curve) gains nothing over the square-root
-rule and in some runs lands measurably past the optimum. The
-basins are broad, which is itself worth remembering: near the optimum,
-being wrong by a factor of two costs little, and the rules are aids for
-crossing large batch-size ratios, not precision instruments.
+Both plots show a broad minimum with a wall of failed runs on the right.
+For SGD the larger batch moves the whole basin to the right: the best
+learning rate moves by a factor of four to sixteen, the batch ratio to
+within one grid step, so the linear rule carried over from $b = 8$ lands
+within one grid step of the best learning rate at $b = 64$. For Adam the
+basin is flatter, so one run locates its minimum less precisely, and where
+the wall stands varies from run to run. The best learning rate moves by
+a factor of about two to eight, and in some runs not at all, as a flat
+basin allows: typically well short of the batch ratio, as the square-root
+rule predicts. The basins are broad, and near the
+optimum a factor of two in $\eta$ changes the loss little. The rules bridge
+large ratios of batch sizes, and a short sweep around their prediction does
+the fine tuning.
 
-### Where the Rules Break
+### Limits of the Rules
+:label:`subsec_batch-size-limits`
 
-The rules fail in three characteristic places, and each failure is visible
-somewhere in this section's data. *Past the noise scale*: both rules assume
-the run is noise-limited; once $b$ approaches $b_{\textrm{noise}}$ the
-optimal step stops growing, and continuing to scale $\eta$ can overshoot.
-The upturn at the top of the steps-to-target sweeps is consistent with this
-mechanism, and the
-exercises reproduce it in isolation. *Against the stability ceiling*: the
-largest usable $\eta$ is capped by curvature, as we saw for gradient descent
-in :numref:`sec_gd`, and the cap does not move with the batch. When we first
-ran the SGD sweep at batch sizes of a few hundred, both basins pinned
-against the same stability limit, and the optimum stopped moving; scaling
-rules only operate in the room below the ceiling. *Early in training*: at
-initialization the noise scale is at its smallest and curvature effects at
-their worst, so a large batch with a linearly scaled $\eta$ can diverge in
-the first steps. The practical fix is learning-rate warmup, which
-:citet:`Goyal.Dollar.Girshick.ea.2017` introduced for exactly this reason;
-:numref:`sec_scheduler` covers it. Finally, none of this is a universal law:
-measured across many workloads, the curves of
-:eqref:`eq_steps-examples` hold their shape but their elbows range over
-orders of magnitude with architecture, dataset, and optimizer
-:cite:`Shallue.Lee.Antognini.ea.2019`. Large batches were once also blamed
-for a *generalization* gap — converging to sharp minima that test poorly
-:cite:`Keskar.Mudigere.Nocedal.ea.2017` — but much of that gap closes under
-full retuning of $\eta$ and training length; the durable cost of a large
-batch is data efficiency, which is what this section measured.
+The rules fail in three places. Past the noise scale, the best learning
+rate stops growing, because $\eta_{\textrm{opt}}(b)$ saturates at
+$\eta_{\max}$, and a learning rate scaled further overshoots. The CNN sweep
+held its rate fixed above 512 images for this reason, and the exercises
+reproduce the effect on `TinyLM`.
+
+At the stability ceiling, curvature caps the learning rate. Gradient descent
+on a function whose curvature is bounded by $L$ is guaranteed to descend
+only for $\eta < 2/L$ (:numref:`sec_gd`), and this bound does not depend on
+the batch. Once $\eta(b)$ reaches it, the optimum stops moving, so the rules
+operate only in the room below the ceiling.
+
+Early in training, the noise scale is at its smallest and the curvature often
+at its largest, so a large batch with a scaled-up learning rate can diverge in
+the first steps. Learning-rate warmup, which
+:citet:`Goyal.Dollar.Girshick.ea.2017` introduced for this reason, starts from
+a small $\eta$ and raises it over the first steps (:numref:`sec_scheduler`).
+
+None of this is a universal law. Across many workloads the curves of
+:eqref:`eq_steps-examples` keep their shape, but their critical batch sizes
+range over orders of magnitude with the architecture, the dataset, and the
+optimizer :cite:`Shallue.Lee.Antognini.ea.2019`. Large batches were once
+also blamed for worse generalization, on the grounds that they converge to
+sharp minima that test poorly :cite:`Keskar.Mudigere.Nocedal.ea.2017`. Much
+of that gap closes when the learning rate and the length of training are
+retuned for the larger batch :cite:`Shallue.Lee.Antognini.ea.2019`. The
+lasting cost of a large batch is data efficiency, which is what this section
+measured.
 
 ## Growing the Batch
 :label:`subsec_batch-size-growing`
 
 The noise scale is not a constant of the problem. We measured it growing
-within the first 500 steps (severalfold for the CNN, one to two orders of
-magnitude for the language model), and the mechanism operates at every
-scale: $\|\nabla f\|$ decreases as the easiest progress is made, while
-per-example disagreement persists. A fixed batch therefore cannot remain equally compute-efficient throughout
-training: a batch chosen for the end may exceed the smaller critical batch
-size near the beginning. Several large language-model runs address this with
-a *batch-size ramp*. GPT-3 grew its batch from 32 thousand to 3.2
-million tokens over the first billions of tokens of training
-:cite:`brown2020language`. Llama 3 doubled its batch twice on a fixed
-schedule, from 4 million to 16 million tokens, as training progressed
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024`. DeepSeek-V3 ramped from about 3
-thousand to 15 thousand sequences across the first half-trillion tokens
-:cite:`Liu.Feng.Xue.ea.2024`. What these schedules set by hand, measurement
-can set directly: researchers at Ai2 measured the critical batch size as
-training proceeded and doubled the batch each time the measurement overtook
-it, finding that the critical batch size tracks the loss reached — the data
-scale — far more than the model size
-:cite:`Merrill.Arora.Groeneveld.ea.2025`, in line with other measurements of
-how the elbow moves during pretraining :cite:`Zhang.Morwani.Vyas.ea.2024`.
+within 500 steps, by more than an order of magnitude for the language model,
+and the reason holds at every scale:
+$\|\nabla f\|$ falls as the easy progress is made, while the disagreement
+between examples persists. A fixed batch size is therefore a compromise. A
+batch chosen for the end of training exceeds the critical batch size at the
+beginning and wastes examples there, while a batch chosen for the beginning
+leaves parallelism unused later. Large language-model runs resolve this with
+a *batch-size ramp*. GPT-3, for example, grew its batch from 32 thousand to
+3.2 million tokens over the first several billion tokens of training
+:cite:`brown2020language`. Measurements during pretraining find that the
+critical batch size grows with the amount of data trained on rather than
+with the model size :cite:`Zhang.Morwani.Vyas.ea.2024`, so the ramp can
+also follow a measurement instead of a fixed schedule.
+:citet:`Merrill.Arora.Groeneveld.ea.2025` measured the critical batch size
+as training proceeded and doubled the batch each time the measurement
+overtook it.
 
-Two interactions are worth carrying forward. First, with the schedule:
-in the simple SGD noise-floor model, raising $b$ at fixed $\eta$ reduces
-the stochastic contribution through the same ratio $\eta/b$ as lowering
-$\eta$ at fixed $b$. A batch ramp can therefore provide some of the
-noise-reduction effect of learning-rate decay
-:cite:`Smith.Kindermans.Ying.ea.2018`, and the ramp and the schedule of
-:numref:`sec_scheduler` must be designed together, not tuned as independent
-knobs. Second, with the optimizer: the descent-direction decision feeds
-back into the noise-management one. Measurements on the studied pretraining workloads find that Muon sustains
-data efficiency to larger batch sizes than AdamW :cite:`Shah.Polloreno.Stratos.ea.2025`, effectively moving the elbow
-of :eqref:`eq_steps-examples` to the right; :numref:`sec_muon` takes up why.
-One boundary remains. This section measures a large batch in
-examples; turning the fewer, larger steps into less wall-clock time
-requires splitting each batch across many devices, and that is data
+A batch ramp interacts with the learning-rate schedule. In the noise ball
+of SGD above, $\eta$ and $b$ enter only through $\eta / b$, so raising $b$ at a fixed $\eta$ reduces the noise as
+much as lowering $\eta$ at a fixed $b$. A batch ramp can therefore do part
+of the work of learning-rate decay :cite:`Smith.Kindermans.Ying.ea.2018`,
+and it is designed together with the schedule of :numref:`sec_scheduler`
+rather than tuned as an independent knob. It also interacts with the
+optimizer. On the pretraining workloads they studied,
+:citet:`Shah.Polloreno.Stratos.ea.2025` find that Muon (:numref:`sec_muon`)
+stays data-efficient up to larger batches than AdamW, which moves the
+critical batch size of :eqref:`eq_steps-examples` to the right.
+
+One question remains open. Fewer, larger steps save wall-clock time only if
+each step is split across many devices that work in parallel. That is data
 parallelism, the subject of :numref:`chap_performance`.
 
 ## Summary
 
-A minibatch gradient is signal plus noise, and the two trade places at the
-gradient-noise scale $b_{\textrm{noise}} = \operatorname{tr}
-\boldsymbol{\Sigma} / \|\nabla f\|^2$, measurable with nothing more than
-gradient norms at two batch sizes. Below it, doubling the batch halves the
-steps to a target at constant total compute; above it, steps flatten at a
-floor and examples are wasted — both testbeds showed the predicted
-hyperbola, with the elbow within a small factor of the measured noise
-scale. Moving between batch sizes requires moving the learning rate: with
-the batch ratio for SGD, with its square root for adaptive methods, valid
-below the noise scale and under the stability ceiling, with warmup
-protecting the early steps. The noise scale grows as the loss falls, which
-is why serious runs grow their batch during training rather than fixing it.
+A minibatch gradient is a signal plus noise, and the two have equal power
+at the gradient-noise scale
+$b_{\textrm{noise}} = \operatorname{tr} \boldsymbol{\Sigma} / \|\nabla f\|^2$,
+which squared gradient norms at two batch sizes suffice to estimate. Below
+it, doubling the batch roughly halves the steps to a target at constant
+total work. Above it, the step count levels off at a floor and the extra
+examples are wasted. Both models of this section followed the predicted
+hyperbola, with a fitted critical batch size of the same order as their
+measured noise scales. Moving between batch sizes requires moving the
+learning rate, in proportion to the batch for SGD and to its square root for
+Adam. These rules hold below the noise scale and under the stability
+ceiling, and they need a warmup. The noise scale grows as the loss falls, which is why large runs
+grow their batch during training.
 
 ## Exercises
 
 1. [code] **The noise scale over training.** `noise_scale` of
    :numref:`subsec_batch-size-estimator` measured `TinyLM` at
-   initialization and after 500 steps of Adam. Repeat that run for 3,000
-   steps and measure the noise scale at steps 0, 25, 50, 100, 200, 500,
-   1,000, 2,000, and 3,000. At each checkpoint also record the loss that
-   `eval_loss` reports on `X_lm[:2048]` and `Y_lm[:2048]`.
+   initialization and after 500 steps of Adam. Repeat that run, at batch
+   size 64, for 3,000 steps and measure the noise scale at steps 0, 25, 50,
+   100, 200, 500, 1,000, 2,000, and 3,000. At each checkpoint also record
+   the held-out loss that `eval_loss` reports on `X_val` and `Y_val`.
     1. Plot the noise scale against this loss. Does the growth continue,
        slow down, or reverse?
     1. Under the rule of :numref:`subsec_batch-size-growing`, doubling $b$
@@ -764,10 +891,13 @@ is why serious runs grow their batch during training rather than fixing it.
        $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + b_{\textrm{noise}}/b)$.
 
 1. [code] **Retuning instead of scaling.** The CNN sweep recorded in
-   `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule rather than
-   retuning. For each batch size, run a three-point learning-rate grid
-   spaced by factors of two around the rule's value and keep the best
-   steps-to-target. Which points of the curve move, and does the elbow?
+   `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule, held fixed
+   above 512 images, rather than retuning it. For each batch size, run a
+   three-point learning-rate grid spaced by factors of two around the
+   rule's value and keep the best
+   steps-to-target. Which points of the curve move? Refit with `fit_steps`:
+   does $b_{\textrm{crit}}$ move, and by more than the difference between
+   two repetitions of the original sweep?
 
 1. **Time-optimal and compute-optimal batch size.** Suppose one
    optimizer step at batch size $b$ takes
@@ -780,49 +910,52 @@ is why serious runs grow their batch during training rather than fixing it.
    $E_{\min}$.
    :exlabel:`ex_batch-size-time-optimal-compute-optimal`
 
-1. [code] **Noise scale per population.** ● The census of
-   :numref:`subsec_tinylm` splits `TinyLM`'s parameters into embeddings,
-   matrices, and vectors. Restrict `grad_sq_norm` to one population at a
-   time and measure its noise scale with `noise_scale`, at initialization
-   and after 500 steps of Adam.
-    1. Which population has the largest noise scale, and does the ranking
-       change during training?
-    1. The census describes embedding rows as receiving gradients only
-       when their token occurs. Count the rows of `token_emb` and of
-       `pos_emb` that receive no gradient in a probe minibatch of 8
-       sequences, and state whether this sparsity can account for the
-       embeddings' noise scale.
+1. [code] **Noise scale per parameter group.** ● The parameter groups of
+   :numref:`subsec_tinylm` split `TinyLM`'s parameters into three groups:
+   embeddings, matrices, and vectors (the biases and the LayerNorm scales
+   and shifts). Restrict `grad_sq_norm` to one group at a time and measure
+   its noise scale with `noise_scale`, at initialization and after 500
+   steps of Adam.
+    1. Which group has the largest noise scale, and does the ranking change
+       during training?
+    1. An embedding row receives a gradient only when its token occurs.
+       Count the rows of `token_emb` that receive no gradient in a probe
+       minibatch of 8 sequences, and state whether this sparsity can account
+       for the embeddings' noise scale. Why does the same count for
+       `pos_emb` always come out zero?
     1. What does the ranking imply for one global batch size serving all
-       three populations?
+       three groups?
 
 1. [code] **The factor-of-two check.** ● Equation :eqref:`eq_steps-examples`
    predicts that examples-to-target reach twice their minimum at
    $b = b_{\textrm{noise}}$, where $b_{\textrm{noise}}$ is averaged over
    the run.
-    1. From the checkpoints of problem :exref:`ex_batch-size-noise-scale-over-training`, average
+    1. From the checkpoints of problem
+       :exref:`ex_batch-size-noise-scale-over-training`, average
        $b_{\textrm{noise}}$ over the training steps before the loss first
-       falls to $1.5$, interpolating linearly between checkpoints.
-    1. Interpolate $\log (b\, S(b))$ linearly in $\log b$ from `lm_bs` and
-       `lm_steps`, and find the batch size at which $b\, S(b)$ reaches
-       twice its smallest measured value. By what factor does this elbow
-       differ from the average of the first sub-item?
-    1. Repeat the sweep and the checkpoint measurements with a second
-       seed. Is the gap between the two estimates larger than the
+       falls to $1.9$, interpolating linearly between checkpoints.
+    1. Compare this average with the $b_{\textrm{crit}}$ that `fit_steps`
+       returns for `lm_bs` and `lm_steps`. By what factor do the two
+       differ?
+    1. Repeat the sweep and the checkpoint measurements with two more
+       seeds. Is the gap between the two estimates larger than the
        seed-to-seed scatter of each?
+   :exlabel:`ex_batch-size-factor-of-two`
 
 1. [extended] **Measured time-compute tradeoff.** ● The step-time model
-   $t(b)$ of problem :exref:`ex_batch-size-time-optimal-compute-optimal` has two constants, $t_0$ and
-   $b_{\textrm{sat}}$, that depend on the hardware.
+   $t(b)$ of problem :exref:`ex_batch-size-time-optimal-compute-optimal`
+   has two constants, $t_0$ and $b_{\textrm{sat}}$, that depend on the
+   hardware.
     1. Measure $t_0$ and $b_{\textrm{sat}}$ for `TinyLM` on your hardware
        with `d2l.Timer` by timing steps at several batch sizes.
     1. Combine $t(b)$ with `lm_bs` and `lm_steps` and plot $T(b)$ against
        $E(b)$. Compare the time-optimal batch size on this curve with the
-       prediction of problem :exref:`ex_batch-size-time-optimal-compute-optimal`, evaluated at the run-averaged
-       $b_{\textrm{noise}}$ of problem 6. By what factor does the
-       time-optimal batch cut $T(b)$ relative to $b = 4$, and by what
-       factor does it raise $E(b)$?
-
-[Discussions](https://d2l.discourse.group/)
+       prediction of problem
+       :exref:`ex_batch-size-time-optimal-compute-optimal`, evaluated at
+       the run-averaged $b_{\textrm{noise}}$ of problem
+       :exref:`ex_batch-size-factor-of-two`, and say by what factor the
+       time-optimal batch cuts $T(b)$ relative to $b = 4$ and by what
+       factor it raises $E(b)$.
 
 [Discussions](https://d2l.discourse.group/t/36765)
 
@@ -832,183 +965,297 @@ is why serious runs grow their batch during training rather than fixing it.
 ::: {.cover}
 [Dive into Deep Learning · §9.10]{.kicker}
 
-How large a batch?<br>
-**the gradient-noise scale · steps to a target · learning-rate rules · batch ramps**
+Batch Size<br>
+**the gradient-noise scale · steps against examples · learning-rate rules · batch ramps**
 :::
 :::
 
-::: {.slide title="Statistical and computational effects of batching"}
-[Motivation]{.kicker}
+::: {.slide title="Quadrupling the Batch Saves Steps Only up to a Point"}
+[The problem]{.kicker}
 
-- §9.3, statistics: gradient variance $\propto 1/b$.
-- §9.4, mechanics: a batch amortizes dispatch and keeps the device fed.
-- These results do not determine when a larger batch stops producing a
-  proportional reduction in the number of optimization steps.
+Train a Fashion-MNIST CNN to a fixed loss with Adam at several batch
+sizes $b$:
 
+- $b = 8 \to 32$: about three to four times fewer steps, at most about 40%
+  more examples.
+- $b = 512 \to 2{,}048$: at most about half the steps saved, for 2× to 4×
+  the examples.
 
-The optimization-efficient batch size depends on the problem and changes
-during training; the time-efficient batch size also depends on hardware.
+A bigger batch means more work per step. It saves steps only while
+gradient noise was what slowed the optimizer.
+
+::: {.d2l-note .warn}
+Where do the savings stop, and can we predict that point before training?
+:::
 :::
 
-::: {.slide title="The gradient-noise scale"}
-A minibatch gradient is **signal + noise**: squared length
-$\|\nabla f\|^2$ plus $\operatorname{tr}\boldsymbol{\Sigma}/b$. They
-trade places at
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
 
-$$b_{\textrm{noise}} = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{\|\nabla f\|^2}$$
+- estimate the gradient-noise scale from gradient norms at two batch sizes;
+- predict steps and examples to a target from one hyperbola;
+- fit the critical batch size to a sweep of training runs;
+- move the learning rate with the batch: linear for SGD, square root for
+  Adam, and say where each rule fails;
+- explain why large runs grow their batch during training.
 
-(McCandlish et al., 2018).
-
-- $b \ll b_{\textrm{noise}}$: expected squared noise exceeds the squared
-  signal; doubling $b$ halves the noise power.
-- $b \gg b_{\textrm{noise}}$: signal dominates in mean square, and
-  further averaging has diminishing returns.
+**Running example:** `TinyLM` (byte-level transformer on WikiText-103,
+0.47M parameters) and a Fashion-MNIST CNN (0.4M), trained to a target loss.
 :::
 
-::: {.slide title="Measure it with two batch sizes"}
-Take expectations of the squared *norm*:
+::: {.slide title="Batch Size Decides How Much Gradient Noise Each Step Removes"}
+[Where this fits]{.kicker}
 
-$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 + \frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}.$$
-
-Its expected *squared norm* exceeds that of the true gradient by exactly
-the noise power. Two batch sizes → two equations → both unknowns:
-
-@batch-size-a-two-batch-estimator-2
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Landscapes | curvature and noise slow training |
+| Gradient Descent | step size against curvature |
+| Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
+| Momentum | averaging over time |
+| Adam and AdamW | a step size per coordinate, decoupled decay |
+| Schedules | warmup and decay |
+| Muon | orthogonalized updates for matrices |
+| **Batch Size** | **how many examples per step** |
+| Scaling Up | learning rates across widths |
+| Practice | clipping, averaging, fair comparisons |
 :::
 
-::: {.slide title="The noise scale grows during training"}
-CNN, then `TinyLM` — at initialization and after 500 steps of Adam:
+::: {.col .narrow}
+- **Uses:** the $1/b$ law, Adam, `TinyLM`, `FashionCNN`.
+- **Skips:** splitting a batch across devices (data parallelism).
+:::
+:::
+:::
+
+::: {.slide title="A Minibatch Gradient Is Signal Plus Noise"}
+Per-example noise power $\operatorname{tr}\boldsymbol{\Sigma} =
+\mathbb{E}_i\|\nabla f_i - \nabla f\|^2$. Averaging $b$ examples:
+
+$$\mathbb{E}\|\hat{\mathbf{g}}_b - \nabla f\|^2 =
+\frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}.$$
+
+Signal $\|\nabla f\|^2$ and noise power are equal at the
+**gradient-noise scale**
+
+$$b_{\textrm{noise}} = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{\|\nabla f\|^2}.$$
+
+Example: $\operatorname{tr}\boldsymbol{\Sigma} = 100$, $\|\nabla f\|^2 = 1$
+→ one example is 100× noisier than its signal; $b = 100$ brings them level.
+
+Source: McCandlish et al. (2018).
+:::
+
+::: {.slide title="Two Batch Sizes Determine Both Unknowns"}
+A minibatch gradient is longer than the true one by its noise power:
+
+$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 +
+\frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}.$$
+
+Mean squared norms $N_s$, $N_l$ at batch sizes $b_s < b_l$:
+
+$$\operatorname{tr} \boldsymbol{\Sigma} \approx
+\frac{N_s - N_l}{1/b_s - 1/b_l},
+\qquad
+\|\nabla f\|^2 \approx \frac{b_l N_l - b_s N_s}{b_l - b_s}.$$
+
+No full-dataset gradient needed: data-parallel workers already compute
+both.
+:::
+
+::: {.slide title="Check: Estimate the Noise Scale from Two Norms"}
+[Check]{.kicker}
+
+Mean squared gradient norm $0.50$ at $b = 16$ and $0.103$ at
+$b = 2{,}048$. What is $b_{\textrm{noise}}$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The big batch is nearly noise-free, so
+$\|\nabla f\|^2 \approx 0.10$. The small batch's excess $0.40 \approx
+\operatorname{tr}\boldsymbol{\Sigma}/16$ gives
+$\operatorname{tr}\boldsymbol{\Sigma} \approx 6.4$. Hence
+$b_{\textrm{noise}} \approx 64$.
+:::
+:::
+:::
+
+::: {.slide title="TinyLM's Noise Scale Grows Within 500 Steps"}
+CNN (images), then `TinyLM` (64-byte sequences), at initialization
+and after 500 steps of Adam:
 
 @!batch-size-a-two-batch-estimator-3
 
-
 @!batch-size-a-two-batch-estimator-4
 
-- Tens of examples (CNN) and single-digit sequence counts (`TinyLM`) at
-  init; severalfold to two orders of magnitude larger 500 steps later.
-
-::: {.d2l-note}
-For large language models, measured noise scales run to the **millions of
-tokens** (McCandlish et al., 2018). The magnitude does not transfer; the
-growth does.
-:::
+The full gradient shrinks as the easy progress is made; the per-example
+scatter does not. Large language models: around a million tokens
+(Kaplan et al., 2020).
 :::
 
-::: {.slide title="Steps to a target: the prediction"}
-Train to a fixed loss at many batch sizes; count steps $S$ and examples
-$E = bS$. The noisy-quadratic model gives one hyperbola:
+::: {.slide title="Steps and Examples Trade Along One Hyperbola"}
+Steps $S(b)$ to a target loss; examples $E(b) = b\,S(b)$:
 
 $$\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\textrm{noise}}}{b},
 \qquad
 \frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\textrm{noise}}}.$$
 
-- Below $b_{\textrm{noise}}$: **perfect scaling** — double $b$, halve
-  $S$, $E$ constant.
-- Above: $S$ approaches $S_{\min}$, with declining data efficiency.
-- Elbow (both at $2\times$ their minimum) = **critical batch size**.
+| $b_{\textrm{noise}} = 100$ | steps | examples |
+|:--|:--|:--|
+| $b = 10$ | $11\,S_{\min}$ | $1.1\,E_{\min}$ |
+| $b = 100$ | $2\,S_{\min}$ | $2\,E_{\min}$ |
+| $b = 1{,}000$ | $1.1\,S_{\min}$ | $11\,E_{\min}$ |
+
+The bend at $b = b_{\textrm{noise}}$ is the **critical batch size**.
 :::
 
-::: {.slide title="Protocol"}
-Fixed target loss on a fixed evaluation batch, checked every 10 steps
-(per-minibatch training loss would bias the small-batch runs). Adam;
-$\eta$ tuned at one anchor $b_0$, moved by the $\sqrt{b/b_0}$ rule.
-Single seeded runs, read qualitatively.
-
-@batch-size-steps-to-a-target
+::: {.slide title="Protocol: One Target, One Seed per Sweep, Rescaled Adam"}
+- Target: a fixed loss on a fixed evaluation subset, checked every 10
+  steps (minibatch losses would let noisy small-batch runs cross early).
+- Adam, $\eta$ tuned at an anchor $b_0$, moved by $\eta_0\sqrt{b/b_0}$;
+  for the CNN held fixed above 512 images, where it would overshoot.
+- One random seed per sweep: every batch size starts from the same
+  initialization.
+- `TinyLM`: held-out target loss 1.9 nats per byte (perplexity 6.7),
+  $b = 4$ to 256 sequences.
+- CNN: target loss 0.35, $b = 8$ to 2,048 images.
 :::
 
-::: {.slide title="TinyLM: steps to loss 1.5"}
+::: {.slide title="TinyLM Saves Steps Nearly Perfectly at Small Batches, Then Bends"}
 @!batch-size-the-language-model
 
-- From $b=4$ to $b=16$, the curve stays near the ideal reference and the
-  example count changes little.
-- By $b=256$, the curve is above the reference: quadrupling the batch
-  reduces the steps by about half or less, while examples-to-target grows.
-- Elbow within a small factor of the mid-training noise scale.
+From 4 to 16 sequences the steps fall about three- to fourfold. From 64 to 256
+they only about halve, so the examples about double.
 :::
 
-::: {.slide title="Same experiment, CNN"}
+::: {.slide title="The CNN Stops Gaining Steps Above a Few Hundred Images"}
 @!batch-size-the-cnn
 
-At the top of the range a quadrupled batch — quadrupled compute per step —
-cuts the step count by about a third at most, and in some runs the count rises;
-examples-to-target sits several times above its minimum.
+At 2,048 images, 4× the batch saves at most about half of the steps;
+examples six to twelve times their minimum.
 :::
 
-::: {.slide title="Examples required to reach the target"}
+::: {.slide title="A Straight-Line Fit in 1/b Gives the Critical Batch Size"}
+$S(b) = S_{\min} + S_{\min}\, b_{\textrm{crit}} / b$ is linear in $1/b$:
+intercept $S_{\min}$, slope over intercept $b_{\textrm{crit}}$.
+
+@!batch-size-the-critical-batch-size-1
+
+Same order as the noise scales measured during the first 500 steps.
+:::
+
+::: {.slide title="Both Models Fall on One Normalized Curve"}
+$\big(E/E_{\min} - 1\big)\big(S/S_{\min} - 1\big) = 1$, with
+$E_{\min} = b_{\textrm{crit}} S_{\min}$:
+
 @!batch-size-the-bill-in-examples
 
-- Flat while batching is free; bends upward past the critical batch size.
-- The vertical axis measures compute; moving left corresponds to fewer steps.
-- Below the elbow, additional batching reduces steps efficiently. Above it,
-  each further reduction in steps requires progressively more compute.
+Upper left: many steps, few examples. Lower right: few steps, many
+examples. Large runs sit near the bend.
 :::
 
-::: {.slide title="Moving the learning rate with the batch"}
+::: {.slide title="Check: Steps and Examples on Either Side of the Bend"}
+[Check]{.kicker}
+
+$b_{\textrm{noise}} = 100$. Compared with their minima, how many steps and
+examples does a run need at $b = 25$? At $b = 400$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $b = 25$: $S = 5\,S_{\min}$, $E = 1.25\,E_{\min}$.
+$b = 400$: $S = 1.25\,S_{\min}$, $E = 5\,E_{\min}$. Sixteen times the
+batch cuts the steps fourfold and quadruples the examples.
+:::
+:::
+:::
+
+::: {.slide title="SGD Scales the Learning Rate Linearly, Adam by the Square Root"}
 $$\eta(b) = \frac{b}{b_0}\, \eta_0 \;\;\textrm{(SGD)},
 \qquad
-\eta(b) = \sqrt{\frac{b}{b_0}}\, \eta_0 \;\;\textrm{(adaptive)}.$$
+\eta(b) = \sqrt{\frac{b}{b_0}}\, \eta_0 \;\;\textrm{(Adam)}.$$
 
-- Linear: the noise floor depends on $\eta/b$ only — hold it fixed
-  (Goyal et al., 2017). Small-$b$ limit of
-  $\eta_{\textrm{opt}}(b) = \eta_{\max}/(1 + b_{\textrm{noise}}/b)$:
-  the rule expires at the noise scale.
-- Square root: Adam's preconditioner already divides by the gradient's
-  RMS; the full SDE rule also moves $\beta_i$ and $\epsilon$, and reduces
-  to $\eta \propto \sqrt{b}$ when they barely move (Malladi et al., 2022).
+- SGD's noise ball $\mathbb{E}[x_\infty^2] \approx \eta\sigma^2/(2\lambda b)$
+  depends on $\eta/b$ only: hold it fixed (Goyal et al., 2017).
+- Adam divides by the gradient RMS $\approx \sigma/\sqrt{b}$: $k\times$ the
+  batch already gives $\sqrt{k}\times$ the signal per step; $\eta$
+  supplies the other $\sqrt{k}$ (Malladi et al., 2022).
+- Best step $\eta_{\max}/(1 + b_{\textrm{noise}}/b)$ saturates: the linear
+  rule expires at the noise scale.
 :::
 
-::: {.slide title="Learning-rate sweeps at two batch sizes"}
-Loss vs. $\eta$ at $b=8$ and $b=64$, fixed example budget:
+::: {.slide title="SGD: Eight Times the Batch Moves the Best Rate About Eightfold"}
+CNN, budget of 12,800 examples, SGD with momentum 0.9:
 
 @!batch-size-learning-rate-rules-2
 
+The basin shifts right by the batch ratio to within one grid step (4× to
+16× on this grid).
+:::
+
+::: {.slide title="Adam: The Best Rate Moves Far Less Than the Batch"}
+Same budget, Adam:
 
 @!batch-size-learning-rate-rules-3
 
-- SGD's basin moves by roughly the batch ratio; Adam's by roughly its
-  square root — the linear rule applied to Adam gains nothing and can
-  overshoot.
-- Basins are broad: rules are for crossing large ratios, not fine tuning.
+$\sqrt{8} \approx 2.8$: in a flat basin the best rate moves by about two
+to eight, depending on the run, typically short of the linear rule's 8×.
 :::
 
-::: {.slide title="Where the rules break"}
-- **Past the noise scale** — the optimal step saturates; scaled $\eta$
-  overshoots (the upturn at the top of the sweeps).
-- **At the stability ceiling** — curvature caps $\eta$ regardless of $b$;
-  at larger batches the optimum reaches this limit and stops moving.
-- **Early in training** — smallest noise scale, worst curvature: warmup
-  (Goyal et al., 2017; §9.8).
-- No universal law: elbows vary by orders of magnitude across workloads
-  (Shallue et al., 2019). The durable cost of a large batch is **data
-  efficiency**, not accuracy.
+::: {.slide title="The Rules Fail Past the Noise Scale, at the Ceiling, and Early"}
+- **Past the noise scale:** the best step saturates; a scaled $\eta$
+  overshoots.
+- **At the stability ceiling:** curvature caps $\eta$ below $2/L$ at any
+  batch size; there the optimum stops moving.
+- **Early in training:** smallest noise scale, often the worst curvature:
+  warmup.
+- Critical batch sizes vary by orders of magnitude across workloads
+  (Shallue et al., 2019). The lasting cost of a large batch is **data
+  efficiency**.
 :::
 
-::: {.slide title="Increasing batch size during training"}
-$b_{\textrm{noise}}$ grows as the loss falls, so a fixed batch need not
-remain equally efficient throughout training.
+::: {.slide title="Large Runs Grow Their Batch as the Noise Scale Grows"}
+- $b_{\textrm{noise}}$ grows as the loss falls: a fixed batch is too big
+  early and too small late.
+- GPT-3: 32 thousand → 3.2 million tokens over the first billions of
+  tokens.
+- Measured ramps: double $b$ whenever the measured critical batch size
+  overtakes it (Merrill et al., 2025).
+- Raising $b$ reduces SGD's noise like lowering $\eta$: design the ramp
+  with the schedule.
+- Muon stays data-efficient to larger batches than AdamW (Shah et al.,
+  2025).
+:::
 
-- GPT-3: 32k → 3.2M tokens. Llama 3: 4M → 16M. DeepSeek-V3: ~3k → ~15k
-  sequences.
-- Ai2: measure the critical batch size *during* training, double $b$
-  when it overtakes the batch — it tracks the loss reached, not the
-  model size.
+::: {.slide title="Check: Rescale Two Learning Rates"}
+[Check]{.kicker}
 
+At $b = 64$, SGD trains well with $\eta = 0.05$ and Adam with
+$\eta = 0.003$. You move to $b = 256$. Which learning rates do the rules
+suggest, and what could still go wrong for SGD?
 
-- In the SGD noise-floor model, batch ramps and learning-rate decay both
-  reduce $\eta/b$; design the batch ramp with the schedule (§9.8).
-- On reported pretraining workloads, Muon remains data-efficient to larger
-  $b$ than AdamW, shifting the measured elbow right (§9.9).
-- Turning fewer steps into less time = data parallelism (ch. 11).
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** SGD: $4 \times 0.05 = 0.2$. Adam: $\sqrt{4} \times 0.003 =
+0.006$. SGD's $0.2$ may exceed the stability ceiling $2/L$, or $b = 256$
+may lie past the noise scale; warmup protects the first steps.
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}
-- Noise scale $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma} / \|\nabla f\|^2$:
-  measurable from gradient norms at two batch sizes.
-- Steps-to-target: ideal scaling below it and a floor above; the measured
-  elbow lies within a small factor of the estimated noise scale.
-- Move $\eta$ with $b$: linearly for SGD, square root for Adam — below
-  the noise scale, under the stability ceiling, behind warmup.
-- The noise scale grows during training, motivating batch ramps in several
-  large-scale runs.
+[Wrap-up]{.kicker}
+
+- **Noise scale** $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}
+  / \|\nabla f\|^2$, from gradient norms at two batch sizes: about a hundred
+  images (CNN) and about two sequences (`TinyLM`) at initialization,
+  growing within 500 steps (`TinyLM`: more than tenfold).
+- **Steps to a target:** perfect scaling below the critical batch size, a
+  floor above; both models fit one hyperbola, $b_{\textrm{crit}}$ roughly
+  a hundred sequences (`TinyLM`) and two to four hundred images (CNN).
+- **Learning rate:** linear in $b$ for SGD, $\sqrt{b}$ for Adam; below the
+  noise scale, under the ceiling, behind warmup.
+- **Ramps:** the noise scale grows, so large runs grow their batch.
+
+**Next:** keeping the best learning rate fixed as the model grows wider.
 :::

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:123af62cee8c54fc20b734b0df8fcf88a9374838a2c46d69ac94081aee76e02f",
+    "d2l_lib_fingerprint": "sha256:a84d2e9ec0dcc50994cea297dbd9062a6846e0ab82af6fe4f06281f219ea26b9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet perplexity: 3.11\n"
+          "text": "Gated DeltaNet perplexity: 3.12\n"
         }
       ]
     }

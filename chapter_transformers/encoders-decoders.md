@@ -20,7 +20,6 @@ Perceiver-style and vision--language models.
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
-import time
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -34,21 +33,19 @@ from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
-import time
 ```
 
 ## Encoder, Decoder, and Encoder--Decoder Architectures
-:label:`sec_large-pretraining-transformers`
 
 A transformer block maps a sequence of $d$-dimensional vectors to a
 sequence of the same shape, and it leaves two questions open: which
 positions may attend to which, and where the keys and values come from.
 Three common wirings answer these questions, and
 :numref:`fig_three-wirings` draws them in the convention we will use for
-every attention map in this section — queries down the rows, keys along
+every attention map in this section: queries down the rows, keys along
 the columns.
 
-![The three wirings and their attention patterns (query position runs downward, key position rightward; a filled cell means the query may attend to that key). Encoder-only: every token attends to every token. Decoder-only: each token attends only to itself and its past. Encoder--decoder: the source attends to itself bidirectionally, while each target token attends to the full source through cross-attention and to its own past causally.](../img/mdl-transformers-three-wirings.svg)
+![The three wirings and their attention patterns (query position runs downward, key position rightward; a filled cell means the query may attend to that key). Encoder-only: every token attends to every token. Decoder-only: each token attends only to itself and its past. Encoder--decoder: the source attends to itself bidirectionally, while each target token attends to the full source through cross-attention (light cells) and to its own past causally.](../img/mdl-transformers-three-wirings.svg)
 :label:`fig_three-wirings`
 
 **Encoder-only.** Drop the mask. Every token attends to every other, so
@@ -63,10 +60,12 @@ wiring pretrained on text
 :cite:`Devlin.Chang.Lee.ea.2018`; the vision transformer of
 :numref:`sec_vision-transformer` is the same wiring over image patches.
 
-**Decoder-only.** Keep the causal mask everywhere: the GPT of
-:numref:`sec_gpt`, in two sentences. Each token predicts its successor,
-generation is the training objective run forward, and one stack serves
-both understanding and production. We do not rebuild it here; it appears
+**Decoder-only.** Keep the causal mask everywhere: this is the GPT of
+:numref:`sec_gpt`. Each token predicts its successor, and generation is the
+training objective run forward. One stack is trained with one objective,
+next-token prediction on raw text, and the same stack serves generation;
+large enough models of this kind perform tasks that are specified only in
+the prompt :cite:`brown2020language`. We do not rebuild it here; it appears
 in :numref:`fig_three-wirings` as the pattern the other two are measured
 against.
 
@@ -78,23 +77,26 @@ the target stream, keys and values from the source, the second wiring of
 :numref:`sec_multihead-attention`. The pattern in
 :numref:`fig_three-wirings` shows the division: a full square for the
 source, a full rectangle for target-to-source cross-attention, a triangle
-for the target's own past. Machine translation was the founding
+for the target's own past. The wiring fits tasks whose input is fully known
+before generation starts. Machine translation was the founding
 application; T5 pretrained the architecture on span reconstruction and
 recast a broad family of tasks as text-to-text :cite:`raffel2020exploring`,
-BART on denoising corrupted text :cite:`lewis2019bart`.
+BART on denoising corrupted text :cite:`lewis2019bart`. In speech
+recognition, Whisper's encoder reads an entire audio clip bidirectionally
+while a text decoder cross-attends into it :cite:`radford2023whisper`.
 
 The rest of this section builds the two wirings that :numref:`sec_gpt` did
 not, in order.
 
 ## Bidirectional Context for Masked-Token Prediction
 
-### A Bidirectional Encoder in a Dozen Lines
+### A Bidirectional Encoder
 
 The encoder differs from the `CharLM` of :numref:`sec_transformer-block`
-by a single argument: we pass no `valid_lens`, so nothing is masked.
-Positions are still the model's job, since attention is permutation
-equivariant (:numref:`sec_positional-information`), so a learned position
-table stays.
+in one respect: its blocks receive no mask, so every token attends to
+every token. Positions are still the model's job, since attention is
+permutation equivariant (:numref:`sec_positional-information`), so a
+learned position table stays.
 
 ```{.python .input #encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines}
 %%tab pytorch
@@ -110,13 +112,13 @@ class TransformerEncoder(nn.Module):
         self.blks = nn.ModuleList([
             d2l.TransformerBlock(num_hiddens, num_heads)
             for _ in range(num_blks)])
-        self.norm = nn.RMSNorm(num_hiddens)
+        self.norm = nn.RMSNorm(num_hiddens, eps=1e-5)
 
     def forward(self, X):
         H = self.token_emb(X) + self.pos_emb(
             torch.arange(X.shape[1], device=X.device))
         for blk in self.blks:
-            H = blk(H)  # no valid_lens: every token attends everywhere
+            H = blk(H)  # no mask: every token attends to every token
         return self.norm(H)
 ```
 
@@ -125,8 +127,7 @@ class TransformerEncoder(nn.Module):
 class TransformerEncoder(nnx.Module):
     """Bidirectional encoder: embeddings plus unmasked pre-norm blocks."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=4,
-                 max_len=64, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+                 max_len=64, *, rngs):
         init = nnx.initializers.normal(0.02)
         self.token_emb = nnx.Embed(vocab_size, num_hiddens,
                                    embedding_init=init, rngs=rngs)
@@ -135,12 +136,12 @@ class TransformerEncoder(nnx.Module):
         self.blks = nnx.List([
             d2l.TransformerBlock(num_hiddens, num_heads, rngs=rngs)
             for _ in range(num_blks)])
-        self.norm = nnx.RMSNorm(num_hiddens, rngs=rngs)
+        self.norm = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
 
     def __call__(self, X):
         H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
         for blk in self.blks:
-            H = blk(H)  # no valid_lens: every token attends everywhere
+            H = blk(H)  # no mask: every token attends to every token
         return self.norm(H)
 ```
 
@@ -176,7 +177,6 @@ def mask_tokens(X, p=0.15):
     mask = torch.rand(X.shape, device=X.device) < p
     return torch.where(mask, torch.full_like(X, MASK), X), mask
 
-torch.manual_seed(0)
 device = d2l.try_gpu()
 model = TransformerEncoder(len(data.vocab) + 1).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
@@ -209,7 +209,8 @@ def mask_tokens(X, key, p=0.15):
     mask = jax.random.uniform(key, X.shape) < p
     return jnp.where(mask, MASK, X), mask
 
-model = TransformerEncoder(len(data.vocab) + 1, rngs=nnx.Rngs(0))
+model = TransformerEncoder(len(data.vocab) + 1,
+                           rngs=nnx.Rngs(d2l.get_key()))
 optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                           wrt=nnx.Param)
 
@@ -223,7 +224,7 @@ def mlm_step(model, optimizer, Xm, X, mask):
     optimizer.update(model, grads)
     return loss
 
-key, losses, step = jax.random.key(0), [], 0
+key, losses, step = d2l.get_key(), [], 0
 while step < 2000:
     for X, _ in data.train_dataloader():
         X = jnp.asarray(X)
@@ -237,7 +238,7 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
 
-A minute of training brings the masked loss to about one nat and the
+Two thousand steps bring the masked loss to about one nat and the
 masked-character accuracy to roughly 65%, compared with a unigram entropy
 of $2.83$ nats for the 28-way vocabulary. The loss by position shows how
 available context contributes to this average.
@@ -247,11 +248,11 @@ available context contributes to this average.
 
 Our windows are 64 characters long, and that finiteness builds a
 comparison into every batch: a masked character in the interior has
-context on both sides, while one at position 0 or 63 sees only one side
-— the final position has the one-sided context available to a causal
-language model at every step. Because the model and objective remain fixed,
-binning validation loss by position measures the contribution of context
-from the second side.
+context on both sides, while one at position 0 or 63 sees only one side.
+The final position has exactly the context that a causal language model
+has at every step. Because the model and objective remain fixed, binning
+validation loss by position measures the contribution of context from the
+second side.
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
@@ -259,7 +260,6 @@ model.eval()
 pos_loss = torch.zeros(64, device=device)
 pos_cnt = torch.zeros(64, device=device)
 correct = total = 0
-torch.manual_seed(1)
 with torch.no_grad():
     for rep in range(5):
         for X, _ in data.val_dataloader():
@@ -292,7 +292,7 @@ def mlm_eval(model, Xm, X):
 
 pos_loss, pos_cnt = jnp.zeros(64), jnp.zeros(64)
 correct = total = 0
-key = jax.random.key(1)
+key = d2l.get_key()
 for rep in range(5):
     for X, _ in data.val_dataloader():
         X = jnp.asarray(X)
@@ -311,13 +311,13 @@ d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
          'masked loss')
 ```
 
-The profile is flat across the interior at about $1.1$ nats and roughly
-doubles at the two one-sided edges. That gap is the second side's value,
-measured: conditioning on both sides of a character cuts its loss by
-about half relative to one side, because for text, what follows a gap
-narrows it down about as sharply as what precedes it. The predictions are
-readable too — mask a character and the model fills it from its
-surroundings:
+The profile is flat across the interior at about one nat and roughly
+doubles at the two one-sided edges. The difference is the contribution of
+the second side: conditioning on both sides of a character halves its loss
+relative to one side, because in text what follows a gap constrains it
+about as strongly as what precedes it. The predictions can be read
+directly. We mask one character of a sentence from the novel and list the
+model's three most probable fills:
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab pytorch
@@ -351,21 +351,19 @@ for pos in (9, 14, 30):
 ```
 
 The doubled consonant in "trave_ler" comes back with high confidence:
-only the right-hand context ("ler") pins it down, and a left-to-right
-model would never see it. Scaled up to subword tokens, sentence pairs,
-gigabytes of text, and a fine-tuning recipe per downstream task, this
-experiment is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining and
-fine-tuning the Language Models part covers in full
-(:numref:`chap_nlp_pretrain`). Nor did the wiring stop evolving in 2019:
-ModernBERT rebuilds the same encoder-only architecture with the modern
-block internals of this chapter (RoPE, gated FFN, alternating
-local--global attention, and an 8k context), and it remains the backbone
-of choice for retrieval and classification at small model sizes
-:cite:`Warner.Chaffin.Clavie.ea.2024`.
+only the right-hand context ("ler") determines it, and a left-to-right
+model would never see that context. Scaled up to subword tokens, sentence
+pairs, gigabytes of text, and a fine-tuning recipe per downstream task,
+this experiment is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining
+and fine-tuning the Language Models part covers in full
+(:numref:`chap_nlp_pretrain`). Encoders have since adopted the block
+internals of this chapter: ModernBERT keeps the encoder-only wiring and
+uses RoPE, a gated FFN, alternating local and global attention, and a
+context of 8,192 tokens :cite:`Warner.Chaffin.Clavie.ea.2024`.
 
-## An Encoder--Decoder: Cross-Attention at Work
+## Cross-Attention in an Encoder--Decoder
 
-### A Task Whose Alignment We Know
+### A Task with Known Alignment
 :label:`subsec_reversal-task`
 
 An encoder--decoder is useful when the input and output are different
@@ -377,7 +375,7 @@ string*. Target position $t$ must copy source position $n-1-t$, the
 letters are drawn independently at random, and the only path from source
 content to the decoder runs through cross-attention. If the mechanism
 works and the model solves the task directly, its attention map should be
-the anti-diagonal — a prediction we can check. Random strings also mean
+the anti-diagonal, a prediction we can check. Random strings also mean
 unlimited fresh data: unlike the memorizing GPT of :numref:`sec_gpt`,
 this model never sees the same example twice.
 
@@ -415,7 +413,7 @@ def sample_batch(batch_size, key):
 def to_str(ids):
     return ''.join(chr(97 + int(i)) for i in ids)
 
-src, dec_in, tgt = sample_batch(1, jax.random.key(0))
+src, dec_in, tgt = sample_batch(1, d2l.get_key())
 print(f'source {to_str(src[0])!r} -> target {to_str(tgt[0])!r}')
 ```
 
@@ -423,16 +421,19 @@ As in :numref:`sec_gpt`, training uses teacher forcing: the decoder input
 is the target shifted right behind a `<bos>` token, so every position
 learns to predict its successor in parallel.
 
-### The Decoder Block: One More Sublayer
+### The Decoder Block
 
 A decoder block is the transformer block plus one sublayer. Between the
 causal self-attention and the FFN sits cross-attention: queries from the
 target's residual stream, keys and values from the encoder output. It
-follows the same pre-norm discipline as everything in this chapter — each
-sublayer reads the stream through a normalization and adds its result
-back. Note the masking asymmetry: self-attention stays causal (the target
-is being generated), while cross-attention is unmasked (the source is
-fully known before generation starts).
+follows the same pre-norm arrangement as every block in this chapter:
+each sublayer reads the stream through a normalization and adds its
+result back. The two attention sites are masked differently.
+Self-attention stays causal, because the target is being generated, while
+cross-attention is unmasked, because the source is fully known before
+generation starts. Both masks are optional arguments, so a padded batch
+can pass its own (:numref:`subsec_encdec-masks`); by default
+self-attention gets `d2l.causal_mask` and cross-attention no mask.
 
 ```{.python .input #encoders-decoders-the-decoder-block-one-more-sublayer-1}
 %%tab pytorch
@@ -441,21 +442,19 @@ class DecoderBlock(nn.Module):
     FFN."""
     def __init__(self, num_hiddens, num_heads):
         super().__init__()
-        self.norm1 = nn.RMSNorm(num_hiddens)
-        self.norm2 = nn.RMSNorm(num_hiddens)
-        self.norm3 = nn.RMSNorm(num_hiddens)
-        self.self_attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                     dropout=0)
-        self.cross_attention = d2l.MultiHeadAttention(num_hiddens,
-                                                      num_heads, dropout=0)
+        self.norm1 = nn.RMSNorm(num_hiddens, eps=1e-5)
+        self.norm2 = nn.RMSNorm(num_hiddens, eps=1e-5)
+        self.norm3 = nn.RMSNorm(num_hiddens, eps=1e-5)
+        self.self_attention = d2l.MultiHeadAttention(num_hiddens, num_heads)
+        self.cross_attention = d2l.MultiHeadAttention(num_hiddens, num_heads)
         self.ffn = d2l.FeedForward(num_hiddens)
 
-    def forward(self, X, enc):
-        B, T = X.shape[:2]
-        causal = torch.arange(1, T + 1, device=X.device).repeat(B, 1)
+    def forward(self, X, enc, mask=None, cross_mask=None):
+        if mask is None:  # causal self-attention
+            mask = d2l.causal_mask(X.shape[1], device=X.device)
         Y = self.norm1(X)
-        X = X + self.self_attention(Y, Y, Y, causal)
-        X = X + self.cross_attention(self.norm2(X), enc, enc, None)
+        X = X + self.self_attention(Y, Y, Y, mask)
+        X = X + self.cross_attention(self.norm2(X), enc, enc, cross_mask)
         return X + self.ffn(self.norm3(X))
 ```
 
@@ -464,34 +463,32 @@ class DecoderBlock(nn.Module):
 class DecoderBlock(nnx.Module):
     """Pre-norm decoder block: causal self-attention, cross-attention,
     FFN."""
-    def __init__(self, num_hiddens, num_heads, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.norm1 = nnx.RMSNorm(num_hiddens, rngs=rngs)
-        self.norm2 = nnx.RMSNorm(num_hiddens, rngs=rngs)
-        self.norm3 = nnx.RMSNorm(num_hiddens, rngs=rngs)
+    def __init__(self, num_hiddens, num_heads, *, rngs):
+        self.norm1 = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
+        self.norm2 = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
+        self.norm3 = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
         self.self_attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                     dropout=0, rngs=rngs)
-        self.cross_attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout=0, rngs=rngs)
+                                                     rngs=rngs)
+        self.cross_attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                      rngs=rngs)
         self.ffn = d2l.FeedForward(num_hiddens, rngs=rngs)
 
-    def __call__(self, X, enc):
-        B, T = X.shape[:2]
-        causal = jnp.tile(jnp.arange(1, T + 1), (B, 1))
+    def __call__(self, X, enc, mask=None, cross_mask=None):
+        if mask is None:  # causal self-attention
+            mask = d2l.causal_mask(X.shape[1])
         Y = self.norm1(X)
-        X = X + self.self_attention(Y, Y, Y, causal)[0]
-        Y2, cross_weights = self.cross_attention(self.norm2(X), enc, enc,
-                                                 None)
-        X = X + Y2
-        return X + self.ffn(self.norm3(X)), cross_weights
+        X = X + self.self_attention(Y, Y, Y, mask)
+        X = X + self.cross_attention(self.norm2(X), enc, enc, cross_mask)
+        return X + self.ffn(self.norm3(X))
 ```
 
 The full model wires a `TransformerEncoder` (the class from the previous
 section, reused unchanged) to a stack of decoder blocks with its own
-embeddings and output head. Following the framework conventions of
-:numref:`sec_multihead-attention`, the JAX model returns the
-cross-attention weights alongside the logits, while the PyTorch model
-stores them on the attention module.
+embeddings and output head. `EncoderDecoder` returns the logits; each
+attention module keeps the weights of its last call in
+`attention_weights`. The decoder alone is the method `decode`, so that
+generation can run the encoder once and then only the decoder for each new
+token.
 
 ```{.python .input #encoders-decoders-the-decoder-block-one-more-sublayer-2}
 %%tab pytorch
@@ -508,16 +505,18 @@ class EncoderDecoder(nn.Module):
             nn.init.normal_(emb.weight, std=0.02)
         self.blks = nn.ModuleList([DecoderBlock(num_hiddens, num_heads)
                                    for _ in range(num_blks)])
-        self.norm = nn.RMSNorm(num_hiddens)
+        self.norm = nn.RMSNorm(num_hiddens, eps=1e-5)
         self.head = nn.Linear(num_hiddens, vocab_size, bias=False)
 
-    def forward(self, src, dec_in):
-        enc = self.encoder(src)
+    def decode(self, dec_in, enc):
         H = self.tgt_emb(dec_in) + self.pos_emb(
             torch.arange(dec_in.shape[1], device=dec_in.device))
         for blk in self.blks:
             H = blk(H, enc)
         return self.head(self.norm(H))
+
+    def forward(self, src, dec_in):
+        return self.decode(dec_in, self.encoder(src))
 ```
 
 ```{.python .input #encoders-decoders-the-decoder-block-one-more-sublayer-2}
@@ -525,8 +524,7 @@ class EncoderDecoder(nn.Module):
 class EncoderDecoder(nnx.Module):
     """A causal decoder cross-attending into a bidirectional encoder."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4,
-                 num_blks=1, max_len=64, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+                 num_blks=1, max_len=64, *, rngs):
         init = nnx.initializers.normal(0.02)
         self.encoder = TransformerEncoder(vocab_size, num_hiddens,
                                           num_heads, num_blks, max_len,
@@ -538,51 +536,49 @@ class EncoderDecoder(nnx.Module):
         self.blks = nnx.List([DecoderBlock(num_hiddens, num_heads,
                                            rngs=rngs)
                               for _ in range(num_blks)])
-        self.norm = nnx.RMSNorm(num_hiddens, rngs=rngs)
-        self.head = nnx.Linear(num_hiddens, vocab_size, use_bias=False,
+        self.norm = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
+        self.head = d2l.Linear(num_hiddens, vocab_size, use_bias=False,
                                rngs=rngs)
 
-    def __call__(self, src, dec_in):
-        enc = self.encoder(src)
+    def decode(self, dec_in, enc):
         H = self.tgt_emb(dec_in) + self.pos_emb(jnp.arange(dec_in.shape[1]))
-        weights = []
         for blk in self.blks:
-            H, w = blk(H, enc)
-            weights.append(w)
-        return self.head(self.norm(H)), weights
+            H = blk(H, enc)
+        return self.head(self.norm(H))
+
+    def __call__(self, src, dec_in):
+        return self.decode(dec_in, self.encoder(src))
 ```
 
 ### Assembling the Masks
 :label:`subsec_encdec-masks`
 
-Our reversal task ducks one bookkeeping question by construction: every
-string has the same length, so nothing is padding, and the only mask in
-sight is the decoder's causal one. A real batch needs three masks, one per
-attention site, because its sequences have different lengths and are
-padded to a rectangle; each mask is composed from the two primitives of
-:numref:`sec_attention-scoring-functions`: a padding mask built from valid
-lengths, and the causal triangle, combined by logical AND under
-broadcasting. Encoder self-attention masks source padding. Decoder
-self-attention during teacher-forced training needs the causal triangle
-*and* target padding on the key side (padded query rows compute outputs
-the loss ignores). Cross-attention masks source padding again, since the
-target may be mid-generation but the source it reads is fully known. The
-cell below assembles all three for a toy ragged batch, as boolean arrays
-of shape (batch, queries, keys) — the form the fused kernels of
-:numref:`sec_attention-at-scale` accept; `d2l.MultiHeadAttention`'s
-`valid_lens` argument carries the same information in compressed form.
+Our reversal task avoids padding by construction: every string has the
+same length, and the only mask in use is the decoder's causal one. A real
+batch holds sequences of different lengths, padded on the right to a
+rectangle, and it needs one mask per attention site. Each is composed
+from the two primitives of :numref:`sec_attention-scoring-functions`, the
+padding mask `d2l.padding_mask` built from valid lengths and the causal
+triangle `d2l.causal_mask`, combined by logical AND under broadcasting.
+Encoder self-attention masks source padding. Decoder self-attention during
+teacher-forced training needs the causal triangle *and* target padding on
+the key side (padded query rows compute outputs that the loss ignores).
+Cross-attention masks source padding again: the target may be
+mid-generation, but the source it reads is fully known. The cell below
+assembles all three for a toy ragged batch as boolean arrays of shape
+(batch, queries, keys). `d2l.MultiHeadAttention` takes such masks
+directly, as do the fused kernels of :numref:`sec_attention-at-scale`.
 
 ```{.python .input #encoders-decoders-assembling-the-masks}
 %%tab pytorch
 src_len, tgt_len = torch.tensor([3, 5]), torch.tensor([3, 4])
 S, T_dec = int(src_len.max()), int(tgt_len.max())
-src_valid = (torch.arange(S)[None, :] < src_len[:, None])[:, None, :]
-tgt_valid = (torch.arange(T_dec)[None, :] < tgt_len[:, None])[:, None, :]
-causal = (torch.arange(T_dec)[None, :]
-          <= torch.arange(T_dec)[:, None])[None]        # (1, T, T)
-enc_self = src_valid.expand(-1, S, -1)     # (B, S, S): source padding
-dec_self = causal & tgt_valid              # (B, T, T): causal AND padding
-cross = src_valid.expand(-1, T_dec, -1)    # (B, T, S): source padding
+B = len(src_len)
+src_valid = d2l.padding_mask(src_len, S)         # (B, 1, S)
+tgt_valid = d2l.padding_mask(tgt_len, T_dec)     # (B, 1, T)
+enc_self = src_valid.expand(-1, S, -1)           # (B, S, S): source padding
+dec_self = d2l.causal_mask(T_dec) & tgt_valid    # (B, T, T): causal, padding
+cross = src_valid.expand(-1, T_dec, -1)          # (B, T, S): source padding
 for name, m in (('encoder self', enc_self), ('decoder self', dec_self),
                 ('cross', cross)):
     print(f'{name}-attention mask, sequence 0 (1 = may attend):')
@@ -593,14 +589,12 @@ for name, m in (('encoder self', enc_self), ('decoder self', dec_self),
 %%tab jax
 src_len, tgt_len = jnp.array([3, 5]), jnp.array([3, 4])
 S, T_dec = int(src_len.max()), int(tgt_len.max())
-src_valid = (jnp.arange(S)[None, :] < src_len[:, None])[:, None, :]
-tgt_valid = (jnp.arange(T_dec)[None, :] < tgt_len[:, None])[:, None, :]
-causal = (jnp.arange(T_dec)[None, :]
-          <= jnp.arange(T_dec)[:, None])[None]          # (1, T, T)
 B = len(src_len)
-enc_self = jnp.broadcast_to(src_valid, (B, S, S))   # source padding
-dec_self = causal & tgt_valid              # (B, T, T): causal AND padding
-cross = jnp.broadcast_to(src_valid, (B, T_dec, S))  # source padding
+src_valid = d2l.padding_mask(src_len, S)         # (B, 1, S)
+tgt_valid = d2l.padding_mask(tgt_len, T_dec)     # (B, 1, T)
+enc_self = jnp.broadcast_to(src_valid, (B, S, S))      # source padding
+dec_self = d2l.causal_mask(T_dec) & tgt_valid    # (B, T, T): causal, padding
+cross = jnp.broadcast_to(src_valid, (B, T_dec, S))     # source padding
 for name, m in (('encoder self', enc_self), ('decoder self', dec_self),
                 ('cross', cross)):
     print(f'{name}-attention mask, sequence 0 (1 = may attend):')
@@ -610,20 +604,45 @@ for name, m in (('encoder self', enc_self), ('decoder self', dec_self),
 Read sequence 0's three grids (source length 3 of 5, target length 3 of
 4): the encoder square and the cross rectangle both blank the same two
 padded source columns, and the decoder triangle loses its last column to
-target padding. In this section's model the composition never surfaces —
-`sample_batch` produces no padding, and the cross-attention call passes
-`valid_lens=None` — but these three grids are what a production
-encoder--decoder assembles for every batch it trains on.
+target padding. These grids are what an encoder--decoder assembles for
+every padded batch it trains on. To see the model consume them, we pass
+`dec_self` and `cross` to a fresh `DecoderBlock` on random inputs of width
+16 and print the cross-attention weights of sequence 0 in one head, in
+percent:
+
+```{.python .input #encoders-decoders-assembling-the-masks-1}
+%%tab pytorch
+blk = DecoderBlock(16, num_heads=2)
+X, enc = torch.randn(B, T_dec, 16), torch.randn(B, S, 16)
+with torch.no_grad():
+    blk(X, enc, dec_self, cross)
+weights = blk.cross_attention.attention_weights[0, 0]  # (queries, keys)
+print((100 * weights).round().int().numpy())
+```
+
+```{.python .input #encoders-decoders-assembling-the-masks-1}
+%%tab jax
+blk = DecoderBlock(16, num_heads=2, rngs=nnx.Rngs(d2l.get_key()))
+X = jax.random.normal(d2l.get_key(), (B, T_dec, 16))
+enc = jax.random.normal(d2l.get_key(), (B, S, 16))
+blk(X, enc, dec_self, cross)
+weights = blk.cross_attention.attention_weights[0, 0]  # (queries, keys)
+print((100 * weights).round().astype(int))
+```
+
+Each row spreads its weight over the three real source positions, and the
+two padded columns receive exactly zero. In the reversal model none of
+this arises: `sample_batch` produces no padding, so the decoder keeps its
+default causal mask and the cross-attention runs unmasked.
 
 ### Training and Decoding
 
-One encoder block, one decoder block, and a few hundred steps of on-line
-batches suffice — the model sees on the order of a million characters,
-none twice.
+One encoder block, one decoder block, and a few hundred steps on freshly
+sampled batches suffice. Over 600 steps of 128 strings the model reads
+about a million source characters and never sees a string twice.
 
 ```{.python .input #encoders-decoders-training-and-decoding-1}
 %%tab pytorch
-torch.manual_seed(0)
 seq2seq = EncoderDecoder(V + 1).to(device)
 optimizer = torch.optim.AdamW(seq2seq.parameters(), lr=1e-3,
                               weight_decay=0.0)
@@ -642,21 +661,21 @@ print('loss at step 100/200/400/600: ' + '/'.join(
 
 ```{.python .input #encoders-decoders-training-and-decoding-1}
 %%tab jax
-seq2seq = EncoderDecoder(V + 1, rngs=nnx.Rngs(0))
+seq2seq = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
 optimizer = nnx.Optimizer(seq2seq, optax.adamw(1e-3, weight_decay=0.0),
                           wrt=nnx.Param)
 
 @nnx.jit
 def s2s_step(model, optimizer, src, dec_in, tgt):
     def loss_fn(model):
-        logits, _ = model(src, dec_in)
+        logits = model(src, dec_in)
         return optax.softmax_cross_entropy_with_integer_labels(
             logits.reshape(-1, logits.shape[-1]), tgt.reshape(-1)).mean()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads)
     return loss
 
-key, losses = jax.random.key(0), []
+key, losses = d2l.get_key(), []
 for step in range(600):
     key, sub = jax.random.split(key)
     src, dec_in, tgt = sample_batch(128, sub)
@@ -672,17 +691,13 @@ model reverses essentially every one exactly.
 ```{.python .input #encoders-decoders-training-and-decoding-2}
 %%tab pytorch
 seq2seq.eval()
-torch.manual_seed(1)
 with torch.no_grad():
     src, _, tgt = sample_batch(1000)
-    enc = seq2seq.encoder(src)
+    enc = seq2seq.encoder(src)  # the encoder runs once
     out = torch.full((1000, T + 1), BOS, device=device)
     for t in range(T):
-        H = seq2seq.tgt_emb(out[:, :t + 1]) + seq2seq.pos_emb(
-            torch.arange(t + 1, device=device))
-        for blk in seq2seq.blks:
-            H = blk(H, enc)
-        out[:, t + 1] = seq2seq.head(seq2seq.norm(H))[:, -1].argmax(-1)
+        logits = seq2seq.decode(out[:, :t + 1], enc)
+        out[:, t + 1] = logits[:, -1].argmax(-1)
 pred = out[:, 1:]
 print(f'exact match on 1000 fresh strings: '
       f'{(pred == tgt).all(-1).float().mean():.3f}')
@@ -695,13 +710,10 @@ seq2seq.eval()
 
 @nnx.jit
 def next_token(model, enc, buf, t):
-    H = model.tgt_emb(buf) + model.pos_emb(jnp.arange(buf.shape[1]))
-    for blk in model.blks:
-        H, _ = blk(H, enc)
-    return model.head(model.norm(H))[:, t].argmax(-1)
+    return model.decode(buf, enc)[:, t].argmax(-1)
 
-src, _, tgt = sample_batch(1000, jax.random.key(1))
-enc = seq2seq.encoder(src)
+src, _, tgt = sample_batch(1000, d2l.get_key())
+enc = seq2seq.encoder(src)  # the encoder runs once
 buf = jnp.full((1000, T + 1), BOS)
 for t in range(T):
     buf = buf.at[:, t + 1].set(next_token(seq2seq, enc, buf, t))
@@ -712,83 +724,90 @@ print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
 ```
 
 :begin_tab:`jax`
-The decode loop reuses the fixed-buffer idiom from :numref:`sec_gpt`'s
-`generate`: a buffer of the final size, overwritten left to right, keeps
-every shape static so the jitted step compiles exactly once. The causal
-mask makes the not-yet-written positions invisible to every query at or
-before $t$.
+As in `generate` of :numref:`sec_gpt`, the decode loop writes into a
+buffer of fixed size, overwritten left to right. Every shape stays static,
+so the jitted step compiles once. The causal mask hides the
+not-yet-written positions from every query at or before $t$.
 :end_tab:
 
 ### Reading the Alignment
 :label:`subsec_reading-alignment`
 
-We run a batch through the model, extract the cross-attention weights from
-the decoder block, and compare each target
-position's attention against the alignment the task dictates.
+We run a batch through the model, read the cross-attention weights of the
+decoder block, of shape (batch, heads, target positions, source positions),
+and compare each target position's attention with the alignment that the
+task dictates. Besides the head average we report how much weight each
+head puts on the true source position, and we plot the average next to
+the head that puts the most weight there.
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
 %%tab pytorch
 with torch.no_grad():
     src, dec_in, tgt = sample_batch(64)
     seq2seq(src, dec_in)
-w = seq2seq.blks[0].cross_attention.attention.attention_weights
-w = w.reshape(64, 4, T, T)
+w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
 want = torch.arange(T - 1, -1, -1, device=device)  # row t -> column T-1-t
-hit = (w.mean(1).argmax(-1) == want).float().mean()
-mass = w.mean(1).gather(-1, want.expand(64, T)[..., None]).mean()
-print(f'head-averaged argmax hits the true source position on '
-      f'{100 * hit:.0f}% of rows; mean weight there {mass:.2f}')
-d2l.show_heatmaps(w[0].cpu()[None], xlabel='source position',
-                  ylabel='target position',
-                  titles=[f'Head {i}' for i in range(1, 5)],
-                  figsize=(9, 2.5), cmap='Blues')
+avg = w.mean(1)                                     # average over heads
+hit = (avg.argmax(-1) == want).float().mean()
+on_target = w[..., torch.arange(T), want].mean((0, 2))  # one per head
+print(f'head average: argmax on the true source position in '
+      f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
+print('weight on the true position, per head:',
+      ' '.join(f'{v:.2f}' for v in on_target))
+h = int(on_target.argmax())
+d2l.show_heatmaps(torch.stack([avg[0], w[0, h]]).cpu()[None],
+                  xlabel='source position', ylabel='target position',
+                  titles=['head average', f'head {h}'], figsize=(6, 3),
+                  cmap='Blues')
 ```
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
 %%tab jax
-src, dec_in, tgt = sample_batch(64, jax.random.key(2))
-_, cross_weights = seq2seq(src, dec_in)
-w = cross_weights[0].reshape(64, 4, T, T)
+src, dec_in, tgt = sample_batch(64, d2l.get_key())
+seq2seq(src, dec_in)
+w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
 want = jnp.arange(T - 1, -1, -1)                   # row t -> column T-1-t
-hit = (w.mean(1).argmax(-1) == want).mean()
-mass = jnp.take_along_axis(w.mean(1),
-                           jnp.tile(want, (64, 1))[..., None], -1).mean()
-print(f'head-averaged argmax hits the true source position on '
-      f'{100 * hit:.0f}% of rows; mean weight there {mass:.2f}')
-d2l.show_heatmaps(w[0][None], xlabel='source position',
-                  ylabel='target position',
-                  titles=[f'Head {i}' for i in range(1, 5)],
-                  figsize=(9, 2.5), cmap='Blues')
+avg = w.mean(1)                                    # average over heads
+hit = (avg.argmax(-1) == want).mean()
+on_target = w[..., jnp.arange(T), want].mean((0, 2))  # one per head
+print(f'head average: argmax on the true source position in '
+      f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
+print('weight on the true position, per head:',
+      ' '.join(f'{v:.2f}' for v in on_target))
+h = int(on_target.argmax())
+d2l.show_heatmaps(jnp.stack([avg[0], w[0, h]])[None],
+                  xlabel='source position', ylabel='target position',
+                  titles=['head average', f'head {h}'], figsize=(6, 3),
+                  cmap='Blues')
 ```
 
-The maps contain the anti-diagonal predicted by the third panel of
+The maps show the anti-diagonal predicted by the third panel of
 :numref:`fig_three-wirings`. Averaged over heads, the argmax lands on the
 true source position for more than nine rows in ten, with most of the
 softmax mass concentrated there. The cross-attention therefore represents
 the alignment built into the task. As :numref:`sec_multihead-attention`
 noted, such readable attention patterns are the exception rather than the
-rule. It is readable here because we made the
-model small; give the encoder and decoder more depth and heads and the
-task stays solved while the maps delocalize, as one of the exercises
-demonstrates.
+rule. This one is readable because the model is small. With more depth
+and more heads the task stays solved while the maps spread out, as
+exercise :exref:`ex_encdec-depth-heads` shows.
 
 ## Cross-Attention as Interface
 
-### Queries Need Not Come from a Sequence
+### Learned Queries
 
 In the decoder, the cross-attention queries came from the target stream.
 Nothing in the mechanism requires that source. A set of $M$ query vectors
-can instead be *learned parameters* — a fixed
-array that exists before any input arrives. Cross-attending it into an
-input of length $N$ costs $O(MN)$; the quadratic term of
-:numref:`sec_attention-at-scale` never appears, because the $M$ latents
-only ever self-attend among themselves at $O(M^2)$. This is the
+can instead be *learned parameters*, a fixed array that exists before any
+input arrives. Cross-attending it into an input of length $N$ costs
+$O(MN)$. The quadratic term of :numref:`sec_attention-at-scale` never
+appears, because the $M$ latents only ever self-attend among themselves,
+at $O(M^2)$. This is the
 *Perceiver* :cite:`Jaegle.Gimeno.Brock.ea.2021`: a fixed-size latent
 bottleneck that reads arbitrarily long, arbitrarily structured
 inputs through cross-attention, sketched in
 :numref:`fig_latent-bottleneck`.
 
-![A latent bottleneck with input length $N$, $M$ learned latents, width $d$, and $L$ latent blocks. One cross-attention read has mixing cost $O(MNd)$; each subsequent latent self-attention layer has mixing cost $O(M^2d)$, for $O(LM^2d)$ across the stack. These terms hold batch size, head count, and width fixed and omit projections and FFNs.](../img/mdl-transformers-latent-bottleneck.svg)
+![A latent bottleneck with input length $N$, $M$ learned latents, width $d$, and $L$ latent blocks. Every latent reads every input (shaded band); the read of one latent is drawn in full. One cross-attention read has mixing cost $O(MNd)$; each subsequent latent self-attention layer has mixing cost $O(M^2d)$, for $O(LM^2d)$ across the stack. These terms hold batch size, head count, and width fixed and omit projections and FFNs.](../img/mdl-transformers-latent-bottleneck.svg)
 :label:`fig_latent-bottleneck`
 
 A minimal version needs a parameter array, one cross-attention, and a
@@ -803,19 +822,18 @@ class PerceiverEncoder(nn.Module):
         super().__init__()
         self.latents = nn.Parameter(
             0.02 * torch.randn(num_latents, num_hiddens))
-        self.norm_q = nn.RMSNorm(num_hiddens)
-        self.cross_attention = d2l.MultiHeadAttention(num_hiddens,
-                                                      num_heads, dropout=0)
+        self.norm_q = nn.RMSNorm(num_hiddens, eps=1e-5)
+        self.cross_attention = d2l.MultiHeadAttention(num_hiddens, num_heads)
         self.blks = nn.ModuleList([
             d2l.TransformerBlock(num_hiddens, num_heads)
             for _ in range(num_blks)])
-        self.norm = nn.RMSNorm(num_hiddens)
+        self.norm = nn.RMSNorm(num_hiddens, eps=1e-5)
 
     def forward(self, X):
         Z = self.latents.expand(X.shape[0], -1, -1)
-        Z = Z + self.cross_attention(self.norm_q(Z), X, X, None)  # O(MN)
+        Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
         for blk in self.blks:
-            Z = blk(Z)                                            # O(M^2)
+            Z = blk(Z)                                       # O(M^2)
         return self.norm(Z)
 
 perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256).to(device)
@@ -830,44 +848,56 @@ class PerceiverEncoder(nnx.Module):
     """M learned latents cross-attend into the input, then process among
     themselves."""
     def __init__(self, num_latents, num_hiddens, num_heads=4, num_blks=2,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+                 *, rngs):
         self.latents = nnx.Param(
             0.02 * jax.random.normal(rngs.params(),
                                      (num_latents, num_hiddens)))
-        self.norm_q = nnx.RMSNorm(num_hiddens, rngs=rngs)
-        self.cross_attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout=0, rngs=rngs)
+        self.norm_q = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
+        self.cross_attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                      rngs=rngs)
         self.blks = nnx.List([
             d2l.TransformerBlock(num_hiddens, num_heads, rngs=rngs)
             for _ in range(num_blks)])
-        self.norm = nnx.RMSNorm(num_hiddens, rngs=rngs)
+        self.norm = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
 
     def __call__(self, X):
         Z = jnp.broadcast_to(self.latents[...],
                              (X.shape[0],) + self.latents.shape)
-        Z = Z + self.cross_attention(self.norm_q(Z), X, X, None)[0]  # O(MN)
+        Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
         for blk in self.blks:
-            Z = blk(Z)                                               # O(M^2)
+            Z = blk(Z)                                       # O(M^2)
         return self.norm(Z)
 
-perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256)
+perceiver = PerceiverEncoder(num_latents=64, num_hiddens=256,
+                             rngs=nnx.Rngs(d2l.get_key()))
 perceiver.eval()
-X = jax.random.normal(jax.random.key(0), (1, 4096, 256))
+X = jax.random.normal(d2l.get_key(), (1, 4096, 256))
 print('input', X.shape, '-> latent summary', perceiver(X).shape)
 ```
 
 Whatever the input length, the output is $M = 64$ vectors. The input here
-is a raw feature sequence rather than token embeddings, because the whole
-point is indifference to what the input is — text, audio frames, image
+is a raw feature sequence rather than token embeddings, because the
+encoder does not depend on what the input is: text, audio frames, image
 pixels, or a concatenation of all three.
+
+Learned queries can also set the shape of the output. Perceiver IO
+:cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an array of output queries
+that cross-attends *out of* the latent summary, so the output has one
+vector per output query, whatever the input: one query for a
+classification label, one per pixel for optical flow, one per audio sample
+for a waveform. Input length, number of latents, and output shape become
+three independent choices, and the latent transformer keeps its fixed
+cost.
 
 ### The Cost Curve
 :label:`subsec_perceiver-cost-curve`
 
 The claim to verify is the shape of the cost. We time the Perceiver
 against the direct alternative (the same two transformer blocks applied
-to the full input sequence) as $N$ doubles at fixed $M = 64$.
+to the full input sequence) as $N$ doubles at fixed $M = 64$. The timer
+is `d2l.Benchmark` of :numref:`sec_perf_model`: it runs the function a few
+times to warm up, waits for the device to finish, and reports the average
+time of further calls.
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab pytorch
@@ -886,38 +916,26 @@ class SelfAttentionEncoder(nn.Module):
 
 full = SelfAttentionEncoder(256).to(device).eval()
 perceiver.eval()
-
-def timed(model, X, reps=20):
-    with torch.no_grad():
-        for _ in range(3):
-            model(X)
-        if device.type == 'cuda':
-            torch.cuda.synchronize()
-        t0 = time.time()
-        for _ in range(reps):
-            model(X)
-        if device.type == 'cuda':
-            torch.cuda.synchronize()
-    return (time.time() - t0) / reps * 1e3
-
-lengths, t_full, t_perc = (1024, 2048, 4096, 8192), [], []
-for N in lengths:
-    X = torch.randn(1, N, 256, device=device)
-    t_full.append(timed(full, X))
-    t_perc.append(timed(perceiver, X))
-    print(f'N={N:5d}: self-attention {t_full[-1]:6.2f} ms, '
-          f'perceiver {t_perc[-1]:5.2f} ms')
-d2l.plot(list(lengths), [t_full, t_perc], 'input length N',
-         'forward time (ms)', xscale='log', yscale='log',
+lengths, t_full, t_perc = [1024, 2048, 4096, 8192], [], []
+with torch.no_grad():
+    for N in lengths:
+        X = torch.randn(1, N, 256, device=device)
+        t_full.append(1e3 * d2l.Benchmark(lambda: full(X), repeats=20).time)
+        t_perc.append(1e3 * d2l.Benchmark(lambda: perceiver(X),
+                                          repeats=20).time)
+        print(f'N={N:5d}: self-attention {t_full[-1]:6.2f} ms, '
+              f'perceiver {t_perc[-1]:5.2f} ms')
+d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
+         xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
+d2l.plt.xticks(lengths, [str(N) for N in lengths])
 ```
 
 ```{.python .input #encoders-decoders-the-cost-curve}
 %%tab jax
 class SelfAttentionEncoder(nnx.Module):
     """The comparison: the same blocks over the full input sequence."""
-    def __init__(self, num_hiddens, num_heads=4, num_blks=2, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+    def __init__(self, num_hiddens, num_heads=4, num_blks=2, *, rngs):
         self.blks = nnx.List([
             d2l.TransformerBlock(num_hiddens, num_heads, rngs=rngs)
             for _ in range(num_blks)])
@@ -927,95 +945,40 @@ class SelfAttentionEncoder(nnx.Module):
             X = blk(X)                                            # O(N^2)
         return X
 
-full = SelfAttentionEncoder(256)
+full = SelfAttentionEncoder(256, rngs=nnx.Rngs(d2l.get_key()))
 full.eval()
 jit_full, jit_perc = nnx.jit(full), nnx.jit(perceiver)
-
-def timed(f, X, reps=20):
-    f(X).block_until_ready()  # warmup + compile
-    t0 = time.time()
-    for _ in range(reps):
-        Y = f(X)
-    Y.block_until_ready()
-    return (time.time() - t0) / reps * 1e3
-
-lengths, t_full, t_perc = (1024, 2048, 4096, 8192), [], []
+lengths, t_full, t_perc = [1024, 2048, 4096, 8192], [], []
 for N in lengths:
-    X = jax.random.normal(jax.random.key(0), (1, N, 256))
-    t_full.append(timed(jit_full, X))
-    t_perc.append(timed(jit_perc, X))
+    X = jax.random.normal(d2l.get_key(), (1, N, 256))
+    # the warmup calls include one compilation per input length
+    t_full.append(1e3 * d2l.Benchmark(lambda: jit_full(X), repeats=20).time)
+    t_perc.append(1e3 * d2l.Benchmark(lambda: jit_perc(X), repeats=20).time)
     print(f'N={N:5d}: self-attention {t_full[-1]:6.2f} ms, '
           f'perceiver {t_perc[-1]:5.2f} ms')
-d2l.plot(list(lengths), [t_full, t_perc], 'input length N',
-         'forward time (ms)', xscale='log', yscale='log',
+d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
+         xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
+d2l.plt.xticks(lengths, [str(N) for N in lengths])
 ```
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
 time by about four, the signature of an $N^2$ term taking over. The
-Perceiver's time grows more slowly over this range (its $O(MN)$
-cross-attention grows linearly but remains dominated by the fixed $O(M^2)$
-latent processing),
-and by $N = 8192$ the gap exceeds an order of magnitude. At the left end
-of the plot, the Perceiver's fixed $O(M^2)$ latent cost is a large fraction
-of the total, so its margin is
-slim — and with PyTorch's kernels full self-attention is actually faster
-at $N = 1024$. A latent bottleneck is advantageous when the input is long
-and a fixed-size summary suffices.
+Perceiver's time grows far more slowly over this range: its $O(MN)$
+cross-attention grows linearly, but the fixed $O(M^2)$ latent processing
+dominates. By $N = 8192$ the gap exceeds an order of magnitude. At
+$N = 1024$ the two encoders take comparable time, because the Perceiver's
+fixed latent cost is then a large fraction of its total. A latent
+bottleneck is the better choice when the input is long and a fixed-size
+summary suffices.
 
-### Perceiver IO and the Idea's Descendants
-
-Learned queries can also determine the output structure. Perceiver IO
-:cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an output
-query array that cross-attends *out of* the latent summary, so the output
-size and shape are set by the queries rather than by the input — one
-query for a classification label, one per pixel for optical flow, one per
-audio sample for a waveform. Input length, latent width, and output shape
-become three independent choices, while the latent transformer retains a
-fixed cost.
-
-The pattern's descendants run through today's multimodal systems.
-Flamingo's Perceiver resampler compresses a variable number of image and
-video features into a fixed handful of visual tokens before a frozen
-language model ever sees them :cite:`alayrac2022flamingo`; BLIP-2's
-Q-Former is a small stack of learned query tokens that bridges a frozen
-vision encoder and a frozen LLM :cite:`Li.Li.Savarese.ea.2023`; learned
-query tokens remain one of the two standard interfaces in current
-vision--language models — the other is a plain learned projection applied
-patch by patch. DETR had already used the query-token device for detection — a
-hundred learned object queries cross-attend into image features, each
-producing one detection :cite:`Carion.Massa.Synnaeve.ea.2020`. The Image
-Models part (:numref:`chap_cv`) takes up DETR and its successors in
-depth.
-
-## Choosing an Architecture
-
-The taxonomy of :numref:`fig_three-wirings` describes several widely used
-model families. The table gives examples rather than an exhaustive ranking.
-
-| Wiring | Exemplars today | Typical use |
-|---|---|---|
-| encoder-only | BERT descendants, ModernBERT | embeddings, retrieval, classification |
-| encoder--decoder | T5 family, Whisper | translation, speech recognition |
-| decoder-only | GPT-style models | generation, chat, in-context learning |
-
-Encoder-only models remain useful when the output is a representation. An
-embedding model processes each document once and can use bidirectional
-context, so retrieval and reranking systems still train BERT-shaped models
-:cite:`Warner.Chaffin.Clavie.ea.2024`. The encoder--decoder survives
-where the input is fully known before generation starts and deserves its
-own tower: T5-style text-to-text :cite:`raffel2020exploring`, and Whisper,
-whose encoder reads an entire audio clip bidirectionally while a text
-decoder cross-attends into it :cite:`radford2023whisper`.
-
-Decoder-only models cover many generative applications. A single stack
-supports a single pretraining objective: next-token prediction on raw text, with
-no masking or span-corruption objective. The same stack supplies the states
-used for next-token generation, and sufficiently large decoder-only models can
-perform tasks specified in the prompt :cite:`brown2020language`. This shared
-training and serving interface is operationally convenient, but it does not
-make decoder-only models preferable for every representation or conditional
-generation task.
+The three wirings differ in what they produce. An encoder produces one
+representation per input token, which classification and retrieval
+consume. An encoder--decoder generates a sequence conditioned on a
+separate input that is fully known in advance. A decoder-only model
+continues a sequence, with one stack for training and for generation.
+Learned queries are a fourth use of cross-attention: they decouple the
+cost of attention from the length of the input.
 
 ## Summary
 
@@ -1028,10 +991,11 @@ encoder--decoder connects an unmasked encoder to a causal decoder through
 cross-attention; on a reversal task, the learned attention map recovers the
 known anti-diagonal alignment. Cross-attention can also use a learned latent
 array as its queries. Reading a length-$N$ input into $M$ latents costs
-$O(MN)$ rather than $O(N^2)$, and its measured runtime remains nearly
-constant as $N$ grows for fixed $M$. Encoder-only models are common for
-retrieval and classification, encoder--decoders for translation and speech,
-and decoder-only models for general autoregressive generation.
+$O(MN)$ rather than $O(N^2)$, and for fixed $M$ its measured runtime grows
+far more slowly with $N$ than that of full self-attention. Encoder-only
+models are common for retrieval and classification, encoder--decoders for
+translation and speech, and decoder-only models for general autoregressive
+generation.
 
 ## Exercises
 
@@ -1042,9 +1006,11 @@ and decoder-only models for general autoregressive generation.
    target positions up to itself. :citet:`raffel2020exploring` compare this
    wiring with the encoder--decoder.
     1. Draw its attention pattern for $m = 3$ and $n = 3$ in the convention
-       of :numref:`fig_three-wirings`. Give the `valid_lens` of shape
-       (batch size, number of queries) that makes `d2l.MultiHeadAttention`
-       apply this pattern, as a formula in the query position $t$ and $m$.
+       of :numref:`fig_three-wirings`. Number all $m + n$ positions from 0
+       and write the mask entry for query $t$ and key $j$ (true when $t$
+       may attend to $j$) as a formula in $t$, $j$, and $m$. Build the mask
+       from `d2l.causal_mask` and one block that unmasks the source, and
+       check it against your drawing.
     1. In the encoder--decoder, the cross-attention of every decoder block
        reads the output of the last encoder block. Which representations of
        the source does a target token read in block $l$ of a prefix
@@ -1087,9 +1053,9 @@ and decoder-only models for general autoregressive generation.
        can reach the loss.
     1. Now pad the batch on the left, so that every sequence ends at the
        last position. Which of the three masks change, and does the causal
-       triangle still suffice for decoder self-attention? Which of the three
-       masks can the `valid_lens` argument of `d2l.MultiHeadAttention`
-       still express?
+       triangle still suffice for decoder self-attention? `d2l.padding_mask`
+       marks the first `valid_lens` keys of each sequence as valid. Which of
+       the three masks can it still build?
     1. What goes wrong with the learned position tables of `EncoderDecoder`
        under left padding unless the position indices change as well?
 
@@ -1108,6 +1074,7 @@ and decoder-only models for general autoregressive generation.
        little weight on source position $n - 1 - t$. Reconcile your
        findings with the cautions about reading attention maps
        in :numref:`sec_multihead-attention`.
+   :exlabel:`ex_encdec-depth-heads`
 
 1. [code] **Several masks at once.** ● The objective
    :eqref:`eq_mlm` scores each masked position separately, so the encoder
@@ -1203,147 +1170,320 @@ and decoder-only models for general autoregressive generation.
 [Dive into Deep Learning · §12.4]{.kicker}
 
 Encoders, decoders, and cross-attention<br>
-**three wirings of one block · predicting from both sides · an alignment you can verify · the latent bottleneck**
+**three wirings of one block · masked-token prediction · an alignment we can check · learned queries**
 :::
 :::
 
-::: {.slide title="Three wirings of one block"}
-The block leaves two questions open: **which positions may attend to
-which**, and **where keys and values come from**.
+::: {.slide title="A Causal Model Sees Only One Side of Every Gap"}
+[The problem]{.kicker}
 
+- Fill the gap in `trave_ler`: the left context allows many letters, the
+  right context (`ler`) fixes it.
+- Measured on *The Time Machine*: a masked character costs about
+  **2 nats** with one side of context, about **1 nat** with both sides.
+- Translation and speech recognition read a whole input before they write
+  a single output token.
+
+::: {.d2l-note .warn}
+How do we wire the same transformer block to read both sides, to read a
+separate input, and to read inputs too long for $N^2$ attention?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- draw the attention pattern of the encoder, the decoder, and the
+  encoder--decoder;
+- train an encoder with masked-token prediction and measure what the
+  second side of context is worth;
+- build a decoder block with cross-attention and compose its masks;
+- check a learned cross-attention map against a known alignment;
+- estimate the cost of reading $N$ inputs with $M$ learned queries.
+
+**Running example:** GPT-2 small is the decoder-only wiring; we build the
+other two at character scale.
+:::
+
+::: {.slide title="The Wirings Complete the Block"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| The Transformer Block | attention + FFN on a residual stream |
+| A GPT from Scratch | embedding, causal mask, tied head |
+| Generation and the KV Cache | reuse keys and values while sampling |
+| **Encoders, Decoders, Cross-Attention** | **the other wirings; learned queries** |
+| Vision Transformer | images as token sequences |
+| Mixture of Experts | more parameters per FLOP |
+| Scaling Laws | loss against parameters, data, compute |
+:::
+
+::: {.col .narrow}
+- **Uses:** `TransformerBlock`, cross-attention, padding and causal masks,
+  teacher forcing.
+- **Skips:** pretraining at scale and fine-tuning (Language Models part),
+  beam search.
+:::
+:::
+:::
+
+::: {.slide title="One Block, Three Wirings"}
 @fig:mdl-transformers-three-wirings
 
-- **Encoder-only**: no mask — no left-to-right generation, built to
-  *represent* (BERT; the ViT is this wiring over patches).
-- **Decoder-only**: the GPT of the previous sections — generation is the
-  objective run forward.
-- **Encoder–decoder**: causal decoder *cross-attends* into a
-  bidirectional encoder (the 2017 original).
+Which positions may attend to which, and where keys and values come from:
+these two choices separate BERT, GPT, and the 2017 translation model.
 :::
 
-::: {.slide title="A bidirectional encoder in a dozen lines"}
-One difference from `CharLM`: no `valid_lens` — nothing is masked.
+::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="pytorch"}
+```{.python #encoders-decoders-exercises-1}
+def forward(self, X):                     # X: (batch, n) token ids
+    H = self.token_emb(X) + self.pos_emb(torch.arange(X.shape[1]))
+    for blk in self.blks:                 # d2l.TransformerBlock
+        H = blk(H)                        # no mask: all see all
+    return self.norm(H)                   # (batch, n, d)
+```
 
-@encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines
+Every output vector summarizes the whole input as seen from its position.
+Positions still need a table: attention ignores order.
 :::
 
-::: {.slide title="The masked-token objective"}
-Next-token prediction is trivial when the future is visible. Hide what
-you ask for:
+::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="jax"}
+```{.python #encoders-decoders-exercises-2}
+def __call__(self, X):                    # X: (batch, n) token ids
+    H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
+    for blk in self.blks:                 # d2l.TransformerBlock
+        H = blk(H)                        # no mask: all see all
+    return self.norm(H)                   # (batch, n, d)
+```
+
+Every output vector summarizes the whole input as seen from its position.
+Positions still need a table: attention ignores order.
+:::
+
+::: {.slide title="Masked Prediction Hides What It Asks For"}
+With the future visible, next-token prediction is copying. Instead, replace
+a random set $\mathcal{M}$ of tokens (15%) by `<mask>` and reconstruct them:
 
 $$\max \; \sum_{t \in \mathcal{M}} \log p\left(x_t \mid \mathbf{x}_{\setminus \mathcal{M}}\right)$$
 
 @!encoders-decoders-the-masked-token-objective
+
+Characters of *The Time Machine*, windows of 64, 2,000 steps; unigram
+entropy 2.83 nats.
 :::
 
-::: {.slide title="Loss by Available Context"}
-Window edges are one-sided by construction — position 63 is where a
-causal LM lives *permanently*. Bin the loss by position:
+::: {.slide title="Both Sides of Context Halve the Loss"}
+Positions 0 and 63 of a window see one side only; position 63 sees what
+a causal model sees.
 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
-Flat interior at ~1.1 nats, roughly **double** at the one-sided edges.
+::: {.d2l-note .rule}
+Interior about 1 nat, edges about 2: the second side halves the loss.
+:::
 :::
 
-::: {.slide title="Predictions you can read"}
+::: {.slide title="The Right-Hand Context Recovers the Doubled Letter"}
 @!encoders-decoders-what-the-second-side-is-worth-2
 
-Only the *right* context pins down "trave_ler".
+- Only `ler` determines the `l` in "trave_ler"; a left-to-right model
+  never sees it.
+- Scaled to subwords and gigabytes, this experiment is BERT (2018);
+  ModernBERT (2024) keeps the wiring with RoPE, a gated FFN, and 8k
+  context.
+:::
 
+::: {.slide title="Check: Why Not Train the Encoder on the Next Token?"}
+[Check]{.kicker}
+
+Our encoder has no mask. What loss would next-token prediction reach,
+and what would the encoder learn from it?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-Scaled up — subwords, sentence pairs, gigabytes — this is BERT (2018).
-ModernBERT (2024) refits the same wiring with this chapter's block:
-RoPE, gated FFN, local–global attention, 8k context.
+**Answer.** Position $t$ can read token $t+1$ directly, so a copy
+attention head drives the loss to zero and teaches nothing about
+language. The objective must hide what it asks for.
+:::
 :::
 :::
 
-::: {.slide title="A task whose alignment we know"}
-Machine translation gives no ground truth for its attention. Reversal
-does: target $t$ **must** copy source $n-1-t$, and content only flows
-through cross-attention.
+::: {.slide title="Reversal Fixes the Correct Alignment"}
+Target position $t$ must copy source position $n-1-t$. Letters are
+random, so content reaches the decoder only through cross-attention.
 
 @!encoders-decoders-a-task-whose-alignment-we-know
 
-Random strings = unlimited fresh data — no memorization possible.
+- Prediction: the cross-attention map is the anti-diagonal.
+- Fresh random strings every step: nothing to memorize.
 :::
 
-::: {.slide title="The decoder block: one more sublayer"}
-Causal self-attention → **cross-attention** (queries: target stream;
-keys/values: encoder output) → FFN. Self-attention masked,
-cross-attention not — the source is fully known.
+::: {.slide title="The Decoder Block Adds Cross-Attention"}
+On the target's residual stream $\mathbf{x}$, with encoder output
+$\mathbf{E}$:
 
-@encoders-decoders-the-decoder-block-one-more-sublayer-1
+$$\begin{aligned}
+\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{Attn}_\text{causal}(\mathrm{Norm}_1(\mathbf{x})) \\
+\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{Attn}(\text{q} = \mathrm{Norm}_2(\mathbf{x}),\ \text{k} = \text{v} = \mathbf{E}) \\
+\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{FFN}(\mathrm{Norm}_3(\mathbf{x}))
+\end{aligned}$$
+
+- Self-attention is causal: the target is being generated.
+- Cross-attention is unmasked: the source is known in full.
 :::
 
-::: {.slide title="Three masks, two primitives"}
-A ragged real batch composes every mask from a padding mask and the
-causal triangle (§10.2): source padding for encoder self-attention,
-causal ∧ target padding for decoder self-attention, source padding again
-for cross-attention:
+::: {.slide title="In Code, One Extra Line" only="pytorch"}
+```{.python #encoders-decoders-exercises-3}
+def forward(self, X, enc, mask=None, cross_mask=None):
+    if mask is None:                      # causal self-attention
+        mask = d2l.causal_mask(X.shape[1], device=X.device)
+    Y = self.norm1(X)
+    X = X + self.self_attention(Y, Y, Y, mask)
+    Y = self.norm2(X)                     # queries: target stream
+    X = X + self.cross_attention(Y, enc, enc, cross_mask)
+    return X + self.ffn(self.norm3(X))
+```
 
-@encoders-decoders-assembling-the-masks
+Keys and values come from `enc`, the encoder output.
 :::
 
-::: {.slide title="Train it, decode it"}
-One encoder block, one decoder block, 600 steps of on-line batches:
+::: {.slide title="In Code, One Extra Line" only="jax"}
+```{.python #encoders-decoders-exercises-4}
+def __call__(self, X, enc, mask=None, cross_mask=None):
+    if mask is None:                      # causal self-attention
+        mask = d2l.causal_mask(X.shape[1])
+    Y = self.norm1(X)
+    X = X + self.self_attention(Y, Y, Y, mask)
+    Y = self.norm2(X)                     # queries: target stream
+    X = X + self.cross_attention(Y, enc, enc, cross_mask)
+    return X + self.ffn(self.norm3(X))
+```
+
+Keys and values come from `enc`, the encoder output.
+:::
+
+::: {.slide title="Three Masks from Two Primitives"}
+A padded batch, source lengths (3, 5), target lengths (3, 4):
+
+- `padding_mask(lens, n)`: key $j$ valid if $j <$ length;
+- `causal_mask(T)`: key $j$ visible to query $i$ if $j \le i$;
+- encoder self: source padding · decoder self: causal ∧ target padding ·
+  cross: source padding.
+
+Cross-attention weights of sequence 0, in percent:
+
+@!encoders-decoders-assembling-the-masks-1
+:::
+
+::: {.slide title="Check: Which Mask Does Cross-Attention Need?"}
+[Check]{.kicker}
+
+The source batch is padded on the right; the target is mid-generation.
+Does cross-attention need the causal triangle, source padding, or both?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Source padding only. The causal triangle protects the target
+from its own future; every real source token is known before decoding
+starts, but padded source positions must receive zero weight.
+:::
+:::
+:::
+
+::: {.slide title="600 Steps Reverse Every String"}
+One encoder block, one decoder block, batches of 128 fresh strings:
 
 @!encoders-decoders-training-and-decoding-1
+
+Greedy decoding: the encoder runs once, the decoder once per token.
 
 @!encoders-decoders-training-and-decoding-2
 :::
 
-::: {.slide title="Reading the alignment"}
+::: {.slide title="The Learned Map Is the Anti-Diagonal"}
 @!encoders-decoders-reading-the-alignment
 
-The anti-diagonal, learned — and verifiable, because the task fixes the
-answer. Deeper, more-headed models solve the task with *delocalized*
-maps (exercise): readable attention is the exception.
+Readable because the model is small: deeper, wider models solve the task
+with maps that spread out.
 :::
 
-::: {.slide title="Cross-attention as interface"}
-A query can be a **learned parameter**. $M$ latents read a length-$N$
-input:
-
+::: {.slide title="Learned Queries Read N Inputs at Cost O(MN)"}
 @fig:mdl-transformers-latent-bottleneck
 
-$O(MN)$ to read, $O(M^2)$ to think — the $N^2$ term never appears
-(Perceiver, 2021).
+$M$ learned latents cross-attend into the input once, then attend only
+among themselves: the $N^2$ term never appears (Perceiver, 2021).
 :::
 
-::: {.slide title="A minimal Perceiver"}
-@encoders-decoders-queries-need-not-come-from-a-sequence
+::: {.slide title="A Perceiver Is Latents Plus One Cross-Attention" only="pytorch"}
+```{.python #encoders-decoders-exercises-5}
+def forward(self, X):                     # X: (batch, N, d)
+    Z = self.latents.expand(X.shape[0], -1, -1)   # (batch, M, d)
+    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
+    for blk in self.blks:
+        Z = blk(Z)                        # O(M^2): latents only
+    return self.norm(Z)                   # (batch, M, d)
+```
+
+@!encoders-decoders-queries-need-not-come-from-a-sequence
+
+Output queries can set the output shape too (Perceiver IO).
 :::
 
-::: {.slide title="The cost curve"}
+::: {.slide title="A Perceiver Is Latents Plus One Cross-Attention" only="jax"}
+```{.python #encoders-decoders-exercises-6}
+def __call__(self, X):                    # X: (batch, N, d)
+    Z = jnp.broadcast_to(self.latents[...],
+                         (X.shape[0],) + self.latents.shape)
+    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
+    for blk in self.blks:
+        Z = blk(Z)                        # O(M^2): latents only
+    return self.norm(Z)                   # (batch, M, d)
+```
+
+@!encoders-decoders-queries-need-not-come-from-a-sequence
+
+Output queries can set the output shape too (Perceiver IO).
+:::
+
+::: {.slide title="Check: Count the Scores"}
+[Check]{.kicker}
+
+$N = 8192$ inputs, $M = 64$ latents. How many attention scores per head
+does one layer of full self-attention compute, and how many does the
+Perceiver's read compute?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $N^2 \approx 6.7 \times 10^7$ against
+$MN \approx 5.2 \times 10^5$: 128 times fewer, plus
+$M^2 = 4{,}096$ per latent layer.
+:::
+:::
+:::
+
+::: {.slide title="Doubling N Quadruples Self-Attention Time"}
 @!encoders-decoders-the-cost-curve
 
-Self-attention: about 4× per doubling of $N$. The Perceiver grows more slowly
-and is over an order of magnitude faster by $N = 8192$; at short inputs its
-fixed latent-processing overhead erodes most of this advantage.
+Self-attention: about $4\times$ per doubling. The Perceiver grows far more
+slowly and is over an order of magnitude faster at $N = 8192$; at
+$N = 1024$ the two are comparable.
 :::
 
-::: {.slide title="Which wiring when"}
-- **Encoder-only** — the product is the representation: embeddings,
-  retrieval, classification (BERT descendants, ModernBERT).
-- **Encoder–decoder** — input fully known, own tower worth it: T5
-  text-to-text, Whisper speech recognition.
-- **Decoder-only** — autoregressive generation and prompt-conditioned tasks:
-  one stack and a next-token objective.
+::: {.slide title="Wrap-Up"}
+[Wrap-up]{.kicker}
 
-::: {.d2l-note}
-Perceiver descendants live on inside multimodal models: Flamingo's
-resampler, BLIP-2's Q-Former, DETR's object queries.
-:::
-:::
+- One block, three wirings: no mask, causal mask, or both joined by
+  cross-attention.
+- Masked prediction trains the encoder; both sides of context cost about
+  1 nat per character, one side about 2.
+- On reversal, the encoder--decoder reverses fresh strings without error,
+  and its cross-attention recovers the anti-diagonal.
+- $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the
+  Perceiver is over $10\times$ faster than full self-attention.
 
-::: {.slide title="Recap"}
-- Three wirings, one block: bidirectional / causal / both + cross.
-- Masked prediction trains encoders; both-sides context cuts the loss
-  roughly in half vs. one side.
-- Cross-attention verified: the reversal task's anti-diagonal appears in
-  the learned map.
-- Learned queries turn attention into an interface: $O(MN)$, flat cost
-  curve, Perceiver → resampler → Q-Former.
-- The appropriate wiring depends on whether the output is a representation,
-  a sequence conditioned on a separate input, or an autoregressive continuation.
+**Next:** the Vision Transformer, the encoder-only wiring over image
+patches.
 :::

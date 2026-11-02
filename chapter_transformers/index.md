@@ -3,41 +3,44 @@
 
 :numref:`chap_attention` developed attention as a mechanism for exchanging
 information between positions. A transformer places attention inside a
-*block* with a position-wise feed-forward network, residual connections,
-and normalization. Stacking these blocks yields models for machine
-translation, language modeling, images, audio, and protein structure.
-Although these applications differ, most current transformer models can
-be described by a small set of architectural choices.
+*block*, together with a position-wise feed-forward network, residual
+connections, and normalization. Stacks of these blocks translate text,
+model language, and process images, audio, and protein structures. The
+applications differ, but most current transformers can be described by a
+small set of architectural choices.
 
-We therefore begin by building a configurable GPT class: normalization type and placement,
-activation, positional scheme, and the attention and feed-forward
-modules are all constructor arguments. Subsequent sections vary
-one component at a time and measure the resulting difference. At the end of the chapter,
-the configurations in a table of current models can be expressed as
-constructor arguments. The training runs finish in minutes on a single
-GPU. We state when conclusions depend on this small scale and compare the
-computational cost with that of production training.
+We therefore build one configurable model, a GPT class whose constructor
+arguments select the type and placement of the normalization, the
+activation, the positional scheme, and the attention and feed-forward
+modules. Each section varies one component at a time and measures the
+difference it makes. By the end of the chapter, the models in a table of
+current configurations can each be written as a set of constructor
+arguments. The training runs finish in minutes on a single GPU. Where a
+conclusion depends on this small scale, we say so, and we compare the
+computation with that of production training.
 
-We first develop the transformer block and compare normalization placement,
-RMSNorm, QK-norm, and gated feed-forward networks. We then assemble a GPT,
-train it on a small text corpus, and load the published GPT-2 weights into
-the same implementation. The section on generation derives the KV cache and
-compares grouped-query attention, low-rank compression, and sliding windows
-with attention sinks.
+The first section develops the transformer block and compares the
+placement of normalization, RMSNorm, QK-norm, and gated feed-forward
+networks. The second assembles a GPT, trains it on a small text corpus,
+and loads the published GPT-2 weights into the same implementation. The
+third turns to generation: it derives the KV cache and compares three ways
+to shrink it, namely grouped-query attention, low-rank compression, and
+sliding windows with attention sinks.
 
 The remaining sections examine encoder, decoder, and encoder--decoder
-architectures; apply an encoder to image patches; and replace dense
-feed-forward networks with mixture-of-experts layers. The chapter concludes
-by deriving parameter and FLOP counts, conducting a small scaling study, and
+architectures, apply an encoder to image patches, and replace dense
+feed-forward networks with mixture-of-experts layers. The chapter closes by
+deriving parameter and FLOP counts, running a small scaling study, and
 comparing the configurations of several current models.
 
-The original 2017 Transformer was an encoder--decoder for translation, with
-post-sublayer normalization, sinusoidal positions, and ReLU feed-forward
-networks. The model configurations tabulated at the end of this chapter,
-reported from 2023 through 2025, retain the residual attention--FFN block but
-vary normalization, position encoding, cache layout, and expert routing. This
-shared interface motivates the configurable implementation used here; it is
-not a claim that all transformer families have converged on one design.
+The original Transformer of 2017 was an encoder--decoder for translation,
+with normalization after each sublayer, sinusoidal positions, and ReLU
+feed-forward networks. The models tabulated at the end of this chapter,
+released from 2023 through 2025, keep its residual block of attention and
+FFN but vary the normalization, the position encoding, the layout of the
+cache, and the routing of experts. Because they share this block, one
+configurable implementation can express them all. The families still
+differ, and the constructor arguments record where.
 
 This chapter assumes the tokenization methods of :numref:`chap_rnn` and the
 optimizers of :numref:`chap_optimization`. It covers base-model architecture,
@@ -66,24 +69,24 @@ scaling. All are freely available unless noted.
 
 **Build-alongs**
 
-- [Let's build GPT: from scratch, in code — Andrej Karpathy (2023)](https://www.youtube.com/watch?v=kCc8FmEb1nY) — the video counterpart of :numref:`sec_gpt`: a character-level GPT assembled and trained in real time; [nanoGPT](https://github.com/karpathy/nanoGPT) and [build-nanogpt](https://github.com/karpathy/build-nanogpt) are its repository forms, and [nanochat](https://github.com/karpathy/nanochat) extends the same discipline to a full chat system with stated dollar costs.
-- [The Annotated Transformer — Harvard NLP (2018, refreshed 2022)](https://nlp.seas.harvard.edu/annotated-transformer/) — the original encoder–decoder implemented line by line against the paper; its executable format closely matches the construction in :numref:`sec_transformer`.
+- [Let's build GPT: from scratch, in code — Andrej Karpathy (2023)](https://www.youtube.com/watch?v=kCc8FmEb1nY) — the video counterpart of :numref:`sec_gpt`: a character-level GPT assembled and trained in real time; [nanoGPT](https://github.com/karpathy/nanoGPT) and [build-nanogpt](https://github.com/karpathy/build-nanogpt) are its repository forms, and [nanochat](https://github.com/karpathy/nanochat) applies the same approach to a full chat system, with its training costs stated in dollars.
+- [The Annotated Transformer — Harvard NLP (2018, refreshed 2022)](https://nlp.seas.harvard.edu/annotated-transformer/) — the original encoder–decoder, implemented line by line next to the text of the paper; its runnable format matches the construction in :numref:`sec_transformer`.
 - [Build a Large Language Model (From Scratch) — Sebastian Raschka (2024)](https://github.com/rasbt/LLMs-from-scratch) — a book-length version of :numref:`sec_transformer-block` through :numref:`sec_kv-cache`, with bonus notebooks for GQA, sliding windows, and from-scratch ports of current open models.
 - [Stanford CS336: Language Modeling from Scratch](https://cs336.stanford.edu/) — a course whose first assignment builds BPE, RMSNorm, RoPE, SwiGLU, causal attention, and the training loop from primitives; lectures are available on YouTube.
-- [CMU Advanced NLP, minLlama assignment](https://www.phontron.com/class/anlp-fall2024/) — build a Llama-style decoder and load real pretrained weights into it, the same payoff as :numref:`sec_gpt`'s GPT-2 cell at larger scale.
+- [CMU Advanced NLP, minLlama assignment](https://www.phontron.com/class/anlp-fall2024/) — build a Llama-style decoder and load real pretrained weights into it, the same exercise as loading GPT-2 in :numref:`sec_gpt`, at larger scale.
 
 **The architecture record**
 
 - [The Big LLM Architecture Comparison — Sebastian Raschka (2025, maintained)](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison) — seventeen current models on the same few axes; the living version of :numref:`sec_scaling-laws`'s recipe table, updated as new models ship.
-- [On Layer Normalization in the Transformer Architecture — Xiong et al. (2020)](https://arxiv.org/abs/2002.04745) — the pre-norm/post-norm analysis behind :numref:`sec_transformer-block`'s signal-propagation experiment, and the paper that explains why warmup exists.
+- [On Layer Normalization in the Transformer Architecture — Xiong et al. (2020)](https://arxiv.org/abs/2002.04745) — the pre-norm/post-norm analysis behind :numref:`sec_transformer-block`'s signal-propagation experiment, with an explanation of why post-norm models need a learning-rate warmup.
 - [GLU Variants Improve Transformer — Shazeer (2020)](https://arxiv.org/abs/2002.05202) — the four-page note whose matched-parameter sweep :numref:`sec_transformer-block` reproduces in miniature.
 - [GQA: Training Generalized Multi-Query Transformer Models — Ainslie et al. (2023)](https://arxiv.org/abs/2305.13245) — grouped-query attention as :numref:`sec_kv-cache` implements it, including the uptraining recipe that converted existing checkpoints.
 - [An Image is Worth 16x16 Words — Dosovitskiy et al. (2021)](https://arxiv.org/abs/2010.11929) — the ViT paper behind :numref:`sec_vision-transformer`; our small-scale experiment examines the same scale-versus-inductive-bias question in a different regime.
-- [Switch Transformers — Fedus et al. (2021)](https://arxiv.org/abs/2101.03961) and [DeepSeek-V3 — DeepSeek-AI (2024)](https://arxiv.org/abs/2412.19437) — the two poles of :numref:`sec_moe`: top-1 routing with an auxiliary balancing loss, and fine-grained experts balanced without one.
+- [Switch Transformers — Fedus et al. (2021)](https://arxiv.org/abs/2101.03961) and [DeepSeek-V3 — DeepSeek-AI (2024)](https://arxiv.org/abs/2412.19437) — the two ends of the design range in :numref:`sec_moe`: top-1 routing with an auxiliary balancing loss, and fine-grained experts balanced without one.
 
 **The arithmetic of scale**
 
 - [Transformer Inference Arithmetic — kipply (2022)](https://kipp.ly/transformer-inference-arithmetic/) — derives per-token inference FLOPs, cache storage, and bandwidth limits and compares the estimates with a real system.
 - [Transformer Math 101 — EleutherAI (2023)](https://blog.eleuther.ai/transformer-math/) — the training-side companion: where 6ND comes from and what it predicts, the accounting :numref:`sec_scaling-laws` verifies against a profiler.
-- [Training Compute-Optimal Large Language Models — Hoffmann et al. (2022)](https://arxiv.org/abs/2203.15556) — Chinchilla: the tokens-per-parameter result whose small-scale shadow is the bend in :numref:`sec_scaling-laws`'s miniature study.
+- [Training Compute-Optimal Large Language Models — Hoffmann et al. (2022)](https://arxiv.org/abs/2203.15556) — Chinchilla: the tokens-per-parameter result that the miniature study of :numref:`sec_scaling-laws` reproduces at small scale as a bend in its curves.
 - [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — a guide to the parallelism and memory engineering required beyond one GPU, topics covered in the Computational Performance chapter.

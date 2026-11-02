@@ -1,28 +1,33 @@
 # Queries, Keys, and Values
 :label:`sec_queries-keys-values`
 
-Many neural networks either assume a fixed input size or compress a
-variable-length input into a fixed-dimensional state. RNNs
-(:numref:`sec_rnn`) and specialized convolutions
-:cite:`Kalchbrenner.Grefenstette.Blunsom.2014` can process variable-length
-sequences, but their fixed-size summaries may lose information in long
-sequences. We seek an operation that can access any input representation while
-using a fixed set of parameters.
+A recurrent language model that has read 1,024 tokens holds everything it
+knows about them in its state. If that state has 768 numbers, the width of
+GPT-2 small, then a question about the 17th token must be answered from 768
+numbers that were written before anyone knew the question would be asked.
+RNNs (:numref:`sec_rnn`) and convolutions over sequences
+:cite:`Kalchbrenner.Grefenstette.Blunsom.2014` both work this way, and on
+long inputs the fixed-size summary loses information that a later
+prediction needs.
 
-Databases have this property because a query is evaluated against stored
-key--value pairs. Consider the scalar database
-$\mathcal{D}=\{(2,10),(5,20)\}$. An exact query $q=5$ returns the value 20.
-A soft query first defines a score, for example
-$a(q,k)=-(q-k)^2$, and normalizes the two scores. For $q=4$, key 5 receives
-the larger weight, but both values contribute to the result. The same rule
-works for any database size, and its output changes when the stored pairs
-change; the query does not require compressing the database into one fixed
-vector first.
+A database avoids the problem. It stores its records as they are and
+answers each query by comparing it with the stored keys. Consider the
+scalar database $\mathcal{D}=\{(2,10),(5,20)\}$ of (key, value) pairs. The
+exact query $q=5$ returns the value 20, and the query $q=4$ returns nothing
+at all, because no key matches. A *soft* query instead scores every key,
+for example by $a(q,k)=-(q-k)^2$, and turns the scores into weights that
+sum to one. For $q=4$ the scores are $-4$ for key 2 and $-1$ for key 5. The
+softmax turns them into the weights $e^{-4}/(e^{-4}+e^{-1}) \approx 0.05$
+and $0.95$, so the answer is $0.05 \cdot 10 + 0.95 \cdot 20 \approx 19.5$.
+The answer moves smoothly with the query, the same rule works for a
+database of any size, and nothing has to be compressed before the query
+arrives.
 
-The *attention mechanism* :cite:`Bahdanau.Cho.Bengio.2014` is a differentiable
-version of this lookup. This section defines the operation and illustrates it
-with classical kernel regression, where the attention weights are specified by
-a kernel rather than learned.
+The *attention mechanism* :cite:`Bahdanau.Cho.Bengio.2014` is this soft
+lookup, used as a layer of a neural network. This section defines it and
+studies it in its oldest form, kernel regression, where the weights come
+from a fixed similarity function rather than from learning. The next
+section makes the scores learnable.
 
 ```{.python .input #queries-keys-values-queries-keys-and-values}
 %%tab pytorch
@@ -41,90 +46,64 @@ from jax import numpy as jnp
 
 ## Attention as Differentiable Lookup
 
-Let $\mathbf{q},\mathbf{k}_i \in \mathbb{R}^{d_k}$ and
-$\mathbf{v}_i \in \mathbb{R}^{d_v}$. Denote by $\mathcal{D}
-\stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1), \ldots,
-(\mathbf{k}_m, \mathbf{v}_m)\}$ a database of $m$ key--value pairs. We
-define the attention output in $\mathbb{R}^{d_v}$ by
+Let the query and the keys be vectors $\mathbf{q},\mathbf{k}_i \in
+\mathbb{R}^{d}$ and the values $\mathbf{v}_i \in \mathbb{R}^{d_v}$, and let
+$\mathcal{D} \stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1),
+\ldots, (\mathbf{k}_m, \mathbf{v}_m)\}$ be a database of $m$ key--value
+pairs. The attention output is the weighted sum of the values
 
 $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) \stackrel{\textrm{def}}{=} \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i,$$
 :eqlabel:`eq_attention_pooling`
 
-where the scalar weights $\alpha(\mathbf{q},\mathbf{k}_i)$ determine each
-value's contribution. In the layers used below, the weights are nonnegative
-and sum to one, so the output is a convex combination of the values. Exact
-lookup is the limiting one-hot case, and uniform weights give average pooling.
-Signed or unnormalized variants exist, but they are not the default operation
-in this chapter.
+where the scalar weight $\alpha(\mathbf{q},\mathbf{k}_i)$ says how much
+value $i$ contributes. In every softmax attention layer of this book the
+weights are nonnegative and sum to one, so the output is a convex
+combination of the values: it lies inside their convex hull. Exact lookup
+is the special case in which one weight is $1$ and the others are $0$. Uniform
+weights $1/m$ give the plain average of the values, *average pooling*.
 
-A common strategy for ensuring that the weights sum up to $1$ is to start
-from any scoring function $a(\mathbf{q}, \mathbf{k})$ and normalize. To make
-the weights nonnegative as well, we exponentiate first. This means we can
-pick *any* function $a(\mathbf{q}, \mathbf{k})$ and apply the softmax
-operation known from multinomial models:
+Weights with these two properties come from any scoring function
+$a(\mathbf{q}, \mathbf{k})$ by exponentiating the scores, which makes them
+positive, and dividing by their sum. This is the softmax operation of
+multinomial logistic regression (:numref:`sec_softmax`):
 
 $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
 :eqlabel:`eq_softmax_attention`
 
-This operation is available in all deep learning frameworks and is
-differentiable. For at least two entries and finite scores, its Jacobian is
-not the zero matrix, although its entries can become very small when the
-distribution saturates. Nondifferentiable attention mechanisms also exist
-and may be trained with reinforcement learning
-:cite:`Mnih.Heess.Graves.ea.2014`, but they are harder to optimize. This
-chapter uses the differentiable framework in :numref:`fig_qkv`.
+The softmax is differentiable, so gradients reach the query, the keys, and
+the values. For finite scores and at least two keys its Jacobian is never
+the zero matrix, although its entries become very small when one score
+dominates the others. Attention can also make hard, nondifferentiable
+choices. It must then be trained with reinforcement learning
+:cite:`Mnih.Heess.Graves.ea.2014` and is harder to optimize, so this book
+uses the differentiable form throughout. :numref:`fig_qkv` works one lookup
+through with three keys.
 
-![The attention mechanism computes a linear combination over values $\mathbf{v}_\mathit{i}$ via attention pooling, where weights are derived according to the compatibility between a query $\mathbf{q}$ and keys $\mathbf{k}_\mathit{i}$.](../img/mdl-attention-soft-lookup.svg)
+![Soft lookup with three key--value pairs. The query's scores $s_i$ against the keys become softmax weights $\alpha_i$ that sum to one (left), and the output $\mathbf{o}$ is the weighted sum of the values, a point inside the triangle whose corners are the values (right).](../img/mdl-attention-soft-lookup.svg)
 :label:`fig_qkv`
 
-The query and compatibility function use a fixed number of parameters even
-when the number of key--value pairs changes. Attention pooling can therefore
-operate on inputs of different lengths without first compressing them to a
-fixed-size state.
-
-## Visualizing Attention Weights
-
-When the weights are nonnegative and sum to $1$, we may *interpret* large
-weights as the model selecting the components that matter for the query at
-hand. This is a useful intuition, though only an intuition—we return to how
-much attention weights actually explain at the end of the chapter. Either
-way, plotting the weight matrix over (query, key) pairs is the standard
-diagnostic, and we will use it throughout the chapter via the
-`d2l.show_heatmaps` helper. It accepts a tensor of shape (number of rows for
-display, number of columns for display, number of queries, number of keys),
-so a whole grid of weight matrices can be compared side by side.
-
-As a sanity check, we visualize the identity matrix, which represents the
-exact-lookup case: the attention weight is $1$ exactly when query and key
-agree.
-
-```{.python .input #queries-keys-values-visualizing-attention-weights}
-%%tab pytorch
-attention_weights = torch.eye(10).reshape((1, 1, 10, 10))
-d2l.show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')
-```
-
-```{.python .input #queries-keys-values-visualizing-attention-weights}
-%%tab jax
-attention_weights = jnp.eye(10).reshape((1, 1, 10, 10))
-d2l.show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')
-```
+The scoring function has a fixed number of parameters, however many
+key--value pairs the database holds. One attention layer therefore serves
+inputs of every length, and it reads all of them directly instead of a
+compressed summary. What grows instead is memory. A recurrent network
+keeps one state, while attention keeps a key and a value for every
+position it may need to read.
 
 ## Attention Pooling with Fixed Kernels
 :label:`sec_attention-pooling`
 
-Equation :eqref:`eq_attention_pooling` does not require learned weights. Long
-before deep learning, statisticians used this operation with specified
-weights: Nadaraya--Watson kernel regression
-:cite:`Nadaraya.1964,Watson.1964`. This classical setting makes the effect of the weights visible on a problem
-we can plot. Its fixed similarity function also motivates the learned
-scoring rules developed in the rest of the chapter.
+The weights in :eqref:`eq_attention_pooling` need not be learned. Long
+before deep learning, statisticians used the same weighted sum with a
+weight function chosen by hand, in Nadaraya--Watson kernel regression
+:cite:`Nadaraya.1964,Watson.1964`. On a problem small enough to plot, this
+classical setting shows what the weights do. Its limits show why the rest
+of the chapter learns them.
 
 ### Similarity Kernels
 
-A *kernel* $\alpha(\mathbf{q}, \mathbf{k})$ measures the similarity between
-a query and a key, typically as a decreasing function of their distance.
-Common choices include
+A *kernel* $\alpha(\mathbf{q}, \mathbf{k})$ measures the similarity of a
+query and a key, typically as a decreasing function of their distance.
+Common choices are
 
 $$
 \begin{aligned}
@@ -135,37 +114,38 @@ $$
 $$
 :eqlabel:`eq_similarity-kernels`
 
-plus the degenerate constant kernel $\alpha(\mathbf{q}, \mathbf{k}) = 1$
-that ignores the query entirely. :numref:`fig_attention_kernels` shows their
-shapes; many more exist, and the choice of kernel connects to kernel density
-estimation, also known as *Parzen windows* :cite:`parzen1957consistent`.
+and the degenerate constant kernel $\alpha(\mathbf{q}, \mathbf{k}) = 1$,
+which ignores the query. :numref:`fig_attention_kernels` plots them. Each
+can be widened or narrowed by dividing the distance by a *bandwidth*
+$\sigma$. The same kernels estimate densities, where they are known as
+*Parzen windows* :cite:`parzen1957consistent`.
 
-![Four similarity kernels as a function of the query--key distance. All are heuristic choices; each can additionally be rescaled by a bandwidth parameter.](../img/mdl-attention-kernels.svg)
+![Four similarity kernels as functions of the query--key distance. Each can be rescaled by a bandwidth.](../img/mdl-attention-kernels.svg)
 :label:`fig_attention_kernels`
 
-Normalizing any such kernel over the keys, as in :eqref:`eq_softmax_attention`
-but without the exponentiation (the kernels are already nonnegative), yields
-the *Nadaraya--Watson estimator*
+Normalizing a kernel over the keys, as in :eqref:`eq_softmax_attention` but
+without the exponential because kernels are already nonnegative, gives the
+*Nadaraya--Watson estimator*
 
 $$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}.$$
 :eqlabel:`eq_nadaraya-watson`
 
 For scalar regression with observations $(x_i, y_i)$, the keys are the
-training inputs $x_i$, the values are the labels $y_i$, and the query is the
-location where we want an estimate. Equation :eqref:`eq_nadaraya-watson` is
-attention pooling, term for term. The estimator needs no training at all,
-and if the kernel is narrowed at a suitable rate as data accumulates, it
-converges to the statistically optimal predictor :cite:`mack1982weak`.
+training inputs $x_i$, the values are the labels $y_i$, and the query is
+the input at which we want a prediction. The estimate is a weighted
+average of the labels of the training inputs near the query, which is
+attention pooling term for term. It needs no training. If the bandwidth
+shrinks at a suitable rate as data accumulate, the estimate converges to
+the best possible predictor :cite:`mack1982weak`.
 
-### Nadaraya--Watson Regression in Action
+### Nadaraya--Watson Regression
 
-To examine the estimator, we draw $40$ noisy training examples from
-$y = 2\sin(x) + x + \epsilon$ with standard Gaussian noise $\epsilon$ and
-evaluate on a grid.
+We draw $40$ training inputs uniformly from $[0, 5)$, label them by $y =
+2\sin(x) + x + \epsilon$ with standard Gaussian noise $\epsilon$, and keep
+a grid of noise-free points for comparison.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-1}
 %%tab pytorch
-torch.manual_seed(0)
 n = 40
 x_train, _ = torch.sort(torch.rand(n) * 5)
 y_train = 2 * torch.sin(x_train) + x_train + torch.randn(n)
@@ -175,96 +155,126 @@ y_val = 2 * torch.sin(x_val) + x_val
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-1}
 %%tab jax
-key1, key2 = jax.random.split(jax.random.key(0))
 n = 40
-x_train = jnp.sort(jax.random.uniform(key1, (n,)) * 5)
-y_train = 2 * jnp.sin(x_train) + x_train + jax.random.normal(key2, (n,))
+x_train = jnp.sort(jax.random.uniform(d2l.get_key(), (n,)) * 5)
+y_train = (2 * jnp.sin(x_train) + x_train
+           + jax.random.normal(d2l.get_key(), (n,)))
 x_val = jnp.arange(0, 5, 0.1)
 y_val = 2 * jnp.sin(x_val) + x_val
 ```
 
-The estimator itself is four lines: compute all query--key distances, apply
-a Gaussian kernel with bandwidth $\sigma$, normalize over the keys, and take
-the weighted sum of the values. The normalized kernel matrix *is* the
-attention weight matrix, so we return it too. For these data, the bandwidth affects the estimate more than the choice
-among the displayed kernel shapes. We therefore vary $\sigma$ and keep the
-kernel Gaussian.
+The estimator computes all query--key distances, applies a Gaussian kernel
+of bandwidth $\sigma$, normalizes over the keys, and takes the weighted sum
+of the labels. The normalized kernel matrix is the matrix of attention
+weights, with one column per query, so we return it as well.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
 %%tab pytorch
 def nadaraya_watson(x_train, y_train, x_val, sigma):
-    dists = x_train[:, None] - x_val[None, :]
+    dists = x_train[:, None] - x_val[None, :]  # (keys, queries)
     k = torch.exp(-dists**2 / (2 * sigma**2))
-    attention_w = k / k.sum(0)  # Normalize over keys for each query
+    attention_w = k / k.sum(0)  # Normalize over the keys of each query
     return y_train @ attention_w, attention_w
-
-sigmas = (0.1, 0.5, 2.0)
-estimates = [nadaraya_watson(x_train, y_train, x_val, s)[0] for s in sigmas]
-d2l.plot(x_val, estimates + [y_val], 'x', 'y',
-         legend=[f'sigma = {s:g}' for s in sigmas] + ['truth'])
-d2l.plt.plot(x_train, y_train, 'o', alpha=0.4);
 ```
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
 %%tab jax
 def nadaraya_watson(x_train, y_train, x_val, sigma):
-    dists = x_train[:, None] - x_val[None, :]
+    dists = x_train[:, None] - x_val[None, :]  # (keys, queries)
     k = jnp.exp(-dists**2 / (2 * sigma**2))
-    attention_w = k / k.sum(0)  # Normalize over keys for each query
+    attention_w = k / k.sum(0)  # Normalize over the keys of each query
     return y_train @ attention_w, attention_w
+```
 
+How much does the bandwidth matter? We compare three bandwidths, a factor
+of four or five apart, against the noise-free function; the dots are the
+training data.
+
+```{.python .input #queries-keys-values-nadaraya-watson-regression-1}
+%%tab pytorch, jax
 sigmas = (0.1, 0.5, 2.0)
 estimates = [nadaraya_watson(x_train, y_train, x_val, s)[0] for s in sigmas]
-d2l.plot(x_val, estimates + [y_val], 'x', 'y',
-         legend=[f'sigma = {s:g}' for s in sigmas] + ['truth'])
-d2l.plt.plot(x_train, y_train, 'o', alpha=0.4);
+d2l.plot([x_val] * 4 + [x_train], estimates + [y_val, y_train], 'x', 'y',
+         legend=[rf'$\sigma$ = {s:g}' for s in sigmas] + ['truth'],
+         fmts=('-', 'm--', 'g-.', 'k:', 'C7o'), ylim=(-2.5, 9),
+         figsize=(5, 3))
 ```
 
-All three bandwidths produce workable estimates. The narrow kernel chases
-individual noisy observations; the wide one oversmooths toward a global
-average; $\sigma = 0.5$ tracks the underlying function well. The attention
-weights show how the bandwidth produces these differences:
+The bandwidth decides the fit. With $\sigma = 0.1$ the estimate chases the
+noise of individual observations. With $\sigma = 2$ it averages over most
+of the data and flattens toward the global mean, missing both the bump and
+the dip of the curve. The middle bandwidth, $\sigma = 0.5$, follows the
+noise-free function closely except near the ends of the interval, where
+all its neighbors lie on one side of the query and pull the estimate
+toward them. We keep the kernel Gaussian and vary only $\sigma$; the
+other shapes of :numref:`fig_attention_kernels` can be rescaled in the
+same way.
+
+## Attention Weights as a Diagnostic
+
+Because the weights are nonnegative and sum to one, a row of them reads as
+a distribution over keys. It tells us which stored pairs a query drew on.
+Plotting the weight matrix over (query, key) pairs is therefore the
+standard first look at any attention layer, and we will do it throughout
+the chapter with `d2l.show_heatmaps`. The helper takes an array of shape
+(rows of panels, columns of panels, queries, keys) and draws a grid of
+heatmaps that share one colorbar.
+
+The narrow and the wide kernel put weights of very different sizes on
+their keys, so we draw each in a figure of its own, with its own color
+scale. The queries are the test inputs and the keys are the training
+inputs, both in increasing order. We start with the narrow kernel.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-3}
-%%tab pytorch
+%%tab pytorch, jax
 _, w_narrow = nadaraya_watson(x_train, y_train, x_val, 0.1)
-_, w_wide = nadaraya_watson(x_train, y_train, x_val, 2.0)
-d2l.show_heatmaps(torch.stack([w_narrow.T, w_wide.T])[None],
-                  xlabel='Training inputs (keys)',
+d2l.show_heatmaps(w_narrow.T[None, None], xlabel='Training inputs (keys)',
                   ylabel='Test inputs (queries)',
-                  titles=['sigma = 0.1', 'sigma = 2'], figsize=(7, 3))
+                  titles=[r'$\sigma$ = 0.1'], figsize=(4, 3))
 ```
 
-```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-3}
-%%tab jax
-_, w_narrow = nadaraya_watson(x_train, y_train, x_val, 0.1)
+Each query puts nearly all of its weight on the few keys nearest to it, so
+the map is a thin diagonal band and the estimate copies a few noisy
+labels. The wide kernel spreads its weight out.
+
+```{.python .input #queries-keys-values-attention-weights-as-a-diagnostic-1}
+%%tab pytorch, jax
 _, w_wide = nadaraya_watson(x_train, y_train, x_val, 2.0)
-d2l.show_heatmaps(jnp.stack([w_narrow.T, w_wide.T])[None],
-                  xlabel='Training inputs (keys)',
+d2l.show_heatmaps(w_wide.T[None, None], xlabel='Training inputs (keys)',
                   ylabel='Test inputs (queries)',
-                  titles=['sigma = 0.1', 'sigma = 2'], figsize=(7, 3))
+                  titles=[r'$\sigma$ = 2'], figsize=(4, 3))
 ```
 
-The narrow kernel concentrates each query's weight on a handful of nearby
-keys—sharp, local, and noisy—while the wide kernel spreads it across much of
-the dataset. Picking one global $\sigma$ is itself a compromise;
-:citet:`Silverman86` proposed bandwidths that adapt to the local data
-density, and similar nearest-neighbor interpolation ideas resurface in
-modern cross-modal representation learning :cite:`norelli2022asif`.
+Its largest weight is a few hundredths, spread over a broad band of keys,
+so neighboring queries see nearly the same average. In both maps the
+diagonal appears only because queries and keys are sorted inputs on the
+same axis. In a trained network, such a heatmap is a hypothesis about what
+the layer does, not a proof. A large weight on a key whose value the next
+layer ignores explains nothing. :numref:`sec_what-attention-computes`
+returns to this question with tools that test such hypotheses.
 
-Nadaraya--Watson regression fixes the kernel shape, bandwidth, and space in
-which distances are measured. Every query therefore uses the same prescribed
-notion of similarity. A learned attention mechanism instead learns query and
-key representations whose induced weights serve the task. The next section develops a learnable scoring function.
+A heatmap also shows what Nadaraya--Watson regression cannot do. Its
+kernel fixes the shape, the bandwidth, and the space in which distances
+are measured, so every query uses the same prescribed notion of
+similarity. A query cannot ask for the key three positions back, or for
+the key with the same grammatical role, because neither is a matter of
+distance in the input space. A learned attention layer instead computes
+queries and keys from the data with trainable maps, so that the weights
+they induce serve the task. The next section develops the scoring function
+that makes this practical.
 
 ## Summary
 
-Attention pooling :eqref:`eq_attention_pooling` forms a weighted sum of values,
-where each weight depends on compatibility between a query and a key. Softmax
-applied to a scoring function produces nonnegative weights that sum to one.
-Exact lookup and average pooling are special cases. Nadaraya--Watson regression
-uses a fixed similarity kernel; modern attention instead learns
-representations of queries and keys.
+Attention pooling :eqref:`eq_attention_pooling` answers a query with a
+weighted sum of stored values, where each weight measures how well the
+query matches the value's key. It reads every stored pair directly, so it
+needs no fixed-size summary of its input, and its parameters do not depend
+on how many pairs there are. The softmax turns any scoring function into
+nonnegative weights that sum to one; exact lookup and average pooling are
+the two extremes. Nadaraya--Watson regression is attention with a fixed
+kernel, and its bandwidth trades noise against bias. Heatmaps of the
+weights show which keys each query uses, and learned attention replaces the
+fixed kernel by learned queries and keys.
 
 ## Exercises
 
@@ -347,7 +357,7 @@ representations of queries and keys.
        $c \to \infty$, and state what it implies for training the query by
        gradient descent.
     1. Verify the identity and the limit with automatic differentiation on
-       a random database with $m = 8$ and $d_k = 4$.
+       a random database with $m = 8$ and $d = 4$.
 
 1. [code] **Soft lookup as retrieval.** ● Build a database of $m$ keys
    drawn uniformly from the unit sphere in $\mathbb{R}^{16}$, with value
@@ -412,96 +422,234 @@ representations of queries and keys.
 ::: {.cover}
 [Dive into Deep Learning · §10.1]{.kicker}
 
-Queries, keys, and values<br>
-**attention as soft lookup · softmax weights · Nadaraya–Watson pooling · why learn the kernel**
+Queries, Keys, and Values<br>
+**soft lookup · softmax weights · Nadaraya–Watson regression · attention heatmaps**
 :::
 :::
 
-::: {.slide title="The fixed-size bottleneck"}
-Many networks either assume a fixed input size, such as $224 \times 224$
-images, or compress a variable-length sequence into a fixed-dimensional RNN
-state.
+::: {.slide title="A 768-Number State Must Answer for 1,024 Tokens"}
+[The problem]{.kicker}
 
-. . .
+A recurrent language model with the width of GPT-2 small reads 1,024
+tokens.
 
-A database need not compress its records into one fixed-size state. A database is a set of
-$(\text{key}, \text{value})$ pairs; a query retrieves the matching value.
+- Everything it knows about them sits in a state of 768 numbers.
+- The state is written before the model knows which question comes next.
+- The token representations themselves hold $1{,}024 \times 768 \approx
+  786{,}000$ numbers.
 
-- The query stays simple no matter how large the database is.
-- The same query gets different answers from different databases.
-- Lookup does not require compressing the database first.
-
-We want a *differentiable* layer with these properties.
+::: {.d2l-note .warn}
+Can a layer keep every position and read what it needs, by content, when
+it needs it?
+:::
 :::
 
-::: {.slide title="Attention as differentiable lookup"}
-Over a database $\mathcal{D} = \{(\mathbf{k}_1, \mathbf{v}_1), \ldots, (\mathbf{k}_m, \mathbf{v}_m)\}$:
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute a soft lookup by hand: scores, softmax weights, output;
+- explain why its parameters do not grow with the number of stored pairs;
+- recognize Nadaraya–Watson regression as attention with a fixed kernel;
+- predict what the bandwidth does to the fit and to the weight heatmap.
+
+**Running example:** one attention head of GPT-2 small, with queries and
+keys of width 64 and up to 1,024 stored key–value pairs.
+:::
+
+::: {.slide title="Attention Looks Up Values by Content"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| **Queries, Keys, and Values** | **soft lookup by content** |
+| Attention Scoring and Masking | learned scores, masks, batching |
+| Multi-Head and Cross-Attention | several lookups in parallel |
+| Positional Information | word order |
+| The Cost of Attention | quadratic cost, cheaper variants |
+| Attention Circuits | circuits in trained models |
+:::
+
+::: {.col .narrow}
+- **Uses:** softmax, the fixed-size RNN state.
+- **Skips:** learned scores (next deck), heads, positions.
+:::
+:::
+:::
+
+::: {.slide title="An Exact Query Either Matches a Key or Returns Nothing"}
+The scalar database $\mathcal{D} = \{(2, 10), (5, 20)\}$ of
+(key, value) pairs:
+
+- query $q = 5$ matches key 5 and returns 20;
+- query $q = 4$ matches no key and returns nothing;
+- a small change of the query changes the answer abruptly, so there is
+  no gradient to learn from.
+
+::: {.d2l-note}
+We want an answer that moves smoothly with the query.
+:::
+:::
+
+::: {.slide title="Soft Lookup Answers q = 4 with 19.5"}
+[Worked example]{.kicker}
+
+Score every key by $a(q, k) = -(q - k)^2$, then normalize with a softmax.
+
+| key $k$ | value | score | weight |
+|---|---|---|---|
+| 2 | 10 | $-4$ | $e^{-4}/(e^{-4}+e^{-1}) \approx 0.05$ |
+| 5 | 20 | $-1$ | $\approx 0.95$ |
+
+Answer: $0.05 \cdot 10 + 0.95 \cdot 20 \approx 19.5$.
+
+::: {.d2l-note .rule}
+Every value contributes; the nearest key contributes most.
+:::
+:::
+
+::: {.slide title="Attention Is a Weighted Sum of Values"}
+Over $m$ pairs $(\mathbf{k}_i, \mathbf{v}_i)$, with $\mathbf{q},
+\mathbf{k}_i \in \mathbb{R}^d$ and $\mathbf{v}_i \in \mathbb{R}^{d_v}$:
 
 $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\, \mathbf{v}_i.$$
 
-One-hot $\alpha$ gives exact lookup; uniform $\alpha$ gives average pooling;
-other distributions interpolate between them.
-
-![Attention pooling: a linear combination of values, with weights from query–key compatibility.](../img/mdl-attention-soft-lookup.svg){width=64%}
+![Three keys: scores, weights that sum to one, and the output inside the triangle of values.](../img/mdl-attention-soft-lookup.svg){width=78%}
 :::
 
-::: {.slide title="Softmax makes any score a weight"}
-Given a scoring function $a(\mathbf{q}, \mathbf{k})$, exponentiate and
-normalize its scores:
+::: {.slide title="Softmax Turns Any Score into Weights"}
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}$$
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
-
-- Nonnegative, sums to one — a convex combination of the values.
-- Differentiable; available in every framework.
-- The rest of the chapter is about the choice of $a$ and where
-  $\mathbf{q}, \mathbf{k}, \mathbf{v}$ come from.
+- Nonnegative and summing to one: the output is a convex combination of
+  the values.
+- One weight 1, the rest 0: exact lookup. All weights $1/m$: average
+  pooling.
+- Differentiable: gradients reach the query, the keys, and the values.
 :::
 
-::: {.slide title="Visualizing attention weights"}
-A queries-by-keys heatmap displays the weights. The identity matrix below
-represents exact lookup:
+::: {.slide title="Check: q = 3.5"}
+[Check]{.kicker}
 
-@queries-keys-values-visualizing-attention-weights
+Same database $\{(2, 10), (5, 20)\}$, same score $-(q - k)^2$. What does
+the soft lookup return for $q = 3.5$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Both scores are $-2.25$, so both weights are $0.5$ and the
+answer is $15$, the average. A query halfway between two keys cannot
+prefer either one.
+:::
+:::
 :::
 
-::: {.slide title="A 1964 attention mechanism"}
-Nadaraya–Watson regression is attention pooling with a *hand-picked*
-similarity kernel:
+::: {.slide title="The Lookup Has No Parameters per Stored Pair"}
+One GPT-2-small head at a context of 1,024 tokens:
 
-$$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}.$$
+- query width 64; 1,024 keys of width 64, 1,024 values of width 64;
+- the softmax and the weighted sum work for any number of pairs $m$;
+- the output always has width 64.
 
-Keys = training inputs, values = labels, query = where to predict.
-The estimator requires no parameter training and is consistent if the kernel
-narrows at a suitable rate as data accumulate.
-
-![Gaussian, boxcar, constant, and triangular kernels.](../img/mdl-attention-kernels.svg){width=88%}
+::: {.d2l-note .rule}
+The parameters are fixed; the memory is not. Attention stores
+$2 \times 1{,}024 \times 64 = 131{,}072$ numbers for this head, where an
+RNN stores one state.
+:::
 :::
 
-::: {.slide title="Nadaraya–Watson in action"}
-$y = 2\sin(x) + x + \epsilon$, 40 noisy points. Four lines of code:
-distances → kernel → normalize over keys → weighted sum of labels.
+::: {.slide title="Nadaraya–Watson Regression Is Attention with a Fixed Kernel"}
+[1964]{.kicker}
+
+$$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}$$
+
+- keys = training inputs $x_i$, values = labels $y_i$, query = where to
+  predict;
+- no training; consistent if the bandwidth shrinks suitably as data grow.
+
+![Gaussian, boxcar, constant, and triangular kernels.](../img/mdl-attention-kernels.svg){width=70%}
+:::
+
+::: {.slide title="The Estimator Is Five Lines"}
+Distances → Gaussian kernel of bandwidth $\sigma$ → normalize over the
+keys → weighted sum of the labels.
 
 @queries-keys-values-nadaraya-watson-regression-in-action-2
 
-- In this example, the bandwidth $\sigma$ has more effect than the choice
-  among the displayed kernel shapes.
+The normalized kernel matrix is the attention-weight matrix.
 :::
 
-::: {.slide title="The weights explain the fits"}
+::: {.slide title="The Bandwidth Decides the Fit"}
+40 noisy points from $y = 2\sin(x) + x + \epsilon$:
+
+@!queries-keys-values-nadaraya-watson-regression-1
+
+- $\sigma = 0.1$ chases the noise; $\sigma = 2$ flattens toward the mean;
+  $\sigma = 0.5$ follows the curve except near the ends.
+:::
+
+::: {.slide title="Narrow Kernels Read a Few Keys, Wide Kernels Read Many"}
+Rows: test inputs (queries). Columns: training inputs (keys), sorted.
+Each map has its own color scale.
+
+::: {.cols}
+::: {.col}
 @!queries-keys-values-nadaraya-watson-regression-in-action-3
 
-- Narrow kernel: sharp, local, noisy — weight on a handful of keys.
-- Wide kernel: smooth, global — weight spread across the dataset.
-- Either way the kernel is *chosen*, not learned, and every query gets
-  the same notion of similarity.
+$\sigma = 0.1$: a thin band; weights near 1 on a few keys.
 :::
 
-::: {.slide title="Recap"}
-- Attention = differentiable soft database lookup:
-  $\sum_i \alpha(\mathbf{q}, \mathbf{k}_i)\, \mathbf{v}_i$.
-- Softmax of any scoring function gives valid weights; exact lookup and
-  average pooling are the extreme weight patterns.
-- A fixed set of parameters can operate on databases of different sizes.
-- Nadaraya–Watson uses fixed kernels; the rest of the chapter learns query
-  and key representations instead.
+::: {.col}
+@!queries-keys-values-attention-weights-as-a-diagnostic-1
+
+$\sigma = 2$: broad rows of weights of a few hundredths.
+:::
+:::
+:::
+
+::: {.slide title="Check: A Query Far from the Data"}
+[Check]{.kicker}
+
+With $\sigma = 0.5$ and training inputs in $[0, 5)$, the estimator above
+returns NaN at $q = 15$ in single precision. Why, and what fixes it?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Every kernel value is below $e^{-200}$, which underflows to
+0 (float32 stops near $e^{-103}$), so the normalization computes $0/0$.
+Computing the weights as a softmax of the scores $-(q - x_i)^2/2\sigma^2$
+subtracts the largest score first and stays finite.
+:::
+:::
+:::
+
+::: {.slide title="Heatmaps Suggest, They Do Not Prove"}
+- A row of weights is a distribution over keys: which pairs did the
+  query use?
+- In a trained network a large weight on a value that later layers
+  ignore explains nothing.
+- The last deck of this chapter tests such readings by intervention.
+:::
+
+::: {.slide title="A Fixed Kernel Gives Every Query the Same Similarity"}
+Nadaraya–Watson fixes the kernel shape, the bandwidth, and the space in
+which distances are measured.
+
+- It cannot ask for "the token three positions back" or "the subject of
+  this verb": neither is a distance between inputs.
+- Learned attention computes queries and keys with trainable maps, so the
+  task decides what counts as similar.
+:::
+
+::: {.slide title="Wrap-up"}
+- Attention answers a query with $\sum_i \alpha(\mathbf{q},
+  \mathbf{k}_i)\, \mathbf{v}_i$; softmax weights are nonnegative and sum
+  to one.
+- Soft lookup in $\{(2, 10), (5, 20)\}$ answers $q = 4$ with 19.5 and
+  $q = 3.5$ with 15.
+- Parameters do not depend on the number of pairs; memory does: 131,072
+  numbers for one GPT-2-small head at 1,024 tokens.
+- Nadaraya–Watson is attention with a fixed kernel; the bandwidth trades
+  noise against bias.
+
+**Next:** learned scores, masks, and attention for a whole minibatch.
 :::

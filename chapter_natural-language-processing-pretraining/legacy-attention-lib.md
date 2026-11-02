@@ -358,9 +358,10 @@ class AddNorm(nnx.Module):  #@save
 
 **`TransformerEncoderBlock` (all four frameworks — no name collision with the
 new chapters; frozen post-LN, ReLU, original signature. The PyTorch/JAX
-tabs' `d2l.MultiHeadAttention` call now resolves to the new
-`chapter_attention/multihead-attention.md` class — constructor and call
-shape verified compatible, no adaptation needed.)**
+tabs' `d2l.MultiHeadAttention` call now resolves to the 4-D
+`chapter_attention/multihead-attention.md` class, which takes a boolean
+mask: the PyTorch/JAX blocks convert `valid_lens` with `d2l.padding_mask`
+(2026-11-01, ch. 10–11 attention API).)**
 
 ```{.python .input}
 %%tab mxnet
@@ -394,7 +395,9 @@ class TransformerEncoderBlock(nn.Module):  #@save
         self.addnorm2 = AddNorm(num_hiddens, dropout)
 
     def forward(self, X, valid_lens):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        mask = (None if valid_lens is None
+                else d2l.padding_mask(valid_lens, X.shape[1]))
+        Y = self.addnorm1(X, self.attention(X, X, X, mask))
         return self.addnorm2(Y, self.ffn(Y))
 ```
 
@@ -432,9 +435,11 @@ class TransformerEncoderBlock(nnx.Module):  #@save
         self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
 
     def __call__(self, X, valid_lens):
-        output, attention_weights = self.attention(X, X, X, valid_lens)
-        Y = self.addnorm1(X, output)
-        return self.addnorm2(Y, self.ffn(Y)), attention_weights
+        mask = (None if valid_lens is None
+                else d2l.padding_mask(valid_lens, X.shape[1]))
+        Y = self.addnorm1(X, self.attention(X, X, X, mask))
+        # Attention weights are recorded on eager (un-jitted) calls only
+        return self.addnorm2(Y, self.ffn(Y)), self.attention.attention_weights
 ```
 
 ## Legacy Recurrent Classes (tensorflow, mxnet only)

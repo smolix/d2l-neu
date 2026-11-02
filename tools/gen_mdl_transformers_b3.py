@@ -27,6 +27,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+PURPLE = fl.T.PURPLE.base  # the `embed` role: memory, KV cache
 
 from matplotlib.patches import Rectangle
 
@@ -54,7 +55,7 @@ def _score_panel(ax, cached):
     ys = T + 0.7  # bottom of the keys/values strip
     # keys/values strip above the score matrix
     if cached:
-        _kv_strip(ax, ys, [(BLUE, 0.30)] * (T - 1) + [(ORANGE, 0.85)])
+        _kv_strip(ax, ys, [(PURPLE, 0.35)] * (T - 1) + [(ORANGE, 0.85)])
         ax.text((T - 1) / 2, ys + 1.0,
                 r"$\mathbf{k}_{1..t-1}, \mathbf{v}_{1..t-1}$ from the cache",
                 ha="center", va="bottom", fontsize=13, color="black")
@@ -81,12 +82,8 @@ def _score_panel(ax, cached):
     if cached:
         # inside the (dashed) triangle, where it is widest
         ax.text(3.0, 2.5, "not computed", ha="center", va="center",
-                fontsize=13, color=GRAY,
+                fontsize=13, color="black",
                 bbox=dict(fc="white", ec="none", pad=2))
-    # arrow from the strip down onto the top edge of the current score row
-    # (row t occupies y in [0, 1])
-    fl.arrow(ax, (T - 0.15, ys - 0.15), (T - 0.15, 1.0), color=GRAY, lw=1.4,
-             mut=12)
     label = ("one new score row per step" if cached
              else "every score row redone per step")
     ax.text(T / 2, -0.85, label, ha="center", va="center", fontsize=14,
@@ -94,6 +91,21 @@ def _score_panel(ax, cached):
     ax.text(-0.55, 0.5, r"row $t$", ha="right", va="center", fontsize=13,
             color="black")
     fl.arrow(ax, (-0.45, 0.5), (-0.02, 0.5), color=GRAY, lw=1.4, mut=11)
+
+
+def _unitless(path):
+    """Rewrite matplotlib's pt-sized root width/height as unitless CSS px
+    (1 pt = 4/3 px), keeping the viewBox (figure guide: unitless sizes)."""
+    import re
+    with open(path) as fh:
+        svg = fh.read()
+    head, rest = svg.split("<svg", 1)
+    tag, body = rest.split(">", 1)
+    tag = re.sub(r'(width|height)="([0-9.]+)pt"',
+                 lambda m: f'{m.group(1)}="{float(m.group(2)) * 4 / 3:.2f}"',
+                 tag)
+    with open(path, "w") as fh:
+        fh.write(head + "<svg" + tag + ">" + body)
 
 
 def fig_kv_cache():
@@ -126,7 +138,8 @@ def _heads_panel(ax, n_kv, label):
         # one kv head centered under its group of query heads
         xs = [i * gap for i in range(g * group, (g + 1) * group)]
         xc = (xs[0] + xs[-1]) / 2
-        ax.add_patch(Rectangle((xc, y_kv), w, w, fc=ORANGE, alpha=0.75,
+        # purple, as the cached keys and values of the kv-cache figure
+        ax.add_patch(Rectangle((xc, y_kv), w, w, fc=PURPLE, alpha=0.55,
                                ec="black", lw=0.9))
         for x in xs:
             ax.plot([x + w / 2, xc + w / 2], [y_q - 0.06, y_kv + w + 0.06],
@@ -139,8 +152,8 @@ def _heads_panel(ax, n_kv, label):
     ax.set_aspect("equal")
     ax.axis("off")
     ax.text((H - 1) * gap / 2 + w / 2, -0.85,
-            rf"cache $\propto H_{{kv}} = {n_kv}$", ha="center", va="center",
-            fontsize=13, color="black")
+            rf"cache $\propto H_\mathrm{{kv}} = {n_kv}$", ha="center",
+            va="center", fontsize=13, color="black")
 
 
 def fig_gqa():
@@ -161,5 +174,7 @@ def fig_gqa():
 if __name__ == "__main__":
     fig_kv_cache()
     fig_gqa()
+    for p in fl.WRITTEN:
+        _unitless(p)
     for p in fl.WRITTEN:
         print("wrote", p)

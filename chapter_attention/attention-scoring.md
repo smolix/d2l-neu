@@ -1,14 +1,29 @@
 # Attention Scoring and Masking
 :label:`sec_attention-scoring-functions`
 
-In :numref:`sec_attention-pooling`, distance-based kernels such as the Gaussian
-defined the attention weights. A more general attention layer first computes a
-score $a(\mathbf{q}, \mathbf{k})$ and then normalizes the scores with softmax
-:eqref:`eq_softmax_attention`. This section derives scaled dot-product
-attention, including the $1/\sqrt d$ factor. Masked softmax handles padding and
-causal constraints, while batched matrix multiplication evaluates many queries
-and sequences efficiently. We conclude with the alignment model from neural
-machine translation that introduced learned attention.
+The Nadaraya--Watson weights of :numref:`sec_attention-pooling` come from a
+kernel chosen in advance. Two capabilities are missing before soft lookup
+can serve as a layer of a trained network. First, a fixed kernel measures
+compatibility as distance in a fixed space, so it cannot learn what
+compatibility should mean for a task, for instance that a verb should find
+its subject. We need a score that learned representations can shape and
+that is fast to evaluate for every query--key pair: one attention head of
+GPT-2 small, reading a context of 1,024 tokens, scores
+$1{,}024^2 = 1{,}048{,}576$ pairs. Second, some of those pairs must not
+count. Sequences of different lengths share a minibatch only after
+padding, and no query should attend to the padding. A language model
+trained to predict each next token processes all positions at once, and
+the query at position $t$ must not see the tokens after it; in the GPT-2
+head that rules out $523{,}776$ of the $1{,}048{,}576$ scores.
+
+This section supplies both. The score is the dot product of query and
+key, divided by $\sqrt{d}$ so that its scale does not grow with the width
+$d$ of the vectors. Exclusions are boolean masks applied before the
+softmax, and several of them combine by logical AND. With both in place,
+attention over a whole minibatch is two batched matrix multiplications and
+a softmax, the `DotProductAttention` layer that every later model in this
+book builds on. The section ends with the translation model in which
+learned attention first appeared.
 
 ```{.python .input #attention-scoring-attention-scoring-and-masking}
 %%tab pytorch
@@ -32,67 +47,71 @@ import math
 
 ## Dot-Product Attention
 
-Expanding the Gaussian kernel gives the following attention score before
-exponentiation:
+Expanding the exponent of the Gaussian kernel gives the score
 
 $$
 a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2} \|\mathbf{q} - \mathbf{k}_i\|^2  = \mathbf{q}^\top \mathbf{k}_i -\frac{1}{2} \|\mathbf{k}_i\|^2  -\frac{1}{2} \|\mathbf{q}\|^2.
 $$
 :eqlabel:`eq_gaussian-expansion`
 
-First, the final term depends on $\mathbf{q}$ only, so it is identical for
-all keys, and the softmax normalization :eqref:`eq_softmax_attention`
-removes it entirely. Second, if the key norms $\|\mathbf{k}_i\|$ are all
-equal, the middle term drops out the same way, and the Gaussian kernel and
-the dot product induce identical attention weights. In general the norms are
-not equal, and dropping the term is a modeling decision rather than an
-approximation: we adopt the dot product $\mathbf{q}^\top \mathbf{k}_i$ as a
-compatibility function in its own right. Learned query and key representations can shape this
-compatibility, while the Gaussian expansion remains an exact special case
-when all key norms are equal.
+The last term depends on the query only. It is the same for all keys, and
+the softmax normalization :eqref:`eq_softmax_attention` removes it. If all
+keys have the same norm, the middle term drops out in the same way, and
+the Gaussian kernel and the dot product give identical weights. In general
+the norms differ, and keeping only $\mathbf{q}^\top \mathbf{k}_i$ is a
+modeling decision rather than an approximation: the dot product becomes
+the compatibility function in its own right. Learned query and key
+representations then decide what compatibility means, and the Gaussian
+kernel remains the special case of keys with equal norms.
 
-One adjustment controls the nominal score magnitude at initialization. Assume
-for this calculation that the $d_k$ coordinates of the query and key are
-independent, zero-mean, unit-variance random variables. Their dot product then
-has zero mean and variance $d_k$. Rescaling by $1/\sqrt{d_k}$ removes this
-dimension dependence under the stated assumptions and yields the *scaled
-dot-product attention* scoring function of the Transformer
+One adjustment controls the size of the scores. Suppose that the $d$
+coordinates of the query and of the key are independent random variables
+with mean zero and variance one. Their dot product then has mean zero and
+variance $d$; for the GPT-2 head, with $d = 64$, a typical score is about
+$\pm 8$. Dividing by $\sqrt{d}$ restores unit variance and gives the
+*scaled dot-product* score of the Transformer
 :cite:`Vaswani.Shazeer.Parmar.ea.2017`:
 
-$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k}.$$
+$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
 :eqlabel:`eq_dot_product_attention`
 
-The attention weights are obtained, as always, with the softmax:
+The attention weights are, as always, the softmax of the scores:
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d_k})}.$$
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d})}.$$
 :eqlabel:`eq_attn-scoring-alpha`
 
 ### Score Variance and the $1/\sqrt{d}$ Factor
 
-Learned queries and keys need not retain the independence or unit-variance
-assumptions, so the calculation is a scaling heuristic rather than a
-trained-model guarantee. Its purpose is to avoid dimension-induced softmax
-saturation at initialization. Once one score
-exceeds the others by a large margin, the winning weight approaches $1$ and
-the rest approach $0$. The gradient returning along the *score* path shrinks
-with them, because the Jacobian of the softmax is
+Learned queries and keys are neither independent nor of unit variance, so
+the calculation above describes a network at initialization. That is when
+it matters. If one score exceeds the others by a wide margin, its weight
+approaches $1$, the others approach $0$, and the softmax *saturates*. The
+gradient that reaches the scores shrinks with it, because the Jacobian of
+the softmax is
 
 $$
 \frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^\top,
 $$
 :eqlabel:`eq_softmax-jacobian`
 
-and this tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a
-one-hot vector, so the queries and keys behind those scores stop being
-updated. (Only that query–key route saturates; gradients still flow through
-the values, the output projection, and any residual connection.) For finite
-scores this Jacobian is
-never the zero matrix — as we noted in :numref:`sec_queries-keys-values`, it
-always keeps the all-ones vector in its null space and nothing else — but it
-can come arbitrarily close. We measure both effects with random queries
-and keys with unit-variance entries, compute attention over $64$ candidate
-keys, and record the entropy of the resulting weight distribution as the
-dimension $d$ grows, with and without the $1/\sqrt{d}$ factor.
+which tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a
+one-hot vector. Row $i$ of the Jacobian carries the factor $\alpha_i$, so
+the gradient of the loss with respect to score $i$ is proportional to the
+weight of key $i$. In a saturated row, the keys with negligible weight
+receive almost no gradient, and the query learns only about the few keys
+that already carry weight. A key that loses at the start has little
+chance to catch up. Only this route saturates. Gradients still reach the
+values, the output projection, and any residual connection. For finite
+scores the Jacobian is never exactly zero, since the all-ones vector alone
+spans its null space (an exercise below proves this), but it can come
+arbitrarily close.
+
+We measure both effects. We draw random queries and keys with independent
+standard normal entries, compute the attention weights of each query over
+$64$ keys, and record the entropy of the weights as the dimension $d$
+grows, with and without the factor $1/\sqrt{d}$. For reference, the
+uniform distribution over $64$ keys has entropy $\log 64 \approx 4.2$
+nats, and a one-hot distribution has entropy $0$.
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab pytorch
@@ -108,7 +127,6 @@ def attention_stats(d, num_keys=64, num_queries=256, scaled=True):
     jac = torch.diag_embed(alpha) - alpha[..., :, None] * alpha[..., None, :]
     return entropy.item(), jac.square().sum((-2, -1)).sqrt().mean().item()
 
-torch.manual_seed(0)
 ds = [2**k for k in range(2, 10)]
 entropies = [[attention_stats(d, scaled=s)[0] for d in ds]
              for s in (False, True)]
@@ -118,10 +136,9 @@ d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1}
 %%tab jax
-def attention_stats(d, num_keys=64, num_queries=256, scaled=True, seed=0):
-    key_q, key_k = jax.random.split(jax.random.key(seed))
-    q = jax.random.normal(key_q, (num_queries, d))
-    keys = jax.random.normal(key_k, (num_queries, num_keys, d))
+def attention_stats(d, num_keys=64, num_queries=256, scaled=True):
+    q = jax.random.normal(d2l.get_key(), (num_queries, d))
+    keys = jax.random.normal(d2l.get_key(), (num_queries, num_keys, d))
     scores = (keys @ q[..., None]).squeeze(-1)
     if scaled:
         scores = scores / math.sqrt(d)
@@ -139,18 +156,16 @@ d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
          legend=['unscaled', 'scaled by 1/sqrt(d)'], xscale='log')
 ```
 
-A uniform distribution over $64$ keys has entropy $\ln 64 \approx 4.2$ nats.
-The scaled scores retain an entropy of about $3.7$ nats across two orders of
-magnitude in $d$. Thus the weight distribution retains similar sharpness as
-the vector dimension grows. Without
-scaling, the entropy collapses as $d$ grows—below $0.2$ nats by $d = 512$,
-a near-deterministic weighting that concentrates almost all its mass on a
-single key purely because the vectors are long. The Jacobian norm measures
-the corresponding change in the score gradient:
+With scaling, the entropy stays near $3.7$ nats over two orders of
+magnitude of $d$: the weights are equally sharp at every width. Without
+scaling it collapses as $d$ grows, to about $0.2$ nats at $d = 512$, a
+nearly one-hot weighting that comes from the length of the vectors alone.
+Unscaled, the largest of the $64$ weights takes about $80\%$ of the total
+at $d = 64$ and about $90\%$ at $d = 512$. The norm of the Jacobian shows
+what this does to the gradient that reaches the scores:
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
-%%tab pytorch
-torch.manual_seed(0)
+%%tab pytorch, jax
 for d in (4, 64, 512):
     _, jac_unscaled = attention_stats(d, scaled=False)
     _, jac_scaled = attention_stats(d, scaled=True)
@@ -158,28 +173,24 @@ for d in (4, 64, 512):
           f'{jac_scaled:.3f} (scaled)')
 ```
 
-```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
-%%tab jax
-for d in (4, 64, 512):
-    _, jac_unscaled = attention_stats(d, scaled=False)
-    _, jac_scaled = attention_stats(d, scaled=True)
-    print(f'd = {d:3d}: Jacobian norm {jac_unscaled:.3f} (unscaled), '
-          f'{jac_scaled:.3f} (scaled)')
-```
-
-With scaling, the Jacobian norm is the same at every dimension. Without it,
-the norm decays as the softmax saturates—by $d = 512$ it has fallen to
-about half the scaled value and is still shrinking. At realistic dimensions, a model with unscaled scores would therefore begin
-with near-one-hot attention and small score gradients. Division by $\sqrt{d}$
-removes the dimension-induced scaling, so it is part of the definition
-:eqref:`eq_dot_product_attention` rather than a tuned hyperparameter.
+With scaling, the norm is the same at every dimension. Without it, the
+norm first *rises*: at small $d$ the unscaled weights concentrate on a few
+keys, and the Jacobian is largest when two keys share the weight (an
+exercise below finds this maximum). It crosses the scaled value near
+$d = 128$, falls to about half of it at $d = 512$, and keeps falling. A
+model with unscaled scores would therefore start training with nearly
+one-hot attention, and the gradient that reaches its scores would flow
+almost entirely through the few keys that each query already favors. The
+factor $1/\sqrt{d}$ removes this dependence on the dimension. That is why
+it is part of the definition :eqref:`eq_dot_product_attention` rather
+than a hyperparameter to tune.
 
 ## Masking
 
-Attention as defined so far attends to *every* key. In practice we routinely
-need it not to, for one of two reasons. The first is *padding*: sequences of
-different lengths end up in the same minibatch, padded with dummy tokens to
-a common length (here shown as `<blank>`):
+So far every query attends to every key. Two situations require
+exclusions. The first is *padding*. Sequences of different lengths share
+a minibatch only after they are padded with a dummy token to a common
+length (here `<blank>`):
 
 ```
 Dive  into  Deep    Learning
@@ -187,196 +198,253 @@ Learn to    code    <blank>
 Hello world <blank> <blank>
 ```
 
-Padding tokens carry no meaning, and no query should waste weight on them.
-The second reason is *causality*: a language model trained to predict the
-next token computes outputs for all positions of a sequence in parallel, and
-the query at position $t$ must not see keys at positions beyond $t$—
-otherwise the model can copy the very future it is being trained to predict.
-Both cases call for the same operation: restrict the attention sum
-$\sum_{i=1}^n \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i$ to a valid
-prefix $\sum_{i=1}^l \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i$ with
-$l \leq n$, where $l$ depends on the sequence (padding) or on the query
-position (causality).
+The padding carries no meaning, and no query should give it weight. The
+second is *causality*. A language model trained to predict the next token
+computes its outputs for all positions of a sequence at once, and the
+query at position $t$ must not see the keys at positions after $t$.
+Otherwise it could copy the very token it is asked to predict.
+
+Both are described by one object, a boolean *mask* with one entry per
+query--key pair that is true where the query may attend to the key. The
+true entries of a row need not form a prefix, so the same object also
+describes the attention windows and document boundaries we meet later.
 
 ### The Masked Softmax Operation
 
-The *masked softmax* implements this restriction without branching over
-keys. It overwrites invalid scores with a very negative number before the
-softmax, making their normalized weights zero. This formulation preserves
-the regular array operations used by optimized batched kernels.
+The *masked softmax* gives zero weight to the excluded pairs. It does not
+skip them, which would leave rows of different lengths. Instead it
+overwrites the excluded scores with a very negative number before the
+softmax, so that their exponentials vanish, and keeps the regular array
+shapes that batched kernels need.
 
-The replacement value depends on the numerical precision. Older codebases used a literal
-constant such as $-10^{6}$. In single precision that works; in the half
-precisions that modern training runs in, it does not. The float16 format
-tops out near $6.5 \times 10^4$, so $-10^6$ silently overflows, and in
-bfloat16 a merely-large constant may fail to fully suppress a weight once
-genuine scores are large themselves. Writing literal $-\infty$ masks exactly, but if every key of some query is
-masked, the softmax returns NaN and can invalidate the training run. We therefore adopt the dtype-safe idiom, which
-masks with the most negative *finite* value of the score's dtype
-(`torch.finfo(X.dtype).min` and `jnp.finfo(X.dtype).min`, respectively): the
-masked weights are exactly zero at any precision, with no NaN. A fully masked query, which has no valid key, would otherwise produce a
-uniform average over invalid values. The `masked_softmax` implementation
-therefore zeroes such a row, although callers should still ensure that every
-query retains at least one valid key.
+The number has to be chosen with the precision in mind. Older code used a
+constant such as $-10^6$. That works in single precision. Float16, a format
+used for training today, cannot represent numbers beyond about
+$6.5 \times 10^4$, and depending on the framework $-10^6$ either
+overflows to $-\infty$ or is refused with an error. Literal $-\infty$
+also masks correctly, until some query has no valid key at all. Every
+score of its row is then $-\infty$, the softmax subtracts the row maximum
+and computes $-\infty - (-\infty)$, and the row becomes NaN. The NaN
+spreads to everything computed from it. We therefore overwrite with the most negative
+*finite* value of the dtype (`finfo(dtype).min`). After the softmax
+subtracts the row maximum, its exponential underflows to exactly zero at
+any precision, and no NaN can arise.
+
+One case remains. A query whose keys are all excluded would now receive
+the uniform average of invalid values, because all its scores are equal.
+`masked_softmax` sets such rows to zero. A model should still ensure that
+every query keeps at least one valid key.
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
 %%tab pytorch
-def masked_softmax(X, valid_lens):  #@save
-    """Perform softmax operation by masking elements on the last axis."""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    if valid_lens is None:
+def masked_softmax(X, mask=None):  #@save
+    """Softmax over the last axis with zero weight where mask is False."""
+    if mask is None:
         return F.softmax(X, dim=-1)
-    shape = X.shape
-    if valid_lens.dim() == 1:
-        valid_lens = torch.repeat_interleave(valid_lens, shape[1])
-    else:
-        valid_lens = valid_lens.reshape(-1)
-    mask = torch.arange(shape[-1], device=X.device)[None, :]
-    mask = mask < valid_lens[:, None]
-    # Most negative finite score: exactly zero weight after the softmax,
-    # at any precision, without the NaN risk of literal -inf
-    X = X.reshape(-1, shape[-1]).masked_fill(~mask, torch.finfo(X.dtype).min)
+    # Most negative finite value: zero weight at any precision, no NaN
+    X = X.masked_fill(~mask, torch.finfo(X.dtype).min)
     weights = F.softmax(X, dim=-1)
-    # A fully masked query (no valid key) would be a uniform average over
-    # invalid values; zero those rows so no padded position leaks through
-    weights = torch.where(mask.any(-1, keepdim=True), weights, 0.0)
-    return weights.reshape(shape)
+    # A query without any valid key gets zero weights, not a uniform row
+    return torch.where(mask.any(-1, keepdim=True), weights, 0.0)
 ```
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
 %%tab jax
-def masked_softmax(X, valid_lens):  #@save
-    """Perform softmax operation by masking elements on the last axis."""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    if valid_lens is None:
+def masked_softmax(X, mask=None):  #@save
+    """Softmax over the last axis with zero weight where mask is False."""
+    if mask is None:
         return jax.nn.softmax(X, axis=-1)
-    shape = X.shape
-    if valid_lens.ndim == 1:
-        valid_lens = jnp.repeat(valid_lens, shape[1])
-    else:
-        valid_lens = valid_lens.reshape(-1)
-    mask = jnp.arange(shape[-1])[None, :] < valid_lens[:, None]
-    # Most negative finite score: exactly zero weight after the softmax,
-    # at any precision, without the NaN risk of literal -inf
-    X = jnp.where(mask, X.reshape(-1, shape[-1]), jnp.finfo(X.dtype).min)
+    # Most negative finite value: zero weight at any precision, no NaN
+    X = jnp.where(mask, X, jnp.finfo(X.dtype).min)
     weights = jax.nn.softmax(X, axis=-1)
-    # A fully masked query (no valid key) would be a uniform average over
-    # invalid values; zero those rows so no padded position leaks through
-    weights = jnp.where(mask.any(-1, keepdims=True), weights, 0.0)
-    return weights.reshape(shape)
+    # A query without any valid key gets zero weights, not a uniform row
+    return jnp.where(mask.any(-1, keepdims=True), weights, 0.0)
 ```
 
-To illustrate how this function works, consider a minibatch of two examples
-with two queries and four keys each, where the valid lengths are $2$ and
-$3$, respectively. All weights beyond the valid length come out as zero,
-and each row still sums to $1$:
+The mask need only *broadcast* against the scores, so a mask that is the
+same for every query, or for every sequence, is stored once. A padding
+mask is of this kind: key $j$ of a sequence is valid when $j$ is less than
+the sequence's valid length. `padding_mask` turns a vector of valid
+lengths, one per sequence, into a mask of shape (batch, 1, keys), which
+the softmax broadcasts over the queries. A matrix of lengths, one per
+query, gives a mask of shape (batch, queries, keys).
+
+```{.python .input #attention-scoring-the-masked-softmax-operation-4}
+%%tab pytorch
+def padding_mask(valid_lens, num_keys):  #@save
+    """Boolean mask that is True for the first valid_lens keys."""
+    # valid_lens of shape (batch,) gives (batch, 1, keys); per-query
+    # lengths of shape (batch, queries) give (batch, queries, keys)
+    if valid_lens.dim() == 1:
+        valid_lens = valid_lens[:, None]
+    keys = torch.arange(num_keys, device=valid_lens.device)
+    return keys < valid_lens[..., None]
+```
+
+```{.python .input #attention-scoring-the-masked-softmax-operation-4}
+%%tab jax
+def padding_mask(valid_lens, num_keys):  #@save
+    """Boolean mask that is True for the first valid_lens keys."""
+    # valid_lens of shape (batch,) gives (batch, 1, keys); per-query
+    # lengths of shape (batch, queries) give (batch, queries, keys)
+    if valid_lens.ndim == 1:
+        valid_lens = valid_lens[:, None]
+    return jnp.arange(num_keys) < valid_lens[..., None]
+```
+
+We try both on a minibatch of two sequences with two queries and four
+keys each, and with valid lengths $2$ and $3$. The weights beyond the
+valid length should be zero, and each row should still sum to $1$.
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-2}
 %%tab pytorch
-masked_softmax(torch.rand(2, 2, 4), torch.tensor([2, 3]))
+masked_softmax(torch.rand(2, 2, 4), padding_mask(torch.tensor([2, 3]), 4))
 ```
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-2}
 %%tab jax
-masked_softmax(jax.random.uniform(jax.random.key(0), (2, 2, 4)),
-               jnp.array([2, 3]))
+masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
+               padding_mask(jnp.array([2, 3]), 4))
 ```
 
-For finer control we can pass a two-dimensional tensor of valid lengths,
-one per query:
+With one valid length per query, each row is cut at its own length:
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-3}
 %%tab pytorch
-masked_softmax(torch.rand(2, 2, 4), torch.tensor([[1, 3], [2, 4]]))
+masked_softmax(torch.rand(2, 2, 4),
+               padding_mask(torch.tensor([[1, 3], [2, 4]]), 4))
 ```
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-3}
 %%tab jax
-masked_softmax(jax.random.uniform(jax.random.key(1), (2, 2, 4)),
-               jnp.array([[1, 3], [2, 4]]))
+masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
+               padding_mask(jnp.array([[1, 3], [2, 4]]), 4))
 ```
 
 ### Causal Masking
 
-Per-query valid lengths are exactly what causality needs: for a sequence of
-length $n$, the query at position $t$ may attend to keys $1, \ldots, t$, so
-the valid lengths are $(1, 2, \ldots, n)$, shared by every sequence
-in the batch. The resulting attention pattern is lower triangular:
+In a causal mask, the query at position $i$ may see the keys at positions
+$j \leq i$. The mask is a lower triangle, and in a sequence of length $n$
+it excludes $n(n-1)/2$ of the $n^2$ pairs, almost half of them.
+`causal_mask` also covers the case of fewer queries than keys, which
+arises when new tokens attend to the keys of earlier tokens kept in a
+cache (:numref:`sec_kv-cache`). The queries are then the *last* positions
+of the sequence, and query $i$ may see key $j$ when $j \leq i +
+(\textrm{keys} - \textrm{queries})$.
 
 ```{.python .input #attention-scoring-causal-masking}
 %%tab pytorch
-torch.manual_seed(0)
+def causal_mask(num_queries, num_keys=None, device=None):  #@save
+    """Boolean (queries, keys) mask, True where a query may see a key."""
+    # Queries are the last positions, as when new tokens attend to a
+    # cache: query i sees key j if j <= i + num_keys - num_queries
+    num_keys = num_queries if num_keys is None else num_keys
+    i = torch.arange(num_queries, device=device)[:, None]
+    j = torch.arange(num_keys, device=device)[None, :]
+    return j <= i + (num_keys - num_queries)
+
 scores = torch.randn(1, 6, 6)
-causal_lens = torch.arange(1, 7)[None, :]  # query t sees keys 1..t
-d2l.show_heatmaps(masked_softmax(scores, causal_lens)[None],
+d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
                   xlabel='Keys', ylabel='Queries')
 ```
 
 ```{.python .input #attention-scoring-causal-masking}
 %%tab jax
-scores = jax.random.normal(jax.random.key(2), (1, 6, 6))
-causal_lens = jnp.arange(1, 7)[None, :]  # query t sees keys 1..t
-d2l.show_heatmaps(masked_softmax(scores, causal_lens)[None],
+def causal_mask(num_queries, num_keys=None):  #@save
+    """Boolean (queries, keys) mask, True where a query may see a key."""
+    # Queries are the last positions, as when new tokens attend to a
+    # cache: query i sees key j if j <= i + num_keys - num_queries
+    num_keys = num_queries if num_keys is None else num_keys
+    i = jnp.arange(num_queries)[:, None]
+    j = jnp.arange(num_keys)[None, :]
+    return j <= i + (num_keys - num_queries)
+
+scores = jax.random.normal(d2l.get_key(), (1, 6, 6))
+d2l.show_heatmaps(masked_softmax(scores, causal_mask(6))[None],
                   xlabel='Keys', ylabel='Queries')
 ```
 
-This triangular mask lets a generative model train all sequence positions in
-parallel without exposing future tokens. Generation additionally requires a
-shifted next-token objective and a decoding loop. The mask will accompany us through
-every decoder in the chapters ahead.
+The first query attends only to itself, and each later query spreads its
+weight over itself and its predecessors. The triangle lets a model train
+on all positions of a sequence in parallel without showing any position
+its future. Every decoder in the following chapters uses it.
 
 ### Composing Masks
 :label:`subsec_composing-masks`
 
-`valid_lens` describes prefixes, which cover the two cases above, but the
-general interface is a boolean tensor: entry $(i, j)$ says whether query $i$
-may attend to key $j$. Every requirement takes this form — padding excludes
-keys beyond the sequence length, causality excludes keys beyond the query,
-and structural patterns such as the attention windows of
-:numref:`sec_attention-at-scale` exclude by distance — and a key must
-survive *all* requirements at once, so masks compose by logical AND.
-Broadcasting keeps the bookkeeping cheap: a padding mask has shape
-$(\textrm{batch}, 1, \textrm{keys})$, a causal mask
-$(1, \textrm{queries}, \textrm{keys})$, and their AND broadcasts to the full
-$(\textrm{batch}, \textrm{queries}, \textrm{keys})$ without materializing
-either input per example. Applying the composite is the same idiom as
-before: overwrite the excluded scores with the dtype's most negative finite
-value, then softmax.
+Each requirement excludes some pairs. Padding excludes the keys beyond a
+sequence's length, causality the keys after the query, and the attention
+windows of :numref:`sec_attention-at-scale` the keys too far from it. A
+pair is allowed only if every requirement allows it, so masks compose by
+logical AND. Broadcasting keeps the composite small. A padding mask of
+shape (batch, 1, keys) and a causal mask of shape (queries, keys) combine
+into a mask of shape (batch, queries, keys), and neither is copied per
+example or per query before the AND (:numref:`fig_mask-algebra`).
+
+![Masks compose by logical AND. For a sequence of length 6 with valid length 3, the padding mask stores one row of keys, which broadcasting repeats for every query (faint); the causal mask is a lower triangle; their AND allows a pair only if both do. Rows are queries, columns are keys, and filled entries are allowed.](../img/mdl-attention-mask-algebra.svg)
+:label:`fig_mask-algebra`
+
+Here are the weights for a minibatch of two sequences of length $6$ with
+valid lengths $6$ and $3$:
 
 ```{.python .input #attention-scoring-composing-masks}
 %%tab pytorch
-valid_lens, n = torch.tensor([6, 3]), 6
-j = torch.arange(n)
-padding = (j[None, :] < valid_lens[:, None])[:, None, :]  # (batch, 1, key)
-causal = (j[None, :] <= j[:, None])[None, :, :]         # (1, query, key)
-mask = padding & causal                                 # (batch, query, key)
-torch.manual_seed(0)
-scores = torch.randn(2, n, n)
-weights = F.softmax(
-    scores.masked_fill(~mask, torch.finfo(scores.dtype).min), dim=-1)
-d2l.show_heatmaps(weights[:, None], xlabel='Keys', ylabel='Queries')
+n = 6
+padding = padding_mask(torch.tensor([6, 3]), n)  # (batch, 1, key)
+causal = causal_mask(n)                          # (query, key)
+mask = padding & causal                          # (batch, query, key)
+weights = masked_softmax(torch.randn(2, n, n), mask)
+d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
+                  titles=['valid length 6', 'valid length 3'],
+                  figsize=(5, 2.5))
 ```
 
 ```{.python .input #attention-scoring-composing-masks}
 %%tab jax
-valid_lens, n = jnp.array([6, 3]), 6
-j = jnp.arange(n)
-padding = (j[None, :] < valid_lens[:, None])[:, None, :]  # (batch, 1, key)
-causal = (j[None, :] <= j[:, None])[None, :, :]         # (1, query, key)
-mask = padding & causal                                 # (batch, query, key)
-scores = jax.random.normal(jax.random.key(0), (2, n, n))
-weights = jax.nn.softmax(
-    jnp.where(mask, scores, jnp.finfo(scores.dtype).min), axis=-1)
-d2l.show_heatmaps(weights[:, None], xlabel='Keys', ylabel='Queries')
+n = 6
+padding = padding_mask(jnp.array([6, 3]), n)  # (batch, 1, key)
+causal = causal_mask(n)                       # (query, key)
+mask = padding & causal                       # (batch, query, key)
+weights = masked_softmax(jax.random.normal(d2l.get_key(), (2, n, n)), mask)
+d2l.show_heatmaps(weights[None], xlabel='Keys', ylabel='Queries',
+                  titles=['valid length 6', 'valid length 3'],
+                  figsize=(5, 2.5))
 ```
 
-The first sequence shows the plain causal triangle; the second is cut off
-at its valid length of $3$, the intersection of both constraints. Composition
-sharpens the fully-masked hazard flagged above: masks that are harmless
-alone can leave some query with an empty intersection, so the guarantee of
-at least one valid key per query must hold for the *composite*. The same mask composition handles *packed sequences*, in which several
-documents are concatenated into one training row. ANDing the causal mask
-with a block-diagonal mask prevents attention across document boundaries.
+The first sequence shows the plain causal triangle. The second has valid
+length $3$, so every row stops at the third key. Composition makes empty
+rows more likely. Masks that each leave every query a key can still have
+an empty intersection, so the guarantee of a valid key must hold for the
+composite mask.
+
+The same algebra handles *packed sequences*. Padding many short documents
+to a common length wastes computation on the padding, so training
+pipelines concatenate documents into one row instead. A mask that allows a
+pair only within one document, ANDed with the causal mask, keeps the
+documents apart. Here a row of length $6$ holds three documents of
+lengths $3$, $2$, and $1$:
+
+```{.python .input #attention-scoring-composing-masks-1}
+%%tab pytorch
+doc = torch.tensor([0, 0, 0, 1, 1, 2])  # Document of each position
+same_doc = doc[:, None] == doc[None, :]
+packed = same_doc & causal_mask(6)
+d2l.show_heatmaps(packed.float()[None, None], xlabel='Keys',
+                  ylabel='Queries')
+```
+
+```{.python .input #attention-scoring-composing-masks-1}
+%%tab jax
+doc = jnp.array([0, 0, 0, 1, 1, 2])  # Document of each position
+same_doc = doc[:, None] == doc[None, :]
+packed = same_doc & causal_mask(6)
+d2l.show_heatmaps(packed.astype(jnp.float32)[None, None], xlabel='Keys',
+                  ylabel='Queries')
+```
+
+The composite mask is block diagonal, with one causal triangle per
+document: each position attends only to the earlier positions of its own
+document.
 
 ## Batched Attention
 
@@ -384,200 +452,241 @@ with a block-diagonal mask prevents attention across document boundaries.
 :label:`subsec_batch_dot`
 
 Attention is computed on minibatches of queries, keys, and values, so we
-need to multiply batches of matrices by one another. Assume that
+need to multiply batches of matrices with each other. Consider two
+batches of $n$ matrices each,
 
 $$
 \mathbf{Q} = [\mathbf{Q}_1, \mathbf{Q}_2, \ldots, \mathbf{Q}_n]  \in \mathbb{R}^{n \times a \times b}, \qquad
 \mathbf{K} = [\mathbf{K}_1, \mathbf{K}_2, \ldots, \mathbf{K}_n]  \in \mathbb{R}^{n \times b \times c}.
 $$
 
-Then the batch matrix multiplication (BMM) computes one matrix product per
+The *batch matrix multiplication* (BMM) computes one matrix product per
 batch element,
 
 $$\textrm{BMM}(\mathbf{Q}, \mathbf{K}) = [\mathbf{Q}_1 \mathbf{K}_1, \mathbf{Q}_2 \mathbf{K}_2, \ldots, \mathbf{Q}_n \mathbf{K}_n] \in \mathbb{R}^{n \times a \times c}.$$
 :eqlabel:`eq_batch-matrix-mul`
 
-A framework batch-matrix multiplication has the expected shape:
+The `@` operator computes it. It batches over any number of leading
+axes, which the attention layers of the next sections use for their extra
+axis of heads.
 
 ```{.python .input #attention-scoring-batch-matrix-multiplication}
 %%tab pytorch
 Q = torch.ones((2, 3, 4))
 K = torch.ones((2, 4, 6))
-d2l.check_shape(torch.bmm(Q, K), (2, 3, 6))
+d2l.check_shape(Q @ K, (2, 3, 6))
 ```
 
 ```{.python .input #attention-scoring-batch-matrix-multiplication}
 %%tab jax
 Q = jnp.ones((2, 3, 4))
 K = jnp.ones((2, 4, 6))
-d2l.check_shape(jax.lax.batch_matmul(Q, K), (2, 3, 6))
+d2l.check_shape(Q @ K, (2, 3, 6))
 ```
+
+:begin_tab:`pytorch`
+`torch.bmm(Q, K)` computes the same product for arrays with exactly one
+batch axis. The `@` operator, short for `torch.matmul`, also accepts any
+number of leading axes and broadcasts them.
+:end_tab:
+
+:begin_tab:`jax`
+The `@` operator is short for `jnp.matmul`, which treats every axis before
+the last two as a batch axis and broadcasts them.
+:end_tab:
 
 ### The DotProductAttention Class
 :label:`subsec_dot-product-attention-class`
 
-Scaled dot-product attention can now be written in its matrix form. For $n$ queries and $m$ key--value pairs, with queries
-and keys of length $d$ and values of length $v$, stack the queries into
-$\mathbf{Q} \in \mathbb{R}^{n \times d}$, the keys into $\mathbf{K} \in
-\mathbb{R}^{m \times d}$, and the values into $\mathbf{V} \in
-\mathbb{R}^{m \times v}$. Then the entire attention computation is two
-matrix products and a softmax:
+Scaled dot-product attention can now be written for many queries at once.
+For $n$ queries and $m$ key--value pairs, with queries and keys of width
+$d$ and values of width $d_v$, stack the queries into $\mathbf{Q} \in
+\mathbb{R}^{n \times d}$, the keys into $\mathbf{K} \in \mathbb{R}^{m
+\times d}$, and the values into $\mathbf{V} \in \mathbb{R}^{m \times
+d_v}$. The whole computation is two matrix products and a softmax
+(:numref:`fig_attention-shapes`):
 
-$$ \mathrm{softmax}\left(\frac{\mathbf{Q} \mathbf{K}^\top }{\sqrt{d}}\right) \mathbf{V} \in \mathbb{R}^{n \times v}.$$
+$$ \mathrm{softmax}\left(\frac{\mathbf{Q} \mathbf{K}^\top }{\sqrt{d}}\right) \mathbf{V} \in \mathbb{R}^{n \times d_v}.$$
 :eqlabel:`eq_softmax_QK_V`
 
-Requiring queries and keys to share the length $d$ is no real restriction:
-a learned matrix $\mathbf{M}$ turns $\mathbf{q}^\top \mathbf{k}$ into
-$\mathbf{q}^\top \mathbf{M} \mathbf{k}$ and translates between spaces of
-different dimension. Applied to a minibatch,
-:eqref:`eq_softmax_QK_V` uses the batch matrix multiplication of
-:eqref:`eq_batch-matrix-mul` twice. The implementation applies dropout to
-the attention weights as regularization, and stores the weights for
-visualization:
+![Shapes in scaled dot-product attention. $\mathbf{Q}\mathbf{K}^\top/\sqrt{d}$ holds the scores of all $n \times m$ query--key pairs; masking and a softmax over each row turn them into the weights $\mathbf{A}$ (here with a causal mask, which leaves the upper triangle empty); multiplying by $\mathbf{V}$ gives one weighted sum of values per query.](../img/mdl-attention-shapes.svg)
+:label:`fig_attention-shapes`
+
+The softmax normalizes each row of the score matrix, so row $i$ of the
+output is the attention :eqref:`eq_attention_pooling` of query $i$. The
+cost is visible in the shapes. For the GPT-2 head at a context of $n = m
+= 1{,}024$ with $d = d_v = 64$, the score matrix holds $1{,}048{,}576$
+entries, 4 MiB in single precision, and the two products take $2 \cdot 2
+n^2 d \approx 0.27$ billion floating-point operations. Both numbers grow
+with the square of the context length, which is the subject of
+:numref:`sec_attention-at-scale`.
+
+Queries and keys must have the same width $d$. That is no restriction in
+practice, because the queries and keys of a network are computed from its
+inputs by learned linear maps, which can map to any common width
+(:numref:`sec_multihead-attention`). On a minibatch,
+:eqref:`eq_softmax_QK_V` uses the batch matrix multiplication
+:eqref:`eq_batch-matrix-mul` twice. The class applies dropout to the
+attention weights as a regularizer and keeps the weights of its last call
+in `attention_weights` for inspection.
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-1}
 %%tab pytorch
 class DotProductAttention(nn.Module):  #@save
-    """Scaled dot product attention."""
-    def __init__(self, dropout):
+    """Scaled dot-product attention over the last two axes."""
+    def __init__(self, dropout=0.0):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
+        self.attention_weights = None
 
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def forward(self, queries, keys, values, valid_lens=None):
+    # Leading axes (batch, and heads if present) are carried along.
+    # Shape of queries: (..., no. of queries, d)
+    # Shape of keys: (..., no. of key-value pairs, d)
+    # Shape of values: (..., no. of key-value pairs, value dimension)
+    # mask: boolean, broadcastable to (..., no. of queries, no. of keys),
+    # True where a query may attend to a key
+    def forward(self, queries, keys, values, mask=None):
         d = queries.shape[-1]
-        # Swap the last two dimensions of keys with keys.transpose(1, 2)
-        scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return torch.bmm(self.dropout(self.attention_weights), values)
+        scores = queries @ keys.transpose(-2, -1) / math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, mask)
+        return self.dropout(self.attention_weights) @ values
 ```
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-1}
 %%tab jax
 class DotProductAttention(nnx.Module):  #@save
-    """Scaled dot product attention."""
-    def __init__(self, dropout, rngs=None):
-        rngs = nnx.Rngs(dropout=0) if rngs is None else rngs
+    """Scaled dot-product attention over the last two axes."""
+    def __init__(self, dropout=0.0, *, rngs=None):
+        # rngs is needed only to draw dropout masks (dropout > 0)
         self.dropout = nnx.Dropout(dropout, rngs=rngs)
+        # A Variable, so that views of the module (nnx.view) share it
+        self.last_weights = nnx.Intermediate(None)
 
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def __call__(self, queries, keys, values, valid_lens=None):
+    # Leading axes (batch, and heads if present) are carried along.
+    # Shape of queries: (..., no. of queries, d)
+    # Shape of keys: (..., no. of key-value pairs, d)
+    # Shape of values: (..., no. of key-value pairs, value dimension)
+    # mask: boolean, broadcastable to (..., no. of queries, no. of keys),
+    # True where a query may attend to a key
+    def __call__(self, queries, keys, values, mask=None):
         d = queries.shape[-1]
-        # Swap the last two dimensions of keys with keys.swapaxes(1, 2)
-        scores = queries@(keys.swapaxes(1, 2)) / math.sqrt(d)
-        attention_weights = masked_softmax(scores, valid_lens)
-        # NNX idiom: return (output, weights); PyTorch stores weights on self
-        return self.dropout(attention_weights) @ values, attention_weights
+        scores = queries @ keys.swapaxes(-2, -1) / math.sqrt(d)
+        weights = masked_softmax(scores, mask)
+        if not isinstance(weights, jax.core.Tracer):
+            # Record the weights of eager calls for inspection; inside
+            # jit-compiled code skip it, so the module state keeps a
+            # fixed structure and the compiled step is reused
+            self.last_weights.set_value(weights)
+        return self.dropout(weights) @ values
+
+    @property
+    def attention_weights(self):
+        """Weights of the last eager call: (..., queries, keys)."""
+        return self.last_weights.get_value()
 ```
 
-To see the class at work we use a minibatch of size $2$, with $10$ keys and
-values of dimension $4$, a single $2$-dimensional query per example, and
-valid lengths of $2$ and $6$. The output is one $4$-dimensional row per
-query:
+:begin_tab:`jax`
+The weights live in an `nnx.Intermediate` variable rather than in a plain
+attribute, so that a view of the module created with `nnx.view` shares
+them with the original. The class records them only in eager calls. Under
+`nnx.jit` the weights are abstract values of a function being compiled.
+Storing them would change the structure of the module's state between
+calls and force a new compilation. It would also make every compiled
+training step hand back the full (queries, keys) weight array of every
+layer, memory that the step otherwise frees as soon as the weights have
+been used. The record therefore keeps its previous value under `jit`, and
+we call the module outside `jit` when we want to look at its weights.
+:end_tab:
+
+We test the class on a minibatch of two sequences, each with one query of
+width $2$ and ten key--value pairs with values of width $4$, and with
+valid lengths $2$ and $6$. Evaluation mode switches dropout off. The
+output has one row of width $4$ per query.
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-2}
 %%tab pytorch
-torch.manual_seed(0)
 queries = torch.randn(2, 1, 2)
 keys = torch.randn(2, 10, 2)
 values = torch.randn(2, 10, 4)
-valid_lens = torch.tensor([2, 6])
+mask = padding_mask(torch.tensor([2, 6]), 10)
 
 attention = DotProductAttention(dropout=0.5)
 attention.eval()
-d2l.check_shape(attention(queries, keys, values, valid_lens), (2, 1, 4))
+d2l.check_shape(attention(queries, keys, values, mask), (2, 1, 4))
 ```
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-2}
 %%tab jax
-queries = jax.random.normal(jax.random.key(0), (2, 1, 2))
-keys = jax.random.normal(jax.random.key(1), (2, 10, 2))
-values = jax.random.normal(jax.random.key(2), (2, 10, 4))
-valid_lens = jnp.array([2, 6])
+queries = jax.random.normal(d2l.get_key(), (2, 1, 2))
+keys = jax.random.normal(d2l.get_key(), (2, 10, 2))
+values = jax.random.normal(d2l.get_key(), (2, 10, 4))
+mask = padding_mask(jnp.array([2, 6]), 10)
 
-attention = DotProductAttention(dropout=0.5)
-output, attention_weights = nnx.view(
-    attention, deterministic=True)(queries, keys, values, valid_lens)
-d2l.check_shape(output, (2, 1, 4))
+attention = DotProductAttention(dropout=0.5,
+                                rngs=nnx.Rngs(d2l.get_key()))
+attention.eval()
+d2l.check_shape(attention(queries, keys, values, mask), (2, 1, 4))
 ```
 
-The stored attention weights confirm the effect of the mask: weights
-vanish beyond the second and sixth key, respectively.
+The stored weights confirm the mask. Each row holds the weights of one
+sequence's query, and they vanish beyond the second and the sixth key,
+respectively.
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-3}
-%%tab pytorch
+%%tab pytorch, jax
 d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
-                  xlabel='Keys', ylabel='Queries')
-```
-
-```{.python .input #attention-scoring-the-dotproductattention-class-3}
-%%tab jax
-d2l.show_heatmaps(attention_weights.reshape((1, 1, 2, 10)),
-                  xlabel='Keys', ylabel='Queries')
+                  xlabel='Keys', ylabel='Sequences', figsize=(4, 1.6))
 ```
 
 ## Attention as Learned Alignment
 :label:`subsec_learned-alignment`
 
-Learned attention first became prominent in neural machine translation.
-Around 2014, the leading neural approach encoded a source
-sentence with an RNN into a single fixed-size state vector and decoded the
-translation from that vector with a second RNN (we build such
-encoder--decoder models in full in :numref:`sec_seq2seq`). The design has
-the flaw this chapter opened with: one fixed-size vector must represent the entire sentence, which becomes
-increasingly restrictive as sentences grow. Translation quality
-degraded visibly with sentence length. :citet:`Graves.2013` had faced a
-version of this problem when generating handwriting from text, and solved
-it with a differentiable model that *aligned* each output pen stroke with a
-position in the source text—though with the constraint that the alignment
-could only move forward, an assumption borrowed from decoding in speech
-recognition :cite:`rabiner1993fundamentals`.
+Learned attention first appeared in neural machine translation. Around
+2014 the leading neural approach encoded a source sentence with an RNN
+into one fixed-size vector and decoded the translation from that vector
+with a second RNN; we build such an encoder--decoder in
+:numref:`sec_seq2seq`. This is the bottleneck of
+:numref:`sec_queries-keys-values`: one vector had to represent the whole
+sentence, and translation quality fell as sentences grew longer.
 
-:citet:`Bahdanau.Cho.Bengio.2014` removed the constraint. Their translation
-model kept the two RNNs but changed the decoder input at every step. The
-current decoder state served as a *query* against all encoder
-states, which serve as keys and values, and feed the resulting weighted
-summary—a fresh one per output token—into the next prediction. The paper's
-title called the idea "jointly learning to align and translate", and the
-learned weights behaved exactly like the soft alignments of classical
-statistical translation: mostly monotone along the diagonal, with clean
-departures where the two languages order words differently, as sketched in
-:numref:`fig_alignment`. The training objective did not directly supervise these alignments; they
-emerged while the model learned translation. This computation instantiates
-the attention mechanism in :eqref:`eq_attention_pooling`.
+:citet:`Bahdanau.Cho.Bengio.2014` kept the two RNNs but changed what the
+decoder reads. At every output step, the current decoder state served as a
+query against all encoder states, which served as keys and values. The
+weighted sum, a fresh one for every output token, entered the next
+prediction. The paper's title called this "jointly learning to align and
+translate". The learned weights resembled the soft word alignments of
+classical statistical translation: mostly monotone along the diagonal,
+with departures where the two languages order words differently, as
+sketched in :numref:`fig_alignment`. Nothing in the training objective
+asked for alignments. They emerged because they help to translate.
 
 ![Soft alignment between an English sentence and its French translation, in the style of a learned attention map (darker cells indicate larger weight; schematic). The alignment is mostly monotone, but "black cat" maps to "chat noir" with the order reversed, and both "était" and "assis" draw on "sat".](../img/mdl-attention-alignment.svg)
 :label:`fig_alignment`
 
-One detail differed from the scoring function we settled on above. The
-decoder state and the encoder states were vectors of different sizes, so
-instead of a dot product, :citet:`Bahdanau.Cho.Bengio.2014` scored with a
-small one-hidden-layer MLP, now known as *additive attention*:
+One detail differed from the score we chose above. The decoder state and
+the encoder states had different widths, so instead of a dot product,
+:citet:`Bahdanau.Cho.Bengio.2014` scored with a small network with one
+hidden layer, now called *additive attention*:
 
-$$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}) \in \mathbb{R},$$
+$$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}) \in \mathbb{R}.$$
 :eqlabel:`eq_additive-attn`
 
-where $\mathbf{W}_q \in \mathbb{R}^{h \times q}$, $\mathbf{W}_k \in
-\mathbb{R}^{h \times k}$, and $\mathbf{w}_v \in \mathbb{R}^{h}$ are learned.
-The two projections embed queries and keys into a shared $h$-dimensional
-space, and $\mathbf{w}_v$ reads a score off the sum. It takes only a few
-lines to compute—here scoring three $20$-dimensional queries against six
-$2$-dimensional keys, dimensions no dot product could pair up:
+Here $\mathbf{q} \in \mathbb{R}^{d_q}$ and $\mathbf{k} \in
+\mathbb{R}^{d_k}$ may have different widths, and the learned parameters
+are $\mathbf{W}_q \in \mathbb{R}^{r \times d_q}$, $\mathbf{W}_k \in
+\mathbb{R}^{r \times d_k}$, and $\mathbf{w}_v \in \mathbb{R}^{r}$ for a
+hidden width $r$. The two projections map queries and keys into a shared
+$r$-dimensional space, and $\mathbf{w}_v$ reads a score off their sum. We
+score three queries of width $20$ against six keys of width $2$, widths
+that no dot product could pair.
 
 ```{.python .input #attention-scoring-from-alignment-to-attention}
 %%tab pytorch
-torch.manual_seed(0)
 queries, keys = torch.randn(3, 20), torch.randn(6, 2)
-num_hiddens = 8
-W_q = torch.randn(num_hiddens, 20) / math.sqrt(20)
-W_k = torch.randn(num_hiddens, 2) / math.sqrt(2)
-w_v = torch.randn(num_hiddens) / math.sqrt(num_hiddens)
+r = 8  # Hidden width
+W_q = torch.randn(r, 20) / math.sqrt(20)
+W_k = torch.randn(r, 2) / math.sqrt(2)
+w_v = torch.randn(r) / math.sqrt(r)
 features = torch.tanh((queries @ W_q.T)[:, None, :]
                       + (keys @ W_k.T)[None, :, :])
 scores = features @ w_v
@@ -587,13 +696,13 @@ F.softmax(scores, dim=-1)
 
 ```{.python .input #attention-scoring-from-alignment-to-attention}
 %%tab jax
-key_q, key_k, k1, k2, k3 = jax.random.split(jax.random.key(0), 5)
-queries = jax.random.normal(key_q, (3, 20))
-keys = jax.random.normal(key_k, (6, 2))
-num_hiddens = 8
-W_q = jax.random.normal(k1, (num_hiddens, 20)) / math.sqrt(20)
-W_k = jax.random.normal(k2, (num_hiddens, 2)) / math.sqrt(2)
-w_v = jax.random.normal(k3, (num_hiddens,)) / math.sqrt(num_hiddens)
+queries = jax.random.normal(d2l.get_key(), (3, 20))
+keys = jax.random.normal(d2l.get_key(), (6, 2))
+r = 8  # Hidden width
+normal = lambda *shape: jax.random.normal(d2l.get_key(), shape)
+W_q = normal(r, 20) / math.sqrt(20)
+W_k = normal(r, 2) / math.sqrt(2)
+w_v = normal(r) / math.sqrt(r)
 features = jnp.tanh((queries @ W_q.T)[:, None, :]
                     + (keys @ W_k.T)[None, :, :])
 scores = features @ w_v
@@ -601,29 +710,41 @@ d2l.check_shape(scores, (3, 6))
 jax.nn.softmax(scores, axis=-1)
 ```
 
-Dot-product attention later became the standard choice partly because it maps
-efficiently to accelerator hardware. All query--key dot products form one
-matrix multiplication, whereas the additive score requires an
-$n \times m \times h$ tensor of hidden activations. When a learned metric
-is wanted, we can project queries and keys with learned matrices *before* the
-dot product and have it at matmul speed—which is precisely the form attention
-takes inside the Transformer, whose authors then discarded the RNN
-scaffolding altogether and kept attention as the only mechanism relating
-sequence positions :cite:`Vaswani.Shazeer.Parmar.ea.2017`. The next
-next sections develop multiple attention heads and then introduce explicit
-positional information to replace the RNN's sequential ordering.
+Each row is a distribution over the six keys. The intermediate array
+`features` has shape $3 \times 6 \times 8$, one hidden vector per
+query--key pair, and this array is why the dot product replaced the
+additive score. All dot products of queries and keys form one matrix
+multiplication, which accelerators execute fast, while the additive score
+needs an $n \times m \times r$ array of hidden activations. The dot
+product can still use a learned metric. Projecting queries and keys with
+learned matrices first leaves a score that runs at the speed of matrix
+multiplication. This is the form attention takes in the Transformer,
+whose authors dropped the recurrent networks altogether and kept attention
+as the only operation that relates positions
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`.
+
+We can now compute attention for a whole minibatch, with scores that
+learned representations can shape and with any pattern of exclusions.
+Each query, however, still forms a single weighted average, and nothing in
+the computation knows where in the sequence a key sits.
+:numref:`sec_multihead-attention` runs several lookups side by side, and
+:numref:`sec_positional-information` adds positions.
 
 ## Summary
 
-Scaled dot-product attention computes scores with one batched matrix
-multiplication. Dividing by $\sqrt d$ keeps the score variance independent of
-dimension and prevents premature softmax saturation. A mask excludes padding,
-future positions, or other invalid query--key pairs before normalization; use
-the most negative finite value of the dtype so the operation remains valid in
-reduced precision. Boolean masks for several constraints compose by logical
-AND. `DotProductAttention` combines scoring, masking, dropout, and value
-pooling. Additive attention provides an alternative learned score and was the
-form used in the original neural alignment model.
+Scaled dot-product attention scores a query against a key by
+$\mathbf{q}^\top \mathbf{k}/\sqrt{d}$, which is the Gaussian kernel without
+the norm terms, and it scores all pairs of a minibatch with one batched
+matrix multiplication. The factor $1/\sqrt{d}$ keeps the score variance
+independent of the width, so the softmax does not saturate at
+initialization merely because the vectors are long. A boolean mask
+excludes padding, future positions, or any other pairs before the
+softmax. Masks compose by logical AND under broadcasting. The excluded
+scores are overwritten with the most negative finite value of the dtype,
+which is safe in reduced precision. `DotProductAttention` combines
+scoring, masking, dropout, and the weighted sum of values. Additive
+attention, the score of the first neural alignment model, gave way to the
+dot product because the dot product is a matrix multiplication.
 
 ## Exercises
 
@@ -719,17 +840,17 @@ form used in the original neural alignment model.
        draws with the prediction computed from the weights before dropout.
 
 1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
-   stays near $3.7$ nats, below the uniform value $\ln 64 \approx 4.16$.
+   stays near $3.7$ nats, below the uniform value $\log 64 \approx 4.16$.
    Fix one query $\mathbf{q} \in \mathbb{R}^d$ and draw $m$ keys with
    independent standard normal coordinates, as `attention_stats` does.
     1. Show that the scaled scores $a_i = \mathbf{q}^\top \mathbf{k}_i /
        \sqrt{d}$ are independent normal variables with mean $0$ and variance
        $s^2 = \|\mathbf{q}\|^2 / d$, and compute the expected value of $s^2$
        when $\mathbf{q}$ is drawn as in `attention_stats`.
-    1. The entropy of the weights is $H = \ln Z - \sum_i \alpha_i a_i$ with
+    1. The entropy of the weights is $H = \log Z - \sum_i \alpha_i a_i$ with
        $Z = \sum_j \exp(a_j)$. For large $m$, replace $Z/m$ and
        $\sum_i \exp(a_i)\, a_i / m$ by their expected values and derive
-       $$H \approx \ln m - \frac{s^2}{2}.$$
+       $$H \approx \log m - \frac{s^2}{2}.$$
        Evaluate the approximation for $m = 64$ and $s = 1$.
     1. The approximation needs $Z$ to concentrate around its mean. Compute
        the relative standard deviation of $Z$ as a function of $s$ and $m$,
@@ -790,54 +911,121 @@ form used in the original neural alignment model.
 ::: {.cover}
 [Dive into Deep Learning · §10.2]{.kicker}
 
-Attention scoring and masking<br>
-**dot-product scores · the 1/√d factor, measured · masked softmax · batched attention · from alignment to attention**
+Attention Scoring and Masking<br>
+**scaled dot products · the 1/√d factor · masks and their algebra · attention as two matrix products · additive attention**
 :::
 :::
 
-::: {.slide title="From kernels to dot products"}
-Expand the Gaussian kernel's exponent:
+::: {.slide title="One Causal Head Scores a Million Pairs and Must Discard Half"}
+[The problem]{.kicker}
 
-$$-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2.$$
+One GPT-2-small head at a context of 1,024 tokens:
 
-The query term cancels in the softmax; the key-norm term cancels too when
-all key norms are equal. Keeping only the dot product is a modeling choice:
-a compatibility score that learned representations can shape freely.
+- $1{,}024^2 = 1{,}048{,}576$ query–key scores per layer;
+- a fixed kernel cannot learn which of them should be large;
+- a language model must ignore the future: $523{,}776$ scores excluded;
+- a padded minibatch must ignore the padding.
 
-. . .
-
-For unit-variance entries, $\operatorname{Var}(\mathbf{q}^\top\mathbf{k}) = d$
-— scores grow with vector length for no semantic reason. Hence the
-Transformer's scoring function:
-
-$$a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+::: {.d2l-note .warn}
+We need a learnable score that is fast for every pair, and a way to
+exclude pairs.
+:::
 :::
 
-::: {.slide title="Measured softmax saturation"}
-Random queries and keys, attention over 64 candidates, entropy of the
-weight distribution as $d$ grows:
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive the dot-product score from the Gaussian kernel;
+- explain and measure why scores are divided by $\sqrt{d}$;
+- build padding and causal masks and combine them by AND;
+- write attention for $n$ queries as two matrix products and a softmax;
+- count the scores, bytes, and FLOPs of one head.
+
+**Running example:** one GPT-2-small head, $d = 64$, context
+$n = 1{,}024$.
+:::
+
+::: {.slide title="Learned Scores, Masks, and Batching Turn Lookup into a Layer"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Queries, Keys, and Values | soft lookup by content |
+| **Attention Scoring and Masking** | **learned scores, masks, batching** |
+| Multi-Head and Cross-Attention | several lookups in parallel |
+| Positional Information | word order |
+| The Cost of Attention | quadratic cost, cheaper variants |
+| Attention Circuits | circuits in trained models |
+:::
+
+::: {.col .narrow}
+- **Uses:** soft lookup, softmax, padding of minibatches.
+- **Skips:** heads and projections (next deck), positions.
+:::
+:::
+:::
+
+::: {.slide title="The Gaussian Kernel Is a Dot Product Plus Two Norms"}
+$$-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2$$
+
+- $\|\mathbf{q}\|^2$ is the same for every key: the softmax removes it.
+- $\|\mathbf{k}_i\|^2$ drops out when all keys have equal norm.
+- Keeping only $\mathbf{q}^\top\mathbf{k}_i$ is a modeling choice: learned
+  queries and keys decide what "compatible" means.
+:::
+
+::: {.slide title="At d = 64 a Typical Unscaled Score Is ±8"}
+Entries of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ independent, mean 0,
+variance 1:
+
+$$\operatorname{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \operatorname{Var}(q_j k_j) = d$$
+
+- $d = 64$: standard deviation $8$.
+- Divide by $\sqrt{d}$: variance 1 at every width.
+
+$$a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{k} / \sqrt{d}$$
+:::
+
+::: {.slide title="Unscaled Scores Collapse the Softmax Entropy"}
+256 random queries, 64 keys each; entropy of the weights:
 
 @!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1
 
-- Uniform over 64 keys ≈ 4.2 nats; scaled scores hold ≈ 3.7 nats at every $d$.
-- Unscaled: below 0.2 nats by $d = 512$ — a near-deterministic weighting,
-  from vector length alone.
+- Uniform over 64 keys: 4.2 nats. Scaled: about 3.7 at every $d$.
+- Unscaled: about 0.2 nats at $d = 512$, nearly one-hot.
 :::
 
-::: {.slide title="Saturation reduces the softmax gradient"}
-The softmax Jacobian
-$\partial \boldsymbol{\alpha} / \partial \mathbf{a} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top$
-tends to zero as $\boldsymbol{\alpha}$ approaches one-hot:
+::: {.slide title="Saturation Shrinks the Gradient That Reaches the Scores"}
+$$\frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top \to \mathbf{0} \quad \textrm{as } \boldsymbol{\alpha} \to \textrm{one-hot}$$
 
-@attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2
+@!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2
 
-- Scaled: constant at every dimension. Unscaled: decaying — about half by
-  $d = 512$, still falling.
-- Division by $\sqrt{d}$ keeps this scale independent of dimension.
+- Scaled: the same norm at every $d$. Unscaled: larger at $d = 64$, about
+  half at $d = 512$, still falling.
+- The gradient of score $i$ carries the factor $\alpha_i$: queries and
+  keys learn only through the few keys that already carry weight.
 :::
 
-::: {.slide title="Two reasons to mask"}
-**Padding** — variable-length sequences share a minibatch:
+::: {.slide title="Check: Two Keys One Standard Deviation Apart"}
+[Check]{.kicker}
+
+In a $d = 64$ head, two keys score one standard deviation apart. What is
+the ratio of their weights without and with the factor $1/\sqrt{d}$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Unscaled, the scores differ by 8: ratio $e^8 \approx 3{,}000$.
+Scaled, they differ by 1: ratio $e \approx 2.7$. Without the factor, one
+key takes most of the weight (about 80% over 64 random keys) before
+training has begun.
+:::
+:::
+:::
+
+::: {.slide title="Padding and Causality Both Exclude Query–Key Pairs"}
+**Padding:** sequences of different lengths share a minibatch.
 
 ```
 Dive  into  Deep    Learning
@@ -845,112 +1033,173 @@ Learn to    code    <blank>
 Hello world <blank> <blank>
 ```
 
-**Causality** — a language model computes all positions in parallel, but
-query $t$ must not see keys beyond $t$.
+**Causality:** the query at position $t$ must not see keys after $t$, or
+it can copy the token it should predict.
 
-Same fix for both: overwrite invalid scores before the softmax.
+::: {.d2l-note .rule}
+One object for both: a boolean mask, true where query $i$ may attend to
+key $j$.
+:::
+:::
+
+::: {.slide title="Fill Excluded Scores with the Most Negative Finite Value"}
+| fill value | excluded key | row with every key excluded |
+|---|---|---|
+| $-10^6$ | weight 0; float16 overflows to $-\infty$ or refuses it | uniform; float16: NaN or an error |
+| $-\infty$ | weight 0 | NaN: $-\infty - (-\infty)$ |
+| `finfo(dtype).min` | weight 0 at any precision | uniform, then set to zero |
 
 ::: {.d2l-note}
-Not with $-10^6$ (overflows float16), not with $-\infty$ (a fully masked
-query → NaN). Use the dtype's most negative *finite* value.
+float16 stops at $6.5 \times 10^4$. `finfo(float16).min`
+$\approx -6.5 \times 10^4$, and its exponential underflows to exactly 0.
 :::
 :::
 
-::: {.slide title="masked_softmax"}
+::: {.slide title="The Masked Softmax Fills, Normalizes, and Zeroes Empty Rows"}
 @attention-scoring-the-masked-softmax-operation-1
+
+The mask only has to broadcast against the scores
+(…, queries, keys).
 :::
 
-::: {.slide title="Masking in action"}
-Valid lengths 2 and 3 — weights beyond the prefix are exactly zero, rows
-still sum to one:
+::: {.slide title="Valid Lengths Become a Padding Mask"}
+Two sequences, two queries, four keys; valid lengths 2 and 3:
 
 @attention-scoring-the-masked-softmax-operation-2
 
-. . .
-
-Per-query valid lengths work too:
-
-@attention-scoring-the-masked-softmax-operation-3
+- Shape (batch, 1, keys): one row per sequence, broadcast over queries.
+- Excluded weights are exactly 0; each row sums to 1.
 :::
 
-::: {.slide title="Causal masking"}
-Query $t$ sees keys $1, \ldots, t$, so the valid lengths are
-$(1, 2, \ldots, n)$. The pattern is lower triangular:
+::: {.slide title="A Causal Mask Is a Lower Triangle"}
+@!attention-scoring-causal-masking
 
-@attention-scoring-causal-masking
-
-- The mask permits parallel training over all positions without exposing
-  future tokens.
+- Query $i$ sees keys $j \le i$: $n(n-1)/2$ of $n^2$ pairs excluded.
+- With fewer queries than keys (a cache), the queries are the last
+  positions.
 :::
 
-::: {.slide title="Composing masks"}
-The general interface is a boolean tensor — entry $(i, j)$: may query $i$
-see key $j$? Requirements compose by AND, broadcasting does the bookkeeping:
-padding $(\textrm{batch}, 1, \textrm{keys})$ ∧ causal
-$(1, \textrm{queries}, \textrm{keys})$.
+::: {.slide title="Masks Compose by AND Under Broadcasting"}
+![Padding (batch, 1, keys) AND causal (queries, keys) gives (batch, queries, keys).](../img/mdl-attention-mask-algebra.svg){width=92%}
 
-@!attention-scoring-composing-masks
+A pair is allowed only if every mask allows it; no mask is copied per
+query or per example.
+:::
 
+::: {.slide title="Packed Documents Need a Block-Diagonal Mask"}
+Three documents of lengths 3, 2, 1 in one row: same document AND causal.
+
+@!attention-scoring-composing-masks-1
+
+Each position attends only to earlier positions of its own document.
+:::
+
+::: {.slide title="Check: An Empty Row"}
+[Check]{.kicker}
+
+A query's row of the composite mask is all false. What does the softmax
+return if the excluded scores are filled with $-\infty$? With
+`finfo.min`? What does `masked_softmax` return?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-The composite must still leave every query at least one valid key — masks
-that are harmless alone can intersect to an empty row.
+**Answer.** NaN, which then spreads to every later layer; a uniform
+average over invalid values; a row of zeros. Masks that are harmless
+alone can still intersect to an empty row.
 :::
 :::
-
-::: {.slide title="Batched attention"}
-Attention over a minibatch is two batched matrix multiplications and one
-softmax:
-
-$$\mathrm{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{n \times v}.$$
-
-@attention-scoring-batch-matrix-multiplication
 :::
 
-::: {.slide title="DotProductAttention"}
-The implementation combines scoring, masking, dropout on the weights, and
-value pooling:
+::: {.slide title="Attention Is Two Matrix Products and a Softmax"}
+$$\mathrm{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{n \times d_v}$$
 
-@attention-scoring-the-dotproductattention-class-1
+![Shapes of Q, K, the scores, the masked weights, V, and the output.](../img/mdl-attention-shapes.svg){width=48%}
 :::
 
-::: {.slide title="Masked attention, verified"}
-Valid lengths (2, 6): the stored weights vanish beyond the second and
-sixth key.
+::: {.slide title="The Layer Is Three Lines" only="pytorch"}
+The core of `DotProductAttention.forward`:
+
+```{.python #attention-scoring-exercises-1}
+# queries (..., n, d), keys (..., m, d), values (..., m, d_v)
+scores = queries @ keys.transpose(-2, -1) / math.sqrt(d)
+weights = masked_softmax(scores, mask)  # (..., n, m)
+output = dropout(weights) @ values      # (..., n, d_v)
+```
+
+- Leading axes (batch, later heads) are carried along by `@`.
+- The class keeps `weights` in `attention_weights` for inspection.
+:::
+
+::: {.slide title="The Layer Is Three Lines" only="jax"}
+The core of `DotProductAttention.__call__`:
+
+```{.python #attention-scoring-exercises-2}
+# queries (..., n, d), keys (..., m, d), values (..., m, d_v)
+scores = queries @ keys.swapaxes(-2, -1) / math.sqrt(d)
+weights = masked_softmax(scores, mask)  # (..., n, m)
+output = dropout(weights) @ values      # (..., n, d_v)
+```
+
+- Leading axes (batch, later heads) are carried along by `@`.
+- The class keeps `weights` in `attention_weights` for inspection.
+:::
+
+::: {.slide title="One GPT-2 Head at 1,024 Tokens: 4 MiB of Scores, 0.27 GFLOP"}
+$n = m = 1{,}024$, $d = d_v = 64$, float32:
+
+- scores: $1{,}024^2 = 1{,}048{,}576$ entries, $\times 4$ bytes = 4 MiB;
+- FLOPs: $2 \cdot n^2 d$ for $\mathbf{Q}\mathbf{K}^\top$ plus
+  $2 \cdot n^2 d_v$ for $\mathbf{A}\mathbf{V}$ $\approx 0.27$ billion.
+
+**Check.** How large is the score matrix at $n = 8{,}192$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+$8{,}192^2 \times 4$ bytes = 256 MiB per head and layer: 64 times more
+for 8 times the context.
+:::
+:::
+:::
+
+::: {.slide title="DotProductAttention Keeps Its Weights for Inspection"}
+Batch of 2, one query each, 10 keys, valid lengths 2 and 6:
 
 @!attention-scoring-the-dotproductattention-class-3
+
+- The layer: scores, masked softmax, dropout on the weights, weighted sum.
+- `attention_weights` holds the weights of the last call.
 :::
 
-::: {.slide title="Attention as learned alignment"}
-[Machine translation]{.kicker}
+::: {.slide title="Learned Attention Began as Alignment in Translation"}
+[2014]{.kicker}
 
-In 2014 neural machine translation, one fixed vector connected the encoder
-and decoder RNNs, restricting the representation of long sentences. Bahdanau, Cho & Bengio: let the decoder state
-*query* all encoder states, one fresh summary per output token —
-"jointly learning to align and translate".
+An RNN encoder squeezed each source sentence into one vector; quality fell
+with sentence length. Bahdanau, Cho, and Bengio let the decoder state
+query all encoder states, a fresh weighted sum per output word.
 
-![Learned weights behave like soft alignments — monotone, except where the languages reorder words.](../img/mdl-attention-alignment.svg){width=46%}
+![The learned weights resembled soft word alignments.](../img/mdl-attention-alignment.svg){width=34%}
 :::
 
-::: {.slide title="Additive scoring"}
-Decoder state and encoder states had different sizes, so the original
-score was a tiny MLP:
+::: {.slide title="Additive Attention Scores Vectors of Different Widths"}
+$$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k})$$
 
-$$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}).$$
+$\mathbf{W}_q \in \mathbb{R}^{r \times d_q}$, $\mathbf{W}_k \in
+\mathbb{R}^{r \times d_k}$, $\mathbf{w}_v \in \mathbb{R}^{r}$: a network
+with one hidden layer of width $r$.
 
-@attention-scoring-from-alignment-to-attention
-
-- Dot products are efficient on current hardware: one matrix multiplication
-  instead of an $n \times m \times h$ tensor of activations. Learned
-  projections followed by a dot product give the metric
-  back, which gives the form used in the Transformer.
+- It needs an $n \times m \times r$ array of hidden activations.
+- The dot product is one matrix multiplication; learned projections
+  before it recover a learned metric.
 :::
 
-::: {.slide title="Recap"}
-- Scaled dot product is the standard scoring function:
-  $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$ keeps score variance at 1, so the
-  softmax avoids dimension-induced saturation and small score gradients.
-- Masking handles padding and causality with one primitive: overwrite
-  invalid scores with the dtype's most negative finite value.
-- `DotProductAttention` uses BMM, masked softmax, dropout, and a second BMM.
-- Additive attention introduced learned soft alignment for translation.
+::: {.slide title="Wrap-up"}
+- Score $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$: the Gaussian kernel without
+  the norms; at $d = 64$ the factor turns a ±8 score into ±1.
+- Unscaled scores saturate the softmax: about 0.2 nats of entropy at
+  $d = 512$ instead of 3.7.
+- Masks are booleans that compose by AND; fill with the dtype's most
+  negative finite value; empty rows become zeros.
+- One GPT-2 head at 1,024 tokens: 1M scores, 4 MiB, 0.27 GFLOP.
+
+**Next:** several heads, each with its own learned projections.
 :::

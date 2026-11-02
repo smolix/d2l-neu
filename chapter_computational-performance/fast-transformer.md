@@ -587,15 +587,12 @@ class Bf16GPT(d2l.GPT):
     refuses mixed inputs), so cast them back after rope."""
     class CausalAttention(d2l.GPT.CausalAttention):
         def __call__(self, X, *_):
-            B, T, D = X.shape
-            q, k, v = jnp.split(self.W_qkv(X), 3, axis=-1)
-            q, k, v = (u.reshape(B, T, self.num_heads, -1)
-                       for u in (q, k, v))
-            if self.rope:
-                q, k = self._rope(q), self._rope(k)
+            q, k, v = self.qkv(X)
             q, k = q.astype(v.dtype), k.astype(v.dtype)
-            Y = jax.nn.dot_product_attention(q, k, v, is_causal=True)
-            return self.W_o(Y.reshape(B, T, D)), None
+            Y = jax.nn.dot_product_attention(
+                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
+                is_causal=True)
+            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
 
 def make_bf16_gpt():
     return Bf16GPT(vocab_size, num_hiddens=512, num_blks=6,

@@ -660,8 +660,9 @@ ranks = list(range(1, 9))
 mean_shares = [[sum(rank) / len(rank) for rank in zip(*s)]
                for s in shares.values()]  # Mean over the layers
 d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
-         'share of tokens', legend=list(shares) + ['even share'],
-         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'))
+         'share of tokens', fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'))
+d2l.plt.legend(list(shares) + ['even share'], loc='center left',
+               bbox_to_anchor=(1, 0.5))  # Beside the curves, not over them
 d2l.plt.xticks(ranks);
 ```
 
@@ -675,13 +676,14 @@ five is a space. In the second block, attention has added to every
 position nearly the same average of the earlier bytes, and this
 common offset tilts most tokens toward the same expert. Training without
 balancing does not undo the imbalance. The routing stays concentrated: the
-busiest expert of a layer receives several times its even share, some
+busiest expert of a layer receives about twice its even share or more, some
 experts receive almost none, and the buffers keep dropping the tokens that
 the busy experts have no room for.
 
-Both remedies spread the tokens much more evenly and drop few assignments,
-and both runs end with a lower validation loss than the unbalanced one. In
-the unbalanced model, experts that receive almost no tokens add parameters
+Both remedies spread the tokens much more evenly and drop few assignments.
+Both runs end at or below the validation loss of the unbalanced one, and
+the further that run has collapsed, the wider the gap. In the unbalanced
+model, experts that receive almost no tokens add parameters
 that the model hardly uses, and many tokens skip their expert altogether.
 At this scale neither remedy ends consistently ahead of the other. Their
 difference shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
@@ -759,8 +761,9 @@ expert's output is scaled by a probability near $1/8$, so the expert
 layers start out much weaker than the dense feed-forward networks, and
 each expert learns from only an eighth of the tokens. As the dense model
 runs out of capacity, its curve flattens, while the mixture keeps
-improving. Its validation loss falls below the dense model's after about
-2,000 steps and stays below it to the end, by a few hundredths of a nat.
+improving. Its validation loss falls below the dense model's after one
+to two thousand steps and stays below it to the end, by a few hundredths
+of a nat.
 At the same computation per token, the stored experts make a better
 model. Large studies report the same effect. The Switch transformer reached the quality of a dense T5
 model several times faster at the same number of operations per token, and
@@ -1082,7 +1085,7 @@ Can a model store many parameters but run only the few each token needs?
 - explain fine-grained and shared experts.
 
 **Running example:** GPT-2 small with eight experts per block, then our
-4.8M-parameter byte-level GPT.
+small byte-level GPT.
 :::
 
 ::: {.slide title="More Parameters per Operation"}
@@ -1276,8 +1279,9 @@ Wikipedia articles (WikiText-103); first a fresh model:
 ::: {.slide title="Both Remedies Even Out the Load; No Balancing Stays Skewed"}
 @!moe-three-runs-one-budget-4
 
-- No balancing: busy experts keep several times their share.
-- Both remedies: shares near $1/8$, few drops, lower validation loss.
+- No balancing: the busiest expert keeps about twice its share or more.
+- Both remedies: shares near $1/8$, few drops, validation loss at or below
+  the unbalanced run's.
 :::
 
 ::: {.slide title="Check: What Is the Balancing Loss Here?"}
@@ -1307,8 +1311,8 @@ $\alpha = 0.01$, capacity factor 1.25:
 @!moe-a-mixture-of-experts-gpt
 
 - 6,000 steps, about 50M bytes, more than 100 per dense parameter.
-- The mixture starts behind, crosses after about 2,000 steps, and stays
-  below.
+- The mixture starts behind, crosses after one to two thousand steps, and
+  stays below.
 :::
 
 ::: {.slide title="Check: How Much Text Does One Expert See?"}

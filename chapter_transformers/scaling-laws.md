@@ -314,9 +314,9 @@ slope, intercept = np.polyfit(x[:3], np.log(val[budgets[-1]][:3]), 1)
 line = np.exp(intercept + slope * x)
 d2l.plot(Ns, [val[s] for s in budgets] + [line],
          'non-embedding parameters N', 'validation loss (nats)',
-         legend=[f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
-         + ['power law'], xscale='log', yscale='log',
-         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
+         xscale='log', yscale='log', fmts=('C0o-', 'C1s-', 'C2^-', 'k--'))
+d2l.plt.legend([f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
+               + ['power law'], loc='center left', bbox_to_anchor=(1, 0.5))
 print(f'slope {slope:.3f}; the largest model lies '
       f'{val[budgets[-1]][-1] - line[-1]:.3f} nats above the line')
 ```

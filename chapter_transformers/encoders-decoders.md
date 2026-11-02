@@ -790,10 +790,10 @@ Whether the maps show the anti-diagonal predicted by the third panel of
 averaged over heads, the argmax lands on the true source position in
 almost every row, with most of the softmax mass concentrated there. In
 others it lands there in only a minority of rows, or in none, although the
-model still reverses every string. The last line of the output shows what
-all runs share. Each target position reads from one source column, the
-same for nearly every string, so the decoder does retrieve by position, as
-the task requires. But the encoder has a position table of its own, and its
+model still reverses essentially every string. The last line of the output
+shows what all runs share. Each target position reads mainly from one
+source column, the same for most strings and in many runs for nearly all,
+so the decoder does retrieve by position, as the task requires. But the encoder has a position table of its own, and its
 self-attention can move every letter to another position before the
 decoder reads it. Any such rearrangement, undone by the cross-attention,
 reverses the string just as well, and training settles on one of them at
@@ -1001,8 +1001,8 @@ that represents each token using context from both directions. In our
 byte-level experiment, positions with context on both sides have about a
 third less loss than positions with only left context. An encoder--decoder
 connects an unmasked encoder to a causal decoder through cross-attention; on
-a reversal task, it reads each target position from one fixed source
-position, the anti-diagonal of the task or, when the encoder has first moved
+a reversal task, it reads each target position mainly from one fixed
+source position, the anti-diagonal of the task or, when the encoder has first moved
 the letters, a rearrangement of it. Cross-attention can also use a learned
 latent array as its queries. Reading a length-$N$ input into $M$ latents
 costs $O(MN)$ rather than $O(N^2)$, and for fixed $M$ its measured runtime
@@ -1412,7 +1412,7 @@ starts, but padded source positions must receive zero weight.
 :::
 :::
 
-::: {.slide title="600 Steps Reverse Every String"}
+::: {.slide title="600 Steps Reverse Nearly Every String"}
 One encoder block, one decoder block, batches of 128 fresh strings:
 
 @!encoders-decoders-training-and-decoding-1
@@ -1425,8 +1425,9 @@ Greedy decoding: the encoder runs once, the decoder once per token.
 ::: {.slide title="The Map Is the Anti-Diagonal or a Rearrangement of It"}
 @!encoders-decoders-reading-the-alignment
 
-Each row reads one fixed source column. If the encoder has moved the
-letters first, the map shows a rearrangement of the anti-diagonal.
+Each row reads mainly one source column, the same for most strings. If
+the encoder has moved the letters first, the map shows a rearrangement of
+the anti-diagonal.
 :::
 
 ::: {.slide title="Learned Queries Read N Inputs at Cost O(MN)"}
@@ -1498,7 +1499,7 @@ $N = 1024$ the two are comparable.
   cross-attention.
 - Masked prediction trains the encoder; a masked byte costs about a third
   less with both sides of context than with one.
-- On reversal, the encoder--decoder reverses fresh strings without error;
+- On reversal, the encoder--decoder reverses nearly every fresh string;
   its cross-attention reads by position, along the anti-diagonal or a
   rearrangement of it made by the encoder.
 - $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the

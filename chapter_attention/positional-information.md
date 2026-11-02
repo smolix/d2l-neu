@@ -697,9 +697,9 @@ for pos in schemes:
 
 At the training length, every explicit scheme gives a lower perplexity than
 NoPE, and the sinusoidal table and RoPE give the lowest. Beyond the training
-length the schemes split into two groups. The sinusoidal table and RoPE
-degrade several-fold at context 512, and the learned table less steeply but
-clearly, each for its own reason. The learned
+length the schemes split into two groups. The learned table, the
+sinusoidal table, and RoPE all degrade at context 512, by up to
+several-fold, each for its own reason. The learned
 table reaches rows beyond position 127 that still hold their random
 initialization. The sinusoidal table supplies rows whose slow columns take
 values never seen in training. RoPE adds no position vector, but its slow
@@ -789,8 +789,10 @@ Rescaling only the slow pairs brings the perplexity at context 512 far
 below that of the unscaled model, and close to its level at the training
 length. The uniform factor fails on this model. It compresses the fast
 pairs too, blurs the distinctions between neighboring bytes that they were
-trained to make, and raises the perplexity at every context, so at 512 it
-gains nothing reliable over leaving the angles alone. This is the defect
+trained to make. The perplexity jumps already at the training length and
+stays at that high level at every context, so at 512 it gains nothing
+reliable over leaving the angles alone and remains far above the rescaling
+of the slow pairs. This is the defect
 that YaRN's split into fast and slow pairs removes. Even so, at context
 512 neither rescaled model reaches the perplexity that the unscaled model
 has at the training length, because no weight was trained on compressed
@@ -1366,8 +1368,8 @@ The trained RoPE model, angle factors changed, no weight updated:
 @!positional-information-extending-a-trained-model-s-context
 
 ::: {.d2l-note}
-Rescaling all pairs blurs neighbors and costs at every length; leaving the
-fast pairs alone keeps them apart. A short fine-tune at the new length
+Rescaling all pairs blurs neighbors and costs already at the training
+length; leaving the fast pairs alone keeps them apart. A short fine-tune at the new length
 completes the recipe.
 :::
 :::

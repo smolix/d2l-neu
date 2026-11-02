@@ -4,93 +4,146 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6fbae90c0703a287eb16161ad5133a70d802cd49799607498d2c968bb5fbd760",
+    "d2l_lib_fingerprint": "sha256:f6c671b20a94ebec126718a94c1f3fe6a20967dc408a56645d6e84c7ee1b8a24",
     "max_inline_bytes": 0
   },
   "cells": {
     "gpt-a-gpt-from-scratch": {
-      "code_fingerprint": "sha256:eac6c08409322f365ff8ad4d05cdef18b7ea73945bd0bd1ee7cb9ed6eb49c09b",
+      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-1": {
-      "code_fingerprint": "sha256:0dbaa0b1467c5f593a60dcdcb1db63f5dff00c3f71add896c9dbf0798d2a0422",
+      "code_fingerprint": "sha256:9d43d8a1fc6465f8497993be770930e7bb8c7663af064c2a564726ca0efc48e0",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-2": {
-      "code_fingerprint": "sha256:7131e1792572ada9e21a0f8c52a4e35ae30945b1c41f8d3b46294fa1ec9f9e1f",
+      "code_fingerprint": "sha256:a3dfdbd559cb23d7e5e5854c503b3f96e723a0dd44388dd27e4dfd3fd1c52c37",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.73M parameters\n"
+          "text": "4.79M parameters; initial std: W_qkv 0.0200, W_o 0.0058\n"
         }
       ]
     },
+    "gpt-from-blocks-to-a-language-model-3": {
+      "code_fingerprint": "sha256:65a2a14792a3a605d84a24dea8c4a2e4aeb780c1ef840564c43512aeffe88705",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0588/0.1412/0.2923\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0028/0.0032/0.0033\n"
+        }
+      ]
+    },
+    "gpt-training-the-model-1": {
+      "code_fingerprint": "sha256:5c49576e1a0bdba08aae295eda134c85bfb56635169633483d612d8e70b00d0c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "270M training bytes, 1.14M validation bytes, vocabulary of 256\n"
+        }
+      ]
+    },
+    "gpt-training-the-model-2": {
+      "code_fingerprint": "sha256:6affba77c581234ae1583741ab07dd46481db4aaf563d5419a8eb11643e2281f",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-training-the-model-3": {
+      "code_fingerprint": "sha256:d9c860f3734ae95c999d719926f2644d1307e7ef9b9f3f6fa23ccd55e77bcc43",
+      "kind": "text",
+      "outputs": []
+    },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:d7f57af4f72d2947958ff67df24139da6dc9b5fe3fad9e198dbf234c845714ae",
+      "code_fingerprint": "sha256:07b52637aaf927475d3b43ab6ad600a11f25e0e49b41a3aab293f06201b28eef",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.44; best validation 1.48 at step 200\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18931,
-          "sha256": "sha256:6146e3f871b5e86cb64455fa18d77dc610903144f00f34c667e2f09bdbeb6076"
+          "bytes": 24636,
+          "sha256": "sha256:3d724f814934ab64b0302d35e22c4758f19b44cd596ac308a1c4c01d83881bfd"
+        }
+      ]
+    },
+    "gpt-training-the-model-4": {
+      "code_fingerprint": "sha256:e9d30a264e8af5e4b9731b35b0d261499adf70dd383720c1039d745a89d173b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unigram 3.17, bigram 2.45 nats per byte\n"
         }
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:3c4829cd63a8a9fdbe398492357d6e0bca0d601168d4bcab802bd0fd08ac283e",
+      "code_fingerprint": "sha256:a4cc25b7527a0029361c90ae5c2f95ca0681d40c6cda104abdf509d8ef5d98e6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.91/1.44/1.03/0.43\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.72/2.21/1.81/1.52\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False: loss at step 100/200/400/800: 2.83/2.83/2.83/2.83\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.52/1.91/1.54\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:a0a73cf0b8440ac3cfe269023d77d2812e728566ef7de100ec9f7a010e329515",
+      "code_fingerprint": "sha256:60961c14d46d07f359a5056dd0c91218ae633ba1245e1d06584895f410f0776e",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:c19ae7f4cfeacc958cbd0a21a53868c54f0e1372b76e22b429724a53409c8b16",
+      "code_fingerprint": "sha256:8c0eb07a4b56735f492216333bc0e0d574a66ac816577172b0ac7a27393089dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knife and fork\n    with a grunt an'\n"
+          "text": "T=1.0, top_k=None: 'The history of the San JorSmenu Break , the 1997\n    knowledge and probulated 20 from Snutch Recent R. Route . The first\n    known was energed in t'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller hated to have servants waiting at dinner\n    for a hot plate at that the editor turned to his knife and fork with a\n    grunt an'\n"
+          "text": "T=0.7, top_k=8: 'The history of the Second Canada . On 2 July , he was\n    nominated the two monastery and particular station . \\n = = Corners = =\n    \\n On May 2004 '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller holding the lamp aloft i intend to\n    explore time is that plain i was never more serious in my life none or\n    under the cype'\n"
+          "text": "T=2.0, top_k=None: 'The history of the wy��\\x01��3LLḭ�t893 D�160t\n    millivenikepri � jaugilusbeed foxi��*��D�H�m Hamlragortr37339 ,\n    eckhdoci; Malfastsky O DbunWid'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:808f2bc44f83f3d6cefcb05ecc58d87535d98ee2f25cbc4bcffaa34df471e4ae",
+      "code_fingerprint": "sha256:043c76f7c2f258d7f9e36c819f868eeaf26719704c57c4c56320268ea1b10237",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +154,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:e984d8343d6eaf8a965a4717856fa0230a05b3a62b5c87bbdc024faebd109dbf",
+      "code_fingerprint": "sha256:250397bf7f42d0c6726db3c115f4c7a597c7a821f940fbdc588f634c5f26ce0e",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +165,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:6827feb576c9421b758951aff448e78580751a826bbe36e430331a9ea5adb6e1",
+      "code_fingerprint": "sha256:68d4abf7b7b2af446fb786759ef75aacc415c56ff76b244f5a12766b9212f611",
       "kind": "text",
       "outputs": [
         {
@@ -123,18 +176,24 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:4434bfe8436134e68c515e3f3d6102207a8317ad3cedc72f516f37564a70ac07",
+      "code_fingerprint": "sha256:156a5ca1b0848915f4bceb72828ba2b4c5a7fdade3847847a2ca29fe3097d4c3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "Alan Turing theorized that computers would one day become the most powerful\n    machines on the planet.\n\nThe computer is a computer that\n"
-        },
+        }
+      ]
+    },
+    "gpt-loading-gpt-2-5": {
+      "code_fingerprint": "sha256:5879df1c736b7f50bcbd4887a9ce3549bcf59860f8b30ed4df646a9b81b49dc9",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is to make sure that you have\n    the right skills set to get started.\n\nA good deep learning textbook is to make sure you have the right skills set\n    to get started.\n\nI used to\n"
+          "text": "The secret of a good deep learning textbook is to make it easy for learners\n    to understand what they're doing and how they are doing it… without\n    sacrificing the content.\n\nIf you find yourself on the path to high performance deep learning, then\n"
         }
       ]
     }

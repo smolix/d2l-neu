@@ -503,7 +503,7 @@ d2l.plot(steps, [[h[1] for h in hist_two], [h[1] for h in hist_one],
 ```
 
 For a long stretch of training, the later-copy curve of the two-block model
-stays on that of the one-block model. It then drops by several nats, most of
+stays at or slightly above that of the one-block model. It then drops by several nats, most of
 the way within a few hundred steps and sometimes in two stages, as the
 computation the model performs changes abruptly. The point at which the drop
 happens varies from run to run by up to a thousand steps. Larger language
@@ -547,7 +547,7 @@ d2l.show_heatmaps(maps[:, 0], xlabel='key position',
 The top row shows block 1 and the bottom row block 2, and both halves of
 the predicted circuit are visible. In block 1, at least one head draws a
 line one step below the diagonal: a previous-token head. The others draw
-the diagonal itself, attending to their own position. In block 2,
+mostly the diagonal itself, attending to their own position. In block 2,
 heads draw a line 23 steps below the diagonal, starting where the second
 copy starts. Each query there attends to the token *after* the previous
 occurrence of the query's own token, which for a period of 24 lies 23
@@ -607,10 +607,10 @@ for b, rows in enumerate(scores.tolist()):
               + ' '.join(f'{v:.2f}' for v in row))
 ```
 
-Each line lists the four heads of one block. In block 1, one head, in
-some runs two that split the role, puts much of its attention on the
-previous token and almost none on the induction target. Its other heads do
-neither. Block 2's heads do the reverse. They share the induction pattern,
+Each line lists the four heads of one block. In block 1, one head, or in
+many runs two that split the role, puts much of its attention on the
+previous token and almost none on the induction target. The other heads of
+the block do neither. Block 2's heads do the reverse. They share the induction pattern,
 and the strongest puts more than a quarter of its attention, in many runs
 over half, on the single position the algorithm calls for, out of up to 63
 candidates. A uniform weighting would give that position about one fortieth.
@@ -701,8 +701,8 @@ d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
                   figsize=(3.6, 3.6), cmap='Blues')
 ```
 
-In block 2 of the two-block model, the largest entry of the great majority
-of rows lies on the diagonal, whereas a random argmax would hit the diagonal
+In block 2 of the two-block model, the largest entry of most rows lies on
+the diagonal, whereas a random argmax would hit the diagonal
 in one row out of 64. Attending to a token raises that token's own logit
 more than any other. The heatmap shows the same thing as a bright diagonal.
 The average over the stream matters. With the raw embeddings $\mathbf{e}_a$
@@ -755,9 +755,12 @@ def ablate(model, blk, heads):
     return model
 ```
 
-The head scores pick the candidates. In block 1 we remove the previous-token
-head and, for comparison, the other three heads together, which sit in the
-same block but score low on both patterns. In block 2 we remove the heads
+The head scores pick the candidates. In block 1 we count every head whose
+previous-token score exceeds 0.2 as a previous-token head, which catches
+both heads when two split the role; the threshold falls in the gap
+between their scores and those of the heads that attend to their own
+position. We remove the previous-token heads together and, as a control,
+all the other heads of block 1 together. In block 2 we remove the heads
 cumulatively, in order of their induction scores, one, two, three, and all
 four. The one-block model is listed for reference, and every variant is
 evaluated on the same fresh batch.
@@ -765,56 +768,58 @@ evaluated on the same fresh batch.
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab pytorch
 H = model_two.num_heads
-prev = scores[0, 0].argmax().item()
+prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
+rest = [h for h in range(H) if h not in prev]
 order = scores[1, 1].argsort(descending=True).tolist()  # Strongest first
 variants = {'none': model_two,
-            'block 1, previous-token head': ablate(model_two, 0, [prev]),
-            'block 1, other three heads': ablate(
-                model_two, 0, [h for h in range(H) if h != prev])}
+            'block 1, previous-token heads': ablate(model_two, 0, prev),
+            'block 1, all other heads': ablate(model_two, 0, rest)}
 for k in range(1, H + 1):
     variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
 variants['one-block model'] = model_one
 x, L = repeated_batch(256, 64, 64, 16, 32, device)
-print(f'{"heads removed":<29}later-copy loss  accuracy')
+print(f'block 1, previous-token heads: {prev}, others: {rest}')
+print(f'{"heads removed":<31}later-copy loss  accuracy')
 for name, model in variants.items():
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<29}{rep:15.2f}{acc:10.2f}')
+    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
 ```
 
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab jax
 H = model_two.num_heads
-prev = int(scores[0, 0].argmax())
+prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
+rest = [h for h in range(H) if h not in prev]
 order = jnp.argsort(-scores[1, 1]).tolist()  # Strongest first
 variants = {'none': model_two,
-            'block 1, previous-token head': ablate(model_two, 0, [prev]),
-            'block 1, other three heads': ablate(
-                model_two, 0, [h for h in range(H) if h != prev])}
+            'block 1, previous-token heads': ablate(model_two, 0, prev),
+            'block 1, all other heads': ablate(model_two, 0, rest)}
 for k in range(1, H + 1):
     variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
 variants['one-block model'] = model_one
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-print(f'{"heads removed":<29}later-copy loss  accuracy')
+print(f'block 1, previous-token heads: {prev}, others: {rest}')
+print(f'{"heads removed":<31}later-copy loss  accuracy')
 for name, model in variants.items():
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<29}{rep:15.2f}{acc:10.2f}')
+    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
 ```
 
-Removing block 1's previous-token head breaks retrieval. The later-copy
+Removing block 1's previous-token heads breaks retrieval. The later-copy
 loss rises by several nats and the accuracy falls far below that of the
 intact model, because block 2 has nothing left to match against. Removing
-the other three heads of block 1 breaks it as badly or worse, although
-their scores marked them as bystanders. They attend to their own position
-and write a transformed copy of the current token into the stream, which
-block 2 reads, as the copy matrix above did. The maps had no way to
-show this; only the intervention did. Block 2's heads share the work.
-Removing the strongest alone raises the loss by roughly a nat or less,
-removing more raises it further, and with all four removed it lies above
+the other heads of block 1 breaks it about as badly, although their maps
+looked irrelevant. They attend to their own position and write a
+transformed copy of the current token into the stream, which block 2
+reads, as the copy matrix above showed. The maps had no way to show this;
+only the intervention did. Block 2's heads share the work. Removing the
+strongest alone costs only part of the accuracy, removing a second and a
+third costs more, and with all four removed the later-copy loss lies above
 even that of the one-block model. Each induction head can partly stand in
 for the others, so removing any single one underestimates how much the
 group matters. The ablations give the causal evidence that the maps could
 not give. To predict later copies, the model needs all of block 1, the
-previous-token head and the heads that copy the current token, and the
+previous-token heads and the heads that copy the current token, and the
 induction heads of block 2.
 
 ## In-Context Learning
@@ -958,11 +963,18 @@ n, p, eta = 32, 8, 0.1
 k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
 X, w = jax.random.normal(k_X, (n, p)), jax.random.normal(k_w, (p,))
 x_q = jax.random.normal(k_q, (p,))
-y = X @ w                              # Context labels
-w_1 = eta * X.T @ y                    # One gradient step from w = 0
-print(f'one gradient step: {x_q @ w_1:.4f}, '
-      f'attention head: {gd_head(X, y, x_q, eta):.4f}')
+with jax.default_matmul_precision('highest'):  # Full fp32 for a check
+    y = X @ w                          # Context labels
+    w_1 = eta * X.T @ y                # One gradient step from w = 0
+    print(f'one gradient step: {x_q @ w_1:.4f}, '
+          f'attention head: {gd_head(X, y, x_q, eta):.4f}')
 ```
+
+:begin_tab:`jax`
+On a GPU, JAX multiplies float32 matrices in the reduced-precision TF32 format by
+default, which is enough for training but blurs an exactness check in the
+fourth digit; the `with` block asks for full float32 precision.
+:end_tab:
 
 The two predictions agree to rounding error. The head's weights contain no
 information about $\mathbf{w}$. The rule comes from the examples in its
@@ -1055,7 +1067,7 @@ the components themselves and shows that it does.
 | period change | input intervention | the fixed-period model uses position, not content | changes the task as well as the input |
 | head scores | activation | heads attend with the predicted offsets | omits the value transformation |
 | copy matrix | weights and mean activations | block 2's OV circuits copy tokens | also present in a model that does not retrieve |
-| head ablation | component intervention | later-copy prediction needs block 1's heads and the induction heads | zeroing moves the stream off its training distribution |
+| head ablation | component intervention | later-copy prediction needs all of block 1, not only its previous-token heads, and block 2's induction heads | zeroing moves the stream off its training distribution |
 
 Ablation asks whether a component is necessary. *Activation patching* asks
 what a component carries. It copies the component's output from a run on
@@ -1091,8 +1103,8 @@ fixed period, a one-block model finds a positional shortcut instead.
 Attention maps located the candidate heads, the copy matrix showed that
 they copy, as even the one-block model's heads do, and ablation showed that
 the model needs them, together with block-1 heads whose maps looked
-irrelevant. Attention weights alone explain little until the
-value transformation and an intervention are added.
+irrelevant. Attention weights alone explain little until the value
+transformation and an intervention are added.
 
 ## Exercises
 
@@ -1515,8 +1527,8 @@ No biases, $L$ uniform on 16 to 32, 5,000 steps each:
 ::: {.slide title="The Two-Block Model Learns Abruptly"}
 @!what-attention-computes-two-blocks-learn-to-look-things-up-2
 
-- Two blocks track one block, then drop by several nats within a few
-  hundred steps.
+- Two blocks track one block, then drop by several nats in one or two
+  steep stages of a few hundred steps.
 - Large models show such a drop as induction heads form (Olsson et al., 2022).
 :::
 
@@ -1535,38 +1547,47 @@ $j = i + 1 - L$, per head, $L$ from 16 to 32:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- Block 1: one head (sometimes two) on the previous token, none on the
+- Block 1: one head, often two, on the previous token, none on the
   target.
 - Block 2: every head on the target, the strongest with over a quarter of
   its weight, often over half, on 1 of up to 63 keys.
 :::
 
 ::: {.slide title="OV Circuits Copy, With or Without Retrieval"}
+::: {.cols .vc}
+::: {.col}
 $C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \bar{\mathbf{h}}_a$: the
 boost that attending to $a$ gives the logit of $b$, with
 $\bar{\mathbf{h}}_a$ the stream the block reads where $a$ sits. Copying
 means each row peaks on the diagonal.
 
-@!what-attention-computes-the-circuit-is-in-the-weights
-
 The one-block control copies too, yet cannot retrieve: copying alone does
 not explain retrieval; the match on the QK side does.
+:::
+
+::: {.col .narrow}
+@!what-attention-computes-the-circuit-is-in-the-weights
+:::
+:::
 :::
 
 ::: {.slide title="Removing the Heads Removes Retrieval"}
 @!what-attention-computes-head-ablation-2
 
 - Zero a head's columns of `proj`: its term leaves the stream.
-- Block 1 needs its previous-token head and, unexpectedly, the other
-  three: they copy the current token for block 2.
-- Block 2's loss rises as induction heads go, past the one-block level.
+- Block 1: heads with previous-token score above 0.2 (one, or two that
+  split the role). Removing them breaks retrieval, and so does removing
+  the rest: they copy the current token for block 2.
+- Block 2: accuracy falls as induction heads go; with all four gone, the
+  loss passes the one-block level.
 :::
 
 ::: {.slide title="Check: Why Does One Head Matter So Little?"}
 [Check]{.kicker}
 
-Removing block 2's strongest induction head raises the later-copy loss by
-roughly a nat or less; removing all four lifts it past the one-block level.
+Removing block 2's strongest induction head costs only part of the
+later-copy accuracy; removing all four lifts the loss past the one-block
+level.
 What does that say about the heads?
 
 ::: {.fragment .fade-up}

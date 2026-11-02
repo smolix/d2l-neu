@@ -246,10 +246,10 @@ for n in [2048, 4096, 8192, 16384]:
     print(f'n = {n:5d}: {wall_clock(layer, Q, Q, Q)*1e3:6.2f} ms')
 ```
 
-At small $n$, the timings change little because the GPU is not saturated
-and launch overhead dominates. Beyond a few thousand tokens, each doubling
-of $n$ roughly quadruples the time, consistent with the $4n^2d$ operation
-count.
+At small $n$, the time grows more slowly than the operation count, because
+the GPU is not saturated and launch overhead dominates. Beyond a few thousand
+tokens, each doubling of $n$ multiplies the time by three to four,
+approaching the fourfold growth of the $4n^2d$ operation count.
 
 ## Exact Attention Without the Matrix
 
@@ -1480,8 +1480,8 @@ buffers, $8n^2$ bytes per head and sequence.
 @!attention-at-scale-counting-memory-1
 
 - Doubling $n$ quadruples the footprint: 512 MiB per head at 8,192 tokens.
-- Time behaves the same way: from a few thousand tokens on, each doubling of
-  $n$ roughly quadruples it.
+- Time behaves almost the same way: from a few thousand tokens on, each
+  doubling of $n$ multiplies it by three to four.
 :::
 
 ::: {.slide title="Online Softmax Carries Three Statistics per Query"}

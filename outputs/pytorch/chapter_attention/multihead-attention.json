@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b5a96aa22bd87e6c4db7690955d449f043c8c8e04b1ebe8eb1dda03addb5844e",
+    "d2l_lib_fingerprint": "sha256:5bbb4b8267a67721cbc71a4bdf1f1a79cc16f58a7237ce249c3a49b6e0b15509",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,73 +14,110 @@
       "outputs": []
     },
     "multihead-attention-one-head-must-average-1": {
-      "code_fingerprint": "sha256:64362fc62d90a7e4e26d938dff706ab24745e34fd4d20341c17882f470a5f89a",
+      "code_fingerprint": "sha256:492dba7378814378222268134f106c73d8fed705acb7c1e05e5b06e498ad64f9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single head, weights (0.5, 0.5): relative error 0.706\nsingle head, weights (0.7, 0.3): relative error 0.706\nsingle head, weights (0.9, 0.1): relative error 0.706\nsingle head, weights (1.0, 0.0): relative error 0.707\ntheory: sqrt(1/2) = 0.707\n"
+          "text": "single head, weights (0.5, 0.5): relative error 0.707\nsingle head, weights (0.7, 0.3): relative error 0.708\nsingle head, weights (0.9, 0.1): relative error 0.708\nsingle head, weights (1.0, 0.0): relative error 0.708\ntheory: sqrt(1/2) = 0.707\n"
         }
       ]
     },
     "multihead-attention-one-head-must-average-2": {
-      "code_fingerprint": "sha256:6bd08fc46ec0835e1b074f03b33c2c0f2a9788cf4f4c8c69e90dd4b8b8679d98",
+      "code_fingerprint": "sha256:5428517645f6fd752f4a69b5f1c71d0c616e9c620bfdafc89a3db35bbe140a25",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.1e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.5e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.0e-06\n"
         }
       ]
     },
     "multihead-attention-implementation-1": {
-      "code_fingerprint": "sha256:f47b1a92253178c771fe982576ac4e1a6b8ed456fa0e41c37b27b9984efa37bc",
+      "code_fingerprint": "sha256:0e43202226b0dd7388d0b930d8c2f472181af642cee953318550c5ee424ff8e2",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-2": {
-      "code_fingerprint": "sha256:bdd96659f1ec5b0dfdd682e3fc3bd2c21e4ef077a0ec04517ea7fd962d8471ad",
+      "code_fingerprint": "sha256:703892817d903e767f8a0cc11fd57c06c4f0d455f2b569754158de4f2dce908c",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-3": {
-      "code_fingerprint": "sha256:315c5748eeb247cbd48e72427b61234185ca45658687e8641f433807793e121d",
+      "code_fingerprint": "sha256:7a6da11805fb76c1f552ce97b6f4bd573656ebd3a459a585da7088e32183c209",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-4": {
-      "code_fingerprint": "sha256:e45f9680a0448b2deed6d09ad3e38d458c564a8fc367f1434824957167e50cc1",
+      "code_fingerprint": "sha256:054a9edd581357701e48ba97c17930a6f31bda607648235655ed4847fbaf1ea4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 heads: 262144 parameters\n2 heads: 262144 parameters\n4 heads: 262144 parameters\n8 heads: 262144 parameters\n"
+          "text": "H = 1: 262144 parameters\nH = 2: 262144 parameters\nH = 4: 262144 parameters\nH = 8: 262144 parameters\n"
+        }
+      ]
+    },
+    "multihead-attention-learned-heads-on-the-copy-both-task-1": {
+      "code_fingerprint": "sha256:e05b4d8ffa75de6e3c5567461f884bcebd84d51eeadca8f3f9e59384f7ec6e70",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-learned-heads-on-the-copy-both-task-2": {
+      "code_fingerprint": "sha256:386ef5cd3f2c944b8e2bd6ee0465daadaa913f6c784a184da25fb6cc310c7181",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H = 1: error 0.71; weights (0.49, 0.51)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H = 2: error 1.1e-07; weights (0.88, 0.12) (0.03, 0.97)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H = 4: error 1.3e-07; weights (0.77, 0.23) (0.96, 0.04) (0.06, 0.94) (0.10, 0.90)\n"
+        }
+      ]
+    },
+    "multihead-attention-shared-keys-and-values": {
+      "code_fingerprint": "sha256:ec5858ac9b69f873d6a3c12d322cf2b622e4b4d044c2c59d7c6f012d53b6013d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |GQA - MHA|: 0.0e+00\nparameters: GQA 163840, MHA 262144\n"
         }
       ]
     },
     "multihead-attention-one-sequence-querying-itself": {
-      "code_fingerprint": "sha256:34f650576ba49dc2dd72fd88730f215560e7c8acd210732a2746ce6771ce4324",
+      "code_fingerprint": "sha256:1e225a3b119c0067ca3782fa7b489a799925f750ed62091d28806bf1f6268cbf",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-one-sequence-querying-another": {
-      "code_fingerprint": "sha256:85dd25408839d9f31069c28d96e6792968822dca3a266a8d3e1f7e8db812cf8a",
+      "code_fingerprint": "sha256:eb8d80016f79e4cd36f4c32321e01a7ab3b0edf40373185f78015440bc8f5f50",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:3aebe879d16607349394ef66efb9574eee0446b85a7a6f8137ea54d521e9a43f",
+      "code_fingerprint": "sha256:c53f27a28f9b7672a46e394f1f67a47e67fc86d49827baefcbdf1f5a11ccbff7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 26897,
-          "sha256": "sha256:e34a72c71d577577928b03a60050784820b7a069282a71447fa7968a6bbdf63a"
+          "bytes": 24031,
+          "sha256": "sha256:68186ba5869111006a232aae3a24e05ecd9535f0c0b27ef3f562323ba56d9ff0"
         }
       ]
     }

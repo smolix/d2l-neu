@@ -820,6 +820,8 @@ uniformly among 3 candidates.
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
     device = next(model.parameters()).device
+    was_training = model.training
+    model.eval()  # Dropout off while we measure
     total, count = 0, 0
     with torch.inference_mode():
         for X, Y in data.val_dataloader():
@@ -827,6 +829,7 @@ def lm_perplexity(model, data):  #@save
             total += F.cross_entropy(logits.flatten(0, 1),
                                      Y.to(device).flatten(), reduction='sum')
             count += Y.numel()
+    model.train(was_training)
     return math.exp(float(total) / count)
 ```
 
@@ -840,7 +843,9 @@ def lm_loss_sum(graphdef, state, X, Y):
 
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
-    graphdef, state = nnx.split(model)  # One walk through the model
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
         total += lm_loss_sum(graphdef, state, X, Y)

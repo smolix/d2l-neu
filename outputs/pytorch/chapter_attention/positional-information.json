@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d465fb8341d344afa56f1543140864d60c530d502f5f8524e1c5f6c1630a1daa",
+    "d2l_lib_fingerprint": "sha256:dbcb324f76d8edfd7448afe5326c6a60ded0cc974e94af8fcdd67e04294d4dbe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:85b6dd48809473f517b11505bc1861d6eab8b670d18abbefb0a171766aefe87c"
+          "sha256": "sha256:522991ce7622e7390ea79d564667d61e0e69840f647cff638780d47253c3fd2d"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:2cdafe3226ee286e50986c444f64b46457339bb005eb73a57962dca84108c172"
+          "sha256": "sha256:b9ad44227a215aeb02982f4102fc42c9d9aa117620d0f7415b01c085da19ad90"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.96\n"
+          "text": "sinusoidal: final training loss 1.95\n"
         },
         {
           "type": "stream",
@@ -120,14 +120,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned:     6.0     16.0     25.9\nsinusoidal:     6.8     21.7     41.5\n      rope:     5.1     14.9     68.9\n     alibi:     7.3      7.3      7.3\n      none:     9.2      9.4      9.5\n"
+          "text": "   learned:     6.0     16.0     25.9\nsinusoidal:     6.8     25.4     45.2\n      rope:     5.1     14.9     68.9\n     alibi:     7.3      7.3      7.3\n      none:     9.2      9.4      9.5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-the-experiment-2-1.svg",
-          "bytes": 29270,
-          "sha256": "sha256:cbe909d278c95d19134bfb7ef6d82a528b51b2f4aaca34d74c096973b1440467"
+          "bytes": 29268,
+          "sha256": "sha256:feb05e8d42b7f5ace4f183e13d0a2031da248881eee67ae8d19e36a0910ef50b"
         }
       ]
     }

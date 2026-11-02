@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9308118015d1ccd322edf535e9f73e0194422f35b734d4ead6c6cde9ec918f30",
+    "d2l_lib_fingerprint": "sha256:3773fae0e2e8a6a487e76bdd02554fa0224c52dbbef2dfc2b63e6052605c6b9d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.20\n"
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.21\n"
         },
         {
           "type": "stream",
@@ -73,12 +73,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.07, validation 1.08\n"
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.04, validation 1.07\n"
         }
       ]
     },
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 33333,
-          "sha256": "sha256:a522fa1fb3f913390cd296f6edb6852674352aa0b3b3caf11f04545dbbe608d6"
+          "bytes": 33337,
+          "sha256": "sha256:963651a60e68df35db92b8caa984ecfae2f9da3f66fa57f8bc2a18e594ed44a8"
         }
       ]
     },
@@ -107,7 +107,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nLlama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+          "text": "Mistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
         },
         {
           "type": "stream",

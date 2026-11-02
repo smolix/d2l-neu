@@ -664,7 +664,7 @@ then the airfoil regression data.
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | **Momentum** | **averaging over time** |
@@ -865,8 +865,8 @@ Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run:
 @!momentum-nesterov-momentum-1
 
 - Libraries store the look-ahead point: no extra gradient evaluation.
-- Convex, with $\beta$ growing toward 1: error $\mathcal{O}(1/k^2)$
-  against $\mathcal{O}(1/k)$, optimal among gradient methods.
+- Convex, $\beta \to 1$: error $\mathcal{O}(1/k^2)$ against
+  $\mathcal{O}(1/k)$, optimal among gradient methods.
 :::
 
 ::: {.slide title="Nesterov Is One Flag, Off by Default"}

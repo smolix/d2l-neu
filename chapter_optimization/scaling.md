@@ -208,7 +208,7 @@ Each width traces a U: too small a learning rate undertrains, and too large
 a one destabilizes. On the right the wider networks tend to climb fastest,
 in some runs off the top of the chart, where the capped runs sit. The U's do
 not line up. The minimum slides left as the network widens: the best
-learning rate at width 1,024 is four to eight times smaller than at width
+learning rate at width 1,024 is several times smaller than at width
 128, and the drift
 continues at larger widths :cite:`Yang.Hu.Babuschkin.ea.2022`. After tuning,
 the wider networks match or beat the narrower ones, so width helps. But the
@@ -494,7 +494,7 @@ for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
 
 Under muP the transferred learning rate lands within a few percent of the
 best loss at width 1,024. Under standard parametrization it lands about 10%
-to 20% above it. This is *hyperparameter transfer*: tune the small model,
+to 30% above it. This is *hyperparameter transfer*: tune the small model,
 scale up, keep the numbers. Under muP the best loss also falls from width
 128 to width 1,024. Retuned at width 1,024, standard parametrization reaches
 the same best loss, because there the two parametrizations coincide. On a
@@ -697,7 +697,7 @@ Scaling Up<br>
   tune a small proxy, then reuse its settings.
 - Fashion-MNIST MLP, 400 Adam steps: the best learning rate at width
   1,024 is several times smaller than at width 128.
-- Reusing the width-128 optimum at width 1,024 costs about 10% to 20% in
+- Reusing the width-128 optimum at width 1,024 costs about 10% to 30% in
   loss.
 
 ::: {.d2l-note .warn}
@@ -725,7 +725,7 @@ Fashion-MNIST, $n = 128$ to $1{,}024$, 400 Adam steps.
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | Momentum | averaging over time |
@@ -863,7 +863,7 @@ Same sweep, same seed, muP:
 Each width's minimum lies within one or two grid steps of width 128's.
 :::
 
-::: {.slide title="Transfer Costs a Few Percent Under muP, 10–20% Under SP"}
+::: {.slide title="Transfer Costs a Few Percent Under muP, 10–30% Under SP"}
 Reuse the width-128 learning rate at width 1,024:
 
 @!scaling-learning-rate-transfer-1

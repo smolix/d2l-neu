@@ -759,8 +759,9 @@ expert's output is scaled by a probability near $1/8$, so the expert
 layers start out much weaker than the dense feed-forward networks, and
 each expert learns from only an eighth of the tokens. As the dense model
 runs out of capacity, its curve flattens, while the mixture keeps
-improving. Its validation loss falls below the dense model's after about
-2,000 steps and stays below it to the end, by a few hundredths of a nat.
+improving. Its validation loss falls below the dense model's after one
+to two thousand steps and stays below it to the end, by a few hundredths
+of a nat.
 At the same computation per token, the stored experts make a better
 model. Large studies report the same effect. The Switch transformer reached the quality of a dense T5
 model several times faster at the same number of operations per token, and
@@ -1082,7 +1083,7 @@ Can a model store many parameters but run only the few each token needs?
 - explain fine-grained and shared experts.
 
 **Running example:** GPT-2 small with eight experts per block, then our
-4.8M-parameter byte-level GPT.
+small byte-level GPT.
 :::
 
 ::: {.slide title="More Parameters per Operation"}
@@ -1307,8 +1308,8 @@ $\alpha = 0.01$, capacity factor 1.25:
 @!moe-a-mixture-of-experts-gpt
 
 - 6,000 steps, about 50M bytes, more than 100 per dense parameter.
-- The mixture starts behind, crosses after about 2,000 steps, and stays
-  below.
+- The mixture starts behind, crosses after one to two thousand steps, and
+  stays below.
 :::
 
 ::: {.slide title="Check: How Much Text Does One Expert See?"}

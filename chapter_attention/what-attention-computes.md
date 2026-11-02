@@ -503,7 +503,7 @@ d2l.plot(steps, [[h[1] for h in hist_two], [h[1] for h in hist_one],
 ```
 
 For a long stretch of training, the later-copy curve of the two-block model
-stays on that of the one-block model. It then drops by several nats, most of
+stays at or slightly above that of the one-block model. It then drops by several nats, most of
 the way within a few hundred steps and sometimes in two stages, as the
 computation the model performs changes abruptly. The point at which the drop
 happens varies from run to run by up to a thousand steps. Larger language
@@ -547,7 +547,7 @@ d2l.show_heatmaps(maps[:, 0], xlabel='key position',
 The top row shows block 1 and the bottom row block 2, and both halves of
 the predicted circuit are visible. In block 1, at least one head draws a
 line one step below the diagonal: a previous-token head. The others draw
-the diagonal itself, attending to their own position. In block 2,
+mostly the diagonal itself, attending to their own position. In block 2,
 heads draw a line 23 steps below the diagonal, starting where the second
 copy starts. Each query there attends to the token *after* the previous
 occurrence of the query's own token, which for a period of 24 lies 23
@@ -607,10 +607,10 @@ for b, rows in enumerate(scores.tolist()):
               + ' '.join(f'{v:.2f}' for v in row))
 ```
 
-Each line lists the four heads of one block. In block 1, one head, in
-some runs two that split the role, puts much of its attention on the
-previous token and almost none on the induction target. Its other heads do
-neither. Block 2's heads do the reverse. They share the induction pattern,
+Each line lists the four heads of one block. In block 1, one head, or in
+many runs two that split the role, puts much of its attention on the
+previous token and almost none on the induction target. The other heads of
+the block do neither. Block 2's heads do the reverse. They share the induction pattern,
 and the strongest puts more than a quarter of its attention, in many runs
 over half, on the single position the algorithm calls for, out of up to 63
 candidates. A uniform weighting would give that position about one fortieth.
@@ -755,9 +755,10 @@ def ablate(model, blk, heads):
     return model
 ```
 
-The head scores pick the candidates. In block 1 we remove the previous-token
-head and, for comparison, the other three heads together, which sit in the
-same block but score low on both patterns. In block 2 we remove the heads
+The head scores pick the candidates. In block 1 we remove the head with the
+highest previous-token score and, for comparison, the other three heads
+together. When a second head shares the previous-token role, it is among
+these three; the rest score low on both patterns. In block 2 we remove the heads
 cumulatively, in order of their induction scores, one, two, three, and all
 four. The one-block model is listed for reference, and every variant is
 evaluated on the same fresh batch.
@@ -803,10 +804,12 @@ for name, model in variants.items():
 Removing block 1's previous-token head breaks retrieval. The later-copy
 loss rises by several nats and the accuracy falls far below that of the
 intact model, because block 2 has nothing left to match against. Removing
-the other three heads of block 1 breaks it as badly or worse, although
-their scores marked them as bystanders. They attend to their own position
-and write a transformed copy of the current token into the stream, which
-block 2 reads, as the copy matrix above did. The maps had no way to
+the other three heads of block 1 breaks it as badly or worse. A second
+previous-token head among them explains part of this, but not all: in runs
+where a single head holds that role, the three heads whose scores mark them
+as bystanders matter as much. They attend to their own position and write a
+transformed copy of the current token into the stream, which block 2 reads,
+as the copy matrix above did. The maps had no way to
 show this; only the intervention did. Block 2's heads share the work.
 Removing the strongest alone raises the loss by roughly a nat or less,
 removing more raises it further, and with all four removed it lies above
@@ -1515,8 +1518,8 @@ No biases, $L$ uniform on 16 to 32, 5,000 steps each:
 ::: {.slide title="The Two-Block Model Learns Abruptly"}
 @!what-attention-computes-two-blocks-learn-to-look-things-up-2
 
-- Two blocks track one block, then drop by several nats within a few
-  hundred steps.
+- Two blocks track one block, then drop by several nats in one or two
+  steep stages of a few hundred steps.
 - Large models show such a drop as induction heads form (Olsson et al., 2022).
 :::
 
@@ -1535,7 +1538,7 @@ $j = i + 1 - L$, per head, $L$ from 16 to 32:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- Block 1: one head (sometimes two) on the previous token, none on the
+- Block 1: one head, often two, on the previous token, none on the
   target.
 - Block 2: every head on the target, the strongest with over a quarter of
   its weight, often over half, on 1 of up to 63 keys.
@@ -1558,7 +1561,8 @@ not explain retrieval; the match on the QK side does.
 
 - Zero a head's columns of `proj`: its term leaves the stream.
 - Block 1 needs its previous-token head and, unexpectedly, the other
-  three: they copy the current token for block 2.
+  three, even when none shares that role: they copy the current token for
+  block 2.
 - Block 2's loss rises as induction heads go, past the one-block level.
 :::
 

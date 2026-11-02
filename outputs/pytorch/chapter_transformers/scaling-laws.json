@@ -4,23 +4,28 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:81ef153261f4969f932ba26bc6160f357317973377adce430ce946b17cc07fcf",
+    "d2l_lib_fingerprint": "sha256:d02bf2bc6283f27e32418db429df9ca408844cd32061a436f1e47e1cf8057ea2",
     "max_inline_bytes": 0
   },
   "cells": {
     "scaling-laws-scaling-laws-and-the-modern-recipe": {
-      "code_fingerprint": "sha256:175cf8f75fda2862fae7354285d04dd414290a43be89c0c142cc3500a958dc32",
+      "code_fingerprint": "sha256:d5cd835370567677c69b8c6fe9b693ebaf57c503a51bf9239921e18e15b46670",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-laws-counting-parameters-1": {
+      "code_fingerprint": "sha256:1600711c239594d4d7fa5e257f80cef5c11c652f26316bc3ce6526f9aba1e032",
       "kind": "text",
       "outputs": []
     },
     "scaling-laws-a-parameter-census": {
-      "code_fingerprint": "sha256:3dde23005de95e845bfff5ea635057aa708a02e97cb8be5f591dc3d8fbcae71c",
+      "code_fingerprint": "sha256:ff19415403ae213f0aa887f17cea3329d2878968ab190ee3ea1b3e27f8076b3b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "embedding   0.01M (  0%),  blocks   4.72M = 12.01 L d^2,  total 4.73M\n"
+          "text": "embedding   0.07M (  1%),  blocks   4.72M = 12.01 L d^2,  total 4.79M\n"
         },
         {
           "type": "stream",
@@ -30,84 +35,106 @@
       ]
     },
     "scaling-laws-checking-the-arithmetic": {
-      "code_fingerprint": "sha256:460fea092bfa5a612a5ca6156b6410dcf830218d8dd98d09ce3ae6d83cce1681",
+      "code_fingerprint": "sha256:109d7b60375a91eae792e5aaf64af52eb4935679d235c209c52fd1aab4af63d0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6ND analytic: 2.324e+11 FLOPs\nprofiler:     2.326e+11 FLOPs (ratio 1.001)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "31 ms per step: 7.6 TFLOP/s achieved\n"
+          "text": "forward 8.483e+10 FLOPs, 1.082 x 2ND\nstep    2.545e+11 FLOPs, 1.082 x 6ND\nbackward / forward = 2.00\n"
         }
       ]
     },
     "scaling-laws-a-corpus-bigger-than-a-novella": {
-      "code_fingerprint": "sha256:9829f84a4bb10b8466a1ed57849f9ef2402570c219299f8b800ed1122c47b41d",
+      "code_fingerprint": "sha256:d47972be5edf4c52a75e4e380ea52547f8d162925de31534986dea3e4c469d6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5.1M characters in 39491 windows, vocabulary size 28\n"
+          "text": "270M training bytes, 1.14M validation bytes, vocabulary of 256\n"
         }
       ]
     },
     "scaling-laws-five-sizes-one-diet-1": {
-      "code_fingerprint": "sha256:4bc83c542fcc75ea563677c1918e57ac0fdf9639cb0b09484cbfb852fa919523",
+      "code_fingerprint": "sha256:d8e5eb85bb4e3ec2fd4128f80bf28a5ee4cd03748410c13d29cd91404a6d7e02",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.20\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.67 / 1.49 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=128, 3 blocks:  0.59M parameters, train 1.17, validation 1.18\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.62 / 1.45 / 1.35, training 1.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.39 / 1.29, training 1.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.09\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.50 / 1.34 / 1.25, training 1.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.46 / 1.31 / 1.22, training 1.24\n"
         }
       ]
     },
     "scaling-laws-five-sizes-one-diet-2": {
-      "code_fingerprint": "sha256:93fb4c70c62449f7bac64b9b408567e8c3cf395fc3eba06ebcbe4add336c92f0",
-      "kind": "asset",
+      "code_fingerprint": "sha256:44cbf400bbcf7b4bf9f0ff281be0a59d54b70a814ee268e3d6a25d1997e3d4d2",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slope -0.041; the largest model lies 0.040 nats above the line\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 34222,
-          "sha256": "sha256:e19513315ee75d67066299cf84b85facd9517a397299aff2250d27b63279e95b"
+          "bytes": 39683,
+          "sha256": "sha256:faa469aad859ef56a0c9b7406fb018a0b611c51cebdac4d520cfe75704c6e2d4"
         }
       ]
     },
-    "scaling-laws-recipe-rows-as-constructor-calls": {
-      "code_fingerprint": "sha256:604cab1ee209e552a502a942f17a5047797df53246641220cbf1daf994f27de8",
+    "scaling-laws-the-optimal-split": {
+      "code_fingerprint": "sha256:515bc8b607ec65c684cee2ba74e7c591ea18508ecf31d7202f296825b15d5f70",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPT-2 (2019) 5.26M  pos='learned', norm='layer', act='gelu', pre_norm=True, bias=True, kv_heads=8\nMistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nLlama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nQwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+          "text": "Hoffmann et al.   N* =  32B, D* = 2.98T,  93 tokens per parameter\nBesiroglu et al.  N* =  72B, D* = 1.33T,  18 tokens per parameter\n"
+        }
+      ]
+    },
+    "scaling-laws-training-past-the-optimum": {
+      "code_fingerprint": "sha256:7aa80d803c188e515c489f040400f9653c0a68fdb0c57ed211d9cecafe5a16c3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Chinchilla      20 tokens per parameter, 0.96 x optimal size, loss +0.000\nLlama 3 8B    1875 tokens per parameter, 0.10 x optimal size, loss +0.054\nLlama 3 405B    39 tokens per parameter, 0.65 x optimal size, loss +0.001\nOLMo 2 7B      579 tokens per parameter, 0.18 x optimal size, loss +0.037\nGemma 3 27B    519 tokens per parameter, 0.18 x optimal size, loss +0.023\n"
+        }
+      ]
+    },
+    "scaling-laws-recipe-rows-as-constructor-calls": {
+      "code_fingerprint": "sha256:171c9c580dda4f82c87dcb5c9fa501f76890002a899231755dc8f2c30f26b307",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPT-2      5.26M parameters, 12.0 KiB of cache per token\nLlama 3 8B 4.40M parameters,  3.0 KiB of cache per token\nQwen3-32B  4.30M parameters,  1.5 KiB of cache per token\n"
         }
       ]
     }

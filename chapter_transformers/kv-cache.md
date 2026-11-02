@@ -51,8 +51,9 @@ import optax
 A forward pass of a model with $N$ parameters over $t$ tokens costs about
 $2Nt$ floating-point operations, because every parameter takes part in one
 multiplication and one addition per token. The attention scores add work
-that grows with $t^2$ (:numref:`sec_attention-at-scale`), but at the
-lengths we run here it is small next to $2Nt$. Naive generation calls this
+that grows with $t^2$ (:numref:`sec_attention-at-scale`). At the lengths
+we run here it stays below $2Nt$, and we leave it out of the count, although
+at a few thousand tokens it is no longer small. Naive generation calls this
 forward pass once per new token, over a history that grows by one token per
 step. Producing $T$ tokens therefore costs about
 $\sum_{t} 2Nt \approx NT^2$ operations, quadratic in the length of the
@@ -407,15 +408,17 @@ d2l.plot(lengths, [[1e3 * t for t in t_naive], [1e3 * t for t in t_cached]],
          xscale='log', yscale='log')
 ```
 
-At long contexts the naive step grows in proportion to $n$, as $2Nn$ says
-it must, while the cached step grows far more slowly. The time to read the
-cache does grow with $n$, but even at 4,000 tokens the cache is smaller
-than the weights, and every step also has a fixed cost that does not
-depend on $n$. At the longest context the cached step is several times
-faster, and the gap widens with every doubling of the context. At short
-contexts the two curves approach each other. A step of either kind then
-spends much of its time on fixed costs, such as launching the kernels of
-twelve blocks, rather than on arithmetic.
+At long contexts the naive step grows at least in proportion to $n$, as
+$2Nn$ says it must, and faster where the attention scores, whose work grows
+with $n^2$, add a sizable share. The cached step grows far more slowly. The
+time to read the cache does grow with $n$, but even at 4,000 tokens the
+cache is smaller than the weights, and every step also has a fixed cost
+that does not depend on $n$. At the longest context the cached step is
+several times faster, and beyond about a thousand tokens the gap widens with
+every doubling of the context. At short contexts the two curves approach
+each other and can even cross. A step of either kind then spends much of
+its time on fixed costs, such as launching the kernels of twelve blocks,
+rather than on arithmetic.
 
 End to end, we generate 256 tokens after a prompt of 3,584 tokens with
 both methods, after one warm-up call each:
@@ -1408,7 +1411,7 @@ for rotary and for learned positions.
 @!kv-cache-checking-the-cache-1
 
 124M-parameter model, untrained: the arithmetic does not depend on the
-weights. Naive grows like $2Nn$; cached adds the cache read to a fixed
+weights. Naive grows at least like $2Nn$; cached adds the cache read to a fixed
 cost per step.
 :::
 

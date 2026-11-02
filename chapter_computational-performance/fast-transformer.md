@@ -359,8 +359,8 @@ print(f'R0 un-jitted: {tput0:.0f} tokens/s')
 Read the profile for the model's character. Matmuls (the attention
 projections and the feed-forward blocks) carry about half of the device
 time — but only about half: the rest is a long tail of small elementwise
-and normalization kernels (note the *hundreds* of `aten::mul` calls per
-five steps), each launched separately, none individually visible. And the
+and normalization kernels, hundreds of launches per step, each launched
+separately and none of them large on its own. And the
 CPU-total column is nearly as large as the CUDA total — remembering
 :numref:`sec_perf_model`'s caveat that these totals overlap across
 threads and streams, that still says the dispatch thread is busy most of
@@ -433,7 +433,7 @@ print(f'R1 jit: {tput1:.0f} tokens/s ({tput1 / tput0:.0f}x)')
 
 :begin_tab:`pytorch`
 The first call takes seconds to compile, longer when the compiler's cache
-is cold. Thereafter throughput is roughly 1.2 times the eager result even though this model is not fully
+is cold. Thereafter throughput is 1.2 to 1.3 times the eager result even though this model is not fully
 overhead-bound in the sense of :numref:`sec_perf_model`. Elementwise chains
 between matmuls fuse
 into a handful of generated kernels, and the launch traffic drops with
@@ -867,7 +867,7 @@ conservative end of its run-to-run range; NCCL's own "busbw" reads
 :numref:`sec_multi_gpu_concise` measures a five-fold-faster configured
 mode, and shows why these runs nonetheless keep the library's defaults.)
 Summing the two terms,
-:eqref:`eq_dp_cost` predicts a *weak* two-GPU gain: scarcely more than one
+:eqref:`eq_dp_cost` predicts a *weak* two-GPU gain: about one
 single-GPU throughput at $k=2$, under half of linear at $k=4$. One
 refinement before trusting the measurement: the serial sum is a *floor* —
 DDP overlaps its bucketed allreduce under backward
@@ -892,7 +892,7 @@ the allreduce at the same tens of milliseconds as the *entire* compute
 step: a transformer's parameters are proportional to its compute, so
 unlike a convolutional ResNet it offers little extra compute to hide
 communication behind. Summing the two terms, :eqref:`eq_dp_cost` predicts
-limited scaling: at $k=2$, throughput barely exceeds the single-GPU
+limited scaling: at $k=2$, throughput stays near the single-GPU
 result, and at $k=4$ it remains under half of linear scaling. The mechanism,
 though, is the declarative recipe of :numref:`sec_multi_gpu_concise` at its cleanest: build a mesh,
 replicate the state, shard the batch, and feed the **unchanged** jitted
@@ -1131,7 +1131,7 @@ d2l.plt.show()
 ```
 
 :begin_tab:`pytorch`
-Compilation raises throughput by roughly 1.2 times by fusing the elementwise
+Compilation raises throughput by 1.2 to 1.3 times by fusing the elementwise
 operations identified in the profile. Bf16 adds roughly another half once the
 matrices are wide enough to use tensor cores effectively. Increasing the batch
 adds 1.1 to 1.3 times by raising arithmetic intensity. Checkpointing reduces
@@ -1227,7 +1227,7 @@ model, one configuration at a time.
 * We profiled a baseline, classified its limiting regime, applied one
   technique, and profiled again. On the GPT of :numref:`sec_gpt` (width
   512, about 19 million parameters), compilation improved throughput by
-  roughly 1.2×. Bf16 and a larger batch supplied further gains, for a
+  1.2 to 1.3×. Bf16 and a larger batch supplied further gains, for a
   cumulative improvement of about 2× in this experiment.
 * Every configuration is attributed to a section, and the bottleneck is
   re-profiled as it moves: after compilation the elementwise tail is
@@ -1542,7 +1542,7 @@ memory-and-precision sequence: **bf16** — double the roof, half the bytes.
 :::
 
 ::: {.slide title="Successive Optimizations" only="pytorch"}
-- **R1 compile** — fuses the tail: **~1.2×** (and asserts
+- **R1 compile** — fuses the tail: **1.2–1.3×** (and asserts
   compiled ≡ eager first)
 - **R2 bf16** — tensor cores, matmuls wide enough: **~1.5×**
 - **R3 batch-up** — climb the roofline: **1.1–1.3×** (fp32-512

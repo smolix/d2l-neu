@@ -1422,7 +1422,7 @@ What is the best step for a *matrix* parameter?
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | Momentum | averaging over time |
@@ -1595,16 +1595,22 @@ $0.2\sqrt{512} \approx 4.5$: exactly $0.2$.
 ::: {.slide title="On TinyLM the Tuned Hybrid Leads Tuned AdamW Throughout"}
 [Muon from scratch]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Same initialization, 2,000 steps, constant rate, grid $10^{-3}$ to
-$10^{-1}$, no weight decay, scored by validation loss:
-
-@!muon-the-race-on-the-language-model-3
+$10^{-1}$, no weight decay, scored by validation loss.
 
 - Validation loss 1.6: hybrid after 1,000–1,250 steps, AdamW 1,500–2,000.
 - Step 2,000: about 1.52–1.55 against 1.56–1.58 nats per byte; the gap
   narrows.
 - Matched tuning at 0.1B–1.2B parameters: about 1.4×, shrinking to 1.1×
   (Wen et al., 2025).
+:::
+
+::: {.col}
+@!muon-the-race-on-the-language-model-3
+:::
+:::
 :::
 
 ::: {.slide title="On a CNN Muon Optimizes Faster but Predicts the Same"}

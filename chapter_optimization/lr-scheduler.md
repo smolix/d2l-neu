@@ -944,7 +944,7 @@ LeNet with batch normalization on Fashion-MNIST, 30 epochs.
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | Momentum | averaging over time |
@@ -1049,11 +1049,17 @@ $t$ in epochs, advancing by $1/235$ per minibatch of 256 images.
 ::: {.slide title="A Small Final Rate Settles the Test Accuracy"}
 [Decay on a network]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 @!lr-scheduler-decay-schedules-compared-2
+:::
 
-Early decay: a third of the budget, the highest loss. Late decay: half the
-budget, about the constant rate's loss. A final rate near 0.01: about 91%,
-steady from epoch to epoch.
+::: {.col}
+- Early decay: a third of the budget, the highest loss.
+- Late decay: half the budget, about the constant rate's loss.
+- A final rate near 0.01: about 91%, steady from epoch to epoch.
+:::
+:::
 :::
 
 ::: {.slide title="A Cold Start at η = 7.5 Stays Near Chance"}

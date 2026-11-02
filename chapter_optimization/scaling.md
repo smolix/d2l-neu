@@ -725,7 +725,7 @@ Fashion-MNIST, $n = 128$ to $1{,}024$, 400 Adam steps.
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | Momentum | averaging over time |

@@ -1289,7 +1289,7 @@ seed = random.getrandbits(31)
 curves = {}
 for name, make_optimizer in [
         ('no decay', lambda ps: torch.optim.Adam(ps, lr=0.003)),
-        ('Adam + $\\ell_2$',
+        ('Adam + ℓ2',
          lambda ps: torch.optim.Adam(ps, lr=0.003, weight_decay=0.1)),
         ('AdamW',
          lambda ps: torch.optim.AdamW(ps, lr=0.003, weight_decay=0.1))]:
@@ -1310,7 +1310,7 @@ def coupled(lr, wd):  # The penalty's gradient enters Adam's moments
 seed = random.getrandbits(32)
 curves = {}
 for name, tx in [('no decay', optax.adam(0.003)),
-                 ('Adam + $\\ell_2$', coupled(0.003, 0.1)),
+                 ('Adam + ℓ2', coupled(0.003, 0.1)),
                  ('AdamW', optax.adamw(0.003, weight_decay=0.1))]:
     model = TinyLM(len(data.vocab), rngs=nnx.Rngs(seed))
     optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
@@ -1935,7 +1935,7 @@ transformer on the bytes of WikiText-103.
 ::: {.col}
 | section | adds |
 |---|---|
-| Landscapes | curvature and noise make training slow |
+| Landscapes | curvature and noise slow training |
 | Gradient Descent | step size against curvature |
 | Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
 | Momentum | averaging over time |
@@ -1994,15 +1994,15 @@ $\eta = 2$ (gradient descent diverges)
 :::
 
 ::: {.slide title="RMSProp Forgets: Its Average Spans 1/(1 − β₂) Steps"}
-$$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\, \mathbf{g}_t^2,
-\qquad \beta_2 = 0.9:\ \textrm{a window of 10 steps}$$
-
 ::: {.cols .vc}
 ::: {.col .fig}
 @!adam-rmsprop-forgetting-on-purpose-1
 :::
 
 ::: {.col}
+$$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\, \mathbf{g}_t^2$$
+
+- $\beta_2 = 0.9$: a window of 10 steps.
 - Steps no longer shrink by construction.
 - Step 1 overshoots: $\mathbf{v}_1 = 0.1\,\mathbf{g}_1^2$, so each
   coordinate moves $\eta/\sqrt{0.1} \approx 3.2\,\eta$.
@@ -2107,10 +2107,7 @@ rates per method spaced by about 3×; "tuned" is the lowest final loss.
 :::
 :::
 
-- On both, SGD's best rate is the largest one that trains reliably.
-- The gap varies with SGD: just below divergence, its final loss varies by
-  up to about 0.1 nats between runs, Adam's by a hundredth or two.
-- On the CNN, the test accuracies agree within a point or two.
+- SGD trains best at its largest stable rate, where runs vary up to 0.1 nats (Adam: 0.01–0.02).
 :::
 
 ::: {.slide title="Check: What Does a 0.1-Nat Gap Do to Perplexity?"}
@@ -2185,11 +2182,11 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t
   library's AdamW to rounding error.
 :::
 
-::: {.slide title="At λ = 0.1, Coupled ℓ2 Ends Over a Nat Higher; AdamW Tracks No Decay"}
+::: {.slide title="At λ = 0.1, Coupled ℓ2 Costs Over a Nat; AdamW Tracks No Decay"}
 @!adamw-one-number-two-meanings
 
-- Coupled ends near 3.2 nats, the loss of predicting each byte from its
-  frequency alone: the context it learned early is lost.
+- Coupled ends near 3.2 nats, the loss of byte frequencies alone: the
+  early context is lost.
 - Progress shrinks $\sqrt{\hat{\mathbf{v}}}$ until $\lambda\mathbf{x}$
   dominates; Adam then normalizes it, and every coordinate shrinks by
   about $\eta$ per step, whatever $\lambda$ is.

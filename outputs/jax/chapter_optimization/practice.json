@@ -4,80 +4,95 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2ff26dfefbd87720fa36787468ed594197945d805ceb1fcf095bf3b5ff9647e0",
+    "d2l_lib_fingerprint": "sha256:399c5ed9b5f5e3bc3af3a313125f688986546d97ea72411bfbf5df27e4c9a2f0",
     "max_inline_bytes": 0
   },
   "cells": {
     "practice": {
-      "code_fingerprint": "sha256:b842bc21b9d605c609e2d141e7a30cc6e04b2ea300094b1b1b55366240f9bb8d",
+      "code_fingerprint": "sha256:0048a9cdcdbf4d673aa08c29492bfebcd07856e86eb22e1779ea036399de2233",
       "kind": "text",
       "outputs": []
     },
     "practice-gradient-clipping-1": {
-      "code_fingerprint": "sha256:4657919782d10d409b89a218ec5b25e6b88c5f73446c0f882ac750a04933eb34",
+      "code_fingerprint": "sha256:13279c05888373ce78ff8ed75994b90c498db19f822f27575be8601b94f8d034",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-1": {
-      "code_fingerprint": "sha256:0a3dc7264d14e214b42e7c87c622383357de0e53fb17270beae932fbf8906654",
+      "code_fingerprint": "sha256:eac4d15dd850ab2e584a8e0cacc9dc0260495677ac60e0a54013bfc8f5695c1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-nan-averted-4": {
+      "code_fingerprint": "sha256:8974be71b1796c994d769c03b6bb6767300a30ac8f4e9cf70f067676d8133e53",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:7d4c572823611eceb37eb6f1bf97729834621db3bea2c7cff207cf260650a818",
+      "code_fingerprint": "sha256:b468b1c313ee33b5cee9a1295f64f053bb118448f43a934aa324763fa29d189d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unclipped: final loss inf\n"
+          "text": "unclipped: final loss nan\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.010\n"
+          "text": "clipped at 1: final loss 1.611\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped 18 of 2000 steps, the last at step 18; median gradient norm 0.25\n"
         }
       ]
     },
     "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:f79f3e2ad4c252ee4c3256bbba44e6276d789a756f76723cae4b91d67ee83e79",
+      "code_fingerprint": "sha256:2dcccf41415bd1d950ef127999170c5eec6c32d480b3a916ffbd299dc2db4c0e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 25917,
-          "sha256": "sha256:af360a56fab95c319528407904049c183e97daf8f20d8c9f1d4cf758d7952ea7"
+          "bytes": 26054,
+          "sha256": "sha256:7dcd9b84cf765e1160ae3344ebe6edd0a94b040b32710cb1181730e1dd1cb358"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:f6d34b71221391f9644d2badcbf167ccea93838b899a59db2e5d16fdb1e252f9",
+      "code_fingerprint": "sha256:d079d24daa34a2888073e844bce2a6eb4b0c6952430213136db02a94a1fd41dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-weight-averaging-4": {
+      "code_fingerprint": "sha256:7493bc2b73a37c7f6455dedd0ff1f2093161a6800c4ee80dff7f885fdf0d99c4",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:0abb57fb0de6e09d6b6ded91338c3d39672e5dcba904a1e070bbe15432803791",
+      "code_fingerprint": "sha256:596fcd6b3712dcd2452ef980608d141abc2cb53ec3803c408b61bf7249313dde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.877, EMA 0.913\n"
+          "text": "live: final test accuracy 0.880, last five epochs 0.838 to 0.884\nEMA: final test accuracy 0.912, last five epochs 0.901 to 0.912\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:d57588543b22c1e6dac016f75dacfb794e8fd4f09c7b1e1e8a3ac841858fb099",
+      "code_fingerprint": "sha256:a42165f9f4aa9219356a605d383d0be83a872c653bdaa21e0217e26b35832983",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24007,
-          "sha256": "sha256:a6e5d0bf5746a6ef318137b78dc118f758b84532819265117e3c729177ff5d89"
+          "bytes": 24015,
+          "sha256": "sha256:5e3482e4cb5c99940e11124e5f5a7e6e5e0f290f7fa661635adea6c9f4c7adb0"
         }
       ]
     }

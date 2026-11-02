@@ -4,89 +4,174 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:51ebeb5a9d849d639ce5b189e6efdae13bd24da2d0d71d00ab18a8c01576b9a5",
+    "d2l_lib_fingerprint": "sha256:21e1b7c3920049af3b422ee6186fe6b195a65c1db92bc651a6ae763ee1ace3e1",
     "max_inline_bytes": 0
   },
   "cells": {
     "sgd-stochastic-gradient-descent": {
-      "code_fingerprint": "sha256:b004c6bb26c984c3fbb878b809cb91b87f2f712275b5530c6543f2ff6cc30bd6",
+      "code_fingerprint": "sha256:b7075137d0e2a645e98396089215aa29b346d5cfaaf23480cbdd4370b4734f77",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-1": {
-      "code_fingerprint": "sha256:55e66a22340682efe0f77cd8476fc76152c813e170c3ae9982ae7650d0cb678c",
+      "code_fingerprint": "sha256:62788042fe73be842563a2a6f73c6c3a7de314af43771959a24a2a1dfb5eaeb3",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-2": {
-      "code_fingerprint": "sha256:60199a52488f88292ff12c3f34376d5e052644d9065bbf4b9014708e89f74da7",
+      "code_fingerprint": "sha256:7974414158b212112fe183033ce041be6fa17285bfbe72e9f14f219fe1571c13",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-3": {
-      "code_fingerprint": "sha256:eef4beb77068e79c7e737d4842b2dfe096b001f3510d566ddf3383252ee5d416",
+      "code_fingerprint": "sha256:6ae7f9b58b0d68bdf441d56c0452640572b7ea247483e95fb0bd8fac78aa7afb",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.141533, x2: -0.069805\n"
+          "text": "step 300, x1: -0.097518, x2: -0.013906\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23510,
-          "sha256": "sha256:b8d98dbf55062467dac5bbbdc7b872fc5a161fb94d86b8955a1e304c7e936ef1"
+          "bytes": 54273,
+          "sha256": "sha256:d30114401c910bb48feba1468efe5a878fc7ad29f42e0f774c9e0a5128c08abc"
         }
       ]
     },
-    "sgd-dynamic-learning-rate-1": {
-      "code_fingerprint": "sha256:8de4b16dd7447fc56772142fe26f1ba9b44e91f9e56af23a564d1ed061208e87",
-      "kind": "mixed",
+    "sgd-the-noise-ball": {
+      "code_fingerprint": "sha256:cd5793dc9e9a57a1acd1f2dbf42aa9be34f8476f3a0d18bfe19c4046f0f59919",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.810909, x2: -0.028332\n"
+          "text": "eta=0.1: measured [0.247  0.0156], predicted [0.2525 0.0156]\n"
         },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 123881,
-          "sha256": "sha256:ca55a56fe995446635769c8c67688e1283dca491e7bd658f99b725a22cd5a15b"
-        }
-      ]
-    },
-    "sgd-dynamic-learning-rate-2": {
-      "code_fingerprint": "sha256:6c6d9be0989e29cc0e9e7b603d1b49d8fadc3d0064eca3e342064b26dab27a23",
-      "kind": "mixed",
-      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: 0.037837, x2: 0.002780\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23518,
-          "sha256": "sha256:affb98f077b86b3c556c5f2d1e70c377eb1f20f8244e2f8b073a3e01091a13b7"
+          "text": "eta=0.05: measured [0.1297 0.0071], predicted [0.1256 0.0069]\n"
         }
       ]
+    },
+    "minibatch-sgd-reading-the-dataset": {
+      "code_fingerprint": "sha256:c4dab30caf497981c35f4e754822501fdede6889fd7b6929cf5e6288c55ec396",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-gradient-variance-and-batch-size-1": {
+      "code_fingerprint": "sha256:cd96493acf98c2910c8cd183972ce142bb9503b8b782064819222cda23f3884e",
+      "kind": "text",
+      "outputs": []
     },
     "sgd-gradient-variance-and-batch-size": {
-      "code_fingerprint": "sha256:cfb4d6e05dfabaa871851d3de1aa712c4a955b5b735f2e98002eeffa32ca24b8",
+      "code_fingerprint": "sha256:ab35d7a0902bf175b7f3f662527353e2692b728103eb69496038c0d6f83b160d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 28714,
-          "sha256": "sha256:f120d40b4d20b9ca27489a02b31bad33c3fd29160b4a34641957365f43a9253e"
+          "bytes": 32302,
+          "sha256": "sha256:136929143634ebf0fca30dd80e27325b832305bbddfab9465ce0147cba0e277a"
+        }
+      ]
+    },
+    "sgd-batched-computation-1": {
+      "code_fingerprint": "sha256:23c5b37817def0d0b61d456cf801baf5bae0306ef45e7dcce075b85f91a8ef3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "sgd-batched-computation-2": {
+      "code_fingerprint": "sha256:0a3953fd32dcaec23e8e6d8aaea5e6ad60e4f3176b68f2dc89d5a389ead78abb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/sgd-batched-computation-2-1.svg",
+          "bytes": 35569,
+          "sha256": "sha256:0caa048d0a72a688c6ac64c0fb8f5697dba306f2615ca57fe27e46fa56bc016a"
+        }
+      ]
+    },
+    "minibatch-sgd-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:e39f3b3efdaa01e457ec429dc0e46b84e97eb43685545f9916cbd901e9f66a1e",
+      "kind": "text",
+      "outputs": []
+    },
+    "minibatch-sgd-vectorization-and-caches-2": {
+      "code_fingerprint": "sha256:9e60f722cff4002f087f8dfc2f9820f81d3cab536c67e0ddf35cab3114288ca2",
+      "kind": "text",
+      "outputs": []
+    },
+    "minibatch-sgd-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:67028e966d198a8142e613e4737977e8cb8a885572e6e1672e7812d3385213b6",
+      "kind": "text",
+      "outputs": []
+    },
+    "minibatch-sgd-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:5db534e2c8b7383c3e40d10141dc5c2f1e213c6a6bb46ce417568b403dd876f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.242, 0.003 sec/epoch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.243, 1.263 sec/epoch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 0.154 sec/epoch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 0.024 sec/epoch\n"
+        }
+      ]
+    },
+    "minibatch-sgd-implementation-from-scratch-7": {
+      "code_fingerprint": "sha256:2fafaf2e2ec2d22596a6caef10bbf1244b06b699262bbf094dcad2a6740ce5e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
+          "bytes": 46830,
+          "sha256": "sha256:b3d6b5732441e257c02611f337b5ae5c64620a340df5f549a51decaad0cf3a92"
+        }
+      ]
+    },
+    "minibatch-sgd-concise-implementation-1": {
+      "code_fingerprint": "sha256:7ea8a6fda6998c14866e13c61c5f7be04babb64b5dbe46817969ed5c766e3ef2",
+      "kind": "text",
+      "outputs": []
+    },
+    "minibatch-sgd-concise-implementation-2": {
+      "code_fingerprint": "sha256:23c78a029a96fdc7aa255bd04989e45e3a7a3b7a6de3232f0c84ab01a5eda499",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.245, 0.153 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/minibatch-sgd-concise-implementation-2-1.svg",
+          "bytes": 18789,
+          "sha256": "sha256:064c14899b65657b31b2d4df14f047278a3ecb450843c48d45d2ab937030570d"
         }
       ]
     }

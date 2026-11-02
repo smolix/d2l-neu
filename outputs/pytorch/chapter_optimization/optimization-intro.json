@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:673dbd45cb277f5754cb5ea6074735186bf592e579af29d815a2417ece0e551c",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,20 +14,49 @@
       "outputs": []
     },
     "optimization-intro-an-ill-conditioned-valley": {
-      "code_fingerprint": "sha256:7e87de972f0164907c751a3f22f87df5625f5971bf6c6754b7e946e80b9221a5",
+      "code_fingerprint": "sha256:85ec42b27e38485059f9260f120dbf81aa8d58a09514f03d9884c6bec27756ae",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
+          "bytes": 18945,
+          "sha256": "sha256:04bfcdcfead066c9ef0e39a4b2dc7d944f998acabd213e2b6bd967629df9e90d"
+        }
+      ]
+    },
+    "optimization-intro-an-ill-conditioned-valley-1": {
+      "code_fingerprint": "sha256:18cb5640184984e5a9aaf84b81eef0fcc274bdec17fe6a0393070c85662a74f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  eta   factor x1   factor x2   steps to 1%\n0.100       0.980       0.600           228\n0.200       0.960       0.200           113\n0.300       0.940      -0.200            75\n0.400       0.920      -0.600            56\n0.450       0.910      -0.800            49\n0.476       0.905      -0.905            47\n0.490       0.902      -0.960           113\n0.500       0.900      -1.000         never\n"
+        }
+      ]
+    },
+    "optimization-intro-the-edge-of-stability-1": {
+      "code_fingerprint": "sha256:b448add425fab0c5df3bd026d59290e53b9f25eb8663fc048b9ea36c2940059f",
+      "kind": "text",
+      "outputs": []
+    },
+    "optimization-intro-the-edge-of-stability-2": {
+      "code_fingerprint": "sha256:9a3a00fd0384f88fdf02b2fc8a0d04c7bd78a12072c21949ab1e94bc5202f901",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 30, x1: -0.295265, x2: -0.002476\n"
+          "text": "eta 0.4: sharpness 3.99 -> 5.00 (2/eta = 5), loss 0.837 -> 2.7e-04\neta 0.25: sharpness 3.99 -> 7.99 (2/eta = 8), loss 0.837 -> 1.2e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
-          "bytes": 25191,
-          "sha256": "sha256:0d67a0e15c3014a83f97d49c19da6a610c7a1b8ef68d3040233cf56a02a0b0e9"
+          "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
+          "bytes": 26325,
+          "sha256": "sha256:7af61a2b246a3c2cb2febefe74ba30f59a472fbe8c86611ef536255cbce539d0"
         }
       ]
     }

@@ -1181,34 +1181,58 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-def train_2d(trainer, steps=20, f_grad=None):
-    """Optimize a 2D objective function with a customized trainer.
+def train_2d(trainer, steps=20, f_grad=None, **hparams):
+    """Run a 2D update rule from (-5, -2) and return the iterates.
 
     Defined in :numref:`sec_gd`"""
-    # `s1` and `s2` are internal state variables used by the stateful
-    # optimizers (momentum, Adam) later in this chapter
-    x1, x2, s1, s2 = -5, -2, 0, 0
+    x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
     results = [(x1, x2)]
-    for i in range(steps):
+    for _ in range(steps):
         if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
         else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, **hparams)
         results.append((x1, x2))
-    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
+    print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
 
 def show_trace_2d(f, results):
-    """Show the trace of 2D variables during optimization.
+    """Show the trace of 2D variables over the contours of f.
 
     Defined in :numref:`sec_gd`"""
-    d2l.set_figsize()
-    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
-    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
-                          d2l.arange(-3.0, 1.0, 0.1), indexing='ij')
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
-    d2l.plt.xlabel('x1')
-    d2l.plt.ylabel('x2')
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+def get_data_ch11(batch_size=10, n=1500):
+    """Load the standardized airfoil self-noise data as minibatches.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = torch.from_numpy((data - data.mean(axis=0)) / data.std(axis=0))
+    dataset = torch.utils.data.TensorDataset(
+        *(t.to(d2l.try_gpu()) for t in (data[:n, :-1], data[:n, -1])))
+    sampler = torch.utils.data.BatchSampler(  # Whole minibatches of indices
+        torch.utils.data.RandomSampler(dataset), batch_size, drop_last=False)
+    data_iter = torch.utils.data.DataLoader(dataset, sampler=sampler,
+                                            batch_size=None)
+    return data_iter, data.shape[1]-1
 
 class Timer:
     """Record multiple running times.
@@ -1239,71 +1263,113 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
-                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
-
-def get_data_ch11(batch_size=10, n=1500):
-    data = np.genfromtxt(d2l.download('airfoil'),
-                         dtype=np.float32, delimiter='\t')
-    data = torch.from_numpy((data - data.mean(axis=0)) / data.std(axis=0))
-    data_iter = d2l.load_array((data[:n, :-1], data[:n, -1]),
-                               batch_size, is_train=True)
-    return data_iter, data.shape[1]-1
-
 def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2):
-    # Initialization
+               feature_dim, num_epochs=2, plot=True):
+    """Train linear regression with an update rule; return its history.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
     w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
-                     requires_grad=True)
-    b = torch.zeros((1), requires_grad=True)
+                     device=Xs.device, requires_grad=True)
+    b = torch.zeros(1, device=Xs.device, requires_grad=True)
     net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    # Train
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
+    full_loss = lambda: float(loss(net(Xs), ys).mean())
+    # Wait until the device has finished (CUDA runs asynchronously)
+    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
+    loss(net(Xs), ys).mean().backward()  # Warm-up, then clear the gradients
+    w.grad, b.grad = None, None
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, step, timer = 0, 0, d2l.Timer()
     for _ in range(num_epochs):
         for X, y in data_iter:
-            l = loss(net(X), y).mean()
-            l.backward()
+            loss(net(X), y).mean().backward()
             trainer_fn([w, b], states, hyperparams)
-            n += X.shape[0]
-            if n % 200 == 0:
+            n, step = n + len(X), step + 1
+            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                wait()
                 timer.stop()
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (d2l.evaluate_loss(net, data_iter, loss),))
+                with torch.no_grad():
+                    l = full_loss()
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(step / len(data_iter), (l,))
                 timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-    return timer.cumsum(), animator.Y[0]
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
 
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=4):
-    # Initialization
-    net = nn.Sequential(nn.Linear(5, 1))
-    def init_weights(module):
-        if type(module) == nn.Linear:
-            torch.nn.init.normal_(module.weight, std=0.01)
-    net.apply(init_weights)
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
+    """Train linear regression with a torch.optim optimizer class.
 
+    Defined in :numref:`sec_minibatch_sgd`"""
+    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
+    net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
+    nn.init.normal_(net.weight, std=0.01)
+    nn.init.zeros_(net.bias)
     optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = nn.MSELoss(reduction='none')
+    loss = d2l.squared_loss
+    wait = torch.cuda.synchronize if Xs.is_cuda else lambda: None
+    loss(net(Xs), ys).mean().backward()  # Warm-up; zero_grad clears it
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
+    step, timer = 0, d2l.Timer()
     for _ in range(num_epochs):
         for X, y in data_iter:
             optimizer.zero_grad()
-            out = net(X)
-            y = y.reshape(out.shape)
-            l = loss(out, y)
-            l.mean().backward()
+            loss(net(X), y).mean().backward()
             optimizer.step()
-            n += X.shape[0]
-            if n % 200 == 0:
+            step += 1
+            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                wait()
                 timer.stop()
-                # `MSELoss` computes squared error without the 1/2 factor
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (d2l.evaluate_loss(net, data_iter, loss) / 2,))
+                with torch.no_grad():
+                    l = float(loss(net(Xs), ys).mean())
+                animator.add(step / len(data_iter), (l,))
                 timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+
+class WikiText103(d2l.DataModule):
+    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
+        super().__init__()
+        self.save_hyperparameters()
+        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
+        self.train = self._read('train-00000-of-00002',
+                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+        self.val = self._read('validation-00000-of-00001',
+                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
+        self.train, self.val = self.train[:num_train], self.val[:num_val]
+
+    def _read(self, split, sha1):
+        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+               f'main/wikitext-103-raw-v1/{split}.parquet')
+        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
+                             sha1)
+        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
+        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
+
+    def windows(self, corpus, starts):
+        """Inputs and next-byte targets of the windows at `starts`."""
+        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
+        array = torch.from_numpy(corpus[idx].astype(np.int64))
+        return array[:, :-1], array[:, 1:]
+
+    def train_dataloader(self):  # A pass of minibatches at random offsets
+        n = len(self.train) - self.num_steps
+        for _ in range(n // (self.batch_size * self.num_steps)):
+            yield self.windows(self.train,
+                               torch.randint(n, (self.batch_size,)).numpy())
+
+    def val_dataloader(self):  # Consecutive, non-overlapping windows
+        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
+        for i in range(0, len(starts), self.batch_size):
+            yield self.windows(self.val, starts[i:i + self.batch_size])
 
 class TinyLM(nn.Module):
     """A small decoder-only transformer language model.
@@ -1358,10 +1424,26 @@ def train_lm(model, data, optimizer, num_steps):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            losses.append(loss.item())
+            losses.append(loss.detach())
             step += 1
             if step >= num_steps:
-                return losses
+                return torch.stack(losses).tolist()
+
+class FashionCNN(nn.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, X):
+        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
+        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
+        return self.fc2(F.relu(self.fc1(X.flatten(1))))
 
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis.

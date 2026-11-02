@@ -1227,23 +1227,6 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-def train_2d(trainer, steps=20, f_grad=None):
-    """Optimize a 2D objective function with a customized trainer.
-
-    Defined in :numref:`sec_gd`"""
-    # `s1` and `s2` are internal state variables used by the stateful
-    # optimizers (momentum, Adam) later in this chapter
-    x1, x2, s1, s2 = -5, -2, 0, 0
-    results = [(x1, x2)]
-    for i in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
-        else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
-        results.append((x1, x2))
-    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
-    return results
-
 class Timer:
     """Record multiple running times.
 

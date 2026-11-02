@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9d48b6a96e3a0fb10e852e51cdb5a2e0d9e1faa5f0fc6f6b6a2bad2e17fa731f",
+    "d2l_lib_fingerprint": "sha256:180f0000d0c921711bda7fa1bbabadc386e1e8b15fff46a379d9673abd4b8719",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[4, 0, 0, 3, 0, 9, 0, 0, 0, 0, 0, 8, 1, 1, 1, 1],\n        [0, 6, 5, 0, 0, 0, 9, 0, 3, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[4, 3, 9, 8],\n        [6, 5, 9, 3]])\n"
+          "text": "tensor([[0, 6, 0, 0, 7, 0, 7, 0, 0, 0, 8, 0, 1, 1, 1, 1],\n        [3, 8, 0, 0, 6, 0, 0, 0, 4, 0, 0, 0, 1, 1, 1, 1]])\ntensor([[6, 7, 7, 8],\n        [3, 8, 6, 4]])\n"
         }
       ]
     },
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.18\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.96\n"
+          "text": "minGRU   accuracy 1.00\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 1.4e-06\n"
+          "text": "max deviation: 1.9e-06\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.03\nMamba  share from the symbols: 0.94\n"
+          "text": "S4D    share from the symbols: 0.04\nMamba  share from the symbols: 0.92\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 40638,
-          "sha256": "sha256:80c76057bd657ea8cb04ff2312cf89e9e8afe23056a43ce354c37ce33a6fc5e8"
+          "bytes": 39785,
+          "sha256": "sha256:d9ebd9441ca1076418834cff96a3ea30836c1d9f0c49fdece60227078dda3cd2"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 3.01\n"
+          "text": "Mamba perplexity: 3.02\n"
         }
       ]
     }

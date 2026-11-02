@@ -1277,34 +1277,55 @@ def beam_search(step_fn, prefix, num_tokens, beam_size=4,
     return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
                   reverse=True)
 
-def train_2d(trainer, steps=20, f_grad=None):
-    """Optimize a 2D objective function with a customized trainer.
+def train_2d(trainer, steps=20, f_grad=None, **hparams):
+    """Run a 2D update rule from (-5, -2) and return the iterates.
 
     Defined in :numref:`sec_gd`"""
-    # `s1` and `s2` are internal state variables used by the stateful
-    # optimizers (momentum, Adam) later in this chapter
-    x1, x2, s1, s2 = -5, -2, 0, 0
+    x1, x2, s1, s2 = -5, -2, 0, 0  # s1, s2: state of stateful optimizers
     results = [(x1, x2)]
-    for i in range(steps):
+    for _ in range(steps):
         if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad, **hparams)
         else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, **hparams)
         results.append((x1, x2))
-    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
+    print(f'step {steps}, x1: {float(x1):f}, x2: {float(x2):f}')
     return results
 
 def show_trace_2d(f, results):
-    """Show the trace of 2D variables during optimization.
+    """Show the trace of 2D variables over the contours of f.
 
     Defined in :numref:`sec_gd`"""
-    d2l.set_figsize()
-    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
-    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
-                          d2l.arange(-3.0, 1.0, 0.1))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
-    d2l.plt.xlabel('x1')
-    d2l.plt.ylabel('x2')
+    x1s, x2s = zip(*[(float(a), float(b)) for a, b in results])
+    grids = []  # A window around start and minimum, widened to fit the trace
+    for (lo, hi), xs in zip([(-5.5, 1.0), (-3.0, 3.0)], (x1s, x2s)):
+        lo, hi = min(lo, min(xs) - 0.5), max(hi, max(xs) + 0.5)
+        grids.append(d2l.arange(lo, hi, (hi - lo) / 100))
+    x1, x2 = d2l.meshgrid(*grids, indexing='ij')
+    width, height = (float(g[-1] - g[0]) for g in grids)
+    equal = 0.25 < height / width < 4  # Equal scales unless the trace diverged
+    d2l.set_figsize((3, 2.8) if equal else (3.5, 2.5))
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='0.6', linewidths=0.8)
+    d2l.plt.plot(x1s, x2s, '-o', color='C1', markersize=4)
+    d2l.plt.xlabel('$x_1$')
+    d2l.plt.ylabel('$x_2$')
+    if equal:
+        d2l.plt.gca().set_aspect('equal')
+
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+def get_data_ch11(batch_size=10, n=1500):
+    """Load the standardized airfoil self-noise data as minibatches.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = (data - data.mean(axis=0)) / data.std(axis=0)
+    data_iter = d2l.load_array(
+        (jnp.array(data[:n, :-1]), jnp.array(data[:n, -1])),
+        batch_size, is_train=True)
+    return data_iter, data.shape[1]-1
 
 class Timer:
     """Record multiple running times.
@@ -1335,112 +1356,124 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
-                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
-
-def get_data_ch11(batch_size=10, n=1500):
-    data = np.genfromtxt(d2l.download('airfoil'),
-                         dtype=np.float32, delimiter='\t')
-    data = (data - data.mean(axis=0)) / data.std(axis=0)
-    data_iter = d2l.load_array(
-        (jnp.array(data[:n, :-1]), jnp.array(data[:n, -1])),
-        batch_size, is_train=True)
-    return data_iter, data.shape[1]-1
-
 def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2):
-    # Initialization
+               feature_dim, num_epochs=2, plot=True):
+    """Train linear regression with an update rule; return its history.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
     w = jnp.array(np.random.normal(scale=0.01, size=(feature_dim, 1)),
                   dtype=jnp.float32)
     b = jnp.zeros(1)
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    # Train
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-    # JIT only the grad computation; the optimizer update runs eagerly so
-    # that stateful optimizers can mutate `states` without triggering JAX
-    # tracer-leak errors from closure side-effects inside jit.
-    @jax.jit
-    def compute_grads(w, b, X, y):
-        def loss_fn(w, b):
-            return d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-        return jax.grad(loss_fn, argnums=(0, 1))(w, b)
-    # Pre-stack the full dataset on device so the periodic evaluate_loss
-    # stays inside one compiled call instead of looping in Python.
-    eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
-    Xs = jnp.concatenate([X for X, _ in eval_batches], axis=0)
-    ys = jnp.concatenate([y for _, y in eval_batches], axis=0)
-    @jax.jit
-    def full_eval(w, b):
-        out = d2l.linreg(Xs, w, b)
-        y_r = ys.reshape(out.shape)
-        return ((out - y_r) ** 2 / 2).mean()
+    loss = lambda w, b, X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
+    grad_fn = jax.jit(jax.grad(loss, argnums=(0, 1)))
+    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
+    full_loss = jax.jit(lambda w, b: loss(w, b, Xs, ys))
+    X, y = next(iter(data_iter))  # One step on copies compiles everything
+    copy = lambda tree: jax.tree.map(lambda a: a, tree)
+    trainer_fn([w, b], list(grad_fn(w, b, X, y)), copy(states),
+               copy(hyperparams))
+    full_loss(w, b)
+    if plot:
+        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                                xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    history = {'examples': [], 'loss': []}
+    n, step, timer = 0, 0, d2l.Timer()
     for _ in range(num_epochs):
         for X, y in data_iter:
-            X, y = jnp.array(X), jnp.array(y)
-            grads = compute_grads(w, b, X, y)
+            grads = grad_fn(w, b, X, y)
             w, b = trainer_fn([w, b], list(grads), states, hyperparams)
-            n += X.shape[0]
-            if n % 200 == 0:
+            n, step = n + len(X), step + 1
+            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                jax.block_until_ready((w, b))  # Wait for the queued steps
                 timer.stop()
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (float(full_eval(w, b)),))
+                l = float(full_loss(w, b))
+                history['examples'].append(n)
+                history['loss'].append(l)
+                if plot:
+                    animator.add(step / len(data_iter), (l,))
                 timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-    return timer.cumsum(), animator.Y[0]
+    history['time'] = timer.cumsum()
+    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
+    return history
 
 def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    # Initialization
-    net = nnx.Linear(5, 1, rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(
-        net, trainer_fn(**hyperparams), wrt=nnx.Param)
+    """Train linear regression with an optax optimizer factory.
 
-    loss = lambda pred, y: jnp.mean((pred - y) ** 2) / 2
+    Defined in :numref:`sec_minibatch_sgd`"""
+    net = nnx.Linear(5, 1, kernel_init=nnx.initializers.normal(0.01),
+                     rngs=nnx.Rngs(random.getrandbits(32)))
+    optimizer = nnx.Optimizer(net, trainer_fn(**hyperparams), wrt=nnx.Param)
+    loss = lambda net, X, y: d2l.squared_loss(net(X), y).mean()
+
+    @nnx.jit
+    def step_fn(net, optimizer, X, y):
+        optimizer.update(net, nnx.grad(loss)(net, X, y))
+
+    Xs, ys = (jnp.concatenate(t) for t in zip(*data_iter))  # The whole data
+    full_loss = nnx.jit(lambda net: loss(net, Xs, ys))
+    X, y = next(iter(data_iter))  # One step on copies compiles everything
+    step_fn(nnx.clone(net), nnx.clone(optimizer), X, y)
+    full_loss(net)
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-    # JIT-fuse the per-batch optimizer update so per-step Python overhead
-    # stays out of the inner loop.
-    @nnx.jit
-    def step(model, optimizer, X, y):
-        def loss_fn(model):
-            out = model(X)
-            y_reshaped = y.reshape(out.shape)
-            return jnp.mean((out - y_reshaped) ** 2) / 2
-        l, grads = nnx.value_and_grad(loss_fn)(model)
-        optimizer.update(model, grads)
-        return l
-
-    # Pre-stack the full dataset on device so the periodic full-loss
-    # evaluation is a single compiled call.
-    eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
-    Xs = jnp.concatenate([X for X, _ in eval_batches], axis=0)
-    ys = jnp.concatenate([y for _, y in eval_batches], axis=0)
-    @nnx.jit
-    def full_eval(model):
-        out = model(Xs)
-        y_r = ys.reshape(out.shape)
-        return jnp.mean((out - y_r) ** 2) / 2
+    step, timer = 0, d2l.Timer()
     for _ in range(num_epochs):
         for X, y in data_iter:
-            X, y = jnp.array(X), jnp.array(y)
-            step(net, optimizer, X, y)
-            n += X.shape[0]
-            if n % 200 == 0:
+            step_fn(net, optimizer, X, y)
+            step += 1
+            if step % max(1, 200 // len(X)) == 0:  # About every 200 examples
+                jax.block_until_ready(nnx.state(net))  # Wait for the steps
                 timer.stop()
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (float(full_eval(net)),))
+                animator.add(step / len(data_iter), (float(full_loss(net)),))
                 timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+
+class WikiText103(d2l.DataModule):
+    """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, batch_size, num_steps, num_train=None, num_val=None):
+        super().__init__()
+        self.save_hyperparameters()
+        self.vocab = d2l.BPETokenizer(vocab_size=256, specials=())  # Bytes
+        self.train = self._read('train-00000-of-00002',
+                                '3cbc792dfc0eeedf8d7333acdc15a9f536032d9a')
+        self.val = self._read('validation-00000-of-00001',
+                              '49d15019b0476afc752bd5f010b5a2aab2de89ca')
+        self.train, self.val = self.train[:num_train], self.val[:num_val]
+
+    def _read(self, split, sha1):
+        url = ('https://huggingface.co/datasets/Salesforce/wikitext/resolve/'
+               f'main/wikitext-103-raw-v1/{split}.parquet')
+        fname = d2l.download(url, os.path.join(self.root, 'wikitext-103'),
+                             sha1)
+        lines = pd.read_parquet(fname)['text']  # Each line ends with '\n'
+        return np.frombuffer(b''.join(s.encode() for s in lines), np.uint8)
+
+    def windows(self, corpus, starts):
+        """Inputs and next-byte targets of the windows at `starts`."""
+        idx = np.asarray(starts)[:, None] + np.arange(self.num_steps + 1)
+        array = corpus[idx].astype(np.int32)
+        return array[:, :-1], array[:, 1:]
+
+    def train_dataloader(self):  # A pass of minibatches at random offsets
+        n = len(self.train) - self.num_steps
+        rng = np.random.default_rng(random.getrandbits(32))
+        for _ in range(n // (self.batch_size * self.num_steps)):
+            yield self.windows(self.train,
+                               rng.integers(n, size=self.batch_size))
+
+    def val_dataloader(self):  # Consecutive, non-overlapping windows
+        starts = np.arange(0, len(self.val) - self.num_steps, self.num_steps)
+        for i in range(0, len(starts), self.batch_size):
+            yield self.windows(self.val, starts[i:i + self.batch_size])
 
 class TinyLM(nnx.Module):
     """A small decoder-only transformer language model.
 
     Defined in :numref:`sec_adam`"""
     def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
-                 max_len=64, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
+                 max_len=64, *, rngs):
         self.num_heads = num_heads
         def linear(d_in, d_out):
             a = 1 / math.sqrt(d_in)  # Weights and biases ~ U(-a, a)
@@ -1478,27 +1511,53 @@ class TinyLM(nnx.Module):
                                             approximate=False))
         return self.head(self.norm(H))
 
+@nnx.jit
+def _lm_train_step(model, optimizer, X, Y):
+    def loss_fn(model):
+        logits = model(X)
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(model)
+    optimizer.update(model, grads)
+    return loss
+
 def train_lm(model, data, optimizer, num_steps):
     """Train a model on next-token prediction for a fixed number of steps.
 
     Defined in :numref:`sec_adam`"""
-    @nnx.jit
-    def step_fn(model, optimizer, X, Y):
-        def loss_fn(model):
-            logits = model(X)
-            return optax.softmax_cross_entropy_with_integer_labels(
-                logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
-        loss, grads = nnx.value_and_grad(loss_fn)(model)
-        optimizer.update(model, grads)
-        return loss
-    losses, step = [], 0
+    losses, pending, step = [], [], 0
     while step < num_steps:
         for X, Y in data.train_dataloader():
-            loss = step_fn(model, optimizer, jnp.asarray(X), jnp.asarray(Y))
-            losses.append(float(loss))
+            pending.append(_lm_train_step(model, optimizer, jnp.asarray(X),
+                                          jnp.asarray(Y)))
             step += 1
+            if len(pending) == 50 or step >= num_steps:  # Sync now and then
+                losses.extend(float(l) for l in jax.device_get(pending))
+                pending = []
             if step >= num_steps:
                 return losses
+
+class FashionCNN(nnx.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, *, rngs):
+        def init(fan_in):  # Weights and biases ~ U(-a, a), a = 1/sqrt(fan_in)
+            a = 1 / math.sqrt(fan_in)
+            f = lambda key, shape, dtype: jax.random.uniform(
+                key, shape, dtype, -a, a)
+            return dict(kernel_init=f, bias_init=f, rngs=rngs)
+        self.conv1 = nnx.Conv(1, 32, kernel_size=(3, 3), **init(9))
+        self.conv2 = nnx.Conv(32, 64, kernel_size=(3, 3), **init(9 * 32))
+        self.fc1 = nnx.Linear(64 * 7 * 7, 128, **init(64 * 7 * 7))
+        self.fc2 = nnx.Linear(128, 10, **init(128))
+
+    def __call__(self, X):
+        X = nnx.max_pool(nnx.relu(self.conv1(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        X = nnx.max_pool(nnx.relu(self.conv2(X)), window_shape=(2, 2),
+                         strides=(2, 2))
+        return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
 
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis.

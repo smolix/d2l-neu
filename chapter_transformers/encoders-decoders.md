@@ -237,9 +237,9 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
 ```
 
 Two thousand steps bring the masked loss far below 3.17 nats, the unigram
-entropy of the byte frequencies, and the model recovers most masked bytes
-exactly. Binning this average by position shows how much each amount of
-available context contributes.
+entropy of the byte frequencies, and the model recovers about half of the
+masked bytes exactly. Binning this average by position shows how much each
+amount of available context contributes.
 
 ### Loss by Available Context
 :label:`subsec_mlm-loss-by-position`
@@ -305,19 +305,19 @@ d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
          'masked loss')
 ```
 
-The profile is flat across the interior and roughly doubles at the two
-one-sided edges. The difference is the contribution of the second side.
-Conditioning on both sides of a byte halves its loss relative to one side,
-because in text what follows a gap constrains it about as strongly as what
-precedes it. We can also read the predictions directly. We mask one byte of a
-sentence from the validation text and list the model's three most probable
-fills:
+The profile is flat across the interior and rises by more than half at the
+two one-sided edges. The difference is the contribution of the second side:
+conditioning on both sides of a byte lowers its loss by about a third
+relative to one side. The two edges cost about the same, because in text
+what follows a gap constrains it about as strongly as what precedes it. We
+can also read the predictions directly. We mask one byte of a sentence from
+the validation text and list the model's three most probable fills:
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab pytorch
 snippet = 'Homarus gammarus , known as the European lobster or common '
 ids = torch.tensor(data.vocab.encode(snippet), device=device)[None]
-for pos in (11, 22, 32):
+for pos in (11, 22, 28):
     Xm = ids.clone()
     Xm[0, pos] = MASK
     with torch.no_grad():
@@ -334,7 +334,7 @@ for pos in (11, 22, 32):
 %%tab jax
 snippet = 'Homarus gammarus , known as the European lobster or common '
 ids = jnp.asarray(data.vocab.encode(snippet))[None]
-for pos in (11, 22, 32):
+for pos in (11, 22, 28):
     Xm = ids.at[0, pos].set(MASK)
     probs = jax.nn.softmax(model.token_emb.attend(model(Xm))[0, pos])
     top = jnp.argsort(probs)[::-1][:3]
@@ -344,16 +344,17 @@ for pos in (11, 22, 32):
                       for i in top))
 ```
 
-The most probable fill for "the _uropean" is the capital "E". The left
-context "known as the " allows almost any word. Only the right-hand context
-("uropean") determines the letter, and a left-to-right model never sees
+In "known as _he European", the model puts most of its probability on "t".
+The left context "known as " allows many words, while the right-hand context
+("he European") leaves essentially one, and a left-to-right model never sees
 that context. Scaled up to subword tokens, sentence pairs, gigabytes of
 text, and a fine-tuning recipe per downstream task, this experiment is BERT
 :cite:`Devlin.Chang.Lee.ea.2018`. The Language Models part covers its
-pretraining and fine-tuning in full (:numref:`chap_nlp_pretrain`). Encoders have since adopted the block
-internals of this chapter: ModernBERT keeps the encoder-only wiring and
-uses RoPE, a gated FFN, alternating local and global attention, and a
-context of 8,192 tokens :cite:`Warner.Chaffin.Clavie.ea.2024`.
+pretraining and fine-tuning in full (:numref:`chap_nlp_pretrain`). Encoders
+have since adopted the block internals of this chapter: ModernBERT keeps the
+encoder-only wiring and uses RoPE, a gated FFN, alternating local and global
+attention, and a context of 8,192 tokens
+:cite:`Warner.Chaffin.Clavie.ea.2024`.
 
 ## Cross-Attention in an Encoder--Decoder
 
@@ -743,12 +744,16 @@ with torch.no_grad():
 w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
 want = torch.arange(T - 1, -1, -1, device=device)  # row t -> column T-1-t
 avg = w.mean(1)                                     # average over heads
-hit = (avg.argmax(-1) == want).float().mean()
+cols = avg.argmax(-1)                  # the source column each row reads
+hit = (cols == want).float().mean()
+same = (cols == cols[0]).float().mean()  # as in the first string
 on_target = w[..., torch.arange(T), want].mean((0, 2))  # one per head
 print(f'head average: argmax on the true source position in '
       f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
 print('weight on the true position, per head:',
       ' '.join(f'{v:.2f}' for v in on_target))
+print(f'argmax in the same column for every string: {100 * same:.0f}% '
+      'of rows')
 h = int(on_target.argmax())
 d2l.show_heatmaps(torch.stack([avg[0], w[0, h]]).cpu()[None],
                   xlabel='source position', ylabel='target position',
@@ -763,12 +768,16 @@ seq2seq(src, dec_in)
 w = seq2seq.blks[0].cross_attention.attention_weights  # (64, 4, T, T)
 want = jnp.arange(T - 1, -1, -1)                   # row t -> column T-1-t
 avg = w.mean(1)                                    # average over heads
-hit = (avg.argmax(-1) == want).mean()
+cols = avg.argmax(-1)                  # the source column each row reads
+hit = (cols == want).mean()
+same = (cols == cols[0]).mean()        # as in the first string
 on_target = w[..., jnp.arange(T), want].mean((0, 2))  # one per head
 print(f'head average: argmax on the true source position in '
       f'{100 * hit:.0f}% of rows, mean weight there {on_target.mean():.2f}')
 print('weight on the true position, per head:',
       ' '.join(f'{v:.2f}' for v in on_target))
+print(f'argmax in the same column for every string: {100 * same:.0f}% '
+      'of rows')
 h = int(on_target.argmax())
 d2l.show_heatmaps(jnp.stack([avg[0], w[0, h]])[None],
                   xlabel='source position', ylabel='target position',
@@ -776,15 +785,24 @@ d2l.show_heatmaps(jnp.stack([avg[0], w[0, h]])[None],
                   cmap='Blues')
 ```
 
-The maps show the anti-diagonal predicted by the third panel of
-:numref:`fig_three-wirings`. Averaged over heads, the argmax lands on the
-true source position for more than nine rows in ten, with most of the
-softmax mass concentrated there. The cross-attention therefore represents
-the alignment built into the task. As :numref:`sec_multihead-attention`
-noted, such readable attention patterns are the exception rather than the
-rule. This one is readable because the model is small. With more depth
-and more heads the task stays solved while the maps spread out, as
-exercise :exref:`ex_encdec-depth-heads` shows.
+Whether the maps show the anti-diagonal predicted by the third panel of
+:numref:`fig_three-wirings` depends on the run. In some runs they do:
+averaged over heads, the argmax lands on the true source position in
+almost every row, with most of the softmax mass concentrated there. In
+others it lands there in only a minority of rows, or in none, although the
+model still reverses every string. The last line of the output shows what
+all runs share. Each target position reads from one source column, the
+same for nearly every string, so the decoder does retrieve by position, as
+the task requires. But the encoder has a position table of its own, and its
+self-attention can move every letter to another position before the
+decoder reads it. Any such rearrangement, undone by the cross-attention,
+reverses the string just as well, and training settles on one of them at
+random. The alignment is then split between two attention layers, and the
+cross-attention map shows only the second half. As
+:numref:`sec_multihead-attention` noted, readable attention patterns are
+the exception rather than the rule. Even in this one-block model a single
+map can mislead, and with more depth and more heads the maps spread out
+further, as exercise :exref:`ex_encdec-depth-heads` shows.
 
 ## Cross-Attention as Interface
 
@@ -923,7 +941,7 @@ with torch.no_grad():
 d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
-d2l.plt.xticks(lengths, [str(N) for N in lengths])
+d2l.plt.xticks(lengths, [str(N) for N in lengths]);
 ```
 
 ```{.python .input #encoders-decoders-the-cost-curve}
@@ -954,7 +972,7 @@ for N in lengths:
 d2l.plot(lengths, [t_full, t_perc], 'input length N', 'forward time (ms)',
          xscale='log', yscale='log',
          legend=['self-attention encoder', 'perceiver encoder'])
-d2l.plt.xticks(lengths, [str(N) for N in lengths])
+d2l.plt.xticks(lengths, [str(N) for N in lengths]);
 ```
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
@@ -978,19 +996,20 @@ cost of attention from the length of the input.
 ## Summary
 
 A transformer block supports encoder-only, decoder-only, and
-encoder--decoder architectures. Removing the causal mask produces an
-encoder that represents each token using context from both directions. In
-our byte-level experiment, positions with context on both sides have
-roughly half the loss of positions with only left context. An
-encoder--decoder connects an unmasked encoder to a causal decoder through
-cross-attention; on a reversal task, the learned attention map recovers the
-known anti-diagonal alignment. Cross-attention can also use a learned latent
-array as its queries. Reading a length-$N$ input into $M$ latents costs
-$O(MN)$ rather than $O(N^2)$, and for fixed $M$ its measured runtime grows
-far more slowly with $N$ than that of full self-attention. Encoder-only
-models are common for retrieval and classification, encoder--decoders for
-translation and speech, and decoder-only models for general autoregressive
-generation.
+encoder--decoder architectures. Removing the causal mask produces an encoder
+that represents each token using context from both directions. In our
+byte-level experiment, positions with context on both sides have about a
+third less loss than positions with only left context. An encoder--decoder
+connects an unmasked encoder to a causal decoder through cross-attention; on
+a reversal task, it reads each target position from one fixed source
+position, the anti-diagonal of the task or, when the encoder has first moved
+the letters, a rearrangement of it. Cross-attention can also use a learned
+latent array as its queries. Reading a length-$N$ input into $M$ latents
+costs $O(MN)$ rather than $O(N^2)$, and for fixed $M$ its measured runtime
+grows far more slowly with $N$ than that of full self-attention.
+Encoder-only models are common for retrieval and classification,
+encoder--decoders for translation and speech, and decoder-only models for
+general autoregressive generation.
 
 ## Exercises
 
@@ -1065,10 +1084,14 @@ generation.
        decoder. Repeat the check with two encoder blocks and one decoder
        block, and with one encoder block and two decoder blocks. Compare
        the maps of both models with those of the one-block model.
-    1. Explain how a model can solve reversal while its cross-attention puts
-       little weight on source position $n - 1 - t$. Reconcile your
-       findings with the cautions about reading attention maps
-       in :numref:`sec_multihead-attention`.
+    1. Follow each letter back through the encoder: multiply the
+       head-averaged cross-attention weights by the head-averaged weights
+       of the encoder's self-attention, and compute the hit rate of the
+       product. Over several runs, does the product recover the
+       anti-diagonal where the cross-attention alone does not? When does
+       the residual stream make this tracing fail? Reconcile your findings
+       with the cautions of :numref:`sec_multihead-attention` about reading
+       attention maps.
    :exlabel:`ex_encdec-depth-heads`
 
 1. [code] **Several masks at once.** ● The objective
@@ -1172,10 +1195,10 @@ Encoders, decoders, and cross-attention<br>
 ::: {.slide title="A Causal Model Sees Only One Side of Every Gap"}
 [The problem]{.kicker}
 
-- Fill the gap in `known as the _uropean`: the left context allows almost
-  any letter, the right context (`uropean`) fixes it.
-- Measured on Wikipedia text: a masked byte costs about **twice** as much
-  with one side of context as with both sides.
+- Fill the gap in `known as _he European`: the left context allows many
+  words, the right context (`he European`) fixes the letter.
+- Measured on Wikipedia text: a masked byte costs about **half again** as
+  much with one side of context as with both sides.
 - Translation and speech recognition read a whole input before they write
   a single output token.
 
@@ -1270,21 +1293,21 @@ Bytes of WikiText-103, windows of 64, 2,000 steps; unigram entropy 3.17
 nats.
 :::
 
-::: {.slide title="Both Sides of Context Halve the Loss"}
+::: {.slide title="Both Sides of Context Cut the Loss by a Third"}
 Positions 0 and 63 of a window see one side only; position 63 sees what
 a causal model sees.
 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
 ::: {.d2l-note .rule}
-The edges cost about twice the interior: the second side halves the loss.
+The edges cost about 1.5 times the interior; the two edges cost the same.
 :::
 :::
 
-::: {.slide title="The Right-Hand Context Recovers the Capital Letter"}
+::: {.slide title="The Right-Hand Context Fixes the Missing Letter"}
 @!encoders-decoders-what-the-second-side-is-worth-2
 
-- Only `uropean` determines the `E` in "the _uropean"; a left-to-right
+- `he European` fixes the `t` in "as _he European"; a left-to-right
   model never sees it.
 - Scaled to subwords and gigabytes, this experiment is BERT (2018);
   ModernBERT (2024) keeps the wiring with RoPE, a gated FFN, and 8k
@@ -1312,7 +1335,8 @@ random, so content reaches the decoder only through cross-attention.
 
 @!encoders-decoders-a-task-whose-alignment-we-know
 
-- Prediction: the cross-attention map is the anti-diagonal.
+- Prediction: if the model solves the task directly, the
+  cross-attention map is the anti-diagonal.
 - Fresh random strings every step: nothing to memorize.
 :::
 
@@ -1398,11 +1422,11 @@ Greedy decoding: the encoder runs once, the decoder once per token.
 @!encoders-decoders-training-and-decoding-2
 :::
 
-::: {.slide title="The Learned Map Is the Anti-Diagonal"}
+::: {.slide title="The Map Is the Anti-Diagonal or a Rearrangement of It"}
 @!encoders-decoders-reading-the-alignment
 
-Readable because the model is small: deeper, wider models solve the task
-with maps that spread out.
+Each row reads one fixed source column. If the encoder has moved the
+letters first, the map shows a rearrangement of the anti-diagonal.
 :::
 
 ::: {.slide title="Learned Queries Read N Inputs at Cost O(MN)"}
@@ -1472,10 +1496,11 @@ $N = 1024$ the two are comparable.
 
 - One block, three wirings: no mask, causal mask, or both joined by
   cross-attention.
-- Masked prediction trains the encoder; a masked byte costs about half as
-  much with both sides of context as with one.
-- On reversal, the encoder--decoder reverses fresh strings without error,
-  and its cross-attention recovers the anti-diagonal.
+- Masked prediction trains the encoder; a masked byte costs about a third
+  less with both sides of context than with one.
+- On reversal, the encoder--decoder reverses fresh strings without error;
+  its cross-attention reads by position, along the anti-diagonal or a
+  rearrangement of it made by the encoder.
 - $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the
   Perceiver is over $10\times$ faster than full self-attention.
 

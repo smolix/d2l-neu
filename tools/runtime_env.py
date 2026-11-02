@@ -245,6 +245,9 @@ FULL_CARD_NOTEBOOKS = {
     # Times the memory/speed trade-offs of checkpointing and copies across two
     # GPUs; a shared card skews the timings the prose quotes.
     "chapter_builders-guide/gpus-devices-memory.ipynb": 2,
+    # 11.3 times naive and cached decoding, prefill, and batched decoding;
+    # sharing a card halved the PyTorch timings in one run (2026-11-02).
+    "chapter_transformers/kv-cache.ipynb": 1,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
 }

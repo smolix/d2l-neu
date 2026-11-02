@@ -515,8 +515,8 @@ The two curves fall together, and the validation loss never turns upward.
 Almost every training window is text the model has not read before, so what
 it learns carries over to the held-out articles. At the end, the two losses
 lie within a few hundredths of a nat of each other. Most of the decrease
-comes in the first few hundred steps, and both losses end below 1.5 nats
-per byte, or about 2.1 bits per byte.
+comes in the first few hundred steps, and both losses end near 1.35 nats
+per byte, or about 1.9 bits per byte.
 
 Two simple predictors give reference levels for these losses. The
 *unigram* model predicts every byte with its frequency in the training
@@ -578,21 +578,21 @@ stack at initialization, this drives the tokens toward their average and
 leaves the query and key projections with tiny gradients. We now test the
 placement in training, with the model and data as above. Two runs differ
 only in `pre_norm`. Both take 800 steps of plain AdamW at a constant
-learning rate of $3 \times 10^{-3}$, without warmup, a setting in which
+learning rate of $10^{-3}$, without warmup, a setting in which
 pre-norm trains without trouble. A third run repeats the post-norm model
-with a warmup. It uses `LMOptimizer` with the same peak rate, 100 steps of
-warmup, and the cosine decay that follows, but without weight decay or
-clipping.
+with a warmup. It uses `LMOptimizer` with the same peak rate, a warmup over
+the first 400 steps, half the run, and the cosine decay that follows, but
+without weight decay or clipping.
 
 ```{.python .input #gpt-breaking-it-with-one-flag}
 %%tab pytorch
 for pre_norm, warmup in ((True, False), (False, False), (False, True)):
     ablation = GPT(len(data.vocab), pre_norm=pre_norm)
     if warmup:
-        optimizer = LMOptimizer(ablation, lr=3e-3, num_steps=800, warmup=100,
+        optimizer = LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
                                 weight_decay=0.0, max_norm=math.inf)
     else:
-        optimizer = torch.optim.AdamW(ablation.parameters(), lr=3e-3,
+        optimizer = torch.optim.AdamW(ablation.parameters(), lr=1e-3,
                                       weight_decay=0.0)
     losses = d2l.train_lm(ablation, data, optimizer, 800)
     print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
@@ -606,11 +606,11 @@ for pre_norm, warmup in ((True, False), (False, False), (False, True)):
     ablation = GPT(len(data.vocab), pre_norm=pre_norm,
                    rngs=nnx.Rngs(d2l.get_key()))
     if warmup:
-        optimizer = LMOptimizer(ablation, lr=3e-3, num_steps=800, warmup=100,
+        optimizer = LMOptimizer(ablation, lr=1e-3, num_steps=800, warmup=400,
                                 weight_decay=0.0, max_norm=math.inf)
     else:
         optimizer = nnx.Optimizer(
-            ablation, optax.adamw(3e-3, weight_decay=0.0), wrt=nnx.Param)
+            ablation, optax.adamw(1e-3, weight_decay=0.0), wrt=nnx.Param)
     losses = d2l.train_lm(ablation, data, optimizer, 800)
     print(f'pre_norm={pre_norm}, warmup={warmup}: loss at step '
           '100/200/400/800: ' + '/'.join(f'{sum(losses[k-50:k]) / 50:.2f}'
@@ -631,7 +631,8 @@ initialization the gradients of the parameters near the output of a
 post-norm stack are large. A large learning rate without warmup then makes
 training unstable, and a warmup avoids the failure. The third run confirms
 this: with a warmup, the post-norm model leaves the unigram level and
-trains, while pre-norm needs no warmup at this rate. GPT-2 already placed
+trains, while pre-norm needs no warmup at this rate. The warmup here is
+long, half the run, and an exercise asks how short it can be. GPT-2 already placed
 the normalization at the input of each sublayer and added one after the
 last block :cite:`Radford.Wu.Child.ea.2019`, the arrangement that `GPT`
 uses by default.
@@ -748,11 +749,11 @@ for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
 At $\tau = 1$ the model writes words and word-like strings in a plausible
 order, with the habits of its corpus, which sets punctuation off by spaces
 (" , " and " . "). The sharpened and truncated setting keeps to frequent
-words and repeats itself, and at $\tau = 2$ the bytes approach random
-strings. A loss below 1.5 nats per byte is a perplexity below 4.5: at a
-typical position the model still hesitates among about four bytes, so the
-temperature changes the text visibly. Fluent text needs a much larger model
-trained on much more text, such as the one we load next.
+words, most of them spelled correctly, and at $\tau = 2$ the bytes approach
+random strings. A loss near 1.35 nats per byte is a perplexity of about 3.9:
+at a typical position the model still hesitates among about four bytes, so
+the temperature changes the text visibly. Fluent text needs a much larger
+model trained on much more text, such as the one we load next.
 
 ## Loading GPT-2
 :label:`subsec_gpt-loading`
@@ -974,11 +975,11 @@ added to the embedding, as in GPT-2, or as RoPE rotations inside each
 attention layer. GPT-2's initialization scales the projections that write
 into the residual stream by $1/\sqrt{2L}$, so that the stream does not grow
 with depth. We train with AdamW, weight decay on the matrices, warmup,
-cosine decay, and clipping, on a corpus so large that the model almost
-never reads the same passage twice, so its validation loss follows its
-training loss. Moving the normalization after the residual addition, at a
-learning rate that pre-norm tolerates without warmup, leaves the model at
-the unigram entropy, where its predictions ignore their context. A warmup lets the
+cosine decay, and clipping, on a corpus so large that the model almost never
+reads the same passage twice, so its validation loss follows its training
+loss. Moving the normalization after the residual addition, at a learning
+rate that pre-norm tolerates without warmup, leaves the model at the unigram
+entropy, where its predictions ignore their context. A slow warmup lets the
 post-norm model train. Temperature and top-$k$ truncation reshape the
 distribution from which text is sampled, and the released GPT-2 loads into
 the same class through a map of parameter names.
@@ -1040,6 +1041,20 @@ the same class through a map of parameter names.
     1. Repeat at three times the peak learning rate. Which of the four
        choices matter now, and why would you expect clipping and warmup to
        matter more at a high learning rate than at a low one?
+
+1. [code] **How slow a warmup post-norm needs.** The third run of
+   :numref:`subsec_gpt-norm-placement` warms the post-norm model up over
+   400 of its 800 steps.
+    1. Repeat it with warmups of 100, 200, and 300 steps at the peak rate
+       $10^{-3}$, and with a warmup of 100 steps at $5 \times 10^{-4}$.
+       Which runs leave the unigram level? Run each setting three times.
+    1. Do your results depend on the length of the warmup, on the peak
+       rate, or on the slope at which the rate rises? Design one more run
+       that separates two of these explanations.
+    1. Track the token spread of :numref:`subsec_signal-propagation` at
+       the last block during the first 100 steps of a run that stalls and
+       of one that trains. Does the stalled run lose the distinction
+       between its tokens, and if so, when?
 
 1. [code] **Memorizing a novel.** :numref:`subsec_gpt-training` trains on
    WikiText-103 so that the model almost never reads the same passage
@@ -1402,8 +1417,8 @@ The model definition hardly changes across 11 orders of magnitude.
 :::
 
 ::: {.slide title="Post-Norm Without Warmup Sticks at the Unigram Level"}
-Plain AdamW at a constant $3 \times 10^{-3}$ for 800 steps, pre-norm and
-post-norm; then post-norm with 100 steps of warmup:
+Plain AdamW at a constant $10^{-3}$ for 800 steps, pre-norm and
+post-norm; then post-norm with a 400-step warmup:
 
 @!gpt-breaking-it-with-one-flag
 
@@ -1441,11 +1456,11 @@ $$p_v = \frac{\exp(z_v/\tau)}{\sum_u \exp(z_u/\tau)}$$
   set the rest to $-\infty$.
 :::
 
-::: {.slide title="Lower Temperature Repeats, Higher Temperature Scrambles"}
+::: {.slide title="Lower Temperature Plays Safe, Higher Temperature Scrambles"}
 @!gpt-sampling-from-the-model-2
 
-$\tau = 1$: the model's own distribution. $\tau = 0.7$, $k = 8$: safer and
-more repetitive. $\tau = 2$: close to random bytes.
+$\tau = 1$: the model's own distribution. $\tau = 0.7$, $k = 8$: safer,
+frequent words, mostly spelled correctly. $\tau = 2$: close to random bytes.
 :::
 
 ::: {.slide title="Naive Generation Redoes the Whole Context for Every Token" only="pytorch"}

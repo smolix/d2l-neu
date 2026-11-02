@@ -168,7 +168,10 @@ counts the full $n \times n$ score matrix, the masked half included.
 XLA counts the operations of a compiled program without running it:
 `cost_analysis()` of the lowered training step reports every operation of
 the optimized computation, the attention scores over the full $n \times n$
-matrix, softmax, and normalization included.
+matrix, softmax, and normalization included. We compile the step for the
+CPU. On a GPU, XLA hands some operations to library kernels whose work it
+may leave out of the count, and which kernels it picks can change from one
+run to the next.
 :end_tab:
 
 ```{.python .input #scaling-laws-checking-the-arithmetic}
@@ -196,6 +199,8 @@ X = jax.random.randint(key_x, (64, 128), 0, 256)
 Y = jax.random.randint(key_y, (64, 128), 0, 256)
 graphdef, params, rest = nnx.split(model, nnx.Param, ...)
 N = sum(p.size for p in jax.tree.leaves(params) if p.ndim == 2)
+# Count on the CPU: on a GPU the count depends on the kernels XLA picks
+params, rest, X, Y = jax.device_put((params, rest, X, Y), d2l.cpu())
 
 def loss_fn(params, X, Y):
     logits = nnx.merge(graphdef, params, rest)(X)
@@ -319,15 +324,15 @@ print(f'slope {slope:.3f}; the largest model lies '
 At every budget the validation loss falls as the model grows, and more
 data lowers every curve. The three smallest models at the largest budget
 lie close to a straight line, but the two larger models fall short of
-its extension: the curve flattens. It flattens earlier at the smaller
-budgets, and at 4.1 million tokens the two largest models are almost tied.
-More parameters lower the loss only as long as there is data for them to
+its extension: the curve flattens. At every budget, the largest model gains
+only a few hundredths of a nat over the next one, although it has three
+times the parameters. More parameters lower the loss only as long as there is data for them to
 learn from. With the data fixed, the loss approaches a floor that more
 parameters do not lower, and more data lowers the floor.
 
 Two checks support this reading. Each point is a single run with fresh
-random weights, and rerunning moves a point by about a hundredth of a nat,
-less than the gaps between the curves. And no run reads the same text
+random weights, and rerunning moves most points by a hundredth or two of
+a nat, less than the gaps between the curves. And no run reads the same text
 twice, so a larger budget means more distinct text, not more passes over
 the same text. The training loss of the longest runs stays within a few
 hundredths of the validation loss, so the models do not memorize.
@@ -903,7 +908,8 @@ A study is only as good as the tuning of its worst point.
 @!scaling-laws-five-sizes-one-diet-2
 
 - Small models follow a power law (dashed); larger ones fall short.
-- Less data: earlier flattening. More data lowers the floor.
+- At every budget the largest model gains only a few hundredths over
+  the next. More data lowers the floor.
 :::
 
 ::: {.slide title="The Chinchilla Law Separates Three Limits"}

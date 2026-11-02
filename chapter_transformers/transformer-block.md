@@ -217,9 +217,9 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
 stats = {pre: signal_stats(pre) for pre in (False, True)}
 for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
     spreads, rms, grads, proj = stats[pre]
-    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f},  '
+    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f}, '
           'token spread at k=8,16,32: '
-          + ' '.join(f'{spreads[k-1]:8.1e}' for k in (8, 16, 32)))
+          + ' '.join(f'{spreads[k-1]:.1e}' for k in (8, 16, 32)))
     print('          grad norms at k=32: '
           + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
 d2l.plot(torch.arange(1, 33), [stats[False][2], stats[True][2]],
@@ -266,9 +266,9 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
 stats = {pre: signal_stats(pre) for pre in (False, True)}
 for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
     spreads, rms, grads, proj = stats[pre]
-    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f},  '
+    print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f}, '
           'token spread at k=8,16,32: '
-          + ' '.join(f'{spreads[k-1]:8.1e}' for k in (8, 16, 32)))
+          + ' '.join(f'{spreads[k-1]:.1e}' for k in (8, 16, 32)))
     print('          grad norms at k=32: '
           + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
 d2l.plot(jnp.arange(1, 33), [stats[False][2], stats[True][2]],
@@ -280,8 +280,9 @@ The two arrangements produce different networks from the same weights.
 Post-LN renormalizes the stream after every addition, so its root mean
 square (RMS) is pinned at $1$ at every depth. Pre-LN only ever adds, so its
 stream grows like the square root of the depth. At initialization the block
-outputs are nearly uncorrelated and their variances add, which puts the
-RMS after 32 blocks near $\sqrt{33} \approx 5.7$. This growth stabilizes the
+outputs are nearly uncorrelated and their variances add, which predicts an
+RMS after 32 blocks of $\sqrt{33} \approx 5.7$. The measured value, a little
+above 5, falls somewhat short; an exercise asks why. This growth stabilizes the
 stack. Each pre-LN branch reads the stream through its own normalization,
 so its output has a fixed scale. As the stream grows, the *relative*
 contribution of each successive block therefore shrinks.
@@ -731,8 +732,8 @@ for act in ('gelu', 'swiglu'):
           + '/'.join(f'{v:.2f}' for v in val))
 ```
 
-The gated FFN ends a few hundredths of a nat ahead, a gap several times
-larger than the change from one random initialization to the next. The
+The gated FFN ends a few hundredths of a nat ahead, and it stays ahead when
+we repeat the comparison from fresh random initializations. The
 direction agrees with the comparison of :citet:`Shazeer.2020` at the scale
 of T5. There, at matched parameters and computation, SwiGLU lowered the
 held-out log-perplexity by about 0.04 nats against GELU. It also agrees
@@ -1251,8 +1252,8 @@ Byte-level LM on WikiText-103, 2 blocks, $d = 128$, 600 AdamW steps; only
 
 @!transformer-block-the-flags-at-work-gelu-versus-swiglu
 
-The gap is several times the change between random initializations;
-at T5 scale it is about 0.04 nats.
+SwiGLU stays ahead when the runs are repeated from fresh initializations;
+at T5 scale the gap is about 0.04 nats.
 :::
 
 ::: {.slide title="Wrap-up"}

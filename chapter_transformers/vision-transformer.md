@@ -519,11 +519,16 @@ d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
 
 The fixed code's curve falls from about 0.76 for neighboring patches to
 between $-0.3$ and $-0.5$ at distances 3 to 5, because by construction
-patches in nearby rows and columns get similar codes. The learned embeddings show
-the same trend, less steeply. Neighbors are more similar than distant
-positions. This structure was absent at initialization, and the model
-inferred it from the images alone. The network that we compare with next is
-given this geometry by its architecture.
+patches in nearby rows and columns get similar codes. The learned
+embeddings show only a trace of this structure. Their curve stays close to
+zero: neighbors are slightly more similar than patches three cells apart,
+by about a tenth, and the curve rises again at distance 5, where every pair
+joins two opposite edges of the image. Fashion-MNIST items rarely reach the
+edges, so the border patches mostly see background, which may make their
+embeddings alike; an exercise tests whether the small dip is more than
+chance. Ten epochs on 60,000 images teach the ViT little about its own
+geometry. The network that we compare with next is given this geometry by
+its architecture.
 
 ## Comparison with a Convolutional Network
 
@@ -631,8 +636,8 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
 ```
 
 At the same parameter count, data, recipe, and number of epochs, and at
-about the same computational cost, the CNN reaches about 92%, about two
-points ahead of the ViT. The experiment measures the two models under one
+about the same computational cost, the CNN reaches about 94%, four to
+five points ahead of the ViT. The experiment measures the two models under one
 protocol; it does not say which property of the CNN produces the gap. The
 CNN builds in locality and translation equivariance, which the ViT must
 infer from 60,000 images, and the position embeddings of
@@ -675,12 +680,11 @@ encoder stack then processes the patch tokens, and a linear head classifies
 the final representation of a learned class token. The architecture is the
 text transformer's, and only the tokenization and the readout are new.
 Position embeddings must encode a row and a column. Learned from noise, as
-in the original ViT, they come to reflect the grid within ten epochs on
-Fashion-MNIST, less sharply than fixed 2-D sinusoidal codes, which build it
-in. Large ViTs also need a few register tokens as internal storage. Matched
+in the original ViT, they show only a trace of the grid after ten epochs
+on Fashion-MNIST, while fixed 2-D sinusoidal codes build it in. Large ViTs also need a few register tokens as internal storage. Matched
 with a CNN in parameters, computation, data, and training recipe, our ViT
-trails by about two points; smaller patches and much more data narrow or
-reverse such gaps.
+trails by four to five points; smaller patches and much more data narrow
+or reverse such gaps.
 
 ## Exercises
 
@@ -1108,14 +1112,14 @@ Our recipe (both models):
 @!vision-transformer-a-first-run-2
 :::
 
-::: {.slide title="The Learned Embeddings Pick Up the Grid, Less Sharply"}
+::: {.slide title="The Learned Embeddings Show Only a Trace of the Grid"}
 Mean cosine similarity of centered position embeddings, by grid distance
 (max of row and column offset):
 
 @!vision-transformer-do-the-position-embeddings-discover-the-grid
 
-The fixed 2-D code falls from 0.76 to about $-0.4$; the learned one, flat
-at initialization, falls less steeply.
+The fixed 2-D code falls from 0.76 to about $-0.4$; the learned one stays
+near zero, a little higher for neighbors and for opposite edges.
 :::
 
 ::: {.slide title="Check: What Would Random Embeddings Give?"}
@@ -1142,7 +1146,7 @@ zero?
 $7 \times 7$ stem, then seven residual blocks of widths 64 to 512.
 :::
 
-::: {.slide title="At Equal Budget the CNN Is Ahead after Ten Epochs"}
+::: {.slide title="At Equal Budget the CNN Is Four to Five Points Ahead"}
 @!vision-transformer-a-convolutional-baseline-at-the-same-budget-3
 
 ::: {.d2l-note}
@@ -1174,12 +1178,13 @@ parameters, and the forward FLOPs?
 ::: {.slide title="Wrap-up"}
 - ViT = strided-convolution patchify, the pre-norm encoder, a head on the
   class token; only tokenization and readout are new.
-- Learned position embeddings start as noise; after ten epochs they
-  reflect the $6 \times 6$ grid, less sharply than a 2-D sinusoidal code
-  that builds it in.
+- Learned position embeddings start as noise; after ten epochs they show
+  only a trace of the $6 \times 6$ grid, which a 2-D sinusoidal code
+  builds in.
 - Large ViTs need register tokens as internal storage.
 - Matched in parameters, FLOPs, data, and recipe, the CNN leads on
-  Fashion-MNIST; smaller patches and more data move the ranking.
+  Fashion-MNIST by four to five points; smaller patches and more data move
+  the ranking.
 
 **Next:** Mixture of Experts, more parameters per FLOP.
 :::

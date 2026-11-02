@@ -674,9 +674,10 @@ for pos in schemes:
 ```
 
 At the training length, every explicit scheme gives a lower perplexity than
-NoPE, and RoPE gives the lowest. Beyond the training length the schemes
-split into two groups. The learned table, the sinusoidal table, and RoPE
-degrade several-fold at context 512, each for its own reason. The learned
+NoPE, and the sinusoidal table and RoPE give the lowest. Beyond the training
+length the schemes split into two groups. The sinusoidal table and RoPE
+degrade several-fold at context 512, and the learned table less steeply but
+clearly, each for its own reason. The learned
 table reaches rows beyond position 127 that still hold their random
 initialization. The sinusoidal table supplies rows whose slow columns take
 values never seen in training. RoPE adds no position vector, but its slow
@@ -742,7 +743,7 @@ for name, factor in factors.items():
     rope_model.rope_scale.copy_(factor)
     print(f'{name:>10}: ' + ''.join(
         f'{eval_ppl(rope_model, eval_sets[n]):8.1f}' for n in contexts))
-rope_model.rope_scale.copy_(ones)
+rope_model.rope_scale.copy_(ones);
 ```
 
 ```{.python .input #positional-information-extending-a-trained-model-s-context}
@@ -762,11 +763,14 @@ for name, factor in factors.items():
 rope_model.rope_scale[...] = ones
 ```
 
-Both rescalings bring the perplexity at context 512 below that of the
-unscaled model. Rescaling only the slow pairs hurts less at the shorter
-contexts, where the uniform factor blurs the distinctions between
-neighboring bytes that the fast pairs were trained to make. At context
-512, neither rescaled model reaches the perplexity that the unscaled model
+Rescaling only the slow pairs brings the perplexity at context 512 far
+below that of the unscaled model, and close to its level at the training
+length. The uniform factor fails on this model. It compresses the fast
+pairs too, blurs the distinctions between neighboring bytes that they were
+trained to make, and raises the perplexity at every context, so at 512 it
+gains nothing reliable over leaving the angles alone. This is the defect
+that YaRN's split into fast and slow pairs removes. Even so, at context
+512 neither rescaled model reaches the perplexity that the unscaled model
 has at the training length, because no weight was trained on compressed
 angles. The published recipes therefore pair the rescaling with a short
 fine-tune at the new length, which Exercise
@@ -1250,8 +1254,9 @@ Validation perplexity per byte on WikiText-103, trained at context 128 for
 @!positional-information-the-experiment-3
 
 ::: {.d2l-note}
-In range, every explicit scheme beats NoPE and RoPE is lowest. At 512,
-learned, sinusoidal, and RoPE degrade; ALiBi and NoPE stay flat.
+In range, every explicit scheme beats NoPE; sinusoidal and RoPE are
+lowest. At 512, learned, sinusoidal, and RoPE degrade; ALiBi and NoPE stay
+flat.
 :::
 :::
 
@@ -1300,7 +1305,7 @@ positions beyond the training length.
   slowest slowed by exactly $s$.
 :::
 
-::: {.slide title="Rescaling Angles Lowers Perplexity at 512 Without Training"}
+::: {.slide title="Rescaling Slow Pairs Lowers Perplexity at 512 Without Training"}
 [Context extension]{.kicker}
 
 The trained RoPE model, angle factors changed, no weight updated:
@@ -1308,8 +1313,9 @@ The trained RoPE model, angle factors changed, no weight updated:
 @!positional-information-extending-a-trained-model-s-context
 
 ::: {.d2l-note}
-Leaving the fast pairs alone keeps neighbors apart; a short fine-tune at
-the new length completes the recipe.
+Rescaling all pairs blurs neighbors and costs at every length; leaving the
+fast pairs alone keeps them apart. A short fine-tune at the new length
+completes the recipe.
 :::
 :::
 

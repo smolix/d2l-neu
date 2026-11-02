@@ -683,8 +683,8 @@ Both remedies spread the tokens much more evenly and drop few assignments,
 and both runs end with a lower validation loss than the unbalanced one. In
 the unbalanced model, experts that receive almost no tokens add parameters
 that the model hardly uses, and many tokens skip their expert altogether.
-At this scale the two remedies end at about the same loss. Their difference
-shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
+At this scale neither remedy ends consistently ahead of the other. Their
+difference shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
 billion parameters both ways, and the controller balanced the load much
 more evenly than the auxiliary loss while reaching a slightly lower
 validation perplexity.
@@ -700,20 +700,23 @@ part.
 
 The expert layer was built to answer one question: at the same
 computation per token, does a model with eight times the feed-forward
-parameters predict text better? We train two models in the configuration of
-:numref:`sec_gpt`, six blocks of width 256: the dense `d2l.GPT`, and the
-same model with each feed-forward network replaced by eight experts, one
-active per token. The expert layers are balanced by the auxiliary loss at
-$\alpha = 0.01$ and use the capacity factor of 1.25, the settings of the
-Switch transformer, whose experiments we compare with below. Each expert
-is a full-width `d2l.FeedForward`, so a token passes through as many parameters in the mixture as in the dense
-model, apart from the router's $256 \times 8$ weights per block.
+parameters predict text better? Extra parameters help only a model that
+has more text than it can absorb, so we compare in that regime: the small
+GPT of the balancing experiments, two blocks of width 128, trained on
+about 50 million bytes, more than a hundred per parameter. The dense
+`d2l.GPT` competes with the same model with each feed-forward network
+replaced by eight experts, one active per token. The expert layers are
+balanced by the auxiliary loss at $\alpha = 0.01$ and use the capacity
+factor of 1.25, the settings of the Switch transformer, whose experiments
+we compare with below. Each expert is a full-width `d2l.FeedForward`, so a
+token passes through as many parameters in the mixture as in the dense
+model, apart from the router's $128 \times 8$ weights per block.
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
 %%tab pytorch
-models = {'dense': d2l.GPT(len(data.vocab)),
-          'MoE': d2l.GPT(len(data.vocab),
-                         ffn_factory=lambda: MoELayer(256, 8, 1))}
+models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
+                           num_blks=2),
+          'MoE': small_moe_gpt()}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
@@ -721,23 +724,22 @@ for name, model in models.items():
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
 %%tab jax
-models = {'dense': d2l.GPT(len(data.vocab), rngs=nnx.Rngs(d2l.get_key())),
-          'MoE': d2l.GPT(len(data.vocab), rngs=nnx.Rngs(d2l.get_key()),
-                         ffn_factory=lambda rngs: MoELayer(256, 8, 1,
-                                                           rngs=rngs))}
+models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
+                           num_blks=2, rngs=nnx.Rngs(d2l.get_key())),
+          'MoE': small_moe_gpt()}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
 ```
 
-The mixture stores 5.6 times the parameters of the dense model and uses
+The mixture stores 5.3 times the parameters of the dense model and uses
 the same number per token. Both models train with the recipe of
-:numref:`sec_gpt` for its 1,000 steps, and we measure the validation loss
-every 50 steps:
+:numref:`sec_gpt` for 6,000 steps, and we measure the validation loss
+every 250 steps:
 
 ```{.python .input #moe-a-mixture-of-experts-gpt}
 %%tab pytorch, jax
-num_steps, every = 1000, 50
+num_steps, every = 6000, 250
 curves = {}
 for name, model in models.items():
     optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=num_steps,
@@ -752,14 +754,15 @@ d2l.plot(list(range(every, num_steps + 1, every)), list(curves.values()),
          fmts=('-', '--'))
 ```
 
-Early in training the mixture keeps pace with the dense model or trails
-it slightly: each fresh expert's output is scaled by a probability near
-$1/8$, so the expert layers start out much weaker than the dense
-feed-forward networks. After the first few hundred steps the mixture's
-validation loss falls below the dense model's and stays below it to the
-end. At the same computation per token, the stored experts make a better
-model. Large studies report the
-same effect. The Switch transformer reached the quality of a dense T5
+Early in training the mixture trails the dense model: each fresh
+expert's output is scaled by a probability near $1/8$, so the expert
+layers start out much weaker than the dense feed-forward networks, and
+each expert learns from only an eighth of the tokens. As the dense model
+runs out of capacity, its curve flattens, while the mixture keeps
+improving. Its validation loss falls below the dense model's after about
+2,000 steps and stays below it to the end, by a few hundredths of a nat.
+At the same computation per token, the stored experts make a better
+model. Large studies report the same effect. The Switch transformer reached the quality of a dense T5
 model several times faster at the same number of operations per token, and
 it already gained from two experts :cite:`fedus2022switch`.
 :citet:`Clark.Casas.Guy.ea.2022` found that routing improved models of
@@ -769,13 +772,15 @@ the largest gains for the smallest models.
 The gain needs data. Each expert sees about $1/E$ of the tokens, and the
 extra parameters help only if the text holds more than the dense model can
 learn from it. A corpus read many times over offers less, and ours is
-read less than once.
+read less than once. Exercise :exref:`ex_moe-data-regime` repeats the
+comparison with the six-block GPT of :numref:`sec_gpt`, which at 1,000
+steps has more parameters than its text can fill.
 :citet:`Krajewski.Ludziejewski.Adamczewski.ea.2024` found that when the
 training tokens grow with the model, the advantage of mixtures over dense
 models grows with the training budget.
 
 The gain also has costs that the operation count leaves out. The mixture
-keeps 5.6 times the parameters in memory, together with AdamW's two state
+keeps 5.3 times the parameters in memory, together with AdamW's two state
 values per parameter. Its step takes longer than its operation count
 suggests: the buffers hold a quarter more rows than there are tokens,
 copying tokens into the buffers and outputs back moves data without
@@ -854,8 +859,9 @@ tokens go to the same expert and because routing reinforces itself. An auxiliary
 on the product of load and probability, or a controller that biases only
 the selection, evens out the load. With balanced experts, a GPT with eight
 experts per block and one active per token reaches a lower validation loss
-than the dense model at the same computation per token, while storing 5.6
-times the parameters; released models refine the design with many narrow
+than the dense model at the same computation per token, once the dense
+model has more text than it can absorb, while storing 5.3 times the
+parameters; released models refine the design with many narrow
 experts and a shared expert.
 
 ## Exercises
@@ -981,6 +987,19 @@ experts and a shared expert.
        minibatch? What does this imply for a model that is evaluated
        with batches of a different size or composition than in training,
        for example while decoding one token per sequence?
+
+1. [code] **When the mixture loses.** :numref:`subsec_moe-gpt` compares
+   the two models where the dense model has more text than it can absorb.
+    1. Repeat the comparison with the six-block GPT of width 256 from
+       :numref:`sec_gpt` and its budget of 1,000 steps, with eight
+       full-width experts per block. Train each model three times. Which
+       one ends lower?
+    1. Compute the training bytes per dense parameter in both comparisons,
+       and explain the outcome with the scaling laws of
+       :numref:`sec_scaling-laws` and the data each expert sees.
+    1. Train the six-block pair for longer. Does the mixture overtake the
+       dense model, and if so, after how many steps?
+   :exlabel:`ex_moe-data-regime`
 
 1. [code] **Shared expert.** ● Write `SharedMoELayer`, a subclass of
    `MoELayer` that adds the output of one extra `d2l.FeedForward`, applied
@@ -1276,10 +1295,10 @@ $\mathcal{L}_{\mathrm{balance}}$?
 :::
 :::
 
-::: {.slide title="Same Computation per Token, 5.6 Times the Parameters"}
-Our GPT of the previous sections, six blocks of width 256, with each FFN
-replaced by 8 experts, top-1, auxiliary loss $\alpha = 0.01$, capacity
-factor 1.25:
+::: {.slide title="Same Computation per Token, 5.3 Times the Parameters"}
+The small GPT of the balancing runs, two blocks of width 128, dense and
+with each FFN replaced by 8 experts, top-1, auxiliary loss
+$\alpha = 0.01$, capacity factor 1.25:
 
 @!moe-a-mixture-of-experts-gpt-1
 :::
@@ -1287,23 +1306,24 @@ factor 1.25:
 ::: {.slide title="The MoE GPT Reaches a Lower Validation Loss Than the Dense GPT"}
 @!moe-a-mixture-of-experts-gpt
 
-- 1,000 steps; the model almost never reads a passage twice.
-- The curves part after a few hundred steps; the mixture stays below.
+- 6,000 steps, about 50M bytes, more than 100 per dense parameter.
+- The mixture starts behind, crosses after about 2,000 steps, and stays
+  below.
 :::
 
 ::: {.slide title="Check: How Much Text Does One Expert See?"}
 [Check]{.kicker}
 
-Our MoE GPT trains for 1,000 steps of 64 windows of 128 bytes, with
+Our MoE GPT trains for 6,000 steps of 64 windows of 128 bytes, with
 8 experts per layer and top-1 routing, evenly balanced. How many
 bytes does one expert of a layer see, and how many does the dense
 FFN see?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $1000 \cdot 64 \cdot 128 \approx 8.2$M bytes pass through
+**Answer.** $6000 \cdot 64 \cdot 128 \approx 49$M bytes pass through
 each layer. The dense FFN sees all of them; each expert sees about
-$8.2\textrm{M}/8 \approx 1$M. Every expert must learn from an eighth of the
+$49\textrm{M}/8 \approx 6$M. Every expert must learn from an eighth of the
 data, which is why mixtures need plenty of distinct text.
 :::
 :::

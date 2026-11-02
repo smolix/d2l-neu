@@ -202,7 +202,7 @@ for n in [2048, 4096, 8192, 16384]:
           f'predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The measurement matches $8n^2$ bytes to within a few MiB of workspace, and
+The measurement matches $8n^2$ bytes up to a small, fixed workspace, and
 doubling $n$ quadruples it. At $n = 16{,}384$, a single fp32 head already
 needs 2 GiB of temporary storage.
 
@@ -388,11 +388,11 @@ with jax.default_matmul_precision('highest'):
 print(f'maximum deviation: {float(err):.2e}')
 ```
 
-The two computations agree up to floating-point rounding, around $10^{-7}$
-in fp32. Chunking changes the order of evaluation, not the definition of
-attention. The chunked version holds $n \times c$ scores at a time instead
-of $n \times n$, so its footprint should grow linearly in $n$ rather than
-quadratically.
+The two computations agree up to floating-point rounding, at the level of
+$10^{-7}$ to $10^{-6}$ in fp32. Chunking changes the order of evaluation,
+not the definition of attention. The chunked version holds $n \times c$
+scores at a time instead of $n \times n$, so its footprint should grow
+linearly in $n$ rather than quadratically.
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-3}
 %%tab pytorch
@@ -1096,15 +1096,31 @@ d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
          legend=list(times), xscale='log', yscale='log', figsize=(4.5, 3))
 ```
 
-At short lengths the fused dense kernel is at least as fast as the other
-two: its work is small, and it runs as a single kernel. At long lengths its
-time grows about fourfold with every doubling of $n$, while the times of the
-windowed and the chunked linear mechanisms grow about twofold. Both
-therefore overtake dense attention within the measured range, and at 32,768
-tokens they are several times faster. Dense attention remains the default
-at moderate lengths, where it is exact and fast. At long contexts the
-mechanisms of linear cost are faster, and linear attention is also faster
-during generation, where its state stays the size of one matrix.
+At short lengths all three take well under a millisecond, and fixed
+per-call costs rather than the operation counts decide which is fastest. At
+long lengths the time of dense attention grows about fourfold with every
+doubling of $n$, while the times of the windowed and the chunked linear
+mechanisms grow about twofold. At 32,768 tokens each of them therefore
+needs well under half the time of dense attention, and the gap widens with
+every further doubling. Dense attention remains the default at moderate
+lengths, where it is exact and fast. At long contexts the mechanisms of
+linear cost are faster, and linear attention is also faster during
+generation, where its state stays the size of one matrix.
+
+:begin_tab:`pytorch`
+Run eagerly, the windowed and the linear functions launch many small
+kernels, one per operation, while dense attention is a single fused kernel.
+Below a few thousand tokens these launches cost more than the arithmetic,
+so the dense kernel is the fastest there and the two others overtake it
+only as $n$ grows.
+:end_tab:
+
+:begin_tab:`jax`
+`jax.jit` compiles the windowed and the linear functions into a few fused
+kernels, so their fixed cost is about that of the dense kernel. At short
+lengths the three curves therefore lie close together, and the gap opens
+only as $n$ grows.
+:end_tab:
 
 ## Summary
 
@@ -1118,9 +1134,10 @@ to $1 + L(w-1)$ after $L$ layers; interleaved global layers restore direct
 paths, and a fused kernel saves work only in whole tiles. A factorizing
 kernel turns attention into a recurrent network with a $d \times d_v$ matrix
 state, computed in chunks for training and step by step for generation; the
-state has constant size but is a lossy summary of the past. At short
-lengths the fused dense kernel is fastest; at long contexts the mechanisms
-of linear cost overtake it.
+state has constant size but is a lossy summary of the past. Measured,
+dense time grows fourfold per doubling of the length and the time of the
+linear-cost mechanisms twofold, so at long contexts they need a fraction of
+its time.
 
 ## Exercises
 
@@ -1683,13 +1700,15 @@ A linear recurrence with a fixed-size state is a state space model.
 [Arora et al. 2024; Yang et al. 2024; MiniMax 2025]{.small}
 :::
 
-::: {.slide title="Fused Dense Wins Short Sequences, Linear Cost Wins Long Ones"}
+::: {.slide title="Dense Time Grows as n², Windowed and Linear as n"}
 [Measured]{.kicker}
 
 @!attention-at-scale-the-price-of-attention-measured
 
 32 heads of width 64, bfloat16. At long lengths dense grows about 4× per
-doubling of $n$, windowed and chunked linear about 2×.
+doubling of $n$, windowed and chunked linear about 2×; at 32,768 tokens
+both need well under half of dense's time. Short lengths measure launch
+costs, not arithmetic.
 :::
 
 ::: {.slide title="Reorganize, Restrict, Kernelize"}

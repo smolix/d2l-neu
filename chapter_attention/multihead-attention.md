@@ -753,14 +753,17 @@ queries find their single partners and attend sharply. The `a`, `t`, and `n`
 queries find *two* copies each and split their weight between them, because
 a head cannot tell identical keys apart. This is the averaging of the
 copy-both task on a small scale. The `e` query, whose letter does not occur in
-"translation", spreads its weight thinly over all keys, because the softmax
-must distribute all of its probability mass even when no key matches.
+"translation", has no partner. Its weight goes to keys that resemble it only
+by chance, and none of them receives the near-certain weight of a real match;
+the softmax must distribute all of its probability mass even when no key
+matches.
 Trained models show all three patterns. Language models often handle the
 third case by sending the leftover weight to the first token of the
 sequence, which then acts as a sink for attention that has nowhere useful to
-go :cite:`Xiao.Tian.Chen.ea.2024`. A thin row or a large weight on such a
-token therefore says that no key is relevant, not that every key is, which is
-one reason why attention maps must be read with care as explanations.
+go :cite:`Xiao.Tian.Chen.ea.2024`. A row without a match, or a large weight
+on such a token, therefore says that no key is relevant, not that the
+favored key is, which is one reason why attention maps must be read with
+care as explanations.
 
 None of the layers in this section knows where a token sits. Permuting the
 keys and values together leaves every output unchanged (Exercise
@@ -1310,11 +1313,12 @@ letter scores about $\sqrt{32} \approx 5.7$, others about 0.
 
 - `i`, `o`: one partner → **sharp** row.
 - `a`, `t`, `n`: two copies → weight **splits**: the copy-both averaging.
-- `e`: no partner → **thin** row: softmax must place all its mass.
+- `e`: no partner → weight on **chance** resemblances, none near-certain:
+  softmax must place all its mass.
 
 ::: {.d2l-note}
 Trained language models often dump such leftover weight on the first token
-(an attention sink). A thin row says "nothing relevant", not "everything
+(an attention sink). Such a row says "nothing relevant", not "this key is
 relevant".
 :::
 :::

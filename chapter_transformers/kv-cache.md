@@ -429,8 +429,8 @@ for name, gen in (('naive ', model.generate),
     print(f'{name}: 256 tokens in {t:4.1f} s = {256 / t:5.1f} tokens/s')
 ```
 
-The cached loop is many times faster, though by less than the factor of
-about 250 in operations. Every decoded token still reads all the weights of
+The cached loop is several times faster, though by far less than the
+factor of about 250 in operations. Every decoded token still reads all the weights of
 the model, as :numref:`subsec_kv-cache-prefill-decode` shows. Serving
 systems report the two phases separately: the *time to first token*
 measures the prefill, and the *tokens per second* measure the decode loop.
@@ -539,10 +539,10 @@ The model reads the prompt at tens of thousands of tokens per second and
 generates tokens at least an order of magnitude more slowly, with the same
 layers on the same hardware. The decode rate also stays below the
 bandwidth ceiling, because a fixed cost per step, such as launching the
-kernels of twelve blocks, adds to the time to read the weights. Decode
-speed is still governed by the bytes moved per token, weights and cache
-together. A smaller cache therefore allows faster decoding, longer
-contexts, or more sequences at once.
+kernels of twelve blocks, adds to the time to read the weights. The bytes
+moved per token, weights and cache together, still set the limit that no
+implementation can beat. A smaller cache therefore allows faster decoding,
+longer contexts, or more sequences at once.
 
 ### Batched Decoding
 :label:`subsec_kv-cache-batching`
@@ -583,13 +583,32 @@ d2l.plot(batches, curves, 'batch size', 'tokens per second',
          fmts=('C0-o', 'C0:', 'C1-s', 'C1:'), xscale='log', yscale='log')
 ```
 
-At a context of 128 tokens the throughput keeps growing over the whole
-range of batches, since the caches reach the size of the weights only near
-a batch of 53. At 1,024 tokens it grows little beyond a batch of 16 and
+The bound keeps growing over the whole range of batches at a context of
+128 tokens, since the caches reach the size of the weights only near a
+batch of 53. At 1,024 tokens it grows little beyond a batch of 16 and
 approaches the ceiling set by the caches. Batching spreads the weight
 reads over many sequences, but every sequence still reads its own cache.
-At small batches both curves stay below the bound, by the fixed cost per
-step of the previous subsection.
+At small batches the measured curves stay below the bound, by the fixed
+cost per step of the previous subsection.
+
+:begin_tab:`pytorch`
+Here the fixed cost dominates the whole range. Each decode step launches
+several hundred small kernels from Python, one or more per operation of
+every block, and launching them takes longer than reading the weights and
+all caches, even at a batch of 64. The time per step therefore hardly
+depends on the batch or the context: the measured throughput grows in
+proportion to the batch at both contexts, far below the bound.
+:numref:`sec_compilation` removes this cost by recording the kernels of a
+step once and replaying them (CUDA graphs) or by compiling the step; only
+then does the bound of :eqref:`eq_kv-cache-batch-throughput` appear in the
+measurement.
+:end_tab:
+
+:begin_tab:`jax`
+`decode` compiles the whole loop of decode steps, so the fixed cost per step
+is small, and the measured curves follow the bound: at 1,024 tokens the
+throughput grows little beyond a batch of 16.
+:end_tab:
 
 When many users are served, the batch changes from step to step, because
 requests arrive and finish at different times and with contexts of
@@ -1453,10 +1472,22 @@ $$\textrm{tokens per second} \approx \frac{b\beta}{W + bnc}
   $b \approx 7$ for $n = 1024$.
 :::
 
-::: {.slide title="Long Contexts Cap the Gain from Batching"}
+::: {.slide title="Long Contexts Cap the Gain from Batching" only="jax"}
+@!kv-cache-batched-decoding
+
+Solid: measured. Dotted: the bandwidth bound at 1 TB/s. The compiled
+decode loop follows the bound: at $n = 1024$ little gain beyond $b = 16$.
+:::
+
+::: {.slide title="A Fixed Cost per Step Hides the Bandwidth Bound" only="pytorch"}
 @!kv-cache-batched-decoding
 
 Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
+
+- Eager PyTorch launches several hundred kernels per decode step; that
+  takes longer than the memory traffic, even at $b = 64$.
+- So throughput grows $\propto b$ at both contexts; CUDA graphs or
+  compilation (:numref:`sec_compilation`) expose the bound.
 :::
 
 ::: {.slide title="Check: Where the Cache Outweighs the Weights"}

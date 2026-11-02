@@ -161,16 +161,15 @@ $$
 
 where $\mathcal{M}$ is the masked set. Prediction at a masked position
 draws on context from *both* sides, the capability provided by removing the
-causal mask. We train the recipe in miniature on the
-character-level Time Machine corpus of :numref:`sec_text-sequence`,
-masking 15% of characters per window and giving `<mask>` one extra
-embedding row; the tied output head is the same trick as in
+causal mask. We train the recipe in miniature on `d2l.WikiText103`, the
+bytes of Wikipedia articles of :numref:`subsec_tinylm`, masking 15% of the
+bytes per window and giving `<mask>` one extra embedding row after the 256
+bytes; the tied output head is the same trick as in
 :numref:`sec_transformer-block`.
 
 ```{.python .input #encoders-decoders-the-masked-token-objective}
 %%tab pytorch
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 MASK = len(data.vocab)  # id of the extra <mask> embedding row
 
 def mask_tokens(X, p=0.15):
@@ -201,8 +200,7 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
 
 ```{.python .input #encoders-decoders-the-masked-token-objective}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=64)
 MASK = len(data.vocab)  # id of the extra <mask> embedding row
 
 def mask_tokens(X, key, p=0.15):
@@ -238,16 +236,16 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
 
-Two thousand steps bring the masked loss to about one nat and the
-masked-character accuracy to roughly 65%, compared with a unigram entropy
-of $2.83$ nats for the 28-way vocabulary. The loss by position shows how
-available context contributes to this average.
+Two thousand steps bring the masked loss far below the unigram entropy of
+3.17 nats of the byte frequencies, and the evaluation below recovers most
+masked bytes exactly. The loss by position shows how available context
+contributes to this average.
 
 ### Loss by Available Context
 :label:`subsec_mlm-loss-by-position`
 
-Our windows are 64 characters long, and that finiteness builds a
-comparison into every batch: a masked character in the interior has
+Our windows are 64 bytes long, and that finiteness builds a
+comparison into every batch: a masked byte in the interior has
 context on both sides, while one at position 0 or 63 sees only one side.
 The final position has exactly the context that a causal language model
 has at every step. Because the model and objective remain fixed, binning
@@ -261,17 +259,15 @@ pos_loss = torch.zeros(64, device=device)
 pos_cnt = torch.zeros(64, device=device)
 correct = total = 0
 with torch.no_grad():
-    for rep in range(5):
-        for X, _ in data.val_dataloader():
-            X = X.to(device)
-            Xm, mask = mask_tokens(X)
-            logits = F.linear(model(Xm), model.token_emb.weight)
-            loss = F.cross_entropy(logits.transpose(1, 2), X,
-                                   reduction='none')
-            pos_loss += (loss * mask).sum(0)
-            pos_cnt += mask.sum(0)
-            correct += (logits.argmax(-1)[mask] == X[mask]).sum().item()
-            total += int(mask.sum())
+    for X, _ in data.val_dataloader():
+        X = X.to(device)
+        Xm, mask = mask_tokens(X)
+        logits = F.linear(model(Xm), model.token_emb.weight)
+        loss = F.cross_entropy(logits.transpose(1, 2), X, reduction='none')
+        pos_loss += (loss * mask).sum(0)
+        pos_cnt += mask.sum(0)
+        correct += (logits.argmax(-1)[mask] == X[mask]).sum().item()
+        total += int(mask.sum())
 pos_loss = (pos_loss / pos_cnt).cpu()
 print(f'masked accuracy {correct / total:.2f}')
 print(f'loss at position 0: {pos_loss[0]:.2f}, at position 63: '
@@ -293,16 +289,15 @@ def mlm_eval(model, Xm, X):
 pos_loss, pos_cnt = jnp.zeros(64), jnp.zeros(64)
 correct = total = 0
 key = d2l.get_key()
-for rep in range(5):
-    for X, _ in data.val_dataloader():
-        X = jnp.asarray(X)
-        key, sub = jax.random.split(key)
-        Xm, mask = mask_tokens(X, sub)
-        loss, pred = mlm_eval(model, Xm, X)
-        pos_loss += (loss * mask).sum(0)
-        pos_cnt += mask.sum(0)
-        correct += int(((pred == X) & mask).sum())
-        total += int(mask.sum())
+for X, _ in data.val_dataloader():
+    X = jnp.asarray(X)
+    key, sub = jax.random.split(key)
+    Xm, mask = mask_tokens(X, sub)
+    loss, pred = mlm_eval(model, Xm, X)
+    pos_loss += (loss * mask).sum(0)
+    pos_cnt += mask.sum(0)
+    correct += int(((pred == X) & mask).sum())
+    total += int(mask.sum())
 pos_loss = pos_loss / pos_cnt
 print(f'masked accuracy {correct / total:.2f}')
 print(f'loss at position 0: {pos_loss[0]:.2f}, at position 63: '
@@ -311,19 +306,19 @@ d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
          'masked loss')
 ```
 
-The profile is flat across the interior at about one nat and roughly
-doubles at the two one-sided edges. The difference is the contribution of
-the second side: conditioning on both sides of a character halves its loss
-relative to one side, because in text what follows a gap constrains it
-about as strongly as what precedes it. The predictions can be read
-directly. We mask one character of a sentence from the novel and list the
-model's three most probable fills:
+The profile is flat across the interior and roughly doubles at the two
+one-sided edges. The difference is the contribution of the second side:
+conditioning on both sides of a byte halves its loss relative to one side,
+because in text what follows a gap constrains it about as strongly as what
+precedes it. The predictions can be read directly. We mask one byte of a
+sentence from the validation text and list the model's three most probable
+fills:
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab pytorch
-snippet = 'the time traveller for so it will be convenient to speak of him '
-ids = torch.tensor(data.vocab[list(snippet)], device=device)[None]
-for pos in (9, 14, 30):
+snippet = 'Homarus gammarus , known as the European lobster or common '
+ids = torch.tensor(data.vocab.encode(snippet), device=device)[None]
+for pos in (11, 22, 32):
     Xm = ids.clone()
     Xm[0, pos] = MASK
     with torch.no_grad():
@@ -332,26 +327,27 @@ for pos in (9, 14, 30):
     top = probs.topk(3)
     shown = snippet[:pos] + '_' + snippet[pos + 1:]
     print(f'{shown[:40]!r}... -> '
-          + ', '.join(f'{data.vocab.to_tokens(int(i))!r} {p:.2f}'
+          + ', '.join(f'{data.vocab.decode([int(i)])!r} {p:.2f}'
                       for p, i in zip(top.values, top.indices)))
 ```
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab jax
-snippet = 'the time traveller for so it will be convenient to speak of him '
-ids = jnp.asarray(data.vocab[list(snippet)])[None]
-for pos in (9, 14, 30):
+snippet = 'Homarus gammarus , known as the European lobster or common '
+ids = jnp.asarray(data.vocab.encode(snippet))[None]
+for pos in (11, 22, 32):
     Xm = ids.at[0, pos].set(MASK)
     probs = jax.nn.softmax(model.token_emb.attend(model(Xm))[0, pos])
     top = jnp.argsort(probs)[::-1][:3]
     shown = snippet[:pos] + '_' + snippet[pos + 1:]
     print(f'{shown[:40]!r}... -> '
-          + ', '.join(f'{data.vocab.to_tokens(int(i))!r} {probs[i]:.2f}'
+          + ', '.join(f'{data.vocab.decode([int(i)])!r} {probs[i]:.2f}'
                       for i in top))
 ```
 
-The doubled consonant in "trave_ler" comes back with high confidence:
-only the right-hand context ("ler") determines it, and a left-to-right
+The capital "E" of "the _uropean" comes back as the most probable fill:
+the left context "known as the " allows almost any word, only the
+right-hand context ("uropean") determines the letter, and a left-to-right
 model would never see that context. Scaled up to subword tokens, sentence
 pairs, gigabytes of text, and a fine-tuning recipe per downstream task,
 this experiment is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining
@@ -376,8 +372,9 @@ letters are drawn independently at random, and the only path from source
 content to the decoder runs through cross-attention. If the mechanism
 works and the model solves the task directly, its attention map should be
 the anti-diagonal, a prediction we can check. Random strings also mean
-unlimited fresh data: unlike the memorizing GPT of :numref:`sec_gpt`,
-this model never sees the same example twice.
+unlimited fresh data: like the GPT of :numref:`sec_gpt`, which almost
+never reads the same passage twice, this model never sees the same example
+twice.
 
 ```{.python .input #encoders-decoders-a-task-whose-alignment-we-know}
 %%tab pytorch
@@ -985,7 +982,7 @@ cost of attention from the length of the input.
 A transformer block supports encoder-only, decoder-only, and
 encoder--decoder architectures. Removing the causal mask produces an
 encoder that represents each token using context from both directions. In
-our character-level experiment, positions with context on both sides have
+our byte-level experiment, positions with context on both sides have
 roughly half the loss of positions with only left context. An
 encoder--decoder connects an unmasked encoder to a causal decoder through
 cross-attention; on a reversal task, the learned attention map recovers the
@@ -1024,7 +1021,7 @@ generation.
        with $2L$ blocks. Which prefix model matches the encoder--decoder in
        parameters, and which in compute?
 
-1. [code] **The masking recipe.** `mask_tokens` masks 15% of the characters
+1. [code] **The masking recipe.** `mask_tokens` masks 15% of the bytes
    and writes `<mask>` at every masked position. Evaluate every variant below
    with the evaluation of :numref:`subsec_mlm-loss-by-position`, so that only
    the training recipe changes.
@@ -1034,7 +1031,7 @@ generation.
        appears when the pretrained encoder reads real text. Implement this
        rule, retrain, and compare the masked accuracy with that of the
        original recipe. Then feed both encoders unmodified validation
-       windows and measure the loss of predicting each input character at
+       windows and measure the loss of predicting each input byte at
        its own position. Explain what each of the two 10% cases teaches the
        model.
     1. :citet:`Wettig.Gao.Zhong.ea.2023` find that masking rates well above
@@ -1079,25 +1076,25 @@ generation.
 1. [code] **Several masks at once.** ● The objective
    :eqref:`eq_mlm` scores each masked position separately, so the encoder
    returns one distribution per masked position, conditioned only on the
-   characters that remain visible. Filling all masked positions from one
-   forward pass therefore chooses each character independently of the
+   bytes that remain visible. Filling all masked positions from one
+   forward pass therefore chooses each byte independently of the
    others. Iterative schemes such as Mask-Predict
    :cite:`Ghazvininejad.Levy.Liu.ea.2019` keep only their most confident
    predictions and predict the remaining positions again.
-    1. Construct a distribution over the two-character fills of a gap for
+    1. Construct a distribution over the two-byte fills of a gap for
        which the pair of per-position argmaxes has probability zero. Show
        that filling the more confident position first and then filling the
        other from its exact conditional distribution always yields a pair
        of positive probability.
-    1. In each validation window, mask one run of $k$ adjacent characters,
-       placed at random with at least 8 unmasked characters on either side,
-       and nothing else. For $k \in \{1, 2, 4, 8\}$, measure the character
+    1. In each validation window, mask one run of $k$ adjacent bytes,
+       placed at random with at least 8 unmasked bytes on either side,
+       and nothing else. For $k \in \{1, 2, 4, 8\}$, measure the byte
        accuracy of the parallel fill and of an iterative fill that commits
-       one character per forward pass, always at the masked position whose
+       one byte per forward pass, always at the masked position whose
        top probability is largest.
     1. Plot the accuracy of both fills against the offset within the run.
        Explain the shape of the curves by the context that each masked
-       character has lost, and explain where the two fills differ.
+       byte has lost, and explain where the two fills differ.
 
 1. **Time's arrow.** ● The masked loss of
    :numref:`subsec_mlm-loss-by-position` takes nearly equal values at the two
@@ -1177,10 +1174,10 @@ Encoders, decoders, and cross-attention<br>
 ::: {.slide title="A Causal Model Sees Only One Side of Every Gap"}
 [The problem]{.kicker}
 
-- Fill the gap in `trave_ler`: the left context allows many letters, the
-  right context (`ler`) fixes it.
-- Measured on *The Time Machine*: a masked character costs about
-  **2 nats** with one side of context, about **1 nat** with both sides.
+- Fill the gap in `known as the _uropean`: the left context allows almost
+  any letter, the right context (`uropean`) fixes it.
+- Measured on Wikipedia text: a masked byte costs about **twice** as much
+  with one side of context as with both sides.
 - Translation and speech recognition read a whole input before they write
   a single output token.
 
@@ -1202,7 +1199,7 @@ separate input, and to read inputs too long for $N^2$ attention?
 - estimate the cost of reading $N$ inputs with $M$ learned queries.
 
 **Running example:** GPT-2 small is the decoder-only wiring; we build the
-other two at character scale.
+other two at small scale.
 :::
 
 ::: {.slide title="The Wirings Complete the Block"}
@@ -1271,8 +1268,8 @@ $$\max \; \sum_{t \in \mathcal{M}} \log p\left(x_t \mid \mathbf{x}_{\setminus \m
 
 @!encoders-decoders-the-masked-token-objective
 
-Characters of *The Time Machine*, windows of 64, 2,000 steps; unigram
-entropy 2.83 nats.
+Bytes of WikiText-103, windows of 64, 2,000 steps; unigram entropy 3.17
+nats.
 :::
 
 ::: {.slide title="Both Sides of Context Halve the Loss"}
@@ -1282,15 +1279,15 @@ a causal model sees.
 @!encoders-decoders-what-the-second-side-is-worth-1
 
 ::: {.d2l-note .rule}
-Interior about 1 nat, edges about 2: the second side halves the loss.
+The edges cost about twice the interior: the second side halves the loss.
 :::
 :::
 
-::: {.slide title="The Right-Hand Context Recovers the Doubled Letter"}
+::: {.slide title="The Right-Hand Context Recovers the Capital Letter"}
 @!encoders-decoders-what-the-second-side-is-worth-2
 
-- Only `ler` determines the `l` in "trave_ler"; a left-to-right model
-  never sees it.
+- Only `uropean` determines the `E` in "the _uropean"; a left-to-right
+  model never sees it.
 - Scaled to subwords and gigabytes, this experiment is BERT (2018);
   ModernBERT (2024) keeps the wiring with RoPE, a gated FFN, and 8k
   context.
@@ -1477,8 +1474,8 @@ $N = 1024$ the two are comparable.
 
 - One block, three wirings: no mask, causal mask, or both joined by
   cross-attention.
-- Masked prediction trains the encoder; both sides of context cost about
-  1 nat per character, one side about 2.
+- Masked prediction trains the encoder; a masked byte costs about half as
+  much with both sides of context as with one.
 - On reversal, the encoder--decoder reverses fresh strings without error,
   and its cross-attention recovers the anti-diagonal.
 - $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the

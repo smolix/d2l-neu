@@ -545,7 +545,7 @@ def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
 
 To read a trained model, we compute its validation loss with
 `d2l.lm_perplexity` of :numref:`sec_lstm`, whose logarithm is the mean
-cross-entropy in nats per character, and count during that pass how many
+cross-entropy in nats per byte, and count during that pass how many
 validation tokens each expert receives and how many assignments the
 buffers drop. The shares of each layer are returned busiest first:
 
@@ -584,15 +584,15 @@ def evaluate_moe(model, data):
 ```
 
 The experiments use the data and the training recipe of
-:numref:`sec_gpt`. The data are the characters of *The Time Machine* and of
-the Penn Treebank, about 5 million training characters in windows of 128,
-with the last 2,000 windows held out for validation. The runs read each
-training character fewer than two times on average, so the validation loss
-measures what a model has learned about English rather than how much of
-the text it has memorized. The recipe, bundled as `d2l.LMOptimizer`, is AdamW with weight
-decay on the weight matrices, a learning rate that rises linearly over the
-first 100 steps and then follows a cosine to zero, and clipping of the
-gradient norm at 1. Our model is a small GPT, two blocks of width 128 with
+:numref:`sec_gpt`. The data are the bytes of the Wikipedia articles of
+`d2l.WikiText103`, about 270 million for training, in windows of 128 bytes
+at random offsets, and the official validation split of about 1.1 million
+bytes. A run almost never reads the same passage twice, so the validation
+loss measures what a model has learned about English rather than how much
+of the text it has memorized. The recipe, bundled as `d2l.LMOptimizer`, is
+AdamW with weight decay on the weight matrices, a learning rate that rises
+linearly over the first 100 steps and then follows a cosine to zero, and
+clipping of the gradient norm at 1. Our model is a small GPT, two blocks of width 128 with
 eight experts per block and one active per token, with the capacity factor
 of 1.25. We first read a fresh model, then train three models for 800
 steps each. The runs differ only in balancing: none, the auxiliary loss at
@@ -601,7 +601,7 @@ its own initialization.
 
 ```{.python .input #moe-three-runs-one-budget-3}
 %%tab pytorch
-data = d2l.TimeMachinePTB(batch_size=64, num_steps=128)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 small_moe_gpt = lambda: d2l.GPT(len(data.vocab), num_hiddens=128,
                                 num_heads=4, num_blks=2,
                                 ffn_factory=lambda: MoELayer(128, 8, 1))
@@ -625,7 +625,7 @@ for name, aux_weight, bias_rate in (('no balancing', 0.0, 0.0),
 
 ```{.python .input #moe-three-runs-one-budget-3}
 %%tab jax
-data = d2l.TimeMachinePTB(batch_size=64, num_steps=128)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 small_moe_gpt = lambda: d2l.GPT(
     len(data.vocab), num_hiddens=128, num_heads=4, num_blks=2,
     rngs=nnx.Rngs(d2l.get_key()),
@@ -666,11 +666,11 @@ d2l.plt.xticks(ranks);
 The fresh model is unbalanced before it has seen any data, unlike the
 layer that we fed random vectors above, and its buffers drop many
 assignments. At initialization the residual stream of the first block
-carries little more than the embedding of the current character. Most
-occurrences of a character therefore look alike to the router and go to
-the same expert, and characters are far from equally frequent: nearly one
-character in five is a space. In the second block, attention has added to
-every position nearly the same average of the earlier characters, and this
+carries little more than the embedding of the current byte. Most
+occurrences of a byte therefore look alike to the router and go to the
+same expert, and bytes are far from equally frequent: nearly one byte in
+five is a space. In the second block, attention has added to every
+position nearly the same average of the earlier bytes, and this
 common offset tilts most tokens toward the same expert. Training without
 balancing does not undo the imbalance. The routing stays concentrated: the
 busiest expert of a layer receives several times its even share, some
@@ -728,7 +728,7 @@ for name, model in models.items():
           f'{active_params(model) / 1e6:.2f}M active per token')
 ```
 
-The mixture stores 5.7 times the parameters of the dense model and uses
+The mixture stores 5.6 times the parameters of the dense model and uses
 the same number per token. Both models train with the recipe of
 :numref:`sec_gpt` for its 1,000 steps, and we measure the validation loss
 every 50 steps:
@@ -766,13 +766,14 @@ the largest gains for the smallest models.
 
 The gain needs data. Each expert sees about $1/E$ of the tokens, and the
 extra parameters help only if the text holds more than the dense model can
-learn from it; a corpus read many times over offers less.
+learn from it. A corpus read many times over offers less; ours is read
+less than once.
 :citet:`Krajewski.Ludziejewski.Adamczewski.ea.2024` found that when the
 training tokens grow with the model, the advantage of mixtures over dense
 models grows with the training budget.
 
 The gain also has costs that the operation count leaves out. The mixture
-keeps 5.7 times the parameters in memory, together with AdamW's two state
+keeps 5.6 times the parameters in memory, together with AdamW's two state
 values per parameter. Its step takes longer than its operation count
 suggests: the buffers hold a quarter more rows than there are tokens,
 copying tokens into the buffers and outputs back moves data without
@@ -850,7 +851,7 @@ tokens go to the same expert and because routing reinforces itself. An auxiliary
 on the product of load and probability, or a controller that biases only
 the selection, evens out the load. With balanced experts, a GPT with eight
 experts per block and one active per token reaches a lower validation loss
-than the dense model at the same computation per token, while storing 5.7
+than the dense model at the same computation per token, while storing 5.6
 times the parameters; released models refine the design with many narrow
 experts and a shared expert.
 
@@ -1059,7 +1060,7 @@ Can a model store many parameters but run only the few each token needs?
 - explain fine-grained and shared experts.
 
 **Running example:** GPT-2 small with eight experts per block, then our
-4.7M-parameter character GPT.
+4.8M-parameter byte-level GPT.
 :::
 
 ::: {.slide title="More Parameters per Operation"}
@@ -1233,19 +1234,18 @@ $$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i 
 :::
 
 ::: {.slide title="Three Runs That Differ Only in Balancing"}
-Two blocks of width 128, 8 experts, top-1, 800 steps on 5M characters of
-*The Time Machine* and the Penn Treebank; first a fresh model:
+Two blocks of width 128, 8 experts, top-1, 800 steps on the bytes of
+Wikipedia articles (WikiText-103); first a fresh model:
 
 @!moe-three-runs-one-budget-3
 :::
 
 ::: {.slide title="Why Text Is Unbalanced Before Any Training"}
-- Block 1: the residual stream is little more than the character's
-  embedding, so a character's occurrences go to one expert.
-- Characters are far from equally frequent: nearly one in five is a
-  space.
+- Block 1: the residual stream is little more than the byte's
+  embedding, so a byte's occurrences go to one expert.
+- Bytes are far from equally frequent: nearly one in five is a space.
 - Block 2: attention adds to every position nearly the same average of
-  the earlier characters; the common offset tilts most tokens toward one
+  the earlier bytes; the common offset tilts most tokens toward one
   expert.
 - Busy experts overflow their buffers: the fresh model drops many
   assignments.
@@ -1273,7 +1273,7 @@ $\mathcal{L}_{\mathrm{balance}}$?
 :::
 :::
 
-::: {.slide title="Same Computation per Token, 5.7 Times the Parameters"}
+::: {.slide title="Same Computation per Token, 5.6 Times the Parameters"}
 Our GPT of the previous sections, six blocks of width 256, with each FFN
 replaced by 8 experts, top-1, auxiliary loss $\alpha = 0.01$, capacity
 factor 1.25:
@@ -1284,21 +1284,21 @@ factor 1.25:
 ::: {.slide title="The MoE GPT Reaches a Lower Validation Loss Than the Dense GPT"}
 @!moe-a-mixture-of-experts-gpt
 
-- 1,000 steps; each character read fewer than two times on average.
+- 1,000 steps; the model almost never reads a passage twice.
 - The curves part after a few hundred steps; the mixture stays below.
 :::
 
 ::: {.slide title="Check: How Much Text Does One Expert See?"}
 [Check]{.kicker}
 
-Our MoE GPT trains for 1,000 steps of 64 windows of 128 characters, with
+Our MoE GPT trains for 1,000 steps of 64 windows of 128 bytes, with
 8 experts per layer and top-1 routing, evenly balanced. How many
-characters does one expert of a layer see, and how many does the dense
+bytes does one expert of a layer see, and how many does the dense
 FFN see?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $1000 \cdot 64 \cdot 128 \approx 8.2$M characters pass through
+**Answer.** $1000 \cdot 64 \cdot 128 \approx 8.2$M bytes pass through
 each layer. The dense FFN sees all of them; each expert sees about
 $8.2\textrm{M}/8 \approx 1$M. Every expert must learn from an eighth of the
 data, which is why mixtures need plenty of distinct text.

@@ -2,9 +2,9 @@
 :label:`sec_gpt`
 
 A language model trained on text solves the same prediction problem at
-every position of every training sequence. Given "the time travelle", it
-must predict "r"; given "the time traveller", it must predict a space. One
-sequence of 128 characters therefore holds 128 training examples. A model
+every position of every training sequence. Given "the European lobste", it
+must predict "r"; given "the European lobster", it must predict a space. One
+sequence of 128 bytes therefore holds 128 training examples. A model
 can learn from all of them at once if it meets two requirements. Each
 position must predict its successor without reading it or any later token.
 And the same parameters must serve every position and every length of
@@ -14,8 +14,8 @@ The transformer block of :numref:`sec_transformer-block` meets the second
 requirement already: it applies the same weights at every position. A
 causal mask inside attention meets the first. Adding the remaining parts,
 an embedding, positions, and an output head, gives a GPT (*generative
-pretrained transformer*), which we write as a `GPT` class. We train it on 5
-million characters of English, test where the normalization belongs, and
+pretrained transformer*), which we write as a `GPT` class. We train it on
+the bytes of Wikipedia articles, test where the normalization belongs, and
 sample text from it. Finally, we load the released 124-million-parameter
 GPT-2 :cite:`Radford.Wu.Child.ea.2019` into the same class, which the rest
 of this chapter reuses. Its sampling loop recomputes the whole context for
@@ -77,7 +77,7 @@ tensor when we load its weights.
 
 **A causal mask.** Position $t$ predicts token $t+1$ from tokens
 $1, \ldots, t$, so its query may attend only to keys at positions up to
-$t$. In :numref:`sec_transformer-block` the character model passed this
+$t$. In :numref:`sec_transformer-block` the small language model passed this
 lower-triangular mask to every block as a boolean array. Here the attention
 module applies it itself, because the fused attention kernels of
 :numref:`sec_attention-at-scale` take the causal mask as a flag and never
@@ -289,9 +289,9 @@ initialization:
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-2}
 %%tab pytorch
-model = GPT(vocab_size=28)
+model = GPT(vocab_size=256)
 X = torch.zeros(2, 16, dtype=torch.long)
-d2l.check_shape(model(X), (2, 16, 28))
+d2l.check_shape(model(X), (2, 16, 256))
 attention = model.blks[0].attention
 print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; initial std: '
       f'W_qkv {attention.W_qkv.weight.std():.4f}, '
@@ -300,9 +300,9 @@ print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; initial std: '
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-2}
 %%tab jax
-model = GPT(vocab_size=28, rngs=nnx.Rngs(d2l.get_key()))
+model = GPT(vocab_size=256, rngs=nnx.Rngs(d2l.get_key()))
 X = jnp.zeros((2, 16), dtype=jnp.int32)
-d2l.check_shape(model(X), (2, 16, 28))
+d2l.check_shape(model(X), (2, 16, 256))
 attention = model.blks[0].attention
 print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; initial std: '
       f'W_qkv {attention.W_qkv.kernel[...].std():.4f}, '
@@ -320,13 +320,13 @@ $0.02$ and once with the scaled writing matrices:
 %%tab pytorch
 def stream_ms(num_blks, scaled):
     """Mean square of the stream after the last block, for random tokens."""
-    net = GPT(vocab_size=28, num_blks=num_blks)
+    net = GPT(vocab_size=256, num_blks=num_blks)
     if not scaled:  # Undo the depth scaling of W_o and W_2
         for name, p in net.named_parameters():
             if name.endswith(('W_o.weight', 'W_2.weight')):
                 nn.init.normal_(p, std=0.02)
     with torch.no_grad():
-        H = net.token_emb(torch.randint(0, 28, (8, 128)))
+        H = net.token_emb(torch.randint(0, 256, (8, 128)))
         for blk in net.blks:
             H = blk(H)
     return H.square().mean().item()
@@ -340,13 +340,13 @@ for scaled in (False, True):
 %%tab jax
 def stream_ms(num_blks, scaled):
     """Mean square of the stream after the last block, for random tokens."""
-    net = GPT(vocab_size=28, num_blks=num_blks, rngs=nnx.Rngs(d2l.get_key()))
+    net = GPT(vocab_size=256, num_blks=num_blks, rngs=nnx.Rngs(d2l.get_key()))
     if not scaled:  # Undo the depth scaling of W_o and W_2
         for path, m in nnx.iter_graph(net):
             if path and path[-1] in ('W_o', 'W_2'):
                 m.kernel[...] = 0.02 * jax.random.normal(d2l.get_key(),
                                                          m.kernel.shape)
-    H = net.token_emb(jax.random.randint(d2l.get_key(), (8, 128), 0, 28))
+    H = net.token_emb(jax.random.randint(d2l.get_key(), (8, 128), 0, 256))
     for blk in net.blks:
         H = blk(H)
     return float(jnp.mean(H ** 2))
@@ -366,8 +366,8 @@ four $d \times d$ matrices, $\mathbf{W}_q$, $\mathbf{W}_k$,
 $\mathbf{W}_v$, and $\mathbf{W}_o$, and the feed-forward network holds
 $8d^2$, as two matrices of width $4d$ with GELU or three of width $8d/3$
 with SwiGLU. A block thus holds about $12d^2$ parameters, 0.79 million at
-$d = 256$ and 4.7 million for six blocks, while the 28-row embedding adds
-only 7,168. GPT-2 small has $d = 768$ and 12 blocks, so its blocks hold
+$d = 256$ and 4.7 million for six blocks, while an embedding of 256 rows
+adds only 65,536. GPT-2 small has $d = 768$ and 12 blocks, so its blocks hold
 $12 \times 12 \times 768^2 \approx 85$ million parameters and its token
 table, $50{,}257 \times 768$, another 38.6 million. An untied head would
 add a second table of that size and make the model about 31% larger.
@@ -377,50 +377,35 @@ add a second table of that size and make the model about 31% larger.
 
 ### The Training Text
 
-A model of 4.7 million parameters needs more text than one novel. The
-training run below reads about 8 million characters. *The Time Machine*
-has about 170,000, so the run would pass over the book about fifty times,
-often enough for a model of this size to memorize much of it rather than
-learn English (an exercise measures how much). We therefore append the
-training text of the Penn Treebank, about 5 million characters of
-newspaper text :cite:`Marcus.Santorini.Marcinkiewicz.1993`, and apply the
-character pipeline of :numref:`sec_text-sequence` to both: the 26
-lowercase letters, the space, and a token for unknown characters, 28 tokens
-in all. The windows of 128 characters do not overlap, because a window
-starting at every position, as `d2l.TimeMachine` builds them, would make 5
-million rows. The last 2,000 windows, about a quarter of a million
-characters, are held out for validation.
+A model of 4.8 million parameters needs more text than one novel. The
+training run below makes about 8 million predictions. *The Time Machine*
+has about 170,000 characters, so the run would pass over the book about
+fifty times, often enough for a model of this size to memorize much of it
+rather than learn English (an exercise measures how much). We therefore
+train on the corpus of the optimization experiments
+(:numref:`subsec_tinylm`), `d2l.WikiText103`: Wikipedia articles kept as
+raw text, with case, digits, and punctuation, about 270 million bytes for
+training. Each training window of 128 bytes starts at a random offset, so
+the run reads about 3% of the text and almost never the same passage twice.
+The validation windows are consecutive pieces of the official validation
+split, about 1.1 million bytes.
 
 ```{.python .input #gpt-training-the-model-1}
 %%tab pytorch, jax
-class TimeMachinePTB(d2l.TimeMachine):  #@save
-    """Characters of The Time Machine and of the Penn Treebank training text,
-    in non-overlapping windows; the last num_val windows are for validation."""
-    def _download(self):
-        with open(d2l.download_extract('ptb') + '/ptb.train.txt') as f:
-            return super()._download() + ' ' + f.read()
-
-    def __init__(self, batch_size, num_steps, num_val=2000):
-        d2l.DataModule.__init__(self)
-        self.save_hyperparameters()
-        corpus, self.vocab = self.build(self._download())
-        n = (len(corpus) - 1) // num_steps * num_steps
-        self.X = d2l.tensor(corpus[:n]).reshape(-1, num_steps)
-        self.Y = d2l.tensor(corpus[1:n + 1]).reshape(-1, num_steps)
-        self.num_train = len(self.X) - num_val
-
-data = TimeMachinePTB(batch_size=64, num_steps=128)
-print(f'{data.num_train * 128 / 1e6:.2f}M training characters, '
+data = d2l.WikiText103(batch_size=64, num_steps=128)
+print(f'{len(data.train) / 1e6:.0f}M training bytes, '
+      f'{len(data.val) / 1e6:.2f}M validation bytes, '
       f'vocabulary of {len(data.vocab)}')
 ```
 
-We keep characters rather than the subword tokens of
-:numref:`sec_text-sequence` for two reasons. The 28-entry table puts only
-7,168 of the model's parameters into embeddings, so nearly all of them sit
-in the blocks; GPT-2's vocabulary of 50,257 tokens would put 12.9 million
-into the table at width 256, almost three times the rest of the model. And
-because each preprocessed character is one byte, the loss in nats per
-character divided by $\log 2$ is the number of bits per byte of
+The tokens are the UTF-8 bytes of the text, the byte-level tokenizer of
+:numref:`sec_text-sequence` without any merges, rather than its subword
+tokens. Bytes have two advantages here. The 256-entry table puts 65,536 of
+the model's parameters into embeddings, about 1.4% of the total, so nearly
+all of them sit in the blocks; GPT-2's vocabulary of 50,257 tokens would put
+12.9 million into the table at width 256, almost three times the rest of
+the model. And because each token is one byte, the loss in nats per byte
+divided by $\log 2$ is the number of bits per byte of
 :numref:`subsec_bits-per-byte`, which does not depend on the tokenizer.
 
 ### The Training Recipe
@@ -441,9 +426,8 @@ without changing its direction (:numref:`sec_practice`).
 `LMOptimizer` bundles the four parts behind the interface of an ordinary
 optimizer, so the training loop `d2l.train_lm` of :numref:`sec_adam`, which
 draws minibatches of windows and takes a fixed number of steps on the
-next-character loss, uses it unchanged. We use no dropout: a model that
-reads its training text about 1.7 times on average has little opportunity
-to memorize.
+next-byte loss, uses it unchanged. We use no dropout: a model that almost
+never reads the same passage twice has nothing to memorize.
 
 ```{.python .input #gpt-training-the-model-2}
 %%tab pytorch
@@ -504,7 +488,7 @@ front of `optax.adamw`. The schedule is passed as the learning rate, and the
 
 We train for 1,000 steps of 64 windows and record both losses every 50
 steps. The training loss is the mean over those 50 steps. The validation
-loss is the mean per-character cross-entropy on the held-out windows, which
+loss is the mean cross-entropy per byte on the validation windows, which
 is the logarithm of `d2l.lm_perplexity` (:numref:`sec_lstm`).
 
 ```{.python .input #gpt-training-the-model-3}
@@ -530,26 +514,27 @@ for step in range(every, num_steps + 1, every):
 d2l.plot(steps, [train_curve, val_curve], 'step', 'loss (nats)',
          legend=['train', 'validation'], fmts=('-', '--'))
 print(f'step {num_steps}: train {train_curve[-1]:.2f}, '
-      f'validation {val_curve[-1]:.2f} nats per character')
+      f'validation {val_curve[-1]:.2f} nats per byte')
 ```
 
 The two curves fall together, and the validation loss never turns upward.
-With fewer than two passes over the training text, the model has little
-chance to memorize it, so what it learns carries over to the held-out end
-of the Penn Treebank. Most of the decrease comes in the first few hundred
-steps, and both losses end near 1.4 nats per character, or about 2 bits per
-byte.
+Every training window is text the model has not read before, so what it
+learns carries over to the held-out articles: at the end, the two losses
+lie within a few hundredths of a nat of each other. Most of the decrease
+comes in the first few hundred steps, and both losses end below 1.5 nats
+per byte, or about 2.1 bits per byte.
 
 Two simple predictors give reference levels for these losses. The
-*unigram* model predicts every character with its frequency in the training
+*unigram* model predicts every byte with its frequency in the training
 text and ignores all context. Its cross-entropy on that text is the entropy
-of the character frequencies. The *bigram* model predicts each character
-from the previous one, with the conditional frequencies of the training
-text.
+of the byte frequencies. The *bigram* model predicts each byte from the
+previous one, with the conditional frequencies of the training text. Both
+are estimated on the first 10 million bytes of the training text, which
+give the frequencies to two decimal places.
 
 ```{.python .input #gpt-training-the-model-4}
 %%tab pytorch, jax
-text = np.asarray(data.X[:data.num_train]).ravel()  # The training text
+text = data.train[:10**7].astype(np.int64)  # The first 10M training bytes
 V = len(data.vocab)
 unigram = np.bincount(text, minlength=V) / len(text)
 pairs = np.bincount(text[:-1] * V + text[1:], minlength=V * V).reshape(V, V)
@@ -557,13 +542,13 @@ bigram = pairs / np.maximum(pairs.sum(1, keepdims=True), 1)
 p = unigram[unigram > 0]
 print(f'unigram {-(p * np.log(p)).sum():.2f}, '
       f'bigram {-np.log(bigram[text[:-1], text[1:]]).mean():.2f} '
-      f'nats per character')
+      f'nats per byte')
 ```
 
-A model that knows nothing about the text scores $\log 28 \approx 3.33$
-nats, the loss at initialization. The unigram level is 2.85 nats and the
-bigram level 2.33. The trained model ends nearly a nat below the bigram
-level, so it uses much more of the context than the previous character.
+A model that knows nothing about the text scores $\log 256 \approx 5.55$
+nats, close to the loss at initialization. The unigram level is 3.17 nats
+and the bigram level 2.45. The trained model ends about a nat below the
+bigram level, so it uses much more of the context than the previous byte.
 
 ### Training Compute
 
@@ -577,7 +562,7 @@ $$C \approx 6ND$$
 :eqlabel:`eq_gpt-six-nd`
 
 operations, ignoring the attention scores, which are small at short
-contexts. Our run, with $N = 4.7$ million and $D = 8.2$ million, comes to
+contexts. Our run, with $N = 4.8$ million and $D = 8.2$ million, comes to
 about $2 \times 10^{14}$. One pass of GPT-2 small, with 124 million
 parameters, over roughly ten billion tokens of WebText comes to about
 $7 \times 10^{18}$. The same pass of GPT-2 XL, with 1.5 billion parameters,
@@ -639,13 +624,13 @@ for pre_norm, warmup in ((True, False), (False, False), (False, True)):
 ```
 
 The pre-norm model trains normally. The post-norm model without warmup
-does not diverge, but its loss stops at about 2.85 nats and stays there.
-That is the unigram level computed above: the model predicts the letter
-frequencies of the text and ignores its input, even the current character.
+does not diverge, but its loss stops at about 3.2 nats and stays there.
+That is the unigram level computed above: the model predicts the byte
+frequencies of the text and ignores its input, even the current byte.
 
 Attention that has learned nothing would not explain this level by itself.
 If every attention sublayer output zero, the feed-forward sublayers would
-still see the current character and could reach the bigram level of 2.33
+still see the current byte and could reach the bigram level of 2.45
 nats. The tiny query and key gradients at initialization are therefore at
 most part of the explanation. :citet:`xiong2020layer` showed that at
 initialization the gradients of the parameters near the output of a
@@ -753,26 +738,25 @@ its last position, then drops the oldest token and writes the new one at
 the end, so the model conditions on the last `max_len` tokens.
 :end_tab:
 
-We sample 120 characters after the prefix "the time traveller " at three
+We sample 120 bytes after the prefix "The history of the " at three
 settings: the model's own distribution, a sharpened and truncated one, and
 a flattened one.
 
 ```{.python .input #gpt-sampling-from-the-model-2}
 %%tab pytorch, jax
-prefix = data.vocab[list('the time traveller ')]
+prefix = data.vocab.encode('The history of the ')
 for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
     out = model.generate(prefix, 120, temperature=temperature, top_k=top_k)
     d2l.print_wrapped(f'T={temperature}, top_k={top_k}: '
-                      + repr(''.join(data.vocab.to_tokens(out))))
+                      + repr(data.vocab.decode(out)))
 ```
 
 At $\tau = 1$ the model writes words and word-like strings in a plausible
-order, with the habits of its corpus: the Penn Treebank replaces rare words
-by `<unk>` and numbers by `N`, which the preprocessing turns into the words
-"unk" and "n". The sharpened and truncated setting keeps to frequent words
-and repeats itself, and at $\tau = 2$ the letters approach random strings.
-A loss near 1.4 nats per character is a perplexity near 4: at a typical
-position the model still hesitates among about four characters, so the
+order, with the habits of its corpus, which sets punctuation off by spaces
+(" , " and " . "). The sharpened and truncated setting keeps to frequent
+words and repeats itself, and at $\tau = 2$ the bytes approach random
+strings. A loss below 1.5 nats per byte is a perplexity below 4.5: at a
+typical position the model still hesitates among about four bytes, so the
 temperature changes the text visibly. Fluent text needs a much larger model
 trained on much more text, such as the one we load next.
 
@@ -973,8 +957,9 @@ added to the embedding, as in GPT-2, or as RoPE rotations inside each
 attention layer. GPT-2's initialization scales the projections that write
 into the residual stream by $1/\sqrt{2L}$, so that the stream does not grow
 with depth. We train with AdamW, weight decay on the matrices, warmup,
-cosine decay, and clipping, on text that the model reads less than twice
-on average, and its validation loss follows its training loss. Moving the
+cosine decay, and clipping, on a corpus so large that the model almost
+never reads the same passage twice, and its validation loss follows its
+training loss. Moving the
 normalization after the residual addition, at a learning rate that
 pre-norm tolerates without warmup, leaves the model at the unigram
 entropy, where its predictions ignore their context. A warmup lets the
@@ -995,7 +980,7 @@ the same class through a map of parameter names.
     1. Exercise :exref:`ex_transformer-block-ffn-width-rounding` of
        :numref:`sec_transformer-block` gives the exact parameter count of
        the default `TransformerBlock`, which `GPT` builds with its default
-       flags. Use it to count the parameters of `GPT(vocab_size=28)`, with
+       flags. Use it to count the parameters of `GPT(vocab_size=256)`, with
        $d = 256$ and six blocks, and check the total against the count
        printed in :numref:`subsec_gpt-blocks-to-lm`. What fraction of the
        parameters sits in the embedding tables of each of the two models?
@@ -1011,8 +996,8 @@ the same class through a map of parameter names.
 1. [code] **Unmasked attention.** In `GPT`, the flag `is_causal=True` of
    the attention call in `CausalAttention` is the only mechanism that keeps
    position $t$ from attending to later positions.
-    1. Take one validation window of 128 characters and replace its
-       character at position 64 by a different one. For every position,
+    1. Take one validation window of 128 bytes and replace its byte at
+       position 64 by a different one. For every position,
        compute the largest absolute change of the logits of the trained
        `model`, and plot the change against position.
     1. Subclass `GPT` with a nested `CausalAttention` whose attention call
@@ -1021,8 +1006,8 @@ the same class through a map of parameter names.
        steps, but stop after 200 steps. Compare its training and
        validation losses with those that the training of `model` recorded
        at step 200, and explain the numbers.
-    1. Sample 100 characters from the unmasked model with the prefix
-       `'the time traveller '`. Explain why the validation loss of the
+    1. Sample 100 bytes from the unmasked model with the prefix
+       `'The history of the '`. Explain why the validation loss of the
        previous sub-problem and this sample judge the unmasked model so
        differently.
 
@@ -1040,23 +1025,25 @@ the same class through a map of parameter names.
        choices matter now, and why would you expect clipping and warmup to
        matter more at a high learning rate than at a low one?
 
-1. [code] **Memorizing a novel.** :numref:`subsec_gpt-training` appends
-   the Penn Treebank to *The Time Machine* so that the model reads its
-   training text only about 1.7 times.
-    1. Train `GPT(len(data.vocab))` with the same recipe on
+1. [code] **Memorizing a novel.** :numref:`subsec_gpt-training` trains on
+   WikiText-103 so that the model almost never reads the same passage
+   twice. Here it reads one short novel many times.
+    1. Train a `GPT` with the same recipe on
        `d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
-       num_train=100000, num_val=3000)` alone, whose 100,000 overlapping
-       training windows start at the first 100,000 positions of the text.
-       Record both losses every 50 steps. At which step does the validation
-       loss reach its minimum, and how far apart are the two losses at the
-       end?
+       num_train=100000, num_val=3000)`, whose 100,000 overlapping
+       training windows start at the first 100,000 positions of the text
+       and whose 28 tokens come from the character pipeline of
+       :numref:`sec_text-sequence`, so that the model has a table of 28
+       rows. Record both losses every 50 steps. At which step does the
+       validation loss reach its minimum, and how far apart are the two
+       losses at the end?
     1. A sample that copies its training text contains long strings that
-       occur in that text verbatim. Draw ten samples of 100 characters at
-       temperature 1 without truncation, with the prefix
-       `'the time traveller '`, from this model and from `model`. Compute
-       the *verbatim fraction* of each sample, the fraction of its
-       20-character windows that occur verbatim in the corresponding
-       training text.
+       occur in that text verbatim. Draw ten samples of 100 tokens at
+       temperature 1 without truncation, from this model with the prefix
+       `'the time traveller '` and from `model` with the prefix
+       `'The history of the '`. Compute the *verbatim fraction* of each
+       sample, the fraction of its 20-token windows that occur verbatim in
+       the corresponding training text.
     1. Retrain on *The Time Machine* with `dropout=0.3`. Does dropout move
        the minimum of the validation loss, lower it, or only slow the rise
        after it?
@@ -1116,42 +1103,44 @@ the same class through a map of parameter names.
 
    $$\frac{\ell}{c \log 2} \textrm{ bits per byte}.$$
 
-    1. Compute the bits per byte of `model` on the text of the validation
-       windows of `data`.
-    1. Compute the bits per byte of `gpt2` on the same preprocessed text,
-       in chunks of 1,024 tokens. Repeat on the raw text that corresponds to
-       the validation windows, about the last 256,000 characters of the
-       file `ptb.train.txt`, in which rare words appear as `<unk>` and
-       numbers as `N`.
+    1. Compute the bits per byte of `model` on the validation split of
+       `data`.
+    1. Compute the bits per byte of `gpt2` on the same text, in chunks of
+       1,024 tokens. WikiText keeps the tokenization of its creators: it
+       sets punctuation off by spaces and writes a hyphen inside a word as
+       ` @-@ `. Repeat on the text with these marks undone, still dividing
+       by the bytes of the original text, as the GPT-2 paper did with
+       invertible detokenizers.
     1. Which of the two GPT-2 figures should be compared with that of
        `model`? Discuss what each side brings to the passage: `model` was
-       trained on text of the same source, sees 128 characters of context,
-       and predicts 28 symbols, whereas GPT-2 was trained on 40 GB of web
-       text, sees up to 1,024 tokens, and predicts 50,257 symbols.
+       trained on text of the same source and format, sees 128 bytes of
+       context, and predicts 256 symbols, whereas GPT-2 was trained on 40 GB
+       of web text from which Wikipedia articles were removed, sees up to
+       1,024 tokens, and predicts 50,257 symbols.
    :exlabel:`ex_gpt-bits-per-byte`
 
 1. [extended] **Subwords at small scale.** ●
-   :numref:`subsec_gpt-training` trains on characters, which keeps the
+   :numref:`subsec_gpt-training` trains on bytes, which keeps the
    embedding table small and makes the loss a number of bits per byte.
    Subword tokens have the opposite advantages: a window of 128 tokens
    covers several times more text, and each prediction carries more
    information. Test which effect wins at this scale.
-    1. Train a `d2l.BPETokenizer` with the GPT-2 pattern on the
-       preprocessed text of *The Time Machine* for vocabulary sizes 256,
-       1,024, and 4,096; with 256 it learns no merges. Subclass
-       `TimeMachinePTB` so that it encodes the preprocessed corpus with a
-       given tokenizer, keeping the same split between training and
-       validation text.
+    1. Train a `d2l.BPETokenizer` with the GPT-2 pattern on the first
+       million bytes of the training text for vocabulary sizes 1,024 and
+       4,096; with 256 it learns no merges and gives the bytes of `data`.
+       Subclass `d2l.WikiText103` so that it encodes the first 20 million
+       bytes of the training split and the whole validation split with a
+       given tokenizer.
     1. Train `GPT` with each vocabulary as in
        :numref:`subsec_gpt-training` and convert the final validation
        losses to bits per byte as in :exref:`ex_gpt-bits-per-byte`. Count
        also the parameters in the embedding table of each model.
-    1. A larger vocabulary gives each window more characters of context
-       and each step more text, and in 1,000 steps the model then reads
-       its training text several times instead of about 1.7 times. Repeat
-       the best vocabulary with windows of about 128 characters, and with
-       as many steps as it takes to read the text about 1.7 times. Which
-       of the three effects explains the differences you found?
+    1. A larger vocabulary gives each window more bytes of context and
+       each step more text, so in 1,000 steps the model reads a larger
+       share of its 20 million bytes. Repeat the best vocabulary with
+       windows of about 128 bytes, and with the number of steps that reads
+       as many bytes as the byte-level run. Which of the three effects
+       explains the differences you found?
 
 [Discussions](https://d2l.discourse.group/t/36775)
 
@@ -1166,14 +1155,14 @@ A GPT from Scratch<br>
 :::
 :::
 
-::: {.slide title="One Window of 128 Characters Holds 128 Prediction Problems"}
+::: {.slide title="One Window of 128 Bytes Holds 128 Prediction Problems"}
 [The problem]{.kicker}
 
 | context | target |
 |:--|:--|
-| `the time travelle` | `r` |
-| `the time traveller` | `␣` |
-| `the time traveller␣` | `w` |
+| `the European lobste` | `r` |
+| `the European lobster` | `␣` |
+| `the European lobster␣` | `o` |
 
 - Train on all positions of a window in **one** forward pass.
 - Two requirements: position $t$ must not see tokens after $t$, and the
@@ -1195,8 +1184,8 @@ How do we turn the transformer block into a model that meets both?
   loss curves against count-based baselines;
 - sample with temperature and top-$k$, and load the released GPT-2.
 
-**Running example:** GPT-2 small (124M parameters), and our 4.7M-parameter
-character model.
+**Running example:** GPT-2 small (124M parameters), and our 4.8M-parameter
+byte-level model.
 :::
 
 ::: {.slide title="Blocks Become a Language Model"}
@@ -1217,7 +1206,7 @@ character model.
 
 ::: {.col .narrow}
 - **Uses:** the block's defaults (pre-norm, RMSNorm, SwiGLU), RoPE,
-  AdamW and schedules, character tokens, perplexity.
+  AdamW and schedules, byte tokens, perplexity.
 - **Skips:** fast generation (next section), training at scale.
 :::
 :::
@@ -1315,7 +1304,7 @@ $4d^2$. FFN: $2 \cdot d \cdot 4d$ (GELU) or $3 \cdot d \cdot 8d/3$
 
 | | $d$ | blocks | $12d^2 \times$ blocks | token table | total |
 |:--|--:|--:|--:|--:|--:|
-| ours | 256 | 6 | 4.7M | 0.007M | 4.73M |
+| ours | 256 | 6 | 4.7M | 0.066M | 4.79M |
 | GPT-2 small | 768 | 12 | 85M | 38.6M | 124.4M |
 
 GPT-2 adds 0.8M for 1,024 learned positions. Untied, it would have 163M.
@@ -1334,18 +1323,18 @@ tied head. Estimate its parameter count.
 - Total $\approx 355$M, the reported size.
 :::
 
-::: {.slide title="A 4.7M-Parameter Model Needs More Than One Novel"}
-1,000 steps $\times$ 64 windows $\times$ 128 characters = 8.2M characters.
+::: {.slide title="A 4.8M-Parameter Model Needs More Than One Novel"}
+1,000 steps $\times$ 64 windows $\times$ 128 bytes = 8.2M predictions.
 
-| corpus | characters | passes in 1,000 steps |
+| corpus | bytes for training | passes in 1,000 steps |
 |:--|--:|--:|
 | *The Time Machine* | 0.17M | about 47 |
-| *The Time Machine* + Penn Treebank | 4.8M for training | about 1.7 |
+| WikiText-103 (Wikipedia articles) | 270M | about 0.03 |
 
-- 28 symbols: lowercase letters, space, unknown.
-- Non-overlapping windows; the last 2,000 (256k characters) for
-  validation.
-- Characters keep the table at 7,168 parameters, and nats per character
+- 256 symbols: the UTF-8 bytes of raw text, with case, digits, punctuation.
+- Training windows at random offsets; validation: the official split,
+  1.1M bytes.
+- Bytes keep the table at 65,536 parameters, and nats per byte
   $/\log 2$ = bits per byte.
 :::
 
@@ -1363,17 +1352,17 @@ $$\eta_t = \eta \cdot \begin{cases} t/t_w, & t < t_w \\ \tfrac12\left(1 + \cos\l
 ::: {.slide title="Training and Validation Loss Fall Together"}
 @!gpt-training-the-modern-configuration
 
-The training text is read about 1.7 times: little to memorize, so the
-validation loss tracks the training loss.
+Every window is new text: nothing to memorize, so the validation loss
+tracks the training loss.
 :::
 
 ::: {.slide title="Count Models Set the Reference Levels"}
 @!gpt-training-the-model-4
 
-- **Unigram**: letter frequencies, no context.
-- **Bigram**: the previous character only.
+- **Unigram**: byte frequencies, no context.
+- **Bigram**: the previous byte only.
 - The GPT ends far below both: it uses much more than the previous
-  character.
+  byte.
 :::
 
 ::: {.slide title="Training Costs About 6ND Operations"}
@@ -1382,7 +1371,7 @@ about twice that.
 
 | run | $N$ | $D$ (tokens) | $6ND$ |
 |:--|--:|--:|--:|
-| ours | 4.7M | 8.2M | $2 \times 10^{14}$ |
+| ours | 4.8M | 8.2M | $2 \times 10^{14}$ |
 | GPT-2 small | 124M | about $10^{10}$ | $7 \times 10^{18}$ |
 | GPT-2 XL | 1.5B | about $10^{10}$ | $10^{20}$ |
 | largest current runs | | | $> 10^{25}$ |
@@ -1397,7 +1386,7 @@ post-norm; then post-norm with 100 steps of warmup:
 @!gpt-breaking-it-with-one-flag
 
 A loss at the unigram entropy means predictions that ignore the input,
-even the current character.
+even the current byte.
 :::
 
 ::: {.slide title="Check: Is Starved Attention the Whole Story?"}
@@ -1409,7 +1398,7 @@ post-norm model still reach?
 
 . . .
 
-- The FFNs act on the current character, so the bigram level is within
+- The FFNs act on the current byte, so the bigram level is within
   reach.
 - The plateau sits at the unigram level instead: starved attention is at
   most part of the explanation.
@@ -1434,7 +1423,7 @@ $$p_v = \frac{\exp(z_v/\tau)}{\sum_u \exp(z_u/\tau)}$$
 @!gpt-sampling-from-the-model-2
 
 $\tau = 1$: the model's own distribution. $\tau = 0.7$, $k = 8$: safer and
-more repetitive. $\tau = 2$: close to random letters.
+more repetitive. $\tau = 2$: close to random bytes.
 :::
 
 ::: {.slide title="Naive Generation Redoes the Whole Context for Every Token" only="pytorch"}
@@ -1523,8 +1512,8 @@ continues the prompt coherently.
   costs about $6ND$.
 - GPT-2 initialization: $0.02$, and $0.02/\sqrt{2L}$ on the stream
   writers.
-- On text read about 1.7 times, validation follows training; post-norm
-  without warmup stalls at the unigram level.
+- On text it has never read before, validation follows training;
+  post-norm without warmup stalls at the unigram level.
 - Temperature and top-$k$ reshape sampling; GPT-2 loads with a name map.
 
 **Next:** generation recomputes the whole context for every token; the KV

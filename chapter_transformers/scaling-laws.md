@@ -73,7 +73,7 @@ of $L$ blocks thus holds $12Ld^2$. The token embedding holds $Vd$ for a
 vocabulary of $V$ tokens; weight tying uses it a second time as the output
 head without storing a copy. A learned position table adds
 $\textrm{max\_len} \times d$. The census below counts both parts for our
-character model and for GPT-2 small:
+byte-level model and for GPT-2 small:
 
 ```{.python .input #scaling-laws-a-parameter-census}
 %%tab pytorch, jax
@@ -86,7 +86,7 @@ def census(model, d, num_blks):
           f'= {(total - emb) / (num_blks * d ** 2):.2f} L d^2,  '
           f'total {total / 1e6:.2f}M')
 
-census(gpt(28), d=256, num_blks=6)
+census(gpt(256), d=256, num_blks=6)
 census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
            pos='learned', norm='layer', act='gelu', bias=True),
        d=768, num_blks=12)
@@ -94,7 +94,7 @@ census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
 
 Both rows confirm the $12Ld^2$ rule to a fraction of a percent; the residue
 is normalization gains and, for GPT-2, biases. The embedding share is what
-separates them. It is negligible for our model with its 28 characters, but
+separates them. It is 1.4% of our model with its 256 bytes, but
 nearly a third of GPT-2, whose 124 million parameters are an 85-million
 parameter transformer attached to lookup tables of 39 million entries, 38.6
 million for the tokens and 0.8 million for the positions.
@@ -173,9 +173,9 @@ matrix, softmax, and normalization included.
 
 ```{.python .input #scaling-laws-checking-the-arithmetic}
 %%tab pytorch
-model = gpt(28, act='gelu')
-X = torch.randint(0, 28, (64, 128))
-Y = torch.randint(0, 28, (64, 128))
+model = gpt(256, act='gelu')
+X = torch.randint(0, 256, (64, 128))
+Y = torch.randint(0, 256, (64, 128))
 N = sum(p.numel() for p in model.parameters() if p.ndim == 2)
 with sdpa_kernel(SDPBackend.MATH):  # Attention as visible matrix products
     with FlopCounterMode(display=False) as fwd:
@@ -190,10 +190,10 @@ print(f'backward / forward = {b / f:.2f}')
 
 ```{.python .input #scaling-laws-checking-the-arithmetic}
 %%tab jax
-model = gpt(28, act='gelu')
+model = gpt(256, act='gelu')
 key_x, key_y = jax.random.split(d2l.get_key())
-X = jax.random.randint(key_x, (64, 128), 0, 28)
-Y = jax.random.randint(key_y, (64, 128), 0, 28)
+X = jax.random.randint(key_x, (64, 128), 0, 256)
+Y = jax.random.randint(key_y, (64, 128), 0, 256)
 graphdef, params, rest = nnx.split(model, nnx.Param, ...)
 N = sum(p.size for p in jax.tree.leaves(params) if p.ndim == 2)
 
@@ -233,15 +233,16 @@ point where the line stops: when does a larger model stop helping?
 ### Five Sizes and Three Data Budgets
 :label:`subsec_scaling-laws-five-sizes`
 
-The corpus is the one of :numref:`sec_gpt`: the characters of *The Time
-Machine* followed by the Penn Treebank training text, about 5.1 million
-characters in windows of 128, of which the last 2,000 windows are held out
-for validation (`d2l.TimeMachinePTB`):
+The corpus is the one of :numref:`sec_gpt`, the bytes of the Wikipedia
+articles of `d2l.WikiText103`: about 270 million training bytes, read in
+windows of 128 at random offsets, and the official validation split of
+about 1.1 million bytes.
 
 ```{.python .input #scaling-laws-a-corpus-bigger-than-a-novella}
 %%tab pytorch, jax
-data = d2l.TimeMachinePTB(batch_size=64, num_steps=128)
-print(f'{data.num_train * 128 / 1e6:.2f}M training characters, '
+data = d2l.WikiText103(batch_size=64, num_steps=128)
+print(f'{len(data.train) / 1e6:.0f}M training bytes, '
+      f'{len(data.val) / 1e6:.2f}M validation bytes, '
       f'vocabulary of {len(data.vocab)}')
 ```
 
@@ -249,8 +250,10 @@ The grid has two axes. Five sizes of `d2l.GPT` grow width and depth
 together, as model families do: widths from 96 to 384 and depths from 3 to
 8 blocks, or 0.33 to 14.2 million non-embedding parameters, a factor of
 43. Each size trains at three data budgets: 500, 1,000, and 2,000 steps of
-64 windows, that is $D$ = 4.1, 8.2, and 16.4 million tokens, or 0.85, 1.7,
-and 3.4 passes over the training text.
+64 windows, that is $D$ = 4.1, 8.2, and 16.4 million tokens. Even the
+largest budget reads about 6% of the training text, so every budget
+consists of fresh text, and the grid varies the amount of data without
+repeating any of it.
 
 The training recipe is that of :numref:`sec_gpt` (`d2l.LMOptimizer`):
 AdamW with weight decay 0.1 on the weight matrices, a linear warmup over
@@ -267,14 +270,14 @@ tuned at one width undertrains or destabilizes the others (exercise
 :exref:`ex_scaling-laws-frozen-learning-rate` measures the effect). We
 anchor the peak rate at $2 \times 10^{-3}$ for width 256, the rate of
 :numref:`sec_gpt`, and scale it as $256/d$. There is no dropout: no run
-reads its text more than four times. Each line of the output is one size,
+reads any passage twice. Each line of the output is one size,
 with its validation losses at the three budgets and its training loss over
 the last 50 steps of the longest run:
 
 ```{.python .input #scaling-laws-five-sizes-one-diet-1}
 %%tab pytorch, jax
 sizes = ((96, 3, 4), (128, 3, 4), (192, 4, 6), (256, 6, 8), (384, 8, 8))
-budgets = (500, 1000, 2000)  # Steps of 64 windows of 128 characters
+budgets = (500, 1000, 2000)  # Steps of 64 windows of 128 bytes
 Ns, train, val = [], [], {num_steps: [] for num_steps in budgets}
 for d, num_blks, num_heads in sizes:
     for num_steps in budgets:
@@ -324,17 +327,15 @@ parameters do not lower, and more data lowers the floor.
 
 Two checks support this reading. Each point is a single run with fresh
 random weights, and rerunning moves a point by about a hundredth of a nat,
-less than the gaps between the curves. And the longest runs read their text
-3.4 times. :citet:`Muennighoff.Rush.Barak.ea.2023` trained models of up to
-9 billion parameters on repeated data and found that up to about four
-passes give almost the same loss as fresh data; beyond that, further passes
-are worth less and less. Accordingly, the longest budget still lowers the
-validation loss of every size: the repeated passes still teach. The
-training loss of the longest runs also stays within a few hundredths of
-the validation loss, although this gap bounds memorization only roughly,
-because the two losses are measured on different text: only the training
-windows contain *The Time Machine*. The grid measures how much data a model saw, not
-how often it saw it.
+less than the gaps between the curves. And no run reads the same text
+twice, so a larger budget means more distinct text, not more passes over
+the same text. The training loss of the longest runs stays within a few
+hundredths of the validation loss: the models do not memorize. Repetition
+would change the picture only slowly:
+:citet:`Muennighoff.Rush.Barak.ea.2023` trained models of up to 9 billion
+parameters on repeated data and found that up to about four passes give
+almost the same loss as fresh data, with each further pass worth less and
+less.
 
 ## Compute-Optimal Allocation
 
@@ -360,15 +361,17 @@ exponent: :citet:`Pearce.Song.2024` trace to it most of the reason why the
 earlier fit of :citet:`kaplan2020scaling` favoured larger models (exercise
 :exref:`ex_scaling-laws-embedding-count` measures the effect on a slope).
 
-In our grid the two counts nearly coincide, because a table of 28
-characters is a tiny fraction of even the smallest model, so the law reads
-the grid directly. With $D$ fixed, $E + B/D^{\beta}$ is a constant, and only $A/N^{\alpha}$
+In our grid the two counts differ little: the table of 256 bytes adds 7%
+to the smallest model and under 1% to the largest, which changes the slope
+on log--log axes by about 2%, so the law reads the grid nearly directly.
+With $D$ fixed, $E + B/D^{\beta}$ is a constant, and only $A/N^{\alpha}$
 falls as the model grows. A constant plus a power law is straight on
 log--log axes only while the power law dominates; once $A/N^{\alpha}$ has
 shrunk to the size of the constant, the curve flattens toward
 $E + B/D^{\beta}$. A smaller $D$ raises that constant, so the curve
 flattens earlier. The law counts $D$ repeated tokens as $D$ fresh ones,
-which is accurate for the few passes of our grid but not for many more.
+which our grid never puts to the test and which holds for a few passes but
+not for many more.
 
 ### The Optimal Split
 
@@ -616,7 +619,7 @@ experts.
 1. **Total versus non-embedding parameters.** Suppose that each model in
    `sizes` had used GPT-2's vocabulary of $V = 50{,}257$ tokens with tied
    embeddings and had reached the validation losses it reached at the
-   largest budget with the 28-symbol vocabulary.
+   largest budget with the 256-byte vocabulary.
     1. Compute the total parameter count of each model and the ratio
        between the largest and the smallest. Compare this ratio with the
        one for the non-embedding counts in `Ns`.
@@ -666,7 +669,7 @@ experts.
        model. Estimate the run's cost with :eqref:`eq_six_nd`.
     1. Train it with the same recipe at all three budgets. Which
        prediction was closer, and what do the three results say about the
-       headroom that 16.4M tokens of this corpus leave?
+       headroom that a budget of 16.4M tokens leaves?
 
 1. [code] **Fitting the law to the grid.** ● Fit
    :eqref:`eq_chinchilla_law` to the fifteen validation losses of the
@@ -732,9 +735,10 @@ experts.
        around the minimum. Fit $N_{\textrm{opt}} \propto C^{a}$ and
        compare $a$ with $\beta / (\alpha + \beta)$ for both fits in
        `fits`.
-    1. Count how many passes over the corpus each run makes. In which
-       direction does repetition bias $N_{\textrm{opt}}$ at the largest
-       budget?
+    1. Count the share of the training text that each run reads. Suppose
+       the corpus had only 5 million bytes, so that the largest runs read
+       it several times. In which direction would repetition bias
+       $N_{\textrm{opt}}$ at the largest budget?
 
     *Adapted from Stanford CS336,
     [Assignment 3](https://github.com/stanford-cs336/assignment3-scaling/blob/main/cs336_assignment3_scaling.pdf),
@@ -758,7 +762,7 @@ Scaling laws<br>
 
 | run | training FLOPs |
 |:--|--:|
-| our 4.7M-parameter GPT, 8.2M tokens | $2 \times 10^{14}$ |
+| our 4.8M-parameter GPT, 8.2M tokens | $2 \times 10^{14}$ |
 | GPT-2 small, 124M parameters, ~10B tokens (estimate) | $7 \times 10^{18}$ |
 | Llama 3, 405B parameters, 15.6T tokens | $3.8 \times 10^{25}$ |
 
@@ -780,7 +784,7 @@ must be decided before it starts.
   parameter.
 
 **Running example:** GPT-2 small (124M parameters), and five small GPTs
-on 5.1M characters.
+on the bytes of WikiText-103.
 :::
 
 ::: {.slide title="Cost and Loss Are Predictable from the Model's Shape"}
@@ -863,13 +867,13 @@ training FLOPs and the attention correction.
 :::
 
 ::: {.slide title="A Grid of Five Sizes and Three Data Budgets"}
-Corpus: *The Time Machine* + Penn Treebank, **5.1M characters**.
+Corpus: WikiText-103 bytes, **270M** for training, read at random offsets.
 
 | axis | values |
 |:--|:--|
 | width, blocks | 96/3, 128/3, 192/4, 256/6, 384/8 |
 | $N$ (non-embedding) | 0.33M → 14.2M, a factor of 43 |
-| $D$ (tokens) | 4.1M, 8.2M, 16.4M = 0.85, 1.7, 3.4 passes |
+| $D$ (tokens) | 4.1M, 8.2M, 16.4M: at most 6% of the text, none repeated |
 
 All 15 runs: AdamW, decay 0.1 on matrices, warmup, cosine, clipping;
 no dropout.

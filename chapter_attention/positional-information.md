@@ -429,7 +429,7 @@ the per-pair angle factors of `rope` as attributes, `rope_base` and
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
 class TinyCharLM(nn.Module):  #@save
-    """Attention-only character-level language model."""
+    """Attention-only language model."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                  pos='rope', max_len=512, bias=False):
         super().__init__()
@@ -502,7 +502,7 @@ class TinyCharLM(nn.Module):  #@save
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab jax
 class TinyCharLM(nnx.Module):  #@save
-    """Attention-only character-level language model."""
+    """Attention-only language model."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                  pos='rope', max_len=512, bias=False, *, rngs):
         assert pos in ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
@@ -575,17 +575,18 @@ class TinyCharLM(nnx.Module):  #@save
 ### The Experiment
 :label:`subsec_pos-experiment`
 
-We train one model per scheme on the character-level Time Machine corpus of
-:numref:`sec_text-sequence` at context length 128, for 3000 steps of the
-fixed-step training loop `d2l.train_lm` of :numref:`sec_adam`. The learned
-and sinusoidal tables are allocated out to `max_len` $= 512$ positions so
-that the models can be evaluated on longer sequences, but only the first 128
-rows of the learned table receive gradients.
+We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
+articles that :numref:`subsec_tinylm` introduced, at context length 128, for
+3000 steps of the fixed-step training loop `d2l.train_lm` of
+:numref:`sec_adam`. The tokens are bytes, so each model has an embedding
+table of 256 rows. The learned and sinusoidal tables are allocated out to
+`max_len` $= 512$ positions so that the models can be evaluated on longer
+sequences, but only the first 128 rows of the learned table receive
+gradients.
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab pytorch
-data = d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
 models = {}
 for pos in schemes:
@@ -599,8 +600,7 @@ for pos in schemes:
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
 models = {}
 for pos in schemes:
@@ -616,18 +616,21 @@ for pos in schemes:
 Every model was trained on length-128 sequences. We evaluate validation
 perplexity at that training context, $n = 128$, and at two and four times
 this length ($n = 256$ and $512$). The first point is in range; the other
-two measure extrapolation on the same held-out text. The evaluation sums the
+two measure extrapolation. All three read the same 1.1 million bytes of the
+validation split: we cut it into consecutive windows of 128 bytes with
+`data.windows` and regroup them into windows of 256 and 512, so that only
+the context available to each prediction changes. The evaluation sums the
 cross-entropy over all predicted tokens and converts it to a perplexity
 once at the end.
 
 ```{.python .input #positional-information-the-experiment-2}
 %%tab pytorch
-def eval_ppl(model, data):
+def eval_ppl(model, batches):
     device = d2l.try_gpu()
     model.to(device).eval()
     total, count = torch.zeros((), device=device), 0
     with torch.inference_mode():
-        for X, Y in data.val_dataloader():
+        for X, Y in batches:
             logits = model(X.to(device))
             total += F.cross_entropy(logits.flatten(0, 1),
                                      Y.to(device).flatten(), reduction='sum')
@@ -642,9 +645,9 @@ def eval_ppl(model, data):
 def total_loss(model, X, Y):
     return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
 
-def eval_ppl(model, data):
+def eval_ppl(model, batches):
     total, count = 0.0, 0
-    for X, Y in data.val_dataloader():
+    for X, Y in batches:
         total += total_loss(model, jnp.asarray(X), jnp.asarray(Y))
         count += Y.size
     return math.exp(float(total) / count)
@@ -655,9 +658,13 @@ The table lists the perplexity of each model at the three context lengths.
 ```{.python .input #positional-information-the-experiment-3}
 %%tab pytorch, jax
 contexts = (128, 256, 512)
-eval_sets = {n: d2l.TimeMachine(batch_size=16, num_steps=n,
-                                tokenization='char', num_train=100000,
-                                num_val=3000) for n in contexts}
+num_bytes = (len(data.val) - 1) // 8192 * 8192  # Batches of 16 x 512 bytes
+X, Y = data.windows(data.val, range(0, num_bytes, 128))
+eval_sets = {}
+for n in contexts:  # The same bytes, regrouped into windows of n
+    Xn, Yn = X.reshape(-1, n), Y.reshape(-1, n)
+    eval_sets[n] = [(Xn[i:i + 16], Yn[i:i + 16])
+                    for i in range(0, len(Xn), 16)]
 ppls = {pos: [eval_ppl(models[pos], eval_sets[n]) for n in contexts]
         for pos in schemes}
 print(f'{"context":>10}: ' + ''.join(f'{n:>8}' for n in contexts))
@@ -755,7 +762,7 @@ rope_model.rope_scale[...] = ones
 Both rescalings bring the perplexity at context 512 below that of the
 unscaled model. Rescaling only the slow pairs hurts less at the shorter
 contexts, where the uniform factor blurs the distinctions between
-neighboring characters that the fast pairs were trained to make. At context
+neighboring bytes that the fast pairs were trained to make. At context
 512, neither rescaled model reaches the perplexity that the unscaled model
 has at the training length, because no weight was trained on compressed
 angles. The published recipes therefore pair the rescaling with a short
@@ -960,7 +967,8 @@ into the trained range.
        `models['rope']` to this base for $s = 4$, evaluate at 128, 256,
        and 512 without training, and compare with the two rescalings of
        the cell.
-    1. Fine-tune for a few hundred steps at context 512 with each of the two
+    1. Fine-tune for a few hundred steps at context 512, on
+       `d2l.WikiText103(batch_size=16, num_steps=512)`, with each of the two
        rescalings of the cell, each starting from a copy of the trained
        `models['rope']`. Re-evaluate at 128, 256, and 512, and compare with
        the unscaled model and with the ALiBi model of the experiment in
@@ -1006,7 +1014,7 @@ training length?
 - stretch a trained RoPE model to four times its context by rescaling
   angles.
 
-**Running example:** `TinyCharLM`, an attention-only character model with
+**Running example:** `TinyCharLM`, an attention-only byte-level model with
 heads of width 32, trained at context 128 and evaluated at 512.
 :::
 
@@ -1233,7 +1241,7 @@ def _attend(self, blk, H):
 ::: {.slide title="Three Schemes Degrade at Four Times the Training Length"}
 [The experiment]{.kicker}
 
-Validation perplexity; Time Machine characters, trained at context 128 for
+Validation perplexity per byte on WikiText-103, trained at context 128 for
 3000 steps, one run per scheme:
 
 @!positional-information-the-experiment-3
@@ -1263,7 +1271,7 @@ Flat perplexity does not mean the model *uses* the longer context.
 ::: {.slide title="Check: Which Logits Change Between Context 128 and 512?"}
 [Check]{.kicker}
 
-The same models read the first 128 characters of a validation sequence,
+The same models read the first 128 bytes of a validation sequence,
 then the first 512. At which positions can the logits differ?
 
 ::: {.fragment .fade-up}

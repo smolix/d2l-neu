@@ -28,6 +28,7 @@ chapter builds on it.
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import math
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -40,6 +41,7 @@ from d2l import jax as d2l
 from flax import nnx
 import jax
 from jax import numpy as jnp
+import math
 import optax
 ```
 
@@ -640,7 +642,7 @@ of blocks, a final RMSNorm, and a tied output head
 ```{.python .input #transformer-block-shapes-and-parameters-2}
 %%tab pytorch
 class CharLM(nn.Module):
-    """Minimal char LM: causal masking through a boolean mask."""
+    """Minimal byte-level LM: causal masking through a boolean mask."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                  act='swiglu', max_len=128):
         super().__init__()
@@ -666,7 +668,7 @@ class CharLM(nn.Module):
 ```{.python .input #transformer-block-shapes-and-parameters-2}
 %%tab jax
 class CharLM(nnx.Module):
-    """Minimal char LM: causal masking through a boolean mask."""
+    """Minimal byte-level LM: causal masking through a boolean mask."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                  act='swiglu', max_len=128, *, rngs):
         init = nnx.initializers.normal(0.02)
@@ -691,39 +693,45 @@ class CharLM(nnx.Module):
 ### Comparing GELU and SwiGLU
 :label:`subsec_gelu-vs-swiglu`
 
-We train `CharLM` twice on the character-level Time Machine corpus of
-:numref:`sec_text-sequence`, with the same model size, optimizer, learning
-rate, and budget of 600 steps. Only the `act` flag differs, and the
-parameter counts match to a tenth of a percent. Each line reports the
-training loss averaged over the 100 steps before step 200, 400, and 600.
+We train `CharLM` twice on `d2l.WikiText103`, the bytes of Wikipedia
+articles that :numref:`subsec_tinylm` introduced, with the same model size,
+optimizer, learning rate, and budget of 600 steps. Only the `act` flag
+differs, and the parameter counts match to a tenth of a percent. Each line
+reports the validation loss after 200, 400, and 600 steps, measured on the
+held-out articles with `d2l.lm_perplexity` (:numref:`sec_lstm`), whose
+logarithm is the mean loss in nats per byte.
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
 %%tab pytorch
-data = d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 for act in ('gelu', 'swiglu'):
     model = CharLM(len(data.vocab), act=act)
-    losses = d2l.train_lm(model, data,
-                          torch.optim.AdamW(model.parameters(), lr=1e-3,
-                                            weight_decay=0.0), 600)
-    print(f'{act:>7}: loss at step 200/400/600: ' + '/'.join(
-        f'{sum(losses[k-100:k]) / 100:.2f}' for k in (200, 400, 600)))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
+                                  weight_decay=0.0)
+    val = []
+    for _ in range(3):  # Three rounds of 200 steps
+        d2l.train_lm(model, data, optimizer, 200)
+        val.append(math.log(d2l.lm_perplexity(model, data)))
+    print(f'{act:>7}: validation loss at step 200/400/600: '
+          + '/'.join(f'{v:.2f}' for v in val))
 ```
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
 %%tab jax
-data = d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
-                       num_train=100000, num_val=3000)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 for act in ('gelu', 'swiglu'):
     model = CharLM(len(data.vocab), act=act, rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                               wrt=nnx.Param)
-    losses = d2l.train_lm(model, data, optimizer, 600)
-    print(f'{act:>7}: loss at step 200/400/600: ' + '/'.join(
-        f'{sum(losses[k-100:k]) / 100:.2f}' for k in (200, 400, 600)))
+    val = []
+    for _ in range(3):  # Three rounds of 200 steps
+        d2l.train_lm(model, data, optimizer, 200)
+        val.append(math.log(d2l.lm_perplexity(model, data)))
+    print(f'{act:>7}: validation loss at step 200/400/600: '
+          + '/'.join(f'{v:.2f}' for v in val))
 ```
 
-The gated FFN ends more than a tenth of a nat ahead, a gap several times
+The gated FFN ends a few hundredths of a nat ahead, a gap several times
 larger than the change from one random initialization to the next. The
 direction agrees with the comparison of :citet:`Shazeer.2020` at the scale
 of T5. There, at matched parameters and computation, SwiGLU lowered the
@@ -734,8 +742,8 @@ improvements of this kind.
 
 We can now build a transformer block in any of the configurations used in
 practice and predict how it treats signals at initialization. `CharLM` is
-still a toy: two blocks, learned absolute positions, and 600 steps on one
-novel. The next section builds a GPT from the same blocks, with rotary
+still a toy: two blocks, learned absolute positions, and 600 steps of
+training. The next section builds a GPT from the same blocks, with rotary
 positions, trains it as a language model, and tests the placement of
 normalization in training.
 
@@ -753,8 +761,8 @@ normalizes what each branch reads, lets the stream grow like the square
 root of the depth, and keeps every block trainable. RMSNorm keeps only the
 scale statistic of LayerNorm, and QK-norm bounds the attention logits.
 SwiGLU replaces the fixed activation with a learned gate; at matched
-parameter count it ends more than a tenth of a nat ahead of GELU in our
-character model. The `TransformerBlock` class exposes these choices as
+parameter count it ends a few hundredths of a nat ahead of GELU in our
+byte-level model. The `TransformerBlock` class exposes these choices as
 options, with replaceable attention and FFN modules.
 
 ## Exercises
@@ -1237,9 +1245,9 @@ The default is the Llama configuration (2023); `norm='layer'`,
 `act='gelu'`, `pre_norm=False` gives the 2017 block.
 :::
 
-::: {.slide title="SwiGLU Ends More Than a Tenth of a Nat Ahead"}
-Character-level LM, 2 blocks, $d = 128$, 600 AdamW steps; only `act`
-differs, parameters matched to 0.1%:
+::: {.slide title="SwiGLU Ends a Few Hundredths of a Nat Ahead"}
+Byte-level LM on WikiText-103, 2 blocks, $d = 128$, 600 AdamW steps; only
+`act` differs, parameters matched to 0.1%; validation loss:
 
 @!transformer-block-the-flags-at-work-gelu-versus-swiglu
 

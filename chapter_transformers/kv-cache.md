@@ -676,19 +676,18 @@ for G in (8, 4, 2, 1):
 :label:`subsec_kv-cache-gqa-quality`
 
 Sharing helps only if the model stays nearly as good. To measure its
-effect, we train the character-level model of
+effect, we train the byte-level model of
 :numref:`subsec_gpt-training` with its recipe, once for every
 number of key--value heads from $H_\textrm{kv} = 8$, full multi-head attention,
-down to $H_\textrm{kv} = 1$, which is MQA. The data are the characters of *The
-Time Machine* and of the Penn Treebank in `d2l.TimeMachinePTB`, and
-`d2l.LMOptimizer` runs AdamW with warmup, cosine decay, and gradient
-clipping for 1,000 steps. The model reads each training character less
-than twice, so the validation loss at the end of training measures what it
-has learned.
+down to $H_\textrm{kv} = 1$, which is MQA. The data are the bytes of the
+Wikipedia articles of `d2l.WikiText103`, and `d2l.LMOptimizer` runs AdamW
+with warmup, cosine decay, and gradient clipping for 1,000 steps. The
+model almost never reads the same passage twice, so the validation loss at
+the end of training measures what it has learned.
 
 ```{.python .input #kv-cache-cache-against-quality}
 %%tab pytorch
-data = d2l.TimeMachinePTB(batch_size=64, num_steps=128)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 for G in (8, 4, 2, 1):
     lm = d2l.GPT(len(data.vocab), num_kv_heads=G)
     optimizer = d2l.LMOptimizer(lm, lr=2e-3, num_steps=1000, warmup=100)
@@ -700,7 +699,7 @@ for G in (8, 4, 2, 1):
 
 ```{.python .input #kv-cache-cache-against-quality}
 %%tab jax
-data = d2l.TimeMachinePTB(batch_size=64, num_steps=128)
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 for G in (8, 4, 2, 1):
     lm = d2l.GPT(len(data.vocab), num_kv_heads=G,
                  rngs=nnx.Rngs(d2l.get_key()))
@@ -725,7 +724,7 @@ spread through existing model families.
 
 Sharing heads reduces one factor of :eqref:`eq_kv-cache-bytes`. Two other
 factors can shrink as well: the width of what is stored per token, and the
-number of tokens stored. Our small character models are too weak to show
+number of tokens stored. Our small byte-level models are too weak to show
 how a trained model uses its cache, so we study both factors on the
 released GPT-2.
 `d2l.load_gpt2` builds it as a `d2l.GPT` with the weights loaded as in
@@ -1195,7 +1194,7 @@ sinks that trained models rely on.
    convert a multi-head checkpoint into a grouped one by mean-pooling the
    key and value projections of the heads in each group, and then continue
    training for 5 percent of the original number of steps. Apply this
-   recipe to the character model that
+   recipe to the byte-level model that
    :numref:`subsec_kv-cache-gqa-quality` trains.
     1. Train the $H_\textrm{kv} = 8$ configuration for 1,000 steps. Convert it to
        $H_\textrm{kv} = 2$ by averaging the key and value columns of
@@ -1258,13 +1257,13 @@ sinks that trained models rely on.
        each entry and which positions the rotation should use, so that
        every query--key offset stays below $s + w$. Explain why learned
        position embeddings do not admit the same reassignment.
-    1. Train the character-level `d2l.GPT` of
+    1. Train the byte-level `d2l.GPT` of
        :numref:`subsec_kv-cache-gqa-quality`, with its default RoPE
-       attention, at context 128. Stream the last 10,000 characters of the
-       validation text, `data.X[data.num_train:]` read in order, through
-       your buffer with $s + w = 128$. Compare the mean loss for $s = 4$
-       and for $s = 0$ with that of a full forward pass over the most
-       recent 128 characters at every step.
+       attention, at context 128. Stream the first 10,000 bytes of the
+       validation text, `data.val` read in order, through your buffer with
+       $s + w = 128$. Compare the mean loss for $s = 4$ and for $s = 0$
+       with that of a full forward pass over the most recent 128 bytes at
+       every step.
 
 [Discussions](https://d2l.discourse.group/t/36776)
 
@@ -1486,7 +1485,7 @@ second at 1 TB/s?
 ::: {.slide title="At This Scale, One Key--Value Head Costs Nothing Measurable"}
 @!kv-cache-cache-against-quality
 
-- Same character GPT and recipe, $H_\textrm{kv} \in \{8, 4, 2, 1\}$: cache
+- Same byte-level GPT and recipe, $H_\textrm{kv} \in \{8, 4, 2, 1\}$: cache
   $8\times$ smaller from top to bottom, losses within a few hundredths.
 - Large models (Ainslie et al., 2023): MQA loses a little, GQA at $H/8$
   comes close to multi-head attention; uptraining converts a checkpoint

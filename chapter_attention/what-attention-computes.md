@@ -1275,11 +1275,11 @@ value transformation and an intervention are added.
    :citet:`Olsson.Elhage.Nanda.ea.2022` tie the formation of induction
    heads in language models to an abrupt gain in in-context learning,
    measured as the drop in loss from early to late positions of the
-   context. Test this on the character-level model
+   context. Test this on the byte-level model
    of :numref:`subsec_pos-experiment`.
-    1. Train `d2l.TinyCharLM` with `pos='rope'` on the character-level Time
-       Machine data of :numref:`subsec_pos-experiment` in 30 rounds of 100
-       steps of `d2l.train_lm`. After each round, record two quantities. The
+    1. Train `d2l.TinyCharLM` with `pos='rope'` on the WikiText-103 bytes
+       of :numref:`subsec_pos-experiment` in 30 rounds of 100 steps of
+       `d2l.train_lm`. After each round, record two quantities. The
        first is the largest induction-target score of a block-2 head on
        repeated random sequences over the text vocabulary with pattern
        lengths 16 to 32, computed with `head_scores`. The second is the

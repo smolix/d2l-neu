@@ -9,8 +9,9 @@ activation checkpointing, and data parallelism. Reporting each incremental
 change separates the contribution of a technique from interactions among
 techniques.
 
-*Prerequisites: the entire chapter. The subject is* `d2l.GPT` *and*
-`d2l.TimeMachine` *from* :numref:`sec_gpt`*, reused verbatim.*
+*Prerequisites: the entire chapter. The subject is* `d2l.GPT` *from*
+:numref:`sec_gpt`*, reused verbatim, on the character-level*
+`d2l.TimeMachine` *of* :numref:`sec_language-model`*.*
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch

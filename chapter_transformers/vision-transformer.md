@@ -407,9 +407,14 @@ everything else unchanged, lowered the ImageNet accuracy of a ViT-Base from
 81.8% to 74.5%. `ViT` therefore uses the optimizer and schedule of the
 compact modern recipe of :numref:`sec_training_recipes`: AdamW with weight
 decay 0.05, and a learning rate that rises linearly from zero and then
-decays to zero along a half-cosine :eqref:`eq_cosine_warmup`. Our base rate
-is $10^{-3}$, and the warmup takes the first tenth of the minibatch steps,
-which over ten epochs is the first epoch. The decay acts on the weight
+decays to zero along a half-cosine :eqref:`eq_cosine_warmup`. We tuned each
+model's base rate over $\{3 \times 10^{-4}, 10^{-3}, 3 \times 10^{-3}\}$. The
+ViT trains best at $3 \times 10^{-4}$ and ends four to five points lower at
+$10^{-3}$; the CNN of :numref:`subsec_vit-cnn-baseline` varies by about a
+point over the three rates and does equally well at $10^{-3}$ and
+$3 \times 10^{-3}$, so we use $10^{-3}$ for it. For both models the warmup
+takes the first tenth of the minibatch steps, which over ten epochs is the
+first epoch. The decay acts on the weight
 matrices and convolution kernels only. Biases and normalization parameters
 are exempt, as in :numref:`subsec_adamw-what-not-to-decay`, and so are the
 class token and the position embeddings, as in the training code of
@@ -427,9 +432,9 @@ hparams = dict(img_size=96, patch_size=16, num_hiddens=512,
                mlp_num_hiddens=2048, num_heads=8, num_blks=2,
                emb_dropout=0.1, blk_dropout=0.1, num_steps=num_steps)
 if tab.selected('pytorch'):
-    model = ViT(**hparams)
+    model = ViT(**hparams, lr=3e-4)
 if tab.selected('jax'):
-    model = ViT(**hparams, rngs=nnx.Rngs(d2l.get_key()))
+    model = ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 vit_history = trainer.history
@@ -603,9 +608,9 @@ class CompactResNet(d2l.Classifier):
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
 %%tab pytorch, jax
 if tab.selected('pytorch'):
-    cnn = CompactResNet(num_steps)
+    cnn = CompactResNet(num_steps, lr=1e-3)
 if tab.selected('jax'):
-    cnn = CompactResNet(num_steps, rngs=nnx.Rngs(d2l.get_key()))
+    cnn = CompactResNet(num_steps, lr=1e-3, rngs=nnx.Rngs(d2l.get_key()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(cnn, data)
 cnn_history = trainer.history
@@ -721,8 +726,8 @@ reverse such gaps.
        validation accuracy with `vit_acc`.
     1. :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` report that the two
        readouts work about equally well but need different learning rates.
-       Train both readouts at the learning rates $3 \times 10^{-4}$ and
-       $3 \times 10^{-3}$ as well. Does the ranking of the two readouts
+       Train both readouts at the learning rates $10^{-4}$ and $10^{-3}$
+       as well. Does the ranking of the two readouts
        depend on the learning rate?
 
 1. [code] **Position information.** By the proposition of
@@ -1089,8 +1094,9 @@ Our recipe (both models):
 
 - AdamW, weight decay 0.05 on weight matrices and kernels only (no
   decay on biases, norms, class token, position embeddings);
-- learning rate $0 \to 10^{-3}$ linearly over the first epoch, then a
-  half-cosine to 0;
+- learning rate from 0 up to a tuned peak linearly over the first epoch,
+  then a half-cosine to 0; peak $3 \times 10^{-4}$ for the ViT, $10^{-3}$
+  for the CNN;
 - ten epochs, minibatch 128, no augmentation.
 
 [Touvron et al., ICML 2021]{.small}

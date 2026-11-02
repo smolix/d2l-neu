@@ -1,48 +1,36 @@
 # The Performance Model
 :label:`sec_perf_model`
 
-Run one matrix multiplication at two sizes on the same GPU with correct
-synchronization, and the hardware can deliver very different fractions of
-its advertised speed. A small multiplication may achieve one percent of
-peak throughput, whereas a large one can approach the specification. This
-section explains the difference and develops a method for diagnosing it.
+On the RTX 4090 that runs this book's notebooks, a product of two
+$256 \times 256$ matrices in bf16 reaches only a percent or two of the
+165 TFLOP/s that the card's specification promises. A product of two
+$8192 \times 8192$ matrices comes close to the full 165 TFLOP/s. The
+operation and the chip are the same, and both products are timed correctly.
+A training step is a long sequence of such operations. If most of them run at
+a few percent of the peak, a faster GPU or a second one changes little,
+because the time goes to waiting rather than to computing.
 
-The method has four steps: **measure** what the program does; **classify** which of
-three resources binds it — arithmetic, memory bandwidth, or per-operation
-overhead; **fix** the binding constraint with the matching technique; then
-**re-measure**, because the fix moves the bottleneck somewhere else. Every
-later section of this chapter slots into this loop.
-:numref:`sec_hardware` explains where the machine's two headline numbers
-come from; :numref:`sec_compilation` targets the bandwidth and overhead
-regimes; :numref:`sec_memory_precision` buys back memory and trades
-precision for speed; :numref:`sec_multi_gpu` and
-:numref:`sec_multi_gpu_concise` add devices;
-:numref:`sec_fast_transformer` runs the whole loop on a real Transformer.
-
-The analysis uses two quantities. The first is *arithmetic intensity*: how many
-floating-point operations a computation performs per byte it moves to and
-from memory. Compared against a single machine-dependent threshold,
-intensity predicts which regime an operation lands in — before you run
-anything. The second is that *timing a GPU is easy to get wrong*: the
-frameworks dispatch work asynchronously, so a naive timer measures how fast
-Python can enqueue work, not how fast the GPU can do it. We build the
-measurement discipline first, package it into a small tool used throughout
-the chapter, and then use it to map our own GPU.
-
-*Prerequisites: tensors and GPU placement from* :numref:`sec_use_gpu`*; the
-training loop of* :numref:`sec_linear_scratch`*. No new modeling ideas
-appear here — this section is about the machine.*
+This section explains the gap. Every operation on a GPU is limited by one of
+three resources: the arithmetic units, the memory bandwidth that supplies
+them with data, or the fixed cost of issuing the operation from Python. A
+single number computed from the shapes of an operation, its arithmetic
+intensity, tells which of the first two applies. Only measurement reveals
+the third. Together they give a method in four steps, which the rest of
+this chapter follows. We **measure** what a program does, **classify** which
+resource limits it, **fix** that resource with the matching technique, and
+**re-measure**, because each fix moves the bottleneck somewhere else.
 
 ```{.python .input #performance-model-the-performance-model}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import re
 import time
 import torch
 from torch import nn
 
-# Let fp32 matmuls use tf32 tensor cores; off by default, and every timing
-# in this chapter is misleading without it (see :numref:`sec_memory_precision`).
+# Run fp32 matrix products on the tf32 tensor cores (PyTorch's default is
+# full fp32). The bf16 products below are unaffected.
 torch.set_float32_matmul_precision('high')
 ```
 
@@ -50,34 +38,44 @@ torch.set_float32_matmul_precision('high')
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
+import collections
+import glob
+import re
+import tempfile
+import time
 import jax
 from jax import numpy as jnp
-import numpy as np
-import time
 ```
 
-## Counting: FLOPs, Bytes, and Arithmetic Intensity
+## Arithmetic Intensity and the Roofline
 :label:`subsec_perf-counting`
 
-Every tensor operation makes two demands on the hardware: it asks for
-*arithmetic* — some number of floating-point operations (FLOPs) — and it
-asks for *bytes* — its inputs must be fetched from memory and its outputs
-written back. A GPU has a separate budget for each. Our build machine's RTX
-4090 can execute about $165 \times 10^{12}$ FLOP/s on bf16 tensor cores,
-and can move about $1.0 \times 10^{12}$ bytes/s between its compute units
-and its memory. Which budget runs out first depends on the *ratio* the
-operation asks for:
+### Counting FLOPs and Bytes
+
+Every tensor operation makes two demands on a GPU. It performs arithmetic,
+which we count in *floating-point operations* (FLOPs), one addition or one
+multiplication each. And it moves bytes: its inputs come from the GPU's
+memory, and its outputs go back there. The GPU has a separate budget for
+each demand. The RTX 4090 performs at most $P = 165 \times 10^{12}$ FLOP/s
+in bf16 on its tensor cores, and its memory delivers at most
+$\beta = 1.008 \times 10^{12}$ bytes/s. Which budget runs out first depends
+on the ratio of the two demands, the *arithmetic intensity*
 
 $$
-\textrm{arithmetic intensity} \;=\;
-\frac{\textrm{FLOPs performed}}{\textrm{bytes moved}}.
+I \;=\; \frac{\textrm{FLOPs performed}}{\textrm{bytes moved}}.
 $$
 
-Consider the workhorse: a matrix multiplication
+An operation of high intensity performs many FLOPs on each byte it
+fetches. An operation of low intensity performs only a few, or less than
+one.
+
+The most important operation in deep learning is the matrix product
 $\mathbf{X}\mathbf{W}$ with $\mathbf{X} \in \mathbb{R}^{B \times D}$ and
-$\mathbf{W} \in \mathbb{R}^{D \times F}$. It performs $2BDF$ FLOPs (one
-multiply and one add per term), while touching $BD + DF + BF$ numbers. With
-$b$ bytes per element, the intensity is
+$\mathbf{W} \in \mathbb{R}^{D \times F}$, a linear layer applied to a
+minibatch of $B$ examples. It performs $2BDF$ FLOPs, one multiplication and
+one addition for each of the $BDF$ terms of the sums. At best it reads
+$\mathbf{X}$ and $\mathbf{W}$ once and writes the result once, which moves
+$BD + DF + BF$ numbers. With $b$ bytes per number, its intensity is
 
 $$
 \frac{2BDF}{b\,(BD + DF + BF)}
@@ -86,431 +84,431 @@ $$
 $$
 :eqlabel:`eq_matmul_intensity`
 
-The approximation has a direct scaling consequence: for a skinny batch pushed through a
-wide layer, **intensity grows linearly with the batch size**, because each
-weight fetched from memory is reused across every row of the batch. A
-batch of one reuses nothing — each weight is fetched, used once, and
-discarded. This single observation will explain phenomena from "why big
-batches are fast" to why generating from a language model one token at a
-time is memory-bound (:numref:`sec_hardware`).
+The middle form shows that the smallest of the three dimensions limits the
+intensity. The approximation covers the common case of a minibatch that is
+narrower than the layer. There the intensity grows linearly with the batch
+size, because every weight fetched from memory is used once for each row of
+the batch. A batch of one uses each weight once and discards it.
 
-An elementwise operation sits at the other extreme: $y_i = x_i + 1$
-performs one FLOP per element while moving $2b$ bytes (read $x_i$, write
-$y_i$), an intensity of $1/(2b)$ — a fraction of a FLOP per byte, no matter
-how large the tensor.
+A GPT with about a billion parameters has attention projections of width
+$D = F = 2048$. In training, a minibatch of 8 sequences of 1,024 tokens
+gives $B = 8192$, and the exact form of :eqref:`eq_matmul_intensity` gives
+about 910 FLOP/byte in bf16 ($b = 2$). Here the width, not the batch, is the
+smallest dimension. When the same model generates text one token at a time,
+$B = 1$ and the intensity is about 1 FLOP/byte. The same layer, with the
+same weights, spans a factor of about a thousand in intensity between the
+two uses.
 
-The *roofline model* :cite:`Williams.Waterman.Patterson.2009` converts
-arithmetic intensity into an upper bound. An
-operation with intensity $I$ running on a machine with peak compute $P$
-(FLOP/s) and memory bandwidth $\beta$ (bytes/s) can attain at most
+An elementwise operation lies at the low extreme. The operation
+$y_i = x_i + 1$ performs one FLOP per element and moves $2b$ bytes, since it
+reads $x_i$ and writes $y_i$. Its intensity is $1/(2b)$, or 0.25 FLOP/byte
+in bf16, however large the tensor.
+
+### The Roofline Model
+
+The *roofline model* :cite:`Williams.Waterman.Patterson.2009` turns
+intensity into a bound on speed. An operation cannot run faster than the
+arithmetic units allow, and it cannot run faster than memory delivers its
+bytes, which caps it at $I \beta$ FLOP/s. The attainable throughput is
+therefore
 
 $$
-\textrm{performance} \;\leq\; \min(P,\; I \cdot \beta).
+\textrm{performance} \;\leq\; \min(P,\; I \beta).
 $$
 :eqlabel:`eq_roofline`
 
-Plotted on log–log axes (:numref:`fig_roofline`), the bandwidth bound rises
-with intensity until it meets the flat compute roof. The intersection is the
-**ridge point** $I^* = P/\beta$:
-operations with intensity below $I^*$ are *bandwidth-bound* — the memory
-system cannot feed the arithmetic units fast enough. Additional arithmetic
-does not increase elapsed time while memory
-traffic remains limiting; operations above it are *compute-bound* — the
-arithmetic units are saturated, and moving fewer bytes would not help.
+On log–log axes the bound is a sloped line that meets a flat roof
+(:numref:`fig_roofline`). The two meet at the *ridge point*
+$I^* = P/\beta$. An operation of intensity below $I^*$ is
+*bandwidth-bound*: memory cannot deliver bytes fast enough to keep the
+arithmetic units busy, so additional arithmetic on each byte costs no time.
+An operation above $I^*$ is *compute-bound*: the arithmetic units are
+saturated, and moving fewer bytes would not make it faster.
 
-![Roofline bound using the build GPU's peak compute and memory bandwidth. Attainable throughput is bounded by the smaller of peak compute and arithmetic intensity times bandwidth. The ridge point is about 165 FLOP/byte for this device; operations below it are bandwidth-bound in the model.](../img/mdl-perf-roofline.svg)
+![The roofline of the RTX 4090. Attainable throughput is the smaller of the compute roof $P$ and the arithmetic intensity times the memory bandwidth $\beta$. The points mark the examples of the text: $x + 1$ in bf16, a linear layer of width 2048 applied to one token, and the same layer applied to a minibatch of 8,192 tokens. The ridge point lies near 164 FLOP/byte.](../img/mdl-perf-roofline.svg)
 :label:`fig_roofline`
 
-Let's compute the ridge point for the card this book is built on. Peak
-tensor-core throughput is not exposed programmatically, so we take it from
-the specification sheet; the device query tells us what we are running on.
+### The Ridge Point of the RTX 4090
+
+The peak throughput of the tensor cores cannot be queried from the device,
+so we take $P$ and $\beta$ from the specification sheet and print the name
+of the GPU that the code runs on. On another GPU, replace the two constants
+with the values from its specification.
 
 ```{.python .input #performance-model-counting-flops-bytes-and-arithmetic-intensity}
 %%tab pytorch
-prop = torch.cuda.get_device_properties(0)
-peak_tflops = 165.0   # RTX 4090 dense bf16 tensor-core spec
-bandwidth_tbs = 1.008  # GDDR6X spec
-print(f'{prop.name}, {prop.total_memory / 1e9:.0f} GB')
+peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
+bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
+print(torch.cuda.get_device_name())
 print(f'ridge point = {peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
 ```
 
 ```{.python .input #performance-model-counting-flops-bytes-and-arithmetic-intensity}
 %%tab jax
-device = jax.devices()[0]
-peak_tflops = 165.0   # RTX 4090 dense bf16 tensor-core spec
-bandwidth_tbs = 1.008  # GDDR6X spec
-print(f'{device.device_kind}')
+peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
+bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
+print(jax.devices()[0].device_kind)
 print(f'ridge point = {peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
 ```
 
-A ridge point of about 165 FLOP/byte means the machine wants about *165
-arithmetic operations for every byte it fetches*, just to break even —
-and our consumer card is on the low side; across modern accelerators the
-ridge sits anywhere from a hundred to several hundred FLOP/byte. Very little of
-what a neural network does naturally reaches that ratio — which is why
-the rest of this chapter is mostly about bytes, not FLOPs. For the square
-matmul above ($B = D = F = n$, bf16), intensity is $n/3$: *in principle*,
-sizes beyond $n \approx 500$ stop being bandwidth-limited. The measured
-sweep below shows that occupancy and launch overhead also
-determine the crossover.
-:numref:`sec_hardware` explains where $P$ and $\beta$ come from
-physically, and why their ratio has climbed, over the long run, from one
-hardware generation to the next.
+A ridge point of 164 FLOP/byte means that an operation must perform about
+164 FLOPs for every byte it moves before the arithmetic units, rather than
+memory, set its speed. On other current GPUs the ridge lies at about
+120 FLOP/byte (RTX 5090) or about 300 (H100, B200). Only large matrix
+products reach these values. Elementwise operations, normalizations, and
+the generation of text one token at a time all lie far below the ridge,
+and most of this chapter is therefore about moving fewer bytes.
 
-## Correct GPU Timing
+For a square product with $B = D = F = n$ in bf16 the intensity is $n/3$,
+so the roofline model declares every such product with $n$ above about 500
+compute-bound. To see whether the GPU agrees, we first need a way to
+measure it.
+
+## Timing GPU Code
 :label:`subsec_perf-measuring`
 
-Mapping a GPU against the roofline requires synchronized timing. Timing only
-the asynchronous Python call underestimates execution time. Deep learning
-frameworks dispatch GPU work
-*asynchronously*: when Python executes a tensor operation, the framework
-enqueues a kernel on the device and returns immediately, long before the
-arithmetic happens. Python then races ahead and enqueues more work while
-the GPU chews through the queue (:numref:`fig_async_timeline`). This design
-is what lets a slow interpreter drive a fast accelerator — the CPU's job is
-to stay *ahead* of the GPU, and any point where Python must stop and wait
-for a value is a stall.
+Python does not wait for the GPU. As :numref:`subsec_async_dispatch` showed,
+each operation is placed in the device's queue and Python moves on: 32
+products of $4096 \times 4096$ matrices are issued in a small fraction of
+the time the GPU needs to compute them. A clock read right after a call
+therefore measures how long Python took to queue the work, not how long the
+GPU took to do it (:numref:`fig_async_timeline`). A correct measurement
+runs the operation once before timing it, waits for the device before it
+starts and before it stops the clock, and divides the time of many
+repetitions by their number.
 
-![Asynchronous dispatch. Python enqueues kernels and moves on; the GPU
-executes behind it. A naive timer stops when the last kernel has been
-*enqueued*; only a synchronization point waits until the work is
-*done*.](../img/mdl-perf-async-timeline.svg)
+![Asynchronous dispatch. Python enqueues kernels and moves on, and the GPU
+executes them behind it. A timer read without a barrier stops when the last
+kernel has been *enqueued*; only a synchronization point waits until the
+work is *done*.](../img/mdl-perf-async-timeline.svg)
 :label:`fig_async_timeline`
 
-The consequence for measurement: a wall-clock timer wrapped around a GPU
-operation measures the *enqueue*, not the *execution*. Watch it lie:
+### Synchronization Points
 
-```{.python .input #performance-model-measuring-without-lying-1}
+Python waits for the device only when it needs a value that the device
+computes: to convert it into a Python number or a NumPy array, to print it,
+or to branch on it, as in `if loss < 0.1:`. Each such *synchronization
+point* drains the queue up to that value. One kind is easy to miss: an
+operation whose output *shape* depends on the data, such as selecting the
+positive entries `x[x > 0]`, waits because Python must learn the shape of
+the result before it can continue.
+
+After a synchronization point the device sits idle until Python sends more
+work. A training loop that reads its loss on every step therefore drains
+the queue once per step. To see what this costs, we time two loops of 1,000
+steps. Each step multiplies a $1024 \times 1024$ matrix by itself and adds
+the sum of the result to a running total on the device. This work takes
+the GPU some tens of microseconds, comparable to the time Python needs to
+issue it. The two loops differ only in when they read the total: the first
+converts it into a Python number after every step, the second once at the
+end.
+
+```{.python .input #performance-model-measuring-without-lying-2}
+%%tab pytorch
+x = torch.ones(1024, 1024, device=d2l.try_gpu())
+s = torch.zeros((), device=x.device)
+s += (x @ x).sum()
+float(s)                          # Warm up: load the kernels
+
+torch.cuda.synchronize()
+t0 = time.perf_counter()
+for _ in range(1000):
+    s += (x @ x).sum()
+    total = float(s)              # Reads the value: a barrier every step
+read_every = time.perf_counter() - t0
+
+torch.cuda.synchronize()
+t0 = time.perf_counter()
+for _ in range(1000):
+    s += (x @ x).sum()            # Stays on the device: no barrier
+total = float(s)                  # One read at the end
+read_once = time.perf_counter() - t0
+print(f'read every step: {read_every:.3f} s   read once: {read_once:.3f} s')
+```
+
+```{.python .input #performance-model-measuring-without-lying-2}
+%%tab jax
+x = jnp.ones((1024, 1024))
+step = jax.jit(lambda s, x: s + (x @ x).sum())
+s = step(jnp.zeros(()), x)
+float(s)                          # Warm up: compile the step
+
+t0 = time.perf_counter()
+for _ in range(1000):
+    s = step(s, x)
+    total = float(s)              # Reads the value: a barrier every step
+read_every = time.perf_counter() - t0
+
+t0 = time.perf_counter()
+for _ in range(1000):
+    s = step(s, x)                # Stays on the device: no barrier
+total = float(s)                  # One read at the end
+read_once = time.perf_counter() - t0
+print(f'read every step: {read_every:.3f} s   read once: {read_once:.3f} s')
+```
+
+:begin_tab:`pytorch`
+`torch.cuda.synchronize()` waits until the device has finished all queued
+work, so that each loop starts on an idle device. `float(s)` converts a
+tensor with one element into a Python number, which waits for its value.
+:end_tab:
+
+:begin_tab:`jax`
+`step` is compiled with `jax.jit`, so each step is a single call to the
+device. The first call of a compiled function compiles it, which is why the
+cell calls `step` once before the clock starts. A read waits only for the
+array it reads, and `float(s)` reads the running total.
+:end_tab:
+
+Reading the value on every step makes the loop nearly twice as slow,
+although the device does the same work. Without reads, host and device work
+at the same time: while the GPU computes one step, Python issues the next,
+and each step costs the longer of the two times. A read on every step makes
+them take turns. The device idles while the host waits for the value and
+then issues the next step, and the host idles while the device computes.
+Each step then costs the host time plus the device time plus the latency
+of the round trip.
+
+A training loop should therefore read values from the device once per
+logging interval, not once per step, and keep running sums on the device.
+The `d2l.Trainer` follows this rule: its training and validation steps return
+losses as device arrays, which it adds up on the device and converts into
+Python numbers once per epoch.
+
+### A Benchmark Helper
+
+Every timing in this chapter follows the same rules, so we package them
+once. `Benchmark` calls a function a few times to warm up, which excludes
+one-time costs such as loading kernels, selecting algorithms, and
+compiling. It then waits for the device, times `repeats` further calls,
+waits again, and stores the average time per call.
+
+```{.python .input #performance-model-measuring-without-lying-3}
+%%tab pytorch
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+```{.python .input #performance-model-measuring-without-lying-3}
+%%tab jax
+class Benchmark:  #@save
+    """Time a callable: warmup, then device-synchronized average seconds."""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            out = f()
+        jax.block_until_ready(out)
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            out = f()
+        jax.block_until_ready(out)
+        self.time = (time.perf_counter() - t0) / repeats
+
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
+```
+
+:begin_tab:`pytorch`
+On a machine without a GPU, PyTorch runs operations synchronously, and
+`Benchmark` needs no barrier.
+:end_tab:
+
+:begin_tab:`jax`
+JAX waits for specific arrays rather than for a whole device, so
+`Benchmark` waits for the value returned by the last call, and the timed
+function must return what it computes. A device runs its queue in order, so
+when the last result is ready, all calls have finished.
+:end_tab:
+
+We time the product of two $4096 \times 4096$ matrices in bf16.
+
+```{.python .input #performance-model-measuring-without-lying-4}
 %%tab pytorch
 a = torch.randn(4096, 4096, device=d2l.try_gpu(), dtype=torch.bfloat16)
-b = torch.mm(a, a)  # Warmup: cuBLAS picks its kernel on first call
-
-t0 = time.perf_counter()
-for _ in range(10):
-    b = torch.mm(a, a)
-naive = time.perf_counter() - t0
-
-torch.cuda.synchronize()
-t0 = time.perf_counter()
-for _ in range(10):
-    b = torch.mm(a, a)
-torch.cuda.synchronize()
-honest = time.perf_counter() - t0
-print(f'naive timer: {1000 * naive:.2f} ms   '
-      f'with synchronize: {1000 * honest:.2f} ms')
-```
-
-```{.python .input #performance-model-measuring-without-lying-1}
-%%tab jax
-key = jax.random.PRNGKey(0)
-a = jax.random.normal(key, (4096, 4096), dtype=jnp.bfloat16)
-jnp.dot(a, a).block_until_ready()  # Warmup: triggers compilation
-
-t0 = time.perf_counter()
-for _ in range(10):
-    b = jnp.dot(a, a)
-naive = time.perf_counter() - t0
-
-b.block_until_ready()  # Drain the naive loop's in-flight work first
-t0 = time.perf_counter()
-for _ in range(10):
-    b = jnp.dot(a, a)
-b.block_until_ready()
-honest = time.perf_counter() - t0
-print(f'naive timer: {1000 * naive:.2f} ms   '
-      f'with block_until_ready: {1000 * honest:.2f} ms')
-```
-
-The naive timer reports close to nothing — it clocked ten kernel *launches*.
-The real number requires a barrier: in PyTorch,
-`torch.cuda.synchronize()` blocks Python until the device queue drains; in
-JAX, `block_until_ready()` blocks on one specific result (the tighter of
-the two — other work may proceed). Note the barrier *before* the second
-timer starts as well: without it, the naive loop's ten still-in-flight
-matmuls would be billed to the synchronized loop. A measurement must both
-start and stop at a known-quiet device. PyTorch also offers
-`torch.cuda.Event` timestamps recorded *on the device itself*, which avoid
-stopping the pipeline at all; for whole-operation timing,
-synchronize-and-wall-clock gives the same answer and is what we use.
-
-Synchronization also sneaks in where you did not ask for it. Any operation
-that needs a tensor's *value* on the host must wait for the device to
-produce it:
-
-* `float(x)` and `x.item()` — converting to a Python scalar;
-* `x.cpu()`, `x.numpy()`, `np.asarray(x)` — leaving device memory;
-* `print(x)` — printing needs the values;
-* boolean control flow like `if (loss < 0.1)` — deciding needs the value;
-* in PyTorch, shape-producing ops like `x.nonzero()` — the *size* of the
-  result depends on the data, so Python must wait to learn it.
-
-Each of these is a barrier exactly like `synchronize()`, but implicit. The
-classic self-inflicted wound is reading the loss on every step of a
-training loop: the read itself is cheap, but it parks Python at the barrier
-once per step, so the GPU queue drains and the enqueue-ahead pipeline of
-:numref:`fig_async_timeline` never fills. Let's measure the damage on a
-long chain of small operations, where staying ahead matters most:
-
-```{.python .input #performance-model-measuring-without-lying-2}
-%%tab pytorch
-x = torch.ones(256, 256, device=d2l.try_gpu())
-
-torch.cuda.synchronize()
-t0 = time.perf_counter()
-s = 0.0
-for _ in range(1000):
-    y = (x * 1.01).sum()
-    s += y.item()          # Reads the value: a barrier on every step
-sync_every = time.perf_counter() - t0
-
-torch.cuda.synchronize()
-t0 = time.perf_counter()
-s = torch.zeros((), device=d2l.try_gpu())
-for _ in range(1000):
-    y = (x * 1.01).sum()
-    s += y                 # Accumulate on the device: no barrier
-s = s.item()               # One read at the very end
-sync_once = time.perf_counter() - t0
-print(f'read every step: {sync_every:.3f} s   '
-      f'read once: {sync_once:.3f} s')
-```
-
-```{.python .input #performance-model-measuring-without-lying-2}
-%%tab jax
-x = jnp.ones((256, 256))
-
-t0 = time.perf_counter()
-s = 0.0
-for _ in range(1000):
-    y = (x * 1.01).sum()
-    s += float(y)          # Reads the value: a barrier on every step
-sync_every = time.perf_counter() - t0
-
-t0 = time.perf_counter()
-s = jnp.zeros(())
-for _ in range(1000):
-    y = (x * 1.01).sum()
-    s = s + y              # Accumulate on the device: no barrier
-s = float(s)               # One read at the very end
-sync_once = time.perf_counter() - t0
-print(f'read every step: {sync_every:.3f} s   '
-      f'read once: {sync_once:.3f} s')
-```
-
-Both loops launch the same kernels and compute the same total; they differ
-only in *where the host reads*. Keeping the accumulator on the device and
-reading once at the end cuts the wall clock by roughly a third in PyTorch
-and by more — around two-thirds — in JAX, where every un-jitted operation
-already pays a hefty dispatch cost (a preview of :numref:`sec_compilation`)
-and the per-step read stalls that pipeline on top. The exact margin is
-framework- and workload-dependent; the rule is not: **synchronize once per
-minibatch at most, and only when the host actually needs the value** —
-accumulate metrics on the device and read them at logging boundaries. (The
-`d2l.Trainer` of the Basics chapters follows this rule: the training and
-validation steps return device values, the trainer sums them on the device,
-and it reads each sum once per epoch.)
-
-Since every timing in this chapter needs the same three-step discipline —
-warm up, synchronize, then time — we package it once. Warmup matters
-because first calls are unrepresentative: cuBLAS selects kernels, JAX
-compiles, caches fill. The class times a zero-argument callable and blocks
-on the device before starting and stopping the clock:
-
-```{.python .input #performance-model-measuring-without-lying-3}
-%%tab pytorch
-class Benchmark:  #@save
-    """Time a callable: warmup, then device-synchronized average seconds."""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
-        for _ in range(warmup):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            f()
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-```
-
-```{.python .input #performance-model-measuring-without-lying-3}
-%%tab jax
-class Benchmark:  #@save
-    """Time a callable: warmup, then device-synchronized average seconds."""
-    def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
-        for _ in range(warmup):
-            out = f()
-        jax.block_until_ready(out)
-        t0 = time.perf_counter()
-        for _ in range(repeats):
-            out = f()
-        jax.block_until_ready(out)
-        self.time = (time.perf_counter() - t0) / repeats
-
-    def __repr__(self):
-        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
-```
-
-```{.python .input #performance-model-measuring-without-lying-4}
-%%tab pytorch
-Benchmark(lambda: torch.mm(a, a), desc='4096-matmul')
+Benchmark(lambda: torch.mm(a, a), desc='4096 x 4096 product')
 ```
 
 ```{.python .input #performance-model-measuring-without-lying-4}
 %%tab jax
-Benchmark(lambda: jnp.dot(a, a), desc='4096-matmul')
+matmul = jax.jit(jnp.dot)
+a = jax.random.normal(d2l.get_key(), (4096, 4096), dtype=jnp.bfloat16)
+Benchmark(lambda: matmul(a, a), desc='4096 x 4096 product')
 ```
 
-Note the JAX version blocks on the callable's *return value*, so the
-callable must return what it computes — pure functions returning their
-results is JAX's house style anyway, and :numref:`sec_compilation` will
-make that convention load-bearing.
+:begin_tab:`jax`
+`matmul` is the compiled form of `jnp.dot`, so each call dispatches one
+compiled program. It is compiled once for each new shape, during the
+warm-up calls of `Benchmark`.
+:end_tab:
 
-## Throughput across Matrix Sizes
-:label:`subsec_perf-sweep`
-
-A synchronized timer lets us measure the quantity introduced at the start
-of this section: achieved TFLOP/s as a function of matrix size, against the
-roofline's bound. A square bf16 matmul at size $n$ performs $2n^3$ FLOPs;
-its intensity $n/3$ crosses our card's ridge point near $n \approx 500$,
-so the *ceiling* of :eqref:`eq_roofline` rises for small $n$ and flattens
-for large $n$. Where the measured curve sits below that ceiling is the
-interesting part.
-
-```{.python .input #performance-model-the-sweep-mapping-our-gpu}
-%%tab pytorch
-sizes = [256, 512, 1024, 2048, 4096, 8192]
-achieved = []
-for n in sizes:
-    a = torch.randn(n, n, device=d2l.try_gpu(), dtype=torch.bfloat16)
-    t = Benchmark(lambda: torch.mm(a, a)).time
-    achieved.append(2 * n**3 / t / 1e12)
-d2l.plot(sizes, [achieved], 'matrix size $n$', 'achieved TFLOP/s',
-         xscale='log', yscale='log')
-print([f'{n}: {tf:.1f}' for n, tf in zip(sizes, achieved)])
-```
-
-```{.python .input #performance-model-the-sweep-mapping-our-gpu}
-%%tab jax
-sizes = [256, 512, 1024, 2048, 4096, 8192]
-achieved = []
-for n in sizes:
-    a = jax.random.normal(key, (n, n), dtype=jnp.bfloat16)
-    compiled = jax.jit(jnp.dot).lower(a, a).compile()
-    flops = compiled.cost_analysis()['flops']  # Analytic count, no timing
-    t = Benchmark(lambda: compiled(a, a)).time
-    achieved.append(flops / t / 1e12)
-d2l.plot(sizes, [achieved], 'matrix size $n$', 'achieved TFLOP/s',
-         xscale='log', yscale='log')
-print([f'{n}: {tf:.1f}' for n, tf in zip(sizes, achieved)])
-```
-
-The JAX tab obtains the operation count from the compiler rather than
-substituting the $2n^3$ formula. Ahead-of-time lowering
-(`jit(...).lower(...).compile()`) produces a compiled object whose
-`cost_analysis()` reports the exact analytic FLOP count of the program —
-no execution, no estimation. We will lean on this introspection again in
-:numref:`sec_compilation` and :numref:`sec_memory_precision`.
-
-Read the plot against :numref:`fig_roofline`, remembering that the
-roofline is a *ceiling*, not a prediction of where you land. At $n = 256$
-the card delivers a percent or less of peak: the matrix is so small that
-per-kernel overhead (a few microseconds to launch work at all — see
-:numref:`sec_hardware`) rivals the arithmetic. More telling is $n = 512$.
-Its nominal intensity ($\approx 171$) already sits *above* the ridge
-point, so the intensity model alone declares it compute-bound — yet the
-card delivers a tenth of peak or less. A $512^2$ output provides too
-little work to fill 128 streaming multiprocessors, and the launch
-overhead has not yet been amortized away. Through the middle sizes
-throughput therefore climbs steeply — a single doubling of $n$ can yield
-several times the TFLOP/s — and the curve approaches the specification
-number only around $n \approx 2048$–$4096$, where the tensor cores
-finally saturate and the operation is compute-bound in fact as well as on
-paper. The nominal crossover sits at $n \approx 500$, the measured knee
-at $n \approx 2048$–$4096$ depending on the framework, and that gap is
-not a failure of the model; it *is*
-a lesson: intensity tells you when an operation stops being
-bandwidth-limited in principle, while utilization and overhead decide how
-much of the roof you collect — and separating those causes is exactly
-what the profiler below is for.
+Each product takes a little under a millisecond. It performs
+$2 \cdot 4096^3 \approx 1.4 \times 10^{11}$ FLOPs, so the GPU computes at
+more than 150 TFLOP/s, over 90% of its specification.
 
 ## Three Regimes
 :label:`subsec_perf-regimes`
 
-The sweep distinguishes three performance regimes. Each regime requires a
-different optimization :cite:`He.2022`. A step of any workload divides its wall-clock time among
-arithmetic, memory traffic, and idle gaps where the device waits for
-Python; whichever dominates names the regime
-(:numref:`fig_regimes`).
+The time of a GPU program divides among compute-bound kernels,
+bandwidth-bound kernels, and idle gaps in which the device waits for Python
+to send work :cite:`He.2022`. Whichever part dominates names the
+program's *regime*. Two experiments locate the three regimes on the
+RTX 4090: matrix products of growing size, and elementwise operations on a
+large tensor.
 
-![The three-regime diagnostic. Where a step's time goes determines which
-fix applies; misdiagnosing wastes effort — more FLOP/s cannot help a
-bandwidth-bound program.](../img/mdl-perf-regimes.svg)
-:label:`fig_regimes`
+### Matrix Products across Sizes
+:label:`subsec_perf-sweep`
 
-**Compute-bound** — arithmetic throughput is the limiting resource.
-Lower-precision formats may raise the applicable compute ceiling
-(:numref:`sec_hardware`, :numref:`sec_memory_precision`), while additional
-devices increase aggregate compute only when the parallel workload can
-use them (:numref:`sec_multi_gpu`).
+Does a square product reach the roof as soon as the roofline says it
+should, near $n = 500$? We time products in bf16 from $n = 256$ to
+$n = 8192$. Each size runs a hundred times, so that the latency of the final
+wait is spread over many calls.
 
-**Bandwidth-bound** — intensity below the ridge; the compute units remain
-idle while waiting for memory. The fix is to *move fewer bytes*: fuse chains
-of operations so intermediate results never make the round trip to memory
-(:numref:`sec_compilation`), recompute rather than store
-(:numref:`sec_memory_precision`), or restructure the algorithm for reuse —
-the FlashAttention kernel of :numref:`sec_attention-at-scale` applies this
-restructuring in a specialized implementation.
+```{.python .input #performance-model-the-sweep-mapping-our-gpu}
+%%tab pytorch
+sizes = [256, 512, 1024, 2048, 4096, 8192]
+times = []
+for n in sizes:
+    a = torch.randn(n, n, device=d2l.try_gpu(), dtype=torch.bfloat16)
+    times.append(Benchmark(lambda: torch.mm(a, a), repeats=100).time)
+```
 
-**Overhead-bound** — the device finishes each kernel before Python can
-supply the next one; the GPU is idle most of the time. Small models with
-many small layers lie in this regime. The corresponding optimization
-removes Python from the launch loop:
-capture the whole graph once and replay it without the interpreter
-(:numref:`sec_compilation`).
+```{.python .input #performance-model-the-sweep-mapping-our-gpu}
+%%tab jax
+sizes = [256, 512, 1024, 2048, 4096, 8192]
+times = []
+for n in sizes:
+    a = jax.random.normal(d2l.get_key(), (n, n), dtype=jnp.bfloat16)
+    times.append(Benchmark(lambda: matmul(a, a), repeats=100).time)
+```
 
-A large elementwise operation provides a bandwidth-bound example. Take
-one large tensor and apply single elementwise kernels of wildly different
-arithmetic cost — an add, a multiply, and a transcendental:
+We convert each time into TFLOP/s and plot it against the intensity $n/3$,
+together with the roofline bound :eqref:`eq_roofline`, which has its corner
+at the ridge point.
+
+```{.python .input #performance-model-matrix-products-across-sizes-1}
+%%tab pytorch, jax
+measured = [2 * n**3 / t / 1e12 for n, t in zip(sizes, times)]
+intensity = [n / 3 for n in sizes]  # FLOP/byte of a square bf16 product
+ridge = peak_tflops / bandwidth_tbs
+roof_x = [intensity[0], ridge, intensity[-1]]
+roof_y = [min(peak_tflops, bandwidth_tbs * i) for i in roof_x]
+d2l.plot([roof_x, intensity], [roof_y, measured],
+         'arithmetic intensity (FLOP/byte)', 'TFLOP/s',
+         legend=['roofline bound', 'measured'],
+         xscale='log', yscale='log', fmts=('-', 'o'))
+```
+
+Printing the time per call of each size shows where the measurements fall
+short of the bound.
+
+```{.python .input #performance-model-matrix-products-across-sizes-2}
+%%tab pytorch, jax
+for n, t, tf in zip(sizes, times, measured):
+    print(f'n = {n:4d}: {1e6 * t:7.1f} us per call, {tf:5.1f} TFLOP/s')
+```
+
+The roofline bound is flat from $n = 512$ on, but the measurements reach it
+only at the largest sizes. From $n = 2048$ on, the GPU computes within about
+15% of its specification: these products are compute-bound in fact as well
+as in the model. A measurement slightly above the specification is
+possible, because the specification assumes the card's rated clock of
+2.52 GHz and the card often runs faster.
+
+The small sizes behave differently. Up to $n = 1024$ every call takes nearly
+the same time, although the work grows 64-fold from $n = 256$ to
+$n = 1024$, and each doubling of $n$ multiplies the throughput by about
+eight. A time per call that does not depend on the size cannot be spent on
+arithmetic. It is the time $h$ that the host needs to issue one call:
+Python, the framework, and the driver that launches the kernel. When calls
+are queued back to back, host and device work at the same time, and each
+call takes the longer of the two:
+
+$$
+t_\textrm{call} \;\approx\; \max\left(h,\; \frac{2n^3}{P}\right).
+$$
+
+For small $n$ the device finishes each product before the host has issued
+the next one, and the throughput $2n^3/h$ rises with the cube of $n$. This
+is the third regime, *overhead-bound*. The knee of the curve lies where the
+device time of a product overtakes the host time,
+$n \approx (hP/2)^{1/3}$: for $h = 20\,\mu\textrm{s}$ and the peak of the
+RTX 4090, near $n = 1200$. The time per call at the smallest sizes in the
+output above is the value of $h$ for this framework and this machine.
+
+The roofline has no term for overhead. It is a ceiling, and the measured
+points meet it only for operations large enough that the host time per call
+is negligible. The faster the GPU, the larger an operation must be to get
+there: $n \approx (hP/2)^{1/3}$ grows with $P$.
+
+A product can also fall short of the roof for a reason inside the device.
+A GPU executes a kernel on its *streaming multiprocessors* (SMs), the
+independent processors of the chip; the RTX 4090 has 128 of them
+(:numref:`subsec_hw-gpu`). A matrix-product kernel splits the output into
+tiles and gives each SM one tile at a time. A product whose output has
+fewer tiles than the GPU has SMs leaves some SMs idle, however fast the
+host issues it. The share of the peak that it can reach is then at most
+the share of SMs that hold a tile.
+
+### Elementwise Operations
+
+Products large enough to escape the overhead regime lie above the ridge
+point, so the sweep never shows the bandwidth-bound regime. To see it, we
+apply single elementwise operations of very different arithmetic cost to a
+tensor of $8192 \times 8192$ numbers in fp32, 256 MiB: an addition, a
+multiplication, a sine, and a sigmoid. Each reads the tensor once and
+writes a result of the same size.
 
 ```{.python .input #performance-model-three-regimes-1}
 %%tab pytorch
-x = torch.randn(4000, 4000, device=d2l.try_gpu())
-for desc, f in [('add', lambda: x + 1), ('mul', lambda: x * 1.5),
-                ('sin', lambda: torch.sin(x)),
-                ('sigmoid', lambda: torch.sigmoid(x))]:
-    print(Benchmark(f, desc=desc))
+x = torch.randn(8192, 8192, device=d2l.try_gpu())  # 256 MiB in fp32
+for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
+                ('sin', torch.sin), ('sigmoid', torch.sigmoid)]:
+    print(Benchmark(lambda: f(x), desc=desc))
 ```
 
 ```{.python .input #performance-model-three-regimes-1}
 %%tab jax
-x = jax.random.normal(key, (4000, 4000))
-for desc, f in [('add', lambda: x + 1), ('mul', lambda: x * 1.5),
-                ('sin', lambda: jnp.sin(x)),
-                ('sigmoid', lambda: jax.nn.sigmoid(x))]:
-    print(Benchmark(f, desc=desc))
+x = jax.random.normal(d2l.get_key(), (8192, 8192))  # 256 MiB in fp32
+for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
+                ('sin', jnp.sin), ('sigmoid', jax.nn.sigmoid)]:
+    f = jax.jit(f)
+    print(Benchmark(lambda: f(x), desc=desc))
 ```
 
-A sine costs far more arithmetic than an add, yet it runs no slower:
-each kernel's cost is set by the 128 MB it reads and writes, not by what
-it computes on the way through. (In the PyTorch tab the four times are
-all but identical; where they scatter, as in the JAX tab, the spread is
-per-dispatch overhead on these un-jitted calls — a preview of the third
-regime — not the arithmetic.) While bandwidth is limiting, the added arithmetic
-does not increase elapsed time. This is the defining behavior of a
-bandwidth-bound operation. Now chain a few of these operations, as in any
-activation function or normalization layer does:
+All four operations take the same time, a little over half a millisecond.
+Each moves 512 MiB, $5.4 \times 10^8$ bytes, which amounts to about
+0.9 TB/s, close to the 1.008 TB/s of the specification. A sine costs many
+more FLOPs than an addition, yet it runs no slower, because the bytes each
+kernel moves set its time. This is the defining behavior of a
+bandwidth-bound operation: additional arithmetic costs no time until the
+intensity approaches the ridge point.
+
+Activation functions and normalization layers chain several elementwise
+operations. The function below is the tanh approximation of the GELU
+activation $z\,\Phi(z)$ (:numref:`subsec_activation-functions`) with
+rounded constants, and it applies eight elementwise operations to its
+input. Executed one operation at a time, each operation is a kernel of its
+own, which reads its inputs from memory and writes its result back.
 
 ```{.python .input #performance-model-three-regimes-2}
 %%tab pytorch
 def gelu_ish(x):
-    # Several elementwise ops; eager mode runs one kernel per op,
-    # each a full round trip to memory
+    # Eight elementwise operations; executed eagerly, one kernel each
     return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
 
 print(Benchmark(lambda: x + 1, desc='1 op'))
@@ -520,123 +518,211 @@ print(Benchmark(lambda: gelu_ish(x), desc='chain'))
 ```{.python .input #performance-model-three-regimes-2}
 %%tab jax
 def gelu_ish(x):
-    # Several elementwise ops; without jit, one kernel per op,
-    # each a full round trip to memory
+    # Eight elementwise operations; without jit, one kernel each
     return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
 
 print(Benchmark(lambda: x + 1, desc='1 op'))
 print(Benchmark(lambda: gelu_ish(x), desc='chain'))
 ```
 
-The chain performs a handful of cheap operations, but eager execution runs
-each as its own kernel, and each kernel pays the full memory round trip —
-so the chain costs roughly as many round trips as it has operations,
-despite computing one output from one input. The diagnosis is complete:
-bandwidth-bound, with several redundant memory round trips.
-:numref:`sec_compilation` shows how compiler fusion replaces the sequence
-with one kernel and verifies both numerical agreement and reduced time.
+The chain takes about nine times as long as the single addition, and the
+bytes explain the factor. The addition reads one tensor and writes one. The
+eight operations of the chain read and write 18 tensors of the same size
+between them. Each of the six operations with one tensor input moves two;
+the sum $x + 0.04x^3$ and the final product combine two tensors and move
+three each. One kernel that read `x` once and wrote the result once would
+move 2 tensors instead of 18. Merging operations into such a kernel is
+called *fusion*, and a compiler can do it automatically.
 
-## Profiling Complete Programs
+### Diagnosis and Fixes
+
+The experiments have located the three regimes on one GPU
+(:numref:`fig_regimes`). Each regime has a symptom by which we recognize it
+and a standard fix, summarized in :numref:`tab_perf_regimes`. The later
+sections of this chapter develop each fix.
+
+![The three regimes. Where the time of a step goes, among compute-bound
+kernels, bandwidth-bound kernels, and idle gaps, determines which fix
+applies.](../img/mdl-perf-regimes.svg)
+:label:`fig_regimes`
+
+:Symptoms and standard fixes of the three regimes.
+:label:`tab_perf_regimes`
+
+| regime | symptom | standard fix |
+|---|---|---|
+| compute-bound | device busy; intensity above the ridge; time grows with the FLOPs | a format with faster tensor cores; more devices |
+| bandwidth-bound | device busy; intensity below the ridge; time grows with the bytes moved | fusion; recomputation instead of storage; algorithms that reuse data on chip |
+| overhead-bound | device idle between kernels; time per call independent of size | fewer and larger calls; capturing the whole program and replaying it without Python |
+
+The FlashAttention kernel of :numref:`sec_attention-at-scale` is an example
+of the third fix for bandwidth: it computes attention in tiles held on the
+chip, so the $T \times T$ matrix of attention scores never reaches memory. A
+wrong diagnosis wastes effort. More FLOP/s do not speed up a bandwidth-bound
+operation, and a faster GPU does not help a program whose device sits idle.
+
+## Profiling a Training Step
 :label:`subsec_perf-profiler`
 
-Intensity arithmetic classifies a single operation; real training steps mix
-hundreds. The tool that classifies a *program* is the profiler, which
-records every kernel with its duration and stream — the measured version of
-:numref:`fig_async_timeline`. First contact, on a small training step:
+A training step runs hundreds of kernels from all three regimes. A
+*profiler* records every kernel the device runs, with its duration, so that
+we can add up where the time of a step goes: how much each kernel takes,
+and how long the device sits idle.
+
+### Recording the Kernels
+
+We profile one SGD step of an MLP with two hidden layers of width 4096 on
+a minibatch of 1,024 examples, in fp32, with the matrix products on the
+tf32 tensor cores. First we measure the
+wall-clock time per step with `Benchmark`.
+
+```{.python .input #performance-model-profiling-a-training-step-1}
+%%tab pytorch
+net = nn.Sequential(nn.Linear(4096, 4096), nn.ReLU(),
+                    nn.Linear(4096, 4096), nn.ReLU(),
+                    nn.Linear(4096, 10)).to(d2l.try_gpu())
+X = torch.randn(1024, 4096, device=d2l.try_gpu())
+opt = torch.optim.SGD(net.parameters(), lr=0.01)
+
+def step():
+    opt.zero_grad()
+    net(X).mean().backward()
+    opt.step()
+
+wall = Benchmark(step).time
+```
+
+```{.python .input #performance-model-profiling-a-training-step-1}
+%%tab jax
+def mlp(params, X):
+    for W, b in params[:-1]:
+        X = jax.nn.relu(X @ W + b)
+    W, b = params[-1]
+    return X @ W + b
+
+@jax.jit
+def step(params, X):
+    grads = jax.grad(lambda p: mlp(p, X).mean())(params)
+    return jax.tree.map(lambda p, g: p - 0.01 * g, params, grads)
+
+widths = [4096, 4096, 4096, 10]
+params = [(jax.random.normal(d2l.get_key(), (m, n)) / m**0.5, jnp.zeros(n))
+          for m, n in zip(widths[:-1], widths[1:])]
+X = jax.random.normal(d2l.get_key(), (1024, 4096))
+wall = Benchmark(lambda: step(params, X)).time
+```
+
+:begin_tab:`jax`
+JAX's default precision for fp32 matrix products on a GPU with tensor cores
+is tf32. `jax.tree.map` applies the SGD update to every weight and bias in
+the nested list of parameters.
+:end_tab:
+
+Next we run ten steps under the profiler and add up the device time of
+each kernel, per step.
 
 ```{.python .input #performance-model-the-profiler}
 %%tab pytorch
-net = nn.Sequential(nn.Linear(1024, 1024), nn.ReLU(),
-                    nn.Linear(1024, 1024), nn.ReLU(),
-                    nn.Linear(1024, 10)).to(d2l.try_gpu())
-X = torch.randn(64, 1024, device=d2l.try_gpu())
-opt = torch.optim.SGD(net.parameters(), lr=0.1)
-
-def step():
-    opt.zero_grad(set_to_none=True)
-    net(X).sum().backward()
-    opt.step()
-
-step()  # Warmup
 with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CPU,
-                    torch.profiler.ProfilerActivity.CUDA],
+        activities=[torch.profiler.ProfilerActivity.CUDA],
         acc_events=True) as prof:
-    for _ in range(5):
+    for _ in range(10):
         step()
-# The profiler's full table has eleven columns; we read the two that
-# diagnose the regime — total CPU vs total device time, per operator.
-dev = lambda e: getattr(e, 'device_time_total', 0)  # 'cuda_...' before 2.11
-print(f"{'operator':<26}{'CPU total':>11}{'CUDA total':>12}")
-for e in sorted(prof.key_averages(), key=dev, reverse=True)[:8]:
-    print(f'{e.key[:25]:<26}{e.cpu_time_total/1e3:>8.2f} ms{dev(e)/1e3:>9.2f} ms')
+    torch.cuda.synchronize()
+kernels = {e.key: e.device_time_total / 1e3 / 10  # ms per step
+           for e in prof.key_averages()
+           if e.device_type == torch.autograd.DeviceType.CUDA}
 ```
 
 ```{.python .input #performance-model-the-profiler}
 %%tab jax
-def loss_fn(params, X):
-    h = X
-    for W in params[:-1]:
-        h = jax.nn.relu(h @ W)
-    return (h @ params[-1]).sum()
-
-params = [jax.random.normal(k, s) * 0.03 for k, s in zip(
-    jax.random.split(key, 3), [(1024, 1024), (1024, 1024), (1024, 10)])]
-X = jax.random.normal(key, (64, 1024))
-grad_fn = jax.jit(jax.grad(loss_fn))
-jax.block_until_ready(grad_fn(params, X))  # Warmup / compile
-
-with jax.profiler.trace('/tmp/jax-trace'):
-    for _ in range(5):
-        grads = grad_fn(params, X)
-    jax.block_until_ready(grads)
-print('trace written to /tmp/jax-trace; '
-      'open it in Perfetto (ui.perfetto.dev) or TensorBoard')
+trace_dir = tempfile.mkdtemp()
+with jax.profiler.trace(trace_dir):
+    for _ in range(10):
+        params = step(params, X)
+    jax.block_until_ready(params)
+xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
+gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
+    '/device:GPU:0')
+kernels = collections.Counter()
+for line in gpu.lines:
+    if line.name.startswith('Stream'):  # One line per CUDA stream
+        for e in line.events:
+            kernels[e.name] += e.duration_ns / 1e6 / 10  # ms per step
 ```
 
-The PyTorch table is the diagnostic in miniature. Two columns matter most:
-device ("CUDA") time tells you *which kernels* dominate — matmuls
-(compute), elementwise/copy kernels (bandwidth) — and the ratio of total
-CPU time to total CUDA time tells you *whether the GPU is fed*: when CPU
-time is far larger, the program is overhead-bound and the kernels
-themselves are almost irrelevant. Read that ratio coarsely, though: CPU
-and device totals overlap across threads and streams, so it is a regime
-heuristic, not a utilization figure — when a real decision hangs on it,
-look at the timeline instead. Both frameworks can also export a full
-timeline — `prof.export_chrome_trace(...)` in PyTorch; the JAX trace
-directory above opens in Perfetto or TensorBoard — where the
-:numref:`fig_async_timeline` picture appears for your actual program, gaps
-and all. We will read one in earnest in :numref:`sec_fast_transformer`.
+:begin_tab:`pytorch`
+`prof.key_averages()` groups the recorded events by name. Kernels are the
+events that ran on the device; the other events, such as the calls that
+launch kernels, ran on the CPU. `prof.export_chrome_trace('trace.json')`
+writes the full timeline, which <https://ui.perfetto.dev> displays.
+:end_tab:
 
-> **The method.** Measure with a synchronized timer or profiler. Classify
-> the regime: compute-bound (kernels dominated by matmuls, device busy),
-> bandwidth-bound (kernels dominated by memory traffic, device busy), or
-> overhead-bound (device idle between kernels). Fix what binds — formats
-> and parallelism for compute, fusion and recomputation for bandwidth,
-> capture-and-replay for overhead. Re-measure, because the bottleneck
-> moves. The rest of this chapter is this loop, applied.
+:begin_tab:`jax`
+`jax.profiler.trace` writes the trace into a directory, and
+`jax.profiler.ProfileData` reads it back: one *plane* per device, one
+*line* per CUDA stream, one *event* per kernel. The same directory opens as
+a timeline in <https://ui.perfetto.dev> or in TensorBoard.
+:end_tab:
+
+### Reading the Profile
+
+The next cell prints the device time per step against the wall-clock time,
+and the kernels that take the most device time. It strips the return type,
+the namespaces, and the argument list from the C++ names of the kernels.
+
+```{.python .input #performance-model-profiling-a-training-step-2}
+%%tab pytorch, jax
+busy = sum(kernels.values())
+print(f'wall clock {1000 * wall:.2f} ms per step, device busy {busy:.2f} ms '
+      f'({busy / (1000 * wall):.0%})')
+for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:6]:
+    name = re.sub(r'^void |\w+::|\(.*', '', name)
+    print(f'{ms:6.3f} ms {100 * ms / busy:5.1f}%  {name[:56]}')
+```
+
+The device is busy for almost all of the wall-clock time, so the step is
+not overhead-bound. Three quarters or more of the device time goes to a
+handful of matrix-product kernels; their names contain *gemm*, the
+traditional name for a general matrix product. These kernels are
+compute-bound: a product of shapes $1024 \times 4096$ and
+$4096 \times 4096$ has an intensity of about 340 FLOP/byte in fp32, against
+a ridge point of about 82 for tf32 (82.6 TFLOP/s over 1.008 TB/s).
+
+The remaining kernels are elementwise kernels and reductions: the ReLUs, the
+bias gradients, which sum over the batch, and the SGD update. The update
+reads every weight and its gradient and writes the weight back, 12 bytes
+for two FLOPs. It is bandwidth-bound, and its time does not depend on the
+batch size, so at small batch sizes it can take a large share of the step.
+
+The four steps of the method can now be stated with their tools.
+**Measure** with `Benchmark` and a profiler. **Classify**: a busy device
+dominated by matrix products is compute-bound; a busy device dominated by
+elementwise and memory-bound kernels is bandwidth-bound; a device idle
+between kernels is overhead-bound. **Fix** what limits the program: faster
+formats and more devices for compute, fusion and recomputation for
+bandwidth, larger calls and graph capture for overhead. **Re-measure**,
+because each fix moves the bottleneck. We can now place any operation or
+program in its regime. We cannot yet say where $P$ and $\beta$ come from, or
+why the ridge point has risen over the hardware generations;
+:numref:`sec_hardware` answers both questions.
 
 ## Summary
 
-* Arithmetic intensity — FLOPs per byte moved — caps performance
-  through the roofline bound
-  $\min(\textrm{peak}, \textrm{intensity} \times \textrm{bandwidth})$. The
-  ridge point of a modern GPU sits at a hundred to several hundred
-  FLOP/byte (about 165 on our card), so most operations are
-  bandwidth-bound, and batch size is the main natural lever on a
-  matmul's intensity.
-* GPU dispatch is asynchronous: naive timers measure the enqueue, not the
-  work. Time with a synchronization barrier (`torch.cuda.synchronize`,
-  `block_until_ready`), warm up first, and beware implicit barriers —
-  `.item()`, `.numpy()`, `print`, value-dependent control flow — inside hot
-  loops.
-* One matmul kernel traverses three regimes as it grows: overhead-bound
-  when tiny, bandwidth-bound in the middle, compute-bound at scale — and
-  it reaches the roof well after the intensity model's nominal crossover,
-  because small shapes cannot fill the machine. The profiler's
-  CPU-versus-device-time comparison diagnoses which regime a whole
-  program is in.
-* The chapter's method: measure → classify → fix → re-measure.
+An operation on a GPU is limited by arithmetic, by memory bandwidth, or by
+the fixed cost of issuing it from the host. Its arithmetic intensity, the
+FLOPs it performs per byte it moves, decides between the first two through
+the roofline bound $\min(P, I\beta)$. Below the ridge point $P/\beta$,
+about 164 FLOP/byte on the RTX 4090, memory sets the time; the intensity of
+a linear layer grows with the batch size. The third limit shows only in
+measurement: an operation whose device time is shorter than the host's time
+per call runs at the host's pace, so a $256 \times 256$ product reaches
+a percent or two of the peak. Correct timing waits for the asynchronous
+device before starting and before stopping the clock, keeps synchronization
+points out of loops, and averages many calls, as `d2l.Benchmark` does. The
+rest of the chapter applies one method, with a profiler to account for every
+kernel of a program: measure, classify the regime, fix it, and measure
+again.
 
 ## Exercises
 
@@ -645,11 +731,11 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
    one before the approximation, holds for all shapes, not only for
    $B \ll D, F$. Let $m = \min(B, D, F)$.
     1. Show that the intensity lies between $2m/(3b)$ and $2m/b$. Conclude
-       that in bf16, on a GPU whose ridge point is 165 FLOP/byte, every
-       matrix product with a dimension below 165 is bandwidth-bound in the
+       that in bf16, on a GPU whose ridge point is 164 FLOP/byte, every
+       matrix product with a dimension below 164 is bandwidth-bound in the
        roofline model.
     1. Apply the bound to three bf16 products: the final layer of the MLP
-       of :numref:`subsec_perf-profiler`, which maps width 1024 to ten
+       of :numref:`subsec_perf-profiler`, which maps width 4096 to ten
        outputs, on a batch of 4096 examples; the attention scores
        $\mathbf{Q}\mathbf{K}^\top$ of one head with
        $\mathbf{Q}, \mathbf{K} \in \mathbb{R}^{T \times 64}$ for a context of
@@ -744,9 +830,8 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
     1. A third program keeps the GPU busy with large matrix products but
        converts its loss to a Python float after every step, and its
        profile attributes most of the host time to that conversion. Explain
-       what the host does during that time, and why the CPU-versus-device
-       comparison of :numref:`subsec_perf-profiler` must not count that time
-       as overhead.
+       what the host and the device do during that time, and why that time
+       is not overhead in the sense of the overhead-bound regime.
 
 1. [code] **A pipeline model of dispatch.** ● Model one call of a GPU
    operation by three durations: the host needs $h$ to enqueue the call,
@@ -763,24 +848,26 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
        $d < h$? Explain why its result for `x + 1` on a $256 \times 256$
        tensor says nothing about the memory bandwidth of the kernel.
     1. Treat one step of the loops of :numref:`subsec_perf-measuring` as one
-       call. The loop that reads `y` on every step waits at a barrier after
-       each step. Express the ratio of its time to the time of the loop that
-       accumulates `s` on the device in terms of $h$, $d$, and $\sigma$.
-    1. Run both loops with `x` of side 256, 1024, 4096, and 8192. From the
-       eight timings, estimate $h$ and $\sigma$, which do not depend on the
-       size, and $d$ for each size, and check that the model reproduces the
-       measured ratios. Above which device time per step does reading a
+       call. The loop that converts the running total into a Python number
+       on every step waits at a barrier after each step. Express the ratio
+       of its time to the time of the loop that reads the total once in
+       terms of $h$, $d$, and $\sigma$.
+    1. Run both loops with `x` of side 256, 512, 1024, 2048, and 4096. From
+       the ten timings, estimate $h$ and $\sigma$, which do not depend on
+       the size, and $d$ for each size, and check that the model reproduces
+       the measured ratios. Above which device time per step does reading a
        value on every step cost less than ten percent?
 
-1. [code] **Tiles and waves.** ● Model a matmul kernel on a GPU with $S$
-   streaming multiprocessors (SMs, :numref:`subsec_hw-gpu`) as follows;
-   the RTX 4090 has $S = 128$. The kernel splits the $n \times n$ output
+1. [code] **Tiles and waves.** ● Model a matrix-product kernel on a GPU
+   with $S$ SMs as follows; the RTX 4090 has $S = 128$. The kernel splits the $n \times n$ output
    into $128 \times 128$ tiles. Each SM computes one tile at a time at
    $1/S$ of the peak, and the tiles run in waves of at most $S$.
     1. Derive the fraction of the peak that this model allows as a function
        of $n$ and $S$, and evaluate it with the $S$ of your GPU for the
        sizes of the sweep in :numref:`subsec_perf-sweep`. Compare the result
-       with the fractions of the peak that your run of the sweep measures.
+       with the fractions of the peak that your run of the sweep measures,
+       and name the sizes at which the host time per call, not the tiles,
+       limits the measurement.
     1. Predict the fraction for $n = 2176$, 2304, 2432, and 2560, all
        multiples of 128, relative to the fraction at $n = 2048$. Measure the
        five sizes with `Benchmark`, and explain where the measured pattern
@@ -814,95 +901,290 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
 
 <!-- slides -->
 
-::: {.slide title="Same Chip, Two Orders of Magnitude Apart"}
-One square matrix multiplication, synchronized and timed at two sizes on
-the same GPU delivers a percent or so of peak at one size and
-nearly the full specification number at the other.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §13.1]{.kicker}
 
-Explaining that gap yields the chapter's whole toolkit:
-
-- a **cost model** you can compute with pencil and paper,
-- a **measurement discipline** the frameworks' async dispatch
-  makes non-optional,
-- a **diagnosis → fix** table the next six sections fill in.
+The Performance Model<br>
+**arithmetic intensity · the roofline · GPU timing · three regimes · profiling**
+:::
 :::
 
-::: {.slide title="Arithmetic Intensity and the Roofline"}
-Every op asks for FLOPs *and* bytes. Intensity = FLOPs/byte.
+::: {.slide title="The Same Product Runs at 1% or at Nearly 100% of the Peak"}
+[The problem]{.kicker}
 
-$$\textrm{performance} \leq \min(P,\; I \cdot \beta)$$
+RTX 4090, bf16 tensor cores, specified peak $P$ = 165 TFLOP/s.
 
-![](../img/mdl-perf-roofline.svg){width=78%}
+- $256 \times 256$ times $256 \times 256$: 1–2% of $P$.
+- $8192 \times 8192$ times $8192 \times 8192$: close to 100% of $P$.
 
-Matmul $\mathbf{X}_{B\times D}\mathbf{W}_{D\times F}$: intensity
-$\approx 2B/b$ — *batch size is intensity*. Elementwise ops:
-intensity below 1, forever bandwidth-bound.
+Same operation, same chip, timed correctly.
+
+::: {.d2l-note}
+A training step is thousands of such operations. **What limits the small
+one, and how do we tell from measurements?**
+:::
 :::
 
-::: {.slide title="The Ridge Point, on Our Card"}
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute the arithmetic intensity of a matrix product and of an
+  elementwise operation;
+- bound an operation's speed with the roofline $\min(P, I\beta)$;
+- time GPU code correctly and find hidden synchronization points;
+- tell compute-, bandwidth-, and overhead-bound operations apart and name
+  each fix;
+- read a kernel profile of a training step.
+
+**Running example:** one RTX 4090 ($P$ = 165 TFLOP/s in bf16,
+$\beta$ = 1.008 TB/s) and the width-2048 linear layers of a 1B-parameter
+GPT.
+:::
+
+::: {.slide title="The Performance Model Opens the Chapter"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| **The Performance Model** | **roofline, three regimes, timing, profiling** |
+| Hardware | where peak arithmetic and bandwidth come from |
+| Compute Graphs and Compilation | fusion and kernel replay |
+| Memory and Precision | what fits: bytes per parameter and per token |
+| Multi-GPU from First Principles | data parallelism by hand, its cost model |
+| Multi-GPU in Practice | production data parallelism, sharding |
+| Case Study: Optimizing a Transformer | the whole method on one GPT |
+:::
+
+::: {.col .narrow}
+- **Uses:** matrix products, bf16, the GPU's asynchronous queue.
+- **Skips:** writing GPU kernels; machines with more than one node.
+:::
+:::
+:::
+
+::: {.slide title="Intensity Is FLOPs per Byte Moved"}
+$$I = \frac{\textrm{FLOPs performed}}{\textrm{bytes moved}}$$
+
+Product $\mathbf{X}\mathbf{W}$, $\mathbf{X}$: $B \times D$, $\mathbf{W}$:
+$D \times F$, $b$ bytes per number:
+
+$$I = \frac{2BDF}{b\,(BD + DF + BF)} \;\approx\; \frac{2B}{b}
+\quad \textrm{for } B \ll D, F$$
+
+Elementwise $y_i = x_i + 1$: one FLOP per $2b$ bytes, $I = 0.25$ in bf16.
+
+::: {.d2l-note}
+Each weight fetched from memory is used once per row of the batch.
+:::
+:::
+
+::: {.slide title="One GPT Layer Spans a Factor of a Thousand in Intensity"}
+Linear layer of width $D = F = 2048$, bf16 ($b = 2$):
+
+| use | rows $B$ | intensity |
+|---|---|---|
+| training, 8 sequences of 1,024 tokens | 8,192 | $\approx 910$ FLOP/byte |
+| generating text, one token | 1 | $\approx 1$ FLOP/byte |
+
+- Training: the width, not the batch, is the smallest dimension.
+- Generation: every weight is read to be used once.
+:::
+
+::: {.slide title="The Roofline Caps Throughput at min(P, Iβ)"}
+![](../img/mdl-perf-roofline.svg){width=72%}
+
+Ridge point $I^* = P/\beta$. Below it: **bandwidth-bound**, extra
+arithmetic costs no time. Above it: **compute-bound**, fewer bytes do not help.
+:::
+
+::: {.slide title="The RTX 4090 Needs 164 FLOPs per Byte"}
 @performance-model-counting-flops-bytes-and-arithmetic-intensity
 
-. . .
-
-~165 FLOP/byte: the machine wants **about 165 ops for every byte
-fetched** just to break even. Almost nothing you write naturally
-gets there. Performance work is mostly about bytes.
+- Other current GPUs: about 120 (RTX 5090), about 300 (H100, B200).
+- Square bf16 product, $B = D = F = n$: $I = n/3$, compute-bound from
+  $n \approx 500$, on paper.
 :::
 
-::: {.slide title="Correct GPU Timing"}
-Dispatch is asynchronous — Python enqueues, the GPU runs behind.
+::: {.slide title="Check: Bound the Time of Each Operation"}
+[Check]{.kicker}
 
-![](../img/mdl-perf-async-timeline.svg){width=90%}
+RTX 4090, bf16, ridge 164 FLOP/byte. Bound the time of each operation.
 
-@performance-model-measuring-without-lying-1
+1. $x + 1$ on $10^8$ elements.
+2. The width-2048 layer applied to one token.
+3. A product of two $4096 \times 4096$ matrices.
+
+::: {.fragment .fade-up}
+1. $I = 0.25$: moves $4 \times 10^8$ bytes, at least 0.4 ms.
+2. $I \approx 1$: reads 8.4 MB of weights, at least 8 µs.
+3. $I \approx 1365$: $1.4 \times 10^{11}$ FLOPs at 165 TFLOP/s, at least
+   0.83 ms.
+:::
 :::
 
-::: {.slide title="Implicit Barriers"}
-Anything that needs a *value* waits for the device:
-`.item()`, `.numpy()`, `print(x)`, `if loss < 0.1:`, `nonzero()`.
+::: {.slide title="A Clock Without a Barrier Measures the Enqueue"}
+![](../img/mdl-perf-async-timeline.svg){width=82%}
 
-@performance-model-measuring-without-lying-2
-
-. . .
-
-Rule: synchronize once per minibatch at most — and only when the
-host actually needs the value.
+- Python queues kernels and moves on; the GPU runs them behind it.
+- Correct timing: warm up, wait for the device before starting and before
+  stopping, average many calls.
 :::
 
-::: {.slide title="Synchronized Benchmarking"}
-Warmup (kernel selection, compilation), sync, time, sync:
+::: {.slide title="Reading a Value Every Step Stalls the Queue"}
+Synchronization points: `float(x)`, `print(x)`, `if loss < 0.1:`,
+data-dependent shapes such as `x[x > 0]`.
 
-@performance-model-measuring-without-lying-3
+1,000 steps of a $1024 \times 1024$ product, total read every step
+versus once at the end:
+
+@!performance-model-measuring-without-lying-2
+
+- No reads: host and device overlap, a step costs the longer of the two.
+- A read every step: host time + device time + round trip.
+
+::: {.d2l-note}
+Keep running sums on the device; read them once per logging interval.
+:::
 :::
 
-::: {.slide title="One Kernel across Three Regimes"}
-@performance-model-the-sweep-mapping-our-gpu
+::: {.slide title="Benchmark Packages the Timing Rules"}
+```{.python #performance-model-benchmark-rules}
+for _ in range(warmup):       # load kernels, compile
+    f()
+wait_for_device()
+t0 = time.perf_counter()
+for _ in range(repeats):
+    f()
+wait_for_device()
+seconds_per_call = (time.perf_counter() - t0) / repeats
+```
 
-. . .
+@!performance-model-measuring-without-lying-4
 
-Small matrices are overhead-bound because launch time rivals arithmetic.
-Intermediate matrices use an increasing fraction of the 128 SMs. Large
-matrices approach the compute roof. The roofline is the *ceiling*; the
-measured knee (~2048–4096) sits well past the nominal crossover (~500) —
-that gap is utilization and overhead.
+$2 \cdot 4096^3 = 1.4 \times 10^{11}$ FLOPs in under 1 ms: over 150 TFLOP/s.
 :::
 
-::: {.slide title="Diagnosis Determines the Fix"}
-![](../img/mdl-perf-regimes.svg){width=95%}
+::: {.slide title="Small Products Run at the Host's Pace"}
+@!performance-model-matrix-products-across-sizes-1
 
-@performance-model-three-regimes-1
-
-Below the ridge, sin and addition take similar time because **memory
-traffic, rather than arithmetic, determines elapsed time.**
+Up to $n = 1024$ the time per call barely changes; beyond, the products
+approach the roof.
 :::
 
-::: {.slide title="The Method"}
-An unfused elementwise chain performs one memory round trip per operation.
-The compiler section measures how fusion removes the redundant traffic.
+::: {.slide title="The Knee Lies Where Device Time Overtakes Host Time"}
+Host time per call $h$ (Python, framework, kernel launch), queued back to
+back:
 
-**measure → classify → fix → re-measure**
+$$t_\textrm{call} \approx \max\left(h,\; \frac{2n^3}{P}\right)$$
 
-The rest of the chapter is this loop, applied: hardware explains
-the constants; compilation attacks bandwidth and overhead; memory
-and precision buy headroom; more GPUs buy more roof.
+- Below the knee: throughput $2n^3/h$, eight times per doubling of $n$.
+- Knee at $n \approx (hP/2)^{1/3}$: for $h$ = 20 µs, $n \approx 1200$.
+- The roofline has no term for $h$: it is a ceiling, not a prediction.
+- Inside the GPU: fewer output tiles than SMs (128 on the RTX 4090) leave
+  SMs idle.
+:::
+
+::: {.slide title="Check: Faster GPUs Need Larger Operations"}
+[Check]{.kicker}
+
+Where is the knee $n \approx (hP/2)^{1/3}$ of a square bf16 product?
+
+1. RTX 4090 ($P$ = 165 TFLOP/s) with a host time of $h$ = 5 µs.
+2. B200 ($P$ = 2,250 TFLOP/s) with the same $h$ = 5 µs.
+
+::: {.fragment .fade-up}
+1. $(5 \times 10^{-6} \cdot 1.65 \times 10^{14} / 2)^{1/3} \approx 740$.
+2. $(5 \times 10^{-6} \cdot 2.25 \times 10^{15} / 2)^{1/3} \approx 1800$.
+
+With the same host, a 14 times faster GPU needs products
+$14^{1/3} \approx 2.4$ times wider to stay busy.
+:::
+:::
+
+::: {.slide title="Elementwise Kernels Run at Memory Speed, Whatever They Compute"}
+$8192 \times 8192$ fp32: 256 MiB in, 256 MiB out, per kernel.
+
+@!performance-model-three-regimes-1
+
+- $5.4 \times 10^8$ bytes in about 0.6 ms: about 0.9 TB/s, near $\beta$.
+- A sine costs far more FLOPs than an addition and runs no slower.
+:::
+
+::: {.slide title="An Unfused Chain Moves Nine Times the Bytes"}
+```{.python #performance-model-gelu-chain}
+0.5 * x * (1 + tanh(0.8 * (x + 0.04 * x**3)))   # 8 operations
+```
+
+@!performance-model-three-regimes-2
+
+- 8 kernels read and write 18 tensors of 256 MiB; a single addition moves 2.
+- One fused kernel would move 2 tensors instead of 18.
+:::
+
+::: {.slide title="Each Regime Has One Standard Fix"}
+![](../img/mdl-perf-regimes.svg){width=85%}
+
+| regime | symptom | fix |
+|---|---|---|
+| compute | device busy, $I$ above the ridge | faster format, more devices |
+| bandwidth | device busy, $I$ below the ridge | fusion, recomputation |
+| overhead | device idle, time independent of size | larger calls, graph capture |
+:::
+
+::: {.slide title="A Profile Splits a Training Step by Kernel"}
+MLP $4096 \to 4096 \to 4096 \to 10$, minibatch 1,024, fp32 with tf32
+products, one SGD step:
+
+@!performance-model-profiling-a-training-step-2
+
+- *gemm* kernels: compute-bound ($I \approx 340$ against a tf32 ridge of 82).
+- SGD update: 12 bytes for 2 FLOPs per weight, bandwidth-bound.
+:::
+
+::: {.slide title="Check: Name the Regime"}
+[Check]{.kicker}
+
+Suppose these times per call on the RTX 4090. Which regime limits each?
+
+1. A $4096 \times 4096$ bf16 product: 0.89 ms.
+2. $x + 1$ on $8192 \times 8192$ fp32: 0.6 ms.
+3. A $256 \times 256$ bf16 product: 15 µs.
+
+::: {.fragment .fade-up}
+1. 154 TFLOP/s, 93% of $P$: compute-bound.
+2. 537 MB in 0.6 ms, 0.9 TB/s: bandwidth-bound.
+3. The device needs 0.2 µs at the peak: overhead-bound.
+:::
+:::
+
+::: {.slide title="Measure, Classify, Fix, Re-measure"}
+- **Measure** with `Benchmark` and a profiler.
+- **Classify**: busy with matrix products, compute; busy with elementwise
+  kernels, bandwidth; idle between kernels, overhead.
+- **Fix**: faster formats or more devices; fusion or recomputation; larger
+  calls or graph capture.
+- **Re-measure**: each fix moves the bottleneck.
+
+::: {.d2l-note}
+The rest of the chapter is this loop, applied.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- Roofline: performance $\leq \min(P, I\beta)$; the RTX 4090's ridge is
+  164 FLOP/byte.
+- A width-2048 GPT layer: $I \approx 910$ in training, $\approx 1$ when
+  generating one token.
+- Small products run at the host's pace: $t_\textrm{call} \approx
+  \max(h, 2n^3/P)$, 1–2% of the peak at $n = 256$.
+- Elementwise kernels run at about 0.9 TB/s whatever they compute; an
+  unfused chain of 8 moves 9 times the bytes of one.
+- Time with warm-up, barriers, and many calls; keep reads out of loops.
+
+**Next:** where $P$ and $\beta$ come from: the hardware.
 :::

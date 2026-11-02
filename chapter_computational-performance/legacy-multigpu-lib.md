@@ -5,8 +5,11 @@ This file is not listed in `_quarto.yml`/`CHAPTER_NUMBERING` and is never
 rendered or executed as a notebook — `make lib` (`tools/build_lib.py`) only
 scans it for `#@save` blocks, and `gen_notebooks.py` excludes it via
 `LIB_ONLY_FILES`. It carries the tensorflow and mxnet variants of
-`split_batch` and `resnet18`, whose PyTorch/JAX homes now live in the rebuilt
-`multiple-gpus.md` (§13.5) and `multi-gpu-practice.md` (§13.6). The rebuilt
+`split_batch` and `resnet18`. The PyTorch/JAX `resnet18` lives in the rebuilt
+`multi-gpu-practice.md`; PyTorch and JAX have no `split_batch` any more
+(since 2026-11 `multiple-gpus.md` keeps the training set on every device and
+splits each minibatch's indices instead), and no PyTorch/JAX notebook used
+it. The rebuilt
 Advanced-part chapter carries PyTorch and JAX tabs only, but the still-four-
 framework notebooks in the Language Models and Image Models parts import these
 symbols:
@@ -30,8 +33,7 @@ extracted d2l/_blocks shards — and hence the freshness fingerprints of the
 ch. 18/19 tf/mxnet consumers — byte-identical after the move. -->
 :label:`sec_multi_gpu`
 
-**`split_batch` (tensorflow, mxnet only — PyTorch/JAX version is
-`chapter_computational-performance/multiple-gpus.md`'s `#@save`).**
+**`split_batch` (tensorflow, mxnet only; PyTorch and JAX have none).**
 
 ```{.python .input}
 %%tab mxnet

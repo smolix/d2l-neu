@@ -588,8 +588,8 @@ z
     </g>
    </g>
    <g id="text_2">
-    <!-- minibatch ($B$ samples) -->
-    <g transform="translate(179.745 40.181822) scale(0.13 -0.13)">
+    <!-- minibatch ($B$ examples) -->
+    <g transform="translate(176.365 40.181822) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -723,6 +723,31 @@ Q 2441 4084 2400 3928
 L 2009 2356 
 z
 " transform="scale(0.015625)"/>
+      <path id="SourceSans3-Regular-33" d="M 90 0 
+L 1107 1626 
+L 166 3110 
+L 736 3110 
+L 1152 2426 
+Q 1222 2304 1299 2169 
+Q 1376 2035 1459 1907 
+L 1485 1907 
+Q 1555 2035 1625 2169 
+Q 1696 2304 1766 2426 
+L 2144 3110 
+L 2694 3110 
+L 1754 1568 
+L 2765 0 
+L 2195 0 
+L 1741 723 
+Q 1658 864 1574 1005 
+Q 1491 1146 1402 1280 
+L 1376 1280 
+Q 1293 1146 1216 1008 
+Q 1139 870 1062 723 
+L 640 0 
+L 90 0 
+z
+" transform="scale(0.015625)"/>
       <path id="SourceSans3-Regular-5a3" d="M 570 -1126 
 L 243 -973 
 Q 614 -365 796 342 
@@ -750,14 +775,15 @@ z
      <use xlink:href="#SourceSans3-Regular-5a2" transform="translate(446.299576 0.796875)"/>
      <use xlink:href="#Cmmi10-34" transform="translate(476.599548 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(552.380798 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(572.380783 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(614.280746 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-28" transform="translate(664.680695 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(747.580612 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-27" transform="translate(803.080566 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(828.580536 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(878.180496 0.796875)"/>
-     <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(920.08046 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(572.380783 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-33" transform="translate(621.980743 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(666.580704 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-28" transform="translate(716.980652 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(799.880569 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-27" transform="translate(855.380524 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(880.880493 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(930.480453 0.796875)"/>
+     <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(972.380417 0.796875)"/>
     </g>
    </g>
    <g id="text_3">

@@ -111,7 +111,11 @@ Resolution order in `notebook_resource`:
    the k = 4 rows the prose quotes. `rel ∈ FULL_CARD_NOTEBOOKS` →
    `('gpu', n, 'all')` — a notebook that sizes its own work to the visible
    cards' memory (the async HPO notebooks start `total_memory // 7 GB`
-   syne-tune workers per visible GPU).
+   syne-tune workers per visible GPU), or one whose prose quotes timings,
+   bandwidths or peak memory that another tenant on the card would skew
+   (`gpus-devices-memory`, `kv-cache`, and ch. 13's sections 13.1–13.5;
+   `multiple-gpus` takes two whole cards). `FULL_CARD_NOTEBOOKS` is checked
+   before `MULTI_GPU_NOTEBOOKS`.
 1. `rel ∈ MULTI_GPU_NOTEBOOKS` → `('gpu', 2, TWO_GPU_SLOTS_PER.get((fw, rel), 1))`
    — a data-parallel notebook genuinely uses two GPUs; default 1 slot each
    (`2×1`), bumped to 2 each (`2×2`) for a framework that allocates >7.5 GiB on a
@@ -133,9 +137,6 @@ Resolution order in `notebook_resource`:
 MULTI_GPU_NOTEBOOKS = {            # data-parallel: need 2 GPUs
     "chapter_builders-guide/gpus-devices-memory.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",
-    "chapter_computational-performance/multiple-gpus-concise.ipynb",
-    "chapter_computational-performance/auto-parallelism.ipynb",
-    "chapter_computational-performance/async-computation.ipynb",
 }
 
 WHOLE_BOX_NOTEBOOKS = {            # every GPU, fully; nothing shares a card
@@ -144,6 +145,13 @@ WHOLE_BOX_NOTEBOOKS = {            # every GPU, fully; nothing shares a card
 }
 
 FULL_CARD_NOTEBOOKS = {            # n whole cards, whatever their size
+    "chapter_builders-guide/gpus-devices-memory.ipynb": 2,     # timings
+    "chapter_transformers/kv-cache.ipynb": 1,                  # timings
+    "chapter_computational-performance/performance-model.ipynb": 1,
+    "chapter_computational-performance/hardware.ipynb": 1,
+    "chapter_computational-performance/compilation.ipynb": 1,
+    "chapter_computational-performance/memory-precision.ipynb": 1,
+    "chapter_computational-performance/multiple-gpus.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,   # syne-tune
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,   # syne-tune
 }

@@ -27,9 +27,6 @@ every new token, a waste that the next section removes.
 from d2l import torch as d2l
 import math
 import numpy as np
-from safetensors.torch import load_file
-import tiktoken
-from tiktoken.load import data_gym_to_mergeable_bpe_ranks
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -45,9 +42,6 @@ from jax import numpy as jnp
 import math
 import numpy as np
 import optax
-from safetensors import numpy as safetensors_numpy
-import tiktoken
-from tiktoken.load import data_gym_to_mergeable_bpe_ranks
 ```
 
 ## From Blocks to a Language Model
@@ -770,105 +764,127 @@ up to 1,024 tokens, and pre-norm with a tied head. Loading it takes a
 constructor call with these settings, the released weights, and the
 released tokenizer. We register the weight and tokenizer files in
 `d2l.DATA_HUB` with their content hashes, so that one download serves every
-later run.
+later run. Both steps go into the library, as `gpt2_tokenizer` and
+`load_gpt2`, because :numref:`sec_kv-cache` studies how the released model
+uses its cache.
 
 ### The Tokenizer
 
 ```{.python .input #gpt-loading-gpt-2-1}
 %%tab pytorch, jax
-HF_URL = 'https://huggingface.co/openai-community/gpt2/resolve/main/'
+#@save
+GPT2_URL = 'https://huggingface.co/openai-community/gpt2/resolve/main/'
 d2l.DATA_HUB['gpt2-weights'] = (
-    HF_URL + 'model.safetensors',
+    GPT2_URL + 'model.safetensors',
     '89a76996d7c6ee89b86618a265483aab73e61d50')
 d2l.DATA_HUB['gpt2-merges'] = (
-    HF_URL + 'merges.txt', '396d4d8ec90cb02f4d56e049e0e4add868bcd943')
+    GPT2_URL + 'merges.txt', '396d4d8ec90cb02f4d56e049e0e4add868bcd943')
 d2l.DATA_HUB['gpt2-encoder'] = (
-    HF_URL + 'vocab.json', 'f0223209235343bc067d7da838328bced8085ae1')
+    GPT2_URL + 'vocab.json', 'f0223209235343bc067d7da838328bced8085ae1')
 
-enc = tiktoken.Encoding(
-    'gpt2', explicit_n_vocab=50257,
-    pat_str=d2l.BPETokenizer.GPT2_PATTERN,
-    mergeable_ranks=data_gym_to_mergeable_bpe_ranks(
-        d2l.download('gpt2-merges', '../data/gpt2'),
-        d2l.download('gpt2-encoder', '../data/gpt2')),
-    special_tokens={'<|endoftext|>': 50256})
+def gpt2_tokenizer():  #@save
+    """GPT-2's byte-level BPE tokenizer, assembled by tiktoken."""
+    import tiktoken  # lazy: d2l itself does not require tiktoken
+    from tiktoken.load import data_gym_to_mergeable_bpe_ranks
+    return tiktoken.Encoding(
+        'gpt2', explicit_n_vocab=50257,
+        pat_str=d2l.BPETokenizer.GPT2_PATTERN,
+        mergeable_ranks=data_gym_to_mergeable_bpe_ranks(
+            d2l.download('gpt2-merges', '../data/gpt2'),
+            d2l.download('gpt2-encoder', '../data/gpt2')),
+        special_tokens={'<|endoftext|>': 50256})
+
+enc = gpt2_tokenizer()
 ids = enc.encode('Attention is all you need.')
 print(ids, [enc.decode([i]) for i in ids])
 ```
 
-The tokenizer cell applies the BPE machinery of
-:numref:`sec_text-sequence` to GPT-2's released merge list and vocabulary.
-It uses the same pre-tokenization pattern as `d2l.BPETokenizer` and
-assembles the result into `tiktoken`'s encoder. The construction needs two
-data files and a regular expression, and no model library or configuration
-framework.
+The tokenizer applies the BPE machinery of :numref:`sec_text-sequence` to
+GPT-2's released merge list and vocabulary. It uses the same
+pre-tokenization pattern as `d2l.BPETokenizer` and assembles the result
+into `tiktoken`'s encoder. The construction needs two data files and a
+regular expression, and no model library or configuration framework.
 
 ### The Weight Map
 
-The checkpoint stores one tensor per parameter under names such as
-`h.3.attn.c_attn.weight`, so loading requires a dictionary that maps these
-names onto our modules. GPT-2's original code implemented its linear layers
-as a class `Conv1D` that stores each weight matrix with the input dimension
-first, as $(\textrm{in}, \textrm{out})$. The fused `c_attn` matrix
-concatenates queries, keys, and values in the same order as our `W_qkv`,
-the token embedding doubles as the output head in both models, and our
-LayerNorm uses GPT-2's $\epsilon = 10^{-5}$, so nothing else needs special
-handling.
+The checkpoint stores one tensor per parameter, under the names of GPT-2's
+original code. The token table is `wte`, the position table `wpe`, and the
+final normalization `ln_f`. Block $i$ is `h.i`. Inside it, `ln_1` and
+`ln_2` are the normalizations before attention and before the feed-forward
+network, `attn.c_attn` and `attn.c_proj` are our `W_qkv` and `W_o`, and
+`mlp.c_fc` and `mlp.c_proj` are our `W_1` and `W_2`. Loading therefore
+needs a dictionary of names and one rule about layout. GPT-2's code
+implemented its linear layers as a class `Conv1D` that stores each weight
+matrix with the input dimension first, as
+$(\textrm{in}, \textrm{out})$. The fused `c_attn` matrix concatenates
+queries, keys, and values in the same order as our `W_qkv`, the token
+embedding doubles as the output head in both models, and our LayerNorm
+uses GPT-2's $\epsilon = 10^{-5}$, so nothing else needs special handling.
+The function `load_gpt2` builds the configuration, copies every tensor
+into place, and returns the model in evaluation mode.
 
 ```{.python .input #gpt-loading-gpt-2-2}
 %%tab pytorch
-gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
-           max_len=1024, pos='learned', norm='layer', act='gelu',
-           pre_norm=True, bias=True)  # the GPT-2 (124M) configuration
-weights = load_file(d2l.download('gpt2-weights', '../data/gpt2'))
+def load_gpt2():  #@save
+    """GPT-2 small (124M) as a GPT with the released weights, in eval
+    mode."""
+    from safetensors.torch import load_file  # lazy, like tiktoken above
+    gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+               max_len=1024, pos='learned', norm='layer', act='gelu',
+               pre_norm=True, bias=True)
+    weights = load_file(d2l.download('gpt2-weights', '../data/gpt2'))
+    with torch.no_grad():
+        gpt2.token_emb.weight.copy_(weights['wte.weight'])
+        gpt2.pos_emb.weight.copy_(weights['wpe.weight'])
+        gpt2.norm.weight.copy_(weights['ln_f.weight'])
+        gpt2.norm.bias.copy_(weights['ln_f.bias'])
+        for i, blk in enumerate(gpt2.blks):
+            modules = {f'h.{i}.ln_1': blk.norm1, f'h.{i}.ln_2': blk.norm2,
+                       f'h.{i}.attn.c_attn': blk.attention.W_qkv,
+                       f'h.{i}.attn.c_proj': blk.attention.W_o,
+                       f'h.{i}.mlp.c_fc': blk.ffn.W_1,
+                       f'h.{i}.mlp.c_proj': blk.ffn.W_2}
+            for key, module in modules.items():
+                W = weights[key + '.weight']  # Conv1D: (in, out)
+                module.weight.copy_(W.T if W.ndim == 2 else W)
+                module.bias.copy_(weights[key + '.bias'])
+    return gpt2.eval()
 
-with torch.no_grad():
-    gpt2.token_emb.weight.copy_(weights['wte.weight'])
-    gpt2.pos_emb.weight.copy_(weights['wpe.weight'])
-    gpt2.norm.weight.copy_(weights['ln_f.weight'])
-    gpt2.norm.bias.copy_(weights['ln_f.bias'])
-    for i, blk in enumerate(gpt2.blks):
-        modules = {f'h.{i}.ln_1': blk.norm1, f'h.{i}.ln_2': blk.norm2,
-                   f'h.{i}.attn.c_attn': blk.attention.W_qkv,
-                   f'h.{i}.attn.c_proj': blk.attention.W_o,
-                   f'h.{i}.mlp.c_fc': blk.ffn.W_1,
-                   f'h.{i}.mlp.c_proj': blk.ffn.W_2}
-        for key, module in modules.items():
-            W = weights[key + '.weight']
-            module.weight.copy_(W.T if W.ndim == 2 else W)  # Conv1D layout
-            module.bias.copy_(weights[key + '.bias'])
-
-gpt2.to(d2l.try_gpu()).eval()
+gpt2 = load_gpt2().to(d2l.try_gpu())
 print(f'{d2l.num_params(gpt2) / 1e6:.1f}M parameters')
 ```
 
 ```{.python .input #gpt-loading-gpt-2-2}
 %%tab jax
-gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
-           max_len=1024, pos='learned', norm='layer', act='gelu',
-           pre_norm=True, bias=True,  # the GPT-2 (124M) configuration
-           rngs=nnx.Rngs(d2l.get_key()))
-weights = safetensors_numpy.load_file(
-    d2l.download('gpt2-weights', '../data/gpt2'))
+def load_gpt2():  #@save
+    """GPT-2 small (124M) as a GPT with the released weights, in eval
+    mode."""
+    from safetensors.numpy import load_file  # lazy, like tiktoken above
+    gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+               max_len=1024, pos='learned', norm='layer', act='gelu',
+               pre_norm=True, bias=True, rngs=nnx.Rngs(d2l.get_key()))
+    weights = {k: jnp.asarray(v) for k, v in load_file(
+        d2l.download('gpt2-weights', '../data/gpt2')).items()}
+    gpt2.token_emb.embedding[...] = weights['wte.weight']
+    gpt2.pos_emb.embedding[...] = weights['wpe.weight']
+    gpt2.norm.scale[...] = weights['ln_f.weight']
+    gpt2.norm.bias[...] = weights['ln_f.bias']
+    for i, blk in enumerate(gpt2.blks):
+        for norm, key in ((blk.norm1, f'h.{i}.ln_1'),
+                          (blk.norm2, f'h.{i}.ln_2')):
+            norm.scale[...] = weights[key + '.weight']
+            norm.bias[...] = weights[key + '.bias']
+        for linear, key in ((blk.attention.W_qkv, f'h.{i}.attn.c_attn'),
+                            (blk.attention.W_o, f'h.{i}.attn.c_proj'),
+                            (blk.ffn.W_1, f'h.{i}.mlp.c_fc'),
+                            (blk.ffn.W_2, f'h.{i}.mlp.c_proj')):
+            # Conv1D stores (in, out), exactly nnx.Linear's kernel layout
+            linear.kernel[...] = weights[key + '.weight']
+            linear.bias[...] = weights[key + '.bias']
+    gpt2.eval()
+    return gpt2
 
-gpt2.token_emb.embedding[...] = jnp.asarray(weights['wte.weight'])
-gpt2.pos_emb.embedding[...] = jnp.asarray(weights['wpe.weight'])
-gpt2.norm.scale[...] = jnp.asarray(weights['ln_f.weight'])
-gpt2.norm.bias[...] = jnp.asarray(weights['ln_f.bias'])
-for i, blk in enumerate(gpt2.blks):
-    for norm, key in ((blk.norm1, f'h.{i}.ln_1'),
-                      (blk.norm2, f'h.{i}.ln_2')):
-        norm.scale[...] = jnp.asarray(weights[key + '.weight'])
-        norm.bias[...] = jnp.asarray(weights[key + '.bias'])
-    for linear, key in ((blk.attention.W_qkv, f'h.{i}.attn.c_attn'),
-                        (blk.attention.W_o, f'h.{i}.attn.c_proj'),
-                        (blk.ffn.W_1, f'h.{i}.mlp.c_fc'),
-                        (blk.ffn.W_2, f'h.{i}.mlp.c_proj')):
-        # Conv1D stores (in, out) -- exactly nnx.Linear's kernel layout
-        linear.kernel[...] = jnp.asarray(weights[key + '.weight'])
-        linear.bias[...] = jnp.asarray(weights[key + '.bias'])
-
-gpt2.eval()
+gpt2 = load_gpt2()
 print(f'{d2l.num_params(gpt2) / 1e6:.1f}M parameters')
 ```
 
@@ -881,8 +897,9 @@ parameter in place is not an operation that autograd should record.
 
 :begin_tab:`jax`
 `nnx.Linear` stores its kernel as $(\textrm{in}, \textrm{out})$, the
-`Conv1D` layout, so the weights load unchanged. The safetensors file opens
-directly into NumPy arrays.
+`Conv1D` layout, so the weights load unchanged. `safetensors.numpy` opens
+the file as NumPy arrays, which become JAX arrays before they are written
+into the parameters.
 :end_tab:
 
 ### Checks of the Loaded Model
@@ -1051,15 +1068,14 @@ the same class through a map of parameter names.
 1. [code] **Checkpoint mismatches.** The GPT-2 checkpoint holds 160 tensors
    with 137,022,720 numbers in all, while `gpt2` has 124,439,808
    parameters.
-    1. Identify the checkpoint tensors that the loading code of
-       :numref:`subsec_gpt-loading` never reads, and explain why `GPT`
-       needs no counterpart for them.
+    1. Identify the checkpoint tensors that `load_gpt2` never reads, and
+       explain why `GPT` needs no counterpart for them.
     1. Construct the GPT-2 configuration with `norm='rms'` and run the
-       loading code. Which line fails, and why can no mapping of the
-       checkpoint onto this configuration reproduce GPT-2? Then list, for
-       the GPT-2 configuration with `pos='rope'` and `act='swiglu'`, every
-       checkpoint tensor without a destination and every model parameter
-       without a source.
+       body of `load_gpt2` on it. Which line fails, and why can no mapping
+       of the checkpoint onto this configuration reproduce GPT-2? Then
+       list, for the GPT-2 configuration with `pos='rope'` and
+       `act='swiglu'`, every checkpoint tensor without a destination and
+       every model parameter without a source.
     1. Some mistakes load without any error. Introduce three of them, one
        at a time: skip every copy of a normalization shift and load the
        rest into the `norm='rms'` model; load the `attn.c_proj` matrix
@@ -1071,6 +1087,13 @@ the same class through a map of parameter names.
        `'Alan Turing theorized that computers would one day become'`.
        Which mistake does the perplexity check flag most clearly, and which
        least?
+    1. A check that catches every such mistake compares the logits with an
+       independent implementation. Write GPT-2's forward pass in NumPy
+       directly from the checkpoint tensors, in float64 and with the
+       `Conv1D` convention $\mathbf{x}\mathbf{W} + \mathbf{b}$, and
+       compare its logits for a short prompt with those of `gpt2`. How
+       large is the largest difference relative to the largest logit, and
+       what does that ratio say about where the difference comes from?
 
 1. [code] **Tied head without blocks.** ● Consider `GPT` with
    `num_blks=0` and its defaults `pos='rope'` and `norm='rms'`. Let
@@ -1458,6 +1481,8 @@ gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12,
   SHA-1 hash.
 - Tokenizer: GPT-2's merge list and vocabulary with the BPE pattern of
   the tokenization section, assembled by `tiktoken`.
+- Saved as `d2l.load_gpt2()` and `d2l.gpt2_tokenizer()`; the KV-cache
+  section studies the released model with them.
 :::
 
 ::: {.slide title="A Name Map and One Layout Rule Load the Checkpoint" only="pytorch"}
@@ -1487,8 +1512,8 @@ for i, blk in enumerate(gpt2.blks):
                         (blk.attention.W_o, f'h.{i}.attn.c_proj'),
                         (blk.ffn.W_1, f'h.{i}.mlp.c_fc'),
                         (blk.ffn.W_2, f'h.{i}.mlp.c_proj')):
-        linear.kernel[...] = jnp.asarray(weights[key + '.weight'])
-        linear.bias[...] = jnp.asarray(weights[key + '.bias'])
+        linear.kernel[...] = weights[key + '.weight']
+        linear.bias[...] = weights[key + '.bias']
 ```
 
 The two LayerNorms per block load the same way (`scale`, `bias`).

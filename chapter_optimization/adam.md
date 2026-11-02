@@ -751,7 +751,7 @@ print(f'training perplexity per byte: '
       f'{math.exp(final_loss(losses)):.2f}')
 ```
 
-The model reaches a training perplexity per byte of about 4.9, or about
+The model reaches a training perplexity per byte of about 5, or about
 2.3 bits per byte, against 256 for a uniform guess over the bytes: it has
 learned a good deal of English spelling, and its loss is still falling
 slowly when the run ends. Strong language models compress text like this
@@ -949,7 +949,7 @@ print(f"Adam reaches SGD's final loss at step "
       f'{steps_to_reach(adam_lm[best_adam], loss_sgd)} of 2000')
 ```
 
-Tuned Adam ends about 0.05 to 0.2 nats below tuned SGD, a perplexity 5
+Tuned Adam ends about 0.03 to 0.2 nats below tuned SGD, a perplexity 3
 to 20% lower, and its curve lies below SGD's from the first hundred steps
 to the end. No learning rate in SGD's grid closes the gap: the best one is
 the last stable one. Most of the variation in the gap comes from SGD.
@@ -957,7 +957,7 @@ Repeated with fresh random draws, tuned Adam ends within a hundredth or two
 of the same loss every time, while tuned SGD, run just below the rate at
 which it diverges, varies by up to about a tenth of a nat. The last line of the output
 measures the gap in time rather than in loss. Adam reaches the loss on
-which SGD ends 40% to 75% of the way through the run, so it optimizes this
+which SGD ends 40% to 80% of the way through the run, so it optimizes this
 model about 1.3 to 2.5 times as fast.
 
 ### Comparison on a CNN
@@ -1045,10 +1045,10 @@ is the largest one that trains reliably. And tuned Adam again reaches a
 lower training loss.
 
 Both losses are cross-entropies in nats per prediction, so the two gaps
-can be compared directly: a few hundredths of a nat on the CNN, about 0.05
+can be compared directly: a few hundredths of a nat on the CNN, about 0.03
 to 0.2 on the language model. A gap of $\Delta$ nats means that the better
 model assigns, on average, $e^\Delta$ times as much probability to each
-correct answer: a few percent more on the CNN, about 5 to 20% more on the
+correct answer: a few percent more on the CNN, about 3 to 20% more on the
 language model.
 
 Measured in time, the question our protocol asks, the two models are
@@ -1634,11 +1634,11 @@ print(f'perplexity: AdamW {math.exp(final_loss(losses)):.2f}, '
       f'Adam without decay {math.exp(final_loss(adam_lm[best_adam])):.2f}')
 ```
 
-AdamW ends slightly behind: its perplexity is a few percent at most
-higher. In
+AdamW ends within a few percent of the run without decay, in either
+direction. In
 2,000 steps the model reads about 3% of the training text and does not
 overfit, so the decay, whose horizon $1/(\eta\lambda)$ is longer than the
-run, has nothing to prevent and mostly slows training.
+run, has nothing to prevent and cannot help.
 This is the configuration in which Adam is used today: AdamW, decay on the
 matrices only, and $\lambda$ chosen together with the schedule. What
 remains is its cost in memory.
@@ -2095,7 +2095,7 @@ rates per method spaced by about 3×; "tuned" is the lowest final loss.
 ::: {.slide title="On Both Models, Adam Reaches SGD's Final Loss 1.3–2.5× Faster"}
 ::: {.cols}
 ::: {.col}
-`TinyLM`: gap about 0.05–0.2 nats
+`TinyLM`: gap about 0.03–0.2 nats
 
 @!adam-the-race-on-the-language-model-3
 :::
@@ -2279,7 +2279,7 @@ activations. Half of the 16 GB is $m$ and $v$.
 - RMSProp forgets; Adam adds momentum and bias correction, so step 1 is
   exactly $\eta$.
 - Tuned Adam reaches tuned SGD's final loss about 1.3–2.5× faster on
-  both models; the gap is about 0.05–0.2 nats on `TinyLM`, a few
+  both models; the gap is about 0.03–0.2 nats on `TinyLM`, a few
   hundredths on `FashionCNN`.
 - AdamW decays outside the preconditioner: one $\lambda$ for every
   coordinate. At scale, $\eta\lambda$ sets the effective learning rate.

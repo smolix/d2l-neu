@@ -2320,7 +2320,9 @@ def lm_perplexity(model, data):
     """Perplexity of a language model on the validation set of `data`.
 
     Defined in :numref:`sec_gru`"""
-    graphdef, state = nnx.split(model)  # One walk through the model
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
         total += lm_loss_sum(graphdef, state, X, Y)
@@ -2486,7 +2488,7 @@ class Mamba(nnx.Module):
         H = expand * num_hiddens
         self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
-                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
         self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
         self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
@@ -2547,7 +2549,7 @@ class GatedLinearAttention(nnx.Module):
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
                              feature_group_count=3 * d,  # One filter each
-                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
         self.W_a = self.decay_gate(d, rngs)
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)

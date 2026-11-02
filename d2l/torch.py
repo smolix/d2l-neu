@@ -2130,6 +2130,8 @@ def lm_perplexity(model, data):
 
     Defined in :numref:`sec_gru`"""
     device = next(model.parameters()).device
+    was_training = model.training
+    model.eval()  # Dropout off while we measure
     total, count = 0, 0
     with torch.inference_mode():
         for X, Y in data.val_dataloader():
@@ -2137,6 +2139,7 @@ def lm_perplexity(model, data):
             total += F.cross_entropy(logits.flatten(0, 1),
                                      Y.to(device).flatten(), reduction='sum')
             count += Y.numel()
+    model.train(was_training)
     return math.exp(float(total) / count)
 
 def fit_lm(model, data, num_steps=3000, lr=2e-3):

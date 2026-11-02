@@ -81,7 +81,7 @@ def fig_zoom_sequence():
     slope = (f(x0 + h) - f(x0 - h)) / (2 * h)
     y0 = f(x0)
 
-    fig, axes = plt.subplots(1, 3, figsize=(10.2, 3.4))
+    fig, axes = plt.subplots(1, 3, figsize=(8.4, 2.9))
     half_widths = [0.6, 0.06, 0.006]
     titles = [r"$\pm 0.6$", r"$\pm 0.06$", r"$\pm 0.006$"]
     for ax, hw, title in zip(axes, half_widths, titles):
@@ -90,66 +90,13 @@ def fig_zoom_sequence():
         # the fixed tangent line at x0
         ax.plot(xs, y0 + slope * (xs - x0), "--", color=ORANGE, lw=1.6, zorder=2)
         ax.plot([x0], [y0], "o", color="black", ms=4, zorder=4)
-        ax.set_title(f"zoom {title}", fontsize=FS)
-        ax.set_xticks([x0]); ax.set_xticklabels(["$x_0$"]); ink_ticks(ax)
+        ax.set_title(f"zoom {title}", fontsize=14)
+        ax.set_xticks([x0]); ink_ticks(ax)
+        ax.set_xticklabels(["$x_0$"], fontsize=14)
         ax.set_yticks([])
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-zoom-sequence")
-
-
-def _second_der_panels(name, sign):
-    """Shared layout for the three second-derivative figures: f'' (constant),
-    f' (line through 0), f (parabola), side by side.  ``sign`` selects +/-/0
-    curvature.  All curves are the genuine derivatives of one another."""
-    # f(x) = (sign/2) x^2  =>  f'(x) = sign*x,  f''(x) = sign (constant)
-    x = np.linspace(-2.0, 2.0, 400)
-    if sign == 0:
-        f2 = np.zeros_like(x)
-        f1 = np.ones_like(x) * 1.0          # constant slope
-        f0 = 1.0 * x                         # straight line
-        c2 = GRAY
-    else:
-        f2 = np.ones_like(x) * sign
-        f1 = sign * x
-        f0 = 0.5 * sign * x ** 2
-        c2 = GREEN if sign > 0 else ORANGE
-
-    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.0))
-    panels = [
-        (f2, r"$f^{(2)}(x)$", c2),
-        (f1, r"$f^{(1)}(x)$", BLUE),
-        (f0, r"$f(x)$", BLUE),
-    ]
-    for ax, (y, title, col) in zip(axes, panels):
-        ax.axhline(0, color=INK, lw=1.0)
-        ax.axvline(0, color=INK, lw=1.0)
-        ax.plot(x, y, color=col, lw=2.4)
-        ax.set_title(title, fontsize=FS)
-        ax.set_xticks([]); ax.set_yticks([])
-        ax.set_xlim(-2.1, 2.1)
-        pad = 0.3
-        ax.set_ylim(min(y.min(), -0.2) - pad, max(y.max(), 0.2) + pad)
-        # the cross through the origin is the coordinate system; an extra
-        # L-shaped frame would read as a second pair of axes
-        for side in ("top", "right", "left", "bottom"):
-            ax.spines[side].set_visible(False)
-    fl.save(fig, name)
-
-
-def fig_pos_second():
-    """f'' > 0 constant -> f' increasing through 0 -> f has a minimum."""
-    _second_der_panels("mdl-cal-pos-second", +1)
-
-
-def fig_neg_second():
-    """f'' < 0 constant -> f' decreasing through 0 -> f has a maximum."""
-    _second_der_panels("mdl-cal-neg-second", -1)
-
-
-def fig_zero_second():
-    """f'' = 0 -> f' constant -> f is a straight line."""
-    _second_der_panels("mdl-cal-zero-second", 0)
 
 
 def fig_secant_to_tangent():
@@ -174,7 +121,9 @@ def fig_secant_to_tangent():
     ax.text(x0 + 0.08, y0 - 0.07, r"$(x,\,f(x))$", ha="left", va="top",
             fontsize=FS)
     ax.set_xlim(-0.3, 2.75); ax.set_ylim(0.1, 1.9)
-    ax.set_xticks([x0]); ax.set_xticklabels(["$x$"]); ax.set_yticks([])
+    # the largest-eps secant point is x + eps; name it on the axis
+    ax.set_xticks([x0, x0 + 1.1])
+    ax.set_xticklabels(["$x$", r"$x+\epsilon$"]); ax.set_yticks([])
     ink_ticks(ax)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-secant-to-tangent")
@@ -322,7 +271,7 @@ def fig_mvt():
     ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=3)
     ax.plot([a, b], [f(a), f(b)], "-", color=GRAY, lw=1.6, zorder=2)
     # the parallel tangent, trimmed so it does not shoot off to the frame edge
-    xt = np.linspace(a - 0.05, b + 0.15, 200)
+    xt = np.linspace(xi - 1.3, xi + 1.3, 200)
     ax.plot(xt, f(xi) + slope * (xt - xi), "--", color=ORANGE, lw=2.0, zorder=4)
     # a, xi, b are positions on the x-axis: named ticks with dotted drop lines
     ybot = -0.18
@@ -417,16 +366,16 @@ def fig_sub_area():
         ax.set_ylim(0, 1.18)
         ax.set_xlim(xs[0], xs[-1])
         ax.set_yticks([])
-        # c is the base point the accumulated areas start from: the left edge
+        # a is the base point the accumulated areas start from: the left edge
         ax.set_xticks([xs[0], a, b])
-        ax.set_xticklabels(["$c$", "$a$", "$b$"]); ink_ticks(ax)
+        ax.set_xticklabels(["$a$", "$x_1$", "$x_2$"]); ink_ticks(ax)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
     lo = xs[0]
-    panel(axes[0], a, b, r"$\int_a^b f$")
-    panel(axes[1], lo, b, r"$\int_c^b f$")
-    panel(axes[2], lo, a, r"$\int_c^a f$")
+    panel(axes[0], a, b, r"$\int_{x_1}^{x_2} f$")
+    panel(axes[1], lo, b, r"$\int_a^{x_2} f$")
+    panel(axes[2], lo, a, r"$\int_a^{x_1} f$")
     # connecting symbols, drawn in figure coordinates between the panels
     fig.text(0.365, 0.5, r"$=$", ha="center", va="center", fontsize=18)
     fig.text(0.640, 0.5, r"$-$", ha="center", va="center", fontsize=18)
@@ -467,7 +416,7 @@ def fig_rect_trans():
                     arrowprops=dict(arrowstyle="<->", color=color, lw=1.1),
                     zorder=5)
         ax.text(x_left - 0.10, (base + h) / 2, text, ha="right", va="center",
-                color=color, fontsize=FS)
+                color=INK, fontsize=FS)
 
     # ---- (a) the x-world: narrow sliver of width epsilon on the x-axis ----
     xs = np.linspace(0.0, 3.0, 400)
@@ -515,91 +464,98 @@ def fig_rect_trans():
 def fig_bell_surface():
     """The bell surface $z=e^{-x^2-y^2}$ over the box $[-2,2]^2$: the double
     integral is the volume between the surface and the base plane, approximated
-    by tiling the base with $\\epsilon\\times\\epsilon$ squares and standing a
-    box of height $f$ on each (one row shown, through the peak along $y=0$)."""
+    by tiling the whole base with $\\epsilon\\times\\epsilon$ squares
+    ($\\epsilon=0.5$) and standing a box of height $f$ (at the square's centre)
+    on each.  One column of boxes at a fixed $x$ is highlighted: it is one
+    inner sum $\\sum_j \\epsilon f(x_i, y_j)$ of Fubini's theorem."""
     f = lambda X, Y: np.exp(-X ** 2 - Y ** 2)
     fig = plt.figure(figsize=(6.2, 5.0))
     ax = fig.add_subplot(projection="3d")
-    ax.computed_zorder = False           # we control draw order explicitly
 
-    # faint epsilon-by-epsilon tiling of the base plane (z=0), so the Riemann
-    # boxes visibly *stand on* a grid covering the domain
-    eps = 0.25
-    ticks = np.arange(-2.0, 2.0 + 1e-9, eps)
-    for t in ticks:
-        ax.plot([t, t], [-2.0, 2.0], [0, 0], color=LIGHT, lw=0.5, zorder=0)
-        ax.plot([-2.0, 2.0], [t, t], [0, 0], color=LIGHT, lw=0.5, zorder=0)
+    eps = 0.5
+    edges = np.arange(-2.0, 2.0 - 1e-9, eps)
+    X0, Y0 = np.meshgrid(edges, edges, indexing="ij")
+    X0, Y0 = X0.ravel(), Y0.ravel()
+    H = f(X0 + eps / 2, Y0 + eps / 2)
+    col_x = 0.0                                  # the highlighted column
+    from matplotlib.colors import to_rgb
+    tint = lambda c, w: tuple(w * np.array(to_rgb(c)) + (1 - w))
+    elev, azim = 26, -52
+    # paint the boxes back to front: depth along the viewing direction
+    view = np.array([np.cos(np.deg2rad(elev)) * np.cos(np.deg2rad(azim)),
+                     np.cos(np.deg2rad(elev)) * np.sin(np.deg2rad(azim))])
+    depth = (X0 + eps / 2) * view[0] + (Y0 + eps / 2) * view[1]
+    ax.computed_zorder = False
+    for rank, k in enumerate(np.argsort(depth)):
+        hi = np.isclose(X0[k], col_x)
+        ax.bar3d(X0[k], Y0[k], 0.0, eps, eps, H[k],
+                 color=tint(ORANGE, 0.85) if hi else tint(BLUE, 0.45),
+                 shade=True, edgecolor="white", linewidth=0.5, zorder=rank)
 
-    # one row of boxes runs through the peak (cells centred on y=0), each as
-    # tall as the surface at its cell centre, so the box tops trace the bell's
-    # profile.  The translucent surface is split at the row's front face: the
-    # far part is drawn behind the boxes, the near part over them, so the boxes
-    # read as standing *under* the surface rather than floating in front of it.
-    gx = np.linspace(-2.0, 2.0, 90)
-    y_cut = -eps / 2
-    for ys, z in [(np.linspace(y_cut, 2.0, 50), 2), (np.linspace(-2.0, y_cut, 40), 6)]:
-        X, Y = np.meshgrid(gx, ys)
-        ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.30,
-                        linewidth=0, antialiased=True, zorder=z)
-    for cx in np.arange(-1.0, 1.0 - 1e-9, eps):
-        h = float(f(cx + eps / 2, 0.0))
-        ax.bar3d(cx, y_cut, 0.0, eps, eps, h, color=ORANGE, alpha=0.95,
-                 shade=True, edgecolor="white", linewidth=0.5, zorder=5)
-
-    ax.text(-0.2, 0.0, 1.18, r"$z=e^{-x^2-y^2}$", fontsize=15, ha="center")
+    ax.text(-1.0, -0.4, 1.12, r"$z=e^{-x^2-y^2}$", fontsize=15, ha="center",
+            color=INK)
     ax.set_xlabel("$x$", fontsize=15, labelpad=-6)
     ax.set_ylabel("$y$", fontsize=15, labelpad=-6)
     ax.set_zlabel("$z$", fontsize=15, labelpad=-6)
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-    ax.set_zlim(0, 1.05)
-    ax.view_init(elev=26, azim=-52)
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        axis.line.set_color("black")
+    ax.set_xlim(-2, 2); ax.set_ylim(-2, 2); ax.set_zlim(0, 1.05)
+    ax.view_init(elev=elev, azim=azim)
     fl.save(fig, "mdl-cal-bell-surface")
 
 
 def fig_sum_order():
-    """The discretization behind Fubini, on one grid.  (1) Sum the cells *within*
-    each column (vertical sweep); this collapses every column to a single total,
-    drawn as the orange strip of cells along the grid's own bottom edge -- same
-    width, aligned to the columns, part of the same hatch.  (2) Add those column
-    totals left to right (horizontal sweep along the orange strip).  Reordering a
-    finite sum changes nothing."""
+    """The discretization behind Fubini, on one grid with corner (a, c), index
+    i along x and j along y.  (1) Sum the cells of each column (fixed i, over
+    j): every column collapses to one total, drawn as the strip of cells below
+    the grid.  (2) Add those column totals left to right.  Reordering a finite
+    sum changes nothing."""
     nx, ny = 6, 4
-    fig, ax = plt.subplots(figsize=(5.8, 4.4))
+    fig, ax = plt.subplots(figsize=(6.0, 4.9))
 
-    # the grid of epsilon-by-epsilon cells (the region being summed)
     for i in range(nx):
         for j in range(ny):
             ax.add_patch(Rectangle((i, j), 1, 1, facecolor=LIGHT, alpha=0.30,
                                    edgecolor=GRAY, lw=0.8, zorder=1))
 
-    # (1) sum WITHIN one column: highlight it blue, sweep up through it
+    # coordinate axes along the grid's bottom and left edges
+    fl.arrow(ax, (-0.35, -0.35), (nx + 0.45, -0.35), color="black", lw=1.0,
+             mut=11)
+    fl.arrow(ax, (-0.35, -0.35), (-0.35, ny + 0.40), color="black", lw=1.0,
+             mut=11)
+    ax.text(nx + 0.55, -0.35, "$x$, index $i$", ha="left", va="center",
+            color=INK, fontsize=FS)
+    ax.text(-0.35, ny + 0.50, "$y$, index $j$", ha="center", va="bottom",
+            color=INK, fontsize=FS)
+    ax.text(-0.45, 0.0, "$(a,c)$", ha="right", va="center", color=INK,
+            fontsize=FS)
+    ax.plot([0], [0], "o", color="black", ms=3.5, zorder=4)
+
+    # (1) sum WITHIN one column (fixed i, over j)
     col = 2
     for j in range(ny):
         ax.add_patch(Rectangle((col, j), 1, 1, facecolor=BLUE, alpha=0.32,
                                edgecolor=BLUE, lw=1.3, zorder=2))
-    # sweep DOWN through the column into its total in the strip below
-    strip_y = -1.25
+    strip_y = -1.75
     fl.arrow(ax, (col + 0.5, ny - 0.18), (col + 0.5, strip_y + 1.0), color=BLUE,
              lw=2.2, mut=15)
-    ax.text(col + 0.5, ny + 0.28, "(1) sum each column", ha="center",
-            va="bottom", color=BLUE, fontsize=FS)
+    ax.text(col + 0.5, ny + 0.12, "(1) sum each column", ha="center",
+            va="bottom", color=INK, fontsize=FS)
 
-    # the column totals: an orange strip of cells along the grid's bottom edge,
-    # SAME width and aligned to the columns (one cell = one column's total), so
-    # it is part of the same grid rather than floating above it.
+    # the column totals, one cell per column, aligned below the grid
     for i in range(nx):
-        fc = ORANGE if i != col else BLUE   # the highlighted column's total
+        fc = ORANGE if i != col else BLUE
         ax.add_patch(Rectangle((i, strip_y), 1, 1, facecolor=fc, alpha=0.30,
                                edgecolor=ORANGE, lw=1.1, zorder=2))
 
-    # (2) add the column totals together: horizontal sweep along the orange strip
+    # (2) add the column totals together
     fl.arrow(ax, (0.18, strip_y + 0.5), (nx - 0.18, strip_y + 0.5),
              color=ORANGE, lw=2.2, mut=15)
-    ax.text(nx / 2, strip_y - 0.30, "(2) add the column totals", ha="center",
-            va="top", color=ORANGE, fontsize=FS)
+    ax.text(nx / 2, strip_y - 0.15, "(2) add the column totals", ha="center",
+            va="top", color=INK, fontsize=FS)
 
-    # epsilon side labels on the top-RIGHT corner cell, clear of the sweeps and
-    # of the "(1)" label above the highlighted column
+    # epsilon side labels on the top-right corner cell
     ax.annotate("", xy=(nx, ny + 0.12), xytext=(nx - 1, ny + 0.12),
                 arrowprops=dict(arrowstyle="<->", color=INK, lw=0.9,
                                 shrinkA=0, shrinkB=0))
@@ -611,8 +567,8 @@ def fig_sum_order():
     ax.text(nx + 0.30, ny - 0.5, r"$\epsilon$", ha="left", va="center",
             color=INK, fontsize=FS)
 
-    ax.set_xlim(-0.3, nx + 0.9)
-    ax.set_ylim(strip_y - 0.95, ny + 0.95)
+    ax.set_xlim(-1.6, nx + 2.4)
+    ax.set_ylim(strip_y - 0.85, ny + 1.0)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "mdl-cal-sum-order")
@@ -645,9 +601,9 @@ def fig_cov_jacobian():
     axa.text(eps / 2 + 0.08, (yb + yo) / 2, r"$u$", ha="left", va="center",
              color=INK, fontsize=15)
     axa.text(eps / 2, yb + 0.17, r"$\epsilon$", ha="center", va="bottom",
-             color=BLUE, fontsize=FS)
+             color=INK, fontsize=FS)
     axa.text(eps * du / 2, yo - 0.17, r"$\epsilon\,u'(x)$", ha="center",
-             va="top", color=ORANGE, fontsize=FS)
+             va="top", color=INK, fontsize=FS)
     axa.set_xlim(-0.15, 1.75); axa.set_ylim(-0.05, 1.85)
     axa.set_aspect("equal")
     axa.axis("off")
@@ -670,13 +626,13 @@ def fig_cov_jacobian():
     fl.arrow(axb, o, o + A @ np.array([0, 1]), color=ORANGE, lw=1.8)
     # the map phi between the two shapes
     fl.arrow(axb, (1.12, 0.62), (1.88, 0.62), color=GRAY, lw=1.5, mut=14)
-    axb.text(1.50, 0.70, r"$\phi$", ha="center", va="bottom", color=INK,
-             fontsize=15)
-    axb.text(0.5, 0.5, "area $1$", ha="center", va="center", color=BLUE,
+    axb.text(1.50, 0.70, r"$\boldsymbol{\phi}$", ha="center", va="bottom",
+             color=INK, fontsize=15)
+    axb.text(0.5, 0.5, "area $1$", ha="center", va="center", color=INK,
              fontsize=FS)
     cx, cy = img.mean(axis=1)
-    axb.text(cx, cy, "area\n" + rf"$|\det D\phi|={abs(det):.2g}$",
-             ha="center", va="center", color=ORANGE, fontsize=FS,
+    axb.text(cx, cy, "area\n" + rf"$|\det\mathbf{{J}}_{{\boldsymbol{{\phi}}}}|={abs(det):.2g}$",
+             ha="center", va="center", color=INK, fontsize=FS,
              multialignment="center")
     axb.set_xlim(-0.15, 4.05); axb.set_ylim(-0.15, 1.85)
     axb.set_aspect("equal")
@@ -724,30 +680,30 @@ def fig_chain_net1():
 def fig_chain_net2():
     """A more subtle chain-rule graph with three paths from y to f.  Built to
     match the dependencies used in the prose:
-        f <- a, b, u ;  a <- u ;  u <- y ;  b <- v ;  v <- y
-    so that df/dy = df/da da/du du/dy + df/du du/dy + df/db db/dv dv/dy."""
+        f <- r, s, p ;  r <- p ;  p <- y ;  s <- q ;  q <- y
+    so that df/dy = df/dr dr/dp dp/dy + df/dp dp/dy + df/ds ds/dq dq/dy."""
     fig, ax = plt.subplots(figsize=(5.6, 2.8))
 
     Y = {"y": (0, 1.0)}
-    MID = {"u": (1.5, 1.7), "v": (1.5, 0.3)}
-    INNER = {"a": (3.0, 1.7), "b": (3.0, 0.3)}
+    MID = {"p": (1.5, 1.7), "q": (1.5, 0.3)}
+    INNER = {"r": (3.0, 1.7), "s": (3.0, 0.3)}
     F = {"f": (4.5, 1.0)}
 
     edges = [
-        ("y", "u"), ("y", "v"),       # y feeds u and v
-        ("u", "a"),                    # u feeds a
-        ("v", "b"),                    # v feeds b
+        ("y", "p"), ("y", "q"),       # y feeds p and q
+        ("p", "r"),                    # p feeds r
+        ("q", "s"),                    # q feeds s
     ]
     pos = {**Y, **MID, **INNER, **F}
     for s, t in edges:
         edge(ax, pos[s], pos[t])
-    # f depends directly on a, b, and (the shortcut) u  -> three paths from y
-    edge(ax, pos["a"], pos["f"])
-    edge(ax, pos["b"], pos["f"])
+    # f depends directly on r, s, and (the skip edge) p  -> three paths from y
+    edge(ax, pos["r"], pos["f"])
+    edge(ax, pos["s"], pos["f"])
     r0 = 0.30
-    tail = np.array(pos["u"]) + r0 * np.array([np.cos(-0.55), np.sin(-0.55)])
+    tail = np.array(pos["p"]) + r0 * np.array([np.cos(-0.55), np.sin(-0.55)])
     head = np.array(pos["f"]) + r0 * np.array([-1.0, 0.0])
-    ax.annotate("", xy=head, xytext=tail,          # the extra direct u -> f path
+    ax.annotate("", xy=head, xytext=tail,          # the skip edge p -> f
                 arrowprops=dict(arrowstyle="-|>", color=GRAY, lw=1.3,
                                 shrinkA=0, shrinkB=0, mutation_scale=11,
                                 connectionstyle="arc3,rad=0.12"))
@@ -775,14 +731,14 @@ def fig_gradient_field():
     fig, ax = plt.subplots(figsize=(5.2, 4.4))
     ax.contour(X, Y, f(X, Y), levels=np.linspace(0.2, 4.0, 9),
                colors=GRAY, linewidths=1.0, zorder=2)
-    for px, py in [(-1.9, 1.1), (1.6, -1.4), (0.7, 1.9),
+    for px, py in [(-1.6, 1.15), (1.6, -1.4), (0.7, 1.9),
                    (-1.1, -1.0), (1.9, 0.6), (-0.5, -2.0)]:
         g = grad(px, py)
         fl.arrow(ax, (px, py), (px + 0.32 * g[0], py + 0.32 * g[1]),
                  color=ORANGE, lw=2.0, mut=12)
     ax.plot([0], [0], "o", color=BLUE, ms=7, zorder=4)     # the minimum
     ax.text(0.12, -0.32, "min", color=BLUE, fontsize=FS)
-    ax.text(-2.22, 1.36, r"$\nabla L$", color=ORANGE, fontsize=15, ha="center",
+    ax.text(-1.95, 1.42, r"$\nabla \ell$", color=ORANGE, fontsize=15, ha="center",
             va="bottom", bbox=dict(facecolor="white", edgecolor="none", pad=1.0))
     ax.set_aspect("equal")
     ax.set_xlim(-2.6, 2.6); ax.set_ylim(-2.6, 2.6)
@@ -837,9 +793,10 @@ def fig_taylor_quadratic():
 
 def fig_tangent_plane():
     """Tangent plane and gradient geometry. The surface $z=f(x,y)$ (blue) with its
-    tangent plane at a point (orange); on the base plane, the level curves of $f$
-    (gray) and the gradient (orange arrow) crossing them at a right angle -- the
-    graph-space companion to ``gradient is normal to the level set''."""
+    tangent plane at a point (orange); the augmented normal $[\nabla f,-1]$ of the
+    plane drawn from the point; on the base plane, the level curves of $f$ (gray,
+    the one through the point in INK) and $\nabla f$ (orange) crossing it at a
+    right angle -- dropping the height coordinate of the normal leaves $\nabla f$."""
     f = lambda X, Y: 0.35 * X ** 2 + 0.6 * Y ** 2
     fx, fy = lambda X, Y: 0.70 * X, lambda X, Y: 1.20 * Y
     x0, y0 = 1.35, -0.5      # gradient leans toward +x so its arrow reads long
@@ -852,35 +809,49 @@ def fig_tangent_plane():
     zbase = -0.2
 
     # clean level-set ellipses on the base plane (0.35x^2+0.6y^2=c => ellipse),
-    # drawn as full parametric curves so they never break into dashes
-    # the level curve through the base point (c = z0) is drawn in INK: it is
-    # the one the gradient arrow is normal to
+    # drawn as full parametric curves so they never break into dashes; the
+    # level curve through the base point (c = z0) is drawn in INK: it is the
+    # one the gradient arrow is normal to
     th = np.linspace(0, 2 * np.pi, 200)
-    for c in [0.25, z0, 1.3, 2.1]:
+    for c in [0.2, z0, 1.1]:  # all inside the drawn x, y range
         ax.plot(np.sqrt(c / 0.35) * np.cos(th), np.sqrt(c / 0.6) * np.sin(th),
                 zbase, color=INK if c == z0 else GRAY,
                 lw=1.5 if c == z0 else 0.9, zorder=1)
 
     gx, gy = np.linspace(-1.8, 1.8, 60), np.linspace(-1.8, 1.8, 60)
     X, Y = np.meshgrid(gx, gy)
-    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.35, linewidth=0, zorder=2)
-    px, py = np.linspace(x0 - 0.7, x0 + 0.7, 20), np.linspace(y0 - 0.7, y0 + 0.7, 20)
+    ax.plot_surface(X, Y, f(X, Y), color=BLUE, alpha=0.30, linewidth=0, zorder=2)
+    # a tangent patch of half-width 1.0 around the point, opaque enough to read
+    # as a plane
+    px, py = np.linspace(x0 - 1.0, x0 + 1.0, 20), np.linspace(y0 - 1.0, y0 + 1.0, 20)
     PX, PY = np.meshgrid(px, py)
-    ax.plot_surface(PX, PY, plane(PX, PY), color=ORANGE, alpha=0.5, linewidth=0,
-                    zorder=3)
-    ax.scatter([x0], [y0], [z0], color="black", s=34, zorder=6,
+    ax.plot_surface(PX, PY, plane(PX, PY), color=ORANGE, alpha=0.65,
+                    linewidth=0, zorder=3)
+    ax.scatter([x0], [y0], [z0], color="black", s=34, zorder=7,
                depthshade=False)
+    # the upward normal -[grad f, -1] = [-grad f, 1] of the plane, from the
+    # point (the downward one projects onto the base-plane gradient arrow and
+    # would hide it); the box aspect below is set to the data ranges so the
+    # normal reads as perpendicular to the plane
+    n = np.array([-gx0, -gy0, 1.0]); n = n / np.linalg.norm(n) * 1.1
+    ax.quiver(x0, y0, z0, n[0], n[1], n[2], color=INK, lw=2.2,
+              arrow_length_ratio=0.18, zorder=6)
+    ax.text(x0 + n[0] + 0.05, y0 + n[1], z0 + n[2] + 0.08,
+            r"$[-\nabla f,\,1]$", color=INK, fontsize=14, ha="left",
+            va="bottom", zorder=7)
     # drop from the point to its shadow on the base plane, where the arrow starts
     ax.plot([x0, x0], [y0, y0], [z0, zbase], ":", color=INK, lw=1.2, zorder=6)
 
     # the gradient on the base plane, normal to the level set, pointing uphill;
     # rooted under the base point and long enough to read as a vector
-    g = np.array([gx0, gy0]); g = g / np.linalg.norm(g) * 1.25
+    g = np.array([gx0, gy0]); g = g / np.linalg.norm(g) * 1.0
     ax.quiver(x0, y0, zbase + 0.01, g[0], g[1], 0.0, color=ORANGE, lw=2.6,
-              arrow_length_ratio=0.16, zorder=5)
+              arrow_length_ratio=0.18, zorder=5)
     # label placed beyond the arrowhead, nudged off the shaft so they don't clash
     ax.text(x0 + g[0] - 0.30, y0 + g[1] - 0.34, zbase, r"$\nabla f$",
-            color=ORANGE, fontsize=13, ha="left", va="top", zorder=6)
+            color=ORANGE, fontsize=14, ha="left", va="top", zorder=6)
+    ax.set_xlim(-1.8, 1.8); ax.set_ylim(-1.8, 1.8); ax.set_zlim(zbase, 3.1)
+    ax.set_box_aspect((3.6, 3.6, 3.3))
     ax.set_xlabel("$x$", fontsize=15, labelpad=-6)
     ax.set_ylabel("$y$", fontsize=15, labelpad=-6)
     ax.set_zlabel("$z$", fontsize=15, labelpad=-6)
@@ -894,66 +865,87 @@ def fig_tangent_plane():
 # =========================================================================== #
 
 def fig_jacobian_ellipse():
-    """Up close, a differentiable map is a linear map.  The nonlinear
-    $\\mathbf f(x,y)=(x+\\sin y,\\ y+x^2/2)$ carries a small circle and grid
-    around $\\mathbf x_0=(0.5,0.5)$ (left) into the output plane (right), where
-    the true image (blue) is nearly indistinguishable from the ellipse
+    """Up close, a differentiable map is its Jacobian.  The running map
+    $\\mathbf f(x,y)=(x+\\sin y,\\ y+x^2/2)$ carries two circles of radius
+    $0.35$ and $0.175$ around $\\mathbf x_0=(0.5,0.5)$ (left) into the output
+    plane (right), where the true images (blue) sit on the ellipses
     $\\mathbf f(\\mathbf x_0)+\\mathbf J(\\mathbf x_0)\\boldsymbol\\delta$
-    predicted by the Jacobian (orange dashed); the small mismatch is the
-    $o(\\|\\boldsymbol\\delta\\|)$ remainder."""
+    (orange, dashed).  Halving the radius cuts the largest gap between image
+    and ellipse from 0.061 to 0.015: the remainder is $O(r^2)$."""
     F = lambda x, y: (x + np.sin(y), y + 0.5 * x ** 2)
     x0, y0 = 0.5, 0.5
     J = np.array([[1.0, np.cos(y0)], [x0, 1.0]])    # [[1, 0.8776], [0.5, 1]]
     fx0 = np.array(F(x0, y0))                       # ~ (0.979, 0.625)
-    r, hw = 0.35, 0.45
-    th = np.linspace(0.0, 2 * np.pi, 200)
-    circ = np.stack([x0 + r * np.cos(th), y0 + r * np.sin(th)])
+    radii, widths = (0.35, 0.175), (2.2, 1.4)
+    hw = 0.45                                       # half-width of the grid
+    th = np.linspace(0.0, 2 * np.pi, 400)
     lines = np.linspace(-hw, hw, 7)
     ts = np.linspace(-hw, hw, 60)
 
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.8))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.2))
 
-    # --- (a) input plane: light grid + circle of perturbations around x0 ---
+    # --- (a) input plane: light grid + two circles of perturbations ---
     for c in lines:
         axa.plot(x0 + ts, np.full_like(ts, y0 + c), color=LIGHT, lw=0.8,
                  zorder=1)
         axa.plot(np.full_like(ts, x0 + c), y0 + ts, color=LIGHT, lw=0.8,
                  zorder=1)
-    axa.plot(circ[0], circ[1], color=BLUE, lw=2.2, zorder=3)
+    for r, lw in zip(radii, widths):
+        axa.plot(x0 + r * np.cos(th), y0 + r * np.sin(th), color=BLUE, lw=lw,
+                 zorder=3)
     axa.plot([x0], [y0], "o", color="black", ms=5, zorder=4)
-    axa.text(x0 + 0.05, y0 + 0.05, r"$\mathbf{x}_0$", fontsize=FS, zorder=4)
-    axa.set_xlim(x0 - hw - 0.1, x0 + hw + 0.1)
-    axa.set_ylim(y0 - hw - 0.1, y0 + hw + 0.1)
+    axa.text(x0 + 0.035, y0 - 0.035, r"$\mathbf{x}_0$", fontsize=FS,
+             ha="left", va="top", zorder=4)
+    axa.set_xlim(x0 - hw - 0.04, x0 + hw + 0.04)
+    axa.set_ylim(y0 - hw - 0.04, y0 + hw + 0.04)
     axa.set_aspect("equal")
     axa.axis("off")
 
-    # --- (b) output plane: warped grid, true image vs. Jacobian ellipse ---
+    # --- (b) output plane: warped grid, true images vs. Jacobian ellipses ---
+    gxs, gys = [], []
     for c in lines:
-        gx, gy = F(x0 + ts, y0 + c)
-        axb.plot(gx, gy, color=LIGHT, lw=0.8, zorder=1)
-        gx, gy = F(np.full_like(ts, x0 + c), y0 + ts)
-        axb.plot(gx, gy, color=LIGHT, lw=0.8, zorder=1)
-    img = np.stack(F(circ[0], circ[1]))             # the true image f(circle)
-    ell = fx0[:, None] + J @ (circ - [[x0], [y0]])  # the Jacobian's prediction
-    axb.plot(img[0], img[1], color=BLUE, lw=2.2, zorder=3)
-    axb.plot(ell[0], ell[1], "--", color=ORANGE, lw=2.0, zorder=4)
+        for gx, gy in (F(x0 + ts, y0 + c), F(np.full_like(ts, x0 + c), y0 + ts)):
+            axb.plot(gx, gy, color=LIGHT, lw=0.8, zorder=1)
+            gxs.append(gx); gys.append(gy)
+    for r, lw in zip(radii, widths):
+        circ = np.stack([x0 + r * np.cos(th), y0 + r * np.sin(th)])
+        img = np.stack(F(circ[0], circ[1]))          # the true image f(circle)
+        ell = fx0[:, None] + J @ (circ - [[x0], [y0]])  # the Jacobian's model
+        axb.plot(img[0], img[1], color=BLUE, lw=lw, zorder=3,
+                 label=r"$\mathbf{f}(\mathrm{circle})$" if r == radii[0] else None)
+        axb.plot(ell[0], ell[1], "--", color=ORANGE, lw=lw - 0.2, zorder=4,
+                 label=(r"$\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$"
+                        if r == radii[0] else None))
     axb.plot([fx0[0]], [fx0[1]], "o", color="black", ms=5, zorder=5)
-    axb.text(1.52, 1.02, r"$\mathbf{f}$", color=BLUE, fontsize=FS, zorder=5)
-    axb.text(0.98, 0.02, r"$\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$",
-             color=ORANGE, fontsize=FS, ha="center", zorder=5)
+    axb.annotate(r"$\mathbf{f}(\mathbf{x}_0)$", xy=(fx0[0], fx0[1]),
+                 xytext=(fx0[0] + 0.42, fx0[1] - 0.42), fontsize=FS, color=INK,
+                 ha="left", va="center", zorder=6,
+                 arrowprops=dict(arrowstyle="-", color=INK, lw=0.8,
+                                 linestyle=":", shrinkA=2, shrinkB=4))
+    gx, gy = np.concatenate(gxs), np.concatenate(gys)
+    cx, cy = 0.5 * (gx.min() + gx.max()), 0.5 * (gy.min() + gy.max())
+    half = 0.5 * max(gx.max() - gx.min(), gy.max() - gy.min()) + 0.03
+    axb.set_xlim(cx - half, cx + half)
+    axb.set_ylim(cy - half, cy + half)
+    leg = axb.legend(loc="upper left", fontsize=FS, frameon=False,
+                     handlelength=1.8, borderaxespad=0.0)
+    for t in leg.get_texts():
+        t.set_color(INK)
     axb.set_aspect("equal")
     axb.axis("off")
 
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, wspace=0.08)
     fl.save(fig, "mdl-cal-jacobian-ellipse")
 
 
 def fig_fwd_vs_rev():
-    """Forward- vs reverse-mode AD on a chain x -> a -> b -> L.  Both evaluate
-    left-to-right (gray); forward propagates a tangent (JVP) the same direction,
-    reverse records a tape then propagates an adjoint (VJP) right-to-left to get
-    the whole scalar-loss gradient in one pass."""
-    chain, xpos = ["x", "a", "b", "L"], [0.0, 1.5, 3.0, 4.5]
-    fig, (axt, axb) = plt.subplots(2, 1, figsize=(6.6, 3.5))
+    """Forward- vs reverse-mode AD on a chain x -> a -> b -> ell.  Both evaluate
+    left-to-right (gray); forward mode carries a tangent (JVP) in the same
+    direction, one input direction per sweep; reverse mode records the chain,
+    then carries an adjoint (VJP) right-to-left, one output direction per
+    sweep, which for a scalar loss is the whole gradient."""
+    chain, xpos = ["x", "a", "b", r"\ell"], [0.0, 1.5, 3.0, 4.5]
+    fig, (axt, axb) = plt.subplots(2, 1, figsize=(7.4, 3.7))
 
     def draw(ax, direction, dual_color, dual_label):
         centers = [(xp, 0.0) for xp in xpos]
@@ -969,32 +961,32 @@ def fig_fwd_vs_rev():
             ax.annotate("", xy=(b[0], b[1] + 0.40), xytext=(a[0], a[1] + 0.40),
                         arrowprops=dict(arrowstyle="->", color=dual_color,
                                         lw=1.7, connectionstyle=f"arc3,rad={rad}"))
-        ax.text(2.25, 0.82, dual_label, ha="center", color=dual_color, fontsize=FS)
-        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.55, 1.02)
+        ax.text(2.25, 0.84, dual_label, ha="center", color=INK, fontsize=FS)
+        ax.set_xlim(-0.9, 5.4); ax.set_ylim(-0.55, 1.08)
         ax.set_aspect("equal"); ax.axis("off")
 
     draw(axt, "fwd", BLUE,
-         r"forward: tangent $\dot a = J\dot x$ (JVP), one input at a time")
+         r"forward (JVP): tangents $\dot x\to\dot a\to\dot b\to\dot\ell$ "
+         "travel with the values")
     draw(axb, "rev", ORANGE,
-         r"reverse: adjoint $\bar a = J^{\!\top}\!\bar L$ (VJP), one output at a time")
+         r"reverse (VJP): adjoints $\bar\ell=1\to\bar b\to\bar a\to\bar x$ "
+         "travel back afterwards")
     fig.subplots_adjust(hspace=0.05)
     fl.save(fig, "mdl-cal-fwd-vs-rev")
 
 
 def fig_tape_dag():
-    """The computational graph (tape) of $y=r\\cdot r$ with $r=uv+u$.  It is a
-    diamond, not a chain: $u$ fans out to the product $t=uv$ and the sum
-    $r=t+u$, and $r$ feeds *both* arguments of $y=r\\cdot r$ (the doubled
-    edge).  Because a value can feed several consumers, the backward pass
-    accumulates each adjoint over outgoing edges with ``+=``; here $\\bar r$
-    receives the contribution $\\bar y\\,r$ twice."""
-    fig, ax = plt.subplots(figsize=(7.4, 3.2))
+    """The tape of $y=r\\cdot r$ with $r=uv+u$ at $u=2$, $v=-3$.  Each box
+    shows its forward value; the orange label beside it is its adjoint
+    $\\bar v=\\partial y/\\partial v$ from the backward sweep.  The graph is a
+    diamond, not a chain: $u$ fans out to $t=uv$ and to $r=t+u$, and $r$ feeds
+    both arguments of $y=r\\cdot r$ (the doubled edge), so the adjoints of $r$
+    and $u$ arrive as sums of two contributions."""
+    fig, ax = plt.subplots(figsize=(9.4, 3.5))
     hh = 0.3                                    # box half-height
-    # t sits at the vertical midpoint between u and v; r and y sit level with u,
-    # so the two "downstream" boxes read as a clean top row over the t/v pair.
-    pos = {"u": (0.0, 2.0), "v": (0.0, 0.4), "t": (2.3, 1.2),
-           "r": (4.4, 2.0), "y": (6.75, 2.0)}
-    hw = {"u": 0.42, "v": 0.42, "t": 0.72, "r": 0.8, "y": 0.8}
+    pos = {"u": (0.0, 2.0), "v": (0.0, 0.4), "t": (2.9, 1.2),
+           "r": (5.6, 2.0), "y": (8.6, 2.0)}
+    hw = {"u": 0.62, "v": 0.7, "t": 1.05, "r": 1.2, "y": 1.2}
 
     def box(k, label, color=LIGHT, ec="black"):
         cx, cy = pos[k]; w = hw[k]
@@ -1015,26 +1007,33 @@ def fig_tape_dag():
                                     shrinkA=0, shrinkB=0, mutation_scale=12,
                                     connectionstyle=f"arc3,rad={rad}"))
 
-    # Each edge emerges from the source's NE/SE/E corner and enters the target's
-    # NW/SW corner, so no arrow cuts through a box.
+    def adjoint(k, text, side):                 # orange adjoint above/below a box
+        cx, cy = pos[k]
+        dy = hh + 0.24 if side == "above" else -(hh + 0.24)
+        ax.text(cx, cy + dy, text, ha="center", va="center", fontsize=FS,
+                color=ORANGE, zorder=4)
+
+    # Each edge leaves a corner of its source and enters a corner of its
+    # target, so no arrow cuts through a box.
     link(port("u", "SE"), port("t", "NW"))      # u -> t
     link(port("v", "NE"), port("t", "SW"))      # v -> t
     link(port("t", "NE"), port("r", "SW"))      # t -> r
-    link(port("u", "E"),  port("r", "W"))       # u -> r  (level with u, over the t box)
-    # r feeds BOTH arguments of y = r*r: two parallel edges a quarter box-height
-    # above and below the centre line, leaving and entering the flat sides
+    link(port("u", "E"),  port("r", "W"))       # u -> r, above the t box
+    # r feeds BOTH arguments of y = r*r: two parallel edges
     for dy in (+0.5 * hh, -0.5 * hh):
         (px, py), (qx, qy) = port("r", "E"), port("y", "W")
         link((px, py + dy), (qx, qy + dy))
 
-    box("u", "$u$"); box("v", "$v$")
-    # light tint fills (base only on the edge) keep the labels readable
-    box("t", r"$t=uv$", color=fl.T.BLUE.tint, ec=BLUE)
-    box("r", r"$r=t+u$", color=fl.T.BLUE.tint, ec=BLUE)
-    box("y", r"$y=r\cdot r$", color=fl.T.ORANGE.tint, ec=ORANGE)
-    ax.text(5.6, 1.12, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
-            color=ORANGE, fontsize=FS, ha="center")
-    ax.set_xlim(-0.6, 7.7); ax.set_ylim(-0.05, 2.45)
+    box("u", "$u=2$"); box("v", "$v=-3$")
+    box("t", r"$t=uv=-6$", color=fl.T.BLUE.tint, ec=BLUE)
+    box("r", r"$r=t+u=-4$", color=fl.T.BLUE.tint, ec=BLUE)
+    box("y", r"$y=r\cdot r=16$", color=fl.T.ORANGE.tint, ec=ORANGE)
+    adjoint("y", r"$\bar y=1$", "above")
+    adjoint("r", r"$\bar r=\bar y\,r+\bar y\,r=-8$", "above")
+    adjoint("u", r"$\bar u=\bar r+\bar t\,v=16$", "above")
+    adjoint("t", r"$\bar t=\bar r=-8$", "below")
+    adjoint("v", r"$\bar v=\bar t\,u=-16$", "below")
+    ax.set_xlim(-0.9, 9.9); ax.set_ylim(-0.35, 2.75)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-tape-dag")
 
@@ -1071,24 +1070,27 @@ def fig_best_parabola():
 
 
 def fig_lagrange_tangency():
-    """Lagrange multipliers as tangency.  Contours of $f(x,y)=x^2+y^2$ (gray
-    circles) against the constraint $g(x,y)=xy=1$ (blue hyperbola).  At the
-    constrained optimum $(1,1)$ the level set of $f$ *kisses* the constraint and
-    the two gradients align ($\\nabla f=(2,2)$, $\\nabla g=(1,1)$: parallel).  At
-    a non-optimal feasible point the gradients disagree, so $\\nabla f$ has a
-    component along the constraint and sliding along it still improves $f$.
-    All arrows are the true gradients, normalized to display length."""
+    """Lagrange multipliers as tangency, on the worked example of the section:
+    minimize $f(x,y)=x^2+y^2$ (gray circles) subject to $g(x,y)=xy=1$ (blue
+    hyperbola).  At the constrained optimum $(1,1)$ the circle $x^2+y^2=2$
+    (orange) touches the constraint and the two gradients align,
+    $\nabla f=(2,2)=2\nabla g$ with $\nabla g=(1,1)$.  At a non-optimal feasible
+    point the gradients disagree, so $\nabla f$ has a component along the
+    constraint.  All arrows are the true gradients, normalized to display
+    length."""
     fig, ax = plt.subplots(figsize=(5.6, 5.2))
     th = np.linspace(0, 2 * np.pi, 300)
     # contours of f: circles; the sqrt(2)-circle is the one through the optimum
-    for rad, lw in [(0.8, 1.0), (np.sqrt(2.0), 1.6), (1.9, 1.0), (2.5, 1.0)]:
+    for rad, lw in [(0.8, 1.0), (np.sqrt(2.0), 1.6), (2.1, 1.0), (2.6, 1.0)]:
         col = ORANGE if abs(rad - np.sqrt(2.0)) < 1e-9 else GRAY
         ax.plot(rad * np.cos(th), rad * np.sin(th), color=col,
                 lw=lw, zorder=2, alpha=0.9 if col is ORANGE else 0.8)
+    ax.text(0.08, 1.48, r"$x^2+y^2=2$", color=ORANGE, fontsize=FS,
+            ha="center", va="bottom")
     # the constraint xy = 1 (first-quadrant branch)
     cx = np.linspace(0.34, 3.1, 300)
     ax.plot(cx, 1.0 / cx, color=BLUE, lw=2.4, zorder=3)
-    ax.text(0.62, 2.55, r"$g(x,y)=c$", color=BLUE, fontsize=FS, ha="left")
+    ax.text(0.62, 2.55, r"$xy=1$", color=BLUE, fontsize=FS, ha="left")
 
     def grads(px, py):
         gf = np.array([2 * px, 2 * py])          # true gradient of f
@@ -1105,18 +1107,22 @@ def fig_lagrange_tangency():
                     fontsize=FS, ha="center", va="center")
         ax.plot([px], [py], "o", color="black", ms=5, zorder=6)
 
-    # optimum (1,1): gradients parallel -- one arrow drawn slightly shorter so
-    # both are visible along the same ray
+    # optimum (1,1): gradients parallel -- one arrow drawn shorter so both are
+    # visible along the same ray, each labelled with its true value
     px, py = 1.0, 1.0
     gfu = np.array([1.0, 1.0]) / np.sqrt(2.0)
     fl.arrow(ax, (px, py), (px + 0.95 * gfu[0], py + 0.95 * gfu[1]),
              color=ORANGE, lw=2.2, mut=13)
-    fl.arrow(ax, (px, py), (px + 0.55 * gfu[0], py + 0.55 * gfu[1]),
+    fl.arrow(ax, (px, py), (px + 0.50 * gfu[0], py + 0.50 * gfu[1]),
              color=GREEN, lw=2.2, mut=11)
     ax.plot([px], [py], "o", color="black", ms=5, zorder=6)
-    ax.text(1.99, 1.64, r"$\nabla f\parallel\nabla g$", fontsize=FS,
-            ha="left", color=ORANGE)
-    ax.text(0.95, 0.95, "optimum", fontsize=FS, ha="right", va="top")
+    ax.text(1.74, 1.70, r"$\nabla f=(2,2)$", fontsize=FS, ha="left",
+            va="bottom", color=ORANGE,
+            bbox=dict(facecolor="white", edgecolor="none", pad=1.0))
+    ax.text(1.27, 1.40, r"$\nabla g$", fontsize=FS, ha="right",
+            va="bottom", color=GREEN)
+    ax.text(0.93, 0.93, r"$(1,1)$", fontsize=FS, ha="right", va="top",
+            color=INK, bbox=dict(facecolor="white", edgecolor="none", pad=1.0))
 
     # a non-optimal feasible point: gradients visibly misaligned
     grads(2.2, 1.0 / 2.2)
@@ -1134,7 +1140,7 @@ def fig_jacobian_shapes():
     """The shape of the Jacobian dictates the cheap mode.  Three glyphs: a wide
     $1\\times n$ row (a scalar loss; one VJP pass), a tall $m\\times 1$ column
     (one input; one JVP pass), and a full $m\\times n$ matrix, which costs
-    $\\min(m,n)$ passes either way.  The pass counts under each glyph are the
+    $\\min(m,n)$ passes with the cheaper mode.  The pass counts under each glyph are the
     entire forward-vs-reverse cost model."""
     fig, ax = plt.subplots(figsize=(9.6, 3.4))
     cell = 0.34
@@ -1171,7 +1177,7 @@ def fig_jacobian_shapes():
     ax.text(x2 + 0.5 * n * cell, top + 0.06, r"$m\times n$ (full Jacobian)",
             ha="center", fontsize=FS)
     ax.text(x2 + 0.5 * n * cell, note_y,
-            r"$\min(m,n)$ passes" + "\n(rows by VJP or columns by JVP)",
+            r"$\min(m,n)$ passes" + "\nwith the cheaper mode",
             ha="center", va="top", fontsize=FS, color=INK)
 
     ax.set_xlim(-0.4, 9.6); ax.set_ylim(-0.65, 2.45)
@@ -1181,17 +1187,17 @@ def fig_jacobian_shapes():
 
 def fig_checkpointing():
     """Gradient checkpointing as a timeline.  Top track: plain reverse mode
-    stores every one of the $L$ forward activations until the backward sweep
-    consumes them ($O(L)$ memory).  Bottom track: checkpointing keeps only every
-    $\\sqrt L$-th activation and, when the backward sweep reaches a segment,
-    recomputes that segment forward from its checkpoint ($O(\\sqrt L)$ memory,
-    about one extra forward pass in time)."""
-    L, K = 16, 4                                  # depth and checkpoint spacing
+    stores every one of the $T$ recorded values until the backward sweep
+    consumes them ($T$ memory).  Bottom track: checkpointing keeps every
+    $s$-th value with $s=\\sqrt T$ and, when the backward sweep reaches a
+    segment, recomputes that segment forward from its checkpoint
+    ($T/s+s=2\\sqrt T$ memory, about one extra forward pass in time)."""
+    T, K = 16, 4                                  # tape length and spacing
     cell, gap = 0.5, 0.06
-    fig, ax = plt.subplots(figsize=(9.8, 3.6))
+    fig, ax = plt.subplots(figsize=(9.8, 3.0))
 
     def track(y, kept, label):
-        for i in range(L):
+        for i in range(T):
             filled = kept(i)
             ax.add_patch(Rectangle((i * (cell + gap), y), cell, cell,
                                    facecolor=BLUE if filled else "white",
@@ -1200,41 +1206,40 @@ def fig_checkpointing():
         ax.text(-0.25, y + cell / 2, label, ha="right", va="center",
                 fontsize=FS)
 
-    width = L * (cell + gap) - gap
-    y_top, y_bot = 2.15, 0.75
-    track(y_top, lambda i: True,
-          "store all $L$\nactivations")
-    track(y_bot, lambda i: i % K == 0,
-          "store $\\sqrt{L}$\ncheckpoints")
+    width = T * (cell + gap) - gap
+    y_top, y_bot = 2.05, 0.65
+    track(y_top, lambda i: True, "store all $T$\nvalues")
+    track(y_bot, lambda i: i % K == 0, "store $\\sqrt{T}$\ncheckpoints")
 
-    # forward / backward sweep arrows above the top track
-    fl.arrow(ax, (0.0, y_top + cell + 0.32), (width, y_top + cell + 0.32),
+    # forward pass arrow above the top track
+    fl.arrow(ax, (0.0, y_top + cell + 0.30), (width, y_top + cell + 0.30),
              color=GRAY, lw=1.6, mut=12)
-    ax.text(width / 2, y_top + cell + 0.42, "forward pass (layers $1$ to $L$)",
+    ax.text(width / 2, y_top + cell + 0.40, "forward pass (steps $1$ to $T$)",
             ha="center", va="bottom", fontsize=FS, color=INK)
 
-    # the recomputed segment on the bottom track: backward has reached layer 16,
-    # so the segment after the last checkpoint is recomputed forward
+    # the backward sweep has reached the last segment of the bottom track: it
+    # runs right-to-left just above that track, after the segment is
+    # recomputed forward from its checkpoint (orange, below the track)
     seg0 = 12 * (cell + gap)
-    fl.arrow(ax, (seg0 + cell / 2, y_bot - 0.28),
-             (width - cell / 2 + 0.15, y_bot - 0.28), color=ORANGE, lw=2.0,
+    fl.arrow(ax, (width, y_bot + cell + 0.25), (seg0, y_bot + cell + 0.25),
+             color=GRAY, lw=1.6, mut=12)
+    ax.text(seg0 - 0.15, y_bot + cell + 0.25, "backward sweep",
+            ha="right", va="center", fontsize=FS, color=INK)
+    fl.arrow(ax, (seg0 + cell / 2, y_bot - 0.27),
+             (width - cell / 2 + 0.15, y_bot - 0.27), color=ORANGE, lw=2.0,
              mut=12)
-    ax.text((seg0 + width) / 2, y_bot - 0.40,
-            "recompute segment forward\nfrom its checkpoint, then sweep it",
-            ha="center", va="top", fontsize=FS, color=ORANGE)
-    fl.arrow(ax, (width, y_bot + cell + 0.30), (seg0, y_bot + cell + 0.30),
-             color=GRAY, lw=1.6, ls="-", mut=12)
-    ax.text((seg0 + width) / 2, y_bot + cell + 0.40, "backward sweep",
-            ha="center", va="bottom", fontsize=FS, color=INK)
+    ax.text(seg0 - 0.15, y_bot - 0.27,
+            "recompute the segment from its checkpoint",
+            ha="right", va="center", fontsize=FS, color=INK)
 
     # memory annotations on the right
-    ax.text(width + 0.35, y_top + cell / 2, r"$O(L)$ memory", fontsize=FS,
-            va="center", color=BLUE)
+    ax.text(width + 0.35, y_top + cell / 2, r"$T$ memory", fontsize=FS,
+            va="center", color=INK)
     ax.text(width + 0.35, y_bot + cell / 2,
-            r"$O(\sqrt{L})$ memory," + "\n~1 extra forward pass", fontsize=FS,
-            va="center", color=BLUE)
+            r"$2\sqrt{T}$ memory," + "\none extra forward pass", fontsize=FS,
+            va="center", color=INK)
 
-    ax.set_xlim(-2.1, width + 3.1); ax.set_ylim(-0.75, 3.45)
+    ax.set_xlim(-2.1, width + 3.3); ax.set_ylim(0.05, 3.15)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-checkpointing")
 
@@ -1255,9 +1260,9 @@ def fig_signed_area():
     pos, neg = f(span) >= 0, f(span) < 0
     ax.fill_between(span, 0, f(span), where=pos, color=BLUE, alpha=0.25, lw=0)
     ax.fill_between(span, 0, f(span), where=neg, color=ORANGE, alpha=0.30, lw=0)
-    ax.text(1.15, 0.34, r"$+$", fontsize=17, ha="center", color=BLUE)
-    ax.text(3.45, -0.30, r"$-$", fontsize=17, ha="center", color=ORANGE)
-    ax.text(5.65, 0.22, r"$+$", fontsize=17, ha="center", color=BLUE)
+    ax.text(1.15, 0.34, r"$+$", fontsize=17, ha="center", color=INK)
+    ax.text(3.45, -0.30, r"$-$", fontsize=17, ha="center", color=INK)
+    ax.text(5.65, 0.22, r"$+$", fontsize=17, ha="center", color=INK)
     for x, lab in [(a, "$a$"), (b, "$b$")]:
         ax.plot([x, x], [0, f(x)], ":", color=GRAY, lw=1.0, zorder=2)
         ax.plot([x], [0], "o", color="black", ms=4, zorder=5)
@@ -1269,7 +1274,7 @@ def fig_signed_area():
             fontsize=FS, color=INK)
     fl.arrow(ax, (b, -1.52), (a, -1.52), color=ORANGE, lw=1.6, mut=12)
     ax.text(6.55, -1.52, r"$\int_b^a f = -\int_a^b f$", ha="left",
-            va="center", fontsize=FS, color=ORANGE)
+            va="center", fontsize=FS, color=INK)
     ax.set_xlim(-0.9, 9.2); ax.set_ylim(-1.8, 1.0)
     ax.axis("off")
     fl.save(fig, "mdl-cal-signed-area")
@@ -1282,9 +1287,6 @@ def fig_signed_area():
 FIGURES = [
     # single-variable calculus
     fig_zoom_sequence,
-    fig_pos_second,
-    fig_neg_second,
-    fig_zero_second,
     fig_secant_to_tangent,
     fig_gd_step,
     fig_descent_lemma,

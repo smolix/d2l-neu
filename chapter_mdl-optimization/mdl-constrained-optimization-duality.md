@@ -122,8 +122,8 @@ $\nabla f(\mathbf{x}^\star) = -\nu^\star \nabla g(\mathbf{x}^\star)$ for exactly
 one scalar $\nu^\star$. $\blacksquare$
 
 This is the tangency condition of :numref:`sec_mdl-multivariable_calculus`,
-which wrote it as $\nabla f = \lambda\,\nabla g$; the two conventions agree
-with $\nu = -\lambda$, and the plus sign here is the one the Lagrangian below
+which wrote it as $\nabla f = \mu\,\nabla g$; the two conventions agree
+with $\nu = -\mu$, and the plus sign here is the one the Lagrangian below
 makes natural.
 
 The hypothesis $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ is called a

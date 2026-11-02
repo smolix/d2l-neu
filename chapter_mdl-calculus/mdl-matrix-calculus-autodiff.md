@@ -1,22 +1,40 @@
 # Automatic Differentiation
 :label:`sec_mdl-matrix-calculus-autodiff`
 
-The previous sections extended derivatives from one variable to the gradient of
-a scalar function of many variables. Neural network layers map vectors to
-vectors and often have matrix-valued parameters, so their derivatives are
-represented by *Jacobians*. This section develops matrix calculus and explains
-the computational cost of automatic differentiation. Backpropagation is
-reverse-mode automatic differentiation implemented through vector--Jacobian
-products, while forward mode computes Jacobian--vector products. The dimensions
-of a dense full Jacobian give the first cost comparison. Graph structure, repeated
-products, sparsity, batching, and memory can alter that choice. We also derive
-common matrix identities and implement both modes in compact Python examples.
+A network with $10^8$ parameters computes one number, its loss $\ell$, and
+every training step needs the derivative of $\ell$ with respect to each of the
+$10^8$ parameters. The direct method nudges one parameter, reruns the network,
+and divides the change in $\ell$ by the nudge. That is $10^8$ runs per step. At
+10 ms per run, one gradient takes $10^6$ s, about 12 days, and the size of the
+nudge adds an error of its own. Backpropagation returns all $10^8$ derivatives,
+correct up to rounding, for the cost of about three runs, roughly 30 ms. This
+section explains where the factor of $10^8$ goes.
+
+The explanation is the chain rule read as matrix algebra. Each step of a
+program maps a vector to a vector, so its derivative is a matrix, the Jacobian
+of :numref:`sec_mdl-matrix-calculus`, and the derivative of the whole program
+is the product of these matrices. A product can be multiplied from either end.
+Starting from the input end, one pass carries one input direction, so $10^8$
+inputs need $10^8$ passes. Starting from the loss end, one pass carries one
+output direction, and a loss has a single output.
+
+:numref:`sec_autograd` showed how to call both products in a framework. Here
+we build them ourselves in a few lines of Python, prove that they return
+derivatives, trace the backward pass by hand, and count its cost. Then we
+combine the two products to compute curvature along one direction, to
+differentiate the solution of an equation without differentiating the solver,
+and to trade memory for recomputation. Three small examples recur. The
+chapter's running example is the log-sum-exp
+$\ell(\mathbf x)=\log\sum_j e^{x_j}$ at $\mathbf x=(1,-0.5,2)$, whose gradient
+is the softmax $\mathbf p=(0.254,0.057,0.690)$. The plane map
+$\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at $(0.5,0.5)$ comes from the previous
+section, and the expression $y=(uv+u)^2$ at $(u,v)=(2,-3)$ is small enough to
+trace by hand.
 
 We use the following imports throughout this section.
 
 ```{.python .input #matrix-calculus-autodiff-imports}
 #@tab mxnet
-from d2l import mxnet as d2l
 from mxnet import autograd, npx
 from mxnet import np as mnp
 import numpy as np
@@ -25,127 +43,162 @@ npx.set_np()
 
 ```{.python .input #matrix-calculus-autodiff-imports}
 #@tab pytorch
-from d2l import torch as d2l
 import numpy as np
 import torch
 ```
 
 ```{.python .input #matrix-calculus-autodiff-imports}
 #@tab tensorflow
-from d2l import tensorflow as d2l
 import numpy as np
 import tensorflow as tf
 ```
 
 ```{.python .input #matrix-calculus-autodiff-imports}
 #@tab jax
-from d2l import jax as d2l
 import numpy as np
 import jax
 from jax import numpy as jnp
 ```
 
-## Forward-Mode AD and Dual Numbers
+## Forward Mode and Dual Numbers
 :label:`subsec_mdl-forward-mode`
 
-Automatic differentiation evaluates a function *and* its derivative in one
-sweep, to full numerical precision, by carrying
-derivative information alongside every value. It is neither symbolic differentiation
-(which manipulates formulas and can produce expressions that grow rapidly, as
-the repeated terms in :numref:`sec_mdl-multivariable_calculus` showed) nor numerical differentiation
-(finite differences, which trade off truncation against round-off error). It is
-the chain rule, applied mechanically to the *program* that computes the
-function :cite:`Baydin.Pearlmutter.Radul.ea.2018`. *Forward mode* is the simplest
-incarnation, and its algebra is that of *dual numbers*.
+### Dual Numbers
 
-### Dual Numbers: an Algebra That Carries Derivatives
-
-Define a *dual number* $a+b\,\varepsilon$ by analogy with the complex numbers, but
-with a new symbol $\varepsilon$ satisfying
+We want the value of a program and its derivative from a single run, with no
+step size to choose and no formula for $f'$ written down. The device is a small
+extension of the real numbers. Adjoin a symbol $\varepsilon$ that is not zero
+but whose square is,
 
 $$
-\varepsilon^2 = 0, \qquad \varepsilon\neq0.
+\varepsilon^2 = 0, \qquad \varepsilon\neq0,
 $$
 :eqlabel:`eq_mdl-dual-rule`
 
-Think of $a$ as a value and $b$ as "the derivative riding along". The rule
-$\varepsilon^2=0$ is the *exact* algebraic encoding of "discard second-order terms",
-the very move we used to derive every differentiation rule in
-:numref:`sec_mdl-single_variable_calculus`. Addition is componentwise, and
-multiplication, dropping the $\varepsilon^2$ term, is
+and compute with expressions $a+b\varepsilon$, called *dual numbers*, by the
+usual rules of algebra. Every differentiation rule of
+:numref:`sec_mdl-single_variable_calculus` discards second-order terms, and the
+rule $\varepsilon^2=0$ makes that step part of the arithmetic.
+
+The smallest case shows what this does. Squaring and cubing $3+\varepsilon$
+gives
+
+$$
+(3+\varepsilon)^2=9+6\varepsilon+\varepsilon^2=9+6\varepsilon,
+\qquad
+(3+\varepsilon)^3=(9+6\varepsilon)(3+\varepsilon)=27+27\varepsilon .
+$$
+
+The $\varepsilon$-parts $6$ and $27$ are the derivatives of $x^2$ and $x^3$ at
+$x=3$. No differentiation rule was applied; the derivatives came out of
+multiplication. The same happens for any product. Multiplying out and dropping the
+$\varepsilon^2$ term gives
 
 $$
 (a+b\varepsilon)(c+d\varepsilon) = ac + (ad+bc)\,\varepsilon.
 $$
 :eqlabel:`eq_mdl-dual-mul`
 
-The $\varepsilon$ coefficient $ad+bc$ is the *product rule*.
+If $b$ and $d$ are the derivatives of two quantities whose values are $a$ and
+$c$, then $ad+bc$ is the derivative of their product. Multiplication of dual
+numbers performs the product rule.
 
-**Proposition (dual numbers compute derivatives).** *For $f$ expressed as a
-composition of the primitives below (constants, the identity, sums, products, and
-elementary functions such as $\sin$ and $\exp$), each differentiable at the point
-where it is evaluated, evaluating that composition on the dual number
-$x+1\cdot\varepsilon$ yields*
+A reader may object that no number is nonzero with a zero square. No real
+number is, but a matrix can be. Take
+$\varepsilon=\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$. Then
+$\varepsilon^2=\mathbf 0$, the dual number $a+b\varepsilon$ is the matrix
+$\left(\begin{smallmatrix}a&b\\0&a\end{smallmatrix}\right)$, and the matrix
+product
+$\left(\begin{smallmatrix}a&b\\0&a\end{smallmatrix}\right)\left(\begin{smallmatrix}c&d\\0&c\end{smallmatrix}\right)=\left(\begin{smallmatrix}ac&ad+bc\\0&ac\end{smallmatrix}\right)$
+is :eqref:`eq_mdl-dual-mul`. Dual numbers are as concrete as $2\times2$
+matrices, just as complex numbers are as concrete as the rotations and
+scalings of the plane.
+
+Programs also call functions such as $\sin$, $\exp$, and $\log$. For a function
+$\varphi$ given by its Taylor series around $a$, substituting $a+b\varepsilon$
+into the series removes every term from $(b\varepsilon)^2$ on, which leaves
+
+$$
+\varphi(a+b\varepsilon)=\varphi(a)+\varphi'(a)\,b\,\varepsilon .
+$$
+
+So $e^{a+b\varepsilon}=e^a+e^a b\,\varepsilon$ and
+$\sin(a+b\varepsilon)=\sin a+(\cos a)\,b\,\varepsilon$ are forced by the
+algebra. For a primitive that is only differentiable at $a$, we take the
+display as the definition of its action on dual numbers. In both cases the
+$\varepsilon$-part follows the chain rule: the derivative $b$ of the argument
+is multiplied by $\varphi'(a)$.
+
+**Proposition (dual numbers compute derivatives).** *Let $f$ be an expression
+built from constants, the identity, sums, products, and primitives $\varphi$
+(such as $\sin$, $\exp$, $\log$). Let each primitive be differentiable at the
+argument it receives when $f$ is evaluated at $x$ (for $\log$, a positive
+argument). Then evaluating the same expression on the dual number
+$x+\varepsilon$ gives*
 
 $$
 f(x + \varepsilon) = f(x) + f'(x)\,\varepsilon.
 $$
 :eqlabel:`eq_mdl-dual-eval`
 
-**Proof.** One point of order first: for an elementary primitive such as
-$\sin$ or $\exp$, differentiable at the point where it is evaluated, we *define*
-its action on a dual argument by
+**Proof.** We use induction on the expression. A constant $c$ becomes
+$c+0\varepsilon$ and the identity becomes $x+1\varepsilon$; their
+$\varepsilon$-parts are their derivatives $0$ and $1$. Suppose two
+subexpressions satisfy $g(x+\varepsilon)=g(x)+g'(x)\varepsilon$ and
+$h(x+\varepsilon)=h(x)+h'(x)\varepsilon$. Their sum has $\varepsilon$-part
+$g'+h'=(g+h)'$. By :eqref:`eq_mdl-dual-mul`, their product has
+$\varepsilon$-part $g'h+gh'=(gh)'$. A primitive applied to $g$ has, by the
+rule above with $a=g(x)$ and $b=g'(x)$, the $\varepsilon$-part
+$\varphi'(g(x))\,g'(x)=(\varphi\circ g)'(x)$. Each way of building a larger
+expression from smaller ones preserves the property, so the whole expression
+has it. $\blacksquare$
 
-$$
-f(a + b\varepsilon) := f(a) + f'(a)\,b\,\varepsilon,
-$$
+To differentiate a program, we therefore run it on $x+\varepsilon$ and read the
+$\varepsilon$-part of the output. The input's $\varepsilon$-part, here $1$, is
+called the *seed*. No formula for $f'$ appears and no step size is chosen; the
+only error is the rounding of the arithmetic itself.
 
-which is exactly what the class methods below implement, so
-:eqref:`eq_mdl-dual-eval` for a single primitive holds *by definition*, not by a
-Taylor expansion evaluated on a nilpotent argument. (The definition is not
-arbitrary: for polynomials the algebra alone forces it, since $\varepsilon^2=0$
-kills every higher-order term, and the elementary functions adopt the same rule.) The
-substance of the proposition is that the property survives *assembly*. It holds
-for constants and the identity ($x+\varepsilon$ itself), and it is closed under
-the operations a program is built from. For a sum, $\varepsilon$-coefficients
-add, matching $(f+g)'=f'+g'$. For a product, :eqref:`eq_mdl-dual-mul` gives
-coefficient $f'(x)g(x)+f(x)g'(x)$, the product rule. For a composition,
-substitute $g(x)+g'(x)\varepsilon$ into a primitive $f$: the definition above,
-read with $a = g(x)$ and $b = g'(x)$, returns
-$f(g(x))+f'(g(x))g'(x)\,\varepsilon$: the chain rule, and consistent with the
-sum and product cases. Since $f$ is assembled from these primitives,
-induction on its expression gives :eqref:`eq_mdl-dual-eval`. $\blacksquare$
+### A Forward-Mode Engine
 
-The derivative is obtained in the same pass: run the ordinary computation in the dual-number
-algebra, set the input's $\varepsilon$-part to $1$ (the "seed"), and the output's
-$\varepsilon$-part is the derivative. No formula for $f'$ is ever written down. The
-implementation is a few lines of operator overloading.
+Operator overloading turns the algebra into code. The class below stores the
+value $a$ and the derivative part $b$, which we call the *tangent*. It
+implements :eqref:`eq_mdl-dual-mul` for `*` and gives $\sin$, $\exp$, and
+$\log$ the primitive rule. A class counter `ops`
+records how many primitive operations have run; we use it to measure cost
+later.
 
 ```{.python .input #matrix-calculus-autodiff-dual-numbers}
 class Dual:
     """A dual number a + b*eps with eps^2 = 0; b carries the derivative."""
+    ops = 0                                         # primitive operations run
     def __init__(self, a, b=0.0):
-        self.a, self.b = a, b                       # value, derivative
+        self.a, self.b = a, b                       # value, tangent
     def __add__(self, o):
         o = o if isinstance(o, Dual) else Dual(o)
+        Dual.ops += 1
         return Dual(self.a + o.a, self.b + o.b)
     __radd__ = __add__
     def __mul__(self, o):
         o = o if isinstance(o, Dual) else Dual(o)
+        Dual.ops += 1
         return Dual(self.a * o.a, self.a * o.b + self.b * o.a)   # product rule
     __rmul__ = __mul__
     def sin(self):
+        Dual.ops += 1
         return Dual(np.sin(self.a), np.cos(self.a) * self.b)     # chain rule
     def exp(self):
-        e = np.exp(self.a)
-        return Dual(e, e * self.b)
+        Dual.ops += 1
+        return Dual(np.exp(self.a), np.exp(self.a) * self.b)
+    def log(self):
+        Dual.ops += 1
+        return Dual(np.log(self.a), self.b / self.a)
     def __repr__(self):
-        return f'{self.a:.6f} + {self.b:.6f} eps'
+        return f'{np.round(self.a, 6)} + {np.round(self.b, 6)} eps'
 ```
 
-To differentiate $f(x)=\sin(x^2)+e^x$ at a point, we evaluate it on
-$x+1\cdot\varepsilon$ and read the two parts of the result. The value should match
-$f$ and the $\varepsilon$-part should match $f'(x)=2x\cos(x^2)+e^x$.
+Does one run on $1.3+\varepsilon$ return both $f(1.3)$ and $f'(1.3)$ for
+$f(x)=\sin(x^2)+e^x$? We compare the $\varepsilon$-part with the derivative
+$f'(x)=2x\cos(x^2)+e^x$ computed by hand.
 
 ```{.python .input #matrix-calculus-autodiff-dual-eval}
 def f(x):
@@ -159,134 +212,195 @@ print('value f(x)  :', np.sin(x0**2) + np.exp(x0))
 print("derivative  : dual %.6f  vs  exact %.6f" % (out.b, exact))
 ```
 
-Value and derivative emerge from a single evaluation. The same construction handles a
-vector-valued $\mathbf f:\mathbb R^n\to\mathbb R^m$ once we let the dual part be a
-*vector* tangent: seeding the inputs with a direction $\mathbf v$ and overloading the
-arithmetic exactly as above propagates the **Jacobian--vector product**
-$\mathbf J\mathbf v$ (a JVP) in the $\varepsilon$-slot, in a single forward pass and
-*without ever forming $\mathbf J$*. Choosing the seed $\mathbf v=\mathbf e_j$ then
-reads off the $j$-th *column* of the Jacobian, so $n$ such passes assemble the whole
-matrix. Let us close the loop on the earlier $\mathbb R^2\to\mathbb R^2$ map
-$\mathbf f(x,y)=(x^2y,\ \sin(x+y))$: we run it through the dual algebra with a
-vector tangent, seed $\mathbf e_1$ then $\mathbf e_2$ to recover the two Jacobian
-columns, and check against the analytic $\mathbf J(\mathbf x_0)$.
+The run returns the value $4.6622$ and the derivative $3.360101$, which
+agrees with the hand formula.
 
-```{.python .input #matrix-calculus-autodiff-forward-jvp}
-class VDual:
-    """Dual number a + b*eps with a *vector* tangent b, so one pass gives J v."""
-    def __init__(self, a, b=0.0):
-        self.a, self.b = a, np.asarray(b, dtype=float)           # value, tangent
-    def __add__(self, o):
-        o = o if isinstance(o, VDual) else VDual(o)
-        return VDual(self.a + o.a, self.b + o.b)
-    __radd__ = __add__
-    def __mul__(self, o):
-        o = o if isinstance(o, VDual) else VDual(o)
-        return VDual(self.a * o.a, self.a * o.b + self.b * o.a)   # product rule
-    __rmul__ = __mul__
-    def sin(self):
-        return VDual(np.sin(self.a), np.cos(self.a) * self.b)     # chain rule
+We turn to the running example. The gradient of log-sum-exp
+$\ell(\mathbf x)=\log\sum_j e^{x_j}$ is the softmax,
+$\partial\ell/\partial x_j=e^{x_j}/\sum_k e^{x_k}=p_j$. How many runs does
+forward mode need for this gradient at $\mathbf x=(1,-0.5,2)$? Seeding input
+$j$ with $1$ and the other inputs with $0$ makes the $\varepsilon$-part of the
+output the partial derivative $\partial\ell/\partial x_j$, so we loop over the
+three seeds $\mathbf e_1,\mathbf e_2,\mathbf e_3$.
 
-def f_dual(x, y):
-    return [(x * x) * y, (x + y).sin()]            # [x^2 y, sin(x+y)] in dual algebra
+```{.python .input #mdl-matrix-calculus-autodiff-a-forward-mode-engine-1}
+def lse_dual(xs):                                   # log-sum-exp, in dual algebra
+    total = 0.0
+    for x in xs:
+        total = total + x.exp()
+    return total.log()
 
-x0 = np.array([1.0, 0.5])
-cols = []
-for seed in (np.array([1., 0.]), np.array([0., 1.])):            # e1, then e2
-    x = VDual(x0[0], seed[0]); y = VDual(x0[1], seed[1])
-    out = f_dual(x, y)                             # one forward pass per seed
-    cols.append(np.array([out[0].b, out[1].b]))    # tangent = J @ seed = a column
-J_fwd = np.column_stack(cols)                      # columns J e1, J e2 assemble J
-
-x, y = x0                                          # analytic Jacobian, for the check
-J_exact = np.array([[2 * x * y, x**2],
-                    [np.cos(x + y), np.cos(x + y)]])
-print('forward-mode J:\n', J_fwd.round(6))
-print('JVP matches analytic Jacobian:', np.allclose(J_fwd, J_exact))
+x_lse = [1.0, -0.5, 2.0]
+p = np.exp(x_lse) / np.exp(x_lse).sum()             # softmax, the known gradient
+for j in range(3):                                  # one pass per input direction
+    out = lse_dual([Dual(x, 1.0 if k == j else 0.0) for k, x in enumerate(x_lse)])
+    print(f'seed e{j + 1}: value {out.a:.6f}, partial {out.b:.6f}, '
+          f'softmax {p[j]:.6f}')
 ```
 
-Each forward pass computes one column of $\mathbf J$ in its $\varepsilon$-slot
-without materializing the full Jacobian. The reverse-mode tape below is verified
-against a framework's autograd in the same way. Forward mode is efficient for
-*tall* Jacobians (many outputs, few inputs, $m\gg n$) but requires too many passes
-when $n$ is large, as in a deep network whose loss has one scalar output and
-millions of inputs.
-Reverse mode uses the alternative parenthesization.
+Each pass returns the value $2.371539$ and one partial derivative, and the three
+partials are the softmax entries $0.253716$, $0.056612$, and $0.689672$. A
+gradient over $n$ inputs therefore costs $n$ passes. For the network of the
+opening, with $n=10^8$, that is again $10^8$ runs of the program. Forward mode
+removes the step size but not the number of runs.
 
-## Reverse-Mode AD, the Tape, and Backprop
+### Vector Tangents and Jacobian Columns
+
+A map $\mathbf f:\mathbb R^n\to\mathbb R^m$ has an $m\times n$ Jacobian
+$\mathbf J$. What does one forward pass compute for it? Seed the inputs with a
+direction $\mathbf v$, so that input $j$ is $x_j+v_j\varepsilon$. Applying the
+proposition to the function $t\mapsto f_i(\mathbf x+t\mathbf v)$ shows that
+output $i$ comes out as $f_i(\mathbf x)+(\nabla f_i\cdot\mathbf v)\,\varepsilon$,
+so the $\varepsilon$-parts of the outputs form the vector $\mathbf J\mathbf v$.
+This product is the *Jacobian--vector product* (JVP). With
+$\mathbf v=\mathbf e_j$ it is column $j$ of $\mathbf J$. One pass carries one
+input direction.
+
+We test this on the plane map $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at
+$(0.5,0.5)$. Its Jacobian, row $i$ holding the partial derivatives of output
+$i$, is
+
+$$
+\mathbf J=\begin{pmatrix}1&\cos y\\ x&1\end{pmatrix}
+=\begin{pmatrix}1&0.877583\\0.5&1\end{pmatrix}.
+$$
+
+Two passes, seeded with $\mathbf e_1$ and then $\mathbf e_2$, should return its
+two columns.
+
+```{.python .input #matrix-calculus-autodiff-forward-jvp}
+def plane_dual(x, y):
+    return [x + y.sin(), y + 0.5 * (x * x)]         # (x + sin y, y + x^2/2)
+
+z0 = (0.5, 0.5)
+cols = []
+for seed in ((1.0, 0.0), (0.0, 1.0)):               # e1, then e2
+    out = plane_dual(Dual(z0[0], seed[0]), Dual(z0[1], seed[1]))
+    cols.append([out[0].b, out[1].b])               # tangent = J @ seed, a column
+J_fwd = np.array(cols).T                            # columns side by side
+J_exact = np.array([[1.0, np.cos(0.5)], [0.5, 1.0]])
+print('forward-mode J:\n', J_fwd.round(6))
+print('matches the analytic Jacobian:', np.allclose(J_fwd, J_exact))
+```
+
+The two passes return the columns $(1,0.5)$ and $(0.877583,1)$, and together
+they form the analytic Jacobian.
+
+Nothing in `Dual` requires the tangent to be a number. If the tangent of $x$ is
+the array $(1,0)$ and the tangent of $y$ is $(0,1)$, every operation carries
+both directions at once, and the tangent of output $i$ becomes row $i$ of
+$\mathbf J$. Can one pass return the whole matrix?
+
+```{.python .input #mdl-matrix-calculus-autodiff-vector-tangents-and-jacobian-columns-1}
+out = plane_dual(Dual(z0[0], np.array([1.0, 0.0])),     # identity seed:
+                 Dual(z0[1], np.array([0.0, 1.0])))     # both directions at once
+J_one = np.array([out[0].b, out[1].b])                  # row i = tangent of f_i
+print('one-pass J:\n', J_one.round(6))
+print('matches the analytic Jacobian:', np.allclose(J_one, J_exact))
+```
+
+It can, but the saving is smaller than it looks. Every tangent operation now
+works on arrays of length $n$, so the single pass does about $n$ times the
+arithmetic of a scalar pass. Passes and work are different measures, and
+:numref:`subsec_mdl-cost-asymmetry` counts work. For a scalar loss with $10^8$ inputs,
+forward mode needs $10^8$ passes, or one pass with tangents of $10^8$ entries.
+Either way its cost is proportional to $n$ runs of the program.
+
+## Reverse Mode and the Tape
 :label:`subsec_mdl-reverse-mode`
 
-Recall the associativity observation from :eqref:`eq_mdl-jacobian-product`: the
-chain of Jacobians may be multiplied in any order. Forward mode multiplies
-*right-to-left*, building up $\mathbf J\mathbf v$ one input direction at a time.
-*Reverse mode* multiplies *left-to-right*: it computes the **vector--Jacobian
-product** $\mathbf u^\top\mathbf J$ (a VJP), one *output* direction at a time.
+### Two Orders of One Product
 
-### Why Reverse Mode Is the Right Cost Model
+To remove the factor $n$ we need a different order of computation. Consider a
+program of $K$ steps, $\mathbf f=\mathbf f_K\circ\cdots\circ\mathbf f_1$. The
+chain rule of :numref:`sec_mdl-matrix-calculus` says that the Jacobian of a
+composition is the product of the Jacobians of its steps, each evaluated at the
+point that step receives:
 
-The asymmetry is decisive for deep learning. Consider a scalar loss $L:\mathbb
-R^n\to\mathbb R$ with $n$ parameters. Its Jacobian is a single row ($m=1$), so
-seeding the reverse pass with $\mathbf u=1$ at the output computes the *entire*
-gradient $\nabla L$ in **one** backward sweep. Forward mode, by contrast, would need
-$n$ passes, one per parameter direction, to assemble the same row. The cost rule:
+$$
+\mathbf J = \mathbf J_K\,\mathbf J_{K-1}\cdots\mathbf J_1.
+$$
+:eqlabel:`eq_mdl-ad-jacobian-product`
 
-* **Reverse mode** costs one pass per *output*: cheap for *wide* Jacobians
-  ($m\ll n$). A scalar loss is the extreme wide case, so its full gradient costs a
-  small constant multiple of one forward evaluation (typically $2$--$4\times$ in
-  practice; for arithmetic circuits, programs built from $+,-,\times,\div$, the
-  Baur--Strassen theorem pins the multiple at no more than $5$
-  :cite:`Baur.Strassen.1983`). This is one sweep regardless of how many input
-  partial derivatives are requested; its absolute work still scales with the
-  cost of the primal program, which usually grows with $n$.
-* **Forward mode** costs one pass per *input*: cheap for *tall* Jacobians
-  ($m\gg n$).
+The derivative of a program is a product of small matrices, one per step. A
+seed vector decides how we evaluate it. Forward mode multiplies a direction
+$\mathbf v$ in from the right; the alternative multiplies a row $\mathbf u^\top$
+in from the left:
 
-:numref:`fig_mdl-cal-jacobian-shapes` turns the rule into shapes: each pass computes
-one linear combination of rows (reverse) or columns (forward). A
-coordinate seed selects one literal row or column, so the cheap mode is the one
-whose number of coordinate seeds matches the Jacobian's short side.
+$$
+\mathbf J\mathbf v=\mathbf J_K\Bigl(\cdots\bigl(\mathbf J_2(\mathbf J_1\mathbf v)\bigr)\Bigr),
+\qquad
+\mathbf u^\top\mathbf J=\Bigl(\bigl((\mathbf u^\top\mathbf J_K)\mathbf J_{K-1}\bigr)\cdots\Bigr)\mathbf J_1.
+$$
+:eqlabel:`eq_mdl-ad-two-orders`
 
-![The shape of the Jacobian dictates the cheap mode. A scalar loss has a $1\times n$ Jacobian: one row, hence one VJP, one backward pass. A one-input map has an $m\times 1$ Jacobian: one column, one JVP, one forward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way.](../img/mdl-cal-jacobian-shapes.svg)
+With a seed, every step multiplies a matrix by a vector and never a matrix by
+a matrix. The left formula carries an input direction forward; it is the JVP of
+forward mode. The right formula carries an output direction backward. Its
+result $\mathbf u^\top\mathbf J$ is the *vector--Jacobian product* (VJP), a
+combination of the rows of $\mathbf J$ with weights $\mathbf u$; for
+$\mathbf u=\mathbf e_i$ it is row $i$. Without a seed, either order multiplies
+matrices by matrices. For a scalar loss on a network with $1000$ inputs and two
+hidden layers of width $1000$, the VJP order costs about $2\times10^6$
+multiplications, while forming $\mathbf J_2\mathbf J_1$ first costs $10^9$.
+
+The cost rule of automatic differentiation follows. Forward mode costs one
+sweep per input direction, and reverse mode one sweep per output direction.
+Each sweep costs a small constant multiple of one evaluation of the program.
+For programs built from $+,-,\times,\div$, Baur and Strassen showed that all
+partial derivatives together take at most five times as many operations as the
+program itself :cite:`Baur.Strassen.1983`. In reverse mode the number of sweeps
+does not depend on $n$, but the cost of one sweep grows with the program. A
+scalar loss has a $1\times n$ Jacobian, a single row, so one reverse sweep
+seeded with $1$ returns the whole gradient.
+:numref:`fig_mdl-cal-jacobian-shapes` draws the rule as shapes.
+
+![The shape of the Jacobian decides the cheaper mode. A scalar loss has a $1\times n$ Jacobian: one row, one VJP, one backward pass. A map with one input has an $m\times 1$ Jacobian: one column, one JVP, one forward pass. A full $m\times n$ Jacobian costs $\min(m,n)$ passes with the cheaper mode.](../img/mdl-cal-jacobian-shapes.svg)
 :label:`fig_mdl-cal-jacobian-shapes`
 
-A network has millions of parameters and one loss, so reverse mode wins by a factor
-of the parameter count: millions. We will count the passes with our own two
-engines once both are built. The *cheap-gradient principle*
-:cite:`Baur.Strassen.1983,Griewank.Walther.2008` names the phenomenon: a scalar's
-gradient costs a small constant multiple of one function evaluation, regardless of
-parameter count, and that is what makes training deep networks computationally
-feasible. **This is backpropagation**
-:cite:`Linnainmaa.1970,Speelpenning.1980,Rumelhart.Hinton.Williams.ea.1988`: the
-algorithm of :numref:`sec_mdl-multivariable_calculus` is reverse-mode AD, and the
-rule we followed there, "keep $\partial f$ in the numerator", is now rigorous.
+The two modes are the same product read from opposite ends. Which end is
+cheaper depends only on the shape of $\mathbf J$: the cheap mode is the one
+whose number of seeds matches the short side. A loss, with one output and many
+inputs, has the most lopsided shape possible.
 
-### The Tape: Record Forward, Replay Backward
+### The Tape
 
-Reverse mode cannot be done by a value-carrying algebra like dual numbers, because
-the multiplications run *opposite* to the program's execution: we need each
-operation's local Jacobian *after* the forward pass has finished. So we *record*
-the computation as it runs, and then walk the record backward. The record is
-called the *Wengert list* or *tape*, after the forward-mode paper
-:cite:`Wengert.1964` that introduced the list of elementary operations; running
-it *backward* is the later, reverse-mode idea :cite:`Linnainmaa.1970`. The forward pass builds a directed acyclic graph of
-elementary operations and stashes the values needed for each local derivative; the
-backward pass seeds the output *adjoint* (the running $\partial L/\partial\cdot$) and
-pushes it through each recorded operation's VJP, accumulating contributions where a
-value feeds several consumers. :numref:`fig_mdl-cal-fwd-vs-rev` contrasts the two
-sweeps.
+Two quantities describe how derivatives flow through a program with input $x$
+and output $y$. The *tangent* $\dot v=(\partial v/\partial x)\,\dot x$ of an
+intermediate value $v$ is the rate at which $v$ changes when the input moves in
+the direction $\dot x$; forward mode computes tangents. The *adjoint*
+$\bar v=\partial y/\partial v$ is the rate at which the output changes when $v$
+is perturbed, summed over all paths from $v$ to $y$; reverse mode computes
+adjoints. A tangent is determined by the steps before $v$, an adjoint by the
+steps after it. For $y=v^2$ with $v=3x$, for instance,
+$\dot v=3\dot x$ and $\bar v=2v$.
 
-![Forward-mode versus reverse-mode automatic differentiation on a computation graph. Forward mode (top) propagates a Jacobian--vector product left to right, in lock-step with evaluation; a coordinate seed selects one Jacobian column. Reverse mode (bottom) records a tape on a forward pass, then propagates a vector--Jacobian product right to left; a coordinate output seed selects one row, and a scalar output yields its full gradient.](../img/mdl-cal-fwd-vs-rev.svg)
+This difference decides how each mode runs
+(:numref:`fig_mdl-cal-fwd-vs-rev`). Tangents travel with the values, so forward
+mode finishes in the same sweep as the evaluation; `Dual` needs no memory of
+the past. Adjoints travel against the order of execution: the adjoint of a node
+needs the adjoints of the nodes that use it, and those exist only once the
+program has run to the end. Reverse mode therefore cannot finish in one forward
+sweep. It records the computation as it runs and then replays the record
+backward. The record is called the *tape*, or Wengert list after
+:citet:`Wengert.1964`; running it backward is reverse mode, introduced by
+:citet:`Linnainmaa.1970`.
+
+![Forward and reverse mode on a chain $x\to a\to b\to\ell$. Both evaluate the chain from left to right (gray). Forward mode (top) carries the tangents $\dot v=(\partial v/\partial x)\,\dot x$ along with the values, one input direction per sweep. Reverse mode (bottom) runs the chain first and then carries the adjoints $\bar v=\partial\ell/\partial v$ back from the seed $\bar\ell=1$, one output direction per sweep, which for a scalar loss is the whole gradient.](../img/mdl-cal-fwd-vs-rev.svg)
 :label:`fig_mdl-cal-fwd-vs-rev`
 
-A tiny tape makes this concrete. We record each operation as a node holding its
-value and a *backward* closure that, given the adjoint of the node's output,
-increments the adjoints of its inputs by the appropriate VJP. Replaying the tape in
-reverse and seeding the final adjoint with $1$ leaves $\partial L/\partial\cdot$ in
-every input's adjoint slot.
+A tape node stores its value, its parents, and a backward closure. Given the
+adjoint $g$ of the node, the closure adds the node's contribution to the
+adjoints of its parents: for $c=a+b$ it adds $g$ to both, and for $c=ab$ it adds
+$b\,g$ to $\bar a$ and $a\,g$ to $\bar b$. The function `backprop` sorts the
+nodes so that every node comes after its parents, seeds the output adjoint with
+$1$, and runs the closures in reverse order. Like `Dual`, the class counts its
+operations, forward and backward.
 
 ```{.python .input #matrix-calculus-autodiff-tape}
 class Var:
     """A scalar node on the autodiff tape; .grad accumulates the adjoint."""
+    ops = 0                                         # recorded ops + backward steps
     def __init__(self, value, parents=(), backward=lambda g: None):
         self.value = value
         self.grad = 0.0
@@ -294,16 +408,20 @@ class Var:
         self._backward = backward                   # pushes adjoint to parents
     def __add__(self, o):
         o = o if isinstance(o, Var) else Var(o)
+        Var.ops += 1
         out = Var(self.value + o.value, (self, o))
         def back(g):                                # d(a+b) = 1*g to each parent
+            Var.ops += 1
             self.grad += g; o.grad += g
         out._backward = back
         return out
     __radd__ = __add__
     def __mul__(self, o):
         o = o if isinstance(o, Var) else Var(o)
+        Var.ops += 1
         out = Var(self.value * o.value, (self, o))
         def back(g):                                # product rule, reversed
+            Var.ops += 1
             self.grad += o.value * g; o.grad += self.value * g
         out._backward = back
         return out
@@ -324,101 +442,191 @@ def backprop(node):
         v._backward(v.grad)
 ```
 
-We differentiate an expression with the same diamond-reuse structure that made
-the backward sweep of :numref:`sec_mdl-multivariable_calculus` efficient, and
-check the tape's gradients against the framework's autograd. Take $g(u,v)=r^2$ with the shared
-intermediate $r=uv+u$ (in code, `r = u*v + u` followed by `y = r*r`). One forward
-pass records the tape, one backward pass yields both partials. Its graph,
-:numref:`fig_mdl-cal-tape-dag`, is not a chain but a *diamond*: $u$ feeds both the
-product $uv$ and the sum $r$, and $r$ feeds *both* arguments of the final
-multiplication. This reuse is exactly why the backward pass must visit nodes in
-reverse topological order (each node before the nodes it depends on, so that its
-adjoint is complete before it is pushed onward) and *accumulate* adjoints with
-`+=` rather than
-overwrite them: when the node $y=r\cdot r$ runs its backward step, it pushes the
-contribution $\bar y\,r$ into `r.grad` *twice*, once per argument, so the adjoint
-$\bar r = 2r\bar y$ arrives as a sum. A node's adjoint is the *sum* of the
-contributions along every outgoing edge, the chain rule's "sum over paths" made
-operational.
+We trace the tape by hand on $y=(uv+u)^2$ at $u=2$, $v=-3$, recorded as three
+operations: $t=uv=-6$, then $r=t+u=-4$, then $y=r\cdot r=16$. The backward
+sweep visits the nodes in the order $y,r,t,u,v$. Each adjoint is the sum of the
+contributions along the node's outgoing edges, and each contribution is the
+adjoint of the consumer times the local derivative:
 
-![The computation graph for the tape example $g(u,v)=r^2$ with $r=uv+u$. It is a diamond, not a chain: $u$ fans out to the product $t=uv$ and the sum $r=t+u$, and $r$ feeds both arguments of $y=r\cdot r$ (the doubled edge). Because a value can feed several consumers, the backward pass walks the tape in reverse topological order and accumulates each adjoint over outgoing edges with `+=`; here `r.grad` receives the contribution $\bar y\,r$ twice, summing to $\bar r=2r\bar y$.](../img/mdl-cal-tape-dag.svg)
+| node | outgoing edges and their contributions | adjoint |
+|---|---|---|
+| $y$ | none: the seed | $\bar y=1$ |
+| $r$ | both arguments of $y=r\cdot r$: $\bar y\,r+\bar y\,r$ | $\bar r=-8$ |
+| $t$ | $r=t+u$: $\bar r\cdot1$ | $\bar t=-8$ |
+| $u$ | $r=t+u$ and $t=uv$: $\bar r\cdot1+\bar t\cdot v$ | $\bar u=-8+24=16$ |
+| $v$ | $t=uv$: $\bar t\cdot u$ | $\bar v=-16$ |
+
+Differentiating $y=(uv+u)^2$ by hand confirms both results:
+$\partial y/\partial u=2(uv+u)(v+1)=2(-4)(-2)=16$ and
+$\partial y/\partial v=2(uv+u)\,u=2(-4)(2)=-16$. The sums matter at two nodes:
+$r$ feeds both arguments of the last product, and $u$ feeds both $t$ and $r$
+(:numref:`fig_mdl-cal-tape-dag`). Overwriting instead of adding would give
+$\bar r=-4$, and even with $\bar r$ correct it would give $\bar u=-8$ or $24$,
+depending on the order of the closures.
+An adjoint is the sum over outgoing edges, which is the chain rule's sum over
+paths; this is why the closures use `+=`.
+
+![The tape of $y=(uv+u)^2$ at $u=2$, $v=-3$. Each box shows the forward value of its node; the orange label shows its adjoint, the derivative of $y$ with respect to that node. The graph is a diamond, not a chain: $u$ feeds both $t=uv$ and $r=t+u$, and $r$ feeds both arguments of $y=r\cdot r$, so the adjoints of $r$ and $u$ are sums of two contributions.](../img/mdl-cal-tape-dag.svg)
 :label:`fig_mdl-cal-tape-dag`
+
+Does the tape reproduce the table? We record the expression with `Var` and run
+one backward sweep.
+
+```{.python .input #mdl-matrix-calculus-autodiff-the-tape-1}
+u, v = Var(2.0), Var(-3.0)
+r = u * v + u                                       # t = uv, then r = t + u
+y = r * r                                           # r feeds both arguments
+backprop(y)
+print('our tape  : dy/du = %.4f  dy/dv = %.4f' % (u.grad, v.grad))
+```
+
+The tape prints $16$ and $-16$, the last column of the table. The framework's
+own reverse mode, given the same expression, agrees:
 
 ```{.python .input #matrix-calculus-autodiff-tape-check}
 #@tab pytorch
-u, v = Var(2.0), Var(-3.0)
-r = u * v + u                                       # shared intermediate
-y = r * r                                           # r feeds both arguments
-backprop(y)
 ut = torch.tensor(2.0, requires_grad=True)
 vt = torch.tensor(-3.0, requires_grad=True)
 rt = ut * vt + ut
 (rt * rt).backward()                                # framework autograd
-print('our tape   : dy/du = %.4f  dy/dv = %.4f' % (u.grad, v.grad))
-print('torch      : dy/du = %.4f  dy/dv = %.4f' % (ut.grad, vt.grad))
+print('torch     : dy/du = %.4f  dy/dv = %.4f' % (ut.grad, vt.grad))
 ```
 
 ```{.python .input #matrix-calculus-autodiff-tape-check}
 #@tab mxnet
-u, v = Var(2.0), Var(-3.0)
-r = u * v + u                                       # shared intermediate
-y = r * r                                           # r feeds both arguments
-backprop(y)
 um, vm = mnp.array(2.0), mnp.array(-3.0)
 um.attach_grad(); vm.attach_grad()
 with autograd.record():                             # framework autograd
     rm = um * vm + um
     ym = rm * rm
 ym.backward()
-print('our tape   : dy/du = %.4f  dy/dv = %.4f' % (u.grad, v.grad))
-print('mxnet      : dy/du = %.4f  dy/dv = %.4f' % (float(um.grad), float(vm.grad)))
+print('mxnet     : dy/du = %.4f  dy/dv = %.4f' % (float(um.grad), float(vm.grad)))
 ```
 
 ```{.python .input #matrix-calculus-autodiff-tape-check}
 #@tab tensorflow
-u, v = Var(2.0), Var(-3.0)
-r = u * v + u                                       # shared intermediate
-y = r * r                                           # r feeds both arguments
-backprop(y)
 ut, vt = tf.Variable(2.0), tf.Variable(-3.0)
 with tf.GradientTape() as tape:                     # framework autograd
     rt = ut * vt + ut
     yt = rt * rt
 du, dv = tape.gradient(yt, [ut, vt])
-print('our tape   : dy/du = %.4f  dy/dv = %.4f' % (u.grad, v.grad))
-print('tensorflow : dy/du = %.4f  dy/dv = %.4f' % (float(du), float(dv)))
+print('tensorflow: dy/du = %.4f  dy/dv = %.4f' % (float(du), float(dv)))
 ```
 
 ```{.python .input #matrix-calculus-autodiff-tape-check}
 #@tab jax
-u, v = Var(2.0), Var(-3.0)
-r = u * v + u                                       # shared intermediate
-y = r * r                                           # r feeds both arguments
-backprop(y)
 def g(u, v):
     r = u * v + u
     return r * r
 du, dv = jax.grad(g, argnums=(0, 1))(2.0, -3.0)     # framework autograd
-print('our tape   : dy/du = %.4f  dy/dv = %.4f' % (u.grad, v.grad))
-print('jax        : dy/du = %.4f  dy/dv = %.4f' % (float(du), float(dv)))
+print('jax       : dy/du = %.4f  dy/dv = %.4f' % (float(du), float(dv)))
 ```
 
-Our thirty-line tape reproduces the framework's gradients exactly. The real systems
-generalize it in three ways that do not change the principle: the nodes hold
-*tensors* rather than scalars, so each `_backward` is a VJP (a matrix operation, e.g.
-the $\mathbf x^\top$ in :eqref:`eq_mdl-lstsq-grad`) rather than a scalar multiply;
-the primitive set is large (every differentiable op ships a VJP rule); and the graph
-is built either eagerly (PyTorch's dynamic tape) or by tracing (JAX, TensorFlow).
-The underlying procedure is the same: record the forward computation, seed the
-output adjoint, and replay the graph backward while accumulating VJPs.
+A framework's tape differs from ours in three ways that leave the procedure
+unchanged. Its nodes hold tensors, so each backward closure is a VJP rule for a
+whole operation; for a matrix product $\mathbf Y=\mathbf X\mathbf W$, the
+previous section derived $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$ and
+$\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$. Its set of primitives is
+large, each with its own VJP rule. And it builds the graph in one of two ways.
+An eager tape records operations as the program runs, as `Var` does. A tracer
+instead turns the program into an expression, linearizes it, and obtains the
+VJP by transposing the JVP. Backpropagation is this procedure applied to a
+neural network :cite:`Rumelhart.Hinton.Williams.ea.1988`.
 
-### The Cost Asymmetry, Counted
+:begin_tab:`pytorch`
+PyTorch keeps an eager tape: every operation on a tensor with
+`requires_grad=True` adds a node, and `backward()` replays the nodes in reverse.
+:end_tab:
+
+:begin_tab:`mxnet`
+MXNet keeps an eager tape: operations inside `autograd.record()` are recorded,
+and `backward()` replays them in reverse.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow keeps an eager tape: operations inside a `GradientTape` context are
+recorded, and `tape.gradient` replays them in reverse.
+:end_tab:
+
+:begin_tab:`jax`
+JAX traces: `jax.grad` turns the function into an expression, linearizes it,
+and obtains the VJP by transposing the JVP.
+:end_tab:
+
+### Parameter Gradients
+:label:`subsec_mdl-param-gradients`
+
+The product :eqref:`eq_mdl-ad-jacobian-product` is the derivative of the
+network with respect to its input. Training needs the derivative with respect to
+the weights, and they do not appear in that product. Where are they?
+
+Let layer $k$ compute $\mathbf h_k=\mathbf W_k\mathbf h_{k-1}$, with
+$\mathbf W_k$ of shape $d_k\times d_{k-1}$. A bias adds nothing new, and an
+activation is a separate step with a diagonal Jacobian. When the backward sweep
+has passed layers $K,\ldots,k+1$, it holds the adjoint
+$\bar{\mathbf h}_k=\partial\ell/\partial\mathbf h_k$, written as a column. It
+is the transpose of the partial product $\mathbf J_K\cdots\mathbf J_{k+1}$,
+which is a row because the loss is a scalar. We want $\nabla_{\mathbf W_k}\ell$, the matrix
+whose entry $(i,j)$ is $\partial\ell/\partial(\mathbf W_k)_{ij}$.
+
+The step that is not routine is to perturb $\mathbf W_k$ alone, with the input
+and all other weights fixed. Then only $\mathbf h_k$ moves, by
+$d\mathbf h_k=d\mathbf W_k\,\mathbf h_{k-1}$, and the loss changes by
+
+$$
+d\ell=\bar{\mathbf h}_k^\top d\mathbf h_k
+=\bar{\mathbf h}_k^\top\,d\mathbf W_k\,\mathbf h_{k-1}
+=\sum_{i,j}\bar h_{k,i}\,h_{k-1,j}\,(d\mathbf W_k)_{ij}.
+$$
+
+The coefficient of $(d\mathbf W_k)_{ij}$ is the partial derivative we want, so
+
+$$
+\nabla_{\mathbf W_k}\ell=\bar{\mathbf h}_k\,\mathbf h_{k-1}^\top.
+$$
+:eqlabel:`eq_mdl-ad-param-grad`
+
+The gradient of a layer's weights is the outer product of the adjoint arriving
+from above and the activation arriving from below. Entry $(i,j)$ is
+$\bar h_{k,i}h_{k-1,j}$, so a weight matters in proportion to how much its
+output matters to the loss and how large its input is. A weight whose input is
+zero, such as one fed by an inactive ReLU, receives no gradient.
+
+The formula has the shape of the least-squares gradient of the previous section, a residual
+times an input. For a minibatch the outer products of the examples add up,
+which gives $\bar{\mathbf H}_k^\top\mathbf H_{k-1}$ with one example per row.
+This is the rule $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$ quoted above,
+transposed because there the weights multiply from the right.
+
+With $\bar{\mathbf h}_k=(1,2)^\top$ and $\mathbf h_{k-1}=(3,-1)^\top$, for
+example,
+
+$$
+\nabla_{\mathbf W_k}\ell=\begin{pmatrix}1\\2\end{pmatrix}\begin{pmatrix}3&-1\end{pmatrix}
+=\begin{pmatrix}3&-1\\6&-2\end{pmatrix}.
+$$
+
+The second row is twice the first because the second output's adjoint is twice
+the first's, and the second column is negative because its input is.
+
+The outer product costs $d_kd_{k-1}$ multiplications, as many as the forward
+product $\mathbf W_k\mathbf h_{k-1}$. Passing the adjoint down,
+$\bar{\mathbf h}_{k-1}^\top=\bar{\mathbf h}_k^\top\mathbf W_k$, costs the same
+again. The backward sweep therefore costs about two forward passes, and forward
+pass plus backward sweep about three, which is the 30 ms of the opening.
+Forward mode, in contrast, treats each weight as an input direction, so a single
+layer would need $d_kd_{k-1}$ passes. This is why no framework trains in forward
+mode.
+
+### Cost of the Two Modes
 :label:`subsec_mdl-cost-asymmetry`
 
-The two implementations allow a direct comparison of pass counts. Take a scalar function
-of $n=200$ inputs, built from nothing but the additions and multiplications both engines
-support. Forward mode must run one pass per input direction to assemble the gradient (a
-$1\times n$ Jacobian, column by column); the tape runs *one* backward sweep.
+The two engines let us count operations instead of arguing about them. Take
+$f(\mathbf x)=(\sum_j x_j^2)^2$ with $n=200$ inputs $x_j=0.01\,j$ for
+$j=1,\ldots,200$, built from $+$ and $\times$ alone. Its gradient is
+$\nabla f=4\bigl(\sum_jx_j^2\bigr)\mathbf x$. One evaluation runs $2n+1=401$
+primitive operations: $n$ squares, $n$ additions, and the final square. We
+compute the gradient in both modes and compare the operation counts.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured}
 n = 200
@@ -429,182 +637,344 @@ def f(xs):                       # f: R^n -> R, from + and * alone
     return total * total         # (sum of squares)^2
 
 xs0 = [0.01 * (j + 1) for j in range(n)]
-passes, grad_fwd = 0, []
-for j in range(n):               # forward mode: one pass per input direction
-    duals = [Dual(x, 1.0 if k == j else 0.0) for k, x in enumerate(xs0)]
-    grad_fwd.append(f(duals).b)
-    passes += 1
-
-xs = [Var(x) for x in xs0]       # reverse mode: one recorded forward pass...
+Dual.ops = 0
+grad_fwd = [f([Dual(x, 1.0 if k == j else 0.0) for k, x in enumerate(xs0)]).b
+            for j in range(n)]   # forward mode: one pass per input direction
+Var.ops = 0
+xs = [Var(x) for x in xs0]       # reverse mode: one recorded pass...
 backprop(f(xs))                  # ...and one backward sweep for all n partials
 grad_rev = [x.grad for x in xs]
 
 gap = max(abs(a - b) for a, b in zip(grad_fwd, grad_rev))
-print(f'forward mode : {passes} passes (one per input)')
-print(f'reverse mode : 1 backward sweep for all {n} partials')
-print(f'max |forward - reverse| over the gradient: {gap:.1e}')
+print(f'forward mode: {Dual.ops:,} operations ({n} passes of {2 * n + 1})')
+print(f'reverse mode: {Var.ops:,} operations (one recorded pass, one sweep)')
+print(f'ratio {Dual.ops / Var.ops:.1f}, largest gradient difference {gap:.1e}')
 ```
 
-The two gradients agree to machine precision, but the pass counts differ by a
-factor of $n$: $200$ forward passes against one backward sweep, which is the
-loop structure itself. Each forward-mode pass costs about one evaluation of $f$,
-and the tape's recorded forward pass plus backward sweep costs a small constant
-multiple of one, so the *work* ratio is $\Theta(n)$, i.e. proportional to $n$ up
-to a constant factor. Nothing about the ratio is special to $200$: replace it by
-the $10^8$ parameters of a modern network and this factor is the "factor of
-millions" claimed above, which is why no framework computes training gradients
-in forward mode.
+Forward mode ran $80{,}200=n(2n+1)$ operations and reverse mode
+$802=2(2n+1)$: $401$ recorded on the forward pass and $401$ backward closures.
+The ratio is $100=n/2$, and the two gradients agree to every printed digit. The
+pass counts differ by a factor of $n$ and the operation counts by $n/2$ for
+these engines; at $n=10^8$ the ratio is the factor of the opening, up to the
+same constant. Reverse mode needs more memory instead. The tape keeps all $401$
+recorded values until the sweep consumes them, while forward mode, like the
+program itself, keeps only the current values, each with its tangent.
 
-### Jacobian Products Without Explicit Jacobians
+### Gradient Checkpointing
+:label:`subsec_mdl-checkpointing`
 
-The two engines above expose exactly two products, the forward-mode JVP
-$\mathbf J\mathbf v$ and the reverse-mode VJP $\mathbf u^\top\mathbf J$, and every
-quantity a training loop needs is built by *composing* those, never by materializing
-$\mathbf J$. This is deliberate. Writing down a dense $m\times n$ Jacobian costs
-$\min(m,n)$ passes (one per column via JVP, or one per row via VJP) plus $\Theta(mn)$
-storage, while the thing you actually want (a gradient $\mathbf u^\top\mathbf J$, a
-directional derivative $\mathbf J\mathbf v$, a sequence of these through a deep
-composition) costs a single pass and never holds more than a vector. Autograd
-systems therefore expose the JVP and the VJP as their primitives and treat the
-full Jacobian as a rare, opt-in convenience. Even that convenience is built from
-the same parts: a Jacobian, when one is truly needed, is assembled by batching
-VJPs over the $m$ output directions (rows) or JVPs over the $n$ input directions
-(columns), and a Hessian by the forward-over-reverse composition of the next
-subsection, when $n$ is small enough to afford one. If you find
-yourself assembling a Jacobian, you have almost certainly written down a matrix you
-could have multiplied through.
+A computation of $T$ recorded steps keeps $T$ values alive until the backward
+sweep reaches them. In a deep network these are the activations of every layer
+for every example in the batch, and this memory, not the arithmetic, often
+limits the batch size and the depth.
 
-### Hessian-Vector Products: One Order Up
+The simplest remedy cuts the tape into segments of $s$ steps. The forward pass
+keeps only every $s$-th value, the $T/s$ *checkpoints*, and discards the rest.
+When the backward sweep reaches a segment, it recomputes that segment's $s$
+values from its checkpoint onto a fresh tape, sweeps it, and frees it. At any
+moment the memory holds the checkpoints and one segment, and the best segment
+length balances the two:
 
-The same approach applies one derivative order higher. Second-order optimizers
-and curvature diagnostics do not need
-the full Hessian $\mathbf H=\nabla^2 L$, an $n\times n$ object, hopeless to even
-store for $n$ in the millions. Newton's method, the *conjugate-gradient* (CG)
-method, and *Gauss--Newton* :cite:`Nocedal.Wright.2006` (see
-:numref:`chap_mdl-optimization`) all need only
-the **Hessian--vector product** $\mathbf H\mathbf v$: the action of curvature in a
-single direction, e.g. one matrix-vector multiply inside a CG iteration. CG is an
-iterative linear-system solver that touches its matrix only through matrix-vector
-products, and Gauss--Newton approximates the Hessian by a product of
-first-derivative Jacobians. Pearlmutter's
-trick :cite:`Pearlmutter.1994` obtains that product *without forming
-$\mathbf H$* by composing the two modes. Since $\mathbf H = \nabla^2 L$ is the Jacobian of the gradient map
-$\nabla L$, the Hessian--vector product is a *directional derivative of the gradient*,
+$$
+M(s)=\frac{T}{s}+s,
+\qquad
+\min_s M(s)=M(\sqrt T)=2\sqrt T.
+$$
+:eqlabel:`eq_mdl-ad-checkpoint-memory`
+
+The minimum follows from $M'(s)=1-T/s^2=0$, or from $T/s+s\ge2\sqrt T$ by the
+inequality of arithmetic and geometric means. Memory grows like the square root
+of the length instead of the length itself. Each step is recomputed once, so
+the extra time is one forward pass. For $T=400$, the segment lengths
+$s=1,5,10,20,100,400$ give $M=401,85,50,40,104,401$, smallest at
+$s=20=\sqrt{400}$. For $T=10^4$, segments of $s=100$ keep $200$ values instead
+of $10{,}000$ :cite:`Chen.Xu.Zhang.ea.2016`. :numref:`fig_mdl-cal-checkpointing`
+draws the schedule.
+
+![Gradient checkpointing on a tape of $T$ steps. Plain reverse mode (top) keeps all $T$ values until the backward sweep uses them. Checkpointing (bottom) keeps every $s$-th value; when the backward sweep reaches a segment, the segment is recomputed from its checkpoint and then swept. The memory is $T/s+s$, which is $2\sqrt T$ at $s=\sqrt T$, for one extra forward pass.](../img/mdl-cal-checkpointing.svg)
+:label:`fig_mdl-cal-checkpointing`
+
+Checkpointing changes the time and the memory but not the gradient. The
+recomputed values are the same numbers, so the result equals that of plain
+reverse mode. Recursive schedules, which checkpoint inside segments as well,
+reach $O(\log T)$ memory with $O(T\log T)$ recomputation.
+
+## Composing Jacobian Products
+:label:`subsec_mdl-composing-products`
+
+A framework exposes the two products our engines compute, $\mathbf J\mathbf v$
+and $\mathbf u^\top\mathbf J$. Everything a training loop needs is built by
+composing them, and a full Jacobian is formed only when it is small or when its
+determinant is needed.
+
+### Jacobian--Vector and Vector--Jacobian Products
+:label:`subsec_mdl-jvp-vjp`
+
+Do the framework's two products give the plane-map numbers? From
+$\mathbf J=\left(\begin{smallmatrix}1&0.8776\\0.5&1\end{smallmatrix}\right)$ at
+$(0.5,0.5)$ and $\mathbf v=\mathbf u=(1,2)$ we expect
+$\mathbf J\mathbf v=(1+2\cdot0.8776,\ 0.5+2)=(2.7552,\ 2.5)$ and
+$\mathbf u^\top\mathbf J=(1+2\cdot0.5,\ 0.8776+2)=(2,\ 2.8776)$. We compute
+both, and the full Jacobian for comparison.
+
+```{.python .input #mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products}
+#@tab pytorch
+def plane(z):                                       # (x + sin y, y + x^2/2)
+    return torch.stack([z[0] + torch.sin(z[1]), z[1] + 0.5 * z[0]**2])
+
+z0 = torch.tensor([0.5, 0.5])
+v, u = torch.tensor([1.0, 2.0]), torch.tensor([1.0, 2.0])
+_, Jv = torch.func.jvp(plane, (z0,), (v,))          # forward mode: J v
+_, vjp_fn = torch.func.vjp(plane, z0)               # reverse mode: records once,
+uJ, = vjp_fn(u)                                     # then u^T J per seed
+J = torch.func.jacrev(plane)(z0)                    # one VJP per row
+print('J v   =', Jv.numpy().round(4))
+print('u^T J =', uJ.numpy().round(4))
+print('J     =', J.numpy().astype(float).round(4).tolist())
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products}
+#@tab mxnet
+def plane(z):                                       # (x + sin y, y + x^2/2)
+    return mnp.stack([z[0] + mnp.sin(z[1]), z[1] + 0.5 * z[0]**2])
+
+def vjp(u):                                         # one reverse sweep seeded with u
+    z = mnp.array([0.5, 0.5])
+    z.attach_grad()
+    with autograd.record():
+        y = plane(z)
+    y.backward(u)
+    return z.grad
+
+v, u = mnp.array([1.0, 2.0]), mnp.array([1.0, 2.0])
+uJ = vjp(u)                                         # reverse mode: u^T J
+J = mnp.stack([vjp(mnp.array([1.0, 0.0])),          # one VJP per row
+               vjp(mnp.array([0.0, 1.0]))])
+Jv = mnp.dot(J, v)                                  # no forward mode: J v from J
+print('J v   =', Jv.asnumpy().round(4))
+print('u^T J =', uJ.asnumpy().round(4))
+print('J     =', J.asnumpy().astype(float).round(4).tolist())
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products}
+#@tab tensorflow
+def plane(z):                                       # (x + sin y, y + x^2/2)
+    return tf.stack([z[0] + tf.sin(z[1]), z[1] + 0.5 * z[0]**2])
+
+z0 = tf.constant([0.5, 0.5])
+v, u = tf.constant([1.0, 2.0]), tf.constant([1.0, 2.0])
+with tf.autodiff.ForwardAccumulator(z0, v) as acc:  # forward mode: J v
+    y = plane(z0)
+Jv = acc.jvp(y)
+with tf.GradientTape(persistent=True) as tape:      # reverse mode: one tape
+    tape.watch(z0)
+    y = plane(z0)
+uJ = tape.gradient(y, z0, output_gradients=u)       # u^T J
+J = tape.jacobian(y, z0)                            # one VJP per row
+print('J v   =', Jv.numpy().round(4))
+print('u^T J =', uJ.numpy().round(4))
+print('J     =', J.numpy().astype(float).round(4).tolist())
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products}
+#@tab jax
+def plane(z):                                       # (x + sin y, y + x^2/2)
+    return jnp.stack([z[0] + jnp.sin(z[1]), z[1] + 0.5 * z[0]**2])
+
+z0 = jnp.array([0.5, 0.5])
+v, u = jnp.array([1.0, 2.0]), jnp.array([1.0, 2.0])
+_, Jv = jax.jvp(plane, (z0,), (v,))                 # forward mode: J v
+_, vjp_fn = jax.vjp(plane, z0)                      # reverse mode: records once,
+uJ, = vjp_fn(u)                                     # then u^T J per seed
+J = jax.jacfwd(plane)(z0)                           # one JVP per column
+print('J v   =', np.asarray(Jv).round(4))
+print('u^T J =', np.asarray(uJ).round(4))
+print('J     =', np.asarray(J, dtype=float).round(4).tolist())
+```
+
+:begin_tab:`mxnet`
+MXNet's autograd has reverse mode only. The tab forms $\mathbf J$ from two VJPs,
+one per row, and then multiplies it by $\mathbf v$; for this $2\times2$ map that
+costs as much as two JVPs would.
+:end_tab:
+
+The printed products are the expected $(2.7552,\ 2.5)$ and $(2,\ 2.8776)$. A JVP
+and a VJP each cost one sweep, and the derivative information they carry along
+is a vector. The VJP also stores the forward intermediates, the tape. A dense
+$m\times n$ Jacobian costs $\min(m,n)$ sweeps with the cheaper mode, plus $mn$
+numbers of storage. Forming it is the right choice when $n$ is small, as for
+this $2\times2$ map, or when its determinant is needed, as in the normalizing
+flows that change probability densities by $|\det\mathbf J|$.
+
+### Hessian--Vector Products
+:label:`subsec_mdl-hvp`
+
+A model with $n=10^6$ parameters has a Hessian of $10^{12}$ entries, 4 TB in
+float32. Newton's method needs the Hessian only to solve
+$\mathbf H\mathbf d=-\nabla\ell$ for its step $\mathbf d$, and Newton--CG, or
+truncated Newton, solves that system by conjugate gradients, an iterative method
+that touches $\mathbf H$ only through products $\mathbf H\mathbf v$
+:cite:`Nocedal.Wright.2006,Martens.2010`. Can we compute $\mathbf H\mathbf v$
+without $\mathbf H$?
+
+The Hessian is the Jacobian of the gradient map $\nabla\ell$, so
+$\mathbf H\mathbf v$ is a JVP of the gradient, the rate of change of the
+gradient along $\mathbf v$:
 
 $$
 \mathbf H\mathbf v
-   = \mathbf J_{\nabla L}\,\mathbf v
-   = \left.\frac{d}{ds}\right|_{s=0}\nabla L(\mathbf x + s\mathbf v),
+   = \mathbf J_{\nabla \ell}\,\mathbf v
+   = \left.\frac{d}{dt}\right|_{t=0}\nabla \ell(\mathbf x + t\mathbf v).
 $$
 :eqlabel:`eq_mdl-hvp`
 
-so we push the tangent $\mathbf v$ through the gradient computation in *forward over
-reverse*: a forward-mode JVP applied to the reverse-mode gradient. The cost is a small
-constant multiple of one gradient evaluation: curvature in one chosen direction
-without $n$ separate gradient evaluations :cite:`Baydin.Pearlmutter.Radul.ea.2018`.
-Its absolute work still scales with the computation of $L$ and therefore usually
-with the problem size.
-In terms of our toy engines, layering a `Dual` seed over the reverse-mode `Var`
-tape is exactly this forward-over-reverse construction. It is
-what makes Newton and conjugate-gradient methods
-and the curvature analysis of :numref:`chap_mdl-dynamics` tractable at scale.
+A reverse sweep computes $\nabla\ell$, and a forward-mode pass through that
+computation, with tangent $\mathbf v$, differentiates it along $\mathbf v$. This
+composition is called *forward over reverse* :cite:`Pearlmutter.1994`. Its cost
+is a small constant multiple of the cost of one gradient evaluation, whatever
+$n$ is.
 
-The recipe is short enough to show whole. For the quadratic
-$L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf A\mathbf x$ with symmetric
-$\mathbf A$, the gradient is $\mathbf A\mathbf x$ and the Hessian is $\mathbf A$
-itself, so the correct answer is known in advance:
-$\mathbf H\mathbf v = \mathbf A\mathbf v$. No $2\times2$ matrix of second
-derivatives is ever assembled below; only the gradient map appears, differentiated
-once in the direction $\mathbf v$.
+Log-sum-exp gives a test with a known answer. Its gradient is the softmax
+$\mathbf p$, so its Hessian is the softmax Jacobian of the previous section,
+whose one-line derivation we restate. With $S=\sum_ke^{x_k}$ and $\delta_{ij}$ equal to
+$1$ for $i=j$ and $0$ otherwise, the quotient rule gives
+$\partial p_i/\partial x_j=(\delta_{ij}e^{x_i}S-e^{x_i}e^{x_j})/S^2=p_i\delta_{ij}-p_ip_j$,
+that is,
+
+$$
+\mathbf H=\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top,
+\qquad
+\mathbf H\mathbf v=\mathbf p\odot\mathbf v-\mathbf p\,(\mathbf p^\top\mathbf v),
+$$
+:eqlabel:`eq_mdl-ad-lse-hessian`
+
+where $\odot$ multiplies entrywise. The product on the right needs only $3n$
+multiplications and no $n\times n$ matrix. At $\mathbf x=(1,-0.5,2)$ and
+$\mathbf v=(1,0.5,-1)$ we have $\mathbf p=(0.2537,0.0566,0.6897)$ and
+$\mathbf p^\top\mathbf v=-0.4077$, so
+
+$$
+\mathbf H\mathbf v=(0.3571,\ 0.0514,\ -0.4085).
+$$
+
+The test is not vacuous. For the quadratic
+$\tfrac12\mathbf x^\top\mathbf A\mathbf x$ the gradient at $\mathbf v$
+equals $\mathbf H\mathbf v$, so a program that returned the wrong quantity would
+still pass; here $\mathbf H$ depends on $\mathbf x$, and the gradient at
+$\mathbf v$, $\operatorname{softmax}(\mathbf v)=(0.574,0.348,0.078)$, is far from
+$\mathbf H\mathbf v$.
+
+Two checks against intuition follow from :eqref:`eq_mdl-ad-lse-hessian`. First,
+$\mathbf H\mathbf 1=\mathbf p-\mathbf p\,(\mathbf p^\top\mathbf 1)=\mathbf 0$:
+adding a constant $c$ to every input adds $c$ to log-sum-exp and leaves its
+gradient unchanged, so the curvature along $\mathbf 1$ is zero. Second,
+$\mathbf H$ is the covariance matrix of a one-hot vector $\mathbf e_J$ with $J$
+drawn from $\mathbf p$, because $\mathbb E[\mathbf e_J\mathbf e_J^\top]=\operatorname{diag}(\mathbf p)$
+and $\mathbb E[\mathbf e_J]=\mathbf p$. So
+$\mathbf v^\top\mathbf H\mathbf v=\operatorname{Var}(v_J)\ge0$, and log-sum-exp
+is convex.
+
+Does the framework's forward over reverse reproduce the formula?
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
 #@tab pytorch
-# Hv for L(x) = x^T A x / 2, where H = A exactly
-A = torch.tensor([[3.0, 1.0], [1.0, 2.0]])
-L = lambda x: 0.5 * x @ A @ x
-x, v = torch.tensor([1.0, -2.0]), torch.tensor([1.0, 0.5])
-_, Hv = torch.func.jvp(torch.func.grad(L), (x,), (v,))  # forward over reverse
-print('forward-over-reverse Hv:', Hv)
-print('A v                    :', A @ v)
+x = torch.tensor([1.0, -0.5, 2.0])
+v = torch.tensor([1.0, 0.5, -1.0])
+lse = lambda x: torch.logsumexp(x, 0)
+_, Hv = torch.func.jvp(torch.func.grad(lse), (x,), (v,))  # forward over reverse
+p = torch.softmax(x, 0)
+print('forward over reverse :', Hv.numpy().round(4))
+print('p*v - p (p.v)        :', (p * v - p * (p @ v)).numpy().round(4))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
 #@tab mxnet
-# Hv for L(x) = x^T A x / 2, where H = A exactly. MXNet cannot tape its own
-# backward pass, so we use eq_mdl-hvp directly: Hv is the directional
-# derivative of the gradient map, here by a central difference
-A = mnp.array([[3.0, 1.0], [1.0, 2.0]])
-def grad_L(x):
+def grad_lse(x):                                    # reverse-mode gradient of lse
     x = x.copy()
     x.attach_grad()
     with autograd.record():
-        L = 0.5 * mnp.dot(x, mnp.dot(A, x))
-    L.backward()
+        ell = mnp.log(mnp.exp(x).sum())
+    ell.backward()
     return x.grad
-x, v = mnp.array([1.0, -2.0]), mnp.array([1.0, 0.5])
-h = 1e-4
-Hv = (grad_L(x + h * v) - grad_L(x - h * v)) / (2 * h)
-print('directional-derivative Hv:', Hv)
-print('A v                      :', mnp.dot(A, v))
+
+x = mnp.array([1.0, -0.5, 2.0], dtype=np.float64)
+v = mnp.array([1.0, 0.5, -1.0], dtype=np.float64)
+h = 1e-4                                            # directional derivative of
+Hv = (grad_lse(x + h * v) - grad_lse(x - h * v)) / (2 * h)   # the gradient
+p = mnp.exp(x) / mnp.exp(x).sum()
+print('derivative of gradient:', Hv.asnumpy().round(4))
+print('p*v - p (p.v)         :', (p * v - p * mnp.dot(p, v)).asnumpy().round(4))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
 #@tab tensorflow
-# Hv for L(x) = x^T A x / 2, where H = A exactly (tape over tape:
-# reverse-over-reverse, TensorFlow's standard HVP construction)
-A = tf.constant([[3.0, 1.0], [1.0, 2.0]])
-x = tf.Variable([1.0, -2.0])
-v = tf.constant([1.0, 0.5])
-with tf.GradientTape() as outer:
-    with tf.GradientTape() as inner:
-        L = 0.5 * tf.tensordot(x, tf.linalg.matvec(A, x), 1)
-    g = inner.gradient(L, x)
-    gv = tf.tensordot(g, v, 1)                # <grad L, v>, then one more grad
-Hv = outer.gradient(gv, x)
-print('reverse-over-reverse Hv:', Hv.numpy())
-print('A v                    :', tf.linalg.matvec(A, v).numpy())
+x = tf.Variable([1.0, -0.5, 2.0])
+v = tf.constant([1.0, 0.5, -1.0])
+with tf.autodiff.ForwardAccumulator(x, v) as acc:   # forward over ...
+    with tf.GradientTape() as tape:                 # ... reverse
+        ell = tf.reduce_logsumexp(x)
+    g = tape.gradient(ell, x)
+Hv = acc.jvp(g)
+p = tf.nn.softmax(x)
+print('forward over reverse :', Hv.numpy().round(4))
+print('p*v - p (p.v)        :', (p * v - p * tf.tensordot(p, v, 1)).numpy().round(4))
 ```
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
 #@tab jax
-# Hv for L(x) = x^T A x / 2, where H = A exactly
-A = jnp.array([[3.0, 1.0], [1.0, 2.0]])
-L = lambda x: 0.5 * x @ A @ x
-x, v = jnp.array([1.0, -2.0]), jnp.array([1.0, 0.5])
-_, Hv = jax.jvp(jax.grad(L), (x,), (v,))      # forward over reverse
-print('forward-over-reverse Hv:', Hv)
-print('A v                    :', A @ v)
+x = jnp.array([1.0, -0.5, 2.0])
+v = jnp.array([1.0, 0.5, -1.0])
+_, Hv = jax.jvp(jax.grad(jax.nn.logsumexp), (x,), (v,))  # forward over reverse
+p = jax.nn.softmax(x)
+print('forward over reverse :', np.asarray(Hv).round(4))
+print('p*v - p (p.v)        :', np.asarray(p * v - p * (p @ v)).round(4))
 ```
 
-The printed product equals $\mathbf A\mathbf v$ to the digit.
-Exercise :exref:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product` builds
-Hessian--vector products from the toy engines `Dual` and `Var` and contrasts forward-over-reverse
-with the *double-backward* (reverse-over-reverse) alternative.
+:begin_tab:`mxnet`
+MXNet has no forward mode, and its second-order autograd does not cover `exp`.
+The tab therefore evaluates :eqref:`eq_mdl-hvp` directly, as a central
+difference of the reverse-mode gradient with step $h=10^{-4}$ in float64; it
+agrees with the formula to about eight digits.
+:end_tab:
 
-### Differentiating Through Equations
+The printed products agree with :eqref:`eq_mdl-ad-lse-hessian` to the printed
+precision, and no $3\times3$ matrix of second derivatives was formed.
+Exercise :exref:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product`
+builds the same product from `Dual` and `Var`, and compares forward over reverse
+with reverse over reverse.
+
+### Implicit Differentiation
 :label:`subsec_mdl-implicit-diff`
 
-So far we have differentiated an *explicit* program recorded on a tape. Some
-useful outputs in machine learning
-are defined *implicitly*, as the solution of an equation: the fixed point a
-solver converges to, the equilibrium of a physical model, the argmin of an inner
-optimization. Suppose $\mathbf x^\star(\boldsymbol\theta)$ is defined by the
-condition
+Some outputs are defined by an equation and found by a solver: the fixed point
+of an iteration, the equilibrium of a physical model, the minimizer of an inner
+optimization problem. Taping twenty Newton iterations and running reverse mode
+through them works, but it stores every iteration and differentiates the path
+the solver happened to take. We want the derivative from the equation alone.
+
+The smallest case is $g(x,\theta)=x^2-\theta=0$, solved by
+$x^\star=\sqrt\theta$. Differentiate the identity
+$x^\star(\theta)^2-\theta\equiv0$ in $\theta$:
+$2x^\star\,dx^\star/d\theta-1=0$, so
 
 $$
-\mathbf g\bigl(\mathbf x^\star(\boldsymbol\theta),\,\boldsymbol\theta\bigr) = \mathbf 0,
+\frac{dx^\star}{d\theta}=\frac{1}{2x^\star}=\frac{1}{2\sqrt\theta},
 $$
 
-and we want $\partial\mathbf x^\star/\partial\boldsymbol\theta$, say to train
-$\boldsymbol\theta$ by gradient descent through the solver. Taping the solver's
-dozens of iterations works but is wasteful and fragile. The *implicit function
-theorem* :cite:`Rudin.1976`, which we use without proof, says we never have to:
-if $\mathbf g$ is continuously differentiable
-and the Jacobian $\partial\mathbf g/\partial\mathbf x$ is invertible at the
-solution, then $\mathbf x^\star(\boldsymbol\theta)$ is locally a differentiable
-function of $\boldsymbol\theta$, and differentiating the identity
+which is the derivative of $\sqrt\theta$. At $\theta=4$ it is $0.25$. The
+formula for $x^\star$ was never used, only the equation and the value of the
+solution.
+
+The general statement is the *implicit function theorem* :cite:`Rudin.1976`,
+which we use without proof. Let $\mathbf g(\mathbf x,\boldsymbol\theta)$ map
+$\mathbb R^d\times\mathbb R^p$ to $\mathbb R^d$, be continuously differentiable
+near a solution $(\mathbf x^\star,\boldsymbol\theta)$ of
+$\mathbf g=\mathbf 0$, and have an invertible Jacobian
+$\partial\mathbf g/\partial\mathbf x$ there. Then, near
+$\boldsymbol\theta$, the solution is a differentiable function
+$\mathbf x^\star(\boldsymbol\theta)$. Differentiating the identity
 $\mathbf g(\mathbf x^\star(\boldsymbol\theta),\boldsymbol\theta)\equiv\mathbf 0$
-by the chain rule :eqref:`eq_mdl-jacobian-chain` gives
+with the chain rule gives
 $\frac{\partial\mathbf g}{\partial\mathbf x}\frac{\partial\mathbf x^\star}{\partial\boldsymbol\theta}
 +\frac{\partial\mathbf g}{\partial\boldsymbol\theta}=\mathbf 0$, hence
 
@@ -615,21 +985,25 @@ $$
 $$
 :eqlabel:`eq_mdl-implicit-grad`
 
-Both Jacobians on the right are evaluated *at the solution only*: the derivative
-of an implicitly defined output costs one linear solve with the matrix
-$\partial\mathbf g/\partial\mathbf x$ per parameter, no matter how many
-iterations the solver ran. The "never form the Jacobian" discipline applies
-verbatim: a VJP $\mathbf u^\top\partial\mathbf x^\star/\partial\boldsymbol\theta$
-needs only one linear solve against
-$(\partial\mathbf g/\partial\mathbf x)^\top$, which is exactly the *adjoint
-method* that :numref:`sec_mdl-neural-odes-cnf` uses to backpropagate through ODE
-solvers. Deep equilibrium models :cite:`Bai.Kolter.Koltun.2019` make this the
-whole network: a layer's output is the fixed point
-$\mathbf x^\star=\mathbf f(\mathbf x^\star,\boldsymbol\theta)$, trained through
-:eqref:`eq_mdl-implicit-grad` alone, and bilevel problems such as hyperparameter
-optimization differentiate through an inner argmin the same way.
-The next cell verifies :eqref:`eq_mdl-implicit-grad` on a $2\times2$ nonlinear
-system, against a finite difference of the solver's output.
+Both Jacobians on the right are evaluated at the solution only. The derivative
+costs one linear solve with $\partial\mathbf g/\partial\mathbf x$ per
+parameter, however many iterations the solver ran. In VJP form it costs one
+solve for all parameters together:
+$\mathbf u^\top\partial\mathbf x^\star/\partial\boldsymbol\theta
+=-\mathbf a^\top\partial\mathbf g/\partial\boldsymbol\theta$, where $\mathbf a$
+solves $(\partial\mathbf g/\partial\mathbf x)^\top\mathbf a=\mathbf u$.
+
+The adjoint method for differentiating through ODE solvers rests on the same idea
+(:numref:`sec_mdl-odes-solvers`). Deep equilibrium models
+:cite:`Bai.Kolter.Koltun.2019` define a whole layer as a fixed point
+$\mathbf z^\star=\mathbf f(\mathbf z^\star,\boldsymbol\theta)$ and train it
+through :eqref:`eq_mdl-implicit-grad`. Tuning a hyperparameter through an inner
+minimization is another instance.
+
+Does :eqref:`eq_mdl-implicit-grad` agree with a finite difference of the
+solver's output on a nonlinear $2\times2$ system? The system is
+$g_1=x_1^2+\theta x_2-2=0$ and $g_2=x_1x_2+\theta-1=0$, solved by twenty Newton
+steps.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-differentiating-through-equations}
 # Implicit gradient dx*/dtheta = -(dg/dx)^{-1} dg/dtheta on a 2x2 system,
@@ -655,112 +1029,122 @@ print('implicit-function gradient:', implicit.round(8))
 print('finite-difference check   :', fd.round(8))
 ```
 
-The two vectors agree to the precision the finite difference allows. Note what
-the implicit route never touched: the twenty Newton iterations inside `solve`.
-Only the residual's two Jacobians at the converged point enter
-:eqref:`eq_mdl-implicit-grad`: the equation, not the algorithm that solved it,
-carries the derivative.
+The two vectors agree to the precision of the finite difference, and the twenty
+Newton iterations never entered the implicit formula. The derivative depends
+only on $\mathbf g$ and the solution, so any converged solver gives the same
+gradient.
 
-### The Memory Trade-off and Checkpointing
+The theorem has two limits, and both can be seen. First, it needs
+$\partial\mathbf g/\partial\mathbf x$ to be invertible. For $x^2=\theta$ at
+$\theta=0$, $\partial g/\partial x=2x^\star=0$ and the formula divides by zero,
+matching the vertical tangent of $\sqrt\theta$ at $0$. Second, the formula
+assumes that the solver has converged. What do the formula and the unrolled
+solver return when Newton's method on $x^2=4$, started at $x=1$, stops after
+$k=1,2,3$ steps? We evaluate the formula $1/(2\tilde x_k)$ at the unconverged
+$\tilde x_k$, and differentiate the $k$-step solver itself by a central
+difference in $\theta$.
 
-One cost is now visible. Reverse mode must *store the forward intermediates* (the
-`value`s on the tape) until the backward pass consumes them, so its memory grows
-*linearly* with the length $L$ of the computation, whereas forward mode keeps only
-the current value and tangent. For a deep network this $O(L)$ activation memory is
-often the binding constraint on batch size and depth. *Gradient checkpointing*
-:cite:`Chen.Xu.Zhang.ea.2016` buys it back: store only $O(\sqrt L)$ of the
-intermediates and *recompute* the rest on the fly during the backward pass, turning
-$O(L)$ memory into $O(\sqrt L)$ at the cost of roughly one extra forward
-pass; :numref:`fig_mdl-cal-checkpointing` draws the schedule. The
-trade-off can be pushed much further: Griewank's *treeverse* algorithm
-:cite:`Griewank.1992` checkpoints recursively to reach $O(\log L)$ memory, at the
-price of $O(L\log L)$ recomputation, provably optimal among checkpointing
-schedules with the given snapshot budget. Forward and reverse modes,
-mixed modes, and checkpointing are treated in full in Griewank and Walther's
-monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the survey
-:cite:`Baydin.Pearlmutter.Radul.ea.2018`; the same reverse-mode tape returns as the
-*adjoint method* for differentiating through ODE solvers in
-:numref:`chap_mdl-dynamics`.
+```{.python .input #mdl-matrix-calculus-autodiff-implicit-differentiation-1}
+def newton(theta, k, x=1.0):                        # k Newton steps on x^2 = theta
+    for _ in range(k):
+        x = x - (x * x - theta) / (2 * x)
+    return x
 
-![Gradient checkpointing as a timeline. Plain reverse mode (top) keeps all $L$ forward activations alive until the backward sweep consumes them. Checkpointing (bottom) stores only every $\sqrt{L}$-th activation; when the backward sweep reaches a segment, that segment is recomputed forward from its checkpoint and then swept: $O(\sqrt{L})$ memory for roughly one extra forward pass.](../img/mdl-cal-checkpointing.svg)
-:label:`fig_mdl-cal-checkpointing`
+theta, h = 4.0, 1e-6
+for k in (1, 2, 3):
+    x_k = newton(theta, k)
+    unrolled = (newton(theta + h, k) - newton(theta - h, k)) / (2 * h)
+    print(f'k={k}: x = {x_k:.5f}, formula {1 / (2 * x_k):.4f}, '
+          f'unrolled {unrolled:.4f}, exact 0.25')
+```
+
+After one, two, and three steps the solver is at $2.5$, $2.05$, and $2.00061$.
+The formula returns $0.2000$, $0.2439$, and $0.2499$, and the unrolled
+derivative $0.5000$, $0.2900$, and $0.2509$, against the true $0.25$. Both are
+wrong before convergence. The formula inherits the error of the solver, and the
+unrolled derivative, which differentiates the path, is further off here. The
+remedy is to converge first.
+
+We can now write both modes of automatic differentiation in a few lines, trace
+a tape by hand, and derive the weight gradient of a layer as the outer product
+of its adjoint and its input. We can also choose the mode from the shape of the
+Jacobian, compute $\mathbf H\mathbf v$ without $\mathbf H$, differentiate the
+output of a solver without taping the solver, and trade tape memory for one
+extra forward pass.
+
+One problem stays open. Automatic differentiation evaluates the product
+$\mathbf J_K\cdots\mathbf J_1$ exactly, but the product itself grows or shrinks
+like $|\lambda_{\max}|^K$ when its factors are equal
+(:numref:`sec_mdl-matrix-calculus`), and the remedies for these vanishing and
+exploding gradients belong to optimization and to the design of architectures.
+The next section starts the chapter's second track, integration.
 
 ## Summary
 
-* **Forward-mode AD** carries a derivative via *dual numbers* ($\varepsilon^2=0$);
-  one pass computes a Jacobian--vector product, a linear combination of columns
-  (one literal column for a coordinate seed), so it is cheap for tall Jacobians.
-* **Reverse-mode AD** records a *tape* and replays it backward, computing a
-  vector--Jacobian product, a linear combination of rows (one literal row for a
-  coordinate seed). Because a loss is scalar, **backpropagation is reverse-mode
-  AD**: one backward sweep yields the gradient with respect to every parameter at
-  a small constant multiple of one forward evaluation, at the price of storing
-  the forward intermediates. The number of sweeps does not grow with $n$; the
-  cost of each sweep still follows the cost of the primal computation.
-* Automatic differentiation composes JVPs and VJPs without usually forming the
-  full Jacobian; a dense $m\times n$ Jacobian costs $\min(m,n)$ passes and is
-  almost always avoidable. One order up, the **Hessian--vector product**
-  $\mathbf H\mathbf v$ comes from *forward-over-reverse* (Pearlmutter's trick) at
-  the cost of one extra gradient: curvature without forming $\mathbf H$, which is
-  what makes Newton/CG methods scale. The $O(L)$ activation memory of the tape can be traded down to
-  $O(\sqrt L)$ by *gradient checkpointing* at roughly one extra forward pass.
-* **Implicitly defined outputs** need no tape through the solver: if
-  $\mathbf g(\mathbf x^\star,\boldsymbol\theta)=\mathbf 0$, the implicit function
-  theorem gives $\partial\mathbf x^\star/\partial\boldsymbol\theta
-  =-(\partial\mathbf g/\partial\mathbf x)^{-1}\partial\mathbf g/\partial\boldsymbol\theta$
-  from the Jacobians at the solution alone: one linear solve per gradient, the
-  seed of the adjoint method, deep equilibrium models, and bilevel optimization.
+The derivative of a program is the product of the Jacobians of its steps, and
+automatic differentiation evaluates this product against a seed vector, so that
+every step multiplies a matrix by a vector. Forward mode runs the program on
+dual numbers and returns one Jacobian--vector product, one input direction, per
+pass; reverse mode records a tape, replays it backward, and returns one
+vector--Jacobian product, one output direction, per pass. A loss has a single
+output, so one backward sweep gives every parameter gradient, and a layer's
+weight gradient is the outer product $\bar{\mathbf h}_k\mathbf h_{k-1}^\top$.
+On $(\sum_jx_j^2)^2$ with $n=200$ inputs, the gradient took $802$ operations in
+reverse mode against $80{,}200$ in forward mode. The tape's memory grows with the length $T$ of the
+computation, and checkpointing reduces it to $2\sqrt T$ for one extra forward
+pass. Composing the two modes gives the Hessian--vector product at a small
+constant multiple of the cost of one gradient evaluation, and the implicit
+function theorem gives the derivative of a solver's output from one linear
+solve at the solution.
 
 ## Exercises
 
-1. [code] **Dual and complex steps.** Take the map
-   $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ at $\mathbf x_0=(1,0.5)$ and the
-   first column $\mathbf J\mathbf e_1$ of its exact Jacobian. Problem
-   :exref:`ex_mdl-multivariable-calculus-gradient-check`b of
-   :numref:`sec_mdl-multivariable_calculus` models the error of a central
-   difference with step $t$ as a truncation part of order $t^2$ plus a
-   rounding part proportional to machine epsilon divided by $t$.
-    1. Use this model to predict the best step and the smallest error of
-       the central difference
-       $(\mathbf f(\mathbf x_0+t\mathbf e_1)-\mathbf f(\mathbf x_0-t\mathbf e_1))/(2t)$
-       in float64. Check the prediction for
-       $t=10^{-1},10^{-2},\ldots,10^{-12}$. Compare the smallest error with
-       the error of one pass of `VDual` seeded with $\mathbf e_1$. Why does
-       no step size enter the `VDual` computation?
-    1. Replacing $\varepsilon$ by the imaginary unit $i$ gives the
-       complex-step estimate
-       $\operatorname{Im}\mathbf f(\mathbf x_0+it\mathbf e_1)/t$
-       :cite:`Squire.Trapp.1998`. Expand
-       $\mathbf f(\mathbf x_0+it\mathbf e_1)$ to third order in $t$, and
-       show that the error of this estimate is $O(t^2)$. Why does the
-       estimate subtract no nearly equal numbers?
-    1. Evaluate the complex-step estimate with NumPy's complex arithmetic
-       for $t=10^{-1},10^{-2},\ldots,10^{-20}$, and compare its errors with
-       those of (a). Evaluated on the dual input
-       $\mathbf x_0+t\mathbf e_1\varepsilon$, $\mathbf f$ returns
-       $t\,\mathbf J\mathbf e_1$ as the $\varepsilon$-part exactly. Which
-       difference between $\varepsilon^2=0$ and $i^2=-1$ causes the
+1. [code] **Dual and complex steps.** Take
+   $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at $\mathbf x_0=(0.5,0.5)$ and the
+   second column $\mathbf J\mathbf e_2=(\cos0.5,\ 1)$ of its Jacobian. The
+   central difference
+   $(\mathbf f(\mathbf x_0+t\mathbf e_2)-\mathbf f(\mathbf x_0-t\mathbf e_2))/(2t)$
+   has an error of order $t^2$ from truncation plus an error of order $u/t$
+   from rounding, where $u\approx10^{-16}$ is the float64 unit roundoff.
+    1. Predict the best step and the smallest error, then check the prediction
+       for $t=10^{-1},10^{-2},\ldots,10^{-12}$ (you should find about
+       $2\times10^{-11}$ near $t=10^{-5}$). Compare with one pass of `Dual`
+       seeded with $\mathbf e_2$. Why does no step size enter the dual
+       computation?
+    1. Repeat (a) for the first column $\mathbf J\mathbf e_1$, and explain why
+       the central difference is exact there for every $t$, up to rounding.
+       (Hint: $\mathbf f$ is a polynomial of degree two in $x$.)
+    1. Replacing $\varepsilon$ by the imaginary unit $i$ gives the complex-step
+       estimate $\operatorname{Im}\mathbf f(\mathbf x_0+it\mathbf e_2)/t$
+       :cite:`Squire.Trapp.1998`, valid for an $\mathbf f$ that extends
+       analytically to complex arguments, as this one does. Expand
+       $\mathbf f(\mathbf x_0+it\mathbf e_2)$ to third order in $t$ and show that
+       the error of the estimate is $O(t^2)$. Why does the estimate subtract no
+       nearly equal numbers?
+    1. Evaluate the complex-step estimate with NumPy's complex arithmetic for
+       $t=10^{-1},10^{-2},\ldots,10^{-20}$ and compare its errors with those of
+       (a). Which difference between $\varepsilon^2=0$ and $i^2=-1$ causes the
        $O(t^2)$ error of the complex step?
 
 1. [code] **Compressed Jacobians.** A dense $m\times n$ Jacobian costs
    $\min(m,n)$ passes, and a sparse one can cost fewer. A JVP with the seed
    $\mathbf e_j+\mathbf e_k$ returns the sum of columns $j$ and $k$ of the
-   Jacobian. If no row has nonzero entries in both columns, each nonzero
-   entry of the sum belongs to exactly one of them.
+   Jacobian. If no row has nonzero entries in both columns, each nonzero entry
+   of the sum belongs to exactly one of them.
     1. Show that one JVP recovers the whole Jacobian of an elementwise map
-       $\boldsymbol\varphi:\mathbb R^n\to\mathbb R^n$. Which seed does it
-       use? How many VJPs does reverse mode need for the same matrix?
-    1. Let $f_i(\mathbf x)=x_{i-1}x_i+\sin(x_{i+1})$ for $i=1,\ldots,n$,
-       where every term with an index outside $1,\ldots,n$ is dropped.
-       Find three seeds from which all nonzero entries of
-       $\mathbf J_{\mathbf f}$ can be read off. Implement $\mathbf f$ for
-       `VDual` inputs with $n=10$, recover $\mathbf J_{\mathbf f}$ from the
-       three JVPs, and compare it with the analytic Jacobian. Can the
-       three JVPs share a single pass of `VDual`?
-    1. How many seeds does a banded Jacobian need whose nonzero entries
-       satisfy $|i-j|\le b$, and how does this number depend on $n$? Apply
-       the answer to a one-dimensional convolution with kernel size $k$,
-       viewed as a map from its input to its output.
+       $\boldsymbol\varphi:\mathbb R^n\to\mathbb R^n$. Which seed does it use?
+       How many VJPs does reverse mode need for the same matrix?
+    1. Let $f_i(\mathbf x)=x_{i-1}x_i+\sin(x_{i+1})$ for $i=1,\ldots,n$, where
+       every term with an index outside $1,\ldots,n$ is dropped. Find three
+       seeds from which all nonzero entries of $\mathbf J_{\mathbf f}$ can be
+       read off. Implement $\mathbf f$ for `Dual` inputs with $n=10$, recover
+       $\mathbf J_{\mathbf f}$ from the three JVPs, and compare it with the
+       analytic Jacobian. Can the three JVPs share a single pass, with tangents
+       that are arrays of length three?
+    1. How many seeds does a banded Jacobian need whose nonzero entries satisfy
+       $|i-j|\le b$, and how does this number depend on $n$? A one-dimensional
+       convolution with kernel size $k$, without padding, has nonzero entries
+       at $0\le j-i\le k-1$; how many seeds does it need?
 
 1. [code] **Hyperparameter gradient.** Ridge regression with one penalty
    $\lambda_j>0$ per feature fits
@@ -799,13 +1183,14 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        `Var(Dual(x_j, v_j))`, and run `backprop`. Show that the value
        parts of the resulting adjoints form $\nabla f$ and that their
        $\varepsilon$-parts form $\mathbf H\mathbf v$, and compare both with
-       (a). Which operations of the backward closures run in dual
+       (a) and with your framework's forward-over-reverse product applied to
+       the same $f$. Which operations of the backward closures run in dual
        arithmetic, and why does this make the computation
-       forward-over-reverse in the sense of :eqref:`eq_mdl-hvp`?
+       forward over reverse in the sense of :eqref:`eq_mdl-hvp`?
     1. Nest the tape in itself instead. Wrap each input as
        `Var(Var(x_j))` and run `backprop`; the adjoints are now `Var`
        objects. Form $\sum_j(\nabla f)_jv_j$ from them and run `backprop`
-       on it to obtain $\mathbf H\mathbf v$ by reverse-over-reverse.
+       on it to obtain $\mathbf H\mathbf v$ by reverse over reverse.
        Count the `Var` objects that each method creates, for example with
        a counter in `Var.__init__`, and compare both counts with that of
        one plain gradient. Which method records the backward pass, and
@@ -813,8 +1198,8 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
    :exlabel:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product`
 
 1. [code] **Checkpointing on the tape.** ● Let
-   $x_k=x_{k-1}-0.01\,x_{k-1}^2$ for $k=1,\ldots,L$ with $L=400$ and
-   $x_0=1$, and differentiate $x_L$ with respect to $x_0$. `Var` has no
+   $x_k=x_{k-1}-0.01\,x_{k-1}^2$ for $k=1,\ldots,T$ with $T=400$ and
+   $x_0=1$, and differentiate $x_T$ with respect to $x_0$. `Var` has no
    subtraction, so record each step as `x + (-0.01) * x * x`.
     1. Record the chain on the tape with plain `backprop` and count the
        nodes that the tape holds when the backward sweep starts.
@@ -822,7 +1207,7 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        accept any seed. Show that recording a segment
        $x_i\mapsto x_j$ from a fresh leaf for $x_i$ and running the
        generalized `backprop` from $x_j$ with the seed
-       $\partial x_L/\partial x_j$ returns $\partial x_L/\partial x_i$ in
+       $\partial x_T/\partial x_j$ returns $\partial x_T/\partial x_i$ in
        the adjoint of the leaf.
     1. Implement the schedule of :numref:`fig_mdl-cal-checkpointing` with
        segments of $s$ steps: a forward pass in plain floats that stores
@@ -830,13 +1215,14 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        one segment at a time, from the last to the first, and applies (b).
        Check that the result equals the gradient of (a).
     1. For $s\in\{1,5,10,20,100,400\}$, report the number of stored
-       checkpoints, the largest tape, and the number of evaluations of the
-       step $x\mapsto x-0.01x^2$, the first forward pass included. Which
-       $s$ minimizes the sum of checkpoints and largest tape? Repeat the
-       sweep for $L=100$ and $L=1600$ over the divisors $s\le800$ of $L$
-       (a single segment of $1600$ steps exceeds Python's default
-       recursion limit in `backprop`). How does the minimizing $s$ scale
-       with $L$?
+       checkpoints, the largest tape in steps, and the number of evaluations of the
+       step $x\mapsto x-0.01x^2$, the first forward pass included. Confirm
+       the memory $T/s+s$ of :eqref:`eq_mdl-ad-checkpoint-memory`, that is
+       $401,85,50,40,104,401$, and its minimizer $s=\sqrt T=20$. Repeat the
+       sweep for $T=100$ and $T=1600$ over the divisors $s\le800$ of $T$ (a
+       single segment of $1600$ steps exceeds Python's default recursion
+       limit in `backprop`). How does the minimizing $s$ scale with $T$, and
+       how many step evaluations does the best schedule need?
 
 1. [extended] **Equilibrium layer.** ●● A deep equilibrium layer
    :cite:`Bai.Kolter.Koltun.2019` outputs the fixed point
@@ -884,6 +1270,95 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        :citet:`Fung.Heaton.Li.ea.2022`. Is it still a descent direction
        for $\ell$?
 
+1. [code] **A tensor tape.** Extend `Var` from scalars to NumPy arrays, so
+   that each node holds an array and each backward closure applies a VJP rule.
+    1. State the backward rule of each primitive as a VJP. For
+       $\mathbf Y=\mathbf X\mathbf W$, show $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$
+       and $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$. For a broadcast sum
+       $\mathbf Y=\mathbf X+\mathbf b$ with a row vector $\mathbf b$, show
+       that the adjoint of $\mathbf b$ sums $\bar{\mathbf Y}$ over the rows.
+       For $s=\sum_{ij}X_{ij}$, show that the adjoint of $\mathbf X$ is
+       $\bar s\,\mathbf 1\mathbf 1^\top$, and for $\mathrm{relu}$ that it is
+       $\bar{\mathbf Y}$ times a mask.
+    1. Implement a class `TVar` with `__matmul__`, `__add__`, `sum`, and
+       `relu`, and reuse `backprop` unchanged. Why does `backprop` not need to
+       know that the values are arrays?
+    1. Build the loss
+       $\tfrac12\sum\bigl(\mathrm{relu}(\mathbf X\mathbf W_1)\mathbf W_2-\mathbf Y\bigr)^2$
+       for random $\mathbf X\in\mathbb R^{32\times8}$,
+       $\mathbf W_1\in\mathbb R^{8\times16}$,
+       $\mathbf W_2\in\mathbb R^{16\times1}$, and $\mathbf Y\in\mathbb R^{32\times1}$
+       (you will need a square or a product node), and check
+       $\nabla_{\mathbf W_1}\ell$ and $\nabla_{\mathbf W_2}\ell$ against your
+       framework's autograd to $10^{-6}$.
+    1. Count the multiplications of the forward product $\mathbf X\mathbf W$
+       and of its two backward products, and conclude that the backward pass
+       of a linear layer costs twice its forward pass.
+
+1. [code] **Mixed mode through a bottleneck.** The text multiplies
+   :eqref:`eq_mdl-ad-jacobian-product` from one end or the other. Splitting it
+   in the middle can beat both. Let $\mathbf h(\mathbf x)=\tanh(\mathbf A\mathbf x)$
+   with $\mathbf A\in\mathbb R^{2\times1000}$, let
+   $\mathbf g(\mathbf z)=\tanh(\mathbf B\mathbf z)$ with
+   $\mathbf B\in\mathbb R^{1000\times2}$, and let
+   $\mathbf f=\mathbf g\circ\mathbf h:\mathbb R^{1000}\to\mathbb R^{1000}$.
+    1. Show that $\operatorname{rank}\mathbf J_{\mathbf f}\le2$.
+    1. Count the passes needed to form the full $1000\times1000$ Jacobian in
+       pure forward mode and in pure reverse mode. In mixed mode, two VJPs
+       through $\mathbf h$ give $\mathbf J_{\mathbf h}$ ($2\times1000$), two
+       JVPs through $\mathbf g$ give $\mathbf J_{\mathbf g}$ ($1000\times2$),
+       and one product forms $\mathbf J_{\mathbf g}\mathbf J_{\mathbf h}$.
+    1. Implement all three with your framework's `jvp` and `vjp` (in MXNet,
+       with VJPs and the analytic diagonal factors of $\tanh$) and compare
+       with its full-Jacobian function. Count multiplications: about
+       $5\times10^6$ for either pure mode (each pass multiplies by $\mathbf A$,
+       by $\mathbf B$, and by the $\tanh'$ factors) against about
+       $2\times10^6$ for mixed mode, and $1000$ runs of the program against four runs of half
+       of it.
+    1. For a longer chain with one layer of width $k$ in the middle, how many
+       half-program passes does mixed mode need? How would you choose where to
+       split the product $\mathbf J_K\cdots\mathbf J_1$ in general?
+
+1. [code] **Forward gradients.** Can forward mode train at all? Let
+   $\ell:\mathbb R^n\to\mathbb R$ and $\mathbf v\sim\mathcal N(\mathbf 0,\mathbf I_n)$.
+   One forward pass seeded with $\mathbf v$ returns
+   $\nabla\ell^\top\mathbf v$; define the estimate
+   $\hat{\mathbf g}=(\nabla\ell^\top\mathbf v)\,\mathbf v$, which Baydin and
+   coauthors call a forward gradient in "Gradients without backpropagation"
+   (2022).
+    1. Show that $\mathbb E[\hat{\mathbf g}]=\nabla\ell$.
+    1. Show that $\mathbb E\|\hat{\mathbf g}-\nabla\ell\|^2=(n+1)\|\nabla\ell\|^2$.
+       (Hint: $\mathbb E[v_iv_jv_k^2]$ is $3$ for $i=j=k$, $1$ for
+       $i=j\neq k$, and $0$ when $i\neq j$.)
+    1. With `Dual`, and the $f$ and `xs0` of the cost cell ($n=200$), average
+       $m$ independent estimates for $m=1,10,10^2,10^3,10^4$ and plot the
+       relative error against $m$ on log--log axes with `d2l.plot`. Show that
+       the slope is $-\tfrac12$ and that about $2\times10^4$ passes reach a
+       relative error of $10\%$.
+    1. Compare that pass count with the $200$ coordinate passes and the one
+       reverse sweep of the text. What does the random seed gain, and what
+       does it cost?
+
+1. [code] **Second derivatives in one forward pass.** Adjoin $\varepsilon$
+   with $\varepsilon^3=0$ (but $\varepsilon^2\neq0$), and write
+   $a+b\varepsilon+c\varepsilon^2$ as a triple $(a,b,c)$.
+    1. Derive the product
+       $(a,b,c)(a',b',c')=(aa',\ ab'+ba',\ ac'+bb'+ca')$, and show that for an
+       analytic $\varphi$,
+       $\varphi(a+b\varepsilon+c\varepsilon^2)=\varphi(a)+\varphi'(a)\,b\,\varepsilon+\bigl(\varphi'(a)\,c+\tfrac12\varphi''(a)\,b^2\bigr)\varepsilon^2$.
+    1. Implement `Dual2` with `__add__`, `__mul__`, `sin`, and `exp`, and
+       evaluate $f(x)=\sin(x^2)+e^x$ on $(1.3,1,0)$. Show that the result is
+       $(f(1.3),\ f'(1.3),\ \tfrac12f''(1.3))$, and check
+       $f''(1.3)\approx-3.2806$ against the hand formula
+       $f''(x)=2\cos x^2-4x^2\sin x^2+e^x$.
+    1. For $\ell:\mathbb R^n\to\mathbb R$ with inputs seeded by a direction
+       $\mathbf v$, what does the $\varepsilon^2$-part return? (Answer:
+       $\tfrac12\mathbf v^\top\mathbf H\mathbf v$, a number.) How many such
+       passes give the vector $\mathbf H\mathbf v$ by polarization, against one
+       forward-over-reverse pass?
+    1. Write $\varepsilon$ as a $3\times3$ matrix with $\varepsilon^3=\mathbf 0$
+       and verify the product of (a) by matrix multiplication.
+
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/)
 :end_tab:
@@ -908,7 +1383,56 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
 ::: {.cover}
 [Dive into Deep Learning · §23.3]{.kicker}
 
-Derivative computation for neural networks<br>**forward mode · reverse mode · Jacobian products**.
+Automatic Differentiation<br>**forward mode · reverse mode · Jacobian products**
+:::
+:::
+
+::: {.slide title="10⁸ Parameters, One Loss: One at a Time Takes 12 Days per Step"}
+[The problem]{.kicker}
+
+- A training step needs $\partial\ell/\partial\theta_i$ for all $10^8$
+  parameters $\theta_i$ of a network.
+- Nudge one parameter and rerun: $10^8$ runs $\times$ 10 ms $=10^6$ s,
+  about 12 days, plus a step-size error.
+- Backpropagation: all $10^8$ derivatives, exact up to rounding, for about
+  three runs, 30 ms.
+
+::: {.d2l-note .warn}
+The derivative of a program is a product of Jacobians. The end we multiply it
+from decides the cost.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- build forward mode (dual numbers) and reverse mode (a tape) in a few lines;
+- trace a backward sweep by hand and derive a weight gradient from an adjoint;
+- pick the mode from the shape of the Jacobian;
+- compute $\mathbf H\mathbf v$ without $\mathbf H$, and differentiate through a solver.
+
+**Running example:** log-sum-exp $\ell(\mathbf x)=\log\sum_je^{x_j}$ at
+$\mathbf x=(1,-0.5,2)$, gradient $\mathbf p=\operatorname{softmax}(\mathbf x)=(0.254,0.057,0.690)$.
+:::
+
+::: {.slide title="Automatic Differentiation, after Matrix Calculus"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Single Variable Calculus | derivative, Taylor, corners |
+| Multivariable Calculus | gradient, chain rule, Hessian |
+| Matrix Calculus | Jacobians, a layer's backward rule |
+| **Automatic Differentiation** | **forward and reverse mode** |
+| Integral Calculus | areas, expectations, their gradients |
+:::
+
+::: {.col .narrow}
+- **Uses:** Jacobians and their products, a layer's backward rule.
+- **Skips:** nonsmooth functions, optimal accumulation orders, recursive checkpointing.
+:::
 :::
 :::
 
@@ -916,50 +1440,73 @@ Derivative computation for neural networks<br>**forward mode · reverse mode · 
 ::: {.divider}
 [01]{.dnum}
 
-[Forward mode and dual numbers]{.dtitle}
+[Forward Mode]{.dtitle}
 
-[carry the derivative alongside the value]{.dsub}
+[dual numbers carry the derivative with the value]{.dsub}
 :::
 :::
 
-::: {.slide title="An algebra that carries derivatives"}
+::: {.slide title="ε² = 0 Turns the Product Rule into Multiplication"}
 [Forward mode]{.kicker}
 
-Adjoin a symbol $\varepsilon\neq0$ with $\varepsilon^2=0$, the exact encoding of *discard second-order terms*:
+Adjoin $\varepsilon\neq0$ with $\varepsilon^2=0$:
 
-$$(a+b\varepsilon)(c+d\varepsilon)=ac+(ad+bc)\varepsilon.$$
+$$(3+\varepsilon)^2=9+6\varepsilon,\qquad (3+\varepsilon)^3=27+27\varepsilon .$$
 
-. . .
+$$(a+b\varepsilon)(c+d\varepsilon)=ac+(ad+bc)\,\varepsilon .$$
 
-The $\varepsilon$-coefficient $ad+bc$ **is** the product rule. So running a program on $x+1\cdot\varepsilon$ yields
-
-$$f(x+\varepsilon)=f(x)+f'(x)\,\varepsilon.$$
-
-The same pass computes the derivative: seed the input's $\varepsilon$-part with $1$ and read the output's $\varepsilon$-part.
+- $\varepsilon$-parts $6$, $27$: the derivatives of $x^2$, $x^3$ at $3$.
+- $ad+bc$ is the product rule. Concretely,
+  $\varepsilon=\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$.
 :::
 
-::: {.slide title="Dual Numbers in Python"}
+::: {.slide title="Running a Program on x + ε Returns f(x) and f′(x)"}
 [Forward mode]{.kicker}
 
-A handful of overloaded operators *is* forward-mode AD: the $\varepsilon$-part returns $f'(x)=2x\cos(x^2)+e^x$ in one pass, no formula for $f'$ written. Differentiate $f(x)=\sin(x^2)+e^x$ at $x=1.3$:
+$$f(x+\varepsilon)=f(x)+f'(x)\,\varepsilon$$
 
-@matrix-calculus-autodiff-dual-eval
+for any $f$ built from $+$, $\times$, and differentiable primitives, with
+$\varphi(a+b\varepsilon)=\varphi(a)+\varphi'(a)\,b\,\varepsilon$. Sums, products,
+and compositions preserve it. For $f(x)=\sin(x^2)+e^x$ at $1.3$:
+
+@!matrix-calculus-autodiff-dual-eval
 :::
 
-::: {.slide title="One pass per input: cheap when tall"}
+::: {.slide title="One Forward Pass Delivers One Partial: Three Passes for Three Softmax Entries"}
 [Forward mode]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-With a *vector* tangent, one forward pass carries a **Jacobian–vector product** $\mathbf J\mathbf v$, a linear combination of columns, never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off literal **column** $j$.
+Seed input $j$ with $1$, the rest with $0$; the $\varepsilon$-part is
+$\partial\ell/\partial x_j=p_j$:
+
+@!mdl-matrix-calculus-autodiff-a-forward-mode-engine-1
 
 ::: {.d2l-note}
-Forward mode costs one pass per **input**. It is efficient for *tall* Jacobians ($m\gg n$) but inefficient for a scalar loss over millions of inputs.
+A gradient over $n$ inputs costs $n$ passes: for $10^8$ parameters, $10^8$ runs.
 :::
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-cal-fwd-vs-rev.svg){width=100%}
+::: {.slide title="An Identity Seed Returns the Whole Jacobian in One Pass, at n Times the Arithmetic"}
+[Forward mode]{.kicker}
+
+Plane map $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at $(0.5,0.5)$. A seed
+$\mathbf v$ returns the JVP $\mathbf J\mathbf v$; seeds $(1,0)$, $(0,1)$ as
+arrays give all of $\mathbf J$:
+
+@!mdl-matrix-calculus-autodiff-vector-tangents-and-jacobian-columns-1
+
+One pass, but every tangent now has $n$ entries: passes and work differ.
+:::
+
+::: {.slide title="Check: Forward Mode on a Loss with 10⁸ Parameters"}
+[Check]{.kicker}
+
+How many forward passes does the gradient need? Or, in one pass, how much
+arithmetic?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $10^8$ passes with scalar tangents, or one pass whose tangents have
+$10^8$ entries: about $10^8$ times the work of one run either way.
 :::
 :::
 :::
@@ -968,146 +1515,169 @@ Forward mode costs one pass per **input**. It is efficient for *tall* Jacobians 
 ::: {.divider}
 [02]{.dnum}
 
-[Reverse mode, the tape, and backprop]{.dtitle}
+[Reverse Mode]{.dtitle}
 
 [record forward, replay backward]{.dsub}
 :::
 :::
 
-::: {.slide title="Why reverse mode is the right cost model"}
+::: {.slide title="One Product, Two Orders: Matrix Times Vector, Never Matrix Times Matrix"}
+[Reverse mode]{.kicker}
+
+$$\mathbf J\mathbf v=\mathbf J_K(\cdots(\mathbf J_1\mathbf v)),\qquad
+\mathbf u^\top\mathbf J=((\mathbf u^\top\mathbf J_K)\cdots)\mathbf J_1$$
+
+![](../img/mdl-cal-jacobian-shapes.svg){width=80% fig-align="center"}
+
+A loss is one row: one VJP sweep seeded with $1$ gives the whole gradient.
+:::
+
+::: {.slide title="The Tape Records Forward and Replays Backward"}
 [Reverse mode]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Reverse mode multiplies *left-to-right*, carrying a **vector–Jacobian product** $\mathbf u^\top\mathbf J$, one pass per **output**.
+Adjoint $\bar v=\partial y/\partial v$. Each node keeps a closure:
 
-A scalar loss is a single-row Jacobian ($m=1$), so **one** backward sweep yields the *entire* gradient.
+```{.python #mdl-matrix-calculus-autodiff-exercises}
+def back(g):        # c = a * b
+    a.grad += b.value * g
+    b.grad += a.value * g
+```
 
-::: {.d2l-note .rule}
-Gradient of a scalar in one reverse sweep at a small constant multiple of the primal cost: the cheap-gradient principle (Baur--Strassen).
+Adjoints flow against execution: they exist only after the forward pass ends.
 :::
-:::
 
-::: {.col .fig .big}
+::: {.col .fig}
 ![](../img/mdl-cal-fwd-vs-rev.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="One row or one column per pass"}
+::: {.slide title="Check: Fill in the Adjoints of y = (uv + u)² at u = 2, v = −3"}
+[Check]{.kicker}
+
+Forward: $t=uv=-6$, $r=t+u=-4$, $y=r\cdot r=16$. Sweep $y,r,t,u,v$.
+
+::: {.fragment .fade-up}
+![](../img/mdl-cal-tape-dag.svg){width=78% fig-align="center"}
+
+@!mdl-matrix-calculus-autodiff-the-tape-1
+:::
+:::
+
+::: {.slide title="One Outer Product per Layer Gives Every Weight Gradient"}
 [Reverse mode]{.kicker}
 
-The cost rule, drawn as shapes. A pass buys one **row** (reverse, a VJP) or one **column** (forward, a JVP); the cheap mode is the one whose unit matches your Jacobian's *short* side.
+Layer $\mathbf h_k=\mathbf W_k\mathbf h_{k-1}$; the sweep brings
+$\bar{\mathbf h}_k=\partial\ell/\partial\mathbf h_k$. Perturb $\mathbf W_k$ alone:
+$d\ell=\bar{\mathbf h}_k^\top d\mathbf W_k\,\mathbf h_{k-1}$, so
 
-![](../img/mdl-cal-jacobian-shapes.svg){width=88% fig-align="center"}
+$$\nabla_{\mathbf W_k}\ell=\bar{\mathbf h}_k\mathbf h_{k-1}^\top,\qquad
+\begin{pmatrix}1\\2\end{pmatrix}\begin{pmatrix}3&-1\end{pmatrix}=\begin{pmatrix}3&-1\\6&-2\end{pmatrix}.$$
 
-A scalar loss is one row: one VJP, one backward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way, which is why it is never formed.
+- Costs one forward product; passing $\bar{\mathbf h}$ down costs another.
+- Forward mode would need one pass per weight.
 :::
 
-::: {.slide title="The tape: a diamond, not a chain"}
+::: {.slide title="Reverse Mode Does n/2 Times Less Work on (Σx²)²: 802 against 80,200 Operations"}
 [Reverse mode]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Record each op as a node with a *backward* closure; replay in reverse topological order, seeding the output adjoint with $1$.
-
-For $r=uv+u$, $y=r^2$, the value $r$ feeds **both** arguments of $y$, so its adjoint arrives **twice**.
-
-::: {.d2l-note}
-A node's adjoint is the *sum* over its outgoing edges, the chain rule's "sum over paths", which is why the tape accumulates with `+=`, not `=`.
-:::
-:::
-
-::: {.col .fig}
-![](../img/mdl-cal-tape-dag.svg){width=100%}
-:::
-:::
-:::
-
-::: {.slide title="Thirty lines reproduce the backward pass"}
-[Reverse mode]{.kicker}
-
-One forward pass records the tape; one backward pass yields both partials, matching the framework's own autograd. Real engines use tensor nodes, VJP rules, and a larger primitive set, but follow the same procedure:
-
-@matrix-calculus-autodiff-tape-check@pytorch
-:::
-
-::: {.slide title="Forward- and Reverse-Mode Cost"}
-[Reverse mode]{.kicker}
-
-The two engines make the pass-count difference measurable. Take a scalar function of $n = 200$ inputs: forward mode assembles the gradient one input direction per pass; the
-tape runs *one* backward sweep.
+$f(\mathbf x)=(\sum_jx_j^2)^2$, $n=200$: one evaluation is $2n+1=401$
+operations. Both engines count:
 
 @!mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured
 
-. . .
-
-Identical gradients, a factor-$n$ gap in pass counts; per-pass costs match to a small constant, so the work ratio is $\Theta(n)$. Replace $200$ by the $10^8$ parameters of a modern network: that factor is why no framework trains in forward mode.
+::: {.d2l-note}
+Forward: $n(2n+1)$. Reverse: $2(2n+1)$, plus a tape of $401$ values in memory.
+:::
 :::
 
-::: {.slide title="Products Without Explicit Jacobians"}
+::: {.slide title="Checkpointing Cuts Tape Memory from T to 2√T"}
 [Reverse mode]{.kicker}
 
-A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; a JVP or
-VJP costs one pass and stores only a vector.
+![](../img/mdl-cal-checkpointing.svg){width=88% fig-align="center"}
 
-::: {.d2l-note .warn}
-Most derivative calculations require only the action of a Jacobian. Autograd exposes JVPs and VJPs so these actions can be **composed** without assembling the matrix.
+- Segments of $s$ steps: memory $T/s+s$, smallest at $s=\sqrt T$.
+- $T=400$: $40$ values instead of $401$, for one extra forward pass.
 :::
 
-One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ is the directional derivative of the gradient map: curvature in a direction without ever forming $\mathbf H$.
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Composing Products]{.dtitle}
+
+[curvature and solvers from JVPs and VJPs]{.dsub}
+:::
 :::
 
-::: {.slide title="Hessian--Vector Products"}
-[Reverse mode]{.kicker}
+::: {.slide title="A Framework Exposes Two Products: Jv and uᵀJ"}
+[Composing products]{.kicker}
 
-Differentiate the gradient *once, in one direction*. For $L(\mathbf x) = \tfrac12\mathbf x^\top\mathbf A\mathbf x$ the Hessian is $\mathbf A$ itself, so the expected product is
-known in advance, and no $2\times2$ matrix of second derivatives is ever assembled:
+Plane map at $(0.5,0.5)$, $\mathbf v=\mathbf u=(1,2)$,
+$\mathbf J=\left(\begin{smallmatrix}1&0.878\\0.5&1\end{smallmatrix}\right)$:
 
-@mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
-
-. . .
-
-Cost: a small constant multiple of *one gradient*, rather than $n$ gradients. The absolute cost still follows the primal computation. This is what makes Newton and conjugate-gradient methods, and curvature diagnostics, tractable at scale.
-:::
-
-::: {.slide title="Differentiating through an equation"}
-[Reverse mode]{.kicker}
-
-Some outputs are defined *implicitly*: $\mathbf x^\star(\boldsymbol\theta)$ solves $\mathbf g(\mathbf x^\star, \boldsymbol\theta) = \mathbf 0$ (a fixed point, an equilibrium, an inner argmin). No need to tape the solver.
-
-::: {.d2l-note .rule}
-**Implicit function theorem.** Differentiating the identity $\mathbf g(\mathbf x^\star(\boldsymbol\theta), \boldsymbol\theta) \equiv \mathbf 0$ gives
-$\;\frac{\partial\mathbf x^\star}{\partial\boldsymbol\theta} = -\bigl(\frac{\partial\mathbf g}{\partial\mathbf x}\bigr)^{-1}\frac{\partial\mathbf g}{\partial\boldsymbol\theta}$, both Jacobians *at the solution only*.
-:::
-
-. . .
-
-One linear solve per gradient, however many iterations the solver ran. Checked on a $2\times2$ Newton solve, against a finite difference of the solver's output:
-
-@!mdl-matrix-calculus-autodiff-differentiating-through-equations
-
-The derivative depends on the defining equation rather than the solver trajectory. This principle underlies the adjoint method, deep equilibrium models, and bilevel optimization.
-:::
-
-::: {.slide title="Tape Memory and Checkpointing"}
-[Reverse mode]{.kicker}
-
-Reverse mode must keep every forward intermediate alive until the backward sweep consumes it: $O(L)$ activation memory, often the binding constraint on batch size and depth.
-
-![](../img/mdl-cal-checkpointing.svg){width=92% fig-align="center"}
-
-**Checkpointing** stores only every $\sqrt{L}$-th activation and recomputes each segment when the sweep reaches it: $O(\sqrt{L})$ memory for roughly one extra forward pass.
-:::
-
-::: {.slide title="JVPs and VJPs compute derivative actions"}
-[Wrap-up]{.kicker}
-
-- **Forward mode** (dual numbers, JVP): one *column* per pass, cheap when tall.
-- **Reverse mode** (the tape, VJP): one *row* per pass, cheap when wide. A loss is maximally wide, so **backprop is reverse-mode AD**, paid for in stored activations (checkpointing buys them back).
-- **Compose, never assemble:** $\mathbf H\mathbf v$ by differentiating the gradient; implicit outputs by one linear solve.
+@!mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products
 
 ::: {.d2l-note}
-JVPs and VJPs provide the derivative actions used by gradients, Hessian--vector products, and implicit differentiation without assembling full Jacobians.
+Each costs one sweep. Form $\mathbf J$ only when it is small or its determinant
+is needed.
 :::
+:::
+
+::: {.slide title="A 10⁶-Parameter Hessian Has 10¹² Entries; Hv Costs a Few Gradients"}
+[Composing products]{.kicker}
+
+$\mathbf H\mathbf v=\frac{d}{dt}\nabla\ell(\mathbf x+t\mathbf v)\big|_{t=0}$: a JVP
+of the gradient, forward over reverse. For log-sum-exp,
+$\mathbf H=\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$, $\mathbf v=(1,0.5,-1)$:
+
+@!mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
+
+$\mathbf H\mathbf 1=\mathbf 0$: shifting all inputs leaves the gradient unchanged.
+:::
+
+::: {.slide title="The Solution of an Equation Has a Derivative without a Tape through the Solver"}
+[Composing products]{.kicker}
+
+$x^2=\theta$: $2x^\star\,dx^\star/d\theta=1$, so $dx^\star/d\theta=1/(2\sqrt\theta)$.
+
+::: {.d2l-note .rule}
+$\mathbf g(\mathbf x^\star,\boldsymbol\theta)=\mathbf 0$ $\Rightarrow$
+$\dfrac{\partial\mathbf x^\star}{\partial\boldsymbol\theta}=-\Bigl(\dfrac{\partial\mathbf g}{\partial\mathbf x}\Bigr)^{-1}\dfrac{\partial\mathbf g}{\partial\boldsymbol\theta}$,
+both at the solution.
+:::
+
+@!mdl-matrix-calculus-autodiff-differentiating-through-equations
+:::
+
+::: {.slide title="Check: Newton Stopped Early at x = 2.05 for x² = 4"}
+[Check]{.kicker}
+
+What do the formula $1/(2\tilde x)$ and the derivative of the two-step solver
+return? The true value is $0.25$.
+
+::: {.fragment .fade-up}
+@!mdl-matrix-calculus-autodiff-implicit-differentiation-1
+
+::: {.d2l-note}
+**Answer.** $0.244$ and $0.290$. Both are wrong until the solver converges;
+converge first.
+:::
+:::
+:::
+
+::: {.slide title="Two Products Compute Every Derivative a Training Loop Needs"}
+[Wrap-up]{.kicker}
+
+- Forward mode: one column per pass (dual numbers).
+- Reverse mode: one row per pass (the tape); a loss costs one sweep, $802$
+  against $80{,}200$ operations.
+- Weights: $\nabla_{\mathbf W_k}\ell=\bar{\mathbf h}_k\mathbf h_{k-1}^\top$;
+  tape memory $2\sqrt T$ with checkpoints.
+- $\mathbf H\mathbf v$ by forward over reverse; a solver's output by one linear
+  solve.
+
+**Next:** integration, the chapter's second track.
 :::

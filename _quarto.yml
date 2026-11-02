@@ -273,13 +273,17 @@ book:
       chapters:
         - chapter_mdl-linear-algebra/index.qmd
         - chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd
+        - chapter_mdl-linear-algebra/mdl-linear-maps.qmd
         - chapter_mdl-linear-algebra/mdl-eigendecomposition.qmd
         - chapter_mdl-linear-algebra/mdl-svd-low-rank.qmd
+        - chapter_mdl-linear-algebra/further-reading.qmd
         - chapter_mdl-calculus/index.qmd
         - chapter_mdl-calculus/mdl-single-variable-calculus.qmd
         - chapter_mdl-calculus/mdl-multivariable-calculus.qmd
+        - chapter_mdl-calculus/mdl-matrix-calculus.qmd
         - chapter_mdl-calculus/mdl-matrix-calculus-autodiff.qmd
         - chapter_mdl-calculus/mdl-integral-calculus.qmd
+        - chapter_mdl-calculus/further-reading.qmd
         - chapter_mdl-optimization/index.qmd
         - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
         - chapter_mdl-optimization/mdl-adaptive-stochastic-methods.qmd

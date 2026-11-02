@@ -1069,7 +1069,7 @@ heads of width 64, 12 layers, contexts of 1,024 tokens.
 | **Multi-Head and Cross-Attention** | **several heads, shared keys and values** |
 | Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
-| Attention Circuits | what trained heads do |
+| Attention Circuits | what trained heads compute |
 :::
 
 ::: {.col .narrow}

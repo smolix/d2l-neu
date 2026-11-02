@@ -1002,13 +1002,13 @@ a deep stack stays trainable?
 ::: {.col}
 | section | adds |
 |---|---|
-| **The Transformer Block** | **sublayers, norms, FFN** |
-| A GPT from Scratch | embeddings, positions, training |
-| Generation and the KV Cache | fast decoding |
-| Encoders, Decoders, and Cross-Attention | the other wirings |
-| Vision Transformer | images as tokens |
-| Mixture of Experts | sparse FFNs |
-| Scaling Laws | how big, how long |
+| **The Transformer Block** | **attention + FFN on a residual stream** |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| Generation and the KV Cache | reuse keys and values while sampling |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
+| Vision Transformer | images as token sequences |
+| Mixture of Experts | more parameters per FLOP |
+| Scaling Laws | loss against parameters, data, compute |
 :::
 
 ::: {.col .narrow}

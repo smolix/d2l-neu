@@ -1,5 +1,12 @@
 # Chapter Overview — chapter_transformers
 
+**Update (2026-11-02, ch. 10–11 pass):** the chapter has 7 sections plus
+`further-reading.md` (no exercises) and carries 60 exercises; each entry
+below opens with its current list. The language-model experiments of
+`gpt`, `kv-cache`, `encoders-decoders`, `moe`, and `scaling-laws` now train
+on the bytes of `d2l.WikiText103`. The survey that follows describes the
+chapter before the pass.
+
 Seven sections, 41 existing exercises (matches the prior style review's count exactly).
 Stanford CS336 ("Language Modeling from Scratch") is the dominant external source
 by a wide margin: its `assignment1-basics` (tokenizer, RMSNorm/RoPE/SwiGLU
@@ -27,6 +34,8 @@ vision-transformer.md, fixing a formatting defect and an underspecified clause),
 ---
 
 ## chapter_transformers/transformer-block.md — The Transformer Block
+
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 scale invariance; 2 unrolled residual stream; 3 [code] QK-norm as a factory; 4 FFN width rounding; 5 [code] causal masks; 6 [code] ● stream variance budget; 7 [code] ● rate of token collapse; 8 [extended] ● learning-rate sensitivity. Exercise 5, formerly "Causal valid lengths", is now "Causal masks": it builds the mask with `tril` in both frameworks and keeps the observation that a fully masked row gets zero weights. Exercise 3 refers to `split_heads` and overrides `forward` (`__call__` in JAX).
 
 **Topic:** Where normalization sits in a transformer block (post-LN vs. pre-LN vs.
 newer placements), RMSNorm and QK-norm, and the feed-forward network (classic MLP
@@ -109,6 +118,8 @@ needs fixing, so external material is additions only.
 
 ## chapter_transformers/gpt.md — A GPT from Scratch
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 parameter count; 2 [code] unmasked attention; 3 [code] the recipe, one part at a time; 4 [code] memorizing a novel; 5 [code] checkpoint mismatches; 6 [code] ● tied head without blocks; 7 [code] ● bits per byte against GPT-2; 8 [extended] ● subwords at small scale. The language-model experiments now train on the bytes of `d2l.WikiText103`. Reworded: exercise 2 (unmasked attention), exercise 4 "Memorizing a novel" (trains on character-level *The Time Machine* on purpose and compares verbatim fractions of samples), exercise 7 "Bits per byte against GPT-2" (on detokenized WikiText, as in the GPT-2 paper, which notes that WebText excluded Wikipedia), and exercise 8 "Subwords at small scale" (20M WikiText bytes). Exercise 5 "Checkpoint mismatches" refers to `load_gpt2` and gains part 4: an independent float64 NumPy forward pass from the checkpoint, compared in logits relative to the largest logit.
+
 **Topic:** Assembling a decoder-only GPT (embeddings, causal masking, RoPE vs.
 learned positions), training and breaking it, sampling/decoding, and loading
 released GPT-2 weights into the from-scratch class.
@@ -188,6 +199,8 @@ names an exact quantity to compute or measure; strong enough to keep in full.
 ---
 
 ## chapter_transformers/kv-cache.md — Generation and the KV Cache
+
+**Update (2026-11-02, ch. 10–11 pass):** 10 exercises: 1 cost of generation; 2 [code] a missing position offset; 3 cache of a 70B model; 4 [code] a basis fitted on the passage itself; 5 [code] quantized keys and values; 6 [code] sinks as no-ops; 7 ● shared weight reads; 8 [code] ● uptraining to GQA; 9 ● absorbed projections; 10 [extended] ●● a streaming cache. Exercise 4 compares the two bases at the same rank (no full-attention hint); exercises 8 (uptraining to GQA) and 10 (a streaming cache) follow the move to `d2l.WikiText103`; the notation is $L$, $H_\textrm{kv}$, $d_h$ throughout.
 
 **Topic:** Why naive generation is quadratic, the KV cache and its memory cost,
 prefill-vs-decode roofline analysis, and shrinking the cache via GQA/MQA, MLA,
@@ -279,6 +292,8 @@ fixing.
 
 ## chapter_transformers/moe.md — Mixture of Experts
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 router gradient; 2 serving arithmetic; 3 balancing-loss gradient; 4 [code] feedback-loop ablations; 5 [code] bias controller in isolation; 6 ● capacity factor; 7 [code] ● shared expert; 8 [extended] ● expert granularity. Exercise 6 (capacity factor) builds on the capacity buffer that the main text now uses: part 1 names no framework, and part 3 is new (drop order, causality, dependence on the batch).
+
 **Topic:** Conditional computation via top-$k$ token-choice routing, routing
 collapse, and two load-balancing repairs (an auxiliary loss vs. a
 gradient-free bias controller).
@@ -361,7 +376,9 @@ defect (the referent is unambiguous), so nothing needs rewriting.
 
 ---
 
-## chapter_transformers/scaling-laws.md — Scaling Laws and Current Transformer Configurations
+## chapter_transformers/scaling-laws.md — Scaling Laws
+
+**Update (2026-11-02, ch. 10–11 pass):** 10 exercises: 1 attention-score correction; 2 variations on six; 3 total versus non-embedding parameters; 4 pricing a mixture-of-experts run; 5 [code] frozen learning rate; 6 [code] ● a sixth size; 7 [code] ● fitting the law to the grid; 8 ● how the ratio moves with the budget; 9 ● training for inference; 10 [extended] ● isoFLOP profiles. Exercise 3 carries the new label `ex_scaling-laws-embedding-count`, referenced from the main text; three exercises follow the move to `d2l.WikiText103`.
 
 **Topic:** Counting non-embedding parameters and the $6ND$ FLOPs approximation,
 a miniature multi-size scaling experiment, the Chinchilla compute-optimal law,
@@ -460,6 +477,8 @@ needs no changes.
 
 ## chapter_transformers/encoders-decoders.md — Encoders, Decoders, and Cross-Attention
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 prefix language model; 2 [code] the masking recipe; 3 padding masks of a ragged batch; 4 [code] depth, heads, and readable maps; 5 [code] ● several masks at once; 6 ● time's arrow; 7 [code] ● content-addressed alignment; 8 [extended] ● a Perceiver for reversal. Exercise 1.1 asks for the prefix-LM mask as a formula in $t$, $j$, $m$ built from `d2l.causal_mask`; exercise 3.2 asks which masks `d2l.padding_mask` can still build under left padding; exercise 4 carries the label `ex_encdec-depth-heads`. The masked-token experiments use `d2l.WikiText103`.
+
 **Topic:** The three transformer wirings (encoder-only, decoder-only,
 encoder–decoder), the masked-language-modeling objective, verifying learned
 cross-attention against a known alignment, and cross-attention with learned
@@ -548,6 +567,8 @@ full.
 ---
 
 ## chapter_transformers/vision-transformer.md — Vision Transformer
+
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 [code] parameters versus compute; 2 [code] choice of readout; 3 [code] position information; 4 [code] grid permutation test; 5 shift equivariance; 6 [code] ● attention distance; 7 ● shifted windows; 8 [extended] ●● distillation from the CNN. Exercise 4.2 sets `num_steps` to 30 epochs of minibatches.
 
 **Topic:** Patchify-as-strided-convolution, the learnable `<cls>` token and
 position embeddings, and a matched-budget comparison between a ViT and a CNN

@@ -654,8 +654,8 @@ The unfused chain from §13.1, compiled for fusion:
 
 Same answer first (the `allclose`), then faster: close to an
 order of magnitude, entirely on the bytes side — one memory
-round trip instead of one per op. FlashAttention (§10.5) is this
-idea by hand.
+round trip instead of one per op. FlashAttention is this idea
+by hand.
 :::
 
 ::: {.slide title="Compile the Training Step"}

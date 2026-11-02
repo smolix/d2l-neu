@@ -952,12 +952,12 @@ $n = 1{,}024$.
 ::: {.col}
 | section | adds |
 |---|---|
-| Queries, Keys, and Values | soft lookup by content |
-| **Attention Scoring and Masking** | **learned scores, masks, batching** |
-| Multi-Head and Cross-Attention | several lookups in parallel |
-| Positional Information | word order |
-| The Cost of Attention | quadratic cost, cheaper variants |
-| Attention Circuits | circuits in trained models |
+| Queries, Keys, and Values | attention as a soft lookup |
+| **Attention Scoring and Masking** | **scaled dot products, masks** |
+| Multi-Head and Cross-Attention | several heads, shared keys and values |
+| Positional Information | where a token sits |
+| The Cost of Attention | quadratic cost, fused kernels |
+| Attention Circuits | what trained heads compute |
 :::
 
 ::: {.col .narrow}

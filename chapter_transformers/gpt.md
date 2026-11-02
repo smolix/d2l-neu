@@ -1219,7 +1219,7 @@ byte-level model.
 | section | adds |
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
-| **A GPT from Scratch** | **embedding, causal mask, tied head; training; loading GPT-2** |
+| **A GPT from Scratch** | **a trained language model; GPT-2 loaded** |
 | Generation and the KV Cache | reuse keys and values while sampling |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |

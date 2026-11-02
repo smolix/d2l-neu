@@ -795,9 +795,9 @@ on the bytes of WikiText-103.
 | section | adds |
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
-| A GPT from Scratch | embedding, causal mask, tied head; training |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
 | Generation and the KV Cache | reuse keys and values while sampling |
-| Encoders, Decoders, Cross-Attention | the other two wirings |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
 | Mixture of Experts | more parameters per FLOP |
 | **Scaling Laws** | **loss against parameters, data, compute** |

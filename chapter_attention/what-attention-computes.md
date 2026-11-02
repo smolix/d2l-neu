@@ -1348,10 +1348,10 @@ from a vocabulary of 64.
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| Multi-Head and Cross-Attention | several heads, self and cross |
-| Positional Information | sinusoids, RoPE, ALiBi |
+| Multi-Head and Cross-Attention | several heads, shared keys and values |
+| Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
-| **Attention Circuits** | **what trained heads compute, and how to check** |
+| **Attention Circuits** | **what trained heads compute** |
 :::
 
 ::: {.col .narrow}

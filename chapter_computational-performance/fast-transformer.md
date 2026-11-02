@@ -54,7 +54,7 @@ os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ## The Subject
 :label:`subsec_ft-subject`
 
-We take ch. 11's GPT at a width where the experiment can be read cleanly.
+We take the GPT of :numref:`sec_gpt` at a width where the experiment can be read cleanly.
 
 :begin_tab:`pytorch`
 At the `num_hiddens=256` of :numref:`sec_gpt`, the model's matmuls are
@@ -583,7 +583,7 @@ def to_bf16(model):
     return copy
 
 class Bf16GPT(d2l.GPT):
-    """ch. 11's GPT with one dtype leak patched: rope's fp32 trigonometry
+    """d2l.GPT with one dtype leak patched: rope's fp32 trigonometry
     promotes q and k back to fp32 (and the attention kernel rightly
     refuses mixed inputs), so cast them back after rope."""
     class CausalAttention(d2l.GPT.CausalAttention):
@@ -786,7 +786,7 @@ assert it is one before timing anything:
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
 class CheckpointedGPT(nn.Module):
-    """ch. 11's GPT with its transformer blocks run under checkpointing.
+    """d2l.GPT with its transformer blocks run under checkpointing.
     Reuses the exact submodules; only the block loop differs."""
     def __init__(self, gpt):
         super().__init__(); self.gpt = gpt
@@ -819,7 +819,7 @@ print(f'R4 +checkpoint: {tput4:.0f} tokens/s ({tput4 / tput3:.2f}x), '
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab jax
 def ckpt_forward(model, X):
-    """ch. 11's GPT.__call__ with each block under jax.checkpoint.
+    """d2l.GPT.__call__ with each block under jax.checkpoint.
     Reuses the exact submodules; only the block loop differs."""
     H = model.token_emb(X)
     if model.pos == 'learned':                # (default 'rope' adds no emb)
@@ -1469,7 +1469,7 @@ model, one configuration at a time.
 <!-- slides -->
 
 ::: {.slide title="Cumulative Optimization of a GPT" only="pytorch"}
-Apply the chapter's profile--change--verify procedure to the GPT of ch. 11.
+Apply the chapter's profile--change--verify procedure to the GPT of the Transformers chapter.
 Each bar changes one mechanism and inherits the previous settings.
 
 Subject: `d2l.GPT`, width **512** (~19M params). Why not 256?
@@ -1478,7 +1478,7 @@ tensor cores. The width choice is itself a measurement.
 :::
 
 ::: {.slide title="Cumulative Optimization of a GPT" only="jax"}
-Apply the chapter's profile--change--verify procedure to the GPT of ch. 11.
+Apply the chapter's profile--change--verify procedure to the GPT of the Transformers chapter.
 Each bar changes one mechanism and inherits the previous settings.
 
 Subject: `d2l.GPT`, width **512** (~19M params), char *Time

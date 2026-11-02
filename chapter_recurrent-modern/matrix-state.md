@@ -92,14 +92,13 @@ $$\mathbf{y}_t = \Big(\sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top\Big)
 
 The right side is causal attention with the score $\mathbf{k}_s^\top
 \mathbf{q}_t$ and no softmax: every earlier value, weighted by how well its
-key matches the query. Softmax attention computes $\sum_s
-\exp(\mathbf{k}_s^\top \mathbf{q}_t) \mathbf{v}_s$ divided by the sum of the
-weights, and the exponential prevents the sum from being folded into a
-fixed-size matrix. :citet:`Katharopoulos.Vyas.Pappas.ea.2020` replaced it by
-a product of features, which can be folded, and called the result *linear
-attention*: its cost per token does not grow with the length of the
-context (:numref:`sec_attention-at-scale` develops it with its normalizer;
-the models of this chapter normalize the output of the layer instead).
+key matches the query. This is the *linear attention* of
+:eqref:`eq_linear-attn` in :numref:`sec_attention-at-scale`, with the
+identity as the feature map and without the normalizer (the models of this
+chapter normalize the output of the layer instead): because the score is a
+product of features rather than an exponential, the sum folds into a
+fixed-size matrix, and the cost per token does not grow with the length of
+the context :cite:`Katharopoulos.Vyas.Pappas.ea.2020`.
 The left side is the recurrence. The same computation is a transformer
 layer read one way and a recurrent network read the other.
 
@@ -225,7 +224,10 @@ constant. The weights of all past pairs then sum to $1/(1 - a)$, and the
 memory behaves as if it held about the last $1/(1-a)$ pairs: 10 for $a =
 0.9$, 100 for $a = 0.99$. As in :numref:`sec_ssm`, a decay that depends on
 the input lets the model choose: hold the memory through a paragraph and
-clear it at a new document.
+clear it at a new document. Such a decay is the first of the two changes
+that made linear attention competitive in practice
+(:numref:`sec_attention-at-scale`); the second, keeping a few softmax
+layers for recall, is the subject of :numref:`sec_hybrids`.
 
 The decay can be shaped in several ways, each a one-line change of
 :eqref:`eq_ms-decay`. RetNet :cite:`Sun.Dong.Huang.ea.2023` uses a fixed
@@ -378,15 +380,17 @@ training: the recurrence is sequential, and the dual form stores a $T
 
 ### Chunked Computation
 
-Chunking combines the two. Cut the sequence into chunks of $m$ steps and
-partition the matrix $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ into $m
-\times m$ blocks, as in :numref:`fig_ms-semiseparable`. The blocks on the
-diagonal describe how tokens within a chunk interact; each is a small masked
-attention product, and all of them are computed in parallel. The blocks
-below the diagonal describe how earlier chunks influence later ones, and
-they need not be formed at all: everything a chunk needs from the entire
-past is the $d_v \times d_k$ state at the chunk's start. The chunked
-computation therefore has three parts:
+Chunking combines the two, as :eqref:`eq_linear-attn-chunked` of
+:numref:`sec_attention-at-scale` did for linear attention without decay:
+the quadratic form within each chunk, and a state carried from chunk to
+chunk. The mask shows where the decays enter. Cut the sequence into chunks
+of $m$ steps and partition the matrix $\mathbf{L} \odot
+\mathbf{Q}\mathbf{K}^\top$ into $m \times m$ blocks, as in
+:numref:`fig_ms-semiseparable`. The blocks on the diagonal are small masked
+attention products, computed in parallel. The blocks below the diagonal are
+never formed: everything a chunk needs from the entire past is the $d_v
+\times d_k$ state at the chunk's start. With decays, the chunked computation
+has three parts:
 
 1. *Within chunks*: the dual form :eqref:`eq_ms-semiseparable` on each
    chunk.

@@ -169,8 +169,10 @@ and the fourth, the hybrid, replaces the second of its two Gated DeltaNet
 layers by attention. The attention mixer is the multi-head attention of
 :numref:`chap_attention`, computed with the fused attention function of each
 framework, behind the same short convolution as the recurrent layers, so
-that the mixers differ only in their memory. The convolution also gives
-attention all the order it needs here: it brings each key into the
+that the mixers differ only in their memory. The attention mixer has no
+position encoding of its own, like the NoPE layers of
+:numref:`sec_positional-information`, and the convolution gives it all the
+order it needs here: it brings each key into the
 position of the value that follows it, and a query then finds that
 position by content. Without it, two layers of attention with rotary
 position embeddings (:numref:`subsec_pos-rope`) must form an *induction
@@ -470,9 +472,11 @@ this state after about 500 tokens, and at 128,000 tokens it holds 512 MB,
 
 Only the attention layers of a hybrid have caches that grow, so its memory
 per sequence is the transformer's times the fraction of layers that are
-attention, plus a constant. :numref:`fig_hy-cache` shows the effect for a
-model of 32 layers. Jamba :cite:`Lieber.Lenz.Bata.ea.2024`, with 4 attention
-layers among 32, reports a cache of 4 GB at a context of 256,000 tokens,
+attention, plus a constant. This is the accounting of windowed layers
+interleaved with global ones in :numref:`sec_attention-at-scale`, with a
+state of fixed size in place of each window's cache.
+:numref:`fig_hy-cache` shows the effect for a model of 32 layers. Jamba
+:cite:`Lieber.Lenz.Bata.ea.2024`, with 4 attention layers among 32, reports a cache of 4 GB at a context of 256,000 tokens,
 against 32 GB for a transformer of similar size. Memory per sequence decides
 how many sequences a GPU can serve at once, and because generating a token
 reads the whole cache from memory (:numref:`sec_kv-cache`), it also sets
@@ -489,8 +493,9 @@ delta rule, make the fixed state as useful as possible. The answer of
 practice adds a small memory that grows: a few attention layers, which
 retrieve exactly what the fixed state cannot hold. How few, where to place
 them, and whether some of them can attend to a window of recent tokens
-instead of the whole context are questions that current models answer
-differently; :numref:`sec_ssm-further-reading` lists some of their choices.
+(:numref:`sec_attention-at-scale`) instead of the whole context are
+questions that current models answer differently;
+:numref:`sec_ssm-further-reading` lists some of their choices.
 
 ## Summary
 

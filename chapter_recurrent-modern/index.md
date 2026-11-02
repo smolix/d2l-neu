@@ -52,8 +52,11 @@ readout, and cost) rather than a ranking of current models.
 
 We assume you know how a recurrent network carries a hidden state, why its
 gradients vanish over long spans, and how attention reads keys and values.
-The chapter teaches algorithms rather than GPU kernels; fused kernels are the
-subject of :numref:`chap_performance`.
+Linear attention, its recurrent form, and its computation in chunks
+(:numref:`sec_attention-at-scale`) are the starting point of
+:numref:`sec_matrix-state`, which adds a decay. The chapter teaches
+algorithms rather than GPU kernels; fused kernels are the subject of
+:numref:`chap_performance`.
 
 ```toc
 :maxdepth: 2

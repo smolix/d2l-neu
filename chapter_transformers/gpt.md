@@ -512,8 +512,8 @@ print(f'step {num_steps}: train {train_curve[-1]:.2f}, '
 ```
 
 The two curves fall together, and the validation loss never turns upward.
-Every training window is text the model has not read before, so what it
-learns carries over to the held-out articles: at the end, the two losses
+Almost every training window is text the model has not read before, so what
+it learns carries over to the held-out articles. At the end, the two losses
 lie within a few hundredths of a nat of each other. Most of the decrease
 comes in the first few hundred steps, and both losses end below 1.5 nats
 per byte, or about 2.1 bits per byte.
@@ -523,8 +523,8 @@ Two simple predictors give reference levels for these losses. The
 text and ignores all context. Its cross-entropy on that text is the entropy
 of the byte frequencies. The *bigram* model predicts each byte from the
 previous one, with the conditional frequencies of the training text. Both
-are estimated on the first 10 million bytes of the training text, which
-give the frequencies to two decimal places.
+are estimated on the first 10 million bytes of the training text, enough
+to fix their levels to two decimal places.
 
 ```{.python .input #gpt-training-the-model-4}
 %%tab pytorch, jax
@@ -764,9 +764,9 @@ up to 1,024 tokens, and pre-norm with a tied head. Loading it takes a
 constructor call with these settings, the released weights, and the
 released tokenizer. We register the weight and tokenizer files in
 `d2l.DATA_HUB` with their content hashes, so that one download serves every
-later run. Both steps go into the library, as `gpt2_tokenizer` and
-`load_gpt2`, because :numref:`sec_kv-cache` studies how the released model
-uses its cache.
+later run. The tokenizer and the loader both go into the library, as
+`gpt2_tokenizer` and `load_gpt2`, because :numref:`sec_kv-cache` studies how
+the released model uses its cache.
 
 ### The Tokenizer
 
@@ -817,9 +817,9 @@ needs a dictionary of names and one rule about layout. GPT-2's code
 implemented its linear layers as a class `Conv1D` that stores each weight
 matrix with the input dimension first, as
 $(\textrm{in}, \textrm{out})$. The fused `c_attn` matrix concatenates
-queries, keys, and values in the same order as our `W_qkv`, the token
+queries, keys, and values in the same order as our `W_qkv`. The token
 embedding doubles as the output head in both models, and our LayerNorm
-uses GPT-2's $\epsilon = 10^{-5}$, so nothing else needs special handling.
+uses GPT-2's $\epsilon = 10^{-5}$. Nothing else needs special handling.
 The function `load_gpt2` builds the configuration, copies every tensor
 into place, and returns the model in evaluation mode.
 
@@ -975,11 +975,10 @@ attention layer. GPT-2's initialization scales the projections that write
 into the residual stream by $1/\sqrt{2L}$, so that the stream does not grow
 with depth. We train with AdamW, weight decay on the matrices, warmup,
 cosine decay, and clipping, on a corpus so large that the model almost
-never reads the same passage twice, and its validation loss follows its
-training loss. Moving the
-normalization after the residual addition, at a learning rate that
-pre-norm tolerates without warmup, leaves the model at the unigram
-entropy, where its predictions ignore their context. A warmup lets the
+never reads the same passage twice, so its validation loss follows its
+training loss. Moving the normalization after the residual addition, at a
+learning rate that pre-norm tolerates without warmup, leaves the model at
+the unigram entropy, where its predictions ignore their context. A warmup lets the
 post-norm model train. Temperature and top-$k$ truncation reshape the
 distribution from which text is sampled, and the released GPT-2 loads into
 the same class through a map of parameter names.
@@ -1145,7 +1144,7 @@ the same class through a map of parameter names.
 1. [extended] **Subwords at small scale.** ●
    :numref:`subsec_gpt-training` trains on bytes, which keeps the
    embedding table small and makes the loss a number of bits per byte.
-   Subword tokens have the opposite advantages: a window of 128 tokens
+   Subword tokens have other advantages: a window of 128 tokens
    covers several times more text, and each prediction carries more
    information. Test which effect wins at this scale.
     1. Train a `d2l.BPETokenizer` with the GPT-2 pattern on the first
@@ -1375,7 +1374,7 @@ $$\eta_t = \eta \cdot \begin{cases} t/t_w, & t < t_w \\ \tfrac12\left(1 + \cos\l
 ::: {.slide title="Training and Validation Loss Fall Together"}
 @!gpt-training-the-modern-configuration
 
-Every window is new text: nothing to memorize, so the validation loss
+Almost every window is new text: little to memorize, so the validation loss
 tracks the training loss.
 :::
 
@@ -1537,7 +1536,7 @@ continues the prompt coherently.
   costs about $6ND$.
 - GPT-2 initialization: $0.02$, and $0.02/\sqrt{2L}$ on the stream
   writers.
-- On text it has never read before, validation follows training;
+- On text it has almost never read before, validation follows training;
   post-norm without warmup stalls at the unigram level.
 - Temperature and top-$k$ reshape sampling; GPT-2 loads with a name map.
 

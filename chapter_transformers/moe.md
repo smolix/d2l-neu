@@ -105,7 +105,7 @@ not the work per token: a token uses less than two sevenths of the
 parameters. Our configuration has Mixtral's eight experts per layer but
 sends each token to one of them, so it stores eight times what it uses.
 
-The count rests on two assumptions. First, it charges only computation.
+The count rests on two assumptions. First, it counts only computation.
 All $E$ experts must sit in accelerator memory, and during training each
 of them receives gradients from the tokens routed to it. Large models
 therefore spread their experts over many devices and send every token to
@@ -159,8 +159,8 @@ selected. Mixtral instead renormalizes the weights of the selected experts
 to sum to one :cite:`Jiang.Sablayrolles.Roux.ea.2024`. The router then
 learns only how to divide the weight among the selected experts, and for
 top-1 routing, where the single weight is always one, it learns nothing
-from the loss at all. Our raw probabilities are what let a top-1 router
-learn. The first exercise works out these gradients.
+from the loss at all. With raw probabilities, a top-1 router still
+learns. The first exercise works out these gradients.
 
 ### Dispatching Tokens to Experts
 
@@ -171,10 +171,12 @@ efficient layer brings each token to its experts instead. A minibatch of
 $n$ tokens makes $nk$ assignments, pairs of a token and one of its
 experts, and how many of them each expert receives changes from batch to
 batch. Matrix
-multiplications want fixed shapes, so each expert gets a buffer of
+multiplications need fixed shapes, so each expert gets a buffer of
 $C = \lceil c\, nk/E \rceil$ slots, where the *capacity factor* $c$ leaves
 room for an uneven spread; the Switch transformer trains with $c = 1.25$
-:cite:`fedus2022switch`. We number the assignments of each expert in the
+:cite:`fedus2022switch`.
+
+We number the assignments of each expert in the
 order of the tokens and copy the token of an expert's $r^\textrm{th}$
 assignment into slot $r$ of that expert's buffer. An assignment with
 $r \geq C$ is *dropped*: that expert skips the token, which keeps the
@@ -183,7 +185,7 @@ input. All $E$ experts then run at once, as one batched matrix
 multiplication over buffers of shape $(E, C, d)$, and each token collects
 its $k$ outputs, weighted by their probabilities. The work is that of
 $EC \approx cnk$ rows, a fraction $ck/E$ of running every expert on every
-token. The price of fixed shapes is dropping: a balanced router loses few
+token. Fixed shapes come with dropping: a balanced router loses few
 assignments, an unbalanced one many.
 
 Besides its output, the layer keeps four things for the experiments
@@ -389,8 +391,8 @@ layer stores about 4.2 million and a token uses about 1.05 million, a
 quarter. A fresh router spreads random tokens roughly evenly: no expert's
 share is far from the even share of $1/8$, and the buffers, a quarter
 larger than an even share, drop almost no assignments. Random vectors are
-not text, however, and the router is trained; the next part follows the
-shares inside a language model.
+not text, however, and the router has yet to be trained. The next part
+follows the shares inside a language model.
 
 ## Routing Collapse and Load Balancing
 
@@ -437,8 +439,8 @@ close to one, it approaches $E$.
 The balancing loss is added to the language-modeling loss with a small
 weight $\alpha$, 0.01 in the Switch transformer. Its gradient,
 which flows through $\bar{p}$ only, lowers the probability of overloaded
-experts for every token, whatever the token needs. That is its cost: the
-balancing gradient is added to the language-modeling gradient at every
+experts for every token, whatever the token needs. This is its drawback:
+the balancing gradient is added to the language-modeling gradient at every
 step, and the two conflict when some tokens do need a busy expert. With
 $\alpha$ too large, routing serves balance rather than prediction; with
 $\alpha$ too small, the imbalance persists :cite:`Wang.Gao.Zeng.ea.2024`.
@@ -592,8 +594,8 @@ loss measures what a model has learned about English rather than how much
 of the text it has memorized. The recipe, bundled as `d2l.LMOptimizer`, is
 AdamW with weight decay on the weight matrices, a learning rate that rises
 linearly over the first 100 steps and then follows a cosine to zero, and
-clipping of the gradient norm at 1. Our model is a small GPT, two blocks of width 128 with
-eight experts per block and one active per token, with the capacity factor
+clipping of the gradient norm at 1. Our model is a small GPT, two blocks
+of width 128 with eight experts per block and one active per token, with the capacity factor
 of 1.25. We first read a fresh model, then train three models for 800
 steps each. The runs differ only in balancing: none, the auxiliary loss at
 $\alpha = 0.01$, or the bias controller at $u = 0.01$. Each model draws
@@ -678,11 +680,11 @@ experts receive almost none, and the buffers keep dropping the tokens that
 the busy experts have no room for.
 
 Both remedies spread the tokens much more evenly and drop few assignments,
-and both runs end with a lower validation loss than the unbalanced one: in
+and both runs end with a lower validation loss than the unbalanced one. In
 the unbalanced model, experts that receive almost no tokens add parameters
 that the model hardly uses, and many tokens skip their expert altogether.
-At this scale the two remedies end at about the same loss. Their difference shows in
-larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
+At this scale the two remedies end at about the same loss. Their difference
+shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
 billion parameters both ways, and the controller balanced the load much
 more evenly than the auxiliary loss while reaching a slightly lower
 validation perplexity.
@@ -696,15 +698,15 @@ part.
 ### A Mixture-of-Experts GPT
 :label:`subsec_moe-gpt`
 
-The question the expert layer was built for is this: at the same
+The expert layer was built to answer one question: at the same
 computation per token, does a model with eight times the feed-forward
 parameters predict text better? We train two models in the configuration of
 :numref:`sec_gpt`, six blocks of width 256: the dense `d2l.GPT`, and the
 same model with each feed-forward network replaced by eight experts, one
 active per token. The expert layers are balanced by the auxiliary loss at
 $\alpha = 0.01$ and use the capacity factor of 1.25, the settings of the
-Switch transformer, whose experiments we compare with below. Each expert is a full-width `d2l.FeedForward`, so a
-token passes through as many parameters in the mixture as in the dense
+Switch transformer, whose experiments we compare with below. Each expert
+is a full-width `d2l.FeedForward`, so a token passes through as many parameters in the mixture as in the dense
 model, apart from the router's $256 \times 8$ weights per block.
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
@@ -759,15 +761,15 @@ end. At the same computation per token, the stored experts make a better
 model. Large studies report the
 same effect. The Switch transformer reached the quality of a dense T5
 model several times faster at the same number of operations per token, and
-it gained already from two experts :cite:`fedus2022switch`.
+it already gained from two experts :cite:`fedus2022switch`.
 :citet:`Clark.Casas.Guy.ea.2022` found that routing improved models of
 every size they trained, from 15 million to 1.3 billion parameters, with
 the largest gains for the smallest models.
 
 The gain needs data. Each expert sees about $1/E$ of the tokens, and the
 extra parameters help only if the text holds more than the dense model can
-learn from it. A corpus read many times over offers less; ours is read
-less than once.
+learn from it. A corpus read many times over offers less, and ours is
+read less than once.
 :citet:`Krajewski.Ludziejewski.Adamczewski.ea.2024` found that when the
 training tokens grow with the model, the advantage of mixtures over dense
 models grows with the training budget.
@@ -790,7 +792,8 @@ such a budget differently, in the two steps shown in
 :numref:`fig_moe-fine-grained`. Their example starts from 16 full-width
 experts with 2 active per token. The first step cuts each expert into $m$
 narrower ones and lets each token select $m$ times as many: with $m = 4$,
-8 of 64 experts of a quarter width instead of 2 of 16 full-width ones. Neither the stored nor the active parameter count changes. The number
+8 of 64 experts of a quarter width instead of 2 of 16 full-width ones.
+Neither the stored nor the active parameter count changes. The number
 of combinations a token can select does, from $\binom{16}{2} = 120$ to
 $\binom{64}{8} \approx 4.4 \times 10^{9}$. A token can then assemble its
 network from many narrow specialists, say one for chemical vocabulary and
@@ -886,7 +889,7 @@ experts and a shared expert.
 1. **Serving arithmetic.** Qwen3-235B-A22B :cite:`Yang.Li.Yang.ea.2025`
    has $d = 4096$ and 94 layers. Every layer holds 128 SwiGLU experts of
    width 1536, of which each token activates 8, and no shared expert. Its
-   attention has 64 query heads and 4 key-value heads, each of dimension
+   attention has 64 query heads and 4 key--value heads, each of dimension
    128, and its untied embedding and output matrices cover a vocabulary of
    151,936 tokens.
     1. Use `moe_accounting` for the experts and the router, and add the
@@ -1136,7 +1139,7 @@ Same operations per token; 4.2 times the parameters in memory.
 
 ::: {.slide title="Each Expert Gets a Fixed Buffer of C Slots"}
 - The number of tokens an expert receives changes from batch to batch;
-  matrix products want fixed shapes.
+  matrix products need fixed shapes.
 - Buffer of $C = \lceil c\, nk/E \rceil$ slots per expert; Switch trains
   with capacity factor $c = 1.25$.
 - Number each expert's assignments in token order; number $r \geq C$ is

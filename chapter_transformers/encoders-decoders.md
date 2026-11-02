@@ -1,20 +1,20 @@
 # Encoders, Decoders, and Cross-Attention
 :label:`sec_transformer`
 
-The GPT of :numref:`sec_gpt` uses a causal mask in addition to stacked
-transformer blocks. This mask supports next-token prediction, but restricts
-each representation to preceding context. In this section, the attention
-mask and the sources of queries, keys, and values become design choices.
-Removing it gives an *encoder*, which reads in both directions and produces
+The GPT of :numref:`sec_gpt` stacks transformer blocks under a causal mask.
+The mask makes next-token prediction possible, but it restricts each
+representation to the preceding context. In this section the mask, and the
+sources of the queries, keys, and values, become design choices.
+Removing the mask gives an *encoder*, which reads in both directions and produces
 contextual representations. Joining a masked stack to an unmasked one
 through the cross-attention of
 :numref:`sec_multihead-attention` gives the *encoder--decoder* that
 transformers started as :cite:`Vaswani.Shazeer.Parmar.ea.2017`. We build
-both from the same `d2l.TransformerBlock`, examine whether a learned
-cross-attention map reproduces a known alignment, and then consider learned
-queries that do not come from an input sequence. These queries provide an
-interface between fixed-size computation and variable-size data, as used in
-Perceiver-style and vision--language models.
+both from the same `d2l.TransformerBlock` and check whether a learned
+cross-attention map reproduces a known alignment. We then turn to learned
+queries that do not come from an input sequence. Such queries connect a
+computation of fixed size to data of variable size, as in Perceiver-style
+and vision--language models.
 
 ```{.python .input #encoders-decoders-encoders-decoders-and-cross-attention}
 %%tab pytorch
@@ -38,9 +38,9 @@ import optax
 ## Encoder, Decoder, and Encoder--Decoder Architectures
 
 A transformer block maps a sequence of $d$-dimensional vectors to a
-sequence of the same shape, and it leaves two questions open: which
+sequence of the same shape. It leaves two questions open: which
 positions may attend to which, and where the keys and values come from.
-Three common wirings answer these questions, and
+Three common wirings answer these questions.
 :numref:`fig_three-wirings` draws them in the convention we will use for
 every attention map in this section: queries down the rows, keys along
 the columns.
@@ -51,11 +51,11 @@ the columns.
 **Encoder-only.** Drop the mask. Every token attends to every other, so
 each output vector summarizes the *whole* input as seen from its position.
 Such a model does not directly implement the left-to-right autoregressive
-factorization: with the future visible, next-token prediction is a copying
-exercise (though masked models can still be decoded by iterative
-re-masking, the idea text diffusion models develop). But it is the
+factorization: with the future visible, next-token prediction reduces to
+copying. (Masked models can still generate text by iterative re-masking,
+the idea that text diffusion models develop.) But the encoder is the
 strongest way to *represent* an input, and one representation per token is
-exactly what classification, retrieval, and tagging consume. BERT is this
+what classification, retrieval, and tagging consume. BERT is this
 wiring pretrained on text
 :cite:`Devlin.Chang.Lee.ea.2018`; the vision transformer of
 :numref:`sec_vision-transformer` is the same wiring over image patches.
@@ -63,30 +63,30 @@ wiring pretrained on text
 **Decoder-only.** Keep the causal mask everywhere: this is the GPT of
 :numref:`sec_gpt`. Each token predicts its successor, and generation is the
 training objective run forward. One stack is trained with one objective,
-next-token prediction on raw text, and the same stack serves generation;
-large enough models of this kind perform tasks that are specified only in
-the prompt :cite:`brown2020language`. We do not rebuild it here; it appears
-in :numref:`fig_three-wirings` as the pattern the other two are measured
-against.
+next-token prediction on raw text, and the same stack serves generation.
+Large enough models of this kind perform tasks that are specified only in
+the prompt :cite:`brown2020language`. We do not rebuild this wiring here.
+In :numref:`fig_three-wirings` it is the pattern against which the other
+two are compared.
 
 **Encoder--decoder.** The original transformer
 :cite:`Vaswani.Shazeer.Parmar.ea.2017` combines the two: a bidirectional
 encoder reads the source sequence, and a causal decoder generates the
-target while *cross-attending* into the encoder's output — queries from
-the target stream, keys and values from the source, the second wiring of
-:numref:`sec_multihead-attention`. The pattern in
+target while *cross-attending* into the encoder's output. This is the
+cross-attention of :numref:`sec_multihead-attention`, with queries from the
+target stream and keys and values from the source. The pattern in
 :numref:`fig_three-wirings` shows the division: a full square for the
 source, a full rectangle for target-to-source cross-attention, a triangle
 for the target's own past. The wiring fits tasks whose input is fully known
 before generation starts. Machine translation was the founding
-application; T5 pretrained the architecture on span reconstruction and
+application. T5 pretrained the architecture on span reconstruction and
 recast a broad family of tasks as text-to-text :cite:`raffel2020exploring`,
-BART on denoising corrupted text :cite:`lewis2019bart`. In speech
+and BART pretrained it on denoising corrupted text :cite:`lewis2019bart`. In speech
 recognition, Whisper's encoder reads an entire audio clip bidirectionally
 while a text decoder cross-attends into it :cite:`radford2023whisper`.
 
 The rest of this section builds the two wirings that :numref:`sec_gpt` did
-not, in order.
+not: first the encoder, then the encoder--decoder.
 
 ## Bidirectional Context for Masked-Token Prediction
 
@@ -94,9 +94,9 @@ not, in order.
 
 The encoder differs from the `CharLM` of :numref:`sec_transformer-block`
 in one respect: its blocks receive no mask, so every token attends to
-every token. Positions are still the model's job, since attention is
-permutation equivariant (:numref:`sec_positional-information`), so a
-learned position table stays.
+every token. Attention is permutation equivariant
+(:numref:`sec_positional-information`), so the model must still supply
+positions, and the learned position table stays.
 
 ```{.python .input #encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines}
 %%tab pytorch
@@ -147,8 +147,8 @@ class TransformerEncoder(nnx.Module):
 
 ### The Masked-Token Objective
 
-What should this model train on? Not next-token prediction: with the
-future visible, position $t$ can read token $t+1$ directly, and the loss
+This model cannot be trained on next-token prediction. With the future
+visible, position $t$ can read token $t+1$ directly, and the loss
 collapses without teaching anything. The objective must hide what it asks
 for. *Masked language modeling* :cite:`Devlin.Chang.Lee.ea.2018` replaces
 a random subset of tokens with a special `<mask>` symbol and asks the
@@ -159,13 +159,13 @@ $$
 $$
 :eqlabel:`eq_mlm`
 
-where $\mathcal{M}$ is the masked set. Prediction at a masked position
-draws on context from *both* sides, the capability provided by removing the
-causal mask. We train the recipe in miniature on `d2l.WikiText103`, the
-bytes of Wikipedia articles of :numref:`subsec_tinylm`, masking 15% of the
-bytes per window and giving `<mask>` one extra embedding row after the 256
-bytes; the tied output head is the same trick as in
-:numref:`sec_transformer-block`.
+where $\mathcal{M}$ is the set of masked positions. A prediction at a
+masked position draws on context from *both* sides, which is what removing
+the causal mask provides. We train this objective in miniature on
+`d2l.WikiText103`, the bytes of the Wikipedia articles of
+:numref:`subsec_tinylm`. In each window 15% of the bytes are masked, and
+`<mask>` gets one extra embedding row after the 256 byte values. The output
+head is tied to the embedding, as in :numref:`sec_transformer-block`.
 
 ```{.python .input #encoders-decoders-the-masked-token-objective}
 %%tab pytorch
@@ -236,21 +236,20 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
     f'{sum(losses[k-50:k]) / 50:.2f}' for k in (500, 1000, 2000)))
 ```
 
-Two thousand steps bring the masked loss far below the unigram entropy of
-3.17 nats of the byte frequencies, and the evaluation below recovers most
-masked bytes exactly. The loss by position shows how available context
-contributes to this average.
+Two thousand steps bring the masked loss far below 3.17 nats, the unigram
+entropy of the byte frequencies, and the model recovers most masked bytes
+exactly. Binning this average by position shows how much each amount of
+available context contributes.
 
 ### Loss by Available Context
 :label:`subsec_mlm-loss-by-position`
 
-Our windows are 64 bytes long, and that finiteness builds a
-comparison into every batch: a masked byte in the interior has
-context on both sides, while one at position 0 or 63 sees only one side.
-The final position has exactly the context that a causal language model
-has at every step. Because the model and objective remain fixed, binning
-validation loss by position measures the contribution of context from the
-second side.
+Our windows are 64 bytes long, so every batch contains a comparison. A
+masked byte in the interior has context on both sides, while one at
+position 0 or 63 sees only one side. The last position has the context
+that a causal language model has at every step. The model and the
+objective are the same at every position, so binning the validation loss
+by position measures what context from the second side contributes.
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
@@ -307,10 +306,10 @@ d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
 ```
 
 The profile is flat across the interior and roughly doubles at the two
-one-sided edges. The difference is the contribution of the second side:
-conditioning on both sides of a byte halves its loss relative to one side,
+one-sided edges. The difference is the contribution of the second side.
+Conditioning on both sides of a byte halves its loss relative to one side,
 because in text what follows a gap constrains it about as strongly as what
-precedes it. The predictions can be read directly. We mask one byte of a
+precedes it. We can also read the predictions directly. We mask one byte of a
 sentence from the validation text and list the model's three most probable
 fills:
 
@@ -345,14 +344,13 @@ for pos in (11, 22, 32):
                       for i in top))
 ```
 
-The capital "E" of "the _uropean" comes back as the most probable fill:
-the left context "known as the " allows almost any word, only the
-right-hand context ("uropean") determines the letter, and a left-to-right
-model would never see that context. Scaled up to subword tokens, sentence
-pairs, gigabytes of text, and a fine-tuning recipe per downstream task,
-this experiment is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining
-and fine-tuning the Language Models part covers in full
-(:numref:`chap_nlp_pretrain`). Encoders have since adopted the block
+The most probable fill for "the _uropean" is the capital "E". The left
+context "known as the " allows almost any word. Only the right-hand context
+("uropean") determines the letter, and a left-to-right model never sees
+that context. Scaled up to subword tokens, sentence pairs, gigabytes of
+text, and a fine-tuning recipe per downstream task, this experiment is BERT
+:cite:`Devlin.Chang.Lee.ea.2018`. The Language Models part covers its
+pretraining and fine-tuning in full (:numref:`chap_nlp_pretrain`). Encoders have since adopted the block
 internals of this chapter: ModernBERT keeps the encoder-only wiring and
 uses RoPE, a gated FFN, alternating local and global attention, and a
 context of 8,192 tokens :cite:`Warner.Chaffin.Clavie.ea.2024`.
@@ -367,9 +365,9 @@ sequences. Its signature component, cross-attention, is usually
 illustrated on machine translation, but a trained translation model gives
 us no ground truth to check its attention against. So we choose a task
 whose correct alignment is known by construction: *reverse a random
-string*. Target position $t$ must copy source position $n-1-t$, the
-letters are drawn independently at random, and the only path from source
-content to the decoder runs through cross-attention. If the mechanism
+string*. Target position $t$ must copy source position $n-1-t$. The
+letters are drawn independently at random, and the only path from the
+source to the decoder runs through cross-attention. If the mechanism
 works and the model solves the task directly, its attention map should be
 the anti-diagonal, a prediction we can check. Random strings also mean
 unlimited fresh data: like the GPT of :numref:`sec_gpt`, which almost
@@ -429,7 +427,7 @@ result back. The two attention sites are masked differently.
 Self-attention stays causal, because the target is being generated, while
 cross-attention is unmasked, because the source is fully known before
 generation starts. Both masks are optional arguments, so a padded batch
-can pass its own (:numref:`subsec_encdec-masks`); by default
+can pass its own (:numref:`subsec_encdec-masks`). By default,
 self-attention gets `d2l.causal_mask` and cross-attention no mask.
 
 ```{.python .input #encoders-decoders-the-decoder-block-one-more-sublayer-1}
@@ -483,7 +481,7 @@ The full model wires a `TransformerEncoder` (the class from the previous
 section, reused unchanged) to a stack of decoder blocks with its own
 embeddings and output head. `EncoderDecoder` returns the logits; each
 attention module keeps the weights of its last call in
-`attention_weights`. The decoder alone is the method `decode`, so that
+`attention_weights`. The method `decode` runs the decoder alone, so that
 generation can run the encoder once and then only the decoder for each new
 token.
 
@@ -598,8 +596,8 @@ for name, m in (('encoder self', enc_self), ('decoder self', dec_self),
     print(m[0].astype(int))
 ```
 
-Read sequence 0's three grids (source length 3 of 5, target length 3 of
-4): the encoder square and the cross rectangle both blank the same two
+In the three grids of sequence 0 (source length 3 of 5, target length 3
+of 4), the encoder square and the cross rectangle both blank the same two
 padded source columns, and the decoder triangle loses its last column to
 target padding. These grids are what an encoder--decoder assembles for
 every padded batch it trains on. To see the model consume them, we pass
@@ -628,8 +626,8 @@ print((100 * weights).round().astype(int))
 ```
 
 Each row spreads its weight over the three real source positions, and the
-two padded columns receive exactly zero. In the reversal model none of
-this arises: `sample_batch` produces no padding, so the decoder keeps its
+two padded columns receive exactly zero. None of this arises in the
+reversal model: `sample_batch` produces no padding, so the decoder keeps its
 default causal mask and the cross-attention runs unmasked.
 
 ### Training and Decoding
@@ -889,7 +887,7 @@ cost.
 ### The Cost Curve
 :label:`subsec_perceiver-cost-curve`
 
-The claim to verify is the shape of the cost. We time the Perceiver
+We check the shape of this cost. We time the Perceiver
 against the direct alternative (the same two transformer blocks applied
 to the full input sequence) as $N$ doubles at fixed $M = 64$. The timer
 is `d2l.Benchmark` of :numref:`sec_perf_model`: it runs the function a few
@@ -1469,7 +1467,7 @@ slowly and is over an order of magnitude faster at $N = 8192$; at
 $N = 1024$ the two are comparable.
 :::
 
-::: {.slide title="Wrap-Up"}
+::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
 - One block, three wirings: no mask, causal mask, or both joined by

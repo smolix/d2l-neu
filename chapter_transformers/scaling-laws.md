@@ -72,7 +72,7 @@ three of width $8d/3$ with SwiGLU (:numref:`sec_transformer-block`). A stack
 of $L$ blocks thus holds $12Ld^2$. The token embedding holds $Vd$ for a
 vocabulary of $V$ tokens; weight tying uses it a second time as the output
 head without storing a copy. A learned position table adds
-$\textrm{max\_len} \times d$. The census below counts both parts for our
+$\textrm{max\_len} \times d$. The cell below counts both parts for our
 byte-level model and for GPT-2 small:
 
 ```{.python .input #scaling-laws-a-parameter-census}
@@ -93,17 +93,17 @@ census(gpt(50257, num_hiddens=768, num_heads=12, num_blks=12,
 ```
 
 Both rows confirm the $12Ld^2$ rule to a fraction of a percent; the residue
-is normalization gains and, for GPT-2, biases. The embedding share is what
-separates them. It is 1.4% of our model with its 256 bytes, but
-nearly a third of GPT-2, whose 124 million parameters are an 85-million
-parameter transformer attached to lookup tables of 39 million entries, 38.6
+is normalization gains and, for GPT-2, biases. The two models differ in the
+share of the embedding. It is 1.4% of our model with its 256 bytes, but
+nearly a third of GPT-2, whose 124 million parameters are an
+85-million-parameter transformer attached to lookup tables of 39 million entries, 38.6
 million for the tokens and 0.8 million for the positions.
 Comparing $Vd$ with $12Ld^2$ shows that the embedding dominates when $V
 \gtrsim 12Ld$, that is, for small models with large vocabularies. The size
 of the table follows the tokenizer, not the computation each token
 receives, so :citet:`kaplan2020scaling` counted only *non-embedding*
 parameters. The miniature study below does the same, so there $N$ means
-the number of non-embedding parameters; the law of
+the number of non-embedding parameters. The law of
 :citet:`hoffmann2022training` that follows it counts all parameters.
 
 ### Six FLOPs per Parameter and Token
@@ -330,8 +330,8 @@ random weights, and rerunning moves a point by about a hundredth of a nat,
 less than the gaps between the curves. And no run reads the same text
 twice, so a larger budget means more distinct text, not more passes over
 the same text. The training loss of the longest runs stays within a few
-hundredths of the validation loss: the models do not memorize. Repetition
-would change the picture only slowly:
+hundredths of the validation loss, so the models do not memorize.
+Repetition would change these results only slowly:
 :citet:`Muennighoff.Rush.Barak.ea.2023` trained models of up to 9 billion
 parameters on repeated data and found that up to about four passes give
 almost the same loss as fresh data, with each further pass worth less and
@@ -358,24 +358,25 @@ unlimited model trained on $D$ tokens. Here $N$ counts all parameters,
 embeddings included. The choice matters at small scale, where the
 embedding is a large share of a model, because it changes the fitted
 exponent: :citet:`Pearce.Song.2024` trace to it most of the reason why the
-earlier fit of :citet:`kaplan2020scaling` favoured larger models (exercise
+earlier fit of :citet:`kaplan2020scaling` favored larger models (exercise
 :exref:`ex_scaling-laws-embedding-count` measures the effect on a slope).
 
 In our grid the two counts differ little: the table of 256 bytes adds 7%
 to the smallest model and under 1% to the largest, which changes the slope
-on log--log axes by about 2%, so the law reads the grid nearly directly.
+on log--log axes by about 2%, so the law can be compared with the grid
+almost directly.
 With $D$ fixed, $E + B/D^{\beta}$ is a constant, and only $A/N^{\alpha}$
 falls as the model grows. A constant plus a power law is straight on
 log--log axes only while the power law dominates; once $A/N^{\alpha}$ has
 shrunk to the size of the constant, the curve flattens toward
 $E + B/D^{\beta}$. A smaller $D$ raises that constant, so the curve
-flattens earlier. The law counts $D$ repeated tokens as $D$ fresh ones,
-which our grid never puts to the test and which holds for a few passes but
-not for many more.
+flattens earlier. The law counts $D$ repeated tokens as $D$ fresh ones.
+Our grid never tests this assumption, which holds for a few passes but not
+for many more.
 
 ### The Optimal Split
 
-A fixed budget $C \approx 6ND$ can buy a large model trained briefly or a
+A fixed budget $C \approx 6ND$ allows a large model trained briefly or a
 small model trained long. To find the best split, substitute $D = C/(6N)$
 into :eqref:`eq_chinchilla_law` and set the derivative with respect to $N$
 to zero. With $\partial D / \partial N = -D/N$, the optimum satisfies
@@ -398,7 +399,7 @@ $$
 :eqlabel:`eq_chinchilla_allocation`
 
 When $\alpha$ and $\beta$ are about equal, both $N^*$ and $D^*$ grow like
-$C^{1/2}$: a budget a hundred times larger buys a model ten times larger,
+$C^{1/2}$: a budget a hundred times larger gives a model ten times larger,
 trained on ten times as many tokens, and the ratio $D^*/N^*$ hardly changes
 with the budget. :numref:`fig_mdl-transformers-chinchilla` draws the
 geometry. A budget of equal compute is a straight line of slope $-1$ on
@@ -455,7 +456,7 @@ although its training reaches the same loss less efficiently
 models with published sizes and token counts, as if they had been trained
 on Chinchilla's data. For each it prints the tokens per parameter, the
 model's size relative to the compute-optimal model of the same training
-budget, and the loss that the law charges for the difference:
+budget, and the extra loss that the law predicts for the difference:
 
 ```{.python .input #scaling-laws-training-past-the-optimum}
 %%tab pytorch, jax
@@ -476,9 +477,10 @@ data put the optimum for that budget at 402 billion parameters and 16.55
 trillion tokens :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. The smaller
 models are trained far past it, by design. Llama 3 8B reads almost 1,900
 tokens per parameter. The law puts it at a tenth of the compute-optimal
-size and charges it about 0.05 nats of loss; in return, each token it
-generates costs a tenth of what the optimal model's would. For a model that
-will serve trillions of tokens, that trade is worth making. Choosing such
+size and predicts about 0.05 nats of extra loss. Each token it generates,
+however, takes a tenth of the computation that the optimal model would
+need. For a model that will serve trillions of tokens, the smaller model is
+the better choice. Choosing such
 budgets, and the further cost of running out of fresh data, are topics of
 the Language Models part (:numref:`chap_nlp_pretrain`). A mixture of
 experts (:numref:`sec_moe`) does not fit this accounting: its training
@@ -487,7 +489,7 @@ above was fitted to dense models only.
 
 ## Configurations of Deployed Models
 
-The models that these budgets buy are built from the components of this
+The models trained on such budgets are built from the components of this
 chapter. :numref:`tab_modern-recipe` compiles the architecture sections of
 seven open-weights families: Mistral 7B
 :cite:`Jiang.Sablayrolles.Mensch.ea.2023`, Llama 3
@@ -514,8 +516,8 @@ wiring of :numref:`sec_gpt`, and the rows agree on most of its settings: a
 gated feed-forward network, RoPE, RMSNorm with an unnormalized residual
 stream, no biases in most rows, and no dropout in any. (OLMo normalizes each
 sublayer's output before it joins the stream rather than its input, which
-also leaves the stream itself untouched.) No dropout is a consequence of
-scale: a model that reads trillions of tokens about once has nothing to
+also leaves the stream itself unnormalized.) The absence of dropout is a
+consequence of scale: a model that reads trillions of tokens about once has nothing to
 memorize. The rows differ on two axes. The first is the size of the KV
 cache: grouped-query attention in most rows, sliding windows on some
 layers, and a compressed latent in DeepSeek-V3, all from
@@ -527,9 +529,9 @@ models replace most attention layers with the linear recurrences of
 positional encoding from some of its attention layers :cite:`Meta.2025`.
 
 At width 256 and six blocks, three rows of the table become calls of our
-constructor. The modern rows need only the number of key-value heads,
-because the defaults of `d2l.GPT` are the recipe the table shares; Llama 3
-8B shares each key-value head among 4 query heads, Qwen3-32B among 8. The
+constructor. The modern rows need only the number of key--value heads,
+because the defaults of `d2l.GPT` are the recipe the table shares. Llama 3
+8B shares each key--value head among 4 query heads, Qwen3-32B among 8. The
 cell prints the parameter count and the bytes of KV cache per token in
 32-bit floats:
 
@@ -548,14 +550,14 @@ for name, cfg in recipes.items():
           'per token')
 ```
 
-Sharing key-value heads removes part of the key and value projections, a
+Sharing key--value heads removes part of the key and value projections, a
 tenth of the parameters or so at this width, but it shrinks the cache by
 the full factor of the sharing, 4 and 8. The settings the flags do not
 reach would enter as new attention modules. QK-norm
 (:numref:`subsec_qk-norm`) enters through the `attn_factory` hook of
-`TransformerBlock`, as in an exercise of :numref:`sec_transformer-block`;
-a sliding window is a mask (:numref:`sec_attention-at-scale`,
-:numref:`sec_kv-cache`); and a learned latent cache replaces the stored
+`TransformerBlock`, as in an exercise of :numref:`sec_transformer-block`.
+A sliding window is a mask (:numref:`sec_attention-at-scale`,
+:numref:`sec_kv-cache`). A learned latent cache replaces the stored
 keys and values, which :numref:`sec_kv-cache` sketches with a fixed basis.
 The expert layers of the MoE rows enter through `ffn_factory`
 (:numref:`sec_moe`). Deployed models are thus
@@ -967,8 +969,8 @@ read?
 
 - Generating a token costs $2N$: a 10× smaller model is 10× cheaper to
   serve, for life.
-- The refit charges Llama 3 8B about 0.05 nats for it (Sardana et al.,
-  2024).
+- The refit predicts about 0.05 nats of extra loss for Llama 3 8B
+  (Sardana et al., 2024).
 :::
 
 ::: {.slide title="Open Models Share One Block and Differ in the Cache and the FFN"}
@@ -990,11 +992,11 @@ nothing to memorize.
 
 - The modern rows need one flag: the defaults of `d2l.GPT` are the shared
   recipe.
-- Key-value sharing shrinks the cache 4× and 8×, the parameters by about
+- Key--value sharing shrinks the cache 4× and 8×, the parameters by about
   a tenth.
 :::
 
-::: {.slide title="Check: The Price of a Generated Token"}
+::: {.slide title="Check: The Cost of a Generated Token"}
 [Check]{.kicker}
 
 For its budget, the compute-optimal model of Llama 3 8B has about 81B

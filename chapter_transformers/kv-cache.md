@@ -677,9 +677,9 @@ for G in (8, 4, 2, 1):
 
 Sharing helps only if the model stays nearly as good. To measure its
 effect, we train the byte-level model of
-:numref:`subsec_gpt-training` with its recipe, once for every
-number of key--value heads from $H_\textrm{kv} = 8$, full multi-head attention,
-down to $H_\textrm{kv} = 1$, which is MQA. The data are the bytes of the
+:numref:`subsec_gpt-training` with its recipe, once for each
+number of key--value heads from $H_\textrm{kv} = 8$ (full multi-head
+attention) down to $H_\textrm{kv} = 1$ (MQA). The data are the bytes of the
 Wikipedia articles of `d2l.WikiText103`, and `d2l.LMOptimizer` runs AdamW
 with warmup, cosine decay, and gradient clipping for 1,000 steps. The
 model almost never reads the same passage twice, so the validation loss at

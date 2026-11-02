@@ -693,10 +693,10 @@ class CharLM(nnx.Module):
 ### Comparing GELU and SwiGLU
 :label:`subsec_gelu-vs-swiglu`
 
-We train `CharLM` twice on `d2l.WikiText103`, the bytes of Wikipedia
-articles that :numref:`subsec_tinylm` introduced, with the same model size,
-optimizer, learning rate, and budget of 600 steps. Only the `act` flag
-differs, and the parameter counts match to a tenth of a percent. Each line
+We train `CharLM` twice on `d2l.WikiText103`, the bytes of the Wikipedia
+articles introduced in :numref:`subsec_tinylm`. Both runs use the same
+model size, optimizer, learning rate, and budget of 600 steps. Only the
+`act` flag differs, and the parameter counts match to a tenth of a percent. Each line
 reports the validation loss after 200, 400, and 600 steps, measured on the
 held-out articles with `d2l.lm_perplexity` (:numref:`sec_lstm`), whose
 logarithm is the mean loss in nats per byte.

@@ -15,10 +15,11 @@ a block has one feed-forward network or many.
 
 Each setting answers a problem of depth or scale. A deep stack can lose its
 signal at initialization and diverge in training. Generating one token at a
-time recomputes the whole context unless keys and values are kept, and then
-reading what is kept, not the arithmetic, sets the speed. More parameters
-cost more computation unless most of them sit idle for any one token. And a
-run that costs millions has to be sized before it starts. We build one
+time recomputes the whole context unless the keys and values are kept, and
+once they are kept, reading them from memory, not the arithmetic, sets the
+speed. More parameters mean more computation unless most of them sit idle
+for any one token. And a run that costs millions has to be sized before it
+starts. We build one
 implementation in which each setting is a constructor argument, and measure
 what each changes on small models.
 
@@ -78,7 +79,7 @@ the chapter does not teach are collected in
 - [GQA: Training Generalized Multi-Query Transformer Models — Ainslie et al. (2023)](https://arxiv.org/abs/2305.13245) — grouped-query attention as :numref:`sec_kv-cache` uses it, including the uptraining recipe that converts multi-head checkpoints.
 - [Efficient Streaming Language Models with Attention Sinks — Xiao et al. (2024)](https://arxiv.org/abs/2309.17453) — the first-token sink and the windowed cache that keeps it, which :numref:`sec_kv-cache` measures on GPT-2.
 - [Perceiver IO: A General Architecture for Structured Inputs and Outputs — Jaegle et al. (2022)](https://arxiv.org/abs/2107.14795) — learned queries that read an input of any size and write an output of any shape, the interface of :numref:`sec_transformer`.
-- [An Image Is Worth 16x16 Words — Dosovitskiy et al. (2021)](https://arxiv.org/abs/2010.11929) — the ViT paper behind :numref:`sec_vision-transformer`, whose question of scale against built-in assumptions the section's small experiment asks in a different regime.
+- [An Image Is Worth 16x16 Words — Dosovitskiy et al. (2021)](https://arxiv.org/abs/2010.11929) — the ViT paper behind :numref:`sec_vision-transformer`, which weighs scale against built-in assumptions; the section's small experiment asks the same question in a different regime.
 - [Switch Transformers — Fedus et al. (2022)](https://arxiv.org/abs/2101.03961) and [DeepSeek-V3 Technical Report — DeepSeek-AI (2024)](https://arxiv.org/abs/2412.19437) — the two ends of the design range in :numref:`sec_moe`: top-1 routing with an auxiliary balancing loss, and fine-grained experts balanced by a bias.
 - [The Big LLM Architecture Comparison — Sebastian Raschka (2025, maintained)](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison) — current open models compared on the same few axes, a maintained version of :numref:`tab_modern-recipe` in :numref:`sec_scaling-laws`.
 
@@ -104,7 +105,7 @@ One block, many models<br>
 [The problem]{.kicker}
 
 - One block: attention plus a feed-forward network, both added to a
-  residual stream; $12d^2 pprox 7.1$M parameters at $d = 768$.
+  residual stream; $12d^2 \approx 7.1$M parameters at $d = 768$.
 - Twelve blocks, embeddings, and a tied head: 124M parameters.
 - Open models hundreds of times larger change a few settings: norm
   placement, activation, positions, key–value heads, experts.
@@ -112,8 +113,8 @@ One block, many models<br>
   generation, costly parameters, unplanned budgets.
 
 ::: {.d2l-note}
-Which few choices make one block trainable deep, fast to generate from,
-cheap per parameter, and predictable in cost?
+Which few choices make one block train when deep, generate fast, run
+cheaply per parameter, and cost a predictable amount?
 :::
 :::
 
@@ -149,7 +150,7 @@ cheap per parameter, and predictable in cost?
 ::: {.slide title="Every Section Measures Its Claims on Models That Train on One GPU"}
 [Running examples]{.kicker}
 
-| section | testbed |
+| section | model |
 |---|---|
 | The Transformer Block | 32 random blocks; a small byte model on WikiText-103 |
 | A GPT from Scratch | a 4.8M-parameter GPT on WikiText-103 bytes; GPT-2 small |

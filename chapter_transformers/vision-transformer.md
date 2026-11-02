@@ -4,7 +4,7 @@
 A transformer block maps a sequence of vectors to a sequence of the same
 shape, and nothing in it assumes that the vectors stand for words. Can the
 same blocks classify images? The obvious tokenization, one token per pixel,
-fails on cost. A $96 \times 96$ image has 9,216 pixels, so a single attention
+is far too expensive. A $96 \times 96$ image has 9,216 pixels, so a single attention
 head in a single layer would score $9{,}216^2 \approx 85$ million pairs of
 pixels; at the $224 \times 224$ resolution of ImageNet the count exceeds 2.5
 billion. Early attention models for vision therefore kept the computation
@@ -56,7 +56,7 @@ patch to a vector of width $d$, the width of the transformer. For our
 grayscale images, $h = w = 96$, $c = 1$, and $p = 16$, which gives a
 $6 \times 6$ grid of $m = 36$ patches of 256 pixels each.
 
-Cutting and projecting look like two operations, but they are one: a
+Cutting and projecting can be done in a single operation, a
 convolution whose kernel size and stride both equal $p$. At each output
 position, the $c \times p \times p$ kernel of output channel $k$ covers
 exactly one patch, and the output is the inner product of the kernel with
@@ -151,8 +151,8 @@ blocks without a causal mask, in which every token attends to every other.
 ## The Vision Transformer
 
 :numref:`fig_vit` shows the whole model. The patch tokens enter at the
-bottom, together with one extra token that belongs to no patch; the stack of
-blocks processes all of them; and the head reads the final representation of
+bottom, together with one extra token that belongs to no patch. The stack of
+blocks processes all of them, and the head reads the final representation of
 the extra token alone. We build the pieces in turn: the block, the extra
 token, and the position embeddings.
 
@@ -164,8 +164,8 @@ token, and the position embeddings.
 The body of the model is the pre-norm transformer block of
 :numref:`sec_transformer-block`. Each of its two sublayers, multi-head
 self-attention and a two-layer MLP, reads a normalized copy of the residual
-stream and adds its output back, so the stream itself passes through the
-block unchanged. ViT adopted this arrangement after analyses had shown that
+stream and adds its output back, so the stream itself is never normalized,
+only added to. ViT adopted this arrangement after analyses had shown that
 it trains deep stacks more reliably than the post-norm original
 :cite:`baevski2018adaptive,wang2019learning,xiong2020layer`, and most
 transformers have used it since.
@@ -415,8 +415,9 @@ are exempt, as in :numref:`subsec_adamw-what-not-to-decay`, and so are the
 class token and the position embeddings, as in the training code of
 :citet:`touvron2021training`. Decaying the position embeddings would also
 pull them toward zero while we try to measure what they learn. We leave out the recipe's label smoothing and
-Mixup, regularizers that pay off over long runs, so that both models
-minimize the plain cross-entropy for ten epochs.
+Mixup, regularizers that help over long runs, so that the ViT and the CNN
+it is compared with later both minimize the plain cross-entropy for ten
+epochs.
 
 ```{.python .input #vision-transformer-a-first-run-1}
 %%tab pytorch, jax
@@ -450,7 +451,7 @@ the position of its patches.
 
 The position embeddings started as noise, and nothing in the training
 signal ever names a row or a column. In fully trained ViTs they reflect the
-grid anyway: in the analysis of
+grid nonetheless. In the analysis of
 :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, each position's embedding is
 most similar to those of its neighbors and of its own row and column. Does
 our small model show this after ten epochs?
@@ -466,7 +467,7 @@ falls with distance. Independent random vectors in 512 dimensions give a
 flat curve slightly below zero, near $-1/35$: once centered, the 36 vectors
 sum to zero, which makes their average pairwise cosine negative. As a
 reference we compute the same curve for the fixed
-2-D sinusoidal code, which encodes the grid by construction.
+2-D sinusoidal code, which encodes the grid by design.
 
 ```{.python .input #vision-transformer-do-the-position-embeddings-discover-the-grid}
 %%tab pytorch
@@ -512,11 +513,11 @@ d2l.plot(list(range(1, 6)), [grid_similarity(learned), grid_similarity(fixed)],
 ```
 
 The fixed code's curve falls from about 0.76 for neighboring patches to
-between $-0.3$ and $-0.5$ at distances 3 to 5: by construction, patches in
-nearby rows and columns get similar codes. The learned embeddings show
+between $-0.3$ and $-0.5$ at distances 3 to 5, because by construction
+patches in nearby rows and columns get similar codes. The learned embeddings show
 the same trend, less steeply. Neighbors are more similar than distant
-positions, a structure that was absent at initialization and that the model
-inferred from the images alone. The network that we compare with next is
+positions. This structure was absent at initialization, and the model
+inferred it from the images alone. The network that we compare with next is
 given this geometry by its architecture.
 
 ## Comparison with a Convolutional Network
@@ -637,7 +638,7 @@ normalization, and in how finely they look at the image.
 ### The Comparison at Other Scales
 
 The patch size alone moves the result by two points on Fashion-MNIST and
-by fifteen on CIFAR-10. Training for 300 epochs with heavy augmentation,
+by sixteen on CIFAR-10. Training for 300 epochs with heavy augmentation,
 :citet:`Hassani.Walton.Shah.ea.2021` report 93.2% on Fashion-MNIST for ViTs
 of about 3.7 to 3.9 million parameters with $16 \times 16$ patches, 94.5%
 with $8 \times 8$ patches, and 95.2% with $4 \times 4$ patches, slightly
@@ -954,7 +955,7 @@ patches, a 6.5M-parameter ViT against a 6.5M-parameter CNN.
 - **Locality:** a convolution unit sees a small neighborhood.
 - **Translation equivariance:** shift the input, and the feature maps
   shift with it.
-- Local self-attention kept locality, but was hard to run fast
+- Local self-attention restricted attention to small windows
   (Ramachandran et al., 2019).
 
 . . .
@@ -1021,8 +1022,8 @@ $$\mathbf{X} \leftarrow \mathbf{X} + \mathrm{MHA}(\mathrm{LN}(\mathbf{X})), \qqu
 - LN: LayerNorm; MHA: multi-head self-attention, **no mask**.
 - MLP: Linear $d \to 4d$, exact GELU, Linear $4d \to d$, dropout after
   each linear layer.
-- The residual stream passes through untouched; output shape = input
-  shape, so blocks stack.
+- The residual stream is only added to, never normalized; output
+  shape = input shape, so blocks stack.
 :::
 
 ::: {.slide title="A Learned Class Token Collects the Evidence for the Head"}

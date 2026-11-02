@@ -660,7 +660,7 @@ The two constants predict both times to within a few percent.
 :end_tab:
 
 :begin_tab:`jax`
-The single call takes no longer than $\alpha$, although the model adds
+The single call takes little more than $\alpha$, although the model adds
 0.1 ms for its bytes. Each call costs the host about $\alpha$ to dispatch,
 and the transfer of one call runs while the host dispatches the next.
 :eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
@@ -838,10 +838,10 @@ The measured step comes in below the prediction. Our $\alpha$ contains
 the dispatch of a separate program for every allreduce, while the training
 step's `psum` runs inside the program that the step dispatches anyway.
 :end_tab:
- Both runs reach the same test accuracy to within
-a point or two. They start from the same parameters and see the examples
-in the same order, so they differ only in rounding, which a thousand
-steps of SGD amplify. Two runs on one GPU differ about as much, because a
+
+Both runs reach the same test accuracy to within a point or two. They
+start from the same parameters and see the examples in the same order, so
+they differ only in rounding, which a thousand steps of SGD amplify. Two runs on one GPU differ about as much, because a
 GPU does not always add the same numbers in the same order.
 
 LeNet is too small for data parallelism. A second device shortens a step

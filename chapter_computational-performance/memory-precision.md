@@ -438,9 +438,9 @@ instead of reading it from memory. The plan also holds the gradient of the
 logits and the temporaries of the backward pass, which the count leaves out.
 The two effects pull in opposite directions; the plan, not the count, is what
 the GPU must hold. The plan is not linear in the number of tokens either:
-per token it grows by about 0.7 MiB from 1,024 to 2,048 tokens and by
-1.0 MiB from 2,048 to 4,096, because for the larger inputs XLA's program holds more
-arrays of the size of the logits at once.
+per token it grows by half a MiB or a little more from 1,024 to 2,048
+tokens and by about 1 MiB from 2,048 to 4,096, because for the larger
+inputs XLA's program holds more arrays of the size of the logits at once.
 :end_tab:
 
 :begin_tab:`pytorch`

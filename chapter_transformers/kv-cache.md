@@ -414,7 +414,7 @@ with $n^2$, add a sizable share. The cached step grows far more slowly. The
 time to read the cache does grow with $n$, but even at 4,000 tokens the
 cache is smaller than the weights, and every step also has a fixed cost
 that does not depend on $n$. At the longest context the cached step is
-several times faster, and beyond about a thousand tokens the gap widens with
+more than five times faster, and beyond about a thousand tokens the gap widens with
 every doubling of the context. At short contexts the two curves approach
 each other and can even cross. A step of either kind then spends much of
 its time on fixed costs, such as launching the kernels of twelve blocks,
@@ -432,8 +432,8 @@ for name, gen in (('naive ', model.generate),
     print(f'{name}: 256 tokens in {t:4.1f} s = {256 / t:5.1f} tokens/s')
 ```
 
-The cached loop is several times faster, though by far less than the
-factor of about 250 in operations. Every decoded token still reads all the weights of
+The cached loop is more than five times faster, though by far less than
+the factor of about 250 in operations. Every decoded token still reads all the weights of
 the model, as :numref:`subsec_kv-cache-prefill-decode` shows. Serving
 systems report the two phases separately: the *time to first token*
 measures the prefill, and the *tokens per second* measure the decode loop.

@@ -441,11 +441,10 @@ as in the model. A measurement slightly above the specification is
 possible, because the specification assumes the card's rated clock of
 2.52 GHz and the card often runs faster.
 
-The small sizes behave differently. Up to $n = 1024$ every call takes nearly
-the same time, although the work grows 64-fold from $n = 256$ to
-$n = 1024$, and each doubling of $n$ multiplies the throughput by six to
-ten. A time per call that does not depend on the size cannot be spent on
-arithmetic. It is the time $h$ that the host needs to issue one call:
+The small sizes behave differently. From $n = 256$ to $n = 1024$ the work
+grows 64-fold, but the time per call grows by less than a factor of two,
+and each doubling of $n$ multiplies the throughput by five to ten. A time
+per call that barely depends on the size cannot be spent on arithmetic. It is the time $h$ that the host needs to issue one call:
 Python, the framework, and the driver that launches the kernel. When calls
 are queued back to back, host and device work at the same time, and each
 call takes the longer of the two:
@@ -463,9 +462,10 @@ RTX 4090, near $n = 1200$. The time per call at the smallest sizes in the
 output above is the value of $h$ for this framework and this machine.
 
 :begin_tab:`jax`
-In JAX the floor lies near a tenth of a millisecond, and it does not
+In JAX the floor lies between about 60 microseconds and a tenth of a
+millisecond, depending on how busy the host's CPU is, and it does not
 depend on the product. A compiled function that only adds one to a small
-array takes nearly as long per call:
+array takes about as long per call:
 :end_tab:
 
 ```{.python .input #performance-model-matrix-products-across-sizes-3}
@@ -1120,8 +1120,8 @@ $2 \cdot 4096^3 = 1.4 \times 10^{11}$ FLOPs in under 1 ms: over 150 TFLOP/s.
 ::: {.slide title="Small Products Run at the Host's Pace"}
 @!performance-model-matrix-products-across-sizes-1
 
-Up to $n = 1024$ the time per call barely changes; beyond, the products
-approach the roof.
+Up to $n = 1024$ the time per call grows far less than the work; beyond,
+the products approach the roof.
 :::
 
 ::: {.slide title="The Knee Lies Where Device Time Overtakes Host Time"}

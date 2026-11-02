@@ -28,6 +28,7 @@ short training run checks that the fastest step still trains the model.
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
 from d2l import torch as d2l
+import gc
 import json
 import math
 import os
@@ -329,12 +330,11 @@ are limited by memory bandwidth (:numref:`subsec_comp-fusion`).
 :end_tab:
 
 :begin_tab:`jax`
-The device runs kernels for nearly nine tenths of the step and waits for
+The device runs kernels for nine tenths of the step or more and waits for
 the host in the rest. Matrix products take a little under two thirds of the
-device time. The
-step is a single compiled program in which XLA has already fused the
-elementwise operations into the kernels around them, so few short kernels
-remain.
+device time. The step is a single compiled program in which XLA has already
+fused the elementwise operations into the kernels around them, so few short
+kernels remain.
 :end_tab:
 
 ### Host Overhead and Small Kernels
@@ -369,19 +369,18 @@ one, measured by their relative difference.
 :end_tab:
 
 :begin_tab:`jax`
-Our step is in the first regime: XLA has fused the short kernels, but the
-device waits for the host during about a tenth of every step. The host
-does much work for every step.
-`nnx.jit` lets us pass the model and the optimizer, Python objects that
-hold arrays, to a compiled function. On every call it walks through both
-objects to collect their arrays, hands the arrays to the compiled program,
-and writes the results back into the objects. We time this work alone,
-with compiled functions that do nothing, called in three ways: through
-`nnx.jit`; through `nnx.jit` with `graph=False`, which treats the model
-and the optimizer as trees of arrays instead of walking them as Python
-objects; and through `nnx.jit_partial` with `graph=False`, which in
-addition binds them to the function once, so that later calls pass only
-the minibatch.
+Our step is close to the first regime: XLA has fused the short kernels, but
+the host does much work for every step, and the device waits whenever the
+host falls behind. `nnx.jit` lets us pass the model and the optimizer,
+Python objects that hold arrays, to a compiled function. On every call it
+walks through both objects to collect their arrays, hands the arrays to the
+compiled program, and writes the results back into the objects. We time this
+work alone, with compiled functions that do nothing, called in three ways:
+through `nnx.jit`; through `nnx.jit` with `graph=False`, which treats the
+model and the optimizer as trees of arrays instead of walking them as Python
+objects; and through `nnx.jit_partial` with `graph=False`, which in addition
+binds them to the function once, so that later calls pass only the
+minibatch.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-1}
@@ -414,19 +413,20 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by more than a quarter.
+Throughput rises by about a quarter.
 :end_tab:
 
 :begin_tab:`jax`
-A call through `nnx.jit` takes about 8 ms, a third of the device time of
-a step. If the host prepared the next step entirely while the device ran
-the current one, this work would be hidden; the idle tenth of the profile
-shows that it is not. Treating the arguments as trees removes about half
-of it, and binding them once removes nearly all of the rest. Binding
-changes how the step is called, not what it computes. The next cell checks this before the
-timing: one step through `nnx.jit` and one through the bound step, from
-equal copies of the model and the optimizer, must give equal losses and
-leave equal weights.
+A call through `nnx.jit` takes about 8 ms, a third of the device time of a
+step. The host prepares the next step while the device runs the current one,
+so this work stays hidden only as long as the host finishes it in time. A
+CPU that also serves other work falls behind, and the idle part of the
+profile measures by how much. Treating the arguments as trees removes about
+half of the 8 ms, and binding them once removes nearly all of the rest.
+Binding changes how the step is called, not what it computes. The next cell
+checks this before the timing: one step through `nnx.jit` and one through
+the bound step, from equal copies of the model and the optimizer, must give
+equal losses and leave equal weights.
 :end_tab:
 
 ```{.python .input #fast-transformer-host-overhead-1}
@@ -445,8 +445,9 @@ speed = record('+ jit_partial', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 :begin_tab:`jax`
-Throughput rises by a little more than a tenth, as much as the idle time
-of the first profile allowed.
+Throughput rises by as much as the idle time of the first profile
+allowed, a little more than a tenth when the device waited a tenth of the
+step.
 :end_tab:
 
 A second profile shows where the bottleneck has moved:
@@ -822,7 +823,10 @@ backward pass runs. It compiles without CUDA graphs: both configurations
 keep the device busy long enough to hide the work of the host. Its first
 process prints the throughput and the time of one `dist.all_reduce`. Every
 process draws its own windows. We run the script on one GPU as well, so
-that the single-GPU step is measured under the same conditions.
+that the single-GPU step is measured under the same conditions. The
+script's first process runs on GPU 0, where the CUDA graphs of the
+notebook's own compiled steps still hold memory, so the notebook releases
+that memory before the first launch.
 :end_tab:
 
 :begin_tab:`jax`
@@ -886,12 +890,17 @@ if rank == 0:
 dist.destroy_process_group()
 ''')
 
+# The compiled steps above replay CUDA graphs, whose memory pools on GPU 0
+# outlive torch.cuda.empty_cache(). Dropping the steps and the outputs of the
+# graphs and resetting the compiler frees the pools for the process of rank 0.
+del step, compiled, remat, high, low
+torch._dynamo.reset()
+gc.collect()
+torch.cuda.empty_cache()
+
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
-    # Return the memory that this process has cached for its own steps to
-    # the GPU, where the process of rank 0 needs it
-    torch.cuda.empty_cache()
     torchrun = pathlib.Path(sys.executable).parent / 'torchrun'
     out = subprocess.run(
         [torchrun, '--standalone', f'--nproc-per-node={k}', 'ddp_gpt.py',
@@ -950,9 +959,10 @@ two GPUs are predicted to be no faster than one. At batch 512 in bf16 the
 step is several times longer, while the allreduce does not depend on the
 minibatch. The prediction rises to about three quarters of linear scaling
 on two GPUs, and somewhat less on four, where the allreduce moves more
-data through each GPU. The measurements lie at or above the predictions by
-the part of the allreduce that ran during the backward pass, which brings
-them closer to linear scaling. On this machine, data parallelism therefore
+data through each GPU. No measurement lies more than a few percent below
+its prediction, and most lie above it, by the part of the allreduce that
+ran during the backward pass, which brings them closer to linear
+scaling. On this machine, data parallelism therefore
 helps only once the step on each GPU is long.
 
 GPUs connected by NVLink
@@ -984,8 +994,8 @@ for name, speed in results.items():
 ```
 
 The three changes before checkpointing together raise throughput more
-than twofold. At batch 512 the step performs between two fifths and one
-half of the 165 TFLOP/s that the tensor cores can execute in bf16.
+than twofold. At batch 512 the step performs roughly half of the
+165 TFLOP/s that the tensor cores can execute in bf16.
 Checkpointing then lowers the throughput again.
 
 Each ratio depends on its place in the sequence. A change that shortens
@@ -1040,7 +1050,7 @@ The training loss starts near $\log 256 \approx 5.55$, the loss of a
 uniform guess over the 256 bytes, and the validation loss ends well below
 the bigram level. The faster step trains the model.
 
-The fastest configuration still leaves more than half of the card's bf16
+The fastest configuration still leaves about half of the card's bf16
 peak unused. What remains lies in the memory-bound kernels between the
 matrix products, which the third profile showed, in the efficiency of the
 products themselves, and in the width of the numbers. The tensor cores of
@@ -1303,23 +1313,23 @@ A window varies by a few percent: read ratios to one decimal.
 :::
 :::
 
-::: {.slide title="The Eager Step Spends Two Fifths of Its Time Outside the Products" only="pytorch"}
+::: {.slide title="The Eager Step Spends a Third of Its Device Time Outside the Products" only="pytorch"}
 [Baseline]{.kicker}
 
 @!fast-transformer-the-baseline-2
 
 - Device busy for nearly nine tenths of the step: the host mostly keeps up.
-- Matrix products about three fifths of the device time; the rest are short,
-  bandwidth-bound elementwise and normalization kernels.
+- Matrix products a little under two thirds of the device time; the rest
+  are short, bandwidth-bound elementwise and normalization kernels.
 :::
 
-::: {.slide title="The Jitted Step Leaves the Device Idle a Tenth of the Time" only="jax"}
+::: {.slide title="The Jitted Step Is Fused, but the Device Can Wait for the Host" only="jax"}
 [Baseline]{.kicker}
 
 @!fast-transformer-the-baseline-2
 
 - One compiled XLA program per step, elementwise operations fused.
-- Device busy for nearly nine tenths of the step; matrix products a
+- Device busy for nine tenths of the step or more; matrix products a
   little under two thirds of its time.
 :::
 
@@ -1339,7 +1349,7 @@ step = make_step(model, compiled)
 - Chains of elementwise operations become one kernel each;
   `reduce-overhead` replays them as CUDA graphs.
 - Logits agree to three or more digits: fused kernels round in another
-  order. Throughput **more than 1.25×**.
+  order. Throughput **about 1.25×**.
 :::
 
 ::: {.slide title="nnx.jit Walks the Model on Every Call; jit_partial Once" only="jax"}
@@ -1347,11 +1357,11 @@ step = make_step(model, compiled)
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- `nnx.jit` walks model and optimizer on every call: about 8 ms, not
-  fully hidden while the device runs the previous step.
+- `nnx.jit` walks model and optimizer on every call: about 8 ms, hidden
+  only while the host keeps ahead of the device.
 - `graph=False`: trees, not objects; `jit_partial`: bound once.
-- Checked first: equal losses and weights. Throughput **about 1.1×**:
-  the device no longer waits.
+- Checked first: equal losses and weights. Throughput rises by the idle
+  share of the first profile, **about 1.1×** for an idle tenth.
 :::
 
 ::: {.slide title="After the Change, Matrix Products Take the Largest Share"}
@@ -1450,7 +1460,7 @@ The right change only for a model or minibatch that does not fit.
 @!fast-transformer-the-waterfall
 
 - Total: more than 2× from three changes.
-- Final step: two fifths to one half of the bf16 peak.
+- Final step: roughly half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.
 :::
@@ -1490,7 +1500,8 @@ second GPU helps only if the allreduce is shorter than a step.
 - Batch 64: allreduce about as long as the step or longer: no gain.
 - Batch 512 in bf16: step several times longer, same allreduce: well
   above one GPU.
-- Above the prediction by the overlap with the backward pass.
+- At or above the prediction, up to a few percent of noise: the overlap
+  with the backward pass.
 :::
 
 ::: {.slide title="The Optimized Step Still Trains the Model"}
@@ -1504,7 +1515,7 @@ second GPU helps only if the allreduce is shorter than a step.
 ::: {.slide title="Check: Where Would the Next Factor of Two Come From?"}
 [Check]{.kicker}
 
-The final step keeps the device busy at under half of the bf16 peak.
+The final step keeps the device busy at about half of the bf16 peak.
 One GPU, then four GPUs over PCIe.
 
 ::: {.fragment .fade-up}

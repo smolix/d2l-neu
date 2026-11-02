@@ -628,7 +628,7 @@ one, a result that must survive the next call has to be cloned.
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call from Python. The eager version dispatches its 120
-operations one at a time, at tens of microseconds each, and is about
+operations one at a time, at tens of microseconds each, and is twenty to
 thirty times slower. On a GPU, XLA also records runs of consecutive kernels as
 CUDA graphs by default (XLA calls them command buffers). A jitted function
 is therefore recorded and replayed without a separate mode.
@@ -1104,7 +1104,8 @@ $$n^* = \frac{t_\textrm{compile}}{t_\textrm{eager} - t_\textrm{compiled}}$$
 
 @!compilation-whole-step-compilation-measured
 
-Four layers of width 1,024, batch 512: the first call takes seconds, and
+Four layers of width 1,024, batch 512: the first call takes up to several
+seconds, and
 $n^*$ is a small fraction of a real training run.
 :::
 

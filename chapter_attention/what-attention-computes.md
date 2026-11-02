@@ -701,8 +701,8 @@ d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
                   figsize=(3.6, 3.6), cmap='Blues')
 ```
 
-In block 2 of the two-block model, the largest entry of the great majority
-of rows lies on the diagonal, whereas a random argmax would hit the diagonal
+In block 2 of the two-block model, the largest entry of most rows lies on
+the diagonal, whereas a random argmax would hit the diagonal
 in one row out of 64. Attending to a token raises that token's own logit
 more than any other. The heatmap shows the same thing as a bright diagonal.
 The average over the stream matters. With the raw embeddings $\mathbf{e}_a$
@@ -757,7 +757,7 @@ def ablate(model, blk, heads):
 
 The head scores pick the candidates. In block 1 we count every head whose
 previous-token score exceeds 0.2 as a previous-token head, which catches
-both heads when two split the role; the threshold falls in the wide gap
+both heads when two split the role; the threshold falls in the gap
 between their scores and those of the heads that attend to their own
 position. We remove the previous-token heads together and, as a control,
 all the other heads of block 1 together. In block 2 we remove the heads
@@ -808,16 +808,19 @@ for name, model in variants.items():
 Removing block 1's previous-token heads breaks retrieval. The later-copy
 loss rises by several nats and the accuracy falls far below that of the
 intact model, because block 2 has nothing left to match against. Removing
-the other heads of block 1, which attend to their own position, costs far
-less: the loss rises by a fraction of that amount and most of the accuracy
-survives. Block 2's heads share the work. Removing the strongest alone
-raises the loss by roughly a nat or less, removing more raises it further,
-and with all four removed it lies above even that of the one-block model.
-Each induction head can partly stand in for the others, so removing any
-single one underestimates how much the group matters. The ablations give the causal evidence that the maps could
-not give. To predict later copies, the model needs the previous-token heads
-of block 1 and the induction heads of block 2, the two halves of the
-circuit.
+the other heads of block 1 breaks it about as badly, although their maps
+looked irrelevant. They attend to their own position and write a
+transformed copy of the current token into the stream, which block 2
+reads, as the copy matrix above showed. The maps had no way to show this;
+only the intervention did. Block 2's heads share the work. Removing the
+strongest alone costs only part of the accuracy, removing a second and a
+third costs more, and with all four removed the later-copy loss lies above
+even that of the one-block model. Each induction head can partly stand in
+for the others, so removing any single one underestimates how much the
+group matters. The ablations give the causal evidence that the maps could
+not give. To predict later copies, the model needs all of block 1, the
+previous-token heads and the heads that copy the current token, and the
+induction heads of block 2.
 
 ## In-Context Learning
 
@@ -960,11 +963,18 @@ n, p, eta = 32, 8, 0.1
 k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
 X, w = jax.random.normal(k_X, (n, p)), jax.random.normal(k_w, (p,))
 x_q = jax.random.normal(k_q, (p,))
-y = X @ w                              # Context labels
-w_1 = eta * X.T @ y                    # One gradient step from w = 0
-print(f'one gradient step: {x_q @ w_1:.4f}, '
-      f'attention head: {gd_head(X, y, x_q, eta):.4f}')
+with jax.default_matmul_precision('highest'):  # Full fp32 for a check
+    y = X @ w                          # Context labels
+    w_1 = eta * X.T @ y                # One gradient step from w = 0
+    print(f'one gradient step: {x_q @ w_1:.4f}, '
+          f'attention head: {gd_head(X, y, x_q, eta):.4f}')
 ```
+
+:begin_tab:`jax`
+On a GPU, JAX multiplies float32 matrices in the reduced-precision TF32 format by
+default, which is enough for training but blurs an exactness check in the
+fourth digit; the `with` block asks for full float32 precision.
+:end_tab:
 
 The two predictions agree to rounding error. The head's weights contain no
 information about $\mathbf{w}$. The rule comes from the examples in its
@@ -1057,7 +1067,7 @@ the components themselves and shows that it does.
 | period change | input intervention | the fixed-period model uses position, not content | changes the task as well as the input |
 | head scores | activation | heads attend with the predicted offsets | omits the value transformation |
 | copy matrix | weights and mean activations | block 2's OV circuits copy tokens | also present in a model that does not retrieve |
-| head ablation | component intervention | later-copy prediction needs block 1's previous-token heads and block 2's induction heads, not block 1's other heads | zeroing moves the stream off its training distribution |
+| head ablation | component intervention | later-copy prediction needs all of block 1, not only its previous-token heads, and block 2's induction heads | zeroing moves the stream off its training distribution |
 
 Ablation asks whether a component is necessary. *Activation patching* asks
 what a component carries. It copies the component's output from a run on
@@ -1092,9 +1102,9 @@ patterns it has never seen, a small instance of in-context learning. With a
 fixed period, a one-block model finds a positional shortcut instead.
 Attention maps located the candidate heads, the copy matrix showed that
 they copy, as even the one-block model's heads do, and ablation showed that
-the model needs them, while the other heads of block 1 matter far less.
-Attention weights alone explain little until the value transformation and an
-intervention are added.
+the model needs them, together with block-1 heads whose maps looked
+irrelevant. Attention weights alone explain little until the value
+transformation and an intervention are added.
 
 ## Exercises
 
@@ -1560,16 +1570,18 @@ not explain retrieval; the match on the QK side does.
 
 - Zero a head's columns of `proj`: its term leaves the stream.
 - Block 1: heads with previous-token score above 0.2 (one, or two that
-  split the role). Removing them breaks retrieval; removing the rest costs
-  far less.
-- Block 2's loss rises as induction heads go, past the one-block level.
+  split the role). Removing them breaks retrieval, and so does removing
+  the rest: they copy the current token for block 2.
+- Block 2: accuracy falls as induction heads go; with all four gone, the
+  loss passes the one-block level.
 :::
 
 ::: {.slide title="Check: Why Does One Head Matter So Little?"}
 [Check]{.kicker}
 
-Removing block 2's strongest induction head raises the later-copy loss by
-roughly a nat or less; removing all four lifts it past the one-block level.
+Removing block 2's strongest induction head costs only part of the
+later-copy accuracy; removing all four lifts the loss past the one-block
+level.
 What does that say about the heads?
 
 ::: {.fragment .fade-up}

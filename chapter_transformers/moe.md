@@ -676,13 +676,14 @@ five is a space. In the second block, attention has added to every
 position nearly the same average of the earlier bytes, and this
 common offset tilts most tokens toward the same expert. Training without
 balancing does not undo the imbalance. The routing stays concentrated: the
-busiest expert of a layer receives several times its even share, some
+busiest expert of a layer receives about twice its even share or more, some
 experts receive almost none, and the buffers keep dropping the tokens that
 the busy experts have no room for.
 
-Both remedies spread the tokens much more evenly and drop few assignments,
-and both runs end with a lower validation loss than the unbalanced one. In
-the unbalanced model, experts that receive almost no tokens add parameters
+Both remedies spread the tokens much more evenly and drop few assignments.
+Both runs end at or below the validation loss of the unbalanced one, and
+the further that run has collapsed, the wider the gap. In the unbalanced
+model, experts that receive almost no tokens add parameters
 that the model hardly uses, and many tokens skip their expert altogether.
 At this scale neither remedy ends consistently ahead of the other. Their
 difference shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models of 1 and 3
@@ -1278,8 +1279,9 @@ Wikipedia articles (WikiText-103); first a fresh model:
 ::: {.slide title="Both Remedies Even Out the Load; No Balancing Stays Skewed"}
 @!moe-three-runs-one-budget-4
 
-- No balancing: busy experts keep several times their share.
-- Both remedies: shares near $1/8$, few drops, lower validation loss.
+- No balancing: the busiest expert keeps about twice its share or more.
+- Both remedies: shares near $1/8$, few drops, validation loss at or below
+  the unbalanced run's.
 :::
 
 ::: {.slide title="Check: What Is the Balancing Loss Here?"}

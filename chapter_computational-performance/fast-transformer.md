@@ -736,7 +736,7 @@ profile_top(prof, rows=5)
 :begin_tab:`jax`
 Read the three printed lines together, because they close R2's case and
 then break a lazy assumption. The bf16 step at batch 512 delivers
-roughly 1.4 times the throughput of the jitted fp32 baseline, and the
+roughly 1.4 to 1.5 times the throughput of the jitted fp32 baseline, and the
 achieved TFLOP/s rises by about half — the tensor cores are finally
 earning their silicon. But look at the fp32 control: at batch 512 it is
 *slower than fp32 at batch 64*. The batch configuration, taken alone, is
@@ -1134,7 +1134,7 @@ d2l.plt.show()
 
 :begin_tab:`pytorch`
 Compilation raises throughput by 1.2 to 1.3 times by fusing the elementwise
-operations identified in the profile. Bf16 adds roughly another half once the
+operations identified in the profile. Bf16 adds roughly another 40 to 50% once the
 matrices are wide enough to use tensor cores effectively. Increasing the batch
 adds 1.1 to 1.3 times by raising arithmetic intensity. Checkpointing reduces
 throughput by about 10% while reducing peak memory from about 9 GiB to 3 GiB;
@@ -1154,7 +1154,7 @@ limiting. At batch 512, bf16 and the larger batch interact: the larger fp32
 batch alone even lowers throughput, while together the two changes raise it
 clearly. Checkpointing reduces throughput by a fifth to a quarter while
 reducing planned temporary storage severalfold. From the jitted baseline through the
-larger-batch configuration, the cumulative increase is about 1.4 times on this
+larger-batch configuration, the cumulative increase is about 1.4 to 1.5 times on this
 host. The PyTorch and JAX sequences differ because their starting bottlenecks
 differ; both are selected by the same profile--change--verify procedure.
 :end_tab:
@@ -1257,7 +1257,7 @@ model, one configuration at a time.
   GPT of :numref:`sec_gpt`, JIT compilation improves throughput by about
   twenty times over un-jitted execution. Bf16 at batch 64 has little effect,
   and increasing the fp32 batch alone reduces throughput; together, reduced
-  precision and the larger batch improve throughput by about 1.4 times over
+  precision and the larger batch improve throughput by about 1.4 to 1.5 times over
   the jitted baseline.
 * Precision in JAX is explicit, and *layered*: casting the arrays is not
   enough — flax modules remember a compute dtype from construction, and
@@ -1546,7 +1546,7 @@ memory-and-precision sequence: **bf16** — double the roof, half the bytes.
 ::: {.slide title="Successive Optimizations" only="pytorch"}
 - **R1 compile** — fuses the tail: **1.2–1.3×** (and asserts
   compiled ≡ eager first)
-- **R2 bf16** — tensor cores, matmuls wide enough: **~1.5×**
+- **R2 bf16** — tensor cores, matmuls wide enough: **1.4–1.5×**
 - **R3 batch-up** — climb the roofline: **1.1–1.3×** (fp32-512
   control: bf16 bought headroom, not admission)
 - **R4 checkpoint** — *negative* for speed (−~10%), but cuts
@@ -1574,10 +1574,10 @@ Masters and grads stay fp32. No `GradScaler`.
 
 **The two changes interact.** fp32 at 512 is *slower* than at
 64 — the ~15 GiB plan is traffic, a memory wall. bf16 at 64
-gained little — a dispatch wall. Together: ~1.4× over the jitted
-baseline, ~36 TFLOP/s.
+gained little — a dispatch wall. Together: 1.4–1.5× over the jitted
+baseline, 35–40 TFLOP/s.
 Measure configurations cumulatively. Checkpointing then reduces throughput by
-about a fifth while saving memory that is not limiting this run.
+a fifth to a quarter while saving memory that is not limiting this run.
 :::
 
 ::: {.slide title="Aggregate Results" only="pytorch"}

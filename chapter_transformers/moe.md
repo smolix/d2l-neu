@@ -708,17 +708,34 @@ GPT of the balancing experiments, two blocks of width 128, trained on
 about 50 million bytes, more than a hundred per parameter. The dense
 `d2l.GPT` competes with the same model with each feed-forward network
 replaced by eight experts, one active per token. The expert layers are
-balanced by the auxiliary loss at $\alpha = 0.01$ and use the capacity
-factor of 1.25, the settings of the Switch transformer, whose experiments
-we compare with below. Each expert is a full-width `d2l.FeedForward`, so a
-token passes through as many parameters in the mixture as in the dense
-model, apart from the router's $128 \times 8$ weights per block.
+balanced by the auxiliary loss at $\alpha = 0.01$, as in the Switch
+transformer, whose experiments we compare with below. Each expert is a
+full-width `d2l.FeedForward`, so a token passes through as many parameters
+in the mixture as in the dense model, apart from the router's
+$128 \times 8$ weights per block.
+
+The buffers are larger than in the balancing experiments: the capacity
+factor is 2 rather than 1.25, another setting with which the Switch
+transformer was trained :cite:`fedus2022switch`. Bytes need the room. At
+$c = 1.25$ an expert's buffer holds $1.25/8 \approx 16\%$ of the
+assignments, yet nearly one byte in five is a space, and the first block,
+which sees little more than the current byte, tends to send the
+occurrences of a byte to the same expert. When one expert collects most of the spaces
+together with another frequent byte, its buffer overflows. In our runs at
+$c = 1.25$, the first block of some models dropped a tenth of its tokens
+for a thousand steps or more. The longer the overflow lasted, the smaller
+the mixture's final lead over the dense model, which ranged from almost
+nothing to five hundredths of a nat. At $c = 2$ a buffer holds a quarter
+of the assignments, and after the first few hundred steps almost no
+assignment is dropped.
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
 %%tab pytorch
 models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
                            num_blks=2),
-          'MoE': small_moe_gpt()}
+          'MoE': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
+                         num_blks=2, ffn_factory=lambda: MoELayer(
+                             128, 8, 1, capacity_factor=2))}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
@@ -728,7 +745,10 @@ for name, model in models.items():
 %%tab jax
 models = {'dense': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
                            num_blks=2, rngs=nnx.Rngs(d2l.get_key())),
-          'MoE': small_moe_gpt()}
+          'MoE': d2l.GPT(len(data.vocab), num_hiddens=128, num_heads=4,
+                         num_blks=2, rngs=nnx.Rngs(d2l.get_key()),
+                         ffn_factory=lambda rngs: MoELayer(
+                             128, 8, 1, capacity_factor=2, rngs=rngs))}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
@@ -785,7 +805,7 @@ models grows with the training budget.
 The gain also has costs that the operation count leaves out. The mixture
 keeps 5.3 times the parameters in memory, together with AdamW's two state
 values per parameter. Its step takes longer than its operation count
-suggests: the buffers hold a quarter more rows than there are tokens,
+suggests: the buffers hold twice as many rows as there are tokens,
 copying tokens into the buffers and outputs back moves data without
 computing, and the experts' weights are stacked anew in every step. And
 wherever the load is uneven, the buffers drop assignments, which a dense
@@ -1302,7 +1322,7 @@ $\mathcal{L}_{\mathrm{balance}}$?
 ::: {.slide title="Same Computation per Token, 5.3 Times the Parameters"}
 The small GPT of the balancing runs, two blocks of width 128, dense and
 with each FFN replaced by 8 experts, top-1, auxiliary loss
-$\alpha = 0.01$, capacity factor 1.25:
+$\alpha = 0.01$, capacity factor 2 (one byte in five is a space):
 
 @!moe-a-mixture-of-experts-gpt-1
 :::

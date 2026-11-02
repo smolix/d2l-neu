@@ -573,7 +573,7 @@ bf16.
 mlp = nn.Sequential(nn.Linear(64 * 64, 8192, bias=False), nn.ReLU(),
                     nn.Linear(8192, 8192, bias=False), nn.ReLU(),
                     nn.Linear(8192, 10, bias=False)).to(gpu)
-for layer in mlp[::2]:  # The same initialization as the JAX tab
+for layer in mlp[::2]:  # Weights drawn from N(0, 0.02^2)
     nn.init.normal_(layer.weight, std=0.02)
 X_mlp = torch.randn(2048, 64 * 64, device=gpu)
 y_mlp = torch.randint(0, 10, (2048,), device=gpu)

@@ -12,13 +12,14 @@ dominates the cost of the whole layer.
 We first compare self-attention with the convolutional and recurrent layers of
 earlier chapters, count its cost, and check the count against measurements on
 a GPU. The rest of the section develops three ways to reduce that cost. The
-first changes only the order of the computation: an online softmax computes
-exact attention one block of keys at a time without storing the full matrix,
-and FlashAttention fits this schedule to the memory hierarchy of a GPU. The
-second scores fewer pairs: each token attends to a window of recent tokens,
-and depth restores the long-range paths. The third replaces the softmax by a
-kernel that factorizes, which turns attention into a recurrent network whose
-state is a matrix. We end by timing the three side by side.
+first changes only the order of the computation. It computes exact attention
+one block of keys at a time, without ever storing the full matrix, and
+FlashAttention fits this schedule to the memory hierarchy of a GPU. The
+second scores fewer pairs: each token attends only to a window of recent
+tokens, and depth restores the long-range paths. The third replaces the
+softmax by a similarity kernel that factorizes, which turns attention into a
+recurrent network whose state is a matrix. We end by timing the three side
+by side.
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab pytorch
@@ -72,7 +73,9 @@ stack of depth $\mathcal{O}(n/k)$. An RNN requires $\mathcal{O}(nd^2)$ for the
 sequence, one $d \times d$ state update per token, but the updates are
 ordered. It takes $\mathcal{O}(n)$ sequential steps, and a signal from the
 first token reaches the last only through $\mathcal{O}(n)$ applications of
-the cell. Self-attention first projects the inputs at cost
+the cell.
+
+Self-attention first projects the inputs at cost
 $\mathcal{O}(nd^2)$, then computes an $n \times d$ by $d \times n$ product and
 an $n \times n$ by $n \times d$ product at cost $\mathcal{O}(n^2d)$. These
 matrix multiplications have $\mathcal{O}(1)$ sequential depth, and any token
@@ -119,9 +122,9 @@ which is linear in $n$, and the head count drops out of both terms
 crossover: the quadratic part dominates the layer as soon as $n > 2d$. GPT-2
 small, with $d = 768$ and contexts of 1,024 tokens, sits below the
 crossover, so its projections still cost more than its scores. A model with
-$d = 4096$ at $n = 131{,}072$ sits far beyond it, with $n/2d = 16$: an
-attention layer at that context does sixteen times as much score-and-mix work
-as projection work.
+$d = 4096$ at $n = 131{,}072$ sits far beyond it. There $n/2d = 16$, so an
+attention layer does sixteen times as much score-and-mix work as projection
+work.
 
 ### Counting Memory
 :label:`subsec_attn-counting-memory`
@@ -433,7 +436,7 @@ is this algorithm fitted to the hardware, with tile sizes matched to on-chip
 SRAM and softmax statistics kept in registers. During training, the backward
 pass recomputes the stripes instead of storing the weights, because the extra
 arithmetic takes less time than the memory traffic it avoids. The result is
-exact attention that is faster *and* asymptotically smaller.
+exact attention that is faster *and* needs asymptotically less memory.
 
 Later versions keep the algorithm and change its schedule. FlashAttention-2
 divides by the normalizer only once at the end, as `chunked_attention` does,
@@ -446,7 +449,8 @@ computes exact attention; only the schedule follows the hardware. Frameworks
 provide it as a fused kernel:
 `torch.nn.functional.scaled_dot_product_attention` in PyTorch and
 `jax.nn.dot_product_attention` in JAX. We compare it with the
-naive reference for 8 heads of dimension 64 in half precision at $n = 8192$.
+naive reference on a minibatch of 2 sequences with 8 heads of dimension 64
+in half precision at $n = 8192$.
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
@@ -481,11 +485,11 @@ for name, f in [('naive', causal_attention), ('fused', fused_attention)]:
           f'XLA temp {temp/2**20:7.1f} MiB')
 ```
 
-The fused kernel is several times faster than the naive implementation and
-needs almost no temporary memory instead of gigabytes. Both gains come
-from keeping the score blocks out of off-chip memory. Dense attention on
-sequences beyond a few hundred tokens therefore runs in a fused kernel in
-practice.
+The fused kernel is several times faster than the naive implementation, and
+it needs almost no temporary memory where the naive one needs gigabytes.
+Both gains come from keeping the score blocks out of off-chip memory. In
+practice, dense attention on sequences beyond a few hundred tokens therefore
+runs in a fused kernel.
 
 :begin_tab:`pytorch`
 `sdpa_kernel(SDPBackend.FLASH_ATTENTION)` restricts
@@ -618,9 +622,9 @@ is a model that runs at contexts longer than those it was trained on.
 
 ### A Linear-Cost Implementation
 
-As with online softmax, the mask defines the result but does not save any
-work. A masked softmax over a band still scores all $n^2$ pairs and then
-discards most of them. The efficient implementation processes the sequence
+The mask defines the result, but by itself it saves no work. A masked
+softmax over a band still scores all $n^2$ pairs and then discards most of
+them. The efficient implementation processes the sequence
 in blocks of $w$ queries. A query can attend only to keys in its own block
 and in the block before it, so each block scores a $w \times 2w$ tile. The
 total work is $2nw$ scores instead of $n^2$, which is linear in $n$ for fixed
@@ -697,9 +701,8 @@ A fused kernel cannot skip single scores. It computes in tiles of
 $b \times b$ scores held in on-chip memory, and it can skip a tile only if
 the mask excludes all of it. Tiles inside the mask are computed without
 masking, and only tiles that straddle its edge apply the mask entry by
-entry. The cost of
-a mask in a fused kernel is therefore the fraction of tiles it touches. We
-count it for tiles of $b = 128$, the usual size.
+entry. The cost of a mask in a fused kernel is therefore the fraction of
+tiles it touches. We count it for tiles of $b = 128$, the usual size.
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-3}
 %%tab pytorch
@@ -757,13 +760,14 @@ size saves nothing more.
 FlexAttention :cite:`Dong.Feng.Guessous.ea.2025` makes this tile map the
 interface to a fused kernel. The user writes the mask as a function of the
 query and key positions, here the band, and `create_block_mask` evaluates it
-once per tile. The printed `BlockMask` is the tile map we just counted: its
+once per tile. The printed `BlockMask` is the tile map counted above: its
 sparsity is the fraction of tiles skipped. `flex_attention` with this block
 mask equals `windowed_attention`. Called as here, without compilation, it
-computes the full score matrix; under `torch.compile` it generates a kernel
-in the style of FlashAttention that visits only the kept tiles, so every
-mask built from the pieces of :numref:`sec_attention-scoring-functions`
-(windows, packed documents, prefixes) runs at the speed of a fused kernel.
+computes the full score matrix. Under `torch.compile` it generates a kernel
+in the style of FlashAttention that visits only the kept tiles. Every mask
+built from the pieces of :numref:`sec_attention-scoring-functions`
+(windows, packed documents, prefixes) then runs at the speed of a fused
+kernel.
 :end_tab:
 
 :begin_tab:`jax`
@@ -831,7 +835,7 @@ query. Linear attention is a recurrent network whose hidden state is a
 matrix. The state acts as an associative memory, with $\phi(\mathbf{k}_t)$
 the address and $\mathbf{v}_t$ the content.
 :citet:`Schlag.Irie.Schmidhuber.2021` showed that this layer is the fast
-weight programmer of the early 1990s. The same computation therefore has two
+weight programmer of the early 1990s. The same computation has two
 implementations. The *parallel* form for training computes all states at
 once with cumulative sums. The *recurrent* form for generation carries
 $(\mathbf{S}, \mathbf{z})$ forward one token at a time, in constant memory,
@@ -1049,12 +1053,12 @@ We now time the three strategies of this section on equal terms, as the
 sequence grows from 512 to 32,768 tokens: dense causal attention in the
 fused kernel, windowed attention with $w = 128$, and chunked linear
 attention. All three process 32 heads of width 64 at once, for instance a
-minibatch of 4 sequences with 8 heads each, in bfloat16, the precision in
-which attention is trained; `vmap` maps the one-head functions of this
-section over the heads. Enough work per call keeps the fixed cost of
-launching kernels from hiding the growth with $n$. The milliseconds depend
-on the GPU; the slopes on the log--log plot follow from the operation
-counts.
+minibatch of 4 sequences with 8 heads each. They run in bfloat16, the
+precision in which attention is trained, and `vmap` maps the one-head
+functions of this section over the heads. Enough work per call keeps the
+fixed cost of launching kernels from hiding the growth with $n$. The
+milliseconds depend on the GPU, but the slopes on the log--log plot follow
+from the operation counts.
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
@@ -1098,9 +1102,9 @@ time grows about fourfold with every doubling of $n$, while the times of the
 windowed and the chunked linear mechanisms grow about twofold. Both
 therefore overtake dense attention within the measured range, and at 32,768
 tokens they are several times faster. Dense attention remains the default
-at moderate lengths, where it is exact and fast. The mechanisms of linear
-cost are faster at long contexts, and linear attention also during
-generation, where its state stays the size of one matrix.
+at moderate lengths, where it is exact and fast. At long contexts the
+mechanisms of linear cost are faster, and linear attention is also faster
+during generation, where its state stays the size of one matrix.
 
 ## Summary
 
@@ -1311,8 +1315,8 @@ of linear cost overtake it.
        :numref:`subsec_pos-experiment`, and report validation perplexity at
        context $128$. Relate the window results to the reach $1 + 2(w-1)$
        of the two-block model.
-    1. Build validation sequences of $128$ characters, each a random
-       $64$-character excerpt of the validation text followed by the same
+    1. Build validation sequences of $128$ bytes, each a random
+       $64$-byte excerpt of the validation text followed by the same
        excerpt again, and compare the mean loss on the second half with
        that on the first half for every variant. Which variants exploit the
        repetition, and how does the answer relate to the reach of the
@@ -1510,7 +1514,7 @@ pass recomputes tiles instead of storing them.
 
 @!attention-at-scale-the-bottleneck-is-memory-traffic
 
-8 heads, $n = 8192$, fp16: several times faster, almost no scratch memory
+2 sequences × 8 heads, $n = 8192$, fp16: several times faster, almost no scratch memory
 instead of gigabytes.
 :::
 
@@ -1525,7 +1529,7 @@ instead of gigabytes.
   `dot_product_attention` (JAX).
 
 ::: {.d2l-note}
-Dense attention beyond a few hundred tokens in practice runs in a fused
+In practice, dense attention beyond a few hundred tokens runs in a fused
 kernel.
 :::
 
@@ -1662,7 +1666,7 @@ Work $\mathcal{O}(ncd + nd\,d_v)$, all matrix products; one state per chunk.
 The same terms in a third order: the result matches the recurrent form.
 :::
 
-::: {.slide title="Linear Attention Ships with Gates and a Few Softmax Layers"}
+::: {.slide title="Practical Linear Attention Adds a Decay and a Few Softmax Layers"}
 [Linear attention]{.kicker}
 
 - Plain linear attention models language less well and fails at recalling

@@ -2,8 +2,8 @@
 :label:`sec_attention-further-reading`
 
 The sections of this chapter teach one representative of each idea: one
-soft lookup, one scoring function, one way to split it into heads, a few
-ways to encode position, one exact kernel and two ways to avoid the
+soft lookup, one scoring function, one way to split attention into heads,
+a few ways to encode position, one exact kernel and two ways to avoid the
 quadratic cost, and one circuit traced through a small model. This section
 points to topics they had no room for: other readings of the lookup and its
 normalization, what trained heads do and how many are needed, further
@@ -78,7 +78,7 @@ input.
 
 ## Heads
 
-### How Many Heads Are Needed
+### Redundant Heads
 
 :numref:`sec_multihead-attention` proved that one head cannot return two
 values and that two heads can, and the trained heads of its experiment
@@ -97,12 +97,12 @@ pruned most of the others with a learned gate at a small cost in quality.
 attention that seem to disagree. :citet:`Ainslie.Lee-Thorp.Jong.ea.2023`
 found eight key-value groups within a tenth of a point of full multi-head
 attention, and DeepSeek-V2 :cite:`DeepSeek-AI.2024` reported a clear loss
-for the same change. The settings differ in the one thing that matters: the
+for the same change. The two results come from different training. The
 first converted a strong multi-head checkpoint and trained it for 5% of its
-original budget, the second trained a 7B dense model from scratch on 1.33T
-tokens. Uptraining starts from heads that already learned distinct
-weightings; training from scratch must find them with fewer key-value
-heads from the start. Multi-head latent attention, DeepSeek-V2's answer,
+original budget. The second trained a 7B dense model from scratch on 1.33T
+tokens. Uptraining starts from heads that have already learned distinct
+weightings, while training from scratch must find them with fewer key-value
+heads from the first step. Multi-head latent attention, DeepSeek-V2's answer,
 is described in :numref:`sec_transformers-further-reading`.
 
 ### Subtracting Two Weightings
@@ -139,12 +139,12 @@ fastest, and so moves more pairs into the slow group of
 :citet:`Barbero.Vitvitskyi.Perivolaropoulos.ea.2025` looked at which pairs a
 trained model uses. Gemma 7B uses the fastest pairs for heads that attend by
 position, such as previous-token heads, and the slowest pairs as nearly
-position-free channels for content. Removing the lowest frequencies
-altogether, which they call p-RoPE, helped in their experiments: it is the
-trained counterpart of the fast and slow pairs of
-:numref:`sec_positional-information`.
+position-free channels for content. These two roles are the trained
+counterpart of the fast and slow pairs of
+:numref:`sec_positional-information`. Removing the lowest frequencies
+altogether, a variant they call p-RoPE, helped in their experiments.
 
-### Rescaling Each Pair Separately
+### Per-Pair Rescaling
 
 YaRN, in :numref:`subsec_pos-context-extension`, leaves the fast pairs alone,
 interpolates the slow ones, and ramps between the two groups with a
@@ -153,23 +153,22 @@ an evolutionary search for one rescale factor per pair and leaves the first
 tokens unscaled. With at most a thousand fine-tuning steps at training
 lengths up to 256k it extends the context to 2048k tokens.
 
-### Why ALiBi and NoPE Stay Flat
+### Length Generalization of ALiBi and NoPE
 
 :numref:`subsec_pos-experiment` found that ALiBi and NoPE keep their
 perplexity beyond the training length. :citet:`Chi.Fan.Rudnicky.ea.2023`
-explain the first: ALiBi's steepest slopes make most heads attend within a
+explain the first. ALiBi's steepest slopes make most heads attend within a
 window near the training length, so the extra tokens are effectively never
-read, which is what the exercise on where extrapolation fails measures.
-NoPE has its own limit. :citet:`Haviv.Ram.Press.ea.2022` showed that causal
-language models without positional encoding are competitive in perplexity
-and learn absolute position from the causal mask, and
-:citet:`Wang.Ji.Wu.ea.2024` found that their length generalization also
-breaks, because attention spreads over too many tokens, and restore it with
-a softmax temperature per head. Llama 4 :cite:`Meta.2025` applies the same
-lever at inference time to position-free global layers that it interleaves
-with RoPE layers.
+read; the exercise on where extrapolation fails measures this. NoPE has its
+own limit. :citet:`Haviv.Ram.Press.ea.2022` showed that causal language
+models without positional encoding are competitive in perplexity and learn
+absolute position from the causal mask. :citet:`Wang.Ji.Wu.ea.2024` found
+that their length generalization also breaks, because attention spreads
+over too many tokens, and restored it with a softmax temperature per head.
+Llama 4 :cite:`Meta.2025` applies the same fix at inference time to the
+position-free global layers that it interleaves with RoPE layers.
 
-### Flat Perplexity Is Not Use of the Context
+### Perplexity and the Use of Long Contexts
 
 A model whose perplexity stays flat at four times its training length need
 not use the extra tokens. :citet:`Liu.Lin.Hewitt.ea.2024` placed the answer
@@ -239,12 +238,12 @@ indexer and runs attention over the top-scoring ones only.
 :numref:`sec_attention-at-scale` describes FlashAttention-3
 :cite:`Shah.Bikshandi.Zhang.ea.2024` as the same algorithm with a new
 schedule. On H100 GPUs, some warps issue asynchronous tile loads while others
-run the matrix products, and two groups of warps take turns so that the
-exponentials of one, which run on a much slower unit, overlap the matrix
-product of the other. Its FP8 mode quantizes each block separately and
-first multiplies queries and keys by a random orthogonal matrix that spreads
-outlying coordinates, which lowers the error of FP8 attention by a factor of
-2.6 against a single scale per tensor. FlexAttention
+run the matrix products. Two groups of warps also take turns, so that the
+exponentials of one group, which run on a much slower unit, overlap the
+matrix product of the other. Its FP8 mode quantizes each block separately.
+It first multiplies queries and keys by a random orthogonal matrix that
+spreads outlying coordinates, which lowers the error of FP8 attention by a
+factor of 2.6 against a single scale per tensor. FlexAttention
 :cite:`Dong.Feng.Guessous.ea.2025` generates kernels for masks and score
 modifications written as Python functions; on the variants that
 FlashAttention-2 supports, its kernels run at 0.68 to 1.43 times the speed
@@ -265,7 +264,7 @@ them keep a few softmax layers for recall: Qwen3-Next
 :cite:`Qwen.Team.2025` places one gated-attention layer after every three
 Gated DeltaNet layers, Kimi Linear :cite:`Kimi.Team.2025b` mixes three of its
 recurrent layers with one latent-attention layer, and MiniMax-01
-:cite:`MiniMax.2025` one softmax layer per seven linear ones. Mamba-2
+:cite:`MiniMax.2025` uses one softmax layer per seven linear ones. Mamba-2
 :cite:`Dao.Gu.2024` shows that a selective state space model with a scalar
 decay computes the same output as a masked attention whose mask holds
 products of the decays, so the chunked form with a decay is one of its
@@ -287,10 +286,10 @@ to" with "Mary". ACDC :cite:`Conmy.MavorParker.Lynch.ea.2023` automates the
 search over edges. Attribution patching :cite:`Nanda.2023` replaces each
 patch by a first-order estimate from gradients, so that one backward pass
 scores every component, and AtP* :cite:`Kramar.Lieberum.Shah.ea.2024`
-corrects the cases where that estimate misses an important component. How
-the choice of corrupted input and of the value that replaces an ablated
-component changes the conclusions is the subject of
-:citet:`Zhang.Nanda.2024` and :citet:`Heimersheim.Nanda.2024`. The Language
+corrects the cases where that estimate misses an important component.
+:citet:`Zhang.Nanda.2024` and :citet:`Heimersheim.Nanda.2024` study how the
+conclusions depend on the choice of corrupted input and on the value that
+replaces an ablated component. The Language
 Models part of the book treats these methods on large models.
 
 ### Superposition and Dictionary Features

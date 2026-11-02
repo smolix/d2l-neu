@@ -4,9 +4,9 @@
 A language model that has read a thousand tokens often needs one of them
 again: a name from the first paragraph, a variable defined at the top of a
 file. A recurrent network must carry that token forward in a state of fixed
-size: a recurrent network as wide as GPT-2 small holds 768 numbers after
-reading 1,024 tokens, written before anyone knew which token would be asked
-for.
+size. After 1,024 tokens, a recurrent network as wide as GPT-2 small holds
+768 numbers about them, all written before anyone knew which token would be
+asked for.
 Attention keeps a representation of every position instead and lets each
 query choose what to read. It scores the query against a key at every
 position, turns the scores into weights, and returns the weighted average of
@@ -30,9 +30,10 @@ learn, and how masks keep a query away from padding and from the future.
 express, and what several heads, and heads that share keys and values,
 provide. :numref:`sec_positional-information` asks how an operation that is
 blind to order learns where each token stands, and what happens beyond the
-length it was trained on. :numref:`sec_attention-at-scale` asks how to pay
-for all pairs of positions: exactly with less memory, through a window, or
-with a recurrence of linear cost. :numref:`sec_what-attention-computes` asks
+length it was trained on. :numref:`sec_attention-at-scale` asks how to cut
+the cost of scoring all pairs of positions: by computing exact attention
+with less memory, by restricting each query to a window, or by a recurrence
+of linear cost. :numref:`sec_what-attention-computes` asks
 what trained heads compute, and which experiments can tell.
 
 The chapter studies the attention layer by itself, in models built from
@@ -112,12 +113,12 @@ Reading every position<br>
   needs.
 - Attention keeps one vector per position and lets each query score every
   key, weight the scores, and average the values.
-- The price: no sense of order, a cost quadratic in the length, and
+- New problems: no sense of order, a cost quadratic in the length, and
   weights that do not explain themselves.
 
 ::: {.d2l-note}
-How do we score, mask, split, position, and pay for a lookup over every
-position, and how do we find out what a trained head does?
+How do we score, mask, split, and position a lookup over every position,
+keep its cost down, and find out what a trained head does?
 :::
 :::
 
@@ -147,14 +148,14 @@ position, and how do we find out what a trained head does?
 | Attention Scoring and Masking | which score, and which pairs may count? |
 | Multi-Head and Cross-Attention | what can one weighting per query not express? |
 | Positional Information | how does an order-blind operation learn position? |
-| The Cost of Attention | how do we pay for all pairs of positions? |
+| The Cost of Attention | how do we cut the cost of all pairs of positions? |
 | Attention Circuits | what do trained heads compute, and how can we tell? |
 :::
 
 ::: {.slide title="Every Section Tests Its Claims on a Small, Checkable Example"}
 [Running examples]{.kicker}
 
-| section | testbed |
+| section | example |
 |---|---|
 | Queries, Keys, and Values | Nadaraya–Watson regression on noisy 1-D data |
 | Attention Scoring and Masking | random queries and keys; padded and causal masks |

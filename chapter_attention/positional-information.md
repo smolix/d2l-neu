@@ -7,17 +7,19 @@ tokens. Fed to the self-attention layer of
 vectors, only listed in a different order. Each output averages value
 vectors with weights computed from content alone, and nothing in that
 computation records where a token stands. A classifier that pools these
-outputs cannot tell who bit whom. Attention therefore needs to be told about
-position, and there are several ways to do so. Absolute embeddings, designed
-or learned, add a position vector to each token. Rotary embeddings (RoPE)
-rotate queries and keys so that every score depends on the offset between
-two positions. Linear biases (ALiBi) penalize distant keys, and a causal
-model can even work without any explicit encoding (NoPE). All of them work
-at the sequence lengths a model was trained on, and they part ways beyond
-them. We prove the symmetry that has to be broken, build each scheme, and
-then train a small attention-only language model at context 128 to see what
-each scheme does at context 512 and how a trained RoPE model can be
-stretched to the longer context.
+outputs cannot tell who bit whom. Attention must therefore be told where
+each token stands.
+
+There are several ways to do so. Absolute embeddings, designed or learned,
+add a position vector to each token. Rotary embeddings (RoPE) rotate queries
+and keys so that every score depends on the offset between two positions.
+Linear biases (ALiBi) penalize distant keys, and a causal model can even
+work without any explicit encoding (NoPE). All of them work at the sequence
+lengths a model was trained on; beyond those lengths they behave very
+differently. We first prove the symmetry that has to be broken and build
+each scheme. A small attention-only language model, trained at context 128,
+then shows what each scheme does at context 512 and how a trained RoPE model
+can be stretched to the longer context.
 
 ```{.python .input #positional-information}
 %%tab pytorch
@@ -104,9 +106,8 @@ equivariance is a property of the *layer*. Stacking equivariant layers and
 reading out per token leaves the model equivariant, so depth does not help.
 Second, the proposition is about unmasked attention. A causal mask singles
 out each position by how many predecessors it may see, which breaks the
-symmetry. NoPE uses this asymmetry,
-as discussed near the end of the section. The other methods provide each
-token with explicit positional information.
+symmetry. NoPE, near the end of the section, relies on this asymmetry. The
+other schemes give each token explicit positional information.
 
 ## Absolute Position Embeddings
 
@@ -115,7 +116,7 @@ The original transformer attaches a *position vector* $\mathbf{p}_i \in
 into the first layer :cite:`Vaswani.Shazeer.Parmar.ea.2017`. Two tokens with
 identical embeddings at different positions now enter attention as different
 vectors, and the equivariance proof fails at its first step. The two classic
-choices of $\mathbf{P}$ differ in whether the table is designed or learned.
+choices of these vectors differ in whether they are designed or learned.
 
 ### Sinusoidal Encodings
 :label:`subsec_pos-sinusoidal`
@@ -161,7 +162,7 @@ d2l.plot(jnp.arange(60), P[:, 6:10].T, xlabel='position',
 
 Adjacent column pairs share a frequency (one sine, one cosine), and the
 frequency falls as the column index grows. This is a continuous version of
-something familiar: binary counting. In the binary representations below, the
+binary counting. In the binary representations below, the
 lowest bit flips every number, the next every two numbers, the next every
 four. Fast dimensions distinguish neighboring positions, whereas slow
 dimensions distinguish broader regions.
@@ -189,13 +190,13 @@ d2l.show_heatmaps(P[None, None], xlabel='column (encoding dimension)',
 
 ### Learned Positions
 
-The empirical choice is to make $\mathbf{P}$ a trainable embedding table, one
+The alternative is to make $\mathbf{P}$ a trainable embedding table, one
 free vector per position, as in BERT and GPT-2
 :cite:`Devlin.Chang.Lee.ea.2018,Radford.Wu.Child.ea.2019`. It concedes that
-we do not know the right encoding and lets gradient descent find one. The
-limitation is apparent before training. The table has exactly as many rows
-as the training context, and a row that no training example ever used
-still holds its random initialization. To such a table, position 500 is
+we do not know the right encoding and lets gradient descent find one. Its
+limitation is visible before any training. The table has one row for each
+position up to some maximum length, and a row that no training example ever
+used still holds its random initialization. To such a table, position 500 is
 not "a bit beyond position 128". Its row carries no information at all.
 
 ### Sinusoidal Encodings as Rotations
@@ -312,8 +313,8 @@ def rope(x, offset=0, base=10000.0, scale=None):  #@save
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
 
-A numerical check of :eqref:`eq_rope-goal` shifts all positions jointly.
-The full RoPE score matrix should remain unchanged. For contrast, we run the
+To check :eqref:`eq_rope-goal` numerically, we shift all positions jointly;
+the full RoPE score matrix should not change. For contrast, we run the
 same test on the additive sinusoidal encoding, where the four-term expansion
 leaves absolute position in the score.
 
@@ -352,18 +353,19 @@ print(f'additive sinusoidal, shifted by  17: max score change '
       f'{jnp.abs(added(17) - added(0)).max():.1e}')
 ```
 
-RoPE's scores change only at the level of float32 round-off, several
-orders of magnitude below the scores themselves, at every shift, including
-one far beyond where any additive table would end. The additive encoding
-moves the scores by an amount comparable to the scores themselves.
-Relative position is therefore encoded by the architecture rather than
-learned from data. This property does not guarantee accurate predictions at
-offsets absent from the training data, which the next experiment tests.
+At every shift, RoPE's scores change only by float32 round-off, several
+orders of magnitude below the scores themselves. This holds even for a
+shift far beyond where any additive table would end. The additive encoding,
+in contrast, moves the scores by an amount comparable to the scores
+themselves. With RoPE, relative position is built into the architecture
+rather than learned from data. This property does not guarantee accurate
+predictions at offsets absent from the training data; the next experiment
+tests such predictions.
 
 ## Extrapolation Beyond the Training Length
 
-Every scheme above breaks the permutation symmetry at the training length.
-They differ when evaluated outside the training range. A length-extrapolation
+Every scheme above breaks the permutation symmetry on sequences as long as
+those seen in training. The schemes differ on longer ones. A length-extrapolation
 test trains at context $L$ and compares perplexity at $L$ with perplexity at,
 for example, $4L$. Two more schemes were designed for this setting.
 
@@ -404,8 +406,8 @@ signal the mask supplies.
 
 ### An Attention-Only Language Model
 
-We compare extrapolation by training a deliberately minimal model that is
-also analyzed later in the chapter: a token embedding, a stack of residual
+To compare extrapolation, we train a deliberately minimal model that the
+chapter analyzes again later: a token embedding, a stack of residual
 causal attention blocks, and an output head tied to the embedding
 :cite:`Press.Wolf.2017`. There is no feed-forward network and no
 normalization layer, and the attention projections carry no bias terms by
@@ -416,15 +418,14 @@ the `TinyLM` of :numref:`subsec_tinylm`.
 
 The positional scheme is the one constructor argument that the experiment
 varies. `pos` takes `'learned'`, `'sinusoidal'`, `'rope'`, `'alibi'`, or
-`'none'`, each implemented as in the equations above. Two details need a
-word. With the sinusoidal table, the
-token embeddings are multiplied by $\sqrt{d}$ before the table is added,
-as in the original transformer. Without this factor the table, whose
+`'none'`, each implemented as in the equations above. Two details need
+explaining. With the sinusoidal table, the token embeddings are multiplied
+by $\sqrt{d}$ before the table is added, as in the original transformer. Without this factor the table, whose
 entries have magnitude about $0.7$, would outweigh embeddings that start
 with entries of about $0.02$ by a factor of 35. With it, the factor is
-about 3. With RoPE, the model keeps the base and
-the per-pair angle factors of `rope` as attributes, `rope_base` and
-`rope_scale`, so that they can be changed after training.
+about 3. With RoPE, the model keeps the base and the per-pair angle factors
+of `rope` as attributes, `rope_base` and `rope_scale`, so that they can be
+changed after training.
 
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
@@ -576,9 +577,9 @@ class TinyCharLM(nnx.Module):  #@save
 :label:`subsec_pos-experiment`
 
 We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
-articles that :numref:`subsec_tinylm` introduced, at context length 128, for
-3000 steps of the fixed-step training loop `d2l.train_lm` of
-:numref:`sec_adam`. The tokens are bytes, so each model has an embedding
+articles that :numref:`subsec_tinylm` introduced. Each model trains at
+context length 128 for 3000 steps of `d2l.train_lm`, the fixed-step training
+loop of :numref:`sec_adam`. The tokens are bytes, so each model has an embedding
 table of 256 rows. The learned and sinusoidal tables are allocated out to
 `max_len` $= 512$ positions so that the models can be evaluated on longer
 sequences, but only the first 128 rows of the learned table receive
@@ -617,7 +618,7 @@ Every model was trained on length-128 sequences. We evaluate validation
 perplexity at that training context, $n = 128$, and at two and four times
 this length ($n = 256$ and $512$). The first point is in range; the other
 two measure extrapolation. All three read the same 1.1 million bytes of the
-validation split: we cut it into consecutive windows of 128 bytes with
+validation split. We cut it into consecutive windows of 128 bytes with
 `data.windows` and regroup them into windows of 256 and 512, so that only
 the context available to each prediction changes. The evaluation sums the
 cross-entropy over all predicted tokens and converts it to a perplexity
@@ -678,13 +679,15 @@ split into two groups. The learned table, the sinusoidal table, and RoPE
 degrade several-fold at context 512, each for its own reason. The learned
 table reaches rows beyond position 127 that still hold their random
 initialization. The sinusoidal table supplies rows whose slow columns take
-values never seen in training. RoPE adds no position vector, but at offsets
-beyond 127 its slow pairs, whose periods exceed 128 positions, turn through
-angles they never reached during training, so those scores are computed
-from angles the projections were never fit to. ALiBi stays nearly flat
-because its bias depends only on distance. NoPE, which has no table and no
-angles to run out of, stays flat from a higher starting point. A flat
-curve, however, does not mean that a model *uses* the longer context.
+values never seen in training. RoPE adds no position vector, but its slow
+pairs have periods longer than 128 positions. At offsets beyond 127 they
+turn through angles they never reached during training, and the
+projections were never fit to scores computed from those angles.
+
+The other two schemes hold their level. ALiBi stays nearly flat because its
+bias depends only on distance. NoPE, which has no table and no angles to
+run out of, stays flat from a higher starting point. A flat curve, however,
+does not mean that a model *uses* the longer context.
 ALiBi's steep heads hardly look past the training window at all, as
 Exercise :exref:`ex_positional-information-where-extrapolation-fails`
 measures.
@@ -816,8 +819,8 @@ into the trained range.
    has `max_len = 512` rows, of which training at context 128 used only the
    first 128.
     1. Construct a new `TinyCharLM` with `pos='learned'`, copy its table
-       `pos_emb` before training, and train it as in the experiment of
-       :numref:`subsec_pos-experiment`, then explain why rows 128 to 511 of the
+       `pos_emb` before training, and train it as in the experiment
+       of :numref:`subsec_pos-experiment`. Explain why rows 128 to 511 of the
        trained table are bitwise equal to the copy, and check the claim. By
        what factor would decoupled weight decay with coefficient $0.1$ at
        the learning rate $10^{-3}$ have shrunk these rows over the 3000
@@ -934,7 +937,7 @@ into the trained range.
 
 1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
    $\omega_m = 10000^{-2m/d}$, and the constant $10000$ is a choice.
-    1. For the per-head width 32 of `TinyCharLM`, compute the periods
+    1. For the head width 32 of `TinyCharLM`, compute the periods
        $2\pi/\omega_m$ of the 16 pairs for the bases $100$, $10^4$, and
        $10^6$, and count the pairs that complete at least one full rotation
        within 128 positions. Which period does not depend on the base?
@@ -1252,7 +1255,7 @@ learned, sinusoidal, and RoPE degrade; ALiBi and NoPE stay flat.
 :::
 :::
 
-::: {.slide title="Each Scheme Fails Beyond 128 for Its Own Reason"}
+::: {.slide title="Each Scheme Holds or Fails Beyond 128 for Its Own Reason"}
 [The experiment]{.kicker}
 
 - **Learned:** rows 128 to 511 still hold their random initialization.

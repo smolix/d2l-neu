@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:29c76be44931046f2d7d9aee9e9ec34746bda79151dafd89994cf8655b141e66",
+    "d2l_lib_fingerprint": "sha256:67b29297788bf8188850a43bee0492e913bf0433a9bb3ebba7d5e39e4aef18be",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward 8.575e+10 FLOPs, 1.094 x 2ND\nstep    2.580e+11 FLOPs, 1.097 x 6ND\nbackward / forward = 2.01\n"
+          "text": "forward 8.575e+10 FLOPs, 1.094 x 2ND\nstep    2.590e+11 FLOPs, 1.102 x 6ND\nbackward / forward = 2.02\n"
         }
       ]
     },
@@ -63,22 +63,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.71 / 1.48 / 1.38, training 1.40\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.68 / 1.48 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.63 / 1.44 / 1.35, training 1.37\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.60 / 1.45 / 1.35, training 1.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.28, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.31\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.50 / 1.35 / 1.25, training 1.26\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.49 / 1.33 / 1.25, training 1.27\n"
         },
         {
           "type": "stream",
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.042; the largest model lies 0.045 nats above the line\n"
+          "text": "slope -0.043; the largest model lies 0.046 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 39434,
-          "sha256": "sha256:8a9122e0275ff22494d52259369fc72cb88ba9f89eb741db47ecdfb79fcd4da4"
+          "bytes": 39673,
+          "sha256": "sha256:521be1c13235986b110ec0d7ec7df912d465063fb67a2b6bf9c2adf0574f1813"
         }
       ]
     },

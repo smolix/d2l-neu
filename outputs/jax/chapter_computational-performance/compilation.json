@@ -9,56 +9,77 @@
   },
   "cells": {
     "compilation-compute-graphs-and-compilation": {
-      "code_fingerprint": "sha256:a212ef780e2fff536002f69f1f4a93f3c51733d6025bbb7359f8cedbe49e4309",
+      "code_fingerprint": "sha256:759c61cdc32bfa4be9786840b1d9a235f9f71f5de1ec7efcac348eff9e960f25",
       "kind": "text",
       "outputs": []
     },
+    "compilation-capture-two-philosophies-1": {
+      "code_fingerprint": "sha256:e37d1daad3a7333a6f5129a8d73ff5584fad113299b8113a6d76c9c4ff7a9548",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "TracerBoolConversionError\n{ lambda ; a:f32[8]. let\n    b:f32[8] = mul a 2.0:f32[]\n    c:f32[] = reduce_sum[axes=(0,) out_sharding=None] b\n    d:bool[] = gt c 0.0:f32[]\n    e:f32[8] = add b 1.0:f32[]\n    f:f32[8] = sub b 1.0:f32[]\n    g:f32[8] = select_n d f e\n  in (g,) }\n"
+        }
+      ]
+    },
     "compilation-capture-two-philosophies-2": {
-      "code_fingerprint": "sha256:a8d54e16d0aafe7704212a251fa70933b9ff55841816245379076edbe1f89ad5",
+      "code_fingerprint": "sha256:c66f8761a4ae56f2c7cc74ae879e383fde38d07a4262b1be60c3a537948d4cc5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{ lambda ; a:f32[4]. let b:f32[4] = sin a; c:f32[4] = add b 1.0:f32[] in (c,) }\nthis prints once, at trace time\n"
-        }
-      ]
-    },
-    "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:eaef60327f31190e30298d27d3fa83fd404a686c28f4724702ff90adbec98838",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eager: 1.48 ms/call\ncompiled: 0.16 ms/call\n"
-        }
-      ]
-    },
-    "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:4b96e5991ea9fef33fd1a92ced47185f4acff1ee7751ee0b994aeb19c4ba4750",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ahead-of-time compile: 2.9 s\n"
+          "text": "tracing g for shape (8,)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 19.01 ms/call\ncompiled: 0.18 ms/call\n"
+          "text": "tracing g for shape (16,)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tracing g for shape (32,)\n"
         }
       ]
     },
-    "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:8040eafa91fcc0e781bd67cc98ca3b199e0a86e309e78257d9276dfa836e538a",
+    "compilation-what-the-compiler-does-fusion": {
+      "code_fingerprint": "sha256:e8e8e937daf0675ec7261fbe6ec4a39315c226825468eec49e66ac34dcd8f647",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 8.83 ms/call\njit: 0.26 ms/call\n"
+          "text": "eager: 1.57 ms/call, 732 GB/s\ncompiled: 0.16 ms/call, 810 GB/s\n"
+        }
+      ]
+    },
+    "compilation-compiling-a-training-step-1": {
+      "code_fingerprint": "sha256:f976af81f38418801800960a47569304b37b931e87997798ad1f056b217e3b6b",
+      "kind": "text",
+      "outputs": []
+    },
+    "compilation-whole-step-compilation-measured": {
+      "code_fingerprint": "sha256:9fd079c7cb6929d16476ff1de6e5a14d39c33d140e88961c340e48df4755e3e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first call: 3.5 s\neager: 25.85 ms, compiled: 0.26 ms\nbreak-even: 138 steps\n"
+        }
+      ]
+    },
+    "compilation-the-overhead-regime-capture-and-replay": {
+      "code_fingerprint": "sha256:872ae07970ad0038b916211b4dee11ed56bc05ce8d33e7bbb3c3fff61dfa33e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 5.95 ms/call\njit: 0.25 ms/call\n"
         }
       ]
     }

@@ -9,51 +9,67 @@
   },
   "cells": {
     "compilation-compute-graphs-and-compilation": {
-      "code_fingerprint": "sha256:303790d37fb5aaf57c08f2fb5544320499588e51602a543c680372702c7774ff",
+      "code_fingerprint": "sha256:44481045c8aca84fa2df898452ce058594e602a47de04b7c99fad84107a992c0",
       "kind": "text",
       "outputs": []
     },
     "compilation-capture-two-philosophies-1": {
-      "code_fingerprint": "sha256:2ee939950b84c9b35f3239fcfcde5610d3c3ba48f7d238291b29216301b8d5f1",
+      "code_fingerprint": "sha256:80943f69bdb35547c18f593a3905fb7f788316ac8c0fd4c6ad1db86a0b212961",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "graph breaks: 1\n"
+          "text": "graphs: 2, breaks: 1\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    x = l_x_ * 2;  l_x_ = None\n    sum_1 = x.sum()\n    gt = sum_1 > 0;  sum_1 = None\n    return (gt, x)\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    add = l_x_ + 1;  l_x_ = None\n    return (add,)\n"
+        }
+      ]
+    },
+    "compilation-capture-two-philosophies-2": {
+      "code_fingerprint": "sha256:4344b04c04452ead6502fecce2b1ff61c3a3f4f7686784707c15b8bd12ac0417",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compilations: 2\ndef forward(self, s77 : torch.SymInt, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    sin = torch.sin(l_x_);  l_x_ = None\n    add = sin + 1;  sin = None\n    return (add,)\n"
         }
       ]
     },
     "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:d941c0acf4061d2e7c1e6ca10f67667fd50929af84e256883e54b305b0f956a5",
+      "code_fingerprint": "sha256:73bc8109e1025315eebe20ba0e87400334a7dcc2255d601849237de5a0bfc3b0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.25 ms/call\ncompiled: 0.15 ms/call\n"
+          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 879 GB/s\n"
         }
       ]
     },
+    "compilation-compiling-a-training-step-1": {
+      "code_fingerprint": "sha256:afe0d5cf8936324286b99ac57de8988102b362a802460309d05991c757c457f4",
+      "kind": "text",
+      "outputs": []
+    },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:7361de07f14432722defd3cd234225a3bf848cfea6ee88c21cb53748cc87b5f2",
+      "code_fingerprint": "sha256:10afda1e1fe72456e05cbae6c07120ab65dfaa643d8db25df9899133684101a2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first compiled step: 0.3 s\neager: 2.65 ms/call\ncompiled: 2.08 ms/call\n"
+          "text": "first call: 0.6 s\neager: 3.04 ms, compiled: 2.07 ms\nbreak-even: 637 steps\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:65d716dcb9ad6863219185b93296c5ed151ef66a52baf1d33452be19ae268a70",
+      "code_fingerprint": "sha256:3549edb5217e4144af3b5478480c43e1c0c3c43cc5b5bc9bef9e5f7c4f1c0e36",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.38 ms/call\nreduce-overhead: 0.31 ms/call\n"
+          "text": "eager: 2.14 ms/call\nreduce-overhead: 0.30 ms/call\n"
         }
       ]
     }

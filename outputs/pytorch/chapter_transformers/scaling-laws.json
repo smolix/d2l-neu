@@ -63,22 +63,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.71 / 1.49 / 1.38, training 1.40\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.70 / 1.48 / 1.39, training 1.42\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.45 / 1.36, training 1.38\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.62 / 1.44 / 1.35, training 1.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.29, training 1.30\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.57 / 1.38 / 1.29, training 1.31\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.50 / 1.34 / 1.25, training 1.27\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.49 / 1.34 / 1.25, training 1.26\n"
         },
         {
           "type": "stream",
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.043; the largest model lies 0.046 nats above the line\n"
+          "text": "slope -0.044; the largest model lies 0.052 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 39433,
-          "sha256": "sha256:bde5bd8ea9c82d67ae16f3970682490b3870e8227e58ca25eb28daf8bd560cbc"
+          "bytes": 39443,
+          "sha256": "sha256:91946bc134e513c20637adcf9bfb352c5337f3d07afa52407e079f9e00f1d647"
         }
       ]
     },
@@ -134,7 +134,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPT-2      5.26M parameters, 12.0 KiB of cache per token\nLlama 3 8B 4.40M parameters,  3.0 KiB of cache per token\nQwen3-32B  4.30M parameters,  1.5 KiB of cache per token\n"
+          "text": "GPT-2      5.26M parameters, 12.0 KiB of cache per token\nLlama 3 8B 4.40M parameters,  3.0 KiB of cache per token\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-32B  4.30M parameters,  1.5 KiB of cache per token\n"
         }
       ]
     }

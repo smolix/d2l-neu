@@ -1445,127 +1445,154 @@ class FashionCNN(nn.Module):
         X = F.max_pool2d(F.relu(self.conv2(X)), 2)
         return self.fc2(F.relu(self.fc1(X.flatten(1))))
 
-def masked_softmax(X, valid_lens):
-    """Perform softmax operation by masking elements on the last axis.
+def masked_softmax(X, mask=None):
+    """Softmax over the last axis with zero weight where mask is False.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    if valid_lens is None:
+    if mask is None:
         return F.softmax(X, dim=-1)
-    shape = X.shape
-    if valid_lens.dim() == 1:
-        valid_lens = torch.repeat_interleave(valid_lens, shape[1])
-    else:
-        valid_lens = valid_lens.reshape(-1)
-    mask = torch.arange(shape[-1], device=X.device)[None, :]
-    mask = mask < valid_lens[:, None]
-    # Most negative finite score: exactly zero weight after the softmax,
-    # at any precision, without the NaN risk of literal -inf
-    X = X.reshape(-1, shape[-1]).masked_fill(~mask, torch.finfo(X.dtype).min)
+    # Most negative finite value: zero weight at any precision, no NaN
+    X = X.masked_fill(~mask, torch.finfo(X.dtype).min)
     weights = F.softmax(X, dim=-1)
-    # A fully masked query (no valid key) would be a uniform average over
-    # invalid values; zero those rows so no padded position leaks through
-    weights = torch.where(mask.any(-1, keepdim=True), weights, 0.0)
-    return weights.reshape(shape)
+    # A query without any valid key gets zero weights, not a uniform row
+    return torch.where(mask.any(-1, keepdim=True), weights, 0.0)
+
+def padding_mask(valid_lens, num_keys):
+    """Boolean mask that is True for the first valid_lens keys.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    # valid_lens of shape (batch,) gives (batch, 1, keys); per-query
+    # lengths of shape (batch, queries) give (batch, queries, keys)
+    if valid_lens.dim() == 1:
+        valid_lens = valid_lens[:, None]
+    keys = torch.arange(num_keys, device=valid_lens.device)
+    return keys < valid_lens[..., None]
+
+def causal_mask(num_queries, num_keys=None, device=None):
+    """Boolean (queries, keys) mask, True where a query may see a key.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    # Queries are the last positions, as when new tokens attend to a
+    # cache: query i sees key j if j <= i + num_keys - num_queries
+    num_keys = num_queries if num_keys is None else num_keys
+    i = torch.arange(num_queries, device=device)[:, None]
+    j = torch.arange(num_keys, device=device)[None, :]
+    return j <= i + (num_keys - num_queries)
 
 class DotProductAttention(nn.Module):
-    """Scaled dot product attention.
+    """Scaled dot-product attention over the last two axes.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, dropout):
+    def __init__(self, dropout=0.0):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
+        self.attention_weights = None
 
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def forward(self, queries, keys, values, valid_lens=None):
+    # Leading axes (batch, and heads if present) are carried along.
+    # Shape of queries: (..., no. of queries, d)
+    # Shape of keys: (..., no. of key-value pairs, d)
+    # Shape of values: (..., no. of key-value pairs, value dimension)
+    # mask: boolean, broadcastable to (..., no. of queries, no. of keys),
+    # True where a query may attend to a key
+    def forward(self, queries, keys, values, mask=None):
         d = queries.shape[-1]
-        # Swap the last two dimensions of keys with keys.transpose(1, 2)
-        scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return torch.bmm(self.dropout(self.attention_weights), values)
+        scores = queries @ keys.transpose(-2, -1) / math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, mask)
+        return self.dropout(self.attention_weights) @ values
 
 class MultiHeadAttention(d2l.Module):
-    """Multi-head attention.
+    """Multi-head attention with heads as an explicit axis; num_kv_heads <
 
     Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
+    def __init__(self, num_hiddens, num_heads, dropout=0.0, bias=False,
+                 num_kv_heads=None):
         super().__init__()
         assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         self.num_heads = num_heads
+        self.num_kv_heads = num_kv_heads or num_heads
+        assert num_heads % self.num_kv_heads == 0
+        kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
         self.attention = d2l.DotProductAttention(dropout)
-        self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_k = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_v = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_o = nn.LazyLinear(num_hiddens, bias=bias)
+        self.W_q = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+        self.W_k = nn.Linear(num_hiddens, kv_hiddens, bias=bias)
+        self.W_v = nn.Linear(num_hiddens, kv_hiddens, bias=bias)
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
 
-    def forward(self, queries, keys, values, valid_lens):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
+    def forward(self, queries, keys, values, mask=None):
+        # queries: (batch, no. of queries, num_hiddens); keys and values:
+        # (batch, no. of key-value pairs, num_hiddens). mask: boolean,
+        # broadcastable to (batch, no. of queries, no. of keys), shared by
+        # all heads, or to (batch, num_heads, no. of queries, no. of keys)
+        q = self.split_heads(self.W_q(queries), self.num_heads)
+        k = self.split_heads(self.W_k(keys), self.num_kv_heads)
+        v = self.split_heads(self.W_v(values), self.num_kv_heads)
+        group = self.num_heads // self.num_kv_heads
+        k, v = k.repeat_interleave(group, 1), v.repeat_interleave(group, 1)
+        if mask is not None and mask.dim() == 3:
+            mask = mask[:, None]           # The same mask for every head
+        # Shape of Y: (batch, num_heads, no. of queries, head width)
+        Y = self.attention(q, k, v, mask)
+        return self.W_o(self.merge_heads(Y))
 
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = torch.repeat_interleave(
-                valid_lens, repeats=self.num_heads, dim=0)
+    @property
+    def attention_weights(self):
+        """Weights of the last call: (batch, num_heads, queries, keys)."""
+        return self.attention.attention_weights
 
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens)
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
-
-    def transpose_qkv(self, X):
-        """Transposition for parallel computation of multiple attention heads.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        # Shape of input X: (batch_size, no. of queries or key-value pairs,
-        # num_hiddens). Shape of output X: (batch_size, no. of queries or
-        # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
-        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        X = X.permute(0, 2, 1, 3)
-        # Shape of output: (batch_size * num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        return X.reshape(-1, X.shape[2], X.shape[3])
-
-    def transpose_output(self, X):
-        """Reverse the operation of transpose_qkv.
+    def split_heads(self, X, num_heads):
+        """(batch, length, num_heads * width) -> (batch, num_heads, length,
 
         Defined in :numref:`sec_multihead-attention`"""
-        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
-        X = X.permute(0, 2, 1, 3)
-        return X.reshape(X.shape[0], X.shape[1], -1)
+        return X.reshape(X.shape[0], X.shape[1], num_heads, -1).transpose(1, 2)
 
-def rope(x, offset=0):
+    def merge_heads(self, X):
+        """Reverse split_heads: (batch, num_heads, length, width) -> (batch,
+
+        Defined in :numref:`sec_multihead-attention`"""
+        return X.transpose(1, 2).reshape(X.shape[0], X.shape[2], -1)
+
+def sinusoidal_encoding(max_len, num_hiddens):
+    """The (max_len, num_hiddens) table of sinusoidal position codes.
+
+    Defined in :numref:`sec_positional-information`"""
+    theta = torch.arange(max_len)[:, None] / 10000 ** (
+        torch.arange(0, num_hiddens, 2) / num_hiddens)
+    return torch.stack([torch.sin(theta), torch.cos(theta)],
+                       -1).reshape(max_len, num_hiddens)
+
+def rope(x, offset=0, base=10000.0, scale=None):
     """Rotate feature pairs of x (..., num_steps, d) by position angles.
 
     Defined in :numref:`sec_positional-information`"""
-    d = x.shape[-1]
-    pos = torch.arange(x.shape[-2], dtype=torch.float32,
-                       device=x.device) + offset
-    inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
-    theta = pos[:, None] * inv_freq[None, :]
-    cos, sin = torch.cos(theta), torch.sin(theta)
+    n, d = x.shape[-2:]
+    key = (n, d, offset, base, x.device)
+    reuse = scale is None and not torch.is_grad_enabled()
+    if reuse and key in rope_cache:  # Same angles as the previous call
+        cos, sin = rope_cache[key]
+    else:
+        pos = torch.arange(n, dtype=torch.float32, device=x.device) + offset
+        omega = base ** (-torch.arange(0, d, 2, device=x.device) / d)
+        if scale is not None:  # One angle factor per pair, shape (d/2,)
+            omega = omega * scale
+        theta = pos[:, None] * omega[None, :]
+        cos, sin = torch.cos(theta), torch.sin(theta)
+        if reuse:  # Keep only the newest tables
+            rope_cache.clear()
+            rope_cache[key] = cos, sin
     x1, x2 = x[..., 0::2], x[..., 1::2]
     return torch.stack([x1 * cos - x2 * sin,
                         x1 * sin + x2 * cos], -1).flatten(-2)
 
+rope_cache = {}
+
 class TinyCharLM(nn.Module):
-    """Attention-only character-level language model.
+    """Attention-only language model.
 
     Defined in :numref:`sec_positional-information`"""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                  pos='rope', max_len=512, bias=False):
         super().__init__()
+        assert pos in ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
         self.num_heads, self.pos = num_heads, pos
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
         nn.init.normal_(self.token_emb.weight, std=0.02)
@@ -1573,24 +1600,16 @@ class TinyCharLM(nn.Module):
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
         if pos == 'sinusoidal':
-            theta = torch.arange(max_len)[:, None] / 10000 ** (
-                torch.arange(0, num_hiddens, 2) / num_hiddens)
-            P = torch.stack([torch.sin(theta), torch.cos(theta)], -1)
-            self.register_buffer('P', P.reshape(max_len, num_hiddens))
+            self.register_buffer('P', sinusoidal_encoding(max_len,
+                                                          num_hiddens))
+        if pos == 'rope':  # Base and per-pair angle factors of the rotation
+            self.rope_base = 10000.0
+            self.register_buffer('rope_scale',
+                                 torch.ones(num_hiddens // num_heads // 2))
         self.blks = nn.ModuleList([nn.ModuleDict(dict(
             qkv=nn.Linear(num_hiddens, 3 * num_hiddens, bias=bias),
             proj=nn.Linear(num_hiddens, num_hiddens, bias=bias)))
             for _ in range(num_blks)])
-
-    def _rope(self, x):
-        d = x.shape[-1]
-        pos = torch.arange(x.shape[-2], dtype=torch.float32, device=x.device)
-        inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
-        theta = pos[:, None] * inv_freq[None, :]
-        cos, sin = torch.cos(theta), torch.sin(theta)
-        x1, x2 = x[..., 0::2], x[..., 1::2]
-        return torch.stack([x1 * cos - x2 * sin,
-                            x1 * sin + x2 * cos], -1).flatten(-2)
 
     def _alibi(self, T, device):
         h = torch.arange(1, self.num_heads + 1, device=device)
@@ -1604,14 +1623,13 @@ class TinyCharLM(nn.Module):
         q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
                    for u in (q, k, v))
         if self.pos == 'rope':
-            q, k = self._rope(q), self._rope(k)
+            q = rope(q, base=self.rope_base, scale=self.rope_scale)
+            k = rope(k, base=self.rope_base, scale=self.rope_scale)
         scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
         if self.pos == 'alibi':
             scores = scores + self._alibi(T, H.device)
-        mask = torch.triu(torch.ones(T, T, dtype=torch.bool,
-                                     device=H.device), 1)
-        scores = scores.masked_fill(mask, torch.finfo(scores.dtype).min)
-        weights = F.softmax(scores, dim=-1)
+        weights = d2l.masked_softmax(scores,
+                                     d2l.causal_mask(T, device=H.device))
         out = (weights @ v).transpose(1, 2).reshape(B, T, D)
         return blk['proj'](out), weights
 
@@ -1619,8 +1637,8 @@ class TinyCharLM(nn.Module):
         H = self.token_emb(X)
         if self.pos == 'learned':
             H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        if self.pos == 'sinusoidal':
-            H = H + self.P[:X.shape[1]]
+        if self.pos == 'sinusoidal':  # Scale tokens up to the table
+            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
         return H
 
     def forward(self, X):
@@ -1656,7 +1674,7 @@ class FeedForward(nn.Module):
         self.W_2 = nn.Linear(width, num_hiddens, bias=bias)
 
     def forward(self, X):
-        if self.act == 'gelu':
+        if self.act == 'gelu':  # The tanh approximation, as in GPT-2
             return self.W_2(F.gelu(self.W_1(X), approximate='tanh'))
         return self.W_2(F.silu(self.W_g(X)) * self.W_1(X))
 
@@ -1672,7 +1690,8 @@ class TransformerBlock(nn.Module):
         assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
         make_norm = nn.RMSNorm if norm == 'rms' else nn.LayerNorm
-        self.norm1, self.norm2 = make_norm(num_hiddens), make_norm(num_hiddens)
+        self.norm1 = make_norm(num_hiddens, eps=1e-5)
+        self.norm2 = make_norm(num_hiddens, eps=1e-5)
         self.attention = (d2l.MultiHeadAttention(num_hiddens, num_heads,
                                                  dropout, bias=bias)
                           if attn_factory is None else attn_factory())
@@ -1680,12 +1699,12 @@ class TransformerBlock(nn.Module):
                     if ffn_factory is None else ffn_factory())
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, X, valid_lens=None):
+    def forward(self, X, mask=None):
         if self.pre_norm:
             Y = self.norm1(X)
-            X = X + self.dropout(self.attention(Y, Y, Y, valid_lens))
+            X = X + self.dropout(self.attention(Y, Y, Y, mask))
             return X + self.dropout(self.ffn(self.norm2(X)))
-        X = self.norm1(X + self.dropout(self.attention(X, X, X, valid_lens)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, mask)))
         return self.norm2(X + self.dropout(self.ffn(X)))
 
 class GPT(nn.Module):
@@ -1694,39 +1713,45 @@ class GPT(nn.Module):
     Defined in :numref:`sec_gpt`"""
 
     class CausalAttention(nn.Module):
-        """Multi-head causal self-attention, optionally rotary."""
-        def __init__(self, num_hiddens, num_heads, bias=False, rope=False):
+        """Fused causal self-attention, optionally rotary; num_kv_heads <
+        num_heads shares each key-value head across a group of queries."""
+        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
+                     num_kv_heads=None):
             super().__init__()
             self.num_heads, self.rope = num_heads, rope
-            self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=bias)
+            self.num_kv_heads = num_kv_heads or num_heads
+            self.kv_hiddens = self.num_kv_heads * (num_hiddens // num_heads)
+            self.W_qkv = nn.Linear(num_hiddens,
+                                   num_hiddens + 2 * self.kv_hiddens,
+                                   bias=bias)
             self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
 
-        def _rope(self, x):
-            d = x.shape[-1]
-            pos = torch.arange(x.shape[-2], dtype=torch.float32,
-                               device=x.device)
-            inv_freq = 10000.0 ** (
-                -torch.arange(0, d, 2, device=x.device) / d)
-            theta = pos[:, None] * inv_freq[None, :]
-            cos, sin = torch.cos(theta), torch.sin(theta)
-            x1, x2 = x[..., 0::2], x[..., 1::2]
-            return torch.stack([x1 * cos - x2 * sin,
-                                x1 * sin + x2 * cos], -1).flatten(-2)
-
-        def forward(self, X, *_):
+        def qkv(self, X, offset=0):
+            """Queries, keys, and values of X, each (batch, heads, length,
+            head width), at positions offset, offset + 1, ..."""
             B, T, D = X.shape
-            q, k, v = self.W_qkv(X).chunk(3, -1)
-            q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-                       for u in (q, k, v))
+            q, k, v = self.W_qkv(X).split(
+                [D, self.kv_hiddens, self.kv_hiddens], -1)
+            q = q.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+            k, v = (u.reshape(B, T, self.num_kv_heads, -1).transpose(1, 2)
+                    for u in (k, v))
             if self.rope:
-                q, k = self._rope(q), self._rope(k)
-            Y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
-            return self.W_o(Y.transpose(1, 2).reshape(B, T, D))
+                q, k = d2l.rope(q, offset), d2l.rope(k, offset)
+            return q, k, v
+
+        def forward(self, X, *_):  # X serves as queries, keys, values
+            q, k, v = self.qkv(X)
+            Y = F.scaled_dot_product_attention(
+                q, k, v, is_causal=True,
+                enable_gqa=self.num_kv_heads < self.num_heads)
+            return self.W_o(Y.transpose(1, 2).flatten(2))
 
     def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
                  max_len=1024, pos='rope', norm='rms', act='swiglu',
-                 pre_norm=True, bias=False, dropout=0):
+                 pre_norm=True, bias=False, dropout=0, num_kv_heads=None,
+                 ffn_factory=None):
         super().__init__()
+        assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
         nn.init.normal_(self.token_emb.weight, std=0.02)
@@ -1734,13 +1759,21 @@ class GPT(nn.Module):
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
         attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
-                                            rope=(pos == 'rope'))
+                                            pos == 'rope', num_kv_heads)
         self.blks = nn.ModuleList([
             d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
-                                 pre_norm, bias, attn_factory=attn)
+                                 pre_norm, bias, attn_factory=attn,
+                                 ffn_factory=ffn_factory)
             for _ in range(num_blks)])
         self.norm = (nn.RMSNorm if norm == 'rms'
-                     else nn.LayerNorm)(num_hiddens)
+                     else nn.LayerNorm)(num_hiddens, eps=1e-5)
+        for name, m in self.named_modules():  # GPT-2's initialization
+            if isinstance(m, nn.Linear):  # W_o and W_2 write to the stream
+                std = 0.02 / (2 * num_blks) ** 0.5 if name.endswith(
+                    ('W_o', 'W_2')) else 0.02
+                nn.init.normal_(m.weight, std=std)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, X):
         H = self.token_emb(X)
@@ -1750,7 +1783,7 @@ class GPT(nn.Module):
             H = blk(H)
         return F.linear(self.norm(H), self.token_emb.weight)
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
         """Sample a continuation of the token-id list prefix.
 
@@ -1766,67 +1799,93 @@ class GPT(nn.Module):
             ids.append(int(torch.multinomial(F.softmax(logits, -1), 1)))
         return ids
 
-class GQAAttention(nn.Module):
-    """Causal multi-head attention with num_kv_heads shared KV heads.
+class LMOptimizer:
+    """AdamW with weight decay on the weight matrices only, a linear warmup
+
+    Defined in :numref:`sec_gpt`"""
+    def __init__(self, model, lr, num_steps, warmup, weight_decay=0.1,
+                 max_norm=1.0):
+        named = list(model.named_parameters())
+        decay = [p for n, p in named if p.ndim == 2 and 'emb' not in n]
+        rest = [p for n, p in named if p.ndim != 2 or 'emb' in n]
+        self.optimizer = torch.optim.AdamW(
+            [{'params': decay, 'weight_decay': weight_decay},
+             {'params': rest, 'weight_decay': 0.0}], lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+            self.optimizer, lambda t: d2l.cosine_warmup(t, num_steps, warmup))
+        self.params, self.max_norm = decay + rest, max_norm
+
+    def zero_grad(self):
+        self.optimizer.zero_grad()
+
+    def step(self):
+        nn.utils.clip_grad_norm_(self.params, self.max_norm)
+        self.optimizer.step()
+        self.scheduler.step()
+
+GPT2_URL = 'https://huggingface.co/openai-community/gpt2/resolve/main/'
+d2l.DATA_HUB['gpt2-weights'] = (
+    GPT2_URL + 'model.safetensors',
+    '89a76996d7c6ee89b86618a265483aab73e61d50')
+d2l.DATA_HUB['gpt2-merges'] = (
+    GPT2_URL + 'merges.txt', '396d4d8ec90cb02f4d56e049e0e4add868bcd943')
+d2l.DATA_HUB['gpt2-encoder'] = (
+    GPT2_URL + 'vocab.json', 'f0223209235343bc067d7da838328bced8085ae1')
+
+def gpt2_tokenizer():
+    """GPT-2's byte-level BPE tokenizer, assembled by tiktoken.
+
+    Defined in :numref:`sec_gpt`"""
+    import tiktoken  # lazy: d2l itself does not require tiktoken
+    from tiktoken.load import data_gym_to_mergeable_bpe_ranks
+    return tiktoken.Encoding(
+        'gpt2', explicit_n_vocab=50257,
+        pat_str=d2l.BPETokenizer.GPT2_PATTERN,
+        mergeable_ranks=data_gym_to_mergeable_bpe_ranks(
+            d2l.download('gpt2-merges', '../data/gpt2'),
+            d2l.download('gpt2-encoder', '../data/gpt2')),
+        special_tokens={'<|endoftext|>': 50256})
+
+def load_gpt2():
+    """GPT-2 small (124M) as a GPT with the released weights, in eval
+
+    Defined in :numref:`sec_gpt`"""
+    from safetensors.torch import load_file  # lazy, like tiktoken above
+    gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+               max_len=1024, pos='learned', norm='layer', act='gelu',
+               pre_norm=True, bias=True)
+    weights = load_file(d2l.download('gpt2-weights', '../data/gpt2'))
+    with torch.no_grad():
+        gpt2.token_emb.weight.copy_(weights['wte.weight'])
+        gpt2.pos_emb.weight.copy_(weights['wpe.weight'])
+        gpt2.norm.weight.copy_(weights['ln_f.weight'])
+        gpt2.norm.bias.copy_(weights['ln_f.bias'])
+        for i, blk in enumerate(gpt2.blks):
+            modules = {f'h.{i}.ln_1': blk.norm1, f'h.{i}.ln_2': blk.norm2,
+                       f'h.{i}.attn.c_attn': blk.attention.W_qkv,
+                       f'h.{i}.attn.c_proj': blk.attention.W_o,
+                       f'h.{i}.mlp.c_fc': blk.ffn.W_1,
+                       f'h.{i}.mlp.c_proj': blk.ffn.W_2}
+            for key, module in modules.items():
+                W = weights[key + '.weight']  # Conv1D: (in, out)
+                module.weight.copy_(W.T if W.ndim == 2 else W)
+                module.bias.copy_(weights[key + '.bias'])
+    return gpt2.eval()
+
+def kv_cache_bytes(model, num_tokens, batch_size=1, bytes_per_elem=4):
+    """Bytes of the keys and values of num_tokens positions in every block
 
     Defined in :numref:`sec_kv-cache`"""
-    def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
-                 rope=False, causal=True):
-        super().__init__()
-        assert num_hiddens % num_heads == 0
-        assert num_heads % num_kv_heads == 0
-        self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
-        self.head_dim = num_hiddens // num_heads
-        self.rope, self.causal = rope, causal
-        self.W_q = nn.Linear(num_hiddens, num_hiddens, bias=bias)
-        self.W_k = nn.Linear(num_hiddens, num_kv_heads * self.head_dim,
-                             bias=bias)
-        self.W_v = nn.Linear(num_hiddens, num_kv_heads * self.head_dim,
-                             bias=bias)
-        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
-
-    def _rope(self, x):  # the rotation of d2l.GPT, kept self-contained
-        d = x.shape[-1]
-        pos = torch.arange(x.shape[-2], dtype=torch.float32,
-                           device=x.device)
-        inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
-        theta = pos[:, None] * inv_freq[None, :]
-        cos, sin = torch.cos(theta), torch.sin(theta)
-        x1, x2 = x[..., 0::2], x[..., 1::2]
-        return torch.stack([x1 * cos - x2 * sin,
-                            x1 * sin + x2 * cos], -1).flatten(-2)
-
-    def forward(self, queries, keys, values, valid_lens=None):
-        B, T, D = queries.shape
-        q = self.W_q(queries).reshape(B, T, self.num_heads, -1)
-        k = self.W_k(keys).reshape(B, -1, self.num_kv_heads, self.head_dim)
-        v = self.W_v(values).reshape(B, -1, self.num_kv_heads,
-                                     self.head_dim)
-        q, k, v = (u.transpose(1, 2) for u in (q, k, v))
-        if self.rope:
-            q, k = self._rope(q), self._rope(k)
-        mask, causal = None, self.causal
-        if valid_lens is not None:      # mask padding (and causality)
-            S = k.shape[2]
-            if valid_lens.dim() == 1:
-                valid_lens = valid_lens[:, None].expand(B, T)
-            mask = (torch.arange(S, device=q.device)[None, None, :]
-                    < valid_lens[:, :, None])[:, None]
-            if causal:
-                i = torch.arange(T, device=q.device)[:, None]
-                j = torch.arange(S, device=q.device)[None, :]
-                mask = mask & (j <= i + S - T)
-            causal = False
-        Y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask,
-                                           is_causal=causal,
-                                           enable_gqa=True)
-        return self.W_o(Y.transpose(1, 2).reshape(B, T, -1))
+    attn = model.blks[0].attention
+    return (2 * len(model.blks) * attn.kv_hiddens * num_tokens * batch_size
+            * bytes_per_elem)
 
 class PatchEmbedding(nn.Module):
     """Image-to-sequence stem of the vision transformer.
 
     Defined in :numref:`sec_vision-transformer`"""
-    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
+                 num_channels=3):
         super().__init__()
         def _make_tuple(x):
             if not isinstance(x, (list, tuple)):
@@ -1839,8 +1898,8 @@ class PatchEmbedding(nn.Module):
             'image size must be divisible by the patch size'
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
-        self.conv = nn.LazyConv2d(num_hiddens, kernel_size=patch_size,
-                                  stride=patch_size)
+        self.conv = nn.Conv2d(num_channels, num_hiddens,
+                              kernel_size=patch_size, stride=patch_size)
 
     def forward(self, X):
         # Output shape: (batch size, no. of patches, no. of channels)
@@ -1853,16 +1912,18 @@ class ViTBlock(nn.Module):
     def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False):
         super().__init__()
-        self.ln1 = nn.LayerNorm(num_hiddens)
+        self.ln1 = nn.LayerNorm(num_hiddens, eps=1e-5)
         self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
                                                 dropout, use_bias)
-        self.ln2 = nn.LayerNorm(num_hiddens)
+        self.ln2 = nn.LayerNorm(num_hiddens, eps=1e-5)
         self.mlp = nn.Sequential(
-            nn.LazyLinear(mlp_num_hiddens), nn.GELU(), nn.Dropout(dropout),
-            nn.LazyLinear(num_hiddens), nn.Dropout(dropout))
+            nn.Linear(num_hiddens, mlp_num_hiddens), nn.GELU(),  # Exact GELU
+            nn.Dropout(dropout), nn.Linear(mlp_num_hiddens, num_hiddens),
+            nn.Dropout(dropout))
 
-    def forward(self, X, valid_lens=None):
-        X = X + self.attention(*([self.ln1(X)] * 3), valid_lens)
+    def forward(self, X, mask=None):
+        X_norm = self.ln1(X)
+        X = X + self.attention(X_norm, X_norm, X_norm, mask)
         return X + self.mlp(self.ln2(X))
 
 class ViT(d2l.Classifier):
@@ -1870,24 +1931,24 @@ class ViT(d2l.Classifier):
 
     Defined in :numref:`sec_vision-transformer`"""
     def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
-                 use_bias=False, num_classes=10):
+                 num_heads, num_blks, emb_dropout, blk_dropout, num_steps,
+                 lr=1e-3, use_bias=False, num_classes=10, num_channels=1):
         super().__init__()
         self.save_hyperparameters()
         self.patch_embedding = PatchEmbedding(
-            img_size, patch_size, num_hiddens)
+            img_size, patch_size, num_hiddens, num_channels)
         self.cls_token = nn.Parameter(d2l.zeros(1, 1, num_hiddens))
-        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        num_tokens = self.patch_embedding.num_patches + 1  # Add the cls token
         # Positional embeddings are learnable, initialized to small noise
         self.pos_embedding = nn.Parameter(
-            torch.randn(1, num_steps, num_hiddens) * 0.02)
+            torch.randn(1, num_tokens, num_hiddens) * 0.02)
         self.dropout = nn.Dropout(emb_dropout)
         self.blks = nn.Sequential()
         for i in range(num_blks):
             self.blks.add_module(f"{i}", ViTBlock(
                 num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
                 use_bias))
-        self.head = nn.Sequential(nn.LayerNorm(num_hiddens),
+        self.head = nn.Sequential(nn.LayerNorm(num_hiddens, eps=1e-5),
                                   nn.Linear(num_hiddens, num_classes))
 
     def forward(self, X):
@@ -1897,6 +1958,20 @@ class ViT(d2l.Classifier):
         for blk in self.blks:
             X = blk(X)
         return self.head(X[:, 0])
+
+    def configure_optimizers(self):
+        # AdamW decays weight matrices and kernels; it exempts biases, norm
+        # parameters, the class token, and the position embeddings
+        named = list(self.named_parameters())
+        decay = lambda n, p: p.ndim >= 2 and n not in ('cls_token',
+                                                        'pos_embedding')
+        optim = torch.optim.AdamW(
+            [{'params': [p for n, p in named if decay(n, p)]},
+             {'params': [p for n, p in named if not decay(n, p)],
+              'weight_decay': 0.0}], lr=self.lr, weight_decay=0.05)
+        # Linear warmup over the first tenth of the steps, then cosine
+        return optim, torch.optim.lr_scheduler.LambdaLR(optim, lambda t: (
+            d2l.cosine_warmup(t, self.num_steps, self.num_steps // 10)))
 
 class GRU(d2l.RNN):
     """The multilayer GRU model implemented with high-level APIs.
@@ -2394,13 +2469,28 @@ class Benchmark:
     def __repr__(self):
         return f'{self.desc}: {1000 * self.time:.2f} ms/call'
 
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
+def torchrun(script, nproc, *args, env=None):
+    """Run Python source in nproc processes; return their JSON lines.
 
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (nn.parallel.scatter(X, devices),
-            nn.parallel.scatter(y, devices))
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    import glob, subprocess, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'script.py')
+        with open(path, 'w') as f:
+            f.write(script)
+        launcher = os.path.join(os.path.dirname(sys.executable), 'torchrun')
+        # Each process prints to a file of its own (--redirects 1), so that
+        # the lines of different processes cannot interleave
+        run = subprocess.run(
+            [launcher, '--standalone', f'--nproc-per-node={nproc}',
+             '--log-dir', tmp, '--redirects', '1', path, *map(str, args)],
+            capture_output=True, text=True, env={**os.environ, **(env or {})})
+        if run.returncode != 0:
+            raise RuntimeError(run.stderr[-3000:])
+        logs = sorted(glob.glob(f'{tmp}/*/attempt_0/*/stdout.log'),
+                      key=lambda log: int(log.split(os.sep)[-2]))  # By rank
+        return [json.loads(line) for log in logs for line in open(log)
+                if line.startswith('{')]
 
 def resnet18(num_classes, in_channels=1):
     """A slightly modified ResNet-18 model.
@@ -5318,7 +5408,9 @@ class TransformerEncoderBlock(nn.Module):
         self.addnorm2 = AddNorm(num_hiddens, dropout)
 
     def forward(self, X, valid_lens):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        mask = (None if valid_lens is None
+                else d2l.padding_mask(valid_lens, X.shape[1]))
+        Y = self.addnorm1(X, self.attention(X, X, X, mask))
         return self.addnorm2(Y, self.ffn(Y))
 
 

@@ -53,6 +53,21 @@ from torch import nn
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
 %%tab jax
 %matplotlib inline
+import os
+# By default, JAX reserves most of every GPU when it starts (here, during
+# the import of d2l) and carves every array out of that block. One step
+# below needs about 10 GB in one piece after many smaller arrays have come
+# and gone, and a later cell starts a second JAX process on the same GPUs.
+# The 'vmm' allocator reserves nothing up front and maps the memory of each
+# array into one contiguous range, so both succeed
+os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'vmm'
+# XLA moves a collective away from the computation around it, so that the
+# two overlap, only when its latency-hiding scheduler is on
+os.environ['XLA_FLAGS'] = '--xla_gpu_enable_latency_hiding_scheduler=true'
+# XLA's NCCL buffer registration fails harmlessly on this machine, whose GPUs
+# lack peer-to-peer access; opt out rather than let every collective print a
+# warning
+os.environ['NCCL_LOCAL_REGISTER'] = '0'
 from d2l import jax as d2l
 from flax import nnx
 import jax
@@ -62,15 +77,9 @@ import json
 import math
 import numpy as np
 import optax
-import os
 import re
 import subprocess
 import sys
-
-# XLA's NCCL buffer registration fails harmlessly on this machine, whose GPUs
-# lack peer-to-peer access; opt out rather than let every collective print a
-# warning.
-os.environ['NCCL_LOCAL_REGISTER'] = '0'
 ```
 
 ## Production Data Parallelism
@@ -149,6 +158,11 @@ limit. ResNet-18's 45 MB of gradients thus travel in two allreduces. XLA
 also compiles each allreduce as an asynchronous pair of
 operations, `all-reduce-start` and `all-reduce-done`, so that the GPU can
 run computation that does not need the sum while the sum is in transit.
+It schedules the pair apart, with computation in between, only when its
+latency-hiding scheduler is on; the first cell of this section turns it
+on with `--xla_gpu_enable_latency_hiding_scheduler=true`. Without it, a
+profile of the step shows the gradient allreduces running on the stream
+of the computation, between two of its kernels.
 :end_tab:
 
 ### The Execution Model
@@ -169,8 +183,9 @@ NVIDIA's library of collective operations, and DDP sends its allreduces
 through NCCL. The launcher `torchrun` starts $k$ copies of a script and
 tells each copy its *rank*, its index from 0 to $k-1$, through environment
 variables. A notebook is a single process, so we write each script as a
-string and start it with the following helper, which returns what the
-processes print as lines of JSON.
+string and start it with the following helper. It collects the lines of
+JSON that the processes print, process by process in the order of their
+ranks.
 :end_tab:
 
 :begin_tab:`jax`
@@ -184,8 +199,9 @@ In :numref:`sec_multi_gpu` the program came from a `shard_map`, in which
 we wrote the per-device computation and its `psum`. Now the program is
 written for one device. What makes it data-parallel is the placement of
 its inputs: the parameters are replicated on every GPU of the mesh
-(`P()`), and the minibatch is split along its leading axis (`P('data')`). The compiler partitions the
-computation to match this placement, so every GPU computes the gradient of
+(`P()`), and the minibatch is split along its leading axis
+(`P('data')`). The compiler partitions the computation to match this
+placement, so every GPU computes the gradient of
 its shard. Each parameter, however, is a copy on every GPU, and the
 derivative of "copy to every device" is the sum over the devices
 (:numref:`sec_multi_gpu`). The compiler therefore sums every parameter's
@@ -199,19 +215,24 @@ JAX's partitioner, Shardy, implements the SPMD partitioning of GSPMD
 #@save
 def torchrun(script, nproc, *args, env=None):
     """Run Python source in nproc processes; return their JSON lines."""
-    import subprocess, tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.py') as f:
-        f.write(script)
-        f.flush()
+    import glob, subprocess, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'script.py')
+        with open(path, 'w') as f:
+            f.write(script)
         launcher = os.path.join(os.path.dirname(sys.executable), 'torchrun')
+        # Each process prints to a file of its own (--redirects 1), so that
+        # the lines of different processes cannot interleave
         run = subprocess.run(
-            [launcher, '--standalone', f'--nproc-per-node={nproc}', f.name,
-             *map(str, args)], capture_output=True, text=True,
-            env={**os.environ, **(env or {})})
-    if run.returncode != 0:
-        raise RuntimeError(run.stderr[-3000:])
-    return [json.loads(line) for line in run.stdout.splitlines()
-            if line.startswith('{')]
+            [launcher, '--standalone', f'--nproc-per-node={nproc}',
+             '--log-dir', tmp, '--redirects', '1', path, *map(str, args)],
+            capture_output=True, text=True, env={**os.environ, **(env or {})})
+        if run.returncode != 0:
+            raise RuntimeError(run.stderr[-3000:])
+        logs = sorted(glob.glob(f'{tmp}/*/attempt_0/*/stdout.log'),
+                      key=lambda log: int(log.split(os.sep)[-2]))  # By rank
+        return [json.loads(line) for log in logs for line in open(log)
+                if line.startswith('{')]
 ```
 
 ### The Training Step
@@ -729,15 +750,31 @@ a step would expose a fifth of $2N/\beta$, about 4 ms.
 
 :begin_tab:`jax`
 With full overlap a step would expose only the last of XLA's two gradient
-allreduces. Their sizes, about 31 and 13 MB, put that bound at a third or
-two thirds of $2N/\beta$, depending on which comes last.
+allreduces. Their sizes, about 26 and 19 MB, put that bound at about two
+fifths or three fifths of $2N/\beta$, depending on which comes last.
 :end_tab:
 
 The bucket model makes three assumptions: every allreduce starts as soon
 as its bucket is complete, it runs as fast as the bare benchmark, and the
-backward kernels beside it run as fast as they do alone. On this machine at
-least one of them fails. A trace of one step, which records when every
-kernel starts and ends, tells which (exercise :exref:`ex_mgp-buckets`).
+backward kernels beside it run as fast as they do alone. A trace of one
+step, which records when every kernel starts and ends, tests them
+(exercise :exref:`ex_mgp-buckets`). On this machine the third fails: the
+kernels of an allreduce take a share of the GPU's processors and memory
+bandwidth, and the backward kernels beside them run more slowly.
+
+:begin_tab:`pytorch`
+In a trace of the step on two GPUs, the backward kernels take about a
+tenth longer than in the same step without communication, and the
+allreduces take more than twice as long as the bare benchmark. Together
+they lengthen the step by about 15 ms.
+:end_tab:
+
+:begin_tab:`jax`
+The first assumption fails as well. A merged buffer is complete only when
+the last of its gradients is, so in XLA's schedule of the step on two GPUs
+the larger allreduce starts two convolutions before the end of the
+backward pass, and the smaller one after it.
+:end_tab:
 
 On a machine whose GPUs share an NVLink domain, each GPU exchanges data
 with the others at 450 GB/s in each direction on the H100 (NVLink 4) and

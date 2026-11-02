@@ -259,6 +259,19 @@ FULL_CARD_NOTEBOOKS = {
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
 }
 
+# rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
+# notebooks whose quoted numbers depend on WHICH cards they get, not only on
+# how many. The scheduler reserves the notebook's usual requirement (above) on
+# these GPUs only, and otherwise lets it wait. A pin that names a GPU the host
+# does not have is ignored (any GPUs will do).
+PINNED_GPU_NOTEBOOKS = {
+    # 13.5 measures the allreduce bandwidth beta between two cards. On the
+    # 4x4090 box (no peer-to-peer) it depends on the pair: ~4.9 GB/s on GPUs
+    # 0,1, ~6.2 on 2,3, ~7.4 on 0,2 or 1,3 (2026-11-02); the prose quotes 0,1,
+    # which is also the pair a standalone run uses.
+    "chapter_computational-performance/multiple-gpus.ipynb": (0, 1),
+}
+
 # (framework, relative-path) → number of global GPU slots to hold for
 # this single notebook. Used for notebooks that overflow the standard
 # per-process VRAM budget. Each entry causes run_one_notebook to flock

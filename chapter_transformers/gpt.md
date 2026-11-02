@@ -198,12 +198,38 @@ class GPT(nn.Module):  #@save
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-1}
 %%tab jax
+@jax.custom_vjp  #@save
+def embedding_rows(table, X):
+    """The rows X of table."""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):  #@save
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):  #@save
+    """Gradient of the table: the one-hot rows of X times the gradients."""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+#@save
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+
+class Embed(nnx.Embed):  #@save
+    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
+
 class GPT(nnx.Module):  #@save
     """Decoder-only transformer language model built from configurable
     blocks."""
 
     class CausalAttention(nnx.Module):
-        """Fused causal self-attention, optionally rotary; num_kv_heads <
+        """Causal self-attention, optionally rotary; num_kv_heads <
         num_heads shares each key-value head across a group of queries."""
         def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
                      num_kv_heads=None, *, rngs):
@@ -231,7 +257,7 @@ class GPT(nnx.Module):  #@save
 
         def __call__(self, X, *_):  # X serves as queries, keys, values
             q, k, v = self.qkv(X)
-            # The fused kernel takes (batch, length, heads, head width)
+            # dot_product_attention takes (batch, length, heads, head width)
             Y = jax.nn.dot_product_attention(
                 q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
                 is_causal=True)
@@ -244,8 +270,8 @@ class GPT(nnx.Module):  #@save
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
         init = nnx.initializers.normal(0.02)
-        self.token_emb = nnx.Embed(vocab_size, num_hiddens,
-                                   embedding_init=init, rngs=rngs)
+        self.token_emb = Embed(vocab_size, num_hiddens,
+                               embedding_init=init, rngs=rngs)
         if pos == 'learned':
             self.pos_emb = nnx.Embed(max_len, num_hiddens,
                                      embedding_init=init, rngs=rngs)
@@ -276,6 +302,21 @@ class GPT(nnx.Module):  #@save
             H = blk(H)
         return self.token_emb.attend(self.norm(H))
 ```
+
+:begin_tab:`jax`
+The token embedding is `d2l.Embed`, an `nnx.Embed` with a faster gradient.
+The gradient of a table lookup adds the gradient at every position to the
+row of that position's token. XLA computes this sum with a scatter-add, in
+which every position adds its values with atomic additions. In a minibatch
+of text, thousands of positions hold the same few frequent bytes, their
+additions to the same row wait for one another, and on our GPU the sum takes
+tens of times as long as for random tokens. For vocabularies of up to
+1,024 tokens, `d2l.Embed` computes the same sum as one matrix product, of
+the one-hot rows of the tokens with the gradients; its forward pass is the
+ordinary lookup. The product splits across GPUs like any other: each GPU
+multiplies its share of the positions, and the shares are added up with the
+other gradients.
+:end_tab:
 
 A shape check confirms one logit per vocabulary entry at every position,
 and the standard deviations of two matrices of the first block confirm the

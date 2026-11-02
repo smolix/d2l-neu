@@ -166,7 +166,26 @@ HEAVY_GPU_NOTEBOOKS = {            # 2 slots on ONE gpu (excerpt)
 TWO_GPU_SLOTS_PER = {             # per-(fw, rel) override: 2x2 instead of 2x1
     # e.g. ("tensorflow", "chapter_computational-performance/multiple-gpus.ipynb"): 2,
 }
+
+PINNED_GPU_NOTEBOOKS = {          # which physical GPUs, not only how many
+    "chapter_computational-performance/multiple-gpus.ipynb": (0, 1),
+}
 ```
+
+**Pinned GPUs.** `PINNED_GPU_NOTEBOOKS[rel]` names the physical GPUs
+(`nvidia-smi` indices) a notebook must run on. It does not change the
+requirement above; it narrows the GPUs `reserve` may choose from to the pinned
+set (§3.3). Use it when the prose quotes a number that depends on *which* cards
+the notebook gets. `multiple-gpus` (13.5) measures the allreduce bandwidth β
+between two cards, and on the 4×4090 box (no peer-to-peer; two pairs behind two
+PCIe host bridges, `nvidia-smi topo -m`) that depends on the pair: NCCL reaches
+β ≈ 4.9 GB/s on GPUs 0,1, ≈ 6.2 on 2,3 and ≈ 7.3–7.4 on 0,2 or 1,3 (2026-11-02,
+256 MB per device, both frameworks). Pinned to 0,1, every capture measures the
+same pair; the standalone path (§4) shows the notebook every GPU, and the
+notebook takes the first two, so it also runs on 0,1. A pin naming a GPU the
+host does not have is ignored. CUDA numbers identical cards in PCI bus order,
+as `nvidia-smi` does; on a box with mixed cards set `CUDA_DEVICE_ORDER=PCI_BUS_ID`
+before relying on a pin.
 
 **To change a notebook's footprint:** add it to the right table (above). A
 single-GPU notebook that OOMs → `HEAVY_GPU_NOTEBOOKS[(fw,rel)] = 2`. A
@@ -224,6 +243,11 @@ items behind it keep the pools full; it starts on a later round when a gap opens
   pick the *n* **emptiest** of them (spread load), reserve *spg* on each. The
   chosen GPU indices become `D2L_ASSIGNED_CUDA` (e.g. `"2"`, or `"0,1"`). If fewer
   than *n* qualifying GPUs exist, return `None` (try again next round).
+  For a pinned notebook (`PINNED_GPU_NOTEBOOKS`) the candidates are its pinned
+  GPUs only, so it waits for them even while other GPUs are free. Like any
+  whole-card request, it is skipped while other jobs hold slots on those cards
+  and may therefore start late in a busy run, at the latest when the GPU queue
+  drains; it never blocks the items behind it.
 - **JAX only:** because JAX preallocates, the scheduler also sets
   `XLA_PYTHON_CLIENT_MEM_FRACTION = clamp(spg × 7.5 GiB / card_VRAM, 0.05, 0.95)`
   so a JAX process is capped to exactly the slots it reserved (e.g. 1 slot on a

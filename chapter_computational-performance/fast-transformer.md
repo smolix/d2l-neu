@@ -8,9 +8,9 @@ floating-point operations: two per parameter and token in the forward pass
 and four in the backward pass. The tensor cores of an RTX 4090 execute
 $1.65 \times 10^{14}$ of them per second in bf16, so the arithmetic of a
 step needs less than 6 ms. A plain training step, in fp32 with an AdamW
-update, takes about 30 ms. Four fifths of the card's capacity go unused,
-and every training run takes several times longer than its arithmetic
-requires.
+update, takes 20 to 30 ms. Three quarters or more of the card's capacity
+go unused, and every training run takes several times longer than its
+arithmetic requires.
 
 The earlier sections of this chapter named the causes of such a gap and
 the change that removes each: host overhead, the memory traffic of small
@@ -47,11 +47,17 @@ os.environ['TEARDOWN_CUPTI'] = '1'
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab jax
+import os
+# Let XLA call cuBLAS for the matrix products instead of generating Triton
+# kernels for them, which run the products of a large minibatch more slowly
+# on our GPU, and let it overlap collectives with computation. JAX reads
+# the flags when it starts, during the import of d2l.
+os.environ['XLA_FLAGS'] = ('--xla_gpu_enable_triton_gemm=false '
+                           '--xla_gpu_enable_latency_hiding_scheduler=true')
 from d2l import jax as d2l
 import collections
 import glob
 import math
-import os
 import re
 import tempfile
 from flax import nnx
@@ -312,8 +318,8 @@ show_profile(kernel_times(step, windows(corpus, 64)), speed)
 
 :begin_tab:`pytorch`
 The device runs kernels for nearly the whole step, so the host keeps up
-with it. Matrix products take about half of the device time. The other
-half is spread over many short kernels: the elementwise operations of
+with it. Matrix products take about three fifths of the device time. The
+rest is spread over many short kernels: the elementwise operations of
 SwiGLU, of the rotary embeddings, and of the residual connections, the
 normalizations, and the optimizer update. Each of them reads its operands
 from device memory and writes its result back, so together they are
@@ -321,11 +327,11 @@ limited by memory bandwidth (:numref:`subsec_comp-fusion`).
 :end_tab:
 
 :begin_tab:`jax`
-The device runs kernels for only part of the step. The step is a single
-compiled program in which XLA has already fused the elementwise
-operations, so the gaps do not come from inside the step. Between steps
-the device waits for the host, which needs about as long to start a step
-as the device needs to run it, or longer.
+The device runs kernels for nearly the whole step, so the host keeps up
+with it. Matrix products take about two thirds of the device time. The
+step is a single compiled program in which XLA has already fused the
+elementwise operations into the kernels around them, so few short kernels
+remain.
 :end_tab:
 
 ### Host Overhead and Small Kernels
@@ -356,16 +362,18 @@ difference.
 :end_tab:
 
 :begin_tab:`jax`
-Our step is in the first regime. `nnx.jit` lets us pass the model and the
-optimizer, Python objects that hold arrays, to a compiled function. On
-every call it walks through both objects to collect their arrays, hands
-the arrays to the compiled program, and writes the results back into the
-objects. We time this work alone, with compiled functions that do
-nothing, called in three ways: through `nnx.jit`; through `nnx.jit` with
-`graph=False`, which treats the model and the optimizer as trees of arrays
-instead of walking them as Python objects; and through `nnx.jit_partial`
-with `graph=False`, which in addition binds them to the function once, so
-that later calls pass only the minibatch.
+Our step is in neither regime: the device is busy, and XLA has fused the
+short kernels. The host nevertheless does much work for every step.
+`nnx.jit` lets us pass the model and the optimizer, Python objects that
+hold arrays, to a compiled function. On every call it walks through both
+objects to collect their arrays, hands the arrays to the compiled program,
+and writes the results back into the objects. We time this work alone,
+with compiled functions that do nothing, called in three ways: through
+`nnx.jit`; through `nnx.jit` with `graph=False`, which treats the model
+and the optimizer as trees of arrays instead of walking them as Python
+objects; and through `nnx.jit_partial` with `graph=False`, which in
+addition binds them to the function once, so that later calls pass only
+the minibatch.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-1}
@@ -402,11 +410,14 @@ Throughput rises by about 1.1 to 1.3 times.
 :end_tab:
 
 :begin_tab:`jax`
-A call through `nnx.jit` takes about as long as the device needs for the
-whole step (the busy time of the profile), and longer on a loaded host.
-Treating the arguments as trees removes most of this time, and binding
-them once removes nearly all of the rest. Binding changes how the step is
-called, not what it computes. The next cell checks this before the
+A call through `nnx.jit` takes about 10 ms, less than half of the device
+time of a step. While the device runs one step, the host prepares the
+next, so this work is hidden, and removing it should leave the throughput
+unchanged. Treating the arguments as trees removes most of it, and binding
+them once removes nearly all of the rest. We bind the step nevertheless,
+because the next changes shorten the device time of a step toward the
+10 ms that the host would need. Binding changes how the step is called,
+not what it computes. The next cell checks this before the
 timing: one step through `nnx.jit` and one through the bound step, from
 equal copies of the model and the optimizer, must give equal losses and
 leave equal weights.
@@ -428,8 +439,8 @@ speed = record('+ jit_partial', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 :begin_tab:`jax`
-Throughput rises by about 1.2 to 1.4 times. The gain grows with the load
-of the host, since the work that binding removes ran on the host.
+Throughput stays the same, as the profile predicted: the work that binding
+removes ran on the host while the device was busy.
 :end_tab:
 
 A second profile shows where the bottleneck has moved:
@@ -450,8 +461,8 @@ have merged into fewer generated ones, whose names begin with `triton_`.
 :end_tab:
 
 :begin_tab:`jax`
-The device time per step is about the same as in the first profile. What
-has changed is the share of the step for which the device is busy.
+The profile is the same as the first one, since binding changed only the
+work of the host.
 :end_tab:
 
 ### Reduced Precision
@@ -548,11 +559,23 @@ step = nnx.jit_partial(train_step, model16, optimizer16, graph=False)
 speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 ```
 
-The logits agree to within one percent. Throughput rises by about 1.4 to
-1.6 times. That is less than the factor of two of the tensor cores,
-because only the matrix products and the traffic of the activations
-become faster. The optimizer update, for instance, still reads and writes
-fp32 weights and moment estimates.
+The logits agree to within one percent.
+
+:begin_tab:`pytorch`
+Throughput rises by about 1.4 times. That is less than the factor of two
+of the tensor cores, because only the matrix products and the traffic of
+the activations become faster. The optimizer update, for instance, still
+reads and writes fp32 weights and moment estimates.
+:end_tab:
+
+:begin_tab:`jax`
+Throughput about doubles. Faster matrix products alone could not do this,
+since they took two thirds of the step. `to_bf16` makes every layer
+compute in bf16, so the normalizations, the residual connections, and the
+attention also move half the bytes, and the fused attention no longer
+stores the weights of all query–key pairs. The optimizer update still
+reads and writes fp32 weights and moment estimates.
+:end_tab:
 
 ### Larger Minibatches
 
@@ -670,9 +693,9 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
 
 Checkpointing lowers throughput by a tenth to a quarter and cuts the
-memory of the step severalfold. It is the right change for a model or a
-minibatch that would not fit otherwise. For this step it is the wrong one,
-as the memory of the previous configuration predicted, and the
+memory of the step to less than half. It is the right change for a model
+or a minibatch that would not fit otherwise. For this step it is the wrong
+one, as the memory of the previous configuration predicted, and the
 configurations that follow leave it out.
 
 ## Data Parallelism
@@ -749,7 +772,9 @@ optimizer state, and the training text on every GPU, and draws each
 minibatch with its windows split across the GPUs. The unchanged step then
 compiles into a program that computes the gradient of each share on its
 own GPU and sums the gradients with an allreduce that the compiler
-inserts. The mesh axis has the type `Auto`, which leaves the placement of
+inserts; the latency-hiding scheduler of the first cell lets these
+allreduces run while the backward pass still computes
+(:numref:`sec_multi_gpu_concise`). The mesh axis has the type `Auto`, which leaves the placement of
 every intermediate result to the compiler; with the default type,
 `Explicit`, the embedding lookup would have to state where its output
 lives. The time of the allreduce comes from a `psum` over the mesh, as in
@@ -803,6 +828,9 @@ dist.destroy_process_group()
 def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
+    # Return the memory that this process has cached for its own steps to
+    # the GPU, where the process of rank 0 needs it
+    torch.cuda.empty_cache()
     torchrun = pathlib.Path(sys.executable).parent / 'torchrun'
     out = subprocess.run(
         [torchrun, '--standalone', f'--nproc-per-node={k}', 'ddp_gpt.py',
@@ -856,10 +884,10 @@ for bf16, batch_size in ((False, 64), (True, 512)):
 
 At batch 64 the allreduce takes about as long as the step or longer, so
 two GPUs are predicted to be no faster than one. At batch 512 in bf16 the
-step is four to five times longer, while the allreduce does not depend on
-the minibatch. The prediction rises to three quarters of linear scaling or
-more on two GPUs, and somewhat less on four, where the allreduce moves
-more data through each GPU. The measurements lie above the predictions by
+step is several times longer, while the allreduce does not depend on the
+minibatch. The prediction rises to about three quarters of linear scaling
+on two GPUs, and somewhat less on four, where the allreduce moves more
+data through each GPU. The measurements lie above the predictions by
 the part of the allreduce that ran during the backward pass, which brings
 them closer to linear scaling. On this machine, data parallelism therefore
 helps only once the step on each GPU is long.
@@ -893,9 +921,9 @@ for name, speed in results.items():
 ```
 
 The three changes before checkpointing together raise throughput about
-two to two and a half times. At batch 512 the step performs between
-a third and a half of the 165 TFLOP/s that the tensor cores can execute
-in bf16. Checkpointing then lowers the throughput again.
+two to two and a half times. At batch 512 the step performs about half
+of the 165 TFLOP/s that the tensor cores can execute in bf16.
+Checkpointing then lowers the throughput again.
 
 Each ratio depends on its place in the sequence. A change that shortens
 the work of the device gains nothing while the step waits for the host,
@@ -948,7 +976,7 @@ The training loss starts near $\log 256 \approx 5.55$, the loss of a
 uniform guess over the 256 bytes, and the validation loss ends well below
 the bigram level. The faster step trains the model.
 
-The fastest configuration still leaves more than half of the card's bf16
+The fastest configuration still leaves about half of the card's bf16
 peak unused. What remains lies in the efficiency of the kernels themselves
 and in the width of the numbers. The tensor cores of the RTX 4090 run fp8
 at twice the bf16 rate, but training in fp8 needs a scaling factor for
@@ -1125,7 +1153,7 @@ Case Study: Optimizing a Transformer<br>
 :::
 :::
 
-::: {.slide title="A GPT Step Needs 6 ms of Arithmetic and Takes About 30 ms"}
+::: {.slide title="A GPT Step Needs 6 ms of Arithmetic and Takes 20 to 30 ms"}
 [The problem]{.kicker}
 
 GPT, width 512, 19M parameters; 64 windows × 128 bytes = 8,192 tokens.
@@ -1133,7 +1161,7 @@ GPT, width 512, 19M parameters; 64 windows × 128 bytes = 8,192 tokens.
 - Arithmetic: $6 \times 1.9 \times 10^7 \times 8192 \approx 0.9$ TFLOP
   per step.
 - RTX 4090 in bf16: 165 TFLOP/s, so **under 6 ms** per step.
-- Plain fp32 step with AdamW: **about 30 ms**.
+- Plain fp32 step with AdamW: **20 to 30 ms**.
 
 ::: {.d2l-note .warn}
 Four fifths of the card idle; every run takes several times longer than
@@ -1209,24 +1237,24 @@ A window varies by a few percent: read ratios to one decimal.
 :::
 :::
 
-::: {.slide title="The Eager Step Spends Half Its Device Time Outside the Products" only="pytorch"}
+::: {.slide title="The Eager Step Spends Two Fifths of Its Time Outside the Products" only="pytorch"}
 [Baseline]{.kicker}
 
 @!fast-transformer-the-baseline-2
 
 - Device busy for nearly the whole step: the host keeps up.
-- Matrix products about half of the device time; the rest are short,
+- Matrix products about three fifths of the device time; the rest are short,
   bandwidth-bound elementwise and normalization kernels.
 :::
 
-::: {.slide title="The Jitted Step Leaves the Device Waiting for the Host" only="jax"}
+::: {.slide title="The Jitted Step Keeps the Device Busy" only="jax"}
 [Baseline]{.kicker}
 
 @!fast-transformer-the-baseline-2
 
 - One compiled XLA program per step, elementwise operations fused.
-- The device idles between steps: starting a step takes the host about
-  as long as running it takes the device, or longer.
+- Device busy for nearly the whole step; matrix products about two
+  thirds of its time.
 :::
 
 ::: {.slide title="Compilation Fuses the Elementwise Tail" only="pytorch"}
@@ -1252,11 +1280,11 @@ step = make_step(model, compiled)
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- `nnx.jit` walks model and optimizer on every call: about as long as
-  the device step.
+- `nnx.jit` walks model and optimizer on every call: about 10 ms, hidden
+  while the device runs the previous step.
 - `graph=False`: trees, not objects; `jit_partial`: bound once.
-- Checked first: equal losses and weights. Throughput **about 1.2 to
-  1.4×**.
+- Checked first: equal losses and weights. Throughput **unchanged**: the
+  device was the limit.
 :::
 
 ::: {.slide title="After the Change, Matrix Products Take the Largest Share"}
@@ -1283,7 +1311,7 @@ costs time, and nothing so far says memory is short.
 :::
 :::
 
-::: {.slide title="bf16 Speeds Up the Step 1.4 to 1.6 Times, Not 2"}
+::: {.slide title="bf16 Speeds Up the Step About 1.4 Times, Not 2" only="pytorch"}
 [Reduced precision]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-2
@@ -1292,6 +1320,17 @@ costs time, and nothing so far says memory is short.
 - Check first: logits agree to about 1%.
 - Only products and activation traffic speed up; the fp32 optimizer
   update does not.
+:::
+
+::: {.slide title="bf16 About Doubles the Throughput" only="jax"}
+[Reduced precision]{.kicker}
+
+@!fast-transformer-rungs-each-one-measured-2
+
+- Weights, gradients, Adam moments stay fp32; no loss scaling.
+- Check first: logits agree to about 1%.
+- Every layer computes in bf16: products, normalizations, residual
+  connections, and fused attention all move half the bytes.
 :::
 
 ::: {.slide title="In JAX, bf16 Is a Compute Dtype on Every Layer" only="jax"}
@@ -1320,7 +1359,7 @@ costs time, and nothing so far says memory is short.
 @!fast-transformer-rungs-each-one-measured-4
 
 - Keeps only each block's input; recomputes the rest in backward.
-- Memory falls severalfold; throughput falls by a tenth to a quarter.
+- Memory falls by more than half; throughput by a tenth to a quarter.
 
 ::: {.d2l-note}
 The right change only for a model or minibatch that does not fit.
@@ -1331,7 +1370,7 @@ The right change only for a model or minibatch that does not fit.
 @!fast-transformer-the-waterfall
 
 - Total: about 2 to 2.5× from three changes.
-- Final step: a third to half of the bf16 peak.
+- Final step: about half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.
 :::
@@ -1369,8 +1408,8 @@ second GPU helps only if the allreduce is shorter than a step.
 @!fast-transformer-rungs-each-one-measured-8
 
 - Batch 64: allreduce about as long as the step or longer: no gain.
-- Batch 512 in bf16: step 4–5× longer, same allreduce: well above one
-  GPU.
+- Batch 512 in bf16: step several times longer, same allreduce: well
+  above one GPU.
 - Above the prediction by the overlap with the backward pass.
 :::
 
@@ -1385,7 +1424,7 @@ second GPU helps only if the allreduce is shorter than a step.
 ::: {.slide title="Check: Where Would the Next Factor of Two Come From?"}
 [Check]{.kicker}
 
-The final step keeps the device busy at a third to half of the bf16 peak.
+The final step keeps the device busy at about half of the bf16 peak.
 One GPU, then four GPUs over PCIe.
 
 ::: {.fragment .fade-up}
@@ -1402,9 +1441,10 @@ hide it.
 [Wrap-up]{.kicker}
 
 - Measure, classify, change one thing, check, measure again.
-- Waiting for the host → less host work; short elementwise kernels →
-  fusion: about 1.1 to 1.4×.
-- Busy with products → bf16: about 1.4 to 1.6×; batch 512: 1.1 to 1.3×.
+- Short elementwise kernels → fusion; host work → less of it, which
+  gains only while the device waits.
+- Busy with products → bf16, the largest single gain; batch 512 spreads
+  the fixed costs of a step.
 - Checkpointing: slower, since memory is not the limit.
 - Data parallelism: $t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)$;
   helps only for long steps on this machine.

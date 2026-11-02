@@ -603,13 +603,18 @@ cost $\alpha$ is that of two driver-managed copies.
 last result. The `psum` moves well under 10 GB/s per device. Without
 peer-to-peer access, NCCL falls back to a transport that moves fewer bytes
 per second than the PCIe links carry; :numref:`sec_multi_gpu_concise`
-measures this transport and a workaround for it. Each call of `allreduce`
+measures this transport and a workaround for it. Its rate also depends on
+which two GPUs take part (:numref:`fig_pcie_topology`). On our machine,
+$\beta$ is 4.9 GB/s for GPUs 0 and 1, 6.2 GB/s for GPUs 2 and 3, the other
+pair behind one host bridge, and 7.3–7.4 GB/s for two GPUs behind
+different bridges. A measured $\beta$ thus describes a pair of GPUs, not
+the machine; ours is GPUs 0 and 1. Each call of `allreduce`
 dispatches a compiled program of its own, so $\alpha$ includes the time of
 that dispatch.
 :end_tab:
 
 At these bandwidths, moving LeNet's 247 KB of gradients takes
-$2N/\beta$, less than a tenth of a millisecond. Does it matter whether
+$2N/\beta$, at most about a tenth of a millisecond. Does it matter whether
 they travel as one message or as ten? We allreduce LeNet's ten gradient
 tensors first one at a time, then all at once as one concatenated vector.
 The cell prints both times next to the predictions of
@@ -747,18 +752,29 @@ def train(params, train_data, test_data, mesh, orders, batch_size=256,
     order; returns seconds per step, test accuracy."""
     times = []
     for order in orders:
+        starts = range(0, len(order), batch_size)
+        batches = jax.device_put(  # The epoch's minibatches, in one call
+            [order[s:s + batch_size] for s in starts],
+            NamedSharding(mesh, P('data')))
         t0 = time.perf_counter()
-        for start in range(0, len(order), batch_size):
-            idx = jax.device_put(order[start:start + batch_size],
-                                 NamedSharding(mesh, P('data')))
+        for idx in batches:
             params = train_step(params, train_data, idx, lr, mesh)
         jax.block_until_ready(params)
-        times.append((time.perf_counter() - t0)
-                     / math.ceil(len(order) / batch_size))
+        times.append((time.perf_counter() - t0) / len(batches))
     X, y = test_data
     acc = float((jax.jit(lenet)(params, X).argmax(1) == y).mean())
     return sum(times[1:]) / (len(times) - 1), acc
 ```
+
+:begin_tab:`jax`
+Placing an array on the devices takes time on the host, more than a
+tenth of a millisecond for one minibatch of indices. `train` therefore
+places all minibatches of an epoch with one `jax.device_put` before the
+clock starts, as we placed the training set before any timing, so that
+the clock measures the steps alone. Placed inside the loop, the transfers
+would lengthen every step by about 0.2 ms per GPU, a cost that no term
+of :eqref:`eq_dp_cost` contains.
+:end_tab:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
 %%tab pytorch
@@ -792,7 +808,8 @@ prediction from the separately measured terms. For LeNet, a second GPU
 makes training slower. Both runs reach the same test accuracy to within
 a point or two. They start from the same parameters and see the examples
 in the same order, so they differ only in rounding, which a thousand
-steps of SGD amplify a little.
+steps of SGD amplify. Two runs on one GPU differ about as much, because a
+GPU does not always add the same numbers in the same order.
 
 LeNet is too small for data parallelism. A second device shortens a step
 when the computation on each shard is long compared with
@@ -1252,7 +1269,7 @@ gives $\beta$:
 
 @!multiple-gpus-the-accounting
 
-LeNet's 247 KB: $2N/\beta$ is under 0.1 ms at these rates.
+LeNet's 247 KB: $2N/\beta$ takes at most about 0.1 ms at these rates.
 :::
 
 ::: {.slide title="Ten Small Allreduces Cost Several Times One Large One"}

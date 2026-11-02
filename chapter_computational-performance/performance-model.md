@@ -2,7 +2,7 @@
 :label:`sec_perf_model`
 
 On the RTX 4090 that runs this book's notebooks, a product of two
-$256 \times 256$ matrices in bf16 reaches only a percent or two of the
+$256 \times 256$ matrices in bf16 reaches less than two percent of the
 165 TFLOP/s that the card's specification promises. A product of two
 $8192 \times 8192$ matrices comes close to the full 165 TFLOP/s. The
 operation and the chip are the same, and both products are timed correctly.
@@ -260,14 +260,26 @@ cell calls `step` once before the clock starts. A read waits only for the
 array it reads, and `float(s)` reads the running total.
 :end_tab:
 
-Reading the value on every step makes the loop nearly twice as slow,
-although the device does the same work. Without reads, host and device work
-at the same time: while the GPU computes one step, Python issues the next,
-and each step costs the longer of the two times. A read on every step makes
-them take turns. The device idles while the host waits for the value and
-then issues the next step, and the host idles while the device computes.
-Each step then costs the host time plus the device time plus the latency
-of the round trip.
+Reading the value on every step makes the loop slower, although the
+device does the same work. Without reads, host and device work at the same
+time: while the GPU computes one step, Python issues the next, and each
+step costs the longer of the two times. A read on every step makes them
+take turns. The device idles while the host waits for the value and then
+issues the next step, and the host idles while the device computes. Each
+step then costs the host time plus the device time plus the latency of the
+round trip.
+
+:begin_tab:`pytorch`
+Here the reads make the loop about 1.6 times as slow.
+:end_tab:
+
+:begin_tab:`jax`
+Here the reads make the loop about five times as slow. Without them a step
+costs about a tenth of a millisecond, the time that the host needs to
+issue it (:numref:`subsec_perf-sweep`). The round trip of a read costs
+several times as much: the read waits for the step, copies the value into
+host memory, and only then returns it to Python.
+:end_tab:
 
 A training loop should therefore read values from the device once per
 logging interval, not once per step, and keep running sums on the device.
@@ -449,6 +461,29 @@ device time of a product overtakes the host time,
 $n \approx (hP/2)^{1/3}$: for $h = 20\,\mu\textrm{s}$ and the peak of the
 RTX 4090, near $n = 1200$. The time per call at the smallest sizes in the
 output above is the value of $h$ for this framework and this machine.
+
+:begin_tab:`jax`
+In JAX the floor lies near a tenth of a millisecond, and it does not
+depend on the product. A compiled function that only adds one to a small
+array takes about as long per call:
+:end_tab:
+
+```{.python .input #performance-model-matrix-products-across-sizes-3}
+%%tab jax
+add_one = jax.jit(lambda x: x + 1)
+small = jnp.zeros((256, 256), dtype=jnp.bfloat16)
+Benchmark(lambda: add_one(small), repeats=100, desc='x + 1 on 256 x 256')
+```
+
+:begin_tab:`jax`
+Every call of a compiled function passes through XLA's runtime. The
+runtime allocates the outputs, launches the kernels, and asks the driver to
+run a callback when they have finished, so that it learns when the arrays
+may be released. On our machine this bookkeeping takes tens of
+microseconds per call, several times the launch of a single kernel. A
+training step compiled into one function pays it once for hundreds of
+kernels.
+:end_tab:
 
 The roofline has no term for overhead. It is a ceiling, and the measured
 points meet it only for operations large enough that the host time per call
@@ -717,7 +752,7 @@ about 164 FLOP/byte on the RTX 4090, memory sets the time; the intensity of
 a linear layer grows with the batch size. The third limit shows only in
 measurement: an operation whose device time is shorter than the host's time
 per call runs at the host's pace, so a $256 \times 256$ product reaches
-a percent or two of the peak. Correct timing waits for the asynchronous
+less than two percent of the peak. Correct timing waits for the asynchronous
 device before starting and before stopping the clock, keeps synchronization
 points out of loops, and averages many calls, as `d2l.Benchmark` does. The
 rest of the chapter applies one method, with a profiler to account for every
@@ -910,12 +945,12 @@ The Performance Model<br>
 :::
 :::
 
-::: {.slide title="The Same Product Runs at 1% or at Nearly 100% of the Peak"}
+::: {.slide title="The Same Product Runs Below 2% or Near 100% of the Peak"}
 [The problem]{.kicker}
 
 RTX 4090, bf16 tensor cores, specified peak $P$ = 165 TFLOP/s.
 
-- $256 \times 256$ times $256 \times 256$: 1–2% of $P$.
+- $256 \times 256$ times $256 \times 256$: under 2% of $P$.
 - $8192 \times 8192$ times $8192 \times 8192$: close to 100% of $P$.
 
 Same operation, same chip, timed correctly.
@@ -1181,7 +1216,7 @@ The rest of the chapter is this loop, applied.
 - A width-2048 GPT layer: $I \approx 910$ in training, $\approx 1$ when
   generating one token.
 - Small products run at the host's pace: $t_\textrm{call} \approx
-  \max(h, 2n^3/P)$, 1–2% of the peak at $n = 256$.
+  \max(h, 2n^3/P)$, under 2% of the peak at $n = 256$.
 - Elementwise kernels run at about 0.9 TB/s whatever they compute; an
   unfused chain of 8 moves 9 times the bytes of one.
 - Time with warm-up, barriers, and many calls; keep reads out of loops.

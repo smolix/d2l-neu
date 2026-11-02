@@ -151,7 +151,7 @@ range further.
 recurrent one restores recall. Released models make different choices
 for the ratio and the kind of attention. Griffin
 :cite:`De.Smith.Fernando.ea.2024` alternates a gated diagonal recurrence
-with attention restricted to a local window. Jamba
+with the sliding-window attention of :numref:`sec_attention-at-scale`. Jamba
 :cite:`Lieber.Lenz.Bata.ea.2024,Jamba.Team.2024` uses one attention layer
 for every seven Mamba layers, together with mixture-of-experts MLPs.
 :citet:`Waleffe.Byeon.Riach.ea.2024` trained matched transformers, Mamba

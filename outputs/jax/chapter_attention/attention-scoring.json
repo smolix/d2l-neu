@@ -14,120 +14,133 @@
       "outputs": []
     },
     "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1": {
-      "code_fingerprint": "sha256:4e5db47db3e7eabd98ce21019f81db76224f94aee7d614abafe47320a9461c90",
+      "code_fingerprint": "sha256:be1963b0eb695a5828378b5c159032a8349d66536e0aad19fc8ffad855889fe3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25285,
-          "sha256": "sha256:beeefce0afedfcd33c6af7d9860ba943b9300278e4cbb5c5e4464e1ec93a726e"
+          "bytes": 25284,
+          "sha256": "sha256:4e34343b46028b7dcd9a17457b397bbbb9d60dcd19a3ffece930f8c6abdef1f5"
         }
       ]
     },
     "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2": {
-      "code_fingerprint": "sha256:0638c3736b4abb073a834da6005766ffa2901ab08ab45911ff897cfa662d41cd",
+      "code_fingerprint": "sha256:62a6ff3b6e9e0ca95ae9dbcdc55e5e9b49a4936573ce02ceb9c055735b7d68c1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.258 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d = 512: Jacobian norm 0.103 (unscaled), 0.186 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.260 (unscaled), 0.184 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.106 (unscaled), 0.183 (scaled)\n"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-1": {
-      "code_fingerprint": "sha256:a2017041dfdfddf858987aa7f49950f26798524bebb024e92cb7d528809fac8b",
+      "code_fingerprint": "sha256:c48a108bdcd5d3e424f7a3e53442d0a2caf92139f822cdec6c31b552009c30e2",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-masked-softmax-operation-4": {
+      "code_fingerprint": "sha256:614e0aa4d0c8bdcca7abc2513158b00b13ea9597169853229e793de91283ee97",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-2": {
-      "code_fingerprint": "sha256:58b77158268426fd02878eeb2e173a6043a53c1842f5ae942202d87f30f7dfd5",
+      "code_fingerprint": "sha256:467bc0d38e2296fe45de5cab10c0aa5219114be25aa3a4c9350499e8e66c48ac",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[0.4922724 , 0.5077276 , 0.        , 0.        ],\n        [0.5997409 , 0.40025908, 0.        , 0.        ]],\n\n       [[0.3531402 , 0.19856434, 0.4482954 , 0.        ],\n        [0.31042197, 0.2873157 , 0.40226236, 0.        ]]], dtype=float32)"
+          "text": "Array([[[0.4708969 , 0.5291031 , 0.        , 0.        ],\n        [0.38541466, 0.61458534, 0.        , 0.        ]],\n\n       [[0.19949612, 0.42471924, 0.3757846 , 0.        ],\n        [0.24187769, 0.3681242 , 0.38999814, 0.        ]]], dtype=float32)"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-3": {
-      "code_fingerprint": "sha256:60dad203c3de3278a9b458c265641a9002564331ba06834de6ec48ec8cb85959",
+      "code_fingerprint": "sha256:3458f2df53fa03e6d8153d4121c287cde69e64ca8aeff8953a9ef6bcd6ea0d02",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.35672572, 0.2543091 , 0.38896522, 0.        ]],\n\n       [[0.43679553, 0.5632045 , 0.        , 0.        ],\n        [0.2580636 , 0.2509437 , 0.258296  , 0.23269679]]], dtype=float32)"
+          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.28457874, 0.32735762, 0.38806367, 0.        ]],\n\n       [[0.2924178 , 0.70758224, 0.        , 0.        ],\n        [0.28333667, 0.27716514, 0.24768038, 0.1918178 ]]], dtype=float32)"
         }
       ]
     },
     "attention-scoring-causal-masking": {
-      "code_fingerprint": "sha256:61322809786b875c351a17e92f7290fbe93605fec51e109cdb9df78ccf6b2248",
+      "code_fingerprint": "sha256:2a3112d41d77f506fdbcb88e738f5b04332ddff43435f762b9855209362b1cec",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
-          "bytes": 16427,
-          "sha256": "sha256:87ae1a199c76603ade6fe7a11c98b8831223ae0bdb1fd517d6bb483361a9ee10"
+          "bytes": 16403,
+          "sha256": "sha256:bf657a776b839b529872164464246552e459e26c33e8742bb36070c1dc8722e1"
         }
       ]
     },
     "attention-scoring-composing-masks": {
-      "code_fingerprint": "sha256:07d28a189dafa2b02b218ffe440d91e7886c0da97f82b8cfc3b2e59ee0730f27",
+      "code_fingerprint": "sha256:d8f3eb4a6fcc15fefc14cdc1445a0c5e3843e438e0463a7e899521f484d53204",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 19766,
-          "sha256": "sha256:2c63be269ae3f0b05b8234527a10a3b9ab8f5134502020c5951b987683c54117"
+          "bytes": 27697,
+          "sha256": "sha256:8c15fadc74262512f90e1fd7b1453be52d82f1acbf990678b3ca4ad783efaab9"
+        }
+      ]
+    },
+    "attention-scoring-composing-masks-1": {
+      "code_fingerprint": "sha256:ffc0f50da74c5258299dfe1ff24d4277f606e108ecb97ad163fef14115b49804",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
+          "bytes": 16267,
+          "sha256": "sha256:909341435f66755eec18ec9803c873563587ae0e76a1237fc90df47454e5a11f"
         }
       ]
     },
     "attention-scoring-batch-matrix-multiplication": {
-      "code_fingerprint": "sha256:f9dd5bc49f0a26cfe1eafe94938ca9e31158245a2f28c39babb837ab0399e240",
+      "code_fingerprint": "sha256:df3edebe70b3b6dc9e0b07fe04473f7036f3b23baca062cf925119dde721b5da",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:8f87f047579064763624e07deb224b648127c261249e83956028cc934d8a3de3",
+      "code_fingerprint": "sha256:bdbeb073807e3c434567a86ce2b62b3c64258bb098c8cd50dddc6e270ad6c376",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:b9ccdd2896eed5bdc32fa5b1e1185a5e8c21bd57eb017ec72c2cd2f8b3716139",
+      "code_fingerprint": "sha256:1978278e057881915179198b7b4b4861dd7e4061e38760cd5d6d362d6c96ead3",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-3": {
-      "code_fingerprint": "sha256:619bb8fb18cff7890ae2dce99b3d2b83ea69686c2997c8aa8ddc03003d4744ec",
+      "code_fingerprint": "sha256:9a22a2e0fc5c0b47ebfefc5b48b71146f10165aa538a33c3e8066f541c8d0e53",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
-          "bytes": 13562,
-          "sha256": "sha256:ea6414fcee878ff3093587aca66cb4bea944357b21e6ecebc049fb088b149042"
+          "bytes": 16813,
+          "sha256": "sha256:963593325e5a1f067db214c741bc3f7190109f8ed9d71f3ef6a826db479dba2d"
         }
       ]
     },
     "attention-scoring-from-alignment-to-attention": {
-      "code_fingerprint": "sha256:e9d5ae6699e76ffd5c8b79e89251b55247ac4772b704e17840bf7910f5fb3f7f",
+      "code_fingerprint": "sha256:0a273c80a2c09547199c86c613d3ec61963c038ce15172c6acd06cf992045e4e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.13390937, 0.3772766 , 0.17127123, 0.1027277 , 0.06276076,\n        0.15205443],\n       [0.19218282, 0.31524566, 0.14511336, 0.08953383, 0.07662669,\n        0.18129766],\n       [0.15669951, 0.3378386 , 0.15281527, 0.11713327, 0.09428051,\n        0.1412329 ]], dtype=float32)"
+          "text": "Array([[0.13364056, 0.16495006, 0.08865   , 0.24817124, 0.14179498,\n        0.22279318],\n       [0.22120641, 0.16644566, 0.05693523, 0.14887838, 0.21064462,\n        0.19588976],\n       [0.19400154, 0.18065082, 0.03982221, 0.19728835, 0.19786511,\n        0.19037199]], dtype=float32)"
         }
       ]
     }

@@ -34,55 +34,54 @@ BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIG
 # --------------------------------------------------------------------------- #
 
 def fig_one_head_averages() -> None:
-    positions = np.arange(1, 7)
-    # One head: must split its weight between the two marked positions.
-    w_single = np.array([0.02, 0.44, 0.03, 0.03, 0.44, 0.04])
-    # Two heads: each locks onto one of the marked positions.
-    w_head1 = np.array([0.02, 0.88, 0.03, 0.03, 0.02, 0.02])
-    w_head2 = np.array([0.02, 0.02, 0.03, 0.03, 0.88, 0.02])
+    # The copy-both task has two source positions; the query weights them.
+    positions = np.array([1, 2])
+    # One head: one softmax pair (any split leaves relative error 1/2).
+    w_single = np.array([0.7, 0.3])
+    # Two heads: two *different* soft pairs, as in the section's demo.
+    w_head1 = np.array([0.88, 0.12])
+    w_head2 = np.array([0.12, 0.88])
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.4, 3.0))
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.3))
 
     ax = axes[0]
-    ax.bar(positions, w_single, width=0.62, color=BLUE)
-    ax.set_title("one head: one distribution", fontsize=14, color="black")
-    ax.text(2, w_single[1] + 0.05, r"$\alpha_1$", ha="center", fontsize=14,
-            color="black")
-    ax.text(5, w_single[4] + 0.05, r"$\alpha_2$", ha="center", fontsize=14,
-            color="black")
-    ax.text(3.5, -0.2,
-            r"output $= \mathbf{W}_o\,(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)$"
-            "\n— a single mixture",
-            ha="center", va="top", fontsize=13, color="black")
+    ax.bar(positions, w_single, width=0.5, color=BLUE)
+    ax.set_title("one head: one weighting", fontsize=14, color="black")
+    for p, w, lab in zip(positions, w_single, (r"$\alpha_1$", r"$\alpha_2$")):
+        ax.text(p, w + 0.04, lab, ha="center", va="bottom", fontsize=15,
+                color="black")
+    ax.text(1.5, -0.24,
+            r"$\mathbf{W}_o\,(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2)$:"
+            "\none mixture",
+            ha="center", va="top", fontsize=14, color="black")
 
     ax = axes[1]
-    ax.bar(positions - 0.17, w_head1, width=0.32, color=ORANGE)
-    ax.bar(positions + 0.17, w_head2, width=0.32, color=GREEN)
-    ax.set_title("two heads: two distributions", fontsize=14, color="black")
-    # label each head directly on its peak (no legend box)
-    ax.text(2 - 0.17, w_head1[1] + 0.04, "head 1", ha="center", va="bottom",
-            fontsize=13, color=fl.T.ORANGE.dark)
-    ax.text(5 + 0.17, w_head2[4] + 0.04, "head 2", ha="center", va="bottom",
-            fontsize=13, color=fl.T.GREEN.dark)
-    ax.text(3.5, -0.2,
-            r"output $= \mathbf{W}_o\,[\mathbf{h}_1;\, \mathbf{h}_2]$"
-            "\n— both values recoverable",
-            ha="center", va="top", fontsize=13, color="black")
+    ax.bar(positions - 0.14, w_head1, width=0.26, color=ORANGE)
+    ax.bar(positions + 0.14, w_head2, width=0.26, color=GREEN)
+    ax.set_title("two heads: two weightings", fontsize=14, color="black")
+    # label each head directly above its taller bar (no legend box)
+    ax.text(1 - 0.14, w_head1[0] + 0.04, "head 1", ha="center",
+            va="bottom", fontsize=13, color=fl.T.ORANGE.dark)
+    ax.text(2 + 0.14, w_head2[1] + 0.04, "head 2", ha="center",
+            va="bottom", fontsize=13, color=fl.T.GREEN.dark)
+    ax.text(1.5, -0.24,
+            r"$\mathbf{W}_o\,[\mathbf{z}_1;\, \mathbf{z}_2]$:"
+            "\ntwo mixtures, both values recovered",
+            ha="center", va="top", fontsize=14, color="black")
 
     for ax in axes:
         ax.set_xticks(positions)
-        ax.set_xticklabels([r"$\mathbf{v}_1$" if p == 2 else
-                            (r"$\mathbf{v}_2$" if p == 5 else str(p))
-                           for p in positions], fontsize=13, color="black")
-        ax.set_ylim(0, 1.04)
-        ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
-        ax.set_xlim(0.35, 6.65)
-        ax.tick_params(axis="y", labelsize=11, colors="black")
+        ax.set_xticklabels([r"$\mathbf{v}_1$", r"$\mathbf{v}_2$"],
+                           fontsize=15, color="black")
+        ax.set_ylim(0, 1.08)
+        ax.set_yticks([0, 0.5, 1.0])
+        ax.set_xlim(0.45, 2.55)
+        ax.tick_params(axis="y", labelsize=12, colors="black")
         ax.spines["left"].set_color("black")
         ax.spines["bottom"].set_color("black")
 
-    axes[0].set_ylabel("attention weight", fontsize=13, color="black")
-    fig.subplots_adjust(wspace=0.22)
+    axes[0].set_ylabel("attention weight", fontsize=14, color="black")
+    fig.subplots_adjust(wspace=0.3, bottom=0.3)
     fl.save(fig, "mdl-attention-one-head-averages")
 
 
@@ -122,11 +121,14 @@ def fig_rope_rotation() -> None:
         # Arc marking the angle between the two vectors, labelled inside the
         # wedge with its value: (j - i) theta + phi = 2 theta + phi in BOTH
         # panels, which is the point of the figure.
-        arc_r = 0.40
+        arc_r = 0.30
         arc = np.linspace(ang_q, ang_k, 60)
         ax.plot(arc_r * np.cos(arc), arc_r * np.sin(arc), color=GREEN, lw=2.2)
         mid = 0.5 * (ang_q + ang_k)
-        ax.text(0.71 * np.cos(mid), 0.71 * np.sin(mid),
+        # The label is wider than tall: the more sideways the wedge opens,
+        # the further inward it sits to stay clear of the circle.
+        r_lab = 0.72 - 0.12 * abs(np.cos(mid))
+        ax.text(r_lab * np.cos(mid), r_lab * np.sin(mid),
                 rf"${j - i}\theta\!+\!\varphi$",
                 ha="center", va="center", fontsize=15,
                 color=fl.T.GREEN.dark)

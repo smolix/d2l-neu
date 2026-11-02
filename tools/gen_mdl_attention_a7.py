@@ -167,8 +167,8 @@ def fig_soft_lookup() -> None:
     axg.plot(*o, "*", color="black", ms=15, zorder=5)
     # "o" right beside its star, in the empty wedge between the v1 and v3
     # spokes (upper right), clear of all three dashed lines
-    axg.text(o[0] + 0.09, o[1] - 0.09, r"$\mathbf{o}$", color="black",
-             fontsize=15, ha="left", va="top")
+    axg.text(o[0] + 0.16, o[1] + 0.04, r"$\mathbf{o}$", color="black",
+             fontsize=15, ha="left", va="bottom")
     axg.text(1.75, 3.05, "a convex combination:\n"
              r"$\mathbf{o}$ lies inside the triangle of values",
              ha="center", va="bottom", fontsize=13, color="black")
@@ -185,80 +185,65 @@ def fig_soft_lookup() -> None:
 # =========================================================================== #
 
 def fig_multi_head() -> None:
-    fig, ax = plt.subplots(figsize=(9.2, 6.6))
+    fig, ax = plt.subplots(figsize=(7.4, 5.1))
     ax.set_aspect("equal")
     ax.axis("off")
 
-    y_in = 0.7                      # Q, K, V inputs
-    y_bus = 1.62                    # fan-out bus
+    y_in = 1.55                     # Q, K, V labels under each head
     y_proj = 2.75                   # per-head projections
-    y_attn = 4.05                   # per-head attention
-    y_cat = 5.35                    # concat
-    y_op = 6.55                     # output projection
-    y_top = 7.75                    # output
+    y_attn = 4.3                    # per-head attention
+    y_cat = 5.6                     # concat
+    y_op = 6.8                      # output projection
+    y_top = 8.0                     # output
 
-    hx = [2.55, 6.65]               # two head columns
+    hx = [2.25, 6.95]               # two head columns
     x_ell = (hx[0] + hx[1]) / 2     # ellipsis between the heads
+    bw = 3.75                       # width of the per-head boxes
 
-    # --- Q, K, V inputs, centred under the ellipsis, on three buses --------- #
-    qkv = [("Q", BLUE), ("K", BLUE), ("V", BLUE)]
-    x_qkv = [x_ell - 0.95, x_ell, x_ell + 0.95]
-    bus_y = [y_bus + 0.18, y_bus, y_bus - 0.18]
-    x_off = {"Q": -0.62, "K": 0.0, "V": 0.62}   # tap offset within a head
-    for (lab, c), xin, by in zip(qkv, x_qkv, bus_y):
-        _box(ax, xin, y_in, 0.8, 0.6, rf"$\mathbf{{{lab}}}$", c, fontsize=13)
-        # plain riser joining this stream's bus at a dot (arrowheads are
-        # reserved for wires entering boxes)
-        ax.plot([xin, xin], [y_in + 0.3, by], color=GRAY, lw=1.5, zorder=1)
-        _dot(ax, xin, by, r=0.05)
-        # bus at this stream's height, running only from its own head-1 tap
-        # to its own head-2 tap (no stubs, no T-joins onto other taps)
-        off = x_off[lab]
-        ax.plot([hx[0] + off, hx[1] + off], [by, by], color=GRAY, lw=1.4,
-                zorder=1)
+    # --- every head reads the same Q, K, V: three short labelled arrows ---- #
+    # straight into its projection box (no shared buses, no wire crossings)
+    for cx in hx:
+        for lab, xin in zip("QKV", [cx - 0.95, cx, cx + 0.95]):
+            ax.text(xin, y_in, rf"$\mathbf{{{lab}}}$", ha="center",
+                    va="center", fontsize=15, color="black")
+            fl.arrow(ax, (xin, y_in + 0.24), (xin, y_proj - 0.36),
+                     color=GRAY, lw=1.4, mut=10)
 
     # --- two heads: project -> attention ------------------------------------ #
-    # the second column stands for head h (the ellipsis hides heads 2..h-1)
-    for h, cx in zip(("1", "h"), hx):
-        # taps from the three buses up into the projection box
-        for xin, by in zip([cx - 0.62, cx, cx + 0.62], bus_y):
-            _dot(ax, xin, by, r=0.05)
-            fl.arrow(ax, (xin, by), (xin, y_proj - 0.33), color=GRAY, lw=1.4,
-                     mut=10)
-        _box(ax, cx, y_proj, 3.0, 0.66,
-             rf"project  $\mathbf{{W}}_{{{h}}}^{{(q)}},"
-             rf"\mathbf{{W}}_{{{h}}}^{{(k)}},\mathbf{{W}}_{{{h}}}^{{(v)}}$",
-             BLUE, fontsize=11.5)
-        fl.arrow(ax, (cx, y_proj + 0.33), (cx, y_attn - 0.39), color=GRAY,
+    # the second column stands for head H (the ellipsis hides heads 2..H-1)
+    for h, cx in zip(("1", "H"), hx):
+        _box(ax, cx, y_proj, bw, 0.72,
+             rf"$\mathbf{{W}}_{{{h}}}^{{(q)}},\ "
+             rf"\mathbf{{W}}_{{{h}}}^{{(k)}},\ \mathbf{{W}}_{{{h}}}^{{(v)}}$",
+             BLUE, fontsize=14)
+        fl.arrow(ax, (cx, y_proj + 0.36), (cx, y_attn - 0.42), color=GRAY,
                  lw=1.7, mut=12)
-        _box(ax, cx, y_attn, 3.0, 0.78,
-             "scaled dot-product\nattention", ORANGE, fontsize=11.5)
-        ax.text(cx - 1.43, (y_proj + 0.33 + y_attn - 0.39) / 2, rf"head ${h}$",
-                ha="left", va="center", fontsize=12, color="black")
+        _box(ax, cx, y_attn, bw, 0.84,
+             "scaled dot-product\nattention", ORANGE, fontsize=13.5)
+        ax.text(cx - 0.18, (y_proj + 0.36 + y_attn - 0.42) / 2,
+                rf"head ${h}$", ha="right", va="center", fontsize=13.5,
+                color="black")
         # attention -> concat
-        fl.arrow(ax, (cx, y_attn + 0.39), (cx, y_cat - 0.32), color=GRAY,
+        fl.arrow(ax, (cx, y_attn + 0.42), (cx, y_cat - 0.34), color=GRAY,
                  lw=1.7, mut=12)
 
-    # ellipsis + "h heads" note between the columns (in the clear gap below
-    # the concat box, centred on the ellipsis column)
-    ax.text(x_ell, y_attn, r"$\cdots$", ha="center", va="center", fontsize=20,
-            color="black")
-    ax.text(x_ell, 0.5 * (y_attn + y_cat) + 0.05, r"$h$ heads in parallel",
-            ha="center", va="center", fontsize=12.5, color="black")
+    # ellipsis between the columns stands for heads 2..H-1
+    ax.text(x_ell, y_attn, r"$\cdots$", ha="center", va="center",
+            fontsize=22, color="black")
 
     # --- concat -> output projection -> output ------------------------------ #
-    _box(ax, x_ell, y_cat, 7.1, 0.64, "concatenate head outputs", GRAY,
-         fontsize=13)
-    fl.arrow(ax, (x_ell, y_cat + 0.32), (x_ell, y_op - 0.33), color=GRAY,
+    _box(ax, x_ell, y_cat, hx[1] - hx[0] + bw, 0.68,
+         "concatenate head outputs", GRAY, fontsize=14)
+    fl.arrow(ax, (x_ell, y_cat + 0.34), (x_ell, y_op - 0.36), color=GRAY,
              lw=1.9, mut=13)
-    _box(ax, x_ell, y_op, 3.4, 0.66, r"output projection  $\mathbf{W}_o$",
-         BLUE, fontsize=12.5)
-    fl.arrow(ax, (x_ell, y_op + 0.33), (x_ell, y_top - 0.3), color=GRAY,
+    _box(ax, x_ell, y_op, 3.9, 0.72, r"output projection  $\mathbf{W}_o$",
+         BLUE, fontsize=14)
+    fl.arrow(ax, (x_ell, y_op + 0.36), (x_ell, y_top - 0.32), color=GRAY,
              lw=1.9, mut=13)
-    _box(ax, x_ell, y_top, 2.4, 0.6, "output", GRAY, fontsize=13)
+    _box(ax, x_ell, y_top, 2.4, 0.64, "output", GRAY, fontsize=14)
 
-    ax.set_xlim(0.6, 8.7)
-    ax.set_ylim(0.2, 8.25)
+    ax.set_xlim(0.2, 9.0)
+    ax.set_ylim(1.25, 8.45)
     fl.save(fig, "mdl-attention-multi-head")
 
 
@@ -299,7 +284,7 @@ def _edge(ax, x0, y0, x1, y1, color=LIGHT, lw=1.0, highlight=False):
 
 def fig_cnn_rnn_self_attention() -> None:
     n = 5
-    fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.4))
+    fig, axes = plt.subplots(1, 3, figsize=(11.6, 3.9))
     focus = 2                      # the output whose connections we highlight
 
     # ---- CNN: each output sees a local window (width 3) -------------------- #
@@ -338,9 +323,15 @@ def fig_cnn_rnn_self_attention() -> None:
                   lw=1.6 if hl else 0.8, highlight=hl)
     ax.set_title("self-attention: all-to-all", fontsize=13.5, color="black")
 
-    for ax in axes:
+    # the two quantities of the cost table, one line under each panel
+    notes = [r"path $\mathcal{O}(n/k)$, parallel",
+             r"path $\mathcal{O}(n)$, sequential",
+             r"path $\mathcal{O}(1)$, parallel"]
+    for ax, note in zip(axes, notes):
+        ax.text((n - 1) / 2, -0.62, note, ha="center", va="top",
+                fontsize=13.5, color="black")
         ax.set_xlim(-0.7, n - 0.3)
-        ax.set_ylim(-0.45, 2.6)
+        ax.set_ylim(-1.15, 2.6)
         ax.set_aspect("equal")
         ax.axis("off")
     fig.subplots_adjust(wspace=0.08)

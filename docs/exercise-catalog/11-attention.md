@@ -1,5 +1,11 @@
 # Exercise Catalog — chapter_attention
 
+**Update (2026-11-02, ch. 10–11 pass):** the chapter has 6 sections plus
+`further-reading.md` (no exercises) and carries 51 exercises; each entry
+below opens with its current list. "What Attention Computes" is now titled
+"Attention Circuits". The survey that follows describes the chapter before
+the pass.
+
 **Chapter overview.** The two strongest external matches are Stanford CS224N
 Assignment 4 ("Self-Attention, Transformers, and Pretraining," Winter 2025)
 and Stanford CS336 Assignments 1–2 ("Language Modeling from Scratch," Spring
@@ -26,6 +32,8 @@ exercise sets.
 ---
 
 ## chapter_attention/queries-keys-values.md — Queries, Keys, and Values
+
+**Update (2026-11-02, ch. 10–11 pass):** 7 exercises: 1 an average of two values; 2 [code] effective number of keys; 3 [code] queries beyond the data; 4 [code] a learned bandwidth; 5 [code] ● the gradient of attention; 6 [code] ● soft lookup as retrieval; 7 [extended] ● a learned metric.
 
 **Topic:** Attention as a differentiable soft lookup over (key, value) pairs;
 softmax turns any scoring function into valid weights; Nadaraya–Watson kernel
@@ -129,6 +137,8 @@ with no deliverable or success criterion and are rewritten or dropped.
 
 ## chapter_attention/attention-scoring.md — Attention Scoring and Masking
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 invariances of the score; 2 [code] the softmax Jacobian; 3 fully masked rows; 4 composite masks; 5 [code] attention dropout; 6 ● entropy of random scores; 7 [code] ● additive scores near zero; 8 [extended] ● a learned alignment.
+
 **Topic:** Deriving scaled dot-product attention from the Gaussian kernel; why
 $1/\sqrt d$ matters (measured via entropy and softmax-Jacobian norm); masked
 softmax for padding/causality and its numerical-precision pitfalls; composing
@@ -209,6 +219,8 @@ kept entirely intact, with external material added rather than substituted.
 
 ## chapter_attention/multihead-attention.md — Multi-Head and Cross-Attention
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 [code] narrow heads; 2 [code] heads as slices; 3 permuting the source; 4 [code] ● nonlinear readouts; 5 [code] ● nearly identical heads; 6 ● what the bound counts; 7 [code] ● sharing keys and values on the copy-both task; 8 [code] ● averages under key noise. Exercise 1 carries the new label `ex_multihead-narrow-heads`; exercise 7 (`ex_multihead-sharing-keys-and-values`) has five parts: the bound $H_\textrm{kv} d_h \ge c$ from the counting of exercise 6, a prediction for $(H, H_\textrm{kv}) \in \{(2,1), (4,2), (4,1)\}$ at $d = 16$, $c = 8$ checked by training, a comparison of the two conversions over at least three runs, and the cache arithmetic.
+
 **Topic:** A single head must average (proved and measured on a
 value-blind "copy-both" task); learned multi-head attention as $h$
 independently-projected heads recombined linearly, at no leading
@@ -281,6 +293,8 @@ research.
 
 ## chapter_attention/positional-information.md — Positional Information
 
+**Update (2026-11-02, ch. 10–11 pass):** 8 exercises: 1 distinct positions, distinct codes; 2 [code] untrained rows; 3 additive codes in the score; 4 [code] where extrapolation fails; 5 ● biases that keep the symmetry; 6 ● offset preference in RoPE; 7 [code] ● the RoPE base; 8 [extended] ● position interpolation. `TinyCharLM` has no `_rope` method any more: exercises 7 and 8 set its `rope_base` and `rope_scale` attributes, which feed the shared `d2l.rope(x, offset, base, scale)`. Exercise 2.1 copies `pos_emb` before training and compares rows 128–511 after it; exercise 4 (`ex_positional-information-where-extrapolation-fails`) measures the four heads of each block. The "RoPE against a from-scratch interface" proposal below should check against `d2l.rope`, not `TinyCharLM._rope`.
+
 **Topic:** Unmasked self-attention is permutation-equivariant (proved and
 checked numerically); absolute (sinusoidal/learned), rotary (RoPE), and
 distance-based (ALiBi/NoPE) schemes for supplying position; a controlled
@@ -349,7 +363,7 @@ well-matched.
    `max_seq_len` at construction, precomputing sin/cos buffers, and applying
    rotation via an explicit `token_positions` tensor of arbitrary leading
    batch shape (rather than assuming positions $0,\ldots,T{-}1$ in order).
-   Verify it reproduces `TinyCharLM._rope`'s output on contiguous positions,
+   Verify it reproduces `d2l.rope`'s output on contiguous positions,
    then use the explicit-positions interface to rotate a batch where every
    example shares the same relative offset but starts from a *different*
    absolute position — something the section's own `offset`-only
@@ -373,6 +387,8 @@ well-matched.
 ---
 
 ## chapter_attention/attention-at-scale.md — The Cost of Attention
+
+**Update (2026-11-02, ch. 10–11 pass):** 10 exercises: 1 reaching across the sequence; 2 [code] the running maximum; 3 merging partial states; 4 arithmetic intensity of attention; 5 [code] tiles of a fused kernel; 6 [code] the feature map; 7 ● traffic of a tiled schedule; 8 ● an exact feature map; 9 [extended] ● attention variants in a language model; 10 [code] ● a decaying state. New exercise 5, "Tiles of a fused kernel": tile counts for causal and windowed masks and for packed documents, and why FlexAttention evaluates the mask as a rule per tile; the exercises after it are renumbered 6–10. Exercise 4 now gives values their own width $d_v$ (limit $(d + d_v)/8$); exercise 8 names the polynomial degree $p$; part (d) of exercise 10 extends `linear_attention_chunked`; exercise 6 carries the new label `ex_attention-at-scale-feature-map`.
 
 **Topic:** Attention's quadratic time/memory cost, measured against a real
 GPU allocator; exact memory-linear computation via online softmax (the
@@ -456,7 +472,9 @@ for the whole chapter.
 
 ---
 
-## chapter_attention/what-attention-computes.md — What Attention Computes
+## chapter_attention/what-attention-computes.md — Attention Circuits
+
+**Update (2026-11-02, ch. 10–11 pass):** 10 exercises: 1 tied bigrams; 2 paths through two blocks; 3 [code] a copying head by hand; 4 [code] the shortcut without biases; 5 weights that change nothing; 6 [code] zero and mean ablation; 7 [code] ● the Bayes-optimal predictor; 8 [code] ● repeated tokens within a pattern; 9 [code] ● K-composition in the weights; 10 [extended] ●● induction heads in text. The section is now titled "Attention Circuits" (label unchanged). Exercise 10 carries the new label `ex_what-attention-computes-text` and trains on the byte-level WikiText-103 data of `subsec_pos-experiment`; the head index is $m$ throughout; exercise 6(b) reads "the product of these columns, before zeroing, with $\bar{\mathbf{o}}_m$".
 
 **Topic:** Attention-only Transformers factor into QK circuits (where) and OV
 circuits (what) acting on a residual stream; representable functions grow

@@ -144,6 +144,7 @@ book:
         - chapter_attention/positional-information.qmd
         - chapter_attention/attention-at-scale.qmd
         - chapter_attention/what-attention-computes.qmd
+        - chapter_attention/further-reading.qmd
         - chapter_transformers/index.qmd
         - chapter_transformers/transformer-block.qmd
         - chapter_transformers/gpt.qmd
@@ -152,6 +153,7 @@ book:
         - chapter_transformers/vision-transformer.qmd
         - chapter_transformers/moe.qmd
         - chapter_transformers/scaling-laws.qmd
+        - chapter_transformers/further-reading.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
         - chapter_recurrent-modern/ssm.qmd

@@ -9,8 +9,9 @@ activation checkpointing, and data parallelism. Reporting each incremental
 change separates the contribution of a technique from interactions among
 techniques.
 
-*Prerequisites: the entire chapter. The subject is* `d2l.GPT` *and*
-`d2l.TimeMachine` *from* :numref:`sec_gpt`*, reused verbatim.*
+*Prerequisites: the entire chapter. The subject is* `d2l.GPT` *from*
+:numref:`sec_gpt`*, reused verbatim, on the character-level*
+`d2l.TimeMachine` *of* :numref:`sec_language-model`*.*
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
@@ -53,7 +54,7 @@ os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ## The Subject
 :label:`subsec_ft-subject`
 
-We take ch. 11's GPT at a width where the experiment can be read cleanly.
+We take the GPT of :numref:`sec_gpt` at a width where the experiment can be read cleanly.
 
 :begin_tab:`pytorch`
 At the `num_hiddens=256` of :numref:`sec_gpt`, the model's matmuls are
@@ -358,8 +359,8 @@ print(f'R0 un-jitted: {tput0:.0f} tokens/s')
 Read the profile for the model's character. Matmuls (the attention
 projections and the feed-forward blocks) carry about half of the device
 time — but only about half: the rest is a long tail of small elementwise
-and normalization kernels (note the *hundreds* of `aten::mul` calls per
-five steps), each launched separately, none individually visible. And the
+and normalization kernels, hundreds of launches per step, each launched
+separately and none of them large on its own. And the
 CPU-total column is nearly as large as the CUDA total — remembering
 :numref:`sec_perf_model`'s caveat that these totals overlap across
 threads and streams, that still says the dispatch thread is busy most of
@@ -431,8 +432,8 @@ print(f'R1 jit: {tput1:.0f} tokens/s ({tput1 / tput0:.0f}x)')
 ```
 
 :begin_tab:`pytorch`
-The first call takes about two seconds to compile. Thereafter throughput is
-roughly 1.2 times the eager result even though this model is not fully
+The first call takes seconds to compile, longer when the compiler's cache
+is cold. Thereafter throughput is 1.2 to 1.3 times the eager result even though this model is not fully
 overhead-bound in the sense of :numref:`sec_perf_model`. Elementwise chains
 between matmuls fuse
 into a handful of generated kernels, and the launch traffic drops with
@@ -479,7 +480,7 @@ precision attacks. So, precision next.
 
 :begin_tab:`jax`
 Put the two numbers against :numref:`tab_gpu_specs`: the compiled step
-achieves about a third of the card's ~83 tf32 TFLOP/s. That
+achieves under a third of the card's ~83 tf32 TFLOP/s. That
 classification carries real information, but read it carefully — it is
 *ambiguous*. Jit already cured R0's op-by-op dispatch disease, and the
 step is not at the compute roof either; the gap could be arithmetic
@@ -582,20 +583,17 @@ def to_bf16(model):
     return copy
 
 class Bf16GPT(d2l.GPT):
-    """ch. 11's GPT with one dtype leak patched: rope's fp32 trigonometry
+    """d2l.GPT with one dtype leak patched: rope's fp32 trigonometry
     promotes q and k back to fp32 (and the attention kernel rightly
     refuses mixed inputs), so cast them back after rope."""
     class CausalAttention(d2l.GPT.CausalAttention):
         def __call__(self, X, *_):
-            B, T, D = X.shape
-            q, k, v = jnp.split(self.W_qkv(X), 3, axis=-1)
-            q, k, v = (u.reshape(B, T, self.num_heads, -1)
-                       for u in (q, k, v))
-            if self.rope:
-                q, k = self._rope(q), self._rope(k)
+            q, k, v = self.qkv(X)
             q, k = q.astype(v.dtype), k.astype(v.dtype)
-            Y = jax.nn.dot_product_attention(q, k, v, is_causal=True)
-            return self.W_o(Y.reshape(B, T, D)), None
+            Y = jax.nn.dot_product_attention(
+                q.swapaxes(1, 2), k.swapaxes(1, 2), v.swapaxes(1, 2),
+                is_causal=True)
+            return self.W_o(Y.reshape(Y.shape[0], Y.shape[1], -1))
 
 def make_bf16_gpt():
     return Bf16GPT(vocab_size, num_hiddens=512, num_blks=6,
@@ -629,7 +627,7 @@ print(f'R2 +bf16, threaded: {tput2:.0f} tokens/s ({tput2 / tput1:.2f}x)')
 :begin_tab:`jax`
 The second surprise, and the better lesson: bf16 is now provably *real* —
 the receipt prints `bfloat16`, the compiler's planned temporaries drop by
-about two-fifths — and the throughput *still* barely moves, nowhere near
+about two-fifths — and the throughput *still* gains little, nowhere near
 the factor the format sequence promised. The profile explains the result. The
 device-side work genuinely shrank, and the plan confirms it. The surrounding
 overhead did not shrink: the per-call Python that walks the
@@ -737,14 +735,13 @@ profile_top(prof, rows=5)
 
 :begin_tab:`jax`
 Read the three printed lines together, because they close R2's case and
-then break a lazy assumption. The bf16 step at batch 512 delivers most
-of a factor of two over the stalled batch-64 configuration, and the achieved
-TFLOP/s roughly doubles — the tensor cores are finally earning their
-silicon. But look at the fp32 control: at batch 512 it is *slower than
-fp32 at batch 64*. The batch configuration, taken alone, is a *negative* configuration
-for the fp32 program — its compute rate does not rise, holding around
-twenty TFLOP/s, no better than the batch-64 step — and the plan says
-why: roughly 15 GiB of temporaries,
+then break a lazy assumption. The bf16 step at batch 512 delivers
+roughly 1.4 to 1.5 times the throughput of the jitted fp32 baseline, and the
+achieved TFLOP/s rises by about half — the tensor cores are finally
+earning their silicon. But look at the fp32 control: at batch 512 it is
+*slower than fp32 at batch 64*. The batch configuration, taken alone, is
+a *negative* configuration for the fp32 program — its compute rate does
+not rise above that of the batch-64 step — and the plan says why: roughly 15 GiB of temporaries,
 dominated by materialized fp32 attention buffers, and a plan that large
 also increases memory traffic. The fp32 step becomes bandwidth-bound as
 host overhead recedes. Neither configuration improves throughput by
@@ -788,7 +785,7 @@ assert it is one before timing anything:
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
 class CheckpointedGPT(nn.Module):
-    """ch. 11's GPT with its transformer blocks run under checkpointing.
+    """d2l.GPT with its transformer blocks run under checkpointing.
     Reuses the exact submodules; only the block loop differs."""
     def __init__(self, gpt):
         super().__init__(); self.gpt = gpt
@@ -821,7 +818,7 @@ print(f'R4 +checkpoint: {tput4:.0f} tokens/s ({tput4 / tput3:.2f}x), '
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab jax
 def ckpt_forward(model, X):
-    """ch. 11's GPT.__call__ with each block under jax.checkpoint.
+    """d2l.GPT.__call__ with each block under jax.checkpoint.
     Reuses the exact submodules; only the block loop differs."""
     H = model.token_emb(X)
     if model.pos == 'learned':                # (default 'rope' adds no emb)
@@ -870,7 +867,7 @@ conservative end of its run-to-run range; NCCL's own "busbw" reads
 :numref:`sec_multi_gpu_concise` measures a five-fold-faster configured
 mode, and shows why these runs nonetheless keep the library's defaults.)
 Summing the two terms,
-:eqref:`eq_dp_cost` predicts a *weak* two-GPU gain: scarcely more than one
+:eqref:`eq_dp_cost` predicts a *weak* two-GPU gain: about one
 single-GPU throughput at $k=2$, under half of linear at $k=4$. One
 refinement before trusting the measurement: the serial sum is a *floor* —
 DDP overlaps its bucketed allreduce under backward
@@ -895,7 +892,7 @@ the allreduce at the same tens of milliseconds as the *entire* compute
 step: a transformer's parameters are proportional to its compute, so
 unlike a convolutional ResNet it offers little extra compute to hide
 communication behind. Summing the two terms, :eqref:`eq_dp_cost` predicts
-limited scaling: at $k=2$, throughput barely exceeds the single-GPU
+limited scaling: at $k=2$, throughput stays near the single-GPU
 result, and at $k=4$ it remains under half of linear scaling. The mechanism,
 though, is the declarative recipe of :numref:`sec_multi_gpu_concise` at its cleanest: build a mesh,
 replicate the state, shard the batch, and feed the **unchanged** jitted
@@ -1034,7 +1031,7 @@ time. At $k=4$ it slips a little *below* it: the floor was priced with
 the $\beta$ we measured at two GPUs, and four ranks staging through the
 same host path do not quite sustain that constant. Either way, data
 parallelism on this fabric turns a second GPU into a modest fraction of
-one, and four GPUs into well under half of linear. Communication-hungry
+one, and four GPUs into under half of linear. Communication-hungry
 is the diagnosis, and it was written down *before* the launch. On an NVLink
 box the same accounting predicts near-linear scaling — the constant
 changes, the method does not. Note what this configuration is *not*: it uses the
@@ -1045,7 +1042,7 @@ through why its efficiency comes out *higher* is the point of doing it.
 
 :begin_tab:`jax`
 The measurement lands where the model said it would — at the floor,
-nowhere near the linear ceiling — and in our runs a shade *under* it. At
+nowhere near the linear ceiling — and in our runs *under* it. At
 $k=2$, the second GPU gives no predicted throughput increase. Measured
 throughput may fall below the one-GPU result because the model omits some
 costs: the global batch stages through one device before scattering,
@@ -1075,12 +1072,11 @@ for k in (k for k in (2, 4) if k <= jax.local_device_count()):
 ```
 
 :begin_tab:`jax`
-— and delivers it: the fast configuration scales at markedly higher
-efficiency than the batch-64 configuration, for the reason the cost model states:
+— and delivers it: the fast configuration scales close to linearly, far
+above the batch-64 configuration, for the reason the cost model states:
 $t_{\text{compute}}$ grew eight-fold while $t_{\text{comm}}$ stayed
-fixed. Still well short of linear — the fabric is what it is — but the
-*shape* of the improvement was predicted by the same two-term sum that
-predicted the failure.
+fixed. The fabric is unchanged; the same two-term sum that predicted the
+failure predicts this success.
 :end_tab:
 
 ## Aggregate Results
@@ -1109,6 +1105,7 @@ print(f'cumulative, R0 -> R3: {tputs[3] / tputs[0]:.2f}x')
 d2l.plt.figure(figsize=(6, 3.5))
 bars = d2l.plt.bar(configurations, [t / 1e3 for t in tputs],
                    color=['#7f7f7f', '#1f77b4', '#1f77b4', '#2ca02c', '#d62728'])
+d2l.plt.ylim(0, 1.15 * max(tputs) / 1e3)  # Headroom for the bar labels
 d2l.plt.ylabel('throughput (k tokens/s)')
 d2l.plt.title('Making a Transformer fast: cumulative configurations')
 for b, t in zip(bars, tputs):
@@ -1126,6 +1123,7 @@ print(f'cumulative, R1 -> R3: {tputs[3] / tputs[1]:.2f}x '
 d2l.plt.figure(figsize=(6, 3.5))
 bars = d2l.plt.bar(configurations, [t / 1e3 for t in tputs],
                    color=['#7f7f7f', '#1f77b4', '#1f77b4', '#2ca02c', '#d62728'])
+d2l.plt.ylim(0, 1.15 * max(tputs) / 1e3)  # Headroom for the bar labels
 d2l.plt.ylabel('throughput (k tokens/s)')
 d2l.plt.title('Making a Transformer fast: cumulative configurations')
 for b, t in zip(bars, tputs):
@@ -1135,15 +1133,15 @@ d2l.plt.show()
 ```
 
 :begin_tab:`pytorch`
-Compilation raises throughput by roughly 1.2 times by fusing the elementwise
-operations identified in the profile. Bf16 adds about another 50% once the
+Compilation raises throughput by 1.2 to 1.3 times by fusing the elementwise
+operations identified in the profile. Bf16 adds roughly another 40 to 50% once the
 matrices are wide enough to use tensor cores effectively. Increasing the batch
-adds roughly 1.2 times by raising arithmetic intensity. Checkpointing reduces
+adds 1.1 to 1.3 times by raising arithmetic intensity. Checkpointing reduces
 throughput by about 10% while reducing peak memory from about 9 GiB to 3 GiB;
 memory capacity was not the limiting resource in this configuration. These
 single-window ratios vary by several percentage points on repetition. Their
-cumulative effect through the larger-batch configuration is a little over two
-times on this host. The result supports an iterative procedure: profile the
+cumulative effect through the larger-batch configuration is about two times
+on this host. The result supports an iterative procedure: profile the
 current configuration, change the identified limiting resource, verify
 correctness, and measure again.
 :end_tab:
@@ -1151,12 +1149,12 @@ correctness, and measure again.
 :begin_tab:`jax`
 Whole-step JIT raises throughput by roughly twenty times relative to the
 un-jitted diagnostic, which is why the jitted step is the practical baseline.
-Bf16 alone changes little at batch 64 because fixed per-step dispatch remains
-limiting. At batch 512, bf16 and the larger batch interact: neither isolated
-change improves this stack, while together they raise throughput by most of a
-factor of two. Checkpointing reduces throughput by about 10% while reducing
-planned temporary storage severalfold. From the jitted baseline through the
-larger-batch configuration, the cumulative increase is about 1.7 times on this
+Bf16 alone gains little at batch 64 because fixed per-step dispatch remains
+limiting. At batch 512, bf16 and the larger batch interact: the larger fp32
+batch alone even lowers throughput, while together the two changes raise it
+clearly. Checkpointing reduces throughput by a fifth to a quarter while
+reducing planned temporary storage severalfold. From the jitted baseline through the
+larger-batch configuration, the cumulative increase is about 1.4 to 1.5 times on this
 host. The PyTorch and JAX sequences differ because their starting bottlenecks
 differ; both are selected by the same profile--change--verify procedure.
 :end_tab:
@@ -1231,8 +1229,8 @@ model, one configuration at a time.
 * We profiled a baseline, classified its limiting regime, applied one
   technique, and profiled again. On the GPT of :numref:`sec_gpt` (width
   512, about 19 million parameters), compilation improved throughput by
-  roughly 1.2×. Bf16 and a larger batch supplied further gains, for a
-  cumulative improvement of a little over 2× in this experiment.
+  1.2 to 1.3×. Bf16 and a larger batch supplied further gains, for a
+  cumulative improvement of about 2× in this experiment.
 * Every configuration is attributed to a section, and the bottleneck is
   re-profiled as it moves: after compilation the elementwise tail is
   fused away and the matmuls' share rises, which is what makes precision
@@ -1248,8 +1246,8 @@ model, one configuration at a time.
 * Data parallelism is predicted before it is measured: a transformer's
   parameters scale with its compute, so DP on our host-staged fabric is
   communication-hungry — the measured throughput lands at the cost
-  model's no-overlap floor (a shade above it at two GPUs, a shade below
-  at four, where the host-staged fabric no longer sustains its two-GPU
+  model's no-overlap floor (above it at two GPUs, below it at four,
+  where the host-staged fabric no longer sustains its two-GPU
   bandwidth), nowhere near the linear ceiling. The
   prediction-then-measurement is the demonstration.
 :end_tab:
@@ -1259,8 +1257,8 @@ model, one configuration at a time.
   GPT of :numref:`sec_gpt`, JIT compilation improves throughput by about
   twenty times over un-jitted execution. Bf16 at batch 64 has little effect,
   and increasing the fp32 batch alone reduces throughput; together, reduced
-  precision and the larger batch improve throughput by most of a factor of
-  two over the jitted baseline.
+  precision and the larger batch improve throughput by about 1.4 to 1.5 times over
+  the jitted baseline.
 * Precision in JAX is explicit, and *layered*: casting the arrays is not
   enough — flax modules remember a compute dtype from construction, and
   the model's own fp32 arithmetic (rope's trigonometry) promotes values
@@ -1272,8 +1270,8 @@ model, one configuration at a time.
   corpus on device), and re-timing one cached batch flatters throughput
   by double-digit percent. Both had to be fixed before the cumulative comparison
   meant anything.
-* Configurations that do not help teach the most: bf16 at batch 64 is a *null*
-  configuration here — the wall was per-step dispatch, which precision cannot
+* Configurations that do not help teach the most: bf16 at batch 64 gains
+  little here — the wall was per-step dispatch, which precision cannot
   touch — and checkpointing costs time to save memory the compiler's
   plan said we did not need. Knowing when a technique does not apply is
   the method too.
@@ -1471,7 +1469,7 @@ model, one configuration at a time.
 <!-- slides -->
 
 ::: {.slide title="Cumulative Optimization of a GPT" only="pytorch"}
-Apply the chapter's profile--change--verify procedure to the GPT of ch. 11.
+Apply the chapter's profile--change--verify procedure to the GPT of the Transformers chapter.
 Each bar changes one mechanism and inherits the previous settings.
 
 Subject: `d2l.GPT`, width **512** (~19M params). Why not 256?
@@ -1480,7 +1478,7 @@ tensor cores. The width choice is itself a measurement.
 :::
 
 ::: {.slide title="Cumulative Optimization of a GPT" only="jax"}
-Apply the chapter's profile--change--verify procedure to the GPT of ch. 11.
+Apply the chapter's profile--change--verify procedure to the GPT of the Transformers chapter.
 Each bar changes one mechanism and inherits the previous settings.
 
 Subject: `d2l.GPT`, width **512** (~19M params), char *Time
@@ -1540,16 +1538,16 @@ Ask the compiler what it plans to run:
 
 @fast-transformer-rungs-each-one-measured-5
 
-About a third of the tf32 roof: not overhead-starved,
+Under a third of the tf32 roof: not overhead-starved,
 not saturated — a mixed workload. Cheapest next configuration in the
 memory-and-precision sequence: **bf16** — double the roof, half the bytes.
 :::
 
 ::: {.slide title="Successive Optimizations" only="pytorch"}
-- **R1 compile** — fuses the tail: **~1.2×** (and asserts
+- **R1 compile** — fuses the tail: **1.2–1.3×** (and asserts
   compiled ≡ eager first)
-- **R2 bf16** — tensor cores, matmuls wide enough: **~1.5×**
-- **R3 batch-up** — climb the roofline: **~1.2×** (fp32-512
+- **R2 bf16** — tensor cores, matmuls wide enough: **1.4–1.5×**
+- **R3 batch-up** — climb the roofline: **1.1–1.3×** (fp32-512
   control: bf16 bought headroom, not admission)
 - **R4 checkpoint** — *negative* for speed (−~10%), but cuts
   peak memory ~3× (unneeded here)
@@ -1566,7 +1564,7 @@ q, k right back.
 @fast-transformer-rungs-each-one-measured-9
 
 Threaded for real (receipt: `bfloat16`; the planned
-temporaries drop ~40%) — and **still flat**: at batch 64 the
+temporaries drop ~40%) — and **still far from 2×**: at batch 64 the
 wall is per-step *dispatch*, which precision cannot touch.
 Masters and grads stay fp32. No `GradScaler`.
 :::
@@ -1576,16 +1574,17 @@ Masters and grads stay fp32. No `GradScaler`.
 
 **The two changes interact.** fp32 at 512 is *slower* than at
 64 — the ~15 GiB plan is traffic, a memory wall. bf16 at 64
-was flat — a dispatch wall. Together: most of 2×, ~43 TFLOP/s.
+gained little — a dispatch wall. Together: 1.4–1.5× over the jitted
+baseline, 35–40 TFLOP/s.
 Measure configurations cumulatively. Checkpointing then reduces throughput by
-about one tenth while saving memory that is not limiting this run.
+a fifth to a quarter while saving memory that is not limiting this run.
 :::
 
 ::: {.slide title="Aggregate Results" only="pytorch"}
 @fast-transformer-the-waterfall
 
 Each bar inherits every preceding choice. Three moderate improvements
-combine to give **a little over 2×** throughput.
+combine to give **about 2×** throughput.
 Checkpointing is red: a technique that helped a different
 model *hurts* this one. A 300-step run confirms the fast
 configuration still learns.
@@ -1607,8 +1606,8 @@ a **no-overlap floor**; DDP's bucketing buys back some overlap.
 
 @fast-transformer-rungs-each-one-measured-8
 
-Measured throughput is near the predicted floor: slightly above it at
-$k=2$ because of overlap and slightly below it at $k=4$ because the
+Measured throughput is near the predicted floor: above it at
+$k=2$ because of overlap and below it at $k=4$ because the
 host-staged fabric provides less bandwidth. NVLink changes the constant, not the method.
 :::
 
@@ -1620,8 +1619,8 @@ no launcher, no sidecar.
 
 @fast-transformer-rungs-each-one-measured-8
 
-Throughput is near the floor at $k=2$ and below it at $k=4$ as effective
-fabric bandwidth falls. Because data parallelism requires three annotations,
+Throughput lies below the floor, a little at $k=2$ and more at $k=4$ as
+effective fabric bandwidth falls. Because data parallelism requires three annotations,
 the fast configuration can be rerun in a loop; efficiency then improves as the
 grown compute term predicts.
 :::

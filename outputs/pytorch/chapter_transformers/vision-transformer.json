@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ff57da5003609a3288c3f74184de9761689a233cadc52404941b307f80a236fa",
+    "d2l_lib_fingerprint": "sha256:9981650260e97c1a1ae02336f6ce9e40eed5ea8fe045e10bf6f5205bf3cb571a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,92 +14,100 @@
       "outputs": []
     },
     "vision-transformer-patches-as-tokens-1": {
-      "code_fingerprint": "sha256:9a959125ec552a90c2fc672dc9621ba44d0bd9102d4fd067e271e4758d408819",
+      "code_fingerprint": "sha256:766b9ed447b792c9d5043d0808c16efc5421bad1878f15096b3a766800ea01ed",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-patches-as-tokens-2": {
-      "code_fingerprint": "sha256:53b193524bec19b2f755cc68de6375717b16ba4ca2102552be855b0fb6ef962e",
+      "code_fingerprint": "sha256:c7a8ecef3b1a15a714c85987bb8a3b2b6cdf4d9a2e6680af1c6195f167119292",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-vision-transformer-block-1": {
-      "code_fingerprint": "sha256:84c792cc5dbf72f1f3f0c6c5dabbd280b68de7a8b50c14a47dda0da90b789bd3",
+      "code_fingerprint": "sha256:bb6b9591a8812229321cc0cbf62d905f996e1fb050692c4e593e7d58f3e408ee",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-vision-transformer-block-2": {
-      "code_fingerprint": "sha256:7ea8437acdf3df5cf65da57e719e6549d35451c025aaef70c0ecbc1068c24a04",
+      "code_fingerprint": "sha256:b79aba016a9377dbf2d00715807aa53f32e3bc6da7c2f2303da37ed639044993",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-the-full-model": {
-      "code_fingerprint": "sha256:ae24403e783a197f0367b219f02694fbcb56a122ad9b067863a0e61600d03b12",
+      "code_fingerprint": "sha256:20a6e641a73a8dfa6e9669f0fa8e6c49233831d978ad2a1f84c2757b76b6f28f",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-first-run-1": {
-      "code_fingerprint": "sha256:59c0c649b0e8160b31598f5f421872ceb50e981d70d3bc4edc2ed18f30248165",
+      "code_fingerprint": "sha256:691e45f63f40d30be0e036c4137cdc732d233b7c26dc50969cae8691f931af8c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
-          "bytes": 31267,
-          "sha256": "sha256:cc191ff6e4706c2c4a868c03dcf4cdccd8b3ccdef5bd57d9dd8cb6f2f84217c3"
+          "bytes": 31955,
+          "sha256": "sha256:2808ad564b53c8967b2eb5d177f9ec1a02036fbbdfdb06b373cb8c07b82315d9"
         }
       ]
     },
     "vision-transformer-a-first-run-2": {
-      "code_fingerprint": "sha256:cc0a8a42f9d10c7f85723e10ecf52b39ab6af17fed3346c0f04f70af1d3ff607",
+      "code_fingerprint": "sha256:0c5c3c6d0ef22e5a42dd4802ecda21266df6d8a855fddebde9941640962427b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ViT: 6.5M parameters, validation accuracy 0.85\n"
+          "text": "ViT: 6.5M parameters, validation accuracy 0.89\n"
         }
       ]
     },
     "vision-transformer-do-the-position-embeddings-discover-the-grid": {
-      "code_fingerprint": "sha256:5ed1f6eaaef2341d24568dffcb97e6ce19079ba7029a8039288cb6e8fa274975",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:4e4183cd0affd878e53bb521c442e9ad2a2b33334dd4b04cb3918ce5f75b946b",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "mean cosine similarity: grid neighbors 0.04, distant positions -0.03\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 107883,
-          "sha256": "sha256:1f81cad218facb65735d003274b45e08df3c6dd8122bd395b507a3812152ad73"
+          "bytes": 26684,
+          "sha256": "sha256:921e569fb19c3209510d97dd338aab9f28b237db31dd594c9c93143051e2a489"
         }
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
-      "code_fingerprint": "sha256:5b8c245a7c482ebef52e108133c7a3840fb4c7331870d95ff83307d95b54626d",
+      "code_fingerprint": "sha256:30b4378e545fccbd8970a30325312efc8859a4271efa4ddaed1d29ddfdcdd00c",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
-      "code_fingerprint": "sha256:eb66a41b5de22431ee2ee4e5264ea808e2ac478959423dd4b757434a1e20d215",
+      "code_fingerprint": "sha256:6a1567af6f01be01332ff74e9093826cb1942d5e61d961ca2b729a2afd7cb081",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 33325,
-          "sha256": "sha256:ed9736968194a77bc3e2f856dc7d6408898668f83506714cce22324981ad93dc"
+          "bytes": 33920,
+          "sha256": "sha256:e4266289e9183444003c16a7768557363c99a067815e19994350278e6ce67294"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.90\nViT: 6.5M parameters, validation accuracy 0.85\n"
+          "text": "CNN: 6.5M parameters, validation accuracy 0.94\nViT: 6.5M parameters, validation accuracy 0.89\n"
+        }
+      ]
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-3": {
+      "code_fingerprint": "sha256:e0a3cc49051110a2afb5f887c61ea7e541b3599dfd6bdcbcad1294e922f92f9f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-3-1.svg",
+          "bytes": 23215,
+          "sha256": "sha256:e455a2ae4546cb84964668ef0d80a935618f8990421a65c41c68aa3944543d5c"
         }
       ]
     }

@@ -4,17 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8150fbb1b11c45abe8f6fd51a809f0e98a15252b6cf79102998939a734778012",
+    "d2l_lib_fingerprint": "sha256:f04afb20291250f1c59cd5eef4082d2ae14c9e55f61f1c4f4ea6693f760da19f",
     "max_inline_bytes": 0
   },
   "cells": {
     "attention-at-scale-the-cost-of-attention": {
-      "code_fingerprint": "sha256:5db1e5d64ba0376e2756fbd87918c482d6642fdcb534285d34410f4eaa886ab7",
+      "code_fingerprint": "sha256:62a3e78f64a4b1148a2e3560e4750d65edf480de8b887cc825d4a00248c7db61",
       "kind": "text",
       "outputs": []
     },
     "attention-at-scale-counting-memory-1": {
-      "code_fingerprint": "sha256:7970fe788dd87ad47dc6df449e91ec1816ce0508f2c0d8accd93cf598c7f4eb5",
+      "code_fingerprint": "sha256:fbbc41bfb4ef7cc9de937819e36210d8ac5824ccfcdece75c5028490c33427f0",
       "kind": "text",
       "outputs": [
         {
@@ -25,34 +25,34 @@
       ]
     },
     "attention-at-scale-counting-memory-2": {
-      "code_fingerprint": "sha256:4238713add958b3fac90e9d5ae0dc11b5ccc3ce84a988fa0d2485b283bdade01",
+      "code_fingerprint": "sha256:463f89b4f366b4af2619cd784daafd2cbc464c7eb22ef00b72138489395bb90f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048:   0.13 ms\nn =  4096:   0.49 ms\nn =  8192:   1.84 ms\nn = 16384:   7.47 ms\n"
+          "text": "n =  2048:   0.21 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\nn = 16384:   7.37 ms\n"
         }
       ]
     },
     "attention-at-scale-a-chunked-implementation-1": {
-      "code_fingerprint": "sha256:858a3cdab4b2b2d1d1f340ab314d19cac0b5dcacc3724014f50dab5ee64e1be3",
+      "code_fingerprint": "sha256:3691c2c7aa532afba6b83d2f21aaa43587cef2659f4a48868411ba39b579f738",
       "kind": "text",
       "outputs": []
     },
     "attention-at-scale-a-chunked-implementation-2": {
-      "code_fingerprint": "sha256:da2702a8a646a72df18bb6a9c84f6eac62ffb96722fd7f258023bd0440a0fc94",
+      "code_fingerprint": "sha256:7d0825b1c88e2d7115b95bbca62c38969a08e52ca7b5c3d13e53bf154c02afd1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 4.77e-07\n"
+          "text": "maximum deviation: 2.38e-07\n"
         }
       ]
     },
     "attention-at-scale-a-chunked-implementation-3": {
-      "code_fingerprint": "sha256:8b31498400a777ad2a6224ba6152e3b179103a5cd3b64499abf1ddb30cf584bd",
+      "code_fingerprint": "sha256:5d186dcd8a5554e379f46a4e4f30c9eddf4c3e74031e1687778dd74174b7b320",
       "kind": "asset",
       "outputs": [
         {
@@ -60,36 +60,36 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
           "bytes": 28795,
-          "sha256": "sha256:95774bb98afe20504f68cc9649bb7e3bed663562b214526f941f24a69d9306a3"
+          "sha256": "sha256:3bc68e249a704119e92be8917cc32a6dad1332de965ae83189fb958d63941b04"
         }
       ]
     },
     "attention-at-scale-the-bottleneck-is-memory-traffic": {
-      "code_fingerprint": "sha256:4fbab7ea3c0e2a85c2db374ad351d3cc4706559b110acd3a11798de5ee90c0e9",
+      "code_fingerprint": "sha256:86ed208204fc589ed03eda103ebca083f133a7d69bfdcda5f52e63c5fdf0624c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:  19.82 ms, peak memory  4112.1 MiB\nfused:   1.06 ms, peak memory    16.5 MiB\n"
+          "text": "naive:  19.95 ms, peak memory  4176.0 MiB\nfused:   1.07 ms, peak memory    16.5 MiB\n"
         }
       ]
     },
     "attention-at-scale-attention-through-a-window": {
-      "code_fingerprint": "sha256:1af1591441369891d6c0de9757fc342b91c705c1bde85998022da45e57e58473",
+      "code_fingerprint": "sha256:0c35d5cb4d3c03ab8d57d531d8b95a4924b6de212fff38b80690ca543be8c122",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
-          "bytes": 18018,
-          "sha256": "sha256:876c56394a94d6abf5bb6487f2d162dbba75d7f7f93287159f8844b6115ff33a"
+          "bytes": 18014,
+          "sha256": "sha256:efede9e061e71c5c9ffa464e56d70039c2f111d65827e93f0f118edec10a6b5a"
         }
       ]
     },
     "attention-at-scale-depth-restores-the-reach": {
-      "code_fingerprint": "sha256:395bbd617a589e0dd6baf6016dc9ae342b5928c799e92a4be84111c43ecc0cb4",
+      "code_fingerprint": "sha256:028545a0c68216b365dd86592d40bb08aeecbf9d4c554ae47ae77edb1265a118",
       "kind": "mixed",
       "outputs": [
         {
@@ -101,18 +101,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
-          "bytes": 102152,
-          "sha256": "sha256:95701eff768e581d01d0f265cf37fa04265dee8fcd128b37222359e7e1135f39"
+          "bytes": 90120,
+          "sha256": "sha256:fa9080f71cf4b74243f9126d297fd901b72f7af929348f78a3c1a72b152ff4b5"
         }
       ]
     },
     "attention-at-scale-a-linear-cost-implementation-1": {
-      "code_fingerprint": "sha256:d80e0054aaa6f9b65ab3bb7b582fee448e7d8394ac418808766433e00d65a322",
+      "code_fingerprint": "sha256:992279ea40b95a345de15befe6003f4a7d707d561b0e570ab6c8a64c1042d313",
       "kind": "text",
       "outputs": []
     },
     "attention-at-scale-a-linear-cost-implementation-2": {
-      "code_fingerprint": "sha256:464c00a35bf80d6aaa8ede2ceffb9380092eec98c24ef9dbe46f09c935d1adbd",
+      "code_fingerprint": "sha256:afe8be597ca90b0a5bbb95495900bf31689d21cda6369c730a6a88ab2431c8a0",
       "kind": "text",
       "outputs": [
         {
@@ -122,32 +122,64 @@
         }
       ]
     },
-    "attention-at-scale-kernelizing-the-score-1": {
-      "code_fingerprint": "sha256:15afba82a45a39794408d47636c3969e0269ccdc003e774e52efbb82b37c776f",
-      "kind": "text",
-      "outputs": []
-    },
-    "attention-at-scale-kernelizing-the-score-2": {
-      "code_fingerprint": "sha256:c8c4d0255987c1d8d81c63757cc2c56c528fe636cc313b4d55f2ea0cda571a0e",
+    "attention-at-scale-a-linear-cost-implementation-3": {
+      "code_fingerprint": "sha256:11c803ee9ffcb5c488fdebc0933c43f7062d74fd427f341fdb10661cf918b203",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 2.38e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+          "text": "causal:  53.1% of tiles\nwindow:  12.1% of tiles\nBlockMask(shape=(1, 1, 2048, 2048), sparsity=87.89%, \n(0, 0)\n██                              \n████                            \n  ████                          \n    ████                        \n      ████                      \n        ████                    \n          ████                  \n            ████                \n              ████              \n                ████            \n                  ████          \n                    ████        \n                      ████      \n                        ████    \n                          ████  \n                            ████\n)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 4.17e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-kernelizing-the-score-1": {
+      "code_fingerprint": "sha256:ab32d0ce731d8a727527bd69156f01a21b3a85857919bd552d57b6c593879181",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-kernelizing-the-score-2": {
+      "code_fingerprint": "sha256:fbe72a5609653e1f8261f896bbcc725273569baa25f6a9621101ed8f752e52df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 4.77e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+        }
+      ]
+    },
+    "attention-at-scale-chunked-computation-1": {
+      "code_fingerprint": "sha256:de761fdd58a0321da236021a2214b225d7b1de47399cb3e7aea681dcf2b3be18",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-chunked-computation-2": {
+      "code_fingerprint": "sha256:f1f513ad7bab2ce042c48e6d31fc63f9ae8aeacd81d574fd9de8a9126f2d1f43",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 3.58e-07\n"
         }
       ]
     },
     "attention-at-scale-the-price-of-attention-measured": {
-      "code_fingerprint": "sha256:eed932297441f2127dbabba0114778b4243b6f256189f67ff8d3677fb55357d0",
+      "code_fingerprint": "sha256:f09d4cd106434e1057e47bf82579887d43df88d95bd4d2491f47834228ff6a58",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 55027,
-          "sha256": "sha256:753161e4212785174bfa412e6048fceb928f04f783a9fd51071e2a25a0c7b6a6"
+          "bytes": 35797,
+          "sha256": "sha256:b24d8ceaab832389173b23085b35cd4d3240d3bbac54e269b8c9caff0525fb6b"
         }
       ]
     }

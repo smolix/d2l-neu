@@ -245,6 +245,9 @@ FULL_CARD_NOTEBOOKS = {
     # Times the memory/speed trade-offs of checkpointing and copies across two
     # GPUs; a shared card skews the timings the prose quotes.
     "chapter_builders-guide/gpus-devices-memory.ipynb": 2,
+    # 11.3 times naive and cached decoding, prefill, and batched decoding;
+    # sharing a card halved the PyTorch timings in one run (2026-11-02).
+    "chapter_transformers/kv-cache.ipynb": 1,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
 }
@@ -265,6 +268,9 @@ HEAVY_GPU_NOTEBOOKS = {
     # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
     # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
     ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
+    # 11.3's batched decoding at b=64 compiles a ~5.5 GiB program and XLA
+    # autotuning then OOMs a 1-slot (~7.5 GiB) arena. Run exclusive.
+    ("jax", "chapter_transformers/kv-cache.ipynb"): 2,
     # 16.4's scoring cell generates 500 samples per run in one call
     # (f32[500,64,64,64] activations) and OOMs/fails XLA autotuning at the
     # 1-slot (~7.5 GiB) arena, deterministically on both attempts.

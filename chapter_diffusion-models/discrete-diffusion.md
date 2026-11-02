@@ -1238,15 +1238,20 @@ data :cite:`Nie.Zhu.You.ea.2025`.
        error of (b)?
    :exlabel:`ex_discrete-diffusion-confidence-unmasking`
 
-1. [extended] **A masked diffusion language model.** ●● Train a masked
-   diffusion model on the character-level Time Machine windows of
-   :numref:`subsec_gpt-training` and compare it with the autoregressive
-   `GPT` trained there. That run passes about $160$ times over its corpus.
-   The validation loss of `GPT` reaches its minimum after about $200$ of
-   its $2000$ updates and then rises while its training loss keeps
-   falling. :citet:`Prabhudesai.Wu.Zadeh.ea.2025` report that masked
-   diffusion models make better use of repeated data than autoregressive
-   models.
+1. [extended] **A masked diffusion language model.** ●●
+   :citet:`Prabhudesai.Wu.Zadeh.ea.2025` report that masked diffusion
+   models make better use of repeated data than autoregressive models. This
+   problem repeats the data on purpose. Use the character-level windows
+   `d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
+   num_train=100000, num_val=3000)` of :numref:`sec_text-sequence`, whose
+   100,000 training windows start at the first 100,000 positions of *The
+   Time Machine*; $2000$ updates on minibatches of $64$ windows of $128$
+   characters then pass over these positions about $160$ times.
+    1. Train the `GPT` of :numref:`sec_gpt` on these windows for $2000$
+       updates with its recipe, `LMOptimizer`, and record its training and
+       validation losses every $200$ updates. At which update does the
+       validation loss reach its minimum, and what do the two losses do
+       after it?
     1. Build the denoiser from `GPT` with an attention call that passes
        `is_causal=False`, one extra vocabulary entry for the mask, and no
        time input, which problem

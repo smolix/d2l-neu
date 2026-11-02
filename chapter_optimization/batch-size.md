@@ -770,9 +770,10 @@ learning rate moves by a factor of four to sixteen, the batch ratio to
 within one grid step, so the linear rule carried over from $b = 8$ lands
 within one grid step of the best learning rate at $b = 64$. For Adam the
 basin is flatter, so one run locates its minimum less precisely, and where
-the wall stands varies from run to run. The best learning rate moves by at
-most a factor of four, and in some runs not at all: well short of the batch
-ratio, as the square-root rule predicts. The basins are broad, and near the
+the wall stands varies from run to run. The best learning rate moves by
+a factor of about two to eight, and in some runs not at all, as a flat
+basin allows: typically well short of the batch ratio, as the square-root
+rule predicts. The basins are broad, and near the
 optimum a factor of two in $\eta$ changes the loss little. The rules bridge
 large ratios of batch sizes, and a short sweep around their prediction does
 the fine tuning.
@@ -1197,8 +1198,8 @@ Same budget, Adam:
 
 @!batch-size-learning-rate-rules-3
 
-$\sqrt{8} \approx 2.8$: in a flat basin the best rate moves at most
-fourfold, sometimes not at all, well short of the linear rule's 8×.
+$\sqrt{8} \approx 2.8$: in a flat basin the best rate moves by about two
+to eight, depending on the run, typically short of the linear rule's 8×.
 :::
 
 ::: {.slide title="The Rules Fail Past the Noise Scale, at the Ceiling, and Early"}

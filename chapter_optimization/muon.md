@@ -946,7 +946,7 @@ print(f'validation loss {val_loss(model, data):.3f}, '
       f'scratch {muon_val[best_muon][-1]:.3f}')
 ```
 
-The library version lands within about 0.01 of the scratch result, no
+The library version lands within about 0.02 of the scratch result, no
 more than the spread between runs: both compute the update
 :eqref:`eq_muon-update`.
 
@@ -1070,7 +1070,7 @@ $\sqrt{127/128} \approx 0.996$, as close to $1$ as one lost direction
 allows. Those of `proj` stay within about 10% of each other. Five
 Newton--Schulz steps leave both spread over a factor of about 1.2 to 1.7.
 The two tall matrices are uneven even under exact orthogonalization: their
-busiest neurons move about two to three times as far as their quietest.
+busiest neurons move about 1.7 to 3 times as far as their quietest.
 
 After five steps the neuron norms are also well below $1$, between about
 $0.2$ and $0.9$. A fresh gradient is close to rank one: for `qkv` and `proj`

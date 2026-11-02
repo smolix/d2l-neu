@@ -580,7 +580,7 @@ training or let $\alpha$ grow from a small value over the first steps.
 
 Second, once the window has filled, the EMA curve is smooth and runs along
 the top of the live curve. Over the last five epochs the live accuracy
-jumps by several points, while the EMA's rises steadily, by one to two
+jumps by two to five points, while the EMA's rises steadily, by one to two
 points, and ends at its highest value. The live curve shows the noise ball
 directly: each epoch evaluates a different point in it, while the EMA
 evaluates close to its center.

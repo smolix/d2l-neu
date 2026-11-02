@@ -66,52 +66,58 @@ def _lane_kernel(ax, x0, w, y, h, color, label=None, fontsize=12, alpha=1.0,
 
 def fig_roofline():
     """The roofline model, drawn with the build box's own numbers: an RTX 4090
-    has ~165 TFLOP/s (bf16 tensor cores) and ~1.0 TB/s of memory bandwidth, so
-    the ridge sits near 165 FLOP/byte.  Log-log; the sloped segment is the
-    bandwidth wall, the flat segment the compute roof."""
+    has 165 TFLOP/s (bf16 tensor cores) and 1.008 TB/s of memory bandwidth, so
+    the ridge sits near 164 FLOP/byte.  Log-log; the sloped segment is the
+    bandwidth bound, the flat segment the compute roof.  The three points are
+    the worked examples of the text: x + 1 in bf16 (1 FLOP per 4 bytes), a
+    width-2048 linear layer applied to one token (about 1 FLOP/byte), and the
+    same layer applied to a training minibatch of 8,192 tokens (about 910)."""
     fig, ax = plt.subplots(figsize=(7.6, 4.6))
 
     peak = 165.0          # TFLOP/s, bf16 dense
-    bw = 1.0              # TB/s -> y[TF] = bw * x[FLOP/byte]
-    ridge = peak / bw     # 165 FLOP/byte
+    bw = 1.008            # TB/s -> y[TF] = bw * x[FLOP/byte]
+    ridge = peak / bw     # ~164 FLOP/byte
 
-    x = np.logspace(np.log10(0.25), np.log10(16384), 400)
+    x = np.logspace(np.log10(0.1), np.log10(16384), 400)
     y = np.minimum(peak, bw * x)
     ax.loglog(x, y, color=BLUE, lw=2.6, zorder=3)
 
     # Ridge marker (dashed drop from the knee, label to its right).
     ax.plot([ridge], [peak], "o", color=BLUE, ms=7, zorder=4)
-    ax.plot([ridge, ridge], [0.1, peak], color=LIGHT, lw=1.2, ls="--",
+    ax.plot([ridge, ridge], [0.05, peak], color=LIGHT, lw=1.2, ls="--",
             zorder=1)
-    ax.text(210, 0.13, r"ridge $\approx 165$ FLOP/byte",
+    ax.text(205, 0.065, r"ridge $\approx 164$ FLOP/byte",
             ha="left", va="bottom", fontsize=13, color="black")
 
     # Slope and roof annotations, offset up-left of (and parallel to) the wall.
-    ax.text(1.6, 3.6, "memory-bandwidth wall\nslope = 1.0 TB/s",
-            ha="left", va="bottom", fontsize=13, color=BLUE_T, rotation=35.6,
+    ax.text(0.55, 2.2, "memory bandwidth\n$\\beta$ = 1.0 TB/s",
+            ha="left", va="bottom", fontsize=13, color=BLUE_T, rotation=33.0,
             rotation_mode="anchor")
-    ax.text(1100, peak * 1.45, "compute roof = 165 TFLOP/s (bf16)",
+    ax.text(1100, peak * 1.45, "compute roof $P$ = 165 TFLOP/s (bf16)",
             ha="center", va="bottom", fontsize=13, color=BLUE_T)
 
-    # Two workloads at opposite ends.
-    ax.plot([1.0], [bw * 1.0], "o", color=ORANGE, ms=8, zorder=5)
-    ax.text(1.75, 0.95, "elementwise op\n(intensity $\\approx 1$)",
+    # The worked examples of the text.
+    ax.plot([0.25], [bw * 0.25], "o", color=ORANGE, ms=8, zorder=5)
+    ax.text(0.36, 0.2, "$x + 1$ in bf16 (0.25)",
             ha="left", va="center", fontsize=13, color=ORANGE_T)
-    ax.plot([2048], [peak], "o", color=GREEN, ms=8, zorder=5)
-    ax.text(2048, peak * 0.42, "large matmul",
+    ax.plot([1.0], [bw * 1.0], "o", color=ORANGE, ms=8, zorder=5)
+    ax.text(1.45, 0.8, "linear layer, 1 token (1)",
+            ha="left", va="center", fontsize=13, color=ORANGE_T)
+    ax.plot([910], [peak], "o", color=GREEN, ms=8, zorder=5)
+    ax.text(910, peak * 0.5, "linear layer,\n8,192 tokens (910)",
             ha="center", va="top", fontsize=13, color=GREEN_T)
 
     # Regime labels in the open corners.
-    ax.text(6.0, 0.35, "bandwidth-bound", ha="center", va="center",
+    ax.text(30, 1.4, "bandwidth-bound", ha="center", va="center",
             fontsize=14, color="black", style="italic")
-    ax.text(2400, 18, "compute-bound", ha="center", va="center",
+    ax.text(2600, 8, "compute-bound", ha="center", va="center",
             fontsize=14, color="black", style="italic")
 
-    ax.set_xlim(0.25, 16384)
-    ax.set_ylim(0.1, 500)
+    ax.set_xlim(0.1, 16384)
+    ax.set_ylim(0.05, 500)
     # Plain-number ticks read faster than powers of ten.
-    ax.set_xticks([1, 10, 100, 1000, 10000])
-    ax.set_xticklabels(["1", "10", "100", "1,000", "10,000"])
+    ax.set_xticks([0.1, 1, 10, 100, 1000, 10000])
+    ax.set_xticklabels(["0.1", "1", "10", "100", "1,000", "10,000"])
     ax.set_yticks([0.1, 1, 10, 100])
     ax.set_yticklabels(["0.1", "1", "10", "100"])
     ax.xaxis.set_minor_formatter(plt.NullFormatter())
@@ -126,8 +132,8 @@ def fig_roofline():
 
 def fig_async_timeline():
     """Asynchronous dispatch: Python enqueues kernels and returns immediately;
-    the GPU works through the queue behind it.  A naive timer stops when the
-    *enqueueing* is done; only a synchronization point waits for the work."""
+    the GPU works through the queue behind it.  A timer without a barrier
+    stops when the *enqueueing* is done; only a barrier waits for the work."""
     fig, ax = plt.subplots(figsize=(8.8, 3.4))
 
     y_cpu, y_gpu, h = 2.0, 0.8, 0.52
@@ -152,16 +158,16 @@ def fig_async_timeline():
     for gx, lab in zip(starts, (r"$k_1$", r"$k_2$", r"$k_3$")):
         _lane_kernel(ax, gx, 3.0, y_gpu, h, BLUE, label=lab, fontsize=12)
 
-    # The naive timer stop vs the synchronized stop.
+    # The stop without a barrier vs the stop after a barrier.
     t_naive = launches[-1][0] + 0.75
     t_sync = starts[-1] + 3.0
     ax.axvline(t_naive, color=ORANGE, lw=1.8, ls="--", zorder=2)
     ax.text(t_naive + 0.2, y_cpu + h / 2 + 0.42,
-            "naive timer stops here:\nwork only enqueued",
+            "timer without a barrier:\nwork only enqueued",
             ha="left", va="bottom", fontsize=13, color=ORANGE_T)
     ax.axvline(t_sync, color=GREEN, lw=1.8, ls="--", zorder=2)
     ax.text(t_sync - 0.15, y_cpu + h / 2 + 0.42,
-            "synchronize()\nreturns here",
+            "barrier returns here:\nwork done",
             ha="right", va="bottom", fontsize=13, color=GREEN_T)
 
     ax.annotate("", xy=(T, y_gpu - h / 2 - 0.5), xytext=(0, y_gpu - h / 2 - 0.5),
@@ -176,14 +182,14 @@ def fig_async_timeline():
 
 def fig_regimes():
     """The three-regime diagnostic: where a training step's wall-clock time
-    actually goes.  One bar per regime, decomposed into arithmetic (busy tensor
-    cores), memory traffic, and idle-waiting-for-Python; each regime names its
-    fix and the section that teaches it."""
+    goes.  One bar per regime, decomposed into compute-bound kernels,
+    bandwidth-bound kernels, and idle gaps waiting for Python; each regime
+    names its standard fix."""
     fig, ax = plt.subplots(figsize=(9.2, 3.1))
 
     rows = [
         ("compute-bound",   [(0.82, BLUE), (0.13, ORANGE), (0.05, GRAY)],
-         "the good regime — or drop to a cheaper format"),
+         "lower precision, more devices"),
         ("bandwidth-bound", [(0.18, BLUE), (0.72, ORANGE), (0.10, GRAY)],
          "fuse kernels: fewer trips to memory"),
         ("overhead-bound",  [(0.10, BLUE), (0.12, ORANGE), (0.78, GRAY)],
@@ -203,8 +209,9 @@ def fig_regimes():
 
     # Legend row (manual, below the bars).
     lx = 0.0
-    for color, lab in ((BLUE, "arithmetic"), (ORANGE, "memory traffic"),
-                       (GRAY, "idle / launch overhead")):
+    for color, lab in ((BLUE, "compute-bound kernels"),
+                       (ORANGE, "bandwidth-bound kernels"),
+                       (GRAY, "idle gaps")):
         _lane_kernel(ax, lx, 0.28, -0.95, 0.28, color)
         ax.text(lx + 0.38, -0.95, lab, ha="left", va="center", fontsize=12,
                 color="black")
@@ -219,20 +226,20 @@ def fig_regimes():
 # 13.2  Hardware                                                              #
 # =========================================================================== #
 
-def _log_ladder(name, rows, xlabel, xlim, ticks, highlight=None,
+def _log_ladder(name, rows, xlabel, xlim, ticks, highlight=(),
                 figsize=None):
     """A horizontal log-scale bar 'ladder'.  ``rows`` = [(label, value,
     pretty-value)], drawn bottom-to-top in the given order (smallest first
     reads as climbing the ladder).  ``ticks`` = [(value, label)] for the
     x-axis, in readable units rather than powers of ten; a faint gridline
-    marks every decade.  ``highlight`` = index into rows drawn in ORANGE."""
+    marks every decade.  ``highlight`` = indices into rows drawn in ORANGE."""
     n = len(rows)
     if figsize is None:
         figsize = (7.8, 0.52 * n + 1.3)
     fig, ax = plt.subplots(figsize=figsize)
     x0 = xlim[0]
     for i, (label, value, pretty) in enumerate(rows):
-        color = ORANGE if i == highlight else BLUE
+        color = ORANGE if i in highlight else BLUE
         ax.barh(i, value - x0, left=x0, height=0.62, color=color, zorder=3)
         # Fixed on-screen gap after the bar end (independent of how many
         # decades the axis spans); a white backing keeps gridlines off it.
@@ -263,62 +270,71 @@ def _log_ladder(name, rows, xlabel, xlim, ticks, highlight=None,
 
 
 def fig_bandwidth_ladder():
-    """The 2026 bandwidth ladder (June-2026-verified MLSS numbers): every chip
-    boundary costs roughly an order of magnitude.  Our own card (GDDR6X) sits
-    two rungs below a B200's HBM3e."""
+    """Bandwidth of the data paths a training job uses, late 2026 (links per
+    direction): every chip boundary costs roughly an order of magnitude.
+    The build machine's own two paths, its GDDR6X and its PCIe 4.0 x16
+    link, are highlighted.  Sources: NVIDIA RTX 4090 (Ada whitepaper v2.02),
+    DGX B200 and NVLink pages (8 TB/s; 1.8 TB/s per GPU = 900 GB/s each
+    way), PCI-SIG (PCIe 4.0/6.0 x16 per direction)."""
     rows = [
-        ("NVMe SSD (seq. read)", 14, "14 GB/s"),
-        ("800G NIC", 100, "100 GB/s"),
+        (r"NVMe SSD (PCIe 5.0 $\times$4)", 14, "14 GB/s"),
+        (r"PCIe 4.0 $\times$16 (RTX 4090)", 32, "32 GB/s"),
+        ("800G network card", 100, "100 GB/s"),
         (r"PCIe 6.0 $\times$16", 128, "128 GB/s"),
-        ("DDR5 socket", 500, "500 GB/s"),
+        ("DDR5 (one CPU socket)", 500, "0.5 TB/s"),
+        ("NVLink 5 (per GPU)", 900, "0.9 TB/s"),
         ("GDDR6X (RTX 4090)", 1008, "1.0 TB/s"),
-        ("NVLink 5 (per GPU)", 1800, "1.8 TB/s"),
-        ("HBM3e (B200)", 8000, "8.0 TB/s"),
+        ("HBM3e (B200)", 8000, "8 TB/s"),
     ]
     _log_ladder("mdl-perf-bandwidth-ladder", rows,
-                "bandwidth (log scale)", (5, 40000),
+                "bandwidth (log scale; links: one direction)", (5, 40000),
                 [(10, "10 GB/s"), (100, "100 GB/s"), (1000, "1 TB/s"),
-                 (10000, "10 TB/s")], highlight=6)
+                 (10000, "10 TB/s")], highlight=(1, 6))
 
 
 def fig_latency_ladder():
-    """The 2026 latency ladder, from on-chip SRAM to a WAN round trip — about
-    eight orders of magnitude.  The kernel-launch rung is the one this chapter
-    keeps meeting: it is why small ops cannot keep a GPU fed."""
+    """Latencies from an L1 hit to a WAN round trip: about eight orders of
+    magnitude.  GPU cache and memory latencies are the RTX 4090
+    microbenchmarks of Luo et al. (2024) at boost clock; the CUDA launch cost
+    is NVIDIA's CUDA Graph guide (1-5 us); the highlighted rung is the host
+    cost of one eager framework operation dispatched from Python, the cost
+    the overhead regime is made of."""
     rows = [
-        ("SRAM / L1", 1, "1 ns"),
-        ("GPU L2", 75, "75 ns"),
-        ("DDR5 access", 90, "90 ns"),
-        ("HBM access", 300, "300 ns"),
-        ("NVLink hop", 1.5e3, r"1.5 $\mu$s"),
-        ("RDMA round trip", 5e3, r"5 $\mu$s"),
-        ("CUDA kernel launch", 8e3, r"5–15 $\mu$s"),
-        ("NVMe read", 5e4, r"50 $\mu$s"),
-        ("WAN round trip", 6e7, "60 ms"),
+        ("CPU L1 hit", 1, "1 ns"),
+        ("GPU L1 / shared memory", 15, "~15 ns"),
+        ("DDR5 access (CPU)", 90, "~90 ns"),
+        ("GPU L2 hit", 100, "~100 ns"),
+        ("GPU memory access", 250, "200–300 ns"),
+        ("CUDA kernel launch", 3e3, "1–5 µs"),
+        ("RDMA network round trip", 4e3, "2–5 µs"),
+        ("eager operation from Python", 1e4, "5–15 µs"),
+        ("NVMe read", 7e4, "50–100 µs"),
+        ("WAN round trip", 6e7, "~60 ms"),
     ]
     _log_ladder("mdl-perf-latency-ladder", rows,
-                "latency (log scale)", (0.6, 6e8),
-                [(1, "1 ns"), (1e3, r"1 $\mu$s"), (1e6, "1 ms"),
-                 (1e8, "100 ms")], highlight=6)
+                "latency (log scale)", (0.6, 1.6e9),
+                [(1, "1 ns"), (1e3, "1 µs"), (1e6, "1 ms"), (1e9, "1 s")],
+                highlight=(7,))
 
 
 def fig_energy_ladder():
-    """Energy per operation (Horowitz ISSCC 2014 / Dally, 45 nm-class
-    magnitudes): arithmetic is nearly free; fetching operands from DRAM is the
-    budget — one 64-bit DRAM read costs about 500 fp32 multiplies."""
+    """Energy per operation (Horowitz, ISSCC 2014, 45 nm): arithmetic is
+    nearly free; fetching operands from DRAM is the budget -- one 64-bit DRAM
+    read costs about 500 fp32 multiplies.  Larger SRAMs cost more per access
+    because the bits travel farther."""
     rows = [
         ("int8 add", 0.03, "0.03 pJ"),
         ("int8 multiply", 0.2, "0.2 pJ"),
         ("fp16 multiply", 1.1, "1.1 pJ"),
         ("fp32 multiply", 3.7, "3.7 pJ"),
-        ("SRAM access (8 KB)", 10, "10 pJ"),
-        ("on-chip data move", 50, "50 pJ"),
-        ("DRAM read (64-bit)", 2000, "~2,000 pJ"),
+        ("64-bit SRAM read (8 KB array)", 10, "10 pJ"),
+        ("64-bit SRAM read (1 MB array)", 100, "100 pJ"),
+        ("64-bit DRAM read", 2000, "1,300–2,600 pJ"),
     ]
     _log_ladder("mdl-perf-energy-ladder", rows,
                 "energy per operation (pJ, log scale)", (0.02, 30000),
                 [(0.1, "0.1"), (1, "1"), (10, "10"), (100, "100"),
-                 (1000, "1,000"), (10000, "10,000")], highlight=6)
+                 (1000, "1,000"), (10000, "10,000")], highlight=(6,))
 
 
 def fig_memory_hierarchy():
@@ -327,8 +343,8 @@ def fig_memory_hierarchy():
     fig, ax = plt.subplots(figsize=(8.8, 4.6))
 
     levels = [
-        ("on-die SRAM (registers, L1/L2)", "~0.1–0.24 GB · tens of TB/s", 0.30),
-        ("GPU memory (HBM / GDDR)", "24–192 GB · 1–8 TB/s", 0.24),
+        ("on-die SRAM (registers, L1/L2)", "~0.1 GB · tens of TB/s", 0.30),
+        ("GPU memory (HBM / GDDR)", "24–288 GB · 1–8 TB/s", 0.24),
         ("host DRAM", "0.1–2 TB · ~0.5 TB/s", 0.19),
         ("NVMe SSD", "several TB · ~14 GB/s", 0.14),
         ("network / object store", "unbounded · ~0.1 TB/s per NIC", 0.09),
@@ -475,7 +491,7 @@ def fig_pcie_topology():
     """This book's own build box (``nvidia-smi topo``): four RTX 4090s in
     pairs behind two PCIe host bridges, no P2P and no NVLink — every
     GPU-to-GPU byte is staged through host memory."""
-    fig, ax = plt.subplots(figsize=(9.0, 5.25))
+    fig, ax = plt.subplots(figsize=(9.0, 4.25))
 
     _box(ax, 5.0, 4.55, 4.6, 0.95, "CPU + host DRAM", GRAY, fontsize=14,
          fc=fl.T.PANEL)
@@ -491,7 +507,7 @@ def fig_pcie_topology():
     # peek out past its arrowhead).
     ax.plot([3.70, 2.7], [1.67, 2.57], color=GRAY, lw=1.6, zorder=1)
     ax.plot([8.70, 7.3], [1.67, 2.57], color=GRAY, lw=1.6, zorder=1)
-    ax.text(1.62, 2.08, r"PCIe 4 $\times$16", ha="right", va="center",
+    ax.text(1.62, 2.08, r"PCIe 4.0 $\times$16", ha="right", va="center",
             fontsize=12, color="black")
 
     # The staged path GPU0 -> host -> GPU2 overlays the gray links exactly
@@ -508,12 +524,7 @@ def fig_pcie_topology():
                                 shrinkA=0, shrinkB=0, mutation_scale=18),
                 zorder=2)
 
-    ax.text(5.0, 0.0,
-            "no P2P, no NVLink: every GPU$\\to$GPU byte is staged through "
-            "host DRAM\n(PCIe-limited: tens of GB/s for a raw copy)",
-            ha="center", va="center", fontsize=13, color="black")
-
-    fl.clean_axes(ax, lim=((0.2, 9.8), (-0.5, 5.25)), hide=True, equal=False)
+    fl.clean_axes(ax, lim=((0.2, 9.8), (0.5, 5.15)), hide=True, equal=False)
     fl.save(fig, "mdl-perf-pcie-topology")
 
 
@@ -569,59 +580,109 @@ def fig_compute_graph():
 
 
 def fig_compile_pipelines():
-    """The two capture philosophies, side by side: torch.compile captures
-    Python bytecode with guards and falls back on a graph break; jax.jit
-    traces the function into a jaxpr and recompiles on new shapes."""
-    fig, ax = plt.subplots(figsize=(11.05, 3.25))
-
-    bw = 1.60      # box width; box text and row labels share one size
-    def pipeline(y, stages):
-        xs = np.linspace(2.35, 9.95, len(stages))
-        for x, s in zip(xs, stages):
-            _box(ax, x, y, bw, 0.70, s, BLUE, fc=fl.T.BLUE.tint, fontsize=12)
-        for a, b in zip(xs[:-1], xs[1:]):
-            ax.annotate("", xy=(b - bw / 2 - 0.03, y),
-                        xytext=(a + bw / 2 + 0.03, y),
-                        arrowprops=dict(arrowstyle="->", color="black",
-                                        lw=1.3))
-        return xs
-
-    y_pt, y_jx = 2.40, 0.75
-    ax.text(0.0, y_pt, "torch.compile", ha="left", va="center",
-            fontsize=12, color="black")
-    xs_pt = pipeline(y_pt, ["Python\nbytecode", "Dynamo\ncapture, guards",
-                            "AOTAutograd\nfwd + bwd", "Inductor",
-                            "Triton / C++\nkernels"])
-    ax.text(0.0, y_jx, "jax.jit", ha="left", va="center", fontsize=12,
-            color="black")
-    xs_jx = pipeline(y_jx, ["Python\nfunction", "trace", "jaxpr", "XLA\ncompiler",
-                            "fused\nexecutable"])
-
-    # torch: graph break = fall back to Python, keep going.  The loop leaves
-    # the top of the Dynamo box and lands on the top of the Python box.
-    top = 0.37
-    ax.annotate("", xy=(xs_pt[0], y_pt + top), xytext=(xs_pt[1], y_pt + top),
+    """Graph capture in one picture: the first call runs the function on
+    placeholders that record each tensor operation, a compiler turns the
+    recorded graph into kernels, and later calls with the same shapes and
+    dtypes reuse them (a note under the kernels).  Two dashed paths mark the
+    limits: a branch on a tensor's value cannot be recorded, and a new shape
+    or dtype sends the call back to capture."""
+    fig, ax = plt.subplots(figsize=(10.4, 3.3))
+    bw, bh, y = 1.62, 0.78, 1.30
+    stages = ["Python\nfunction", "capture\n(placeholders)", "graph",
+              "compiler\n(fuse, schedule)", "compiled\nkernels"]
+    xs = np.linspace(1.0, 9.4, len(stages))
+    for x, s in zip(xs, stages):
+        _box(ax, x, y, bw, bh, s, BLUE, fc=fl.T.BLUE.tint, fontsize=12.5)
+    for a, b in zip(xs[:-1], xs[1:]):
+        ax.annotate("", xy=(b - bw / 2 - 0.03, y), xytext=(a + bw / 2 + 0.03, y),
+                    arrowprops=dict(arrowstyle="->", color="black", lw=1.3))
+    top = bh / 2 + 0.04
+    # Above: a branch on a value cannot become part of the graph.
+    ax.annotate("", xy=(xs[0], y + top), xytext=(xs[1], y + top),
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
                                 linestyle="--", shrinkA=0, shrinkB=0,
-                                connectionstyle="arc3,rad=0.45"))
-    # Left-anchored just right of the loop's tail, so it reads as the
-    # loop's label rather than the boxes' below it.
-    ax.text(xs_pt[1] + 0.12, y_pt + 0.80,
-            "graph break: run that bit in Python, resume capture",
-            ha="left", va="center", fontsize=12, color=ORANGE_T)
-    # jax: new shape -> retrace, from the bottom of the executable back to
-    # the bottom of the trace box.
-    ax.annotate("", xy=(xs_jx[1], y_jx - top), xytext=(xs_jx[-1], y_jx - top),
+                                connectionstyle="arc3,rad=0.5"))
+    ax.text(xs[1] + 0.25, y + 0.95,
+            "branch on a tensor's value: cannot be recorded",
+            ha="left", va="center", fontsize=12.5, color=ORANGE_T)
+    # Below: a new input shape or dtype sends the call back to capture; a
+    # note under the kernels names the other path, reuse.
+    x_from = xs[-1] - 0.45
+    ax.annotate("", xy=(xs[1], y - top), xytext=(x_from, y - top),
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
                                 linestyle="--", shrinkA=0, shrinkB=0,
                                 connectionstyle="arc3,rad=-0.12"))
-    ax.text((xs_jx[1] + xs_jx[-1]) / 2, y_jx - 1.10,
-            "new input shape or dtype: retrace and recompile",
-            ha="center", va="center", fontsize=12, color=ORANGE_T)
-
-    fl.clean_axes(ax, lim=((-0.2, 10.85), (-0.55, 3.40)), hide=True,
+    ax.text((xs[1] + x_from) / 2, y - 0.98,
+            "new shape or dtype: capture again",
+            ha="center", va="center", fontsize=12.5, color=ORANGE_T)
+    ax.text(xs[-1] + 0.12, y - top - 0.36,
+            "same shapes and\ndtypes: reuse",
+            ha="center", va="center", fontsize=12.5, color="black",
+            linespacing=1.1)
+    fl.clean_axes(ax, lim=((0.05, 10.35), (0.10, 2.45)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-perf-compile-pipelines")
+
+
+def fig_fusion():
+    """Memory traffic of the elementwise chain
+    0.5 x (1 + tanh(0.8 (x + 0.04 x^3))) on a 64 MB array.  Eager execution
+    runs eight kernels that read ten arrays and write eight (18 x 64 MB);
+    the fused kernel reads x once and writes the result once (2 x 64 MB)."""
+    fig, ax = plt.subplots(figsize=(10.4, 4.9))
+    ops = [("mul", 1), ("pow", 1), ("mul", 1), ("add", 2), ("mul", 1),
+           ("tanh", 1), ("add", 1), ("mul", 2)]
+    bw, bh = 0.86, 0.56
+    xs = 1.55 + 1.08 * np.arange(len(ops))
+    READ, WRITE = BLUE, ORANGE
+
+    def hbm(y):
+        ax.add_patch(Rectangle((0.95, y - 0.17), 9.0, 0.34, fc=fl.T.PANEL,
+                               ec=GRAY, lw=1.0, zorder=2))
+        ax.text(0.85, y, "GPU memory", ha="right", va="center",
+                fontsize=12.5, color="black")
+
+    def link(x, y0, y1, color):
+        ax.annotate("", xy=(x, y1), xytext=(x, y0),
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1.5,
+                                    mutation_scale=11, shrinkA=0, shrinkB=0))
+
+    # Eager: one kernel per operation, every result written back.
+    yk, ym = 3.95, 2.85
+    hbm(ym)
+    ax.text(0.85, yk, "eager", ha="right", va="center", fontsize=13,
+            color="black")
+    for x, (name, nin) in zip(xs, ops):
+        _box(ax, x, yk, bw, bh, name, BLUE, fc=fl.T.BLUE.tint, fontsize=12.5)
+        reads = [x - 0.24] if nin == 1 else [x - 0.30, x - 0.14]
+        for xr in reads:
+            link(xr, ym + 0.17, yk - bh / 2 - 0.04, READ)
+        link(x + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
+    ax.text(5.45, ym - 0.52, "8 kernels: 10 reads + 8 writes of 64 MB "
+            "= 1.15 GB moved", ha="center", va="center", fontsize=12.5,
+            color="black")
+
+    # Fused: one kernel, intermediates stay in registers.
+    yk, ym = 1.35, 0.25
+    hbm(ym)
+    ax.text(0.85, yk, "fused", ha="right", va="center", fontsize=13,
+            color="black")
+    _box(ax, (xs[0] + xs[-1]) / 2, yk, xs[-1] - xs[0] + bw, bh,
+         "mul · pow · mul · add · mul · tanh · add · mul   (in registers)",
+         GREEN, fc=fl.T.GREEN.tint, fontsize=12.5)
+    link(xs[0] - 0.24, ym + 0.17, yk - bh / 2 - 0.04, READ)
+    link(xs[-1] + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
+    ax.text(5.45, ym - 0.52, "1 kernel: 1 read + 1 write of 64 MB "
+            "= 128 MB moved", ha="center", va="center", fontsize=12.5,
+            color="black")
+    # Key for the arrow colours.
+    ax.text(0.85, 3.55, "read", ha="right", va="center", fontsize=12.5,
+            color=BLUE_T)
+    ax.text(0.85, 3.25, "write", ha="right", va="center", fontsize=12.5,
+            color=ORANGE_T)
+    fl.clean_axes(ax, lim=((-0.75, 10.05), (-0.45, 4.35)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-perf-fusion")
 
 
 # =========================================================================== #
@@ -653,17 +714,18 @@ def fig_memory_anatomy():
     ax.plot([0, t[ti]], [total[ti], total[ti]], color="black", lw=1.1,
             ls="--", zorder=4)
     ax.plot([t[ti]], [total[ti]], "o", color="black", ms=5, zorder=5)
-    ax.text(0.15, total[ti] + 0.18,
-            "peak: activations full, backward beginning",
+    # Label to the right of the apex, above the falling activation edge.
+    ax.text(t[ti] + 0.25, total[ti] + 0.12,
+            "peak: start of the backward pass",
             ha="left", va="bottom", fontsize=13, color="black")
 
-    # Band labels.
-    ax.text(2.0, 0.5, "parameters", ha="center", va="center", fontsize=13,
-            color="black")
-    ax.text(2.0, 2.0, "optimizer states ($\\mathbf{m}$, $\\mathbf{v}$)",
+    # Band labels, with the bytes each band holds for N parameters.
+    ax.text(2.0, 0.5, "weights: $4N$", ha="center", va="center",
+            fontsize=13, color="black")
+    ax.text(2.0, 2.0, "Adam's moments $\\mathbf{m}$, $\\mathbf{v}$: $8N$",
             ha="center", va="center", fontsize=13, color="black")
-    ax.text(6.6, 3.32, "gradients", ha="center", va="center", fontsize=13,
-            color="black")
+    ax.text(6.6, 3.32, "gradients: $4N$", ha="center", va="center",
+            fontsize=13, color="black")
     ax.text(2.7, 3.85, "activations", ha="center", va="center", fontsize=13,
             color="black")
 
@@ -677,7 +739,7 @@ def fig_memory_anatomy():
 
     ax.set_xlim(0, 9.5)
     ax.set_ylim(0, 6.6)
-    ax.set_ylabel("memory (multiples of parameter bytes)", fontsize=12.5)
+    ax.set_ylabel("memory (bytes, in units of $4N$)", fontsize=12.5)
     ax.set_xticks([])
     ax.spines["left"].set_color("black")
     ax.spines["bottom"].set_color("black")
@@ -756,7 +818,7 @@ def fig_data_parallel():
     apply the same update everywhere."""
     fig, ax = plt.subplots(figsize=(8.4, 4.6))
 
-    _box(ax, 4.2, 4.35, 3.6, 0.7, "minibatch ($B$ samples)", GRAY,
+    _box(ax, 4.2, 4.35, 3.6, 0.7, "minibatch ($B$ examples)", GRAY,
          fc=fl.T.PANEL, fontsize=13)
     for cx, lab, half in ((2.0, "GPU 0", "$B/2$"), (6.4, "GPU 1", "$B/2$")):
         _box(ax, cx, 2.55, 3.3, 1.5,
@@ -870,20 +932,36 @@ def fig_ring_allreduce():
     for g in range(k):
         axes[1, 0].text(-0.18, -g * 0.6 + 0.28, f"GPU {g}", ha="right",
                         va="center", fontsize=12, color="black")
-    # Last bottom panel: the accounting.
+    # Last bottom panel: the key for the outline, the ring itself (who sends
+    # to whom), then the byte accounting (inline fractions: stacked ones
+    # shrink to illegibility at book width).
     axl = axes[1, 3]
-    # Key for the outline, the ring order, then the byte accounting (inline
-    # fractions: stacked ones shrink to illegibility at book width).
-    lines_y = [0.95, 0.38, -0.42, -0.95, -1.55]
-    axl.add_patch(Rectangle((-0.75, lines_y[0] - 0.165), 0.33, 0.33,
+    axl.add_patch(Rectangle((-0.75, 1.12 - 0.165), 0.33, 0.33,
                             fc="white", ec=fl.T.INK, lw=2.0))
-    axl.text(-0.3, lines_y[0], "received this step", ha="left",
+    axl.text(-0.3, 1.12, "received this step", ha="left",
              va="center", fontsize=12.5, color="black")
-    for y, txt in zip(lines_y[1:], (
-            r"ring: GPU 0$\to$1$\to$2$\to$3$\to$0",
-            "per link, per phase:",
-            r"$(k-1)/k \cdot N$ bytes",
-            r"total $2(k-1)/k \cdot N \leq 2N$")):
+    # The ring: GPU g sends to GPU g+1, clockwise from the top.
+    from matplotlib.patches import Circle, FancyArrowPatch
+    cx, cy, R, r = -0.16, -0.13, 0.72, 0.22
+    ang = [np.pi / 2 - g * np.pi / 2 for g in range(k)]
+    for g, a in enumerate(ang):
+        x, y = cx + R * np.cos(a), cy + R * np.sin(a)
+        axl.add_patch(Circle((x, y), r, fc=fl.T.BLUE.tint, ec=BLUE, lw=1.4,
+                             zorder=3))
+        axl.text(x, y, str(g), ha="center", va="center", fontsize=12,
+                 color="black", zorder=4)
+    gap = (r + 0.04) / R            # leave the node circles clear
+    for g in range(k):
+        a0, a1 = ang[g] - gap, ang[g] - np.pi / 2 + gap
+        axl.add_patch(FancyArrowPatch(
+            (cx + R * np.cos(a0), cy + R * np.sin(a0)),
+            (cx + R * np.cos(a1), cy + R * np.sin(a1)),
+            connectionstyle="arc3,rad=-0.22", arrowstyle="-|>",
+            mutation_scale=12, color=fl.T.INK, lw=1.3, zorder=2))
+    axl.text(cx + R + r + 0.16, cy, "GPU $g$ sends to\nGPU $(g{+}1)$ mod 4",
+             ha="left", va="center", fontsize=12, color="black")
+    for y, txt in ((-1.31, r"per phase: $(k-1)N/k$ bytes"),
+                   (-1.76, r"total $2(k-1)N/k \leq 2N$")):
         axl.text(-0.75, y, txt, ha="left", va="center", fontsize=12.5,
                  color="black")
     fl.clean_axes(axl, lim=((-1.25, 2.8), (-1.95, 1.35)), hide=True)
@@ -903,8 +981,8 @@ def fig_ddp_overlap():
                                           "hspace": 0.05})
 
     h = 0.5
-    layers = [(0.0, 1.5, r"$\nabla L_4$"), (1.5, 3.0, r"$\nabla L_3$"),
-              (3.0, 4.5, r"$\nabla L_2$"), (4.5, 6.0, r"$\nabla L_1$")]
+    layers = [(0.0, 1.5, "layer 4"), (1.5, 3.0, "layer 3"),
+              (3.0, 4.5, "layer 2"), (4.5, 6.0, "layer 1")]
 
     def lanes(ax, comm, title, total, ybot):
         for (x0, x1, lab) in layers:
@@ -927,7 +1005,7 @@ def fig_ddp_overlap():
           "no overlap: wait for the whole backward, then communicate", 10.0,
           -0.55)
     lanes(axes[1], [(3.0, 5.6, "bucket 1"), (6.0, 8.0, "bucket 2")],
-          "DDP bucketing: communication overlaps the rest of the backward",
+          "bucketing: communication overlaps the rest of the backward",
           8.0, -1.0)
     # Faint copy of the upper panel's finish line, so "time saved" spans two
     # visible markers.
@@ -947,34 +1025,31 @@ def fig_fsdp_lifecycle():
     rank); the full block is materialized by an all-gather only while it
     computes, then freed; gradients leave via reduce-scatter, so each rank
     keeps only its shard."""
-    fig, (ax, axm) = plt.subplots(2, 1, figsize=(9.2, 3.7), sharex=True,
-                                  gridspec_kw={"height_ratios": [0.85, 1.0],
+    fig, (ax, axm) = plt.subplots(2, 1, figsize=(9.2, 3.3), sharex=True,
+                                  gridspec_kw={"height_ratios": [0.6, 1.0],
                                                "hspace": 0.12})
 
     # Phase widths leave every 12.5-pt label clear padding in its box.
     events = [
-        (0.0, 1.55, "all-gather\nparams", ORANGE, "black"),
+        (0.0, 1.55, "all-gather\nweights", ORANGE, "black"),
         (1.55, 3.3, "forward", BLUE, "white"),
         (3.3, 4.1, "free", GRAY, "white"),
-        (4.4, 5.95, "all-gather\nparams", ORANGE, "black"),
+        (4.4, 5.95, "all-gather\nweights", ORANGE, "black"),
         (5.95, 7.45, "backward", BLUE, "white"),
-        (7.45, 9.7, "reduce-scatter\ngrads", ORANGE, "black"),
-        (9.7, 10.5, "free", GRAY, "white"),
+        (7.45, 8.25, "free", GRAY, "white"),
+        (8.25, 10.5, "reduce-scatter\ngrads", ORANGE, "black"),
     ]
     for x0, x1, lab, color, tc in events:
         _lane_kernel(ax, x0 + 0.03, (x1 - x0) - 0.06, 0.5, 0.62, color,
                      label=lab, fontsize=12.5, tc=tc)
-    ax.text(0.0, 1.12, "one block, one step (the other blocks stay sharded "
-            "the whole time)", ha="left", va="center", fontsize=13,
-            color="black")
-    fl.clean_axes(ax, lim=((-0.3, 10.7), (0.1, 1.3)), hide=True,
+    fl.clean_axes(ax, lim=((-0.3, 10.7), (0.1, 0.9)), hide=True,
                   equal=False)
 
     # Memory trace of this block's parameter bytes on one rank.
     t = np.linspace(0, 10.5, 500)
     full, shard = 1.0, 1.0 / 4
     mem = np.full_like(t, shard)
-    for (g0, g1, f0, f1) in ((0.0, 1.55, 3.3, 4.1), (4.4, 5.95, 9.7, 10.5)):
+    for (g0, g1, f0, f1) in ((0.0, 1.55, 3.3, 4.1), (4.4, 5.95, 7.45, 8.25)):
         rise = (t >= g0) & (t < g1)
         mem[rise] = shard + (full - shard) * (t[rise] - g0) / (g1 - g0)
         mem[(t >= g1) & (t < f0)] = full
@@ -982,15 +1057,16 @@ def fig_fsdp_lifecycle():
         mem[fall] = full - (full - shard) * (t[fall] - f0) / (f1 - f0)
     axm.plot(t, mem, color=BLUE, lw=2.2, zorder=3)
     # Reference levels stop at the trace's end so their labels sit clear.
-    for level, lab in ((shard, r"sharded: $P/k$ per rank"),
-                       (full, r"materialized: $P$")):
+    for level, lab in ((shard, r"sharded: $1/k$ of the block"),
+                       (full, "gathered: the whole block")):
         axm.plot([-0.3, 10.5], [level, level], color=GRAY, lw=1.0, ls="--",
                  zorder=2)
         axm.text(10.7, level, lab, ha="left", va="center", fontsize=12.5,
                  color="black")
     axm.set_ylim(0, 1.35)
     axm.set_xlim(-0.3, 10.7)
-    axm.set_ylabel("this block's\nparam bytes", fontsize=12.5)
+    axm.set_ylabel("this block's\nweights on\none GPU", fontsize=12.5)
+    axm.set_xlabel("time", fontsize=12.5, color="black", loc="right")
     axm.set_xticks([])
     axm.set_yticks([])
     for s in ("left", "bottom"):
@@ -1016,6 +1092,7 @@ FIGURES = [
     fig_pcie_topology,
     fig_compute_graph,
     fig_compile_pipelines,
+    fig_fusion,
     fig_memory_anatomy,
     fig_splitting,
     fig_data_parallel,

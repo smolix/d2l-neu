@@ -170,6 +170,7 @@ book:
         - chapter_computational-performance/multiple-gpus.qmd
         - chapter_computational-performance/multi-gpu-practice.qmd
         - chapter_computational-performance/fast-transformer.qmd
+        - chapter_computational-performance/further-reading.qmd
         - chapter_reinforcement-learning/index.qmd
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd

@@ -1250,6 +1250,7 @@ CHAPTER_NUMBERING = {
     'chapter_computational-performance/multiple-gpus.md': [13, 5],
     'chapter_computational-performance/multi-gpu-practice.md': [13, 6],
     'chapter_computational-performance/fast-transformer.md': [13, 7],
+    'chapter_computational-performance/further-reading.md': [13, 8],
     'chapter_reinforcement-learning/index.md': [14],
     'chapter_reinforcement-learning/mdp.md': [14, 1],
     'chapter_reinforcement-learning/value-iter.md': [14, 2],

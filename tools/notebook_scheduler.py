@@ -53,7 +53,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from runtime_env import notebook_resource, file_uses_gpu
+from runtime_env import PINNED_GPU_NOTEBOOKS, notebook_resource, file_uses_gpu
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS_DIR = ROOT / "_notebooks"
@@ -311,7 +311,7 @@ class Scheduler:
         elif spg == "all":
             # n whole cards: each chosen GPU entirely free, at its own full
             # capacity (so the request means the same on 16 GB and 24 GB cards).
-            cand = [g for g in range(self.num_gpus)
+            cand = [g for g in self._gpu_pool(it, ngpu)
                     if self.gpu_free[g] == self.gpu_cap[g]
                     and self._live_ok(g, self.gpu_cap[g])]
             if len(cand) < ngpu:
@@ -320,7 +320,7 @@ class Scheduler:
             per_gpu_spg = [self.gpu_cap[g] for g in chosen]
         else:
             # GPUs with at least spg free, most-free first (spread load)
-            cand = sorted((g for g in range(self.num_gpus)
+            cand = sorted((g for g in self._gpu_pool(it, ngpu)
                            if self.gpu_free[g] >= spg and self._live_ok(g, spg)),
                           key=lambda g: self.gpu_free[g], reverse=True)
             if len(cand) < ngpu:
@@ -357,6 +357,15 @@ class Scheduler:
         return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": grp,
                 "extra_env": env, "_": ("gpu", chosen, per_gpu_spg),
                 "_fw": it.fw}
+
+    def _gpu_pool(self, it, ngpu):
+        """GPUs the item may be placed on: its pin (PINNED_GPU_NOTEBOOKS) when
+        the host has every pinned GPU, else all of them. A pinned item whose
+        GPUs are busy waits for them rather than taking others."""
+        pin = PINNED_GPU_NOTEBOOKS.get(it.rel)
+        if pin and len(pin) >= ngpu and all(g < self.num_gpus for g in pin):
+            return list(pin)
+        return list(range(self.num_gpus))
 
     def _release(self, asg):
         self.fw_inflight[asg["_fw"]] -= 1

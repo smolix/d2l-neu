@@ -4,87 +4,116 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c71adb386531ca631ce5b18aa1355a728ba5582d3cedadc039dc7f139cd7cd7f",
+    "d2l_lib_fingerprint": "sha256:5803df2f40e426367fdd6277cf46ab48eaa5b90356cbb2a6f128249d8f3d17df",
     "max_inline_bytes": 0
   },
   "cells": {
     "multi-gpu-practice-multi-gpu-in-practice": {
-      "code_fingerprint": "sha256:07cdb86ce8abd2c1121a6d376f65239989dcfcca4ab95414b301410f113a9d67",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'0'"
-        }
-      ]
-    },
-    "multi-gpu-practice-ddp-really-run-1": {
-      "code_fingerprint": "sha256:a984029776ca2c5b096ca7d77c076a5dadca424dfe3c0aa9d5a4e0990edf83be",
+      "code_fingerprint": "sha256:ab9ebbf9baa32b2951425af7cac659300bcbb56d67c0c4c0fc3aae0eadda7c2f",
       "kind": "text",
       "outputs": []
     },
-    "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
-      "code_fingerprint": "sha256:72582bc5104cc45a9ee840400ee800dbe5ccd0ae63aba61f67e0d65966e2aed3",
+    "multi-gpu-practice-ddp-really-run-1": {
+      "code_fingerprint": "sha256:ed57f911704033d6c00875a223a59e83fd5926410a3f41ffd11429e3aa271758",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-the-training-step-1": {
+      "code_fingerprint": "sha256:531c4d2f7c9d6bc31c3342fa8f72e40cd85919f3c9d86dea3e3e9c1fba35649e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "JAX shards by annotation; the next subsection is the demo\n"
+          "text": "11.2M parameters, N = 45 MB\n"
         }
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-1": {
-      "code_fingerprint": "sha256:d68da5f5cec91b2883b9c2804547031e796ebe2d954e0cb7864f25b22418b1e3",
+      "code_fingerprint": "sha256:dc2739c01a01add2243cd5d26e69e1284035d979648e801a5da736480f393c09",
       "kind": "text",
       "outputs": []
     },
-    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-2": {
-      "code_fingerprint": "sha256:8c0ef81d70fe47042b184a046242ba487960c395b8eb5285dac17f70fc76d593",
+    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5": {
+      "code_fingerprint": "sha256:b6d2d9fed977f25d5f9cb4578ed1ba591b08aa5a88c39dc830e3b9365ed0366a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one sharded step: loss 2.84\nthe batch, split along its leading axis:\n┌──────────────────────────────────────────────────────────────────────────────┐\n│                                    GPU 0                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 1                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 2                                     │\n├──────────────────────────────────────────────────────────────────────────────┤\n│                                    GPU 3                                     │\n└──────────────────────────────────────────────────────────────────────────────┘\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "a weight after the step, still replicated:\n┌───────────┐\n│           │\n│           │\n│           │\n│           │\n│GPU 0,1,2,3│\n│           │\n│           │\n│           │\n│           │\n└───────────┘\n"
+          "text": "largest update 2.1e-02\nlargest difference between one and two GPUs: 3.0e-05\n"
         }
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3": {
-      "code_fingerprint": "sha256:7e51e3971b631329dc88effad216c8d3c33cae0933119503ddb598782db3f807",
+      "code_fingerprint": "sha256:041296d2db68c139e10fd4d75604ec6b0b2067955faf359482cc7f08c05f5c97",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "76 all-reduce ops in the compiled step; the largest sums 6.4M floats:\n%all-reduce-start.74 = f32[6444288]{0} all-reduce-start(%wrapped_concatenate.6), channel ...\n"
+          "text": "76 allreduces: 2 of 25.8 and 18.9 MB, the other 74 of 0.10 MB together\n"
         }
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4": {
-      "code_fingerprint": "sha256:7872ca577011b6aee74710bf94af8e2a1f3e596a5772bc503bb8b165789f85c6",
+      "code_fingerprint": "sha256:0dcc1f0591f67767a377f4771a504c2bbb5049ccbba19a03da1f3d612e5717ac",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-3": {
+      "code_fingerprint": "sha256:f76f6cc1e8789bb2a661ef58a018ae3f77702f8d20bf7b6f32106ff885a904ad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2550 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 4191 samples/s, 1.64x, 82% weak-scaling efficiency\n4 GPU(s): 7669 samples/s, 3.01x, 75% weak-scaling efficiency\n"
+          "text": "1 GPU(s):  2554 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4289 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7840 examples/s, speedup 3.07, efficiency 77%\n"
         }
       ]
     },
-    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5": {
-      "code_fingerprint": "sha256:38a5c8b83a86ec438c1efaf487a0e03bf362ebe0d355348a62f02bdf88322535",
+    "multi-gpu-practice-ddp-really-run-4": {
+      "code_fingerprint": "sha256:b62947b744c1ecfbe9f3795ddd8c1b86a26d8baba6bfa28d6db9cb210d015124",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.71, efficiency 85%\n4 GPU(s), 128 examples each: speedup 2.55, efficiency 64%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
+          "bytes": 25898,
+          "sha256": "sha256:62d84cc7f85d30de77958f94d93a96176f727686549c5a686b37362e68ab813c"
+        }
+      ]
+    },
+    "multi-gpu-practice-communication-predicted-and-measured-1": {
+      "code_fingerprint": "sha256:743af83d76c286b2fb6ea39ea2c59b56bbb04ba6e487a76ce071c4ca96922b10",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-5": {
+      "code_fingerprint": "sha256:08efac77b916419082f3b63fbaf5cf2fb99abaf74c9b3bdbe0cbb4f2486feb73",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 2.2e-04\n"
+          "text": "beta = 4.9 GB/s; k=2: predicted 2N/beta = 18 ms, measured exposed 19 ms per step\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-ddp-really-run-6": {
+      "code_fingerprint": "sha256:2300722b1bcd234de5128d4d68b398fd42558ca7bf9fa8aa7fccd7781591ceda",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 4.9 GB/s by default, 22.4 GB/s with the copy engines (4.6x)\n"
         }
       ]
     }

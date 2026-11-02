@@ -9,12 +9,12 @@
   },
   "cells": {
     "hardware": {
-      "code_fingerprint": "sha256:3bdbf006b79c50f5196210a029ae4a31d0a4c074cb98537f873e16da664d3391",
+      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
       "kind": "text",
       "outputs": []
     },
     "hardware-where-bytes-live": {
-      "code_fingerprint": "sha256:cb0fb0c951c187f00e299bf04a66632af99a41ea1f6584bd096446e1ebc2674f",
+      "code_fingerprint": "sha256:718ad5222904e8aec07452c9054fb82ce5c86e4d81ddca2f3b59892facccff47",
       "kind": "text",
       "outputs": [
         {
@@ -25,13 +25,24 @@
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:fb9f70b66140adc625fda24a05c219654d20d2b7af9c0787f64964048e87e993",
+      "code_fingerprint": "sha256:d8786cb459c50bc11d801f069009698c2be5ef2151af2339299c297a3d1c5f3a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 14.4 GB/s\npinned: 25.2 GB/s\n"
+          "text": "pageable: 14.8 GB/s\npinned: 23.3 GB/s\n"
+        }
+      ]
+    },
+    "hardware-batched-decoding": {
+      "code_fingerprint": "sha256:48955145cd0b3720bd5216f557c0aa23ac65ce120327a9d21301bd10568c6ef4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =    1:  0.57 ms,     1,758 rows/s,   0.9 TFLOP/s\nB =    4:  0.57 ms,     6,990 rows/s,   3.8 TFLOP/s\nB =   16:  0.57 ms,    27,929 rows/s,  15.0 TFLOP/s\nB =   64:  0.58 ms,   109,686 rows/s,  58.9 TFLOP/s\nB =  256:  0.88 ms,   292,165 rows/s, 156.9 TFLOP/s\nB = 1024:  3.29 ms,   311,423 rows/s, 167.2 TFLOP/s\n"
         }
       ]
     }

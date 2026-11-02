@@ -1,5 +1,13 @@
 # Chapter Overview: chapter_computational-performance
 
+**Update (2026-11-02, ch. 13 pass):** the chapter has 7 sections plus
+`further-reading.md` (no exercises) and carries 58 exercises per reader (the
+PyTorch and JAX views differ in a few tabbed problems; counts below are per
+view). Every set now uses the named and tagged style (`[code]`, `[extended]`,
+●, ●●), and cross-references to exercises use `:exlabel:`/`:exref:`. Each
+entry below opens with its current list. The survey that follows describes
+the chapter before the pass, when it had 42 exercises.
+
 This chapter's 7 sections (42 exercises total) are already the strongest-specified
 in the book: the prior style review found zero clarity flags across all 42 items
 and only 3 formatting defects, though also zero use of the book's new
@@ -38,6 +46,8 @@ fast-transformer.md ex5/ex8) — no exercise anywhere in the chapter is dropped.
 
 ## chapter_computational-performance/performance-model.md — The Performance Model
 
+**Update (2026-11-02, ch. 13 pass):** 8 exercises: 1 the smallest dimension (exact intensity of a product); 2 [code] batch size and the ridge; 3 [code] hidden barriers (per tab: five lines to classify and rewrite, checked with `torch.cuda.set_sync_debug_mode('warn')` or `jax.transfer_guard_device_to_host('disallow')`); 4 diagnosis from timings (sub-question on the under-occupied product D, answerable from the SM definition of the sweep subsection); 5 idle time in a profile; 6 [code] ● a pipeline model of dispatch (host and device stages; the loop that converts the running total into a Python number every step; sizes 256 to 4096); 7 [code] ● tiles and waves (wave quantization; SMs are defined in the main text); 8 [extended] ● roofline of a ResNet step.
+
 **Topic:** the roofline-style performance model (arithmetic intensity vs. a
 machine's ridge point) and the discipline of correct, synchronized GPU timing.
 **Current exercises:** 5; disposition: keep 5, rewrite 0, drop 0 — all five are
@@ -69,6 +79,8 @@ and should not be diluted.
 ---
 
 ## chapter_computational-performance/hardware.md — Hardware
+
+**Update (2026-11-02, ch. 13 pass):** 10 exercises: 1 [code] latency and bandwidth, measured (Hockney's $\alpha$–$\beta$ model and the half-performance length); 2 shoreline countermeasures; 3 format halving on the roofline; 4 starved input pipeline; 5 ridge point of a link (uses the 25 GB/s ceiling of a staged GPU-to-GPU copy); 6 energy per byte; 7 memory sweep time; 8 launch-bound decode; 9 [code] ● burst versus random access (the burst model); 10 ● latency hiding (Little's law, warps per SM).
 
 **Topic:** where peak FLOP/s and bandwidth come from; the memory hierarchy,
 bandwidth/latency ladders, chip-boundary cost rule, energy of data movement,
@@ -110,6 +122,8 @@ changes, so nothing is lost by fixing them.
 
 ## chapter_computational-performance/compilation.md — Compute Graphs and Compilation
 
+**Update (2026-11-02, ch. 13 pass):** 8 exercises per view. PyTorch: 1 [code] value-dependent branches (`fullgraph=True`, the error, a `torch.cond` rewrite against `torch.where`); 2 [code] shape changes (`recompile_limit`, eight compilations); 3 padding buckets; 4 [code] ● fusion behind a matmul; 5 ● fusing a reduction; 6 [code] ● compiling the optimizer; 7 [code] ● overhead crossover; 8 [extended] ●● a tracer of your own. JAX: the same, except 1 rewrites the branch with `jnp.where` and `jax.lax.cond` and vmaps the latter, 2 is retracing on new shapes, and 6 is [code] trace-time constants.
+
 **Topic:** eager vs. traced/compiled execution (`torch.compile`/`jax.jit`),
 graph breaks, retracing, kernel fusion, and when compilation pays off.
 **Current exercises:** 5; disposition: keep 5, rewrite 0, drop 0 — every item
@@ -141,6 +155,8 @@ not here.
 ---
 
 ## chapter_computational-performance/memory-precision.md — Memory and Precision
+
+**Update (2026-11-02, ch. 13 pass):** 8 exercises: 1 where the peak lands (`ex_mp-peak`: gradients charged for the whole step versus freed after the update, 12N + activations); 2 [code] optimizer-step memory (per tab); 3 clipping under accumulation; 4 [code] ● fp16 gradient window (per tab, on the renamed `mlp`/`mlp_params` of the mixed-precision cell); 5 ● checkpoint placement; 6 [code] ● selective recomputation (`ex_mp-selective`; PyTorch policy contexts, JAX `jax.checkpoint` policies); 7 [code] ● cost of accumulation (micro-batch count $m$); 8 [extended] ●● the loss in chunks (`ex_mp-chunked-loss`, chunk size $n_c$). The parameter count is $N$ throughout (16N, 18N).
 
 **Topic:** the 16-bytes-per-parameter training-memory rule, mixed-precision
 training and loss scaling, activation checkpointing, and gradient accumulation.
@@ -174,6 +190,8 @@ structure was singled out as exemplary); no defects, no clarity issues.
 
 ## chapter_computational-performance/multiple-gpus.md — Multi-GPU from First Principles
 
+**Update (2026-11-02, ch. 13 pass):** 8 exercises: 1 data versus pipeline parallelism; 2 gradient normalization; 3 strong-scaling speedup (written with the per-direction link rate $b$, not $\beta$; answers at $b$ = 20 GB/s: $S(2) = 1.78$, $S(4) = 2.93$, limit 8.2; at 5 GB/s: 1.46, 1.88, 2.67; no speedup below $b = 2N/(cB) = 1.75$ GB/s; bf16 at 5 GB/s: $S(4) = 2.47$, limit 4.85); 4 parameter servers and the ring (restates the design, since the history paragraph moved to further reading); 5 [code] ● ring allreduce by hand (needs four GPUs; per tab); 6 [code] ● gradients in bf16; 7 ● latency in the allreduce (uses $b$; last part asks for $N_{1/2} = \alpha\beta/2$ of the section's allreduce); 8 [extended] ● where data parallelism helps (times the local step with `train_step(communicate=False)`).
+
 **Topic:** hand-written data parallelism, the ring-allreduce derivation, and the
 data-parallel step-time cost model.
 **Current exercises:** 5; disposition: keep 5, rewrite 0, drop 0 — dense but
@@ -203,6 +221,8 @@ equation to check it against, with no formatting or clarity issues found.
 ---
 
 ## chapter_computational-performance/multi-gpu-practice.md — Multi-GPU in Practice
+
+**Update (2026-11-02, ch. 13 pass):** 8 exercises per view. PyTorch: 1 [code] splitting the data; 2 weak-scaling extrapolation; 3 ● cost of sharding (the 36-block GPT, 1.9B parameters; 6 operations per parameter and token); 4 [code] ● bucket size (`ex_mgp-buckets`; part d profiles a step with and without `no_sync`); 5 [code] ● transport configuration (`ex_mgp-transport`; reproduces the training hang under a time limit, per DECISIONS C6); 6 [extended] ● sharded optimizer state (ZeRO stage 1); 7 [code] ● synchronized batch normalization (`ex_mgp-syncbn`); 8 [code] ● tensor versus data parallelism (`ex_mgp-tensor`). JAX: the same, with 1 on placing the indices of `minibatches`, 4d tracing with `jax.profiler.trace` at k = 1 and 2, 5 on XLA's NCCL, and 7 on batch-norm statistics across the mesh.
 
 **Topic:** production data parallelism (PyTorch DDP vs. JAX sharding
 annotations), weak-scaling measurement, tensor parallelism, and ZeRO/FSDP-style
@@ -237,6 +257,8 @@ explicit safety warning.
 ---
 
 ## chapter_computational-performance/fast-transformer.md — Case Study: Optimizing a Transformer
+
+**Update (2026-11-02, ch. 13 pass):** 8 exercises: 1 [code] noise floor; 2 [code] model FLOPs utilization; 3 [code] fixed cost of a step; 4 [code] causality gate; 5 throughput versus time to target (the speedrun idea, whose survey moved to further reading); 6 [code] width 256; 7 [code] ● data-parallel overlap; 8 [extended] ●● another model. The experiments train on the bytes of `d2l.WikiText103`. An attribution exercise was drafted and left out to stay at eight.
 
 **Topic:** end-to-end, incremental optimization of a real GPT-style Transformer
 — compilation, mixed precision, larger batches, activation checkpointing, and

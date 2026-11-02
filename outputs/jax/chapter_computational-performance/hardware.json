@@ -9,29 +9,65 @@
   },
   "cells": {
     "hardware": {
-      "code_fingerprint": "sha256:372ca5d63bdedd0943fc2398e9a235b7711006386f5734144375d05aceaa1a26",
+      "code_fingerprint": "sha256:61d16d0ef568b340b753898abe22f880948bbd489c9c74bc43bc68a8406f76e4",
       "kind": "text",
       "outputs": []
     },
     "hardware-where-bytes-live": {
-      "code_fingerprint": "sha256:940ddfbbc52f8294896ad922fdadc631e9b94e15300a3c740a97bb640eab67e2",
+      "code_fingerprint": "sha256:da665a0c40311703bd6074e74566bdb3ff5c9ec8552a775652f425af9af3f09b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured 0.91 TB/s (spec: about 1.0 TB/s)\n"
+          "text": "measured 0.90 TB/s (spec: about 1.0 TB/s)\n"
         }
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:90fc9311771da0943a0669c8ed637fb05a930dd976858eb732a323ad6a6a32ed",
+      "code_fingerprint": "sha256:aa018c5c718afe5ec7be3dff0a0d85dcfb50aff1559030d8dbe7b32c1c6b69a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "device_put: 0.9 GB/s\n"
+          "text": "pageable: 8.6 GB/s\npinned: 22.6 GB/s\n"
+        }
+      ]
+    },
+    "hardware-batched-decoding": {
+      "code_fingerprint": "sha256:d1c1fc961424b1d04e8121d1d66b703255d0982ec7b71a422387b581429445cf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =    1:  0.58 ms,     1,714 rows/s,   0.9 TFLOP/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =    4:  0.59 ms,     6,792 rows/s,   3.6 TFLOP/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =   16:  0.60 ms,    26,474 rows/s,  14.2 TFLOP/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =   64:  0.63 ms,   102,054 rows/s,  54.8 TFLOP/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B =  256:  0.86 ms,   299,201 rows/s, 160.6 TFLOP/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B = 1024:  3.08 ms,   332,970 rows/s, 178.8 TFLOP/s\n"
         }
       ]
     }

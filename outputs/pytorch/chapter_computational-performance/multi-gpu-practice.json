@@ -4,91 +4,110 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1c0b326fcd30aa33b0a11772c43a0ffb9efd29debebbb826639cb131d463b2a2",
+    "d2l_lib_fingerprint": "sha256:ba9e2cd8e76f2c0235a82c8a900edd4e77943161f204e4a5de418ca4021cb2d0",
     "max_inline_bytes": 0
   },
   "cells": {
     "multi-gpu-practice-multi-gpu-in-practice": {
-      "code_fingerprint": "sha256:21f17656b15ed91627f3898f542ad41e8aa1a254d047064ddc8d38d90f8e1591",
+      "code_fingerprint": "sha256:f2051fa399cc22b0d0824bae50abe49008c5253dac4057e381efbc909f3ba37a",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-one-program-per-gpu": {
+      "code_fingerprint": "sha256:bc81e75b2c5bf179ba082766452dd18b889449a8b7206fc1dec6f5152088ad96",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-1": {
-      "code_fingerprint": "sha256:9e38aabd52076970115ac78c974c24cc80d3b4824ff1aef99f46a7ac9fc5de17",
+      "code_fingerprint": "sha256:2acec87bab5c921fba39319f8977c34299f1898407faf377644ac13c8d89a16b",
       "kind": "text",
       "outputs": []
     },
+    "multi-gpu-practice-the-training-step-1": {
+      "code_fingerprint": "sha256:2a4df4d040f53b868a98b837026c5a23f7956022c142e9092ad34120808cfbe7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "11.2M parameters, N = 45 MB\n"
+        }
+      ]
+    },
     "multi-gpu-practice-ddp-really-run-2": {
-      "code_fingerprint": "sha256:21bdf7992dcd7d2ad66a4275235c79cfd730ea399d2ca3247ec54033087835d3",
+      "code_fingerprint": "sha256:3a12e23e2718965cd9e1f0fd8d2ed9c5eea0fd3110f33808ba06b1e8215ac7c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5": {
+      "code_fingerprint": "sha256:67222bb327c7da50a16a19bcf0cb253c743c9005ebf41c2add3ec638dbefba07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest update 1.0e-02\nlargest difference from one GPU on all 256: 6.8e-04\nlargest difference from one GPU on two accumulated halves: 6.0e-08\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4": {
+      "code_fingerprint": "sha256:c3ec62e020374509c0d0680ce0e516bad5b8a2f25b0e2e8ecbc06c36acfc2ed2",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-3": {
-      "code_fingerprint": "sha256:2c113d060d55ae45d13a382f5cf11c8adf5365b0c636d275f1e5967d4786b35a",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:769d1958386e555f2a7981ee02fe46ca1a1d0c0e9cba7d62fdd9b2d63e43e5a2",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2202 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3858 samples/s, 1.75x, 88% weak-scaling efficiency\n4 GPU(s): 7190 samples/s, 3.27x, 82% weak-scaling efficiency\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-3-1.svg",
-          "bytes": 18937,
-          "sha256": "sha256:5fbb29768138a0078a03a06646676ffbaf5a271f027b744dbffe634f739d16b2"
+          "text": "1 GPU(s):  2284 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4039 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7575 examples/s, speedup 3.32, efficiency 83%\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-4": {
-      "code_fingerprint": "sha256:a7c0a9723191f6daae0b73cb633da6ccaf449574a5eef6d7ed2a9cc5d927a22b",
+      "code_fingerprint": "sha256:9760d84daadd9e320c7314076b2048f0be6dc8ef938a834350c9baa936ccb257",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2194 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3860 samples/s, 1.76x, 88% strong-scaling efficiency\n4 GPU(s): 6052 samples/s, 2.76x, 69% strong-scaling efficiency\n"
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.78, efficiency 89%\n4 GPU(s), 128 examples each: speedup 2.82, efficiency 70%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 27034,
-          "sha256": "sha256:437ae0754691d3ac6f33357eeb61cfe3334c901957f379d0591e33898689b2e0"
+          "bytes": 25896,
+          "sha256": "sha256:6d66577bf8c3fc287c161235a7d4e20618a5bb6387f1820c0353d42aad96b52c"
         }
       ]
     },
+    "multi-gpu-practice-communication-predicted-and-measured-1": {
+      "code_fingerprint": "sha256:86c58f4858b423e7d395efd3fe0fd89bf5bafc3af6917f9d8c6db2d6e83ffa8f",
+      "kind": "text",
+      "outputs": []
+    },
     "multi-gpu-practice-ddp-really-run-5": {
-      "code_fingerprint": "sha256:f9f314bacf5f6eb6feb90e4e5703a4c03ac3664f97693b0a7f94ae794ede701d",
+      "code_fingerprint": "sha256:56eabd6685f6a54d956bf468f21f0239b6078316762746cf75d5df824e4ea5ad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 127, no_sync 112)\n"
+          "text": "beta = 4.9 GB/s; k=2: predicted 2N/beta = 18 ms, measured exposed 15 ms per step\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-6": {
-      "code_fingerprint": "sha256:45e4df5146fdfc84a159928c424bec8dcdc8157e2ddc1097c6bf226e6259fc45",
+      "code_fingerprint": "sha256:5158a8188603f3b401188b9eedc896021679d13dc75a35f0310e050336dd2db2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bare allreduce, effective bytes/device/s: 4.4 GB/s at the default, 22.3 GB/s configured (5.1x)\n"
-        }
-      ]
-    },
-    "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
-      "code_fingerprint": "sha256:d7ef5aed8f2caa1dcb830490c2a10c27237399bdc758ff6d6ddf7e35f5858898",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "FSDP sketch: reach for it past a few billion parameters, not on an 11M-param demo\n"
+          "text": "beta = 4.9 GB/s by default, 23.1 GB/s with the copy engines (4.7x)\n"
         }
       ]
     }

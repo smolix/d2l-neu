@@ -375,7 +375,7 @@ the outcome it explains :cite:`popper2005logic`. Conversely, if a class cannot
 fit arbitrary labels and the sample is large compared with its capacity, a low
 training error is evidence that the model has found a real pattern. Learning
 theory turns this into bounds on the generalization gap, which the
-mathematics appendix develops (:numref:`sec_mdl-concentration-generalization`).
+mathematics appendix develops (:numref:`sec_mdl-generalization-bounds`).
 
 Counting parameters is not the only way to measure capacity. The size of
 the parameters matters too: the polynomial of degree 19 fit the training

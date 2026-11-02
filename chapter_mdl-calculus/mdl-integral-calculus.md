@@ -361,7 +361,7 @@ them in turn to a single example: $\int_0^{-1} 1\,dx = -1$ (one
 flip, from reversed limits), while $\int_0^{-1}(-1)\,dx = 1$ (two flips, which
 cancel). This is the same signed-area convention the
 determinant followed for transformed regions in
-:numref:`sec_mdl-geometry-linear-algebraic-ops`, and it is exactly what makes the
+:numref:`sec_mdl-linear-maps`, and it is exactly what makes the
 change-of-variables formula below come out right.
 
 ![Signed area. Lobes above the axis count positive and the lobe below counts negative, so $\int_a^b f$ totals the shaded regions with their signs; reversing the limits of integration traverses the same area right-to-left and negates the total.](../img/mdl-cal-signed-area.svg)
@@ -530,7 +530,7 @@ Compare :eqref:`eq_mdl-change_var_nd` with the one-dimensional rule
 by $|\det D\boldsymbol{\phi}|$, and the determinant of a linear
 map is exactly the factor by which it scales area or volume, the signed-area
 reading of the determinant from
-:numref:`sec_mdl-geometry-linear-algebraic-ops`. So a tiny cube of volume
+:numref:`sec_mdl-linear-maps`. So a tiny cube of volume
 $d\mathbf{x}$ is sent to a tiny parallelepiped of volume
 $|\det D\boldsymbol{\phi}|\,d\mathbf{x}$, and the factor in the integrand
 compensates for exactly that distortion. :numref:`fig_mdl-cov-jacobian` puts

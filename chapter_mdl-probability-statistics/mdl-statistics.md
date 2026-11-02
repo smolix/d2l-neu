@@ -208,7 +208,7 @@ greater flexibility lowers bias and raises variance, producing the U-shaped
 curve in :numref:`fig_mdl-bias-variance-u-curve`. Regularization can improve
 risk by accepting more bias in exchange for less variance. This U-shape is a
 common pattern, not a theorem about every model sequence; interpolating models
-can exhibit double descent (:numref:`sec_mdl-concentration-generalization`).
+can exhibit double descent (:numref:`sec_mdl-generalization-bounds`).
 
 ![A classical bias--variance pattern. Along this illustrative model sequence, squared bias falls and variance rises with complexity; their sum is U-shaped. Other model sequences, including some interpolating regimes, need not follow this curve.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_mdl-bias-variance-u-curve`
@@ -457,7 +457,7 @@ not.
 A Bayesian **credible interval** has a different interpretation because
 $\theta$ is assigned a posterior distribution conditional on a prior and the
 observed data. For the Beta posterior in
-:numref:`sec_mdl-distributions`, a 95% credible interval for a Bernoulli
+:numref:`sec_mdl-exponential-family`, a 95% credible interval for a Bernoulli
 parameter is given by the 2.5% and 97.5% posterior quantiles of
 $\mathrm{Beta}(\alpha+x,\beta+n-x)$. Its probability statement is conditional
 on the chosen model and prior.

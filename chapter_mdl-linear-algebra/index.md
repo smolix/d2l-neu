@@ -24,8 +24,10 @@ finite matrix; this distinction organizes the chapter.
 :maxdepth: 2
 
 mdl-geometry-linear-algebraic-ops
+mdl-linear-maps
 mdl-eigendecomposition
 mdl-svd-low-rank
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

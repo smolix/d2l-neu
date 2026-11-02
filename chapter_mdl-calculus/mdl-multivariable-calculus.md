@@ -59,7 +59,7 @@ The gradient *is* the derivative in many dimensions: it is the unique vector
 whose dot product with a perturbation gives the first-order change in $L$. We
 treat $\nabla_{\mathbf{w}} L$ as a column vector throughout; the layout
 conventions that make this choice precise are settled in
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+:numref:`sec_mdl-matrix-calculus`.
 
 This order of reasoning matters. Existence of all partial derivatives does not
 itself imply the joint linear approximation. A convenient sufficient condition
@@ -917,9 +917,9 @@ of partial derivatives, the *Jacobian*, with gradients and Hessians as special
 cases. The Mean Value Theorem of
 :numref:`sec_mdl-mvt` does *not* survive the passage to vector-valued maps;
 only an inequality remains, the mean value inequality :cite:`Rudin.1976`.
-:numref:`sec_mdl-matrix-calculus-autodiff` develops the Jacobian machinery, the
-layout conventions, and how it all yields backpropagation as reverse-mode
-automatic differentiation.
+:numref:`sec_mdl-matrix-calculus` develops the Jacobian machinery and the
+layout conventions, and :numref:`sec_mdl-matrix-calculus-autodiff` shows how it
+all yields backpropagation as reverse-mode automatic differentiation.
 
 ## Summary
 

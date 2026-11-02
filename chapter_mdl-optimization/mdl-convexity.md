@@ -7,7 +7,7 @@ rates in :numref:`sec_mdl-gradient-based-optimization` then become global
 guarantees. Convex examples in machine learning include logistic losses as
 functions of the logits, projections onto convex constraint sets, $\ell_1$ and
 $\ell_2$ regularizers, and the SVM dual in
-:numref:`sec_mdl-constrained-optimization-duality`. This section gives three
+:numref:`sec_mdl-lagrangian-duality`. This section gives three
 equivalent characterizations of convex functions, derives Jensen's inequality
 and convergence guarantees, develops rules for recognizing convexity, and
 states which conclusions remain useful for nonconvex neural networks.
@@ -823,7 +823,7 @@ $\mathbf{s}$, hence PSD, hence $\mathrm{lse}$ is convex.*
 $\partial\, \mathrm{lse} / \partial x_i = e^{x_i} / \sum_j e^{x_j} = s_i$: the
 gradient of $\mathrm{lse}$ *is* the softmax. Differentiating again gives the
 softmax Jacobian :eqref:`eq_mdl-softmax-jacobian`, derived in
-:numref:`sec_mdl-matrix-calculus-autodiff`, which is the claimed
+:numref:`sec_mdl-matrix-calculus`, which is the claimed
 matrix. Now let $I$ be a random index with $\Pr(I = i) = s_i$ and let
 $\mathbf{e}_I$ be its one-hot vector. Then
 $\mathbb{E}[\mathbf{e}_I] = \mathbf{s}$ and
@@ -875,296 +875,6 @@ the predicted flat direction, confirmed by
 $\|H\mathbf{1}\|_\infty \approx 1.8 \times 10^{-16}$. And the empirical
 covariance of $200{,}000$ one-hot draws matches the analytic Hessian to within
 $0.0006$: the empirical covariance agrees with the analytic Hessian.
-
-### The Convex Conjugate
-:label:`subsec_mdl-convex-conjugate`
-
-The convex conjugate connects this section with duality (:numref:`sec_mdl-constrained-optimization-duality`)
-and the variational representations of information theory. From here on we
-allow $f$ to take the value $+\infty$; convexity for such an extended-real
-function is read on its epigraph (the chord inequality is required wherever
-the values are finite), and the conjugates below produce $+\infty$ naturally.
-The **convex
-conjugate** (or Fenchel--Legendre transform) of $f : \mathbb{R}^n \to \mathbb{R} \cup \{+\infty\}$
-is
-
-$$
-f^*(\mathbf{y}) \;=\; \sup_{\mathbf{x}} \;\left( \mathbf{y}^\top \mathbf{x} - f(\mathbf{x}) \right).
-$$
-:eqlabel:`eq_mdl-opt-conjugate`
-
-Geometrically, $f^*(\mathbf{y})$ asks: among all affine functions with slope
-$\mathbf{y}$, what is the largest intercept compatible with remaining below the graph of $f$?
-(It records the negative of that intercept.) The conjugate thus encodes $f$ by
-its supporting lines instead of its values, and for **closed** convex $f$
-(closed meaning the epigraph is a closed set, equivalently $f$ is lower
-semicontinuous) the
-encoding is lossless: $f^{**} = f$ (:citet:`Boyd.Vandenberghe.2004`, section
-3.3). For non-convex $f$ the double transform returns the largest
-closed convex function below it, the **convex envelope**, which is what
-convex *relaxations* optimize in place of $f$.
-
-Two properties are immediate. First, $f^*$ is *always* convex, whatever
-$f$ is: for fixed $\mathbf{x}$ the expression
-$\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and rule
-3 says a supremum of affine functions is convex. The same one-line argument,
-in the next section, makes the dual function of
-:numref:`subsec_mdl-lagrangian-duality` concave, and that is no coincidence:
-for linearly constrained problems the dual function can be written in terms of a
-conjugate.
-Second, the definition rearranges into the **Fenchel--Young inequality**,
-
-$$
-\mathbf{y}^\top \mathbf{x} \;\le\; f(\mathbf{x}) + f^*(\mathbf{y})
-\qquad \textrm{for all } \mathbf{x}, \mathbf{y},
-$$
-:eqlabel:`eq_mdl-opt-fenchel-young`
-
-with equality exactly when $\mathbf{x}$ attains the supremum; for
-differentiable $f$, when $\mathbf{y} = \nabla f(\mathbf{x})$.
-
-The simplest example sets the pattern: for $f(\mathbf{x}) = \tfrac12\|\mathbf{x}\|^2$,
-the supremum of $\mathbf{y}^\top\mathbf{x} - \tfrac12\|\mathbf{x}\|^2$ is attained at
-$\mathbf{x} = \mathbf{y}$, giving $f^*(\mathbf{y}) = \tfrac12\|\mathbf{y}\|^2$:
-the squared norm is its own conjugate, and Fenchel--Young becomes the familiar
-$\mathbf{y}^\top\mathbf{x} \le \tfrac12\|\mathbf{x}\|^2 + \tfrac12\|\mathbf{y}\|^2$.
-
-The pair that matters for deep learning is **log-sum-exp $\leftrightarrow$
-negative entropy**. Compute
-$\mathrm{lse}^*(\mathbf{p}) = \sup_{\mathbf{x}} \mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x})$.
-If $\mathbf{p}$ has a negative coordinate, send that $x_i \to -\infty$ and the
-objective is unbounded; if $\mathbf{1}^\top\mathbf{p} \neq 1$, take $\mathbf{x} = c\mathbf{1}$
-off to $\pm\infty$ and shift invariance does the same. So the supremum is finite
-only for $\mathbf{p}$ in the simplex, where stationarity demands
-$\mathrm{softmax}(\mathbf{x}) = \mathbf{p}$, solved by
-$\mathbf{x} = \log \mathbf{p}$, and the value is
-$\sum_i p_i \log p_i$. The stationarity argument covers $\mathbf{p}$ in the
-relative interior of the simplex (softmax outputs are strictly positive); for
-boundary $\mathbf{p}$, with some $p_i = 0$, no maximizer exists, but sending
-those $x_i \to -\infty$ approaches the same value, so the formula holds on the
-whole simplex with the convention $0 \log 0 = 0$. Therefore
-
-$$
-\begin{aligned}
-\mathrm{lse}^*(\mathbf{p}) &=
-\begin{cases}
-\sum_i p_i \log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\
-+\infty, & \textrm{otherwise,}
-\end{cases} \\
-\textrm{and dually} \qquad
-\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
-\end{aligned}
-$$
-:eqlabel:`eq_mdl-opt-lse-entropy`
-
-The dual formula expresses log-sum-exp as the maximum of an entropy-regularized
-linear score over distributions, and the maximizing $\mathbf{p}$ is the softmax.
-Two consequences are already on this page. Softmax is the gradient of
-$\mathrm{lse}$, proved in the Hessian proposition above; and softmax is the
-*maximum-entropy* answer, since dropping the bonus leaves
-$\max_{\mathbf{p} \in \Delta} \mathbf{p}^\top\mathbf{x}$, whose maximizer is a
-hard, one-hot $\arg\max$, and the entropy term replaces this hard selection with a distribution. The identity
-is also the prototype
-for the variational representations of divergences: Donsker--Varadhan and the
-$f$-GAN duals in :numref:`sec_mdl-divergences-distances` are this same
-conjugate construction applied to KL and its relatives.
-
-### Proximal Operators
-:label:`subsec_mdl-proximal-operators`
-
-The conjugate encodes a convex function by its supporting lines; another
-construction supplies algorithmic updates for convex functions, unifying
-gradient steps with the projections that
-:numref:`subsec_mdl-projected-gd` will build on. The **proximal operator** of
-a convex $f$ is
-
-$$
-\mathrm{prox}_{f}(\mathbf{z}) \;=\; \mathop{\mathrm{argmin}}_{\mathbf{x}}\; \left( f(\mathbf{x}) + \tfrac12\, \|\mathbf{x} - \mathbf{z}\|^2 \right),
-$$
-:eqlabel:`eq_mdl-opt-prox`
-
-well defined for the closed convex $f$ we use: the objective is $1$-strongly
-convex, so the uniqueness proposition above guarantees at most one minimizer, and
-closedness supplies the existence that an indicator (which is not continuous)
-would otherwise put in doubt. The prox balances lower values of $f$ against a
-quadratic penalty for moving away from
-$\mathbf{z}$. Two special cases calibrate the definition. If $f = 0$, the prox
-is the identity. If $f$ is the *indicator* of a closed convex set $C$ (zero on
-$C$, $+\infty$ outside), then minimizing forces $\mathbf{x} \in C$ and the
-prox is the nearest feasible point:
-$\mathrm{prox}_f = \Pi_C$, the projection operator on which
-:numref:`subsec_mdl-projected-gd` will build projected gradient descent.
-Proximal operators are projections,
-generalized from sets to functions.
-
-A sparsity example is $f(x) = \lambda |x|$ (the operator
-acts coordinate-wise on $\lambda\|\cdot\|_1$, so one dimension suffices). The
-objective $\lambda|x| + \tfrac12 (x - z)^2$ has a kink at $0$, and the
-subgradient optimality criterion $0 \in \partial(\cdot)$
-(:eqref:`eq_mdl-subopt` of :numref:`sec_mdl-single_variable_calculus`, restated
-for vectors in :numref:`subsec_mdl-three-lenses`) gives the following cases: if the
-minimizer $x \neq 0$, stationarity reads $\lambda\,\mathrm{sign}(x) + x - z = 0$,
-i.e. $x = z - \lambda\,\mathrm{sign}(z)$, consistent only when $|z| > \lambda$;
-if $x = 0$, the criterion asks $z \in [-\lambda, \lambda]$; and the two cases
-combine as
-
-$$
-\mathrm{prox}_{\lambda|\cdot|}(z) \;=\; \mathrm{sign}(z)\, \max\left(|z| - \lambda,\, 0\right).
-$$
-:eqlabel:`eq_mdl-opt-soft-threshold`
-
-This is **soft-thresholding**; Exercise :exref:`ex_mdl-convexity-compute-full-subdifferential-f`
-runs the same subdifferential argument for the Euclidean norm
-$\lambda\|\cdot\|_2$. Inputs smaller than $\lambda$ are
-set to *exactly* zero; larger ones are shrunk by $\lambda$. This is the
-mechanism by which $\ell_1$ regularization produces genuinely sparse weights
-where $\ell_2$ only shrinks them.
-
-The resulting update is compact. For a composite objective
-$g(\mathbf{x}) + h(\mathbf{x})$ with $g$ smooth and $h$ convex but kinked
-(the lasso :cite:`Tibshirani.1996`, with $g$ the least-squares term and
-$h = \lambda\|\cdot\|_1$, is
-the prototype), alternate a gradient step on the smooth part with a prox on
-the kinked part:
-
-$$
-\mathbf{x}_{k+1} = \mathrm{prox}_{\eta h}\left(\mathbf{x}_k - \eta\, \nabla g(\mathbf{x}_k)\right).
-$$
-:eqlabel:`eq_mdl-opt-ista`
-
-This is **ISTA**, the proximal-gradient method. It converges at the same
-$O(1/k)$ rate as plain gradient descent, kink notwithstanding (a theorem we
-quote rather than prove; see :citet:`Beck.Teboulle.2009`), and it contains
-the projected gradient descent of
-:numref:`sec_mdl-constrained-optimization-duality` as the special case where
-$h$ is an indicator. The cell verifies :eqref:`eq_mdl-opt-soft-threshold`
-against brute-force minimization, then runs twenty ISTA steps on a tiny lasso
-and records the resulting exact zeros:
-
-```{.python .input #convexity-prox-ista}
-lam = 0.7
-prox = lambda z, t: np.sign(z) * np.maximum(np.abs(z) - t, 0.0)
-zs = np.linspace(-3.0, 3.0, 13)
-grid = np.linspace(-5.0, 5.0, 200001)          # brute-force argmin on a grid
-brute = np.array([grid[np.argmin(lam * np.abs(grid) + 0.5 * (grid - z)**2)]
-                  for z in zs])
-print('max |prox - brute-force argmin| =',
-      f'{np.abs(prox(zs, lam) - brute).max():.1e}')
-rng = np.random.default_rng(5)                 # a tiny lasso problem
-A = rng.normal(size=(30, 8))
-b = A @ np.array([2.0, 0, 0, -1.5, 0, 0, 0, 1.0]) + 0.05 * rng.normal(size=30)
-eta = 1.0 / np.linalg.eigvalsh(A.T @ A).max()
-w = np.zeros(8)
-for _ in range(20):                            # ISTA: gradient step, then prox
-    w = prox(w - eta * A.T @ (A @ w - b), eta * lam)
-print('w after 20 ISTA steps:', w.round(3))
-print('exact zeros:', int((w == 0).sum()), 'of 8 coordinates')
-```
-
-The closed form matches the brute-force minimizer to grid resolution, and
-after twenty proximal-gradient steps five of the eight coordinates are
-*exactly* zero, set there by the $\max$ in
-:eqref:`eq_mdl-opt-soft-threshold`, while the three nonzero coordinates sit
-near the planted values $(2.0, -1.5, 1.0)$. Plain gradient descent does not
-produce exact zeros because it uses only smooth steps. The proximal operator
-incorporates the nonsmooth term, and one application per step suffices for
-sparsity.
-
-### Coordinate and Block Coordinate Descent
-:label:`subsec_mdl-coordinate-descent`
-
-A full gradient updates every coordinate at once. When parameters or examples
-are sparse, touching one coordinate or one block can be much cheaper. Suppose
-$f$ has coordinate-wise smoothness constants $L_j$:
-
-$$
-f(\mathbf x+t\mathbf e_j)
-\le f(\mathbf x)+t\,\partial_jf(\mathbf x)+\tfrac12L_jt^2.
-$$
-:eqlabel:`eq_mdl-coordinate-smoothness`
-
-Minimizing this one-dimensional upper bound gives the **coordinate-descent**
-step
-
-$$
-x_j\leftarrow x_j-\frac{1}{L_j}\partial_jf(\mathbf x),
-$$
-:eqlabel:`eq_mdl-coordinate-step`
-
-with all other coordinates fixed. The method can cycle through coordinates,
-choose the largest partial derivative, or sample $j$. Randomized selection
-avoids adversarial orderings and has a clean representative guarantee: for a
-$\mu$-strongly convex objective, sampling coordinate $j$ proportional to
-$L_j$ and taking :eqref:`eq_mdl-coordinate-step` contracts expected
-suboptimality at a rate governed by
-$1-\mu/\sum_jL_j$. The comparison with full-gradient descent is not “one
-iteration versus one iteration”: a coordinate step reads and changes much
-less state, so work, memory traffic, and sparsity determine the useful unit.
-
-For a positive-definite quadratic
-
-$$
-f(\mathbf x)=\tfrac12\mathbf x^\top A\mathbf x-\mathbf b^\top\mathbf x,
-$$
-
-we can minimize the chosen coordinate *exactly*:
-
-$$
-x_j\leftarrow x_j-\frac{(A\mathbf x-\mathbf b)_j}{A_{jj}}.
-$$
-:eqlabel:`eq_mdl-quadratic-coordinate`
-
-Maintaining the residual $\mathbf r=A\mathbf x-\mathbf b$ makes a coordinate
-update cheap: after changing $x_j$ by $\delta$, update
-$\mathbf r\leftarrow\mathbf r+\delta A_{:j}$. On a sparse matrix this touches
-only the nonzeros in column $j$. A full cyclic sweep is the Gauss--Seidel
-iteration for $A\mathbf x=\mathbf b$.
-
-```{.python .input #mdl-convexity-coordinate-descent}
-d_cd = 40
-A_cd = (2 * np.eye(d_cd) - 0.95 * np.eye(d_cd, k=1)
-        - 0.95 * np.eye(d_cd, k=-1))             # SPD, strongly coupled
-b_cd = np.ones(d_cd)
-x_star_cd = np.linalg.solve(A_cd, b_cd)
-f_cd = lambda x: 0.5 * x @ A_cd @ x - b_cd @ x
-f_star_cd = f_cd(x_star_cd)
-L_cd = np.linalg.eigvalsh(A_cd)[-1]
-x_gd, x_cd = np.zeros(d_cd), np.zeros(d_cd)
-r_cd = A_cd @ x_cd - b_cd
-gap_gd, gap_cd = [], []
-for sweep in range(1, 101):
-    x_gd -= (A_cd @ x_gd - b_cd) / L_cd           # one full gradient
-    for j in range(d_cd):                         # one coordinate sweep
-        delta = -r_cd[j] / A_cd[j, j]
-        x_cd[j] += delta
-        r_cd += delta * A_cd[:, j]
-    gap_gd.append(f_cd(x_gd) - f_star_cd)
-    gap_cd.append(f_cd(x_cd) - f_star_cd)
-d2l.plot(np.arange(1, 101), [gap_gd, gap_cd], 'sweep', 'optimality gap',
-         legend=[r'gradient descent, step $1/L$', 'exact coordinate sweep'],
-         yscale='log')
-```
-
-This coupled quadratic includes interactions between neighboring coordinates:
-changing one affects its neighbors. Even so, exact coordinate minimization
-uses the updated residual after each coordinate and converges faster per sweep here
-than the conservative global step $1/L$. Different matrices can reverse that
-comparison; the point is the mechanism, not a universal ranking.
-
-The same idea extends in two directions. **Block coordinate descent** updates a
-layer, feature group, or matrix block by solving a small subproblem, exploiting
-structure that scalar coordinates miss. For a composite objective
-$f(\mathbf x)+\lambda\|\mathbf x\|_1$, the coordinate subproblem includes the
-nonsmooth term and its exact update is soft-thresholding, the proximal operator
-of :eqref:`eq_mdl-opt-soft-threshold`. This is why coordinate methods are
-natural for sparse regression and matrix factorization: each cheap local solve
-can create exact zeros, whereas an ordinary smooth gradient step cannot.
-
-Coordinate descent is not the default for dense end-to-end neural training:
-accelerators are built for large matrix operations, not sequential scalar
-updates. It remains important for sparse linear models, embedding tables,
-alternating minimization, and inner problems where a block has a closed-form or
-very cheap solve.
 
 ### Nonconvex Neural Networks
 
@@ -1266,7 +976,7 @@ the same solution the pseudoinverse computes
 :numref:`sec_mdl-svd-low-rank` has you verify it). For
 logistic regression on separable data, gradient descent's direction converges
 to the maximum-margin separator :cite:`Soudry.Hoffer.Nacson.ea.2018`, the
-SVM solution of :numref:`sec_mdl-constrained-optimization-duality`. These
+SVM solution of :numref:`sec_mdl-lagrangian-duality`. These
 examples show that an optimizer can select among multiple interpolating
 solutions. The selected solution can affect generalization, but the form of the
 implicit bias depends on the model, loss, initialization, and optimization
@@ -1304,12 +1014,7 @@ particular model and regime.
   cross-entropy without touching a Hessian; log-sum-exp is convex because its
   Hessian **is the softmax covariance**, and its conjugate is negative entropy,
   the identity behind softmax-as-maximum-entropy and the variational duals
-  of :numref:`chap_mdl-information-theory`. **Proximal operators** generalize
-  projections from sets to functions; soft-thresholding is the prox of
-  $\lambda|\cdot|$, and one prox per step (ISTA) optimizes kinked composite
-  losses at gradient descent's rate. **Coordinate descent** minimizes one
-  coordinate or block at a time; on quadratics it is an exact one-dimensional
-  solve, and with $\ell_1$ regularization that solve becomes soft-thresholding.
+  of :numref:`chap_mdl-information-theory`.
 * Deep networks are **non-convex by construction** (permutation symmetry makes
   the minimizer set non-convex), but the **PL condition** preserves linear
   convergence without convexity, and gradient descent's **implicit bias**
@@ -1381,26 +1086,6 @@ particular model and regime.
        Which hypothesis of the uniqueness proposition does the penalty
        supply?
    :exlabel:`ex_mdl-convexity-minimizer-existence`
-
-1. **Conjugate pairs.** Compute each conjugate
-   from :eqref:`eq_mdl-opt-conjugate`.
-    1. $f(\mathbf{x}) = \lambda\|\mathbf{x}\|_1$ with $\lambda > 0$.
-    1. $f(\mathbf{x}) = \tfrac12 \mathbf{x}^\top A \mathbf{x}$ with
-       $A \succ 0$. What does the Fenchel--Young inequality
-       :eqref:`eq_mdl-opt-fenchel-young` state for this pair?
-    1. The softplus $f(t) = \log(1 + e^t)$ on $\mathbb{R}$. The binary
-       cross-entropy of a logit $t$ against a soft label $p \in [0, 1]$ is
-       $\log(1 + e^t) - pt$. Use Fenchel--Young to show that it is at least
-       the binary entropy $H(p) = -p\log p - (1-p)\log(1-p)$, with equality
-       exactly when $\sigma(t) = p$. Write the difference as a KL divergence.
-    1. The double well $g(x) = (x^2 - 1)^2$ of
-       :numref:`subsec_mdl-recognizing-convexity` is not convex. Find its
-       convex envelope $g^{**}$ and the set on which $g^{**} < g$.
-
-   *Adapted from Boyd and Vandenberghe,
-   [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/),
-   Examples 3.22 and 3.26.*
-   :exlabel:`ex_mdl-convexity-conjugate-pairs`
 
 1. **The PL condition beyond convexity.** The `#convexity-pl-rate` cell
    measures the PL constant $\mu \approx 0.1755$ of
@@ -1477,51 +1162,6 @@ particular model and regime.
        an accelerated method with error $O(LR^2/k^2)$ replaces gradient
        descent?
    :exlabel:`ex_mdl-convexity-smoothing-maximum`
-
-1. **Moreau decomposition.** ● For a closed convex $f$, two facts connect
-   the proximal operator :eqref:`eq_mdl-opt-prox` with the conjugate
-   :eqref:`eq_mdl-opt-conjugate`: $\mathbf{x} = \mathrm{prox}_f(\mathbf{z})$
-   exactly when $\mathbf{z} - \mathbf{x} \in \partial f(\mathbf{x})$, and
-   $\mathbf{y} \in \partial f(\mathbf{x})$ exactly when
-   $\mathbf{x} \in \partial f^*(\mathbf{y})$ :cite:`Parikh.Boyd.2014`.
-    1. Derive the Moreau decomposition
-       $\mathbf{z} = \mathrm{prox}_f(\mathbf{z}) + \mathrm{prox}_{f^*}(\mathbf{z})$.
-    1. Take $f = \lambda\|\cdot\|_1$ and its conjugate from problem
-       :exref:`ex_mdl-convexity-conjugate-pairs`a. Show that the
-       decomposition writes soft-thresholding
-       :eqref:`eq_mdl-opt-soft-threshold` as $\mathbf{z}$ minus a clipped
-       copy of $\mathbf{z}$.
-    1. Take $f = \lambda\|\cdot\|_2$, whose conjugate is the indicator of
-       the $\ell_2$ ball of radius $\lambda$. The proximal operator of that
-       indicator is the projection onto the ball, the clip-by-norm map of
-       gradient clipping. Use the decomposition to recover the solution of
-       problem :exref:`ex_mdl-convexity-compute-full-subdifferential-f`c.
-   :exlabel:`ex_mdl-convexity-moreau-decomposition`
-
-1. [code] **Accelerated proximal gradient.** ● FISTA
-   :cite:`Beck.Teboulle.2009` adds momentum to the ISTA update
-   :eqref:`eq_mdl-opt-ista` for $F = g + h$. With
-   $\mathbf{v}_1 = \mathbf{x}_0$ and $t_1 = 1$, it iterates for $k \ge 1$
-
-   $$\mathbf{x}_k = \mathrm{prox}_{\eta h}\bigl(\mathbf{v}_k - \eta \nabla g(\mathbf{v}_k)\bigr), \qquad t_{k+1} = \tfrac12\Bigl(1 + \sqrt{1 + 4t_k^2}\Bigr), \qquad \mathbf{v}_{k+1} = \mathbf{x}_k + \frac{t_k - 1}{t_{k+1}}\,(\mathbf{x}_k - \mathbf{x}_{k-1}).$$
-
-   With $\eta = 1/L$ its objective gap satisfies
-   $F(\mathbf{x}_k) - F^\star \le 2L\|\mathbf{x}_0 - \mathbf{x}^\star\|^2/(k+1)^2$,
-   against $O(1/k)$ for ISTA.
-    1. Add FISTA to the `#convexity-prox-ista` cell and plot
-       $F(\mathbf{x}_k) - F^\star$ of both methods over 100 steps on a
-       logarithmic axis, with $F^\star$ taken from $10^5$ ISTA steps. Which
-       method is ahead after 10 steps, and which after 30? Explain the ISTA
-       curve with problem :exref:`ex_mdl-convexity-distance-contraction`a
-       and the nonexpansiveness
-       $\|\mathrm{prox}_{\eta h}(\mathbf{u}) - \mathrm{prox}_{\eta h}(\mathbf{v})\| \le \|\mathbf{u} - \mathbf{v}\|$
-       of the proximal operator.
-    1. Is $F(\mathbf{x}_k)$ monotone along the FISTA iterates?
-    1. Replace `A` by a $30 \times 100$ Gaussian matrix and plant the same
-       three nonzero coefficients, and run both methods for 1000 steps.
-       Over which range of $k$ is FISTA ahead now? Why does ISTA still end
-       with a fast linear phase, although $A^\top A$ is singular?
-   :exlabel:`ex_mdl-convexity-accelerated-proximal-gradient`
 
 1. **A factored scalar model.** ● The two-weight model
    $f(a, b) = (ab - 1)^2$ of :numref:`subsec_mdl-recognizing-convexity` is
@@ -2000,26 +1640,6 @@ Carlo, and the predicted flat direction:
 
 Every eigenvalue is nonnegative down to one numerical zero, and 200k
 one-hot draws reproduce the analytic Hessian: the empirical covariance agrees with the analytic Hessian.
-:::
-
-::: {.slide title="Proximal operators for nonsmooth terms"}
-[Recognizing convexity]{.kicker}
-
-$\mathrm{prox}_f(\mathbf{z})$ balances lower values of $f$ against a
-quadratic penalty for moving away from $\mathbf{z}$: a projection,
-generalized from sets to functions. For $\lambda|x|$ the subgradient
-criterion solves it in closed form: **soft-thresholding**,
-
-$$\mathrm{prox}_{\lambda|\cdot|}(z) = \mathrm{sign}(z)\,\max(|z| - \lambda,\, 0),$$
-
-and alternating a gradient step on the smooth part with a proximal update on
-the nonsmooth part is **ISTA**, which keeps gradient descent's $O(1/k)$ rate:
-
-@!convexity-prox-ista
-
-Five of eight coordinates are exactly zero because of the $\max$ thresholding
-operation; an ordinary smooth gradient step does not produce this result. This is how $\ell_1$
-sparsifies where $\ell_2$ only shrinks.
 :::
 
 ::: {.slide}

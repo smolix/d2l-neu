@@ -1,7 +1,7 @@
 # Eigendecompositions
 :label:`sec_mdl-eigendecompositions`
 
-In :numref:`sec_mdl-geometry-linear-algebraic-ops`, a matrix was interpreted as
+In :numref:`sec_mdl-linear-maps`, a matrix was interpreted as
 a linear transformation that rotates, skews, and rescales space. Eigenvalues
 identify directions, called *eigenvectors*, along which this transformation is
 pure scaling. When the eigenvectors form a basis, the transformation separates
@@ -249,7 +249,7 @@ there the *real parts* of the eigenvalues decide stability, as we show in
 :numref:`sec_mdl-odes-solvers`.
 
 **Determinant and trace from the eigenvalues.** Two quantities we met in
-:numref:`sec_mdl-geometry-linear-algebraic-ops` read off the spectrum directly.
+:numref:`sec_mdl-linear-maps` read off the spectrum directly.
 For a diagonalizable matrix, both follow in two lines from identities we have
 already proved. The determinant is multiplicative
 :eqref:`eq_mdl-det-multiplicative`, and applying multiplicativity to
@@ -284,7 +284,7 @@ the *sum* of the eigenvalues. So determinant and trace are the product and sum
 of the spectrum; both are *similarity invariants* (unchanged by
 $\mathbf{A}\mapsto\mathbf{W}\mathbf{A}\mathbf{W}^{-1}$). The trace identity
 returns when we estimate $\log\det$ Jacobians with the Hutchinson trace
-estimator in :numref:`sec_mdl-odes-solvers`.
+estimator in :numref:`sec_mdl-neural-odes-cnf`.
 
 Both identities in fact hold for *every* square matrix, diagonalizable or not,
 provided the eigenvalues are counted with algebraic multiplicity over the

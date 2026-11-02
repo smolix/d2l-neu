@@ -348,7 +348,7 @@ place of direct exponentiation.
 ### Bounds for Log-Sum-Exp
 
 Log-sum-exp appears throughout exponential-family models as their normalizer
-(:numref:`sec_mdl-distributions`) and also determines cross-entropy. The shift
+(:numref:`sec_mdl-exponential-family`) and also determines cross-entropy. The shift
 in :eqref:`eq_mdl-opt-stable-lse` yields the following useful bounds:
 
 **Proposition (log-sum-exp sandwich).** *For every
@@ -958,7 +958,7 @@ initial error is not perfectly aligned with the slowest eigendirection).
 Ridge thus conditions the problem exactly as a preconditioner would, with
 one difference: a true preconditioner leaves the minimizer unchanged, while
 ridge biases the solution, shrinking $\mathbf{w}_\lambda$ toward
-$\mathbf{0}$; :numref:`sec_mdl-constrained-optimization-duality` showed the
+$\mathbf{0}$; :numref:`sec_mdl-lagrangian-duality` showed the
 precise sense in which the penalty $\lambda\|\mathbf{w}\|^2$ is the
 Lagrangian counterpart of a norm constraint. Thus a regularization parameter
 chosen for statistical reasons can also improve the conditioning of the linear
@@ -1260,7 +1260,7 @@ The condition number governs both the convergence rate of fixed-step gradient
 descent (:numref:`sec_mdl-gradient-based-optimization`) and the sensitivity
 of a linear solve. Ridge regularization, which corresponds to a norm constraint
 through the Lagrangian analysis in
-:numref:`sec_mdl-constrained-optimization-duality`, can improve both.
+:numref:`sec_mdl-lagrangian-duality`, can improve both.
 
 The same stable computations recur elsewhere in the book. Softmax and
 attention use maximum subtraction and log-sum-exp; naive Bayes and other

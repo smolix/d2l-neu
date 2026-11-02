@@ -787,207 +787,7 @@ cost. Momentum or exponential gradient averaging is consequently common in
 deep learning optimizers
 (:numref:`sec_momentum`).
 
-## Stochastic Gradients and Second-Order Tradeoffs
-:label:`subsec_mdl-stochastic-gradients`
-
-### The Cost of Full Gradients
-
-A training loss is an average over data,
-
-$$
-f(\mathbf{w}) = \frac{1}{N} \sum_{i=1}^N f_i(\mathbf{w}),
-$$
-
-where $f_i$ is the loss on example $i$. The exact gradient
-$\nabla f = \tfrac1N \sum_i \nabla f_i$ touches all $N$ examples; at
-$N \sim 10^9$, one gradient-descent step costs a full pass over the dataset.
-**Stochastic gradient descent** replaces the exact gradient with an estimate
-from a random **minibatch** $B$ of $b$ indices, drawn uniformly (for the
-analysis, with replacement):
-
-$$
-\hat{\mathbf{g}}_b = \frac{1}{b} \sum_{i \in B} \nabla f_i(\mathbf{w}),
-\qquad
-\mathbf{w}_{k+1} = \mathbf{w}_k - \eta_k\, \hat{\mathbf{g}}_b.
-$$
-:eqlabel:`eq_mdl-opt-minibatch`
-
-The estimate has two basic properties that recur in minibatch analyses.
-
-**Proposition (minibatch gradients: unbiased, variance $\propto 1/b$).** *Let
-$\Sigma$ denote the covariance of a single uniformly drawn example gradient,
-$\Sigma = \tfrac1N \sum_i \big(\nabla f_i - \nabla f\big)\big(\nabla f_i - \nabla f\big)^\top$
-(all gradients at the current $\mathbf{w}$). Then*
-
-$$
-\mathbb{E}\big[\hat{\mathbf{g}}_b\big] = \nabla f(\mathbf{w}),
-\qquad
-\mathbb{E}\big[\|\hat{\mathbf{g}}_b - \nabla f(\mathbf{w})\|^2\big] = \frac{\mathrm{tr}\, \Sigma}{b}.
-$$
-:eqlabel:`eq_mdl-opt-variance`
-
-**Proof.** Each index is uniform on $\{1, \ldots, N\}$, so each term has
-expectation $\tfrac1N \sum_i \nabla f_i = \nabla f$; by linearity so does the
-average. This equality depends on uniform sampling and on conditioning on the
-current iterate; biased sampling requires a correction. For the variance, the
-$b$ draws are
-independent and identically distributed, so the covariance of their average is
-$\Sigma / b$ (covariances of independent terms add, and the $1/b$ outside
-enters squared). Taking the trace turns covariance into expected squared
-error. $\blacksquare$
-
-The expected squared estimation error falls like $1/b$, while its root-mean-square
-magnitude falls like $1/\sqrt{b}$: increasing the batch computation by
-$100\times$ reduces this magnitude by only $10\times$. This scaling contributes
-to diminishing returns from very large batches (exercise :exref:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl`); the practical
-operating point also depends on parallel hardware and optimization dynamics. The cell
-verifies both claims on a hand-rolled logistic-regression problem, the toy
-we will keep for the rest of the section: $n = 200$ points in five dimensions,
-labels flipped with logistic noise, plus a small $\ell_2$ regularizer that
-makes the loss strongly convex.
-
-```{.python .input #gradient-based-optimization-sgd-variance}
-rng = np.random.default_rng(42)
-n, d = 200, 5
-w_true = np.array([1.0, -2.0, 1.5, 0.0, 2.0])
-X = rng.normal(size=(n, d))
-y = np.where(rng.random(n) < 1 / (1 + np.exp(-X @ w_true)), 1.0, -1.0)
-lam_reg = 0.1
-
-def loss(w):
-    return np.mean(np.log1p(np.exp(-y * (X @ w)))) + 0.5 * lam_reg * w @ w
-
-def example_grads(w):                        # row i: gradient of example i's loss
-    s = 1 / (1 + np.exp(y * (X @ w)))        # sigma(-y_i x_i^T w)
-    return -(y * s)[:, None] * X + lam_reg * w
-
-G = example_grads(np.zeros(d))
-g_full = G.mean(axis=0)
-tr_sigma = ((G - g_full)**2).sum(axis=1).mean()   # tr Sigma over the dataset
-print(f'single-example gradient noise  tr Sigma = {tr_sigma:.4f}')
-for b in [1, 4, 16, 64]:
-    batches = rng.integers(0, n, size=(2000, b))  # 2000 minibatches per size
-    err = ((G[batches].mean(axis=1) - g_full)**2).sum(axis=1).mean()
-    print(f'b = {b:2d}:  measured E|g_hat - g|^2 = {err:.5f}   '
-          f'predicted tr Sigma / b = {tr_sigma / b:.5f}')
-```
-
-At the initialization the single-example noise level is
-$\mathrm{tr}\,\Sigma = 1.1447$, and the measured squared error of the
-minibatch gradient tracks the $1/b$ prediction within Monte Carlo error at
-every batch size: $1.155$ vs. $1.145$ at $b = 1$, down to $0.0182$ vs.
-$0.0179$ at $b = 64$.
-
-### Stationary Error under Fixed-Step SGD
-
-What does persistent gradient noise do to convergence? A one-dimensional strongly convex quadratic gives an exact recurrence. Model the update as
-$x_{k+1} = x_k - \eta\,(\lambda x_k + \xi_k)$ with i.i.d. noise
-$\mathbb{E}[\xi_k] = 0$, $\mathbb{E}[\xi_k^2] = \sigma^2$. Squaring and taking
-expectations (the cross term vanishes by unbiasedness),
-
-$$
-\mathbb{E}\big[x_{k+1}^2\big] = (1 - \eta\lambda)^2\, \mathbb{E}\big[x_k^2\big] + \eta^2 \sigma^2,
-$$
-
-a contraction plus a constant noise injection, whose fixed point is
-
-$$
-\mathbb{E}\big[x_\infty^2\big]
-= \frac{\eta^2 \sigma^2}{1 - (1 - \eta\lambda)^2}
-= \frac{\eta\, \sigma^2}{\lambda\, (2 - \eta\lambda)}
-\;\approx\; \frac{\eta\, \sigma^2}{2\lambda}
-\qquad (\eta \ll 1/\lambda).
-$$
-:eqlabel:`eq_mdl-opt-noise-ball`
-
-In this scalar quadratic model, fixed-step SGD does *not* converge to the
-minimizer; it converges to a stationary *distribution* whose iterates fluctuate
-inside a **noise
-ball** of squared radius proportional to $\eta\,\sigma^2$, as in
-:numref:`fig_mdl-opt-sgd-noise-ball`. Far from the optimum the contraction
-term dominates and SGD makes GD-like linear progress; once the error reaches
-the ball, signal and noise balance, and subsequent iterates continue to fluctuate within the stationary distribution. The radius formula is a design guide: halving $\eta$ halves the
-squared radius (and so does doubling $b$, since $\sigma^2 \mapsto \sigma^2/b$
-by :eqref:`eq_mdl-opt-variance`; step size and batch size are coupled parameters, the coupling behind the learning-rate rules of
-:numref:`sec_batch_size`).
-
-![Gradient descent versus SGD on the same strongly convex bowl. The full-batch path converges to the minimizer; fixed-step SGD first descends and then fluctuates inside a noise ball whose squared radius scales like $\eta\sigma^2/(2\lambda)$. Halving the step size shrinks the ball in this model, which motivates decaying schedules under persistent gradient noise.](../img/mdl-opt-sgd-noise-ball.svg)
-:label:`fig_mdl-opt-sgd-noise-ball`
-
-Under the persistent-noise assumptions of this model, convergence to the
-minimizer requires a decaying step: fast enough to control the noise, slowly
-enough to retain cumulative movement. The classical
-conditions of :citet:`Robbins.Monro.1951` make both demands precise:
-
-$$
-\sum_{k} \eta_k = \infty,
-\qquad
-\sum_{k} \eta_k^2 < \infty.
-$$
-:eqlabel:`eq_mdl-opt-robbins-monro`
-
-These step-size conditions are only one part of a convergence theorem. With
-unbiased stochastic gradients, controlled second moments, a smooth strongly
-convex objective, and a suitable constant in $\eta_k \propto 1/k$, SGD attains
-$\mathbb{E}[f(\mathbf{w}_k)] - f^\star = O(1/k)$. For a convex but not strongly
-convex objective, appropriately scheduled SGD or averaged iterates attain the
-usual $O(1/\sqrt{k})$ stochastic rate; Polyak--Ruppert averaging has sharper
-asymptotic conclusions under its own regularity conditions
-:cite:`Polyak.Juditsky.1992,Bottou.2010,Goodfellow.Bengio.Courville.2016`.
-A condition on the constant is easy to miss: with $\eta_k = c/k$, the
-$O(1/k)$ guarantee requires $c$
-large enough relative to the curvature, $c > 1/(2\mu)$; choose $c$ too
-small and the rate degrades to $O(k^{-2\mu c})$
-(exercise :exref:`ex_mdl-gradient-based-optimization-one-over-k-constant`), arbitrarily slower
-than advertised, one reason practical schedules decay more gently than $1/k$
-:cite:`Bottou.Curtis.Nocedal.2018`. Compare the
-deterministic linear rate :eqref:`eq_mdl-opt-gd-rate-strongly-convex`: noise
-changes the *rate class*, from geometric to
-polynomial. The cell shows both regimes on the logistic toy: fixed steps
-approach an $\eta$-proportional floor, whereas the decaying schedule continues
-toward zero.
-
-```{.python .input #gradient-based-optimization-sgd-schedule}
-w_star = np.zeros(d)
-for _ in range(4000):                         # full-batch reference optimum
-    w_star = w_star - 0.5 * example_grads(w_star).mean(axis=0)
-f_star = loss(w_star)
-
-def sgd(schedule, steps=4000, b=8, seed=1):
-    rg = np.random.default_rng(seed)
-    w, gaps = np.zeros(d), []
-    for k in range(steps):
-        idx = rg.integers(0, n, size=b)
-        s = 1 / (1 + np.exp(y[idx] * (X[idx] @ w)))
-        g = (-(y[idx] * s)[:, None] * X[idx]).mean(axis=0) + lam_reg * w
-        w = w - schedule(k) * g
-        gaps.append(loss(w) - f_star)
-    return np.array(gaps)
-
-gap_fix = sgd(lambda k: 0.8)
-gap_half = sgd(lambda k: 0.4)
-gap_dec = sgd(lambda k: 0.8 / (1 + k / 100))
-print(f'fixed eta = 0.8:     mean gap, last 1000 steps = {gap_fix[-1000:].mean():.2e}')
-print(f'fixed eta = 0.4:     mean gap, last 1000 steps = {gap_half[-1000:].mean():.2e}')
-print(f'decay 0.8/(1+k/100): mean gap, last 1000 steps = {gap_dec[-1000:].mean():.2e}')
-d2l.plot(np.arange(1, 4001), [gap_fix, gap_dec], 'step k', 'optimality gap',
-         xscale='log', yscale='log',
-         legend=['fixed eta = 0.8', 'decay 0.8/(1+k/100)'])
-```
-
-The measurements agree with the theoretical predictions. Fixed $\eta = 0.8$ stalls at
-an average gap of $2.3 \times 10^{-2}$; halving the step to $0.4$ halves the
-floor to $1.1 \times 10^{-2}$: the linear-in-$\eta$ noise ball of
-:eqref:`eq_mdl-opt-noise-ball`, measured. The $1/k$ schedule is at
-$5.7 \times 10^{-4}$ after the same $4000$ steps and still descending as a
-power law, the straight line on the log-log plot: its early large steps cross
-the valley, and its late small steps shrink the ball. Modern schedules (step
-decay, cosine, and warmup; :numref:`sec_scheduler`) manage this tradeoff
-empirically on losses that are neither convex nor stationary. Warmup starts with a small $\eta$ and ramps
-it upward. It can reduce early instability while gradient statistics and local
-curvature are changing rapidly, but the quadratic analysis does not establish a
-universal warmup rule for neural networks. Schedules and warmup are discussed in
-:numref:`sec_mdl-adaptive-stochastic-methods`.
+## Newton and Quasi-Newton Methods
 
 The main curvature-based choices differ in what they store and how they control
 a proposed step:
@@ -1029,6 +829,23 @@ number of correct digits. The cell shows both
 facts: a one-step solve of the $\kappa = 100$ quadratic that costs gradient
 descent $691$ iterations, and the doubling-digits signature on our logistic
 toy.
+
+```{.python .input #mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1}
+rng = np.random.default_rng(42)
+n, d = 200, 5
+w_true = np.array([1.0, -2.0, 1.5, 0.0, 2.0])
+X = rng.normal(size=(n, d))
+y = np.where(rng.random(n) < 1 / (1 + np.exp(-X @ w_true)), 1.0, -1.0)
+lam_reg = 0.1
+
+def example_grads(w):                        # row i: gradient of example i's loss
+    s = 1 / (1 + np.exp(y * (X @ w)))        # sigma(-y_i x_i^T w)
+    return -(y * s)[:, None] * X + lam_reg * w
+
+w_star = np.zeros(d)
+for _ in range(4000):                         # full-batch reference optimum
+    w_star = w_star - 0.5 * example_grads(w_star).mean(axis=0)
+```
 
 ```{.python .input #gradient-based-optimization-newton}
 A2 = np.diag([1.0, 100.0])                    # kappa = 100
@@ -1225,13 +1042,6 @@ beyond explicitly inverting a Hessian.
   guarantee, and these rates are *optimal* for first-order methods. Heavy
   ball's $\sqrt{\kappa}$ is quadratic-only: it can cycle on general
   strongly convex functions.
-* Minibatch gradients are **unbiased** with variance
-  $\mathrm{tr}\,\Sigma / b$. On the scalar quadratic model, fixed-step SGD
-  has a **noise ball** of squared radius
-  $\approx \eta\sigma^2/(2\lambda)$. Under the usual stochastic
-  approximation assumptions, Robbins--Monro decay
-  ($\sum \eta_k = \infty$, $\sum \eta_k^2 < \infty$) permits convergence
-  to the optimum.
 * In exact arithmetic, Newton's method solves a positive-definite quadratic in
   one step regardless of $\kappa$. Near a regular minimizer it is locally
   quadratically convergent, but a dense implementation costs $O(d^2)$ memory
@@ -1442,68 +1252,6 @@ beyond explicitly inverting a Hessian.
        $n = 2k + 1$, and divide each gap by the bound. Which ratio stays
        bounded as $k$ grows?
    :exlabel:`ex_mdl-gradient-based-optimization-first-order-lower-bound`
-
-1. [code] **Noise scale and critical batch size.** ● How much does one
-   minibatch step lower the loss, and how does the gain depend on $b$? Write
-   $\mathbf{g} = \nabla f(\mathbf{w})$ and $H = \nabla^2 f(\mathbf{w})$, and
-   approximate the loss after the step
-   $\mathbf{w} - \eta\,\hat{\mathbf{g}}_b$ of :eqref:`eq_mdl-opt-minibatch`
-   by its second-order Taylor expansion at $\mathbf{w}$. The analysis follows
-   :citet:`McCandlish.Kaplan.Amodei.ea.2018`.
-    1. Use the covariance $\Sigma/b$ of $\hat{\mathbf{g}}_b$, established in
-       the proof of :eqref:`eq_mdl-opt-variance`, to show that the expected
-       loss after the step is minimized by
-       $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + B_{\textrm{noise}}/b)$,
-       with expected improvement $\Delta_{\max} / (1 + B_{\textrm{noise}}/b)$,
-       where
-
-       $$
-       \eta_{\max} = \frac{\|\mathbf{g}\|^2}{\mathbf{g}^\top H \mathbf{g}},
-       \qquad
-       \Delta_{\max} = \frac{\|\mathbf{g}\|^4}{2\,\mathbf{g}^\top H \mathbf{g}},
-       \qquad
-       B_{\textrm{noise}} = \frac{\mathrm{tr}(H \Sigma)}{\mathbf{g}^\top H \mathbf{g}}.
-       $$
-
-    1. The linear scaling rule of :citet:`Goyal.Dollar.Girshick.ea.2017`
-       multiplies $\eta$ by $s$ when it multiplies $b$ by $s$. For which
-       batch sizes does this rule follow from $\eta_{\textrm{opt}}(b)$? What
-       does a larger batch buy per step once $b \gg B_{\textrm{noise}}$?
-    1. For $H$ proportional to the identity, $B_{\textrm{noise}}$ reduces to
-       $B_{\textrm{simple}} = \mathrm{tr}\,\Sigma / \|\mathbf{g}\|^2$. Compute
-       $B_{\textrm{simple}}$ and $B_{\textrm{noise}}$ for the logistic loss
-       of the `#gradient-based-optimization-sgd-variance` cell at
-       $\mathbf{w} = \mathbf{0}$ and after $5$, $10$, and $20$ full-batch
-       gradient steps with $\eta = 0.5$, using `example_grads` and the
-       Hessian formula of the `#gradient-based-optimization-newton` cell.
-       How does the noise scale change as the iterates approach the optimum?
-       Treat $B_{\textrm{noise}}$ as the critical batch size that separates
-       the two regimes of (b). How should the batch size change over a
-       training run?
-   :exlabel:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl`
-
-1. [code] **The constant in a $1/k$ schedule.** ● With
-   $\eta_k \propto 1/k$, SGD attains the $O(1/k)$ rate only when the
-   constant is large enough relative to
-   $\mu$ (:numref:`subsec_mdl-stochastic-gradients`). The scalar model of
-   :eqref:`eq_mdl-opt-noise-ball` with curvature $\lambda = \mu$ and steps
-   $\eta_k = c/(k + k_0)$ makes this condition exact: the second moment
-   $e_k = \mathbb{E}[x_k^2]$ obeys
-
-   $$
-   e_{k+1} = (1 - \eta_k \mu)^2\, e_k + \eta_k^2 \sigma^2.
-   $$
-
-    1. Let $2\mu c > 1$. Substitute $e_k \approx A/k$ for large $k$, keep
-       the terms of order $1/k^2$, and solve for $A$. Which $c$ minimizes
-       $A$?
-    1. Let $2\mu c < 1$. Show that $e_k = \Theta(k^{-2\mu c})$.
-    1. Iterate the recursion with $\mu = \sigma = 1$, $k_0 = 10$, and
-       $e_0 = 1$ up to $k = 10^6$ for $c \in \{0.1, 0.25, 0.5, 1, 2\}$, and
-       estimate the slope of $\log e_k$ against $\log k$ between $k = 10^5$
-       and $k = 10^6$. Which costs more, a constant twice as large as the
-       minimizer of $A$ or one half as large?
-   :exlabel:`ex_mdl-gradient-based-optimization-one-over-k-constant`
 
 1. [code] **Edge of stability with momentum.** ●●
    :citet:`Cohen.Kaur.Li.ea.2021` report that with momentum, the sharpness
@@ -1841,56 +1589,6 @@ $10^{-6}$:
 GD's count is linear in $\kappa$ ($6{,}908$ at $\kappa=1000$); heavy ball
 grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup). At one gradient
 per step, the speedup adds no per-step cost.
-:::
-
-::: {.slide title="Minibatch noise: unbiased, variance $\propto 1/b$"}
-[Stochastic gradients]{.kicker}
-
-A training loss averages over data, so the exact gradient costs a full
-pass. A random minibatch estimate is unbiased with variance that falls
-like $1/b$:
-
-$$\mathbb{E}[\hat{\mathbf{g}}_b] = \nabla f, \qquad
-\mathbb{E}\big[\|\hat{\mathbf{g}}_b - \nabla f\|^2\big] = \frac{\mathrm{tr}\,\Sigma}{b}.$$
-
-::: {.d2l-note}
-Noise *energy* falls like $1/b$, so *amplitude* falls like $1/\sqrt{b}$:
-$100\times$ the compute reduces the noise only $10\times$, which is why
-huge batches show diminishing returns.
-:::
-:::
-
-::: {.slide title="Fixed-step SGD has a nonzero noise floor"}
-[Stochastic gradients]{.kicker}
-
-::: {.cols .vc}
-::: {.col .narrow}
-A contraction plus constant noise injection has a nonzero fixed point:
-In the scalar quadratic model, SGD first descends and then fluctuates with
-squared radius
-
-$$\mathbb{E}[x_\infty^2] \approx \frac{\eta\,\sigma^2}{2\lambda}.$$
-
-Halving $\eta$ halves the squared radius in this model; decaying schedules use
-this tradeoff under persistent noise.
-:::
-
-::: {.col .fig .big}
-@fig:mdl-opt-sgd-noise-ball
-:::
-:::
-:::
-
-::: {.slide title="Step-Size Decay under Persistent Noise"}
-[Stochastic gradients]{.kicker}
-
-Robbins--Monro decay ($\sum\eta_k=\infty,\ \sum\eta_k^2<\infty$) quenches
-the noise while still travelling far, on the logistic toy:
-
-@!gradient-based-optimization-sgd-schedule
-
-Fixed $\eta$ approaches a nonzero floor; $1/k$ continues toward zero: noise moves the *rate
-class* from geometric to polynomial.
 :::
 
 ::: {.slide title="Newton's Method: Accuracy and Cost"}

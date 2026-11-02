@@ -23,8 +23,11 @@ These quantities are not interchangeable losses. Their support assumptions, inva
 :maxdepth: 2
 
 mdl-information-theory
+mdl-coding-compression
 mdl-divergences-distances
 mdl-mutual-information
+mdl-mi-estimation
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

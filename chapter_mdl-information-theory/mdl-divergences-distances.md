@@ -412,7 +412,7 @@ the classic GAN value function equals $2\,\textrm{JS}(P, Q) - \log 4$. For the
 KL generator $f(u) = u \log u$ the conjugate is $f^*(t) = e^{t-1}$, giving
 $D_{\textrm{KL}}(P\|Q) \geq E_P[T] - E_Q[e^{T-1}]$, a bound we will meet
 again, tightened into Donsker--Varadhan form, when
-:numref:`sec_mdl-mutual-information` estimates mutual information
+:numref:`sec_mdl-mi-estimation` estimates mutual information
 variationally.
 
 Two practical caveats remain. The bound is tight only at the *optimal* critic, so
@@ -1030,7 +1030,7 @@ exactly. With squared cost $\|x - y\|^2$ in
 :eqref:`eq_mdl-w1-primal` one obtains the Wasserstein-2 distance, whose
 dynamical (Benamou--Brenier) formulation as a minimum-kinetic-energy flow is
 the natural language for diffusion models and flow matching; we develop it
-where it is needed, in :numref:`sec_mdl-score-matching-diffusion-flow`.
+where it is needed, in :numref:`sec_mdl-flow-matching-transport`.
 
 ## Scores: Fisher Divergence, Stein Discrepancy, and the Objective Map
 

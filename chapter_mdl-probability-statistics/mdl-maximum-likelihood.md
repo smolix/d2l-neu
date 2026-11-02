@@ -802,7 +802,7 @@ precisely when data is scarce.
 We now return to the coin example. A prior on its bias must have support on
 $[0,1]$; a common choice is the **Beta distribution**
 $p(\theta)\propto\theta^{a-1}(1-\theta)^{b-1}$ with shape parameters $a, b > 0$,
-the conjugate prior of :numref:`sec_mdl-distributions`: multiplying by the
+the conjugate prior of :numref:`sec_mdl-exponential-family`: multiplying by the
 likelihood :eqref:`eq_mdl-coin-like` shifts the exponents by the observed
 counts, so the posterior is again a Beta (:eqref:`eq_mdl-beta_posterior`),
 
@@ -1475,7 +1475,7 @@ taken up in detail there.
     1. Fit the Poisson regression $\log\lambda(x)=w_0+w_1x$ with one feature
        by the Newton method of exercise
        :exref:`ex_mdl-distributions-poisson-regression`
-       of :numref:`sec_mdl-distributions`. An observation is now a pair
+       of :numref:`sec_mdl-exponential-family`. An observation is now a pair
        $(x_i,y_i)$, and $\log p(y_i\mid x_i;\mathbf w)$ takes the place of
        $\log p(x\mid\boldsymbol{\theta})$ in $\mathbf A$ and $\mathbf B$;
        estimate both by sample averages at the fitted $\hat{\mathbf w}$.
@@ -1489,7 +1489,7 @@ taken up in detail there.
        $95\%$ intervals of the first two covers $w_1=0.5$? Repeat with
        $\alpha=10^6$.
     1. Exercise :exref:`ex_mdl-distributions-poisson-regression`c of
-       :numref:`sec_mdl-distributions` shows that the Poisson fit still
+       :numref:`sec_mdl-exponential-family` shows that the Poisson fit still
        recovers $\mathbf w$ when the counts are overdispersed. Which part
        of the model would have to be wrong for $\mathbf w^\dagger$ to
        differ from $\mathbf w$? Which parameter does the sandwich interval

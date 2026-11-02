@@ -17,7 +17,7 @@ other by an explicit formula, so a trained noise predictor already defines
 a velocity field. This formula, a dictionary between the two views, is
 checked on the running example, where both fields are known in closed form,
 and the image U-Net is then trained with a velocity target.
-:numref:`sec_mdl-score-matching-diffusion-flow` proves the two theorems
+:numref:`sec_mdl-flow-matching-transport` proves the two theorems
 that the section states.
 
 One convention changes. Flow matching runs time in the generative direction:

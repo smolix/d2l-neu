@@ -58,8 +58,8 @@ section it goes with. All are freely accessible online except where noted.
 - [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 6 covers hidden units, activation functions, universal approximation, and backpropagation (:numref:`sec_mlp`, :numref:`sec_backprop`), and Chapter 7 covers dropout (:numref:`sec_dropout`).
 - [Neural Networks and Deep Learning, Chapter 2 — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap2.html) — free online; derives backpropagation step by step from the chain rule (:numref:`sec_backprop`).
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF with notebooks; its chapters on shallow and deep networks, gradients and initialization, and generalization accompany :numref:`sec_mlp`, :numref:`sec_numerical_stability`, and :numref:`sec_generalization_deep`.
-- Matrix calculus and automatic differentiation in this book's mathematics appendix (:numref:`sec_mdl-matrix-calculus-autodiff`) — reverse-mode differentiation with proofs, the background of :numref:`sec_backprop`.
-- Concentration and generalization in the mathematics appendix (:numref:`sec_mdl-concentration-generalization`) — uniform convergence, the minimum-norm mechanism behind double descent, and a numerical double-descent example with random features (:numref:`sec_generalization_deep`).
+- Matrix calculus and automatic differentiation in this book's mathematics appendix (:numref:`sec_mdl-matrix-calculus` and :numref:`sec_mdl-matrix-calculus-autodiff`) — reverse-mode differentiation with proofs, the background of :numref:`sec_backprop`.
+- Concentration and generalization in the mathematics appendix (:numref:`sec_mdl-generalization-bounds`) — uniform convergence, the minimum-norm mechanism behind double descent, and a numerical double-descent example with random features (:numref:`sec_generalization_deep`).
 
 **Courses and tutorials**
 

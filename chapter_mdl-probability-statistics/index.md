@@ -24,11 +24,14 @@ analysis in one classifier.
 
 mdl-random-variables
 mdl-distributions
+mdl-exponential-family
+mdl-statistics
 mdl-maximum-likelihood
 mdl-bayesian-computation
-mdl-statistics
 mdl-concentration-generalization
+mdl-generalization-bounds
 mdl-naive-bayes
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

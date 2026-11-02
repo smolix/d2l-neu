@@ -536,7 +536,7 @@ $\mathbf{W}$ collects the partial derivatives with respect to its entries in
 a matrix of the same shape. Since $\|\mathbf{W}\|_\textrm{F}^2$ is the sum
 of the squared entries, the computation for $\|\mathbf{x}\|^2$ applies entry
 by entry and gives $\nabla_{\mathbf{W}} \|\mathbf{W}\|_\textrm{F}^2 =
-2\mathbf{W}$. :numref:`sec_mdl-matrix-calculus-autodiff` derives many more
+2\mathbf{W}$. :numref:`sec_mdl-matrix-calculus` derives many more
 such identities.
 
 These identities give the gradient of the line model's loss. Expanding the

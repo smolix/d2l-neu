@@ -15,7 +15,7 @@ $$
 :eqlabel:`eq_mdl-bayes-predictive`
 
 Outside the conjugate families of
-:numref:`sec_mdl-distributions`, this integral — and the posterior's own
+:numref:`sec_mdl-exponential-family`, this integral — and the posterior's own
 normalizer — usually has no closed form. We can evaluate the unnormalized
 posterior pointwise, but must approximate its integrals. This leads to the
 computational question:
@@ -34,7 +34,7 @@ models.
 One Bayesian logistic-regression problem provides a common comparison. Because
 it has only two parameters, a sufficiently fine grid supplies a high-accuracy
 numerical reference for checking the approximations. Conjugate posteriors are treated in
-:numref:`sec_mdl-distributions`; MAP and the ELBO are developed in
+:numref:`sec_mdl-exponential-family`; MAP and the ELBO are developed in
 :numref:`sec_mdl-maximum_likelihood`; differentiation through random
 variables is in :numref:`subsec_mdl-stochastic-gradient-estimators`.
 Standard broader references are :citet:`Bishop.2006` and

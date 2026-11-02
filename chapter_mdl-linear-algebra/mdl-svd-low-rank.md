@@ -156,7 +156,7 @@ low-rank approximation of :numref:`subsec_mdl-eckart-young`: retain the
 leading terms and discard the smaller ones.
 
 The dyadic sum is also a one-line `einsum` in the Einstein notation of
-:numref:`sec_mdl-geometry-linear-algebraic-ops`.
+:numref:`sec_mdl-linear-maps`.
 Summing $\sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top$ over $i$ is the index pattern
 `'i,mi,in->mn'` (row $i$ of `Vt` *is* $\mathbf{v}_i^\top$), and it rebuilds the
 matrix exactly:
@@ -278,7 +278,7 @@ the matrix analog of the rotation-with-scaling reading from
 The determinant identity holds in general: for any square $\mathbf{A}$,
 $|\det\mathbf{A}|=\prod_i\sigma_i$, because orthogonal factors have determinant
 $\pm1$, so the volume scaling of
-:numref:`sec_mdl-geometry-linear-algebraic-ops` is carried entirely by the
+:numref:`sec_mdl-linear-maps` is carried entirely by the
 diagonal stretch $\boldsymbol{\Sigma}$.
 
 **The defective shear, finally decomposed.** The shear of
@@ -337,7 +337,7 @@ $$
 :eqlabel:`eq_mdl-rank-sigma`
 
 This is the *efficient* characterization of rank promised in
-:numref:`sec_mdl-geometry-linear-algebraic-ops`, where counting independent
+:numref:`sec_mdl-linear-maps`, where counting independent
 columns by elimination was the only tool on offer. The dyadic form
 :eqref:`eq_mdl-svd-dyadic` makes the four fundamental subspaces equally explicit.
 Splitting the singular vectors at the index $r$,

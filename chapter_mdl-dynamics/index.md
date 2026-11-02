@@ -24,9 +24,12 @@ probability, optimization, and divergence material developed in
 :maxdepth: 2
 
 mdl-odes-solvers
+mdl-neural-odes
 mdl-sdes
 mdl-fokker-planck-probability-flow
 mdl-score-matching-diffusion-flow
+mdl-flow-matching-transport
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

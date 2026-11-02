@@ -20,10 +20,13 @@ valid and are separated from empirical guidance for large neural networks.
 :maxdepth: 2
 
 mdl-gradient-based-optimization
-mdl-adaptive-stochastic-methods
 mdl-convexity
+mdl-stochastic-gradient-methods
+mdl-adaptive-stochastic-methods
 mdl-constrained-optimization-duality
+mdl-lagrangian-duality
 mdl-numerical-stability-conditioning
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

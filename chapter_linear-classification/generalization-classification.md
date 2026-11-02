@@ -449,7 +449,7 @@ essentially any labeling of their training set, random labels included
 the training set. Yet, trained on real labels, the same networks generalize
 well, and often better as they grow larger. Bounds that depend on the data
 and on the training algorithm, not only on the class, are an active area of
-research. :numref:`sec_mdl-concentration-generalization` proves the uniform
+research. :numref:`sec_mdl-generalization-bounds` proves the uniform
 convergence results of this section and develops one such tool, Rademacher
 complexity, which measures how well a class can fit random signs on the
 actual data. Until such bounds become sharp, deep learning certifies

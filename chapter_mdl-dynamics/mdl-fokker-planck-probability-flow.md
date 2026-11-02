@@ -459,7 +459,7 @@ of optimal transport (:numref:`sec_mdl-optimal-transport`), a result of
 :citet:`Jordan.Kinderlehrer.Otto.1998`. We will not use this, but it is why
 transport mathematics keeps resurfacing here, from the continuity equation
 below to the Benamou--Brenier principle :cite:`Benamou.Brenier.2000` that
-:numref:`sec_mdl-score-matching-diffusion-flow` builds on.
+:numref:`sec_mdl-flow-matching-transport` builds on.
 
 ## The Continuity Equation and the Probability-Flow ODE
 :label:`sec_mdl-continuity-equation`
@@ -1207,7 +1207,7 @@ the score.
        particles whose sign differs from the sign of their starting point,
        that is, the fraction that has switched modes. Exercise
        :exref:`ex_mdl-odes-solvers-flow-expressivity`a of
-       :numref:`sec_mdl-odes-solvers` shows that the time-$T$ map of a
+       :numref:`sec_mdl-neural-odes-cnf` shows that the time-$T$ map of a
        Lipschitz field on $\mathbb{R}$ is strictly increasing, and the
        argument carries over to a time-dependent field whose Lipschitz
        constant does not depend on $t$. Use this and the symmetry of $p_0$

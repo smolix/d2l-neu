@@ -187,7 +187,7 @@ iterates as the output, reaches an error of order $1/\sqrt{T}$. No method
 that sees only noisy gradients has a better worst-case rate. For smooth
 nonconvex problems the same constant rate is optimal for driving the
 gradient toward zero (:numref:`subsec_mdl-stochastic-gradients`,
-:numref:`subsec_mdl-schedules-warmup`). Training, however, returns the last
+:numref:`subsec_mdl-step-size-decay`). Training, however, returns the last
 iterate, and for the last iterate the worst-case optimal schedule decays
 linearly to zero :cite:`Defazio.Cutkosky.Mehta.ea.2023`, again a statement
 about the final rate. No theorem ranks one decay shape against another on

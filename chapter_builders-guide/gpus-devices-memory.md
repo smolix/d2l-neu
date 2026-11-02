@@ -389,7 +389,7 @@ except Exception as e:
 try:
     print(X + Y)
 except RuntimeError as e:
-    print(e)
+    print(str(e).split(', but')[0])
 ```
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-4}

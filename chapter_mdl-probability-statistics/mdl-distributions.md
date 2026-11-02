@@ -1830,7 +1830,11 @@ Learn the *map*, not a flat list of formulas.
 One coin flip: $P(X=1)=p$, $P(X=0)=1-p$. Because $X^2 = X$, both moments
 collapse instantly: $\mathbb E[X]=p$, $\operatorname{Var}(X)=p(1-p)$.
 
-@distributions-bernoulli
+~~~python
+big = 1 * (rng.random(10000) < p)   # 1 with prob p, else 0
+~~~
+
+@!distributions-bernoulli
 
 ::: {.d2l-note .rule}
 A probabilistic binary classifier with a Bernoulli likelihood has binary
@@ -1845,7 +1849,11 @@ $K$ outcomes with $P(X=k)=p_k$. A network produces the $p_k$ from logits
 through the softmax $p_k = e^{z_k}/\sum_j e^{z_j}$, and the NLL is exactly
 cross-entropy.
 
-@distributions-categorical
+~~~python
+p_cat = onp.exp(z) / onp.exp(z).sum()   # softmax -> categorical
+~~~
+
+@!distributions-categorical
 
 ::: {.d2l-note}
 The **Gumbel-max** trick samples a categorical exactly; its soft version
@@ -1913,7 +1921,11 @@ $\tfrac{(b-a)^2}{12}$.
 The unit uniform powers inverse-transform sampling, Monte Carlo,
 dropout masks, and initialization.
 
-@distributions-continuous-uniform
+~~~python
+sample = (b - a) * rng.random(10000) + a   # shift-and-scale
+~~~
+
+@!distributions-continuous-uniform
 :::
 
 ::: {.col .fig}
@@ -1930,10 +1942,14 @@ mean $1/\lambda$, variance $1/\lambda^2$.
 
 $$P(X > s+t \mid X > s) = e^{-\lambda t} = P(X > t).$$
 
-@distributions-exponential
+~~~python
+sample = -onp.log(U) / lam   # inverse-transform sampler
+~~~
+
+@!distributions-exponential
 
 ::: {.d2l-note .rule}
-The only memoryless continuous law (converse: Exercise :exref:`ex_mdl-distributions-memoryless-converse`); the continuous
+The only memoryless continuous law; the continuous
 partner of the Poisson, and the source of $X=-\log U/\lambda$ sampling.
 :::
 :::
@@ -1975,7 +1991,11 @@ chapter.
 $p(x)=\tfrac{1}{2b}e^{-|x-\mu|/b}$: a sharp peak and heavier (exponential)
 tails than the Gaussian; variance $2b^2$.
 
-@distributions-laplace
+~~~python
+lap = mu - b * onp.sign(U) * onp.log(1 - 2 * onp.abs(U))
+~~~
+
+@!distributions-laplace
 
 ::: {.d2l-note .rule}
 Its NLL is $|y-\hat y|$ (MAE); as a prior it gives the $\ell_1$ /
@@ -2100,7 +2120,11 @@ So $A$ is **convex** and the MLE equation is moment matching,
 $\mathbb E[T] = \bar T$. Autograd confirms $dA/d\eta=\sigma(\eta)$ for the
 Bernoulli:
 
-@distributions-exp-family
+~~~python
+dA = (A(eta + eps) - A(eta - eps)) / (2 * eps)   # numerical dA/deta
+~~~
+
+@!distributions-exp-family
 :::
 
 ::: {.slide}

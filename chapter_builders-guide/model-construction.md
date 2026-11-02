@@ -538,7 +538,7 @@ class PlainListMLP(nnx.Module):
 try:
     net = PlainListMLP(nnx.Rngs(d2l.get_key()))
 except ValueError as e:
-    print(e)
+    print(str(e).split(' of Pytree')[0])  # The rest lists the repairs
 ```
 
 :begin_tab:`mxnet`
@@ -589,7 +589,8 @@ of the model, and a later assignment fails at once:
 :begin_tab:`jax`
 NNX rejects the plain list when the model is constructed. It would
 otherwise treat the list as fixed configuration and hide the parameters
-inside it. The error lists the repairs, among them `nnx.List` and
+inside it. The first line of the error, which is all we print, names the
+problem, and the rest of the message lists the repairs, among them `nnx.List` and
 `nnx.data`. With the graph-aware `nnx.List`, the model is complete:
 :end_tab:
 
@@ -621,7 +622,7 @@ net(X).shape, sum(p.numel() for p in net.parameters())
 try:
     net.head = tf.keras.layers.Dense(2)  # net is built: too late
 except ValueError as e:
-    print(e)
+    print(str(e)[:70].rsplit(' ', 1)[0], '...')
 ```
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}

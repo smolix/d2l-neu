@@ -343,7 +343,7 @@ x32 = tf.ones(3, dtype=tf.float32)
 try:
     x16 + x32
 except tf.errors.InvalidArgumentError as e:
-    print(e.message)
+    print(e.message.split(' but ')[0])
 (x16 + 1.0).dtype
 ```
 

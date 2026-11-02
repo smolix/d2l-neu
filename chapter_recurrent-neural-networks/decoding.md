@@ -531,8 +531,8 @@ token. We count the tokens each rule keeps after both prefixes.
 for text in ('The Time Traveller', 'The Time'):
     probs = next_probs(text)
     n_p, n_m = cutoffs(probs)
-    print(f'{text!r}: top probability {probs[0]:.2f}, top-k keeps 20, '
-          f'top-p keeps {n_p}, min-p keeps {n_m}')
+    print(f'{text!r}: top probability {probs[0]:.2f}; kept: top-k 20, '
+          f'top-p {n_p}, min-p {n_m}')
 ```
 
 Top-$k$ keeps 20 tokens whatever the distribution. After "The Time" the

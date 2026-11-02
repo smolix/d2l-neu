@@ -900,14 +900,22 @@ same test set requires a paired analysis; overlapping marginal intervals do not
 by themselves imply that their difference is insignificant.
 :::
 
-::: {.slide title="Classwise errors" layout="tight"}
+::: {.slide title="Classwise errors"}
 [A confusion matrix identifies systematic confusions]{.kicker}
 
-@!mdl-naive-bayes-calibration-2
+::: {.cols .vc}
+::: {.col}
+The largest confusions ($4\to9$, $5\to3$, $8\to3$) occur among classes
+with similar learned templates.
 
-The largest confusions ($4\to9$, $5\to3$, and $8\to3$) occur among classes
-with similar learned templates. Distinguishing them depends partly on joint
-patterns among neighboring pixels, which the marginal feature model omits.
+Telling them apart depends on joint patterns among neighboring pixels,
+which the marginal feature model omits.
+:::
+
+::: {.col .fig}
+@!mdl-naive-bayes-calibration-2
+:::
+:::
 :::
 
 ::: {.slide title="Calibration of posterior scores"}
@@ -934,29 +942,15 @@ should be checked with a calibration analysis.
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-::: {.cols}
-::: {.col}
-- Naive Bayes combines Bayes' rule with conditional feature independence.
-- For binary features, the factorization reduces an unrestricted
-  $2^d-1$-parameter class-conditional distribution to $d$ Bernoulli parameters
-  per class.
-- Parameter estimates are smoothed empirical counts, and prediction is
-  performed in log space.
-- Bernoulli and multinomial scores are affine; Gaussian boundaries are linear
-  only under shared per-feature variances and otherwise quadratic.
-:::
-
-::: {.col}
-- The method is often useful for sparse text features but is limited on images
-  by conditional dependence and the chosen pixel likelihood.
-- This experiment obtains $84.3\%\pm0.7$ accuracy. The confusion matrix
-  identifies similar templates, and the calibration curve shows substantial
-  overconfidence.
-:::
-:::
+- Naive Bayes is Bayes' rule plus conditional feature independence: $d$
+  Bernoulli parameters per class instead of $2^d-1$.
+- Training is smoothed counting; prediction is a sum of log-likelihoods,
+  affine in binary features.
+- On MNIST it reaches $84.3\%\pm0.7$ accuracy; the confusion matrix shows
+  similar templates and the calibration curve shows overconfidence.
+- It suits sparse text better than images, where pixels are correlated.
 
 ::: {.d2l-note}
-An accuracy report is more informative when accompanied by uncertainty,
-classwise errors, and a calibration check.
+Report accuracy with uncertainty, classwise errors, and a calibration check.
 :::
 :::

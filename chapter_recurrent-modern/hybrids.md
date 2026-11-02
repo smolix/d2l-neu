@@ -218,7 +218,7 @@ class CausalAttention(nnx.Module):
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
                              feature_group_count=3 * d,  # One filter each
-                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
 
     def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)

@@ -1105,6 +1105,7 @@ print(f'cumulative, R0 -> R3: {tputs[3] / tputs[0]:.2f}x')
 d2l.plt.figure(figsize=(6, 3.5))
 bars = d2l.plt.bar(configurations, [t / 1e3 for t in tputs],
                    color=['#7f7f7f', '#1f77b4', '#1f77b4', '#2ca02c', '#d62728'])
+d2l.plt.ylim(0, 1.15 * max(tputs) / 1e3)  # Headroom for the bar labels
 d2l.plt.ylabel('throughput (k tokens/s)')
 d2l.plt.title('Making a Transformer fast: cumulative configurations')
 for b, t in zip(bars, tputs):
@@ -1122,6 +1123,7 @@ print(f'cumulative, R1 -> R3: {tputs[3] / tputs[1]:.2f}x '
 d2l.plt.figure(figsize=(6, 3.5))
 bars = d2l.plt.bar(configurations, [t / 1e3 for t in tputs],
                    color=['#7f7f7f', '#1f77b4', '#1f77b4', '#2ca02c', '#d62728'])
+d2l.plt.ylim(0, 1.15 * max(tputs) / 1e3)  # Headroom for the bar labels
 d2l.plt.ylabel('throughput (k tokens/s)')
 d2l.plt.title('Making a Transformer fast: cumulative configurations')
 for b, t in zip(bars, tputs):

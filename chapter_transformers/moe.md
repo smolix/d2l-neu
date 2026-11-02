@@ -660,8 +660,9 @@ ranks = list(range(1, 9))
 mean_shares = [[sum(rank) / len(rank) for rank in zip(*s)]
                for s in shares.values()]  # Mean over the layers
 d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
-         'share of tokens', legend=list(shares) + ['even share'],
-         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'))
+         'share of tokens', fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'))
+d2l.plt.legend(list(shares) + ['even share'], loc='center left',
+               bbox_to_anchor=(1, 0.5))  # Beside the curves, not over them
 d2l.plt.xticks(ranks);
 ```
 

@@ -200,11 +200,13 @@ The baseline is the training step of :numref:`sec_gpt` with plain AdamW:
 a forward pass, the cross-entropy loss, a backward pass, and the update.
 
 :begin_tab:`pytorch`
-The step runs eagerly. Python issues every operation of the forward pass,
-autograd every operation of the backward pass, and the optimizer its
-update, each as one or more kernel launches. `make_step` packages the step
-as a function of a minibatch; its arguments `forward` and `bf16` bring in
-the changes of the next subsections.
+The step runs eagerly. Python issues every operation of the forward pass
+and autograd every operation of the backward pass, each as one or more
+kernel launches. The optimizer, created with `fused=True`, updates all
+weights and moment estimates in a few kernels instead of several per
+weight tensor. `make_step` packages the step as a function of a minibatch;
+its arguments `forward` and `bf16` bring in the changes of the next
+subsections.
 :end_tab:
 
 :begin_tab:`jax`
@@ -221,7 +223,7 @@ def make_step(model, forward=None, bf16=False):
     replaces the model's forward pass, `bf16` turns on autocast."""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
-                                  weight_decay=0.01)
+                                  weight_decay=0.01, fused=True)
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
@@ -295,8 +297,8 @@ def kernel_times(step, batches, steps=5):
 
 `show_profile` compares the time during which the device runs kernels with
 the wall-clock time of a step, computed from the measured throughput. It
-also reports the share of the matrix products and lists the kernels that
-take the most time.
+also reports the share of the matrix products, counting fused attention
+kernels among them, and lists the kernels that take the most time.
 
 ```{.python .input #fast-transformer-the-baseline-2}
 %%tab pytorch, jax
@@ -306,7 +308,7 @@ def show_profile(kernels, speed, tokens=64 * 128, rows=4):
     kernels with the most device time."""
     step_ms, busy = 1e3 * tokens / speed, sum(kernels.values())
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul', name, re.I))
+                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
     print(f'wall clock {step_ms:.1f} ms per step, device busy {busy:.1f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
@@ -318,13 +320,12 @@ show_profile(kernel_times(step, windows(corpus, 64)), speed)
 
 :begin_tab:`pytorch`
 The device runs kernels for nearly nine tenths of the step, so the host
-mostly keeps up with it. Matrix products take about three fifths of the
-device time. The
-rest is spread over many short kernels: the elementwise operations of
-SwiGLU, of the rotary embeddings, and of the residual connections, the
-normalizations, and the optimizer update. Each of them reads its operands
-from device memory and writes its result back, so together they are
-limited by memory bandwidth (:numref:`subsec_comp-fusion`).
+mostly keeps up with it. Matrix products take a little under two thirds of
+the device time. The rest is spread over many short kernels: the
+elementwise operations of SwiGLU, of the rotary embeddings, and of the
+residual connections, and the normalizations. Each of them reads its
+operands from device memory and writes its result back, so together they
+are limited by memory bandwidth (:numref:`subsec_comp-fusion`).
 :end_tab:
 
 :begin_tab:`jax`
@@ -356,12 +357,15 @@ graph and generates kernels for it and for its backward pass, each of
 which fuses a chain of elementwise operations. It thus replaces several
 hundred operations that Python and autograd dispatch one at a time by far
 fewer kernels. The matrix products remain calls to the library, and the
-optimizer update stays as it is. With `dynamic=False`, every minibatch
-shape gets kernels specialized to it. The first call with a new shape
-compiles, which takes seconds, and the warm-up of `tokens_per_second`
-absorbs it. Before timing anything, we check that the compiled model
-computes the same logits as the original one, measured by their relative
-difference.
+optimizer update stays as it is. With `mode='reduce-overhead'`, the
+compiled kernels of the forward and of the backward pass are recorded as
+two CUDA graphs and replayed with one launch each
+(:numref:`subsec_comp-overhead`), so the host no longer issues them one by
+one. With `dynamic=False`, every minibatch shape gets kernels specialized
+to it. The first call with a new shape compiles, which takes seconds, and
+the warm-up of `tokens_per_second` absorbs it. Before timing anything, we
+check that the compiled model computes the same logits as the original
+one, measured by their relative difference.
 :end_tab:
 
 :begin_tab:`jax`
@@ -382,7 +386,7 @@ the minibatch.
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-1}
 %%tab pytorch
-compiled = torch.compile(model, dynamic=False)
+compiled = torch.compile(model, dynamic=False, mode='reduce-overhead')
 X, _ = next(windows(corpus, 64))
 high = model(X)
 error = ((compiled(X) - high).norm() / high.norm()).item()
@@ -410,7 +414,7 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by about a quarter.
+Throughput rises by more than a quarter.
 :end_tab:
 
 :begin_tab:`jax`
@@ -476,26 +480,37 @@ When the device is busy and the matrix products take most of its time,
 the next change should make the products faster. In bf16 the tensor cores
 of the RTX 4090 run at 165 TFLOP/s, twice their tf32 rate, and every
 activation that is stored or read takes half the bytes
-(:numref:`sec_memory_precision`). Mixed precision computes the forward
-and backward passes in bf16 and keeps the weights, their gradients, and
-Adam's moment estimates in fp32. Since bf16 has the exponent range of
-fp32, the loss needs no scaling. The check before the timing compares the
-bf16 logits with the fp32 logits of the same weights; they should agree
-to the precision of bf16, two to three significant digits.
+(:numref:`sec_memory_precision`). We apply the mixed-precision recipe of
+:numref:`subsec_mp-mixed`: the matrix products of the forward and the
+backward pass, those of the attention included, run in bf16, and so do
+the elementwise operations between them, such as SwiGLU. The weights,
+their gradients, and Adam's moment estimates stay in fp32, and so do the
+normalizations, the loss, and the residual stream that connects the
+blocks. The stream is kept in fp32 because each block adds to it an update
+that can be much smaller than the stream itself, and bf16, with 8
+significant bits, would round away an update a few hundred times smaller
+than the entry it is added to. Since bf16 has the exponent range of fp32,
+the loss needs no scaling. The check before the timing compares the bf16
+logits with the fp32 logits of the same weights; they should agree to the
+precision of bf16, two to three significant digits.
 
 :begin_tab:`pytorch`
-`torch.autocast` runs the matrix products and the attention in bf16 and
-computes reductions such as the softmax of the loss in fp32
-(:numref:`sec_numerics`); the backward pass follows the dtypes of the
-forward pass.
+`torch.autocast` applies this recipe operation by operation
+(:numref:`sec_numerics`): it runs the matrix products and the attention in
+bf16 and computes reductions such as the softmax of the loss in fp32. The
+embedding and the normalizations receive no cast, so the stream stays in
+fp32. The backward pass follows the dtypes of the forward pass.
 :end_tab:
 
 :begin_tab:`jax`
 A Flax layer computes in the dtype stored in its attribute `dtype` and
-keeps its parameters in `param_dtype` (:numref:`sec_numerics`). Setting
-`dtype` to bf16 in every layer, as `to_bf16` does, gives mixed precision;
-the gradients arrive in fp32, because the derivative of a cast to bf16 is
-a cast back.
+keeps its parameters in `param_dtype` (:numref:`sec_numerics`). `to_bf16`
+sets `dtype` to bf16 in the linear layers only, as
+:numref:`subsec_mp-mixed` does. The embedding and the normalizations
+compute in fp32, so the stream stays in fp32, and the output layer, which
+reuses the embedding table and takes under 1% of the FLOPs, computes in
+fp32 as well. The gradients arrive in fp32, because the derivative of a
+cast to bf16 is a cast back.
 
 `FusedGPT` changes three details of `d2l.GPT`. First, `d2l.GPT` leaves
 the choice of attention kernel to `jax.nn.dot_product_attention`, whose
@@ -527,9 +542,10 @@ class FusedGPT(d2l.GPT):
         return super().__call__(X).astype(jnp.float32)
 
 def to_bf16(model):
-    """Make every layer of `model` compute in bf16; parameters stay fp32."""
+    """Make the linear layers of `model` compute in bf16; parameters stay
+    fp32."""
     for _, layer in nnx.iter_graph(model):
-        if isinstance(layer, nnx.Module) and hasattr(layer, 'dtype'):
+        if isinstance(layer, nnx.Linear):
             layer.dtype = jnp.bfloat16
     return model
 ```
@@ -566,19 +582,20 @@ speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 The logits agree to within one percent.
 
 :begin_tab:`pytorch`
-Throughput rises by about 1.4 times. That is less than the factor of two
-of the tensor cores, because only the matrix products and the traffic of
-the activations become faster. The optimizer update, for instance, still
-reads and writes fp32 weights and moment estimates.
+Throughput rises by about 1.7 times. That is less than the factor of two
+of the tensor cores, because not every part of the step halves its work:
+the normalizations and the residual stream still move fp32 values, the
+casts between the two formats add traffic of their own, and the optimizer
+update still reads and writes fp32 weights and moment estimates.
 :end_tab:
 
 :begin_tab:`jax`
 Throughput about doubles. Faster matrix products alone could not do this,
-since they took two thirds of the step. `to_bf16` makes every layer
-compute in bf16, so the normalizations, the residual connections, and the
-attention also move half the bytes, and the fused attention no longer
-stores the weights of all query–key pairs. The optimizer update still
-reads and writes fp32 weights and moment estimates.
+since they took a little under two thirds of the step. The fused attention
+no longer stores the weights of all query–key pairs, and the activations
+between the linear layers, those of SwiGLU among them, take half the bytes.
+The normalizations, the residual stream, and the optimizer update still
+move fp32 values.
 :end_tab:
 
 ### Larger Minibatches
@@ -626,7 +643,9 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 The step needs well under half of the card's 24 GiB.
 
 :begin_tab:`pytorch`
-Throughput rises by about a quarter.
+Throughput stays the same. With the update fused and the kernels replayed
+as CUDA graphs, almost nothing of the step at batch 64 was a fixed cost for
+the larger minibatch to divide.
 :end_tab:
 
 :begin_tab:`jax`
@@ -634,8 +653,33 @@ Throughput rises by less than a tenth. After fusion and binding, little of
 the step at batch 64 was a fixed cost for the larger minibatch to divide.
 :end_tab:
 
- An exercise separates the fixed cost of
-a step from its cost per token by measuring several minibatch sizes.
+An exercise separates the fixed cost of a step from its cost per token by
+measuring several minibatch sizes. A third profile shows what limits the
+step at batch 512:
+
+```{.python .input #fast-transformer-larger-minibatches-1}
+%%tab pytorch, jax
+show_profile(kernel_times(step, windows(corpus, 512)), speed,
+             tokens=512 * 128)
+```
+
+The device is busy for the whole step, and the matrix products, those
+inside the fused attention included, take half or more of its time.
+The largest single kernels are matrix products. Most of the rest goes to
+the kernels between them, for the normalizations, SwiGLU, the rotary
+embeddings, and the casts between fp32 and bf16, which move bytes through
+device memory and leave the tensor cores idle.
+
+:begin_tab:`pytorch`
+Matrix products take a little over half of the device time. The kernels
+that Inductor generated take most of the rest; the largest of them
+computes the backward pass of SwiGLU.
+:end_tab:
+
+:begin_tab:`jax`
+Matrix products take about three fifths of the device time, and XLA's
+fusions take the rest.
+:end_tab:
 
 ### Activation Checkpointing
 
@@ -673,7 +717,8 @@ class CheckpointedGPT(d2l.GPT):
 remat = CheckpointedGPT(len(data.vocab), num_hiddens=512).to(device)
 remat.load_state_dict(model.state_dict())
 assert torch.allclose(remat(X), model(X), atol=1e-6)
-step = make_step(remat, torch.compile(remat, dynamic=False), bf16=True)
+step = make_step(remat, torch.compile(remat, dynamic=False,
+                                      mode='reduce-overhead'), bf16=True)
 torch.cuda.reset_peak_memory_stats()
 start = torch.cuda.memory_allocated()
 speed = record('+ checkpointing',
@@ -773,10 +818,11 @@ overhead, one in fp32 at batch 64 and one in bf16 at batch 512.
 `ddp_gpt.py`, which `torchrun` starts on $k$ GPUs. The script repeats the
 sampler and the compiled step of this section and wraps the model in
 `DistributedDataParallel`, which sums the gradients in buckets while the
-backward pass runs. Its first process prints the throughput and the time
-of one `dist.all_reduce`. Every process draws its own windows. We run the
-script on one GPU as well, so that the single-GPU step is measured under
-the same conditions.
+backward pass runs. It compiles without CUDA graphs: both configurations
+keep the device busy long enough to hide the work of the host. Its first
+process prints the throughput and the time of one `dist.all_reduce`. Every
+process draws its own windows. We run the script on one GPU as well, so
+that the single-GPU step is measured under the same conditions.
 :end_tab:
 
 :begin_tab:`jax`
@@ -819,7 +865,8 @@ offsets = torch.arange(129, device='cuda')
 model = DistributedDataParallel(
     d2l.GPT(len(data.vocab), num_hiddens=512).cuda())
 forward = torch.compile(model, dynamic=False)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01,
+                              fused=True)
 
 def step():
     starts = torch.randint(len(corpus) - 128, (batch_size, 1), device='cuda')
@@ -937,8 +984,8 @@ for name, speed in results.items():
 ```
 
 The three changes before checkpointing together raise throughput more
-than twofold. At batch 512 the step performs about half
-of the 165 TFLOP/s that the tensor cores can execute in bf16.
+than twofold. At batch 512 the step performs between two fifths and one
+half of the 165 TFLOP/s that the tensor cores can execute in bf16.
 Checkpointing then lowers the throughput again.
 
 Each ratio depends on its place in the sequence. A change that shortens
@@ -962,7 +1009,8 @@ learning-rate schedule.
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab pytorch
 learner = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
-step = make_step(learner, torch.compile(learner, dynamic=False), bf16=True)
+step = make_step(learner, torch.compile(learner, dynamic=False,
+                                        mode='reduce-overhead'), bf16=True)
 batches = windows(corpus, 512)
 losses = torch.stack([step(*next(batches)).detach()
                       for _ in range(300)]).tolist()
@@ -992,10 +1040,12 @@ The training loss starts near $\log 256 \approx 5.55$, the loss of a
 uniform guess over the 256 bytes, and the validation loss ends well below
 the bigram level. The faster step trains the model.
 
-The fastest configuration still leaves about half of the card's bf16
-peak unused. What remains lies in the efficiency of the kernels themselves
-and in the width of the numbers. The tensor cores of the RTX 4090 run fp8
-at twice the bf16 rate, but training in fp8 needs a scaling factor for
+The fastest configuration still leaves more than half of the card's bf16
+peak unused. What remains lies in the memory-bound kernels between the
+matrix products, which the third profile showed, in the efficiency of the
+products themselves, and in the width of the numbers. The tensor cores of
+the RTX 4090 run fp8 at twice the bf16 rate, but training in fp8 needs a
+scaling factor for
 each tensor or block of values to keep them within its narrow range. That
 recipe, kernels written for a particular model, and training on more GPUs
 than one machine holds belong to the Language Models part. The method
@@ -1277,7 +1327,7 @@ A window varies by a few percent: read ratios to one decimal.
 [Small kernels]{.kicker}
 
 ```{.python #fast-transformer-exercises}
-compiled = torch.compile(model, dynamic=False)
+compiled = torch.compile(model, dynamic=False, mode='reduce-overhead')
 high = model(X)
 error = ((compiled(X) - high).norm() / high.norm()).item()
 assert error < 0.01      # same answer first
@@ -1286,9 +1336,10 @@ step = make_step(model, compiled)
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- Chains of elementwise operations become one kernel each.
+- Chains of elementwise operations become one kernel each;
+  `reduce-overhead` replays them as CUDA graphs.
 - Logits agree to three or more digits: fused kernels round in another
-  order. Throughput **about 1.25×**.
+  order. Throughput **more than 1.25×**.
 :::
 
 ::: {.slide title="nnx.jit Walks the Model on Every Call; jit_partial Once" only="jax"}
@@ -1327,15 +1378,16 @@ costs time, and nothing so far says memory is short.
 :::
 :::
 
-::: {.slide title="bf16 Speeds Up the Step About 1.4 Times, Not 2" only="pytorch"}
+::: {.slide title="bf16 Speeds Up the Step About 1.7 Times, Not 2" only="pytorch"}
 [Reduced precision]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-2
 
-- Weights, gradients, Adam moments stay fp32; no loss scaling.
+- bf16 products and activations; fp32 weights, gradients, Adam moments,
+  norms, residual stream, loss. No loss scaling.
 - Check first: logits agree to about 1%.
-- Only products and activation traffic speed up; the fp32 optimizer
-  update does not.
+- Norms, stream, casts, and the update still move fp32 values: less
+  than 2×.
 :::
 
 ::: {.slide title="bf16 About Doubles the Throughput" only="jax"}
@@ -1343,30 +1395,42 @@ costs time, and nothing so far says memory is short.
 
 @!fast-transformer-rungs-each-one-measured-2
 
-- Weights, gradients, Adam moments stay fp32; no loss scaling.
+- bf16 products and activations; fp32 weights, gradients, Adam moments,
+  norms, residual stream, loss. No loss scaling.
 - Check first: logits agree to about 1%.
-- Every layer computes in bf16: products, normalizations, residual
-  connections, and fused attention all move half the bytes.
+- More than faster products: the fused attention stores no weights of
+  query–key pairs, and the activations of SwiGLU take half the bytes.
 :::
 
-::: {.slide title="In JAX, bf16 Is a Compute Dtype on Every Layer" only="jax"}
+::: {.slide title="In JAX, bf16 Is a Compute Dtype on the Linear Layers" only="jax"}
 [Reduced precision]{.kicker}
 
-- Flax layers compute in `dtype`, store in `param_dtype`: set `dtype`.
+- Flax layers compute in `dtype`, store in `param_dtype`: set `dtype`
+  on the linear layers; norms and embedding stay fp32.
 - Gradients arrive fp32: the derivative of a cast is a cast back.
 - `FusedGPT`: cuDNN's fused attention (16-bit only) instead of XLA's,
   which stores all attention weights.
 - `d2l.rope` returns fp32: cast queries and keys back.
 :::
 
-::: {.slide title="512 Windows per Step Spread the Fixed Costs"}
+::: {.slide title="512 Windows per Step Spread What Fixed Cost Remains"}
 [Larger minibatches]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-3
 
 - Fixed per step: optimizer update (every weight and moment), launches.
-- Larger products keep the tensor cores busier.
+- After fusion and replay, little of it is left to spread.
 - Memory grows with the minibatch; still well under 24 GiB.
+:::
+
+::: {.slide title="At Batch 512, the Kernels Between the Products Take the Rest"}
+[Third profile]{.kicker}
+
+@!fast-transformer-larger-minibatches-1
+
+- Busy throughout; matrix products (attention included): half or more.
+- The rest: norms, SwiGLU, rotary embeddings, casts. They move bytes
+  and leave the tensor cores idle.
 :::
 
 ::: {.slide title="Checkpointing Costs Time When Memory Is Not the Limit"}
@@ -1386,7 +1450,7 @@ The right change only for a model or minibatch that does not fit.
 @!fast-transformer-the-waterfall
 
 - Total: more than 2× from three changes.
-- Final step: about half of the bf16 peak.
+- Final step: two fifths to one half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.
 :::
@@ -1440,7 +1504,7 @@ second GPU helps only if the allreduce is shorter than a step.
 ::: {.slide title="Check: Where Would the Next Factor of Two Come From?"}
 [Check]{.kicker}
 
-The final step keeps the device busy at about half of the bf16 peak.
+The final step keeps the device busy at under half of the bf16 peak.
 One GPU, then four GPUs over PCIe.
 
 ::: {.fragment .fade-up}
@@ -1460,7 +1524,7 @@ hide it.
 - Short elementwise kernels → fusion; host work → less of it, which
   gains only while the device waits.
 - Busy with products → bf16, the largest single gain; batch 512 spreads
-  the fixed costs of a step.
+  what fixed cost remains.
 - Checkpointing: slower, since memory is not the limit.
 - Data parallelism: $t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)$;
   helps only for long steps on this machine.

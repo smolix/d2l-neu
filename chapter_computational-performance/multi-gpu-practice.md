@@ -504,8 +504,9 @@ dist.destroy_process_group()
 '''
 if d2l.num_gpus() >= 2:
     r = d2l.torchrun(CHECK_DDP, 2, random.getrandbits(32))[0]
-    print(f"largest update {r['largest']:.1e}; largest difference from one "
-          f"GPU on all 256: {r['full']:.1e}, on two accumulated halves: "
+    print(f"largest update {r['largest']:.1e}\n"
+          f"largest difference from one GPU on all 256: {r['full']:.1e}\n"
+          f"largest difference from one GPU on two accumulated halves: "
           f"{r['halves']:.1e}")
 ```
 
@@ -523,8 +524,9 @@ with jax.default_matmul_precision('highest'):  # Full fp32 convolutions
         updates.append(jax.tree.map(lambda p, b: np.asarray(p) - b,
                                     nnx.state(model, nnx.Param), before))
 u1, u2 = (jax.tree.leaves(u) for u in updates)
-print(f'largest update {max(np.abs(u).max() for u in u1):.1e}, largest '
-      f'difference {max(np.abs(a - b).max() for a, b in zip(u1, u2)):.1e}')
+print(f'largest update {max(np.abs(u).max() for u in u1):.1e}\n'
+      f'largest difference between one and two GPUs: '
+      f'{max(np.abs(a - b).max() for a, b in zip(u1, u2)):.1e}')
 ```
 
 :begin_tab:`pytorch`

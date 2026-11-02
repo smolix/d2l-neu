@@ -1554,15 +1554,21 @@ $j = i + 1 - L$, per head, $L$ from 16 to 32:
 :::
 
 ::: {.slide title="OV Circuits Copy, With or Without Retrieval"}
+::: {.cols .vc}
+::: {.col}
 $C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \bar{\mathbf{h}}_a$: the
 boost that attending to $a$ gives the logit of $b$, with
 $\bar{\mathbf{h}}_a$ the stream the block reads where $a$ sits. Copying
 means each row peaks on the diagonal.
 
-@!what-attention-computes-the-circuit-is-in-the-weights
-
 The one-block control copies too, yet cannot retrieve: copying alone does
 not explain retrieval; the match on the QK side does.
+:::
+
+::: {.col .narrow}
+@!what-attention-computes-the-circuit-is-in-the-weights
+:::
+:::
 :::
 
 ::: {.slide title="Removing the Heads Removes Retrieval"}

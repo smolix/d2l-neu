@@ -1360,11 +1360,17 @@ Causal attention never changes the keys and values of past tokens.
 :::
 
 ::: {.slide title="Causality Freezes the Keys and Values of the Past"}
-@fig:mdl-transformers-kv-cache
-
+::: {.cols .vc}
+::: {.col}
 - Step $t$ needs one new query against $\mathbf{k}_1, \ldots, \mathbf{k}_t$.
 - Positions $1, \ldots, t-1$ never see position $t$: their keys and values
   are the same as one step ago.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-transformers-kv-cache
+:::
+:::
 :::
 
 ::: {.slide title="A Cached Step Writes Its Slot and Reads the Prefix" only="pytorch"}
@@ -1485,14 +1491,20 @@ decode loop follows the bound: at $n = 1024$ little gain beyond $b = 16$.
 :::
 
 ::: {.slide title="A Fixed Cost per Step Hides the Bandwidth Bound" only="pytorch"}
-@!kv-cache-batched-decoding
-
+::: {.cols .vc}
+::: {.col}
 Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
 
 - Eager PyTorch launches several hundred kernels per decode step; that
   takes longer than the GPU's work, except at $b = 64$, $n = 1024$.
 - So throughput grows $\propto b$ almost throughout; CUDA graphs or
   compilation (:numref:`sec_compilation`) expose the bound.
+:::
+
+::: {.col .fig .big}
+@!kv-cache-batched-decoding
+:::
+:::
 :::
 
 ::: {.slide title="Check: Where the Cache Outweighs the Weights"}

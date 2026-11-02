@@ -562,7 +562,7 @@ def time_calls(f, devices, calls):
         for _ in range(calls):
             f()
         synchronize(devices)
-    return d2l.Benchmark(run, warmup=1, repeats=3).time / calls
+    return d2l.Benchmark(run, warmup=10, repeats=3).time / calls
 
 def allreduce_time(n, devices, calls):
     """Seconds per allreduce of n floats per device."""
@@ -590,7 +590,9 @@ print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
 
 :begin_tab:`pytorch`
 `d2l.Benchmark` waits only for the current device, so `time_calls` ends
-its calls with a wait for both. The star allreduce reaches about 20 GB/s.
+its calls with a wait for both. It warms up with ten rounds of calls,
+because the first few hundred allreduces of a run can be slower than the
+rest, which would inflate $\alpha$. The star allreduce reaches about 20 GB/s.
 On two devices it consists of two copies of $N$ bytes, one after the
 other, so each copy runs at about 20 GB/s as well. The GPUs' copy engines
 move the bytes over PCIe and through host memory, and this is about what
@@ -651,8 +653,22 @@ for name, f, calls in (
 ```
 
 Ten calls take several times as long as one call that moves the same
-bytes, and the two constants predict both times. For a gradient this
-small, the number of messages decides the communication time, and the
+bytes.
+
+:begin_tab:`pytorch`
+The two constants predict both times to within a few percent.
+:end_tab:
+
+:begin_tab:`jax`
+The single call takes no longer than $\alpha$, although the model adds
+0.1 ms for its bytes. Each call costs the host about $\alpha$ to dispatch,
+and the transfer of one call runs while the host dispatches the next.
+:eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
+transfer is shorter than its dispatch. Ten calls take about ten times
+$\alpha$.
+:end_tab:
+
+For a gradient this small, the number of messages decides the communication time, and the
 bytes hardly matter. This is why collective libraries pack many small
 gradient tensors into a few large buffers before they send them, as our
 training step does by hand.
@@ -685,17 +701,17 @@ for k, b in ((1, 256), (1, 128), (2, 128)):
     params = broadcast(base, mesh)
     i = jax.device_put(idx[:k * b], NamedSharding(mesh, P('data')))
     t_local[k, b] = d2l.Benchmark(lambda: train_step(
-        params, data_k, i, 0.2, mesh, communicate=False), repeats=50).time
+        params, data_k, i, 0.2, mesh, communicate=False), repeats=500).time
     print(f'{k} GPU(s), {b} examples each: {1e3 * t_local[k, b]:.2f} ms')
 ```
 
-On one GPU, 128 examples take about as long as 256. A LeNet layer applied
-to a few hundred small images is far too little work to occupy an RTX
-4090, so each kernel finishes before the next one is ready to start. The
-step is in the overhead-bound regime of :numref:`subsec_perf-regimes`:
-its time is set by the number of kernels launched rather than by the
-arithmetic inside them, and halving the minibatch leaves the number of
-kernels unchanged.
+On one GPU, halving the minibatch shortens the local work by far less
+than half. A LeNet layer applied to a few hundred small images is far too
+little work to occupy an RTX 4090, so each kernel finishes before the next
+one is ready to start. The step is close to the overhead-bound regime of
+:numref:`subsec_perf-regimes`: its time is set mostly by the number of
+kernels launched rather than by the arithmetic inside them, and halving the
+minibatch leaves the number of kernels unchanged.
 
 :begin_tab:`pytorch`
 On two GPUs, the local work takes about twice as long as on one GPU with
@@ -707,14 +723,18 @@ they share one launcher.
 :end_tab:
 
 :begin_tab:`jax`
-On two GPUs, the local work takes about as long as on one GPU with the
-same 128 examples. The jitted `shard_map` is a single program, launched
-once, which both devices run side by side.
+On two GPUs, the local work takes far longer than on one GPU with the
+same 128 examples, and longer than on one GPU with all 256. The jitted
+`shard_map` is a single program, but launching it on two devices from one
+host thread takes several times as long as the work it launches, which
+keeps each device busy for little more than a tenth of a millisecond per
+step. Here, too, the launcher sets the pace.
 :end_tab:
 
-The second GPU thus saves almost no local time, while the allreduce adds
-$\alpha + 2N/\beta$, and :eqref:`eq_dp_cost` predicts that a step on two
-GPUs takes longer than a step on one. The predicted step time is the
+On two GPUs the local work thus takes longer than on one GPU with the
+whole minibatch, the allreduce adds $\alpha + 2N/\beta$ on top, and
+:eqref:`eq_dp_cost` predicts that a step on two GPUs takes longer than a
+step on one. The predicted step time is the
 one-GPU step, plus the difference between the local work on two GPUs and
 on one, plus $\alpha + 2N/\beta$. To test the prediction, we train for
 five epochs on one GPU and on two, from the same initialization `base`,
@@ -803,9 +823,22 @@ predicted = (t_step[1] + t_local[2, 128] - t_local[1, 256]
 print(f'2 GPUs predicted: {1e3 * predicted:.2f} ms per step')
 ```
 
-The step on two GPUs is slower than the step on one, close to the
-prediction from the separately measured terms. For LeNet, a second GPU
-makes training slower. Both runs reach the same test accuracy to within
+The step on two GPUs is slower than the step on one, as the separately
+measured terms predict. For LeNet, a second GPU makes training slower.
+
+:begin_tab:`pytorch`
+The measured step usually lies within a few percent of the prediction.
+Both are bound by the one Python thread that drives the two GPUs, so they
+follow the speed of a single CPU core, and on a machine busy with other
+work the two can differ by a fifth or more.
+:end_tab:
+
+:begin_tab:`jax`
+The measured step comes in below the prediction. Our $\alpha$ contains
+the dispatch of a separate program for every allreduce, while the training
+step's `psum` runs inside the program that the step dispatches anyway.
+:end_tab:
+ Both runs reach the same test accuracy to within
 a point or two. They start from the same parameters and see the examples
 in the same order, so they differ only in rounding, which a thousand
 steps of SGD amplify. Two runs on one GPU differ about as much, because a
@@ -1285,17 +1318,17 @@ pack gradients into large buffers before sending.
 :::
 :::
 
-::: {.slide title="Half a Minibatch Takes About as Long as a Whole One"}
+::: {.slide title="Half a Minibatch Saves Little Time"}
 [LeNet on one and two GPUs]{.kicker}
 
 Local work only (forward, backward, update), no communication:
 
 @!multiple-gpus-lenet-on-one-and-two-gpus-1
 
-- One GPU: 128 examples take about as long as 256. LeNet on a few
-  hundred images is too little work for an RTX 4090.
-- Overhead-bound: the number of kernels, not their arithmetic, sets the
-  time, and halving the batch keeps the number of kernels.
+- One GPU: 128 examples take far more than half the time of 256. LeNet
+  on a few hundred images is too little work for an RTX 4090.
+- Close to overhead-bound: the number of kernels, not their arithmetic,
+  sets most of the time, and halving the batch keeps the number of kernels.
 - The last row is the local work of a two-GPU step.
 :::
 
@@ -1307,9 +1340,10 @@ GPU with all 256 examples, and $\alpha + 2N/\beta$.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. The second GPU saves almost no local time and adds an
-allreduce, so the step gets slower: by the difference of the two local
-times plus $\alpha + 2N/\beta$.
+**Answer.** No. The local work on two GPUs takes longer than on one GPU
+with all 256 examples, and the allreduce comes on top, so the step gets
+slower: by the difference of the two local times plus
+$\alpha + 2N/\beta$.
 :::
 :::
 :::
@@ -1380,7 +1414,7 @@ Read every speedup with its convention.
 - Ring allreduce: $2(k-1)N/k \le 2N$ bytes per device, $2(k-1)$ hops.
 - $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + m\alpha + 2N/\beta$,
   with every term measured.
-- LeNet: ten messages cost several times one; half a batch is no faster;
+- LeNet: ten messages cost several times one; half a batch is barely faster;
   two GPUs make the step slower.
 - A 1B GPT on two RTX 4090s: 1.4× to 1.75× by the same cost model,
   depending on $\beta$.

@@ -8,7 +8,7 @@ floating-point operations: two per parameter and token in the forward pass
 and four in the backward pass. The tensor cores of an RTX 4090 execute
 $1.65 \times 10^{14}$ of them per second in bf16, so the arithmetic of a
 step needs less than 6 ms. A plain training step, in fp32 with an AdamW
-update, takes 20 to 30 ms. Three quarters or more of the card's capacity
+update, takes about 30 ms. Three quarters or more of the card's capacity
 go unused, and every training run takes several times longer than its
 arithmetic requires.
 
@@ -317,8 +317,9 @@ show_profile(kernel_times(step, windows(corpus, 64)), speed)
 ```
 
 :begin_tab:`pytorch`
-The device runs kernels for nearly the whole step, so the host keeps up
-with it. Matrix products take about three fifths of the device time. The
+The device runs kernels for nearly nine tenths of the step, so the host
+mostly keeps up with it. Matrix products take about three fifths of the
+device time. The
 rest is spread over many short kernels: the elementwise operations of
 SwiGLU, of the rotary embeddings, and of the residual connections, the
 normalizations, and the optimizer update. Each of them reads its operands
@@ -327,8 +328,9 @@ limited by memory bandwidth (:numref:`subsec_comp-fusion`).
 :end_tab:
 
 :begin_tab:`jax`
-The device runs kernels for nearly the whole step, so the host keeps up
-with it. Matrix products take about two thirds of the device time. The
+The device runs kernels for nearly nine tenths of the step and waits for
+the host in the rest. Matrix products take a little under two thirds of the
+device time. The
 step is a single compiled program in which XLA has already fused the
 elementwise operations into the kernels around them, so few short kernels
 remain.
@@ -347,7 +349,8 @@ merges chains of them into one kernel that reads its inputs once and
 writes its result once.
 
 :begin_tab:`pytorch`
-Our step is in the second regime. `torch.compile`
+Our step shows both regimes, the second more than the first.
+`torch.compile`
 (:numref:`sec_compilation`) captures the forward pass of the model as a
 graph and generates kernels for it and for its backward pass, each of
 which fuses a chain of elementwise operations. It thus replaces several
@@ -362,8 +365,9 @@ difference.
 :end_tab:
 
 :begin_tab:`jax`
-Our step is in neither regime: the device is busy, and XLA has fused the
-short kernels. The host nevertheless does much work for every step.
+Our step is in the first regime: XLA has fused the short kernels, but the
+device waits for the host during about a tenth of every step. The host
+does much work for every step.
 `nnx.jit` lets us pass the model and the optimizer, Python objects that
 hold arrays, to a compiled function. On every call it walks through both
 objects to collect their arrays, hands the arrays to the compiled program,
@@ -406,18 +410,16 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by about 1.1 to 1.3 times.
+Throughput rises by about a quarter.
 :end_tab:
 
 :begin_tab:`jax`
-A call through `nnx.jit` takes about 10 ms, less than half of the device
-time of a step. While the device runs one step, the host prepares the
-next, so this work is hidden, and removing it should leave the throughput
-unchanged. Treating the arguments as trees removes most of it, and binding
-them once removes nearly all of the rest. We bind the step nevertheless,
-because the next changes shorten the device time of a step toward the
-10 ms that the host would need. Binding changes how the step is called,
-not what it computes. The next cell checks this before the
+A call through `nnx.jit` takes about 8 ms, a third of the device time of
+a step. If the host prepared the next step entirely while the device ran
+the current one, this work would be hidden; the idle tenth of the profile
+shows that it is not. Treating the arguments as trees removes about half
+of it, and binding them once removes nearly all of the rest. Binding
+changes how the step is called, not what it computes. The next cell checks this before the
 timing: one step through `nnx.jit` and one through the bound step, from
 equal copies of the model and the optimizer, must give equal losses and
 leave equal weights.
@@ -439,8 +441,8 @@ speed = record('+ jit_partial', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 :begin_tab:`jax`
-Throughput stays the same, as the profile predicted: the work that binding
-removes ran on the host while the device was busy.
+Throughput rises by a little more than a tenth, as much as the idle time
+of the first profile allowed.
 :end_tab:
 
 A second profile shows where the bottleneck has moved:
@@ -455,14 +457,16 @@ take the largest share of its time. The step is limited by the device,
 mostly by the arithmetic of the matrix products.
 
 :begin_tab:`pytorch`
-Compared with the first profile, the device time per step has fallen. The
-matrix products take as long as before, while the elementwise kernels
-have merged into fewer generated ones, whose names begin with `triton_`.
+Compared with the first profile, the device time per step has fallen and
+the gaps between kernels have closed. The matrix products take as long as
+before, while the elementwise kernels have merged into fewer generated
+ones, whose names begin with `triton_`.
 :end_tab:
 
 :begin_tab:`jax`
-The profile is the same as the first one, since binding changed only the
-work of the host.
+The device time is the same as in the first profile, since binding
+changed only the work of the host, but the gaps in which the device waited
+are gone.
 :end_tab:
 
 ### Reduced Precision
@@ -619,8 +623,18 @@ memory = plan.temp_size_in_bytes / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
 
-Throughput rises by another 1.1 to 1.3 times, and the step needs well
-under half of the card's 24 GiB. An exercise separates the fixed cost of
+The step needs well under half of the card's 24 GiB.
+
+:begin_tab:`pytorch`
+Throughput rises by about a quarter.
+:end_tab:
+
+:begin_tab:`jax`
+Throughput rises by less than a tenth. After fusion and binding, little of
+the step at batch 64 was a fixed cost for the larger minibatch to divide.
+:end_tab:
+
+ An exercise separates the fixed cost of
 a step from its cost per token by measuring several minibatch sizes.
 
 ### Activation Checkpointing
@@ -835,8 +849,10 @@ def data_parallel(k, bf16, batch_size):
     out = subprocess.run(
         [torchrun, '--standalone', f'--nproc-per-node={k}', 'ddp_gpt.py',
          'bf16' if bf16 else 'fp32', str(batch_size)],
-        stdout=subprocess.PIPE, text=True, check=True).stdout
-    return json.loads(out.splitlines()[-1])
+        capture_output=True, text=True)  # Keep the workers' logs off the page
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr[-3000:])
+    return json.loads(out.stdout.splitlines()[-1])
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
@@ -887,7 +903,7 @@ two GPUs are predicted to be no faster than one. At batch 512 in bf16 the
 step is several times longer, while the allreduce does not depend on the
 minibatch. The prediction rises to about three quarters of linear scaling
 on two GPUs, and somewhat less on four, where the allreduce moves more
-data through each GPU. The measurements lie above the predictions by
+data through each GPU. The measurements lie at or above the predictions by
 the part of the allreduce that ran during the backward pass, which brings
 them closer to linear scaling. On this machine, data parallelism therefore
 helps only once the step on each GPU is long.
@@ -920,8 +936,8 @@ for name, speed in results.items():
     previous = speed
 ```
 
-The three changes before checkpointing together raise throughput about
-two to two and a half times. At batch 512 the step performs about half
+The three changes before checkpointing together raise throughput more
+than twofold. At batch 512 the step performs about half
 of the 165 TFLOP/s that the tensor cores can execute in bf16.
 Checkpointing then lowers the throughput again.
 
@@ -994,8 +1010,8 @@ device that waits for the host calls for less work on the host per step,
 a device busy with many short elementwise kernels calls for fusion, and a
 busy device dominated by matrix products calls for faster arithmetic. On
 one RTX 4090, fusion or less host work, bf16, and a larger minibatch
-together raised the throughput of our 19-million-parameter GPT about two
-to two and a half times. Activation checkpointing lowered it, because
+together raised the throughput of our 19-million-parameter GPT more than
+twofold. Activation checkpointing lowered it, because
 memory did not limit the step. Every change to the computation is checked
 for correctness before it is timed, every change is measured on top of
 the previous ones, and a short training run confirms that the fastest
@@ -1153,7 +1169,7 @@ Case Study: Optimizing a Transformer<br>
 :::
 :::
 
-::: {.slide title="A GPT Step Needs 6 ms of Arithmetic and Takes 20 to 30 ms"}
+::: {.slide title="A GPT Step Needs 6 ms of Arithmetic and Takes about 30 ms"}
 [The problem]{.kicker}
 
 GPT, width 512, 19M parameters; 64 windows × 128 bytes = 8,192 tokens.
@@ -1161,7 +1177,7 @@ GPT, width 512, 19M parameters; 64 windows × 128 bytes = 8,192 tokens.
 - Arithmetic: $6 \times 1.9 \times 10^7 \times 8192 \approx 0.9$ TFLOP
   per step.
 - RTX 4090 in bf16: 165 TFLOP/s, so **under 6 ms** per step.
-- Plain fp32 step with AdamW: **20 to 30 ms**.
+- Plain fp32 step with AdamW: **about 30 ms**.
 
 ::: {.d2l-note .warn}
 Four fifths of the card idle; every run takes several times longer than
@@ -1242,19 +1258,19 @@ A window varies by a few percent: read ratios to one decimal.
 
 @!fast-transformer-the-baseline-2
 
-- Device busy for nearly the whole step: the host keeps up.
+- Device busy for nearly nine tenths of the step: the host mostly keeps up.
 - Matrix products about three fifths of the device time; the rest are short,
   bandwidth-bound elementwise and normalization kernels.
 :::
 
-::: {.slide title="The Jitted Step Keeps the Device Busy" only="jax"}
+::: {.slide title="The Jitted Step Leaves the Device Idle a Tenth of the Time" only="jax"}
 [Baseline]{.kicker}
 
 @!fast-transformer-the-baseline-2
 
 - One compiled XLA program per step, elementwise operations fused.
-- Device busy for nearly the whole step; matrix products about two
-  thirds of its time.
+- Device busy for nearly nine tenths of the step; matrix products a
+  little under two thirds of its time.
 :::
 
 ::: {.slide title="Compilation Fuses the Elementwise Tail" only="pytorch"}
@@ -1272,7 +1288,7 @@ step = make_step(model, compiled)
 
 - Chains of elementwise operations become one kernel each.
 - Logits agree to three or more digits: fused kernels round in another
-  order. Throughput **about 1.1 to 1.3×**.
+  order. Throughput **about 1.25×**.
 :::
 
 ::: {.slide title="nnx.jit Walks the Model on Every Call; jit_partial Once" only="jax"}
@@ -1280,11 +1296,11 @@ step = make_step(model, compiled)
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- `nnx.jit` walks model and optimizer on every call: about 10 ms, hidden
-  while the device runs the previous step.
+- `nnx.jit` walks model and optimizer on every call: about 8 ms, not
+  fully hidden while the device runs the previous step.
 - `graph=False`: trees, not objects; `jit_partial`: bound once.
-- Checked first: equal losses and weights. Throughput **unchanged**: the
-  device was the limit.
+- Checked first: equal losses and weights. Throughput **about 1.1×**:
+  the device no longer waits.
 :::
 
 ::: {.slide title="After the Change, Matrix Products Take the Largest Share"}
@@ -1369,7 +1385,7 @@ The right change only for a model or minibatch that does not fit.
 ::: {.slide title="Each Change Is Measured on Top of the Last"}
 @!fast-transformer-the-waterfall
 
-- Total: about 2 to 2.5× from three changes.
+- Total: more than 2× from three changes.
 - Final step: about half of the bf16 peak.
 - A change that shortens device work gains nothing while the step waits
   for the host: order matters.

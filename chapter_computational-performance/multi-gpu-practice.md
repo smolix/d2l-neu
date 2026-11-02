@@ -530,7 +530,7 @@ print(f'largest update {max(np.abs(u).max() for u in u1):.1e}, largest '
 :begin_tab:`pytorch`
 The DDP step agrees with the accumulated halves to rounding error, well
 under one percent of the largest update, but it differs from the step on
-all 256 examples by several percent of the largest update. DDP normalizes
+all 256 examples by about a tenth of the largest update. DDP normalizes
 each GPU's shard with the statistics of that shard, so it computes what
 one GPU computes when it accumulates the gradients of the same shards
 (:numref:`subsec_mp-accumulation`). The mean and the variance over 128
@@ -619,7 +619,7 @@ for k in ks:
 ```
 
 Two GPUs process about 1.7 times as many examples per second as one, and
-four GPUs about three times as many. The *efficiency*, the speedup divided
+four GPUs a little over three times as many. The *efficiency*, the speedup divided
 by $k$, falls gradually as GPUs are added. Under weak
 scaling every GPU does the same work at every $k$. The efficiency is
 therefore the ratio of the single-GPU step time to the step time on $k$
@@ -786,9 +786,9 @@ near-linear scaling for this model with or without overlap.
 ### The Collective Transport
 
 At $k = 2$ each GPU sends and receives at $\beta/2$ in each direction,
-about 2 GB/s. A copy between two of our GPUs, staged through host memory,
-runs at 20 to 25 GB/s (:numref:`subsec_hw-interconnects`), about ten times
-as fast. The cause lies in how NCCL moves data between GPUs that lack
+about 2.5 GB/s. A copy between two of our GPUs, staged through host memory,
+can run at up to 23 GB/s (:numref:`subsec_hw-interconnects`), about nine
+times as fast. The cause lies in how NCCL moves data between GPUs that lack
 peer-to-peer access. It falls back to buffers in host memory, and by
 default GPU kernels copy the data into and out of these buffers with
 ordinary loads and stores across PCIe. The copy engines, the units that
@@ -806,8 +806,8 @@ if d2l.num_gpus() >= 2:
           f'({beta_ce / beta:.1f}x)')
 ```
 
-The bandwidth rises about five-fold, and with it the predicted
-communication time of ResNet-18 falls from about 20 ms to about 4 ms.
+The bandwidth rises nearly five-fold, and with it the predicted
+communication time of ResNet-18 falls from about 18 ms to about 4 ms.
 
 :begin_tab:`pytorch`
 PyTorch 2.11 bundles NCCL 2.28.9. On our machine, DDP training with the
@@ -825,7 +825,7 @@ default, because the parameter is specific to these NCCL versions and to
 machines without peer-to-peer access.
 :end_tab:
 
-One environment variable changed $\beta$ five-fold here. Whether such a
+One environment variable changed $\beta$ nearly five-fold here. Whether such a
 setting is safe has to be checked on the training run itself, not only on
 a benchmark of bare collectives.
 
@@ -940,10 +940,10 @@ how long the communication takes. For our GPT, the fp32 gradients take
 $N$ = 7.7 GB, four bytes per parameter. On $k$ GPUs, a ring allreduce
 makes every GPU send $2(k-1)N/k$ bytes and receive as many
 (:numref:`subsec_mg-ring`), $1.5N$ in each direction at $k = 4$ against
-$N$ at $k = 2$. If every GPU keeps the bandwidth $\beta$ of about 4.5 GB/s
+$N$ at $k = 2$. If every GPU keeps the bandwidth $\beta$ of about 5 GB/s
 that we measured on two, one allreduce of data parallelism takes
 $3N/\beta$, about 5 s, and the three phases of FSDP take $4.5N/\beta$,
-about 8 s.
+about 7 s.
 
 The computation of a step is much shorter. The forward and the backward
 pass take about six floating-point operations per parameter and token
@@ -1577,7 +1577,7 @@ the step takes as long as on one GPU, and the speedup is 1.
 :::
 :::
 
-::: {.slide title="Weak Scaling: About 1.7× on Two GPUs, About 3× on Four"}
+::: {.slide title="Weak Scaling: About 1.7× on Two GPUs, over 3× on Four"}
 [Scaling]{.kicker}
 
 256 examples per GPU, the global minibatch grows with $k$:
@@ -1614,20 +1614,20 @@ Overlap hides far less here than the bucket model predicts.
 ::: {.slide title="Check: The Same Step on an NVLink Machine"}
 [Check]{.kicker}
 
-$N$ = 45 MB. On our machine each GPU sends at about 2 GB/s; NVLink 5
+$N$ = 45 MB. On our machine each GPU sends at about 2.5 GB/s; NVLink 5
 moves 900 GB/s per direction. What happens to the allreduce and to the
 weak-scaling efficiency?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The allreduce falls from about 20 ms to well under 1 ms,
+**Answer.** The allreduce falls from about 18 ms to well under 1 ms,
 against a step of about 100 ms: the efficiency approaches 100%, with or
 without overlap. Same model, same cost model, a different $\beta$.
 :::
 :::
 :::
 
-::: {.slide title="One Undocumented NCCL Parameter Changes β Five-Fold"}
+::: {.slide title="One Undocumented NCCL Parameter Changes β Nearly Five-Fold"}
 [The collective transport]{.kicker}
 
 No peer-to-peer access: NCCL stages through host memory, copying with
@@ -1686,14 +1686,14 @@ where an allreduce has two. Memory: $16/k$ bytes per parameter plus a gathered b
 ::: {.slide title="Check: The 36-Block GPT with FSDP on Our Four GPUs"}
 [Check]{.kicker}
 
-1.9B parameters, gradients $N$ = 7.7 GB, $k = 4$, $\beta \approx$ 4.5 GB/s
+1.9B parameters, gradients $N$ = 7.7 GB, $k = 4$, $\beta \approx$ 5 GB/s
 (measured on two GPUs), 6 operations per parameter and token at 80 TFLOP/s, 2,048
 tokens per GPU and step. Communication and computation per step?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** Ring at $k = 4$: $1.5N$ each way per GPU, so an allreduce
-takes $3N/\beta$ and FSDP $4.5N/\beta \approx 7.7$ s. Compute:
+takes $3N/\beta$ and FSDP $4.5N/\beta \approx 7$ s. Compute:
 $6 \cdot 1.9 \cdot 10^9 \cdot 2048 / 8 \cdot 10^{13} \approx 0.3$ s. It
 trains, at a few percent of its compute speed; NVLink 5: about 20 ms.
 :::
@@ -1706,9 +1706,9 @@ trains, at a few percent of its compute speed; NVLink 5: about 20 ms.
 - Buckets overlap allreduces with the backward; the last stays exposed.
 - DDP: one process per GPU, NCCL's ring instead of our star.
 - One-step check: DDP equals one GPU accumulating over the shards.
-- ResNet-18, weak scaling: about 1.7× on two GPUs, about 3× on four.
+- ResNet-18, weak scaling: about 1.7× on two GPUs, over 3× on four.
 - Exposed time near $2N/\beta$: overlap hides little through host memory.
-- One NCCL variable: $\beta$ five-fold, but DDP training deadlocks.
+- One NCCL variable: $\beta$ nearly five-fold, but DDP training deadlocks.
 - ZeRO-1/2: less memory, same bytes; FSDP: $16/k$ bytes per parameter, 1.5× the traffic.
 
 **Next:** the method of this chapter applied to a transformer, in Case
@@ -1721,9 +1721,9 @@ Study: Optimizing a Transformer.
 - Buckets overlap allreduces with the backward; the last stays exposed.
 - `jit` with placement: the compiler writes and combines the allreduces.
 - One-step check: the sharded step equals the single-GPU step.
-- ResNet-18, weak scaling: about 1.7× on two GPUs, about 3× on four.
+- ResNet-18, weak scaling: about 1.7× on two GPUs, over 3× on four.
 - Exposed time near $2N/\beta$: overlap hides little through host memory.
-- One NCCL variable: $\beta$ five-fold; validate it on the training run.
+- One NCCL variable: $\beta$ nearly five-fold; validate it on the training run.
 - ZeRO-1/2: less memory, same bytes; FSDP: $16/k$ bytes per parameter, 1.5× the traffic.
 
 **Next:** the method of this chapter applied to a transformer, in Case

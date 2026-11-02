@@ -400,7 +400,8 @@ on_gpu = jax.sharding.SingleDeviceSharding(gpu, memory_kind='device')
 x_pinned = jax.device_put(x_pageable, jax.sharding.SingleDeviceSharding(
     gpu, memory_kind='pinned_host'))
 for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
-    t = d2l.Benchmark(lambda: jax.device_put(src, on_gpu)).time
+    t = d2l.Benchmark(
+        lambda: jax.device_put(src, on_gpu).block_until_ready()).time
     print(f'{desc}: {x_pageable.nbytes / t / 1e9:.1f} GB/s')
 ```
 
@@ -418,10 +419,13 @@ JAX names the memory in which an array lives by its *memory kind*:
 `'device'` for the GPU's memory and `'pinned_host'` for page-locked host
 memory. A NumPy array lives in pageable host memory. One `device_put` with
 a `'pinned_host'` sharding copies it into pinned memory, and transfers from
-there to the GPU need no further copy on the host.
+there to the GPU need no further copy on the host. JAX may run several
+transfers at once, and the last one to be issued can finish before the
+others. `Benchmark`, which waits only for the last result, would then
+stop the clock early, so every call here waits for its own copy.
 :end_tab:
 
-The pinned copy reaches about 25 GB/s, close to the 32 GB/s that a PCIe
+The pinned copy reaches about 23 GB/s, close to the 32 GB/s that a PCIe
 4.0 ×16 link carries in each direction and forty times below the card's own
 memory bandwidth. The pageable copy is slower, because every byte first
 makes an extra trip through host memory. Data that the GPU reads
@@ -448,7 +452,7 @@ four RTX 4090s sit in pairs behind two PCIe host bridges. Without
 peer-to-peer access, every byte from one GPU to another is staged through
 host memory: up one PCIe link, through the CPU's memory, and down another.
 A copy between two of our GPUs therefore runs at most at the rate of one
-PCIe 4.0 link, the 25 GB/s that the pinned copy above reached, about 35
+PCIe 4.0 link, the 23 GB/s that the pinned copy above reached, about 40
 times less than one direction of NVLink 5. Collective communication
 libraries such as NCCL reach even less on this staged path at their
 default settings, and :numref:`sec_multi_gpu_concise` traces where their
@@ -462,8 +466,8 @@ one GPU to another.](../img/mdl-perf-pcie-topology.svg)
 
 Data-parallel training of our 1B-parameter GPT on two GPUs sums the 4 GB
 of fp32 gradients of every step across the GPUs. Moving 4 GB once takes
-at least 0.16 s at 25 GB/s and less than 5 ms over one direction of
-NVLink 5. On our machine, communication therefore adds at least 0.16 s to
+at least 0.17 s at 23 GB/s and less than 5 ms over one direction of
+NVLink 5. On our machine, communication therefore adds at least 0.17 s to
 every step of this model, unless it overlaps with computation.
 :numref:`sec_multi_gpu` turns such numbers into a cost model and checks
 its predictions on this machine.
@@ -539,7 +543,7 @@ time barely changes, so the rows per second through this matrix grow
 almost in proportion to the batch. The roofline puts the crossover where
 the intensity reaches the ridge point, at a batch of about 164. Beyond it
 the time grows in proportion to the batch, and the arithmetic rate levels
-off at a large fraction of the 165 TFLOP/s peak. One matrix on one card
+off near the 165 TFLOP/s peak. One matrix on one card
 covers both ends of :numref:`fig_roofline`.
 
 In a whole model the
@@ -588,7 +592,7 @@ the formats they support. Halving the width of a format halves the bytes
 moved and, on most parts, doubles the peak FLOP/s; tf32 raises only the
 compute roof. Outside the GPU, bandwidth drops by one to two orders of
 magnitude. On our machine a copy from pinned host memory reaches about
-25 GB/s over PCIe 4.0, and a copy between two GPUs, staged through host
+23 GB/s over PCIe 4.0, and a copy between two GPUs, staged through host
 memory, runs no faster, while NVLink 5 carries 900 GB/s per direction.
 Prefill is compute-bound, and single-stream decode is bandwidth-bound at
 about $\beta$ divided by the bytes per token, roughly 450 tokens per second
@@ -689,7 +693,7 @@ decode in proportion to the batch until it reaches the ridge point.
    in the time one byte crosses the path.
     1. Compute $P/\beta$ in bf16 for an RTX 4090 against its own memory
        and against the host-staged GPU-to-GPU path of
-       :numref:`subsec_hw-interconnects` at 25 GB/s. Compute it for a B200
+       :numref:`subsec_hw-interconnects` at 23 GB/s. Compute it for a B200
        against its HBM and against one direction of NVLink 5, 900 GB/s.
     1. In data-parallel training (:numref:`sec_multi_gpu`), every GPU
        holds a copy of a model with $N$ parameters and processes $T$
@@ -1006,7 +1010,7 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Pinned Host Memory Feeds PCIe Near Its Ceiling"}
 @!hardware-the-cpu-s-role
 
-- Pinned: about 25 of PCIe 4.0's 32 GB/s, forty times below GPU memory.
+- Pinned: about 23 of PCIe 4.0's 32 GB/s, forty times below GPU memory.
 - Pageable: an extra copy through host memory first.
 - Keep data on the device; copy minibatches from pinned memory, overlapped.
 :::
@@ -1014,8 +1018,8 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Without Peer-to-Peer, Every Inter-GPU Byte Goes through the Host"}
 ![](../img/mdl-perf-pcie-topology.svg){height=400px}
 
-GPU to GPU: at most one PCIe link, about 25 GB/s, 35× below one direction
-of NVLink 5. The 4 GB of fp32 gradients of the 1B GPT: ≥ 0.16 s per step
+GPU to GPU: at most one PCIe link, about 23 GB/s, 40× below one direction
+of NVLink 5. The 4 GB of fp32 gradients of the 1B GPT: ≥ 0.17 s per step
 here, < 5 ms on NVLink.
 :::
 
@@ -1054,7 +1058,7 @@ per second for one stream, and for a batch of 64?
 [Wrap-up]{.kicker}
 
 - Bandwidth drops at every boundary: RTX 4090 memory 0.9 TB/s measured,
-  PCIe 25 GB/s from pinned memory, GPU to GPU no faster, through the host.
+  PCIe 23 GB/s from pinned memory, GPU to GPU no faster, through the host.
 - Compute is area, I/O is perimeter, and data movement dominates energy:
   ridge points of 117–295 FLOP/B, rising over generations.
 - Narrower formats halve the bytes and usually double $P$.

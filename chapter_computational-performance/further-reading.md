@@ -233,7 +233,7 @@ keeps the optimizer state in host memory and runs the update on the CPU,
 so the GPU holds the weights and the activations only. The drawback is
 traffic over PCIe. In fp32 the gradients travel to the host and the
 updated weights return, 8 GB per step for a model of a billion
-parameters, which takes a sizable fraction of a second at the 25 GB/s of
+parameters, which takes a sizable fraction of a second at the 23 GB/s of
 :numref:`subsec_hw-cpu`. Large minibatches hide this time behind the
 computation. ZeRO-Infinity :cite:`Rajbhandari.Ruwase.Rasley.ea.2021`
 extends the hierarchy to NVMe drives. JAX exposes offloading through its

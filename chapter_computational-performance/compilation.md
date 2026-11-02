@@ -323,7 +323,8 @@ for desc, fn in (('eager', gelu_ish), ('compiled', compiled)):
     print(f'{b}, {arrays_moved[desc] * x.nbytes / b.time / 1e9:.0f} GB/s')
 ```
 
-The compiled chain is eight to nine times faster, as predicted, and both
+The compiled chain is eight to ten times faster, close to the predicted
+nine, and both
 versions move data at a similar rate, most of the card's
 1 TB/s. The compiler made memory no faster and arithmetic no cheaper. It
 removed 16 of the 18 array transfers. The cell checks the result before
@@ -602,7 +603,7 @@ print(d2l.Benchmark(lambda: deep(params, x), desc='eager'))
 print(d2l.Benchmark(lambda: jitted(params, x), desc='jit'))
 ```
 
-Without Python in the loop, the stack runs several times faster, at
+Without Python in the loop, the stack runs many times faster, at
 roughly the time the GPU needs for its 120 small kernels. Dividing each time
 by 120 reads off the two costs per kernel: the eager time gives the host
 time of one launch, and the compiled time gives the GPU time of one kernel,
@@ -613,9 +614,10 @@ a few microseconds.
 as CUDA graphs and replay them. The first call compiles and runs a warm-up,
 the second records the CUDA graph, and later calls with the same shapes copy
 the input into the recorded buffer and replay. `Benchmark` warms up with
-three calls, so the timed calls are replays. The host time per launch of the
-eager version exceeds that of a bare operation, since every layer is also a
-call of an `nn.Module`.
+three calls, so the timed calls are replays, about seven times faster
+than the eager calls. The host time per launch of the eager version exceeds
+that of a bare operation, since every layer is also a call of an
+`nn.Module`.
 
 We time inference under `torch.no_grad()`, where every call is a complete
 step and can be replayed as a whole. In training, the forward and the
@@ -626,8 +628,8 @@ one, a result that must survive the next call has to be cloned.
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call from Python. The eager version dispatches its 120
-operations one at a time, at tens of microseconds each, and is more than
-ten times slower. On a GPU, XLA also records runs of consecutive kernels as
+operations one at a time, at tens of microseconds each, and is about
+thirty times slower. On a GPU, XLA also records runs of consecutive kernels as
 CUDA graphs by default (XLA calls them command buffers). A jitted function
 is therefore recorded and replayed without a separate mode.
 :end_tab:
@@ -1032,8 +1034,8 @@ of bytes: $18/2 = 9$.
 @!compilation-what-the-compiler-does-fusion
 
 - Check `allclose` first: compilers reorder floating-point arithmetic.
-- 8–9× faster, as predicted. Memory is no faster; 16 of 18 transfers are
-  gone.
+- 8–10× faster, close to the predicted 9. Memory is no faster; 16 of 18
+  transfers are gone.
 :::
 
 ::: {.slide title="Check: The Activation of the 1B GPT"}
@@ -1174,7 +1176,7 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
 
 - Tracing records tensor operations on placeholders; branches on values
   and new shapes are its limits.
-- `gelu_ish` on 64 MB: eager moves 1.15 GB, fused 128 MB; 8–9× faster.
+- `gelu_ish` on 64 MB: eager moves 1.15 GB, fused 128 MB; 8–10× faster.
 - In the 1B GPT's GELU MLP, the unfused activation takes about 2.4 ms per
   layer next to 3.3 ms of matmuls; fused, 0.27 ms.
 - Break-even: $n^* = t_\textrm{compile} / (t_\textrm{eager} -

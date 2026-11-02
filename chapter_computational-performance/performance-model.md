@@ -270,7 +270,7 @@ step then costs the host time plus the device time plus the latency of the
 round trip.
 
 :begin_tab:`pytorch`
-Here the reads make the loop about 1.6 times as slow.
+Here the reads make the loop about one and a half times as slow.
 :end_tab:
 
 :begin_tab:`jax`
@@ -443,8 +443,8 @@ possible, because the specification assumes the card's rated clock of
 
 The small sizes behave differently. Up to $n = 1024$ every call takes nearly
 the same time, although the work grows 64-fold from $n = 256$ to
-$n = 1024$, and each doubling of $n$ multiplies the throughput by about
-eight. A time per call that does not depend on the size cannot be spent on
+$n = 1024$, and each doubling of $n$ multiplies the throughput by six to
+ten. A time per call that does not depend on the size cannot be spent on
 arithmetic. It is the time $h$ that the host needs to issue one call:
 Python, the framework, and the driver that launches the kernel. When calls
 are queued back to back, host and device work at the same time, and each
@@ -465,7 +465,7 @@ output above is the value of $h$ for this framework and this machine.
 :begin_tab:`jax`
 In JAX the floor lies near a tenth of a millisecond, and it does not
 depend on the product. A compiled function that only adds one to a small
-array takes about as long per call:
+array takes nearly as long per call:
 :end_tab:
 
 ```{.python .input #performance-model-matrix-products-across-sizes-3}
@@ -560,8 +560,8 @@ print(Benchmark(lambda: x + 1, desc='1 op'))
 print(Benchmark(lambda: gelu_ish(x), desc='chain'))
 ```
 
-The chain takes about nine times as long as the single addition, and the
-bytes explain the factor. The addition reads one tensor and writes one. The
+The chain takes eight to nine times as long as the single addition, and
+the bytes explain the factor. The addition reads one tensor and writes one. The
 eight operations of the chain read and write 18 tensors of the same size
 between them. Each of the six operations with one tensor input moves two;
 the sum $x + 0.04x^3$ and the final product combine two tensors and move
@@ -712,7 +712,7 @@ busy = sum(kernels.values())
 print(f'wall clock {1000 * wall:.2f} ms per step, device busy {busy:.2f} ms '
       f'({busy / (1000 * wall):.0%})')
 for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:6]:
-    name = re.sub(r'^void |\w+::|\(.*', '', name)
+    name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
     print(f'{ms:6.3f} ms {100 * ms / busy:5.1f}%  {name[:56]}')
 ```
 
@@ -727,8 +727,23 @@ a ridge point of about 82 for tf32 (82.6 TFLOP/s over 1.008 TB/s).
 The remaining kernels are elementwise kernels and reductions: the ReLUs, the
 bias gradients, which sum over the batch, and the SGD update. The update
 reads every weight and its gradient and writes the weight back, 12 bytes
-for two FLOPs. It is bandwidth-bound, and its time does not depend on the
-batch size, so at small batch sizes it can take a large share of the step.
+for two FLOPs. As a kernel of its own it is bandwidth-bound, and its time
+does not depend on the batch size, so at small batch sizes it can take a
+large share of the step.
+
+:begin_tab:`pytorch`
+The update is the `multi_tensor_apply_kernel` line, about a sixth of the
+device time. It moves 12 bytes for each of the 34 million weights, 0.4 GB,
+which takes 0.4 ms at the card's bandwidth.
+:end_tab:
+
+:begin_tab:`jax`
+The update has no kernel of its own. XLA fuses it into the products that
+compute the weight gradients: `gemm_fusion_dot` and `gemm_fusion_dot_1`
+each compute the gradient of one large weight matrix and subtract its
+scaled value from the weight before writing the result, so the gradient
+never travels to memory and back.
+:end_tab:
 
 The four steps of the method can now be stated with their tools.
 **Measure** with `Benchmark` and a profiler. **Classify**: a busy device

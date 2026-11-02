@@ -213,8 +213,7 @@ def _embedding_rows_bwd(residuals, grad):  #@save
     return jnp.einsum('...v,...d->vd', one_hot, grad,
                       precision='highest').astype(table.dtype), None
 
-#@save
-embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)  #@save
 
 class Embed(nnx.Embed):  #@save
     """nnx.Embed whose gradient is a matrix product for small vocabularies."""

@@ -531,7 +531,7 @@ class TinyCharLM(nnx.Module):  #@save
         assert pos in ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
         self.num_heads, self.pos = num_heads, pos
         init = nnx.initializers.normal(0.02)
-        self.token_emb = nnx.Embed(vocab_size, num_hiddens,
+        self.token_emb = d2l.Embed(vocab_size, num_hiddens,
                                    embedding_init=init, rngs=rngs)
         if pos == 'learned':
             self.pos_emb = nnx.Embed(max_len, num_hiddens,
@@ -594,6 +594,12 @@ class TinyCharLM(nnx.Module):  #@save
             H = H + out
         return maps
 ```
+
+:begin_tab:`jax`
+The token table is `d2l.Embed` of :numref:`subsec_tinylm`: on bytes of text,
+whose frequencies are skewed, it computes the gradient of the lookup faster
+than `nnx.Embed`.
+:end_tab:
 
 ### The Experiment
 :label:`subsec_pos-experiment`

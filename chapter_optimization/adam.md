@@ -547,6 +547,31 @@ class TinyLM(nn.Module):  #@save
 
 ```{.python .input #adam-a-tiny-language-model-2}
 %%tab jax
+@jax.custom_vjp  #@save
+def embedding_rows(table, X):
+    """The rows X of table."""
+    return table[X]
+
+def _embedding_rows_fwd(table, X):  #@save
+    return table[X], (table, X)
+
+def _embedding_rows_bwd(residuals, grad):  #@save
+    """Gradient of the table: the one-hot rows of X times the gradients."""
+    table, X = residuals
+    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
+    return jnp.einsum('...v,...d->vd', one_hot, grad,
+                      precision='highest').astype(table.dtype), None
+
+embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)  #@save
+
+class Embed(nnx.Embed):  #@save
+    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
+    def __call__(self, X):
+        table = self.embedding[...]
+        if len(table) > 1024:  # A one-hot row would cost too much
+            return super().__call__(X)
+        return embedding_rows(table, X).astype(self.dtype or table.dtype)
+
 class TinyLM(nnx.Module):  #@save
     """A small decoder-only transformer language model."""
     def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
@@ -559,8 +584,8 @@ class TinyLM(nnx.Module):  #@save
             return nnx.Linear(d_in, d_out, kernel_init=init, bias_init=init,
                               rngs=rngs)
         def embed(n):  # Embedding rows ~ N(0, I)
-            return nnx.Embed(n, d_model, rngs=rngs,
-                             embedding_init=nnx.initializers.normal(1.0))
+            return Embed(n, d_model, rngs=rngs,
+                         embedding_init=nnx.initializers.normal(1.0))
         def norm():
             return nnx.LayerNorm(d_model, epsilon=1e-5, rngs=rngs)
         self.token_emb, self.pos_emb = embed(vocab_size), embed(max_len)
@@ -601,6 +626,16 @@ every kernel and bias, a standard normal for the embeddings, and
 LayerNorm with $\epsilon = 10^{-5}$. `approximate=False` selects the exact
 GELU. The random stream `rngs` is a required argument: every model states
 where its initialization comes from.
+
+The embeddings are `Embed`, an `nnx.Embed` with a faster gradient. The
+gradient of a lookup adds the gradient at each position to the row of that
+position's token, and XLA performs these additions with atomic operations.
+In a minibatch of text, thousands of positions hold the same few frequent
+bytes, such as the space and `e`. Their additions to the same row wait for
+one another, and on our GPU the sum takes tens of times as long as for
+random tokens. For vocabularies of up to 1,024 tokens, `Embed` computes
+the same sum as one matrix product of the one-hot rows of the tokens with
+the gradients.
 :end_tab:
 
 ### Parameter Groups

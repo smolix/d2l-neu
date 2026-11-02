@@ -1497,7 +1497,12 @@ if the model still has lazy parameters, it runs the first training minibatch
 through the model on the device and applies the model's `weight_init`
 function, if it has one, before the optimizer is created. A model built
 from layers with fixed shapes initializes itself in its constructor;
-`weight_init` is not called for it.
+`weight_init` is not called for it. On a GPU, `prepare_model` also turns on
+`torch.backends.cudnn.benchmark` for the rest of the process, unless
+deterministic algorithms were requested
+(:numref:`subsec_deterministic_arithmetic`): cuDNN then times its
+convolution algorithms on the first minibatch of each shape and keeps the
+fastest.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1558,6 +1563,10 @@ def prepare_model(self, model):
     self.model = model
     if self.gpus:
         model.to(self.gpus[0])
+        # Pick convolution algorithms by timing, unless determinism is wanted
+        torch.backends.cudnn.benchmark = not (
+            torch.are_deterministic_algorithms_enabled()
+            or torch.backends.cudnn.deterministic)
     if any(isinstance(p, nn.parameter.UninitializedParameter)
            for p in model.parameters()):
         loader = (self.train_dataloader if self.train_dataloader is not None

@@ -333,11 +333,17 @@ def add_docstring_labels(blocks):
                                            f'{spaces}Defined in :numref:`{label}`"""')
                                 label_added = True
                         else:
-                            # Multi-line: find closing """
+                            # Multi-line: insert the label before the closing
+                            # """, keeping any text that shares its line
+                            # (`    last line."""`) instead of overwriting it.
                             for k in range(j + 1, len(lines)):
-                                if '"""' in lines[k]:
-                                    lines[k] = (f'\n{spaces}Defined in '
-                                               f':numref:`{label}`"""')
+                                q = lines[k].find('"""')
+                                if q >= 0:
+                                    text = lines[k][:q].rstrip()
+                                    lines[k] = (
+                                        (f'{text}\n' if text.strip() else '')
+                                        + f'\n{spaces}Defined in '
+                                        f':numref:`{label}`' + lines[k][q:])
                                     label_added = True
                                     break
                         break

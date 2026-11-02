@@ -643,29 +643,48 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,  #@save
 ```
 
 `show_heatmaps` draws matrices as grids of colored cells, one panel per
-matrix, with a shared color bar. Its argument has the shape (rows of panels,
-columns of panels, height, width). It displays the confusion matrix of
-:numref:`sec_softmax_scratch` and the attention weights of
-:numref:`chap_attention`.
+matrix. Its argument has the shape (rows of panels, columns of panels,
+height, width). By default all panels share one color scale and one
+colorbar; `cbar='each'` gives every panel its own scale and colorbar, and
+`cbar=False` draws none. Ticks mark integer rows and columns, and
+`xticklabels` and `yticklabels` name them, e.g., by token. It displays the
+confusion matrix of :numref:`sec_softmax_scratch` and the attention weights
+of :numref:`chap_attention`.
 
 ```{.python .input #utils-training-utilities-1}
 def show_heatmaps(matrices, xlabel, ylabel, titles=None,  #@save
-                  figsize=(2.5, 2.5), cmap='Reds'):
-    """Show heatmaps of matrices."""
+                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
+                  xticklabels=None, yticklabels=None):
+    """Show heatmaps of matrices; cbar is True (shared), 'each' or False."""
     d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
+    matrices = d2l.numpy(matrices)
+    num_rows, num_cols, height, width = matrices.shape
     fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
                                  sharex=True, sharey=True, squeeze=False)
+    # All panels share one color scale (one norm) unless each gets its own
+    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
+        matrices.min(), matrices.max()))
     for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
         for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            pcm = ax.imshow(matrix, cmap=cmap, **lims)
+            if cbar == 'each':
+                fig.colorbar(pcm, ax=ax, shrink=0.6)
             if i == num_rows - 1:
                 ax.set_xlabel(xlabel)
             if j == 0:
                 ax.set_ylabel(ylabel)
             if titles:
                 ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
+    # Shared axes: setting the ticks of one panel sets them for all
+    for axis, n, labels in ((ax.xaxis, width, xticklabels),
+                            (ax.yaxis, height, yticklabels)):
+        if labels is None:
+            axis.set_major_locator(d2l.plt.MaxNLocator(
+                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
+        else:
+            axis.set_ticks(range(n), labels)
+    if cbar is True:
+        fig.colorbar(pcm, ax=axes, shrink=0.6);
 ```
 
 ```{.python .input #utils-utility-functions-and-classes-11}

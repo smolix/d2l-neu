@@ -218,35 +218,29 @@ Plotting the weight matrix over (query, key) pairs is therefore the
 standard first look at any attention layer, and we will do it throughout
 the chapter with `d2l.show_heatmaps`. The helper takes an array of shape
 (rows of panels, columns of panels, queries, keys) and draws a grid of
-heatmaps that share one colorbar.
+heatmaps.
 
 The narrow and the wide kernel put weights of very different sizes on
-their keys, so we draw each in a figure of its own, with its own color
-scale. The queries are the test inputs and the keys are the training
-inputs, both in increasing order. We start with the narrow kernel.
+their keys, so we give each map its own color scale (`cbar='each'`). The
+queries are the test inputs and the keys are the training inputs, both in
+increasing order.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-3}
 %%tab pytorch, jax
-_, w_narrow = nadaraya_watson(x_train, y_train, x_val, 0.1)
-d2l.show_heatmaps(w_narrow.T[None, None], xlabel='Training inputs (keys)',
+w_narrow, w_wide = (nadaraya_watson(x_train, y_train, x_val, s)[1].T
+                    for s in (0.1, 2.0))
+d2l.show_heatmaps(d2l.stack([w_narrow, w_wide])[None],
+                  xlabel='Training inputs (keys)',
                   ylabel='Test inputs (queries)',
-                  titles=[r'$\sigma$ = 0.1'], figsize=(4, 3))
+                  titles=[r'$\sigma$ = 0.1', r'$\sigma$ = 2'],
+                  figsize=(7, 3), cbar='each')
 ```
 
-Each query puts nearly all of its weight on the few keys nearest to it, so
-the map is a thin diagonal band and the estimate copies a few noisy
-labels. The wide kernel spreads its weight out.
-
-```{.python .input #queries-keys-values-attention-weights-as-a-diagnostic-1}
-%%tab pytorch, jax
-_, w_wide = nadaraya_watson(x_train, y_train, x_val, 2.0)
-d2l.show_heatmaps(w_wide.T[None, None], xlabel='Training inputs (keys)',
-                  ylabel='Test inputs (queries)',
-                  titles=[r'$\sigma$ = 2'], figsize=(4, 3))
-```
-
-Its largest weight is a few hundredths, spread over a broad band of keys,
-so neighboring queries see nearly the same average. In both maps the
+With the narrow kernel, each query puts nearly all of its weight on the
+few keys nearest to it, so the map is a thin diagonal band and the
+estimate copies a few noisy labels. The wide kernel spreads its weight
+out: its largest weight is a few hundredths, spread over a broad band of
+keys, so neighboring queries see nearly the same average. In both maps the
 diagonal appears only because queries and keys are sorted inputs on the
 same axis. In a trained network, such a heatmap is a hypothesis about what
 the layer does, not a proof. A large weight on a key whose value the next
@@ -591,19 +585,10 @@ The normalized kernel matrix is the attention-weight matrix.
 Rows: test inputs (queries). Columns: training inputs (keys), sorted.
 Each map has its own color scale.
 
-::: {.cols}
-::: {.col}
 @!queries-keys-values-nadaraya-watson-regression-in-action-3
 
-$\sigma = 0.1$: a thin band; weights near 1 on a few keys.
-:::
-
-::: {.col}
-@!queries-keys-values-attention-weights-as-a-diagnostic-1
-
-$\sigma = 2$: broad rows of weights of a few hundredths.
-:::
-:::
+- $\sigma = 0.1$: a thin band; weights near 1 on a few keys.
+- $\sigma = 2$: broad rows of weights of a few hundredths.
 :::
 
 ::: {.slide title="Check: A Query Far from the Data"}

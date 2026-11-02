@@ -832,17 +832,18 @@ def lm_perplexity(model, data):  #@save
 
 ```{.python .input #lstm-character-level-language-modeling-3}
 %%tab jax
-@nnx.jit  #@save
-def lm_loss_sum(model, X, Y):
+@jax.jit(static_argnums=0)  #@save
+def lm_loss_sum(graphdef, state, X, Y):
     """Summed next-token cross-entropy of a batch."""
-    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    logits = nnx.merge(graphdef, state)(X)
+    return optax.softmax_cross_entropy_with_integer_labels(logits, Y).sum()
 
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
-    loss_sum = nnx.cached_partial(lm_loss_sum, model)  # Compile once, reuse
+    graphdef, state = nnx.split(model)  # One walk through the model
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        total += loss_sum(X, Y)
+        total += lm_loss_sum(graphdef, state, X, Y)
         count += Y.size
     return math.exp(float(total) / count)
 ```

@@ -610,8 +610,12 @@ net.embedding.set_weights([embeds])
 
 ### Training and Evaluating the Model
 
-In contrast to the `split_batch` function in :numref:`sec_multi_gpu` that takes single inputs such as text sequences (or images),
-we define a `split_batch_multi_inputs` function to take multiple inputs such as premises and hypotheses in minibatches.
+:begin_tab:`mxnet`
+`d2l.train_ch13` splits each minibatch across the GPUs with
+`d2l.split_batch`, which takes a single input, such as a batch of text
+sequences or images. Our model takes two inputs, premises and hypotheses,
+so we define `split_batch_multi_inputs`, which splits both.
+:end_tab:
 
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-1}
 #@tab mxnet

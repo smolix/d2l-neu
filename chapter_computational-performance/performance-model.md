@@ -321,7 +321,7 @@ class Benchmark:  #@save
 class Benchmark:  #@save
     """Time a callable: warmup, then device-synchronized average seconds."""
     def __init__(self, f, warmup=3, repeats=10, desc='time'):
-        self.desc = desc
+        self.desc, out = desc, None
         for _ in range(warmup):
             out = f()
         jax.block_until_ready(out)

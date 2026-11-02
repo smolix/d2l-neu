@@ -73,11 +73,18 @@ tensor when we load its weights.
 $1, \ldots, t$, so its query may attend only to keys at positions up to
 $t$. In :numref:`sec_transformer-block` the small language model passed this
 lower-triangular mask to every block as a boolean array. Here the attention
-module applies it itself, because the fused attention kernels of
-:numref:`sec_attention-at-scale` take the causal mask as a flag and never
-store the $n \times n$ matrix of scores. With the mask, one forward pass
-over a window computes all its next-token predictions at once, each from
-its own prefix.
+module applies it itself: it passes the attention function the flag
+`is_causal=True` instead of a mask. The fused attention kernels of
+:numref:`sec_attention-at-scale` take the causal mask in this form and
+never store the $n \times n$ matrix of scores. With the mask, one forward
+pass over a window computes all its next-token predictions at once, each
+from its own prefix.
+
+:begin_tab:`jax`
+`jax.nn.dot_product_attention` uses XLA's implementation by default, which
+builds the mask and the matrix of scores in memory.
+:numref:`sec_fast_transformer` selects cuDNN's fused kernel instead.
+:end_tab:
 
 **Positions.** Attention alone treats its inputs as a set: permuting the
 tokens permutes the outputs in the same way

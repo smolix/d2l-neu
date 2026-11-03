@@ -323,3 +323,5 @@ functions, and decision trees, and found errors close to those of the best
 algorithm for each class. :citet:`Akyurek.Schuurmans.Andreas.ea.2023` asked
 which algorithm a trained model implements and found a progression with
 depth and width, from one gradient step towards ridge regression.
+
+[Discussions](https://d2l.discourse.group/t/36852)

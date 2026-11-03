@@ -1280,6 +1280,8 @@ predict the quality of the representation it trains.
        in (c) :cite:`Saxe.Bansal.Dapello.ea.2018`?
    :exlabel:`ex_mdl-mutual-information-compression-phase`
 
+[Discussions](https://d2l.discourse.group/t/36866)
+
 <!-- slides -->
 
 ::: {.slide}

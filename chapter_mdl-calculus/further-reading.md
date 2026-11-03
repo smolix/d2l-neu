@@ -186,3 +186,5 @@ derivatives, writes the derivative of a density as a scaled difference of
 two densities and samples from both. :citet:`Mohamed.Rosca.Figurnov.ea.2020`
 compare all three families in one framework, state the conditions each
 needs, and recommend which to use for which model.
+
+[Discussions](https://d2l.discourse.group/t/36858)

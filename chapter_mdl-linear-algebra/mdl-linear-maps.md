@@ -1450,6 +1450,8 @@ index rule.
 :begin_tab:`jax`
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36855)
+
 <!-- slides -->
 
 ::: {.slide}

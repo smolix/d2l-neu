@@ -1094,6 +1094,8 @@ under one tokenizer.
        that mattered most.
    :exlabel:`ex_mdl-information-theory-adaptive-compression`
 
+[Discussions](https://d2l.discourse.group/t/36865)
+
 <!-- slides -->
 
 ::: {.slide}

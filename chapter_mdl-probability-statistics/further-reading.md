@@ -217,3 +217,5 @@ for the unlabeled examples and counting with those posteriors as fractional
 labels. :citet:`Nigam.McCallum.Thrun.ea.2000` showed large gains for text
 classification with few labeled documents, and that unlabeled data can hurt
 when the generative model fits the data poorly.
+
+[Discussions](https://d2l.discourse.group/t/36864)

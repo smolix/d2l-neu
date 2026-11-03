@@ -1266,6 +1266,8 @@ section evaluates these products by program.
 :begin_tab:`jax`
 :end_tab:
 
+[Discussions](https://d2l.discourse.group/t/36857)
+
 <!-- slides -->
 
 ::: {.slide}

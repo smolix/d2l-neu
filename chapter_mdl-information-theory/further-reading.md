@@ -215,3 +215,5 @@ make the question well posed by adding Gaussian noise to the activations,
 so that $I(X; Z)$ is finite and can be estimated. With that definition the
 measured compression depends on the noise scale, and it tracks how the
 representations of each class cluster together.
+
+[Discussions](https://d2l.discourse.group/t/36867)

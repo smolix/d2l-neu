@@ -1,38 +1,47 @@
 # Information Theory and Divergences
 :label:`chap_mdl-information-theory`
 
-A freshly initialized 10-class classifier reports a loss of $2.30$. A
-generative adversarial network whose samples miss the data by $0.01$ sees
-the same Jensen--Shannon divergence, $\log 2$, as one whose samples miss by
-$100$, so its loss cannot tell a near miss from a far one. A contrastive
-model trained with $128$ candidates per example can never report more than
-$\ln 128 \approx 4.85$ nats of shared information, however much its two
-views share. Each number is the value of a familiar loss, and each makes a
-precise statement about probability distributions.
+Almost every model in this book was trained by minimizing a cross-entropy.
+We chose it because it works: it turns "give high probability to what
+actually happened" into a number that gradient descent can push down. We
+never asked what that number means. When a language model reports a loss of
+1.2 nats per character, is that good? How low could it go? And when we
+compare two distributions in other ways, with a KL penalty in a variational
+autoencoder or with a discriminator in a generative adversarial network, what
+exactly are we measuring?
 
-The Basics part used these quantities as losses to minimize. Read only as
-numbers to push down, they cannot say whether a plateau is a property of
-the data or a defect of the model, whether a comparison of two
-distributions can see how far apart they are, or whether a reported value
-is a measurement or a bound. Information theory gives each of them a
-meaning, a floor and a failure mode. Two small examples recur: the
-distributions $(0.6, 0.3, 0.1)$ and $(0.2, 0.5, 0.3)$ on three outcomes,
-and a pair of standard normal variables with correlation $\rho$.
+Information theory answers these questions, although it began with a
+different one. In 1948 Claude Shannon asked how efficiently a message can be
+sent over a telephone line, and found that the answer depends on a single
+property of the source: how predictable it is. His measure of
+unpredictability, *entropy*, is the average surprise of an outcome. It is
+also the floor below which no model's cross-entropy can fall. A handful of
+related ideas follow from it: the surprise of an outcome, the extra cost of
+believing the wrong distribution, and the information one variable carries
+about another. Together they explain why log-loss is the natural loss for
+predicting probabilities, why a good language model is also a good
+compressor, and why some ways of comparing distributions stop telling a
+model which way to move.
+
+The chapter builds these ideas from one starting point, the surprise of a
+single outcome, and ties each to a loss or a model from earlier chapters. Two
+small examples recur: a pair of distributions on three outcomes, and a pair
+of correlated Gaussian variables.
 
 :numref:`sec_mdl-information_theory` asks what a log-loss measures and how
 low it can go. :numref:`sec_mdl-coding-compression` asks why a log-loss is
-the length of a code, and how close a real compressor comes to it.
-:numref:`sec_mdl-divergences-distances` asks what else two distributions can
-be compared by, and which comparisons see a near miss.
-:numref:`sec_mdl-mutual-information` asks how to measure the dependence
-between two variables, and what that measure limits in processing,
-prediction, communication and compression. :numref:`sec_mdl-mi-estimation`
-asks what samples alone can say about dependence.
+the length of a code, and how close real compressors come to it.
+:numref:`sec_mdl-divergences-distances` asks how else two distributions can
+be compared, and which comparisons notice when a model is close but not yet
+right. :numref:`sec_mdl-mutual-information` asks how to measure the
+dependence between two variables, and what that measure limits.
+:numref:`sec_mdl-mi-estimation` asks what samples alone can tell us about
+dependence.
 
 We assume the probability of :numref:`chap_mdl-probability-statistics` and
-the convexity of :numref:`chap_mdl-optimization`. The construction of
-practical channel codes, Kolmogorov complexity and the information geometry
-of statistical models are left out.
+the convexity of :numref:`chap_mdl-optimization`. We leave out the
+construction of practical error-correcting codes, Kolmogorov complexity and
+information geometry.
 
 ```toc
 :maxdepth: 2

@@ -25,25 +25,25 @@
       ]
     },
     "mdl-odes-solvers-transient-growth": {
-      "code_fingerprint": "sha256:024faca9908aa6828a6502ed7d5a629a3bd93d4104641d15762f43746cc05ee2",
+      "code_fingerprint": "sha256:4b61cbbdde7529df34b1a57c29fa2d323f565d65ffdcdf7171480f866f0dd77b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of B: [-1. -2.]\n|coefficients of x0 on the unit eigenvectors|: [10.   10.05]\n|closed form - eigen formula| = 1.6e-15\npeak ||x(t)|| = 2.513 at t = 0.68\n"
+          "text": "eigenvalues of B: [-1. -2.]\n|coefficients of x0|: [10.   10.05]\n|closed form - eigen| = 1.6e-15\npeak 2.513 at t = 0.68\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
           "bytes": 25093,
-          "sha256": "sha256:9598d71e92b637f3f45c95f7429cb910182a03bd29e5e468e9da86aefd31af14"
+          "sha256": "sha256:d36d118fe557f2818692885a64373623e80394c1b164f57456e32ff49acfd8b5"
         }
       ]
     },
     "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:9ac363a88bb58d2207b55982d1f08168b28f88fb96f286d14e9580b1fe2ea07b",
+      "code_fingerprint": "sha256:f80759984b410bc8a6dc859f6e3d2d5f4e4e3a1480ac6339dad2bb6412d72d21",
       "kind": "mixed",
       "outputs": [
         {
@@ -56,12 +56,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:2991fbd4c054c76362ca6eaa2bfbd2f3a5f4915c0582efeee45af7207b3a3b08"
+          "sha256": "sha256:b7efb92a21a7d582577270292b57d7be6aa844e986a87744cb3debb5cfcf1b9e"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:5cf42423541843cd81be946b59dfb6b76363d3a7a76dcd6cfe3aa04afb9c90e7",
+      "code_fingerprint": "sha256:58cf711c288214552e4a88a39dcd7493a786e47b67bff2bab9b07690708d3494",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:6135d81d1e746969d04c044dc81e2af956f8409da872c5f9df3b258fc6b2bf67",
+      "code_fingerprint": "sha256:11433a52d2e1289d599065e4fd4b7e2204db6e8aa9bb7e6b893948798cc10c79",
       "kind": "text",
       "outputs": [
         {

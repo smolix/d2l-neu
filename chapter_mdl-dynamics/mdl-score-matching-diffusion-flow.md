@@ -1007,7 +1007,7 @@ measure the Euler error alone, since the noise prediction is exact. The
 mixture behaves the same way. Ten strides land on average $0.08$ from the
 thousand-stride result, on a scale where the modes sit at $\pm 0.97$. Their
 empirical distribution differs from it by a KS statistic of $0.08$, and
-fifty strides reduce both numbers to under $0.02$. No sample changes mode at any
+fifty strides reduce both numbers to about $0.02$. No sample changes mode at any
 stride count: each stride map is odd and, for these strides, increasing, so
 every sample keeps its sign. :numref:`fig_mdl-dyn-ddim-strides` shows both
 experiments. A higher-order solver in the same coordinates spends two

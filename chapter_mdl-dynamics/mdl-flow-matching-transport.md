@@ -846,11 +846,11 @@ d2l.plot(steps_list, eds, 'Euler steps', 'squared energy distance',
 One step scores between $0.6$ and $0.7$, the same order as the point mass at the mean
 ($0.9$): the network has learned, imperfectly, the collapse that the exact
 field performs at $t = 0$. Two steps score about $0.15$, four about $0.04$,
-eight about $0.01$, and from sixteen steps on the score stays at a few
-thousandths, the resolution of the metric. The decline is Euler's
-discretization error; once it is gone, what remains is the error of the
-trained field, which is too small to measure with $2{,}048$ points. The
-samples show the same progression.
+eight about $0.01$, and from sixteen steps on the score levels off, usually
+at a few thousandths and never much above $0.01$. The decline is Euler's
+discretization error. The level that remains is the error of the trained
+field; it varies with the training run and is often as small as the metric
+can resolve with $2{,}048$ points. The samples show the same progression.
 
 ```{.python .input #score-matching-diffusion-flow-cfm-panels}
 fig, axes = d2l.plt.subplots(1, 4, figsize=(10, 2.6), sharex=True, sharey=True)
@@ -1001,8 +1001,8 @@ print(f'mean squared pair length: independent {np.mean(np.sum((x1_indep - x0_pai
       f', reflowed {np.mean(np.sum((x1_pairs - x0_pairs)**2, 1)):.2f}')
 ```
 
-One Euler step of the reflowed model scores a few thousandths, the same as
-thirty-two steps of the original and more than a hundred times below the
+One Euler step of the reflowed model scores the same as thirty-two steps of
+the original, usually a few thousandths, and about a hundred times below the
 original's single step. The reflowed network was trained to reproduce the
 original's $32$-step endpoints, so matching their quality in one step is the
 best it can do. It inherits the first model's error.
@@ -1758,7 +1758,7 @@ $4{,}000$ steps of $256$ independent pairs:
 @!score-matching-diffusion-flow-cfm-panels
 
 Squared energy distance to held-out data: $0.6$–$0.7$ at $1$ step, $0.15$
-at $2$, $0.01$ at $8$, a few thousandths from $16$ on.
+at $2$, $0.01$ at $8$, about $0.01$ or less from $16$ on.
 :::
 
 ::: {.slide title="Reflow Does Not Increase the Transport Cost"}
@@ -1895,7 +1895,7 @@ Each regresses on a closed-form per-sample quantity and samples with a solver.
 - Marginal velocity = posterior mean; CFM = FM $+\,C$; floor $1.38$ per
   coordinate on the moons.
 - Velocity and score are affine in $\hat{\mathbf x}_1$: one network serves both.
-- Independent pairs: one step $0.6$–$0.7$, thirty-two steps a few thousandths.
+- Independent pairs: one step $0.6$–$0.7$, thirty-two steps about $0.01$ or less.
 - Reflow: one step matches thirty-two; pair cost $4\to0.3$.
 - $W_2^2(\mathcal N(0,1),\mathcal N(0,4))=1$ against $5$; $W_2^2$ = least kinetic energy.
 - Heun beats Euler at equal cost only from about $40$ evaluations.

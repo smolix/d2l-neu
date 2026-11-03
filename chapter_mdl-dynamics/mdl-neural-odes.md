@@ -373,9 +373,9 @@ for it in range(401):
         print(f'iter {it:3d}  loss {float(loss):.1e}')
 ```
 
-The loss falls from order one to between $10^{-7}$ and $10^{-5}$: one small field,
-integrated by ten shared-weight residual updates, reproduces the prescribed
-endpoints.
+The loss falls from order one to well below $10^{-4}$, typically about
+$10^{-6}$: one small field, integrated by ten shared-weight residual updates,
+reproduces the prescribed endpoints.
 
 Is what we trained a continuous flow or a ten-step program? Two tests answer
 this. First, integrate the trained field with $N=100$ and $N=1000$ steps
@@ -430,9 +430,9 @@ for n in (10, 100, 1000):
           f'forward-backward round trip {float(trip):.1e}')
 ```
 
-At the training step count the endpoints lie a few thousandths from
-their targets. With finer steps the endpoint error *rises* to about $0.02$ and
-then stops changing. Training fitted the ten-step program. The exact
+At the training step count the endpoints lie within $0.01$ of their
+targets, typically a few thousandths. With finer steps the endpoint error
+*rises* to about $0.02$ and then stops changing. Training fitted the ten-step program. The exact
 time-one flow of the same field, which $N=1000$ approximates, lands about
 $0.02$ from the targets, under $2\%$ of the ellipse's long semi-axis. The
 field defines a flow close to its ten-step program, not equal to it.
@@ -925,8 +925,8 @@ print(f'trace integral {zT[2]:+.6f}  log|det D Phi| {logdet:+.6f}  '
 ```
 
 The trace generally takes different values at the two ends of the path,
-yet the integral and the log-determinant agree to about $10^{-10}$, and never
-worse than about $10^{-9}$, for any draw of the weights. That gap is the
+yet the integral and the log-determinant agree to about $10^{-10}$, and to better
+than $10^{-8}$ for any draw of the weights. That gap is the
 accuracy of the solver and of the finite differences. Nothing in the
 proposition used linearity.
 
@@ -1078,11 +1078,11 @@ vector--Jacobian product per probe.
 1. [code] **The learned field at other step counts.** The
    `#odes-solvers-neural-ode-train` cell trains the field with $N=10$ Euler
    steps of size $h=0.1$, and the text found that the endpoint error rises
-   from about $10^{-3}$ to about $0.02$ when the same field is integrated
+   from a few thousandths to about $0.02$ when the same field is integrated
    with $N=100$ or $N=1000$ steps.
     1. Evaluate the trained `flow` with $N=1$, $2$ and $5$ steps ($Nh=1$).
        Why is the error at $N=1$ large although ten steps of the same field
-       are accurate to about $10^{-3}$? Which map does one Euler step of
+       are accurate to a few thousandths? Which map does one Euler step of
        the trained field compute?
     1. What does the error at $N=1000$ measure? Name the two maps whose
        distance it is, and explain why it does not shrink as $N$ grows
@@ -1394,11 +1394,17 @@ $-0.5\pm\mathrm i$; a $32$-unit tanh field that maps the unit circle to an ellip
 ::: {.slide title="A Residual Block Is One Euler Step with $h=1$"}
 [From ResNets to ODEs]{.kicker}
 
-@fig:mdl-dyn-resnet-as-euler
-
+::: {.cols .vc}
+::: {.col}
 - $\mathbf x_{l+1}=\mathbf x_l+\mathbf f_{\boldsymbol\theta_l}(\mathbf x_l)$ is $\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f(\mathbf x_n,t_n)$ at $h=1$.
 - Exact and numerical maps differ in kind: $\dot x=-x$ has the bijection
   $e^{-t}x$; one Euler step with $h=1$ sends every $x$ to $0$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-dyn-resnet-as-euler
+:::
+:::
 :::
 
 ::: {.slide title="Sharing One Field and Shrinking the Step Gives a Neural ODE"}
@@ -1417,11 +1423,17 @@ $$\mathbf x_{n+1}=\mathbf x_n+h\,\mathbf f_{\boldsymbol\theta}(\mathbf x_n,t_n)
 ::: {.slide title="No Flow on the Line Can Reverse Order"}
 [A limit]{.kicker}
 
-@fig:mdl-dyn-flow-order
-
+::: {.cols .vc}
+::: {.col}
 - If $x<y$ but $\Phi_T(x)\ge\Phi_T(y)$, the paths meet at some $s$; uniqueness backward from $s$ gives $x=y$.
 - Euler step: $(x+hf(x))-(y+hf(y))\ge(1-hL)(x-y)$; $f=-2x$ has $hL=2$.
 - In 2-D, $e^{\pi \mathbf K}=-\mathbf I$ sends $(x,0)$ to $(-x,0)$ along half circles.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-dyn-flow-order
+:::
+:::
 :::
 
 ::: {.slide title="Ten Shared-Weight Euler Steps Learn the Circle-to-Ellipse Map"}
@@ -1469,11 +1481,17 @@ invertible for a Lipschitz field; the Euler map only in the limit $h\to0$.
 ::: {.slide title="The Scalar Adjoint: $x$ Grows, $a$ Shrinks, $a\,x$ Is Flat"}
 [The adjoint method]{.kicker}
 
-@fig:mdl-dyn-adjoint-timeline
-
+::: {.cols .vc}
+::: {.col}
 $\dot x=\theta x$, $\mathcal L=\tfrac12x(T)^2$. I: directly $\partial\mathcal L/\partial\theta=Tx(T)^2$.
 II: $a(t)=\partial\mathcal L/\partial x(t)=e^{\theta(T-t)}x(T)$, run backward.
 III: $\int_0^Ta\,x\,dt=Tx(T)^2$; at $\theta=T=x_0=1$, $\boxed{e^2=7.39}$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-dyn-adjoint-timeline
+:::
+:::
 :::
 
 ::: {.slide title="The Adjoint ODE Carries the Loss Sensitivity Backward"}

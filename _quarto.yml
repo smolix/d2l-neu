@@ -300,8 +300,11 @@ book:
         - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
         - chapter_mdl-information-theory/index.qmd
         - chapter_mdl-information-theory/mdl-information-theory.qmd
+        - chapter_mdl-information-theory/mdl-coding-compression.qmd
         - chapter_mdl-information-theory/mdl-divergences-distances.qmd
         - chapter_mdl-information-theory/mdl-mutual-information.qmd
+        - chapter_mdl-information-theory/mdl-mi-estimation.qmd
+        - chapter_mdl-information-theory/further-reading.qmd
         - chapter_mdl-dynamics/index.qmd
         - chapter_mdl-dynamics/mdl-odes-solvers.qmd
         - chapter_mdl-dynamics/mdl-sdes.qmd

@@ -203,4 +203,4 @@ worse conditioned matrices, which lets half- and single-precision
 factorizations on GPUs deliver double-precision solutions
 :cite:`Carson.Higham.2018`.
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36861)

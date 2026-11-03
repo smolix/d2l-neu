@@ -1300,7 +1300,7 @@ the single $\eta$ by one step per coordinate.
     1. Compare the last iterate with the average at the same $\eta$.
    :exlabel:`ex_mdl-stochastic-gradient-methods-convex-bound-logistic`
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36859)
 
 <!-- slides -->
 

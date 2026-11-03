@@ -1332,7 +1332,7 @@ vector--Jacobian product per probe.
        $\log|\det \mathbf M(1)|$ with the two numbers that cell prints.
    :exlabel:`ex_mdl-neural-odes-liouville`
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36868)
 
 <!-- slides -->
 

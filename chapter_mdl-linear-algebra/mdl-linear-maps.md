@@ -1439,20 +1439,18 @@ index rule.
    :exlabel:`ex_mdl-linear-maps-einsum-attention`
 
 :begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
+
+[Discussions](https://d2l.discourse.group/t/36855)
 
 <!-- slides -->
 

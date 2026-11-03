@@ -1204,7 +1204,7 @@ to the solution rather than to the class.
        random-label experiment of :numref:`subsec_random_labels`?
    :exlabel:`ex_mdl-generalization-bounds-two-layer-norm-bound`
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36863)
 
 <!-- slides -->
 

@@ -1255,20 +1255,18 @@ section evaluates these products by program.
     MIT 18.S096, IAP 2023, Problem 3.*
 
 :begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/)
 :end_tab:
+
+[Discussions](https://d2l.discourse.group/t/36857)
 
 <!-- slides -->
 

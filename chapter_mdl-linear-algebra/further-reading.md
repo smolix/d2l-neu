@@ -237,3 +237,5 @@ $\ell_\infty$ norm, and Shampoo becomes steepest descent under the spectral
 norm. The norm, chosen per layer, is then the design decision, and the
 update rule follows from it. The optimizer built on the spectral norm is
 taught in :numref:`sec_muon`.
+
+[Discussions](https://d2l.discourse.group/t/36856)

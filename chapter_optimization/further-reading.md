@@ -396,4 +396,4 @@ hardware failures, and of learning rates lowered in mid-run. It
 complements the rewind-and-skip remedy of :numref:`sec_practice` with a
 day-by-day record of what such remedies cost.
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36851)

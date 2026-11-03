@@ -225,3 +225,5 @@ layers as Euler steps of a mean-field interacting-particle ODE on the sphere
 and prove that the tokens cluster as depth grows. The analysis uses the
 chapter's language of fields, flows and the continuity equation on a model
 that does not generate data.
+
+[Discussions](https://d2l.discourse.group/t/36870)

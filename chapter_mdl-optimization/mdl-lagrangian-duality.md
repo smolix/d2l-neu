@@ -1528,7 +1528,7 @@ $p^\star - d^\star = \tfrac14$ shows.
        Does the ill-conditioning make this constrained problem hard to solve
        through its dual?
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36860)
 
 <!-- slides -->
 

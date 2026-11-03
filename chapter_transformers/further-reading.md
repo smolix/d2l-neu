@@ -366,4 +366,4 @@ attention chooses the keys by content. The indexer of DeepSeek-V3.2
 :cite:`Liu.Mei.Lin.ea.2025`, for example, selects 2,048 key--value tokens
 per query; :numref:`sec_attention-further-reading` describes it.
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36853)

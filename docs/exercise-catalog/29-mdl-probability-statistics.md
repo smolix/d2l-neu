@@ -1,5 +1,7 @@
 # Chapter Overview — chapter_mdl-probability-statistics
 
+**Update (2026-11-03, math appendix pass):** the chapter now has nine sections plus `further-reading.md` (no exercises), in this order: Random Variables; Distributions; The Exponential Family (new file `mdl-exponential-family.md`, split from Distributions); Statistics (moved before Maximum Likelihood); Maximum Likelihood; Bayesian Computation; Concentration Inequalities (retitled `mdl-concentration-generalization.md`); Uniform Convergence and Generalization (new file `mdl-generalization-bounds.md`, split from Concentration); and Naive Bayes. It carries 100 exercises (12, 10, 10, 12, 12, 12, 10, 10, 12), all in the named and tagged style (`[code]`, `[extended]`, ●, ●●) with `:exlabel:` labels; labels of moved exercises were kept, so some labels carry the prefix of the file they came from. The surveys and proposals below were written for the seven-file chapter before the split and are kept as the record of that review.
+
 Best external sources, in order of how directly reusable they proved: (1) Wasserman's
 *All of Statistics* — via its own numbered exercises (verified through a third-party
 solutions mirror, parsiad.ca) — matched nearly every section, from Ch. 2/4 groundwork
@@ -26,6 +28,8 @@ in-text proof or under-specified against the "no bare explain-why" rule.
 ---
 
 ## chapter_mdl-probability-statistics/mdl-random-variables.md — Random Variables
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Power-law tail; 2 Rectified Gaussian; 3 [code] Logistic distribution and calibration; 4 [code] Classes missing from a minibatch; 5 Uncorrelated but dependent; 6 Averaging correlated estimates; 7 [code] Sigmoid of a Gaussian; 8 [code] Sampling from a staircase ●; 9 One-sided Chebyshev ●; 10 Explained variance ●; 11 [code] Affine coupling layer and Box--Muller ●; 12 [extended] Averages of heavy tails ●●.
 
 **Topic:** Densities and CDFs for continuous variables, mean/variance, Markov/Chebyshev,
 joint/marginal/conditional densities and independence, conditional expectation, covariance
@@ -97,6 +101,8 @@ log-normal check) despite all being pencil-and-paper.
 ---
 
 ## chapter_mdl-probability-statistics/mdl-distributions.md — Distributions
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Error counts on a test set; 2 Conditioning on a noisy observation; 3 Gamma--Poisson mixture; 4 Converse of memorylessness ●; 5 [code] Convergence rate of the CLT ●●; 6 [extended] Burstiness of word counts ●●; 7 The Student-$t$ as a Gamma scale mixture ●; 8 Two factors of one covariance ●; 9 Superposition, thinning, and the order of arrivals ●; 10 Covariance of the multinomial ●. The exponential family, the softmax origins and the conjugate priors moved to `mdl-exponential-family.md` with old exercises 2 exponential races, 4 maximum entropy, 5 log-partition moments, 6 probit/logit, 9 minimal categorical, 10 Poisson regression and 11 conjugate recipe (labels kept); the survey below covers the section before the split.
 
 **Topic:** A reference gallery of eleven named discrete/continuous distributions, the
 exponential family, and the Beta/Gamma/Dirichlet conjugate priors.
@@ -171,7 +177,97 @@ posterior computation into a short numerical convergence check.
 
 ---
 
+## chapter_mdl-probability-statistics/mdl-exponential-family.md — The Exponential Family
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Exponential races; 2 Maximum entropy on the integers; 3 Moments from the log-partition; 4 [code] Probit and logit; 5 Minimal categorical family ●; 6 [code] Poisson regression ●; 7 Conjugate priors from natural parameters ●; 8 [code] Moment matching outside the family; 9 [code] A likelihood with no maximizer; 10 Dirichlet smoothing and the next word. New file, split from `mdl-distributions.md`; exercises 1–7 came from that file and keep their `ex_mdl-distributions-*` labels; 8–10 are new.
+
+No pre-split survey exists for this file; the entry above is its current list.
+
+## chapter_mdl-probability-statistics/mdl-statistics.md — Statistics
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 [code] Shrinking the sample mean; 2 Reading a $p$-value; 3 [code] Multiple comparisons; 4 [code] Coverage at small $n$; 5 [code] Delta method near a boundary; 6 [code] Bootstrap of the maximum; 7 [code] Choosing the variance denominator ●; 8 [code] Paired comparisons ●; 9 Standard error of the median ●; 10 [code] Clustered test sets ●; 11 [code] Stein's paradox ●●; 12 [extended] Peeking at a running test ●●. Now precedes Maximum Likelihood.
+
+**Topic:** Estimators (bias, variance, MSE, consistency, efficiency), the bias-variance
+decomposition and the weak law of large numbers, hypothesis testing (permutation tests,
+power, multiple testing), confidence intervals, and the bootstrap.
+**Current exercises:** 9; disposition: keep 8, rewrite 0, drop 1 — a defect-free set per
+the prior review (ex1's bootstrap-failure walkthrough was singled out as "unusually well
+explained"), covering the Uniform$(0,\theta)$ estimator/bootstrap-failure pairing,
+re-deriving the bias-variance identity, the $n-1$ correction, estimator shrinkage,
+$p$-value misinterpretation, CI pathologies at $N=2$, bootstrapping the mean, and
+Bonferroni; the one drop is a one-line arithmetic restatement of the sample-size scaling
+already given in closed form in the text.
+
+**External sources found:**
+- Wasserman, *All of Statistics*, Ch. 8 (Bootstrap), Exercises 4, 5, 7, 8 — a
+  stars-and-bars count of bootstrap-resample configurations; the exact bootstrap
+  variance-inflation factor $(2n-1)/n$ for the sample mean; a real-data
+  standard-error/CI computation; and the classic
+  $P(\hat\theta^*=\hat\theta\mid\hat\theta)\to1-e^{-1}\approx0.632$ fact —
+  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_8_solutions.pdf
+- Wasserman, *All of Statistics*, Ch. 9 (Parametric Inference), Exercises 2, 3 — the MLE
+  of $\textrm{Uniform}(a,b)$ as order statistics (the non-regular case underlying this
+  section's own exercise 1) and a delta-method CI for a quantile functional —
+  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_9_solutions.pdf
+- Wasserman, *All of Statistics*, Ch. 10 (Hypothesis Testing), Exercises 7, 8 — a
+  permutation test versus a Wald test on real word-length data (the Mosteller-Wallace
+  "twain vs. snodgrass" disputed-authorship comparison), and a $z$-test power/sample-size
+  derivation matching this section's own :eqref:`eq_mdl-power-sample-size` —
+  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_10_solutions.pdf
+- Harvard Stat 110 offers no strategic-practice set on hypothesis testing, confidence
+  intervals, or the bootstrap — a finding, not a failure: Stat 110 is a probability course
+  and stops before frequentist inference, which is exactly the material this section
+  covers.
+
+**Proposed problem set** (7 problems, our reference format):
+1. [conceptual] **The Uniform-Support MLE and Why Its Bootstrap Fails.** For
+   $X_1,\ldots,X_n\sim\textrm{Unif}(0,\theta)$, compare $\hat\theta=\max_iX_i$ against
+   $\tilde\theta=\tfrac2n\sum_iX_i$ on bias/variance/MSE, then explain why bootstrapping
+   $\hat\theta$ fails (a resample contains the largest observation with probability
+   $\to1-e^{-1}$, putting a point mass exactly at $\hat\theta$).
+   *Provenance:* original (existing exercise 1, retitled; no change); Wasserman Ch. 9
+   Ex. 2 and Ch. 8 Ex. 8 independently derive the same MLE and the same $1-e^{-1}$
+   bootstrap-collision constant, confirming this is the standard textbook example.
+2. [conceptual] **Re-deriving the Bias-Variance Decomposition.** Expand
+   $\mathbb E[(\hat\theta_n-\theta)^2]$ directly via $\mathbb
+   E[\hat\theta_n^2]-2\theta\mathbb E[\hat\theta_n]+\theta^2$ and confirm it agrees with
+   the add-and-subtract proof in the text.
+   *Provenance:* original (existing exercise 2, retitled; no change).
+3. [short-code] **The Degrees-of-Freedom Correction, Verified.** Rerun the bias-variance
+   decomposition check using the unbiased ($\texttt{ddof=1}$) variance estimator instead
+   of the plug-in one, and explain which denominator makes the identity exact to
+   floating-point precision and why.
+   *Provenance:* original (existing exercise 3, retitled; no change).
+4. [short-code] **Estimator Spread Shrinks Like $1/\sqrt n$.** Shrink the per-dataset
+   size $n$ in the sampling-distribution simulation and confirm the spread of $\hat\theta$
+   widens like $\sigma/\sqrt n$; repeat with the biased estimator
+   $\hat\theta=\max_iX_i$ for $\textrm{Unif}(0,\theta)$ and watch its center shift away
+   from $\theta$.
+   *Provenance:* original (existing exercise 4, retitled; no change).
+5. [conceptual] **A $p$-value Is Not $P(H_0\mid\textrm{data})$.** Given a reported
+   $p=0.5$, explain in terms of $P(\textrm{data}\mid H_0)$ versus $P(H_0\mid\textrm{data})$
+   why this is not evidence that $H_0$ is true, and describe a situation where a large
+   $p$-value reflects only low power.
+   *Provenance:* original (existing exercise 5, retitled; no change).
+6. [short-code] **A Short Interval Is Not a Precise One.** Run the confidence-interval
+   code with $N=2$ and $\alpha=0.5$ for 100 independently generated datasets; identify the
+   extremely short intervals far from the true mean, and explain why this does not
+   contradict the $1-\alpha$ coverage guarantee.
+   *Provenance:* original (existing exercise 7, retitled; no change).
+7. [short-code] **Permutation Testing on Real Word-Length Data.** Reproduce the classic
+   Mosteller-Wallace two-sample word-length comparison ("twain" vs. "snodgrass") with a
+   permutation test in the style of this section's own model-A/B example, verify the
+   permutation $p$-value against a large-sample Wald-test approximation, and discuss why
+   the permutation test is preferable at this sample size.
+   *Provenance:* adapted from Wasserman, *All of Statistics*, Ch. 10, Exercise 7 (overlap
+   high — same dataset and the same Wald-versus-permutation comparison; cite Wasserman on
+   adoption).
+
+---
+
 ## chapter_mdl-probability-statistics/mdl-maximum-likelihood.md — Maximum Likelihood
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 [code] Learning rate and loss scale; 2 The cross-entropy floor; 3 Learned noise variance; 4 Losses that are not likelihoods; 5 [code] Boundaries: separable data and rare outcomes; 6 Gaussian versus Laplace shrinkage; 7 MAP in log-odds; 8 Densities carry units ●; 9 Symmetries of a ReLU network ●; 10 A support that moves ●; 11 [code] EM speed and missing information ●; 12 [extended] Misspecification and the sandwich ●●.
 
 **Topic:** The MLE principle, NLL as cross-entropy/MSE, MAP and regularization, Fisher
 information/Cramér-Rao and asymptotic normality, latent variables/EM/ELBO.
@@ -245,6 +341,8 @@ which is both more informative and better matched to an available external solut
 ---
 
 ## chapter_mdl-probability-statistics/mdl-bayesian-computation.md — Bayesian Computation
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Metropolis–Hastings acceptance; 2 [code] Proposal scale; 3 [code] Monte Carlo standard error; 4 Laplace and parameterization; 5 [code] Moderated predictions ●; 6 [code] Predicting the weight ESS ●; 7 [code] Variational families ●; 8 [code] Estimating the evidence ●; 9 [code] A posterior with two modes ●; 10 [code] Tails of the logistic posterior ●●; 11 [extended] Approximations in higher dimension ●●; 12 [code] Langevin proposals ●●.
 
 **Topic:** Approximating posterior averages when the posterior is known only up to a
 constant: importance sampling, Metropolis MCMC, the Laplace approximation, and
@@ -329,87 +427,9 @@ exercises.
 
 ---
 
-## chapter_mdl-probability-statistics/mdl-statistics.md — Statistics
+## chapter_mdl-probability-statistics/mdl-concentration-generalization.md — Concentration Inequalities
 
-**Topic:** Estimators (bias, variance, MSE, consistency, efficiency), the bias-variance
-decomposition and the weak law of large numbers, hypothesis testing (permutation tests,
-power, multiple testing), confidence intervals, and the bootstrap.
-**Current exercises:** 9; disposition: keep 8, rewrite 0, drop 1 — a defect-free set per
-the prior review (ex1's bootstrap-failure walkthrough was singled out as "unusually well
-explained"), covering the Uniform$(0,\theta)$ estimator/bootstrap-failure pairing,
-re-deriving the bias-variance identity, the $n-1$ correction, estimator shrinkage,
-$p$-value misinterpretation, CI pathologies at $N=2$, bootstrapping the mean, and
-Bonferroni; the one drop is a one-line arithmetic restatement of the sample-size scaling
-already given in closed form in the text.
-
-**External sources found:**
-- Wasserman, *All of Statistics*, Ch. 8 (Bootstrap), Exercises 4, 5, 7, 8 — a
-  stars-and-bars count of bootstrap-resample configurations; the exact bootstrap
-  variance-inflation factor $(2n-1)/n$ for the sample mean; a real-data
-  standard-error/CI computation; and the classic
-  $P(\hat\theta^*=\hat\theta\mid\hat\theta)\to1-e^{-1}\approx0.632$ fact —
-  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_8_solutions.pdf
-- Wasserman, *All of Statistics*, Ch. 9 (Parametric Inference), Exercises 2, 3 — the MLE
-  of $\textrm{Uniform}(a,b)$ as order statistics (the non-regular case underlying this
-  section's own exercise 1) and a delta-method CI for a quantile functional —
-  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_9_solutions.pdf
-- Wasserman, *All of Statistics*, Ch. 10 (Hypothesis Testing), Exercises 7, 8 — a
-  permutation test versus a Wald test on real word-length data (the Mosteller-Wallace
-  "twain vs. snodgrass" disputed-authorship comparison), and a $z$-test power/sample-size
-  derivation matching this section's own :eqref:`eq_mdl-power-sample-size` —
-  https://parsiad.ca/assets/pdf/all_of_statistics_chapter_10_solutions.pdf
-- Harvard Stat 110 offers no strategic-practice set on hypothesis testing, confidence
-  intervals, or the bootstrap — a finding, not a failure: Stat 110 is a probability course
-  and stops before frequentist inference, which is exactly the material this section
-  covers.
-
-**Proposed problem set** (7 problems, our reference format):
-1. [conceptual] **The Uniform-Support MLE and Why Its Bootstrap Fails.** For
-   $X_1,\ldots,X_n\sim\textrm{Unif}(0,\theta)$, compare $\hat\theta=\max_iX_i$ against
-   $\tilde\theta=\tfrac2n\sum_iX_i$ on bias/variance/MSE, then explain why bootstrapping
-   $\hat\theta$ fails (a resample contains the largest observation with probability
-   $\to1-e^{-1}$, putting a point mass exactly at $\hat\theta$).
-   *Provenance:* original (existing exercise 1, retitled; no change); Wasserman Ch. 9
-   Ex. 2 and Ch. 8 Ex. 8 independently derive the same MLE and the same $1-e^{-1}$
-   bootstrap-collision constant, confirming this is the standard textbook example.
-2. [conceptual] **Re-deriving the Bias-Variance Decomposition.** Expand
-   $\mathbb E[(\hat\theta_n-\theta)^2]$ directly via $\mathbb
-   E[\hat\theta_n^2]-2\theta\mathbb E[\hat\theta_n]+\theta^2$ and confirm it agrees with
-   the add-and-subtract proof in the text.
-   *Provenance:* original (existing exercise 2, retitled; no change).
-3. [short-code] **The Degrees-of-Freedom Correction, Verified.** Rerun the bias-variance
-   decomposition check using the unbiased ($\texttt{ddof=1}$) variance estimator instead
-   of the plug-in one, and explain which denominator makes the identity exact to
-   floating-point precision and why.
-   *Provenance:* original (existing exercise 3, retitled; no change).
-4. [short-code] **Estimator Spread Shrinks Like $1/\sqrt n$.** Shrink the per-dataset
-   size $n$ in the sampling-distribution simulation and confirm the spread of $\hat\theta$
-   widens like $\sigma/\sqrt n$; repeat with the biased estimator
-   $\hat\theta=\max_iX_i$ for $\textrm{Unif}(0,\theta)$ and watch its center shift away
-   from $\theta$.
-   *Provenance:* original (existing exercise 4, retitled; no change).
-5. [conceptual] **A $p$-value Is Not $P(H_0\mid\textrm{data})$.** Given a reported
-   $p=0.5$, explain in terms of $P(\textrm{data}\mid H_0)$ versus $P(H_0\mid\textrm{data})$
-   why this is not evidence that $H_0$ is true, and describe a situation where a large
-   $p$-value reflects only low power.
-   *Provenance:* original (existing exercise 5, retitled; no change).
-6. [short-code] **A Short Interval Is Not a Precise One.** Run the confidence-interval
-   code with $N=2$ and $\alpha=0.5$ for 100 independently generated datasets; identify the
-   extremely short intervals far from the true mean, and explain why this does not
-   contradict the $1-\alpha$ coverage guarantee.
-   *Provenance:* original (existing exercise 7, retitled; no change).
-7. [short-code] **Permutation Testing on Real Word-Length Data.** Reproduce the classic
-   Mosteller-Wallace two-sample word-length comparison ("twain" vs. "snodgrass") with a
-   permutation test in the style of this section's own model-A/B example, verify the
-   permutation $p$-value against a large-sample Wald-test approximation, and discuss why
-   the permutation test is preferable at this sample size.
-   *Provenance:* adapted from Wasserman, *All of Statistics*, Ch. 10, Exercise 7 (overlap
-   high — same dataset and the same Wald-versus-permutation comparison; cite Wasserman on
-   adoption).
-
----
-
-## chapter_mdl-probability-statistics/mdl-concentration-generalization.md — Concentration and Generalization
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Hoeffding with unequal ranges; 2 Sub-Gaussian random signs; 3 Latent interpolation; 4 [code] Chernoff bound for coins ●; 5 Chi-square tail ●; 6 [code] Activation norms through depth ●; 7 [code] Random projections preserve distances ●; 8 Bernstein's inequality ●; 9 Comparing two classifiers on one test set ●; 10 [code] Mode versus mass. Retitled from Concentration and Generalization. Uniform convergence, Rademacher complexity and double descent moved to `mdl-generalization-bounds.md` with the McDiarmid, Massart, margin, random-signs, leaderboard and benign-spectra exercises (labels kept); the survey below covers the section before the split.
 
 **Topic:** The Chernoff method, Hoeffding's lemma/inequality, sub-Gaussian and
 sub-exponential variables, Bernstein's inequality, high-dimensional norm/angle
@@ -485,7 +505,15 @@ prove and none of the 8 exercises practice.
 
 ---
 
+## chapter_mdl-probability-statistics/mdl-generalization-bounds.md — Uniform Convergence and Generalization
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 McDiarmid's inequality ●; 2 Massart's lemma and $\ell_1$ balls ●; 3 Margin bound ●; 4 [code] Fitting random signs ●; 5 [code] Leaderboard attack ●●; 6 Ranking configurations on a holdout ●; 7 Thresholds on the line ●; 8 [code] The square case ●; 9 [extended] Benign spectra ●●; 10 Norms, not widths: a two-layer network ●●. New file, split from `mdl-concentration-generalization.md`; exercises 1–5 and 9 came from that file and keep their `ex_mdl-concentration-generalization-*` labels; 6–8 and 10 are new.
+
+No pre-split survey exists for this file; the entry above is its current list.
+
 ## chapter_mdl-probability-statistics/mdl-naive-bayes.md — Naive Bayes
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 XOR and the naive assumption; 2 Naive Bayes as logistic regression; 3 Gaussian class-conditionals; 4 [code] Smoothing and unseen pixels; 5 Two event models for text; 6 [code] Paired comparison; 7 Duplicated and correlated evidence; 8 [code] Label shift; 9 [code] Score gaps under the model ●; 10 [code] Temperature scaling ●; 11 [code] Missing pixels; 12 [extended] Generative versus discriminative learning ●●.
 
 **Topic:** Bayes-rule classification, the conditional-independence assumption, log-space
 computation and linear decision boundaries, Laplace-smoothed counting estimation, the

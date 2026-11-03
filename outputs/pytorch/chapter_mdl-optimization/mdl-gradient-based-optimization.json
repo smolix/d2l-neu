@@ -79,37 +79,13 @@
         }
       ]
     },
-    "gradient-based-optimization-sgd-variance": {
-      "code_fingerprint": "sha256:24076d84c042d1d62fa7bcdc4029b20efbd50acbd4e3751c4d2272d657e56021",
+    "mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1": {
+      "code_fingerprint": "sha256:99d1e23a7a3e54874a11881b5f798e7ffb98b27fee744e4ced39b808c7d38300",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "single-example gradient noise  tr Sigma = 1.1447\nb =  1:  measured E|g_hat - g|^2 = 1.15464   predicted tr Sigma / b = 1.14466\nb =  4:  measured E|g_hat - g|^2 = 0.28471   predicted tr Sigma / b = 0.28617\nb = 16:  measured E|g_hat - g|^2 = 0.07119   predicted tr Sigma / b = 0.07154\nb = 64:  measured E|g_hat - g|^2 = 0.01824   predicted tr Sigma / b = 0.01789\n"
-        }
-      ]
-    },
-    "gradient-based-optimization-sgd-schedule": {
-      "code_fingerprint": "sha256:3a0def88e9f3bfb8448dc7e1d87b9ec3a916d894622a47fad3b9a2a129f76425",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "fixed eta = 0.8:     mean gap, last 1000 steps = 2.34e-02\nfixed eta = 0.4:     mean gap, last 1000 steps = 1.08e-02\ndecay 0.8/(1+k/100): mean gap, last 1000 steps = 5.67e-04\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 99919,
-          "sha256": "sha256:fd6088d51d21b36ca25ec7f66a8e88d45a35cb660667b3a6e6689718645fb3ea"
-        }
-      ]
+      "outputs": []
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:2a49351aa729c14d0ed3740ff34cd1046fd804544dd6c574a377031505db9c2e",
+      "code_fingerprint": "sha256:1ebc17de18f6ed7a630692445e1ab17a918e13afa65b07119212db824c13d8b2",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +96,7 @@
       ]
     },
     "mdl-gradient-bfgs-quadratic": {
-      "code_fingerprint": "sha256:5a8eabf0468bef29aab5bbc1f17ddbe27b16c84c3b59b48c3c7fc2fe3901404a",
+      "code_fingerprint": "sha256:98f5503091b50677aadf335c8dd736e42e8b424ddc4ce1afd221dff113dd26dc",
       "kind": "mixed",
       "outputs": [
         {
@@ -133,7 +109,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
           "bytes": 28737,
-          "sha256": "sha256:42bd19d50d557e9db8938f81f7c7e201a22c7ed744e975edc9f213f9188754bd"
+          "sha256": "sha256:b79bd76b1a3a17af56c07f1b068c04d0f92326e501e4c47b03e80be76d0f6a60"
         }
       ]
     }

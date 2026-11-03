@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,32 +68,8 @@
         }
       ]
     },
-    "convexity-prox-ista": {
-      "code_fingerprint": "sha256:e60211b1e095e5615fa431a517ca3483882329db364a97c022b93a9d01f05a52",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
-        }
-      ]
-    },
-    "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:92b49c364690c79b8a424223487960eedee5a2b6027db8a57f1eae3e27509906",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33104,
-          "sha256": "sha256:412cdf3ba4f0d173177e0a1451930667ecaaac94780afd527b8f8250e6db8e53"
-        }
-      ]
-    },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:6c1ab09a7ff4df7c28d9b0bd12a4b3de3caa1080fa344ce11c7c5cc6c994bbec",
+      "code_fingerprint": "sha256:260209aa53371f1ea0b512553c1e334f2406e39901da7b094b703fef010fc943",
       "kind": "text",
       "outputs": [
         {

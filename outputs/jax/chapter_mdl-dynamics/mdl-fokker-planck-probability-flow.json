@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71801,
-          "sha256": "sha256:25177e95bd52a213e8388218ab33023d8ad9c924aa4a753844f7fd3443abbc4e"
+          "sha256": "sha256:bbf173c9e2907a3be613b6dbce10d1804011e8123875d09ed6abe4544a3e98d4"
         }
       ]
     },
@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245140,
-          "sha256": "sha256:5cdb8ca4e8c6fdc36487d1019085eb02a6fdf6c07ad1ce0927043408db687d72"
+          "sha256": "sha256:fde925dc42b93cc11154be6f672744616fbbfdd33edc08cc6bdf18df992dcdee"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25799,
-          "sha256": "sha256:b26287367b5209494f03481697ed66574b9dcd66ce5b8180f5a5db6094c5e0fd"
+          "sha256": "sha256:f4a8381c3a24a9bd8d7817b96051f8cbb18db6dfbfeb16182f7586adc65de197"
         }
       ]
     },
@@ -119,7 +119,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43160,
-          "sha256": "sha256:6afeaab9315f8395fab1fcf828b2a60e8912164b651e4889e330674564731088"
+          "sha256": "sha256:7b59d261fb464373324b7e5cdb17f2f9b41747ecbec815164f0c9b89f41c22e0"
         }
       ]
     }

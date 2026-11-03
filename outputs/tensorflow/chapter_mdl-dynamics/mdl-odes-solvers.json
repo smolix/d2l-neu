@@ -9,12 +9,12 @@
   },
   "cells": {
     "odes-solvers-imports": {
-      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
       "kind": "text",
       "outputs": []
     },
     "odes-solvers-matrix-exponential": {
-      "code_fingerprint": "sha256:a94a2ad02598832b96022665ae283ad61b2d6c26a30e153f7a94177c4951bf64",
+      "code_fingerprint": "sha256:09ded91f9a1450582630519add2c6ea6fe60332db92dd6c48a31eef905c0f862",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:1d810a72b5ee1611687118cad2153a30fc794cf4264f72cb3cf54e7a1b51a6ce",
+      "code_fingerprint": "sha256:31d5eaee704e15c6f1effea8b4a72caa2997ae97e9d3c41f0250991ae49d4fd5",
       "kind": "mixed",
       "outputs": [
         {
@@ -38,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:9081921d939983a0fb339bff88672c041a53429a34a122e2d8c039cc49f3018f"
+          "sha256": "sha256:4a04684b5249596912f77a25c8c7c1235d38fda274391cbcf793abd83fe92257"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:b14a4aea86cbc9690a23b795e5e80b0563cbcd5a8346ae576d758e347f158e68",
+      "code_fingerprint": "sha256:0d030f243501740c2acf30cafa85b826ecb0404417e572536d52894bb9ac273b",
       "kind": "text",
       "outputs": [
         {
@@ -54,56 +54,13 @@
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:c2dd9f4941e1cb343c37e02027b1ed4caf5653f2379839bc6032f817e5b740b6",
+      "code_fingerprint": "sha256:215bbaa3b3f6c6dfe3a186c6efd1e0174244cae02bc08631f00839c9ba57bf33",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n     eta  |1-eta*lam_max|  ||x|| after 100 GD steps\n   0.050             0.50                  5.92e-03\n   0.150             0.50                  8.75e-08\n   0.190             0.90                  2.66e-05\n   0.201             1.01                  2.70e+00\n   0.210             1.10                  1.38e+04\n   0.250             1.50                  4.07e+17\n"
-        }
-      ]
-    },
-    "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:005ffde53c0245125d97ddac2e05925b8c98cc674f200631c3edaea8f7e3bb4d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter   0  loss 1.28881\niter 100  loss 0.00009\niter 200  loss 0.00002\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0012\n"
-        }
-      ]
-    },
-    "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:a8603ee54c8de275acf528b10c0cba0b87f1aad351321e4c4beae7c2f86693f7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\nn =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
-        }
-      ]
-    },
-    "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:49f7049737e8b61bb379a482d3dbcf5586e8b5497461c6ee5a05378cd53be79d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

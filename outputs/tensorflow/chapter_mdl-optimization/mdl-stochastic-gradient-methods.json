@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-stochastic-gradient-methods.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-stochastic-gradient-methods-stochastic-gradient-methods": {
+      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
+      "kind": "text",
+      "outputs": []
+    },
+    "gradient-based-optimization-sgd-variance": {
+      "code_fingerprint": "sha256:535b4a42f23f1b30047000b9afdcfa7fcf7b2d7976d35e543904fe144c43ad96",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single-example gradient noise  tr Sigma = 1.1447\nb =  1:  measured E|g_hat - g|^2 = 1.15464   predicted tr Sigma / b = 1.14466\nb =  4:  measured E|g_hat - g|^2 = 0.28471   predicted tr Sigma / b = 0.28617\nb = 16:  measured E|g_hat - g|^2 = 0.07119   predicted tr Sigma / b = 0.07154\nb = 64:  measured E|g_hat - g|^2 = 0.01824   predicted tr Sigma / b = 0.01789\n"
+        }
+      ]
+    },
+    "gradient-based-optimization-sgd-schedule": {
+      "code_fingerprint": "sha256:a6d90f532265c64e1ec075c0c7f4d806333088b96f2e66d2a041dff0e7f283f8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fixed eta = 0.8:     mean gap, last 1000 steps = 2.34e-02\nfixed eta = 0.4:     mean gap, last 1000 steps = 1.08e-02\ndecay 0.8/(1+k/100): mean gap, last 1000 steps = 5.67e-04\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
+          "bytes": 99919,
+          "sha256": "sha256:79016f9adb9ae7115a83af0994b5d18968a683b717abfcf7cfad6bfa670f38cd"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-schedules": {
+      "code_fingerprint": "sha256:2d39504dd4768f4f744a38384f11b6246bb4060261765ef8dc5b9a41ce185ce7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant       9.53e-02       9.19e-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "c/k decay      2.82e-03       1.94e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine         8.71e-03       1.58e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-ghadimi-lan": {
+      "code_fingerprint": "sha256:7eb479149f66c15f75fa15791cd56ed0287699a33c9994e746573d8f435e1ff3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    K    eta_K     E|grad(x_R)|^2   min-so-far\n  125   0.0447      2.134e-01      9.385e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  500   0.0224      8.485e-02      1.398e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2000   0.0112      3.774e-02      2.973e-04\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 8000   0.0056      1.729e-02      5.428e-05\nlog-log slope, random iterate: -0.60  (theory: -1/2)\nlog-log slope, min-so-far:     -1.23\n"
+        }
+      ]
+    },
+    "mdl-adaptive-svrg": {
+      "code_fingerprint": "sha256:b2d7ea7b7aabdc20d11ab81be1b56599e4704efc067421110bbb78d54b1e2f2b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
+          "bytes": 29383,
+          "sha256": "sha256:a3897a5909c444120f9a336b7a8bb0c19244785655160b02b3a16c4a599d705b"
+        }
+      ]
+    }
+  }
+}

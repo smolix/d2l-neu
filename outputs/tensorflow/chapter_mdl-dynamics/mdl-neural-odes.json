@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-neural-odes.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2": {
+      "code_fingerprint": "sha256:0a9a457f678b2568c6d3b5e097b6ca20f170325796773a3f6cdd7af0a6db3c82",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-1": {
+      "code_fingerprint": "sha256:9b530ba035c20fd8bfe5b054a2b6b9905ee2444b68e41833ac1638340f2be18b",
+      "kind": "text",
+      "outputs": []
+    },
+    "odes-solvers-neural-ode-train": {
+      "code_fingerprint": "sha256:85851d9f43e9304e52415bb7af5b7249cf7268338c0fca301ca28e1dcec9d42d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter   0  loss 1.35314\niter 100  loss 0.00001\niter 200  loss 0.00000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean endpoint error: 0.0015\n"
+        }
+      ]
+    },
+    "odes-solvers-adjoint-check": {
+      "code_fingerprint": "sha256:62387a4191d49774a888d99c7981d8c97715de6de1bf5fcc1bfb5c8f0c02802e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+        }
+      ]
+    },
+    "odes-solvers-cnf-trace": {
+      "code_fingerprint": "sha256:65308348a34f5dc062a711842a5a7d2d31e8214497a842b625a8d838e5605668",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+        }
+      ]
+    }
+  }
+}

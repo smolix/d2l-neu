@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-flow-matching-transport.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-flow-matching-transport-flow-matching-and-optimal-transport": {
+      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
+      "code_fingerprint": "sha256:60951080fba2b168b0843383a4c82810476d8f83b6382ce7a1d52629c6d98c9f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-two-moons": {
+      "code_fingerprint": "sha256:bb764fda800cb2e3d051d1e21df38f29f929cde38499407958ed5948e584498f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training set (8192, 2); energy distance of a fresh sample to the held-out set: 0.0014\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-cfm-train": {
+      "code_fingerprint": "sha256:0a54a7846972200be721804ab5c004bbf81be75f304b5f3a691c283504cfbf94",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step    0: CFM loss 2.011\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 1000: CFM loss 1.556\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 2000: CFM loss 1.561\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 3000: CFM loss 1.162\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 4000: CFM loss 1.552\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-cfm-sample": {
+      "code_fingerprint": "sha256:82908e8dd8fd727df597f45273c6a37f2b34e6325c8a18a34d46ab1204ad010f",
+      "kind": "text",
+      "outputs": []
+    },
+    "score-matching-diffusion-flow-cfm-panels": {
+      "code_fingerprint": "sha256:c970dcd75cf75898149889acd0e570811f54ff9ac91a5331694cb6aaeed86893",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.png",
+          "bytes": 47428,
+          "sha256": "sha256:3e9477977831db4b065bdb28581a4ba23d86f1f30e7f734a9df37a7b6948c3b0"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
+      "code_fingerprint": "sha256:53a730b4c63c9ccd28a872c26720b572aa5b35bb71bdee9d598d0f69c6fcc4d7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final reflow loss 0.003\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 step(s): energy distance  CFM 0.582  ->  reflow 0.006\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 step(s): energy distance  CFM 0.137  ->  reflow 0.005\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 step(s): energy distance  CFM 0.007  ->  reflow 0.006\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-steps-quality": {
+      "code_fingerprint": "sha256:ce4127eb58e8f9d85ffff0acd5fdb92d368726c03ea15fa9c36295e937c4b4f6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1: 0.582  2: 0.137  4: 0.027  8: 0.008  16: 0.006  32: 0.007  64: 0.007\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
+          "bytes": 25349,
+          "sha256": "sha256:b1307c1e7909d1a85a45fd79219c1a6808d02b664bbb338dfc7e9096ac5c029f"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-euler-vs-heun": {
+      "code_fingerprint": "sha256:c677de03a17e97549893827e33104dd43ec7348f952840a226a51f55a37bf7b4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  2 steps: endpoint error  Euler 0.7516 (2 NFE)   Heun 0.6659 (4 NFE)\nK =  5 steps: endpoint error  Euler 0.1215 (5 NFE)   Heun 0.0808 (10 NFE)\nK = 10 steps: endpoint error  Euler 0.0439 (10 NFE)   Heun 0.0282 (20 NFE)\nK = 20 steps: endpoint error  Euler 0.0203 (20 NFE)   Heun 0.0085 (40 NFE)\nK = 40 steps: endpoint error  Euler 0.0099 (40 NFE)   Heun 0.0023 (80 NFE)\n"
+        }
+      ]
+    }
+  }
+}

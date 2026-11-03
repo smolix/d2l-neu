@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-flow-matching-transport.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-flow-matching-transport-flow-matching-and-optimal-transport": {
+      "code_fingerprint": "sha256:e5fe68c110ec7f955cbb2530d43e77f77a1a4ad53b2ba35945da942a1fb2b819",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
+      "code_fingerprint": "sha256:49cb3300f35e22905282f8d8f2695f8aefdeb1628dc8e4bf96a5c888c81e468d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-two-moons": {
+      "code_fingerprint": "sha256:a3617219be673fd3262b2ac2b519f515d5a91e20c7d7d8408ca1531af7ae9b90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training set (8192, 2); energy distance of a fresh sample to the held-out set: 0.0014\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-cfm-train": {
+      "code_fingerprint": "sha256:d12f22d266064dabffdd2de9656376a047eea28266b3387fbefc61cbe5a9d0f3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CFM loss: step 0 1.907 -> step 4000 1.402\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-cfm-sample": {
+      "code_fingerprint": "sha256:fcebf51d44f842eea98129aeda615b00f8483bb7632521ab43e2d19e45523cf7",
+      "kind": "text",
+      "outputs": []
+    },
+    "score-matching-diffusion-flow-cfm-panels": {
+      "code_fingerprint": "sha256:0c429ed61277625df13886e0d278b32d24bb9969766dc7673e30e73e60a4f58f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-cfm-panels-1.png",
+          "bytes": 47628,
+          "sha256": "sha256:cf0b36124ea16748e1b83158ec0e26e4e7f5df4884cc4cff175b045b8aedf3fb"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
+      "code_fingerprint": "sha256:6a9d35606bba37d6970a927deb9e3cc2938f07dbf200892bb9c78418b596d1f5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final reflow loss 0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 step(s): energy distance  CFM 0.657  ->  reflow 0.005\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 step(s): energy distance  CFM 0.176  ->  reflow 0.004\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 step(s): energy distance  CFM 0.004  ->  reflow 0.004\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-steps-quality": {
+      "code_fingerprint": "sha256:4a7cfd8a5e946b1fb78e5576c477ae1695df47b67a2c3b87c4f636cde6877c9e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1: 0.657  2: 0.176  4: 0.044  8: 0.013  16: 0.006  32: 0.004  64: 0.003\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-flow-matching-transport/score-matching-diffusion-flow-steps-quality-1.svg",
+          "bytes": 26139,
+          "sha256": "sha256:1479d8616134d393e97d3c12dcdaf753689eb94cf520a21e10976dff86f57972"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-euler-vs-heun": {
+      "code_fingerprint": "sha256:2d0ced3b44131be9fb9535feae8621c5a0f609c5a709e05bd1c7a52babf2713c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  2 steps: endpoint error  Euler 0.7516 (2 NFE)   Heun 0.6659 (4 NFE)\nK =  5 steps: endpoint error  Euler 0.1215 (5 NFE)   Heun 0.0808 (10 NFE)\nK = 10 steps: endpoint error  Euler 0.0439 (10 NFE)   Heun 0.0282 (20 NFE)\nK = 20 steps: endpoint error  Euler 0.0203 (20 NFE)   Heun 0.0085 (40 NFE)\nK = 40 steps: endpoint error  Euler 0.0099 (40 NFE)   Heun 0.0023 (80 NFE)\n"
+        }
+      ]
+    }
+  }
+}

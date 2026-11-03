@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f16c5ec87ae3a6814f92dc6d03e7abcdbf42fc2d8c1065e33ed4761a3f222330",
+    "d2l_lib_fingerprint": "sha256:0a8f81a1c76b0ac56b7d0d557ab88654f5c6f685c95f427f2f2b8a8744de4012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,41 +64,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
-        }
-      ]
-    },
-    "convexity-prox-ista": {
-      "code_fingerprint": "sha256:3d7ee654593614fb67356350e78063cd426c52cb93cfc268d9ad0b984401af2d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
-        }
-      ]
-    },
-    "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:6de9836e1f15f95273dc0cc24933332f8927f914ea821c1e9e4087d37cb05719",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33104,
-          "sha256": "sha256:b95dc77f921728f29a492e04b1b3fd15fe792766e63b2eb7cbe1c6ac02708efd"
+          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\nmax |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:0535c93c0ed2b2c38d4467124dedce6cf77ab0073c630227e7b8aeba114e8cb1",
+      "code_fingerprint": "sha256:3b4d56cac04e9113cfd385f4c23bd481d6194225741cdedd5805a6a72fda0d0a",
       "kind": "text",
       "outputs": [
         {

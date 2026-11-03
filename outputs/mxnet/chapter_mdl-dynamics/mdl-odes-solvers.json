@@ -9,12 +9,12 @@
   },
   "cells": {
     "odes-solvers-imports": {
-      "code_fingerprint": "sha256:8f7b022b29382362892f9b7685b18c3eaec7abccd61d05327c2088de8e155eef",
+      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
       "kind": "text",
       "outputs": []
     },
     "odes-solvers-matrix-exponential": {
-      "code_fingerprint": "sha256:0220a6285f7957d59078fb56586c84c5935c66a327239436a281c9fd601be951",
+      "code_fingerprint": "sha256:4c5c31c805a6cd94837614a83b893e73704d60b7412e8d42eeac61f3b80417fa",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:fd692611355cf32d1dca89653a899a5374cf37428c3a87600b03521e7f817b4c",
+      "code_fingerprint": "sha256:2a0c15ad224d6fd4bf8139bb9235701f149ee2fa43f1222bca778064cd86204b",
       "kind": "mixed",
       "outputs": [
         {
@@ -38,12 +38,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:c25d9d88be80359979516dacbb17208ee51cf65557cc36515ebce13a72469a9e"
+          "sha256": "sha256:ad4790e28f13ae6244380fa529a0cf103632421a935026be5942f997fe4cc3b7"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:efa922dc3025f9ed082ae96b149c1d1ecd316e9d1a64c1221785e9c769ee4f57",
+      "code_fingerprint": "sha256:bb7443d992df3a4b958ea856bec146289d642fc7681cfe20a763e900a9cbd029",
       "kind": "text",
       "outputs": [
         {
@@ -54,71 +54,13 @@
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:0c6d3150a4269403398042838c62395f2be54c5478f39fe8e62a5c21d24b8fa2",
+      "code_fingerprint": "sha256:c4b0d0def556eb8d2bd25902d0c199e1ea0fe2ab5f954f24704f63b25fa852c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n     eta  |1-eta*lam_max|  ||x|| after 100 GD steps\n   0.050             0.50                  5.92e-03\n   0.150             0.50                  8.75e-08\n   0.190             0.90                  2.66e-05\n   0.201             1.01                  2.70e+00\n   0.210             1.10                  1.38e+04\n   0.250             1.50                  4.07e+17\n"
-        }
-      ]
-    },
-    "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:adb893f3a76759426d0b6c6db20cce8f7f5fbbe94019636457872583d05c7e67",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter   0  loss 1.27961\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 100  loss 0.00003\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 200  loss 0.00001\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 300  loss 0.00000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 400  loss 0.00000\nmean endpoint error: 0.0013\n"
-        }
-      ]
-    },
-    "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:fb0a9922169476f5a3378e639008e470e5a2e7efa4143c0c182774f40bb35d72",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
-        }
-      ]
-    },
-    "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:28ade1019b2f904405a3b32bc0c47c4239642b26a23b1c785c1a0e87316569db",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

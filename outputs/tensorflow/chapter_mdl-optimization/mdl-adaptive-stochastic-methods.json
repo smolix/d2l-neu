@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,34 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "adaptive-stochastic-methods-ghadimi-lan": {
-      "code_fingerprint": "sha256:6849b69de29b8f15565dafb9235fa84ad7dadb29d287eb72d3e0237cdcbbdf62",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    K    eta_K     E|grad(x_R)|^2   min-so-far\n  125   0.0447      2.134e-01      9.385e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  500   0.0224      8.485e-02      1.398e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 2000   0.0112      3.774e-02      2.973e-04\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 8000   0.0056      1.729e-02      5.428e-05\nlog-log slope, random iterate: -0.60  (theory: -1/2)\nlog-log slope, min-so-far:     -1.23\n"
-        }
-      ]
-    },
     "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:06dae8c9d228766e46290006086cb8dc38d9f9156ede51a45489ec7e2fb649ea",
+      "code_fingerprint": "sha256:9465a8d6777982c7a4048d953896a0da4d2ca845f445203e3782423ceb12c51e",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +25,7 @@
       ]
     },
     "adaptive-stochastic-methods-adam-vs-gd": {
-      "code_fingerprint": "sha256:bbfbe1a9d262d0f7312bac26ef31f6a27b9e9ffc134ced1ec416aca16c21894c",
+      "code_fingerprint": "sha256:1343a748de85674c063d7d91f4e9d54abf2af014ce62d618270a2735d3f1c4f0",
       "kind": "text",
       "outputs": [
         {
@@ -67,57 +41,13 @@
       ]
     },
     "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:9eb65c9e0580d6fd5f649c808c029d3203f22cb7a32819d92cfac21f100076bd",
+      "code_fingerprint": "sha256:f7fd4dd453e7e00dfe7658867428df5f723806b44684d9b0963987581226e58f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "per-step decay rate, l2 through Adam (alpha*lam/sigma_i): [1.e-05 1.e-03]\nper-step decay rate, AdamW (uniform):                     0.0001\n|w| after 4000 steps,  Adam + l2: [0.9677 0.0235]\n|w| after 4000 steps,  AdamW    : [0.6681 0.6598]\nAdamW prediction (1 - alpha*lam)^T = 0.6703\n"
-        }
-      ]
-    },
-    "adaptive-stochastic-methods-schedules": {
-      "code_fingerprint": "sha256:19c166630d3af4d5ddf5c70145579cd1c7aa1c42421d2d6a7650ff2b37714560",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "constant       9.53e-02       9.19e-02\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "c/k decay      2.82e-03       1.94e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
-        }
-      ]
-    },
-    "mdl-adaptive-svrg": {
-      "code_fingerprint": "sha256:bec26b6a4fe8ad271f3805c1f2a58c7d294434625ecbd09c9f381ab9cf387926",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
-          "bytes": 29383,
-          "sha256": "sha256:729463e4f446d0476708884500d728109d82fd382b77758ae32d93a84836508d"
         }
       ]
     }

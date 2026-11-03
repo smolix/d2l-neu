@@ -24,59 +24,27 @@
         }
       ]
     },
-    "constrained-weight-decay": {
-      "code_fingerprint": "sha256:e770e2dbe140fd8aa25ad1a31990cb2676694f32ab8570299338e18f599af7de",
+    "convexity-prox-ista": {
+      "code_fingerprint": "sha256:74278f7a2b94878021474a10beeb3d2d4611fd44d4faf23f3ebf68ace7a962ff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
         }
       ]
     },
-    "constrained-svm-dual": {
-      "code_fingerprint": "sha256:116144376ee6df145ad798cf69cb2533fa9c810e7dd1a8c2fc66d921707de752",
-      "kind": "text",
+    "mdl-convexity-coordinate-descent": {
+      "code_fingerprint": "sha256:89738856df6dc29644657baea693e78ba18ebb0e1212824d8427a71813094224",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 4.4e-16\n"
-        }
-      ]
-    },
-    "constrained-water-filling": {
-      "code_fingerprint": "sha256:6276f2df8ea330b59947824ad4af0d0066ab9ce9c3d94e3fbd0f09495f98cb80",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "water level w = 1.433333  p* = [1.3333 1.0333 0.6333 0.     0.    ]  total = 3.000000\nwet channels filled to common level: [1.433333 1.433333 1.433333]\ndry channels above the waterline:    True\nmu = 1/w = 0.697674 vs finite-difference dU*/dP = 0.697674\n"
-        }
-      ]
-    },
-    "constrained-duality-gap": {
-      "code_fingerprint": "sha256:0e76dad402806b6d94dfee0a0b6f1f0d3eee40b6a9e7619e67d7f9f4f3e2c213",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "p* = -0.2500,  d* = -0.5000 at lambda = 1.00,  gap = 0.2500\nweak duality g(lambda) <= p* everywhere: True\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
-          "bytes": 26582,
-          "sha256": "sha256:ead09b66aababc438d7b34799008b72e046630a24f75b63f50a588200110ef0a"
+          "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
+          "bytes": 33104,
+          "sha256": "sha256:8e9470ef4e9e5bb0408f021fb6364e48f60d027aa33567749fc390f74540ea0c"
         }
       ]
     }

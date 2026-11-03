@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25748,
-          "sha256": "sha256:2c1022df8d92d3b67feddec8f274db3a3dcd6f3ec0b9ad74f7726b2de16ab0c3"
+          "sha256": "sha256:1295eba2562d6afedae3f29c830d40afa1df887892d1be63aa847b5f1d9daa3e"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 32694,
-          "sha256": "sha256:14ac02b58dbbaca7da59de647171cc72721e6e1e5862775c56c5f94ed57b892f"
+          "sha256": "sha256:4c157ee955bf855ef3c9960c9c66b586b1a477d20014a6ae6e6c696672c9b617"
         }
       ]
     },
@@ -162,39 +162,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "empirical covariance:\n [[1.96 1.03]\n [1.03 2.06]]\neigenvalues (≈ 1, 3): [0.98 3.04]\nCholesky-recipe covariance:\n [[1.93 0.97]\n [0.97 2.  ]]\n"
-        }
-      ]
-    },
-    "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:c0ca66f8bfe6dd648c5a2353cfc0e97b5defa00632a71392cf4cfd2f0d99589e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
-        }
-      ]
-    },
-    "distributions-exp-family": {
-      "code_fingerprint": "sha256:6fbaed31f254be67ea25641a8a5827ab2fb49a93a583e747e67738ad5ec73745",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
-        }
-      ]
-    },
-    "distributions-conjugate": {
-      "code_fingerprint": "sha256:65f11256c54446b00710eb51b8a519e5549b79b01676ee2c38c062e077da2d75",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
         }
       ]
     }

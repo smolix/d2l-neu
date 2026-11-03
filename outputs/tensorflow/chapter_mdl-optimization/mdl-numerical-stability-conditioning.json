@@ -91,7 +91,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   384.000000\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
+          "text": "naive E[x^2] - E[x]^2 :   384.000000"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
         }
       ]
     },
@@ -131,7 +136,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
           "bytes": 38784,
-          "sha256": "sha256:b1141e3581e3af5e2480e48fb9803ce12ce9831c3595cca0bcd8c0b830a397c5"
+          "sha256": "sha256:5bec2366955df89a411cc879a5797782fdf24b14b9784cb461c4f16055257f1d"
         }
       ]
     }

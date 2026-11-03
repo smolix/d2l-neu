@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-exponential-family.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-exponential-family-the-exponential-family": {
+      "code_fingerprint": "sha256:1e93818407151e67e4a6a49bdbe948279653a00daefa0241f1cbdf39e7ba01c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "distributions-exp-family": {
+      "code_fingerprint": "sha256:93ba92707452927ab605b50a667f99d3392a79ee1077e4b7f5ff2a2cf9750791",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+        }
+      ]
+    },
+    "distributions-conjugate": {
+      "code_fingerprint": "sha256:0af2247069a9e2e2f514b60cffaaad43ca476be9aa5af1b09ab73b4bff10685d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
+        }
+      ]
+    }
+  }
+}

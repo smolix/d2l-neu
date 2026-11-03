@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,32 +68,8 @@
         }
       ]
     },
-    "convexity-prox-ista": {
-      "code_fingerprint": "sha256:056ba660f3e17d5185e0140bd626601ff75c8bdce994485e0480ca70c76fc3b6",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
-        }
-      ]
-    },
-    "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:fa270403e9da632cd0d4a5f58d5411210be39996a429f748d453f6354e290683",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 33104,
-          "sha256": "sha256:d77aeefa96739af50e1f81609cf4addde8c74a1787a010956816e06f8b1c4163"
-        }
-      ]
-    },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:231e65c566108f59d470436148b40f6f1cea4c28b340777963fb8d0514505c1f",
+      "code_fingerprint": "sha256:3063259369f247194dc89d85c4edaefc2c6ef18fbe012925518c2935a4454f07",
       "kind": "text",
       "outputs": [
         {

@@ -798,7 +798,7 @@ ppl_plain = math.exp(trainer.history['val_loss'][-1])
 print(f'validation perplexity {ppl_plain:.1f}')
 ```
 
-A perplexity of 90 to 100 may look poor next to the perplexity of about 6
+A perplexity of about 90 may look poor next to the perplexity of about 6
 of the character-level trigram in :numref:`sec_language-model`. The two numbers
 cannot be compared: our model chooses among 1,027 BPE tokens per step, a
 character model among 27 characters. Bits per byte
@@ -899,7 +899,7 @@ print(f'validation perplexity {ppl_scratch:.1f}, '
       f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
 ```
 
-The validation perplexity falls to about 60, against 90 to 100 for the
+The validation perplexity falls to about 60, against about 90 for the
 plain model; in bits per byte, about 2.1 against 2.3 to 2.4. The training loss on the board is
 measured with dropout active, which raises it, so it no longer shows the
 gap between training and validation directly. The validation loss is still
@@ -1893,7 +1893,7 @@ per byte.
 @!rnn-implementation-a-wider-embedding-with-dropout-3
 
 - 740,355 parameters, same SGD, learning rate, clipping and epochs.
-- Validation perplexity 90 to 100 $\to$ about 60.
+- Validation perplexity about 90 $\to$ about 60.
 - Adam instead of SGD moves the rows much further and does better still
   (exercise).
 :::

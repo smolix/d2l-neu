@@ -1454,7 +1454,7 @@ $$L \cdot 4d + a + h + 8V \approx 144 + 440 + 230 + 393\textrm{ KiB}
 - The loss now dominates: compute it in chunks of tokens.
 :::
 
-::: {.slide title="Measured on Four Blocks: Stored Bytes down to 5d, Peak ÷2 to 3"}
+::: {.slide title="Measured on Four Blocks: Stored Bytes down to 5d, Peak about ÷3"}
 [Activation checkpointing]{.kicker}
 
 Two sequences of 1,024 tokens through four blocks of the running example:

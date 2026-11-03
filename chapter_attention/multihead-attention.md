@@ -522,7 +522,7 @@ functions of the 8 numbers in one mixture $\alpha_1\mathbf{v}_1 +
 \alpha_2\mathbf{v}_2$. With two or four heads the error falls by more
 than two orders of magnitude, and the layer returns both values almost
 exactly. The printed weights show how. The heads learn clearly different
-weightings of the two positions, and these often stay far from one-hot. As
+weightings of the two positions, and these need not be one-hot. As
 in the hand-built construction, two different mixtures are all that the
 output projection needs.
 

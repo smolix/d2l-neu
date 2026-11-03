@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 3.2e-02\nlargest difference between one and two GPUs: 4.9e-05\n"
+          "text": "largest update 2.0e-02\nlargest difference between one and two GPUs: 3.9e-05\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2550 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4283 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7839 examples/s, speedup 3.07, efficiency 77%\n"
+          "text": "1 GPU(s):  2552 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4284 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7834 examples/s, speedup 3.07, efficiency 77%\n"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 25896,
-          "sha256": "sha256:a95e60e0feef6ccf0ab3bc885fe81aa8bdec29e3941fb39abd99f94dc5dbc329"
+          "bytes": 25898,
+          "sha256": "sha256:4450814d65e9222e3a524797643436759ba4abeaf3081c0eb2ca4eabb1f8cadb"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 4.9 GB/s by default, 22.4 GB/s with the copy engines (4.6x)\n"
+          "text": "beta = 4.9 GB/s by default, 22.5 GB/s with the copy engines (4.6x)\n"
         }
       ]
     }

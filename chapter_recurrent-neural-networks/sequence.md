@@ -432,7 +432,7 @@ d2l.plot([data.time[data.m:], data.time[start:]],
 
 The rollout never follows the oscillation.
 It starts at the level of the last observed window and drifts slowly
-toward zero, while the series rises and falls.
+toward a constant, while the series rises and falls.
 The learned weights show why.
 
 ```{.python .input #sequence-multistep-rollout-1}
@@ -453,7 +453,9 @@ adds almost no error.
 Fed its own outputs, however, an average of the last four values can
 only repeat their current level.
 Because the weights sum to slightly less than one, that level also
-shrinks slowly toward zero.
+drifts slowly toward the rollout's fixed point $b / (1 - \sum_i w_i)$,
+where $b$ is the bias: a small bias divided by a small difference, so the
+fixed point differs from run to run.
 The model has not learned the curvature of the sine, which the one-step
 loss barely rewarded, and over many steps that omission dominates the
 error.
@@ -878,7 +880,7 @@ From step 609 on, the model reads only its own predictions.
 @!sequence-prediction-3
 
 The one-step predictions follow the sine. The rollout from step 604 starts
-at the level of the last window and drifts slowly toward zero.
+at the level of the last window and drifts slowly toward a constant.
 :::
 
 ::: {.slide title="The Model Learned to Average the Last Four Values"}
@@ -890,7 +892,8 @@ at the level of the last window and drifts slowly toward zero.
   0.2. An average of 4 keeps noise variance 0.04/4 = 0.01.
 - One step ahead, averaging matters far more than the curvature.
 - Fed its own outputs, an average can only repeat the current level;
-  weights summing to just under 1 shrink it slowly.
+  weights summing to just under 1 pull it slowly toward the fixed point
+  $b / (1 - \sum_i w_i)$.
 :::
 
 ::: {.slide title="Check: Roll Out an Exact Four-Point Average"}

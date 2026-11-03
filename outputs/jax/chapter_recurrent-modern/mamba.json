@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0 0 0 0 8 7 0 0 0 8 0 6 1 1 1 1]\n [0 0 0 0 3 0 7 0 0 0 9 7 1 1 1 1]]\n[[8 7 8 6]\n [3 7 9 7]]\n"
+          "text": "[[8 9 0 0 0 2 9 0 0 0 0 0 1 1 1 1]\n [2 0 0 0 2 0 4 0 0 8 0 0 1 1 1 1]]\n[[8 9 2 9]\n [2 2 4 8]]\n"
         }
       ]
     },
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.18\n"
+          "text": "S4D      accuracy 0.19\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.81\n"
+          "text": "minGRU   accuracy 1.00\n"
         }
       ]
     },
@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba    accuracy 0.99\n"
+          "text": "Mamba    accuracy 1.00\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.03\nMamba  share from the symbols: 0.44\n"
+          "text": "S4D    share from the symbols: 0.04\nMamba  share from the symbols: 0.95\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36218,
-          "sha256": "sha256:58048f399ac0304d0cb4a1894524b330c5dbe4ffd6154a8ee8be6e1b34a42573"
+          "bytes": 40446,
+          "sha256": "sha256:089034d20048c46cdc66f23e989f18d22318c97728bce4a95ee6ffb6bbf4ba3b"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 3.02\n"
+          "text": "Mamba perplexity: 3.00\n"
         }
       ]
     }

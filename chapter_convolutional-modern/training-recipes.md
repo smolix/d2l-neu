@@ -1449,7 +1449,7 @@ Test accuracy, repeated runs:
 | A (2015), 30 epochs | 89.5–90.5% |
 | compact modern, 45 epochs | 90.5–91% |
 
-Gain within each pair of runs: 0.5–1.3 points, 12 of 12 positive.
+Gain within each pair of runs: 0.5–1.3 points, positive in every pair.
 
 ::: {.d2l-note}
 Without RandAugment, CutMix, stochastic depth, or weight averaging: this

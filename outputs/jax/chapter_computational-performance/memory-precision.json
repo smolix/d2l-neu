@@ -84,17 +84,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 21.02 ms/call\n"
+          "text": "fp32: 21.01 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 13.78 ms/call\n"
+          "text": "tf32: 13.55 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 8.12 ms/call\n"
+          "text": "bf16: 8.06 ms/call\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False: stores 1769 KiB per token, peak 1.56 GiB, 43 ms per step\n"
+          "text": "checkpointing=False: stores 1769 KiB per token, peak 1.56 GiB, 42 ms per step\n"
         },
         {
           "type": "stream",

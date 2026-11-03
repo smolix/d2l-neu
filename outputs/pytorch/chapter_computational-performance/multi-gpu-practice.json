@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 7.4e-03\nlargest difference from one GPU on all 256: 7.6e-04\nlargest difference from one GPU on two accumulated halves: 3.0e-08\n"
+          "text": "largest update 8.0e-03\nlargest difference from one GPU on all 256: 8.2e-04\nlargest difference from one GPU on two accumulated halves: 6.0e-08\n"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2284 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4118 examples/s, speedup 1.80, efficiency 90%\n4 GPU(s):  7833 examples/s, speedup 3.43, efficiency 86%\n"
+          "text": "1 GPU(s):  2283 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4038 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7564 examples/s, speedup 3.31, efficiency 83%\n"
         }
       ]
     },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.81, efficiency 90%\n4 GPU(s), 128 examples each: speedup 2.86, efficiency 72%\n"
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.78, efficiency 89%\n4 GPU(s), 128 examples each: speedup 2.82, efficiency 70%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 25896,
-          "sha256": "sha256:5cc435ad1abfb8988e22cbdae103a615fa1131faaa1892647e40fb7e4126862d"
+          "bytes": 25898,
+          "sha256": "sha256:2de8386346bef28aa7d1e8b4e993c1fddd45da2d80d6de740b565983abbbd672"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0 GB/s; k=2: predicted 2N/beta = 18 ms, measured exposed 12 ms per step\n"
+          "text": "beta = 4.9 GB/s; k=2: predicted 2N/beta = 18 ms, measured exposed 15 ms per step\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0 GB/s by default, 23.0 GB/s with the copy engines (4.6x)\n"
+          "text": "beta = 4.9 GB/s by default, 23.1 GB/s with the copy engines (4.7x)\n"
         }
       ]
     }

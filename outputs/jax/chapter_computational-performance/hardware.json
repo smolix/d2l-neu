@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 8.8 GB/s\npinned: 22.1 GB/s\n"
+          "text": "pageable: 8.4 GB/s\npinned: 22.9 GB/s\n"
         }
       ]
     },
@@ -42,32 +42,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.59 ms,     1,696 rows/s,   0.9 TFLOP/s\n"
+          "text": "B =    1:  0.58 ms,     1,716 rows/s,   0.9 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    4:  0.58 ms,     6,893 rows/s,   3.7 TFLOP/s\n"
+          "text": "B =    4:  0.59 ms,     6,733 rows/s,   3.6 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   16:  0.60 ms,    26,669 rows/s,  14.3 TFLOP/s\n"
+          "text": "B =   16:  0.59 ms,    26,985 rows/s,  14.5 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   64:  0.62 ms,   103,004 rows/s,  55.3 TFLOP/s\n"
+          "text": "B =   64:  0.62 ms,   103,347 rows/s,  55.5 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =  256:  0.82 ms,   313,450 rows/s, 168.3 TFLOP/s\n"
+          "text": "B =  256:  0.81 ms,   315,017 rows/s, 169.1 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B = 1024:  3.18 ms,   321,727 rows/s, 172.7 TFLOP/s\n"
+          "text": "B = 1024:  3.09 ms,   331,324 rows/s, 177.9 TFLOP/s\n"
         }
       ]
     }

@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.319 s   read once: 0.077 s\n"
+          "text": "read every step: 0.510 s   read once: 0.102 s\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4096 x 4096 product: 0.84 ms/call"
+          "text": "4096 x 4096 product: 0.86 ms/call"
         }
       ]
     },
@@ -63,8 +63,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 32679,
-          "sha256": "sha256:c6699583154093b08b53f590c7c4c1bbd93589ebb2370fe26aa1f8012a0c982c"
+          "bytes": 32674,
+          "sha256": "sha256:8c1c9c0e25fcfca2ae363a215095fb7d47f9221fb0cf61ca296dc2cf33d8ab33"
         }
       ]
     },
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:   101.0 us per call,   0.3 TFLOP/s\nn =  512:    57.2 us per call,   4.7 TFLOP/s\nn = 1024:    96.6 us per call,  22.2 TFLOP/s\nn = 2048:   110.5 us per call, 155.4 TFLOP/s\nn = 4096:   828.8 us per call, 165.8 TFLOP/s\nn = 8192:  6371.4 us per call, 172.6 TFLOP/s\n"
+          "text": "n =  256:   100.1 us per call,   0.3 TFLOP/s\nn =  512:    87.4 us per call,   3.1 TFLOP/s\nn = 1024:    83.3 us per call,  25.8 TFLOP/s\nn = 2048:   110.5 us per call, 155.5 TFLOP/s\nn = 4096:   828.2 us per call, 165.9 TFLOP/s\nn = 8192:  6398.9 us per call, 171.8 TFLOP/s\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "x + 1 on 256 x 256: 0.07 ms/call"
+          "text": "x + 1 on 256 x 256: 0.08 ms/call"
         }
       ]
     },
@@ -96,12 +96,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.61 ms/call\nmul: 0.61 ms/call\n"
+          "text": "add: 0.62 ms/call\nmul: 0.62 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sin: 0.61 ms/call\nsigmoid: 0.61 ms/call\n"
+          "text": "sin: 0.62 ms/call\nsigmoid: 0.62 ms/call\n"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.41 ms per step, device busy 2.37 ms (98%)\n 0.511 ms  21.6%  gemm_fusion_dot\n 0.504 ms  21.3%  gemm_fusion_dot_1\n 0.443 ms  18.7%  gemm_fusion_dot_general_8\n 0.420 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_nn_al\n 0.419 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_tn_al\n 0.054 ms   2.3%  input_reduce_select_fusion_1\n"
+          "text": "wall clock 2.41 ms per step, device busy 2.37 ms (98%)\n 0.511 ms  21.6%  gemm_fusion_dot\n 0.504 ms  21.3%  gemm_fusion_dot_1\n 0.442 ms  18.7%  gemm_fusion_dot_general_8\n 0.421 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_nn_al\n 0.420 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_tn_al\n 0.054 ms   2.3%  input_reduce_select_fusion_1\n"
         }
       ]
     }

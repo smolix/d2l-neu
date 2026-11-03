@@ -442,7 +442,7 @@ possible, because the specification assumes the card's rated clock of
 2.52 GHz and the card often runs faster.
 
 The small sizes behave differently. From $n = 256$ to $n = 1024$ the work
-grows 64-fold, but the time per call grows by less than a factor of two,
+grows 64-fold, but the time per call changes by less than a factor of two,
 and each doubling of $n$ multiplies the throughput by five to ten. A time
 per call that barely depends on the size cannot be spent on arithmetic. It is the time $h$ that the host needs to issue one call:
 Python, the framework, and the driver that launches the kernel. When calls

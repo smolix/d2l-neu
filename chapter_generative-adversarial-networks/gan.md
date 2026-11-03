@@ -645,9 +645,17 @@ axes[2].legend()
 fig.tight_layout()
 ```
 
-The printed KL values quantify the predicted difference. In both frameworks, the saturating generator remains near its initialization and its final divergence exceeds three hundred nats. The discriminator reaches near-zero loss within the first few epochs, so $\sigma(D(x')) \approx 0$ for every generated sample. Equation :eqref:`eq_gan_weights` then assigns nearly zero weight to each generator update. Because the generator scarcely changes, the discriminator can continue to reject its samples confidently.
+The printed KL values quantify the predicted difference. The saturating generator remains near its initialization, and its final divergence exceeds three hundred nats. The discriminator reaches near-zero loss within the first few epochs, so $\sigma(D(x')) \approx 0$ for every generated sample. Equation :eqref:`eq_gan_weights` then assigns nearly zero weight to each generator update. Because the generator scarcely changes, the discriminator can continue to reject its samples confidently.
 
-The non-saturating loss reduces the divergence by orders of magnitude, although the result within this budget depends on the random draw. The stored PyTorch run reaches the data region and ends near one nat; as the distributions approach, the discriminator loss returns to $\log 2$. The stored JAX run makes partial progress and ends at several dozen nats because the small critic provides an imperfect score surface. The reweighting provides a useful gradient under confident rejection, but it does not guarantee a complete fit within a fixed training budget.
+The non-saturating generator leaves its initialization and moves toward the data, but how far it gets within this budget depends on the random draw. The reweighting provides a useful gradient under confident rejection, but it does not guarantee a complete fit within a fixed training budget.
+
+:begin_tab:`pytorch`
+Here the run reaches the data region and ends near one nat; as the distributions approach, the discriminator loss returns to $\log 2$.
+:end_tab:
+
+:begin_tab:`jax`
+Here the run makes only partial progress and ends tens of nats from the data. Its discriminator loss returns to $\log 2$ all the same: the small critic no longer separates the two sample sets, and its score surface gives the generator little further direction.
+:end_tab:
 
 Reweighting helps only when the critic's score surface retains a useful slope. Both weights in :eqref:`eq_gan_weights` multiply the same factor $\nabla_\theta D$, so the non-saturating loss can amplify this factor but cannot create it. In this experiment, the small tanh critic was far from its best response, and its smooth score surface supplied a gradient. An optimal critic on separated supports supplies no such gradient.
 
@@ -1037,7 +1045,7 @@ Data $= z A + b$: a Gaussian with known mean and covariance. A **linear**
 generator keeps $q$ Gaussian too, so $\log(p/q)$ and $\mathrm{KL}(q\|p)$
 have closed forms to check against.
 
-@gan-data-and-models-1
+@!gan-data-and-models-1
 :::
 
 ::: {.slide title="The Value Appears in the Loss Curves"}
@@ -1049,13 +1057,19 @@ $\mathrm{JS} \approx 0$; the generated cloud provides a separate visual check.
 :::
 
 ::: {.slide title="The Trained Critic Tracks the Analytic Log Ratio"}
+::: {.cols .vc}
+::: {.col}
 Freeze a partially trained generator; train the critic to its best response;
-compare with the closed-form $\lambda = \log(p/q)$:
-
-@!gan-verifying-the-optimal-critic-2
+compare with the closed-form $\lambda = \log(p/q)$.
 
 Points hug the identity line; errors grow only where the mixture has almost
 no samples, because ratio estimation is unconstrained off-support.
+:::
+
+::: {.col .narrow}
+@!gan-verifying-the-optimal-critic-2
+:::
+:::
 :::
 
 ::: {.slide title="Saturation under an Identical Initialization"}

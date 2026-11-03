@@ -20,24 +20,24 @@
       ]
     },
     "hardware-decode-bound": {
-      "code_fingerprint": "sha256:16048262e5b23a5e8de799ae73e4e6f99ab836cdcac354d5c1f35d223e8a758c",
+      "code_fingerprint": "sha256:2edac69afa0796c60619acfd652281177a81822c69b4966ee9d43fd47cb04346",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        H100 SXM: <=   744 tok/s\n        RTX 5090: <=   398 tok/s\n    RTX PRO 6000: <=   398 tok/s\n RTX 3090 (used): <=   208 tok/s\n     RTX 5070 Ti: <=   199 tok/s\n        M3 Ultra: <=   182 tok/s\n          M4 Max: <=   121 tok/s\n       DGX Spark: <=    61 tok/s\n      Strix Halo: <=    57 tok/s\n"
+          "text": "        H100 SXM: <=   744 tok/s\n        RTX 5090: <=   398 tok/s\n    RTX PRO 6000: <=   398 tok/s\n        M5 Ultra: <=   267 tok/s\n RTX 3090 (used): <=   208 tok/s\n     RTX 5070 Ti: <=   199 tok/s\n          M5 Max: <=   136 tok/s\n       DGX Spark: <=    61 tok/s\n      Strix Halo: <=    57 tok/s\n"
         }
       ]
     },
     "hardware-break-even": {
-      "code_fingerprint": "sha256:413f9d39ece3743f6181aa31e4ddd4c043990bcc6ce79dc58f5e5742ef458dc6",
+      "code_fingerprint": "sha256:1d628880d7947815fd8023f5c105596cfa4d862248a030efbf17442f6eae8485",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1680 productive hours to break even\n"
+          "text": "5250 productive hours to break even\n"
         }
       ]
     }

@@ -285,7 +285,7 @@ print(f'fraction inside +-2 sqrt(t) at t=1: {inside.mean():.3f}'
       '   (Gaussian: 0.954)')
 ```
 
-The variances lie within a percent or two of $t$; the Monte Carlo standard
+The variances lie within a few percent of $t$; the Monte Carlo standard
 error of a variance from $20{,}000$ Gaussian samples is $t\sqrt{2/20000}$, or
 $1\%$ of $t$. About $95\%$ of the paths lie inside $\pm 2\sqrt{t}$ at $t = 1$.
 This is a statement about one fixed time: far fewer paths stay inside the
@@ -1692,11 +1692,17 @@ Why noise of size $\sqrt{0.02}=\sqrt{2h}$ for step $h=0.01$, and not of size $h$
 ::: {.slide title="Drift Alone Collapses, Noise Alone Spreads, Both Settle"}
 [Noise as a forward process]{.kicker}
 
-@fig:mdl-dyn-sde-paths
-
+::: {.cols .vc}
+::: {.col}
 - Drift $\dot x=-x$: both starts $\pm2$ go to the point $0$.
 - Noise $X_t=x_0+\sqrt2W_t$: centers stay at $\pm2$, envelope $\pm2\sqrt{2t}$ grows forever.
 - Both: the same $\mathcal N(0,1)$ from every start.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-dyn-sde-paths
+:::
+:::
 :::
 
 ::: {.slide title="Only Steps of Size √Δt Give a Walk with a Limit"}
@@ -1915,7 +1921,7 @@ Same increments for both. Strong: $\mathbb{E}|\hat X_N-X_T|$, needed to couple p
 Weak: $|\mathbb{E}\varphi(\hat X_N)-\mathbb{E}\varphi(X_T)|$, all that generation needs.
 :::
 
-::: {.slide title="Additive Noise: Strong Order 1; Multiplicative: ½; Weak Order 1 for Both"}
+::: {.slide title="Strong Order Is 1 for Additive Noise and ½ for Multiplicative"}
 [Convergence]{.kicker}
 
 Omitted Milstein term: mean zero, size $\propto\Delta t$; $N$ of them add to $\sqrt N\Delta t=\sqrt{T\Delta t}$.

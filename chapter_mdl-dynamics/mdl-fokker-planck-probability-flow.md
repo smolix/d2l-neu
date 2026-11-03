@@ -1165,10 +1165,11 @@ d2l.plt.xlabel('x'); d2l.plt.ylabel('density'); d2l.plt.legend();
 
 The terminal mismatch $\max_x|p_T-\mathcal N(0,1)|$ is $0.0016$ against a peak
 of $0.40$, so starting from Gaussian noise is justified. The reverse SDE
-recovers modes at $\pm2.00$ to within about $0.01$ and splits the mass within
+recovers modes at $\pm2$ to within about $0.02$ and splits the mass within
 about $0.01$ of one half (the binomial standard deviation is $0.0035$). Its
 widths scatter around $0.505$ by a few thousandths, slightly above the target
-$0.5$, and the KS distance to the exact $p_0$ stays below about $0.01$.
+$0.5$, and the KS distance to the exact $p_0$ is usually below $0.01$, close
+to the $0.0096$ band of an exact sample.
 
 Part of the width excess is the bias of Euler--Maruyama, which has weak order
 one (:numref:`sec_mdl-euler-maruyama`). The Monte Carlo error of a width from
@@ -1372,7 +1373,6 @@ these samplers the only unknown is the score $\nabla\log p_t$.
    $$
    j_i=f_i\,p-\tfrac12\sum_k\partial_k(a_{ik}\,p)
    $$
-   :eqlabel:`eq_mdl-dyn-matrix-current`
 
    and, dividing by $p$, the probability-flow velocity
 
@@ -1380,14 +1380,13 @@ these samplers the only unknown is the score $\nabla\log p_t$.
    \mathbf u=\mathbf f-\tfrac12\,\mathbf a\,\nabla\log p-\tfrac12\,\nabla\cdot\mathbf a,
    \qquad(\nabla\cdot\mathbf a)_i=\sum_k\partial_ka_{ik}.
    $$
-   :eqlabel:`eq_mdl-dyn-general-pf-velocity`
 
    A constant matrix only replaces $g^2$ by $\mathbf a$ in the score term;
    a state-dependent $\mathbf a$ adds the last term. Now let
    $dX = g(X)\,dW$ with no drift and a smooth positive $g$, on the circle
    $[0, 1)$ with periodic boundaries.
-    1. Specialize the current :eqref:`eq_mdl-dyn-matrix-current` and the
-       velocity :eqref:`eq_mdl-dyn-general-pf-velocity` to this SDE. Show
+    1. Specialize the matrix current and the general velocity above
+       to this SDE. Show
        that a stationary density has constant current, that periodicity
        forces the constant to vanish, and find $p_\infty$.
     1. Replacing the constant $g^2$ of :eqref:`eq_mdl-dyn-fokker-planck` by
@@ -1758,11 +1757,17 @@ $$\dot{\mathbf x}=\mathbf f(\mathbf x,t)-\tfrac12g^2\,\nabla\log p_t(\mathbf x)$
 ::: {.slide title="SDE Cloud and ODE Cloud: Same Histogram"}
 [Experiment]{.kicker}
 
-One sample of the mixture, $20{,}000$ particles; KS distance to the exact $p_t$:
-
-@!fokker-planck-pf-ode-overlay
+::: {.cols .vc}
+::: {.col}
+One sample of the mixture, $20{,}000$ particles; KS distance to the exact $p_t$.
 
 In most runs both stay inside the $95\%$ band $1.36/\sqrt n$, as an exact sample would.
+:::
+
+::: {.col .fig .narrow}
+@!fokker-planck-pf-ode-overlay
+:::
+:::
 :::
 
 ::: {.slide title="Check: How Fast Do PF-ODE Particles Move at Stationarity?"}

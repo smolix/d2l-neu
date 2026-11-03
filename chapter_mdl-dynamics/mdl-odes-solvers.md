@@ -671,10 +671,9 @@ x_eig = np.array([(V_B @ np.diag(np.exp(lam_B * s)) @ np.linalg.inv(V_B))[:, 1]
                   for s in ts])                # e^{Bt} x0 = second column
 norm = np.hypot(x1, x2)
 print('eigenvalues of B:', lam_B)
-print('|coefficients of x0 on the unit eigenvectors|:',
-      np.abs(np.linalg.solve(V_B, [0.0, 1.0])).round(2))
-print(f'|closed form - eigen formula| = {np.abs(x_eig - np.c_[x1, x2]).max():.1e}')
-print(f'peak ||x(t)|| = {norm.max():.3f} at t = {ts[norm.argmax()]:.2f}')
+print('|coefficients of x0|:', np.abs(np.linalg.solve(V_B, [0.0, 1.0])).round(2))
+print(f'|closed form - eigen| = {np.abs(x_eig - np.c_[x1, x2]).max():.1e}')
+print(f'peak {norm.max():.3f} at t = {ts[norm.argmax()]:.2f}')
 d2l.plot(ts, [norm, np.exp(-ts), np.exp(-2 * ts)], 't', '||x(t)||',
          legend=['B from (0, 1)', 'exp(-t)', 'exp(-2t)'])
 ```
@@ -1617,7 +1616,7 @@ Eigenvectors $5.7^\circ$ apart: $\mathbf x_0=10\,\mathbf v_1+10.05\,\mathbf v_2$
 :::
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!mdl-odes-solvers-transient-growth
 :::
 :::
@@ -1705,7 +1704,7 @@ On $\dot y=\lambda y$, $z=h\lambda$:
 - Spiral, same 512 evaluations: Euler $3.6\times10^{-3}$, RK4 $1.3\times10^{-9}$.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!odes-solvers-euler-rk4-order
 :::
 :::
@@ -1724,15 +1723,16 @@ What is the largest stable Euler step for the spiral, eigenvalues $-0.5\pm\mathr
 :::
 :::
 
-::: {.slide title="Forward Euler Is Stable Inside |1 + hλ| < 1, Backward Euler on the Whole Left Half-Plane"}
+::: {.slide title="Backward Euler Is Stable on the Whole Left Half-Plane"}
 [Stability regions]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 ![](../img/mdl-dyn-stability-regions.svg)
 :::
 
 ::: {.col}
+- Forward Euler: stable inside $|1+z|<1$.
 - Backward Euler: $y_{n+1}=y_n/(1-z)$.
 - **A-stable**: $|R(z)|\le1$ whenever $\operatorname{Re}z\le0$.
 - Cost: one equation solve per step.

@@ -227,15 +227,21 @@ words, before any new notation appears:
 4. **Where.** One sentence connecting to the previous section; name what
    remains open.
 
-Concrete instances and numbers are essential (§5), but they come after the
-reader knows what question they answer. A chapter introduction contains no
-experimental or technical numbers in its first paragraph; specific puzzles
-("a fresh 10-class classifier reports 2.30") belong at the start of the
-section that explains them. A section opening may begin with a concrete
-problem, but ties it first to the previous section or to a familiar model, and
-states the question in words before giving the number. Subsections follow the
-same rule at a smaller scale: one or two sentences of why we need this before
-any formula, code or figure.
+A concrete example is desirable in every opening, often in its first
+paragraph. What matters is how it arrives. Introduce it as an instance of a
+situation the reader recognizes or a question they already hold, in an
+unhurried sentence: "When a language model reports a loss of 1.2 nats per
+character, is that good? How low could it go?" Do not fire a series of
+specialist facts at the reader before they know what the chapter is about
+("A freshly initialized 10-class classifier reports a loss of 2.30. A
+generative adversarial network whose samples miss the data by 0.01 ...").
+One well-chosen example, explained in words, does more than three dense ones.
+Puzzles that need the chapter's own concepts to be understood belong at the
+start of the section that explains them. A section opening may begin with a
+concrete problem, but ties it first to the previous section or to a familiar
+model and states the question in words around the number. Subsections follow
+the same rule at a smaller scale: one or two sentences of why we need this
+before any formula, code or figure.
 
 Defect (`chapter_mdl-information-theory/index.md`, 2026-11-03):
 
@@ -723,8 +729,8 @@ At most 400 words, no tables, no experimental numbers, no lists of model
 names.
 
 1. **Start from the reader** (§3.1): what they already do or know, and the
-   question it raises, in plain words. No technical or experimental numbers
-   in this paragraph.
+   question it raises, in plain words, with one concrete example the reader
+   recognizes, introduced gently. No burst of specialist facts.
 2. **The idea, its origin, and why it matters**: the problem the field set
    out to solve, the central idea, and what it explains about the tools the
    reader already has or what was unsatisfactory about them.

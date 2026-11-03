@@ -46,54 +46,14 @@
     },
     "vgg-training": {
       "code_fingerprint": "sha256:f872fc375e34b560f123d4289dc7dc6c4301ec6064bb01123a715cfa9e8a2b52",
-      "kind": "mixed",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "Traceback (most recent call last):\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/multiprocessing/util.py\", line 303, in _run_finalizers\n    finalizer()\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/multiprocessing/util.py\", line 227, in __call__\n    res = self._callback(*self._args, **self._kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/multiprocessing/util.py\", line 136, in _remove_temp_dir\n    rmtree(tempdir, onerror=onerror)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/shutil.py\", line 796, in rmtree\n    onexc(os.rmdir, path, err)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/shutil.py\", line 764, in onexc\n    return onerror(func, path, exc_info)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "  File \"/usr/lib/python3.12/shutil.py\", line 794, in rmtree\n    os.rmdir(path, dir_fd=dir_fd)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "OSError: [Errno 39] Directory not empty: '/tmp/pymp-j05c9brs'\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 32432,
-          "sha256": "sha256:0c790e917c96105c3d9bd8f56478b7c6db6a09274ea9fa16d3406f4a6c0c412c"
+          "bytes": 31824,
+          "sha256": "sha256:2c8fa6889896537abef2410bd647a5f048e9c09c3c5c7d86e8ce4681f4738e05"
         }
       ]
     },
@@ -126,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31738,
-          "sha256": "sha256:97083f97672a4478f0096168fcb21ddc813f71bf9fa079094cd822d6fce7ec20"
+          "bytes": 30432,
+          "sha256": "sha256:ea4c45cbd9a6b8dc625615d77cf8bed7d2b176f801c35fd7a7ca3bb05d7b9143"
         }
       ]
     },
@@ -165,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33641,
-          "sha256": "sha256:13e0ce9b1025008f048f36819aadac91b7b7b937b26938f09b764bfb4e64d5f1"
+          "bytes": 32737,
+          "sha256": "sha256:df8dfde2312f45a89722fe896031570377930adb6810274c3bc68fc6922d4211"
         }
       ]
     },
@@ -176,7 +136,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.915, 'NiN': 0.878, 'GoogLeNet': 0.908}"
+          "text": "{'VGG': 0.92, 'NiN': 0.876, 'GoogLeNet': 0.904}"
         }
       ]
     }

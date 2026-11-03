@@ -1,17 +1,24 @@
 # Convexity
 :label:`sec_mdl-convexity`
 
-Run one gradient-descent loop, with step $0.05$ and $600$ steps, from $500$
-starting points drawn uniformly on $[-1.5, 1.5]$. On the bowl
-$f(x) = (x - \tfrac12)^2$ every run ends at $x = \tfrac12$. On the tilted
-double well $\phi(x) = (x^2 - 1)^2 + x/2$ roughly half of the runs, 46% in
-expectation, stop at $x \approx 0.93$, where $\phi \approx 0.48$. That is almost
-one unit above the best value $\phi \approx -0.51$, reached at
-$x \approx -1.06$. The stopped runs have a zero gradient, which is all that
-the stationarity guarantee of :numref:`sec_mdl-gradient-based-optimization`
-promises, and nothing in the run tells us that a better point exists.
-Training a model is this loop, so we need to know when the end of a run is
-the best point there is.
+When a training run ends, we know one thing about the point where it
+stopped: the loss no longer decreases there. The previous section showed
+that gradient descent with a safe step reaches such a point, where the
+gradient is close to zero. It did not say whether a better point exists
+elsewhere. This section asks when the end of a run is the best point there
+is, and how fast gradient descent gets there.
+
+A one-dimensional experiment shows that the question is real. We run the
+same gradient-descent loop, with step $0.05$ and $600$ steps, from $500$
+starting points drawn uniformly on $[-1.5, 1.5]$, once on each of two
+functions. On the bowl $f(x) = (x - \tfrac12)^2$ every run ends at
+$x = \tfrac12$. On the tilted double well $\phi(x) = (x^2 - 1)^2 + x/2$
+roughly half of the runs, 46% in expectation, stop at $x \approx 0.93$, where
+$\phi \approx 0.48$. That is almost one unit above the best value
+$\phi \approx -0.51$, reached at $x \approx -1.06$. The stopped runs have a
+zero gradient, which is all that the stationarity guarantee of
+:numref:`sec_mdl-gradient-based-optimization` promises, and nothing in the
+run tells us that a better point exists.
 
 The two functions differ in one property. Every chord of the bowl lies above
 its graph, while the double well has chords that dip below it. Functions with
@@ -22,15 +29,14 @@ whole domain. The progress of single gradient steps then adds up to a rate
 that holds from every start. The same property gives Jensen's inequality,
 which the probability and information chapters use throughout.
 
-The previous section proved what one gradient step does. Here we define
-convex sets and convex functions, give three tests for convexity, and derive
-the consequences, including the rates of gradient descent. A short calculus
-then certifies the common losses of machine learning as convex without
-computing a Hessian. Deep-network losses are not convex, and the last part
-says which conclusions survive. Three examples recur: the chapter's quadratic
-$\tfrac12(x_1^2 + 1000\,x_2^2)$ for the rates, the double well $\phi$ as the
-nonconvex contrast, and small least-squares problems in two weights for the
-numerical checks.
+We define convex sets and convex functions, give three tests for convexity,
+and derive the consequences, including the rates of gradient descent. A
+short calculus then certifies the common losses of machine learning as
+convex without computing a Hessian. Deep-network losses are not convex, and
+the last part says which conclusions survive. Three examples recur: the
+chapter's quadratic $\tfrac12(x_1^2 + 1000\,x_2^2)$ for the rates, the double
+well $\phi$ as the nonconvex contrast, and small least-squares problems in
+two weights for the numerical checks.
 
 ```{.python .input #convexity-imports}
 #@tab mxnet

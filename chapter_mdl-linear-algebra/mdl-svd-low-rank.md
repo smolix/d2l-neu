@@ -1,22 +1,31 @@
 # Singular Value Decomposition and Low-Rank Approximation
 :label:`sec_mdl-svd-low-rank`
 
-A grayscale photograph of $400\times500$ pixels is a matrix with 200,000
-entries. Twenty well-chosen rank-one pieces, 18,020 numbers or 9% of the
+The eigendecomposition of :numref:`sec_mdl-eigendecompositions` describes a
+square matrix by the directions it only stretches, and it turns the powers
+of that matrix into powers of numbers. Most matrices in deep learning are
+of another kind. A weight matrix maps inputs of one width to outputs of
+another, and a data matrix has one row per example and one column per
+feature. Neither is applied to its own output, and neither need be square.
+Even a square matrix may lack a basis of eigenvectors: the shear
+$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is *defective*,
+with a single eigenvector direction where the plane needs two. We need a
+description that works for every matrix, and that tells how few numbers
+suffice to describe a large matrix well.
+
+A photograph shows why the second requirement matters. A grayscale
+photograph of $400\times500$ pixels is a matrix with 200,000 entries. Like
+any matrix, it can be written as a sum of rank-one pieces, each the outer
+product of a column and a row. Twenty well-chosen pieces, 18,020 numbers or 9% of the
 original, reproduce it with a relative error of 8%
 (:numref:`fig_mdl-la-eckart-young` shows the result). Which twenty pieces are
 these, and could any other twenty do better? The same question decides how
 many parameters a fine-tuning adapter for a large model needs, and how many
 directions of a dataset are worth keeping.
 
-The eigendecomposition of :numref:`sec_mdl-eigendecompositions` cannot answer
-it. The photograph is not square, so it has no eigenvectors at all, and even a
-square matrix may lack a basis of eigenvectors: the shear
-$\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is *defective*,
-with a single eigenvector direction where the plane needs two. The way out is
-to stop asking one basis to serve as both the input and the output axes.
-Choose one orthonormal basis for the inputs and another for the outputs, and
-every matrix becomes a list of independent stretches
+The answer is to stop asking one basis to serve as both the input and the
+output axes. Choose one orthonormal basis for the inputs and another for the
+outputs, and every matrix becomes a list of independent stretches
 $\sigma_1\ge\sigma_2\ge\cdots\ge0$. Rank, the best low-rank approximation,
 principal component analysis, least squares and the sensitivity of a linear
 solve to errors are all read off that list. :numref:`sec_linear-algebra`
@@ -584,9 +593,10 @@ while the threshold reports two.
 ### Best Low-Rank Approximation
 :label:`subsec_mdl-eckart-young`
 
-The dyadic sum :eqref:`eq_mdl-svd-dyadic` lists the rank-one pieces of
-$\mathbf{A}$ heaviest first. Keeping only the first $k$ gives the *truncated
-SVD*
+We can now return to the photograph of the opening and ask which twenty
+rank-one pieces to keep. The dyadic sum :eqref:`eq_mdl-svd-dyadic` lists the
+rank-one pieces of $\mathbf{A}$ heaviest first. Keeping only the first $k$
+gives the *truncated SVD*
 
 $$
 \mathbf{A}_k = \sum_{i=1}^{k}\sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top .
@@ -1061,7 +1071,9 @@ perpendicular.
 ### The Condition Number
 :label:`subsec_mdl-condition-number`
 
-Consider the system
+The data of a linear system are measured or rounded, so before trusting a
+solution we need to know how much a small error in the data can change it. A
+$2\times2$ system shows how large the effect can be. Consider the system
 $\mathbf{K}\mathbf{x}=\mathbf{b}$ with
 $\mathbf{K}=\left(\begin{smallmatrix}1&1\\1&1.0001\end{smallmatrix}\right)$
 and $\mathbf{b}=(2,2.0001)$. Its solution is $\mathbf{x}=(1,1)$. Change $b_2$
@@ -1347,6 +1359,12 @@ update direction. :numref:`sec_muon` develops the optimizer.
 
 ### Measuring and Controlling the Spectrum
 :label:`subsec_mdl-spectrum-control`
+
+The last of the three questions asks how much a layer can stretch its input,
+and the largest singular value answers it. The whole spectrum of a weight
+matrix also says how close the matrix is to low rank. Training methods
+therefore bound the singular values, measure them, and need to compute them
+cheaply for large matrices.
 
 **Spectral normalization.** By :eqref:`eq_mdl-sigma1-variational`, a layer
 $\mathbf{x}\mapsto\mathbf{W}\mathbf{x}$ satisfies

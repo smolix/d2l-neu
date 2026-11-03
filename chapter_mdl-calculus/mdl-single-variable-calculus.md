@@ -1,27 +1,34 @@
 # Single Variable Calculus
 :label:`sec_mdl-single_variable_calculus`
 
-Take one training example, one weight $w$, and the logistic loss
-$\ell(w)=\log(1+e^{-w})$. At $w=0$ the loss is $0.693147$. After the weight
-moves to $w=0.1$ it is $0.644397$. A straight line through $w=0$ with slope
-$-\tfrac12$ predicts $0.693147-0.05=0.643147$, off by only $0.00125$. That
-remainder equals $\tfrac12\cdot\tfrac14\cdot0.1^2$, where the number
-$\tfrac14$ measures how much the graph of $\ell$ bends at $w=0$.
+The models of the Basics part were all trained by gradient descent. At each
+step the optimizer evaluates the loss and its slope at the current weights,
+moves the weights a little downhill, and repeats. It never sees the loss
+anywhere else, so every step rests on a prediction: the slope at one point is
+assumed to describe the loss a short distance away. How good is that
+prediction, and how large a step does it allow?
 
-An optimizer never sees more than this local information: the value, the
-slope, and perhaps the bend at the current weights. Every step it takes rests
-on how far a line, or a parabola that also accounts for the bend, can be
-trusted. This section builds the line from the first derivative and the
-parabola from the second, proves how large their errors can be, and uses the
-two models to choose a safe step size for gradient descent and to run Newton's
+A single weight already shows what the answer looks like. Take one training
+example, one weight $w$, and the logistic loss $\ell(w)=\log(1+e^{-w})$. At
+$w=0$ the loss is $0.693147$ and its slope is $-\tfrac12$. If the weight
+moves to $w=0.1$, a straight line through $w=0$ with that slope predicts a
+loss of $0.693147-0.05=0.643147$. The actual loss is $0.644397$, so the line
+is off by only $0.00125$. The error has a simple form. It equals
+$\tfrac12\cdot\tfrac14\cdot0.1^2$, where the number $\tfrac14$ measures how
+much the graph of $\ell$ bends at $w=0$. The slope makes the prediction, and
+the bend says how quickly the prediction goes wrong as the step grows.
+
+This section builds the line from the first derivative and, from the second,
+a parabola that also accounts for the bend. It proves the rules of
+differentiation, bounds the error of each of the two models, and uses the
+models to choose a safe step size for gradient descent and to run Newton's
 method. It ends at the corner of $\mathrm{ReLU}$, where no line fits and
 backpropagation must still return a slope.
 
 The Basics (:numref:`sec_calculus`) defined the derivative, stated the rules
-of differentiation, and used automatic differentiation as a tool. Here the
-rules are proved, the error of each local model is bounded, and the corner is
-handled. For a network with loss $\ell(w_1,\ldots,w_n)$, holding every weight
-but $w_i$ fixed and replacing $w_i$ by $x$ gives a function of one variable,
+of differentiation, and used automatic differentiation as a tool. For a
+network with loss $\ell(w_1,\ldots,w_n)$, holding every weight but $w_i$
+fixed and replacing $w_i$ by $x$ gives a function of one variable,
 $f(x)=\ell(w_1,\ldots,w_{i-1},x,w_{i+1},\ldots,w_n)$. One-variable calculus
 studies such slices.
 
@@ -219,7 +226,10 @@ every base.
 
 ### Rules for Combining Derivatives
 
-Let $g$ and $h$ be differentiable at $x$; for the chain rule, let $h$ be
+The table covers only the building blocks. A loss combines them by sums,
+products, quotients, and compositions, and the rules below give the
+derivative of each combination from the derivatives of its parts. Let $g$ and
+$h$ be differentiable at $x$; for the chain rule, let $h$ be
 differentiable at $x$ and $g$ at $h(x)$. Then:
 
 * **Sum rule.** $\frac{d}{dx}\bigl(g(x) + h(x)\bigr) = g'(x) + h'(x)$.

@@ -1,34 +1,39 @@
 # Integral Calculus
 :label:`sec_mdl-integral_calculus`
 
-A standard normal random variable $Z$ has the bell-shaped density
-$p(z)=e^{-z^2/2}/\sqrt{2\pi}$. Its value at $z=0$ is $0.40$, yet
-$P(Z=0)=0$, and the same holds at every other single point. Intervals do carry
-probability: $P(-1\le Z\le 1)\approx 0.68$. That number is the area under $p$
-between $-1$ and $1$, and the constant $1/\sqrt{2\pi}$ is the one that makes
-the total area under $p$ equal to $1$. Where does the constant come from, and
-how is $0.68$ computed?
+The earlier chapters used continuous random variables without asking how
+their probabilities are computed. A normal distribution was described by its
+density, an expected loss was an average over that density, and both were
+taken as given. The previous sections of this chapter differentiated
+functions. This section asks a different question: how do we add up a
+quantity that is spread continuously over an interval?
+
+The standard normal distribution, the bell curve, shows why the question
+needs care. A standard normal random variable $Z$ has the density
+$p(z)=e^{-z^2/2}/\sqrt{2\pi}$. Its value at $z=0$ is $0.40$, yet $P(Z=0)=0$,
+and the same holds at every other single point. Intervals do carry
+probability: $P(-1\le Z\le 1)\approx 0.68$. That number is the area under
+$p$ between $-1$ and $1$, and the constant $1/\sqrt{2\pi}$ is the one that
+makes the total area under $p$ equal to $1$. Where does the constant come
+from, and how is $0.68$ computed?
 
 The question is not special to the bell curve. Every probability and every
 expected loss over a continuous variable is an area of this kind, a sum of
 infinitely many slices of negligible weight. Training a model through random
-sampling, as variational autoencoders and policy-gradient methods do, needs one
-more thing: the derivative of such an area with respect to a parameter.
+sampling, as variational autoencoders and policy-gradient methods do, needs
+one more thing: the derivative of such an area with respect to a parameter.
 
 The plan is to cut the area into thin slices, add them, and let the slices
 shrink; the limit is the integral. Adding slices by hand is slow, and the
 fundamental theorem of calculus replaces it by reversing differentiation. The
-bell curve has no elementary reverse, so we take two other routes: pass to two
-dimensions, where the integral becomes elementary and $\sqrt{2\pi}$ appears,
-or average random samples. Last, we differentiate an integral with respect to
-a parameter, with the same two tools.
-
-The Basics part used densities and expectations as given, and the previous
-sections of this chapter differentiated. This section defines the integral,
-proves the theorem that evaluates it, and answers the opening question twice:
-the constant $1/\sqrt{2\pi}$ in the Gaussian integral and the $0.68$ in the
-subsection on densities. Measure theory and the Lebesgue integral are left
-out; :numref:`sec_mdl-calculus-further-reading` points to them.
+bell curve has no elementary reverse, so we take two other routes: pass to
+two dimensions, where the integral becomes elementary and $\sqrt{2\pi}$
+appears, or average random samples. Last, we differentiate an integral with
+respect to a parameter, with the same two tools. Along the way the section
+answers both halves of the opening question: the constant $1/\sqrt{2\pi}$ in the
+Gaussian integral and the $0.68$ in the subsection on densities. Measure
+theory and the Lebesgue integral are left out;
+:numref:`sec_mdl-calculus-further-reading` points to them.
 
 ```{.python .input #integral-imports}
 #@tab mxnet
@@ -593,7 +598,10 @@ that generalizes to many dimensions.
 
 ### Double Integrals and Fubini's Theorem
 
-The bell in two dimensions, $f(x,y)=e^{-x^2-y^2}$ over the square
+The integral behind the opening constant, $\int e^{-x^2}dx$, has no
+elementary antiderivative, and the plan of the opening reaches it through two
+dimensions. We first extend the integral from intervals to regions of the
+plane. The bell in two dimensions, $f(x,y)=e^{-x^2-y^2}$ over the square
 $[-2,2]^2$, encloses a volume between its surface and the base plane. We
 compute it the way we computed areas: tile the base with
 $\epsilon\times\epsilon$ squares, stand on each square a box as tall as the
@@ -828,8 +836,10 @@ vanishes.
 
 ### Densities and Expectations
 
-A probability **density** on a set $\mathcal X$ is a nonnegative function
-whose total integral is $1$:
+With the integral defined, the puzzle of the opening has a precise form: a
+density assigns probability to intervals through their area, not to single
+points. A probability **density** on a set $\mathcal X$ is a nonnegative
+function whose total integral is $1$:
 
 $$
 p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .

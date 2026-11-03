@@ -1,17 +1,17 @@
 # Entropy, Cross-Entropy, and KL Divergence
 :label:`sec_mdl-information_theory`
 
-A freshly initialized 10-class classifier reports a loss of about $2.30$;
-:numref:`sec_mlp-implementation` uses this value to check that an untrained
-network is set up correctly. The number is $\ln 10$, the cost in nats of
-naming one of ten equally likely labels. A perfect classifier on clean labels
-reports $0$. If $10\%$ of the labels are flipped uniformly to one of the other
-nine classes, no classifier, however large or well trained, gets below
-$0.545$. This section explains these three numbers.
-
-So far we have used cross-entropy only as a loss to minimize. Without knowing
-what it measures, a loss curve cannot be read. Is a loss of $0.6$ good? Is a
-plateau a bug or a property of the data? What would a loss of $0$ mean?
+Almost every classifier in this book was trained by pushing a cross-entropy
+loss down, and we have grown used to watching that number fall. We have not yet
+asked what it measures, and without knowing that, a loss curve cannot be
+read. Its starting value already means something. A freshly initialized
+classifier with ten classes reports a loss of about $2.30$, and
+:numref:`sec_mlp-implementation` used this value to check that an untrained
+network is set up correctly. The value is $\ln 10$, the cost in nats of
+naming one of ten labels when the model still finds all ten equally likely.
+The end of the curve raises harder questions. Is a final loss of $0.6$ good?
+Is a plateau a bug or a property of the data? If some of the labels are
+wrong, how low can any model go?
 
 The loss is the average of $-\log q(y)$, the model's surprise at the label
 $y$ that occurred. That average splits into two parts. The first is the
@@ -567,8 +567,11 @@ $h(p) + D_{\textrm{KL}}(p\|q_{\boldsymbol\theta})$.
 
 ### KL Divergence Between Gaussians
 
-For continuous distributions, the standard example is the KL divergence
-between two univariate Gaussians, which has a closed form. For
+Gaussians are the continuous distributions we meet most often, and
+comparing two of them is a common task. A variational autoencoder, for
+instance, penalizes the KL divergence between the Gaussian distribution of
+its code and a standard normal prior. For two univariate Gaussians the KL
+divergence has a closed form. For
 $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
 
 $$
@@ -794,9 +797,13 @@ The built-in loss reports $0.9486$, the value computed by hand.
 ### The Irreducible Loss
 :label:`subsec_mdl-irreducible-loss`
 
-We can now explain the third number of the opening. In real data the label is
-not a function of the input: the same image can carry different labels, from
-ambiguity or from annotation errors. What is the best possible loss, then?
+We can now answer the last question of the opening: how low can the loss go
+when some labels are wrong? In real data the label is not a function of the
+input: the same image can carry different labels, from ambiguity or from
+annotation errors. With ten classes and $10\%$ of the labels flipped
+uniformly to one of the other nine classes, the answer will turn out to be
+$0.545$ nats.
+
 Let the input $\mathbf{x}$ and the label $y \in \{1, \ldots, k\}$ have a
 joint distribution, let $p(\cdot \mid \mathbf{x})$ be the true conditional
 distribution of the label, and let $q(\cdot \mid \mathbf{x})$ be any model's.
@@ -828,7 +835,8 @@ The floor is the average entropy of the label given the input, called the
 *conditional entropy*. It is a
 property of the data: no architecture, data volume, or training time lowers
 it.
-The three numbers of the opening now follow.
+Three cases show what the floor means, beginning with the $2.30$ of an
+untrained classifier.
 
 * A model that predicts the uniform distribution has cross-entropy $\ln k$ at
   every input, whatever the labels are: $2.303$ nats for $k = 10$.

@@ -1,19 +1,25 @@
 # Vectors, Angles, and Projections
 :label:`sec_mdl-geometry-linear-algebraic-ops`
 
-A $28 \times 28$ Fashion-MNIST image is a list of $784$ numbers, so it is a
-point in $\mathbb{R}^{784}$. Nobody can draw that space. Yet one question
-about it has a plain answer: is a new image closer to the average t-shirt or
-to the average pair of trousers? Deciding takes one dot product per image,
-and the resulting rule is right about $92\%$ of the time on the $2{,}000$
-test images of those two classes.
+The Basics treated every input as a vector: an image became a list of pixel
+values, and a word became an embedding. Models do three geometric things
+with these vectors. They compare, as when we ask whether two
+embeddings are similar. They fit, as when we look for the combination of
+features that comes closest to the targets. And they separate, as when a
+classifier decides on which side of a boundary an input falls. In the plane
+each of these is a picture of lengths, angles, and shadows. Inputs live in
+spaces of hundreds or thousands of dimensions, which nobody can draw. Do the
+pictures still mean anything there?
 
-Comparing, fitting, and separating are three things a model does with
-vectors, and each of them is a question about lengths, angles, and shadows.
-Is this embedding similar to that one? Which combination of the features
-comes closest to the targets? On which side of a boundary does this input
-fall? If the pictures we draw in the plane did not carry over to $784$
-dimensions, a rule as simple as "nearest mean" would have no reason to work.
+Telling t-shirts from trousers is one instance of the question. Each
+$28 \times 28$ Fashion-MNIST image (:numref:`sec_fashion_mnist`) is a list of
+$784$ numbers, so it is a point in $\mathbb{R}^{784}$. A simple rule assigns
+a new image to the class whose average image it lies closer to. In the plane
+"closer" is something we can see; in $\mathbb{R}^{784}$ it is a calculation,
+and it takes one dot product per image. On the $2{,}000$ test images of those
+two classes the rule is right about $92\%$ of the time. If the pictures we
+draw in the plane did not carry over to $784$ dimensions, a rule as simple as
+"nearest mean" would have no reason to work.
 
 The dot product carries the geometry of the plane into any dimension.
 Lengths are square roots of dot products, the shadow of one vector on another
@@ -628,10 +634,12 @@ Gram–Schmidt, loses orthogonality
 
 ## Similarity in High Dimensions
 
-The rest of the section works with the images from the opening. We load
-them through `d2l.FashionMNIST` (:numref:`sec_fashion_mnist`) as NumPy
-arrays, one flattened image of $784$ pixels per row, with pixel values in
-$[0, 1]$.
+So far every result came with a picture in the plane. We now ask what the
+results say where no picture is possible: how similar two images are, and
+what similarity to expect between vectors that are unrelated. The rest of the
+section works with the images from the opening. We load them through
+`d2l.FashionMNIST` (:numref:`sec_fashion_mnist`) as NumPy arrays, one
+flattened image of $784$ pixels per row, with pixel values in $[0, 1]$.
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-1}
 #@tab mxnet
@@ -836,9 +844,11 @@ the layers of :numref:`sec_softmax`.
 
 ### Hyperplanes and Signed Distance
 
-Start in the plane with $\mathbf{w} = (2, 1)$ and $b = -1$. The points with
-$2x + y - 1 = 0$ form the line $y = 1 - 2x$. By :eqref:`eq_mdl-dot_geom`,
-every point $\mathbf{x}$ on it has the same signed shadow on $\mathbf{w}$,
+Both questions have answers we can draw when the boundary is a line in the
+plane, and the drawing shows how $\mathbf{w}$ and $b$ place the line. Take
+$\mathbf{w} = (2, 1)$ and $b = -1$. The points with $2x + y - 1 = 0$ form
+the line $y = 1 - 2x$. By :eqref:`eq_mdl-dot_geom`, every point
+$\mathbf{x}$ on it has the same signed shadow on $\mathbf{w}$,
 
 $$
 \frac{\mathbf{w}\cdot\mathbf{x}}{\|\mathbf{w}\|} = \frac{-b}{\|\mathbf{w}\|} = \frac{1}{\sqrt{5}}.

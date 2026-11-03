@@ -1,21 +1,26 @@
 # Adaptive Methods
 :label:`sec_mdl-adaptive-stochastic-methods`
 
-Take the valley $f(\mathbf{x}) = \tfrac12\bigl(x_1^2 + 1000\, x_2^2\bigr)$
-and start at $(1, 1)$. Gradient descent with the best single step size,
-$\eta = 2/1001$, needs 6,160 steps to bring $f$ below $10^{-8}$: a step small
-enough to keep $x_2$ stable is a thousand times too small for $x_1$. The
-heavy-ball method of :numref:`sec_mdl-gradient-based-optimization`, which adds
-a fraction of the previous step to each new one, needs 296 steps. An optimizer
+The transformers in this book, like most large networks, are trained with
+Adam or its variant AdamW (:numref:`sec_adam`) rather than with plain
+stochastic gradient descent. One reason is the step size. The methods of
+:numref:`sec_mdl-stochastic-gradient-methods` use one step size for every
+coordinate, and their schedules change that step only over time. A network
+has $10^7$ to $10^{11}$ coordinates whose curvatures differ by orders of
+magnitude and are not known in advance. With one step size for all of them,
+the stiffest coordinate sets the step and the others crawl. This section
+asks how an optimizer can choose a step size for each coordinate from the
+gradients alone, and when that choice fails.
+
+The chapter's running example shows how much is at stake. Take the valley
+$f(\mathbf{x}) = \tfrac12\bigl(x_1^2 + 1000\, x_2^2\bigr)$ and start at
+$(1, 1)$. Gradient descent with the best single step size, $\eta = 2/1001$,
+needs 6,160 steps to bring $f$ below $10^{-8}$, because a step small enough
+to keep $x_2$ stable is a thousand times too small for $x_1$. The heavy-ball
+method of :numref:`sec_mdl-gradient-based-optimization`, which adds a
+fraction of the previous step to each new one, needs 296 steps. An optimizer
 that gives each coordinate its own step size, estimated only from the
 gradients it has seen, needs 48.
-
-The problem is not special to this valley. A network has $10^7$ to $10^{11}$
-coordinates whose curvatures differ by orders of magnitude and are not known
-in advance. With one step size for all of them, the stiffest coordinate sets
-the step and the others crawl. The schedules of
-:numref:`sec_mdl-stochastic-gradient-methods` change the step over time, but
-they still give every coordinate the same one.
 
 The remedy is to divide each coordinate's step by the root mean square of its
 own past gradients. AdaGrad, RMSProp and Adam, which this section derives, all
@@ -221,8 +226,13 @@ counterexample below exploits.
 
 ### Adam and Its Bias Correction
 
-**Adam** :cite:`Kingma.Ba.2014` applies the same moving average to the gradient
-itself and corrects both averages for their zero start. The chapter on
+RMSProp divides by a smoothed gradient scale but steps along the raw
+minibatch gradient, noise included. Averaging the gradient itself over recent
+steps, as heavy-ball momentum does, smooths that noise and keeps the iterate
+moving along directions that persist.
+
+**Adam** :cite:`Kingma.Ba.2014` applies the moving average of RMSProp to the
+gradient itself and corrects both averages for their zero start. The chapter on
 optimization algorithms runs it on real models (:numref:`sec_adam`). The
 update is
 
@@ -589,6 +599,9 @@ guarantee. It does not predict failure on ordinary training problems.
 
 ### Coupled and Decoupled Decay
 
+Nearly every training recipe adds weight decay, so an adaptive method has to
+decide whether the decay term passes through its division.
+
 Under SGD, weight decay has two equivalent implementations. Adding the penalty
 $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss adds $\lambda \mathbf{w}$ to
 the gradient, and the update can be read as a gradient step followed by
@@ -894,6 +907,10 @@ stored numbers instead of $2.8 \times 10^{14}$, and inverting them costs about
 $1.4 \times 10^{11}$ operations instead of $4.7 \times 10^{21}$.
 
 ### K-FAC, Shampoo and Muon
+
+The Kronecker identity makes a preconditioner per layer affordable. It leaves
+open which matrix to factor and which power of it to apply, and the methods
+in current use differ in these two choices.
 
 Preconditioning by the Fisher matrix is called the **natural gradient**
 :cite:`Amari.1998`. It is steepest descent when the length of a step is

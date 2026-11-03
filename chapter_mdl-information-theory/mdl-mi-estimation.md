@@ -3,23 +3,25 @@
 
 The previous section computed mutual information from known densities. In
 practice we hold only samples: two crops of one photograph, an image and its
-caption, a sentence and its continuation. The standard general-purpose
-estimator counts nearest neighbors. Given $2{,}000$ samples of a
-one-dimensional Gaussian pair that shares $0.83$ nats, it reports a value
-of about $0.8$ to $0.9$. Given $2{,}000$ samples of a 16-dimensional pair
-that shares $13.3$ nats, it reports about $2.8$. A contrastive model
-trained with $128$ candidates per example reports a loss. Papers subtract it
-from $\ln 128 = 4.85$ and quote the difference as the information that the
-model's two views share, and no such number can exceed $4.85$, whatever the
-views share.
+caption, a sentence and its continuation. We would still like to know how
+much the two share, and representation learning goes further and trains
+models to make that amount large. This section asks what samples alone can
+tell us about dependence.
 
-These numbers matter because representation learning trains on them and
-papers read them as measurements. A reader who cannot tell a measurement from
-a bound, or the slack of a bound from the error of a model, will misread both
-the $2.8$ and the $4.85$.
+A familiar loss makes the question concrete. A contrastive model such as
+SimCLR or CLIP learns to pick the true partner of an example out of a batch
+of candidates, say $128$ of them, and reports a cross-entropy loss. Papers
+often subtract that loss from $\ln 128 = 4.85$ and quote the difference as
+the information that the two views share. That number can never exceed
+$4.85$ nats, however much the views share, because a model that always
+picks the right partner has shown only that it can tell $128$ candidates
+apart. Since models are trained on such numbers and papers read them as
+measurements, we need to tell a measurement from a bound, and the slack of a
+bound from the error of a model.
 
-There are two routes. Nonparametric estimators count neighbors; they work in
-a few dimensions and saturate in more. Variational estimators
+There are two routes. Nonparametric estimators count nearest neighbors. They
+are accurate for a pair of numbers, but for pairs of vectors in more than a
+few dimensions they report far less than the pair shares. Variational estimators
 replace the unknown densities by a model, a decoder or a *critic* (a function
 that scores pairs), chosen so that the result is a lower bound on the
 information, and then maximize the bound. The bound that contrastive learning

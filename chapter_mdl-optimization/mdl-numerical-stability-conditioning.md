@@ -1,11 +1,19 @@
 # Numerical Stability and Conditioning
 :label:`sec_mdl-numerical-stability-conditioning`
 
-The three logits $(1000, 1001, 1002)$ define an ordinary softmax, with
-probabilities $(0.09, 0.24, 0.67)$. Evaluated as written, even in float64,
-the formula returns `NaN` three times. Solve a $12\times12$ linear system with
-`np.linalg.solve` and the answer is off by 30%, although the solver returned
-the exact solution of a system that differs from the stated one in the
+Every computation in this chapter so far ran in floating point, and we read
+its results as if they were exact real numbers. Usually that is harmless.
+Occasionally a training loss turns into `NaN`, or a solver returns an answer
+that looks reasonable and is wrong. This section asks when finite-precision
+arithmetic, rather than the algorithm, decides the answer, and what we can do
+about it.
+
+Two small computations show the two ways this happens. The three logits
+$(1000, 1001, 1002)$ define an ordinary softmax, with probabilities
+$(0.09, 0.24, 0.67)$, yet the formula evaluated as written returns `NaN`
+three times, even in float64. And `np.linalg.solve`, applied to a
+$12\times12$ linear system, returns an answer that is off by 30%, although
+it is the exact solution of a system that differs from the stated one in the
 seventeenth digit. The first failure stops training with a `NaN` loss; the
 second goes unnoticed.
 
@@ -16,8 +24,8 @@ The linear system is so sensitive that rounding its entries in the
 sixteenth digit moves its answer in the first, and no rewriting of the
 solver can undo that.
 
-This section shows what a computer stores and how much error each rounding
-introduces. It then computes softmax and cross-entropy without passing
+We first show what a computer stores and how much error each rounding
+introduces. We then compute softmax and cross-entropy without passing
 through values the format cannot hold, and the variance without subtracting
 nearly equal numbers. A condition number for a function decides whether the
 algorithm or the problem is to blame. The condition number of a
@@ -705,6 +713,10 @@ is accurate in both. Reformulation removes the ill-conditioned step itself
 
 ### One-Pass Variance
 
+Cancellation also hides inside formulas that look harmless. The variance is
+the standard example. Normalization layers compute it at every step, and so
+does any code that standardizes data.
+
 The variance of data $x_1,\ldots,x_N$ with mean $m$ and standard deviation
 $s$ can be computed in one pass from the identity
 
@@ -930,6 +942,11 @@ is not along the most amplified direction (Exercise
 :exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`).
 
 ### Backward and Forward Error
+
+The two lines introduced forward and backward error on one example, where a
+tiny change of the data moved the answer a long way. To judge any computed
+solution against what its problem allows, we need both errors in general,
+and a name for the algorithms whose backward error is small.
 
 For a linear system $\mathbf A\mathbf x=\mathbf b$ and a computed solution
 $\hat{\mathbf x}$, the forward error is

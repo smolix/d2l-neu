@@ -1,34 +1,40 @@
 # Automatic Differentiation
 :label:`sec_mdl-matrix-calculus-autodiff`
 
-A network with $10^8$ parameters computes one number, its loss $\ell$, and
-every training step needs the derivative of $\ell$ with respect to each of the
-$10^8$ parameters. The direct method nudges one parameter, reruns the network,
-and divides the change in $\ell$ by the nudge. That is $10^8$ runs per step. At
-10 ms per run, one gradient takes $10^6$ s, about 12 days, and the size of the
-nudge adds an error of its own. Backpropagation returns all $10^8$ derivatives,
-correct up to rounding, for the cost of about three runs, roughly 30 ms. This
-section explains where the factor of $10^8$ goes.
+In the Basics part, every gradient came from one call to the framework's
+automatic differentiation. The previous section showed what
+that call computes: the derivative of a network is a product of Jacobians,
+one per layer, and the order of multiplication decides the cost. A program,
+however, is a sequence of additions, multiplications and function calls, not
+a list of matrices. How does the framework find the factors from the code,
+and how does it multiply them in the cheap order?
+
+How much the cheap order saves is easiest to see on a large network. A
+network with $10^8$ parameters computes one number, its loss $\ell$, and every training
+step needs the derivative of $\ell$ with respect to each of the $10^8$
+parameters. The direct method nudges one parameter, reruns the network, and
+divides the change in $\ell$ by the nudge. That is $10^8$ runs per step. At
+10 ms per run, one gradient takes $10^6$ s, about 12 days, and the size of
+the nudge adds an error of its own. Backpropagation returns all $10^8$
+derivatives, correct up to rounding, for the cost of about three runs,
+roughly 30 ms. This section explains where the factor of $10^8$ goes.
 
 The explanation is the chain rule read as matrix algebra. Each step of a
-program maps a vector to a vector, so its derivative is a matrix, the Jacobian
-of :numref:`sec_mdl-matrix-calculus`, and the derivative of the whole program
-is the product of these matrices. A product can be multiplied from either end.
-Starting from the input end, one pass carries one input direction, so $10^8$
-inputs need $10^8$ passes. Starting from the loss end, one pass carries one
-output direction, and a loss has a single output.
+program maps a vector to a vector, so its derivative is a Jacobian, and the
+derivative of the program is the product of these Jacobians. Starting from
+the input end, one pass carries one input direction, so $10^8$ inputs need
+$10^8$ passes. Starting from the loss end, one pass carries one output
+direction, and a loss has a single output.
 
 :numref:`sec_autograd` showed how to call both products in a framework. Here
 we build them ourselves in a few lines of Python, prove that they return
 derivatives, trace the backward pass by hand, and count its cost. Then we
 combine the two products to compute curvature along one direction, to
 differentiate the solution of an equation without differentiating the solver,
-and to trade memory for recomputation. Three small examples recur. The
-chapter's running example is the log-sum-exp
-$\ell(\mathbf x)=\log\sum_j e^{x_j}$ at $\mathbf x=(1,-0.5,2)$, whose gradient
-is the softmax $\mathbf p=(0.254,0.057,0.690)$. The plane map
-$\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ at $(0.5,0.5)$ comes from the previous
-section, and the expression $y=(uv+u)^2$ at $(u,v)=(2,-3)$ is small enough to
+and to trade memory for recomputation. Three small examples recur: the
+chapter's log-sum-exp $\ell(\mathbf x)=\log\sum_j e^{x_j}$, whose gradient is
+the softmax; the plane map $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ from the
+previous section; and the expression $y=(uv+u)^2$, which is small enough to
 trace by hand.
 
 We use the following imports throughout this section.

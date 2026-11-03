@@ -1,33 +1,40 @@
 # Gradient Descent and Curvature
 :label:`sec_mdl-gradient-based-optimization`
 
-Take $f(x, y) = \tfrac12(x^2 + 10\,y^2)$ at the point $(2, 1)$, where $f = 7$
-and the gradient is $\nabla f = (2, 10)$. A step of size $\eta$ against the
-gradient moves to $(2 - 2\eta,\, 1 - 10\eta)$. With $\eta = 0.01$ the value
-drops only to $6.01$. With $\eta = 0.1$ it drops to $1.62$. With
-$\eta = 0.25$ it *rises* to $12.4$. The direction was downhill every time;
-only the distance differed.
+A learning rate is usually found by trial: we try a value, watch the loss,
+and lower the value if the loss blows up. Each training step moves against
+the gradient of the loss, so the gradient fixes the direction of the step and
+the learning rate sets only its distance. Yet a poor choice of distance makes
+training either slow or unstable. This section asks how far a step along the gradient
+can be trusted, and how many steps that limit forces on us.
 
-Every first-order method chooses a direction and a distance at every step.
-The gradient settles the direction. This section is about the distance: how
-far a step along the gradient can be trusted, and how many steps that limit
-requires.
+A function of two variables already shows the difficulty. Take the bowl
+$f(x, y) = \tfrac12(x^2 + 10\,y^2)$, which curves ten times faster along $y$
+than along $x$, and start at the point $(2, 1)$, where $f = 7$ and the
+gradient is $\nabla f = (2, 10)$. A step of size $\eta$ against the gradient
+moves to $(2 - 2\eta,\, 1 - 10\eta)$. With $\eta = 0.01$ the value drops only
+to $6.01$. With $\eta = 0.1$ it drops to $1.62$. With $\eta = 0.25$ it
+*rises* to $12.4$. The direction was downhill every time; only the distance
+differed.
 
-The answer depends on curvature. Along $y$ this function curves
-ten times faster than along $x$, so a step short enough for the steep
-direction makes slow progress along the flat one. Even the best fixed step
-needs $69$ iterations to shrink the error by a factor of $10^6$, that is, to
-gain six digits. Stretch the ratio to $1000$, the chapter's running example
-$\tfrac12(x_1^2 + 1000\,x_2^2)$, and it needs $6{,}908$. Momentum brings that
-down to $315$, and Newton's method needs a single step if we can afford its
-Hessian. Most worked numbers below use the opening function, whose Hessian
-$\mathrm{diag}(1, 10)$ keeps every step checkable by hand.
+How far a step can go depends on curvature. A step short enough for the
+steep direction $y$ makes slow progress along the flat direction $x$. Even
+the best fixed step needs $69$ iterations to shrink the error by a factor of
+$10^6$, that is, to gain six digits. Stretch the ratio to $1000$, the
+chapter's running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, and it needs
+$6{,}908$. Momentum brings that down to $315$, and Newton's method needs a
+single step if we can afford its Hessian. Most worked numbers below use the
+opening function, whose Hessian $\mathrm{diag}(1, 10)$ keeps every step
+checkable by hand.
 
-We first bound the safe step through smoothness. We then solve gradient
-descent exactly on quadratics, where the ratio of curvatures appears as the
-condition number, and show how momentum and curvature models each change the
-count. Gradients are exact throughout. The code is plain NumPy, so each
-update can be read against its equation.
+We first bound the safe step through smoothness, which turns the local
+linear model of :numref:`sec_mdl-multivariable_calculus` into a guarantee.
+We then solve gradient descent exactly on quadratics, where the ratio of
+curvatures appears as the condition number, and show how momentum and
+curvature models each change the count. Gradients are exact throughout; the
+noisy gradients of training are the subject of
+:numref:`sec_mdl-stochastic-gradient-methods`. The code is plain NumPy, so
+each update can be read against its equation.
 
 ```{.python .input #gradient-based-optimization-imports}
 #@tab mxnet
@@ -429,6 +436,10 @@ $\mathbf{A}$ it equals the singular-value ratio $\kappa(\mathbf{A})$ of
 :numref:`subsec_mdl-condition-number`.
 
 ### Per-Mode Contraction and the Stability Ceiling
+
+The zigzag in the valley comes from a ceiling on the step that the steep
+direction imposes. To see where that ceiling lies, and what it costs the
+flat direction, we solve gradient descent on a quadratic exactly.
 
 Start with one variable, $f(u) = \tfrac{\lambda}{2} u^2$ with $\lambda > 0$.
 The gradient step is $u_{k+1} = u_k - \eta\lambda u_k$, so

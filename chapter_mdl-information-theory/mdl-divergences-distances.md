@@ -1,13 +1,23 @@
 # Divergences and Distances Between Distributions
 :label:`sec_mdl-divergences-distances`
 
-A generative model is trained by driving some distance between its
-distribution and the data distribution toward zero. Take the smallest case:
-the data sit at a single point, $P = \delta_0$, and the model's samples sit at
-a single point a distance $d$ away, $Q = \delta_d$. A model at $d = 0.01$ is
-nearly right and a model at $d = 100$ is far off, so a useful loss should tell
-them apart. :numref:`tab_mdl-point-mass-table` shows what five common
-comparisons report.
+:numref:`sec_mdl-information_theory` ended with a difficulty: the KL
+divergence becomes infinite as soon as a model gives zero probability to an
+outcome that occurs. A classifier rarely meets it, because a softmax never
+outputs an exact zero. A generative network that turns a low-dimensional
+noise vector into an image meets it often. It is trained by driving some
+distance between its distribution and the data distribution toward zero, yet
+its samples lie on a thin surface in image space that can miss the data
+altogether. This section asks how else two distributions can be compared,
+and which comparisons notice when a model is close but not yet right.
+
+The smallest case already shows what can go wrong. Let the data sit at a
+single point, $P = \delta_0$, and let the model's samples sit at a single
+point a distance $d$ away, $Q = \delta_d$. A model at $d = 0.01$ is nearly
+right and a model at $d = 100$ is far off, so a useful loss should tell them
+apart. :numref:`tab_mdl-point-mass-table` shows what five common comparisons
+report. Most of them are defined later in the section, and for now only the
+pattern matters.
 
 :Five comparisons of the point masses $\delta_0$ and $\delta_d$. The MMD row uses the RBF kernel with length scale $1$.
 :label:`tab_mdl-point-mass-table`
@@ -29,16 +39,15 @@ $2\,\textrm{JS} - \log 4$ and therefore zero in every column. A loss that
 does not change with the generator's parameters has zero gradient, so the
 generator cannot learn which way to move.
 
-Each divergence compares something different, and that difference decides
-how a model trained with it behaves. A GAN loss stalls when the model's
-samples and the data do not overlap. A maximum-likelihood fit spreads mass
-over the empty valley between two modes. A loss built from the slopes of
+The point masses are an extreme case, but in ordinary cases too, what a
+divergence compares decides how a model trained with it behaves. A
+maximum-likelihood fit spreads mass over
+the empty valley between two modes. A loss built from the slopes of
 log-densities cannot tell whether two distant modes hold $70\%$ and $30\%$ of
-the mass or the reverse. None of this can be predicted without knowing what
-each divergence compares.
+the mass or the reverse.
 
-To compare two distributions we must choose *what* to compare, and that
-choice fixes what we must be able to compute and what the comparison can
+To compare two distributions we must therefore choose *what* to compare, and
+that choice fixes what we must be able to compute and what the comparison can
 detect. There are four choices. Ratio methods compare the two densities point
 by point through $p/q$, and they need both densities. Test-function methods
 ask how differently the two distributions average a class of functions, and
@@ -748,8 +757,10 @@ move.
 ### Total Variation and Pinsker's Inequality
 :label:`sec_mdl-tv-pinsker`
 
-The *total variation distance* is the largest disagreement between the
-probabilities that $P$ and $Q$ assign to any event $A$:
+The simplest functions to average are indicators of events, and averaging an
+indicator gives a probability. So the first question is whether some event
+has very different probabilities under $P$ and under $Q$. The *total
+variation distance* is the largest such disagreement over all events $A$:
 
 $$
 \textrm{TV}(P, Q) = \sup_{A} \,\lvert P(A) - Q(A) \rvert.

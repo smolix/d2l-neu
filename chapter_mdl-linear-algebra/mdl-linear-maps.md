@@ -1,17 +1,28 @@
 # Matrices as Linear Maps
 :label:`sec_mdl-linear-maps`
 
-The running matrix of this chapter,
+In :numref:`sec_mdl-geometry-linear-algebraic-ops` we read
+$\mathbf{A}\mathbf{x}$ by rows: entry $i$ is the dot product of row $i$ with
+$\mathbf{x}$, one hyperplane test per output, so that a 10-class softmax layer
+is a set of 10 normal vectors. That reading says what a matrix computes for
+one input. It does not say what the matrix does to all inputs at once, and in
+particular whether its effect can be undone.
+
+The question arises as soon as a layer is narrower than its input. A fully
+connected layer from the 784 pixels of a Fashion-MNIST image to 256 features
+is a $256 \times 784$ matrix. Its output holds fewer numbers than its input.
+By a count we make precise below, it sends at least $784 - 256 = 528$
+independent input directions to zero, so different images produce the same
+features before any nonlinearity sees them. A square matrix may or may not
+lose information. The running matrix of this chapter,
 $\mathbf{A} = \left(\begin{smallmatrix}1 & 2\\ -1 & 3\end{smallmatrix}\right)$,
 sends the vector $(2, -1)$ to $(0, -5)$, and another matrix sends $(0, -5)$
-back to $(2, -1)$. The matrix
+back to $(2, -1)$. That matrix undoes $\mathbf{A}$ on every input, so
+$\mathbf{A}$ loses nothing. The matrix
 $\mathbf{B} = \left(\begin{smallmatrix}2 & 1\\ 4 & 2\end{smallmatrix}\right)$
-sends both $(1, 1)$ and $(0, 3)$ to $(3, 6)$, so no matrix can bring $(3, 6)$
-back: which of the two inputs we started from is lost. A fully connected layer
-from the 784 pixels of a Fashion-MNIST image to 256 features is a
-$256 \times 784$ matrix. By a count we make precise below, it sends at least
-$784 - 256 = 528$ independent input directions to zero before any
-nonlinearity sees them.
+sends both $(1, 1)$ and $(0, 3)$ to $(3, 6)$. Seeing the output $(3, 6)$, we
+cannot tell which of the two inputs we started from, so no matrix can bring
+it back.
 
 Whether a map can be undone decides whether a layer discards information,
 whether a linear system has one solution or many, and how a probability
@@ -20,14 +31,8 @@ reading a matrix through its columns. Column $j$ is the image of the $j$-th
 coordinate axis, and these images determine the whole map. The number of
 linearly independent columns, the *rank*, tells how many input dimensions
 survive. The signed volume of the image of the unit cube, the *determinant*,
-tells in one number whether any dimension is lost.
-
-In :numref:`sec_mdl-geometry-linear-algebraic-ops` we read
-$\mathbf{A}\mathbf{x}$ by rows: entry $i$ is the dot product of row $i$ with
-$\mathbf{x}$, one hyperplane test per output, so that a 10-class softmax layer
-is a set of 10 normal vectors. This section reads the same product by columns,
-first in two dimensions, where every statement is a picture, and then in $n$
-dimensions.
+tells in one number whether any dimension is lost. We work first in two
+dimensions, where every statement is a picture, and then in $n$ dimensions.
 
 ```{.python .input #mdl-linear-maps-matrices-as-linear-maps}
 #@tab mxnet

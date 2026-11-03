@@ -1,11 +1,19 @@
 # Eigendecompositions
 :label:`sec_mdl-eigendecompositions`
 
-A surfer moves between two web pages. From page 1 she clicks to page 1 or to
-page 2 with probability $1/2$ each; from page 2 she stays with probability
-$3/4$ and returns to page 1 with probability $1/4$. Let $\mathbf p_k$ hold the
-probabilities of being on each page after $k$ clicks. One click multiplies it
-by a fixed matrix,
+In :numref:`sec_mdl-linear-maps` we asked what a matrix does to space when it
+is applied once. Many computations apply the same matrix again and again. A
+deep linear network with equal layers computes $\mathbf A^{50}\mathbf x$
+after 50 layers, and gradient descent on a quadratic multiplies its error by
+one fixed matrix per step. In each case we want to know whether the signal
+grows, dies out, or settles, and how quickly. Multiplying out the powers gives
+the numbers but does not explain them.
+
+A random walk between two web pages is the smallest instance of the question.
+From page 1 a surfer clicks to page 1 or to page 2 with probability $1/2$
+each; from page 2 she stays with probability $3/4$ and returns to page 1 with
+probability $1/4$. Let $\mathbf p_k$ hold the probabilities of being on each
+page after $k$ clicks. One click multiplies it by a fixed matrix,
 
 $$
 \mathbf p_{k+1}=\mathbf P\mathbf p_k,
@@ -15,16 +23,12 @@ $$
 
 whose columns are the click probabilities from each page, so each column sums
 to one. Starting on page 1, $\mathbf p_0=(1,0)$, the distribution reads
-$(0.5,0.5)$, $(0.375,0.625)$, $(0.344,0.656)$, $(0.336,0.664)$. It appears to
-settle. Where is the surfer after 50 clicks, and how fast does the answer
-settle?
+$(0.5,0.5)$, $(0.375,0.625)$, $(0.344,0.656)$, $(0.336,0.664)$. The changes
+shrink from click to click, as if the walk were settling on a fixed
+distribution. Where is the surfer after 50 clicks, and how fast does the
+answer settle? PageRank asks the same question of the whole web.
 
-The same question arises whenever one matrix is applied over and over. A deep
-linear network with equal layers computes $\mathbf A^{50}\mathbf x$ after 50
-layers, gradient descent on a quadratic multiplies its error by one fixed
-matrix per step, and PageRank ranks the web by where a surfer ends up. Without
-an answer we cannot say whether a signal grows, dies out, or settles, nor how
-quickly. The answer is to write the starting vector in the coordinates of a few
+The answer is to write the starting vector in the coordinates of a few
 special directions, the eigenvectors, along which the matrix acts as
 multiplication by a number. Each coordinate then evolves by its own scalar
 power $\lambda^k$.
@@ -996,9 +1000,12 @@ elongated the bowl is.
 ### Sample Covariance and the Marchenko--Pastur Law
 :label:`subsec_mdl-sample-covariance-mp`
 
-Draw $n$ samples of pure noise in $d$ dimensions, with independent
-coordinates of mean 0 and variance 1, so that the true covariance is
-$\mathbf I$, and stack them as the rows of $\mathbf X\in\mathbb R^{n\times d}$.
+When we look for structure in data, we look at the large eigenvalues of its
+sample covariance. To tell which eigenvalues are large, we need to know what
+they are when the data have no structure at all. Draw $n$ samples of pure
+noise in $d$ dimensions, with independent coordinates of mean 0 and
+variance 1, so that the true covariance is $\mathbf I$, and stack them as
+the rows of $\mathbf X\in\mathbb R^{n\times d}$.
 Do the eigenvalues of the sample covariance
 $\mathbf C=\tfrac1n\mathbf X^\top\mathbf X$ sit near 1? For a unit vector
 $\mathbf w$, the Rayleigh quotient $\mathbf w^\top\mathbf C\mathbf w$ is the
@@ -1322,9 +1329,14 @@ limit?
 ### Normal Matrices
 :label:`subsec_mdl-normal-matrices`
 
-A matrix is *normal* when it commutes with its transpose,
-$\mathbf A^\top\mathbf A=\mathbf A\mathbf A^\top$ (for complex matrices, with
-the conjugate transpose $\mathbf A^*$ in place of $\mathbf A^\top$). Symmetric
+Both counterexamples, the shear and the Jordan block, have too few
+eigenvectors to form a basis. We therefore look first at the opposite
+extreme, matrices with an orthonormal basis of eigenvectors. Such a matrix
+acts on perpendicular directions independently, so its eigenvalues should
+tell the whole story. A matrix is *normal* when it commutes with its
+transpose, $\mathbf A^\top\mathbf A=\mathbf A\mathbf A^\top$ (for complex
+matrices, with the conjugate transpose $\mathbf A^*$ in place of
+$\mathbf A^\top$). Symmetric
 matrices, orthogonal matrices, and the rotation--scaling blocks
 $r\mathbf Q_\theta$ are normal. The running matrix
 $\mathbf A=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ is not:

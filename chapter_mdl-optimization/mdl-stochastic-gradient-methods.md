@@ -1,36 +1,32 @@
 # Stochastic Gradient Methods
 :label:`sec_mdl-stochastic-gradient-methods`
 
-A training loss is an average over examples, and its exact gradient touches
-every one of them. With $n = 10^9$ examples, one step of gradient descent is
-one pass over the data, and gradient descent needs thousands of steps. On this
-chapter's running example $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$,
-whose two curvatures differ by a factor of $1000$, the best fixed step needs
-about $7{,}000$ steps to shrink the error a million-fold. A minibatch of
-$b = 256$ examples costs about four million times less than a full pass, and
-its gradient is right on average. But it is noisy. Take the simplest loss,
-$f(x) = \tfrac12 x^2$, add noise of unit variance to every gradient, and use
-the step $\eta = 0.1$. The iterate never settles: its mean square tends to
-$0.1/1.9 \approx 0.053$, so it stays about $0.23$ away from the minimizer
-however many steps we take.
+Training a network almost never uses the exact gradient of its loss. Each
+step computes the gradient on a minibatch of a few hundred examples instead
+of the whole training set. The two previous sections assumed exact
+gradients: curvature set the number of steps, and convexity made a
+stationary point a global minimizer. A minibatch gradient is right on
+average, but it is noisy, and the noise changes the question from how many
+steps a run needs to how close to the minimizer it can get. This section
+asks what the noise costs and how that cost can be removed.
 
-Every deep network is trained this way, so this noise decides the loss at
-which a run ends. Three numbers set that loss: the size of the noise, the
-step, and the number of steps we can afford. This section computes how each of
-them enters.
+The simplest loss already shows the cost. Take $f(x) = \tfrac12 x^2$, whose
+minimizer is $0$, add noise of unit variance to every gradient, and use the
+step $\eta = 0.1$. With exact gradients each step would shrink $x$ by a tenth,
+and the iterate would approach $0$ as closely as we like. With noise it never
+settles: its mean square tends to $0.1/1.9 \approx 0.053$, so it stays about
+$0.23$ away from the minimizer however many steps we take. Three numbers set
+the loss at which a run ends: the size of the noise, the step, and the number
+of steps we can afford.
 
 We first measure the noise of a minibatch gradient. On a quadratic we then
 compute exactly where a fixed step stalls and how long it takes to get there.
 Next we show how a decaying step removes the stall and what its constant must
 be, and we bound the loss that a constant step tuned to a fixed budget reaches
 on convex and on nonconvex losses. Finally, we cancel the noise on a finite
-training set with a stored gradient.
-
-The two previous sections assumed exact gradients: curvature set the number
-of steps, and convexity made a stationary point a global minimizer. With noisy
-gradients the question changes from "how many steps" to "how close". Every
-method in this section uses one step size for all coordinates, and the next
-section lets each coordinate choose its own.
+training set with a stored gradient. Every method in this section uses one
+step size for all coordinates, and the next section lets each coordinate
+choose its own.
 
 ```{.python .input #mdl-stochastic-gradient-methods-stochastic-gradient-methods}
 #@tab mxnet
@@ -73,9 +69,14 @@ $$
 
 where $f_i$ is the loss on example $i$ and $\mathbf{x} \in \mathbb{R}^d$ holds
 the parameters. Its gradient $\nabla f = \tfrac1n \sum_i \nabla f_i$ is an
-average too, so computing it touches all $n$ examples. **Stochastic gradient
-descent** (SGD) replaces the average over all examples by the average over a
-random **minibatch** $\mathcal{B}$ of $b$ indices,
+average too, so computing it touches all $n$ examples. With $n = 10^9$
+examples, one step of gradient descent is one pass over the data, and
+gradient descent needs thousands of steps: on the chapter's running example
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, whose two curvatures differ by a factor of
+$1000$, the best fixed step needs about $7{,}000$ steps to shrink the error a
+million-fold. **Stochastic gradient descent** (SGD) replaces the average
+over all examples by the average over a random **minibatch** $\mathcal{B}$
+of $b$ indices,
 
 $$
 \hat{\mathbf{g}}_b(\mathbf{x}) = \frac{1}{b} \sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}),
@@ -84,10 +85,13 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-minibatch`
 
-Each step thus reads $b$ examples instead of $n$. Throughout the section, $k$
-counts optimizer steps, and the step size $\eta_k$ may change with $k$. In the
-analysis, a fresh minibatch is drawn at every step
-and its $b$ indices are independent and uniform on $\{1, \ldots, n\}$, that is,
+Each step thus reads $b$ examples instead of $n$. A minibatch of $b = 256$
+out of $10^9$ examples costs about four million times less than a full pass,
+and the next subsection shows that its gradient is right on average.
+Throughout the section, $k$ counts optimizer steps, and the step size
+$\eta_k$ may change with $k$. In the analysis, a fresh minibatch is drawn at
+every step and its $b$ indices are independent and uniform on
+$\{1, \ldots, n\}$, that is,
 drawn with replacement. Training loops usually shuffle the data and draw
 without replacement, which multiplies the variance below by
 $(n-b)/(n-1)$, a factor close to one when $b \ll n$ (:numref:`sec_sgd` derives
@@ -915,6 +919,13 @@ example at nearby points share most of their noise. Their difference keeps the
 change, which is small, and discards the shared part, which is large.
 
 ### SVRG and SAGA
+
+The control variate needs a snapshot and its full gradient, and the snapshot
+must follow the iterate, or the distance in
+:eqref:`eq_mdl-opt-svrg-variance` stops shrinking. A full gradient at every
+step would defeat the purpose. SVRG refreshes the snapshot once per epoch;
+SAGA replaces it by a table of stored gradients, refreshed one example at a
+time.
 
 SVRG works in epochs. At the start of each epoch it stores a snapshot
 $\tilde{\mathbf{x}}$ and computes the full gradient $\nabla f(\tilde{\mathbf{x}})$;

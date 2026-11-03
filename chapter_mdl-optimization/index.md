@@ -1,30 +1,35 @@
 # Optimization
 :label:`chap_mdl-optimization`
 
-Training a network lowers a function of millions of variables, one small
-step at a time. Two variables are enough to make this slow. On
-$f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$, every step size above
-$2/1000$ makes $x_2$ grow instead of shrink. At the best fixed step, $x_1$
-shrinks by only $0.2\%$ per step, so gradient descent needs about $6{,}900$
-steps to gain six digits. Noise in the gradient, a constraint on
-$\mathbf{x}$, or 16-bit arithmetic each change how many steps are needed and
-where the run ends.
+Every network in this book was trained by the same loop: compute the
+gradient of the loss, step against it, repeat. The size of the step is the
+learning rate. Too high a rate makes the loss overflow, and a lower one is
+stable but can be slow. :numref:`chap_optimization` showed what momentum,
+adaptive methods and schedules do about this on real networks, and left the
+proofs to this chapter. Why does the learning rate have a ceiling? Why can a
+step below it still make almost no progress? Why do noisy gradients keep a
+run from settling?
 
-:numref:`chap_optimization` shows what practitioners do about this, with
-momentum, adaptive methods and schedules, and measures the effect on real
-networks. Calculus describes a function near one point. Optimization needs
-statements about whole runs: how far a step may go, whether the run ends at
-the best point, and what noise, constraints and rounding change. This
-chapter proves why the methods work, computes their constants exactly on
-problems small enough to solve by hand, and shows where each guarantee
-ends. The quadratic above is the running example of every section.
+In 1847 Augustin-Louis Cauchy, who wanted to compute the orbits of celestial
+bodies, proposed to solve a system of equations by moving downhill on the
+sum of their squared errors, the method we now call gradient descent. Its
+theory ties each question to a property of the function. The steepest
+curvature sets the largest safe step, the ratio of the steepest to the
+flattest curvature sets the number of steps, and convexity decides whether
+the point where a run stops is the best one. The bowl
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, the running example of every section, is a
+thousand times steeper in one direction than in the other, so a step that
+is safe in the steep direction barely moves along the flat one, and gradient
+descent needs thousands of steps. The same theory explains why momentum and Adam help, why
+clipping and weight decay act as constraints, and why a loss can turn into
+`NaN`.
 
 :numref:`sec_mdl-gradient-based-optimization` asks how far a gradient step
 can go and how curvature sets the number of steps.
 :numref:`sec_mdl-convexity` asks when a point that looks optimal locally is
 optimal globally, and how fast gradient descent reaches it.
 :numref:`sec_mdl-stochastic-gradient-methods` asks what noisy gradients cost
-and how a decaying step or a stored gradient removes that cost.
+and how to remove that cost.
 :numref:`sec_mdl-adaptive-stochastic-methods` asks how an optimizer can learn
 one step size per coordinate from gradients alone, and when that fails.
 :numref:`sec_mdl-constrained-optimization-duality` asks how to find the best
@@ -34,11 +39,10 @@ is better, and what the multipliers measure.
 :numref:`sec_mdl-numerical-stability-conditioning` asks when finite-precision
 arithmetic, rather than the algorithm, decides the answer.
 
-We assume gradients and Hessians, the eigenvalues of symmetric matrices, and
-the training loop of the Basics part. The proofs assume smooth or convex
-functions. Deep-network losses are neither, so for them the results are
-models, and each section says where its model stops. Interior-point solvers
-and operator-splitting methods are not taught.
+We assume gradients, Hessians and eigenvalues. The proofs assume smooth or
+convex functions. Deep-network losses are neither, so for them the results
+are models, and each section says where its model stops. Interior-point and
+operator-splitting methods are left out.
 
 ```toc
 :maxdepth: 2

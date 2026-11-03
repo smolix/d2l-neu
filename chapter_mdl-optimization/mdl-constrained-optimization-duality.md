@@ -1,19 +1,27 @@
 # Constrained Optimization
 :label:`sec_mdl-constrained-optimization-duality`
 
-Clip a gradient $\mathbf{y} = (3, 4)$ to norm at most $1$. The answer,
-$(0.6, 0.8)$, is not a point where any gradient vanishes: the squared distance
-$f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ has gradient
-$(-2.4, -3.2)$ there, and $f = 8$. Instead, no *allowed* direction lowers $f$:
-every move that keeps $\|\mathbf{x}\| \le 1$ makes $f$ larger or, to first
-order, leaves it unchanged. Optima of this kind, with a nonzero gradient, arise
-for weights under a norm budget, attention weights that must sum to one, and
-margins that must be at least one. A lasso penalty, which charges for every
-nonzero weight, leads to a close relative.
+So far every variable could take any value. Many quantities in deep learning
+cannot. Attention weights must be nonnegative and sum to one, gradient
+clipping keeps the norm of a gradient at or below a threshold, a norm budget
+limits the weights, and the margins of a support vector machine must be at
+least one. At the best point of such a problem the gradient usually does not
+vanish, so the zero-gradient test of the earlier sections fails. A lasso
+penalty, which charges for the absolute value of every weight, replaces such
+a hard limit by a cost and leads to a close relative. This section asks how
+to recognize the best point when the variables must stay in a set, and how
+to compute it.
 
-Without a replacement for the condition "the gradient is zero", we can neither
-recognize a constrained optimum nor compute one. Gradient descent alone walks
-out of the feasible set.
+Gradient clipping gives the smallest instance. Clipping the gradient
+$\mathbf{y} = (3, 4)$ to norm at most $1$ returns $(0.6, 0.8)$, the point of
+the unit disk nearest to $\mathbf{y}$. This point minimizes the squared
+distance $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ over the
+disk, yet it is not a point where any gradient vanishes: $f$ has gradient
+$(-2.4, -3.2)$ there, and $f = 8$. Instead, no *allowed* direction lowers
+$f$: every move that keeps $\|\mathbf{x}\| \le 1$ makes $f$ larger or, to
+first order, leaves it unchanged. Without a replacement for the condition
+"the gradient is zero", we can neither recognize a constrained optimum nor
+compute one. Gradient descent alone walks out of the feasible set.
 
 The replacement is one number per constraint, its *multiplier*, which records
 how hard the optimum presses against that constraint. At $(0.6, 0.8)$ the push
@@ -23,11 +31,9 @@ and those of Karush, Kuhn, and Tucker for inequalities. The projection that
 produced $(0.6, 0.8)$ gives an algorithm: take a gradient step, then return to
 the nearest feasible point. When a penalty with a kink, such as the absolute
 value, replaces the hard wall, the same step becomes a proximal step, which
-sets lasso weights to exactly zero.
-
-The earlier sections of this chapter optimized over all of $\mathbb{R}^n$.
-Convexity (:numref:`sec_mdl-convexity`) makes the conditions of this section
-sufficient and its algorithms convergent.
+sets lasso weights to exactly zero. Convexity (:numref:`sec_mdl-convexity`)
+makes the conditions of this section sufficient and its algorithms
+convergent.
 
 ```{.python .input #constrained-imports}
 #@tab mxnet

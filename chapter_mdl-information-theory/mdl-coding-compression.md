@@ -1,34 +1,32 @@
 # Codes, Compression, and Perplexity
 :label:`sec_mdl-coding-compression`
 
-A source emits the symbol `a` with probability $0.9$ and the symbol `b`
-with probability $0.1$. Its entropy is $0.47$ bits per symbol, and each `a`
-carries only $\log_2(1/0.9) = 0.15$ bits of surprise. Yet a code that
-writes one binary codeword per symbol cannot spend less than one whole bit
-on an `a`, more than six times its information.
+:numref:`sec_mdl-information_theory` read every log-loss as a code length:
+a model whose loss on a text is $x$ bits per symbol should be able to store
+that text in about $x$ bits per symbol. We never built the code that does
+this, and the reading means little until such a code exists. This section
+asks two questions: is there a code whose length is a model's log-loss, and
+how close do real compressors come to it?
 
-On real text, the probability model behind a code matters as much as the
-code. The general-purpose compressor `zlib` stores H. G. Wells's novel *The
-Time Machine*, 173,428 characters over 27 symbols, in $2.84$ bits per
-character.
-A model that predicts each character from the three before it, learning its
-counts as it reads, codes the same text in $2.55$ bits per character. A coder
-driven by the next-token probabilities of a large language model compresses
-ImageNet image patches to $43.4\%$ of their raw size, against $58.5\%$ for
-PNG, and LibriSpeech audio to $16.4\%$, against $30.3\%$ for FLAC
-:cite:`Deletang.Ruoss.Duquenne.ea.2023`.
+Compressors are familiar tools, and they already suggest the answer. Take
+*The Time Machine*, the novel of :numref:`sec_text-sequence`, reduced to
+173,428 characters over 27 symbols, the 26 letters and the space. The
+general-purpose compressor `zlib` stores it in $2.84$ bits per character. A
+small model that predicts each character from the three before it, learning
+its counts as it reads, codes the same text in $2.55$ bits per character.
+The model that predicts the text better also writes the shorter file, and
+this section shows why. Once a code exists whose length is the log-loss, a
+loss of $1.8$ nats per token is a file size, a perplexity is a branching
+factor, and choosing between two models becomes a question of which complete
+description is shorter.
 
-:numref:`sec_mdl-information_theory` read every log-loss as a code length.
-That reading means little until a code exists that attains it. Once one
-does, a loss of $1.8$ nats per token is a file size, a perplexity is a
-branching factor, and choosing between two models becomes a question of
-which complete description is shorter.
-
-A code that needs no separators is a set of non-overlapping intervals, so its codeword lengths must fit a budget.
-The best lengths are $\log_2(1/p)$ bits, and rounding them to whole bits
-costs up to one bit per symbol. Coding the whole message as one interval
-rounds only once. For a source with memory, such as text, the long-run floor
-is the entropy rate, and perplexity is the per-token loss exponentiated.
+We build the code in steps. A code that needs no separators between its
+codewords has a fixed budget of short codewords to hand out. The best length
+for a symbol of probability $p$ is $\log_2(1/p)$ bits, and rounding these
+lengths to whole bits costs up to one bit per symbol. Coding the whole
+message as one unit rounds only once. For a source with memory, such as
+text, the long-run floor is the entropy rate, and perplexity is the
+per-token loss exponentiated.
 
 The section rests on one fact from the previous section. The expected
 log-loss of a model $Q$ on data from $P$, the cross-entropy, splits into
@@ -234,8 +232,13 @@ The one bit is not an artifact of the proof. The best symbol code, built by
 Huffman's algorithm :cite:`Huffman.1952`, gives the pair the lengths
 $1, 2, 2$ and $1.4$ bits (Exercise :exref:`ex_mdl-coding-compression-huffman`).
 No symbol code can go below one bit per symbol, however, because no
-codeword is shorter than one bit. On the `a`/`b` source of the opening every
-symbol code spends at least $1$ bit per symbol against an entropy of $0.47$.
+codeword is shorter than one bit. This matters most for a skewed source.
+Take one that emits the symbol `a` with probability $0.9$ and the symbol `b`
+with probability $0.1$. Its entropy is $0.47$ bits per symbol, and each `a`
+carries only $\log_2(1/0.9) = 0.15$ bits of surprise. Yet every symbol code
+spends at least one whole bit on an `a`, more than six times its
+information, and so at least $1$ bit per symbol against an entropy of
+$0.47$.
 The "$+1$" is the cost of coding one symbol at a time. Coding blocks of
 symbols shrinks it: Huffman's code for pairs of `a`/`b` symbols spends $0.645$ bits
 per symbol, and long blocks drive the slack to zero :cite:`Cover.Thomas.1999`.
@@ -487,8 +490,10 @@ An adaptive model transmits no parameters, but it codes the early text
 poorly while it learns. A pretrained model codes every file well from the
 start, but its description must be shared once.
 :citet:`Deletang.Ruoss.Duquenne.ea.2023` take the second route with a
-70-billion-parameter language model and obtain the image and audio numbers
-of the section's opening.
+70-billion-parameter language model. A coder driven by its next-token
+probabilities compresses ImageNet image patches to $43.4\%$ of their raw
+size, against $58.5\%$ for PNG, and LibriSpeech audio to $16.4\%$, against
+$30.3\%$ for FLAC.
 
 ### Minimum Description Length
 :label:`subsec_mdl-mdl`
@@ -907,7 +912,7 @@ under one tokenizer.
        problem by one symbol with $\mathbb{E}[\ell] = \mathbb{E}[\ell'] + p_i + p_j$, where
        $\ell'$ are the lengths of the merged code. Conclude by induction.
        Hint: exchange two codewords and compare the expected lengths.
-    1. For the source of the section's opening, `a` with probability $0.9$,
+    1. For the source that emits `a` with probability $0.9$,
        show that every symbol code spends at least one bit per symbol. Then
        code *pairs* of symbols as a four-symbol source with Huffman's
        algorithm and compute the bits per original symbol. How large is the

@@ -1,16 +1,22 @@
 # Mutual Information
 :label:`sec_mdl-mutual-information`
 
-An image and its caption share content; so do two crops of one photograph,
-and a sentence and its translation. How much does one of them tell us about
-the other? The tool we already have, the correlation coefficient, answers only
-for straight-line relations. Take $X\sim\mathcal N(0,1)$ and
-$Y=X^2+0.3\,\epsilon$ with independent noise $\epsilon\sim\mathcal N(0,1)$.
-Their correlation is zero, because $\textrm{Cov}(X,Y)=\mathbb{E}[X^3]=0$ by
-symmetry. Yet knowing $X$ pins $Y$ down up to noise of standard deviation
-$0.3$, while $Y$ on its own spreads from about $0$ to $9$. The quantity this
-section defines gives $1.14$ nats for that pair, more than the $0.83$ nats
-that a Gaussian pair with correlation $0.9$ shares.
+The previous sections compared two distributions over the same variable,
+such as the data and a model. Many questions in deep learning concern a pair
+of variables instead. An image and its caption share content; so do two
+crops of one photograph, and a sentence and its translation. How much does
+one of them tell us about the other?
+
+The tool we already have, the correlation coefficient, answers only for
+straight-line relations. Take $X\sim\mathcal N(0,1)$ and let $Y$ be its
+square plus a little noise, $Y=X^2+0.3\,\epsilon$ with independent
+$\epsilon\sim\mathcal N(0,1)$. The two are plainly related: a large $X$ of
+either sign gives a large $Y$. Yet their correlation is zero, because
+$\textrm{Cov}(X,Y)=\mathbb{E}[X^3]=0$ by symmetry. Knowing $X$ pins $Y$ down
+up to noise of standard deviation $0.3$, while $Y$ on its own spreads from
+about $0$ to $9$, and the correlation sees none of this. The quantity this
+section defines sees it: it credits this pair with more shared information
+than a Gaussian pair with correlation $0.9$.
 
 We want a number that is zero exactly when two variables are independent,
 that grows with their dependence, and that does not change when either
@@ -19,7 +25,7 @@ How much of it does a classifier need to reach a given error rate? How much
 of it survives a noisy channel or a layer of a network, and how much must a
 compressor keep?
 
-The previous sections built the tool. The KL divergence
+The tool for such a number already exists. The KL divergence
 $D_{\textrm{KL}}(P\|Q)$ of :numref:`sec_mdl-information_theory` measures how
 far a distribution $P$ is from a reference $Q$, and Gibbs' inequality says
 that it is nonnegative and zero only when $P=Q$. Applied to the joint
@@ -327,8 +333,11 @@ plug-in estimate from finite counts.
 ### Pointwise Mutual Information
 :label:`subsec_mdl-pmi`
 
-Mutual information is an average. Its summand in
-:eqref:`eq_mdl-mut_ent_def` is the *pointwise mutual information*
+Mutual information is an average over all pairs of outcomes, and the
+average hides which pairs contribute. Often a single pair is what we care
+about: does seeing the word *new* make the next word *york* more likely than
+chance? The summand of :eqref:`eq_mdl-mut_ent_def` answers this. It is the
+*pointwise mutual information*
 
 $$\textrm{pmi}(x, y) = \log\frac{p_{X, Y}(x, y)}{p_X(x)\, p_Y(y)},$$
 :eqlabel:`eq_mdl-pmi_def`
@@ -551,6 +560,11 @@ nats, and the next subsection explains why this equals $I(X;Y)$.
 
 ### The Data-Processing Inequality
 :label:`subsec_mdl-dpi`
+
+A hidden layer is computed from the layer below it, and that layer from the
+input. Can processing of this kind create information about the input that
+the earlier layer did not already carry? The answer needs a name for this
+structure.
 
 Random variables $X, Y, Z$ form a *Markov chain*, written $X \to Y \to Z$,
 when $Z$ depends on $(X, Y)$ only through $Y$:

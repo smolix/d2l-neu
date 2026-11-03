@@ -1,36 +1,42 @@
 # Calculus and Automatic Differentiation
 :label:`chap_mdl-calculus`
 
-A network with a hundred million weights computes one number, its loss.
-Every training step needs to know how that number changes when all the
-weights move a little at once. Moving one weight at a time and running the
-network again would take a hundred million runs per step. The derivative
-answers the question for every weight at once, and backpropagation computes
-it for the cost of a few runs. A second question appears as soon as data or
-weights are random. A probability, or an expected loss over a continuous
-variable, is an area under a curve, and training through random sampling
-needs the derivative of such an area.
+Almost every model in this book was trained by the same loop: compute a
+loss, ask the framework for its gradient, and move every weight a small step
+against it. Two parts of that loop went unexplained. Suppose a run diverges
+after we double the learning rate. The gradient is still correct, but the
+step has left the region where the slope predicts the loss. How far can that
+prediction be trusted? The gradient also comes cheaply. Nudging a hundred
+million weights one at a time would take a hundred million network runs, yet
+one call returns every slope for the cost of a few. How?
 
-The Basics part stated the rules of differentiation and used automatic
-differentiation as a tool. It did not show how far the local linear model
-can be trusted, what a slope means at the corner of a ReLU, why the backward
-order is cheap, or how to compute and differentiate an integral. This
-chapter proves these facts and checks them in code. One function recurs
-throughout, the log-sum-exp $\log\sum_j e^{x_j}$, whose gradient is the
-softmax.
+Calculus answers these questions, although it was created for others. In the
+seventeenth century Newton and Leibniz asked how to describe a quantity that
+changes continuously, such as the position of a moving body, and how to add
+up infinitely many small pieces, such as slices of an area. Their answers
+were the derivative and the integral, and they found that each undoes the
+other. The derivative is the best linear model of a function near a point.
+Besides the loss value, it is all an optimizer knows, and backpropagation is
+the chain rule evaluated in its cheapest order. The integral enters once data
+or weights are random: a probability or an expected loss is an area under a
+curve, and training through random sampling needs the derivative of that
+area.
+
+This chapter proves the rules of differentiation that the Basics part used,
+shows why automatic differentiation is correct and cheap, and checks each
+result in code. One function recurs throughout, the log-sum-exp
+$\log\sum_j e^{x_j}$, whose gradient is the softmax.
 
 :numref:`sec_mdl-single_variable_calculus` asks how a function of one
-variable responds to a small change, how large a step its local model
-allows, and what a slope means at a corner.
-:numref:`sec_mdl-multivariable_calculus` asks in which direction many weights
-should move, how one backward sweep produces that direction, and how second
-derivatives tell a minimum from a saddle. :numref:`sec_mdl-matrix-calculus`
-asks how to differentiate a layer whose inputs and parameters are vectors and
-matrices. :numref:`sec_mdl-matrix-calculus-autodiff` asks how a program
-computes these derivatives, and why multiplying from the loss end costs only
-a few runs of the network. :numref:`sec_mdl-integral_calculus` asks how to
-add up infinitely many thin slices, and how to differentiate an expectation
-with respect to a parameter.
+variable responds to a small change, how large a step its local model allows,
+and what a slope means at a corner. :numref:`sec_mdl-multivariable_calculus`
+asks in which direction many weights should move, how one backward sweep
+finds it, and how second derivatives tell a minimum from a saddle.
+:numref:`sec_mdl-matrix-calculus` asks how to differentiate a layer whose
+inputs and parameters are vectors and matrices.
+:numref:`sec_mdl-matrix-calculus-autodiff` asks how a program computes these
+derivatives. :numref:`sec_mdl-integral_calculus` asks how to add up
+infinitely many thin slices, and how to differentiate an expectation.
 
 We assume school calculus and the Basics part. Vector calculus beyond the
 gradient (divergence, Stokes' theorem) and measure theory are left out;

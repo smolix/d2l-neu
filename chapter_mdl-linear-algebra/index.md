@@ -1,43 +1,48 @@
 # Linear Algebra
 :label:`chap_mdl-linear-algebra`
 
-A $28\times28$ image is a vector of 784 numbers, and a layer of a network is
-a matrix that maps it to another vector. We cannot draw 784 dimensions, yet
-we need to answer geometric questions there: how similar two images are,
-which side of a boundary an image falls on, whether a layer loses
-information, what happens to a signal that passes through the same map fifty
-times, and how much of a large weight matrix a few hundred numbers can
-describe.
+Every network in this book is built from matrix products. A linear layer
+multiplies its input by a weight matrix, attention multiplies queries by
+keys, and a recurrent network multiplies its state by the same matrix at
+every step. So far we have treated these products as computations and
+rarely asked what a matrix does to the vectors it acts on.
 
-The Basics introduced vectors, matrix products, norms, and eigenvectors as
-tools of computation. They did not say when a map can be undone, why a
-recurrence whose eigenvalues all lie inside the unit circle can grow tenfold
-before it decays, or which matrix of rank $k$ is closest to a given one. Each
-of these questions has a simple answer once we pick the right directions:
-orthonormal axes, eigenvectors, or a pair of singular bases, in which the
-matrix becomes a list of numbers. One $2\times2$ matrix,
+Take a Fashion-MNIST image, a list of 784 numbers, and a layer that maps it
+to 256 features. How similar are two images? How much information does the
+layer lose? What happens to a signal that passes through the same map fifty
+times? We cannot draw 784 dimensions, so the answers must come from algebra
+that keeps the geometry of the plane.
+
+Linear algebra grew out of solving systems of linear equations. Around 1810
+Carl Friedrich Gauss computed the orbit of the asteroid Pallas from more
+observations than unknowns, fitting it by least squares and solving the
+resulting equations by elimination. The central idea of linear algebra is
+that a matrix becomes simple in the right directions. In orthonormal axes,
+lengths and angles are dot products. Along its eigenvectors, a matrix acts as
+multiplication by a number. With a pair of singular bases, every matrix
+becomes a list of independent stretches. These ideas explain why attention
+divides its scores by $\sqrt d$, when the gradients of a recurrent network
+explode, and why a fine-tuning adapter of low rank can work.
+
+One $2\times2$ matrix,
 $\mathbf{A}=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$,
 and one shear,
 $\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, recur through
 the chapter, the first as the typical case and the second as the case where
-eigenvectors fail.
-
-:numref:`sec_mdl-geometry-linear-algebraic-ops` asks how lengths, angles,
-and projections work in any dimension, and uses them to fit lines and to
-classify images with one dot product. :numref:`sec_mdl-linear-maps` asks
-what a matrix does to all of space at once: which inputs it sends to zero,
-when it can be inverted, and by how much it scales volume.
+eigenvectors fail. :numref:`sec_mdl-geometry-linear-algebraic-ops` asks how
+lengths, angles, and projections work in any dimension, and uses them to fit
+lines and classify images. :numref:`sec_mdl-linear-maps` asks what a matrix
+does to all of space at once: which inputs it sends to zero, when it can be
+inverted, and by how much it scales volume.
 :numref:`sec_mdl-eigendecompositions` asks what happens when the same square
-matrix is applied again and again, and when its eigenvalues give the wrong
-answer to that question. :numref:`sec_mdl-svd-low-rank` asks how every
-matrix, square or not, splits into independent stretches, and uses the
-split to approximate matrices at low rank, to solve least-squares problems,
-and to measure how sensitive a solution is to errors in the data.
+matrix is applied again and again, and when its eigenvalues mislead.
+:numref:`sec_mdl-svd-low-rank` asks how every matrix, square or not, splits
+into independent stretches, and uses the split for low-rank approximation,
+for least squares, and to measure how errors in the data affect a solution.
 
 We work in real finite-dimensional spaces and use complex numbers only where
-real matrices force them on us, for rotations. Algorithms appear only as far
-as the mathematics explains them; how libraries factor large matrices is
-left to the Further Reading.
+real matrices force them on us, for rotations. How libraries factor large
+matrices is left to the Further Reading.
 
 ```toc
 :maxdepth: 2

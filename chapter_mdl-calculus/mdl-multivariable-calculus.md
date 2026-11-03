@@ -1,25 +1,32 @@
 # Multivariable Calculus
 :label:`sec_mdl-multivariable_calculus`
 
-A network with a million weights $w_1, \ldots, w_N$, $N = 10^6$, has a loss
-$\ell(\mathbf{w})$ that depends on all of them. Each training step moves every
-weight a little at once, so it needs to know how $\ell$ responds to a joint
-change. The obvious probe nudges one weight, evaluates the loss again, and
-repeats: $1{,}000{,}001$ evaluations of the loss per step. That is far more
-than a training step can spend. Even then we would know a million separate
-slopes, but not what happens when all the weights move together. This section
-shows that one vector of
-slopes, the *gradient*, answers the question for every joint move at once, to
-first order. The same vector points in the direction of fastest increase.
-Running the chain rule backward through the computation produces the whole
-vector at a small constant multiple of the cost of one evaluation of the loss.
+The previous section studied a loss as a function of one weight, with every
+other weight held fixed. Training never moves one weight at a time. Each step
+of gradient descent moves all the weights a little at once, so it needs to
+know how the loss responds to a joint change, and which joint change lowers
+it fastest.
+
+Consider how we might find out for a network with a million weights
+$w_1, \ldots, w_N$, $N = 10^6$, and loss $\ell(\mathbf{w})$. The obvious
+probe nudges one weight, evaluates the loss again, and repeats for every
+weight: $1{,}000{,}001$ evaluations of the loss for a single step. That is
+far more than a training step can spend. Even then we would know a million
+separate slopes, but not what happens when all the weights move together.
+
+This section shows that one vector of slopes, the *gradient*, answers the
+question for every joint move at once, to first order. The same vector points
+in the direction of fastest increase. Running the chain rule backward through
+the computation produces the whole vector at a small constant multiple of the
+cost of one evaluation of the loss.
 A symmetric table of second derivatives, the *Hessian*, describes how the
 surface bends and tells a minimum from a saddle.
 
 :numref:`sec_calculus` stated the rules of differentiation and used the
 gradient. Here we prove when the linear model holds, why the backward order is
 cheap, and how second derivatives classify a critical point, as
-:numref:`sec_mdl-single_variable_calculus` did for functions of one variable. Our running example is the two-variable log-sum-exp
+:numref:`sec_mdl-single_variable_calculus` did for functions of one variable.
+Our running example is the two-variable log-sum-exp
 $f(x, y) = \log(e^x + e^y)$ at the point $(0, \log 2)$. Its gradient will turn
 out to be the softmax.
 
@@ -615,7 +622,10 @@ gradient.
 
 ### Backpropagation
 
-Return to :eqref:`eq_mdl-multi_func_def` at $(w, x, y, z) = (1, 1, -2, 1)$. A
+The sum over paths gives every partial derivative, but the number of paths
+grows quickly with depth. Paths share edges, and the way we group the shared
+products decides the cost. We compare two groupings on the four-input function
+:eqref:`eq_mdl-multi_func_def` at $(w, x, y, z) = (1, 1, -2, 1)$. A
 *forward pass* evaluates the nodes in order: $a = 1^2 = 1$, $b = 3^2 = 9$,
 $u = 10^2 = 100$, $v = (-8)^2 = 64$, and $f = 164^2 = 26896$. The edge
 derivatives at these values are

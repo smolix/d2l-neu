@@ -1,21 +1,25 @@
 # Duality
 :label:`sec_mdl-lagrangian-duality`
 
-The previous section clipped the point $\mathbf{x}_0 = (3, 4)$ to the unit
-disk: it minimized the squared distance
-$\tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ over all $\mathbf{x}$ with
-$\|\mathbf{x}\| \le 1$ and found $\mathbf{x}^\star = (0.6, 0.8)$ with value
-$8$. Suppose instead that an iterative solver stops at
-$\mathbf{x} = (0.55, 0.835)$. This point is feasible
-($\|\mathbf{x}\|^2 = 0.9997$) and has value $8.01$. Is that good enough, or
-is there a feasible point with value $7$? Without constraints, a zero
-gradient would settle the question, but here the gradient at the true
-optimum is $(-2.4, -3.2)$, not zero. And the disk has infinitely many points,
-so we cannot check them all.
+An iterative solver stops when its progress becomes small and reports that
+it has converged. Whether the point it returns is optimal is a separate
+question. Without constraints, a zero gradient answers it for a convex
+function (:numref:`sec_mdl-convexity`). The previous section showed that a
+constrained optimum usually has a nonzero gradient, so that test is gone.
+Solvers need a lower bound on the optimal value to decide when to stop, and
+proofs need one to show that an answer is optimal. This section asks how to
+find such a bound, and what the multipliers of the previous section
+measure.
 
-Without a bound from below, a solver that reports "converged" has only
-stopped. Solvers need such a bound to decide when to stop, and proofs need
-one to show that an answer is optimal.
+The clipping problem of the previous section shows the difficulty. It
+minimized the squared distance $\tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ to
+$\mathbf{x}_0 = (3, 4)$ over all $\mathbf{x}$ with $\|\mathbf{x}\| \le 1$ and
+found $\mathbf{x}^\star = (0.6, 0.8)$ with value $8$. Suppose instead that an
+iterative solver stops at $\mathbf{x} = (0.55, 0.835)$. This point is
+feasible ($\|\mathbf{x}\|^2 = 0.9997$) and has value $8.01$. Is that good
+enough, or is there a feasible point with value $7$? The gradient at the
+true optimum is $(-2.4, -3.2)$, not zero, and the disk has infinitely many
+points, so we cannot check them all.
 
 The bound comes from moving the constraint into the objective. Add $\lambda$
 times the constraint function $\tfrac12(\|\mathbf{x}\|^2 - 1)$, with
@@ -29,12 +33,11 @@ convex. For a convex problem with a strictly feasible point, its value equals
 the constrained optimum. Its solution, the vector of multipliers, measures
 how fast the optimum improves when each constraint is relaxed.
 
-The previous section found $\mathbf{x}^\star$ and its multiplier
-$\lambda^\star = 4$ from the KKT conditions. This section proves that no
-feasible point does better, computes duals by hand for a half-plane, the
-support vector machine, and a power allocation problem, and shows a problem
-whose best bound stays strictly below its optimum. All computations are
-small enough for NumPy, and `d2l` supplies the plots.
+We prove that no feasible point of the clipping problem beats
+$\mathbf{x}^\star$, compute duals by hand for a half-plane, the support
+vector machine, and a power allocation problem, and show a problem whose
+best bound stays strictly below its optimum. All computations are small
+enough for NumPy, and `d2l` supplies the plots.
 
 ```{.python .input #mdl-lagrangian-duality-duality}
 #@tab mxnet

@@ -1,7 +1,14 @@
 # Matrix Calculus
 :label:`sec_mdl-matrix-calculus`
 
-Take a network with two inputs, two ReLU hidden units and one output,
+The previous section wrote the gradient as a column of partial derivatives
+and the chain rule as a sum over paths through a graph of scalars. A network
+is not written in scalars. Each layer maps a vector to a vector, and its
+weights form a matrix. What is the derivative of the loss with respect to a
+vector or a matrix, and how do we compute it for a whole layer at once?
+
+A network small enough to work by hand shows what is needed. It has two
+inputs, two ReLU hidden units and one output,
 
 $$
 g(\mathbf x)=\mathbf w_2^\top\boldsymbol\varphi(\mathbf W_1\mathbf x+\mathbf b),\qquad
@@ -13,21 +20,21 @@ $$
 where $\boldsymbol\varphi$ applies $\max(0,\cdot)$ to each entry. At
 $\mathbf x=(1,1)$ the pre-activations are $\mathbf W_1\mathbf x+\mathbf b=(3,-2)$,
 so the second unit is off, the hidden vector is $(3,0)$, and the output is
-$g=6$. A training step asks three questions about this number. Nudge the input
-by $\boldsymbol\delta$: the output changes by $2\delta_1+4\delta_2$, a row of
-two numbers, the transpose of the previous section's column gradient. Nudge the weight
-matrix by $\Delta\mathbf W_1$: the output changes by
-$2\,\Delta W_{11}+2\,\Delta W_{12}$ and not at all through the second row, so
-the derivative with respect to a matrix is again a matrix,
+$g=6$. A training step asks three questions about this number. If the input
+moves by $\boldsymbol\delta$, the output changes by $2\delta_1+4\delta_2$, a
+row of two numbers, the transpose of the previous section's column gradient.
+If the weight matrix moves by $\Delta\mathbf W_1$, the output changes by
+$2\,\Delta W_{11}+2\,\Delta W_{12}$ and not at all through the second row,
+so the derivative with respect to a matrix is again a matrix,
 $\left(\begin{smallmatrix}2&2\\0&0\end{smallmatrix}\right)$. And the hidden
 layer $\mathbf x\mapsto\boldsymbol\varphi(\mathbf W_1\mathbf x+\mathbf b)$ maps
 a vector to a vector. Neither a slope nor a gradient describes its derivative,
 yet the output reaches $\mathbf W_1$ only through that layer.
 
-Every training step needs the gradient of the loss with respect to every weight
-matrix. A hand-derived gradient with a transposed square factor raises no
-error; training goes wrong. Reference tables of matrix derivatives run to
-hundreds of entries, and they do not protect against that mistake.
+Such derivatives are easy to get wrong by hand. A hand-derived gradient with
+a transposed square factor raises no error, and training goes wrong.
+Reference tables of matrix derivatives run to hundreds of entries, and they
+do not protect against that mistake.
 
 This section answers the three questions with one object and one rule. The
 derivative of a vector-valued map is a matrix, the *Jacobian*, defined as the
@@ -38,9 +45,7 @@ products, softmax) all follow from one rule: write down the first-order change
 of the function and read the gradient off as its coefficient. The same rule
 produces the backward pass of each layer. We check every result against a
 framework's automatic differentiation and end with $\mathbf p-\mathbf y$, the
-gradient every classifier computes. The previous section wrote the gradient as
-a column and the chain rule as a sum over paths; here both become matrix
-products.
+gradient every classifier computes.
 
 We use the following imports throughout this section.
 
@@ -194,8 +199,15 @@ derivatives.
 
 ### Gradients, Hessians, and the Shape of a Derivative
 
-When $m=1$, a scalar field $f:\mathbb R^n\to\mathbb R$, the Jacobian is a single
-row, $\partial f/\partial\mathbf x=[\partial f/\partial x_1,\ldots,\partial f/\partial x_n]$,
+The gradient and the Hessian of the previous section are both built from
+Jacobians. The gradient is the transpose of the Jacobian of a scalar
+function, and the Hessian is the Jacobian of the gradient. Seeing them this
+way settles a question of shape that every hand derivation runs into:
+whether a derivative is a row or a column, and how a derivative with respect
+to a matrix is arranged.
+
+When $m=1$, a scalar field $f:\mathbb R^n\to\mathbb R$, the Jacobian is a
+single row, $\partial f/\partial\mathbf x=[\partial f/\partial x_1,\ldots,\partial f/\partial x_n]$,
 and :eqref:`eq_mdl-jacobian-linearization` is the first-order expansion
 $f(\mathbf x+\boldsymbol\delta)\approx f(\mathbf x)+(\partial f/\partial\mathbf x)\,\boldsymbol\delta$
 of the previous section. That section wrote the gradient as a column. The two

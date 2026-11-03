@@ -445,9 +445,8 @@ d2l.plot([mean_conf[used], [0, 1]], [acc[used], [0, 1]], 'mean confidence',
 
 The curve stays close to the diagonal. Over all validation images the mean
 confidence is about 81% and the accuracy about 83%, so the model is
-slightly underconfident, and the expected calibration error stays
-between 0.01 and 0.03 in repeated runs in all four frameworks. The probabilities of
-softmax regression can therefore be taken nearly at face value on images
+slightly underconfident, and the expected calibration error stays below
+0.03 in repeated runs. The probabilities of softmax regression can therefore be taken nearly at face value on images
 like its validation images. This is a property of the trained model, not of
 the softmax: deep networks trained on the same loss are often
 overconfident (:numref:`sec_softmax`), and the same check, followed by
@@ -473,7 +472,7 @@ $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$. The frameworks' losses compute
 this form when given logits, and `Classifier.loss` installs them for every
 classifier in the book. Trained for ten epochs, the model reaches about 83%
 validation accuracy, like the version from scratch, and its confidences
-match its accuracy to within about two points.
+match its accuracy to within about three points.
 
 ## Exercises
 
@@ -813,7 +812,7 @@ never form a probability.
 ::: {.col .narrow}
 Same data, minibatch size, learning rate, and epochs as the scratch model.
 
-- About 83% validation accuracy, in every framework.
+- About 83% validation accuracy.
 - The framework's components change how the model is computed, not the
   model.
 :::
@@ -854,7 +853,7 @@ be below $1/10$.
   confidence, in most bins slightly above it.
 :::
 
-::: {.slide title="Softmax Regression Is Nearly Calibrated: ECE of 0.01 to 0.03"}
+::: {.slide title="Softmax Regression Is Nearly Calibrated: ECE Below 0.03"}
 [Calibration]{.kicker}
 
 ::: {.cols .vc}

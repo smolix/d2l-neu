@@ -743,7 +743,7 @@ d2l.plot(list(range(1, 11)), list(curves.values()), 'epoch',
 ```
 
 LeNet sits at chance, 10%, for the first two to five epochs, and after ten it
-reaches between 40% and 65%, depending on how long it stayed at chance. With
+reaches about 60%, less in runs that stay at chance longer. With
 batch normalization the same network is near 70% or above after the first
 epoch and reaches about 88% after ten, close to the 88--90% that LeNet reaches
 with twenty times the learning rate and three times the epochs. Its curve ends
@@ -1350,8 +1350,8 @@ running statistics.
 
 @!batch-norm-lenet-with-batch-normalization-5
 
-Validation accuracy after 10 epochs: LeNet 40–65% (it sits at chance
-for 2–5 epochs), BN-LeNet **≈ 88%**.
+Validation accuracy after 10 epochs: LeNet ≈ 60%, less if it sits at
+chance longer (2–5 epochs); BN-LeNet **≈ 88%**.
 :::
 
 ::: {.slide title="Check: Batch Normalization with a Minibatch of One"}
@@ -1424,7 +1424,7 @@ Source: Wu and He (2018).
   minibatch, then learned $\gamma$, $\beta$.
 - **Scale invariance:** weights × $a$ → gradient ÷ $a$; one learning rate
   for all layers.
-- **LeNet, base rate 0.1, cosine decay, 10 epochs:** 40–65% without,
+- **LeNet, base rate 0.1, cosine decay, 10 epochs:** ≈ 60% without,
   ≈ 88% with, for 226 extra parameters.
 - **Two modes:** running averages with $\rho = 0.9$, $\epsilon = 10^{-5}$,
   set explicitly.

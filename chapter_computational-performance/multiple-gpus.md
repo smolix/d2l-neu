@@ -660,12 +660,12 @@ The two constants predict both times to within a few percent.
 :end_tab:
 
 :begin_tab:`jax`
-The single call takes little more than $\alpha$, although the model adds
+The single call takes about as long as $\alpha$, although the model adds
 0.1 ms for its bytes. Each call costs the host about $\alpha$ to dispatch,
 and the transfer of one call runs while the host dispatches the next.
 :eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
-transfer is shorter than its dispatch. Ten calls take about ten times
-$\alpha$.
+transfer is shorter than its dispatch. Ten calls take about ten times as
+long as one.
 :end_tab:
 
 For a gradient this small, the number of messages decides the communication time, and the

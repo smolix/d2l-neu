@@ -759,7 +759,7 @@ epochs. At this scale the dataset, not the architecture, limits the
 accuracy to about 94%.
 
 Fewer multiply-adds do not make RegNetX32 faster to train: on a GPU, an
-epoch takes half again to nearly twice as long as one of ResNet-18. Timed
+epoch takes about one and a half to two times as long as one of ResNet-18. Timed
 layer by layer, a grouped $3 \times 3$ convolution with 16 channels per
 group runs at a quarter to a tenth of the arithmetic rate of a dense one,
 because the GPU library runs it with generic kernels that do not use the
@@ -1280,7 +1280,7 @@ about 91%. The design rules were found under the paper's optimizer.
 ::: {.slide title="A Third of the Multiply-Adds, Yet Slower Steps on a GPU"}
 [RegNet]{.kicker}
 
-- an epoch of RegNetX32 takes 1.5–2× as long as one of ResNet-18
+- an epoch of RegNetX32 takes about 1.5–2× as long as one of ResNet-18
 - grouped 3 × 3 convolution, 16 channels per group: 1/4 to 1/10 of the
   arithmetic rate of a dense one (generic kernels, no matrix units)
 - about 1.6× as many small kernels per step (33 convolutions, each with

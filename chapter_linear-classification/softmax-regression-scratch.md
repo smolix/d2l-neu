@@ -410,7 +410,7 @@ trainer.fit(model, data)
 
 The training loss falls quickly during the first epoch and slowly after it.
 The validation accuracy is between 75% and 80% after one epoch and about 83%
-after ten. From one epoch to the next it can also drop by about a point, since
+after ten. From one epoch to the next it can also drop by a point or two, since
 minibatch SGD keeps moving the parameters. The training and validation
 losses end close together, near 0.45 and 0.49. A model with 7,850
 parameters fitted to 60,000 images can memorize little of its training
@@ -426,7 +426,7 @@ trainer.evaluate(model, data)
 ```
 
 The model labels about 83% of the validation images correctly. Repeated
-runs in all four frameworks stay between 82% and 84%: the random
+runs stay between 82% and 84%: the random
 initialization and the order of the minibatches change the result by about
 a point.
 

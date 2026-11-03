@@ -190,8 +190,9 @@ for name, model in models.items():
 S4D answers fewer than one query in five correctly, a little above the
 chance rate of one in eight: its weights depend on distance, and the same
 distance holds a symbol in one sequence and a filler in the next. The minGRU
-answers nine in ten or more. Its decay is chosen by each input, so it can
-keep a symbol and let fillers pass, and it nearly solves the task. Its
+answers nine in ten or more in most runs, and rarely fewer than eight. Its
+decay is chosen by each input, so it can keep a symbol and let fillers pass,
+and it nearly solves the task. Its
 gates, however, start near one half: on the delayed recall task of
 :numref:`sec_ssm`, which needs no selection at all, the minGRU could not
 keep a symbol across 1,000 fillers unless its gates were initialized with
@@ -648,15 +649,16 @@ For S4D, the contributions rise smoothly toward the query, and the most
 recent inputs dominate, whatever they are. A symbol may stand out from the
 fillers next to it, because the size of a write depends on the token, but
 its decay does not: a symbol hundreds of steps back still contributes far
-less than the last few fillers. The windows at the symbols supply only a
-few percent of the state, about their share of the positions. For Mamba, the
+less than the last few fillers. Unless a symbol happens to sit among the
+last few positions, the windows at the symbols supply only a few percent of
+the state, about their share of the positions. For Mamba, the
 contributions spike at the four symbols, far above the fillers around them,
 wherever the symbols sit, and the windows supply many times their share of
 the positions: the selective SSM writes the symbols and lets the fillers
 pass. The task does not determine how much of the state they supply. Runs
 that copy equally well find different solutions, some reserving nearly the
-whole state for the symbols, others leaving a sizable part of it to the
-last few positions before the query, so the printed share changes from run
+whole state for the symbols, others leaving most of it to the last few
+positions before the query, so the printed share changes widely from run
 to run.
 
 ### Language Modeling

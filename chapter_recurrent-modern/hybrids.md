@@ -369,7 +369,7 @@ _ = d2l.plt.legend(list(accuracy), loc='lower left', ncol=2)  # Below curves
 With 4 pairs, all four models recall nearly every value. Beyond that Gated
 DeltaNet loses pairs, and the more pairs a sequence holds, the more it
 loses: it recalls about nine tenths of 32 pairs and about seven tenths of
-64. Gated linear attention recalls fewer at every load, and its curve
+64. Gated linear attention recalls fewer from 8 pairs on, and its curve
 varies more from run to run. It first sits on a plateau, recalling about
 half of 4 pairs, for a number of training steps that varies from a few
 thousand to more than ten thousand, and only then learns the task. The
@@ -694,7 +694,7 @@ Chance: 1/4. Up to 64 pairs per sequence.
 ::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
 - Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
   seven tenths of 64.
-- Gated linear attention: fewer at every load; it first sits on a plateau
+- Gated linear attention: fewer from 8 pairs on; it first sits on a plateau
   (about half of 4 pairs) for a varying number of steps, as does the
   reference implementation.
 - The hybrid: every pair at every load; attention in almost every run.

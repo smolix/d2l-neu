@@ -2,28 +2,33 @@
 :label:`sec_muon`
 
 Every optimizer so far treats the parameters as one long vector of
-coordinates. The networks we train are not built that way. In `TinyLM`, the
-two-block transformer language model of :numref:`subsec_tinylm`, 393,216 of
-the 470,784 parameters, about 84%, sit in eight matrices that multiply
-activation vectors. Adam rescales each entry of those matrices on its own and
-never uses the fact that they form a matrix. The gradient of such a matrix is
-typically dominated by a few directions :cite:`Jordan.Jin.Boza.ea.2024`, so a
-step along the gradient moves the layer a long way along those few
-directions and hardly at all along the others. Adam's per-entry rescaling
-does not fix this, because it equalizes coordinates, not directions.
+coordinates. The networks we train are not built that way. Most of their
+parameters sit in weight matrices that multiply activation vectors, and a
+step changes what each matrix does to its inputs. This section asks what
+the best step for such a matrix is.
 
-This section asks what the best step for a matrix parameter is. The answer
-depends on how we measure the size of a step. Measured by the Euclidean
-norm, the best direction is the negative gradient, as in SGD. Measured by
-the largest change of any single coordinate, it is the sign of the gradient,
-the direction Adam approximates. Measured by the largest change the step can
-make to a layer's output, it is the gradient with all of its singular values
-set to one. Computing that matrix with a handful of matrix multiplications
-gives Muon :cite:`Jordan.Jin.Boza.ea.2024`, which in under a year went from a
-record on a training-speed competition to the pretraining of a
-trillion-parameter model. We derive Muon, implement it, and compare it with
-AdamW on `TinyLM` and on a CNN. We then relate it to Shampoo and look at
-variants that change its per-neuron step sizes and its communication cost.
+In `TinyLM`, the two-block transformer language model of
+:numref:`subsec_tinylm`, 393,216 of the 470,784 parameters, about 84%, sit
+in eight such matrices. Adam rescales each entry of those matrices on its
+own and never uses the fact that they form a matrix. The gradient of such a
+matrix is typically dominated by a few directions
+:cite:`Jordan.Jin.Boza.ea.2024`, so a step along the gradient moves the
+layer a long way along those few directions and hardly at all along the
+others. Adam's per-entry rescaling does not fix this, because it equalizes
+coordinates, not directions.
+
+The best step for a matrix depends on how we measure the size of a step.
+Measured by the Euclidean norm, the best direction is the negative gradient,
+as in SGD. Measured by the largest change of any single coordinate, it is
+the sign of the gradient, the direction Adam approximates. Measured by the
+largest change the step can make to a layer's output, it is the gradient
+with all of its singular values set to one. Computing that matrix with a
+handful of matrix multiplications gives Muon
+:cite:`Jordan.Jin.Boza.ea.2024`, which in under a year went from a record on
+a training-speed competition to the pretraining of a trillion-parameter
+model. We derive Muon, implement it, and compare it with AdamW on `TinyLM`
+and on a CNN. We then relate it to Shampoo and look at variants that change
+its per-neuron step sizes and its communication cost.
 
 ```{.python .input #muon}
 %%tab pytorch
@@ -196,11 +201,13 @@ polynomial, so a rank-deficient matrix stays rank-deficient, as it should.
 
 ### The Tuned Quintic
 
-The classical Newton--Schulz iteration uses the cubic $p(x) = \tfrac{3}{2}x -
-\tfrac{1}{2}x^3$. It converges to $1$, but slowly from below: near zero its
-slope is $1.5$, so a small singular value grows by only half its size per
-step. A singular value of $0.01$ needs ten steps to pass $0.5$.
-:citet:`Jordan.Jin.Boza.ea.2024` instead tuned a quintic for speed,
+Which polynomial should we iterate? A training step can afford only a few
+iterations, so the polynomial must move small singular values toward $1$
+quickly. The classical Newton--Schulz iteration uses the cubic $p(x) =
+\tfrac{3}{2}x - \tfrac{1}{2}x^3$. It converges to $1$, but slowly from
+below: near zero its slope is $1.5$, so a small singular value grows by only
+half its size per step. A singular value of $0.01$ needs ten steps to pass
+$0.5$. :citet:`Jordan.Jin.Boza.ea.2024` instead tuned a quintic for speed,
 
 $$
 p(x) = 3.4445\,x - 4.7750\,x^3 + 2.0315\,x^5,

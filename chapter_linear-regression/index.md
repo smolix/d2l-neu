@@ -1,19 +1,29 @@
 # Linear Regression
 :label:`chap_regression`
 
-Suppose we want to predict a number from measurements: the price of a house
-from its area and age, a patient's stay in hospital from test results, next
-quarter's demand for a product. Linear regression predicts the number as a
-weighted sum of the measurements plus a constant. It goes back two
-centuries, to Legendre and Gauss, and is still the first method to try. It
-also contains every part of learning in its simplest form: a model with parameters, a loss that
-measures how badly the parameters fit, an algorithm that improves them, and
-predictions for examples the model has not seen.
+Looking at a house for sale, most of us estimate its price by comparison.
+We recall what similar houses sold for, and adjust for a larger or older
+house. A learning method does the same with numbers, finding in past sales
+a rule that maps area, age and other measurements to a price. How should we
+find the rule, and how far can we trust it for a house that has not been
+sold?
+
+Linear regression answers with the simplest rule: the prediction is a
+weighted sum of the measurements plus a constant, with weights that make
+the squared errors on past sales small. Each weight is one adjustment, such
+as the price per square meter. Legendre published the method in 1805 to
+compute the orbits of comets. Gauss, whose orbit for the lost asteroid
+Ceres let astronomers find it again in 1801, published his account in 1809
+and said he had used the method since 1795 :cite:`Legendre.1805,Gauss.1809`.
+Linear regression contains every part of learning in its simplest form: a
+model with parameters, a loss that measures how badly the parameters fit,
+an algorithm that improves them, and predictions for examples the model has
+not seen.
 
 :numref:`chap_preliminaries` supplied the tools; this chapter assembles them
-into a complete learning procedure and asks what can go wrong. A model can
-fit its training data well and still predict new data badly, and an
-implementation can be wrong without raising an error. Both problems stay with us in every later
+into a learning procedure and asks what can go wrong. A model can fit its
+training data well and still predict new data badly, and an implementation
+can be wrong without raising an error. Both problems recur in every later
 chapter, so we study them where the model is simple enough to analyze.
 
 :numref:`sec_linear_regression` asks how a linear model predicts, which loss

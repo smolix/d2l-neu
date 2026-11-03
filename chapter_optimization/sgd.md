@@ -1,28 +1,32 @@
 # Stochastic and Minibatch Gradient Descent
 :label:`sec_sgd`
 
-Every step of gradient descent requires a pass over the whole training
-set. A common recipe trains ResNet-50 on the 1.28 million images of
-ImageNet for 90 epochs in minibatches of 256 images
+Every model since :numref:`sec_linear_regression` has been trained on
+minibatches, most of them with minibatch SGD: at each step we drew a few
+dozen or a few hundred examples, computed the gradient of their average
+loss, and stepped against it. :numref:`sec_gd` studied step size and
+curvature with the exact gradient, which requires a pass over the whole
+training set for every step. This section asks what is gained and what is
+lost when the gradient is estimated from a few examples instead.
+
+The gain is large. A common recipe trains ResNet-50 on the 1.28 million
+images of ImageNet for 90 epochs in minibatches of 256 images
 :cite:`Goyal.Dollar.Girshick.ea.2017`, which comes to 450,000 parameter
-updates. The same number of updates with exact gradients would
-take 450,000 passes over the data, 5,000 times the work. Yet a few hundred
+updates. The same number of updates with exact gradients would take
+450,000 passes over the data, 5,000 times the work. Yet a few hundred
 randomly chosen images already indicate which way is downhill.
 *Stochastic gradient descent* (SGD) uses that observation: it estimates the
 gradient from a random sample of examples and steps along the estimate.
 Each step is cheap, and the estimate is right on average, but any single
 estimate is noisy.
 
-Every model since :numref:`sec_linear_regression` has been trained on
-minibatches, most of them with minibatch SGD. :numref:`sec_gd` studied step
-size and curvature without noise, and this section asks what the noise
-does. On a quadratic valley we compute exactly how far from the minimum the
-iterates of constant-step SGD keep wandering, and how that distance depends
-on the learning rate, the curvature, and the noise. We then ask what
-averaging over a minibatch of $b$ examples gains. Averaging divides the
-variance of the estimate by $b$, which we measure on a small network. On
-parallel hardware, moreover, $b$ examples take far less time than $b$
-separate steps, and we measure that too.
+We first ask what the noise does. On a quadratic valley we compute exactly
+how far from the minimum the iterates of constant-step SGD keep wandering,
+and how that distance depends on the learning rate, the curvature, and the
+noise. We then ask what averaging over a minibatch of $b$ examples gains.
+Averaging divides the variance of the estimate by $b$, which we measure on a
+small network. On parallel hardware, moreover, $b$ examples take far less
+time than $b$ separate steps, and we measure that too.
 
 A race of full-batch, single-example, and minibatch updates against the
 clock closes the section and builds the training function that the next
@@ -732,6 +736,10 @@ before it stops the timer.
 :end_tab:
 
 ### Batch Size and Wall-Clock Time
+
+A smaller batch takes more steps per epoch, and each step is cheaper and
+noisier than a step on a larger batch. We now race batch sizes against the
+clock to see which lowers the loss fastest.
 
 `train_sgd` trains with plain SGD at a given learning rate and batch size.
 We run four configurations. Batch size 1,500 is the whole dataset, which

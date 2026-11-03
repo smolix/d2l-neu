@@ -6,16 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Normalization Layers
 :label:`sec_batch_norm`
 
-LeNet (:numref:`sec_lenet`) trains poorly at the learning rate that suits
-the MLP. At a learning rate of 0.1 its validation accuracy stays at chance
-for the first few epochs and reaches only 70--73% after ten; it needs a
-learning rate of 2.0 and 30 epochs to reach about 89%. The cause is the scale
-of the signals inside the network. Each of its four sigmoids multiplies the
-gradient by at most $1/4$ on the way back, so the first layers receive much
-smaller gradients than the last, and no single learning rate suits all of
-them. Deeper networks make the problem worse: every layer changes the scale
-of the signals that enter the next one, and these scales drift as the weights
-change during training.
+When we trained LeNet in :numref:`sec_lenet`, the learning rate that suited
+the MLP did not work. At a learning rate of 0.1 its validation accuracy
+stayed at chance for the first few epochs and reached only 70--73% after ten;
+we had to raise the rate to 2.0, twenty times larger, and train for 30 epochs
+to reach about 89%. A network of five layers should not need such care. Why
+does the right learning rate depend so strongly on the network, and can a
+layer inside the network remove that dependence?
+
+The cause is the scale of the signals inside the network. Each of LeNet's
+four sigmoids multiplies the gradient by at most $1/4$ on the way back, so
+the first layers receive much smaller gradients than the last, and no single
+learning rate suits all of them. Deeper networks make the problem worse:
+every layer changes the scale of the signals that enter the next one, and
+these scales drift as the weights change during training.
 
 *Batch normalization* :cite:`Ioffe.Szegedy.2015` controls these scales
 inside the network. Before the nonlinearity of a layer, it standardizes each

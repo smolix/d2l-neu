@@ -1,24 +1,34 @@
 # Convolutional Neural Networks
 :label:`chap_cnn`
 
-A 28 × 28 grayscale image has 784 pixels, and the MLP of
-:numref:`chap_perceptrons` flattens them into a vector before its first
-layer. Flattening throws away which pixels are neighbors: if we shuffled the
-pixels of every image in the same way and retrained, the MLP would do exactly
-as well, since it has no notion of space. Yet an edge, a stroke, or a texture
-is a pattern among nearby pixels, and it means the same thing wherever in the
-image it appears. A model that knew this would need far fewer parameters and
-far less data. A one-megapixel color image fed to a hidden layer of 1,000
-units needs three billion weights; a layer that looks only at small
-neighborhoods, with the same weights everywhere, needs a few thousand.
+Every image classifier in this book so far has treated an image as a list
+of numbers. The MLP of :numref:`chap_perceptrons` reads a Fashion-MNIST
+picture of a shirt or a sneaker as 784 pixel values, and the order of the
+list does not matter to it: if we shuffled the pixels of every image in the
+same way and retrained, it would do as well as before. We recognize a
+sneaker by its outline, however, and an outline is a pattern among
+neighboring pixels. It also means the same thing wherever in the image it
+appears. What would a layer look like that knew these two facts about
+images?
 
-*Convolutional neural networks* (CNNs) :cite:`LeCun.Jackel.Bottou.ea.1995`
-build these two facts, locality and translation equivariance, into their
-layers. On ImageNet :cite:`Deng.Dong.Socher.ea.2009` they brought the jump in
-accuracy :cite:`Krizhevsky.Sutskever.Hinton.2012` that started the current
-era of deep learning, and they remain the default where data are scarce,
-latency matters, or every pixel needs a prediction; vision transformers
-(:numref:`chap_transformers`) now share the field.
+The question is older than deep learning. Hubel and Wiesel found that
+neurons in the visual cortex of the cat respond to oriented edges and bars,
+each within a small region of the visual field :cite:`Hubel.Wiesel.1962`.
+Fukushima's Neocognitron :cite:`Fukushima.1980` modeled these cells as a
+network of local detectors repeated across the image, and LeCun and his colleagues trained networks of this kind by
+backpropagation to read handwritten zip codes
+:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`.
+
+The layer at the center of these networks, the *convolution*, applies one
+small set of weights to every neighborhood of the image. It builds in
+*locality*, since each output depends only on nearby pixels, and
+*translation equivariance*, since a shifted input gives a shifted output. A
+network that need not relearn a pattern at every position needs far fewer
+parameters and far less data. *Convolutional neural networks* (CNNs) brought the jump in accuracy on ImageNet
+:cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012` that
+started the current era of deep learning. They remain the default where data
+are scarce, latency matters, or every pixel needs a prediction, and vision
+transformers (:numref:`chap_transformers`) now share the field.
 
 :numref:`sec_why-conv` asks which layer follows from locality and
 translation equivariance alone. :numref:`sec_conv_layer` asks what that
@@ -27,9 +37,8 @@ layer computes, and how it learns an edge detector from data.
 size of the output and how far each output sees. :numref:`sec_channels`
 asks how a layer combines several input channels into several output
 channels. :numref:`sec_pooling` asks how to summarize a neighborhood so that
-small shifts do not matter. :numref:`sec_lenet` asks what a complete
-convolutional classifier looks like, and how it compares with the MLP on
-Fashion-MNIST.
+small shifts do not matter. :numref:`sec_lenet` asks how a complete
+convolutional classifier compares with the MLP on Fashion-MNIST.
 
 The chapter treats images and the classic building blocks; the deeper
 architectures and training methods that made CNNs dominant follow in

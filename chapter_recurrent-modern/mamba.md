@@ -1,15 +1,16 @@
 # Selective State Space Models
 :label:`sec_mamba`
 
-The S4D layer of :numref:`sec_ssm` weights its inputs by their distance
-alone: an input from $k$ steps ago contributes to the output through the
-fixed number $K_k$ of the convolution kernel. Whether the token ten steps
+The S4D layer of :numref:`sec_ssm` treats every input alike: an input from
+$k$ steps ago reaches the output through the fixed number $K_k$ of the
+convolution kernel, whatever that input was. Whether the token ten steps
 ago was the key fact of a paragraph or a comma, its influence on the present
 is the same. Language is not like this. Most tokens can be forgotten
 quickly, and a few, such as a name, a number, or the subject of a sentence,
 must be kept for a long time, at positions that differ from one sentence to
 the next. A memory that keeps everything for the same time fills up with
-commas; a memory that forgets quickly loses the name.
+commas; a memory that forgets quickly loses the name. Can a state space
+model decide, token by token, what to keep and for how long?
 
 Two models of the previous section each have half of a solution. The minGRU
 chooses its decay from the current input, so it can keep one token and
@@ -21,11 +22,12 @@ with the Mamba architecture by :citet:`Gu.Dao.2023`, combine the two: the
 step size $\Delta$ of the discretized SSM, and the vectors that write to and
 read from the state, become functions of the current input. A small step
 size keeps the state and ignores the token; a large one overwrites the state
-with it. The convolution of S4D no longer applies, because the dynamics
-change from step to step, but the scan of :numref:`sec_ssm` does. We test
-these models on a task that requires choosing what to keep, build the Mamba
-layer, measure where its state comes from, and train it as a language model.
-The state of a selective SSM turns out to be a matrix written one outer
+with it. With input-dependent dynamics, Mamba matched or exceeded
+transformers of the same size in language modeling. The convolution of S4D
+no longer applies, because the dynamics change from step to step, but the
+scan of :numref:`sec_ssm` does. We test these models on a task that
+requires choosing what to keep, build the Mamba layer, measure where its
+state comes from, and train it as a language model. The state of a selective SSM turns out to be a matrix written one outer
 product at a time, which the next section studies in its own right.
 
 ```{.python .input #mamba-selective-state-space-models}

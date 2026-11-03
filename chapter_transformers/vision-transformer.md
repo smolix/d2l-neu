@@ -1,27 +1,32 @@
 # Vision Transformer
 :label:`sec_vision-transformer`
 
-A transformer block maps a sequence of vectors to a sequence of the same
-shape, and nothing in it assumes that the vectors stand for words. Can the
-same blocks classify images? The obvious tokenization, one token per pixel,
-is far too expensive. A $96 \times 96$ image has 9,216 pixels, so a single attention
-head in a single layer would score $9{,}216^2 \approx 85$ million pairs of
-pixels; at the $224 \times 224$ resolution of ImageNet the count exceeds 2.5
-billion. Early attention models for vision therefore kept the computation
-local or the images small. :citet:`ramachandran2019stand` restricted
-self-attention to small windows. :citet:`cordonnier2020relationship` proved
-that a self-attention layer with enough heads can express any convolution,
-and applied full attention to $2 \times 2$ patches of small images.
+The convolutional networks of :numref:`chap_cnn` were designed for images.
+They build in two assumptions (:numref:`sec_why-conv`): *locality*, by
+which a unit looks only at a small neighborhood, and *translation
+equivariance*, by which a shifted input produces a shifted output. A
+transformer block assumes neither. It maps a sequence of vectors to a
+sequence of the same shape, and nothing in it says that the vectors stand
+for words, or that two of them are neighbors. Can the same blocks, told
+nothing about images, learn to classify them?
+
+The first obstacle is the choice of tokens. One token per pixel is far too
+expensive, because attention scores every pair of tokens. Even a small
+$96 \times 96$ image has 9,216 pixels, so a single attention head in a
+single layer would score $9{,}216^2 \approx 85$ million pairs of pixels; at
+the $224 \times 224$ resolution of ImageNet the count exceeds 2.5 billion.
+Early attention models for vision therefore kept the computation local or
+the images small. :citet:`ramachandran2019stand` restricted self-attention
+to small windows. :citet:`cordonnier2020relationship` proved that a
+self-attention layer with enough heads can express any convolution, and
+applied full attention to $2 \times 2$ patches of small images.
 
 The *vision transformer* (ViT) of :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
 takes a coarser route. It cuts the image into patches of $16 \times 16$
 pixels, embeds each patch as one token, and passes the sequence to an
 unmodified transformer encoder. Our $96 \times 96$ image becomes 36 tokens,
-and each head scores 1,296 pairs. The model gives up the two assumptions that
-a convolutional network builds in (:numref:`sec_why-conv`): *locality*, by
-which a unit looks only at a small neighborhood, and *translation
-equivariance*, by which a shifted input produces a shifted output. Nothing in
-a ViT tells it that two patches are neighbors.
+and each head scores 1,296 pairs. Nothing in a ViT tells it that two
+patches are neighbors.
 
 This section builds a ViT, trains it on Fashion-MNIST, and checks whether its
 position embeddings learn the layout of the patch grid. It then compares the

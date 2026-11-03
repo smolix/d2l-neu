@@ -1,9 +1,19 @@
 # Momentum
 :label:`sec_momentum`
 
-Gradient descent on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ needs
-47 steps to shrink both coordinates to 1% of their starting values, and that
-is at its best learning rate (:numref:`sec_optimization-intro`). The steep
+Several of the convolutional networks in this book were trained by SGD with
+`momentum=0.9` (:numref:`sec_training_recipes`). Adam, in the next
+section, has momentum built in, and so does almost every other optimizer in
+deep learning. We have used the setting without asking what it does.
+Momentum addresses the weakness of gradient descent that
+:numref:`sec_optimization-intro` and :numref:`sec_gd` measured on a narrow
+valley: a learning rate small enough for the steep direction makes little
+progress along the flat one. This section asks how much faster an
+optimizer can go if it remembers its past gradients.
+
+The valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ shows how much there is
+to gain. At its best learning rate, gradient descent needs 47 steps to
+shrink both coordinates to 1% of their starting values. The steep
 direction, with curvature 4, keeps the learning rate below $2/4 = 0.5$. At
 such a rate the flat direction, with curvature 0.2, shrinks by less than a
 tenth per step. The number of steps grows in proportion to the condition
@@ -22,11 +32,9 @@ and in general a number of steps proportional to $\sqrt{\kappa}$ rather
 than $\kappa$. Momentum needs one extra buffer per parameter and one more
 hyperparameter.
 
-This section derives the method on the valley, works out how to set its
-hyperparameter, and implements it for the minibatch
-training of :numref:`sec_sgd`. Momentum is part of almost every optimizer
-in deep learning, including the SGD with `momentum=0.9` of
-:numref:`sec_training_recipes` and Adam in the next section.
+We derive the method on the valley, work out how to set its
+hyperparameter, and implement it for the minibatch training of
+:numref:`sec_sgd`.
 
 ```{.python .input #momentum}
 %%tab pytorch

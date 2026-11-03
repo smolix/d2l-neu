@@ -45,7 +45,9 @@ import optax
 ## Permutation Equivariance
 :label:`subsec_pos-ignores-order`
 
-Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
+Before choosing a remedy, we state the symmetry precisely, since every
+scheme in this section is a way of breaking it. Let
+$\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
 representations. At evaluation time, with dropout disabled and with no mask
 or position-dependent bias, let $f$ be the self-attention layer
 

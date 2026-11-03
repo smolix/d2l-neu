@@ -6,19 +6,25 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation
 :label:`sec_softmax_concise`
 
-The implementation of :numref:`sec_softmax_scratch` computes the
-probabilities with the softmax and then takes the logarithm of the
-probability of the true class. Both steps can fail in floating point. In
-single precision, the exponential of a logit above about 88 overflows, and a
-probability that underflows to 0 has the logarithm $-\infty$, which the
-previous section could only hide behind a floor that also stops the
-gradient. Yet the loss needs only that one logarithm, and
+In :numref:`sec_softmax_scratch` we wrote every part of softmax regression by
+hand. In practice we use the building blocks of a deep learning framework
+instead, as :numref:`sec_linear_concise` did for linear regression: a fully
+connected layer that holds the weights and the bias, and a cross-entropy loss.
+The framework's loss does more than save lines of code. It takes the logits
+rather than the probabilities, and this removes a numerical problem of the
+scratch implementation. How can the loss be computed so that it stays finite,
+and keeps its gradient, for every value of the logits?
+
+The scratch implementation computes the probabilities with the softmax and
+then takes the logarithm of the probability of the true class. Both steps can
+fail in floating point. In single precision, the exponential of a logit above
+about 88 overflows, and a probability that underflows to 0 has the logarithm
+$-\infty$, which the previous section could only hide behind a floor that
+also stops the gradient. Yet the loss needs only that one logarithm, and
 $\log \hat{y}_y = o_y - \log \sum_k \exp(o_k)$ can be evaluated stably from
-the logits without forming any probability. Deep learning frameworks provide
-a cross-entropy loss that takes the logits and evaluates this combined
-expression, and a fully connected layer that holds the weights and the bias.
-With these two components softmax regression takes a few lines, and its
-forward pass returns the logits, with no softmax.
+the logits without forming any probability. The framework's loss evaluates
+this combined expression. With the layer and the loss, softmax regression
+takes a few lines, and its forward pass returns the logits, with no softmax.
 
 We write the model with the framework's layer, derive the stable form of the
 loss, and install the framework's loss on `Classifier`, so that every

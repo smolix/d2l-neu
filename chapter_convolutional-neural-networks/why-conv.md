@@ -11,15 +11,18 @@ The cost shows up in the number of parameters. Consider a classifier that
 tells cats from dogs in one-megapixel grayscale photographs. Each input
 has $10^6$ dimensions, so even a hidden layer of only 1000 units needs
 $10^6 \times 10^3 = 10^9$ weights. In 32-bit floating point these weights
-alone take 4 GB, before gradients and optimizer state are stored. A billion
-parameters are also far more than any collection of labeled pet photographs
-could determine. People nevertheless tell cats from dogs with ease, because
-photographs are far from arbitrary vectors: nearby pixels are related, and a
-whisker looks like a whisker wherever it appears in the photograph.
+alone take 4 GB, before gradients and optimizer state are stored. A color
+photograph has three values per pixel and triples the count to three billion.
+Even a billion parameters are far more than any collection of labeled pet
+photographs could determine. People nevertheless tell cats from dogs with
+ease, because photographs are far from arbitrary vectors: nearby pixels are
+related, and a whisker looks like a whisker wherever it appears in the
+photograph.
 
-This section turns these two observations into constraints on a fully
-connected layer. We start from a layer that maps a $1000 \times 1000$ image to
-a hidden representation of the same size, which has $10^{12}$ weights.
+Which layer do these two observations leave us with? This section turns them
+into constraints on a fully connected layer. We start from a layer that maps
+a $1000 \times 1000$ image to a hidden representation of the same size,
+which has $10^{12}$ weights.
 Requiring that a shifted input produce a shifted output reduces this to about
 $4 \times 10^6$ weights. Requiring that each hidden unit look only at a small
 neighborhood reduces it to a few hundred. The layer that remains is a
@@ -81,8 +84,10 @@ only away from the border, a point to which :numref:`sec_padding` returns.
 
 ## Constraints on the Fully Connected Layer
 
-Take an input image $\mathbf{X}$ and a hidden representation $\mathbf{H}$ that
-are matrices of the same shape, and keep both spatially organized:
+To turn the two observations into constraints, we first write a fully
+connected layer in a form in which they are easy to state. Take an input
+image $\mathbf{X}$ and a hidden representation $\mathbf{H}$ that are
+matrices of the same shape, and keep both spatially organized:
 $[\mathbf{X}]_{k,l}$ is the pixel at location $(k,l)$, and
 $[\mathbf{H}]_{i,j}$ is the hidden unit at location $(i,j)$. In a fully
 connected layer every hidden unit receives every pixel, each with its own

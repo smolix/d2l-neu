@@ -1,18 +1,23 @@
 # A GPT from Scratch
 :label:`sec_gpt`
 
-A language model trained on text solves the same prediction problem at
-every position of every training sequence. Given "the European lobste", it
-must predict "r"; given "the European lobster", it must predict a space. One
-sequence of 128 bytes therefore holds 128 training examples. A model
-can learn from all of them at once if it meets two requirements. Each
-position must predict its successor without reading it or any later token.
-And the same parameters must serve every position and every length of
-context, from one token to the whole window.
+The block of :numref:`sec_transformer-block` maps a sequence of vectors to
+a sequence of the same shape. A language model has a more specific job: it
+reads text and says what comes next. How does a stack of blocks become such
+a model, and how do we train it?
 
-The transformer block of :numref:`sec_transformer-block` meets the second
-requirement already: it applies the same weights at every position. A
-causal mask inside attention meets the first. Adding the remaining parts,
+The training text suggests the answer. A language model solves the same
+prediction problem at every position of every training sequence. Given "the
+European lobste", it must predict "r"; given "the European lobster", it must
+predict a space. One sequence of 128 bytes therefore holds 128 training
+examples, and a model can learn from all of them at once if it meets two
+requirements. Each position must predict its successor without reading it
+or any later token. And the same parameters must serve every position and
+every length of context, from one token to the whole window.
+
+The transformer block meets the second requirement already: it applies the
+same weights at every position. A causal mask inside attention meets the
+first. Adding the remaining parts,
 an embedding, positions, and an output head, gives a GPT (*generative
 pretrained transformer*), which we write as a `GPT` class. We train it on
 the bytes of Wikipedia articles, test where the normalization belongs, and
@@ -513,10 +518,12 @@ at a different learning rate.
 
 ### Loss Curves and Baselines
 
-We train for 1,000 steps of 64 windows and record both losses every 50
-steps. The training loss is the mean over those 50 steps. The validation
-loss is the mean cross-entropy per byte on the validation windows, which
-is the logarithm of `d2l.lm_perplexity` (:numref:`sec_lstm`).
+A loss in nats means little on its own, so after training we compute
+reference levels to compare it with. We train for
+1,000 steps of 64 windows and record both losses every 50 steps. The
+training loss is the mean over those 50 steps. The validation loss is the
+mean cross-entropy per byte on the validation windows, which is the
+logarithm of `d2l.lm_perplexity` (:numref:`sec_lstm`).
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
@@ -803,6 +810,10 @@ later run. The tokenizer and the loader both go into the library, as
 the released model uses its cache.
 
 ### The Tokenizer
+
+Our `GPT` reads bytes, but GPT-2 reads subword tokens, so loading it starts
+with its tokenizer. The cell registers the three released files and builds
+the tokenizer from the two that describe the vocabulary:
 
 ```{.python .input #gpt-loading-gpt-2-1}
 %%tab pytorch, jax

@@ -6,24 +6,30 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Manipulation
 :label:`sec_ndarray`
 
-Training a model processes its examples in small groups called
-*minibatches*. A minibatch of 256 grayscale images of $28 \times 28$ pixels
-holds $256 \times 28 \times 28 = 200{,}704$ numbers. Image files store each
-pixel as an integer from 0 to 255, and before a model sees the images we
-rescale every pixel to a real number between 0 and 1 by dividing it by 255.
-In plain Python, this takes three nested loops over the images, the rows,
-and the columns, and the interpreter carries out the 200,704 divisions one
-at a time. In deep learning code it takes one expression, `images / 255`,
-which the library applies to the whole minibatch at once in compiled code,
-on a CPU or a GPU. Deep learning code computes with whole arrays in this way
+A photograph of a shirt reaches a model as a grid of numbers, one per
+pixel, and everything else the model touches is numbers too: its parameters,
+the values it computes along the way, and the gradients used to train it. A
+deep learning program spends nearly all of its time computing with such
+collections of numbers. How should we store them, and how can we compute
+with them quickly?
+
+Rescaling images is a typical computation. Training a model processes its
+examples in small groups called *minibatches*, and a minibatch of 256
+grayscale images of $28 \times 28$ pixels holds
+$256 \times 28 \times 28 = 200{,}704$ numbers. Image files store each pixel
+as an integer from 0 to 255, and before a model sees the images we rescale
+every pixel to a real number between 0 and 1 by dividing it by 255. In plain
+Python, this takes three nested loops over the images, the rows, and the
+columns, and the interpreter carries out the 200,704 divisions one at a
+time. In deep learning code it takes one expression, `images / 255`, which
+the library applies to the whole minibatch at once in compiled code, on a
+CPU or a GPU. Deep learning code computes with whole arrays in this way
 throughout, rather than with loops over their elements.
 
 An array of numbers arranged along any number of axes is called a *tensor*.
-Tensors hold everything a model touches: its inputs, its parameters, the
-values it computes along the way, and the gradients used to train it. If you
-know NumPy :cite:`Harris.Millman.Walt.ea.2020`, much of this section will
-look familiar. The tensor classes of deep learning libraries (`ndarray` in
-MXNet, `Tensor` in PyTorch and TensorFlow, `jax.Array` in JAX) resemble
+If you know NumPy :cite:`Harris.Millman.Walt.ea.2020`, much of this section
+will look familiar. The tensor classes of deep learning libraries (`ndarray`
+in MXNet, `Tensor` in PyTorch and TensorFlow, `jax.Array` in JAX) resemble
 NumPy's `ndarray`, with two additions. They run their operations on GPUs and
 other accelerators as well as on CPUs, and the libraries can compute
 derivatives of computations on them automatically, as we will see later in

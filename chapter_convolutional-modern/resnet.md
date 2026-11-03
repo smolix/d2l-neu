@@ -6,32 +6,36 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Residual Networks: ResNet, ResNeXt, and DenseNet
 :label:`sec_resnet`
 
-Adding layers helped every network of this chapter so far, but the gains do
-not continue indefinitely, and the reason is not overfitting.
-:citet:`He.Zhang.Ren.ea.2016` trained *plain* networks, stacks of
-convolutions with batch normalization and ReLU in the style of VGG, at
-several depths. On CIFAR-10 a plain network with 56 layers ended training
-with a higher *training* error than one with 20 layers. On ImageNet a plain
-network with 34 layers had a higher training error than one with 18 layers
-throughout training, and a top-1 validation error of 28.5% against 27.9%.
-A deeper network that fits even its training data worse does not overfit;
-the optimizer fails to find a good setting of its parameters. This
-*degradation problem* is puzzling, because the deeper network could copy the
-shallower one and pass its result through the extra layers unchanged, so a
-setting that is at least as good exists.
+The networks of this chapter so far became more accurate as they became
+deeper, from the eight layers of AlexNet to the 22 of GoogLeNet, and the
+batch normalization of :numref:`sec_batch_norm` made such depth easier to
+train. We might expect that adding still more layers keeps helping, at worst
+until the network starts to overfit. :citet:`He.Zhang.Ren.ea.2016` tested
+this expectation. They trained *plain* networks, stacks of convolutions with
+batch normalization and ReLU in the style of VGG, at several depths. On
+CIFAR-10 a plain network with 56 layers ended training with a higher
+*training* error than one with 20 layers. A deeper network that fits even its
+training data worse does not overfit; the optimizer fails to find a good
+setting of its parameters. This *degradation problem* is puzzling, because
+the deeper network could copy the shallower one and pass its result through
+the extra layers unchanged, so a setting that is at least as good exists.
+Why does training not find it, and how can we change the network so that it
+does?
 
 *Residual networks* (ResNets) make that setting easy to reach. Each block
 adds a learned correction to its input instead of replacing it, so a block
-whose correction is zero passes its input through unchanged. With this
-change, the 34-layer network reached a top-1 error of 25.0% where the
-18-layer one reached 27.9%, and residual networks with 152 layers won the
-ImageNet challenge of 2015. This section first states the argument in terms
-of the functions a network can represent, then builds the residual block and
-the 18-layer ResNet and trains it on Fashion-MNIST, with the batch
-normalization of :numref:`sec_batch_norm` in every block. Two variants close
-the section: ResNeXt splits the block into parallel groups to make it wider
-at the same cost, and DenseNet concatenates the outputs of its layers
-instead of adding them.
+whose correction is zero passes its input through unchanged. The ImageNet
+experiments of the same paper show both the problem and the fix. A plain
+network with 34 layers had a higher training error than one with 18 layers
+throughout training, and a top-1 validation error of 28.5% against 27.9%.
+With residual blocks, the 34-layer network reached a top-1 error of 25.0%
+where the 18-layer one reached 27.9%, and residual networks with 152 layers
+won the ImageNet challenge of 2015. This section first states the argument in
+terms of the functions a network can represent, then builds the residual
+block and the 18-layer ResNet and trains it on Fashion-MNIST, with batch
+normalization in every block. Two variants close the section: ResNeXt splits
+the block into parallel groups to make it wider at the same cost, and
+DenseNet concatenates the outputs of its layers instead of adding them.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet
@@ -66,11 +70,13 @@ import optax
 
 ## Function Classes and Depth
 
-Let $\mathcal{F}$ be the set of functions that an architecture can represent
-as its parameters vary, its *function class*. Training searches
-$\mathcal{F}$ for the function that best fits the training data
-$(\mathbf{X}, \mathbf{y})$. Its loss is the smallest loss available in the
-class,
+To see why the degradation problem is a puzzle, and what a fix has to
+provide, we describe a network by the set of functions it can represent and
+ask when adding layers enlarges that set. Let $\mathcal{F}$ be the set of
+functions that an architecture can represent as its parameters vary, its
+*function class*. Training searches $\mathcal{F}$ for the function that best
+fits the training data $(\mathbf{X}, \mathbf{y})$. Its loss is the smallest
+loss available in the class,
 
 $$L^*_{\mathcal{F}} \stackrel{\textrm{def}}{=}
 \min_{f\in\mathcal{F}} L(\mathbf{X},\mathbf{y},f).$$

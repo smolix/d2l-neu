@@ -1,12 +1,19 @@
 # Multi-Head and Cross-Attention
 :label:`sec_multihead-attention`
 
-Scaled dot-product attention gives each query one set of weights over the keys
-and returns one weighted average of the values. Some queries need several
-values at once, and a single average blends them. We make this concrete with
-a small task: one query must report the values stored at two positions. Any
-single set of attention weights, however it is chosen, loses half of the
-target's variance on this task. *Multi-head attention*
+The attention layer of :numref:`sec_attention-scoring-functions` gives each
+query one set of weights over the keys and returns one weighted average of
+the values. That suffices when a query needs one thing from its context.
+Often it needs several. In the sentence "Alice gave Bob the book", the verb
+*gave* needs three other words: who gave, who received, and what was given.
+A single weighted average mixes their three value vectors into one vector of
+the same width. How can one query read several positions
+at once without blending what it reads?
+
+We make the question precise with a small task: one query must report the
+values stored at two positions. Any single set of attention weights,
+however it is chosen, loses half of the target's variance on this task.
+*Multi-head attention*
 :cite:`Vaswani.Shazeer.Parmar.ea.2017` gives each query several sets of
 weights, each computed in a learned projection of its own, and combines the
 resulting averages linearly. With the usual choice of head width it has the
@@ -38,6 +45,8 @@ import optax
 ## A One-Mixture Bottleneck with Position-Only Keys
 :label:`subsec_one-mixture-bottleneck`
 
+To measure what one weighting per query cannot express, we need a task
+whose answer we know and whose best single-head solution we can compute.
 Consider the following task. Two source positions hold value vectors
 $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^c$, drawn independently at random
 for every example. Their keys mark only the *positions*, not the content. A

@@ -93,9 +93,11 @@ multiplicative noise, so it motivates dropout without explaining it.
 
 ### Masking and Rescaling
 
-Consider one hidden unit, whose activation $h_j$ is entry $j$ of the hidden
-representation $\mathbf{h}$ of an example. At each training step, dropout
-draws a random *mask* $m_j$, equal to 0 with probability $p$ and to 1 with
+Removing units shrinks the input of the next layer. With half of the units
+set to zero, a weighted sum over them is on average half as large, so
+dropout scales up the units that it keeps. Consider one hidden unit, whose
+activation $h_j$ is entry $j$ of the hidden representation $\mathbf{h}$ of
+an example. At each training step, dropout draws a random *mask* $m_j$, equal to 0 with probability $p$ and to 1 with
 probability $1 - p$, independently for every unit and every example, and
 replaces $h_j$ by
 

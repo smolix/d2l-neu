@@ -911,6 +911,11 @@ during training, such as running statistics, is held in other
 
 ### Eager and Compiled Execution
 
+A forward method is ordinary Python code, and so far it has also run like
+ordinary Python, one line at a time. A framework can instead record the
+computation once and replay the recording, which is faster but restricts
+what the forward method may do.
+
 :begin_tab:`mxnet`
 Gluon runs `forward` as written, one operation at a time, a mode called
 *eager execution*, and so does our `Trainer`. A loop whose condition

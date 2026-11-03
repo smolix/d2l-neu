@@ -6,17 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Softmax Regression from Scratch
 :label:`sec_softmax_scratch`
 
-Softmax regression differs from the linear regression of
-:numref:`sec_linear_scratch` in three places. The model computes one output
-per class instead of a single number, the softmax turns these outputs, the
-logits, into probabilities, and the loss is the cross-entropy instead of the
-squared error. Everything else carries over. The `Trainer` runs the same
-training loop, the default optimizer of `Module` performs the same minibatch
-SGD update, the `FashionMNIST` class of :numref:`sec_fashion_mnist` delivers
-the images in minibatches, and the `Classifier` class of
+In :numref:`sec_linear_scratch` we wrote linear regression ourselves, with
+tensors and automatic differentiation, so that no part of training stayed
+hidden. We now do the same for softmax regression. What changes when the
+model predicts a class instead of a number? Softmax regression differs from
+linear regression in three places. The model computes one output per class
+instead of a single number, the softmax turns these outputs, the logits, into
+probabilities, and the loss is the cross-entropy instead of the squared
+error. Everything else carries over. The `Trainer` runs the same training
+loop, the default optimizer of `Module` performs the same minibatch SGD
+update, the `FashionMNIST` class of :numref:`sec_fashion_mnist` delivers the
+images in minibatches, and the `Classifier` class of
 :numref:`sec_classification` reports the loss and the accuracy on validation
-data. We therefore write only the three new pieces ourselves, with tensors and
-automatic differentiation, and train the model on Fashion-MNIST.
+data. We therefore write only the three new pieces ourselves and train the
+model on Fashion-MNIST.
 
 Writing the softmax directly from its formula exposes a numerical trap. In
 single precision, $\exp(o)$ overflows to infinity once $o$ exceeds about 88,
@@ -60,7 +63,8 @@ from jax import numpy as jnp
 
 ### Normalizing Each Row
 
-For a minibatch of $n$ examples the logits form a matrix
+We start with the softmax, the piece that turns the logits of the model into
+probabilities. For a minibatch of $n$ examples the logits form a matrix
 $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ with one row per example and
 one column per class (:numref:`subsec_softmax_vectorization`). The softmax
 acts on each row separately,
@@ -390,9 +394,10 @@ def loss(self, y_hat, y):
 
 ### The Training Run
 
-We train for 10 epochs with minibatches of 256 images at learning rate 0.1.
-An epoch takes 235 steps, the last on the 96 images left over
-($60{,}000 = 234 \times 256 + 96$). Fashion-MNIST has no separate validation split, so we validate on
+With the parameters, the forward pass, and the loss in place, the `Trainer`
+can fit the model to Fashion-MNIST. We train for 10 epochs with minibatches
+of 256 images at learning rate 0.1. An epoch takes 235 steps, the last on the
+96 images left over ($60{,}000 = 234 \times 256 + 96$). Fashion-MNIST has no separate validation split, so we validate on
 its 10,000 test images (:numref:`sec_fashion_mnist`), and the `Trainer`
 reports the validation loss and accuracy after every epoch. The number of
 epochs, the minibatch size, and the learning rate influence the result,

@@ -6,18 +6,24 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutional Neural Networks (LeNet)
 :label:`sec_lenet`
 
-The MLP of :numref:`sec_mlp-implementation` classifies Fashion-MNIST images
-with about 87% validation accuracy after 30 epochs, using about 204,000
-parameters. It flattens each $28\times28$ image into a vector of 784 numbers
-before its first layer. Shuffling the pixels in the same way in every image
-would therefore not change what it can learn: the MLP does not know which
-pixels are neighbors, and it must learn a pattern separately at every
-position where the pattern can occur. The convolutional layers of this
-chapter keep the spatial layout and use the same kernel at every position,
-so they need far fewer parameters. This section builds a complete
-classifier from convolutions, pooling, and fully connected layers and asks
-whether it is also more accurate than the MLP, under the same loss,
-optimizer, and number of epochs.
+We now have every part of a convolutional network: the convolutional layer of
+:numref:`sec_conv_layer`, padding and stride to control its output
+(:numref:`sec_padding`), channels to detect many patterns at once
+(:numref:`sec_channels`), and pooling to summarize neighborhoods
+(:numref:`sec_pooling`). This section puts them together into a complete
+classifier and asks whether it is better than the MLP we trained on the same
+data.
+
+The MLP of :numref:`sec_mlp-implementation` reached about 87% validation
+accuracy on Fashion-MNIST after 30 epochs, using about 204,000 parameters. It
+flattens each $28\times28$ image into a vector of 784 numbers before its first
+layer. Shuffling the pixels in the same way in every image would therefore
+not change what it can learn: the MLP does not know which pixels are
+neighbors, and it must learn a pattern separately at every position where the
+pattern can occur. Convolutional layers keep the spatial layout and use the
+same kernel at every position, so they need far fewer parameters. We train
+the convolutional classifier with the same loss, optimizer, and number of
+epochs as the MLP and compare their validation accuracy.
 
 The network we build is *LeNet*, after Yann LeCun, who developed it with his
 colleagues at AT&T Bell Labs to recognize handwritten digits
@@ -243,6 +249,8 @@ class LeNet(d2l.Classifier):  #@save
 
 ## Layer Shapes
 
+A wrong padding or a missing flattening step changes the shape of every
+layer that follows it, so we check the shapes before training.
 :numref:`img_lenet_vert` lists the layers in compressed notation, with the
 shape of the tensor that passes between them. To check that the code builds
 this network, we pass a single-channel $28 \times 28$ image through it and

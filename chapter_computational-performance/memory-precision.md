@@ -1,19 +1,26 @@
 # Memory and Precision
 :label:`sec_memory_precision`
 
-An RTX 4090 has 24 GiB of memory. A GPT with a billion parameters, trained
-with Adam in fp32, keeps four numbers for every parameter: the weight, its
-gradient, and Adam's two moment estimates. At four bytes each that is 15 GiB
-before the model has read a single token. The remaining 9 GiB must hold
-everything that the forward pass stores for the backward pass, and for this
-model that is several megabytes per token of the minibatch. Only one to three
-sequences of 1,024 tokens fit, while language models are trained on
-minibatches of half a million tokens or more :cite:`brown2020language`. A
-training run that does not fit does not start, and one that barely fits learns
-from too few examples per step.
+The previous sections asked how fast a training step runs. A step that
+does not fit in the GPU's memory does not run at all. The models of
+earlier chapters fit on one card with room to spare, so we never had to
+ask how much memory a step needs. Large language models change that.
+Where does the memory of a training step go, and how can a model that
+barely fits on a card still train on large minibatches?
 
-The previous sections asked how fast a training step runs; this one asks
-whether it runs at all. The memory of a step splits into two parts: one
+Consider a GPT with a billion parameters, trained with Adam in fp32 on an
+RTX 4090, which has 24 GiB of memory. The optimizer keeps four numbers for
+every parameter: the weight, its gradient, and Adam's two moment
+estimates. At four bytes each that is
+15 GiB before the model has read a single token. The remaining 9 GiB must
+hold everything that the forward pass stores for the backward pass, and
+for this model that is several megabytes per token of the minibatch. Only
+one to three sequences of 1,024 tokens fit, while language models are
+trained on minibatches of half a million tokens or more
+:cite:`brown2020language`. A training run that does not fit does not
+start, and one that barely fits learns from too few examples per step.
+
+The memory of a step splits into two parts: one
 proportional to the number of parameters, fixed by the model and the
 optimizer, and one proportional to the number of tokens in the step, the
 *activations*. We count both for the billion-parameter GPT and check the

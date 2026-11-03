@@ -6,39 +6,41 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Weight Decay
 :label:`sec_weight_decay`
 
-Suppose that a linear model receives two features that nearly duplicate
-each other, such as the same quantity measured by two instruments, and that
-the label is close to their sum, $y \approx x_1 + x_2$. The weights
-$(1, 1)$ fit the training data. The weights $(501, -499)$ fit them almost
-as well: they predict $x_1 + x_2 + 500\,(x_1 - x_2)$, and on the training
-examples the two measurements differ only slightly. Least squares chooses
-among such weight vectors by how well they fit the noise in the training
-labels, and since the small differences $x_1 - x_2$ are noise as well, it
-can return large weights of opposite sign. On a new example whose two
-measurements differ by 2, the predictions of the two weight vectors differ
-by 1,000. With more features than examples the problem is
-extreme: 200 weights can fit 20 labels exactly in infinitely many ways,
-which agree on the training inputs and disagree on new ones.
+In :numref:`sec_generalization_basics` a polynomial of degree 19 fit 20
+noisy points with weights of a million or more, and we avoided such fits by
+choosing the degree on validation data. Choosing the degree is a choice of
+features, and with many inputs it is a coarse one. For $k$ input variables,
+the number of *monomials* of degree $q$, products of powers such as
+$x_1^2 x_2$ whose exponents add up to $q$, is $\binom{k-1+q}{k-1}$. For $k = 20$ there are 20 features of
+degree 1, 210 of degree 2, and 1,540 of degree 3. We would like to limit
+the flexibility of a model on a continuous scale instead, while keeping all
+of its features.
 
-More data would determine the weights, but data are often expensive or
-impossible to collect. Removing features helps too: without the second
-measurement there is nothing to trade off. As a control of capacity,
-however, choosing features is coarse. With $k$ input variables, the number
-of *monomials* of degree $q$, products of powers such as $x_1^2 x_2$ whose
-exponents add up to $q$, is $\binom{k-1+q}{k-1}$. For $k = 20$ there are
-20 features of degree 1, 210 of degree 2, and 1,540 of degree 3, so each
-step in degree adds hundreds or thousands of features at once.
+A small example shows where the excess flexibility of a linear model lies.
+Suppose that the model receives two features that nearly duplicate each
+other, such as the same quantity measured by two instruments, and that the
+label is close to their sum, $y \approx x_1 + x_2$. The weights $(1, 1)$
+fit the training data. The weights $(501, -499)$ fit them almost as well:
+they predict $x_1 + x_2 + 500\,(x_1 - x_2)$, and on the training examples
+the two measurements differ only slightly. Least squares chooses among such
+weight vectors by how well they fit the noise in the training labels, and
+since the small differences $x_1 - x_2$ are noise as well, it can return
+large weights of opposite sign. On a new example whose two measurements
+differ by 2, the predictions of the two weight vectors differ by 1,000.
+With more features than examples the problem is extreme: 200 weights can
+fit 20 labels exactly in infinitely many ways, which agree on the training
+inputs and disagree on new ones. More data would determine the weights, but
+data are often expensive or impossible to collect. Dropping the second
+measurement would also help, but that is again a choice of features.
 
 This section keeps all the features and penalizes large weights instead. We
 add the squared norm of the weight vector, multiplied by a constant
 $\lambda \geq 0$, to the loss. Among weight vectors that fit the data about
 equally well, the penalized loss prefers the smallest, $(1, 1)$ in the
 example, and $\lambda$ sets the strength of this preference on a continuous
-scale. The polynomial of degree 19 in :numref:`sec_generalization_basics`,
-which fit 20 noisy points with weights of a million or more, is the kind of
-fit that the penalty suppresses. We define the penalty and its effect on
-gradient descent, watch it repair a model with 200 features trained on 20
-examples, and then ask which directions in weight space it shrinks.
+scale. We define the penalty and its effect on gradient descent, watch it
+repair a model with 200 features trained on 20 examples, and then ask which
+directions in weight space it shrinks.
 
 ```{.python .input #weight-decay}
 %%tab mxnet

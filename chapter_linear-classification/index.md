@@ -1,23 +1,26 @@
 # Linear Classification
 :label:`chap_classification`
 
-Many predictions are categories rather than numbers: whether an email is
-spam, which of ten garments a photograph shows, which disease explains a set
-of symptoms. A regression model is the wrong tool for them. Its output is an
-unbounded number, so it cannot say that the model is torn between two
-classes, and its squared loss treats the class index as a quantity, as if a
-pullover lay halfway between a trouser and a dress.
+The previous chapter taught a linear model to predict a number, such as the
+price of a house. Other questions ask for a category. A photo in an online
+clothing store shows a shirt, a coat or a sandal, not 5.5 of anything. If we
+numbered the categories and regressed on the numbers, the model would treat a
+name as a quantity, as if a pullover lay halfway between a trouser and a
+dress. Nor could one number express doubt. How should a model predict a
+category, and when can we trust its prediction?
 
-The procedure of :numref:`chap_regression` carries over: a model with
-parameters, a loss, minibatch stochastic gradient descent, and evaluation on
-held-out data. Three parts change. The model outputs one score per class, the
-scores become a probability distribution over the classes, and the loss
-measures how much probability the model gives the correct class. Maximum
-likelihood, which turned Gaussian noise into the squared loss, now gives the
-softmax function and the cross-entropy loss. Evaluation also asks more than
-it did for regression. A probability is not yet a decision, accuracy can
-mislead when one class is rare, and a test set vouches only for data that
-resemble it.
+The question is old. In 1936 Ronald Fisher asked how to tell species of iris
+apart from four measurements of their flowers. He answered with a weighted sum
+of the measurements, a linear score. Softmax regression, the model of this
+chapter, gives each class its own linear score and turns the scores into a
+probability distribution over the classes. The procedure of
+:numref:`chap_regression` then carries over. Maximum likelihood, which turned
+Gaussian noise into the squared loss, now gives the cross-entropy loss, and
+minibatch stochastic gradient descent trains the model. Nearly every
+classifier in this book, up to the largest language models, ends in the same
+softmax and the same loss. Evaluation changes more. A probability is not yet a
+decision, accuracy can mislead when one class is rare, and a test set vouches
+only for data that resemble it.
 
 :numref:`sec_softmax` asks how a linear model can output a probability
 distribution over classes, and which loss trains it.
@@ -25,19 +28,19 @@ distribution over classes, and which loss trains it.
 experiments yet hard enough to tell models apart. :numref:`sec_classification`
 asks how to measure a classifier, and what accuracy hides.
 :numref:`sec_softmax_scratch` asks what softmax regression looks like when we
-write it ourselves, and where the naive version fails numerically.
+write it ourselves, and where the direct formula fails numerically.
 :numref:`sec_softmax_concise` asks how a framework's loss avoids that failure,
-and whether the trained model's probabilities can be read as probabilities.
-:numref:`chap_classification_generalization` asks how many test examples a
-trustworthy accuracy estimate needs, what reusing a test set does to it, and
-why a classifier fitted to its training data should do better on new data than
-one that memorizes them. :numref:`sec_environment-and-distribution-shift` asks
-what happens when the data at deployment differ from the training data, and
-when we can correct for it.
+and whether the model's probabilities can be read as probabilities.
+:numref:`chap_classification_generalization` asks how many test examples an
+accuracy estimate needs, what reusing a test set does to it, and why fitting a
+linear model should beat memorizing the training data.
+:numref:`sec_environment-and-distribution-shift` asks what happens when the
+data at deployment differ from the training data, and when we can correct for
+it.
 
 The chapter treats problems with exactly one class per example, and the
-classes have no order. The next chapter keeps the loss and replaces the
-linear model by a multilayer network.
+classes have no order. The next chapter keeps the loss and replaces the linear
+model by a multilayer network.
 
 ```toc
 :maxdepth: 2

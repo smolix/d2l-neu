@@ -6,25 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Pooling
 :label:`sec_pooling`
 
-Whether an image shows a shirt or a sneaker is a question about the whole
-image, so the receptive field of some unit near the top of the network, the
-input region that can influence it (:numref:`sec_conv_layer`), has to cover
-all of it. A $3\times3$ convolution with stride 1 widens the receptive field
-by two pixels, so after $L$ such layers a unit sees a $(2L+1)\times(2L+1)$
-patch. Covering a $28\times28$ Fashion-MNIST image takes fourteen layers. If
-every second layer is followed by a $2\times2$ step that halves the
-resolution, each later kernel reaches twice as far in the input
-(:numref:`subsec_stride_rf`), and each $2\times2$ window adds its own extent
-(:eqref:`eq_receptive_field` with $k=s=2$). Six $3\times3$ convolutions with
-two such steps then see a $32\times32$ patch.
+The layers of the previous sections answer local questions. The edge
+detector of :numref:`sec_conv_layer` reports, position by position, whether an
+edge lies there. A classifier must answer a question about the whole image:
+does this Fashion-MNIST picture show a shirt or a sneaker? This section asks
+how a network gets from many local answers to one global answer. Two
+obstacles stand in the way.
 
-A second problem appears at the bottom of the network. The edge detector of
-:numref:`sec_conv_layer` responds at the pixel where the edge lies. Shift the
+The first obstacle is reach. Some unit near the top of the network must have a
+receptive field, the input region that can influence it
+(:numref:`sec_conv_layer`), that covers the whole image. A $3\times3$
+convolution with stride 1 widens the receptive field by two pixels, so after
+$L$ such layers a unit sees a $(2L+1)\times(2L+1)$ patch, and covering a
+$28\times28$ Fashion-MNIST image takes fourteen layers. If every second layer
+is followed by a $2\times2$ step that halves the resolution, each later kernel
+reaches twice as far in the input (:numref:`subsec_stride_rf`), and each
+$2\times2$ window adds its own extent (:eqref:`eq_receptive_field` with
+$k=s=2$). Six $3\times3$ convolutions with two such steps then see a
+$32\times32$ patch.
+
+The second obstacle appears at the bottom of the network. The edge detector
+responds at the pixel where the edge lies. Shift the
 image by one pixel, as happens whenever the object or the camera moves
-slightly, and the response moves by one pixel too. A classifier should not
-change its mind because of such a shift.
+slightly, and the response moves by one pixel too. A classifier's answer
+should not change because of such a shift.
 
-A *pooling layer* addresses both problems. It replaces each small window of
+A *pooling layer* addresses both obstacles. It replaces each small window of
 its input by one summary value, the maximum or the average, and has no
 parameters. With windows of size 2 and stride 2 it halves the resolution, and
 the maximum of a window does not change when a response moves within it. The

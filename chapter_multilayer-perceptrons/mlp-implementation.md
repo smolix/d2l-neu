@@ -6,17 +6,19 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Implementation
 :label:`sec_mlp-implementation`
 
-Softmax regression scores each Fashion-MNIST class with a weighted sum of
-the 784 pixel values of an image. With 7,850 parameters it reaches about 83%
-validation accuracy after ten epochs, and most of its errors confuse garments
-of similar outline, such as shirts, pullovers, and coats
-(:numref:`sec_softmax_scratch`). The multilayer perceptron (MLP) of
-:numref:`sec_mlp` first computes features of the pixels in a hidden layer
-and then classifies these features with a linear layer. With 256 hidden
-units it has 203,530 parameters and performs 203,264 multiply-adds per
-image, 26 times as many as softmax regression. Whether the hidden layer
-makes the classifier more accurate on real images, and by how much, is a
-question for experiment.
+In :numref:`sec_mlp` a hidden layer let a network combine its inputs, and
+for the four points of XOR we chose its weights by hand. We now let training
+choose the weights on real images, and ask whether the hidden layer fixes
+the errors that softmax regression made. On Fashion-MNIST, softmax
+regression reached about 83% validation accuracy after ten epochs, and most
+of its errors confused garments of similar outline, such as shirts,
+pullovers, and coats (:numref:`sec_softmax_scratch`). Telling such garments
+apart depends on how pixels combine, which is what a hidden layer can
+compute. Does an MLP with one hidden layer make fewer of these errors, and
+by how much? The hidden layer also adds computation: with 256 hidden units
+the MLP has 203,530 parameters and performs 203,264 multiply-adds per image,
+26 times as many as softmax regression. Whether the gain in accuracy
+justifies this extra work is a question for experiment.
 
 We implement the MLP twice and train it as we trained softmax regression.
 The first implementation writes the four parameter arrays, the activation

@@ -6,27 +6,27 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Efficient Convnets
 :label:`sec_efficient_cnns`
 
-VGG-16 needs 15.3 billion multiply-adds to classify one $224 \times 224$
-image, and its 138 million parameters occupy 550 MB in single precision. A
-phone that runs such a network on every camera frame, 30 times a second,
-must perform 460 billion multiply-adds per second and keep the weights in
-memory next to every other app. MobileNet :cite:`howard2017mobilenet` comes
-within one point of VGG-16's ImageNet accuracy (70.6% against 71.5%) with
-0.57 billion multiply-adds and 4.2 million parameters: 27 times less
-arithmetic and 33 times fewer parameters.
-
 The networks of the previous sections were designed to win accuracy
-benchmarks on datacenter GPUs. On phones, cameras, cars, and embedded
-boards, latency, memory, and energy are fixed budgets, and a network that
-exceeds them cannot ship, however accurate it is. This section studies three
-ideas that make convnets cheaper. *Factorization* replaces each dense
-convolution by a per-channel spatial filter and a $1 \times 1$ channel
-mixer. *Scaling and search* fixes the block and lets an optimizer choose the
-widths, depths, and input resolution. *Re-parameterization* trains a network
-with several branches per layer and then merges the branches into a single
-convolution that computes the same function. We will also see the limit of
-the first idea: on a GPU, a network with 7.7 times fewer multiply-adds is not
-7.7 times faster.
+benchmarks, and they were trained and run on datacenter GPUs. Many
+convolutional networks run elsewhere: on phones, cameras, cars, and embedded
+boards. There latency, memory, and energy are fixed budgets, and a network
+that exceeds them cannot ship, however accurate it is. A phone that
+classifies every frame its camera records is a simple example. VGG-16 needs
+15.3 billion multiply-adds to classify one $224 \times 224$ image, so at 30
+frames a second the phone would have to perform 460 billion multiply-adds per
+second. The network's 138 million parameters would occupy 550 MB in single
+precision, in memory next to every other app. How can we make a
+convolutional network an order of magnitude cheaper, and what does that cost
+in accuracy?
+
+This section studies three ideas that make convnets cheaper.
+*Factorization* replaces each dense convolution by a per-channel spatial
+filter and a $1 \times 1$ channel mixer. *Scaling and search* fixes the block
+and lets an optimizer choose the widths, depths, and input resolution.
+*Re-parameterization* trains a network with several branches per layer and
+then merges the branches into a single convolution that computes the same
+function. We will also see the limit of the first idea: on a GPU, a network
+with 7.7 times fewer multiply-adds is not 7.7 times faster.
 
 ```{.python .input #efficient-convnets-imports}
 %%tab mxnet
@@ -69,10 +69,11 @@ import time
 
 ### MobileNet
 
-A dense $k \times k$ convolution from $c_\textrm{i}$ to $c_\textrm{o}$
-channels on an $h \times w$ output performs
-$hw \cdot c_\textrm{i} c_\textrm{o} k^2$ multiply-adds: every output channel
-filters every input channel. A *depthwise-separable* convolution
+Most of the arithmetic of a convnet is spent in its dense convolutions, so
+the first idea makes each of them cheaper. A dense $k \times k$ convolution
+from $c_\textrm{i}$ to $c_\textrm{o}$ channels on an $h \times w$ output
+performs $hw \cdot c_\textrm{i} c_\textrm{o} k^2$ multiply-adds: every output
+channel filters every input channel. A *depthwise-separable* convolution
 (:numref:`sec_depthwise_separable`) splits this work in two. A *depthwise*
 $k \times k$ convolution filters each input channel on its own, and a
 *pointwise* $1 \times 1$ convolution then mixes the channels at each
@@ -91,15 +92,18 @@ output channels it is $1/128 + 1/9 \approx 0.119$: the separable layer is
 8.4 times cheaper, and no number of output channels makes it more than 9
 times cheaper.
 
-MobileNet turned this layer into a whole network. Every layer after the
-first is the block of :numref:`fig_dws_block`: a depthwise $3 \times 3$
-convolution and a pointwise $1 \times 1$ convolution, each followed by batch
-normalization and a ReLU. The network downsamples by giving the depthwise
-convolution a stride of 2, so it needs no pooling layers inside, and it ends
-with global average pooling and one linear layer, as NiN does
-(:numref:`sec_nin`). A single *width multiplier* scales every
-channel count, so that one network design yields a family of networks that
-trade accuracy against cost.
+MobileNet :cite:`howard2017mobilenet` turned this layer into a whole
+network. Every layer after the first is the block of
+:numref:`fig_dws_block`: a depthwise $3 \times 3$ convolution and a
+pointwise $1 \times 1$ convolution, each followed by batch normalization and
+a ReLU. The network downsamples by giving the depthwise convolution a stride
+of 2, so it needs no pooling layers inside, and it ends with global average
+pooling and one linear layer, as NiN does (:numref:`sec_nin`). A single
+*width multiplier* scales every channel count, so that one network design
+yields a family of networks that trade accuracy against cost. On ImageNet,
+MobileNet comes within one point of VGG-16's accuracy (70.6% against 71.5%)
+with 0.57 billion multiply-adds and 4.2 million parameters: 27 times less
+arithmetic and 33 times fewer parameters.
 
 ![A depthwise-separable block from $c_\textrm{i}$ to $c_\textrm{o}$ channels. The depthwise $3 \times 3$ convolution filters each input channel separately; the pointwise $1 \times 1$ convolution mixes the channels at each position; batch normalization and a ReLU follow each convolution.](../img/arch-dws-block.svg)
 :label:`fig_dws_block`
@@ -706,9 +710,9 @@ input channel, scaled by a channel weight. Part is arithmetic itself: the
 dense network applies each weight at far more positions, keeping
 $96 \times 96$ feature maps for its first two convolutions where MobileNet
 halves the resolution in its stem. Equal parameters are therefore not equal
-compute, and the comparison at the start of this section, MobileNet against
-VGG-16, was a different one: nearly equal accuracy at 33 times fewer
-parameters and 27 times less arithmetic.
+compute. The ImageNet comparison of MobileNet with VGG-16 above was a
+different one: nearly equal accuracy at 33 times fewer parameters and 27
+times less arithmetic.
 
 Matching the arithmetic instead shows what the separable network buys. With
 MobileNet's 50 million multiply-adds, the dense network would have to shrink

@@ -6,15 +6,19 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multilayer Perceptrons
 :label:`sec_mlp`
 
-Softmax regression scores each class with a weighted sum of the inputs, so
-each input moves a score by the same amount whatever the other inputs are.
-On Fashion-MNIST this model reaches about 83% validation accuracy with 7,850
-parameters. Yet in an image, whether a bright pixel belongs to a sleeve, a
-strap, or the background depends on the pixels around it. The smallest
-problem of this kind has four points. Label each corner of the unit square
-by whether its two coordinates differ, the *exclusive or* (XOR) of two bits.
-No line separates the two classes, so every linear classifier gets at least
-one of the four points wrong.
+The softmax regression of :numref:`chap_classification` classifies a
+Fashion-MNIST image by adding up evidence from its pixels, with one weight
+for each pixel and class. With 7,850 parameters it reaches about 83%
+validation accuracy. Its limit lies in how it adds the evidence: each input
+moves a class score by the same amount whatever the other inputs are. Yet in
+an image, whether a bright pixel belongs to a sleeve, a strap, or the
+background depends on the pixels around it. Can a model learn to combine its
+inputs in this way, and what does it need beyond a weighted sum?
+
+The smallest problem of this kind has four points. Label each corner of the
+unit square by whether its two coordinates differ, the *exclusive or* (XOR)
+of two bits. No line separates the two classes, so every linear classifier
+gets at least one of the four points wrong.
 
 A *multilayer perceptron* (MLP) removes this limit by computing new features
 before it classifies. A hidden layer applies an affine map followed by a
@@ -61,7 +65,8 @@ from jax import numpy as jnp
 
 ### Monotonicity and Interactions
 
-In softmax regression (:numref:`sec_softmax`), an input
+To see what a linear model cannot express, we look again at how it scores a
+class. In softmax regression (:numref:`sec_softmax`), an input
 $\mathbf{x} \in \mathbb{R}^d$ gives class $j$ the score
 
 $$o_j = \sum_{i=1}^d x_i w_{ij} + b_j.$$

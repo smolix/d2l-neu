@@ -1,14 +1,18 @@
 # The Performance Model
 :label:`sec_perf_model`
 
-On the RTX 4090 that runs this book's notebooks, a product of two
-$256 \times 256$ matrices in bf16 reaches less than two percent of the
-165 TFLOP/s that the card's specification promises. A product of two
-$8192 \times 8192$ matrices comes close to the full 165 TFLOP/s. The
-operation and the chip are the same, and both products are timed correctly.
-A training step is a long sequence of such operations. If most of them run at
-a few percent of the peak, a faster GPU or a second one changes little,
-because the time goes to waiting rather than to computing.
+Every network we have trained so far spends most of its arithmetic in
+matrix products, and we have assumed that a GPU computes them at the rate
+its specification states. The assumption is often wrong. On the RTX 4090
+that runs this book's notebooks, a product of two $8192 \times 8192$
+matrices in bf16 comes close to the 165 TFLOP/s that the specification
+promises. A product of two $256 \times 256$ matrices reaches less than two
+percent of it, although the operation and the chip are the same and both
+products are timed correctly. A training step is a long sequence of
+operations, many of them small. If most of them run at a few percent of the
+peak, a faster GPU or a second one changes little, because the time goes to
+waiting rather than to computing. Why does the same operation run at such
+different speeds, and how do we tell which case a program is in?
 
 This section explains the gap. Every operation on a GPU is limited by one of
 three resources: the arithmetic units, the memory bandwidth that supplies
@@ -49,6 +53,10 @@ from jax import numpy as jnp
 
 ## Arithmetic Intensity and the Roofline
 :label:`subsec_perf-counting`
+
+Before we time anything, we can predict from the shapes of an operation
+which resource should limit it. The prediction needs two counts: the
+arithmetic the operation performs and the bytes it moves.
 
 ### Counting FLOPs and Bytes
 
@@ -124,6 +132,9 @@ $I^* = P/\beta$. An operation of intensity below $I^*$ is
 arithmetic units busy, so additional arithmetic on each byte costs no time.
 An operation above $I^*$ is *compute-bound*: the arithmetic units are
 saturated, and moving fewer bytes would not make it faster.
+The elementwise operation $x + 1$ in bf16 has an intensity of
+0.25 FLOP/byte, so it runs at most at $0.25\beta$, about a quarter of a
+trillion FLOP/s. That is less than a six-hundredth of the compute roof.
 
 ![The roofline of the RTX 4090. Attainable throughput is the smaller of the compute roof $P$ and the arithmetic intensity times the memory bandwidth $\beta$. The points mark the examples of the text: $x + 1$ in bf16, a linear layer of width 2048 applied to one token, and the same layer applied to a minibatch of 8,192 tokens. The ridge point lies near 164 FLOP/byte.](../img/mdl-perf-roofline.svg)
 :label:`fig_roofline`

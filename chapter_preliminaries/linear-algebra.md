@@ -6,25 +6,29 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Linear Algebra
 :label:`sec_linear-algebra`
 
-Suppose that we want to sort small grayscale images of clothing, like those
-of the Fashion-MNIST dataset that later chapters use, into ten categories
-such as shirts, sneakers, and bags. Each image has $28 \times 28 = 784$
-pixels. A simple classifier gives every category a score, a weighted sum of
-the 784 pixel intensities plus an offset, and predicts the category with the
-highest score. Training processes the images in minibatches of, say, 256 at
-a time, so scoring one minibatch takes $256 \times 10 \times 784 \approx 2$
-million multiply--adds, about $4 \times 10^6$ floating-point operations, and
-training repeats this for thousands of minibatches. As in
-:numref:`sec_ndarray`, such work runs as one call to compiled code rather
-than as Python loops over the numbers. Before we run it, however, we want to
-know what shape the result has and how much work it takes.
+Most operations of :numref:`sec_ndarray` act on each element of a tensor
+separately: dividing a minibatch by 255 rescales every pixel on its own. A
+model has to do more. To decide what an image shows, it combines many
+numbers into a few, weighing some pixels more than others. Linear algebra
+studies such weighted sums. It lets us write the computation of a model on a
+whole minibatch as one expression, and it tells us, before we run anything,
+what shape the result has and how much work it takes.
 
-Linear algebra writes the computation as one expression that answers both
-questions. Stack the images as the rows of a matrix $\mathbf{X}$, the
-weights of each category as the columns of a matrix $\mathbf{W}$, and the
-ten offsets (also called biases) in a vector $\mathbf{b}$. Together,
-$\mathbf{W}$ and $\mathbf{b}$ hold the $784 \times 10 + 10 = 7{,}850$
-parameters of the classifier. The $256 \times 10 = 2{,}560$ scores of the
+Our example is a simple classifier for small grayscale images of clothing,
+like those of the Fashion-MNIST dataset that later chapters use. It sorts
+them into ten categories such as shirts, sneakers, and bags. Each image has
+$28 \times 28 = 784$ pixels. The classifier gives every category a score, a
+weighted sum of the 784 pixel intensities plus an offset, and predicts the
+category with the highest score. Training scores the images in minibatches
+of, say, 256 at a time, and repeats this for thousands of minibatches, so the
+scoring has to run as one call to compiled code rather than as Python loops
+over the numbers.
+
+In the notation of linear algebra, the scores take one line. Stack the
+images as the rows of a matrix $\mathbf{X}$, the weights of each category as
+the columns of a matrix $\mathbf{W}$, and the ten offsets (also called
+biases) in a vector $\mathbf{b}$. Together, $\mathbf{W}$ and $\mathbf{b}$
+hold the $784 \times 10 + 10 = 7{,}850$ parameters of the classifier. The $256 \times 10 = 2{,}560$ scores of the
 minibatch are then
 
 $$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b},$$
@@ -689,7 +693,7 @@ O.shape, O.argmax(axis=1).shape
 What did this cost? Each of the $mn$ entries of $\mathbf{A}\mathbf{B}$ is a
 dot product of length $k$, which takes $k$ multiplications and $k - 1$
 additions, so the product takes about $2mkn$ floating-point operations
-(FLOPs). For the minibatch, that is
+(FLOPs). For the minibatch, that is about 2 million multiply--adds, or
 $2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs. The
 product must also read $\mathbf{X}$, $256 \times 784 = 200{,}704$ numbers
 or about 0.8 MB at 4 bytes each, so it performs only about 5 FLOPs per
@@ -834,6 +838,11 @@ cosine(x, y), cosine(2 * x, y), jnp.arccos(cosine(x, y))
 ```
 
 ### Other Vector Norms
+
+The $\ell_2$ norm squares the entries before adding them, so a few large
+entries can outweigh all the small ones. For losses and penalties we
+sometimes want a measure of size that weighs large and small entries more
+evenly.
 
 The *$\ell_1$ norm* sums the absolute values of the elements,
 
@@ -1037,9 +1046,11 @@ not have either property, as the rotation shows.
 
 ### Powers of a Matrix
 
-For a symmetric $n \times n$ matrix $\mathbf{A}$, the perpendicular
-eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$ of length 1 let us take
-any vector apart, as $\mathbf{x} = \sum_i c_i \mathbf{v}_i$ with
+Eigenvectors answer the question posed at the start of
+:numref:`subsec_lin-alg-eigenvalues`: how large $\mathbf{A}^k\mathbf{x}$
+becomes after $k$ layers. For a symmetric $n \times n$ matrix $\mathbf{A}$,
+the perpendicular eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$ of
+length 1 let us take any vector apart, as $\mathbf{x} = \sum_i c_i \mathbf{v}_i$ with
 $c_i = \mathbf{v}_i^\top \mathbf{x}$. Applying $\mathbf{A}$ to
 $\mathbf{x}$ $k$ times multiplies each part by its own eigenvalue $k$
 times:

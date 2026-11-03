@@ -6,33 +6,35 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # ConvNeXt: A ConvNet for the 2020s
 :label:`sec_convnext`
 
-In 2021 a network without convolutions beat the ResNet on its home ground. A
-*vision transformer* :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` cuts the
-image into a grid of patches, turns each patch into a vector, and processes
-this set of vectors with a stack of identical blocks. Each block has two
-parts. An *attention* layer lets every patch take a weighted average of the
-features of other patches, with weights computed from the features
-themselves; a small MLP then transforms each patch's vector on its own. The
-Swin Transformer :cite:`liu2021swin`, a vision transformer that computes
-attention within local $7 \times 7$ windows of patches and lowers the
-resolution between stages as a convnet does, reached 81.3% top-1 accuracy on
-ImageNet, against 76.1% for a ResNet-50 of similar cost. If attention
-caused the gap, convolutional networks were obsolete.
+Every network of this chapter so far is a convolutional network, and until
+2020 the best image classifiers were convolutional networks too. In 2021 a
+network without convolutions overtook them. A *vision transformer*
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` cuts the image into a grid of
+patches, turns each patch into a vector, and processes this set of vectors
+with a stack of identical blocks. Each block has two parts. An *attention*
+layer lets every patch take a weighted average of the features of other
+patches, with weights computed from the features themselves; a small MLP
+then transforms each patch's vector on its own. The Swin Transformer
+:cite:`liu2021swin`, a vision transformer that computes attention within
+local $7 \times 7$ windows of patches and lowers the resolution between
+stages as a convnet does, reached 81.3% top-1 accuracy on ImageNet, against
+76.1% for a ResNet-50 of similar cost. Did attention cause the gap? If it
+did, convolutional networks were obsolete.
 
-But Swin differs from a 2015 ResNet in many ways besides attention: it was
-trained with a newer recipe, its stem slices the image into patches, and it
-uses another activation, another normalization, and other stage depths.
-Which of these differences carried the improvement? :citet:`liu2022convnet`
-answered by experiment. Starting from a ResNet-50, they applied one
-Swin-inspired change at a time, measured ImageNet accuracy after each, and
-never added attention. The result, *ConvNeXt*, reaches 82.0%. Its
-ingredients come from earlier sections: the training recipe of
-:numref:`sec_training_recipes`, the depthwise convolutions and inverted
-bottlenecks of :numref:`sec_efficient_cnns`, and the layer normalization of
-:numref:`sec_batch_norm`. We read the sequence of changes, build the network,
-and train a small ConvNeXt on Fashion-MNIST against a ResNet-18 with the same
-number of parameters. Transformers themselves are the subject of
-:numref:`chap_transformers`.
+The previous section suggests caution. Swin differs from a 2015 ResNet in
+many ways besides attention: it was trained with a newer recipe, its stem
+slices the image into patches, and it uses another activation, another
+normalization, and other stage depths. Which of these differences carried
+the improvement? :citet:`liu2022convnet` answered by experiment. Starting
+from a ResNet-50, they applied one Swin-inspired change at a time, measured
+ImageNet accuracy after each, and never added attention. The result,
+*ConvNeXt*, reaches 82.0%. Its ingredients come from earlier sections: the
+training recipe of :numref:`sec_training_recipes`, the depthwise
+convolutions and inverted bottlenecks of :numref:`sec_efficient_cnns`, and
+the layer normalization of :numref:`sec_batch_norm`. We read the sequence of
+changes, build the network, and train a small ConvNeXt on Fashion-MNIST
+against a ResNet-18 with the same number of parameters. Transformers
+themselves are the subject of :numref:`chap_transformers`.
 
 ```{.python .input #convnext-imports}
 %%tab mxnet

@@ -1,11 +1,14 @@
 # Attention Circuits
 :label:`sec_what-attention-computes`
 
-An attention map shows where each query looks, and it invites a simple
-reading: the model predicted *B* because it attended to *B*. The map shows
-only half of a head. What the head adds to its output also depends on its
-value and output projections, so a head that attends sharply to a token may
-pass on the token's identity, one feature of it, or nothing at all.
+Since :numref:`sec_queries-keys-values` we have plotted attention weights
+as heatmaps, and that section warned that such a map is a hypothesis about
+what a layer does, not a proof. A map shows where each query looks, and it
+invites a simple reading: the model predicted *B* because it attended to
+*B*. The map shows only half of a head. What the head adds to its output
+also depends on its value and output projections, so a head that attends
+sharply to a token may pass on the token's identity, one feature of it, or
+nothing at all.
 Explaining what a trained model computes therefore takes both halves of
 every head, and experiments that tell a mechanism apart from a pattern that
 merely looks like one.
@@ -48,7 +51,9 @@ import optax
 
 ### Residual Representations Across Layers
 
-`TinyCharLM` has the simplest architecture that still counts as a
+Reading a head from its weights requires an exact account of what each
+layer adds to a token's representation. We write it down for the model we
+will train. `TinyCharLM` has the simplest architecture that still counts as a
 transformer. Each of its $L$ blocks adds the output of $H$ causal attention
 heads to its input, and nothing else: there are no feed-forward layers and
 no normalization. The output head reuses the embedding matrix

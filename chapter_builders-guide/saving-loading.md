@@ -6,16 +6,21 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Saving, Loading, and Pretrained Weights
 :label:`sec_read_write`
 
-A trained network lives in the memory of the process that trained it. When
-the process ends, because the script finished, crashed, or ran on a cloud
-machine that was reclaimed, the weights are gone unless they were written to
-disk. At scale, such failures are routine. In a 54-day snapshot of the
-pre-training of Llama 3 405B on up to 16,384 GPUs, Meta recorded 419
-unexpected interruptions, about one every three hours :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. A run that
-cannot continue from where it stopped would never finish. Saved weights also
-let others use a model without training it: in practice, many models start
-from weights that someone else trained, as the fine-tuning examples of
-:numref:`sec_fine_tuning` do.
+Each model we have trained so far has lived only in the memory of the
+process that trained it. When the process ends, because the script finished,
+crashed, or ran on a cloud machine that was reclaimed, the weights are gone
+unless they were written to disk. For the small models of earlier chapters,
+that means repeating a few minutes of training. For a large model it can
+mean repeating weeks of computation, and at scale such failures are routine.
+In a 54-day snapshot of the pre-training of Llama 3 405B on up to 16,384
+GPUs, Meta recorded 419 unexpected interruptions, about one every three
+hours :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. A run that cannot continue
+from where it stopped would never finish.
+
+Saved weights also let others use a model without training it: in practice,
+many models start from weights that someone else trained, as the
+fine-tuning examples of :numref:`sec_fine_tuning` do. Both uses raise the
+same questions: what must be written to disk, and how is it read back?
 
 What has to be saved follows from :numref:`sec_parameters`. A model is code
 plus state. The code defines the layers and the forward computation; the
@@ -354,7 +359,8 @@ layer, which Keras refuses to run unless we pass `safe_mode=False`.
 
 ### The safetensors Format
 
-A *safetensors* file has three parts, shown in
+The *safetensors* format is one: a file holds tensors and a description of
+them, and nothing else. It has three parts, shown in
 :numref:`fig_bg_safetensors_layout`: an 8-byte little-endian integer that
 gives the length of a header, the header itself as JSON text, and the raw
 bytes of all tensors back to back. The header names each tensor and records

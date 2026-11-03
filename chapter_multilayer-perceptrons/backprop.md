@@ -6,25 +6,27 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Backpropagation
 :label:`sec_backprop`
 
-The MLP of :numref:`sec_mlp-implementation` has 203,530 parameters, and
-every step of minibatch stochastic gradient descent needs the derivative of
-the loss with respect to each of them. Automatic differentiation
-(:numref:`sec_autograd`) computes all of these derivatives for a small
-multiple of the cost of the forward pass: the framework records the
-operations of the forward pass as a computational graph and then applies the
-chain rule backward through the graph, one operation at a time. So far we
-have called `backward` and used the result. Three practical questions depend
-on what happens inside it. Why does training need more memory than
-prediction, and why does that memory grow with the minibatch? Why does a
-ReLU unit that is inactive for every example stop learning? And why do the
-gradients of a deep network vanish or explode, the subject of the next
-section?
+In :numref:`sec_mlp-implementation` we trained an MLP by calling
+`backward` and using the gradients it returned. Every step of minibatch
+stochastic gradient descent needed the derivative of the loss with respect
+to each of the network's 203,530 parameters, and automatic differentiation
+(:numref:`sec_autograd`) supplied all of them for a small multiple of the
+cost of the forward pass. How can one pass backward through a network
+compute so many derivatives at once? So far we have not needed to know, but
+three practical questions depend on the answer. Why does training need more
+memory than prediction, and why does that memory grow with the minibatch?
+Why does a ReLU unit that is inactive for every example stop learning? And
+why do the gradients of a deep network vanish or explode, the subject of the
+next section?
 
-The backward pass is built from local rules. Each operation receives the
-gradient of the loss with respect to its output and passes back the
-gradients with respect to its inputs, computed from values that the forward
-pass stored. An MLP needs only three such rules: one for a matrix product,
-one for adding a bias, and one for an elementwise activation function.
+The framework records the operations of the forward pass as a computational
+graph and then applies the chain rule backward through the graph, one
+operation at a time. The backward pass is thus built from local rules. Each
+operation receives the gradient of the loss with respect to its output and
+passes back the gradients with respect to its inputs, computed from values
+that the forward pass stored. An MLP needs only three such rules: one for a
+matrix product, one for adding a bias, and one for an elementwise activation
+function.
 Applying them in reverse order, from the loss back to the first layer, is
 backpropagation. We work through a graph with three inputs first,
 then derive the three rules for an MLP in matrix form, check them against
@@ -207,9 +209,10 @@ for general tensor operations in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 ### The Backward Pass
 
-The backward pass starts at the objective with
-$\partial J / \partial J = 1$. Since $J = L + s$, both $L$ and $s$ receive
-the gradient 1. For the cross-entropy, :numref:`sec_softmax` showed that the
+With these three rules we can compute the gradient of the objective with
+respect to every parameter of the MLP. The backward pass starts at the
+objective with $\partial J / \partial J = 1$. Since $J = L + s$, both $L$
+and $s$ receive the gradient 1. For the cross-entropy, :numref:`sec_softmax` showed that the
 gradient of the loss of one example with respect to its logits is
 $\hat{\mathbf{y}} - \mathbf{y}$, the predicted probabilities minus the
 one-hot label. With the one-hot labels as the rows of

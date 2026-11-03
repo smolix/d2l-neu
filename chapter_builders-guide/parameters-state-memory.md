@@ -6,16 +6,24 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Parameters, State, and Memory
 :label:`sec_parameters`
 
-A model with 8 billion parameters stores 32 GB of weights in 32-bit floating
-point. Training it takes four times as much memory, 128 GB, before it has
-seen a single example: every weight needs a gradient of the same size, and
-the Adam optimizer, which we meet in :numref:`sec_adam`, keeps two more
-tensors of that size, running averages of the gradients and of their
-squares. That is more than an 80 GB GPU holds. To estimate such numbers we
-need to know every tensor a model holds and what each one is for. Other
-routine operations need the same knowledge: a checkpoint must save every
-tensor the computation depends on, a move to a GPU must take all of them
-along, and fine-tuning must decide which of them the optimizer may change.
+The previous section built models as trees of modules and found every
+parameter by walking the tree. So far the framework has handled those
+tensors for us, and we have not asked what else a model holds or how much
+memory training it takes. Both questions matter once a model is large.
+Consider a model with 8 billion parameters, the size of the Llama 3 model
+that :numref:`sec_model_construction` mentioned. Its weights take 32 GB in
+the 32-bit floating-point format we have used so far. Training it takes four
+times as much memory, 128 GB, before it has seen a single example: every
+weight needs a gradient of the same size, and the Adam optimizer, which we
+meet in :numref:`sec_adam`, keeps two more tensors of that size, running
+averages of the gradients and of their squares. That is more than an 80 GB
+GPU holds.
+
+To estimate such numbers we need to know every tensor a model holds and what
+each one is for. Other routine operations need the same knowledge: a
+checkpoint must save every tensor the computation depends on, a move to a
+GPU must take all of them along, and fine-tuning must decide which of them
+the optimizer may change.
 
 Frameworks make this possible by *registration*: each layer announces the
 tensors it owns to the module system, which files them by name in the tree

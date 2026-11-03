@@ -1,43 +1,44 @@
 # Sequence Models
 :label:`chap_rnn`
 
-The first sentence of *The Time Machine* reads "The Time Traveller (for so it
-will be convenient to speak of him) was expounding a recondite matter to us."
-To predict its last word, a model must read the nineteen words before it, in
-their order. The models of the earlier chapters cannot: they map an input of
-fixed shape to an output and treat examples as independent, while a text
-varies in length and its entries depend on each other.
+Every model of the earlier chapters reads an input of fixed shape, such as
+a $28 \times 28$ image of a piece of clothing, and treats each example on
+its own. A sentence, a recording, or a series of measurements is different:
+it varies in length, and its entries depend on each other and on their
+order. Take the opening sentence of H. G. Wells' *The Time Machine*, which
+the models of this chapter read: "The Time Traveller (for so it will be
+convenient to speak of him) was expounding a recondite matter to us." To
+guess its last word, a reader uses the nineteen words before it, in order.
+How can a model do the same when the text before it can have any length?
 
-Language models are trained to predict each token from the tokens before
-it, and they write the same way, feeding each new token back in as input. By
-the chain rule of probability, these conditionals multiply to the probability
-of the whole text. The difficulty is the prefix, which grows with every token. A
-window of the last few tokens forgets everything older, and a table of counts
-over windows needs exponentially more text as the window widens. A
-*recurrent neural network* instead summarizes the prefix in a *hidden state*
-of fixed size, which the same layer updates after every token.
+The question is older than neural networks. In 1951 Claude Shannon measured
+how predictable English is by asking people to guess a text one letter at a
+time. A *language model* plays the same game: it predicts each token from
+the tokens before it. By the chain rule of probability, these predictions
+multiply to the probability of the whole text, and the model writes by
+feeding each chosen token back in as input. The difficulty is the
+prefix, which grows with every token. A window of the last few tokens
+forgets everything older, and a table of counts over windows needs
+exponentially more text as the window widens. A *recurrent neural network*
+instead summarizes the prefix in a *hidden state* of fixed size, which the
+same layer updates after every token. Today's large language models also
+predict one token at a time, so tokenization, perplexity and decoding
+carry over to them.
 
-:numref:`sec_sequence` asks how to predict a sequence from its own past with
-an input of fixed size, and why forecasting many steps ahead is harder than
-forecasting one. :numref:`sec_text-sequence` asks how to cut text into
-tokens, from characters and words to the byte pair encoding of deployed
-models. :numref:`sec_language-model` asks how to assign a text a probability
-by counting, why the counts run out, and how perplexity and bits per byte
-compare models. :numref:`sec_rnn` asks how a hidden state replaces the
-window, and how large an RNN language model is. :numref:`sec_rnn-scratch` asks
-how to implement and train that model, and how it compares with counts on
-the same text. :numref:`sec_bptt` asks why gradients through the recurrence
-vanish or explode, and what truncating them gives up. :numref:`sec_decoding`
-asks how to turn next-token distributions into text, by search or by
-sampling.
+:numref:`sec_sequence` asks how to predict a sequence from its own past,
+and why forecasting many steps ahead is harder than forecasting one.
+:numref:`sec_text-sequence` asks how to cut text into tokens.
+:numref:`sec_language-model` asks how to assign a text a probability by
+counting, why the counts run out, and how to compare language models.
+:numref:`sec_rnn` asks how a hidden state replaces the window.
+:numref:`sec_rnn-scratch` asks how to implement and train that model, and
+how it compares with counts. :numref:`sec_bptt` asks why gradients through
+the recurrence vanish or explode. :numref:`sec_decoding` asks how to turn
+next-token distributions into text.
 
-Every language model of the chapter reads *The Time Machine*. In a plain
-recurrent network the gradient from a few dozen steps back usually fades,
-which limits how far back the network learns to remember. Gated cells and state
-space models, which address this, follow in :numref:`chap_modern_rnn`;
-attention, which keeps every past token instead of a summary, follows in
-:numref:`chap_attention`. Tokenization, perplexity, backpropagation through
-time, and decoding carry over to both.
+Gated cells and state space models, which let a recurrent network remember
+further back, follow in :numref:`chap_modern_rnn`, and attention, which
+keeps every past token, in :numref:`chap_attention`.
 
 ```toc
 :maxdepth: 2

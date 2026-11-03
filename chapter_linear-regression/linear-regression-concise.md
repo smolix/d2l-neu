@@ -11,12 +11,14 @@ ourselves: the parameters and their initialization, the forward pass, the
 squared loss, and the update of minibatch stochastic gradient descent.
 Writing them out showed what each part computes, and we could check every
 line against the formulas of :numref:`sec_linear_regression`. That model had
-two weights and a bias. ResNet-50, a standard network for classifying
-images, has 25.6 million parameters in 161 tensors, and it is trained with
-update rules that keep a running average of past gradients for every
-parameter. Writing and testing all of this by hand for every new model would
-take most of our effort. Worse, a mistake in any part rarely raises an
-error. The model still trains, only less well.
+two weights and a bias, and the models of later chapters are far larger.
+The image classifier ResNet-50 of :numref:`sec_resnet`, for instance, has
+25.6 million parameters in 161 tensors, and it is trained with update rules
+that keep a running average of past gradients for every parameter. Writing
+and testing all of this by hand for every new model would take most of our
+effort, and a mistake in any part rarely raises an error. The model still
+trains, only less well. We need parts that are written and tested once, for
+models of any size.
 
 Deep learning frameworks such as MXNet :cite:`Chen.Li.Li.ea.2015`, JAX
 :cite:`Frostig.Johnson.Leary.2018` with its libraries Flax and Optax,

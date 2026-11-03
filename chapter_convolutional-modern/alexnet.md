@@ -6,28 +6,34 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # AlexNet and Learned Image Representations
 :label:`sec_alexnet`
 
-The ImageNet challenge of 2012 asked a system to sort photographs into 1000
-categories and scored it by its *top-5 error*, the fraction of test images
-whose correct label is not among the system's five best guesses. The winners
-of the two previous years had top-5 errors of about 28% and 26%. Like most
-vision systems of the time, they separated representation from prediction:
-hand-designed operators such as SIFT :cite:`Lowe.2004`, SURF
+The LeNet of :numref:`sec_lenet` learns everything it computes from examples,
+its convolution kernels as well as its classifier. LeCun and his colleagues
+trained the first such network in 1989, yet for the next two decades most
+vision systems worked differently. They separated representation from
+prediction: hand-designed operators such as SIFT :cite:`Lowe.2004`, SURF
 :cite:`Bay.Tuytelaars.Van-Gool.2006`, HOG :cite:`Dalal.Triggs.2005`, and bags
 of visual words :cite:`Sivic.Zisserman.2003` turned pixels into feature
 vectors, and a linear or kernel method learned a classifier on top. The
 training loss could improve the classifier but never the features, so
-progress depended on people inventing better features.
+progress depended on people inventing better features. Why did learned
+features take so long to beat engineered ones, and what changed when they
+did?
 
-AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012` replaced the whole pipeline
-with one deep convolutional network trained end to end, and reached a top-5
-error of 15.3%, against 26.2% for the next-best entry. Its architecture is
-the template of LeNet (:numref:`sec_lenet`) scaled up: convolutional stages
-that shrink the resolution and grow the number of channels, followed by fully
-connected layers. Three things made the scale-up work in 2012 when it had not
-before: a labeled dataset large enough for tens of millions of parameters,
-GPUs fast enough to train them in days, and techniques (ReLU activations,
-dropout, data augmentation) that kept a network of this size trainable and
-kept it from overfitting.
+The change came at the ImageNet challenge of 2012, which asked a system to
+sort photographs into 1000 categories and scored it by its *top-5 error*, the
+fraction of test images whose correct label is not among the system's five
+best guesses. The winners of the two previous years, both built on engineered
+features, had top-5 errors of about 28% and 26%. AlexNet
+:cite:`Krizhevsky.Sutskever.Hinton.2012` replaced the two-stage pipeline with
+one deep convolutional network trained end to end, and reached a top-5 error
+of 15.3%, against 26.2% for the next-best entry. Its architecture is the
+template of LeNet scaled up: convolutional stages that shrink the resolution
+and grow the number of channels, followed by fully connected layers. Three
+things made the scale-up work in 2012 when it had not before: a labeled
+dataset large enough for tens of millions of parameters, GPUs fast enough to
+train them in days, and techniques (ReLU activations, dropout, data
+augmentation) that kept a network of this size trainable and kept it from
+overfitting.
 
 This section explains why each of the three mattered, builds AlexNet, counts
 where its parameters and its arithmetic sit, and trains it on Fashion-MNIST.

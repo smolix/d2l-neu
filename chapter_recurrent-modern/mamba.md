@@ -190,8 +190,9 @@ for name, model in models.items():
 S4D answers fewer than one query in five correctly, a little above the
 chance rate of one in eight: its weights depend on distance, and the same
 distance holds a symbol in one sequence and a filler in the next. The minGRU
-answers nine in ten or more. Its decay is chosen by each input, so it can
-keep a symbol and let fillers pass, and it nearly solves the task. Its
+answers nine in ten or more in most runs, and rarely fewer than eight. Its
+decay is chosen by each input, so it can keep a symbol and let fillers pass,
+and it nearly solves the task. Its
 gates, however, start near one half: on the delayed recall task of
 :numref:`sec_ssm`, which needs no selection at all, the minGRU could not
 keep a symbol across 1,000 fillers unless its gates were initialized with

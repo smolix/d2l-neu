@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:c0a9f1dc06dbdcc03ecef41dfd75fd60ece1b3958b50a0065d38c197964a2cd9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,8 +13,19 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-divergences-distances-divergences-and-distances-between-distributions-1": {
+      "code_fingerprint": "sha256:2e926fc2a35460dbc851d13b7bbb9f95aaefd3d4a3a9a571d789c27d2fcb2d07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =   0.01: KL inf  JS 0.6931  TV 1  MMD^2 0.0001  W1 0.01\nd =    1.0: KL inf  JS 0.6931  TV 1  MMD^2 0.7869  W1 1\nd =  100.0: KL inf  JS 0.6931  TV 1  MMD^2 2  W1 100\n"
+        }
+      ]
+    },
     "divergences-distances-f-table": {
-      "code_fingerprint": "sha256:83a1309c65ee192eedce6f0c11fc0708898600a48fcf7ea05de7beaa50a613f2",
+      "code_fingerprint": "sha256:ea6c7f13fdc3fcaad49608db36ec3a05fff02e493d746ca8ae5fcc5cb03e8b47",
       "kind": "text",
       "outputs": [
         {
@@ -24,19 +35,19 @@
         }
       ]
     },
-    "divergences-distances-f-gan-bound": {
-      "code_fingerprint": "sha256:8269767498b65f319b58cb8718e2ef9b1a78da6a6229eb5916c79087cbd62691",
+    "mdl-divergences-distances-the-local-quadratic": {
+      "code_fingerprint": "sha256:97c8ab04c60f8fa8b688254c1165a1a1907cb493298cca90f9582f8f2c563004",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact chi^2(P||Q)           = 1.0133\nbound at the optimal critic = 1.0133\nbound at a perturbed critic (scale 0.5): 0.9678\nbound at a perturbed critic (scale 1.0): 0.3661\nbound at a perturbed critic (scale 2.0): 0.9600\n"
+          "text": "t =  0.5: KL 0.844  reverse KL 0.747  Hellinger^2 0.789  JS 0.783\nt =  0.1: KL 0.956  reverse KL 0.917  Hellinger^2 0.936  JS 0.935\nt = 0.01: KL 0.995  reverse KL 0.990  Hellinger^2 0.993  JS 0.993\n"
         }
       ]
     },
     "divergences-distances-fwd-rev-kl": {
-      "code_fingerprint": "sha256:47605ff0bd29793a4e9d83407d18ce4e1185ab4a24d1245dc813f383ef3e9926",
+      "code_fingerprint": "sha256:27ad6c9523e4b179aa480faef149eb7fd8a6d03905b18e3335490e9b79b14b2e",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,34 +60,82 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37856,
-          "sha256": "sha256:1920a728e5124e0a1c528d70260bca4e59f0fb84e1e2e5f364c1cd50d0d6e444"
+          "sha256": "sha256:c8ebfd56e1a38a95987d6b2f840cb009424f6eade1d6ec6c426661f748f42c65"
+        }
+      ]
+    },
+    "divergences-distances-f-gan-bound": {
+      "code_fingerprint": "sha256:79d6cd73791cde6160bd54ddea85c3a00c330e14c9d2acd180587d141e0e6651",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact chi^2(P||Q) = 1.0133\nc         0.00    0.25    0.50    1.00    1.50    2.00\nbound   0.0000  0.4433  0.7600  1.0133  0.7600  0.0000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/divergences-distances-f-gan-bound-1.svg",
+          "bytes": 29121,
+          "sha256": "sha256:5683e3b8e23e90190bfcba73e96918797bb15f3728cae33fffd580363491b970"
         }
       ]
     },
     "divergences-distances-pinsker": {
-      "code_fingerprint": "sha256:33a4af236c3ba8169c57b2dc7dd5ae23f430eb3fad7788032709089cb248c374",
-      "kind": "text",
+      "code_fingerprint": "sha256:be06db2610d3ccab154e1a70bc739252d59d56930a5dcc74857306cf140723bb",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9861\ncoins 1/2 vs 1/2 +   0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2 +  0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2 + 0.001: TV / sqrt(KL/2) = 0.999999\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/divergences-distances-pinsker-1.svg",
+          "bytes": 242243,
+          "sha256": "sha256:8401184b99a0b72096311b5638c2efbe8f0fc35e4c23ccbc700111df70c08145"
         }
       ]
     },
     "divergences-distances-mmd": {
-      "code_fingerprint": "sha256:afa0af41dca32fa743338434005e56d190c9e8e0cbcd6c6c98ccd6773f96b668",
+      "code_fingerprint": "sha256:3d2b43cb169f6ff880eda45cf7899411b9fe52d6e00f7f21683ff7787b9f24d7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MMD^2, same distribution : +0.00054\nMMD^2, mean shifted 0.5  : +0.05890\n"
+          "text": "linear,    N(0,1) vs N(0,4)    MMD^2 = -0.0045  (population 0.0000)\nquadratic, N(0,1) vs N(0,4)    MMD^2 = +10.7600  (population 9.0000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RBF,       N(0,1) vs N(0,4)    MMD^2 = +0.1048  (population 0.0942)\nRBF,       N(0,1) vs N(0,1)    MMD^2 = -0.0003  (population 0.0000)\nRBF,       N(0,1) vs N(0.5,1)  MMD^2 = +0.0467  (population 0.0471)\n"
+        }
+      ]
+    },
+    "mdl-divergences-distances-integral-probability-metrics-and-mmd-1": {
+      "code_fingerprint": "sha256:9b059eadf805f12cfb0922af33b72a2617954b6ba4dcba0a41c7365728ca5178",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "witness changes sign at x = 0.45\nE_P g - E_Q g = 0.0476\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/mdl-divergences-distances-integral-probability-metrics-and-mmd-1-1.svg",
+          "bytes": 27303,
+          "sha256": "sha256:16fccb3f9b6ecd772ac1d9335d4a34e9c4b69e825464a9ad9be5ad22b36325d6"
         }
       ]
     },
     "divergences-distances-w1": {
-      "code_fingerprint": "sha256:f51075ea047fddef30c243a11d3589b30369d0f7ec7aad5971efe7db3e3bfdb4",
+      "code_fingerprint": "sha256:f157401adc1857c725558a1777333f94f7ee4263e8cd1c77de3275491e0589be",
       "kind": "text",
       "outputs": [
         {
@@ -87,53 +146,69 @@
       ]
     },
     "divergences-distances-sinkhorn": {
-      "code_fingerprint": "sha256:a3c8d30dfa0744aefda2a46886556694b6946cb28259eb014e2ff8cb81fc9030",
+      "code_fingerprint": "sha256:b549341d7b391715ac8fea73157b4e1d96cb0bfe10d8a8251f7af61403523219",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\nepsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+          "text": "squared cost, LP optimum : 3.5000\nepsilon = 2.0: entropic cost = 4.0649, routes above 1e-3 = 25\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.5: entropic cost = 3.5696, routes above 1e-3 = 14\nepsilon = 0.1: entropic cost = 3.4995, routes above 1e-3 = 10\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
-          "bytes": 35886,
-          "sha256": "sha256:1d0a322665d152a070ed1a159efcf3c85ecd55d06b6f66165bec26816103478d"
+          "bytes": 32778,
+          "sha256": "sha256:06783fd1472be278ea1376454d98e02d4e2905ff606589c9ee8f3af6b0f7bea7"
         }
       ]
     },
     "divergences-distances-score": {
-      "code_fingerprint": "sha256:731fa1037ceac0defdcd7cf6c64b6d7972e56a9de54b5f74cc2424e50dabc5f7",
+      "code_fingerprint": "sha256:61de7920df22f2d41ea37dbfb3d1309367b3bda4b8bead9a20e000e8a4711f84",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mixture score, max |analytic - numerical|: 3.52e-04\nscore change from rescaling p by 2.7    : 1.82e-12\nFisher divergence N(0,1)||N(1,1): quadrature 0.500000, closed form 0.500000\n"
+          "text": "mixture score, max |analytic - numerical|: 3.52e-04\n"
+        }
+      ]
+    },
+    "mdl-divergences-distances-the-score-and-the-fisher-divergence-1": {
+      "code_fingerprint": "sha256:8d2db1e986c78bff4107dc1dc17bd1e97ef4096321ed84aa63f35ad9ce591521",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "m = 1: KL = 0.184 nats, Fisher = 1.1e-01\nm = 3: KL = 0.337 nats, Fisher = 7.1e-03\nm = 5: KL = 0.339 nats, Fisher = 4.0e-06\n"
         }
       ]
     },
     "divergences-distances-stein": {
-      "code_fingerprint": "sha256:70c44378c2629e4fc93b7ce5a376756f3029e44fff491813cfa6c045a6654460",
+      "code_fingerprint": "sha256:41e390c0247e9d924ee06177d452898a630b935cea89fcd0fd18578ad0ba6e31",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+          "text": "g(x) = x^3  : mean of g'(Z) - Z g(Z) = -0.0002, standard error 0.0065\ng(x) = sin x: mean of g'(Z) - Z g(Z) = +0.0008, standard error 0.0010\n"
         }
       ]
     },
     "divergences-distances-ksd": {
-      "code_fingerprint": "sha256:b010dbdf5aac4162b233c5765450b27c587ef32e411d5b248ddd69dbcf464205",
+      "code_fingerprint": "sha256:4900c6b7eb01b155a2eb8c288b870191aa23a8631fd1d49bcdee2acbb22b2b19",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the true model  N(0,1): +0.00019\nKSD^2 vs the wrong model N(1,1): +0.64425\n"
+          "text": "KSD^2 vs the true model  N(0,1): +0.0001  (population 0.0000)\nKSD^2 vs the wrong model N(1,1): +0.5941  (population 0.5774)\n"
         }
       ]
     }

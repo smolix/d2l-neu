@@ -9,212 +9,111 @@
   },
   "cells": {
     "score-matching-diffusion-flow-imports": {
-      "code_fingerprint": "sha256:528e842d4af8c122d5d60319973d3d5d54365c44730e096751f8f71a0665f2ad",
+      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
       "kind": "text",
       "outputs": []
     },
+    "mdl-score-matching-diffusion-flow-a-normalizer-free-objective": {
+      "code_fingerprint": "sha256:458b29da3ee29940b663cf01995f1d864221d32d9eaff0d3bd05ddf5c4a2361e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "implicit score matching picks w = 2.00  (v = 2.0)\n"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-denoising-score-matching": {
+      "code_fingerprint": "sha256:343c0e18f7553475e91c82d6012d6ff55b56fc435f3b540a9ec53e25f07e237a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean squared error of the conditional mean -xt/1.25: 3.195  (floor 3.2)\nleast-squares slope of x on xt: 0.798  (0.8)\n"
+        }
+      ]
+    },
     "score-matching-diffusion-flow-dsm-train": {
-      "code_fingerprint": "sha256:da0a5547e9574d2989272c553e8ca82dd38608173cd9c4b149dd6f15764bd56c",
+      "code_fingerprint": "sha256:81fed7d64d1a02c1777d2cb0f7678abde3fef945ca7cf40bb20f771d991eb4d5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DSM loss 2.036 vs estimated Bayes risk 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
+          "text": "mean squared error: fit 2.12, exact score 2.12, population floor 2.11\nexcess risk 0.007; fit at x = 8: -10.5, exact score -12 (no pairs there)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 24720,
-          "sha256": "sha256:dec48f0684600065293d64357b69370bb0b31a92d8be9ece27010dcad47adad8"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-ddpm-marginal": {
-      "code_fingerprint": "sha256:d6f128729c3e685e97c2f61f537ff6f0a9b4c50b212faf27610ef38853831f52",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "bytes": 97405,
+          "sha256": "sha256:5b7cfd0f6504682b4e55e03be2477284d491aa0846bf0e79670eada8b63ab600"
         }
       ]
     },
     "score-matching-diffusion-flow-langevin": {
-      "code_fingerprint": "sha256:771414297ea6663031369e2f06b40b076158c82b9aeab7dcf4ff1c398a92054d",
+      "code_fingerprint": "sha256:b2ee32a2ee98e375653e2f0f71c9950a5b5080b702e65c0761845dc0080c95eb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spread-out start: P(X > 0) = 0.509, E[X^2] = 4.26 (truth 0.500, 4.25)\n"
+          "text": "spread-out start: P(X > 0) = 0.499, E[X^2] = 4.22  (truth 0.5, 4.25)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one-mode start:   P(X > 0) = 0.012  (slow mixing)\n"
+          "text": "one-mode start:   P(X > 0) = 0.012  (crossed)\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-ddpm-marginal": {
+      "code_fingerprint": "sha256:0a2e10a6a1fb115caebda0614eb00b4ed56ca86e872030874569bf1deb764cb6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t =   10: alpha_bar 0.998, Var(x_t) 0.999 (formula 1.000), KS 0.010\nt =  100: alpha_bar 0.897, Var(x_t) 1.003 (formula 1.000), KS 0.011\nt = 1000: alpha_bar 0.000, Var(x_t) 1.015 (formula 1.000), KS 0.024\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
-      "code_fingerprint": "sha256:6a9b50e323612308fa2840c81d3e8944b13ed752e1a84acd18ba34ae29fe0bd4",
+      "code_fingerprint": "sha256:5fbf914f3a3b6391cc01b2af7ab7c483d1e0f3c395d264fdf9bcd2b9fe9493dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; the same initial draws are used at every stride count\n"
+          "text": "N(0,1) data,   10 strides: every sample times 0.832\nN(0,1) data,   50 strides: every sample times 0.964\nN(0,1) data, 1000 strides: every sample times 0.998\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mixture,  10 strides vs 1000: mean |gap| 0.084, KS 0.080\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.018\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:fa8883a5948f94823be9bc9b2503a58abf809099fc584acb3ebd6be98e1697b8",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nexact conditional: mean 0.970, std 0.243\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
-          "bytes": 30576,
-          "sha256": "sha256:1d5cc24877eb24dbebc96136c700225f05232da87f320002d9f8a04d4e26b771"
-        }
-      ]
-    },
-    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
-      "code_fingerprint": "sha256:178c503a5f634b27419bafbbd732e03a2795352f7da77209e23c87a570bd1857",
+      "code_fingerprint": "sha256:029effad08c265602b13542c6e06212127e32027b19fb6c69bf1e7d3903d1920",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:d470c88afb06005963b19823e6e03ec25790291528f96f6ef48f8fba72545ada",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "training set (8192, 2); energy distance of a fresh sample to the held-out set: 0.0014\n"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:ca4304f443a98e199e9dd2a239e6f555ebe7ea0870888f9c62b474c9bc47dd26",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step    0: CFM loss 2.125\n"
+          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.966, std 0.240\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: CFM loss 1.590\n"
+          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.029, std 0.235\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 2000: CFM loss 1.459\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 3000: CFM loss 1.419\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 4000: CFM loss 1.427\n"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:5a06beb379e4930b5601d440451053b8c9b5dde1e735fca36e06e536cd0aa8ee",
-      "kind": "text",
-      "outputs": []
-    },
-    "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:da191e5f09ed20694bfafdf96e43b4457028a6ce6091c270b94d0c9e85d6eaf4",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114821,
-          "sha256": "sha256:654191b02206410b153d3215bafebfe4ac0cb0093377f1897586c9383401b9a8"
-        }
-      ]
-    },
-    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
-      "code_fingerprint": "sha256:896b1d3a5135e6988c0d7ecf6e0ac58036c3c6ea4dcf63141666b63bd62c0830",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "final reflow loss 0.003\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 1 step(s): energy distance  CFM 0.603  ->  reflow 0.003\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 2 step(s): energy distance  CFM 0.129  ->  reflow 0.003\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "32 step(s): energy distance  CFM 0.003  ->  reflow 0.003\n"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:129d49e3b9f2e8d46712c9d5a87cf57357363cb9002c7700be37b0398da5b88e",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "1: 0.603  2: 0.129  4: 0.024  8: 0.005  16: 0.003  32: 0.003  64: 0.003\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 26142,
-          "sha256": "sha256:57a7b552b511e277c400a3d5462f3b7cce16080c0002287d213ac966c7ecfc6a"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:54b6b64b01acf21b2db0255478699c5735889b49fded2862ac2715378e86b4e5",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  2 steps: endpoint error  Euler 0.7516 (2 NFE)   Heun 0.6659 (4 NFE)\nK =  5 steps: endpoint error  Euler 0.1215 (5 NFE)   Heun 0.0808 (10 NFE)\nK = 10 steps: endpoint error  Euler 0.0439 (10 NFE)   Heun 0.0282 (20 NFE)\nK = 20 steps: endpoint error  Euler 0.0203 (20 NFE)   Heun 0.0085 (40 NFE)\nK = 40 steps: endpoint error  Euler 0.0099 (40 NFE)   Heun 0.0023 (80 NFE)\n"
+          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.078, std 0.233\nexact conditional: mean 0.970, std 0.243\n"
         }
       ]
     }

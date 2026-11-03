@@ -9,102 +9,141 @@
   },
   "cells": {
     "integral-imports": {
-      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "code_fingerprint": "sha256:2bf2bf987368ec984a28e0a08ec97401658c569eff6ed36ccabbbf6f299cd92b",
       "kind": "text",
       "outputs": []
     },
-    "integral-riemann-converge": {
-      "code_fingerprint": "sha256:77bc0e3bc44845dfeaa1ba7bf868b3b0441a627a6d48274f49b481b332a26816",
+    "mdl-integral-calculus-riemann-sums-1": {
+      "code_fingerprint": "sha256:93627a0ac4df2a3436878b1bfbb76615f24b05bfc16566249e5f6e93f2d23d9c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\neps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\neps=0.001  sum=0.804519  error=0.000200\ntruth = (1/2) log 5 = 0.804719\n"
+          "text": "N=10    left sum=0.285000  formula=0.285000\nN=100   left sum=0.328350  formula=0.328350\nN=1000  left sum=0.332834  formula=0.332834\n"
+        }
+      ]
+    },
+    "integral-riemann-converge": {
+      "code_fingerprint": "sha256:18599f3a87fe0135311531d470a847b4c82a7f68538c1d93261059a478c405f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=1e-01  sum=0.783785  truth-sum=2.09e-02  0.2*eps=2e-02\neps=1e-02  sum=0.802710  truth-sum=2.01e-03  0.2*eps=2e-03\neps=1e-03  sum=0.804519  truth-sum=2.00e-04  0.2*eps=2e-04\neps=1e-04  sum=0.804699  truth-sum=2.00e-05  0.2*eps=2e-05\ntruth = (1/2) log 5 = 0.804719\n"
+        }
+      ]
+    },
+    "mdl-integral-calculus-the-theorem-1": {
+      "code_fingerprint": "sha256:abefe2f856a6403fe516f3d6a7269002df5ecaa29963fc45b0fff644de927d92",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |dG/dx - f| = 5.551115123125783e-17\n"
         }
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:282cbb32e0dc878bf83f3859672dc67e773448cb002ba7f23b19e4c044693068",
+      "code_fingerprint": "sha256:4fec87afab22183b0bd538a03dfb0d7310b19cf3549a49a70d0a222f56a85f03",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 5.551115123125783e-14\nRiemann F(2) vs G(2)-G(0): 0.8045188628837103 0.8047189562170501\n"
+          "text": "eps=1e-02  max over x of |F(x) - (G(x) - G(0))| = 2.51e-03\neps=1e-03  max over x of |F(x) - (G(x) - G(0))| = 2.50e-04\neps=1e-04  max over x of |F(x) - (G(x) - G(0))| = 2.50e-05\n"
         }
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:351e38f2be6e074e867209e62658acf9dbeb3e3f99d890d0b29774713db0333f",
+      "code_fingerprint": "sha256:39f3d0d799eba2940902079835fa8bdb2463eaf52cc233301e7f42a7cf7671af",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=1.0   left-Riemann sum=0.632437  exact 1-e^-b=0.632121\nb=2.0   left-Riemann sum=0.865097  exact 1-e^-b=0.864665\nb=5.0   left-Riemann sum=0.993759  exact 1-e^-b=0.993262\nb=10.0  left-Riemann sum=1.000455  exact 1-e^-b=0.999955\nb=20.0  left-Riemann sum=1.000500  exact 1-e^-b=1.000000\n"
-        }
-      ]
-    },
-    "integral-box-volume": {
-      "code_fingerprint": "sha256:ed3cb2d32fe67dcbd920022848edd4a020adbc326b70b540492cdfc6050fc943",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact volume  pi * erf(2)^2           : 3.11227\n"
+          "text": "b=1    left sum=0.632437  exact 1-e^-b=0.632121\nb=2    left sum=0.865097  exact 1-e^-b=0.864665\nb=5    left sum=0.993759  exact 1-e^-b=0.993262\nb=10   left sum=1.000455  exact 1-e^-b=0.999955\nb=20   left sum=1.000500  exact 1-e^-b=1.000000\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:a6d5aa3b22db680a93894459e8884e718dc8cbffcb002dbf963a92b7dc0f7bdf",
+      "code_fingerprint": "sha256:df895153b718370e3969ee52a2e7bac428c137266a8b49a86ccf14f18f9a26b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "grid integral of e^(-x^2-y^2): 3.141593\nexact value pi               : 3.141593\n"
+          "text": "b=1  grid sum=2.230949  pi*erf(b)^2=2.230985  pi=3.141593\nb=2  grid sum=3.112266  pi*erf(b)^2=3.112270  pi=3.141593\nb=3  grid sum=3.141454  pi*erf(b)^2=3.141454  pi=3.141593\nb=6  grid sum=3.141593  pi*erf(b)^2=3.141593  pi=3.141593\n"
         }
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:7d1d0775456db0831660ffa02acc04ce33624f2b5f2024629c9b8b9d4ddb05df",
+      "code_fingerprint": "sha256:c21290cb247df4ff239ee5b3d426a284348d62dd5277f2fff54b5768537653b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: 0.0\n"
+          "text": "total mass   1.000000\nE[Z^2]       1.000000\nP(|Z| <= 1)  0.682689   erf(1/sqrt 2) = 0.682689\n"
         }
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:cfe0401cb3248c986afffef85848290290ea8e6c9035f63bdc062ce3be5704f5",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.75454  error=7.7e-03\nn=1000    Monte Carlo=0.74619  error=6.3e-04\nn=10000   Monte Carlo=0.74833  error=1.5e-03\nn=100000  Monte Carlo=0.74719  error=3.7e-04\nmidpoint quadrature  =0.74682\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 44182,
-          "sha256": "sha256:be403207f03780cc2cc4420b2bca347c12aa8644b368133c3646280beb1f1298"
-        }
-      ]
-    },
-    "mdl-integral-stochastic-gradient-estimators": {
-      "code_fingerprint": "sha256:c9debcd4e5aa8efb6bbb16fe5e90ff4fccc7f499fcdea1b99204845447e88db9",
+      "code_fingerprint": "sha256:c345bcdcd1f5355720c7d1c746a66bf71cd9f2949d6ca34a335f2c86965d08ba",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true derivative = 3.0000\npathwise               mean=3.0019  sample sd=1.998  MC se=0.0045\nscore function         mean=2.9974  sample sd=7.162  MC se=0.0160\nscore + baseline       mean=2.9924  sample sd=4.878  MC se=0.0109\n"
+          "text": "n=10      estimate=0.74832  error=1.5e-03  sigma/sqrt(n)=6.4e-02\nn=100     estimate=0.73487  error=1.2e-02  sigma/sqrt(n)=2.0e-02\nn=1000    estimate=0.74162  error=5.2e-03  sigma/sqrt(n)=6.4e-03\nn=10000   estimate=0.74460  error=2.2e-03  sigma/sqrt(n)=2.0e-03\nn=100000  estimate=0.74661  error=2.1e-04  sigma/sqrt(n)=6.4e-04\nexact (sqrt(pi)/2) erf(1) = 0.746824\n"
+        }
+      ]
+    },
+    "mdl-integral-calculus-monte-carlo-estimation-1": {
+      "code_fingerprint": "sha256:923f0a86c795c01ec1619a1efc08dbc3efe7d0363a7766efd0cf969d3ebc2a84",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-integral-calculus/mdl-integral-calculus-monte-carlo-estimation-1-1.svg",
+          "bytes": 42223,
+          "sha256": "sha256:f247d4def3774063f2a54b0aea4dd39df43e40005e87f48ccddb8521c79f9e94"
+        }
+      ]
+    },
+    "mdl-integral-stochastic-gradient-estimators": {
+      "code_fingerprint": "sha256:872731fa4166f5f316ccadcb043b605ec247bae8d813f1b9f66fd96d6fadba84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |pathwise - 2x| = 0.0\n"
+        }
+      ]
+    },
+    "mdl-integral-calculus-score-function-and-pathwise-gradients-1": {
+      "code_fingerprint": "sha256:e3e8cc3f6ae54c7a408e6114d627fd8c5ea0a04a5b3a377bf512cc502f93f835",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true derivative 2*theta = 3.0\npathwise        mean=2.9953  sd=2.002 (exact 2.000)  se=0.0045\nscore           mean=2.9923  sd=7.145 (exact 7.181)  se=0.0160\nscore+baseline  mean=3.0047  sd=4.871 (exact 4.899)  se=0.0109\n"
+        }
+      ]
+    },
+    "integral-score-wins": {
+      "code_fingerprint": "sha256:2900f79bb8c3203e1d05ea9341c34067721363b210af661769a1c13a1e5e770d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "omega=1  true=+0.0429  pathwise +0.0440 (sd 0.66)  score +0.0437 (sd 0.55)\nomega=3  true=-0.0070  pathwise -0.0028 (sd 2.12)  score -0.0089 (sd 0.71)\n"
         }
       ]
     }

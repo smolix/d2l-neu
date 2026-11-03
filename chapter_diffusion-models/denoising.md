@@ -518,7 +518,7 @@ combine noise levels so that neither side of the trade-off is lost.
        this the best answer under squared error even though it is not a
        possible clean value?
     1. Write the minimum of :eqref:`eq_diffusion-dsm` as
-       $\frac{1}{2 \sigma^4}\, \mathbb{E}\big[\operatorname{tr} \operatorname{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big]$,
+       $\frac{1}{2 \sigma^4}\, \mathbb{E}\big[\operatorname{tr} \textrm{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big]$,
        and show that it is positive for every data distribution that is not
        concentrated on a single point. Which property of the Gaussian noise
        kernel does the argument use?

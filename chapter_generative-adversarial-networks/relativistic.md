@@ -22,7 +22,7 @@ import numpy as np
 The construction is due to :citet:`Jolicoeur-Martineau.2019`, who called the resulting critic *relativistic*: it scores a sample relative to a sample from the opposing distribution rather than against an absolute standard. The paired form used here is abbreviated RpGAN, for relativistic *paired*, and the divergence derived below inherits the subscript. We keep the notation of :numref:`sec_basic_gan`: data density $p$, generator density $q$, ratio $\rho = p/q$, log ratio $\lambda = \log \rho$, and a critic $D$ whose value is a realness logit. Draw a real sample $x \sim p$ and a generated sample $x' \sim q$ independently, and score the pair by the difference of the two critic values:
 
 $$
-\Phi(D) \;=\; E_{x \sim p,\; x' \sim q}\big[\log \sigma\big(D(x) - D(x')\big)\big].
+\Phi(D) \;=\; \mathbb{E}_{x \sim p,\; x' \sim q}\big[\log \sigma\big(D(x) - D(x')\big)\big].
 $$
 :eqlabel:`eq_gan_rp`
 
@@ -52,8 +52,8 @@ The inner maximization no longer decouples across points, because each critic va
 
 $$
 \frac{\delta \Phi}{\delta D(t)}
-\;=\; p(t)\, E_{x' \sim q}\big[\sigma(D(x') - D(t))\big]
-\;-\; q(t)\, E_{x \sim p}\big[\sigma(D(t) - D(x))\big].
+\;=\; p(t)\, \mathbb{E}_{x' \sim q}\big[\sigma(D(x') - D(t))\big]
+\;-\; q(t)\, \mathbb{E}_{x \sim p}\big[\sigma(D(t) - D(x))\big].
 $$
 :eqlabel:`eq_gan_rp_stationarity`
 
@@ -77,7 +77,7 @@ $$
 
 Taking logarithms proves (i).
 
-*The swap symmetry doubles the objective.* Under $P$, the first term of $V_{P,Q}(\mathcal{D})$ is $E[\log \sigma(D(a_1)-D(a_2))] = \Phi(D)$. Under $Q$, we have $a_1 \sim q$ and $a_2 \sim p$. Antisymmetry gives $-\mathcal{D}(a_1,a_2)=D(a_2)-D(a_1)$, and relabeling $(x,x')=(a_2,a_1)$ turns the second term into $\Phi(D)$ as well. Hence $V_{P,Q}(\mathcal{D})=2\Phi(D)$, proving (ii).
+*The swap symmetry doubles the objective.* Under $P$, the first term of $V_{P,Q}(\mathcal{D})$ is $\mathbb{E}[\log \sigma(D(a_1)-D(a_2))] = \Phi(D)$. Under $Q$, we have $a_1 \sim q$ and $a_2 \sim p$. Antisymmetry gives $-\mathcal{D}(a_1,a_2)=D(a_2)-D(a_1)$, and relabeling $(x,x')=(a_2,a_1)$ turns the second term into $\Phi(D)$ as well. Hence $V_{P,Q}(\mathcal{D})=2\Phi(D)$, proving (ii).
 
 *Differences suffice.* Pointwise maximization of the log-loss game on $\mathcal{X} \times \mathcal{X}$ gives the optimal pair critic $\log(dP/dQ)$ wherever both densities are positive. By (i), this critic has the difference form with $D=\lambda$. Restricting the supremum to difference critics therefore does not change its value. $\blacksquare$
 
@@ -102,7 +102,7 @@ Substituting the optimal critic $D^\star = \lambda$ into :eqref:`eq_gan_rp` dire
 
 $$
 d_{\mathrm{Rp}}(p, q)
-\;=\; \log 2 \;-\; E_{x \sim p,\; x' \sim q}\Big[\log\Big(1 + \frac{q(x)\, p(x')}{p(x)\, q(x')}\Big)\Big].
+\;=\; \log 2 \;-\; \mathbb{E}_{x \sim p,\; x' \sim q}\Big[\log\Big(1 + \frac{q(x)\, p(x')}{p(x)\, q(x')}\Big)\Big].
 $$
 :eqlabel:`eq_gan_rp_explicit`
 
@@ -126,13 +126,13 @@ The closed form permits an exact comparison between the pairing game and the cor
 
 *(a) $\mathrm{JS}(p, q) \;\leq\; d_{\mathrm{Rp}}(p, q) \;\leq\; \log 2$;*
 
-*(b) if $q = p\,(1 + \epsilon h)$ with $E_p[h] = 0$ and $h$ bounded, then $d_{\mathrm{Rp}}(p, q) = \tfrac{\epsilon^2}{4} E_p[h^2] + O(\epsilon^3) = 2\, \mathrm{JS}(p, q) + O(\epsilon^3)$;*
+*(b) if $q = p\,(1 + \epsilon h)$ with $\mathbb{E}_p[h] = 0$ and $h$ bounded, then $d_{\mathrm{Rp}}(p, q) = \tfrac{\epsilon^2}{4} \mathbb{E}_p[h^2] + O(\epsilon^3) = 2\, \mathrm{JS}(p, q) + O(\epsilon^3)$;*
 
 *(c) if $p$ and $q$ have disjoint supports, then $d_{\mathrm{Rp}}(p, q) = \log 2$, independently of how far apart the supports lie.*
 
 **Proof.** (a) The map $(a_1, a_2) \mapsto a_1$ pushes $P$ forward to $p$ and $Q$ forward to $q$. Since $\mathrm{JS}$ is an f-divergence, the data-processing inequality of :numref:`sec_mdl-tv-pinsker` gives $\mathrm{JS}(p, q) \leq \mathrm{JS}(P, Q) = d_{\mathrm{Rp}}$. Equation :eqref:`eq_gan_rp_mi` gives the upper bound because $I\big((a_1, a_2); y\big) \leq H(y) = \log 2$.
 
-(b) In :eqref:`eq_gan_rp_explicit`, set $u = \lambda(x') - \lambda(x)$ and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$. The moments satisfy $E[u] = -\epsilon^2 E_p[h^2] + O(\epsilon^3)$ and $E[u^2] = 2 \epsilon^2 E_p[h^2] + O(\epsilon^3)$. Substitution gives $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} E_p[h^2] + O(\epsilon^3)$. Applying the corresponding expansion to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} E_p[h^2] + O(\epsilon^3)$. Exercise :exref:`ex_relativistic-local-expansion-let-e` supplies the moment calculations.
+(b) In :eqref:`eq_gan_rp_explicit`, set $u = \lambda(x') - \lambda(x)$ and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$. The moments satisfy $\mathbb{E}[u] = -\epsilon^2 \mathbb{E}_p[h^2] + O(\epsilon^3)$ and $\mathbb{E}[u^2] = 2 \epsilon^2 \mathbb{E}_p[h^2] + O(\epsilon^3)$. Substitution gives $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} \mathbb{E}_p[h^2] + O(\epsilon^3)$. Applying the corresponding expansion to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} \mathbb{E}_p[h^2] + O(\epsilon^3)$. Exercise :exref:`ex_relativistic-local-expansion-let-e` supplies the moment calculations.
 
 (c) A real-first pair lies in $\operatorname{supp} p \times \operatorname{supp} q$, whereas a fake-first pair lies in $\operatorname{supp} q \times \operatorname{supp} p$. These product sets are disjoint when the original supports are disjoint. Thus $P$ and $Q$ are mutually singular, the pair determines its ordering with certainty, and $\mathrm{JS}(P, Q) = \log 2$. $\blacksquare$
 
@@ -147,9 +147,9 @@ Part (c) shows that pairing does not resolve support saturation. For the point m
 The loss of :numref:`sec_gan_objectives`'s template structure is not total. For fixed $p$ the map $q \mapsto d_{\mathrm{Rp}}(p, q)$ is convex, because $q \mapsto p \otimes q$ is linear and grouping :eqref:`eq_gan_rp` by the generated member,
 
 $$
-d_{\mathrm{Rp}}(p, q) \;=\; \log 2 + \sup_D\, E_{x' \sim q}\big[g_D(x')\big],
+d_{\mathrm{Rp}}(p, q) \;=\; \log 2 + \sup_D\, \mathbb{E}_{x' \sim q}\big[g_D(x')\big],
 \qquad
-g_D(x') := E_{x \sim p}\big[\log \sigma\big(D(x) - D(x')\big)\big],
+g_D(x') := \mathbb{E}_{x \sim p}\big[\log \sigma\big(D(x) - D(x')\big)\big],
 $$
 
 exhibits the objective as a supremum of functionals linear in $q$, the structural property that made the metrics of :numref:`sec_gan_objectives` convex in the generator's distribution. What does not survive is the fixed test class: each $g_D$ is built from the data distribution itself, and it scores $x'$ by a smoothed comparison against the entire real population. The outer minimization over $q$ is therefore as well posed as it was for the template objectives, and the rank structure of the test functions is what changes the generator's incentives.
@@ -157,7 +157,7 @@ exhibits the objective as a supremum of functionals linear in $q$, the structura
 To see the change, differentiate $\Phi$ through $x' = G(z)$ as :numref:`sec_basic_gan` did for the classical game. Playing the zero-sum game literally, with the generator minimizing $\Phi$, moves each generated sample up the critic's score surface with a per-sample weight, and comparing that weight with the classical saturating weight of :eqref:`eq_gan_weights` isolates what pairing changed:
 
 $$
-w_{\mathrm{Rp}}(x') = E_{x \sim p}\big[\sigma\big(D(x') - D(x)\big)\big],
+w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}\big[\sigma\big(D(x') - D(x)\big)\big],
 \qquad
 w_{\mathrm{GAN}}(x') = \sigma\big(D(x')\big).
 $$
@@ -169,14 +169,14 @@ This distinction changes the incentives for mode collapse. A generator can place
 
 :citet:`Sun.Fang.Schwing.2020` turn this observation into a result about the empirical loss landscape. For $n$ data points and $n$ generated points, the classical objective has at least $n^n - n!$ suboptimal strict local minima, one for every mode-dropping assignment with at least one collision. For the relativistic loss that pairs the $i$-th data point with the $i$-th generated point, every configuration has a continuous path to a global minimum along which the loss never increases. We use this result without reproducing its proof. It applies to a finite-sample, best-response setting and neither contradicts nor follows from part (c) of the proposition above. Pairing changes where optimization can become trapped; it does not change the objective's value on separated supports.
 
-The rank weight still saturates. If $D(x')$ is far below every real score, then $w_{\mathrm{Rp}}(x') \approx 0$, so the generated samples requiring the largest change receive the smallest updates. As in the classical game, a non-saturating objective reverses this weighting. Maximizing $E[\log \sigma(D(x') - D(x))]$ rather than minimizing $\Phi$ gives the same update direction with the complementary weight. Repeating the calculation from :eqref:`eq_gan_weights` with a score difference gives
+The rank weight still saturates. If $D(x')$ is far below every real score, then $w_{\mathrm{Rp}}(x') \approx 0$, so the generated samples requiring the largest change receive the smallest updates. As in the classical game, a non-saturating objective reverses this weighting. Maximizing $\mathbb{E}[\log \sigma(D(x') - D(x))]$ rather than minimizing $\Phi$ gives the same update direction with the complementary weight. Repeating the calculation from :eqref:`eq_gan_weights` with a score difference gives
 
 | generator objective | weight on the update of $x'$ | on a badly ranked sample |
 |:---|:---|:---|
-| zero-sum: minimize $\Phi$ | $E_{x \sim p}[\sigma(D(x') - D(x))]$ | weight $\to 0$: the update vanishes |
-| non-saturating: maximize $E[\log \sigma(D(x') - D(x))]$ | $E_{x \sim p}[\sigma(D(x) - D(x'))]$ | weight $\to 1$: the update is largest |
+| zero-sum: minimize $\Phi$ | $\mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]$ | weight $\to 0$: the update vanishes |
+| non-saturating: maximize $\mathbb{E}[\log \sigma(D(x') - D(x))]$ | $\mathbb{E}_{x \sim p}[\sigma(D(x) - D(x'))]$ | weight $\to 1$: the update is largest |
 
-The non-saturating swap is part of the original relativistic construction: :citet:`Jolicoeur-Martineau.2019` trains the generator this way from the start. Paper and code nevertheless differ in the modern reference. The R3GAN paper presents a zero-sum minimax game over $\Phi$, which places the generator on the saturating row of the table. Its official implementation instead maximizes $E[\log \sigma(D(x') - D(x))]$ for the generator while maximizing $\Phi$ for the critic. The implemented game is therefore not zero-sum.
+The non-saturating swap is part of the original relativistic construction: :citet:`Jolicoeur-Martineau.2019` trains the generator this way from the start. Paper and code nevertheless differ in the modern reference. The R3GAN paper presents a zero-sum minimax game over $\Phi$, which places the generator on the saturating row of the table. Its official implementation instead maximizes $\mathbb{E}[\log \sigma(D(x') - D(x))]$ for the generator while maximizing $\Phi$ for the critic. The implemented game is therefore not zero-sum.
 
 The two variants share their fixed point. :numref:`sec_basic_gan` established this for the classical pair by evaluating the non-saturating loss at the optimal critic. The same calculation works here. At $D^\star = \lambda$, Jensen's inequality bounds the swapped generator loss below by $\log(1 + e^J)$, where $J = \mathrm{KL}(p \,\|\, q) + \mathrm{KL}(q \,\|\, p) \geq 0$. The loss exceeds $\log 2$ whenever $q \neq p$ and attains $\log 2$ at $q = p$.
 
@@ -273,17 +273,17 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
        which statistic of the same minibatch scores replaces it?
    :exlabel:`ex_relativistic-prove-shift-invariance-ev`
 
-1. **Local expansion.** Let $q = p\,(1 + \epsilon h)$ with $E_p[h] = 0$
+1. **Local expansion.** Let $q = p\,(1 + \epsilon h)$ with $\mathbb{E}_p[h] = 0$
    and $h$ bounded.
     1. Starting from :eqref:`eq_gan_rp_explicit`, write
        $u = \lambda(x') - \lambda(x)$ and expand
        $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$.
-       Compute $E[u] = E_q[\lambda] - E_p[\lambda]$ and $E[u^2]$ to second
+       Compute $\mathbb{E}[u] = \mathbb{E}_q[\lambda] - \mathbb{E}_p[\lambda]$ and $\mathbb{E}[u^2]$ to second
        order in $\epsilon$, and conclude that
-       $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} E_p[h^2] + O(\epsilon^3)$.
+       $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} \mathbb{E}_p[h^2] + O(\epsilon^3)$.
     1. Apply the corresponding expansion to the entropy form
        :eqref:`eq_gan_entropy_gap` to show that
-       $\mathrm{JS}(p, q) = \tfrac{\epsilon^2}{8} E_p[h^2] + O(\epsilon^3)$,
+       $\mathrm{JS}(p, q) = \tfrac{\epsilon^2}{8} \mathbb{E}_p[h^2] + O(\epsilon^3)$,
        so that locally $d_{\mathrm{Rp}} = 2\, \mathrm{JS} + O(\epsilon^3)$.
    :exlabel:`ex_relativistic-local-expansion-let-e`
 
@@ -307,7 +307,7 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
    minimizes $\Phi$ and updates each generated sample with the weight
    $w_{\mathrm{Rp}}$ of :eqref:`eq_gan_rp_weights`. The non-saturating
    generator instead maximizes
-   $E_{x \sim p,\, x' \sim q}\big[\log \sigma\big(D(x') - D(x)\big)\big]$,
+   $\mathbb{E}_{x \sim p,\, x' \sim q}\big[\log \sigma\big(D(x') - D(x)\big)\big]$,
    which updates each generated sample with the complementary weight
    $1 - w_{\mathrm{Rp}}(x')$.
     1. Treat each of the five atoms of
@@ -345,7 +345,7 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
 
 1. **Separability of the pair critic.** ● Replace the logistic payoff
    in :eqref:`eq_gan_rp` by a concave payoff $\ell$, giving
-   $\Phi_\ell(D) = E_{x \sim p,\, x' \sim q}[\ell(D(x) - D(x'))]$. The
+   $\Phi_\ell(D) = \mathbb{E}_{x \sim p,\, x' \sim q}[\ell(D(x) - D(x'))]$. The
    corresponding game on the pair space lets an unrestricted pair critic
    $\mathcal{D}$ collect $\ell(\mathcal{D})$ on pairs from $P = p \otimes q$
    and $\ell(-\mathcal{D})$ on pairs from $Q = q \otimes p$. The proof of
@@ -419,9 +419,9 @@ Pairing changes the generator's per-sample weight from a comparison with one thr
    $x'_1, \ldots, x'_n \sim q$, and let
    $f(x, x') = \log \sigma(D(x) - D(x'))$. The diagonal estimate of $\Phi$
    averages $f(x_i, x'_i)$ over $i$, and the all-pairs estimate averages
-   $f(x_i, x'_j)$ over all $n^2$ index pairs. Write $v = \mathrm{Var}[f(x, x')]$,
-   $v_{10} = \mathrm{Var}_x\big[E_{x'}[f(x, x')]\big]$, and
-   $v_{01} = \mathrm{Var}_{x'}\big[E_x[f(x, x')]\big]$.
+   $f(x_i, x'_j)$ over all $n^2$ index pairs. Write $v = \textrm{Var}[f(x, x')]$,
+   $v_{10} = \textrm{Var}_x\big[\mathbb{E}_{x'}[f(x, x')]\big]$, and
+   $v_{01} = \textrm{Var}_{x'}\big[\mathbb{E}_x[f(x, x')]\big]$.
     1. Show that both estimates are unbiased, that the diagonal estimate
        has variance $v / n$, and that the all-pairs estimate has variance
 
@@ -503,7 +503,7 @@ Relativistic objectives<br>
 :::
 
 ::: {.slide title="The Critic Scores a Real–Fake Pair"}
-$$\Phi(D) = E_{x \sim p,\; x' \sim q}\big[\log \sigma\big(D(x) - D(x')\big)\big]$$
+$$\Phi(D) = \mathbb{E}_{x \sim p,\; x' \sim q}\big[\log \sigma\big(D(x) - D(x')\big)\big]$$
 
 - $\sigma(D(x) - D(x'))$: the Bradley–Terry probability that $x$ is preferred
   to $x'$ — the reward-model likelihood of :numref:`sec_regularized`.
@@ -526,8 +526,8 @@ Because $\Phi$ is concave in $D$, any stationary point is a global
 maximum. Its functional derivative is
 
 $$\frac{\delta \Phi}{\delta D(t)}
-= p(t)\, E_{x' \sim q}[\sigma(D(x') - D(t))]
-- q(t)\, E_{x \sim p}[\sigma(D(t) - D(x))]$$
+= p(t)\, \mathbb{E}_{x' \sim q}[\sigma(D(x') - D(t))]
+- q(t)\, \mathbb{E}_{x \sim p}[\sigma(D(t) - D(x))]$$
 
 . . .
 
@@ -577,7 +577,7 @@ the training dynamics.
 :::
 
 ::: {.slide title="Rank Weight Replaces Threshold Weight"}
-$$w_{\mathrm{Rp}}(x') = E_{x \sim p}[\sigma(D(x') - D(x))]
+$$w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]
 \qquad
 w_{\mathrm{GAN}}(x') = \sigma(D(x'))$$
 
@@ -608,8 +608,8 @@ distinguish samples after the threshold weight is nearly saturated.
 ::: {.slide title="Saturating Paper, Non-Saturating Code"}
 | generator plays | weight | badly ranked sample |
 |:---|:---|:---|
-| minimize $\Phi$ (paper's zero-sum Eq. 2) | $E_{x \sim p}[\sigma(D(x') - D(x))]$ | $\to 0$: stalls |
-| maximize $E[\log \sigma(D(x') - D(x))]$ (the code) | $E_{x \sim p}[\sigma(D(x) - D(x'))]$ | $\to 1$: largest |
+| minimize $\Phi$ (paper's zero-sum Eq. 2) | $\mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]$ | $\to 0$: stalls |
+| maximize $\mathbb{E}[\log \sigma(D(x') - D(x))]$ (the code) | $\mathbb{E}_{x \sim p}[\sigma(D(x) - D(x'))]$ | $\to 1$: largest |
 
 Both variants have the same fixed point, but the paper's displayed
 zero-sum objective gives smaller updates to badly ranked samples early in

@@ -1,4 +1,15 @@
-# Chapter Overview — chapter_mdl-linear-algebra
+# Chapter Overview — chapter_mdl-linear-algebra (4 files)
+
+**Update (2026-11-02, math appendix pass):** the chapter now has four
+sections plus `further-reading.md` (no exercises): Vectors, Angles, and
+Projections (`mdl-geometry-linear-algebraic-ops.md`, retitled), Matrices as
+Linear Maps (new file `mdl-linear-maps.md`, split from the old Geometry and
+Linear Algebraic Operations section), Eigendecompositions, and Singular Value
+Decomposition and Low-Rank Approximation. It carries 43 exercises (9, 10, 12,
+12), all in the named and tagged style (`[code]`, `[extended]`, ●, ●●) with
+`:exlabel:` labels. Each section entry below opens with its current list; the
+survey that follows describes the chapter before the pass, when it had three
+sections.
 
 Best source by far: **MIT 18.065** (Strang, *Matrix Methods in Data Analysis, Signal
 Processing, and Machine Learning*, Spring 2018) — its lecture-keyed problem sets map
@@ -27,7 +38,9 @@ found), so the IR-book textbook is used in their place for the PageRank aside.
 
 ---
 
-## chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md — Geometry and Linear Algebraic Operations
+## chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md — Vectors, Angles, and Projections
+
+**Update (2026-11-02, math appendix pass):** 9 exercises: 1 Fitting a line by projection; 2 [code] Cosines between random vectors; 3 Closest point and margin; 4 Nearest means and invariance; 5 Orthogonal and oblique projectors; 6 The cosine in two and three dimensions; 7 [code] Tilting the boundary ●; 8 [code] Gram–Schmidt in floating point ●; 9 [extended] Packing nearly orthogonal directions ●●. Before the split this entry covered the combined Geometry and Linear Algebraic Operations section; its matrix, rank, determinant, and Einstein-notation material now lives in `mdl-linear-maps.md`.
 
 **Topic:** Vector geometry (angles, projections, bases), matrices as linear maps
 (rank, invertibility, determinant), and tensor/Einstein notation.
@@ -117,7 +130,15 @@ material below is purely additive.
 
 ---
 
+## chapter_mdl-linear-algebra/mdl-linear-maps.md — Matrices as Linear Maps
+
+**Update (2026-11-02, math appendix pass):** 10 exercises: 1 Maps that preserve angles; 2 Rank and nullity of $\mathbf{C}$; 3 Rank of a product; 4 [code] Rank of a sum and of a low-rank update; 5 Matrices that commute with a rotation; 6 Householder reflections; 7 [code] Determinant and near-singularity; 8 [code] Area of the image of the unit disk; 9 Determinant of a rank-one update ●; 10 [code] Einstein summation for attention. The file was split from the old Geometry and Linear Algebraic Operations section; the survey of that section above covers its rank, determinant, and Einstein-notation material, including the Fredholm-alternative and patterned-rank proposals.
+
+---
+
 ## chapter_mdl-linear-algebra/mdl-eigendecomposition.md — Eigendecompositions
+
+**Update (2026-11-02, math appendix pass):** 12 exercises: 1 Trace, determinant, and definiteness; 2 Rank and zero eigenvalues; 3 A defective limit; 4 Spectral radius and norms; 5 The centering matrix; 6 [code] Power-iteration rates; 7 [code] Accuracy of computed eigenvalues ●; 8 [code] Pseudospectra and transient growth ●; 9 [code] Shifted inverse iteration ●; 10 [code] Damping in PageRank ●; 11 [code] Spikes above the bulk ●; 12 [code] Lyapunov exponents of random products ●●.
 
 **Topic:** Eigenvalues/eigenvectors, diagonalizability and the Jordan form, the
 spectral theorem and positive-definiteness, Gershgorin/power iteration, and spectral
@@ -207,6 +228,8 @@ issue); external material below is purely additive.
 ---
 
 ## chapter_mdl-linear-algebra/mdl-svd-low-rank.md — Singular Value Decomposition and Low-Rank Approximation
+
+**Update (2026-11-02, math appendix pass):** 12 exercises: 1 The SVD by hand; 2 Norms and the maximum stretch; 3 Weyl perturbation bound; 4 [code] Denoising by truncation; 5 [code] Centering in PCA, and Fashion-MNIST; 6 [code] Ridgeless limit and gradient descent; 7 [code] Newton--Schulz basin; 8 [code] Polar factor and Procrustes ●; 9 [code] Warm-started power iteration ●; 10 [code] Randomized range finder ●; 11 [code] Optimal hard threshold ●●; 12 [extended] Matrix completion by soft-thresholding ●●.
 
 **Topic:** The SVD as rotate-scale-rotate, the four fundamental subspaces, Eckart–
 Young low-rank approximation and PCA, the pseudoinverse/least squares/condition

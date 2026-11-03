@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-matrix-calculus.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-matrix-calculus-matrix-calculus": {
+      "code_fingerprint": "sha256:0a9a457f678b2568c6d3b5e097b6ca20f170325796773a3f6cdd7af0a6db3c82",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-jacobian-finite-diff": {
+      "code_fingerprint": "sha256:ce0156e363a6e6a26e73e06740902353b289c688730227c4df91b3b99f52b709",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "|delta| = 2.2e-01   error / |delta| = 9.0e-02\n|delta| = 2.2e-02   error / |delta| = 9.0e-03\n|delta| = 2.2e-03   error / |delta| = 9.0e-04\n|delta| = 2.2e-04   error / |delta| = 9.0e-05\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-the-jacobian-of-a-network": {
+      "code_fingerprint": "sha256:4fe0717b1fad3c4982bbc0f89ccf480ac481928dc839f9fcbc527707829516f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "by hand    : [2. 4.]\nby autograd: [2. 4.]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-backward-rules-of-a-layer-1": {
+      "code_fingerprint": "sha256:29c38b450e05e8b29ca7bc77591176330ab74a734fb495615d03586600cbbfa6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dg/dW1 = (w2*m) x^T: [[2.0, 2.0], [0.0, 0.0]]   autograd: [[2.0, 2.0], [0.0, 0.0]]\ndg/db  = w2*m      : [2.0, 0.0]   autograd: [2.0, 0.0]\ndg/dw2 = h         : [3.0, 0.0]   autograd: [3.0, 0.0]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
+      "code_fingerprint": "sha256:4140050cc09d642363bc291e8418dc1b10fdaedbf73837bf19a59ab49130f9e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grad a^T x   == a           : True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grad x^T A x == (A + A^T) x : True\nXbar, Wbar   == matmul rule : True\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-softmax-jacobian": {
+      "code_fingerprint": "sha256:66cda466de356c298c6583f32b4234b11bba149f2d15fa7acdd218b1d0624b22",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax Jacobian matches autograd : True\nJ @ 1 (shift invariance)          : [0. 0. 0.]\ngrad log-sum-exp equals p         : True\nd loss / d z : [ 0.2537 -0.9434  0.6897]\np - y        : [ 0.2537 -0.9434  0.6897]\n"
+        }
+      ]
+    }
+  }
+}

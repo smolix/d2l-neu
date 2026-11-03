@@ -164,7 +164,7 @@ Three reasons make the exponential the natural link between an unconstrained
 function and a density :cite:`Kuleshov.2023`.
 Probabilities of natural data vary over many orders of magnitude, and the
 logarithm is the scale on which a smooth network can represent such
-variation. The exponential families of :numref:`sec_mdl-distributions`,
+variation. The exponential families of :numref:`sec_mdl-exponential-family`,
 which include the Gaussian, Bernoulli, and categorical distributions, already
 have the form :eqref:`eq_diffusion-ebm` with an energy linear in the
 parameters. In statistical physics, a system in thermal equilibrium occupies

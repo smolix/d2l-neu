@@ -27,12 +27,12 @@ import optax
 ## The Capacity Argument
 :label:`subsec_gan_beyond_capacity`
 
-Many generation problems are conditional predictions. A super-resolution network receives a low-resolution image and must produce a high-resolution one; a vocoder receives a spectrogram and must produce a waveform; a one-step distillation student receives a noise vector and must produce, in a single forward pass, the image its teacher builds over hundreds of evaluations. The default loss for a prediction is the pointwise squared error, and its minimizer is a classical identity. For any predictor $f$ and the conditional mean $\mu(x) = E[y \mid x]$, adding and subtracting $\mu$ inside the square and noting that the cross term vanishes conditionally on $x$ gives
+Many generation problems are conditional predictions. A super-resolution network receives a low-resolution image and must produce a high-resolution one; a vocoder receives a spectrogram and must produce a waveform; a one-step distillation student receives a noise vector and must produce, in a single forward pass, the image its teacher builds over hundreds of evaluations. The default loss for a prediction is the pointwise squared error, and its minimizer is a classical identity. For any predictor $f$ and the conditional mean $\mu(x) = \mathbb{E}[y \mid x]$, adding and subtracting $\mu$ inside the square and noting that the cross term vanishes conditionally on $x$ gives
 
 $$
-E\big[(y - f(x))^2\big]
+\mathbb{E}\big[(y - f(x))^2\big]
 \;=\;
-E\big[(y - \mu(x))^2\big] \;+\; E\big[(\mu(x) - f(x))^2\big].
+\mathbb{E}\big[(y - \mu(x))^2\big] \;+\; \mathbb{E}\big[(\mu(x) - f(x))^2\big].
 $$
 :eqlabel:`eq_beyond_condmean`
 
@@ -279,10 +279,10 @@ The capacity argument explains the continued use of adversarial terms in diffusi
    analysis of the trade-off between distortion and realism by
    :citet:`Blau.Michaeli.2017`.
     1. Use :eqref:`eq_beyond_condmean` to show that
-       $E\big[(y - \hat y)^2\big] = 2\, E\big[(y - \mu(x))^2\big]$. For
+       $\mathbb{E}\big[(y - \hat y)^2\big] = 2\, \mathbb{E}\big[(y - \mu(x))^2\big]$. For
        outputs with peak value $y_{\max}$, the peak signal-to-noise ratio of
        a predictor $\hat y$ is
-       $10 \log_{10}\big(y_{\max}^2 / E[(y - \hat y)^2]\big)$ decibels. By
+       $10 \log_{10}\big(y_{\max}^2 / \mathbb{E}[(y - \hat y)^2]\big)$ decibels. By
        how many decibels does the peak signal-to-noise ratio of such a
        sampler fall below that of the conditional mean?
     1. For the two-band data :eqref:`eq_beyond_twoband`, compute the
@@ -300,7 +300,7 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        the price of matching the distribution of $y$ small?
 1. [code] **Mean and median.** Squared error is minimized by the
    conditional mean :eqref:`eq_beyond_condmean`. Absolute error
-   $E\big[|y - f(x)|\big]$ is minimized by a conditional median, a value $t$
+   $\mathbb{E}\big[|y - f(x)|\big]$ is minimized by a conditional median, a value $t$
    with $P(y \leq t \mid x) = \tfrac12$. Both statistics can be computed for
    variants of the two-band data :eqref:`eq_beyond_twoband`.
     1. Let the mode offset $m$ take the three values $\{-1, 0, +1\}$ with
@@ -343,7 +343,7 @@ The capacity argument explains the continued use of adversarial terms in diffusi
    $y_t = \sin(\omega t + \phi)$ for $t = 0, \ldots, N - 1$, where the
    spectrogram fixes $\omega$ and the phase $\phi$ is uniform on $[-a, a]$
    with $0 < a \leq \pi$.
-    1. Compute the squared-error prediction $E[y_t]$ and the ratio of its
+    1. Compute the squared-error prediction $\mathbb{E}[y_t]$ and the ratio of its
        amplitude to the common amplitude of the valid waveforms. Evaluate the
        ratio for $a = \pi/2$ and $a = \pi$.
     1. Let $\omega = 2\pi k / N$ for an integer $k$ with $0 < k < N/2$. Show
@@ -391,8 +391,8 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        it plays.
     1. Show that at $\theta = \theta_{\textrm{ref}}$ the gradient of $L$ is
        one half of the gradient of the negative log-likelihood
-       $-E_{x \sim p}[\log q_\theta(x)]$. Use the identity
-       $E_{x \sim q_\theta}[\nabla_\theta \log q_\theta(x)] = 0$, which
+       $-\mathbb{E}_{x \sim p}[\log q_\theta(x)]$. Use the identity
+       $\mathbb{E}_{x \sim q_\theta}[\nabla_\theta \log q_\theta(x)] = 0$, which
        follows from differentiating $\int q_\theta(x)\, dx = 1$.
     1. At $\theta = \theta_{\textrm{ref}}$, every real and every reference
        sample enters the gradient with weight $\tfrac12$. Away from
@@ -410,7 +410,7 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        incentive to use the latent bit?
     1. IMLE :cite:`Li.Malik.2018` associates each data point with its
        nearest generated sample. With a binary latent, this becomes the loss
-       $E\big[\min_{s} (f(x, s) - y)^2\big]$. Train a student with this loss
+       $\mathbb{E}\big[\min_{s} (f(x, s) - y)^2\big]$. Train a student with this loss
        and compare it with the two students of (a). Which property of the
        loss forces both latent values into use without a critic?
     1. Now let $P(m = +1) = \tfrac34$. Which band frequencies can a student
@@ -422,7 +422,7 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        a student to represent the probability $\tfrac34$?
 1. [code] **Multi-round refinement.** ●● In practice DDO minimizes
 
-   $$L_{\alpha, \beta}(\theta) = -E_{x \sim p}\big[\log \sigma\big(\beta D_\theta(x)\big)\big] - \alpha\, E_{x \sim q_{\textrm{ref}}}\big[\log \sigma\big(-\beta D_\theta(x)\big)\big]$$
+   $$L_{\alpha, \beta}(\theta) = -\mathbb{E}_{x \sim p}\big[\log \sigma\big(\beta D_\theta(x)\big)\big] - \alpha\, \mathbb{E}_{x \sim q_{\textrm{ref}}}\big[\log \sigma\big(-\beta D_\theta(x)\big)\big]$$
 
    with $D_\theta$ from :eqref:`eq_beyond_ddo`, typical values
    $\beta \in [0.01, 0.1]$, and several rounds, each of which replaces
@@ -445,7 +445,7 @@ The capacity argument explains the continued use of adversarial terms in diffusi
     1. Let $q_\theta(x) = h(x) \exp\big(\theta^\top T(x) - A(\theta)\big)$
        be an exponential family and $\theta_{\textrm{ref}}$ its
        maximum-likelihood fit, so that
-       $E_{x \sim q_{\textrm{ref}}}[T(x)] = E_{x \sim p}[T(x)]$. Show that for
+       $\mathbb{E}_{x \sim q_{\textrm{ref}}}[T(x)] = \mathbb{E}_{x \sim p}[T(x)]$. Show that for
        $\alpha = 1$ and every $\beta > 0$, $\theta_{\textrm{ref}}$ minimizes
        $L_{1, \beta}$ globally. Compare with logistic regression over all
        critics of the form $\mathbf{w}^\top T(x) + b$.
@@ -478,10 +478,10 @@ Adversarial losses beyond GANs<br>
 :::
 
 ::: {.slide title="A Pointwise Loss Predicts the Conditional Mean"}
-For any predictor $f$, with $\mu(x) = E[y \mid x]$:
+For any predictor $f$, with $\mu(x) = \mathbb{E}[y \mid x]$:
 
-$$E\big[(y - f(x))^2\big]
-= E\big[(y - \mu(x))^2\big] + E\big[(\mu(x) - f(x))^2\big]$$
+$$\mathbb{E}\big[(y - f(x))^2\big]
+= \mathbb{E}\big[(y - \mu(x))^2\big] + \mathbb{E}\big[(\mu(x) - f(x))^2\big]$$
 
 . . .
 

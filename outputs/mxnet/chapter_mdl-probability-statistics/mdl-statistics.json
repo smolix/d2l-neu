@@ -4,104 +4,156 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3003897987dc03b11748f679203016004a3dbe502841b17b4609bbed1537562",
+    "d2l_lib_fingerprint": "sha256:d4343eaadd88f7112227a1fe344b3614934f01c8f40d641e42d8705ee5caf228",
     "max_inline_bytes": 0
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:c42e1a73164b6b6e9c5fc655eab70ee0bf3f34bb7b8cd8f471f50a18a3cacab5",
+      "code_fingerprint": "sha256:cec08d5d6a2fd810b288099aa622fbcd16cf0e2d325effee2ab590d849fb20bd",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:576772aae9b2837f55590c1e95ef7322ef286f9122755974d319de6cdb55a28a",
-      "kind": "text",
-      "outputs": []
-    },
-    "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:7c50314be30e419eb03cfe139b8d495fc672896ee4d5e553d1ae3db0ffc93c70",
-      "kind": "text",
-      "outputs": []
-    },
-    "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:4cf389e99a70db8f3d97bb025d716c623bf252689f09d38ecd0f25ee67c7c15e",
+      "code_fingerprint": "sha256:1df53a568fc3766e8b1dc79c9cd30567ef20956bad9a5cc7b127e5e8f6b8b92c",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(0.5354252038819016, 0.5354252038819016)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean 0.9118, std 0.0089, formula 0.0090\n"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:ab10dbe4f119ce6be93070fe59c9bcae03299532ae7f1d2d4631d9d1a6d71413",
+      "code_fingerprint": "sha256:dcf81df54ce0214d3ca3c0dbfa45328556afff18c4ad2846e51537f3e89ddcb2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.664  (biased)\nE[divide by n-1] = 3.995  (unbiased)\n"
+          "text": "true variance          4.000\naverage of sum / n     2.654\naverage of sum / (n-1) 3.981\n"
         }
       ]
     },
-    "statistics-permutation-test": {
-      "code_fingerprint": "sha256:fdfae9af1312c8708bd4f30ff434a90f150ba30fe2ea38975b88535399c132d3",
-      "kind": "mixed",
+    "statistics-sampling-distribution": {
+      "code_fingerprint": "sha256:9f4afb856c68382dded569b6cf56ef72147169dd626529b05f2d670e8cdb7f06",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-verify-decomposition": {
+      "code_fingerprint": "sha256:4f096053c3a98342a2c441951800fdc22c61272ba1c6f3ffe7f35cec47df8d55",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "observed gap        = 0.0073\npermutation p-value = 0.0197\n"
-        },
+          "text": "   estimator  bias^2    var    sum    MSE\n        mean   0.000  0.535  0.535  0.535\n 0.65 * mean   0.127  0.226  0.353  0.353\n      median   0.000  0.807  0.807  0.807\n"
+        }
+      ]
+    },
+    "mdl-statistics-the-permutation-test-1": {
+      "code_fingerprint": "sha256:efcdc605bad67969f322eb50e72d4a54f8f41ffe1b3ee8e82af67aa3f99d57f9",
+      "kind": "text",
+      "outputs": []
+    },
+    "statistics-permutation-test": {
+      "code_fingerprint": "sha256:b6d8b83efe9866515a655f4f7daa258edd9157373c19658025c821a16fa6e6b2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "observed gap 0.0102, permutation p-value 0.002\n"
+        }
+      ]
+    },
+    "mdl-statistics-the-permutation-test-2": {
+      "code_fingerprint": "sha256:bc38db37252b5407c37a6f643291569d63a0524daf0387a8a833204fdb01fd98",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-statistics/statistics-permutation-test-1.svg",
-          "bytes": 32334,
-          "sha256": "sha256:9b9663b4a9b18082d1b5dcb939e369157b88f9c8245a3dff7f79a5d59d0291ff"
+          "asset": "mdl-statistics/mdl-statistics-the-permutation-test-2-1.svg",
+          "bytes": 27655,
+          "sha256": "sha256:73e4c32a99083c7470aa5ed5738038be9a8720f0ab92d9209de16ccd9ebda930"
+        }
+      ]
+    },
+    "mdl-statistics-two-kinds-of-error-and-power-1": {
+      "code_fingerprint": "sha256:9c8bbb1ad249ef8b84a2a42267ac947fa57874cf8960fb5f44cfd842f5834a39",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu = 0.0: 0.10 0.10 0.10 0.10 0.11 0.09 0.10 0.10 0.09 0.11\nmu = 0.8: 0.98 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00\n"
+        }
+      ]
+    },
+    "mdl-statistics-two-kinds-of-error-and-power-2": {
+      "code_fingerprint": "sha256:6c86af2f05f73beb608270334f3233bd10680ccdc232495abd1807d3da9976c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "20 seeds: rejects in 0.69 of runs, formula 0.72\n 5 seeds: rejects in 0.18 of runs, formula 0.24\n"
+        }
+      ]
+    },
+    "mdl-statistics-paired-comparisons": {
+      "code_fingerprint": "sha256:448198db845a39946975bd7f11f018e3ed8cb9db2fb0b825d99f396cb6e24f11",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gap 0.009, sign-flip p-value 0.21\n"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:8fe2ea493739a2fef713541e369b3bc3e3d6bf22f34f6c681efc3a08182d72a4",
+      "code_fingerprint": "sha256:c5c4a248c439749cda795bb3c5b488497f315504a47856f69d4421d5e7f97ddb",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(-0.10367563812579983, 0.01723041442035165)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "912 of 1000: (0.894, 0.930)\n  9 of   13: (0.441, 0.943)\n"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:f0e032ae70d27c3d720caac5ad4271314222680f8ba7d44e8ff1e2541943f7cb",
+      "code_fingerprint": "sha256:c960543c27f2ea2e0d6462c2dbc969525ec0b492b971e73bf0cb3d8ddda37511",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "937 of 1000 intervals contain the true mean (expected about 950)\n"
-        }
-      ]
-    },
-    "statistics-bootstrap": {
-      "code_fingerprint": "sha256:5784ecc540097e4215371e7668f007d457b74584b868968585a9fd0687f01400",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sample median        = 0.808\nbootstrap SE         = 0.072\npercentile 95% CI    = (0.682, 0.955)\n"
+          "text": "first interval (-0.454, -0.050) contains 0: False\n951 of 1000 intervals contain the true mean (nominal 950, exact 947)\n"
         }
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:83a616c9bd01f47ca4592bf0c7c1b94460e225af27f83f128e99e8a7742c6b3e",
+      "code_fingerprint": "sha256:86275a215354360fc7b5b4a3cfa2c2c85d99c14ad49090122fa1ba26e0c51c82",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gaussian 95% CI (mean) = (0.986, 1.272)\n"
+          "text": "bootstrap se 0.0088, formula 0.0090\n"
+        }
+      ]
+    },
+    "statistics-bootstrap": {
+      "code_fingerprint": "sha256:22c3132acf2f5c30637369302ac37f9ce810ce541a5d8d6d592657828d1522ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "median 0.660, bootstrap se 0.065, 95% percentile interval (0.531, 0.795)\n"
         }
       ]
     }

@@ -17,7 +17,7 @@ other by an explicit formula, so a trained noise predictor already defines
 a velocity field. This formula, a dictionary between the two views, is
 checked on the running example, where both fields are known in closed form,
 and the image U-Net is then trained with a velocity target.
-:numref:`sec_mdl-score-matching-diffusion-flow` proves the two theorems
+:numref:`sec_mdl-flow-matching-transport` proves the two theorems
 that the section states.
 
 One convention changes. Flow matching runs time in the generative direction:
@@ -717,7 +717,7 @@ drops that assumption.
    :eqref:`eq_mdl-regression-lemma` (:numref:`sec_mdl-flow-matching`), the
    minimum of :eqref:`eq_diffusion-cfm-loss` over all functions
    $\mathbf{v}$ is
-   $\mathbb{E}_{t, \mathbf{x}_t}\, \mathrm{Var}[\mathbf{x}_1 - \mathbf{x}_0 \mid \mathbf{x}_t]$,
+   $\mathbb{E}_{t, \mathbf{x}_t}\, \textrm{Var}[\mathbf{x}_1 - \mathbf{x}_0 \mid \mathbf{x}_t]$,
    with the variance summed over coordinates.
     1. Estimate this conditional variance for the running example at each
        $t$ of a grid on $(0, 1)$ by Monte Carlo, with `true_velocity` as the

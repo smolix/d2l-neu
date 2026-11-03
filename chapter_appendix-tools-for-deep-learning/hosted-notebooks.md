@@ -1,189 +1,210 @@
 # Colab and Kaggle
 :label:`sec_hosted_notebooks`
 
+The previous section set up the book's notebooks on your own machine. Many
+readers do not have a suitable one at hand: a laptop without a GPU, a school
+computer that forbids installations, or a tablet.
 [Google Colab](https://colab.research.google.com/) and
-[Kaggle](https://www.kaggle.com/code) provide browser-based notebooks on
-temporary virtual machines, with limited free access to accelerators when
-available. They allow readers to run the book without a local installation,
-including from devices on which installing development software is
-impractical. Availability and usage limits vary, so resource requirements
-must still be checked for each notebook.
+[Kaggle](https://www.kaggle.com/code) serve these readers. Each opens a
+notebook in the browser on a virtual machine lent for the session, with
+Python and the main frameworks preinstalled and, within usage limits, a free
+GPU when one is available.
 
-The provider controls the runtime. It creates a temporary machine with a
-browser editor, a Python environment, and possibly an accelerator. When the
-session ends because of an idle or usage limit, the machine and files written
-only to its local disk disappear. Your notebook and any
-artifacts you explicitly saved survive; nothing else does.
+A borrowed machine raises a question that a local one does not: what is still
+there tomorrow? Suppose that you install a package, download Fashion-MNIST,
+and train a classifier for an hour. The provider created the machine when you
+connected, and it deletes the machine when the session ends, after an idle
+period or at a usage limit. The next morning the notebook is still there,
+together with any file you saved to durable storage. The package, the
+dataset, and the checkpoints written to the local disk are gone.
+
+The remedy is to treat the runtime as replaceable. A notebook that records how
+to rebuild its environment, and that saves what it must keep, runs on Colab,
+on Kaggle, and on a local kernel alike, even after the provider updates its
+software image. Below we see how the book's launch buttons reach the two
+providers, how the providers differ, and how to write setup cells that
+survive a new machine.
 
 ![A hosted runtime is temporary; notebooks, data, and checkpoints become durable only when we save them explicitly.](../img/tools-hosted-lifecycle.svg)
 :label:`fig_tools_hosted_lifecycle`
 
-The lifecycle in :numref:`fig_tools_hosted_lifecycle` explains the principal
-failure modes of hosted notebooks. A runtime may stop after inactivity, hit a session
-limit, or come back with a different software image. Conversely, rerunning a
-setup cell has little overhead when the notebook records everything needed to
-reconstruct the runtime — which is exactly how the notebooks in this book
-are written.
+:numref:`fig_tools_hosted_lifecycle` shows the lifecycle. A runtime may stop
+after inactivity, hit a session limit, or come back with a different software
+image. Rerunning a setup cell costs little when the notebook records
+everything needed to reconstruct the runtime, and the book's notebooks are
+written that way.
 
 ## Launching a Book Notebook
 
-Every code-bearing page of the book has a **Run notebook** control that
-follows the active framework tab: framework-specific pages offer PyTorch,
-TensorFlow, or JAX; framework-independent pages use a single NumPy notebook.
-The generated notebooks live at a stable path on a public GitHub branch and
-record the exact source revision they were built from. A PyTorch,
-TensorFlow, or JAX notebook whose code imports `d2l` starts with a generated
-setup cell that installs missing or mismatched packages and downloads the
+Every page of the book that contains code shows a **Run notebook** control
+with three actions: **Colab**, **Kaggle**, and **Download**. The control
+follows the active framework tab and offers that tab's PyTorch, TensorFlow, or
+JAX notebook. When the tab has no hosted notebook, as for MXNet, the control
+reads *Notebook unavailable*. Pages whose code uses no framework offer a
+single NumPy notebook instead. The notebooks live at stable paths on a
+public GitHub branch and record the source revision they were built from. A
+notebook that imports `d2l` starts with a generated setup cell. It keeps the
+provider's preinstalled packages where they are compatible, installs the
+versions the book was tested with where they are not, and downloads the
 `d2l` helper modules of that revision from GitHub.
 
 ![The source page, the generated notebook branch, and the provider launch are separate stages with a stable page-to-notebook mapping.](../img/tools-notebook-pipeline.svg)
 :label:`fig_tools_notebook_pipeline`
 
-The launch buttons use different persistence models:
+The two launch actions keep your work in different places:
 
 * **Colab opens a pointer to GitHub.** The URL has the form
   `colab.research.google.com/github/<org>/<repo>/blob/<branch>/<path>.ipynb`,
   and Colab fetches the notebook from GitHub each time it is opened. You
-  see the current published version — but your edits are
-  *not* written back. To keep changes, use **File → Save a copy in Drive**
-  (or download the `.ipynb`).
+  always see the current published version, but your edits are not written
+  back. To keep changes, use **File → Save a copy in Drive**, or download the
+  `.ipynb`.
 * **Kaggle imports a copy.** The book passes the notebook's raw URL to
   Kaggle's importer (`kaggle.com/kernels/welcome?src=...`), which creates a
-  new private scratchpad *in your Kaggle account* containing that notebook.
-  You can inspect it without signing in; editing and running require an
-  account. Your copy is now independent of the book — it will not update
-  when the book does, and keeping your changes means saving a version on
-  Kaggle.
+  new private notebook in your Kaggle account, so you need an account to use
+  it. Your copy is independent of the book: it does not update when the
+  book does, and you keep your changes by saving a version on Kaggle.
 
-In short: Colab launches a live view of the repository, Kaggle clones a
-snapshot into your workspace. Either way, the launch button never uploads an
-arbitrary local file — it refers to a readable notebook at a stable public
-path, which you can and should inspect before running. Treat that as a habit
-for *any* "open in Colab" badge on the internet: check the repository origin
-and the setup cell before executing someone else's code on your account.
+In both cases the launch refers to a readable notebook at a public path,
+which you can inspect before running it. Do the same for any "Open in Colab"
+badge on the internet: check the repository it comes from and read the setup
+cell before executing someone else's code with your account's permissions.
 
 ## Colab
 
 ### Free-Tier Resources
 
-Colab's free tier provides access to GPUs and TPUs, but its
-[official FAQ](https://research.google.com/colaboratory/faq.html) does not
-guarantee particular hardware, memory, or session duration. These
-limits vary with demand, usage history, and product policy; a T4 with 16 GB
-has been a common allocation, but it is not a service guarantee. Verify the
-assigned hardware at runtime. Colab also integrates an assistant for writing
-and debugging notebook code.
+Colab's free tier provides GPUs and TPUs, but its
+[FAQ](https://research.google.com/colaboratory/faq.html) guarantees neither
+the hardware nor the limits: as of November 2026 it states that the types of
+accelerators vary over time and that usage limits fluctuate. A notebook runs
+for at most 12 hours, depending on availability and on your usage, and an idle
+runtime times out. A T4 with
+16 GB of memory is the GPU that free users commonly receive, but this is not a
+service guarantee.
 
-Do not infer the hardware from the menu — verify it in code:
+The menu shows what you asked for, not what you received, so we check the
+runtime in code:
 
 ```{.python .input #hosted-notebooks-resource-check}
+import importlib.util
 import os
+from pathlib import Path
 
 resource = {
     "cpu_count_visible": os.cpu_count(),
-    "colab": "COLAB_RELEASE_TAG" in os.environ,
-    "kaggle": "KAGGLE_KERNEL_RUN_TYPE" in os.environ,
+    "colab": importlib.util.find_spec("google.colab") is not None,
+    "kaggle": Path("/kaggle/working").exists(),
 }
 resource
 ```
 
-The cell detects Colab through `COLAB_RELEASE_TAG`, which holds a dated tag
-of the Colab runtime release, such as `release-colab-20230216-060056-RC01`.
-
-For PyTorch, check `torch.cuda.is_available()` and
-`torch.cuda.get_device_properties(0)`; for TensorFlow,
-`tf.config.list_physical_devices("GPU")`; for JAX, `jax.devices()`. A
-reported accelerator is still not a guarantee that your workload fits its
+The cell recognizes Colab by its preinstalled `google.colab` package and
+Kaggle by its working directory. For the accelerator, PyTorch reports
+`torch.cuda.is_available()` and `torch.cuda.get_device_properties(0)`,
+TensorFlow `tf.config.list_physical_devices("GPU")`, and JAX `jax.devices()`.
+A reported accelerator is still no guarantee that your workload fits in its
 memory.
 
-When the free tier is insufficient, Colab offers paid plans and
-pay-as-you-go *compute units*. Unit prices, accelerator consumption rates,
-and plan features change, so consult the purchase dialog and current FAQ
-before estimating cost. A compute-unit balance increases access but does not
-guarantee a particular accelerator.
+Beyond the free tier, Colab sells *compute units* through Pay As You Go and
+the Pro and Pro+ subscriptions. A balance increases access to accelerators
+but guarantees none in particular. Unit prices and consumption rates change,
+so read the purchase page before estimating a cost.
 
-Two additional features affect reproducibility and automation. *Pinned runtime versions* let a
-notebook request a dated environment image, taming the "worked yesterday,
-broke today" package drift that plagues hosted runtimes. And the *Colab
-CLI* (`colab exec`, `colab repl`) drives the same runtimes from a terminal
-or a coding agent, which makes Colab usable as a scriptable free GPU rather
-than only an interactive page.
+### Runtime Versions and the Command Line
+
+Colab updates its software image regularly, which can break a notebook that
+worked last month. Since September 2025 a notebook can pin a dated *runtime
+version* in **Runtime → Change runtime type**. As of November 2026 past
+versions remain available for one year after their release, and connecting to
+one takes two to three minutes. Google recommends the
+latest runtime with pinned library versions for most work, and a pinned
+runtime for notebooks shared with many people, such as the material of a
+course.
+
+The [Colab CLI](https://github.com/googlecolab/google-colab-cli), released in
+June 2026 for Linux and macOS, drives the same runtimes from a terminal or a
+coding agent: `colab new` allocates a runtime, `colab exec` runs a script or
+notebook on it, and `colab stop` releases it.
 
 ### Saving Work
 
-Colab is Drive-centric: **Save a copy in Drive** is the persistence story,
-and Google Drive mounts (`drive.mount`) are the common way to keep datasets
-and checkpoints across sessions. A notebook opened from GitHub is never
-saved back automatically. Colab can also attach to a *local runtime* — the
-browser UI controlling a Jupyter server on your own machine — which changes
-the security boundary completely: the notebook then executes with the
-permissions of your local Jupyter process. Connect only notebooks you trust.
+Colab keeps work in Google Drive. **Save a copy in Drive** stores the
+notebook, and mounting Drive (`drive.mount`) is the usual way to keep
+datasets and checkpoints across sessions. A notebook opened from GitHub is
+never saved back automatically. Colab can also attach to a *local runtime*,
+in which the browser page controls a Jupyter server on your own machine.
+This moves the security boundary: the notebook then executes with the
+permissions of your local Jupyter process, and Drive mounting no longer
+works. Connect only notebooks you trust.
 
 ## Kaggle
 
-### A Data-Centric Model
+### Inputs, Outputs, and Versions
 
-Where Colab orbits Drive, Kaggle orbits *datasets and competitions*, and its
-notebook product reflects that. Three directories define the mental model:
+Kaggle is built around datasets and competitions, and its notebooks follow
+from that. Three kinds of directory define how a Kaggle notebook handles
+files:
 
-* `/kaggle/input/` holds attached datasets, models, and output files of
-  notebooks, mounted **read-only** and versioned. Attaching an existing
-  dataset is instant and costs no download time or quota.
-* `/kaggle/working/` is your writable output directory (about 20 GB); its
-  contents persist only into *saved versions* of the notebook.
-* everything else is scratch that disappears with the session.
+* `/kaggle/input/` holds attached datasets, models, and the outputs of other
+  notebooks, mounted **read-only** and versioned. An attached dataset needs no
+  download inside the notebook.
+* `/kaggle/working/` is your writable output directory, with 20 GB of space
+  as of November 2026. Its contents persist only into *saved versions* of the
+  notebook.
+* Everything else is scratch space that disappears with the session.
 
 The second defining feature is versioning. **Save & Run All** executes the
-whole notebook top to bottom in a fresh session and stores the result as an
-immutable, named version — inputs, code, outputs, and logs. This is restart
-and run all (:numref:`sec_interactive_development`) elevated to a platform
-primitive, and it is why Kaggle notebooks attached to competitions are
-reproducible in a way ad-hoc notebooks rarely are.
+whole notebook from top to bottom in a fresh session and stores the result as
+an immutable version with its inputs, code, outputs, and logs. This is the
+habit of restarting and running all cells
+(:numref:`sec_interactive_development`) built into the platform.
 
 ### Quotas and Hardware
 
-Kaggle displays accelerator quotas and session limits in the notebook
-interface. In the mid-2026 snapshot used for this chapter, accounts received
-roughly **30 GPU-hours per week** on a P100 or a 2×T4 machine, about 20
-TPU-hours per week, sessions of up to 12 hours, and around 30 GB of RAM.
-These values are account- and policy-dependent and must be checked before
-planning a run. Phone verification may be required to enable accelerators or
-internet access.
+As of November 2026 an account receives a weekly GPU quota of 30
+hours, sometimes more when demand allows, on either one P100 or two T4 GPUs,
+and a separate weekly TPU quota. A session runs for at most 12 hours on CPU or
+GPU and 9 hours on TPU. The notebook interface shows the current values for
+your account; check them before planning a run. Kaggle may require phone
+verification before it enables accelerators or internet access.
+
 Internet access is a per-notebook setting and is disabled in some
-competitions, so a well-behaved notebook attaches data as inputs rather
+competitions, so a well-behaved notebook attaches its data as inputs rather
 than downloading it mid-run. The
 [Kaggle CLI](https://github.com/Kaggle/kaggle-cli) can push, run, and pull
-notebooks and datasets from your terminal; keep its token in the provider's
+notebooks and datasets from your terminal. Keep its token in the provider's
 secret store, never in a cell.
 
-## Choosing and Working Portably
+## Portable Notebooks
 
-### Colab or Kaggle?
+### Choosing a Provider
 
-:Hosted notebook trade-offs (mid-2026)
+Either provider runs the book's notebooks. They differ in where your files
+and results live, and in how predictable their limits are, as
+:numref:`tab_hosted_notebook_tradeoffs` summarizes.
+
+:Hosted notebook trade-offs (as of November 2026)
 :label:`tab_hosted_notebook_tradeoffs`
 
 | Need | Colab | Kaggle |
 |---|---|---|
-| Open a GitHub notebook directly | Yes — live fetch per open | Import creates your own copy |
-| Free GPU | T4; limits opaque, demand-driven | P100 or 2×T4; ~30 h/week published |
+| Open a GitHub notebook directly | Yes, fetched on each open | Import creates your own copy |
+| Free GPU | Usually a T4; limits unpublished | P100 or 2×T4; 30 h/week published |
 | Predictable quota | No | Yes |
 | Persistent files | Google Drive | Versioned datasets and outputs |
-| Reproducible runs | Manual restart-and-run-all | Save & Run All versions |
+| Reproducible runs | Manual restart and run all; pinned runtime versions | Save & Run All versions |
 | Competition workflow | External | Native |
-| Paid upgrade path | Compute units, Pro/Pro+ | None needed — quota is fixed |
+| Paid upgrade | Compute units (Pay As You Go, Pro, Pro+) | Not needed for the published quota |
 
-Data location is an important selection criterion. For running a
-book section, Colab's direct GitHub opening is the shortest path. For a
-dataset-centered experiment you want to share or rerun reproducibly,
-Kaggle's versioned inputs and outputs are more natural. For long training
-runs, private data, or guaranteed hardware, use a machine you control — the
-subject of :numref:`sec_cloud_instances`.
+For running a section of the book, Colab's direct opening from GitHub is the
+shortest path. For an experiment built around a dataset that you want to share or rerun, Kaggle's
+versioned inputs and outputs fit better.
 
-### Setup Cells That Survive
+### Setup Cells
 
 Because the runtime is replaceable, the notebook must carry its own setup.
-A good setup cell is short, idempotent, and explicit: it pins revisions,
+A good setup cell is short, idempotent, and explicit: it pins versions,
 installs only what is missing, and contains no secrets.
 
 ```{.python .input #hosted-notebooks-portable-setup}
@@ -200,8 +221,8 @@ missing = [name for name in required
 }
 ```
 
-Avoid an unconditional `pip install --upgrade ...` at the top of a notebook:
-it discards a tested provider environment, slows every start, and makes
+Avoid an unconditional `pip install --upgrade ...` at the top of a notebook.
+It discards a tested provider environment, slows every start, and makes
 yesterday's notebook resolve different packages today. Install the specific
 missing package at a pinned version instead. Since a provider image can
 change under an unmodified notebook, printing a small environment
@@ -219,9 +240,11 @@ fingerprint = {
 print(json.dumps(fingerprint, indent=2))
 ```
 
-Portable notebooks also avoid hard-coding provider paths. Isolate
-provider-specific paths in a small adapter and use `pathlib` for the
-remaining file operations:
+### Paths and Secrets
+
+Portable notebooks also avoid hard-coding provider paths. A small adapter
+chooses the working directory, and `pathlib` handles the remaining file
+operations:
 
 ```{.python .input #hosted-notebooks-work-directory}
 from pathlib import Path
@@ -235,24 +258,31 @@ else:
 work
 ```
 
-Finally, secrets: both providers offer a secret manager for API tokens. Use
-it. Never print a token, store it in an output, or commit it in a saved
-copy — a public notebook is an executable publication, and its outputs are
-part of what you publish.
+Both providers offer a secret manager for API tokens, and a notebook should
+read its tokens from there. Never print a token, store it in an output, or
+commit it in a saved copy. A public notebook is an executable publication,
+and its outputs are part of what you publish.
+
+These habits make a notebook independent of the machine it runs on. They do
+not lengthen a session or guarantee an accelerator. For long runs and
+guaranteed hardware, :numref:`sec_cloud_instances` rents a machine you
+control.
 
 ## Summary
 
-* Colab and Kaggle provide limited free notebook runtimes; accelerator
-  availability is not guaranteed, so inspect the assigned runtime before use.
-* The launch buttons differ: Colab opens a live pointer to the notebook on
-  GitHub (edits are not saved back); Kaggle imports a snapshot into your
-  own account.
-* Colab's limits are dynamic and demand-driven, with paid compute units for
-  additional access; Kaggle displays a weekly quota and
-  makes reproducible versioned runs a platform primitive.
-* A hosted runtime is replaceable: idempotent setup cells, explicit saving
-  of artifacts, and secrets kept in the secret manager make notebooks
-  portable across providers and time.
+* Colab and Kaggle lend free, temporary notebook runtimes with limited
+  access to accelerators. Availability is not guaranteed, so inspect the
+  assigned runtime before relying on it.
+* The book's launch buttons differ: Colab opens a live pointer to the
+  notebook on GitHub and does not save edits back, while Kaggle imports a
+  snapshot into your own account.
+* Colab's limits change with demand and are not published; paid compute
+  units add access, and pinned runtime versions hold the software image
+  fixed. Kaggle publishes a weekly quota and stores every Save & Run All as a
+  reproducible version.
+* A hosted runtime is replaceable. Idempotent setup cells, explicit saving of
+  artifacts, and secrets kept in the secret manager make a notebook portable
+  across providers and over time.
 
 ## Exercises
 
@@ -300,21 +330,23 @@ part of what you publish.
        framework a poor way to learn its version in this cell?
     1. Extend the cell with these framework versions, the name and memory
        of each visible NVIDIA GPU as reported by `nvidia-smi`, and the
-       value of `COLAB_RELEASE_TAG` when it is set. The cell must run on a
-       CPU-only runtime and must read the framework versions from the
-       package metadata. When a framework is already imported, also record
-       its `__version__`; exercise
-       :exref:`ex_hosted-notebooks-restart-after-install` shows why the
-       two values can differ.
+       provider's own environment variables, those whose names begin with
+       `COLAB_` or `KAGGLE_`. The cell must run on a CPU-only runtime and
+       must read the framework versions from the package metadata. When a
+       framework is already imported, also record its `__version__`;
+       exercise :exref:`ex_hosted-notebooks-restart-after-install` shows
+       why the two values can differ. Run the cell on one provider. Which of
+       the recorded variables would reveal that the provider changed its
+       software image?
     1. A notebook whose first cell runs
        `pip install --upgrade transformers` worked on Monday and fails
        on Friday with an import error inside `transformers`. In a first
-       hypothetical case, Friday's fingerprint shows the same
-       `COLAB_RELEASE_TAG` and NumPy version as Monday's, and
-       `transformers` moved from 4.56.1 to 4.57.0. In a second case, the release tag changed, NumPy moved
-       from 2.0.2 to 2.3.1, and `transformers` stayed at 4.56.1. Which
-       change caused the failure in each case? Which edit to the notebook
-       prevents a recurrence in each case?
+       hypothetical case, Friday's fingerprint shows the same provider
+       image and NumPy version as Monday's, and `transformers` moved from
+       4.56.1 to 4.57.0. In a second case, the provider image changed,
+       NumPy moved from 2.0.2 to 2.3.1, and `transformers` stayed at
+       4.56.1. Which change caused the failure in each case? Which edit to
+       the notebook prevents a recurrence in each case?
    :exlabel:`ex_hosted-notebooks-fingerprint-extension`
 
 1. [code] **Durable and scratch paths.** The cell that sets `work`
@@ -360,9 +392,13 @@ part of what you publish.
    tokens for 90% of the steps and of 512 tokens for the rest. NVIDIA
    lists a peak of 65 TFLOP/s in FP16 for the T4. Assume that training
    sustains 30% of this peak on one T4.
-    1. Estimate the training cost with :eqref:`eq_six_nd`. How many T4
-       hours does it take? How many 12-hour sessions and how many weeks
-       of a 30-hour weekly quota does that amount to?
+    1. Training a model with $N$ parameters on $D$ tokens costs about
+       $C \approx 6ND$ floating-point operations: two per parameter and
+       token in the forward pass and four in the backward pass
+       (:numref:`sec_scaling-laws`). Estimate the training cost of
+       BERT-base this way. How many T4 hours does it take? How many
+       12-hour sessions and how many weeks of a 30-hour weekly quota does
+       that amount to?
     1. Which costs of BERT pretraining does $6ND$ leave out, and which
        does it overcount? Consider the attention scores at both sequence
        lengths (:numref:`sec_scaling-laws` gives the correction), the

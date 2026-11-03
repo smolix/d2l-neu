@@ -435,7 +435,7 @@ The next experiment isolates the maximization bias that produces this effect.
 ### Measuring the Maximization Bias
 :label:`subsec_dqn-max-bias`
 
-The target :eqref:`eq_dqn_target` maximizes estimated action values. For noisy estimates, $E[\max_{a'}\hat{Q}(s',a')]\geq\max_{a'}E[\hat{Q}(s',a')]$, with strict inequality when noise can change the maximizing action. :numref:`sec_qlearning` demonstrated this bias in a table, and :numref:`sec_regularized` showed that the hard maximum is the $\beta\to0$ limit of the soft backup. Function approximation can feed the resulting bias back into subsequent targets :cite:`Thrun.Schwartz.1993`.
+The target :eqref:`eq_dqn_target` maximizes estimated action values. For noisy estimates, $\mathbb{E}[\max_{a'}\hat{Q}(s',a')]\geq\max_{a'}\mathbb{E}[\hat{Q}(s',a')]$, with strict inequality when noise can change the maximizing action. :numref:`sec_qlearning` demonstrated this bias in a table, and :numref:`sec_regularized` showed that the hard maximum is the $\beta\to0$ limit of the soft backup. Function approximation can feed the resulting bias back into subsequent targets :cite:`Thrun.Schwartz.1993`.
 
 The following simulation gives four actions the same true value of zero and adds independent unit noise to each estimate. The single estimator selects and evaluates an action with the same noisy values. The double estimator selects with one set of noisy values and evaluates with an independent set :cite:`vanHasselt.2010`:
 
@@ -625,7 +625,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
    $X_1, \ldots, X_m$ of $m$ actions with the same true value $0$ be jointly
    normal with variance $\sigma^2$ each.
     1. For $m = 2$ and independent estimates, show that
-       $E[\max(X_1, X_2)] = \sigma/\sqrt{\pi}$, using
+       $\mathbb{E}[\max(X_1, X_2)] = \sigma/\sqrt{\pi}$, using
        $\max(x, y) = (x + y)/2 + |x - y|/2$.
     1. The outputs of one network share its hidden layers, so their errors
        are correlated. For $m = 2$ and correlation $c$ between $X_1$ and
@@ -637,7 +637,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        have mean zero and variance $\sigma^2$ each and are independent of
        $X_1, \ldots, X_m$, so that $Y_a$ has variance $\sigma^2$ and
        correlation $\rho$ with $X_a$. Show that the bias of
-       $Y_{\mathrm{argmax}_a X_a}$ is $\rho\, E[\max_a X_a]$.
+       $Y_{\mathrm{argmax}_a X_a}$ is $\rho\, \mathbb{E}[\max_a X_a]$.
     1. Check parts (a) and (c) by modifying the simulation of
        :numref:`subsec_dqn-max-bias`: use two actions, and draw the second
        estimate as `rho * est + np.sqrt(1 - rho**2) * noise` with fresh
@@ -704,7 +704,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        $t + j$ instead?
     1. The actions $a_{t+1}, \ldots, a_{t+n-1}$ were chosen by the
        $\epsilon$-greedy behavior policy of an older network. For $n = 2$ and
-       $Q_{w^-} = Q^*$, write $E[y^{(2)}_t \mid s_t, a_t]$ and show that it
+       $Q_{w^-} = Q^*$, write $\mathbb{E}[y^{(2)}_t \mid s_t, a_t]$ and show that it
        equals the one-step target of $Q^*$ only if $a_{t+1}$ is greedy for
        $Q^*$ with probability one. Which policy's value does the $n$-step
        target estimate?
@@ -721,7 +721,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        $u_i = 1/\big(N P(i)\big)$ gives an unbiased estimate of
        $\bar{\mathbf{g}}$.
     1. Find the distribution $P$ that minimizes the expected squared error
-       $E\|u_i \mathbf{g}_i - \bar{\mathbf{g}}\|^2$ of this estimate. For the
+       $\mathbb{E}\|u_i \mathbf{g}_i - \bar{\mathbf{g}}\|^2$ of this estimate. For the
        squared loss, $\mathbf{g}_i = e_i \nabla_w Q_w(s_i, a_i)$ with residual
        $e_i$. Under which condition is sampling in proportion to $|e_i|$
        optimal?

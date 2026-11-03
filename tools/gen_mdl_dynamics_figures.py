@@ -136,49 +136,86 @@ def fig_ode_field():
 # =========================================================================== #
 
 def fig_sde_paths():
-    """Many Euler-Maruyama sample paths of the OU SDE dX = -theta X dt + sigma dW
-    from one fixed start: a spreading fan of jittery trajectories, the mean curve
-    X0 e^{-theta t} highlighted, and the analytic +/- 2 std time-marginal envelope
-    overlaid (the OU variance (sigma^2/2theta)(1-e^{-2theta t})."""
-    rng = np.random.default_rng(0)
-    theta, sigma, X0 = 1.0, 0.9, 2.0
-    T, n = 4.0, 800
+    """Two failures and the remedy, from the two starts x0 = +-2 (theta = 1,
+    g = sqrt 2, the section's running example).  Left: drift alone, the
+    deterministic curves +-2 e^{-t}, which collapse to the point 0.  Middle:
+    noise alone, X_t = x0 + sqrt2 W_t, whose clouds keep their centers and
+    spread like 2 sqrt(2t).  Right: both, the OU process, whose clouds from
+    either start merge into the stationary N(0, 1) (drawn sideways in a narrow
+    fourth axis).  Paths are Euler-Maruyama at dt = 0.005 from one seeded
+    increment array; dashed lines are the analytic two-standard-deviation
+    envelopes."""
+    rng = np.random.default_rng(3)
+    theta, g, T, n, n_paths = 1.0, np.sqrt(2.0), 3.0, 600, 6
     dt = T / n
     t = np.linspace(0, T, n + 1)
+    starts = (2.0, -2.0)
+    dW = np.sqrt(dt) * rng.standard_normal((len(starts), n_paths, n))
 
-    n_paths = 40
-    X = np.full((n_paths, n + 1), X0, float)
-    for k in range(n):
-        xi = rng.standard_normal(n_paths)
-        X[:, k + 1] = (X[:, k] - theta * X[:, k] * dt
-                       + sigma * np.sqrt(dt) * xi)
+    fig, axes = plt.subplots(
+        1, 4, figsize=(9.0, 3.2), sharey=True,
+        gridspec_kw=dict(width_ratios=[1.0, 1.0, 1.0, 0.28], wspace=0.17))
+    ax_d, ax_n, ax_b, ax_s = axes
+    titles = (r"drift only: $dX=-X\,dt$", r"noise only: $dX=\sqrt{2}\,dW$",
+              r"both: $dX=-X\,dt+\sqrt{2}\,dW$")
+    for ax, title in zip(axes[:3], titles):
+        ax.set_title(title, fontsize=12.5)
+        ax.set_xlim(0, T)
+        ax.set_xticks([0, 1, 2, 3])
+        ax.set_xlabel("$t$")
+        ax.set_aspect("auto")
+        fl.clean_axes(ax, equal=False)
+    ax_d.set_ylim(-7.2, 7.2)
+    ax_d.set_yticks([-6, -3, 0, 3, 6])
+    ax_d.set_ylabel("$X_t$")
 
-    mean = X0 * np.exp(-theta * t)
-    var = sigma ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * t))
-    std = np.sqrt(var)
+    for x0, inc in zip(starts, dW):
+        # drift only: the ODE solution, no noise
+        ax_d.plot(t, x0 * np.exp(-theta * t), color=BLUE, lw=1.8, zorder=3)
+        # noise only: X_t = x0 + g W_t
+        W = np.concatenate([np.zeros((n_paths, 1)), np.cumsum(inc, axis=1)],
+                           axis=1)
+        for path in x0 + g * W:
+            ax_n.plot(t, path, color=BLUE, lw=0.7, alpha=0.5, zorder=1)
+        half = 2 * g * np.sqrt(t)
+        ax_n.plot(t, np.full_like(t, x0), color=GREEN, lw=2.0, zorder=3)
+        for s in (1, -1):
+            ax_n.plot(t, x0 + s * half, color=ORANGE, lw=1.3, ls="--",
+                      zorder=2)
+        # both: Euler-Maruyama for the OU process on the same increments
+        X = np.empty((n_paths, n + 1))
+        X[:, 0] = x0
+        for k in range(n):
+            X[:, k + 1] = X[:, k] - theta * X[:, k] * dt + g * inc[:, k]
+        for path in X:
+            ax_b.plot(t, path, color=BLUE, lw=0.7, alpha=0.5, zorder=1)
+        mean = x0 * np.exp(-theta * t)
+        sd = np.sqrt(g ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * t)))
+        ax_b.plot(t, mean, color=GREEN, lw=2.0, zorder=3)
+        for s in (1, -1):
+            ax_b.plot(t, mean + s * 2 * sd, color=ORANGE, lw=1.3, ls="--",
+                      zorder=2)
+        ax_d.plot(0, x0, "o", color="black", ms=4.5, zorder=4)
+    ax_n.text(0.08, 5.7, r"$x_0\pm2\sqrt{2t}$", color=INK, fontsize=13,
+              ha="left", va="bottom", bbox=WHITE_BOX, zorder=5)
+    ax_b.text(2.95, 3.4, r"$\pm2$ (stationary)", color=INK, fontsize=13,
+              ha="right", va="bottom", bbox=WHITE_BOX, zorder=5)
+    ax_d.text(2.95, 1.0, r"$\pm2e^{-t}\to0$", color=INK, fontsize=13,
+              ha="right", va="bottom", bbox=WHITE_BOX, zorder=5)
 
-    fig, ax = plt.subplots(figsize=(6.6, 4.2))
-    for k in range(n_paths):
-        ax.plot(t, X[k], color=BLUE, lw=0.6, alpha=0.28, zorder=1)
-    # +/- 2 std analytic marginal envelope
-    ax.fill_between(t, mean - 2 * std, mean + 2 * std, color=ORANGE, alpha=0.16,
-                    zorder=2, label=r"$\pm 2\,\mathrm{std}$ marginal")
-    ax.plot(t, mean + 2 * std, color=ORANGE, lw=1.4, ls="--", zorder=3)
-    ax.plot(t, mean - 2 * std, color=ORANGE, lw=1.4, ls="--", zorder=3)
-    ax.plot(t, mean, color=GREEN, lw=2.6, zorder=4,
-            label=r"mean $X_0 e^{-\theta t}$")
-    ax.plot(0, X0, "o", color="black", ms=6, zorder=5)
-    ax.text(0.06, X0 + 0.10, r"$X_0$", fontsize=14, ha="left", va="bottom",
-            bbox=WHITE_BOX, zorder=6)
-
-    ax.set_xlabel("time $t$")
-    ax.set_ylabel("$X_t$")
-    ax.set_xlim(0, T)
-    # White-backed so the faint paths that reach the top right pass behind.
-    ax.legend(loc="upper right", frameon=True, facecolor="white",
-              edgecolor="none", framealpha=0.9)
-    ax.set_aspect("auto")
-    fl.clean_axes(ax, equal=False)
+    # the stationary density N(0, 1), sideways, beside the "both" panel
+    xs = np.linspace(-7.2, 7.2, 400)
+    dens = _gauss(xs, 0.0, g ** 2 / (2 * theta))
+    ax_s.fill_betweenx(xs, 0, dens, color=GREEN, alpha=0.25, zorder=1)
+    ax_s.plot(dens, xs, color=GREEN, lw=1.8, zorder=2)
+    ax_s.set_xlim(0, dens.max() * 1.15)
+    ax_s.set_xticks([])
+    for sp in ("top", "right", "bottom"):
+        ax_s.spines[sp].set_visible(False)
+    ax_s.spines["left"].set_color(LIGHT)
+    ax_s.tick_params(left=False)
+    ax_s.text(dens.max() * 0.5, -4.2, r"$\mathcal{N}(0,1)$", color=INK,
+              fontsize=13, ha="center", va="center", rotation=90)
     fl.save(fig, "mdl-dyn-sde-paths")
 
 
@@ -187,142 +224,109 @@ def fig_sde_paths():
 # =========================================================================== #
 
 def fig_fokker_planck_flux():
-    """A 1-D density bump p(x) with the probability current j = f p arrows
-    crossing the boundary of a control region [a, b], illustrating
-    'rate of change of mass inside = net inward flux' (the continuity equation
-    that underlies Fokker-Planck).  Uses a real Gaussian p and a constant drift
-    f, so the current j(x) = f p(x) is exact."""
+    """A 1-D density bump p(x) carried by a constant drift f, with the
+    probability current j = f p drawn at the two ends of a window [a, b] on
+    the bump's right flank.  The density is higher at a than at b, so more
+    current enters at a than leaves at b and the mass inside grows:
+    d/dt int_a^b p = j(a) - j(b) > 0 (the continuity equation).  Uses a real
+    Gaussian p, so the two arrow lengths are in the true ratio p(a)/p(b)."""
     mu, var, fdrift = 0.15, 0.55, 0.8
-    a, b = -0.7, 1.0
+    a, b = 0.5, 1.5
     x = np.linspace(-3.0, 3.0, 600)
     p = _gauss(x, mu, var)
-    j = fdrift * p  # probability current j = f * p (constant drift)
 
     fig, ax = plt.subplots(figsize=(6.8, 4.0))
 
-    # the density bump
+    # the density bump and the mass in the window
     ax.plot(x, p, color=BLUE, lw=2.4, zorder=4)
     ax.fill_between(x, 0, p, color=BLUE, alpha=0.10, zorder=1)
-    # highlight the control region mass
     sel = (x >= a) & (x <= b)
     ax.fill_between(x[sel], 0, p[sel], color=ORANGE, alpha=0.22, zorder=2)
 
     pa, pb = _gauss(a, mu, var), _gauss(b, mu, var)
-    # Boundaries stop below the balance equation, which sits above them.
-    ax.plot([a, a], [0, 0.585], color=GRAY, lw=1.2, ls="--", zorder=3)
-    ax.plot([b, b], [0, 0.585], color=GRAY, lw=1.2, ls="--", zorder=3)
+    yarr = 0.60   # above the whole curve (peak 0.54)
+    ax.plot([a, a], [0, yarr + 0.03], color=GRAY, lw=1.2, ls="--", zorder=3)
+    ax.plot([b, b], [0, yarr + 0.03], color=GRAY, lw=1.2, ls="--", zorder=3)
 
-    # flux arrows: current f*p crossing each boundary (drift > 0 => rightward).
-    # length proportional to the current magnitude at that boundary, but
-    # scaled up (and drawn with a thick shaft) so the shaft reads clearly as
-    # an arrow and not just an arrowhead.
+    # current arrows, length proportional to j = f p at each boundary
     scale = 1.9
-    yarr = 0.50   # above the curve over both arrow spans
-    fl.arrow(ax, (a, yarr), (a + scale * (fdrift * pa), yarr),
+    fl.arrow(ax, (a, yarr), (a + scale * fdrift * pa, yarr),
              color=GREEN, lw=3.0, mut=14)
-    fl.arrow(ax, (b, yarr), (b + scale * (fdrift * pb), yarr),
+    fl.arrow(ax, (b, yarr), (b + scale * fdrift * pb, yarr),
              color=GREEN, lw=3.0, mut=14)
-    # labels placed to the OUTSIDE of each boundary so they clear the arrows
-    ax.text(a - 0.12, yarr, r"$j(a)=f\,p(a)$", color=GREEN, fontsize=13.5,
+    ax.text(a - 0.10, yarr, r"$j(a)=f\,p(a)$", color=GREEN, fontsize=13.5,
             ha="right", va="center")
-    ax.text(b + 0.58, yarr, r"$j(b)=f\,p(b)$", color=GREEN, fontsize=13.5,
-            ha="left", va="center")
+    ax.text(b + scale * fdrift * pb + 0.12, yarr, r"$j(b)=f\,p(b)$",
+            color=GREEN, fontsize=13.5, ha="left", va="center")
 
-    # mark a, b as explicit ticks (no free-floating text colliding with the axis)
-    ax.set_xticks([-3, -2, a, b, 2, 3])
-    ax.set_xticklabels(["$-3$", "$-2$", "$a$", "$b$", "$2$", "$3$"])
-    ax.text((a + b) / 2, 0.10,
-            r"mass in $[a,b]$",
-            color=ORANGE, fontsize=13.5, ha="center", va="center")
-    ax.text((a + b) / 2, 0.665,
-            r"$\partial_t\int_a^b p\,dx = j(a)-j(b)$",
+    ax.set_xticks([-3, -2, -1, 0, a, b, 3])
+    ax.set_xticklabels(["$-3$", "$-2$", "$-1$", "$0$", "$a$", "$b$", "$3$"])
+    ax.text(0.96, 0.085, "mass in\n" + r"$[a,b]$", color=ORANGE, fontsize=13,
+            ha="center", va="center", linespacing=1.1)
+    ax.text(0.0, 0.725,
+            r"$\partial_t\int_a^b p\,dx = j(a)-j(b)>0$: net inflow",
             color="black", fontsize=14, ha="center", va="center")
 
     ax.set_xlabel("$x$")
     ax.set_ylabel("$p(x)$")
     ax.set_xlim(-3.0, 3.0)
-    ax.set_ylim(0.0, 0.74)
+    ax.set_ylim(0.0, 0.79)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-fokker-planck-flux")
 
 
 # =========================================================================== #
-# §6.3.6 / §6.4.3  Forward (data->noise) and reverse (noise->data) process     #
+# Fokker-Planck section: forward marginals of the running mixture              #
 #                  ->  mdl-dyn-forward-reverse                                  #
 # =========================================================================== #
 
 def fig_forward_reverse():
-    """Two rows of small 1-D density panels.  Top: the FORWARD noising process
-    turns a structured (bimodal) data density into a single Gaussian across a
-    few time slices, left->right.  Bottom: the REVERSE process recovers the
-    structured density, read right->left over the same columns (one column =
-    one time t in both rows).  Each panel is the exact VP-SDE (OU)
-    marginal of the bimodal mixture: a closed-form mixture of Gaussians, so the
-    shapes are computed, not sketched."""
-    # bimodal data mixture p_0 = 1/2 N(-1.6, .12) + 1/2 N(1.6, .12)
-    mus0 = np.array([-1.6, 1.6])
-    var0 = 0.12
-    w = np.array([0.5, 0.5])
-
-    # VP-SDE / OU forward: X_t = a_t X_0 + sqrt(1 - a_t^2) Z, a_t = e^{-t/2}.
-    # Marginal of the mixture is a mixture: N(a_t mu_i, a_t^2 var0 + (1-a_t^2)).
-    ts = np.array([0.0, 0.5, 1.2, 2.5, 6.0])
-    x = np.linspace(-3.2, 3.2, 500)
+    """One row of five 1-D density panels: the exact OU marginals (theta = 1,
+    g = sqrt(2)) of the section's running mixture
+    p_0 = 1/2 N(-2, 0.25) + 1/2 N(2, 0.25) at t = 0, 0.4, 0.78, 1.5, 3.  Each
+    component evolves to N(2 e^{-t}, 1 - 0.75 e^{-2t}), so the shapes are
+    computed, not sketched; the t = 0.78 panel is flat-topped (the merging
+    time t* = ln(4.75)/2).  An arrow above the row reads the forward process
+    left to right; one below reads the reverse processes right to left."""
+    mus0, var0, w = np.array([-2.0, 2.0]), 0.25, np.array([0.5, 0.5])
+    ts = (0.0, 0.4, 0.78, 1.5, 3.0)
+    x = np.linspace(-3.5, 3.5, 600)
 
     def marginal(tt):
-        at = np.exp(-tt / 2)
+        at = np.exp(-tt)
         var_t = at ** 2 * var0 + (1 - at ** 2)
-        dens = np.zeros_like(x)
-        for wi, mi in zip(w, mus0):
-            dens += wi * _gauss(x, at * mi, var_t)
-        return dens
+        return sum(wi * _gauss(x, at * mi, var_t) for wi, mi in zip(w, mus0))
 
     n = len(ts)
-    fig, axes = plt.subplots(2, n, figsize=(1.55 * n, 3.5), sharex=True,
+    fig, axes = plt.subplots(1, n, figsize=(1.75 * n, 2.3), sharex=True,
                              sharey=True)
-
-    # peak height of the data density, for a shared y-scale and arrow placement
-    ymax = marginal(0.0).max() * 1.12
-
-    def panel(ax, tt, color, fill):
+    ymax = marginal(0.0).max() * 1.15
+    for j, (ax, tt) in enumerate(zip(axes, ts)):
+        c = BLUE if j == 0 else (ORANGE if j == n - 1 else GRAY)
         d = marginal(tt)
-        ax.plot(x, d, color=color, lw=2.0)
-        ax.fill_between(x, 0, d, color=color, alpha=fill)
-        ax.set_xlim(-3.2, 3.2)
+        ax.plot(x, d, color=c, lw=2.0)
+        ax.fill_between(x, 0, d, color=c, alpha=0.30 if j in (0, n - 1) else 0.18)
+        ax.set_xlim(-3.5, 3.5)
         ax.set_ylim(0, ymax)
         ax.set_xticks([])
         ax.set_yticks([])
         for sp in ("top", "right", "left"):
             ax.spines[sp].set_visible(False)
-        ax.spines["bottom"].set_color(LIGHT)
+        ax.spines["bottom"].set_color(INK)
+        ax.set_xlabel(f"$t={tt:g}$", fontsize=14, color=INK, labelpad=3)
+    axes[0].set_title(r"data $p_0$", fontsize=14, color=BLUE)
+    axes[-1].set_title(r"noise $p_T\approx\mathcal{N}(0,1)$", fontsize=14,
+                       color=ORANGE)
 
-    # Both rows share the column order: each column is ONE time t, data p_0
-    # on the left, noise p_T on the right.  The forward process reads the top
-    # row left to right; the reverse process reads the bottom row right to
-    # left (the arrows under / over the rows say which way).
-    for i in range(2):
-        for j, tt in enumerate(ts):
-            c = BLUE if j == 0 else (GRAY if j < n - 1 else ORANGE)
-            panel(axes[i, j], tt, c, 0.18 if 0 < j < n - 1 else 0.30)
-
-    axes[0, 0].set_title(r"data $p_0$", fontsize=14, color=BLUE)
-    axes[0, n - 1].set_title(r"noise $p_T$", fontsize=14, color=ORANGE)
-
-    # process-direction labels at the row margins
-    axes[0, 0].text(-0.30, 0.5, "forward\n(noising)", transform=axes[0, 0].transAxes,
-                    rotation=90, va="center", ha="center", fontsize=14, color=INK)
-    axes[1, 0].text(-0.30, 0.5, "reverse\n(score)", transform=axes[1, 0].transAxes,
-                    rotation=90, va="center", ha="center", fontsize=14, color=GREEN)
-
-    fig.subplots_adjust(wspace=0.10, hspace=0.30, left=0.10, right=0.985,
-                        top=0.80, bottom=0.11)
-    # big direction arrows spanning each row
-    fig.text(0.55, 0.93, r"$\longrightarrow$ add noise $\longrightarrow$",
-             ha="center", fontsize=14, color=INK)
-    fig.text(0.55, 0.0, r"$\longleftarrow$ denoise with $\nabla\log p_t$ $\longleftarrow$",
-             ha="center", fontsize=14, color=GREEN)
-
+    fig.subplots_adjust(wspace=0.08, left=0.01, right=0.99, top=0.70,
+                        bottom=0.30)
+    fig.text(0.5, 0.92,
+             r"forward: $dX=-X\,dt+\sqrt{2}\,dW$  $\longrightarrow$",
+             ha="center", va="center", fontsize=14, color=INK)
+    fig.text(0.5, 0.04,
+             r"$\longleftarrow$  reverse: SDE or PF-ODE with $\nabla\log p_t$",
+             ha="center", va="center", fontsize=14, color=GREEN)
     fl.save(fig, "mdl-dyn-forward-reverse")
 
 
@@ -491,13 +495,13 @@ def fig_phase_portraits():
          # the origin and leaves along the unstable direction (1,1).
          [(-1.83, 1.85), (-1.85, 1.83), (1.85, -1.83), (1.83, -1.85)], 3.4),
         ("stable spiral", np.array([[-0.5, -1.0], [1.0, -0.5]]),
-         r"$\lambda=a\pm ib,\ a<0$",
+         r"$\lambda=a\pm \mathrm{i}b,\ a<0$",
          [(2.0, 0.2), (-1.5, -1.5)], 7.0),
         ("unstable spiral", np.array([[0.25, -1.0], [1.0, 0.25]]),
-         r"$\lambda=a\pm ib,\ a>0$",
+         r"$\lambda=a\pm \mathrm{i}b,\ a>0$",
          [(0.15, 0.0), (-0.15, 0.0)], 10.5),
         ("center", np.array([[0.0, -1.0], [1.0, 0.0]]),
-         r"$\lambda=\pm ib$",
+         r"$\lambda=\pm \mathrm{i}b$",
          [(0.6, 0.0), (1.2, 0.0), (1.8, 0.0)], 2 * np.pi),
     ]
     m = 2.0
@@ -516,6 +520,15 @@ def fig_phase_portraits():
         ax.quiver(X, Y, U / N, V / N, color=FAINT, alpha=0.6, angles="xy",
                   pivot="mid", width=0.006, headwidth=4, headlength=5,
                   scale=16, zorder=1)
+
+        # real eigenvalues: draw the two eigendirections as dashed lines
+        # through the origin, under the trajectories
+        lam, Vec = np.linalg.eig(A)
+        if np.all(np.isreal(lam)):
+            for v in Vec.real.T:
+                v = v / np.max(np.abs(v))
+                ax.plot([-m * v[0], m * v[0]], [-m * v[1], m * v[1]],
+                        color=FAINT, lw=1.3, ls="--", zorder=2)
 
         def f(t, x, A=A):
             return A @ x
@@ -759,35 +772,38 @@ def fig_qv_convergence():
 # =========================================================================== #
 
 def fig_ou_mean_reversion():
-    """Mean reversion in one picture: the OU drift -theta x as a direction
-    field in the (t, x) plane, Euler-Maruyama sample paths from three
-    different starts relaxing to 0, the saturating +-2 sigma_t spread band,
-    and the stationary Gaussian N(0, sigma^2/2 theta) drawn sideways on the
-    right edge."""
+    """Mean reversion in one picture, for the running example theta = 1,
+    g = sqrt 2: the OU drift -theta x as a direction field in the (t, x)
+    plane, Euler-Maruyama sample paths from three different starts relaxing
+    to 0 and then fluctuating inside the flat stationary band of two
+    standard deviations, +-2 sqrt(g^2/2 theta) = +-2, and the stationary
+    Gaussian N(0, g^2/2 theta) = N(0, 1) drawn sideways on the right edge."""
     rng = np.random.default_rng(5)
-    theta, sigma, T, n = 1.0, 0.9, 4.0, 800
+    theta, g, T, n = 1.0, np.sqrt(2.0), 4.0, 800
     dt = T / n
     t = np.linspace(0, T, n + 1)
+    sd_inf = np.sqrt(g ** 2 / (2 * theta))
 
     fig, (ax, axd) = plt.subplots(
         1, 2, figsize=(7.4, 3.9), sharey=True,
         gridspec_kw=dict(width_ratios=[4.0, 1.0], wspace=0.05))
 
     # drift direction field (1, -theta x), normalized
-    tg, xg = np.meshgrid(np.arange(0.25, T, 0.5), np.arange(-2.6, 2.7, 0.65))
+    tg, xg = np.meshgrid(np.arange(0.25, T, 0.5), np.arange(-3.25, 3.3, 0.65))
     U, V = np.ones_like(xg), -theta * xg
     N = np.hypot(U, V)
     ax.quiver(tg, xg, U / N, V / N, color=FAINT, alpha=0.6, angles="xy",
               pivot="mid", width=0.005, headwidth=4, headlength=5, scale=26,
               zorder=1)
 
-    # saturating +-2 sigma_t spread band (about the relaxed mean 0)
-    std = np.sqrt(sigma ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * t)))
-    ax.fill_between(t, -2 * std, 2 * std, color=ORANGE, alpha=0.15, zorder=2)
-    ax.plot(t, 2 * std, color=ORANGE, lw=1.3, ls="--", zorder=2)
-    ax.plot(t, -2 * std, color=ORANGE, lw=1.3, ls="--", zorder=2)
-    ax.text(2.45, 1.42, r"$\pm 2\sigma_t$ (saturates)", color=ORANGE,
-            fontsize=13.5, ha="left", va="bottom")
+    # the flat stationary band of two standard deviations
+    ax.fill_between(t, -2 * sd_inf, 2 * sd_inf, color=ORANGE, alpha=0.15,
+                    zorder=2)
+    for s in (1, -1):
+        ax.axhline(s * 2 * sd_inf, color=ORANGE, lw=1.3, ls="--", zorder=2)
+    ax.text(2.25, 2 * sd_inf + 0.12, r"$\pm2$: two stationary sd",
+            color=INK, fontsize=13, ha="left", va="bottom", bbox=WHITE_BOX,
+            zorder=5)
 
     # Euler-Maruyama sample paths from three different starts
     for x0 in (2.5, -2.0, 0.8):
@@ -795,21 +811,20 @@ def fig_ou_mean_reversion():
         X[0] = x0
         xi = rng.standard_normal(n)
         for k in range(n):
-            X[k + 1] = X[k] - theta * X[k] * dt + sigma * np.sqrt(dt) * xi[k]
+            X[k + 1] = X[k] - theta * X[k] * dt + g * np.sqrt(dt) * xi[k]
         ax.plot(t, X, color=BLUE, lw=1.2, alpha=0.9, zorder=3)
         ax.plot(0, x0, "o", color=BLUE, ms=5, zorder=4)
 
     ax.set_xlabel("time $t$")
     ax.set_ylabel("$x$")
     ax.set_xlim(0, T)
-    ax.set_ylim(-3.0, 3.0)
+    ax.set_ylim(-3.6, 3.6)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
 
     # the stationary density, sideways, on the right edge
-    var_inf = sigma ** 2 / (2 * theta)
-    xs = np.linspace(-3.0, 3.0, 300)
-    dens = _gauss(xs, 0.0, var_inf)
+    xs = np.linspace(-3.6, 3.6, 300)
+    dens = _gauss(xs, 0.0, sd_inf ** 2)
     axd.fill_betweenx(xs, 0, dens, color=GREEN, alpha=0.25, zorder=1)
     axd.plot(dens, xs, color=GREEN, lw=2.0, zorder=2)
     axd.set_xlim(0, dens.max() * 1.25)
@@ -817,10 +832,11 @@ def fig_ou_mean_reversion():
     for sp in ("top", "right", "bottom"):
         axd.spines[sp].set_visible(False)
     axd.spines["left"].set_color(LIGHT)
-    axd.set_title("stationary", fontsize=13.5, color=GREEN)
-    axd.text(dens.max() * 0.62, -2.45,
-             r"$\mathcal{N}\,\left(0,\frac{\sigma^2}{2\theta}\right)$",
-             color=GREEN, fontsize=14, ha="center", va="center")
+    axd.set_title("stationary", fontsize=13.5, color=INK)
+    axd.text(dens.max() * 0.55, -2.9,
+             r"$\mathcal{N}\left(0,\frac{g^2}{2\theta}\right)$" "\n"
+             r"$=\mathcal{N}(0,1)$",
+             color=INK, fontsize=13, ha="center", va="center")
     fl.save(fig, "mdl-dyn-ou-mean-reversion")
 
 
@@ -843,7 +859,7 @@ def _two_moons(n, rng, noise=0.06):
 
 
 def fig_noising_denoising():
-    """A two-moons cloud under the VP (OU) forward process at t = 0 / 0.7 / T,
+    """A two-moons cloud under the VP (OU) forward process at t/T = 0 / 0.02 / 1,
     columns aligned by t.  Top row: forward noising, read left to right.
     Bottom row: the reverse process traverses the same marginals right to
     left, with short arrows showing the EXACT score of the noised empirical
@@ -853,7 +869,7 @@ def fig_noising_denoising():
     X0 = _two_moons(n, rng)
     eps_f = rng.standard_normal((n, 2))      # forward-row noise draw
     eps_r = rng.standard_normal((n, 2))      # independent reverse-row draw
-    ts = (0.0, 0.7, 3.0)                     # VP clock, a_t = e^{-t}
+    ts = (0.0, 0.06, 3.0)                    # VP clock, a_t = e^{-t}; t/T = 0, 0.02, 1
     cols = (BLUE, GRAY, ORANGE)
 
     def noised(eps, tt):
@@ -902,9 +918,9 @@ def fig_noising_denoising():
                           headwidth=3.5, headlength=4, headaxislength=3.6,
                           zorder=3)
 
-    axes[0, 0].set_title("$t=0$ (data)", fontsize=14, color=BLUE)
-    axes[0, 1].set_title("$t=0.7$", fontsize=14, color=INK)
-    axes[0, 2].set_title("$t=T$ (noise)", fontsize=14, color=ORANGE)
+    axes[0, 0].set_title("$t/T=0$ (data)", fontsize=14, color=BLUE)
+    axes[0, 1].set_title("$t/T=0.02$", fontsize=14, color=INK)
+    axes[0, 2].set_title("$t/T=1$ (noise)", fontsize=14, color=ORANGE)
     axes[0, 0].text(-0.22, 0.5, "forward\n(noising)",
                     transform=axes[0, 0].transAxes, rotation=90,
                     va="center", ha="center", fontsize=14, color=INK)
@@ -1083,13 +1099,13 @@ def fig_time_conventions():
 
 def fig_strong_weak():
     """Strong versus weak convergence of Euler-Maruyama on the OU process
-    dX = -X dt + dW, X0 = 1.5, T = 1 (the parameters of the strong-order
-    cell).  Left: ONE coarse path (16 steps) against the fine reference (4096
+    dX = -X dt + sqrt2 dW, X0 = 2, T = 1 (the running example, as in the
+    strong-order cell).  Left: ONE coarse path (16 steps) against the fine reference (4096
     steps) driven by the SAME Brownian increments -- the pathwise (strong)
     gap is visible.  Right: terminal histograms of 20,000 paths at both step
-    sizes on top of the analytic marginal -- the laws (weak view) already
-    agree.  Everything is computed from one seeded increment array."""
-    theta, sig, X0, T = 1.0, 1.0, 1.5, 1.0
+    sizes on top of the analytic marginal -- the laws (weak view) nearly
+    agree (at 16 steps the EM terminal variance is about 4% too large).  Everything is computed from one seeded increment array."""
+    theta, sig, X0, T = 1.0, np.sqrt(2.0), 2.0, 1.0
     n_fine, n_coarse = 4096, 16
     rng = np.random.default_rng(21)
 
@@ -1121,9 +1137,9 @@ def fig_strong_weak():
     axL.plot(0, X0, "o", color="black", ms=5, zorder=5)
     axL.set_ylabel("$X_t$")
     axL.set_xlim(0, 1.02)
-    # room below the path (its minimum is ~0.6, at t = 1) for the legend
-    axL.set_ylim(-0.3, 2.75)
-    axL.set_yticks([1.0, 2.0])
+    # room below the path for the legend
+    axL.set_ylim(fine.min() - 1.25, fine.max() + 0.15)
+    axL.set_yticks([1.0, 2.0, 3.0])
     axL.tick_params(labelbottom=False)
     axL.legend(loc="lower center", bbox_to_anchor=(0.5, -0.02),
                fontsize=12.5, handlelength=1.4, frameon=False)
@@ -1138,12 +1154,12 @@ def fig_strong_weak():
     axG.axhline(0.0, color=INK, lw=0.9, zorder=1)
     axG.vlines(tc, 0.0, gap, color=ORANGE, lw=2.0, zorder=2)
     axG.plot(tc, gap, "o", color=ORANGE, ms=4, zorder=3)
-    axG.set_ylim(-0.025, 0.08)
+    axG.set_ylim(min(gap.min(), 0.0) - 0.012, gap.max() + 0.05)
     axG.set_yticks([0.0, 0.05])
     axG.set_yticklabels(["0", "0.05"])
     axG.set_xlabel("$t$")
     axG.set_ylabel("gap")
-    axG.text(0.02, 0.079, "strong error: gap at the grid times (magnified)",
+    axG.text(0.02, gap.max() + 0.049, "strong error: gap at the grid times (magnified)",
              color=INK, fontsize=12.5, ha="left", va="top")
     axG.set_aspect("auto")
     fl.clean_axes(axG, equal=False)
@@ -1160,15 +1176,15 @@ def fig_strong_weak():
              lw=1.5, zorder=3)
     m = X0 * np.exp(-theta * T)
     v = sig ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * T))
-    gx = np.linspace(-2.4, 3.2, 400)
+    gx = np.linspace(-2.6, 4.1, 400)
     axR.fill_between(gx, 0, _gauss(gx, m, v), color=GRAY, alpha=0.15, zorder=1)
-    axR.plot(gx, _gauss(gx, m, v), color="black", lw=1.0, zorder=2)
-    axR.text(m, 0.70, "weak view:\nthe laws already match", color=INK,
+    axR.plot(gx, _gauss(gx, m, v), color="black", lw=1.2, zorder=5)
+    axR.text(m, 0.455, "weak view:\nthe laws nearly match", color=INK,
              fontsize=13, ha="center", va="bottom", zorder=4)
     axR.set_xlabel("$X_T$")
     axR.set_ylabel("terminal density")
-    axR.set_xlim(-2.4, 3.2)
-    axR.set_ylim(-0.02, 0.92)
+    axR.set_xlim(-2.6, 4.1)
+    axR.set_ylim(-0.01, 0.57)
     axR.set_aspect("auto")
     fl.clean_axes(axR, equal=False)
 
@@ -1186,21 +1202,21 @@ def fig_lambda_family():
     f - (1+lambda^2)/2 g^2 grad log p_t and noise lambda*g, for lambda = 0
     (probability-flow ODE, smooth), 0.5, and 1 (Anderson's reverse SDE,
     jagged), using the EXACT score of the OU-evolved bimodal mixture (theta=1,
-    sigma=sqrt(2), p0 = 1/2 N(-2, 0.25^2) + 1/2 N(2, 0.25^2) -- the section's
-    running example).  Left: three stacked panels, the same four
+    g=sqrt(2), p0 = 1/2 N(-2, 0.25) + 1/2 N(2, 0.25) -- the section's
+    running example, component standard deviation 0.5).  Left: three stacked panels, the same four
     trajectories per lambda.  Right
     panel: the three 20k-particle terminal histograms overlaid on the
     analytic p0 -- same marginals, different choreography."""
-    theta, sig = 1.0, np.sqrt(2.0)
+    theta, g = 1.0, np.sqrt(2.0)
     pis = np.array([0.5, 0.5])
     mus = np.array([-2.0, 2.0])
-    s2s = np.array([0.25 ** 2, 0.25 ** 2])
+    s2s = np.array([0.25, 0.25])
     T, steps = 3.0, 600
     dt = T / steps
 
     def mixture_params(t):
         m = mus * np.exp(-theta * t)
-        v = s2s * np.exp(-2 * theta * t) + sig ** 2 / (2 * theta) * (
+        v = s2s * np.exp(-2 * theta * t) + g ** 2 / (2 * theta) * (
             1 - np.exp(-2 * theta * t))
         return m, v
 
@@ -1221,9 +1237,9 @@ def fig_lambda_family():
         x = x0.copy()
         for k in range(steps):
             t = T - k * dt
-            drift = theta * x + 0.5 * (1 + lam ** 2) * sig ** 2 * score_t(x, t)
+            drift = theta * x + 0.5 * (1 + lam ** 2) * g ** 2 * score_t(x, t)
             x = x + drift * dt \
-                + lam * sig * np.sqrt(dt) * rng.standard_normal(x.shape)
+                + lam * g * np.sqrt(dt) * rng.standard_normal(x.shape)
             X.append(x.copy())
         return np.array(X)
 
@@ -1243,7 +1259,7 @@ def fig_lambda_family():
     # -- left: one short panel per lambda, the SAME four terminal noise draws
     # (and the same driving noise) in each, so only the texture changes ---- #
     starts = np.array([-1.3, -0.35, 0.3, 1.1])
-    ss = np.linspace(0.0, T, steps + 1)          # reverse clock s = T - t
+    ss = np.linspace(0.0, T, steps + 1)          # reversed clock T - t
     for ax, lam, c, lab in zip(axLs, lams, cols, labs):
         P = reverse(starts, lam, np.random.default_rng(5))
         for j in range(len(starts)):
@@ -1261,7 +1277,7 @@ def fig_lambda_family():
     for ax in axLs[:2]:
         ax.tick_params(labelbottom=False)
     axLs[1].set_ylabel("$x$")
-    axLs[2].set_xlabel(r"reverse time $s = T - t$ (noise $\rightarrow$ data)")
+    axLs[2].set_xlabel(r"reversed clock $\bar t = T - t$ (noise $\rightarrow$ data)")
 
     # -- right: terminal histograms of full clouds, one per lambda ---------- #
     rng = np.random.default_rng(7)
@@ -1275,11 +1291,12 @@ def fig_lambda_family():
     p0 = sum(pi * _gauss(gx, mi, vi) for pi, mi, vi in zip(pis, m0, v0))
     axR.fill_between(gx, 0, p0, color=GRAY, alpha=0.15, zorder=1)
     axR.plot(gx, p0, color="black", lw=1.0, zorder=2)
-    axR.text(0.0, 0.62, "all three land\non the same $p_0$", color=INK,
+    axR.text(0.0, 0.50, "all three land\non the same $p_0$", color=INK,
              fontsize=13, ha="center", va="center")
     axR.set_xlabel("$x$")
     axR.set_ylabel("terminal density")
     axR.set_xlim(-3.2, 3.2)
+    axR.set_ylim(0.0, 0.58)
     axR.set_aspect("auto")
     fl.clean_axes(axR, equal=False)
 
@@ -1345,9 +1362,23 @@ def fig_stability_regions():
     ax.text(-3.55, -0.30, r"$\approx{-2.79}$", color=GREEN,
             fontsize=13, ha="center", va="top", zorder=6)
 
+    # the section's own points: the opening's steps on dx/dt = -50x and the
+    # spiral (eigenvalues -0.5 +- i) at its largest stable Euler step h = 0.8
+    for zx, zy in ((-2.5, 0.0), (-0.5, 0.0), (-0.4, 0.8), (-0.4, -0.8)):
+        ax.plot(zx, zy, "o", color=INK, ms=6.5, zorder=7)
+    ax.annotate("$h=0.05$,\n$\\lambda=-50$", xy=(-2.55, 0.06),
+                xytext=(-3.65, 1.05), color=INK, fontsize=13, ha="center",
+                va="center", zorder=8,
+                arrowprops=dict(arrowstyle="-", color=INK, lw=0.8,
+                                shrinkA=4, shrinkB=3))
+    ax.text(-0.75, -0.22, "$h=0.01$", color=INK, fontsize=13, ha="center",
+            va="top", bbox=WHITE_BOX, zorder=8)
+    ax.text(-0.3, 1.06, "spiral at $h=0.8$", color=INK, fontsize=13,
+            ha="right", va="bottom", bbox=WHITE_BOX, zorder=8)
+
     ax.text(-1.0, -1.3, "forward Euler", color=BLUE, fontsize=13,
             ha="center", va="center", zorder=6)
-    ax.text(-1.0, 1.6, "RK4", color=GREEN, fontsize=13,
+    ax.text(-0.9, 1.8, "RK4", color=GREEN, fontsize=13,
             ha="center", va="center", zorder=6)
     ax.text(1.4, 1.75, "backward Euler:\nunstable only here", color=ORANGE,
             fontsize=13, ha="center", va="center", zorder=6)
@@ -1449,70 +1480,121 @@ def fig_tweedie():
 # =========================================================================== #
 
 def fig_ddim_strides():
-    """The family of curves sqrt(abar_t) x0 + sqrt(1 - abar_t) eps in the
-    (t, x) plane under the actual DDPM linear-beta schedule (T = 1000):  each
-    clean-point/noise-draw pair owns one curve, gray verticals mark the fine
-    ancestral grid, and DDIM slides one highlighted sample along its own curve
-    through 10 big strides (dots), skipping the grid times in between."""
-    T = 1000
-    beta = np.linspace(1e-4, 0.02, T)
-    abar = np.cumprod(1.0 - beta)
-    tgrid = np.arange(1, T + 1) / T                      # curve parameter
-    ca, cb = np.sqrt(np.concatenate([[1.0], abar])), \
-        np.sqrt(np.concatenate([[0.0], 1.0 - abar]))
-    tt = np.concatenate([[0.0], tgrid])
+    """DDIM against the forward curves, in two panels of equal height.
+
+    (a) The standardized two-mode mixture under the DDPM linear-beta schedule
+    (N = 1000): each clean-point/noise pair owns one forward curve
+    sqrt(abar_t) x0 + sqrt(1 - abar_t) eps.  One pair (blue) crossed the
+    valley.  From the SAME noise end, DDIM with the exact noise prediction
+    E[eps | x_t] of the mixture (10 strides, orange dots; 1000 strides,
+    dashed) follows the probability-flow ODE into the other mode: the sampler
+    never sees the sample's own curve.
+    (b) Unit-variance Gaussian data: the exact probability-flow paths are
+    horizontal (the flow is the identity), while ten DDIM strides with the
+    exact noise prediction sqrt(1 - abar_t) x_t shrink every sample by the
+    product of cos(phi_t' - phi_t), 0.832 -- Euler's error."""
+    N = 1000
+    beta = np.linspace(1e-4, 0.02, N)
+    abar = np.concatenate([[1.0], np.cumprod(1.0 - beta)])   # abar[0] = 1
+    tt = np.arange(N + 1) / N
+    ca, cb = np.sqrt(abar), np.sqrt(1.0 - abar)
 
     rng = np.random.default_rng(3)
-    mt = 2.0 / np.sqrt(4.25)                             # standardized modes
-    x0s = mt * (2 * rng.integers(0, 2, 7) - 1) \
-        + np.sqrt(0.25 / 4.25) * rng.standard_normal(7)
+    m = 2.0 / np.sqrt(4.25)                              # standardized modes
+    v0 = 0.25 / 4.25
+    x0s = m * (2 * rng.integers(0, 2, 7) - 1) + np.sqrt(v0) * rng.standard_normal(7)
     eps = rng.standard_normal(7)
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.2))
+    def eps_hat(x, a):
+        # exact noise prediction -sqrt(1 - a) * score of the noised mixture
+        v = a * v0 + 1.0 - a
+        mus = np.array([-np.sqrt(a) * m, np.sqrt(a) * m])
+        logw = -(x - mus) ** 2 / (2 * v)
+        w = np.exp(logw - logw.max())
+        s = (w * (mus - x) / v).sum() / w.sum()
+        return -np.sqrt(1.0 - a) * s
 
-    # the fine ancestral grid, as faint verticals (every 25th of 1000) -- kept
-    # very light (low alpha) so the dense grid reads as texture, not clutter
-    for tk in tt[25::25]:
-        ax.axvline(tk, color=LIGHT, lw=0.6, alpha=0.8, zorder=1)
+    def ddim_path(xN, K, eps_fn):
+        idx = np.linspace(N, 1, K + 1).round().astype(int)   # levels N..1
+        xs, x = [xN], xN
+        for t1, t2 in zip(idx[:-1], idx[1:]):
+            a1, a2 = abar[t1], abar[t2]
+            e = eps_fn(x, a1)
+            x = np.sqrt(a2) * (x - np.sqrt(1 - a1) * e) / np.sqrt(a1) + np.sqrt(1 - a2) * e
+            xs.append(x)
+        return idx, np.array(xs)
 
-    # the curve family (gray), one curve highlighted (blue)
+    fig, (axa, axb) = plt.subplots(
+        1, 2, figsize=(11.6, 4.3), sharey=True,
+        gridspec_kw=dict(width_ratios=[1, 1], wspace=0.08))
+
+    # ---- (a) the mixture -------------------------------------------------- #
+    for tk in tt[50::50]:
+        axa.axvline(tk, color=LIGHT, lw=0.6, alpha=0.8, zorder=1)
     for k in range(1, 7):
-        ax.plot(tt, ca * x0s[k] + cb * eps[k], color=GRAY, lw=1.0,
-                alpha=0.55, zorder=2)
+        axa.plot(tt, ca * x0s[k] + cb * eps[k], color=GRAY, lw=1.0,
+                 alpha=0.55, zorder=2)
     xb = ca * x0s[0] + cb * eps[0]
-    ax.plot(tt, xb, color=BLUE, lw=2.4, zorder=4)
+    axa.plot(tt, xb, color=BLUE, lw=2.4, zorder=4)
+    axa.plot(np.zeros(7), x0s, "o", color=GREEN, ms=5, zorder=5)
 
-    # DDIM strides: 10 big deterministic steps along the highlighted curve
-    idx = np.linspace(T, 0, 11).round().astype(int)
-    ax.plot(tt[idx], xb[idx], "o", color=ORANGE, ms=6.5, zorder=5)
-    # direction of sampling: noise -> data (right to left), midway between
-    # the t = 0.5 and t = 0.6 dots
-    i = 565
-    fl.arrow(ax, (tt[i], xb[i]), (tt[i - 14], xb[i - 14]), color=BLUE,
-             lw=0.0, mut=20)
+    xN = xb[-1]
+    idx1k, fine = ddim_path(xN, 1000, eps_hat)
+    idx10, coarse = ddim_path(xN, 10, eps_hat)
+    axa.plot(idx1k / N, fine, color=ORANGE, lw=1.6, ls=(0, (4, 2.5)), zorder=5)
+    axa.plot(idx10 / N, coarse, "-o", color=ORANGE, lw=1.4, ms=6, zorder=6)
 
-    ax.plot(np.zeros(7), x0s, "o", color=GREEN, ms=5, zorder=5)
-    ax.text(0.02, 2.35, "data end: $x_0$", color=GREEN, fontsize=13,
-            ha="left", va="center")
-    ax.text(0.98, 2.35, r"noise end: $\epsilon$", color=ORANGE, fontsize=13,
-            ha="right", va="center")
-    ax.annotate("one sample slides along\nits own curve, 10 strides",
-                xy=(tt[idx[3]], xb[idx[3]]), xytext=(0.42, -2.1),
-                color=ORANGE, fontsize=13, ha="center", va="center",
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
-                                shrinkA=2, shrinkB=5), zorder=6)
-    # the formula in the clear band between the top labels and the curve
-    # bundle (the caption names the faint verticals)
-    ax.text(0.5, 2.05,
-            r"$x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\epsilon$",
-            color="black", fontsize=14, ha="center", va="center", zorder=6)
+    axa.text(0.02, 2.35, "data end $x_0$", color=GREEN, fontsize=13,
+             ha="left", va="center")
+    axa.text(0.98, 2.35, "noise end", color=INK, fontsize=13,
+             ha="right", va="center")
+    axa.text(0.5, 1.95,
+             r"$x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\epsilon$",
+             color=INK, fontsize=14, ha="center", va="center", zorder=7)
+    axa.annotate("the sample's own forward curve\n(hidden from the sampler)",
+                 xy=(0.16, xb[160]), xytext=(0.30, 1.30), color=BLUE,
+                 fontsize=12.5, ha="left", va="center",
+                 bbox=WHITE_BOX,
+                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.1,
+                                 shrinkA=2, shrinkB=3), zorder=8)
+    axa.annotate("DDIM, 10 strides,\nexact $\\hat\\epsilon$",
+                 xy=(idx10[8] / N, coarse[8]), xytext=(0.30, -1.85),
+                 color=ORANGE, fontsize=12.5, ha="left", va="center",
+                 bbox=WHITE_BOX,
+                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
+                                 shrinkA=2, shrinkB=4), zorder=8)
+    axa.set_xlabel(r"diffusion time $t/N$")
+    axa.set_ylabel("$x$")
+    axa.set_xlim(-0.02, 1.02)
+    axa.set_ylim(-2.6, 2.6)
+    axa.set_aspect("auto")
+    fl.clean_axes(axa, equal=False)
+    axa.text(0.0, 1.02, "(a)", transform=axa.transAxes, fontsize=14,
+             ha="left", va="bottom", color=INK)
 
-    ax.set_xlabel(r"diffusion time $t/T$")
-    ax.set_ylabel("$x$")
-    ax.set_xlim(-0.02, 1.02)
-    ax.set_ylim(-2.6, 2.6)
-    ax.set_aspect("auto")
-    fl.clean_axes(ax, equal=False)
+    # ---- (b) unit-variance Gaussian data ---------------------------------- #
+    def eps_gauss(x, a):
+        return np.sqrt(1.0 - a) * x            # E[eps | x_t] for N(0, 1) data
+
+    for xs0 in (-1.5, -0.5, 0.5, 1.5):
+        axb.plot([0.0, 1.0], [xs0, xs0], color=INK, lw=1.2,
+                 ls=(0, (4, 2.5)), zorder=3)
+        idx, path = ddim_path(xs0, 10, eps_gauss)
+        axb.plot(idx / N, path, "-o", color=ORANGE, lw=1.4, ms=5.5, zorder=5)
+    axb.annotate(r"$\times 0.83$ after 10 strides", xy=(0.0, 1.5 * 0.832),
+                 xytext=(0.22, 0.95), color=ORANGE, fontsize=13,
+                 ha="left", va="center", bbox=WHITE_BOX,
+                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
+                                 shrinkA=2, shrinkB=5), zorder=8)
+    axb.text(0.98, 2.0, "exact flow: $x_t$ constant", color=INK,
+             fontsize=13, ha="right", va="center", bbox=WHITE_BOX)
+    axb.set_xlabel(r"diffusion time $t/N$")
+    axb.set_xlim(-0.02, 1.02)
+    axb.set_aspect("auto")
+    fl.clean_axes(axb, equal=False)
+    axb.tick_params(labelleft=True)
+    axb.text(0.0, 1.02, "(b)", transform=axb.transAxes, fontsize=14,
+             ha="left", va="bottom", color=INK)
     fl.save(fig, "mdl-dyn-ddim-strides")
 
 

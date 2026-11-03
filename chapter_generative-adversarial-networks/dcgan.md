@@ -1189,7 +1189,7 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
    critic of the penalized arm, so the two gaps cannot be compared directly.
    :citet:`Karras.Aittala.Hellsten.ea.2020` consider two statistics,
 
-   $$r_v = \frac{E[D_{\textrm{train}}] - E[D_{\textrm{holdout}}]}{E[D_{\textrm{train}}] - E[D_{\textrm{generated}}]}, \qquad r_t = E\big[\operatorname{sign}(D_{\textrm{train}})\big],$$
+   $$r_v = \frac{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]}{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{generated}}]}, \qquad r_t = \mathbb{E}\big[\operatorname{sign}(D_{\textrm{train}})\big],$$
 
    where $D_{\textrm{train}}$, $D_{\textrm{holdout}}$, and
    $D_{\textrm{generated}}$ denote critic scores on training images,
@@ -1201,7 +1201,7 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        :numref:`sec_gan_relativistic`, the sign of a single score carries
        no information about a critic trained on the pairing objective, such
        as that of the penalized arm. Consider instead the pairwise statistic
-       $E\big[\operatorname{sign}(D_{\textrm{train}} - D_{\textrm{holdout}})\big]$
+       $\mathbb{E}\big[\operatorname{sign}(D_{\textrm{train}} - D_{\textrm{holdout}})\big]$
        over independent pairs of a training and a held-out image. Under
        which transformations of $D$ is it invariant? Which value does it
        take when the critic scores training and held-out images alike?
@@ -1299,7 +1299,7 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        $(u^\top v)^j = \langle u^{\otimes j}, v^{\otimes j} \rangle$ to show
        that the population value of $\mathrm{MMD}^2$ is
 
-       $$\sum_{j=1}^{3} \binom{3}{j} d^{-j}\, \big\| E_p[u^{\otimes j}] - E_q[u^{\otimes j}] \big\|^2.$$
+       $$\sum_{j=1}^{3} \binom{3}{j} d^{-j}\, \big\| \mathbb{E}_p[u^{\otimes j}] - \mathbb{E}_q[u^{\otimes j}] \big\|^2.$$
 
        Which moments of the feature distributions does KID compare?
     1. In one dimension, let $p = \mathcal{N}(0, 1)$. Compute the
@@ -1310,7 +1310,7 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        for $0 < a < 1$.
     1. Which differences between two feature distributions are invisible
        to both metrics? A kernel is *characteristic* when its mean embedding
-       $E_p[k(u, \cdot)]$ determines the distribution $p$, so that the
+       $\mathbb{E}_p[k(u, \cdot)]$ determines the distribution $p$, so that the
        population $\mathrm{MMD}^2$ vanishes only for $q = p$. Is the kernel
        of KID characteristic? Does the $\mathrm{MMD}^2$ with the Gaussian
        RBF kernel of CMMD distinguish the mixture in (b) from $p$?

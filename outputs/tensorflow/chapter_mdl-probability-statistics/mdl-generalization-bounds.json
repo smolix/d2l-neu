@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-generalization-bounds.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-generalization-bounds-uniform-convergence-and-generalization": {
+      "code_fingerprint": "sha256:63ba06deaf601417c4139607b196b7d539fa9d7eac4cc95d294fb6d22ae15363",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-the-best-of-many-coins": {
+      "code_fingerprint": "sha256:201b20206730e65032b52e6918a5be2fc635516574181f02d491ad964804638a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 97%\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-coin-flips-in-code": {
+      "code_fingerprint": "sha256:336538969ce613a42833ec5a4fdf26d7d36414e045c6a9f94ba29dfec4ffbaf7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =    2: Monte-Carlo R_S = 0.125, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+        }
+      ]
+    },
+    "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
+      "code_fingerprint": "sha256:7bc6a1b79494cb374f5b656348fd0a2b12a876731e90695b7b12a070cb6de1bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean ||w|| = 1.03 (predicted 1.01), largest 1.47\nr = 11.2, B r / sqrt(n) with B = largest ||w||: 2.3\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
+      "code_fingerprint": "sha256:916811117623950af6aa411102e906f4bb409dae760b0ee6ecd1ba3b8327e772",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-a-double-descent-sweep-1": {
+      "code_fingerprint": "sha256:ce4dea698ab3976e77e3879be533d755b7f172535e4b61139c36359b5ff94532",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
+          "bytes": 38268,
+          "sha256": "sha256:21d6b1d3c71b2231497ec96269ad36cd925d25e92d1cd259e9da8058c1307bee"
+        }
+      ]
+    },
+    "mdl-generalization-bounds-a-double-descent-sweep-2": {
+      "code_fingerprint": "sha256:b0d22677617beab65bbd08ec66dfa45cb506ace03e3025572f2df41ccb706f4b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.73     0.29      2.1     0.89      1.4      0.7   0.0069\n  38      2.6    0.005      5.4    0.099      5.7      2.3     0.19\n  40       28    7e-29       18    0.019       19       23      3.4\n  42      1.6  1.1e-29      3.9    0.099      4.6      1.8     0.19\n  50     0.61  1.6e-29      2.4     0.27      2.9      0.6    0.059\n  80      0.2  1.6e-29      1.1     0.73      1.7     0.17    0.021\n 400    0.055  8.1e-30      0.4      2.8      1.3    0.044   0.0096\n"
+        }
+      ]
+    }
+  }
+}

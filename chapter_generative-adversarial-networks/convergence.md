@@ -89,16 +89,16 @@ Neither the non-saturating update nor the pairing objective changes these local 
 Local linear attraction in the Dirac-GAN requires eigenvalues with negative real parts. The following regularizers on the critic supply this attraction. Define the two *zero-centered gradient penalties*
 
 $$
-R_1 \;=\; \frac{\gamma}{2}\, E_{x \sim p}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
+R_1 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x \sim p}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
 \qquad
-R_2 \;=\; \frac{\gamma}{2}\, E_{x' \sim q}\Big[ \big\| \nabla_x D(x') \big\|^2 \Big],
+R_2 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x' \sim q}\Big[ \big\| \nabla_x D(x') \big\|^2 \Big],
 $$
 :eqlabel:`eq_gan_r1r2`
 
-with weight $\gamma > 0$, and let the critic maximize $V_\ell(D) - R_1 - R_2$, where $V_\ell$ is the margin objective :eqref:`eq_gan_margin`, while the generator's objective remains unchanged :cite:`Roth.Lucchi.Nowozin.ea.2017,Mescheder.Geiger.Nowozin.2018`. These penalties apply to the critic's *input* gradient rather than its parameter gradient. The term $R_1$ limits variation near data samples, and $R_2$ limits variation near generated samples. They are called zero-centered because both are minimized by the flat critic $\nabla_x D = 0$. At $q = p$, the optimal critic of :numref:`sec_basic_gan` is the constant $D^\star = \log(p/q) = 0$, so the penalties vanish at the equilibrium they are intended to stabilize. Since $\tfrac12(E_p + E_q) = E_m$, their sum is
+with weight $\gamma > 0$, and let the critic maximize $V_\ell(D) - R_1 - R_2$, where $V_\ell$ is the margin objective :eqref:`eq_gan_margin`, while the generator's objective remains unchanged :cite:`Roth.Lucchi.Nowozin.ea.2017,Mescheder.Geiger.Nowozin.2018`. These penalties apply to the critic's *input* gradient rather than its parameter gradient. The term $R_1$ limits variation near data samples, and $R_2$ limits variation near generated samples. They are called zero-centered because both are minimized by the flat critic $\nabla_x D = 0$. At $q = p$, the optimal critic of :numref:`sec_basic_gan` is the constant $D^\star = \log(p/q) = 0$, so the penalties vanish at the equilibrium they are intended to stabilize. Since $\tfrac12(\mathbb{E}_p + \mathbb{E}_q) = \mathbb{E}_m$, their sum is
 
 $$
-R_1 + R_2 \;=\; \gamma\, E_{x \sim m}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
+R_1 + R_2 \;=\; \gamma\, \mathbb{E}_{x \sim m}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
 \qquad m = \frac{p + q}{2} :
 $$
 :eqlabel:`eq_gan_r1r2_sum`
@@ -136,7 +136,7 @@ V_\ell(D) = 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle + O(\|D\|^2),
 \Phi(D) = \ell(0) + \ell'(0)\, \langle p - q,\, D \rangle + O(\|D\|^2),
 $$
 
-where $\langle h, D\rangle = \int h(x)\, D(x)\, dx$, so $\langle p - q, D\rangle = E_p[D] - E_q[D]$. To leading order, every objective in the family therefore reduces to the same linear functional $a\,\langle p - q, D\rangle$, with $a = \ell'(0)$. The regularized critic maximizes this functional subject to a quadratic smoothness penalty, whose optimum has the following classical form.
+where $\langle h, D\rangle = \int h(x)\, D(x)\, dx$, so $\langle p - q, D\rangle = \mathbb{E}_p[D] - \mathbb{E}_q[D]$. To leading order, every objective in the family therefore reduces to the same linear functional $a\,\langle p - q, D\rangle$, with $a = \ell'(0)$. The regularized critic maximizes this functional subject to a quadratic smoothness penalty, whose optimum has the following classical form.
 
 **Proposition.** *For $a \in \mathbb{R}$ and $\gamma > 0$,*
 
@@ -167,12 +167,12 @@ The conclusion has two important qualifications. It is local because it relies o
 
 ### One-Centered versus Zero-Centered
 
-WGAN-GP uses a different center :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017`. To enforce the Lipschitz constraint from :numref:`sec_gan_objectives`, it penalizes $E\big[(\|\nabla_x D\| - 1)^2\big]$ at points interpolated between real and generated samples. This *one-centered* penalty is motivated by optimal $W_1$ potentials, which have unit slope along transport rays. At $q = p$, however, the optimal critic is constant. The zero-centered penalty is minimized by this critic, whereas the one-centered penalty favors a unit input-gradient norm. The WGAN-GP critic can therefore retain a nonzero gradient at equilibrium and continue to update a generator that already matches the data. On the Dirac-GAN, the resulting dynamics do not converge to the equilibrium :cite:`Mescheder.Geiger.Nowozin.2018`.
+WGAN-GP uses a different center :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017`. To enforce the Lipschitz constraint from :numref:`sec_gan_objectives`, it penalizes $\mathbb{E}\big[(\|\nabla_x D\| - 1)^2\big]$ at points interpolated between real and generated samples. This *one-centered* penalty is motivated by optimal $W_1$ potentials, which have unit slope along transport rays. At $q = p$, however, the optimal critic is constant. The zero-centered penalty is minimized by this critic, whereas the one-centered penalty favors a unit input-gradient norm. The WGAN-GP critic can therefore retain a nonzero gradient at equilibrium and continue to update a generator that already matches the data. On the Dirac-GAN, the resulting dynamics do not converge to the equilibrium :cite:`Mescheder.Geiger.Nowozin.2018`.
 
 | penalty | at $q = p$ | induced geometry | Dirac-GAN test |
 |:---|:---|:---|:---|
-| one-centered, $E\big[(\|\nabla_x D\| - 1)^2\big]$ | rewards unit slope | $W_1$ | does not converge |
-| zero-centered, $E_m\big[\|\nabla_x D\|^2\big]$ | rewards the flat critic | linearized $W_2$ | converges for every $\gamma > 0$ |
+| one-centered, $\mathbb{E}\big[(\|\nabla_x D\| - 1)^2\big]$ | rewards unit slope | $W_1$ | does not converge |
+| zero-centered, $\mathbb{E}_m\big[\|\nabla_x D\|^2\big]$ | rewards the flat critic | linearized $W_2$ | converges for every $\gamma > 0$ |
 
 ### Phase Portraits
 
@@ -228,7 +228,7 @@ The phase portraits agree with the eigenvalue analysis. To visual accuracy, the 
 
 The Dirac-GAN cannot distinguish $R_1$ from $R_2$ because the linear critic has the same slope everywhere. More generally, either penalty can suffice near equilibrium. When the supports of $p$ and $q$ nearly coincide, regularizing the critic under one measure also controls it under the other, and :eqref:`eq_gan_sobolev` holds with $m$ replaced by either measure. The local convergence result of :citet:`Mescheder.Geiger.Nowozin.2018` therefore requires only one penalty.
 
-Far from equilibrium, the two penalties are no longer interchangeable. The interpretation of :citet:`Roth.Lucchi.Nowozin.ea.2017` explains why. Up to a weighting factor and a higher-order error term, penalizing $E_p\big[\|\nabla_x D\|^2\big]$ modifies the game like convolving $p$ with Gaussian noise whose covariance is proportional to $\gamma$; $R_2$ similarly smooths $q$. Smoothing two mutually singular distributions makes their densities overlap, rendering their density ratio finite and the divergence sensitive to the distance between their supports. The penalties produce this effect analytically without perturbing the samples. This argument requires both distributions to be smoothed. With $R_1$ alone, the critic is unconstrained in regions containing generated but not real samples. :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe the corresponding behavior: the critic's input gradients on generated samples grow without bound and training diverges.
+Far from equilibrium, the two penalties are no longer interchangeable. The interpretation of :citet:`Roth.Lucchi.Nowozin.ea.2017` explains why. Up to a weighting factor and a higher-order error term, penalizing $\mathbb{E}_p\big[\|\nabla_x D\|^2\big]$ modifies the game like convolving $p$ with Gaussian noise whose covariance is proportional to $\gamma$; $R_2$ similarly smooths $q$. Smoothing two mutually singular distributions makes their densities overlap, rendering their density ratio finite and the divergence sensitive to the distance between their supports. The penalties produce this effect analytically without perturbing the samples. This argument requires both distributions to be smoothed. With $R_1$ alone, the critic is unconstrained in regions containing generated but not real samples. :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe the corresponding behavior: the critic's input gradients on generated samples grow without bound and training diverges.
 
 The available evidence is empirical and depends on the training setting. In R3GAN's StackedMNIST ablation, training with $R_1$ alone diverged early for both the classical and pairing objectives. For the pairing objective, increasing $\gamma$ from 0.1 to 100 did not prevent divergence, whereas adding $R_2$ made training stable for both objectives :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. StyleGAN2 provides an important counterexample: it trained successfully on FFHQ using $R_1$ alone :cite:`Karras.Laine.Aittala.ea.2020`. Whether one penalty suffices therefore depends on the dataset and the remaining training choices. Both the smoothing argument and the R3GAN ablation favor symmetric regularization, at the cost of one additional term in the backward pass.
 
@@ -558,7 +558,7 @@ The experiment does not distinguish the two penalized configurations because bot
 
 An equilibrium analysis does not imply that gradient training will reach the equilibrium. On the Dirac-GAN, the simultaneous gradient field is orthogonal to the parameter vector. Continuous-time trajectories therefore move on circles with eigenvalues $\pm i\,\ell'(0)$, while simultaneous discrete updates increase the distance to the solution at every positive step size. Neither the non-saturating generator weighting nor the pairing objective changes this local field.
 
-The zero-centered penalties $R_1$ and $R_2$ add damping through $\gamma E_m[\|\nabla_xD\|^2]$. Their eigenvalues $-\gamma/2 \pm \sqrt{\gamma^2/4-\ell'(0)^2}$ have negative real part for every $\gamma>0$, with critical damping at $\gamma=2|\ell'(0)|$. Near equilibrium, the penalized game evaluates $\tfrac{a^2}{4\gamma}\|p-q\|^2_{\dot H^{-1}(m)}$, the squared linearized Wasserstein-2 distance. Unlike a density ratio, this difference-based quantity remains meaningful as nearby supports move. The one-centered WGAN-GP penalty does not have the same equilibrium behavior.
+The zero-centered penalties $R_1$ and $R_2$ add damping through $\gamma \mathbb{E}_m[\|\nabla_xD\|^2]$. Their eigenvalues $-\gamma/2 \pm \sqrt{\gamma^2/4-\ell'(0)^2}$ have negative real part for every $\gamma>0$, with critical damping at $\gamma=2|\ell'(0)|$. Near equilibrium, the penalized game evaluates $\tfrac{a^2}{4\gamma}\|p-q\|^2_{\dot H^{-1}(m)}$, the squared linearized Wasserstein-2 distance. Unlike a density ratio, this difference-based quantity remains meaningful as nearby supports move. The one-centered WGAN-GP penalty does not have the same equilibrium behavior.
 
 Far from equilibrium, the two penalties smooth the data and generator distributions in complementary regions, so one penalty may be insufficient. R3GAN's StackedMNIST ablation attributes convergence to the pair of penalties and improved mode coverage to the relativistic objective. The 25-Gaussians experiment confirms the effect on reach and balance at small scale: both penalized runs cover every mode more evenly than the unpenalized run. All configurations nevertheless place most of their mass outside the narrow target modes, so this experiment demonstrates coverage rather than a close distributional fit. The additional benefit of pairing requires the larger StackedMNIST comparison. :numref:`sec_dcgan` applies the combined loss to images.
 
@@ -844,9 +844,9 @@ $$\|(\theta, \psi) + \eta v\|^2 = \|(\theta, \psi)\|^2 + \eta^2 \|v\|^2$$
 :::
 
 ::: {.slide title="Zero-Centered Penalties Add Damping"}
-$$R_1 = \tfrac{\gamma}{2} E_p\big[\|\nabla_x D\|^2\big], \quad
-R_2 = \tfrac{\gamma}{2} E_q\big[\|\nabla_x D\|^2\big], \quad
-R_1 + R_2 = \gamma\, E_m\big[\|\nabla_x D\|^2\big]$$
+$$R_1 = \tfrac{\gamma}{2} \mathbb{E}_p\big[\|\nabla_x D\|^2\big], \quad
+R_2 = \tfrac{\gamma}{2} \mathbb{E}_q\big[\|\nabla_x D\|^2\big], \quad
+R_1 + R_2 = \gamma\, \mathbb{E}_m\big[\|\nabla_x D\|^2\big]$$
 
 On the Dirac-GAN: $\nabla_x D_\psi = \psi$, so either penalty is
 $\tfrac{\gamma}{2}\psi^2$ — the two coincide here, and using both doubles the

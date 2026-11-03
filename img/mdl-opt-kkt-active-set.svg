@@ -1030,8 +1030,21 @@ z
     </g>
    </g>
    <g id="text_14">
+    <g id="patch_16">
+     <path d="M 482.575838 86.892253 
+L 509.875838 86.892253 
+Q 511.175838 86.892253 511.175838 85.592253 
+L 511.175838 68.354253 
+Q 511.175838 67.054253 509.875838 67.054253 
+L 482.575838 67.054253 
+Q 481.275838 67.054253 481.275838 68.354253 
+L 481.275838 85.592253 
+Q 481.275838 86.892253 482.575838 86.892253 
+z
+" style="fill: #ffffff"/>
+    </g>
     <!-- $-\nabla f$ -->
-    <g style="fill: #ff7f0e" transform="translate(473.783111 83.383344) scale(0.13 -0.13)">
+    <g style="fill: #ff7f0e" transform="translate(482.575838 81.354253) scale(0.13 -0.13)">
      <use xlink:href="#Cmsy10-11" transform="translate(0 0.484375)"/>
      <use xlink:href="#Cmsy10-6e" transform="translate(77.685547 0.484375)"/>
      <use xlink:href="#Cmmi10-57" transform="translate(160.986328 0.484375)"/>

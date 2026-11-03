@@ -1466,7 +1466,7 @@ L 289.514851 68.362162
    </g>
    <g id="text_1">
     <!-- $+$ -->
-    <g style="fill: #1f77b4" transform="translate(79.850198 58.1652) scale(0.17 -0.17)">
+    <g style="fill: #15181c" transform="translate(79.850198 58.1652) scale(0.17 -0.17)">
      <defs>
       <path id="Cmr10-4c" d="M 481 1472 
 Q 428 1472 393 1512 
@@ -1501,7 +1501,7 @@ z
    </g>
    <g id="text_2">
     <!-- $-$ -->
-    <g style="fill: #ff7f0e" transform="translate(168.798713 107.586) scale(0.17 -0.17)">
+    <g style="fill: #15181c" transform="translate(168.798713 107.586) scale(0.17 -0.17)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -1522,7 +1522,7 @@ z
    </g>
    <g id="text_3">
     <!-- $+$ -->
-    <g style="fill: #1f77b4" transform="translate(253.879901 67.4316) scale(0.17 -0.17)">
+    <g style="fill: #15181c" transform="translate(253.879901 67.4316) scale(0.17 -0.17)">
      <use xlink:href="#Cmr10-4c" transform="translate(0 0.703125)"/>
     </g>
    </g>
@@ -1764,7 +1764,7 @@ z
    </g>
    <g id="text_7">
     <!-- $\int_b^a f = -\int_a^b f$ -->
-    <g style="fill: #ff7f0e" transform="translate(295.315842 208.6194) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(295.315842 208.6194) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 

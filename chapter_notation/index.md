@@ -55,6 +55,15 @@ $\mathbb{Z}$.
 * $[\cdot, \cdot]$: concatenation
 * $\|\cdot\|_p$: $\ell_p$ norm
 * $\|\cdot\|$: $\ell_2$ norm
+* $\|\mathbf{X}\|_2$: spectral norm of matrix $\mathbf{X}$, its largest singular value
+* $\|\mathbf{X}\|_F$: Frobenius norm of matrix $\mathbf{X}$, the $\ell_2$ norm of its entries
+* $\|\mathbf{X}\|_*$: nuclear norm of matrix $\mathbf{X}$, the sum of its singular values
+* $\sigma_i(\mathbf{X})$: the $i^\textrm{th}$ largest singular value of matrix $\mathbf{X}$
+* $\mathbf{X}^{+}$: Moore–Penrose pseudoinverse of matrix $\mathbf{X}$
+* $\kappa(\mathbf{X})$: condition number of matrix $\mathbf{X}$, the ratio of its largest to its smallest nonzero singular value
+* $\rho(\mathbf{X})$: spectral radius of a square matrix $\mathbf{X}$, the largest modulus of its eigenvalues (not the correlation $\rho(X, Y)$ below)
+* $\operatorname{rank}\mathbf{X}$, $\operatorname{tr}\mathbf{X}$, $\det\mathbf{X}$: rank, trace, and determinant of matrix $\mathbf{X}$
+* $\mathbf{X}\succeq 0$, $\mathbf{X}\succ 0$: the symmetric matrix $\mathbf{X}$ is positive semidefinite, positive definite
 * $\langle \mathbf{x}, \mathbf{y} \rangle$: inner (dot) product of vectors $\mathbf{x}$ and $\mathbf{y}$
 * $\sum$: summation over a collection of elements
 * $\prod$: product over a collection of elements
@@ -80,7 +89,8 @@ $\mathbb{Z}$.
 * $P(X=x)$: the probability that random variable $X$ takes the value $x$
 * $P(X \mid Y)$: the conditional probability distribution of $X$ given $Y$
 * $p(\cdot)$: a probability density function (PDF) associated with distribution $P$
-* ${E}[X]$: expectation of a random variable $X$
+* $\mathbb{E}[X]$: expectation of a random variable $X$
+* $\mathbb{E}_{x \sim P}[f(x)]$: expectation of $f(x)$ for $x$ drawn from $P$
 * $X \perp Y$: random variables $X$ and $Y$ are independent
 * $X \perp Y \mid Z$: random variables $X$ and $Y$ are conditionally independent given $Z$
 * $\sigma_X$: standard deviation of random variable $X$

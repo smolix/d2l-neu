@@ -364,9 +364,9 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
    $(K-1)/K$ (:numref:`subsec_leave_one_out`). Suppose that prompt $x$ receives a
    group of fixed size $K_x$, which may differ between prompts, for instance
    because a curriculum samples more responses for prompts that it considers
-   hard. Write $J_x = E_{y \sim \pi_\theta(\cdot \mid x)}[r(x, y)]$ for the
+   hard. Write $J_x = \mathbb{E}_{y \sim \pi_\theta(\cdot \mid x)}[r(x, y)]$ for the
    expected reward on prompt $x$, so that the objective is
-   $J = E_{x \sim \mu_0}[J_x]$, and use the centered weights $r_j - \mu$
+   $J = \mathbb{E}_{x \sim \mu_0}[J_x]$, and use the centered weights $r_j - \mu$
    without the division by the group standard deviation.
     1. Write the expected update as a combination of the gradients
        $\nabla_\theta J_x$. When is it a positive multiple of
@@ -401,11 +401,11 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
    independently of the prompt and the response, where $\alpha + f < 1$.
    Let $v \in \{0, 1\}$ be its score and $p_x$ the probability that the
    policy answers prompt $x$ correctly.
-    1. Show that $E[v \mid x] = (1 - \alpha - f)\, p_x + f$. How is the
+    1. Show that $\mathbb{E}[v \mid x] = (1 - \alpha - f)\, p_x + f$. How is the
        policy gradient of the expected score related to that of the expected
        exact-match score?
     1. Now set $\alpha = 0$ and let the false-positive rate depend on the
-       response, $f(x, y)$. Express $E[v \mid x, y]$ in terms of $r(x, y)$
+       response, $f(x, y)$. Express $\mathbb{E}[v \mid x, y]$ in terms of $r(x, y)$
        and $f(x, y)$. Which choice of $f$ turns `verify` into `sloppy`, and
        why can no rescaling of the score undo the effect of such a verifier?
     1. Write a verifier `noisy(x, y)` that returns $1$ with probability
@@ -569,7 +569,7 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
     1. For responses of $T$ tokens, write $\ell_t$ for the log-ratio of token
        $t$, and use :eqref:`eq_seq_factorization` to show that
 
-       $$\nabla_\theta D_{\textrm{KL}}\big(\pi_\theta(\cdot \mid x) \Vert \pi_{\textrm{ref}}(\cdot \mid x)\big) = E\Big[\sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t}) \sum_{t'=t}^{T} \ell_{t'}\Big].$$
+       $$\nabla_\theta D_{\textrm{KL}}\big(\pi_\theta(\cdot \mid x) \Vert \pi_{\textrm{ref}}(\cdot \mid x)\big) = \mathbb{E}\Big[\sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t}) \sum_{t'=t}^{T} \ell_{t'}\Big].$$
 
        Which terms does the sum of the per-token losses $k_2$ miss? Why does
        folding the penalty into the reward, as `group_step` does, avoid the

@@ -446,7 +446,7 @@ DAgger collects states from the learner and obtains expert labels for them, addr
     1. Plot the total variation distance against $t$, together with the mass
        that each distribution places on the goal and on each hole. Which hole
        accounts for the clone's lost successes?
-    1. Show that $|E_{s \sim d}[f(s)] - E_{s \sim d'}[f(s)]|$ is at most the
+    1. Show that $|\mathbb{E}_{s \sim d}[f(s)] - \mathbb{E}_{s \sim d'}[f(s)]|$ is at most the
        total variation distance between $d$ and $d'$ for every function $f$
        with values in $[0, 1]$. Conclude that the two success probabilities
        differ by at most the total variation distance at $t = 100$, and
@@ -549,14 +549,14 @@ DAgger collects states from the learner and obtains expert labels for them, addr
    distribution of $\pi$, let $\ell(s, \pi) \in [0, \ell_{\max}]$ be a
    classification loss of $\pi$ at $s$, such as
    $\mathbf{1}[\pi(s) \neq \pi^*(s)]$, and set
-   $\ell_i(\pi) = E_{s \sim d_{\pi_i}}[\ell(s, \pi)]$.
+   $\ell_i(\pi) = \mathbb{E}_{s \sim d_{\pi_i}}[\ell(s, \pi)]$.
     1. Show that $\|d_{\pi_i} - d_{\hat\pi_i}\|_1 \leq 2\min(1, T\beta_i)$.
     1. Let $\varepsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N \ell_i(\pi)$ be
        the loss of the best policy in hindsight, and suppose that the
        learners have average regret at most $\delta_N$:
        $$\frac{1}{N}\sum_{i=1}^N \ell_i(\hat\pi_i) - \varepsilon_N \leq \delta_N.$$
        Show that some learner $\hat\pi_j$ of the sequence satisfies
-       $$E_{s \sim d_{\hat\pi_j}}[\ell(s, \hat\pi_j)] \leq \varepsilon_N + \delta_N + \frac{2\ell_{\max}}{N}\sum_{i=1}^N \min(1, T\beta_i).$$
+       $$\mathbb{E}_{s \sim d_{\hat\pi_j}}[\ell(s, \hat\pi_j)] \leq \varepsilon_N + \delta_N + \frac{2\ell_{\max}}{N}\sum_{i=1}^N \min(1, T\beta_i).$$
        The proof of Theorem 4.1 of the paper derives this bound before it
        simplifies the last sum.
     1. The loop of :numref:`subsec_il_dagger` uses $\beta_1 = 1$ and

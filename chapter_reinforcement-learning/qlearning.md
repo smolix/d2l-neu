@@ -27,7 +27,7 @@ Value iteration, written for the action-value function, sweeps
 
 $$Q_{k+1}(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q_k (s', a'); \ \textrm{for all } s \in \mathcal{S} \textrm{ and } a \in \mathcal{A},$$
 
-whose fixed point is $Q^*$; call the right-hand side $(TQ)(s, a)$, the optimality operator of :numref:`sec_valueiter` on action-value tables. We use $Q$ rather than $V$ because extracting the optimal policy from $Q^*$ requires only an argmax over a table row and no transition model. The kernel enters the sweep through one expectation, $E_{s' \sim P(\cdot \mid s, a)} [\max_{a'} Q_k(s', a')]$, and an expectation can be estimated from samples. Panel (d) of :numref:`fig_rl_backups` shows this substitution: Q-learning uses one sampled successor where the exact backup sums over every successor, while retaining the maximum over next actions.
+whose fixed point is $Q^*$; call the right-hand side $(TQ)(s, a)$, the optimality operator of :numref:`sec_valueiter` on action-value tables. We use $Q$ rather than $V$ because extracting the optimal policy from $Q^*$ requires only an argmax over a table row and no transition model. The kernel enters the sweep through one expectation, $\mathbb{E}_{s' \sim P(\cdot \mid s, a)} [\max_{a'} Q_k(s', a')]$, and an expectation can be estimated from samples. Panel (d) of :numref:`fig_rl_backups` shows this substitution: Q-learning uses one sampled successor where the exact backup sums over every successor, while retaining the maximum over next actions.
 
 Let the agent act with some data-collection policy $\pi_e(a \mid s)$, its *behavior policy*, and record $n$ trajectories of $T$ timesteps each, $\{ (s_t^i, a_t^i)_{t=0,\ldots,T-1}\}_{i=1,\ldots, n}$. The Bellman equations constrain the action values of all state--action pairs. A sampled objective can impose corresponding residual terms only for pairs present in the data:
 
@@ -56,12 +56,12 @@ The scalar $\delta$ is the *temporal-difference error* :cite:`Sutton.1988`: the 
 
 Suppose $\pi_e$ visits every state--action pair and collects unlimited data. Minimizing $\ell(Q)$ then recovers the value-iteration solution when transitions are deterministic, but not in general. In the population objective, conditioning on $(s,a)$ decomposes each squared term into a squared mean and a variance:
 
-$$L(Q) = E_{(s, a) \sim \mu} \Big[ \big( Q(s, a) - (TQ)(s, a) \big)^2 \Big] + \gamma^2\, E_{(s, a) \sim \mu} \Big[ \mathrm{Var}_{s' \sim P(\cdot \mid s, a)} \big( \max_{a'} Q(s', a') \big) \Big],$$
+$$L(Q) = \mathbb{E}_{(s, a) \sim \mu} \Big[ \big( Q(s, a) - (TQ)(s, a) \big)^2 \Big] + \gamma^2\, \mathbb{E}_{(s, a) \sim \mu} \Big[ \textrm{Var}_{s' \sim P(\cdot \mid s, a)} \big( \max_{a'} Q(s', a') \big) \Big],$$
 :eqlabel:`eq_double_sampling`
 
 Here $\mu$ is the visitation distribution of $\pi_e$. The first term is the squared Bellman residual and is zero at $Q^*$. The second term depends on $Q$ whenever transitions are stochastic, so the minimizer of $L$ need not be $Q^*$. Exercise :exref:`ex_qlearning-double-sampling-counterexample` gives a three-state counterexample. This is the *double-sampling problem*: an unbiased gradient of the squared Bellman residual requires two independent successors for the same $(s,a)$, which an ordinary environment interaction does not provide. For deterministic transitions the variance term vanishes.
 
-Convergence instead follows from the expected update. Averaging :eqref:`eq_td_error` over $s'$ gives $E[\delta\mid s,a]=(TQ)(s,a)-Q(s,a)$, which is zero at the unique fixed point $Q^*$. Q-learning is therefore a stochastic approximation to Bellman fixed-point iteration. With the step-size conditions below and infinite visitation of every state-action pair, it converges to $Q^*$ with probability one :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994`. Sampling variance affects the rate, while the behavior policy determines whether the coverage condition holds.
+Convergence instead follows from the expected update. Averaging :eqref:`eq_td_error` over $s'$ gives $\mathbb{E}[\delta\mid s,a]=(TQ)(s,a)-Q(s,a)$, which is zero at the unique fixed point $Q^*$. Q-learning is therefore a stochastic approximation to Bellman fixed-point iteration. With the step-size conditions below and infinite visitation of every state-action pair, it converges to $Q^*$ with probability one :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994`. Sampling variance affects the rate, while the behavior policy determines whether the coverage condition holds.
 
 ### Step Sizes and the Robbins-Monro Conditions
 
@@ -288,7 +288,7 @@ A bandit permits evaluation by cumulative regret rather than success rate. Each 
 
 $$\textrm{regret after } t \textrm{ pulls} = \sum_{u=1}^{t} \big( \mu^* - \mu_{a_u} \big),$$
 
-which is what `bandit_run` accumulates. Its expectation is $\sum_a (\mu^* - \mu_a)\, E[n(a)]$: the gap of each arm multiplied by its expected number of pulls. *Sublinear* regret means that average regret per pull converges to zero. We compare three members of the $\epsilon$-greedy family over twenty independent runs:
+which is what `bandit_run` accumulates. Its expectation is $\sum_a (\mu^* - \mu_a)\, \mathbb{E}[n(a)]$: the gap of each arm multiplied by its expected number of pulls. *Sublinear* regret means that average regret per pull converges to zero. We compare three members of the $\epsilon$-greedy family over twenty independent runs:
 
 ```{.python .input #qlearning-regret-and-the-linear-tax}
 %%tab pytorch, jax
@@ -602,7 +602,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
     1. For fixed pull counts of both arms, bound the probability of each
        of the two events at step $u$ by $u^{-4}$. Take a union bound over
        the counts and sum over $u$ to show
-       $E[n(a)] \leq \ell + \pi^2/3$ after $t$ pulls.
+       $\mathbb{E}[n(a)] \leq \ell + \pi^2/3$ after $t$ pulls.
     1. Combine part (b) with the regret decomposition to obtain the
        theorem. Evaluate the bound for `arms` at $t = 2000$ and compare it
        with the regret near $200$ that the section reports for
@@ -686,14 +686,14 @@ the max at the next state kept.
 ::: {.slide title="What Actually Converges"}
 The sampled least-squares objective is *not* the right justification:
 
-$$L(Q) = E_\mu \big[ (Q - TQ)^2 \big] + \gamma^2\, E_\mu \big[ \mathrm{Var}_{s'} ( \max_{a'} Q(s', a') ) \big]$$
+$$L(Q) = \mathbb{E}_\mu \big[ (Q - TQ)^2 \big] + \gamma^2\, \mathbb{E}_\mu \big[ \textrm{Var}_{s'} ( \max_{a'} Q(s', a') ) \big]$$
 
 $Q^*$ makes the first term zero, but the variance term can change the
 minimizer (**double sampling**). It vanishes for deterministic transitions.
 
 . . .
 
-The expected update satisfies $E[\delta \mid s, a] = (TQ)(s, a) - Q(s, a)$,
+The expected update satisfies $\mathbb{E}[\delta \mid s, a] = (TQ)(s, a) - Q(s, a)$,
 zero exactly at $Q^*$. A stochastic approximation of value iteration,
 convergent under Robbins-Monro steps.
 :::

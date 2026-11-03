@@ -9,66 +9,67 @@
   },
   "cells": {
     "eigendecomposition-imports": {
-      "code_fingerprint": "sha256:6ec2266b2b6066bcd3a46a2d46ed3efa626bb03503c262f56d592de8b37c9153",
+      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
       "kind": "text",
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:9c9b2aa6cad941f192aaf2c9487aa8f56479fb0148d32dce5a2e4918e0ff6c59",
+      "code_fingerprint": "sha256:7f9cf3cd93dc0637f3a0ba36e52f00d86ae17e0a30fcf23dcdfa15c10d692a20",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.25 1.  ]\neigenvectors (columns):\n [[-0.70710678 -0.4472136 ]\n [ 0.70710678 -0.89442719]]\nmax |P V - V diag(lam)|: 0.0\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-diagonalization": {
+      "code_fingerprint": "sha256:e0512cbb07760f5f8929f6ae616e4023e95940e5d2e25a1de5f81550fbe450a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P^50 p0             : [0.33333333 0.66666667]\nsum c_i lam_i^50 v_i: [0.33333333 0.66666667]\nerror ratios: [0.25 0.25 0.25 0.25 0.25 0.25 0.25]\n"
         }
       ]
     },
     "mdl-eigendecomposition-jordan-power": {
-      "code_fingerprint": "sha256:2256c569a7e5de5404fac12fb35fcd8281a6387b74758967dbe912f7c0184629",
+      "code_fingerprint": "sha256:75ae18c5b56964b45fa7a1b4f748ab607a6fe042d634281cb964326c30348b22",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =   1   ||J^n|| =    1.609   n * 0.99^(n-1) =    1.000\nn =  50   ||J^n|| =   30.568   n * 0.99^(n-1) =   30.556\nn = 100   ||J^n|| =   36.977   n * 0.99^(n-1) =   36.973\nn = 200   ||J^n|| =   27.067   n * 0.99^(n-1) =   27.067\nn = 800   ||J^n|| =    0.260   n * 0.99^(n-1) =    0.260\n"
+          "text": "k =   1   ||J^k|| =    1.609   k * 0.99^(k-1) =    1.000\nk =  50   ||J^k|| =   30.568   k * 0.99^(k-1) =   30.556\nk = 100   ||J^k|| =   36.977   k * 0.99^(k-1) =   36.973\nk = 200   ||J^k|| =   27.067   k * 0.99^(k-1) =   27.067\nk = 800   ||J^k|| =    0.260   k * 0.99^(k-1) =    0.260\n"
         }
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:2b5f4e74d9b00fa1d008a1aee5484002d670f2b351fa9b4b01b841225fa6d8af",
+      "code_fingerprint": "sha256:8c79f9ea2f4cd35ea3e5dd3da37cbed86e338370f4a0ca174a999744c5626f44",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of R: [0.866+0.5j 0.866-0.5j]\nexpected e^{+/- i*theta}: [0.866+0.5j 0.866-0.5j]\nmoduli (should be 1): [1. 1.]\n"
+          "text": "eigenvalues of Q: [0.866+0.5j 0.866-0.5j]\ne^(+-i theta):    [0.866+0.5j 0.866-0.5j]\nmoduli: [1. 1.]\n"
         }
       ]
     },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:21dce692efe58bb9c23ab971489f5eb7588711d01712e9eba05a3d7eadeabb4c",
+      "code_fingerprint": "sha256:e3810ffc821301408e4e600943fe362dc126197bc8b95ea412b10924a31162a1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.4000+1.0344j   r = 1.1091   theta = 1.2018\nP^-1 A P =\n [[ 0.4    -1.0344]\n [ 1.0344  0.4   ]]\nr * R(theta) =\n [[ 0.4    -1.0344]\n [ 1.0344  0.4   ]]\n"
-        }
-      ]
-    },
-    "mdl-eigendecomposition-nonnormal-transient": {
-      "code_fingerprint": "sha256:6a47717084de9ed185de3a302b4cc9534d685dbfd65ac259f5fb09d545ad7917",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eigenvalues: [0.9 0.8]\nnormal matrix: max ||D^k|| = 1.000\nnon-normal:    max ||A^k|| = 10.788 at k = 6\neigenvector condition number = 80.0\nat z=1: ||(zI-A)^-1|| = 200.3,  normal comparison = 10.0\n"
+          "text": "lambda = 2.0000+1.0000j   r = 2.2361   theta = 0.4636\nB^-1 A B =\n [[ 2. -1.]\n [ 1.  2.]]\nnorm ratios: [1.41 2.92 3.45 2.76 2.27 1.88 1.5  1.54]\n"
         }
       ]
     },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:92a6423d336bbe2307765d1a7712c9e0b343691e97ac15ada7d672727ce91ef5",
+      "code_fingerprint": "sha256:936cec43061f9c27ed64c7c856bdf8b9c78cb47b353dbd8d1baa617f2eae7f89",
       "kind": "text",
       "outputs": [
         {
@@ -79,34 +80,79 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:eb64e423ddbe2f5221ee697d0063e094d22c3d1ea826f5ae967c694ca1228195",
+      "code_fingerprint": "sha256:75d55c08f45c6111796fafbda45cd75a681ea81f8a6b62c0d4a914df893be0e7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sweep of R:  min = 1.381967, max = 3.618033\neigvalsh:    [1.381966 3.618034]\n"
+          "text": "sweep of R:  min = 1.000000, max = 3.000000\neigvalsh:    [1. 3.]\nargmax angle = 0.7854, argmin angle = 2.3562\npi/4 = 0.7854, 3 pi/4 = 2.3562\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-sample-covariance-and-the-marchenko-pastur-law": {
+      "code_fingerprint": "sha256:3c1e2188d6ff2d216c53e66b6ecf7a26d624c1fdfc72500561d052b53bb8aab4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of C: min 0.250, max 2.237\nMarchenko-Pastur edges: 0.250, 2.250\n"
         }
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:e3418e6bd47d741d39053b25bd88cf9071755ddc599e8add20328b3e87e507c4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
-        }
-      ]
-    },
-    "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:a29ff0c4c7dd05881c5ea3216a5a6cf8cb60b230a8a1932738b52bf02c3d2d39",
+      "code_fingerprint": "sha256:da0f2652560d38751ce99c5737092b7a007068a5dd77b89a690e2253253e7a41",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stabilized norm ratio = 1.9744593215   max|eigenvalue| = 1.9744593215\n"
+          "text": "centres: [4. 4. 1.]   radii: [1.  1.5 0.5]\neigenvalue 3.987+0.961j   in the union of the discs: True\neigenvalue 3.987-0.961j   in the union of the discs: True\neigenvalue 1.025+0.000j   in the union of the discs: True\n"
+        }
+      ]
+    },
+    "eigendecomposition-power-iteration": {
+      "code_fingerprint": "sha256:b6accdd805ae59cf026ed0a68b2d440457a07087aaaffa3a41b2d4a1605f89ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "norm ratio after 200 steps = 3.0075114413\nlargest |eigenvalue|       = 3.0075114413\n|lambda_2| / |lambda_1|    = 0.222\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:37d9329d6d825fbcb9b32ea036f3449a11c4571a8203c5a08ab896b22cf021e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\ncoefficients of e_2 on the unit eigenvectors: [40.         40.01249805]\nmax ||M^k|| = 10.788 at k = 6;  max ||Lambda^k|| = 1.000\nkappa_2(V) = 80.0\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-pseudospectra": {
+      "code_fingerprint": "sha256:442af1b1d9c538277086cfb73fc7d14ea36962d86b16343b337cbbb9e9a10081",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "||(I - M)^-1||      = 200.3\n||(I - Lambda)^-1|| = 10.0\n"
+        }
+      ]
+    },
+    "mdl-eigendecomposition-random-matrices-at-initialization": {
+      "code_fingerprint": "sha256:596c6143144dcfbb5801a78140dddfa01d49eddce0218195f822a0a6a72077a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rho(A) / sqrt(n)       = 1.029\nsigma_max(A) / sqrt(n) = 2.009\n"
         }
       ]
     }

@@ -199,12 +199,12 @@ def fig_significance():
     ax.annotate(r"reject  ($\alpha/2$)", xy=(-2.55, pdf(2.55)),
                 xytext=(-3.0, 0.16), color=ORANGE, fontsize=11, ha="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
-    ax.text(zc, -0.012, r"$+z^\ast$", color=ORANGE, ha="center", va="top",
+    ax.text(zc, -0.012, r"$1.96$", color=ORANGE, ha="center", va="top",
             fontsize=11)
-    ax.text(-zc, -0.012, r"$-z^\ast$", color=ORANGE, ha="center", va="top",
+    ax.text(-zc, -0.012, r"$-1.96$", color=ORANGE, ha="center", va="top",
             fontsize=11)
 
-    # integer ticks, but skip +/-2 (right where +/-z* already labels the axis)
+    # integer ticks, but skip +/-2 (right where +/-1.96 already labels the axis)
     # so the two labels don't stack on top of each other
     ax.set_xticks([-4, -3, -1, 0, 1, 3, 4])
     ax.set_xlabel("test statistic (under $H_0$)", fontsize=13)
@@ -300,132 +300,123 @@ def fig_power_curves():
 
 
 def fig_bias_variance_u_curve():
-    """The bias-variance decomposition as a U-curve: as model complexity grows,
-    bias^2 falls and variance rises, and their sum -- the MSE / test error --
-    is a U with a minimum at the sweet spot.  Curves are real functions of a
-    complexity axis so the minimum sits exactly where d/dc(bias^2+var)=0."""
-    c = np.linspace(0.4, 5.0, 400)          # model-complexity axis
-    bias2 = 1.6 / c**1.3                      # bias^2: high when too simple
-    var = 0.045 * c**2                        # variance: grows with complexity
+    """Bias^2, variance and MSE of the shrunk mean c * mean as functions of the
+    shrinkage factor c in [0, 1], for theta = 1, sigma = 4, n = 30:
+    bias^2 = (1 - c)^2 theta^2, variance = c^2 sigma^2 / n = 0.533 c^2.  Their
+    sum is minimized at c* = theta^2 / (theta^2 + sigma^2/n) = 0.652, where the
+    MSE is 0.348 against 0.533 for the sample mean (c = 1).  Exact curves."""
+    theta, sigma, n = 1.0, 4.0, 30
+    v = sigma**2 / n
+    c = np.linspace(0.0, 1.0, 400)
+    bias2 = (1 - c) ** 2 * theta**2
+    var = c**2 * v
     mse = bias2 + var
-    cstar = c[np.argmin(mse)]                 # real sweet-spot complexity
+    cstar = theta**2 / (theta**2 + v)
+    mstar = (1 - cstar) ** 2 * theta**2 + cstar**2 * v
 
     fig, ax = plt.subplots(figsize=(6.2, 4.0))
     ax.plot(c, bias2, color=BLUE, lw=2.0, label=r"bias$^2$")
     ax.plot(c, var, color=ORANGE, lw=2.0, label="variance")
-    ax.plot(c, mse, color=GREEN, lw=2.6, label="MSE = test error")
+    ax.plot(c, mse, color=GREEN, lw=2.6, label=r"MSE $=$ bias$^2$ $+$ variance")
 
-    # dashed marker stops AT the minimum — full-height it would cross
-    # the legend text (Alex, ch3 review)
-    ax.plot([cstar, cstar], [0, mse.min()], color=GRAY, lw=1.0, ls="--",
-            zorder=1)
-    ax.plot([cstar], [mse.min()], "o", color=GREEN, ms=7, zorder=6)
-    ax.annotate("sweet spot", xy=(cstar, mse.min()),
-                xytext=(cstar + 1.05, mse.min() + 1.25), color=fl.INK,
-                fontsize=11, ha="center",
-                arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0))
+    # the minimizer: a dashed drop to the axis and a dot on the MSE curve
+    ax.plot([cstar, cstar], [0, mstar], color=GRAY, lw=1.0, ls="--", zorder=1)
+    ax.plot([cstar], [mstar], "o", color=GREEN, ms=7, zorder=6)
+    # the two ends of the family, labelled in the empty space above each end
+    ax.text(0.02, 1.04, "constant $0$\n(all bias)", color=fl.INK, fontsize=12,
+            ha="left", va="bottom")
+    ax.text(0.98, v + 0.06, r"$\bar x$" "\n(all variance)", color=fl.INK,
+            fontsize=12, ha="right", va="bottom")
 
-    # underfit / overfit regime labels, tucked into the low corners clear of the
-    # curves (bias^2 sweeps high on the left, variance rises on the right).
-    ax.text(0.035, 0.14, "underfit\n(high bias)", color=BLUE, fontsize=11,
-            ha="left", va="center", transform=ax.transAxes)
-    ax.text(0.97, 0.70, "overfit\n(high variance)", color=ORANGE, fontsize=11,
-            ha="right", va="center", transform=ax.transAxes)
-
-    ax.set_xlabel("model complexity", fontsize=12)
-    ax.set_ylabel("error", fontsize=12)
-    ax.set_ylim(0, mse[0] * 1.05)
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.legend(loc="upper center", ncol=3, fontsize=10.5)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.32)
+    ax.set_xticks([0, cstar, 1])
+    ax.set_xticklabels(["$0$", r"$c^\star\approx0.65$", "$1$"])
+    ax.set_yticks([0, mstar, v, 1])
+    ax.set_yticklabels(["$0$", "$0.35$", "$0.53$", "$1$"])
+    ax.tick_params(labelsize=12)
+    ax.set_xlabel(r"shrinkage factor $c$", fontsize=13)
+    ax.set_ylabel(r"error of $c\,\bar x$", fontsize=13)
+    ax.legend(loc="upper center", ncol=1, fontsize=12, frameon=False)
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
+    for sp in ("bottom", "left"):
+        ax.spines[sp].set_color(fl.INK)
     fl.save(fig, "mdl-prob-bias-variance-u-curve")
 
 
 def fig_sampling_distribution():
-    """The sampling distribution of an estimator, drawn for two estimators of
-    the same parameter theta.  Each panel histograms the estimate hat-theta over
-    many independent datasets: the *center* of the histogram relative to the true
-    theta is the bias, and the *spread* is the standard error (sqrt variance).
-    Left: a low-bias / high-variance estimator (centered on theta, wide).  Right:
-    a high-bias / low-variance estimator (offset from theta, narrow).  These are
-    real Gaussian sampling distributions, not sketches, so center and spread are
-    exact."""
-    theta = 0.0
-    z = np.linspace(-3.4, 3.4, 800)
+    """The sampling distributions of the section's two estimators of theta = 1
+    from n = 30 draws of N(1, 16): the sample mean (center 1, standard error
+    4/sqrt(30) = 0.730) and the shrunk mean 0.65 * mean (center 0.65, i.e.
+    bias -0.35, standard error 0.65 * 0.730 = 0.475).  Both are exact Gaussians
+    (the mean of Gaussian data is Gaussian), drawn on the same x-window so the
+    narrower, offset right panel reads against the wider, centered left one."""
+    theta, sigma, n, c = 1.0, 4.0, 30, 0.65
+    se_mean = sigma / np.sqrt(n)
+    panels = [(theta, se_mean), (c * theta, c * se_mean)]   # (center, se)
+    z = np.linspace(-1.4, 3.4, 800)
 
     def gauss(x, mu, sd):
         return np.exp(-((x - mu) ** 2) / (2 * sd**2)) / (sd * np.sqrt(2 * np.pi))
 
-    panels = [
-        # (bias, se, title)
-        (0.0, 1.0, "low bias, high variance"),
-        (1.1, 0.45, "high bias, low variance"),
-    ]
-
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.6), sharey=True)
-    # shared vertical scale (sharey): offsets below the axis and the guide
-    # heights use the taller panel's peak so both panels line up
-    Y = max(gauss(theta + b, theta + b, se) for b, se, _ in panels)
-    for ax, (bias, se, title) in zip(axes, panels):
-        mu = theta + bias
+    # shared vertical scale: guides and label heights use the taller peak
+    Y = max(gauss(mu, mu, se) for mu, se in panels)
+    for ax, (mu, se) in zip(axes, panels):
         y = gauss(z, mu, se)
         ax.fill_between(z, y, color=BLUE, alpha=0.18, lw=0)
         ax.plot(z, y, color=BLUE, lw=2.0)
         ymax = gauss(mu, mu, se)
 
-        # true theta (dashed gray) and estimator center (orange).  When theta and
-        # the center coincide (no bias) the two labels would stack, so offset
-        # them to opposite sides of the shared line; otherwise label each in place.
-        # the theta guide starts at the density's baseline, so it never runs
-        # through the "spread" label under the axis
+        # true theta (dashed gray guide) and the estimator's center (orange)
         ax.plot([theta, theta], [0, Y * 1.3], color=GRAY, lw=1.1, ls="--")
-        if abs(bias) < 1e-6:
+        if abs(mu - theta) < 1e-9:
             ax.plot([mu, mu], [0, ymax], color=ORANGE, lw=1.6)
-            ax.text(theta - 0.18, ymax * 1.12, r"$\theta$", color=fl.INK,
-                    ha="right", va="bottom", fontsize=13)
-            ax.text(mu + 0.18, ymax * 1.12, r"$\mathbb{E}[\hat\theta]$",
-                    color=ORANGE, ha="left", va="bottom", fontsize=12)
+            ax.text(theta - 0.08, ymax * 1.06, r"$\theta$", color=fl.INK,
+                    ha="right", va="bottom", fontsize=14)
+            ax.text(mu + 0.08, ymax * 1.06, r"$\mathbb{E}[\hat\theta]$",
+                    color=ORANGE, ha="left", va="bottom", fontsize=13)
         else:
-            # bias = horizontal offset between theta and the center, drawn
-            # just above the peak (clear of the density) with its label on
-            # top; the center line rises to meet the arrow, and the two
-            # endpoint labels sit higher still, outside the arrow's span.
+            # the center lies LEFT of theta: the bias arrow spans the gap just
+            # above the peak; theta is labelled to the right of its guide and
+            # the center to the left of its line, both outside the arrow
             ay = ymax * 1.06
             ax.plot([mu, mu], [0, ay], color=ORANGE, lw=1.6)
             ax.annotate("", xy=(mu, ay), xytext=(theta, ay),
                         arrowprops=dict(arrowstyle="<->", color=ORANGE, lw=1.3,
                                         shrinkA=0, shrinkB=0))
-            ax.text((theta + mu) / 2, ay + ymax * 0.035, "bias", color=ORANGE,
-                    ha="center", va="bottom", fontsize=11)
-            ax.text(theta - 0.18, ymax * 1.2, r"$\theta$", color=fl.INK,
-                    ha="right", va="bottom", fontsize=13)
-            ax.text(mu + 0.1, ymax * 1.2, r"$\mathbb{E}[\hat\theta]$",
-                    color=ORANGE, ha="left", va="bottom", fontsize=12)
+            # the arrow is short (0.35), so "bias" sits to its right, past
+            # the theta guide, at the arrow's own height
+            ax.text(theta + 0.08, ay, "bias", color=ORANGE,
+                    ha="left", va="center", fontsize=12)
+            ax.text(theta + 0.08, Y * 1.22, r"$\theta$", color=fl.INK,
+                    ha="left", va="center", fontsize=14)
+            ax.text(mu - 0.08, ay + Y * 0.08, r"$\mathbb{E}[\hat\theta]$",
+                    color=ORANGE, ha="right", va="bottom", fontsize=13)
 
-        # spread = standard error, drawn as a +/- 1 SE bar low on the curve
+        # spread = standard error, drawn as a +/- 1 se bar low on the curve
         sy = ymax * 0.13
         ax.annotate("", xy=(mu + se, sy), xytext=(mu - se, sy),
                     arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.3))
         ax.text(mu, -Y * 0.05, r"spread $=$ std. error",
-                color=BLUE, ha="center", va="top", fontsize=11)
+                color=BLUE, ha="center", va="top", fontsize=12)
 
-        ax.set_xlabel(r"$\hat\theta$", fontsize=13)
+        ax.set_xlabel(r"$\hat\theta$", fontsize=14)
+        ax.set_xlim(z[0], z[-1])
         ax.set_ylim(-Y * 0.12, Y * 1.34)
         ax.set_yticks([])
         ax.set_xticks([])
         ax.set_aspect("auto")
         fl.clean_axes(ax, equal=False)
-        # a density is nonnegative: pin the visible x-axis flush to y=0 (not to
-        # the bottom of the ylim, which would leave a white gap under the curve).
-        # Moving the spine also drags matplotlib's default xlabel placement up
-        # to hug it (colliding with the "spread" caption below), so re-pin the
-        # label itself, in axes-fraction coordinates, to the bottom margin.
+        # a density is nonnegative: pin the x-axis flush to y=0 and re-pin the
+        # axis label to the bottom margin, below the "spread" caption
         ax.spines["bottom"].set_position(("data", 0))
+        ax.spines["bottom"].set_color(fl.INK)
         ax.spines["left"].set_bounds(0, Y * 1.34)
+        ax.spines["left"].set_color(fl.INK)
         ax.xaxis.set_label_coords(0.5, -0.055)
-    axes[0].set_ylabel("density over datasets", fontsize=12)
+    axes[0].set_ylabel("density over data sets", fontsize=13)
     fl.save(fig, "mdl-prob-sampling-distribution")
 
 
@@ -609,24 +600,24 @@ def fig_inverse_transform():
 
 
 def fig_chebyshev():
-    """Three-atom p.m.f. at {-2,0,2} with masses {p,1-2p,p}: the Chebyshev
-    event |X-mu| >= alpha*sigma has half-width 4*sqrt(2p).  For p>1/8 the
-    half-width exceeds 2, so no atom lies in the event; for p=1/8 the +/-2
-    atoms sit exactly at the boundary and carry mass 2p = 1/4, matching the
-    bound -- the equality case; for p<1/8 they lie strictly beyond it with
-    mass 2p < 1/4.  Atoms inside the event are drawn orange."""
+    """Three-atom p.m.f. at {a-2,a,a+2} with masses {q,1-2q,q}: the Chebyshev
+    event |X-a| >= alpha*sigma at alpha=2 has half-width 4*sqrt(2q).  For q>1/8
+    the half-width exceeds 2, so no atom lies in the event; for q=1/8 the +/-2
+    atoms sit at the boundary and carry mass 2q = 1/4, matching the bound (the
+    equality case); for q<1/8 they lie beyond it with mass 2q < 1/4.  Atoms
+    inside the event are drawn orange."""
     fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.4))
-    # per-panel titles name the regime (with the p actually drawn); the
+    # per-panel titles name the regime (with the q actually drawn); the
     # caption lists the regimes but cannot say which panel is which
-    for ax, p, title in zip(axes, [0.2, 0.125, 0.05],
-                            [r"$p=0.2>1/8$", r"$p=1/8$", r"$p=0.05<1/8$"]):
-        atoms, heights = [-2, 0, 2], [p, 1 - 2 * p, p]
+    for ax, q, title in zip(axes, [0.2, 0.125, 0.05],
+                            [r"$q=0.2>1/8$", r"$q=1/8$", r"$q=0.05<1/8$"]):
+        atoms, heights = [-2, 0, 2], [q, 1 - 2 * q, q]
         ax.vlines(atoms, 0, heights, color=BLUE, lw=3, zorder=3)
-        # the +/-2 atoms belong to the event {|X| >= half-width} iff p <= 1/8
-        edge_col = ORANGE if p <= 0.125 else BLUE
-        ax.plot([-2, 2], [p, p], "o", color=edge_col, ms=7, zorder=4)
-        ax.plot([0], [1 - 2 * p], "o", color=BLUE, ms=7, zorder=4)
-        hw = 4 * np.sqrt(2 * p)
+        # the +/-2 atoms belong to the event {|X-a| >= half-width} iff q <= 1/8
+        edge_col = ORANGE if q <= 0.125 else BLUE
+        ax.plot([-2, 2], [q, q], "o", color=edge_col, ms=7, zorder=4)
+        ax.plot([0], [1 - 2 * q], "o", color=BLUE, ms=7, zorder=4)
+        hw = 4 * np.sqrt(2 * q)
         # the a-2, a, a+2 tick labels sit just under the axis; drop the
         # bracket (and its caption) further down still so neither touches them.
         ax.annotate("", xy=(hw, -0.22), xytext=(-hw, -0.22),
@@ -686,22 +677,45 @@ def fig_covariance():
 
 
 def fig_correlation():
-    """Three clouds at correlation -0.9 / 0 / 0.9 with matched spread: only the
-    tilt changes, in contrast to covariance which also tracks scale.  Drawn
-    exactly like the covariance figure's top row (same colour, window and y
-    ticks), with each panel's rho as its title."""
+    """Correlation measures the tightness and sign of a linear relation, not
+    its slope.  (a) Y = 0.5 X + noise and (b) Y = 2 X + noise, with the noise
+    scaled (sd = slope * sqrt(1/0.81 - 1)) so that both have rho = 0.9;
+    (c) Y = X^2 - E[X^2] for X uniform on [-2.5, 2.5] (a sample symmetric
+    about 0), a function of X with rho = 0.  Equal windows, so the two slopes are visible; each
+    panel's sample rho sits in its empty corner."""
     rng = np.random.default_rng(1)
-    fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.3))
-    for ax, r, title in zip(axes, [-0.9, 0.0, 0.9],
-                            [r"$\rho=-0.9$", r"$\rho=0$", r"$\rho=0.9$"]):
-        X = rng.standard_normal(220)
-        Y = r * X + np.sqrt(max(1 - r ** 2, 0.0)) * rng.standard_normal(220)
-        ax.scatter(X, Y, s=10, color=BLUE, alpha=0.5)
-        ax.axhline(0, color="black", lw=0.8); ax.axvline(0, color="black", lw=0.8)
+    fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.6))
+    n, rho = 220, 0.9
+    X = rng.standard_normal(n)
+    xi = rng.standard_normal(n)
+    u = rng.uniform(0, 2.5, n // 2)
+    U = np.concatenate([u, -u])          # symmetric sample: sample rho is 0
+    clouds = [
+        (X, 0.5 * X + 0.5 * np.sqrt(1 / rho ** 2 - 1) * xi, "(a) slope $0.5$"),
+        (X, 2.0 * X + 2.0 * np.sqrt(1 / rho ** 2 - 1) * xi, "(b) slope $2$"),
+        (U, U ** 2 - 2.5 ** 2 / 3, "(c) $y=x^2$, centered"),
+    ]
+    for ax, (x, y, title) in zip(axes, clouds):
+        r = round(np.corrcoef(x, y)[0, 1], 2) + 0.0   # + 0.0 drops a -0.0
+        ax.scatter(x, y, s=10, color=BLUE, alpha=0.5)
+        ax.axhline(0, color="black", lw=0.8)
+        ax.axvline(0, color="black", lw=0.8)
         ax.set_title(title, fontsize=15)
-        ax.set_xlim(-3.6, 3.6); ax.set_ylim(-4, 4)
-        ax.set_xticks([]); ax.set_yticks([-3, 0, 3])
-        ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+        # the up-right clouds leave the top-left corner empty; the parabola
+        # leaves the bottom corners empty
+        if title.startswith("(c)"):
+            pos = dict(x=0.04, y=0.05, ha="left", va="bottom")
+        else:
+            pos = dict(x=0.04, y=0.95, ha="left", va="top")
+        ax.text(pos["x"], pos["y"], rf"$\rho \approx {{{r:.2f}}}$",
+                color=fl.INK, fontsize=15, ha=pos["ha"], va=pos["va"],
+                transform=ax.transAxes, zorder=6,
+                bbox=dict(facecolor="white", edgecolor="none", pad=1.0,
+                          alpha=0.85))
+        ax.set_xlim(-3.6, 3.6); ax.set_ylim(-7, 7)
+        ax.set_xticks([]); ax.set_yticks([-6, 0, 6])
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-correlation")
 
 
@@ -719,221 +733,278 @@ def _box(ax, xy, w, h, label, fc="white", ec=None):
 
 
 def fig_family_tree():
-    """Relationship map of the common distributions inside an exponential-family
-    envelope.  Solid arrows *construct* or take limits (Bernoulli -> Binomial ->
-    {Poisson, Gaussian}; Poisson -> Exponential as the waiting time between its
-    events; Bernoulli -> Categorical -> Multinomial); dashed green arrows mark
-    the *conjugate prior* of each likelihood family (Beta for Bernoulli/Binomial,
-    Gamma for Poisson, Dirichlet for Categorical/Multinomial).  Every arrow is
+    """How the section's twelve laws grow out of one coin flip.  Filled-head
+    arrows construct (a sum, a random sign, a vector of coordinates, a waiting
+    time, equal weights); dashed open-head arrows take a limit.  Every arrow is
     clipped to the box outlines, so tails leave and heads land on an edge."""
-    from matplotlib.patches import FancyBboxPatch
+    fig, ax = plt.subplots(figsize=(13.0, 5.2))
+    w, h = 2.5, 1.0
+    centers = {"Bernoulli": (1.3, 3.2), "Binomial": (5.4, 5.2),
+               "Categorical": (5.4, 1.4), "Poisson": (10.0, 6.6),
+               "Gaussian": (10.0, 4.0), "Multinomial": (10.0, 2.3),
+               "Discrete\nuniform": (10.0, 0.5), "Exponential": (14.6, 6.6),
+               "Multivariate\nGaussian": (14.6, 4.0),
+               "Continuous\nuniform": (14.6, 0.5), "Gamma": (19.0, 7.4),
+               "Laplace": (19.0, 5.8)}
 
-    fig, ax = plt.subplots(figsize=(9.6, 5.0))
-    w, h = 2.0, 0.66
-    # box centers: construction tree left -> right, priors above/below the
-    # families they attach to
-    centers = {"Bernoulli": (1.0, 1.6), "Binomial": (4.4, 2.8),
-               "Categorical": (4.4, 0.4), "Poisson": (8.0, 3.8),
-               "Gaussian": (8.0, 2.2), "Multinomial": (8.0, 0.4),
-               "Exponential": (11.6, 3.8),
-               "Beta": (1.0, 3.9), "Gamma": (8.0, 5.4),
-               "Dirichlet": (11.6, 0.4)}
-    priors = ("Beta", "Gamma", "Dirichlet")
-
-    def edge_pts(s, t, gap=0.07):
-        """Segment between the outlines of boxes s and t (plus a small gap)."""
+    def edge_pts(s, t, gap=0.08):
         c0, c1 = np.array(centers[s]), np.array(centers[t])
-        d = c1 - c0
-        u = d / np.linalg.norm(d)
+        u = (c1 - c0) / np.linalg.norm(c1 - c0)
+
         def reach(v):  # distance from a center to its outline along v
             return min((w / 2 + gap) / abs(v[0]) if v[0] else np.inf,
                        (h / 2 + gap) / abs(v[1]) if v[1] else np.inf)
         return c0 + u * reach(u), c1 - u * reach(u)
 
-    def link(s, t, color, ls):
-        p0, p1 = edge_pts(s, t)
+    def link(p0, p1, limit):
         ax.annotate("", xy=tuple(p1), xytext=tuple(p0),
-                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1.4,
-                                    linestyle=ls, shrinkA=0, shrinkB=0,
-                                    mutation_scale=13))
-        return p0, p1
+                    arrowprops=dict(arrowstyle="-|>", edgecolor=fl.INK, lw=1.5,
+                                    facecolor="white" if limit else fl.INK,
+                                    linestyle=(0, (4, 3)) if limit else "-",
+                                    shrinkA=0, shrinkB=0, mutation_scale=15))
 
-    # construction / limit arrows with their labels (position, alignment)
-    cons = [("Bernoulli", "Binomial", r"sum of $n$", (2.65, 2.42), "center", "bottom"),
-            ("Bernoulli", "Categorical", r"$K$ outcomes", (2.0, 0.85), "center", "top"),
-            ("Binomial", "Poisson", "$n\\to\\infty$\n$np\\to\\lambda$", (6.0, 3.55),
-             "center", "bottom"),
-            ("Binomial", "Gaussian", "CLT", (6.2, 2.32), "center", "top"),
-            ("Poisson", "Exponential", "waiting time", (9.8, 3.95), "center", "bottom"),
-            ("Categorical", "Multinomial", r"sum of $n$", (6.2, 0.48), "center", "bottom")]
-    for s, t, lab, (lx, ly), ha, va in cons:
-        link(s, t, fl.INK, "-")
-        ax.text(lx, ly, lab, ha=ha, va=va, fontsize=11, color=fl.INK)
-
-    # dashed conjugate-prior arrows (prior -> each likelihood family it serves)
-    for s, t in [("Beta", "Bernoulli"), ("Beta", "Binomial"),
-                 ("Gamma", "Poisson"), ("Dirichlet", "Multinomial")]:
-        link(s, t, GREEN, (0, (4, 3)))
-    # Dirichlet sits right of Multinomial (no extra bottom row); its second
-    # prior arrow arcs under Multinomial into Categorical's bottom edge
-    from matplotlib.patches import FancyArrowPatch
-    dx_, dy_ = centers["Dirichlet"]; cx_, cy_ = centers["Categorical"]
-    ax.add_patch(FancyArrowPatch(
-        (dx_ - w / 4, dy_ - h / 2 - 0.07), (cx_, cy_ - h / 2 - 0.07),
-        connectionstyle="arc3,rad=-0.14", arrowstyle="-|>",
-        mutation_scale=13, color=GREEN, lw=1.4, linestyle=(0, (4, 3)),
-        shrinkA=0, shrinkB=0, zorder=2))
-    # name the dashed style once, beside the shortest dashed arrow
-    gx, gy = centers["Gamma"]
-    ax.text(gx + 0.12, gy - h / 2 - 0.36, "conjugate prior", ha="left",
-            va="center", fontsize=11, color=fl.T.GREEN.dark)
-
+    # (source, target, label, label center, is_limit)
+    arrows = [
+        ("Bernoulli", "Binomial", r"sum of $n$", (2.75, 4.65), False),
+        ("Bernoulli", "Categorical", r"$K$ outcomes", (2.6, 1.85), False),
+        ("Binomial", "Poisson", "$n\\to\\infty$,\n$np\\to\\lambda$",
+         (7.35, 6.65), True),
+        ("Binomial", "Gaussian", "standardized,\n$n\\to\\infty$",
+         (7.3, 3.85), True),
+        ("Poisson", "Exponential", "waiting time", (12.3, 6.95), False),
+        ("Exponential", "Gamma", r"sum of $k$", (16.75, 7.55), False),
+        ("Exponential", "Laplace", "random sign", (16.45, 5.45), False),
+        ("Gaussian", "Multivariate\nGaussian", r"vector, $\boldsymbol{\Sigma}$",
+         (12.3, 4.35), False),
+        ("Categorical", "Multinomial", r"sum of $n$ draws", (7.3, 2.45), False),
+        ("Categorical", "Discrete\nuniform", r"equal $p_k$", (7.55, 0.45),
+         False),
+        ("Discrete\nuniform", "Continuous\nuniform", "points fill\n$[a,b]$",
+         (12.3, 1.3), True),
+    ]
+    for s, t, lab, (lx, ly), limit in arrows:
+        link(*edge_pts(s, t), limit)
+        ax.text(lx, ly, lab, ha="center", va="center", fontsize=13,
+                color="black", linespacing=1.05)
     for k, (cx, cy) in centers.items():
-        if k in priors:
-            fc, ec = fl.T.GREEN.tint, GREEN
-        else:
-            fc, ec = "white", None
-        _box(ax, (cx - w / 2, cy - h / 2), w, h, k, fc=fc, ec=ec)
-
-    # the exponential-family envelope around every node
-    x0, x1 = -0.35, 12.95
-    y0, y1 = -0.75, 6.15
-    ax.add_patch(FancyBboxPatch((x0, y0), x1 - x0, y1 - y0,
-                                boxstyle="round,pad=0,rounding_size=0.35",
-                                facecolor=fl.T.PANEL, edgecolor=fl.T.HAIRLINE,
-                                lw=1.2, zorder=0))
-    ax.text(x0 + 0.25, y1 - 0.22, "E X P O N E N T I A L   F A M I L Y",
-            ha="left", va="top", fontsize=10, color=fl.T.MUTED)
-    ax.set_xlim(x0 - 0.05, x1 + 0.05); ax.set_ylim(y0 - 0.05, y1 + 0.05)
+        _box(ax, (cx - w / 2, cy - h / 2), w, h, "", fc="white")
+        ax.text(cx, cy, k, ha="center", va="center", fontsize=14,
+                color=fl.INK, zorder=4, linespacing=1.0)
+    # legend: name the two arrow styles once, in the empty top-left corner
+    for y, limit, lab in ((7.75, False, "construction"), (7.15, True, "limit")):
+        link((0.05, y), (1.3, y), limit)
+        ax.text(1.5, y, lab, ha="left", va="center", fontsize=13,
+                color="black")
+    ax.set_xlim(-0.1, 20.35); ax.set_ylim(-0.1, 8.0)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
+    import shutil
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-family-tree.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-family-tree.svg"))
+
 
 
 def fig_beta_posterior():
-    """Bayesian updating as sharpening.  Three panels of the Beta density over a
-    coin's bias: the flat Beta(1,1) prior; the Beta(10,5) posterior after
-    observing 9 heads in 13 flips; and the Beta(91,41) posterior after 90 heads
-    in 130 flips.  The true bias p* = 0.7 is the dashed line; the exact Beta
-    densities (via lgamma, no scipy) visibly pile up on it, their width
-    shrinking like 1/sqrt(n)."""
+    """Bayesian updating of a coin's bias theta.  Three panels of the Beta
+    density: the flat Beta(1,1) prior; the Beta(10,5) posterior after 9 heads
+    in 13 flips (mean 2/3, sd 0.12); and the Beta(91,41) posterior after 90
+    heads in 130 flips (sd 0.04).  The true bias theta* = 0.7 is the dashed
+    line; the exact Beta densities (via lgamma, no scipy) pile up on it, their
+    width shrinking like 1/sqrt(n)."""
+    import shutil
     from math import lgamma
 
-    def beta_pdf(p, a, b):
+    def beta_pdf(t, a, b):
         logB = lgamma(a) + lgamma(b) - lgamma(a + b)
-        return np.exp((a - 1) * np.log(p) + (b - 1) * np.log(1 - p) - logB)
+        return np.exp((a - 1) * np.log(t) + (b - 1) * np.log(1 - t) - logB)
 
-    p = np.linspace(1e-4, 1 - 1e-4, 600)
-    theta = 0.7
-    panels = [(1, 1, "prior"),
-              (10, 5, "9 H in 13 flips"),
-              (91, 41, "90 H in 130 flips")]
-    ymax = beta_pdf(p, 91, 41).max() * 1.12
+    t = np.linspace(1e-4, 1 - 1e-4, 600)
+    theta_star = 0.7
+    panels = [(1, 1, "Beta(1,1)\nprior"),
+              (10, 5, "Beta(10,5)\n9 H in 13"),
+              (91, 41, "Beta(91,41)\n90 H in 130")]
+    ymax = beta_pdf(t, 91, 41).max() * 1.12
 
     fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.1), sharex=True)
     for ax, (a, b, sub) in zip(axes, panels):
-        y = beta_pdf(p, a, b)
-        ax.plot(p, y, color=BLUE, lw=2.2)
-        ax.fill_between(p, 0, y, color=BLUE, alpha=0.15, lw=0)
-        ax.axvline(theta, color=ORANGE, lw=1.6, ls="--")
-        # inset from the left spine (never touching it) and still well clear
-        # of the theta* dashed line at 0.7
+        y = beta_pdf(t, a, b)
+        ax.plot(t, y, color=BLUE, lw=2.2)
+        ax.fill_between(t, 0, y, color=BLUE, alpha=0.15, lw=0)
+        ax.axvline(theta_star, color=ORANGE, lw=1.6, ls="--")
+        # top-left corner: clear of the curves (the Beta(10,5) peak sits at
+        # 0.69, next to the dashed line) and of the dashed line at 0.7
         ax.text(0.045, ymax * 0.95, sub, color=fl.INK, fontsize=13, ha="left",
-                va="top")
+                va="top", linespacing=1.05)
         ax.set_xlim(0, 1); ax.set_ylim(0, ymax)
-        ax.set_xticks([0, theta, 1.0])
-        ax.set_xticklabels(["$0$", r"$p^{\ast}$", "$1$"], fontsize=13)
+        ax.set_xticks([0, theta_star, 1.0])
+        ax.set_xticklabels(["$0$", r"$\theta^{\ast}$", "$1$"], fontsize=13)
+        ax.tick_params(colors="black")
         ax.set_yticks([])
-        ax.set_xlabel(r"$p$", fontsize=14)
+        ax.set_xlabel(r"$\theta$", fontsize=14)
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     axes[0].set_ylabel("density", fontsize=13)
     fl.save(fig, "mdl-prob-beta-posterior")
+    # the slides read @fig figures from img/auto
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-beta-posterior.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-beta-posterior.svg"))
 
 
 def fig_discrete_pmfs():
-    """Gallery of four discrete p.m.f.s (real masses, stem style), each panel
-    titled with its distribution."""
+    """The four discrete laws of the section in the order of the text, each
+    on the running example: Bernoulli(9/13); Binomial(13, 1/2) with the k = 9
+    stem (P = 715/8192) in orange; Poisson(4); and the categorical
+    softmax(2, 1, 0.1, -1) against the uniform 1/4."""
     import math
-    fig, axes = plt.subplots(1, 4, figsize=(11.0, 2.7),
-                             gridspec_kw=dict(wspace=0.38))
+    import shutil
+    z = np.array([2.0, 1.0, 0.1, -1.0])
+    cat = np.exp(z) / np.exp(z).sum()
     series = [
-        ([0, 1], [0.7, 0.3], r"Bernoulli$(0.3)$"),
-        (list(range(1, 7)), [1 / 6] * 6, r"Uniform$\{1,\ldots,6\}$"),
-        (list(range(0, 11)),
-         [math.comb(10, k) * 0.4 ** k * 0.6 ** (10 - k) for k in range(11)],
-         r"Binomial$(10,0.4)$"),
-        (list(range(0, 15)),
+        ([0, 1], [4 / 13, 9 / 13], r"Bernoulli$(9/13)$"),
+        (list(range(14)), [math.comb(13, k) / 2 ** 13 for k in range(14)],
+         r"Binomial$(13,\frac{1}{2})$"),
+        (list(range(15)),
          [math.exp(-4) * 4 ** k / math.factorial(k) for k in range(15)],
          r"Poisson$(4)$"),
+        ([1, 2, 3, 4], list(cat), "categorical"),
     ]
-    for ax, (ks, ps, title) in zip(axes, series):
-        ax.vlines(ks, 0, ps, color=BLUE, lw=2.2)
-        ax.plot(ks, ps, "o", color=BLUE, ms=4, clip_on=False)
-        # pad half a unit past the outer atoms so no stem sits on the spine,
-        # and tick only integer outcomes
-        ax.set_xlim(ks[0] - 0.6 if len(ks) < 8 else ks[0] - 0.8,
-                    ks[-1] + 0.6 if len(ks) < 8 else ks[-1] + 0.8)
-        ax.set_xticks(ks if len(ks) < 8 else [0, 5, 10])
-        # Bernoulli gets its own scale (its 0.7 atom dwarfs the rest); the
-        # other three share one, so the uniform's 1/6 reads against the
-        # binomial's and Poisson's peaks.  Ticks make every scale explicit.
-        if len(ks) == 2:
-            ax.set_ylim(0, 0.78); ax.set_yticks([0, 0.3, 0.7])
-            ax.set_yticklabels(["0", "0.3", "0.7"])
-        else:
-            ax.set_ylim(0, 0.27); ax.set_yticks([0, 0.1, 0.2])
-            ax.set_yticklabels(["0", "0.1", "0.2"])
-        ax.set_title(title, fontsize=14)
+    fig, axes = plt.subplots(1, 4, figsize=(12.0, 2.9),
+                             gridspec_kw=dict(wspace=0.34,
+                                              width_ratios=[0.7, 1.3, 1.3, 1]))
+    for i, (ax, (ks, ps, title)) in enumerate(zip(axes, series)):
+        ax.vlines(ks, 0, ps, color=BLUE, lw=2.4)
+        ax.plot(ks, ps, "o", color=BLUE, ms=4.5, clip_on=False)
+        few = len(ks) <= 4
+        ax.set_xlim(ks[0] - 0.6 if few else ks[0] - 0.8,
+                    ks[-1] + 0.6 if few else ks[-1] + 0.8)
+        ax.set_xticks(ks if few else [0, 5, 10])
+        if few:   # the two-bar-scale panels share 0-0.75
+            ax.set_ylim(0, 0.75); ax.set_yticks([0, 0.25, 0.5])
+        else:     # binomial and Poisson share 0-0.25
+            ax.set_ylim(0, 0.25); ax.set_yticks([0, 0.1, 0.2])
+        ax.tick_params(colors="black", labelsize=13)
+        ax.set_title(title, fontsize=15)
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    # the running coin: 9 heads in 13 fair flips
+    ax = axes[1]
+    p9 = math.comb(13, 9) / 2 ** 13
+    ax.vlines([9], 0, [p9], color=ORANGE, lw=2.8)
+    ax.plot([9], [p9], "o", color=ORANGE, ms=5.5)
+    ax.text(9.45, 0.098, r"$0.087$", fontsize=14,
+            color=fl.T.ORANGE.dark, ha="left", va="center",
+            bbox=dict(facecolor="white", edgecolor="none", pad=0.6))
+    # the categorical against the uniform 1/4
+    ax = axes[3]
+    ax.axhline(0.25, color=fl.T.FAINT, lw=1.2, ls=(0, (4, 3)))
+    ax.text(4.5, 0.30, "uniform", fontsize=13, color="black", ha="right",
+            va="bottom")
+    ax.set_xlabel("class", fontsize=14, color="black")
+    axes[1].set_xlabel("heads", fontsize=14, color="black")
+    axes[2].set_xlabel("count", fontsize=14, color="black")
+    axes[0].set_xlabel("outcome", fontsize=14, color="black")
     fl.save(fig, "mdl-prob-discrete-pmfs")
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-discrete-pmfs.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-discrete-pmfs.svg"))
 
 
 def fig_continuous_pdfs():
-    """Continuous uniform, standard Gaussian, and a unit-variance Laplace: the
-    Laplace has a sharper peak and heavier tails than the Gaussian."""
-    x = np.linspace(-5, 5, 600)
-    uni = np.where(np.abs(x) <= 2, 0.25, 0.0)
+    """Uniform U(-sqrt3, sqrt3), the standard Gaussian and Laplace(0, 1/sqrt2),
+    all of variance one: (a) densities, (b) the same on a logarithmic axis,
+    where the Gaussian is a parabola and the Laplace two straight lines."""
+    import shutil
+    x = np.linspace(-4, 4, 801)
+    r3 = np.sqrt(3.0)
     gauss = np.exp(-x ** 2 / 2) / np.sqrt(2 * np.pi)
     b = 1 / np.sqrt(2)                       # var = 2 b^2 = 1
     lap = np.exp(-np.abs(x) / b) / (2 * b)
-    fig, ax = plt.subplots(figsize=(5.8, 3.6))
-    ax.plot(x, uni, color=GRAY, lw=2.0, label=r"Uniform on $[-2,2]$")
-    ax.plot(x, gauss, color=BLUE, lw=2.2, label=r"$\mathcal{N}(0,1)$")
-    ax.plot(x, lap, color=ORANGE, lw=2.2, label=r"Laplace, var $1$")
-    ax.legend(fontsize=11, loc="upper right"); ax.set_yticks([])
-    ax.set_xlim(-5, 5); ax.set_ylim(0, None)
-    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fig, axes = plt.subplots(1, 2, figsize=(11.0, 3.4),
+                             gridspec_kw=dict(wspace=0.22))
+    for ax, logy in zip(axes, (False, True)):
+        bottom = 1e-4 if logy else 0.0
+        ax.plot([-4, -r3, -r3, r3, r3, 4],
+                [bottom, bottom, 1 / (2 * r3), 1 / (2 * r3), bottom, bottom],
+                color=GRAY, lw=2.0, label="uniform")
+        ax.plot(x, gauss, color=BLUE, lw=2.4, label="Gaussian")
+        ax.plot(x, lap, color=ORANGE, lw=2.4,
+                label="Laplace")
+        ax.set_xlim(-4, 4)
+        ax.set_xticks([-3, -2, -1, 0, 1, 2, 3])
+        ax.tick_params(colors="black", labelsize=13)
+        ax.set_xlabel("$x$", fontsize=14, color="black")
+        ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+        if logy:
+            ax.set_yscale("log"); ax.set_ylim(1e-4, 1.0)
+        else:
+            ax.set_ylim(0, 0.75); ax.set_yticks([0, 0.25, 0.5, 0.75])
+    axes[0].set_ylabel("density", fontsize=14, color="black")
+    axes[0].legend(fontsize=13, loc="upper left", handlelength=1.4,
+                   frameon=False)
     fl.save(fig, "mdl-prob-continuous-pdfs")
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-continuous-pdfs.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-continuous-pdfs.svg"))
 
 
 def fig_mvn_contours():
-    """A 2-D Gaussian sample with elliptical density contours; the ellipse axes
-    are the covariance eigenvectors scaled by sqrt(eigenvalue)."""
+    """The running covariance Sigma = [[2, 1], [1, 2]].  (a) 400 samples, the
+    contours at Mahalanobis radius 1, 2, 3, and the eigenvectors v1 along
+    (1, 1) and v2 along (1, -1), drawn to the radius-2 contour (lengths
+    2 sqrt3 and 2).  (b) The same contours sliced at x2 = 2: the conditional
+    density N(1, 3/2) of x1, and the line x1 = x2 / 2 of conditional means."""
+    import shutil
     rng = np.random.default_rng(0)
-    cov = np.array([[2.0, 1.1], [1.1, 1.0]])
+    cov = np.array([[2.0, 1.0], [1.0, 2.0]])
     L = np.linalg.cholesky(cov)
     pts = (L @ rng.standard_normal((2, 400))).T
-    g = np.linspace(-5, 5, 200); X, Y = np.meshgrid(g, g)
-    inv = np.linalg.inv(cov)
-    Z = np.exp(-0.5 * (inv[0, 0] * X ** 2 + 2 * inv[0, 1] * X * Y + inv[1, 1] * Y ** 2))
-    fig, ax = plt.subplots(figsize=(5.4, 3.9))
-    ax.scatter(pts[:, 0], pts[:, 1], s=8, color=BLUE, alpha=0.35, zorder=2)
-    ax.contour(X, Y, Z, levels=5, colors=GRAY, linewidths=1.0, zorder=3)
-    wv, V = np.linalg.eigh(cov)
-    # name each principal axis; orient both eigenvectors into the upper half
-    # plane so their labels sit above the tips, backed white over the cloud
-    for i, lab in ((1, r"$\mathbf{w}_1$"), (0, r"$\mathbf{w}_2$")):
-        v = V[:, i] * (1 if V[1, i] > 0 else -1)
-        tip = v * np.sqrt(wv[i]) * 2.0
-        fl.arrow(ax, (0, 0), tip, color=ORANGE, lw=2.0, mut=12)
-        lp = tip + v * 0.42
-        ax.text(lp[0], lp[1], lab, color=fl.T.ORANGE.dark, fontsize=14,
+    gam, V = np.linalg.eigh(cov)                 # ascending: 1, 3
+    B = V @ np.diag(np.sqrt(gam))
+    th = np.linspace(0, 2 * np.pi, 400)
+    circ = np.stack([np.cos(th), np.sin(th)])
+    lim = 5.0
+    fig, axes = plt.subplots(1, 2, figsize=(10.0, 5.0),
+                             gridspec_kw=dict(wspace=0.08))
+    for ax in axes:
+        fl.axis_cross(ax, (-lim, lim), (-lim, lim), color="black")
+        ax.text(lim, -0.12, "$x_1$", fontsize=15, ha="right", va="top",
+                color="black")
+        ax.text(-0.15, lim, "$x_2$", fontsize=15, ha="right", va="top",
+                color="black")
+        for r in (1, 2, 3):
+            e = r * (B @ circ)
+            ax.plot(e[0], e[1], color=GRAY, lw=1.1, zorder=3)
+        ax.set_aspect("equal"); ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim)
+        ax.axis("off")
+    ax = axes[0]
+    ax.scatter(pts[:, 0], pts[:, 1], s=8, color=BLUE, alpha=0.30, lw=0,
+               zorder=2)
+    for v, g, lab in ((np.array([1.0, 1.0]) / np.sqrt(2), 3.0, r"$\mathbf{v}_1$"),
+                      (np.array([1.0, -1.0]) / np.sqrt(2), 1.0, r"$\mathbf{v}_2$")):
+        tip = 2 * np.sqrt(g) * v
+        fl.arrow(ax, (0, 0), tuple(tip), color=ORANGE, lw=2.2, mut=14)
+        lp = tip + 0.55 * v
+        ax.text(lp[0], lp[1], lab, color=fl.T.ORANGE.dark, fontsize=16,
                 ha="center", va="center", zorder=6,
                 bbox=dict(facecolor="white", edgecolor="none", pad=0.8))
-    # the window hugs the sample cloud (equal aspect)
-    ax.set_aspect("equal"); ax.set_xlim(-5.6, 4.7); ax.set_ylim(-3.5, 3.7)
-    ax.set_xticks([]); ax.set_yticks([])
-    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    ax = axes[1]
+    x2s = np.array([-lim, lim])
+    ax.plot(x2s / 2, x2s, color=ORANGE, lw=2.0, zorder=4)
+    ax.plot([-lim, lim], [2, 2], color="black", lw=1.0, ls=(0, (4, 3)),
+            zorder=4)
+    x1 = np.linspace(1 - 3.3, 1 + 3.3, 400)
+    dens = np.exp(-(x1 - 1) ** 2 / 3.0) / np.sqrt(3 * np.pi)
+    ax.fill_between(x1, 2, 2 + 4.0 * dens, color=fl.T.BLUE.tint, zorder=3,
+                    lw=0)
+    ax.plot(x1, 2 + 4.0 * dens, color=BLUE, lw=2.0, zorder=5)
+    ax.plot([1], [2], "o", color=ORANGE, ms=7, zorder=6)
+    ax.text(-lim + 0.05, 2.12, "$x_2=2$", fontsize=14, ha="left", va="bottom",
+            color="black")
+    ax.text(-0.6, 4.1, r"$x_1\mid x_2=2\sim\mathcal{N}(1,\frac{3}{2})$",
+            fontsize=14, ha="right", va="center", color="black",
+            bbox=dict(facecolor="white", edgecolor="none", pad=0.6), zorder=7)
+    ax.text(-2.0, -4.62, "$x_1=x_2/2$", fontsize=14, ha="left",
+            va="center", color=fl.T.ORANGE.dark,
+            bbox=dict(facecolor="white", edgecolor="none", pad=0.6), zorder=7)
     fl.save(fig, "mdl-prob-mvn-contours")
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-mvn-contours.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-mvn-contours.svg"))
 
 
 # =========================================================================== #
@@ -1014,79 +1085,57 @@ def fig_naive_independence():
 
 
 def fig_naive_genvdisc():
-    """The generative vs. discriminative routes to a classifier.  Left: a
-    generative model (naive Bayes) learns the prior-weighted class-conditional
-    densities p(x|y=k) p(y=k) -- here two Gaussians with means -/+1.2, sd 0.8,
-    priors 1/2 -- and Bayes' rule flips them into a posterior; the decision
-    flips where the weighted curves tie (x* = 0).  Right: a discriminative
-    model (softmax regression) never models the inputs at all -- it spends its
-    capacity directly on the boundary between the classes."""
-    fig, (axg, axd) = plt.subplots(1, 2, figsize=(9.6, 3.6))
-
-    # --- left: prior-weighted class-conditional densities on a 1-D axis -----
-    x = np.linspace(-3.8, 3.8, 600)
-    sd, prior = 0.8, 0.5
-
-    def wdens(mu):
-        return prior * np.exp(-((x - mu) ** 2) / (2 * sd ** 2)) / (
-            sd * np.sqrt(2 * np.pi))
-
-    y0, y1 = wdens(-1.2), wdens(1.2)
-    ymax = y0.max()
-    for y, col in ((y0, BLUE), (y1, ORANGE)):
-        axg.plot(x, y, color=col, lw=2.2)
-        axg.fill_between(x, 0, y, color=col, alpha=0.14, lw=0)
-    # the two class labels are long, so anchor each over its own bump and
-    # *stagger* them in height (blue higher, orange lower) so they never collide
-    # in the middle; each gets a short leader down to its peak.
-    axg.annotate(r"$p(x\mid y{=}0)\,p(y{=}0)$", xy=(-1.2, ymax * 1.02),
-                 xytext=(-1.9, ymax * 1.34), color=BLUE, ha="center",
-                 va="bottom", fontsize=11,
-                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.1))
-    axg.annotate(r"$p(x\mid y{=}1)\,p(y{=}1)$", xy=(1.2, ymax * 1.02),
-                 xytext=(1.9, ymax * 1.16), color=ORANGE, ha="center",
-                 va="bottom", fontsize=11,
-                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1))
-    # the tie point of the weighted densities is where the decision flips
-    xstar = 0.0
-    ytie = np.interp(xstar, x, y0)
-    axg.axvline(xstar, color=GRAY, lw=1.2, ls="--")
-    axg.annotate("decision\nflips here", xy=(xstar, ytie),
-                 xytext=(xstar + 1.0, ymax * 0.16), color=fl.INK,
-                 fontsize=11, ha="left", va="center",
-                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
-    axg.set_title("generative (naive Bayes)", fontsize=12)
-    # name the axis at its right end, in the x* tick row (no extra band of
-    # height that the right panel lacks)
-    axg.set_xlabel(r"$x$", fontsize=13, loc="right", labelpad=-14)
-    axg.set_xticks([xstar]); axg.set_xticklabels([r"$x^\ast$"], fontsize=13)
-    axg.set_yticks([]); axg.set_xlim(-3.8, 3.8)
-    axg.set_ylim(0, ymax * 1.58)
-    axg.spines["top"].set_visible(False); axg.spines["right"].set_visible(False)
-
-    # --- right: two labeled clouds and only a boundary between them ---------
-    rng = np.random.default_rng(0)
-    m0, m1 = np.array([-1.3, -0.9]), np.array([1.3, 0.9])
-    c0 = m0 + 0.7 * rng.standard_normal((40, 2))
-    c1 = m1 + 0.7 * rng.standard_normal((40, 2))
-    # the perpendicular bisector of the class means: m . x = 0, i.e. the line
-    # y = -(m_x / m_y) x through the origin (the means are symmetric).
-    xx = np.linspace(-3.2, 3.2, 2)
-    yy = -(m1[0] / m1[1]) * xx
-    axd.fill_between(xx, yy, 3.2, color=ORANGE, alpha=0.07, lw=0)
-    axd.fill_between(xx, -3.2, yy, color=BLUE, alpha=0.07, lw=0)
-    axd.scatter(c0[:, 0], c0[:, 1], s=12, color=BLUE, alpha=0.45, lw=0)
-    axd.scatter(c1[:, 0], c1[:, 1], s=12, color=ORANGE, alpha=0.45, lw=0)
-    axd.plot(xx, yy, color="black", lw=2.0, zorder=4)
-    axd.text(-1.5, -2.9, "no model of $p(x)$", color=fl.INK, fontsize=11,
-             ha="center", va="center")
-    axd.set_title("discriminative (softmax regression)", fontsize=12)
-    axd.set_xlim(-3.2, 3.2); axd.set_ylim(-3.2, 3.2)
-    axd.set_xticks([]); axd.set_yticks([])
-    axd.set_xlabel(r"$x_1$", fontsize=13, loc="right", labelpad=2)
-    axd.set_ylabel(r"$x_2$", fontsize=13, loc="top", rotation=0, labelpad=8)
-    axd.spines["top"].set_visible(False); axd.spines["right"].set_visible(False)
-
+    """Two routes to a linear classifier on the same 2-D points.  Two classes
+    share the tilted covariance Sigma = [[1, .65], [.65, .6]] (correlation .84)
+    and have means -/+(1, .2), equal priors.  (a) The naive generative fit
+    models each class by an axis-aligned Gaussian (the per-feature variances
+    1 and .6, drawn as 1- and 2-sd ellipses) and takes the boundary from Bayes'
+    rule: normal (2, .4/.6), population error 19.2%.  (b) The direct fit of
+    p(y|x): the population-optimal boundary, normal Sigma^-1 (2, .4), error
+    7.2%.  Population values, not fitted ones; the points are a fixed draw."""
+    from matplotlib.patches import Ellipse
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.6, 3.75))
+    Sigma = np.array([[1.0, 0.65], [0.65, 0.6]])
+    mus = (np.array([-1.0, -0.2]), np.array([1.0, 0.2]))
+    rng = np.random.default_rng(3)
+    L = np.linalg.cholesky(Sigma)
+    clouds = [m + rng.standard_normal((60, 2)) @ L.T for m in mus]
+    (x0, x1), (y0, y1) = (-3.7, 3.7), (-2.5, 2.5)
+    dmu = mus[1] - mus[0]
+    normals = (dmu / np.diag(Sigma), np.linalg.solve(Sigma, dmu))
+    titles = ("naive generative fit: error 19%",
+              r"direct fit of $p(y\mid\mathbf{x})$: error 7%")
+    xx = np.array([x0, x1])
+    for ax, nvec, title in zip((axa, axb), normals, titles):
+        # boundary n . x = 0 through the midpoint of the means (the origin)
+        yy = -nvec[0] / nvec[1] * xx
+        side = np.sign(nvec[1])   # +1: class 1 lies above the line
+        top, bot = (ORANGE, BLUE) if side > 0 else (BLUE, ORANGE)
+        ax.fill_between(xx, yy, y1, color=top, alpha=0.08, lw=0)
+        ax.fill_between(xx, y0, yy, color=bot, alpha=0.08, lw=0)
+        for c, col in zip(clouds, (BLUE, ORANGE)):
+            ax.scatter(c[:, 0], c[:, 1], s=13, color=col, alpha=0.55, lw=0)
+        ax.plot(xx, yy, color="black", lw=2.0, zorder=4)
+        ax.set_title(title, fontsize=13)
+        ax.set_xlim(x0, x1); ax.set_ylim(y0, y1); ax.set_aspect("equal")
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_xlabel(r"$x_1$", fontsize=14, loc="right", labelpad=2)
+        ax.set_ylabel(r"$x_2$", fontsize=14, loc="top", rotation=0, labelpad=10)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("left", "bottom"):
+            ax.spines[sp].set_color("black")
+    # (a) only: the axis-aligned Gaussians that the naive fit uses
+    sd = np.sqrt(np.diag(Sigma))
+    for m, col in zip(mus, (BLUE, ORANGE)):
+        for k in (1, 2):
+            axa.add_patch(Ellipse(m, 2 * k * sd[0], 2 * k * sd[1], fill=False,
+                                  color=col, lw=1.8 if k == 1 else 1.2, zorder=3))
+    for ax in (axa, axb):
+        ax.text(-2.9, 1.9, r"$y=0$", color=BLUE, fontsize=14, ha="center",
+                va="center")
+        ax.text(2.9, -1.9, r"$y=1$", color=ORANGE, fontsize=14, ha="center",
+                va="center")
     fl.save(fig, "mdl-prob-naive-genvdisc")
 
 
@@ -1095,42 +1144,53 @@ def fig_naive_genvdisc():
 # =========================================================================== #
 
 def fig_conditional_slice():
-    """Conditioning as slicing.  Left: the joint density p(x,y) with a horizontal
-    slice at y=y0 highlighted.  Right: that slice, renormalized to unit area, is
-    the conditional density p(x|y0).  For an *independent* pair the slice shape
-    would be the same at every y0; here the pair is correlated, so it shifts."""
-    xs = np.linspace(-3.0, 3.4, 220)
-    ys = np.linspace(-3.0, 3.2, 220)
+    """Conditioning as slicing, for a dependent and an independent pair.
+    Left column: a joint density with three horizontal slices at y0 = -1, 0, 1.
+    Right column: each slice renormalized to unit area, the conditional
+    density p(x | y0).  Top: a correlated Gaussian (sx=1, sy=0.9, rho=0.55);
+    the three conditionals have the same width but centres at
+    rho*sx/sy*y0 = -0.61, 0, 0.61, so the conditional depends on y0.  Bottom:
+    the product Gaussian (rho=0); the three conditionals coincide (drawn with
+    decreasing widths so every colour stays visible)."""
+    xs = np.linspace(-3.0, 3.4, 260)
+    ys = np.linspace(-2.8, 2.8, 260)
     X, Y = np.meshgrid(xs, ys)
-    sx, sy, rho = 1.0, 0.9, 0.55                       # correlated -> dependence
-    z = (X ** 2 / sx ** 2 - 2 * rho * X * Y / (sx * sy) + Y ** 2 / sy ** 2)
-    joint = np.exp(-z / (2 * (1 - rho ** 2)))
-    dx, dy = xs[1] - xs[0], ys[1] - ys[0]
-    joint /= joint.sum() * dx * dy
-    y0 = 1.0
-    j0 = int(np.argmin(np.abs(ys - y0)))
-    sl = joint[j0, :]
-    cond = sl / (sl.sum() * dx)                        # renormalize -> p(x|y0)
+    dx = xs[1] - xs[0]
+    sx, sy = 1.0, 0.9
+    y0s, cols, lws = [-1.0, 0.0, 1.0], [BLUE, GREEN, ORANGE], [3.6, 2.6, 1.6]
 
-    fig, (axj, axc) = plt.subplots(1, 2, figsize=(8.6, 3.8))
-    axj.contourf(X, Y, joint, levels=12, cmap="Blues")
-    axj.axhline(y0, color=ORANGE, lw=2.4)
-    axj.text(3.2, y0 + 0.12, r"$y=y_0$", color=ORANGE, ha="right", va="bottom",
-             fontsize=11)
-    axj.set_xlabel(r"$x$", fontsize=13); axj.set_ylabel(r"$y$", fontsize=13)
-
-    axc.plot(xs, cond, color=ORANGE, lw=2.6)
-    axc.fill_between(xs, 0, cond, color=ORANGE, alpha=0.18, lw=0)
-    axc.set_xlabel(r"$x$", fontsize=13)
-    axc.set_ylabel(r"$p(x \mid y_0)$", fontsize=13)
-    axc.set_yticks([])
-    axc.set_ylim(0, None)
-    axc.spines["top"].set_visible(False); axc.spines["right"].set_visible(False)
-    # the conditional density is nonnegative: pin the x-axis flush to y=0
-    axc.spines["bottom"].set_position(("data", 0))
-    # one x-scale for both panels, so the slice lines up with its profile
-    for ax in (axj, axc):
-        ax.set_xlim(xs[0], xs[-1])
+    fig, axes = plt.subplots(2, 2, figsize=(8.6, 7.2))
+    for row, (rho, name) in enumerate([(0.55, "dependent"),
+                                       (0.0, "independent")]):
+        z = X ** 2 / sx ** 2 - 2 * rho * X * Y / (sx * sy) + Y ** 2 / sy ** 2
+        joint = np.exp(-z / (2 * (1 - rho ** 2)))
+        axj, axc = axes[row]
+        axj.contourf(X, Y, joint, levels=10, cmap="Greys", alpha=0.55)
+        for y0, col, lw in zip(y0s, cols, lws):
+            axj.axhline(y0, color=col, lw=2.2)
+            axj.text(3.3, y0 + 0.08, rf"$y_0={y0:g}$", color=col,
+                     ha="right", va="bottom", fontsize=13,
+                     bbox=dict(facecolor="white", edgecolor="none", pad=0.6,
+                               alpha=0.85))
+            j0 = int(np.argmin(np.abs(ys - y0)))
+            sl = joint[j0, :]
+            cond = sl / (sl.sum() * dx)            # renormalize -> p(x|y0)
+            axc.plot(xs, cond, color=col, lw=lw if rho == 0 else 2.4)
+        axj.set_xlabel(r"$x$", fontsize=14)
+        axj.set_ylabel(r"$y$", fontsize=14)
+        axj.set_yticks([-2, 0, 2])
+        axj.text(-0.30, 0.5, name, transform=axj.transAxes, rotation=90,
+                 ha="center", va="center", fontsize=15, color=fl.INK)
+        axc.set_xlabel(r"$x$", fontsize=14)
+        axc.set_ylabel(r"$p(x \mid y_0)$", fontsize=14)
+        axc.set_yticks([])
+        axc.set_ylim(0, 0.55)
+        axc.spines["top"].set_visible(False)
+        axc.spines["right"].set_visible(False)
+        for ax in (axj, axc):
+            ax.set_xlim(xs[0], xs[-1])
+            ax.set_xticks([-2, 0, 2])
+    fig.tight_layout()
     fl.save(fig, "mdl-prob-conditional-slice")
 
 
@@ -1139,27 +1199,55 @@ def fig_conditional_slice():
 # =========================================================================== #
 
 def fig_mle_kl():
-    """Maximum likelihood as KL minimization.  The per-example cross-entropy
-    H(p, q) = H(p) + KL(p || q) splits into a fixed floor H(p) (the empirical data's
-    own entropy) and the excess KL(p || q) that training drives toward zero.  As
-    the model q improves across steps, the KL slice shrinks and the cross-entropy
-    settles onto the floor."""
-    steps = np.arange(5)
-    floor = 1.0
-    kl = 1.6 * np.exp(-0.8 * steps)
-    fig, ax = plt.subplots(figsize=(6.0, 3.9))
-    ax.bar(steps, [floor] * len(steps), color=BLUE, alpha=0.85,
-           label=r"$H(\hat p)$  (fixed floor)")
-    ax.bar(steps, kl, bottom=[floor] * len(steps), color=ORANGE, alpha=0.85,
-           label=r"$D_{\mathrm{KL}}(\hat p \,\Vert\, p_\theta)$  (removed by training)")
-    ax.axhline(floor, color=GRAY, lw=1.0, ls="--")
-    ax.set_xlabel("training step", fontsize=13)
-    ax.set_ylabel(r"cross-entropy  $H(\hat p,\, p_\theta)$", fontsize=13)
-    ax.set_xticks(steps)
-    ax.set_yticks([])
-    ax.legend(loc="upper right", fontsize=11, frameon=False)
+    """The coin's per-flip cross-entropy CE(theta) = -(9/13 log theta + 4/13
+    log(1 - theta)) as a function of the model bias.  It never falls below the
+    entropy H(9/13) = 0.617 nats of the observed frequencies (dashed floor),
+    touches the floor at the MLE 9/13, and its excess over the floor at any
+    other theta is D_KL(p_hat || p_theta): 0.076 nats at theta = 1/2 and
+    0.164 nats at theta = 0.9 (orange double arrows)."""
+    import shutil
+
+    p = 9 / 13
+    th = np.linspace(0.2, 0.98, 781)
+    ce = -(p * np.log(th) + (1 - p) * np.log(1 - th))
+    floor = -(p * np.log(p) + (1 - p) * np.log(1 - p))
+
+    fig, ax = plt.subplots(figsize=(6.2, 3.9))
+    ax.plot(th, ce, color=BLUE, lw=2.4, zorder=4)
+    ax.axhline(floor, color=GRAY, lw=1.2, ls="--", zorder=2)
+    ax.text(0.21, floor - 0.012, r"$H(\hat p) = 0.617$ nats", color="black",
+            fontsize=13, ha="left", va="top")
+    ax.plot([p], [floor], "o", color=BLUE, ms=7, zorder=6)
+    ax.plot([p, p], [0.55, floor], color=GRAY, lw=1.0, ls=":", zorder=1)
+    # the KL excess at two other biases, labelled below the curve on the
+    # side with room (the right label is a bare number to stay inside)
+    for t0, side, fmt in ((0.5, "left", r"$D_{\mathrm{KL}} = %.3f$"),
+                          (0.9, "right", r"$%.3f$")):
+        c0 = -(p * np.log(t0) + (1 - p) * np.log(1 - t0))
+        ax.annotate("", xy=(t0, c0), xytext=(t0, floor),
+                    arrowprops=dict(arrowstyle="<->", color=ORANGE, lw=1.8,
+                                    shrinkA=0, shrinkB=0), zorder=5)
+        dx = -0.012 if side == "left" else 0.012
+        ax.text(t0 + dx, (floor + c0) / 2,
+                fmt % (c0 - floor), color="black",
+                fontsize=13, ha="right" if side == "left" else "left",
+                va="center",
+                bbox=dict(facecolor="white", edgecolor="none", pad=1.0))
+    ax.set_xlim(0.2, 0.98)
+    ax.set_ylim(0.55, 1.25)
+    ax.set_xticks([0.2, 0.5, p, 0.9])
+    ax.set_xticklabels(["0.2", "0.5", r"$9/13$", "0.9"])
+    ax.set_yticks([0.6, 0.8, 1.0, 1.2])
+    ax.set_xlabel(r"model bias $\theta$", fontsize=13)
+    ax.set_ylabel(r"$\mathrm{CE}(\hat p, p_\theta)$  [nats]", fontsize=13)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("black")
+    ax.tick_params(colors="black")
     fl.save(fig, "mdl-prob-mle-kl")
+    # the slides read @fig figures from img/auto
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-prob-mle-kl.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-prob-mle-kl.svg"))
 
 
 def fig_mle_fisher():
@@ -1416,12 +1504,13 @@ def fig_bootstrap():
 # =========================================================================== #
 
 def fig_bayes_importance():
-    """Importance sampling lives or dies by proposal coverage.  Same bimodal
-    target in both panels; stems show 24 seeded draws from the proposal with
-    height equal to the *normalized* weight p/q.  A narrow proposal reaches the
-    right mode only through a couple of draws, which then carry nearly all the
-    weight (tiny effective sample size); a proposal that covers the target
-    spreads the weight evenly."""
+    """Importance sampling depends on proposal coverage.  Same bimodal target
+    in both panels; stems show 24 seeded draws from the proposal with height
+    equal to the *normalized* weight p/q.  The narrow proposal never reaches
+    the right-hand mode: its weights are nearly equal (ESS 23 of 24), yet its
+    estimate is wrong.  The covering proposal samples both modes: its weights
+    are less equal (ESS 17 of 24), yet its estimate is far better.  ESS
+    measures how unequal the weights are, not whether the mass was found."""
     x = np.linspace(-3.2, 4.4, 700)
 
     def target(t):
@@ -1456,7 +1545,9 @@ def fig_bayes_importance():
         ax.set_yticks([])
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-    axa.text(-1.15, 0.62, r"target $p$", color=BLUE, ha="right", fontsize=11)
+    # beside the right-hand mode, the only curve there (the left mode is
+    # crowded by the dashed proposal)
+    axa.text(2.85, 0.20, r"target $p$", color=BLUE, ha="left", fontsize=11)
     # proposal label left of its own dashed flank; the coverage note sits
     # centred over the right-hand mode it talks about, with a short leader
     axa.text(-0.9, 0.47, r"proposal $q$", color=ORANGE, ha="right",
@@ -1466,9 +1557,11 @@ def fig_bayes_importance():
                  ha="center", va="bottom", fontsize=11,
                  arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1,
                                  shrinkA=2, shrinkB=2))
-    axb.text(3.0, 0.33, r"proposal $q$", color=ORANGE, ha="left", fontsize=11)
-    axb.text(1.3, 0.60, "both modes sampled,\nweight spread over draws",
-             color=GREEN, ha="left", va="bottom", fontsize=11)
+    axb.text(-1.95, 0.13, r"proposal $q$", color=ORANGE, ha="right",
+             fontsize=11)
+    # the note sits just above the right-hand stems it describes
+    axb.text(3.2, 0.12, "both modes\nsampled", color=GREEN, ha="left",
+             va="bottom", fontsize=11)
     fl.save(fig, "mdl-prob-bayes-importance")
 
 

@@ -299,67 +299,66 @@ def fig_angle():
 
 
 def fig_projection():
-    """(a) generic projection of v onto w with right-angle residual;
-    (b) the Cauchy-Schwarz equality case (v collinear with w).
+    """(a) the worked projection of v=(1,3) onto w=(2,1): shadow (2,1),
+    residual (-1,2) at a right angle, theta = 45 deg;
+    (b) the Cauchy-Schwarz equality case, v = 1.5 w collinear with w.
 
     Both panels share one coordinate box, so they render at the same size; the
-    caption ("Left ... Right ...") names them, so we draw no per-panel titles.
+    caption ("(a) ... (b) ...") names them, so we draw no per-panel titles.
     """
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 3.7))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 3.9))
 
-    LBL = 16                            # vector letters
+    LBL = 15                            # vector labels
     FML = 14                            # longer formula labels
-    LIM = ((-0.4, 4.1), (-0.5, 2.7))    # identical box for both panels -> equal size
-    XR, YR = (-0.3, 4.0), (-0.4, 2.6)
+    LIM = ((-0.45, 3.9), (-0.35, 3.35))  # identical box for both panels
+    XR, YR = (-0.35, 3.7), (-0.3, 3.25)
 
-    # (a) generic
-    w = np.array([3.2, 0.6])
-    v = np.array([1.6, 2.2])
+    # (a) worked example
+    w = np.array([2.0, 1.0])
+    v = np.array([1.0, 3.0])
     wn = w / np.linalg.norm(w)
-    proj_len = float(v @ wn)
-    proj = proj_len * wn
+    proj = (v @ w) / (w @ w) * w        # = (2, 1)
     axis_cross(axa, XR, YR)
+    # the shadow coincides with w: a thick green band under the orange arrow
+    axa.plot([0, proj[0]], [0, proj[1]], color=GREEN, lw=7,
+             solid_capstyle="butt", zorder=2)
     arrow(axa, (0, 0), w, color=ORANGE, lw=2.2)
     arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
-    # projection as a thick segment along w
-    axa.plot([0, proj[0]], [0, proj[1]], color=GREEN, lw=5, solid_capstyle="round",
-             zorder=2)
     # residual r = v - proj (dashed) meeting w at a right angle
-    axa.plot([proj[0], v[0]], [proj[1], v[1]], "--", color=GRAY, lw=1.6)
-    right_angle(axa, proj, -wn, (v - proj), size=0.22, color=GRAY)
-    vlabel(axa, (w[0] + 0.05, w[1] - 0.22), r"$\mathbf{w}$", color=ORANGE, ha="left",
+    axa.plot([proj[0], v[0]], [proj[1], v[1]], "--", color=INK, lw=1.5)
+    right_angle(axa, proj, -wn, (v - proj), size=0.27, color=INK)
+    vlabel(axa, (w[0] + 0.12, w[1] + 0.02), r"$\mathbf{w}=(2,1)$",
+           color=ORANGE, ha="left", fontsize=LBL)
+    vlabel(axa, (w[0] + 0.12, w[1] - 0.40),
+           r"$=\mathrm{proj}_{\mathbf{w}}\mathbf{v}$", color=GREEN, ha="left",
+           fontsize=FML)
+    vlabel(axa, (v[0] + 0.10, v[1] + 0.10), r"$\mathbf{v}=(1,3)$",
+           color=BLUE, ha="left", va="bottom", fontsize=LBL)
+    # residual label: outward from the residual's midpoint, along +w
+    rm = 0.5 * (proj + v) + 0.22 * wn
+    vlabel(axa, rm, r"$\mathbf{r}=(-1,2)$", color=INK, ha="left",
            fontsize=LBL)
-    vlabel(axa, (v[0] - 0.12, v[1] + 0.24), r"$\mathbf{v}$", color=BLUE, fontsize=LBL)
-    # inside the right triangle, above the green segment and left of the
-    # right-angle mark (the wedge below w is too thin for the label)
-    vlabel(axa, (1.15, 0.74),
-           r"$\|\mathbf{v}\|\cos\theta$", color=GREEN, ha="center", fontsize=FML)
-    vlabel(axa, ((proj[0] + v[0]) / 2 + 0.24, (proj[1] + v[1]) / 2),
-           r"$\mathbf{r}$", color=INK, ha="left", fontsize=LBL)
     # the angle theta between w and v, at the origin
     aw = np.degrees(np.arctan2(w[1], w[0]))
     av = np.degrees(np.arctan2(v[1], v[0]))
-    axa.add_patch(Arc((0, 0), 0.9, 0.9, angle=0, theta1=aw, theta2=av,
+    axa.add_patch(Arc((0, 0), 1.1, 1.1, angle=0, theta1=aw, theta2=av,
                       color=INK, lw=1.2, zorder=5))
     am = np.radians(0.5 * (aw + av))
-    vlabel(axa, (0.68 * np.cos(am), 0.68 * np.sin(am)), r"$\theta$",
+    vlabel(axa, (0.78 * np.cos(am), 0.78 * np.sin(am)), r"$\theta$",
            color=INK, fontsize=FML)
     clean_axes(axa, lim=LIM, hide=True)
 
-    # (b) equality: v collinear with w, residual vanishes
-    w2 = np.array([3.4, 1.3])
-    v2 = 0.62 * w2  # collinear
+    # (b) equality: v = 1.5 w collinear with w, residual vanishes
+    v2 = 1.5 * w
+    nrm = np.array([-wn[1], wn[0]])     # unit normal to the common line
     axis_cross(axb, XR, YR)
-    arrow(axb, (0, 0), w2, color=ORANGE, lw=2.2)
-    axb.plot([0, 0.86 * v2[0]], [0, 0.86 * v2[1]], color=GREEN, lw=5, solid_capstyle="round",
-             zorder=2)
     arrow(axb, (0, 0), v2, color=BLUE, lw=2.4)
-    vlabel(axb, (w2[0] + 0.05, w2[1] + 0.02), r"$\mathbf{w}$", color=ORANGE,
-           ha="left", fontsize=LBL)
-    vlabel(axb, (v2[0] * 0.5 - 0.12, v2[1] * 0.5 + 0.34), r"$\mathbf{v}$",
+    arrow(axb, (0, 0), w, color=ORANGE, lw=2.4)
+    vlabel(axb, 0.5 * w - 0.30 * nrm, r"$\mathbf{w}$", color=ORANGE,
+           fontsize=LBL)
+    vlabel(axb, 0.5 * (w + v2) + 0.55 * nrm - 0.25 * wn, r"$\mathbf{v}=1.5\,\mathbf{w}$",
            color=BLUE, fontsize=LBL)
-    # equality relation, sat in the open upper-left area (lower than before)
-    axb.text(1.6, 1.5,
+    axb.text(1.55, 2.75,
              r"$|\mathbf{v}\cdot\mathbf{w}| = \|\mathbf{v}\|\,\|\mathbf{w}\|$",
              ha="center", va="center", fontsize=FML)
     clean_axes(axb, lim=LIM, hide=True)
@@ -368,10 +367,11 @@ def fig_projection():
 
 
 def fig_hyperplane():
-    """The line w.x = b in 2-D: normal w, one level set, one shaded half-space,
-    and the signed distance b/||w||.  Beside it a 3-D coordinate frame (three
-    axes meeting at the origin) with the plane analog."""
-    fig = plt.figure(figsize=(9.0, 3.7))
+    """Left: the line w.x + b = 0 for w=(2,1), b=-1 (2x+y=1), its normal w,
+    the shaded half-plane w.x+b>0, the distance |b|/||w|| from the origin,
+    and the point (1,1) at signed distance 2/sqrt(5) with its foot (0.2,0.6).
+    Right: the plane analog inside matplotlib's 3-D box frame."""
+    fig = plt.figure(figsize=(9.0, 3.8))
     axa = fig.add_subplot(1, 2, 1)
     axb = fig.add_subplot(1, 2, 2, projection="3d")
 
@@ -379,50 +379,52 @@ def fig_hyperplane():
     FML = 14                                   # formula labels
 
     # --- 2-D panel ---
-    w = np.array([1.0, 1.6])
-    wn = w / np.linalg.norm(w)
+    w = np.array([2.0, 1.0])
+    b = -1.0
     nrm = np.linalg.norm(w)
-    b = 2.0
-    L = 2.6
-    perp = np.array([-wn[1], wn[0]])           # along the level set
-    lim = ((-2.0, 3.4), (-1.2, 2.9))           # trimmed landscape box
+    wn = w / nrm
+    perp = np.array([-wn[1], wn[0]])           # along the line
+    lim = ((-1.15, 2.75), (-0.75, 2.0))
 
-    cp = (b / nrm) * wn                         # foot of perpendicular from origin
-    # the line and the shaded half-plane run past the window and are clipped
-    # by it, so the half-space reads as unbounded (not a ragged polygon)
-    seg = np.array([cp - 3 * L * perp, cp + 3 * L * perp])
-
-    # shade the single half-space w.x > b (on the +w side of the line)
-    far = wn * (3 * L)
+    foot = (-b / nrm) * wn                      # (0.4, 0.2)
+    L = 6.0
+    seg = np.array([foot - L * perp, foot + L * perp])
+    # shade the half-space w.x + b > 0 (clipped by the window)
+    far = wn * L
     poly = np.array([seg[0], seg[1], seg[1] + far, seg[0] + far])
     axa.add_patch(Polygon(poly, closed=True, color=BLUE, alpha=0.10, lw=0))
-
-    # the single level set w.x = b
     axa.plot(seg[:, 0], seg[:, 1], "--", color=BLUE, lw=1.8)
-    text_dir = perp if perp[0] >= 0 else -perp  # keep the label upright
-    line_rot = np.degrees(np.arctan2(text_dir[1], text_dir[0]))
-    # upper-left stretch of the line, on its unshaded side, clear of both
-    # coordinate axes
-    lab_pos = cp - 0.66 * L * text_dir - 0.30 * wn
-    axa.text(lab_pos[0], lab_pos[1], r"$\mathbf{w}\!\cdot\!\mathbf{x}=b$",
-             color=BLUE, fontsize=FML, ha="center", va="center",
-             rotation=line_rot, rotation_mode="anchor")
+    # line label, upright, on the unshaded side of the upper-left stretch
+    text_dir = perp if perp[0] >= 0 else -perp
+    rot = np.degrees(np.arctan2(text_dir[1], text_dir[0]))
+    lp = foot - 1.45 * text_dir - 0.56 * wn
+    axa.text(lp[0], lp[1], r"$\mathbf{w}\cdot\mathbf{x}+b=0$", color=BLUE,
+             fontsize=FML, ha="center", va="center", rotation=rot,
+             rotation_mode="anchor")
 
-    axis_cross(axa, (-1.9, 3.3), (-1.1, 2.8))
-    arrow(axa, (0, 0), w, color=ORANGE, lw=2.4)
-    vlabel(axa, (w[0] + 0.20, w[1] + 0.12), r"$\mathbf{w}$", color=ORANGE,
+    axis_cross(axa, (-1.1, 2.7), (-0.7, 1.95))
+    # distance from the origin to the line, along w (under the w arrow)
+    axa.plot([0, foot[0]], [0, foot[1]], color=GREEN, lw=6,
+             solid_capstyle="butt", zorder=3)
+    arrow(axa, (0, 0), w, color=ORANGE, lw=2.2)
+    vlabel(axa, (w[0] + 0.08, w[1] - 0.16), r"$\mathbf{w}$", color=ORANGE,
            ha="left", fontsize=LBL)
+    axa.text(-0.08, 0.07, r"$|b|/\|\mathbf{w}\|$", color=GREEN,
+             fontsize=FML, ha="right", va="bottom")
 
-    # signed distance b/||w|| from origin to the line
-    axa.plot([0, cp[0]], [0, cp[1]], color=GREEN, lw=3, solid_capstyle="round",
-             zorder=4)
-    # left of the y-axis: right of the segment the wedge under the line is
-    # too thin for the label
-    dl = 0.5 * cp + np.array([-0.38, 0.0])
-    axa.text(dl[0], dl[1], r"$b/\|\mathbf{w}\|$", color=GREEN, fontsize=FML,
-             ha="right", va="center")
-    axa.text(1.95, 2.25, r"$\mathbf{w}\cdot\mathbf{x}>b$", color=BLUE,
-             fontsize=FML, ha="center")
+    # the point (1, 1) and its perpendicular to the line
+    x = np.array([1.0, 1.0])
+    score = w @ x + b
+    xc = x - score / (w @ w) * w                # (0.2, 0.6)
+    axa.plot([xc[0], x[0]], [xc[1], x[1]], ":", color=INK, lw=1.6, zorder=4)
+    right_angle(axa, xc, perp, wn, size=0.11, color=INK)
+    axa.plot([x[0]], [x[1]], "o", color=INK, ms=5, zorder=6)
+    vlabel(axa, (x[0] + 0.08, x[1] + 0.12), r"$(1,1)$", color=INK,
+           ha="left", fontsize=FML)
+    mid = 0.5 * (x + xc) + 0.32 * perp
+    vlabel(axa, mid, r"$2/\sqrt{5}$", color=INK, fontsize=FML)
+    axa.text(1.95, 1.55, r"$\mathbf{w}\cdot\mathbf{x}+b>0$", color=BLUE,
+             fontsize=FML, ha="center", va="center")
     clean_axes(axa, lim=lim, hide=True)
 
     # --- 3-D panel: plane w.x = b inside the default 3-D box frame ---
@@ -461,184 +463,202 @@ def fig_hyperplane():
 
 
 def fig_linear_map():
-    """A unit-square grid and its image under the chapter's running matrix
-    A = [[1, 2], [-1, 3]].  Both windows are square (so the panels render at
-    the same height), but the image grid does not fit at the input's scale:
-    the right panel is drawn at exactly one third of the left panel's scale,
-    which the caption states.  The shaded unit square maps to the shaded
-    parallelogram (0,0), (1,-1), (3,2), (2,3)."""
+    """The chapter's running matrix A = [[1, 2], [-1, 3]] acting on the plane.
+    (a) the input grid x in {0,1,2}, y in {-1,...,2}, the shaded unit square,
+    e1, e2 and the running input v = (2, -1), a grid point; (b) the image grid
+    under A, the shaded parallelogram (0,0), (1,-1), (3,2), (2,3), the columns
+    A e1 = (1,-1), A e2 = (2,3) and A v = (0,-5).  Panel (b) is drawn at one
+    third of (a)'s scale (window spans 3.2 x 4.2 against 9.6 x 12.6), which
+    the caption states; both panels share the same aspect, hence the same
+    height.  All images are computed by applying A."""
     A = np.array([[1.0, 2.0], [-1.0, 3.0]])
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.6, 4.4))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 5.4))
+    fig.subplots_adjust(wspace=0.08)
 
     LBL = 16
-    n = 3
-    ts = np.linspace(0, n, 200)
-    grid = list(range(n + 1))
-    GRIDC = GRAY
+    xs, ys = (0, 2), (-1, 2)
+    ts_x = np.linspace(*xs, 50)
+    ts_y = np.linspace(*ys, 50)
 
-    def draw_grid(ax, M, lw=0.8):
-        for k in grid:  # images of the lines x=k
-            pts = M @ np.vstack([np.full_like(ts, k), ts])
-            ax.plot(pts[0], pts[1], color=GRIDC, lw=lw)
-        for k in grid:  # images of the lines y=k
-            pts = M @ np.vstack([ts, np.full_like(ts, k)])
-            ax.plot(pts[0], pts[1], color=GRIDC, lw=lw)
+    def draw_grid(ax, M):
+        for k in range(xs[0], xs[1] + 1):        # images of the lines x = k
+            pts = M @ np.vstack([np.full_like(ts_y, k), ts_y])
+            ax.plot(pts[0], pts[1], color=T.FAINT, lw=1.0, zorder=1)
+        for k in range(ys[0], ys[1] + 1):        # images of the lines y = k
+            pts = M @ np.vstack([ts_x, np.full_like(ts_x, k)])
+            ax.plot(pts[0], pts[1], color=T.FAINT, lw=1.0, zorder=1)
 
     unit = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    v = np.array([2.0, -1.0])
+    lima = ((-0.6, 2.6), (-1.6, 2.6))
+    limb = ((-2.6, 7.0), (-5.9, 6.7))
 
-    # (a) frames the unit grid; (b) is zoomed out by exactly 3x (window span
-    # 13.8 = 3 * 4.6) to contain the whole image grid -- its corners map to
-    # (0,0),(3,-3),(6,9),(9,6), so the content spans x in [0,9], y in [-3,9].
-    # Both windows are square, so the panels still render at the same height.
-    lima = ((-1.0, 3.6), (-0.9, 3.7))
-    limb = ((-2.4, 11.4), (-3.9, 9.9))
-
-    # (a) original grid
+    # (a) the input plane
+    axis_cross(axa, (lima[0][0], lima[0][1]), (lima[1][0], lima[1][1]),
+               color=INK)
     draw_grid(axa, np.eye(2))
-    axa.add_patch(Polygon(unit, closed=True, facecolor=GREEN, alpha=0.30, lw=0))
+    axa.add_patch(Polygon(unit, closed=True, facecolor=GREEN, alpha=0.28,
+                          lw=0, zorder=0))
     arrow(axa, (0, 0), (1, 0), color=BLUE, lw=2.6)
     arrow(axa, (0, 0), (0, 1), color=ORANGE, lw=2.6)
-    vlabel(axa, (1.05, -0.42), r"$\mathbf{e}_1$", color=BLUE, fontsize=LBL)
-    vlabel(axa, (-0.48, 1.05), r"$\mathbf{e}_2$", color=ORANGE, fontsize=LBL)
+    arrow(axa, (0, 0), v, color=INK, lw=2.2)
+    axa.plot(0, 0, "o", color=INK, ms=5, zorder=6)
+    vlabel(axa, (0.55, 0.24), r"$\mathbf{e}_1$", color=BLUE, fontsize=LBL)
+    vlabel(axa, (-0.30, 0.72), r"$\mathbf{e}_2$", color=ORANGE, fontsize=LBL)
+    vlabel(axa, (v[0] + 0.20, v[1] - 0.24), r"$\mathbf{v}$", color=INK,
+           fontsize=LBL)
     clean_axes(axa, lim=lima, hide=True)
 
-    # (b) image under A -- at one third of (a)'s scale
+    # (b) the image under A, at one third of (a)'s scale
+    axis_cross(axb, (limb[0][0], limb[0][1]), (limb[1][0], limb[1][1]),
+               color=INK)
     draw_grid(axb, A)
     axb.add_patch(Polygon((A @ unit.T).T, closed=True, facecolor=GREEN,
-                          alpha=0.30, lw=0))
-    a1 = A @ np.array([1, 0])  # (1, -1)
-    a2 = A @ np.array([0, 1])  # (2, 3)
+                          alpha=0.28, lw=0, zorder=0))
+    a1, a2, Av = A @ np.array([1.0, 0.0]), A @ np.array([0.0, 1.0]), A @ v
     arrow(axb, (0, 0), a1, color=BLUE, lw=2.6)
     arrow(axb, (0, 0), a2, color=ORANGE, lw=2.6)
-    # a1 is the image of e1 -- put its label OUTSIDE the grid, below the
-    # bottom edge (the image of the x-axis, the line y = -x here)
-    vlabel(axb, (a1[0] - 0.35, a1[1] - 0.25), r"$\mathbf{A}\mathbf{e}_1$",
-           color=BLUE, ha="right", va="top", fontsize=LBL)
-    vlabel(axb, (a2[0] - 0.35, a2[1] + 0.35), r"$\mathbf{A}\mathbf{e}_2$",
-           color=ORANGE, ha="right", fontsize=LBL)
+    arrow(axb, (0, 0), Av, color=INK, lw=2.2)
+    axb.plot(0, 0, "o", color=INK, ms=5, zorder=6)
+    # inside the image of the cell [1, 2] x [-1, 0], clear of grid lines
+    vlabel(axb, (1.0, -2.25), r"$\mathbf{A}\mathbf{e}_1$", color=BLUE,
+           fontsize=LBL)
+    vlabel(axb, (a2[0] - 0.55, a2[1] + 0.95), r"$\mathbf{A}\mathbf{e}_2$",
+           color=ORANGE, fontsize=LBL, ha="right",
+           bbox=dict(fc="white", ec="none", pad=0.5))
+    vlabel(axb, (Av[0] + 0.45, Av[1] + 0.1), r"$\mathbf{A}\mathbf{v}$",
+           color=INK, fontsize=LBL, ha="left")
     clean_axes(axb, lim=limb, hide=True)
 
     save(fig, "mdl-la-linear-map")
 
 
 def fig_determinant():
-    """Three panels: (a) unit square -> parallelogram, area = |det A|;
-    (b) negative determinant (orientation flip); (c) degenerate (det 0).
-    The caption names the three cases, so the panels carry no titles."""
-    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.6))
-    fig.subplots_adjust(wspace=0.05)
-    unit = np.array([[0, 0], [1, 0], [1, 1], [0, 1]]).T  # columns: corners
+    """The determinant as signed area for the section's three matrices:
+    (a) A = [[1, 2], [-1, 3]], det 5, counter-clockwise; (b) A with its
+    columns swapped, [[2, 1], [3, -1]], det -5: the same parallelogram with
+    the orientation reversed; (c) B = [[2, 1], [4, 2]], det 0: the unit
+    square collapses to the segment from 0 to (3, 6).  Panel (c) is drawn at
+    half the scale of (a) and (b) (window spans 8.8 x 10.4 against
+    4.4 x 5.2), stated in the caption.  The panel texts are functional (the
+    values are not in the caption)."""
+    fig, axes = plt.subplots(1, 3, figsize=(10.2, 4.3))
+    fig.subplots_adjust(wspace=0.06)
+    unit = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], float).T
+    lim_ab = ((-0.7, 3.7), (-1.5, 3.7))
+    lim_c = ((-1.4, 7.4), (-3.0, 7.4))
 
-    def show_para(ax, A, tag, degenerate=False):
-        det = np.linalg.det(A)
-        img = A @ unit
-        # original unit square (dashed reference)
+    def show(ax, M, tag, lim, degenerate=False):
+        det = float(np.round(np.linalg.det(M), 9))
+        img = M @ unit
+        axis_cross(ax, lim[0], lim[1], color=INK)
         ax.add_patch(Polygon(unit.T, closed=True, fill=False, edgecolor=INK,
-                             lw=1.0, ls="--"))
+                             lw=1.0, ls="--", zorder=2))
         col = GREEN if det > 0 else ORANGE
+        c1, c2 = M[:, 0], M[:, 1]
         if degenerate:
-            # collapses to a segment: a grey halo UNDER the two column
-            # arrows, so both arrows stay visible on top of it
-            ax.plot(img[0], img[1], color=GRAY, lw=7, alpha=0.40,
+            ax.plot([0, 3], [0, 6], color=GRAY, lw=8, alpha=0.40,
                     solid_capstyle="round", zorder=1)
         else:
-            ax.add_patch(Polygon(img.T, closed=True, facecolor=col, alpha=0.28,
-                                 edgecolor=col, lw=2))
-        c1 = A @ np.array([1, 0])
-        c2 = A @ np.array([0, 1])
-        arrow(ax, (0, 0), c1, color=BLUE, lw=2.2)
-        arrow(ax, (0, 0), c2, color=ORANGE, lw=2.2)
-        if not degenerate:
-            # a curved arrow column-1 -> column-2 shows the induced orientation:
-            # counter-clockwise when det > 0, clockwise (the flip) when det < 0
-            rad = 0.4 if det > 0 else -0.4
-            ax.add_patch(FancyArrowPatch(0.46 * c1, 0.46 * c2,
+            ax.add_patch(Polygon(img.T, closed=True, facecolor=col,
+                                 alpha=0.25, edgecolor=col, lw=2, zorder=1))
+            rad = 0.45 if det > 0 else -0.45
+            ax.add_patch(FancyArrowPatch(0.42 * c1, 0.42 * c2,
                          connectionstyle=f"arc3,rad={rad}", arrowstyle="-|>",
-                         mutation_scale=13, color=col, lw=1.6, zorder=6))
-        if abs(det) < 1e-9:      # exact-zero determinant (degenerate case)
-            det = 0.0
-        # the SIGNED area: the sign is the point of panel (b)
-        ax.text(0.5, 0.02,
-                rf"({tag})  $\det\mathbf{{A}}={det:.2g}$",
-                transform=ax.transAxes, ha="center", va="top", fontsize=15,
-                color=INK)
-        clean_axes(ax, lim=((-0.42, 2.25), (-0.35, 2.15)), hide=True)
+                         mutation_scale=14, color=col, lw=1.8, zorder=6))
+        # longer column first, so the shorter one is drawn on top
+        order = [(c1, BLUE), (c2, ORANGE)]
+        order.sort(key=lambda t: -np.linalg.norm(t[0]))
+        for c, cc in order:
+            arrow(ax, (0, 0), c, color=cc, lw=2.4)
+        ax.plot(0, 0, "o", color=INK, ms=4.5, zorder=7)
+        ax.text(0.98, 0.03, tag, transform=ax.transAxes, ha="right",
+                va="bottom",
+                fontsize=15, color=INK)
+        clean_axes(ax, lim=lim, hide=True)
 
-    show_para(axes[0], np.array([[1.6, 0.6], [0.3, 1.4]]), "a")
-    show_para(axes[1], np.array([[0.4, 1.5], [1.4, 0.5]]), "b")
-    show_para(axes[2], np.array([[0.9, 0.6], [1.2, 0.8]]), "c", degenerate=True)
+    show(axes[0], np.array([[1.0, 2.0], [-1.0, 3.0]]),
+         r"(a) $\det\mathbf{A}=5$", lim_ab)
+    show(axes[1], np.array([[2.0, 1.0], [3.0, -1.0]]),
+         r"(b) $\det=-5$", lim_ab)
+    show(axes[2], np.array([[2.0, 1.0], [4.0, 2.0]]),
+         r"(c) $\det\mathbf{B}=0$", lim_c, degenerate=True)
     save(fig, "mdl-la-determinant")
 
 
 def fig_null_collapse():
-    """(a) the input plane with a light grid, the null-space direction of
-    B = [[2,-1],[4,-2]] dashed, and three marked points (one on the null line);
-    (b) the image: the whole grid lands on the column-space line y = 2x, the
-    marked points land at their exact images, and the null-line point lands at
-    the origin.  All images computed by applying B."""
-    B = np.array([[2.0, -1.0], [4.0, -2.0]])
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.8, 4.4))
-
-    # sample inputs: x1, x2 generic; x3 on the null line span{(1, 2)}
-    pts = [np.array([1.0, 0.5]), np.array([-0.5, 1.0]), np.array([0.5, 1.0])]
-    marks = ["o", "s", "^"]
-    cols = [BLUE, ORANGE, GREEN]
-    labs_a = [r"$\mathbf{x}_1$", r"$\mathbf{x}_2$", r"$\mathbf{x}_3$"]
-    labs_b = [r"$\mathbf{B}\mathbf{x}_1$", r"$\mathbf{B}\mathbf{x}_2$",
-              r"$\mathbf{B}\mathbf{x}_3=\mathbf{0}$"]
-
-    LBL = 15
-    ANN = 14
-    rot = np.degrees(np.arctan2(2.0, 1.0))  # slope of the null / column line
+    """B = [[2, 1], [4, 2]] collapsing the plane.  (a) the input plane: light
+    grid, black axes, the null-space line span{(1, -2)} dashed, the row
+    direction (2, 1) as a short grey arrow with a right-angle mark against the
+    null line, and the marked inputs x1 = (1, 1), x2 = (0, 3) (same image) and
+    x3 = (1, -2) (on the null line).  (b) the image plane: the column-space
+    line y = 2x as a grey halo, the columns b1 = (2, 4) and b2 = (1, 2), the
+    shared image (3, 6) and B x3 = 0 at the origin.  Both windows span 5 x 8,
+    so the two panels share one scale.  All images computed by applying B."""
+    B = np.array([[2.0, 1.0], [4.0, 2.0]])
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.0, 6.4))
+    fig.subplots_adjust(wspace=0.10)
+    LBL, ANN = 15, 14
+    lima = ((-2.5, 2.5), (-3.0, 5.0))
+    limb = ((-1.0, 4.0), (-1.0, 7.0))
+    x1, x2, x3 = np.array([1.0, 1.0]), np.array([0.0, 3.0]), np.array([1.0, -2.0])
 
     # --- (a) input plane ---
-    n = 2
-    for k in range(-n, n + 1):
-        axa.plot([k, k], [-n, n], color=LIGHT, lw=0.9)
-        axa.plot([-n, n], [k, k], color=LIGHT, lw=0.9)
-    axis_cross(axa, (-2.3, 2.3), (-2.3, 2.3))
-    # null-space line span{(1, 2)} (dashed): inputs sent to the origin
-    axa.plot([-1.15, 1.15], [-2.3, 2.3], "--", color=INK, lw=1.6)
-    # at the line's upper end, above the grid, so no grid line runs through it
-    axa.text(1.30, 2.20, r"null space", color=INK,
-             fontsize=ANN, ha="left", va="center")
-    offs_a = [(0.30, -0.24), (-0.36, 0.22), (0.42, 0.04)]
-    for p, m, c, lab, off in zip(pts, marks, cols, labs_a, offs_a):
+    for k in range(-2, 3):
+        axa.plot([k, k], [-3, 4.6], color=LIGHT, lw=0.9, zorder=0)
+    for k in range(-3, 5):
+        axa.plot([-2.3, 2.3], [k, k], color=LIGHT, lw=0.9, zorder=0)
+    axis_cross(axa, lima[0], lima[1], color=INK)
+    t = np.array([-1.45, 1.45])
+    axa.plot(t, -2 * t, "--", color=INK, lw=1.6, zorder=2)
+    axa.text(-2.40, 3.45, "null space", color=INK, fontsize=ANN, ha="left",
+             va="center", bbox=dict(fc="white", ec="none", pad=1.0))
+    # a row of B, (2, 1), is perpendicular to the null line
+    r = np.array([2.0, 1.0]) / np.sqrt(5.0) * 1.25
+    arrow(axa, (0, 0), r, color=GRAY, lw=1.8, mut=12)
+    right_angle(axa, (0, 0), r, np.array([-1.0, 2.0]), size=0.28,
+                color=GRAY, lw=1.2)
+    axa.text(r[0] + 0.12, r[1] - 0.05, "row", color=GRAY, fontsize=ANN,
+             ha="left", va="center", bbox=dict(fc="white", ec="none", pad=0.5))
+    for p, m, c, lab, off in [
+            (x1, "o", BLUE, r"$\mathbf{x}_1$", (0.38, 0.18)),
+            (x2, "s", ORANGE, r"$\mathbf{x}_2$", (0.42, 0.0)),
+            (x3, "^", GREEN, r"$\mathbf{x}_3$", (0.42, 0.0))]:
         axa.plot(*p, m, color=c, ms=9, zorder=5)
         axa.text(p[0] + off[0], p[1] + off[1], lab, color=c, fontsize=LBL,
-                 ha="center", va="center")
-    clean_axes(axa, lim=((-2.3, 2.3), (-2.3, 2.3)), hide=True)
+                 ha="center", va="center",
+                 bbox=dict(fc="white", ec="none", pad=0.5), zorder=6)
+    axa.plot(0, 0, "o", color=INK, ms=4.5, zorder=7)
+    clean_axes(axa, lim=lima, hide=True)
 
     # --- (b) image plane: everything lands on the column space y = 2x ---
-    axis_cross(axb, (-4.8, 4.8), (-4.8, 4.8))
-    # column space = span of the columns = the line y = 2x
-    axb.plot([-2.3, 2.3], [-4.6, 4.6], color=GRAY, lw=5, alpha=0.5,
+    axis_cross(axb, limb[0], limb[1], color=INK)
+    axb.plot([-0.45, 3.35], [-0.9, 6.7], color=GRAY, lw=7, alpha=0.40,
              solid_capstyle="round", zorder=1)
-    # parallel to the line, on its upper-left side between the line and the
-    # y-axis, where the wedge is wide enough to clear both
-    tc, off = 1.50, 0.62
-    nrm = np.array([-2.0, 1.0]) / np.sqrt(5.0)
-    cx, cy = np.array([tc, 2 * tc]) + off * nrm
-    axb.text(cx, cy, r"column space", color=INK,
-             fontsize=ANN, ha="center", va="center", rotation=rot,
-             rotation_mode="anchor")
-    # the two columns of B, both along the line
-    b1 = B @ np.array([1.0, 0.0])   # (2, 4)
-    b2 = B @ np.array([0.0, 1.0])   # (-1, -2)
+    rot = np.degrees(np.arctan2(2.0, 1.0))
+    nrm = np.array([2.0, -1.0]) / np.sqrt(5.0)
+    cx, cy = np.array([2.35, 4.7]) + 0.42 * nrm
+    axb.text(cx, cy, "column space", color=INK, fontsize=ANN, ha="center",
+             va="center", rotation=rot, rotation_mode="anchor")
+    b1, b2 = B[:, 0], B[:, 1]
     arrow(axb, (0, 0), b1, color=BLUE, lw=2.4)
-    arrow(axb, (0, 0), b2, color=ORANGE, lw=2.4)
-    vlabel(axb, (b1[0] + 0.75, b1[1] + 0.05), r"$\mathbf{b}_1$", color=BLUE,
+    arrow(axb, (0, 0), b2, color=ORANGE, lw=2.6)
+    vlabel(axb, (b1[0] - 0.42, b1[1] + 0.05), r"$\mathbf{b}_1$", color=BLUE,
            fontsize=LBL)
-    # b2 and Bx2 labels share the same up-left offset from their markers
-    vlabel(axb, (b2[0] - 0.85, b2[1] + 0.45), r"$\mathbf{b}_2$", color=ORANGE,
-           fontsize=LBL)
-    offs_b = [(1.15, -0.25), (-0.85, 0.45), (1.7, -0.55)]
-    for p, m, c, lab, off in zip(pts, marks, cols, labs_b, offs_b):
-        q = B @ p
-        axb.plot(*q, m, color=c, ms=9, zorder=5)
-        axb.text(q[0] + off[0], q[1] + off[1], lab, color=c, fontsize=LBL,
-                 ha="center", va="center")
-    clean_axes(axb, lim=((-4.8, 4.8), (-4.8, 4.8)), hide=True)
+    vlabel(axb, (b2[0] + 0.42, b2[1] - 0.25), r"$\mathbf{b}_2$",
+           color=ORANGE, fontsize=LBL)
+    q = B @ x1
+    axb.plot(*q, "o", color=BLUE, ms=11, zorder=5)
+    axb.plot(*q, "s", color=ORANGE, ms=5.5, zorder=6)
+    axb.text(q[0] - 0.25, q[1] + 0.05,
+             r"$\mathbf{B}\mathbf{x}_1=\mathbf{B}\mathbf{x}_2$", color=INK,
+             fontsize=LBL, ha="right", va="center",
+             bbox=dict(fc="white", ec="none", pad=0.5))
+    axb.plot(0, 0, "^", color=GREEN, ms=9, zorder=5)
+    axb.text(0.30, -0.55, r"$\mathbf{B}\mathbf{x}_3=\mathbf{0}$",
+             color=GREEN, fontsize=LBL, ha="left", va="center",
+             bbox=dict(fc="white", ec="none", pad=0.5))
+    clean_axes(axb, lim=limb, hide=True)
 
     save(fig, "mdl-la-null-collapse")
 
@@ -694,59 +714,56 @@ def fig_cosine_highd():
 # =========================================================================== #
 
 def fig_eig_ellipse():
-    """Unit circle -> ellipse under (a) diag(2, -1) and (b) [[2,1],[1,2]].
-    Eigenvectors drawn as the ellipse axes, scaled by eigenvalues, labelled."""
+    """Unit circle -> ellipse under (left) the symmetric S = [[2,1],[1,2]] and
+    (right) the upper-triangular T = [[1,1],[0,2]].  Green: unit eigenvectors;
+    red: their images lambda v.  For S the eigenvectors are the ellipse axes;
+    for T they are not (the ellipse axes are drawn thin and grey)."""
     fig, axes = plt.subplots(1, 2, figsize=(8.6, 4.2))
     t = np.linspace(0, 2 * np.pi, 400)
     circle = np.vstack([np.cos(t), np.sin(t)])
     LBL = 15
+    m = 2.75
 
-    # the caption names the two matrices, so the panels carry no titles
-    specs = [np.array([[2.0, 0.0], [0.0, -1.0]]),
-             np.array([[2.0, 1.0], [1.0, 2.0]])]
-    for ax, A in zip(axes, specs):
-        ellipse = A @ circle
-        w, V = np.linalg.eigh(A)  # symmetric: real eigenpairs, V orthonormal cols
-        ax.plot(circle[0], circle[1], "--", color=INK, lw=1.0, alpha=0.5)
-        ax.plot(ellipse[0], ellipse[1], color=BLUE, lw=2.4)
-        order = np.argsort(-np.abs(w))
-        labels = [r"$\lambda_1$", r"$\lambda_2$"]
-        for rank, idx in enumerate(order):
-            vec = V[:, idx]
-            lam = w[idx]
-            tip = lam * vec  # eigenvector scaled by eigenvalue (signed)
-            # as the text reads it: the image A v = lambda v in red, the unit
-            # eigenvector v in green on top (for lambda = 1 the two coincide)
-            arrow(ax, (0, 0), tip, color=T.RED.base, lw=2.6)
-            arrow(ax, (0, 0), vec, color=GREEN, lw=2.4)
-            lab = labels[rank]
-            sign = "" if lam >= 0 else " (flip)"
-            # offset the label beyond the tip plus a perpendicular nudge so it
-            # never sits under the arrowhead for near-axis-aligned eigenvectors
-            d = tip / np.linalg.norm(tip)
-            perp = np.array([-d[1], d[0]])
-            # the eigenvectors ARE the ellipse axes, so the outward normal at a
-            # tip is radial.  For a near-horizontal/vertical axis a radial label
-            # would sit under the arrowhead, so drop it above/beside where the
-            # ellipse has already narrowed; diagonals get pushed straight out.
-            if abs(d[1]) < 0.35:            # ~horizontal axis -> label above tip
-                lpos = tip + np.array([0.18 * np.sign(d[0]), 1.02])
-                ha = "center"
-            elif abs(d[0]) < 0.35:          # ~vertical axis -> beyond the tip,
-                # left of the y-axis so the long "(flip)" text neither clips nor
-                # crosses the axis line
-                lpos = np.array([-0.15, tip[1] + 0.55 * np.sign(tip[1])])
-                ha = "right"
-            else:                           # diagonal -> straight out along axis
-                lpos = tip + 0.90 * d + 0.14 * perp
-                ha = "center"
-            ax.text(lpos[0], lpos[1], rf"{lab}$={lam:.2g}${sign}",
-                    color=T.RED.dark, fontsize=LBL,
-                    ha=ha, va="center")
-        m = 3.0
-        clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
-        axis_cross(ax, (-m, m), (-m, m))
+    def label(ax, pos, text):
+        ax.text(pos[0], pos[1], text, color=T.RED.dark, fontsize=LBL,
+                ha="center", va="center")
+
+    # ---- left: symmetric S, eigenvectors = ellipse axes
+    ax = axes[0]
+    S = np.array([[2.0, 1.0], [1.0, 2.0]])
+    ell = S @ circle
+    ax.plot(circle[0], circle[1], "--", color=INK, lw=1.0, alpha=0.5)
+    ax.plot(ell[0], ell[1], color=BLUE, lw=2.4)
+    for lam, vec, lpos in [(3.0, np.array([1, 1]) / np.sqrt(2), (2.2, 2.55)),
+                           (1.0, np.array([1, -1]) / np.sqrt(2), (1.15, -1.05))]:
+        arrow(ax, (0, 0), lam * vec, color=T.RED.base, lw=2.6)
+        arrow(ax, (0, 0), vec, color=GREEN, lw=2.4)
+        label(ax, lpos, rf"$\lambda={lam:.0f}$")
+    clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
+    axis_cross(ax, (-m, m), (-m, m), color="black")
+
+    # ---- right: upper-triangular T, eigenvectors are not the ellipse axes
+    ax = axes[1]
+    Tm = np.array([[1.0, 1.0], [0.0, 2.0]])
+    ell = Tm @ circle
+    U, s, _ = np.linalg.svd(Tm)            # ellipse axes: s_i * U[:, i]
+    ax.plot(circle[0], circle[1], "--", color=INK, lw=1.0, alpha=0.5)
+    for i in range(2):
+        a = s[i] * U[:, i]
+        ax.plot([-a[0], a[0]], [-a[1], a[1]], color=GRAY, lw=1.2, zorder=1)
+    ax.plot(ell[0], ell[1], color=BLUE, lw=2.4)
+    for lam, vec, lpos in [(1.0, np.array([1.0, 0.0]), (1.62, -0.45)),
+                           (2.0, np.array([1, 1]) / np.sqrt(2), (2.05, 1.12))]:
+        arrow(ax, (0, 0), lam * vec, color=T.RED.base, lw=2.6)
+        arrow(ax, (0, 0), vec, color=GREEN, lw=2.4)
+        label(ax, lpos, rf"$\lambda={lam:.0f}$")
+    clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
+    axis_cross(ax, (-m, m), (-m, m), color="black")
     save(fig, "mdl-la-eig-ellipse")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(IMG_DIR, "mdl-la-eig-ellipse.svg"),
+                    os.path.join(IMG_DIR, "auto", "mdl-la-eig-ellipse.svg"))
 
 
 def fig_defective_shear():
@@ -816,18 +833,18 @@ def fig_defective_shear():
 
 
 def fig_psd():
-    """Three 3-D surface plots of z = x^T A x: bowl (PD), trough (PSD), saddle."""
-    fig = plt.figure(figsize=(10.5, 3.8))
+    """Three 3-D surface plots of z = x^T A x: bowl (PD), trough (PSD), saddle.
+    Per-panel titles give the eigenvalues (absent from the caption)."""
+    fig = plt.figure(figsize=(10.5, 4.1))
     g = np.linspace(-1.5, 1.5, 60)
     X, Y = np.meshgrid(g, g)
 
-    # the caption names the three cases (PD / PSD / indefinite), no titles
     specs = [
-        np.array([[2.0, 0.0], [0.0, 1.0]]),
-        np.array([[1.0, 0.0], [0.0, 0.0]]),
-        np.array([[1.0, 0.0], [0.0, -1.0]]),
+        (np.array([[2.0, 0.0], [0.0, 1.0]]), r"$\lambda = 2,\ 1$"),
+        (np.array([[1.0, 0.0], [0.0, 0.0]]), r"$\lambda = 1,\ 0$"),
+        (np.array([[1.0, 0.0], [0.0, -1.0]]), r"$\lambda = 1,\ {-1}$"),
     ]
-    for i, A in enumerate(specs, 1):
+    for i, (A, title) in enumerate(specs, 1):
         ax = fig.add_subplot(1, 3, i, projection="3d")
         Z = A[0, 0] * X**2 + (A[0, 1] + A[1, 0]) * X * Y + A[1, 1] * Y**2
         # Alex 2026-08-04: the original viridis reads better on 3-D relief
@@ -836,123 +853,102 @@ def fig_psd():
         ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
         ax.set_xlabel("$x_1$", labelpad=-10, fontsize=17)
         ax.set_ylabel("$x_2$", labelpad=-10, fontsize=17)
+        ax.set_title(title, fontsize=16, pad=0, color="black")
+        for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+            axis.line.set_color("black")
         ax.view_init(elev=24, azim=-52)
         try:
             ax.set_box_aspect((1, 1, 0.8))
         except Exception:
             pass
     save(fig, "mdl-la-psd")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(IMG_DIR, "mdl-la-psd.svg"),
+                    os.path.join(IMG_DIR, "auto", "mdl-la-psd.svg"))
 
 
 def fig_gershgorin():
-    """Gershgorin discs for a diagonally-dominant symmetric matrix, with the
-    true eigenvalues overplotted, each inside its disc."""
-    A = np.array([
-        [1.0, 0.1, 0.1, 0.1],
-        [0.1, 3.0, 0.2, 0.3],
-        [0.1, 0.2, 5.0, 0.5],
-        [0.1, 0.3, 0.5, 9.0],
-    ])
-    n = A.shape[0]
+    """Gershgorin discs of the non-symmetric 3x3 [[4,1,0],[-1,4,.5],[.5,0,1]]
+    with its eigenvalues: a complex pair inside the two (nested) discs centred
+    at 4 and a real eigenvalue inside the disjoint disc centred at 1."""
+    A = np.array([[4.0, 1.0, 0.0],
+                  [-1.0, 4.0, 0.5],
+                  [0.5, 0.0, 1.0]])
     centers = np.diag(A)
     radii = np.sum(np.abs(A), axis=1) - np.abs(centers)
-    eig = np.linalg.eigvals(A)  # true eigenvalues (real, symmetric)
+    eig = np.linalg.eigvals(A)
 
     from matplotlib.colors import to_rgba
-    fig, ax = plt.subplots(figsize=(6.4, 3.4))
-    cols = [BLUE, ORANGE, GREEN, GRAY]
-    ax.axhline(0, color=INK, lw=0.8, zorder=1)
+    fig, ax = plt.subplots(figsize=(7.2, 4.0))
+    cols = [BLUE, ORANGE, GREEN]
+    ax.axhline(0, color="black", lw=0.9, zorder=1)
     for c, r, col in zip(centers, radii, cols):
-        # light wash, solid rim: the disc boundary is what the theorem bounds
-        ax.add_patch(plt.Circle((c, 0), r, facecolor=to_rgba(col, 0.16),
-                                edgecolor=col, lw=1.6, zorder=2))
-    # the true eigenvalues: the crosses the caption refers to (each sits near,
-    # not at, its disc's centre a_ii, so no separate centre mark is drawn)
-    ax.plot(eig.real, np.zeros_like(eig.real), "x", color=INK, ms=10, mew=2.2,
-            zorder=6)
+        ax.add_patch(plt.Circle((c, 0), r, facecolor=to_rgba(col, 0.13),
+                                edgecolor=col, lw=1.8, zorder=2))
+    ax.plot(centers, np.zeros(3), "o", color="black", ms=4, zorder=5)
+    ax.plot(eig.real, eig.imag, "x", color="black", ms=11, mew=2.4, zorder=6)
+    # radius labels just outside each rim, in the disc's colour
+    ax.text(4.0, 0.45, r"$r_1=1$", color=T.BLUE.dark, fontsize=14,
+            ha="center", va="center", zorder=7)
+    ax.text(5.12, 1.12, r"$r_2=1.5$", color=T.ORANGE.dark, fontsize=14,
+            ha="left", va="bottom", zorder=7)
+    ax.text(1.0, 0.58, r"$r_3=0.5$", color=T.GREEN.dark, fontsize=14,
+            ha="center", va="bottom", zorder=7)
     ax.set_xlabel(r"$\mathrm{Re}\,z$", fontsize=15)
     ax.set_ylabel(r"$\mathrm{Im}\,z$", fontsize=15)
     ax.tick_params(labelsize=13)
     ax.set_aspect("equal")
-    ax.set_ylim(-1.2, 1.2)
-    ax.set_xlim(centers.min() - radii.max() - 0.5, centers.max() + radii.max() + 0.5)
+    ax.set_xlim(0.3, 5.9)
+    ax.set_ylim(-1.7, 1.7)
     clean_axes(ax, equal=True)
     save(fig, "mdl-la-gershgorin")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(IMG_DIR, "mdl-la-gershgorin.svg"),
+                    os.path.join(IMG_DIR, "auto", "mdl-la-gershgorin.svg"))
 
 
 def fig_power_iter():
-    """(a) fan of arrows: a unit vector under repeated A-then-renormalize
-    swinging onto the dominant eigenvector; (b) the ratio ||A^{k+1}v||/||A^k v||
-    converging to |lambda_1|."""
-    A = np.array([[3.0, 1.0], [1.0, 2.0]])  # symmetric; eigvals (5±√5)/2 ≈ 3.618, 1.382
-    w, V = np.linalg.eigh(A)
-    order = np.argsort(-np.abs(w))
-    lam1 = w[order[0]]
-    lam2 = w[order[1]]
-    dom = V[:, order[0]]
-    if dom[0] < 0:
-        dom = -dom
+    """Power iteration on S = [[2,1],[1,2]] from e1, log scale: the direction
+    error sin(angle to v1) falls by 1/3 per step, the Rayleigh-quotient error
+    by 1/9 (the squared rate, since S is symmetric)."""
+    S = np.array([[2.0, 1.0], [1.0, 2.0]])
+    v1 = np.array([1.0, 1.0]) / np.sqrt(2)
+    ks = np.arange(0, 13)
+    sin_err, rq_err = [], []
+    v = np.array([1.0, 0.0])
+    for _ in ks:
+        u = v / np.linalg.norm(v)
+        sin_err.append(np.sqrt(max(1.0 - (u @ v1) ** 2, 0.0)))
+        rq_err.append(3.0 - u @ S @ u)
+        v = S @ v
+    sin_err, rq_err = np.array(sin_err), np.array(rq_err)
 
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.0))
-
-    # (a) iterate directions
-    v = np.array([0.0, 1.0])  # start far from dominant direction
-    v = v / np.linalg.norm(v)
-    n_it = 6
-    cmap = BLUE_CMAP(np.linspace(0.10, 0.95, n_it + 1))
-    # all the iterates live in the first quadrant -- show only that
-    axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32))
-    # dominant eigenvector reference ray (first quadrant only)
-    axa.plot([0, 1.28 * dom[0]], [0, 1.28 * dom[1]],
-             color=INK, lw=1.0, ls="--")
-    cur = v.copy()
-    for k in range(n_it + 1):
-        arrow(axa, (0, 0), cur, color=cmap[k], lw=2.2)
-        nxt = A @ cur
-        cur = nxt / np.linalg.norm(nxt)
-    arrow(axa, (0, 0), dom, color=ORANGE, lw=2.6)
-    # w1 sits just BELOW its orange tip, on the side away from every iterate
-    # (the iterates all approach from above), so it cannot be read as a
-    # label for one of them
-    dperp = np.array([-dom[1], dom[0]])
-    wpos = dom * 0.97 - 0.06 * dperp
-    axa.text(wpos[0], wpos[1], r"$\mathbf{w}_1$", color=ORANGE, fontsize=16,
-             ha="left", va="top")
-    # v0 lies along the y-axis: label it beside its tip, not by the axis head
-    axa.text(0.06, 1.0, r"$\mathbf{v}_0$", color=INK, fontsize=16, ha="left",
-             va="center")
-    clean_axes(axa, lim=((-0.15, 1.34), (-0.15, 1.34)), hide=True)
-
-    # (b) ratio convergence
-    vk = v.copy()                 # the same start vector v0 as in (a)
-    ks, ratios = [], []
-    cur = vk.copy()
-    norms = [np.linalg.norm(cur)]
-    for k in range(14):
-        cur = A @ cur
-        norms.append(np.linalg.norm(cur))
-    norms = np.array(norms)
-    ratios = norms[1:] / norms[:-1]
-    ks = np.arange(len(ratios))   # ratio k is ||B^{k+1} v0|| / ||B^k v0||
-    axb.plot(ks, ratios, "o-", color=BLUE, ms=5)
-    axb.axhline(abs(lam1), color=INK, ls="--", lw=1.4)
-    axb.text(ks[-1], abs(lam1) - 0.04, rf"$|\lambda_1|\approx{abs(lam1):.3g}$",
-             ha="right", va="top", color=INK, fontsize=16)
-    axb.set_xticks([0, 3, 6, 9, 12])       # iterations are integers
-    axb.set_xlabel("iteration $k$", fontsize=15)
-    # the text's notation: B = [[3, 1], [1, 2]], start vector v0
-    axb.set_ylabel(r"$\|\mathbf{B}^{k+1}\mathbf{v}_0\|/\|\mathbf{B}^k\mathbf{v}_0\|$",
-                   fontsize=15)
-    axb.tick_params(labelsize=13)
-    # the *norm ratio* converges at the squared rate (lambda_2/lambda_1)^2;
-    # sit the note low-centre, clear of the (plateaued) curve
-    axb.annotate(rf"gap $\sim(\lambda_2/\lambda_1)^{{2k}}="
-                 rf"({(lam2 / lam1) ** 2:.2g})^k$",
-                 xy=(0.30, 0.26), xycoords="axes fraction", fontsize=15,
-                 color=INK)
-    axb.set_aspect("auto")
-    clean_axes(axb, equal=False)
+    fig, ax = plt.subplots(figsize=(6.6, 4.0))
+    kk = np.linspace(0, 12, 50)
+    # asymptotes: tan(angle) = 3^-k and lambda_1 - R = 2 / (9^k + 1) exactly
+    ax.semilogy(kk, (1 / 3) ** kk, "--", color=GRAY, lw=1.2)
+    ax.semilogy(kk, 2 * (1 / 9) ** kk, "--", color=GRAY, lw=1.2)
+    ax.semilogy(ks, sin_err, "o", color=BLUE, ms=6, zorder=4)
+    ax.semilogy(ks, rq_err, "s", color=ORANGE, ms=5.5, zorder=4)
+    ax.text(12.3, sin_err[-1], r"$\sin\angle(\mathbf{v}_k,\mathbf{v}_1)$" "\n"
+            r"$\times 1/3$ per step", color=T.BLUE.dark, fontsize=14,
+            ha="left", va="center")
+    ax.text(12.3, rq_err[-1], r"$\lambda_1 - R(\mathbf{v}_k)$" "\n"
+            r"$\times 1/9$ per step", color=T.ORANGE.dark, fontsize=14,
+            ha="left", va="center")
+    ax.set_xticks([0, 3, 6, 9, 12])
+    ax.set_xlim(-0.5, 12.5)
+    ax.set_xlabel("iteration $k$", fontsize=15)
+    ax.set_ylabel("error", fontsize=15)
+    ax.tick_params(labelsize=13)
+    clean_axes(ax, equal=False)
     save(fig, "mdl-la-power-iter")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(IMG_DIR, "mdl-la-power-iter.svg"),
+                    os.path.join(IMG_DIR, "auto", "mdl-la-power-iter.svg"))
 
 
 # =========================================================================== #
@@ -960,28 +956,37 @@ def fig_power_iter():
 # =========================================================================== #
 
 def fig_svd_action():
-    """Four panels left->right showing the rotate-scale-rotate action of a
-    NON-symmetric 2x2 A on the unit circle.  Exact SVD via numpy."""
-    A = np.array([[1.5, 0.9], [0.2, 1.3]])  # non-symmetric => U != V
+    """Four panels left->right showing the rotate-scale-rotate action of the
+    shear A = [[1, 1], [0, 1]] on the unit circle: V = R(58.3 deg),
+    Sigma = diag(phi, 1/phi), U = R(31.7 deg).  Exact SVD via numpy."""
+    A = np.array([[1.0, 1.0], [0.0, 1.0]])
     U, s, Vt = np.linalg.svd(A)
+    # LAPACK may return any joint sign choice: fix u_1 in the first quadrant
+    # and det U = det V = +1, so the picture shows the rotations of the text
+    if U[0, 0] < 0:
+        U[:, 0] *= -1
+        Vt[0] *= -1
+    if np.linalg.det(U) < 0:
+        U[:, 1] *= -1
+        Vt[1] *= -1
     V = Vt.T
 
     t = np.linspace(0, 2 * np.pi, 400)
     circle = np.vstack([np.cos(t), np.sin(t)])
 
     fig, axes = plt.subplots(1, 4, figsize=(12.0, 3.2))
-    # equal aspect but a SHORT window in y (content only reaches ~1.3 in y): a
-    # wide-but-short box keeps the vertical axis from towering over the shapes
-    mx, my = 2.4, 2.05
+    # equal aspect, one window for all four panels (same scale); the shapes
+    # reach about 1.6 in x and 1.4 in y once the labels are included
+    mx, my = 2.0, 1.75
     lim = ((-mx, mx), (-my, my))
 
-    def tip_label(ax, tip, text, color):
-        """Place a label well beyond an arrow tip (radially outside the shape),
-        nudged perpendicular so it never sits under the arrowhead."""
+    def tip_label(ax, tip, text, color, out=0.36, side=0.0):
+        """Place a label beyond an arrow tip, radially outside the shape,
+        optionally nudged sideways so it never sits under the arrowhead."""
         tip = np.asarray(tip, float)
         d = tip / np.linalg.norm(tip)
         perp = np.array([-d[1], d[0]])
-        p = tip + 0.44 * d + 0.30 * perp
+        p = tip + out * d + side * perp
         ax.text(p[0], p[1], text, color=color, fontsize=14,
                 ha="center", va="center")
 
@@ -991,18 +996,16 @@ def fig_svd_action():
     ax.plot(circle[0], circle[1], color=GRAY, lw=1.6)
     arrow(ax, (0, 0), V[:, 0], color=BLUE, lw=2.4)
     arrow(ax, (0, 0), V[:, 1], color=ORANGE, lw=2.4)
-    tip_label(ax, V[:, 0], r"$\mathbf{v}_1$", BLUE)
-    tip_label(ax, V[:, 1], r"$\mathbf{v}_2$", ORANGE)
+    tip_label(ax, V[:, 0], r"$\mathbf{v}_1$", BLUE, side=-0.22)
+    tip_label(ax, V[:, 1], r"$\mathbf{v}_2$", ORANGE, side=0.22)
 
     # (2) after V^T: circle unchanged, v's rotated onto the axes
     ax = axes[1]
     ax.set_title(r"(2) after $\mathbf{V}^{\!\!\top}$", fontsize=14)
     c2 = Vt @ circle
     ax.plot(c2[0], c2[1], color=GRAY, lw=1.6)
-    e1 = Vt @ V[:, 0]
-    e2 = Vt @ V[:, 1]
-    arrow(ax, (0, 0), e1, color=BLUE, lw=2.4)
-    arrow(ax, (0, 0), e2, color=ORANGE, lw=2.4)
+    arrow(ax, (0, 0), Vt @ V[:, 0], color=BLUE, lw=2.4)
+    arrow(ax, (0, 0), Vt @ V[:, 1], color=ORANGE, lw=2.4)
 
     # (3) after Sigma: axis-aligned ellipse, semi-axes sigma1, sigma2
     ax = axes[2]
@@ -1012,10 +1015,10 @@ def fig_svd_action():
     ax.plot(c3[0], c3[1], color=BLUE, lw=2.2)
     arrow(ax, (0, 0), [s[0], 0], color=BLUE, lw=2.4)
     arrow(ax, (0, 0), [0, s[1]], color=ORANGE, lw=2.4)
-    # sit the sigma labels OUTSIDE the ellipse outline (below / above it)
-    ax.text(s[0] * 0.5, -1.25, rf"$\sigma_1={s[0]:.2g}$", color=BLUE,
+    # labels OUTSIDE the ellipse outline (below it / above it)
+    ax.text(s[0] * 0.5, -s[1] - 0.18, rf"$\sigma_1={s[0]:.2f}$", color=BLUE,
             fontsize=13, ha="center", va="top")
-    ax.text(0.28, 1.2, rf"$\sigma_2={s[1]:.2g}$", color=ORANGE,
+    ax.text(0.12, s[1] + 0.14, rf"$\sigma_2={s[1]:.2f}$", color=ORANGE,
             fontsize=13, ha="left", va="bottom")
 
     # (4) after U: ellipse rotated; draw sigma1 u1, sigma2 u2 as its axes
@@ -1027,12 +1030,10 @@ def fig_svd_action():
     a2 = s[1] * U[:, 1]
     arrow(ax, (0, 0), a1, color=BLUE, lw=2.4)
     arrow(ax, (0, 0), a2, color=ORANGE, lw=2.4)
-    tip_label(ax, a1, r"$\sigma_1\mathbf{u}_1$", BLUE)
+    tip_label(ax, a1, r"$\sigma_1\mathbf{u}_1$", BLUE, out=0.45, side=0.25)
     # a2 is the minor semi-axis, so the ellipse is tangent to the
     # perpendicular there: push the label purely radially, past the outline
-    p2 = a2 + 0.62 * a2 / np.linalg.norm(a2) + np.array([-0.18, 0.04])
-    ax.text(p2[0], p2[1], r"$\sigma_2\mathbf{u}_2$", color=ORANGE,
-            fontsize=14, ha="center", va="center")
+    tip_label(ax, a2, r"$\sigma_2\mathbf{u}_2$", ORANGE, out=0.62)
 
     for ax in axes:
         clean_axes(ax, lim=lim, hide=True)
@@ -1089,6 +1090,16 @@ def fig_svd_subspaces():
             r"$\mathbf{v}_i \mapsto \sigma_i\mathbf{u}_i$", ha="center",
             va="bottom", fontsize=13, color=BLUE)
 
+    # the pseudoinverse runs the bijection backwards (dashed, below it)
+    q_col = np.array([cod_x, y0 + bh * 0.56])
+    q_row = np.array([dom_x + bw, y0 + bh * 0.56])
+    ax.add_patch(FancyArrowPatch(q_col, q_row, arrowstyle="->",
+                                 mutation_scale=16, color=GREEN, lw=1.8,
+                                 linestyle=(0, (5, 3))))
+    ax.text((q_col[0] + q_row[0]) / 2, q_col[1] - 0.14,
+            r"$\mathbf{A}^{+}\!:\ \sigma_i\mathbf{u}_i \mapsto \mathbf{v}_i$",
+            ha="center", va="top", fontsize=13, color=GREEN)
+
     # the null space collapses to 0, which lies in R^m where the column space
     # and the left null space meet: on the codomain's left edge, at the divider
     p_null = np.array([dom_x + bw, y0 + bh * 0.20])
@@ -1107,86 +1118,46 @@ def fig_svd_subspaces():
     save(fig, "mdl-la-svd-subspaces")
 
 
-def _structured_image(n=128):
-    """Deterministic structured grayscale image (no network) with a *slowly
-    decaying* singular spectrum, so low-rank approximation is visibly lossy at
-    moderate rank.  Tries ``scipy.datasets.ascent`` first (a real photo, the
-    classic SVD demo); falls back to a fixed-seed synthetic image."""
-    try:
-        from scipy.datasets import ascent  # real 512x512 photo (needs cache)
-        img = ascent().astype(float)
-        return img / img.max()
-    except Exception:
-        pass
-    # Fixed-seed synthetic image.  Smooth shapes give the leading singular
-    # values; a deterministic mid-frequency texture + a radial chirp supply a
-    # genuine slowly-decaying tail (so rank-20 still carries visible error).
-    rng = np.random.default_rng(7)
-    yy, xx = np.mgrid[0:n, 0:n] / n
-    img = np.zeros((n, n))
-    img += np.exp(-((xx - 0.3) ** 2 + (yy - 0.35) ** 2) / 0.05)
-    img += 0.8 * np.exp(-((xx - 0.7) ** 2 + (yy - 0.6) ** 2) / 0.03)
-    img[20:50, 70:110] += 0.6
-    img[80:100, 20:60] += 0.4
-    # radial chirp: spatial frequency grows with radius -> many singular values
-    r = np.hypot(xx - 0.5, yy - 0.5)
-    img += 0.4 * np.cos(30 * r ** 2)
-    # smoothed random texture (low-pass a fixed-seed field) -> long gentle tail
-    noise = rng.standard_normal((n, n))
-    k = np.exp(-0.5 * (np.arange(n) - n / 2) ** 2 / 4.0 ** 2)
-    k /= k.sum()
-    sm = np.apply_along_axis(lambda m: np.convolve(m, k, mode="same"), 0, noise)
-    sm = np.apply_along_axis(lambda m: np.convolve(m, k, mode="same"), 1, sm)
-    img += 0.5 * sm / np.abs(sm).max()
-    img -= img.min()
-    img /= img.max()
-    return img
-
-
 def fig_eckart_young():
-    """(a) singular-value spectrum (log y) with top-k region shaded;
-    (b) reconstructions at ranks 1, 5, 20, full with relative Frobenius error."""
-    img = _structured_image()
+    """Eckart--Young on the committed 400x500 photograph img/cat1.jpg in
+    grayscale: (a) its singular values on log-log axes, the twenty kept at
+    rank 20 shaded; (b)-(e) the truncations at ranks 1, 5, 20, 50, titled
+    with the relative Frobenius error and the storage fraction k(m+n+1)/mn
+    (both computed here).  No network, no scipy: the same file and the same
+    grayscale weights as the notebook cell."""
+    import matplotlib.image as mpimg
+    rgb = mpimg.imread(os.path.join(IMG_DIR, "cat1.jpg")).astype(float)
+    img = rgb @ np.array([0.299, 0.587, 0.114])           # 400 x 500, 0..255
     U, s, Vt = np.linalg.svd(img, full_matrices=False)
+    m, n = img.shape
     full_norm = np.linalg.norm(s)
 
     fig = plt.figure(figsize=(12.0, 3.2))
-    gs = fig.add_gridspec(1, 5, width_ratios=[1.25, 1, 1, 1, 1])
+    gs = fig.add_gridspec(1, 5, width_ratios=[1.25, 1, 1, 1, 1], wspace=0.12)
     axs = fig.add_subplot(gs[0, 0])
-    # plot only up to the numerical rank: past it the values are a flat
-    # machine-precision floor that would squeeze the decay into a corner
-    r_num = int(np.linalg.matrix_rank(img))
-    axs.semilogy(np.arange(1, r_num + 1), s[:r_num], color=BLUE, lw=1.8)
+    idx = np.arange(1, len(s) + 1)
+    axs.loglog(idx, s, color=BLUE, lw=1.8)
     axs.axvspan(1, 20, color=ORANGE, alpha=0.15)
-    axs.set_xlim(-1, r_num + 2)
-    axs.set_ylim(s[r_num - 1] / 5, s[0] * 20)
-    # names the shaded band: the rank-20 panel keeps exactly these values
-    axs.text(23, s[0] * 8, "$k=20$", color=ORANGE, fontsize=14, ha="left",
-             va="top")
+    axs.text(24, s[0] * 0.9, "$k=20$", color=ORANGE, fontsize=14,
+             ha="left", va="top")
+    axs.set_xlim(1, len(s))
     axs.set_xlabel("index $i$", fontsize=14)
-    axs.set_ylabel(r"$\sigma_i$ (log)", fontsize=14)
-    axs.set_yticks([1e0, 1e-4, 1e-8, 1e-12])
-    axs.set_xticks([1, 20, 40, 60])
-    axs.tick_params(labelsize=13)
-    axs.set_aspect("auto")
-    # same height as the square image panels: they are 1/1.25 as wide
-    axs.set_box_aspect(1 / 1.25)
+    axs.set_ylabel(r"$\sigma_i$", fontsize=14)
+    axs.tick_params(labelsize=12)
+    # same height as the image panels, whose height/width is m/n = 0.8
+    axs.set_box_aspect(0.8 / 1.25)
     axs.spines["top"].set_visible(False)
     axs.spines["right"].set_visible(False)
 
-    ranks = [1, 5, 20, len(s)]
-    for j, k in enumerate(ranks):
+    for j, k in enumerate([1, 5, 20, 50]):
         ax = fig.add_subplot(gs[0, 1 + j])
         approx = (U[:, :k] * s[:k]) @ Vt[:k, :]
-        # relative Frobenius error = ||A - A_k||_F / ||A||_F
-        rel = np.linalg.norm(s[k:]) / full_norm if k < len(s) else 0.0
-        ax.imshow(approx, cmap="gray", vmin=0, vmax=1)
-        # no "(128)": the spectrum panel stops at the numerical rank, so a
-        # count of 128 terms would read as a rank the image does not have
-        ttl = "full" if k == len(s) else f"rank {k}"
-        err = "0" if k == len(s) else f"{rel:.3f}"
-        ax.set_title(f"{ttl}\nerr {err}", fontsize=14)
-        ax.set_xticks([]); ax.set_yticks([])
+        rel = np.linalg.norm(s[k:]) / full_norm   # ||A - A_k||_F / ||A||_F
+        frac = k * (m + n + 1) / (m * n)
+        ax.imshow(approx, cmap="gray", vmin=0, vmax=255)
+        ax.set_title(f"rank {k}\nerr {rel:.2g} · {frac:.1%}", fontsize=14)
+        ax.set_xticks([])
+        ax.set_yticks([])
         for sp in ax.spines.values():
             sp.set_visible(False)
     save(fig, "mdl-la-eckart-young")
@@ -1229,18 +1200,18 @@ def fig_lora():
     ax.add_patch(Polygon([(6.3, 2.4), (8.5, 2.4), (7.75, 3.5), (7.05, 3.5)],
                          closed=True, facecolor=ORANGE, alpha=0.18,
                          edgecolor=ORANGE, lw=1.8))
-    ax.text(xB, 2.85, r"$\mathbf{A}$ ($r\times n$)", fontsize=12.5,
+    ax.text(xB, 2.85, r"$\mathbf{A}$ ($k\times n$)", fontsize=12.5,
             ha="center", va="center", color=ORANGE)
     ax.add_patch(Polygon([(7.05, 3.9), (7.75, 3.9), (8.5, 5.0), (6.3, 5.0)],
                          closed=True, facecolor=ORANGE, alpha=0.18,
                          edgecolor=ORANGE, lw=1.8))
-    ax.text(xB, 4.55, r"$\mathbf{B}$ ($m\times r$)", fontsize=12.5,
+    ax.text(xB, 4.55, r"$\mathbf{B}$ ($m\times k$)", fontsize=12.5,
             ha="center", va="center", color=ORANGE)
     arrow(ax, (xB, 3.5), (xB, 3.9), color=ORANGE, lw=1.8, mut=11)
-    ax.text(xB + 0.32, 3.7, r"$r=8$", fontsize=12.5, ha="left", va="center",
+    ax.text(xB + 0.32, 3.7, r"$k=8$", fontsize=12.5, ha="left", va="center",
             color=ORANGE)
     # trainable-count note in the free right margin, beside the trapezoids
-    ax.text(8.8, 4.35, "trainable:\n" + r"$r(m{+}n)\approx65.5$K"
+    ax.text(8.8, 4.35, "trainable:\n" + r"$k(m{+}n)\approx65.5$K"
             + "\n" + r"($0.39\%$)", fontsize=12, ha="left", va="center",
             color=INK)
 
@@ -1291,131 +1262,130 @@ def fig_condition():
 
 
 def fig_pca():
-    """2-D point cloud with the two principal directions (right singular vectors
-    of the centered data) drawn from the mean, scaled by the singular values."""
-    rng = np.random.default_rng(3)
-    n = 350
-    # anisotropic Gaussian, rotated
-    cov_axes = np.array([[1.0, 0.0], [0.0, 0.28]])
-    theta = np.radians(32)
+    """The cloud of the PCA cell: 300 points with standard deviations 3 and
+    0.8 along axes rotated by pi/5, centered at (1, 0.6), and its principal
+    axes (right singular vectors of the centered data) drawn from the mean,
+    each two standard deviations 2 sigma_i / sqrt(n) long."""
+    rng = np.random.default_rng(3)        # figures keep a fixed draw
+    n = 300
+    theta = np.pi / 5
     R = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
-    L = R @ np.sqrt(cov_axes)
-    data = (L @ rng.standard_normal((2, n))).T + np.array([1.0, 0.6])
+    data = (rng.standard_normal((n, 2)) * np.array([3.0, 0.8])) @ R.T \
+        + np.array([1.0, 0.6])
 
     mean = data.mean(axis=0)
     Xc = data - mean
-    U, s, Vt = np.linalg.svd(Xc, full_matrices=False)
-    pcs = Vt  # rows are principal directions
-    scales = s / np.sqrt(n)  # ~ std along each PC
+    _, s, Vt = np.linalg.svd(Xc, full_matrices=False)
+    stds = s / np.sqrt(n)                  # standard deviation along each PC
 
-    fig, ax = plt.subplots(figsize=(5.2, 4.6))
+    fig, ax = plt.subplots(figsize=(6.0, 4.4))
     ax.scatter(data[:, 0], data[:, 1], s=10, color=BLUE, alpha=0.45,
                edgecolors="none")
-    ax.plot(*mean, "o", color=INK, ms=5)
+    ax.plot(*mean, "o", color=INK, ms=5, zorder=6)
     for i, (col, lab) in enumerate(zip([ORANGE, GREEN], ["PC1", "PC2"])):
-        d = pcs[i]
+        d = Vt[i]
         if d[np.argmax(np.abs(d))] < 0:
             d = -d
-        tip = mean + 2.2 * scales[i] * d
+        tip = mean + 2 * stds[i] * d
         arrow(ax, mean, tip, color=col, lw=2.8)
-        ax.text(tip[0] + 0.30 * d[0], tip[1] + 0.30 * d[1] + 0.04, lab,
-                color=col, fontsize=14, fontweight="bold",
+        lp = tip + 0.75 * d
+        ax.text(lp[0], lp[1], lab, color=col, fontsize=14, fontweight="bold",
                 ha="center", va="center",
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none",
                           alpha=0.9))
     ax.set_aspect("equal")
-    ax.set_xlabel("$x_1$", fontsize=13)
-    ax.set_ylabel("$x_2$", fontsize=13)
+    ax.set_xlabel("$x_1$", fontsize=14)
+    ax.set_ylabel("$x_2$", fontsize=14)
     clean_axes(ax, equal=True)
     save(fig, "mdl-la-pca")
 
 
 def fig_transient_growth():
-    """Transient amplification made visible.  Left: ||A^k||_2 for the
-    non-normal A = [[0.9, 4], [0, 0.8]] versus the diagonal (normal) matrix
-    with identical eigenvalues — same spectral radius, same asymptotic decay
-    rate, yet A first amplifies by an order of magnitude.  Right: the
-    epsilon-pseudospectra of both matrices — level sets of
-    sigma_min(zI - A) — showing that tiny perturbations move A's eigenvalues
-    far outside the unit disk while the normal matrix's stay put.  Same
-    matrices as the accompanying notebook cell."""
-    A = np.array([[0.9, 4.0], [0.0, 0.8]])
-    D = np.diag([0.9, 0.8])
+    """Transient growth made visible.  Left: ||M^k||_2 for the non-normal
+    M = [[0.9, 4], [0, 0.8]] against Lambda = diag(0.9, 0.8), which has the
+    same eigenvalues: same asymptotic slope, yet M first grows ten-fold.
+    Right: the epsilon-pseudospectra (level sets of sigma_min(zI - M)) for
+    eps = 0.05, 0.1, 0.2, 0.4; around Lambda they are discs of radius eps.
+    Same matrices as the accompanying notebook cells."""
+    M = np.array([[0.9, 4.0], [0.0, 0.8]])
+    Lam = np.diag([0.9, 0.8])
     ks = np.arange(0, 61)
-    norm_A = np.array([np.linalg.norm(np.linalg.matrix_power(A, k), 2)
+    norm_M = np.array([np.linalg.norm(np.linalg.matrix_power(M, k), 2)
                        for k in ks])
-    norm_D = np.array([np.linalg.norm(np.linalg.matrix_power(D, k), 2)
+    norm_L = np.array([np.linalg.norm(np.linalg.matrix_power(Lam, k), 2)
                        for k in ks])
-    k_peak = int(norm_A.argmax())
+    k_peak = int(norm_M.argmax())
 
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.9))
-    axa.semilogy(ks, norm_A, color=BLUE, lw=2.4, zorder=4)
-    axa.semilogy(ks, norm_D, color=ORANGE, lw=2.2, ls="--", zorder=4)
+    axa.semilogy(ks, norm_M, color=BLUE, lw=2.4, zorder=4)
+    axa.semilogy(ks, norm_L, color=ORANGE, lw=2.2, ls="--", zorder=4)
     axa.axhline(1.0, color=GRAY, lw=0.9, ls=":", zorder=2)
-    axa.plot([k_peak], [norm_A[k_peak]], "o", color=BLUE, ms=6, zorder=6)
-    axa.annotate(f"peak at $k={k_peak}$:\ntransient growth $\\times$"
-                 f"{norm_A[k_peak]:.0f}",
-                 xy=(k_peak, norm_A[k_peak]),
-                 xytext=(k_peak + 9, norm_A[k_peak] * 1.6),
-                 fontsize=13, ha="left", va="center", color=INK,
+    axa.plot([k_peak], [norm_M[k_peak]], "o", color=BLUE, ms=6, zorder=6)
+    axa.annotate(f"peak {norm_M[k_peak]:.1f} at $k={k_peak}$",
+                 xy=(k_peak, norm_M[k_peak]),
+                 xytext=(k_peak + 10, norm_M[k_peak] * 1.5),
+                 fontsize=13, ha="left", va="center", color="black",
                  arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
-    # in the free band between the dotted 10^0 line and the falling curve
-    axa.text(53, 0.64, "non-normal $\\mathbf{A}$", color=BLUE, fontsize=13,
-             ha="center", va="center", zorder=7)
-    axa.text(15, 0.022, "normal, same\neigenvalues", color=ORANGE,
-             fontsize=13, ha="center", va="center")
+    axa.text(53, 0.64, r"$\|\mathbf{M}^k\|_2$", color=T.BLUE.dark,
+             fontsize=14, ha="center", va="center", zorder=7)
+    axa.text(13, 0.03, r"$\|\boldsymbol{\Lambda}^k\|_2$", color=T.ORANGE.dark,
+             fontsize=14, ha="center", va="center")
     axa.set_xlabel(r"$k$", fontsize=15)
-    axa.set_ylabel(r"$\|\mathbf{A}^k\|_2$", fontsize=15)
+    axa.set_ylabel("spectral norm", fontsize=15)
     axa.set_ylim(1e-3, 40)
 
-    # ----- right: pseudospectra via sigma_min(zI - M) on a grid -----
+    # ----- right: pseudospectra via sigma_min(zI - X) on a grid -----
     gx = np.linspace(-1.6, 2.6, 320)
     gy = np.linspace(-1.7, 1.7, 260)
     GX, GY = np.meshgrid(gx, gy)
     Z = GX + 1j * GY
 
-    def smin_grid(M):
+    def smin_grid(X):
         out = np.empty_like(GX)
         for i in range(GX.shape[0]):
             for j in range(GX.shape[1]):
                 out[i, j] = np.linalg.svd(
-                    Z[i, j] * np.eye(2) - M, compute_uv=False)[-1]
+                    Z[i, j] * np.eye(2) - X, compute_uv=False)[-1]
         return out
 
     levels = [0.05, 0.1, 0.2, 0.4]
     theta = np.linspace(0, 2 * np.pi, 200)
     axb.plot(np.cos(theta), np.sin(theta), color=GRAY, lw=1.0, ls=":",
              zorder=2)
-    axb.contour(GX, GY, smin_grid(A), levels=levels, colors=[BLUE],
-                linewidths=1.3, zorder=4)
-    axb.contour(GX, GY, smin_grid(D), levels=levels, colors=[ORANGE],
+    cs = axb.contour(GX, GY, smin_grid(M), levels=levels, colors=[BLUE],
+                     linewidths=1.3, zorder=4)
+    axb.contour(GX, GY, smin_grid(Lam), levels=levels, colors=[ORANGE],
                 linewidths=1.1, linestyles="--", zorder=3)
-    axb.plot([0.9, 0.8], [0.0, 0.0], "o", color=INK, ms=5, zorder=6)
-    # labels sit in the free corners, off every contour and off the circle
-    axb.text(0.85, 1.57, "$\\varepsilon$-pseudospectra of $\\mathbf{A}$",
-             color=BLUE, fontsize=13, ha="center", va="center", zorder=7,
-             bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
-                       pad=1.5))
-    # leader line from the free lower-left corner to the outer orange disk
-    axb.annotate("normal matrix:\ntight disks", xy=(0.62, -0.30),
-                 xytext=(-0.8, -1.3), color=ORANGE, fontsize=13,
+    axb.text(2.6, -1.8, r"$\varepsilon = 0.05,\ 0.1,\ 0.2,\ 0.4$"
+             " (inner to outer)", color="black", fontsize=12, ha="right",
+             va="center", zorder=7)
+    axb.plot([0.9, 0.8], [0.0, 0.0], "o", color="black", ms=5, zorder=6)
+    axb.text(0.85, 1.57, r"$\varepsilon$-pseudospectra of $\mathbf{M}$",
+             color=T.BLUE.dark, fontsize=13, ha="center", va="center",
+             zorder=7, bbox=dict(facecolor="white", edgecolor="none",
+                                 alpha=0.9, pad=1.5))
+    axb.annotate(r"of $\boldsymbol{\Lambda}$: discs", xy=(0.62, -0.30),
+                 xytext=(-0.8, -1.3), color=T.ORANGE.dark, fontsize=13,
                  ha="center", va="center", zorder=7,
                  bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
                            pad=1.5),
                  arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2,
                                  shrinkA=2, shrinkB=1))
-    axb.text(-1.52, 1.3, "unit circle", color=INK, fontsize=12,
+    axb.text(-1.52, 1.3, "unit circle", color="black", fontsize=12,
              ha="left", va="center", zorder=7,
              bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
                        pad=1.0))
     axb.set_xlabel(r"$\mathrm{Re}\,z$", fontsize=15)
     axb.set_ylabel(r"$\mathrm{Im}\,z$", fontsize=15)
     axb.set_aspect("equal")
+    axb.set_ylim(-2.0, 1.7)
 
     for ax in (axa, axb):
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color("black")
+        ax.spines["bottom"].set_color("black")
     save(fig, "mdl-la-transient-growth")
 
 

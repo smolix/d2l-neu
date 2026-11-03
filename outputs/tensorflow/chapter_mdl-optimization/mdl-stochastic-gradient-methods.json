@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-stochastic-gradient-methods.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-stochastic-gradient-methods-stochastic-gradient-methods": {
+      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-stochastic-gradient-methods-unbiasedness-and-the-1-b-law-1": {
+      "code_fingerprint": "sha256:517808d694c34bb1bca39c5c761279f4e4ef2b0fcaa244f06e5614da17196500",
+      "kind": "text",
+      "outputs": []
+    },
+    "gradient-based-optimization-sgd-variance": {
+      "code_fingerprint": "sha256:3ae6f0274218ea244a1dac178d92b5393c445427740d5f6981c0490b2319fe86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tr Sigma = 1.140\nb =  1: measured 1.1352, tr Sigma / b = 1.1399, ratio 0.996\nb =  4: measured 0.2874, tr Sigma / b = 0.2850, ratio 1.009\nb = 16: measured 0.0700, tr Sigma / b = 0.0712, ratio 0.983\nb = 64: measured 0.0178, tr Sigma / b = 0.0178, ratio 0.999\n"
+        }
+      ]
+    },
+    "mdl-stochastic-gradient-methods-the-robbins-monro-conditions-1": {
+      "code_fingerprint": "sha256:8fa7685bb4b55026493856fac8930f4e6d721fe0fe59b1c42345a0e3d5cfd744",
+      "kind": "text",
+      "outputs": []
+    },
+    "gradient-based-optimization-sgd-schedule": {
+      "code_fingerprint": "sha256:94997bb1e62a0fbd4c05cd20a2148e3a904e6fd82adadbe689b7d9a90732bf6b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean gap, last 1000 steps: 1.4e-02, 6.8e-03, 2.3e-04\nfloor(0.8) / floor(0.4) = 1.99, floor(0.8) / decay = 59\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/gradient-based-optimization-sgd-schedule-1.svg",
+          "bytes": 90307,
+          "sha256": "sha256:91f165ee7f6a9781798188f83e29657cee133cbed54f7ac16e61bf7a2e443b3a"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-schedules": {
+      "code_fingerprint": "sha256:0ffd32e03c29b34e2d57cd3864194e7ff600e398b4fb3dd0151d6e55c4c3671c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "floor 0.0882     constant       c/k    cosine       WSD\nE f at 80%       8.82e-02  2.36e-03  7.87e-03  8.82e-02\nE f at end       8.82e-02  1.90e-03  1.68e-03  6.13e-03\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-schedules-1.svg",
+          "bytes": 30408,
+          "sha256": "sha256:258fa9129c7e6d6a9622f86cd7a08c44645b5eb7ac63e5889362977f9552480b"
+        }
+      ]
+    },
+    "mdl-stochastic-gradient-methods-the-measured-slope-1": {
+      "code_fingerprint": "sha256:ccb89d99c53f3070e062b0aaca1114d57ae3e4af2ef1d0fb59e6e37d61299f9d",
+      "kind": "text",
+      "outputs": []
+    },
+    "adaptive-stochastic-methods-ghadimi-lan": {
+      "code_fingerprint": "sha256:42c7e0398859c6fde3664dfb16363961e1db631689321eb11afce339e2b41893",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "random iterate 2.1e-01 8.6e-02 3.7e-02 1.8e-02   slope -0.59\nbest iterate   1.5e-02 2.1e-03 2.9e-04 4.9e-05   slope -1.37\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/adaptive-stochastic-methods-ghadimi-lan-1.svg",
+          "bytes": 30118,
+          "sha256": "sha256:c237af21e2e14d4f89ecdd78e0dbfdcc8d09fe0505973f45381aa0ff8db6319f"
+        }
+      ]
+    },
+    "mdl-stochastic-gradient-methods-svrg-and-saga-1": {
+      "code_fingerprint": "sha256:6a0b1aae2b4403d80794e1d4c68790771b1cfb27ddd2454ba8ca6d8f200fe5d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L_max = 27, 1 / (4 L_max) = 0.0091\n"
+        }
+      ]
+    },
+    "mdl-adaptive-svrg": {
+      "code_fingerprint": "sha256:60b7019beef26e436c41bb1bf2475b10e4bd4fcc7307070037693240bb3e14ea",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SGD: predicted floor 2.3e-02, mean gap in epochs 4-12 2.4e-02\nSVRG: gap after epochs 1, 4, 12: 2e+00, 1e-03, 4e-11\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-stochastic-gradient-methods/mdl-adaptive-svrg-1.svg",
+          "bytes": 31043,
+          "sha256": "sha256:d550c31dac05fccea4570c82602f9f9fa9bc7f6e55ac820033fcd6328b2edeb7"
+        }
+      ]
+    }
+  }
+}

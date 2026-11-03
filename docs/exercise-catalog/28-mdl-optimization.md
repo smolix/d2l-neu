@@ -1,5 +1,18 @@
 # Chapter Overview: chapter_mdl-optimization
 
+**Update (2026-11-03, math appendix pass):** the chapter now has seven
+sections plus `further-reading.md` (no exercises), in this order: Gradient
+Descent and Curvature; Convexity; Stochastic Gradient Methods (new file
+`mdl-stochastic-gradient-methods.md`); Adaptive Methods (retitled
+`mdl-adaptive-stochastic-methods.md`); Constrained Optimization (retitled
+`mdl-constrained-optimization-duality.md`); Duality (new file
+`mdl-lagrangian-duality.md`); and Numerical Stability and Conditioning. It
+carries 78 exercises (12, 12, 10, 11, 10, 11, 12), all in the named and tagged style
+(`[code]`, `[extended]`, ●, ●●) with `:exlabel:` labels; labels of moved
+exercises were kept, so some labels carry the prefix of the file they came
+from. The surveys and proposals below were written for the five-file
+chapter before the split and are kept as the record of that review.
+
 This is the strongest-specified chapter surveyed so far: the prior style review
 found zero clarity flags across all 44 exercises in the group's 5 files, and
 every exercise already closes with an explicit derivation-plus-numerical-check
@@ -31,7 +44,9 @@ gets no addition at all.
 
 ---
 
-## chapter_mdl-optimization/mdl-gradient-based-optimization.md — Gradient-Based Optimization
+## chapter_mdl-optimization/mdl-gradient-based-optimization.md — Gradient Descent and Curvature
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Preconditioned descent directions; 2 [code] Smoothness constants; 3 [code] A saddle that attracts; 4 [code] Step size and the ceiling; 5 Reparametrization and preconditioning; 6 Steepest descent in other norms ●; 7 [code] Heavy ball: the double root and the factor $k$ ●; 8 [code] Heavy ball beyond quadratics ●; 9 [code] A lower bound for first-order methods ●; 10 [code] Edge of stability with momentum ●●; 11 [code] BFGS on a quadratic ●; 12 [code] Trust region at a saddle ●. Retitled from Gradient-Based Optimization. Stochastic gradients and the noise ball moved to `mdl-stochastic-gradient-methods.md`, and the convex rates are now proved in Convexity; the survey below covers the section before the split.
 
 **Topic:** descent directions and the descent lemma; the condition number and
 per-mode contraction on quadratics; momentum and the $\sqrt\kappa$ law;
@@ -79,50 +94,9 @@ so no addition is proposed):
 
 ---
 
-## chapter_mdl-optimization/mdl-adaptive-stochastic-methods.md — Stochastic and Adaptive Methods
+## chapter_mdl-optimization/mdl-convexity.md — Convexity
 
-**Topic:** the Ghadimi–Lan nonconvex SGD rate; per-coordinate scaling
-(AdaGrad, RMSProp, Adam) and Adam's bias correction and non-convergence
-counterexample; decoupled weight decay; schedules and warmup; SVRG/SAGA
-variance reduction; preconditioners beyond diagonal scaling.
-
-**Current exercises:** 8; disposition: keep 6, rewrite 2, drop 0 — every item
-already carries a bold descriptive name and an explicit, checkable deliverable
-(the review found no clarity issues); the two rewrites are pure formatting
-fixes already flagged by the prior style review (ex4's crammed inline
-"(a)...(b)..." and a stray blank line isolating ex8).
-
-**External sources found:**
-- Stanford CS231n, Assignment 2 (`FullyConnectedNets.ipynb` / `optim.py`) — students implement SGD-with-momentum, RMSProp, and Adam directly from their update equations and compare optimization trajectories on a small fully connected network trained on real image data; a hands-on, implement-and-race register this section's derivation-heavy exercises do not otherwise offer — https://cs231n.github.io/assignments2024/assignment2/
-- Sashank Reddi, Satyen Kale & Sanjiv Kumar, "On the Convergence of Adam and Beyond" (ICLR 2018) — the source of the periodic non-convergence counterexample this section's own ex3/ex7 already exercise directly; already cited as the origin of :eqref:`eq_mdl-opt-reddi`, so no new problem is proposed from it — https://arxiv.org/abs/1904.09237
-- **No good external exercise tradition found** for K-FAC/Shampoo/Muon-style structured preconditioners: these are 2015–2024 research methods with lecture coverage (e.g., CMU 10-725's stochastic-gradient lectures) but no course homework problem could be located that derives or implements them.
-- **No good external exercise tradition found** specifically for SVRG/SAGA as a *homework* problem (as opposed to lecture material): CMU 10-725's lecture notes cover variance reduction, but no assignment deriving SVRG's unbiasedness or comparing it against SGD/SAGA could be located and verified.
-
-**Proposed problem set** (9 problems — exceeds the guideline range because the
-existing 8-item set is uniformly strong and none merit dropping; one
-project-scale addition is appended):
-1. [conceptual] **AdaGrad from the metric view.** Set $A_t=\mathrm{diag}(\sqrt{\mathbf s_t})+\epsilon I$ in the steepest-descent-under-a-metric result of gradient-based-optimization.md ex2 to recover AdaGrad, and explain why $A_t$ is built from $\sqrt{\mathbf s_t}$ rather than $\mathbf s_t$.
-   *Provenance:* original (existing ex1, kept).
-1. [conceptual] **Bias correction for the first moment.** Repeat the second-moment bias-correction computation for $\mathbf m_t$, show uncorrected Adam's first step has magnitude $\approx3.16\times$ the true gradient at default hyperparameters, and find where the inflation factor peaks.
-   *Provenance:* original (existing ex2, kept).
-1. [conceptual] **The Reddi example by hand.** For $C=4$, $\beta_1=0$, $\beta_2=1/17$, compute the three Adam updates of one period of the Reddi–Kale–Kumar counterexample and show the net displacement is toward the wrong endpoint.
-   *Provenance:* original (existing ex3, kept; the counterexample itself is Reddi, Kale & Kumar, ICLR 2018).
-1. [conceptual] **Coupled versus decoupled fixed points.** Write the stationarity conditions of (a) Adam with an $\ell_2$ penalty and (b) AdamW, show they characterize different points, and explain which applies the uniform per-step shrinkage that matters during training.
-   *Provenance:* original (existing ex4, kept — reformat the inline "(a) ... (b) ..." into a nested list; content unchanged).
-1. [short-code] **Where $\epsilon$ matters.** On the $\kappa=10^3$ quadratic, sweep $\epsilon$ across five orders of magnitude and record iterations to convergence, explaining the two regimes ($\epsilon$ invisible vs. $\epsilon$-dominated).
-   *Provenance:* original (existing ex5, kept).
-1. [short-code] **The optimal constant step, exactly.** Derive the exact finite-horizon loss under a fixed step, show the minimizing step scales like $\Theta(\log K/K)$ rather than $1/\sqrt K$, and verify against a grid search at $K=2000$.
-   *Provenance:* original (existing ex6, kept).
-1. [short-code] **AMSGrad's monotone steps.** Show the effective per-coordinate step is nonincreasing under a running maximum, then modify the Reddi-counterexample cell to interpolate between AdamW and AMSGrad and find the largest forgetting factor at which drift reappears.
-   *Provenance:* original (existing ex7, kept).
-1. [short-code] **SVRG unbiasedness and cost.** Prove the conditional unbiasedness of the SVRG estimator, count component-gradient evaluations per epoch, and vary the inner-loop length to explore the snapshot-amortization/staleness tradeoff.
-   *Provenance:* original (existing ex8, kept — fix the stray blank line isolating it; content unchanged).
-1. [extended] **Build and race three optimizers.** Implement SGD-with-momentum, RMSProp, and Adam from their update equations against a small multi-layer network trained on a real dataset, independently tune each optimizer's learning rate, and report which reaches a fixed loss threshold first at matched compute, relating the ranking to this section's coordinate-scaling argument.
-   *Provenance:* adapted from Stanford CS231n Assignment 2 (overlap medium — the "implement the three updates and race them on a real net" structure is adopted; CS231n's own numerical-precision scaffolding is dropped since this section's NumPy cells already provide that) — https://cs231n.github.io/assignments2024/assignment2/
-
----
-
-## chapter_mdl-optimization/mdl-convexity.md — Convex Sets and Convex Functions
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Subdifferentials of norms and maxima; 2 Convex combinations and Jensen's inequality; 3 Existence of minimizers; 4 The PL condition beyond convexity; 5 [code] Contraction of the distance ●; 6 Smoothing the maximum ●; 7 A factored scalar model ●; 8 [code] Implicit bias and the optimizer ●; 9 [extended] Max-margin bias of gradient descent ●●; 10 Gradient descent on $x^4$ ●; 11 Permutation symmetry and nonconvexity; 12 Convexity of the log-partition function. Retitled from Convex Sets and Convex Functions. The convex conjugate moved to `mdl-lagrangian-duality.md`, and proximal operators and coordinate descent to `mdl-constrained-optimization-duality.md`; the survey below covers the section before the move.
 
 **Topic:** three characterizations of convex functions (chords, tangents,
 Hessian) plus subgradients; Jensen's inequality; why convexity makes local
@@ -166,7 +140,60 @@ narrowly-scoped addition is appended to broaden proximal-operator coverage):
 
 ---
 
-## chapter_mdl-optimization/mdl-constrained-optimization-duality.md — Constrained Optimization and Duality
+## chapter_mdl-optimization/mdl-stochastic-gradient-methods.md — Stochastic Gradient Methods
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 [code] Noise scale and critical batch size ●; 2 [code] The constant in a $1/k$ schedule ●●; 3 [code] SVRG inner loop and SAGA; 4 Biased gradient estimators ●; 5 [code] The best constant step for a budget ●; 6 [code] Iterate averaging ●; 7 Which Robbins--Monro condition does the quadratic need? ●; 8 [code] The decay fraction of WSD; 9 [code] Interpolation and linear convergence ●●; 10 [code] The convex bound on the logistic problem. New file, assembled from the stochastic-gradient part of the old Gradient-Based Optimization section and the noise, schedule, nonconvex-rate and variance-reduction parts of the old Stochastic and Adaptive Methods section; its exercises are surveyed under those two sections.
+
+---
+
+## chapter_mdl-optimization/mdl-adaptive-stochastic-methods.md — Adaptive Methods
+
+**Update (2026-11-03, math appendix pass):** 11 exercises: 1 AdaGrad from the metric view; 2 Concentrated gradients and AdaGrad's bound; 3 Bias correction and step inflation; 4 The Reddi example by hand; 5 [code] Where $\epsilon$ matters; 6 [code] Adam's first steps on noise; 7 Regret of online gradient descent ●; 8 [code] Rotation sensitivity ●; 9 [code] Coupled versus decoupled fixed points ●; 10 [extended] AdamW's implicit $\ell_\infty$ constraint ●●; 11 The Kronecker identity and its cost. Retitled from Stochastic and Adaptive Methods. The noise floor, step-size decay, the nonconvex SGD rate and variance reduction moved to `mdl-stochastic-gradient-methods.md`; the survey below covers the combined section before the split.
+
+**Topic:** the Ghadimi–Lan nonconvex SGD rate; per-coordinate scaling
+(AdaGrad, RMSProp, Adam) and Adam's bias correction and non-convergence
+counterexample; decoupled weight decay; schedules and warmup; SVRG/SAGA
+variance reduction; preconditioners beyond diagonal scaling.
+
+**Current exercises:** 8; disposition: keep 6, rewrite 2, drop 0 — every item
+already carries a bold descriptive name and an explicit, checkable deliverable
+(the review found no clarity issues); the two rewrites are pure formatting
+fixes already flagged by the prior style review (ex4's crammed inline
+"(a)...(b)..." and a stray blank line isolating ex8).
+
+**External sources found:**
+- Stanford CS231n, Assignment 2 (`FullyConnectedNets.ipynb` / `optim.py`) — students implement SGD-with-momentum, RMSProp, and Adam directly from their update equations and compare optimization trajectories on a small fully connected network trained on real image data; a hands-on, implement-and-race register this section's derivation-heavy exercises do not otherwise offer — https://cs231n.github.io/assignments2024/assignment2/
+- Sashank Reddi, Satyen Kale & Sanjiv Kumar, "On the Convergence of Adam and Beyond" (ICLR 2018) — the source of the periodic non-convergence counterexample this section's own ex3/ex7 already exercise directly; already cited as the origin of :eqref:`eq_mdl-opt-reddi`, so no new problem is proposed from it — https://arxiv.org/abs/1904.09237
+- **No good external exercise tradition found** for K-FAC/Shampoo/Muon-style structured preconditioners: these are 2015–2024 research methods with lecture coverage (e.g., CMU 10-725's stochastic-gradient lectures) but no course homework problem could be located that derives or implements them.
+- **No good external exercise tradition found** specifically for SVRG/SAGA as a *homework* problem (as opposed to lecture material): CMU 10-725's lecture notes cover variance reduction, but no assignment deriving SVRG's unbiasedness or comparing it against SGD/SAGA could be located and verified.
+
+**Proposed problem set** (9 problems — exceeds the guideline range because the
+existing 8-item set is uniformly strong and none merit dropping; one
+project-scale addition is appended):
+1. [conceptual] **AdaGrad from the metric view.** Set $A_t=\mathrm{diag}(\sqrt{\mathbf s_t})+\epsilon I$ in the steepest-descent-under-a-metric result of gradient-based-optimization.md ex2 to recover AdaGrad, and explain why $A_t$ is built from $\sqrt{\mathbf s_t}$ rather than $\mathbf s_t$.
+   *Provenance:* original (existing ex1, kept).
+1. [conceptual] **Bias correction for the first moment.** Repeat the second-moment bias-correction computation for $\mathbf m_t$, show uncorrected Adam's first step has magnitude $\approx3.16\times$ the true gradient at default hyperparameters, and find where the inflation factor peaks.
+   *Provenance:* original (existing ex2, kept).
+1. [conceptual] **The Reddi example by hand.** For $C=4$, $\beta_1=0$, $\beta_2=1/17$, compute the three Adam updates of one period of the Reddi–Kale–Kumar counterexample and show the net displacement is toward the wrong endpoint.
+   *Provenance:* original (existing ex3, kept; the counterexample itself is Reddi, Kale & Kumar, ICLR 2018).
+1. [conceptual] **Coupled versus decoupled fixed points.** Write the stationarity conditions of (a) Adam with an $\ell_2$ penalty and (b) AdamW, show they characterize different points, and explain which applies the uniform per-step shrinkage that matters during training.
+   *Provenance:* original (existing ex4, kept — reformat the inline "(a) ... (b) ..." into a nested list; content unchanged).
+1. [short-code] **Where $\epsilon$ matters.** On the $\kappa=10^3$ quadratic, sweep $\epsilon$ across five orders of magnitude and record iterations to convergence, explaining the two regimes ($\epsilon$ invisible vs. $\epsilon$-dominated).
+   *Provenance:* original (existing ex5, kept).
+1. [short-code] **The optimal constant step, exactly.** Derive the exact finite-horizon loss under a fixed step, show the minimizing step scales like $\Theta(\log K/K)$ rather than $1/\sqrt K$, and verify against a grid search at $K=2000$.
+   *Provenance:* original (existing ex6, kept).
+1. [short-code] **AMSGrad's monotone steps.** Show the effective per-coordinate step is nonincreasing under a running maximum, then modify the Reddi-counterexample cell to interpolate between AdamW and AMSGrad and find the largest forgetting factor at which drift reappears.
+   *Provenance:* original (existing ex7, kept).
+1. [short-code] **SVRG unbiasedness and cost.** Prove the conditional unbiasedness of the SVRG estimator, count component-gradient evaluations per epoch, and vary the inner-loop length to explore the snapshot-amortization/staleness tradeoff.
+   *Provenance:* original (existing ex8, kept — fix the stray blank line isolating it; content unchanged).
+1. [extended] **Build and race three optimizers.** Implement SGD-with-momentum, RMSProp, and Adam from their update equations against a small multi-layer network trained on a real dataset, independently tune each optimizer's learning rate, and report which reaches a fixed loss threshold first at matched compute, relating the ranking to this section's coordinate-scaling argument.
+   *Provenance:* adapted from Stanford CS231n Assignment 2 (overlap medium — the "implement the three updates and race them on a real net" structure is adopted; CS231n's own numerical-precision scaffolding is dropped since this section's NumPy cells already provide that) — https://cs231n.github.io/assignments2024/assignment2/
+
+---
+
+## chapter_mdl-optimization/mdl-constrained-optimization-duality.md — Constrained Optimization
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Degenerate constraints; 2 KKT points that are not minima; 3 Projected fixed points; 4 [code] Sparsemax and the $\ell_1$ ball; 5 Second-order conditions on the sphere ●; 6 [code] Projection onto an ellipse; 7 Block soft-thresholding (the group lasso); 8 Moreau decomposition ●; 9 [code] Accelerated proximal gradient ●; 10 [code] Stalls of coordinate descent and separable penalties ●. Retitled from Constrained Optimization and Duality. The dual problem, conjugates, strong duality, shadow prices and the worked duals moved to `mdl-lagrangian-duality.md`, and proximal operators and coordinate descent moved in from Convexity; the survey below covers the combined section before the split.
 
 **Topic:** equality/inequality constraints and the KKT conditions; projections
 and projected gradient descent; the Lagrange dual, weak/strong duality and
@@ -209,7 +236,15 @@ theme):
 
 ---
 
+## chapter_mdl-optimization/mdl-lagrangian-duality.md — Duality
+
+**Update (2026-11-03, math appendix pass):** 11 exercises: 1 Conjugate pairs; 2 Maximum entropy and temperature; 3 A dual certificate for $\ell_1$ minimization; 4 Support vectors and the dual value; 5 [code] Duality gaps and formulations; 6 [code] Gradient descent--ascent ●; 7 [code] Penalty versus constraint without convexity ●; 8 [extended] Entropic optimal transport ●●; 9 [code] The dual of ridge regression; 10 [code] Dual ascent and the gradient of the dual; 11 The chapter's quadratic against a half-plane. New file, split from Constrained Optimization and Duality, with the convex conjugate moved in from Convexity; its exercises are surveyed under those two sections.
+
+---
+
 ## chapter_mdl-optimization/mdl-numerical-stability-conditioning.md — Numerical Stability and Conditioning
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Loss-scale window; 2 [code] Blame the problem or the algorithm; 3 [code] A negative variance; 4 [code] Normal equations in floating point; 5 Ridge as a conditioning dial; 6 [code] Feature scaling as preconditioning; 7 [code] Stochastic rounding ●; 8 Exact subtraction ●; 9 [code] Merging running moments ●; 10 [code] Summation error growth ●; 11 [code] Residual as a certificate ●; 12 [code] Mixed-precision iterative refinement ●●.
 
 **Topic:** floating-point representation and range; numerically safe softmax,
 log-sum-exp, and cross-entropy; catastrophic cancellation and Welford's

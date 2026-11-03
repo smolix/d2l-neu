@@ -798,7 +798,7 @@ matter of adding a classifier gradient to the score.
        :exref:`ex_denoising-regression-identity`c of
        :numref:`sec_diffusion-denoising`, this minimum, the floor of $J_i$,
        is
-       $\mathbb{E}\big[\operatorname{tr} \operatorname{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big] / (2 \sigma_i^2)$.
+       $\mathbb{E}\big[\operatorname{tr} \textrm{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big] / (2 \sigma_i^2)$.
        Using :eqref:`eq_diffusion-posterior-mean-score`, show that the floor
        also equals
 
@@ -918,7 +918,7 @@ matter of adding a classifier gradient to the score.
    and let the ladder be geometric with ratio
    $\gamma = \sigma_{i-1} / \sigma_i > 1$.
     1. Show that $r = \|\mathbf{x}\|$ for $\mathbf{x} \sim p_\sigma$ satisfies
-       $\mathbb{E}[r^2] = d \sigma^2$ and $\mathrm{Var}[r^2] = 2 d \sigma^4$.
+       $\mathbb{E}[r^2] = d \sigma^2$ and $\textrm{Var}[r^2] = 2 d \sigma^4$.
        Conclude, by a first-order expansion of the square root, that $r$ is
        approximately $\mathcal{N}(\sigma \sqrt{d}, \sigma^2 / 2)$ for large
        $d$, the limit stated in Proposition 2 of :citet:`Song.Ermon.2020`.

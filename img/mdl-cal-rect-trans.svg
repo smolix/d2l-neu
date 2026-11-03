@@ -97,7 +97,7 @@ L 247.309091 103.025535
    </g>
    <g id="text_1">
     <!-- $f(u(x))$ -->
-    <g style="fill: #1f77b4" transform="translate(97.620909 117.240339) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(97.620909 117.240339) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -453,7 +453,7 @@ L 539.498182 54.200174
    </g>
    <g id="text_3">
     <!-- $f(y)$ -->
-    <g style="fill: #ff7f0e" transform="translate(383.036364 117.240339) scale(0.13 -0.13)">
+    <g style="fill: #15181c" transform="translate(383.036364 117.240339) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-72" d="M 538 -916 
 Q 672 -1147 1006 -1147 

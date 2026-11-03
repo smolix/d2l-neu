@@ -987,7 +987,7 @@ $$-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - 
 Entries of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ independent, mean 0,
 variance 1:
 
-$$\operatorname{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \operatorname{Var}(q_j k_j) = d$$
+$$\textrm{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \textrm{Var}(q_j k_j) = d$$
 
 - $d = 64$: standard deviation $8$.
 - Divide by $\sqrt{d}$: variance 1 at every width.

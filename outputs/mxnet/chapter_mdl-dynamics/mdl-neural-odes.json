@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-dynamics/mdl-neural-odes.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-2": {
+      "code_fingerprint": "sha256:7c1eb18162750e0e1cbdf7768a9933e76af94ba764a01b899313d64f68c1b7ec",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-neural-odes-neural-odes-adjoints-and-continuous-flows-1": {
+      "code_fingerprint": "sha256:dc0a9ec810f98d11c5cbfa6387132084f5a6907a391f18a54b3a8d910bb6323d",
+      "kind": "text",
+      "outputs": []
+    },
+    "odes-solvers-neural-ode-train": {
+      "code_fingerprint": "sha256:2933496318d7008c627b86b8a314aed8c3eec07309ebcbb8b429cc580558ec67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter   0  loss 1.2e+00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter 200  loss 5.6e-06\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter 400  loss 1.3e-06\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-training-through-the-solver-1": {
+      "code_fingerprint": "sha256:2793cffbc38d3d9f3bd4164032e71de6dc5840106e9f6ca03270f83bda328df4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =   10: endpoint error 1.4e-03, forward-backward round trip 5.5e-02\nN =  100: endpoint error 1.7e-02, forward-backward round trip 5.6e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 1000: endpoint error 1.9e-02, forward-backward round trip 5.6e-04\n"
+        }
+      ]
+    },
+    "odes-solvers-adjoint-check": {
+      "code_fingerprint": "sha256:fd0b21b4a190fa76f1019fa6397407aec6e5b4f962cc8269470868871820f776",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-backpropagation-as-the-discrete-adjoint-1": {
+      "code_fingerprint": "sha256:ea9d8aae0ac746a6ef98466b8627859c6a841a11de733df05987d813511e2ad5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =   100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn = 10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+        }
+      ]
+    },
+    "odes-solvers-cnf-trace": {
+      "code_fingerprint": "sha256:e07e8edb2bb4f5d264a03822bd6adb361a1ea933231d007970b70df12737e5fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "log p_t(x(t)), Gaussian formula : [-0.512354 -2.260224 -1.243172 -0.771084]\nlog p_0(x_0) - t tr(A)          : [-0.512354 -2.260224 -1.243172 -0.771084]\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-checking-the-trace-integral-1": {
+      "code_fingerprint": "sha256:2b5832a5afc0d2ec5b79890aa2a0d7332cbaf58243da95acce1a67635a1305e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tr J at x(0) -0.538, at x(1) -0.464\ntrace integral -0.498645  log|det D Phi| -0.498645  gap 5.8e-11\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-the-hutchinson-trace-estimator-1": {
+      "code_fingerprint": "sha256:ddd4de0acca00f4ea2a537056ecb2d9adce7a30ac6486aa579c128bb8727966c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact trace 0.3409\n"
+        }
+      ]
+    },
+    "mdl-neural-odes-the-hutchinson-trace-estimator-2": {
+      "code_fingerprint": "sha256:e4687e85dbff7c1827f70f23962cb29b380f484f966e73bce20a016faafc4e09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Hutchinson 0.3479 +- 0.0147 (100000 probes, one VJP each)\n"
+        }
+      ]
+    }
+  }
+}

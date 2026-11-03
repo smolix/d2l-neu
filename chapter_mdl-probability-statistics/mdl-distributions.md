@@ -1,48 +1,50 @@
 # Distributions
 :label:`sec_mdl-distributions`
 
-A *distribution* assigns probabilities to the possible values of a random
-variable (:numref:`sec_mdl-random_variables`). This section develops eleven
-data distributions and three conjugate priors used frequently in machine learning and relates
-them through constructions and limits. A sum of Bernoulli variables has a
-binomial distribution. Appropriate many-trial limits yield the Poisson or,
-under the central limit theorem, the Gaussian distribution. The categorical
-distribution extends Bernoulli variables to $K$ outcomes and provides the
-probabilistic model behind a softmax classifier. Many of these distributions
-belong to the exponential family and admit conjugate priors, which simplifies
-maximum-likelihood and Bayesian calculations.
+The previous section gave us a language for any random quantity: a mass
+function or a density, a mean, a variance. A model that predicts a label
+uses this language whether or not it says so. A binary classifier outputs one
+number, the probability that the label is 1. A language model outputs a
+probability for every token in its vocabulary, and the numbers sum to one. A
+regression network outputs a predicted value and is trained with squared
+error. Each of these models has chosen a particular distribution for its
+labels, and that choice fixes the loss it minimizes. Which distributions are
+these, where do they come from, and what are their means and variances?
 
-:numref:`fig_mdl-prob-family-tree` summarizes these relationships. Its arrows
-denote constructions and limiting arguments, and the enclosing region marks
-the distributions that belong to the exponential family.
+A coin will carry us through most of the answer. Suppose it lands heads 9
+times in 13 flips. If the coin is fair, how likely is that? To answer, we need the
+distribution of the number of heads, and the same distribution describes how
+many test examples a classifier gets right. We will find that the answer is
+about 9%.
 
-![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson, whose waiting time between events is the Exponential; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node, the conjugate priors included, lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
+The idea of this section is that a handful of distributions grow out of a
+single coin flip. Counting heads gives the binomial. Many flips that each
+rarely come up heads give the Poisson, and the time until the next rare event
+gives the exponential. Many ordinary flips, added up and rescaled, give the
+Gaussian. Because each law is built from simpler pieces, its mean and variance
+follow from the construction, by a short argument that is different each time.
+
+The choice of law matters in practice. Each law, read as a model of the label,
+turns into a familiar loss: binary cross-entropy, softmax cross-entropy,
+squared error, absolute error. A wrong choice has measurable consequences. A
+count model whose variance is too small, for example, makes every error bar
+computed from it too narrow.
+
+We build on the densities, means and variances of
+:numref:`sec_mdl-random_variables`. Two questions stay open at the end: why
+almost all of these laws share one algebraic form, and how well 13 flips
+determine the bias of a coin whose bias we do not know.
+:numref:`fig_mdl-prob-family-tree` shows how the laws of this section are
+built from one another.
+
+![Every law of this section grows out of one coin flip. Arrows with filled heads construct a new law (a sum, a waiting time, a random sign, a vector of coordinates, equal probabilities); dashed arrows with open heads take a limit as the number of flips or points grows. The Poisson and the exponential describe one stream of events, counted and timed.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
-
-The first two parts form a reference gallery; the exponential-family and
-conjugacy parts explain shared structure. A modeling choice also depends on the
-support and data-generating question:
-
-| observed quantity | useful starting model | condition or omission to check |
-|:--|:--|:--|
-| binary or one-of-$K$ outcome | Bernoulli or categorical | probabilities may depend on covariates |
-| successes in fixed trials | binomial | conditionally independent trials with a common success probability |
-| event count over exposure | Poisson | mean equals variance; overdispersion may require another count law |
-| positive waiting time | exponential | constant hazard; Gamma, Weibull, and log-normal laws are omitted |
-| bounded continuous value | continuous uniform as a baseline | an application need not have constant density |
-| real-valued residual | Gaussian or Laplace | mixtures and heavier-tailed laws may fit better |
-| correlated real vector | multivariate Gaussian | multimodality and structured covariance need richer models |
-
-For each distribution we use a common template: its mass or density function,
-where it *arises* in machine learning, its mean and variance *derived* rather than
-asserted, and a compact teaching cell that evaluates the law and draws a
-sample. We treat the discrete distributions first, then the continuous ones, then
-unify them, using the following imports throughout.
 
 ```{.python .input #distributions-imports}
 #@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
+import math
 import numpy as np
 ```
 
@@ -50,481 +52,725 @@ import numpy as np
 #@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import math
 import numpy as np
-import torch
 ```
 
 ```{.python .input #distributions-imports}
 #@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
+import math
 import numpy as np
-import tensorflow as tf
 ```
 
 ```{.python .input #distributions-imports}
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
+import math
 import numpy as np
-import jax
-from jax import numpy as jnp
 ```
-
-:begin_tab:`mxnet`
-This section works in plain NumPy: every computation here is elementary array
-arithmetic, so nothing beyond NumPy is needed.
-:end_tab:
 
 ## Discrete Distributions
 
-A discrete random variable takes values in a countable set, and its distribution
-is a *probability mass function* (pmf) $p_k = P(X=k)$ with $p_k\ge0$ and
-$\sum_k p_k=1$. Mean and variance are the sums
-$\mathbb E[X]=\sum_k k\,p_k$ and
-$\operatorname{Var}(X)=\mathbb E[X^2]-\mathbb E[X]^2$
-(:numref:`sec_mdl-random_variables`). The five distributions here form a
-connected chain: each is built from, or is a limit of, the one
-before. :numref:`fig_mdl-prob-discrete-pmfs` shows their shapes side by side so the
-shared bell-like silhouette of the count distributions is visible at a glance.
+A discrete random variable takes values in a countable set such as $\{0,1\}$
+or $\{0,1,2,\dots\}$. Its distribution is a probability mass function
+$P(X=k)\ge0$ with $\sum_k P(X=k)=1$, its mean is
+$\mathbb{E}[X]=\sum_k k\,P(X=k)$, and its variance is
+$\textrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2$. The laws below are built
+from one another. The binomial counts Bernoulli trials, the Poisson is a limit
+of the binomial, the categorical extends the Bernoulli to $K$ outcomes, the
+multinomial counts categorical draws, and the discrete uniform is the
+categorical with equal probabilities. :numref:`fig_mdl-prob-discrete-pmfs`
+shows them in the order of the text.
 
-![A gallery of discrete probability mass functions in one consistent style, left to right: $\mathrm{Bernoulli}(0.3)$, a discrete uniform on $\{1,\dots,6\}$, $\mathrm{Binomial}(10,0.4)$, and $\mathrm{Poisson}(4)$. The binomial and Poisson share the same right-skewed bell silhouette, foreshadowing their limiting relationship. The last three panels share a vertical scale; the Bernoulli panel has its own.](../img/mdl-prob-discrete-pmfs.svg)
+![Four probability mass functions on the running examples. Bernoulli$(9/13)$: one flip of a coin with the observed frequency of heads. Binomial$(13,\frac{1}{2})$: the number of heads in 13 fair flips; the orange stem is $P(X=9)=715/8192\approx0.087$. Poisson$(4)$: requests per minute at an average of four. A categorical over four classes from the logits $(2, 1, 0.1, -1)$, against the uniform $1/4$. The binomial and the Poisson peak near their means, $6.5$ and $4$, and share a vertical scale; the two panels with few outcomes share another.](../img/mdl-prob-discrete-pmfs.svg)
 :label:`fig_mdl-prob-discrete-pmfs`
 
 ### Bernoulli
 
-The Bernoulli is the simplest non-trivial random variable: a single coin flip that
-comes up $1$ with probability $p$ and $0$ with probability $1-p$. We write
-$X\sim\mathrm{Bernoulli}(p)$, with pmf
+The simplest random quantity has two outcomes: a flip comes up heads or tails,
+a user clicks or does not, a prediction is right or wrong. One number describes
+it completely, the probability $p$ of the outcome we call $1$.
+
+A *Bernoulli* random variable $X\sim\mathrm{Bernoulli}(p)$ takes the value $1$
+with probability $p$ and $0$ with probability $1-p$, where $0\le p\le1$. Both
+cases fit in one formula,
 
 $$
-p_1 = P(X=1) = p, \qquad p_0 = P(X=0) = 1-p .
+P(X=x) = p^{x}(1-p)^{1-x}, \qquad x\in\{0,1\}.
 $$
 :eqlabel:`eq_mdl-bernoulli_pmf`
 
-**Where it arises.** A probabilistic binary classifier commonly uses a
-Bernoulli output: the model emits $\hat p$, and the negative log-likelihood
-$-y\log\hat p-(1-y)\log(1-\hat p)$ is exactly the *binary cross-entropy* loss,
-the maximum-likelihood view of binary classification developed in
-:numref:`subsec_mdl-nll-crossentropy`.
+The exponent selects the factor: for $x=1$ the formula reads $p$, and for $x=0$
+it reads $1-p$.
 
-**Mean and variance.** Because $X$ takes only the values $0$ and $1$, we have
-$X^2=X$, which makes both moments immediate:
+Because $0^2=0$ and $1^2=1$, the variable equals its own square, $X^2=X$.
+Both moments follow at once:
 
 $$
-\mu_X = \mathbb E[X] = 1\cdot p + 0\cdot(1-p) = p,
+\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p,
 \qquad
-\sigma_X^2 = \mathbb E[X^2]-\mu_X^2 = p - p^2 = p(1-p).
+\textrm{Var}(X) = \mathbb{E}[X^2]-\mathbb{E}[X]^2 = p - p^2 = p(1-p).
 $$
 
-The variance $p(1-p)$ is largest at $p=\tfrac12$ (the fairest, least predictable
-coin) and vanishes at $p\in\{0,1\}$ (a certain outcome carries no randomness).
+The mean of a $0/1$ variable is the probability of a $1$, and its variance is
+the product of the two probabilities. A fair coin has mean $\tfrac12$ and
+variance $\tfrac14$. The variance $p(1-p)$ is $0.25$ at $p=\tfrac12$, $0.09$ at
+$p=0.1$ and at $p=0.9$, and $0$ at $p\in\{0,1\}$: the fair coin is the least
+predictable, and a coin with $p=0$ or $p=1$ is a constant. If we use the
+observed frequency $9/13\approx0.69$ of our coin as $p$, the variance is
+$\tfrac{9}{13}\cdot\tfrac{4}{13}\approx0.21$.
+
+A binary classifier outputs an estimate $\hat p$ of the probability that the
+label $y$ is $1$. By :eqref:`eq_mdl-bernoulli_pmf`, the negative
+log-probability it assigns to the observed label is
+$-\log P(y)=-y\log\hat p-(1-y)\log(1-\hat p)$, the *binary cross-entropy*. A
+classifier trained with this loss is fitting a Bernoulli distribution to each
+label.
+
+Does the frequency of heads in many flips approach $p$, and is the variance
+largest at the fair coin? The cell flips the running coin $10{,}000$ times.
 
 ```{.python .input #distributions-bernoulli}
-import numpy as onp
-rng = onp.random.default_rng(0)
-p = 0.3
-sample = 1 * (rng.random((3, 3)) < p)          # 1 with prob p, else 0
-big = 1 * (rng.random(10000) < p)              # large sample for the mean
-print('pmf  P(0), P(1) =', (1 - p, p))
-print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
-sample
+rng = np.random.default_rng()
+p = 9 / 13
+flips = rng.random(10000) < p          # True (heads) with probability p
+print(f'p(1-p) = {p * (1 - p):.3f}')
+print(f'frequency of heads in 10,000 flips: {flips.mean():.3f}   (p = {p:.3f})')
+print('p(1-p) at p = 0.1, 0.5, 0.9:', [round(q * (1 - q), 2) for q in (0.1, 0.5, 0.9)])
 ```
 
-### Categorical and Multinomial
-
-The *categorical* distribution generalizes the Bernoulli from two outcomes to $K$.
-It is parameterized by a probability vector $\mathbf p=(p_1,\dots,p_K)$ with
-$p_k\ge0$ and $\sum_k p_k=1$, and a draw lands on class $k$ with probability $p_k$,
-
-$$
-P(X=k) = p_k .
-$$
-:eqlabel:`eq_mdl-categorical_pmf`
-
-**Where it arises.** Every *softmax* output layer turns a vector of scores
-(logits) $\mathbf z$ into a categorical over classes or vocabulary tokens via
-
-$$
-p_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}},
-$$
-:eqlabel:`eq_mdl-softmax`
-
-and the negative log-likelihood of the categorical,
-$-\sum_k y_k\log p_k$ with $\mathbf y$ the one-hot label, is exactly the softmax
-*cross-entropy* loss (:numref:`subsec_mdl-nll-crossentropy`, :numref:`sec_softmax`).
-The Bernoulli is the case $K=2$. To *sample* a class rather than score one, the
-*Gumbel-max trick* perturbs each logit with independent Gumbel noise (the Gumbel
-distribution, whose standard form has the CDF $\exp(-e^{-x})$, is the
-location--scale law of the maxima of many independent draws
-:cite:`Gumbel.1954`) and takes the argmax: an exact categorical sampler, and the
-basis of the Gumbel-softmax relaxation that lets gradients flow through discrete
-choices :cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017`.
-
-The *multinomial* is its count version, the categorical analogue of how the
-binomial sums Bernoullis. Drawing $n$ independent categorical samples and counting
-how often each class occurs gives a vector $\mathbf x=(x_1,\dots,x_K)$ with
-$\sum_k x_k=n$ and pmf
-
-$$
-P(\mathbf x) = \frac{n!}{x_1!\cdots x_K!}\,\prod_{k=1}^{K} p_k^{x_k},
-$$
-:eqlabel:`eq_mdl-multinomial_pmf`
-
-the multinomial coefficient counting the orderings that yield those counts, times
-the probability $\prod_k p_k^{x_k}$ of any one such ordering. For $K=2$ this is the
-binomial of the next section.
-
-The teaching cell turns a logit vector into a categorical via softmax, confirms it
-normalizes, and draws one sample.
-
-```{.python .input #distributions-categorical}
-import numpy as onp
-rng = onp.random.default_rng(0)
-z = onp.array([2.0, 1.0, 0.1, -1.0])            # logits over K = 4 classes
-p_cat = onp.exp(z) / onp.exp(z).sum()            # softmax -> categorical
-draw = int(rng.choice(len(p_cat), p=p_cat))
-print('categorical p =', p_cat.round(3), ' sum =', float(p_cat.sum()))
-print('one sample -> class', draw)
-```
-
-### Discrete Uniform
-
-If a categorical assigns *equal* probability to each of its outcomes it is the
-*discrete uniform*. Supported on $\{1,2,\dots,n\}$, every value is equally likely,
-$p_i=\tfrac1n$, written $X\sim U(n)$.
-
-**Where it arises.** It models a fair die, a uniformly chosen index, or a token
-sampled with no preference. It is also the maximum-entropy distribution on a
-finite set, a fact we take as given :cite:`Cover.Thomas.1999` and place in
-context when we meet the exponential family below.
-
-**Mean and variance.** Both follow from the closed forms
-$\sum_{i=1}^n i=\tfrac{n(n+1)}2$ and $\sum_{i=1}^n i^2=\tfrac{n(n+1)(2n+1)}6$:
-
-$$
-\mu_X = \frac1n\sum_{i=1}^n i = \frac{n+1}{2},
-\qquad
-\sigma_X^2 = \frac1n\sum_{i=1}^n i^2 - \mu_X^2 = \frac{n^2-1}{12}.
-$$
-
-The mean is the midpoint, by symmetry; the variance grows like $n^2$, since a wider
-range of equally likely values is more spread out. The cell checks both formulas
-against a large sample of die rolls.
-
-```{.python .input #distributions-discrete-uniform}
-rng = np.random.default_rng(0)
-n = 6
-sample = rng.integers(1, n + 1, 10000)           # 10,000 die rolls
-print('mean (n+1)/2  =', (n + 1) / 2, '   sample mean:', float(sample.mean()))
-print('var (n^2-1)/12 =', round((n**2 - 1) / 12, 3), ' sample var :',
-      float(sample.var().round(3)))
-```
+The frequency lands within about $0.01$ of $p\approx0.692$ (its standard
+deviation is $\sqrt{0.21/10{,}000}\approx0.005$), and $p(1-p)$ is largest at
+$p=\tfrac12$.
 
 ### Binomial
 
-Sum $n$ independent Bernoulli flips and you count *successes*: this is the
-*binomial*. Writing each flip as $X_i\sim\mathrm{Bernoulli}(p)$ with $1$ for success,
+Our question about the coin is about a count: how many heads in 13 flips, and
+how likely are exactly 9?
+
+Start with two flips. The outcomes are TT, HT, TH and HH, so
+
+$$
+P(X=0)=(1-p)^2,\qquad P(X=1)=2p(1-p),\qquad P(X=2)=p^2 .
+$$
+
+The factor $2$ counts the two orderings of one head and one tail, and the three
+probabilities sum to $(p+1-p)^2=1$.
+
+In general, the number of heads in $n$ flips is a sum of $n$ indicator
+variables, one per flip. If the flips $X_1,\dots,X_n$ are independent and each
+is $\mathrm{Bernoulli}(p)$ with the same $p$, their sum has the *binomial*
+distribution,
 
 $$
 X = \sum_{i=1}^{n} X_i \sim \mathrm{Binomial}(n,p).
 $$
 :eqlabel:`eq_mdl-binomial_sum`
 
-Exactly $k$ successes can occur in $\binom nk$ orderings, each of probability
-$p^k(1-p)^{n-k}$, so
+A binomial count is a sum of $n$ independent coin flips with a common bias.
+Exactly $k$ heads can occur in $\binom nk$ orderings, one for each choice of
+which $k$ flips are heads, and by independence each ordering has probability
+$p^k(1-p)^{n-k}$. Hence
 
 $$
 P(X=k) = \binom{n}{k}\,p^k(1-p)^{n-k}, \qquad k=0,1,\dots,n.
 $$
 :eqlabel:`eq_mdl-binomial_pmf`
 
-**Where it arises.** It models any "how many out of $n$" count with a fixed
-per-trial probability: clicks among impressions, correct predictions on a held-out
-batch, heads in a run of flips.
-
-**Mean and variance, via the sum.** Rather than wrestle with the binomial
-coefficient, use the representation :eqref:`eq_mdl-binomial_sum` as a sum of
-Bernoullis. *Expectation is linear* (always, even for dependent terms), so
+The probability of a count is the number of orderings times the probability of
+one ordering. For $n=2$ it gives the three numbers above. For our coin, 9 heads
+in 13 flips can occur in $\binom{13}{9}=715$ orderings, each of probability
+$2^{-13}=1/8192$, so
 
 $$
-\mu_X = \mathbb E\Bigl[\sum_i X_i\Bigr] = \sum_i \mathbb E[X_i] = np .
+P(X=9) = \frac{715}{8192} \approx 0.087 .
 $$
 
-The $X_i$ are *independent*, and variance is additive over independent summands, so
+Nine heads *or more* has probability $(715+286+78+13+1)/8192=1093/8192\approx0.133$.
+Whether a tail probability of $0.133$ is reason to doubt the coin is a
+question for statistics, which this section does not take up.
+
+**Mean and variance.** Summing $k$ times the pmf would be laborious. The
+construction :eqref:`eq_mdl-binomial_sum` gives both moments in one line each.
+Expectation is linear for any random variables, dependent or not, so
 
 $$
-\sigma_X^2 = \operatorname{Var}\Bigl(\sum_i X_i\Bigr) = \sum_i \operatorname{Var}(X_i) = np(1-p) .
+\mathbb{E}[X] = \sum_{i=1}^n \mathbb{E}[X_i] = np .
 $$
 
-Representing a binomial variable as a sum of Bernoulli variables gives its mean
-and variance without manipulating binomial coefficients. Successive pmf terms
-differ by the ratio
+Variance adds over *independent* summands, because the covariance of two
+independent variables is zero (:numref:`sec_mdl-random_variables`), so
 
 $$
-\frac{P(X=k+1)}{P(X=k)} = \frac{n-k}{k+1}\cdot\frac{p}{1-p},
+\textrm{Var}(X) = \sum_{i=1}^n \textrm{Var}(X_i) = np(1-p).
 $$
 
-so the whole pmf builds up from $P(X=0)=(1-p)^n$ by repeated multiplication, with
-never a factorial in sight.
+Thus $n$ flips have $n$ times the mean and $n$ times the variance of one flip.
+For the coin the mean is $6.5$, the variance $3.25$ and the standard deviation
+$\sqrt{3.25}\approx1.80$, so 9 heads lie $2.5/1.80\approx1.4$ standard
+deviations above the mean.
+
+The two formulas need different hypotheses. The mean $np$ holds even if the
+flips are dependent, and with different probabilities $p_i$ it becomes
+$\sum_ip_i$. The variance needs independence. If the 13 "flips" were one flip
+copied 13 times, $X$ would be $0$ or $13$, and its variance would be
+$13^2\cdot\tfrac14=42.25$, thirteen times $np(1-p)$.
+
+**The successive ratio.** The pmf can be computed without any factorial.
+When we divide consecutive binomial coefficients, the factorials cancel:
+
+$$
+\frac{\binom{n}{k+1}}{\binom nk}
+= \frac{k!\,(n-k)!}{(k+1)!\,(n-k-1)!} = \frac{n-k}{k+1},
+\qquad\text{so}\qquad
+\frac{P(X=k+1)}{P(X=k)} = \frac{n-k}{k+1}\cdot\frac{p}{1-p}.
+$$
+
+The ratio counts orderings: a set of $k+1$ heads arises from $k+1$ different
+sets of $k$ heads by adding one of the $n-k$ remaining flips, and the factor
+$p/(1-p)$ trades the probability of a tail for that of a head. Starting from
+$P(X=0)=(1-p)^n$ and multiplying by the ratio builds the whole pmf. The ratio
+exceeds $1$ while $k+1<(n+1)p$ and falls below $1$ afterwards, so the pmf rises
+to a single peak near the mean and then falls.
+
+How likely are 9 heads in 13 fair flips? The cell builds the pmf by the ratio,
+in a function we reuse below, and compares it with direct counting.
 
 ```{.python .input #distributions-binomial}
-import numpy as onp
-rng = onp.random.default_rng(0)
-n, p = 10, 0.4
-pmf = onp.zeros(n + 1)
-pmf[0] = (1 - p)**n
-for k in range(n):                               # successive-ratio recursion
-    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
-print('mean onp =', n * p, '  var onp(1-p) =', n * p * (1 - p))
-print('P(X=k):', pmf.round(3))
-rng.binomial(n, p, size=(3, 3))                  # sample counts of successes
+def binomial_pmf(n, p, kmax):
+    """P(X=k) for k = 0..kmax, built from P(X=0) by the successive ratio."""
+    pmf = [(1 - p) ** n]
+    for k in range(kmax):
+        pmf.append(pmf[-1] * max(n - k, 0) / (k + 1) * p / (1 - p))
+    return np.array(pmf)
+
+n, p = 13, 0.5
+pmf = binomial_pmf(n, p, n)
+print(f'P(X=9): by the ratio {pmf[9]:.4f}, by counting {math.comb(13, 9) / 2**13:.4f}')
+print(f'P(X>=9) = {pmf[9:].sum():.4f}')
+print(f'mean np = {n * p}, variance np(1-p) = {n * p * (1 - p)}')
 ```
+
+Both routes give $0.0873$, and the tail $P(X\ge9)$ is $0.1334$.
 
 ### Poisson
 
-What if the trials become *many* and each *rare*? Standing at a bus stop, the
-chance of an arrival in any tiny sub-interval is small, but there are many such
-intervals. Let $\lambda$ be the expected number of arrivals per minute. Split the
-minute into $n$ slices, model each as $\mathrm{Bernoulli}(\lambda/n)$, and the
-count is $\mathrm{Binomial}(n,\lambda/n)$. Its mean is $n\cdot\lambda/n=\lambda$
-for every $n$, and its variance
-$n\cdot\tfrac{\lambda}{n}(1-\tfrac{\lambda}{n})\to\lambda$.
-The moments stabilize, which signals that a limiting distribution exists.
+Some counts have no natural number of trials. A web server receives requests
+at an average rate of $\lambda=4$ per minute, and nobody fixes in advance how
+many requests may arrive. What is the chance of a minute with no request at
+all, or of a burst of 10 or more?
 
-**The limit, derived.** Take $\mathrm{Binomial}(n,p_n)$ with $n\to\infty$ and
-$p_n\to0$ such that $np_n\to\lambda$, the *law of rare events*. Writing
-$p_n=\lambda/n$, the pmf at a fixed $k$ factors into four pieces:
+Slice the minute into $n$ short pieces, so short that no piece holds two
+requests, and treat each piece as an independent $\mathrm{Bernoulli}(4/n)$
+trial. The count is then $\mathrm{Binomial}(n,4/n)$. Its mean is
+$n\cdot\tfrac4n=4$ for every $n$, and its variance $4(1-\tfrac4n)$ approaches
+$4$. The chance of a silent minute is $(1-\tfrac4n)^n$, which is $0.0115$ at
+$n=20$, $0.0169$ at $n=100$ and $0.0182$ at $n=1000$, approaching
+$e^{-4}\approx0.0183$. The numbers settle as the slices shrink, which suggests
+that the binomial has a limit.
+
+**Derivation of the limit.** Take $\mathrm{Binomial}(n,\lambda/n)$ and fix $k$.
+The pmf splits into four factors, three of which have simple limits:
 
 $$
 \binom{n}{k}\Bigl(\frac\lambda n\Bigr)^k\Bigl(1-\frac\lambda n\Bigr)^{n-k}
-= \underbrace{\frac{n!}{(n-k)!\,n^k}}_{\to\,1}
+= \underbrace{\frac{n(n-1)\cdots(n-k+1)}{n^k}}_{\to\,1}
   \cdot \frac{\lambda^k}{k!}
   \cdot \underbrace{\Bigl(1-\frac\lambda n\Bigr)^{n}}_{\to\,e^{-\lambda}}
   \cdot \underbrace{\Bigl(1-\frac\lambda n\Bigr)^{-k}}_{\to\,1} .
 $$
 
-The first factor is $\tfrac{n(n-1)\cdots(n-k+1)}{n^k}\to1$, the third is the
-classic limit $(1-\lambda/n)^n\to e^{-\lambda}$, and the last $\to1$. Collecting
-the survivors gives the *Poisson* pmf:
+The first factor is a product of $k$ ratios that each tend to $1$, the third is
+the limit $(1-\lambda/n)^n\to e^{-\lambda}$ that defines the exponential
+function, and the last tends to $1$ because $k$ is fixed. The same computation
+works for any success probabilities $p_n$ with $np_n\to\lambda$, since then
+$(1-p_n)^n\to e^{-\lambda}$ as well. This limit is the *law of rare events*. The
+surviving factors are the *Poisson* pmf with rate $\lambda>0$,
 
 $$
 P(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad k=0,1,2,\dots
 $$
 :eqlabel:`eq_mdl-poisson_pmf`
 
-with $\lambda>0$ the *rate*, the average count per unit time; we write
-$X\sim\mathrm{Poisson}(\lambda)$.
+and we write $X\sim\mathrm{Poisson}(\lambda)$. The Poisson describes a count
+made of many independent chances, each small, with a fixed expected total
+$\lambda$. Its probabilities sum to one because
+$\sum_{k\ge0}\lambda^k/k!=e^{\lambda}$.
 
-**Where it arises.** Counts of rare events with no fixed ceiling: click counts,
-photons on a sensor, mutations in a genome, requests hitting a server. Run over
-the whole timeline, the bus-stop slicing above is the *Poisson process*: the
-event counts in disjoint time windows are independent Poisson variables.
-
-**Mean and variance.** The binomial moments suggest the answer, but
-convergence in distribution alone does not automatically pass unbounded
-moments to the limit. The Poisson pmf verifies them directly:
+**Mean and variance.** We compute the moments from the pmf directly. The
+factor $k$ cancels against the $k!$, and the index shift $j=k-1$ turns the
+remaining sum into the total probability of a Poisson:
 
 $$
-E[X]=\sum_{k\ge1}k e^{-\lambda}\frac{\lambda^k}{k!}
-=\lambda,
-\qquad
-E[X(X-1)]=\lambda^2.
+\mathbb{E}[X] = \sum_{k\ge1} k\,\frac{e^{-\lambda}\lambda^k}{k!}
+= \lambda\sum_{k\ge1}\frac{e^{-\lambda}\lambda^{k-1}}{(k-1)!}
+= \lambda\sum_{j\ge0}\frac{e^{-\lambda}\lambda^{j}}{j!} = \lambda .
 $$
 
-Therefore
+The same shift applied twice gives $\mathbb{E}[X(X-1)]=\lambda^2$, so
 
 $$
-\mu_X=\lambda,
-\qquad
-\sigma_X^2=E[X(X-1)]+E[X]-E[X]^2=\lambda.
+\textrm{Var}(X) = \mathbb{E}[X(X-1)] + \mathbb{E}[X] - \mathbb{E}[X]^2
+= \lambda^2+\lambda-\lambda^2 = \lambda .
 $$
 
-Mean equals variance is the Poisson fingerprint: over-dispersed count data (where
-the empirical variance exceeds the mean) is the standard sign that a plain Poisson
-model is too simple. The standard fix, a Poisson whose rate is *itself random*,
-reappears later in this section as the Gamma--Poisson mixture, better known as the
-*negative binomial*.
+The Poisson's mean and variance are equal. For the server,
+$P(X=0)=e^{-4}\approx0.018$, $P(X=4)=\tfrac{4^4}{4!}e^{-4}\approx0.195$ and
+$P(X\ge10)\approx0.008$: a silent minute occurs about once an hour, and a burst
+of ten or more about once in two hours. If request counts measured over many
+minutes have a variance several times their mean, the Poisson model is wrong
+for them, and error bars computed from it are too narrow. The usual repair, a
+Poisson whose rate is itself random, is
+exercise :exref:`ex_mdl-distributions-gamma-poisson-mixture`.
+
+**The Poisson process.** Run the slicing over the whole timeline, with rate
+$\lambda$ per unit time. A window of length $t$ holds $nt$ slices, so its count
+is $\mathrm{Binomial}(nt,\lambda/n)$, which tends to
+$\mathrm{Poisson}(\lambda t)$. Windows that do not overlap use disjoint sets of
+slices, so their counts are independent. This stream of events is the
+*Poisson process* with rate $\lambda$, and the exponential distribution below
+describes the times between its events.
+
+We build the Poisson pmf by its own successive ratio,
+$P(X=k+1)/P(X=k)=\lambda/(k+1)$, read off the three probabilities for the
+server, and check the mean and variance on simulated counts.
 
 ```{.python .input #distributions-poisson}
-import numpy as onp
-rng = onp.random.default_rng(0)
-lam = 4.0
-k = onp.arange(15)
-pmf = onp.empty_like(k, dtype=float)
-pmf[0] = onp.exp(-lam)
-for j in range(len(k) - 1):                    # P(j+1) / P(j) = lambda / (j+1)
-    pmf[j + 1] = pmf[j] * lam / (j + 1)
-print('mean = var = lambda =', lam)
-print('P(X=k):', pmf.round(3))
-rng.poisson(lam, size=(3, 3))                   # sample event counts
-```
-
-**Watching the limit happen.** The limit is visible in a plot. The cell below
-overlays the pmf of $\mathrm{Binomial}(n,\lambda/n)$ for
-growing $n$ on its $\mathrm{Poisson}(\lambda)$ limit, building every pmf by the
-same successive-ratio trick we used for the binomial (for the Poisson the ratio is
-simply $P(X=k+1)/P(X=k)=\lambda/(k+1)$). Already at $n=20$ the curves are visibly
-closing in on each other, and at $n=100$ they coincide to plotting accuracy.
-
-```{.python .input #distributions-binomial-to-poisson}
-lam, ks = 4.0, np.arange(15)
-
-def binomial_pmf(n, p):                # successive-ratio recursion, no factorials
-    pmf = [(1 - p)**n]
-    for k in range(len(ks) - 1):
-        pmf.append(pmf[-1] * max(n - k, 0) / (k + 1) * p / (1 - p))
+def poisson_pmf(lam, kmax):
+    """P(X=k) for k = 0..kmax, built from P(X=0) = e^-lam by the ratio lam/(k+1)."""
+    pmf = [math.exp(-lam)]
+    for k in range(kmax):
+        pmf.append(pmf[-1] * lam / (k + 1))
     return np.array(pmf)
 
-poisson_pmf = [np.exp(-lam)]
-for k in range(len(ks) - 1):
-    poisson_pmf.append(poisson_pmf[-1] * lam / (k + 1))
-d2l.plot(ks, [binomial_pmf(n, lam / n) for n in (5, 20, 100)]
-         + [np.array(poisson_pmf)], xlabel='k', ylabel='P(X=k)',
-         legend=[f'Binomial({n}, 4/{n})' for n in (5, 20, 100)] + ['Poisson(4)'])
+pmf = poisson_pmf(4.0, 60)
+print(f'P(0) = {pmf[0]:.3f}, P(4) = {pmf[4]:.3f}, P(X>=10) = {pmf[10:].sum():.3f}')
+counts = rng.poisson(4.0, 100000)
+print(f'100,000 simulated minutes: mean {counts.mean():.2f}, '
+      f'variance {counts.var(ddof=1):.2f}')
 ```
+
+The pmf gives $0.018$, $0.195$ and $0.008$, and the simulated counts have mean
+and variance both close to $4$.
+
+**The binomial-to-Poisson limit.** How fast does
+$\mathrm{Binomial}(n,4/n)$ approach $\mathrm{Poisson}(4)$? The plot overlays
+the two, and the cell measures the gap by the *total-variation distance*
+$\tfrac12\sum_k|P_{\mathrm{Bin}}(k)-P_{\mathrm{Poi}}(k)|$, which is the largest
+difference between the probabilities that the two laws give to any one event.
+
+```{.python .input #distributions-binomial-to-poisson}
+ns, ks = (5, 20, 100), np.arange(15)
+d2l.plot(ks, [binomial_pmf(n, 4 / n, 14) for n in ns] + [poisson_pmf(4.0, 14)],
+         xlabel='k', ylabel='P(X=k)', fmts=('o-', 's--', '^-.', 'k*:'),
+         legend=[f'Binomial({n}, 4/{n})' for n in ns] + ['Poisson(4)'],
+         figsize=(5, 3))
+for n in (20, 100, 1000):
+    tv = 0.5 * np.abs(binomial_pmf(n, 4 / n, 60) - poisson_pmf(4.0, 60)).sum()
+    print(f'n = {n:4d}: total-variation distance {tv:.3f}')
+```
+
+At $n=5$ the binomial cannot exceed five requests, and its peak is too high.
+By $n=100$ the two pmfs coincide to plotting accuracy. The distance is $0.056$
+at $n=20$, $0.010$ at $n=100$ and $0.001$ at $n=1000$: each tenfold increase
+in $n$ cuts it about tenfold, so the error of the Poisson approximation falls
+like $1/n$.
+
+### Categorical and Multinomial
+
+A classifier with $K$ classes, or a language model choosing the next token,
+has more than two outcomes. The categorical distribution is the coin with $K$
+faces.
+
+A *categorical* random variable takes values in $\{1,\dots,K\}$ with
+probabilities given by a vector $\mathbf p=(p_1,\dots,p_K)$, where $p_k\ge0$ and
+$\sum_kp_k=1$:
+
+$$
+P(X=k) = p_k .
+$$
+:eqlabel:`eq_mdl-categorical_pmf`
+
+For $K=2$ it is the Bernoulli. A network produces the $p_k$ from real-valued
+scores $z_1,\dots,z_K$, the *logits*, through the *softmax*
+
+$$
+p_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}} .
+$$
+:eqlabel:`eq_mdl-softmax`
+
+Exponentiating makes every score positive, and dividing by the sum makes the
+scores add to one. The logits $\mathbf z=(2,1,0.1,-1)$, for example, give
+$\mathbf p\approx(0.638,0.235,0.095,0.032)$. With the label written as a one-hot
+vector $\mathbf y$, the negative log-probability of the observed class is
+$-\log p_y=-\sum_ky_k\log p_k$, the *softmax cross-entropy*. Training a
+classifier with it fits a categorical distribution to each label.
+
+**The discrete uniform.** When all probabilities are equal, the categorical
+on $\{1,\dots,n\}$ with $p_k=1/n$ is the *discrete uniform*
+$\mathrm{Unif}\{1,\dots,n\}$: a fair die, or an index chosen uniformly at
+random. Its moments follow from the sums $\sum_{i=1}^n i=\tfrac{n(n+1)}2$ and
+$\sum_{i=1}^n i^2=\tfrac{n(n+1)(2n+1)}6$:
+
+$$
+\mathbb{E}[X] = \frac1n\sum_{i=1}^n i = \frac{n+1}{2},
+\qquad
+\textrm{Var}(X) = \frac{(n+1)(2n+1)}{6} - \frac{(n+1)^2}{4}
+= \frac{(n+1)\bigl(2(2n+1)-3(n+1)\bigr)}{12} = \frac{n^2-1}{12}.
+$$
+
+The mean is the midpoint, and the variance grows like $n^2$ because the values
+spread over a range of length $n-1$. A die has mean $3.5$ and variance
+$35/12\approx2.92$.
+
+**The multinomial.** Draw $n$ independent categorical samples and count how
+often each class occurs. The counts $\mathbf x=(x_1,\dots,x_K)$, with
+$\sum_kx_k=n$, have the *multinomial* pmf
+
+$$
+P(\mathbf x) = \frac{n!}{x_1!\cdots x_K!}\,\prod_{k=1}^{K} p_k^{x_k}.
+$$
+:eqlabel:`eq_mdl-multinomial_pmf`
+
+As for the binomial, the coefficient counts the orderings of the $n$ draws
+that produce these counts, and the product is the probability of one
+ordering. For $K=2$ the coefficient is $\binom{n}{x_1}$, and the multinomial is
+the binomial again: $13!/(9!\,4!)=715$. Each count on its own is
+$\mathrm{Binomial}(n,p_k)$, since a draw either lands in class $k$ or not, so
+$\mathbb{E}[x_k]=np_k$ and $\textrm{Var}(x_k)=np_k(1-p_k)$. The whole count
+vector has mean $n\mathbf p$ and covariance
+$n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$, which
+exercise :exref:`ex_mdl-distributions-multinomial-covariance` derives; its
+off-diagonal entries are negative because the classes compete for the same
+$n$ draws. With $n=1$ the count vector is the one-hot vector of a single
+categorical draw.
+
+Does a sampler reproduce the softmax probabilities of the example logits, and
+does the two-class multinomial coefficient equal the binomial coefficient
+$\binom{13}{9}$?
+
+```{.python .input #distributions-categorical}
+z = np.array([2.0, 1.0, 0.1, -1.0])          # logits for K = 4 classes
+p_cat = np.exp(z) / np.exp(z).sum()           # softmax
+draws = rng.choice(4, size=10000, p=p_cat)
+print('softmax p   =', p_cat.round(3))
+print('frequencies =', (np.bincount(draws, minlength=4) / 10000).round(3))
+print('13! / (9! 4!) =', math.factorial(13) // (math.factorial(9) * math.factorial(4)))
+```
+
+The frequencies of $10{,}000$ draws agree with $\mathbf p$ to within about a
+percentage point, and the coefficient is $715$.
+
+Do the closed-form sums give the mean and variance of a die?
+
+```{.python .input #distributions-discrete-uniform}
+n = 6
+k = np.arange(1, n + 1)
+p_k = np.full(n, 1 / n)
+mean = (k * p_k).sum()
+print(f'mean:     sum of k p_k = {mean:.3f},   (n+1)/2 = {(n + 1) / 2:.3f}')
+print(f'variance: sum of k^2 p_k - mean^2 = {(k**2 * p_k).sum() - mean**2:.3f},'
+      f'   (n^2-1)/12 = {(n**2 - 1) / 12:.3f}')
+```
+
+Both pairs agree: $3.5$ and $2.917$.
 
 ## Continuous Distributions
 
-A continuous random variable is described by a *probability density* (pdf)
-$p(x)\ge0$ with $\int p(x)\,dx=1$; probabilities are areas under it and
-expectations are integral averages (:numref:`sec_mdl-integral_calculus`). The five
-laws below run from the structureless (uniform) to the universal (Gaussian) to the
-vector-valued (multivariate Gaussian), with the exponential covering waiting times
-on $[0,\infty)$ and the Laplace the symmetric case with heavier-than-Gaussian
-tails.
-:numref:`fig_mdl-prob-continuous-pdfs` overlays the three densities on the whole
-line so their tail behavior is directly comparable: the Gaussian's thin
-$e^{-x^2}$ tail, the Laplace's heavier $e^{-|x|}$ tail and sharp peak, and the
-uniform's flat plateau.
-
-![A gallery of continuous probability densities in one consistent style: a continuous uniform on the interval from $-2$ to $2$, a standard Gaussian $\mathcal N(0,1)$, and a Laplace with matched variance. The Laplace has a sharper peak and heavier tails than the Gaussian; the uniform is a flat plateau with hard edges.](../img/mdl-prob-continuous-pdfs.svg)
-:label:`fig_mdl-prob-continuous-pdfs`
-
-### Continuous Uniform
-
-Refine the discrete uniform (let the $n$ equally likely points fill an interval
-$[a,b]$) and you reach the *continuous uniform*, which picks a value in $[a,b]$
-with every value equally likely. The density is constant on the interval and zero
-outside, with the constant fixed by $\int p=1$:
-
-$$
-p(x) = \begin{cases}\frac{1}{b-a} & x\in[a,b],\\ 0 & \text{otherwise,}\end{cases}
-\qquad X\sim U(a,b).
-$$
-:eqlabel:`eq_mdl-cont_uniform_pdf`
-
-**Where it arises.** It is the raw material of randomness: the $U(0,1)$ generator
-underlies inverse-transform sampling (:numref:`sec_mdl-random_variables`), Monte
-Carlo, dropout masks, and random weight initialization.
-
-**Mean and variance.** Direct integration, with the substitution $x\mapsto x-\tfrac{a+b}2$ centering the interval,
-
-$$
-\mu_X = \int_a^b \frac{x}{b-a}\,dx = \frac{a+b}{2},
-\qquad
-\sigma_X^2 = \int_a^b \frac{(x-\mu_X)^2}{b-a}\,dx = \frac{(b-a)^2}{12}.
-$$
-
-These are the continuous mirrors of the discrete-uniform formulas (with the range
-$b-a$ playing the role of $n$). The default generator samples $U(0,1)$; shifting
-and scaling gives any $U(a,b)$, and the cell checks the formulas against a large
-sample.
-
-```{.python .input #distributions-continuous-uniform}
-rng = np.random.default_rng(0)
-a, b = 1.0, 3.0
-sample = (b - a) * rng.random(10000) + a         # shift-and-scale U(0,1)
-print('mean (a+b)/2   =', (a + b) / 2, '  sample mean:',
-      float(sample.mean().round(3)))
-print('var (b-a)^2/12 =', round((b - a)**2 / 12, 3), ' sample var :',
-      float(sample.var().round(3)))
-```
+A continuous random variable has a density $p(x)\ge0$ with $\int p(x)\,dx=1$.
+Probabilities are areas under the density, and means and variances are
+integrals, as in :numref:`sec_mdl-random_variables`. The laws below come
+in the order in which they are built. The exponential comes from the Poisson
+process. The uniform is the raw material of every sampler. The Gaussian is the
+limit of sums of ordinary terms, and the Laplace is the exponential folded to
+both sides.
 
 ### Exponential
 
-If the Poisson counts how *many* rare events land in a window, the *exponential*
-models the *waiting time between* them. It is the canonical density on $[0,\infty)$,
+Return to the server. The Poisson tells us how many requests arrive in a
+minute. An engineer choosing a timeout asks a different question about the
+same stream of requests: how long until the next one?
+
+The two questions share an answer. The wait for the next request exceeds one
+minute exactly when the minute contains no request, so
+$P(\text{wait}>1)=P(N=0)=e^{-4}\approx0.018$, the same number as the
+Poisson's $P(0)$. :numref:`fig_mdl-prob-poisson-timeline` shows the one stream
+of events that both laws describe.
+
+![One stream of requests at an average rate of four per minute, seen two ways. (a) Event times over three minutes; the unit windows hold $N = 4$, $2$ and $5$ requests, and $T_1$, $T_2$, $T_3$ are the first three waits. (b) The number of requests in a minute is Poisson$(4)$; a silent minute has probability $e^{-4}\approx0.018$. (c) The probability that a wait exceeds $t$ minutes is $e^{-4t}$, a straight line on the logarithmic axis; a wait longer than a minute and a silent minute are the same event.](../img/mdl-prob-poisson-timeline.svg)
+:label:`fig_mdl-prob-poisson-timeline`
+
+**Derivation.** The same argument works for a wait of any length $t\ge0$. In a Poisson process with
+rate $\lambda$, the wait $T$ from time $0$ to the first event exceeds $t$
+exactly when the window $[0,t]$ is empty, and the count in that window is
+$\mathrm{Poisson}(\lambda t)$. Hence
 
 $$
-p(x) = \lambda e^{-\lambda x}\ (x\ge0),
+P(T>t) = P\bigl(N(t)=0\bigr) = e^{-\lambda t}, \qquad t\ge0 .
+$$
+
+The cumulative distribution function is $F(t)=1-e^{-\lambda t}$, and its
+derivative is the density of the *exponential* distribution with rate
+$\lambda>0$,
+
+$$
+p(t) = \lambda e^{-\lambda t}\quad (t\ge0),
 \qquad
-F(x) = 1 - e^{-\lambda x},
-\qquad X\sim\mathrm{Exp}(\lambda),
+p(t) = 0\quad (t<0),
+\qquad
+F(t) = 1 - e^{-\lambda t},
+\qquad T\sim\mathrm{Exp}(\lambda).
 $$
 :eqlabel:`eq_mdl-exponential_pdf`
 
-with rate $\lambda$ matching the Poisson rate: more frequent events mean shorter
-waits.
+The density is the rate at which the probability of an empty window decays,
+so the process determines it. After each event the future
+slices of the process are fresh independent trials, so the same law holds for
+the wait after any event: the gaps between consecutive events are independent
+$\mathrm{Exp}(\lambda)$ variables.
 
-**Where it arises.** Inter-arrival times, time-to-failure in reliability, and
-survival analysis: anywhere a constant *hazard* (the instantaneous failure rate
-per unit time, here independent of the age already reached) is plausible.
-
-**Memorylessness.** The exponential is the *unique* continuous distribution with no
-memory: having already waited $s$, the chance of waiting $t$ longer is the same as
-starting fresh. Using $P(X>x)=e^{-\lambda x}$,
+**Mean and variance.** Two integrals by parts do the work:
+$\int_0^\infty u\,e^{-u}\,du=[-ue^{-u}]_0^\infty+\int_0^\infty e^{-u}\,du=1$
+and
+$\int_0^\infty u^2e^{-u}\,du=[-u^2e^{-u}]_0^\infty+2\int_0^\infty u\,e^{-u}\,du=2$.
+Substituting $u=\lambda t$,
 
 $$
-P(X>s+t \mid X>s)
-= \frac{P(X>s+t)}{P(X>s)}
+\mathbb{E}[T] = \int_0^\infty t\,\lambda e^{-\lambda t}\,dt = \frac1\lambda,
+\qquad
+\mathbb{E}[T^2] = \frac{2}{\lambda^2},
+\qquad
+\textrm{Var}(T) = \frac{2}{\lambda^2}-\frac1{\lambda^2} = \frac1{\lambda^2}.
+$$
+
+More frequent events mean shorter waits. At four requests per minute the mean
+wait is $\tfrac14$ minute, or 15 seconds. The median $m$ solves
+$F(m)=\tfrac12$, so $m=\log2/\lambda\approx10.4$ seconds: half of all waits are
+shorter than about 10 seconds even though the mean is 15. The density is
+largest at $t=0$ and has a long right tail, which pulls the mean above the
+median.
+
+**Memorylessness.** Having already waited $s$ minutes without a request, the
+chance of waiting $t$ minutes more is the same as at the start:
+
+$$
+P(T>s+t \mid T>s)
+= \frac{P(T>s+t)}{P(T>s)}
 = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}}
 = e^{-\lambda t}
-= P(X>t).
+= P(T>t).
 $$
 
-The waiting clock never "ages", exactly the property that makes the exponential
-the continuous-time partner of the Poisson. The converse, that memorylessness
-*forces* the exponential form, is
-exercise :exref:`ex_mdl-distributions-memoryless-converse`.
+Time already spent waiting tells us nothing about the time still to wait. Among
+continuous distributions on $(0,\infty)$, only the exponential has this
+property; exercise :exref:`ex_mdl-distributions-memoryless-converse` proves
+it. The property also marks the limit of the model. A light bulb whose
+filament thins with use is more likely to fail in the next hour the older it
+is, so its lifetime is not exponential.
 
-**Mean and variance.** With the standard integrals $\int_0^\infty u\,e^{-u}\,du=1$
-and $\int_0^\infty u^2 e^{-u}\,du=2$ (integration by parts,
-:numref:`sec_mdl-integral_calculus`), substitute $u=\lambda x$:
+**The Gamma distribution.** The time $T_k$ of the $k$-th request is the sum of
+$k$ independent waits. By the binomial's argument, linearity and independence,
+its mean is $k/\lambda$ and its variance $k/\lambda^2$. Its density also follows
+from the process. The $k$-th event comes after $t$ exactly when at most $k-1$
+events fall in $[0,t]$:
 
 $$
-\mu_X = \int_0^\infty x\,\lambda e^{-\lambda x}\,dx = \frac1\lambda,
-\qquad
-\mathbb E[X^2] = \frac{2}{\lambda^2}
-\;\Rightarrow\;
-\sigma_X^2 = \frac{2}{\lambda^2}-\frac1{\lambda^2} = \frac1{\lambda^2}.
+P(T_k>t) = P\bigl(N(t)\le k-1\bigr) = \sum_{j=0}^{k-1} e^{-\lambda t}\frac{(\lambda t)^j}{j!}.
 $$
 
-The teaching cell samples by the *inverse-transform* proposition of
-:numref:`sec_mdl-random_variables`; this is the closed-form case promised
-there. Inverting $F(x)=1-e^{-\lambda x}$ gives
-$F^{-1}(q)=-\tfrac1\lambda\log(1-q)$, and since $1-U$ is again uniform when
-$U\sim U(0,1)$, the sampler simplifies to
-$X=-\tfrac1\lambda\log U\sim\mathrm{Exp}(\lambda)$.
+Differentiating the $j$-th term gives
+$-\lambda e^{-\lambda t}\frac{(\lambda t)^j}{j!}+\lambda e^{-\lambda t}\frac{(\lambda t)^{j-1}}{(j-1)!}$,
+whose second part cancels the first part of the term before it. The sum
+telescopes, and only the first part of the last term survives:
+
+$$
+p(t) = -\frac{d}{dt}P(T_k>t) = \frac{\lambda^k\,t^{k-1}e^{-\lambda t}}{(k-1)!},
+\qquad t>0 .
+$$
+
+For $k=1$ this is the exponential density. To allow values of $k$ that are not
+integers, replace $(k-1)!$ by the *Gamma function*
+$\Gamma(z)=\int_0^\infty u^{z-1}e^{-u}\,du$ for $z>0$. Integration by parts
+gives $\Gamma(z+1)=z\,\Gamma(z)$, and $\Gamma(1)=1$, so $\Gamma(n+1)=n!$. The
+*Gamma distribution* with shape $\alpha>0$ and rate $\beta>0$ has the density
+
+$$
+p(t) = \frac{\beta^{\alpha}\,t^{\alpha-1}e^{-\beta t}}{\Gamma(\alpha)},
+\qquad t>0,
+\qquad T\sim\mathrm{Gamma}(\alpha,\beta).
+$$
+:eqlabel:`eq_mdl-gamma_pdf`
+
+The substitution $u=\beta t$ turns its integral into $\Gamma(\alpha)$, so it
+integrates to one. The same substitution gives
+$\mathbb{E}[T]=\Gamma(\alpha+1)/(\beta\,\Gamma(\alpha))=\alpha/\beta$ and
+$\textrm{Var}(T)=\alpha/\beta^2$, which for $\alpha=k$, $\beta=\lambda$ are the
+moments of the $k$-th waiting time. For the server, the 4th request arrives
+after a mean of $1$ minute with standard deviation $0.5$ minutes, and
+$P(T_4>1)=P(N(1)\le3)\approx0.43$: in 43% of minutes, fewer than four requests
+arrive, although four is the average.
+
+**Sampling.** The inverse-transform method of
+:numref:`sec_mdl-random_variables` turns a uniform draw $U$ into a draw from any
+continuous distribution with an invertible cumulative distribution function
+$F$, by setting $X=F^{-1}(U)$. For the exponential,
+$F^{-1}(q)=-\log(1-q)/\lambda$, so $T=-\log(1-U)/\lambda$. The variable $1-U$
+has the same distribution as $U$. We use it because generators return values
+in $[0,1)$, so $U=0$ can occur, and $-\log U$ would then be infinite.
+
+Does one simulated stream of events give both laws at once? The cell draws
+$60{,}000$ exponential gaps at rate $4$, adds them up into event times, counts
+the events in each of the first $10{,}000$ minutes, and checks the Poisson
+count, the exponential wait and the Gamma probability $P(T_4>1)$.
 
 ```{.python .input #distributions-exponential}
-import numpy as onp
-rng = onp.random.default_rng(0)
-lam = 0.5
-U = rng.random(100000)
-sample = -onp.log(U) / lam                        # inverse-transform sampler
-print('mean 1/lambda =', 1 / lam, '  sample mean =', float(sample.mean().round(3)))
-print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var().round(3)))
+lam = 4.0                                       # requests per minute
+gaps = -np.log(1 - rng.random(60000)) / lam     # inverse transform: Exp(lam)
+times = np.cumsum(gaps)                         # event times, about 15,000 min
+counts = np.bincount(times[times < 10000].astype(int), minlength=10000)
+print(f'requests per minute: mean {counts.mean():.2f}, variance {counts.var(ddof=1):.2f}')
+print(f'silent minutes {np.mean(counts == 0):.4f},   waits over 1 min '
+      f'{np.mean(gaps > 1):.4f},   e^-4 = {math.exp(-4):.4f}')
+print(f'mean wait {gaps.mean():.3f} min,   minutes with at most 3 requests '
+      f'{np.mean(counts <= 3):.3f}')
 ```
+
+The counts have mean and variance close to $4$, and the mean wait is close to
+$0.25$ minutes. The fraction of silent minutes and the fraction of waits longer
+than a minute are both close to $e^{-4}$. The fraction of minutes with at most
+three requests is close to the Gamma value $P(T_4>1)\approx0.43$. Gaps drawn
+as exponentials produce Poisson counts.
+
+### Uniform
+
+Every sampler in this section starts from the same raw material, a number drawn
+uniformly from $[0,1)$. Its law, and the law of a number drawn uniformly from
+any other interval, is the continuous uniform.
+
+The *uniform* distribution $U(a,b)$ on an interval $[a,b]$ with $a<b$ has
+constant density, fixed by $\int p=1$:
+
+$$
+p(x) = \begin{cases}\frac{1}{b-a} & x\in[a,b],\\ 0 & \text{otherwise.}\end{cases}
+$$
+:eqlabel:`eq_mdl-cont_uniform_pdf`
+
+Every subinterval of the same length has the same probability, its length
+divided by $b-a$. (Every single value has probability zero, as for any
+density.) The moments follow by direct integration; for the variance, center
+the interval at its midpoint, so that it runs from $-c$ to $c$ with
+$c=\tfrac{b-a}2$:
+
+$$
+\mathbb{E}[X] = \int_a^b \frac{x}{b-a}\,dx = \frac{b^2-a^2}{2(b-a)} = \frac{a+b}{2},
+\qquad
+\textrm{Var}(X) = \int_{-c}^{c} \frac{y^2}{2c}\,dy = \frac{c^2}{3} = \frac{(b-a)^2}{12}.
+$$
+
+$U(0,1)$ has mean $\tfrac12$ and variance $\tfrac1{12}$, and
+$U(-\sqrt3,\sqrt3)$ has variance $(2\sqrt3)^2/12=1$. The formula continues the
+discrete uniform: $n$ equally likely points spaced $h$ apart have variance
+$h^2(n^2-1)/12$, which tends to $(b-a)^2/12$ as the points fill $[a,b]$ with
+$nh=b-a$. Through the inverse transform, $U(0,1)$ becomes any continuous
+distribution; the exponential sampler above is the example. The uniform has
+hard edges and no tails, so it looks nothing like a Gaussian. For that reason
+we use it below as the summand that the central limit theorem turns into one.
+
+Is every subinterval of length $0.3$ equally likely under $U(-\sqrt3,\sqrt3)$,
+and is the variance $1$?
+
+```{.python .input #distributions-continuous-uniform}
+a, b = -math.sqrt(3), math.sqrt(3)
+u = a + (b - a) * rng.random(100000)            # shift and scale U(0, 1)
+for lo in (-1.5, 1.0):
+    print(f'fraction in [{lo}, {lo + 0.3:.1f}): {np.mean((u >= lo) & (u < lo + 0.3)):.3f}')
+print(f'0.3 / (b-a) = {0.3 / (b - a):.3f};  sample variance {u.var(ddof=1):.3f},'
+      f'  (b-a)^2/12 = {(b - a)**2 / 12:.3f}')
+```
+
+Both subintervals catch about $0.087$ of the draws, which is $0.3/(2\sqrt3)$,
+and the sample variance is close to $1$.
 
 ### Gaussian
 :label:`subsec_mdl-gaussian-clt`
 
-The *Gaussian* (or normal) distribution is what sums of many small independent
-effects look like, and such sums are everywhere.
-Return to the binomial $X^{(n)}\sim\mathrm{Binomial}(n,p)$, but now hold $p$ fixed
-and send $n\to\infty$. Both mean $np$ and variance $np(1-p)$ blow up, so we
-standardize,
+We found $P(X=9)$ for the coin by counting 715 orderings. A test set of
+$10{,}000$ examples also has a binomial number of errors, and counting
+orderings there is hopeless. Is there a formula for the shape of the binomial
+near its peak?
+
+**The log-ratio near the mean.** Write $q=1-p$ and measure the
+count from the mean, $k=np+x$. The successive ratio of the binomial becomes
 
 $$
-Y^{(n)} = \frac{X^{(n)} - np}{\sqrt{np(1-p)}},
+\frac{P(X=k+1)}{P(X=k)} = \frac{(n-k)\,p}{(k+1)\,q}
+= \frac{(nq-x)\,p}{(np+x+1)\,q}
+= \frac{1-x/(nq)}{1+(x+1)/(np)} .
 $$
 
-which has mean $0$ and variance $1$ for every $n$. The *central limit theorem*
-(CLT) states that $Y^{(n)}$ converges in distribution to the *standard Gaussian*:
-for any interval $[a,b]$, $P(Y^{(n)}\in[a,b])\to P(\mathcal N(0,1)\in[a,b])$. This
-binomial case is the *de Moivre--Laplace theorem*, historically the first central
-limit theorem. The limiting density is
+For $x$ of the order of the standard deviation $\sqrt{npq}$, both $x/(nq)$ and
+$(x+1)/(np)$ are small, and $\log(1+\epsilon)\approx\epsilon$ gives
+
+$$
+\log\frac{P(X=k+1)}{P(X=k)} \approx -\frac{x}{nq}-\frac{x+1}{np}
+= -\frac{x}{npq}-\frac{1}{np},
+$$
+
+where we used $\frac1{nq}+\frac1{np}=\frac{p+q}{npq}=\frac{1}{npq}$. The step
+from $\log P(X=k)$ to $\log P(X=k+1)$ is, to leading order, linear in the
+distance $x$ from the mean, with slope $-1/(npq)$; the term $-1/(np)$ is
+smaller by a factor of order $1/\sqrt n$. A function whose steps grow
+linearly is a parabola. Summing the steps from the mean to $np+x$,
+
+$$
+\log P(X=np+x) \approx C-\sum_{j=0}^{x-1}\frac{j}{npq} = C-\frac{x(x-1)}{2npq}
+\approx C-\frac{x^2}{2npq},
+$$
+
+with $C$ the logarithm of the peak value, which the normalizer below fixes.
+Near its peak the binomial is a bell, $e^{-x^2/(2npq)}$, centered at the mean
+and as wide as its standard deviation $\sqrt{npq}$. This is the
+*de Moivre–Laplace theorem*, the first central limit theorem. With the
+normalizer it reads $P(X=np+x)\approx e^{-x^2/(2npq)}/\sqrt{2\pi npq}$. For the
+coin, $npq=3.25$ and $x=2.5$ give $e^{-2.5^2/6.5}/\sqrt{2\pi\cdot3.25}\approx0.0846$,
+against the exact $0.0873$.
+
+How good is the bell at $n=13$, and how fast does it improve? The cell compares
+it with the exact pmf for fair coins.
+
+```{.python .input #mdl-distributions-gaussian-2}
+for n in (13, 100, 1000):
+    k = np.arange(n + 1)
+    bell = np.exp(-(k - n / 2)**2 / (n / 2)) / np.sqrt(np.pi * n / 2)
+    exact = binomial_pmf(n, 0.5, n)
+    peak = n // 2
+    print(f'n = {n:4d}: relative error at the peak {abs(bell[peak] / exact[peak] - 1):.2%}')
+print(f'n = 13, k = 9: bell {np.exp(-2.5**2 / 6.5) / np.sqrt(np.pi * 6.5):.4f},'
+      f' exact {binomial_pmf(13, 0.5, 13)[9]:.4f}')
+```
+
+The bell is 3% low at $k=9$ for 13 flips, and its relative error at the peak is
+$1.7\%$ at $n=13$, $0.25\%$ at $n=100$ and $0.03\%$ at $n=1000$, falling like
+$1/n$.
+
+**The standard Gaussian.** The parabola suggests rescaling. The standardized
+count $Y^{(n)}=(X-np)/\sqrt{npq}$ has mean $0$ and variance $1$ for every $n$,
+and its values are spaced $1/\sqrt{npq}$ apart. The bell says that
+$P(X=k)\approx\phi(y)/\sqrt{npq}$ at $y=(k-np)/\sqrt{npq}$, a density
+$\phi(y)$ times the spacing, with
+
+$$
+\phi(y) = \frac{1}{\sqrt{2\pi}}\,e^{-y^2/2}.
+$$
+
+This is the density of the *standard Gaussian* $\mathcal N(0,1)$, the limit of
+the standardized binomial. Shifting by $\mu$ and scaling by $\sigma>0$ gives
+the variable $X=\mu+\sigma Y$, whose density by the change-of-variables formula
+of :numref:`sec_mdl-random_variables` is $\phi((x-\mu)/\sigma)/\sigma$, the
+*Gaussian* (or normal) distribution
 
 $$
 p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\,\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\Bigr),
@@ -532,25 +778,35 @@ p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\,\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\B
 $$
 :eqlabel:`eq_mdl-gaussian_pdf`
 
-Nothing about coin flips was special: the *Lindeberg--Lévy* form of the CLT holds
-for any independent, identically distributed summands with finite variance (no
-higher moments needed), which is why the conditions are so easy to meet and the
-Gaussian is everywhere. We take the theorem as given; :cite:`Wasserman.2013`
-gives the proof.
+The parameter $\mu$ moves the center of the bell and $\sigma$ sets its width.
+The variance computation below shows that they are the mean and the standard
+deviation.
 
-**Watching universality happen.** Like the Poisson limit, this claim is
-checkable in a few lines. The cell below starts from a summand that looks
-nothing like a Gaussian (a $U(0,1)$ draw, flat with hard edges and no tails), forms
-sums of $n$ of them, standardizes each sum by its mean $n/2$ and standard
-deviation $\sqrt{n/12}$, and overlays the resulting histograms on the standard
-normal density. At $n=1$ we see the uniform's own plateau; at $n=2$ the
-triangular hat; by $n=8$ the curve is already hard to distinguish from the
-Gaussian, and at $n=32$ the two agree to the resolution of the plot. Nothing in
-the code knows about the Gaussian: the bell is manufactured by the summation
-itself, which is exactly the universality the CLT asserts.
+**The central limit theorem.** The derivation used little about coin flips
+beyond their mean and variance, and the general theorem needs only these two
+moments. Let $X_1,X_2,\dots$ be
+independent and identically distributed with mean $\mu$ and variance
+$0<\sigma^2<\infty$, and let $S_n=\sum_{i=1}^nX_i$. Then for every $y$,
+
+$$
+\lim_{n\to\infty} P\Bigl(\frac{S_n-n\mu}{\sigma\sqrt n}\le y\Bigr) = \Phi(y)
+= \int_{-\infty}^{y}\phi(u)\,du .
+$$
+:eqlabel:`eq_mdl-clt`
+
+The standardized sum of many independent copies of any law with finite
+variance has, in the limit, the standard Gaussian distribution. For Bernoulli
+summands this is the de Moivre–Laplace theorem above; we take the general proof
+as given :cite:`Wasserman.2013`. Only the mean and the variance of the summands
+enter the limit, which is why sums of many small independent effects, such as
+measurement noise, so often look Gaussian.
+
+**Sums of uniforms.** The theorem is easy to watch. The cell starts from
+$U(0,1)$, flat with hard edges and no tails, forms sums of $n$ draws,
+standardizes them by their mean $n/2$ and standard deviation $\sqrt{n/12}$,
+and compares their histograms with $\phi$.
 
 ```{.python .input #mdl-distributions-gaussian-1}
-rng = np.random.default_rng(0)
 ns, x = (1, 2, 8, 32), np.arange(-4, 4, 0.01)
 curves = []
 for n in ns:                                   # standardized sums of n uniforms
@@ -562,54 +818,79 @@ d2l.plot(x, curves, xlabel='standardized sum', ylabel='density',
          legend=[f'n = {n}' for n in ns] + ['N(0, 1)'])
 ```
 
-**The normalizer and the moments.** Why the constant $1/\sqrt{2\pi\sigma^2}$?
-The identity it rests on, $\int_{-\infty}^\infty e^{-x^2/2}\,dx=\sqrt{2\pi}$, is
-the Gaussian integral computed in :numref:`sec_mdl-integral_calculus` by squaring
-the integral and passing to polar coordinates (:eqref:`eq_mdl-gauss-square`).
-Substituting $x\mapsto(x-\mu)/\sigma$ then shows :eqref:`eq_mdl-gaussian_pdf`
-integrates to one. The parameters are the first two moments, and one integration
-by parts proves it: the mean is $\mu$ by symmetry, and for the variance take
-$\mu=0$, $\sigma=1$ and integrate by parts with $u=x$, $dv=x\,e^{-x^2/2}\,dx$,
+At $n=1$ we see the uniform's plateau and at $n=2$ a triangle. By $n=8$ the
+histogram is close to the Gaussian, and at $n=32$ the two cannot be told apart
+at the resolution of the plot.
+
+**The normalizer.** Why the constant $1/\sqrt{2\pi}$? Let
+$I=\int_{-\infty}^\infty e^{-x^2/2}\,dx$. Squaring $I$ gives an integral over
+the plane, and polar coordinates $x=r\cos\theta$, $y=r\sin\theta$, with area
+element $dx\,dy=r\,dr\,d\theta$, make it elementary:
+
+$$
+I^2 = \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2+y^2)/2}\,dx\,dy
+= \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta
+= 2\pi\,\Bigl[-e^{-r^2/2}\Bigr]_0^\infty = 2\pi .
+$$
+
+So $I=\sqrt{2\pi}$, and $\phi$ integrates to one. The factor $r$ of the polar
+area element gives $r\,e^{-r^2/2}$ the simple antiderivative $-e^{-r^2/2}$,
+which $e^{-x^2/2}$ alone does not have.
+
+**The variance.** The mean of $\mathcal N(0,1)$ is $0$ by symmetry. For the
+variance, integrate by parts with $u=x$ and $dv=x\,e^{-x^2/2}\,dx$:
 
 $$
 \int_{-\infty}^{\infty} x^2\,\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,dx
 = \frac{1}{\sqrt{2\pi}}\Bigl(\bigl[-x\,e^{-x^2/2}\bigr]_{-\infty}^{\infty}
-+ \int_{-\infty}^{\infty} e^{-x^2/2}\,dx\Bigr) = 0 + 1 = 1,
++ \int_{-\infty}^{\infty} e^{-x^2/2}\,dx\Bigr) = 0 + 1 = 1 .
 $$
 
-so the standard Gaussian has variance $1$; shifting by $\mu$ and scaling by
-$\sigma$ gives mean $\mu$ and variance $\sigma^2$ in general. (The exponential
-family's moment property, :eqref:`eq_mdl-exp_family_moment`, recovers both by
-differentiation alone; see
-exercise :exref:`ex_mdl-distributions-log-partition-moments`.)
+The standard Gaussian has variance $1$, so $\mathcal N(\mu,\sigma^2)$ has mean
+$\mu$ and variance $\sigma^2$: the two parameters are the first two moments.
 
-**Maximum entropy.** Among all distributions with a given mean and variance, the
-Gaussian has the largest entropy: it is the *most noncommittal* choice consistent
-with knowing only those two numbers :cite:`Cover.Thomas.1999`. We prove this in
-:numref:`subsec_mdl-gaussian-max-entropy` as a short consequence of Gibbs'
-inequality, and place it in context when we meet the
-exponential family below.
+**The Cauchy counterexample.** The theorem needs a finite variance. The previous
+section met the standard Cauchy density $1/(\pi(1+x^2))$, whose tails are so
+heavy that its variance is infinite. The average of $n$ independent standard
+Cauchy draws is again standard Cauchy, a fact we state without proof, so
+averaging more draws never narrows the spread. In particular
+$P(|\bar X_n|>1)=\tfrac12$ for every $n$. For Gaussian draws the average is
+$\mathcal N(0,1/n)$, and the same probability falls from $0.32$ at $n=1$ to
+$0.0016$ at $n=10$, and it is negligible at $n=1000$.
 
-**Where it arises.** As the CLT limit it models aggregate noise; it is the noise
-model behind *regression*, where taking $y\sim\mathcal N(\hat y,\sigma^2)$ makes
-the negative log-likelihood equal to mean squared error
-(:numref:`subsec_mdl-gaussian-mse`); and it is the default prior
-and latent distribution throughout deep generative modeling.
+Does averaging help when the variance is infinite? The cell averages $n$
+Cauchy draws and $n$ Gaussian draws, $10{,}000$ times each.
 
 ```{.python .input #distributions-gaussian}
-import numpy as onp
-rng = onp.random.default_rng(0)
-mu, sigma = 0.0, 1.0
-x = onp.arange(-4, 4, 0.01)
-p = onp.exp(-(x - mu)**2 / (2 * sigma**2)) / onp.sqrt(2 * onp.pi * sigma**2)
-print('total mass (≈1):', float((0.01 * p).sum().round(4)))
-rng.normal(mu, sigma, size=(3, 3))              # sample from N(mu, sigma^2)
+for n in (1, 10, 1000):
+    cauchy = rng.standard_cauchy((10000, n)).mean(axis=1)
+    gauss = rng.standard_normal((10000, n)).mean(axis=1)
+    print(f'n = {n:4d}: P(|average| > 1):  Cauchy {np.mean(np.abs(cauchy) > 1):.3f},'
+          f'  Gaussian {np.mean(np.abs(gauss) > 1):.4f}')
 ```
+
+The Cauchy fraction stays near $\tfrac12$ at every $n$. The Gaussian fraction
+is about $0.32$ at $n=1$, one or two in a thousand at $n=10$, and zero at
+$n=1000$.
+
+**Gaussian noise and squared error.** A regression network that predicts $\hat y$ and
+assumes the noise $y\sim\mathcal N(\hat y,\sigma^2)$ has the negative
+log-probability $-\log p(y)=(y-\hat y)^2/(2\sigma^2)+\tfrac12\log(2\pi\sigma^2)$,
+which is the squared error up to a scale and a constant. The Gaussian is also
+the default prior and latent distribution of generative models.
 
 ### Laplace
 
-The *Laplace* distribution is a Gaussian's sharper sibling: symmetric about a
-location $\mu$, but with *exponential* decay on each side instead of Gaussian,
+Squared error punishes a residual of $10$ a hundred times more than a
+residual of $1$, so a few outliers can dominate a fit. A loss that grows only
+linearly, the absolute error, corresponds to a different noise law.
+
+**Construction.** Let $S$ be a fair random sign, $P(S=1)=P(S=-1)=\tfrac12$, and
+let $E$ be an exponential variable with mean $b>0$ (rate $1/b$), independent of
+$S$. The variable $X=\mu+SE$ lies above $\mu$ exactly when $S=1$, and then
+$X-\mu=E$, so for $x>\mu$ its density is $\tfrac12\cdot\tfrac1b e^{-(x-\mu)/b}$;
+by symmetry the same holds below $\mu$ with $|x-\mu|$. This is the *Laplace*
+distribution,
 
 $$
 p(x) = \frac{1}{2b}\,e^{-|x-\mu|/b},
@@ -617,91 +898,275 @@ p(x) = \frac{1}{2b}\,e^{-|x-\mu|/b},
 $$
 :eqlabel:`eq_mdl-laplace_pdf`
 
-The two-sided exponential gives it a sharp peak at $\mu$ and *heavier tails* than
-the Gaussian, visible in :numref:`fig_mdl-prob-continuous-pdfs`.
+Each side carries half the mass of an exponential. The density is symmetric,
+has a sharp peak at $\mu$, and decays exponentially on both sides.
 
-**Where it arises.** The Laplace likelihood corresponds to the $L_1$ loss, just
-as the Gaussian likelihood corresponds to squared error: its negative
-log-likelihood is proportional to $|y-\hat y|$, the *mean absolute error*. As a
-prior on weights, it gives the sparsity-inducing regularizer
-$\|\mathbf w\|_1$ used by LASSO
-:cite:`Tibshirani.1996`.
-
-**Mean and variance.** By symmetry $\mu_X=\mu$. For the variance, center at $\mu$
-and use $\int_0^\infty u^2 e^{-u}\,du=2$ with $u=|x-\mu|/b$:
+**Mean and variance.** The construction gives both. The mean is $\mu$ because
+$\mathbb{E}[SE]=\mathbb{E}[S]\,\mathbb{E}[E]=0$. Because $S^2=1$, the variance
+is the exponential's second moment, $2/\lambda^2$ with $\lambda=1/b$:
 
 $$
-\sigma_X^2 = \int_{-\infty}^\infty \frac{(x-\mu)^2}{2b}e^{-|x-\mu|/b}\,dx
-= \frac{2}{2b}\int_0^\infty x^2 e^{-x/b}\,dx
-= \frac{1}{b}\cdot b^3\!\int_0^\infty u^2 e^{-u}\,du
-= 2b^2 .
+\textrm{Var}(X) = \mathbb{E}\bigl[S^2E^2\bigr] = \mathbb{E}[E^2] = 2b^2 .
 $$
 
-The *location estimator* makes the contrast concrete: the maximum-likelihood
-$\hat\mu$ under a Laplace minimizes $\sum_i|x_i-\mu|$, whose minimizers include
-the sample *median* (robust to outliers), whereas the Gaussian's is the mean. The cell
-matches a Laplace and a Gaussian on variance and confirms the Laplace's heavier
-tail by the fraction of mass beyond $3$ standard deviations.
+**Laplace noise and absolute error.** A regression network that assumes Laplace noise has the
+negative log-probability $-\log p(y)=|y-\hat y|/b+\log 2b$, the absolute error
+plus a constant. As a prior on weights, the Laplace density gives the
+$\ell_1$ penalty $\|\mathbf w\|_1$ used by the LASSO :cite:`Tibshirani.1996`.
+For a location fitted to data $x_1,\dots,x_m$, the Laplace likelihood is
+largest where $\sum_i|x_i-\mu|$ is smallest, which is at the sample median. A
+single outlier can move the sample mean arbitrarily far, but it moves the
+median by at most one data point.
+
+**Tails.** :numref:`fig_mdl-prob-continuous-pdfs` compares the uniform, the
+Gaussian and the Laplace at the same variance. At matched variance
+$\sigma^2=2b^2$, the Laplace probability of landing more than three standard
+deviations from the center is $P(|X-\mu|>3\sigma)=e^{-3\sigma/b}=e^{-3\sqrt2}\approx0.014$,
+against $0.0027$ for the Gaussian: about five times more.
+
+![Three densities with variance one: the uniform on $[-\sqrt{3},\sqrt{3}]$, the standard Gaussian, and the Laplace with $b=1/\sqrt{2}$. (a) The densities. (b) The same on a logarithmic axis, where the Gaussian is a parabola, the Laplace two straight lines, and the uniform a plateau that ends at $\pm\sqrt{3}$. At three standard deviations the Laplace carries about five times the Gaussian's tail probability.](../img/mdl-prob-continuous-pdfs.svg)
+:label:`fig_mdl-prob-continuous-pdfs`
+
+How much heavier is the Laplace tail at matched variance? The cell samples the
+Laplace by its construction, a random sign times an exponential.
 
 ```{.python .input #distributions-laplace}
-import numpy as onp
-rng = onp.random.default_rng(0)
-mu, b = 0.0, 1.0
-sigma = onp.sqrt(2) * b                            # matched-variance Gaussian sd
-U = (rng.random(200000) - 0.5) * (1 - 1e-7)       # open interval avoids log(0)
-lap = mu - b * onp.sign(U) * onp.log(1 - 2 * onp.abs(U))  # inverse transform
-gau = rng.normal(mu, sigma, 200000)
-print('Laplace var (2b^2):', float(lap.var().round(3)), ' Gaussian var:', float(gau.var().round(3)))
-print('P(|x| > 3sd): Laplace', float((onp.abs(lap) > 3 * sigma).mean()),
-      ' Gaussian', float((onp.abs(gau) > 3 * sigma).mean()))
+b, m = 1.0, 200000
+lap = rng.choice([-1.0, 1.0], m) * rng.exponential(b, m)   # S * E
+sigma = math.sqrt(2) * b                                    # matched sd
+gau = rng.normal(0.0, sigma, m)
+print(f'sample variances: Laplace {lap.var(ddof=1):.2f}, '
+      f'Gaussian {gau.var(ddof=1):.2f}   (2b^2 = 2)')
+print(f'P(|X| > 3 sd): Laplace {np.mean(np.abs(lap) > 3 * sigma):.4f}, '
+      f'Gaussian {np.mean(np.abs(gau) > 3 * sigma):.4f}')
 ```
 
-### Multivariate Gaussian
+Both sample variances are close to $2$, and the tail fractions are about
+$0.014$ and $0.003$.
 
-Almost every latent-variable and noise model in deep learning uses a Gaussian over
-a *vector*. The *multivariate Gaussian* $\mathcal N(\boldsymbol\mu,
-\boldsymbol\Sigma)$ on $\mathbb R^d$ has a mean vector $\boldsymbol\mu$ and a
-symmetric positive-definite *covariance matrix* $\boldsymbol\Sigma$, with density
+## The Multivariate Gaussian
+
+The noise in an image, the latent code of a generative model, and the
+predictions of a model at many inputs are vectors, and their coordinates are
+correlated. The multivariate Gaussian is the distribution of such vectors that
+we can compute with. Our running example has two coordinates with variance $2$
+each and covariance $1$,
+
+$$
+\boldsymbol\Sigma = \begin{pmatrix}2&1\\1&2\end{pmatrix}.
+$$
+
+### Contours and Eigenvectors
+
+The *multivariate Gaussian* $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ on
+$\mathbb R^d$ has a mean vector $\boldsymbol\mu$ and a covariance matrix
+$\boldsymbol\Sigma$ that is symmetric and positive definite. Its density is
 
 $$
 p(\mathbf x) = \frac{1}{(2\pi)^{d/2}|\boldsymbol\Sigma|^{1/2}}
-\exp\!\Bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\Bigr).
+\exp\!\Bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\Bigr),
 $$
 :eqlabel:`eq_mdl-mvn_pdf`
 
-**The geometry is the eigendecomposition.** The exponent is a quadratic form in
-$\boldsymbol\Sigma^{-1}$, so its level sets (the contours of equal density) are
-*ellipsoids*. The covariance $\boldsymbol\Sigma$ is symmetric positive definite, so
-it has an orthonormal eigenbasis
-$\boldsymbol\Sigma=\mathbf W\boldsymbol\Lambda\mathbf W^\top$ with all $\lambda_i>0$
-by the spectral theorem (:numref:`subsec_mdl-spectral-theorem`), and the contour
-ellipsoid's *axes point along the eigenvectors $\mathbf w_i$ with half-lengths
-proportional to $\sqrt{\lambda_i}$*: the principal directions of spread are the
-eigenvectors, stretched by the standard deviations along them. The isotropic case
-$\boldsymbol\Sigma=\sigma^2\mathbf I$ gives spherical contours and factorizes into
-$d$ independent one-dimensional Gaussians. :numref:`fig_mdl-prob-mvn-contours` draws
-this for a $2\times2$ covariance.
+where $|\boldsymbol\Sigma|$ is the determinant. For $d=1$ it is
+:eqref:`eq_mdl-gaussian_pdf`. The density depends on $\mathbf x$ only through
+the quadratic form in the exponent, so it is constant on the sets where that
+form is constant. What do these sets look like?
 
-![Samples from a $2$-D Gaussian (blue points) with the elliptical density contours overlaid. The ellipse axes lie along the eigenvectors of the covariance $\boldsymbol\Sigma$ with half-lengths proportional to $\sqrt{\lambda_i}$ (the standard deviation along each principal direction); the orange arrows are the eigenvectors $\mathbf{w}_1,\mathbf{w}_2$ scaled by $2\sqrt{\lambda_i}$. This connects the multivariate Gaussian directly to the spectral theorem.](../img/mdl-prob-mvn-contours.svg)
+**The running example by hand.** Turn the axes by $45^\circ$ and use the sum
+and difference coordinates $u=(x_1+x_2)/\sqrt2$ and $w=(x_1-x_2)/\sqrt2$, with
+$\boldsymbol\mu=\mathbf 0$. Their variances and covariance follow from the
+entries of $\boldsymbol\Sigma$:
+
+$$
+\textrm{Var}(u) = \frac{2+2+2\cdot1}{2} = 3,
+\qquad
+\textrm{Var}(w) = \frac{2+2-2\cdot1}{2} = 1,
+\qquad
+\textrm{Cov}(u,w) = \frac{2-2}{2} = 0 .
+$$
+
+In the turned coordinates the covariance is diagonal. The new axes are the
+eigenvectors $\mathbf v_1=(1,1)/\sqrt2$ and $\mathbf v_2=(1,-1)/\sqrt2$ of
+$\boldsymbol\Sigma$, with eigenvalues $\gamma_1=3$ and $\gamma_2=1$; indeed
+$\boldsymbol\Sigma\mathbf v_1=(3,3)/\sqrt2=3\mathbf v_1$.
+
+**The general case.** The spectral theorem says that a symmetric matrix has an
+orthonormal basis of eigenvectors,
+$\boldsymbol\Sigma=\mathbf V\operatorname{diag}(\gamma_1,\dots,\gamma_d)\mathbf V^\top$
+with $\mathbf V^\top\mathbf V=\mathbf I$, and positive definiteness means that
+every $\gamma_i>0$. In the coordinates
+$\mathbf u=\mathbf V^\top(\mathbf x-\boldsymbol\mu)$ the quadratic form becomes
+a weighted sum of squares,
+
+$$
+(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)
+= \mathbf u^\top\operatorname{diag}(\gamma_1^{-1},\dots,\gamma_d^{-1})\,\mathbf u
+= \sum_{i=1}^d \frac{u_i^2}{\gamma_i}.
+$$
+
+The set where this sum equals $r^2$ is an ellipsoid with axes along the
+eigenvectors $\mathbf v_i$ and half-lengths $r\sqrt{\gamma_i}$. The contours of
+a Gaussian are therefore ellipsoids whose axes are the eigenvectors of the
+covariance, stretched by the standard deviations $\sqrt{\gamma_i}$ along them.
+For the running example they are ellipses at $45^\circ$ with half-lengths in
+the ratio $\sqrt3:1$ (:numref:`fig_mdl-prob-mvn-contours`, left). Because
+$|\boldsymbol\Sigma|=\prod_i\gamma_i$, the density also factorizes in
+$\mathbf u$ into $d$ one-dimensional Gaussians: the coordinates along the
+eigenvectors are independent with variances $\gamma_i$. When
+$\boldsymbol\Sigma=\sigma^2\mathbf I$, the contours are spheres and the original
+coordinates are already independent.
+
+![The running Gaussian with covariance $\boldsymbol{\Sigma}$ with rows $(2, 1)$ and $(1, 2)$. (a) 400 samples and three contours of the density, on which the quadratic form in the exponent equals $1$, $4$ and $9$. The axes of the ellipses lie along the eigenvectors of $\boldsymbol{\Sigma}$, with half-lengths proportional to $\sqrt{\gamma_1} = \sqrt{3}$ and $\sqrt{\gamma_2} = 1$; the arrows $\mathbf{v}_1$ and $\mathbf{v}_2$ reach the middle contour. (b) Observing $x_2 = 2$ slices the density along the dashed line; the slice is the conditional density $\mathcal{N}(1, \frac{3}{2})$ of $x_1$. The conditional means of all slices lie on the line $x_1 = x_2/2$, and the conditional variance is $3/2$ for every slice.](../img/mdl-prob-mvn-contours.svg)
 :label:`fig_mdl-prob-mvn-contours`
 
-It is the default vector noise and prior because it is *closed under linear maps and
-conditioning*. A linear transform $\mathbf A\mathbf x+\mathbf b$ of a Gaussian is
-again Gaussian, with covariance $\mathbf A\boldsymbol\Sigma\mathbf A^\top$; marginals
-(a special case, projecting onto a coordinate block) are therefore Gaussian too.
-*Conditioning* is closed in the same way. Partition the vector and its parameters
-into blocks $\mathbf x=(\mathbf x_1,\mathbf x_2)$,
+**High dimension.** For the standard Gaussian $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$
+the coordinates are independent with variance $1$, so
+$\mathbb{E}\|\mathbf x\|^2=d$, and the norm concentrates near $\sqrt d$. Two
+independent draws have a cosine of mean $0$ and standard deviation exactly
+$1/\sqrt d$, as :numref:`sec_mdl-geometry-linear-algebraic-ops` showed for a
+uniformly random direction, and the direction $\mathbf x/\|\mathbf x\|$ of a
+standard Gaussian is uniform on the sphere.
+
+### Linear Maps and Sampling
+
+In practice we build Gaussian vectors from other Gaussian vectors: we add
+independent noise, mix coordinates, or project onto a few directions. All of
+these are linear maps, and a linear map keeps a Gaussian Gaussian.
+
+**Proposition.** Let $\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$
+in $\mathbb R^d$, and let $\mathbf A$ be an $m\times d$ matrix of full row rank
+$m\le d$ and $\mathbf b\in\mathbb R^m$. Then
+
+$$
+\mathbf A\mathbf x+\mathbf b\sim\mathcal N\bigl(\mathbf A\boldsymbol\mu+\mathbf b,\;\mathbf A\boldsymbol\Sigma\mathbf A^\top\bigr).
+$$
+
+**Proof.** The mean and covariance hold for any distribution with these
+moments, by linearity:
+$\mathbb{E}[(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)^\top]
+=\mathbf A\,\mathbb{E}[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top]\,\mathbf A^\top
+=\mathbf A\boldsymbol\Sigma\mathbf A^\top$. It remains to show that the law is
+Gaussian. For a square invertible $\mathbf A$, the change-of-variables formula
+of :numref:`sec_mdl-random_variables` gives the density of
+$\mathbf y=\mathbf A\mathbf x+\mathbf b$ as
+$p_{\mathbf y}(\mathbf y)=p_{\mathbf x}(\mathbf A^{-1}(\mathbf y-\mathbf b))/|\det\mathbf A|$.
+With $\mathbf c=\mathbf y-\mathbf A\boldsymbol\mu-\mathbf b$, the exponent
+becomes
+$-\tfrac12\mathbf c^\top\mathbf A^{-\top}\boldsymbol\Sigma^{-1}\mathbf A^{-1}\mathbf c
+=-\tfrac12\mathbf c^\top(\mathbf A\boldsymbol\Sigma\mathbf A^\top)^{-1}\mathbf c$,
+and $|\det\mathbf A|\,|\boldsymbol\Sigma|^{1/2}=|\mathbf A\boldsymbol\Sigma\mathbf A^\top|^{1/2}$,
+so $p_{\mathbf y}$ is the Gaussian density with the stated parameters. A wide
+$\mathbf A$ with independent rows can be completed by $d-m$ further rows to an
+invertible square matrix. Then $\mathbf A\mathbf x+\mathbf b$ is the first
+block of a Gaussian vector, and the conditioning proposition below shows
+(after reordering the coordinates) that every block of a Gaussian vector is
+Gaussian. $\blacksquare$
+
+The rank condition matters. With $\mathbf A=\left(\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right)$
+the two outputs are always equal, and
+$\mathbf A\boldsymbol\Sigma\mathbf A^\top=\left(\begin{smallmatrix}6&6\\6&6\end{smallmatrix}\right)$
+is singular. The image is a Gaussian spread along the line $y_1=y_2$, and it
+has no density in the plane.
+
+**Sampling by a matrix factor.** How do we draw from
+$\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ when the generator produces only
+independent standard normals? Stack $d$ of them into
+$\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$, whose density is the product
+of $d$ copies of $\phi$. If a matrix $\mathbf L$ satisfies
+$\mathbf L\mathbf L^\top=\boldsymbol\Sigma$, then by the proposition
+$\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ is Gaussian with mean
+$\boldsymbol\mu$ and covariance
+
+$$
+\mathbb{E}\bigl[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top\bigr]
+= \mathbf L\,\mathbb{E}[\mathbf z\mathbf z^\top]\,\mathbf L^\top
+= \mathbf L\,\mathbf I\,\mathbf L^\top
+= \boldsymbol\Sigma .
+$$
+
+A matrix factor turns independent noise into correlated noise. The cheapest
+factor is the *Cholesky factor*: every symmetric positive definite matrix
+factors as $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ with $\mathbf L$ lower
+triangular with a positive diagonal. For the running example, matching entries
+of $\mathbf L\mathbf L^\top$ to $\boldsymbol\Sigma$ one at a time gives
+$L_{11}=\sqrt2$, then $L_{21}=\Sigma_{21}/L_{11}=1/\sqrt2$, then
+$L_{22}=\sqrt{\Sigma_{22}-L_{21}^2}=\sqrt{3/2}$, and indeed
+$L_{21}^2+L_{22}^2=\tfrac12+\tfrac32=2$.
+
+Any other factor works as well, for
+instance the eigen-factor $\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$;
+two factors of the same $\boldsymbol\Sigma$ differ by an orthogonal matrix,
+which exercise :exref:`ex_mdl-distributions-two-factors` shows. PyTorch's
+`MultivariateNormal` samples with the Cholesky factor, and NumPy's
+`multivariate_normal` uses a factor from the singular value decomposition by
+default.
+
+Does the Cholesky recipe reproduce $\boldsymbol\Sigma$? The cell samples by the
+recipe itself, so that the mechanism is visible, and checks the covariance of
+the samples and its eigenvalues.
+
+```{.python .input #distributions-mvn}
+Sigma = np.array([[2.0, 1.0], [1.0, 2.0]])
+L = np.linalg.cholesky(Sigma)                   # Sigma = L L^T
+x = rng.standard_normal((400000, 2)) @ L.T      # each row is x = L z
+C = np.cov(x.T)
+print('L =', L.round(3).tolist())
+print('sample covariance =', C.round(2).tolist())
+print('its eigenvalues   =', np.linalg.eigvalsh(C).round(2))
+```
+
+The factor is $\left(\begin{smallmatrix}1.414&0\\0.707&1.225\end{smallmatrix}\right)$,
+the sample covariance agrees with $\boldsymbol\Sigma$ to about $0.01$, and its
+eigenvalues are close to $1$ and $3$.
+
+### Conditioning
+
+Often we observe some coordinates of a Gaussian vector and want to predict the
+others. In the running example, if we observe $x_2=2$, where is $x_1$ likely
+to be? Split the vector into blocks $\mathbf x=(\mathbf x_1,\mathbf x_2)$, and
+split its parameters to match:
 
 $$
 \boldsymbol\mu = \begin{pmatrix}\boldsymbol\mu_1\\\boldsymbol\mu_2\end{pmatrix},
 \qquad
 \boldsymbol\Sigma = \begin{pmatrix}\boldsymbol\Sigma_{11} & \boldsymbol\Sigma_{12}\\
-\boldsymbol\Sigma_{21} & \boldsymbol\Sigma_{22}\end{pmatrix},
+\boldsymbol\Sigma_{21} & \boldsymbol\Sigma_{22}\end{pmatrix}.
 $$
 
-and the conditional $\mathbf x_1\mid\mathbf x_2$ is again Gaussian. We state its
-mean and covariance as a given fact (the derivation is a block-matrix computation,
-carried out in :cite:`Bishop.2006`, §2.3; Exercise :exref:`ex_mdl-distributions-using-conditional-formula-eqref` puts the formulas to work):
+The idea is to remove from $\mathbf x_1$ the part that $\mathbf x_2$ predicts
+linearly. What is left over carries no information about $\mathbf x_2$.
+
+**Proposition.** Let $\mathbf B=\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}$.
+The residual $\mathbf r=\mathbf x_1-\mathbf B\mathbf x_2$ is independent of
+$\mathbf x_2$, and $\mathbf x_2\sim\mathcal N(\boldsymbol\mu_2,\boldsymbol\Sigma_{22})$.
+
+**Proof.** The block $\boldsymbol\Sigma_{22}$ is positive definite, as a
+diagonal block of a positive definite matrix, so it is invertible. The
+residual is uncorrelated with $\mathbf x_2$:
+$\textrm{Cov}(\mathbf r,\mathbf x_2)=\boldsymbol\Sigma_{12}-\mathbf B\boldsymbol\Sigma_{22}=\mathbf 0$.
+The map $\mathbf x\mapsto(\mathbf r,\mathbf x_2)$ is the square matrix
+$\left(\begin{smallmatrix}\mathbf I&-\mathbf B\\\mathbf 0&\mathbf I\end{smallmatrix}\right)$,
+which has determinant $1$, so $(\mathbf r,\mathbf x_2)$ is Gaussian by the
+square case of the previous proposition. Its covariance is block diagonal,
+because the off-diagonal blocks are $\textrm{Cov}(\mathbf r,\mathbf x_2)=\mathbf 0$.
+Then the inverse covariance is block diagonal too, the quadratic form in the
+exponent splits into a term in $\mathbf r$ plus a term in $\mathbf x_2$, and the
+determinant is the product of the two blocks' determinants. The density is
+therefore a Gaussian density in $\mathbf r$ times a Gaussian density in
+$\mathbf x_2$: the two are independent, and $\mathbf x_2$ has mean
+$\boldsymbol\mu_2$ and covariance $\boldsymbol\Sigma_{22}$. $\blacksquare$
+
+The proof used only square invertible maps. Its second claim, that every block
+of a Gaussian vector is Gaussian, therefore completes the proof of the
+linear-map proposition for wide matrices without circularity. Now condition on $\mathbf x_2$. Since
+$\mathbf x_1=\mathbf r+\mathbf B\mathbf x_2$ and $\mathbf r$ is independent of
+$\mathbf x_2$, given $\mathbf x_2$ the block $\mathbf x_1$ is the Gaussian
+$\mathbf r$ shifted by $\mathbf B\mathbf x_2$. The residual has mean
+$\boldsymbol\mu_1-\mathbf B\boldsymbol\mu_2$ and covariance
+$\boldsymbol\Sigma_{11}-\mathbf B\boldsymbol\Sigma_{21}-\boldsymbol\Sigma_{12}\mathbf B^\top+\mathbf B\boldsymbol\Sigma_{22}\mathbf B^\top
+=\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$,
+so $\mathbf x_1\mid\mathbf x_2$ is Gaussian with
 
 $$
 \boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 + \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
@@ -710,765 +1175,107 @@ $$
 $$
 :eqlabel:`eq_mdl-mvn_conditional`
 
-The conditional mean is a *linear* function of the observed block (a linear
-regression of $\mathbf x_1$ on $\mathbf x_2$ read straight off the covariance),
-and the conditional covariance
-$\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$
-is the *Schur complement* of $\boldsymbol\Sigma_{22}$, the block that remains
-when the variables in $\mathbf x_2$ are eliminated. It does not depend on the
-observed value $\mathbf x_2$. These formulas underlie Gaussian process
-regression (:numref:`chap_gp`): conditioning the joint Gaussian prior over
-function values on the observations gives the predictive mean and variance.
+The conditional mean is a linear function of the observed block, and the
+conditional covariance does not depend on the observed value. For the running
+example, $\mathbf B=\tfrac12$, so given $x_2=2$ the conditional mean is
+$\tfrac12\cdot2=1$ and the conditional variance is $2-1\cdot\tfrac12\cdot1=\tfrac32$:
+$x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$, the slice drawn in
+:numref:`fig_mdl-prob-mvn-contours` (right).
 
-**Sampling via Cholesky.** How do we draw from
-$\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ given only a standard-normal
-generator? This is the application promised when the Cholesky factorization was
-introduced (:numref:`subsec_mdl-psd`): factor
-$\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ with $\mathbf L$ lower triangular,
-draw $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ ($d$ independent standard
-normals), and set $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$. Then $\mathbf x$
-is Gaussian (a linear map of a Gaussian), and its mean is $\boldsymbol\mu$
-because $\mathbb E[\mathbf z]=\mathbf 0$. Its covariance is
+The matrix $\mathbf B$ is the regression coefficient of $\mathbf x_1$ on
+$\mathbf x_2$: the multiple of $\mathbf x_2$ whose removal leaves no
+correlation. The conditional mean is linear regression read off the
+covariance. The conditional covariance, called the *Schur complement* of
+$\boldsymbol\Sigma_{22}$, is never larger than $\boldsymbol\Sigma_{11}$,
+because the subtracted term
+$\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$ is
+positive semidefinite: observing $x_2$ shrank the variance of $x_1$ from $2$ to
+$\tfrac32$. With $\mathbf x_2$ the observed values of a function and
+$\mathbf x_1$ its values at new inputs, this computation is Gaussian process
+regression.
 
-$$
-\mathbb E\bigl[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top\bigr]
-= \mathbf L\,\mathbb E[\mathbf z\mathbf z^\top]\,\mathbf L^\top
-= \mathbf L\,\mathbf I\,\mathbf L^\top
-= \boldsymbol\Sigma .
-$$
+A reader may object that uncorrelated variables need not be independent. That
+is right, and the proof used more than zero correlation: it used that
+$(\mathbf r,\mathbf x_2)$ is *jointly* Gaussian. Without that, the conclusion
+fails. If $Z\sim\mathcal N(0,1)$ and $S$ is an independent fair sign, then $SZ$
+is also $\mathcal N(0,1)$, and $\textrm{Cov}(SZ,Z)=\mathbb{E}[S]\,\mathbb{E}[Z^2]=0$,
+yet $|SZ|=|Z|$, so the two are far from independent.
 
-This recipe is what the library samplers run: $d$ standard normals plus one
-triangular matrix multiply. The cell draws samples through the library sampler,
-estimates the covariance, checks that its eigenvalues recover the $\{1,3\}$
-built into $\boldsymbol\Sigma$, then re-samples by the Cholesky recipe and
-confirms that it reproduces $\boldsymbol\Sigma$ as well.
+Does the residual argument hold on samples? The cell reuses the Cholesky
+samples, forms $r=x_1-\tfrac12x_2$, and then keeps only the samples whose $x_2$
+is within $0.05$ of $2$.
 
-```{.python .input #distributions-mvn}
-import numpy as onp
-rng = onp.random.default_rng(0)
-mu_v = onp.array([0., 0.])
-Sigma = onp.array([[2., 1.], [1., 2.]])
-sample = rng.multivariate_normal(mu_v, Sigma, size=5000)
-emp = onp.cov(sample.T)
-vals, vecs = onp.linalg.eigh(emp)
-print('empirical covariance:\n', emp.round(2))
-print('eigenvalues (≈ 1, 3):', vals.round(2))   # Sigma has eigenvalues 1 and 3
-L = onp.linalg.cholesky(Sigma)                   # Sigma = L L^T
-chol = mu_v + rng.standard_normal((5000, 2)) @ L.T  # x = mu + L z
-print('Cholesky-recipe covariance:\n', onp.cov(chol.T).round(2))
+```{.python .input #mdl-distributions-conditioning}
+r = x[:, 0] - 0.5 * x[:, 1]                     # residual x1 - B x2, B = 1/2
+print(f'Cov(r, x2) = {np.cov(r, x[:, 1])[0, 1]:.3f},  Var(r) = {r.var(ddof=1):.3f}')
+near = x[np.abs(x[:, 1] - 2) < 0.05, 0]         # x1 of samples with x2 near 2
+print(f'{near.size} samples with x2 near 2: mean of x1 {near.mean():.2f}, '
+      f'variance {near.var(ddof=1):.2f}')
 ```
 
-**Probability in high dimension.** One more Gaussian fact matters enormously in
-deep learning and defies low-dimensional intuition. For
-$\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$ the squared norm
-$\|\mathbf x\|^2=\sum_{i=1}^d x_i^2$ is a sum of $d$ independent terms with mean
-$1$, so $\mathbb E\,\|\mathbf x\|^2=d$, and, by the same averaging that makes
-sample means reliable, the sum concentrates near $d$: virtually all the mass
-of a high-dimensional Gaussian lives in a *thin shell* of radius
-$\approx\sqrt d$, far from the origin where the density is pointwise largest.
-Likewise two independent draws $\mathbf x,\mathbf y$ are *nearly orthogonal*:
-their cosine has mean $0$ and standard deviation $\approx1/\sqrt d$, a
-probabilistic version of the concentration-of-angles proposition of
-:numref:`sec_mdl-geometry-linear-algebraic-ops`
-:cite:`Vershynin.2018`; both facts get their full quantitative treatment, with
-exponential tail bounds, in :numref:`sec_mdl-concentration-generalization`.
-Both matter in practice:
-weight-initialization schemes scale by $1/\sqrt{d}$ precisely so that
-$\|\mathbf W\mathbf x\|$ stays comparable to $\|\mathbf x\|$ layer after layer;
-cosine similarity between embeddings is informative because unrelated
-high-dimensional vectors sit near cosine $0$ by default; and nearest-neighbor
-search loses contrast because the distances between random points all
-concentrate around one common value. The check below watches both
-concentrations set in as $d$ grows.
-
-```{.python .input #mdl-distributions-multivariate-gaussian-1}
-rng = np.random.default_rng(0)
-for d in (3, 30, 300):
-    x, y = rng.standard_normal((2, 1000, d))
-    nx = np.linalg.norm(x, axis=1)
-    cos = (x * y).sum(1) / (nx * np.linalg.norm(y, axis=1))
-    print(f'd = {d:3d}:  ||x||/sqrt(d) = {(nx / np.sqrt(d)).mean():.3f}'
-          f' ± {(nx / np.sqrt(d)).std():.3f},   mean |cos(x,y)| = {np.abs(cos).mean():.3f}')
-```
-
-The norm ratio locks onto $1$ with a spread shrinking like $1/\sqrt{2d}$, and
-the typical cosine collapses toward $0$ at the promised $1/\sqrt d$ rate: in
-high dimension, Gaussian geometry is a thin shell of mutually near-orthogonal
-directions.
-
-## The Exponential Family
-
-Nearly every distribution above (Bernoulli, categorical, binomial, Poisson,
-exponential, Gaussian, Laplace with fixed location) is a special case of one
-form, the *exponential family*. A distribution
-belongs to it if its density (or mass) can be written
-
-$$
-p(\mathbf x\mid\boldsymbol\eta) = h(\mathbf x)\,\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)\bigr).
-$$
-:eqlabel:`eq_mdl-exp_family`
-
-The four ingredients each play a clear role. The *base measure* $h(\mathbf x)$ is a
-fixed background that does not depend on the parameters. The *natural parameters*
-$\boldsymbol\eta$ are the knobs. The *sufficient statistics* $T(\mathbf x)$ are the
-only features of the data that matter: given $T(\mathbf x)$, no other detail of
-$\mathbf x$ affects the probability, which is exactly what "sufficient" means. The
-*log-partition function* (or cumulant function)
-
-$$
-A(\boldsymbol\eta) = \log\!\int h(\mathbf x)\,\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x)\bigr)\,d\mathbf x
-$$
-:eqlabel:`eq_mdl-log_partition`
-
-is whatever it takes to make :eqref:`eq_mdl-exp_family` integrate to one.
-
-### Identifying Standard Distributions
-
-The form looks abstract until we match the pieces. The **Bernoulli**
-$p^x(1-p)^{1-x}$ rewrites as
-
-$$
-\exp\!\Bigl(x\log\tfrac{p}{1-p} + \log(1-p)\Bigr),
-$$
-
-so $T(x)=x$, the natural parameter $\eta=\log\tfrac{p}{1-p}$ is the *logit*, and
-$A(\eta)=\log(1+e^\eta)$ is the *softplus*; the link between probabilities and
-logits is built into the family. The **Poisson** $\tfrac{\lambda^k e^{-\lambda}}{k!}$
-has base measure $h(k)=1/k!$, statistic $T(k)=k$, parameter $\eta=\log\lambda$, and
-$A(\eta)=e^\eta=\lambda$. The **Gaussian** with unknown mean and variance is a
-two-parameter member: completing the exponent,
-
-$$
-\frac{1}{\sqrt{2\pi}}\exp\!\Bigl(\underbrace{\tfrac{\mu}{\sigma^2}}_{\eta_1}\,x
-+ \underbrace{\bigl(-\tfrac{1}{2\sigma^2}\bigr)}_{\eta_2}\,x^2
-- \underbrace{\bigl(\tfrac{\mu^2}{2\sigma^2}+\log\sigma\bigr)}_{A(\boldsymbol\eta)}\Bigr),
-$$
-
-so $T(x)=(x,x^2)^\top$ with base measure $h(x)=1/\sqrt{2\pi}$. The second natural
-parameter is negative, $\eta_2=-1/(2\sigma^2)<0$, which is what forces the
-tail-suppressing $e^{-x^2}$ decay. The exact split between $h$, $\eta$, and $T$ is
-not unique; what matters is that the distribution *fits the form at all*.
-
-Membership has edges. The conspicuous absentees from the list above
-are the two *uniforms*: when the endpoints are unknown parameters, the support of
-$U(a,b)$ (and likewise of $U(n)$) moves with those parameters, whereas every member
-of :eqref:`eq_mdl-exp_family` has the fixed, parameter-free support of its base
-measure $h$. This is the classic counterexample. Heavy-tailed laws live outside
-the family for a different reason. The *Student-$t$* takes two lines to define:
-draw a random precision $1/\sigma^2$ from a Gamma distribution (a two-parameter
-density on the positive half-line, defined in full among the conjugate priors
-below), then draw a Gaussian with that precision. Averaging the Gaussian over its
-random scale fattens the $e^{-x^2}$ tails into polynomial ones, and the Cauchy of
-:numref:`sec_mdl-random_variables` is its one-degree-of-freedom extreme. The
-support here is all of $\mathbb R$, fixed, yet the mixing destroys the exponential
-form: no fixed finite-dimensional sufficient statistic exists, the situation
-described by the *Pitman--Koopman--Darmois* theorem :cite:`Bishop.2006`. The
-exclusion costs two conveniences: these laws admit no finite-dimensional
-conjugate prior, and their negative log-likelihoods are not convex in the
-parameters. Both conveniences are exponential-family privileges, as the rest of
-this section shows.
-
-### Maximum-Entropy Derivation
-:label:`subsec_mdl-max-entropy-derivation`
-
-Maximum entropy produces an exponential-family form only relative to a chosen
-support, base measure, and feasible set of constraints. Fix a base measure
-$h$, require $p$ to be absolutely continuous with respect to it, and impose
-normalization together with $\mathbb E_p[T(\mathbf x)]=\boldsymbol\tau$. If
-the constraints are feasible, the log-partition function is finite, and a
-maximizer exists in the regular interior case, the optimizer has the
-exponential form below. Existence can fail for incompatible constraints or
-heavy-tailed settings.
-
-The two maximum-entropy facts cited earlier
-:cite:`Cover.Thomas.1999` are the same
-statement seen twice: the discrete uniform is the maximum-entropy distribution on a
-finite set when we fix *nothing* but the support, and the Gaussian is the
-maximum-entropy distribution on the line when we fix the *mean and variance*. In
-general, maximizing the entropy *relative to the base measure* $h$,
-$H_h[p]=-\int p\log\tfrac{p}{h}$, subject to fixing the expected
-sufficient statistics $\mathbb E[T(\mathbf x)]=\boldsymbol\tau$ has, by a Lagrange
-multiplier argument (:numref:`subsec_mdl-lagrange-multipliers`), the solution
-
-$$
-p(\mathbf x) \propto h(\mathbf x)\,\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x)\bigr),
-$$
-
-which is precisely :eqref:`eq_mdl-exp_family`: the multipliers $\boldsymbol\eta$
-are the natural parameters and $A(\boldsymbol\eta)$ is again the normalizer
-:cite:`Murphy.2022,Wainwright.Jordan.2008`. One subtlety: the base measure does
-real work here. With plain Shannon entropy, i.e. $h\equiv1$, fixing the mean on
-$\{0,1,2,\dots\}$ yields the *geometric* distribution; only entropy relative to
-$h(k)=1/k!$ yields the Poisson. For the uniform and the Gaussian above, $h$ is
-constant, so plain entropy was the relevant objective in those cases. Thus,
-when the optimization problem has a solution, the solution is least committal
-only relative to the selected support, base measure, entropy, and moment
-constraints. Changing those choices can change the optimizer.
-
-### The Moment Property
-
-The single most useful fact about :eqref:`eq_mdl-exp_family` is that $A$ is a moment
-generator: *differentiating the log-partition function returns the mean of the
-sufficient statistics.*
-
-**Proposition (mean of the sufficient statistics).**
-*For an exponential-family distribution :eqref:`eq_mdl-exp_family`,*
-
-$$
-\nabla_{\boldsymbol\eta} A(\boldsymbol\eta) = \mathbb E[T(\mathbf x)].
-$$
-:eqlabel:`eq_mdl-exp_family_moment`
-
-**Proof.** Differentiate :eqref:`eq_mdl-log_partition` under the integral sign;
-we grant the interchange of derivative and integral, which is valid on the
-interior of the natural-parameter domain :cite:`Folland.1999`.
-Writing $Z(\boldsymbol\eta)=e^{A(\boldsymbol\eta)}=\int h(\mathbf x)e^{\boldsymbol\eta^\top T(\mathbf x)}d\mathbf x$,
-the derivative of the log is $\nabla A = (\nabla Z)/Z$, and
-
-$$
-\nabla_{\boldsymbol\eta} Z
-= \int h(\mathbf x)\,T(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x)}\,d\mathbf x .
-$$
-
-Dividing by $Z=e^{A}$ pulls the $e^{-A}$ back inside, reconstituting the density
-:eqref:`eq_mdl-exp_family`:
-
-$$
-\nabla_{\boldsymbol\eta} A
-= \frac{1}{Z}\int h(\mathbf x)\,T(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x)}\,d\mathbf x
-= \int T(\mathbf x)\,\underbrace{h(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)}}_{p(\mathbf x\mid\boldsymbol\eta)}\,d\mathbf x
-= \mathbb E[T(\mathbf x)] . \quad\blacksquare
-$$
-
-Differentiating once more (the same interchange) turns $\nabla A=(\nabla Z)/Z$
-into
-
-$$
-\nabla^2 A
-= \frac{\nabla^2 Z}{Z} - \frac{(\nabla Z)(\nabla Z)^\top}{Z^2}
-= \mathbb E[T\,T^\top] - \mathbb E[T]\,\mathbb E[T]^\top
-= \operatorname{Cov}(T),
-$$
-
-so $A$ is *convex* (a covariance matrix is PSD, :numref:`subsec_mdl-psd`).
-Consequently, for a sample $x_1,\dots,x_n$ the negative
-log-likelihood is
-
-$$
--\sum_{i=1}^{n} \log p(x_i\mid\boldsymbol\eta)
-= n\,A(\boldsymbol\eta) - \boldsymbol\eta^\top \sum_{i=1}^{n} T(x_i)
-- \sum_{i=1}^{n} \log h(x_i),
-$$
-:eqlabel:`eq_mdl-exp_family_nll`
-
-convex in $\boldsymbol\eta$ because $A$ is. Setting its gradient to zero gives
-$n\nabla A(\boldsymbol\eta)=\sum_i T(x_i)$: by the moment property, maximum
-likelihood *matches the model's expected sufficient statistics to their empirical
-averages*, $\mathbb E[T]=\bar T$. Uniqueness of the optimum needs one more
-hypothesis, strict convexity: $\operatorname{Cov}(T)\succ0$, which holds when the
-representation is *minimal* (no linear combination of the sufficient statistics
-is constant). The section's own softmax parameterization :eqref:`eq_mdl-softmax`
-is *not* minimal: adding the same constant to every logit leaves every $p_k$
-unchanged, so the categorical negative log-likelihood is flat along the direction
-$\mathbf 1$ and its optima form a line rather than a point. Multinomial logistic
-regression in statistics software removes this direction by fixing one logit at
-zero. Deep-learning implementations keep all $K$ logits and use the invariance
-only to subtract the maximum logit before exponentiating, which prevents
-overflow (:numref:`sec_softmax_concise`). We verify
-:eqref:`eq_mdl-exp_family_moment` for the Bernoulli, where it should read
-$A'(\eta)=\sigma(\eta)=\mathbb E[x]=p$.
-
-```{.python .input #distributions-exp-family}
-import numpy as onp
-eta = 0.7                                        # natural parameter (logit)
-A = lambda e: onp.log1p(onp.exp(e))                # Bernoulli log-partition (softplus)
-eps = 1e-6
-dA = (A(eta + eps) - A(eta - eps)) / (2 * eps)   # numerical dA/deta
-print('dA/deta      =', round(float(dA), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(1 / (1 + onp.exp(-eta))), 6))
-```
-
-The derivative of the softplus is the sigmoid, and it lands exactly on the
-Bernoulli mean $p$. This is no coincidence: the sigmoid and softmax links that
-deep-learning classifiers use are *precisely* the maps from natural parameters to
-means in the Bernoulli and categorical families, and the convexity of $A$ is why
-their negative log-likelihoods are convex in the natural parameters. If those
-parameters are affine functions of fixed features, this gives a convex
-optimization problem. A neural network makes the natural parameters nonlinear
-functions of its weights, so the same loss is not generally convex in the
-weights. The exponential family still supplies the likelihood and the link
-functions used by standard deep-learning losses
-:cite:`Bishop.2006,Koller.Friedman.2009`.
-
-### Generalized Linear Models
-:label:`subsec_mdl-glm`
-
-Regression and classification models predict a distribution of a label $y$
-for each input $\mathbf x$. A *generalized linear model* takes that
-distribution from an exponential family and makes its natural parameter a
-linear function of the input, $\boldsymbol\eta = \mathbf W^\top\mathbf x$ (a
-bias is a constant feature). Write $\boldsymbol\mu(\mathbf x) =
-\nabla A(\boldsymbol\eta) = \mathbb E[T(y)\mid\mathbf x]$ for the model's mean
-of the sufficient statistic. The negative log-likelihood of one example is
-$A(\boldsymbol\eta) - \boldsymbol\eta^\top T(y) - \log h(y)$, so by the moment
-property its gradient with respect to $\boldsymbol\eta$ is
-$\boldsymbol\mu(\mathbf x) - T(y)$, and the chain rule through
-$\boldsymbol\eta = \mathbf W^\top\mathbf x$ gives
-
-$$
-\nabla_{\mathbf W}\bigl(-\log p(y\mid\mathbf x)\bigr)
-= \mathbf x\,\bigl(\boldsymbol\mu(\mathbf x) - T(y)\bigr)^\top .
-$$
-:eqlabel:`eq_mdl-glm-gradient`
-
-The gradient is the input times the error of the predicted mean: prediction
-minus observation, whatever the family. The loss is convex in $\mathbf W$,
-since it is the convex function $A$ composed with a linear map, plus a linear
-term. Four families give four familiar models:
-
-| label $y$ | family | $T(y)$ | mean $\boldsymbol\mu(\mathbf x)$ | model |
-|:--|:--|:--|:--|:--|
-| real number | Gaussian, variance 1 | $y$ | $\eta$ | linear regression |
-| yes or no | Bernoulli | $y \in \{0, 1\}$ | $\sigma(\eta)$ | logistic regression |
-| one of $K$ classes | categorical | one-hot $\mathbf y$ | $\mathrm{softmax}(\boldsymbol\eta)$ | softmax regression |
-| count | Poisson | $y$ | $e^{\eta}$ | Poisson regression |
-
-With variance $\sigma^2$ instead of 1, the Gaussian negative log-likelihood
-is $(\hat y - y)^2/(2\sigma^2)$ plus a constant, where $\hat y =
-\mathbf w^\top\mathbf x$: the squared loss of :numref:`sec_linear_regression`
-divided by $\sigma^2$, with the gradient $\mathbf x(\hat y - y)/\sigma^2$. Softmax regression in
-:numref:`sec_softmax` has the gradient $\mathbf x(\hat{\mathbf y} -
-\mathbf y)^\top$ for the same reason. A neural network keeps the last step,
-a linear map into the natural parameters followed by the family's
-negative log-likelihood, and replaces the fixed input $\mathbf x$ by learned
-features. The loss is then no longer convex in the weights, but its
-gradient with respect to the natural parameters is still prediction minus
-observation.
-
-### Origins of the Softmax
-:label:`subsec_mdl-softmax-origins`
-
-The softmax :eqref:`eq_mdl-softmax` turns $K$ logits into class
-probabilities, and the table above lists it as the mean of the categorical
-family. Other maps would also do. Normalizing the softplus values
-$\log(1+e^{z_k})$ instead of $e^{z_k}$ gives positive numbers that sum to
-one and keep the order of the logits. The choice fixes the loss we train
-with and the meaning of a logit: under the softmax,
-$z_i-z_j=\log(p_i/p_j)$ is a log-ratio of probabilities. Three arguments
-from different fields lead to the exponential: a model of noisy choices
-from psychology and economics, the Boltzmann distribution of statistical
-physics, and the exponential family. Each explains a different property of
-the softmax.
-
-**Noisy choices.** Suppose that a decision maker, such as a subject in a
-perception experiment, a shopper, or whoever labels our data, gives each
-option $k$ a score $z_k$ but does not always pick the best one. A simple
-model of this behavior perturbs every score by independent noise
-$\epsilon_k$ and picks the largest perturbed score,
-
-$$
-y = \operatorname*{argmax}_{k}\,(z_k+\epsilon_k).
-$$
-
-The probability of class $k$ is the chance that option $k$ wins this noisy
-contest, so the noise distribution decides its form.
-:citet:`Fechner.1860` analyzed judgments of which of two lifted weights is
-heavier in this way, with Gaussian errors, and :citet:`Thurstone.1927` made
-the model a general law of comparative judgment. With two options and
-$\epsilon_k\sim\mathcal N(0,s^2)$, option 1 wins when
-$\epsilon_2-\epsilon_1<z_1-z_2$. The difference $\epsilon_2-\epsilon_1$ is
-Gaussian with variance $2s^2$, so
-
-$$
-P(y=1) = \Phi\Bigl(\frac{z_1-z_2}{\sqrt2\,s}\Bigr),
-$$
-
-where $\Phi$ is the standard Gaussian CDF. This is the *probit* model: the
-probability depends only on the score difference, measured in units of the
-noise.
-
-With more than two options the probit model has no closed form. Let $\phi$
-be the standard Gaussian density. Option $k$ wins when every other
-perturbed score falls below its own, and averaging this chance over the
-standardized noise $u=\epsilon_k/s$ of option $k$ gives
-
-$$
-P(y=k) = \int_{-\infty}^{\infty}\phi(u)\prod_{j\ne k}\Phi\Bigl(u+\frac{z_k-z_j}{s}\Bigr)\,du .
-$$
-
-For $K>2$ this integral and its gradient must be computed numerically, for
-every example at every training step. If the noise is correlated across
-options, the integral becomes $(K-1)$-dimensional.
-
-Gumbel noise removes the integral. The standard *Gumbel* distribution has
-the CDF $G(x)=\exp(-e^{-x})$. It is the limiting distribution of the
-suitably shifted and scaled maximum of many independent draws from
-distributions such as the Gaussian or the exponential :cite:`Gumbel.1954`,
-and :citet:`McFadden.1974` used it as the noise in models of discrete
-economic choices.
-
-**Proposition (Gumbel noise gives the softmax).** *If
-$\epsilon_1,\dots,\epsilon_K$ are independent standard Gumbel variables,
-the noisy argmax follows the softmax probabilities,*
-
-$$
-P\Bigl(\operatorname*{argmax}_j\,(z_j+\epsilon_j)=k\Bigr) = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} .
-$$
-
-**Proof.** Write $S=\sum_j e^{z_j}$. The perturbed score $z_j+\epsilon_j$
-has the CDF $G(t-z_j)=\exp(-e^{z_j}e^{-t})$. If option $k$ scores
-$t=z_k+\epsilon_k$, it wins with probability
-$\prod_{j\ne k}\exp(-e^{z_j}e^{-t})=\exp\bigl(-(S-e^{z_k})e^{-t}\bigr)$, by
-independence. We multiply by the density
-$e^{z_k}e^{-t}\exp(-e^{z_k}e^{-t})$ of $t$, integrate, and substitute
-$v=e^{-t}$:
-
-$$
-P(y=k) = \int_{-\infty}^{\infty} e^{z_k}e^{-t}\exp\bigl(-Se^{-t}\bigr)\,dt
-= e^{z_k}\int_0^{\infty} e^{-Sv}\,dv = \frac{e^{z_k}}{S} . \quad\blacksquare
-$$
-
-The proof works because a product of Gumbel CDFs is again a Gumbel CDF.
-Over all $K$ options,
-$P\bigl(\max_j(z_j+\epsilon_j)\le t\bigr)=\exp(-Se^{-t})=G(t-\log S)$, so
-the winning score is a standard Gumbel variable shifted by the log-sum-exp
-$\log\sum_j e^{z_j}$. The log-sum-exp is thus a smoothed maximum of the
-logits, and its gradient, the softmax, gives the chance that each option
-attains the maximum. Exercise
-:exref:`ex_mdl-distributions-exponential-races` proves the proposition a
-second way, through races between exponential waiting times.
-
-Read from right to left, the proposition is the Gumbel-max sampler of the
-categorical paragraph above. Because
-$\operatorname{argmax}_k(z_k+T\epsilon_k)=\operatorname{argmax}_k(z_k/T+\epsilon_k)$
-for $T>0$, Gumbel noise of scale $T$ samples from
-$\mathrm{softmax}(\mathbf z/T)$: the amount of noise in the choice acts as
-a temperature.
-
-With two options, the difference of two independent standard Gumbel
-variables has the logistic distribution, whose CDF is the sigmoid
-$\sigma(x)=1/(1+e^{-x})$, so this *logit* model gives
-$P(y=1)=\sigma(z_1-z_2)$. The sigmoid is close to a rescaled Gaussian CDF,
-$|\sigma(1.7x)-\Phi(x)|<0.01$ for all $x$, so fitted probit and logit
-models give nearly the same probabilities and differ mainly in the scale of
-their scores. They part in the tails, which decay like $e^{-x}$ for the
-logistic and like $e^{-x^2/2}$ for the Gaussian. A confidently
-misclassified example therefore costs a negative log-likelihood linear in
-its score difference under the logit model and quadratic under the probit
-model, so mislabeled examples pull a probit fit harder
-(exercise :exref:`ex_mdl-distributions-probit-logit`).
-
-The softmax has one property that is unrealistic for similar options: the
-ratio $p_i/p_j=e^{z_i-z_j}$ does not depend on the other options. If a
-commuter takes the car or a red bus with probability $\tfrac12$ each,
-adding an identical blue bus should leave the car at $\tfrac12$, but a
-softmax with equal scores for the two buses gives all three options
-$\tfrac13$. A probit model with strongly correlated noise for the two buses
-keeps the car near $\tfrac12$, which is why economists accept its
-integrals for such choices.
-
-**The Boltzmann distribution.** A physical system in thermal equilibrium at
-temperature $T$, such as a molecule in a gas, occupies a state $k$ of
-energy $E_k$ with probability
-
-$$
-p_k = \frac{\exp\bigl(-E_k/(k_{\mathrm B}T)\bigr)}{\sum_j \exp\bigl(-E_j/(k_{\mathrm B}T)\bigr)},
-$$
-
-where $k_{\mathrm B}$ is Boltzmann's constant. Low-energy states are the
-most probable, and the temperature sets how strongly they are preferred.
-Boltzmann found this law for the molecules of a gas, and
-:citet:`Gibbs.1902` made it the basis of statistical mechanics. If we
-measure temperature in units of energy, so that $k_{\mathrm B}=1$, and set
-$E_k=-z_k$, the law becomes $\mathrm{softmax}(\mathbf z/T)$. A logit is a
-negative energy, and the most probable class is the state of lowest energy.
-As $T\to0$ the distribution concentrates on the largest logit, the argmax;
-as $T\to\infty$ it becomes uniform.
-
-Maximum entropy explains the exponential without appeal to physics
-:cite:`Jaynes.1957`. By :numref:`subsec_mdl-max-entropy-derivation`, the
-distribution of largest entropy with prescribed expected values of some
-statistics is proportional to the exponential of a linear combination of
-those statistics, with the Lagrange multipliers as coefficients. On $K$
-states with the single constraint $\sum_k p_kE_k=\bar E$, the maximizer is
-therefore $p_k\propto\exp(-E_k/T)$, with $-1/T$ as the multiplier. The
-softmax is thus the least committal distribution over the classes among
-all those with a given average logit $\sum_k p_kz_k$. The higher the
-required average, the lower the temperature. As $T$ falls from $\infty$ to
-$0$, the average logit rises from the mean of the logits to their maximum.
-
-*Energy-based models* take the physical reading literally
-:cite:`LeCun.Chopra.Hadsell.ea.2006,Ranzato.Boureau.Chopra.ea.2007`. They
-learn an energy $E(\mathbf x,y)$ for every pair of input and output and set
-$p(y\mid\mathbf x)\propto\exp(-E(\mathbf x,y))$. A classifier is the case
-$E(\mathbf x,k)=-z_k(\mathbf x)$, in which the normalizing sum has only $K$
-terms. When $y$ ranges over images or sentences, the sum has far too many
-terms to compute, and avoiding it is the central problem of energy-based
-learning.
-
-**The exponential family.** The third derivation is the one this section
-has already made. With the class coded as a one-hot vector $\mathbf y$, the
-categorical distribution with probabilities $\mathrm{softmax}(\mathbf z)$
-reads
-
-$$
-P(\mathbf y) = \exp\bigl(\mathbf z^\top\mathbf y - A(\mathbf z)\bigr),
-\qquad
-A(\mathbf z) = \log\sum_{k=1}^K e^{z_k}.
-$$
-
-This is an exponential family :eqref:`eq_mdl-exp_family` with the logits as
-natural parameters, the one-hot vector as sufficient statistic, and the
-log-sum-exp as log-partition function. By the moment property
-:eqref:`eq_mdl-exp_family_moment`, the softmax is its mean map,
-$\nabla A(\mathbf z)=\mathrm{softmax}(\mathbf z)=\mathbb E[\mathbf y]$
-(exercise :exref:`ex_mdl-distributions-minimal-categorical` works out the
-details). This view explains how the softmax trains: as
-:numref:`subsec_mdl-glm` showed, its negative log-likelihood is convex in
-the logits and has the gradient $\mathrm{softmax}(\mathbf z)-\mathbf y$.
-The three derivations agree on the function. Noisy choices give the labels
-a generative model and an exact sampler, the Boltzmann distribution gives
-the temperature and the maximum-entropy reading, and the exponential family
-gives the convex loss and its gradient.
-
-**Geometry of the argmax.** Under every derivation the most probable class
-has the largest logit, so a linear model
-$z_k(\mathbf x)=\mathbf w_k^\top\mathbf x+b_k$ assigns class $j$ to the
-region $\{\mathbf x : z_j(\mathbf x)\ge z_k(\mathbf x)\text{ for all }k\}$.
-This region is an intersection of $K-1$ halfspaces, hence a convex
-polyhedron, possibly empty. Two classes tie on the hyperplane
-$z_j(\mathbf x)=z_k(\mathbf x)$. For three classes the tie hyperplanes are
-linearly dependent, since $(z_1-z_2)+(z_2-z_3)=z_1-z_3$, so a point on two
-of them lies on the third. In the plane, two tie lines that are not
-parallel meet in a point, which then lies on the third line as well
-(:numref:`fig_mdl-clf-decision-regions`); if two of the lines are parallel,
-so is the third. In general, all $K$ scores tie on the solutions of $K-1$
-affine equations in $\mathbb R^d$, a set of dimension $d-K+1$ for generic
-weights and empty when $K>d+1$, so four classes in the plane generically
-share no point. In the noisy-choice model, ties have probability zero under
-any continuous noise, so the argmax is unique and the class probabilities
-sum to one.
-
-## Conjugate Priors
-
-The distributions above model observations, but Bayesian inference also
-requires distributions over their parameters: the Bernoulli probability $p$,
-the Poisson rate $\lambda$, or the categorical probability vector $\mathbf p$.
-Such a distribution is a *prior*. Three continuous distributions provide the
-standard priors for the discrete likelihoods introduced above: the **Beta**,
-**Gamma**, and **Dirichlet** distributions.
-
-A prior is **conjugate** to a likelihood if the posterior belongs to the same
-family as the prior. Observations then update the parameters of the
-distribution without changing its functional form. The dashed links in
-:numref:`fig_mdl-prob-family-tree` show these conjugate pairs.
-
-### Beta--Bernoulli Conjugacy and Pseudo-Counts
-
-The **Beta** distribution is a density on the unit interval $p\in[0,1]$ (exactly
-the range of a probability) with two shape parameters $\alpha,\beta>0$,
-
-$$
-\mathrm{Beta}(p\mid\alpha,\beta) = \frac{p^{\alpha-1}(1-p)^{\beta-1}}{B(\alpha,\beta)},
-$$
-:eqlabel:`eq_mdl-beta_pdf`
-
-where the normalizing constant is
-$B(\alpha,\beta)=\Gamma(\alpha)\Gamma(\beta)/\Gamma(\alpha+\beta)$, with $\Gamma$
-the Gamma function that the exercises of :numref:`sec_mdl-integral_calculus`
-introduced (recall $\Gamma(z+1)=z\,\Gamma(z)$ and $\Gamma(n+1)=n!$). The mean
-follows from this normalizer:
-
-$$
-\mathbb E[p]
-= \frac{1}{B(\alpha,\beta)}\int_0^1 p^{\alpha}(1-p)^{\beta-1}\,dp
-= \frac{B(\alpha+1,\beta)}{B(\alpha,\beta)}
-= \frac{\alpha}{\alpha+\beta},
-$$
-
-using $\Gamma(\alpha+1)=\alpha\,\Gamma(\alpha)$ to simplify the ratio; the same
-move one step further gives the variance
-$\operatorname{Var}(p)=\alpha\beta/\bigl((\alpha+\beta)^2(\alpha+\beta+1)\bigr)$.
-The uniform prior on $[0,1]$ that :numref:`sec_mdl-maximum_likelihood` will place
-on the coin's bias is the special case $\alpha=\beta=1$.
-
-Now take a Beta prior on a coin's bias $p$ and observe a Bernoulli/binomial sample
-with $x$ heads in $n$ flips. Multiplying the prior by the likelihood
-:eqref:`eq_mdl-binomial_pmf`,
-
-$$
-\underbrace{p^{\alpha-1}(1-p)^{\beta-1}}_{\text{prior}}\cdot
-\underbrace{p^{x}(1-p)^{n-x}}_{\text{likelihood}}
-= p^{(\alpha+x)-1}(1-p)^{(\beta+n-x)-1},
-$$
-
-which, up to normalization, is again a Beta, now with parameters shifted by the
-data:
-
-$$
-p \mid x \;\sim\; \mathrm{Beta}\bigl(\alpha+x,\ \beta+(n-x)\bigr).
-$$
-:eqlabel:`eq_mdl-beta_posterior`
-
-This update has a **pseudo-count** interpretation. The parameters
-$\alpha$ and $\beta$ act as prior counts for heads and tails. Observing $x$
-heads and $n-x$ tails adds these observations to the corresponding prior
-counts. The posterior mean
-
-$$
-\mathbb E[p\mid x] = \frac{\alpha+x}{\alpha+\beta+n}
-$$
-
-is the empirical frequency after including the pseudo-counts. It lies between
-the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood estimate
-$x/n$, and approaches the latter as $n$ grows. With the uniform prior
-$\alpha=\beta=1$ it becomes *Laplace's rule of succession* $(x+1)/(n+2)$
-:cite:`Laplace.1814`: estimate a
-probability by adding one phantom observation of each outcome. The cell verifies
-the update on a small sample.
-
-```{.python .input #distributions-conjugate}
-alpha, beta = 2.0, 2.0                           # Beta prior pseudo-counts
-x, n = 7, 10                                     # 7 heads in 10 flips
-post_alpha, post_beta = alpha + x, beta + (n - x)  # Beta posterior update
-print('prior mean      =', round(alpha / (alpha + beta), 4))
-print('MLE  x/n        =', round(x / n, 4))
-print('posterior Beta  =', (post_alpha, post_beta))
-print('posterior mean  =', round(post_alpha / (post_alpha + post_beta), 4))
-```
-
-The posterior mean lies between the prior mean $0.5$ and the empirical
-frequency $0.7$, as the pseudo-count calculation predicts.
-:numref:`fig_mdl-prob-beta-posterior` shows the same update with more data: the
-flat $\mathrm{Beta}(1,1)$ prior becomes concentrated around the true bias, and
-its width decreases as $1/\sqrt n$.
-
-![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $p^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $p^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
-:label:`fig_mdl-prob-beta-posterior`
-
-### Other Conjugate Pairs
-:label:`subsec_mdl-other-conjugate-pairs`
-
-The other discrete laws have their own conjugate partners, built the same way.
-
-* **Gamma--Poisson.** The **Gamma** distribution
-  $\mathrm{Gamma}(\lambda\mid\alpha,\beta)=\frac{\beta^\alpha}{\Gamma(\alpha)}\,\lambda^{\alpha-1}e^{-\beta\lambda}$
-  is a density on the rate $\lambda>0$ with mean $\alpha/\beta$ and variance
-  $\alpha/\beta^2$. Its conjugacy with the Poisson follows by the same
-  multiplication used for the Beta: $n$ observed counts $x_1,\dots,x_n$
-  contribute the likelihood
-  $\propto\lambda^{\sum_i x_i}e^{-n\lambda}$, and multiplying by the prior
-  collects powers into $\lambda^{\alpha+\sum_i x_i-1}e^{-(\beta+n)\lambda}$, the
-  posterior $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$: pseudo-events
-  over a pseudo-window. Averaging the Poisson over this Gamma uncertainty in its
-  rate yields the *negative binomial*, the over-dispersed fix promised in the
-  Poisson section.
-* **Gamma as a waiting time.** The Gamma is more than a prior: with integer shape
-  $\alpha=k$, $\mathrm{Gamma}(k,\beta)$ is the waiting time to the *$k$-th* event
-  of the Poisson process we named at the bus stop, the sum of $k$ independent
-  $\mathrm{Exp}(\beta)$ waits, extending the exponential's arrow in the family
-  tree just as the binomial extends the Bernoulli's.
-* **Dirichlet--Multinomial.** The **Dirichlet** distribution
-
-  $$
-  \mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)=\frac{\Gamma(\sum_k\alpha_k)}{\prod_k\Gamma(\alpha_k)}\prod_k p_k^{\alpha_k-1}
-  $$
-
-  is the multivariate Beta, a density over probability vectors on the simplex,
-  with mean $\mathbb E[p_k]=\alpha_k/\sum_j\alpha_j$. It is conjugate to the
-  categorical/multinomial by the same multiplication: the likelihood contributes
-  $\prod_k p_k^{x_k}$, so observing class counts $\mathbf x$ updates the prior to
-  $\mathrm{Dir}(\boldsymbol\alpha+\mathbf x)$, one pseudo-count per class.
-
-These are three instances of one theorem. **Every exponential-family likelihood
-has a conjugate prior**, provided the hyperparameters are chosen so that the
-prior below is normalizable, and that prior is itself an exponential family in
-the natural parameters $\boldsymbol\eta$:
-$p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$.
-Multiplying this prior by the likelihood :eqref:`eq_mdl-exp_family` adds the data's
-sufficient statistics to $\boldsymbol\nu$ and increments $\kappa$ by the sample
-size. The pseudo-count update of :eqref:`eq_mdl-beta_posterior` is this general
-mechanism specialized to the Bernoulli, and the hyperparameters
-$(\boldsymbol\nu,\kappa)$ are *pseudo-data*: a prior sufficient statistic and a prior
-sample size :cite:`Bishop.2006,Murphy.2022`. Conjugacy makes the exponential
-family the natural home of tractable Bayesian inference as well as of the
-standard losses.
+The residual's covariance with $x_2$ is close to $0$ and its variance close to
+$\tfrac32$. About four thousand samples fall in the slice, and their $x_1$ has
+mean near $1$ and variance near $\tfrac32$, the conditional law
+$\mathcal N(1,\tfrac32)$.
+
+We can now write down a likelihood for binary, categorical, count,
+waiting-time and real-valued data, scalar or vector, and derive each mean and
+variance from the way its law is built. Two questions are open. Nearly all of
+these laws share one algebraic form. That form explains why their negative
+log-likelihoods are convex in a suitable parameter and why their gradients
+take the form "prediction minus observation", as
+:numref:`sec_mdl-exponential-family` shows. And the probability $715/8192$
+assumed that the coin is fair; how well 13 flips determine the bias of a coin
+is the question of :numref:`sec_mdl-statistics`.
 
 ## Summary
 
-Here are the eleven data distributions of this section in one view; their three
-conjugate priors, the Beta, Gamma, and Dirichlet, close the family. For the categorical
-and multinomial rows we code a draw as a one-hot vector, respectively as the sum
-of $n$ one-hot vectors: the coding the cross-entropy loss already uses, and the
-object whose mean and covariance the table states.
+The table collects the laws of this section, in the order of the text. For the
+categorical and multinomial rows, a draw is coded as a one-hot vector, as the
+cross-entropy loss codes it.
 
-| Law | pmf or pdf | Mean | Variance | Where it shows up in DL |
+| Law | pmf or pdf | Mean | Variance | Model assumption |
 |:--|:--|:--|:--|:--|
-| $\mathrm{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | binary classifier output, BCE loss |
-| $\mathrm{Categorical}(\mathbf p)$ | $p_k$ | $\mathbf p$ | $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$ | softmax output, cross-entropy loss |
-| $\mathrm{Multinomial}(n,\mathbf p)$ | :eqref:`eq_mdl-multinomial_pmf` | $n\mathbf p$ | $n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$ | class counts over $n$ draws |
-| Uniform $U(n)$ | $1/n$ | $(n+1)/2$ | $(n^2-1)/12$ | index sampling, shuffling |
-| $\mathrm{Binomial}(n,p)$ | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | success counts over $n$ trials |
-| $\mathrm{Poisson}(\lambda)$ | $\lambda^k e^{-\lambda}/k!$ | $\lambda$ | $\lambda$ | rare-event counts |
-| Uniform $U(a,b)$ | $1/(b-a)$ on $[a,b]$ | $(a+b)/2$ | $(b-a)^2/12$ | raw randomness, initialization |
-| $\mathrm{Exp}(\lambda)$ | $\lambda e^{-\lambda x}$, $x\ge0$ | $1/\lambda$ | $1/\lambda^2$ | waiting times, survival |
-| $\mathcal N(\mu,\sigma^2)$ | $\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/2\sigma^2}$ | $\mu$ | $\sigma^2$ | MSE noise model, CLT, priors |
-| $\mathrm{Laplace}(\mu,b)$ | $\frac{1}{2b}e^{-\lvert x-\mu\rvert/b}$ | $\mu$ | $2b^2$ | MAE loss, $L_1$ sparsity prior |
-| $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ | :eqref:`eq_mdl-mvn_pdf` | $\boldsymbol\mu$ | $\boldsymbol\Sigma$ | latent priors, Gaussian processes |
+| $\mathrm{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | one yes/no outcome |
+| $\mathrm{Binomial}(n,p)$ | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | $n$ fixed, independent trials, one $p$ |
+| $\mathrm{Poisson}(\lambda)$ | $\lambda^k e^{-\lambda}/k!$ | $\lambda$ | $\lambda$ | many rare independent chances; mean equals variance |
+| $\mathrm{Categorical}(\mathbf p)$ | $p_k$ | $\mathbf p$ | $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$ | one of $K$ outcomes |
+| $\mathrm{Multinomial}(n,\mathbf p)$ | :eqref:`eq_mdl-multinomial_pmf` | $n\mathbf p$ | $n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$ | $n$ fixed, independent draws |
+| $\mathrm{Unif}\{1,\dots,n\}$ | $1/n$ | $(n+1)/2$ | $(n^2-1)/12$ | equally likely values |
+| $\mathrm{Exp}(\lambda)$ | $\lambda e^{-\lambda t}$, $t\ge0$ | $1/\lambda$ | $1/\lambda^2$ | constant event rate (no ageing) |
+| $\mathrm{Gamma}(\alpha,\beta)$ | $\beta^\alpha t^{\alpha-1}e^{-\beta t}/\Gamma(\alpha)$ | $\alpha/\beta$ | $\alpha/\beta^2$ | time of the $\alpha$-th event (integer $\alpha$) |
+| $U(a,b)$ | $1/(b-a)$ on $[a,b]$ | $(a+b)/2$ | $(b-a)^2/12$ | equal-length intervals equally likely |
+| $\mathcal N(\mu,\sigma^2)$ | $\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/(2\sigma^2)}$ | $\mu$ | $\sigma^2$ | sum of many small independent effects, finite variance |
+| $\mathrm{Laplace}(\mu,b)$ | $\frac{1}{2b}e^{-\lvert x-\mu\rvert/b}$ | $\mu$ | $2b^2$ | symmetric, exponential tails |
+| $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ | :eqref:`eq_mdl-mvn_pdf` | $\boldsymbol\mu$ | $\boldsymbol\Sigma$ | jointly Gaussian coordinates |
 
-* Distributions form a *family*: Bernoulli is the seed; summing $n$
-  gives the **Binomial** ($\mu=np$, $\sigma^2=np(1-p)$, derived as a sum of
-  Bernoullis); the many-rare limit gives the **Poisson** ($\mu=\sigma^2=\lambda$,
-  derived from the binomial); the many-ordinary limit (CLT) gives the **Gaussian**.
-* The **Categorical** generalizes Bernoulli to $K$ outcomes; its softmax form is
-  every classifier's output layer and its NLL is the cross-entropy loss. The
-  **Multinomial** counts $n$ categorical draws.
-* The **continuous** laws: the **uniform** (raw randomness, $U(0,1)$ powers
-  sampling), the **exponential** (memoryless waiting times, partner of the
-  Poisson), the **Gaussian** (CLT limit, MSE noise model, max-entropy default), the
-  **Laplace** ($L_1$/MAE loss, sparsity prior), and the **multivariate Gaussian**,
-  whose elliptical contours are the eigendecomposition of its covariance, which is
-  closed under both linear maps and conditioning (the Schur-complement formulas,
-  :eqref:`eq_mdl-mvn_conditional`, that drive Gaussian-process regression), and
-  which is sampled by the Cholesky recipe
-  $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$.
-* Means and variances follow from structure (linearity of expectation,
-  limits, and standard integrals) rather than memorization.
-* The **exponential family** $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top
-  T(\mathbf x)-A(\boldsymbol\eta))$ unifies almost all of them (the uniforms, whose
-  support moves with their parameters, stay outside). Under feasible moment
-  constraints and regularity conditions, the form arises by maximizing
-  entropy relative to a selected base measure $h$. Its
-  log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
-  and $A$ is convex. Thus its negative log-likelihood is convex in the natural
-  parameters; with an affine parameter map this yields a convex generalized
-  linear model, whereas a neural-network parameterization remains nonconvex.
-  In such a model the gradient is the input times prediction minus
-  observation, which is why linear, logistic, softmax, and Poisson regression
-  share one training rule.
-* The **softmax** arises three ways: as the choice under Gumbel-perturbed scores
-  (Gaussian noise gives the probit model instead), as the Boltzmann distribution
-  at temperature $T$, and as the mean map of the categorical family.
-* Every exponential-family likelihood has a **conjugate prior**: the **Beta** for the
-  Bernoulli/binomial, the **Gamma** for the Poisson, the **Dirichlet** for the
-  categorical/multinomial. Bayesian updating then just adds the data's sufficient
-  statistics to the prior's *pseudo-counts*: e.g. a $\mathrm{Beta}(\alpha,\beta)$
-  prior and $x$ heads in $n$ flips give a $\mathrm{Beta}(\alpha+x,\beta+n-x)$
-  posterior.
+A small set of distributions describes the labels and noise of most models,
+and each fixes a loss: the Bernoulli gives binary cross-entropy, the
+categorical softmax cross-entropy, the Gaussian squared error, and the Laplace
+absolute error. All of them grow out of one coin flip by a sum, a limit, a
+waiting time, a random sign, or a vector of coordinates. The construction of
+each law gives its mean and variance in a few lines, and the same constructions
+give samplers: inverse transforms of a uniform, a random sign times an
+exponential, a matrix factor times standard normals. The central limit theorem
+explains why the Gaussian appears whenever many small effects add up, and the
+Cauchy shows that it needs a finite variance. A Gaussian vector stays Gaussian
+under linear maps and conditioning; its contours are the eigen-ellipsoids of
+the covariance, and conditioning on one block is linear regression on it.
 
 ## Exercises
 
 1. **Error counts on a test set.** A classifier is scored on $n=10{,}000$
-   independent test examples, so that its number of errors $E$ has the
-   distribution $\mathrm{Binomial}(n,q)$, where $q$ is its true error rate.
+   independent test examples, each of which it gets wrong with the same
+   probability $q$, its true error rate. Its number of errors $X$ then has the
+   distribution $\mathrm{Binomial}(n,q)$.
     1. Let $q=0.1$. Use the Gaussian approximation of the binomial (the
        de Moivre--Laplace theorem) to find the interval around $nq$ that
-       contains $E$ with probability about $95\%$. Two classifiers with this
+       contains $X$ with probability about $95\%$. Two classifiers with this
        error rate are scored on two independent test sets of this size. Find
        the standard deviation of the difference of their observed accuracies.
-    1. Let $q=5\cdot10^{-4}$. Compute $P(E=0)$ and $P(E\ge10)$ exactly and
+    1. Let $q=5\cdot10^{-4}$. Compute $P(X=0)$ and $P(X\ge10)$ exactly and
        under the Poisson approximation $\mathrm{Poisson}(nq)$. Show that the
-       logarithm of $P(E=0)$ under the binomial differs from its Poisson
+       logarithm of $P(X=0)$ under the binomial differs from its Poisson
        value by about $-nq^2/2$.
     1. The classifier makes no errors on the $n$ test examples. Under the
        Poisson approximation, find the largest error rate $q$ for which this
@@ -1477,114 +1284,37 @@ object whose mean and covariance the table states.
        is accurate for every error rate this small.
    :exlabel:`ex_mdl-distributions-error-counts`
 
-1. **Exponential races.** Let $X_1,\dots,X_m$ be independent with
-   $X_i\sim\mathrm{Exp}(\lambda_i)$, for example the waiting times for the next
-   event in $m$ independent event streams.
-    1. Show that $\min_i X_i\sim\mathrm{Exp}\bigl(\sum_i\lambda_i\bigr)$.
-    1. Show that the $j$-th stream fires first with probability
-       $P\bigl(X_j=\min_i X_i\bigr)=\lambda_j/\sum_i\lambda_i$.
-    1. Let $E_1,\dots,E_K$ be independent $\mathrm{Exp}(1)$ variables and let
-       $\mathbf z\in\mathbb R^K$ be a vector of logits. Use (b) to show that
-       $\operatorname{argmax}_k\,(z_k-\log E_k)$ is distributed according to
-       the softmax probabilities :eqref:`eq_mdl-softmax`. Because $-\log E_k$
-       has the standard Gumbel distribution, this result is the Gumbel-max
-       trick.
-   :exlabel:`ex_mdl-distributions-exponential-races`
-
 1. **Conditioning on a noisy observation.** The conditional formulas
    :eqref:`eq_mdl-mvn_conditional` turn a joint Gaussian into a prediction of
    one block from another.
     1. Take the bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
        $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$,
-       where $|\rho|<1$. Show that $x_1\mid x_2\sim\mathcal N(\rho x_2,1-\rho^2)$.
-       Why does observing $x_2$ never increase the uncertainty about $x_1$?
+       where $|\rho|<1$. Identify $\mathbf B$ and the residual $r$, and check
+       $\textrm{Cov}(r,x_2)=0$ directly. Show that
+       $x_1\mid x_2\sim\mathcal N(\rho x_2,1-\rho^2)$. Why does observing $x_2$
+       never increase the uncertainty about $x_1$?
     1. A signal $s\sim\mathcal N(0,\tau^2)$ is observed with additive noise,
        $y=s+\epsilon$, where $\epsilon\sim\mathcal N(0,\sigma^2)$ is
        independent of $s$. Write $(s,y)$ as a linear map of $(s,\epsilon)$ to
        obtain its joint Gaussian distribution, and compute the conditional
        distribution of $s$ given $y$. Show that the conditional precision
-       $1/\operatorname{Var}(s\mid y)$ is the sum of the prior precision
+       $1/\textrm{Var}(s\mid y)$ is the sum of the prior precision
        $1/\tau^2$ and the noise precision $1/\sigma^2$. How does
-       $\mathbb E[s\mid y]$ behave as $\sigma^2\to0$ and as
+       $\mathbb{E}[s\mid y]$ behave as $\sigma^2\to0$ and as
        $\sigma^2\to\infty$? This computation is Gaussian process
        regression (:numref:`chap_gp`) with a single observation.
    :exlabel:`ex_mdl-distributions-using-conditional-formula-eqref`
 
-1. **Maximum entropy on the integers.** Consider distributions
-   $(p_0,p_1,p_2,\dots)$ on $\{0,1,2,\dots\}$ with a fixed mean $m>0$.
-   :numref:`subsec_mdl-max-entropy-derivation` asserts that the base measure
-   decides which of them maximizes entropy.
-    1. Maximize the Shannon entropy $H[p]=-\sum_k p_k\log p_k$ subject to
-       $\sum_k p_k=1$ and $\sum_k k\,p_k=m$, using Lagrange
-       multipliers (:numref:`subsec_mdl-lagrange-multipliers`). Show that the stationary
-       point is a geometric distribution $p_k=(1-q)\,q^k$, and express $q$
-       through $m$.
-    1. Repeat the derivation for the entropy relative to $h(k)=1/k!$,
-       $H_h[p]=-\sum_k p_k\log\bigl(p_k/h(k)\bigr)$, and show that the
-       maximizer is $\mathrm{Poisson}(m)$.
-    1. At $m=4$, compute the Shannon entropy of both distributions
-       numerically. Which one is larger, and why must it be? Compare
-       $P(X\ge15)$ under the two distributions. Which assumption about large
-       counts does the choice of base measure encode?
-   :exlabel:`ex_mdl-distributions-max-entropy-integers`
-
-1. **Moments from the log-partition.** The moment property
-   :eqref:`eq_mdl-exp_family_moment` and its second-order form
-   $\nabla^2A=\operatorname{Cov}(T)$ turn moment calculations into
-   differentiation.
-    1. For the Poisson, $A(\eta)=e^\eta$. Derive the mean and the variance
-       from $A$. Which property of the function $A$ makes them equal?
-    1. For the Gaussian, the natural parameters are $\eta_1=\mu/\sigma^2$
-       and $\eta_2=-1/(2\sigma^2)$. Express $A$ as a function of
-       $(\eta_1,\eta_2)$. Differentiate it to recover $\mathbb E[x]$,
-       $\mathbb E[x^2]$, $\operatorname{Var}(x)$ and
-       $\operatorname{Cov}(x,x^2)$.
-    1. The Laplace distribution with a fixed location $\mu$ has the
-       sufficient statistic $T(x)=|x-\mu|$. Write it in the form
-       :eqref:`eq_mdl-exp_family`, and use $A$ to compute
-       $\mathbb E\,|x-\mu|$ and $\operatorname{Var}|x-\mu|$. Check the result
-       against the Laplace variance $2b^2$.
-   :exlabel:`ex_mdl-distributions-log-partition-moments`
-
-1. [code] **Probit and logit.** For two classes with the score difference
-   $m=z_1-z_2$, the logit model gives $P(y=1)=\sigma(m)$ and the probit model
-   with noise scale $s$ gives $P(y=1)=\Phi\bigl(m/(\sqrt2\,s)\bigr)$
-   (:numref:`subsec_mdl-softmax-origins`).
-    1. Show that the difference of two independent standard Gumbel variables
-       has the CDF $\sigma(x)$. The standard Gumbel distribution has variance
-       $\pi^2/6$. Find the scale $c$ for which the distribution with CDF
-       $\sigma(cx)$ has variance 1, like the standard Gaussian.
-    1. Find numerically the scale $c$ that minimizes
-       $\max_x|\sigma(cx)-\Phi(x)|$, and the value of this maximum. Why is
-       this scale smaller than the one of (a)?
-    1. An example of class 2 lies on the wrong side of the decision
-       boundary, with $m>0$. Show that its negative log-likelihood
-       $-\log\sigma(-m)$ under the logit model lies between $m$ and
-       $m+e^{-m}$, and that its derivative with respect to $m$ is less than
-       1. Use the bounds
-       $\frac{x}{1+x^2}\,\phi(x)\le1-\Phi(x)\le\frac{\phi(x)}{x}$ for $x>0$ to
-       show that its negative log-likelihood
-       $-\log\Phi\bigl(-m/(\sqrt2\,s)\bigr)$ under the probit model grows like
-       $m^2/(4s^2)$, and that its derivative grows linearly in $m$.
-    1. Draw 100 inputs $x\sim\mathcal N(1,1)$ of class 1 and 100 inputs
-       $x\sim\mathcal N(-1,1)$ of class 2, and let $m=wx+b$. Fit $(w,b)$ by
-       maximum likelihood under both models. Then add three examples at
-       $x=6$ labeled as class 2, and fit again. For each model, compute the
-       ratio of the slope $w$ with these mislabeled examples to the slope
-       without them, and explain the difference between the models with (c).
-       Compute $\log\Phi$ with a numerically stable routine such as
-       `scipy.special.log_ndtr`.
-   :exlabel:`ex_mdl-distributions-probit-logit`
-
 1. **Gamma--Poisson mixture.** Let the Poisson rate itself be random,
-   $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density of
-   :numref:`subsec_mdl-other-conjugate-pairs`, and let
-   $X\mid\lambda\sim\mathrm{Poisson}(\lambda)$.
-    1. Use the laws of total expectation and total variance
-       :eqref:`eq_mdl-tower` to compute $\mathbb E[X]$ and
-       $\operatorname{Var}(X)$. Write the variance in terms of the mean
-       $m=\alpha/\beta$ and the shape $\alpha$. In which limit of $\alpha$
-       and $\beta$ does the Poisson reappear?
+   $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density
+   :eqref:`eq_mdl-gamma_pdf`, and let $X\mid\lambda\sim\mathrm{Poisson}(\lambda)$.
+    1. Use the law of total expectation
+       $\mathbb{E}[X]=\mathbb{E}\bigl[\mathbb{E}[X\mid\lambda]\bigr]$ and the law
+       of total variance
+       $\textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\lambda)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\lambda]\bigr)$
+       to compute $\mathbb{E}[X]$ and $\textrm{Var}(X)$. Write the variance in
+       terms of the mean $m=\alpha/\beta$ and the shape $\alpha$. In which
+       limit of $\alpha$ and $\beta$ does the Poisson reappear?
     1. Show that $X$ has the *negative binomial* pmf
 
        $$P(X=k)=\frac{\Gamma(k+\alpha)}{k!\,\Gamma(\alpha)}\Bigl(\frac{\beta}{1+\beta}\Bigr)^{\alpha}\Bigl(\frac{1}{1+\beta}\Bigr)^{k},\qquad k=0,1,2,\dots,$$
@@ -1607,80 +1337,6 @@ object whose mean and covariance the table states.
        geometric, $P(X>t)=(1-p)^t$ for some $p\in(0,1]$.
    :exlabel:`ex_mdl-distributions-memoryless-converse`
 
-1. **Minimal categorical family.** ● Code a categorical outcome as a one-hot
-   vector $\mathbf x\in\{0,1\}^K$, with class probabilities
-   $\mathbf p=\mathrm{softmax}(\mathbf z)$ given by :eqref:`eq_mdl-softmax`.
-    1. Write $P(\mathbf x)$ in the form :eqref:`eq_mdl-exp_family` with
-       $T(\mathbf x)=\mathbf x$ and natural parameters
-       $\boldsymbol\eta=\mathbf z$. Find $A(\mathbf z)$ and verify that
-       $\nabla A(\mathbf z)=\mathrm{softmax}(\mathbf z)$. Deduce the gradient
-       of the cross-entropy loss $-\log P(\mathbf y)$ of a one-hot label
-       $\mathbf y$ with respect to the logits.
-    1. Compute $\nabla^2 A(\mathbf z)$ and show that it equals the
-       covariance $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$
-       of the one-hot vector $\mathbf x$. Every one-hot vector satisfies
-       $\mathbf x\mathbf x^\top=\operatorname{diag}(\mathbf x)$. Show that
-       $\nabla^2A(\mathbf z)\,\mathbf 1=\mathbf 0$, and that the gradient of
-       the negative log-likelihood of a dataset is orthogonal to $\mathbf 1$
-       at every $\mathbf z$. Gradient descent with a small step size runs on
-       the logits from a starting point $\mathbf z_0$, and every class
-       occurs in the data. Which function of $\mathbf z$ does gradient
-       descent never change? Which of the minimizers does it therefore
-       approach?
-    1. Fix $z_K=0$. This gives a minimal representation with
-       $\boldsymbol\eta=(z_1,\dots,z_{K-1})$ and
-       $T(\mathbf x)=(x_1,\dots,x_{K-1})$. Show that $\nabla^2A(\boldsymbol\eta)$
-       is positive definite whenever every $p_k>0$. Given class counts
-       $n_1,\dots,n_K$, solve the moment-matching condition
-       $\nabla A(\boldsymbol\eta)=\bar T$ for the maximum-likelihood
-       $\hat{\boldsymbol\eta}$. What happens when some class has $n_k=0$?
-   :exlabel:`ex_mdl-distributions-minimal-categorical`
-
-1. [code] **Poisson regression.** ● A generalized linear model for counts
-   makes the natural parameter of a Poisson an affine function of the
-   features: $y_i\mid\mathbf x_i\sim\mathrm{Poisson}(e^{\eta_i})$ with
-   $\eta_i=\mathbf w^\top\mathbf x_i+b$.
-    1. Use the negative log-likelihood :eqref:`eq_mdl-exp_family_nll` to
-       write the loss as a function of $(\mathbf w,b)$, and compute its
-       gradient and Hessian. Show that the loss is convex. Which equations
-       does a zero gradient impose on the fitted means
-       $\hat m_i=e^{\hat\eta_i}$?
-    1. Generate $n=1000$ examples with $\mathbf x_i\sim\mathcal N(\mathbf 0,\mathbf I_2)$,
-       $\mathbf w=(-0.3,1.0)$ and $b=0.5$. Starting from zero, fit
-       $(\mathbf w,b)$ with the Newton step :eqref:`eq_mdl-opt-newton-step`,
-       and check the equations of (a) at the solution.
-    1. Multiply each rate by an independent $g_i\sim\mathrm{Gamma}(1,1)$,
-       which has mean $1$, so that the counts become overdispersed while their
-       conditional means stay $e^{\eta_i}$. Fit the Poisson model to $200$
-       such datasets and to $200$ datasets without the multiplier. Compare
-       the mean and the standard deviation of the estimates across datasets.
-       Explain the behavior of the mean with the equations of (a).
-   :exlabel:`ex_mdl-distributions-poisson-regression`
-
-1. **Conjugate priors from natural parameters.** ● For a scalar natural
-   parameter $\eta$, the general conjugate prior of an exponential-family
-   likelihood is
-
-   $$p(\eta)\propto\exp\bigl(\nu\,\eta-\kappa\,A(\eta)\bigr),$$
-
-   and $n$ observations update it by $\nu\to\nu+\sum_i T(x_i)$ and
-   $\kappa\to\kappa+n$.
-    1. For the Poisson, $\eta=\log\lambda$ and $A(\eta)=e^\eta$. Change
-       variables from $\eta$ to $\lambda$, including the Jacobian, and show
-       that the prior on $\lambda$ is a Gamma distribution. Identify its shape
-       and rate, and check that the update reproduces the Gamma posterior
-       of :numref:`subsec_mdl-other-conjugate-pairs`.
-    1. For the Bernoulli, $\eta=\log\frac{p}{1-p}$ and
-       $A(\eta)=\log(1+e^\eta)$. Show that the prior on $p$ is a Beta
-       distribution, identify its parameters, and find the values of
-       $(\nu,\kappa)$ for which it is normalizable.
-    1. Take the flat prior on the logit, $\nu=\kappa=0$. Which density on $p$
-       does it induce, and is that density normalizable? After $x$ heads in
-       $n$ flips, when is the posterior normalizable, and what is its mean?
-       Compare it with the mean of the posterior :eqref:`eq_mdl-beta_posterior`
-       under the uniform prior $\mathrm{Beta}(1,1)$ on $p$.
-   :exlabel:`ex_mdl-distributions-conjugate-recipe`
-
 1. [code] **Convergence rate of the CLT.** ●● Let $F_n$ be the c.d.f. of
    the standardized sum $(S_n-n\mu)/(\sigma\sqrt n)$ of $n$ independent
    summands with mean $\mu$ and standard deviation $\sigma$. Measure the
@@ -1690,22 +1346,18 @@ object whose mean and covariance the table states.
    approximation by eye; this problem measures its rate.
     1. Compute $D_n$ for $n\in\{1,2,4,\dots,64\}$ and three summand
        distributions, $U(0,1)$, $\mathrm{Exp}(1)$ and
-       $\mathrm{Bernoulli}(1/2)$, from an exact formula for $F_n$ in each
-       case. For uniform summands use the Irwin--Hall formula
-
-       $$P(S_n\le s)=\frac{1}{n!}\sum_{k=0}^{\lfloor s\rfloor}(-1)^k\binom{n}{k}(s-k)^n,$$
-
-       evaluated in exact rational arithmetic with Python's
-       `fractions.Fraction`, because its terms cancel catastrophically in
-       floating point once $n$ exceeds about $40$. For exponential summands,
-       $S_n$ is the time of the $n$-th event of a Poisson process with rate
-       $1$, so $P(S_n\le s)=P(N\ge n)$ for $N\sim\mathrm{Poisson}(s)$. For the
-       two continuous summands, take the supremum over a fine grid of
-       $x\in[-4,4]$. For Bernoulli summands, compare $\Phi$ with $F_n$ on
-       both sides of every jump. Plot $D_n$ against $n$ on log-log axes and
-       fit the slopes.
+       $\mathrm{Bernoulli}(1/2)$. For uniform summands, compute the density of
+       $S_n$ by repeated numerical convolution of the $U(0,1)$ density on a
+       fine grid (`np.convolve`, rescaled by the grid spacing) and integrate it
+       to $F_n$. For exponential summands, $S_n$ is the time of the $n$-th
+       event of a Poisson process with rate $1$, so $P(S_n\le s)=P(N\ge n)$
+       for $N\sim\mathrm{Poisson}(s)$. For the two continuous summands, take
+       the supremum over a fine grid of $x\in[-4,4]$. For Bernoulli summands,
+       use the exact binomial pmf and compare $\Phi$ with $F_n$ on both sides
+       of every jump. Plot $D_n$ against $n$ on log-log axes and fit the
+       slopes.
     1. For summands that are not confined to a lattice and have skewness
-       $\gamma=\mathbb E[(X-\mu)^3]/\sigma^3$, the Edgeworth expansion
+       $\gamma=\mathbb{E}[(X-\mu)^3]/\sigma^3$, the Edgeworth expansion
        :cite:`Hall.1992` refines the central limit theorem to
 
        $$F_n(x)=\Phi(x)-\frac{\gamma}{6\sqrt n}\,(x^2-1)\,\phi(x)+o\bigl(n^{-1/2}\bigr).$$
@@ -1767,6 +1419,94 @@ object whose mean and covariance the table states.
        your measurements.
    :exlabel:`ex_mdl-distributions-word-burstiness`
 
+1. **The Student-$t$ as a Gamma scale mixture.** ● A Gaussian whose precision
+   (inverse variance) is itself random has heavier tails than any Gaussian.
+   Let $\tau\sim\mathrm{Gamma}(\nu/2,\nu/2)$ with the density
+   :eqref:`eq_mdl-gamma_pdf` (shape and rate both $\nu/2$, for some $\nu>0$),
+   and let $X\mid\tau\sim\mathcal N(\mu,1/\tau)$.
+    1. Integrate $\tau$ out to show that $X$ has the density
+
+       $$p(x)=\frac{\Gamma\bigl(\frac{\nu+1}{2}\bigr)}{\sqrt{\pi\nu}\,\Gamma\bigl(\frac{\nu}{2}\bigr)}\Bigl(1+\frac{(x-\mu)^2}{\nu}\Bigr)^{-(\nu+1)/2},$$
+
+       *Student's $t$ distribution* with $\nu$ degrees of freedom. *Hint:*
+       $\int_0^\infty\tau^{a-1}e^{-c\tau}\,d\tau=\Gamma(a)/c^a$ for $a,c>0$.
+    1. Show that $p(x)$ decays like $|x|^{-(\nu+1)}$, so that
+       $\mathbb{E}|X-\mu|^k$ is finite only for $k<\nu$. Which distribution
+       met in this section is the case $\nu=1$?
+    1. Show that $\textrm{Var}(X)=\nu/(\nu-2)$ for $\nu>2$ by the law of total
+       variance of exercise :exref:`ex_mdl-distributions-gamma-poisson-mixture`.
+    1. [code] Draw $10^5$ samples for $\nu=3$ and $\mu=0$ by the mixture
+       recipe (first $\tau$, then $X$), and compare the fraction with
+       $|X|>3$ with the Gaussian's $0.0027$. Then draw $10^4$ sample means of
+       20 draws each and compare their standard deviation with
+       $\sqrt{3/20}$.
+   :exlabel:`ex_mdl-distributions-student-t`
+
+1. **Two factors of one covariance.** ● Let
+   $\boldsymbol\Sigma=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$.
+    1. Compute the Cholesky factor $\mathbf L$ by hand, and the eigen-factor
+       $\mathbf M=\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\sqrt{\gamma_2})$
+       from the eigenvectors and eigenvalues found in the text.
+       Verify $\mathbf L\mathbf L^\top=\mathbf M\mathbf M^\top=\boldsymbol\Sigma$.
+    1. Show that any two invertible factors with
+       $\mathbf M_1\mathbf M_1^\top=\mathbf M_2\mathbf M_2^\top$ satisfy
+       $\mathbf M_2=\mathbf M_1\mathbf Q$ with $\mathbf Q$ orthogonal (*hint:*
+       set $\mathbf Q=\mathbf M_1^{-1}\mathbf M_2$). What is the distribution
+       of $\mathbf Q\mathbf z$ for $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I)$?
+       Conclude that $\boldsymbol\mu+\mathbf M_1\mathbf z$ and
+       $\boldsymbol\mu+\mathbf M_2\mathbf z$ have the same distribution.
+    1. *Whitening.* Show that $\mathbf z=\mathbf L^{-1}(\mathbf x-\boldsymbol\mu)$
+       has covariance $\mathbf I$ when
+       $\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$. Explain why
+       computing $\mathbf z$ for one $\mathbf x$ takes about $d^2$ operations
+       once $\mathbf L$ is known, against about $d^3/3$ for computing
+       $\mathbf L$.
+    1. [code] Sample $10{,}000$ points by each factor, print both empirical
+       covariances, whiten the Cholesky samples with a triangular solve, and
+       print the covariance of the result.
+   :exlabel:`ex_mdl-distributions-two-factors`
+
+1. **Superposition, thinning, and the order of arrivals.** ● Requests reach a
+   server from two independent sources, which are Poisson processes with
+   rates $\lambda_1$ and $\lambda_2$.
+    1. Show that the merged stream is a Poisson process with rate
+       $\lambda_1+\lambda_2$. Use the slicing picture, or show by the binomial
+       theorem that the sum of independent $\mathrm{Poisson}(\lambda_1)$ and
+       $\mathrm{Poisson}(\lambda_2)$ counts is
+       $\mathrm{Poisson}(\lambda_1+\lambda_2)$.
+    1. Each request of a rate-$\lambda$ process is logged independently with
+       probability $q$. Show that the logged requests form a Poisson process
+       with rate $q\lambda$: condition on the number of requests and sum a
+       binomial over a Poisson. With $\lambda=4$ per minute and $q=\tfrac14$,
+       what is the probability that a minute logs nothing?
+    1. Given that exactly $n$ events fell in $[0,t]$, show that their times
+       have the distribution of $n$ independent $U(0,t)$ draws, sorted. Use
+       the slicing picture: every slice is equally likely to hold an event.
+    1. [code] Simulate a rate-$4$ process for $1{,}000$ minutes by exponential
+       gaps, thin it with $q=\tfrac14$, and check that the thinned counts per
+       minute have mean and variance close to $1$. Collect the positions
+       within the minute of the events in minutes with exactly three events,
+       and check that their histogram is flat.
+   :exlabel:`ex_mdl-distributions-poisson-process`
+
+1. **Covariance of the multinomial.** ● Write the multinomial count vector as
+   $\mathbf x=\sum_{i=1}^n\mathbf e_{Y_i}$, a sum of $n$ independent one-hot
+   vectors with $P(Y_i=k)=p_k$.
+    1. Show that $\mathbb{E}[\mathbf e_Y]=\mathbf p$ and
+       $\textrm{Cov}(\mathbf e_Y)=\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$,
+       and hence that $\mathbb{E}[\mathbf x]=n\mathbf p$ and
+       $\textrm{Cov}(\mathbf x)=n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$.
+       Read off $\textrm{Var}(x_k)=np_k(1-p_k)$ and
+       $\textrm{Cov}(x_j,x_k)=-np_jp_k$ for $j\ne k$. Why is every covariance
+       negative?
+    1. Show that $\textrm{Cov}(\mathbf x)\mathbf 1=\mathbf 0$, and explain this
+       by the constraint $\sum_kx_k=n$.
+    1. For 12 rolls of a fair die, compute $\textrm{Var}(x_k)$,
+       $\textrm{Cov}(x_j,x_k)$, and the correlation between two counts.
+    1. Show that $x_k$ alone is $\mathrm{Binomial}(n,p_k)$ by grouping the
+       other $K-1$ classes into one.
+   :exlabel:`ex_mdl-distributions-multinomial-covariance`
+
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/417)
 :end_tab:
@@ -1789,233 +1529,247 @@ object whose mean and covariance the table states.
 ::: {.cover}
 [Dive into Deep Learning · §25.2]{.kicker}
 
-A core distribution vocabulary<br>**from Bernoulli to the Gaussian, and the family they belong to**.
+Distributions<br>**from one coin flip to the Gaussian**
 :::
 :::
 
-::: {.slide title="A family, not a list"}
-[Motivation]{.kicker}
+::: {.slide title="9 Heads in 13 Flips: How Surprising Is That?"}
+[The problem]{.kicker}
+
+- A coin lands heads 9 times in 13 flips. If it is fair, how likely is that?
+- Every model that predicts a label has chosen a law for it, and the law fixes the loss:
+
+| model output | law of the label | loss |
+|:--|:--|:--|
+| $P(y=1)$ | Bernoulli | binary cross-entropy |
+| softmax over $K$ classes | categorical | cross-entropy |
+| a predicted value | Gaussian | squared error |
+| a robust predicted value | Laplace | absolute error |
+
+::: {.d2l-note .warn}
+A wrong law gives wrong error bars: a Poisson count must have variance equal to its mean.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute a binomial probability by a ratio, without factorials;
+- derive each law's mean and variance from how it is built;
+- derive the exponential wait from the Poisson count;
+- state the central limit theorem and show where it fails;
+- sample a Gaussian vector and condition it on an observation.
+
+**Running examples:** the coin (9 heads in 13 flips); a server at 4 requests per minute;
+$\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$.
+**Idea:** a few laws grow out of one coin flip by sums, limits and waiting times.
+:::
+
+::: {.slide title="From Densities to Named Laws"}
+[Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-These fourteen distributions form a useful core vocabulary, and they
-**connect** through constructions, limits, and conjugacy. Important omissions
-include mixtures, heavy-tailed multivariate laws, survival families, and
-structured stochastic processes.
-
-::: {.d2l-note}
-Learn the *map*, not a flat list of formulas.
-:::
-:::
-
-::: {.col .fig .big}
-@fig:mdl-prob-family-tree
-:::
-:::
+| section | adds |
+|---|---|
+| Random Variables | densities, moments, covariance |
+| **Distributions** | **the named laws and their losses** |
+| The Exponential Family | one form, convex fits, conjugacy |
+| Statistics | error bars, tests, intervals |
+| Maximum Likelihood | losses, Fisher information, MAP, EM |
+| Bayesian Computation | averaging over a posterior |
+| Concentration Inequalities | exponential tails of averages |
+| Uniform Convergence | guarantees after selection |
+| Naive Bayes | one classifier, end to end |
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Discrete distributions]{.dtitle}
-
-[Bernoulli · Categorical · Uniform · Binomial · Poisson]{.dsub}
+::: {.col .narrow}
+- **Uses:** mean, variance, change of variables, inverse transform.
+- **Skips:** heavy tails beyond the Laplace, event rates that change in time.
+:::
 :::
 :::
 
-::: {.slide title="Bernoulli: the seed"}
-[Discrete]{.kicker}
+::: {.slide title="One Flip Has Mean p and Variance p(1−p)"}
+[Bernoulli]{.kicker}
 
-One coin flip: $P(X=1)=p$, $P(X=0)=1-p$. Because $X^2 = X$, both moments
-collapse instantly: $\mathbb E[X]=p$, $\operatorname{Var}(X)=p(1-p)$.
+$P(X=x)=p^x(1-p)^{1-x}$ for $x\in\{0,1\}$. Since $X^2=X$:
 
-~~~python
-big = 1 * (rng.random(10000) < p)   # 1 with prob p, else 0
-~~~
+$$
+\mathbb{E}[X]=p, \qquad \textrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2=p-p^2=p(1-p).
+$$
 
-@!distributions-bernoulli
+- $p(1-p)$ is $0.25$ at $p=\tfrac12$, $0.09$ at $p=0.1$ or $0.9$, $0$ at $0$ or $1$.
+- The running coin, $p=9/13$: variance $\approx0.21$.
 
 ::: {.d2l-note .rule}
-A probabilistic binary classifier with a Bernoulli likelihood has binary
-cross-entropy as its negative log-likelihood.
+Binary cross-entropy $-y\log\hat p-(1-y)\log(1-\hat p)$ is the Bernoulli's negative log-probability.
 :::
 :::
 
-::: {.slide title="Categorical: softmax in disguise"}
-[Discrete]{.kicker}
+::: {.slide title="13 Flips Have Mean 6.5, Variance 3.25, and P(9) = 715/8192"}
+[Binomial]{.kicker}
 
-$K$ outcomes with $P(X=k)=p_k$. A network produces the $p_k$ from logits
-through the softmax $p_k = e^{z_k}/\sum_j e^{z_j}$, and the NLL is exactly
-cross-entropy.
+$X=\sum_{i=1}^n X_i$, independent flips with one $p$:
+$P(X=k)=\binom nk p^k(1-p)^{n-k}$, orderings times one ordering.
 
-~~~python
-p_cat = onp.exp(z) / onp.exp(z).sum()   # softmax -> categorical
-~~~
-
-@!distributions-categorical
-
-::: {.d2l-note}
-The **Gumbel-max** trick samples a categorical exactly; its soft version
-makes discrete choices differentiable.
-:::
-:::
-
-::: {.slide title="The discrete gallery"}
-[Discrete]{.kicker}
-
-The figure compares four probability laws on the integers:
-
-@fig:mdl-prob-discrete-pmfs
-
-Uniform spreads mass evenly ($\mu=\tfrac{n+1}{2}$); the others concentrate
-it where events are likely.
-:::
-
-::: {.slide title="Binomial: moments for free"}
-[Discrete]{.kicker}
-
-A Binomial is a **sum of $n$ Bernoullis**, $X=\sum_i X_i$, so linearity
-and independence hand us the moments with no algebra:
-
-$$\mu = \sum_i \mathbb E[X_i] = np, \qquad
-\sigma^2 = \sum_i \operatorname{Var}(X_i) = np(1-p).$$
+- Linearity: $\mathbb{E}[X]=np$. Independence: $\textrm{Var}(X)=np(1-p)$.
+- Ratio: $\dfrac{P(X=k+1)}{P(X=k)}=\dfrac{n-k}{k+1}\cdot\dfrac{p}{1-p}$, from $P(X=0)=(1-p)^n$.
 
 @!distributions-binomial
+
+9 heads lie $1.4$ standard deviations above the mean.
 :::
 
-::: {.slide title="Poisson: the many-rare limit"}
-[Discrete]{.kicker}
+::: {.slide title="Many Rare Chances Give the Poisson, with Mean = Variance = λ"}
+[Poisson]{.kicker}
 
-Take $\text{Binomial}(n,\lambda/n)$ and send $n\to\infty$:
-
-$$\binom{n}{k}\Bigl(\tfrac{\lambda}{n}\Bigr)^k\Bigl(1-\tfrac{\lambda}{n}\Bigr)^{n-k}
-\longrightarrow \frac{\lambda^k e^{-\lambda}}{k!}.$$
+Slice a minute into $n$ pieces, each $\mathrm{Bernoulli}(4/n)$; let $n\to\infty$:
+$P(X=k)\to\lambda^ke^{-\lambda}/k!$. Silent minute: $(1-\tfrac4n)^n=0.0115,\ 0.0169,\ 0.0182\to e^{-4}$.
 
 @!distributions-binomial-to-poisson
+:::
 
+::: {.slide title="Check: A Silent Minute, and Exactly Four Requests"}
+[Check]{.kicker}
+
+A server gets 4 requests per minute on average, modeled as Poisson.
+What is the probability of a minute with no request? With exactly 4?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-Mean $=$ variance $=\lambda$ is the Poisson fingerprint:
-**over-dispersion** (variance $>$ mean) signals a too-simple model.
+**Answer.** $P(0)=e^{-4}\approx0.018$, about once an hour.
+$P(4)=\tfrac{4^4}{4!}e^{-4}\approx0.195$: even the most likely count (4, tied with 3) happens in only one minute of five.
 :::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Continuous distributions]{.dtitle}
-
-[Uniform · Exponential · Gaussian · Laplace · Multivariate Gaussian]{.dsub}
 :::
 :::
 
-::: {.slide title="Uniform: raw randomness"}
-[Continuous]{.kicker}
+::: {.slide title="K Outcomes Give the Categorical; n Draws Give the Multinomial"}
+[Categorical]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Density $\tfrac{1}{b-a}$ on $[a,b]$; mean $\tfrac{a+b}{2}$, variance
-$\tfrac{(b-a)^2}{12}$.
+- $P(X=k)=p_k$; softmax $p_k=e^{z_k}/\sum_je^{z_j}$ turns logits into a categorical.
+- Logits $(2,1,0.1,-1)$ give $\mathbf p\approx(0.64,0.23,0.10,0.03)$.
+- Cross-entropy $-\log p_y$ is its negative log-probability.
+- Counts of $n$ draws: $\dfrac{n!}{x_1!\cdots x_K!}\prod_kp_k^{x_k}$; for $K=2$, $\dfrac{13!}{9!\,4!}=715$.
+- Equal $p_k=\tfrac1n$: the die, mean $\tfrac{n+1}2=3.5$, variance $\tfrac{n^2-1}{12}\approx2.92$.
+:::
 
-The unit uniform powers inverse-transform sampling, Monte Carlo,
-dropout masks, and initialization.
+::: {.slide title="The Wait for the Next Event Is Exponential"}
+[Exponential]{.kicker}
 
-~~~python
-sample = (b - a) * rng.random(10000) + a   # shift-and-scale
-~~~
+@fig:mdl-prob-poisson-timeline
+
+$P(T>t)=P(N(t)=0)=e^{-\lambda t}$, so $p(t)=\lambda e^{-\lambda t}$. At $\lambda=4$/min:
+mean wait $1/\lambda=15$ s, median $\log2/\lambda\approx10.4$ s.
+:::
+
+::: {.slide title="The Exponential Forgets How Long You Have Waited"}
+[Memorylessness]{.kicker}
+
+$$
+P(T>s+t\mid T>s)=\frac{e^{-\lambda(s+t)}}{e^{-\lambda s}}=e^{-\lambda t}=P(T>t).
+$$
+
+- The $k$-th event's time is a sum of $k$ waits: $\mathrm{Gamma}(k,\lambda)$, mean $k/\lambda$.
+- $P(T_4>1)=P(N(1)\le3)\approx0.43$.
+
+@!distributions-exponential
+:::
+
+::: {.slide title="Every Sampler Starts from U(0,1)"}
+[Uniform]{.kicker}
+
+- $U(a,b)$: density $\tfrac1{b-a}$; every subinterval of equal length is equally likely.
+- Mean $\tfrac{a+b}2$, variance $\tfrac{(b-a)^2}{12}$; $U(-\sqrt3,\sqrt3)$ has variance $1$.
+- Inverse transform: $X=F^{-1}(U)$ has c.d.f. $F$.
+- Exponential: $T=-\log(1-U)/\lambda$. With $-\log U$, the draw $U=0$ would give $\infty$.
 
 @!distributions-continuous-uniform
 :::
 
-::: {.col .fig}
+::: {.slide title="I. The Binomial's Own Ratio Turns into a Parabola"}
+[Derivation]{.kicker}
+
+Put $k=np+x$, $q=1-p$, and use $\log(1+\epsilon)\approx\epsilon$:
+
+$$
+\log\frac{P(k+1)}{P(k)}=\log\frac{1-x/(nq)}{1+(x+1)/(np)}\approx-\frac{x}{npq}.
+$$
+
+Steps linear in $x$ add up to a parabola: $\log P(np+x)\approx C-\dfrac{x^2}{2npq}$,
+a bell of variance $npq$.
+
+@!mdl-distributions-gaussian-2
+:::
+
+::: {.slide title="II. Standardized Sums with Finite Variance Become Gaussian"}
+[Central limit theorem]{.kicker}
+
+$X_i$ iid, mean $\mu$, variance $0<\sigma^2<\infty$, $S_n=\sum_{i\le n}X_i$:
+$P\bigl((S_n-n\mu)/(\sigma\sqrt n)\le y\bigr)\to\Phi(y)$. Standardized sums of uniforms:
+
+@!mdl-distributions-gaussian-1
+
+Only two moments enter.
+:::
+
+::: {.slide title="III. Normalizer by Polar Coordinates, Variance by Parts"}
+[Derivation]{.kicker}
+
+$$
+I^2=\iint e^{-(x^2+y^2)/2}\,dx\,dy=\int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta=2\pi .
+$$
+
+$$
+\int x^2\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,dx=\frac{1}{\sqrt{2\pi}}\Bigl(\bigl[-xe^{-x^2/2}\bigr]+\int e^{-x^2/2}\,dx\Bigr)=1 .
+$$
+
+::: {.d2l-note .rule}
+$\mathcal N(\mu,\sigma^2)$: $p(x)=\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/(2\sigma^2)}$, mean $\mu$, variance $\sigma^2$.
+:::
+:::
+
+::: {.slide title="Check: Does the Average of 1,000 Cauchy Draws Settle?"}
+[Check]{.kicker}
+
+The Cauchy density $1/(\pi(1+x^2))$ has infinite variance. Average $n$ independent
+draws. Does $P(|\text{average}|>1)$ shrink as $n$ grows?
+
+::: {.fragment .fade-up}
+No. The average of Cauchy draws is again Cauchy, so the probability stays $\tfrac12$:
+
+@!distributions-gaussian
+:::
+:::
+
+::: {.slide title="The Laplace Is a Random Sign Times an Exponential"}
+[Laplace]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$X=\mu+SE$: $p(x)=\frac1{2b}e^{-|x-\mu|/b}$, $\textrm{Var}=\mathbb{E}[E^2]=2b^2$.
+
+Beyond $3\sigma$: $e^{-3\sqrt2}\approx0.014$ against $0.0027$, five times the Gaussian.
+
+Its negative log-probability is the absolute error.
+:::
+
+::: {.col .fig .big}
 @fig:mdl-prob-continuous-pdfs
 :::
 :::
 :::
 
-::: {.slide title="Exponential: memorylessness"}
-[Continuous]{.kicker}
-
-Waiting times: $p(x)=\lambda e^{-\lambda x}$, $F(x)=1-e^{-\lambda x}$,
-mean $1/\lambda$, variance $1/\lambda^2$.
-
-$$P(X > s+t \mid X > s) = e^{-\lambda t} = P(X > t).$$
-
-~~~python
-sample = -onp.log(U) / lam   # inverse-transform sampler
-~~~
-
-@!distributions-exponential
-
-::: {.d2l-note .rule}
-The only memoryless continuous law; the continuous
-partner of the Poisson, and the source of $X=-\log U/\lambda$ sampling.
-:::
-:::
-
-::: {.slide title="Gaussian: the CLT limit" layout="tight"}
-[Continuous]{.kicker}
-
-Standardized sums of *any* iid finite-variance terms converge to the
-Gaussian. Start from the least Gaussian summand, the flat uniform:
-
-@!mdl-distributions-gaussian-1
-
-$n=1$ is a plateau, $n=2$ a triangle; by $n=32$ the sum is
-indistinguishable from $\mathcal N(0,1)$: **summation manufactures the
-Gaussian**. It is also the maximum-entropy law for fixed mean and variance.
-:::
-
-::: {.slide title="The normalizer: a polar trick"}
-[Continuous]{.kicker}
-
-Why $\sqrt{2\pi}$? Recall from the integral-calculus chapter: square the
-integral and switch to polar coordinates,
-
-$$I^2 = \!\int\!\!\int e^{-(x^2+y^2)/2}\,dx\,dy
-= \!\int_0^{2\pi}\!\!\int_0^{\infty} e^{-r^2/2}\,r\,dr\,d\theta = 2\pi.$$
-
-. . .
-
-The Jacobian factor $r$ makes the radial integral elementary, so
-$I=\sqrt{2\pi}$; the full derivation lives in the integral-calculus
-chapter.
-:::
-
-::: {.slide title="Laplace: the L1 sibling"}
-[Continuous]{.kicker}
-
-$p(x)=\tfrac{1}{2b}e^{-|x-\mu|/b}$: a sharp peak and heavier (exponential)
-tails than the Gaussian; variance $2b^2$.
-
-~~~python
-lap = mu - b * onp.sign(U) * onp.log(1 - 2 * onp.abs(U))
-~~~
-
-@!distributions-laplace
-
-::: {.d2l-note .rule}
-Its NLL is $|y-\hat y|$ (MAE); as a prior it gives the $\ell_1$ /
-LASSO penalty; its ML location estimator is the **median**, not the mean.
-:::
-:::
-
-::: {.slide title="Multivariate Gaussian: covariance geometry"}
-[Continuous]{.kicker}
+::: {.slide title="A Gaussian Vector's Contours Are the Eigen-Ellipses of Σ"}
+[Multivariate Gaussian]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$p(\mathbf x)\propto \exp\!\Bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top
-\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\Bigr).$$
+$p(\mathbf x)\propto\exp\bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\bigr)$
 
-Contours are ellipsoids: axes along the **eigenvectors** of
-$\boldsymbol\Sigma$, half-lengths $\propto\sqrt{\lambda_i}$. Isotropy =
-spheres = independent coordinates. Sampling is the Cholesky recipe:
-$\boldsymbol\Sigma=\mathbf L\mathbf L^\top$,
-$\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$.
-
-@!distributions-mvn
+- $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$: sum and difference
+  coordinates have variances $3$ and $1$, covariance $0$.
+- Axes along $\mathbf v_i$, half-lengths $\propto\sqrt{\gamma_i}$: $\sqrt3$ and $1$.
 :::
 
 ::: {.col .fig}
@@ -2024,177 +1778,57 @@ $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$.
 :::
 :::
 
-::: {.slide title="Closed under conditioning"}
-[Continuous]{.kicker}
+::: {.slide title="Linear Maps Keep a Gaussian Gaussian, and Sample It"}
+[Linear maps]{.kicker}
 
-Partition $\mathbf x=(\mathbf x_1,\mathbf x_2)$. Then $\mathbf x_1\mid\mathbf x_2$
-is Gaussian with
+- Full row rank $\mathbf A$: $\mathbf A\mathbf x+\mathbf b\sim\mathcal N(\mathbf A\boldsymbol\mu+\mathbf b,\ \mathbf A\boldsymbol\Sigma\mathbf A^\top)$.
+- Sampling: $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ with $\mathbf L\mathbf L^\top=\boldsymbol\Sigma$, $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I)$.
+- Cholesky by hand: $L_{11}=\sqrt2$, $L_{21}=1/\sqrt2$, $L_{22}=\sqrt{3/2}$.
+- Any factor works; two factors differ by an orthogonal matrix.
 
-$$\boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 +
-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
-\quad
-\boldsymbol\Sigma_{1\mid 2} = \boldsymbol\Sigma_{11} -
-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.$$
-
-::: {.d2l-note .rule}
-Conditional mean is **linear** in $\mathbf x_2$; the Schur-complement
-covariance determines the posterior uncertainty in Gaussian-process regression.
-:::
+@!distributions-mvn
 :::
 
-::: {.slide title="In high dimension, the Gaussian is a thin shell"}
-[Continuous]{.kicker}
+::: {.slide title="Conditioning a Gaussian Is Linear Regression"}
+[Conditioning]{.kicker}
 
-$\|\mathbf x\|^2$ sums $d$ independent mean-$1$ terms, so it concentrates near
-$d$. Consequently, most probability lies in a shell of radius $\approx\sqrt d$, *far from
-the origin where the density is pointwise largest*; and two independent
-draws are nearly orthogonal, cosine $\sim 1/\sqrt d$:
+$\mathbf B=\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}$; the residual
+$\mathbf r=\mathbf x_1-\mathbf B\mathbf x_2$ has $\textrm{Cov}(\mathbf r,\mathbf x_2)=\mathbf 0$,
+and $(\mathbf r,\mathbf x_2)$ is jointly Gaussian, so they are independent. Hence
 
-@!mdl-distributions-multivariate-gaussian-1
+$$
+\boldsymbol\mu_{1\mid2}=\boldsymbol\mu_1+\mathbf B(\mathbf x_2-\boldsymbol\mu_2),
+\qquad
+\boldsymbol\Sigma_{1\mid2}=\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.
+$$
 
+Running example, $x_2=2$: $B=\tfrac12$, so $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$.
+
+@!mdl-distributions-conditioning
+:::
+
+::: {.slide title="Check: Condition a Correlated Pair"}
+[Check]{.kicker}
+
+$(x_1,x_2)$ is Gaussian with mean $\mathbf 0$, unit variances and correlation $\rho$,
+$|\rho|<1$. What is the law of $x_1$ given $x_2$?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-The $1/\sqrt d$ **initialization** scale keeps
-$\|\mathbf{Wx}\|\approx\|\mathbf x\|$; cosine similarity is informative
-*because* unrelated vectors have cosine similarity near $0$; nearest-neighbor contrast
-fades. Exponential tail bounds arrive in the concentration-and-generalization
-section.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[The exponential family]{.dtitle}
-
-[one form, maximum entropy, the moment property]{.dsub}
-:::
-:::
-
-::: {.slide title="One shared form"}
-[Unification]{.kicker}
-
-$$p(\mathbf x\mid\boldsymbol\eta) = h(\mathbf x)\,
-\exp\!\bigl(\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)\bigr).$$
-
-Base measure $h$, **natural parameters** $\boldsymbol\eta$, sufficient
-statistics $T$, log-partition $A$. Bernoulli ($\eta=\operatorname{logit}p$,
-$A=\operatorname{softplus}$), Poisson ($\eta=\log\lambda$), and Gaussian
-all fit.
-
-::: {.d2l-note}
-Two exclusions, two reasons: the **uniforms** stay outside because their
-support moves with the parameters; **Cauchy and Student-$t$** do not admit a
-fixed finite-dimensional sufficient statistic for their usual unknown
-location-and-scale families. They therefore lack the standard
-finite-dimensional conjugate update, and their negative log-likelihoods are
-not generally convex.
-:::
-:::
-
-::: {.slide title="Where the form comes from"}
-[Unification]{.kicker}
-
-Maximize entropy $H_h[p]$ subject to fixed averages
-$\mathbb E[T(\mathbf x)] = \boldsymbol\tau$. The Lagrange multipliers
-*are* the natural parameters, and the maximizer is exactly
-$p\propto h\,e^{\boldsymbol\eta^\top T}$.
-
-::: {.d2l-note .rule}
-The exponential family is the **least-committal** family consistent with a
-chosen set of expected statistics.
-:::
-:::
-
-::: {.slide title="The moment property"}
-[Unification]{.kicker}
-
-Differentiating the log-partition recovers the moments:
-
-$$\nabla A(\boldsymbol\eta) = \mathbb E[T(\mathbf x)], \qquad
-\nabla^2 A(\boldsymbol\eta) = \operatorname{Cov}(T) \succeq 0.$$
-
-So $A$ is **convex** and the MLE equation is moment matching,
-$\mathbb E[T] = \bar T$. Autograd confirms $dA/d\eta=\sigma(\eta)$ for the
-Bernoulli:
-
-~~~python
-dA = (A(eta + eps) - A(eta - eps)) / (2 * eps)   # numerical dA/deta
-~~~
-
-@!distributions-exp-family
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Conjugate priors]{.dtitle}
-
-[Beta · Gamma · Dirichlet: updating is counting]{.dsub}
-:::
-:::
-
-::: {.slide title="Beta–Bernoulli: pseudo-counts"}
-[Priors]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-A $\text{Beta}(\alpha,\beta)$ prior times a Bernoulli likelihood with $x$
-heads in $n$ flips gives a $\text{Beta}(\alpha+x,\beta+n-x)$ posterior;
-$\alpha,\beta$ act as **phantom** heads and tails:
-
-$$\mathbb E[\theta\mid X] = \frac{\alpha+x}{\alpha+\beta+n}.$$
-
-@!distributions-conjugate
-
-::: {.d2l-note}
-$\alpha=\beta=1$ recovers Laplace's rule of succession $(x+1)/(n+2)$.
-:::
-:::
-
-::: {.col .fig}
-@fig:mdl-prob-beta-posterior
+**Answer.** $B=\rho$, so $x_1\mid x_2\sim\mathcal N(\rho x_2,\,1-\rho^2)$.
+The variance $1-\rho^2\le1$ does not depend on $x_2$: observing never widens the uncertainty.
 :::
 :::
 :::
 
-::: {.slide title="The rest of the tier"}
-[Priors]{.kicker}
-
-::: {.cols}
-::: {.col}
-**Gamma → Poisson.** Pseudo-events over a pseudo-window; marginalizing
-the rate gives the over-dispersed negative binomial.
-:::
-
-::: {.col}
-**Dirichlet → Categorical.** A multivariate Beta: one pseudo-count per
-class on the simplex.
-:::
-:::
-
-::: {.d2l-note .rule}
-**General fact.** Every exponential-family likelihood has a conjugate
-prior of the same form; its hyperparameters are pseudo-data
-$(\boldsymbol\nu,\kappa)$.
-:::
-:::
-
-::: {.slide title="Recap"}
+::: {.slide title="One Coin Flip, a Dozen Laws, Their Moments and Their Losses"}
 [Wrap-up]{.kicker}
 
-::: {.cols}
-::: {.col}
-- Bernoulli → Binomial → Poisson / Gaussian by sums and limits; Categorical → Multinomial.
-- Moments from linearity, limits, and a few integrals.
-- Gaussian is central: CLT, max entropy, closed under linear maps and conditioning (Schur complement).
-:::
+- 9 heads in 13 fair flips: $715/8192\approx0.087$; mean $6.5$, variance $3.25$.
+- Server at 4/min: a silent minute and a wait over a minute both have probability $e^{-4}\approx0.018$.
+- The bell at $n=13$: $0.085$ against the exact $0.087$; the CLT needs a finite variance.
+- Laplace: five times the Gaussian's mass beyond $3\sigma$; absolute error as its loss.
+- $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$: eigenvalues $3$ and $1$; $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$.
 
-::: {.col}
-- The exponential family unifies them; $\nabla A=\mathbb E[T]$, and its NLL is convex in natural parameters.
-- The usual conjugate families (Beta / Gamma / Dirichlet) update by adding sufficient statistics.
-- The named shapes are the vocabulary; maximum likelihood is the grammar (next).
-:::
-:::
+**Next:** the one form these laws share; then how well 13 flips determine an unknown bias.
 :::

@@ -155,7 +155,7 @@ the average loss on the training examples, the empirical risk. Under shift
 we must say which distribution the expectation is over. We care about the
 *target risk*
 
-$$R_T[f] = E_{(\mathbf{x}, y) \sim p_T}\left[l(f(\mathbf{x}), y)\right],$$
+$$R_T[f] = \mathbb{E}_{(\mathbf{x}, y) \sim p_T}\left[l(f(\mathbf{x}), y)\right],$$
 
 the expected loss in deployment. The training examples are drawn from
 $p_S$, so their empirical risk estimates the source risk $R_S[f]$ instead.
@@ -174,7 +174,7 @@ $$
 \begin{aligned}
 R_T[f] &= \int\int l(f(\mathbf{x}), y)\, p(y \mid \mathbf{x})\, p_T(\mathbf{x}) \;d\mathbf{x}\,dy \\
 &= \int\int l(f(\mathbf{x}), y)\, p(y \mid \mathbf{x})\, p_S(\mathbf{x})\, \frac{p_T(\mathbf{x})}{p_S(\mathbf{x})} \;d\mathbf{x}\,dy
-= E_{(\mathbf{x}, y) \sim p_S}\left[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)\right],
+= \mathbb{E}_{(\mathbf{x}, y) \sim p_S}\left[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)\right],
 \end{aligned}
 $$
 :eqlabel:`eq_covariate-shift-identity`
@@ -427,7 +427,7 @@ and only the class proportions change. The argument that gave
 :eqref:`eq_covariate-shift-identity`, with the weight now on the label,
 gives
 
-$$R_T[f] = \sum_{y} p_T(y) \int l(f(\mathbf{x}), y)\, p(\mathbf{x} \mid y) \;d\mathbf{x} = E_{(\mathbf{x}, y) \sim p_S}\left[\frac{p_T(y)}{p_S(y)}\, l(f(\mathbf{x}), y)\right].$$
+$$R_T[f] = \sum_{y} p_T(y) \int l(f(\mathbf{x}), y)\, p(\mathbf{x} \mid y) \;d\mathbf{x} = \mathbb{E}_{(\mathbf{x}, y) \sim p_S}\left[\frac{p_T(y)}{p_S(y)}\, l(f(\mathbf{x}), y)\right].$$
 
 Each training example is weighted by $\beta_i = p_T(y^{(i)})/p_S(y^{(i)})$,
 the ratio of how common its class is in the target and in the source, and
@@ -607,7 +607,7 @@ correction must be complemented by an analysis of the decisions.
    $\beta(\mathbf{x}) = p_T(\mathbf{x})/p_S(\mathbf{x})$ outside
    $\mathcal{A}$.
     1. Show that the weighted source risk
-       $E_{(\mathbf{x}, y) \sim p_S}[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)]$
+       $\mathbb{E}_{(\mathbf{x}, y) \sim p_S}[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)]$
        equals the target risk with the contribution of $\mathcal{A}$
        removed. Write the missing term as $\pi$ times a conditional
        expectation.
@@ -683,7 +683,7 @@ correction must be complemented by an analysis of the decisions.
        Explain how the domain classifier can reach high accuracy at large
        $s$ while $h$ is far from the true log-ratio.
     1. Show that under the source the true weights satisfy
-       $E[\beta(\mathbf{x})] = 1$ and $E[\beta(\mathbf{x})^2] = e^{s^2}$, so
+       $\mathbb{E}[\beta(\mathbf{x})] = 1$ and $\mathbb{E}[\beta(\mathbf{x})^2] = e^{s^2}$, so
        that for large $n$ their effective sample size is about
        $n e^{-s^2}$. Evaluate this for $n = 1000$ and $s = 1, 2, 3$.
     1. For each $s$, compute the effective sample size of the true weights
@@ -936,7 +936,7 @@ $$
 \begin{aligned}
 R_T[f] &= \int\int l(f(\mathbf{x}), y)\, p(y \mid \mathbf{x})\, p_T(\mathbf{x}) \;d\mathbf{x}\,dy \\
 &= \int\int l(f(\mathbf{x}), y)\, \underbrace{p(y \mid \mathbf{x})\, p_S(\mathbf{x})}_{p_S(\mathbf{x}, y)}\, \beta(\mathbf{x}) \;d\mathbf{x}\,dy
-= E_{p_S}\left[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)\right]
+= \mathbb{E}_{p_S}\left[\beta(\mathbf{x})\, l(f(\mathbf{x}), y)\right]
 \end{aligned}
 $$
 

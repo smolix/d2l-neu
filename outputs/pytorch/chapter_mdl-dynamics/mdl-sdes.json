@@ -14,65 +14,118 @@
       "outputs": []
     },
     "sdes-brownian-paths": {
-      "code_fingerprint": "sha256:c0db75213d1e66a877923df5a9aeadc1ca2f52ae9643e20454c19a540cd296fa",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:b58f4ac20ea8110bbc4d348d52195ad4f9ce56532c2fe8c4788804dbabd573d1",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Var(W_t) at t=0.25: 0.2486   (theory: 0.25)\nVar(W_t) at t=0.50: 0.4950   (theory: 0.50)\nVar(W_t) at t=1.00: 1.0014   (theory: 1.00)\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
-          "bytes": 105256,
-          "sha256": "sha256:2da68549a3284c9202da9a0bb8c3e4361239fb5098f4bf52cc1173c12c2f5dfe"
+          "text": "Var(W_t) at t=0.25: 0.2493   (theory: 0.25)\nVar(W_t) at t=0.50: 0.4948   (theory: 0.50)\nVar(W_t) at t=1.00: 1.0012   (theory: 1.00)\nfraction inside +-2 sqrt(t) at t=1: 0.956   (Gaussian: 0.954)\n"
         }
       ]
     },
     "sdes-brownian-covariance": {
-      "code_fingerprint": "sha256:86cbc7bb8471f2eb28f982b4d37d30d40b3a69d5b3cbdf40d3ba9bc970f7d017",
+      "code_fingerprint": "sha256:192200276ea337a80d639a3c94ff852069fdcb4cb34dd6f0c07889248a714c8e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical E[W_s W_t]:\n[[0.101 0.101 0.1   0.1   0.101]\n [0.101 0.249 0.247 0.248 0.248]\n [0.1   0.247 0.495 0.499 0.497]\n [0.1   0.248 0.499 0.754 0.751]\n [0.101 0.248 0.497 0.751 1.001]]\nmax |empirical - min(s,t)| = 0.0050\n"
+          "text": "empirical E[W_s W_t]:\n[[0.101 0.101 0.101 0.103 0.104]\n [0.101 0.249 0.248 0.25  0.251]\n [0.101 0.248 0.495 0.496 0.498]\n [0.103 0.25  0.496 0.745 0.749]\n [0.104 0.251 0.498 0.749 1.001]]\nmax |empirical - min(s,t)| = 0.0052\n"
         }
       ]
     },
     "sdes-quadratic-variation": {
-      "code_fingerprint": "sha256:10232b0e05b49a5d9a236a0c637fc31a00a2a7f4d32970d0dc468abed520ea1c",
+      "code_fingerprint": "sha256:b65af9c55c669925707b05a94e204a9308ad3d468e2c56ed438b18feb671c414",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       n    QV of W  QV of sin(2 pi t)\n      16     0.5575           1.217927\n      64     1.0456           0.308177\n     256     1.0245           0.077102\n    1024     1.0793           0.019277\n    4096     1.0308           0.004819\n   16384     1.0011           0.001205\n   65536     0.9950           0.000301\n  262144     0.9980           0.000075\n"
+          "text": "      n  QV of W  sqrt(2/n)  QV of sin  2 pi^2/n\n     16   1.1608     0.3536   1.217927  1.233701\n     64   1.2026     0.1768   0.308177  0.308425\n    256   0.9838     0.0884   0.077102  0.077106\n   1024   1.0330     0.0442   0.019277  0.019277\n   4096   1.0127     0.0221   0.004819  0.004819\n  16384   0.9983     0.0110   0.001205  0.001205\n  65536   0.9942     0.0055   0.000301  0.000301\n 262144   0.9999     0.0028   0.000075  0.000075\n"
+        }
+      ]
+    },
+    "sdes-left-right-sums": {
+      "code_fingerprint": "sha256:d609f93e15bce981179d8d25070cbf86f3c3caa85def54eac04d1cf4343683c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "left sum -0.4159   right sum 0.5098\nright - left 0.9256   sum of (dW)^2 0.9256\n"
+        }
+      ]
+    },
+    "sdes-isometry-check": {
+      "code_fingerprint": "sha256:30120b5767b3a65bae901a9daecbd0167fb214930723c0eb735df8bd41cbd011",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean 0.0059   (theory 0)\nvariance 0.5125   (theory 1/2)\n"
         }
       ]
     },
     "sdes-ito-correction": {
-      "code_fingerprint": "sha256:e88a50ebb37f807367efa48f85998400160c0b16b19b48b312694128877cc433",
+      "code_fingerprint": "sha256:96ca3eac5ed3fe707dff0fce5f14c7ac85bbcbb23f38d1494bebcb7f427ad40a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W_T^2 - int 2W dW = 1.0150   (Ito correction: T = 1.0)\nmax |gap_t - t| along the path = 0.0235\n"
+          "text": "final gap W_1^2 - int 2W dW = 0.9256   (Ito correction: t = 1)\nmax |gap_t - t| along the path = 0.0744\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
-          "bytes": 84225,
-          "sha256": "sha256:52a2b24f3aab05a8faf778214efeaf9df91a5417e0ed0247b31628b18a3603e7"
+          "bytes": 80561,
+          "sha256": "sha256:f003fb229aff41abc0cde569cff1f51fc6a4489ae0ede7a13d0e5934523d68cd"
+        }
+      ]
+    },
+    "sdes-ou-cloud": {
+      "code_fingerprint": "sha256:03e862890f57cc25639b61b715c69068e29ba2a96590a798416a7387088329f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   t   mean 2alpha_t    std sigma_t  inside\n 0.5  1.216    1.213  0.800   0.795   0.952\n 1.0  0.735    0.736  0.924   0.930   0.953\n 1.5  0.441    0.446  0.976   0.975   0.955\n 2.0  0.266    0.271  0.991   0.991   0.953\n 4.0  0.034    0.037  1.007   1.000   0.953\n"
+        }
+      ]
+    },
+    "sdes-ou-stationary": {
+      "code_fingerprint": "sha256:70078d0e5d771e611fba6bd3d53bc9213e48a22567a7403d0c0b375a172d5a76",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "simulated quantiles at t=4: [-1.93 -0.65  0.04  0.72  2.01]\nN(2 e^-4, 1) quantiles:     [-1.92 -0.64  0.04  0.71  2.  ]\nvariance 1.0143   (stationary 1, recurrence fixed point 1.0050)\n"
+        }
+      ]
+    },
+    "sdes-vp-normalization": {
+      "code_fingerprint": "sha256:5f1f95ef1f08011c4dfdac256401c5e254895d4b95f7881509d569248c632346",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   t    Var    rec  E X^4    rec 3-2abar^2\n0.00  1.000  1.000  1.000  1.000     1.000\n0.25  0.993  1.002  2.257  2.280     2.264\n1.00  1.012  1.004  3.013  2.990     2.963\n3.00  0.990  1.005  2.991  3.030     3.000\n"
         }
       ]
     },
     "sdes-euler-maruyama": {
-      "code_fingerprint": "sha256:6e89c6d7d97174c106802ee46b23722cab7ded6e50c58443f00466f7df7e48ff",
+      "code_fingerprint": "sha256:6112fbaa1117f42145545c518a6ffcf842104f739d97f5dabb70ef232e2abc3b",
+      "kind": "text",
+      "outputs": []
+    },
+    "sdes-euler-check": {
+      "code_fingerprint": "sha256:d2024728b95efb859fe46a5d246dc1d651504c3c5134601903930a246f07c418",
       "kind": "text",
       "outputs": [
         {
@@ -83,83 +136,31 @@
       ]
     },
     "sdes-em-strong-order": {
-      "code_fingerprint": "sha256:cd29f506cfaa3da5c245c5897a07e31faccea690cbf10dfb269adcc5e7c4c804",
+      "code_fingerprint": "sha256:4808c594266647ba9e7f215364d20b40cc924fb763ae1c51c0734b9420c08e2b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "strong-order slopes:  OU (additive) 1.02,  GBM (multiplicative) 0.45\n"
+          "text": "strong-order slopes:  OU (additive) 1.03,  GBM (multiplicative) 0.48\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
-          "bytes": 36386,
-          "sha256": "sha256:55a7f26344f956fb4d0ec4c77211d6c8506c30a31df96527bf326346eaa2095f"
+          "bytes": 36232,
+          "sha256": "sha256:a96a3d431df251dedf54fb391ed0ee0ea0af2717730f6d7fe2cc53e244903016"
         }
       ]
     },
     "sdes-em-weak-order": {
-      "code_fingerprint": "sha256:24a9210c04ecd7abcf36a7ab96619f07099f17292b662f9b5ec00267bc25f3f9",
+      "code_fingerprint": "sha256:07f2fce1ec899733bbadf04698c4ddc19c043035b721ed795859be93b364862e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weak-order slopes on OU:  mean 1.01,  variance 1.01\n"
-        }
-      ]
-    },
-    "sdes-ou-cloud": {
-      "code_fingerprint": "sha256:143a68ae70414e74f8af1615c6e661586de8e53795acdd865a5514ebb2c6c70e",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=0.5:  mean  1.2237 vs  1.2131,   std 0.4997 vs 0.5060"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\nt=1.0:  mean  0.7336 vs  0.7358,   std 0.5912 vs 0.5918\nt=2.0:  mean  0.2712 vs  0.2707,   std 0.6304 vs 0.6305\nt=4.0:  mean  0.0406 vs  0.0366,   std 0.6399 vs 0.6363\nfraction of paths inside the +-2 sigma band at t=4: 0.952   (Gaussian: 0.954)\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
-          "bytes": 121806,
-          "sha256": "sha256:e4389d5d9b773375a857f345343f7033f14a8cd646bc97250d7c41113b5873ac"
-        }
-      ]
-    },
-    "sdes-ou-stationary": {
-      "code_fingerprint": "sha256:741b2d5679e9f2e9b1d67e2cf9120c60bddfa0ec9e614f17c84de12705bd7a33",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ensemble variance at t=4: 0.4095   (stationary sigma^2/(2 theta) = 0.4050)\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
-          "bytes": 35950,
-          "sha256": "sha256:274f28b7c41a6879308a08b0009b3f5d093212f09986df081e91c6d59b97a38a"
-        }
-      ]
-    },
-    "sdes-vp-normalization": {
-      "code_fingerprint": "sha256:40d27b0a7bbc5961dc0b456f05fed7819576baa0a018b1b2c57c030886f44349",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    t  Var(X_t)  E[X_t^4]  3 - 2 alpha_t^2\n 0.00    1.0000     1.000            1.000\n 0.25    1.0030     2.286            2.264\n 1.00    1.0073     2.999            2.963\n 3.00    1.0139     3.062            3.000\n"
+          "text": "   n  EM mean  EM var   exact 0.7358, 0.8647\n  10   0.6974  0.9247\n  20   0.7170  0.8938\n  40   0.7265  0.8791\n  80   0.7311  0.8718\n 160   0.7335  0.8682\n 320   0.7346  0.8664\nweak-order slopes:  mean 1.01,  variance 1.01\n"
         }
       ]
     }

@@ -13,70 +13,98 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-constrained-optimization-duality-active-and-inactive-constraints": {
+      "code_fingerprint": "sha256:b01e12129ffaef8e433595a69ba10e01a20dc4cc19ee89b51d3882943c3fd7e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "x* = [0.6 0.8]  lambda* = 4.0  f(x*) = 8.0\ngrad f(x*) = [-2.4 -3.2]  lambda* grad g(x*) = [2.4 3.2]  sum = [0. 0.]\n"
+        }
+      ]
+    },
+    "mdl-constrained-optimization-duality-projected-gradient-descent": {
+      "code_fingerprint": "sha256:cd980560d9dfba966ce40b3ca8175a67d6c2ce2bc04c91277ddfaa63e570565f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bound rho = 0.998002   largest observed ratio = 0.998002   bound holds: True\nsteps to |x - x*| < 1e-6: 974   grad f at the end = [0.999001 0.999001]\n"
+        }
+      ]
+    },
     "constrained-simplex-projection": {
-      "code_fingerprint": "sha256:233d79e5a203f4a1c494505612b03fe84f39630d1560d18bba6d16ca770ad70b",
+      "code_fingerprint": "sha256:9cb81a5776dc9143b554db702e92fc8b2054d5215e3311dff3399d2967c6270b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x* = [0.0676 0.     0.5823 0.0467 0.     0.3034]  sum = 1.000000\nKKT residuals: stationarity 5.6e-17 | comp. slack 0.0e+00 | dual feas. 0.0e+00\nf(x*) = 0.158962 <= best random feasible 0.162139\n"
+          "text": "x* = [0.    0.251 0.    0.    0.    0.749]  zeros: 4  tau = 0.913\ntau =  0.913: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  1.213: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.449\ncertificate max_i (y - x*)^T(e_i - x*) = 0e+00  (<= 0 up to rounding: True)\n"
         }
       ]
     },
-    "constrained-weight-decay": {
-      "code_fingerprint": "sha256:e770e2dbe140fd8aa25ad1a31990cb2676694f32ab8570299338e18f599af7de",
+    "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-1": {
+      "code_fingerprint": "sha256:c11d8a4342c4bfa525e7ce4677ae62393008704c790dcdf5a5cfd099ea93cfe0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": "L = lambda_max(A^T A) = 172.5;  |a_j|^2 range from 80 to 129\n"
         }
       ]
     },
-    "constrained-svm-dual": {
-      "code_fingerprint": "sha256:116144376ee6df145ad798cf69cb2533fa9c810e7dd1a8c2fc66d921707de752",
+    "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-2": {
+      "code_fingerprint": "sha256:74c499ad86ce4858fcca13c44044c3ca507d456eab7e53527ceae77dde80dca5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 4.4e-16\n"
+          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.022;  eta * lam = 0.017\n"
         }
       ]
     },
-    "constrained-water-filling": {
-      "code_fingerprint": "sha256:6276f2df8ea330b59947824ad4af0d0066ab9ce9c3d94e3fbd0f09495f98cb80",
+    "mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-3": {
+      "code_fingerprint": "sha256:55f6223efb5da0724e8b4680ccc8f1588cde62bf31742da19e1f2ca7b53e8f28",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "water level w = 1.433333  p* = [1.3333 1.0333 0.6333 0.     0.    ]  total = 3.000000\nwet channels filled to common level: [1.433333 1.433333 1.433333]\ndry channels above the waterline:    True\nmu = 1/w = 0.697674 vs finite-difference dU*/dP = 0.697674\n"
+          "text": "max |soft(z, 0.7) - brute-force argmin| = 8.9e-16\n"
         }
       ]
     },
-    "constrained-duality-gap": {
-      "code_fingerprint": "sha256:0e76dad402806b6d94dfee0a0b6f1f0d3eee40b6a9e7619e67d7f9f4f3e2c213",
+    "convexity-prox-ista": {
+      "code_fingerprint": "sha256:f78ad0d6c8a475adfbf395227d757075a81d465fa04ec93cee3d4fa619459fb9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.040\n"
+        }
+      ]
+    },
+    "mdl-convexity-coordinate-descent": {
+      "code_fingerprint": "sha256:8cde872ce0627f957c0463ed6cba91edd316cb4e9d36232becbe450e1cd5da5e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p* = -0.2500,  d* = -0.5000 at lambda = 1.00,  gap = 0.2500\nweak duality g(lambda) <= p* everywhere: True\n"
+          "text": "passes to gap < 1e-8: ISTA 18, coordinate descent 5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
-          "bytes": 26582,
-          "sha256": "sha256:ead09b66aababc438d7b34799008b72e046630a24f75b63f50a588200110ef0a"
+          "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
+          "bytes": 28127,
+          "sha256": "sha256:de7a26444e4da9231a6e7b9dae1d05f79307d256a7dea6f273c62cd864aafbf6"
         }
       ]
     }

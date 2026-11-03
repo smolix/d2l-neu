@@ -19,7 +19,7 @@ d2l.set_figsize()
 
 ## Definition
 
-A Gaussian process is defined as _a collection of random variables, any finite number of which have a joint Gaussian distribution_. If a function $f(x)$ is a Gaussian process, with _mean function_ $m(x)$ and _covariance function_ or _kernel_ $k(x,x')$, $f(x) \sim \mathcal{GP}(m, k)$, then any collection of function values queried at any collection of input points $x$ (times, spatial locations, image pixels, etc.), has a joint multivariate Gaussian distribution with mean vector $\mu$ and covariance matrix $K$: $f(x_1),\dots,f(x_n) \sim \mathcal{N}(\mu, K)$, where $\mu_i = E[f(x_i)] = m(x_i)$ and $K_{ij} = \textrm{Cov}(f(x_i),f(x_j)) = k(x_i,x_j)$.
+A Gaussian process is defined as _a collection of random variables, any finite number of which have a joint Gaussian distribution_. If a function $f(x)$ is a Gaussian process, with _mean function_ $m(x)$ and _covariance function_ or _kernel_ $k(x,x')$, $f(x) \sim \mathcal{GP}(m, k)$, then any collection of function values queried at any collection of input points $x$ (times, spatial locations, image pixels, etc.), has a joint multivariate Gaussian distribution with mean vector $\mu$ and covariance matrix $K$: $f(x_1),\dots,f(x_n) \sim \mathcal{N}(\mu, K)$, where $\mu_i = \mathbb{E}[f(x_i)] = m(x_i)$ and $K_{ij} = \textrm{Cov}(f(x_i),f(x_j)) = k(x_i,x_j)$.
 
 This definition may seem abstract and inaccessible, but Gaussian processes are in fact very simple objects. Any function
 
@@ -66,14 +66,14 @@ In the plot above, we saw how a distribution over parameters in a model induces 
 
 In the above example, the mean function
 
-$$m(x) = E[f(x)] = E[w_0 + w_1x] = E[w_0] + E[w_1]x = 0+0 = 0.$$
+$$m(x) = \mathbb{E}[f(x)] = \mathbb{E}[w_0 + w_1x] = \mathbb{E}[w_0] + \mathbb{E}[w_1]x = 0+0 = 0.$$
 
 Similarly, the covariance function is
 
 $$
 \begin{aligned}
-k(x,x') &= \textrm{Cov}(f(x),f(x')) = E[f(x)f(x')]-E[f(x)]E[f(x')] \\
-&= E[w_0^2 + w_0w_1x' + w_1w_0x + w_1^2xx'] = 1 + xx'.
+k(x,x') &= \textrm{Cov}(f(x),f(x')) = \mathbb{E}[f(x)f(x')]-\mathbb{E}[f(x)]\mathbb{E}[f(x')] \\
+&= \mathbb{E}[w_0^2 + w_0w_1x' + w_1w_0x + w_1^2xx'] = 1 + xx'.
 \end{aligned}
 $$
 
@@ -172,9 +172,9 @@ $b$ is a bias, $v_i$ are the hidden to output weights, $h$ is any bounded hidden
 
 The mean and covariance function of the corresponding Gaussian process are:
 
-$$m(x) = E[f(x)] = 0$$
+$$m(x) = \mathbb{E}[f(x)] = 0$$
 
-$$k(x,x') = \textrm{cov}[f(x),f(x')] = E[f(x)f(x')] = \sigma_b^2 + \frac{1}{J} \sum_{i=1}^{J} \sigma_v^2 E[h_i(x; u_i)h_i(x'; u_i)]$$
+$$k(x,x') = \textrm{Cov}[f(x),f(x')] = \mathbb{E}[f(x)f(x')] = \sigma_b^2 + \frac{1}{J} \sum_{i=1}^{J} \sigma_v^2 \mathbb{E}[h_i(x; u_i)h_i(x'; u_i)]$$
 
 In some cases, we can essentially evaluate this covariance function in closed form. Let $h(x; u) = \textrm{erf}(u_0 + \sum_{j=1}^{P} u_j x_j)$, where $\textrm{erf}(z) = \frac{2}{\sqrt{\pi}} \int_{0}^{z} e^{-t^2} dt$, and $u \sim \mathcal{N}(0,\Sigma)$. Let $\tilde{x} = (1, x_1, \dots, x_P)^{\top}$ denote the input $x$ augmented with a leading $1$ to absorb the bias $u_0$. Then
 
@@ -262,8 +262,8 @@ $$f(x) = b + \sum_{i=1}^{J} v_i h(x; u_i).$$
 With zero-mean independent weights, finite collections of function
 values are jointly Gaussian, with
 
-$$m(x)=E[f(x)]=0,$$
-$$k(x,x')=E[f(x)f(x')].$$
+$$m(x)=\mathbb{E}[f(x)]=0,$$
+$$k(x,x')=\mathbb{E}[f(x)f(x')].$$
 
 RBF kernels are stationary: behavior depends only on $x-x'$. Neural
 network kernels are non-stationary, so the function class can change

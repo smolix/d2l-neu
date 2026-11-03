@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-exponential-family.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:225f60f3b056ad30995f0fef02e1e699fc3cd11ca05bbb1782db1542bb99594d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-exponential-family-the-exponential-family": {
+      "code_fingerprint": "sha256:708ef73d195828c67af409e6b9577e82178b3f7702d86c1d9f94ba846521179f",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-exponential-family-entropy-and-a-loaded-die": {
+      "code_fingerprint": "sha256:84f2a5423ce5d5dcb139a11fa9b9442bcfa138285e779f89c60b792a521ab700",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta = 0.371  p = [0.054 0.079 0.114 0.165 0.24  0.347]\nH = 1.614  log 6 = 1.792\n"
+        }
+      ]
+    },
+    "distributions-exp-family": {
+      "code_fingerprint": "sha256:96eb7e2ad9fe8cea3b4f08e73c7cd9ed4aa5e8d91b8810b0134572ce271b0513",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Bernoulli A' = 0.6923 (mean 0.6923)  A'' = 0.2130 (variance 0.2130)\nPoisson   A' = 4.0000 (mean 4.0000)  A'' = 4.0000 (variance 4.0000)\n"
+        }
+      ]
+    },
+    "mdl-exponential-family-noisy-choices-and-gumbel-noise": {
+      "code_fingerprint": "sha256:2ed4cc239f9316500b78c3db5d615c650bf00a6f94cb48a605589591af66ae64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T = 1: argmax frequencies [0.638 0.234 0.097 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\nT = 2: argmax frequencies [0.448 0.275 0.174 0.102]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.003\n"
+        }
+      ]
+    },
+    "distributions-conjugate": {
+      "code_fingerprint": "sha256:6a46d52e24eaf31d448a6bb9eaa186c271cb11838851b71c4500d81c86f398df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |prior * likelihood - Beta(10,5)| = 2.1e-14\nposterior mean = 0.667, sd = 0.118\n"
+        }
+      ]
+    }
+  }
+}

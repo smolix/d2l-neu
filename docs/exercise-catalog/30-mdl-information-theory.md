@@ -1,5 +1,20 @@
 # Chapter overview: chapter_mdl-information-theory
 
+**Update (2026-11-03, math appendix pass):** the chapter now has five
+sections plus `further-reading.md` (no exercises): Entropy, Cross-Entropy, and
+KL Divergence; Codes, Compression, and Perplexity (new file
+`mdl-coding-compression.md`, split from the first section); Divergences and
+Distances Between Distributions; Mutual Information (retitled; rate–distortion
+and channel capacity moved in from the first section); and Estimating Mutual
+Information (new file `mdl-mi-estimation.md`, split from Mutual Information).
+It carries 52 exercises (10, 10, 12, 10, 10), all in the named and tagged style
+(`[code]`, `[extended]`, ●, ●●) with `:exlabel:` labels; labels of moved
+exercises were kept, so some `ex_mdl-information-theory-*` and
+`ex_mdl-mutual-information-*` labels now live in the split-off files. Each
+section entry below opens with its current list; the survey that follows
+describes the chapter before the pass, when it had three sections and 28
+exercises.
+
 Best source by far was MIT 6.441 (Polyanskiy, MIT OCW Spring 2016; the same lineage
 as Polyanskiy & Wu's newer book) — its problem sets 1, 3, and 6 map almost
 one-to-one onto our Gaussian-KL, data-processing/Pinsker, and hypothesis-testing
@@ -26,6 +41,8 @@ keep 17, rewrite 5 (2 of those merge a pair into one slot), drop 6, new 4 adopte
 ---
 
 ## chapter_mdl-information-theory/mdl-information-theory.md — Entropy, Cross-Entropy, and KL Divergence
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Gaussian KL divergence; 2 Other scoring rules; 3 Uniqueness of self-information ●; 4 Gibbs' inequality from the tangent line; 5 Maximum entropy with a fixed mean; 6 [code] Quantized entropy against differential entropy; 7 [code] The label-noise floor; 8 [code] The initial-loss check; 9 Label smoothing on ambiguous inputs ●; 10 [code] Distillation at high temperature ●. The coding, AEP, MDL and perplexity material and its exercises moved to `mdl-coding-compression.md`, and the rate–distortion and channel exercises to `mdl-mutual-information.md`; the survey below covers the section before the split.
 
 **Topic:** Self-information, Shannon/differential entropy, KL divergence and Gibbs'
 inequality, cross-entropy as a strictly proper scoring rule, the coding view (Kraft,
@@ -119,7 +136,15 @@ through step by step immediately above it.
 
 ---
 
+## chapter_mdl-information-theory/mdl-coding-compression.md — Codes, Compression, and Perplexity
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Perplexity across tokenizers; 2 Huffman codes; 3 McMillan's theorem; 4 Where the slack goes; 5 [code] Exact arithmetic coding ●; 6 [code] Typical and high-probability sets ●; 7 Two-part code for a coin ●; 8 Entropy rate of a two-state chain; 9 The perplexity floor; 10 [extended] Adaptive context-model compression ●●. The file was split from the first section; its coding exercises are surveyed under that section above.
+
+---
+
 ## chapter_mdl-information-theory/mdl-divergences-distances.md — Divergences and Distances Between Distributions
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Generators and argument order; 2 Local quadratic regime; 3 Conjugates and critics; 4 Cost of dropping a mode; 5 Metrics among divergences; 6 [code] MMD in closed form, and what data processing does not preserve; 7 Fisher divergence and Stein moments; 8 [code] Restricted critics ●; 9 Hellinger bounds and testing ●; 10 [code] One-dimensional transport ●; 11 [code] Score blindness to mixing weights ●; 12 [code] Sinkhorn divergences ●●.
 
 **Topic:** f-divergences and their Fenchel-dual (f-GAN) view, forward vs. reverse
 KL as mode-covering vs. mode-seeking, total variation and Pinsker's inequality,
@@ -220,7 +245,9 @@ Fenchel-conjugate exercise are natural halves of one multi-part problem.
 
 ---
 
-## chapter_mdl-information-theory/mdl-mutual-information.md — Mutual Information and Representation Learning
+## chapter_mdl-information-theory/mdl-mutual-information.md — Mutual Information
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Gaussian pointwise mutual information; 2 [code] Rare pairs and PMI; 3 Information versus usable information; 4 Synergy and the Venn diagram; 5 Fano and a converse ●; 6 Fano's tightness ●; 7 [code] Scalar quantization and rate–distortion ●; 8 Binary channels ●; 9 The Gaussian channel; 10 [code] Data processing from $f$-divergences. The estimation material and its exercises moved to `mdl-mi-estimation.md`; the survey below covers the combined section before the split.
 
 **Topic:** Mutual information as KL-from-independence, the data-processing
 inequality, why MI is statistically hard to estimate (the $O(\log N)$ ceiling and
@@ -344,3 +371,9 @@ genuine gap (the Venn-diagram caution) rather than fixing anything broken.
   visibly shows this collapse; narrow next to the section's one extended slot,
   which already asks the reader to engage with the estimation-limits material at
   project scale.
+
+---
+
+## chapter_mdl-information-theory/mdl-mi-estimation.md — Estimating Mutual Information
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 [code] Bias of the histogram estimator; 2 Heavy tails of the exponentiated pmi ●; 3 [code] The sample-size ceiling of KSG; 4 Barber–Agakov with a Gaussian decoder; 5 Temperature of a cosine critic; 6 Entropy bounds from samples ●; 7 Optimal InfoNCE critic ●; 8 In-batch negatives and the symmetric loss; 9 Negative sampling as shifted PMI ●; 10 [extended] Compression phase at small scale ●●. The file was split from Mutual Information; its estimation exercises are surveyed under that section above.

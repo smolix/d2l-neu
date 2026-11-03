@@ -9,12 +9,12 @@
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:a0015c970c3145479f10007bd3cb248b612cfa8405e124528090b87b48070924",
+      "code_fingerprint": "sha256:157f625dc00c50606f8554378efb914c4de05eb60f5de75af2f37e27ee86e31d",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:03e20af4bacdd206b15d88a5d675c9fe73b992e05e97a0afd38aec8a844c5202",
+      "code_fingerprint": "sha256:9bd5b60ee2ed5499fd026eb1feb6e3c046d102abc6ea5f97382b45c110eb55b5",
       "kind": "text",
       "outputs": [
         {
@@ -24,32 +24,30 @@
         }
       ]
     },
-    "single-variable-calculus-autograd-check": {
-      "code_fingerprint": "sha256:986950591e513e01c6f2b425445b14cc7063af6fb047d472be04829e2594de06",
+    "mdl-single-variable-calculus-the-softplus-the-sigmoid-and-the-logit-1": {
+      "code_fingerprint": "sha256:15b5b6df461a8b85816b5c773ae009edcbe3a0ca05473370e27c1ee5a952e61d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "autograd: f'(4) = 8.0\n"
+          "text": "eps = 0.1  : l = 0.644397, line = 0.643147, gap = 1.25e-03, gap / eps^2 = 0.1249\neps = 0.01 : l = 0.688160, line = 0.688147, gap = 1.25e-05, gap / eps^2 = 0.1250\neps = 0.001: l = 0.692647, line = 0.692647, gap = 1.25e-07, gap / eps^2 = 0.1250\n"
         }
       ]
     },
-    "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:a440caed8f52dae9a175c70f9c1fbbaf28d7b729e2a46ecaa59dd4c33211313d",
-      "kind": "asset",
+    "single-variable-calculus-autograd-check": {
+      "code_fingerprint": "sha256:2adc7256d85dc7694f982dc0f1d0b8c416ae7f8235fc8693ea663a8863ab6530",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15821,
-          "sha256": "sha256:db52b9eeb96842d8d241bc4b3a4a1cec7f946e048f4b61cdb38f656a5bb235d7"
+          "type": "stream",
+          "name": "stdout",
+          "text": "autograd: f'(4) = 8.000\nautograd: softplus'(0) = 0.500\n"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:3a30ff706d7800a4f0c04b0e967e95a9218308a7e79ab84e75e7d021b6cb6432",
+      "code_fingerprint": "sha256:f9c58dcc464c8f864c8f0342e1a3f08fc99e5679ca8c98fbcbf3b86007ae868f",
       "kind": "mixed",
       "outputs": [
         {
@@ -62,69 +60,76 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:9d20a67a942c4a63ac707dd02b06540bc3207036ccb8007a77c13c7f20eb1e03"
-        }
-      ]
-    },
-    "mdl-single-variable-calculus-newton-s-method": {
-      "code_fingerprint": "sha256:7aa854cb588108ac83a06a5a4df2f0920d3969aa930fd3775ac59fd433dbc30c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t = 0: x = 2.000000000000, error = 1.0e+00\nt = 1: x = 1.416666666667, error = 4.2e-01\nt = 2: x = 1.110534409842, error = 1.1e-01\nt = 3: x = 1.010636768405, error = 1.1e-02\nt = 4: x = 1.000111557304, error = 1.1e-04\nt = 5: x = 1.000000012443, error = 1.2e-08\n"
-        }
-      ]
-    },
-    "single-variable-calculus-taylor-error-rate": {
-      "code_fingerprint": "sha256:52758ac841ea4ef87d658d7ed61d7ef86f0e41b9c4e38143ffb65e1b8b951047",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n = 1: max error 2.1e-02 (h = 0.2) vs 5.2e-03 (h = 0.1), ratio = 4.1, prediction 2^2 = 4\nn = 2: max error 1.4e-03 (h = 0.2) vs 1.7e-04 (h = 0.1), ratio = 8.2, prediction 2^3 = 8\nn = 3: max error 6.9e-05 (h = 0.2) vs 4.3e-06 (h = 0.1), ratio = 16.3, prediction 2^4 = 16\n"
+          "sha256": "sha256:7540c458248f39f4f126fe1138125622cbaa9e209e9f6c12f5aaf293eaec97f7"
         }
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:ae8479941f94fbea37d38d25e40811459c32ab4914616f3067adf740f48da718",
+      "code_fingerprint": "sha256:2607e76283781dd36c776d50ef64442fb8a9b5ff50534abead041bcfd5c0174f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28451,
-          "sha256": "sha256:b345225338acb7f38d61211aac13967b51b8766457e4f322b8e6b7da04b531c4"
+          "bytes": 18436,
+          "sha256": "sha256:edc8dd4707c65695a543ff32d475104df47eb3927da8fe480a45d4324a0ba0ca"
+        }
+      ]
+    },
+    "single-variable-calculus-taylor-error-rate": {
+      "code_fingerprint": "sha256:c751431feedfff3a7f37ebd53d3054374aa3ef36824eced48afa1f4f2cf8f45e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 1: ratios between successive windows 4.3 4.1 4.1, predicted 4\nn = 2: ratios between successive windows 8.4 8.2 8.1, predicted 8\nn = 3: ratios between successive windows 16.7 16.3 16.2, predicted 16\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-error-rate-1.svg",
+          "bytes": 33582,
+          "sha256": "sha256:2a299b793c1cabc37fc2a0fb7a80f211428b53802ecd7175fbd8b864688cfc34"
+        }
+      ]
+    },
+    "mdl-single-variable-calculus-newton-s-method": {
+      "code_fingerprint": "sha256:2bf02fb56dc7c93b1bfb92d5ca5c22d98168a8c449862238e71989b3a07b7451",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0: x = 2.000000000000, error = 1.0e+00\nt = 1: x = 1.416666666667, error = 4.2e-01\nt = 2: x = 1.110534409842, error = 1.1e-01\nt = 3: x = 1.010636768405, error = 1.1e-02\nt = 4: x = 1.000111557304, error = 1.1e-04\nt = 5: x = 1.000000012443, error = 1.2e-08\nfrom x0 = 1.4: -1.41, 1.45, -1.55, 1.85, -2.89, 8.71\n"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:8d7077e3a2321f05d2e47a69fe8938889f8b66b0b97990b85a047004b565ffb5",
+      "code_fingerprint": "sha256:e610cb660be0f057e6776d6fc27828b0a5dae002b726d329e3e80f907ce8722f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "right quotient: +1.0, left quotient: -1.0\n"
+          "text": "d|x|/dx at 0: autograd returns 1.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d|x|/dx at 0: autograd returns 1.0\nReLU' at 0: autograd returns 0.0\n"
+          "text": "ReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:84f519c8b5c59fdee7278eaa6d2a975be7b374cfdab1abbe6d74e891cb38adfa",
+      "code_fingerprint": "sha256:c09f75ad773ce66b390bec2bd300386bdd00e5e03fd9b1f7dc0cc0943afd7669",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "autograd: g'(0) = 0.0  (true slope: 1.0)\n"
+          "text": "autograd: phi'(0) = 0.0  (true slope: 1.0)\n"
         }
       ]
     }

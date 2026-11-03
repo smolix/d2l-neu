@@ -63,7 +63,7 @@ the squared loss of :numref:`sec_linear_regression`. Its *generalization
 error*, also called the *risk*, is the expected loss on a new example drawn
 from $P$:
 
-$$R[P, f] = E_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] = \int \int l(\mathbf{x}, y, f(\mathbf{x})) \, p(\mathbf{x}, y) \;d\mathbf{x} \, dy.$$
+$$R[P, f] = \mathbb{E}_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] = \int \int l(\mathbf{x}, y, f(\mathbf{x})) \, p(\mathbf{x}, y) \;d\mathbf{x} \, dy.$$
 :eqlabel:`eq_true-risk`
 
 The training error averages the loss over the sample we have. The
@@ -288,7 +288,7 @@ training noise and the test noise $\epsilon$, the expected squared error
 splits into three parts:
 
 $$
-E\left[\big(y - \hat{f}(x)\big)^2\right] = \underbrace{\big(f^*(x) - E[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.
+\mathbb{E}\left[\big(y - \hat{f}(x)\big)^2\right] = \underbrace{\big(f^*(x) - \mathbb{E}[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.
 $$
 :eqlabel:`eq_generalization-bias-variance`
 
@@ -299,11 +299,11 @@ unrelated to the bias $b$ of a linear model. The second, the *variance*,
 measures how much the fit changes from one draw of the training noise to the
 next. The third is the noise in the test label. To see why the error splits
 this way, name the three parts of the prediction error: the test noise
-$\epsilon$, the bias $\textrm{bias}(x) = f^*(x) - E[\hat{f}(x)]$, and the
-fluctuation $v = E[\hat{f}(x)] - \hat{f}(x)$ of the fit around its average.
+$\epsilon$, the bias $\textrm{bias}(x) = f^*(x) - \mathbb{E}[\hat{f}(x)]$, and the
+fluctuation $v = \mathbb{E}[\hat{f}(x)] - \hat{f}(x)$ of the fit around its average.
 Then $y - \hat{f}(x) = \epsilon + \textrm{bias}(x) + v$, and
 
-$$E\left[\big(\epsilon + \textrm{bias}(x) + v\big)^2\right] = E[\epsilon^2] + \textrm{bias}(x)^2 + E[v^2] = \sigma^2 + \textrm{bias}(x)^2 + \textrm{Var}\big(\hat{f}(x)\big),$$
+$$\mathbb{E}\left[\big(\epsilon + \textrm{bias}(x) + v\big)^2\right] = \mathbb{E}[\epsilon^2] + \textrm{bias}(x)^2 + \mathbb{E}[v^2] = \sigma^2 + \textrm{bias}(x)^2 + \textrm{Var}\big(\hat{f}(x)\big),$$
 
 because every cross term has an expectation of zero: $\textrm{bias}(x)$ is a
 constant, $\epsilon$ and $v$ have mean zero, and $\epsilon$ is independent
@@ -375,7 +375,7 @@ the outcome it explains :cite:`popper2005logic`. Conversely, if a class cannot
 fit arbitrary labels and the sample is large compared with its capacity, a low
 training error is evidence that the model has found a real pattern. Learning
 theory turns this into bounds on the generalization gap, which the
-mathematics appendix develops (:numref:`sec_mdl-concentration-generalization`).
+mathematics appendix develops (:numref:`sec_mdl-generalization-bounds`).
 
 Counting parameters is not the only way to measure capacity. The size of
 the parameters matters too: the polynomial of degree 19 fit the training
@@ -586,7 +586,7 @@ flexibility without touching the test set.
    $\hat{\mathbf{y}} = \mathbf{H}\mathbf{y}$ with
    $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$.
     1. Show that the expected training error is
-       $E[\|\mathbf{y} - \hat{\mathbf{y}}\|^2]/n = \sigma^2 (n - p)/n$.
+       $\mathbb{E}[\|\mathbf{y} - \hat{\mathbf{y}}\|^2]/n = \sigma^2 (n - p)/n$.
        Hint: $\mathbf{y} - \hat{\mathbf{y}} = (\mathbf{I} - \mathbf{H})\boldsymbol{\epsilon}$,
        and the trace of $\mathbf{I} - \mathbf{H}$ is $n - p$.
     1. Draw fresh labels $\mathbf{y}' = \mathbf{X}\mathbf{w}^* + \boldsymbol{\epsilon}'$
@@ -760,7 +760,7 @@ the loss on one example and $n$ training examples:
 
 $$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n}\sum_{i=1}^n l\big(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})\big)$$
 
-$$R[P, f] = E_{(\mathbf{x}, y)\sim P}\big[l(\mathbf{x}, y, f(\mathbf{x}))\big]$$
+$$R[P, f] = \mathbb{E}_{(\mathbf{x}, y)\sim P}\big[l(\mathbf{x}, y, f(\mathbf{x}))\big]$$
 
 ::: {.d2l-note}
 The training error (*empirical risk*) is computable; the generalization
@@ -877,7 +877,7 @@ flexibility.
 Same inputs, fresh training noise: the fit $\hat{f}$ is random. For a
 test input $x$ with label $y = f^*(x) + \epsilon$,
 
-$$E\big[(y - \hat{f}(x))^2\big] = \underbrace{\big(f^*(x) - E[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.$$
+$$\mathbb{E}\big[(y - \hat{f}(x))^2\big] = \underbrace{\big(f^*(x) - \mathbb{E}[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.$$
 
 - **Bias:** how far the average fit is from the truth.
 - **Variance:** how much the fit moves when the noise is redrawn.

@@ -52,10 +52,10 @@ The diagram specifies the training mechanism but not the quantity being optimize
 
 The discriminator solves a binary classification problem. Draw a label $y \sim \textrm{Bernoulli}(\tfrac12)$. If $y = 1$, draw $x$ from the data density $p$; if $y = 0$, draw $x$ from the generator density $q$. The marginal density of $x$ is the balanced mixture $m = (p + q)/2$, which describes a sample whose source is unknown. Throughout this chapter, $p$ denotes the data distribution and $q$ the generator distribution. Two derived quantities will recur: the density ratio $\rho = p/q$ and its logarithm $\lambda = \log \rho$. The discriminator is a function $D: \mathcal{X} \to \mathbb{R}$ that produces a *realness logit*; we also call $D$ the *critic*. With $\sigma(t) = 1/(1 + e^{-t})$, the value $\sigma(D(x))$ estimates $P(y = 1 \mid x)$, and a larger $D(x)$ indicates stronger evidence that $x$ came from the data. We will repeatedly use the identities $\sigma(-t) = 1 - \sigma(t)$ and $\tfrac{d}{dt} \log \sigma(t) = \sigma(-t)$.
 
-The natural loss for a probabilistic classifier is the log loss, and on the balanced problem the discriminator's expected negative log-likelihood is $-\tfrac12 E_{x \sim p}[\log \sigma(D(x))] - \tfrac12 E_{x' \sim q}[\log \sigma(-D(x'))]$. Dropping the factor $\tfrac12$ and flipping the sign gives the objective the discriminator maximizes,
+The natural loss for a probabilistic classifier is the log loss, and on the balanced problem the discriminator's expected negative log-likelihood is $-\tfrac12 \mathbb{E}_{x \sim p}[\log \sigma(D(x))] - \tfrac12 \mathbb{E}_{x' \sim q}[\log \sigma(-D(x'))]$. Dropping the factor $\tfrac12$ and flipping the sign gives the objective the discriminator maximizes,
 
 $$
-V(D) \;=\; E_{x \sim p}\big[\log \sigma(D(x))\big] + E_{x' \sim q}\big[\log \sigma(-D(x'))\big],
+V(D) \;=\; \mathbb{E}_{x \sim p}\big[\log \sigma(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\log \sigma(-D(x'))\big],
 $$
 :eqlabel:`eq_gan_V`
 
@@ -113,20 +113,20 @@ $$
 
 ## The Generator's Gradient
 
-The generator influences only the second term of :eqref:`eq_gan_V`, so playing the minimax game literally means minimizing $E_z[\log \sigma(-D(G(z)))]$ over the generator's parameters $\theta$, with the discriminator held fixed. Differentiating through $x' = G(z)$ with the identity $\tfrac{d}{du} \log \sigma(-u) = -\sigma(u)$ gives
+The generator influences only the second term of :eqref:`eq_gan_V`, so playing the minimax game literally means minimizing $\mathbb{E}_z[\log \sigma(-D(G(z)))]$ over the generator's parameters $\theta$, with the discriminator held fixed. Differentiating through $x' = G(z)$ with the identity $\tfrac{d}{du} \log \sigma(-u) = -\sigma(u)$ gives
 
 $$
-\nabla_\theta \, E_z\big[\log \sigma(-D(G(z)))\big]
-= -\,E_z\big[\sigma(D(x'))\, \nabla_\theta D(G(z))\big] ,
+\nabla_\theta \, \mathbb{E}_z\big[\log \sigma(-D(G(z)))\big]
+= -\,\mathbb{E}_z\big[\sigma(D(x'))\, \nabla_\theta D(G(z))\big] ,
 $$
 
 where $\nabla_\theta D(G(z))$ is the gradient of the composite map. The contribution from each generated sample points in the direction that increases its critic score. For sample $x'$, this contribution is weighted by $\sigma(D(x'))$, the discriminator's estimated probability that the sample is real. Early in training, or for a poorly modeled sample later on, the discriminator may have $D(x') \ll 0$. The weight $\sigma(D(x'))$ is then exponentially small. The loss has *saturated*: samples that the discriminator rejects most confidently contribute least to the generator update.
 
-:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` therefore substitute a different generator loss in practice: rather than minimizing the probability of being called fake, the generator maximizes the probability of being called real, minimizing $-E_z[\log \sigma(D(G(z)))]$. The same differentiation, now with $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$, gives
+:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` therefore substitute a different generator loss in practice: rather than minimizing the probability of being called fake, the generator maximizes the probability of being called real, minimizing $-\mathbb{E}_z[\log \sigma(D(G(z)))]$. The same differentiation, now with $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$, gives
 
 $$
-\nabla_\theta \Big({-E_z\big[\log \sigma(D(G(z)))\big]}\Big)
-= -\,E_z\big[\sigma(-D(x'))\, \nabla_\theta D(G(z))\big] .
+\nabla_\theta \Big({-\mathbb{E}_z\big[\log \sigma(D(G(z)))\big]}\Big)
+= -\,\mathbb{E}_z\big[\sigma(-D(x'))\, \nabla_\theta D(G(z))\big] .
 $$
 
 The two losses generate the *same* update direction $\nabla_\theta D$ per sample and differ only in the weight attached to it:
@@ -143,7 +143,7 @@ The *non-saturating* weight $w_{\textrm{ns}}$ is near one where the saturating w
 Swapping the weighting does not change the population minimizer against an optimal critic. Substituting the optimal critic $D^\star = \lambda$ into the non-saturating loss and using $\sigma(\lambda) = p/(2m)$,
 
 $$
--E_{x' \sim q}\big[\log \sigma(\lambda(x'))\big]
+-\mathbb{E}_{x' \sim q}\big[\log \sigma(\lambda(x'))\big]
 = \log 2 + \mathrm{KL}(q \,\|\, p) - \mathrm{KL}(q \,\|\, m)
 \;\geq\; \log 2 + \tfrac12\, \mathrm{KL}(q \,\|\, p),
 $$
@@ -271,7 +271,7 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
     return loss_D
 ```
 
-The generator update implements the non-saturating loss of :eqref:`eq_gan_weights`: generated samples are fed to the discriminator under the label *one*, so that the resulting cross-entropy is $-E[\log \sigma(D(G(z)))]$. The discriminator has changed since its half-step, so its scores are recomputed rather than reused. In the JAX version, the loss closure takes both models as explicit arguments and differentiates only with respect to the first; this keeps the update rule reusable for networks whose forward pass mutates state, which the convolutional models of :numref:`sec_dcgan` require.
+The generator update implements the non-saturating loss of :eqref:`eq_gan_weights`: generated samples are fed to the discriminator under the label *one*, so that the resulting cross-entropy is $-\mathbb{E}[\log \sigma(D(G(z)))]$. The discriminator has changed since its half-step, so its scores are recomputed rather than reused. In the JAX version, the loss closure takes both models as explicit arguments and differentiates only with respect to the first; this keeps the update rule reusable for networks whose forward pass mutates state, which the convolutional models of :numref:`sec_dcgan` require.
 
 ```{.python .input #gan-the-update-rules-2}
 %%tab pytorch
@@ -679,7 +679,7 @@ The saturating and non-saturating generator losses have the same fixed point but
     1. Replace the weights $0.01$ and $0.99$ by $\epsilon$ and $1 - \epsilon$.
        The argument after :eqref:`eq_gan_noise_mixture` then bounds the
        shortfall
-       $E_{p_{\textrm{data}}}[\log p_{\textrm{data}}] - E_{p_{\textrm{data}}}[\log \tilde p]$
+       $\mathbb{E}_{p_{\textrm{data}}}[\log p_{\textrm{data}}] - \mathbb{E}_{p_{\textrm{data}}}[\log \tilde p]$
        by $\log(1/\epsilon)$. Write the shortfall exactly as an expectation
        under $p_{\textrm{data}}$ of a function of the ratio
        $p_{\textrm{noise}} / p_{\textrm{data}}$. When is the bound nearly
@@ -695,7 +695,7 @@ The saturating and non-saturating generator losses have the same fixed point but
        $q = \mathcal{N}(0, s^2 I_d)$ with $s < 1$. Each sample of $q$ is then
        a data sample shrunk by the factor $s$, which for images resembles a
        slight loss of contrast. Use :eqref:`eq_gan_mvn_kl` to compute the gap
-       $E_p[\log p] - E_p[\log q]$ for $d = 3072$ and $s = 0.9$. Find the $s$
+       $\mathbb{E}_p[\log p] - \mathbb{E}_p[\log q]$ for $d = 3072$ and $s = 0.9$. Find the $s$
        at which the gap equals the $\log 100$ nats of the noise mixture. Which
        of the two models wins by likelihood, and which by its samples?
    :exlabel:`ex_gan-likelihood-versus-samples`
@@ -708,7 +708,7 @@ The saturating and non-saturating generator losses have the same fixed point but
    success probabilities $a$ and $s$.
     1. Show that every critic $D$ satisfies
 
-       $$V(D^\star) - V(D) = 2\, E_{x \sim m}\big[\mathrm{KL}_{\textrm{b}}\big(\eta(x) \,\|\, \sigma(D(x))\big)\big],$$
+       $$V(D^\star) - V(D) = 2\, \mathbb{E}_{x \sim m}\big[\mathrm{KL}_{\textrm{b}}\big(\eta(x) \,\|\, \sigma(D(x))\big)\big],$$
 
        and conclude that $D^\star$ is the unique maximizer of
        :eqref:`eq_gan_V`, up to changes on a set of $m$-probability zero.
@@ -729,7 +729,7 @@ The saturating and non-saturating generator losses have the same fixed point but
 1. **Unequal priors.** Suppose the labeling problem draws $y = 1$ with
    probability $\alpha$, where $0 < \alpha < 1$, so that the critic maximizes
 
-   $$V_\alpha(D) = \alpha\, E_{x \sim p}\big[\log \sigma(D(x))\big] + (1 - \alpha)\, E_{x' \sim q}\big[\log \sigma(-D(x'))\big].$$
+   $$V_\alpha(D) = \alpha\, \mathbb{E}_{x \sim p}\big[\log \sigma(D(x))\big] + (1 - \alpha)\, \mathbb{E}_{x' \sim q}\big[\log \sigma(-D(x'))\big].$$
 
     1. Show that the optimal critic is
        $D^\star_\alpha = \lambda + \log \frac{\alpha}{1 - \alpha}$, so that
@@ -790,7 +790,7 @@ The saturating and non-saturating generator losses have the same fixed point but
        contours of the mixture density $m$ on top. Report the largest error on
        the grid and where it occurs.
     1. Draw 10,000 fresh samples from each of $p$ and $q$. Estimate the
-       $m$-weighted mean error $E_m\big[|\sigma(D) - \eta|\big]$, and estimate
+       $m$-weighted mean error $\mathbb{E}_m\big[|\sigma(D) - \eta|\big]$, and estimate
        the excess $V(D^\star) - V(D)$ of the trained critic from the identity
        of problem :exref:`ex_gan-log-loss-game-identifies`a. Which of the
        three error measures does the training objective control? Use the
@@ -852,7 +852,7 @@ The saturating and non-saturating generator losses have the same fixed point but
     1. For balanced classes, the Bayes classifier labels $x$ as real where
        $\eta(x) > \tfrac12$. Show that its accuracy is
 
-       $$E_{x \sim m}\big[\max(\eta(x), 1 - \eta(x))\big] = \tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$$
+       $$\mathbb{E}_{x \sim m}\big[\max(\eta(x), 1 - \eta(x))\big] = \tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$$
 
        with the total variation distance :eqref:`eq_mdl-tv-def`. Use
        Pinsker's inequality :eqref:`eq_mdl-pinsker` and the printed
@@ -876,27 +876,27 @@ The saturating and non-saturating generator losses have the same fixed point but
    :exlabel:`ex_gan-classifier-two-sample-test`
 
 1. **Generator weights and their divergences.** ●● A generator loss
-   $E_z[g(D(G(z)))]$, differentiated with the critic held fixed, has the
-   gradient $-E_z\big[w(D(x'))\, \nabla_\theta D(G(z))\big]$ with the weight
+   $\mathbb{E}_z[g(D(G(z)))]$, differentiated with the critic held fixed, has the
+   gradient $-\mathbb{E}_z\big[w(D(x'))\, \nabla_\theta D(G(z))\big]$ with the weight
    $w = -g'$, and :eqref:`eq_gan_weights` lists the two weights of this
    section. Throughout this problem, the critic is the best response
    $D = \lambda$ to the current generator $q_{\theta_0}$ and is held fixed
    while the loss is differentiated at $\theta_0$. Write
    $\rho = e^{D} = p / q_{\theta_0}$.
-    1. Show that the sum of the saturating loss $E_z[\log \sigma(-D(G(z)))]$
-       and the non-saturating loss $-E_z[\log \sigma(D(G(z)))]$ equals
+    1. Show that the sum of the saturating loss $\mathbb{E}_z[\log \sigma(-D(G(z)))]$
+       and the non-saturating loss $-\mathbb{E}_z[\log \sigma(D(G(z)))]$ equals
        $\mathrm{KL}(q \,\|\, p)$ at $D = \lambda$, and that its weight is
        $w = 1$.
-    1. Let $D_f(p \,\|\, q_\theta) = E_{x \sim q_\theta}\big[f\big(p(x)/q_\theta(x)\big)\big]$
+    1. Let $D_f(p \,\|\, q_\theta) = \mathbb{E}_{x \sim q_\theta}\big[f\big(p(x)/q_\theta(x)\big)\big]$
        be the f-divergence :eqref:`eq_mdl-f-div-def` with a twice
        differentiable convex function $f$. Show that
 
-       $$\nabla_\theta D_f(p \,\|\, q_\theta)\big|_{\theta_0} = -E_z\big[\rho^2 f''(\rho)\, \nabla_\theta D(G(z))\big],$$
+       $$\nabla_\theta D_f(p \,\|\, q_\theta)\big|_{\theta_0} = -\mathbb{E}_z\big[\rho^2 f''(\rho)\, \nabla_\theta D(G(z))\big],$$
 
        with $\rho$ evaluated at $x' = G(z)$. Two steps suffice: the product
        rule gives $\int \nabla_\theta q_\theta(x)\, h(x)\, dx$ with
        $h = f(\rho) - \rho f'(\rho)$, and for a fixed $h$ this integral equals
-       $\nabla_\theta E_z[h(G(z))]$. A positive weight $w$ therefore selects
+       $\nabla_\theta \mathbb{E}_z[h(G(z))]$. A positive weight $w$ therefore selects
        the divergence whose function $f$ satisfies
        $\rho^2 f''(\rho) = w(\log \rho)$.
     1. Identify the divergences selected by $w_{\textrm{sat}}$, by $w = 1$,
@@ -990,7 +990,7 @@ $$\tilde p = 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}
 
 The discriminator maximizes, the generator minimizes:
 
-$$V(D) = E_{x \sim p}[\log \sigma(D(x))] + E_{x' \sim q}[\log \sigma(-D(x'))]$$
+$$V(D) = \mathbb{E}_{x \sim p}[\log \sigma(D(x))] + \mathbb{E}_{x' \sim q}[\log \sigma(-D(x'))]$$
 
 Maximizing $V$ = fitting the Bayes classifier of real vs. generated.
 :::

@@ -1,4 +1,15 @@
-# Chapter overview — chapter_mdl-calculus (4 files)
+# Chapter overview — chapter_mdl-calculus (5 files)
+
+**Update (2026-11-02, math appendix pass):** the chapter now has five
+sections plus `further-reading.md` (no exercises): Single Variable Calculus,
+Multivariable Calculus, Matrix Calculus (new file `mdl-matrix-calculus.md`,
+split from the old Matrix Calculus and Automatic Differentiation section),
+Automatic Differentiation (`mdl-matrix-calculus-autodiff.md`, retitled), and
+Integral Calculus. It carries 55 exercises (12, 11, 10, 10, 12), all in the
+named and tagged style (`[code]`, `[extended]`, ●, ●●) with `:exlabel:`
+labels. Each section entry below opens with its current list; the survey that
+follows describes the chapter before the pass, when it had four sections and
+37 exercises.
 
 All four sections already carry unusually strong exercise sets (the prior style
 review found zero defects in three of the four files, and only a cosmetic
@@ -21,6 +32,8 @@ these are ML-native material with no classical-calculus counterpart. Totals:
 sets (7–8 each).
 
 ## chapter_mdl-calculus/mdl-single-variable-calculus.md — Single Variable Calculus
+
+**Update (2026-11-02, math appendix pass):** 12 exercises: 1 Quotient rule; 2 Smoothness of the logistic loss; 3 Entropy extremes; 4 Newton at degenerate minima; 5 Flat stationary points; 6 [code] Minimizers at kinks; 7 [code] Chained subgradients; 8 Quartic descent ●; 9 [code] Central differences ●; 10 [code] Argument reduction for exp ●; 11 [code] Gradient descent past $2/L$ ●●; 12 [extended] $\mathrm{ReLU}'(0)$ in low precision ●●.
 
 **Topic:** The derivative as local linear model; differentiation rules;
 gradient descent and the descent lemma; curvature, Taylor series, Newton's
@@ -125,6 +138,8 @@ against a Taylor-series exercise.
 
 ## chapter_mdl-calculus/mdl-multivariable-calculus.md — Multivariable Calculus
 
+**Update (2026-11-02, math appendix pass):** 11 exercises: 1 Directional derivatives without a gradient; 2 Gradients of an elongated bowl; 3 [code] Backward pass for two tanh units; 4 Classifying critical points; 5 Flat directions; 6 Paths through a residual stack ●; 7 [code] Gradient checks in single precision ●; 8 Mixed partials that disagree ●; 9 [code] Random Hessians ●; 10 [extended] Saddles of a linear network ●●; 11 Lagrange multipliers and the Rayleigh quotient.
+
 **Topic:** Partial derivatives and the gradient; steepest-descent geometry
 and level sets; the multivariate chain rule as backpropagation; the Hessian
 and the second-derivative test; Lagrange multipliers.
@@ -225,7 +240,18 @@ drop two thin/redundant items to make room for two code-based additions.
    sensitivity result.
    *Provenance:* original (current ex8, unchanged).
 
-## chapter_mdl-calculus/mdl-matrix-calculus-autodiff.md — Matrix Calculus and Automatic Differentiation
+## chapter_mdl-calculus/mdl-matrix-calculus.md — Matrix Calculus
+
+**Update (2026-11-02, math appendix pass):** 10 exercises: 1 Jacobian of a ReLU network; 2 [code] Area under the Jacobian; 3 [code] Cheapest chain order ●; 4 [code] Backward rules of a matrix product; 5 [code] Gradient of softmax regression; 6 Softmax vector–Jacobian product; 7 [code] The LayerNorm Jacobian; 8 Log-determinant gradient ●; 9 [code] Gradient through a linear solve; 10 Gradient of the spectral norm ●. The file was split from the old Matrix Calculus and
+Automatic Differentiation section; the survey of that section below covers its
+Jacobian and identity material.
+
+---
+
+## chapter_mdl-calculus/mdl-matrix-calculus-autodiff.md — Automatic Differentiation
+
+**Update (2026-11-02, math appendix pass):** 10 exercises: 1 [code] Dual and complex steps; 2 [code] Compressed Jacobians; 3 [code] Hyperparameter gradient; 4 [code] Hessian--vector product ●; 5 [code] Checkpointing on the tape ●; 6 [extended] Equilibrium layer ●●; 7 [code] A tensor tape; 8 [code] Mixed mode through a bottleneck; 9 [code] Forward gradients; 10 [code] Second derivatives in one forward pass. Before the split this entry covered Matrix Calculus and Automatic
+Differentiation; the survey below describes that combined section.
 
 **Topic:** Jacobians as best linear approximations; the chain rule as
 Jacobian composition; forward-mode AD via dual numbers; reverse-mode AD via
@@ -358,6 +384,8 @@ directly.
    implicit-function-theorem material).
 
 ## chapter_mdl-calculus/mdl-integral-calculus.md — Integral Calculus
+
+**Update (2026-11-02, math appendix pass):** 12 exercises: 1 [code] Midpoint versus left rule; 2 Activations as accumulated areas; 3 Heavy tails; 4 Gamma function by parts; 5 Orientation in substitution; 6 Swapping the order; 7 Gaussian normalizers and moments; 8 A moving support; 9 [code] Grids against Monte Carlo ●; 10 [code] Monte Carlo under heavy tails ●; 11 [code] Estimator variance for a quartic ●; 12 [extended] Gradients through a coin flip ●●.
 
 **Topic:** The definite integral and the FTC; improper integrals,
 integration by parts, change of variables; multiple integrals and Fubini;

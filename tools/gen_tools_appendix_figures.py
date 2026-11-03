@@ -251,17 +251,17 @@ def _save_plot(fig, name):
 
 
 def hardware_menu():
-    """Capacity × bandwidth scatter: the July 2026 local-hardware menu."""
+    """Capacity × bandwidth scatter: the November 2026 local-hardware menu."""
     fig = plt.figure(figsize=(640 / 72.0, 360 / 72.0))
     ax = fig.add_axes([0.11, 0.14, 0.78, 0.82])
-    discrete = [("RTX 5070 Ti", 16, 896, "$0.9k", (-8, -26), "left"),
-                ("RTX 3090 used", 24, 936, "$1.2k", (8, 12), "left"),
-                ("RTX 5090", 32, 1792, "$3–4k", (0, 30), "center"),
-                ("RTX PRO 6000", 96, 1792, "$13k", (12, -6), "left")]
-    unified = [("Strix Halo", 128, 256, "$2–2.5k", (-12, -6), "right"),
-               ("DGX Spark", 128, 273, "$4.7k", (12, 20), "left"),
-               ("M4 Max", 128, 546, "$3.7k", (12, -6), "left"),
-               ("M3 Ultra", 512, 819, "$5.3k+", (0, 30), "center")]
+    discrete = [("RTX 5070 Ti", 16, 896, "$1.1–1.3k", (-8, -26), "left"),
+                ("RTX 3090 used", 24, 936, "$1.25–1.45k", (8, 12), "left"),
+                ("RTX 5090", 32, 1792, "$6–8k", (0, 30), "center"),
+                ("RTX PRO 6000", 96, 1792, "$16k", (12, -6), "left")]
+    unified = [("Strix Halo", 128, 256, "$3.4–4.4k", (-12, -6), "right"),
+               ("DGX Spark", 128, 273, "$6.95k", (12, 20), "left"),
+               ("M5 Max", 128, 614, "from $2.5k", (12, -6), "left"),
+               ("M5 Ultra", 512, 1200, "from $5.5k", (0, 30), "center")]
     datacenter = [("H100 SXM", 80, 3350, "rented", (12, -6), "left")]
     groups = [(discrete, ACCENT, "discrete GPU — bandwidth first"),
               (unified, ACCENT2, "unified memory — capacity first"),

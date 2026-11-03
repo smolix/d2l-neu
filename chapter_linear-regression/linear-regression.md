@@ -135,7 +135,7 @@ exactly for every $i$. Two houses with the same area and age sell for
 different prices, because of features we did not record, such as the view,
 and because of chance. The linear model therefore describes the average
 label: we assume that the conditional expectation
-$E[Y \mid X = \mathbf{x}]$, the mean price of houses with features
+$\mathbb{E}[Y \mid X = \mathbf{x}]$, the mean price of houses with features
 $\mathbf{x}$, equals $\mathbf{w}^\top \mathbf{x} + b$, and we treat the
 deviation of each label from it as noise. Our goal is to choose
 $\mathbf{w}$ and $b$ so that predictions for new examples from the same
@@ -606,7 +606,7 @@ linear prediction plus an independent normal deviation,
 
 $$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon, \quad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
 
-The conditional mean $E[Y \mid X = \mathbf{x}]$ is then
+The conditional mean $\mathbb{E}[Y \mid X = \mathbf{x}]$ is then
 $\mathbf{w}^\top \mathbf{x} + b$, the assumption of
 :numref:`subsec_linear_model`, and the labels scatter around it with the
 same standard deviation $\sigma$ for every $\mathbf{x}$
@@ -820,7 +820,7 @@ block of the deep networks to come.
        models counts. It is given by
        $p(k \mid \nu) = \nu^k e^{-\nu}/k!$, where $\nu > 0$
        is the rate and $k \in \{0, 1, 2, \ldots\}$ is the observed count.
-       Prove that $E[k] = \nu$.
+       Prove that $\mathbb{E}[k] = \nu$.
     1. Derive the negative log-likelihood of a count $k$ under a rate
        $\nu(\mathbf{x})$ that depends on the features, dropping terms
        that do not depend on the parameters, and check it against the table
@@ -841,7 +841,7 @@ block of the deep networks to come.
    compute the least-squares solution $\hat{\mathbf{w}}$ with `lstsq`.
     1. Run minibatch SGD without a bias, starting at $\hat{\mathbf{w}}$,
        with minibatches of 10 and $\eta = 0.1$ for 20,000 steps. Estimate
-       the mean squared distance $E\|\mathbf{w} - \hat{\mathbf{w}}\|^2$ of
+       the mean squared distance $\mathbb{E}\|\mathbf{w} - \hat{\mathbf{w}}\|^2$ of
        the iterates from $\hat{\mathbf{w}}$.
     1. Repeat for $\eta \in \{0.05, 0.025\}$ and for minibatch sizes 20
        and 40. Check that the mean squared distance is roughly
@@ -880,9 +880,9 @@ block of the deep networks to come.
     1. Replace $\mathbf{X}$ by $\tilde{\mathbf{X}} = \mathbf{X} + \mathbf{Z}$,
        where the entries of $\mathbf{Z}$ are independent draws from
        $\mathcal{N}(0, \gamma^2)$. Compute
-       $E[\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}]$ and determine whether
+       $\mathbb{E}[\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}]$ and determine whether
        it is invertible. Express the expected loss
-       $E\|\mathbf{y} - \tilde{\mathbf{X}}\mathbf{w}\|^2$ in terms of
+       $\mathbb{E}\|\mathbf{y} - \tilde{\mathbf{X}}\mathbf{w}\|^2$ in terms of
        $\mathbf{X}$, $\mathbf{y}$, $\mathbf{w}$ and $\gamma$.
     1. The standard remedy for a (near-)singular
        $\mathbf{X}^\top \mathbf{X}$ is to add $\tilde{\lambda} \mathbf{I}$

@@ -30,7 +30,7 @@ import optax
 The value function of :numref:`sec_basic_gan` scores real samples through $\log \sigma(D)$ and generated samples through $\log \sigma(-D)$. Replacing these expressions by two scalar scoring functions gives the template
 
 $$
-d(p, q) \;=\; \sup_{T \in \mathcal{T}} \Big\{ E_{x \sim p}\big[a(T(x))\big] - E_{x' \sim q}\big[b(T(x'))\big] \Big\},
+d(p, q) \;=\; \sup_{T \in \mathcal{T}} \Big\{ \mathbb{E}_{x \sim p}\big[a(T(x))\big] - \mathbb{E}_{x' \sim q}\big[b(T(x'))\big] \Big\},
 $$
 :eqlabel:`eq_gan_template`
 
@@ -54,7 +54,7 @@ Not every adversarial objective fits the template. An objective that jointly sco
 The pointwise maximization in :numref:`sec_basic_gan` does not depend on the particular form of the logistic score. Let $\ell$ score a critic output. A real sample contributes $\ell(D(x))$, and a generated sample contributes $\ell(-D(x'))$:
 
 $$
-V_\ell(D) \;=\; E_{x \sim p}\big[\ell(D(x))\big] + E_{x' \sim q}\big[\ell(-D(x'))\big].
+V_\ell(D) \;=\; \mathbb{E}_{x \sim p}\big[\ell(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell(-D(x'))\big].
 $$
 :eqlabel:`eq_gan_margin`
 
@@ -67,20 +67,20 @@ L(\eta) \;=\; \inf_{t} \Big\{ \eta \, \big({-\ell(t)}\big) + (1 - \eta)\, \big({
 $$
 :eqlabel:`eq_gan_bayes_risk`
 
-the smallest expected loss available to a critic that knows the posterior exactly. Since $L$ is an infimum of affine functions of $\eta$, it is concave for any choice of $\ell$. Substituting the pointwise optimum into :eqref:`eq_gan_margin` gives $\sup_D V_\ell(D) = -2\,E_{x \sim m}[L(\eta(x))]$.
+the smallest expected loss available to a critic that knows the posterior exactly. Since $L$ is an infimum of affine functions of $\eta$, it is concave for any choice of $\ell$. Substituting the pointwise optimum into :eqref:`eq_gan_margin` gives $\sup_D V_\ell(D) = -2\,\mathbb{E}_{x \sim m}[L(\eta(x))]$.
 
 The supremum still carries a loss-dependent offset: a critic that ignores its input already achieves the risk $L(\tfrac12)$, the Bayes risk at the prior, whatever the distributions. Subtracting this baseline leaves the part that observation contributes. The *Bayes-risk gap*
 
 $$
-\Delta_\ell(p, q) \;=\; L(\tfrac12) - E_{x \sim m}\big[L(\eta(x))\big]
+\Delta_\ell(p, q) \;=\; L(\tfrac12) - \mathbb{E}_{x \sim m}\big[L(\eta(x))\big]
 $$
 :eqlabel:`eq_gan_bayes_gap`
 
-measures how much observing the sample reduces the minimum classification loss. It also determines the optimized objective through $\sup_D V_\ell = 2\Delta_\ell - 2 L(\tfrac12)$. The gap is nonnegative by Jensen's inequality because $L$ is concave and $E_m[\eta] = \tfrac12$. For the log loss, $L$ is binary entropy and $L(\tfrac12) = \log 2$. In this case, :eqref:`eq_gan_bayes_gap` is the mutual information between a sample and its source, which :numref:`sec_basic_gan` identified with $\mathrm{JS}(p, q)$. The following proposition shows that every such Bayes-risk gap is an f-divergence.
+measures how much observing the sample reduces the minimum classification loss. It also determines the optimized objective through $\sup_D V_\ell = 2\Delta_\ell - 2 L(\tfrac12)$. The gap is nonnegative by Jensen's inequality because $L$ is concave and $\mathbb{E}_m[\eta] = \tfrac12$. For the log loss, $L$ is binary entropy and $L(\tfrac12) = \log 2$. In this case, :eqref:`eq_gan_bayes_gap` is the mutual information between a sample and its source, which :numref:`sec_basic_gan` identified with $\mathrm{JS}(p, q)$. The following proposition shows that every such Bayes-risk gap is an f-divergence.
 
 ### Every Gap Is an f-Divergence
 
-Recall from :eqref:`eq_mdl-f-div-def` that an f-divergence averages a convex function of the density ratio, $D_f(p \,\|\, q) = E_{x \sim q}[f(\rho(x))]$, where the *generator* $f$ is convex with $f(1) = 0$; :numref:`sec_mdl-f-divergences` proves nonnegativity, collects the standard examples, and records the boundary conventions that apply where one density vanishes. Throughout this chapter the symbol $f$ is reserved for these generators.
+Recall from :eqref:`eq_mdl-f-div-def` that an f-divergence averages a convex function of the density ratio, $D_f(p \,\|\, q) = \mathbb{E}_{x \sim q}[f(\rho(x))]$, where the *generator* $f$ is convex with $f(1) = 0$; :numref:`sec_mdl-f-divergences` proves nonnegativity, collects the standard examples, and records the boundary conventions that apply where one density vanishes. Throughout this chapter the symbol $f$ is reserved for these generators.
 
 **Proposition.** *For any loss with concave Bayes risk $L$,*
 
@@ -95,10 +95,10 @@ $$
 **Proof.** Substitute $u = \rho = p/q$, so that $m = q\,(u+1)/2$ and $\eta = u/(u+1)$. Then
 
 $$
-E_{x \sim m}\big[L(\eta(x))\big] = \int q \, \frac{u+1}{2}\, L\!\left(\frac{u}{u+1}\right),
+\mathbb{E}_{x \sim m}\big[L(\eta(x))\big] = \int q \, \frac{u+1}{2}\, L\!\left(\frac{u}{u+1}\right),
 $$
 
-and since $\int q = 1$ the constant $L(\tfrac12)$ can be moved inside the integral, giving $\Delta_\ell = \int q\, f(u) = E_q[f(\rho)]$. For convexity, write the concave $L$ as the lower envelope of its tangent lines, $L(v) = \inf_s \{\alpha_s v + \beta_s\}$. Then
+and since $\int q = 1$ the constant $L(\tfrac12)$ can be moved inside the integral, giving $\Delta_\ell = \int q\, f(u) = \mathbb{E}_q[f(\rho)]$. For convexity, write the concave $L$ as the lower envelope of its tangent lines, $L(v) = \inf_s \{\alpha_s v + \beta_s\}$. Then
 
 $$
 (u+1)\, L\!\left(\frac{u}{u+1}\right) = \inf_s \big\{ \alpha_s u + \beta_s (u+1) \big\}
@@ -134,7 +134,7 @@ The proposition maps losses to divergences in one direction only. It does not ch
 The construction is proved in :numref:`sec_mdl-f-gan-dual` and we restate it. For a convex generator $f$ with conjugate $f^*(t) = \sup_u \{ut - f(u)\}$ (the convex conjugate of :numref:`subsec_mdl-convex-conjugate`), every critic $T$ gives a lower bound
 
 $$
-D_f(p \,\|\, q) \;\geq\; E_{x \sim p}\big[T(x)\big] - E_{x' \sim q}\big[f^*(T(x'))\big],
+D_f(p \,\|\, q) \;\geq\; \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[f^*(T(x'))\big],
 $$
 :eqlabel:`eq_gan_fgan_bound`
 
@@ -147,7 +147,7 @@ T^\star(x) \;=\; f'\big(\rho(x)\big),
 $$
 :eqlabel:`eq_gan_tstar`
 
-and at nothing else where $f$ is strictly convex. Since $f$ is convex, $f'$ is nondecreasing, so $T^\star$ is a monotone reparameterization of the density ratio. Equation :eqref:`eq_gan_tstar` states in one formula what the table's link column showed row by row: the optimal unconstrained critic reports a transform of the density ratio. The choice of $f$ determines that transform and hence how estimation errors are weighted across the sample space. As a concrete instance, the forward KL generator $f(u) = u \log u$ has conjugate $f^*(t) = e^{t-1}$, obtained by maximizing $ut - u\log u$ at $u = e^{t-1}$, so its game is $\sup_T \{ E_p[T] - E_q[e^{T-1}] \}$ with optimal critic $T^\star = 1 + \log \rho = 1 + \lambda$. The experiment below trains exactly this critic and checks it against the formula.
+and at nothing else where $f$ is strictly convex. Since $f$ is convex, $f'$ is nondecreasing, so $T^\star$ is a monotone reparameterization of the density ratio. Equation :eqref:`eq_gan_tstar` states in one formula what the table's link column showed row by row: the optimal unconstrained critic reports a transform of the density ratio. The choice of $f$ determines that transform and hence how estimation errors are weighted across the sample space. As a concrete instance, the forward KL generator $f(u) = u \log u$ has conjugate $f^*(t) = e^{t-1}$, obtained by maximizing $ut - u\log u$ at $u = e^{t-1}$, so its game is $\sup_T \{ \mathbb{E}_p[T] - \mathbb{E}_q[e^{T-1}] \}$ with optimal critic $T^\star = 1 + \log \rho = 1 + \lambda$. The experiment below trains exactly this critic and checks it against the formula.
 
 One implementation detail is forced by the conjugate. The bound :eqref:`eq_gan_fgan_bound` is $-\infty$ whenever $T$ leaves the domain of $f^*$, so a network implementing $T$ must map into that domain, and the standard recipe reads the required output activation off the conjugate's domain :cite:`Nowozin.Cseke.Tomioka.2016`. The forward KL conjugate is finite on all of $\mathbb{R}$ and needs no activation; the reverse KL conjugate is finite only for $t < 0$, enforced by $-\mathrm{softplus}$; the GAN generator below is finite for $t < \log 2$, enforced by $\log 2 - \mathrm{softplus}$.
 
@@ -159,14 +159,14 @@ f^*(T) = -\log\big(2 - 2\sigma(D)\big) = -\log 2 - \log \sigma(-D),
 T = \log 2 + \log \sigma(D),
 $$
 
-and substituting both into :eqref:`eq_gan_fgan_bound` gives $E_p[T] - E_q[f^*(T)] = 2\log 2 + V(D)$, the value function of :numref:`sec_basic_gan` shifted by a constant. Taking suprema recovers the value $2\,\mathrm{JS} - 2\log 2$ exactly. The original GAN is the Jensen--Shannon row of the f-GAN family, written in a different parameterization of the same critic.
+and substituting both into :eqref:`eq_gan_fgan_bound` gives $\mathbb{E}_p[T] - \mathbb{E}_q[f^*(T)] = 2\log 2 + V(D)$, the value function of :numref:`sec_basic_gan` shifted by a constant. Taking suprema recovers the value $2\,\mathrm{JS} - 2\log 2$ exactly. The original GAN is the Jensen--Shannon row of the f-GAN family, written in a different parameterization of the same critic.
 
 ## Integral Probability Metrics
 
 The second family places the restriction on the critic class rather than on nonlinear score functions. With linear scores, the objective becomes
 
 $$
-d_{\mathcal{F}}(p, q) \;=\; \sup_{h \in \mathcal{F}} \Big\{ E_{x \sim p}\big[h(x)\big] - E_{x' \sim q}\big[h(x')\big] \Big\},
+d_{\mathcal{F}}(p, q) \;=\; \sup_{h \in \mathcal{F}} \Big\{ \mathbb{E}_{x \sim p}\big[h(x)\big] - \mathbb{E}_{x' \sim q}\big[h(x')\big] \Big\},
 $$
 :eqlabel:`eq_gan_ipm`
 
@@ -178,7 +178,7 @@ Taking $\mathcal{F}$ to be the unit ball of a reproducing kernel Hilbert space w
 
 ### Wasserstein-1
 
-Taking $\mathcal{F}$ to be the ball of 1-Lipschitz functions gives the Wasserstein-1 distance by the Kantorovich--Rubinstein duality proved as :eqref:`eq_mdl-kr-dual` in :numref:`sec_mdl-optimal-transport`. The supremum of $E_p[h] - E_q[h]$ over functions with slope at most one equals the minimum cost of transporting the mass of $p$ onto $q$.
+Taking $\mathcal{F}$ to be the ball of 1-Lipschitz functions gives the Wasserstein-1 distance by the Kantorovich--Rubinstein duality proved as :eqref:`eq_mdl-kr-dual` in :numref:`sec_mdl-optimal-transport`. The supremum of $\mathbb{E}_p[h] - \mathbb{E}_q[h]$ over functions with slope at most one equals the minimum cost of transporting the mass of $p$ onto $q$.
 
 Unlike the kernel ball, the Lipschitz ball admits no closed-form supremum in general. A WGAN therefore trains a critic network to approximate the dual and must enforce the constraint approximately :cite:`Arjovsky.Chintala.Bottou.2017`. The original proposal used weight clipping. Later methods introduced a gradient penalty that encourages $\|\nabla h\| \approx 1$ :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017` or spectral normalization of the layers :cite:`Miyato.Kataoka.Koyama.ea.2018`. These mechanisms provide different guarantees. Clipping and spectral normalization bound the product of layerwise Lipschitz constants, often loosely. A gradient penalty regularizes norms only at sampled points and provides no global bound. :numref:`sec_mdl-optimal-transport` discusses these distinctions in detail.
 
@@ -654,7 +654,7 @@ The hinge critic has an additional source of indeterminacy. Where one class domi
 ### Recovering the Ratio by Duality
 :label:`subsec_gan_objectives_kl_critic`
 
-The preceding diagnostic verified the link induced by a classification loss. Equation :eqref:`eq_gan_tstar` makes a corresponding prediction for the dual construction and for a divergence that no bounded loss can produce. For forward KL, the optimal critic is $T^\star = 1+\lambda$, and the optimal objective equals $\mathrm{KL}(p\,\|\,q)$. Both quantities are available in closed form for $p=\mathcal{N}(0,1)$ and $q=\mathcal{N}(2,1.5^2)$. Their log density ratio is quadratic, and their divergence follows from the Gaussian KL formula used in :numref:`sec_basic_gan`. We train a small network with the objective $E_p[T]-E_q[e^{T-1}]$. No output activation is required because the KL conjugate is finite on all of $\mathbb{R}$.
+The preceding diagnostic verified the link induced by a classification loss. Equation :eqref:`eq_gan_tstar` makes a corresponding prediction for the dual construction and for a divergence that no bounded loss can produce. For forward KL, the optimal critic is $T^\star = 1+\lambda$, and the optimal objective equals $\mathrm{KL}(p\,\|\,q)$. Both quantities are available in closed form for $p=\mathcal{N}(0,1)$ and $q=\mathcal{N}(2,1.5^2)$. Their log density ratio is quadratic, and their divergence follows from the Gaussian KL formula used in :numref:`sec_basic_gan`. We train a small network with the objective $\mathbb{E}_p[T]-\mathbb{E}_q[e^{T-1}]$. No output activation is required because the KL conjugate is finite on all of $\mathbb{R}$.
 
 ```{.python .input #objectives-recovering-the-ratio-by-duality-1}
 %%tab pytorch
@@ -867,8 +867,8 @@ When the supports overlap, all four tested objectives move the generator toward 
    normalized critics score higher with the hinge loss than with the
    logistic loss of the original GAN. Such a critic combines the loss of
    an f-divergence with a constrained critic class. Write the hinge game as
-   $V(D) = E_p[-\max(0, 1 - D)] + E_q[-\max(0, 1 + D)]$.
-    1. Show that $V(D) = E_p[D] - E_q[D] - 2$ for every critic with
+   $V(D) = \mathbb{E}_p[-\max(0, 1 - D)] + \mathbb{E}_q[-\max(0, 1 + D)]$.
+    1. Show that $V(D) = \mathbb{E}_p[D] - \mathbb{E}_q[D] - 2$ for every critic with
        $|D| \leq 1$, and that clipping any critic to $[-1, 1]$ never
        lowers $V$. Conclude that the unconstrained hinge game is the
        integral probability metric :eqref:`eq_gan_ipm` of the ball
@@ -1008,7 +1008,7 @@ Adversarial objectives and divergences<br>
 :::
 
 ::: {.slide title="One Template Generates the Classical Objectives"}
-$$d(p, q) = \sup_{T \in \mathcal{T}} \big\{ E_{x \sim p}[a(T(x))] - E_{x' \sim q}[b(T(x'))] \big\}$$
+$$d(p, q) = \sup_{T \in \mathcal{T}} \big\{ \mathbb{E}_{x \sim p}[a(T(x))] - \mathbb{E}_{x' \sim q}[b(T(x'))] \big\}$$
 
 Two independent choices:
 
@@ -1028,14 +1028,14 @@ next section is quadratic and does not fit the template.
 
 ::: {.slide title="Every Proper Loss Yields an f-Divergence"}
 Replace $\log \sigma$ by a general score function $\ell$:
-$V_\ell(D) = E_p[\ell(D)] + E_q[\ell(-D)]$.
+$V_\ell(D) = \mathbb{E}_p[\ell(D)] + \mathbb{E}_q[\ell(-D)]$.
 
 . . .
 
 The optimized objective is determined by the **Bayes-risk gap** between a
 classifier that observes the sample and one that does not:
 
-$$\Delta_\ell(p, q) = L(\tfrac12) - E_{x \sim m}\big[L(\eta(x))\big],
+$$\Delta_\ell(p, q) = L(\tfrac12) - \mathbb{E}_{x \sim m}\big[L(\eta(x))\big],
 \qquad \eta = \frac{p}{p + q}$$
 
 . . .
@@ -1065,7 +1065,7 @@ $f(1) = 0$. Proof: substitute $u = p/q$; concavity survives the perspective.
 ::: {.slide title="Duality: the Optimal Critic Is f′(p/q)"}
 Any $f$-divergence becomes a game (f-GAN):
 
-$$D_f(p \,\|\, q) \;\geq\; E_p[T] - E_q[f^*(T)]$$
+$$D_f(p \,\|\, q) \;\geq\; \mathbb{E}_p[T] - \mathbb{E}_q[f^*(T)]$$
 
 . . .
 
@@ -1082,7 +1082,7 @@ $$T^\star = f'\!\left(\frac{p}{q}\right)$$
 :::
 
 ::: {.slide title="Constrain the Critic Instead: Integral Probability Metrics"}
-$$d_{\mathcal{F}}(p, q) = \sup_{h \in \mathcal{F}} \big\{ E_p[h] - E_q[h] \big\}$$
+$$d_{\mathcal{F}}(p, q) = \sup_{h \in \mathcal{F}} \big\{ \mathbb{E}_p[h] - \mathbb{E}_q[h] \big\}$$
 
 - A symmetric class gives a pseudometric, and a metric when the class
   separates distributions; the supremum does not reduce to $p/q$.
@@ -1125,7 +1125,7 @@ are scarce.
 :::
 
 ::: {.slide title="The KL Critic Recovers 1 + log(p/q)"}
-Train $T$ on $E_p[T] - E_q[e^{T-1}]$ between two known Gaussians:
+Train $T$ on $\mathbb{E}_p[T] - \mathbb{E}_q[e^{T-1}]$ between two known Gaussians:
 
 @!objectives-recovering-the-ratio-by-duality-2
 

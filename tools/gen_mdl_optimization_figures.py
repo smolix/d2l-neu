@@ -56,12 +56,13 @@ def fig_gd_bowl_vs_valley():
     """The headline contrast of the whole chapter (sec_mdl-gradient-based-
     optimization, 3.1.2-3.1.3): real gradient descent on f(x)=1/2 x^T A x.
 
-    (a) Well-conditioned, isotropic bowl (kappa=1): near-circular contours, the
-        path runs essentially straight to the minimum.
-    (b) Ill-conditioned valley (kappa>>1): elongated contours; with a step size
-        near the stability ceiling the iterates zig-zag across the steep axis
-        while crawling along the slow lambda_min axis -- the slowest mode sets
-        the rate.
+    (a) Well-conditioned bowl, lambda = (1, 1.3), eta = 0.55 (factors 0.45
+        and 0.285): the path runs nearly straight to the minimum.
+    (b) Ill-conditioned valley, lambda = (1, 20), eta = 0.097 ~ 2/L (factors
+        0.903 and -0.94): the iterates zig-zag across the steep axis while
+        crawling along the slow lambda_min axis.  fig_per_coordinate replays
+        this exact run, so its geometry must not change.
+    The panel titles carry kappa and eta (functional, absent from the caption).
     """
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.2))
 
@@ -80,25 +81,26 @@ def fig_gd_bowl_vs_valley():
         ax.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.5, lw=1.6,
                 zorder=4)
         ax.plot(0, 0, "*", color=GREEN, ms=13, zorder=5)
+        ax.set_title(title, color="black", fontsize=LBL)
         clean_lim = ((-1.7, 1.7), (-1.7, 1.7))
         fl.clean_axes(ax, lim=clean_lim, hide=True)
         return path
 
     # (a) well-conditioned: lambda = (1, 1.3), kappa ~ 1; safe step -> ~straight.
     run(axa, np.array([[1.0, 0.0], [0.0, 1.3]]),
-        r"(a) well-conditioned  ($\kappa\approx1$)",
+        r"(a) $\kappa=1.3$, $\eta=0.55$",
         eta=0.55, x0=(-1.35, 1.15), steps=10)
 
     # (b) ill-conditioned: lambda = (1, 20), kappa = 20; eta near 2/lambda_max
     #     -> the steep mode oscillates, the flat mode barely moves.
     A = np.array([[1.0, 0.0], [0.0, 20.0]])
-    run(axb, A, r"(b) ill-conditioned  ($\kappa\gg1$)",
+    run(axb, A, r"(b) $\kappa=20$, $\eta=0.097\approx2/L$",
         eta=0.097, x0=(-1.4, 1.0), steps=26, levels=VALLEY_LEVELS)
     # annotate the slow (lambda_min) axis along which progress crawls.
     # both heads sit outside the zig-zag (its leftmost iterate is x = -1.4);
     # the shaft runs under the path (zorder < 4), so the iterates stay on top
     axb.annotate("", xy=(1.63, 0.0), xytext=(-1.63, 0.0),
-                 arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1,
+                 arrowprops=dict(arrowstyle="<->", color="black", lw=1.1,
                                  linestyle=(0, (4, 3)), shrinkA=0, shrinkB=0),
                  zorder=2)
     axb.text(1.0, 0.07, r"slow axis ($\lambda_{\min}$)", color="black",
@@ -158,8 +160,8 @@ def fig_eta_tent():
     # lives in the caption.
     ax.text(11.75, abs(1 - 0.1 * 11.6), r"$\eta=0.1$", color=BLUE,
             fontsize=LBL, ha="left", va="center")
-    ax.text(11.75, abs(1 - 2.0 / 11.0 * 11.6), r"$\eta^\star$", color=GREEN,
-            fontsize=LBL + 1, ha="left", va="center")
+    ax.text(11.75, abs(1 - 2.0 / 11.0 * 11.6), r"$\eta^{\star}$", color=GREEN,
+            fontsize=LBL, ha="left", va="center")
     # The balanced level, labelled just under its dotted line in the band
     # between the blue line (left) and the green right arm.
     ax.text(6.6, rho - 0.035, r"both endpoints at $\rho=9/11$",
@@ -168,7 +170,7 @@ def fig_eta_tent():
     # the greedy eta = 0.1: stiff mode dead, slow mode rules.  Placed in the
     # clear pocket just right of lambda_max (the blue curve stays low there),
     # so the label clears both the lambda_max gridline and the curve.
-    ax.annotate("stiff mode killed", xy=(10.05, 0.04), xytext=(10.2, 0.40),
+    ax.annotate("stiff mode: factor 0", xy=(10.05, 0.04), xytext=(10.2, 0.40),
                 color=BLUE, fontsize=LBL, ha="left", va="bottom",
                 arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
     # right of the lambda_min dot, between the blue line and the dashed
@@ -177,11 +179,11 @@ def fig_eta_tent():
             fontsize=LBL, ha="left", va="center")
     ax.text(11.5, -0.06, r"$\lambda$", color="black", fontsize=LBL,
             ha="right", va="top")
-    ax.text(-0.25, 1.12, r"$|1-\eta\lambda|$", color="black", fontsize=LBL,
-            ha="left", va="bottom")
+    ax.text(0.18, 1.27, r"$|1-\eta\lambda|$", color="black", fontsize=LBL,
+            ha="left", va="top")
 
-    # baseline
-    ax.plot([0, 11.6], [0, 0], color="black", lw=1.0)
+    # black coordinate axes (lambda to the right, the factor upward)
+    fl.axis_cross(ax, (0.0, 11.6), (0.0, 1.27), color="black")
     fl.clean_axes(ax, lim=((-0.35, 12.9), (-0.22, 1.30)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-opt-eta-tent")
@@ -193,19 +195,16 @@ def fig_momentum_damping():
     ill-conditioned valley f(x, y) = 1/2 (x^2 + 10 y^2), all with the *same*
     step size, differing only in the damping knob beta:
 
-    - beta = 0.05: over-damped -- zig-zags briefly, then crawls along the slow
-      axis like plain gradient descent;
-    - beta = beta* = ((sqrt(10)-1)/(sqrt(10)+1))^2 ~ 0.27: critically tuned --
-      cuts through the valley fastest (the sqrt(kappa) tuning);
-    - beta = 0.85: under-damped -- overshoots the minimum and loops around it.
+    - beta = 0.05: too little momentum, rate 0.81 -- zig-zags like gradient
+      descent (the stiff mode's factor 1 + beta - eta*lambda_max is a negative
+      real root);
+    - beta = (1 - sqrt(2/11))^2 ~ 0.33: critically damped *for this step*,
+      rate 0.57 (the slow mode's roots are a double root);
+    - beta = 0.85: too much momentum, rate 0.92 -- loops around the minimum.
 
-    Note on the shared step size: the figure spec suggested eta* =
-    (2/(1+sqrt(10)))^2 ~ 0.231 for all three runs, but heavy ball with
-    beta = 0.05 *diverges* at that step (stability needs
-    |1 + beta - eta*lambda_max| < 1 + beta, i.e. 2.31 < 2.10 fails).  We use
-    the GD-optimal eta = 2/(lambda_max + lambda_min) = 2/11 instead, which is
-    stable for all three betas and makes the over-damped run genuinely
-    GD-like, as the caption describes.
+    All three use the gradient-descent step eta = 2/11.  The sqrt(kappa)
+    tuning beta* = 0.27 belongs with the larger step eta* = 0.231, at which
+    beta = 0.05 diverges (eta* lambda_max = 2.31 > 2 + 2 beta).
     """
     fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.3), sharey=True)
 
@@ -216,7 +215,7 @@ def fig_momentum_damping():
     Z = 0.5 * (lam[0] * X**2 + lam[1] * Y**2)
 
     eta = 2.0 / (lam[0] + lam[1])             # GD-optimal step, ~0.182
-    beta_star = ((np.sqrt(10) - 1) / (np.sqrt(10) + 1)) ** 2  # ~0.270
+    beta_crit = (1 - np.sqrt(eta * lam[0])) ** 2   # ~0.329, critical here
 
     def heavy_ball(beta, steps, x0=(-2.0, 1.0)):
         x_prev = np.array(x0, float)
@@ -229,9 +228,12 @@ def fig_momentum_damping():
         return np.array(path)
 
     runs = [
-        (0.05, 34, BLUE, r"over-damped  $\beta=0.05$"),
-        (beta_star, 22, GREEN, r"critical  $\beta^\star\approx0.27$"),
-        (0.85, 60, ORANGE, r"under-damped  $\beta=0.85$"),
+        (0.05, 34, BLUE, "too little momentum\n"
+         r"$\beta=0.05$, rate $0.81$"),
+        (beta_crit, 18, GREEN, r"critically damped for $\eta=2/11$" "\n"
+         r"$\beta\approx0.33$, rate $0.57$"),
+        (0.85, 60, ORANGE, "too much momentum\n"
+         r"$\beta=0.85$, rate $0.92$"),
     ]
     # one regime per panel: the three paths overlap hopelessly on shared axes
     for ax, (beta, steps, col, lab) in zip(axes, runs):
@@ -327,6 +329,10 @@ def fig_sgd_noise_ball():
 
     fl.clean_axes(ax, lim=((-2.45, 2.3), (-1.7, 1.95)), hide=True)
     fl.save(fig, "mdl-opt-sgd-noise-ball")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-opt-sgd-noise-ball.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-opt-sgd-noise-ball.svg"))
 
 
 # =========================================================================== #
@@ -334,30 +340,41 @@ def fig_sgd_noise_ball():
 # =========================================================================== #
 
 def fig_per_coordinate():
-    """The adaptive-methods thesis drawn (sec_mdl-adaptive-stochastic-methods,
-    Per-Coordinate Step Sizes): the same elongated quadratic
+    """Per-coordinate scaling and its limit (sec_mdl-adaptive-stochastic-methods,
+    The Running Example, Aligned and Rotated): the valley
     f(x, y) = 1/2 (x^2 + 20 y^2) from the same start, under
 
     (a) gradient descent with one global step size near the stability ceiling
         (eta = 0.097, 26 steps -- the exact run of fig_gd_bowl_vs_valley's
         right panel): the stiff axis oscillates, the slow axis crawls;
     (b) Adam's per-coordinate normalization (beta_1 = 0 to isolate the
-        rescaling from momentum, alpha = 0.12, 40 steps): both coordinates
-        move at comparable speed and the path curves smoothly into the
-        minimum -- the valley is effectively rounded.
+        rescaling from momentum, bias-corrected v, alpha = 0.12, 40 steps):
+        both coordinates move at equal speed and the path curves into the
+        minimum (f = 4e-7 after 40 steps);
+    (c) the same update, step and step count on the valley rotated by 45
+        degrees, with the start rotated too: the coordinate scales no longer
+        match the curvature directions, and after dropping to the valley floor
+        the path creeps along it (f = 0.19 after 40 steps).
 
-    Both trajectories are honest runs of the stated updates.
+    All three trajectories are honest runs of the stated updates.
     """
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.2))
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.2))
+    axa, axb, axc = axes
 
     lam = np.array([1.0, 20.0])
-    g = np.linspace(-1.7, 1.7, 220)
+    th = np.pi / 4
+    R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+    H_rot = R @ np.diag(lam) @ R.T
+    lim = 1.8
+    g = np.linspace(-lim, lim, 240)
     X, Y = np.meshgrid(g, g)
-    Z = 0.5 * (lam[0] * X**2 + lam[1] * Y**2)
     x0 = np.array([-1.4, 1.0])
 
-    for ax in (axa, axb):
-        ax.contour(X, Y, Z, levels=VALLEY_LEVELS, colors=[LIGHT],
+    Z = 0.5 * (lam[0] * X**2 + lam[1] * Y**2)
+    Z_rot = 0.5 * (H_rot[0, 0] * X**2 + 2 * H_rot[0, 1] * X * Y
+                   + H_rot[1, 1] * Y**2)
+    for ax, ZZ in ((axa, Z), (axb, Z), (axc, Z_rot)):
+        ax.contour(X, Y, ZZ, levels=VALLEY_LEVELS, colors=[LIGHT],
                    linewidths=0.9)
         ax.plot(0, 0, "*", color=GREEN, ms=13, zorder=5)
 
@@ -370,38 +387,49 @@ def fig_per_coordinate():
     axa.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.5, lw=1.6,
              zorder=4)
 
-    # (b) Adam's per-coordinate rescaling (beta_1 = 0, bias-corrected v).
-    x, m, v = x0.copy(), np.zeros(2), np.zeros(2)
-    path = [x0.copy()]
-    for k in range(1, 41):
-        gr = lam * x
-        v = 0.999 * v + 0.001 * gr * gr
-        x = x - 0.12 * gr / (np.sqrt(v / (1 - 0.999**k)) + 1e-8)
-        path.append(x.copy())
-    path = np.array(path)
+    # (b, c) Adam's per-coordinate rescaling (beta_1 = 0, bias-corrected v).
+    def scaled_path(H, start):
+        x, v, path = start.copy(), np.zeros(2), [start.copy()]
+        for k in range(1, 41):
+            gr = H @ x
+            v = 0.999 * v + 0.001 * gr * gr
+            x = x - 0.12 * gr / (np.sqrt(v / (1 - 0.999**k)) + 1e-8)
+            path.append(x.copy())
+        return np.array(path)
+
+    path = scaled_path(np.diag(lam), x0)
     axb.plot(path[:, 0], path[:, 1], "-o", color=BLUE, ms=3.5, lw=1.6,
              zorder=4)
-    # annotate the equal-speed opening segment.
     axb.annotate("equal speed on\nboth coordinates",
-                 xy=(-0.85, 0.47), xytext=(-0.05, 1.1), color=BLUE,
+                 xy=(-0.85, 0.47), xytext=(-0.05, 1.2), color="black",
                  fontsize=LBL, ha="center", va="center",
                  bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"),
-                 arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+                 arrowprops=dict(arrowstyle="-", color="black", lw=0.9))
 
-    for ax in (axa, axb):
-        fl.clean_axes(ax, lim=((-1.7, 1.7), (-1.7, 1.7)), hide=True)
+    path = scaled_path(H_rot, R @ x0)
+    axc.plot(path[:, 0], path[:, 1], "-o", color=BLUE, ms=3.5, lw=1.6,
+             zorder=4)
+    # label in the empty upper-left corner, pointing at the slow stretch
+    axc.annotate("creeps along\nthe floor",
+                 xy=tuple(path[30]), xytext=(-0.95, 0.85), color="black",
+                 fontsize=LBL, ha="center", va="center",
+                 bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"),
+                 arrowprops=dict(arrowstyle="-", color="black", lw=0.9))
+
+    for ax in axes:
+        fl.clean_axes(ax, lim=((-lim, lim), (-lim, lim)), hide=True)
+    fig.subplots_adjust(wspace=0.08)
     fl.save(fig, "mdl-opt-per-coordinate")
 
 
 def fig_schedule_zoo():
-    """The schedule zoo (sec_mdl-adaptive-stochastic-methods, Schedules and
-    Warmup): eta_t over a fixed budget K for the four shapes the section
-    discusses -- constant, c/k decay, cosine, and warmup-stable-decay (WSD) --
-    all beginning with the same linear warmup over the first 5% of the budget.
-    A dashed gray line marks the noise-floor reading: fixed-step SGD parks on
-    a floor proportional to eta, so the constant schedule keeps paying it while
-    the decaying schedules pay it down; WSD does all of that paying in its
-    final decay phase.
+    """The schedule zoo (sec_mdl-stochastic-gradient-methods, Schedule Shapes
+    under the Exact Recursion): eta_k over a fixed budget K for the four shapes
+    the section compares -- constant, c/k decay, cosine, and
+    warmup-stable-decay (WSD) -- all beginning with the same linear warmup over
+    the first 5% of the budget.  The constant step keeps its noise floor
+    proportional to eta; c/k converges for every c > 0 but reaches the O(1/k)
+    rate only for c > 1/(2 mu); WSD lowers its floor only in the final decay.
     """
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
 
@@ -432,7 +460,7 @@ def fig_schedule_zoo():
     # shifted left from x=345 -- at that anchor the "m" of "optimum," sat
     # right on the descending blue cosine curve.  Plain coloured labels next
     # to their curves: the leaders were ~10 px stubs that read as stray ticks.
-    ax.text(300, 0.47, "$c/k$: reaches the\noptimum if $c$ is\nlarge enough",
+    ax.text(300, 0.47, "$c/k$: converges\nfor every $c$; $O(1/k)$\nonly if $c$ is large",
             color=GREEN, fontsize=LBL, ha="center", va="center")
     # moved right/low, where the cosine curve has already dropped well below
     # the label -- the earlier placement had the curve cut through "of".
@@ -451,11 +479,15 @@ def fig_schedule_zoo():
                 arrowprops=dict(arrowstyle="-", color="black", lw=0.8))
 
     ax.plot([0, K], [0, 0], color="black", lw=1.0)
-    ax.text(K, -0.07, r"$t$", fontsize=LBL, ha="right", va="top")
-    ax.text(8, 1.10, r"$\eta_t$", fontsize=LBL, ha="left", va="bottom")
+    ax.text(K, -0.07, r"$k$", fontsize=LBL, ha="right", va="top")
+    ax.text(8, 1.10, r"$\eta_k$", fontsize=LBL, ha="left", va="bottom")
     fl.clean_axes(ax, lim=((-25.0, 1030.0), (-0.16, 1.24)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-opt-schedule-zoo")
+    # the slides read @fig figures from img/auto
+    import shutil
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-opt-schedule-zoo.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-opt-schedule-zoo.svg"))
 
 
 def fig_bias_correction():
@@ -501,11 +533,11 @@ def fig_bias_correction():
     axb.set_xscale("log")
     axb.plot(1, ratio[0], "o", color=ORANGE, ms=6, zorder=4)
     axb.plot(tpk, ratio.max(), "o", color=ORANGE, ms=6, zorder=4)
-    axb.annotate(r"$3.16\times$ at $t=1$",
+    axb.annotate(r"$3.16{\times}$ at $t=1$",
                  xy=(1, ratio[0]), xytext=(2.3, 1.75), color=ORANGE,
                  fontsize=LBL, ha="left", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
-    axb.annotate(rf"peak ${ratio.max():.1f}\times$ at $t={tpk}$",
+    axb.annotate(rf"peak ${ratio.max():.1f}{{\times}}$ at $t={tpk}$",
                  xy=(tpk, ratio.max()), xytext=(90, 6.4), color=ORANGE,
                  fontsize=LBL, ha="left", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
@@ -531,12 +563,12 @@ def fig_bias_correction():
 # =========================================================================== #
 
 def fig_chord_above_graph():
-    """Two equivalent lenses on convexity of a real convex function f(x)=1/4 x^2
-    (sec_mdl-convexity, 3.2.2):
+    """Two equivalent conditions for convexity of a real convex function
+    f(x)=1/4 x^2 (sec_mdl-convexity, The First-Order Condition):
 
-    (a) Chord lens: a chord between two points on the graph lies *above* the
+    (a) Chord condition: a chord between two points on the graph lies *above* the
         graph -- f(theta x + (1-theta) y) <= theta f(x) + (1-theta) f(y).
-    (b) First-order lens: the tangent at a point lies *below* the graph -- the
+    (b) First-order condition: the tangent at a point lies *below* the graph -- the
         tangent is a global under-estimator, f(y) >= f(x) + f'(x)(y-x).
     """
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.0))
@@ -571,8 +603,11 @@ def fig_chord_above_graph():
                  fontsize=LBL, ha="center", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9,
                                  shrinkA=4, shrinkB=0))
-    axa.text(xc, -1.12, r"$f(\theta\mathbf{x}+(1-\theta)\mathbf{y})$",
-             color=BLUE, fontsize=LBL, ha="center", va="center")
+    # the graph value sits beside its dot: below-left, under the x-axis and
+    # clear of the y-axis (a white box keeps it off any line)
+    axa.text(xc - 0.12, -0.28, r"$f(\theta\mathbf{x}+(1-\theta)\mathbf{y})$",
+             color=BLUE, fontsize=LBL, ha="right", va="top",
+             bbox=dict(facecolor="white", edgecolor="none", pad=1.5))
     # the vertical axis stops below the top label it would otherwise cut
     fl.axis_cross(axa, (-3.6, 3.6), (-0.6, 2.25), color="black")
     # both panels share one window so their axes sit at the same height
@@ -824,79 +859,72 @@ def fig_local_equals_global():
 
 def fig_lagrange_tangency():
     """The Lagrange-multiplier picture (sec_mdl-constrained-optimization-
-    duality, Equality Constraints): minimizing f along the constraint curve
-    g(x) = 0.  Real geometry: the constraint is the unit circle, f(x) =
-    1/2 ||x - c||^2 with c = 2 x_hat outside it, so the constrained minimizer
-    is x* = c/||c|| and there grad f = -(||c||-1) x* is exactly anti-parallel
-    to grad g = 2 x* (grad f = -nu grad g with nu > 0).  At a non-optimal
-    feasible point the level set of f *crosses* the constraint: grad f has a
-    component along the curve, so sliding against it is a feasible descent.
+    duality, Equality Constraints) on the section's running example: minimize
+    f(x) = 1/2 ||x - y||^2 with y = (3, 4) on the unit circle
+    h(x) = 1/2 (||x||^2 - 1) = 0.  Real geometry: the level sets of f are
+    circles around y (off the frame); radius 4 is tangent to the constraint at
+    x* = (0.6, 0.8), where grad f = x* - y = -4 x* = -4 grad h (nu* = 4);
+    radius 6 is tangent at the antipode (-0.6, -0.8), the second Lagrange
+    point (nu = -6, the maximum of f on the circle); radius 5.215 passes
+    through the non-optimal point x' at 150 degrees, where the level set
+    crosses the circle and sliding along it against grad f is a feasible
+    descent.
     """
-    fig, ax = plt.subplots(figsize=(6.0, 5.2))
+    fig, ax = plt.subplots(figsize=(5.6, 5.7))
 
-    c = 2.0 * np.array([0.8, 0.6])            # ||c|| = 2 -> x* = (0.8, 0.6)
-    xstar = c / np.linalg.norm(c)
+    y = np.array([3.0, 4.0])
+    xstar = y / np.linalg.norm(y)             # (0.6, 0.8)
 
-    # constraint circle g(x) = ||x||^2 - 1 = 0
+    # constraint circle h(x) = 0
     t = np.linspace(0, 2 * np.pi, 400)
     ax.plot(np.cos(t), np.sin(t), color=BLUE, lw=2.2, zorder=3)
 
-    # level sets of f: circles around c; r = 1 is *tangent* to the constraint
-    # at x* (distance of centers 2 = 1 + 1), r = 2.43 passes through x0.
-    x0 = np.array([np.cos(np.deg2rad(140.0)), np.sin(np.deg2rad(140.0))])
-    # (a faint decorative r = 1.9 ring used to run under the "feasible
-    # descent" label, whose white box cut a gap in it; dropped)
-    radii = [1.0, 1.45, float(np.linalg.norm(x0 - c))]
-    for r, a in zip(radii, (0.95, 0.65, 0.65)):
-        ax.add_patch(plt.Circle(c, r, fill=False, edgecolor=ORANGE, lw=1.3,
+    # level sets of f: circles around y = (3, 4), clipped by the frame
+    xp = np.array([np.cos(np.deg2rad(150.0)), np.sin(np.deg2rad(150.0))])
+    for r, a in ((4.0, 0.95), (float(np.linalg.norm(xp - y)), 0.7),
+                 (6.0, 0.7)):
+        ax.add_patch(plt.Circle(y, r, fill=False, edgecolor=ORANGE, lw=1.3,
                                 alpha=a, zorder=2))
-    ax.plot(*c, "+", color=ORANGE, ms=8, mew=1.6, zorder=3)
 
-    # ---- the optimum: tangency, gradients parallel (grad f = -nu grad g) ----
+    # ---- the optimum: tangency, grad f = -4 grad h ----
     ax.plot(*xstar, "o", color="black", ms=6.5, zorder=6)
-    fl.arrow(ax, xstar, xstar + 0.60 * xstar, color=BLUE, lw=2.0)      # grad g
+    fl.arrow(ax, xstar, xstar + 0.60 * xstar, color=BLUE, lw=2.0)      # grad h
     fl.arrow(ax, xstar, xstar - 0.50 * xstar, color=ORANGE, lw=2.0)    # grad f
-    fl.vlabel(ax, xstar + 0.74 * xstar + np.array([0.16, -0.10]),
-              r"$\nabla g$", color=BLUE, fontsize=LBL)
-    fl.vlabel(ax, xstar - 0.50 * xstar + np.array([-0.02, -0.20]),
+    fl.vlabel(ax, xstar + 0.60 * xstar + np.array([0.30, 0.02]),
+              r"$\nabla h$", color=BLUE, fontsize=LBL)
+    fl.vlabel(ax, xstar - 0.50 * xstar + np.array([0.08, -0.22]),
               r"$\nabla f$", color=ORANGE, fontsize=LBL)
-    # x* label moved right and up from the tangency point -- the old
-    # lower-right offset (0.30, -0.24) put it right on top of the tangent
-    # r=1 level-set circle (both circles meet exactly at x*, so anything
-    # close to it grazes one curve or the other).  (0.30, 0.40) clears the
-    # r=1 circle, the constraint circle, and the grad-g arrow all at once.
-    fl.vlabel(ax, xstar + np.array([0.20, 0.48]), r"$\mathbf{x}^\star$",
+    fl.vlabel(ax, xstar + np.array([0.10, -0.40]), r"$\mathbf{x}^\star$",
               color="black", fontsize=LBL + 1)
 
-    # ---- a non-optimal feasible point: grad f crosses the constraint ----
-    ax.plot(*x0, "o", color="black", ms=5.5, zorder=6)
-    df = (x0 - c) / np.linalg.norm(x0 - c)    # unit grad f at x0
-    fl.arrow(ax, x0, x0 + 0.55 * df, color=ORANGE, lw=2.0)
-    fl.vlabel(ax, x0 + 0.72 * df + np.array([0.0, 0.12]), r"$\nabla f$",
+    # ---- a non-optimal feasible point: the level set crosses the circle ----
+    ax.plot(*xp, "o", color="black", ms=5.5, zorder=6)
+    df = (xp - y) / np.linalg.norm(xp - y)    # unit grad f at x'
+    fl.arrow(ax, xp, xp + 0.55 * df, color=ORANGE, lw=2.0)
+    fl.vlabel(ax, xp + 0.55 * df + np.array([-0.22, -0.02]), r"$\nabla f$",
               color=ORANGE, fontsize=LBL)
-    # feasible descent: minus the tangential component of grad f (first-order
-    # move along the constraint), drawn dashed
-    tang = np.array([-x0[1], x0[0]])          # unit tangent at x0
+    tang = np.array([-xp[1], xp[0]])          # unit tangent at x'
     desc = -np.dot(df, tang) * tang
-    desc = 0.5 * desc / np.linalg.norm(desc)
-    # solid and longer: the short dashed arrow read as a stray tick
     desc = 0.62 * desc / np.linalg.norm(desc)
-    fl.arrow(ax, x0, x0 + desc, color=GREEN, lw=2.0)
-    fl.vlabel(ax, x0 + desc + np.array([0.02, 0.30]), "feasible\ndescent",
+    fl.arrow(ax, xp, xp + desc, color=GREEN, lw=2.0)
+    fl.vlabel(ax, np.array([-0.88, 1.42]), "feasible\ndescent",
               color=GREEN, fontsize=LBL,
               bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none"))
 
-    ax.text(-0.55, -1.05, r"constraint $g(\mathbf{x})=0$", color=BLUE,
-            fontsize=LBL, ha="center", va="top")
-    # anchored in the clear upper-left corner (outside every circle) with a
-    # short leader to one ring -- the previous unanchored placement sat right
-    # on top of the tangent (r=1) circle's crest.
-    # inside the innermost ring, above its centre: the old corner placement
-    # needed a leader across the whole figure
-    ax.text(c[0], c[1] + 0.42, r"level sets of $f$", color=ORANGE,
-            fontsize=LBL, ha="center", va="center")
+    # ---- the second Lagrange point: the farthest point of the circle ----
+    anti = -xstar
+    ax.plot(*anti, "o", mfc="white", mec="black", mew=1.5, ms=6.5, zorder=6)
+    ax.text(anti[0] + 0.12, anti[1] - 0.20, r"$\nu=-6$: a maximum",
+            color="black", fontsize=LBL, ha="left", va="top",
+            bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none"))
 
-    fl.clean_axes(ax, lim=((-1.95, 2.75), (-1.45, 2.45)), hide=True)
+    ax.text(1.06, -0.45, r"constraint $h(\mathbf{x})=0$", color=BLUE,
+            fontsize=LBL, ha="left", va="center")
+    ax.text(2.35, 2.42, "level sets of $f$,\n"
+            r"centre $(3,4)$ off the frame", color=ORANGE, fontsize=LBL,
+            ha="right", va="top")
+
+    fl.clean_axes(ax, lim=((-1.7, 2.4), (-1.75, 2.5)), hide=True)
     fl.save(fig, "mdl-opt-lagrange-tangency")
 
 
@@ -1005,10 +1033,12 @@ def fig_kkt_active_set():
               color=BLUE, fontsize=LBL, va="bottom")
     fl.vlabel(axb, corner + np.array([0.72, -0.16]), r"$\nabla g_2$",
               color=BLUE, fontsize=LBL)
-    # below-right of the tip, clear of the wedge: above the tip the orange
-    # "+" (unconstrained minimizer) sat right on the label ("+ -grad f")
-    axb.text(*(corner + 0.62 * df + np.array([0.12, -0.15])), r"$-\nabla f$",
-             color=ORANGE, fontsize=LBL, ha="left", va="center")
+    # right of the tip, outside the shaded wedge (at (0.12, -0.15) it sat on
+    # the wedge's rim) and inside the innermost level set; above the tip the
+    # orange "+" (unconstrained minimizer) sat right on the label
+    axb.text(*(corner + 0.62 * df + np.array([0.25, -0.12])), r"$-\nabla f$",
+             color=ORANGE, fontsize=LBL, ha="left", va="center",
+             bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none"))
     # No in-figure "normal cone" label: the two-line text needs more room
     # than the wedge or any spot beside it offers between the three
     # gradient arrows, their labels, the orange "+" and the level-set arcs
@@ -1023,212 +1053,166 @@ def fig_kkt_active_set():
 
 
 def fig_primal_dual_gap():
-    """The supporting-line picture of duality (sec_mdl-constrained-
-    optimization-duality, Duality): map every x to (u, t) = (constraint value,
-    objective value); the *image set* G of all such pairs is shaded.  Evaluating
-    the dual at lambda lowers a line of slope -lambda until it supports G from
-    below; its height at the axis u = 0 is the dual value g(lambda) <= p*.  Both
-    panels are exact computations, with only the single *best* supporting line
-    drawn so the one idea reads cleanly:
+    """The supporting-line picture of duality (sec_mdl-lagrangian-duality,
+    Strong Duality).  Every x maps to (u, t) = (g(x), f(x)); the shaded set
+    A = {(u, t) : u >= g(x), t >= f(x) for some x} holds these pairs and
+    everything above and to the right of them.  Evaluating the dual at lambda
+    lowers a line of slope -lambda until it supports A from below; its height
+    at u = 0 is q(lambda) <= p*.  Only the best supporting line is drawn.
 
-    (a) convex (min x^2 s.t. 1 - x <= 0): the image boundary is the parabola
-        t = (1-u)^2 and G is convex; the best supporting line (lambda* = 2) is
-        tangent at (0, p*) -- strong duality, d* = p* = 1, the line meets the
-        axis exactly at p*;
-    (b) the chapter's non-convex example (min -x^2 s.t. x - 1/2 <= 0 on
-        [0, 1]): the image boundary t = -(u + 1/2)^2 is dented, so G is not
-        convex; the best supporting line (lambda* = 1) passes *under* the dent
-        and meets the axis at d* = -1/2 < p* = -1/4 -- a visible duality gap.
-
-    Design: G is shaded (everything on/above the boundary curve is achievable-
-    or-dominated), the feasible slice u <= 0 of the boundary is drawn thick in
-    orange, and exactly one green supporting line is shown per panel with its
-    axis intercept marked.  Earlier versions also drew a *suboptimal* dashed
-    line; it crossed the curve and the optimal line and made the panel unreadable
-    (the author's "lots of lines intersecting"), so it is gone -- "lower the line
-    until it supports" is carried by an arrow on the single optimal line.
+    (a) the section's running example, clipping x0 = (3, 4) to the unit ball:
+        f = |x - x0|^2 / 2, g = (|x|^2 - 1) / 2.  At |x| = rho the smallest f
+        is (5 - rho)^2 / 2 and u = (rho^2 - 1) / 2, so the lower boundary of A
+        is t(u) = (5 - sqrt(1 + 2u))^2 / 2 for u >= -1/2 (vertical tangent at
+        u = -1/2, slope -4 at u = 0).  A is convex and 0 is strictly feasible,
+        so the line of slope -lambda* = -4 touches at (0, p*) = (0, 8).
+    (b) min -x^2 on D = [0, 1] s.t. g(x) = x - 1/2 <= 0: the image curve
+        {(u, -(u + 1/2)^2) : u in [-1/2, 1/2]} bends the wrong way, A is not
+        convex, and the best line (slope -1) meets u = 0 at d* = -1/2, below
+        p* = -1/4.
     """
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 4.5))
 
-    def axis_labels(ax, xr, yr, u_label_dx=0.0):
-        """Faint origin cross with the two value-axis names tucked at the far
-        ends, clear of the curve and every annotation.  ``u_label_dx`` nudges
-        the "constraint value u" label further right (panel (a): the green
-        supporting line's segment is still visible down at that label's
-        height, and a plain right-anchor at xr[1] lets the line cut through
-        the text's left portion)."""
+    def axis_labels(ax, xr, yr):
+        """Black origin cross with the two value-axis names at the far ends."""
         fl.axis_cross(ax, xr, yr, color="black")
-        ax.text(xr[1] + u_label_dx, -0.04 * (yr[1] - yr[0]),
-                "constraint value  $u$",
+        ax.text(xr[1], -0.035 * (yr[1] - yr[0]), "constraint value  $u$",
                 color="black", fontsize=LBL, ha="right", va="top")
-        # objective-axis name set just right of the vertical axis at the top,
-        # so it never collides with the curve in the upper-left.
-        ax.text(0.04 * (xr[1] - xr[0]), yr[1], "objective value  $t$",
+        ax.text(0.03 * (xr[1] - xr[0]), yr[1], "objective value  $t$",
                 color="black", fontsize=LBL, ha="left", va="top")
 
-    # =================== (a) convex: strong duality =================== #
-    xr_a, yr_a = (-1.25, 1.85), (-1.45, 3.8)
-    u = np.linspace(-0.95, 1.7, 340)
-    boundary_a = (1 - u) ** 2
-    # the image set G = {(u, t) : t >= (1-u)^2}: shade everything above the
-    # boundary so "support from below" is literally what the green line does.
+    # ============ (a) the clipping problem: strong duality ============ #
+    xr_a, yr_a = (-0.75, 2.2), (-1.3, 13.6)
+    u = np.linspace(-0.5, 2.1, 400)
+    boundary_a = 0.5 * (5 - np.sqrt(1 + 2 * u)) ** 2
+    # A is everything above the boundary (and, for u < -1/2, nothing).
     axa.fill_between(u, boundary_a, yr_a[1], color=BLUE, alpha=0.08, lw=0,
                      zorder=1)
     axa.plot(u, boundary_a, color=BLUE, lw=2.0, zorder=3)
+    axa.plot([-0.5, -0.5], [12.5, yr_a[1]], color=BLUE, lw=2.0, zorder=3)
     uf = u[u <= 0]
-    axa.plot(uf, (1 - uf) ** 2, color=ORANGE, lw=3.4, zorder=4)
-    p_star_a = 1.0                            # min over u <= 0 of (1-u)^2
-
-    # best supporting line, slope -lambda* = -2: tangent to G at (0, p*).  The
-    # tangency at (0, p*) plus the shaded G already say "lowered until it
-    # supports G"; an extra arrow only crowded the panel, so we let the geometry
-    # and the caption carry that, keeping the picture uncluttered.
-    line = lambda uu: 1 - 2 * uu
-    us = np.array([-0.55, 1.32])
-    axa.plot(us, line(us), color=GREEN, lw=2.0, zorder=3)
-    # the dual value is the line's height at u = 0; here it equals p*.
+    axa.plot(uf, 0.5 * (5 - np.sqrt(1 + 2 * uf)) ** 2, color=ORANGE, lw=3.4,
+             zorder=4)
+    p_star_a = 8.0
+    us = np.array([-0.35, 2.0])
+    axa.plot(us, 8 - 4 * us, color=GREEN, lw=2.0, zorder=3)
     axa.plot(0, p_star_a, "o", color="black", ms=7, zorder=6)
-
-    # labels, each in clear space.
-    axa.text(0.16, p_star_a + 0.30, r"$d^\star=p^\star$", color="black",
-             fontsize=LBL, ha="left", va="center")
-    axa.text(-0.93, 1.62, r"feasible" "\n" r"slice $u\leq0$", color=ORANGE,
-             fontsize=LBL, ha="center", va="center")
-    # moved to sit entirely right of the y-axis, above the d*=p* label --
-    # centered on the axis (x=-0.25) it straddled the vertical arrow, and at
-    # y=2.0 (even fully right-anchored) the curve's left branch reaches out
-    # to u=-0.41 there, closer to the axis than this text's left edge.
-    # up in the open interior of G, clear of the d* = p* label below
-    axa.text(0.25, 2.75, r"$G=\{(g(x),f_0(x))\}$", color=BLUE, fontsize=LBL,
-             ha="left", va="center")
-    # slope tag on the green line, well down-right where it sits clearly alone
-    # below both the curve and the x-axis label.
-    # unrotated, left of the line below the u-axis (rotated mathtext garbled
-    # the lambda-star and never matched the line's on-screen angle)
-    axa.text(0.85, -1.05, r"slope $-\lambda^\star$", color=GREEN,
+    axa.text(0.1, p_star_a + 0.75, r"$d^\star=p^\star=8$", color="black",
+             fontsize=LBL, ha="left", va="bottom")
+    axa.text(-0.55, 11.0, "feasible\nslice\n" r"$u\leq0$", color=ORANGE,
              fontsize=LBL, ha="right", va="center")
-    axis_labels(axa, xr_a, yr_a, u_label_dx=0.45)
+    axa.text(1.35, 10.5, r"$\mathcal{A}$", color=BLUE, fontsize=LBL + 4,
+             ha="center", va="center")
+    axa.text(1.0, 2.0, r"slope $-\lambda^\star=-4$", color=GREEN,
+             fontsize=LBL, ha="right", va="center")
+    axis_labels(axa, xr_a, yr_a)
     fl.clean_axes(axa, lim=(xr_a, yr_a), hide=True, equal=False)
 
-    # =============== (b) non-convex: a duality gap =============== #
+    # =============== (b) a concave objective: a duality gap =============== #
     xr_b, yr_b = (-0.92, 0.92), (-1.35, 0.72)
     u = np.linspace(-0.5, 0.5, 300)           # image of x in [0, 1]
     boundary_b = -(u + 0.5) ** 2
-    axb.fill_between(u, boundary_b, yr_b[1], color=BLUE, alpha=0.09, lw=0,
+    # A: up and to the right of the image curve; right of u = 1/2 its floor
+    # is the curve's right end, t = -1.
+    ue = np.concatenate([u, [0.5, xr_b[1]]])
+    floor = np.concatenate([boundary_b, [-1.0, -1.0]])
+    axb.fill_between(ue, floor, yr_b[1], color=BLUE, alpha=0.09, lw=0,
                      zorder=1)
+    axb.plot([0.5, xr_b[1] - 0.02], [-1.0, -1.0], color=BLUE, lw=1.2,
+             ls=(0, (4, 3)), zorder=2)
     axb.plot(u, boundary_b, color=BLUE, lw=2.0, zorder=3)
     uf = u[u <= 0]
     axb.plot(uf, -(uf + 0.5) ** 2, color=ORANGE, lw=3.4, zorder=4)
-    p_star_b = -0.25                          # min over u <= 0: the dent
-    d_star_b = -0.5                           # best dual value at u = 0
-
-    # best supporting line, slope -lambda* = -1: touches both endpoints of the
-    # boundary and passes *under* the dent, meeting the axis at d* < p*.
+    p_star_b, d_star_b = -0.25, -0.5
     line = lambda uu: -0.5 - uu
     us = np.array([-0.72, 0.78])
     axb.plot(us, line(us), color=GREEN, lw=2.0, zorder=3)
     axb.plot(0, p_star_b, "o", color="black", ms=7, zorder=6)
     axb.plot(0, d_star_b, "o", color=GREEN, ms=7, zorder=6)
-
-    # the gap: a clean vertical double-arrow between p* and d*, running
-    # exactly through u=0 -- same x as the p*/d* dots themselves.  (It used
-    # to be offset to x=0.045, a hair right of the dots: legible on its own,
-    # but next to the dots it visibly failed to line up with the two points
-    # it's supposed to be measuring.)
     axb.annotate("", xy=(0.0, p_star_b - 0.012), xytext=(0.0, d_star_b + 0.012),
                  arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.4))
-    # moved further left (was x=-0.06) -- at the midpoint height the green
-    # supporting line sits at u in [-0.17,-0.08], which the old anchor's
-    # span reached right into.
     axb.text(-0.22, 0.5 * (p_star_b + d_star_b), "duality gap", color="black",
              fontsize=LBL, ha="right", va="center")
     axb.text(-0.045, p_star_b, r"$p^\star$", color="black", fontsize=LBL,
              ha="right", va="center")
     axb.text(-0.045, d_star_b, r"$d^\star$", color=GREEN, fontsize=LBL,
              ha="right", va="center")
-
-    # raised above the green supporting line -- at the old height (0.16) the
-    # line's leftmost value in this x-range (0.4 at u=-0.9) cut through it.
     axb.text(-0.85, 0.55, r"feasible slice $u\leq0$", color=ORANGE,
              fontsize=LBL, ha="left", va="center")
-    # inside the shaded band, in its empty upper-right part, like the G label
-    # of panel (a): down by the end of the green line it read as a label for
-    # that line, far from the region it names
-    axb.text(0.27, 0.30, r"dented $G$", color=BLUE, fontsize=LBL,
-             ha="center", va="center")
-    # placed *below* the green line (va='top') at u=0.15: above the line is
-    # where the dented-G curve runs almost parallel and close alongside it,
-    # so any label above the line touches blue; below it is clear.
-    axb.text(0.09, -1.25, r"slope $-\lambda^\star$", color=GREEN,
+    axb.text(0.42, 0.30, r"$\mathcal{A}$ (not convex)", color=BLUE,
+             fontsize=LBL, ha="center", va="center")
+    axb.text(0.30, -0.42, r"$(g(x),f(x))$," "\n" r"$x\in[0,1]$", color=BLUE,
+             fontsize=LBL, ha="left", va="center")
+    axb.text(-0.88, -0.95, r"slope $-\lambda^\star=-1$", color=GREEN,
              fontsize=LBL, ha="left", va="center")
     axis_labels(axb, xr_b, yr_b)
     fl.clean_axes(axb, lim=(xr_b, yr_b), hide=True, equal=False)
 
     fig.subplots_adjust(wspace=0.16)
     fl.save(fig, "mdl-opt-primal-dual-gap")
+    import shutil                             # slides read img/auto/
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-opt-primal-dual-gap.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-opt-primal-dual-gap.svg"))
 
 
 def fig_water_filling():
-    """The water-filling picture (sec_mdl-constrained-optimization-duality,
-    Worked Duals): each channel is a basin whose floor sits at its noise level
-    n_i; pouring in the power budget P fills the quiet channels to a common
-    water level w, and channels whose floor is above the waterline stay dry.
+    """The water-filling picture (sec_mdl-lagrangian-duality, Worked
+    Examples): each channel is a basin whose floor sits at its noise level
+    N_i; pouring in the power budget P fills the quiet channels to a common
+    water level theta = 1/nu, and channels whose floor is above the level stay
+    dry.
 
-    Honest numbers: uses the *same* noise floors and budget as the
-    #constrained-water-filling cell (n = [0.1, 0.4, 0.8, 1.6, 2.5], P = 3)
-    and finds the level by the same bisection, so the figure's w ~ 1.4333 and
-    allocations match the cell's printout digit for digit.
+    Uses the same noise floors and budget as the #constrained-water-filling
+    cell (N = [0.1, 0.4, 0.8, 1.6, 2.5], P = 3) and finds the level by the same
+    bisection, so the figure's theta ~ 1.4333 matches the cell's printout.
     """
     fig, ax = plt.subplots(figsize=(7.2, 4.0))
 
-    noise = np.array([0.1, 0.4, 0.8, 1.6, 2.5])
+    N = np.array([0.1, 0.4, 0.8, 1.6, 2.5])
     P = 3.0
-    lo, hi = noise.min(), noise.min() + P
-    for _ in range(60):                       # the cell's bisection, verbatim
+    lo, hi = N.min(), N.min() + P
+    for _ in range(60):                       # the cell's bisection
         mid = 0.5 * (lo + hi)
-        lo, hi = (mid, hi) if np.maximum(0, mid - noise).sum() < P else (lo, mid)
-    w = 0.5 * (lo + hi)                       # ~ 1.4333
+        lo, hi = (mid, hi) if np.maximum(0, mid - N).sum() < P else (lo, mid)
+    theta = 0.5 * (lo + hi)                   # ~ 1.4333
 
     width, gap = 0.84, 0.16
-    for i, n in enumerate(noise):
+    for i, n in enumerate(N):
         x = i + gap / 2
-        # basin floor: solid gray block up to the noise level n_i
         ax.add_patch(plt.Rectangle((x, 0), width, n, facecolor=GRAY,
                                    alpha=0.45, lw=0))
         ax.plot([x, x + width], [n, n], color=GRAY, lw=1.6)
-        if n < w:                             # water fills up to the level
-            ax.add_patch(plt.Rectangle((x, n), width, w - n, facecolor=BLUE,
-                                       alpha=0.28, lw=0))
-        else:                                 # floor above the waterline
+        if n < theta:                         # water fills up to the level
+            ax.add_patch(plt.Rectangle((x, n), width, theta - n,
+                                       facecolor=BLUE, alpha=0.28, lw=0))
+        else:                                 # floor above the level
             ax.text(i + 0.5, n + 0.13, "dry", color="black", fontsize=LBL,
                     ha="center", va="bottom")
-        ax.text(i + 0.5, -0.13, rf"$n_{{{i + 1}}}={n}$", color="black",
+        ax.text(i + 0.5, -0.13, rf"$N_{{{i + 1}}}={n}$", color="black",
                 fontsize=LBL, ha="center", va="top")
 
-    # the common water level, dashed across the whole tank
-    ax.plot([0.0, len(noise)], [w, w], color=ORANGE, lw=1.7, ls=(0, (5, 3)),
-            zorder=4)
-    ax.text(len(noise) + 0.08, w,
-            r"water level $w=1/\mu\approx1.43$", color=ORANGE, fontsize=LBL,
-            ha="left", va="center")
+    ax.plot([0.0, len(N)], [theta, theta], color=ORANGE, lw=1.7,
+            ls=(0, (5, 3)), zorder=4)
+    ax.text(len(N) + 0.08, theta,
+            r"water level $\theta=1/\nu\approx1.43$", color=ORANGE,
+            fontsize=LBL, ha="left", va="center")
 
-    # one allocation called out: p_2* = w - n_2 on the second basin
-    xi = 1 + 0.5
-    ax.annotate("", xy=(xi, w - 0.015), xytext=(xi, noise[1] + 0.015),
+    xi = 1 + 0.5                              # P_2* = theta - N_2
+    ax.annotate("", xy=(xi, theta - 0.015), xytext=(xi, N[1] + 0.015),
                 arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.4))
-    # just the symbol fits inside the basin (the full "= w - n_2" ran across
-    # the gap into basin 3); the caption gives p_i* = w - n_i
-    ax.text(xi + 0.08, 0.5 * (w + noise[1]), r"$p_2^\star$",
+    ax.text(xi + 0.08, 0.5 * (theta + N[1]), r"$P_2^\star$",
             color=BLUE, fontsize=LBL + 1, ha="left", va="center")
 
-    # baseline
-    ax.plot([0.0, len(noise)], [0.0, 0.0], color="black", lw=1.2)
-    ax.text(2.5, -0.42, "channels, floors at the noise levels $n_i$",
+    ax.plot([0.0, len(N)], [0.0, 0.0], color="black", lw=1.2)
+    ax.text(2.5, -0.42, "channels, floors at the noise levels $N_i$",
             color="black", fontsize=LBL, ha="center", va="top")
 
     fl.clean_axes(ax, lim=((-0.15, 7.3), (-0.75, 2.95)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-opt-water-filling")
+    import shutil                             # slides read img/auto/
+    shutil.copyfile(os.path.join(fl.IMG_DIR, "mdl-opt-water-filling.svg"),
+                    os.path.join(fl.IMG_DIR, "auto", "mdl-opt-water-filling.svg"))
 
 
 # =========================================================================== #
@@ -1351,26 +1335,26 @@ def fig_conditioning_ellipse():
     at the per-panel optimal step eta = 2/(mu + L) draws both paths from the
     same start: zig-zag down the valley vs. a near-straight, much shorter run.
     Green arrows mark the principal axes, labelled with the curvatures
-    sigma_1^2 + lambda and sigma_n^2 + lambda that set kappa's ratio.
+    sigma_1^2 + lambda and sigma_d^2 + lambda that set kappa's ratio.
     """
     # Rotated 90 degrees from the original layout: the slow/shallow axis
     # (small eigenvalue, long semi-axis) now runs horizontal instead of
     # vertical, so the panel is wide-and-short rather than narrow-and-tall.
     # figsize and the xlim/ylim extents below are the old ylim/xlim swapped.
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.4, 3.5))
-    s2 = np.array([1.0, 1.0 / 16.0])          # sigma_1^2, sigma_n^2
+    s2 = np.array([1.0, 1.0 / 16.0])          # sigma_1^2, sigma_d^2
     xlim, ylim = (-3.25, 3.25), (-2.2, 2.2)
     gx = np.linspace(*xlim, 300)
     gy = np.linspace(*ylim, 240)
     X, Y = np.meshgrid(gx, gy)
     # start point with its two components swapped to match the rotated axes,
     # in the left half-plane: from the right, the zig-zag covered the
-    # right-pointing sigma_n^2 arrow and buried the short sigma_1^2 arrow
+    # right-pointing sigma_d^2 arrow and buried the short sigma_1^2 arrow
     x0 = np.array([-2.8, -0.72])
 
     def panel(ax, ridge, title, steps, axis_labels):
         h = s2 + ridge                        # h[0] = sigma_1^2 (steep),
-                                               # h[1] = sigma_n^2 (shallow)
+                                               # h[1] = sigma_d^2 (shallow)
         # x gets the shallow eigenvalue (long semi-axis, horizontal), y gets
         # the steep one (short semi-axis, vertical) -- this is the 90-degree
         # rotation relative to the original h[0]-on-x/h[1]-on-y layout.
@@ -1378,8 +1362,14 @@ def fig_conditioning_ellipse():
         Z = 0.5 * (hx * X**2 + hy * Y**2)
         # levels chosen so the x-semi-axes are evenly spaced on screen
         semis = np.array([0.55, 1.05, 1.55, 2.1, 2.65, 3.2])
-        ax.contour(X, Y, Z, levels=list(0.5 * hx * semis**2),
-                   colors=[LIGHT], linewidths=0.9)
+        levels = list(0.5 * hx * semis**2)
+        # In the elongated panel (a) the closed ellipses use only the middle
+        # third of the panel's height; add the valley walls (levels whose
+        # vertical semi-axes continue the spacing up to the panel edge) so
+        # the contours fill the panel as they do in (b).
+        b_top = semis[-1] * np.sqrt(hx / hy)
+        levels += [0.5 * hy * b**2 for b in np.arange(b_top + 0.4, 2.15, 0.4)]
+        ax.contour(X, Y, Z, levels=levels, colors=[LIGHT], linewidths=0.9)
         # principal axes of the ellipse with x-semi-axis 2.1, labelled with
         # the curvatures sigma^2 + lambda along each axis
         c = 0.5 * hx * 2.1**2
@@ -1414,9 +1404,9 @@ def fig_conditioning_ellipse():
     kappa0 = s2[0] / s2[1]
     kappa1 = (s2[0] + 0.5) / (s2[1] + 0.5)
     panel(axa, 0.0, rf"(a) $\lambda=0$:  $\kappa={kappa0:.0f}$", 28,
-          (r"$\sigma_1^2$", r"$\sigma_n^2$"))
+          (r"$\sigma_1^2$", r"$\sigma_d^2$"))
     panel(axb, 0.5, rf"(b) $\lambda=0.5$:  $\kappa\approx{kappa1:.1f}$", 12,
-          (r"$\sigma_1^2+\lambda$", r"$\sigma_n^2+\lambda$"))
+          (r"$\sigma_1^2+\lambda$", r"$\sigma_d^2+\lambda$"))
 
     fl.save(fig, "mdl-opt-conditioning-ellipse")
 

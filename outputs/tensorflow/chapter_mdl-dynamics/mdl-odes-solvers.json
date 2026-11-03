@@ -9,101 +9,76 @@
   },
   "cells": {
     "odes-solvers-imports": {
-      "code_fingerprint": "sha256:b27291429088ecdee9c4e816827f306c2180a4d0d40393dc1130266656e5a701",
+      "code_fingerprint": "sha256:704ec8acfb2d73d68d938e8478cd554bf5f5c5a2eed0e268cc8ad2831fc5e71c",
       "kind": "text",
       "outputs": []
     },
     "odes-solvers-matrix-exponential": {
-      "code_fingerprint": "sha256:a94a2ad02598832b96022665ae283ad61b2d6c26a30e153f7a94177c4951bf64",
+      "code_fingerprint": "sha256:243395554384d5097dd4708cc9e8abf520e58e915ed3677e90bd3ff3613565fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of A: [-0.5+1.j -0.5-1.j]\n|series - eigen formula| : 5.6e-17\n|(I+tA/n)^n - eigen|     : 5.4e-08\n||e^{At} x0|| = 0.735759  vs  e^{-t/2}||x0|| = 0.735759\n"
+          "text": "eigenvalues of A: [-0.5+1.j -0.5-1.j]\n|series - eigen formula| = 5.6e-17\nn = 2^10: |(I+tA/n)^n - eigen| = 8.8e-04, n * error = 0.90\nn = 2^16: |(I+tA/n)^n - eigen| = 1.4e-05, n * error = 0.90\nn = 2^24: |(I+tA/n)^n - eigen| = 5.4e-08, n * error = 0.90\nx(2) = [-0.3062  0.669 ]\n||x(2)|| = 0.735759,  e^(-t/2) ||x0|| = 0.735759\n"
         }
       ]
     },
-    "odes-solvers-euler-rk4-order": {
-      "code_fingerprint": "sha256:1d810a72b5ee1611687118cad2153a30fc794cf4264f72cb3cf54e7a1b51a6ce",
+    "mdl-odes-solvers-transient-growth": {
+      "code_fingerprint": "sha256:063879c9786620f14ed8ec62872864e2b94e50ce081f4a9e4d61ec752b079aa0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured slope, Euler: 1.040\nmeasured slope, RK4  : 4.022\n"
+          "text": "eigenvalues of B: [-1. -2.]\n|coefficients of x0 on the unit eigenvectors|: [10.   10.05]\n|closed form - eigen formula| = 1.6e-15\npeak ||x(t)|| = 2.513 at t = 0.68\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-odes-solvers/mdl-odes-solvers-transient-growth-1.svg",
+          "bytes": 25093,
+          "sha256": "sha256:21968fcf751b278802cf0ba633a9ec3f21d0dcde34f6616d4afafc533b606339"
+        }
+      ]
+    },
+    "odes-solvers-euler-rk4-order": {
+      "code_fingerprint": "sha256:4d5ced86841474fbbbb898d85e3b8b121fd427c4f61eec5c5faeaf59f847fe37",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured slope, Euler: 1.040\nmeasured slope, RK4  : 4.022\nerror at 512 steps: Euler 3.6e-03, RK4 5.0e-12\nRK4 with 128 steps (the same 512 evaluations): 1.3e-09\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 33102,
-          "sha256": "sha256:9081921d939983a0fb339bff88672c041a53429a34a122e2d8c039cc49f3018f"
+          "sha256": "sha256:12eb99553b3583efea041f20e6d01374862bdad32e8e34e06418b6ef07403e45"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:b14a4aea86cbc9690a23b795e5e80b0563cbcd5a8346ae576d758e347f158e68",
+      "code_fingerprint": "sha256:fa694d3219529bb925e69184d073c42956a7ec2f2d340f98f40e80d766554a1a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05 (the long-dead fast mode explodes):\nx(T) = [3.32526e+03 3.60000e-01]\n"
+          "text": "exact at T = 1: fast 1.9e-22, slow 0.3679\n    h   fwd fast  fwd slow   bwd fast  bwd slow\n 0.10    1.0e+06    0.3487    1.7e-08    0.3855\n 0.05    3.3e+03    0.3585    1.3e-11    0.3769\n 0.04   -1.0e+00    0.3604    1.2e-12    0.3751\n 0.02    0.0e+00    0.3642    8.9e-16    0.3715\n 0.01    7.9e-31    0.3660    2.5e-18    0.3697\n"
         }
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:c2dd9f4941e1cb343c37e02027b1ed4caf5653f2379839bc6032f817e5b740b6",
+      "code_fingerprint": "sha256:4bcbfb17bbb1e8f063c8b0277683d5490663bcf7689edd3b40904b4473694cd8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n     eta  |1-eta*lam_max|  ||x|| after 100 GD steps\n   0.050             0.50                  5.92e-03\n   0.150             0.50                  8.75e-08\n   0.190             0.90                  2.66e-05\n   0.201             1.01                  2.70e+00\n   0.210             1.10                  1.38e+04\n   0.250             1.50                  4.07e+17\n"
-        }
-      ]
-    },
-    "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:005ffde53c0245125d97ddac2e05925b8c98cc674f200631c3edaea8f7e3bb4d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter   0  loss 1.28881\niter 100  loss 0.00009\niter 200  loss 0.00002\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0012\n"
-        }
-      ]
-    },
-    "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:a8603ee54c8de275acf528b10c0cba0b87f1aad351321e4c4beae7c2f86693f7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\nn =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
-        }
-      ]
-    },
-    "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:49f7049737e8b61bb379a482d3dbcf5586e8b5497461c6ee5a05378cd53be79d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+          "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n   eta  |1-eta*lam_max|  |1-eta*lam_min|  ||x_100||\n 0.050             0.50            0.950   5.92e-03\n 0.150             0.50            0.850   8.75e-08\n 0.190             0.90            0.810   2.66e-05\n 0.201             1.01            0.799   2.70e+00\n 0.210             1.10            0.790   1.38e+04\n 0.250             1.50            0.750   4.07e+17\n"
         }
       ]
     }

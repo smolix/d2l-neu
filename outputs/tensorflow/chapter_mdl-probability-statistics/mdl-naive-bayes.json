@@ -4,100 +4,177 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:f817f93bac15223759a478a786209ce923df3f2453d55a05c6e4ea1600559c89",
+    "d2l_lib_fingerprint": "sha256:0f987861180f2b0abd5f9cb7d304d889f168f2f7297d007702f1dad82cb80533",
     "max_inline_bytes": 0
   },
   "cells": {
     "naive-bayes-imports": {
-      "code_fingerprint": "sha256:2e1964f4774d39ba051ca76bf5256543d9abbfc0c205691008a0883d0b50d7da",
+      "code_fingerprint": "sha256:cbb2d5e4c2c31e2585c5836894043548d24bfe2a9e18ceb33b0b00d49766f8b8",
       "kind": "text",
       "outputs": []
     },
     "naive-bayes-load": {
-      "code_fingerprint": "sha256:fa7880d8c308b3430a4867e747096a21646603ded63bf0016897147c4729c41a",
+      "code_fingerprint": "sha256:e32946a2dba2afdcb52294c58b6f674650310d890a2b312fd39256a4e7fc74e7",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "((60000, 28, 28), (60000,))"
+          "type": "stream",
+          "name": "stdout",
+          "text": "(60000, 784) (10000, 784) ink fraction 0.50\n"
         }
       ]
     },
     "naive-bayes-train": {
-      "code_fingerprint": "sha256:758ee80c476c33cea9fc4969b9f840886142dd2ed17a558c587712529ee4da32",
+      "code_fingerprint": "sha256:65249e8ffdf4d15f556f148e643f136d53fb2376f21d60e8943f9b7ced642063",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "array([0.09871667, 0.11236667, 0.0993    , 0.10218333, 0.09736667,\n       0.09035   , 0.09863333, 0.10441667, 0.09751667, 0.09915   ])"
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior: [0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]\nnever-inked pixels per class: [ 0 13  1  0  3  3  0 57  0  1]\ntest images inking one of their class: 5\n"
         }
       ]
     },
     "naive-bayes-templates": {
-      "code_fingerprint": "sha256:cb22945454dffa5ee3d69c9fb8071c19bad74c85c298b19af892120ba85758ef",
+      "code_fingerprint": "sha256:f8bb3caa2e0995cb27e63d37ca4298e0d36230c77dabe2d71d0697435da77b0b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47723,
-          "sha256": "sha256:685030512afb45dac6a1705ab083e8eb18070c91a81ad3952b2db259c491377b"
+          "bytes": 49053,
+          "sha256": "sha256:b867317fd560cc427114c012cc7f2acea74b2b8358eb17b657ccc29fc996e95e"
+        }
+      ]
+    },
+    "mdl-naive-bayes-templates-and-samples-1": {
+      "code_fingerprint": "sha256:af4898f4fe8bcf7b93e835ea63b9226197600455674953923bd1dac2e90742bf",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/mdl-naive-bayes-templates-and-samples-1-1.svg",
+          "bytes": 35365,
+          "sha256": "sha256:4270141cee8cb5998eaf0d47cf63f4c4bf5751050673dfe79b5802c62d893f6b"
+        }
+      ]
+    },
+    "mdl-naive-bayes-templates-and-samples-2": {
+      "code_fingerprint": "sha256:548841f48336a0fa2bb7f13b1302039daa8a0c69dd6701b4e8be71fa873dac27",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ink fraction: data 0.498, samples 0.498\nswitches per row, data:    [3.8 3.2 3.1 3.1 3.1 3.  3.3 1.5 3.1 2.6]\nswitches per row, samples: [5.1 4.1 4.8 4.7 4.8 8.2 5.4 4.  8.2 5.9]\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-checking-the-assumption": {
+      "code_fingerprint": "sha256:3ee6ac8ce9d7fca661c2b6dc840b11066998d02a3178ad319d22c7944afe8819",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "data : P(i)=0.55  P(j)=0.55  P(i)P(j)=0.30  P(i,j)=0.54\nmodel: P(i)=0.54  P(j)=0.53  P(i)P(j)=0.28  P(i,j)=0.30\n"
         }
       ]
     },
     "naive-bayes-predict": {
-      "code_fingerprint": "sha256:ddb687948509a9b5514785b415721b770e8d7b6808cdce5755885a18afe59f25",
+      "code_fingerprint": "sha256:18877d4d04891584b5935fd966bee0ffa287312867fc919b9e3c46e72f54f239",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 underflow: 99.1% of class scores; smallest float64 survivor = 1e-323\n"
-        },
+          "text": "test accuracy 0.7059\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-test-accuracy-1": {
+      "code_fingerprint": "sha256:24afff8f67bd20d9f189425abee5e45f41c3ef3cf1b475db439047b0ab717996",
+      "kind": "text",
+      "outputs": [
         {
-          "type": "execute_result",
-          "text": "0.8427"
+          "type": "stream",
+          "name": "stdout",
+          "text": "log10 of the numerators: largest -32, smallest -1002, median best -81\nimages whose best numerator underflows float32: 0.96\nnumerators below the smallest normal float64: 0.44\n"
         }
       ]
     },
     "mdl-naive-bayes-calibration-1": {
-      "code_fingerprint": "sha256:52c9830f5b0a8a82d40763593a31ec874d5153f54c9e0d45aa3f2cff55225060",
+      "code_fingerprint": "sha256:061dde99d7aa0956d8f6278dae04aaba0a7605470ee8b16e5f203abd4ac66f84",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy = 0.8427, bootstrap 95% CI = (0.8354, 0.8496)\n"
+          "text": "accuracy 0.7059, bootstrap 95% interval (0.697, 0.715)\nbinomial half-width 1.96 se = 0.0089\n"
         }
       ]
     },
     "mdl-naive-bayes-calibration-2": {
-      "code_fingerprint": "sha256:9b033e69dbf1b98aba608d1e7d9ba5685c07bbe6642c3bd20f111ad072ceef4f",
+      "code_fingerprint": "sha256:aa2a1e8bea007bf205411946e101d2575967c5d187d1f1993cf19df434ea4ed4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[748   0  14 122   8   0  83   1  24   0]\n [  9 907  18  48  16   0   0   0   2   0]\n [  8   0 665  12 242   0  50   0  23   0]\n [ 50  53   5 808  45   0  35   0   4   0]\n [  2   3 372 104 483   0  25   0  11   0]\n [  0   0   0   2   0 680   2 232   9  75]\n [218   4 232  93 222   0 167   1  63   0]\n [  0   0   0   0   0   5   0 893   0 102]\n [  0   3  14  68   6   1  20  55 832   1]\n [  0   0   0   7   0   0   0 113   4 876]]\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-confusions-and-weights-1": {
+      "code_fingerprint": "sha256:70b18c2183c4c0aaecd40e7760dc1eee2e5d747d96013198ff7e8ede52be6569",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "coat->pullover 372, pullover->coat 242, shirt->pullover 232\nsandal->sneaker 232, shirt->coat 222, shirt->t-shirt 218\nper-class accuracy: [0.75 0.91 0.66 0.81 0.48 0.68 0.17 0.89 0.83 0.88]\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-confusions-and-weights-2": {
+      "code_fingerprint": "sha256:ceabdd4c0326226a91c7bcb2e4cd464269dc05af7bb0addf977aeca794afad1e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "accuracy: softmax regression 0.832, naive Bayes 0.706\npullover<->coat errors: softmax regression 322 naive Bayes 614\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-confusions-and-weights-3": {
+      "code_fingerprint": "sha256:206dfadfeb07d3c3e68a3f56ab6d4db372b8f9dc32ee9756762e29398f679d85",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "most confused true->predicted: 4->9 (138), 5->3 (106), 8->3 (68), 7->9 (67)\n"
+          "text": "largest |weight| 3.1 nats at row 0, column 1: inked in 21 pullovers and 0 coats\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
-          "bytes": 22645,
-          "sha256": "sha256:a9e5b5b2ee2edf2d2ccb1e041f771e52cf9b40412fd2aa72b7a090dda4a4f3a3"
+          "asset": "mdl-naive-bayes/mdl-naive-bayes-confusions-and-weights-3-1.svg",
+          "bytes": 21441,
+          "sha256": "sha256:c05b0ec0d3a1ab25cbf070c6eef6d307690d2d5bfbd01a46fddd513bf6c01e84"
         }
       ]
     },
     "mdl-naive-bayes-calibration-3": {
-      "code_fingerprint": "sha256:7ec1167dcfe7ac0c8d3dff38f553c7a4b15e761a3175631fb4ff590e8ef43557",
+      "code_fingerprint": "sha256:2fe08b7b37d1ab649c8b5bf24fe93355eccc84c2e56bf070ba95990e968722fc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean claimed confidence = 0.986,   actual accuracy = 0.843\nconfidence in (0.0, 0.9]:   447 examples,  claimed 0.7229,  achieved 0.3736\nconfidence in (0.9, 0.99]:   455 examples,  claimed 0.9606,  achieved 0.4747\nconfidence in (0.99, 0.999]:   406 examples,  claimed 0.9960,  achieved 0.5640\nconfidence in (0.999, 1.0]:  8692 examples,  claimed 1.0000,  achieved 0.8991\n"
+          "text": "mean confidence 0.992, accuracy 0.706\n(0, 0.9]:   257 images, claimed 0.726, achieved 0.350\n(0.9, 0.99]:   297 images, claimed 0.961, achieved 0.384\n(0.99, 0.999]:   265 images, claimed 0.996, achieved 0.419\n(0.999, 1]:  9181 images, claimed 1.000, achieved 0.735\nECE 0.29, median top-two score gap 61 nats\n"
         }
       ]
     }

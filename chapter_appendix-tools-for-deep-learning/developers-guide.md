@@ -1,27 +1,37 @@
 # Contributor Guide
 :label:`sec_developers_guide`
 
-This book is maintained as a software project. Its pages are generated from
-Git-tracked source files, executed by a build system, and reviewed as code.
-This section explains the build, the Git workflow for contributions, optional
-use of coding agents, and the checks required for a patch. The same
-single-source, generated-artifact, and executable-document concerns arise in
-many machine learning documentation and experiment repositories.
+By now you have run many of this book's notebooks, and you may have found a
+sentence that confused you, a transposed subscript in an equation, or a cell
+that fails with a newer library. A fix should appear wherever that text or
+code appears: on the website, in the PDF, in the notebook of every
+framework, and on the slide that quotes the same cell. How does a one-line
+correction reach all of these places, and how do we know that it broke
+nothing?
 
-## How the Book Is Built
+The book is maintained the way open-source software is. Every page comes
+from one Markdown file under version control, a build system derives
+everything else from these files, and a change is ready for review once
+the notebooks it touches execute and the site renders. We describe the build,
+the Git workflow for proposing a change, the optional use of coding agents,
+and the checks a change must pass. The same concerns arise in any machine
+learning repository whose documents must run.
+
+## The Build
 
 ### One Source, Many Artifacts
 
-Each section is stored in a single Markdown file — for example, this one is
-`chapter_appendix-tools-for-deep-learning/developers-guide.md`. From these
-sources the build derives everything else:
+Each section is stored in a single Markdown file; this one is
+`chapter_appendix-tools-for-deep-learning/developers-guide.md`. The build
+derives everything else from these sources:
 
 ```text
-chapter_*/*.md               source of truth (edit these)
-├── chapter_*/*.qmd          generated Quarto input → HTML site and PDFs
-├── _notebooks/<fw>/...      generated Jupyter notebooks, one per framework
-│   └── outputs/...          executed outputs, committed to the repository
-└── _slides/<fw>/...         generated lecture slides
+chapter_*/*.md              source of truth (edit these)
+├── chapter_*/*.qmd         generated Quarto input → HTML site and PDFs
+├── _notebooks/<fw>/...     generated Jupyter notebooks, one set per framework
+├── _slides/<fw>/...        generated lecture slides
+└── d2l/*.py                generated d2l library, from the #@save blocks
+outputs/<fw>/...            executed outputs, captured from _notebooks/, committed
 ```
 
 This design has three practical consequences:
@@ -33,50 +43,63 @@ This design has three practical consequences:
   every notebook of the file. The file yields one notebook for each
   framework that at least one of its blocks is tagged for, and a file
   without tagged blocks yields a PyTorch notebook only. One source file
-  thus yields up to four notebooks that must all execute.
+  thus yields up to four notebooks that must all execute. Chapters of the
+  Basics part and the mathematics appendix carry all four frameworks;
+  chapters of the Advanced part carry PyTorch and JAX only.
 * **Cell identity is stable.** Every Python block carries a permanent ID
   (assigned by `tools/add_cell_ids.py`) so that slides, executed outputs,
   and framework views can refer to a cell across renames and moves.
 
-Why Markdown sources instead of committing notebooks directly? Version
-control. A `.ipynb` file is JSON that combines code, outputs, execution counts, and
-editor metadata, producing noisier diffs than the Markdown source. Markdown
-source produces readable prose diffs;
-executed outputs are stored separately (and re-captured only when the code
-that produced them, the library code it uses, or the framework version
-changes); and one file drives the website, the PDF,
-four notebook sets, and the slide decks without four copies drifting
-apart.
+The sources are Markdown rather than notebooks because of version control.
+A `.ipynb` file is JSON that mixes code, outputs, execution counts, and
+editor metadata, so a one-word edit followed by a re-run changes many
+lines besides that word; a Markdown diff shows only the changed prose and
+code. Executed outputs are stored
+separately and are re-captured only when the code that produced them, the
+library code it uses, or the framework version changes.
 
-The `d2l` library you have imported all book long is generated the same
-way: every block marked `#@save` is extracted into the per-framework
-modules (`d2l/torch.py`, `d2l/jax.py`, …). Change the function where it is
-taught, rebuild, and every later chapter sees the fix — the reason those
-files also carry a "do not edit directly" banner.
+The `d2l` library you have imported throughout the book is generated the
+same way. `make lib` extracts every block marked `#@save` into the
+per-framework modules `d2l/torch.py`, `d2l/tensorflow.py`, `d2l/jax.py`,
+and `d2l/mxnet.py`. A fix made where a function is taught reaches every
+later chapter after a rebuild, which is why those files carry a banner
+that says not to edit them directly. The Colab and Kaggle notebooks of
+:numref:`sec_hosted_notebooks` are generated too, onto a separate branch,
+`notebooks`, that is rebuilt from the sources and never edited by hand.
 
-### The Repository at a Glance
+### Repository Layout
+
+The top level of the repository holds the sources, the build entry
+points, and the documentation that explains them:
 
 ```text
 d2l-neu/
 ├── chapter_*/            source Markdown, one directory per chapter
-├── img/                  figures (SVG, generated by tools/gen_*_figures.py)
+├── img/                  figures; illustrative SVGs come from tools/gen_*_figures.py
 ├── d2l/                  the generated d2l library
 ├── outputs/              committed store of executed notebook outputs
-├── tools/                build scripts (preprocessing, notebooks, slides)
-├── Makefile              entry point: make html, make slides, make lib ...
-└── CLAUDE.md             build documentation, written for coding agents
+├── tools/                build scripts (preprocessing, notebooks, slides, audits)
+├── docs/                 build-system documentation, writing and code guides
+├── Makefile, make/       entry point: make html, make lib, make capture-outputs ...
+├── bootstrap.sh          one-time setup of a fresh clone
+└── CLAUDE.md             build summary, written for coding agents
 ```
 
-`make html` renders the site from committed outputs on any laptop — no
-GPU required; executing notebooks that need accelerators is a separate,
-explicit step. The Makefile and `CLAUDE.md` document the supported targets.
+On a fresh clone, `./bootstrap.sh` installs Git LFS, which stores the
+images of the committed outputs, fetches those images, and creates
+`.venv-build`, the environment that holds Quarto. After that, `make html`
+renders the whole site from the committed outputs on a laptop without a
+GPU; executing notebooks is a separate step. The Makefile needs GNU Make
+4.3 or newer, which macOS provides only as an extra install (`gmake` from
+MacPorts, for example). `make help` lists the targets, and
+`docs/build-system.md` explains them.
 
-## Git in Five Minutes
+## Git Basics
 
-If you already use Git daily, skip ahead. Otherwise, the commands below
-establish the main contribution workflow. First, make your own copy:
-click **Fork** on the [repository page](https://github.com/smolix/d2l-neu),
-then
+Every change to the book travels as a Git commit on a branch of your own
+copy of the repository. If you already use Git daily, skip ahead. First,
+make that copy: click **Fork** on the
+[repository page](https://github.com/smolix/d2l-neu), then
 
 ```bash
 git clone https://github.com/<your-username>/d2l-neu.git
@@ -89,97 +112,104 @@ Edit the source `.md` file, then record and publish the change:
 ```bash
 git status                  # what changed?
 git diff                    # show the exact edits
-git add chapter_attention-mechanisms/attention.md
+git add chapter_attention/attention-scoring.md
 git commit -m "Fix transposed subscript in attention equation"
 git push -u origin fix-typo-in-attention
 ```
 
-GitHub will offer to open a *pull request* — your branch, proposed for
+GitHub will offer to open a *pull request*: your branch, proposed for
 merging, with a diff the maintainers can review and comment on. (The
 [`gh` command-line tool](https://cli.github.com/) does the same with
-`gh pr create`.) Small, focused pull requests are easier to review than changes spanning
-several chapters. The fork-branch-pull-request workflow is common in
-open-source projects and makes each proposed change explicit.
+`gh pr create`.) Small, focused pull requests are easier to review than
+changes spanning several chapters.
 
-## Working with a Coding Agent
+## Coding Agents
 
-Coding agents can assist with bounded repository tasks such as locating a
-definition, propagating a mechanical change, or running verification. Their
-use is optional, and generated edits require the same review as human-written
-changes. This repository supports agent-assisted work through three
-properties:
+A coding agent is a language model that reads the repository, edits
+files, and runs commands. It helps with bounded tasks: finding where a
+function is defined, propagating a mechanical change across framework
+variants, or running the checks and reading their failures. Its use is
+optional, and its edits need the same review as anyone else's. Three
+properties of this repository make such help practical:
 
-* **The build is self-describing.** `CLAUDE.md` tells an agent how to
-  regenerate, execute, and render the artifacts. The same explicit build
-  instructions also support human contributors.
-* **Verification is executable.** The definition of "this edit works" is
-  mechanical: the notebook executes top to bottom in all frameworks, the
-  audit of the committed outputs passes, the page renders. An agent can
-  run the edit, regeneration, execution, and failure-inspection loop,
-  but the contributor must review both the final diff and the evidence
-  from the checks.
-* **The tedious parts are mechanical.** Keeping four framework
-  implementations in sync, checking that every `:numref:` resolves,
-  and regenerating figures are mechanical multi-file tasks that can be
-  automated and then reviewed.
+* **The build is documented.** `CLAUDE.md` and `docs/` tell an agent how
+  to regenerate, execute, and render the artifacts. The same instructions
+  serve human contributors.
+* **Verification is executable.** An edit works when the notebook executes
+  top to bottom in every framework it has, the audit of the committed
+  outputs passes, and the page renders. An agent can run the loop of
+  editing, regenerating, executing, and inspecting failures, but the
+  contributor reviews both the final diff and the evidence from the checks.
+* **The tedious parts are mechanical.** Keeping framework implementations
+  in sync, checking that every `:numref:` resolves, and regenerating
+  figures are multi-file tasks that an agent can carry out and a person can
+  review.
 
-A useful workflow specifies the intended change and its verification, for
-example: "the momentum notebook's contour plot mislabels the axes; correct
-the source and rerun the affected notebooks." The agent may locate sources,
-edit, and run checks, but the contributor remains responsible for reviewing
-the diff and validating the technical result. Two cautions apply. Agents can
-share the newcomer failure
-mode of editing generated files unless the project documentation warns
-them (ours does). And an agent eager to make a failing check pass may
-weaken the check or the code instead of fixing the cause — "the notebook
-now runs" is not the same as "the notebook still teaches the right
-thing." Review accordingly.
+A useful request states the change and how to verify it, for example: "the
+contour plot of the momentum section mislabels its axes; correct the source
+and rerun the affected notebooks." Review for two failure modes. An agent
+may edit a generated file, as newcomers do, unless the project
+documentation warns against it (ours does). And an agent asked to make a
+failing check pass may weaken the check or the code instead of fixing the
+cause: a notebook that runs again may no longer teach the right thing.
 
-## Contributing Your Changes
+## Submitting Changes
 :label:`sec_how_to_contribute`
 
-Contributions range from one-line corrections to executable content changes:
+Contributions range from one-line corrections to new code, and the checks
+grow with the change. A one-line fix does not even need a local checkout:
+open the source file on GitHub and press the edit (pencil) button. GitHub
+offers to fork the repository, and after the edit it leads you through the
+commit to a pull request, all in the browser.
 
-* **Small text fixes.** For a one-line fix you do not even need a local
-  checkout: open the source file on GitHub, press the edit (pencil)
-  button, and GitHub walks you through fork, commit, and pull request in
-  the browser.
-* **Code and content changes.** Clone, branch, edit the source `.md`, and
-  verify before submitting: regenerate the affected notebooks, run
-  them end to end, copy their outputs into the committed store with
-  `make capture-outputs`, and render
-  the page with `make html` to check formatting, references, and
-  figures. If you edit code that carries `#@save`, rebuild the library
-  (`make lib`) and expect downstream notebooks to be affected.
-* **Working in the notebook view.** If you prefer editing in Jupyter or
-  VS Code rather than raw Markdown, this repository ships a VS Code
-  extension (under `.vscode-extension/`) designed for this workflow: it opens
-  the generated notebook for any section with the right kernel
-  preselected, switches between the PyTorch/TensorFlow/JAX/MXNet views of
-  the same source, previews the section's slide deck live, and syncs
-  edits from the notebook back into the Markdown source so that generated
-  files never become the thing you edited. `make kernels` registers the
-  per-framework Jupyter kernels it uses.
+For code and content changes, clone, branch, and edit the source `.md`.
+Check the edited file with `tools/lint_source.py`, which catches
+unbalanced tab and slide markers, duplicate cell IDs, and equation labels
+that would not attach; with `--corpus` it also checks that every
+cross-reference points to an existing label. Then
+re-execute every notebook that the edit touches, copy its outputs into the
+committed store, and render the site:
 
-Whatever the route, the review bar is the one this chapter has been
-teaching throughout: the change executes cleanly from a fresh state, in
-every framework it touches, and the source of truth — never a generated
-artifact — is what changed.
+```bash
+make venv-pytorch                                     # once per framework
+make -B _notebooks/pytorch/<chapter>/<file>.executed  # repeat per framework
+make capture-outputs FILES=<chapter>/<file>.md
+make html
+```
+
+If you edit code that carries `#@save`, rebuild the library with `make lib`
+before you execute any notebook. Notebooks of other sections that use the edited symbol then become
+stale too, and `make audit-outputs` lists them. A laptop without a GPU
+cannot re-execute GPU notebooks; `make html` warns about such a notebook
+instead of stopping, and the pull request should name the notebooks that
+still need a GPU run. New prose follows `docs/writing-guide.md`, and new
+code follows `docs/code-guide.md`.
+
+If you prefer editing notebooks to raw Markdown, the VS Code extension in
+`.vscode-extension/` (its README explains how to build and install it)
+opens the generated notebook of the current section with the right kernel
+preselected, switches between its framework views, previews the slide
+deck live, and re-executes and captures a notebook with one command. It
+writes edits made in the notebook back into the Markdown source, so a
+generated file never becomes the thing you edited. `make kernels`
+registers the Jupyter kernels it uses.
+
+Whatever the route, a change is ready when it executes cleanly from a
+fresh state in every framework it touches, and when the source, never a
+generated file, is what changed.
 
 ## Summary
 
 * One Markdown source generates the website, PDFs, per-framework
   notebooks, executed outputs, slides, and the `d2l` library; generated
   files are never edited directly.
-* Markdown-as-source exists for version control: readable diffs and
-  reviewable pull requests are what make a 250-notebook book maintainable.
-* The contribution loop is fork → branch → edit source → verify (execute
-  notebooks, render) → small pull request.
+* Markdown sources serve version control: readable diffs and reviewable
+  pull requests keep a book of more than 600 notebooks maintainable.
+* The contribution loop is fork → branch → edit source → verify (lint,
+  execute notebooks, capture outputs, render) → small pull request.
 * Coding agents can automate parts of this workflow because the build is
-  documented and verification is executable; contributors must review and
-  take responsibility for submitted changes.
-* The VS Code extension bridges notebook-style editing and
-  Markdown-source truth: framework views, slide preview, and sync-back.
+  documented and verification is executable; contributors review and take
+  responsibility for submitted changes.
 
 ## Exercises
 
@@ -209,7 +239,8 @@ artifact — is what changed.
    notebook it also stores the installed framework version without its
    local build tag (`torch==2.11.0`, not `torch==2.11.0+cu128`) and a hash
    of the library blocks of every symbol `d2l.X` that the code of the
-   section mentions. An output is stale when one of these values no longer
+   section mentions, together with the blocks that those symbols use in
+   turn. An output is stale when one of these values no longer
    matches the current source and environment. The audit
    `tools/audit_outputs.py`, which `make html` runs before it renders the
    site, reports a stale image as a warning and stops the build at a stale
@@ -236,7 +267,8 @@ artifact — is what changed.
    a notebook to its cells by ID. A stored ID that no cell of the notebook
    carries any more is an error that stops `make html`, while a cell
    without a stored output only causes a warning. Slide sources cite cells
-   by ID as well, for example `@resnet-training` in :numref:`sec_resnet`.
+   by ID as well; the slides of :numref:`sec_resnet`, for example, cite
+   `@resnet-residual-blocks-2`.
     1. In :numref:`sec_use_gpu`, the cell that adds `__init__` and
        `prepare_batch` to `d2l.Trainer` for PyTorch has the ID
        `gpus-devices-memory-the-trainer-now-with-devices-1`, although it
@@ -304,7 +336,8 @@ artifact — is what changed.
    `.ipynb` or than one of the library block files that its `.d` file
    lists. Besides `d2l/torch.py`, `make lib` writes one block file per
    `#@save` symbol to `d2l/_blocks/<fw>/`, and the `.d` file of a section
-   lists the block files of every symbol `d2l.X` that its code mentions.
+   lists the block files of every symbol `d2l.X` that its code mentions
+   and of the symbols that those blocks use in turn.
    `make notebooks-pytorch` regenerates every PyTorch notebook and writes
    each `.ipynb` anew. When the code cells of a regenerated notebook are
    unchanged, `tools/gen_notebooks.py` then sets the modification times of
@@ -382,13 +415,17 @@ artifact — is what changed.
        of the test commit to fix this, and compare the mean number of runs
        and the error rate with (b).
     1. Treat one run as a channel from $\{\text{good}, \text{bad}\}$ to
-       $\{\text{pass}, \text{fail}\}$ and compute its
-       capacity :eqref:`eq_mdl-channel-capacity`. Each run reveals at most
-       this many bits about $k$, even when the tests are chosen adaptively.
-       Use
-       Fano's inequality :eqref:`eq_mdl-fano` to bound from below the mean
-       number of runs of any strategy that names $k$ with probability at
-       least 0.95. How close does (c) come?
+       $\{\text{pass}, \text{fail}\}$ and compute its capacity
+       $C = \max_{p(x)} I(X; Y)$, the largest mutual information between
+       input and output over all input distributions
+       (:numref:`sec_mdl-mutual-information`). Each run reveals at most
+       $C$ bits about $k$, even when the tests are chosen adaptively.
+       Fano's inequality states that an estimate $\hat k$ computed from the
+       runs, with error probability $P_e = P(\hat k \neq k)$, satisfies
+       $H_b(P_e) + P_e \log_2 63 \geq H(k \mid \text{runs})$, where $H_b$ is
+       the binary entropy. Use it to bound from below the mean number of
+       runs of any strategy that names $k$ with probability at least 0.95.
+       How close does (c) come?
    :exlabel:`ex_developers-guide-noisy-bisection`
 
 [Discussions](https://d2l.discourse.group/t/36848)

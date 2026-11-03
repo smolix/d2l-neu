@@ -83,7 +83,7 @@ $$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\left(f(\mathbf{x}
 The *population error* is the probability that $f$ gets the label wrong on a
 new example drawn from the distribution $P(X, Y)$ that generates the data:
 
-$$\epsilon(f) = E_{(\mathbf{x}, y) \sim P}\left[\mathbf{1}\left(f(\mathbf{x}) \neq y\right)\right] = P\left(f(X) \neq Y\right).$$
+$$\epsilon(f) = \mathbb{E}_{(\mathbf{x}, y) \sim P}\left[\mathbf{1}\left(f(\mathbf{x}) \neq y\right)\right] = P\left(f(X) \neq Y\right).$$
 
 These are the empirical risk and the risk of
 :numref:`sec_generalization_basics` for the *0--1 loss*, which charges 1 for
@@ -96,7 +96,7 @@ with probability $\epsilon(f)$. The test examples are drawn independently,
 and $f$ was fixed before they were drawn, so $\epsilon_\mathcal{D}(f)$ is
 the frequency of heads in $n$ independent tosses of this coin. Two facts
 from :numref:`sec_prob` follow. The estimate is unbiased:
-$E[\epsilon_\mathcal{D}(f)] = \epsilon(f)$. And the average of $n$
+$\mathbb{E}[\epsilon_\mathcal{D}(f)] = \epsilon(f)$. And the average of $n$
 independent draws has a standard error equal to the standard deviation of a
 single draw divided by $\sqrt{n}$. A variable that equals 1 with probability
 $\epsilon$ and 0 otherwise has variance $\epsilon(1 - \epsilon)$, so the
@@ -448,7 +448,7 @@ essentially any labeling of their training set, random labels included
 the training set. Yet, trained on real labels, the same networks generalize
 well, and often better as they grow larger. Bounds that depend on the data
 and on the training algorithm, not only on the class, are an active area of
-research. :numref:`sec_mdl-concentration-generalization` proves the uniform
+research. :numref:`sec_mdl-generalization-bounds` proves the uniform
 convergence results of this section and develops one such tool, Rademacher
 complexity, which measures how well a class can fit random signs on the
 actual data. Until such bounds become sharp, deep learning certifies

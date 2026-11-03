@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="602.165773pt" height="282.504pt" viewBox="0 0 602.165773 282.504" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="599.87853pt" height="282.504pt" viewBox="0 0 599.87853 282.504" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 282.504 
-L 602.165773 282.504 
-L 602.165773 0 
+L 599.87853 282.504 
+L 599.87853 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -318,7 +318,7 @@ L 106.774885 220.267843
    </g>
    <g id="text_6">
     <!-- target $p$ -->
-    <g style="fill: #1f77b4" transform="translate(48.343423 67.277538) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(210.084819 177.731077) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2f" d="M 1504 -58 
 Q 1005 -58 809 227 
@@ -1571,7 +1571,7 @@ L 438.127504 210.539017
    </g>
    <g id="text_15">
     <!-- proposal $q$ -->
-    <g style="fill: #ff7f0e" transform="translate(531.355929 143.543077) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(327.099326 196.14) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-2b" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(55.499954 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(90.199921 0.796875)"/>
@@ -1585,8 +1585,8 @@ L 438.127504 210.539017
     </g>
    </g>
    <g id="text_16">
-    <!-- both modes sampled, -->
-    <g style="fill: #2ca02c" transform="translate(477.716085 54.365231) scale(0.11 -0.11)">
+    <!-- both modes -->
+    <g style="fill: #2ca02c" transform="translate(537.666498 180.597846) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1d" d="M 1901 -77 
 Q 1683 -77 1449 28 
@@ -1658,42 +1658,16 @@ z
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(353.109375 0)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(408.609375 0)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(458.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(500.109375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(520.109375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(562.015625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-28" transform="translate(612.421875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(695.328125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-27" transform="translate(750.828125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(776.328125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1f" transform="translate(825.921875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-56c" transform="translate(881.421875 0)"/>
     </g>
-    <!-- weight spread over draws -->
-    <g style="fill: #2ca02c" transform="translate(477.716085 68.951231) scale(0.11 -0.11)">
-     <use xlink:href="#SourceSans3-Regular-32"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(71.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(121.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-22" transform="translate(145.6875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-23" transform="translate(196.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(250.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(284.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(304.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(346.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(401.703125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(435.40625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(483.59375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1f" transform="translate(534 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(589.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(609.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-31" transform="translate(663.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(709.59375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(759.1875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(793.890625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1f" transform="translate(813.890625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(869.390625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(901.6875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-32" transform="translate(952.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(1024 0)"/>
+    <!-- sampled -->
+    <g style="fill: #2ca02c" transform="translate(537.666498 195.183846) scale(0.11 -0.11)">
+     <use xlink:href="#SourceSans3-Regular-2e"/>
+     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(41.90625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-28" transform="translate(92.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(175.21875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-27" transform="translate(230.71875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(256.21875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1f" transform="translate(305.8125 0)"/>
     </g>
    </g>
    <g id="text_17">

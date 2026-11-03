@@ -550,8 +550,8 @@ On-policy updates estimate expectations under the current policy; importance rat
    empirical action distribution
    $\hat{\pi}_e(a \mid s) = n(s, a) / n(s)$, where
    $n(s) = \sum_a n(s, a)$. In a table, one iteration chooses
-   $$\hat{Q}_{k+1} = \operatorname*{argmin}_Q\; \alpha_{\textrm{c}} \Big( E_{s \sim \mathcal{D},\, a \sim \mu(\cdot \mid s)}\big[Q(s, a)\big] - E_{(s, a) \sim \mathcal{D}}\big[Q(s, a)\big] \Big) + \frac{1}{2} E_{(s, a) \sim \mathcal{D}} \Big[ \big( Q(s, a) - \hat{\mathcal{B}} \hat{Q}_k(s, a) \big)^2 \Big],$$
-   where $E_{\mathcal{D}}$ averages over the transitions of the dataset,
+   $$\hat{Q}_{k+1} = \operatorname*{argmin}_Q\; \alpha_{\textrm{c}} \Big( \mathbb{E}_{s \sim \mathcal{D},\, a \sim \mu(\cdot \mid s)}\big[Q(s, a)\big] - \mathbb{E}_{(s, a) \sim \mathcal{D}}\big[Q(s, a)\big] \Big) + \frac{1}{2} \mathbb{E}_{(s, a) \sim \mathcal{D}} \Big[ \big( Q(s, a) - \hat{\mathcal{B}} \hat{Q}_k(s, a) \big)^2 \Big],$$
+   where $\mathbb{E}_{\mathcal{D}}$ averages over the transitions of the dataset,
    $\alpha_{\textrm{c}} > 0$ sets the strength of the penalty, and
    $\hat{\mathcal{B}} \hat{Q}_k(s, a)$ averages the Q-learning target
    $r + \gamma \max_{a'} \hat{Q}_k(s', a')$ over the transitions from

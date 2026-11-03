@@ -9,12 +9,28 @@
   },
   "cells": {
     "mdl-concentration-generalization-concentration-and-generalization": {
-      "code_fingerprint": "sha256:9e87f222e25c352ca1bc7e2c64878738cbf968356f3ff0c46f84d5f5a21455d7",
+      "code_fingerprint": "sha256:531856d59d698a23301c5647dd7849873f3cd73e08ddf144dc1362a5957de0df",
       "kind": "text",
       "outputs": []
     },
+    "mdl-concentration-generalization-chebyshev-s-rate-1": {
+      "code_fingerprint": "sha256:33b2f197adaab91b0874d0346f20b689f6866689e36b4abf20ca6a4280e963b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-concentration-generalization-chebyshev-s-rate-2": {
+      "code_fingerprint": "sha256:30cf40624245de68547bf9b7b3ef997d446c40fcc61b908afb8de45c86a02a24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     n      exact  Chebyshev\n    10   7.54e-01   2.50e+00\n   100   5.69e-02   2.50e-01\n  1000   2.73e-10   2.50e-02\n  5000   1.30e-45   5.00e-03\n"
+        }
+      ]
+    },
     "mdl-concentration-generalization-the-tail-race-in-code": {
-      "code_fingerprint": "sha256:07ef5025056453cd332b49646892634bdd26645f6b3324df443b84a2e889e965",
+      "code_fingerprint": "sha256:a5cbd674e7e512da2b7ff04874aefaeccea7eaafc976ae89f025eef97ac0688b",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,34 +43,55 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31734,
-          "sha256": "sha256:c114386ce15fedad87cfc0191053810f1b7260c112093430444b11c4e402d41b"
+          "sha256": "sha256:437b3a3a47ec648f2f373a4dee4f01b7813fce1129c124148cc2e2bd477b84de"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables": {
+      "code_fingerprint": "sha256:9ba74267571d83ddf1018b7413d72d76b626ed533b3cf8572beb134447d47074",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1": {
+      "code_fingerprint": "sha256:f80e6ed98d87bfd8cc48649a322812673ff2acc2929aa0bf0ee6aa9020f3445d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error 8.3%: Hoeffding ±1.36%, Bernstein ±0.76%, Gaussian ±0.54%\nerror 2.0%: Hoeffding ±1.36%, Bernstein ±0.39%, Gaussian ±0.27%\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:11adba5489c702a50454d9ee4d0351ae9ebe1a63d92e980d20ebedcb547ca879",
+      "code_fingerprint": "sha256:1abf6b3831ccb14a1ca026e59c81858e87894abba2b932c0e09aa0a1a778eede",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
-        }
-      ]
-    },
-    "mdl-concentration-generalization-measuring-the-shell": {
-      "code_fingerprint": "sha256:bd037ba9ec4b62a58a221b233ce983ca4ac1ee53c95cf4745baba77dce45e67b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d=    2:  mass within (1±0.1)·sqrt(d):  14.8%,   NN contrast (d_max-d_min)/d_min = 29.440\nd=   20:  mass within (1±0.1)·sqrt(d):  47.6%,   NN contrast (d_max-d_min)/d_min =  1.234\nd=  200:  mass within (1±0.1)·sqrt(d):  95.4%,   NN contrast (d_max-d_min)/d_min =  0.239\n"
+          "text": "d =    2: mean ||x||/sqrt(d) = 0.888, sd ||x|| = 0.66, mean |cos| = 0.6416 vs 0.5642\nd =   20: mean ||x||/sqrt(d) = 0.990, sd ||x|| = 0.70, mean |cos| = 0.1788 vs 0.1784\nd =  200: mean ||x||/sqrt(d) = 0.999, sd ||x|| = 0.71, mean |cos| = 0.0566 vs 0.0564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 2000:  mass within (1±0.1)·sqrt(d): 100.0%,   NN contrast (d_max-d_min)/d_min =  0.079\n"
+          "text": "d = 2000: mean ||x||/sqrt(d) = 1.000, sd ||x|| = 0.71, mean |cos| = 0.0178 vs 0.0178\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-measuring-the-shell": {
+      "code_fingerprint": "sha256:63274e4220711c667b2ba34530fd323b8d000e289fd6893dea89ff05d364efdd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =    2: mass in (1 ± 0.1) sqrt(d) =  14.5%, median contrast = 31.891\nd =   20: mass in (1 ± 0.1) sqrt(d) =  47.0%, median contrast = 1.213\nd =  200: mass in (1 ± 0.1) sqrt(d) =  95.7%, median contrast = 0.269\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 2000: mass in (1 ± 0.1) sqrt(d) = 100.0%, median contrast = 0.079\n"
         }
       ]
     }

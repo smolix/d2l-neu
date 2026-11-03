@@ -9,29 +9,56 @@
   },
   "cells": {
     "mdl-exponential-family-the-exponential-family": {
-      "code_fingerprint": "sha256:1e93818407151e67e4a6a49bdbe948279653a00daefa0241f1cbdf39e7ba01c5",
+      "code_fingerprint": "sha256:2e2512cf0cc94fdddd25c34f25829ff6390063b426ca7eaff7cfab9ff6fdae5a",
       "kind": "text",
       "outputs": []
     },
-    "distributions-exp-family": {
-      "code_fingerprint": "sha256:93ba92707452927ab605b50a667f99d3392a79ee1077e4b7f5ff2a2cf9750791",
+    "mdl-exponential-family-entropy-and-a-loaded-die": {
+      "code_fingerprint": "sha256:98daf6b6578c94b76f97db8106b7134ec56945112f11e60a11c9dc757d1bd6c4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+          "text": "eta = 0.371  p = [0.054 0.079 0.114 0.165 0.24  0.347]\nH = 1.614  log 6 = 1.792\n"
+        }
+      ]
+    },
+    "distributions-exp-family": {
+      "code_fingerprint": "sha256:e6eceabde476255bf805747427458f9e9d37f2b0008ea79e9b5a67c3b0680a06",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Bernoulli A' = 0.6923 (mean 0.6923)  A'' = 0.2130 (variance 0.2130)\nPoisson   A' = 4.0000 (mean 4.0000)  A'' = 4.0000 (variance 4.0000)\n"
+        }
+      ]
+    },
+    "mdl-exponential-family-noisy-choices-and-gumbel-noise": {
+      "code_fingerprint": "sha256:eeb8b8298b71ddf2e658915a1eaed5669472d86c2f898c045c063a79d137f274",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T = 1: argmax frequencies [0.639 0.236 0.094 0.031]\n      softmax(z / T)        [0.638 0.235 0.095 0.032]  max diff 0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T = 2: argmax frequencies [0.453 0.276 0.173 0.099]\n      softmax(z / T)        [0.451 0.274 0.174 0.101]  max diff 0.002\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:0af2247069a9e2e2f514b60cffaaad43ca476be9aa5af1b09ab73b4bff10685d",
+      "code_fingerprint": "sha256:cc3b2bc49257259a8ff2b2994bba9c90b9e0a098f3cb02824cc75dde570f25c1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prior mean      = 0.5\nMLE  x/n        = 0.7\nposterior Beta  = (9.0, 5.0)\nposterior mean  = 0.6429\n"
+          "text": "max |prior * likelihood - Beta(10,5)| = 2.1e-14\nposterior mean = 0.667, sd = 0.118\n"
         }
       ]
     }

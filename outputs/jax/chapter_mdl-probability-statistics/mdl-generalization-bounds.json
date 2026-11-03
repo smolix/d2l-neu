@@ -9,36 +9,69 @@
   },
   "cells": {
     "mdl-generalization-bounds-uniform-convergence-and-generalization": {
-      "code_fingerprint": "sha256:80ec2941e412351e1cbd54588417a3ca9f0233690374fe8e01d4d661c3a31566",
+      "code_fingerprint": "sha256:ed4600c9913d517b557ed1eacb84c1b92a5ea656e73085eb8cfac108928d14c8",
       "kind": "text",
       "outputs": []
     },
-    "mdl-concentration-generalization-coin-flips-in-code": {
-      "code_fingerprint": "sha256:0de79a898fa136b400a33c0af157448b409cef1505c1e2c940292f22cebfd629",
+    "mdl-generalization-bounds-the-best-of-many-coins": {
+      "code_fingerprint": "sha256:55ed1d059f9ec6ddf20b7ec968269ad8b5daff90bf977d80d2568b64854f9e32",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Monte-Carlo Rademacher complexity  = 0.1390\nbound B*r/sqrt(n)                  = 0.1414\ncorrelation of min-norm fits with coin flips = 1.0000\nnorm it costs: mean ||w|| = 1.00;  implied capacity bound B*r/sqrt(n) = 1.41\n"
+          "text": "best of 1000 coins: median 0.66, 90% of experiments in [0.64, 0.69]\n95% half-width: one coin 0.136, all 1000 coins 0.230\nexperiments in which the best coin leaves the one-coin band: 96%\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-coin-flips-in-code": {
+      "code_fingerprint": "sha256:01c291754d6f61e16c6ee26e867a4aabeb4877e5cd4726e37f0e7384c33ea9a1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =    2: Monte-Carlo R_S = 0.129, bound B r / sqrt(n) = 0.141\nd =   20: Monte-Carlo R_S = 0.140, bound B r / sqrt(n) = 0.141\nd = 1000: Monte-Carlo R_S = 0.141, bound B r / sqrt(n) = 0.141\n"
+        }
+      ]
+    },
+    "mdl-generalization-bounds-rademacher-complexity-in-numbers-1": {
+      "code_fingerprint": "sha256:497262bbb2c45ee143215f123ca79c14ef7f41f50faf40e6a50d3ad97b4caa33",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean ||w|| = 1.01 (predicted 1.01), largest 1.45\nr = 11.5, B r / sqrt(n) with B = largest ||w||: 2.4\n"
         }
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:365762922e7a2f3b4500162bbcbce24d5fe8f4c96af00afe55dfa6576f852684",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:f6f2b8805dfb7844159fcdf4cf8f031e16eeb75659e0b804524af13430df6a41",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-generalization-bounds-a-double-descent-sweep-1": {
+      "code_fingerprint": "sha256:22263fb206f23c1c7dcfb8e5747483bfbf943fe75dfa6cc854182b0c5746bcb6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-generalization-bounds/mdl-generalization-bounds-a-double-descent-sweep-1-1.svg",
+          "bytes": 38272,
+          "sha256": "sha256:a0d05278925cec7848bff3d1ebc363eb14bc5eb07672d1e052a014c65b068055"
+        }
+      ]
+    },
+    "mdl-generalization-bounds-a-double-descent-sweep-2": {
+      "code_fingerprint": "sha256:cc98eea7a6fe690cb2866b0736ce67a196377b8f9328874a97912ef658cca957",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p=  2  test MSE=   1.0378  train MSE= 8.67e-01  ||w||=   0.32\np=  5  test MSE=   0.9627  train MSE= 7.70e-01  ||w||=   0.77\np= 10  test MSE=   0.7728  train MSE= 4.64e-01  ||w||=   1.68\np= 15  test MSE=   0.6782  train MSE= 2.81e-01  ||w||=   1.97\np= 20  test MSE=   0.7156  train MSE= 1.54e-01  ||w||=   2.15\np= 25  test MSE=   0.6905  train MSE= 8.10e-02  ||w||=   2.37\np= 30  test MSE=   0.6893  train MSE= 4.32e-02  ||w||=   2.70\np= 35  test MSE=   1.5061  train MSE= 1.32e-02  ||w||=   3.75\np= 38  test MSE=   2.1205  train MSE= 5.00e-03  ||w||=   4.61\np= 40  test MSE=  33.6376  train MSE= 1.00e-28  ||w||=  18.52\np= 42  test MSE=   1.9858  train MSE= 1.15e-29  ||w||=   4.96\np= 45  test MSE=   1.1249  train MSE= 7.16e-30  ||w||=   3.64\np= 50  test MSE=   0.6466  train MSE= 7.35e-30  ||w||=   2.42\np= 60  test MSE=   0.3507  train MSE= 5.36e-30  ||w||=   1.70\np= 80  test MSE=   0.1824  train MSE= 5.72e-30  ||w||=   1.18\np=120  test MSE=   0.1121  train MSE= 7.99e-30  ||w||=   0.83\np=200  test MSE=   0.0796  train MSE= 9.07e-30  ||w||=   0.59\np=400  test MSE=   0.0604  train MSE= 7.00e-30  ||w||=   0.39\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-generalization-bounds/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
-          "bytes": 32503,
-          "sha256": "sha256:199a7c564a7af74ebc3591e07580f924d740824d8dbe3606275fec3634e04ee5"
+          "text": "   p     test    train     norm    s_min capacity    clean    noise\n  15     0.83     0.28        2     0.99      1.5     0.81   0.0067\n  38      3.6   0.0068      5.6    0.086      6.8      3.5     0.26\n  40       25  9.9e-29       14    0.023       16       23      2.2\n  42        3  2.9e-29      5.5    0.076      6.3      3.4     0.34\n  50     0.66  1.8e-29      2.6     0.25      3.1     0.65    0.063\n  80      0.2    1e-29      1.2     0.75      1.8     0.19     0.02\n 400    0.062  1.5e-29     0.39      2.8      1.2    0.056   0.0087\n"
         }
       ]
     }

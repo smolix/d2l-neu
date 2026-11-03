@@ -9,42 +9,71 @@
   },
   "cells": {
     "random-variables-imports": {
-      "code_fingerprint": "sha256:a50946bbf74366d3c4acbb7e504a2092bd97c72ed73fcb55f56b2e161b2c9f19",
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
       "kind": "text",
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:0414350b85f1b9233a927f75145e427568a0d955abc630937dfdfac78543c17a",
+      "code_fingerprint": "sha256:87b4f747c6b94a0eb0357da24c3b4b133a63eacf3d157f5a8d6104155198dd6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "width 0.1    probability 0.10008  ratio 1.001\nwidth 0.01   probability 0.01013  ratio 1.013\nwidth 0.001  probability 0.00100  ratio 1.002\n"
+        }
+      ]
+    },
+    "mdl-random-variables-quantiles-and-inverse-transform-sampling": {
+      "code_fingerprint": "sha256:c069d1fd6f96a96c5e2ae770af8351a2a85b4b5fc9fda77425675a60760bd6ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(R < 0.5): darts 0.250, sqrt(U) 0.249, naive U 0.499\nmean distance: darts 0.667, sqrt(U) 0.667\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:c33958eabc55d2a988a66351950e9fd51fa2b96f4c516cd126613c81c623f3f1",
+      "code_fingerprint": "sha256:408a6510a9844d547ac9786fa5a7c7ae6711ed96171fc3f1c20cb49fb24aa4b2",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "averages of 1000 Cauchy draws with |average| > 1: 0.49\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-random-variables/random-variables-cauchy-diverges-1.svg",
+          "bytes": 46243,
+          "sha256": "sha256:be952cf3aa40fb483a93dc7616a636890f31086ef87faa446e53c37e36169806"
+        }
+      ]
+    },
+    "mdl-random-variables-conditional-expectation": {
+      "code_fingerprint": "sha256:02640426f17f1c1783539b53fc80d80501cb697d1cbeae29a273f6e92523071e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
+          "text": "Var(X) 3.555 = within 0.999 + between 2.556\n"
         }
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:9748cf2650df01ea99166ebe4afcf9d21473500ce552fe607313de48c45c989a",
+      "code_fingerprint": "sha256:f74de9a9840e41e502d93ee8b18561d3707a39c477410d1316c1d1cca6daafc6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
-          "bytes": 27143,
-          "sha256": "sha256:e5fa050d62c264a3f58987ac979afc430d9c1ad9a0a688e445f59b961981ca75"
+          "bytes": 36808,
+          "sha256": "sha256:bdf674ed9add0a011efeee53979dd94eae66a284ada57f0865c0f30fa7bb7988"
         }
       ]
     }

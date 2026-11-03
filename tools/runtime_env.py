@@ -27,36 +27,28 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
-    # Diffusion chapter (ch. 17): every experiment is sized for a laptop CPU
-    # (2-D mixtures in seconds; the small Fashion-MNIST U-Nets in minutes).
-    # Listed explicitly because the keyword scan can otherwise match "GPU"
-    # inside base64 image outputs, making the classification non-deterministic.
+    # Diffusion chapter (ch. 17): the sections whose experiments are all on the
+    # 2-D running example. Small MLPs on batches of 256 points are bound by
+    # per-step dispatch, not arithmetic, so a GPU does not help (2026-11-03,
+    # standalone: PyTorch ddpm's training cell 6 s on CPU vs 11 s on a GPU,
+    # score-matching 8 vs 14 s; JAX 339 s on CPU and 339 s on a GPU summed
+    # over the five notebooks). The sections that train on Fashion-MNIST are
+    # in GPU_ONLY_NOTEBOOKS. Listed explicitly because the keyword scan can
+    # otherwise match "GPU" inside base64 image outputs, making the
+    # classification non-deterministic.
     "chapter_diffusion-models/limits.ipynb",
     "chapter_diffusion-models/energy-training.ipynb",
     "chapter_diffusion-models/score-matching.ipynb",
-    "chapter_diffusion-models/denoising.ipynb",
     "chapter_diffusion-models/langevin.ipynb",
-    "chapter_diffusion-models/annealed-langevin.ipynb",
     "chapter_diffusion-models/ddpm.ipynb",
-    "chapter_diffusion-models/ddim.ipynb",
-    "chapter_diffusion-models/flow-matching.ipynb",
-    "chapter_diffusion-models/discrete-diffusion.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
-# run on a GPU slot. ch. 17 (#95): the PyTorch diffusion notebooks meet the
-# "minutes on a laptop CPU" budget (annealed-langevin 6 min, flow-matching 11
-# min, 2026-10-25 batch run), but the JAX versions took 31-51 min on CPU under
-# the build's thread caps (flow-matching 51, ddim 51, discrete-diffusion 38,
-# annealed-langevin 31). JAX places arrays on the default backend, so with a GPU
-# visible these notebooks use it without code changes; the PyTorch versions
-# stay on CPU slots.
-GPU_FRAMEWORK_NOTEBOOKS = {
-    ("jax", "chapter_diffusion-models/annealed-langevin.ipynb"),
-    ("jax", "chapter_diffusion-models/ddim.ipynb"),
-    ("jax", "chapter_diffusion-models/flow-matching.ipynb"),
-    ("jax", "chapter_diffusion-models/discrete-diffusion.ipynb"),
-}
+# run on a GPU slot, for a notebook whose variants in different frameworks
+# need different resources. Empty since ch. 17's Fashion-MNIST sections moved
+# to GPU_ONLY_NOTEBOOKS for both frameworks (#95); kept because
+# run_one_notebook.py and scan_notebook_manifests.py honour it.
+GPU_FRAMEWORK_NOTEBOOKS = set()
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
 # scan is textual, so it is unreliable in BOTH directions: a notebook that never
@@ -65,15 +57,20 @@ GPU_FRAMEWORK_NOTEBOOKS = {
 # makes the answer depend on whether the notebook has been executed yet. An
 # entry here settles it deterministically.
 GPU_ONLY_NOTEBOOKS = {
-    # ch. 17: three U-Net training loops of 1000-2000 steps, each inside ONE
-    # cell. On CPU the JAX variant blows the 3600 s per-cell timeout (measured
-    # 2026-09-28: FAIL at 3612 s both at 8-way concurrency and standalone); on
-    # a GPU the same notebook finishes in 155 s. JAX is what forces the entry:
-    # it places arrays on the default backend, so it is the only framework here
-    # that actually picks the GPU up. The PyTorch cells never call .to(device),
-    # so that variant stays CPU-bound either way (2068 s with the GPU hidden,
-    # 1846 s with one assigned) and only holds the slot — cheap, and it keeps
-    # both frameworks' numbers coming off the same run configuration.
+    # ch. 17: the sections that train a U-Net or a convolutional denoiser on
+    # Fashion-MNIST. Both frameworks put the model and data on the GPU
+    # (PyTorch via d2l.try_gpu(), JAX on its default device). Measured
+    # 2026-11-03 standalone on one RTX 4090 against a CPU run with 4 threads,
+    # PyTorch: denoising 51 -> 17 s, annealed-langevin 201 -> 24 s, ddim 399
+    # -> 34 s, flow-matching 372 -> 31 s, discrete-diffusion 355 -> 48 s.
+    # JAX took 7-51 min on a CPU slot under the build's thread caps (#95) and
+    # 46-93 s on a GPU. image-diffusion's JAX variant blows the 3600 s
+    # per-cell timeout on CPU (2026-09-28) and finishes in about 150 s on a GPU.
+    "chapter_diffusion-models/denoising.ipynb",
+    "chapter_diffusion-models/annealed-langevin.ipynb",
+    "chapter_diffusion-models/ddim.ipynb",
+    "chapter_diffusion-models/flow-matching.ipynb",
+    "chapter_diffusion-models/discrete-diffusion.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",
 }
 

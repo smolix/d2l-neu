@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
+    "d2l_lib_fingerprint": "sha256:a81dc03f98169e54e398e0a6ce82c5a124348c2ae58ec9616f1c33d345e1d349",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DDIM, 200 steps (eta = 0): mode weights [0.492, 0.359, 0.148], spread 0.47, stray 0.065\nDDIM,  50 steps (eta = 0): mode weights [0.502, 0.359, 0.139], spread 0.46, stray 0.066\nDDIM,  20 steps (eta = 0): mode weights [0.511, 0.357, 0.132], spread 0.47, stray 0.068\nDDIM,  10 steps (eta = 0): mode weights [0.497, 0.375, 0.127], spread 0.41, stray 0.082\n"
+          "text": "DDIM, 200 steps (eta = 0): mode weights [0.492, 0.359, 0.148], spread 0.47, stray 0.065\nDDIM,  50 steps (eta = 0): mode weights [0.502, 0.359, 0.139], spread 0.46, stray 0.066\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM,  20 steps (eta = 0): mode weights [0.511, 0.357, 0.132], spread 0.47, stray 0.068\nDDIM,  10 steps (eta = 0): mode weights [0.497, 0.375, 0.127], spread 0.41, stray 0.082\n"
         }
       ]
     },
@@ -46,7 +51,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact predictor, 200 steps: mode weights [0.515, 0.294, 0.191], spread 0.48, stray 0.014\nexact predictor,  50 steps: mean distance to the 200-step sample 0.038\nexact predictor,  20 steps: mean distance to the 200-step sample 0.113\nexact predictor,  10 steps: mean distance to the 200-step sample 0.238\nexact predictor,   5 steps: mean distance to the 200-step sample 0.540\nsame x_T twice: max difference 0.0e+00\n"
+          "text": "exact predictor, 200 steps: mode weights [0.515, 0.294, 0.191], spread 0.48, stray 0.014\nexact predictor,  50 steps: mean distance to the 200-step sample 0.038\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact predictor,  20 steps: mean distance to the 200-step sample 0.113\nexact predictor,  10 steps: mean distance to the 200-step sample 0.238\nexact predictor,   5 steps: mean distance to the 200-step sample 0.540\nsame x_T twice: max difference 0.0e+00\n"
         }
       ]
     },
@@ -64,18 +74,18 @@
       ]
     },
     "ddim-fast-sampling-for-images-1": {
-      "code_fingerprint": "sha256:8b0c27c373e9c4a16b332208bb7c1905abe7d23d60ef2bdf94bf3f80d2827527",
+      "code_fingerprint": "sha256:cb1b8956874f390ddb1c8dbf2a05f7f01b7ab29aafdda1951e36c44a4333aa76",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.039\n"
+          "text": "final training loss: 0.045\n"
         }
       ]
     },
     "ddim-fast-sampling-for-images-2": {
-      "code_fingerprint": "sha256:19d2bffd031dbff93d139cb00d71ef4f74e207db157c66c05899331e897f905b",
+      "code_fingerprint": "sha256:d1ba2bd013e018fc59b4340322803ea9f2e2d28a7713fee57a02550c1537b588",
       "kind": "mixed",
       "outputs": [
         {
@@ -87,21 +97,21 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-2-1.png",
-          "bytes": 60640,
-          "sha256": "sha256:66c7c8e503816eaf8adf9a5cd305c02c8051d979afc3f46d087916665d3840be"
+          "bytes": 62920,
+          "sha256": "sha256:ea4258b759e8d4d3a0b0943919f97e39aa7ea3bfbc7b5c613ee0de2b0ee4b090"
         }
       ]
     },
     "ddim-fast-sampling-for-images-3": {
-      "code_fingerprint": "sha256:88e08f1e1a2e6d2dd4f733a830a3cdd13e10e0c6aaaf7c9b32d8514d9a89535b",
+      "code_fingerprint": "sha256:e7228ce248a49290cebd196dc5d8b73f4a4fd9afa6a2b6f52d166dfea98ba6ad",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-3-1.png",
-          "bytes": 24911,
-          "sha256": "sha256:53c8f210676a0fe790c8661d9fbe78598b3f4cfd59a708bedda0d9830b362894"
+          "bytes": 22534,
+          "sha256": "sha256:97954cb2d2333cae47d2e664e07177717fe33f044b0fc798131af4087dd71d6e"
         }
       ]
     }

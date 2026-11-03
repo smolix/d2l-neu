@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-the-running-example-2-1.svg",
           "bytes": 223700,
-          "sha256": "sha256:7fb2b65712337200bbd61ed59fa9577f423b73f1e19f4fa24a1dcd4b14681158"
+          "sha256": "sha256:746089642c5290b26d217b5d085c57b69624a2e13f33d9729871bae451ea9d59"
         }
       ]
     },
@@ -59,12 +59,12 @@
       ]
     },
     "energy-training-metropolis-hastings": {
-      "code_fingerprint": "sha256:cb64996c33583473b8c9b31de019b9cb3aaf5d426c94c158c51bb061b0264040",
+      "code_fingerprint": "sha256:a9446a7553e956cbc05dfa5bf4adaf1d1a7ecfe2a937700151cd33f0565e320b",
       "kind": "text",
       "outputs": []
     },
     "energy-training-the-step-size-trades-acceptance-against-mixing": {
-      "code_fingerprint": "sha256:ea10e9388cde07d2bba7e2c28472ebd0a3c8f5c8e1dcf098adcbed1732369492",
+      "code_fingerprint": "sha256:559a28300c5da22a2d370c484a501c5bb1c6cb58d75c79ac6924fe05cd3ea14b",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "energy-training-contrastive-divergence-1": {
-      "code_fingerprint": "sha256:4b5bbe181a9a2ac86d9b28a00f21a0bbad1fcee5f23c14d9c30006a4802c96b9",
+      "code_fingerprint": "sha256:6a411b8d90bbb47029158a8fff3ab3ad86ef945eeb7c52f9b110e2d89e6e80cb",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "energy-training-contrastive-divergence-2": {
-      "code_fingerprint": "sha256:28cb7fe0160ac81425c3a6f0e3ba7c1e5eadd49bd409c4d007be378ca8b3b361",
+      "code_fingerprint": "sha256:8e85972c2928b4b63123ce3559c2583970a8bfc94b22b8c37e64f5cd4dcff12c",
       "kind": "asset",
       "outputs": [
         {
@@ -109,7 +109,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
           "bytes": 321029,
-          "sha256": "sha256:bc61d5a9d2cd69f3e908b46d1e7ab4f581f857962f390140f16f23b01b66f510"
+          "sha256": "sha256:a73044356ed11c6382a1d10772cf7707097c269cca52438305a9ca6c8787529d"
         }
       ]
     }

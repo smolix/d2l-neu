@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
+    "d2l_lib_fingerprint": "sha256:a81dc03f98169e54e398e0a6ce82c5a124348c2ae58ec9616f1c33d345e1d349",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -95,28 +95,28 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-1": {
-      "code_fingerprint": "sha256:25978951da3c0b51c2efe3df5c914ffa1de64b63cc1d8c03d1876095c9bd301e",
+      "code_fingerprint": "sha256:68a53e38a6dac1854367ea7e56dd6f4fb6aef2a943f4790f2fd0fab651508072",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step   0: loss 0.789 nats per pixel\n"
+          "text": "step   0: loss 0.794 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 200: loss 0.162 nats per pixel\n"
+          "text": "step 200: loss 0.157 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 400: loss 0.141 nats per pixel\n"
+          "text": "step 400: loss 0.129 nats per pixel\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 600: loss 0.148 nats per pixel\n"
+          "text": "step 600: loss 0.136 nats per pixel\n"
         },
         {
           "type": "stream",
@@ -126,34 +126,34 @@
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-2": {
-      "code_fingerprint": "sha256:8977e496ed722e2b1876e6e99326621444b592c836de4cdf356675dcaeeea958",
+      "code_fingerprint": "sha256:1b608386dade6956690736dd5f8d7915b33afb7eb1fd92dd225874a68d9c30ea",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: training images 0.0037, 100-step samples 0.0077, 4-step samples 0.0262\n"
+          "text": "speckles: training images 0.0037, 100-step samples 0.0079, 4-step samples 0.0271\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 82825,
-          "sha256": "sha256:206f63dbbc250e1f8466edf0660c2a8311ac8a135ed967fdfd4e299f060114c6"
+          "bytes": 86672,
+          "sha256": "sha256:fe224dd89f5cd5393930e92378958cbe7d89e97887fd68e6cd5198f9e0b0f3f1"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 170839,
-          "sha256": "sha256:322c8041e9a5c415a439ab508e5471d95989ff93b55ac273efd344637aff4e99"
+          "bytes": 167567,
+          "sha256": "sha256:52989d42efcb68609b8893b4ea5448786d48f4351b2fc35cfa50c1c6cf8d315a"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 177266,
-          "sha256": "sha256:df740fda9dff0e427ee732b9c07f1e105681b442fe7019e3aaa10c897ad17783"
+          "bytes": 177163,
+          "sha256": "sha256:9eff8cda6e15101b8496356469d12f8b56c94c234a4d7d922e4320f0259d25d6"
         }
       ]
     }

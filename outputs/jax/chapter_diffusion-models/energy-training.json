@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-the-running-example-2-1.svg",
           "bytes": 223637,
-          "sha256": "sha256:848d6dbde932992e1141cbbc9fea81350eb3e50f4afd5b1f0304aa8a3a4ee5e8"
+          "sha256": "sha256:e2c4ea1880f52324a4916daa079d9a3819788451647e5741e9cda494139832e6"
         }
       ]
     },
@@ -69,12 +69,12 @@
       ]
     },
     "energy-training-metropolis-hastings": {
-      "code_fingerprint": "sha256:0a305a4c574bb8d81d63f073d3dabb1ca8fdd2921b4a79b5b1160d880d7b4f63",
+      "code_fingerprint": "sha256:ac45654b1267018b70840c3ed5430ef4437217275b9f3784aca08e6c3f2845db",
       "kind": "text",
       "outputs": []
     },
     "energy-training-the-step-size-trades-acceptance-against-mixing": {
-      "code_fingerprint": "sha256:500179814156c7705fea8ae01ebcb9863ca4db17ea55c27a49dbf1b0c54e8ff8",
+      "code_fingerprint": "sha256:d5a3e2d65178d16826ed20f3435eee8daa2b51e3f1279f5cfd03851577bd618a",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "energy-training-contrastive-divergence-1": {
-      "code_fingerprint": "sha256:0f3a7ce881a93dc8a69f8fc7534143a56cc4a40946c7ec56d9bf9fa821d66b24",
+      "code_fingerprint": "sha256:3f06c7389cc84776101b3b4cd3038f97c3e1472455cabacf2a84b7499c163122",
       "kind": "text",
       "outputs": [
         {
@@ -116,7 +116,7 @@
       ]
     },
     "energy-training-contrastive-divergence-2": {
-      "code_fingerprint": "sha256:610f80c8239174251d2bf435c2dd6913028a121f70136bb43c4babd354d534da",
+      "code_fingerprint": "sha256:3e12cd31abaa7ad9bedf2fc1c601865f77bbe505616248fcb7dd43fdff0ce716",
       "kind": "asset",
       "outputs": [
         {
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
           "bytes": 298271,
-          "sha256": "sha256:264c341447abdd9878859f831531c6b4712691ed21579f897fe241770b33ee33"
+          "sha256": "sha256:1db1c093c9d673cc5bfea9711375a79b258c907cd4267465807f49f2e50b4137"
         }
       ]
     }

@@ -3675,7 +3675,7 @@ class BERTEncoder(nnx.Module):
                  num_blks, dropout, max_len=1000, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.token_embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
-        self.segment_embedding = nnx.Embed(2, num_hiddens, rngs=rngs)
+        self.segment_embedding = d2l.Embed(2, num_hiddens, rngs=rngs)
         self.blks = nnx.List([d2l.TransformerEncoderBlock(
             num_hiddens, ffn_num_hiddens, num_heads, dropout, True, rngs=rngs)
             for _ in range(num_blks)])
@@ -3851,23 +3851,23 @@ def _pad_bert_inputs(examples, max_len, vocab):
     nsp_labels = []
     for (token_ids, pred_positions, mlm_pred_label_ids, segments,
          is_next) in examples:
-        all_token_ids.append(jnp.array(token_ids + [vocab['<pad>']] * (
-            max_len - len(token_ids)), dtype=jnp.int32))
-        all_segments.append(jnp.array(segments + [0] * (
-            max_len - len(segments)), dtype=jnp.int32))
+        all_token_ids.append(np.array(token_ids + [vocab['<pad>']] * (
+            max_len - len(token_ids)), dtype=np.int32))
+        all_segments.append(np.array(segments + [0] * (
+            max_len - len(segments)), dtype=np.int32))
         # `valid_lens` excludes count of '<pad>' tokens
-        valid_lens.append(jnp.array(len(token_ids), dtype=jnp.float32))
-        all_pred_positions.append(jnp.array(pred_positions + [0] * (
-            max_num_mlm_preds - len(pred_positions)), dtype=jnp.int32))
+        valid_lens.append(np.array(len(token_ids), dtype=np.float32))
+        all_pred_positions.append(np.array(pred_positions + [0] * (
+            max_num_mlm_preds - len(pred_positions)), dtype=np.int32))
         # Predictions of padded tokens will be filtered out in the loss via
         # multiplication of 0 weights
         all_mlm_weights.append(
-            jnp.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
+            np.array([1.0] * len(mlm_pred_label_ids) + [0.0] * (
                 max_num_mlm_preds - len(pred_positions)),
-                dtype=jnp.float32))
-        all_mlm_labels.append(jnp.array(mlm_pred_label_ids + [0] * (
-            max_num_mlm_preds - len(mlm_pred_label_ids)), dtype=jnp.int32))
-        nsp_labels.append(jnp.array(is_next, dtype=jnp.int32))
+                dtype=np.float32))
+        all_mlm_labels.append(np.array(mlm_pred_label_ids + [0] * (
+            max_num_mlm_preds - len(mlm_pred_label_ids)), dtype=np.int32))
+        nsp_labels.append(np.array(is_next, dtype=np.int32))
     return (all_token_ids, all_segments, valid_lens, all_pred_positions,
             all_mlm_weights, all_mlm_labels, nsp_labels)
 
@@ -3924,13 +3924,9 @@ def load_data_wiki(batch_size, max_len):
             if len(batch_indices) < batch_size:
                 continue
             batch = [train_set[idx] for idx in batch_indices]
-            yield (jnp.stack([b[0] for b in batch]),
-                   jnp.stack([b[1] for b in batch]),
-                   jnp.stack([b[2] for b in batch]),
-                   jnp.stack([b[3] for b in batch]),
-                   jnp.stack([b[4] for b in batch]),
-                   jnp.stack([b[5] for b in batch]),
-                   jnp.stack([b[6] for b in batch]))
+            # Stack on the host, then copy each field to the device once
+            yield tuple(jnp.asarray(np.stack([b[k] for b in batch]))
+                        for k in range(7))
     return data_iter, train_set.vocab
 
 def _get_batch_loss_bert(net, vocab_size, tokens_X,

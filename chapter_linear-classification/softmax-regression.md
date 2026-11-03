@@ -1,21 +1,23 @@
 # Softmax Regression
 :label:`sec_softmax`
 
-An online store wants to file each product photo under one of ten
-categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker,
-bag, or ankle boot. Linear regression predicts a number, and a number is the
-wrong kind of answer here. If we coded the categories as 1 to 10 and
-regressed on the codes, a prediction of 5.5 would place a photo halfway
-between a coat and a sandal, and the squared loss would charge 81 times more
-for mistaking a T-shirt (code 1) for an ankle boot (code 10) than for a
-trouser (code 2), although nothing makes the first mistake worse. The codes
-are names, not quantities.
+The linear regression of :numref:`sec_linear_regression` predicts a number,
+such as the price of a house. Many questions ask instead to which of several
+categories, or classes, an example belongs. Problems of this kind are called
+*classification*. A spam filter chooses between two classes, a diagnostic
+system among a handful of diseases, and a language model, which predicts the
+next word, among the tens of thousands of words of its vocabulary. This
+section asks how a linear model can answer such a question, and which loss
+trains it.
 
-Problems of this kind are called *classification*: the model must say to
-which of several categories, or classes, an example belongs. A spam filter
-chooses between two classes, a diagnostic system among a handful of
-diseases, and a language model chooses the next word from a vocabulary of
-tens of thousands. Usually we want more than a decision. A spam filter
+Consider an online store that files each product photo under one of ten
+categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker,
+bag, or ankle boot. We could code the categories as 1 to 10 and regress on
+the codes, but the codes are names, not quantities. A prediction of 5.5 would
+place a photo halfway between a coat and a sandal. The squared loss would
+charge 81 times more for mistaking a T-shirt (code 1) for an ankle boot
+(code 10) than for a trouser (code 2), although nothing makes the first
+mistake worse. Usually we also want more than a decision. A spam filter
 should remove an email from the inbox only when it is nearly certain, and a
 doctor needs to know how likely a diagnosis is, not just which one is most
 likely. So the model should output a probability for every class.

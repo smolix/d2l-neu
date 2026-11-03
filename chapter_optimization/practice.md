@@ -3,17 +3,18 @@
 
 Every experiment in this chapter so far ran in seconds or minutes. We could
 sweep a learning rate over four values, repeat a comparison, and restart
-a run that went wrong. A large training run allows none of this.
-PaLM, a language model with 540 billion parameters, was trained on 6,144 TPU
-chips, and its loss spiked about twenty times along the way, although
-gradient clipping was enabled :cite:`chowdhery2022palm`. At that scale a
-sweep over four learning rates costs four times the run itself, so most
+a run that went wrong. A large training run allows none of this. A sweep
+over four learning rates costs four times the run itself, so most
 hyperparameters are set once and never tuned on the model that matters. A
-single oversized update can undo days of progress. And the checkpoint at
-the end is one draw from a noisy trajectory, yet it is the one that ships.
+single oversized update can undo days of progress. PaLM, a language model
+with 540 billion parameters trained on 6,144 TPU chips, saw its loss spike
+about twenty times along the way, although gradient clipping was enabled
+:cite:`chowdhery2022palm`. And the checkpoint at the end is one draw from a
+noisy trajectory, yet it is the one that ships. This section asks how to
+set up, protect and finish a run that can be done only once.
 
-This section follows such a run through its life, using the methods of the
-earlier sections on models small enough to train here. We first ask how a
+We follow such a run through its life, using the methods of the earlier
+sections on models small enough to train here. We first ask how a
 configuration is chosen when the target cannot be tuned, and read the
 settings that four recent reports disclose. We then protect the run against
 rare oversized updates with gradient clipping, and ask what to do when a

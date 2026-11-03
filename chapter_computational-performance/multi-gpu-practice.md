@@ -1,10 +1,15 @@
 # Multi-GPU in Practice
 :label:`sec_multi_gpu_concise`
 
-In :numref:`sec_multi_gpu` a second GPU made the training steps of LeNet
-slower: each GPU had too little work to outweigh even a small exchange of
-gradients. A ResNet-18 on Fashion-MNIST images enlarged to 64×64 pixels is
-a different case. It performs 2.2 billion multiply-adds per image, about
+In :numref:`sec_multi_gpu` we built data parallelism by hand, and a second
+GPU made the training steps of LeNet slower: each GPU had too little work
+to outweigh even a small exchange of gradients. A larger model gives each
+GPU more work for every byte it exchanges, so it should fare better. How
+much better, once the exchange is organized well? And what can several
+GPUs do for a model that is too large for any one of them?
+
+A ResNet-18 on Fashion-MNIST images enlarged to 64×64 pixels gives each
+GPU far more work than LeNet. It performs 2.2 billion multiply-adds per image, about
 fifty for every byte of its 45 MB of gradients, so the work that a second
 GPU takes over is large compared with the gradients that the two GPUs must
 exchange. Whether this advantage survives depends on how the exchange is
@@ -29,7 +34,7 @@ gradients, and Adam's moment estimates take 29 GiB, more than the 24 GiB
 of an RTX 4090. Data parallelism would place these 29 GiB on every one of
 our four GPUs, so four GPUs cannot train this model any more than one can.
 
-This section first replaces the hand-written loop with each framework's
+We first replace the hand-written loop with each framework's
 production tool for data parallelism, which starts communicating while the
 backward pass is still running. We measure how ResNet-18 then scales on two
 and four GPUs, and compare the measurement with the cost model of

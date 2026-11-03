@@ -1,10 +1,16 @@
 # Recurrent Neural Networks
 :label:`sec_rnn`
 
-The trigram model of :numref:`sec_language-model` predicts each word from
-the two words before it, and nothing older can influence the prediction.
-Widening the window does not scale. A count table over a context of 20 BPE
-tokens has $1024^{20} \approx 10^{60}$ possible contexts, almost none of
+The language models of :numref:`sec_language-model` predict each token from
+a short window of the tokens just before it. The trigram model, for
+example, sees only the two words before the one it predicts, and nothing
+older can influence the prediction. A human reader does better: a character
+introduced on the first page of a novel still shapes how its last page
+reads. How can a model take the whole prefix into account without growing
+as the prefix grows?
+
+Widening the window does not answer this. A count table over a context of 20
+BPE tokens has $1024^{20} \approx 10^{60}$ possible contexts, almost none of
 which any corpus contains. A neural network that reads the last 20 tokens
 can generalize between similar contexts, but its window is still fixed: a
 token 21 positions back is invisible, and every additional token of context
@@ -67,11 +73,11 @@ import jax
 
 ## Neural Networks without Hidden States
 
-We start from the MLP of :numref:`sec_mlp`, with one hidden layer and
-activation function $\phi$. Its input is a minibatch of $b$ examples with
-$d$ features each, $\mathbf{X} \in \mathbb{R}^{b \times d}$. (We write $b$
-for the minibatch size, since $n$ is the order of an $n$-gram in this
-chapter.) The hidden layer computes
+A recurrent network is an MLP with one extra input, the previous hidden
+state, so we first write down the MLP of :numref:`sec_mlp`, with one hidden
+layer and activation function $\phi$. Its input is a minibatch of $b$
+examples with $d$ features each, $\mathbf{X} \in \mathbb{R}^{b \times d}$. (We write $b$ for the minibatch size, since $n$ is
+the order of an $n$-gram in this chapter.) The hidden layer computes
 
 $$\mathbf{H} = \phi(\mathbf{X} \mathbf{W}_{\textrm{xh}} + \mathbf{b}_\textrm{h}),$$
 :eqlabel:`rnn_h_without_state`

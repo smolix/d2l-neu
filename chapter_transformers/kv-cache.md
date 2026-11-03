@@ -1,16 +1,17 @@
 # Generation and the KV Cache
 :label:`sec_kv-cache`
 
-The `generate` method of :numref:`sec_gpt` produces each new token by
-running the model over the whole text so far. A forward pass costs about
-$2N$ floating-point operations per token for a model with $N$ parameters,
-so for a model of GPT-2's size, with 124 million parameters, writing 256
-tokens after a prompt of 3,584 tokens takes about $2.4 \times 10^{14}$
-operations. Reading the prompt once and then processing each new token once
-would take about $10^{12}$, some 250 times less. The difference is
-repetition. Attention is causal, so the keys and values of earlier tokens
-never change once computed, and the *KV cache* stores them instead of
-recomputing them.
+The GPT of :numref:`sec_gpt` writes text one token at a time, and its
+`generate` method produces each new token by running the model over the
+whole text so far. A chat assistant also writes one token at a time. If it
+were built like our GPT, it would answer a long question by reading the
+whole question again for every word of its answer. Does a model have to
+reprocess everything before it to choose the next token?
+
+It does not. Attention is causal, so the keys and
+values of earlier tokens never change once computed. The *KV cache* stores
+them, and each step then runs the model on the new token alone. For a long
+prompt this removes all but a small fraction of the arithmetic.
 
 This section builds the cache and measures the speedup. It then turns to the
 problem the cache creates. Generation becomes limited by memory rather than
@@ -70,7 +71,11 @@ step then runs the model on the one new token, writes its key and value
 into the cache, and attends to everything stored.
 :numref:`fig_kv-cache` contrasts the two schedules. A cached step costs
 about $2N$ operations, a forward pass over a single token, plus the scores
-of one query against $t$ keys.
+of one query against $t$ keys. For a model of GPT-2's size, with 124
+million parameters, writing 256 tokens after a prompt of 3,584 tokens takes
+about $2.4 \times 10^{14}$ operations without the cache. Reading the prompt
+once and then processing each new token once takes about $10^{12}$, some
+250 times less.
 
 ![One decoding step at context length $t$. Naive generation recomputes every key, value, and score row of the prefix and then uses only the last row. With a KV cache, the past keys and values are read from memory, and the step computes a single new key, value, and score row.](../img/mdl-transformers-kv-cache.svg)
 :label:`fig_kv-cache`
@@ -441,10 +446,12 @@ measures the prefill, and the *tokens per second* measure the decode loop.
 ## Memory and Bandwidth
 :label:`subsec_kv-cache-memory`
 
-The size of the cache follows from the shape of its buffers. Each of the
-$L$ blocks stores one key and one value vector of dimension
-$H_\textrm{kv} d_h$ per token, for $H_\textrm{kv}$ key--value heads of width
-$d_h$, so a batch of $b$ sequences of length $n$ holds
+The cache removes the repeated arithmetic, but it has to be stored, and it
+is read again at every step, so we start with its size. The size of the
+cache follows from the shape of its
+buffers. Each of the $L$ blocks stores one key and one value vector of
+dimension $H_\textrm{kv} d_h$ per token, for $H_\textrm{kv}$ key--value
+heads of width $d_h$, so a batch of $b$ sequences of length $n$ holds
 
 $$
 \textrm{cache bytes} \;=\; 2 \cdot L \cdot H_\textrm{kv} \cdot d_h \cdot n

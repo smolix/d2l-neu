@@ -6,12 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Synthetic Data
 :label:`sec_synthetic-regression-data`
 
-
-Before we can train a model we need data. Real datasets are what we
-ultimately care about, but when a method performs poorly on one, three
-explanations compete: the model may be misspecified, the optimization
-algorithm or its implementation may be flawed, or the data may be
-pathological. On real data these explanations are difficult to tell apart.
+The classes of :numref:`sec_oo-design` can train a model as soon as they
+are given data. Which data should the first run use? Real datasets are what
+we ultimately care about, but they make a poor first test. Suppose that we
+fit a linear model to house prices like those of
+:numref:`sec_linear_regression` and its predictions are poor. Three
+explanations compete: the model may be
+misspecified, the optimization algorithm or its implementation may be
+flawed, or the data may be pathological. On real data these explanations
+are difficult to tell apart.
 *Synthetic data* removes the ambiguity by construction. If we generate the
 data ourselves, we know the true weights $\mathbf{w}^*$, the true bias
 $b^*$, and the distribution of the noise. A model of the right form then has

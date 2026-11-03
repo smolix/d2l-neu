@@ -1,9 +1,19 @@
 # Case Study: Optimizing a Transformer
 :label:`sec_fast_transformer`
 
-The GPT of :numref:`sec_gpt` has 19 million parameters when we double its
-width to 512. One training step on 64 windows of 128 bytes then performs
-about $6 \times 1.9 \times 10^{7} \times 8{,}192 \approx 9 \times 10^{11}$
+The earlier sections of this chapter took the causes of a slow training
+step one at a time and found the change that removes each: host overhead,
+the memory traffic of small operations, wide number formats, and the limits
+of a single GPU. They also showed that recomputing activations saves
+memory, at the cost of time, when a step does not fit. A real model
+suffers from several of these causes at once, and removing one changes how
+much the others matter. How much faster does its training step become when
+we apply all the changes in turn?
+
+We answer the question for the GPT of :numref:`sec_gpt`, which has
+19 million parameters when we double its width to 512. One training step
+on 64 windows of 128 bytes performs about
+$6 \times 1.9 \times 10^{7} \times 8{,}192 \approx 9 \times 10^{11}$
 floating-point operations: two per parameter and token in the forward pass
 and four in the backward pass. The tensor cores of an RTX 4090 execute
 $1.65 \times 10^{14}$ of them per second in bf16, so the arithmetic of a
@@ -12,18 +22,13 @@ update, takes about 30 ms. Three quarters or more of the card's capacity
 go unused, and every training run takes several times longer than its
 arithmetic requires.
 
-The earlier sections of this chapter named the causes of such a gap and
-the change that removes each: host overhead, the memory traffic of small
-operations, wide number formats, and the limits of a single GPU. They also
-showed that recomputing activations saves memory, at the cost of time,
-when a step does not fit. In this section we apply these changes to the
-GPT one at a time, with the method of :numref:`sec_perf_model`. We measure
-the step, find the resource that limits it, change one thing, check that
-the model still computes the same function, and measure again. Each change
-is measured on top of the previous ones, because each moves the bottleneck
-and so changes what the next one can achieve. For data parallelism we
-predict the gain from a cost model before we measure it, and at the end a
-short training run checks that the fastest step still trains the model.
+We follow the method of :numref:`sec_perf_model`. We measure the step,
+find the resource that limits it, change one thing, check that the model
+still computes the same function, and measure again. Each change is
+measured on top of the previous ones, because each moves the bottleneck and
+so changes what the next one can achieve. For data parallelism we predict
+the gain from a cost model before we measure it, and at the end a short
+training run checks that the fastest step still trains the model.
 
 ```{.python .input #fast-transformer-case-study-making-a-transformer-fast}
 %%tab pytorch
@@ -71,6 +76,9 @@ import optax
 
 ## Experimental Setup
 :label:`subsec_ft-subject`
+
+Every change in this section is judged by the same measurement, so the
+model, the data, and the way we measure throughput stay fixed throughout.
 
 ### Model and Data
 
@@ -193,6 +201,9 @@ we read ratios to one decimal place.
 
 ## A Single GPU
 :label:`subsec_ft-rungs`
+
+We first make the step fast on one GPU, one change at a time, starting
+from the step as :numref:`sec_gpt` wrote it.
 
 ### Baseline
 :label:`subsec_ft-baseline`
@@ -761,6 +772,9 @@ configurations that follow leave it out.
 ## Data Parallelism
 :label:`subsec_ft-dp`
 
+The fastest single-GPU step still leaves three of the machine's four GPUs
+idle. We predict what data parallelism gains on them before we measure it.
+
 ### Predicted Speedup
 
 Four GPUs could at best process four times as many tokens per second as
@@ -807,6 +821,7 @@ allreduce was hidden behind computation.
 
 ### Measured Speedup
 
+We now test the prediction on two and four GPUs.
 `data_parallel(k, bf16, batch_size)` trains on $k$ GPUs with the given
 precision and minibatch size per GPU. It returns the throughput, together
 with the time of one allreduce of a buffer as large as all gradients on
@@ -972,6 +987,9 @@ and the cost model predicts most of the linear speedup even at batch 64.
 
 ## Results
 :label:`subsec_ft-waterfall`
+
+We now put the measurements of all the changes side by side and check that
+the fastest step still trains the model.
 
 ### Cumulative Comparison
 

@@ -1,13 +1,15 @@
 # The Delta Rule
 :label:`sec_deltanet`
 
-A program sets `rate = 0.05` and later `rate = 0.07`; a story moves its
-hero from Paris to Rome; a dialogue corrects an earlier date. In each case
-the text binds a name to a new value, and from then on only the new value
-is correct. The matrix memories of :numref:`sec_matrix-state` cannot do
-this. They store a pair by adding $\mathbf{v}_t\mathbf{k}_t^\top$, so a key
-written twice returns the sum of its two values, and the more often a key
-is rewritten, the less the latest value stands out.
+The matrix memories of :numref:`sec_matrix-state` add each new pair to what
+they already hold, which works as long as each name is bound once. Text
+often binds a name again. A program sets `rate = 0.05` and later
+`rate = 0.07`, and from then on only the new value is correct. A story moves
+its hero from Paris to Rome; a dialogue corrects an earlier date. A memory
+that stores a pair by adding $\mathbf{v}_t\mathbf{k}_t^\top$ cannot follow
+such a change: a key written twice returns the sum of its two values, and
+the more often a key is rewritten, the less the latest value stands out.
+How can a memory replace what it has stored under a key?
 
 The fix is to read before writing. Before storing a value under a key, the
 memory computes what it currently returns for that key and stores only the
@@ -46,8 +48,9 @@ import random
 
 ### A Key Written Twice
 
-Start with a single key $\mathbf{k}$ of unit length. Write the value 1 under
-it, then the value 2: the memory is $\mathbf{S} = 1 \cdot \mathbf{k}^\top +
+Before changing the write, we measure how badly addition does when a key is
+rewritten. Start with a single key $\mathbf{k}$ of unit length. Write the
+value 1 under it, then the value 2: the memory is $\mathbf{S} = 1 \cdot \mathbf{k}^\top +
 2 \cdot \mathbf{k}^\top$, and reading it returns $\mathbf{S}\mathbf{k} = 3$.
 In general, if a key is written $R$ times with values $\mathbf{v}^{(1)},
 \ldots, \mathbf{v}^{(R)}$, the additive memory returns

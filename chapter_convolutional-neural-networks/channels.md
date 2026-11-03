@@ -6,27 +6,27 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multiple Input and Multiple Output Channels
 :label:`sec_channels`
 
-A color image is not one grid of numbers but three: a $224\times 224$ RGB
-image is a tensor of shape $3\times 224\times 224$, with one *channel* each
-for red, green, and blue. The cross-correlation of :numref:`sec_conv_layer`
-takes one grid and one kernel and returns one grid. It can therefore neither
-look at all three colors at once nor detect more than one pattern. Both
-matter. A boundary between a red and a green region of equal brightness is
-visible only when the channels are compared, and a useful layer detects dozens
-of patterns at every position (edges at several orientations, spots,
-textures), each in a grid of its own.
+Every kernel we have used so far has read one grid of numbers and produced
+one. The edge detector of :numref:`sec_conv_layer` looked at a grayscale image
+and found one kind of edge. Real images and real networks need more on both
+sides. A color photograph stores three numbers per pixel, one *channel* each
+for red, green, and blue, so a $224\times 224$ RGB image is a tensor of shape
+$3\times 224\times 224$. A boundary between a red and a green region of equal
+brightness is visible only when the channels are compared. And a useful layer
+detects dozens of patterns at every position (edges at several orientations,
+spots, textures), each in a grid of its own. How does one layer read several
+input channels and produce several output channels, and what does that cost?
 
 The convolutional layer of :numref:`sec_why-conv` already allows for this:
 each output channel adds up, over all input channels, a separate
 $k_\textrm{h}\times k_\textrm{w}$ kernel applied to each. This section
 implements that layer on top of the single-channel `corr2d` and counts what
 it costs. A layer with $c_\textrm{i}$ input and $c_\textrm{o}$ output channels
-has $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ weights, about
-590,000 for a $3\times 3$ layer with 256 channels in and out, and its cost
-grows with the product $c_\textrm{i} c_\textrm{o}$. The rest of the section
-reduces that product: the $1\times 1$ convolution mixes channels without
-looking at neighbors, and grouped and depthwise convolutions restrict which
-channels are mixed.
+has $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ weights, and its
+cost grows with the product $c_\textrm{i} c_\textrm{o}$. The rest of the
+section reduces that product: the $1\times 1$ convolution mixes channels
+without looking at neighbors, and grouped and depthwise convolutions restrict
+which channels are mixed.
 
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
@@ -185,7 +185,9 @@ second channel starts at $56 + 20 = 76$.
 
 ### Parameters and Cost
 
-With one bias per output channel, a convolutional layer has
+Channels multiply the size of a layer, and before we design networks with
+many of them we need to know by how much. With one bias per output channel, a
+convolutional layer has
 
 $$c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$$
 

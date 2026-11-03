@@ -1,18 +1,26 @@
 # Gradient Descent
 :label:`sec_gd`
 
-Gradient descent is the simplest optimizer and the ancestor of every other
-method in this chapter: compute the gradient, take a step against it, and
-repeat. It has a single knob, the learning rate $\eta$, and on the valley
-$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of :numref:`sec_optimization-intro`
-this knob already decides everything. At $\eta = 0.45$ the iterate needs 49
-steps to come within 1% of the minimum, at $\eta = 0.5$ it never arrives,
-and no learning rate does better than 47 steps. A learning rate that makes
-a large network diverge does so for the same reason that it makes a
-one-dimensional quadratic diverge, so the small cases are worth
-understanding completely.
+Every model in this book was trained with a learning rate fixed before
+the run, usually copied from a recipe and lowered if the loss diverged.
+The previous section showed why the choice is delicate: on a valley that
+curves steeply in one direction and gently in another, a step small enough
+for the steep direction makes little progress along the gentle one. This
+section asks what decides which learning rates work, and how fast the best
+of them can go. We answer it for gradient descent, the simplest optimizer
+and the ancestor of every other method in this chapter: compute the
+gradient, take a step against it, and repeat.
 
-This section answers three questions. Why does a step against the gradient
+Gradient descent has a single knob, the learning rate $\eta$, and on the
+valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of
+:numref:`sec_optimization-intro` this knob already decides everything. At
+$\eta = 0.45$ the iterate needs 49 steps to come within 1% of the minimum,
+at $\eta = 0.5$ it never arrives, and no learning rate does better than 47
+steps. A learning rate that makes a large network diverge does so for the
+same reason that it makes a one-dimensional quadratic diverge, so the small
+cases are worth understanding completely.
+
+We split the question into three. Why does a step against the gradient
 lower the objective, and how large may the step be? What would the ideal
 step be if we also knew the curvature? And how can we approximate that
 ideal cheaply? The answers are a Taylor expansion, Newton's method, and

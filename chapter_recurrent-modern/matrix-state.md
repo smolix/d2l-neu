@@ -1,15 +1,17 @@
 # Matrix-State Recurrences
 :label:`sec_matrix-state`
 
-A program defines `rate = 0.05` near its top and uses `rate` two hundred
-lines later. A story introduces a character as "the engineer" and refers to
-"the engineer" again three pages on. To predict such a token, a model must
-store a *pair*, a name together with what it stands for, and later retrieve
-the second half of the pair when the first half reappears. This is
-*associative recall*, and transformers do it with attention: the current
-token's query is compared with the keys of all earlier tokens, and the
-values of the best matches are returned. A recurrent state that holds one
-decaying number per channel has no natural place to keep such pairs.
+The selective models of :numref:`sec_mamba` decide, token by token, what to
+keep and for how long. Much of what a language model must remember comes in
+pairs, a name together with what it stands for. A program defines `rate =
+0.05` near its top and uses `rate` two hundred lines later. A story
+introduces a character as "the engineer" and refers to "the engineer" again
+three pages on. To predict such a token, a model must store a *pair* and
+later retrieve the second half of the pair when the first half reappears.
+This is *associative recall*, and transformers do it with attention: the
+current token's query is compared with the keys of all earlier tokens, and
+the values of the best matches are returned. Can a recurrent state of fixed
+size store pairs too, and how many?
 
 This section makes the state a matrix that stores key–value pairs. A pair
 is written by adding the outer product of its value and its key; it is read
@@ -51,8 +53,10 @@ import random
 
 ### Writing and Reading Pairs
 
-Start with two keys in $\mathbb{R}^2$, $\mathbf{k}_1 = (1, 0)^\top$ and
-$\mathbf{k}_2 = (0, 1)^\top$, with the values $v_1 = 3$ and $v_2 = 5$.
+The simplest memory for pairs is a sum: it adds each new pair to what it
+holds and reads a value back with its key. A small example shows how this
+works and where it fails. Start with two keys in $\mathbb{R}^2$,
+$\mathbf{k}_1 = (1, 0)^\top$ and $\mathbf{k}_2 = (0, 1)^\top$, with the values $v_1 = 3$ and $v_2 = 5$.
 Store both in one row vector, the sum of each value times its key,
 $\mathbf{S} = v_1 \mathbf{k}_1^\top + v_2 \mathbf{k}_2^\top = (3, 5)$.
 Multiplying by a key reads its value back: $\mathbf{S}\mathbf{k}_1 = 3$ and
@@ -84,7 +88,9 @@ trace linear attention back to this older idea.
 
 ### Linear Attention
 
-Unrolling :eqref:`eq_ms-recurrence` from $\mathbf{S}_0 = \mathbf{0}$ gives
+The recurrence :eqref:`eq_ms-recurrence` does not look like attention, yet
+it computes a form of it. Unrolling it from $\mathbf{S}_0 = \mathbf{0}$
+gives
 
 $$\mathbf{y}_t = \Big(\sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top\Big)
 \mathbf{q}_t = \sum_{s \le t} (\mathbf{k}_s^\top \mathbf{q}_t)\,
@@ -254,8 +260,11 @@ the matrix products of the dual form below.
 
 ### Unrolling with Decay
 
-With a scalar decay, unrolling :eqref:`eq_ms-decay` from $\mathbf{S}_0 =
-\mathbf{0}$ gives each output as a weighted sum over the past, in which a
+Written as a recurrence, the decayed memory processes one token at a time.
+Without decay, linear attention can also be computed as attention, over all
+positions at once (:numref:`sec_attention-at-scale`); we ask whether this
+survives the decay. With a scalar decay, unrolling :eqref:`eq_ms-decay`
+from $\mathbf{S}_0 = \mathbf{0}$ gives each output as a weighted sum over the past, in which a
 pair written at step $s$ is scaled by all decays met since:
 
 $$\mathbf{y}_t = \sum_{s \le t} L_{ts}\, (\mathbf{k}_s^\top \mathbf{q}_t)\,

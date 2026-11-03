@@ -1,8 +1,8 @@
 # The Transformer Block
 :label:`sec_transformer-block`
 
-The previous chapter built attention, a layer in which each position reads
-from all the others. On its own it makes a weak model. Each output of an
+:numref:`chap_attention` built attention, a layer in which each position
+reads from all the others. On its own it makes a weak model. Each output of an
 attention layer is a weighted average of value vectors, which are linear
 projections of the inputs. The softmax weights decide how much of each value
 to take, but nothing in the layer computes a nonlinear feature of what a
@@ -402,7 +402,9 @@ enters the block through the `attn_factory` hook introduced below.
 
 ## The Feed-Forward Network
 
-The other half of the block is a small MLP applied to each position
+Attention moves information between positions but computes no nonlinear
+feature of what a single position holds. That computation happens in the
+other half of the block, a small MLP applied to each position
 independently,
 
 $$
@@ -694,7 +696,9 @@ class CharLM(nnx.Module):
 ### Comparing GELU and SwiGLU
 :label:`subsec_gelu-vs-swiglu`
 
-We train `CharLM` twice on `d2l.WikiText103`, the bytes of the Wikipedia
+SwiGLU keeps its parameter count equal to the GELU network's by
+shrinking the hidden width, so a comparison of the two asks whether the
+gate makes a better model at the same size. We train `CharLM` twice on `d2l.WikiText103`, the bytes of the Wikipedia
 articles introduced in :numref:`subsec_tinylm`. Both runs use the same
 model size, optimizer, learning rate, and budget of 600 steps. Only the
 `act` flag differs, and the parameter counts match to a tenth of a percent. Each line

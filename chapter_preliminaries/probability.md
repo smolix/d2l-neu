@@ -6,27 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Probability and Statistics
 :label:`sec_prob`
 
-Suppose that a coin is tossed 100 times and produces 56 heads. Is the coin
-biased? The count alone does not tell us. Even a fair coin rarely produces
-exactly 50 heads in 100 tosses, so some deviation from 50 is expected, and the
-question is whether a deviation of 6 is larger than chance alone would
-produce. The same question arises whenever we measure a model. A classifier
-that labels 230 of a minibatch of 256 images correctly has an accuracy of 0.90
-on that minibatch, and on the next minibatch it may score 0.87. Before we
-conclude that one model is better than another, or that a change to the
-training code helped, we need to know how much such numbers fluctuate when
-nothing has changed.
+The previous sections gave us the tools to compute a prediction, a loss, and
+its gradient. Once a model is trained, we measure how well it does, and the
+measurement depends on which examples we happened to use. A classifier that
+labels 230 of a minibatch of 256 images correctly has an accuracy of 0.90 on
+that minibatch, and on the next minibatch the same model may score 0.87.
+Before we conclude that one model is better than another, or that a change
+to the training code helped, we need to know how much such numbers fluctuate
+when nothing has changed.
+
+Such questions are much older than machine learning. Probability theory
+began in the seventeenth century as a study of games of chance, and its
+simplest example is still a coin. Suppose that a coin is tossed 100 times
+and produces 56 heads. Is the coin biased? The count alone does not tell us.
+Even a fair coin rarely produces exactly 50 heads in 100 tosses, so some
+deviation from 50 is expected, and the question is whether a deviation of 6
+is larger than chance alone would produce.
 
 *Probability* answers the forward question: given a model of a random
 process, such as a fair coin, how likely is each outcome? *Statistics*
 answers the inverse question: given observations, what can we infer about the
-process that produced them? The previous sections gave us the tools to
-compute a prediction and its gradient. This section gives us the tools to
-judge whether a number computed from data reflects a stable pattern or
-sampling noise. We simulate coin tosses to see the noise, then state the
-rules for computing with probabilities and use them to interpret a medical
-test. Finally, we measure how much an average of random outcomes
-fluctuates, which settles the question about the coin.
+process that produced them? Together they let us judge whether a number
+computed from data reflects a stable pattern or sampling noise. We simulate
+coin tosses to see the noise, then state the rules for computing with
+probabilities and use them to interpret a medical test. Finally, we measure
+how much an average of random outcomes fluctuates, which settles the
+question about the coin.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet

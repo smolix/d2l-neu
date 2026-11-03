@@ -1,29 +1,32 @@
 # Gated Recurrent Networks
 :label:`sec_lstm`
 
-To predict the next characters of "the keys to the cabinet in the hall",
-a language model must remember that the subject, "keys", is plural, and by
-the time the verb arrives, that word lies 30 characters back. The recurrent
-networks of :numref:`sec_rnn-scratch` carry such information in a hidden
-state that they rewrite at every step with a matrix product and a $\tanh$.
-Information from 30 steps back reaches the present only through 30 of these
-rewrites, and so does the gradient that would teach the network to keep it.
-If each rewrite shrinks a signal by a factor of 0.9, 30 steps leave 4% of
-it, and 100 steps leave 0.003%. Plain recurrent networks therefore learn
-dependencies over a few dozen steps at best, while text, speech, and music
-are full of longer ones.
+The recurrent network of :numref:`sec_rnn-scratch` generates text with real
+words and punctuation, but its grammar holds over a few words at most. Such
+networks have trouble remembering anything for long. Consider a model that
+reads "the keys to the cabinet in the hall" and must predict what comes
+next. To choose "are" rather than "is", it must remember that the subject,
+"keys", is plural, and by the time the verb arrives, that word lies 30
+characters back. A plain recurrent network rewrites its whole hidden state
+at every step with a matrix product and a $\tanh$. Information from 30 steps
+back reaches the present only through 30 of these rewrites, and so does the
+gradient that would teach the network to keep it. Each rewrite tends to
+shrink the signal, so plain recurrent networks learn dependencies over a few
+dozen steps at best, while text, speech, and music are full of longer ones.
+How can a network keep what it has read for hundreds of steps?
 
-The remedy that made recurrent networks practical, from the late 1990s
-until transformers replaced them, is to let the network decide, for each
-unit and at each step, how much of its state to keep. A unit that keeps its
-state unchanged passes the stored information, and the gradient, through
-the step without loss. The decision is made by a *gate*, a vector of
-numbers between 0 and 1 that the network computes from its input and its
-state. We build the two gated networks in wide use, the long short-term
-memory (LSTM) and the gated recurrent unit (GRU), and test them on a task
-that needs a long memory and on character-level language modeling. Gates
-fix the memory, but they read the previous state, so training must still
-process a sequence one step at a time. The next section removes that
+The remedy that made recurrent networks practical is to let the network
+decide, for each unit and at each step, how much of its state to keep. It
+dates from the late 1990s, and gated networks carried speech recognition and
+machine translation through the 2010s, until transformers took their place.
+A unit that keeps its state unchanged passes the stored information, and the
+gradient, through the step without loss. The decision is made by a *gate*, a
+vector of numbers between 0 and 1 that the network computes from its input
+and its state. We build the two gated networks in wide use, the long
+short-term memory (LSTM) and the gated recurrent unit (GRU), and test them
+on a task that needs a long memory and on character-level language modeling.
+Gates fix the memory, but they read the previous state, so training must
+still process a sequence one step at a time. The next section removes that
 restriction.
 
 Throughout the chapter we write the equations for a single sequence, with
@@ -59,8 +62,9 @@ import random
 
 ### Vanishing Gradients
 
-A plain recurrent network updates its hidden state $\mathbf{h}_t \in
-\mathbb{R}^d$ from the previous state and the input $\mathbf{x}_t$,
+We first make precise why a plain recurrent network forgets. It updates its
+hidden state $\mathbf{h}_t \in \mathbb{R}^d$ from the previous state and the
+input $\mathbf{x}_t$,
 
 $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh} \mathbf{h}_{t-1} +
 \mathbf{W}_\textrm{xh} \mathbf{x}_t + \mathbf{b}_\textrm{h}).$$
@@ -83,8 +87,8 @@ $t-k$ through the transpose of the same product
 product is a product of numbers $w (1 - h_s^2)$, each at most $|w|$ in
 magnitude. If $|w| < 1$, the product shrinks at least as fast as $|w|^k$:
 with $w = 0.9$, a change 30 steps back reaches the present at no more than
-4% of its size. If $|w| > 1$, the product can grow until the $\tanh$ saturates, and
-then the factor $1 - h_s^2$ drives it toward zero again. For matrices the
+4% of its size, and a change 100 steps back at no more than 0.003%. If
+$|w| > 1$, the product can grow until the $\tanh$ saturates, and then the factor $1 - h_s^2$ drives it toward zero again. For matrices the
 same holds with the largest singular value of $\mathbf{W}_\textrm{hh}$ in
 place of $|w|$. To
 carry information over hundreds of steps, a plain network would have to

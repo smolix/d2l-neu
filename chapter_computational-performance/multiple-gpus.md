@@ -1,13 +1,17 @@
 # Multi-GPU from First Principles
 :label:`sec_multi_gpu`
 
-Our machine holds four RTX 4090 GPUs. Each performs about 83 trillion fp32
-operations per second and reads its own memory at 1 TB/s. A training run
-on one of them leaves three quarters of the machine's arithmetic idle. The
-simplest way to use all four is to give every GPU a
+Every training run so far has used one GPU, although this book's build
+machine holds four. A run on one of them leaves three quarters of the machine's
+arithmetic idle. The simplest way to use all four is to give every GPU a
 copy of the model and a quarter of each minibatch. The copies must then
-agree after every step, which means that the GPUs exchange their
-gradients. On this machine that exchange travels over PCIe and through
+agree after every step, so the GPUs exchange their gradients, and the
+exchange takes time that a single GPU never spends. When does a second GPU
+shorten a step, and when does the exchange cost more than it saves?
+
+On our machine the exchange is slow compared with the work. Each RTX 4090
+performs about 83 trillion fp32 operations per second and reads its own
+memory at 1 TB/s. Gradients travel between the cards over PCIe and through
 host memory, because the cards cannot address each other directly
 (:numref:`subsec_hw-interconnects`). A PCIe 4.0 link carries a nominal
 32 GB/s in each direction, about thirty times less than a GPU reads from

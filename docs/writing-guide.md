@@ -203,19 +203,61 @@ depth, not to supply missing steps.
 
 ### 3.1 Openings
 
-Every chapter, section, and major subsection opens by answering the four
-questions of §1, in this order and in plain words, before any new notation
-appears.
+An opening first establishes a relationship with the reader, and only then
+gets specific. The reader arrives from somewhere: from the previous section,
+from a model they have trained, from a question they have had. Start there.
+A paragraph of hard numbers or specialist facts before the reader knows what
+the chapter is about reads as brisk and cold. None of the four model chapters
+opens that way: Strang places the chapter in the course ("The first half was
+about $Ax = b$"), Cover and Thomas say what the quantities will mean and how
+they will be judged, MacKay starts from how people sort the world.
 
-- **Problem.** Give a concrete instance, ideally with a number. "A model that
-  writes a 2,000-token answer must read its whole context 2,000 times" is a
-  problem. "Inference efficiency is an important consideration" is not.
-- **Why it matters.** Say what fails, costs, or becomes impossible if the
-  problem is left unsolved.
-- **How.** Give the idea of the solution in one or two sentences, before the
-  details.
-- **Where.** Connect the idea to the previous section in one sentence, and
-  name what remains open.
+Every chapter, section and major subsection opens in this order, in plain
+words, before any new notation appears:
+
+1. **Start from the reader.** What the reader already does or knows, and the
+   question it raises, in words. "Almost every model in this book was trained
+   by minimizing a cross-entropy. We never asked what that number means."
+2. **The idea and its origin.** The problem the idea was created to solve,
+   with its history or a human-scale example where that helps (Shannon's
+   telephone line, Strang's compound interest), and the central idea in one or
+   two sentences.
+3. **Why it matters here.** What the idea explains about, or lets the reader
+   do with, the methods they have met, or what fails without it.
+4. **Where.** One sentence connecting to the previous section; name what
+   remains open.
+
+A concrete example is desirable in every opening, often in its first
+paragraph. What matters is how it arrives. Introduce it as an instance of a
+situation the reader recognizes or a question they already hold, in an
+unhurried sentence: "When a language model reports a loss of 1.2 nats per
+character, is that good? How low could it go?" Do not fire a series of
+specialist facts at the reader before they know what the chapter is about
+("A freshly initialized 10-class classifier reports a loss of 2.30. A
+generative adversarial network whose samples miss the data by 0.01 ...").
+One well-chosen example, explained in words, does more than three dense ones.
+Puzzles that need the chapter's own concepts to be understood belong at the
+start of the section that explains them. A section opening may begin with a
+concrete problem, but ties it first to the previous section or to a familiar
+model and states the question in words around the number. Subsections follow
+the same rule at a smaller scale: one or two sentences of why we need this
+before any formula, code or figure.
+
+Defect (`chapter_mdl-information-theory/index.md`, 2026-11-03):
+
+> A freshly initialized 10-class classifier reports a loss of $2.30$. A
+> generative adversarial network whose samples miss the data by $0.01$ sees
+> the same Jensen--Shannon divergence, $\log 2$, as one whose samples miss by
+> $100$ ...
+
+Revision:
+
+> Almost every model in this book was trained by minimizing a cross-entropy.
+> We chose it because it works: it turns "give high probability to what
+> actually happened" into a number that gradient descent can push down. We
+> never asked what that number means. ... Information theory answers these
+> questions, although it began with a different one. In 1948 Claude Shannon
+> asked how efficiently a message can be sent over a telephone line ...
 
 A section opening that cannot be written this way is a sign that the section
 has no single idea (§4).
@@ -686,10 +728,12 @@ Sibling headings have parallel form. A worked example may be titled "Example:
 At most 400 words, no tables, no experimental numbers, no lists of model
 names.
 
-1. **The problem** the chapter solves, with a concrete instance (one
-   paragraph).
-2. **Why it matters**, and what was unsatisfactory about the tools the
-   reader already has.
+1. **Start from the reader** (§3.1): what they already do or know, and the
+   question it raises, in plain words, with one concrete example the reader
+   recognizes, introduced gently. No burst of specialist facts.
+2. **The idea, its origin, and why it matters**: the problem the field set
+   out to solve, the central idea, and what it explains about the tools the
+   reader already has or what was unsatisfactory about them.
 3. **The route**, one sentence per section, phrased as the question that
    section answers.
 4. **Scope**: what is left out, in one or two sentences, if a reader would
@@ -786,7 +830,8 @@ literature on topics beyond the chapter. It is used sparingly.
 
 Read the section top to bottom as a newcomer and check:
 
-1. The opening answers what, why, how, and where before new notation appears.
+1. The opening starts from the reader (§3.1) and answers what, why, how, and
+   where before new notation or technical numbers appear.
 2. The section's idea can be stated in one jargon-free sentence.
 3. Every new concept is defined in words where it first appears, and only one
    arrives per paragraph.

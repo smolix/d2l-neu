@@ -6,15 +6,17 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization in Deep Learning
 :label:`sec_generalization_deep`
 
-The MLP of :numref:`sec_mlp-implementation` has a hidden layer of 256 units
-and $784 \times 256 + 256 + 256 \times 10 + 10 = 203{,}530$ parameters, about
-3.4 for each of the 60,000 Fashion-MNIST training images. In
-:numref:`sec_generalization_basics`, a polynomial with one weight per
-training example passed through all of its 20 training points and missed
-new points by orders of magnitude. With more parameters than that, the MLP
-could memorize its training set as well. It does not: its accuracy on test
-images, about 87%, is only a few points below its accuracy of about 89% on
-the training images. Something other than the number of parameters keeps it from
+In :numref:`sec_generalization_basics` we saw what usually happens when a
+model has as many parameters as training examples. A polynomial with one
+weight per training example passed through all 20 of its training points
+and missed new points by orders of magnitude. The MLP of
+:numref:`sec_mlp-implementation` would seem to be in the same danger. Its
+$784 \times 256 + 256 + 256 \times 10 + 10 = 203{,}530$ parameters come to
+about 3.4 for each of the 60,000 Fashion-MNIST training images, enough to
+memorize them. Yet it does not: its accuracy on test images, about
+87%, is only a few points below its accuracy of about 89% on the training
+images. Why does a network that can memorize its training data generalize
+anyway? Something other than the number of parameters keeps it from
 memorizing.
 
 We need to know what that is, because the width of a network, the length of
@@ -440,7 +442,9 @@ preference of a training algorithm is called its *implicit bias*.
 
 ### Minimum-Norm Interpolation
 
-Consider one output of the random-features model: weights
+We begin with the random-features model of the double-descent experiment.
+Its loss is quadratic, so the fit that gradient descent reaches can be
+written down. Consider one output of this model: weights
 $\mathbf{w} \in \mathbb{R}^h$, the loss
 $L(\mathbf{w}) = \frac{1}{2}\|\mathbf{H}\mathbf{w} - \mathbf{y}\|^2$ with
 $h > n$, and a matrix $\mathbf{H}$ whose $n$ rows are linearly independent.

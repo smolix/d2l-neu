@@ -1,62 +1,46 @@
 # State Space Models
 :label:`chap_modern_rnn`
 
-A language model that generates text one token at a time has to remember
-what it has read. A transformer keeps everything: it stores a key and a value
-for every previous token, so the memory it needs, and the work per new token,
-grow with the length of the context. A recurrent network keeps a summary of
-fixed size instead, its *state*, and updates it once per token. Generating
-the millionth token then costs as much as generating the tenth.
+The recurrent networks of :numref:`chap_rnn` read a text the way we do,
+one token after another, and carry what they have read in a hidden state.
+The transformers of :numref:`chap_transformers` keep every token instead.
+When a chat assistant answers a question about a long report, it holds a
+key and a value for every token of the report (:numref:`sec_kv-cache`), so
+its memory, and the work for each word of the answer, grow with the length
+of the report. Can a model read a long text with a memory of fixed size and
+still model language well?
 
-A fixed-size summary raises two problems. Classical recurrent networks update
-the state with a nonlinear function of the previous state, so training has to
-process a sequence one step at a time and leaves most of a GPU idle. And a
-state of fixed size must forget, which raises the question of what it should
-keep and how much it can hold.
+A recurrent network keeps a summary of fixed size, its *state*, and updates
+it once per token, so generating the millionth token costs as much as
+generating the tenth. A state of fixed size raises two problems. Classical
+recurrent networks update the state nonlinearly, so training processes a
+sequence one step at a time and leaves most of a GPU idle. And a state of fixed size must forget, which raises the question of what it should
+keep and how much it can hold. The answers in this chapter come from three
+directions: gates from the 1990s :cite:`Hochreiter.Schmidhuber.1997`, linear
+dynamical systems from physics and control theory
+:cite:`Gu.Dao.Ermon.ea.2020,Gu.Goel.Re.2022`, and attention without the
+softmax :cite:`Katharopoulos.Vyas.Pappas.ea.2020`. The three meet in
+recurrent layers that train in parallel and compute a form of attention.
+Several recent large models interleave such layers with a few attention
+layers :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
 
-:numref:`sec_lstm` shows how gates let a network learn what to keep, and why
-gated networks still train one step at a time. :numref:`sec_ssm` makes the
-update linear in the state, which lets us compute the states at all
-positions at once, and borrows from physics a principled way to choose how
-fast the state forgets. :numref:`sec_mamba` lets each input decide how much
-to write and how much to forget. :numref:`sec_matrix-state` turns the state
-into a matrix that stores key–value pairs, which is linear attention, and
-asks how many pairs it can hold. :numref:`sec_deltanet` lets a write correct
-an old association instead of adding to it. The last section,
-:numref:`sec_hybrids`, shows what no fixed-size state can do and how a few
-attention layers repair it. :numref:`sec_ssm-further-reading` points to
-topics the chapter has no room for: other ways to build and write to a
-fixed-size state, results on what such models can compute, and applications
-beyond language.
+:numref:`sec_lstm` asks how a network can learn what to keep.
+:numref:`sec_ssm` asks how to compute the states at all positions at once,
+and how fast a state should forget. :numref:`sec_mamba` asks how each input
+can decide what to write and what to forget. :numref:`sec_matrix-state` asks
+how a state can store key–value pairs, and how many it can hold.
+:numref:`sec_deltanet` asks how a memory can correct a pair instead of
+adding to it. :numref:`sec_hybrids` asks what no fixed-size state can do,
+and how a few attention layers repair it.
 
-The LSTM :cite:`Hochreiter.Schmidhuber.1997` and the GRU
-:cite:`Cho.Van-Merrienboer.Bahdanau.ea.2014` made recurrent networks
-trainable over long spans and carried speech recognition and machine
-translation through the 2010s, until the transformer
-:cite:`Vaswani.Shazeer.Parmar.ea.2017` replaced them. State space models
-came from a different direction. HiPPO :cite:`Gu.Dao.Ermon.ea.2020` and S4
-:cite:`Gu.Goel.Re.2022` derived the recurrence from continuous-time linear
-systems and solved benchmarks with dependencies over thousands of steps.
-Mamba :cite:`Gu.Dao.2023` made the dynamics depend on the input and matched
-or exceeded transformers of the same size on language. Linear attention
-:cite:`Katharopoulos.Vyas.Pappas.ea.2020` had already shown that attention
-without the softmax is a recurrence with a matrix state, and Mamba-2
-:cite:`Dao.Gu.2024` showed that gated versions of the two are the same
-computation. The delta rule :cite:`Schlag.Irie.Schmidhuber.2021`, made fast
-to train by :citet:`Yang.Wang.Zhang.ea.2024` and gated by
-:citet:`Yang.Kautz.Hatamizadeh.2024`, lets the matrix state correct what it
-stores. Several recent large models interleave such recurrent layers with a
-few attention layers :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`. The
-field changes quickly, so the chapter teaches the mechanisms (state, update,
-readout, and cost) rather than a ranking of current models.
-
-We assume you know how a recurrent network carries a hidden state, why its
-gradients vanish over long spans, and how attention reads keys and values.
-Linear attention, its recurrent form, and its computation in chunks
+We assume the recurrent networks of :numref:`chap_rnn` and the attention of
+:numref:`chap_attention`; linear attention and its computation in chunks
 (:numref:`sec_attention-at-scale`) are the starting point of
-:numref:`sec_matrix-state`, which adds a decay. The chapter teaches
-algorithms rather than GPU kernels; fused kernels are the subject of
-:numref:`chap_performance`.
+:numref:`sec_matrix-state`. The field changes quickly, so the chapter
+teaches the mechanisms (state, update, readout, and cost) rather than a
+ranking of current models. It teaches algorithms rather than GPU kernels,
+which are the subject of :numref:`chap_performance`, and
+:numref:`sec_ssm-further-reading` points to the topics it has no room for.
 
 ```toc
 :maxdepth: 2

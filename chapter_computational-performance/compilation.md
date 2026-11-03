@@ -1,16 +1,22 @@
 # Compute Graphs and Compilation
 :label:`sec_compilation`
 
-The activation function `gelu_ish` of :numref:`sec_perf_model`,
-$0.5\, x \left(1 + \tanh\left(0.8\, (x + 0.04\, x^3)\right)\right)$,
-consists of eight elementwise operations. Applied to a $4000 \times 4000$
-matrix in fp32, which takes 64 MB, each operation runs as a GPU kernel of
-its own that reads its inputs from GPU memory and writes its result back.
-Together the eight kernels move 1.15 GB to produce 64 MB of output.
-Reading the input once and writing the result once would move 128 MB, nine
-times less. At the RTX 4090's memory bandwidth of about 1 TB/s, the eight
-kernels need at least 1.15 ms where 0.13 ms would do. The arithmetic hardly matters, since
-:numref:`sec_perf_model` found the chain to be limited by bandwidth.
+In :numref:`sec_perf_model` the activation function `gelu_ish` took eight
+to nine times as long as a single addition on the same tensor, although its
+arithmetic hardly mattered. The cause was the way the framework ran it.
+Each of its eight elementwise operations ran as a GPU kernel of its own,
+which read its inputs from GPU memory and wrote its result back, and
+:numref:`sec_hardware` showed why that memory traffic is slow. Can a
+framework run such a chain without the traffic, and without the cost of
+issuing every operation from Python?
+
+A count of the bytes shows how much is wasted. The function computes
+$0.5\, x \left(1 + \tanh\left(0.8\, (x + 0.04\, x^3)\right)\right)$.
+Applied to a $4000 \times 4000$ matrix in fp32, which takes 64 MB, the
+eight kernels together move 1.15 GB to produce 64 MB of output. Reading
+the input once and writing the result once would move 128 MB, nine times
+less. At the RTX 4090's memory bandwidth of about 1 TB/s, the eight
+kernels need at least 1.15 ms where 0.13 ms would do.
 
 Activation functions, normalization layers, residual additions, and
 optimizer updates are all chains of this kind, and a deep network contains
@@ -22,8 +28,8 @@ before it runs. A compiler that sees all eight operations can merge them
 into one kernel that reads $x$ once and writes the result once. A sequence
 of kernels, once recorded, can be replayed without Python.
 
-This section asks how a framework captures a program as a graph, what a
-compiler does with that graph, and which programs escape capture.
+We study how a framework captures a program as a graph, what a compiler
+does with that graph, and which programs escape capture.
 Compilation addresses two of the three regimes of :numref:`sec_perf_model`,
 the bandwidth-bound and the overhead-bound regime. Memory capacity is a
 separate limit, the subject of :numref:`sec_memory_precision`.

@@ -6,10 +6,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-A call can look harmless and still do something other than what we meant. The
-call `ones(2, 3)` looks like a request for a $2 \times 3$ matrix of ones,
-but whether it is one depends on how the function reads its arguments, and
-only the function's signature says what each argument means.
+The sections of this chapter explained every function that they used. Every
+project, however, soon needs a function that the book never mentions, or
+uses a familiar one in an unfamiliar way. No book can record the details of
+every function: the main module of a deep learning framework defines several
+hundred to a thousand public names, and new releases add names and deprecate
+others. How, then, do we find out reliably what a function does?
+
+The question matters because a call can look harmless and still do
+something other than what we meant. The call `ones(2, 3)` looks like a
+request for a $2 \times 3$ matrix of ones, but whether it is one depends on
+how the function reads its arguments, and only the function's signature says
+what each argument means.
 
 :begin_tab:`mxnet`
 In MXNet, `mnp.ones(2, 3)` raises an error, while `mnp.ones((2, 3))`
@@ -31,15 +39,8 @@ In JAX, `jnp.ones(2, 3)` raises an error, while `jnp.ones((2, 3))` returns
 the matrix.
 :end_tab:
 
-No book can record such details for every function. The main module of a
-deep learning framework defines several hundred to a thousand public names,
-and new releases add names and deprecate others. This book explains the
-functions it uses, but every project soon needs a function that the book
-never mentions, or uses a familiar one in an unfamiliar way.
-
-Instead of a list, we need a procedure that finds out reliably what a
-function does. This section describes one with four steps, shown in
-:numref:`fig_lookup_loop`. We discover the names that a library offers,
+Instead of a list of functions, this section gives a procedure of four
+steps, shown in :numref:`fig_lookup_loop`. We discover the names that a library offers,
 inspect the arguments and the documentation of a candidate, read the
 reference pages or the source code when the documentation leaves a question
 open, and verify the behavior with a small example whose result we

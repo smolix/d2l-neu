@@ -1,13 +1,19 @@
 # The Cost of Attention
 :label:`sec_attention-at-scale`
 
-Self-attention lets every token read every other token in a single layer. The
-cost is one score for every pair of positions. A context of 8,192 tokens has
-67 million query--key pairs per head, and storing their scores in single
-precision takes 256 MiB for one head of one sequence. At 131,072 tokens a
-single score matrix would take 69 GB. Arithmetic and memory both grow with the
-square of the sequence length, and at long contexts this quadratic term
-dominates the cost of the whole layer.
+The language model of :numref:`sec_positional-information` was trained on
+contexts of 128 bytes. Language models in use today read whole reports,
+code repositories and books, often tens or hundreds of thousands of tokens
+at once. Self-attention lets every token read every other token in a
+single layer, and the cost is one score for every pair of positions. How
+does this cost grow with the length of the context, and how can it be
+reduced?
+
+Doubling the context quadruples the number of pairs. A context of 8,192
+tokens already has 67 million query--key pairs per head, and storing their
+scores in single precision takes 256 MiB for one head of one sequence.
+Arithmetic and memory both grow with the square of the sequence length, and
+at long contexts this quadratic term dominates the cost of the whole layer.
 
 We first compare self-attention with the convolutional and recurrent layers of
 earlier chapters, count its cost, and check the count against measurements on

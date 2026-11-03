@@ -6,24 +6,26 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Modern Training Recipes for Convnets
 :label:`sec_training_recipes`
 
-Take the ResNet-50 of :numref:`sec_resnet`, change nothing about its
-architecture, and train it with the methods in use around 2022 instead of those
-of its 2015 debut. Its ImageNet top-1 accuracy rises from 76.1% to 80.4%
-:cite:`wightman2021resnet`. That gain, from the *training recipe* alone, is as
-large as the gains that many new architectures of those years reported over
-ResNet-50. The "ResNet strikes back" study that produced it trained the
-unmodified network with three procedures of increasing cost: A3 (100 epochs)
-reaches 78.1%, A2 (300 epochs) 79.8%, and A1 (600 epochs, the LAMB optimizer, a
-binary cross-entropy loss, and heavy augmentation) 80.4%.
+So far in this chapter, the networks of each section were trained under one
+shared procedure, so that differences in accuracy could be credited to the
+architectures. Published comparisons are often made differently: a new
+architecture is trained with the latest methods and compared with a baseline
+trained years earlier. How much of a reported accuracy comes from the
+*training recipe* (the optimizer, schedule, augmentation, regularization, and
+length of training) rather than from the network itself?
 
-The number matters for anyone who compares networks. If an architecture paper
-reports a gain of two points over a baseline trained with an older recipe, the
-gain may come from the recipe, not the architecture;
-:citet:`wightman2021resnet` make this point by retraining the unchanged
-ResNet-50 to the accuracy of several of its successors. This section lists what
-changed between 2015 and 2022, implements each ingredient in a few lines, and
-then trains one ResNet-18 under an old and a new recipe to measure the
-difference.
+ResNet-50, the deeper relative of the ResNet-18 of :numref:`sec_resnet`,
+gives a clear answer. :citet:`wightman2021resnet` changed nothing about its
+architecture and trained it with the methods in use around 2022 instead of
+those of its 2015 debut. Its ImageNet top-1 accuracy rose from 76.1% to
+80.4%. That gain, from the recipe alone, is as large as the gains that many
+new architectures of those years reported over ResNet-50. If an architecture
+paper reports a gain of two points over a baseline trained with an older
+recipe, the gain may therefore come from the recipe, not the architecture.
+The same study makes this point by retraining the unchanged ResNet-50 to the
+accuracy of several of its successors. This section lists what changed
+between 2015 and 2022, implements each ingredient in a few lines, and then
+trains one ResNet-18 under an old and a new recipe to measure the difference.
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab mxnet
@@ -59,7 +61,7 @@ from jax import numpy as jnp
 import optax
 ```
 
-## What Changed between 2015 and 2022
+## Training Recipes from 2015 to 2022
 
 The original ResNet recipe was already careful: stochastic gradient descent
 with momentum, weight decay, a learning rate divided by 10 twice during
@@ -68,15 +70,17 @@ training, and random crops and horizontal flips as augmentation
 choices was revisited. The first systematic accounting, in 2019, collected
 the techniques that had accumulated (warmup, cosine decay, label smoothing,
 Mixup, zero-initializing the last batch-normalization scale in each block,
-knowledge distillation)
-and showed that together with tweaks to the network they lift ResNet-50 from
-75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`. One tweak, *ResNet-D*,
-changes the downsampling blocks: their stride moves from the first
-$1 \times 1$ convolution of the branch to the $3 \times 3$ one, and their
-shortcut average-pools before its $1 \times 1$ convolution, which with
-stride 2 would read only one of every four positions
-(:numref:`sec_resnet`).
-:numref:`tab_recipe_2015_2022` summarizes the shift.
+knowledge distillation) and showed that together with tweaks to the network
+they lift ResNet-50 from 75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`. One
+tweak, *ResNet-D*, changes the downsampling blocks: their stride moves from
+the first $1 \times 1$ convolution of the branch to the $3 \times 3$ one, and
+their shortcut average-pools before its $1 \times 1$ convolution, which with
+stride 2 would read only one of every four positions (:numref:`sec_resnet`).
+The "ResNet strikes back" study :cite:`wightman2021resnet` then kept the
+architecture fixed and trained the unmodified ResNet-50 with three procedures
+of increasing cost: A3 (100 epochs) reaches 78.1%, A2 (300 epochs) 79.8%, and
+A1 (600 epochs, the LAMB optimizer, a binary cross-entropy loss, and heavy
+augmentation) 80.4%. :numref:`tab_recipe_2015_2022` summarizes the shift.
 
 :A 2015 ImageNet recipe and a representative high-accuracy recipe from the
 early 2020s. The later column is not a universal standard; strong recipes still

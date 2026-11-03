@@ -1,13 +1,17 @@
 # Mixture of Experts
 :label:`sec_moe`
 
-In a dense transformer every token passes through every parameter. The
-forward pass costs about two floating-point operations per parameter and
-token (:numref:`sec_gpt`), so a model with twice the parameters costs twice
-as much to train and to run. Yet most of what a large model knows is of no
-use for any one token: continuing "the integral of" draws on different
-knowledge from continuing "Act I, Scene". A *mixture of experts* (MoE)
-exploits this. It keeps $E$ copies of each block's feed-forward network,
+Every transformer of this chapter so far is *dense*: each token passes
+through every parameter. A forward pass costs about two floating-point
+operations per parameter and token (:numref:`sec_gpt`), so a model with
+twice the parameters, which can store more of what it reads, also costs
+twice as much to train and to run. Yet most of what a large model knows is
+of no use for any one token. Continuing "the integral of" draws on
+different knowledge from continuing "Act I, Scene". Can a model hold more
+parameters without spending more computation on each token?
+
+A *mixture of experts* (MoE) does this by running only part of the model
+for each token. It keeps $E$ copies of each block's feed-forward network,
 the *experts*, and a small learned *router* sends each token to only $k$
 of them. The stored parameters then grow with $E$, while the computation
 per token grows only with $k$. DeepSeek-V3, for example, stores 671 billion
@@ -447,11 +451,13 @@ $\alpha$ too small, the imbalance persists :cite:`Wang.Gao.Zeng.ea.2024`.
 
 ### Balancing Without a Loss
 
-:citet:`Wang.Gao.Zeng.ea.2024` balance the load without touching the loss,
-and DeepSeek-V3 trains this way :cite:`Liu.Feng.Xue.ea.2024`. A bias $b_i$
-per expert is added to the probabilities for the selection, and only for
-the selection. After each optimizer step, a controller moves each bias by a
-fixed amount $u$ toward balance:
+The conflict disappears if balance acts on the selection of experts alone
+and adds nothing to the loss. :citet:`Wang.Gao.Zeng.ea.2024` balance the
+load this way, and DeepSeek-V3 trains with their method
+:cite:`Liu.Feng.Xue.ea.2024`. A bias $b_i$ per expert is added to the
+probabilities for the selection, and only for the selection. After each
+optimizer step, a controller moves each bias by a fixed amount $u$ toward
+balance:
 
 $$
 \mathcal{E}_k(\mathbf{x}) = \operatorname{argtop}_k \big(p_i(\mathbf{x}) + b_i\big),
@@ -814,15 +820,16 @@ model never does.
 ### Fine-Grained and Shared Experts
 :label:`subsec_moe-fine-grained`
 
+Released mixtures differ in how they divide a budget of expert parameters.
 Mixtral's experts are full copies of the feed-forward network, eight per
 layer and two per token. DeepSeekMoE :cite:`Dai.Deng.Zhao.ea.2024` spends
 such a budget differently, in the two steps shown in
 :numref:`fig_moe-fine-grained`. Their example starts from 16 full-width
 experts with 2 active per token. The first step cuts each expert into $m$
-narrower ones and lets each token select $m$ times as many: with $m = 4$,
-8 of 64 experts of a quarter width instead of 2 of 16 full-width ones.
-Neither the stored nor the active parameter count changes. The number
-of combinations a token can select does, from $\binom{16}{2} = 120$ to
+narrower ones and lets each token select $m$ times as many: with $m = 4$, 8
+of 64 experts of a quarter width instead of 2 of 16 full-width ones.
+Neither the stored nor the active parameter count changes. The number of
+combinations a token can select does, from $\binom{16}{2} = 120$ to
 $\binom{64}{8} \approx 4.4 \times 10^{9}$. A token can then assemble its
 network from many narrow specialists, say one for chemical vocabulary and
 another for nested clauses, instead of selecting two broad experts that

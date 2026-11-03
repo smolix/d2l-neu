@@ -58,6 +58,8 @@ from jax import numpy as jnp
 
 ## Sequential Data
 
+The email and the temperature record of the opening look different, but we
+can describe both, and every other kind of sequence, in the same terms.
 A *sequence* is an ordered list of feature vectors
 $\mathbf{x}_1, \ldots, \mathbf{x}_T$, or of scalars $x_1, \ldots, x_T$.
 The index $t \in \mathbb{Z}^+$ is a *time step*, and the length $T$ may

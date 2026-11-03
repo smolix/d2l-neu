@@ -1,28 +1,37 @@
 # Preliminaries
 :label:`chap_preliminaries`
 
-Consider the smallest complete learning problem: load a table of examples,
-represent it as numbers, compute a prediction and a loss, find how the loss
-changes with each parameter, and decide whether the result is a real pattern or
-an accident of the sample. Even a modest problem, such as sorting small
-grayscale images of clothing into ten categories, involves many numbers: one
-minibatch of 256 images holds 200,704 pixel values, and a linear classifier for
-them has almost 8,000 parameters. A Python loop over individual numbers is far
-too slow at this scale, and deriving thousands of partial derivatives by hand
-is slow and error-prone.
+The introduction described every learning problem by four components: data,
+a model that turns inputs into predictions, a loss that says how badly the
+model does, and an algorithm that adjusts the model's parameters to lower the
+loss. Suppose that we want to write a program that learns a modest task,
+sorting small photographs of clothing into shirts, sneakers, bags, and seven
+other categories. What would it have to do, and what do we need to know to
+write it?
 
-Each step of the problem needs its own tool. :numref:`sec_ndarray` asks how to
-store such data and compute with all of it at once.
-:numref:`sec_pandas` asks how to turn a table of real records, with missing
-entries and text categories, into tensors. :numref:`sec_linear-algebra`
-asks how a model turns a minibatch of inputs into predictions, how to
-measure the size of vectors and errors, and what repeated multiplication by
-a matrix does to a vector. :numref:`sec_calculus` asks how the
-loss changes when a parameter changes, and which direction lowers it.
-:numref:`sec_autograd` asks how a framework computes these derivatives for
-us. :numref:`sec_prob` asks how evidence updates a probability, and when a
-measured difference, such as a change in accuracy from one minibatch to the
-next, is larger than sampling noise. Finally,
+It would store the photographs as numbers and compute with all of them at
+once. It would combine those numbers into a score for each category, find
+out how the loss changes when each parameter changes, and judge whether its
+accuracy reflects a real pattern or the luck of the examples it saw. The
+mathematics behind these steps was not invented for deep learning. Calculus
+is more than three centuries old, and probability began in 1654 with letters
+between Pascal and Fermat about a game of chance. Deep learning applies this
+mathematics at a scale where calculation by hand is out of the question,
+with two kinds of software: array libraries, which apply one operation to
+millions of numbers in compiled code, and automatic differentiation, which
+computes the derivatives of a program. Every later chapter relies on both.
+
+:numref:`sec_ndarray` asks how to store such data and compute with all of it
+at once. :numref:`sec_pandas` asks how to turn a table of real records, with
+missing entries and text categories, into tensors.
+:numref:`sec_linear-algebra` asks how a model turns a minibatch of inputs
+into predictions, how to measure the size of vectors and errors, and what
+repeated multiplication by a matrix does to a vector. :numref:`sec_calculus`
+asks how the loss changes when a parameter changes, and which direction
+lowers it. :numref:`sec_autograd` asks how a framework computes these
+derivatives for us. :numref:`sec_prob` asks how evidence updates a
+probability, and when a measured difference, such as a change in accuracy
+from one minibatch to the next, is larger than sampling noise.
 :numref:`sec_lookup_api` asks how to find out what a function does when the
 book does not say.
 
@@ -30,8 +39,8 @@ Each section develops only what later chapters need, together with the
 intuition behind each result. The Mathematics for Deep Learning appendix treats
 linear algebra (:numref:`chap_mdl-linear-algebra`), calculus
 (:numref:`chap_mdl-calculus`), and probability
-(:numref:`chap_mdl-probability-statistics`) in depth, with proofs; readers who
-meet these subjects here for the first time can turn to it at any point.
+(:numref:`chap_mdl-probability-statistics`) in depth, with proofs; readers
+new to these subjects can turn to it at any point.
 
 ```toc
 :maxdepth: 2

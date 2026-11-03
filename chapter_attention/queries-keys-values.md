@@ -1,20 +1,26 @@
 # Queries, Keys, and Values
 :label:`sec_queries-keys-values`
 
-A recurrent language model that has read 1,024 tokens holds everything it
-knows about them in its state. If that state has 768 numbers, the width of
-GPT-2 small, then a question about the 17th token must be answered from 768
-numbers that were written before anyone knew the question would be asked.
-RNNs (:numref:`sec_rnn`) and convolutions over sequences
-:cite:`Kalchbrenner.Grefenstette.Blunsom.2014` both work this way, and on
+The recurrent networks of :numref:`sec_rnn` keep everything they know
+about the past in a state of fixed size, and every prediction is made from
+that state. The network has to decide what to write there before it knows
+what a later prediction will need. Consider a recurrent language model as
+wide as GPT-2 small that has read 1,024 tokens. Its state holds 768
+numbers. If the next prediction depends on the 17th token, it must be made
+from those 768 numbers, all written before the network could know that the
+17th token would matter. Convolutions over sequences
+:cite:`Kalchbrenner.Grefenstette.Blunsom.2014` face the same limit, and on
 long inputs the fixed-size summary loses information that a later
-prediction needs.
+prediction needs. Can a model keep its whole input and read from it only
+the part that each prediction uses?
 
-A database avoids the problem. It stores its records as they are and
-answers each query by comparing it with the stored keys. Consider the
-scalar database $\mathcal{D}=\{(2,10),(5,20)\}$ of (key, value) pairs. The
-exact query $q=5$ returns the value 20, and the query $q=4$ returns nothing
-at all, because no key matches. A *soft* query instead scores every key,
+A database does this. It stores its records as they are and answers each
+query by comparing it with the stored keys. An exact lookup, however,
+either finds a matching key or returns nothing, and a network trained by
+gradient descent needs an answer that changes smoothly with the query.
+Consider the scalar database $\mathcal{D}=\{(2,10),(5,20)\}$ of (key,
+value) pairs. The exact query $q=5$ returns the value 20, and the query
+$q=4$ returns nothing at all, because no key matches. A *soft* query instead scores every key,
 for example by $a(q,k)=-(q-k)^2$, and turns the scores into weights that
 sum to one. For $q=4$ the scores are $-4$ for key 2 and $-1$ for key 5. The
 softmax turns them into the weights $e^{-4}/(e^{-4}+e^{-1}) \approx 0.05$
@@ -45,6 +51,10 @@ from jax import numpy as jnp
 ```
 
 ## Attention as Differentiable Lookup
+
+The soft query of the example used scalars and two stored pairs. In a
+network the keys and values are vectors, and there is a pair for every
+position of the input, so we now write the same rule in that generality.
 
 Let the query and the keys be vectors $\mathbf{q},\mathbf{k}_i \in
 \mathbb{R}^{d}$ and the values $\mathbf{v}_i \in \mathbb{R}^{d_v}$, and let
@@ -140,9 +150,12 @@ the best possible predictor :cite:`mack1982weak`.
 
 ### Nadaraya--Watson Regression
 
-We draw $40$ training inputs uniformly from $[0, 5)$, label them by $y =
-2\sin(x) + x + \epsilon$ with standard Gaussian noise $\epsilon$, and keep
-a grid of noise-free points for comparison.
+A one-dimensional regression problem is small enough to plot both the
+estimate and every weight behind it, so it shows what the bandwidth does
+before any learning is involved. We draw $40$ training inputs uniformly
+from $[0, 5)$, label them by $y = 2\sin(x) + x + \epsilon$ with standard
+Gaussian noise $\epsilon$, and keep a grid of noise-free points for
+comparison.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-1}
 %%tab pytorch

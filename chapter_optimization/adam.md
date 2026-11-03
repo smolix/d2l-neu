@@ -1,29 +1,36 @@
 # Adam and AdamW
 :label:`sec_adam`
 
-Gradient descent uses one learning rate for every coordinate, and the
-stiffest direction decides how large that rate may be. On the valley
-$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of :numref:`sec_gd`, the
-curvatures are $0.2$ and $4$, so a step is stable only for $\eta < 2/4 =
-0.5$. At $\eta = 0.4$ the flat coordinate shrinks by a factor of only
+The modern training recipe of :numref:`sec_training_recipes` replaced SGD
+with momentum by AdamW, and we used it there as one ingredient among many.
+Adam differs from the optimizers so far in one respect: it gives every
+coordinate of the parameter vector its own learning rate. This section asks
+what such per-coordinate rates achieve, how Adam sets them without knowing
+the curvature, and why weight decay must then bypass them.
+
+The valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ of :numref:`sec_gd` shows
+what a single rate costs. Gradient descent uses one learning rate for every
+coordinate, and the stiffest direction decides how large that rate may be.
+Here the curvatures are $0.2$ and $4$, so a step is stable only for $\eta <
+2/4 = 0.5$. At $\eta = 0.4$ the flat coordinate shrinks by a factor of only
 $1 - 0.4 \cdot 0.2 = 0.92$ per step, and twenty steps take $x_1$ from $-5$
 to about $-0.94$. With a separate rate for each coordinate, the inverse of
-that coordinate's curvature, a single step would reach the minimum.
-Momentum averages gradients over time and so eases the problem, but it
-keeps the single rate.
+that coordinate's curvature, a single step would reach the minimum. Momentum
+averages gradients over time and so eases the problem, but it keeps the
+single rate.
 
 The curvatures of a neural network are unknown, and they change during
-training. This section estimates a scale for each coordinate from the
-history of that coordinate's own gradients. AdaGrad accumulates the squared
-gradients, RMSProp lets the accumulation forget, and Adam
-:cite:`Kingma.Ba.2014` adds momentum and corrects both averages for their
-start at zero. Adam is the standard optimizer for transformers. To see
+training. The methods of this section therefore estimate a scale for each
+coordinate from the history of that coordinate's own gradients. AdaGrad
+accumulates the squared gradients, RMSProp lets the accumulation forget, and
+Adam :cite:`Kingma.Ba.2014` adds momentum and corrects both averages for
+their start at zero. Adam is the standard optimizer for transformers. To see
 where its advantage comes from, we build two small models, a transformer
-language model and a convolutional network, and compare Adam with tuned
-SGD with momentum on both. The section ends with AdamW, the form in which
-Adam is used in practice. AdamW applies weight decay outside the
-per-coordinate scaling. It also stores two extra numbers for every
-parameter, and we count that memory at the end.
+language model and a convolutional network, and compare Adam with tuned SGD
+with momentum on both. The section ends with AdamW, the form in which Adam
+is used in practice. AdamW applies weight decay outside the per-coordinate
+scaling. It also stores two extra numbers for every parameter, and we count
+that memory at the end.
 
 ```{.python .input #adam}
 %%tab pytorch

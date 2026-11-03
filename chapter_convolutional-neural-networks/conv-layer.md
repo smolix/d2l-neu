@@ -6,27 +6,32 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutions for Images
 :label:`sec_conv_layer`
 
-Suppose we want to find the vertical edges in a grayscale image, the places
-where a bright region meets a dark one. Take an image of $6 \times 8$ pixels
-that is white (value 1) except for a black band (value 0) in its middle four
-columns. Subtracting from each pixel its right-hand neighbor gives $1$ where
-white turns to black, $-1$ where black turns to white, and $0$ inside flat
-regions. An edge can occur in any row and any column, so the same detector,
-the two weights $(1, -1)$, must be applied at every position. Sliding it over
-the image gives one output for each of the $6 \times 7$ positions at which the
-$1 \times 2$ window fits, and these outputs form a map of the edges.
+:numref:`sec_why-conv` derived the convolutional layer on paper, from two
+requirements on a fully connected layer: that a shifted input produce a
+shifted output, and that each output depend only on a small neighborhood.
+The derivation ended with a formula. This section asks what that formula
+computes on an actual image, and whether a network can find good
+weights for it by itself.
 
-This is the operation that a convolutional layer computes: a small array of
-weights, the kernel, is compared with every window of the image, and each
-comparison yields one output. :numref:`sec_why-conv` derived this layer from
-two requirements on a fully connected layer: that a shifted input produce a
-shifted output, and that each output depend only on a small neighborhood. A
-detector that we design by hand works for vertical edges, but a network needs
-thousands of detectors, and nobody knows in advance which patterns they
-should match. This section defines the operation, implements it,
-applies it to the edge example, and then learns the kernel $(1, -1)$ from the
-image and its edge map alone. It ends with how the operation is computed
-efficiently and how much of the image a unit in a stack of such layers sees.
+Finding the vertical edges in a grayscale image, the places where a bright
+region meets a dark one, is a simple instance of both questions. Picture a
+small white image with a black vertical band down its middle. If we
+subtract from each pixel its right-hand neighbor, the difference is zero
+inside flat regions and nonzero where the brightness changes, positive where
+white turns to black and negative where black turns to white. An edge can
+occur in any row and any column, so the same detector, the two weights
+$(1, -1)$, must be applied at every position. Sliding it over the image gives
+one output for every position at which it fits, and these outputs form a map
+of the edges. This is the operation that a convolutional layer computes: a
+small array of weights, the kernel, is compared with every window of the
+image, and each comparison yields one output.
+
+A detector that we design by hand works for vertical edges, but a network
+needs thousands of detectors, and nobody knows in advance which patterns they
+should match. This section defines the operation, implements it, applies it
+to the edge example, and then learns the kernel $(1, -1)$ from the image and
+its edge map alone. It ends with how the operation is computed efficiently
+and how much of the image a unit in a stack of such layers sees.
 
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
@@ -61,8 +66,10 @@ from jax import numpy as jnp
 
 ### The Operation
 
-We omit channels for now: the input $\mathbf{X}$ is a matrix of height
-$n_\textrm{h}$ and width $n_\textrm{w}$, and the kernel $\mathbf{K}$ is a
+The edge detector uses a single kernel of shape $1\times 2$. We first state
+the operation for any input and any kernel, omitting channels for now: the
+input $\mathbf{X}$ is a matrix of height $n_\textrm{h}$ and width
+$n_\textrm{w}$, and the kernel $\mathbf{K}$ is a
 matrix of height $k_\textrm{h}$ and width $k_\textrm{w}$. The kernel's shape
 is also the shape of the *window*, the part of the input that the kernel
 covers at one position. Place the window with its upper-left corner at input
@@ -463,6 +470,9 @@ from the loss at the end of the network.
 ## Convolution as Matrix Multiplication
 :label:`subsec_conv_matmul`
 
+The two loops of `corr2d` visit one output position at a time, which is far
+too slow for real images and networks. Fast implementations turn the whole
+computation into one large matrix product, which a GPU executes efficiently.
 Every output element in :numref:`fig_correlation` is a dot product: the
 kernel, flattened into a vector of length $k_\textrm{h} k_\textrm{w}$, times
 the input patch under the window, flattened the same way. If we extract each
@@ -523,8 +533,11 @@ $\mathbf{W}^\top$ a layer of its own, the transposed convolution.
 
 ## Feature Maps and Receptive Fields
 
-The output of a convolutional layer is called a feature map: it records, for
-every location, how strongly the feature that the kernel detects is present
+A single layer sees only a window the size of its kernel, but recognizing an
+object requires seeing much more of the image. To measure how much of the
+input a unit sees, we name the outputs of a layer and the region they depend
+on. The output of a convolutional layer is called a feature map: it records,
+for every location, how strongly the feature that the kernel detects is present
 there, and the next layer takes it as input (:numref:`subsec_why-conv-channels`).
 The edge map `Y` is a feature map for vertical edges. For an element $x$ of
 some layer, its *receptive field* is the set of elements of all previous

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:87066793aa6c7ae931b7584444f878a6e2dbae1567fd8de783d18b340e4878e5",
+    "d2l_lib_fingerprint": "sha256:01e586d882ed4da63f4f7bfd60593b59a68b3dc32ef9d096da68e3716494149d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[0, 4, 0, 0, 5, 0, 0, 0, 5, 3, 0, 0, 1, 1, 1, 1],\n        [0, 0, 0, 3, 0, 9, 4, 0, 0, 3, 0, 0, 1, 1, 1, 1]])\ntensor([[4, 5, 5, 3],\n        [3, 9, 4, 3]])\n"
+          "text": "tensor([[0, 0, 0, 4, 7, 0, 3, 0, 0, 0, 0, 2, 1, 1, 1, 1],\n        [9, 0, 0, 0, 0, 0, 6, 4, 0, 0, 0, 4, 1, 1, 1, 1]])\ntensor([[4, 7, 3, 2],\n        [9, 6, 4, 4]])\n"
         }
       ]
     },
@@ -36,12 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.19\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU   accuracy 0.98\n"
+          "text": "minGRU   accuracy 0.99\n"
         }
       ]
     },
@@ -99,14 +99,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.03\nMamba  share from the symbols: 0.87\n"
+          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.20\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 36757,
-          "sha256": "sha256:0c9d017878b8057c2a6e354d198ae48dfe39997d18834b5c70314595a467f4ad"
+          "bytes": 34458,
+          "sha256": "sha256:628d80fc47e245db67f29874c7bc46a32bd7ac75f2d1e9d9a005b2e83f667ddc"
         }
       ]
     },

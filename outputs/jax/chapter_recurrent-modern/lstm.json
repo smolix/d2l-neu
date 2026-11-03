@@ -72,17 +72,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  1.00  1.00\n"
+          "text": "RNN               1.00  1.00  1.00  0.87  1.00  0.24\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.50  0.12  0.13  0.12\n"
+          "text": "LSTM              1.00  1.00  0.24  0.12  0.13  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.12\n"
+          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.13\n"
         },
         {
           "type": "stream",
@@ -118,28 +118,28 @@
       ]
     },
     "lstm-character-level-language-modeling-3": {
-      "code_fingerprint": "sha256:5e975a7867a401335c639c6379fc756843ffd5f2c1120366de3c41d79e681891",
+      "code_fingerprint": "sha256:313bc3e221a93e2c4992b301bcf0e4d6f4579ab715c012e57be7b41d6161986c",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:ab359e10d5167c4c4274f54a485e715852daace9ff2a2dd8f99cc2ec4fa755b1",
+      "code_fingerprint": "sha256:a1362be98317895e6939eab4092b7ba0c98c066b9c7c9d462e868946c499e687",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:c056fa91a2864afe344c0c4198351adee44bfc297b444621a66cbcdc2ff88004",
+      "code_fingerprint": "sha256:0fa1ff15c4f2dfb40ef600f0b057a837b5c7369b1fda1cd1f8906346b55dd46b",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:b4ff0b9ae8a4f350aaf85c5f3dbdcb89a2271a3f60749f1643329943bf40a35e",
+      "code_fingerprint": "sha256:823a5a22b75cec9d9fd4685173a34e4602b8a53103ab08c6c618d7db98c0ed99",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,603 parameters   perplexity 3.13\nLSTM    540,979 parameters   perplexity 2.98\nGRU     475,187 parameters   perplexity 2.98\n"
+          "text": "RNN     343,603 parameters   perplexity 3.11\nLSTM    540,979 parameters   perplexity 2.97\nGRU     475,187 parameters   perplexity 2.99\n"
         }
       ]
     }

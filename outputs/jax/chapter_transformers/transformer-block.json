@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c3042f18705fff79242a119d0e5fa12fda2f0f96c5cc64b859b6c81ea13d989c",
+    "d2l_lib_fingerprint": "sha256:a0cd0d3381c4a087871316c8ab40f888930d0b0d3712be46943c432a6ea99128",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 3.4e-01 2.2e-02 1.9e-04\n          grad norms at k=32: W_q 4.5e-09  W_k 4.5e-09  W_v 6.3e-02  W_o 6.3e-02\n  pre-LN: stream RMS at k=32:  5.28, token spread at k=8,16,32: 6.8e-01 4.6e-01 3.5e-01\n          grad norms at k=32: W_q 1.8e-03  W_k 1.8e-03  W_v 8.1e-02  W_o 8.5e-02\n"
+          "text": " post-LN: stream RMS at k=32:  1.00, token spread at k=8,16,32: 3.4e-01 2.3e-02 2.0e-04\n          grad norms at k=32: W_q 4.6e-09  W_k 4.6e-09  W_v 6.1e-02  W_o 6.3e-02\n  pre-LN: stream RMS at k=32:  5.59, token spread at k=8,16,32: 7.1e-01 4.9e-01 3.4e-01\n          grad norms at k=32: W_q 2.0e-03  W_k 1.8e-03  W_v 8.9e-02  W_o 8.9e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 29316,
-          "sha256": "sha256:896329bbcc137f4d2e17a0fde2b2f3cb13f0bb9ceed42a562d760642ca5b69cd"
+          "bytes": 29314,
+          "sha256": "sha256:d0a1d33dbd9aa705bd820e6e2536fc534b5f55bebf953a55ce6e7c18e6fb2b14"
         }
       ]
     },
@@ -43,7 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.44 ms/call\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LayerNorm: 0.44 ms/call\n"
         },
         {
           "type": "stream",
@@ -101,12 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   gelu: validation loss at step 200/400/600: 2.49/2.16/1.90\n"
+          "text": "   gelu: validation loss at step 200/400/600: 2.47/2.12/1.87\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " swiglu: validation loss at step 200/400/600: 2.49/2.15/1.85\n"
+          "text": " swiglu: validation loss at step 200/400/600: 2.46/2.05/1.82\n"
         }
       ]
     }

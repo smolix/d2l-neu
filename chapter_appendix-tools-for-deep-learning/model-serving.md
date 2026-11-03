@@ -1,22 +1,32 @@
 # Model Serving
 :label:`sec_model_serving`
 
-Training produces model parameters; serving exposes model inference to
-people or programs. Serving emphasizes latency distributions, concurrent
-request state, capacity planning, and operational controls. This section
-compares representative local and server engines as of mid-2026 and explains
-four recurring techniques: KV-cache management, continuous batching, prefix
-reuse, and quantization.
+The language models in this book generated text in a notebook, one prompt
+at a time, for the person who ran the cell. Suppose instead that a hundred
+colleagues send requests to the same language model whenever they like. If
+the GPU answers them one after another at two seconds each, the last
+colleague waits more than three minutes. What has to change between calling
+a model and serving it?
 
-## Know Your Workload
+Serving makes one accelerator work on many requests at once. Generating a
+token reads the weights and the key--value cache from memory
+(:numref:`sec_hardware_buyers`). All requests share the weights, so an
+engine that advances many requests in the same step reads the weights once
+for all of them, provided memory holds the cache of every active request. We
+start with the latency numbers that users notice, survey local and server
+engines as of November 2026, and explain the techniques that make the
+engines fast.
 
-Two numbers govern interactive serving of autoregressive models: **time to
-first token** (TTFT), counted from the arrival of the request and, on an idle
-server, dominated by *prefill* — processing the prompt, a
-parallel, compute-bound pass — and **time per output token** (TPOT),
-dominated by *decode* — one token at a time, bandwidth-bound, as
-:numref:`sec_hardware_buyers` quantified. Throughput (tokens per second
-across all users) trades against both.
+## Workloads and Latency Metrics
+
+A user of a chat assistant notices two delays: the wait before the first
+word appears, and the pace of the words that follow. The first is the
+**time to first token** (TTFT), counted from the arrival of the request. On
+an idle server it is dominated by *prefill*, which processes all prompt
+tokens in parallel and is bound by compute. The second is the **time per
+output token** (TPOT), dominated by *decode*, which produces one token per
+sequence and step and is bound by memory bandwidth. Throughput, the tokens
+per second summed over all users, trades against both.
 
 ![Prompt prefill is parallel and often compute-heavy; autoregressive decode advances one token per sequence and stresses memory movement.](../img/tools-prefill-decode.svg)
 :label:`fig_tools_prefill_decode`
@@ -24,7 +34,7 @@ across all users) trades against both.
 Which numbers matter depends on the workload, and the workload picks the
 tool:
 
-:Serving workloads and example starting points (mid-2026)
+:Serving workloads and example starting points (as of November 2026)
 :label:`tab_serving_workloads`
 
 | Workload | Optimize for | Start with |
@@ -33,73 +43,81 @@ tool:
 | Offline batch scoring | throughput per dollar | vLLM offline mode |
 | One application's API | operability | vLLM behind a small authenticated proxy |
 | Multi-user / agentic service | goodput under an SLO | vLLM or SGLang, then NVIDIA Dynamo at scale |
-| Max throughput on fixed NVIDIA fleet | compiled kernels | TensorRT-LLM |
+| Max throughput on fixed NVIDIA fleet | throughput per GPU | TensorRT-LLM |
 
-"Goodput" — completed requests that also met their latency target — is the
-production metric; overload can raise raw throughput while goodput
-collapses.
+A service level objective (SLO) sets a latency target, such as a TTFT below
+1 s. *Goodput*, the rate of completed requests that also met their target,
+is the production metric. Overload can raise raw throughput while goodput
+collapses, because requests queue until they miss their targets.
 
-## Serving on Your Own Machine
+## Local Serving
 :label:`subsec_model-serving-local`
 
-Many local inference tools use **llama.cpp** and its **GGUF** file format.
-Community repositories commonly publish GGUF conversions of open-weight
-models. Users often access llama.cpp through a wrapper:
+On a laptop or a workstation with one user, the questions are whether a
+model fits and how fast it answers. Many local inference tools use
+**llama.cpp** and its **GGUF** file format, and community repositories
+commonly publish GGUF conversions of open-weight models. Users often reach
+llama.cpp through a wrapper:
 
-* **Ollama** wraps it (plus an Apple-MLX backend) in a one-command
-  experience — `ollama run qwen3:8b` downloads, caches, and serves a model
-  with an OpenAI-compatible local API. It provides a low-configuration
-  starting point for local use.
-* **LM Studio** offers the same engines behind a GUI, with per-layer GPU
-  offload control — a graphical interface for users who prefer not to work in a terminal.
-* **MLX** is Apple's array framework; on M-series Macs, `mlx-lm` is
-  optimized for Apple silicon and has many pre-converted models on the Hub.
-  Performance depends on the model and conversion.
+* **Ollama** builds on llama.cpp and, on Apple silicon, also on MLX.
+  `ollama run qwen3:8b` downloads, caches, and serves a model, with an
+  OpenAI-compatible API at `http://localhost:11434/v1`.
+* **LM Studio** offers the same engines behind a graphical interface, with
+  control over how much of the model is offloaded to the GPU.
+* **MLX** is Apple's array framework. Its package `mlx-lm` runs and
+  fine-tunes models on Apple silicon, and the `mlx-community` organization
+  on Hugging Face publishes thousands of converted models.
 
-Common GGUF quantizations include `Q4_K_M` (~4.9 bits/weight),
-`Q5_K_M`, and `Q8_0`. Higher-bit formats require more memory and usually
-retain model quality better, but the effect is model- and task-dependent and
-should be measured on the target workload.
-The rule of thumb follows the decode bound of
-:numref:`sec_hardware_buyers`: pick the largest model whose chosen quant
-fits your memory with room for the KV cache, then take the highest quant
-that still fits.
+Common GGUF quantizations include `Q4_K_M` (about 4.9 bits per weight),
+`Q5_K_M` (about 5.7), and `Q8_0` (about 8.5). For the 8.2 billion
+parameters of Qwen3-8B, `Q4_K_M` gives $8.2 \times 10^9 \times 4.9 / 8
+\approx 5.0$ GB, close to the 5.2 GB of Ollama's `qwen3:8b` download. The
+4.9 bits were measured on Llama 3.1 8B, and `Q4_K_M` keeps a
+model-dependent share of tensors at higher precision. The cache of a full
+32,768-token context in bf16 adds almost as much again. Higher-bit formats
+usually retain quality better; measure the effect on your own task. Decode
+speed is at most the memory bandwidth divided by the bytes read per token,
+so every extra bit costs speed as well as memory. A common rule is to pick
+the largest model whose quantized weights fit in memory with room for the
+cache, then the highest-bit format that still fits.
 
-## Serving as a Service
+## Server Engines
 
-### vLLM and SGLang
+### Open-Source and NVIDIA Engines
 
-For an open-source GPU server, **vLLM** provides continuous batching, paged
-KV-cache management, prefix caching,
-tensor parallelism, quantized-model support, and an OpenAI-compatible
-server in one command:
+A shared server needs an engine that schedules requests together. For an
+open-source GPU server, **vLLM** provides continuous batching, paged
+KV-cache management, prefix caching, tensor parallelism, quantized-model
+support, and an OpenAI-compatible server in one command:
 
 ```bash
 vllm serve Qwen/Qwen3-8B --max-model-len 32768
 ```
 
-**SGLang** is its closest peer, distinguished by *RadixAttention* — a
-radix-tree KV cache shared across requests, which can improve reuse when many
-requests share long prefixes (chat with a system prompt, RAG over the
-same documents, agent trees). The DeepSeek ecosystem has used it for such
-workloads. Both projects evolve
-quickly and support multiple accelerator backends. Benchmark both with the
-target prompt-length and concurrency distributions before selecting one.
+**SGLang** is its closest peer. Its *RadixAttention*
+:cite:`Zheng.Yin.Xie.ea.2024` keeps cached keys and values in a radix tree
+shared across requests, which helps when many requests share long prefixes:
+chat with a system prompt, retrieval over the same documents, or trees of
+agent calls. Both projects evolve quickly and support several accelerator
+backends; benchmark both on your distributions of prompt length and
+concurrency before selecting one.
 
-NVIDIA-specific tools trade portability for compiled optimizations.
-**TensorRT-LLM** compiles a model into optimized engines, which can improve
-steady-state serving at the cost of additional setup, while **Dynamo**
-orchestrates disaggregated prefill/decode and KV-aware routing across a
-fleet, wrapping vLLM, SGLang, or TensorRT-LLM as backends. These matter
-at datacenter scale; below it, they are complexity you do not need.
+NVIDIA's tools trade portability for hardware-specific optimization.
+**TensorRT-LLM** runs models on PyTorch with NVIDIA-tuned kernels, which can
+improve steady-state throughput at the cost of more setup. **Dynamo**
+coordinates many GPUs and nodes, with vLLM, SGLang, or TensorRT-LLM as
+backends. It runs prefill and decode on separate pools of GPUs and routes
+each request by worker load and by how much of its prefix a worker already
+caches. These tools matter at datacenter scale; on a few GPUs, vLLM or
+SGLang alone is simpler.
 
-### One Client Contract
+### A Common Client API
 :label:`subsec_model-serving-contract`
 
-Many of these tools implement the OpenAI chat-completions API, which serves
-as a common client contract — the same application code targets a
-local Ollama, your vLLM server, or a commercial provider by changing the
-base URL and the model name:
+An application should not need rewriting when it moves from a laptop to a
+server. Many of these tools implement the OpenAI chat-completions API, so
+the same client code targets a local Ollama, your vLLM server, or a
+commercial provider after a change of the base URL and the model name:
 
 ```text
 from openai import OpenAI
@@ -113,13 +131,14 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-"Compatible" is not "identical": tokenization, sampling defaults,
-structured-output support, streaming behavior, and token accounting all
-vary. Keep a small conformance test and rerun it before swapping engines.
+Servers that accept the same requests can still answer them differently:
+tokenization, sampling defaults, structured-output support, streaming
+behavior, and token accounting all vary. Keep a small conformance test and
+rerun it before swapping engines.
 
-## Why These Engines Are Fast
+## Engine Techniques
 
-Four composable techniques explain much of serving-engine performance:
+Four composable techniques explain much of the speed of these engines.
 
 **Continuous batching.** A static batch waits for its slowest member.
 Continuous batching admits new requests and retires finished ones between
@@ -128,7 +147,7 @@ decode steps, keeping the batch nearly full:
 ![Two batch slots serving requests of 5, 2, 7, and 3 output tokens, as in the toy scheduler below. Static batching pads each batch to its longest member; continuous batching refills a finished slot at the next step and finishes in 9 steps instead of 12.](../img/tools-continuous-batching.svg)
 :label:`fig_tools_continuous_batching`
 
-The toy scheduler below captures the idea in ten lines.
+The toy scheduler below captures the idea in a few lines.
 Exercise :exref:`ex_model-serving-arrivals` extends it with arrival times and
 a memory budget:
 
@@ -147,73 +166,79 @@ while requests or active:
 timeline
 ```
 
-**Paged KV cache.** Each active sequence's key–value cache grows with its
-length; vLLM's PagedAttention allocates it in fixed-size blocks, like
-virtual memory, nearly eliminating the fragmentation that once capped batch
-sizes. Capacity planning follows: GPU memory must hold weights *plus* KV
-for every concurrent sequence. A model that fits for one request may therefore
-exceed memory under high concurrency.
+**Paged KV cache.** Each active sequence's key--value cache grows with its
+length. vLLM's PagedAttention :cite:`Kwon.Li.Zhuang.ea.2023` allocates it in
+fixed-size blocks, like virtual memory, and so nearly eliminates the
+fragmentation that once capped batch sizes. Capacity planning follows: GPU
+memory must hold the weights *plus* the cache of every concurrent sequence.
+A model that fits for one request may therefore exceed memory under high
+concurrency.
 
 **Prefix caching.** When two requests share a tokenized prefix (the same
-system prompt, the same document), its KV state can be computed once and
-reused:
+system prompt, the same document), its cached keys and values can be
+computed once and reused:
 
 ![A prefix cache reuses KV state only when tokenized prefixes match, then computes each request's unique suffix.](../img/tools-prefix-cache.svg)
 :label:`fig_tools_prefix_cache`
 
-Some commercial APIs charge less for cached input tokens. Place shared,
-stable content before variable suffixes when the provider's documented cache
-semantics support prefix reuse; prices and eligibility vary by provider.
+Some commercial APIs charge less for cached input tokens, under rules that
+differ by provider. Placing shared, stable content before the variable part
+of a prompt then saves money as well as prefill time.
 
 **Speculative decoding and quantization.** A small draft model proposes
-several tokens; the target model verifies them in one parallel pass —
-potential decode speedups when acceptance is high, while preserving the
-target distribution under the algorithm's sampling assumptions.
-Quantization reduces the bytes transferred during decode:
-fewer bytes per weight, more tokens per second, up to a limit at the lowest
-bit widths. On recent datacenter GPUs,
-supported formats include FP8 on Hopper and NVFP4 on Blackwell, while vLLM
-and SGLang support AWQ for 4-bit weights; GGUF
-quants play the same role locally.
+several tokens, and the target model verifies them in one parallel pass.
+This speeds up decoding when most proposals are accepted and preserves the
+target distribution. Quantization reduces the bytes read during decode:
+fewer bytes per weight give more tokens per second, until quality degrades
+at the lowest bit widths. Recent NVIDIA tensor cores support FP8 (from the
+Hopper and Ada generations on) and NVFP4 (from Blackwell on), and vLLM and
+SGLang also load 4-bit AWQ weights. GGUF formats play the same role
+locally.
 
-## Operating Notes
+## Operations
 
-A model behind a port is not yet a service. The short version of the
-production checklist: put authentication, TLS, and rate limits at a proxy
-in front of the engine (never expose the raw port); make admission
-control reject or queue *before* memory exhausts rather than OOM after;
-propagate client cancellations so abandoned generations stop burning
-compute; measure TTFT, TPOT, and end-to-end latency as p50/p95
-distributions under realistic arrival patterns, not averages under a
-closed loop; avoid logging raw prompts by default; and pin model,
-tokenizer, quantization, and engine versions together — a faster server
-that answers differently is a different system, so gate rollouts on task
-quality as well as latency.
+An engine listening on a port still lacks the controls that a shared
+service needs. Put authentication, TLS, and rate limits in a proxy in front
+of the engine, and do not expose the engine's own port. Admission control should reject or queue
+requests *before* memory runs out, not after an out-of-memory error.
+Propagate client cancellations so that abandoned generations stop consuming
+compute. Measure TTFT, TPOT, and end-to-end latency as p50 and p95 under
+realistic arrival patterns, not as averages under a closed loop of clients.
+Avoid logging raw prompts by default. Pin the model, tokenizer,
+quantization, and engine versions together: a faster server that answers
+differently is a different system, so gate rollouts on task quality as well
+as on latency.
+
+You can now estimate whether a model and the caches of its users fit on a
+card, and which engine to try first. How a server should admit and order
+requests under load remains open; the simulators of the exercises explore
+it.
 
 ## Summary
 
-* Separate prefill (compute-bound, sets TTFT) from decode
-  (bandwidth-bound, sets TPOT), and pick tools by workload: Ollama/LM
-  Studio/MLX locally, vLLM or SGLang for services, TensorRT-LLM and
-  Dynamo at NVIDIA-fleet scale.
-* GGUF quantizations are common in local serving, while server engines support
-  formats such as AWQ, FP8, and NVFP4; in both cases quantization converts bytes saved into tokens
-  per second, up to a limit at the lowest bit widths.
-* Continuous batching, paged KV, prefix caching, and speculative decoding
-  are four recurring serving optimizations — and prefix structure is
-  something *you* control from the prompt side.
+* Prefill is bound by compute and sets the TTFT; decode is bound by memory
+  bandwidth and sets the TPOT. Pick tools by workload: Ollama, LM Studio, or
+  MLX locally, vLLM or SGLang for services, TensorRT-LLM and Dynamo for
+  NVIDIA fleets.
+* Quantization, in GGUF formats locally and AWQ, FP8, or NVFP4 on servers,
+  converts bytes saved into tokens per second, up to a limit at the lowest
+  bit widths.
+* Continuous batching, paged caches, prefix caching, and speculative
+  decoding are four recurring optimizations, and the client controls the
+  prefix structure of its prompts.
 * The OpenAI-compatible API is the portable client contract; verify
   compatibility with your own conformance tests.
-* Capacity is weights plus per-user KV; production means admission
-  control, cancellation, percentile latencies, and pinned revisions.
+* Capacity is the weights plus the cache of every user; production also
+  needs admission control, cancellation, percentile latencies, and pinned
+  versions.
 
 ## Exercises
 
 1. **Batch size limits.** The command `vllm serve Qwen/Qwen3-8B` serves a
-   model with 36 layers and 8 key-value heads of dimension 128, whose bf16
-   weights occupy
-   $B_w = 16.4$ GB. Its cache is stored in bf16 as well. Serve it on the
-   H100 SXM of :numref:`tab_gpu_specs`, whose memory bandwidth is $\beta$.
+   model with $L = 36$ layers and $H_\textrm{kv} = 8$ key--value heads of
+   dimension $d_h = 128$, whose bf16 weights occupy $B_w = 16.4$ GB. Its
+   cache is stored in bf16 as well. Serve it on an H100 SXM, whose memory bandwidth is $\beta = 3.35$ TB/s and whose dense
+   bf16 rate is 989 TFLOP/s (:numref:`tab_gpu_specs`).
    A decode step reads the weights once for the whole batch and the cache
    of every active sequence. For $b$ sequences that each hold $n$ cached
    tokens, the step, and hence the time per output token of every
@@ -222,13 +247,16 @@ quality as well as latency.
    $$t(b) = \frac{B_w + b\, n\, B_\textrm{kv}}{\beta},$$
 
    where $B_\textrm{kv}$ is the cache size per token.
-    1. Compute $B_\textrm{kv}$ with :eqref:`eq_kv-cache-bytes`. Evaluate
-       the TPOT and the throughput $b / t(b)$ at $n = 2048$ for
+    1. Every layer stores one key and one value vector per key--value head
+       and token, so $B_\textrm{kv} = 2 \cdot L \cdot H_\textrm{kv} \cdot
+       d_h \cdot (\textrm{bytes per element})$ (:numref:`sec_kv-cache`).
+       Compute $B_\textrm{kv}$. Evaluate the TPOT and the throughput
+       $b / t(b)$ at $n = 2048$ for
        $b \in \{1, 8, 64, 256\}$. Which value does the throughput approach
        as $b$ grows, and which term of $t(b)$ sets it? Count 2 FLOPs per
        parameter and token for the 8.2 billion parameters, and check with
-       the bf16 rate of :numref:`tab_gpu_specs` that the step at $b = 256$
-       is still bound by memory traffic.
+       the bf16 rate that the step at $b = 256$ is still bound by memory
+       traffic.
     1. An interactive service promises a TPOT of at most 20 ms. What is
        the largest batch it can run? Which batch would an offline scoring
        job of :numref:`tab_serving_workloads` choose instead, and why?
@@ -394,7 +422,7 @@ quality as well as latency.
        sequence scores $\gamma + 1$ positions per round. Ignore the cache,
        store the weights in bf16, and count 2 FLOPs per parameter and token.
        Above which $b$ does the pass become compute-bound on the H100 of
-       :numref:`tab_gpu_specs` for $\gamma = 4$? What does this imply for
+       exercise :exref:`ex_model-serving-batch-limits` for $\gamma = 4$? What does this imply for
        speculative decoding on a busy server compared with a single user?
 
 1. [extended] **Goodput under load.** ●● Turn your simulator of exercise

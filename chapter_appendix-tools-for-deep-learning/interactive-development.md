@@ -1,22 +1,29 @@
 # Notebooks
 :label:`sec_interactive_development`
 
-Every section of this book is an executable notebook in which prose,
-mathematics, code, and output share one document. This format supports the
-empirical study of deep learning: readers can train a model, vary the learning
-rate, layer width, or amount of data, and inspect the result beside the
-explanation. Notebooks are also widely used for data inspection and research
-prototypes.
+Every section you have read so far placed code next to its prose, with the
+output of each code cell printed below it. While reading, you may have wanted
+to change one of those cells: try a smaller learning rate, a wider layer, or
+half of the training data, and see what happens. The book is written for
+this. Each section is a Jupyter notebook, a single document that holds prose,
+mathematics, code, and results, and that you can edit and run one cell at a
+time.
 
-The notebooks are designed to be edited and rerun, including with variants
-mentioned only in the text. This section explains local execution and
-effective notebook use, especially *restart and run all*, which detects hidden
-state and order-dependent results. If you
-would rather not install anything, :numref:`sec_hosted_notebooks` shows how
-to run the same notebooks free of charge on Colab or Kaggle; if you need more
-hardware than your laptop offers, see :numref:`sec_cloud_instances`.
+Running cells one at a time raises a question that a script never raises:
+which code produced the result on the screen? A notebook remembers everything you
+have run, in the order you ran it, and that order need not match the page. A
+notebook can therefore show a result that nobody, its author included, can
+reproduce after a restart. The remedy is to restart the notebook and run it
+from the top before trusting or sharing a result.
 
-## Why Notebooks?
+Below we explain where a notebook keeps its state and how to check it, set up
+the book's notebooks on your own machine, and work with them from an editor
+and on a remote GPU. If you would rather not install anything,
+:numref:`sec_hosted_notebooks` runs the same notebooks free of charge on
+Colab or Kaggle. If you need more hardware than your laptop offers, see
+:numref:`sec_cloud_instances`.
+
+## The Notebook Execution Model
 
 A plain Python script re-runs from the top every time, so a slow step — say,
 loading and preprocessing a dataset — repeats on every experiment. A notebook
@@ -25,12 +32,13 @@ once, then iterate on the model as often as you like while the data stays in
 memory. Inline plots and interleaved explanations make this execution model useful
 for both teaching and research.
 
-This convenience introduces persistent *state*, whose location and lifetime
-must be understood.
+The same memory also outlives the code that filled it: a variable keeps its
+value after you edit or delete the cell that assigned it. We therefore need to
+know where this *state* lives and how long it lasts.
 
 ### The Document and the Kernel
 
-A notebook is really two things. The *document* stores cells and saved
+A notebook has two parts. The *document* stores cells and saved
 outputs — it is what you read, share, and commit. The *kernel* holds the live
 state: imported modules, variables, random-number generators, open files,
 compiled programs, and accelerator memory. The document orders cells top to
@@ -74,28 +82,34 @@ and pass data explicitly rather than mutating globals across many cells.
 and replays the document from a blank slate, in reading order. It catches
 hidden kernel state and order dependencies before a notebook is
 shared. Run it before saving, sharing, or committing a notebook.
-Every notebook in this book is built and tested with this procedure — the
-outputs you see on the website are produced by a clean top-to-bottom run.
+The book's build applies the same test: it executes every notebook from top
+to bottom in a fresh kernel, and the outputs on the website come from those
+runs.
 
 ## Running the Book Locally
 
 ### Setting Up
 
-Download the notebook archive described in :ref:`chap_installation`, or
-clone the current sources from [GitHub](https://github.com/smolix/d2l-neu).
-The archive includes CPU and GPU `uv` environment files. From the extracted
-directory, create the environment once and launch JupyterLab through it:
+Numerical results and even APIs change between package versions, so the
+book pins its environments. The notebook archive for each framework, described
+in :ref:`chap_installation`, contains the notebooks, the `d2l` package, and
+`uv` lock files for a CPU and a GPU environment. From the extracted directory,
+create the environment once and launch JupyterLab in it:
 
 ```bash
-uv sync --locked
-uv run jupyter lab
+uv venv --python 3.12
+uv pip sync pylock.cpu.toml
+uv run --no-sync jupyter lab
 ```
 
-Use the GPU lock file on a compatible NVIDIA system when the examples require
-it. The *kernel* selected inside a
-notebook must belong to the environment where the packages were installed. A
-Jupyter server can see many kernels; its own Python process does not
-determine which one executes your notebook.
+On Linux with an NVIDIA GPU, synchronize `pylock.gpu.toml` instead. The
+`--no-sync` option keeps uv from altering the environment that the lock
+selected. A clone of the [GitHub repository](https://github.com/smolix/d2l-neu)
+builds its environments with `make` instead (:numref:`sec_developers_guide`).
+
+The *kernel* selected inside a notebook must belong to the environment where
+the packages were installed. A Jupyter server can see many kernels; its own
+Python process does not determine which one executes your notebook.
 
 ### A Quick Sanity Check
 
@@ -113,7 +127,7 @@ import sys
 }
 ```
 
-This catches the two most common setup mistakes in one cell: a kernel from
+This catches two common setup mistakes in one cell: a kernel from
 the wrong environment (`sys.executable` points somewhere unexpected) and a
 notebook opened from a directory where relative data paths no longer resolve.
 The cell abbreviates the home directory to `~` and prints only the last
@@ -135,16 +149,16 @@ running kernels. The essentials are stable even as the interface evolves:
   state and, normally, the accelerator memory owned by that process.
 * Use **Restart Kernel and Run All Cells** before saving a result for others.
 * Inspect the **Running** panel and stop kernels you no longer use — closing
-  a browser tab does not necessarily stop its kernel, and an orphaned kernel
+  a browser tab does not stop its kernel, and an orphaned kernel
   can hold gigabytes of GPU memory.
 
 ### VS Code
 
 [Visual Studio Code](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
 edits and runs `.ipynb` files with kernel selection, a variable inspector,
-cell-level debugging, and notebook-aware diffs. Open the repository as a
-folder, choose the interpreter created by `uv`, and select that interpreter
-as the notebook kernel.
+cell-level debugging, and notebook-aware diffs. Open the extracted directory
+as a folder, choose the interpreter of the environment created above, and
+select that interpreter as the notebook kernel.
 
 When a notebook grows into a project, VS Code can navigate definitions, run
 tests, format code, and review Git diffs. Keep testable logic in `.py` modules
@@ -155,11 +169,13 @@ edits back to the source — described in :numref:`sec_developers_guide`.
 
 ### Debugging and Timing
 
-Use the notebook debugger when the kernel supports it, or move a small
-failing call into a module and debug it in a terminal. Resist broad
-`try/except` blocks that print "failed": they discard the exception type and
-location that diagnosis needs. For quick measurements, IPython's magics are
-built in:
+An exception ends the cell but not the kernel, which keeps the traceback
+along with every variable. Running `%debug` in the next cell therefore opens a
+debugger in the frame where the exception was raised. Use the notebook debugger when the
+kernel supports it, or move a small failing call into a module and debug it
+in a terminal. Resist broad `try/except` blocks that print "failed": they
+discard the exception type and location that diagnosis needs. For quick
+measurements, IPython's magics are built in:
 
 ```{.python .input #interactive-development-timing}
 values = np.arange(100_000, dtype=np.float64)
@@ -185,7 +201,7 @@ Bind the remote server to loopback and forward it over SSH:
 
 ```bash
 # Remote machine
-uv run jupyter lab --no-browser --ip 127.0.0.1 --port 8888
+uv run --no-sync jupyter lab --no-browser --ip 127.0.0.1 --port 8888
 ```
 
 ```bash
@@ -220,10 +236,11 @@ note the environment and hardware needed to interpret any measurement.
   documents.
 * The document and the kernel hold different state in different orders;
   restart and run all is the test that they agree.
-* Launch JupyterLab from the book's `uv` environment, and verify the kernel
-  with `sys.executable` before trusting any result.
+* Launch JupyterLab in the environment built from the book's `uv` lock
+  files, and verify the kernel with `sys.executable` before trusting any
+  result.
 * JupyterLab integrates notebooks, terminals, and kernels; VS Code adds
-  modules, tests, diffs, and first-class remote development.
+  modules, tests, diffs, and remote development over SSH.
 * Use SSH tunneling or VS Code Remote SSH instead of exposing a notebook
   server to the network.
 
@@ -254,7 +271,7 @@ note the environment and hardware needed to interpret any measurement.
 1. [code] **Cell reruns.** The cell
    `#interactive-development-hidden-state-a` creates the generator `rng`
    and draws `samples` in one step, so rerunning it and then
-   `#interactive-development-hidden-state-b` reproduces the printed mean
+   `#interactive-development-hidden-state-b` reproduces the displayed mean
    $-0.2639$.
     1. Split the cell into one that creates `rng` and one that draws
        `samples`. Rerun the drawing cell twice and then
@@ -382,7 +399,7 @@ note the environment and hardware needed to interpret any measurement.
 
 1. **A shared GPU server.** ● Several users of one remote server each
    start JupyterLab with
-   `uv run jupyter lab --no-browser --ip 127.0.0.1 --port 8888` and connect
+   `uv run --no-sync jupyter lab --no-browser --ip 127.0.0.1 --port 8888` and connect
    from their laptops with `ssh -N -L 8888:127.0.0.1:8888 myserver`.
     1. Who can connect to a server that listens on `127.0.0.1` of that
        machine? What protects your kernel from them? Find where your

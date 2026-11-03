@@ -1,131 +1,157 @@
 # Ecosystem
 :label:`sec_software_ecosystem`
 
-Modern machine learning projects commonly begin with pretrained checkpoints,
-datasets, released code, and benchmark results. Using these artifacts requires
-knowing where to find them, how to evaluate their relevance, and how to record
-their provenance. This section surveys prominent sources as of 2026, explains
-how to interpret leaderboards, and presents practices for managing external
-artifacts safely.
+Most models in this book were trained from scratch, on Fashion-MNIST or on
+*The Time Machine*, so that every step stayed visible. A real project rarely
+starts that way. It starts from someone else's work: a pretrained checkpoint,
+a public dataset, the code released with a paper. Suppose you want a model
+that sorts the support tickets of a small company. A search of the Hugging
+Face Hub for text classifiers returns more than a hundred thousand
+candidates, each with a download count and many with a model card and a
+benchmark score. Which one should you try first? Will its reported score
+hold on your tickets? And will the model you load next year be the one you
+evaluated today?
 
-## Where to Find Things
+These are questions about evidence and identity rather than about training.
+Answering them means treating external artifacts the way a software engineer
+treats dependencies: find them where the community keeps them, judge them by
+measurements on your own task and not by rankings alone, and record which
+version you used and under which license. Without that record a result
+cannot be reproduced. A checkpoint downloaded in good faith can also run
+code on your machine unless its file format is checked first. This section
+follows the hardware sections because the choice of a model and the choice
+of a machine constrain each other. We look first at where models, datasets
+and papers are found, then at how to read benchmarks and leaderboards, at a
+few sources that keep a practitioner informed, and finally at how to pin, check and license what we download.
+
+## Sources of Models, Data, and Papers
 
 ### Models
 
-The [Hugging Face Hub](https://huggingface.co/models) listed more than two
-million public models in spring 2026 and provides Git-style versioning, model
-cards, and integrations with the libraries used in this book. Because
-popularity does not establish suitability, search by task, inspect recency and
-download signals, and read the model card before selecting a repository. Complementary sources include:
+The [Hugging Face Hub](https://huggingface.co/models) listed more than three
+million public models as of November 2026. Each model lives in a Git
+repository, with a model card and integrations with the libraries used in
+this book. Popularity does not establish suitability, so search by task,
+check recency and download counts, and read the model card. Several other sources complement the Hub:
 
-* [ModelScope](https://modelscope.cn/), Alibaba's hub, hosts a large part
-  of the Chinese open-model ecosystem (Qwen and friends, 170,000+ models) —
-  and frequently publishes new open-weight releases.
-* [Kaggle Models](https://www.kaggle.com/models) hosts curated weights
-  wired into Kaggle's competition and notebook infrastructure
+* [ModelScope](https://modelscope.cn/), Alibaba's hub, hosts a large part of
+  the Chinese open-model ecosystem, with more than 280,000 models as of
+  November 2026.
+* [Kaggle Models](https://www.kaggle.com/models) hosts curated weights wired
+  into Kaggle's competition and notebook infrastructure
   (:numref:`sec_hosted_notebooks`).
-* The [Ollama library](https://ollama.com/library) is a short, curated
-  menu of local-runtime models — less a discovery surface than a
-  convenience layer (:numref:`sec_model_serving`).
-* [`timm`](https://huggingface.co/timm) provides a broad collection of vision
-  backbones; [Civitai](https://civitai.com/) hosts community image-generation
-  checkpoints and LoRAs.
+* The [Ollama library](https://ollama.com/library) is a short, curated list
+  of models packaged for a local runtime (:numref:`sec_model_serving`).
+* [`timm`](https://huggingface.co/timm) provides a broad collection of
+  vision backbones, and [Civitai](https://civitai.com/) hosts community
+  image-generation checkpoints and LoRA adapters.
 
 ### Datasets
 
-[Hugging Face Datasets](https://huggingface.co/datasets) (half a million
-public datasets) and [Kaggle](https://www.kaggle.com/datasets) cover most
-supervised needs. For pretraining-scale text, the lineage runs from raw
-[Common Crawl](https://commoncrawl.org/) through filtered derivatives —
-[FineWeb](https://huggingface.co/datasets/HuggingFaceFW/fineweb) (15
+[Hugging Face Datasets](https://huggingface.co/datasets) (more than a
+million public datasets as of November 2026) and
+[Kaggle](https://www.kaggle.com/datasets) cover most supervised needs. For
+pretraining-scale text, the lineage runs from raw
+[Common Crawl](https://commoncrawl.org/) through filtered derivatives.
+[FineWeb](https://huggingface.co/datasets/HuggingFaceFW/fineweb) held 15
 trillion tokens at its 2024 release and more than 18.5 trillion after later
-versions added newer dumps, plus a 1,000-language successor) provides a widely used open
-baseline, analogous to C4 in the period when
-BERT was developed. For
-vision–language pairs, DataComp provides an alternative to LAION with an emphasis on controlled
-dataset construction and evaluation. Older and very large corpora are sometimes available only through
-[Academic Torrents](https://academictorrents.com/). Whatever the source:
-datasets, like models, have versions, licenses, and documented failure modes.
-Review a dataset's documentation before adopting it.
+versions added newer crawls, and the multilingual FineWeb2 applies the
+same pipeline to more than 1,000 languages. FineWeb is now a common open
+baseline for pretraining, the role that C4 played after its release with T5
+in 2019. For image–text pairs,
+[DataComp](https://www.datacomp.ai/) provides an alternative to LAION with
+an emphasis on controlled dataset construction and evaluation. Older and
+very large corpora are sometimes available only through
+[Academic Torrents](https://academictorrents.com/). Whatever the source,
+datasets have versions, licenses and documented failure modes, just as
+models do. Read a dataset's documentation before adopting it.
 
 ### Papers and Code
 
-New work appears on [arXiv](https://arxiv.org/list/cs.LG/recent) first;
-the community's curated front page for ML is [Hugging Face
-Papers](https://huggingface.co/papers), which absorbed that role when
-Papers with Code—for years an index from papers to code and benchmarks—closed
-in mid-2025. Its historical leaderboard data survives as a static archive,
-illustrating why project inputs should not depend on one external index. [Semantic Scholar](https://www.semanticscholar.org/)
-and [alphaXiv](https://alphaxiv.org/) help with search and discussion.
-Released implementations commonly reside on GitHub. Issue history, recent
-commits, and documented reproduction results provide evidence beyond the
-paper's abstract.
+New work appears first on [arXiv](https://arxiv.org/list/cs.LG/recent).
+[Hugging Face Papers](https://huggingface.co/papers) curates a daily front
+page and links papers to their code. It took over that role when Papers with
+Code, for years the index from papers to code and benchmarks, closed in July
+2025; its address now redirects there, and its historical data survives
+as a frozen [archive](https://github.com/paperswithcode/paperswithcode-data).
+The episode is a reason not to make a project depend on one external index.
+[Semantic Scholar](https://www.semanticscholar.org/) and
+[alphaXiv](https://www.alphaxiv.org/) help with search and discussion.
+Released code usually lives on GitHub, where issue history, recent commits
+and reported reproductions are evidence beyond the paper itself.
 
-## Choosing a Model: Benchmarks and Leaderboards
+## Benchmarks and Leaderboards
 
-Model rankings change as models, evaluation sets, and optimization methods
-evolve. Static benchmark suites can also enter training data. The Open LLM
-Leaderboard was retired in 2025 after contamination reduced its usefulness.
-Model selection should therefore combine several sources of evidence:
+A leaderboard ranks models by one measurement, and a project needs a model
+that does well on another, its own task. A static benchmark also ages:
+models saturate it, or its questions leak into training data. Two
+retirements show both. The Open LLM Leaderboard, which ran fixed benchmarks
+on more than ten thousand open models, replaced its benchmarks in 2024 after
+models saturated them and was retired in 2025.
+In February 2026 OpenAI stopped reporting SWE-bench Verified, a set of real
+GitHub issues for coding agents, citing contamination and tests that reject
+correct fixes, and recommended the harder
+[SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro) instead. Model
+selection therefore combines several kinds of evidence:
 
-* [LMArena](https://lmarena.ai/) (now Arena) — blind human pairwise
-  preference; it measures aggregate user preferences, which may differ from
-  the target task.
-* [LiveBench](https://livebench.ai/) — contamination-resistant by rotating
-  fresh questions monthly.
-* [SWE-bench Verified](https://www.swebench.com/) — an evaluation for
-  coding agents on real GitHub issues; it exemplifies the
-  benchmark-per-capability pattern (math, long context, safety all have
-  their own).
-* [Artificial Analysis](https://artificialanalysis.ai/) — the
-  quality/price/latency triangulation across hundreds of models and
-  providers; useful when cost and latency are selection criteria.
-* [OpenRouter rankings](https://openrouter.ai/rankings) — revealed
-  preference by real token volume rather than scores; instructive
-  precisely where it disagrees with the quality leaderboards.
+* [Arena](https://arena.ai/), formerly LMArena and Chatbot Arena, ranks
+  models by blind pairwise human preference. It measures what users of the
+  site prefer on average, which may differ from what the target task needs.
+* [LiveBench](https://livebench.ai/) limits contamination by releasing new
+  questions regularly and withholding the newest ones.
+* Capability benchmarks such as [SWE-bench](https://www.swebench.com/) for
+  coding agents follow a benchmark-per-capability pattern; mathematics, long
+  context and safety have their own.
+* [Artificial Analysis](https://artificialanalysis.ai/) measures quality,
+  price and latency across models and providers.
+* [OpenRouter rankings](https://openrouter.ai/rankings) order models by the
+  number of tokens customers send them, a revealed preference that is most
+  instructive where it disagrees with the quality leaderboards.
 
 After forming a shortlist, build a small evaluation set from the target task
-and run each candidate on it. The
-gap between leaderboard rank and performance on your distribution is
-routinely larger than the gap between adjacent leaderboard entries. The
-evaluation discipline this book has practiced throughout — held-out data,
-meaningful baselines, error analysis — applies to *choosing* models exactly
-as it does to training them.
+and run each candidate on it. On the target task, models that sit next to
+each other on a leaderboard often differ by much more than their leaderboard
+scores do, and not always in the same order. The evaluation discipline used throughout this book
+(held-out data, meaningful baselines, error analysis) applies to *choosing*
+models just as it does to training them.
 
-## Staying Current
+## Information Sources
 
-A small, deliberate set of information sources is easier to evaluate than a
-continuous stream of announcements.
-A workable minimal set, as of 2026:
+New models, papers and tools appear daily, and nobody can read every
+announcement. A small, deliberate set of sources is easier to judge than a
+continuous stream. One workable set, as of November 2026:
 
-* [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/) — a community source
-  for open-weight releases, quantizations, hardware reports, and reproduction
-  attempts.
-* [Hugging Face Papers](https://huggingface.co/papers) daily — a curated
-  dozen papers instead of arXiv's daily hundreds.
-* One good newsletter — Andrew Ng's *The Batch*, Jack Clark's *Import AI*,
-  or Sebastian Raschka's *Ahead of AI* — for the weekly synthesis.
-* For systems depth, the [GPU MODE](https://github.com/gpu-mode/lectures)
-  lecture series and community, and the
-  [EleutherAI Discord](https://www.eleuther.ai/community) for open
-  research.
+* [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/), a community that
+  reports open-weight releases, quantizations, hardware measurements and
+  reproduction attempts.
+* The daily selection of Hugging Face Papers instead of the hundreds of
+  papers that arXiv receives each day.
+* One newsletter, such as Andrew Ng's
+  [*The Batch*](https://www.deeplearning.ai/the-batch/), Jack Clark's
+  [*Import AI*](https://importai.substack.com/), or Sebastian Raschka's
+  [*Ahead of AI*](https://magazine.sebastianraschka.com/).
+* The [GPU MODE](https://github.com/gpu-mode/lectures) lectures and
+  community for systems, and the
+  [EleutherAI community](https://www.eleuther.ai/community) for open research.
 
-X/Twitter remains where labs announce and researchers argue; treat it as a
-discovery feed, not an archive. And the chapter-end
-resources of this book (:numref:`chap_appendix_tools`) collect the
-durable long-form references.
+Social media is where labs announce results. Use it to discover them, and
+cite the paper or the model card instead. The introduction of this chapter (:numref:`chap_appendix_tools`)
+lists long-form references.
 
-## Using What You Found
+## Managing External Artifacts
 
-### Pin the Identity
+### Pinned Revisions
+
+A model is more than its weights. The tokenizer, preprocessing,
+configuration, license and revision all determine whether a result can be
+reproduced (:numref:`fig_tools_model_artifact`).
 
 ![A reusable model artifact combines configuration, weights, preprocessing, documentation, and an immutable revision.](../img/tools-ecosystem-artifact.svg)
 :label:`fig_tools_model_artifact`
 
-A model is more than its weights: the tokenizer, preprocessing,
-configuration, license, and revision all determine whether you can
-reproduce a result (:numref:`fig_tools_model_artifact`). Repositories are
-Git repositories — `main` moves. Pin the commit:
+Hub repositories are Git repositories, and the branch `main` moves when the
+owner pushes a commit. To load the same files tomorrow, download a specific
+commit:
 
 ```text
 from huggingface_hub import snapshot_download
@@ -138,7 +164,7 @@ path = snapshot_download(
 ```
 
 A small manifest records the model identity explicitly. In production, add
-file hashes, library versions, and an evaluation record:
+file hashes, library versions and an evaluation record:
 
 ```{.python .input #software-ecosystem-manifest}
 from dataclasses import asdict, dataclass
@@ -158,53 +184,56 @@ artifact = Artifact(repository="organization/model-name",
 print(json.dumps(asdict(artifact), indent=2))
 ```
 
-The same pinning discipline applies to *derived* artifacts: a LoRA adapter
-without its base-model revision is incomplete, and a quantized conversion
-(GGUF, AWQ, ONNX — see :numref:`sec_model_serving`) is a new artifact
-whose numerical fidelity someone should have checked against the source.
-For such artifacts, the field `parent` of `Artifact` identifies the artifact
-they were derived from.
+The same pinning applies to *derived* artifacts. A LoRA adapter without the
+revision of its base model is incomplete, and a quantized conversion (GGUF
+or AWQ, see :numref:`sec_model_serving`) is a new artifact whose numerical
+fidelity to the source must be checked. The field `parent`
+of `Artifact` records the artifact that a derived one was made from.
 
-### Trust and Licenses
+### Security and Licenses
 
-Downloaded models are software supply-chain inputs with security and licensing
-implications:
+A downloaded model is an input to your software supply chain, with the same
+security and licensing questions as any third-party library:
 
-* Prefer **safetensors** — a pure tensor container. Legacy pickle-based
-  checkpoints can execute arbitrary code on load, and the Hub's scanners
-  are a mitigation, not a guarantee.
-* `trust_remote_code=True` runs Python from the repository on your
-  machine. Read and pin that code; use the flag only when the architecture
-  genuinely requires it.
-* "Open" spans a wide range of licenses: permissive Apache/MIT weights,
-  acceptable-use licenses with commercial thresholds, research-only
-  releases, and gated models whose terms you accept per account. Record the
-  license associated with the pinned repository revision, since repositories
-  can relicense between revisions.
-* Every hub client caches aggressively (tens to hundreds of gigabytes in
-  `~/.cache/huggingface` is routine). Learn the cache tool's `scan` and
-  `delete` commands and monitor disk use.
+* Prefer **safetensors**, a container that holds only tensors. Legacy
+  pickle-based checkpoints can execute arbitrary code when loaded. The Hub
+  scans such files for known malicious patterns, which reduces the risk but
+  does not remove it.
+* `trust_remote_code=True` runs Python from the repository on your machine.
+  Read and pin that code, and use the flag only when the architecture
+  requires it.
+* "Open" spans a wide range of licenses: permissive Apache or MIT weights,
+  acceptable-use licenses with commercial thresholds, research-only releases,
+  and gated models whose terms you accept per account. Record the license of
+  the pinned revision, since a repository can change its license between
+  revisions.
+* Hub clients cache every file they download, and tens to hundreds of
+  gigabytes in `~/.cache/huggingface` are common. `hf cache ls` lists the
+  cache, `hf cache rm` deletes a repository or revision, and `hf cache prune`
+  removes revisions that no branch or tag points to any longer, along with
+  incomplete downloads.
+
+With these habits, a model found on a hub becomes a dependency you can
+justify, reproduce and audit. What they do not settle is whether the model
+is good enough for your task; only an evaluation on your own data answers
+that, and the exercises below show how large such an evaluation must be to
+separate two models.
 
 ## Summary
 
-* Discovery is a skill: Hugging Face is the center for models and
-  datasets, with ModelScope, Kaggle, Ollama's library, and Civitai as the
-  complements that matter; FineWeb-class corpora are the open pretraining
-  baseline.
-* Papers with Code closed in 2025; arXiv and Hugging Face Papers provide paper
-  discovery, while repository activity and reproduction reports help assess
-  released code.
-* No leaderboard is trusted alone: triangulate Arena, LiveBench,
-  task-specific benchmarks, and price/latency data — then decide on a
-  small evaluation you built from your own task.
-* Use a small set of complementary sources, such as a community, a curated
-  paper feed, and a newsletter.
-* Pin revisions, prefer safetensors, read licenses, treat remote code as
-  code review, and manage your caches — treat external artifacts as supply-chain dependencies.
+Pretrained models, datasets and papers are found mostly on the Hugging Face
+Hub and its complements, and on arXiv. Preference rankings,
+contamination-resistant benchmarks, capability benchmarks and
+price-and-latency data each measure something different, and benchmarks are
+retired as models saturate or memorize them, so no single leaderboard
+settles a choice. The choice of a
+model rests on a small evaluation built from your own task, with error bars.
+Every external artifact is a supply-chain dependency: pin its revision,
+prefer safetensors, review remote code, and record its license and parent.
 
 ## Exercises
 
-1. **Rating gaps on the Arena.** LMArena fits the Bradley-Terry model
+1. **Rating gaps on the Arena.** Arena (formerly LMArena) fits the Bradley-Terry model
    :eqref:`eq_bradley_terry` of :numref:`sec_regularized` to pairwise votes
    :cite:`Chiang.Zheng.Sheng.ea.2024` and reports the scores on the Elo
    scale. Ignoring ties, model A then beats model B with probability
@@ -327,7 +356,7 @@ implications:
 1. [extended] **Task-specific model selection.** ● Choose a task you know
    well, such as answering support questions in your field or extracting
    fields from documents you handle.
-    1. Shortlist three models using LMArena or LiveBench, one benchmark
+    1. Shortlist three models using Arena or LiveBench, one benchmark
        for the capability your task needs, and Artificial Analysis. Where
        do the rankings disagree? Explain each disagreement by what the
        disagreeing leaderboards measure.

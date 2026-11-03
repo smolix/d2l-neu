@@ -1560,13 +1560,19 @@ Poisson: $A = A' = A'' = e^\eta$, so mean $=$ variance $= \lambda$.
 ::: {.slide title="Maximum Likelihood Matches the Mean of $T$ to Its Sample Average"}
 [Moment matching]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 NLL $= nA(\boldsymbol\eta) - \boldsymbol\eta^\top\sum_i T(\mathbf x_i) + \text{const}$,
 convex; zero gradient $\Leftrightarrow \nabla A(\hat{\boldsymbol\eta}) = \bar T$.
 
-@fig:mdl-prob-log-partition
-
 The coin: $\operatorname{sigmoid}(\hat\eta) = 9/13$; minimum $8.02 = 13 \times 0.617$,
 13 times the entropy of the fitted coin.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-log-partition
+:::
+:::
 :::
 
 ::: {.slide title="With 13 Heads in 13 Flips the Likelihood Has No Maximizer"}
@@ -1662,12 +1668,18 @@ $10^5$ noisy argmaxes for $\mathbf z = (2, 1, 0.1, -1)$:
 ::: {.slide title="Beta$(a,b)$ Times the Coin's Likelihood Is Beta$(a+x, b+n-x)$"}
 [Conjugacy]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Bias $\theta$; $x$ heads in $n$ flips. $\theta^{a-1}(1-\theta)^{b-1}\cdot\theta^{x}(1-\theta)^{n-x}$,
 posterior mean $\mathbb{E}[\theta\mid x] = \frac{a+x}{a+b+n}$.
 
-@fig:mdl-prob-beta-posterior
-
 $\mathrm{Beta}(1,1) \to \mathrm{Beta}(10,5)$: mean $2/3$, sd $0.12$; $a$ and $b$ are pseudo-counts.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-beta-posterior
+:::
+:::
 :::
 
 ::: {.slide title="Check: Flat Prior, 9 Heads in 13. Probability the Next Flip Is Heads?"}

@@ -804,7 +804,7 @@ for d in (2, 20, 200, 2000):
 The ratio $\|\mathbf x\|/\sqrt d$ approaches $1$: about $0.89$ and $0.99$,
 then within $0.002$ of $1$. The standard deviation of the norm sits at about
 $0.65$ at $d=2$ and at about $0.7$ after that, the $1/\sqrt2$ of the
-tangent-line calculation, while the norm itself grows from about 1 to about
+tangent-line calculation, while the norm itself grows from about 1.3 to about
 45. The mean $|\cos|$ is about $0.64$ at $d=2$. That is $2/\pi$, the mean of
 $|\cos\theta|$ for a uniform angle; the formula $\sqrt{2/(\pi d)}$ describes
 high dimensions only. From $d=20$ on, the measured values, about $0.18$,
@@ -1231,11 +1231,17 @@ log scale.
 ::: {.slide title="A Tail Bound Is the Expectation of a Function Above the Indicator"}
 [Chernoff]{.kicker}
 
-@fig:mdl-prob-conc-majorants
-
+::: {.cols .vc}
+::: {.col}
 - $P(X\geq t)\leq\mathbb{E}[g(X)]$ for any $g\geq\mathbf 1\{x\geq t\}$.
 - The exponential can be made small where the mass is, and it factorizes
   over sums.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-conc-majorants
+:::
+:::
 :::
 
 ::: {.slide title="Chernoff: Every λ > 0 Gives a Bound; Keep the Best"}
@@ -1347,8 +1353,7 @@ $2e^{-2nt^2}$ for the coin with $t=9/13-\tfrac12$.
 
 @!mdl-concentration-generalization-the-tail-race-in-code
 
-Slopes per flip: Hoeffding $2t^2=0.02$; exact
-$D_{\textrm{KL}}(0.6\|0.5)=0.0201$. Chebyshev is tighter only for $18\leq n\leq107$.
+Slopes per flip: Hoeffding $0.02$, exact $0.0201$; Chebyshev wins for $18\leq n\leq107$.
 :::
 
 ::: {.slide title="Sub-Gaussian Means an MGF Bound That Survives Averaging"}
@@ -1391,10 +1396,16 @@ Small $t$: the Gaussian tail with the true $\sigma^2$. Large $t$: only exponenti
 ::: {.slide title="A 784-Dimensional Gaussian Never Comes Within 14 of Its Mode"}
 [The thin shell]{.kicker}
 
-@fig:mdl-prob-conc-shell
-
+::: {.cols .vc}
+::: {.col}
 - Density of $\|\mathbf x\|\propto r^{d-1}e^{-r^2/2}$, peak at $\sqrt{d-1}$.
 - $d=784$: $P(\|\mathbf x\|\leq14)\approx10^{-110}$; a typical norm is $28.0\pm0.7$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-conc-shell
+:::
+:::
 :::
 
 ::: {.slide title="Norm Concentration Is an Instance of the Sub-Exponential Bound"}

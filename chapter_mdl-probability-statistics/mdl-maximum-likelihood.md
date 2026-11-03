@@ -1016,8 +1016,8 @@ print(f'n Var(MLE) = {n * theta.var():.2f}, '
       f'n Var(mean) = {n * x.mean(axis=1).var():.3g}')
 ```
 
-The MLE comes out near $2.1$, close to the floor of $2$, and the median near
-$2.5$, so the MLE needs about $20\%$ fewer observations for the same error
+The MLE comes out between about $1.9$ and $2.2$, close to the floor of $2$,
+and the median near $2.5$, so the MLE needs about $20\%$ fewer observations for the same error
 bar. The sample mean
 has an enormous variance that changes wildly from run to run: the mean of $n$
 Cauchy observations is again Cauchy, so averaging never helps.
@@ -1470,8 +1470,8 @@ print(f'pi = {pi.round(2)}, mu = {mu.round(2)}, sigma = {sigma.round(2)}')
 ```
 
 The log-likelihood climbs by several hundred nats, from about $-1{,}300$ to
-about $-850$ (the exact values depend on the draw), and is within about one
-nat of its final value after six steps. The recovered weights, means, and
+about $-850$ (the exact values depend on the draw). After six steps it is
+typically within one nat of its final value, and always within a few nats. The recovered weights, means, and
 scales lie within about $0.2$ of the generating values $(0.6, 0.4)$,
 $(-2, 1.5)$, and $(0.8, 0.6)$.
 

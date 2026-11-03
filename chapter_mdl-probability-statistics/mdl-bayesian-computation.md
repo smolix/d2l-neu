@@ -404,8 +404,9 @@ print('grid correlation:', round(post_rho, 3))
 print('(mean - MAP)/sd :', ((post_mean - theta_map) / post_sd).round(2))
 ```
 
-In every run the slope's posterior mean lies above its MAP and the
-intercept's mean lies below its MAP. For the slope the gap is typically about
+In nearly every run the slope's posterior mean lies above its MAP and the
+intercept's mean lies below its MAP; the order flips in about one run in a
+thousand. For the slope the gap is typically about
 a quarter of a posterior standard deviation. The Laplace standard deviations
 are a few percent too small, and the grid's correlation is close to the
 strongly negative value that the Laplace approximation reported. So even the
@@ -692,12 +693,12 @@ for name, mean, cov, N in [('prior', np.zeros(2), prior_var * np.eye(2), 20000),
           f'{w_max:.4f}, error in sds {error.round(3)}')
 ```
 
-With the prior as the proposal, the ESS is a few percent of the draws,
-because most draws land where the likelihood is negligible. The Laplace
-proposal, aimed at the posterior, typically keeps about 85% of its draws as
-effective. Both estimates agree with
-the grid mean to within about a tenth of a posterior standard deviation, and
-usually to within a few hundredths.
+With the prior as the proposal, the ESS is between about 1% and 10% of the
+draws, because most draws land where the likelihood is negligible. The
+Laplace proposal, aimed at the posterior, keeps most of its draws as
+effective, typically between about 55% and 95%. Both estimates usually agree
+with the grid mean to within a few hundredths of a posterior standard
+deviation, and rarely miss by more than about $0.15$.
 
 The Laplace proposal has a defect that the printed ESS does not show. Far
 out, the posterior's tails are those of the prior: along any ray
@@ -1204,8 +1205,8 @@ print('predicted sd, grid sd * sqrt(1 - rho^2):',
       (post_sd * np.sqrt(1 - post_rho**2)).round(3))
 ```
 
-The mean-field mean lies within a tenth of a posterior standard deviation of
-the grid mean. Its standard deviations are about half the grid's and match
+The mean-field mean lies within about a tenth of a posterior standard
+deviation of the grid mean. Its standard deviations are about half the grid's and match
 the predicted values to within a few percent in a typical run. The
 optimization has converged, and the remaining error comes from the family.
 Richer families remove it at a higher cost: full-covariance Gaussians
@@ -1634,12 +1635,18 @@ Averaging over a posterior known only up to a constant<br>**Bayesian computation
 ::: {.slide title="Far From the Data, One Fitted Model Hides Orders of Magnitude of Doubt"}
 [The problem]{.kicker}
 
-@!mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2
-
+::: {.cols .vc}
+::: {.col}
 - Logistic regression, 20 points with $x\in[0,4]$; plug-in uses the MAP.
 - At $x=-3$ the plausible vectors disagree by orders of magnitude; their
   average is typically 3–10× the plug-in.
 - Inside the data the two agree to about $0.02$.
+:::
+
+::: {.col .fig .big}
+@!mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2
+:::
+:::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
@@ -1722,7 +1729,7 @@ Grid of $241\times241$ points at MAP $\pm7$ Laplace sds:
 
 @!bayesian-computation-grid
 
-- Slope mean above the MAP (about ¼ sd), intercept below, in every run.
+- Slope mean above the MAP (about ¼ sd), intercept below, in nearly every run.
 - Laplace sds a few percent small; correlation about $-0.85$.
 :::
 
@@ -1759,12 +1766,18 @@ $$\boxed{\mathbb{E}_{p}[h]=\frac{\mathbb{E}_q[wh]}{\mathbb{E}_q[w]},\quad w=\wid
 ::: {.slide title="The ESS Measures Unequal Weights, Not Unseen Mass"}
 [Effective sample size]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $N_{\mathrm{eff}}=1/\sum_s\bar w_s^2\ \to\ N/(1+\chi^2(p\|q))$.
-
-@fig:mdl-prob-bayes-importance
 
 Gaussian target with sd $s_p$, Gaussian $q$ at the same center with sd
 $rs_p$: limit $\sqrt{2r^2-1}/r^2$, and zero for $r\le1/\sqrt2$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-bayes-importance
+:::
+:::
 :::
 
 ::: {.slide title="Aim the Proposal: the Prior Keeps a Few Percent, Laplace Most"}
@@ -1804,10 +1817,16 @@ The proposal always names the other state. Write $\mathbf T$, check
 $\pi\mathbf T=\pi$, and say what counting only accepted states gives.
 
 ::: {.fragment .fade-up}
-@fig:mdl-prob-bayes-two-state
-
+::: {.cols .vc}
+::: {.col}
 $\mathbf T=\begin{pmatrix}0&1\\1/3&2/3\end{pmatrix}$, $\pi\mathbf T=\pi$;
 accepted states alone alternate 2, 1, 2, 1: $(1/2,1/2)$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-bayes-two-state
+:::
+:::
 :::
 :::
 

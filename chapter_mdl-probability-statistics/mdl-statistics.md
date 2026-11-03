@@ -741,10 +741,11 @@ for k in (20, 5):
 ```
 
 The permutation test rejects in about 70% of the experiments with 20 seeds
-and about 20% with 5. Both rates are a little below the formula, which
-assumes that $\sigma$ is known, while the permutation test in effect
-estimates the noise from the data. So the design we ran misses a real 0.8-point improvement about
-three times in ten, and with five seeds about four times in five. When a
+and about 20% with 5; with 400 experiments, each printed rate scatters by
+about two points from run to run. Both rates are a little below the formula
+on average, which assumes that $\sigma$ is known, while the permutation test
+in effect estimates the noise from the data. So the design we ran misses a
+real 0.8-point improvement about three times in ten, and with five seeds about four times in five. When a
 test with power $0.2$ fails to reject, we have learned almost nothing. A
 common target is power $0.8$.
 
@@ -1148,7 +1149,8 @@ print(f'median {theta_hat:.3f}, bootstrap se {boot.std(ddof=1):.3f}, '
       f'95% percentile interval ({lo:.3f}, {hi:.3f})')
 ```
 
-The printed median is near $0.69$ and the bootstrap standard error near
+The printed median scatters around $\log2\approx0.69$ from run to run,
+usually by less than $0.15$, and the bootstrap standard error is near
 $0.07$. A formula for the median's standard error does exist,
 $1/(2f(m)\sqrt n)$ with $f(m)$ the density at the median $m$ (exercise
 :exref:`ex_mdl-statistics-median-se`). Here it gives

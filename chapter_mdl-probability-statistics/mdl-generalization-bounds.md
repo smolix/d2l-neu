@@ -659,7 +659,7 @@ print(f'r = {r:.1f}, B r / sqrt(n) with B = largest ||w||: '
 The mean norm matches the prediction, $1.0$ against $1.01$. The rows of
 $\boldsymbol\Phi$ have length about $\sqrt p=10$, the longest about 11 to 12.5,
 and the ball that holds the 2,000 fits gives $Br/\sqrt n$ between about 2
-and 2.6. A ball that holds an interpolant of every one of the $2^{50}$ sign
+and 2.8. A ball that holds an interpolant of every one of the $2^{50}$ sign
 vectors is at least as large, and for that ball the value must be at least
 $1$. The class then fits every sign pattern, so its
 $\widehat{\mathfrak R}_S$ is at least $1$, and the proposition bounds
@@ -828,16 +828,16 @@ for p in (15, 38, 40, 42, 50, 80, 400):
 ```
 
 Below the threshold the test error first falls, from about $1$ at $p=2$ to a
-minimum of about $0.6$ to $0.7$ somewhere between $p=15$ and $p=25$, then
+minimum of roughly $0.6$ to $0.8$ somewhere between $p=15$ and $p=30$, then
 rises, as the U-curve leads us to expect. At $p=40=n$ the training error drops
 from a few times $10^{-3}$ at $p=38$ to about $10^{-28}$, which is exact
 interpolation up to floating point. At the same point the test error peaks,
-one to two orders of magnitude above the underparameterized minimum. The
+typically one to two orders of magnitude above the underparameterized minimum. The
 median over 20 trials lands anywhere between about 5 and 50 from one run of
 the cell to the next, because the peak is heavy-tailed: for a square Gaussian
 matrix $\mathbb{E}[1/\sigma_{\min}^2]$ is infinite. The solution norm jumps
-to about 10 or more, and $\sigma_{\min}$ falls to about $0.02$ to $0.03$,
-against $0.07$ to $0.1$ at $p=38$ and about $2.8$ at $p=400$.
+to between about 6 and 20, and $\sigma_{\min}$ falls to about $0.01$ to $0.04$,
+against $0.05$ to $0.12$ at $p=38$ and about $2.8$ at $p=400$.
 
 Past the threshold the norm falls steadily, as the nesting proposition
 requires (it does so in every trial, not only in the medians), down to
@@ -850,7 +850,7 @@ smallest singular value and the capacity product all can. The best model in
 the experiment is the most overparameterized one, fitting noisy data exactly,
 with ten times more parameters than data points.
 
-The capacity product peaks at the threshold with values of about 10 to 25,
+The capacity product peaks at the threshold with values of about 8 to 25,
 falls past it, and reaches about $1.2$ to $1.3$ at $p=400$. It follows the
 shape of the test curve, but it certifies nothing, for two reasons. First,
 past the threshold it stays above $1$. A complexity bound of $1$ or more
@@ -898,8 +898,8 @@ At $p=42$ the noise part is a few tenths, at $p=80$ about $0.02$, and at
 $p=400$ just under $0.01$. Far past the threshold, interpolating the noise
 adds about the noise variance itself to the test error.
 
-The clean part falls from 10 or more at the peak to about $0.04$ to $0.05$ at
-$p=400$. Most of the gain past the threshold therefore comes from a better
+The clean part falls from about 5 to 40 at the peak to about $0.04$ to $0.06$
+at $p=400$. Most of the gain past the threshold therefore comes from a better
 approximation of the target.
 
 :eqref:`eq_mdl-svd-interpolant` explains why the noise costs so little. The signal is carried by the few
@@ -1445,7 +1445,7 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 [The threshold]{.kicker}
 
 - 40 points, linear teacher in 15 dimensions, ReLU random features, label noise 0.1.
-- $\sigma_{\min}$: $0.07$ to $0.1$ at $p=38$, about $0.02$ to $0.03$ at $p=40$, about $2.8$ at $p=400$.
+- $\sigma_{\min}$: $0.05$ to $0.12$ at $p=38$, about $0.01$ to $0.04$ at $p=40$, about $2.8$ at $p=400$.
 - What is divided: label noise and the part of the target ReLU features represent badly.
 - With noise 0 the peak stays; a target made of ten features has no peak.
 :::
@@ -1453,10 +1453,16 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 ::: {.slide title="Double Descent Measured: Test Error, Norm and Capacity All Peak at p = n"}
 [The sweep]{.kicker}
 
-@!mdl-generalization-bounds-a-double-descent-sweep-1
-
-- Minimum below the threshold about $0.7$; at $p=40$ one to two orders of magnitude higher.
+::: {.cols .vc}
+::: {.col}
+- Minimum below the threshold about $0.7$; at $p=40$ typically one to two orders of magnitude higher.
 - $p=400$: about $0.05$, roughly ten times below the classical minimum, with zero training error.
+:::
+
+::: {.col .fig .big}
+@!mdl-generalization-bounds-a-double-descent-sweep-1
+:::
+:::
 :::
 
 ::: {.slide title="The Capacity Product Tracks the Curve but Never Certifies"}
@@ -1464,7 +1470,7 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 
 @!mdl-generalization-bounds-a-double-descent-sweep-2
 
-- Capacity $\|\mathbf w\|\,r/\sqrt n$: 10 or more at $p=40$, about 1.2 at $p=400$.
+- Capacity $\|\mathbf w\|\,r/\sqrt n$: about 8 to 25 at $p=40$, about 1.2 at $p=400$.
 - It stays above 1, and its $B$ was read off the fit.
 :::
 

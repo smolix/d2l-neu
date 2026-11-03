@@ -1628,8 +1628,6 @@ Slice a minute into $n$ pieces, each $\mathrm{Bernoulli}(4/n)$; let $n\to\infty$
 $P(X=k)\to\lambda^ke^{-\lambda}/k!$. Silent minute: $(1-\tfrac4n)^n=0.0115,\ 0.0169,\ 0.0182\to e^{-4}$.
 
 @!distributions-binomial-to-poisson
-
-The total-variation error falls like $1/n$.
 :::
 
 ::: {.slide title="Check: A Silent Minute, and Exactly Four Requests"}
@@ -1747,11 +1745,19 @@ No. The average of Cauchy draws is again Cauchy, so the probability stays $\tfra
 ::: {.slide title="The Laplace Is a Random Sign Times an Exponential"}
 [Laplace]{.kicker}
 
-@fig:mdl-prob-continuous-pdfs
-
+::: {.cols .vc}
+::: {.col}
 $X=\mu+SE$: $p(x)=\frac1{2b}e^{-|x-\mu|/b}$, $\textrm{Var}=\mathbb{E}[E^2]=2b^2$.
+
 Beyond $3\sigma$: $e^{-3\sqrt2}\approx0.014$ against $0.0027$, five times the Gaussian.
+
 Its negative log-probability is the absolute error.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-continuous-pdfs
+:::
+:::
 :::
 
 ::: {.slide title="A Gaussian Vector's Contours Are the Eigen-Ellipses of Σ"}

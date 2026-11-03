@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from runtime_env import (CPU_ONLY_NOTEBOOKS, GPU_FRAMEWORK_NOTEBOOKS,
-                         GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS)
+                         GPU_KEYWORDS, GPU_ONLY_NOTEBOOKS, MULTI_GPU_NOTEBOOKS)
 from build_lib import LIB_ONLY_FILES
 
 
@@ -87,8 +87,9 @@ def source_execution_class(md_path, rel, framework=None):
     conservative behavior for all frameworks produced from the file.
     """
     nb_rel = notebook_rel(rel)
-    if (framework, nb_rel) in GPU_FRAMEWORK_NOTEBOOKS:
-        return 'gpu'   # one framework's variant of a CPU-only file (#95)
+    if (nb_rel in GPU_ONLY_NOTEBOOKS
+            or (framework, nb_rel) in GPU_FRAMEWORK_NOTEBOOKS):
+        return 'gpu'   # as notebook_resource: the explicit lists win
     if nb_rel in CPU_ONLY_NOTEBOOKS:
         return 'cpu'
     if nb_rel in MULTI_GPU_NOTEBOOKS:

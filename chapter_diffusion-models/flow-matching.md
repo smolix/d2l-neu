@@ -580,17 +580,18 @@ the field with fifty Euler steps.
 
 ```{.python .input #flow-matching-images-with-a-velocity-target}
 %%tab pytorch
+device = d2l.try_gpu()
 fmnist = d2l.FashionMNIST(batch_size=128)
-X = fmnist.train.data.float()[:, None] / 255 * 2 - 1
+X = (fmnist.train.data.float()[:, None] / 255 * 2 - 1).to(device)
 
 torch.manual_seed(5)
-unet = d2l.UNet()
-ema = d2l.UNet()
+unet = d2l.UNet().to(device)
+ema = d2l.UNet().to(device)
 ema.load_state_dict(unet.state_dict())
 optimizer = torch.optim.Adam(unet.parameters(), lr=1e-3)
 for step in range(1000):
-    x1 = X[torch.randint(0, len(X), (128,))]
-    x0, t = torch.randn_like(x1), torch.rand(128)
+    x1 = X[torch.randint(0, len(X), (128,), device=device)]
+    x0, t = torch.randn_like(x1), torch.rand(128, device=device)
     x_t = (1 - t)[:, None, None, None] * x0 + t[:, None, None, None] * x1
     loss = ((unet(x_t, 1000 * t) - (x1 - x0)) ** 2).mean()
     optimizer.zero_grad(), loss.backward(), optimizer.step()
@@ -601,10 +602,10 @@ for step in range(1000):
 print(f'final training loss: {loss.item():.3f}')
 
 torch.manual_seed(6)
-x = torch.randn(48, 1, 28, 28)
+x = torch.randn(48, 1, 28, 28, device=device)
 with torch.no_grad():
     for k in range(50):
-        x = x + ema(x, torch.full((48,), 1000 * k / 50)) / 50
+        x = x + ema(x, torch.full((48,), 1000 * k / 50, device=device)) / 50
 imgs = x.clamp(-1, 1) / 2 + 0.5
 d2l.show_images(imgs.permute(0, 2, 3, 1).repeat(1, 1, 1, 3), 6, 8, scale=0.8);
 ```

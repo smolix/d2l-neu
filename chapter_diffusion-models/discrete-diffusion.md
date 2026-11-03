@@ -727,11 +727,12 @@ as independent, with the per-pixel frequencies of the training set.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-1}
 %%tab pytorch
+device = d2l.try_gpu()
 fmnist = d2l.FashionMNIST(batch_size=128)
-X = (fmnist.train.data > 127).long()  # (60000, 28, 28) tokens in {0, 1}
-X_test = (fmnist.val.data > 127).long()[:200]
+X = (fmnist.train.data > 127).long().to(device)  # (60000, 28, 28) tokens in {0, 1}
+X_test = (fmnist.val.data > 127).long()[:200].to(device)
 T, MASK = 100, 2  # the schedule for images; the mask is a third value
-alpha_bar = 1 - torch.arange(T + 1) / T
+alpha_bar = 1 - torch.arange(T + 1, device=device) / T
 
 class MaskedUNet(nn.Module):
     """The chapter's U-Net on one-hot tokens; outputs logits of the clean pixel."""
@@ -744,19 +745,20 @@ class MaskedUNet(nn.Module):
         return self.unet(x, t).permute(0, 2, 3, 1)  # (n, 28, 28, 2)
 
 def masked_image_loss(model, x0, t):  # one-sample estimate of the bound per image, nats
-    masked = torch.rand(x0.shape) < (1 - alpha_bar[t])[:, None, None]
+    masked = (torch.rand(x0.shape, device=x0.device)
+              < (1 - alpha_bar[t])[:, None, None])
     z = torch.where(masked, MASK, x0)
     logp = torch.log_softmax(model(z, t), -1).gather(-1, x0[..., None])[..., 0]
     weight = (alpha_bar[t - 1] - alpha_bar[t]) / (1 - alpha_bar[t])
     return (T * weight[:, None, None] * -logp * masked).sum((1, 2))
 
 torch.manual_seed(3)
-net, ema = MaskedUNet(), MaskedUNet()
+net, ema = MaskedUNet().to(device), MaskedUNet().to(device)
 ema.load_state_dict(net.state_dict())
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
 for step in range(800):
-    x0 = X[torch.randint(0, len(X), (128,))]
-    t = torch.randint(1, T + 1, (128,))
+    x0 = X[torch.randint(0, len(X), (128,), device=device)]
+    t = torch.randint(1, T + 1, (128,), device=device)
     loss = masked_image_loss(net, x0, t).mean() / 784
     optimizer.zero_grad(), loss.backward(), optimizer.step()
     decay = min(0.999, (1 + step) / (10 + step))
@@ -767,7 +769,8 @@ for step in range(800):
         print(f'step {step:>3}: loss {loss.item():.3f} nats per pixel')
 
 with torch.no_grad():
-    bound = sum(masked_image_loss(ema, X_test, torch.full((len(X_test),), t)).mean()
+    bound = sum(masked_image_loss(ema, X_test, torch.full((len(X_test),), t,
+                                                          device=device)).mean()
                 for t in range(1, T + 1)) / T
 pixel = X.float().mean(0).clamp(1e-6, 1 - 1e-6)  # frequency of white per position
 independent = -(torch.special.xlogy(X_test.float(), pixel)
@@ -856,15 +859,15 @@ samples.
 %%tab pytorch
 @torch.no_grad()
 def unmask_images(model, n, steps, keep=()):
-    z = torch.full((n, 28, 28), MASK)
+    z = torch.full((n, 28, 28), MASK, device=device)
     levels = torch.linspace(T, 0, steps + 1).round().long().tolist()
     snapshots = []
     for t, s in zip(levels[:-1], levels[1:]):
         if t in keep:
             snapshots.append(z.clone())
         draw = torch.distributions.Categorical(
-            logits=model(z, torch.full((n,), t))).sample()
-        reveal = (z == MASK) & (torch.rand(z.shape)
+            logits=model(z, torch.full((n,), t, device=device))).sample()
+        reveal = (z == MASK) & (torch.rand(z.shape, device=device)
                                 < (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t]))
         z = torch.where(reveal, draw, z)
     return z, snapshots + [z]

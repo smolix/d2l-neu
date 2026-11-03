@@ -465,7 +465,7 @@ def metropolis_hastings(energy, x, steps, step_size, box=math.inf):
                       & (proposal.abs() <= box).all(-1))
             x = torch.where(accept[:, None], proposal, x)
             e = torch.where(accept, e_prop, e)
-            accepted += accept.float().mean().item()
+            accepted += accept.float().mean()  # stays on the device
     return x, accepted / steps
 ```
 
@@ -490,7 +490,7 @@ def metropolis_hastings(energy, x, key, steps, step_size, box=math.inf):
     for _ in range(steps):
         key, subkey = jax.random.split(key)
         x, e, rate = mh_step(energy, x, e, subkey, step_size, box)
-        accepted += float(rate)
+        accepted += rate  # stays on the device
     return x, accepted / steps
 ```
 

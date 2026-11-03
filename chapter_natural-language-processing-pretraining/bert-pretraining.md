@@ -356,8 +356,9 @@ def train_bert(train_iter, net, vocab_size, num_steps):
 
     print(f'MLM loss {metric[0] / metric[3]:.3f}, '
           f'NSP loss {metric[1] / metric[3]:.3f}')
-    print(f'{metric[2] / timer.sum():.1f} sentence pairs/sec on '
-          f'{str(jax.devices())}')
+    # The first step also compiles `train_step`; time only the later steps
+    print(f'{tokens_X.shape[0] * (step - 1) / sum(timer.times[1:]):.1f} '
+          f'sentence pairs/sec on {str(jax.devices())}')
     return net
 ```
 

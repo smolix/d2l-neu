@@ -473,21 +473,22 @@ moving average of :numref:`sec_diffusion-images`.
 
 ```{.python .input #ddim-fast-sampling-for-images-1}
 %%tab pytorch
+device = d2l.try_gpu()
 fmnist = d2l.FashionMNIST(batch_size=128)
-X = fmnist.train.data.float()[:, None] / 255 * 2 - 1
+X = (fmnist.train.data.float()[:, None] / 255 * 2 - 1).to(device)
 T_img = 1000
-beta_img = torch.linspace(1e-4, 0.02, T_img)
+beta_img = torch.linspace(1e-4, 0.02, T_img, device=device)
 alpha_img = 1 - beta_img
 alpha_bar_img = torch.cumprod(alpha_img, 0)
 
 torch.manual_seed(5)
-unet = d2l.UNet()
-ema = d2l.UNet()
+unet = d2l.UNet().to(device)
+ema = d2l.UNet().to(device)
 ema.load_state_dict(unet.state_dict())
 optimizer = torch.optim.Adam(unet.parameters(), lr=1e-3)
 for step in range(1000):
-    x0 = X[torch.randint(0, len(X), (128,))]
-    t = torch.randint(0, T_img, (128,))
+    x0 = X[torch.randint(0, len(X), (128,), device=device)]
+    t = torch.randint(0, T_img, (128,), device=device)
     eps = torch.randn_like(x0)
     a = alpha_bar_img[t][:, None, None, None]
     loss = ((unet(a.sqrt() * x0 + (1 - a).sqrt() * eps, t) - eps) ** 2).mean()
@@ -550,7 +551,7 @@ def ddim_images(model, x, steps, eta=0.0):
     a_bars = [alpha_bar_img[t].item() for t in taus] + [1.0]
     for k, t in enumerate(taus):
         a_t, a_s = a_bars[k], a_bars[k + 1]
-        eps = model(x, torch.full((len(x),), t))
+        eps = model(x, torch.full((len(x),), t, device=x.device))
         x0_hat = (x - (1 - a_t) ** 0.5 * eps) / a_t ** 0.5
         sigma = eta * ((1 - a_s) / (1 - a_t) * (1 - a_t / a_s)) ** 0.5 if a_s < 1 else 0
         x = (a_s ** 0.5 * x0_hat + max(1 - a_s - sigma ** 2, 0) ** 0.5 * eps
@@ -558,7 +559,7 @@ def ddim_images(model, x, steps, eta=0.0):
     return x
 
 torch.manual_seed(6)
-x_T = torch.randn(8, 1, 28, 28)
+x_T = torch.randn(8, 1, 28, 28, device=device)
 rows = [ddim_images(ema, x_T, 1000, eta=1.0), ddim_images(ema, x_T, 50),
         ddim_images(ema, x_T, 10)]
 print('rows: ancestral, 1000 steps | DDIM, 50 steps | DDIM, 10 steps')
@@ -621,7 +622,7 @@ shrink it in the middle; it decodes each point with fifty DDIM steps.
 ```{.python .input #ddim-fast-sampling-for-images-3}
 %%tab pytorch
 torch.manual_seed(7)
-z0, z1 = torch.randn(2, 1, 28, 28)
+z0, z1 = torch.randn(2, 1, 28, 28, device=device)
 angle = torch.acos((z0 * z1).sum() / (z0.norm() * z1.norm()))
 lam = torch.linspace(0, 1, 8)
 codes = torch.stack([(torch.sin((1 - l) * angle) * z0 + torch.sin(l * angle) * z1)

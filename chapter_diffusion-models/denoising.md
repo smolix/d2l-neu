@@ -335,9 +335,10 @@ indexed directly.
 
 ```{.python .input #denoising-denoising-images-1}
 %%tab pytorch
+device = d2l.try_gpu()
 fmnist = d2l.FashionMNIST(batch_size=128)
-X = fmnist.train.data.float()[:, None] / 255 * 2 - 1  # (60000, 1, 28, 28)
-X_test = fmnist.val.data.float()[:, None] / 255 * 2 - 1
+X = (fmnist.train.data.float()[:, None] / 255 * 2 - 1).to(device)  # (60000, 1, 28, 28)
+X_test = (fmnist.val.data.float()[:, None] / 255 * 2 - 1).to(device)
 
 class ConvDenoiser(nn.Module):
     def __init__(self, ch=32):
@@ -352,11 +353,11 @@ class ConvDenoiser(nn.Module):
 
 sigma = 0.5
 torch.manual_seed(0)
-denoiser = ConvDenoiser()
+denoiser = ConvDenoiser().to(device)
 image_score = lambda x: -denoiser(x) / sigma
 optimizer = torch.optim.Adam(denoiser.parameters(), lr=1e-3)
 for step in range(600):
-    x = X[torch.randint(0, len(X), (128,))]
+    x = X[torch.randint(0, len(X), (128,), device=device)]
     eps = torch.randn_like(x)
     # sigma^2 times the per-pixel denoising objective: 0.5 E||eps_theta - eps||^2 / 784
     loss = 0.5 * sigma ** 2 * ((image_score(x + sigma * eps) + eps / sigma) ** 2).mean()

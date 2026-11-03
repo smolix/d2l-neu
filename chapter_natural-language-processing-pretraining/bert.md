@@ -272,7 +272,7 @@ class BERTEncoder(nnx.Module):
                  num_blks, dropout, max_len=1000, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.token_embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
-        self.segment_embedding = nnx.Embed(2, num_hiddens, rngs=rngs)
+        self.segment_embedding = d2l.Embed(2, num_hiddens, rngs=rngs)
         self.blks = nnx.List([d2l.TransformerEncoderBlock(
             num_hiddens, ffn_num_hiddens, num_heads, dropout, True, rngs=rngs)
             for _ in range(num_blks)])

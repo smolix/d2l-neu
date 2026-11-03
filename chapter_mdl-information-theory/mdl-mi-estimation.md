@@ -6,7 +6,7 @@ practice we hold only samples: two crops of one photograph, an image and its
 caption, a sentence and its continuation. The standard general-purpose
 estimator counts nearest neighbors. Given $2{,}000$ samples of a
 one-dimensional Gaussian pair that shares $0.83$ nats, it reports a value
-between $0.8$ and $0.9$. Given $2{,}000$ samples of a 16-dimensional pair
+of about $0.8$ to $0.9$. Given $2{,}000$ samples of a 16-dimensional pair
 that shares $13.3$ nats, it reports about $2.8$. A contrastive model
 trained with $128$ candidates per example reports a loss. Papers subtract it
 from $\ln 128 = 4.85$ and quote the difference as the information that the
@@ -677,7 +677,7 @@ d2l.plot(true_mi, list(np.array(medians).T) + [true_mi, [np.log(N)] * 7]
 
 Up to $I = 3$ the three medians are within about $0.15$ nat of the truth,
 and InfoNCE has the narrowest spread (an interquartile range of about $0.1$
-nat, against $0.15$ to $0.6$ for the others). At $I = 4$ the DV and NWJ
+nat, against $0.15$ to $0.7$ for the others). At $I = 4$ the DV and NWJ
 medians are slightly above $4$, and InfoNCE reads $3.7$ under its cap of
 $4.85$. At $I = 6$ InfoNCE reads $4.6$ with an interquartile range below
 $0.1$. NWJ's median is about $7 = I + 1$, while its mean is usually within
@@ -690,8 +690,8 @@ The rare pairs described in the NWJ subsection explain these numbers. The
 product expectation $\mathbb{E}_Q[e^{\textrm{pmi}}] = 1$ is carried by the rare
 independent pairs that happen to look like partners. At $I = 6$ the typical
 batch's average of $e^{\textrm{pmi}}$ over its $128$ mismatched pairs is near
-zero (its median over batches is about $0.002$, and six batches in ten stay
-below $0.1$). On such a batch NWJ reports $\mathbb{E}_P[T^*] - 0 = 1 + I$,
+zero (its median over batches is at most a few hundredths, and more than half of
+the batches stay below $0.1$). On such a batch NWJ reports $\mathbb{E}_P[T^*] - 0 = 1 + I$,
 one nat high, and DV reports the average pmi minus the logarithm of a
 near-zero average, many nats high. About one batch in four holds a single
 mismatched pair with $e^{\textrm{pmi}} \geq N$, which alone pulls NWJ down
@@ -942,8 +942,8 @@ print(f'true I(X;Y) = {mi_gauss(rho):.2f} nats')
 ```
 
 The learned critic matches the exact one to within a few hundredths of a nat
-at every $N$: about $0.57$ at $N = 2$, $1.4$ at $N = 8$, $1.8$ at $N = 32$
-and $1.9$ at $N = 128$. The gap to the true $1.96$ nats belongs to the bound,
+at every $N$: about $0.57$ at $N = 2$, $1.4$ at $N = 8$, $1.75$ at $N = 32$
+and $1.8$ to $1.9$ at $N = 128$. The gap to the true $1.96$ nats belongs to the bound,
 and it closes only as $N$ grows. At $N = 8$ the ceiling $\ln 8 = 2.08$
 already exceeds the truth, so the shortfall of about $0.55$ nat there is the
 slack of the bound, not its cap.
@@ -1551,7 +1551,7 @@ $N = 128$, exact critics, median over $200$ batches:
 
 | true $I$ | DV | NWJ | InfoNCE |
 |---|---|---|---|
-| 2 | 2.0 | 2.0 | 1.95 |
+| 2 | 2.0–2.1 | 2.0–2.1 | 1.95 |
 | 4 | 4.0–4.3 | 4.0–4.3 | 3.7 |
 | 6 | far above 6 | 6.9 | 4.6 |
 

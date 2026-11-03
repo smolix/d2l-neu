@@ -786,7 +786,7 @@ They do not. Raw images have cosines around $0.6$ with a standard deviation
 of about $0.18$, nowhere near $0 \pm 0.036$. Pixels are non-negative, so every
 image lies in the same orthant of $\mathbb{R}^{784}$ and every pair has a
 positive dot product. Subtracting the mean image centers the cosines at $0$,
-but their standard deviation, about $0.35$, is ten times the isotropic value:
+but their standard deviation, about $0.34$, is nearly ten times the isotropic value:
 the images vary along far fewer effective directions than $784$. A cosine
 therefore counts as large only when it exceeds the spread of unrelated pairs
 from the same data. Retrieval over embeddings relies on training to push
@@ -1495,7 +1495,7 @@ Pick two Fashion-MNIST test images at random. Is their cosine near $0 \pm 0.036$
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No: about $0.6 \pm 0.18$. Pixels are non-negative, so all images share one orthant. After subtracting the mean image: $0 \pm 0.35$, ten times the isotropic width. A cosine is large only relative to the right reference.
+**Answer.** No: about $0.6 \pm 0.18$. Pixels are non-negative, so all images share one orthant. After subtracting the mean image: $0 \pm 0.34$, nearly ten times the isotropic width. A cosine is large only relative to the right reference.
 :::
 :::
 :::

@@ -574,9 +574,9 @@ print(f'tolerance {tol:.1e};  exact zeros: {(s == 0).sum()};  '
       f'numerical rank: {np.linalg.matrix_rank(A)}')
 ```
 
-Two singular values are of order one. The other two are of order
-$10^{-16}$, about an order of magnitude below the tolerance, but usually not
-exact zeros. A test for exact zeros would therefore report the wrong rank,
+Two singular values are of order one. The other two are rounding noise,
+$10^{-15}$ or smaller and typically more than ten times below the tolerance,
+but usually not exact zeros. A test for exact zeros would therefore report the wrong rank,
 while the threshold reports two.
 
 ## Low-Rank Approximation
@@ -913,9 +913,9 @@ print('mean squared rank-1 error:', (((Xc - X1)**2).sum() / 300).round(4),
       '  sigma_2^2 / n:', (s[1]**2 / 300).round(4))
 ```
 
-The first direction explains about 93% of the variance, close to the
-population value $9/9.64=0.934$, and it lies within a few degrees of the long
-axis. The last two numbers agree, as the identity says they must for any
+The first direction explains between about 91% and 95% of the variance,
+scattered around the population value $9/9.64=0.934$, and it lies within a
+few degrees of the long axis. The last two numbers agree, as the identity says they must for any
 draw. Without centering, the first singular vector turns toward the mean of
 the cloud once the offset of the mean exceeds the spread of the data. It then
 describes where the data are rather than how they vary, and exercise

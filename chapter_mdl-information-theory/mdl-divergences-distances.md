@@ -913,8 +913,8 @@ d2l.plot([kl_pq[:2000], grid], [tv[:2000], np.sqrt(grid / 2)], 'KL (nats)',
          xlim=[0, 3], figsize=(4.5, 3))
 ```
 
-The ratio never exceeds $1$; the largest value over $10{,}000$ random pairs is
-about $0.98$ to $0.99$. On nearly fair coins it climbs to $0.9899$, $0.9999$
+The ratio never exceeds $1$, and the largest value over $10{,}000$ random
+pairs comes within a few hundredths of it. On nearly fair coins it climbs to $0.9899$, $0.9999$
 and $0.999999$, so the constant $\tfrac{1}{2}$ cannot be improved (problem
 :exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`c). This
 sharp constant is due to Csiszár :cite:`Csiszar.1967`, not to Pinsker's
@@ -1075,7 +1075,8 @@ its estimate involves fourth powers and is noisy. The RBF kernel reports
 about $0.094$, give or take $0.03$. On two samples from the same distribution
 the RBF estimate is within a few thousandths of zero and may be slightly
 negative, which an unbiased estimator of zero must sometimes be. The
-half-standard-deviation shift gives about $0.047$, give or take $0.03$. No
+half-standard-deviation shift gives about $0.047$, typically within $0.02$ of
+it. No
 critic was trained and no density was evaluated.
 
 Where do the two samples differ? The supremum in :eqref:`eq_mdl-mmd-features`
@@ -1104,7 +1105,7 @@ d2l.plot(grid, [witness / np.abs(witness).max(), pdf(grid, 0.0),
 
 The witness is positive where $P$ has more mass and negative where $Q$ has
 more, and it changes sign near the midpoint $x = 0.25$ of the two means
-(typically within $0.15$ of it, depending on the draw). The gap
+(within about $0.2$ of it, depending on the draw). The gap
 $\mathbb{E}_P g - \mathbb{E}_Q g$ agrees with the printed $\textrm{MMD}^2$ to
 about $0.001$; the small difference is the self-pairs that the unbiased
 estimator leaves out. The witness plays the role of $A^\star$ in
@@ -2287,7 +2288,7 @@ Adversarial estimates are biased low; an overconfident critic ($c=2$) reports ze
 
 - **I. Coins.** $\rho(a)=d(a\|b)-2(a-b)^2$ has $\rho(b)=\rho'(b)=0$ and $\rho''=\tfrac{1}{a(1-a)}-4\ge0$.
 - **II. Merge.** Collapse $A^\star$ and its complement: data processing, $D_f(P\kappa\|Q\kappa)\le D_f(P\|Q)$.
-- 10,000 random pairs: $\textrm{TV}/\sqrt{\textrm{KL}/2}$ never exceeds $1$ (max $\approx0.98$–$0.99$).
+- 10,000 random pairs: $\textrm{TV}/\sqrt{\textrm{KL}/2}$ never exceeds $1$ (max within a few hundredths of $1$).
 - Coins $\tfrac12$ vs $\tfrac12+\delta$, $\delta=0.1, 0.01, 0.001$: $0.9899$, $0.9999$, $0.999999$.
 
 ::: {.d2l-note}

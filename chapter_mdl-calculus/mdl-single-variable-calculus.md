@@ -1855,7 +1855,7 @@ $\varphi'(0)=0+0$:
 - It needs a pre-activation of exactly $0$: probability zero for draws
   with densities, rare in floating point.
 - Gradient descent from $0.5$ with $\eta=0.125$ lands on $0$ and stops;
-  with $\eta=0.1$ it lands at $2.8\times10^{-17}$, not $0$, and continues.
+  with $\eta=0.1$ rounding leaves it just off $0$, and it continues.
 :::
 
 ::: {.slide title="Lines and Parabolas Predict the Loss; Corners Need a Set of Slopes"}

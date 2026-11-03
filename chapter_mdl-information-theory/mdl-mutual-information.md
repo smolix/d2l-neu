@@ -318,8 +318,8 @@ for rho in (0.0, 0.3, 0.6, 0.9, 0.99):
           f'closed form {0.5 * np.log(1 / (1 - rho**2)):.3f} nats')
 ```
 
-Up to $\rho=0.9$ the histogram stays within about $0.02$ nats of the closed
-form. At $\rho=0.99$ it reads $1.75$ to $1.80$ against $1.96$, roughly $0.18$
+Up to $\rho=0.9$ the histogram stays within a few hundredths of a nat of the
+closed form. At $\rho=0.99$ it reads about $1.8$ against $1.96$, roughly $0.2$
 nats low, because the probability mass sits in a ridge thinner than the bins.
 At $\rho=0$ it reads about $0.003$ instead of $0$, the small upward bias of a
 plug-in estimate from finite counts.
@@ -465,7 +465,7 @@ print(f'sample correlation {np.corrcoef(x, y)[0, 1]:+.3f}, '
 ```
 
 The sample correlation is within about $0.02$ of zero. The histogram reads
-between about $0.94$ and $1.01$ nats, below the true $1.14$ for the reason it fell
+about $0.9$ to $1.0$ nats, below the true $1.14$ for the reason it fell
 short at $\rho=0.99$: the samples lie along a thin parabola that the bins do
 not resolve.
 
@@ -487,8 +487,8 @@ for name, u in (('x', x), ('x**3', x**3)):
 The correlation falls from $0.90$ to $0.70$. This is the exact value
 $3\rho/\sqrt{15}=0.697$, because $\mathbb{E}[X^3Y]=3\rho$ and
 $\textrm{Var}(X^3)=15$ for a standard $X$. The raw histogram estimate also
-changes, from about $0.81$ to roughly half of that (between $0.3$ and $0.55$
-from run to run). The bins have equal width in the stretched coordinate
+changes, from about $0.81$ to roughly half of that (between about $0.3$ and
+$0.6$ from run to run). The bins have equal width in the stretched coordinate
 $x^3$, their range is set by the few most extreme samples, and most samples
 crowd into a few central columns. The histogram of the ranks is unchanged to the
 last digit, since an increasing map leaves the ranks of the samples fixed.
@@ -1446,7 +1446,7 @@ A $40\times40$ histogram of $200{,}000$ samples against the closed form:
 
 @!mutual-information-gaussian-binned
 
-At $\rho=0.99$ it is about $0.18$ nats low: the ridge is thinner than a bin.
+At $\rho=0.99$ it is about $0.2$ nats low: the ridge is thinner than a bin.
 :::
 
 ::: {.slide title="Pointwise MI Ranks Collocations; Counts Do Not"}

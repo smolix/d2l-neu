@@ -1227,10 +1227,10 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
    independent standard normal entries and $b$ be uniform on $[0, 2\pi]$.
     1. Using
        $\cos\alpha\cos\beta = \frac{1}{2}(\cos(\alpha - \beta) + \cos(\alpha + \beta))$
-       and $E[\cos(\mathbf{w}^\top\mathbf{u})] = \exp(-\|\mathbf{u}\|^2/2)$,
+       and $\mathbb{E}[\cos(\mathbf{w}^\top\mathbf{u})] = \exp(-\|\mathbf{u}\|^2/2)$,
        show that the features $\mathbf{z}(\mathbf{x})$ of `RandomFeatures`
        satisfy
-       $E[\mathbf{z}(\mathbf{x})^\top \mathbf{z}(\mathbf{x}')] = \exp(-\|\mathbf{x} - \mathbf{x}'\|^2/2)$
+       $\mathbb{E}[\mathbf{z}(\mathbf{x})^\top \mathbf{z}(\mathbf{x}')] = \exp(-\|\mathbf{x} - \mathbf{x}'\|^2/2)$
        for every number $D$ of features.
     1. Check this numerically for two inputs at distance 1, with $D = 10$,
        100, 1,000, and 10,000, averaging the error over several layers for

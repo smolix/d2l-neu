@@ -947,7 +947,7 @@ $\sigma_t^2 = \beta_t$.
        $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t) = \mathbb{E}_{\mathbf{x}_0 \sim q(\mathbf{x}_0 \mid \mathbf{x}_t)}\big[q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)\big]$
        of the forward posteriors :eqref:`eq_diffusion-posterior`, and that
        its covariance is
-       $\tilde{\beta}_t I + c_t^2 \operatorname{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$,
+       $\tilde{\beta}_t I + c_t^2 \textrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$,
        where $c_t = \sqrt{\bar{\alpha}_{t-1}}\, \beta_t / (1 - \bar{\alpha}_t)$
        is the coefficient of $\mathbf{x}_0$ in $\tilde{\boldsymbol{\mu}}_t$.
     1. Let the data be $\tfrac12 \delta_{-1} + \tfrac12 \delta_{+1}$ in one

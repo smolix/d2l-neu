@@ -1385,7 +1385,7 @@ strongly. CutMix pastes a rectangle instead and mixes labels by area.
 
 $$\mathbf{x} + \frac{b}{1-p} f(\mathbf{x}),\qquad b\sim\mathrm{Bernoulli}(1-p)\ \textrm{per example}$$
 
-- $E[b/(1-p)] = 1$: no change needed at evaluation, as with dropout.
+- $\mathbb{E}[b/(1-p)] = 1$: no change needed at evaluation, as with dropout.
 - 1,000 examples through a block with $p = 0.5$ in training mode:
 
 @!training-recipes-stochastic-depth

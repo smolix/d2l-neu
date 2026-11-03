@@ -751,7 +751,7 @@ mean zero, each feature has variance 1, and the product of any two of them
 averages to zero. Squaring $r$ and taking the expectation therefore leaves
 only the squared terms,
 
-$$E\left[\tfrac{1}{2} r^2\right] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2.$$
+$$\mathbb{E}\left[\tfrac{1}{2} r^2\right] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2.$$
 :eqlabel:`eq_linreg-scratch-expected-loss`
 
 The expected loss is half the squared distance between the parameters and
@@ -967,7 +967,7 @@ $10^{-4}$ of the true ones, rarely more than $10^{-3}$.
     1. Show that a step on a single example multiplies the component of the
        parameter error along $\tilde{\mathbf{x}}$ by
        $1 - \eta \|\tilde{\mathbf{x}}\|^2$, and use
-       $E\|\tilde{\mathbf{x}}\|^2 = 3$ to explain the limit you found for
+       $\mathbb{E}\|\tilde{\mathbf{x}}\|^2 = 3$ to explain the limit you found for
        minibatches of one example.
    :exlabel:`ex_linear-regression-scratch-stability`
 
@@ -1196,8 +1196,8 @@ independent standard normal.
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** The errors are $r = -y$, so the gradient is
-$E[\mathbf{x}\, r] = -E[\mathbf{x}\mathbf{x}^\top]\mathbf{w}^* = -\mathbf{w}^* = (-2, 3.4)$
-for $\mathbf{w}$ and $E[r] = -b^* = -4.2$ for $b$. The negative gradient
+$\mathbb{E}[\mathbf{x}\, r] = -\mathbb{E}[\mathbf{x}\mathbf{x}^\top]\mathbf{w}^* = -\mathbf{w}^* = (-2, 3.4)$
+for $\mathbf{w}$ and $\mathbb{E}[r] = -b^* = -4.2$ for $b$. The negative gradient
 points straight at the true parameters.
 :::
 :::
@@ -1457,7 +1457,7 @@ def train_step(model, optimizer, batch):
 
 Standard normal features, independent of the noise:
 
-$$E\bigl[\tfrac{1}{2} r^2\bigr] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2$$
+$$\mathbb{E}\bigl[\tfrac{1}{2} r^2\bigr] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2$$
 
 - Floor: $\sigma^2/2 = 5 \times 10^{-5}$; nothing gets below it.
 - Gradient $= (\mathbf{w} - \mathbf{w}^*, b - b^*)$: a step along it

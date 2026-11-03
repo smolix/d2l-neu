@@ -210,7 +210,7 @@ parameters exactly.
 For our data the matrix $\mathbf{X}^\top\mathbf{X}$ is simple. Its entries
 are sums over the $n$ examples of products of two columns. On the diagonal
 each product is either the square of the constant $1$ or a squared feature
-$z^2$, with mean $1$ and variance $E[z^4] - 1 = 3 - 1 = 2$ for a standard
+$z^2$, with mean $1$ and variance $\mathbb{E}[z^4] - 1 = 3 - 1 = 2$ for a standard
 normal $z$. These sums are therefore close to $n$, within about
 $\sqrt{2n}$. Off the diagonal the products have mean $0$, because the
 features are independent with mean $0$, and variance $1$, so a sum of $n$ of
@@ -1001,7 +1001,7 @@ value does that average settle?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $\hat{y} - y = -\epsilon$, so the average approaches
-$\tfrac{1}{2}E[\epsilon^2] = \sigma^2/2 = 5 \times 10^{-5}$. The noise is
+$\tfrac{1}{2}\mathbb{E}[\epsilon^2] = \sigma^2/2 = 5 \times 10^{-5}$. The noise is
 unpredictable: no model does better on new examples, and a correct
 training run levels off there.
 :::
@@ -1061,7 +1061,7 @@ $$\hat{\mathbf{w}} - \mathbf{w}^* \approx \frac{1}{n}\mathbf{X}^\top\boldsymbol{
 
 Coordinate $j$ of the error averages $n$ independent terms
 $\epsilon^{(i)} x_j^{(i)}$, each with mean 0 and variance
-$\sigma^2 E[x_j^2] = \sigma^2$. An average of $n$ such terms has standard
+$\sigma^2 \mathbb{E}[x_j^2] = \sigma^2$. An average of $n$ such terms has standard
 deviation $\sigma/\sqrt{n}$, its **standard error**:
 
 ::: {.d2l-note .rule}

@@ -285,9 +285,9 @@ Thus the experiment demonstrates improvement with a continuous-action policy, no
 
 ### Score-Function versus Pathwise Gradients
 
-An expected value can also be differentiated by reparameterizing its random variable. Consider a single state, a Gaussian policy $a\sim\mathcal{N}(\mu,\sigma^2)$, and a known differentiable reward $Q(a)$. The gradient of $E[Q(a)]$ with respect to $\mu$ has two equivalent forms:
+An expected value can also be differentiated by reparameterizing its random variable. Consider a single state, a Gaussian policy $a\sim\mathcal{N}(\mu,\sigma^2)$, and a known differentiable reward $Q(a)$. The gradient of $\mathbb{E}[Q(a)]$ with respect to $\mu$ has two equivalent forms:
 
-$$\nabla_\mu\, E\big[ Q(a) \big] = E\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = E\big[ Q'(\mu + \sigma z) \big], \qquad z \sim \mathcal{N}(0, 1).$$
+$$\nabla_\mu\, \mathbb{E}\big[ Q(a) \big] = \mathbb{E}\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = \mathbb{E}\big[ Q'(\mu + \sigma z) \big], \qquad z \sim \mathcal{N}(0, 1).$$
 :eqlabel:`eq_score_vs_pathwise`
 
 The first equality is the score-function identity used throughout this chapter. The second substitutes $a = \mu + \sigma z$, placing $\mu$ inside $Q$ rather than the distribution, and differentiates through the sample. This is the *pathwise* or reparameterization gradient :cite:`Kingma.Welling.2014`, and :numref:`fig_rl_score_vs_pathwise` illustrates where each estimator's gradient flows. Both are unbiased. They are not equally noisy:
@@ -440,8 +440,8 @@ Parameter sharing makes continuous problems learnable but also couples updates a
        $\partial \log \pi / \partial \ell = z^2 - 1$, and that both have mean
        zero under the policy.
     1. Let $Q$ be a quadratic function of the action with second derivative
-       $Q''$. Show that $E\big[Q(a)\,(z^2 - 1)\big] = \sigma^2 Q''$, using
-       $E[z^4] = 3$. In which direction does the expected policy-gradient
+       $Q''$. Show that $\mathbb{E}\big[Q(a)\,(z^2 - 1)\big] = \sigma^2 Q''$, using
+       $\mathbb{E}[z^4] = 3$. In which direction does the expected policy-gradient
        step move $\sigma$ near a maximum of $Q$? What does this imply for the
        exploration of a policy whose mean approaches the best action?
     1. Pendulum clips each sampled torque to $[-2, 2]$, while `log_prob`
@@ -457,7 +457,7 @@ Parameter sharing makes continuous problems learnable but also couples updates a
    :eqref:`eq_score_vs_pathwise` differentiates through $Q$. Take $\mu = 0$
    and $\sigma = 0.5$, as in the computation of `g_score` and `g_path`, and
    the threshold reward $Q(a) = 1$ for $a > 1$ and $Q(a) = 0$ otherwise.
-    1. Compute the exact gradient $\nabla_\mu E[Q(a)]$. What does the
+    1. Compute the exact gradient $\nabla_\mu \mathbb{E}[Q(a)]$. What does the
        pathwise estimator return for every sample? Which step of the
        derivation of the second equality fails?
     1. Replace `Q` in that computation by the smooth step
@@ -523,7 +523,7 @@ Parameter sharing makes continuous problems learnable but also couples updates a
 
 1. **Score versus pathwise variance.** ● The samples `g_score` and
    `g_path` estimate the two forms of :eqref:`eq_score_vs_pathwise` for
-   $Q(a) = -(a - 1)^2$ at $\mu = 0$. Use $E[z^4] = 3$ and $E[z^6] = 15$ for
+   $Q(a) = -(a - 1)^2$ at $\mu = 0$. Use $\mathbb{E}[z^4] = 3$ and $\mathbb{E}[z^6] = 15$ for
    $z \sim \mathcal{N}(0, 1)$.
     1. Show that the single-sample variance of the score-function estimate
        is $15\sigma^2 + 14 + 1/\sigma^2$ and that of the pathwise estimate is
@@ -575,13 +575,13 @@ Parameter sharing makes continuous problems learnable but also couples updates a
    with the perturbed deterministic policy, and ascend the smoothed
    objective
 
-   $$J_\nu(\boldsymbol{\theta}) = E_{\boldsymbol{\epsilon}}\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\big].$$
+   $$J_\nu(\boldsymbol{\theta}) = \mathbb{E}_{\boldsymbol{\epsilon}}\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\big].$$
 
     1. Apply the score-function identity of :eqref:`eq_score_vs_pathwise` to
        the distribution $\mathcal{N}(\boldsymbol{\theta}, \nu^2 I)$ of the
        parameters, and show that
 
-       $$\nabla J_\nu(\boldsymbol{\theta}) = \frac{1}{\nu}\, E\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\, \boldsymbol{\epsilon}\big].$$
+       $$\nabla J_\nu(\boldsymbol{\theta}) = \frac{1}{\nu}\, \mathbb{E}\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\, \boldsymbol{\epsilon}\big].$$
 
        Show that the antithetic estimate
 
@@ -710,9 +710,9 @@ A language model uses an analogous discrete policy
 :::
 
 ::: {.slide title="Two Gradients of One Expectation"}
-$$\nabla_\mu\, E\big[ Q(a) \big]
-= E\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big]
-= E\big[ Q'(\mu + \sigma z) \big]$$
+$$\nabla_\mu\, \mathbb{E}\big[ Q(a) \big]
+= \mathbb{E}\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big]
+= \mathbb{E}\big[ Q'(\mu + \sigma z) \big]$$
 
 @!deep-rl-score-function-versus-pathwise-gradients
 

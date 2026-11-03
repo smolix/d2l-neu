@@ -89,7 +89,8 @@ $\mathbb{Z}$.
 * $P(X=x)$: the probability that random variable $X$ takes the value $x$
 * $P(X \mid Y)$: the conditional probability distribution of $X$ given $Y$
 * $p(\cdot)$: a probability density function (PDF) associated with distribution $P$
-* ${E}[X]$: expectation of a random variable $X$
+* $\mathbb{E}[X]$: expectation of a random variable $X$
+* $\mathbb{E}_{x \sim P}[f(x)]$: expectation of $f(x)$ for $x$ drawn from $P$
 * $X \perp Y$: random variables $X$ and $Y$ are independent
 * $X \perp Y \mid Z$: random variables $X$ and $Y$ are conditionally independent given $Z$
 * $\sigma_X$: standard deviation of random variable $X$

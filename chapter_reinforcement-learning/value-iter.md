@@ -27,13 +27,13 @@ A *stochastic policy* $\pi(a \mid s)$ (policy for short) is a conditional distri
 
 For a fixed policy, an agent starting from $s_0$ samples $a_t \sim \pi(s_t)$, moves to $s_{t+1} \sim P(\cdot \mid s_t, a_t)$, and traces out the trajectory $\tau$ of :numref:`sec_mdp`. Different runs give different trajectories, so the natural score is the average,
 
-$$V^\pi(s_0) = E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \Big],$$
+$$V^\pi(s_0) = \mathbb{E}_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
 the *value function* of $\pi$. Because the start state is arbitrary, $V^\pi$ assigns a number to every state. The algorithms below operate on this value table.
 
 In implementations, it is often useful to maintain a closely related quantity called the "action value" function. This is defined as the average *return* of a trajectory that begins at $s_0$ but whose first-stage action is fixed to be $a_0$
 
-$$Q^\pi(s_0, a_0) = r(s_0, a_0) + E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big],$$
+$$Q^\pi(s_0, a_0) = r(s_0, a_0) + \mathbb{E}_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
 note that the summation inside the expectation is from $t=1,\ldots, \infty$ because the reward of the first stage is fixed in this case: act as you must for one step, then follow the policy forever.
 
@@ -50,7 +50,7 @@ Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \ga
 The *advantage* of an action is its value relative to the policy's average value at that state,
 
 $$
-A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad E_{a \sim \pi(s)} \big[ A^\pi(s, a) \big] = 0,
+A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(s)} \big[ A^\pi(s, a) \big] = 0,
 $$
 :eqlabel:`eq_advantage`
 
@@ -64,7 +64,7 @@ The Markov assumption converts the infinite trajectory sums above into local rec
 
 Separate a trajectory after its first transition. The first part contains action $a_0$, reward $r(s_0,a_0)$, and next state $s_1$; the remainder is the trajectory beginning at $s_1$. By the Markov property, the expected return of the remainder depends on the past only through $s_1$ and equals $V^\pi(s_1)$. The value at $s_0$ is therefore the expected immediate reward plus the discounted expected value of the next state:
 
-$$V^\pi(s_0) = E_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ E_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
+$$V^\pi(s_0) = \mathbb{E}_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ \mathbb{E}_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
 :eqlabel:`eq_dynamic_programming`
 
 This decomposition is the basis of dynamic programming and of the Bellman
@@ -608,7 +608,7 @@ Dynamic programming<br>
 
 The gap is the *advantage* (:eqref:`eq_advantage`):
 
-$$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad E_{a \sim \pi(s)}[A^\pi] = 0$$
+$$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(s)}[A^\pi] = 0$$
 
 $A^\pi(s,a) > 0$ identifies actions $a$ whose value exceeds the policy average.
 :::

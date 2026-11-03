@@ -54,7 +54,7 @@ if tab.selected('jax'):
 Section :numref:`sec_regularized` derived an objective with a per-step KL penalty relative to a fixed reference policy. For a uniform reference, the per-step penalty equals an entropy bonus minus the same coefficient times the logarithm of the size of the action set, a term that does not depend on the action probabilities. SAC maximizes this special case, conventionally writing $\alpha$ for the coefficient denoted by $\beta$ in :numref:`sec_regularized`:
 
 $$
-J(\pi) = E_{\pi}\Big[ \sum_t \gamma^t \big( r_t + \alpha\, H(\pi(\cdot \mid s_t)) \big) \Big].
+J(\pi) = \mathbb{E}_{\pi}\Big[ \sum_t \gamma^t \big( r_t + \alpha\, H(\pi(\cdot \mid s_t)) \big) \Big].
 $$
 :eqlabel:`eq_maxent_objective`
 
@@ -65,7 +65,7 @@ Equation :eqref:`eq_maxent_objective` can be optimized by generalized policy ite
 ### Soft Policy Evaluation
 :label:`subsec_sac-soft-evaluation`
 
-Under :eqref:`eq_maxent_objective`, a state value includes future reward and policy entropy, so $V^{\pi}(s) = E_{a \sim \pi}\big[ Q^{\pi}(s, a) - \alpha \log \pi(a \mid s) \big]$: the entropy is $-E[\log \pi]$, sampled by the action just drawn. Substituting this identity into the one-step bootstrap of :numref:`sec_actorcritic` adds one term to the critic target,
+Under :eqref:`eq_maxent_objective`, a state value includes future reward and policy entropy, so $V^{\pi}(s) = \mathbb{E}_{a \sim \pi}\big[ Q^{\pi}(s, a) - \alpha \log \pi(a \mid s) \big]$: the entropy is $-\mathbb{E}[\log \pi]$, sampled by the action just drawn. Substituting this identity into the one-step bootstrap of :numref:`sec_actorcritic` adds one term to the critic target,
 
 $$
 y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \Big( \min_{j=1,2} Q_{w_j^-}(s', \tilde{a}') - \alpha \log \pi_\theta(\tilde{a}' \mid s') \Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s'),
@@ -98,12 +98,12 @@ The sampled form in :eqref:`eq_sac_target` is what an actor-critic can compute w
 The policy-improvement step follows directly from :numref:`sec_regularized`. For any policy $\pi$ and reward vector,
 
 $$
-E_{\pi}[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).
+\mathbb{E}_{\pi}[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).
 $$
 :eqlabel:`eq_sac_kl_identity`
 
 Here $\pi^\star \propto \pi_{\textrm{ref}}\, e^{r/\beta}$ is the optimum derived in :numref:`sec_regularized`, and $\beta \log Z$ is its value. Set $r\to Q(s,\cdot)$, use a uniform reference, and replace $\beta$ by
-$\alpha$. Then maximizing $E_\pi[Q]+\alpha H(\pi)$ is equivalent to
+$\alpha$. Then maximizing $\mathbb{E}_\pi[Q]+\alpha H(\pi)$ is equivalent to
 minimizing
 $D_{\textrm{KL}}\big(\pi\Vert e^{Q/\alpha}/Z\big)$: the two objectives
 differ by the policy-independent constant $\alpha\log Z$. A restricted
@@ -112,7 +112,7 @@ exactly. SAC therefore takes gradient steps toward its reverse-KL
 projection, equivalently optimizing
 
 $$
-L_{\pi}(\theta) = E_{s \sim \mathcal{D},\, z}\Big[ \alpha \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - \min_{j=1,2} Q_{w_j}\big(s, \tilde{a}_\theta(s, z)\big) \Big], \qquad \tilde{a}_\theta(s, z) = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s)\, z\big),
+L_{\pi}(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, z}\Big[ \alpha \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - \min_{j=1,2} Q_{w_j}\big(s, \tilde{a}_\theta(s, z)\big) \Big], \qquad \tilde{a}_\theta(s, z) = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s)\, z\big),
 $$
 :eqlabel:`eq_sac_actor`
 
@@ -120,15 +120,15 @@ with $z \sim \mathcal{N}(0,I)$ and states drawn from the replay buffer $\mathcal
 
 The same proposition also yields a soft policy-improvement guarantee.
 
-**Proposition.** Let $\Pi$ contain $\pi_{\textrm{old}}$, and let $\pi_{\textrm{new}}(\cdot \mid s)$ maximize $E_{a \sim \pi}\big[ Q^{\pi_{\textrm{old}}}(s, a) \big] + \alpha H(\pi(\cdot \mid s))$ over $\Pi$ at every $s$. Then $V^{\pi_{\textrm{new}}} \geq V^{\pi_{\textrm{old}}}$ everywhere.
+**Proposition.** Let $\Pi$ contain $\pi_{\textrm{old}}$, and let $\pi_{\textrm{new}}(\cdot \mid s)$ maximize $\mathbb{E}_{a \sim \pi}\big[ Q^{\pi_{\textrm{old}}}(s, a) \big] + \alpha H(\pi(\cdot \mid s))$ over $\Pi$ at every $s$. Then $V^{\pi_{\textrm{new}}} \geq V^{\pi_{\textrm{old}}}$ everywhere.
 
 **Proof.** Since $\pi_{\textrm{old}} \in \Pi$, optimality at $s$ gives
 
 $$
-E_{a \sim \pi_{\textrm{new}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \alpha \log \pi_{\textrm{new}}(a \mid s) \big] \;\geq\; E_{a \sim \pi_{\textrm{old}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \alpha \log \pi_{\textrm{old}}(a \mid s) \big] = V^{\pi_{\textrm{old}}}(s).
+\mathbb{E}_{a \sim \pi_{\textrm{new}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \alpha \log \pi_{\textrm{new}}(a \mid s) \big] \;\geq\; \mathbb{E}_{a \sim \pi_{\textrm{old}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \alpha \log \pi_{\textrm{old}}(a \mid s) \big] = V^{\pi_{\textrm{old}}}(s).
 $$
 
-Expand $Q^{\pi_{\textrm{old}}}(s, a) = r(s, a) + \gamma\, E_{s'}\big[ V^{\pi_{\textrm{old}}}(s') \big]$ on the left and apply the same inequality at $s'$, then at $s''$, and so on: each substitution pushes $V^{\pi_{\textrm{old}}}$ one step deeper while accumulating rewards and entropies collected under $\pi_{\textrm{new}}$. Bounded rewards and $\gamma < 1$ send the remainder to zero, and the accumulated series is $V^{\pi_{\textrm{new}}}(s)$. $\blacksquare$
+Expand $Q^{\pi_{\textrm{old}}}(s, a) = r(s, a) + \gamma\, \mathbb{E}_{s'}\big[ V^{\pi_{\textrm{old}}}(s') \big]$ on the left and apply the same inequality at $s'$, then at $s''$, and so on: each substitution pushes $V^{\pi_{\textrm{old}}}$ one step deeper while accumulating rewards and entropies collected under $\pi_{\textrm{new}}$. Bounded rewards and $\gamma < 1$ send the remainder to zero, and the accumulated series is $V^{\pi_{\textrm{new}}}(s)$. $\blacksquare$
 
 The caveat is the one :numref:`sec_actorcritic` and :numref:`sec_dqn` attach to their own guarantees: the argument assumes exact per-state maximization and a converged $Q^{\pi_{\textrm{old}}}$, and SAC takes one gradient step on each. It describes the exact-update setting rather than certifying the approximate loop below; the full telescoping treatment is Appendix B of :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
 
@@ -720,7 +720,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 
 1. [code] **Variance of the sampled bracket.** The target
    :eqref:`eq_sac_target` estimates the soft value
-   $E_{a \sim \pi}\big[Q(s', a) - \alpha \log \pi(a \mid s')\big]$ from a
+   $\mathbb{E}_{a \sim \pi}\big[Q(s', a) - \alpha \log \pi(a \mid s')\big]$ from a
    single action $\tilde{a}'$. Take the five action values `Q` of
    :numref:`subsec_sac-soft-evaluation`, $\alpha = 0.5$, and the policies
    $\pi_T(a) \propto e^{Q(a)/T}$ for temperatures $T > 0$.
@@ -743,12 +743,12 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
    $Q(s, a) = Q(s, a^\star) - \frac{\kappa}{2} (a - a^\star)^2$ with
    curvature $\kappa > 0$, and let the policy be the unsquashed Gaussian
    $\mathcal{N}(\mu, \sigma^2)$.
-    1. Maximize $E_{a \sim \pi}[Q(s, a)] + \alpha H(\pi)$ over $\mu$ and
+    1. Maximize $\mathbb{E}_{a \sim \pi}[Q(s, a)] + \alpha H(\pi)$ over $\mu$ and
        $\sigma$. Show that the maximizer is the tilted distribution
        $e^{Q(s, \cdot)/\alpha}/Z$, so that the reverse-KL projection of
        :numref:`subsec_sac-soft-improvement` is exact for this family.
     1. Show that the optimal policy loses
-       $Q(s, a^\star) - E_{a \sim \pi}[Q(s, a)] = \alpha/2$ for every
+       $Q(s, a^\star) - \mathbb{E}_{a \sim \pi}[Q(s, a)] = \alpha/2$ for every
        $\kappa$.
     1. Exercise :exref:`ex_regularized-identifiability`c of
        :numref:`sec_regularized` showed for a single decision that scaling
@@ -771,7 +771,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
    in `SquashedGaussianPolicy`.
     1. Use :eqref:`eq_tanh_logdet` to show that
 
-       $$H(\pi) = \tfrac{1}{2} \log(2 \pi e \sigma^2) + E_u\big[\log(1 - \tanh^2 u)\big] + \log c.$$
+       $$H(\pi) = \tfrac{1}{2} \log(2 \pi e \sigma^2) + \mathbb{E}_u\big[\log(1 - \tanh^2 u)\big] + \log c.$$
 
        At $\mu = 0$, which term grows with $\sigma$, and which one shrinks?
     1. Evaluate $H$ at $\mu = 0$ for $\sigma \in \{0.1, 0.3, 1, 3\}$ as an
@@ -836,7 +836,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
        :eqref:`eq_sac_kl_identity` to show that the reverse-KL projection onto
        any family that contains $\pi_{\textrm{old}}$ has this property.
     1. Consider a single state with $\gamma = 0$, so that the soft value of a
-       policy is $E_\pi[Q] + \alpha H(\pi)$. Let
+       policy is $\mathbb{E}_\pi[Q] + \alpha H(\pi)$. Let
 
        $$Q(a) = \alpha \log\Big(\tfrac{1}{2}\, \mathcal{N}(a; -m, 1) + \tfrac{1}{2}\, \mathcal{N}(a; m, 1)\Big),$$
 
@@ -900,11 +900,11 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 
 1. [code] **Temperature autotuning.** ●
    :citet:`Haarnoja.Zhou.Hartikainen.ea.2018` replace the fixed $\alpha$ by
-   the constraint $E\big[H(\pi(\cdot \mid s_t))\big] \geq \bar{H}$ with
+   the constraint $\mathbb{E}\big[H(\pi(\cdot \mid s_t))\big] \geq \bar{H}$ with
    $\bar{H} = -\dim \mathcal{A}$ and treat $\alpha$ as its Lagrange
    multiplier. They minimize
 
-   $$J(\alpha) = E_{a \sim \pi}\big[-\alpha \log \pi(a \mid s) - \alpha \bar{H}\big]$$
+   $$J(\alpha) = \mathbb{E}_{a \sim \pi}\big[-\alpha \log \pi(a \mid s) - \alpha \bar{H}\big]$$
 
    by gradient steps, with the states drawn from the buffer.
     1. With the fixed $\alpha = 0.2$ of the section, the entropy trace of
@@ -966,7 +966,7 @@ Soft Actor-Critic<br>
 :numref:`sec_regularized`'s KL penalty, with a uniform reference,
 applied at every step; $\alpha$ for $\beta$, the field's convention:
 
-$$J(\pi) = E_{\pi}\Big[ \sum_t \gamma^t \big( r_t
+$$J(\pi) = \mathbb{E}_{\pi}\Big[ \sum_t \gamma^t \big( r_t
 + \alpha\, H(\pi(\cdot \mid s_t)) \big) \Big]$$
 
 . . .
@@ -999,7 +999,7 @@ At the tilted optimum the bracket is 15.3's logsumexp, exactly:
 15.3's proof line, read with $r \to Q(s, \cdot)$, uniform
 reference:
 
-$$E_{\pi}[Q] + \alpha H(\pi) \;=\; \alpha \log Z
+$$\mathbb{E}_{\pi}[Q] + \alpha H(\pi) \;=\; \alpha \log Z
 - \alpha\, D_{\textrm{KL}}\big(\pi \,\Vert\, e^{Q/\alpha}/Z\big)$$
 
 Maximizing the left and projecting onto the family in KL are the

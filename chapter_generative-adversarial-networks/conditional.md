@@ -35,8 +35,8 @@ A condition specifies a property of the requested sample. It may be a class labe
 The critic scores sample--condition pairs, $D(x, c)$, and the game is the log-loss game of :numref:`sec_basic_gan` played on those pairs:
 
 $$
-V(D) \;=\; E_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big]
-+ E_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big].
+V(D) \;=\; \mathbb{E}_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big]
++ \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big].
 $$
 :eqlabel:`eq_gan_cond_V`
 
@@ -54,7 +54,7 @@ The optimal conditional critic is the log density ratio $\lambda$ within the sub
 
 $$
 \max_D V(D)
-\;=\; E_{c}\Big[\, 2\, \mathrm{JS}\big(p(\cdot \mid c),\, q(\cdot \mid c)\big) \Big] - 2 \log 2 .
+\;=\; \mathbb{E}_{c}\Big[\, 2\, \mathrm{JS}\big(p(\cdot \mid c),\, q(\cdot \mid c)\big) \Big] - 2 \log 2 .
 $$
 :eqlabel:`eq_gan_cond_value`
 
@@ -464,7 +464,7 @@ def train_conditional(train_X, train_y, gamma, num_steps=15000,
     return ema_G, net_D, np.array(history)
 ```
 
-We retune the penalty weight rather than reuse the value from the sprite experiment. A development-time pilot, not reproduced in this notebook, compared $\gamma \in \{0.05, 0.5, 5\}$ over 4,000 steps. All three values trained stably and reached similar condition alignment. They differed in the penalized quantity $E_m[\|\nabla_x D\|^2]$, as :eqref:`eq_gan_dirac_pen` predicts. At $\gamma = 0.05$, this quantity was several times larger than at $\gamma = 0.5$; at $\gamma = 5$, it remained near zero. These settings correspond to lighter and heavier damping, respectively. The full runs use the intermediate value $\gamma = 0.5$.
+We retune the penalty weight rather than reuse the value from the sprite experiment. A development-time pilot, not reproduced in this notebook, compared $\gamma \in \{0.05, 0.5, 5\}$ over 4,000 steps. All three values trained stably and reached similar condition alignment. They differed in the penalized quantity $\mathbb{E}_m[\|\nabla_x D\|^2]$, as :eqref:`eq_gan_dirac_pen` predicts. At $\gamma = 0.05$, this quantity was several times larger than at $\gamma = 0.5$; at $\gamma = 5$, it remained near zero. These settings correspond to lighter and heavier damping, respectively. The full runs use the intermediate value $\gamma = 0.5$.
 
 Penalty weights do not transfer unchanged between experiments. :numref:`sec_dcgan` uses $\gamma = 10$ for $64 \times 64$ sprites, whereas R3GAN decays its tuned CIFAR-10 value from $0.05$ to $0.005$ during a four-day run :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. The appropriate value depends on the dataset, resolution, input scale, loss reduction, critic architecture, optimizer, batch size, augmentation, and training budget. A new implementation therefore requires its own sweep.
 
@@ -829,7 +829,7 @@ Only pix2pix plays this section's conditional game; CycleGAN substitutes a recon
 
 ## Summary
 
-Conditional generation trains on pairs $(x,c)$ and gives the condition to both networks. When real and generated pairs share the same marginal $p(c)$, the optimal critic is the conditional log density ratio $\log[p(x\mid c)/q(x\mid c)]$. The value is the average $E_c[2\,\mathrm{JS}(p(\cdot\mid c),q(\cdot\mid c))]-2\log2$. Saturation, non-saturating weights, relativistic pairing, and zero-centered penalties therefore apply separately within each condition. A label-shifted generator shows why this target is stronger than matching the unconditional marginal.
+Conditional generation trains on pairs $(x,c)$ and gives the condition to both networks. When real and generated pairs share the same marginal $p(c)$, the optimal critic is the conditional log density ratio $\log[p(x\mid c)/q(x\mid c)]$. The value is the average $\mathbb{E}_c[2\,\mathrm{JS}(p(\cdot\mid c),q(\cdot\mid c))]-2\log2$. Saturation, non-saturating weights, relativistic pairing, and zero-centered penalties therefore apply separately within each condition. A label-shifted generator shows why this target is stronger than matching the unconditional marginal.
 
 Conditions can enter through concatenation, condition-dependent modulation, or a compatibility head. Under a shared log-linear representation of the real and generated class posteriors, the Bayes decomposition gives the projection critic $D(x,c)=e_c^\top\varphi(x)+\psi(x)$. The CIFAR-10 experiment uses concatenation in the generator and this projection head in the critic. Within 15,000 steps, most requested classes produce visibly distinct rows, overall classifier alignment is close to the classifier's accuracy on real data, and the pooled feature distances remain near their real-versus-real references. The weakest classes differ between the recorded PyTorch and JAX runs, so classwise conclusions are specific to each run.
 
@@ -848,7 +848,7 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        encoding of $c$ on samples from the two joint distributions, and
        minimize the balanced loss
 
-       $$\tfrac12\, E_{(x, c) \sim p}\big[\log(1 + e^{-D(x, c)})\big] + \tfrac12\, E_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log(1 + e^{D(x', c)})\big].$$
+       $$\tfrac12\, \mathbb{E}_{(x, c) \sim p}\big[\log(1 + e^{-D(x, c)})\big] + \tfrac12\, \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log(1 + e^{D(x', c)})\big].$$
 
        Show that the minimum of this loss is $-\tfrac12 \max_D V(D)$ for
        the game :eqref:`eq_gan_cond_V`, and compare the converged loss with
@@ -1010,12 +1010,12 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
    :cite:`Odena.Olah.Shlens.2017` contains a classifier $C(c \mid x)$, and
    the generator minimizes, in addition to its adversarial loss, the
    classification loss
-   $E_{c \sim p(c),\, x \sim q(\cdot \mid c)}[-\log C(c \mid x)]$ of its own
+   $\mathbb{E}_{c \sim p(c),\, x \sim q(\cdot \mid c)}[-\log C(c \mid x)]$ of its own
    samples. Write $q(x)$ for the marginal of the generated images and
    $q(c \mid x)$ for the label posterior of the generated pairs.
     1. Show that this loss equals
 
-       $$E_{x \sim q}\Big[H\big(q(\cdot \mid x)\big) + \mathrm{KL}\big(q(\cdot \mid x) \,\|\, C(\cdot \mid x)\big)\Big],$$
+       $$\mathbb{E}_{x \sim q}\Big[H\big(q(\cdot \mid x)\big) + \mathrm{KL}\big(q(\cdot \mid x) \,\|\, C(\cdot \mid x)\big)\Big],$$
 
        where $H$ is the entropy.
     1. Hold $C$ fixed and set $q(x) = p(x)$. Let $q(\cdot \mid x)$ vary
@@ -1093,8 +1093,8 @@ Data supplies sample–condition pairs $(x, c)$; the generator draws $c$ from
 the same label marginal and attaches a sample: $x' = G(z, c)$. The critic
 scores the pairs:
 
-$$V(D) = E_{(x,c) \sim p}[\log \sigma(D(x, c))]
-+ E_{c,\, x' \sim q(\cdot \mid c)}[\log \sigma(-D(x', c))]$$
+$$V(D) = \mathbb{E}_{(x,c) \sim p}[\log \sigma(D(x, c))]
++ \mathbb{E}_{c,\, x' \sim q(\cdot \mid c)}[\log \sigma(-D(x', c))]$$
 
 . . .
 
@@ -1111,7 +1111,7 @@ $$D^\star(x, c) = \log \frac{p(c)\, p(x \mid c)}{p(c)\, q(x \mid c)}
 
 . . .
 
-$$\max_D V = E_c\big[2\, \mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big]
+$$\max_D V = \mathbb{E}_c\big[2\, \mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big]
 - 2 \log 2$$
 
 - An average of per-condition games, weighted by $p(c)$.

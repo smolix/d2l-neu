@@ -72,7 +72,7 @@ As in :eqref:`eq_rtg`, we omit the factor $\gamma^t$ from the actor update. The 
 
 The TD error is not merely cheaper than the Monte Carlo weight; it estimates the same thing. Suppose for a moment the critic were exact, $\hat{V} = V^\pi$. Averaging :eqref:`eq_td_error_v` over the next state,
 
-$$E\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) = Q^{\pi}(s_t, a_t) - V^{\pi}(s_t),$$
+$$\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) = Q^{\pi}(s_t, a_t) - V^{\pi}(s_t),$$
 
 where the second equality is :eqref:`eq_dynamic_programming_q` written with $V^\pi$. The right-hand side is the advantage :eqref:`eq_advantage` of the action taken, the exact quantity the learned baseline of :numref:`sec_baselines` estimated with $\hat{G}_t - \hat{V}(s_t)$. So a single transition, one reward plus two critic evaluations, yields an unbiased one-sample estimate of the advantage, where the Monte Carlo estimate needed the entire remaining trajectory.
 
@@ -571,10 +571,10 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        The identity removes one of the two error terms. For the other one,
        which step of the identity's proof fails?
     1. Show that the bias of the step-$t$ term
-       $E[\delta_t\, \boldsymbol{\psi}_t]$ relative to
-       $E[A^{\pi}(s_t, a_t)\, \boldsymbol{\psi}_t]$ is
-       $\gamma\, E\big[\bar{\varepsilon}(s_t, a_t)\, \boldsymbol{\psi}_t\big]$
-       with $\bar{\varepsilon}(s, a) = E[\varepsilon(s_{t+1}) \mid s_t = s, a_t = a]$.
+       $\mathbb{E}[\delta_t\, \boldsymbol{\psi}_t]$ relative to
+       $\mathbb{E}[A^{\pi}(s_t, a_t)\, \boldsymbol{\psi}_t]$ is
+       $\gamma\, \mathbb{E}\big[\bar{\varepsilon}(s_t, a_t)\, \boldsymbol{\psi}_t\big]$
+       with $\bar{\varepsilon}(s, a) = \mathbb{E}[\varepsilon(s_{t+1}) \mid s_t = s, a_t = a]$.
        Under what condition on $\varepsilon$ does the bias vanish? Is
        $\hat{V} = V^{\pi}$ necessary for it?
     1. Let the critic overestimate every nonterminal state by the same
@@ -723,11 +723,11 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
     1. Treat the $N$ terms as independent and identically distributed.
        Show that
 
-       $$E\big[\|\hat{\mathbf{g}}\|^2\big] = \big\|E[\hat{A}_t\, \boldsymbol{\psi}_t]\big\|^2 + \frac{1}{N} \Big( E\big[\|\hat{A}_t\, \boldsymbol{\psi}_t\|^2\big] - \big\|E[\hat{A}_t\, \boldsymbol{\psi}_t]\big\|^2 \Big).$$
+       $$\mathbb{E}\big[\|\hat{\mathbf{g}}\|^2\big] = \big\|\mathbb{E}[\hat{A}_t\, \boldsymbol{\psi}_t]\big\|^2 + \frac{1}{N} \Big( \mathbb{E}\big[\|\hat{A}_t\, \boldsymbol{\psi}_t\|^2\big] - \big\|\mathbb{E}[\hat{A}_t\, \boldsymbol{\psi}_t]\big\|^2 \Big).$$
 
        Decompose $\hat{A}_t = f(s_t) + \xi_t$ with
-       $f(s) = E[\hat{A}_t \mid s_t = s]$, and show that $f$ contributes
-       nothing to $E[\hat{A}_t\, \boldsymbol{\psi}_t]$. What does a large
+       $f(s) = \mathbb{E}[\hat{A}_t \mid s_t = s]$, and show that $f$ contributes
+       nothing to $\mathbb{E}[\hat{A}_t\, \boldsymbol{\psi}_t]$. What does a large
        state-dependent part $f$ of a unit-variance weight do to the norm?
     1. At the policy `frozen`, draw 50 batches of eight episodes with
        `d2l.rollout`. For each batch, compute the norm of
@@ -744,12 +744,12 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
    $\hat{V} = V^{\pi}$, and the episodes have no time limit. Let $\delta_t$
    be the TD errors of an on-policy episode.
     1. Show that
-       $E[\delta_{t+l} \mid s_0, a_0, r_0, \ldots, s_{t+l}] = 0$ for every
-       $l \geq 0$, and conclude that $E[\delta_t\, \delta_{t+l}] = 0$ for
+       $\mathbb{E}[\delta_{t+l} \mid s_0, a_0, r_0, \ldots, s_{t+l}] = 0$ for every
+       $l \geq 0$, and conclude that $\mathbb{E}[\delta_t\, \delta_{t+l}] = 0$ for
        $l \geq 1$.
     1. Conclude that every $\lambda$ yields an unbiased estimate
        $\hat{A}^{\textrm{GAE}}_t$ of $A^{\pi}(s_t, a_t)$, and that
-       $E\big[(\hat{A}^{\textrm{GAE}}_t)^2\big] = \sum_{l \geq 0} (\gamma \lambda)^{2l}\, E[\delta_{t+l}^2]$.
+       $\mathbb{E}\big[(\hat{A}^{\textrm{GAE}}_t)^2\big] = \sum_{l \geq 0} (\gamma \lambda)^{2l}\, \mathbb{E}[\delta_{t+l}^2]$.
        Which $\lambda$ minimizes the error of the advantage estimate then?
        What does this say about the source of the interior minimum in the
        frozen-policy comparison of :numref:`subsec_actorcritic_measuring`?
@@ -785,7 +785,7 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        :exref:`ex_actor-critic-uncorrelated-td-errors`a, conclude that the
        bias of the step-$t$ term of the gradient estimate is
        $\mathbf{b}(\lambda) = (1 - \lambda) \sum_{k \geq 1} \gamma^k \lambda^{k-1}\, \mathbf{c}_k$
-       with $\mathbf{c}_k = E[\varepsilon(s_{t+k})\, \boldsymbol{\psi}_t]$.
+       with $\mathbf{c}_k = \mathbb{E}[\varepsilon(s_{t+k})\, \boldsymbol{\psi}_t]$.
     1. Suppose $\mathbf{c}_k = \rho^{k-1} \mathbf{c}_1$ for a fixed vector
        $\mathbf{c}_1$ and some $0 \leq \rho \leq 1$: the action's influence
        on the critic's error at later states decays geometrically. Show that
@@ -842,7 +842,7 @@ data by construction. No explicit `detach` operation is needed.
 ::: {.slide title="Why the TD Error Is an Advantage"}
 If the critic were exact, $\hat V = V^\pi$:
 
-$$E[\delta_t \mid s_t, a_t] = Q^\pi(s_t, a_t) - V^\pi(s_t).$$
+$$\mathbb{E}[\delta_t \mid s_t, a_t] = Q^\pi(s_t, a_t) - V^\pi(s_t).$$
 
 A single transition therefore provides an advantage estimate, whereas the
 Monte Carlo estimate requires the rest of the trajectory.

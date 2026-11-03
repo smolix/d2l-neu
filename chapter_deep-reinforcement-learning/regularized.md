@@ -190,7 +190,7 @@ Every point in this figure is an optimum of the penalized objective; the Bellman
 
 Whereas :numref:`chap_reinforcement_learning` maximized expected reward, a fixed-reference penalty can restrict optimization of a learned reward to policies near the data-generating policy. For a single decision with reward $r(a)$ over a finite action set, reference $\pi_{\textrm{ref}}$, and coefficient $\beta > 0$, the regularized objective is
 
-$$\max_{\pi}\ E_{a \sim \pi}\big[ r(a) \big] - \beta\, D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big).$$
+$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[ r(a) \big] - \beta\, D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big).$$
 :eqlabel:`eq_kl_objective`
 
 The penalty is part of the objective rather than a constraint on a single update. The coefficient $\beta$ sets its weight relative to reward, and the reference policy remains fixed.
@@ -206,7 +206,7 @@ and the maximal value is $\beta \log Z$.
 
 **Proof.** By construction $r(a) = \beta \log\big( \pi^\star(a) Z / \pi_{\textrm{ref}}(a) \big)$. Substituting into the objective, for any policy $\pi$,
 
-$$E_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \sum_a \pi(a)\, \beta \log \frac{\pi^\star(a)\, Z}{\pi(a)} = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).$$
+$$\mathbb{E}_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \sum_a \pi(a)\, \beta \log \frac{\pi^\star(a)\, Z}{\pi(a)} = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).$$
 
 Gibbs' inequality, proved in :numref:`chap_mdl-information-theory`, says the remaining divergence is nonnegative and zero exactly when $\pi = \pi^\star$. $\blacksquare$
 
@@ -362,7 +362,7 @@ Pairwise preferences identify reward differences but not an additive term depend
    that a policy $\pi$, started at state $0$, produces the trajectory
    $\tau = (s_0, a_0, s_1, a_1, \ldots, s_T)$ of a fixed horizon $T$.
     1. Show that
-       $$D_{\textrm{KL}}\big(p_\pi \Vert p_{\pi_{\textrm{ref}}}\big) = E_\pi\Big[\sum_{t=0}^{T-1} D_{\textrm{KL}}\big(\pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t)\big)\Big].$$
+       $$D_{\textrm{KL}}\big(p_\pi \Vert p_{\pi_{\textrm{ref}}}\big) = \mathbb{E}_\pi\Big[\sum_{t=0}^{T-1} D_{\textrm{KL}}\big(\pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t)\big)\Big].$$
        Which factors of $p_\pi(\tau)$ cancel, and why can the divergence
        therefore be estimated from trajectories of $\pi$ without a model of
        the transitions?
@@ -459,7 +459,7 @@ Pairwise preferences identify reward differences but not an additive term depend
        $\beta$ at the point $\pi^\star$, and that it is increasing and concave
        whenever $r$ is not constant on the support of $\pi_{\textrm{ref}}$.
     1. Show that $\pi^\star$ also solves the constrained problem
-       $\max_\pi E_\pi[r]$ subject to
+       $\max_\pi \mathbb{E}_\pi[r]$ subject to
        $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) \leq K(\lambda)$. Which
        quantity of the constrained problem does $\beta$ become?
     1. Check the slope numerically by finite differences along `front` and
@@ -468,13 +468,13 @@ Pairwise preferences identify reward differences but not an additive term depend
 1. **A moving reference.** ● The trust region of :numref:`sec_ppo` measures
    divergence from the previous iterate. Consider, for a single decision with
    reward $r(a)$, the idealized update that solves each step exactly,
-   $$\pi_{k+1} = \operatorname*{argmax}_\pi\ E_\pi[r] - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k), \qquad \pi_0 = \pi_{\textrm{ref}},$$
+   $$\pi_{k+1} = \operatorname*{argmax}_\pi\ \mathbb{E}_\pi[r] - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k), \qquad \pi_0 = \pi_{\textrm{ref}},$$
    with a coefficient $\nu > 0$.
     1. Show that $\pi_k$ is the optimum :eqref:`eq_kl_optimum` with
        coefficient $\nu / k$. What is the limit of $\pi_k$ as $k \to \infty$?
     1. Now add the fixed-reference penalty of :eqref:`eq_kl_objective`, as
        PPO-style fine-tuning does, so that $\pi_{k+1}$ maximizes
-       $$E_\pi[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k).$$
+       $$\mathbb{E}_\pi[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k).$$
        Show that, up to a constant,
        $$\log \pi_{k+1} = \frac{\beta \log \pi_{\textrm{ref}} + \nu \log \pi_k + r}{\beta + \nu},$$
        and find the limit of $\pi_k$. Which coefficient determines the limit?
@@ -486,7 +486,7 @@ Pairwise preferences identify reward differences but not an additive term depend
 1. [code] **Forward-KL penalty.** ● :numref:`subsec_kl_direction` contrasts
    the reverse divergence of :eqref:`eq_kl_objective` with the forward one.
    Replace the penalty by the forward divergence,
-   $$\max_\pi\ E_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi_{\textrm{ref}} \Vert \pi\big).$$
+   $$\max_\pi\ \mathbb{E}_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi_{\textrm{ref}} \Vert \pi\big).$$
     1. Introduce a multiplier $\lambda$ for the constraint
        $\sum_a \pi(a) = 1$, and show that the optimum is
        $\pi(a) = \beta\, \pi_{\textrm{ref}}(a) / (\lambda - r(a))$, where
@@ -600,7 +600,7 @@ exact optimum.
 :::
 
 ::: {.slide title="The Regularized Objective"}
-$$\max_{\pi}\ E_{a \sim \pi}\big[ r(a) \big] - \beta\,
+$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[ r(a) \big] - \beta\,
 D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big)$$
 
 . . .

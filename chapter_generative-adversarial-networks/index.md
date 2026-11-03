@@ -62,7 +62,7 @@ all three.
 | integral probability metrics: MMD, Wasserstein | one sample, scored by a critic from a constrained class | the largest expectation gap the class can certify; geometry-sensitive classes remain informative as supports separate, while a bounded kernel loses sensitivity beyond its length scale | :numref:`sec_gan_objectives` |
 | relativistic pairing, RpGAN | a real--generated pair, rewarded for ranking the real member higher | $\mathrm{JS}(p \otimes q,\, q \otimes p)$: the information a pair carries about which member is real | :numref:`sec_gan_relativistic` |
 | zero-centered gradient penalties $R_1$, $R_2$ | any of the above, with a penalty on the critic's input gradients | near equilibrium, a squared linearized Wasserstein-2 distance and dynamics that converge for every positive penalty weight | :numref:`sec_gan_convergence` |
-| the conditional game | a sample together with the condition it claims to satisfy | the average over conditions, $E_c\big[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big] - 2\log 2$; shared log-linear class posteriors motivate the projection discriminator | :numref:`sec_gan_conditional` |
+| the conditional game | a sample together with the condition it claims to satisfy | the average over conditions, $\mathbb{E}_c\big[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big] - 2\log 2$; shared log-linear class posteriors motivate the projection discriminator | :numref:`sec_gan_conditional` |
 
 :numref:`sec_dcgan` and :numref:`sec_gan_beyond` add no further games. The
 first assembles the penalized relativistic loss into an image generator and

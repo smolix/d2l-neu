@@ -78,10 +78,10 @@ variance $s^2$. The expected squared error of the prediction
 $\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b$ for the label $y$
 is
 
-$$E\left[\left(\mathbf{w}^\top\mathbf{x} + b - y + \mathbf{w}^\top\boldsymbol{\epsilon}\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + s^2\|\mathbf{w}\|^2.$$
+$$\mathbb{E}\left[\left(\mathbf{w}^\top\mathbf{x} + b - y + \mathbf{w}^\top\boldsymbol{\epsilon}\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + s^2\|\mathbf{w}\|^2.$$
 
 The cross term vanishes because $\boldsymbol{\epsilon}$ has mean zero, and
-$E[(\mathbf{w}^\top\boldsymbol{\epsilon})^2] = s^2 \|\mathbf{w}\|^2$ because
+$\mathbb{E}[(\mathbf{w}^\top\boldsymbol{\epsilon})^2] = s^2 \|\mathbf{w}\|^2$ because
 its entries are independent. Training on noisy inputs thus minimizes the
 squared loss plus the penalty $s^2\|\mathbf{w}\|^2$ of weight decay. For
 nonlinear models and small noise, :citet:`Bishop.1995` showed that the noise
@@ -115,14 +115,14 @@ kept unit is scaled up by $1/(1 - p)$, which makes up, on average, for the
 units that were dropped. For a fixed $h_j$, the expected value over the
 mask is
 
-$$E[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1 - p} = h_j,$$
+$$\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1 - p} = h_j,$$
 
 so on average the next layer receives the activation it would receive
 without dropout, and $1/(1 - p)$ is the only factor with this property. The
 fluctuations around this average are large. Since
-$E[h_j'^2] = (1 - p)\, h_j^2/(1 - p)^2 = h_j^2/(1 - p)$, the variance is
+$\mathbb{E}[h_j'^2] = (1 - p)\, h_j^2/(1 - p)^2 = h_j^2/(1 - p)$, the variance is
 
-$$\textrm{Var}[h_j'] = E[h_j'^2] - h_j^2 = \frac{p}{1 - p}\, h_j^2.$$
+$$\textrm{Var}[h_j'] = \mathbb{E}[h_j'^2] - h_j^2 = \frac{p}{1 - p}\, h_j^2.$$
 
 The noise grows with $p$ and with the size of the activation. For $p = 0.5$
 a kept unit is doubled and a dropped one vanishes, so the standard deviation
@@ -145,16 +145,16 @@ the full network runs, with no masks and no rescaling. By the rescaling,
 each hidden activation then equals the expected value of its dropped
 version. This statement concerns one unit. The next layer is linear, and the
 expected value passes through it: a pre-activation
-$z = \sum_j w_j h_j'$ has $E[z] = \sum_j w_j h_j$, the value of the full
+$z = \sum_j w_j h_j'$ has $\mathbb{E}[z] = \sum_j w_j h_j$, the value of the full
 network. The activation function that follows is not linear, and the
 expected value does not pass through it.
 
 A small example shows the difference. Let two units with activations
 $h_1 = h_2 = 1$ feed the pre-activation $z = h_1' - h_2'$, with $p = 0.5$.
 Each $h_j'$ is 0 or 2 with equal probability, so $z$ takes the values $-2$,
-$0$, $0$, $2$, each with probability $1/4$, and $E[z] = 0$, the value of the
+$0$, $0$, $2$, each with probability $1/4$, and $\mathbb{E}[z] = 0$, the value of the
 full network. After a ReLU, however, the average over the masks is
-$E[\textrm{ReLU}(z)] = \frac{1}{4} \cdot 2 = 0.5$, whereas the full network
+$\mathbb{E}[\textrm{ReLU}(z)] = \frac{1}{4} \cdot 2 = 0.5$, whereas the full network
 computes $\textrm{ReLU}(0) = 0$. In a network with nonlinear layers, the
 network at test time therefore does not compute the average output of the
 networks that dropout samples during training. It approximates that
@@ -694,7 +694,7 @@ $\mathbf{w}^\top\mathbf{x} + b$ and variance
 $\frac{p}{1-p}\sum_j w_j^2 x_j^2$. The expected loss is the squared error of
 the mean plus this variance,
 
-$$E\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
+$$\mathbb{E}\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
 
 In expectation, dropout on the inputs of a linear model is a weight decay
 :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`. Summed over the training
@@ -959,9 +959,9 @@ about 84% after 30 epochs. Here: an MLP with two hidden layers of 256 units,
 Perturb the input, $\mathbf{x} + \boldsymbol{\epsilon}$, with independent
 entries of mean 0 and variance $s^2$:
 
-$$E\left[\left(\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + s^2\|\mathbf{w}\|^2.$$
+$$\mathbb{E}\left[\left(\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + s^2\|\mathbf{w}\|^2.$$
 
-- The cross term vanishes: $E[\boldsymbol{\epsilon}] = \mathbf{0}$.
+- The cross term vanishes: $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$.
 - Training on noisy inputs = squared loss + weight decay $s^2\|\mathbf{w}\|^2$.
 
 ::: {.d2l-note}
@@ -978,7 +978,7 @@ With a mask $m_j$ that is 0 with probability $p$ and 1 otherwise:
 $$h_j' = \frac{m_j h_j}{1 - p} = \begin{cases} 0 & \textrm{with probability } p,\\ h_j/(1 - p) & \textrm{with probability } 1 - p.\end{cases}$$
 
 - A fresh mask for every unit, every example, every step.
-- $E[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1-p} = h_j$: the expected value
+- $\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1-p} = h_j$: the expected value
   is kept, and $1/(1 - p)$ is the only factor that keeps it.
 
 ::: {.d2l-note}
@@ -991,7 +991,7 @@ weights by $1 - p$ at test time instead.
 ::: {.slide title="The Noise Is as Large as the Activation"}
 [Noise · the variance]{.kicker}
 
-$$E[h_j'^2] = \frac{h_j^2}{1 - p}, \qquad \textrm{Var}[h_j'] = \frac{p}{1 - p}\, h_j^2.$$
+$$\mathbb{E}[h_j'^2] = \frac{h_j^2}{1 - p}, \qquad \textrm{Var}[h_j'] = \frac{p}{1 - p}\, h_j^2.$$
 
 | $p$ | kept unit scaled by | variance for $h_j = 1$ |
 |---|---:|---:|
@@ -1014,8 +1014,8 @@ Two units, $h_1 = h_2 = 1$, $p = 0.5$, pre-activation $z = h_1' - h_2'$:
 | $z$ | 0 | 2 | −2 | 0 |
 | $\textrm{ReLU}(z)$ | 0 | 2 | 0 | 0 |
 
-- Linear layer: $E[z] = 0$, the full network's value.
-- After the ReLU: $E[\textrm{ReLU}(z)] = 0.5$, but the full network gives
+- Linear layer: $\mathbb{E}[z] = 0$, the full network's value.
+- After the ReLU: $\mathbb{E}[\textrm{ReLU}(z)] = 0.5$, but the full network gives
   $\textrm{ReLU}(0) = 0$.
 
 ::: {.d2l-note}
@@ -1187,7 +1187,7 @@ of the steps.
 Drop the inputs $x_j' = m_j x_j/(1 - p)$: mean $x_j$, variance
 $\frac{p}{1-p}x_j^2$, independent.
 
-$$E\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
+$$\mathbb{E}\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
 
 - Expected loss = loss of the mean + variance of the prediction.
 - Each weight is penalized by the square of its input; no penalty where
@@ -1232,7 +1232,7 @@ are $2^{512} \approx 10^{154}$ masks.
 ::: {.cols}
 ::: {.col}
 - **Operation:** zero with probability $p$, scale by $1/(1-p)$;
-  $E[h_j'] = h_j$, $\textrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$.
+  $\mathbb{E}[h_j'] = h_j$, $\textrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$.
 - **Test time:** full network, no masks; not the average of the thinned
   networks once a nonlinearity intervenes.
 :::

@@ -1370,8 +1370,8 @@ $$\mathbf x_{t+1}=\mathbf x_t-\eta\,\frac{\hat{\mathbf m}_t}{\sqrt{\hat{\mathbf 
 ::: {.slide title="Zero Initialization Leaves v at the Fraction 1 − β₂ᵗ of Its Scale"}
 ::: {.cols .vc}
 ::: {.col .narrow}
-Unroll and assume $\mathbb E[\mathbf g_\tau^2]=\overline{\mathbf g^2}$:
-$$\mathbb E[\mathbf v_t]=(1-\beta_2^t)\,\overline{\mathbf g^2}$$
+Unroll and assume $\mathbb{E}[\mathbf g_\tau^2]=\overline{\mathbf g^2}$:
+$$\mathbb{E}[\mathbf v_t]=(1-\beta_2^t)\,\overline{\mathbf g^2}$$
 
 - $1\%$ at $t=10$, $63\%$ at $t=1000$
 - uncorrected update off by $3.16\times$ at $t=1$, $6.6\times$ at $t=12$
@@ -1531,8 +1531,8 @@ coincidence of this $\lambda$. (2) Gradient descent and heavy ball.
 ::: {.slide title="Kronecker Factors Replace a 10¹⁴-Entry Inverse by Two 4096² Inverses"}
 Layer $\mathbf y=\mathbf W\mathbf a$, gradient $\boldsymbol\delta\mathbf a^\top$;
 curvature $\approx\mathbf S_{\rm in}\otimes\mathbf S_{\rm out}$,
-$\mathbf S_{\rm in}=\mathbb E[\mathbf a\mathbf a^\top]$,
-$\mathbf S_{\rm out}=\mathbb E[\boldsymbol\delta\boldsymbol\delta^\top]$:
+$\mathbf S_{\rm in}=\mathbb{E}[\mathbf a\mathbf a^\top]$,
+$\mathbf S_{\rm out}=\mathbb{E}[\boldsymbol\delta\boldsymbol\delta^\top]$:
 
 $$(\mathbf S_{\rm in}\otimes\mathbf S_{\rm out})^{-1}\mathrm{vec}\,\mathbf V
 =\mathrm{vec}(\mathbf S_{\rm out}^{-1}\mathbf V\,\mathbf S_{\rm in}^{-1})$$

@@ -127,18 +127,18 @@ down is a sum of $h$ terms, one per unit of the layer above, and each term is
 the product of a weight, a slope $\phi'(z)$, and an entry of the gradient
 above. If the weights are independent with mean zero and variance $\tau^2$,
 the cross terms of the square of this sum vanish, so the sum has $h$ times
-the mean square of one term, and one term has $\tau^2 E\bigl[\phi'(z)^2\bigr]$
+the mean square of one term, and one term has $\tau^2 \mathbb{E}\bigl[\phi'(z)^2\bigr]$
 times the mean square of the gradient above (:numref:`subsec_xavier`
 derives this). Per layer, the mean square of the gradient is therefore
 multiplied by about
 
-$$h\, \tau^2\, E\bigl[\phi'(z)^2\bigr].$$
+$$h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr].$$
 :eqlabel:`eq_grad-factor`
 
 Two things set the factor: the scale of the weights, through $h\tau^2$, and
-the slope of the activation function, through $E[\phi'(z)^2]$. When the
+the slope of the activation function, through $\mathbb{E}[\phi'(z)^2]$. When the
 pre-activations are symmetric about zero, the ReLU has slope 1 for half of
-them and 0 for the other half, so $E[\phi'(z)^2] = 1/2$. For a ReLU layer of
+them and 0 for the other half, so $\mathbb{E}[\phi'(z)^2] = 1/2$. For a ReLU layer of
 width $h = 256$ with the weights of :numref:`sec_mlp-implementation`,
 $\tau = 0.01$, the factor is $256 \times 10^{-4} / 2 = 0.0128$; with
 $\tau = 1$ it is $128$.
@@ -275,7 +275,7 @@ then leaves the first layers almost where they started. Small weights cause
 this, and so do activation functions with small slopes. The derivative of
 the sigmoid, $\sigma'(z) = \sigma(z)\bigl(1 - \sigma(z)\bigr)$, never
 exceeds $1/4$, its value at $z = 0$,
-so $E[\sigma'(z)^2] \le 1/16$ and each sigmoid layer with $h\tau^2 = 1$
+so $\mathbb{E}[\sigma'(z)^2] \le 1/16$ and each sigmoid layer with $h\tau^2 = 1$
 divides the mean square of the gradient by at least 16. Larger weights do
 not simply compensate, because they push more pre-activations into the tails
 of the sigmoid, where its slope is close to zero. Vanishing gradients made
@@ -346,20 +346,20 @@ The weights $w_{ij}$ are drawn independently from the same distribution,
 with mean zero and variance $\tau^2$; the distribution need not be Gaussian.
 The inputs $x_i$ have mean zero and variance $\gamma^2$, and they are
 independent of the weights and of each other. Then $o_j$ has mean
-$E[o_j] = \sum_i E[x_i]\,E[w_{ij}] = 0$ and variance
+$\mathbb{E}[o_j] = \sum_i \mathbb{E}[x_i]\,\mathbb{E}[w_{ij}] = 0$ and variance
 
 $$
 \begin{aligned}
-\textrm{Var}[o_j] = E[o_j^2]
-&= \sum_{i=1}^{n_\textrm{in}} \sum_{i'=1}^{n_\textrm{in}} E[x_i x_{i'} w_{ij} w_{i'j}] \\
-&= \sum_{i=1}^{n_\textrm{in}} E[x_i^2]\, E[w_{ij}^2]
+\textrm{Var}[o_j] = \mathbb{E}[o_j^2]
+&= \sum_{i=1}^{n_\textrm{in}} \sum_{i'=1}^{n_\textrm{in}} \mathbb{E}[x_i x_{i'} w_{ij} w_{i'j}] \\
+&= \sum_{i=1}^{n_\textrm{in}} \mathbb{E}[x_i^2]\, \mathbb{E}[w_{ij}^2]
 = n_\textrm{in}\, \tau^2 \gamma^2.
 \end{aligned}
 $$
 
 In the second line, the cross terms with $i \neq i'$ vanish because the
 weights $w_{ij}$ and $w_{i'j}$ are independent with mean zero, and the
-remaining terms use $E[w_{ij}^2] = \tau^2$ and $E[x_i^2] = \gamma^2$, which
+remaining terms use $\mathbb{E}[w_{ij}^2] = \tau^2$ and $\mathbb{E}[x_i^2] = \gamma^2$, which
 hold because both have mean zero. A sum of $n_\textrm{in}$ independent
 terms has $n_\textrm{in}$ times their variance, so the layer multiplies the
 variance of the signal by $n_\textrm{in}\tau^2$. To keep it unchanged, we
@@ -397,14 +397,14 @@ derived it for tanh networks.
 
 A ReLU is far from linear: it sets about half of its inputs to zero. To
 extend the argument, we note what it used. With independent weights of mean
-zero, the output $o_j$ has mean zero and $E[o_j^2] = n_\textrm{in}\tau^2
-E[x_i^2]$ for *any* inputs, whatever their mean: the inputs enter only
-through their mean square $E[x_i^2]$. So we track the mean square of the
+zero, the output $o_j$ has mean zero and $\mathbb{E}[o_j^2] = n_\textrm{in}\tau^2
+\mathbb{E}[x_i^2]$ for *any* inputs, whatever their mean: the inputs enter only
+through their mean square $\mathbb{E}[x_i^2]$. So we track the mean square of the
 activations through the ReLU. If the pre-activations $z$ are symmetric about
 zero, as they are when the weights are drawn from a symmetric distribution
 independently of the inputs, then $\textrm{ReLU}(z)^2$ equals $z^2$ for the
 positive half of them and $0$ for the negative half, so the ReLU halves the
-mean square: $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$.
+mean square: $\mathbb{E}[\textrm{ReLU}(z)^2] = \tfrac{1}{2}\mathbb{E}[z^2]$.
 
 Let $m^{(k)}$ be the mean square of the entries of $\mathbf{H}^{(k)}$, the activations of
 layer $k$. Its pre-activations have mean square
@@ -420,7 +420,7 @@ $$\tau^2 = \frac{2}{n_\textrm{in}}.$$
 This is *He initialization* :cite:`He.Zhang.Ren.ea.2015`, also called
 Kaiming initialization, the standard choice for networks with ReLU
 activations. For the backward pass, :eqref:`eq_grad-factor` with
-$E[\phi'(z)^2] = 1/2$ gives the same condition with $n_\textrm{out}$ in
+$\mathbb{E}[\phi'(z)^2] = 1/2$ gives the same condition with $n_\textrm{out}$ in
 place of $n_\textrm{in}$, and for layers of equal width the two coincide.
 The factor 2 compensates for the ReLU between two layers. A network has one
 weight layer more than it has ReLU layers, so one layer receives the factor
@@ -704,16 +704,16 @@ identical gradients and stay identical.
        repeat the ten steps. Does the loss decrease? Relate the outcome to
        the scale of the network's outputs at this initialization.
 1. **Variance under ReLU.** ● The derivation in :numref:`subsec_he_init`
-   tracks the mean square $E[\textrm{ReLU}(z)^2]$ rather than the variance,
+   tracks the mean square $\mathbb{E}[\textrm{ReLU}(z)^2]$ rather than the variance,
    because the next layer's pre-activation $o = \sum_i x_i w_i$, with inputs $x_i = \textrm{ReLU}(z_i)$ and
    independent zero-mean weights has
-   $\textrm{Var}[o] = n_\textrm{in}\tau^2 E[x_i^2]$ whatever the mean of
+   $\textrm{Var}[o] = n_\textrm{in}\tau^2 \mathbb{E}[x_i^2]$ whatever the mean of
    $x_i$.
-    1. For $z \sim \mathcal{N}(0, \nu^2)$, compute $E[\textrm{ReLU}(z)]$ and
+    1. For $z \sim \mathcal{N}(0, \nu^2)$, compute $\mathbb{E}[\textrm{ReLU}(z)]$ and
        $\textrm{Var}[\textrm{ReLU}(z)]$, and show that the variance equals
        $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\nu^2$ rather than
        $\tfrac{1}{2}\nu^2$.
-    1. A tempting shortcut substitutes $\textrm{Var}[x_i]$ for $E[x_i^2]$ in
+    1. A tempting shortcut substitutes $\textrm{Var}[x_i]$ for $\mathbb{E}[x_i^2]$ in
        the Xavier computation. Show that this shortcut prescribes
        $\tau^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
        $2/n_\textrm{in}$. Compute the factor by which each ReLU layer
@@ -722,7 +722,7 @@ identical gradients and stay identical.
 1. [code] **Tanh networks.** ● Repeat the measurement of
    :numref:`subsec_variance_propagation` with $\tanh$ in place of ReLU, with
    Xavier initialization and fifty layers. A layer then maps the mean square
-   $m$ of its input to $m' = E[\tanh(z)^2]$, where $z$ is approximately
+   $m$ of its input to $m' = \mathbb{E}[\tanh(z)^2]$, where $z$ is approximately
    $\mathcal{N}(0, m)$.
     1. Use $\tanh(z)^2 \approx z^2 - \tfrac{2}{3}z^4$ for small $z$ to show
        that $m' \approx m - 2m^2$. Over many layers, does the mean square
@@ -780,7 +780,7 @@ whether a deep network trains at all.
 [Goals]{.kicker}
 
 - write the gradient at layer $k$ as a product of one factor per layer;
-- compute the factor $h\tau^2 E[\phi'(z)^2]$ by which one layer scales the
+- compute the factor $h\tau^2 \mathbb{E}[\phi'(z)^2]$ by which one layer scales the
   gradient, and predict the gradient after ten layers;
 - derive Xavier and He initialization from a variance count;
 - check the predictions by measurement;
@@ -843,21 +843,21 @@ $0.9^{50} \approx 1/200$, $\;1.1^{50} \approx 117$.
 :::
 :::
 
-::: {.slide title="Each Layer Multiplies the Gradient's Mean Square by hτ²E[φ′(z)²]"}
+::: {.slide title="Each Layer Multiplies the Gradient's Mean Square by hτ²𝔼[φ′(z)²]"}
 [Products of Jacobians]{.kicker}
 
 Each entry one layer down sums $h$ terms (weight × slope × gradient). With
 independent weights of mean 0 and variance $\tau^2$, the sum has $h$ times
-the mean square of a term, and a term has $\tau^2 E[\phi'(z)^2]$ times that
+the mean square of a term, and a term has $\tau^2 \mathbb{E}[\phi'(z)^2]$ times that
 of the gradient above.
 
 | network ($h = 256$) | factor per layer | after 9 layers |
 |---|---|---|
 | ReLU, $\tau = 0.01$ | $256 \cdot 10^{-4} \cdot \tfrac12 = 0.0128$ | $\approx 10^{-17}$ |
 | ReLU, $\tau = 1$ | $256 \cdot \tfrac12 = 128$ | $\approx 10^{19}$ |
-| sigmoid, $h\tau^2 = 1$ | $E[\sigma'(z)^2] \le 1/16$ | $< 10^{-10}$ |
+| sigmoid, $h\tau^2 = 1$ | $\mathbb{E}[\sigma'(z)^2] \le 1/16$ | $< 10^{-10}$ |
 
-ReLU: slope 1 on half of the units, so $E[\phi'^2] = 1/2$.
+ReLU: slope 1 on half of the units, so $\mathbb{E}[\phi'^2] = 1/2$.
 :::
 
 ::: {.slide title="Measured: Straight Lines with the Predicted Slopes"}
@@ -872,7 +872,7 @@ gradient of mean square 1 at layer 10.
 ::: {.slide title="Sigmoid Gradients Vanish Even with Correctly Scaled Weights"}
 [Vanishing gradients]{.kicker}
 
-- $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 1/4$, so $E[\sigma'(z)^2] \le 1/16$.
+- $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 1/4$, so $\mathbb{E}[\sigma'(z)^2] \le 1/16$.
 - With $h\tau^2 = 1$, each sigmoid layer divides the mean square by at
   least 16; measured: about $5 \times 10^{-12}$ after nine layers.
 - Larger weights push pre-activations into the tails, where
@@ -930,10 +930,10 @@ $\tau \approx 0.088$, nearly nine times the 0.01 of the one-layer MLP.
 Output $o_j = \sum_{i=1}^{n_\textrm{in}} x_i w_{ij}$; weights independent,
 mean 0, variance $\tau^2$; inputs mean 0, variance $\gamma^2$.
 
-$$E[o_j] = 0, \qquad
-\textrm{Var}[o_j] = \sum_{i} E[x_i^2]\,E[w_{ij}^2] = n_\textrm{in}\,\tau^2\gamma^2.$$
+$$\mathbb{E}[o_j] = 0, \qquad
+\textrm{Var}[o_j] = \sum_{i} \mathbb{E}[x_i^2]\,\mathbb{E}[w_{ij}^2] = n_\textrm{in}\,\tau^2\gamma^2.$$
 
-Cross terms $E[x_i x_{i'} w_{ij} w_{i'j}]$, $i \neq i'$, vanish: independent
+Cross terms $\mathbb{E}[x_i x_{i'} w_{ij} w_{i'j}]$, $i \neq i'$, vanish: independent
 weights with mean 0.
 
 ::: {.d2l-note .rule}
@@ -959,7 +959,7 @@ four times the 0.01 it used. Derived for tanh, slope 1 near zero.
 [He initialization]{.kicker}
 
 Symmetric pre-activations: $\textrm{ReLU}(z)^2$ is $z^2$ for half of them,
-0 for the rest, so $E[\textrm{ReLU}(z)^2] = \tfrac12 E[z^2]$.
+0 for the rest, so $\mathbb{E}[\textrm{ReLU}(z)^2] = \tfrac12 \mathbb{E}[z^2]$.
 
 $$m^{(k)} = \tfrac12\, n_\textrm{in}\, \tau^2\, m^{(k-1)}
 \quad\Longrightarrow\quad
@@ -1108,10 +1108,10 @@ random weights and zero biases.
 - **Product:** the gradient at layer $k$ is the top gradient times one
   factor $\mathbf{W}\operatorname{diag}(\phi'(\mathbf{z}))$ per layer
   above it.
-- **Factor:** $h\tau^2 E[\phi'(z)^2]$ per layer on the mean square; ten
+- **Factor:** $h\tau^2 \mathbb{E}[\phi'(z)^2]$ per layer on the mean square; ten
   ReLU layers of width 256 multiply it by $10^{-17}$ with $\tau = 0.01$ and
   by $10^{19}$ with $\tau = 1$.
-- **Sigmoid:** $E[\sigma'^2] \le 1/16$ shrinks the gradient even when
+- **Sigmoid:** $\mathbb{E}[\sigma'^2] \le 1/16$ shrinks the gradient even when
   $h\tau^2 = 1$.
 - **Xavier:** $\tau^2 = 2/(n_\textrm{in} + n_\textrm{out})$; **He:**
   $\tau^2 = 2/n_\textrm{in}$, flat through ten ReLU layers.

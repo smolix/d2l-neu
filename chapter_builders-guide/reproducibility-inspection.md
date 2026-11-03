@@ -1107,7 +1107,7 @@ one forward pass.
    :numref:`subsec_activation_stats` grow because each block adds its
    body's output to the stream. Measure how closely
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+   $$\textrm{Var}[\mathbf{h}_k] = \textrm{Var}[\mathbf{x}_k] + \textrm{Var}[\mathbf{b}_k]$$
 
    holds for every block, and name the term this equation omits.
 3. [code] **Seeds and data loading.** ● Extend `train_once` to load its
@@ -1169,7 +1169,7 @@ one forward pass.
    grow because each block adds its body's output to the stream. Measure
    how closely
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+   $$\textrm{Var}[\mathbf{h}_k] = \textrm{Var}[\mathbf{x}_k] + \textrm{Var}[\mathbf{b}_k]$$
 
    holds for every block, and name the term this equation omits.
 3. [code] **Seeds and data loading.** ● Extend `train_once` to load its
@@ -1236,7 +1236,7 @@ one forward pass.
    in the table of :numref:`subsec_activation_stats` grow because each
    block adds its body's output to the stream. Measure how closely
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+   $$\textrm{Var}[\mathbf{h}_k] = \textrm{Var}[\mathbf{x}_k] + \textrm{Var}[\mathbf{b}_k]$$
 
    holds for every block, and name the term this equation omits.
 3. [code] **Seeds and data loading.** ● Work in a fresh process, since the
@@ -1296,7 +1296,7 @@ one forward pass.
    in the table of :numref:`subsec_activation_stats` grow because each
    block adds its body's output to the stream. Measure how closely
 
-   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+   $$\textrm{Var}[\mathbf{h}_k] = \textrm{Var}[\mathbf{x}_k] + \textrm{Var}[\mathbf{b}_k]$$
 
    holds for every block, and name the term this equation omits.
 3. [code] **Seeds and data loading.** ● Simulate a four-worker input

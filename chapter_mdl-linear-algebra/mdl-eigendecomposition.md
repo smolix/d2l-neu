@@ -1589,7 +1589,7 @@ For large $n$ the spectral radius is within a few percent of $\sqrt n$ and
 the largest stretch close to $2\sqrt n$: a random matrix stretches some
 vectors twice as much as its eigenvalues suggest. Initialization schemes divide
 random weights by $\sqrt{\textrm{fan-in}}$ for a different reason: with
-entries of variance $1/n$, $\mathbb E\|\mathbf A\mathbf x\|^2=\|\mathbf x\|^2$
+entries of variance $1/n$, $\mathbb{E}\|\mathbf A\mathbf x\|^2=\|\mathbf x\|^2$
 for every fixed $\mathbf x$, so squared lengths are preserved on average.
 A spectral radius near 1 is a side effect, and by
 :numref:`subsec_mdl-jacobian-products` it does not control a product of such

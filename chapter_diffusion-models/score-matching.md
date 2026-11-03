@@ -651,7 +651,7 @@ three or more orders of magnitude below its peak.
    symmetric part of $\nabla_{\mathbf{x}} \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x})$,
    so that the first term equals $\mathbf{v}^\top A \mathbf{v}$.
     1. For a standard Gaussian $\mathbf{v}$ and symmetric matrices $A$ and
-       $B$, $\operatorname{Cov}(\mathbf{v}^\top A \mathbf{v}, \mathbf{v}^\top B \mathbf{v}) = 2 \operatorname{tr}(AB)$.
+       $B$, $\textrm{Cov}(\mathbf{v}^\top A \mathbf{v}, \mathbf{v}^\top B \mathbf{v}) = 2 \operatorname{tr}(AB)$.
        Use this to show that the variance over $\mathbf{v}$ of the sliced
        integrand minus that of the SSM-VR integrand is
        $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^4 + 2\, \mathbf{s}_{\boldsymbol{\theta}}^\top A\, \mathbf{s}_{\boldsymbol{\theta}}$.
@@ -687,7 +687,7 @@ three or more orders of magnitude below its peak.
     1. Using the standard argument for estimators that minimize an average,
        show that $\sqrt{n}\, (\hat{\pi} - \pi)$ is asymptotically normal with
        variance
-       $$\Gamma_{\textrm{SM}} = \frac{\operatorname{Var}[\partial_\pi h_\pi(x)]}{\big(\mathbb{E}[(\partial_\pi s_\pi(x))^2]\big)^2}.$$
+       $$\Gamma_{\textrm{SM}} = \frac{\textrm{Var}[\partial_\pi h_\pi(x)]}{\big(\mathbb{E}[(\partial_\pi s_\pi(x))^2]\big)^2}.$$
        Why does the curvature of the population objective at the true $\pi$
        equal $\mathbb{E}[(\partial_\pi s_\pi)^2]$?
     1. Evaluate $\Gamma_{\textrm{SM}}$ and the maximum-likelihood variance

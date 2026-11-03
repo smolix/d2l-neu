@@ -51,7 +51,7 @@ In words: at any state, the score of the sampled action has zero mean. For our s
 
 The useful consequence is slightly stronger. Suppose $c$ is any quantity that is already determined by the time the agent stands at state $s_t$: a reward collected earlier in the trajectory, a constant, or a function of $s_t$ itself. Conditioned on the trajectory prefix $(s_0, a_0, r_0, \ldots, s_t)$, the value $c$ is fixed while the action $a_t$ is still random, and since the policy consults only $s_t$, the inner expectation is the one the lemma covers:
 
-$$E\big[ c\ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \big] = E\Big[ c\ \underbrace{E\big[ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \mid s_0, a_0, \ldots, s_t \big]}_{=\,0 \textrm{ by the lemma}} \Big] = 0.$$
+$$\mathbb{E}\big[ c\ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \big] = \mathbb{E}\Big[ c\ \underbrace{\mathbb{E}\big[ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \mid s_0, a_0, \ldots, s_t \big]}_{=\,0 \textrm{ by the lemma}} \Big] = 0.$$
 
 We can therefore multiply any score in the REINFORCE estimator by such a quantity, or subtract such a quantity from its weight, without moving the average. Every tool in this section is an instance of this observation.
 
@@ -68,7 +68,7 @@ Their product with the time-$t$ score therefore has zero expectation but
 can have nonzero variance. Removing these zero-mean terms from
 $\nabla_\theta J(\theta)$ leaves
 
-$$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ \sum_{t'=t}^{T-1} \gamma^{t'} r_{t'} \Big].$$
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ \sum_{t'=t}^{T-1} \gamma^{t'} r_{t'} \Big].$$
 
 The inner sum equals $\gamma^t \hat{G}_t$ where
 
@@ -119,20 +119,20 @@ On FrozenLake, every reward-to-go is nonnegative. Without a baseline, sampled ac
 
 Baseline subtraction is an instance of the control-variate method for Monte Carlo estimation.
 
-Suppose the objective is to estimate $E[X]$, and each sample also contains a correlated quantity $Y$ whose expectation is known. For any scalar $c$, define
+Suppose the objective is to estimate $\mathbb{E}[X]$, and each sample also contains a correlated quantity $Y$ whose expectation is known. For any scalar $c$, define
 
-$$X_c = X - c\, \big( Y - E[Y] \big).$$
+$$X_c = X - c\, \big( Y - \mathbb{E}[Y] \big).$$
 :eqlabel:`eq_control_variate`
 
-Since $E[Y-E[Y]]=0$, the estimator $X_c$ has the same expectation as $X$ for every $c$. Its variance is
+Since $\mathbb{E}[Y-\mathbb{E}[Y]]=0$, the estimator $X_c$ has the same expectation as $X$ for every $c$. Its variance is
 
-$$\mathrm{Var}(X_c) = \mathrm{Var}(X) - 2c\, \mathrm{Cov}(X, Y) + c^2\, \mathrm{Var}(Y),$$
+$$\textrm{Var}(X_c) = \textrm{Var}(X) - 2c\, \textrm{Cov}(X, Y) + c^2\, \textrm{Var}(Y),$$
 
 Minimizing this quadratic gives
 
-$$c^* = \frac{\mathrm{Cov}(X, Y)}{\mathrm{Var}(Y)},$$
+$$c^* = \frac{\textrm{Cov}(X, Y)}{\textrm{Var}(Y)},$$
 
-and substituting $c^*$ back in leaves the variance at $(1 - \mathrm{corr}^2)\, \mathrm{Var}(X)$, where $\mathrm{corr}$ is the correlation between $X$ and $Y$. Strong correlation therefore permits substantial variance reduction: at $\mathrm{corr}=0.9$, the variance falls by a factor of about five, whereas at $\mathrm{corr}=0$ it is unchanged. The quantity $Y$ is called a control variate for $X$.
+and substituting $c^*$ back in leaves the variance at $(1 - \mathrm{corr}^2)\, \textrm{Var}(X)$, where $\mathrm{corr}$ is the correlation between $X$ and $Y$. Strong correlation therefore permits substantial variance reduction: at $\mathrm{corr}=0.9$, the variance falls by a factor of about five, whereas at $\mathrm{corr}=0$ it is unchanged. The quantity $Y$ is called a control variate for $X$.
 
 For a policy gradient, take
 
@@ -142,11 +142,11 @@ and
 
 $$Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
 
-Here $E[Y\mid s_t]=0$ by the zero-mean lemma, and $X$ is a scalar multiple of $Y$. Setting $c=b(s_t)$ recovers :eqref:`eq_pg_baseline`. Thus a baseline is a control variate constructed from the policy score.
+Here $\mathbb{E}[Y\mid s_t]=0$ by the zero-mean lemma, and $X$ is a scalar multiple of $Y$. Setting $c=b(s_t)$ recovers :eqref:`eq_pg_baseline`. Thus a baseline is a control variate constructed from the policy score.
 
 This interpretation explains both unbiasedness and the choice of baseline. Any coefficient preserves the mean of a control-variate estimator, while the variance-minimizing coefficient is the covariance-to-variance ratio $c^*$, computed separately for each state. For a vector-valued score, scalar products replace ordinary products and give the score-weighted optimal baseline derived in exercise :exref:`ex_baselines-optimal-constant-baseline`. The average return is often effective, but it is not generally optimal. :citet:`Greensmith.Bartlett.Baxter.2004` develop this analysis for policy gradients and interpret a value-function critic as a control variate.
 
-![Variance reduction for the one-step problem of :numref:`fig_rl_score_ascent`. The reward is $R(a)=0.4+2e^{-(a-2)^2/2}$ under $\mathcal{N}(0,1)$, with $E[R]=0.92$ and $\nabla_\mu J=0.52$. (a) Rewards preceding an action have zero expected product with its score, leaving only reward-to-go. (b) The standard deviation of a single-sample gradient estimate decreases from $1.34$ without a baseline to $0.69$ after subtracting the mean reward. The distributions are clipped at the 1st and 95th percentiles. (c) Estimator variance as a function of a constant baseline $b$. The optimum $b^\star=c^*=1.18$ leaves $1-\mathrm{corr}^2=0.23$ of the original variance.](../img/mdl-rl-variance-reduction.svg)
+![Variance reduction for the one-step problem of :numref:`fig_rl_score_ascent`. The reward is $R(a)=0.4+2e^{-(a-2)^2/2}$ under $\mathcal{N}(0,1)$, with $\mathbb{E}[R]=0.92$ and $\nabla_\mu J=0.52$. (a) Rewards preceding an action have zero expected product with its score, leaving only reward-to-go. (b) The standard deviation of a single-sample gradient estimate decreases from $1.34$ without a baseline to $0.69$ after subtracting the mean reward. The distributions are clipped at the 1st and 95th percentiles. (c) Estimator variance as a function of a constant baseline $b$. The optimum $b^\star=c^*=1.18$ leaves $1-\mathrm{corr}^2=0.23$ of the original variance.](../img/mdl-rl-variance-reduction.svg)
 :label:`fig_rl_variance_reduction`
 
 ### The Advantage and the Learned Baseline
@@ -516,7 +516,7 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
    $\nabla_\theta \log \pi_\theta(a \mid s)$.
     1. Use :eqref:`eq_softmax_score` to compute, for a constant $b$,
 
-       $$E_{a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)}\big[b\, \nabla_\theta \log \pi_\theta(a \mid s)\big].$$
+       $$\mathbb{E}_{a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)}\big[b\, \nabla_\theta \log \pi_\theta(a \mid s)\big].$$
 
        Which values of $b$ introduce no bias, and how does the bias depend
        on the difference between the two policies?
@@ -530,14 +530,14 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
    $(\hat{G} - b)\, \boldsymbol{\psi}$ with a constant $b$. Its mean does not
    depend on $b$, so we measure its noise by the trace of its covariance,
 
-   $$E\big[\|(\hat{G} - b)\, \boldsymbol{\psi}\|^2\big] - \big\|E[\hat{G}\, \boldsymbol{\psi}]\big\|^2.$$
+   $$\mathbb{E}\big[\|(\hat{G} - b)\, \boldsymbol{\psi}\|^2\big] - \big\|\mathbb{E}[\hat{G}\, \boldsymbol{\psi}]\big\|^2.$$
 
     1. Minimize the trace over $b$ and show that the minimizer is
 
-       $$b^* = \frac{E\big[\|\boldsymbol{\psi}\|^2\, \hat{G}\big]}{E\big[\|\boldsymbol{\psi}\|^2\big]}.$$
+       $$b^* = \frac{\mathbb{E}\big[\|\boldsymbol{\psi}\|^2\, \hat{G}\big]}{\mathbb{E}\big[\|\boldsymbol{\psi}\|^2\big]}.$$
 
        Show that any other $b$ adds exactly
-       $E\big[\|\boldsymbol{\psi}\|^2\big]\, (b - b^*)^2$ to the trace, and
+       $\mathbb{E}\big[\|\boldsymbol{\psi}\|^2\big]\, (b - b^*)^2$ to the trace, and
        that $b^*$ is the coefficient $c^*$ of :eqref:`eq_control_variate`
        for $X = \hat{G}\, \boldsymbol{\psi}$ and $Y = \boldsymbol{\psi}$,
        with inner products in place of products.
@@ -547,7 +547,7 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        $R(a) = 0.4 + 2e^{-(a-2)^2/2}$ and confirm the caption's value
        $b^\star = 1.18$. The product of the standard normal density with
        $e^{-(a-2)^2/2}$ is proportional to another normal density. Why does
-       $b^*$ exceed $E[R] = 0.92$?
+       $b^*$ exceed $\mathbb{E}[R] = 0.92$?
    :exlabel:`ex_baselines-optimal-constant-baseline`
 1. [code] **Baseline step size and timing.** ● The learned-baseline arm of
    `train` updates its table $\hat{V}$ by :eqref:`eq_value_baseline` after
@@ -573,7 +573,7 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        the centered estimate as
        $\frac{1}{n}\sum_{i=1}^n \big(R(\tau_i) - \mu\big)\, \mathbf{S}_i$,
        where $\mathbf{S}_i$ is the summed score of trajectory $i$ and $\mu$
-       the mean return of the batch, expand $E[\mu\, \mathbf{S}_i]$ into its
+       the mean return of the batch, expand $\mathbb{E}[\mu\, \mathbf{S}_i]$ into its
        $n$ terms, and use the independence of the trajectories. Which of the
        terms have a nonzero expectation?
     1. The centered arm of `train` instead subtracts the mean of all
@@ -599,7 +599,7 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        the first?
     1. Let $y$ denote the sampled response. Show that
 
-       $$E\big[(r - p_x)\, \nabla_\theta \log \pi_\theta(y \mid x)\big] = \nabla_\theta\, p_x.$$
+       $$\mathbb{E}\big[(r - p_x)\, \nabla_\theta \log \pi_\theta(y \mid x)\big] = \nabla_\theta\, p_x.$$
 
        Conclude that the $\sigma$-normalized update ascends
        $\sum_x h(p_x)$ for a function $h$ with $h'(p) = 1/\sqrt{p(1-p)}$,
@@ -653,7 +653,7 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
 
        $$\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2 = 1 - 2\pi_\theta(a \mid s) + \sum_{a'} \pi_\theta(a' \mid s)^2.$$
 
-       Use $E[\hat{G}_t \mid s_t = s, a_t = a] = Q^{\pi_\theta}(s, a)$ to
+       Use $\mathbb{E}[\hat{G}_t \mid s_t = s, a_t = a] = Q^{\pi_\theta}(s, a)$ to
        write the optimal baseline $b^*(s)$ in terms of
        $\pi_\theta(\cdot \mid s)$ and $Q^{\pi_\theta}(s, \cdot)$.
     1. The estimate of one episode sums the weighted scores of all its
@@ -733,7 +733,7 @@ $$\sum_a \pi_\theta(a \mid s)\, \nabla_\theta \log \pi_\theta(a \mid s)
 Condition on the prefix: anything already determined at $s_t$
 has a mean-zero product with the score,
 
-$$E\big[ c\ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \big] = 0.$$
+$$\mathbb{E}\big[ c\ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \big] = 0.$$
 
 Multiply a score by such a $c$, or subtract it from the weight,
 and the expectation is unchanged. Reward-to-go, state baselines, and
@@ -757,18 +757,18 @@ $\gamma\lambda$.
 :::
 
 ::: {.slide title="A Baseline Is a Control Variate"}
-To estimate $E[X]$: subtract anything whose mean you know,
+To estimate $\mathbb{E}[X]$: subtract anything whose mean you know,
 
-$$X_c = X - c\,(Y - E[Y]), \qquad
-c^* = \frac{\mathrm{Cov}(X,Y)}{\mathrm{Var}(Y)}
-\ \Rightarrow\ \mathrm{Var} = (1-\mathrm{corr}^2)\,\mathrm{Var}(X).$$
+$$X_c = X - c\,(Y - \mathbb{E}[Y]), \qquad
+c^* = \frac{\textrm{Cov}(X,Y)}{\textrm{Var}(Y)}
+\ \Rightarrow\ \textrm{Var} = (1-\mathrm{corr}^2)\,\textrm{Var}(X).$$
 
 At $\mathrm{corr} = 0.9$ the variance falls by a factor of about five.
 
 . . .
 
 Here: $X = \hat G_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$,
-$\ Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$, $\ E[Y] = 0$
+$\ Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$, $\ \mathbb{E}[Y] = 0$
 by the lemma. Choosing $b(s_t)$ **is** choosing $c$; the optimum
 is $c^*$, state by state.
 :::
@@ -778,7 +778,7 @@ is $c^*$, state by state.
 
 . . .
 
-Drop the past; subtract $b = E[R]$ and the std halves
+Drop the past; subtract $b = \mathbb{E}[R]$ and the std halves
 ($1.34 \to 0.69$); the parabola's optimum $b^\star$ leaves
 $1 - \mathrm{corr}^2 = 0.23$ of the variance.
 :::

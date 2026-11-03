@@ -109,7 +109,7 @@ $$P(\tau; \theta) = \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\ P(s_{t+1} \mid s
 
 If $s_0$ were sampled from the distribution $\mu_0$ of :numref:`sec_mdp`, the product would include a factor $\mu_0(s_0)$. This factor is independent of $\theta$, so it does not alter the following derivative. FrozenLake has a fixed start state; in text generation, $\mu_0$ corresponds to a distribution over prompts (:numref:`sec_rl_sequences`). The objective is the expected trajectory return,
 
-$$J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau) \Big] = \sum_{\tau} R(\tau)\ P(\tau; \theta),$$
+$$J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau) \Big] = \sum_{\tau} R(\tau)\ P(\tau; \theta),$$
 :eqlabel:`eq_pg_objective`
 
 where the sum ranges over trajectories of length $T$. Episodes that terminate early may be padded with an absorbing state and zero rewards, without changing the objective. The implementation stores only the observed portion of each episode. In the notation of :numref:`sec_valueiter`, $J(\theta)=V^{\pi_\theta}(s_0)$. We optimize this quantity directly:
@@ -185,7 +185,7 @@ $$
 
 where we multiplied and divided by $P(\tau; \theta)$ and used the identity $\nabla \log P = \nabla P / P$. This step, known as the log-derivative trick, is important because it turns the gradient back into an average over trajectories,
 
-$$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nabla_\theta \log P(\tau; \theta) \Big],$$
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nabla_\theta \log P(\tau; \theta) \Big],$$
 :eqlabel:`eq_pg_gradient`
 
 This expectation can be estimated by sampling trajectories from the current policy.
@@ -269,9 +269,9 @@ The arrows show the most probable action in each state, and shading shows its pr
 
 REINFORCE weights a whole trajectory's score by the whole trajectory's return. The same gradient can be expressed by state occupancy rather than complete trajectories. Later sections use this form.
 
-**Proposition (policy gradient theorem).** *For the objective $J(\theta) = E_{s_0 \sim \mu_0} [V^{\pi_\theta}(s_0)]$,*
+**Proposition (policy gradient theorem).** *For the objective $J(\theta) = \mathbb{E}_{s_0 \sim \mu_0} [V^{\pi_\theta}(s_0)]$,*
 
-$$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \gamma^t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big] = \frac{1}{1 - \gamma}\, E_{s \sim d^{\pi_\theta}_\gamma,\ a \sim \pi_\theta(\cdot \mid s)} \Big[ \nabla_\theta \log \pi_\theta(a \mid s)\ Q^{\pi_\theta}(s, a) \Big],$$
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \gamma^t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big] = \frac{1}{1 - \gamma}\, \mathbb{E}_{s \sim d^{\pi_\theta}_\gamma,\ a \sim \pi_\theta(\cdot \mid s)} \Big[ \nabla_\theta \log \pi_\theta(a \mid s)\ Q^{\pi_\theta}(s, a) \Big],$$
 :eqlabel:`eq_pg_theorem`
 
 *where $d^{\pi_\theta}_\gamma(s) = (1 - \gamma) \sum_{t \geq 0} \gamma^t \Pr(s_t = s)$ is the discounted state-occupancy distribution* :cite:`Sutton.McAllester.Singh.ea.2000`.
@@ -538,7 +538,7 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
    factor $\gamma^t$ from the trajectory form of :eqref:`eq_pg_theorem`,
    which gives the update field
 
-   $$F(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big].$$
+   $$F(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big].$$
 
    :citet:`Nota.Thomas.2020` prove that $F$ need not be the gradient of any
    function, and they construct an MDP in which exact updates along $F$
@@ -591,7 +591,7 @@ No model (:numref:`sec_valueiter` had one), no expert
 as a differentiable function of $\theta$ and ascend $J(\theta)$.
 
 $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}},
-\qquad J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big]$$
+\qquad J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big]$$
 
 - one free *preference* $\theta_{s,a}$ per pair: `ActorCritic.tabular`,
   reused from :numref:`sec_imitation`

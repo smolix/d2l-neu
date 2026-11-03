@@ -104,7 +104,7 @@ $$P(x_t \mid x_1, \ldots, x_{t-1}).$$
 
 Even when the full distribution is hard to pin down,
 a useful summary is the conditional expectation
-$E[x_t \mid x_1, \ldots, x_{t-1}]$,
+$\mathbb{E}[x_t \mid x_1, \ldots, x_{t-1}]$,
 which we could try to fit with linear regression
 (:numref:`sec_linear_regression`).
 A model that regresses a signal on its own past
@@ -743,7 +743,7 @@ starts in the next deck.
 
 Predict the next entry from the past:
 $P(x_t \mid x_1, \ldots, x_{t-1})$, or its mean
-$E[x_t \mid x_1, \ldots, x_{t-1}]$ by regression.
+$\mathbb{E}[x_t \mid x_1, \ldots, x_{t-1}]$ by regression.
 
 - Features and label come from the **same series**: an *autoregressive*
   model.

@@ -57,12 +57,12 @@ Every estimator since :numref:`sec_policygradient` has used trajectories sampled
 
 Importance sampling gives the exact answer. For any function $f$ of trajectories,
 
-$$E_{\tau \sim P(\cdot;\, \theta)} \big[ f(\tau) \big] = \sum_\tau P(\tau; \theta)\, f(\tau) = \sum_\tau P(\tau; \theta_{\textrm{old}})\ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) = E_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) \Big],$$
+$$\mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ f(\tau) \big] = \sum_\tau P(\tau; \theta)\, f(\tau) = \sum_\tau P(\tau; \theta_{\textrm{old}})\ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) \Big],$$
 :eqlabel:`eq_change_of_measure`
 
 valid whenever every trajectory the new policy can produce has positive probability under the old one, a condition softmax policies satisfy automatically because they never assign zero probability to any action. Applied with $f = R$, the return, this rewrites the objective of :numref:`sec_policygradient` as an expectation under the *old* policy,
 
-$$J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big] = E_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, R(\tau) \Big],$$
+$$J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big] = \mathbb{E}_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, R(\tau) \Big],$$
 :eqlabel:`eq_offpolicy_objective`
 
 Thus data from the old policy give an unbiased estimate of the new policy's return when weighted by the trajectory likelihood ratio. Expanding $P(\tau;\theta)$ from :eqref:`eq_traj_prob` cancels the transition probabilities between numerator and denominator, just as in :numref:`sec_policygradient`. The remaining weight is a product of policy ratios:
@@ -100,11 +100,11 @@ To relate the surrogate to actual performance, abbreviate the old policy's advan
 **Proposition** (performance difference lemma, :citet:`Kakade.Langford.2002`).
 
 $$
-J(\theta) - J(\theta_{\textrm{old}}) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t=0}^{T-1} \gamma^t\, A^{\textrm{old}}(s_t, a_t) \Big].
+J(\theta) - J(\theta_{\textrm{old}}) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t=0}^{T-1} \gamma^t\, A^{\textrm{old}}(s_t, a_t) \Big].
 $$
 :eqlabel:`eq_perf_diff`
 
-**Proof.** Write $V$ for $V^{\pi_{\theta_{\textrm{old}}}}$. Along any trajectory, the sum $\sum_t \gamma^t \big( r_t + \gamma V(s_{t+1}) - V(s_t) \big)$ telescopes: the interior $V$ terms cancel in pairs, and $V = 0$ at termination, leaving $R(\tau) - V(s_0)$. Now take expectations under $\tau \sim P(\cdot;\, \theta)$. On the left, conditioned on $(s_t, a_t)$, the expectation of $r_t + \gamma V(s_{t+1})$ over the next state is $Q^{\pi_{\theta_{\textrm{old}}}}(s_t, a_t)$, by :eqref:`eq_dynamic_programming_q` written with $V^\pi$, so each term becomes $\gamma^t\, E\big[ A^{\textrm{old}}(s_t, a_t) \big]$. On the right, $E[R(\tau)] = J(\theta)$, and $E[V(s_0)] = J(\theta_{\textrm{old}})$ because both policies draw $s_0$ from the same $\mu_0$. $\blacksquare$
+**Proof.** Write $V$ for $V^{\pi_{\theta_{\textrm{old}}}}$. Along any trajectory, the sum $\sum_t \gamma^t \big( r_t + \gamma V(s_{t+1}) - V(s_t) \big)$ telescopes: the interior $V$ terms cancel in pairs, and $V = 0$ at termination, leaving $R(\tau) - V(s_0)$. Now take expectations under $\tau \sim P(\cdot;\, \theta)$. On the left, conditioned on $(s_t, a_t)$, the expectation of $r_t + \gamma V(s_{t+1})$ over the next state is $Q^{\pi_{\theta_{\textrm{old}}}}(s_t, a_t)$, by :eqref:`eq_dynamic_programming_q` written with $V^\pi$, so each term becomes $\gamma^t\, \mathbb{E}\big[ A^{\textrm{old}}(s_t, a_t) \big]$. On the right, $\mathbb{E}[R(\tau)] = J(\theta)$, and $\mathbb{E}[V(s_0)] = J(\theta_{\textrm{old}})$ because both policies draw $s_0$ from the same $\mu_0$. $\blacksquare$
 
 The lemma says that improvement depends on the old policy's advantages evaluated along trajectories of the new policy. Those trajectories are unavailable until the candidate policy is deployed. Replacing their state distribution by the old policy's state distribution, and reweighting only the sampled actions by $\rho_t$, gives the surrogate in :eqref:`eq_surrogate` after omitting the conventional factor $\gamma^t$. The approximation is exact at $\theta_{\textrm{old}}$ and deteriorates as the two policies induce different state distributions. Its accuracy therefore depends on policy change, not directly on parameter distance.
 
@@ -643,12 +643,12 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
    and the data are used to evaluate $\pi_\theta = (0.6, 0.4)$. Write $W_T$
    for the trajectory ratio :eqref:`eq_traj_ratio` of an episode of $T$
    steps.
-    1. Compute $E[\rho_t]$ and $E[\rho_t^2]$ under the old policy. Use them
-       to find $E[W_T]$ and $\textrm{Var}[W_T]$ here, and evaluate the variance for
+    1. Compute $\mathbb{E}[\rho_t]$ and $\mathbb{E}[\rho_t^2]$ under the old policy. Use them
+       to find $\mathbb{E}[W_T]$ and $\textrm{Var}[W_T]$ here, and evaluate the variance for
        $T \in \{10, 100, 500\}$, where $500$ is CartPole's episode limit.
     1. As the number $n$ of episodes grows, the effective sample size
        :eqref:`eq_mdl-bayes-is-ess` of the weights $W_T$ approaches
-       $n / E[W_T^2]$. For which $n$ does this limit equal one at
+       $n / \mathbb{E}[W_T^2]$. For which $n$ does this limit equal one at
        $T = 200$? Simulate one batch of that many episodes (the number of
        steps with $a = 1$ in an episode is binomial) and compute its
        effective sample size. Why does the batch report a much larger
@@ -704,16 +704,16 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
    $\rho = \pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$.
     1. The approximate KL of `ppo_epochs` averages $k_1 = -\log \rho$ over the
        batch. Show that
-       $E[k_1] = D_{\textrm{KL}}\big(\pi_{\theta_{\textrm{old}}}(\cdot \mid s) \Vert \pi_\theta(\cdot \mid s)\big)$.
+       $\mathbb{E}[k_1] = D_{\textrm{KL}}\big(\pi_{\theta_{\textrm{old}}}(\cdot \mid s) \Vert \pi_\theta(\cdot \mid s)\big)$.
        Then show that $k_3 = (\rho - 1) - \log \rho$ has the same expectation
        and is nonnegative for every sample. Expand both estimators to second
        order in $\rho - 1$. Why does $k_3$ have a much smaller variance than
        $k_1$ when the policy changes little? `cleanrl/ppo.py` logs both.
     1. Problem :exref:`ex_ppo-exploding-product`b uses the limit
-       $n / E[w^2]$ of the effective sample size
+       $n / \mathbb{E}[w^2]$ of the effective sample size
        :eqref:`eq_mdl-bayes-is-ess` of $n$ independent weights $w$ with
-       $E[w] = 1$. Derive this limit with the law of large numbers. Then show
-       that $E[\rho^2] = 1 + \chi^2$, so that the effective sample size of the
+       $\mathbb{E}[w] = 1$. Derive this limit with the law of large numbers. Then show
+       that $\mathbb{E}[\rho^2] = 1 + \chi^2$, so that the effective sample size of the
        weights $\rho$ divided by $n$ approaches $1 / (1 + \chi^2)$, where
 
        $$\chi^2 = \sum_a \frac{\big(\pi_\theta(a \mid s) - \pi_{\theta_{\textrm{old}}}(a \mid s)\big)^2}{\pi_{\theta_{\textrm{old}}}(a \mid s)}.$$
@@ -764,8 +764,8 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
    $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$.
     1. Show that $\log W_T$ has mean $-\kappa T$ and variance $vT$, whereas
        $\log s$ has mean $-\kappa$ and variance $v / T$.
-    1. Show that $E[s] = \big(E[\rho_t^{1/T}]\big)^T \leq 1$ and that
-       $E[s] \to e^{-\kappa}$ as $T \to \infty$. Evaluate $E[s]$ for the two
+    1. Show that $\mathbb{E}[s] = \big(\mathbb{E}[\rho_t^{1/T}]\big)^T \leq 1$ and that
+       $\mathbb{E}[s] \to e^{-\kappa}$ as $T \to \infty$. Evaluate $\mathbb{E}[s]$ for the two
        policies of problem :exref:`ex_ppo-exploding-product` at
        $T \in \{10, 500\}$. Is $s$ an importance weight in the sense of
        :eqref:`eq_change_of_measure`?
@@ -804,22 +804,22 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
    with the total variation distance
    $D_{\textrm{TV}}(p, q) = \frac{1}{2} \sum_a |p(a) - q(a)|$.
     1. Show from :eqref:`eq_perf_diff` that
-       $J(\theta) - J(\theta_{\textrm{old}}) = \sum_t \gamma^t E_{s_t \sim \tilde{\pi}}\big[\bar{A}(s_t)\big]$,
+       $J(\theta) - J(\theta_{\textrm{old}}) = \sum_t \gamma^t \mathbb{E}_{s_t \sim \tilde{\pi}}\big[\bar{A}(s_t)\big]$,
        and that the population surrogate :eqref:`eq_pop_surrogate` is
-       $\bar{L}(\theta) = \sum_t \gamma^t E_{s_t \sim \pi}\big[\bar{A}(s_t)\big]$,
+       $\bar{L}(\theta) = \sum_t \gamma^t \mathbb{E}_{s_t \sim \pi}\big[\bar{A}(s_t)\big]$,
        where $s_t \sim \pi$ denotes the state distribution at time $t$ under
        $\pi$.
     1. Two distributions at total variation distance $\alpha$ can be coupled:
        there is a joint distribution of $(a, \tilde{a})$ with marginals
        $\pi(\cdot \mid s)$ and $\tilde{\pi}(\cdot \mid s)$ under which
        $P(a \neq \tilde{a}) \leq \alpha$ at every state. Use
-       $E_{a \sim \pi}[A(s, a)] = 0$ to show that
+       $\mathbb{E}_{a \sim \pi}[A(s, a)] = 0$ to show that
        $|\bar{A}(s)| \leq 2\alpha A_{\max}$.
     1. Run both policies from the same start state with coupled actions at
        every step, and let $n_t$ count the steps before $t$ at which the two
        actions differ. On the event $n_t = 0$, the two trajectories coincide
        up to time $t$. Show that
-       $\big|E_{s_t \sim \tilde{\pi}}[\bar{A}(s_t)] - E_{s_t \sim \pi}[\bar{A}(s_t)]\big| \leq 4\alpha \big(1 - (1 - \alpha)^t\big) A_{\max}$.
+       $\big|\mathbb{E}_{s_t \sim \tilde{\pi}}[\bar{A}(s_t)] - \mathbb{E}_{s_t \sim \pi}[\bar{A}(s_t)]\big| \leq 4\alpha \big(1 - (1 - \alpha)^t\big) A_{\max}$.
     1. Sum over $t$ to obtain
 
        $$\big|J(\theta) - J(\theta_{\textrm{old}}) - \bar{L}(\theta)\big| \leq \frac{4 \alpha^2 \gamma A_{\max}}{(1-\gamma)^2},$$
@@ -898,7 +898,7 @@ What can a batch from $\pi_{\theta_{\text{old}}}$ say about
 $\pi_\theta$? Change of measure:
 
 $$J(\theta)
-  = E_{\tau \sim \theta_{\text{old}}}\!\Big[
+  = \mathbb{E}_{\tau \sim \theta_{\text{old}}}\!\Big[
     \tfrac{P(\tau;\theta)}{P(\tau;\theta_{\text{old}})}\, R(\tau) \Big],
 \qquad
 \frac{P(\tau;\theta)}{P(\tau;\theta_{\text{old}})}
@@ -928,7 +928,7 @@ where it was built, but inaccurate after large policy changes.
 
 ::: {.slide title="The Performance Difference Lemma"}
 $$J(\theta) - J(\theta_{\text{old}})
-  = E_{\tau \sim P(\cdot;\,\theta)} \Big[ \sum_t \gamma^t\,
+  = \mathbb{E}_{\tau \sim P(\cdot;\,\theta)} \Big[ \sum_t \gamma^t\,
     A^{\text{old}}(s_t, a_t) \Big]$$
 
 The result follows by summing the TD identity along a trajectory and taking

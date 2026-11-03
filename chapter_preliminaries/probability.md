@@ -621,34 +621,34 @@ $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8$. In general, the
 *expectation* or *mean* of a random variable $X$ is the average of its values
 weighted by their probabilities,
 
-$$E[X] = \sum_x x \, P(X = x).$$
+$$\mathbb{E}[X] = \sum_x x \, P(X = x).$$
 
 If we place a weight $P(X = x)$ at each position $x$ on a line, the
 expectation is the point at which the line balances. For a density, the sum
-becomes an integral, $E[X] = \int x \, p(x) \, dx$. The expectation of a
+becomes an integral, $\mathbb{E}[X] = \int x \, p(x) \, dx$. The expectation of a
 function of $X$ is computed in the same way,
-$E[f(X)] = \sum_x f(x) P(X = x)$.
+$\mathbb{E}[f(X)] = \sum_x f(x) P(X = x)$.
 
 For a coin toss, let $X = \mathbf{1}(\textrm{heads})$ be the *indicator* of
 heads: $X = 1$ if the toss comes up heads and $X = 0$ otherwise. Then
-$E[X] = 1 \cdot p + 0 \cdot (1 - p) = p$, so the expectation of an indicator
+$\mathbb{E}[X] = 1 \cdot p + 0 \cdot (1 - p) = p$, so the expectation of an indicator
 is the probability of its event.
 
 Expectations can be conditioned like probabilities. The *conditional
 expectation*, or conditional mean,
-$E[Y \mid X = x] = \sum_y y \, P(Y = y \mid X = x)$ is the average of $Y$
+$\mathbb{E}[Y \mid X = x] = \sum_y y \, P(Y = y \mid X = x)$ is the average of $Y$
 over the outcomes in which $X = x$. In the HIV example the status $H$ is an
-indicator, so $E[H \mid D_1 = 1] = P(H = 1 \mid D_1 = 1) \approx 0.13$.
+indicator, so $\mathbb{E}[H \mid D_1 = 1] = P(H = 1 \mid D_1 = 1) \approx 0.13$.
 
 Expectations are *linear*: for any
 random variables $X$ and $Y$ and numbers $a$ and $b$,
-$E[aX + bY] = aE[X] + bE[Y]$. This follows by writing $E[aX + bY]$ as a sum
+$\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$. This follows by writing $\mathbb{E}[aX + bY]$ as a sum
 over the joint distribution of $X$ and $Y$ and splitting the sum
 (:numref:`sec_mdl-random_variables` gives the details), and it holds whether
 or not $X$ and $Y$ are independent. Let $X_i$ be the indicator of heads on
 toss $i$, so that the frequency of heads is their average. Linearity gives
 
-$$E[\hat{p}] = E\left[\frac{1}{n} \sum_{i=1}^n X_i\right] = \frac{1}{n} \sum_{i=1}^n E[X_i] = p.$$
+$$\mathbb{E}[\hat{p}] = \mathbb{E}\left[\frac{1}{n} \sum_{i=1}^n X_i\right] = \frac{1}{n} \sum_{i=1}^n \mathbb{E}[X_i] = p.$$
 
 On average, the frequency equals the probability that it estimates; an
 estimator with this property is called *unbiased*. Unbiasedness says nothing
@@ -659,11 +659,11 @@ question asks. For that we need a second summary.
 
 The investment above has an expected return of 1.8, yet half of the time it
 loses everything. To measure how far values tend to fall from the mean
-$\mu = E[X]$, we cannot average the deviation $X - \mu$ itself, since by
-linearity $E[X - \mu] = E[X] - \mu = 0$: positive and negative deviations
+$\mu = \mathbb{E}[X]$, we cannot average the deviation $X - \mu$ itself, since by
+linearity $\mathbb{E}[X - \mu] = \mathbb{E}[X] - \mu = 0$: positive and negative deviations
 cancel. Averaging the squared deviation instead gives the *variance*,
 
-$$\textrm{Var}(X) = E\left[(X - \mu)^2\right] = E[X^2] - \mu^2.$$
+$$\textrm{Var}(X) = \mathbb{E}\left[(X - \mu)^2\right] = \mathbb{E}[X^2] - \mu^2.$$
 
 The second form follows by expanding $(X - \mu)^2 = X^2 - 2\mu X + \mu^2$
 and taking the expectation of each term.
@@ -675,7 +675,7 @@ numbers, as for the columns in :numref:`sec_pandas`, the variance becomes
 a sum of squared deviations from their average, divided by $n$ or, to keep
 the estimate unbiased when the average stands in for $\mu$, by $n - 1$.
 For the investment,
-$E[X^2] = 0.4 \cdot 2^2 + 0.1 \cdot 10^2 = 11.6$, so
+$\mathbb{E}[X^2] = 0.4 \cdot 2^2 + 0.1 \cdot 10^2 = 11.6$, so
 $\textrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ and $\sigma \approx 2.9$, larger than
 the mean itself. For the indicator of heads, $X^2 = X$, so
 
@@ -690,14 +690,14 @@ and their squares by $a^2$, so $\textrm{Var}(aX + b) = a^2 \, \textrm{Var}(X)$.
 ### Sums of Independent Variables
 
 The frequency of heads is an average of many tosses, so we need the variance
-of a sum. Write $\mu_X = E[X]$ and $\mu_Y = E[Y]$. Expanding the square in the
+of a sum. Write $\mu_X = \mathbb{E}[X]$ and $\mu_Y = \mathbb{E}[Y]$. Expanding the square in the
 definition of variance gives
 
-$$\textrm{Var}(X + Y) = E\left[(X - \mu_X + Y - \mu_Y)^2\right] = \textrm{Var}(X) + \textrm{Var}(Y) + 2\, \textrm{Cov}(X, Y),$$
+$$\textrm{Var}(X + Y) = \mathbb{E}\left[(X - \mu_X + Y - \mu_Y)^2\right] = \textrm{Var}(X) + \textrm{Var}(Y) + 2\, \textrm{Cov}(X, Y),$$
 
 where the cross term
 
-$$\textrm{Cov}(X, Y) = E\left[(X - \mu_X)(Y - \mu_Y)\right]$$
+$$\textrm{Cov}(X, Y) = \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right]$$
 
 is the *covariance* of $X$ and $Y$. The covariance is positive when $X$ and
 $Y$ tend to lie on the same side of their means, and negative when they tend
@@ -713,8 +713,8 @@ always lies between $-1$ and $1$.
 
 For independent variables the covariance vanishes. Since the joint
 distribution factorizes, the expectation of a product of a function of $X$
-and a function of $Y$ factorizes too, $E[f(X) g(Y)] = E[f(X)] \, E[g(Y)]$,
-so $\textrm{Cov}(X, Y) = E[X - \mu_X] \, E[Y - \mu_Y] = 0$. Hence, for
+and a function of $Y$ factorizes too, $\mathbb{E}[f(X) g(Y)] = \mathbb{E}[f(X)] \, \mathbb{E}[g(Y)]$,
+so $\textrm{Cov}(X, Y) = \mathbb{E}[X - \mu_X] \, \mathbb{E}[Y - \mu_Y] = 0$. Hence, for
 independent $X$ and $Y$,
 
 $$\textrm{Var}(X + Y) = \textrm{Var}(X) + \textrm{Var}(Y).$$
@@ -726,21 +726,21 @@ standard deviation $\sqrt{n}\,\sigma$, not $n\sigma$, because deviations of
 opposite signs partly cancel.
 
 The converse does not hold: zero covariance does not imply independence. Let
-$X$ be uniform on $\{-1, 0, 1\}$ and $Y = X^2$. Then $E[X] = 0$ and
-$E[XY] = E[X^3] = 0$, so $\textrm{Cov}(X, Y) = 0$, yet $Y$ is determined by
+$X$ be uniform on $\{-1, 0, 1\}$ and $Y = X^2$. Then $\mathbb{E}[X] = 0$ and
+$\mathbb{E}[XY] = \mathbb{E}[X^3] = 0$, so $\textrm{Cov}(X, Y) = 0$, yet $Y$ is determined by
 $X$. Covariance detects only a tendency to move together along a line.
 
 For a random vector $\mathbf{x}$ with mean $\boldsymbol{\mu}$, the variances
 and covariances of all coordinates form the *covariance matrix*
 
-$$\boldsymbol{\Sigma} = E\left[(\mathbf{x} - \boldsymbol{\mu})(\mathbf{x} - \boldsymbol{\mu})^\top\right],$$
+$$\boldsymbol{\Sigma} = \mathbb{E}\left[(\mathbf{x} - \boldsymbol{\mu})(\mathbf{x} - \boldsymbol{\mu})^\top\right],$$
 
 whose diagonal holds the variances of the coordinates and whose entry
 $\Sigma_{ij}$ is the covariance of $x_i$ and $x_j$. It gives the variance of
 every weighted sum of the coordinates: for a fixed vector $\mathbf{v}$,
 linearity of expectation yields
 
-$$\textrm{Var}(\mathbf{v}^\top \mathbf{x}) = E\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu})(\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v}.$$
+$$\textrm{Var}(\mathbf{v}^\top \mathbf{x}) = \mathbb{E}\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu})(\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v}.$$
 
 One matrix thus determines how much every weighted sum of the coordinates
 fluctuates, such as the return of a portfolio of stocks or the output of a
@@ -1033,7 +1033,7 @@ evidence of bias.
        two classifiers' correctness on an image have, and why?
 1. **Portfolio return and risk.** Assume that you manage a portfolio of
    $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
-   mean $\boldsymbol{\mu} = E[\mathbf{s}]$ and covariance matrix
+   mean $\boldsymbol{\mu} = \mathbb{E}[\mathbf{s}]$ and covariance matrix
    $\boldsymbol{\Sigma}$. You invest a fraction $\alpha_i \geq 0$ of your
    capital in stock $i$, with $\sum_i \alpha_i = 1$.
     1. Compute the expected return and the variance of the return of the
@@ -1362,12 +1362,12 @@ The prior matters as much as the test: one positive is now a coin flip.
 
 ::: {.cols .vc}
 ::: {.col}
-$$E[X] = \sum_x x\,P(X{=}x)$$
+$$\mathbb{E}[X] = \sum_x x\,P(X{=}x)$$
 
 - Investment: $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8$.
-- Indicator of heads: $E[X] = p$.
-- **Linear**, always: $E[aX + bY] = aE[X] + bE[Y]$, so
-  $E[\hat{p}] = p$: the frequency is **unbiased**.
+- Indicator of heads: $\mathbb{E}[X] = p$.
+- **Linear**, always: $\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$, so
+  $\mathbb{E}[\hat{p}] = p$: the frequency is **unbiased**.
 :::
 
 ::: {.col .fig}
@@ -1381,7 +1381,7 @@ $$E[X] = \sum_x x\,P(X{=}x)$$
 
 ::: {.cols .vc}
 ::: {.col}
-$$\textrm{Var}(X) = E\big[(X - \mu)^2\big] = E[X^2] - \mu^2$$
+$$\textrm{Var}(X) = \mathbb{E}\big[(X - \mu)^2\big] = \mathbb{E}[X^2] - \mu^2$$
 
 - Investment: $11.6 - 1.8^2 = 8.36$, so $\sigma \approx 2.9$.
 - Indicator of heads: $p - p^2 = p(1-p)$, at most $\tfrac14$.
@@ -1399,9 +1399,9 @@ $$\textrm{Var}(X) = E\big[(X - \mu)^2\big] = E[X^2] - \mu^2$$
 
 **Step 1.** Expand the square:
 $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X,Y)$,
-with $\textrm{Cov}(X,Y) = E[(X-\mu_X)(Y-\mu_Y)]$.
+with $\textrm{Cov}(X,Y) = \mathbb{E}[(X-\mu_X)(Y-\mu_Y)]$.
 
-**Step 2.** Independent: $\textrm{Cov}(X,Y) = E[X-\mu_X]\,E[Y-\mu_Y] = 0$.
+**Step 2.** Independent: $\textrm{Cov}(X,Y) = \mathbb{E}[X-\mu_X]\,\mathbb{E}[Y-\mu_Y] = 0$.
 
 ::: {.d2l-note .rule}
 $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$: the sum of $n$
@@ -1496,7 +1496,7 @@ times as many: 14,400.
 
 - **Rules:** marginalize by summing, condition by renormalizing.
 - **Bayes:** two positive HIV tests take 0.15% to 13% to 83%.
-- **Summaries:** $E[X]$ and $\textrm{Var}(X)$; variances of independent
+- **Summaries:** $\mathbb{E}[X]$ and $\textrm{Var}(X)$; variances of independent
   variables add.
 - **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
   standard errors from $0.5$ after 100 tosses (no evidence of bias), and

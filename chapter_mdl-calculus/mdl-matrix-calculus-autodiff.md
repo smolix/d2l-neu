@@ -875,9 +875,9 @@ $\mathbf H\mathbf 1=\mathbf p-\mathbf p\,(\mathbf p^\top\mathbf 1)=\mathbf 0$:
 adding a constant $c$ to every input adds $c$ to log-sum-exp and leaves its
 gradient unchanged, so the curvature along $\mathbf 1$ is zero. Second,
 $\mathbf H$ is the covariance matrix of a one-hot vector $\mathbf e_J$ with $J$
-drawn from $\mathbf p$, because $\mathbb E[\mathbf e_J\mathbf e_J^\top]=\operatorname{diag}(\mathbf p)$
-and $\mathbb E[\mathbf e_J]=\mathbf p$. So
-$\mathbf v^\top\mathbf H\mathbf v=\operatorname{Var}(v_J)\ge0$, and log-sum-exp
+drawn from $\mathbf p$, because $\mathbb{E}[\mathbf e_J\mathbf e_J^\top]=\operatorname{diag}(\mathbf p)$
+and $\mathbb{E}[\mathbf e_J]=\mathbf p$. So
+$\mathbf v^\top\mathbf H\mathbf v=\textrm{Var}(v_J)\ge0$, and log-sum-exp
 is convex.
 
 Does the framework's forward over reverse reproduce the formula?
@@ -1332,9 +1332,9 @@ solve at the solution.
    $\hat{\mathbf g}=(\nabla\ell^\top\mathbf v)\,\mathbf v$, which Baydin and
    coauthors call a forward gradient in "Gradients without backpropagation"
    (2022).
-    1. Show that $\mathbb E[\hat{\mathbf g}]=\nabla\ell$.
-    1. Show that $\mathbb E\|\hat{\mathbf g}-\nabla\ell\|^2=(n+1)\|\nabla\ell\|^2$.
-       (Hint: $\mathbb E[v_iv_jv_k^2]$ is $3$ for $i=j=k$, $1$ for
+    1. Show that $\mathbb{E}[\hat{\mathbf g}]=\nabla\ell$.
+    1. Show that $\mathbb{E}\|\hat{\mathbf g}-\nabla\ell\|^2=(n+1)\|\nabla\ell\|^2$.
+       (Hint: $\mathbb{E}[v_iv_jv_k^2]$ is $3$ for $i=j=k$, $1$ for
        $i=j\neq k$, and $0$ when $i\neq j$.)
     1. With `Dual`, and the $f$ and `xs0` of the cost cell ($n=200$), average
        $m$ independent estimates for $m=1,10,10^2,10^3,10^4$ and plot the

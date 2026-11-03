@@ -83,7 +83,7 @@ $$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\left(f(\mathbf{x}
 The *population error* is the probability that $f$ gets the label wrong on a
 new example drawn from the distribution $P(X, Y)$ that generates the data:
 
-$$\epsilon(f) = E_{(\mathbf{x}, y) \sim P}\left[\mathbf{1}\left(f(\mathbf{x}) \neq y\right)\right] = P\left(f(X) \neq Y\right).$$
+$$\epsilon(f) = \mathbb{E}_{(\mathbf{x}, y) \sim P}\left[\mathbf{1}\left(f(\mathbf{x}) \neq y\right)\right] = P\left(f(X) \neq Y\right).$$
 
 These are the empirical risk and the risk of
 :numref:`sec_generalization_basics` for the *0--1 loss*, which charges 1 for
@@ -96,7 +96,7 @@ with probability $\epsilon(f)$. The test examples are drawn independently,
 and $f$ was fixed before they were drawn, so $\epsilon_\mathcal{D}(f)$ is
 the frequency of heads in $n$ independent tosses of this coin. Two facts
 from :numref:`sec_prob` follow. The estimate is unbiased:
-$E[\epsilon_\mathcal{D}(f)] = \epsilon(f)$. And the average of $n$
+$\mathbb{E}[\epsilon_\mathcal{D}(f)] = \epsilon(f)$. And the average of $n$
 independent draws has a standard error equal to the standard deviation of a
 single draw divided by $\sqrt{n}$. A variable that equals 1 with probability
 $\epsilon$ and 0 otherwise has variance $\epsilon(1 - \epsilon)$, so the

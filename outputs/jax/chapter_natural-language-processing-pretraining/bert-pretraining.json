@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6bb4a04c945da53e339979be5cf1cbedf718b38d7105d0e69d5b5c1f9632da4d",
+    "d2l_lib_fingerprint": "sha256:925f88a9c095e94f6ac5a8e43cd89407f3111f281826e030834c69807557a4fd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,50 +29,50 @@
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-3": {
-      "code_fingerprint": "sha256:f669a5bdfda676e381f245aec7d3dd31fce8c2456a10c5a233c1ad4fda768242",
+      "code_fingerprint": "sha256:50b147c642c9b9d4f902071baf822352c90deb7a4c60c455e6c0fa6d3559e1d1",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-pretraining-bert-2-4": {
-      "code_fingerprint": "sha256:d2e3cc516152d7f4a74f6cd8ebc5b190b7adefbdcabc85663ffd3c0ce5d392d6",
+      "code_fingerprint": "sha256:b5969aaf07206cbe4b46071566ab3d606598bce8151b9441a3aca57e7fd56d9c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.702, NSP loss 0.709\n821.1 sentence pairs/sec on [CudaDevice(id=0)]\n"
+          "text": "MLM loss 9.697, NSP loss 0.708\n15789.3 sentence pairs/sec on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21496,
-          "sha256": "sha256:dc5691e47ce77b5a52dfaa4cc2644ee4adc4da0e60d76ef4b1811c1c88e922c6"
+          "bytes": 21491,
+          "sha256": "sha256:74ed290ba4de69de5bf50c02cc1c6697462ec1bed95800c8f4421697cd8efb14"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-1": {
-      "code_fingerprint": "sha256:9bcadecb2fffb05ca51a7629a23448c7675615191dd28d3230f3069c81d3ca79",
+      "code_fingerprint": "sha256:06b321cb6062120e646a3d99f5d2f6c9c20656d388a56c4b47328be86d03f2d7",
       "kind": "text",
       "outputs": []
     },
     "bert-pretraining-representing-text-with-bert-2": {
-      "code_fingerprint": "sha256:acef86c06363c2643471370d883f4900a1a7efb43dc764ad56e1bcb9fa009513",
+      "code_fingerprint": "sha256:a238a217bbc8da0fb1d43ced04cda55217f83d0111e8af21712fcb77e0410284",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 6, 128),\n (1, 128),\n Array([-1.1519607, -2.0929437, -0.0740127], dtype=float32))"
+          "text": "((1, 6, 128),\n (1, 128),\n Array([-0.96408135, -1.7424127 , -0.6990965 ], dtype=float32))"
         }
       ]
     },
     "bert-pretraining-representing-text-with-bert-3": {
-      "code_fingerprint": "sha256:f1d2f14411be24ebc007ec5d897572352c4641eb76c045f9d8f185fe459b9736",
+      "code_fingerprint": "sha256:d6cb3a4a816269f086185168f420c7d2893f7d89bdea9c458bc6300b851c5437",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "((1, 10, 128),\n (1, 128),\n Array([-1.0770007 , -2.010716  ,  0.15599044], dtype=float32))"
+          "text": "((1, 10, 128),\n (1, 128),\n Array([-0.8391815, -1.566566 , -0.5362287], dtype=float32))"
         }
       ]
     }

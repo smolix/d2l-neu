@@ -583,17 +583,19 @@ on a laptop processor; the published models train for hundreds of thousands.
 
 ```{.python .input #annealed-langevin-a-noise-conditional-network-for-images-2}
 %%tab pytorch
+device = d2l.try_gpu()
 fmnist = d2l.FashionMNIST(batch_size=128)
-X = fmnist.train.data.float()[:, None] / 255 * 2 - 1
-X_test = fmnist.val.data.float()[:, None] / 255 * 2 - 1
-img_sigmas = torch.exp(torch.linspace(math.log(2.0), math.log(0.02), 10))
+X = (fmnist.train.data.float()[:, None] / 255 * 2 - 1).to(device)
+X_test = (fmnist.val.data.float()[:, None] / 255 * 2 - 1).to(device)
+img_sigmas = torch.exp(torch.linspace(math.log(2.0), math.log(0.02), 10,
+                                      device=device))
 
 torch.manual_seed(4)
-unet = UNet()
+unet = UNet().to(device)
 optimizer = torch.optim.Adam(unet.parameters(), lr=1e-3)
 for step in range(600):
-    x = X[torch.randint(0, len(X), (128,))]
-    level = torch.randint(0, 10, (128,))
+    x = X[torch.randint(0, len(X), (128,), device=device)]
+    level = torch.randint(0, 10, (128,), device=device)
     eps = torch.randn_like(x)
     x_noisy = x + img_sigmas[level][:, None, None, None] * eps
     loss = 0.5 * ((unet(x_noisy, level) - eps) ** 2).mean()  # noise prediction
@@ -646,7 +648,8 @@ for level in (6, 3, 0):  # sigma about 0.09, 0.43, 2
     sigma = img_sigmas[level]
     x_noisy = x + sigma * torch.randn_like(x)
     with torch.no_grad():
-        x_hat = x_noisy - sigma * unet(x_noisy, torch.full((len(x),), level))
+        x_hat = x_noisy - sigma * unet(x_noisy, torch.full((len(x),), level,
+                                                           device=device))
     print(f'sigma = {sigma:.2f}: per-pixel squared error noisy {((x_noisy - x) ** 2).mean():.3f}, '
           f'denoised {((x_hat - x) ** 2).mean():.3f}')
     rows += [x_noisy[:6], x_hat[:6]]

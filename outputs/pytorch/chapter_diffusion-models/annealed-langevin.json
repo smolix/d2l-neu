@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a33b25038898418893fc3d7d1c4dd0e4d6d350bbd0419bdccab528ecb9adec68",
+    "d2l_lib_fingerprint": "sha256:77d6087d60984ac7527a09305d68d40f10ed561856f7f8f792be1d03dc3a05d9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,41 +85,31 @@
       "outputs": []
     },
     "annealed-langevin-a-noise-conditional-network-for-images-2": {
-      "code_fingerprint": "sha256:76b84f156fe9a00ddff9d886c480ad0c476fb6099c6341f1ea19cfb5e32e0581",
+      "code_fingerprint": "sha256:a1308d459bcf5ae38ca02f279b148a1c09bbcfa95ad0eb83dca19f61ea9365d7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.115\n"
+          "text": "final training loss: 0.107\n"
         }
       ]
     },
     "annealed-langevin-a-noise-conditional-network-for-images-3": {
-      "code_fingerprint": "sha256:19e846ac2709d00545ffef0c3851e3906bca8d10c2d5cce26574a77508e609e6",
+      "code_fingerprint": "sha256:feb048e8eb548cd3d043db4d1219e4726437506823895d8435d643c59eb2965c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.09: per-pixel squared error noisy 0.009, denoised 0.002\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma = 0.43: per-pixel squared error noisy 0.186, denoised 0.022\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma = 2.00: per-pixel squared error noisy 4.004, denoised 0.132\n"
+          "text": "sigma = 0.09: per-pixel squared error noisy 0.009, denoised 0.002\nsigma = 0.43: per-pixel squared error noisy 0.186, denoised 0.022\nsigma = 2.00: per-pixel squared error noisy 4.011, denoised 0.133\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 180462,
-          "sha256": "sha256:896c37f93cee7b72606c0dd432432c95a337cdb9fb038c59c89da441e7d93162"
+          "bytes": 180581,
+          "sha256": "sha256:edeac0c596adbd82c093651301e282f1b7d3871aa154016f3dce6d30196f8a7b"
         }
       ]
     }

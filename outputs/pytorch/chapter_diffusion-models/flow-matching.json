@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:253457d6a2e7442b23b0bc08eed42ffd67914097584c90a241482e826ef7f90b",
+    "d2l_lib_fingerprint": "sha256:a81dc03f98169e54e398e0a6ce82c5a124348c2ae58ec9616f1c33d345e1d349",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -85,20 +85,20 @@
       ]
     },
     "flow-matching-images-with-a-velocity-target": {
-      "code_fingerprint": "sha256:dfc9b81c380e9d1aaaf4fa0775a0c6ada63ba775e7d19c7b69f4b6649711f1e5",
+      "code_fingerprint": "sha256:8c03e49a608b6a9d9d9b43ab5c25fb5b4c4852abc688dc4d09e483ed889813de",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.280\n"
+          "text": "final training loss: 0.272\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 128291,
-          "sha256": "sha256:ddd01b387f320686c4040885eeac8de687bb57d59e6a88ae0809ba1a07606be5"
+          "bytes": 127953,
+          "sha256": "sha256:b80a415a69175013ceeb3e825b36c4c9e82f94ddde37d16c441e78c8d0cb71a1"
         }
       ]
     }

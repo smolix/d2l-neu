@@ -1157,7 +1157,7 @@ pattern on which Adam converges to the *worst* feasible point. The problem
 is adversarial and says nothing about ordinary training data, but it shows
 that Adam has no general convergence guarantee. Their repair, AMSGrad,
 divides by the running maximum of $\hat{\mathbf{v}}_t$, so that the
-estimate can never shrink. :numref:`subsec_mdl-per-coordinate` works
+estimate can never shrink. :numref:`subsec_mdl-adam-counterexample` works
 through the construction and the repair. Neither AMSGrad nor later repairs
 replaced Adam in practice.
 
@@ -1819,7 +1819,7 @@ time, the subject of :numref:`sec_scheduler`.
     1. Implement both by changing the from-scratch Adam of this section,
        and check each against a hand computation of its first three steps
        on a scalar gradient sequence such as $(1, 0.1, 0.1)$.
-    1. The function `online` of :numref:`subsec_mdl-per-coordinate` runs
+    1. The function `online` of :numref:`subsec_mdl-adam-counterexample` runs
        Adam and AMSGrad on the losses :eqref:`eq_mdl-opt-reddi`, on which
        Adam converges to the worst point $x = +1$. Add the Yogi update to
        it, run it at $C = 4$, and report where its iterate ends. Explain the

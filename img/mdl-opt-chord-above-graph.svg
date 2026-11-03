@@ -397,8 +397,16 @@ z
     </g>
    </g>
    <g id="text_4">
+    <g id="patch_3">
+     <path d="M 16.256364 129.988909 
+L 108.946364 129.988909 
+L 108.946364 109.630909 
+L 16.256364 109.630909 
+z
+" style="fill: #ffffff"/>
+    </g>
     <!-- $f(\theta\mathbf{x}+(1-\theta)\mathbf{y})$ -->
-    <g style="fill: #1f77b4" transform="translate(66.405909 142.203727) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(17.816364 124.190909) scale(0.13 -0.13)">
      <use xlink:href="#Cmmi10-57"/>
      <use xlink:href="#Cmr10-77" transform="translate(48.876953 0)"/>
      <use xlink:href="#Cmmi10-12" transform="translate(87.695312 0)"/>
@@ -413,7 +421,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(649.922104 0)"/>
     </g>
    </g>
-   <g id="patch_3">
+   <g id="patch_4">
     <path d="M 9.20282 102.313636 
 Q 121.338245 102.313636 232.467439 102.313636 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
@@ -422,7 +430,7 @@ L 232.467439 102.313636
 L 225.667439 105.713636 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
-   <g id="patch_4">
+   <g id="patch_5">
     <path d="M 121.336364 119.337172 
 Q 121.336364 76.156842 121.336364 33.982743 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
@@ -614,7 +622,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(913.364664 0.084203)"/>
     </g>
    </g>
-   <g id="patch_5">
+   <g id="patch_6">
     <path d="M 283.130093 102.313636 
 Q 395.265517 102.313636 506.394711 102.313636 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
@@ -623,7 +631,7 @@ L 506.394711 102.313636
 L 499.594711 105.713636 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
-   <g id="patch_6">
+   <g id="patch_7">
     <path d="M 395.263636 119.337172 
 Q 395.263636 76.156842 395.263636 33.982743 
 " style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>

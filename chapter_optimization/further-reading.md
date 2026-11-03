@@ -133,7 +133,7 @@ gradients can do better in the worst case :cite:`Nemirovski.Yudin.1983`. For
 smooth nonconvex objectives, where a minimum cannot be guaranteed, SGD
 drives the expected squared gradient norm to zero at the same order
 :cite:`Ghadimi.Lan.2013`. The appendix proves both results
-(:numref:`subsec_mdl-stochastic-gradients` and
+(:numref:`subsec_mdl-fixed-budget-rates` and
 :numref:`subsec_mdl-nonconvex-sgd`). :citet:`Bottou.Curtis.Nocedal.2018`
 survey the theory and practice of stochastic methods for large-scale
 learning, from noise and averaging to second-order methods.

@@ -286,10 +286,13 @@ book:
         - chapter_mdl-calculus/further-reading.qmd
         - chapter_mdl-optimization/index.qmd
         - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
-        - chapter_mdl-optimization/mdl-adaptive-stochastic-methods.qmd
         - chapter_mdl-optimization/mdl-convexity.qmd
+        - chapter_mdl-optimization/mdl-stochastic-gradient-methods.qmd
+        - chapter_mdl-optimization/mdl-adaptive-stochastic-methods.qmd
         - chapter_mdl-optimization/mdl-constrained-optimization-duality.qmd
+        - chapter_mdl-optimization/mdl-lagrangian-duality.qmd
         - chapter_mdl-optimization/mdl-numerical-stability-conditioning.qmd
+        - chapter_mdl-optimization/further-reading.qmd
         - chapter_mdl-probability-statistics/index.qmd
         - chapter_mdl-probability-statistics/mdl-random-variables.qmd
         - chapter_mdl-probability-statistics/mdl-distributions.qmd

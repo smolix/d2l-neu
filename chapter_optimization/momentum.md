@@ -304,9 +304,9 @@ The $\sqrt{\kappa}$ law is a statement about quadratics. On general
 objectives it holds near a minimum, where the quadratic approximation of
 the loss applies, and the evidence that momentum speeds up the training of
 deep networks is empirical :cite:`Sutskever.Martens.Dahl.ea.2013`.
-:numref:`subsec_mdl-momentum-acceleration` proves the law, together with
-a lower bound showing that no method built from gradients does better on
-quadratics.
+:numref:`subsec_mdl-momentum-acceleration` proves the law and states
+the matching lower bound: no method built from gradients has a better
+dependence on $\kappa$ in the worst case.
 
 ## Implementation
 
@@ -475,7 +475,7 @@ the worst case. On strongly convex functions a constant momentum
 $\beta = (\sqrt{\kappa} - 1)/(\sqrt{\kappa} + 1)$ achieves the
 $\sqrt{\kappa}$ rate, with a proof that is not confined to quadratics
 :cite:`Nesterov.2018`. :numref:`subsec_mdl-momentum-acceleration`
-gives the statements and proofs.
+states the result, proves it on quadratics, and cites the general proof.
 
 The SGD optimizer of each framework offers Nesterov momentum as the flag
 `nesterov=True`, which is off by default. The implementation is a rewrite

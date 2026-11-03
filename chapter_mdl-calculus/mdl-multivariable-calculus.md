@@ -310,8 +310,8 @@ The learning rate $\eta > 0$ absorbs the length of the gradient into the step.
 may move by at most one, the steepest unit step is
 $-\operatorname{sign}(\nabla \ell)$, coordinate by coordinate; at $(0, \log 2)$
 that is $(-1, -1)$, with slope $-(\tfrac13 + \tfrac23) = -1$.
-:numref:`sec_mdl-adaptive-stochastic-methods` develops steepest descent in other
-norms. Practical optimizers also build their steps from gradients without
+Exercise :exref:`ex_mdl-gradient-based-optimization-steepest-other-norms`
+develops steepest descent in other norms. Practical optimizers also build their steps from gradients without
 always stepping along the current $-\nabla \ell$. Momentum averages gradients
 over time, and RMSProp and Adam rescale the coordinates
 (:numref:`chap_optimization`).
@@ -504,7 +504,7 @@ Without the hypothesis $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ a
 multiplier need not exist (Exercise :exref:`ex_mdl-multivariable-calculus-rayleigh`
 gives an example).
 :numref:`sec_mdl-constrained-optimization-duality` builds the KKT conditions
-and duality on this condition.
+on this condition, and :numref:`sec_mdl-lagrangian-duality` the dual problem.
 
 ## The Multivariable Chain Rule
 

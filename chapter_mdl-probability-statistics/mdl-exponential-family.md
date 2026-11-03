@@ -1376,8 +1376,6 @@ $\mathrm{Beta}(10,5)$ for the coin.
        total probability do the unseen words receive?
    :exlabel:`ex_mdl-exponential-family-dirichlet-smoothing`
 
-[Discussions](https://d2l.discourse.group/)
-
 <!-- slides -->
 
 ::: {.slide}

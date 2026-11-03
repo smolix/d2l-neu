@@ -1583,8 +1583,6 @@ fastest parts of the field.
        deterministic sample.
    :exlabel:`ex_mdl-flow-matching-transport-stochastic-sampler`
 
-[Discussions](https://d2l.discourse.group/)
-
 <!-- slides -->
 
 ::: {.slide}

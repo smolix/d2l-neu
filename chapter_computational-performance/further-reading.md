@@ -347,5 +347,3 @@ accumulation :cite:`Micikevicius.Stosic.Burgess.ea.2022,Liu.Feng.Xue.ea.2024`.
 Serving engines batch requests continuously and page the key–value cache
 :cite:`Kwon.Li.Zhuang.ea.2023`. Quantization compresses trained weights to
 4 or 8 bits for inference.
-
-[Discussions](https://d2l.discourse.group/)

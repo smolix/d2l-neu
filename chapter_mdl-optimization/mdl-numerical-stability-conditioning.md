@@ -1715,16 +1715,6 @@ $\kappa=10^3$ quadratic $\tfrac12(x_1^2+1000x_2^2)$.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Floating point]{.dtitle}
-
-[a number system with gaps]{.dsub}
-:::
-:::
-
 ::: {.slide title="Four Values per Octave: Every Rounding Errs by at Most One Part in 2^(p+1)"}
 [Floating point]{.kicker}
 
@@ -1776,16 +1766,6 @@ bfloat16: no. The threshold below $1$ is $2^{-9}\approx0.00195>10^{-3}$.
 
 fp16: yes. The threshold is $2^{-12}\approx2.4\times10^{-4}<10^{-3}$, and
 the weight lands on $0.99902$.
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Softmax and cross-entropy]{.dtitle}
-
-[subtract the max, stay in log space]{.dsub}
-:::
 :::
 
 ::: {.slide title="Softmax Is Shift-Invariant, So Subtract the Max"}
@@ -1888,16 +1868,6 @@ zero, so the loss is `inf` already at gap 103.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Catastrophic cancellation]{.dtitle}
-
-[the problem or the algorithm?]{.dsub}
-:::
-:::
-
 ::: {.slide title="κ_f = |x f′(x) / f(x)| Says Whether the Problem or the Algorithm Is to Blame"}
 [Cancellation]{.kicker}
 
@@ -1954,16 +1924,6 @@ $10^7$ copies of fp32's $0.1$:
   is $1/16$, and each $+0.1$ rounds to $+0.125$.
 - Pairwise: $u\log_2n\sum\lvert x_i\rvert$. Kahan: independent
   of $n$.
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Conditioning]{.dtitle}
-
-[backward error, forward error, and κ]{.dsub}
-:::
 :::
 
 ::: {.slide title="Two Nearly Parallel Lines: a 3.5×10⁻⁵ Change in b Moves x by 100%"}

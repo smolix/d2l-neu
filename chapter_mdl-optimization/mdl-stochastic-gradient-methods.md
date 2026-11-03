@@ -1452,14 +1452,12 @@ $\eta = 0.15$, slightly less than half, because $2 - \eta\lambda$ grows.
 ::: {.slide title="Robbins–Monro: Travel Any Distance, Inject Finite Noise"}
 [Step-size decay]{.kicker}
 
-$\sum_k \eta_k = \infty$ (reach the minimizer),
-$\sum_k \eta_k^2 < \infty$ (finite total noise $\sigma^2\sum_k\eta_k^2$).
-Logistic problem, $b = 8$:
+$\sum_k \eta_k = \infty$ (reach the minimizer);
+$\sum_k \eta_k^2 < \infty$ (finite noise). Logistic problem:
 
 @!gradient-based-optimization-sgd-schedule
 
-Fixed steps stall near $10^{-2}$, and halving $\eta$ about halves the stall;
-$0.8/(1 + k/100)$ keeps falling.
+Fixed steps stall near $10^{-2}$; $0.8/(1 + k/100)$ keeps falling.
 :::
 
 ::: {.slide title="With $\eta_k = c/(k+k_0)$ the Constant Sets the Rate"}

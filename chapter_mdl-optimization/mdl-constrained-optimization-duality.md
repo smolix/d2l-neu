@@ -1595,12 +1595,18 @@ $\lambda^\star=0$, $\mathbf{x}^\star=(0.3,0.4)$.
 ::: {.slide title="The Residual Makes an Obtuse Angle with Every Feasible Direction"}
 [Projections]{.kicker}
 
-$$\left(\mathbf{y}-\Pi_C(\mathbf{y})\right)^\top\left(\mathbf{x}-\Pi_C(\mathbf{y})\right)\le0\quad\text{for all }\mathbf{x}\in C.$$
-
-@fig:mdl-opt-projection-inequality
+::: {.cols .vc}
+::: {.col}
+$$\left(\mathbf{y}-\Pi_C(\mathbf{y})\right)^\top\left(\mathbf{x}-\Pi_C(\mathbf{y})\right)\le0\quad\forall\,\mathbf{x}\in C.$$
 
 Disk: residual $(2.4,3.2)$, and $4(0.6x_1+0.8x_2)-4\le4\|\mathbf{x}\|-4\le0$.
 Supporting line: $3x_1+4x_2=5$.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-projection-inequality
+:::
+:::
 :::
 
 ::: {.slide title="Projection Never Increases Distance, So PGD Converges Like GD"}
@@ -1624,13 +1630,19 @@ Final gradient $=\lambda^\star(1,1)$ with $\lambda^\star=1000/1001$.
 ::: {.slide title="The Simplex Projection Is a Shift and a Clip"}
 [Projections]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 KKT on $\{\mathbf{x}\ge0,\ \sum_ix_i=1\}$:
 $x_i^\star=\max(y_i-\tau,0)$, and the budget $\sum_ix_i=1$ fixes $\tau$.
 
-@fig:mdl-opt-simplex-threshold
-
 $(0.9,0.5,-0.2)\mapsto(0.7,0.3,0)$; softmax gives $(0.50,0.33,0.17)$.
 On attention scores this is **sparsemax**.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-simplex-threshold
+:::
+:::
 :::
 
 ::: {.slide title="Residuals Hold for Any τ; the Certificate Decides"}

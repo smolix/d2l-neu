@@ -1488,14 +1488,12 @@ Fixed points, exact gradient $g_i=\partial_i\ell$:
 :::
 
 ::: {.slide title="Adam's First Steps Are Inflated by Momentum, Not by the Preconditioner"}
-RMS update on pure noise, in units of $\eta$; exact variance in place of
-$\hat{\mathbf v}_t$ for comparison:
+RMS update on pure noise, in units of $\eta$:
 
 @!mdl-adaptive-stochastic-methods-warmup
 
 ::: {.d2l-note}
-$1.00\to0.23=\sqrt{(1-\beta_1)/(1+\beta_1)}$ within tens of steps. Long
-warmups rest on curvature that changes fast after initialization.
+$1.00\to0.23=\sqrt{(1-\beta_1)/(1+\beta_1)}$ within tens of steps.
 :::
 :::
 

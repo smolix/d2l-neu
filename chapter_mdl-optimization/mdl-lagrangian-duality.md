@@ -1668,10 +1668,16 @@ $8.01 - 7.875 = 0.135$; $\lambda = 4$ tightens this to $0.01$.
 $f^*(\mathbf{y}) = \sup_{\mathbf{x}} \bigl(\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})\bigr)$:
 minus the intercept of the highest line of slope $\mathbf{y}$ below $f$.
 
-@fig:mdl-opt-conjugate-intercept
-
+::: {.cols .vc}
+::: {.col .narrow}
 $\tfrac12x^2$ at slope $2$: touches at $x = 2$, $f^*(2) = 2$.
 $|x|$: $f^* = 0$ on $[-1, 1]$, $+\infty$ outside.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-conjugate-intercept
+:::
+:::
 :::
 
 ::: {.slide title="For Linear Constraints the Dual Is a Conjugate"}
@@ -1723,11 +1729,17 @@ Softmax is the entropy-regularized argmax.
 ::: {.slide title="Convexity Plus One Strictly Feasible Point Closes the Gap"}
 [Strong duality]{.kicker}
 
-@fig:mdl-opt-primal-dual-gap
-
+::: {.cols .vc}
+::: {.col .narrow}
 $\mathcal{A}$: all $(u, t)$ above and right of some $(g(\mathbf{x}), f(\mathbf{x}))$.
 $q(\lambda)$ is the height at $u = 0$ of the lowest line of slope $-\lambda$ below
 $\mathcal{A}$. Left: clipping, $d^\star = p^\star = 8$. Right: concave objective, gap.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-primal-dual-gap
+:::
+:::
 
 [Slater: $f, g_i$ convex, $h_j$ affine, some $\bar{\mathbf{x}}$ with $g_i(\bar{\mathbf{x}}) < 0$, $h_j(\bar{\mathbf{x}}) = 0$.]{.small}
 :::

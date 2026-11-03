@@ -2246,14 +2246,12 @@ $$D_f(P\|Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]$$
 :::
 
 ::: {.slide title="A Half-Trained Critic Reports 75% of the Divergence"}
-[The f-GAN bound]{.kicker}
-
-$\chi^2$ generator, critics $T=c\,T^\star$: the bound is $\chi^2\,(2c-c^2)$.
+$\chi^2$ generator, critics $T=c\,T^\star$: bound $\chi^2\,(2c-c^2)$.
 
 @!divergences-distances-f-gan-bound
 
 ::: {.d2l-note}
-Adversarial estimates are biased low; an overconfident critic ($c=2$) reports zero.
+Estimates are biased low; $c=2$ reports zero.
 :::
 :::
 

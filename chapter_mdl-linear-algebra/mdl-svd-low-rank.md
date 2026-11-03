@@ -2036,7 +2036,7 @@ $$\boxed{\|\mathbf{A}-\mathbf{B}\|_2\ge\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}}$
 :::
 
 ::: {.col .fig}
-![Two planes through the origin meet in a line.](../img/mdl-la-svd-dimension-count.svg){width=100%}
+![Two planes through the origin meet in a line.](../img/mdl-la-svd-dimension-count.svg){width=85%}
 :::
 :::
 :::
@@ -2093,12 +2093,12 @@ With $\mathbf{y}=\mathbf{V}^\top\mathbf{x}$, $\mathbf{c}=\mathbf{U}^\top\mathbf{
 $$\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2=\sum_{i\le r}(\sigma_iy_i-c_i)^2+\sum_{i>r}c_i^2$$
 
 - $y_i=c_i/\sigma_i$ for $i\le r$; $y_i=0$ for $i>r$ (free, set short).
-- That is $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$;
+- So $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$;
   $x_1+x_2=2\mapsto(1,1)$.
 :::
 
 ::: {.col .fig}
-![The solutions of x1 + x2 = 2 and the shortest one.](../img/mdl-la-min-norm.svg){width=100%}
+![The solutions of x1 + x2 = 2 and the shortest one.](../img/mdl-la-min-norm.svg){width=88%}
 :::
 :::
 :::

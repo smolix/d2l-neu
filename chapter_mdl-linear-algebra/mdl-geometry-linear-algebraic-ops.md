@@ -1539,7 +1539,12 @@ $$\|\mathbf{x} - \bar{\mathbf{x}}_1\|^2 < \|\mathbf{x} - \bar{\mathbf{x}}_0\|^2 
 ::: {.slide title="One Hyperplane Separates T-Shirts from Trousers 92% of the Time"}
 ::: {.cols .vc}
 ::: {.col .narrow}
-@geometry-linear-algebraic-ops-hyperplanes-4
+~~~python
+w = mean_1 - mean_0
+b = -w @ (mean_0 + mean_1) / 2
+pred = X2 @ w + b > 0   # trousers
+np.mean(pred == (y2 == 1))  # 0.92
+~~~
 
 Two modes, a broad t-shirt hump and a sharp trouser peak; their tails overlap at the boundary: $169$ of $2{,}000$ errors.
 :::

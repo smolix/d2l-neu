@@ -1478,7 +1478,13 @@ is the familiar $2.30$ nats.
 $D_{\textrm{KL}}(P\|Q) = \mathbb{E}_{x \sim P}[\log p(x)/q(x)]$: surprise
 under $Q$ minus surprise under $P$, averaged over $P$.
 
-@information-theory-definition-2
+~~~python
+def kl(p, q):
+    m = p > 0
+    return np.dot(p[m], np.log(p[m] / q[m]))
+~~~
+
+@!information-theory-definition-2
 
 Asymmetric ($0.396$ against $0.365$), and $+\infty$ where $q = 0 < p$.
 :::
@@ -1521,14 +1527,19 @@ $\textrm{CE}(P, Q) = -\mathbb{E}_P[\log q] = H(P) + D_{\textrm{KL}}(P\|Q)$
 ::: {.slide title="A Narrow Model Is Far More Surprised by Wide Data Than the Reverse"}
 [Gaussians]{.kicker}
 
-$D_{\textrm{KL}} = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac12$;
-for $\mathcal{N}(0,1)$ against $\mathcal{N}(0,4)$: $0.318$ one way, $0.807$
-the other.
+$D_{\textrm{KL}} = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac12$
 
+::: {.cols .vc}
+::: {.col .narrow}
+$\mathcal{N}(0,1)$ against $\mathcal{N}(0,4)$: $0.318$ one way, $0.807$
+the other. The wide tails, where the narrow model is very surprised, carry
+the $0.807$.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-kl-integrand
-
-The tails of the wide distribution, where the narrow model is very
-surprised, carry the $0.807$.
+:::
+:::
 :::
 
 ::: {.slide title="With Mean and Variance Fixed, the Gaussian Has the Largest Entropy"}

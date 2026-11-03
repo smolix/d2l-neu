@@ -1658,7 +1658,7 @@ $$x_{t+1}=x_t-\eta f'(x_t),\quad \eta>0$$
 [Gradient descent]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .narrow}
 @!single-variable-calculus-gradient-descent
 :::
 
@@ -1706,15 +1706,17 @@ $$P_n(x)=\sum_{i=0}^n\frac{f^{(i)}(x_0)}{i!}(x-x_0)^i$$
 :::
 
 ::: {.slide title="Halving the Window Divides the Error of $P_n$ by $2^{n+1}$"}
-[Taylor]{.kicker}
-
+::: {.cols .vc}
+::: {.col}
 $$f=P_n+R_n,\quad R_n=\frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}$$
 
-On $|x|\le h$ the error of $P_n$ for $e^x$ grows like $h^{n+1}$: log–log slopes $2, 3, 4$.
+with $\xi$ between $x_0$ and $x$. On $|x|\le h$ the error of $P_n$ for $e^x$ grows like $h^{n+1}$: log–log slopes $2, 3, 4$.
+:::
 
+::: {.col .narrow}
 @!single-variable-calculus-taylor-error-rate
-
-[$f$ is $(n+1)$ times differentiable between $x_0$ and $x$; $\xi$ lies strictly between them.]{.small}
+:::
+:::
 :::
 
 ::: {.slide title="The Series of $e^x$ Converges to $e^x$, but Smooth Is Not Analytic"}
@@ -1739,8 +1741,8 @@ $e^{-1/x^2}$ has every derivative $0$ at $0$: its series is $\equiv0$.
 [Descent lemma]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
-![The quadratic ceiling and its minimizer at $\eta=1/L$.](../img/mdl-cal-descent-lemma.svg){width=98%}
+::: {.col .fig}
+![The quadratic ceiling and its minimizer at $\eta=1/L$.](../img/mdl-cal-descent-lemma.svg){width=92%}
 :::
 
 ::: {.col}

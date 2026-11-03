@@ -1373,7 +1373,6 @@ these samplers the only unknown is the score $\nabla\log p_t$.
    $$
    j_i=f_i\,p-\tfrac12\sum_k\partial_k(a_{ik}\,p)
    $$
-   :eqlabel:`eq_mdl-dyn-matrix-current`
 
    and, dividing by $p$, the probability-flow velocity
 
@@ -1381,14 +1380,13 @@ these samplers the only unknown is the score $\nabla\log p_t$.
    \mathbf u=\mathbf f-\tfrac12\,\mathbf a\,\nabla\log p-\tfrac12\,\nabla\cdot\mathbf a,
    \qquad(\nabla\cdot\mathbf a)_i=\sum_k\partial_ka_{ik}.
    $$
-   :eqlabel:`eq_mdl-dyn-general-pf-velocity`
 
    A constant matrix only replaces $g^2$ by $\mathbf a$ in the score term;
    a state-dependent $\mathbf a$ adds the last term. Now let
    $dX = g(X)\,dW$ with no drift and a smooth positive $g$, on the circle
    $[0, 1)$ with periodic boundaries.
-    1. Specialize the current :eqref:`eq_mdl-dyn-matrix-current` and the
-       velocity :eqref:`eq_mdl-dyn-general-pf-velocity` to this SDE. Show
+    1. Specialize the matrix current and the general velocity above
+       to this SDE. Show
        that a stationary density has constant current, that periodicity
        forces the constant to vanish, and find $p_\infty$.
     1. Replacing the constant $g^2$ of :eqref:`eq_mdl-dyn-fokker-planck` by

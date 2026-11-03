@@ -173,7 +173,7 @@ Invertibility is a gain, but it is also a constraint. Is a Neural ODE at
 least as expressive as the residual stack it came from? On the real line it
 is not, and a picture shows why. In the $(t,x)$ plane, trajectories
 of a Lipschitz field never cross. Two trajectories that swapped $-1$ and $1$
-would have to meet on the way (:numref:`fig_mdl-dyn-flow-order`a).
+would have to meet on the way (panel (a) of :numref:`fig_mdl-dyn-flow-order`).
 
 **Proposition (flows on $\mathbb{R}$ preserve order).** *Let $f(x,t)$ be
 continuous in $t$ and globally Lipschitz in $x$, and write $\Phi_t(x)$ for
@@ -196,7 +196,7 @@ meeting time. Thus no Neural ODE on $\mathbb{R}$ realizes $x\mapsto-x$: that
 map sends $-1$ to $1$ and $1$ to $-1$, which reverses their order.
 
 The residual block $x+f(x)$ with $f(x)=-2x$ does realize it, in one step
-(:numref:`fig_mdl-dyn-flow-order`b). That block is the Euler step with $h=1$
+(panel (b) of :numref:`fig_mdl-dyn-flow-order`). That block is the Euler step with $h=1$
 of $\dot{x}=-2x$, whose exact flow $e^{-2t}x$ never reverses order. The two
 statements agree because one Euler step $x+hf(x)$ of a field with Lipschitz
 constant $L$ is guaranteed to be increasing when $hL<1$: for $x>y$,
@@ -219,7 +219,7 @@ $$
 $$
 
 It carries $(x,0)$ to $(-x,0)$ along half circles, and trajectories pass each
-other in the plane without meeting (:numref:`fig_mdl-dyn-flow-order`c).
+other in the plane without meeting (panel (c) of :numref:`fig_mdl-dyn-flow-order`).
 Adding dimensions in this way is called *augmentation*
 :cite:`Dupont.Doucet.Teh.2019`. A flow is a continuous rearrangement of
 space, and on a line there is no room for two points to pass.

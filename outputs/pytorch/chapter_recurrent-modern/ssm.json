@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d62dbe4d0f2968f02fb8fd9c02577543659039851b5797188b737c83a6c1a40e",
+    "d2l_lib_fingerprint": "sha256:445a9c6c481f465c9287c32473b05656b3d6bef06fb14a2c364163afecc9023b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 4.8e-07\n"
+          "text": "max deviation: 9.5e-07\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31730,
-          "sha256": "sha256:64313d829c22bfd692da955bed33d70e01cb34cd4d21d5b263fae1aba6a5be05"
+          "bytes": 30154,
+          "sha256": "sha256:f168048a5175d7ffd0e9f09728941ba702cb06b1746fee29fdf976b4e26ad2ce"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU perplexity: 3.19\n"
+          "text": "minGRU perplexity: 3.20\n"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity with the state reset: 10.77\ngates above 0.5: 53%, above 0.9: 24%\n"
+          "text": "perplexity with the state reset: 10.68\ngates above 0.5: 53%, above 0.9: 24%\n"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convolution vs scan: 2.4e-07, convolution vs steps: 2.4e-07\n"
+          "text": "convolution vs scan: 1.2e-07, convolution vs steps: 2.4e-07\n"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D, short timescales     1.00   0.13\n"
+          "text": "S4D, short timescales     1.00   0.12\n"
         },
         {
           "type": "stream",
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D perplexity: 3.39\n"
+          "text": "S4D perplexity: 3.36\n"
         }
       ]
     }

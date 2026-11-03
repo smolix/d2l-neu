@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 1.0e-02\nlargest difference from one GPU on all 256: 6.8e-04\nlargest difference from one GPU on two accumulated halves: 6.0e-08\n"
+          "text": "largest update 8.0e-03\nlargest difference from one GPU on all 256: 8.2e-04\nlargest difference from one GPU on two accumulated halves: 6.0e-08\n"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2284 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4039 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7575 examples/s, speedup 3.32, efficiency 83%\n"
+          "text": "1 GPU(s):  2283 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4038 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7564 examples/s, speedup 3.31, efficiency 83%\n"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 25896,
-          "sha256": "sha256:6d66577bf8c3fc287c161235a7d4e20618a5bb6387f1820c0353d42aad96b52c"
+          "bytes": 25898,
+          "sha256": "sha256:2de8386346bef28aa7d1e8b4e993c1fddd45da2d80d6de740b565983abbbd672"
         }
       ]
     },

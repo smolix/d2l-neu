@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:21fdaf951a6b7ea979a348e8270765bd5a70c7abcbeb4883d407bda68dcdb870",
+    "d2l_lib_fingerprint": "sha256:d64af196db737f6feb1fd9a76ed0ad902a9981e087cad7a4a22dd92d95604f01",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29548,
-          "sha256": "sha256:fc0d9d31e94235e58b03163934630a8119026d304b2ca393216582f05a4ad9ae"
+          "sha256": "sha256:0594c7bfa4762b6707fc212df1f3e6435a31da56f62c3366e47107a20af0e870"
         }
       ]
     },
@@ -122,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101492,
-          "sha256": "sha256:4991c37d0a066471528e9f24d01e9a4b5f455c38c99d79a6f0db1dc4d23cb190"
+          "sha256": "sha256:499bcb945f2a0fea2c89fdd16bb2f2ff651d1a8a1f185871d3ade36a777daddb"
         }
       ]
     },

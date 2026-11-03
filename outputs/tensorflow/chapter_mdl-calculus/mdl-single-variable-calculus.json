@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15821,
-          "sha256": "sha256:64d369d8441e98f7b0abacc30b63cc149e39d2dab43870b53211e7321f098047"
+          "sha256": "sha256:a45e27057b3548b4e0e7af0ee89b69f1bbde07f3962940d8109e710531b06c63"
         }
       ]
     },
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:75ab3f2274d225abc8965039b72fe4d1729b534bb38b902c4e2f8e98b66c47f1"
+          "sha256": "sha256:b73c4f4b3c526a64680a163d3accc27e97ffcf99722720f21ca9a81d08134097"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28451,
-          "sha256": "sha256:3135b47eeb03bab59449622cc67e1f8e8c3bc65472a39d3d3a44b4cd3aeb17b1"
+          "sha256": "sha256:acddbf7abfec932c1e6f8c206ac7d73f1fdb06e73aee8a5d5d26e0e1b963f6e3"
         }
       ]
     },
@@ -108,12 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "right quotient: +1.0, left quotient: -1.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d|x|/dx at 0: autograd returns 0.0\nReLU' at 0: autograd returns 0.0\n"
+          "text": "right quotient: +1.0, left quotient: -1.0\nd|x|/dx at 0: autograd returns 0.0\nReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },

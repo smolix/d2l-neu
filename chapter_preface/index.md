@@ -639,9 +639,17 @@ including prose, figures, mathematics, and code, all in one place.
 D2L notebooks use shared imports and helper functions from
 the `d2l` package. Blocks marked with `#@save` are exported
 there so later notebooks can focus on models instead of
-repeating setup code.
+repeating setup code. The header of the library is nothing more than
+imports, with the module bound to the name `d2l`:
 
-@preface-code-1
+~~~python
+#@save
+import math
+import sys
+from matplotlib import pyplot as plt
+...
+d2l = sys.modules[__name__]
+~~~
 :::
 
 ::: {.slide title="Framework-Specific Imports"}

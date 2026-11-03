@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fa082dddb97c3a5410a38c451ca50287d20e27aeccbe2eeb0e9100342e23d598",
+    "d2l_lib_fingerprint": "sha256:2b2da06d029f6ce4d72e4035a8789fa07642fb16f1d5847454f7818686905104",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 35643,
-          "sha256": "sha256:10e22cada4920a7d79ecad3a5fc43885854e5a209cc79eac7b96fd276e1bc173"
+          "sha256": "sha256:0bd667154d1c3bf987a378fdb003ced33eccf1453d1f44d7b40d840535242af4"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 52147,
-          "sha256": "sha256:5c09a77b1a447d1dcb8a82a7182cf7d7e47f18ccf38876706cdd56bbebdd0fa2"
+          "sha256": "sha256:1b0cf377bcdce6f99f39d5ee86657f779fd9306989be3c97e29ef69179f61719"
         }
       ]
     },
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 31738,
-          "sha256": "sha256:09b541d1d78a85eb4f06c18fabf7be59ee649d085d8c5ee2e3321a12ffbe806d"
+          "sha256": "sha256:d8166cc55a920e405155d5fafb0be8dc6c7c347a505113f59824c3986d77204a"
         }
       ]
     }

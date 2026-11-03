@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (1.0390, 0.0282)\nlabel: 6.1925, noise: 0.0103\n"
+          "text": "features: (0.9959, 0.5770)\nlabel: 4.2347, noise: 0.0048\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (-4.9e-04, 5.5e-05)\nerror in b: 2.5e-05\nstandard error: 3.2e-04\n"
+          "text": "error in w: (-3.1e-04, 4.6e-04)\nerror in b: 4.0e-04\nstandard error: 3.2e-04\n"
         }
       ]
     },
@@ -94,7 +94,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [ 2.07 10.28 -1.56]\na new pass starts with labels [-0.48  6.82  5.04]\n"
+          "text": "32 minibatches, the last of size 8\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "second pass: 32 minibatches\na new pass starts with labels [0.74 1.45 0.51]\na new pass starts with labels [ 8.41  2.93 -3.3 ]\n"
         }
       ]
     },

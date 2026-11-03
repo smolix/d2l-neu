@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.69\nResidualBlock   std 0.83\nResidualBlock   std 1.03\nResidualBlock   std 1.27\nResidualBlock   std 1.60\nResidualBlock   std 1.98\nResidualBlock   std 2.34\nResidualBlock   std 2.93\nResidualBlock   std 3.70\nLinear          std 5.11\n"
+          "text": "Linear          std 0.68\nResidualBlock   std 0.84\nResidualBlock   std 0.99\nResidualBlock   std 1.22\nResidualBlock   std 1.51\nResidualBlock   std 1.80\nResidualBlock   std 2.10\nResidualBlock   std 2.47\nResidualBlock   std 3.01\nLinear          std 3.96\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kernel 26.6, bias 5.3\n"
+          "text": "kernel 13.8, bias 3.1\n"
         }
       ]
     }

@@ -522,7 +522,7 @@ functions of the 8 numbers in one mixture $\alpha_1\mathbf{v}_1 +
 \alpha_2\mathbf{v}_2$. With two or four heads the error falls by more
 than two orders of magnitude, and the layer returns both values almost
 exactly. The printed weights show how. The heads learn clearly different
-weightings of the two positions, and these often stay far from one-hot. As
+weightings of the two positions, and these need not be one-hot. As
 in the hand-built construction, two different mixtures are all that the
 output projection needs.
 
@@ -725,10 +725,8 @@ queries, keys = (emb[[letters.index(c) for c in w]][None] for w in words)
 attention = d2l.DotProductAttention()
 attention(queries, keys, keys)
 d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
-                  ylabel='queries', figsize=(4, 3.5), cmap='Blues')
-ax = d2l.plt.gcf().axes[0]                 # Label the rows and columns
-ax.set_xticks(range(len(words[1])), list(words[1]))
-ax.set_yticks(range(len(words[0])), list(words[0]));
+                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
+                  xticklabels=words[1], yticklabels=words[0])
 ```
 
 ```{.python .input #multihead-attention-an-alignment-you-can-read}
@@ -741,10 +739,8 @@ queries, keys = (emb[jnp.array([letters.index(c) for c in w])][None]
 attention = d2l.DotProductAttention()
 attention(queries, keys, keys)
 d2l.show_heatmaps(attention.attention_weights[None], xlabel='keys',
-                  ylabel='queries', figsize=(4, 3.5), cmap='Blues')
-ax = d2l.plt.gcf().axes[0]                 # Label the rows and columns
-ax.set_xticks(range(len(words[1])), list(words[1]))
-ax.set_yticks(range(len(words[0])), list(words[0]));
+                  ylabel='queries', figsize=(4, 3.5), cmap='Blues',
+                  xticklabels=words[1], yticklabels=words[0])
 ```
 
 The map reads row by row. The queries are the letters of "attention", the

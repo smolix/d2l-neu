@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 3.3e-02, largest difference 3.0e-08\n"
+          "text": "largest update 6.8e-02, largest difference 3.0e-08\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately:  580 us measured,  597 us predicted\nat once   :   81 us measured,   83 us predicted\n"
+          "text": "separately:  576 us measured,  596 us predicted\nat once   :   81 us measured,   83 us predicted\n"
         }
       ]
     },
@@ -90,17 +90,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 2.88 ms\n"
+          "text": "1 GPU(s), 256 examples each: 2.82 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 128 examples each: 2.70 ms\n"
+          "text": "1 GPU(s), 128 examples each: 2.82 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s), 128 examples each: 5.50 ms\n"
+          "text": "2 GPU(s), 128 examples each: 5.62 ms\n"
         }
       ]
     },
@@ -116,12 +116,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2.71 ms per step, test accuracy 0.86\n"
+          "text": "1 GPU(s): 2.75 ms per step, test accuracy 0.84\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 5.61 ms per step, test accuracy 0.86\n2 GPUs predicted: 5.42 ms per step\n"
+          "text": "2 GPU(s): 5.59 ms per step, test accuracy 0.83\n2 GPUs predicted: 5.64 ms per step\n"
         }
       ]
     }

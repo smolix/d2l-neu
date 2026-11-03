@@ -281,8 +281,8 @@ Post-LN renormalizes the stream after every addition, so its root mean
 square (RMS) is pinned at $1$ at every depth. Pre-LN only ever adds, so its
 stream grows like the square root of the depth. At initialization the block
 outputs are nearly uncorrelated and their variances add, which predicts an
-RMS after 32 blocks of $\sqrt{33} \approx 5.7$. The measured value, a little
-above 5, falls somewhat short; an exercise asks why. This growth stabilizes the
+RMS after 32 blocks of $\sqrt{33} \approx 5.7$. The measured value, between
+5 and 5.6, falls somewhat short; an exercise asks why. This growth stabilizes the
 stack. Each pre-LN branch reads the stream through its own normalization,
 so its output has a fixed scale. As the stream grows, the *relative*
 contribution of each successive block therefore shrinks.
@@ -305,7 +305,7 @@ weights, and with them the loss, barely depend on $\mathbf{W}_q$ and
 $\mathbf{W}_k$. At block 32 the post-LN query and key projections receive
 gradients of order $10^{-9}$, five to six orders of magnitude less than in
 the pre-LN stack, while the value and output projections, which act on the
-averaged token itself, still receive gradients near $0.06$. These are
+averaged token itself, still receive gradients of several hundredths. These are
 measurements at initialization, but they agree with what
 :citet:`xiong2020layer` find in training: post-LN needs a learning-rate
 warmup to train well, and pre-LN trains without one. We use pre-norm as the

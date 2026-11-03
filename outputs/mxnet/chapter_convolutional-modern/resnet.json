@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:5f4d4652c134fa2f17283157cf2cacb86dfebb05021d9ec46b7a9de3c33562f2",
+    "d2l_lib_fingerprint": "sha256:1d51f853039902111b0e7eca9e712cf797f5ae7f0ad2445350eb9d83906086b4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -82,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 32947,
-          "sha256": "sha256:05ead862a284ddbc9c5f1dabf23c53ec7bc2641c3d848ecb0d5543d3627199e4"
+          "bytes": 31164,
+          "sha256": "sha256:4cc663b2158a30dbcf329c79d0cfd240ecba682ca1c5a14f47f1847d79944a34"
         }
       ]
     },

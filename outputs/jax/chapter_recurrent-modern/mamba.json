@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6613aa3f36546151084ecd4dcb8126f8b6e6079e1aa2aafaf20da7fee21325f0",
+    "d2l_lib_fingerprint": "sha256:c9f60ec76546c68872020f5a23989990e4fec54d0c4573aca9cf4f977e6d10a6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0 5 0 7 0 0 0 0 0 0 3 4 1 1 1 1]\n [0 5 0 4 0 0 0 8 6 0 0 0 1 1 1 1]]\n[[5 7 3 4]\n [5 4 8 6]]\n"
+          "text": "[[8 9 0 0 0 2 9 0 0 0 0 0 1 1 1 1]\n [2 0 0 0 2 0 4 0 0 8 0 0 1 1 1 1]]\n[[8 9 2 9]\n [2 2 4 8]]\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D      accuracy 0.17\n"
+          "text": "S4D      accuracy 0.19\n"
         },
         {
           "type": "stream",
@@ -72,12 +72,12 @@
       "outputs": []
     },
     "mamba-the-layer-3": {
-      "code_fingerprint": "sha256:647ba1ed074c579023644e14a22844f652e54e8d8069ea2be4d220ef6d3438cd",
+      "code_fingerprint": "sha256:0c44de9f6edb447d3ed0f9805d547275a943300fa51f5344f678859cc381b03c",
       "kind": "text",
       "outputs": []
     },
     "mamba-selective-copying-with-mamba": {
-      "code_fingerprint": "sha256:cf03b1fa62b2ea91d3829e26b5002c56519b4f4593f3f3e73a2d88cab79fd5f7",
+      "code_fingerprint": "sha256:8f392204534ff06319cb9658184fae628bdd06e85d23fbc851f23401f59faec8",
       "kind": "text",
       "outputs": [
         {
@@ -88,41 +88,41 @@
       ]
     },
     "mamba-where-the-state-comes-from-1": {
-      "code_fingerprint": "sha256:1d6ff57adc14c8a380852aa9161b1b02f7756527e6b240805ae434886ce7846a",
+      "code_fingerprint": "sha256:08744da7a2793b6f75badfc3063b3ab0e443df6aa351c3691c7bc8c00628969e",
       "kind": "text",
       "outputs": []
     },
     "mamba-where-the-state-comes-from-2": {
-      "code_fingerprint": "sha256:3a2898cd9b38492c02da55cdd7015314e3b00b40888582d135d5a5a6c2cbfbe3",
+      "code_fingerprint": "sha256:aa752c893235513570660c068442a8b13ec8b7578c7be3cc9a0a246b9eb40810",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D    share from the symbols: 0.02\nMamba  share from the symbols: 0.62\n"
+          "text": "S4D    share from the symbols: 0.04\nMamba  share from the symbols: 0.95\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-where-the-state-comes-from-2-1.svg",
-          "bytes": 34033,
-          "sha256": "sha256:483eec597af484013495a02e0db88065708ceae719179a098e11ec7560a2f4a1"
+          "bytes": 40446,
+          "sha256": "sha256:089034d20048c46cdc66f23e989f18d22318c97728bce4a95ee6ffb6bbf4ba3b"
         }
       ]
     },
     "mamba-language-modeling-1": {
-      "code_fingerprint": "sha256:0cafde79371d3b0002a019d494817d1db63b186864a58bab25e7a5cbdf9638d5",
+      "code_fingerprint": "sha256:a7fe519fb26367163ca01e2cb5289ee9d300d70d1866c77e30eab5a120ac317c",
       "kind": "text",
       "outputs": []
     },
     "mamba-language-modeling-2": {
-      "code_fingerprint": "sha256:1e919e6e2b36511695f0d90c27e8a15e33b552f35b2c3a090ffc1887058a7ebe",
+      "code_fingerprint": "sha256:cbdba4195a1e675e6fccca71e4b0dc7d1aa7c9a334bfe77805039a20a4c952cb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba perplexity: 3.01\n"
+          "text": "Mamba perplexity: 3.00\n"
         }
       ]
     }

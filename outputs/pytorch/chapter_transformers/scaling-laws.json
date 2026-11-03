@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d02bf2bc6283f27e32418db429df9ca408844cd32061a436f1e47e1cf8057ea2",
+    "d2l_lib_fingerprint": "sha256:dba5c423ccff4d028a4ce436f82038db033da762a1b209889c5accf3920c408f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -63,27 +63,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.70 / 1.48 / 1.39, training 1.42\n"
+          "text": "d =  96, 3 blocks, N =  0.33M: validation 1.90 / 1.48 / 1.38, training 1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.62 / 1.44 / 1.35, training 1.37\n"
+          "text": "d = 128, 3 blocks, N =  0.59M: validation 1.61 / 1.45 / 1.36, training 1.38\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.57 / 1.38 / 1.29, training 1.31\n"
+          "text": "d = 192, 4 blocks, N =  1.77M: validation 1.53 / 1.38 / 1.28, training 1.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.49 / 1.34 / 1.25, training 1.26\n"
+          "text": "d = 256, 6 blocks, N =  4.72M: validation 1.50 / 1.34 / 1.25, training 1.27\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.31 / 1.22, training 1.24\n"
+          "text": "d = 384, 8 blocks, N = 14.16M: validation 1.45 / 1.32 / 1.22, training 1.24\n"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slope -0.044; the largest model lies 0.052 nats above the line\n"
+          "text": "slope -0.045; the largest model lies 0.054 nats above the line\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 39443,
-          "sha256": "sha256:91946bc134e513c20637adcf9bfb352c5337f3d07afa52407e079f9e00f1d647"
+          "bytes": 41566,
+          "sha256": "sha256:bdca6758809c5803e1ce99e1906c6752d783ee22fd4b8ca5a8df8943b10be041"
         }
       ]
     },
@@ -134,12 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPT-2      5.26M parameters, 12.0 KiB of cache per token\nLlama 3 8B 4.40M parameters,  3.0 KiB of cache per token\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen3-32B  4.30M parameters,  1.5 KiB of cache per token\n"
+          "text": "GPT-2      5.26M parameters, 12.0 KiB of cache per token\nLlama 3 8B 4.40M parameters,  3.0 KiB of cache per token\nQwen3-32B  4.30M parameters,  1.5 KiB of cache per token\n"
         }
       ]
     }

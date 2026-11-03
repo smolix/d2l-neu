@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:21e1b7c3920049af3b422ee6186fe6b195a65c1db92bc651a6ae763ee1ace3e1",
+    "d2l_lib_fingerprint": "sha256:02e6b9207496b8982760a01b1f2d36a4878225aca5b3ac91879ea690906b1282",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: -0.097518, x2: -0.013906\n"
+          "text": "step 300, x1: -0.406515, x2: 0.018305\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54273,
-          "sha256": "sha256:d30114401c910bb48feba1468efe5a878fc7ad29f42e0f774c9e0a5128c08abc"
+          "bytes": 54036,
+          "sha256": "sha256:116a9768dd8890d8c9b4b621cc15de07bf6f56d8875d927bdad6c001a2a93715"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.247  0.0156], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.2508 0.0157], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.1297 0.0071], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1268 0.007 ], predicted [0.1256 0.0069]\n"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 32302,
-          "sha256": "sha256:136929143634ebf0fca30dd80e27325b832305bbddfab9465ce0147cba0e277a"
+          "bytes": 31170,
+          "sha256": "sha256:ad32aee6eb3e904289e6b4005dd492a3c7a5c8507f9ff4fe6e4c738c5dcf300c"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-batched-computation-2-1.svg",
-          "bytes": 35569,
-          "sha256": "sha256:0caa048d0a72a688c6ac64c0fb8f5697dba306f2615ca57fe27e46fa56bc016a"
+          "bytes": 35571,
+          "sha256": "sha256:9758b243d8433d1872419abbd19402533d43f8500816bcaf97a49347631a240a"
         }
       ]
     },
@@ -125,17 +125,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 1.263 sec/epoch\n"
+          "text": "loss: 0.246, 1.292 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.154 sec/epoch\n"
+          "text": "loss: 0.250, 0.151 sec/epoch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.024 sec/epoch\n"
+          "text": "loss: 0.254, 0.024 sec/epoch\n"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 46830,
-          "sha256": "sha256:b3d6b5732441e257c02611f337b5ae5c64620a340df5f549a51decaad0cf3a92"
+          "bytes": 48427,
+          "sha256": "sha256:12964da3cf21f8eb3881de1947a74d0410101c9b7572434f615106e69b2465da"
         }
       ]
     },
@@ -164,14 +164,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.153 sec/epoch\n"
+          "text": "loss: 0.250, 0.152 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-concise-implementation-2-1.svg",
-          "bytes": 18789,
-          "sha256": "sha256:064c14899b65657b31b2d4df14f047278a3ecb450843c48d45d2ab937030570d"
+          "bytes": 18791,
+          "sha256": "sha256:1b8bf0639156a2eb8487e5771d16c5222bc93c3a162fa8aff3781f9274f03d3a"
         }
       ]
     }

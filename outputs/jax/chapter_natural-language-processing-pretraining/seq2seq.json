@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9f9a2ce532040346b57818cd72b74ba8685199bb9fd82040fe4857b92869cf20",
+    "d2l_lib_fingerprint": "sha256:f675fc920138e9faaf8e2bf73ac5d1c131cdf3981f452eda2cad3345f17836b1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 105 1890  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297  705  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  385  607  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  106  585  279 2349  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296 1234  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270 3614  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 5]\nshared vocabulary size: 4003\n"
+          "text": "source: [[1426  579  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2566  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 323  701  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 1372  378 1227  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  103 3576  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  317  277   39 1165 1373  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 3 4]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24467,
-          "sha256": "sha256:c5f3a968dbdd4b8606c209e57518373f178f9cde4cce9e260b302542553432f2"
+          "sha256": "sha256:4479c08cfb08a66b012c7e91dfc9f6916d4b538ad0d2bc42f5699480eda8f5cc"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 26054,
-          "sha256": "sha256:fe957dc98fd53bd2017de3953b7c46ad2859240517c740dd0c8885d10e0b3f1e"
+          "bytes": 26241,
+          "sha256": "sha256:65be95479b9d65815d91d0045e05439df9e0c3884702370fbd1a15fa60fcf3d1"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => 'je l’ai perdu .'\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
         }
       ]
     },
@@ -154,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => 'je l’ai perdu .', chrF 0.697\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost .     k=1: 0.70  k=2: 1.00  k=5: 1.00\n"
+          "text": "i lost .     k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
         },
         {
           "type": "stream",
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24887,
-          "sha256": "sha256:b412d26e8ee2fdda84c91775ecab4de390618c34a6b2ac41a6ce3933136efa2f"
+          "bytes": 24510,
+          "sha256": "sha256:ae22536c1341b1cf7a4b76dfeada0c02e89c9ec84dfcf2bf139731c58edc3103"
         }
       ]
     }

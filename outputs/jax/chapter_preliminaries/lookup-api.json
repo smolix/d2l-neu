@@ -36,13 +36,13 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:30e2913ba22323932e9fb33c3f055f443fc7e7a679420183090c0db621a1f12f",
+      "code_fingerprint": "sha256:3464fd430c09dac41fd14adcf755309e940063f29918a083442a099e825689e8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TypeError: Cannot interpret '3' as a data type.\n\nDid you accidentally write `jax.numpy.ones(2, 3)` when you meant `jax.numpy.ones((2, 3))`, i.e. with a single tuple argument for the shape?\n"
+          "text": "TypeError: Cannot interpret '3' as a data type.\n"
         },
         {
           "type": "stream",

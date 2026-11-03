@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time the on i time boldly the was\n    me the viii folly and get were judged out my became to felt closing a\n    went and machine\n2-gram (longest copied run: 4 words): the time traveller through the lesson\n    of a little ape like morlocks about building which was trembling with a\n    proportionately great house and shoulders of being gently\n3-gram (longest copied run: 7 words): the time machine itself asked the time\n    machine i had made myself the most part they had left was situated on\n    the lips it was the presence\n"
+          "text": "1-gram (longest copied run: 3 words): the time or summer easier fishes it\n    painful non exploring bearing refuge had dark train rubbing any on the\n    against i was off a voices his a\n2-gram (longest copied run: 4 words): the time i found i had been stamped\n    out the breeding now a day grew more indolent or cunning and burned down\n    and went down upon the\n3-gram (longest copied run: 8 words): the time traveller with a sudden\n    motion to warn them when i pressed the lever no he said not a little\n    open court within the big valves\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:e5b8714dfcc40a020638fb025e2fb0395b3e832b650f7d0274b10ec1da3aa4ad"
+          "sha256": "sha256:47905dd88109f010c54e2a318a91b38bb9832c28701d60079362137ad5098266"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:582d8c8b59fa097e78108be13d5593916fd540c129bdfdb5ed4de85b033f8cb6"
+          "sha256": "sha256:bee4152c41c3b6572b0e6017941f87e4965c23f15a98afc3f9f7a2f300541273"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[260 546 320 118 259 604 315 377 333 282]\n [304 849  44  10 386 266 274 437 511 115]] \nY: [[546 320 118 259 604 315 377 333 282  59]\n [849  44  10 386 266 274 437 511 115 416]]\nX[0]: ' the Provincial Mayor'\nY[0]: ' Provincial Mayor;'\n"
+          "text": "X: [[ 99 391 275  10 294 772 330 321 523 422]\n [674  99 400 395 514 351  10 729 557 302]] \nY: [[391 275  10 294 772 330 321 523 422 721]\n [ 99 400 395 514 351  10 729 557 302  44]]\nX[0]: 'calling\\nan incident very v'\nY[0]: 'alling\\nan incident very viv'\n"
         }
       ]
     }

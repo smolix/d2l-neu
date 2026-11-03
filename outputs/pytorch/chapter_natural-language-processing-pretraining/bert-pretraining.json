@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:311afb15d1fbc8fe9ca6edea2321e64a706ec372d573880790bf53b1d48a320b",
+    "d2l_lib_fingerprint": "sha256:453a421dc491d840c4f13a28ba9f7b11a70b1eeb5bbb7c61f2e0c9304eb4564b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.618, NSP loss 0.694\n17688.5 sentence pairs/sec on [device(type='cuda', index=0)]\n"
+          "text": "MLM loss 9.566, NSP loss 0.695\n17866.8 sentence pairs/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21499,
-          "sha256": "sha256:1892e925475b91f1957b2ba8372df22d4eb3b186dc4f612886b9101fc0b674b1"
+          "bytes": 21491,
+          "sha256": "sha256:d4c9545d149be95c23e2d5744bad3d5804ff7654d2d78bcc2b49b1470d855e55"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([-1.4008, -1.0923,  0.6509], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([ 0.3185, -0.2125,  2.3535], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([-1.0761, -1.1139, -0.0567], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 0.3793, -0.7582,  2.2543], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     }

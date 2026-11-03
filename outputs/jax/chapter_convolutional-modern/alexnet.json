@@ -70,25 +70,25 @@
       ]
     },
     "alexnet-training-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:0cc82aa3ebb9ea23837f2a4a5679389a2b29bbf53e3447e1d8952910308d10fd",
+      "code_fingerprint": "sha256:f7686aef53c3a0d0e362ef220a687af0589356faa62e6e3ba28c986a5d3741b4",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:dc0d696eff0db7d2f23f9c4d9ddffde06994eaa80334f91d232426ce0945bade",
+      "code_fingerprint": "sha256:06eda1ebbaea779d1f832e8aae8c867cee906be32adddcb6eeb86a0216b6fb5f",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:47777338ad6b1e6f30f2e91417fff674233d417926cb61914ac216d7ebd1f349",
+      "code_fingerprint": "sha256:03379187ac53bd8a05543caf8e09202cb8318aa1a8813495344694fcb36eeecc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 34321,
-          "sha256": "sha256:cc3aaf4a1199f07d7f1b06533cbf8dff5e2fdfd05f7c4459b9048e468f7f8f60"
+          "bytes": 33678,
+          "sha256": "sha256:8a3ccea4a27d264de63f89c92abc0533bb8a330c14125cdbe2249663ed36bb07"
         }
       ]
     }

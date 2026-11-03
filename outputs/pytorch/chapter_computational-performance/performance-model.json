@@ -63,8 +63,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 30546,
-          "sha256": "sha256:fa07c8d0d4ffb901bd25b1b56cbf18ab154fd72c6a84f30baff5d1a2c9f75b11"
+          "bytes": 32578,
+          "sha256": "sha256:4cf83652be262e4ce084a2f6182848a38b23175ce9e3ebcda5d5f43adfb7c521"
         }
       ]
     },
@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:    13.3 us per call,   2.5 TFLOP/s\nn =  512:    13.9 us per call,  19.3 TFLOP/s\nn = 1024:    16.8 us per call, 127.8 TFLOP/s\nn = 2048:   107.7 us per call, 159.5 TFLOP/s\nn = 4096:   892.7 us per call, 154.0 TFLOP/s\nn = 8192:  6416.6 us per call, 171.4 TFLOP/s\n"
+          "text": "n =  256:    12.4 us per call,   2.7 TFLOP/s\nn =  512:    13.4 us per call,  20.1 TFLOP/s\nn = 1024:    16.8 us per call, 128.0 TFLOP/s\nn = 2048:   107.7 us per call, 159.5 TFLOP/s\nn = 4096:   892.6 us per call, 154.0 TFLOP/s\nn = 8192:  6459.5 us per call, 170.2 TFLOP/s\n"
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.59 ms/call\nmul: 0.59 ms/call\nsin: 0.58 ms/call\nsigmoid: 0.58 ms/call\n"
+          "text": "add: 0.58 ms/call\nmul: 0.59 ms/call\nsin: 0.58 ms/call\nsigmoid: 0.58 ms/call\n"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.58 ms per step, device busy 2.56 ms (99%)\n 0.818 ms  32.0%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_nt_al\n 0.789 ms  30.8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_tn_al\n 0.421 ms  16.4%  multi_tensor_apply_kernel<TensorListMetadata<2>, BinaryO\n 0.385 ms  15.0%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_nn_al\n 0.056 ms   2.2%  vectorized_elementwise_kernel<4, BinaryFunctor<float, fl\n 0.021 ms   0.8%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
+          "text": "wall clock 2.58 ms per step, device busy 2.56 ms (99%)\n 0.818 ms  32.0%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_nt_al\n 0.788 ms  30.8%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_tn_al\n 0.421 ms  16.5%  multi_tensor_apply_kernel<TensorListMetadata<2>, BinaryO\n 0.385 ms  15.0%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_nn_al\n 0.056 ms   2.2%  vectorized_elementwise_kernel<4, BinaryFunctor<float, fl\n 0.021 ms   0.8%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
         }
       ]
     }

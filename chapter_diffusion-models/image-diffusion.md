@@ -659,7 +659,7 @@ $\gamma = 1$. :citet:`Dhariwal.Nichol.2021` report a similar weakness on
 ImageNet: at scale one their samples did not match the requested classes on
 inspection, although their guiding classifier gave those classes about fifty
 percent probability; larger scales remedied this. Raising the scale raises agreement and lowers within-class
-distance, as before; at a scale of ten the agreement comes within about
+distance, as before; at a scale of ten the agreement lies within about
 $0.1$ of that of classifier-free guidance at $\gamma = 4$, while the
 within-class distance stays larger. The grids temper this comparison: at
 scale ten, more samples are malformed or faint than under classifier-free
@@ -1038,10 +1038,16 @@ requested class increases with $\gamma$, within-class distance decreases.
 :::
 
 ::: {.slide title="The Same Seed at Two Guidance Scales"}
-@!image-diffusion-guided-samples-3
-
+::: {.cols .vc}
+::: {.col}
 Columns are classes. At $\gamma = 4$ the instances are cleaner, more
 prototypical, and more alike; some saturate to white.
+:::
+
+::: {.col .narrow}
+@!image-diffusion-guided-samples-3
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

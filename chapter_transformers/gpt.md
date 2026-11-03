@@ -73,11 +73,18 @@ tensor when we load its weights.
 $1, \ldots, t$, so its query may attend only to keys at positions up to
 $t$. In :numref:`sec_transformer-block` the small language model passed this
 lower-triangular mask to every block as a boolean array. Here the attention
-module applies it itself, because the fused attention kernels of
-:numref:`sec_attention-at-scale` take the causal mask as a flag and never
-store the $n \times n$ matrix of scores. With the mask, one forward pass
-over a window computes all its next-token predictions at once, each from
-its own prefix.
+module applies it itself: it passes the attention function the flag
+`is_causal=True` instead of a mask. The fused attention kernels of
+:numref:`sec_attention-at-scale` take the causal mask in this form and
+never store the $n \times n$ matrix of scores. With the mask, one forward
+pass over a window computes all its next-token predictions at once, each
+from its own prefix.
+
+:begin_tab:`jax`
+`jax.nn.dot_product_attention` uses XLA's implementation by default, which
+builds the mask and the matrix of scores in memory.
+:numref:`sec_fast_transformer` selects cuDNN's fused kernel instead.
+:end_tab:
 
 **Positions.** Attention alone treats its inputs as a set: permuting the
 tokens permutes the outputs in the same way
@@ -198,31 +205,6 @@ class GPT(nn.Module):  #@save
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-1}
 %%tab jax
-@jax.custom_vjp  #@save
-def embedding_rows(table, X):
-    """The rows X of table."""
-    return table[X]
-
-def _embedding_rows_fwd(table, X):  #@save
-    return table[X], (table, X)
-
-def _embedding_rows_bwd(residuals, grad):  #@save
-    """Gradient of the table: the one-hot rows of X times the gradients."""
-    table, X = residuals
-    one_hot = jax.nn.one_hot(X, len(table), dtype=grad.dtype)
-    return jnp.einsum('...v,...d->vd', one_hot, grad,
-                      precision='highest').astype(table.dtype), None
-
-embedding_rows.defvjp(_embedding_rows_fwd, _embedding_rows_bwd)  #@save
-
-class Embed(nnx.Embed):  #@save
-    """nnx.Embed whose gradient is a matrix product for small vocabularies."""
-    def __call__(self, X):
-        table = self.embedding[...]
-        if len(table) > 1024:  # A one-hot row would cost too much
-            return super().__call__(X)
-        return embedding_rows(table, X).astype(self.dtype or table.dtype)
-
 class GPT(nnx.Module):  #@save
     """Decoder-only transformer language model built from configurable
     blocks."""
@@ -269,8 +251,8 @@ class GPT(nnx.Module):  #@save
         assert pos in ('rope', 'learned'), f'unknown pos: {pos!r}'
         self.pos, self.max_len = pos, max_len
         init = nnx.initializers.normal(0.02)
-        self.token_emb = Embed(vocab_size, num_hiddens,
-                               embedding_init=init, rngs=rngs)
+        self.token_emb = d2l.Embed(vocab_size, num_hiddens,
+                                   embedding_init=init, rngs=rngs)
         if pos == 'learned':
             self.pos_emb = nnx.Embed(max_len, num_hiddens,
                                      embedding_init=init, rngs=rngs)
@@ -303,18 +285,12 @@ class GPT(nnx.Module):  #@save
 ```
 
 :begin_tab:`jax`
-The token embedding is `d2l.Embed`, an `nnx.Embed` with a faster gradient.
-The gradient of a table lookup adds the gradient at every position to the
-row of that position's token. XLA computes this sum with a scatter-add, in
-which every position adds its values with atomic additions. In a minibatch
-of text, thousands of positions hold the same few frequent bytes, their
-additions to the same row wait for one another, and on our GPU the sum takes
-tens of times as long as for random tokens. For vocabularies of up to
-1,024 tokens, `d2l.Embed` computes the same sum as one matrix product, of
-the one-hot rows of the tokens with the gradients; its forward pass is the
-ordinary lookup. The product splits across GPUs like any other: each GPU
-multiplies its share of the positions, and the shares are added up with the
-other gradients.
+The token embedding is `d2l.Embed` of :numref:`subsec_tinylm`. Its
+gradient is one matrix product of the one-hot rows of the tokens with the
+gradients, not the atomic additions of an ordinary lookup, which wait on
+one another when a few frequent bytes fill most positions. The product
+splits across GPUs like any other: each GPU multiplies its share of the
+positions, and the shares are added up with the other gradients.
 :end_tab:
 
 A shape check confirms one logit per vocabulary entry at every position,
@@ -491,18 +467,30 @@ class LMOptimizer:  #@save
 
 ```{.python .input #gpt-training-the-model-2}
 %%tab jax
+def lm_decay_mask(params):  #@save
+    """Decay the weight matrices; exempt embeddings, gains, and biases."""
+    return jax.tree_util.tree_map_with_path(
+        lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
+
+@optax.inject_hyperparams  #@save
+def lm_adamw(lr=0.0, num_steps=1, warmup=0, weight_decay=0.0, max_norm=1.0):
+    """The transformation of LMOptimizer, with its hyperparameters as state."""
+    schedule = lambda t: lr * d2l.cosine_warmup(t, num_steps, warmup)
+    return optax.chain(
+        optax.clip_by_global_norm(max_norm),
+        optax.adamw(schedule, weight_decay=weight_decay, mask=lm_decay_mask))
+
 class LMOptimizer(nnx.Optimizer):  #@save
     """AdamW with weight decay on the weight matrices only, a linear warmup
     and a cosine decay of the learning rate, and gradient-norm clipping."""
+    tx = lm_adamw()  # Shared by all instances: the step compiles once
     def __init__(self, model, lr, num_steps, warmup, weight_decay=0.1,
                  max_norm=1.0):
-        decay = lambda params: jax.tree_util.tree_map_with_path(
-            lambda path, p: p.ndim == 2 and 'emb' not in str(path), params)
-        schedule = lambda t: lr * d2l.cosine_warmup(t, num_steps, warmup)
-        super().__init__(model, optax.chain(
-            optax.clip_by_global_norm(max_norm),
-            optax.adamw(schedule, weight_decay=weight_decay, mask=decay)),
-            wrt=nnx.Param)
+        super().__init__(model, LMOptimizer.tx, wrt=nnx.Param)
+        hyperparams = dict(lr=lr, num_steps=num_steps, warmup=warmup,
+                           weight_decay=weight_decay, max_norm=max_norm)
+        for name, value in hyperparams.items():
+            self.opt_state.hyperparams[name][...] = value
 ```
 
 :begin_tab:`pytorch`
@@ -514,8 +502,13 @@ always stay in step.
 
 :begin_tab:`jax`
 `LMOptimizer` is an `nnx.Optimizer` whose transformation chains clipping in
-front of `optax.adamw`. The schedule is passed as the learning rate, and the
-`mask` marks the parameters that are decayed.
+front of `optax.adamw`. The schedule is passed as the learning rate, and
+`lm_decay_mask` marks the parameters that are decayed.
+`optax.inject_hyperparams` keeps the peak rate, the step counts, the decay,
+and the clipping norm in the optimizer state rather than in the
+transformation. All instances then share one transformation, `tx`, and a
+jitted training step compiled for one instance runs the next one too, even
+at a different learning rate.
 :end_tab:
 
 ### Loss Curves and Baselines

@@ -911,7 +911,7 @@ that failed, so we print only the type of the error.
 try:
     mnp.ones((3, 2)) + mnp.ones((2, 3))
 except Exception as e:
-    print(str(e).splitlines()[-1])
+    print(str(e).splitlines()[-1].rsplit(': ', 1)[-1])
 ```
 
 ```{.python .input #ndarray-broadcasting-3}

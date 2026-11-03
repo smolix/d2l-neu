@@ -369,7 +369,7 @@ linear_rmse = k_fold(folds, make_linear)
 The linear model predicts the validation folds with an RMSE of about 0.15,
 a typical error of about 15% of the price, against about 0.11 on its
 training folds. Single folds differ a lot: within one run, the best fold
-has an RMSE of 0.11 to 0.13 and the worst one of 0.16 to 0.24, depending on
+has an RMSE of about 0.12 and the worst one of about 0.2, depending on
 which houses they contain. The mean over the five folds varies far less, by
 one or two hundredths from one random split to the next, occasionally more.
 Models evaluated on the same folds share
@@ -503,7 +503,7 @@ for wd in (0, 0.01, 0.03, 0.1, 0.3):
 
 Without weight decay, the MLP fits the training folds more closely than the
 linear model, with a training RMSE of about 0.09 against 0.11, but it
-predicts the validation folds worse, at 0.16 to 0.18: it has fit noise. From
+predicts the validation folds worse, at about 0.16 to 0.18: it has fit noise. From
 a weight decay of 0.03 on, the training RMSE rises, from about 0.09 to about
 0.16 at 0.3. The validation RMSE first falls, to between 0.13 and 0.145 at a
 weight decay of 0.03, with 0.1 nearly as good, and then rises again, to
@@ -511,8 +511,8 @@ about 0.17 at 0.3, where the MLP no longer fits even the training folds as
 well as the linear model does. This is the U-shaped curve of
 :numref:`sec_generalization_basics`, traced here by the strength of weight
 decay instead of the degree of a polynomial. At its minimum, the MLP beats
-the linear model on the same folds in every run, typically by about 0.01,
-which lowers the typical error from about 15% to about 14% of the price.
+the linear model on the same folds in every run, by one or two hundredths,
+which lowers the typical error from about 15% to 13% or 14% of the price.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
@@ -970,7 +970,7 @@ Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
 
 @!kaggle-house-price-a-linear-baseline-1
 
-- Training RMSE about 0.11; the best fold 0.11–0.13, the worst 0.16–0.24.
+- Training RMSE about 0.11; the best fold about 0.12, the worst about 0.2.
 - The five-fold mean moves by one or two hundredths between random splits.
 :::
 
@@ -1009,7 +1009,7 @@ then rises.
 
 ::: {.d2l-note}
 On the same folds, the selected MLP beats the linear model in every run,
-typically by about 0.01.
+by one or two hundredths.
 :::
 :::
 

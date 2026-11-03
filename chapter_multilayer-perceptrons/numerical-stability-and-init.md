@@ -448,9 +448,10 @@ He initialization keeps the mean squares of the activations and of the
 gradients within a factor of about 3 of 1 through all ten layers. The curve
 is not exactly flat, because the factor of each layer fluctuates around 1
 with the random weights and the fluctuations compound. Xavier initialization
-loses the factor $1/2$ of the ReLU at every layer, in both directions: the
-activations at the last layer are about $2^{-10} \approx 10^{-3}$, and the
-gradient at the first layer about $2^{-9} \approx 2 \times 10^{-3}$.
+loses the factor $1/2$ of the ReLU at every layer, in both directions. The
+predictions are $2^{-10} \approx 10^{-3}$ for the activations at the last
+layer and $2^{-9} \approx 2 \times 10^{-3}$ for the gradient at the first;
+the measurements lie within a factor of 3 of them.
 With the weights of :numref:`sec_mlp-implementation`, the activations at the
 last layer are about $10^{-19}$, and the network is useless before training
 begins.

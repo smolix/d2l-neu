@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:476469832716e11c849f207064a7cf695bdf85b3761a0b30b5af2d1147462467",
+    "d2l_lib_fingerprint": "sha256:615ca4c7362ceac588f63e00328a88a57ad6160912cde4bb752bbb37c820d277",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
           "bytes": 35140,
-          "sha256": "sha256:498d44032f4d2d167cad89d2b32530b143593b4b5e0f5e846c408bdc518af456"
+          "sha256": "sha256:05b446a2a9a91d5e9e00648a10a343f225dc0c99b48abe8bf8e2977f6e806271"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
           "bytes": 35440,
-          "sha256": "sha256:6d51edbe19fc22351d5cd63faefa5bcf37f24eff0e2096c8d6f584243dba6777"
+          "sha256": "sha256:a05f94b4dc4da1842ca10b17a025f48110315599fd5edea8192887d13870b35c"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 52000,
-          "sha256": "sha256:5175c33462cf7cfa7a4298f6b0c262a662ee650e5f67677876e75848a53747cc"
+          "sha256": "sha256:410f37fb7890500b2a3cb5c4c90ba368abcfa369c3554c1111c133c116e632df"
         }
       ]
     },
@@ -133,7 +133,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 30261,
-          "sha256": "sha256:57c5e24d2fb721021166d8e53a360743dc053aaa8fbe4afb2321e1754a779ca3"
+          "sha256": "sha256:f3efa99f2d190d37f3f079d09840ca01a7801a06c788a541b735dbe4c6a35d64"
         }
       ]
     },

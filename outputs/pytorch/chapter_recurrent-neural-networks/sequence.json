@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5ff5df6a186aff39e8f451ec18b9a47f08d68800127c0c5aab3205b87e1acc77",
+    "d2l_lib_fingerprint": "sha256:c13717ec5ff6339d10a9c7b928ddf178270290265ff9a9948393106ed79470c4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40360,
-          "sha256": "sha256:d8a4b3bfb0d960b834539083d04ad91290ce07757c8a912470609df8670fa97c"
+          "bytes": 40421,
+          "sha256": "sha256:37afef79b169183841ba46d2a090615add61d7112a95aecc4959bdcb73978f63"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22246,
-          "sha256": "sha256:6a0328f44490e28ce50c2f14d058c4acbd48f2740a0ad84a8cb017ca65ed23b8"
+          "bytes": 22252,
+          "sha256": "sha256:308b3fd7bf68d7e6b0636c519da31feb947bf4b0ac88f6bb80bd1bff20768d11"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
-          "bytes": 67759,
-          "sha256": "sha256:0f08f5f70083962c8545a22fe65dd1487aa090e6b7e4b036f1b60d8cf4670d1c"
+          "bytes": 68050,
+          "sha256": "sha256:dda6e43ed16be77c0ce95a02f215be3b895c8d3a6fafc8ae4e62f7452a01ff17"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44292,
-          "sha256": "sha256:2df054cd1e2b4dd0d7b49e1215abc89ec91eef49f4afb7a57a89cb82651ec2e6"
+          "bytes": 44832,
+          "sha256": "sha256:16764176b07c98ae485698f995511b65ff05a255b8630dbe17f982ec7068e619"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights on x[t-4], ..., x[t-1]: [0.221 0.244 0.251 0.26 ]\n"
+          "text": "weights on x[t-4], ..., x[t-1]: [0.252 0.25  0.24  0.244]\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-error-accumulation-1-1.svg",
-          "bytes": 103998,
-          "sha256": "sha256:70a3eb664e8a3575d8c0400eb796e865e4c64238dc50efa25fdad9bbc0e49d04"
+          "bytes": 104917,
+          "sha256": "sha256:e2a54581662c479f200e1964823cc838c1aaddc8ea55446bc243e0ddd15867a1"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 steps ahead: mean squared error 0.052\n 4 steps ahead: mean squared error 0.060\n16 steps ahead: mean squared error 0.074\n64 steps ahead: mean squared error 0.268\nvariance of the series: 0.485\n"
+          "text": " 1 steps ahead: mean squared error 0.047\n 4 steps ahead: mean squared error 0.052\n16 steps ahead: mean squared error 0.063\n64 steps ahead: mean squared error 0.229\nvariance of the series: 0.477\n"
         }
       ]
     }

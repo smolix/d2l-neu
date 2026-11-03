@@ -233,7 +233,10 @@ uniformly at random, gives the gradient estimate
 
 $$\mathbf{g}_t = \frac{1}{b} \sum_{i \in \mathcal{B}_t} \nabla f_i(\mathbf{x}_t).$$
 
-It is unbiased because every term is. Its noise is smaller. Let
+It is unbiased because every term is. Its noise is smaller. In
+:numref:`subsec_linear-regression-minibatch-sgd` we met this as the
+proportionality of the noise ball to $1 / |\mathcal{B}|$; here we derive the
+exact constant and use it throughout the chapter. Let
 $\boldsymbol{\Sigma}$ be the covariance of a single example's gradient, so
 that its trace
 $\operatorname{tr} \boldsymbol{\Sigma} = \mathbb{E}_i \|\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\|^2$

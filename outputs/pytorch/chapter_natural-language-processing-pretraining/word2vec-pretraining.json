@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c6d3f060825135454b20cfe7a4f4d68b006c89ddf893b5d05697bb1729413a73",
+    "d2l_lib_fingerprint": "sha256:959dd1a02e5941157d1798375652e454628d72f6c9a2df75801a97a6143eedbf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[-1.4259, -0.2646,  0.5588, -0.7325],\n         [-2.1737,  1.5394,  1.7643,  0.9932],\n         [-1.2326,  0.9098,  0.1161, -0.0393]],\n\n        [[-0.9720, -0.3348, -0.7228,  2.1711],\n         [-1.8206,  1.0975, -0.9782,  0.8365],\n         [-0.3267,  0.7744, -0.2940, -2.5208]]], grad_fn=<EmbeddingBackward0>)"
+          "text": "tensor([[[ 0.2870, -0.2601, -0.4256, -1.8123],\n         [-0.5378,  0.0900, -0.0605,  0.2372],\n         [-1.9099,  1.1418, -2.0358, -0.2099]],\n\n        [[ 2.1710, -0.3677,  0.1956,  0.5513],\n         [ 0.7700, -1.2501, -1.0514, -0.5447],\n         [-1.4064,  0.6421, -0.0816,  1.7364]]], grad_fn=<EmbeddingBackward0>)"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.410, 483402.4 tokens/sec on cuda:0\n"
+          "text": "loss 0.410, 350158.7 tokens/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17611,
-          "sha256": "sha256:9e738fe0da76019314a18056289d10679ff32f9bb91573167f35717c1925b40e"
+          "bytes": 17608,
+          "sha256": "sha256:7601231dd774e5cf5554ed41c92a05a13c48fa52b723551ba9bf823a97e8c7a3"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.716: intel\ncosine sim=0.712: microprocessor\ncosine sim=0.645: devices\n"
+          "text": "cosine sim=0.680: microprocessor\ncosine sim=0.619: laptop\ncosine sim=0.598: intel\n"
         }
       ]
     }

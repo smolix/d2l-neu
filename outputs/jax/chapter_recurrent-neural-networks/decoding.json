@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23613,
-          "sha256": "sha256:816088c3deedd4884a600fd9543a7f4b58576a8d6f4bc7894ff0c5ae51f67636"
+          "bytes": 23610,
+          "sha256": "sha256:4737a68e32081e76bdc4b2c68c91777c36d352179ad2c46f54dbde7387b92cf5"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.9\n"
+          "text": "validation perplexity 58.0\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"The Time Traveller.\\n\\n'I had\\nflourless, and\\nthere I had\\ndark.\\n\\n'I\n    had\\nflourless, and\\nthere I had\\ndark.\\n\\n'I had\\nf\"\n\"It seemed to me that\\nthere\\nface of\\ntheir\\nbright.\\n\\n'I had\\nflourless,\n    and\\nthere I had\\ndark.\\n\\n'I had\\nflourless, and\\nthe\"\n"
+          "text": "'The Time Traveller, and the walls, and the bushes, and the bushes, and the\n    bushes, and the bushes, and the bushes, and the bushes, and the bushes,\n    and'\n'It seemed to me that the Time Traveller, and the walls, and the bushes, and\n    the bushes, and the bushes, and the bushes, and the bushes, and the\n    bushes, and the bus'\n"
         }
       ]
     },
@@ -69,17 +69,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -4.17: \"The Time Traveller.\\n\\n'I had\\nflourless, and\\nthere I\n    had\\ndark.\\n\\n'I had\\nfl\"\n"
+          "text": "w=1, score -3.89: 'The Time Traveller, and the walls, and the bushes, and\n    the bushes, and the bushes, and the bushes'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -3.48: \"The Time Traveller.\\n\\n'Then I had\\ndark.\\n\\n'Then I\n    had\\ndistinct.\\n\\n'Then I\"\nw=1, score -4.65: \"It seemed to me that\\nthere\\nface\n    of\\ntheir\\nbright.\\n\\n'I had\\nflourless, and\\nthere\"\n"
+          "text": "w=4, score -4.12: 'The Time Traveller, and the walls, and I could see no\n    doubt, and the bushes, and then the Time Traveller, and the'\nw=1, score -3.76: 'It seemed to me that the Time Traveller, and the walls,\n    and the bushes, and the bushes, and the bushes, and the'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -3.81: \"It seemed to me that I had\\ndistinct.\\n\\n'Then I\\nwell\n    you.\\n\\n'Then I had\\ndark.\\n\"\n"
+          "text": "w=4, score -4.10: 'It seemed to me that the Time Traveller, and the walls,\n    and I could see the Time Traveller, and I was a peculiar, and the'\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy: 0\n{'k': 2} [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]\n{'p': 0.8} [2, 2, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 2]\n{'min_p': 0.5} [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0]\n"
+          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0]\n{'p': 0.8} [0, 0, 0, 0, 2, 2, 1, 1, 2, 0, 0, 0, 0, 1, 0]\n{'min_p': 0.5} [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1]\n"
         }
       ]
     },
@@ -112,92 +112,92 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 50972,
-          "sha256": "sha256:9a527103c2bf1f5678d66baecae5eb3b4986c435a4ec7c28b19004c14798172b"
+          "bytes": 50877,
+          "sha256": "sha256:0a7bfd8311e558e360bc97a682a23bdc10f1d8ff2b59b17096b7f92c3c69dd71"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:708c6b805026cc5c4b213fbb851cf5975768b6b7739634262c30970246e4e7e4",
+      "code_fingerprint": "sha256:9878b8db580aa1cdad2978ba7013cb39c3ca35d33ff58a131b0e1cbe6539ba7c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.12, top-k keeps 20, top-p keeps 129, min-p keeps 25\n'The Time': top probability 0.63, top-k keeps 20, top-p keeps 8, min-p keeps 4\n"
+          "text": "'The Time Traveller': top probability 0.17; kept: top-k 20, top-p 150, min-p 17\n'The Time': top probability 0.76; kept: top-k 20, top-p 3, min-p 3\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:ab0a41071778947c666ad47eed077bf6032888f68a23f2b9cdc5c1ee97fe2e31",
+      "code_fingerprint": "sha256:87fd4a551f152f0c82180b1dfd144d1ed1cbd0e873baace54691ffe115aeb5d4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: \"The Time Traveller.\\n\\n'I tried to them.\\n\\n'Then I was in my\n    mind.\\n\\n'I could not\\ndark in the\\nthe anticie, and\\npropinging\\nthen\n    of\"\n"
+          "text": "tau=0.5: \"The Time Traveller's animal, and the lamping. But the simply, and\n    railed.\\n\\n'And\\nthe bushes of the Palace of the factly, and fashed.\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=1.0: 'The Time Traveller purious not perfort; but men octionial shalles\n    and wrou than\\norempmes of veryual\\nof drop abundred wey valley fromch\n    is\\n'\n"
+          "text": "tau=1.0: \"The Time Traveller preslend very afiet, we the evening at the Time\n    Traveller, thinite great the emeather didle wilization of her trapiasily\n    more leet, the wox,' said\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=2.0: 'The Time Traveller couldor fig or head one the same cou. can\n    thingsardfour range go usoo Weena might bair� Mour minachindel peed\n    knowth dimciries opasily there? were\\ncom'\n"
+          "text": "tau=2.0: \"The Time Travellerth�\\n its his desuicon wight,ult beganrough\n    thing blacksed me through gre more trM� suddenise lab instclined fild\n    towardsked; through d head spe�full 'oneillndersed�\"\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:dc95109607e1b5fd32da0ed0854877c86bb0f9b0a2e50d0871f8e98da4288ffe",
+      "code_fingerprint": "sha256:897493910f965d8deabdfea38440b79cd709f5d97f31e9bce4ddf96af5b7d987",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: \"The Time Traveller.\\n\\n'I had\\nflourless, and\\nthere I\n    had\\ndark.\\n\\n'I had\\nflourless, and\\nthere I had\\ndark.\\n\\n'I had\\nf\"\n"
+          "text": "    greedy: 'The Time Traveller, and the walls, and the bushes, and the\n    bushes, and the bushes, and the bushes, and the bushes, and the bushes,\n    and the bushes, and'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Traveller\\nwere sc slerovement at last Thimplexalent,\n    and felt pivertic tw, too, and\\n9ig face in this narrow groating; and\n    she make you. And'\n"
+          "text": "     tau=1: 'The Time Traveller oatory soft\\ncomfortable. I telling the\n    line, I was in their object. It would have a rememol hope. My stapping.\n    Then I) to lear'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: \"The Time Traveller began\\nsplanes had\\nbriciar the\\nbeneat to\n    his hands from me, and\\nflower I could\\nfaint the Morlocks. 'Tumanity\n    was a vigil was in\"\n"
+          "text": "  top-k=20: \"The Time Traveller's machinery in the Time Traveller. I did not\n    telling a pailed. And the lates. And so I came back the land of the\n    little people were girer, I had a pecet\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: 'The Time Traveller had such a betweenerged it and fatter from\n    which the Morlocks. I had come in\\nso\\nhis, in shafts the\n    mutperty\\nof\\nwhen I say you was animens'\n"
+          "text": " top-p=0.9: 'The Time Traveller. They were zens, and the happn the\n    ideamintolack to be sadded in Time. It was I found the beautiful findst\n    of the glit. Then,'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: \"The Time Traveller.\\n\\n'The Time Machine and a\\ncame upon\\nthe\n    night was\\nlittle discause the pitations. But even\\nthe whole\n    popes\\ntrin. I sat into a waller,\"\n"
+          "text": "min-p=0.05: \"The Time Traveller's imague to the year. One might becape, but\n    in the future\\nand fluessity.\\n\\n'Sometiolently, and the stare. 'Soones\"\n"
         }
       ]
     },
     "decoding-evaluating-generated-text": {
-      "code_fingerprint": "sha256:8a0fb36ac989cb90696a839f4e8796c5d6d4357406ee393dda482101f47a37c1",
+      "code_fingerprint": "sha256:c131ee717f1045a774f0b3f8daa31d196e4469f6e39f7d558704b8f7bbadc8f5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -1.91, distinct-3 0.27\n"
+          "text": "    greedy: log-prob per token -1.64, distinct-3 0.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.52, distinct-3 0.24\n"
+          "text": " beam, w=4: log-prob per token -1.78, distinct-3 0.34\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.71, distinct-3 0.97\n"
+          "text": "min-p=0.05: log-prob per token -2.72, distinct-3 0.98\n"
         }
       ]
     }

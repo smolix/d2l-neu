@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3121015d39bb0b4f1c6e36c6895e96811f7e458228ab8d99c142a8446a24b875",
+    "d2l_lib_fingerprint": "sha256:73b50af6b3ca0a5a43e0e0349ce531c7090cbc1f9266b0000ec1096f3c2ad9dc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,12 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 2048 tokens: peak 1.88 GiB above the weights\n"
+          "text": " 2048 tokens: peak 2.01 GiB above the weights\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 4096 tokens: peak 4.11 GiB above the weights\nplanned: 1141 KiB per token; counted: 1109 KiB per token\n"
+          "text": " 4096 tokens: peak 4.11 GiB above the weights\nplanned: 1077 KiB per token; counted: 1109 KiB per token\n"
         }
       ]
     },
@@ -84,17 +84,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 20.98 ms/call\n"
+          "text": "fp32: 21.01 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 13.66 ms/call\n"
+          "text": "tf32: 13.55 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 8.05 ms/call\n"
+          "text": "bf16: 8.06 ms/call\n"
         }
       ]
     },

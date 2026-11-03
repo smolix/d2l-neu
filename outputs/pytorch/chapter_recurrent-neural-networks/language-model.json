@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time in mockery in violently\n    account raised miles tried me a some green the this without morlocks\n    revolutions traveller enough nursery smoking that panels bushes close\n2-gram (longest copied run: 4 words): the time machine above me to clamber\n    down upon me but even be hard to look at the peculiar risk was very much\n    then when it s\n3-gram (longest copied run: 8 words): the time machine i had started with\n    the same clustering thickets of evergreens the same grey covering then i\n    perceived by this ancient monument of an age\n"
+          "text": "1-gram (longest copied run: 2 words): the time then attention how least neck\n    along was i at of to we to in heaping old confidence the own hasty box\n    suffering i such hither\n2-gram (longest copied run: 3 words): the time in which we were heaps of my\n    ears and besides weena but the black except where i went again rather\n    than the laboratory exactly the\n3-gram (longest copied run: 17 words): the time machine the fact is that\n    insensibly the absolute strangeness of everything the sickly jarring and\n    swaying of the remote future were alike and the throb\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:9b8d22899e4075a4e23b8a21149c24cf3e883e42510b5ac7db1ec44a3433c8c3"
+          "sha256": "sha256:58b7e5b59a03ece181f9c5116962d46a4cfc8026f7f4c3409018be32d9dd9a69"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:4d757d0f3ee3feefe7d6565b1becd7b3cd509294e37b46df9316d4001ca82c34"
+          "sha256": "sha256:67ecb3207ce4a6ea06ac9c06514000cc0929647ca204f76a0f0d8ee6f6436dfe"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[270, 432, 260, 917, 397, 667,  10, 943, 330, 516],\n        [703,  10, 271, 438, 287,  44, 605, 404, 266, 282]]) \nY: tensor([[432, 260, 917, 397, 667,  10, 943, 330, 516, 360],\n        [ 10, 271, 438, 287,  44, 605, 404, 266, 282, 646]])\nX[0]: \"ed into the future?'\\nsaid F\"\nY[0]: \" into the future?'\\nsaid Fil\"\n"
+          "text": "X: tensor([[ 267,  334,  277,  593,  623,  432,  260,  471,   46,   10],\n        [ 277,  290,  682,  275,  409,  875,  285, 1010,  997,  260]]) \nY: tensor([[ 334,  277,  593,  623,  432,  260,  471,   46,   10,   39],\n        [ 290,  682,  275,  409,  875,  285, 1010,  997,  260,  629]])\nX[0]: 'hair and peered into the thing.\\n'\nY[0]: \"ir and peered into the thing.\\n'\"\n"
         }
       ]
     }

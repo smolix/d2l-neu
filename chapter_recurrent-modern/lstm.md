@@ -517,18 +517,21 @@ class RecallModel(nnx.Module):  #@save
     """Embedding, a sequence layer, and a classifier of its last output."""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8, *, rngs):
-        self.embedding = nnx.Embed(vocab_size, num_inputs, rngs=rngs,
+        self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
             embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
         self.layer = layer
         self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
     def __call__(self, X):
-        # A one-hot product instead of a lookup: on GPUs, the gradient of a
-        # lookup is slow when a few tokens make up most of the input
-        E = jax.nn.one_hot(X, self.embedding.num_embeddings) @ \
-            self.embedding.embedding[...]
-        return self.head(self.layer(E)[:, -1])
+        return self.head(self.layer(self.embedding(X))[:, -1])
 ```
+
+:begin_tab:`jax`
+The table is `d2l.Embed` of :numref:`subsec_tinylm`, whose gradient is a
+matrix product. The gradient of an ordinary lookup adds to each row with
+atomic operations, which wait on one another when a few filler tokens fill
+almost every position.
+:end_tab:
 
 Besides the three networks with their gates starting near one half, we train an
 LSTM and a GRU whose gates start out keeping their state: the bias of the
@@ -729,7 +732,7 @@ class SeqLM(nnx.Module):  #@save
     """A language model of residual blocks: a sequence mixer, then an MLP."""
     def __init__(self, vocab_size, num_hiddens, mixers, *, rngs):
         d = num_hiddens
-        self.embedding = nnx.Embed(vocab_size, d, rngs=rngs,  # Unit length
+        self.embedding = d2l.Embed(vocab_size, d, rngs=rngs,  # Unit length
             embedding_init=nnx.initializers.normal(d ** -0.5))
         self.mixers = nnx.List(mixers)
         norm = lambda: nnx.LayerNorm(d, epsilon=1e-5, rngs=rngs)
@@ -742,9 +745,7 @@ class SeqLM(nnx.Module):  #@save
         self.head = nnx.Linear(d, vocab_size, rngs=rngs)
 
     def __call__(self, X):
-        # A one-hot product instead of a lookup, as in RecallModel
-        H = jax.nn.one_hot(X, self.embedding.num_embeddings) @ \
-            self.embedding.embedding[...]  # (batch_size, num_steps, d)
+        H = self.embedding(X)  # (batch_size, num_steps, num_hiddens)
         for norm, mixer, mlp in zip(self.norms, self.mixers, self.mlps):
             H = H + mixer(norm(H))
             H = H + mlp(H)
@@ -819,6 +820,8 @@ uniformly among 3 candidates.
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
     device = next(model.parameters()).device
+    modes = {m: m.training for m in model.modules()}  # Restored at the end
+    model.eval()  # Dropout off while we measure
     total, count = 0, 0
     with torch.inference_mode():
         for X, Y in data.val_dataloader():
@@ -826,23 +829,30 @@ def lm_perplexity(model, data):  #@save
             total += F.cross_entropy(logits.flatten(0, 1),
                                      Y.to(device).flatten(), reduction='sum')
             count += Y.numel()
+    for m, training in modes.items():
+        m.training = training
     return math.exp(float(total) / count)
 ```
 
 ```{.python .input #lstm-character-level-language-modeling-3}
 %%tab jax
-@nnx.jit  #@save
-def lm_loss_sum(model, X, Y):
-    """Summed next-token cross-entropy of a batch."""
-    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+@jax.jit(static_argnums=0)  #@save
+def lm_loss_sum(graphdef, state, X, Y):
+    """Summed next-token cross-entropy of a batch, and the model's state."""
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
 
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
-    loss_sum = nnx.cached_partial(lm_loss_sum, model)  # Compile once, reuse
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        total += loss_sum(X, Y)
-        count += Y.size
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
     return math.exp(float(total) / count)
 ```
 

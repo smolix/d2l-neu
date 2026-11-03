@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.85414445, 0.6492642 , 0.05282414],\n       [0.6261976 , 0.30239475, 0.59421456]], dtype=float32)"
+          "text": "Array([[0.32385373, 0.3298906 , 0.80340123],\n       [0.8031919 , 0.36201978, 0.2545159 ]], dtype=float32)"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[1.8541445, 1.6492642, 1.0528241],\n       [1.6261976, 1.3023947, 1.5942146]], dtype=float32)"
+          "text": "Array([[1.3238537, 1.3298906, 1.8034012],\n       [1.8031919, 1.3620198, 1.2545159]], dtype=float32)"
         }
       ]
     },
@@ -121,7 +121,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[3.1494632],\n       [3.1494632]], dtype=float32)"
+          "text": "Array([[-1.0981826],\n       [-1.0981826]], dtype=float32)"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.0540 sec\n"
+          "text": "time to queue 32 matrix products: 0.0028 sec\ntime until they all finished:     0.0540 sec\n"
         }
       ]
     },
@@ -206,7 +206,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   520 MiB,  29.0 ms per step\n"
+          "text": "checkpointing=True   step memory   520 MiB,  28.3 ms per step\n"
         }
       ]
     },
@@ -223,8 +223,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 30728,
-          "sha256": "sha256:2ad4464eaa0cd24ffa74f83cc4d918a04ab47229a7bbc9d2adde69f645ce06be"
+          "bytes": 29135,
+          "sha256": "sha256:8f69d73721250b848b2405bcc73a97daf2a437b90d1a805c4048bf0af7b08023"
         },
         {
           "type": "execute_result",

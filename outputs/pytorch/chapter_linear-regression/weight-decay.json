@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9d8fbb36d8056ffec983553100322145fcb1827b824d0275f5cbfcf5c4f13db7",
+    "d2l_lib_fingerprint": "sha256:0a5dc3745afe9613197d66c8a1ffb0ee2a001e8b7e344d726b3001e2df332fab",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 29911,
-          "sha256": "sha256:9074882cce2f2bdf6d82e214a1c158150a44e560ebac24250deb23d557135212"
+          "bytes": 28885,
+          "sha256": "sha256:aa89035339ea3c7813259c9afe343eae8952743a93ca2fffd75c218892bf61d7"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0208, norm of w 0.144\n"
+          "text": "validation loss 0.0211, norm of w 0.142\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 28572,
-          "sha256": "sha256:ebaf3fed7c3b7d2813def693e3278e775b7626a437b019c8a6b2b23323b42523"
+          "bytes": 28512,
+          "sha256": "sha256:002e1daaf52ae28e524623ae07a0477951765009fd06ed446832750423dc45a5"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0103, norm of w 0.028\n"
+          "text": "validation loss 0.0096, norm of w 0.045\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "least squares ( 13.52, -11.52): test 0.010, disagreeing 1.697\n        ridge (  1.00,   0.99): test 0.010, disagreeing 0.010\nleast squares (  7.30,  -5.29): test 0.010, disagreeing 0.434\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.010\neigenvalues of X^T X / n: 6.0e-07, 1.9e+00\n"
+          "text": "least squares (  5.74,  -3.73): test 0.010, disagreeing 0.230\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.010\nleast squares ( -7.79,   9.78): test 0.010, disagreeing 0.756\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\neigenvalues of X^T X / n: 5.0e-07, 1.6e+00\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the other 180 eigenvalues are at most 5e-06\nmu from 4.9 to 17.2, factors from 0.62 to 0.85, df = 15.2\n"
+          "text": "the other 180 eigenvalues are at most 2e-06\nmu from 5.1 to 15.2, factors from 0.63 to 0.84, df = 15.0\n"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0: determined part 0.036, rest 0.139\nlambda = 3: determined part 0.028, rest 0.004\n"
+          "text": "lambda = 0: determined part 0.057, rest 0.130\nlambda = 3: determined part 0.045, rest 0.004\n"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 30279,
-          "sha256": "sha256:58e3dda9d5f5060efcc2f4d897dfc0cf87fb34fb20b82f9fc29d6d3b3eabce92"
+          "bytes": 28598,
+          "sha256": "sha256:fd89517323bbae009b7eb8e5e942b53d4c5df4d220f3061761ce55a5b0afdf56"
         }
       ]
     },
@@ -144,7 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.0208, norm of w 0.028\n"
+          "text": "validation loss 0.0194, norm of w 0.045\n"
         }
       ]
     }

@@ -445,7 +445,7 @@ def cosine_warmup(t, num_steps, warmup_steps):  #@save
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
     if t < warmup_steps:
         return t / warmup_steps
-    progress = (t - warmup_steps) / (num_steps - warmup_steps)
+    progress = min((t - warmup_steps) / (num_steps - warmup_steps), 1)
     return 0.5 * (1 + math.cos(math.pi * progress))
 ```
 
@@ -454,8 +454,9 @@ def cosine_warmup(t, num_steps, warmup_steps):  #@save
 def cosine_warmup(t, num_steps, warmup_steps):  #@save
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
     t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
-    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
-    progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    warmup = tf.where(t < warmup_steps, t / warmup_steps, 1.0)
+    progress = tf.clip_by_value(
+        (t - warmup_steps) / (num_steps - warmup_steps), 0.0, 1.0)
     return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
 ```
 
@@ -463,8 +464,9 @@ def cosine_warmup(t, num_steps, warmup_steps):  #@save
 %%tab jax
 def cosine_warmup(t, num_steps, warmup_steps):  #@save
     """Learning-rate factor: linear warmup from 0, then a half-cosine to 0."""
-    warmup = jnp.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
-    progress = jnp.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    t = jnp.asarray(t, jnp.float32)  # Arguments may be traced arrays
+    warmup = jnp.where(t < warmup_steps, t / warmup_steps, 1.0)
+    progress = jnp.clip((t - warmup_steps) / (num_steps - warmup_steps), 0, 1)
     return warmup * 0.5 * (1 + jnp.cos(jnp.pi * progress))
 ```
 

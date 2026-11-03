@@ -908,7 +908,7 @@ head = nnx.eval_shape(lambda: nnx.Linear(
     4096, 128256, use_bias=False, rngs=nnx.Rngs(key)))
 leaves = jax.tree.leaves(nnx.state(head, nnx.Param))
 n_head = sum(x.size for x in leaves)
-print(leaves, f'{n_head:,} parameters, {4 * n_head / 1e9:.1f} GB in fp32')
+print(leaves, f'{n_head:,} params, {4 * n_head / 1e9:.1f} GB in fp32')
 ```
 
 :begin_tab:`mxnet`

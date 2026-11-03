@@ -614,7 +614,7 @@ a few microseconds.
 as CUDA graphs and replay them. The first call compiles and runs a warm-up,
 the second records the CUDA graph, and later calls with the same shapes copy
 the input into the recorded buffer and replay. `Benchmark` warms up with
-three calls, so the timed calls are replays, about seven times faster
+three calls, so the timed calls are replays, seven to eight times faster
 than the eager calls. The host time per launch of the eager version exceeds
 that of a bare operation, since every layer is also a call of an
 `nn.Module`.

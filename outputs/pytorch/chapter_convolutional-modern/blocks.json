@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8aef632ca1d03a713ebd18fd3961c34976c62e678ba33149e72cd84ad5f60a60",
+    "d2l_lib_fingerprint": "sha256:ede972495d54a0c5d12881167c9e39be7561a3da439bae1fd6ebd9e200ea5116",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 33681,
-          "sha256": "sha256:cbfc1d7dd9df911473e6d04ea77bf220fecbb6a49aac0b1d9793b7ce24b268b1"
+          "bytes": 31824,
+          "sha256": "sha256:2c8fa6889896537abef2410bd647a5f048e9c09c3c5c7d86e8ce4681f4738e05"
         }
       ]
     },
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 30950,
-          "sha256": "sha256:32a22644fe3dcedbadaa51ed0a037eaa51fff0f012d2167176f7651f4cdbbbca"
+          "bytes": 30432,
+          "sha256": "sha256:ea4c45cbd9a6b8dc625615d77cf8bed7d2b176f801c35fd7a7ca3bb05d7b9143"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 33397,
-          "sha256": "sha256:b3cbee64a9cc9471822f4729861a02cf3d28608ce3631a07353db67243f61f95"
+          "bytes": 32737,
+          "sha256": "sha256:df8dfde2312f45a89722fe896031570377930adb6810274c3bc68fc6922d4211"
         }
       ]
     },
@@ -136,7 +136,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.919, 'NiN': 0.865, 'GoogLeNet': 0.906}"
+          "text": "{'VGG': 0.92, 'NiN': 0.876, 'GoogLeNet': 0.904}"
         }
       ]
     }

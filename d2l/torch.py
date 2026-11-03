@@ -301,6 +301,10 @@ class Trainer(d2l.HyperParameters):
         self.model = model
         if self.gpus:
             model.to(self.gpus[0])
+            # Pick convolution algorithms by timing, unless determinism is wanted
+            torch.backends.cudnn.benchmark = not (
+                torch.are_deterministic_algorithms_enabled()
+                or torch.backends.cudnn.deterministic)
         if any(isinstance(p, nn.parameter.UninitializedParameter)
                for p in model.parameters()):
             loader = (self.train_dataloader if self.train_dataloader is not None
@@ -675,7 +679,7 @@ def cosine_warmup(t, num_steps, warmup_steps):
     Defined in :numref:`sec_alexnet`"""
     if t < warmup_steps:
         return t / warmup_steps
-    progress = (t - warmup_steps) / (num_steps - warmup_steps)
+    progress = min((t - warmup_steps) / (num_steps - warmup_steps), 1)
     return 0.5 * (1 + math.cos(math.pi * progress))
 
 class Residual(nn.Module):
@@ -1157,6 +1161,7 @@ class RNNLM(d2l.RNNLMScratch):
 def beam_search(step_fn, prefix, num_tokens, beam_size=4,
                 alpha=0.75, eos_id=None):
     """Length-normalized beam search (score = log P / len^alpha).
+    Returns candidates sorted best-first; [0][1] is the argmax sequence.
 
     Defined in :numref:`sec_beam-search`"""
     def log_softmax(logits):
@@ -1502,6 +1507,7 @@ class DotProductAttention(nn.Module):
 
 class MultiHeadAttention(d2l.Module):
     """Multi-head attention with heads as an explicit axis; num_kv_heads <
+    num_heads shares each key-value head across a group of query heads.
 
     Defined in :numref:`sec_multihead-attention`"""
     def __init__(self, num_hiddens, num_heads, dropout=0.0, bias=False,
@@ -1541,12 +1547,14 @@ class MultiHeadAttention(d2l.Module):
 
     def split_heads(self, X, num_heads):
         """(batch, length, num_heads * width) -> (batch, num_heads, length,
+        width).
 
         Defined in :numref:`sec_multihead-attention`"""
         return X.reshape(X.shape[0], X.shape[1], num_heads, -1).transpose(1, 2)
 
     def merge_heads(self, X):
         """Reverse split_heads: (batch, num_heads, length, width) -> (batch,
+        length, num_heads * width).
 
         Defined in :numref:`sec_multihead-attention`"""
         return X.transpose(1, 2).reshape(X.shape[0], X.shape[2], -1)
@@ -1680,6 +1688,7 @@ class FeedForward(nn.Module):
 
 class TransformerBlock(nn.Module):
     """Configurable transformer block: attention + FFN on a residual
+    stream.
 
     Defined in :numref:`sec_transformer-block`"""
     def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
@@ -1709,6 +1718,7 @@ class TransformerBlock(nn.Module):
 
 class GPT(nn.Module):
     """Decoder-only transformer language model built from configurable
+    blocks.
 
     Defined in :numref:`sec_gpt`"""
 
@@ -1801,6 +1811,7 @@ class GPT(nn.Module):
 
 class LMOptimizer:
     """AdamW with weight decay on the weight matrices only, a linear warmup
+    and a cosine decay of the learning rate, and gradient-norm clipping.
 
     Defined in :numref:`sec_gpt`"""
     def __init__(self, model, lr, num_steps, warmup, weight_decay=0.1,
@@ -1848,6 +1859,7 @@ def gpt2_tokenizer():
 
 def load_gpt2():
     """GPT-2 small (124M) as a GPT with the released weights, in eval
+    mode.
 
     Defined in :numref:`sec_gpt`"""
     from safetensors.torch import load_file  # lazy, like tiktoken above
@@ -1874,6 +1886,7 @@ def load_gpt2():
 
 def kv_cache_bytes(model, num_tokens, batch_size=1, bytes_per_elem=4):
     """Bytes of the keys and values of num_tokens positions in every block
+    of a GPT, for batch_size sequences.
 
     Defined in :numref:`sec_kv-cache`"""
     attn = model.blks[0].attention
@@ -1997,6 +2010,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
 
 def init_lecun(module):
     """LeCun normal weights and zero biases for all linear, convolutional,
+    and recurrent layers.
 
     Defined in :numref:`sec_gru`"""
     for layer in module.modules():
@@ -2116,6 +2130,8 @@ def lm_perplexity(model, data):
 
     Defined in :numref:`sec_gru`"""
     device = next(model.parameters()).device
+    modes = {m: m.training for m in model.modules()}  # Restored at the end
+    model.eval()  # Dropout off while we measure
     total, count = 0, 0
     with torch.inference_mode():
         for X, Y in data.val_dataloader():
@@ -2123,6 +2139,8 @@ def lm_perplexity(model, data):
             total += F.cross_entropy(logits.flatten(0, 1),
                                      Y.to(device).flatten(), reduction='sum')
             count += Y.numel()
+    for m, training in modes.items():
+        m.training = training
     return math.exp(float(total) / count)
 
 def fit_lm(model, data, num_steps=3000, lr=2e-3):
@@ -2240,6 +2258,7 @@ def adjoint_scan(a, b):
 
 class SelectiveSSM(nn.Module):
     """A diagonal SSM whose step sizes and write and read vectors depend on
+    the input: N states for each of num_channels channels.
 
     Defined in :numref:`sec_mamba`"""
     def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
@@ -2430,6 +2449,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
     """Gated linear attention with one decay per head, whose memory is
+    written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
     gate_scale = 1
@@ -2572,6 +2592,7 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
     """Mean discounted return of an acting policy over Monte Carlo episodes.
 
     `policy(obs, rng) -> action` is the protocol every agent in these two
+    chapters speaks; a deterministic policy simply ignores `rng`.
 
     Defined in :numref:`sec_valueiter`"""
     total = 0.0
@@ -2731,6 +2752,7 @@ def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
 
+    All sampling runs through the one numpy generator `rng`.
 
     Defined in :numref:`sec_policygradient`"""
     cols, ep_ends = [[] for _ in range(5)], []
@@ -2788,6 +2810,7 @@ class GaussianHead(nn.Module):
 
 class GaussianPolicy(d2l.ActorCritic):
     """The same interface over a Normal instead of a softmax; nothing that
+    consumes the interface changes.
 
     Defined in :numref:`sec_deeprl`"""
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2):
@@ -2813,6 +2836,7 @@ def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
                entropy_coef=0.01, use_clip=True):
     """num_epochs clipped-surrogate passes on one frozen batch; returns
     [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
+    band, approximate KL, mean policy entropy.
 
     Defined in :numref:`sec_ppo`"""
     obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
@@ -2931,6 +2955,7 @@ def rpgan_loss_G(critic, real, fake):
 
 def r1_r2_penalty(critic, real, fake):
     """Per-sample squared critic input gradients on real (R1) and fake (R2),
+    before the gamma/2 scale.
 
     Defined in :numref:`sec_gan_convergence`"""
     def sq_grad_norm(x):
@@ -3362,6 +3387,7 @@ def _pad_ptb(all_centers, all_contexts, all_negatives):
     """Pre-pad all skip-gram examples to the global max length.
 
     Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+    masks (N, L), labels (N, L), where L = max(len(c) + len(n)).
 
     Defined in :numref:`sec_word2vec_data`"""
     import numpy as _np
@@ -4783,6 +4809,7 @@ def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
     a shaded band between the seed min and max. `smooth`, if greater than
     1, applies a trailing moving average of that many steps before taking
     the seed statistics. `reference`, if given, draws a dashed horizontal
+    line; `ylim`, if given, fixes the y-axis range.
 
     Defined in :numref:`sec_utils`"""
     set_figsize((6, 4))
@@ -4810,6 +4837,7 @@ def show_grid(desc, values, policy, titles=None):
     shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
     to any one map size. `values` and `policy` may each be a single frame,
     shape (num_states,), or a sequence of frames, shape
+    (num_frames, num_states); `titles`, if given, labels each frame.
 
     Defined in :numref:`sec_utils`"""
     h, w = desc.shape
@@ -4973,24 +5001,40 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
     return axes
 
 def show_heatmaps(matrices, xlabel, ylabel, titles=None,
-                  figsize=(2.5, 2.5), cmap='Reds'):
-    """Show heatmaps of matrices.
+                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
+                  xticklabels=None, yticklabels=None):
+    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
 
     Defined in :numref:`sec_utils`"""
     d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
+    matrices = d2l.numpy(matrices)
+    num_rows, num_cols, height, width = matrices.shape
     fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
                                  sharex=True, sharey=True, squeeze=False)
+    # All panels share one color scale (one norm) unless each gets its own
+    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
+        matrices.min(), matrices.max()))
     for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
         for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            pcm = ax.imshow(matrix, cmap=cmap, **lims)
+            if cbar == 'each':
+                fig.colorbar(pcm, ax=ax, shrink=0.6)
             if i == num_rows - 1:
                 ax.set_xlabel(xlabel)
             if j == 0:
                 ax.set_ylabel(ylabel)
             if titles:
                 ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
+    # Shared axes: setting the ticks of one panel sets them for all
+    for axis, n, labels in ((ax.xaxis, width, xticklabels),
+                            (ax.yaxis, height, yticklabels)):
+        if labels is None:
+            axis.set_major_locator(d2l.plt.MaxNLocator(
+                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
+        else:
+            axis.set_ticks(range(n), labels)
+    if cbar is True:
+        fig.colorbar(pcm, ax=axes, shrink=0.6);
 
 def linreg(X, w, b):
     """The linear regression model.

@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time an inevitable half unknown\n    laughter loophole futility in came the at to in i though mace strange\n    great i wooden visit the felt the towards\n2-gram (longest copied run: 4 words): the time traveller then i can\n    represent a schoolmaster amidst children s might have told the sightless\n    eyes darted sideways and presently left arm but she put\n3-gram (longest copied run: 11 words): the time machine by h g wells i the\n    time traveller but now with my first fire coming after me in three\n    strides i was so plausible\n"
+          "text": "1-gram (longest copied run: 2 words): the time and concerned humanity in\n    down i i only my well morning at inactivity of see and our well for the\n    a upon finger i why\n2-gram (longest copied run: 3 words): the time certainly said i passed away\n    on the jerking sun across the derelict remains that it towards his wont\n    in my back to mount again put\n3-gram (longest copied run: 10 words): the time traveller s face the\n    psychologist he took that individual s hand in his trousers pockets he\n    walked slowly out of that came another thought i\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:053c732429d0dbe006f33a4d7085f739a80b0b2143ff1f0f6a80968d55dcecd7"
+          "sha256": "sha256:42dfeb99cfc5e76d39e171d6ea7e254d5a27534d297611d6c7767f9d52c01e7b"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:5ea1b80084f2f57a82aa471800dc9450ac8a517074d9e40799a50e6f233ee136"
+          "sha256": "sha256:366604501b7488d5a6baa7f6759561be90d263bbb39974869e449fd436ae8ff3"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[ 368   44  277  307  317  621   44  730  258  280]\n [ 272  522  266  274  437 1019  344  322  109   98]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[  44  277  307  317  621   44  730  258  280  117]\n [ 522  266  274  437 1019  344  322  109   98  672]], shape=(2, 10), dtype=int32)\nX[0]: 'th, and thickness, can a c'\nY[0]: ', and thickness, can a cu'\n"
+          "text": "X: tf.Tensor(\n[[260 632 371 284 260 419 578 518 542 100]\n [260 812  44 352  10 116 119 111 407 103]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[632 371 284 260 419 578 518 542 100 115]\n [812  44 352  10 116 119 111 407 103 115]], shape=(2, 10), dtype=int32)\nX[0]: \" the matter in the Time Traveller's word\"\nY[0]: \" matter in the Time Traveller's words\"\n"
         }
       ]
     }

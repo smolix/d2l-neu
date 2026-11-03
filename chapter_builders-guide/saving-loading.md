@@ -943,7 +943,7 @@ print('fresh optimizer:', fresh_losses)
 
 With the saved optimizer state, training continues where it stopped, and
 the loss keeps decreasing slowly. With a fresh Adam, the loss jumps from a
-few thousandths or less to between about 1 and 6 after a single step, and after four steps
+few thousandths or less to between about 0.5 and 6 after a single step, and after four steps
 it is still hundreds of times higher than at the checkpoint, or more.
 :eqref:`eq_saving_adam` explains the jump. At the first step of a fresh
 Adam, $\mathbf{m}$ and $\mathbf{v}$ are zero, so the bias-corrected
@@ -1630,7 +1630,7 @@ from its checkpoint for five steps, loss before each step:
 
 - Saved optimizer state: the loss keeps falling slowly from a few
   thousandths or less.
-- Fresh Adam: about 1 to 6 after one step, still hundreds of times
+- Fresh Adam: about 0.5 to 6 after one step, still hundreds of times
   higher after four, or more.
 :::
 
@@ -1714,7 +1714,7 @@ an error.
 - **8B model:** 16 GB of bf16 weights, 96 GB of checkpoint (12 bytes per
   parameter).
 - **Fresh Adam:** first step $\pm\eta$ per parameter; the loss jumps from
-  a few thousandths or less to about 1 to 6.
+  a few thousandths or less to about 0.5 to 6.
 - **Pretrained:** new head, read the missing/unexpected report, freeze:
   20,490 trainable.
 :::

@@ -781,8 +781,8 @@ expert's output is scaled by a probability near $1/8$, so the expert
 layers start out much weaker than the dense feed-forward networks, and
 each expert learns from only an eighth of the tokens. As the dense model
 runs out of capacity, its curve flattens, while the mixture keeps
-improving. Its validation loss falls below the dense model's after one
-to two thousand steps and stays below it to the end, by a few hundredths
+improving. Its validation loss falls below the dense model's within the
+first two thousand steps and stays below it to the end, by a few hundredths
 of a nat.
 At the same computation per token, the stored experts make a better
 model. Large studies report the same effect. The Switch transformer reached the quality of a dense T5
@@ -1331,7 +1331,7 @@ $\alpha = 0.01$, capacity factor 2 (one byte in five is a space):
 @!moe-a-mixture-of-experts-gpt
 
 - 6,000 steps, about 50M bytes, more than 100 per dense parameter.
-- The mixture starts behind, crosses after one to two thousand steps, and
+- The mixture starts behind, crosses within the first 2,000 steps, and
   stays below.
 :::
 

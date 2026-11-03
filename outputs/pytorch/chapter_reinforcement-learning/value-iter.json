@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d1c8b958a9525b6d690d962036017f54ed3b0f12ed31e28fa5ece0159ef7f937",
+    "d2l_lib_fingerprint": "sha256:7ba39bc24a1e708f8908610b81dd0083cb49f653fcceaf116ca15a96e28d4d05",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
           "bytes": 28636,
-          "sha256": "sha256:746f528aa85d064b8ae5ee100c8bbf5b8e30ea47f5f956a4411a97018ced06ed"
+          "sha256": "sha256:8eef4edbb793e8a81269875f093f4763a899ede685f427c170c7e223acb4cace"
         }
       ]
     },

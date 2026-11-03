@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:52fba118f5c276659b4fab29033a23c43515234ed53f1316b0f53b2f2b8f3f49",
+    "d2l_lib_fingerprint": "sha256:33fd3e95adbbb6edad048d2e86ef0f4a5a66d2685a14863a4718249e6e9a5f40",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33230,
-          "sha256": "sha256:6d9d07da733b1d14a075442791f9469c7288f25ba36a887220021732c158c903"
+          "bytes": 31270,
+          "sha256": "sha256:395c4b1aee720c89635e717516384f007f871bd41fcd1bb3ef04ef6957dfb463"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.478578662109375, 'acc': 0.8313}"
+          "text": "{'loss': 0.475096533203125, 'acc': 0.8354}"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "41 of 256 wrong\n"
+          "text": "40 of 256 wrong\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 47538,
-          "sha256": "sha256:e33ddfe2500c5fff02a94e163bbf78dc29bf80dae7a21aa324cd725a96ae6cdc"
+          "bytes": 46534,
+          "sha256": "sha256:df2ff323541c2325b302978a84846502bc852af3bb48cfc1f78a2cb724490c78"
         }
       ]
     },
@@ -148,8 +148,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21511,
-          "sha256": "sha256:0f167dfeaa7d15f3675ec632e0ea550ecca3b5b7e09f3411784d49bc79a9ab19"
+          "bytes": 21495,
+          "sha256": "sha256:5481f2a05b670a7624160b2779bd5d99a312297828c22ff5ffb8821177eb476a"
         }
       ]
     }

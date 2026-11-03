@@ -31,17 +31,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.499 s   read once: 0.104 s\n"
+          "text": "read every step: 0.510 s   read once: 0.102 s\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-3": {
-      "code_fingerprint": "sha256:bee7d012be4ab1e8927c6f5f017a7e5a37a1cde30762125636a560e0c77d2013",
+      "code_fingerprint": "sha256:27010f38f741111b0aeee798d518b2669c282cdec470abc8da8a1a550a0b120f",
       "kind": "text",
       "outputs": []
     },
     "performance-model-measuring-without-lying-4": {
-      "code_fingerprint": "sha256:d4bf4f1be4c8beedf0892754137fd9ed042df2ac026de25738a553a69cfe3293",
+      "code_fingerprint": "sha256:d577bef9e42342fedaf209e61877926e232eda62c8021a2967142fed4a2cd67f",
       "kind": "text",
       "outputs": [
         {
@@ -51,94 +51,94 @@
       ]
     },
     "performance-model-the-sweep-mapping-our-gpu": {
-      "code_fingerprint": "sha256:9ecd4150de776e0a8a2873043583e5fb9ee25f685965e9d8ce9b2454f4760989",
+      "code_fingerprint": "sha256:e144f37d1e6cfcc7f0da4fb1183345d67e45b4fe9e5a0baad7697f9c81f47dfb",
       "kind": "text",
       "outputs": []
     },
     "performance-model-matrix-products-across-sizes-1": {
-      "code_fingerprint": "sha256:28ee9ec19185c5f9b8411be34a7ae9f8767f016169bfc4f1d557261eea32bfe3",
+      "code_fingerprint": "sha256:1d574446251224650d5cf2560c1fe11b5720d2105314576a3aaceda52dd5280a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 32288,
-          "sha256": "sha256:5da58d2e5966b9bb8684944cce6de570dc38807e921be5a73f780c065245240c"
+          "bytes": 32674,
+          "sha256": "sha256:8c1c9c0e25fcfca2ae363a215095fb7d47f9221fb0cf61ca296dc2cf33d8ab33"
         }
       ]
     },
     "performance-model-matrix-products-across-sizes-2": {
-      "code_fingerprint": "sha256:e05c574ae230df90b09ac4832ce20d75e6dc7c2128a4bda4885ac6863be9fc6d",
+      "code_fingerprint": "sha256:d550dc09a3af8f81e499ae57cff7376af236114b2ece642fc7bdfd68482001e5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:    57.7 us per call,   0.6 TFLOP/s\nn =  512:    80.4 us per call,   3.3 TFLOP/s\nn = 1024:    95.6 us per call,  22.5 TFLOP/s\nn = 2048:   110.7 us per call, 155.2 TFLOP/s\nn = 4096:   828.7 us per call, 165.9 TFLOP/s\nn = 8192:  6369.0 us per call, 172.6 TFLOP/s\n"
+          "text": "n =  256:   100.1 us per call,   0.3 TFLOP/s\nn =  512:    87.4 us per call,   3.1 TFLOP/s\nn = 1024:    83.3 us per call,  25.8 TFLOP/s\nn = 2048:   110.5 us per call, 155.5 TFLOP/s\nn = 4096:   828.2 us per call, 165.9 TFLOP/s\nn = 8192:  6398.9 us per call, 171.8 TFLOP/s\n"
         }
       ]
     },
     "performance-model-matrix-products-across-sizes-3": {
-      "code_fingerprint": "sha256:8e6d71dcf98044f5f2282bc3e4986ce90a604086c1d7491b7c349813147b2dab",
+      "code_fingerprint": "sha256:42674a1b455a6121ffd7395750b4de04bbfeacaca026a58e9373f5394924622e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "x + 1 on 256 x 256: 0.07 ms/call"
+          "text": "x + 1 on 256 x 256: 0.08 ms/call"
         }
       ]
     },
     "performance-model-three-regimes-1": {
-      "code_fingerprint": "sha256:c043fbde486573820dc00888f3c288f1664a0068843fc21f09ff9e595898578f",
+      "code_fingerprint": "sha256:b58cf2b789f817ca2b2d598ead88bfcb5a57e9581d8bd97eb1632572e214ca74",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.60 ms/call\nmul: 0.61 ms/call\nsin: 0.60 ms/call\n"
+          "text": "add: 0.62 ms/call\nmul: 0.62 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigmoid: 0.61 ms/call\n"
+          "text": "sin: 0.62 ms/call\nsigmoid: 0.62 ms/call\n"
         }
       ]
     },
     "performance-model-three-regimes-2": {
-      "code_fingerprint": "sha256:c4f2aa39273e82f69f8b2de54e33ce9d2b28f3090e211476a7c7a846e323f20d",
+      "code_fingerprint": "sha256:9b4951dfd45ae090f53288dd2347887b8b8b49c1ddf2b6ee03b52eeedeb799be",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 op: 0.62 ms/call\n"
+          "text": "1 op: 0.63 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain: 5.28 ms/call\n"
+          "text": "chain: 5.30 ms/call\n"
         }
       ]
     },
     "performance-model-profiling-a-training-step-1": {
-      "code_fingerprint": "sha256:d5c02c6b200d585d8c7dc66839f25ca4d276c9d0edabe187f6a0da034a8e35b1",
+      "code_fingerprint": "sha256:271fd853db229526e68cceb2dbfed2f2884a6e1145c7193671deea015752ae67",
       "kind": "text",
       "outputs": []
     },
     "performance-model-the-profiler": {
-      "code_fingerprint": "sha256:7277e6b86fea9a9577a69d03e6f5d71332c58c51f869962182a2134f1ee93b2a",
+      "code_fingerprint": "sha256:5f15bcd3181c16e1b1cd9d728986d8da2c9eabe84332634930e9cb017b34db4a",
       "kind": "text",
       "outputs": []
     },
     "performance-model-profiling-a-training-step-2": {
-      "code_fingerprint": "sha256:d4461d0a05e51cc4718e90c19bc15d771278b3651f509e213ee70caf744be18e",
+      "code_fingerprint": "sha256:5911dbfbcf1d5e4f44d22178f9114dd29382a6d06489fc10ee0a6f25585a8438",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.41 ms per step, device busy 2.37 ms (98%)\n 0.514 ms  21.7%  gemm_fusion_dot\n 0.506 ms  21.4%  gemm_fusion_dot_1\n 0.443 ms  18.7%  gemm_fusion_dot_general_8\n 0.421 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_nn_al\n 0.419 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_tn_al\n 0.050 ms   2.1%  input_reduce_select_fusion_1\n"
+          "text": "wall clock 2.41 ms per step, device busy 2.37 ms (98%)\n 0.511 ms  21.6%  gemm_fusion_dot\n 0.504 ms  21.3%  gemm_fusion_dot_1\n 0.442 ms  18.7%  gemm_fusion_dot_general_8\n 0.421 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_nn_al\n 0.420 ms  17.7%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_tn_al\n 0.054 ms   2.3%  input_reduce_select_fusion_1\n"
         }
       ]
     }

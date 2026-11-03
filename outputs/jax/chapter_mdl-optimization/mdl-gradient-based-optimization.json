@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 99919,
-          "sha256": "sha256:04f432dd4536152e46e7d8cc317cfe0494606597a97e44333c8425d4c4631718"
+          "sha256": "sha256:a46716dcc633cfc11939b382788c80125d0c41daee9241e7a0e5a6c5c44f0da2"
         }
       ]
     },
@@ -133,7 +133,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
           "bytes": 28737,
-          "sha256": "sha256:8320f7bce1e1c2b95afecfab05af9ee58cb938bf23f691d9915bfba2d27fb18a"
+          "sha256": "sha256:92795412446237cfac6fffba20bfe9ce40430a442f870ab95889d5d45fe34a30"
         }
       ]
     }

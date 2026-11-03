@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4c5da26eab6ca1b68298395b7dc7f3b5d79e4ff7f877fe342e75d2b4bbc38f6d",
+    "d2l_lib_fingerprint": "sha256:28cfe65de25ef4e996ace35145a98020615561654f6dc872a314a28cc31e9028",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rope: max |full - cached| = 9.5e-07\nlearned: max |full - cached| = 7.2e-07\n"
+          "text": "rope: max |full - cached| = 9.5e-07\nlearned: max |full - cached| = 8.3e-07\n"
         }
       ]
     },
@@ -46,22 +46,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 256: naive   6.2 ms, cached  7.0 ms per token\n"
+          "text": "n= 256: naive   6.3 ms, cached  7.2 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 512: naive   6.3 ms, cached  7.0 ms per token\n"
+          "text": "n= 512: naive   6.4 ms, cached  7.2 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: naive   9.9 ms, cached  7.1 ms per token\n"
+          "text": "n=1024: naive   9.8 ms, cached  7.1 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=2048: naive  20.9 ms, cached  7.1 ms per token\n"
+          "text": "n=2048: naive  20.9 ms, cached  7.2 ms per token\n"
         },
         {
           "type": "stream",
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-checking-the-cache-1-1.svg",
-          "bytes": 23621,
-          "sha256": "sha256:2e9e99550347dfe2f45bb156bd03e0c9db1fc3a5bafe41f8f9cb4f570fa7ea42"
+          "bytes": 23620,
+          "sha256": "sha256:78d26c36a0f23ae22c5a5a6fad29e9525429bbf23ab3cf0667249318bdf8f356"
         }
       ]
     },
@@ -90,12 +90,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens in 11.1 s =  23.1 tokens/s\n"
+          "text": "naive : 256 tokens in 11.1 s =  23.2 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens in  1.9 s = 138.0 tokens/s\n"
+          "text": "cached: 256 tokens in  1.9 s = 137.2 tokens/s\n"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill:  97915 tokens/s\ndecode:     142 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
+          "text": "prefill:  97928 tokens/s\ndecode:     140 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
         }
       ]
     },
@@ -138,19 +138,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=128: 142, 551, 2155, 8689 tokens/s\n"
+          "text": "n=128: 139, 546, 2126, 8530 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: 142, 552, 2161, 6855 tokens/s\n"
+          "text": "n=1024: 140, 543, 2100, 6845 tokens/s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-batched-decoding-1.svg",
           "bytes": 33651,
-          "sha256": "sha256:ade3d256adafe7a92731ee252f6c59475061864575f870a17e4a7d644b9920ec"
+          "sha256": "sha256:17f430654cc71867ede2c86a7a2b8858395e0a08273a05f24b4e02d3f02e4f5f"
         }
       ]
     },
@@ -183,22 +183,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=8: validation loss 1.35, cache 12.0 KiB per token\n"
+          "text": "H_kv=8: validation loss 1.34, cache 12.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=4: validation loss 1.34, cache  6.0 KiB per token\n"
+          "text": "H_kv=4: validation loss 1.35, cache  6.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=2: validation loss 1.35, cache  3.0 KiB per token\n"
+          "text": "H_kv=2: validation loss 1.34, cache  3.0 KiB per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=1: validation loss 1.35, cache  1.5 KiB per token\n"
+          "text": "H_kv=1: validation loss 1.34, cache  1.5 KiB per token\n"
         }
       ]
     },

@@ -670,8 +670,14 @@ grows eightfold: by 8 for SGD and by $\sqrt{8} \approx 2.8$ for Adam. Both
 batch sizes lie below the critical batch size of two to four hundred images
 that we fitted for the CNN. There extra examples per step still turn into
 fewer steps, so both rules should hold. Because `d2l.train_lm` already
-trains for a fixed number of steps, the sweep takes a few lines. Each sweep
-draws one seed, so all its runs start from the same initialization.
+trains for a fixed number of steps, the sweep takes a few lines. The budget
+is a fifth of the training set, so every minibatch is new to the model, and
+its loss, recorded before the update, is a loss on unseen images. We
+average it over the last quarter of each run, the last 3,200 images at
+either batch size, which smooths out the jitter of the final weights. Each
+sweep draws one seed, so all its runs start from the same initialization
+and see the same images in the same order, and the differences along a
+curve come from the learning rate alone.
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab pytorch
@@ -680,27 +686,37 @@ def final_loss_at(make_optimizer, lrs, b, seed, num_examples=12800):
     data_b = d2l.FashionMNIST(batch_size=b)
     final = []
     for lr in lrs:
-        torch.manual_seed(seed)
+        torch.manual_seed(seed)  # Same initialization and minibatch order
         model = d2l.FashionCNN().to(device)
-        d2l.train_lm(model, data_b, make_optimizer(model, lr),
-                     num_steps=num_examples // b)
-        loss = eval_loss(model, X_f[:8192], y_f[:8192])
+        losses = d2l.train_lm(model, data_b, make_optimizer(model, lr),
+                              num_steps=num_examples // b)
+        loss = np.mean(losses[3 * len(losses) // 4:])  # Last quarter
         final.append(loss if math.isfinite(loss) else float('nan'))
     return final
 ```
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab jax
+class FixedOrder(d2l.DataModule):  # Minibatches in one order, fixed by key
+    def __init__(self, arrays, batch_size, key):
+        super().__init__()
+        self.save_hyperparameters()
+
+    def get_dataloader(self, train):
+        return d2l.ArrayLoader(self.arrays, self.batch_size, shuffle=train,
+                               key=self.key)
+
 def final_loss_at(make_tx, lrs, b, seed, num_examples=12800):
     """Train the CNN once per learning rate; return the final losses."""
-    data_b = d2l.FashionMNIST(batch_size=b)
+    init_key, order_key = jax.random.split(jax.random.key(seed))
+    data_b = FixedOrder((X_f, y_f), b, order_key)
     final = []
-    for lr in lrs:
-        model = d2l.FashionCNN(rngs=nnx.Rngs(seed))
+    for lr in lrs:  # Same initialization and minibatch order
+        model = d2l.FashionCNN(rngs=nnx.Rngs(init_key))
         optimizer = nnx.Optimizer(model, make_tx(lr), wrt=nnx.Param)
-        d2l.train_lm(model, data_b, optimizer,
-                     num_steps=num_examples // b)
-        loss = eval_loss(model, X_f[:8192], y_f[:8192])
+        losses = d2l.train_lm(model, data_b, optimizer,
+                              num_steps=num_examples // b)
+        loss = np.mean(losses[3 * len(losses) // 4:])  # Last quarter
         final.append(loss if math.isfinite(loss) else float('nan'))
     return final
 ```
@@ -735,6 +751,21 @@ d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
+For Adam the predicted shift, $\sqrt{8} \approx 2.8$, falls between two
+grid points, and in a flat basin the best grid point can move by a whole
+step from one run to the next. We therefore locate each minimum between
+the grid points: fit a parabola in $\log \eta$ through the lowest final
+loss and its two neighbors, and take its vertex.
+
+```{.python .input #batch-size-learning-rate-sweeps-at-two-batch-sizes-1}
+%%tab pytorch, jax
+def best_lr(lrs, losses):
+    """Vertex of a parabola in log(lr) through the minimum and neighbors."""
+    i = int(np.clip(np.nanargmin(losses), 1, len(lrs) - 2))
+    c2, c1, _ = np.polyfit(np.log(lrs[i - 1:i + 2]), losses[i - 1:i + 2], 2)
+    return math.exp(-c1 / (2 * c2))
+```
+
 Then Adam:
 
 ```{.python .input #batch-size-learning-rate-rules-3}
@@ -745,8 +776,9 @@ make_adam = lambda model, lr: torch.optim.Adam(model.parameters(), lr)
 seed = random.getrandbits(32)
 adam_small = final_loss_at(make_adam, adam_lrs, b=8, seed=seed)
 adam_big = final_loss_at(make_adam, adam_lrs, b=64, seed=seed)
-for b, loss in ((8, adam_small), (64, adam_big)):
-    print(f'b={b:2d}: best lr {adam_lrs[np.nanargmin(loss)]:g}')
+lr_small, lr_big = best_lr(adam_lrs, adam_small), best_lr(adam_lrs, adam_big)
+print(f'best lr: {lr_small:.2g} at b=8, {lr_big:.2g} at b=64, '
+      f'a factor of {lr_big / lr_small:.1f}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
@@ -758,22 +790,24 @@ adam_lrs = [0.0002, 0.0004, 0.0008, 0.0016, 0.0032, 0.0064, 0.0128,
 seed = random.getrandbits(32)
 adam_small = final_loss_at(optax.adam, adam_lrs, b=8, seed=seed)
 adam_big = final_loss_at(optax.adam, adam_lrs, b=64, seed=seed)
-for b, loss in ((8, adam_small), (64, adam_big)):
-    print(f'b={b:2d}: best lr {adam_lrs[np.nanargmin(loss)]:g}')
+lr_small, lr_big = best_lr(adam_lrs, adam_small), best_lr(adam_lrs, adam_big)
+print(f'best lr: {lr_small:.2g} at b=8, {lr_big:.2g} at b=64, '
+      f'a factor of {lr_big / lr_small:.1f}')
 d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-Both plots show a broad minimum with a wall of failed runs on the right.
+Both plots show a broad minimum, with the loss rising on the right, where
+runs become unstable and, in many sweeps, some fail outright.
 For SGD the larger batch moves the whole basin to the right: the best
 learning rate moves by a factor of four to sixteen, the batch ratio to
 within one grid step, so the linear rule carried over from $b = 8$ lands
 within one grid step of the best learning rate at $b = 64$. For Adam the
-basin is flatter, so one run locates its minimum less precisely, and where
-the wall stands varies from run to run. The best learning rate moves by
-a factor of about two to eight, and in some runs not at all, as a flat
-basin allows: typically well short of the batch ratio, as the square-root
-rule predicts. The basins are broad, and near the
+fitted optimum moves by a factor between about 1.5 and 5 across our runs,
+and by about 2.5 on average: close to the $\sqrt{8} \approx 2.8$ of the
+square-root rule, and short of the batch ratio of 8 in every run. Three
+points of a flat basin fix each optimum only roughly, so a single sweep
+scatters around the prediction. The basins are broad, and near the
 optimum a factor of two in $\eta$ changes the loss little. The rules bridge
 large ratios of batch sizes, and a short sweep around their prediction does
 the fine tuning.
@@ -1193,13 +1227,14 @@ The basin shifts right by the batch ratio to within one grid step (4× to
 16× on this grid).
 :::
 
-::: {.slide title="Adam: The Best Rate Moves Far Less Than the Batch"}
+::: {.slide title="Adam: The Best Rate Moves Less Than the Batch"}
 Same budget, Adam:
 
 @!batch-size-learning-rate-rules-3
 
-$\sqrt{8} \approx 2.8$: in a flat basin the best rate moves by about two
-to eight, depending on the run, typically short of the linear rule's 8×.
+Best rate: vertex of a parabola in $\log \eta$ through the best grid
+point and its neighbors. It moves 1.5× to 5× across runs, 2.5× on
+average: near $\sqrt{8} \approx 2.8$, short of the linear rule's 8×.
 :::
 
 ::: {.slide title="The Rules Fail Past the Noise Scale, at the Ceiling, and Early"}

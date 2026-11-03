@@ -1498,7 +1498,7 @@ Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
 - Eager PyTorch launches several hundred kernels per decode step; that
   takes longer than the GPU's work, except at $b = 64$, $n = 1024$.
 - So throughput grows $\propto b$ almost throughout; CUDA graphs or
-  compilation (:numref:`sec_compilation`) expose the bound.
+  compilation remove the launch overhead and expose the bound.
 :::
 
 ::: {.col .fig .big}

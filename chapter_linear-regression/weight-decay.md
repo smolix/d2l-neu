@@ -539,8 +539,8 @@ them changes from draw to draw, with weights often several units away from
 1 and of opposite sign. Ridge returns about $(1, 1)$ every time. On new
 examples like the training examples, both fits have a test error of about
 0.01, the noise variance $\sigma^2$. On examples whose features disagree
-more, least squares fails. Since $w_2 - 1 \approx -(w_1 - 1)$, its error on
-such an example is about $(w_1 - 1)(x_1 - x_2)$ plus the noise, with mean
+more, least squares fails whenever its weights lie far from 1. Since
+$w_2 - 1 \approx -(w_1 - 1)$, its error on such an example is about $(w_1 - 1)(x_1 - x_2)$ plus the noise, with mean
 square about $0.01\,(w_1 - 1)^2 + 0.01$: the large weights amplify the
 disagreement, as the bound
 $|\mathbf{w}^\top \mathbf{x} - \mathbf{w}^\top \mathbf{x}'| \leq \|\mathbf{w}\|\, \|\mathbf{x} - \mathbf{x}'\|$

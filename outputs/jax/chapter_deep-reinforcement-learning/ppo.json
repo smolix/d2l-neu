@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:89586832f96d91bd591d8dde550a21e1dfaf1e7f6bf2f89d411918a566f60182",
+    "d2l_lib_fingerprint": "sha256:ca502eae322a92bb0b24393a8dbd8ae3db66590ea56dccfc5b286076d203b52f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
           "bytes": 35129,
-          "sha256": "sha256:f0eb43f57ffe6ea7e713c7a1c3f8feb6463240c9baa447e581b438291ff1a9f2"
+          "sha256": "sha256:bad341349fedecbf040c90b4f54d73de0cc82073d64d38d4a23d2c0fdc30ede9"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
           "bytes": 35442,
-          "sha256": "sha256:b75d2f80e896829fdb3dc4ab4412830c88090d40b21a57f5b3b6191e9e67df7a"
+          "sha256": "sha256:f76772fdc986b5435febbbdf9d49c93b5e1e6f8772e918bbf5a96d899809e09b"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 50392,
-          "sha256": "sha256:ab391e5035be98e6a09660819f32e279ebe7ca4941ba5722f6a00fdb13212966"
+          "sha256": "sha256:ef9e80f2cf9566c586cdae9f5430c7d99c956a9c357bf0be90fb1578a2a2c570"
         }
       ]
     },
@@ -133,7 +133,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 31646,
-          "sha256": "sha256:45d9695f0b2f4976e24f0dda7947c680ad582e075b997234a08bcbca20e08a7f"
+          "sha256": "sha256:36f9d76c0049bc850c243f3ec4cdfb94a8230638eab862d5522499d70178dcdd"
         }
       ]
     },
@@ -155,12 +155,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a fixed (32, 8) rectangle of steps, 0 episode boundaries inside it\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "V at the cut, pricing the unrecorded future: [100. 100. 100. 100. 100. 100. 100. 100.]\n"
+          "text": "a fixed (32, 8) rectangle of steps, 0 episode boundaries inside it\nV at the cut, pricing the unrecorded future: [100. 100. 100. 100. 100. 100. 100. 100.]\n"
         }
       ]
     },

@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  2.  4.  6.  0. 10. 12. 14.]\n [16. 18. 20. 22.  0. 26. 28.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\np = 0.5: tf.Tensor(\n[[ 0.  2.  4.  6.  8.  0. 12. 14.]\n [ 0. 18. 20. 22. 24. 26.  0.  0.]], shape=(2, 8), dtype=float32)\np = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         },
         {
           "type": "stream",
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35253,
-          "sha256": "sha256:5c594c4cca621fcaf9204f680efbb09ee365b58db7612ad85fd889e14aa51bb4"
+          "bytes": 35843,
+          "sha256": "sha256:135b5f01933f6e6de1732792887ef287bc0b7ae33d7f6dd100014929b230f8b7"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 37056,
-          "sha256": "sha256:1bcdfb118cd01958c038c5e1ce8c5ea8364f2822563519279d9a7fcb1e3c9c9e"
+          "bytes": 35842,
+          "sha256": "sha256:7b62a147b7d679d5a479cdddcd8e91bcd525f71143fdfc5afd2ff0454cddec8a"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35712,
-          "sha256": "sha256:121ba1cc8998259ab0e9743792acb9da791cefb2fd80f59fb37ff68790d8258b"
+          "bytes": 35721,
+          "sha256": "sha256:7a258ccc36f4ad3979ea7b95d3a9e5bb62f569388df78373ab5a5e628ff98f0b"
         }
       ]
     },
@@ -95,12 +95,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.872, with masks 0.857\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.868, with masks 0.775\n"
+          "text": "trained with dropout: validation accuracy 0.874, with masks 0.858\ntrained without dropout: validation accuracy 0.867, with masks 0.767\n"
         }
       ]
     }

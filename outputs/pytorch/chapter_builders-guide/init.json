@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([-0.0072,  0.0027, -0.0018, -0.0047]), tensor(0.))"
+          "text": "(tensor([ 0.0060, -0.0007, -0.0018, -0.0011]), tensor(0.))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([-0.0918,  0.0771, -0.3059,  0.6830]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+          "text": "(tensor([0.0543, 0.3674, 0.2158, 0.2473]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.94      1.54         1\n  8      16.5      1.63     0.995\n 32  4.34e+04      1.63     0.996\n"
+          "text": "  N  unscaled    scaled      zero\n  2      1.99      1.55     0.993\n  8      20.2      1.56     0.998\n 32  3.37e+04       1.6         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35346,
-          "sha256": "sha256:8181de8e1076e65ea49db6bcacb0853bd998697c008bbe2ec124f46fe508cfe1"
+          "bytes": 35048,
+          "sha256": "sha256:665a9cc7c503ea1d7829bc721816d6bf5755ae7b8f726bb21169981e38726890"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1005\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0963\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 9.5101,  0.0000,  9.6882,  9.5284],\n        [-5.2054,  0.0000, -6.9826,  0.0000]])"
+          "text": "tensor([[-5.3635,  8.7828, -5.4513, -0.0000],\n        [ 0.0000,  0.0000, -0.0000, -0.0000]])"
         }
       ]
     },
@@ -99,7 +99,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42.0000,  1.0000, 10.6882, 10.5284])"
+          "text": "tensor([42.0000,  9.7828, -4.4513,  1.0000])"
         }
       ]
     }

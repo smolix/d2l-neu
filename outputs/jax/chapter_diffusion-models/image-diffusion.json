@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
-          "bytes": 131154,
-          "sha256": "sha256:d0c4d3ae2ab0de49ea32da9a8e8386ed099f7a67dbeceb2e930300fd00cd4fd4"
+          "bytes": 131044,
+          "sha256": "sha256:6732033fbe2eff4d09b51064f65e882e75a4fb54b47f5de8ff85875f629c16d4"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classifier test accuracy: 0.892\n"
+          "text": "classifier test accuracy: 0.891\n"
         }
       ]
     },
@@ -85,17 +85,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.688                  16.29\n"
+          "text": "  1.0            0.675                  16.29\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0            0.825                  14.87\n"
+          "text": "  2.0            0.838                  14.86\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.875                  13.71\n"
+          "text": "  4.0            0.863                  13.71\n"
         }
       ]
     },
@@ -112,15 +112,15 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
-          "bytes": 102498,
-          "sha256": "sha256:1617171eb12db4288a0da8afdca93b7bcd65ad93795f76437d7ab2b58c2f679c"
+          "bytes": 102472,
+          "sha256": "sha256:90fc4266874ff28e61aca2bd2edadb3bb2d24d92d2ec3e1f4a0b68667030b92a"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
-          "bytes": 101048,
-          "sha256": "sha256:f8cf40a273d2e17753e3705dab18863826ccdd9876dc7ca8d37ad5beea47ae3e"
+          "bytes": 101172,
+          "sha256": "sha256:3107df091694b11c46dfd657f9d4cebfa6a68d16a117a20874ecdf58110f9484"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy classifier test accuracy: 0.849 at t = 0, 0.584 at t = 500\n"
+          "text": "noisy classifier test accuracy: 0.849 at t = 0, 0.585 at t = 500\n"
         }
       ]
     },
@@ -147,31 +147,31 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.438                  18.13\n"
+          "text": "  1.0            0.438                  18.01\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.812                  16.50\n"
+          "text": "  4.0            0.863                  16.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10.0            0.850                  16.22\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+          "text": " 10.0            0.913                  16.19\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
-          "bytes": 107656,
-          "sha256": "sha256:c6cd8a5d0129f6217740d3e739f62a59e264b380a38e32c284d31d463f76f5d5"
+          "bytes": 107573,
+          "sha256": "sha256:b0870b8b13d88553373684631a2c6636f005abd65fb8bf69475869904ee5bf33"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
-          "bytes": 95599,
-          "sha256": "sha256:b0a27e5004861e3e063603160a816f28c62ca132d443814a4394009772a21474"
+          "bytes": 95650,
+          "sha256": "sha256:a063d19faddf0dc9a0751e9bf5b5932598d1274338ca4305827af8fe3d202032"
         }
       ]
     }

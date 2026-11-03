@@ -614,8 +614,8 @@ def forward_ms(model, num_reps=50):
 for name, model in models.items():
     print(f'{name}: {num_params(model):,} parameters, '
           f'{macs[name] / 1e6:.1f}M multiply-adds, '
-          f'test accuracy {accuracy[name]:.3f}, '
-          f'{forward_ms(model):.1f} ms per batch')
+          f'accuracy {accuracy[name]:.3f}, '
+          f'{forward_ms(model):.1f} ms/batch')
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
@@ -637,8 +637,8 @@ def forward_ms(model, num_reps=50):
 for name, model in models.items():
     print(f'{name}: {num_params(model):,} parameters, '
           f'{macs[name] / 1e6:.1f}M multiply-adds, '
-          f'test accuracy {accuracy[name]:.3f}, '
-          f'{forward_ms(model):.1f} ms per batch')
+          f'accuracy {accuracy[name]:.3f}, '
+          f'{forward_ms(model):.1f} ms/batch')
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
@@ -659,8 +659,8 @@ def forward_ms(model, num_reps=50):
 for name, model in models.items():
     print(f'{name}: {num_params(model):,} parameters, '
           f'{macs[name] / 1e6:.1f}M multiply-adds, '
-          f'test accuracy {accuracy[name]:.3f}, '
-          f'{forward_ms(model):.1f} ms per batch')
+          f'accuracy {accuracy[name]:.3f}, '
+          f'{forward_ms(model):.1f} ms/batch')
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
@@ -680,8 +680,8 @@ def forward_ms(model, num_reps=50):
 for name, model in models.items():
     print(f'{name}: {num_params(model):,} parameters, '
           f'{macs[name] / 1e6:.1f}M multiply-adds, '
-          f'test accuracy {accuracy[name]:.3f}, '
-          f'{forward_ms(model):.1f} ms per batch')
+          f'accuracy {accuracy[name]:.3f}, '
+          f'{forward_ms(model):.1f} ms/batch')
 ```
 
 :numref:`tab_dws_vs_dense` collects the results. The accuracies are the range

@@ -669,8 +669,9 @@ def cosine_warmup(t, num_steps, warmup_steps):
 
     Defined in :numref:`sec_alexnet`"""
     t = tf.cast(t, tf.float32)  # Also works on the step counter of a graph
-    warmup = tf.minimum(t / warmup_steps, 1) if warmup_steps > 0 else 1.0
-    progress = tf.maximum(t - warmup_steps, 0) / (num_steps - warmup_steps)
+    warmup = tf.where(t < warmup_steps, t / warmup_steps, 1.0)
+    progress = tf.clip_by_value(
+        (t - warmup_steps) / (num_steps - warmup_steps), 0.0, 1.0)
     return warmup * 0.5 * (1 + tf.cos(math.pi * progress))
 
 class Residual(tf.keras.Model):
@@ -1186,6 +1187,7 @@ class RNNLM(d2l.RNNLMScratch):
 def beam_search(step_fn, prefix, num_tokens, beam_size=4,
                 alpha=0.75, eos_id=None):
     """Length-normalized beam search (score = log P / len^alpha).
+    Returns candidates sorted best-first; [0][1] is the argmax sequence.
 
     Defined in :numref:`sec_beam-search`"""
     def log_softmax(logits):
@@ -1543,6 +1545,7 @@ def _pad_ptb(all_centers, all_contexts, all_negatives):
     """Pre-pad all skip-gram examples to the global max length.
 
     Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
+    masks (N, L), labels (N, L), where L = max(len(c) + len(n)).
 
     Defined in :numref:`sec_word2vec_data`"""
     import numpy as _np
@@ -2985,24 +2988,40 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5,
     return axes
 
 def show_heatmaps(matrices, xlabel, ylabel, titles=None,
-                  figsize=(2.5, 2.5), cmap='Reds'):
-    """Show heatmaps of matrices.
+                  figsize=(2.5, 2.5), cmap='Reds', cbar=True,
+                  xticklabels=None, yticklabels=None):
+    """Show heatmaps of matrices; cbar is True (shared), 'each' or False.
 
     Defined in :numref:`sec_utils`"""
     d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
+    matrices = d2l.numpy(matrices)
+    num_rows, num_cols, height, width = matrices.shape
     fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
                                  sharex=True, sharey=True, squeeze=False)
+    # All panels share one color scale (one norm) unless each gets its own
+    lims = {} if cbar == 'each' else dict(norm=d2l.plt.Normalize(
+        matrices.min(), matrices.max()))
     for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
         for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            pcm = ax.imshow(matrix, cmap=cmap, **lims)
+            if cbar == 'each':
+                fig.colorbar(pcm, ax=ax, shrink=0.6)
             if i == num_rows - 1:
                 ax.set_xlabel(xlabel)
             if j == 0:
                 ax.set_ylabel(ylabel)
             if titles:
                 ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
+    # Shared axes: setting the ticks of one panel sets them for all
+    for axis, n, labels in ((ax.xaxis, width, xticklabels),
+                            (ax.yaxis, height, yticklabels)):
+        if labels is None:
+            axis.set_major_locator(d2l.plt.MaxNLocator(
+                'auto', integer=True, steps=[1, 2, 2.5, 5, 10]))
+        else:
+            axis.set_ticks(range(n), labels)
+    if cbar is True:
+        fig.colorbar(pcm, ax=axes, shrink=0.6);
 
 def linreg(X, w, b):
     """The linear regression model.

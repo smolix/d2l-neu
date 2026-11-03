@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d3be79f81633782ae4643c8d496a5c784c731a96eefca26b2f00b88cfde0c234",
+    "d2l_lib_fingerprint": "sha256:168884d41d21311b8972fd98c5f9fca92a6f0750026375cc57d358eddd0ec96f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,34 +31,21 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-1-1.svg",
-          "bytes": 31024,
-          "sha256": "sha256:8bcd63a4cab9588c77112152db5fd226b72e4ebd50423c4dc58cf0bfb0e36458"
+          "bytes": 31006,
+          "sha256": "sha256:f9793120eea0b38c403c48a3bd07d2b079bf9f19ea2276bb8d32383419335c7a"
         }
       ]
     },
     "queries-keys-values-nadaraya-watson-regression-in-action-3": {
-      "code_fingerprint": "sha256:91b551e18545305ad9a7a68944fa6a90e0276c775579478b1823bddc40d478d6",
+      "code_fingerprint": "sha256:99e6d1628b4ef4db05a759d53704a7e2f0cf92cb3b771a330432b299e295b523",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 27568,
-          "sha256": "sha256:d1ab06e5ca1a1136ec51681edc59b9f701c1dbbf4c80192147b85e2f63665132"
-        }
-      ]
-    },
-    "queries-keys-values-attention-weights-as-a-diagnostic-1": {
-      "code_fingerprint": "sha256:36264f0affe4efc3c83ca782bebb109d246fc8d729537bf6ba929e7134c8a291",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "queries-keys-values/queries-keys-values-attention-weights-as-a-diagnostic-1-1.svg",
-          "bytes": 29160,
-          "sha256": "sha256:bacac4818989c07825d986c7e62c00b4bd1d5873d3e79a498bd80d35eebc4053"
+          "bytes": 42062,
+          "sha256": "sha256:b68680934be2efd306a1a745a923b938325eab8c50042e9d52d0be96dd68b12e"
         }
       ]
     }

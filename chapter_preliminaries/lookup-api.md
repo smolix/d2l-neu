@@ -316,7 +316,7 @@ try:
     x = jnp.ones(2, 3)
     print('shape:', x.shape, 'dtype:', x.dtype)
 except TypeError as e:
-    print('TypeError:', e)
+    print('TypeError:', str(e).splitlines()[0])
 print('ones((2, 3)) has shape', jnp.ones((2, 3)).shape)
 ```
 
@@ -348,7 +348,8 @@ passed as one tuple, returns the $2 \times 3$ matrix.
 
 :begin_tab:`jax`
 The prediction holds: JAX cannot interpret the integer 3 as a data type, so
-the call fails, and the error message even names the likely intent. The
+the call fails. We print only the first line of the message, which goes on
+to name the likely intent. The
 last line of the output shows the call that we meant: `jnp.ones((2, 3))`,
 with the shape passed as one tuple, returns a $2 \times 3$ matrix.
 :end_tab:

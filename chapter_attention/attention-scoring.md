@@ -430,7 +430,7 @@ doc = torch.tensor([0, 0, 0, 1, 1, 2])  # Document of each position
 same_doc = doc[:, None] == doc[None, :]
 packed = same_doc & causal_mask(6)
 d2l.show_heatmaps(packed.float()[None, None], xlabel='Keys',
-                  ylabel='Queries')
+                  ylabel='Queries', cbar=False)
 ```
 
 ```{.python .input #attention-scoring-composing-masks-1}
@@ -439,7 +439,7 @@ doc = jnp.array([0, 0, 0, 1, 1, 2])  # Document of each position
 same_doc = doc[:, None] == doc[None, :]
 packed = same_doc & causal_mask(6)
 d2l.show_heatmaps(packed.astype(jnp.float32)[None, None], xlabel='Keys',
-                  ylabel='Queries')
+                  ylabel='Queries', cbar=False)
 ```
 
 The composite mask is block diagonal, with one causal triangle per

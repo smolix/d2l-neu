@@ -610,8 +610,12 @@ net.embedding.set_weights([embeds])
 
 ### Training and Evaluating the Model
 
-In contrast to the `split_batch` function in :numref:`sec_multi_gpu` that takes single inputs such as text sequences (or images),
-we define a `split_batch_multi_inputs` function to take multiple inputs such as premises and hypotheses in minibatches.
+:begin_tab:`mxnet`
+`d2l.train_ch13` splits each minibatch across the GPUs with
+`d2l.split_batch`, which takes a single input, such as a batch of text
+sequences or images. Our model takes two inputs, premises and hypotheses,
+so we define `split_batch_multi_inputs`, which splits both.
+:end_tab:
 
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-1}
 #@tab mxnet
@@ -835,15 +839,16 @@ Three steps: **Attend** → **Compare** → **Aggregate**.
 :::
 
 ::: {.slide title="Step 1: Attend"}
-Compute alignment weights between every premise word and
-every hypothesis word. Use them to build aligned context
-vectors:
+Score every premise word $a_i$ against every hypothesis word $b_j$
+with a shared MLP $f$, then softly align each side to the other:
 
-@natural-language-inference-attention-attending-1
+~~~python
+e = f(A) @ f(B).transpose(1, 2)        # (batch, m, n) scores
+beta = softmax(e, -1) @ B              # hypothesis context per premise word
+alpha = softmax(e.transpose(1, 2), -1) @ A
+~~~
 
-. . .
-
-@natural-language-inference-attention-attending-2
+$f$ is two ReLU layers with dropout 0.2.
 :::
 
 ::: {.slide title="Step 2: Compare"}
@@ -862,11 +867,15 @@ sentence summaries → final MLP → 3-way logits:
 :::
 
 ::: {.slide title="Putting it together"}
-The final module wires the three stages into one classifier.
-Inputs are premise IDs and hypothesis IDs; output is 3 logits
-for entailment, contradiction, and neutral.
+One classifier: premise and hypothesis IDs in, 3 logits out
+(entailment, contradiction, neutral).
 
-@natural-language-inference-attention-putting-it-all-together
+~~~python
+A, B = embed(premises), embed(hypotheses)
+beta, alpha = attend(A, B)
+V_A, V_B = compare(A, B, beta, alpha)
+logits = aggregate(V_A, V_B)
+~~~
 :::
 
 ::: {.slide title="Loading data + model"}
@@ -886,11 +895,7 @@ Loss should fall quickly: there is no recurrence, so every
 token-pair alignment and every MLP comparison is fully
 parallelizable.
 
-@natural-language-inference-attention-training-and-evaluating-the-model-2-1
-
-. . .
-
-@natural-language-inference-attention-training-and-evaluating-the-model-2-2
+@!natural-language-inference-attention-training-and-evaluating-the-model-2-2
 :::
 
 ::: {.slide title="Training" except="mxnet"}
@@ -898,7 +903,11 @@ Loss should fall quickly: there is no recurrence, so every
 token-pair alignment and every MLP comparison is fully
 parallelizable.
 
-@natural-language-inference-attention-training-and-evaluating-the-model-2-2
+~~~python
+trainer = Adam(net.parameters(), lr=0.001)   # 4 epochs, cross-entropy
+~~~
+
+@!natural-language-inference-attention-training-and-evaluating-the-model-2-2
 :::
 
 ::: {.slide title="Predict"}

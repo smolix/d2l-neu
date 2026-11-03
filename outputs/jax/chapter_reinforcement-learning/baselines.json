@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3f355ef3a8b4b2f6d64dcc1449c19a689bed29bfc5f83cd99e69e72ee0811a2b",
+    "d2l_lib_fingerprint": "sha256:8e368d973732a99b211fa82551c203aa221c9b4ab08ba6852797a6a4477de46e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 73267,
-          "sha256": "sha256:24bbad73f72414294e3e6a4c050aa476f57ff0a0c72f33c164e90e87092b40a1"
+          "sha256": "sha256:bad1a934a774005f72909d7fe1d91c44c8b1438b41c67f50b1c492ab58c69d38"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 48049,
-          "sha256": "sha256:9629b09be87e8c6b1959ff3d23be24e22f00869639ee00ecd09c9a254b7dfc8c"
+          "sha256": "sha256:d17fa676d2b9e83a070fc70146f1dc930b7a871cd887bad7ec4a66f2101b3bbc"
         }
       ]
     }

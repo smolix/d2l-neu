@@ -217,8 +217,8 @@ d2l.plt.legend(['train, true labels', 'test, true labels',
 ```
 
 With true labels, training accuracy passes 99% after 60 to 90 epochs, and
-test accuracy settles at 80% to 83%. With random labels, the network needs
-longer, 115 to 145 epochs to pass 99%, but it fits them too: training
+test accuracy settles at about 80% to 83%. With random labels, the network needs
+longer, 110 to 150 epochs to pass 99%, but it fits them too: training
 accuracy reaches 100%, while test accuracy stays near the 10% of guessing. The network, the optimizer, and the images are the same in both
 runs; only the labels differ.
 
@@ -401,7 +401,7 @@ for h in (200, 900, 1000, 1100, 10000):
           f'norm of W2 {norm[h]:6.1f}')
 ```
 
-At the threshold the smallest singular value is tens to hundreds of times
+At the threshold the smallest singular value is tens to thousands of times
 smaller than at 1,100 hidden units, depending on the draw of the features.
 The norm of the solution jumps from about 50 at 900 units to several hundred
 or more, often thousands, against about 40 at 1,100 units and 3 at 10,000.
@@ -565,7 +565,7 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
 ```
 
 The two kinds of training images are fit at very different speeds. After 20
-epochs the network reproduces the labels of 80% to 90% of the correctly
+epochs the network reproduces the labels of more than 80% of the correctly
 labeled images, but those of fewer than one in five of the mislabeled ones.
 Validation accuracy peaks in this first phase, within the first 40 epochs. Then
 the network memorizes the wrong labels, nearly all of them after about 100 to 160
@@ -854,8 +854,8 @@ Experiments use 1,000 training images.
 1,000 images, 203,530 parameters, SGD for 200 epochs. Random labels:
 each label redrawn uniformly, independent of the image.
 
-- True labels: over 99% train after 60–90 epochs, 80–83% test.
-- Random labels: over 99% train after 115–145 epochs, about 10% test.
+- True labels: over 99% train after 60–90 epochs, about 80–83% test.
+- Random labels: over 99% train after 110–150 epochs, about 10% test.
 
 ::: {.d2l-note}
 Same network, optimizer, and images; only the labels differ.
@@ -1103,7 +1103,7 @@ The minimum-norm fit is $\frac{4}{5}\mathbf{h} = (0.8, 1.6)$, norm $1.79$.
 ::: {.col .narrow}
 1,000 images, 20% of labels redrawn: about 18% wrong.
 
-- After 20 epochs: 80–90% of the clean labels fit, under 20% of the
+- After 20 epochs: over 80% of the clean labels fit, under 20% of the
   wrong ones. Validation accuracy peaks in this phase.
 - Then the wrong labels are memorized, nearly all after about 100–160 epochs;
   validation accuracy drops several points.

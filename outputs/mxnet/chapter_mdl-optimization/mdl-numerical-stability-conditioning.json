@@ -108,23 +108,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   512.000000   (= 4 x 128)\nWelford, one pass     :     0.994200\ntwo-pass reference    :     0.994200\nWelford vs two-pass   : 1.5e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     0.998938\ntwo-pass reference    :     0.998938\nWelford vs two-pass   : 3.7e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-summation-order": {
-      "code_fingerprint": "sha256:7a6bd132f85f5d87a3f11ce422cfa98438cb5c0df62ea5b69f28d991c5b028b7",
+      "code_fingerprint": "sha256:f381aedfaecde31019f2477e2ed03c6108759ec4104f35296152c8edf7db7d2d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "in order (cumsum):     1087937.0000\npairwise (np.sum):      999989.4375\nexact            :     1000000.0149\n"
+          "text": "in order (cumsum):     1087937.0000\npairwise         :     1000000.0000\nexact            :     1000000.0149\n"
         }
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:a5e7104f2c60421a0f67bc164329349524b483ec8741cddda4e9eed320493d51",
+      "code_fingerprint": "sha256:aa9a8d299e6d6e74b011fc6d3a51d1cafca8e3a362d75dd0653e5bcd9fe57070",
       "kind": "text",
       "outputs": [
         {
@@ -135,18 +135,18 @@
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:9d235d7ef6664e5b4e81fdc8effb34d4dfa16cae22d8e463dade5c72796f746a",
+      "code_fingerprint": "sha256:f87a11bf97e4f202389312bd37eb1f9df4b334da2a594ad1970bd65ba4296707",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 10.7 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.7 digits, lstsq keeps 12.1\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.5 digits, lstsq keeps 14.1\nkappa(A) = 1e+06: normal equations keep  4.7 digits, lstsq keeps 11.7\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:9c0fb262059b4618110e82401d0a667c47d103517da6414b6334ee30366d7b42",
+      "code_fingerprint": "sha256:fbfa7d8596d01028e7845754d9a4ad3876ae51170792d4de64ca286353f53e09",
       "kind": "text",
       "outputs": [
         {
@@ -162,12 +162,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
-      "code_fingerprint": "sha256:0a4348dd6bd8da3a985a10df6e4a05ed0ace56663bc19d180b99c70f39aa38ef",
+      "code_fingerprint": "sha256:7ce65b7e7a5eb3dda8103726ce96a89f911607083d494969793db20f17f442b5",
       "kind": "asset",
       "outputs": [
         {
@@ -175,7 +180,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:97cd2009510e996ba4e8eaccaace0e24b4d75c5ba4785bbc02e06d4926bd1726"
+          "sha256": "sha256:35960bf61bf2181106388a87ed1c8fc9f7d01978385b2480ae9e17b429aa6492"
         }
       ]
     }

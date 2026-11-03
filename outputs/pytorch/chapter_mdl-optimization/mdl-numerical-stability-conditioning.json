@@ -108,23 +108,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   128.000000   (= 1 x 128)\nWelford, one pass     :     0.997215\ntwo-pass reference    :     0.997215\nWelford vs two-pass   : 9.2e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -384.000000   (= -3 x 128)\nWelford, one pass     :     0.999215\ntwo-pass reference    :     0.999215\nWelford vs two-pass   : 1.1e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-summation-order": {
-      "code_fingerprint": "sha256:96889f4679a655a590549fd1167402662359bcbe32bd2b18a2d213c4baf34488",
+      "code_fingerprint": "sha256:d1cbc4eb08717f397fc27862423a1f41cd0463c72336e249b59f00fb8f063cf8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "in order (cumsum):     1087937.0000\npairwise (np.sum):     1000000.1250\nexact            :     1000000.0149\n"
+          "text": "in order (cumsum):     1087937.0000\npairwise         :     1000000.0000\nexact            :     1000000.0149\n"
         }
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:3430f5685f0dc91d5923bf7ea161270783f32a924062250584041601361d7e53",
+      "code_fingerprint": "sha256:b01dad706897a6b431783f5e82c60610562b17aaecbb93ed7efe6b5e151c290b",
       "kind": "text",
       "outputs": [
         {
@@ -135,34 +135,34 @@
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:a3dbaaeb4324c36962bf535552a7acb79b0b3d33ae9d8eeea77fe5a6cb984fe7",
+      "code_fingerprint": "sha256:5e00fc95efa3df794d0a562d75be7433959e0a2453047a9c55912a608e7f9998",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep  9.9 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.4 digits, lstsq keeps 11.7\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.9 digits, lstsq keeps 14.1\nkappa(A) = 1e+06: normal equations keep  4.6 digits, lstsq keeps 11.4\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:eb9ad4dbcb2e40781a5daa817aa2a7764a90b29058949d1f4e753d5b846c8362",
+      "code_fingerprint": "sha256:afd09969276b2e75578ed51acde0a36e42a9e602a4379cb19d2c6d674427241b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n     0  1000.0   6908         6.91  [1. 1.]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     0  1000.0   6908         6.91  [1. 1.]\n     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
-      "code_fingerprint": "sha256:b2e1fc728875405e94599eb89423540088482e959fa659ef9a0c533eb8b89a88",
+      "code_fingerprint": "sha256:1f23111f016bf1e29ca10dfe525065a9df9d8a0f939a4554bac9f0acb84e4300",
       "kind": "asset",
       "outputs": [
         {
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:bdfd5394c92334283e11753e3292c32e9e6cacd671b1efbf1db87aa2e9737f69"
+          "sha256": "sha256:2bf315762b3ca16f2306ba6ccd1a06a59ed09a957b251917e9e54195be5cae41"
         }
       ]
     }

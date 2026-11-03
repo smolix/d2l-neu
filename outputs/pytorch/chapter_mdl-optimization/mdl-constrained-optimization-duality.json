@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "x* = [0.    0.    0.15  0.    0.505 0.346]  zeros: 3  tau = 0.39\ntau =  0.390: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  0.690: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.250\ncertificate max_i (y - x*)^T(e_i - x*) = 6e-17  (<= 0 up to rounding: True)\n"
+          "text": "x* = [0.    0.    0.    0.431 0.    0.569]  zeros: 4  tau = 0.962\ntau =  0.962: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 1.000\ntau =  1.262: stationarity 0e+00, comp. slack 0e+00, dual feas. True, sum x = 0.400\ncertificate max_i (y - x*)^T(e_i - x*) = -1e-16  (<= 0 up to rounding: True)\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L = lambda_max(A^T A) = 138.9;  |a_j|^2 range from 73 to 115\n"
+          "text": "L = lambda_max(A^T A) = 159.4;  |a_j|^2 range from 83 to 131\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 90 of 95\nlargest null coordinate: 0.035;  eta * lam = 0.022\n"
+          "text": "exact zeros: 0 of 8;  sign flips of the null coordinates, last 20 steps: 95 of 95\nlargest null coordinate: 0.030;  eta * lam = 0.019\n"
         }
       ]
     },
@@ -86,25 +86,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.051\n"
+          "text": "exact zeros: 5 of 8;  support recovered: True;  max deviation on the support: 0.035\n"
         }
       ]
     },
     "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:c304e729531a97ddd03751cc24c4c7b849cc6a7035c2199e5403037f890dff60",
+      "code_fingerprint": "sha256:0bfd2ba7261c94786040822de276e938fcf6b415be19dadb968575d4cceba20f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "passes to gap < 1e-8: ISTA 23, coordinate descent 6\n"
+          "text": "passes to gap < 1e-8: ISTA 21, coordinate descent 5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/mdl-convexity-coordinate-descent-1.svg",
-          "bytes": 28140,
-          "sha256": "sha256:e93a93acb55af12310ee2f80f7a67d786a4d6579d62cb734f91dcb29d9cca8f1"
+          "bytes": 28201,
+          "sha256": "sha256:c715bb6077b6051355fce2b0ef15ee099a0b3906d01cb2ba42e86e8d03d0d037"
         }
       ]
     }

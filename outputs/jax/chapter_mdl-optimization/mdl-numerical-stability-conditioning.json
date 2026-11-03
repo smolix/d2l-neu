@@ -113,23 +113,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :     0.000000   (= 0 x 128)\nWelford, one pass     :     1.000361\ntwo-pass reference    :     1.000361\nWelford vs two-pass   : 1.5e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+          "text": "naive E[x^2] - E[x]^2 :  -256.000000   (= -2 x 128)\nWelford, one pass     :     0.992578\ntwo-pass reference    :     0.992578\nWelford vs two-pass   : 3.2e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-summation-order": {
-      "code_fingerprint": "sha256:4a484ed2a70e7e98a6de5bf93b5eeb7fe7fbb8169ea7fc3289f4d7bd54280a48",
+      "code_fingerprint": "sha256:fc1403783fad3f31c1f81cc4b1838b11d44bde965e29aa9542da3e2f624277e9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "in order (cumsum):     1087937.0000\npairwise (np.sum):     1000000.1250\nexact            :     1000000.0149\n"
+          "text": "in order (cumsum):     1087937.0000\npairwise         :     1000000.0000\nexact            :     1000000.0149\n"
         }
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:fc151dcae0a3cc36fb285264eb135dee990254121bf4ad891bf131720c5c3090",
+      "code_fingerprint": "sha256:a4319d7823cc09f0a16b8edbf59af3e29a1328b0e0d4205e87c749699cca5c9e",
       "kind": "text",
       "outputs": [
         {
@@ -140,18 +140,18 @@
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:ad650463c5f127bf2bcb5c8737629015cf621e6dd717681ebb001330de0d946a",
+      "code_fingerprint": "sha256:e2bdaf2681ffe5a04fbc2f2c7fa373bc384bee717ec3a1af58ebb96ae155a42c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1e+03: normal equations keep 10.7 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  5.5 digits, lstsq keeps 10.9\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.8 digits, lstsq keeps 14.7\nkappa(A) = 1e+06: normal equations keep  4.2 digits, lstsq keeps 11.3\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:fea7818f9467a04ff5fce934b54fb3ef15ec712015127da91d806b7afafdff62",
+      "code_fingerprint": "sha256:2980c61ee19be8f97db2957e89a3c6f182a0ad5027ed94ffc7d9a4b445bff37a",
       "kind": "text",
       "outputs": [
         {
@@ -162,12 +162,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     0  1000.0   6908         6.91  [1. 1.]\n     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+          "text": "     0  1000.0   6908         6.91  [1. 1.]\n     1   500.5   3458         6.91  [0.5   0.999]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
         }
       ]
     },
     "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
-      "code_fingerprint": "sha256:f50a17745704b4299685b7a816214d9ed834622bae8b7521d7d7f52f0c0137c8",
+      "code_fingerprint": "sha256:7f8479937fc4fec1e8e72a0882e19aa879f7707415c805fa5bf8bf249b6cc1c7",
       "kind": "asset",
       "outputs": [
         {
@@ -175,7 +180,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
           "bytes": 36675,
-          "sha256": "sha256:80503c8d89838e2454a22f9146927194a33cc461ae9dc5a238a5b70bfeae63ad"
+          "sha256": "sha256:fcb9aebb7bd71c8583922d1047b333a027e1bed10acb650a5243679f7f2024d4"
         }
       ]
     }

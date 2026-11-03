@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20911,
-          "sha256": "sha256:03673a4bc012b45eea4ab197df6e2e116840fce66c39fa831e2511f6e2d28573"
+          "sha256": "sha256:b9e3009ac27304d579711666abbf74ca626c6dac8500412ec45c1817b4ebee44"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30496,
-          "sha256": "sha256:c4647ebaa7a1c9a6fc1fcbe511ed959b36d7cf18957be40ede5d038431239aa5"
+          "sha256": "sha256:6f921ef5face74af534f2ac2b05e20dcaeb693450f3abcc3f18a05cf4227ae7f"
         }
       ]
     },

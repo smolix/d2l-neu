@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b9cf7efe4fe51bb6232c1f43709be59b6ea55592e715201498e445aeb6cfa6ce",
+    "d2l_lib_fingerprint": "sha256:236a26b1cca8fbda30bbc2780824a3ed376ae505eda5f806c22b1258b87c5647",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,34 +31,21 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-1-1.svg",
-          "bytes": 31057,
-          "sha256": "sha256:201e544451841098498d91ab68d71be5338b8fcffe66cb37f08122c4f60c8601"
+          "bytes": 31024,
+          "sha256": "sha256:9dbf6e56ef68597a49f4d28396cd45d99ca63704396d3b168a1c7b60d382843d"
         }
       ]
     },
     "queries-keys-values-nadaraya-watson-regression-in-action-3": {
-      "code_fingerprint": "sha256:dd49159216a614a27385aff1f8d51f08c469955bdc4d637c57aeff41f9430273",
+      "code_fingerprint": "sha256:fd593e4786442f61b46ee503c77ff0ba3d4c5daeb5da6143edf8b32ebd126e5a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
-          "bytes": 27619,
-          "sha256": "sha256:4e1f5c1386b46a3cd95c7cdbfcdfb10cc9bebb858e5bfb246bd2b04c1c61ef07"
-        }
-      ]
-    },
-    "queries-keys-values-attention-weights-as-a-diagnostic-1": {
-      "code_fingerprint": "sha256:83a0dcdab228f38df4876cc25004da67f1751173eb90392e6284ed1d8bab5e55",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "queries-keys-values/queries-keys-values-attention-weights-as-a-diagnostic-1-1.svg",
-          "bytes": 28480,
-          "sha256": "sha256:c65828d8abcbb7eac7e5887c3b83cad7c4dc4c171042a62b91dde8aef1324916"
+          "bytes": 41808,
+          "sha256": "sha256:5086381bc04837a7326b1c74abca94d79fab147890be9574d6c47b285463c84a"
         }
       ]
     }

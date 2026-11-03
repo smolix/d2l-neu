@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 1.95 x1 +0.11 x2 -1.91   (true log-ratio: 2 x1 - 2)\nlargest weight: 145; effective sample size: 32 of 1000, 224 if clipped at 5\n"
+          "text": "learned h(x) = 1.97 x1 -0.05 x2 -1.99   (true log-ratio: 2 x1 - 2)\nlargest weight: 21; effective sample size: 123 of 1000, 229 if clipped at 5\n"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.485   source accuracy 0.856\nweighted    target accuracy 0.953   source accuracy 0.828\nclipped     target accuracy 0.952   source accuracy 0.837\nalways predicting the most common target class: 0.715\n"
+          "text": "unweighted  target accuracy 0.533   source accuracy 0.857\nweighted    target accuracy 0.938   source accuracy 0.835\nclipped     target accuracy 0.938   source accuracy 0.841\nalways predicting the most common target class: 0.712\n"
         }
       ]
     },
@@ -53,8 +53,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 794516,
-          "sha256": "sha256:a6a4b243c4a482da9d0ff0c80237d036bb1cc39ed940ee1fdf8d225569b1b69f"
+          "bytes": 794853,
+          "sha256": "sha256:8d5850dd513e72d1dd0673287968249a6a84b57230254a6f53fbf4d4346581cb"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "C = [[0.84, 0.17], [0.16, 0.83]]   mu = [0.78, 0.22]\nestimated target p(y) = [0.917, 0.083]\n"
+          "text": "C = [[0.84, 0.16], [0.16, 0.84]]   mu = [0.774, 0.226]\nestimated target p(y) = [0.899, 0.101]\n"
         }
       ]
     }

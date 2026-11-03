@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [55, 45]\n"
+          "text": "heads, tails:  [46, 54]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([51, 49], dtype=int64)"
+          "text": "array([57, 43], dtype=int64)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.39, 0.61],\n       [0.58, 0.42],\n       [0.46, 0.54],\n       [0.43, 0.57],\n       [0.57, 0.43]])"
+          "text": "array([[0.56, 0.44],\n       [0.52, 0.48],\n       [0.46, 0.54],\n       [0.51, 0.49],\n       [0.5 , 0.5 ]])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.4943, 0.5057])"
+          "text": "array([0.499, 0.501])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 71676,
-          "sha256": "sha256:6a2ede08d8aa19c01d11abc9b452c333aac06e10ab69144975daea6ba44fec53"
+          "bytes": 67222,
+          "sha256": "sha256:7826d92f7a3ae6f3cb2a990ad701795bbb03c1809e9f66221364dffc5326e2c1"
         }
       ]
     },
@@ -73,7 +73,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.8281206)"
+          "text": "array(0.83623594)"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31779,
-          "sha256": "sha256:94fd96c6ae08096f0bcc5f7af126a393162b5614f30588734132cd0a607e1dab"
+          "bytes": 31773,
+          "sha256": "sha256:d600f418d8328b487c812b4b4adfa9f0e71984633af7acfae5c9b3005cf42ebf"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0.271), array(0.))"
+          "text": "(array(0.25), array(0.))"
         }
       ]
     }

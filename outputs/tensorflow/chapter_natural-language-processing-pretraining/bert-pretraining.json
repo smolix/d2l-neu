@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.641, NSP loss 0.728\n1003.3 sentence pairs/sec on 1 devices\n"
+          "text": "MLM loss 9.633, NSP loss 0.721\n1023.2 sentence pairs/sec on 1 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21498,
-          "sha256": "sha256:0062d1caf99bfaa8650ca5e28524f82ee3b76e0e3f6dce83e82d637796f7e715"
+          "bytes": 21502,
+          "sha256": "sha256:224570c461dd3d8acad0381eeb62f40480a85e088289ecf2a1e0f30e6be376af"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([-0.3473855, -0.6398296, -2.89722  ], dtype=float32))"
+          "text": "(TensorShape([1, 6, 128]),\n TensorShape([1, 128]),\n array([ 0.3118002,  0.9506722, -1.5380406], dtype=float32))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([ 0.00581306, -0.4455838 , -2.6847928 ], dtype=float32))"
+          "text": "(TensorShape([1, 10, 128]),\n TensorShape([1, 128]),\n array([ 0.08416289,  0.6722358 , -1.3501129 ], dtype=float32))"
         }
       ]
     }

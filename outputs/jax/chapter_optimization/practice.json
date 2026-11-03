@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:399c5ed9b5f5e3bc3af3a313125f688986546d97ea72411bfbf5df27e4c9a2f0",
+    "d2l_lib_fingerprint": "sha256:c505d648d30e8b9a45f95d25b799a56e30853cc2bce0bbf3b0cf0ab32524c74c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,12 +40,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.611\n"
+          "text": "clipped at 1: final loss 1.602\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 18 of 2000 steps, the last at step 18; median gradient norm 0.25\n"
+          "text": "clipped 9 of 2000 steps, the last at step 9; median gradient norm 0.25\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 26054,
-          "sha256": "sha256:7dcd9b84cf765e1160ae3344ebe6edd0a94b040b32710cb1181730e1dd1cb358"
+          "bytes": 24621,
+          "sha256": "sha256:df2474839066d5f4b6519349ac522fd2d1d9030f8e11efe1975f38de19f5b678"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.880, last five epochs 0.838 to 0.884\nEMA: final test accuracy 0.912, last five epochs 0.901 to 0.912\n"
+          "text": "live: final test accuracy 0.893, last five epochs 0.882 to 0.900\nEMA: final test accuracy 0.911, last five epochs 0.899 to 0.911\n"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24015,
-          "sha256": "sha256:5e3482e4cb5c99940e11124e5f5a7e6e5e0f290f7fa661635adea6c9f4c7adb0"
+          "bytes": 24009,
+          "sha256": "sha256:ee08f0d9fcdaed4387d46d15e70593806bb4a5765d354ecf5b47083c8eb8a6e3"
         }
       ]
     }

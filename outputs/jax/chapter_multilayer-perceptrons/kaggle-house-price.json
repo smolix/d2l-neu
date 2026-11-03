@@ -87,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.113, validation RMSE 0.144 (folds 0.114 to 0.189)\n"
+          "text": "training RMSE 0.112, validation RMSE 0.150 (folds 0.112 to 0.239)\n"
         }
       ]
     },
@@ -108,27 +108,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.091, validation RMSE 0.163 (folds 0.131 to 0.198)\nweight decay 0.01: "
+          "text": "training RMSE 0.093, validation RMSE 0.179 (folds 0.146 to 0.268)\nweight decay 0.01: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.096, validation RMSE 0.138 (folds 0.120 to 0.154)\nweight decay 0.03: "
+          "text": "training RMSE 0.094, validation RMSE 0.151 (folds 0.108 to 0.231)\nweight decay 0.03: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.105, validation RMSE 0.134 (folds 0.107 to 0.159)\nweight decay 0.1: "
+          "text": "training RMSE 0.105, validation RMSE 0.139 (folds 0.104 to 0.222)\nweight decay 0.1: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.132, validation RMSE 0.141 (folds 0.109 to 0.176)\nweight decay 0.3: "
+          "text": "training RMSE 0.131, validation RMSE 0.144 (folds 0.110 to 0.210)\nweight decay 0.3: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training RMSE 0.163, validation RMSE 0.165 (folds 0.129 to 0.200)\n"
+          "text": "training RMSE 0.162, validation RMSE 0.168 (folds 0.134 to 0.219)\n"
         }
       ]
     },
@@ -138,7 +138,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "     Id      SalePrice\n0  1461  116307.062500\n1  1462  157349.046875\n2  1463  179611.546875\n3  1464  197512.968750\n4  1465  182906.562500"
+          "text": "     Id      SalePrice\n0  1461  117947.023438\n1  1462  156909.828125\n2  1463  180312.812500\n3  1464  203565.187500\n4  1465  182336.531250"
         }
       ]
     }

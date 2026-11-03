@@ -66,61 +66,61 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-1.svg",
-          "bytes": 29529,
-          "sha256": "sha256:eb6a5fa9ccdc71e829ef6e915206d284b0bd62479656d90d722e81be464b5f38"
+          "bytes": 29532,
+          "sha256": "sha256:3157b3d9faf48f37e1fe682b6a7d7b325218b354f8ab440c7f7f7dcb4050f0db"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.2672, runtime = 38.1 s\nTrial 1: learning_rate = 0.07795, batch_size = 196\n"
+          "text": "    error = 0.2764, runtime = 37.6 s\nTrial 1: learning_rate = 0.01191, batch_size = 152\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-2.svg",
-          "bytes": 34652,
-          "sha256": "sha256:7acdc8f860c2992850fd92514886fc21f049f3dc3cc392a8a5598e7bc0fd4688"
+          "bytes": 34249,
+          "sha256": "sha256:ab5dd4ab08c4583076ba044ddb832dea0b6c9962366224560b9b43da701bc093"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.3741, runtime = 27.3 s\nTrial 2: learning_rate = 0.7052, batch_size = 100\n"
+          "text": "    error = 0.9000, runtime = 35.0 s\nTrial 2: learning_rate = 0.2655, batch_size = 127\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-3.svg",
-          "bytes": 30240,
-          "sha256": "sha256:0b7eba6cf2f8f77079c2604da26e25df4abc60ff521eb151600680b07031f4d1"
+          "bytes": 30753,
+          "sha256": "sha256:e7c5b7b977f4eaefac04d04c59ee68def9ddb2d7387cdf56d82f181cb50ec226"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1637, runtime = 27.3 s\nTrial 3: learning_rate = 0.151, batch_size = 234\n"
+          "text": "    error = 0.2048, runtime = 36.0 s\nTrial 3: learning_rate = 0.2662, batch_size = 118\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-4.svg",
-          "bytes": 29528,
-          "sha256": "sha256:eceeb64216c994c8428acf3fdb7bc4fa0873774fbe68bfb3c9e10affca14e202"
+          "bytes": 30761,
+          "sha256": "sha256:e2be7d38c32f94224eea0476df45ead83599f311836b25ce1cda1b7091392cc8"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.3095, runtime = 24.8 s\nTrial 4: learning_rate = 0.5357, batch_size = 143\n"
+          "text": "    error = 0.2223, runtime = 31.7 s\nTrial 4: learning_rate = 0.02812, batch_size = 248\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3-5.svg",
-          "bytes": 30955,
-          "sha256": "sha256:8450e712e982a5f0b19410d54df20af4908d3921e54ffe4e8d9004a15941bba9"
+          "bytes": 33519,
+          "sha256": "sha256:5ec09f1e083bc84cfc34963d82a7a7067a2b01ccaa62409046fbbd6696114f45"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.1856, runtime = 36.4 s\n"
+          "text": "    error = 0.9000, runtime = 27.4 s\n"
         }
       ]
     },
@@ -132,8 +132,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 22879,
-          "sha256": "sha256:0df367bd331f784fde00d19ef84b19ffbe829dd1c2829c1aa604a644d9c981e4"
+          "bytes": 19652,
+          "sha256": "sha256:828f3165c651b8a8498a2dbb44a545d6ad4d1a2e034c1597a51248adc6aaff65"
         }
       ]
     }

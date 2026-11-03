@@ -30,7 +30,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv                   (1, 10, 10, 16)\nsigmoid                (1, 10, 10, 16)\navg_pool               (1, 5, 5, 16)\nflatten                (1, 400)\n"
+          "text": "Conv                   (1, 10, 10, 16)\nsigmoid                (1, 10, 10, 16)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "avg_pool               (1, 5, 5, 16)\nflatten                (1, 400)\n"
         },
         {
           "type": "stream",
@@ -57,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 38063,
-          "sha256": "sha256:0fddba6779c1cd4a9f18866bd88e649dae054cc8189163a8c58c301493a89c2c"
+          "bytes": 39146,
+          "sha256": "sha256:02aae3f13985f3527e513729ddcd4e644dce5810eeca31583a92822d9b4bed01"
         }
       ]
     }

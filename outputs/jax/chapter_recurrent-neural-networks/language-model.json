@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram (longest copied run: 2 words): the time rapped seated my more am or\n    after in said lies on soft doors direction time group in of me for the\n    or for mind about\n2-gram (longest copied run: 4 words): the time with an eddying mass of the\n    fact remains that commerce which there came one triumph of preventive\n    medicine was naturally enough in the circumstances in\n3-gram (longest copied run: 9 words): the time by trying to revive her but\n    my mind but i remembered my former headlong fall i began to fill his\n    pipe we stared at the\n"
+          "text": "1-gram (longest copied run: 2 words): the time week sport in erected that\n    and a flare and of because with sky invest the their left some like your\n    had between ached time of\n2-gram (longest copied run: 4 words): the time traveller with both hands\n    together it in their absolute helplessness and why had dropped to my\n    guesses at that fear as i saw me stood\n3-gram (longest copied run: 8 words): the time dimension but said the\n    psychologist and reassured us that s good he said to myself and my own i\n    ever saw in that derelict museum\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 38137,
-          "sha256": "sha256:37fb218782c68546407937084e6f66ec0d0861ad455a58f4e72a7d92a332257b"
+          "sha256": "sha256:bfb9e1c68b23baed0f225a0c19098e96936d2e520677c44ad7f84727586901d3"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 42259,
-          "sha256": "sha256:9ccdd09f74552094954a64b97ad31e2021223e1e32ae96daf1597aac054b713b"
+          "sha256": "sha256:75a05cf45d831a415207624a14a9cee4f62c3861664c6d0a7c42b88bf992d035"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[351 347 118 321 483  44 731 351  10 116]\n [491 260 419 578  44 277  44 285 260 907]] \nY: [[347 118 321 483  44 731 351  10 116 119]\n [260 419 578  44 277  44 285 260 907  58]]\nX[0]: ' at seventeen, another at\\nt'\nY[0]: ' seventeen, another at\\ntw'\n"
+          "text": "X: [[540 684 308 504  58  10 923 331 768 783]\n [272 625 304 284 942  10 100 337 564 581]] \nY: [[684 308 504  58  10 923 331 768 783 260]\n [625 304 284 942  10 100 337 564 581  46]]\nX[0]: ' do him good:\\nfor he looked round'\nY[0]: ' him good:\\nfor he looked round the'\n"
         }
       ]
     }

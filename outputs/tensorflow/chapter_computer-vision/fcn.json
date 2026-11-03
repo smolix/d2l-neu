@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85977,
-          "sha256": "sha256:297bee48456f1583bc34820ef7413ac8607912c9e18f1bb3267805198f5984f9"
+          "sha256": "sha256:ec5aafb8c00ccb053adb53b32b476c997a47477e212eda8061124892d97f547d"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 84s - 2s/step - accuracy: 0.7400 - loss: 39.1295 - pixel_ce: 1.2228 - val_accuracy: 0.8089 - val_loss: 22.7837 - val_pixel_ce: 0.7120\n"
+          "text": "34/34 - 52s - 2s/step - accuracy: 0.7436 - loss: 38.1659 - pixel_ce: 1.1927 - val_accuracy: 0.7947 - val_loss: 24.1322 - val_pixel_ce: 0.7541\n"
         },
         {
           "type": "stream",
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 13s - 370ms/step - accuracy: 0.8314 - loss: 19.1108 - pixel_ce: 0.5972 - val_accuracy: 0.8300 - val_loss: 18.9600 - val_pixel_ce: 0.5925\n"
+          "text": "34/34 - 9s - 270ms/step - accuracy: 0.8337 - loss: 18.4876 - pixel_ce: 0.5777 - val_accuracy: 0.8318 - val_loss: 19.3108 - val_pixel_ce: 0.6035\n"
         },
         {
           "type": "stream",
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 12s - 349ms/step - accuracy: 0.8548 - loss: 15.1964 - pixel_ce: 0.4749 - val_accuracy: 0.8392 - val_loss: 17.7064 - val_pixel_ce: 0.5533\n"
+          "text": "34/34 - 9s - 267ms/step - accuracy: 0.8569 - loss: 15.0680 - pixel_ce: 0.4709 - val_accuracy: 0.8346 - val_loss: 17.9899 - val_pixel_ce: 0.5622\n"
         },
         {
           "type": "stream",
@@ -145,7 +145,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 15s - 446ms/step - accuracy: 0.8729 - loss: 12.9936 - pixel_ce: 0.4060 - val_accuracy: 0.8400 - val_loss: 17.2804 - val_pixel_ce: 0.5400\n"
+          "text": "34/34 - 10s - 281ms/step - accuracy: 0.8755 - loss: 12.7511 - pixel_ce: 0.3985 - val_accuracy: 0.8400 - val_loss: 17.0857 - val_pixel_ce: 0.5339\n"
         },
         {
           "type": "stream",
@@ -155,11 +155,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 16s - 479ms/step - accuracy: 0.8834 - loss: 11.6898 - pixel_ce: 0.3653 - val_accuracy: 0.8438 - val_loss: 16.9900 - val_pixel_ce: 0.5309\n"
+          "text": "34/34 - 10s - 298ms/step - accuracy: 0.8843 - loss: 11.6210 - pixel_ce: 0.3632 - val_accuracy: 0.8444 - val_loss: 16.7716 - val_pixel_ce: 0.5241\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x77b1003a70e0>"
+          "text": "<keras.src.callbacks.history.History at 0x7ee6b030ef00>"
         }
       ]
     },
@@ -181,8 +181,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 157046,
-          "sha256": "sha256:82a3608b8d139c8a372dba5e3a856de7fee6e0dbefc2b54c14b4f881fdb8b837"
+          "bytes": 156974,
+          "sha256": "sha256:9c795df94e7ce67ae87f12fbe019eee04b1ef891366b1065d0b0d8875dbeb3ec"
         }
       ]
     }

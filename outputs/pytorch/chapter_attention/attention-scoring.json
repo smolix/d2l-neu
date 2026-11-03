@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:13daf7714fdae4e39c239c386b8e6e485f2b6ce68b708cdba2457285ffc7d1a7",
+    "d2l_lib_fingerprint": "sha256:97fb425e8b8f065af48d6cc3670a8e528f71512d82dc6ecf4976161b056ef004",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
-          "bytes": 25282,
-          "sha256": "sha256:f0d289d3e6b656125e7fd3c7f6de79aea3b971f20d2b5573904bc75d29384c35"
+          "bytes": 25853,
+          "sha256": "sha256:b95957e352e78171d53536ea8474f64a8f670106c10c4f4a9c065abaaa44ad95"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.261 (unscaled), 0.180 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.088 (unscaled), 0.184 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.252 (unscaled), 0.179 (scaled)\nd =  64: Jacobian norm 0.220 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.082 (unscaled), 0.182 (scaled)\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[0.4530, 0.5470, 0.0000, 0.0000],\n         [0.5262, 0.4738, 0.0000, 0.0000]],\n\n        [[0.2649, 0.4701, 0.2649, 0.0000],\n         [0.3092, 0.2704, 0.4204, 0.0000]]])"
+          "text": "tensor([[[0.4476, 0.5524, 0.0000, 0.0000],\n         [0.6005, 0.3995, 0.0000, 0.0000]],\n\n        [[0.2588, 0.2957, 0.4455, 0.0000],\n         [0.2345, 0.4355, 0.3300, 0.0000]]])"
         }
       ]
     },
@@ -63,7 +63,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3873, 0.3642, 0.2485, 0.0000]],\n\n        [[0.5791, 0.4209, 0.0000, 0.0000],\n         [0.2809, 0.2514, 0.2341, 0.2336]]])"
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3272, 0.3200, 0.3528, 0.0000]],\n\n        [[0.5589, 0.4411, 0.0000, 0.0000],\n         [0.3080, 0.2888, 0.2255, 0.1776]]])"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
-          "bytes": 16427,
-          "sha256": "sha256:9c8a9bc741c2b01cc432db83edb10b101a96182f0586017b85791c29ff443cb1"
+          "bytes": 16423,
+          "sha256": "sha256:67025ed61531aa33400c5625d8b9ab2be584909a9d59be6e9d7846e154ce2c2a"
         }
       ]
     },
@@ -88,41 +88,41 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
-          "bytes": 27709,
-          "sha256": "sha256:e5e11f873097243d3e825133e845e69b82e9cfc2776a5d60ad60c7895fe5b93b"
+          "bytes": 27701,
+          "sha256": "sha256:e06c0ad368fed3e2bdfd4c47750f3026fde977051c9fc9d1d7b24a0c211d7b9c"
         }
       ]
     },
     "attention-scoring-composing-masks-1": {
-      "code_fingerprint": "sha256:2aa1055d8aa1560cf9ed1ee89fb64aa2e1c9b35e453823258239f852c9fa51f9",
+      "code_fingerprint": "sha256:7a5f8f52f9b72de6de17d32401e5deae0e2db60808cf609fdd445c90efa75c2a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1-1.svg",
-          "bytes": 16267,
-          "sha256": "sha256:15dad3501402e0b27852491afdf05b8a815865a28dbdc4f9512048850866e14f"
+          "bytes": 13718,
+          "sha256": "sha256:b03df6d042fda594d565bf2fb2e6a46042ecd02728de612cdc19fea1c24e29b5"
         }
       ]
     },
     "attention-scoring-batch-matrix-multiplication": {
-      "code_fingerprint": "sha256:829f4098be8a606f63d34bb0f10db848d2e073fe323c44792f7cd629bd44345d",
+      "code_fingerprint": "sha256:291d9ff5e2232e13111cc4ab94d8ad75497352d86af91b11c48046f12081c619",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:307bc83fed798faab87c4351971b80cb3f0ffbada1e2737bae87afdaf543746b",
+      "code_fingerprint": "sha256:d834f64a8f80069098c2553de88d9b615bad5aa25561c4511d5ac19ea660d567",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:6df031090e6701f2bdff4adde1885b86c66c1b1cc2dbae4aafdba9b83c25d6c9",
+      "code_fingerprint": "sha256:4ef6a7f66de6d2b608d18f858b6eb3d6272cbd75f7e1f776db7a770e1bfa7ae4",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-3": {
-      "code_fingerprint": "sha256:f980dcb26b038399600d3dd602764b166667c26265f9f36141d849d138ef4ca5",
+      "code_fingerprint": "sha256:fa7eda6973b1e0c2d669c2b66346c2112947ff2611d52d4dc491c8cc0abd6d16",
       "kind": "asset",
       "outputs": [
         {
@@ -130,17 +130,17 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 16817,
-          "sha256": "sha256:54469e458d2faaaac9e94e56022fd08304300a160c1f6618dbb02c73ea345ec6"
+          "sha256": "sha256:24976bb9a3bfb6b8f0646bad602ae05c419e270646e39fa6d4c69f69ce6631b6"
         }
       ]
     },
     "attention-scoring-from-alignment-to-attention": {
-      "code_fingerprint": "sha256:2ea5d1c2d98a220f870bcfe2d82aa4667e395cb266951a2c68dfb1fdefcb9afe",
+      "code_fingerprint": "sha256:64c0f542259b80a393879da8f5482b0216c85eed63b81623994ba3f794627049",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.1582, 0.1863, 0.1536, 0.2387, 0.1142, 0.1491],\n        [0.1361, 0.1688, 0.1430, 0.2630, 0.1403, 0.1487],\n        [0.1591, 0.1694, 0.1389, 0.2775, 0.1206, 0.1345]])"
+          "text": "tensor([[0.1291, 0.1597, 0.1405, 0.1671, 0.1613, 0.2422],\n        [0.1622, 0.1437, 0.1348, 0.1782, 0.1647, 0.2165],\n        [0.1709, 0.1550, 0.1569, 0.1815, 0.1733, 0.1625]])"
         }
       ]
     }

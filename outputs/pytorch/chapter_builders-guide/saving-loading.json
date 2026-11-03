@@ -97,7 +97,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.0028"
+          "text": "0.0019"
         }
       ]
     },
@@ -107,7 +107,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 49188.97 -> restored 0.0028'"
+          "text": "'perturbed 42253.44 -> restored 0.0019'"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0028, 0.0027, 0.0026, 0.0025, 0.0025]\nfresh optimizer: [0.0028, 3.7621, 0.877, 0.9348, 1.69]\n"
+          "text": "saved optimizer: [0.0019, 0.0019, 0.0018, 0.0018, 0.0017]\nfresh optimizer: [0.0019, 0.5212, 1.185, 0.1084, 0.7223]\n"
         }
       ]
     },

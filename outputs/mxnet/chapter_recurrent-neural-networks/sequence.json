@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40339,
-          "sha256": "sha256:9dcf8bd4f6017bc3ea831804831f8eed63b014a59ffe9388ca1f272e03fbe3e3"
+          "bytes": 39461,
+          "sha256": "sha256:045b0867fb43464a975700201aae1840a8dc3893ccb91a2934cbc41f212bc5db"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 22449,
-          "sha256": "sha256:8d076071ec4b0c3509838458a38966d07331066b74ecfd6ff175c1fdbb1e9653"
+          "bytes": 22250,
+          "sha256": "sha256:d331e9bd0427110ba1d87c96b882f6f4f34278fc996eab2c17c0e83b33252c8c"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-one-step-ahead-prediction-1-1.svg",
-          "bytes": 68224,
-          "sha256": "sha256:907c163e1783a3672db86065cafaf70cfe3fdd98e3da70d438c090bda1c0421b"
+          "bytes": 67443,
+          "sha256": "sha256:7c819633cb617738853e6778aa8f3a29f6450c4996b208f798e6274835429af6"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44926,
-          "sha256": "sha256:a99f2f1d1447e41b072831dc4f90ce2f08578b50c9f2b6c80d5b76b32b23a2b6"
+          "bytes": 44939,
+          "sha256": "sha256:7d6a6365c11f26bcb63a38ab4b09336f545bd0f594ebb0e0332b49afb541ec96"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights on x[t-4], ..., x[t-1]: [0.251 0.259 0.244 0.231]\n"
+          "text": "weights on x[t-4], ..., x[t-1]: [0.243 0.247 0.234 0.257]\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-error-accumulation-1-1.svg",
-          "bytes": 104978,
-          "sha256": "sha256:ded78b5ee621adaf621ccb7ef586a7d879346b22ad413647244aba3652940c4f"
+          "bytes": 105805,
+          "sha256": "sha256:90c72a5685f4d1ca4d7042804ae43482b30941c41388fa5de08a3fa7162f5057"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 steps ahead: mean squared error 0.045\n 4 steps ahead: mean squared error 0.051\n16 steps ahead: mean squared error 0.063\n64 steps ahead: mean squared error 0.229\nvariance of the series: 0.485\n"
+          "text": " 1 steps ahead: mean squared error 0.049\n 4 steps ahead: mean squared error 0.053\n16 steps ahead: mean squared error 0.071\n64 steps ahead: mean squared error 0.258\nvariance of the series: 0.493\n"
         }
       ]
     }

@@ -74,23 +74,23 @@
       ]
     },
     "model-construction-sequential-and-friends-containers-4": {
-      "code_fingerprint": "sha256:027b047e884bf1cd667a0c1d6bb88312189521db47b7f0d27228415e4630a78e",
+      "code_fingerprint": "sha256:30669f6276d53fc11ebb9d85117362bba59a47166a6e25537cdbc737c59a6134",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "You cannot add new elements of state (variables or sub-layers) to a layer that is already built. All state must be created in the `__init__()` method or in the `build()` method.\n"
+          "text": "You cannot add new elements of state (variables or sub-layers) to a ...\n"
         }
       ]
     },
     "model-construction-forward-is-just-python-1": {
-      "code_fingerprint": "sha256:043f096b07324ca6ae715c3d1327da793a0d47377f66028df7fdae2852d1d03f",
+      "code_fingerprint": "sha256:bc365cb1beed5a63a57026f81b269c7453b9842f574801dcba04c97f8cd6a110",
       "kind": "text",
       "outputs": []
     },
     "model-construction-forward-is-just-python-2": {
-      "code_fingerprint": "sha256:9e7776dfad2e3eee03b1137b02edf0a0923115696c737d57e6b9d4880c3e0b0f",
+      "code_fingerprint": "sha256:9a9a4fc4cbd7429294184340a5765de38102daa88a0076351e8177a999d180d7",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "model-construction-forward-is-just-python-3": {
-      "code_fingerprint": "sha256:c9e88ef32f0a9d27d2040c1d2bd79267ba18ef19ad2d41f613ed6534c102f582",
+      "code_fingerprint": "sha256:f87246fd828297faa3cee72f56d4d1f41a16ae0e3fa2175402493b2a61646b47",
       "kind": "text",
       "outputs": [
         {
@@ -110,18 +110,18 @@
       ]
     },
     "model-construction-forward-is-just-python-4": {
-      "code_fingerprint": "sha256:5095c1b231d1a5e84b0d4cb5979e923c782dfbe736790b631bf55d5c5e1657cc",
+      "code_fingerprint": "sha256:b89d9363317f7b74d8392458a6f9ed524ebd0ff59e9a5a4eb4257cf796086038",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(0.113871574, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
+          "text": "tf.Tensor(0.22971515, shape=(), dtype=float32)\nOperatorNotAllowedInGraphError\n"
         }
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-1": {
-      "code_fingerprint": "sha256:4d8d83f6d0e1f569400bc9912ddab990470a3df65f69b06eb9661d8eb2112803",
+      "code_fingerprint": "sha256:07e799f5b4670206b3741b74eb7a87bed9cca8a5920c4242a55f168d39383d13",
       "kind": "text",
       "outputs": [
         {
@@ -131,7 +131,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-2": {
-      "code_fingerprint": "sha256:288b01c802ccf6ab80a2383c22f8d165286d01c81e64e3c93535d4afc7427246",
+      "code_fingerprint": "sha256:ded753abc5204ce60a7de2f360b2394c5c5962a73c1f7fca15fa2407f05b689d",
       "kind": "text",
       "outputs": [
         {
@@ -141,7 +141,7 @@
       ]
     },
     "model-construction-lazy-initialization-shapes-from-data-4": {
-      "code_fingerprint": "sha256:94503d336298bcbfc83eb388a8218d68eb4bba5f0127f6de8fa7363350421421",
+      "code_fingerprint": "sha256:ed601cde3de93fbcb9a423b6cf483707895cc54a70929d0927da17d918981501",
       "kind": "text",
       "outputs": [
         {
@@ -151,12 +151,12 @@
       ]
     },
     "model-construction-building-from-a-config-1": {
-      "code_fingerprint": "sha256:c1a3d59c5f3f8ea90d5aa4fc9c3e2eb8d770961e6bb39ed04fdb9ddb1c70c12e",
+      "code_fingerprint": "sha256:bbef5f9b62b10be518a05a6174499ca576937dae576d4ae87fa5ef19c5696875",
       "kind": "text",
       "outputs": []
     },
     "model-construction-building-from-a-config-2": {
-      "code_fingerprint": "sha256:ce58a5a79a42f57f069d3a9ecf8ef966680189c53b57ebf5d50366f68b77653e",
+      "code_fingerprint": "sha256:f6f92db8d861e0b65a93baf2f548a2cc0aa02547ff90b7e58d0847e79202ef13",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     "model-construction-building-from-a-config-3": {
-      "code_fingerprint": "sha256:e83580e3d6374868749a924c8e1aa685fc6130ee2f2aec0f0f442443f79f3f29",
+      "code_fingerprint": "sha256:1e5d2d37e981b8e28d28402c48b6c222c67863e6b415c8fa079db58e40f4a980",
       "kind": "text",
       "outputs": [
         {
@@ -176,13 +176,18 @@
       ]
     },
     "model-construction-building-from-a-config-4": {
-      "code_fingerprint": "sha256:9b26272d606d6c5caccdfbecdfb3a6b306ee45199157ce3c27dcafa258c24ebd",
+      "code_fingerprint": "sha256:326346c78ff7abc8bc82792d0f2fc5f8f3d3af9243b5d2b335726a88030fc928",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\nnum_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
+          "text": "num_hiddens=256, num_blocks=4: 729,866 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "num_hiddens=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

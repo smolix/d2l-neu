@@ -31,13 +31,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 23603,
-          "sha256": "sha256:b79b6dc5159365c7dbd80b4d7f4456d2e75211f8c866d88748b8f0445d7b4c56"
+          "bytes": 23600,
+          "sha256": "sha256:a122f6c0fcdba6fdca4aa80ac5b4f8338099f9e28281fe9095ab7406a13f291f"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 58.9\n"
+          "text": "validation perplexity 59.1\n"
         }
       ]
     },
@@ -53,12 +53,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and I was a\\ndisappeared to me, and I was\n    a\\ndisappeared to me, and I was a\\ndisappeared to me, and I was\n    a\\ndisappeared'\n"
+          "text": "'The Time Traveller. I was not a little people. I was a\\nmatches. I had\n    nothinged the\\nfossibly the\\ntowards the sound of the\\nside. I was\n    a\\nmatches'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'It seemed to me that I had a faintness. I had a faintness. I had a\n    faintness. I had a faintness. I had a faintness. I had a faintness. I\n    had a faintness. I'\n"
+          "text": "'It seemed to me that the sound of the\\nside. I was a\\nmatches. I had\n    nothinged the\\nfossibly the\\ntowards the sound of the\\nside. I was\n    a\\nmat'\n"
         }
       ]
     },
@@ -74,22 +74,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -4.10: 'The Time Traveller, and I was a\\ndisappeared to me, and I\n    was a\\ndisappeared to me, and I was'\n"
+          "text": "w=1, score -5.18: 'The Time Traveller. I was not a little people. I was\n    a\\nmatches. I had nothinged the\\nfossibly the\\n'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.28: \"The Time Traveller.\\n\\n'Some, and then, and then, and\n    then, and then, and then, and then, and then, and\"\n"
+          "text": "w=4, score -3.82: \"The Time Traveller.\\n\\n'Then I could see no doubt. I felt\n    as it was a vague.\\n\\n'Then I\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=1, score -5.13: 'It seemed to me that I had a faintness. I had a\n    faintness. I had a faintness. I had a faintness. I had'\n"
+          "text": "w=1, score -4.82: 'It seemed to me that the sound of the\\nside. I was\n    a\\nmatches. I had nothinged the\\nfossibly the'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "w=4, score -4.42: \"It seemed to me that I could not seem.\\n\\n'Some, and\n    then, and then, and then, and then, and then, and then\"\n"
+          "text": "w=4, score -4.26: \"It seemed to me that the sound of the slopes. I was\n    a\\nmatches.\\n\\n'Then I felt as I was in the\"\n"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "greedy: 0\n{'k': 2} [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0]\n{'p': 0.8} [0, 1, 0, 0, 2, 1, 0, 0, 1, 0, 1, 0, 2, 1, 1]\n{'min_p': 0.5} [0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1]\n"
+          "text": "greedy: 0\n{'k': 2} [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0]\n{'p': 0.8} [2, 2, 1, 1, 1, 0, 2, 1, 2, 1, 0, 0, 0, 0, 1]\n{'min_p': 0.5} [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1]\n"
         }
       ]
     },
@@ -122,92 +122,92 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51497,
-          "sha256": "sha256:26ad13f39000c586d32be1d3c8ed73960bf0ab40d57887a6545f1483acd06299"
+          "bytes": 50858,
+          "sha256": "sha256:bc2708535895f78d1f244ab6bb8ea0504bd0af60e3c5cdf81801a36926293ad1"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:fd6cc1d62e03c04d3e973c464099e31cc2fea5af41f4c29b4f2bef3e6148d6ed",
+      "code_fingerprint": "sha256:f2e125a85f9ed953a24ad55f7125493ae5addaffbbe36dfd4b39ec1b3b3fa72f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller': top probability 0.21, top-k keeps 20, top-p keeps 124, min-p keeps 14\n'The Time': top probability 0.64, top-k keeps 20, top-p keeps 15, min-p keeps 3\n"
+          "text": "'The Time Traveller': top probability 0.13; kept: top-k 20, top-p 140, min-p 22\n'The Time': top probability 0.69; kept: top-k 20, top-p 6, min-p 2\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:638664c2e87018334defa34e40c6aa4f38fab305017293a43eee591520212cd8",
+      "code_fingerprint": "sha256:3b8a8f2d1fb6158ba5fb00c8e6f79cd71de32f2f4332887082fc38868f6a19e2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=0.5: \"The Time Traveller was a bars, and\\nthe Morlocks, and I could\n    finded. The Time Traveller had\\ncame to the Time Traveller. The Time\n    Traveller's face, and then a past at a purther a clouding\"\n"
+          "text": "tau=0.5: \"The Time Traveller's\\nafter the ground of the thick. I was in the\n    point of the bushes by a steadily\\nthe batternature. I felt\\nthe\n    laboratory. I was a strong,\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=1.0: \"The Time Traveller po than unlike'mopped reaccredations, though I\n    reindhe shap, and sheetckp; perhaps? I were fiftable of decay, than a\n    kind of fightful,\"\n"
+          "text": "tau=1.0: 'The Time Traveller lampation matches.\\nTraveller lem larpeping\n    strough cand got holding and lean\\na muffen glored was in a bocTknown\n    means, the\\n'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tau=2.0: 'The Time Travellerence up to smround at cont,H awayA sky may daig\n    incdel�-gread sa think will air under_sa the onal ro go\n    you�ucooluturnlike slqu@ wease are'\n"
+          "text": "tau=2.0: 'The Time Traveller.by putiddly n Hesh ongepps grecl myselfment\n    again as sun when lastelicact hill offought? expoppull them�usous coial\n    moon had arlyueed, again c before'\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:71019053c4c956a3930b221d3e4cc19e779e7e0493a39ea3492c96e72575fa0c",
+      "code_fingerprint": "sha256:d0b42f30274d2aca6f7f4fc7cd451db7556b8df5ecd2df17e16e689a1647ac6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: 'The Time Traveller, and I was a\\ndisappeared to me, and I was\n    a\\ndisappeared to me, and I was a\\ndisappeared to me, and I was\n    a\\ndisappeared'\n"
+          "text": "    greedy: 'The Time Traveller. I was not a little people. I was\n    a\\nmatches. I had nothinged the\\nfossibly the\\ntowards the sound of\n    the\\nside. I was a\\nmatches'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     tau=1: 'The Time Traveller there. I could see they\\nof that the face.\n    Narent were at wor, and I amgeth for this scarce would monage and well\n    to his little at the coac�irears withless--un.'\n"
+          "text": "     tau=1: 'The Time Traveller, this of a sal. But the\\nbutter, the\n    strength for me be conpular, I he clumbively, of leadd. I felt time a\n    little that� time, fe'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k=20: 'The Time Traveller. Abes\\npatterous, and soons--thy\\nit my\n    doubts; and in the lines was since, I sat down on a minute, to do that,\n    and in my'\n"
+          "text": "  top-k=20: \"The Time Traveller's river,\\nand its breath the thing. The\n    Medical Man, I had not immit a pause\\nand my hands. At last in\\nthe\n    clock of a start, I had not,' said,\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " top-p=0.9: 'The Time Traveller. I was senshed, carven perhaps, to a pale,\n    and form. This, it was, there for a certainp, and there and my only it\n    was, to this bron, and downing'\n"
+          "text": " top-p=0.9: 'The Time Traveller. I have scanished upon the sigence and the\n    trees was sepiet to the pange it was strees appeared to trrange upon my\n    warmervent sected by'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: 'The Time Traveller, and the Time Traveller, and a large artits,\n    and so I saw me in my mind. It was in my mind. I felt\\ninstanced, and,\n    it seemed to lets and lighterg'\n"
+          "text": "min-p=0.05: \"The Time Traveller, at last. I resver a large\\nstoes of\n    the\\nsunnce in my mind. I took him\\nwhich is\\nmy faintly.\\n\\n'I had\n    something. The Psychologist was\"\n"
         }
       ]
     },
     "decoding-evaluating-generated-text": {
-      "code_fingerprint": "sha256:acf43ce096fdfd4b006b71843e6aa95580e9642e7faae5b1907df08506a27d13",
+      "code_fingerprint": "sha256:5a140672cbf96e82efb38d2de8f1b50597f153d9b501182e1b175c5ed659829e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    greedy: log-prob per token -1.94, distinct-3 0.13\n"
+          "text": "    greedy: log-prob per token -2.08, distinct-3 0.36\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " beam, w=4: log-prob per token -1.97, distinct-3 0.06\n"
+          "text": " beam, w=4: log-prob per token -1.74, distinct-3 0.30\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "min-p=0.05: log-prob per token -2.88, distinct-3 0.99\n"
+          "text": "min-p=0.05: log-prob per token -2.90, distinct-3 0.99\n"
         }
       ]
     }

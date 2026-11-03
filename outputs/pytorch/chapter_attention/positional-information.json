@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9fd46f9347c1eb3dc22fb6e841a9bc9d98130ed67eff496326f948d9e74015ec",
+    "d2l_lib_fingerprint": "sha256:98b42f6eda4716e2141245212ebc005e8a3e88f37b4e2d0fe7edb7cbb0a1891c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |Y[perm] - Y_perm|: 8.94e-08\n"
+          "text": "max |Y[perm] - Y_perm|: 7.45e-08\n"
         }
       ]
     },
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31436,
-          "sha256": "sha256:2deffae9483480a02e9fd7dceb73abd1008a2af1b3c23067ef14e00178eb9cb1"
+          "sha256": "sha256:88bfada310457850f86ff620d319001447b2de514f288cd47dcd7e0c07d2d9f3"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30603,
-          "sha256": "sha256:f8647b801d983f4f9a99d4fc90126f847491773fc1b884eb406c9ce8023865d3"
+          "sha256": "sha256:e220c53f01b8a954fef65649eaff6cd5585422d3665d228e5fb617ee874f6d52"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RoPE, all positions shifted by   1: max score change 2.6e-06\nRoPE, all positions shifted by  17: max score change 2.3e-06\nRoPE, all positions shifted by 480: max score change 2.5e-05\nadditive sinusoidal, shifted by  17: max score change 3.2e+00\n"
+          "text": "RoPE, all positions shifted by   1: max score change 1.3e-06\nRoPE, all positions shifted by  17: max score change 2.3e-06\nRoPE, all positions shifted by 480: max score change 2.2e-05\nadditive sinusoidal, shifted by  17: max score change 3.2e+00\n"
         }
       ]
     },
@@ -89,17 +89,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 2.42\n"
+          "text": "   learned: final training loss 2.28\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.89\n"
+          "text": "sinusoidal: final training loss 1.96\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 2.03\n"
+          "text": "      rope: final training loss 2.00\n"
         },
         {
           "type": "stream",
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      none: final training loss 2.46\n"
+          "text": "      none: final training loss 2.45\n"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   context:      128     256     512\n   learned:     11.2    13.3    14.6\nsinusoidal:      6.5    16.4    29.5\n      rope:      7.5    16.9    70.8\n     alibi:     10.0     9.9     9.8\n      none:     11.7    11.8    11.9\n"
+          "text": "   context:      128     256     512\n   learned:      9.6    15.0    19.5\nsinusoidal:      7.0    19.1    36.7\n      rope:      7.3    15.5    47.0\n     alibi:      9.9     9.9     9.8\n      none:     11.6    11.7    11.8\n"
         }
       ]
     },
@@ -141,17 +141,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  unscaled:      7.5    16.9    70.8\n"
+          "text": "  unscaled:      7.3    15.5    47.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " all pairs:     49.5    50.0    50.2\n"
+          "text": " all pairs:     48.1    48.4    48.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slow pairs:      8.1     8.5     9.0\n"
+          "text": "slow pairs:      8.2     8.8     9.3\n"
         }
       ]
     }

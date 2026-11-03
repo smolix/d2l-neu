@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-finite-differences-2-1.svg",
           "bytes": 31717,
-          "sha256": "sha256:eea674f309bdf4d90334797ab2d10c8f0a6fb9c8ab58dbfa87da1a6204e53ef9"
+          "sha256": "sha256:087cf51583f5ccdd0ed301b3b01913dd7285933017f72378cfe6d47c5d2b8855"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 22421,
-          "sha256": "sha256:0f3d5175e50b0c8ba707c4e141c21e999dcbd91d0edc41a1e56b62cdedc84fe1"
+          "sha256": "sha256:06283e4cec3ef842638fd604448ddf5600b81fb6db15516048cbedebc0dd6462"
         }
       ]
     },

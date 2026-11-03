@@ -57,13 +57,13 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-1": {
-      "code_fingerprint": "sha256:9c6fc9202956b685e5ce7444841f5a1b28163c319ecd7d195b19ad026e37b1bb",
+      "code_fingerprint": "sha256:efe41989be3ee5b36d7c4733db19dd3a58b2bb539cd32fdecfad4afb7f579129",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cannot compute AddV2 as input #1(zero-based) was expected to be a half tensor but is a float tensor [Op:AddV2] name: \n"
+          "text": "cannot compute AddV2 as input #1(zero-based) was expected to be a half tensor\n"
         },
         {
           "type": "execute_result",
@@ -72,7 +72,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-2": {
-      "code_fingerprint": "sha256:eb54cff6ecdb709b78bb2c79bc82fbf789160632b9fcf81ef586f9f2523d1035",
+      "code_fingerprint": "sha256:acc2ef35a753992afe73afb4e2dce02282a9173c3c8c429a0842bde0ac190b62",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "numerics-dtype-rules-promotion-parameters-and-casts-3": {
-      "code_fingerprint": "sha256:4a58615fdfb1338aab51eaf0bbb7462213f39042add183724082df27e5d6e1f1",
+      "code_fingerprint": "sha256:8fd0785ad98b47cd7e54799ff7744aabc971ede88f91c98490ef45aba466ca8d",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +93,7 @@
       ]
     },
     "numerics-mixed-precision-training-1": {
-      "code_fingerprint": "sha256:75499f11fdd4657c019a8faba5514a24c7feae76241ccae5162f8b6c9aec829a",
+      "code_fingerprint": "sha256:531feb4580b9bd8879c88b8c07e686ef6bb30cf610c5996f60ab5a7d78268eef",
       "kind": "text",
       "outputs": [
         {
@@ -103,35 +103,35 @@
       ]
     },
     "numerics-mixed-precision-training-2": {
-      "code_fingerprint": "sha256:7d5a9982a49da9aab0b6a1aae91fa3579bbccae88186f255efcd4f5ea7147c2e",
+      "code_fingerprint": "sha256:5f0dfe28bf06607b07c1d792c8c507cd025b998315833ecad616788b5ae37b5a",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:ab613af97401c62dc0c3b52c9c4680178059d473f93a22c4bd3a65fe4db84f40",
+      "code_fingerprint": "sha256:ede1ff286ad267d6f522da59751b3f3e8f8f7cd85005c3c182b6d08a8b68c058",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:69c74bd4b231184813ace86c80bfd87663ed38aeec9293f069c8623c88dc516f",
+      "code_fingerprint": "sha256:9e745f3be487ddb3bdaedb8c83c09247a6c98963d6c87d820db8ed3c7adfd820",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.653, bf16 0.654\n"
+          "text": "validation accuracy: fp32 0.656, bf16 0.659\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 27290,
-          "sha256": "sha256:e6a57f2d91da2370936d0a7e9da25ce0ab473db9bcb931327a4dc825c1639fab"
+          "bytes": 27286,
+          "sha256": "sha256:270e46804e8ff7fffeddbb3013b456aa6d1441e69e9a75ff708af7ff0ea16443"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:fed363a9cc57407aeb597e8c02f1e7c7c32b8b7219bd37dbdce2c7b5da139300",
+      "code_fingerprint": "sha256:869fcafc26f7474e4979147e17a27bbe3974bc97c6ea192c1c9d2360f14c047c",
       "kind": "text",
       "outputs": [
         {
@@ -141,29 +141,29 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:da05139eba3730d70067953fa9eb38091f556f0cec47110c8f222773e55c3798",
+      "code_fingerprint": "sha256:d8ac888bbbc89289d782522e2fa37039354bec61e90e7650b531002880895217",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 32.5% subnormal, 0.20% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 31.9% subnormal, 0.24% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-2": {
-      "code_fingerprint": "sha256:6a72f5833744114105739570dc326908f5f29cf42008bceaa616883ca14a200b",
+      "code_fingerprint": "sha256:52ce5e817733edf292e5d899cbd0b621b6ce9bbfa2284c3abdcc2e13d7207ad2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.028, loss scale 32768\n"
+          "text": "loss 2.006, loss scale 32768\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:875c73ceeb79b9c59c9f0305f79968ed5283a6d691660cf068b293b333b61b74",
+      "code_fingerprint": "sha256:e0449a6d97518aed0d71fa590efb4198e8ad5ba51e3d9da050856f3568cde509",
       "kind": "text",
       "outputs": [
         {
@@ -173,7 +173,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:fa2226ac73b30f491b0fa473fc6d888bb2a83250292400b5ae0cd88a32c87cc3",
+      "code_fingerprint": "sha256:fc83bd19422bc30f526d8c29361d7c50adaded60c4d50cacba199cc1511c6117",
       "kind": "text",
       "outputs": [
         {
@@ -183,7 +183,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:a55924cc1066b5d6f324579df2b9245a6b5d6d1cfe29b901b213257f07203132",
+      "code_fingerprint": "sha256:59aa316162976ca46aa5c0bcaf7956309c51f6b3f3d5471c970def9b8f0bf8fb",
       "kind": "text",
       "outputs": [
         {

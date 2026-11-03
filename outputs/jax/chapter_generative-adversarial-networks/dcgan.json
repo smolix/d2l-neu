@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:1a4dfb9d981c3a2d05f6f7b91375577bb35afcbd2153972611889e39f7892b92",
+    "d2l_lib_fingerprint": "sha256:1ff6b8928e076740282e496492790e960f3924b5ac05c99331329e84c7799eec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -99,7 +99,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss_D 0.150, loss_G 3.305\n"
+          "text": "final loss_D 0.233, loss_G 2.930\n"
         }
       ]
     },
@@ -111,8 +111,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-training-with-the-classic-loss-3-1.png",
-          "bytes": 416406,
-          "sha256": "sha256:a9cd72f92e9d18ae13d4b124dd2a4fe6b3cafbbe54764d44d47c70af49961b71"
+          "bytes": 426057,
+          "sha256": "sha256:562ec892c69b2bd9d26e418fce0ecfcc2aa6c64b0378d325cf379c9f32f86bb0"
         }
       ]
     },
@@ -149,12 +149,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classic: final loss_D 0.145, loss_G 3.687, critic train-holdout gap +0.590\n"
+          "text": "classic: final loss_D 0.054, loss_G 4.734, critic train-holdout gap +1.207\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RpGAN + R1 + R2: final loss_D 0.580, loss_G 1.116, critic train-holdout gap -0.021\n"
+          "text": "RpGAN + R1 + R2: final loss_D 0.546, loss_G 1.182, critic train-holdout gap -0.027\n"
         }
       ]
     },
@@ -166,8 +166,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.png",
-          "bytes": 843369,
-          "sha256": "sha256:2e0fe6f8d8bf8cc10066c96204de7bbad9008ec3e51b88602aef3b38d053915f"
+          "bytes": 866838,
+          "sha256": "sha256:a1ee2926ecf7a78999a248ed7ffd19e511685302cfa4367e487aef9540a6ec7a"
         }
       ]
     },
@@ -179,8 +179,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.png",
-          "bytes": 80530,
-          "sha256": "sha256:d25ff0322fdafa637b22e25a91786eb7e11ab5a4f204d5751a73e5cebddc2f13"
+          "bytes": 78213,
+          "sha256": "sha256:2cac4fc5733a408caa13760c5e698172d85a3eb907f002c0fb6480386d4dcafd"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.530\n"
+          "text": "CIFAR-10 test accuracy: 0.538\n"
         }
       ]
     },
@@ -217,7 +217,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classic                         104.32              40.95         0.001\nRpGAN + R1 + R2                   2.96               1.44         0.159\n"
+          "text": "classic                          62.05              24.52         0.000\nRpGAN + R1 + R2                   2.49               1.04         0.171\n"
         }
       ]
     },
@@ -228,14 +228,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median distance to nearest training image: generated 2.11, held-out real 0.73\n"
+          "text": "median distance to nearest training image: generated 2.14, held-out real 0.74\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-training-on-limited-data-1.png",
-          "bytes": 172103,
-          "sha256": "sha256:2824c6f6a10d7660a353af09c6a0843643e130e782debc091053e740d3ca9d58"
+          "bytes": 156252,
+          "sha256": "sha256:f6787fe7266ca16b8b57d1295aadab43a3aa1390461793df6b3af5d2ca6ae328"
         }
       ]
     }

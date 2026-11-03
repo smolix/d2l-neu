@@ -85,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0, loss 11.709\nstep 3, loss 0.805\nstep 6, loss 0.056\nstep 9, loss 0.004\n"
+          "text": "step 0, loss 12.039\nstep 3, loss 0.828\nstep 6, loss 0.057\nstep 9, loss 0.004\n"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.98935825, -0.9879587 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.98853874, -0.98853374]], dtype=float32)>"
         }
       ]
     },

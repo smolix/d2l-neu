@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24720,
-          "sha256": "sha256:873ae3367f42fb8215d5b0d5e49ea9d77b2bf11c5e1e8f08806de7082111275a"
+          "sha256": "sha256:09a554a025c1f75fa4fda5fc1995652eec1c3754bd77c23cb2c5adfaa1aa6a71"
         }
       ]
     },
@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30576,
-          "sha256": "sha256:fa7741a543c0e95ee9a8144d4184b4aac2ed14c31871339548b122fd724b674f"
+          "sha256": "sha256:165a1d50bd6def9669dd956c6a5c6d1f44198dbceb8da3f1d28947133eac0e45"
         }
       ]
     },
@@ -159,7 +159,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114767,
-          "sha256": "sha256:bcf26e740ba9f3fc20aada2ea4fc47c22d3b6f7114329ddc215a5aa607632731"
+          "sha256": "sha256:bd9ac4adf4fb78f2e428c32f7a9a923b0a1c28bebe01f792611cf913ed78fd24"
         }
       ]
     },
@@ -203,7 +203,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 25546,
-          "sha256": "sha256:b87f4e53124ec001ffdbb7713a2695c4b53dd42cc538e7954fbe890fa6b6caa8"
+          "sha256": "sha256:4faf2769fafb672db2c00a6fbf5ffd28dae3ac27933b8203e6334affdc1a6d0d"
         }
       ]
     },

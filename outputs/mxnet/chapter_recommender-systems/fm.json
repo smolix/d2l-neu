@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.003, train acc 1.000, test acc 0.925\n154161.9 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.004, train acc 1.000, test acc 0.925\n19253.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fm/fm-train-the-model-1.svg",
-          "bytes": 29867,
-          "sha256": "sha256:bbce7e26b6e4ed73c45981858b302f0186e9803536d59a5051188d0e5d7f6d44"
+          "bytes": 30293,
+          "sha256": "sha256:a4bd97984886ff50f3ebd0a7a31bec9cf9576ef65f6897d71940f965abcf688c"
         }
       ]
     }

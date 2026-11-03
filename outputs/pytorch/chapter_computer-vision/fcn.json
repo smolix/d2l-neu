@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 85901,
-          "sha256": "sha256:9fbd9a8e29c6442d41f11af520826e96d0069e0add2e5836974951f01405d4d5"
+          "sha256": "sha256:9c23b5795ce5bf97646429a6aca0075fbcdf1197fa2edcc1437b4249d20a962b"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.415, train acc 0.870, test acc 0.853\n412.5 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.418, train acc 0.868, test acc 0.843\n413.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-training-1.svg",
-          "bytes": 25026,
-          "sha256": "sha256:f6f03ee9cc49a0d04d2ce81585f242ed75caab2d6ca04ee8e526336da3224db0"
+          "bytes": 25003,
+          "sha256": "sha256:bdf2bc1c9aec0394f5f3fc627ea8c93cacd3d6a7d057f7ec6d998af1064aee98"
         }
       ]
     },
@@ -133,8 +133,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 156378,
-          "sha256": "sha256:c8857833ca0d10af76f4d79c4881176db621ca13059b5eaea4f742a5888b5031"
+          "bytes": 155118,
+          "sha256": "sha256:56516661823f06d1cc3fdca2f9f0f4792fc35864daf02a9cf7653456c39e8514"
         }
       ]
     }

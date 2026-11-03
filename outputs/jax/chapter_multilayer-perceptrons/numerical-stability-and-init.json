@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 1.1e-17\nReLU, N(0, 1): gradient mean square at layer 1: 9.0e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 5.0e-12\n"
+          "text": "ReLU, N(0, 0.01²): gradient mean square at layer 1: 8.1e-18\nReLU, N(0, 1): gradient mean square at layer 1: 9.1e+18\nsigmoid, N(0, 1/256): gradient mean square at layer 1: 4.9e-12\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-exploding-gradients-1.svg",
-          "bytes": 34712,
-          "sha256": "sha256:48b33dc0186771abe4560d7c245727ad08a572a4982a219ecb97aefcbba7f9ca"
+          "bytes": 34704,
+          "sha256": "sha256:019634d09f2243c8c1daf153860b17956598ddd06ce90a20d5c7b68cc21093b3"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0, 0.01²): activations at layer 10: 1.1e-19, gradient at layer 1: 9.5e-18\nXavier: activations at layer 10: 1.3e-03, gradient at layer 1: 2.1e-03\nHe: activations at layer 10: 1.0e+00, gradient at layer 1: 1.0e+00\n"
+          "text": "N(0, 0.01²): activations at layer 10: 8.2e-20, gradient at layer 1: 8.2e-18\nXavier: activations at layer 10: 6.0e-04, gradient at layer 1: 1.5e-03\nHe: activations at layer 10: 1.1e+00, gradient at layer 1: 1.0e+00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31923,
-          "sha256": "sha256:7ddfbaf8860f41b8852da3f43f3e8ee8a3075005e73fd9d7a6a0dc16352f7e47"
+          "bytes": 31913,
+          "sha256": "sha256:434f08a8e7c0290fab8ab6531ae9d006c87cf99b97d868ff694fd3d68e2453ff"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.38\n"
+          "text": "constant: largest difference between two hidden units 0.00\nrandom: largest difference between two hidden units 0.14\n"
         }
       ]
     }

@@ -25,12 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  0.  6.  0.  0. 12.  0.]\n [16.  0. 20.  0.  0.  0. 28.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  2.  4.  0.  0.  0.  0.  0.]\n [16.  0. 20.  0. 24. 26. 28.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 0.999, variance 0.251\n"
+          "text": "mean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35847,
-          "sha256": "sha256:520324c4c0f4477e0176b8935080b373ad8ebd72da00d7ad9f405834099b9169"
+          "bytes": 35255,
+          "sha256": "sha256:0424f4b5a3b2cc8e5665edb6e9ff247e8de10b12f8260dfa622be32ccc546016"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35259,
-          "sha256": "sha256:98453e27e682e515f99a9da045df717ceeb77c4bba226f988964a81ca38f2bee"
+          "bytes": 35248,
+          "sha256": "sha256:b98c1088f7d975dcde9241104f7138509cf7585e87ccdbc90705e41dd45e5a36"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 34514,
-          "sha256": "sha256:c99029166ae70eb48c6dbe0a6b2a40d930e305108203b940bbad8ec008ce64f3"
+          "bytes": 35110,
+          "sha256": "sha256:ed7e2ece89acfd550020334031336bc173b5a4c4119de43585175b9ba1738ee4"
         }
       ]
     },
@@ -95,12 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.870, with masks 0.858\n"
+          "text": "trained with dropout: validation accuracy 0.874, with masks 0.857\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.872, with masks 0.775\n"
+          "text": "trained without dropout: validation accuracy 0.864, with masks 0.752\n"
         }
       ]
     }

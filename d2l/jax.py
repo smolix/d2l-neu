@@ -2310,11 +2310,12 @@ class PennTreebank(d2l.DataModule):
 
 @jax.jit(static_argnums=0)
 def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch.
+    """Summed next-token cross-entropy of a batch, and the model's state.
 
     Defined in :numref:`sec_gru`"""
-    logits = nnx.merge(graphdef, state)(X)
-    return optax.softmax_cross_entropy_with_integer_labels(logits, Y).sum()
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
 
 def lm_perplexity(model, data):
     """Perplexity of a language model on the validation set of `data`.
@@ -2325,8 +2326,9 @@ def lm_perplexity(model, data):
                                          raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        total += lm_loss_sum(graphdef, state, X, Y)
-        count += Y.size
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
     return math.exp(float(total) / count)
 
 def fit_lm(model, data, num_steps=3000, lr=2e-3):
@@ -2488,7 +2490,7 @@ class Mamba(nnx.Module):
         H = expand * num_hiddens
         self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
-                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
         self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
         self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
@@ -2549,7 +2551,7 @@ class GatedLinearAttention(nnx.Module):
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
                              feature_group_count=3 * d,  # One filter each
-                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
         self.W_a = self.decay_gate(d, rngs)
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)

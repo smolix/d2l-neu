@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:5803df2f40e426367fdd6277cf46ab48eaa5b90356cbb2a6f128249d8f3d17df",
+    "d2l_lib_fingerprint": "sha256:1c0687a3151fe5ba7458e9db2b1425d279af6e745ddf3c402e89a0179e400137",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 2.1e-02\nlargest difference between one and two GPUs: 3.0e-05\n"
+          "text": "largest update 3.2e-02\nlargest difference between one and two GPUs: 4.9e-05\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2554 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4289 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7840 examples/s, speedup 3.07, efficiency 77%\n"
+          "text": "1 GPU(s):  2550 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4283 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7839 examples/s, speedup 3.07, efficiency 77%\n"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.71, efficiency 85%\n4 GPU(s), 128 examples each: speedup 2.55, efficiency 64%\n"
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.70, efficiency 85%\n4 GPU(s), 128 examples each: speedup 2.55, efficiency 64%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 25898,
-          "sha256": "sha256:62d84cc7f85d30de77958f94d93a96176f727686549c5a686b37362e68ab813c"
+          "bytes": 25896,
+          "sha256": "sha256:a95e60e0feef6ccf0ab3bc885fe81aa8bdec29e3941fb39abd99f94dc5dbc329"
         }
       ]
     },

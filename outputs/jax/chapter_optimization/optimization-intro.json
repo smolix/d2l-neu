@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:a08da1caf5bae92236b7d7e718718676a9b48f427c2b2833c039dce38e809533"
+          "sha256": "sha256:0b426c87284ccab4fa18b5c62bbef94ed0bf21cd17560b0339a492eba8dbbbd3"
         }
       ]
     },
@@ -49,14 +49,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta 0.4: sharpness 3.01 -> 5.01 (2/eta = 5), loss 0.487 -> 3.0e-04\neta 0.25: sharpness 3.01 -> 8.02 (2/eta = 8), loss 0.487 -> 2.0e-04\n"
+          "text": "eta 0.4: sharpness 3.30 -> 5.00 (2/eta = 5), loss 1.841 -> 1.3e-03\neta 0.25: sharpness 3.30 -> 7.99 (2/eta = 8), loss 1.841 -> 3.9e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 26316,
-          "sha256": "sha256:b3b529cc0f7db845fe20a441dff619af38ba0c9a389286e858a57b76cbd44596"
+          "bytes": 26312,
+          "sha256": "sha256:f935b6a58760cafb96b8b787549dc7faeccb2e6b3f07fd0aeda9f712c3d6c43e"
         }
       ]
     }

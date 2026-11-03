@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.250, train acc 0.909, test acc 0.916\n1907.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.162, train acc 0.940, test acc 0.932\n1902.3 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-2-1.svg",
-          "bytes": 25005,
-          "sha256": "sha256:54b6e365cf33223fec32ec5a69147061fe279a7d87d3172e36de3abf8f1c4749"
+          "bytes": 25006,
+          "sha256": "sha256:9158fa28944a9fc20e4dec9885c2066499c119deba85c41c592ad55212c32a27"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.359, train acc 0.846, test acc 0.854\n2109.3 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.341, train acc 0.855, test acc 0.848\n2068.1 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fine-tuning/fine-tuning-fine-tuning-the-model-3-1.svg",
-          "bytes": 25016,
-          "sha256": "sha256:7c3fb2ef173f5e32d52c923b807055f7e4240f11315210efcd010dd866a8681c"
+          "bytes": 25019,
+          "sha256": "sha256:2af668028c68668300f33fba1872d04ae5d0adb54479b755a963d2db29026d21"
         }
       ]
     },

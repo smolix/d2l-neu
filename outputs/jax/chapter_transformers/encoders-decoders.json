@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:823a0d4801f5103fad5b0ee33895a1dfb5c4daea972a30cd776275fba119c091",
+    "d2l_lib_fingerprint": "sha256:033637407ebb52b53dd4cbe8896837411451746842e6b450bf053cee7bfcee16",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked loss at step 500/1000/2000: 3.13/2.24/1.57\n"
+          "text": "masked loss at step 500/1000/2000: 3.12/2.17/1.60\n"
         }
       ]
     },
@@ -41,14 +41,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at position 0: 2.39, at position 63: 2.41, interior mean: 1.53\n"
+          "text": "loss at position 0: 2.39, at position 63: 2.47, interior mean: 1.53\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 21941,
-          "sha256": "sha256:4e63e448fb579d9bffc49dae1ec8bd48be3ac4b8f2846c7cc682073d39f84d63"
+          "bytes": 21942,
+          "sha256": "sha256:79e803360800af4be296aa68e0ff6365123864ce280579681a66e28a384519ac"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'Homarus gam_arus , known as the European'... -> ' ' 0.30, 'p' 0.27, 'b' 0.18\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.83, 'o' 0.04, 'r' 0.03\n'Homarus gammarus , known as _he European'... -> 't' 0.94, 's' 0.02, 'T' 0.01\n"
+          "text": "'Homarus gam_arus , known as the European'... -> 'm' 0.32, 'p' 0.22, ' ' 0.21\n'Homarus gammarus , kno_n as the European'... -> 'w' 0.73, 'o' 0.08, 'u' 0.05\n'Homarus gammarus , known as _he European'... -> 't' 0.87, 'w' 0.05, 'T' 0.02\n"
         }
       ]
     },
@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source 'jjfacblaniii' -> target 'iiinalbcafjj'\n"
+          "text": "source 'olafjaaddigp' -> target 'pgiddaajfalo'\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[38 27 35  0  0]\n [31 50 19  0  0]\n [34 28 37  0  0]\n [21 56 23  0  0]]\n"
+          "text": "[[44 35 21  0  0]\n [33 32 35  0  0]\n [40 33 27  0  0]\n [41 30 29  0  0]]\n"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at step 100/200/400/600: 0.009/0.090/0.001/0.000\n"
+          "text": "loss at step 100/200/400/600: 0.007/0.030/0.001/0.317\n"
         }
       ]
     },
@@ -129,12 +129,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact match on 1000 fresh strings: 1.000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "source 'gcnkppfmlhao' -> predicted 'oahlmfppkncg'\n"
+          "text": "exact match on 1000 fresh strings: 0.723\nsource 'indkdgihoejb' -> predicted 'bjeohigdkdin'\n"
         }
       ]
     },
@@ -145,14 +140,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "head average: argmax on the true source position in 100% of rows, mean weight there 0.90\nweight on the true position, per head: 0.92 0.91 0.90 0.87\nargmax in the same column for every string: 100% of rows\n"
+          "text": "head average: argmax on the true source position in 57% of rows, mean weight there 0.53\nweight on the true position, per head: 0.53 0.54 0.51 0.53\nargmax in the same column for every string: 99% of rows\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
-          "bytes": 31694,
-          "sha256": "sha256:0f1372ac6bdbe9f559a2832c028520003c636a50c46582e9f1c50695c78bb1cf"
+          "bytes": 31711,
+          "sha256": "sha256:c6f50b69b51d5780db302daa4dd09d524ea2e638a84c6656ea140920c1ffb343"
         }
       ]
     },
@@ -174,29 +169,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   0.31 ms, perceiver  0.32 ms\n"
+          "text": "N= 1024: self-attention   0.20 ms, perceiver  0.16 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 2048: self-attention   0.64 ms, perceiver  0.34 ms\n"
+          "text": "N= 2048: self-attention   0.65 ms, perceiver  0.22 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention   2.69 ms, perceiver  0.34 ms\n"
+          "text": "N= 4096: self-attention   2.68 ms, perceiver  0.24 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention   9.98 ms, perceiver  0.31 ms\n"
+          "text": "N= 8192: self-attention   9.95 ms, perceiver  0.35 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 33078,
-          "sha256": "sha256:eb4495444d8acbc0a97eebe564b5494e0f58ccbd910e8d0a5d436c5fd4900cb5"
+          "bytes": 33835,
+          "sha256": "sha256:be30f897846e6f46148cfc115ed75483b01fc71b33733c82ba342a5fdc20bd2f"
         }
       ]
     }

@@ -46,12 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sgd        -0.954   -0.986   -0.995   -0.998\n"
+          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\nsgd        -0.954   -0.986   -0.995   -0.998\n"
         }
       ]
     },
@@ -62,12 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -94,27 +84,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\n"
+          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\nconstant       9.53e-02       9.19e-02\nc/k decay      2.82e-03       1.94e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant       9.53e-02       9.19e-02\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "c/k decay      2.82e-03       1.94e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
+          "text": "cosine         8.71e-03       1.58e-03\nWSD 80/20      9.53e-02       5.48e-03\n"
         }
       ]
     },
@@ -127,7 +102,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29383,
-          "sha256": "sha256:857bd547865c8b8ee7cd89cfff63cbf88a808dad8a63de523120872b39b730b2"
+          "sha256": "sha256:b8d442f68868913a69317b17812e2d21a457082f5bb665ee92cc0b70c7ab792f"
         }
       ]
     }

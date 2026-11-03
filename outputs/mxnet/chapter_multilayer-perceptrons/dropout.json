@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  6.  8. 10. 12. 14.]\n [16. 18.  0. 22.  0. 26.  0.  0.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\np = 0.5: [[ 0.  0.  4.  6.  0.  0. 12.  0.]\n [16.  0.  0. 22.  0. 26.  0. 30.]]\np = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 35851,
-          "sha256": "sha256:4ac86338120511f98e347e6a26336f1ca62d8e74e07b1912b5e5c472ce1900e3"
+          "bytes": 36440,
+          "sha256": "sha256:e9ec9298a9590657a27d4217450cd8939b2f8193afa10840c33ad2b9a5392783"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 35848,
-          "sha256": "sha256:e1b66658aa269e4b787735a62b92fe6dfa059bc67649db5d73aaf341c8e2f1cf"
+          "bytes": 35856,
+          "sha256": "sha256:c62590bcda976aaf9ed7e3338897f898568b7d2af30f5b9e9a02611412d50052"
         }
       ]
     },
@@ -73,8 +73,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-accuracy-1.svg",
-          "bytes": 35250,
-          "sha256": "sha256:740849915c006008e668b18289212e650d8fb677cd9be3752cc7433c3f9b8524"
+          "bytes": 35712,
+          "sha256": "sha256:230eb0d730bc1ac2f2c364a1da1c782d3d6df1888b34311758317cc5f2867aaf"
         }
       ]
     },
@@ -90,12 +90,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained with dropout: validation accuracy 0.863, with masks 0.855\n"
+          "text": "trained with dropout: validation accuracy 0.874, with masks 0.859\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained without dropout: validation accuracy 0.871, with masks 0.768\n"
+          "text": "trained without dropout: validation accuracy 0.860, with masks 0.750\n"
         }
       ]
     }

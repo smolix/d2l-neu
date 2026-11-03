@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-sampling-with-the-true-score-2-1.svg",
           "bytes": 139780,
-          "sha256": "sha256:6154e939a7b2362f4c9aba40970489ae377a524f63ffcf5e9f8d52e6468cf36a"
+          "sha256": "sha256:60ca73a1219fb807772b86690262728d90ff15a9276044a735567067699a0405"
         }
       ]
     },
@@ -113,7 +113,7 @@
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-gaussian-smoothing-and-its-price-2-1.svg",
           "bytes": 353869,
-          "sha256": "sha256:8638227f91af8dacaf324fc2de17d763242f3e0b04f570d02a1ff200619550b2"
+          "sha256": "sha256:9ff217896bf061fd60cbb9031b321b391f37a7590a3b3cb71abfced810ac7aef"
         }
       ]
     }

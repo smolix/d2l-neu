@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9083c9b28cb0376687875833f45fb7905205d199c5665ff7fde415630d3df838",
+    "d2l_lib_fingerprint": "sha256:e52786a1ab68faae98d2b9a4ac61cd0df65c42a3ef80901a6edf2ecb9594a62b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-and-dataset/sentiment-analysis-and-dataset-preprocessing-the-dataset-2-1.svg",
           "bytes": 20698,
-          "sha256": "sha256:40e40d4322975f2c81789de8a6888d67ba9e24fa117c578853559263f1b4a19f"
+          "sha256": "sha256:b4cfabceecdc267af176f0b4d5c897429cabedf18d25dc16bb05c2c84595bacf"
         }
       ]
     },

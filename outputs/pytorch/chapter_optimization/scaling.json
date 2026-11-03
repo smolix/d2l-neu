@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 4.9e-04\n"
+          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 3.9e-03\nwidth  512: best lr 9.8e-04\nwidth 1024: best lr 4.9e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31766,
-          "sha256": "sha256:8696da4dbb0fb70b2fa11770fa4301871313951e255e001cb567a2ae91a0990e"
+          "bytes": 31767,
+          "sha256": "sha256:9031713f80e5fb3ba938a52c8dcb13b9381486cd51c2125047e5a661a4167da3"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 33849,
-          "sha256": "sha256:5a6935d5d5d373f9ac7e46d3401872566891fcb23ec56be42f675f8969e86dc4"
+          "bytes": 33852,
+          "sha256": "sha256:437891f57b9839dc8849d8aca07c3830afa978f87b1c6c552a8b9ab1343091ac"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 33869,
-          "sha256": "sha256:6e3db585d7682a21983e06dbd03c1376a8304be744ef774a3f65c3309e08a823"
+          "bytes": 33867,
+          "sha256": "sha256:aff8bb7325f12e44e902cea393eec46fe3b2a7d21e5925a27746cbf2de0fb175"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31668,
-          "sha256": "sha256:32456aa247bacfac213062bb544d8f6a5595952523f115d165614eda7ad9df19"
+          "bytes": 31675,
+          "sha256": "sha256:32c2b16e5cf6d63a0776e39b8a07eed692b7b637ec74af95ad4142b21edbfc1a"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.313  0.297  0.283  0.278\n     width-128 lr at width 1024: 10% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.310  0.283  0.274  0.278\n     width-128 lr at width 1024: 0% above its best\n"
+          "text": "SP   best loss at widths [128, 256, 512, 1024]: 0.312  0.307  0.293  0.272\n     width-128 lr at width 1024: 9% above its best\nmuP  best loss at widths [128, 256, 512, 1024]: 0.312  0.286  0.284  0.272\n     width-128 lr at width 1024: 0% above its best\n"
         }
       ]
     }

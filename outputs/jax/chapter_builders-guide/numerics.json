@@ -124,14 +124,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.649, bf16 0.653\n"
+          "text": "validation accuracy: fp32 0.652, bf16 0.655\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26045,
-          "sha256": "sha256:85e037e48f96face2e1140fed28e71beacf261dd594a48c696598c96d42fb5cc"
+          "bytes": 26053,
+          "sha256": "sha256:c730d73135ffcbc394bb0016429cff2786ae8f30c866f7da35c6426570a08bd0"
         }
       ]
     },
@@ -152,7 +152,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 33.3% subnormal, 0.21% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.6% subnormal, 0.19% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },

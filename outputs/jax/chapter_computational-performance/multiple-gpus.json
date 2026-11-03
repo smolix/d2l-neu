@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3f988dd34291b81187699078bf00e86214ab27a59f11b17ebf5b4280ccd3a5f5",
+    "d2l_lib_fingerprint": "sha256:a764d09b226160c77a4e3e5fe8a350664a37284d8875d3c2ae224f80c3c79f91",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 1.0e-01, largest difference 3.0e-08\n"
+          "text": "largest update 5.8e-02, largest difference 6.0e-08\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha = 262 us, beta = 4.9 GB/s\n"
+          "text": "alpha = 287 us, beta = 4.9 GB/s\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately: 2826 us measured, 2726 us predicted\nat once   :  289 us measured,  363 us predicted\n"
+          "text": "separately: 2729 us measured, 2974 us predicted\nat once   :  296 us measured,  388 us predicted\n"
         }
       ]
     },
@@ -95,12 +95,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 0.37 ms\n"
+          "text": "1 GPU(s), 256 examples each: 0.34 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 128 examples each: 0.32 ms\n"
+          "text": "1 GPU(s), 128 examples each: 0.33 ms\n"
         },
         {
           "type": "stream",
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 0.83 ms per step, test accuracy 0.85\n2 GPUs predicted: 0.93 ms per step\n"
+          "text": "2 GPU(s): 0.79 ms per step, test accuracy 0.86\n2 GPUs predicted: 0.99 ms per step\n"
         }
       ]
     }

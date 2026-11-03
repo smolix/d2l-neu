@@ -837,9 +837,10 @@ def lm_perplexity(model, data):  #@save
 %%tab jax
 @jax.jit(static_argnums=0)  #@save
 def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch."""
-    logits = nnx.merge(graphdef, state)(X)
-    return optax.softmax_cross_entropy_with_integer_labels(logits, Y).sum()
+    """Summed next-token cross-entropy of a batch, and the model's state."""
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
 
 def lm_perplexity(model, data):  #@save
     """Perplexity of a language model on the validation set of `data`."""
@@ -848,8 +849,9 @@ def lm_perplexity(model, data):  #@save
                                          raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        total += lm_loss_sum(graphdef, state, X, Y)
-        count += Y.size
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
     return math.exp(float(total) / count)
 ```
 

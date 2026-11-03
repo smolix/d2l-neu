@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5e864b684a767b31a6bd8a448863aa59d7e14d3cf7651d1f9cf4cc681e257de7",
+    "d2l_lib_fingerprint": "sha256:de42bc5aaf747b96f1e65e088c3462975aec06325ab0c93e7f2e783e775ac7c9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29548,
-          "sha256": "sha256:a7e64f0b115143b25dbeb069856d0b45e06ffb0a47d47546af92acf634d22505"
+          "sha256": "sha256:6d8e4e5fcd021582d14367068aa5069f62b3bccadd1ef34589f2e4a80f2f8b38"
         }
       ]
     },
@@ -122,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101492,
-          "sha256": "sha256:70ee85a80915f7f6185a2602966ee65fe7077564efc4e48efb2874d2f3047e1c"
+          "sha256": "sha256:763d5a0a74edce17be1e239ef80c715624197f53ebdcc6ff149034aa106e0cdb"
         }
       ]
     },

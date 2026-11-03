@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DDIM,  50 steps (eta = 0): mode weights [0.529, 0.221, 0.251], spread 0.44, stray 0.069\n"
+          "text": "DDIM,  50 steps (eta = 0): mode weights [0.529, 0.221, 0.251], spread 0.44, stray 0.068\n"
         },
         {
           "type": "stream",
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DDIM,  10 steps (eta = 0): mode weights [0.59, 0.158, 0.252], spread 0.43, stray 0.104\n"
+          "text": "DDIM,  10 steps (eta = 0): mode weights [0.59, 0.158, 0.252], spread 0.43, stray 0.105\n"
         }
       ]
     },
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-experiments-on-the-running-example-4-1.png",
-          "bytes": 80305,
-          "sha256": "sha256:986397e632954f619891bf2414928fab9916730f1bb972f4d3bfd0ca08d19310"
+          "bytes": 80259,
+          "sha256": "sha256:c090e45d9c70513ac1e1e55660794f9390ceb3b824e74feef8d05467f0cc75bf"
         }
       ]
     },
@@ -117,8 +117,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-2-1.png",
-          "bytes": 65108,
-          "sha256": "sha256:535bebd4f0446358a51458824aebf34f56c175ab8b3c69fe4afaad527ec6c5d3"
+          "bytes": 64864,
+          "sha256": "sha256:79c1444ed7cce6854d5813ec7f7b61c13d6294289281c7c47fed021807c97214"
         }
       ]
     },
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-3-1.png",
-          "bytes": 22121,
-          "sha256": "sha256:ceac823f853964ef2e68f97ebf2c78eeb72eef73fb7eba58c1e9d1820e81c740"
+          "bytes": 22057,
+          "sha256": "sha256:d445f961702a1367950107171220783bb43220624370534645b2e1e23779c3f5"
         }
       ]
     }

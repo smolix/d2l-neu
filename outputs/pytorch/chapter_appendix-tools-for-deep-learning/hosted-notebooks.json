@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "PosixPath('/home/smola/d2l-neu/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
+          "text": "PosixPath('/home/smola/d2l-neu-infra/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
         }
       ]
     }

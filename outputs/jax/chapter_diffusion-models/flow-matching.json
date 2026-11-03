@@ -100,7 +100,7 @@
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
           "bytes": 34663,
-          "sha256": "sha256:1f2b71f6dc8546f83c4f6672e9d701938585cda971c3451a778ba70883f1c4ec"
+          "sha256": "sha256:dd3b98ff439741f547095f5146d5dad1015f58b2f96af4c4edd4298129e403ba"
         }
       ]
     },
@@ -117,8 +117,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 132070,
-          "sha256": "sha256:473e11d7ea0d27f957812dfbdadff01ef9249020146b7e07da32832a63a9af05"
+          "bytes": 132053,
+          "sha256": "sha256:22a151cf59b405ec6df1288e9fb32dc615bf84d048692b4c2ec76e518925422c"
         }
       ]
     }

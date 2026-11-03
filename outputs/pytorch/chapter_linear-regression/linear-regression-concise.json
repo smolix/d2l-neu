@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cbbb1bc6a996ae427add0d47ea9e8cf2bf19d849ce413265a35e3713f97360bc",
+    "d2l_lib_fingerprint": "sha256:08560c236d43d0ae48639dcec6d968ba5106557eb80bb3f13f6b7c4a55e3882a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 33760,
-          "sha256": "sha256:52e6f04b2dc346104b561455c391894f453769877eb95b149a7f9ecefb4c8656"
+          "bytes": 33763,
+          "sha256": "sha256:55c2d0614a6a58327f427ef69ed2b4ece4d7ba3d58270fb68d216b34905faf3f"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 1.02e-04\n"
+          "text": "validation loss: 9.54e-05\n"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -5.5e-04, 6.3e-04\nerror in b: -6.7e-04\n"
+          "text": "error in w: -5.9e-05, 2.0e-04\nerror in b: -2.6e-04\n"
         }
       ]
     }

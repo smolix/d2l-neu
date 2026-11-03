@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1: relative difference 3.9e-16\nb1: relative difference 3.4e-16\nW2: relative difference 4.1e-16\nb2: relative difference 2.2e-16\n"
+          "text": "W1: relative difference 2.6e-16\nb1: relative difference 2.3e-16\nW2: relative difference 2.9e-16\nb2: relative difference 1.2e-16\n"
         }
       ]
     }

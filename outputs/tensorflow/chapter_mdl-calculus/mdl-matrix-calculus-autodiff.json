@@ -9,116 +9,138 @@
   },
   "cells": {
     "matrix-calculus-autodiff-imports": {
-      "code_fingerprint": "sha256:123976fc389e816815d4e8218f55ce6e0275ee505b9454dd0af33bcd56e97b93",
+      "code_fingerprint": "sha256:0a9a457f678b2568c6d3b5e097b6ca20f170325796773a3f6cdd7af0a6db3c82",
       "kind": "text",
       "outputs": []
     },
-    "matrix-calculus-autodiff-jacobian-finite-diff": {
-      "code_fingerprint": "sha256:35541fbc3726f3a984b55fced4a633d3a007c4cc75f819ad8cebdd7abcf4834b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "linear approx: [0.499    0.997424]\nexact        : [0.498996 0.997424]\nerror / |delta|: 0.0015819444529976167\n"
-        }
-      ]
-    },
-    "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
-      "code_fingerprint": "sha256:c1d78fcf97fd760772ed7f38a9401d779a37edecb2a37a46a7453e494413d539",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "grad a^T x   equals a        : True\ngrad x^T A x equals (A+A^T)x : True\n"
-        }
-      ]
-    },
-    "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:100fee27bf3e92841542015b993a5923783d0a7dfe13831984aaf6a5a53ca576",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "softmax Jacobian matches autograd: True\nd loss / d z : [ 0.253716 -0.943388  0.689672]\np - y        : [ 0.253716 -0.943388  0.689672]\n"
-        }
-      ]
-    },
     "matrix-calculus-autodiff-dual-numbers": {
-      "code_fingerprint": "sha256:6fe20d482851ff340ec31cb2a28336682416c43d2e2d466c4b30c8babd678beb",
+      "code_fingerprint": "sha256:aa6578db0fda77264cf0bba4bd3dc81b33ed2ff985cd529be9afcb94cf1673bd",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-dual-eval": {
-      "code_fingerprint": "sha256:5e80f1122747c79727eb5a0f1bf1eb1e596d56b9c00520db7822c9bb24798d6f",
+      "code_fingerprint": "sha256:b4104e3cd40b4f608c73db6fd7d686d429ebfafa75e9f67b190874498e453a03",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dual result : 4.662200 + 3.360101 eps\nvalue f(x)  : 4.662200318713363\nderivative  : dual 3.360101  vs  exact 3.360101\n"
+          "text": "dual result : 4.6622 + 3.360101 eps\nvalue f(x)  : 4.662200318713363\nderivative  : dual 3.360101  vs  exact 3.360101\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-a-forward-mode-engine-1": {
+      "code_fingerprint": "sha256:6adc53cf5a488e12a88c956e22210ae2d78d09e6ae964e5072682d6a06013524",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed e1: value 2.371539, partial 0.253716, softmax 0.253716\nseed e2: value 2.371539, partial 0.056612, softmax 0.056612\nseed e3: value 2.371539, partial 0.689672, softmax 0.689672\n"
         }
       ]
     },
     "matrix-calculus-autodiff-forward-jvp": {
-      "code_fingerprint": "sha256:5dd761960f929372d4d9956c859ac595df32c81c1f14d1d32da15a96a31f380d",
+      "code_fingerprint": "sha256:d666ce50da91f3de7898a3bf5d3ba14aa264ad75890b42a285838ed99ee09b54",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward-mode J:\n [[1.       1.      ]\n [0.070737 0.070737]]\nJVP matches analytic Jacobian: True\n"
+          "text": "forward-mode J:\n [[1.       0.877583]\n [0.5      1.      ]]\nmatches the analytic Jacobian: True\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-vector-tangents-and-jacobian-columns-1": {
+      "code_fingerprint": "sha256:478556e4f2d73b9e7bc26feeb5502e3e5233991b788590914450879d69625b26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one-pass J:\n [[1.       0.877583]\n [0.5      1.      ]]\nmatches the analytic Jacobian: True\n"
         }
       ]
     },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:64e9817724489619bb2718968bb2562e076843efa9f52f5ff591d2a8205ab9d8",
+      "code_fingerprint": "sha256:eb42d28b2c27cb7ff91581079bfbbae35484d9a455e6173756120ecd9fc66db5",
       "kind": "text",
       "outputs": []
     },
-    "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:1258befdde8b0b0c58b58cabbd3e25952e834889969bfb40908ff9f855c7414b",
+    "mdl-matrix-calculus-autodiff-the-tape-1": {
+      "code_fingerprint": "sha256:353be062072074d5ca514518e4fac9976d5198baf42ac0456cad1f5e41dad696",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\ntensorflow : dy/du = 16.0000  dy/dv = -16.0000\n"
+          "text": "our tape  : dy/du = 16.0000  dy/dv = -16.0000\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-tape-check": {
+      "code_fingerprint": "sha256:5cf502bbb53346a15d7f8e9843a98a81b3a3406a837be498e15ef45ee7a9ff57",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tensorflow: dy/du = 16.0000  dy/dv = -16.0000\n"
         }
       ]
     },
     "mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured": {
-      "code_fingerprint": "sha256:b7f97bfc9bfad09277202ecb963c839ca2fc12ad4614efd0256e483daecd6c36",
+      "code_fingerprint": "sha256:cc4ca6418ebc865a6cc1a4c7065f7a42496498e91106e727b5fa9e531c44cf54",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward mode : 200 passes (one per input)\nreverse mode : 1 backward sweep for all 200 partials\nmax |forward - reverse| over the gradient: 0.0e+00\n"
+          "text": "forward mode: 80,200 operations (200 passes of 401)\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products": {
+      "code_fingerprint": "sha256:0f375192f0a3d0ea36026e192dca34d7da028e9b78ec7bc8c5719e5bb9cbbfbd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "J v   = [2.7552 2.5   ]\nu^T J = [2.     2.8776]\nJ     = [[1.0, 0.8776], [0.5, 1.0]]\n"
         }
       ]
     },
     "mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up": {
-      "code_fingerprint": "sha256:ff8a0999e93bf19bad43a40ede12702b102c5fc70d5eda39d26b639d247c7ab9",
+      "code_fingerprint": "sha256:f8b8ccc1d894f40cbf14d6538e8b25e0cccba7def95c579dec82ce11b83e0ed5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reverse-over-reverse Hv: [3.5 2. ]\nA v                    : [3.5 2. ]\n"
+          "text": "forward over reverse : [ 0.3571  0.0514 -0.4085]\np*v - p (p.v)        : [ 0.3571  0.0514 -0.4085]\n"
         }
       ]
     },
     "mdl-matrix-calculus-autodiff-differentiating-through-equations": {
-      "code_fingerprint": "sha256:21cf87e83c188010412bfa4d313b217e6d1ace862d04fbea0e56ebdacd32ba10",
+      "code_fingerprint": "sha256:4dc0196ebd3fd10191fe450fbf3e26ef1cb6803ccce259ff39bb762bddec3554",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "implicit-function gradient: [-0.11311451 -0.69322129]\nfinite-difference check   : [-0.11311451 -0.69322129]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-implicit-differentiation-1": {
+      "code_fingerprint": "sha256:a6da7dab5a9422dc124948f785fcb523119eb875bfaeedc5f39d7904e263d689",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=1: x = 2.50000, formula 0.2000, unrolled 0.5000, exact 0.25\nk=2: x = 2.05000, formula 0.2439, unrolled 0.2900, exact 0.25\nk=3: x = 2.00061, formula 0.2499, unrolled 0.2509, exact 0.25\n"
         }
       ]
     }

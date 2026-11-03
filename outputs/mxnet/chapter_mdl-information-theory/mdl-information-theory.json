@@ -9,52 +9,71 @@
   },
   "cells": {
     "information-theory-imports": {
-      "code_fingerprint": "sha256:855b31a2deb91e0c800c9dc8212943091196c450ce95dacbc9bc755d259e49bb",
+      "code_fingerprint": "sha256:51078f38a777467b40c6ea488469fb4ee193a1f1f003952054a74607b66d3765",
       "kind": "text",
       "outputs": []
     },
     "information-theory-self-information": {
-      "code_fingerprint": "sha256:b644a6d08c5cd6f8aedf5dc49dd882861f3ad1b2ba119e95e2405fe5df13c221",
+      "code_fingerprint": "sha256:4aa2345dcae54897d618d5d9df3608bdc0778d9a72d917c4b11cdc100de554d5",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "4.1588830833596715"
+          "type": "stream",
+          "name": "stdout",
+          "text": "a card                   0.000 nats\na heart                  1.386 nats\nthe three of spades      3.951 nats\nthe order of the deck   156.36 nats = 225.6 bits\n"
         }
       ]
     },
     "information-theory-definition": {
-      "code_fingerprint": "sha256:d996621f035c5f6c421c46ceadd95db423af6604af45d81d70e96a0e4968dff7",
+      "code_fingerprint": "sha256:ec1d9498f9e8cd10454dc81aa75242442b65346351d733afbffa55bd2376f6e5",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "1.1682824501765625"
+          "type": "stream",
+          "name": "stdout",
+          "text": "H = 1.213 nats = 1.75 bits\n"
         }
       ]
     },
     "information-theory-definition-2": {
-      "code_fingerprint": "sha256:8f8d33692d328d403c129cea2e12ab86f3177a7107f2e7931c043e5ab2519ea0",
+      "code_fingerprint": "sha256:050d210e08cc4598285359b1b298cefe5d635e83f0ff5edfab4cb778c4a2a193",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KL(P||Q) = 0.3961 nats, KL(Q||P) = 0.3653 nats\nKL(P||Q') = inf\n"
+        }
+      ]
+    },
+    "information-theory-kl-categorical": {
+      "code_fingerprint": "sha256:ebb9fb2d87f960dc3253df929f30c9e60a044b9b9719c520be9a21eeea930c73",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CE(P,Q) = 1.2940, H(P) = 0.8979, CE - H = 0.3961\ndyadic vs uniform, in bits: H = 1.75, KL = 0.25, CE = 2.00\n"
+        }
+      ]
     },
     "information-theory-example-1": {
-      "code_fingerprint": "sha256:9b07e8d28771e57f293109e23a633bc339ebc18fb405a38ef6a858b75736df75",
+      "code_fingerprint": "sha256:13b8bc4a5b216d7d5a8ce24f92a508bdc86595945c23724317e1b93f064b53cb",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-2": {
-      "code_fingerprint": "sha256:5305ba50cc33f6e8f4c2e43349436c5a8da1c232000c740629ed0f2436473829",
+      "code_fingerprint": "sha256:23c7b759252f7a1c606904eb7ff009127e3d305366f3dba0660a58b734c3c449",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.49979056151806983)"
+          "text": "(0.5, 0.4978596270500233)"
         }
       ]
     },
     "information-theory-example-3": {
-      "code_fingerprint": "sha256:8ab403bfb223d09c80ddadf74dc221392559cbf258a20624c4fecddf5217599f",
+      "code_fingerprint": "sha256:110a6e9abf1b0f6e5a24113fe7864bcf902e65ab43212d62cb67d1227a1d7ceb",
       "kind": "text",
       "outputs": [
         {
@@ -63,24 +82,13 @@
         }
       ]
     },
-    "information-theory-kl-categorical": {
-      "code_fingerprint": "sha256:7d3f5c8866d2b6e0f909bf4b7eb094fe46e7b8b3b8298a1f70fe8b11346fe0f4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "KL(P||Q) = 0.3961 nats, KL(Q||P) = 0.3653 nats\nCE(P, Q) - H(P) = 0.3961 nats\n"
-        }
-      ]
-    },
     "information-theory-formal-definition-1": {
-      "code_fingerprint": "sha256:81faf5a16dc2a39963cea996abbbde3fd49532184cf319610e0b236d6c77938d",
+      "code_fingerprint": "sha256:b20fec49e18963e961c7a53393bedf26db515cbc37daa1d811d1e7ad85628133",
       "kind": "text",
       "outputs": []
     },
     "information-theory-formal-definition-2": {
-      "code_fingerprint": "sha256:04354a651ff68c2e695e2718293676394b4aa3ed2aab114485c485b20dcda228",
+      "code_fingerprint": "sha256:f174eabbd5d67e464f44155cd9d89fb65662819a3122ceea01b029fba9b1ca60",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +98,7 @@
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:4636a20e59905bb1f9cda538676dac4a74779fe8e151e09831ae882439d0d4ab",
+      "code_fingerprint": "sha256:e8ab082161fcf4840c37944fd9e41439f0fd9bdfca83f38fb3df03f08d5029aa",
       "kind": "text",
       "outputs": [
         {
@@ -99,52 +107,19 @@
         }
       ]
     },
-    "information-theory-coding": {
-      "code_fingerprint": "sha256:a1f89be82073f2ac8e492f84e5186b11a823cb0438bbfdb165003743d17c0ce7",
+    "mdl-information-theory-the-irreducible-loss": {
+      "code_fingerprint": "sha256:29c8ec1f577f6671518295caf3471baaaa4c5c83cc241acf4924deb7799f9a77",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Shannon lengths [1, 2, 3, 3], Kraft sum = 1.0\nE[l] = 1.75 bits = H(P) = 1.75 bits: no waste\nuniform codebook: 2.0 bits = H + KL = 2.0 bits\n"
-        }
-      ]
-    },
-    "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:d359d09bdcf92ceff7b2d22abd1cef35d7f627c86e3718fe5d10ea84c64f7f39",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "final width = 3.874205e-02, prod of probs = 3.874205e-02\ntotal surprisal = 4.69 bits\narithmetic code: 6 bits, symbol-by-symbol Shannon code: 13 bits\n"
-        }
-      ]
-    },
-    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
-      "code_fingerprint": "sha256:d9b5ba9677c6b21208584a8feacec851bbf717a49bd1bd42aa458f9b25b9dd5e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "entropy H = 0.881 bits/symbol, so nH = 176 bits\ntypical strings: 2^188.8 of all 2^200\nprobability they carry: 0.9893\n"
-        }
-      ]
-    },
-    "information-theory-perplexity": {
-      "code_fingerprint": "sha256:fb688f3c344dcc0769683ea534d7af84d4231c672e0bb7df254b07ea69587860",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "per-token NLL (nats): [1.609, 2.303, 0.916, 1.386, 2.996]\nmean NLL = 1.8421 nats, perplexity = 6.31\n"
+          "text": "floor = H(p) = 0.545 nats\nuniform         CE = 2.303 nats\nconfident 0.99  CE = 0.689 nats\nBayes q = p     CE = 0.545 nats\n"
         }
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:3f5915b486f71914d3a5d5d7339151ca85ae759ac486c0155a94a617b0577e4e",
+      "code_fingerprint": "sha256:bd9badda704712add722558d8e4c71f1e38d649bbb421dfd4c9a368c202a6c8b",
       "kind": "text",
       "outputs": [
         {
@@ -155,13 +130,13 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:0a5afe023760c2c318f5c02356820cf84dc9cb3af552796cdba6467de83f0faf",
+      "code_fingerprint": "sha256:2c7136985b1fb8e55d1b78ffd72cc8d0943997437a76e41002d715819e34dbf1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 3.0e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 9.3e-10  T^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "tau= 1.0  |autograd - closed| = 0.0e+00  tau^2 grad = [-0.462, 0.441, 0.022]\ntau= 2.0  |autograd - closed| = 3.0e-08  tau^2 grad = [-0.672, 0.549, 0.123]\ntau= 5.0  |autograd - closed| = 2.8e-09  tau^2 grad = [-0.741, 0.478, 0.263]\ntau=10.0  |autograd - closed| = 9.3e-10  tau^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

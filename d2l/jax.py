@@ -2320,7 +2320,9 @@ def lm_perplexity(model, data):
     """Perplexity of a language model on the validation set of `data`.
 
     Defined in :numref:`sec_gru`"""
-    graphdef, state = nnx.split(model)  # One walk through the model
+    # A view with dropout off, sharing the weights; one walk through it
+    graphdef, state = nnx.split(nnx.view(model, deterministic=True,
+                                         raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
         total += lm_loss_sum(graphdef, state, X, Y)

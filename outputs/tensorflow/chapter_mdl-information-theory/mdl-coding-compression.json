@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-information-theory/mdl-coding-compression.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:0b181ffb2fdb2a802e70411369881506e7f93571951517c64f8392f801cd8dd3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-coding-compression-codes-compression-and-perplexity": {
+      "code_fingerprint": "sha256:294607ce112bcd080b995dd0daf895c0c273f9b2a0b173f94193ba319c85416c",
+      "kind": "text",
+      "outputs": []
+    },
+    "information-theory-coding": {
+      "code_fingerprint": "sha256:eeba0686369baed987162e2c817fd400fb6939bdcdee656f484eb53c4818abd6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dyadic, own      lengths [1, 2, 3, 3]  Kraft 1.0000  E[ell] 1.750  CE2 1.750\ndyadic, uniform  lengths [2, 2, 2, 2]  Kraft 1.0000  E[ell] 2.000  CE2 2.000\nP, own           lengths [1, 2, 4]  Kraft 0.8125  E[ell] 1.600  CE2 1.295\nP, code from Q   lengths [3, 1, 2]  Kraft 0.8750  E[ell] 2.300  CE2 1.867\n"
+        }
+      ]
+    },
+    "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
+      "code_fingerprint": "sha256:de5854c58c54930187940441287221ac4012b8a78da5c72c23ac488030d1e5b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final interval [0.3874, 0.4262), width 0.0387\nsurprisal 4.69 bits, codeword 011001 (6 bits)\nsymbol-by-symbol Shannon code: 13 bits\n"
+        }
+      ]
+    },
+    "mdl-coding-compression-a-language-model-as-a-compressor-1": {
+      "code_fingerprint": "sha256:d138bab9c6db92998358ca3d820f96dbe376e0043d4cca39184cdd2a79120921",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-coding-compression-a-language-model-as-a-compressor-2": {
+      "code_fingerprint": "sha256:034d06db10ddec8bc5a48cb9bc026055070eac09f54cccfe3b1dcbfa69875db2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "173428 characters over 27 symbols\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "order 0: 4.08 bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "order 1: 3.29 bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "order 2: 2.75 bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "order 3: 2.55 bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "order 4: 2.78 bits/char\nzlib -9: 2.84 bits/char\n"
+        }
+      ]
+    },
+    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
+      "code_fingerprint": "sha256:2ca4337bbec1f978c030786bd006d757cf6689eb26cee3f55998d4dff92200a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H = 0.881 bits/symbol, nH = 176.3 bits\ntypical: 2^188.8 of 2^200 strings, 44 <= j <= 76\nprobability they carry: 0.9893\nbounds: 0.989 * 2^156.3 <= |A| <= 2^196.3\n"
+        }
+      ]
+    },
+    "mdl-coding-compression-typical-sequences-1": {
+      "code_fingerprint": "sha256:14457dc6cbfd1ef6acb84df6fe7d8bb8ec540d10130f9d025fc9f4e0539a194f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-coding-compression/mdl-coding-compression-typical-sequences-1-1.svg",
+          "bytes": 31016,
+          "sha256": "sha256:d7e2cda19f316dd7ff844d672bc0271f7b0a3dc420508f14686268ea674b3b1f"
+        }
+      ]
+    },
+    "information-theory-perplexity": {
+      "code_fingerprint": "sha256:ee0cb8efb43a821116b975e0b37c4bbd06412ff9e4e777cb10991c26db2e7f6e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-token NLL (nats): [1.609, 2.303, 0.916, 1.386, 2.996]\nCE = 1.8421 nats, perplexity e^CE = 6.31\nCE2 = 2.6575 bits, 2^CE2 = 6.31\n"
+        }
+      ]
+    }
+  }
+}

@@ -4,28 +4,28 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
+    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
     "max_inline_bytes": 0
   },
   "cells": {
     "multivariable-calculus-imports": {
-      "code_fingerprint": "sha256:611804fc8e9d5aeaa26cebeb97fec33dae9120c5205652516e5e8b3313858bba",
+      "code_fingerprint": "sha256:0a9a457f678b2568c6d3b5e097b6ca20f170325796773a3f6cdd7af0a6db3c82",
       "kind": "text",
       "outputs": []
     },
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:45a2ad2aa498a75e3ddead3408fed9b5b476a16dfcce22ce46016ee7600f1165",
+      "code_fingerprint": "sha256:47e9858be715b03240f856e56192ab5194d716c74a9b0f879996f418927a07ae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "approximation: 1.081946, true value: 1.082124\n"
+          "text": "gradient: [0.33333333 0.66666667]\n|eps| 3.2e-02: linear 1.08194562, true 1.08212418, gap 1.786e-04\n|eps| 3.2e-03: linear 1.09694562, true 1.09694740, gap 1.779e-06\n|eps| 3.2e-04: linear 1.09844562, true 1.09844564, gap 1.778e-08\n"
         }
       ]
     },
     "mdl-multivariable-calculus-directional-derivatives-1": {
-      "code_fingerprint": "sha256:d30090f8ddd6b02a9057de489f7595dd3bb5e13be0451ad47a97c71b220835f4",
+      "code_fingerprint": "sha256:e7cca05f53709207a67360cfced3f4f2650e8ca1360dc400c66bb55b3555636c",
       "kind": "text",
       "outputs": [
         {
@@ -36,70 +36,79 @@
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:23674d1140adde705699674f65293df64910deab066c37770e37a40bf4a8cba4",
-      "kind": "asset",
+      "code_fingerprint": "sha256:02845cd1bb238fac193f37804e649201e1e3cb5948089d46b5cdc2736e36c344",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13693,
-          "sha256": "sha256:87bdcb66c1fdb91b0d4c7ef88fc32514a029246c40f6181e67563e7ea54b84b5"
+          "type": "stream",
+          "name": "stdout",
+          "text": "psi(-0.7071, 0) = -0.4289, |grad psi| = 1.3e-16\npsi(+0.7071, 0) = +0.4289, |grad psi| = 1.3e-16\npsi(+0.3000, 0) = +0.2742, |grad psi| = 7.5e-01\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:2be96e585bcc484a99c4d321a9a90fd081b87a46c8b318840fad8f0bf937e58d",
+      "code_fingerprint": "sha256:a81d72de55f106518b76182ae8ea7b4c82cdc9d21c4f5ae7f597e759b1fb6bf2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\n"
+          "text": "a, b, u, v, f = 1 9 100 64 26896\ndf/dw = 73472\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:bde92ab203c42439a17413765ca460ef768012a9e5e223040b996e3a9c8ee663",
+      "code_fingerprint": "sha256:639437528f7c9eeed204e4860884f955f2487c3fd49ca2d0bb42fc83660517da",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\ndf/dx at 1, 1, -2, 1 is 73472\ndf/dy at 1, 1, -2, 1 is -68224\ndf/dz at 1, 1, -2, 1 is -68224\n"
+          "text": "adjoints: u 328, v 328, a 1312, b 11808\ngradient: {'w': 73472, 'x': 73472, 'y': -68224, 'z': -68224}\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:fbdbf011f0b319fdf03c80aac16f89210c0636b7f8cb5cf1f21dc29d0fb10f3b",
+      "code_fingerprint": "sha256:8e52475533e4477d0b0101e41bc72afb0e15ffb43b6306b8de232b5592500e3b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "df/dw at [1.], [1.], [-2.], [1.] is [73472.]\ndf/dx at [1.], [1.], [-2.], [1.] is [73472.]\ndf/dy at [1.], [1.], [-2.], [1.] is [-68224.]\ndf/dz at [1.], [1.], [-2.], [1.] is [-68224.]\n"
+          "text": "[ 73472.  73472. -68224. -68224.]\n"
+        }
+      ]
+    },
+    "mdl-multivariable-calculus-the-second-order-taylor-approximation-1": {
+      "code_fingerprint": "sha256:4a8fe3ad457b235b39f76e60981976e8d4361002496694f6e906575676a3f1ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "9 H = [[2.0, -2.0], [-2.0, 2.0]]\neigenvalues: [0.       0.444444]\n|eps| 3.2e-02: predicted gap 1.7778e-04\n|eps| 3.2e-03: predicted gap 1.7778e-06\n"
         }
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:fa162c407b048cb80eaac762d4182190bd55af1752545f41afd40e821aaecff6",
+      "code_fingerprint": "sha256:2adc912d1bd467940fb28f467809cee268e2babd63b455d10dc437e7194fa5ec",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+          "text": "step 0.00: psi = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: psi = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: psi = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: psi = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
         }
       ]
     },
     "mdl-multivariable-calculus-the-second-derivative-test": {
-      "code_fingerprint": "sha256:6d42f8c00a272569d6105fea945be46015c26768895c4de60aeb72fc1b415842",
+      "code_fingerprint": "sha256:60a943225492adf8187f2c872e127115740f5c1c9222df0124bb611f0f06b8ac",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "at (-0.7071, 0): eigenvalues +0.858, +1.716 -> minimum\nat (+0.7071, 0): eigenvalues -1.716, -0.858 -> maximum\n"
+          "text": "(-0.7071, 0): eigenvalues +0.858, +1.716 -> minimum\n(+0.7071, 0): eigenvalues -1.716, -0.858 -> maximum\n(+0.0000, 0): eigenvalues -4.000, +4.000 -> saddle\n(+0.0000, 0): eigenvalues +0.000, +2.000 -> inconclusive\n"
         }
       ]
     }

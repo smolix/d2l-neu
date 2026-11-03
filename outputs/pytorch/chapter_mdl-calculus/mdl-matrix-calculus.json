@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-calculus/mdl-matrix-calculus.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-matrix-calculus-matrix-calculus": {
+      "code_fingerprint": "sha256:6ec2266b2b6066bcd3a46a2d46ed3efa626bb03503c262f56d592de8b37c9153",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-calculus-autodiff-jacobian-finite-diff": {
+      "code_fingerprint": "sha256:bcd573d07bb7f46b1f1dd32ca4b5d93055a3d2b565c1d55c84d5454edf20c245",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "|delta| = 2.2e-01   error / |delta| = 9.0e-02\n|delta| = 2.2e-02   error / |delta| = 9.0e-03\n|delta| = 2.2e-03   error / |delta| = 9.0e-04\n|delta| = 2.2e-04   error / |delta| = 9.0e-05\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-the-jacobian-of-a-network": {
+      "code_fingerprint": "sha256:b198c4c02e831fcc7fd6a878377507567993174772eda54c6851486edb0eface",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "by hand    : [2. 4.]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "by autograd: [2. 4.]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-backward-rules-of-a-layer-1": {
+      "code_fingerprint": "sha256:c6baaf68627a6e17adc891e21e534625f2abecaa24a17595cd638c8cd6361bcf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dg/dW1 = (w2*m) x^T: [[2.0, 2.0], [0.0, 0.0]]   autograd: [[2.0, 2.0], [0.0, 0.0]]\ndg/db  = w2*m      : [2.0, 0.0]   autograd: [2.0, 0.0]\ndg/dw2 = h         : [3.0, 0.0]   autograd: [3.0, 0.0]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
+      "code_fingerprint": "sha256:a7af23483cef86689addab508f3570ada3a53c619cda8d3c2d42f2ab81875b01",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grad a^T x   == a           : True\ngrad x^T A x == (A + A^T) x : True\nXbar, Wbar   == matmul rule : True\n"
+        }
+      ]
+    },
+    "matrix-calculus-autodiff-softmax-jacobian": {
+      "code_fingerprint": "sha256:4a63d8f8a0dda5a290608c74f0480140e0ddc583fa2808b520f24618edfe4910",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax Jacobian matches autograd : True\nJ @ 1 (shift invariance)          : [0. 0. 0.]\ngrad log-sum-exp equals p         : True\nd loss / d z : [ 0.2537 -0.9434  0.6897]\np - y        : [ 0.2537 -0.9434  0.6897]\n"
+        }
+      ]
+    }
+  }
+}

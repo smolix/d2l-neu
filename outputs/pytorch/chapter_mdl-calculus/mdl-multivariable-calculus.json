@@ -4,102 +4,111 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
+    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
     "max_inline_bytes": 0
   },
   "cells": {
     "multivariable-calculus-imports": {
-      "code_fingerprint": "sha256:d7e4715df5ee92472c7fda56798fbdd757cdbf1ff75c4e0260feffeb6fc074e4",
+      "code_fingerprint": "sha256:6ec2266b2b6066bcd3a46a2d46ed3efa626bb03503c262f56d592de8b37c9153",
       "kind": "text",
       "outputs": []
     },
     "multivariable-calculus-higher-dimensional-differentiation": {
-      "code_fingerprint": "sha256:579e562caf3d82dc86c7fa48068f87b48e27bc19b872fac135060ea47a0e1277",
+      "code_fingerprint": "sha256:f757bee8bcda0f1a49ffdf563df3c089486e434b357de02f2fe141de2ea49d72",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "approximation: 1.081946, true value: 1.082124\n"
+          "text": "gradient: [0.33333333 0.66666667]\n|eps| 3.2e-02: linear 1.08194562, true 1.08212418, gap 1.786e-04\n|eps| 3.2e-03: linear 1.09694562, true 1.09694740, gap 1.779e-06\n|eps| 3.2e-04: linear 1.09844562, true 1.09844564, gap 1.778e-08\n"
         }
       ]
     },
     "mdl-multivariable-calculus-directional-derivatives-1": {
-      "code_fingerprint": "sha256:8b5dc5a4065ba0c4147bfc9b013d30eaef45153d8658fda214e276651ff4e141",
+      "code_fingerprint": "sha256:2440838013a4d6f7f5109c2a12cf80c0ce959528f9af852d12ac60ea9aa5accd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "autograd gradient: tensor([0.3333, 0.6667])\n"
+          "text": "autograd gradient: tensor([0.3333, 0.6667], dtype=torch.float64)\n"
         }
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:c996768634f0604805fab86c2c49efb81126a6eb68893a5ac3d35c4992c77652",
-      "kind": "asset",
+      "code_fingerprint": "sha256:5d93a426f7077cdfd2c8c0839a7060cfa9570c864e52c0fbce15d5c1ce752c08",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13693,
-          "sha256": "sha256:3a487df7445f474f941f657cecf85336d1f37c72626465dbec0aee5ee35cf527"
+          "type": "stream",
+          "name": "stdout",
+          "text": "psi(-0.7071, 0) = -0.4289, |grad psi| = 1.3e-16\npsi(+0.7071, 0) = +0.4289, |grad psi| = 1.3e-16\npsi(+0.3000, 0) = +0.2742, |grad psi| = 7.5e-01\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:5423a5502d45c1401f36b2c037a38464d1fc6ce9e744e44470da3595712ff683",
+      "code_fingerprint": "sha256:20f21ad99126ca68fd57117ae5bb02fa30ee4f716e6a7147de9bf789cded1ac0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\n"
+          "text": "a, b, u, v, f = 1 9 100 64 26896\ndf/dw = 73472\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:0ff6fc4a6e6e14a8f1fd3a4a0280d2b19fa36dad94a09a5598ac0774a62047b0",
+      "code_fingerprint": "sha256:5bbc0182a0190f8156cd545b7e9747b42eb6b8b965ce42ed1deb4803dcfa27d9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\ndf/dx at 1, 1, -2, 1 is 73472\ndf/dy at 1, 1, -2, 1 is -68224\ndf/dz at 1, 1, -2, 1 is -68224\n"
+          "text": "adjoints: u 328, v 328, a 1312, b 11808\ngradient: {'w': 73472, 'x': 73472, 'y': -68224, 'z': -68224}\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:8e0946bfcbd0d9497ad9613c547a52e46a046ee87dd732d7da9d5cbeded2bc81",
+      "code_fingerprint": "sha256:11f4b9ac603ba5b55c67ff95c3911e9c238e1eae9cddb8d775712bc03f6b1227",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "df/dw at 1.0, 1.0, -2.0, 1.0 is 73472.0\ndf/dx at 1.0, 1.0, -2.0, 1.0 is 73472.0\ndf/dy at 1.0, 1.0, -2.0, 1.0 is -68224.0\ndf/dz at 1.0, 1.0, -2.0, 1.0 is -68224.0\n"
+          "text": "tensor([ 73472.,  73472., -68224., -68224.])\n"
+        }
+      ]
+    },
+    "mdl-multivariable-calculus-the-second-order-taylor-approximation-1": {
+      "code_fingerprint": "sha256:2f2af154e108fc949dbca25850fd94320fb87f0af12b83dd338747ea4bdc94b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "9 H = [[2.0, -2.0], [-2.0, 2.0]]\neigenvalues: [0.       0.444444]\n|eps| 3.2e-02: predicted gap 1.7778e-04\n|eps| 3.2e-03: predicted gap 1.7778e-06\n"
         }
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:1facbb352392450a79a45093752e0268f4119b9cb748efc794b8c995765827d3",
+      "code_fingerprint": "sha256:6eb63a6432bbad50d030751f93794fe5e445e94a22df05f130dfa0ae4fa03b0d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+          "text": "step 0.00: psi = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: psi = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: psi = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: psi = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
         }
       ]
     },
     "mdl-multivariable-calculus-the-second-derivative-test": {
-      "code_fingerprint": "sha256:b145c14765b5ce08845825154022bfa146a5f598964d64ada5d66fc931319187",
+      "code_fingerprint": "sha256:7f07f70c27d25682fbd4cdab66036fbf53058cb244bf14461b4f42358e6a45c0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "at (-0.7071, 0): eigenvalues +0.858, +1.716 -> minimum\nat (+0.7071, 0): eigenvalues -1.716, -0.858 -> maximum\n"
+          "text": "(-0.7071, 0): eigenvalues +0.858, +1.716 -> minimum\n(+0.7071, 0): eigenvalues -1.716, -0.858 -> maximum\n(+0.0000, 0): eigenvalues -4.000, +4.000 -> saddle\n(+0.0000, 0): eigenvalues +0.000, +2.000 -> inconclusive\n"
         }
       ]
     }

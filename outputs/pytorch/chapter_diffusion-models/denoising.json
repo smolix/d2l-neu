@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:efc5ac20b18c7b2d93c3c2ffc1cfe3955260d2992f1250f8361a47fe55c53179",
+    "d2l_lib_fingerprint": "sha256:d3ea2374615b2f029321ce2339299416e7489a60fad724068f0295884c122e7f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,31 +53,31 @@
       ]
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:dc062395e0c6da68d10fe8c88b305e64b7630da21b7c4c790918dd482630df0d",
+      "code_fingerprint": "sha256:364b3d043dd8599c81f65fa67a19850dd76d8c7fd0adf27a2c51ca9f7d1ada50",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.061\n"
+          "text": "final training loss: 0.064\n"
         }
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:b2e7d420c40aac7f03dedd9e51a7fd79c9b66947d4f94ae5e1f51d546d014944",
+      "code_fingerprint": "sha256:9d089042f547c2d974940e24c375768c2e18dc9cf809554aae8f53b18597c68c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per-pixel squared error: noisy 0.251, denoised 0.031\n"
+          "text": "per-pixel squared error: noisy 0.249, denoised 0.031\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-denoising-images-2-1.png",
-          "bytes": 111151,
-          "sha256": "sha256:82938775129e7362808aefc83d858b257be838903da369be5611214719a42da2"
+          "bytes": 110816,
+          "sha256": "sha256:2f3f9a0ecf85df4e9877a4e261c6075e5eee8a667a288229c667b489d33ea3d0"
         }
       ]
     }

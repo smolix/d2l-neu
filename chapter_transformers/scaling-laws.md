@@ -1,17 +1,20 @@
 # Scaling Laws
 :label:`sec_scaling-laws`
 
-The GPT of :numref:`sec_gpt` trained on about $2 \times 10^{14}$
+Every model so far in this chapter was sized by hand. We chose a width, a depth
+and a number of training steps, and if the result had disappointed us, we
+could have changed them and trained again. A large model offers no second
+try. The GPT of :numref:`sec_gpt` trained on about $2 \times 10^{14}$
 floating-point operations. The largest Llama 3 model used $3.8 \times
 10^{25}$ :cite:`Grattafiori.Dubey.Jauhri.ea.2024`, about $10^{11}$ times
-as many, in one run that no one could afford to repeat with a different
-model size. A budget of that size has to be planned before the run starts:
-how many parameters the model gets, and how many tokens it reads. The plan
-rests on two regularities that can be measured on runs a million times
-smaller. The cost of a run follows from the shape of the model by counting.
-And the loss falls smoothly with the number of parameters and the amount of
-data, along a power law that can be fitted on small models and extended to
-large ones. Such a fit is called a *scaling law*.
+as many, in a single run. How should such a budget be divided, before the
+run starts, between the parameters of the model and the tokens it reads?
+
+The answer rests on two regularities that can be measured on runs a million
+times smaller. The cost of a run follows from the shape of the model by
+counting. And the loss falls smoothly with the number of parameters and the
+amount of data, along a power law that can be fitted on small models and
+extended to large ones. Such a fit is called a *scaling law*.
 
 This section derives the cost, about $6ND$ operations for $N$ parameters
 and $D$ training tokens, and checks it against the framework's own count.
@@ -50,8 +53,9 @@ import optax
 
 ### Blocks and Embeddings
 
-All models in this section are `d2l.GPT`s of :numref:`sec_gpt`, built
-through one shorthand:
+The cost of a run depends on how many parameters the model has and where
+they sit, so we begin by counting them. All models in this section are
+`d2l.GPT`s of :numref:`sec_gpt`, built through one shorthand:
 
 ```{.python .input #scaling-laws-counting-parameters-1}
 %%tab pytorch
@@ -238,10 +242,12 @@ point where the line stops: when does a larger model stop helping?
 ### Five Sizes and Three Data Budgets
 :label:`subsec_scaling-laws-five-sizes`
 
-The corpus is the one of :numref:`sec_gpt`, the bytes of the Wikipedia
-articles of `d2l.WikiText103`: about 270 million training bytes, read in
-windows of 128 at random offsets, and the official validation split of
-about 1.1 million bytes.
+To separate the effect of model size from that of data, we train a grid of
+models that varies the two independently. The corpus is the one of
+:numref:`sec_gpt`, the bytes of the Wikipedia articles of
+`d2l.WikiText103`: about 270 million training bytes, read in windows of 128
+at random offsets, and the official validation split of about 1.1 million
+bytes.
 
 ```{.python .input #scaling-laws-a-corpus-bigger-than-a-novella}
 %%tab pytorch, jax
@@ -346,6 +352,8 @@ less.
 
 ### The Chinchilla Law
 
+Our miniature study shows the shape of the loss, but over too small a range
+to plan a large run. That needs a law fitted to runs at scale.
 :citet:`hoffmann2022training` trained over 400 models, from 70 million to
 over 16 billion parameters on 5 to 500 billion tokens, and fitted their
 final losses with

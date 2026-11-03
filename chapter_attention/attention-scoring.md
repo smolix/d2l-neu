@@ -1,22 +1,24 @@
 # Attention Scoring and Masking
 :label:`sec_attention-scoring-functions`
 
-The Nadaraya--Watson weights of :numref:`sec_attention-pooling` come from a
-kernel chosen in advance. Two capabilities are missing before soft lookup
-can serve as a layer of a trained network. First, a fixed kernel measures
-compatibility as distance in a fixed space, so it cannot learn what
-compatibility should mean for a task, for instance that a verb should find
-its subject. We need a score that learned representations can shape and
-that is fast to evaluate for every query--key pair: one attention head of
-GPT-2 small, reading a context of 1,024 tokens, scores
-$1{,}024^2 = 1{,}048{,}576$ pairs. Second, some of those pairs must not
-count. Sequences of different lengths share a minibatch only after
-padding, and no query should attend to the padding. A language model
-trained to predict each next token processes all positions at once, and
-the query at position $t$ must not see the tokens after it; in the GPT-2
-head that rules out $523{,}776$ of the $1{,}048{,}576$ scores.
+In :numref:`sec_attention-pooling` the attention weights came from a kernel
+chosen by hand. They follow distance in a fixed input space, and no amount
+of data changes what counts as similar. In a sentence, however, a verb looking for
+its subject wants the word that plays that grammatical role, which need not
+be the word whose representation is closest to its own. Turning soft lookup
+into a layer of a trained network raises two questions: which score should
+the network learn, and which query--key pairs should count at all?
 
-This section supplies both. The score is the dot product of query and
+The score must be shaped by learned representations, and it must be cheap,
+because it is evaluated for every pair: one attention head of GPT-2 small,
+reading a context of 1,024 tokens, scores $1{,}024^2 = 1{,}048{,}576$
+pairs. Some of those pairs must not count. Sequences of different lengths
+share a minibatch only after padding, and no query should attend to the
+padding. A language model trained to predict each next token processes all
+positions at once, and the query at position $t$ must not see the tokens
+after it.
+
+This section answers both questions. The score is the dot product of query and
 key, divided by $\sqrt{d}$ so that its scale does not grow with the width
 $d$ of the vectors. Exclusions are boolean masks applied before the
 softmax, and several of them combine by logical AND. With both in place,
@@ -47,7 +49,10 @@ import math
 
 ## Dot-Product Attention
 
-Expanding the exponent of the Gaussian kernel gives the score
+We look for a score that learned queries and keys can shape and that costs
+one short computation per pair. The Gaussian kernel of
+:numref:`sec_attention-pooling` already contains one. Expanding its
+exponent gives the score
 
 $$
 a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2} \|\mathbf{q} - \mathbf{k}_i\|^2  = \mathbf{q}^\top \mathbf{k}_i -\frac{1}{2} \|\mathbf{k}_i\|^2  -\frac{1}{2} \|\mathbf{q}\|^2.
@@ -325,7 +330,9 @@ masked_softmax(jax.random.uniform(d2l.get_key(), (2, 2, 4)),
 
 In a causal mask, the query at position $i$ may see the keys at positions
 $j \leq i$. The mask is a lower triangle, and in a sequence of length $n$
-it excludes $n(n-1)/2$ of the $n^2$ pairs, almost half of them.
+it excludes $n(n-1)/2$ of the $n^2$ pairs, almost half of them. For one head
+of GPT-2 small reading $n = 1{,}024$ tokens, that is $523{,}776$ of the $1{,}048{,}576$
+scores.
 `causal_mask` also covers the case of fewer queries than keys, which
 arises when new tokens attend to the keys of earlier tokens kept in a
 cache (:numref:`sec_kv-cache`). The queries are then the *last* positions

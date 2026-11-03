@@ -1,26 +1,31 @@
 # Attention
 :label:`chap_attention`
 
-A language model that has read a thousand tokens often needs one of them
-again: a name from the first paragraph, a variable defined at the top of a
-file. A recurrent network must carry that token forward in a state of fixed
-size. After 1,024 tokens, a recurrent network as wide as GPT-2 small holds
-768 numbers about them, all written before anyone knew which token would be
-asked for.
-Attention keeps a representation of every position instead and lets each
-query choose what to read. It scores the query against a key at every
-position, turns the scores into weights, and returns the weighted average of
-the values stored there. The terms *query*, *key*, and *value* come from
-database lookup, and the weighted average makes the lookup differentiable.
+The sequence models of :numref:`chap_rnn` read a text one token at a time
+and carry what they have read in a state of fixed size. Think of a reader
+who reaches the last chapter of a mystery novel and needs the name of a
+minor character from the first page. A person turns back and looks. A
+recurrent network must have kept the name in its state all along, written
+when nothing marked it as important. Can a network look back
+instead, and read only what the current prediction needs?
 
-Attention first let a translation model consult every source word instead of
-one sentence vector :cite:`Bahdanau.Cho.Bengio.2014`, and the Transformer
-made it the only operation that mixes positions
-:cite:`Vaswani.Shazeer.Parmar.ea.2017`. Reading every position raises
-problems that recurrent networks never had. A weighted average ignores the
-order of its inputs. Scoring all pairs of positions costs time and memory
-that grow with the square of the length. And a map of attention weights
-shows where a head looks, not what it computes.
+Attention does this. It keeps a representation of every position,
+scores the current query against a key at every position, turns the scores
+into weights, and returns the weighted average of the values stored there.
+The terms *query*, *key*, and *value* come from database lookup, and the
+weighted average makes the lookup differentiable. The idea came from
+machine translation, where a decoder had to work from a single vector
+summarizing the source sentence. Attention let it consult
+every source word instead :cite:`Bahdanau.Cho.Bengio.2014`. The Transformer
+then made attention the only operation that mixes positions
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`, and it is now the core of large
+language models.
+
+Reading every position raises problems that recurrent networks never had.
+A weighted average ignores the order of its inputs. Scoring all pairs of
+positions costs time and memory that grow with the square of the length.
+And a map of attention weights shows where a head looks, not what it
+computes.
 
 :numref:`sec_queries-keys-values` asks how a lookup can be made
 differentiable, starting from classical kernel regression.
@@ -31,17 +36,15 @@ express, and what several heads, and heads that share keys and values,
 provide. :numref:`sec_positional-information` asks how an operation that is
 blind to order learns where each token stands, and what happens beyond the
 length it was trained on. :numref:`sec_attention-at-scale` asks how to cut
-the cost of scoring all pairs of positions: by computing exact attention
-with less memory, by restricting each query to a window, or by a recurrence
-of linear cost. :numref:`sec_what-attention-computes` asks
-what trained heads compute, and which experiments can tell.
+the cost of scoring all pairs of positions: by exact attention in less
+memory, by a window of recent keys, or by a recurrence of linear cost.
+:numref:`sec_what-attention-computes` asks what trained heads compute, and
+which experiments can tell.
 
-The chapter studies the attention layer by itself, in models built from
-attention alone. :numref:`chap_transformers` adds the feed-forward layers,
+The chapter studies the attention layer by itself.
+:numref:`chap_transformers` adds the feed-forward layers,
 normalization, and training recipe that make it a transformer, and
 :numref:`chap_modern_rnn` develops the recurrent side of linear attention.
-Related topics that the chapter does not teach are collected in
-:numref:`sec_attention-further-reading`.
 
 ```toc
 :maxdepth: 2

@@ -1,39 +1,41 @@
 # Computational Performance
 :label:`chap_performance`
 
-An RTX 4090, the GPU that runs this book's notebooks, performs 165
-trillion floating-point operations per second on bf16 matrices, but it
-reads and writes its memory at only one trillion bytes per second. A
-product of two large matrices performs thousands of operations for every
-byte it moves, so it can keep the arithmetic units busy. Adding one to
-every entry of a bf16 matrix performs one operation for every four bytes,
-so it runs at a quarter of a trillion operations per second at most, less
-than a six-hundredth of the peak. A training step contains operations of
-both kinds, and each of them also costs some microseconds of Python before
-the GPU starts it. Written one way, a step keeps the card busy; written
-another way, the same model with the same optimizer spends most of its time
-waiting.
+Until now we have trained every model by writing the network, starting the
+training loop, and waiting. We took the time of a step and its memory as
+given. That stops working when a run takes days, a model does not fit on
+the card, or a second GPU makes training slower. Consider the GPT of
+:numref:`sec_gpt`. Dividing the arithmetic of one training step by the rate
+in the GPU's specification gives the time the step should take. On the GPU
+that runs this book's notebooks, the measured step takes several times
+longer. Where does the rest of the time go?
 
-The earlier chapters ran their models as written and took the time of a
-step and its memory as given. That stops working when a run takes days, when a model does not fit on the card, or when a second GPU
-makes training slower instead of faster. This chapter teaches a method in
-its place: measure a program, find the resource that limits it, apply the
-change that relieves that resource, and measure again.
+Computer architects met this question long before deep learning did. By
+the 1990s processors had become so much faster than their memory that many
+programs spent much of their time waiting for data. In 2009 Williams,
+Waterman, and Patterson drew the consequence as one picture, the
+*roofline* :cite:`Williams.Waterman.Patterson.2009`: a program runs no
+faster than its arithmetic units allow, and no faster than memory can
+deliver the bytes it needs. A GPU driven from Python adds a third limit,
+the cost of issuing each operation. Which of the three holds a step back
+decides which change speeds it up. This view explains choices that earlier
+chapters made, such as large minibatches and 16-bit numbers
+(:numref:`sec_numerics`). It also gives a method: measure a
+program, find the resource that limits it, relieve that resource, and
+measure again.
 
-:numref:`sec_perf_model` asks which of three resources limits an
-operation (the arithmetic units, the memory bandwidth, or the cost of
-issuing it) and how to time GPU code correctly. :numref:`sec_hardware`
+:numref:`sec_perf_model` asks which of the three resources limits an
+operation, and how to time GPU code correctly. :numref:`sec_hardware`
 asks where a machine's arithmetic rate and bandwidth come from, and why
-their ratio tends to grow. :numref:`sec_compilation` asks how a compiler removes memory traffic and
-launch overhead that eager execution cannot avoid.
-:numref:`sec_memory_precision` asks where the memory of a training step
-goes, and how a model of a billion parameters can train on one card.
+their ratio tends to grow. :numref:`sec_compilation` asks how a compiler
+removes memory traffic and launch overhead that eager execution cannot
+avoid. :numref:`sec_memory_precision` asks where the memory of a training
+step goes, and how a model of a billion parameters can train on one card.
 :numref:`sec_multi_gpu` builds data parallelism by hand and asks when a
-second GPU shortens a step.
-:numref:`sec_multi_gpu_concise` asks how production libraries hide
-communication behind computation and divide a model that no single GPU
-holds. :numref:`sec_fast_transformer` asks how far the whole method takes
-the training step of a GPT.
+second GPU shortens a step. :numref:`sec_multi_gpu_concise` asks how
+production libraries hide communication behind computation and divide a
+model that no single GPU holds. :numref:`sec_fast_transformer` asks how
+far the whole method takes the training step of a GPT.
 
 The chapter stays within one machine with up to four GPUs, and it uses the
 kernels that the frameworks provide instead of writing new ones

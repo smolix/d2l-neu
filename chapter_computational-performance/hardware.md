@@ -1,28 +1,34 @@
 # Hardware
 :label:`sec_hardware`
 
-An RTX 4090 performs up to 165 trillion floating-point operations per
-second on bf16 matrices, but it reads its own memory at only about one
-trillion bytes per second. Suppose we use it to generate text with a GPT of
-one billion parameters. In bf16 the weights occupy 2 GB, and every
-generated token needs all of them: about $2 \times 10^9$ FLOPs, which the
-tensor cores finish in 12 µs, and 2 GB of reads, which take the memory
-2 ms. The card therefore produces at most about 500 tokens per second for
-a single stream of text, and its arithmetic units sit idle more than 99%
-of the time. Peak arithmetic does not predict speed, because every
-operand must first arrive through a memory system that is far slower.
+The roofline model of the previous section describes a GPU by two numbers
+from its specification sheet, its peak arithmetic rate $P$ and its memory
+bandwidth $\beta$. An operation that performs $I$ FLOPs per byte it moves runs at
+most at $\min(P, I\beta)$. On the RTX 4090 memory lags far behind arithmetic:
+the card performs up to 165 trillion floating-point operations per second
+on bf16 matrices, but it reads its own memory at only about one trillion
+bytes per second. This section asks where the two numbers come from, and
+why the bandwidth falls so far short of the arithmetic rate.
 
-The roofline model of :numref:`sec_perf_model` describes a machine by two
-numbers, its peak arithmetic rate $P$ and its memory bandwidth $\beta$. An
-operation that performs $I$ FLOPs per byte it moves runs at most at
-$\min(P, I\beta)$. This section explains where the two numbers come from
-and why their ratio, the ridge point $P/\beta$, is large and has grown over
-the years. The explanation rests on three physical facts. Data must cross
-the boundaries between chips. The wires that cross them grow in number
-more slowly than the transistors that compute. And moving a byte takes far
-more energy than computing with it. The same reasoning covers the paths to
-the host and between GPUs, and our worked example is this book's build
-machine, a workstation with four RTX 4090s.
+The gap decides the speed of a task we met in :numref:`sec_kv-cache`,
+generating text one token at a time. Suppose we generate with a GPT of one
+billion parameters. In bf16 its weights occupy 2 GB, and every generated
+token needs all of them. The arithmetic for one token, about
+$2 \times 10^9$ FLOPs, takes the tensor cores 12 µs, while reading the
+2 GB of weights takes the memory 2 ms. The card therefore produces at most
+about 500 tokens per second for a single stream of text, and its arithmetic
+units sit idle more than 99% of the time. Peak arithmetic does not predict
+speed, because every operand must first arrive through a memory system
+that is far slower.
+
+The explanation rests on three physical facts. Data must cross the
+boundaries between chips. The wires that cross them grow in number more
+slowly than the transistors that compute. And moving a byte takes far more
+energy than computing with it. Together they explain why the ratio
+$P/\beta$, the ridge point, is large and has grown over the years. The
+same reasoning covers the paths to the host and between GPUs, and our
+worked example is this book's build machine, a workstation with four
+RTX 4090s.
 
 The numbers below are those of late 2026. They will change, but the
 relations between them change slowly: memory is orders of magnitude slower
@@ -146,8 +152,11 @@ its time.
 ## Compute and Memory Bandwidth
 :label:`subsec_hw-shoreline`
 
-The ridge point of the RTX 4090 is 164 FLOP/byte, and that of a B200 is
-281 (:numref:`tab_gpu_specs` below). Both numbers follow from the geometry of
+An operation is limited by arithmetic only if it performs at least as
+many FLOPs per byte as the ridge point. The larger the ridge point, the
+more operations are limited by bandwidth instead. The ridge point of the
+RTX 4090 is 164 FLOP/byte, and that of a B200 is 281
+(:numref:`tab_gpu_specs` below). Both numbers follow from the geometry of
 chips, and the same geometry predicts that the ratio tends to rise over
 time.
 

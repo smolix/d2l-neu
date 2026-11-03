@@ -1,15 +1,17 @@
 # Implementing RNNs
 :label:`sec_rnn-scratch`
 
-The recurrent language model of :numref:`sec_rnn` fits in three equations:
-look up the embedding of the current token, update the hidden state from it
-and from the previous state, and map the new state to scores over the
-vocabulary. To train it on the 65,741 BPE tokens of *The Time Machine*, the
-equations have to become code that keeps one contract. At each time step
-the model consumes one token per sequence and the previous hidden state,
-and it returns $|\mathcal{V}|$ logits per sequence and a new state of the
-same shape as the old one. Because the shapes do not change from step to
-step, the same step applies to a sequence of any length.
+:numref:`sec_rnn` wrote down a recurrent language model and counted its
+parameters, but did not train it. Two questions remain: how its equations
+become working code, and whether a hidden state predicts *The Time
+Machine* better than the counts of :numref:`sec_language-model`. The model fits in three equations: look up the
+embedding of the current token, update the hidden state from it and from
+the previous state, and map the new state to scores over the vocabulary.
+The code for these equations keeps one contract. At each time step the
+model consumes one token per sequence and the previous hidden state, and it
+returns $|\mathcal{V}|$ logits per sequence and a new state of the same
+shape as the old one. Because the shapes do not change from step to step,
+the same step applies to a sequence of any length.
 
 We first implement this contract with plain tensor operations, so that
 every parameter and every shape is visible, and then hand it to the
@@ -482,7 +484,8 @@ jnp.allclose(jax.nn.one_hot(ids, 5) @ W, W[ids])
 
 ### The Output Layer
 
-The output layer computes $\mathbf{O}_t = \mathbf{H}_t
+The last of the three equations turns each hidden state into scores for
+the next token. The output layer computes $\mathbf{O}_t = \mathbf{H}_t
 \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}$ for every time step, with
 $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$. Since
 the same weights serve every step, one matrix product handles all of them:

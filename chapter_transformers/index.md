@@ -1,32 +1,34 @@
 # Transformers
 :label:`chap_transformers`
 
-Attention lets every position read the others, but on its own it makes a
-weak model: each output is a weighted average of linear projections,
-and nothing computes a nonlinear feature of a single position. A
-*transformer* block adds a feed-forward network that transforms each
-position on its own, and both sublayers add their outputs to a residual
-stream that carries the signal through the stack. GPT-2 small stacks twelve
-such blocks of width 768 into 124 million parameters. Open models
-hundreds of times larger use the same block with a few settings changed:
-where the normalization sits, the activation of the feed-forward network,
-how positions enter, how many key--value heads attention keeps, and whether
-a block has one feed-forward network or many.
+The language models behind chat assistants are built from the attention
+layers of :numref:`chap_attention`. Attention alone does not make such a
+model: it moves information between positions, but computes no nonlinear
+feature of any single one. When an assistant writes a reply, each new word
+passes up through dozens of units of the same design, and attention is only
+one part of each. What else does a unit need? How can a stack that deep be
+trained? And how can it write fast enough for us to read along?
+
+The unit is the *transformer block*, introduced in 2017 for machine
+translation :cite:`Vaswani.Shazeer.Parmar.ea.2017`. It pairs attention with
+a small feed-forward network that transforms each position on its own, and
+both add their outputs to a residual stream that carries the signal upward.
+With a few settings changed, it now runs language, vision and speech
+models.
 
 Each setting answers a problem of depth or scale. A deep stack can lose its
-signal at initialization and diverge in training. Generating one token at a
-time recomputes the whole context unless the keys and values are kept, and
-once they are kept, reading them from memory, not the arithmetic, sets the
-speed. More parameters mean more computation unless most of them sit idle
-for any one token. And a run that costs millions has to be sized before it
-starts. We build one
-implementation in which each setting is a constructor argument, and measure
-what each changes on small models.
+signal at initialization or diverge in training. Generating one token at a
+time repeats work unless the model keeps what it has computed, and then
+reading that memory, not the arithmetic, sets the speed. More parameters
+cost more computation unless most of them sit idle for any one token. And a
+run that costs millions has to be sized before it starts. We build one
+block in which each setting is a constructor argument, and test each on
+small models.
 
 :numref:`sec_transformer-block` asks what a block needs besides attention,
 and where its normalization must sit for a deep stack to train.
 :numref:`sec_gpt` asks how a stack of blocks becomes a language model, how
-to train it, and whether the same code runs the released GPT-2.
+to train it, and whether the same code runs GPT-2.
 :numref:`sec_kv-cache` asks how to generate without recomputing the
 context, and how to shrink the cache that generation then reads.
 :numref:`sec_transformer` asks what changes when the causal mask is removed,
@@ -41,8 +43,7 @@ The chapter treats the architecture of base models. Pretraining at scale,
 data, fine-tuning, serving systems, and quantization belong to the Language
 Models part, kernels and parallelism to
 :numref:`chap_performance`, and recurrent alternatives to a growing cache to
-:numref:`chap_modern_rnn`. Related topics that the chapter does not teach
-are collected in :numref:`sec_transformers-further-reading`.
+:numref:`chap_modern_rnn`.
 
 ```toc
 :maxdepth: 2

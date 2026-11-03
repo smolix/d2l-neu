@@ -1,23 +1,33 @@
 # Multilayer Perceptron
 :label:`chap_perceptrons`
 
-Softmax regression scores each class by a weighted sum of the pixels, so a
-bright pixel adds the same evidence for a class whatever its neighbors show.
-Yet whether that pixel belongs to a sleeve, a strap, or the background
-depends on the pixels around it. The smallest problem of this kind, the
-exclusive or of two bits, defeats every linear classifier. A *multilayer
-perceptron* (MLP) computes new features before it classifies: a hidden layer
-applies an affine map followed by a fixed nonlinear function, and softmax
-regression classifies the result. Stacking such layers gives the first deep
-networks of this book.
+In :numref:`chap_classification` we taught a computer to recognize
+clothing. Softmax regression looks at the 784 pixels of a Fashion-MNIST
+image, weighs each one, and adds up the evidence for each of the ten
+classes. Its limit is that each pixel adds the same evidence for a class
+whatever the pixels around it show. Yet a bright pixel may belong to a
+sleeve, a strap, or the background, and only its neighbors can tell which.
+How do we build a model that combines its inputs in this way, and how do we
+train it?
 
-The loss, the optimizer, and the training loop of
-:numref:`chap_classification` carry over unchanged, but hidden layers raise
-three new problems. Every training step needs the derivative of the loss with respect
-to hundreds of thousands of parameters. A deep network can fail to train at
-all when its initial weights have the wrong scale. And a network with more
-parameters than training examples could memorize its training data, yet
-usually does not.
+The question is older than deep learning. In 1958 Frank Rosenblatt proposed
+the *perceptron*, a classifier that learns the weights of a weighted sum
+from examples. In 1969 Marvin Minsky and Seymour Papert analyzed what such
+classifiers cannot compute; the simplest example is the exclusive or of two
+bits. Computing new features first escapes this limit, but for years no
+widely used method learned the features. A *multilayer perceptron* (MLP)
+computes them in hidden layers, each an affine map followed by a fixed
+nonlinear function. In 1986, Rumelhart, Hinton, and Williams showed that
+backpropagation trains all the layers together by gradient descent, so that
+the hidden layers learn useful features
+:cite:`Rumelhart.Hinton.Williams.ea.1988`.
+
+The loss, the optimizer, and the training loop of softmax regression carry
+over unchanged, but hidden layers raise three new problems. Each training
+step needs derivatives with respect to hundreds of thousands of parameters.
+A deep network can fail to train when its initial weights have the wrong
+scale. And a network with more parameters than training examples could
+memorize its data, yet usually does not.
 
 :numref:`sec_mlp` asks which functions networks with hidden layers can
 represent, and why they need a nonlinearity.
@@ -25,12 +35,11 @@ represent, and why they need a nonlinearity.
 softmax regression on Fashion-MNIST. :numref:`sec_backprop` asks how one
 backward pass computes the gradient of every parameter, and what it costs in
 memory. :numref:`sec_numerical_stability` asks why gradients vanish or
-explode in deep networks, and how the scale of the initial weights prevents
-it. :numref:`sec_generalization_deep` asks why a network that can memorize
-its training data generalizes anyway. :numref:`sec_dropout` asks whether
-silencing random hidden units during training helps.
-:numref:`sec_kaggle_house` asks how these tools carry over to a real
-prediction task, the sale prices of houses on Kaggle.
+explode, and how the scale of the initial weights prevents it.
+:numref:`sec_generalization_deep` asks why a network that can memorize its
+training data generalizes anyway. :numref:`sec_dropout` asks whether
+silencing random hidden units helps. :numref:`sec_kaggle_house` asks how
+these tools carry over to predicting house prices on Kaggle.
 
 The chapter treats fully connected networks. Layers that exploit the
 structure of images and sequences, and the optimizers and normalization

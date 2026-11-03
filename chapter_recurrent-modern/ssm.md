@@ -1,15 +1,19 @@
 # Linear Recurrences and State Space Models
 :label:`sec_ssm`
 
-A gated network that reads a sequence of 4,096 tokens performs 4,096
-updates, and each update needs the result of the one before. A GPU can
-carry out tens of thousands of multiply-adds at the same time, but it cannot
-start step 2,000 until step 1,999 has finished, so during training most of it
-waits. A transformer layer has no such chain: it processes all 4,096
-positions in a few large matrix products. This difference in training
-speed, more than any difference in what the two kinds of model can
-represent, was a main reason why transformers replaced recurrent networks
-for large-scale language modeling.
+The gated networks of :numref:`sec_lstm` can keep information for hundreds
+of steps, but they still read a sequence one token after another, and each
+update needs the result of the one before. That order is natural when a
+model generates text, but during training the whole sequence is known in
+advance. Take a sequence of 4,096 tokens. A gated network performs 4,096
+updates in a row. A GPU can carry out tens of thousands of multiply-adds at
+the same time, but it cannot start step 2,000 until step 1,999 has
+finished, so most of it waits. A transformer layer has
+no such chain: it processes all 4,096 positions in a few large matrix
+products. This difference in training speed, more than any difference in
+what the two kinds of model can represent, was a main reason why
+transformers replaced recurrent networks for large-scale language modeling.
+Can a recurrent network be trained on all positions at once?
 
 The chain has a single cause. The gates of :numref:`sec_lstm` read the
 previous state, and the state passes through a nonlinearity, so step $t$
@@ -54,6 +58,7 @@ import random
 
 ### A Single Decaying Number
 
+To see what a linear update gives us, we start with the smallest one.
 Consider a state $h_t$, a single number, that keeps a fraction $a$ of its
 value at every step and adds the new input $x_t$:
 
@@ -528,8 +533,10 @@ from the first step of training, and a larger state at little extra cost.
 ## State Space Models
 :label:`subsec_state-space`
 
-A linear recurrence holds a value for a thousand steps only if its decay
-stays within about 0.001 of one for all thousand steps: a decay of 0.999
+The minGRU trains in parallel, but like the gated networks of
+:numref:`sec_lstm` it must learn from scratch how long to remember. A
+linear recurrence holds a value for a thousand steps only if its decay stays
+within about 0.001 of one for all thousand steps: a decay of 0.999
 has a half-life of 693 steps. The minGRU starts with decays near one half
 and must find such values by gradient descent, from gradients that, at the
 start, have been halved a thousand times. Nothing in the recurrence says
@@ -638,8 +645,9 @@ approximate that design.
 ### The Convolutional Form
 :label:`subsec_ssm-conv`
 
-When $\bar{a}_n$, $\bar{b}_n$, and $\mathbf{C}$ are the same at every step,
-the model is *linear time-invariant*, and unrolling it gives the outputs
+The scan is one way to compute all states at once, and dynamics that do not
+change along the sequence allow a second. When $\bar{a}_n$, $\bar{b}_n$,
+and $\mathbf{C}$ are the same at every step, the model is *linear time-invariant*, and unrolling it gives the outputs
 directly in terms of the inputs. State $n$ holds
 $\sum_{k \ge 0} \bar{a}_n^k \bar{b}_n x_{t-k}$, as in :eqref:`eq_lr-unrolled`,
 and the readout adds the states with weights $c_n$:
@@ -665,7 +673,8 @@ second way to train in parallel: the convolution of two sequences of
 length $T$ can be computed with the fast Fourier transform (FFT) in
 $O(T \log T)$ operations, by transforming both, multiplying them, and
 transforming back. The S4 model of :citet:`Gu.Goel.Re.2022` trained this
-way on sequences of tens of thousands of steps. The convolution requires
+way on sequences of tens of thousands of steps, and it solved benchmarks
+whose dependencies span thousands of steps. The convolution requires
 dynamics that are the same at every step; the scan does not.
 
 ![Three forms of one state space model. Left: the continuous-time state responds to an input pulse. Middle: the discretized system is a linear recurrence, one step per token. Right: unrolled, the same system is a causal convolution whose kernel is the response to a single pulse.](../img/mdl-modernrnn-ssm-views.svg)

@@ -1,16 +1,23 @@
 # Schedules
 :label:`sec_scheduler`
 
-With a constant learning rate, stochastic gradient descent never settles.
-On the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ with unit gradient
-noise, the iterates at $\eta = 0.1$ keep wandering around the minimum with
-a standard deviation of 0.5 along the flat direction, however long they
-run (:numref:`sec_sgd`). Halving the rate halves the squared radius of
-that cloud, but it also halves the speed at which the iterates approach
-it. The start of training has the opposite problem. The convolutional
-network of this section trains at a learning rate of 7.5 if the rate is
-raised to that value gradually, while a run that starts at 7.5 stays
-close to chance accuracy.
+The modern recipe of :numref:`sec_training_recipes` did not keep the
+learning rate fixed. It raised the rate linearly over the first few epochs
+and then let it fall along a cosine curve. Almost every large model today
+is trained with a warmup followed by a decay. This section asks why the
+learning rate should change during a run, and what shape the change should
+have.
+
+The two ends of a run need different things. At the end, a constant learning
+rate keeps stochastic gradient descent from settling. On the valley
+$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ with unit gradient noise, the iterates
+at $\eta = 0.1$ keep wandering around the minimum with a standard deviation
+of 0.5 along the flat direction, however long they run (:numref:`sec_sgd`).
+Halving the rate halves the squared radius of that cloud, but it also halves
+the speed at which the iterates approach it. The start of training has the
+opposite problem. The convolutional network of this section trains at a
+learning rate of 7.5 if the rate is raised to that value gradually, while a
+run that starts at 7.5 stays close to chance accuracy.
 
 A learning-rate *schedule* addresses both problems. It is a function that
 gives the learning rate $\eta_t$ at each point $t$ of training, and it can
@@ -49,6 +56,10 @@ import optax
 
 ## Decay on the Valley
 :label:`subsec_scheduler-valley`
+
+At the end of a run a schedule has two jobs: carry the iterate to the
+minimum and shrink the noise around it. On the valley both effects can be
+computed in closed form, so we start there.
 
 ### Progress and Noise
 

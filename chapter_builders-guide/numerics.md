@@ -6,14 +6,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerical Formats
 :label:`sec_numerics`
 
-A model with 8 billion parameters needs 32 GB to store its weights in the
-32-bit floating-point format we have used so far, and 16 GB in a 16-bit
-format. Recent GPUs also multiply 16-bit matrices at a multiple of their
-32-bit rate. Halving the bits halves memory and memory traffic, but it makes
-the numbers coarser. In the 16-bit format fp16, $300^2$ is already infinite,
-and in the 16-bit format bf16, adding 0.001 to a weight of 1 leaves the
-weight at 1. A training run that ignores this either fills with `inf` and
-NaN or stops learning, without an error message in either case.
+Every number in our models so far has been stored in the 32-bit
+floating-point format, and we have not asked whether a model needs that many
+bits. Fewer bits per number would save memory and time. A model with 8
+billion parameters needs 32 GB to store its weights in 32 bits and 16 GB in
+a 16-bit format, and recent GPUs multiply 16-bit matrices at a multiple of
+their 32-bit rate. Can we train in 16 bits and obtain the same model?
+
+Halving the bits halves memory and memory traffic, but it makes the numbers
+coarser, and a training run can fail in two ways without an error message.
+In the 16-bit format fp16, $300^2$ is already infinite, so a run can fill
+with `inf` and NaN. In the 16-bit format bf16, adding 0.001 to a weight of 1
+leaves the weight at 1, so a run can stop learning.
 
 This section shows how to compute in 16 bits without these failures. Every
 tensor has a *dtype*, the number format of its entries, and each format
@@ -1160,8 +1164,9 @@ is a debugging mode, not a default.
 
 ### Log-Sum-Exp
 
-The direct evaluation of $\log \sum_i \exp(x_i)$ overflows long before its
-result does:
+The cross-entropy of a softmax output contains the logarithm of a sum of
+exponentials of the logits. The direct evaluation of
+$\log \sum_i \exp(x_i)$ overflows long before its result does:
 
 ```{.python .input #numerics-when-numerics-bite-2}
 %%tab mxnet

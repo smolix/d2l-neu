@@ -6,14 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # GPUs, Devices, and Memory
 :label:`sec_use_gpu`
 
-A current desktop GPU multiplies two $4096 \times 4096$ matrices in a few
-milliseconds and has 24 GB of memory. A model with 8 billion parameters
-needs 16 GB for its weights in bf16, which fits. Training it with Adam in
-fp32 needs 128 GB: 16 bytes per parameter for the weights, their
-gradients, and the two moment estimates of Adam, before a single activation
-is stored. That does not fit. Whether a model fits on a device, and whether
-the device computes or waits, is decided by where each array lives and how
-many bytes each array takes.
+Since :numref:`sec_oo-design` our `Trainer` has accepted an argument
+`num_gpus` and ignored it. The models of the earlier chapters were small
+enough that it hardly mattered where they ran. A GPU computes much faster
+than a CPU: a current desktop GPU multiplies two $4096 \times 4096$
+matrices in a few milliseconds. But it has its own memory, 24 GB on such a
+card, and every array it computes with must be there.
+
+Will a given model fit? A model with 8 billion parameters needs 16 GB for
+its weights in bf16, which fits. Training it with Adam in fp32 needs
+128 GB: 16 bytes per parameter for the weights, their gradients, and the two
+moment estimates of Adam, before a single activation is stored. That does
+not fit. Whether a model fits on a device, and whether the device computes
+or waits, is decided by where each array lives and how many bytes each
+array takes.
 
 This section answers three questions. Where does an array live, and how does
 it move between the CPU and a GPU? When does the CPU wait for the GPU, and
@@ -535,6 +541,10 @@ computation, once, and to keep the operations inside a training loop on one
 device.
 
 ### Models on a Device
+
+A model computes with its parameters and its inputs together, so its
+parameters must live on the device of its data. Every framework places a
+whole model at once, without our listing its parameters.
 
 :begin_tab:`mxnet`
 A Gluon model allocates its parameters at the first forward pass, when the

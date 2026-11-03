@@ -1,13 +1,16 @@
 # Batch Size
 :label:`sec_batch_size`
 
-Doubling the minibatch from 64 to 128 sequences doubles the work in every
-step. If the run then needs half as many steps to reach the same loss,
-nothing is lost: the total work is unchanged, and on twice as many
-accelerators the run finishes in half the time. If it needs as many steps as
-before, half of the work was spent for nothing. Which of the two happens
-decides how fast a model can be trained, because a run can be shared among
-only as many accelerators as its batch can feed.
+Most runs in this chapter so far used a batch size chosen once and never
+changed, such as the 64 sequences per step of `TinyLM` (:numref:`sec_adam`).
+This section asks when a larger batch trains faster. Doubling the batch
+from 64 to 128 sequences doubles the work in every step. If the run then
+needs half as many steps to reach the same loss, nothing is lost:
+the total work is unchanged, and on twice as many accelerators the run
+finishes in half the time. If it needs as many steps as before, half of
+the work was spent for nothing. Which of the two happens decides how fast
+a model can be trained, because a run can be shared among only as many
+accelerators as its batch can feed.
 
 Two facts from earlier sections frame the question. Averaging $b$ examples
 divides the variance of a gradient estimate by $b$ (:numref:`sec_sgd`), and
@@ -16,8 +19,8 @@ it is fully occupied. A larger batch therefore gives a better gradient at
 little extra cost per step. It saves steps, however, only as long as the
 noise in the gradient was what slowed the optimizer down.
 
-This section turns that observation into numbers. We compare the size of
-the noise in a gradient with the size of the gradient itself, measure the
+To turn that observation into numbers, we compare the size of the
+noise in a gradient with the size of the gradient itself, measure the
 ratio on two small models, and use it to predict how the number of steps to
 a target loss falls as the batch grows. We then ask how the learning rate
 must change when the batch does, and why the best batch size grows while a
@@ -51,10 +54,12 @@ import random
 
 ### Signal and Noise
 
-Write $\nabla f$ for the gradient of the training loss over the whole
-dataset at the current parameters, and $\nabla f_i$ for the gradient of the
-loss on example $i$. The per-example gradients scatter around their mean
-$\nabla f$. Their expected squared distance from it,
+Whether a larger batch saves steps depends on how large the noise in a
+minibatch gradient is compared with the gradient itself. We first need a
+number for each. Write $\nabla f$ for the gradient of the training loss over
+the whole dataset at the current parameters, and $\nabla f_i$ for the
+gradient of the loss on example $i$. The per-example gradients scatter
+around their mean $\nabla f$. Their expected squared distance from it,
 
 $$\operatorname{tr} \boldsymbol{\Sigma} = \mathbb{E}_i \|\nabla f_i - \nabla f\|^2,$$
 

@@ -6,20 +6,21 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutional Network Design Spaces
 :label:`sec_cnn-design`
 
-Most networks in this chapter were designed by hand, and each design fixes a
-few numbers for every stage: how many blocks it repeats, how many channels
-they produce, and what the block looks like. ResNet-18 repeats its blocks
-$(2, 2, 2, 2)$ times across four stages, ResNet-50 $(3, 4, 6, 3)$ times, and
-ConvNeXt-T $(3, 3, 9, 3)$ times. ResNet's depths come with no stated rule,
-and ConvNeXt-T's were copied from Swin and checked once. The choices interact: at a fixed
-budget of computation, a deeper stage must be narrower, and a block with
-grouped convolutions can afford more channels than one without. Trying every
-combination is out of the question. With only two values for each of the
-16 numbers that describe the networks of this section, there are
-$2^{16} = 65{,}536$ variants, each needing its own training run. And a
-single good network, however it was found, does not say which of its
-choices mattered, so nothing carries over to a new compute budget or a new
-block.
+Most networks in this chapter were designed by hand. Each design fixes a few
+numbers for every stage: how many blocks it repeats, how many channels they
+produce, and what the block looks like. Where do these numbers come from,
+and are there rules for choosing them? The networks we built give little
+guidance. ResNet-18 repeats its blocks $(2, 2, 2, 2)$ times across four
+stages, ResNet-50 $(3, 4, 6, 3)$ times, and ConvNeXt-T $(3, 3, 9, 3)$ times.
+ResNet's depths come with no stated rule, and ConvNeXt-T's were copied from
+Swin and checked once. The choices interact: at a fixed budget of
+computation, a deeper stage must be narrower, and a block with grouped
+convolutions can afford more channels than one without. Trying every
+combination is out of the question. With only two values for each of the 16
+numbers that describe the networks of this section, there are
+$2^{16} = 65{,}536$ variants, each needing its own training run. And a single
+good network, however it was found, does not say which of its choices
+mattered, so nothing carries over to a new compute budget or a new block.
 
 Neural architecture search (NAS), which found EfficientNet's base network
 (:numref:`sec_efficient_cnns`), automates the hand design. It selects from
@@ -129,7 +130,9 @@ the resolution, so the body ends at $224 / 2^5 = 7$ pixels on a side.
 
 ### Implementing AnyNet
 
-The stem is a three-layer sequential block.
+To sample networks from the space and train them, we need code that builds
+any member of AnyNet from its stage parameters. The stem is a three-layer
+sequential block.
 
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab mxnet

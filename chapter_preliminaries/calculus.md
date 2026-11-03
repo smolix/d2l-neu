@@ -431,6 +431,10 @@ training needs such an estimate at every step.
 
 ### The Gradient
 
+Each partial derivative tells us how the loss responds to one parameter
+while the others stay fixed. Training changes all the parameters at once, so
+it needs all of these numbers together.
+
 Collecting the partial derivatives of $f$ with respect to all $n$ variables
 $\mathbf{x} = (x_1, \ldots, x_n)$ gives a vector, the *gradient* of $f$:
 

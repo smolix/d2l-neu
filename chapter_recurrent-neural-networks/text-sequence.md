@@ -416,9 +416,11 @@ toy_tok.decode(toy_tok.encode('hug pug hugs'))
 
 ### Training on The Time Machine
 
-Token lists, and later in the chapter generated text, run wider than a
-printed page. One utility folds them, and we use it throughout the rest of
-the book whenever output would otherwise run off the margin.
+The toy corpus shows how the merges work. To see what BPE learns from real
+prose, we train it on the novella. Token lists, and later in the chapter
+generated text, run wider than a printed page. One utility folds them, and
+we use it throughout the rest of the book whenever output would otherwise
+run off the margin.
 
 ```{.python .input #text-sequence-training-on-the-time-machine-3}
 #@save

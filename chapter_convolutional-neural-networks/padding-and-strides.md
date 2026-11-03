@@ -6,25 +6,24 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Padding, Stride, and Dilation
 :label:`sec_padding`
 
-A cross-correlation can only be evaluated where the kernel fits inside the
-input. An $n_\textrm{h}\times n_\textrm{w}$ input and a
-$k_\textrm{h}\times k_\textrm{w}$ kernel therefore give an output of shape
-$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$, as the
-$3\times 3$ input and $2\times 2$ kernel of :numref:`fig_correlation` give a
-$2\times 2$ output. One layer loses little, but the losses add up: ten layers
-with $5\times 5$ kernels shrink a $240\times 240$ image to $200\times 200$,
-which removes 30% of its area, all of it at the border. The border was
-already underused before it was cut away. A $5\times 5$ kernel covers each
-interior pixel in 25 windows but a corner pixel in only one, so an object near
-the corner of an image barely reaches the next layer.
+The convolutional layer of :numref:`sec_conv_layer` evaluates its kernel only
+where the kernel fits inside the input, so its output is smaller than its
+input by one less than the kernel size along each axis. For a single layer
+this hardly matters. In a deep network the size of every output becomes a
+design decision, and two needs pull in opposite directions. How do we keep a
+stack of layers from cutting away the border of the image? And how do we
+shrink the image on purpose, so that a unit near the top can see all of it
+without a network of hundreds of layers?
 
-At other times we want a layer to shrink its input on purpose. A network that
-keeps a $224\times 224$ image at full resolution computes 50,176 outputs per
-channel in every layer. Since each $3\times 3$ layer widens the region a unit
-sees by only two pixels, such a network would need more than 100 layers
-before a single unit could see the whole image, as a classifier must. We may
-also want one kernel to see a wide region without the weights and the
-computation of a large kernel.
+A stack of ten layers with $5\times 5$ kernels shows the first problem. Each
+layer trims two pixels from every side of its input, so a $240\times 240$
+image comes out as $200\times 200$. The stack has removed 30% of the image's
+area, all of it at the border. The second problem is the reverse. A network
+that never shrinks its input computes a full-resolution output in every
+layer, and each small kernel lets a unit see only a few pixels farther than
+the layer below, so a unit needs very many layers to see the whole image.
+A third need is for one kernel to see a wide region without the weights and
+the computation of a large kernel.
 
 Three settings of a convolutional layer address these needs. *Padding* adds a
 border of extra pixels around the input, so that the kernel can be placed at
@@ -68,11 +67,14 @@ from jax import numpy as jnp
 
 ### Boundary Pixels
 
+Pixels near the border are underused even before a layer cuts them away.
 :numref:`img_conv_reuse` counts the windows that contain each pixel. With a
 $k\times k$ kernel, a pixel at least $k-1$ pixels away from every border lies
 in $k^2$ windows, a pixel on an edge in at most $k$, and a corner pixel in a
-single one. Each layer thus draws most of its evidence from the center of its
-input, and the next layer receives an input from which the border has been
+single one. A $5\times 5$ kernel covers each interior pixel in 25 windows but
+a corner pixel in only one, so an object near the corner of an image barely
+reaches the next layer. Each layer thus draws most of its evidence from the
+center of its input, and the next layer receives an input from which the border has been
 cut away.
 
 ![Number of windows that contain each pixel when a $1\times 1$, $2\times 2$, or $3\times 3$ kernel slides over a large input without padding. Interior pixels are covered $k^2$ times, corner pixels once.](../img/conv-reuse.svg)
@@ -282,8 +284,13 @@ it without building a larger tensor.
 
 ### Strided Convolution
 
-So far the window has moved one pixel at a time, to the right and then down.
-The number of rows and columns it moves per step is the *stride*. With stride
+A network that keeps a $224\times 224$ image at full resolution computes
+50,176 outputs per channel in every layer. Since each $3\times 3$ layer widens
+the region a unit sees by only two pixels, such a network would need more than
+100 layers before a single unit could see the whole image, as a classifier
+must. Moving the window in larger steps reduces both the number of outputs
+and the number of layers. So far the window has moved one pixel at a time, to
+the right and then down. The number of rows and columns it moves per step is the *stride*. With stride
 $s_\textrm{h}$ along the height and $s_\textrm{w}$ along the width, the layer
 evaluates only every $s_\textrm{h}$-th row and every $s_\textrm{w}$-th column
 of window positions, so it computes about $s_\textrm{h} s_\textrm{w}$ times
@@ -444,8 +451,11 @@ a few dozen layers.
 
 ### Dilated Convolution
 
-Padding and stride change where the kernel is applied. Dilation changes the
-kernel's footprint itself: a *dilated convolution* :cite:`yu2016dilated`
+Stride lets a unit see far by giving up resolution. Some tasks need both: a
+wide view of the image and an output at every pixel. A large kernel would
+give the wide view, but its weights and its computation grow with the square
+of its size. Padding and stride change where the kernel is applied. Dilation
+changes the kernel's footprint itself: a *dilated convolution* :cite:`yu2016dilated`
 places the kernel's weights $d$ pixels apart instead of at adjacent pixels,
 where $d$ is the *dilation*. A $k\times k$ kernel with dilation $d$ still
 has $k^2$ weights, but along each axis they now span

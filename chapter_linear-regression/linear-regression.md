@@ -227,7 +227,10 @@ other model in this book.
 ### The Normal Equations
 :label:`subsec_linear-regression-analytic-solution`
 
-We first absorb the bias into the weights. Appending a feature that equals
+The squared loss is a quadratic function of the parameters, so its gradient
+is linear in them, and the points where the gradient vanishes solve a system
+of linear equations. To write the gradient compactly, we first absorb the
+bias into the weights. Appending a feature that equals
 $1$ for every example, a column of ones in $\mathbf{X}$, and appending $b$
 to $\mathbf{w}$ turns $\mathbf{w}^\top\mathbf{x} + b$ into a dot product of
 the extended vectors. Minimizing $L$ is then the same as minimizing
@@ -614,8 +617,11 @@ same standard deviation $\sigma$ for every $\mathbf{x}$
 
 ### Maximum Likelihood
 
-Given parameters $\mathbf{w}$ and $b$, the density of a label $y$ for
-features $\mathbf{x}$ is the normal density centered on the prediction:
+The noise model lets us judge parameters without choosing a loss in
+advance, because it says how probable the observed labels are under each
+choice of the parameters. Given parameters $\mathbf{w}$ and $b$, the
+density of a label $y$ for features $\mathbf{x}$ is the normal density
+centered on the prediction:
 
 $$p(y \mid \mathbf{x}) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{(y - \mathbf{w}^\top \mathbf{x} - b)^2}{2 \sigma^2}\right).$$
 

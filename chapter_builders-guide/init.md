@@ -6,19 +6,24 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Initialization
 :label:`sec_init_param`
 
-:numref:`sec_numerical_stability` showed how to initialize one layer. Draw
-each weight with standard deviation $g/\sqrt{n_\textrm{in}}$, where
+Every network we have trained began from random weights, and we have mostly
+let the framework draw them. :numref:`sec_numerical_stability` showed that
+the draw matters. If each layer scales the signal up or down a little, a
+deep stack scales it up or down a lot, and the network does not train.
+
+That section also gave a rule that keeps one layer from doing so. Draw each
+weight with standard deviation $g/\sqrt{n_\textrm{in}}$, where
 $n_\textrm{in}$ is the number of inputs of the layer and the *gain* $g$
 depends on what follows it: $g = \sqrt{2}$ before a ReLU, which is He
 initialization, and $g = 1$ when no nonlinearity follows. Each layer then
-passes
-on the mean square of its input unchanged, so a stack of ten ReLU layers
-keeps its activations roughly at the scale of its input. Xavier
+passes on the mean square of its input unchanged, so a stack of ten ReLU
+layers keeps its activations roughly at the scale of its input. Xavier
 initialization uses the average of the numbers of inputs and outputs
 instead, so that the gradients keep their scale in the backward pass as
 well.
 
-In a residual network the activations grow even though every layer follows
+A rule for each layer does not settle how to initialize a whole network. In
+a residual network the activations grow even though every layer follows
 this rule. Each residual block adds the output of a small network, its
 *branch*, to its input. If the branch passes on the mean square of its
 input, and its output is uncorrelated with that input, the sum has twice
@@ -187,6 +192,10 @@ ourselves and wrap it in `nnx.Param`.
 :end_tab:
 
 ## Applying Initializers
+
+The defaults apply one fixed rule to each type of layer. To use He
+initialization, or the residual scaling later in this section, we have to
+apply a rule of our own to a whole model or to selected parameters.
 
 :begin_tab:`mxnet`
 To impose a scheme we hand an `Initializer` object to the model:
@@ -776,7 +785,9 @@ rescale after truncating.
 
 ### A Custom Distribution
 
-Suppose we want weights distributed as
+When no library routine draws the distribution we want, we write the
+initializer ourselves. As an example with no library counterpart, suppose we
+want weights distributed as
 
 $$
 \begin{aligned}
@@ -864,6 +875,10 @@ net.layers[0].kernel[:, :2]
 ```
 
 ### Direct Edits
+
+An initializer sets every entry of a parameter by one rule. Sometimes we
+want to change particular values by hand instead, after initialization or
+after training.
 
 :begin_tab:`mxnet`
 No guard is needed above, because gradients are recorded only inside an

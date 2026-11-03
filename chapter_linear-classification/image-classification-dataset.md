@@ -6,10 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Image Classification Data
 :label:`sec_fashion_mnist`
 
-To develop and compare classifiers we need labeled images, and the choice of
-dataset decides what our experiments can show. A good dataset for this book
-is hard enough that a better model scores visibly higher, and small enough
-that a model trains in minutes inside a notebook.
+Softmax regression, as :numref:`sec_softmax` described it, is ready to be
+trained, but it needs labeled examples to learn from. Our examples will be
+images, and the choice of dataset decides what our experiments can show.
+Which dataset should we use? A good dataset for this book is hard enough that
+a better model scores visibly higher, and small enough that a model trains in
+minutes inside a notebook.
+
+The two best-known image datasets each meet only one of these needs.
 MNIST :cite:`LeCun.Bottou.Bengio.ea.1998`, 70,000 grayscale images of
 handwritten digits with $28 \times 28$ pixels in 10 classes, is small but too
 easy. Convolutional networks classify more than 99% of its test digits

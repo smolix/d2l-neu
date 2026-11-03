@@ -8,8 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`chap_classification_generalization`
 
 The softmax regression of :numref:`sec_softmax_concise` labels about 83% of
-the Fashion-MNIST test images correctly. We would like to read
-that number as the accuracy the model will have on clothing images it has
+the Fashion-MNIST test images correctly. We would like to read that number as the accuracy the model will have on clothing images it has
 never seen, and two things stand in the way. First, the 10,000 test images
 are a sample: another 10,000 images from the same source would give a
 somewhat different accuracy. Second, a high score on data the model has seen
@@ -24,8 +23,8 @@ This raises three questions:
    of our classifiers on the underlying population?
 1. What happens if we keep evaluating models on the same test set
    repeatedly?
-1. Why should we expect that fitting our linear models to the training set
-   should fare any better than our naive memorization scheme?
+1. Why should fitting our linear models to the training set fare any better
+   than memorizing it?
 
 :numref:`sec_generalization_basics` estimated the error of a model on new
 data with held-out examples and kept the test set out of model selection.

@@ -1,20 +1,28 @@
 # Encoders, Decoders, and Cross-Attention
 :label:`sec_transformer`
 
-The GPT of :numref:`sec_gpt` stacks transformer blocks under a causal mask.
-The mask makes next-token prediction possible, but it restricts each
-representation to the preceding context. In this section the mask, and the
-sources of the queries, keys, and values, become design choices.
-Removing the mask gives an *encoder*, which reads in both directions and produces
-contextual representations. Joining a masked stack to an unmasked one
-through the cross-attention of
-:numref:`sec_multihead-attention` gives the *encoder--decoder* that
-transformers started as :cite:`Vaswani.Shazeer.Parmar.ea.2017`. We build
-both from the same `d2l.TransformerBlock` and check whether a learned
-cross-attention map reproduces a known alignment. We then turn to learned
-queries that do not come from an input sequence. Such queries connect a
-computation of fixed size to data of variable size, as in Perceiver-style
-and vision--language models.
+The GPT of :numref:`sec_gpt` reads text from left to right: its causal mask
+lets each position see only what came before it. This is what next-token
+prediction needs, but many tasks are not next-token prediction. To fill the
+gap in "the ___ barked at the mail carrier", a reader uses the words after
+the gap as much as those before it. To translate a sentence, a translator
+reads all of it before writing the first word of the translation. What does
+a transformer gain when it may see its whole input, and how does it produce
+one sequence from another?
+
+Both questions concern two choices that the GPT fixed: the mask, and the
+sources of the queries, keys, and values. Removing the mask gives an
+*encoder*, which reads in both directions and produces contextual
+representations. Joining a masked stack to an unmasked one through the
+cross-attention of :numref:`sec_multihead-attention` gives the
+*encoder--decoder*, the form in which transformers began, as a model for
+machine translation :cite:`Vaswani.Shazeer.Parmar.ea.2017`. We build both
+from the same `d2l.TransformerBlock`, measure how much the text after a
+token lowers the loss of predicting it, and check whether a learned
+cross-attention map reproduces a known alignment. We then turn to learned queries that do not
+come from an input sequence. Such queries connect a computation of fixed
+size to data of variable size, as in Perceiver-style and vision--language
+models.
 
 ```{.python .input #encoders-decoders-encoders-decoders-and-cross-attention}
 %%tab pytorch
@@ -735,12 +743,15 @@ not-yet-written positions from every query at or before $t$.
 ### Reading the Alignment
 :label:`subsec_reading-alignment`
 
-We run a batch through the model, read the cross-attention weights of the
-decoder block, of shape (batch, heads, target positions, source positions),
-and compare each target position's attention with the alignment that the
-task dictates. Besides the head average we report how much weight each
-head puts on the true source position, and we plot the average next to
-the head that puts the most weight there.
+A low loss shows that the model reverses strings, but not how. Because the
+task dictates which source position each target position needs, we can
+check whether cross-attention finds it. We run a batch through the model,
+read the cross-attention weights of the decoder block, of shape (batch,
+heads, target positions, source positions), and compare each target
+position's attention with that alignment. Besides the
+head average we report how much weight each head puts on the true source
+position, and we plot the average next to the head that puts the most
+weight there.
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
 %%tab pytorch

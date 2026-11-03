@@ -1,45 +1,45 @@
 # Optimization Algorithms
 :label:`chap_optimization`
 
-Every network in this book was trained by an optimizer that took thousands
-of steps downhill. The optimizer decides how quickly the loss falls, and
-whether it falls at all. Take the valley $f(\mathbf{x}) = 0.1
-x_1^2 + 2 x_2^2$. Along $x_2$ the curvature is 4, and a gradient step
-larger than $2/4$ overshoots that wall and diverges. Along $x_1$ the
-curvature is $0.2$, and a step of that size removes less than a tenth of
-the remaining distance. Gradient descent is held back by the steepest
-direction and paced by the flattest. The loss of a deep network has the
-same shape, with curvatures that differ by factors of hundreds or more, and
-its gradient is known only through noisy minibatch estimates.
+Every network in this book was trained with optimizer settings taken from
+a recipe, such as SGD with momentum 0.9 or AdamW with warmup and cosine
+decay (:numref:`sec_training_recipes`). When a loss shoots up to `nan`, we
+halve the learning rate and try again. Why does a larger step ruin a run,
+and why does a smaller one cost so much time? What does each part of the
+recipe do, and what must change when the model grows?
 
-The earlier chapters treated the optimizer as a setting copied from a
-recipe: SGD with momentum or AdamW, a learning rate, warmup and cosine
-decay. A recipe stops helping when a run diverges, stalls, or has to grow to
-a larger model or batch. Each of its choices answers a question about
-curvature, noise, or the geometry in which a step is measured. This chapter
-asks those questions one at a time, on problems small enough that we can
-compute the answers.
+Gradient descent is older than computers. Augustin-Louis Cauchy proposed it
+in 1847 to solve the equations that determine the orbit of a celestial
+body. In 1951 Herbert Robbins and Sutton Monro asked how to find the root of
+a function that can only be measured with noise, as a minibatch gradient
+is, and answered with steps whose size shrinks over time. Two problems
+limit such steps. The curvature of the loss differs between
+directions, so a step that is safe along the steepest one barely moves
+along the flattest. And the gradient is only an estimate, so every step is
+slightly wrong. Momentum, per-coordinate learning rates, schedules and batch
+sizes each answer one of these problems. Newer methods also ask how to
+measure the size of a step. We take the questions one at a time, on
+problems we can solve exactly.
 
 :numref:`sec_optimization-intro` asks what makes a loss hard to minimize.
 :numref:`sec_gd` asks how large a gradient step may be, and how rescaling
 the gradient removes the limit. :numref:`sec_sgd` asks what changes when the
-gradient is estimated from a few examples, and how many examples each
-estimate should use. :numref:`sec_momentum` asks how averaging gradients
-over steps speeds up descent along a narrow valley. :numref:`sec_adam` asks
-what a separate learning rate for each coordinate achieves, and why weight
-decay must then bypass it. :numref:`sec_scheduler` asks how the learning
-rate should change over a run. :numref:`sec_muon` asks what step a weight matrix should
-take when the size of the step is measured as a matrix.
-:numref:`sec_batch_size` asks how large a batch can grow before more
-examples per step stop saving steps. :numref:`sec_scaling` asks how to set
-learning rates so that they carry over from a narrow model to a wide one.
+gradient is estimated from a few examples. :numref:`sec_momentum` asks how
+averaging gradients over steps speeds up descent along a narrow valley.
+:numref:`sec_adam` asks what a separate learning rate for each coordinate
+achieves, and why weight decay must then bypass it. :numref:`sec_scheduler`
+asks how the learning rate should change over a run. :numref:`sec_muon` asks
+what step a weight matrix should take when the size of a step is measured as
+a matrix. :numref:`sec_batch_size` asks how large a batch can grow before
+more examples per step stop saving steps. :numref:`sec_scaling` asks how
+learning rates carry over from a narrow model to a wide one.
 :numref:`sec_practice` asks how to configure a long run, guard it against
 failure, and compare optimizers fairly.
 
 The mathematical appendix (:numref:`chap_mdl-optimization`) proves the rates
 that this chapter measures, and :numref:`chap_performance` spreads the same
-updates across many devices. Methods that the chapter does not teach are
-collected in :numref:`sec_optimization-further-reading`.
+updates across many devices. Methods the chapter does not teach are listed
+in :numref:`sec_optimization-further-reading`.
 
 ```toc
 :maxdepth: 2

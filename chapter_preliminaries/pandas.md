@@ -6,17 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Preprocessing
 :label:`sec_pandas`
 
-A model may receive synthetic data as ready-made tensors, but real tabular
-records arrive as text files, often with gaps, and with words where a model
-needs numbers.
-Consider ten home sales, each recorded with the number of rooms, the type of
-roof, the floor area, and the sale price. In our table, three of the ten
-homes lack the number of rooms and four lack the roof type. The roof type is
-a word, such as `Slate` or `Tile`, not a number. And the floor area averages
-1,654 square feet, about 500 times the average number of rooms, 3.3. A model
-computes with tensors of numbers, so before it sees this table we have to
-decide what to put in the gaps, how to turn words into numbers, and whether
-to bring the columns to a common scale.
+The tensors of the previous section were made by our own code, filled with
+zeros, ones, or random numbers in the shape we chose. Data from the world
+rarely arrive that way. A table of records is usually stored as a text file,
+with gaps where a value was not recorded and with words where a model needs
+numbers. How do we turn such a table into tensors that a model can use?
+
+Our example is a small table of ten home sales, each recorded with the number
+of rooms, the type of roof, the floor area, and the sale price. Three of the
+ten homes lack the number of rooms, and four lack the roof type. The roof
+type is a word, such as `Slate` or `Tile`, not a number. And the floor area,
+measured in square feet, is hundreds of times larger than the number of
+rooms. Before a model sees this table we have to decide what to put in the
+gaps, how to turn words into numbers, and whether to bring the columns to a
+common scale.
 
 These decisions change what a model can learn. Dropping every incomplete row
 would leave 4 of the 10 homes. Numbering slate roofs, tile roofs, and
@@ -139,7 +142,9 @@ data.describe()
 
 The columns have very different scales. The number of rooms ranges from 2 to
 5, the area from 850 to 2,600 square feet, and the price from 127,500 to
-375,000 dollars. We return to this difference when we rescale the columns.
+375,000 dollars. The floor area averages 1,654 square feet, about 500 times
+the average number of rooms, 3.3. We return to this difference when we
+rescale the columns.
 
 ### Inputs and Targets
 

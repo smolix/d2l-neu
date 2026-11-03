@@ -1,18 +1,19 @@
 # Hybrid Architectures
 :label:`sec_hybrids`
 
-A user pastes a table of 64 product codes and prices into a prompt and asks
-for the prices of 20 of them. A programmer asks for a 2,000-token function to
-be copied with one line changed. A transformer answers such requests by
-looking back: every earlier token is still in its cache, and attention finds
-the ones that match. A model with a fixed-size state has only what it chose
-to store when the tokens went by, before it knew which of them would be
-asked for. Every model in this chapter improved how such a state is written,
+Every model in this chapter improved how a fixed-size state is written,
 from gates to selective dynamics to the delta rule, but none of them can
-make it hold more than its size allows. Retrieval from the context is a
-large part of how language models are used, in few-shot prompts, in answers
-grounded in retrieved documents, and in editing code, so this limit
-matters.
+make the state hold more than its size allows. Does that size limit what a
+model can recall from its context? Consider a user who pastes a table of 64
+product codes and prices into a prompt and asks for the prices of 20 of
+them. A transformer answers such a request by looking back: every earlier
+token is still in its cache, and attention finds the ones that match. A
+model with a fixed-size state has only what it chose to store when the
+tokens went by, before it knew which of them would be asked for. Retrieval
+from the context is a large part of how language models are used, in
+few-shot prompts, in answers grounded in retrieved documents, and in
+editing code, where a programmer may ask for a 2,000-token function to be
+copied with one line changed. This limit therefore matters in practice.
 
 This section measures the limit and shows the remedy that most recent large
 recurrent models adopt. We first count how much a fixed state can hold. We
@@ -49,8 +50,9 @@ import random
 
 ### Counting Bits
 
-A state of $N$ numbers stored with $b$ bits each can be in at most
-$2^{Nb}$ different configurations. Suppose a model reads $k$ tokens, each
+The simplest limit comes from counting: a state cannot tell apart more
+inputs than it has configurations. A state of $N$ numbers stored with $b$
+bits each can be in at most $2^{Nb}$ different configurations. Suppose a model reads $k$ tokens, each
 drawn from a vocabulary of $V$ tokens, and must later reproduce all of them.
 The $V^k$ possible inputs must then lead to $V^k$ different states, since two
 inputs that lead to the same state receive the same answer. This requires
@@ -160,8 +162,10 @@ print('tokens:', X[0, :8], '...', X[0, -4:], ' answers:', Y[0])
 
 ### Four Models
 
-All four models are instances of `d2l.SeqLM` with two blocks of width 32;
-only the mixers differ. Two use the recurrent layers of the previous
+To see whether a single attention layer gives a recurrent model the recall
+of a transformer, we compare a hybrid with models built from one kind of
+layer. All four models are instances of `d2l.SeqLM` with two blocks of
+width 32; only the mixers differ. Two use the recurrent layers of the previous
 sections, gated linear attention (:numref:`sec_matrix-state`) and Gated
 DeltaNet (:numref:`sec_deltanet`), with eight heads, so that keys and values
 have 4 dimensions. The third uses causal softmax attention in both blocks,

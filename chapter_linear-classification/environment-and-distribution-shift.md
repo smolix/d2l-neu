@@ -6,38 +6,41 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Environment and Distribution Shift
 :label:`sec_environment-and-distribution-shift`
 
-Suppose that a bank trains a model to predict which loan applicants will
-repay, and the model finds that applicants who wear Oxfords tend to repay
-while applicants who wear sneakers tend to default. The model scores well on
-held-out applications, so the bank approves everyone in Oxfords and declines
-everyone in sneakers. Applicants soon notice, everyone starts wearing
-Oxfords, and the fraction who repay stays what it was. The model was
-accurate on the data it was tested on and is useless on the data it now
-sees, because using it changed the data. This is an instance of *Goodhart's
-law*: when a measure becomes a target, it ceases to be a good measure.
+The test error of :numref:`chap_classification_generalization` tells us how
+well a classifier will do on new data, provided the new data come from the
+distribution of the test set. After deployment this condition often fails,
+even when the model has no influence on the data: a hospital buys a new
+scanner, an epidemic changes which diseases patients have, and the meaning
+of words drifts. The test set then gives no warning. Can we still predict,
+or even improve, how the model does on the data it now sees?
 
-The test error of :numref:`chap_classification_generalization` predicts
-performance on new data only if the new data come from the distribution of
-the test set. In deployment this often fails, even without any feedback from
-the model: a hospital buys a new scanner, an epidemic changes which diseases
-patients have, and the meaning of words drifts. The test set then gives no
-warning.
+The model can also change the data itself. Suppose that a bank trains a
+model to predict which loan applicants will repay, and the model finds that
+applicants who wear Oxfords tend to repay while applicants who wear sneakers
+tend to default. The model scores well on held-out applications, so the bank
+approves everyone in Oxfords and declines everyone in sneakers. Applicants
+soon notice, everyone starts wearing Oxfords, and the fraction who repay
+stays what it was. The model was accurate on the data it was tested on and
+is useless on the data it now sees, because using it changed the data. This
+is an instance of *Goodhart's law*: when a measure becomes a target, it
+ceases to be a good measure.
 
-This section asks what we can still do when the distribution changes. We
-first show that nothing carries over unless we assume something about how
-the two distributions are related, and we sort the common assumptions by
-which part of the joint distribution of inputs and labels they keep fixed.
-Under two of them, unlabeled examples from the new distribution suffice to
-correct training by reweighting the training examples; the third needs new
-labels. We end with models whose decisions change their own data, where
-statistical correction stops and questions of policy begin.
+We first show that nothing carries over from the old distribution to the new
+one unless we assume something about how the two are related, and we sort the
+common assumptions by which part of the joint distribution of inputs and
+labels they keep fixed. Under two of them, unlabeled examples from the new
+distribution suffice to correct training by reweighting the training examples;
+the third needs new labels. We end with models whose decisions change their
+own data, where statistical correction stops and questions of policy begin.
 
 ## Types of Distribution Shift
 
-We train on labeled examples drawn from a *source distribution* with density
-$p_S(\mathbf{x}, y)$ and deploy the model on examples drawn from a *target
-distribution* with density $p_T(\mathbf{x}, y)$, whose inputs we observe
-but, at least at first, not their labels.
+To say what can be corrected when the data change, we first need names for
+the two distributions and for what changes between them. We train on labeled
+examples drawn from a *source distribution* with density $p_S(\mathbf{x}, y)$
+and deploy the model on examples drawn from a *target distribution* with
+density $p_T(\mathbf{x}, y)$, whose inputs we observe but, at least at first,
+not their labels.
 
 Without an assumption that links $p_S$ and $p_T$, the source data tell us
 nothing about the target. Consider telling cats from dogs, and suppose that

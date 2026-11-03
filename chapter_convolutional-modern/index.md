@@ -1,40 +1,47 @@
 # Modern Convnets
 :label:`chap_modern_cnn`
 
-The LeNet of :numref:`sec_lenet` has five layers and about 62,000
-parameters. Stacking more of its layers does not give a better network.
-Sigmoid units shrink the gradient at every layer, a deeper plain network
-ends up with a *higher* training error than a shallower one, and every new
-layer needs its own width, kernel size, and initialization chosen by hand.
-Between 2012 and 2016 a series of ideas removed these obstacles one at a
-time, and the networks that won ImageNet grew from 8 layers to more than 150.
-Later progress came as much from how networks are trained, and from
-studying whole families of networks, as from new layers. Telling these
-sources apart matters whenever we compare two published results or design a
-network for a new problem.
+The LeNet of :numref:`sec_lenet` learns its convolution kernels from
+examples, and it classifies Fashion-MNIST slightly better than the MLP with
+fewer than a third of its parameters. A natural next step is to make it
+larger, with more layers and more channels. For a long time this did not
+work. Deeper stacks of sigmoid layers trained worse than shallow ones, and
+every new layer brought its own kernel size, width, and initialization to
+choose by hand. What does it take to make a convolutional network much
+deeper, and better?
 
-:numref:`sec_alexnet` asks what let a deep network trained on raw pixels
-beat engineered features in 2012. :numref:`sec_blocks` asks how to build
-deep networks from repeated blocks instead of layer by layer, and what
-$1 \times 1$ convolutions, global pooling, and parallel branches add.
+Much of the answer was found on ImageNet, a benchmark of more than a million
+photographs in a thousand categories. In 2012 a convolutional network trained
+end to end on raw pixels beat every system built on hand-designed features.
+It had 8 layers, and three years later the winning network had more than 150.
+A series of ideas removed one obstacle at a time: repeated blocks, layers
+that keep the scale of the signals under control, and connections that let a
+deep network start out as a shallow one. Later gains came as much from how
+networks are trained as from new layers. Normalization and residual
+connections reappear in every transformer. Telling a training recipe apart
+from an architecture matters whenever we compare two published results.
+
+:numref:`sec_alexnet` asks what let a deep network trained on raw pixels beat
+engineered features. :numref:`sec_blocks` asks how to build deep networks
+from repeated blocks instead of layer by layer, and what $1 \times 1$
+convolutions, global pooling, and parallel branches add.
 :numref:`sec_batch_norm` asks how normalizing activations makes training
-faster and less sensitive to the learning rate. :numref:`sec_resnet` asks
-why deeper plain networks train worse and how a residual connection fixes
-it. :numref:`sec_efficient_cnns` asks how to cut the arithmetic of a
-convolutional layer by an order of magnitude, and what that costs in
-accuracy. :numref:`sec_training_recipes` asks how much of a reported
-accuracy comes from the training procedure rather than the architecture.
+faster and less sensitive to the learning rate. :numref:`sec_resnet` asks why
+deeper plain networks train worse and how a residual connection fixes it.
+:numref:`sec_efficient_cnns` asks how to make a convolutional network cheap
+enough for a phone, and what that costs in accuracy.
+:numref:`sec_training_recipes` asks how much of a reported accuracy comes
+from the training procedure rather than the architecture.
 :numref:`sec_convnext` asks how far a ResNet gets when it is modernized one
 change at a time. :numref:`sec_cnn-design` asks what rules appear when we
 study populations of networks instead of single designs.
 
 Every network in the chapter is trained on Fashion-MNIST; ImageNet results are
 quoted from the papers. Vision transformers
-:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` now lead many large-scale
-benchmarks and follow in :numref:`chap_transformers`. Convnets remain the
-default where data are limited, latency matters, or every pixel needs a
-prediction, and with matched compute they match transformers on image
-classification :cite:`smith2023convnets`.
+:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` follow in
+:numref:`chap_transformers`. With equal compute, convnets match them on
+image classification :cite:`smith2023convnets`, and they remain the default
+where data are limited, latency matters, or every pixel needs a prediction.
 
 ```toc
 :maxdepth: 2

@@ -1,15 +1,21 @@
 # Decoding and Generation
 :label:`sec_decoding`
 
-After the prefix "The Time Traveller", the language model of
-:numref:`sec_rnn-scratch` returns a probability for each of its 1,027
-tokens. To write a 50-token continuation, we have to turn each such
-distribution into a token, one step at a time. How to make that choice is
-not obvious. There are $1027^{50} > 10^{150}$ possible continuations, far
-too many to compare. Always taking the most probable token is cheap, but in
-practice it produces generic text that tends to repeat itself. Drawing
-tokens at random from the model's distribution produces varied text, which
-every so often derails on an improbable token.
+The language models of this chapter have been judged by how well they
+predict the next token. To write text, a model must also choose one token
+at each step from the distribution it returns, and different rules for that
+choice make the same model write very different text. The two simplest
+rules, tried in :numref:`sec_rnn-scratch`, both fell short. How should the
+choice be made?
+
+After the prefix "The Time Traveller", the model of :numref:`sec_rnn-scratch`
+returns a probability for each of its 1,027 tokens, and a 50-token
+continuation takes fifty such choices in a row. There are
+$1027^{50} > 10^{150}$ possible continuations, far too many to compare.
+Always taking the most probable token is cheap, but in practice it produces
+generic text that tends to repeat itself. Drawing tokens at random from the
+model's distribution produces varied text, which every so often derails on
+an improbable token.
 
 The rule that turns next-token distributions into sequences is called
 *decoding* :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`. This section

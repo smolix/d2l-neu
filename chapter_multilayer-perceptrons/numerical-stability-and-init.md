@@ -6,12 +6,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerical Stability and Initialization
 :label:`sec_numerical_stability`
 
-The MLP of :numref:`sec_mlp-implementation` has a single hidden layer and
-draws its initial weights from a normal distribution with standard deviation
-0.01. A network with ten such hidden layers of width 256, initialized the
-same way, does not learn. The backward pass of :numref:`sec_backprop`
-multiplies the gradient by one transposed weight matrix per layer on its way
-down to the first layer, and with weights this small each multiplication
+In :numref:`sec_mlp` we saw why depth is worth having. A stack of narrow
+layers can compute some functions for which a single hidden layer needs
+exponentially many units. Yet the MLP we trained in
+:numref:`sec_mlp-implementation` has a single hidden layer, and we drew its
+initial weights from a normal distribution with standard deviation 0.01
+without asking whether that choice matters. Does a deeper network train as
+easily?
+
+A network with ten hidden layers of width 256, initialized the same way,
+does not learn. The backward pass of :numref:`sec_backprop` multiplies
+the gradient by one transposed weight matrix per layer on its way down to
+the first layer, and with weights this small each multiplication
 shrinks the magnitude of the gradient about ninefold. By the time it reaches
 the first layer, the gradient is smaller than at the top by a factor of more
 than $10^8$, and the first layers barely change. With weights of standard
@@ -64,7 +70,10 @@ from jax import numpy as jnp
 
 ### Products of Jacobians
 
-Consider an MLP with $K$ layers, $K - 1$ of them hidden, of width $h$, in the notation of
+To see why the scale of the weights decides whether the gradient survives,
+we write the backward pass as a product with one factor per layer.
+Consider an MLP with $K$ layers, $K - 1$ of them hidden, of width $h$, in
+the notation of
 :numref:`sec_mlp`. Starting from $\mathbf{H}^{(0)} = \mathbf{X}$, hidden
 layer $k$ computes the pre-activation
 $\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$
@@ -324,8 +333,12 @@ variance $1/n_\textrm{in}$, called LeCun normal, and sets its biases to 0.
 ### Xavier Initialization
 :label:`subsec_xavier`
 
-We start with a layer without activation function. It has $n_\textrm{in}$
-inputs $x_i$ and $n_\textrm{out}$ outputs, and output $j$ is
+The gradient keeps its size from layer to layer only when the variance of
+the weights is chosen for the width of the layer and for the slope of its
+activation function. We derive the right variance first for the simplest case, a layer
+without activation function, in the forward and in the backward pass. It
+has $n_\textrm{in}$ inputs $x_i$ and $n_\textrm{out}$ outputs, and output
+$j$ is
 
 $$o_j = \sum_{i=1}^{n_\textrm{in}} x_i w_{ij}.$$
 

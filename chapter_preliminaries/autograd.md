@@ -6,18 +6,24 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Automatic Differentiation
 :label:`sec_autograd`
 
-In :numref:`sec_calculus` we computed the gradient of a loss by hand. The
-line model of that section fits three examples, and its loss is the squared
-norm of the errors $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$. To
+In :numref:`sec_calculus` we computed the gradient of a loss by hand, and it
+took some care even for a model with two parameters. A deep network has
+millions of parameters spread over dozens of layers, and every change to its
+design would mean deriving and coding its gradient again. Can the computer
+do this work for us, given nothing more than the code that computes the
+loss?
+
+The line model of :numref:`sec_calculus` shows what the work involves. Its
+loss is the squared norm of the errors
+$\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ on three examples. To
 differentiate the loss, we noticed that the errors depend linearly on the
 parameters $\mathbf{w}$, with Jacobian $\mathbf{X}$, and wrote out the
 backward pass $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r})$
-ourselves. At $\mathbf{w} = (1, 0)$ it gave $(2, 4)$. A deep
-network chains dozens of layers, and each of them needs the same work: derive
-its Jacobian, code the product with it, and test the code. Every change to
-the model means doing this again. Finite differences avoid the derivation,
-but they cost one evaluation of the loss per parameter, and in float32 they
-give only three or four correct digits.
+ourselves. At $\mathbf{w} = (1, 0)$ it gave $(2, 4)$. A deep network needs
+the same work for every layer: derive its Jacobian, code the product with it,
+and test the code. Finite differences avoid the derivation, but they cost
+one evaluation of the loss per parameter, and in float32 they give only
+three or four correct digits.
 
 Deep learning frameworks do this work for us. While our code computes the
 loss, the framework records each operation that it executes, such as a
@@ -201,6 +207,9 @@ and a sum.
 :label:`fig_autograd_graph`
 
 ### The Backward Pass
+
+We now ask the framework for the gradient of the loss at $\mathbf{w}$ and
+compare it with the $(2, 4)$ that we derived by hand.
 
 :begin_tab:`mxnet, pytorch`
 Calling `backward` on the loss runs the backward pass and stores the

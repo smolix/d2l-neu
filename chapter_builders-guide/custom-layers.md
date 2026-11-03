@@ -6,18 +6,22 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Custom Layers and Functions
 :label:`sec_custom_layer`
 
-RMSNorm, a layer that rescales each activation vector to a fixed size, was
-published in 2019 :cite:`Zhang.Sennrich.2019`, and PyTorch added it to its
-library of layers in 2024. Until then, each PyTorch codebase that used it
-carried its own implementation or borrowed one from another package. The
-same happens with every new layer, because research moves faster than
-libraries. A layer written by hand must then behave like
-a built-in one: its parameters must reach the optimizer, its state must be
-saved and moved to the GPU, and it must fit into containers next to other
-layers. Sometimes the problem is the derivative instead. Rounding, which is
-needed to store weights as 4-bit integers, has derivative zero almost
-everywhere, so a weight that is rounded in the forward pass receives no
-gradient and never learns.
+Our concise models so far have been assembled from the framework's library
+of layers: fully connected layers, activation functions, dropout. Research
+moves faster than libraries, however, and a layer that a paper proposes can be
+missing from them for years. RMSNorm, a layer that rescales each activation
+vector to a fixed size, is an example. It was published in 2019
+:cite:`Zhang.Sennrich.2019`, and PyTorch added it to its library of layers
+in 2024. Until then, each PyTorch codebase that used it carried its own
+implementation or borrowed one from another package. How do we write such a
+layer ourselves, so that it behaves like a built-in one? Its parameters must
+reach the optimizer, its state must be saved and moved to the GPU, and it
+must fit into containers next to other layers.
+
+Sometimes the problem is the derivative instead. Rounding, which is needed
+to store weights as 4-bit integers, has derivative zero almost everywhere,
+so a weight that is rounded in the forward pass receives no gradient and
+never learns.
 
 This section writes both kinds of extension. A custom layer is a subclass
 of the module class of :numref:`sec_model_construction`. Recall that a
@@ -534,6 +538,9 @@ transfers handle the custom layer through the same interface as a built-in
 one.
 
 ### Comparison with Framework Implementations
+
+Where the library provides the same layer, comparing the outputs of the two
+implementations tests ours.
 
 :begin_tab:`mxnet`
 Gluon provides `nn.LayerNorm` but no RMSNorm, so this tab has no library

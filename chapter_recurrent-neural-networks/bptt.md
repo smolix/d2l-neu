@@ -3,16 +3,21 @@
 
 The RNN language model of :numref:`sec_rnn-scratch` trained only because we
 clipped its gradients: without clipping, an occasional enormous gradient
-wrecks the parameters. To see where such gradients come from, take the simplest
-recurrence, a scalar state that keeps a fraction $w_\textrm{h}$ of its value
-and adds the new input, $h_t = w_\textrm{h} h_{t-1} + x_t$. Unrolling it
-gives $h_t = \sum_{s \leq t} w_\textrm{h}^{t-s} x_s$, so the derivative of
-$h_t$ with respect to the state $k$ steps earlier is $w_\textrm{h}^k$. With
+wrecks the parameters. Where do such gradients come from? A recurrent
+network applies the same weights at every time step, so a gradient that
+travels backward through the sequence is multiplied by a similar factor at
+each step. Over many steps these factors compound, the way interest
+compounds a deposit, and the gradient grows or shrinks geometrically.
+
+The simplest recurrence shows the effect. Consider a scalar state that
+keeps a fraction $w_\textrm{h}$ of its value at each step and adds the new
+input, $h_t = w_\textrm{h} h_{t-1} + x_t$. Unrolling it gives $h_t =
+\sum_{s \leq t} w_\textrm{h}^{t-s} x_s$, so the derivative of $h_t$ with
+respect to the state $k$ steps earlier is $w_\textrm{h}^k$. With
 $w_\textrm{h} = 0.9$, forty steps shrink this derivative to $0.9^{40}
-\approx 0.015$; with $w_\textrm{h} = 1.1$, they inflate it to $1.1^{40}
-\approx 45$. A gradient that travels backward through a recurrence is
-multiplied by such a factor at every step, so over long sequences it either
-fades or blows up.
+\approx 0.015$. With $w_\textrm{h} = 1.1$, they inflate it to $1.1^{40}
+\approx 45$, as forty years at 10% interest multiply a deposit 45-fold.
+Over long sequences the gradient either fades or blows up.
 
 Both outcomes hurt. A gradient that explodes destabilizes training, which is
 why we clipped. A gradient that vanishes is harder to notice and does more

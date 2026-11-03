@@ -2,33 +2,42 @@
 :label:`chap_computation`
 
 So far each model has been a few lines of code: a class with some layers, a
-loss, and a call to `fit`. Real models are built from hundreds of such
-pieces, hold billions of numbers, train for days on accelerators, and must
-survive crashes, be shared, and be fine-tuned by others. What happens to a
-model between its definition and a trained result we can trust is a matter
-of software, and getting it wrong is costly: a model that is initialized
-badly does not train, one that is saved incompletely cannot resume, one that
-runs in the wrong number format silently loses precision, and one that is
-placed on the wrong device runs ten times slower or not at all.
+loss, and a call to `fit`. When we trained the multilayer perceptron of
+:numref:`sec_mlp-implementation`, the framework handed its four parameter
+arrays to the optimizer, kept them on a device of its choosing, and
+discarded them when the notebook closed. We never had to ask how. Once a
+model grows, we have to. Does the model fit in the memory of a GPU? Can
+training resume after a crash? What if it needs a layer that the library
+lacks?
 
-This chapter opens up the machinery that the previous chapters used without
-comment. It introduces no new models or datasets; every later chapter relies
-on what it teaches.
+What happens to a model between its definition and a trained result is a
+matter of software. Early neural network programs derived and coded the
+gradients of each model by hand. Around 1990 Léon Bottou and Yann LeCun
+built their network simulator from *modules* instead, each computing its
+outputs forward and its gradients backward, so that a new architecture is a
+new arrangement of existing modules. Torch and then PyTorch kept this
+design, and every framework in this book organizes a model as a tree of
+modules that own their parameters. The optimizer, the initializer, the
+checkpoint, and the move to a GPU all walk this tree. Knowing the tree lets
+us change the defaults when they fail: a badly initialized model does not
+train, one saved incompletely cannot resume, one in a coarser number format
+can lose precision without an error, and one on the wrong device runs slowly
+or not at all.
 
 :numref:`sec_model_construction` asks how a model is assembled from modules,
 and what a module is. :numref:`sec_parameters` asks what state a model
 holds, and how much memory training it needs. :numref:`sec_init_param` asks
-how to set that state before training, and how to change the defaults.
-:numref:`sec_custom_layer` asks how to add a layer or a differentiable
-function that the library does not provide. :numref:`sec_numerics` asks
-which number formats a model can compute in, and what lower precision costs
-and saves. :numref:`sec_read_write` asks how to save a model and its
-training state, and how to load weights that someone else trained.
-:numref:`sec_use_gpu` asks how computation is placed on devices and how GPU
-memory is spent. :numref:`sec_repro` asks when two runs of the same code give
-the same result, and how to look inside a running model.
+how to set that state before training. :numref:`sec_custom_layer` asks how
+to add a layer or a differentiable function that the library lacks.
+:numref:`sec_numerics` asks which number formats a model can compute in, and
+what lower precision costs and saves. :numref:`sec_read_write` asks how to
+save a model and its training state, and how to load weights trained by
+others. :numref:`sec_use_gpu` asks how computation is placed on devices and
+how GPU memory is spent. :numref:`sec_repro` asks when two runs of the same
+code give the same result, and how to look inside a running model.
 
-The chapter covers one device at a time; training on several devices
+The chapter introduces no new models or datasets; later chapters rely on it
+throughout. It covers one device at a time; training on several devices
 follows in :numref:`chap_performance`.
 
 ```toc

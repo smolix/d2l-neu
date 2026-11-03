@@ -4,8 +4,8 @@
 Run one gradient-descent loop, with step $0.05$ and $600$ steps, from $500$
 starting points drawn uniformly on $[-1.5, 1.5]$. On the bowl
 $f(x) = (x - \tfrac12)^2$ every run ends at $x = \tfrac12$. On the tilted
-double well $\phi(x) = (x^2 - 1)^2 + x/2$ a little under half of the runs,
-about 46%, stop at $x \approx 0.93$, where $\phi \approx 0.48$. That is almost
+double well $\phi(x) = (x^2 - 1)^2 + x/2$ roughly half of the runs, 46% in
+expectation, stop at $x \approx 0.93$, where $\phi \approx 0.48$. That is almost
 one unit above the best value $\phi \approx -0.51$, reached at
 $x \approx -1.06$. The stopped runs have a zero gradient, which is all that
 the stationarity guarantee of :numref:`sec_mdl-gradient-based-optimization`
@@ -1667,7 +1667,7 @@ Convexity<br>**convex sets · chords, tangents, Hessians · Jensen · rates · b
 Gradient descent, step $0.05$, 600 steps, 500 starts uniform on $[-1.5, 1.5]$:
 
 - bowl $(x-\tfrac12)^2$: every run ends at $x = 0.5$;
-- double well $\phi(x) = (x^2-1)^2 + x/2$: about 46% end at $x \approx 0.93$,
+- double well $\phi(x) = (x^2-1)^2 + x/2$: roughly half (46% expected) end at $x \approx 0.93$,
   where $\phi \approx 0.48$;
 - the best value is $\phi \approx -0.51$ at $x \approx -1.06$.
 
@@ -1986,7 +1986,7 @@ With many minimizers the update picks one: min-norm from $\mathbf{0}$, max-margi
 [Wrap-up]{.kicker}
 
 - Chords above, tangents below, PSD Hessian: one property, three tests.
-- Local = global: all 500 runs agree on the bowl; the double well strands about 46%.
+- Local = global: all 500 runs agree on the bowl; the double well strands roughly half (46% expected).
 - Rates: $50/k$ for $L = 1$ at distance $10$; $\approx 6{,}900$ steps at $\kappa = 10^3$, and $0.81 = (1 - \mu/L)^2$ measured at $\kappa = 10$.
 - Jensen: $\sqrt{e}$ against $1$; $D_{\mathrm{KL}} \ge 0$.
 - Four rules and a covariance certify the losses of linear models.

@@ -1053,7 +1053,8 @@ for sweep in range(30):
         r -= A[:, j] * (w_new - w_c[j])
         w_c[j] = w_new
     gap_i.append(F(w_i) - F_star); gap_c.append(F(w_c) - F_star)
-passes = lambda gap: int(np.argmax(np.array(gap) < 1e-8)) + 1
+passes = lambda gap: next((k + 1 for k, g in enumerate(gap) if g < 1e-8),
+                          '> 30')                  # not reached in 30 passes
 print(f'passes to gap < 1e-8: ISTA {passes(gap_i)}, coordinate descent {passes(gap_c)}')
 d2l.plot(np.arange(1, 31), [np.maximum(gap_i, 1e-16), np.maximum(gap_c, 1e-16)],
          'passes over the data', 'F - F*', legend=['ISTA', 'coordinate descent'],
@@ -1062,8 +1063,8 @@ d2l.plot(np.arange(1, 31), [np.maximum(gap_i, 1e-16), np.maximum(gap_c, 1e-16)],
 
 Both methods converge linearly, as straight lines on the logarithmic axis, and
 coordinate descent is steeper. It reaches a gap of $10^{-8}$ in a few sweeps
-(typically four to six), where ISTA needs ten to twenty-five steps: about two
-to five times fewer passes over the data. Two properties account for the
+(typically four to six), where ISTA typically needs ten to twenty-five steps:
+about two to six times fewer passes over the data. Two properties account for the
 difference. Each coordinate step uses the residual already updated by the
 previous ones, and the exact one-dimensional minimizer needs no step size.
 

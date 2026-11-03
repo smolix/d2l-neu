@@ -664,8 +664,8 @@ print(f'loss rose on this fraction of late steps:  eta=0.40 {runs[0.40][1]:.2f},
 
 Each run starts at the sharpness in its first row, usually between $2$ and
 $5$, and neither stays there. By step $2{,}000$ the $\eta = 0.4$ run is
-already near its ceiling $5$, while the $\eta = 0.25$ run is still climbing
-toward $8$. At the end the $\eta = 0.4$ run sits within a fraction of a
+usually already near its ceiling $5$, while the $\eta = 0.25$ run is usually
+still climbing toward $8$. At the end the $\eta = 0.4$ run sits within a fraction of a
 percent of $5$. Its last two rows are consecutive steps, and in most runs
 the sharpness alternates between slightly above $2/\eta$ and slightly below
 it. The loss rises on a sizable fraction of the late steps, often about
@@ -674,7 +674,7 @@ magnitude over the run. While the sharpness is above $2/\eta$, the quadratic
 model predicts growth along the top eigendirection. That is how a loss that
 falls over the run can rise on single steps.
 
-The $\eta = 0.25$ run ends within a few percent of its ceiling $8$. In some
+The $\eta = 0.25$ run usually ends within a few percent of its ceiling $8$. In some
 draws it alternates in the same way. In others it settles just below $8$, and
 its loss then rises on fewer steps, in some draws on almost none. The data,
 the architecture, and the initialization are shared, so the curvature that
@@ -1107,8 +1107,8 @@ print(f'max |w - w_star| = {np.abs(w - w_star).max():.1e}')
 ```
 
 One Newton step solves the quadratic that costs gradient descent $691$ steps.
-On the logistic loss the gradient norm starts between $0.3$ and $0.4$ and is below
-$10^{-9}$ by the fifth iteration, with its exponent roughly doubling each
+On the logistic loss the gradient norm starts at a few tenths and is below
+$10^{-8}$ by the fifth iteration, with its exponent roughly doubling each
 time, which is the signature of quadratic convergence. After six iterations
 the iterate agrees with the reference optimum of the data cell to about
 $10^{-15}$, the precision of the reference itself.
@@ -1318,8 +1318,8 @@ print(f'max |M_6 - A^-1| = {np.abs(M - np.linalg.inv(A)).max():.1e}')
 ```
 
 After six steps BFGS is at the minimizer to rounding error (a relative
-distance near $10^{-14}$), and its matrix equals $\mathbf{A}^{-1}$ to about the
-same precision. Gradient descent, at the same cost of six gradients, is still
+distance of $10^{-13}$ or less), and its matrix equals $\mathbf{A}^{-1}$ to about the
+same precision. Gradient descent, at the same cost of six gradients, is typically still
 more than $90\%$ of its initial distance away, because its slowest mode
 contracts by only $999/1001$ per step.
 
@@ -2109,7 +2109,7 @@ $\ \mathbf{x}_{k+1}=\mathbf{x}_k-(\nabla^2 f)^{-1}\nabla f$.
 $$\|\mathbf{e}_{k+1}\|\le\frac{L_2}{2\mu}\|\mathbf{e}_k\|^2$$
 
 - $\mathrm{diag}(1,100)$: $1$ Newton step against $691$ gradient steps.
-- Logistic loss: $\|\nabla f\|$ from about $0.35$ to below $10^{-9}$ in five steps, the exponent doubling.
+- Logistic loss: $\|\nabla f\|$ from a few tenths to below $10^{-8}$ by the fifth iteration, the exponent doubling.
 - Cost: $O(d^2)$ memory, $O(d^3)$ time per step.
 :::
 

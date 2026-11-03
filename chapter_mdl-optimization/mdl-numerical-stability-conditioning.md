@@ -824,7 +824,7 @@ $\pm256$, never near the true value $1$, and sometimes negative. Both terms
 of the formula lie in $[2^{59},2^{60})$, where float64 numbers are
 $2^{59-52}=128$ apart, so their difference can only be a multiple of $128$.
 The predicted size of the error, $(m/s)^2u\approx100$, matches. Welford's
-estimate agrees with the two-pass reference to seven or more digits, as the
+estimate agrees with the two-pass reference to about seven digits or more, as the
 amplification $|m|/s$ predicts, and often to eight or nine, because the
 rounding errors of the updates have both signs and partly cancel in the sum.
 
@@ -853,19 +853,24 @@ $\log_2n$ additions and the bound becomes $u\log_2n\sum_i|x_i|$; NumPy's
 rounding error of each addition in a second variable and achieves an error
 bound independent of $n$ (Exercise
 :exref:`ex_mdl-numerical-stability-conditioning-summation-error-growth`). The
-cell adds $10^7$ copies of float32's $0.1$, which is $0.100000001490$, in order and pairwise:
+cell adds $10^7$ copies of float32's $0.1$, which is $0.100000001490$, in order and
+pairwise. The pairwise sum pads the list with zeros to $2^{24}$ terms and adds
+neighbors until one number is left:
 
 ```{.python .input #mdl-numerical-stability-conditioning-summation-order}
 x = np.full(10_000_000, 0.1, dtype=np.float32)
 exact = len(x) * float(x[0])                  # x[0] = 0.100000001490...
+s = np.concatenate([x, np.zeros(2**24 - len(x), np.float32)])  # pad to 2^24
+while len(s) > 1:                             # pairwise: add neighbors, halve
+    s = s[0::2] + s[1::2]
 print(f'in order (cumsum): {np.cumsum(x)[-1]:16.4f}')
-print(f'pairwise (np.sum): {np.sum(x):16.4f}')
+print(f'pairwise         : {s[0]:16.4f}')
 print(f'exact            : {exact:16.4f}')
 ```
 
 The in-order sum ends at $1{,}087{,}937$, 9% too high, inside its bound
 $(n-1)u\sum_i|x_i|\approx6\times10^5$. Pairwise summation returns
-$1{,}000{,}000.125$, within $0.11$ of the exact value and inside its bound
+$1{,}000{,}000$, within $0.015$ of the exact value and inside its bound
 $u\log_2n\sum_i|x_i|\approx1.4$.
 
 The in-order error has the mechanism behind lost small updates: each
@@ -1078,7 +1083,7 @@ The digits kept fall from about $13$ at $n=4$ to well under one at $n=12$,
 while the backward error stays of order $10^{-16}$ in every row: each
 computed vector solves a system that differs from the stored one in the
 sixteenth or seventeenth digit. The rule of thumb is pessimistic by about
-one digit (between half a digit and one and a half, depending on the row),
+one digit (from about half a digit to about one and a half, depending on the row),
 because the error is not aligned with the most amplified direction
 (Exercise
 :exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`). At
@@ -1142,11 +1147,11 @@ for kappa in [1e3, 1e6]:
           f'digits, lstsq keeps {digits[1]:4.1f}')
 ```
 
-At $\kappa(\mathbf A)=10^3$ the normal equations keep about $10$ to $11$
+At $\kappa(\mathbf A)=10^3$ the normal equations keep about $10$ to $12$
 digits against about $14$ for `lstsq`, a gap of about $3=\log_{10}\kappa$. At
-$10^6$ they keep about $5$ against $11$ to $12$, a gap of about
-$6=\log_{10}\kappa$. The exact digits vary from run to run by about a digit;
-the gaps stay near $\log_{10}\kappa$. Libraries therefore implement
+$10^6$ they keep about $4$ to $6$ against $10.5$ to $12.5$, a gap of about
+$6=\log_{10}\kappa$. The exact digits vary from run to run by a digit or two;
+the gaps scatter around $\log_{10}\kappa$, mostly within a digit of it. Libraries therefore implement
 `lstsq` with QR or the SVD, and the pseudoinverse of
 :numref:`subsec_mdl-pseudoinverse` is computed from the SVD rather than from
 $(\mathbf A^\top\mathbf A)^{-1}\mathbf A^\top$ for the same reason.
@@ -1947,7 +1952,7 @@ $10^7$ copies of fp32's $0.1$:
 
 - In order: error $\le(n-1)u\sum\lvert x_i\rvert$. Above $2^{19}$ the gap
   is $1/16$, and each $+0.1$ rounds to $+0.125$.
-- Pairwise (`np.sum`): $u\log_2n\sum\lvert x_i\rvert$. Kahan: independent
+- Pairwise: $u\log_2n\sum\lvert x_i\rvert$. Kahan: independent
   of $n$.
 :::
 
@@ -2025,7 +2030,7 @@ $\mathrm{diag}(1,1000)$, minimizer $(1,1)$:
 - **Cancellation:** `log1p`; the one-pass variance gives multiples of
   $128$, Welford seven digits.
 - **Conditioning:** $3.5\times10^{-5}$ in $\mathbf b$ moved $\mathbf x$ by
-  100%; normal equations keep 10 digits, `lstsq` 14.
+  100%; normal equations keep about 11 digits, `lstsq` 14.
 - **Ridge:** $\lambda=100$ cuts $6{,}908$ steps to $76$.
 
 ::: {.d2l-note}

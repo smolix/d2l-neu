@@ -405,10 +405,11 @@ d2l.plot(np.arange(100, 4001), [np.convolve(gap, window, 'valid') for gap in gap
 
 Both fixed steps stall. The mean gap over the last $1{,}000$ steps is about
 $1$ to $2 \times 10^{-2}$ at $\eta = 0.8$, and halving the step about halves
-it. The ratio lies between about $2$ and $2.6$ across runs, close to the
+it. The ratio scatters between about $1.7$ and $2.8$ across runs, around the
 factor $2$ that the quadratic model predicts, although the loss is not
-quadratic. The decaying run ends $25$ to $90$ times below the $\eta = 0.8$
-floor and is still falling along a straight line on the log–log plot. Its
+quadratic. The decaying run ends roughly $20$ to $90$ times below the $\eta = 0.8$
+floor, and on the log–log plot its curve still trends down, jagged with
+minibatch noise. Its
 early large steps cover the distance to the minimizer, and its late small
 steps shrink the noise ball.
 
@@ -843,8 +844,8 @@ d2l.plot(Ks, [avg, avg[0] * (Ks / Ks[0])**-0.5], 'budget K', 'E |grad f(x_R)|^2'
          xscale='log', yscale='log', legend=['random iterate', 'slope -1/2'])
 ```
 
-The random-iterate quantity falls by a factor of about $10$ to $14$ for a
-$64$ times larger budget, a log–log slope of about $-0.6$. The theorem gives an upper
+The random-iterate quantity falls by a factor of about $12$ (between roughly
+$9$ and $16$ across runs) for a $64$ times larger budget, a log–log slope of about $-0.6$. The theorem gives an upper
 bound of slope $-1/2$, so a slightly steeper measured slope is consistent with
 it. The best iterate falls faster, with a slope near $-1$ or steeper, but noisy
 gradients do not tell us which iterate it is, so no guarantee can use it.
@@ -959,7 +960,7 @@ L_max = (A_r**2).sum(axis=1).max() + reg_r       # largest per-example smoothnes
 print(f'L_max = {L_max:.0f}, 1 / (4 L_max) = {1 / (4 * L_max):.4f}')
 ```
 
-$L_{\max}$ is about $30$ (between $25$ and $40$ across draws of the data), so
+$L_{\max}$ is about $30$ (typically between $25$ and $40$ across draws of the data), so
 the theorem asks for $\eta$ below about $0.008$.
 
 Does a fixed step converge without a floor once the noise is cancelled? The
@@ -999,12 +1000,13 @@ d2l.plot(np.arange(1, epochs + 1), [gaps_sgd, gaps_svrg], 'epoch (3n gradients)'
          'f(x) - f*', yscale='log', legend=['SGD', 'SVRG'])
 ```
 
-SGD drops quickly and then fluctuates near $2 \times 10^{-2}$, where the floor
-formula of the first part puts it. The plateau lies between about $20\%$ below
-and $40\%$ above the prediction, more often above. The formula counts only the
+SGD drops quickly and then fluctuates at a few times $10^{-2}$, where the floor
+formula of the first part puts it. The plateau usually lies between about
+$10\%$ below and $40\%$ above the prediction, always within a factor of two
+of it, and more often above. The formula counts only the
 noise at $\mathbf{x}^\star$, and the example gradients spread more away from
-it. SVRG falls by a factor of six to ten per epoch, to about $10^{-12}$ to
-$10^{-9}$ by epoch $12$. It does so at a step more than twice the theorem's
+it. SVRG falls by a factor of about eight per epoch (between roughly five and
+thirteen across runs), to between about $10^{-13}$ and $10^{-8}$ by epoch $12$. It does so at a step more than twice the theorem's
 limit, so the theorem's constants are loose. Three hypotheses carry this result: a finite
 sum, repeated passes over it, and strong convexity for the linear rate. On
 streaming data there is no sum to store.
@@ -1620,7 +1622,7 @@ fixed step without a floor.
 :::
 :::
 
-::: {.slide title="SVRG Falls Six- to Tenfold per Epoch Where SGD Sits Near $2 \times 10^{-2}$"}
+::: {.slide title="SVRG Falls About Eightfold per Epoch Where SGD Sits at a Few Times $10^{-2}$"}
 [Variance reduction]{.kicker}
 
 Ridge regression, $n = 300$, $d = 12$, $\eta = 0.02$, $3n$ example gradients

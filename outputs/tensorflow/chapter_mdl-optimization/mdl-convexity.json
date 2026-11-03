@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:984a2531500bb31a04aa38f127eda91d30cbbd3b45c7cc270f16121994437e1c",
+    "d2l_lib_fingerprint": "sha256:7bc73cba1dda3923adfbbaaa5e787ff5f31aa4dd48c0496ac8787beb55cb50ec",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,69 +13,87 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-convexity-strict-and-strong-convexity": {
+      "code_fingerprint": "sha256:914c2cf2dc4295dd0d0bbf744dac27d57f61efd0d3d17c0983fa405af714a120",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "x^2: first k with x_k < 1e-6: 49\nx^4: x_k * sqrt(k) at k = 1e2, 1e3, 1e4: [0.973 0.996 1.   ]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-convexity/mdl-convexity-strict-and-strong-convexity-1.svg",
+          "bytes": 27365,
+          "sha256": "sha256:020b57e8cc375475278f9b0ad0766f93604b2a8d4166ceaa67decdbb50c49bf5"
+        }
+      ]
+    },
     "convexity-three-lenses": {
-      "code_fingerprint": "sha256:020c03b1d0c79b606dbcb8b5df65539bfcbbf5b3f304b32ef9049dac98341a61",
+      "code_fingerprint": "sha256:9dfdfcd3a08d5f4b1c7b581b1148e1ce37b6f57f80b6a0269e1b63739b9d25f5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "worst chord violation over 1000 trials:   -2.46e-03\nworst tangent violation over 1000 trials: -4.95e-02\nHessian eigenvalues: [ 6.273  18.6557]\n"
+          "text": "worst chord gap:   -2.34e-02\nworst tangent gap: -1.08e+00\nboth <= 0: True\nHessian eigenvalues: [17.3494 19.7662]\n"
         }
       ]
     },
     "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:6e58d66d5347d662a1d24db5900f534e406fd0ec0687ac9a72b6bb1b5225fed6",
+      "code_fingerprint": "sha256:498253e6903c69100e403975c45c83f75187c36d2860acc79d449c0c8aded680",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(X)] = 1.6466  vs  exp(E[X]) = 0.9998  (theory: sqrt(e) = 1.6487 vs 1)\nAM >= GM in all trials: True,  smallest AM/GM ratio = 1.0002\nmin KL(p||q) = 0.1331 >= 0,  max |KL(p||p)| = 0.0e+00\n"
+          "text": "E[exp(Z)] = 1.65 vs exp(E[Z]) = 1.00  (population: 1.6487 vs 1)\nAM >= GM in every draw: True\nKL >= 0 for every pair: True, smallest 0.088\nmedian KL(p || (1-eps) p + eps q), eps = 1e-2, 1e-3, 1e-4: 1.5e-04 1.6e-06 1.6e-08\n"
         }
       ]
     },
     "convexity-basins": {
-      "code_fingerprint": "sha256:e2dc2cf50b6c3ba1c9346f23431073086e27abbd3e1668440a55d7a01efe1bdb",
+      "code_fingerprint": "sha256:16db3c9e5077efeb6ace4a7b557e8c92bfa61f0ac22725ff6f65c55a7c2e4734",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "convex bowl: all 500 runs end at x = 0.500000  (spread 6.7e-16)\ndouble well: 271 runs -> x = -1.0575  (g = -0.5148)\n             229 runs -> x = 0.9304  (g = 0.4833)\n"
+          "text": "bowl: all 500 runs end at x = 0.500000 (spread 7e-16)\nwell, left : 241 runs, x = -1.0575, phi = -0.5148\nwell, right: 259 runs, x = 0.9304, phi = 0.4833\nlocal max at 0.1271: predicted share right 0.458, observed 0.518\n"
         }
       ]
     },
     "convexity-rate-check": {
-      "code_fingerprint": "sha256:3ceac720fc52ce8e667a538bf660cdeb3ca952c14f69159c578717e6f6f10539",
+      "code_fingerprint": "sha256:edb4374edf0d0be76ecc7c9a5155f125c41872310d2566da1fdd29752be1fa6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu = 6.2730, L = 18.6557:  the theorem promises contraction <= 1 - mu/L = 0.6637\nmeasured per-step contraction of f - f*: [0.4406 0.4406 0.4406 0.4406]\nworst step: 0.4406  (the bound holds at every step)\n"
+          "text": "mu = 1.0000, L = 10.0000: bound 1 - mu/L = 0.9000, its square 0.8100\nfirst three ratios: [0.2263 0.81   0.81  ]  largest ratio: 0.81\nbound holds at every step: True\n"
         }
       ]
     },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:3a0c27239b39644f7e679a9b516a9c941597e71822b4231bc269f0d06f0167fa",
+      "code_fingerprint": "sha256:4d9460264322efffcd59392ea3c76098992573384d5a8507b20cc8ed4244fc5e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\nmax |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
+          "text": "eigenvalues: [0.       0.021341 0.071479 0.088622 0.143873 0.330442]\nmax |hess - Cov(e_Y)| = 0.0007\nmax |hess @ 1| = 1.4e-16\n"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:bfcfe731bd572aa0d1c4adae25d744c00d7a21ad2a41dfb60821027a183c5e05",
+      "code_fingerprint": "sha256:bd3e22e8f15a4ca6ce2fb4fea0b97eccf18df0962ee4bfb2f44f19111bffa98d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "PL constant on [-5, 5]: mu = 0.1755\nmin f'' = -4.00  (f is not convex)\nsuccessive gap ratios: [0.6293 0.2907 0.25   0.25   0.25  ]\n"
+          "text": "PL constant on [-5, 5]: mu = 0.1755\nmin f'' = -4.00  (f is not convex)\nguaranteed 0.9835; largest ratio 0.9778 from x = 2.19; last ratio 0.2500\n"
         }
       ]
     }

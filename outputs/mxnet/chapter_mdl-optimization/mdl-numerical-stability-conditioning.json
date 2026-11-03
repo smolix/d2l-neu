@@ -9,56 +9,78 @@
   },
   "cells": {
     "numerical-stability-conditioning-imports": {
-      "code_fingerprint": "sha256:e2cd76e913299d4c1d0ee3acdacfab93d869856e48867aa5196c2cb0b65569fe",
+      "code_fingerprint": "sha256:820c1d929720d670b1c39ae94c2f593187d7a2c324a80634b68c46b02bed3fbf",
       "kind": "text",
       "outputs": []
     },
     "numerical-stability-conditioning-finfo": {
-      "code_fingerprint": "sha256:e9fdedac4fc436614d3f8738aab44618ddbce633315c091c2f0de85903748d06",
+      "code_fingerprint": "sha256:f2c414386511efe3f5cd60cc6119275960b00859328bd79cbed0f81b4862237f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     dtype          eps   smallest normal          max\n   float16    9.766e-04         6.104e-05    6.550e+04\n   float32    1.192e-07         1.175e-38    3.403e+38\n  bfloat16    7.812e-03   (exponent range = float32)\nbfloat16 eps equals 2^-7: True  and 1 + 2^-8 rounds back to 1: True\n"
+          "text": "         dtype        eps  smallest normal        max\n       float16  9.766e-04        6.104e-05  6.550e+04\n       float32  1.192e-07        1.175e-38  3.403e+38\n      bfloat16  7.812e-03        1.175e-38  3.390e+38\n float8_e4m3fn  1.250e-01        1.562e-02  4.480e+02\n   float8_e5m2  2.500e-01        6.104e-05  5.734e+04\n"
+        }
+      ]
+    },
+    "mdl-numerical-stability-conditioning-formats-1": {
+      "code_fingerprint": "sha256:9b5720eac73de2acc0e108e2552faefd519ded1ec3935ec25e8dd22984fad3fd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.00488281 -> 1.00781250   (expected 1.00781250)\n1.00390625 -> 1.00000000   (expected 1.00000000)\n1.01171875 -> 1.01562500   (expected 1.01562500)\n"
         }
       ]
     },
     "numerical-stability-conditioning-spacing": {
-      "code_fingerprint": "sha256:e9a01c1a9c0fbc1e02b651ad985ada65480ec4545191ff7819711eac7a6b91f5",
+      "code_fingerprint": "sha256:3cee82cc2779fe02535a7eb709b8167c2ac2499476b31d0d77de3877c05a5860",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 + eps   != 1 : True\n1 + eps/2 == 1 : True\ngap between adjacent float32 values near 1    : 1.1920929e-07\ngap between adjacent float32 values near 2^20 : 0.125\nfloat16: exp(x) overflows for x > 11.09\nfloat32: exp(x) overflows for x > 88.72\n"
+          "text": "1 + eps   != 1 : True\n1 + eps/2 == 1 : True\ngap between float32 neighbors at 1    : 1.1920929e-07\ngap between float32 neighbors at 2^20 : 0.125\nfloat16: exp(x) overflows for x > 11.09\nfloat32: exp(x) overflows for x > 88.72\nfloat64: exp(x) overflows for x > 709.78\n"
+        }
+      ]
+    },
+    "mdl-numerical-stability-conditioning-overflow-underflow-and-small-updates": {
+      "code_fingerprint": "sha256:aa383261e4d44c2fc36bd17ec05729afac27f450722827e7adb204eacacb02fd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bfloat16: 1 - 1e-3 -> 1.0\nbfloat16: 1 - 2e-3 -> 0.99609375\nfp16    : 1 - 1e-4 -> 1.0\nfp16    : 1 - 3e-4 -> 0.9995\nfp32    : 1 - 1e-3 -> 0.999\n"
         }
       ]
     },
     "numerical-stability-conditioning-stable-softmax": {
-      "code_fingerprint": "sha256:ab8fa9b1c8c1636557cbc883d7d44a3d6c017c59503fb4d51be1d857a051fd59",
+      "code_fingerprint": "sha256:5359c2e06044c8e2de31ff61c6f543dc9d1265ecb0d4752ebef6852ba12a4354",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive,  logits z      : [0.09003058 0.24472846 0.66524094]\nnaive,  logits z + 100: [nan nan nan]\nstable, logits z + 100: [0.09003057 0.24472846 0.66524094]\nnaive and stable agree where both work: False\n"
+          "text": "naive  softmax(0, 100): [ 0. nan]\nstable softmax(0, 100): [3.8e-44 1.0e+00]\nsoftmax(0, 10), naive minus stable, in ulps: [2. 0.]\n"
         }
       ]
     },
     "numerical-stability-conditioning-logsumexp": {
-      "code_fingerprint": "sha256:23ce3a917d8cbce4def1c37a3f40821cf69121e39329b352a431d21a82834ba1",
+      "code_fingerprint": "sha256:2c4b122f1bd12bca7f9af8e41187ed161e5383ca1e36f7d1a8e5d422b92712d0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive  log(sum(exp(z))) : inf\nstable log_sum_exp(z)   : 1002.4076\nlog softmax             : [-2.4075928  -1.4075928  -0.40759277]\nprobabilities sum to 1  : 1.000013\n"
+          "text": "naive log(sum(exp(z))): inf\nlse = c + s           : 1002.4076   float32 gap at 1002: 6.1035156e-05\nsum of exp(z - lse)    : 1.00001323\nsum of exp((z - c) - s): 1.00000000\n"
         }
       ]
     },
     "numerical-stability-conditioning-cross-entropy": {
-      "code_fingerprint": "sha256:a778c8b4ed2ef13680d991bdf4cd475560c0f46b23789b13d8b2e46dd3ba009a",
+      "code_fingerprint": "sha256:61a3d81154bc6fa028e2ea0ea5cbf15dfe4a60dc968368776fa5371ff5c35e33",
       "kind": "text",
       "outputs": [
         {
@@ -69,64 +91,91 @@
       ]
     },
     "numerical-stability-conditioning-log1p": {
-      "code_fingerprint": "sha256:8e03a8a3732e129ec6883a62a1abefcdf215aadbd613b14f7950cb2db596fdc1",
+      "code_fingerprint": "sha256:91bf2a31ff5af32c8f77740cdc7c7fdd8051377891a8ebbf1a0de23864a6e6c9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 rounds 1 + x to     : 1.0\nlog(1 + x) = 0.0    log1p(x) = 1e-08\na - b in float32            : 2.3841858e-07   (true value 3.0e-07)\namplification (|a|+|b|)/|a-b| ~ 8.4e+06\n"
+          "text": "float32 rounds 1 + x to: 1.0\nlog(1 + x) = 0.0    log1p(x) = 1e-08\nstored a = 1.0002343655, b = 1.0002341270\na - b = 2.3841858e-07 = 2.0 ulps of 1\nfloat64: log(1 + 1e-20) = 0.0   log1p(1e-20) = 1e-20\n"
         }
       ]
     },
     "numerical-stability-conditioning-welford": {
-      "code_fingerprint": "sha256:cf283a432446f2c8c10dc7745ae7bb84b5fcf1ef7bb24e8ef648c8a28970560f",
+      "code_fingerprint": "sha256:20f813b5e50183877ad687b3f6eb9da9e2ff96347adeaec107a61ad67c2d1d82",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :  -256.000000\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
+          "text": "naive E[x^2] - E[x]^2 :   512.000000   (= 4 x 128)\nWelford, one pass     :     0.994200\ntwo-pass reference    :     0.994200\nWelford vs two-pass   : 1.5e-08 relative\nfloat64 gap near 1e18 : 128.0\n"
+        }
+      ]
+    },
+    "mdl-numerical-stability-conditioning-summation-order": {
+      "code_fingerprint": "sha256:7a6bd132f85f5d87a3f11ce422cfa98438cb5c0df62ea5b69f28d991c5b028b7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "in order (cumsum):     1087937.0000\npairwise (np.sum):      999989.4375\nexact            :     1000000.0149\n"
         }
       ]
     },
     "numerical-stability-conditioning-hilbert": {
-      "code_fingerprint": "sha256:385f2591389314ba814bc25c17da9f498d188f4c2152c38419f7418cf73e6f06",
+      "code_fingerprint": "sha256:a5e7104f2c60421a0f67bc164329349524b483ec8741cddda4e9eed320493d51",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " n      kappa   log10 kappa   forward error  correct digits  backward error\n 4    1.6e+04       4.2         4.1e-14         13.4         0.0e+00\n 6    1.5e+07       7.2         1.4e-10          9.8         1.3e-16\n 8    1.5e+10      10.2         6.1e-08          7.2         5.7e-17\n10    1.6e+13      13.2         8.7e-05          4.1         1.0e-16\n12    1.8e+16      16.2         3.2e-01          0.5         9.8e-17\n"
+          "text": " n     kappa  forward error  digits kept  16 - log10 kappa  backward error\n 4   1.6e+04        4.1e-14         13.4              11.8         0.0e+00\n 6   1.5e+07        1.4e-10          9.8               8.8         1.3e-16\n 8   1.5e+10        6.1e-08          7.2               5.8         5.7e-17\n10   1.6e+13        8.7e-05          4.1               2.8         1.0e-16\n12   1.8e+16        3.2e-01          0.5              -0.2         9.8e-17\n"
         }
       ]
     },
     "numerical-stability-conditioning-normal-equations": {
-      "code_fingerprint": "sha256:9aecb6cc125a1104b84ad20c755031a3750063c1de93d6b37cd7c6925136bf75",
+      "code_fingerprint": "sha256:9d235d7ef6664e5b4e81fdc8effb34d4dfa16cae22d8e463dade5c72796f746a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1.0e+05   kappa(A^T A) = 1.0e+10\nnormal equations: relative error 7.7e-08  (7.1 correct digits)\nSVD (lstsq)     : relative error 5.5e-14  (13.3 correct digits)\n"
+          "text": "kappa(A) = 1e+03: normal equations keep 10.7 digits, lstsq keeps 14.2\nkappa(A) = 1e+06: normal equations keep  4.7 digits, lstsq keeps 12.1\n"
         }
       ]
     },
     "numerical-stability-conditioning-ridge": {
-      "code_fingerprint": "sha256:994cccab4eed5ded8d7b0773bbb5d6fb9515642637d2bb4bcbffab0edf27abc5",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:9c0fb262059b4618110e82401d0a667c47d103517da6414b6334ee30366d7b42",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iterations / kappa: [5.89 5.9  5.94 5.99 6.06 6.15 6.19 6.25 6.  ]\n"
+          "text": "lambda   kappa  steps  steps/kappa  ridge minimizer\n"
         },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     0  1000.0   6908         6.91  [1. 1.]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     1   500.5   3458         6.91  [0.5   0.999]\n    10    91.8    635         6.92  [0.0909 0.9901]\n   100    10.9     76         6.98  [0.0099 0.9091]\n  1000     2.0     13         6.51  [0.001 0.5  ]\n"
+        }
+      ]
+    },
+    "mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1": {
+      "code_fingerprint": "sha256:0a4348dd6bd8da3a985a10df6e4a05ed0ace56663bc19d180b99c70f39aa38ef",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
-          "bytes": 38784,
-          "sha256": "sha256:df315e8d60ed0c9edc6d424a600010378be698c2a2fbac87f778312782a8b1ea"
+          "asset": "mdl-numerical-stability-conditioning/mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1-1.svg",
+          "bytes": 36675,
+          "sha256": "sha256:97cd2009510e996ba4e8eaccaace0e24b4d75c5ba4785bbc02e06d4926bd1726"
         }
       ]
     }

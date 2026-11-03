@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:779ac2aff30922dbd72066d94c217521e20c119beb5fd1c6441907753ab66e24",
+    "d2l_lib_fingerprint": "sha256:80475a4e8a6d531876947ae7054dbb724ff2b1ce38ff211a2821df0def0eb61b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,41 +13,101 @@
       "kind": "text",
       "outputs": []
     },
-    "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:235c7b32e508e02a211f73f4829d423b7c275cbcbf366e884ef3b2b0dfac668b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\nsgd        -0.954   -0.986   -0.995   -0.998\n"
-        }
-      ]
-    },
     "adaptive-stochastic-methods-adam-vs-gd": {
-      "code_fingerprint": "sha256:f7d80ac656d1b6fe94264608cbaa22597bb42f7209e36c312920a8f144f9a2b4",
+      "code_fingerprint": "sha256:f6557d5e3a1fc41560b5bb1cc1897a7a98a50d9f5cb79fb1e207dea314e9ec99",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-1": {
+      "code_fingerprint": "sha256:aeebe84d38bcd039748bc6e131b5d23e1d7377df168ee1c45fde5f4daa760ef4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "steps to f < 1e-8                aligned  rotated 45\nGD, eta = 2/(mu + L)                6160        6160\nheavy ball, tuned                    296         296\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Adam reaches f < 1e-8 at k = 344\n"
+          "text": "Adam, beta1 = 0, eta = 0.1            48       never\nAdam, beta1 = 0.9, eta = 0.01        344        7908\n"
         }
       ]
     },
-    "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:91da56f21336781f1b721403f587a8fb0c8d14f8a717a6b3233088392939d2ce",
+    "mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-2": {
+      "code_fingerprint": "sha256:f7bcdb2a4717ad9b26bfe6a2d3b0ba6136d22f45f3c0888cbac413db82dc3262",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per-step decay rate, l2 through Adam (alpha*lam/sigma_i): [1.e-05 1.e-03]\nper-step decay rate, AdamW (uniform):                     0.0001\n|w| after 4000 steps,  Adam + l2: [0.9677 0.0235]\n|w| after 4000 steps,  AdamW    : [0.6681 0.6598]\nAdamW prediction (1 - alpha*lam)^T = 0.6703\n"
+          "text": "t =  1: x = 0.9, 0.9;  eta/sqrt(v_hat) = 0.1, 0.0001\nt = 10: x = 0.262, 0.262;  eta/sqrt(v_hat) = 0.152, 0.000152\nt = 48: x = 3.91e-06, 3.91e-06;  eta/sqrt(v_hat) = 0.329, 0.000329\nlargest |x_1 - x_2| over the run: 5.6e-17\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-reddi": {
+      "code_fingerprint": "sha256:063ce3f1865b526a32df8fedd5d737a51e8bcb0012f1a834b56e30e4c2e43ba5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "x_t at t =        30      300     3000    15000   (x* = -1)\nadam         0.745    1.000    1.000    1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "amsgrad     -0.953   -0.985   -0.995   -0.998\nsgd         -0.954   -0.986   -0.995   -0.998\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-adamw": {
+      "code_fingerprint": "sha256:4068260d06d9a20221ea04bf5ca17e961736211256ce9a355d280be11dc99963",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-step decay rates: coupled [1.e-05 1.e-03]  AdamW 0.0001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean w, coupled: [0.962 0.027]   predictions exp(-eta lam T / sigma): [0.961 0.018]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean w, AdamW:   [0.67  0.671]   prediction (1 - eta lam)^T: 0.67\n"
+        }
+      ]
+    },
+    "mdl-adaptive-stochastic-methods-warmup": {
+      "code_fingerprint": "sha256:ab38a973e75edd61e0f71e4f99bc934199c150f90b6a11d4208605bf59614372",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t:                    1     2     3    10    30   100  1000  3000\nestimated v:       1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\nexact variance:    1.00  0.71  0.58  0.33  0.24  0.23  0.23  0.23\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-stochastic-methods-warmup-1.svg",
+          "bytes": 76562,
+          "sha256": "sha256:d9a6a66fadca9fca6e789ae94b3f5a5cb5440c6d04a96bd53c39b8f04a86bbe7"
+        }
+      ]
+    },
+    "mdl-adaptive-stochastic-methods-kronecker-factors": {
+      "code_fingerprint": "sha256:ab316e9fd072568f89ea673f406c98ed91d7116668828cb89027d95c87ddd5b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max difference: 4.2e-17\nstored entries: full 2.8e+14, two factors 3.4e+07\nflops to invert: full 4.7e+21, two factors 1.4e+11\n"
         }
       ]
     }

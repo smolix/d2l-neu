@@ -14,18 +14,29 @@
       "outputs": []
     },
     "gradient-based-optimization-steepest-direction": {
-      "code_fingerprint": "sha256:c5722e22e43d66aa27e073001e7353a0f2c2946eb7e853f425ab53f452f5535d",
+      "code_fingerprint": "sha256:1e6999a0d33e9d647458cd3d56f640b01c586b6ba724d6c3fbc5cc91a269ac38",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "steepest -grad/|grad|:  slope = -10.1980,  f(x + eta d) - f(x) = -0.101498\ndiagonal -(1,1)/sqrt(2):  slope =  -8.4853,  f(x + eta d) - f(x) = -0.084578\naxis     (-1,0):  slope =  -2.0000,  f(x + eta d) - f(x) = -0.019950\nuphill   +(1,1)/sqrt(2):  slope =  +8.4853,  f(x + eta d) - f(x) = +0.085128\nbest of 3600 sampled unit directions: [-0.1959 -0.9806]  vs  -grad/|grad| = [-0.1961 -0.9806]\n"
+          "text": "steepest -grad/|grad|:  slope = -10.1980,  f(x + eta d) - f(x) = -0.101498\ndiagonal -(1,1)/sqrt(2):  slope =  -8.4853,  f(x + eta d) - f(x) = -0.084578\naxis     (-1,0):  slope =  -2.0000,  f(x + eta d) - f(x) = -0.019950\nuphill   +(1,1)/sqrt(2):  slope =  +8.4853,  f(x + eta d) - f(x) = +0.085128\nbest of 3600 directions: [-0.1959 -0.9806]   -grad/|grad|: [-0.1961 -0.9806]\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-smoothness-and-the-descent-lemma": {
+      "code_fingerprint": "sha256:5a1d73e739b19a9d57eb04a1773d948f59c53e0f67589e678c21d11be9748027",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eta = 0.01:  bound  6.0120,  actual  6.0102\neta = 0.10:  bound  1.8000,  actual  1.6200\neta = 0.25:  bound 13.5000,  actual 12.3750\n"
         }
       ]
     },
     "gradient-based-optimization-backtracking": {
-      "code_fingerprint": "sha256:20e748a6daaeec59b51ad8888d7a66d682d01723e7e011909975a24d9d66cac1",
+      "code_fingerprint": "sha256:ddb10a4b386f3b43d36405087ae169573b7e0c7fee643ed9441e0b5391587393",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +47,7 @@
       ]
     },
     "gradient-based-optimization-eta-sweep": {
-      "code_fingerprint": "sha256:2646acb6c45eca3106f4906a048c39b04385cb2197c7dd6e65acc2e0d0a060f3",
+      "code_fingerprint": "sha256:fc75bb4d550c2f9fb2a565d0ab70044a2312653d66c4e543b50e76618f06d729",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +58,7 @@
       ]
     },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:3020e147a8bb5b545d82d9ec252e93559f2e436b0e93f6227d388bf23ea4ddc6",
+      "code_fingerprint": "sha256:c4a3178a0d50ca8d3e16f3400a4a5292071748dd560aa41d67cd500276763de5",
       "kind": "text",
       "outputs": [
         {
@@ -57,19 +68,24 @@
         }
       ]
     },
+    "mdl-gradient-based-optimization-the-edge-of-stability-1": {
+      "code_fingerprint": "sha256:781975c0bafe4a4cb9ff37e632dc6986acb08ea1b68f68fe4ec19d92d3278053",
+      "kind": "text",
+      "outputs": []
+    },
     "gradient-based-optimization-edge-of-stability": {
-      "code_fingerprint": "sha256:2d36844356767dee1994751bb862d2486c0b8d64f7945d9c4f1f3e72e0a04f57",
+      "code_fingerprint": "sha256:8e2848a54db02fe3e8dc1775367a17c3c28439f42902f6cc1b67e95a2c88269c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
+          "text": "    k   eta=0.40: loss  sharpness    eta=0.25: loss  sharpness\n    0         8.04e-01      4.205          8.04e-01      4.205\n 2000         1.75e-02      5.023          1.38e-02      5.433\n20000         3.50e-04      5.009          8.46e-05      7.987\n20001         3.50e-04      4.991          8.45e-05      8.013\nloss rose on this fraction of late steps:  eta=0.40 0.50,  eta=0.25 0.50\n"
         }
       ]
     },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:1f68b0dff819a78610c45ee501ddae996f0afe9784610bfc724c51169640c86e",
+      "code_fingerprint": "sha256:cb0138e1f1084f0af32c4a9ee71154c4b8e6801f7e5cc903ff5210bb86b4e44e",
       "kind": "text",
       "outputs": [
         {
@@ -80,36 +96,74 @@
       ]
     },
     "mdl-gradient-based-optimization-newton-s-method-and-its-computational-cost-1": {
-      "code_fingerprint": "sha256:66dd8dedc22df3cb8b3a6f39cd3ba78b6ba0b96333fde8a71ea4ed9b20bd972a",
+      "code_fingerprint": "sha256:5498bd6917c3aeebbb6978efdbc25df350de967101368c5b5b187e742a92dad7",
       "kind": "text",
       "outputs": []
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:42f2b625782839d7b026cdf5e6508abd2ac70b210ab15c8d8bacd8a3f56b7b54",
+      "code_fingerprint": "sha256:81e653d3b489ebb053b7e46a1686422a284634328bc5d6e1744243ccbd96d3c3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD at the optimal step contracts by 0.9802; it needs 691 steps for |x_k| <= 1e-6 |x_0|\nNewton iteration 1:  |grad| = 3.7e-01\nNewton iteration 2:  |grad| = 4.7e-02\nNewton iteration 3:  |grad| = 2.3e-03\nNewton iteration 4:  |grad| = 6.4e-06\nNewton iteration 5:  |grad| = 5.0e-11\nNewton iteration 6:  |grad| = 2.2e-17\nmax |w - w_star| = 4.4e-16\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-newton-s-method-1": {
+      "code_fingerprint": "sha256:32abe16257e0ff6216d3259d96d6474ad72b16e63b6295af143143b6e0711bfd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Newton y: [-9.33624961e-03  2.71275924e-07 -6.61744490e-21]   f = 1.0000\nGD     y: [0.5955 1.1565 2.0718 2.9489 3.1404 3.1416]   f = -1.0000\n"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-bfgs-1": {
+      "code_fingerprint": "sha256:7fa8d625051e7b5c1af95c7fde2ebfaa22b92d31b35ba9629ec97f0f4f83dc8f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 1: x = [ 0.8991 -0.009 ],  M = [[1.009, -0.0001], [-0.0001, 0.1]]\nstep 2: x = [0. 0.],  M = [[1.0, -0.0], [-0.0, 0.1]]\nA^-1 = [[1.0, 0.0], [0.0, 0.1]],  max |M_2 - A^-1| = 1e-16\n"
         }
       ]
     },
     "mdl-gradient-bfgs-quadratic": {
-      "code_fingerprint": "sha256:7a66e8585178534a4eed9c9cf23914e0c68a9b83bc3701b273370e85ed9fb831",
+      "code_fingerprint": "sha256:65edae6946a6a1c0f524aad6bfd90f3d871ae227279edf9ee38294c69daff5d1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after d = 6 steps: BFGS 1.05e-14, GD 7.94e-01\n"
+          "text": "after d = 6 steps: BFGS 2.7e-14, GD 0.96\nmax |M_6 - A^-1| = 3.6e-15\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
-          "bytes": 28737,
-          "sha256": "sha256:3bb0b6bef1aa05ca9746f1f7258364c1381a7afe47774dbecc31148f677a659e"
+          "bytes": 29964,
+          "sha256": "sha256:65161544fbfd2b5414acc6a7a60a0379312ccbb810a0d8da5aa99dc4cc735255"
+        }
+      ]
+    },
+    "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1": {
+      "code_fingerprint": "sha256:9c1749a2af667f17c96da62e78e129eb93cb0ace1e56510af0ab2d738988a43b",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-2": {
+      "code_fingerprint": "sha256:ee3a9279e02af7f0758f781021a4ca8b81fbb21e1efc74b3fb9dffa174f217ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " k        x            f      |p|    tau      r  Delta\n 0 ( 0.500, 0.300)  1.0803  0.500  1.596   0.98  0.50\n 1 ( 0.307, 0.761)  0.7711  1.000  1.419   0.87  1.00\n 2 ( 0.180, 1.753) -0.1652  2.000  0.311   0.41  2.00\n 3 ( 0.043, 3.749) -0.8205  0.696  0.000   0.88  2.00\n 4 ( 0.000, 3.054) -0.9962  0.088  0.000   1.00  2.00\n 5 ( 0.000, 3.142) -1.0000  0.000  0.000   1.00  2.00\nfinal x = (0.0000, 3.1416),  f = -1.0000\n"
         }
       ]
     }

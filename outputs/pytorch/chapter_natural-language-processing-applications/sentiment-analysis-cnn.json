@@ -60,14 +60,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.091, train acc 0.969, test acc 0.867\n11421.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.096, train acc 0.968, test acc 0.869\n14258.2 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-cnn/sentiment-analysis-cnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25123,
-          "sha256": "sha256:7abdd2f90b4a9d3b590053de7a48d52661b1d0ee9a2803587d6b0d362fa75ff6"
+          "bytes": 25131,
+          "sha256": "sha256:137328b26cfb6453792eec8c761ce5eaacf503efb86255573da4148d82efffa6"
         }
       ]
     },

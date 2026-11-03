@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24720,
-          "sha256": "sha256:bb219fe22a2b0e3185f7507d98d3a6b5c2302d6e5e12cb4f03f236bac9bf1d03"
+          "sha256": "sha256:dec48f0684600065293d64357b69370bb0b31a92d8be9ece27010dcad47adad8"
         }
       ]
     },
@@ -38,7 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -83,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30576,
-          "sha256": "sha256:7a45f3c3876eb880dce8d05364ffa372840daa3c23bd9b131d6690ed3d70d54f"
+          "sha256": "sha256:1d5cc24877eb24dbebc96136c700225f05232da87f320002d9f8a04d4e26b771"
         }
       ]
     },
@@ -154,7 +159,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114821,
-          "sha256": "sha256:39f758276ec7f0e6f9ed8b13576c104f13f4d52ca626a0b01271f60f4ff7bacc"
+          "sha256": "sha256:654191b02206410b153d3215bafebfe4ac0cb0093377f1897586c9383401b9a8"
         }
       ]
     },
@@ -198,7 +203,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 26142,
-          "sha256": "sha256:8cf798df14330cf081207ee0bc8581621688263e40a423334390e44709f56883"
+          "sha256": "sha256:57a7b552b511e277c400a3d5462f3b7cce16080c0002287d213ac966c7ecfc6a"
         }
       ]
     },

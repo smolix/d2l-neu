@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 3.000             0.0017             0.076\n 0.766             0.0296             1.122\n 0.196             0.1071             3.430\n 0.050             2.4389             3.950\n"
+          "text": " 3.000             0.0017             0.076\n 0.766             0.0296             1.122\n 0.196             0.1070             3.430\n 0.050             2.4310             3.950\n"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "annealed, 100 steps per level: mode weights [0.487, 0.333, 0.18], spread 0.54, stray 0.023\n"
+          "text": "annealed, 100 steps per level: mode weights [0.487, 0.334, 0.18], spread 0.54, stray 0.022\n"
         },
         {
           "type": "stream",
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
-          "bytes": 101733,
-          "sha256": "sha256:c18df4efbfadf2123d9b9abcc0f4f83e6a53119818c438f8c53fca2bb456a018"
+          "bytes": 101651,
+          "sha256": "sha256:eb53a6d4f1ddbd67d67b5e7c9bab7da3831550d57963d6cd6246470c9e319cde"
         }
       ]
     },
@@ -112,14 +112,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.162\n"
+          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.161\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 182416,
-          "sha256": "sha256:14a38a1f40d61c62aa3ee3b5d405f3c05a9640a0e98d9b42cc76653a0bf6a2d1"
+          "bytes": 182855,
+          "sha256": "sha256:6415680527de71afa98aca8abd2a38d270d6c9c58c1542322bead44109ecb6dc"
         }
       ]
     }

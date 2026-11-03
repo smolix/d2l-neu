@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15821,
-          "sha256": "sha256:89efddce76eaf65993ae4ac014726e2adc908caf8a1519917d68fd38f289e3d6"
+          "sha256": "sha256:c97b3c1d2f4e2a025e30027be1f4e22f308e46907e15b5eca6948b216663ba3d"
         }
       ]
     },
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25088,
-          "sha256": "sha256:cc20eb3c3d4ef6886adac544deff08425fd9e6d6a8071fbc5c9413e141722595"
+          "sha256": "sha256:06c8a4b0bebb2d9bed66c786eb24fefb8d234dc459290d6a8b43a1594790acda"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28451,
-          "sha256": "sha256:b4096bfe7b7667e212c7b70cacd05243d5c41877df3e48da4fce8ba92078fcdf"
+          "sha256": "sha256:4f4055ff2353e41a2052dd5a31112efbcd23750479ab3949c0a060d55cb85c5a"
         }
       ]
     },

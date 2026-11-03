@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([-5.3609875e-03,  1.1589489e-02,  2.1191216e-05,  1.1758380e-02]),\n array(0.))"
+          "text": "(array([ 0.01035288,  0.00435858, -0.01532585, -0.00713896]), array(0.))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([ 0.4821511 , -0.03323567, -0.69498956, -0.5297704 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+          "text": "(array([-0.23971221, -0.22738042,  0.38908058, -0.5690891 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.03       1.5      1.01\n  8      14.7      1.69      1.01\n 32  6.45e+04      1.63      1.01\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.11      1.51         1\n  8        18      1.53         1\n 32  5.41e+04      1.62         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37522,
-          "sha256": "sha256:b2fd9cf79c49688c5e058050f7f5502bb289625c2df6acb1259fba53c19401b4"
+          "bytes": 35867,
+          "sha256": "sha256:a1eca77e84069157ba9688aecdfa3a0d2cf07fa0e88579ced4f94c2356a940b3"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0982\n"
+          "text": "normal:    std 0.0200, max weight 0.0975\n"
         },
         {
           "type": "stream",
@@ -94,7 +94,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-7.602658 ,  9.152859 , -0.       , -8.024243 ],\n       [ 6.7942104, -0.       ,  0.       , -5.563192 ]])"
+          "text": "array([[ 6.9151096,  0.       , -8.768754 , -0.       ],\n       [ 7.323183 ,  5.0116596,  0.       , -7.361978 ]])"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([42.       , 10.152859 ,  1.       , -7.0242434])"
+          "text": "array([42.      ,  1.      , -7.768754,  1.      ])"
         }
       ]
     }

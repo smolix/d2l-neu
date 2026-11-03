@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'python': '~/d2l-neu/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': 'chapter_appendix-tools-for-deep-learning'}"
+          "text": "{'python': '~/d2l-neu-infra/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': 'chapter_appendix-tools-for-deep-learning'}"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "9.57 μs ± 14.2 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
+          "text": "9.65 μs ± 25.1 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
         }
       ]
     }

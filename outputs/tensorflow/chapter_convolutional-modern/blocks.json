@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:fdd0a2f425d70592562656ae9b63e39586ff4af82b1ddc4c87398cbb8b6f7d35",
+    "d2l_lib_fingerprint": "sha256:1b2cb1a2fe4487a1c0190b2dd0cd44f7775896aa8485d5780808c2a127fd5637",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,12 +30,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 112, 112, 64)\nSequential             (1, 56, 56, 128)\n"
+          "text": "Sequential             (1, 112, 112, 64)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 28, 28, 256)\nSequential             (1, 14, 14, 512)\nSequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
+          "text": "Sequential             (1, 56, 56, 128)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 28, 28, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 14, 14, 512)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 7, 7, 512)\nFlatten                (1, 25088)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 4096)\nDropout                (1, 4096)\nDense                  (1, 10)\n"
         }
       ]
     },
@@ -52,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 31957,
-          "sha256": "sha256:f6d76fa4f0d1cf7e368414002d685cc590d878e5343acc8c4126eb8e08a4d17b"
+          "bytes": 32432,
+          "sha256": "sha256:dbe65a928d06f125c0bc39dba37254aa960aaa5255469f352bfa0e942ebea151"
         }
       ]
     },
@@ -74,7 +89,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\nSequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\nSequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\nSequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
+          "text": "Sequential             (1, 54, 54, 96)\nMaxPooling2D           (1, 26, 26, 96)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 26, 26, 256)\nMaxPooling2D           (1, 12, 12, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 12, 12, 384)\nMaxPooling2D           (1, 5, 5, 384)\nDropout                (1, 5, 5, 384)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential             (1, 5, 5, 10)\nGlobalAveragePooling2D (1, 10)\n"
         }
       ]
     },
@@ -86,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 30240,
-          "sha256": "sha256:ae4598d905cc012a244994b6c98fa6fc358b7cb8b2df08ebcd91cef4f3626143"
+          "bytes": 30230,
+          "sha256": "sha256:f60433705f1d10da2554001ef76c3893e1f49a03213dd9d0724bcb16872cf3cf"
         }
       ]
     },
@@ -140,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 31406,
-          "sha256": "sha256:2e4147f4e334caf68bb61dfbc66194f1aede08c1d71f947771a5fedd9e4a674d"
+          "bytes": 30890,
+          "sha256": "sha256:090e87534a2781e4c763ad85f2864f7a0e4653bd4362913e493678f056b7a606"
         }
       ]
     },
@@ -151,7 +181,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.916, 'NiN': 0.852, 'GoogLeNet': 0.909}"
+          "text": "{'VGG': 0.92, 'NiN': 0.873, 'GoogLeNet': 0.906}"
         }
       ]
     }

@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.5659049 , 0.38074365, 0.887377  ],\n       [0.74272156, 0.27641395, 0.0451817 ]], device=gpu(1))"
+          "text": "array([[0.3217661 , 0.42627156, 0.49070048],\n       [0.94067824, 0.49903202, 0.22653851]], device=gpu(1))"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.5659049, 1.3807436, 1.887377 ],\n       [1.7427216, 1.2764139, 1.0451818]], device=gpu(1))"
+          "text": "array([[1.3217661, 1.4262716, 1.4907005],\n       [1.9406782, 1.499032 , 1.2265385]], device=gpu(1))"
         }
       ]
     },
@@ -121,7 +121,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.01547003],\n       [0.01547003]], device=gpu(0))"
+          "text": "array([[-0.05240346],\n       [-0.05240346]], device=gpu(0))"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0015 sec\ntime until they all finished:     0.0603 sec\n"
+          "text": "time to queue 32 matrix products: 0.0020 sec\ntime until they all finished:     0.0548 sec\n"
         }
       ]
     },
@@ -171,7 +171,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
           "bytes": 30937,
-          "sha256": "sha256:ee24720c6708f050aed8515d5defab49cd2d130b5709c02430951a736bff9ac6"
+          "sha256": "sha256:0ce977a48d18f55db69daa26f43c4d91e1d0b12190f0511b3a89f15f73ff1159"
         },
         {
           "type": "execute_result",

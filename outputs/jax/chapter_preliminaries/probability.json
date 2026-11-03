@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [49, 51]\n"
+          "text": "heads, tails:  [42, 58]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([54., 46.], dtype=float32)"
+          "text": "Array([51., 49.], dtype=float32)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.48999998, 0.51      ],\n       [0.48      , 0.52      ],\n       [0.62      , 0.38      ],\n       [0.45999998, 0.53999996],\n       [0.58      , 0.42      ]], dtype=float32)"
+          "text": "Array([[0.45      , 0.55      ],\n       [0.48999998, 0.51      ],\n       [0.47      , 0.53      ],\n       [0.44      , 0.56      ],\n       [0.45999998, 0.53999996]], dtype=float32)"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([0.496, 0.504], dtype=float32)"
+          "text": "Array([0.5009, 0.4991], dtype=float32)"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 70202,
-          "sha256": "sha256:d00ccd72fa756b73ca8e4319dbb2369aef47e4216b967cbd096da28af6857343"
+          "bytes": 69986,
+          "sha256": "sha256:b08e658f594735930d707ce1313b411759dda4006747c011cf2e304ffa5c0d53"
         }
       ]
     },
@@ -73,7 +73,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.8326143, dtype=float32)"
+          "text": "Array(0.8407252, dtype=float32)"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31773,
-          "sha256": "sha256:6f4859e0d42a8683090f40619352f736b6bdc05f5a14b66351e6b261929b0965"
+          "bytes": 31731,
+          "sha256": "sha256:8727779189733b8d222d78372e37d7c2ac40752a0ef53748af8c27873460ed9a"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.283, 0.0)"
+          "text": "(0.266, 0.0)"
         }
       ]
     }

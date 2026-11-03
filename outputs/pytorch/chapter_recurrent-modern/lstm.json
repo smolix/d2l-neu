@@ -72,12 +72,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  1.00  1.00  0.25\n"
+          "text": "RNN               1.00  1.00  1.00  1.00  0.12  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.60  0.12  0.13  0.12\n"
+          "text": "LSTM              1.00  1.00  0.49  0.12  0.12  0.12\n"
         },
         {
           "type": "stream",
@@ -118,28 +118,28 @@
       ]
     },
     "lstm-character-level-language-modeling-3": {
-      "code_fingerprint": "sha256:5c74259645ee32fe36905ba0981b7fdcc65ca35463c811b81c75ab6c649d487f",
+      "code_fingerprint": "sha256:da7d2483fdf69975e31a04c54acf4c40ad47479f0f63b50587f9d818c86de45c",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:4f6c03354042a3187c9481351f2a80a631a98d5938df84adf0a2fd4b5b33c578",
+      "code_fingerprint": "sha256:a78c7aedd7fa79993411d9be1e933fef98cd9d343f0697fd2929acbf25ec77f1",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:0d1787991af9d081d76eb133edf7e6adad1b6a084ba3ed9f9f5f262e54d04b7e",
+      "code_fingerprint": "sha256:4ed3cc8e3f0e24a33e47d33dc503b7eac6e387e09745bb3559b2c98a9314eb48",
       "kind": "text",
       "outputs": []
     },
     "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:6211948ebf1fbee7c22584750675fc0385c46fa3959cda62a674fe48f0686b10",
+      "code_fingerprint": "sha256:4af7329846e8445aa9475023f3e017ecafb84e6ad60b71032db76dac25f7fa79",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.14\nLSTM    542,003 parameters   perplexity 2.97\nGRU     475,955 parameters   perplexity 2.98\n"
+          "text": "RNN     343,859 parameters   perplexity 3.13\nLSTM    542,003 parameters   perplexity 2.97\nGRU     475,955 parameters   perplexity 3.00\n"
         }
       ]
     }

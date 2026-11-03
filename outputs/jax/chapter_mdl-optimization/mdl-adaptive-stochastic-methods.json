@@ -57,12 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -122,7 +117,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29383,
-          "sha256": "sha256:d5387a2fc4e6fdc94236a73eb9a8a573b065bce09f7a88f6b19e0a60e96023d6"
+          "sha256": "sha256:06336a0ea03b1999ea4c3624e797368cf2ee594b1bb7434594084735121204e7"
         }
       ]
     }

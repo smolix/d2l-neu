@@ -20,17 +20,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.264\n"
+          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.266\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.128\n"
+          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.133\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "polynomial 1/2  budget  200.2, final rate 0.036, mean squared distance 0.097\n"
+          "text": "polynomial 1/2  budget  200.2, final rate 0.036, mean squared distance 0.099\n"
         },
         {
           "type": "stream",
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-four-schedules-on-the-valley-1.svg",
-          "bytes": 99737,
-          "sha256": "sha256:02e99f866d853ac7e239ec6bb59884a01aca449f7135a719e197626b02b2571e"
+          "bytes": 98612,
+          "sha256": "sha256:ee463686f030cbf33de2cabd49ea17451dd22f7040e2269622f015e7c3bddf01"
         }
       ]
     },
@@ -69,13 +69,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-a-testbed-3-1.svg",
-          "bytes": 40333,
-          "sha256": "sha256:99a1cf3a21b71bd3dfc30887a59bb21f654e331da7f151385f427105a3fbe2ba"
+          "bytes": 39718,
+          "sha256": "sha256:e81b97e164ae101ba8dafd0fda95b468ae27fed23c44655b69ffdff4791763db"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.062, test loss 0.515, test accuracy 0.871\n"
+          "text": "train loss 0.064, test loss 0.400, test accuracy 0.897\n"
         }
       ]
     },
@@ -98,7 +98,7 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-four-decay-shapes-2-1.svg",
           "bytes": 27755,
-          "sha256": "sha256:4a5a67db1b222ef7b7eec6d7d3f942d64238d5063f4fbde81dc6d1291e02c3d9"
+          "sha256": "sha256:451889263a96bc95d0281f9c5b01edca8edb96b16d222679d743556055ead521"
         }
       ]
     },
@@ -114,22 +114,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.100, test loss 0.326, test accuracy 0.897\nexponential: "
+          "text": "train loss 0.105, test loss 0.374, test accuracy 0.885\nexponential: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.093, test loss 0.289, test accuracy 0.907\npiecewise: "
+          "text": "train loss 0.100, test loss 0.273, test accuracy 0.911\npiecewise: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.073, test loss 0.289, test accuracy 0.911\ncosine: "
+          "text": "train loss 0.065, test loss 0.293, test accuracy 0.909\ncosine: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.054, test loss 0.322, test accuracy 0.906\n"
+          "text": "train loss 0.052, test loss 0.308, test accuracy 0.910\n"
         }
       ]
     },
@@ -140,14 +140,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy over the last 5 epochs: mean, std\nconstant     0.885 0.008\nsquare root  0.897 0.006\nexponential  0.905 0.004\npiecewise    0.910 0.001\ncosine       0.908 0.001\n"
+          "text": "test accuracy over the last 5 epochs: mean, std\nconstant     0.889 0.007\nsquare root  0.896 0.006\nexponential  0.911 0.001\npiecewise    0.909 0.000\ncosine       0.909 0.001\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-decay-schedules-compared-2-1.svg",
-          "bytes": 30537,
-          "sha256": "sha256:15c030e63b979b1b78519a56aafe1b6aba1c9d94220e6ea44efb4b3d7490591b"
+          "bytes": 30531,
+          "sha256": "sha256:21cf957b4c2b3204aa21d30180c041528a5b2909d231a721cab3674004006ae9"
         }
       ]
     },
@@ -159,13 +159,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
-          "bytes": 31732,
-          "sha256": "sha256:31f04cc7613e7bb3387ff9e55103ae100201b3b219cadd5d34e36b558bb70245"
+          "bytes": 32681,
+          "sha256": "sha256:181c424899c1ec0914674a8723e5325fac2ed3c02a6ff780bb72a2c76d4123b7"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 2.022, test loss 2.032, test accuracy 0.195\n"
+          "text": "train loss 2.312, test loss 2.319, test accuracy 0.100\n"
         }
       ]
     },
@@ -182,13 +182,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-3-1.svg",
-          "bytes": 33385,
-          "sha256": "sha256:eeb70bf0c8e84c9516002af900a8fbc25c9d3d3c102e01258ac7576b8d886b61"
+          "bytes": 33348,
+          "sha256": "sha256:3a6bb31c97fe8efe036a08989bb06c597382682bf627c6c41d64688c7b754c71"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.189, test loss 0.304, test accuracy 0.903\n"
+          "text": "train loss 0.189, test loss 0.341, test accuracy 0.882\n"
         }
       ]
     },
@@ -199,7 +199,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.060, test loss 0.318, test accuracy 0.907\n"
+          "text": "train loss 0.062, test loss 0.311, test accuracy 0.905\n"
         }
       ]
     },
@@ -215,14 +215,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.027, test loss 0.356, test accuracy 0.908\n"
+          "text": "train loss 0.031, test loss 0.366, test accuracy 0.905\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-2-1.svg",
-          "bytes": 28411,
-          "sha256": "sha256:5cb56a8273c3ce4487901a39fc3e60bd316f02f5babef0e906d1cec6bd585531"
+          "bytes": 28407,
+          "sha256": "sha256:7becd12e6c60903acf0ea7bd23fe5f028105df309000a28264554b0d8c0ed217"
         }
       ]
     },
@@ -233,7 +233,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.086, test loss 0.436, test accuracy 0.875\n"
+          "text": "train loss 0.088, test loss 0.421, test accuracy 0.881\n"
         }
       ]
     },
@@ -254,12 +254,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.028, test loss 0.367, test accuracy 0.908\nplateau: "
+          "text": "train loss 0.028, test loss 0.378, test accuracy 0.903\nplateau: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.062, test loss 0.510, test accuracy 0.874\n"
+          "text": "train loss 0.062, test loss 0.486, test accuracy 0.883\n"
         }
       ]
     },
@@ -270,14 +270,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy, epochs 25 to 30\nplateau      0.883 0.899 0.849 0.896 0.875 0.874\nbranch       0.883 0.899 0.901 0.906 0.908 0.908\nplanned WSD  0.874 0.897 0.901 0.905 0.904 0.908\n"
+          "text": "test accuracy, epochs 25 to 30\nplateau      0.891 0.848 0.886 0.856 0.881 0.883\nbranch       0.888 0.878 0.898 0.899 0.904 0.903\nplanned WSD  0.887 0.885 0.902 0.901 0.903 0.905\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-4-1.svg",
-          "bytes": 28815,
-          "sha256": "sha256:7ed2de069bdee3c1d4fc5b6f688dbed875b112dfdbdbe226e64a2876566b3643"
+          "bytes": 28812,
+          "sha256": "sha256:0346d8a2641a3409e7fb6759bcadef36f169a4b19b2004f27ae828f784ea8e87"
         }
       ]
     }

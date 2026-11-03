@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x748176476680>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x74810500c080>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x748104094880>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x71aa54107400>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04ed0c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04ed9c0>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x748104097000>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d80>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d40>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x748104096d00>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04f4fc0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04f4f80>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04f4f40>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x71a9c04f4f00>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.82228184, 0.720204  , 0.95189404],\n       [0.33173   , 0.18658495, 0.7490263 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.56938636, 0.5615597 , 0.5604254 ],\n       [0.89167   , 0.06372738, 0.786674  ]], dtype=float32)>"
         }
       ]
     },
@@ -101,7 +101,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.8222818, 1.720204 , 1.951894 ],\n       [1.33173  , 1.186585 , 1.7490263]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.5693864, 1.5615597, 1.5604254],\n       [1.89167  , 1.0637274, 1.786674 ]], dtype=float32)>"
         }
       ]
     },
@@ -111,7 +111,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-0.6435734],\n       [-0.6435734]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.386862],\n       [1.386862]], dtype=float32)>"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0025 sec\ntime until they all finished:     0.0535 sec\n"
+          "text": "time to queue 32 matrix products: 0.0024 sec\ntime until they all finished:     0.0535 sec\n"
         }
       ]
     },
@@ -191,12 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  step memory  1152 MiB,  24.4 ms per step\n"
+          "text": "checkpointing=False  step memory  1152 MiB,  24.6 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   step memory   512 MiB,  30.2 ms per step\n"
+          "text": "checkpointing=True   step memory   512 MiB,  29.8 ms per step\n"
         }
       ]
     },
@@ -213,8 +213,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 30333,
-          "sha256": "sha256:885ec54218457f2f87ff571c3fd0a130d4a339e5afcead1cae8d380714755ac6"
+          "bytes": 29736,
+          "sha256": "sha256:89cc42a8d5116c6432f18e742151bd785c00c1dddb52fe41cb7c9bfaede6bf66"
         },
         {
           "type": "execute_result",

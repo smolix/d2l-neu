@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-2.3916  2.7826 -3.4107]\nlargest difference: 2e-07\n"
+          "text": "gradient: [-2.5575  3.1926 -3.309 ]\nlargest difference: 2e-07\n"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 34357,
-          "sha256": "sha256:2fab250ea715a059dd12046c68869c2afe0880479d9117084d6e35ff8ef1fc2b"
+          "bytes": 34356,
+          "sha256": "sha256:d71b374eb5fc85c7981d0f512a8a4c76fd2a4f8cce1caf052d6d294b4ad65c7e"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: -2.3e-04, -4.5e-04\nerror in b: -6.3e-04\n"
+          "text": "error in w: -4.2e-04, 6.2e-04\nerror in b: -5.4e-04\n"
         }
       ]
     },
@@ -100,17 +100,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.9e+00\n"
+          "text": "lr = 0.003  validation loss: 2.6e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 5.3e-05\n"
+          "text": "lr = 0.03   validation loss: 4.9e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.3    validation loss: 6.5e-05\n"
+          "text": "lr = 0.3    validation loss: 4.9e-05\n"
         },
         {
           "type": "stream",

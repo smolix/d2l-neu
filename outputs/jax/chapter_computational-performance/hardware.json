@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:dbc4fd0696a83261eac661a9ba63fb8b69226b0d30b0d85ebc09bed8c0bf6041",
+    "d2l_lib_fingerprint": "sha256:0dfb959e91c72b8f77611318a03a0501c5ad69d2d24560364f85aaeef9c55ef8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 8.6 GB/s\npinned: 22.6 GB/s\n"
+          "text": "pageable: 8.8 GB/s\npinned: 22.1 GB/s\n"
         }
       ]
     },
@@ -42,32 +42,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    1:  0.58 ms,     1,714 rows/s,   0.9 TFLOP/s\n"
+          "text": "B =    1:  0.59 ms,     1,696 rows/s,   0.9 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =    4:  0.59 ms,     6,792 rows/s,   3.6 TFLOP/s\n"
+          "text": "B =    4:  0.58 ms,     6,893 rows/s,   3.7 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   16:  0.60 ms,    26,474 rows/s,  14.2 TFLOP/s\n"
+          "text": "B =   16:  0.60 ms,    26,669 rows/s,  14.3 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =   64:  0.63 ms,   102,054 rows/s,  54.8 TFLOP/s\n"
+          "text": "B =   64:  0.62 ms,   103,004 rows/s,  55.3 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B =  256:  0.86 ms,   299,201 rows/s, 160.6 TFLOP/s\n"
+          "text": "B =  256:  0.82 ms,   313,450 rows/s, 168.3 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "B = 1024:  3.08 ms,   332,970 rows/s, 178.8 TFLOP/s\n"
+          "text": "B = 1024:  3.18 ms,   321,727 rows/s, 172.7 TFLOP/s\n"
         }
       ]
     }

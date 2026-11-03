@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 0.68\nResidualBlock   std 0.85\nResidualBlock   std 1.03\nResidualBlock   std 1.25\nResidualBlock   std 1.51\nResidualBlock   std 1.85\nResidualBlock   std 2.34\nResidualBlock   std 2.71\nResidualBlock   std 3.16\nDense           std 3.66\n"
+          "text": "Dense           std 0.69\nResidualBlock   std 0.88\nResidualBlock   std 1.04\nResidualBlock   std 1.24\nResidualBlock   std 1.59\nResidualBlock   std 1.94\nResidualBlock   std 2.26\nResidualBlock   std 2.70\nResidualBlock   std 3.41\nDense           std 3.42\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weight 9.96, bias 1.86\n"
+          "text": "weight 11.8, bias 2.02\n"
         }
       ]
     }

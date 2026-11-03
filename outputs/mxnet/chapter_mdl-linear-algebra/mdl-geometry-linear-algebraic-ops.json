@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26279,
-          "sha256": "sha256:16169c2518be75c51fa327faaea13eb9f71c1186410f35ae7321f19c6144b714"
+          "sha256": "sha256:718fc6c96a2c541a0828bade2a8eae485505c5c39b752e8066e49e1d24fc259f"
         }
       ]
     },
@@ -70,7 +70,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 37269,
-          "sha256": "sha256:f31f240d518148b1804f6babfd425a73249c7a3d8bdb05894c50036348c014b9"
+          "sha256": "sha256:d616a8eb6c5562622b1867081fcac8ad5c379315138e2bc9110d2cd330394c82"
         }
       ]
     },

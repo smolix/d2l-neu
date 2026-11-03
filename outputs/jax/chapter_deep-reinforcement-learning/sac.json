@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:119313007d03d77bb86cae4297ac6e00c7dd27ad4da935c9eeec728fc5ac55ea",
+    "d2l_lib_fingerprint": "sha256:78ed76faa6957d3901fc253e7204a0de8cbab4168ffc5059533c6fd593ead6ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -95,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
           "bytes": 34612,
-          "sha256": "sha256:11f8aa35e76cbc99dff94f78f7192dc0bf7aafe66d3710cb4b855fbd440d1f02"
+          "sha256": "sha256:071671663cc236339da53089e70d01a9af24f8fea8738576c6db8730fab67ecf"
         }
       ]
     },
@@ -113,7 +113,7 @@
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
           "bytes": 34215,
-          "sha256": "sha256:ee071a549512bf864fcecbac1218b89fc2fabfe2f89fe3e0a1f34b2763f2994c"
+          "sha256": "sha256:701dc555e950649f6db7a3e3bc6710b9fdc89d476c5fc268cee3214dc7615c7a"
         }
       ]
     },

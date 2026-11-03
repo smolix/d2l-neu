@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, np.float64(0.500392833064386))"
+          "text": "(0.5, np.float64(0.5000643920088004))"
         }
       ]
     },

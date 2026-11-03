@@ -2310,11 +2310,12 @@ class PennTreebank(d2l.DataModule):
 
 @jax.jit(static_argnums=0)
 def lm_loss_sum(graphdef, state, X, Y):
-    """Summed next-token cross-entropy of a batch.
+    """Summed next-token cross-entropy of a batch, and the model's state.
 
     Defined in :numref:`sec_gru`"""
-    logits = nnx.merge(graphdef, state)(X)
-    return optax.softmax_cross_entropy_with_integer_labels(logits, Y).sum()
+    model = nnx.merge(graphdef, state)
+    loss = optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
+    return loss, nnx.state(model)
 
 def lm_perplexity(model, data):
     """Perplexity of a language model on the validation set of `data`.
@@ -2325,8 +2326,9 @@ def lm_perplexity(model, data):
                                          raise_if_not_found=False))
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        total += lm_loss_sum(graphdef, state, X, Y)
-        count += Y.size
+        loss, state = lm_loss_sum(graphdef, state, X, Y)
+        total, count = total + loss, count + Y.size
+    nnx.update(model, state)  # Keep statistics the model records, if any
     return math.exp(float(total) / count)
 
 def fit_lm(model, data, num_steps=3000, lr=2e-3):

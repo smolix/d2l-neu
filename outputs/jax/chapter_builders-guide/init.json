@@ -35,7 +35,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([0.00441131, 0.01448729, 0.00534416, 0.01819666], dtype=float32),\n Array(0., dtype=float32))"
+          "text": "(Array([-0.0006284 , -0.01016768,  0.00825929,  0.00077705], dtype=float32),\n Array(0., dtype=float32))"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([-0.26192242,  0.32621694,  0.5842553 ,  0.2171763 ], dtype=float32),\n Array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
+          "text": "(Array([ 0.31773177, -0.24687448, -0.15993987,  0.06672217], dtype=float32),\n Array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[-0.12451605],\n       [-0.7477722 ],\n       [ 0.48692998]], dtype=float32)"
+          "text": "Array([[-0.08544405],\n       [ 0.5782265 ],\n       [-0.7238175 ]], dtype=float32)"
         }
       ]
     },
@@ -76,14 +76,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.01      1.49     0.996\n  8      14.8       1.6     0.986\n 32  6.19e+04      1.71     0.999\n"
+          "text": "  N  unscaled    scaled      zero\n  2      1.97      1.46         1\n  8      17.7       1.6         1\n 32  1.32e+05      1.63         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 37502,
-          "sha256": "sha256:c3d76fafe91df79f369cb1f38dbec09e3b151a0a04e96c6375c6ab58e570bfb7"
+          "bytes": 37486,
+          "sha256": "sha256:b4a023017984cc655499166ecdab5af88840dff91a9d3ab2708bbbb362bf7cb3"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1084\n"
+          "text": "normal:    std 0.0200, max weight 0.1025\n"
         },
         {
           "type": "stream",
@@ -109,7 +109,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.      , 0.      ],\n       [7.880163, 0.      ],\n       [0.      , 8.933647],\n       [6.619041, 0.      ]], dtype=float32)"
+          "text": "Array([[ 9.291978 , -9.667921 ],\n       [ 0.       ,  7.598617 ],\n       [ 0.       ,  6.0718727],\n       [ 0.       ,  5.9228015]], dtype=float32)"
         }
       ]
     },
@@ -119,7 +119,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([42.      ,  8.880163,  1.      ,  7.619041], dtype=float32)"
+          "text": "Array([42.,  1.,  1.,  1.], dtype=float32)"
         }
       ]
     }

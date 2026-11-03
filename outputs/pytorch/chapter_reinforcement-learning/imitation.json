@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5a835e3c95b6e9eb6f23f1329478edd3f4d69122790898218b831659730bcb1c",
+    "d2l_lib_fingerprint": "sha256:abf91f268d3be52a748d9b8c2fda0eaa43aea1e72797e9c309fb6726f374cec6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 28996,
-          "sha256": "sha256:7d9f8afeee0c9888a6ddb5f9f09d6252c521c3610c253bbb5d3c3f0781dea568"
+          "sha256": "sha256:2f011b5c18765e8a217a198afca3efe9dd08864938486dbfd9afcb9ed1c62b85"
         }
       ]
     },
@@ -114,7 +114,7 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-why-this-is-not-a-defect-of-the-fit-1.svg",
           "bytes": 36125,
-          "sha256": "sha256:38500ecad304e8b0bc1a433b7ca95d7cbe5d9c9d4ee28ae676cfe03cb0869eb3"
+          "sha256": "sha256:9e278c69ba6f1c05e18b9e7ed374e8862cbed752f8f56f8c50e420b89a2d96b8"
         }
       ]
     },

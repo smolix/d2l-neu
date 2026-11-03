@@ -136,7 +136,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 20688,
-          "sha256": "sha256:7be0c2a05845a87eba3649e406bc6222489f6556dce8ae7552008446b0a89387"
+          "sha256": "sha256:df3c24330bce37904408c0e3108df47fab00ccc9752026ae10c06a833e718435"
         }
       ]
     },
@@ -216,12 +216,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\n{'<|endoftext|>': 50256}\n"
+          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]\n{'<|endoftext|>': 50256}\n"
         }
       ]
     },

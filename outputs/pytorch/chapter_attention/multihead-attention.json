@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5bbb4b8267a67721cbc71a4bdf1f1a79cc16f58a7237ce249c3a49b6e0b15509",
+    "d2l_lib_fingerprint": "sha256:e4be430c45cc92cc1215cced117057657e191f69d02f05a55800ae12bf1af3f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single head, weights (0.5, 0.5): relative error 0.707\nsingle head, weights (0.7, 0.3): relative error 0.708\nsingle head, weights (0.9, 0.1): relative error 0.708\nsingle head, weights (1.0, 0.0): relative error 0.708\ntheory: sqrt(1/2) = 0.707\n"
+          "text": "single head, weights (0.5, 0.5): relative error 0.705\nsingle head, weights (0.7, 0.3): relative error 0.705\nsingle head, weights (0.9, 0.1): relative error 0.705\nsingle head, weights (1.0, 0.0): relative error 0.706\ntheory: sqrt(1/2) = 0.707\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.5e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.0e-06\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.3e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 1.3e-06\n"
         }
       ]
     },
@@ -73,17 +73,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 1: error 0.71; weights (0.49, 0.51)\n"
+          "text": "H = 1: error 0.71; weights (0.66, 0.34)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 2: error 1.1e-07; weights (0.88, 0.12) (0.03, 0.97)\n"
+          "text": "H = 2: error 1.1e-07; weights (0.11, 0.89) (0.96, 0.04)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H = 4: error 1.3e-07; weights (0.77, 0.23) (0.96, 0.04) (0.06, 0.94) (0.10, 0.90)\n"
+          "text": "H = 4: error 1.1e-07; weights (0.98, 0.02) (0.29, 0.71) (0.07, 0.93) (0.98, 0.02)\n"
         }
       ]
     },
@@ -109,15 +109,15 @@
       "outputs": []
     },
     "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:c53f27a28f9b7672a46e394f1f67a47e67fc86d49827baefcbdf1f5a11ccbff7",
+      "code_fingerprint": "sha256:5dfa89dd280186418a7ad63d122a9ccd8dd9aab620bc04a63ac7c7d09b9651f7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
-          "bytes": 24031,
-          "sha256": "sha256:68186ba5869111006a232aae3a24e05ecd9535f0c0b27ef3f562323ba56d9ff0"
+          "bytes": 23963,
+          "sha256": "sha256:0bb431df7c39df8d62710ca3ac2a074dc7e860f900cb5e28bf2f729813d3d9c3"
         }
       ]
     }

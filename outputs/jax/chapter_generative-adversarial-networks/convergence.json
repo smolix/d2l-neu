@@ -43,12 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 22/25 modes, reverse KL 0.89, on-mode fraction 0.05\n    off-mode mass 0.95, nearest-center distance mean 0.75 / median 0.76, 26-bin KL 4.10\n"
+          "text": "GAN: 20/25 modes, reverse KL 0.75, on-mode fraction 0.05\n    off-mode mass 0.95, nearest-center distance mean 0.77 / median 0.78, 26-bin KL 4.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.17, on-mode fraction 0.03\n    off-mode mass 0.97, nearest-center distance mean 0.70 / median 0.73, 26-bin KL 4.25\n"
+          "text": "GAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.19, on-mode fraction 0.03\n    off-mode mass 0.97, nearest-center distance mean 0.69 / median 0.71, 26-bin KL 4.24\n"
         },
         {
           "type": "stream",
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.png",
-          "bytes": 187912,
-          "sha256": "sha256:f53f701eb98c24da8e6625cffdbce0c0c492b2edf1152a0c9ff5a134902d3743"
+          "bytes": 191550,
+          "sha256": "sha256:7291450cbffdd9e75809f4adb8290171f76c037be6aa55e8467524453ba6dbd6"
         }
       ]
     }

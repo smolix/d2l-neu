@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(3.7252903e-09, dtype=float32)"
+          "text": "Array(-1.2572855e-08, dtype=float32)"
         }
       ]
     },

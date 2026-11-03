@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1daef6fcae3444b0fbb95f0c4e3b366b9704d06a4615a96797f431db84b8d3ef",
+    "d2l_lib_fingerprint": "sha256:8f65c6c20e7d7e8be9286ced84a4a1cc9b970f8174f2a9185c07ca61d523d230",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
           "bytes": 35169,
-          "sha256": "sha256:99574920b4fac479339ad0c2adf4add42e4c054c1cc5245ffcffbb999a0a7aac"
+          "sha256": "sha256:bd6ece7f819e61a99cb0732a44403c7423fd8589190a98c0c28ff0f41afa6c5f"
         }
       ]
     },
@@ -81,39 +81,39 @@
       ]
     },
     "memory-precision-mixed-precision": {
-      "code_fingerprint": "sha256:0535bd82263992ae4c061ddd7705e812112465b06aec23456b2e4c9ed4d24c77",
+      "code_fingerprint": "sha256:fefd233979af76297e4f52af9fd36838948c547e4d73025f1764e517b27efd5c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 22.36 ms/call\ntf32: 14.81 ms/call\n"
+          "text": "fp32: 23.00 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 9.44 ms/call\n"
+          "text": "tf32: 15.06 ms/call\nbf16: 9.67 ms/call\n"
         }
       ]
     },
     "memory-precision-activation-checkpointing": {
-      "code_fingerprint": "sha256:8ff1ee5aa1fa9a36076b48c2957aaea5c1eb460b2f223283c525bf44d9aed5d5",
+      "code_fingerprint": "sha256:089dcf72ac536816aa95edbd417767fbf6ca59e144c3cbd65958e47536dcd0a6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False: stores  606 KiB per token, peak 1.25 GiB, 46 ms per step\n"
+          "text": "checkpointing=False: stores  606 KiB per token, peak 1.25 GiB, 47 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 57 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 59 ms per step\n"
         }
       ]
     },
     "memory-precision-gradient-accumulation": {
-      "code_fingerprint": "sha256:a10df7e2958263eab5ae13959ed8072918c8b5ead84718bc485a9a3efcee78f8",
+      "code_fingerprint": "sha256:d795c844a0417853b3d788e59d6b20b223e85f55f8c23ce9871b3c43a5132c83",
       "kind": "text",
       "outputs": [
         {

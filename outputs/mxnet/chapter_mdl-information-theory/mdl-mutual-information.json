@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27802,
-          "sha256": "sha256:4f1d28eae6436976e3f32fbf1348645c00f5bcb067354d1c6b6624e73c232fa4"
+          "sha256": "sha256:c8da2dcc72bec1eed9ca7471f0bc2b14a72a5ca99ad4230e06e485a504d0e947"
         }
       ]
     },
@@ -136,7 +136,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29876,
-          "sha256": "sha256:be382f93f228d9ea364286e9abef61a8cac49646ebba22e29826cf6e8f6fd191"
+          "sha256": "sha256:5d21fc04193de47ce7639460b44ea7ac32285259fdd81375fc5d230dd074973d"
         }
       ]
     },
@@ -196,7 +196,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31646,
-          "sha256": "sha256:3dcb5b99c47163f3f0aad04d8af6460457862aae1b7ce40285f69baabf43767f"
+          "sha256": "sha256:ded7b61ff3b9e9f04c989b9fc81dd8071da5226848a15b85e409f94b3334a7f6"
         }
       ]
     },

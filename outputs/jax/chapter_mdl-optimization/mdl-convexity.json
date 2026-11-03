@@ -64,7 +64,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\nmax |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
+          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
         }
       ]
     },
@@ -88,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
           "bytes": 33104,
-          "sha256": "sha256:988bed5d92f7252293c5d87d6063b93043703a4b3dab5fa13c0f07fe43f80227"
+          "sha256": "sha256:b95dc77f921728f29a492e04b1b3fd15fe792766e63b2eb7cbe1c6ac02708efd"
         }
       ]
     },

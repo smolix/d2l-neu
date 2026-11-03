@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: (8, 256) O: (8, 10)\nloss 2.303, fraction of active units 0.48\n"
+          "text": "H: (8, 256) O: (8, 10)\nloss 2.307, fraction of active units 0.47\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 38534,
-          "sha256": "sha256:eb2e726c32d821de99124ca976f38822e4caf3cfcaf83af4331cd7dc16894f4e"
+          "bytes": 38553,
+          "sha256": "sha256:e3a6e2d503c7ac625883563cd388414ee161b9c2930ed7c0a2251fca47063f97"
         }
       ]
     },
@@ -70,8 +70,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 30250,
-          "sha256": "sha256:dd9ca6c4723a5e1d9fb73638256fa4755f3bef2717e5883b439fbe02bef661c3"
+          "bytes": 30258,
+          "sha256": "sha256:954c55ccac4e9a026f11c7ea84fb887870f0d7313ab611838279989a13d21e57"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.872\n  concise MLP: 0.874\n  softmax regression: 0.836\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.873\n  concise MLP: 0.868\n  softmax regression: 0.835\n"
         }
       ]
     },

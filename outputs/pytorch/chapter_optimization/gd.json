@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
           "bytes": 18526,
-          "sha256": "sha256:4885627a5524332f7c78887f2d82458b542670344a40c18b315bcc18d05a312f"
+          "sha256": "sha256:083a9bcde49123920f55ebc0c4c678a8394e7ed4e80ac85dd0dec67a9d4b6855"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
           "bytes": 18516,
-          "sha256": "sha256:badc117471c2e8e8ffd17a6c7ada72a4fc9ae8b6f3139a4a79cac6a379f4d658"
+          "sha256": "sha256:c9cbfd8347bdedebcb1a1dd2afc5d4a7900cf185eb754271000e53d8d8556e38"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
           "bytes": 18037,
-          "sha256": "sha256:c5562962f7ba026d8db48e91c4a340c52442c1fca503a62f4abee24b33078837"
+          "sha256": "sha256:a81c2fa109f1f57d9f5de1b87a71ed7f65f713589b2f4e61a5e81b78d3b36d2b"
         }
       ]
     },
@@ -85,19 +85,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 10, x: 7.269388\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "step 10, x: -1.528166\n"
+          "text": "step 10, x: 7.269388\nstep 10, x: -1.528166\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 15063,
-          "sha256": "sha256:5a73af3cecb6462970047b3b245e7b83ff1e2267778d8e377d8bb421f96ed7e0"
+          "sha256": "sha256:5feb3e3db3727f555a1f18663262413565b508dc05c84a54626f354b1671cef1"
         }
       ]
     },
@@ -125,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
           "bytes": 19312,
-          "sha256": "sha256:d8948fd6e6e8ddfd5dd75c00b0564e7d12ad07db795db169dd2f7e50e7329023"
+          "sha256": "sha256:f50abfc5c5735b90cc677effbe2167a5e40fac912d20e90391095a0af15276dd"
         }
       ]
     },
@@ -143,7 +138,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16565,
-          "sha256": "sha256:2ba5a718eb6eec56bd03d27cd9188138c05cb97523db4abab78bdd4a62b943da"
+          "sha256": "sha256:6fe7dfc56dbee2f78c8eaab6b1fc871151e6b48fbed9e3a823d104b47dbda818"
         }
       ]
     },
@@ -161,7 +156,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16852,
-          "sha256": "sha256:12f48b9a475a693ec78a6320624e4c003ac7ead77a7894f4262f1605ec4e7142"
+          "sha256": "sha256:6203ac2743cee6c8be84ab22e082c100fb2b9de180d51630cb62f6b87814403b"
         }
       ]
     },
@@ -179,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
           "bytes": 15069,
-          "sha256": "sha256:58ca829428555bb5d3ebe8266d34f5f52f66e60e060e710c3eab0d0f3248f540"
+          "sha256": "sha256:ddf9bfda71c32f32b5580029f0765eecc6001a9036f64f45581407427cc931fd"
         }
       ]
     },
@@ -197,7 +192,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16716,
-          "sha256": "sha256:6f746314437644c0e077989cd76c4d0656e92ba5858568a1d5993778bb9c925a"
+          "sha256": "sha256:80643acff01c78086fedde3edc05dcb5fa99140aecd42a54bb027c5be56f396e"
         }
       ]
     }

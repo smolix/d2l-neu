@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:1f30d4cdcd5c7b08533812664fa0681b32651cc6d4585bd2fea1fa85d342946e",
+    "d2l_lib_fingerprint": "sha256:362453d570eca7f30b52142ceaa8dbd6a2403c802e8b643b6100dd3a6cc1cbae",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,25 +35,25 @@
       ]
     },
     "alexnet-training-on-fashion-mnist-1": {
-      "code_fingerprint": "sha256:e2c098ba6e82582f1ea60d91b041995a0734e80e59ef74193df97279290027fc",
+      "code_fingerprint": "sha256:a1e4a1ff22f690429f7efb22a9c392185472309b793054ba50fba69699c04377",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:3123e3ff5bc70bbeb2e0d4454b252a64c9b10d9d5aad4eb39b6d3eb28d034e37",
+      "code_fingerprint": "sha256:c51d2222ef1a718669099e4ca4581752c747e9fc33d6a86b82978f25172e1e99",
       "kind": "text",
       "outputs": []
     },
     "alexnet-training": {
-      "code_fingerprint": "sha256:379078e8b7b89961f690b04b44343a605d9568b02ab79d1f19fbe7a280b4f9c6",
+      "code_fingerprint": "sha256:fd06560938121ee54db3161b1c082de0c890a12e4ac918c67702b87667e5cc5d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32564,
-          "sha256": "sha256:49100e8df64c752251bedcef33cf64bb2bb9a4212dae6efecd8e4ef2ff84a076"
+          "bytes": 31959,
+          "sha256": "sha256:26cefa3107f5358321c158c936d754bebbdd909969bfe7ccb5c1e52b1c19c721"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:29d95dea789352e550c867c19bc918236c45b5b700c0058acd7ac75ff70be24c",
+    "d2l_lib_fingerprint": "sha256:7569c42fda1d315da4a3dc361426bb96d44eceec521213bf5fab3208ea3ceef4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33230,
-          "sha256": "sha256:5bd3168ddaa5b77b2b5a8be7ea7d6441fb3054dd5dfbfc2f11d3634ce6fe0b38"
+          "bytes": 31268,
+          "sha256": "sha256:7593cbb3a51257d8b3cf82fa112d53d3f55d74f6bc99fa745a6e4cea3d2870f1"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.479949658203125, 'acc': 0.8339}"
+          "text": "{'loss': 0.48221318359375, 'acc': 0.833}"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34 of 256 wrong\n"
+          "text": "36 of 256 wrong\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 47801,
-          "sha256": "sha256:e53ab7fb3d39fc66e22c0b8c98ced78b88a3224c8555eaad562f595fa92037ed"
+          "bytes": 46973,
+          "sha256": "sha256:85818c8e7adb8c6ebfedfbb0d53241c9705c117ef024e4a82807f102c47a711b"
         }
       ]
     },
@@ -149,7 +149,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
           "bytes": 21499,
-          "sha256": "sha256:1e8549422e74b8944532eccdf48c3266b22785808061d8b38518daded1ae45dc"
+          "sha256": "sha256:2696f7f2f69b3e448447b30d3bd0e90532b984daa8a4b6e23ae753cd40e4884d"
         }
       ]
     }

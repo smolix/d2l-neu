@@ -92,7 +92,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "('run-tf-1', 0.0014)"
+          "text": "('run-tf-1', 0.0024)"
         }
       ]
     },
@@ -102,7 +102,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 50638.98 -> restored 0.0014'"
+          "text": "'perturbed 51400.31 -> restored 0.0024'"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saved optimizer: [0.0014, 0.0014, 0.0013, 0.0013, 0.0012]\nfresh optimizer: [0.0014, 4.2824, 0.2898, 1.1554, 2.1208]\n"
+          "text": "saved optimizer: [0.0024, 0.0024, 0.0023, 0.0022, 0.0022]\nfresh optimizer: [0.0024, 2.594, 1.0332, 0.5864, 0.8276]\n"
         }
       ]
     },

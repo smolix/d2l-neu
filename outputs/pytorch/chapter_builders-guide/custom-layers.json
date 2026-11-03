@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-4.6566e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-5.5879e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },

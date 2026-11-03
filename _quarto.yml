@@ -1,9 +1,13 @@
 project:
   type: book
   output-dir: _book
+  resources:
+    - favicon.ico
+    - static/apple-touch-icon.png
 
 book:
   title: "Dive into Deep Learning"
+  favicon: static/favicon-32.png
   author:
     - Aston Zhang
     - Zachary C. Lipton
@@ -364,6 +368,7 @@ format:
     code-overflow: wrap
     toc: true
     css: _d2l-style.css
+    include-in-header: _d2l-favicon.html
     include-after-body:
       - _d2l-slides-data.html
       - _d2l-notebooks-data.html

@@ -271,7 +271,7 @@ Y2 = corr2d_multi_in_out(X, K)
 float(d2l.reduce_sum(d2l.abs(Y1 - Y2)))
 ```
 
-The total absolute difference over the 18 outputs is zero or about
+The total absolute difference over the 18 outputs is zero or at most about
 $10^{-6}$, the size of rounding errors in 32-bit floating-point arithmetic.
 
 A $1\times 1$ convolution changes the number of channels cheaply, and deep

@@ -482,8 +482,7 @@ whose final rate is still 0.054, lies in between. The second column shows
 why. As the rate falls, the test accuracy settles to a value instead of
 jumping from epoch to epoch: for the three schedules with a small final
 rate its standard deviation over the last five epochs is a few tenths of
-a point at most, against roughly a point or more for the constant rate,
-and the
+a point at most, several times smaller than for the constant rate, and the
 checkpoint we keep at the end is as good as any of the last few. Among the
 late-decaying shapes, cosine decay became widespread because it is
 convenient. Besides the peak rate it takes only a final rate, and it has

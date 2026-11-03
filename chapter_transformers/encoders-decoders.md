@@ -305,8 +305,8 @@ d2l.plot(jnp.arange(64), pos_loss, 'position in the window',
          'masked loss')
 ```
 
-The profile is flat across the interior and rises by more than half at the
-two one-sided edges. The difference is the contribution of the second side:
+The profile is flat across the interior and rises by about half or more at
+the two one-sided edges. The difference is the contribution of the second side:
 conditioning on both sides of a byte lowers its loss by about a third
 relative to one side. The two edges cost about the same, because in text
 what follows a gap constrains it about as strongly as what precedes it. We
@@ -635,13 +635,19 @@ default causal mask and the cross-attention runs unmasked.
 
 One encoder block, one decoder block, and a few hundred steps on freshly
 sampled batches suffice. Over 600 steps of 128 strings the model reads
-about a million source characters and never sees a string twice.
+about a million source characters and never sees a string twice. The
+optimizer is `d2l.LMOptimizer` of :numref:`sec_gpt`, with its gradient
+clipping but without warmup or weight decay. Once the loss is near zero,
+Adam at a constant learning rate makes it jump now and then, to tenths of
+a nat or more, for about twenty steps. A jump near the end of the run
+leaves a model that fails on many strings. The cosine decay of the
+learning rate to zero prevents this.
 
 ```{.python .input #encoders-decoders-training-and-decoding-1}
 %%tab pytorch
 seq2seq = EncoderDecoder(V + 1).to(device)
-optimizer = torch.optim.AdamW(seq2seq.parameters(), lr=1e-3,
-                              weight_decay=0.0)
+optimizer = d2l.LMOptimizer(seq2seq, lr=1e-3, num_steps=600, warmup=0,
+                            weight_decay=0.0)
 losses = []
 for step in range(600):
     src, dec_in, tgt = sample_batch(128)
@@ -658,8 +664,8 @@ print('loss at step 100/200/400/600: ' + '/'.join(
 ```{.python .input #encoders-decoders-training-and-decoding-1}
 %%tab jax
 seq2seq = EncoderDecoder(V + 1, rngs=nnx.Rngs(d2l.get_key()))
-optimizer = nnx.Optimizer(seq2seq, optax.adamw(1e-3, weight_decay=0.0),
-                          wrt=nnx.Param)
+optimizer = d2l.LMOptimizer(seq2seq, lr=1e-3, num_steps=600, warmup=0,
+                            weight_decay=0.0)
 
 @nnx.jit
 def s2s_step(model, optimizer, src, dec_in, tgt):
@@ -789,8 +795,8 @@ Whether the maps show the anti-diagonal predicted by the third panel of
 :numref:`fig_three-wirings` depends on the run. In some runs they do:
 averaged over heads, the argmax lands on the true source position in
 almost every row, with most of the softmax mass concentrated there. In
-others it lands there in only a minority of rows, or in none, although the
-model still reverses essentially every string. The last line of the output
+others it lands there in only about half of the rows or fewer, even in
+none, although the model still reverses essentially every string. The last line of the output
 shows what all runs share. Each target position reads mainly from one
 source column, the same for most strings and in many runs for nearly all,
 so the decoder does retrieve by position, as the task requires. But the encoder has a position table of its own, and its
@@ -1300,7 +1306,8 @@ a causal model sees.
 @!encoders-decoders-what-the-second-side-is-worth-1
 
 ::: {.d2l-note .rule}
-The edges cost about 1.5 times the interior; the two edges cost the same.
+The edges cost about 1.5 times the interior; the two edges cost about the
+same.
 :::
 :::
 

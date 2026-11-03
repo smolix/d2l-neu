@@ -797,18 +797,17 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
 
-Both plots show a broad minimum, with the loss rising steeply on the right,
-where runs start to fail.
+Both plots show a broad minimum, with the loss rising on the right, where
+runs become unstable and, in many sweeps, some fail outright.
 For SGD the larger batch moves the whole basin to the right: the best
 learning rate moves by a factor of four to sixteen, the batch ratio to
 within one grid step, so the linear rule carried over from $b = 8$ lands
 within one grid step of the best learning rate at $b = 64$. For Adam the
-fitted optimum moves by a factor between about 1.5 and 4.5 across our runs,
+fitted optimum moves by a factor between about 1.5 and 5 across our runs,
 and by about 2.5 on average: close to the $\sqrt{8} \approx 2.8$ of the
-square-root rule, and in no run near the batch ratio of 8, where the
-$b = 64$ curve is already rising. Three points of a flat basin fix each
-optimum only roughly, so a single sweep scatters around the prediction.
-The basins are broad, and near the
+square-root rule, and short of the batch ratio of 8 in every run. Three
+points of a flat basin fix each optimum only roughly, so a single sweep
+scatters around the prediction. The basins are broad, and near the
 optimum a factor of two in $\eta$ changes the loss little. The rules bridge
 large ratios of batch sizes, and a short sweep around their prediction does
 the fine tuning.
@@ -1228,14 +1227,14 @@ The basin shifts right by the batch ratio to within one grid step (4× to
 16× on this grid).
 :::
 
-::: {.slide title="Adam: The Best Rate Moves Far Less Than the Batch"}
+::: {.slide title="Adam: The Best Rate Moves Less Than the Batch"}
 Same budget, Adam:
 
 @!batch-size-learning-rate-rules-3
 
 Best rate: vertex of a parabola in $\log \eta$ through the best grid
-point and its neighbors. It moves 1.5× to 4.5× across runs, 2.5× on
-average: near $\sqrt{8} \approx 2.8$, never near the linear rule's 8×.
+point and its neighbors. It moves 1.5× to 5× across runs, 2.5× on
+average: near $\sqrt{8} \approx 2.8$, short of the linear rule's 8×.
 :::
 
 ::: {.slide title="The Rules Fail Past the Noise Scale, at the Ceiling, and Early"}

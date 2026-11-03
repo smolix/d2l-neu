@@ -608,9 +608,9 @@ for b, rows in enumerate(scores.tolist()):
 ```
 
 Each line lists the four heads of one block. In block 1, one head, or in
-many runs two that split the role, puts much of its attention on the
-previous token and almost none on the induction target. The other heads of
-the block do neither. Block 2's heads do the reverse. They share the induction pattern,
+many runs two or three that split the role, puts much of its attention on
+the previous token and almost none on the induction target. The other
+heads of the block do neither. Block 2's heads do the reverse. They share the induction pattern,
 and the strongest puts more than a quarter of its attention, in many runs
 over half, on the single position the algorithm calls for, out of up to 63
 candidates. A uniform weighting would give that position about one fortieth.
@@ -757,7 +757,7 @@ def ablate(model, blk, heads):
 
 The head scores pick the candidates. In block 1 we count every head whose
 previous-token score exceeds 0.2 as a previous-token head, which catches
-both heads when two split the role; the threshold falls in the gap
+every head that shares the role; the threshold falls in the gap
 between their scores and those of the heads that attend to their own
 position. We remove the previous-token heads together and, as a control,
 all the other heads of block 1 together. In block 2 we remove the heads
@@ -1547,8 +1547,8 @@ $j = i + 1 - L$, per head, $L$ from 16 to 32:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- Block 1: one head, often two, on the previous token, none on the
-  target.
+- Block 1: one head, often two or three, on the previous token, none on
+  the target.
 - Block 2: every head on the target, the strongest with over a quarter of
   its weight, often over half, on 1 of up to 63 keys.
 :::
@@ -1575,8 +1575,8 @@ not explain retrieval; the match on the QK side does.
 @!what-attention-computes-head-ablation-2
 
 - Zero a head's columns of `proj`: its term leaves the stream.
-- Block 1: heads with previous-token score above 0.2 (one, or two that
-  split the role). Removing them breaks retrieval, and so does removing
+- Block 1: heads with previous-token score above 0.2 (one, or several
+  that split the role). Removing them breaks retrieval, and so does removing
   the rest: they copy the current token for block 2.
 - Block 2: accuracy falls as induction heads go; with all four gone, the
   loss passes the one-block level.

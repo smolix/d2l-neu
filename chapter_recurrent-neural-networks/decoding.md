@@ -629,8 +629,9 @@ for name, decode in decoders.items():
 ```
 
 The two averages disagree. The two maximizers produce continuations with a
-clearly higher log-probability per token than the min-$p$ samples, beam
-search usually a little ahead of greedy decoding. Yet the samples are the
+clearly higher log-probability per token than the min-$p$ samples. Beam
+search is usually ahead of greedy decoding, by a margin that varies from
+run to run and occasionally reverses. Yet the samples are the
 most varied: their distinct-3 is close to 1,
 higher than that of either maximizer. Maximization raises the probability of
 the text and lowers its variety, the degeneration described by

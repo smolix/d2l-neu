@@ -663,7 +663,7 @@ for c in range(10):
 print(f'{"overall":12s}{np.mean(align):11.2f}{np.mean(cls_acc):12.2f}')
 ```
 
-In each recorded framework run, overall alignment is within a few percentage points of the classifier's accuracy on real test images. The per-class results are less consistent. PyTorch and JAX identify different weak classes, with discrepancies larger than the counting noise expected from 500 samples per class. The two tabs therefore illustrate the measurement but do not establish a shared classwise pattern. The weakest generated rows also score below their visual impression. In the PyTorch run, the cat alignment is about ten points below the classifier's already modest accuracy on real cats; the JAX run shows a similar gap for dogs. In both cases, the classifier's weakest real class is also the generator's weakest measured class.
+In each recorded framework run, overall alignment is within ten percentage points of the classifier's accuracy on real test images. The per-class results are less consistent. PyTorch and JAX identify different weak classes, with discrepancies larger than the counting noise expected from 500 samples per class. The two tabs therefore illustrate the measurement but do not establish a shared classwise pattern. The weakest generated rows also score below their visual impression. In the PyTorch run, the cat alignment is about ten points below the classifier's already modest accuracy on real cats; the JAX run shows a similar gap for dogs. In both cases, the classifier's weakest real class is also the generator's weakest measured class.
 
 The difference between alignment and real-image accuracy may be positive or negative. The classifier's real-image accuracy does not cap the alignment score: generated samples that resemble class prototypes can exceed it. In the recorded runs, every generated class remains below its corresponding real-image reference.
 
@@ -756,7 +756,7 @@ Three inexpensive checks connect the measurements to the preceding analysis. Fir
 
 Second, we evaluate real images under their correct labels and under cyclically shifted labels. The difference in mean critic score cancels the unconditional head $\psi$ and any score offset shared by all classes, leaving the contribution of the class embeddings. A class-dependent offset in the scores cancels exactly only when every class occurs equally often among the 1,000 test images. A positive value indicates that the projection head assigns higher compatibility to the correct condition.
 
-Third, we construct a degenerate generator by repeating one fixed held-out image from each class 100 times. The classifier assigns these real images their labels often enough to produce high alignment, but the per-class feature variance is nearly zero. Feature variance, unlike alignment, directly detects this within-class collapse.
+Third, we construct a degenerate generator by repeating one fixed held-out image from each class 100 times. These are real images, so their alignment estimates the classifier's accuracy on real images, from only ten of them, while the per-class feature variance is nearly zero. Feature variance, unlike alignment, directly detects this within-class collapse.
 
 ```{.python .input #conditional-measuring-condition-alignment-5}
 %%tab pytorch
@@ -810,7 +810,7 @@ print(f'collapse baseline: alignment '
 
 Conditional evaluation has three distinct axes: sample fidelity, sample diversity, and condition alignment. None of the preceding metrics reports all three separately. The feature distances measure marginal fit and combine fidelity with coverage, whereas alignment measures only agreement with the requested condition.
 
-The repeated-image baseline exposes this limitation. One stored image per class can attain alignment near the real-image reference despite having zero within-class diversity. This *within-class collapse* is mode collapse within a conditional distribution. The objective in :eqref:`eq_gan_cond_value` penalizes it because a point mass differs from $p(\cdot \mid c)$ under the divergences considered here. Alignment cannot detect the collapse, and a marginal feature distance observes it only after mixing the classes. Per-class feature variance provides a more direct diagnostic.
+The repeated-image baseline exposes this limitation. One stored image per class attains about the classifier's accuracy on real images, up to the noise of ten images, despite having zero within-class diversity. This *within-class collapse* is mode collapse within a conditional distribution. The objective in :eqref:`eq_gan_cond_value` penalizes it because a point mass differs from $p(\cdot \mid c)$ under the divergences considered here. Alignment cannot detect the collapse, and a marginal feature distance observes it only after mixing the classes. Per-class feature variance provides a more direct diagnostic.
 
 Incorrect labels are not the only conditional failure. A generator may ignore the condition, obey it through shortcuts such as background or palette, collapse within a condition, leak between conditions, neglect rare conditions, or optimize for classifier prototypes. A sound evaluation therefore considers fidelity, diversity, and alignment together. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends the collapse diagnosis to per-class distribution metrics. Exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which deliberately exchanges sample variety for fidelity.
 
@@ -1199,9 +1199,10 @@ between runs and score below their visual impression in the grid.
 
 - Shifting the requested labels of the same 1,000 images reduces alignment,
   while FD and MMD$^2$ remain unchanged because the images do not change.
-- Repeating one fixed image per class gives alignment near the real-image
-  reference but nearly zero per-class feature variance. The variance detects
-  within-class collapse that alignment misses.
+- Repeating one fixed image per class gives about the real-image alignment,
+  up to the noise of ten images, but nearly zero per-class feature
+  variance. The variance detects within-class collapse that alignment
+  misses.
 :::
 
 ::: {.slide title="The Trade-off Triangle"}

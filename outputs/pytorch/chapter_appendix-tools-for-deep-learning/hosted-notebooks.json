@@ -9,7 +9,7 @@
   },
   "cells": {
     "hosted-notebooks-resource-check": {
-      "code_fingerprint": "sha256:22ecc551bbac759071bd98d08637fbfa3ad1557f63560d82d653a0d8f948417d",
+      "code_fingerprint": "sha256:200df63d90cc931552acf800f28e4d69d4ae1cdd6be714cf9c9dd5ff4859aec5",
       "kind": "text",
       "outputs": [
         {
@@ -19,7 +19,7 @@
       ]
     },
     "hosted-notebooks-portable-setup": {
-      "code_fingerprint": "sha256:1476c828c8ca23b85897fd95d9d0d0250e2e7b3376c5f96556304b786d942958",
+      "code_fingerprint": "sha256:bf5565dd44b4bf1aaef796c04daa44d8912c546edc06852e359d8ddbe7607d32",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "hosted-notebooks-environment-fingerprint": {
-      "code_fingerprint": "sha256:54629717fe9fa9ac8fa4566e8639ee7bc4caa23769c0779fd482c8ba4d368f06",
+      "code_fingerprint": "sha256:04939e5aec2630bc5ea5b242f6f3f89f6eaa738e5a3612928e918ee558ba10f1",
       "kind": "text",
       "outputs": [
         {
@@ -40,12 +40,12 @@
       ]
     },
     "hosted-notebooks-work-directory": {
-      "code_fingerprint": "sha256:750280479ac4fc2d695679e57735df5fe1e1415815d29c38e19b1d7f7bfdf5fe",
+      "code_fingerprint": "sha256:ea40f3945ee725ef93535c1f743e6bc5b4774ae6a73f0616883b5b02b49d77fe",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "PosixPath('/home/smola/d2l-neu-infra/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
+          "text": "PosixPath('/home/smola/d2l-neu-math/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
         }
       ]
     }

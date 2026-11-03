@@ -9,13 +9,13 @@
   },
   "cells": {
     "cloud-instances-cost-model": {
-      "code_fingerprint": "sha256:d18047ebd319b66ef16dbe5bd05758072cc4100ed617c40747f322dd0cc4f60a",
+      "code_fingerprint": "sha256:d8eea9012bd773f80cf8c000c6717d5eeef331b98cca32667ad5239300b18c63",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "('RTX 4090', np.float64(8.0), np.float64(5.4), np.float64(35.4))\n('A100 80GB', np.float64(5.0), np.float64(10.25), np.float64(40.25))\n('H100', np.float64(2.7), np.float64(9.92), np.float64(39.92))\n"
+          "text": "('RTX 4090', np.float64(8.0), np.float64(5.4), np.float64(35.4))\n('A100 80GB', np.float64(5.0), np.float64(8.6), np.float64(38.6))\n('H100', np.float64(2.7), np.float64(9.92), np.float64(39.92))\n"
         }
       ]
     }

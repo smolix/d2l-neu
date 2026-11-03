@@ -87,19 +87,19 @@ The menu shows what you asked for, not what you received, so we check the
 runtime in code:
 
 ```{.python .input #hosted-notebooks-resource-check}
-import importlib.util
 import os
+import sys
 from pathlib import Path
 
 resource = {
     "cpu_count_visible": os.cpu_count(),
-    "colab": importlib.util.find_spec("google.colab") is not None,
+    "colab": "google.colab" in sys.modules,
     "kaggle": Path("/kaggle/working").exists(),
 }
 resource
 ```
 
-The cell recognizes Colab by its preinstalled `google.colab` package and
+The cell recognizes Colab by its `google.colab` module, which Colab loads at startup, and
 Kaggle by its working directory. For the accelerator, PyTorch reports
 `torch.cuda.is_available()` and `torch.cuda.get_device_properties(0)`,
 TensorFlow `tf.config.list_physical_devices("GPU")`, and JAX `jax.devices()`.

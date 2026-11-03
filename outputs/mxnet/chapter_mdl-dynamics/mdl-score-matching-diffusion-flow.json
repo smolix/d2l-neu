@@ -13,77 +13,107 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-score-matching-diffusion-flow-a-normalizer-free-objective": {
+      "code_fingerprint": "sha256:458b29da3ee29940b663cf01995f1d864221d32d9eaff0d3bd05ddf5c4a2361e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "implicit score matching picks w = 2.00  (v = 2.0)\n"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-denoising-score-matching": {
+      "code_fingerprint": "sha256:343c0e18f7553475e91c82d6012d6ff55b56fc435f3b540a9ec53e25f07e237a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean squared error of the conditional mean -xt/1.25: 3.195  (floor 3.2)\nleast-squares slope of x on xt: 0.798  (0.8)\n"
+        }
+      ]
+    },
     "score-matching-diffusion-flow-dsm-train": {
-      "code_fingerprint": "sha256:649f1cdf48f397be6315d20f0c054765eaed41b9ea75f8d957a83aa7acee8bb9",
+      "code_fingerprint": "sha256:81fed7d64d1a02c1777d2cb0f7678abde3fef945ca7cf40bb20f771d991eb4d5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DSM loss 2.036 vs estimated Bayes risk 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
+          "text": "mean squared error: fit 2.12, exact score 2.12, population floor 2.11\nexcess risk 0.007; fit at x = 8: -10.5, exact score -12 (no pairs there)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 24720,
-          "sha256": "sha256:8b95d294677de8f5401b39908277eaceae22a1779271782fc974a051d7cea913"
-        }
-      ]
-    },
-    "score-matching-diffusion-flow-ddpm-marginal": {
-      "code_fingerprint": "sha256:2109f9cb84fc641c685c63b25ad57640d230c8f788553123f45b34312f378764",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "bytes": 97405,
+          "sha256": "sha256:5b7cfd0f6504682b4e55e03be2477284d491aa0846bf0e79670eada8b63ab600"
         }
       ]
     },
     "score-matching-diffusion-flow-langevin": {
-      "code_fingerprint": "sha256:3852cc2b8906b547515029f393ba798b0862a51552bc901c691571b958012319",
+      "code_fingerprint": "sha256:b2ee32a2ee98e375653e2f0f71c9950a5b5080b702e65c0761845dc0080c95eb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "spread-out start: P(X > 0) = 0.509, E[X^2] = 4.26 (truth 0.500, 4.25)\n"
+          "text": "spread-out start: P(X > 0) = 0.499, E[X^2] = 4.22  (truth 0.5, 4.25)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one-mode start:   P(X > 0) = 0.012  (slow mixing)\n"
+          "text": "one-mode start:   P(X > 0) = 0.012  (crossed)\n"
+        }
+      ]
+    },
+    "score-matching-diffusion-flow-ddpm-marginal": {
+      "code_fingerprint": "sha256:0a2e10a6a1fb115caebda0614eb00b4ed56ca86e872030874569bf1deb764cb6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t =   10: alpha_bar 0.998, Var(x_t) 0.999 (formula 1.000), KS 0.010\nt =  100: alpha_bar 0.897, Var(x_t) 1.003 (formula 1.000), KS 0.011\nt = 1000: alpha_bar 0.000, Var(x_t) 1.015 (formula 1.000), KS 0.024\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
-      "code_fingerprint": "sha256:f6dc97784eeb1864585e6011530f0960b606dc517cdb92fb90d8626caa91205c",
+      "code_fingerprint": "sha256:5fbf914f3a3b6391cc01b2af7ab7c483d1e0f3c395d264fdf9bcd2b9fe9493dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; the same initial draws are used at every stride count\n"
+          "text": "N(0,1) data,   10 strides: every sample times 0.832\nN(0,1) data,   50 strides: every sample times 0.964\nN(0,1) data, 1000 strides: every sample times 0.998\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mixture,  10 strides vs 1000: mean |gap| 0.084, KS 0.080\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.018\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:ca866999f42a557a801275101c8668774a5b58f77ba4e099a02e6c2b84950f79",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:029effad08c265602b13542c6e06212127e32027b19fb6c69bf1e7d3903d1920",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nexact conditional: mean 0.970, std 0.243\n"
+          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.966, std 0.240\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
-          "bytes": 30576,
-          "sha256": "sha256:ffcef0a094d309aa9b386916aa7976dcac932905a8b41aa3d4d57298613daac5"
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.029, std 0.235\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.078, std 0.233\nexact conditional: mean 0.970, std 0.243\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:235fbded42f53399ebd65c50a6ee018cbda88636242521c62cfa78cc524cd9ab",
+    "d2l_lib_fingerprint": "sha256:cc2756d0b26d910f4d8715d07d3759949cf697861f062b4687cb20b1ef30bc71",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "matrix-state/matrix-state-interference-2-1.svg",
           "bytes": 46679,
-          "sha256": "sha256:8d1d968baad98a6bc33af46235a98189737bbe5c29b5acc885767019a6f98dcf"
+          "sha256": "sha256:d6c52439c749a27587cd1e6ba76045097064db5f8e8f408922eb61d38d5caf9e"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "recurrence       255.62 ms\ndual               1.11 ms\nchunks of 16       1.31 ms\nchunks of 64       1.12 ms\nchunks of 256      0.93 ms\n"
+          "text": "recurrence       234.15 ms\ndual               1.02 ms\nchunks of 16       1.10 ms\nchunks of 64       0.93 ms\nchunks of 256      0.78 ms\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention perplexity: 3.10\n"
+          "text": "gated linear attention perplexity: 3.09\n"
         }
       ]
     }

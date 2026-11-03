@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f6c671b20a94ebec126718a94c1f3fe6a20967dc408a56645d6e84c7ee1b8a24",
+    "d2l_lib_fingerprint": "sha256:360d93d65f45571c98b00c383a5de69fb2a20320a4d6b5d5c0d8382208de4014",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,39 +14,39 @@
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-1": {
-      "code_fingerprint": "sha256:ecec4a08caabe2569677494bf5ca8bb290e2a550b8a8fa1b206d5f83c44d547b",
+      "code_fingerprint": "sha256:befa7b7fecd9cfdf1436a972baa56f5292c8634fdaa80ea13f50d903cb0e558f",
       "kind": "text",
       "outputs": []
     },
     "gpt-from-blocks-to-a-language-model-2": {
-      "code_fingerprint": "sha256:af3ebd7ec41377de64753b07d05d01bb0881fed7302b53351466b5a478d03bc7",
+      "code_fingerprint": "sha256:feb26f3032f8e1da22d750c3c8b1ff3f1ba1eed8292b2d14ab2a65cf74fde515",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; initial std: W_qkv 0.0199, W_o 0.0058\n"
+          "text": "4.79M parameters; initial std: W_qkv 0.0200, W_o 0.0058\n"
         }
       ]
     },
     "gpt-from-blocks-to-a-language-model-3": {
-      "code_fingerprint": "sha256:0dd237749bf4109f8774c283685e8867ae029e924ee77df62dd8298bf6ae5480",
+      "code_fingerprint": "sha256:e4795da63dab2e5b3dfaab0246aa518b9935e4ded486e526f5307a6538475ca0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0631/0.1369/0.3025\n"
+          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0578/0.1436/0.3061\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0025/0.0030/0.0032\n"
+          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0027/0.0031/0.0032\n"
         }
       ]
     },
     "gpt-training-the-model-1": {
-      "code_fingerprint": "sha256:7735846394daf07784608ac5d592e96997eb562cb6c829adb1cf89ed5434c990",
+      "code_fingerprint": "sha256:63b13c9c8c8f2cf4075631f06684a06c74504c46225b9a0c87c5923116ef9e0a",
       "kind": "text",
       "outputs": [
         {
@@ -57,35 +57,35 @@
       ]
     },
     "gpt-training-the-model-2": {
-      "code_fingerprint": "sha256:17e5db1eb4dd222176a1d9d83c107a3013e8604677295d7f4df1c6ae32e2010f",
+      "code_fingerprint": "sha256:f9f69880823f3ef9d592abc526b6446b6546b652b9d25af6fbc0d3d3fd53415d",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-model-3": {
-      "code_fingerprint": "sha256:910ada28fc6a2c9982187f79afe817f0085b213a1f1a65e2ba9c41b93b834d49",
+      "code_fingerprint": "sha256:47b67de0dfbf8557245527cc59640642c45e8facd96eb25d9a23404b032656ed",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:ae60b5ed095e7895fb115b1827d06fde89e76f5678423f7b04ebc94b80cf8b6f",
+      "code_fingerprint": "sha256:d4fb760aaba73a990112d101880939e47d4baba1aafd6985799e6f81be74040e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.37, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24630,
-          "sha256": "sha256:9b0f533c5ef0761f9a35cf54b8ec597dcd83972b4b215995ce71c42eca964b43"
+          "bytes": 24620,
+          "sha256": "sha256:ea185428acf0c6a4380e79f27f783ee9cda95b4e3fdf5268f4168c418f57c39d"
         }
       ]
     },
     "gpt-training-the-model-4": {
-      "code_fingerprint": "sha256:ab13822cc83143cce99fcc95cb1e4446e2c49da0577d3238b2e9cabda2eb1ad9",
+      "code_fingerprint": "sha256:b099014598d4d352d5892f8e319b24aaaec06c1319875ad61d0de2561726ba94",
       "kind": "text",
       "outputs": [
         {
@@ -96,54 +96,54 @@
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:2d83be31e965cb5cc3cbfab4a6093462cf932673c68135f3e0e6c3f3d681d97d",
+      "code_fingerprint": "sha256:20e964dd99a2363117d98c8617cbdd8dc4754265b0b2ac6d952706a7b2be9f56",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.62/2.20/1.79/1.53\n"
+          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.56/2.10/1.73/1.51\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.18/3.17/3.17\n"
+          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.53/1.89/1.54\n"
+          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.55/1.90/1.54\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:d3147794640cff578253765586763cf78dd5f03e445778fd62f3d4ffeee45be7",
+      "code_fingerprint": "sha256:c425370d3904bec31b1bbc9073ec1e43e71a2afb8130a6a07fa78c73e66a81ef",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:b498296be3e856dc0f2aa4b0763b5bc622de458b361b3b84d8006f221007a4a4",
+      "code_fingerprint": "sha256:134f754e04f3b024e9f1b89a142723dfc40841867091d441978257486529b079",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the Australian Party logge RN . Hera \\'s\n    viailable adaption of \" Senson , a her total maisures , or abolish World\n    Ash \" deman'\n"
+          "text": "T=1.0, top_k=None: 'The history of the intelligent offices due to Japan It ,\n    but the body augments . The Nations meets conflict repeat have been\n    unable to excr'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the threat . In the first to the river . The\n    first project was shown to the pilot and distance in the transfer of the\n    produc'\n"
+          "text": "T=0.7, top_k=8: 'The history of the state . \" Work , it was the series of\n    chefine to her complete the following the parties against the player \\'s\n    match . Th'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: \"The history of the 20t�D�s\\u05fc� sa.elts =\n    /Sllywo�timbopoecopehomolypopsu iss�ys50 �\\tpakaiź�οp\\x06ε����Х�Ţ\n    �`-�.�gečjr��ne '] 'I.�ᒞ��\"\n"
+          "text": "T=2.0, top_k=None: \"The history of the OPCCDLAV��eijiouff� @'@�\\r����\\x0c;��\n    ���\\x1e����Go\\x19�����nNE\\x10��>��1�n�χ���ά671 , butplenedacials\n    gaJoyadh.>2Ip.BS^ P ur�X� \"\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:87c52042c249a9300a07a897179ef0a25752a34ba18c1e27f48fb9a7ad78282f",
+      "code_fingerprint": "sha256:f6cdadf8c680b65647607fd03bd6c627b7ae323ac181c607828b9056591bc0d4",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:694232049eaf4a66e7d16f8f7bb9f62c222dc47c4a7758dc93ed4247d9d93022",
+      "code_fingerprint": "sha256:ef6a139ba8ca7dc37451b3ca0326059850bd6aa93598881cae82e6d9da4c364b",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +165,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:e21422c6d8e50521963c5e7b23f9dbf927ba6062636d118a9af2b8c8fb453197",
+      "code_fingerprint": "sha256:05a298568322133c32111ad28e23ded684cdb6c9faa93347160b54b81adfb12c",
       "kind": "text",
       "outputs": [
         {
@@ -176,7 +176,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:ef247daa32598489aa6fe2bfc7e4bc4a36260454d333b69d230241c86754f52c",
+      "code_fingerprint": "sha256:f069b26c832b01ba9c485d0512158cf8a9d19328e4fcfe46758ee6d3e3c54c13",
       "kind": "text",
       "outputs": [
         {
@@ -187,13 +187,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:6d3c96e7c2585c8e43fd0497859d219175a53d446dbc1b3bcfc6a8751a8ede3e",
+      "code_fingerprint": "sha256:1a0abf94ba6b567d1c12ba8230fe6642fc2915d85099e7105b03dc87f821af1d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that it can be built through\n    dozens of techniques and models of learning that are accessible and\n    understandable to anyone who has never been exposed to deep learning.\n    You can learn from other teachers in the same field or\n"
+          "text": "The secret of a good deep learning textbook is that at each step of the\n    process you learn more about how to train it.\n\nThe secret of a good deep learning textbook is that at each step of the\n    process you learn more about how to\n"
         }
       ]
     }

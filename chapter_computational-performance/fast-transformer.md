@@ -1064,7 +1064,7 @@ and measure again.
 
 ## Summary
 
-A training step can be made several times faster by a sequence of
+A training step can be made more than twice as fast by a sequence of
 changes, each chosen by a measurement. A profile classifies the step: a
 device that waits for the host calls for less work on the host per step,
 a device busy with many short elementwise kernels calls for fusion, and a

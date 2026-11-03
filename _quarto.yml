@@ -313,9 +313,12 @@ book:
         - chapter_mdl-information-theory/further-reading.qmd
         - chapter_mdl-dynamics/index.qmd
         - chapter_mdl-dynamics/mdl-odes-solvers.qmd
+        - chapter_mdl-dynamics/mdl-neural-odes.qmd
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
         - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
+        - chapter_mdl-dynamics/mdl-flow-matching-transport.qmd
+        - chapter_mdl-dynamics/further-reading.qmd
     - part: chapter_tools-for-deep-learning/index.qmd
       chapters:
         - chapter_appendix-tools-for-deep-learning/index.qmd

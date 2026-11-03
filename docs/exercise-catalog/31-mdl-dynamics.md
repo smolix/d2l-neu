@@ -1,5 +1,21 @@
 # chapter_mdl-dynamics — Chapter Overview
 
+**Update (2026-11-03, math appendix pass):** the chapter now has six
+sections plus `further-reading.md` (no exercises): Ordinary Differential
+Equations and Numerical Solvers; Neural ODEs, Adjoints, and Continuous Flows
+(new file `mdl-neural-odes.md`, split from the first section); Stochastic
+Differential Equations; The Fokker–Planck Equation and Probability Flow;
+Score Matching and Diffusion Models (retitled); and Flow Matching and Optimal
+Transport (new file `mdl-flow-matching-transport.md`, split from the score
+matching section). It carries 63 exercises (10, 9, 12, 12, 10, 10), all in the
+named and tagged style (`[code]`, `[extended]`, ●, ●●) with `:exlabel:`
+labels; labels of moved exercises were kept, so the `ex_mdl-odes-solvers-*`
+labels of the Neural-ODE exercises and
+`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants` now live in the
+split-off files. Each section entry below opens with its current list; the
+survey that follows describes the chapter before the pass, when it had four
+sections.
+
 Best external match by far: Särkkä & Solin, *Applied Stochastic Differential
 Equations* (free Aalto PDF, verified directly — 324 pp., end-of-chapter
 problem sets throughout). Its Ch. 2 (ODE background), Ch. 3 (pragmatic SDE
@@ -36,6 +52,8 @@ the external material.
 ---
 
 ## chapter_mdl-dynamics/mdl-odes-solvers.md — Ordinary Differential Equations and Numerical Solvers
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Separation of trajectories; 2 Rotating modes; 3 Heavy ball as a discretized ODE; 4 [code] Adaptive step size ●; 5 [code] Implicit gradient regularization ●●; 6 [code] Symplectic Euler and splitting; 7 [code] Transient growth and nonnormality; 8 Limits of linearization; 9 [code] Order on a nonlinear field; 10 [code] Implicit steps on a stiff nonlinear field ●. The Neural-ODE, adjoint and CNF material and its exercises moved to `mdl-neural-odes.md`; the survey below covers the section before the split.
 
 **Topic:** Vector fields and flows; Picard–Lindelöf existence/uniqueness; the matrix exponential and eigenvalue-based stability; Euler/Runge–Kutta convergence and stiffness; gradient descent as Euler discretization; Neural ODEs and the (continuous/discrete) adjoint method; continuous normalizing flows and the Hutchinson trace estimator.
 
@@ -145,7 +163,15 @@ bold-named).
 
 ---
 
+## chapter_mdl-dynamics/mdl-neural-odes.md — Neural ODEs, Adjoints, and Continuous Flows
+
+**Update (2026-11-03, math appendix pass):** 9 exercises: 1 [code] The learned field at other step counts; 2 [code] What a flow cannot represent ●; 3 Adjoint with a running loss ●; 4 [code] Reconstructing the trajectory backward ●; 5 Log-determinant of a residual step ●; 6 [code] Variance of the Hutchinson estimator ●; 7 [code] Discrete and continuous adjoints ●●; 8 Checkpointing arithmetic ●; 9 [code] Liouville's formula ●●. The file was split from the first section; its exercises are surveyed under that section above.
+
+---
+
 ## chapter_mdl-dynamics/mdl-sdes.md — Stochastic Differential Equations
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Biased random walk; 2 Infinite total variation; 3 [code] Quadratic variation of an Itô process; 4 Geometric Brownian motion and the $-\nu^2/2$ correction; 5 [code] Strong order and Milstein's correction; 6 [code] Weak order under multiplicative noise; 7 [code] Covariance of the OU process; 8 Variance preservation, exactly; 9 [code] Itô versus Stratonovich ●; 10 Exact transitions of linear SDEs ●; 11 [extended] Multilevel Monte Carlo ●●; 12 [code] Brownian scaling and exit times.
 
 **Topic:** Brownian motion and quadratic variation; the Itô integral, isometry, and Itô's lemma; the SDE/Euler–Maruyama definition and strong/weak convergence orders; the Ornstein–Uhlenbeck process, its stationary law, and the variance-preserving normalization.
 
@@ -260,6 +286,8 @@ extension the section's own text sets up but never asks the reader to build.
 ---
 
 ## chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.md — The Fokker–Planck Equation and Probability Flow
+
+**Update (2026-11-03, math appendix pass):** 12 exercises: 1 Laplacian as averaging; 2 Moments from the weak form; 3 Stationary density from zero current; 4 Affine Gaussian flow; 5 [code] Same marginals, different couplings; 6 Mode merging; 7 [code] State-dependent noise ●; 8 [code] Fokker--Planck on a grid ●; 9 Divergence-free velocity fields ●; 10 Exact Gaussian reverse step ●; 11 [code] Mismatched drift and noise ●; 12 [extended] Prior mismatch, ODE versus SDE ●●.
 
 **Topic:** From SDE paths to the deterministic Fokker–Planck PDE for
 $p_t$; rewriting diffusion as transport (the continuity equation) to get the
@@ -385,7 +413,9 @@ derivations.
 
 ---
 
-## chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.md — Score Matching, Diffusion, and Flow Matching
+## chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.md — Score Matching and Diffusion Models
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Boundary terms; 2 [code] Langevin discretization bias; 3 [code] Annealing out of one mode; 4 [code] The Bayes-risk floor ●; 5 Weightings across noise levels ●; 6 [code] DDIM against a second-order stride ●; 7 [code] Guidance by noise level ●; 8 Guided densities and noised marginals ●; 9 Score error and likelihood ●●; 10 [extended] Learned noise prediction ●●. The flow-matching, rectified-flow and optimal-transport material and its exercises moved to `mdl-flow-matching-transport.md`; the survey below covers the combined section before the split, and the cell ids it names may now live in that file.
 
 **Topic:** Estimating scores (explicit/implicit/denoising score matching,
 Tweedie's formula) and velocities (conditional flow matching) by regression
@@ -517,3 +547,9 @@ parts sourced directly from it.
    *Provenance:* parts (a)–(b) original; the numerical verification is
    adapted from MIT 6.S184 Lab 2 Question 3.3 (overlap medium — same
    score-from-flow verification technique, different concrete schedule).
+
+---
+
+## chapter_mdl-dynamics/mdl-flow-matching-transport.md — Flow Matching and Optimal Transport
+
+**Update (2026-11-03, math appendix pass):** 10 exercises: 1 Crossing segments and the floor; 2 Stochastic interpolants ●; 3 Late decisions; 4 [code] Optimal transport in one dimension; 5 [code] Kinetic energy of Gaussian paths; 6 [code] One reflow round on two points; 7 [code] Minibatch optimal-transport pairing; 8 Conditioning of prediction targets; 9 Reflow preserves marginals and can stall; 10 [code] A stochastic sampler for a flow-matching model ●. The file was split from the score-matching section; its flow-matching exercises are surveyed under that section above.

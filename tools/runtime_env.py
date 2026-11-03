@@ -22,8 +22,8 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-linear-algebra/mdl-svd-low-rank.ipynb",
     # MDL part: tiny CPU training loops (gluon.Trainer matches "Trainer(") or
     # "GPU" appearing only in prose; every cell runs in seconds on CPU.
-    "chapter_mdl-dynamics/mdl-odes-solvers.ipynb",
-    "chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.ipynb",
+    "chapter_mdl-dynamics/mdl-neural-odes.ipynb",
+    "chapter_mdl-dynamics/mdl-flow-matching-transport.ipynb",
     "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",

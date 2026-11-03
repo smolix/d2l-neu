@@ -1154,10 +1154,9 @@ $\varphi$; the normalizers are $c$-free, so
 $$D(x, c) = e_c^\top \varphi(x) + \psi(x)$$
 
 - One embedding per class, one inner product, one unconditional head.
-- Bayes' rule gives an identity. The shared log-linear representation of
-  both posteriors is an assumption; learning $\varphi$ makes it more flexible
-  but does not remove it.
-- The standard head at scale: BigGAN, R3GAN's conditional runs.
+- Bayes' rule is an identity; the shared log-linear form of both posteriors
+  is the assumption.
+- Standard at scale: BigGAN, R3GAN.
 :::
 
 ::: {.slide title="Class-Conditional CIFAR-10, the Chapter's Recipe"}

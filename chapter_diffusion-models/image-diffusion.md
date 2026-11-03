@@ -1038,10 +1038,16 @@ requested class increases with $\gamma$, within-class distance decreases.
 :::
 
 ::: {.slide title="The Same Seed at Two Guidance Scales"}
-@!image-diffusion-guided-samples-3
-
+::: {.cols .vc}
+::: {.col}
 Columns are classes. At $\gamma = 4$ the instances are cleaner, more
 prototypical, and more alike; some saturate to white.
+:::
+
+::: {.col .narrow}
+@!image-diffusion-guided-samples-3
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

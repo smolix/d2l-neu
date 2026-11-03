@@ -1045,7 +1045,7 @@ Data $= z A + b$: a Gaussian with known mean and covariance. A **linear**
 generator keeps $q$ Gaussian too, so $\log(p/q)$ and $\mathrm{KL}(q\|p)$
 have closed forms to check against.
 
-@gan-data-and-models-1
+@!gan-data-and-models-1
 :::
 
 ::: {.slide title="The Value Appears in the Loss Curves"}
@@ -1057,13 +1057,19 @@ $\mathrm{JS} \approx 0$; the generated cloud provides a separate visual check.
 :::
 
 ::: {.slide title="The Trained Critic Tracks the Analytic Log Ratio"}
+::: {.cols .vc}
+::: {.col}
 Freeze a partially trained generator; train the critic to its best response;
-compare with the closed-form $\lambda = \log(p/q)$:
-
-@!gan-verifying-the-optimal-critic-2
+compare with the closed-form $\lambda = \log(p/q)$.
 
 Points hug the identity line; errors grow only where the mixture has almost
 no samples, because ratio estimation is unconstrained off-support.
+:::
+
+::: {.col .narrow}
+@!gan-verifying-the-optimal-critic-2
+:::
+:::
 :::
 
 ::: {.slide title="Saturation under an Identical Initialization"}

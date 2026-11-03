@@ -1958,15 +1958,13 @@ partner of the Poisson, and the source of $X=-\log U/\lambda$ sampling.
 [Continuous]{.kicker}
 
 Standardized sums of *any* iid finite-variance terms converge to the
-Gaussian. Watch universality happen, starting from the least Gaussian
-summand available, the flat, hard-edged uniform:
+Gaussian. Start from the least Gaussian summand, the flat uniform:
 
 @!mdl-distributions-gaussian-1
 
 $n=1$ is a plateau, $n=2$ a triangle; by $n=32$ the sum is
-indistinguishable from $\mathcal N(0,1)$ at this resolution. Nothing in
-the code knows about the Gaussian: **summation manufactures it**. (It is
-also the maximum-entropy law for fixed mean and variance.)
+indistinguishable from $\mathcal N(0,1)$: **summation manufactures the
+Gaussian**. It is also the maximum-entropy law for fixed mean and variance.
 :::
 
 ::: {.slide title="The normalizer: a polar trick"}

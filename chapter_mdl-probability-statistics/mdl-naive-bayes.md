@@ -912,7 +912,7 @@ Telling them apart depends on joint patterns among neighboring pixels,
 which the marginal feature model omits.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @!mdl-naive-bayes-calibration-2
 :::
 :::

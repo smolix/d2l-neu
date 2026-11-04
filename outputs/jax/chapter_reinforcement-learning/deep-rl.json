@@ -4,74 +4,102 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c343658c67babe80e3355b3e00e7bccaa83d6f61a1a8d35430dddcd7003d147e",
+    "d2l_lib_fingerprint": "sha256:9108438d8f8b0cf4b55f048c1ef7d4bbfc79ab6a626914c74d220137620bb020",
     "max_inline_bytes": 0
   },
   "cells": {
     "deep-rl-from-tables-to-networks": {
-      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
+      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-replacing-the-table-with-a-network-1": {
+      "code_fingerprint": "sha256:afb935cd74c2f44fc95668bec2977f914ab0fc2ecd1f0be29c1a03165392359f",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-1": {
-      "code_fingerprint": "sha256:d09518b7b4611786301c7774b3e336f1e7915df0a5511fc1a66c7318a3439e1d",
+      "code_fingerprint": "sha256:26d3b76aab0aa4c5dba1dc169b130348bbdda8f3c8fac2772a2d9287c2390370",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-2": {
-      "code_fingerprint": "sha256:cd53ae869e1f07cee3fae408384b690a8bab5c691031e6d196b1f0688841c7ef",
+      "code_fingerprint": "sha256:4b344003479c5dfc61f01b8d183133e56a815a8f2f107fce6cb93d56d1b871e4",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-replacing-the-table-with-a-network-2": {
+      "code_fingerprint": "sha256:85d183dadcdddff35d3995910da7b16660dcfa66de527f987dc6c92196c6bb59",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:bbf319bb685cedd0d4ba7e05717c356528083777e4b305732e761a4b15c22cf1",
+      "code_fingerprint": "sha256:40efb44e1cd8af4dac13efd431f8379cf7d42c0c4e20458832faf899131bb609",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:5e1d8d6da0dd743ae8b364b991a6ed0a618daf4b7096ab8d7d746a85927e768d",
+      "code_fingerprint": "sha256:f16b0b900624125ec2997bb5e329e3a3315ff483b92bee1f3da2bfa70824c70d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
-          "bytes": 35587,
-          "sha256": "sha256:7c7b94b49bd0759d9af7048177a3342c43ccedfcd8123dfe064dcff85640f9e2"
+          "bytes": 32186,
+          "sha256": "sha256:653e59aed642a8c8022c86b7b378b19d5e570f0ac756b7d63e87d723dc2d5fc4"
+        }
+      ]
+    },
+    "deep-rl-the-estimator-written-as-a-loss": {
+      "code_fingerprint": "sha256:cdb428c79087bf905f39e7ad78b62da30bbacb561857e8cf7350de32a192e389",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
+          "bytes": 28331,
+          "sha256": "sha256:296b4ac1f74edc1196ccdf1e5a4a8a85e8ab37fbf643168a7a192c7b85f98c8b"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:8cb7f45c75c15402b37e16ab2f408806eed516a4e3f863b8619795124eed99c5",
+      "code_fingerprint": "sha256:55cdeeb407e233a8fe4bce8021e781fdfbefb27be11c5f4ab196b41e45aacac0",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:57eba6856c98065ce7aca3e4ba173ad0b8f89df0ea2d3bce31dd776d7db55df6",
+      "code_fingerprint": "sha256:bed6bfa43f0fa837a5c25f0db132a3aed53f8271ed6c1cb0c221ef3e330b9b81",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "True\n"
+          "text": "density: True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "score in mu: True | score in log sigma: True\n"
         }
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:8c8de120aa40814fc4308a9cf3cfe6a52bad36a9f06d3ff49c3b263b96705f2c",
+      "code_fingerprint": "sha256:6361840d088fdb0e8aa183e3230d207107c0100b2c5033902c5236fccff3bf38",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
-          "bytes": 52656,
-          "sha256": "sha256:7db058500ae78b115ecd1c90fdd53fedc270fbeb7d0abde42b062f7d0a386296"
+          "bytes": 52005,
+          "sha256": "sha256:6f47c49d8a81dcc286260acdfbee03122517e5a9c9101f3d3de4b43701e78258"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:760eb1d30f459ce472f277896924b8b94a2404f3a8b5b85057f78078349d4b9e",
+      "code_fingerprint": "sha256:2f39e74fea3c2fb879f4e2b57b9d417da487a0aba387fd002d7deb24555616ac",
       "kind": "text",
       "outputs": [
         {
@@ -82,26 +110,13 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:f137bbd77d5c60dac94ef941fc3c2141a379da0134a1b94f846ab3d0bec310cf",
+      "code_fingerprint": "sha256:c9f4993ddfb77aecc07e4a5ed1939607cd07e5e3c1c140f0525eea2884490781",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "network: nudged state moved +1.12; 255 of the 255 others moved too, |change| up to 1.20\ntable:   nudged entry moved +1.18; largest move among the other fifteen: 0.000000\n"
-        }
-      ]
-    },
-    "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:013c982b5652676a1e8fd18ee8c4b8439b7940560375879586131b4db21857ab",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
-          "bytes": 31630,
-          "sha256": "sha256:9359cecb1d27d149e16e99e889730a1ffb29f60d0d96e1dc81a2d52f61ffbf6d"
+          "text": "network: nudged state +0.55; 10 nearest probes +0.49, 10 farthest -0.01; 6 of 255 moved down\ntable:   nudged entry +0.50; largest move among the other fifteen: 0.000000\n"
         }
       ]
     }

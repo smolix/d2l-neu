@@ -9,12 +9,12 @@
   },
   "cells": {
     "mdp-markov-decision-processes": {
-      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "code_fingerprint": "sha256:c5df94e5abaf279bfbbd831abc76581c9c94528d11747f314c7e5584c99334d9",
       "kind": "text",
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-1": {
-      "code_fingerprint": "sha256:34c2613776602963163d0ac1f99a4fcd08901855e9e181e520b671f8d0348b8a",
+      "code_fingerprint": "sha256:72fa73877b4a6e6290c73e322f6aca036281f12a943046cf8cafea355b7ae268",
       "kind": "text",
       "outputs": [
         {
@@ -23,13 +23,35 @@
         }
       ]
     },
+    "mdp-return-discount-and-horizon": {
+      "code_fingerprint": "sha256:52addb9f3363c5b2d14d49186c840e1fa3f740f7c7229b3813ee60dc26c77d2a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t= 0  s= 0  a=>  s'= 0  r=0\nt= 1  s= 0  a=v  s'= 0  r=0\nt= 2  s= 0  a=<  s'= 4  r=0\nt= 3  s= 4  a=^  s'= 4  r=0\nt= 4  s= 4  a=<  s'= 4  r=0\nt= 5  s= 4  a=v  s'= 8  r=0\nt= 6  s= 8  a=>  s'= 9  r=0\nt= 7  s= 9  a=^  s'=10  r=0\nt= 8  s=10  a=>  s'=11  r=0\nterminated=True, truncated=False, total reward=0\n"
+        }
+      ]
+    },
+    "mdp-the-geometric-bound-and-the-effective-horizon": {
+      "code_fingerprint": "sha256:762b6738416d6aca7f5674fe4c0b7fb0d5ccf9aaa0d61bb1bbc6cbb05b946b09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " gamma  horizon 1/(1-gamma)  t: gamma^t < 0.05  gamma^5\n   0.5                    2                  5    0.031\n   0.9                   10                 29    0.590\n  0.95                   20                 59    0.774\n  0.99                  100                299    0.951\n"
+        }
+      ]
+    },
     "mdp-states-actions-and-the-transition-kernel-2": {
-      "code_fingerprint": "sha256:e8b4451a2ee9e8fbca5818030f5ab58ff4b22c1ab9ac49b2f56c0b39706d7f8a",
+      "code_fingerprint": "sha256:888f566f5403b55cce5de1e5136fc5cdaae35b316b52d0901232581298edab96",
       "kind": "text",
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-3": {
-      "code_fingerprint": "sha256:79304b6debb08508b7081d823b100dd4df68d5a2252b6d2451e25926ab815a22",
+      "code_fingerprint": "sha256:ce580944add57766c909090de3980757ac113e3573f08ba54ba1886275123d8f",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +62,7 @@
       ]
     },
     "mdp-states-actions-and-the-transition-kernel-4": {
-      "code_fingerprint": "sha256:40da8a99548d8b5085ec1ae74cd4d0c4005002c64402f99917851c05ab59164b",
+      "code_fingerprint": "sha256:e50f27dcf7a1a99d9415ee7ac66a3814f4754322d54a9afb39f5442c694bbc61",
       "kind": "text",
       "outputs": [
         {
@@ -50,36 +72,14 @@
         }
       ]
     },
-    "mdp-return-discount-and-horizon": {
-      "code_fingerprint": "sha256:aa632064ada70882a8dfe3c79ec43d275a47d53d6394a1bb7066d8c586f7c01b",
+    "mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward": {
+      "code_fingerprint": "sha256:b34a14f9ecf1beba203b4c16b35dad7f2163977d890f1ddf944a4fc309934dc2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t= 0  s= 0  a=>  r=0\nt= 1  s= 0  a=v  r=0\nt= 2  s= 0  a=<  r=0\nt= 3  s= 4  a=^  r=0\nt= 4  s= 4  a=<  r=0\nt= 5  s= 4  a=v  r=0\nt= 6  s= 8  a=>  r=0\nt= 7  s= 9  a=^  r=0\nt= 8  s=10  a=>  r=0\nterminated=True, truncated=False, return=0\n"
-        }
-      ]
-    },
-    "mdp-the-geometric-bound-and-the-effective-horizon": {
-      "code_fingerprint": "sha256:5896ea2d0a075b5b98e4c7dc94a661ee2a59b7bbbd5f5d51ffbdd44d8bbb01c9",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " gamma  horizon 1/(1-gamma)  t: gamma^t < 0.05\n   0.5                    2                  5\n   0.9                   10                 29\n  0.95                   20                 59\n  0.99                  100                299\n"
-        }
-      ]
-    },
-    "mdp-model-based-versus-model-free": {
-      "code_fingerprint": "sha256:d573b0a088e7f5f4ee8935d21ef5b9d2659187c8947ac28ada866459ba42396c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "shaped-optimal: at s=14 goes <, shaped value 2.15, true value 0.000\ntrue-optimal:   at s=14 goes v, true value 0.180\n"
+          "text": "success of a response sampled from the reference: 0.062\n"
         }
       ]
     }

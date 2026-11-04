@@ -201,7 +201,7 @@ if tab.selected('jax'):
         return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
 ```
 
-Two pieces of per-framework speed first, not algorithm, both following the compilation rule of :numref:`sec_compilation` exactly as :numref:`sec_actorcritic` did: compile what has a fixed shape and runs hot. The acting forward is compiled and cached in the jax tab and stays eager in the pytorch tab; both tabs gain a batched probability read `_probs` that the vectorized collection at the end of the section will want.
+The vectorized collection at the end of the section reads the action probabilities of many states at once; `_probs` returns them as a NumPy array.
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab pytorch
@@ -212,62 +212,13 @@ def _probs(ac, obs):   # batched action probabilities, read as numpy
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab jax
-_act_probs = nnx.jit(lambda net, obs: jax.nn.softmax(net(obs), -1))
-
-def _probs(ac, obs):   # the fixed-shape acting forward, compiled and
-    if not hasattr(ac, '_fwd'):    # cached as in :numref:`sec_actorcritic`
-        ac._fwd = nnx.cached_partial(_act_probs, ac.policy)
-    return np.asarray(ac._fwd(jnp.asarray(obs)))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act(self, obs, rng):
-    p = _probs(self, obs)
-    return int(rng.choice(len(p), p=p))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act_greedy(self, obs, rng=None):
-    return int(_probs(self, obs).argmax())
+def _probs(ac, obs):   # batched action probabilities, read as numpy
+    return np.asarray(jax.nn.softmax(d2l.forward_np(ac.policy, obs), -1))
 ```
 
-The critic's regression is the same hot loop it was in :numref:`sec_actorcritic`, and the jax tab repeats that section's padding trick, batches padded to a power-of-two length so the jitted pass compiles once per size bucket; sections are self-contained, so the cell is repeated rather than imported.
-
-```{.python .input #ppo-the-implementation-3}
-%%tab pytorch
-# Eager per-pass cost is about a millisecond in this tab; the library
-# helper needs no compilation story here, unlike its jax sibling.
-fit_value = d2l.fit_value
-```
-
-```{.python .input #ppo-the-implementation-3}
-%%tab jax
-def _pad(x, size):  #@save
-    return jnp.asarray(np.pad(x, ((0, size - len(x)),) + ((0, 0),)
-                              * (x.ndim - 1)))
-
-_value_fwd = nnx.jit(lambda net, obs: net(obs).squeeze(-1))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def value_np(self, obs):   # batched reads only, padded to the bucket size
-    size = 1 << max(6, (len(obs) - 1).bit_length())
-    return np.asarray(_value_fwd(self.value, _pad(obs, size)))[:len(obs)]
-
-@nnx.jit
-def _critic_pass(value, opt, obs, target, mask):
-    loss, grads = nnx.value_and_grad(lambda v: (mask * (
-        v(obs).squeeze(-1) - target) ** 2).sum() / mask.sum())(value)
-    opt.update(value, grads)
-    return loss
-
-def fit_value(ac, obs, target, num_steps=1):
-    """d2l.fit_value, padded to a power-of-two length: the jitted pass
-    compiles once per size bucket (:numref:`sec_compilation`)."""
-    size = 1 << max(6, (len(target) - 1).bit_length())
-    mask = jnp.asarray((np.arange(size) < len(target)).astype(np.float32))
-    for _ in range(num_steps):
-        loss = _critic_pass(ac.value, ac.opt_v, _pad(obs, size),
-                            _pad(target, size), mask)
-    return float(loss)
-```
+:begin_tab:`jax`
+`_probs` runs the policy through `d2l.forward_np`, the compiled forward that `act` uses (:numref:`sec_imitation`).
+:end_tab:
 
 `ppo_epochs` receives a batch together with the quantities frozen before
 reuse: the advantages and the collecting policy's log-probabilities. It
@@ -280,7 +231,6 @@ $\log\pi_{\theta_{\textrm{old}}}-\log\pi_\theta$, and mean policy entropy.
 The expected log-ratio under the old policy is a KL divergence at the
 visited states, but its finite-sample estimate may be negative. The
 `use_clip` control retains importance ratios and removes only clipping.
-The JAX tab compiles one padded step per size bucket.
 
 ```{.python .input #ppo-the-implementation-4}
 %%tab pytorch
@@ -337,15 +287,19 @@ def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,  #@save
     """num_epochs clipped-surrogate passes on one frozen batch; returns
     [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
     band, approximate KL, mean policy entropy."""
-    size = 1 << max(6, (len(adv) - 1).bit_length())
-    mask = jnp.asarray((np.arange(size) < len(adv)).astype(np.float32))
-    obs, act, adv, logp_old = (_pad(np.asarray(x), size) for x in
+    size = d2l._bucket(len(adv))
+    mask = (np.arange(size) < len(adv)).astype(np.float32)
+    obs, act, adv, logp_old = (d2l._pad(x, size) for x in
                                (batch.obs, batch.act, adv, logp_old))
     step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
     return np.array([step(obs, act, adv, logp_old, mask, epsilon,
                           entropy_coef, use_clip)
                      for _ in range(num_epochs)])
 ```
+
+:begin_tab:`jax`
+`ppo_epochs` pads the batch to a bucket length with `d2l._pad` and `d2l._bucket` and masks the padded rows out of every mean, so the compiled `_ppo_step` is reused across batches of different lengths (:numref:`sec_imitation`).
+:end_tab:
 
 The training loop extends :numref:`sec_actorcritic` in one place. After the
 critic updates, it computes GAE advantages and records log probabilities under
@@ -354,9 +308,10 @@ instead of taking a single actor step. During reuse, only the current policy
 $\pi_\theta$ changes.
 
 As before, the critic is updated first and regresses on the $\lambda$-return
-target `gae + value`. For each update, the generator yields the batch
-return, the three diagnostics averaged over the epochs, and the three
-diagnostics of the last epoch, in this order. An optional `trace` retains the full
+target `gae + value` with `fit_value` of :numref:`sec_deeprl`. For each
+update, the generator yields the batch return, the three diagnostics
+averaged over the epochs, and the three diagnostics of the last epoch, in
+this order. An optional `trace` retains the full
 diagnostic matrix for the experiments below.
 
 ```{.python .input #ppo-the-implementation-5}
@@ -369,8 +324,8 @@ def train_ppo(seed, ac, use_clip=True, trace=None):
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         for _ in range(critic_steps):   # fresh lambda-return target, per pass
-            fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
-                      + ac.value_np(batch.obs))
+            d2l.fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
+                          + ac.value_np(batch.obs))
         adv = d2l.normalize(batch.gae(ac.value_np, gamma, lam))
         logp_old = ac.log_prob_np(batch.obs, batch.act)
         d = ppo_epochs(ac, batch, adv, logp_old, epsilon_clip, num_epochs,
@@ -405,14 +360,19 @@ runs['no clip'] = np.array(
      for s in range(num_seeds)])
 ```
 
-First the casualties, counted rather than asserted, with a run declared dead if its last ten updates average below a return of 100:
+Two criteria summarize each run. A run *holds* the task if its batch return, once it first reaches 475, never again falls below 250, half the maximum. A run ends *dead* if its last ten updates average below a return of 100:
 
 ```{.python .input #ppo-the-ablation-3}
 %%tab pytorch, jax
+def holds(ret):   # reaches 475, then never falls below 250 again
+    hit = np.flatnonzero(ret >= 475)
+    return len(hit) > 0 and ret[hit[0]:].min() >= 250
+
 for name, r in runs.items():
+    held = sum(holds(ret) for ret in r[:, :, 0])
     dead = r[:, -10:, 0].mean(axis=1) < 100
-    print(f'{name:>13}: {int(dead.sum())} of {num_seeds} seeds end dead; '
-          f'casualties {np.flatnonzero(dead).tolist()}')
+    print(f'{name:>13}: {held} of {num_seeds} seeds hold the task, '
+          f'{int(dead.sum())} end dead')
 ```
 
 ```{.python .input #ppo-the-ablation-4}
@@ -422,7 +382,7 @@ d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
                 reference=500)
 ```
 
-With twenty optimization epochs per batch, at least half of the unclipped seeds finish with a return below 100. Repeated unconstrained updates move the policy into a saturated region in which gradients are small, and subsequent batches are then collected by the poor policy. Every clipped seed finishes near the maximum return under the same data and update schedule. The identities of the failed seeds, and their exact number, can vary with numerical details, so the comparison concerns the failure rate rather than particular seeds. With fewer epochs or a smaller learning rate, the unclipped variant usually succeeds; clipping is most useful when batch reuse and step size would otherwise produce an excessive policy change.
+With twenty optimization epochs per batch, every clipped seed reaches the maximum return and holds it, while most unclipped seeds do not. Some of them collapse to returns near 9; others reach the maximum and then lose it. Repeated unconstrained updates move the policy into a saturated region in which gradients are small, and subsequent batches are then collected by the poor policy. The identities of the failed seeds, and their exact number, vary with numerical details, so the comparison concerns the failure rate rather than particular seeds. With four epochs instead of twenty, the unclipped variant usually reaches the maximum as well; with a ten times smaller learning rate it no longer collapses, but sixty updates are too few for it to settle at the maximum. Clipping is most useful when batch reuse and step size would otherwise produce an excessive policy change.
 
 The clipping rate must be defined carefully. Each update checks every sample once per epoch, and the first epoch begins with $\rho_t=1$ for every sample. We report both the fraction of all per-epoch checks outside the band and the corresponding fraction in the final epoch of each batch:
 
@@ -437,8 +397,9 @@ for name, r in runs.items():
 
 For the clipped runs, both counts are near one check in twenty. Clipping sets
 the surrogate gradient to zero for samples whose ratios have crossed the
-relevant boundary. In the unclipped control, ratios cross the band three to
-four times as often overall and continue to move across repeated epochs.
+relevant boundary. In the unclipped control, ratios cross the band several
+times as often, and more often at the last epoch of a batch than on average:
+nothing stops them from moving further across repeated epochs.
 
 ### Training Diagnostics
 :label:`subsec_ppo_diagnostics`
@@ -606,7 +567,7 @@ The list is not ours. A community audit collected 37 such implementation details
 
 Equal parameter steps need not produce equal changes in a policy. Importance sampling corrects expectations when data come from an older policy, but trajectory-level products of ratios can have high variance. The per-step surrogate is a local approximation that retains the old policy's state distribution. TRPO controls this approximation through a divergence constraint and a monotonic-improvement bound. PPO instead clips individual probability ratios; this is simpler but does not inherit the TRPO guarantee. Practical PPO also uses GAE, an entropy bonus, repeated optimization epochs, and diagnostics for KL divergence, clipping, entropy, and effective sample size.
 
-**Experimental scope.** The clipping ablation uses eight seeds per method and framework. With twenty reuse epochs, every clipped run reaches high CartPole return, whereas at least half of the unclipped runs collapse. The exact failure rate and diagnostic values vary across seeds. The implementation uses full batches from a single environment and omits vectorized collection and minibatch updates, so it illustrates the clipped objective rather than reproducing a production PPO system.
+**Experimental scope.** The clipping ablation uses eight seeds per method and framework. With twenty reuse epochs, every clipped run reaches the maximum CartPole return and holds it, whereas most unclipped runs either never reach the maximum or lose it again after reaching it. The exact failure rate and diagnostic values vary across seeds. The implementation uses full batches from a single environment and omits vectorized collection and minibatch updates, so it illustrates the clipped objective rather than reproducing a production PPO system.
 
 ## Exercises
 
@@ -1003,9 +964,9 @@ The implementation uses generalized advantage estimation from
 
 . . .
 
-Both variants use the same batches and 20 optimization passes. At least half
-of the unclipped seeds collapse to returns near 9, whereas every clipped seed
-reaches the task ceiling. Roughly 5% of ratio evaluations activate the clip.
+Both variants spend 20 optimization passes on every batch. Every clipped seed
+reaches the task ceiling and holds it; most unclipped seeds do not, and some
+collapse to returns near 9. Roughly 5% of ratio evaluations activate the clip.
 The individual failing seeds vary between runs, but the failure frequency is
 consistent in this experiment.
 :::

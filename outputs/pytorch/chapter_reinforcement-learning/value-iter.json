@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7ba39bc24a1e708f8908610b81dd0083cb49f653fcceaf116ca15a96e28d4d05",
+    "d2l_lib_fingerprint": "sha256:8b0e1582f9df233e9910ba451e1986f5f536112b895fc05974b58a90e63c0e6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,60 +13,76 @@
       "kind": "text",
       "outputs": []
     },
+    "value-iter-the-expectation-form": {
+      "code_fingerprint": "sha256:8a04d7613198b35ac6951e7285993db88fae721b04b0adb1d6029aa9a8f4af72",
+      "kind": "text",
+      "outputs": []
+    },
     "value-iter-three-algorithms": {
-      "code_fingerprint": "sha256:65cacfac4d3622e1f600e0299a34a27b91593e1d8027f11998651b9f83003ef5",
+      "code_fingerprint": "sha256:915d46faf9f3c4ea53c262a96fdeeeb0e5a079684cd7212a789e8081f5199de3",
       "kind": "text",
       "outputs": []
     },
     "value-iter-value-iteration-1": {
-      "code_fingerprint": "sha256:07c49745cb5e2ed33affcd3ed939c0faa3dc840fe838024d0f7d72ee6ae786ff",
+      "code_fingerprint": "sha256:0cd3eca0576c46fabb3ad719120e2fe033b87e8b2ee6f554149d51c8f81453c2",
       "kind": "text",
       "outputs": []
     },
+    "value-iter-what-the-optimal-policy-looks-like-on-ice-4": {
+      "code_fingerprint": "sha256:0720b1bb8120271bf3254fe81593e023a95b8f53148412894d12f8f25ea072b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cells with nonzero value after each sweep: [ 1  3  5  7 10 11 11 11 11 11]\nV*(s0) on calm ice: 0.7738;  gamma^5 = 0.7738\n"
+        }
+      ]
+    },
     "value-iter-value-iteration-2": {
-      "code_fingerprint": "sha256:689265bfdf26f9479c17f12be23871f04609d403c329bd79b082d4757f7f3962",
+      "code_fingerprint": "sha256:8be049dbb712a25325a82ec1f4e5acb60ea00c2a51b7eb89ffa42dfaa47bd118",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "V*(s0) = 0.1805\n"
+          "text": "V*(s0) = 0.1805, V*(13) = 0.5090\nstate 14: V* = 0.7237;  1/3 + gamma (V*(13) + V*(14)) / 3 = 0.7237\ncell 9: Q*(9, a) for a = <, v, >, ^: [0.247 0.375 0.289 0.213]\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "value-iter/value-iter-value-iteration-2-1.png",
-          "bytes": 7587,
-          "sha256": "sha256:4a0f2c621b418c183d2dcf6ab8e2c3ebea1147eac7512be0821654fb5e8dc799"
+          "bytes": 37276,
+          "sha256": "sha256:fcbc7679670a4f643c3b6cd630809d7b27b6a9906d827663a263d53dfc79343a"
         }
       ]
     },
     "value-iter-value-iteration-3": {
-      "code_fingerprint": "sha256:a93396fb23968ab4180e97887d9c40c9f322668b8947b181db5936c3ea5a1d7b",
+      "code_fingerprint": "sha256:e5d70176e3d1530ecb73d9141646b9f2a05103b28e89778c149350b8a86892e4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
-          "bytes": 28636,
-          "sha256": "sha256:8eef4edbb793e8a81269875f093f4763a899ede685f427c170c7e223acb4cace"
+          "bytes": 42057,
+          "sha256": "sha256:c74bf688e59d67ef4d4bce7d2b184fb67e95fc95610e0a355760a4838fcad886"
         }
       ]
     },
     "value-iter-value-iteration-4": {
-      "code_fingerprint": "sha256:61150b952a7aea3381f87d28f247563c46a80de38751d6683f4ea0df1b1edd29",
+      "code_fingerprint": "sha256:50c73a9be3d43bf7f086339fa8a8ed6c09bfe7abc6394984ae82e3e8556e1ba0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sweep-to-sweep change first below 1e-6 at sweep 128\ncertified error bound first below 1e-6 at sweep 164\ndistance to V* first below 1e-6 at sweep 158\n"
+          "text": "sweep-to-sweep change first below 1e-6 at sweep 128\ncertified error bound first below 1e-6 at sweep 164\ndistance to V* first below 1e-6 at sweep 158\ndistance to V* when the change first falls below 1e-6: 1.1e-05\n"
         }
       ]
     },
     "value-iter-policy-evaluation": {
-      "code_fingerprint": "sha256:18b581e5a9fe76b1fe51d95cf0428890ac2b8761fe7c751d9a5b0db44234dfe4",
+      "code_fingerprint": "sha256:167c204215fab0a4648c1616ad165ceb823fc2b24464e0142631a000696128ef",
       "kind": "text",
       "outputs": [
         {
@@ -76,57 +92,89 @@
         }
       ]
     },
+    "value-iter-policy-evaluation-1": {
+      "code_fingerprint": "sha256:8b173da51efdc35e529e6b5c1579e8f3b2d939ed52634e1f066aaf69d62266d5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "V(s0) for the uniformly random policy, solved exactly: 0.0078\n"
+        }
+      ]
+    },
     "value-iter-policy-iteration-and-generalized-policy-iteration-1": {
-      "code_fingerprint": "sha256:49557f58f1e53b007289fcd4491bd10932e195fc18d99a5f5145ea404d751be9",
+      "code_fingerprint": "sha256:f8945807e56646e2dd875e0bef3fabe3f6e0bb0ee6bd9ad2e2a2810bd17b1aa7",
       "kind": "text",
       "outputs": []
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-2": {
-      "code_fingerprint": "sha256:91c7926a037f17f036fef770d0862578312107310c35f2b56928dd9ac28f1443",
+      "code_fingerprint": "sha256:42def04c64d858ca683e41e820f3440acd7e11ae2fe82ad646c7b4ca721af438",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "policy iteration: 2 rounds of evaluate-then-improve\nvalue iteration: certified at sweep 164\nits greedy policy already equals pi* from sweep 14 on\n"
+          "text": "policy iteration: 2 exact solves; the first greedy step gives pi*: True\nvalue iteration: certified at sweep 164 (10,496 backups)\nits greedy policy already equals pi* from sweep 14 on (896 backups)\n"
         }
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-1": {
-      "code_fingerprint": "sha256:898c8fc2117e8e73aa476c11e8acd6f7c76615761bbcd0f84ab6a373c741de37",
+      "code_fingerprint": "sha256:2f45957a1a175cc3c2fd1244423f203d2a780cc7f6e4c745e39a085259d434cc",
       "kind": "text",
       "outputs": []
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-2": {
-      "code_fingerprint": "sha256:3679e0dd24744fa24539d7169129e8d78d2bec38f89ed14a8184bd01d0089fc6",
+      "code_fingerprint": "sha256:06b3d2c3218785e426185cfcaa609dc9aadef35cc90eee9319a83dcf4395cd57",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "slip-aware optimum: reaches the goal in 73.6% of 2000 episodes\nshortest-path policy: reaches the goal in 4.7% of 2000 episodes\n"
+          "text": "     slip-aware optimum: goal within 100 steps 0.730 exactly, 0.736 in 2000 episodes\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   shortest-path policy: goal within 100 steps 0.045 exactly, 0.046 in 2000 episodes\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniformly random policy: goal within 100 steps 0.014 exactly, 0.010 in 2000 episodes\n"
         }
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-3": {
-      "code_fingerprint": "sha256:c1cbf531b63688ca776c5d72b9d8a651fa9e2f0132df18fbe2caad20a94c4e8d",
+      "code_fingerprint": "sha256:25560898b41d0d09260ea309c38917be7b8f5b562fd52455c0c126dd051f5f57",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "s= 2: pi* commands <, the shortest path takes v\ns= 6: pi* commands <, the shortest path takes v\ns= 8: pi* commands ^, the shortest path takes >\ns=10: pi* commands <, the shortest path takes v\n"
+          "text": "s= 0: pi* < into a wall         hole risk: pi* 0.00, shortest 0.00, least 0.00\ns= 1: pi* ^ into a wall         hole risk: pi* 0.00, shortest 0.33, least 0.00\ns= 2: pi* < away from the goal  hole risk: pi* 0.00, shortest 0.00, least 0.00\ns= 3: pi* ^ into a wall         hole risk: pi* 0.00, shortest 0.33, least 0.00\ns= 4: pi* < into a wall         hole risk: pi* 0.00, shortest 0.33, least 0.00\ns= 6: pi* < away from the goal  hole risk: pi* 0.33, shortest 0.67, least 0.33\ns= 8: pi* ^ away from the goal  hole risk: pi* 0.00, shortest 0.33, least 0.00\ns= 9: pi* v toward the goal     hole risk: pi* 0.00, shortest 0.00, least 0.00\ns=10: pi* < away from the goal  hole risk: pi* 0.00, shortest 0.33, least 0.00\ns=13: pi* > toward the goal     hole risk: pi* 0.00, shortest 0.00, least 0.00\ns=14: pi* v into a wall         hole risk: pi* 0.00, shortest 0.00, least 0.00\n"
         }
       ]
     },
-    "value-iter-what-the-optimal-policy-looks-like-on-ice-4": {
-      "code_fingerprint": "sha256:8c57940a7f92b9897a64e2a3d116933e47c7340428bf87d1f228c36fc93b8628",
+    "value-iter-the-optimal-policy-on-slippery-ice-1": {
+      "code_fingerprint": "sha256:ca4f80a5de3ed5c51a4f8a33e585bdc53ba4c9110f36e97e8cbf73a447337026",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "V*(s0) on calm ice: 0.7738;  gamma^5 = 0.7738\n"
+          "text": "     pi*: P(falls into a hole) 0.22, from 6: 0.22\nshortest: P(falls into a hole) 0.96, from 4: 0.31, 1: 0.31, 8: 0.13, 6: 0.08, 3: 0.06, 10: 0.05\n"
+        }
+      ]
+    },
+    "mdp-model-based-versus-model-free": {
+      "code_fingerprint": "sha256:fa40e190efb2c5885b86ba8a106843d115bb964a8a213c137607945bc6c84f9f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bonus 0.3: at s=14 goes <, shaped V(0) 2.15, V(13) 1.71, V(14) 1.52; true V(0) 0.000\nbonus 0.1: at s=14 goes v, shaped V(0) 0.79, V(13) 0.87, V(14) 0.94; true V(0) 0.115\nbonus 0.0: at s=14 goes v, shaped V(0) 0.18, V(13) 0.51, V(14) 0.72; true V(0) 0.180\n"
         }
       ]
     }

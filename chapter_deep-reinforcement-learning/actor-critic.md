@@ -32,7 +32,7 @@ We retain the CartPole environment, discount $0.99$, and one-hidden-layer `Actor
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-2}
 %%tab pytorch, jax
-gamma, num_updates, batch_episodes = 0.99, 100, 8
+gamma, num_updates, batch_episodes = 0.99, 150, 8
 num_seeds, critic_steps, grad_clip = 3, 20, 0.5
 if tab.selected('pytorch'):
     def cartpole_agent(seed):
@@ -124,11 +124,11 @@ We first modify `d2l.policy_step` to cap the actor's gradient norm at the common
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab pytorch
-def policy_step_clip(ac, batch, w, clip=grad_clip):
+def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap."""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
-    loss = -(torch.as_tensor(w) * ac.log_prob(obs, act)).mean()
+    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
+    loss = -(torch.as_tensor(weight) * ac.log_prob(obs, act)).mean()
     ac.opt_pi.zero_grad()
     loss.backward()
     gnorm = nn.utils.clip_grad_norm_(ac.policy.parameters(), clip)
@@ -138,37 +138,15 @@ def policy_step_clip(ac, batch, w, clip=grad_clip):
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab jax
-def policy_step_clip(ac, batch, w, clip=grad_clip):
+def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap. `_pad` and `_actor_pass`,
-    defined with the critic's compilation story two cells below, are
-    resolved at the first call."""
-    size = 1 << max(6, (len(w) - 1).bit_length())
-    gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(batch.obs, size),
-                        _pad(batch.act, size), _pad(w, size),
-                        jnp.float32(len(w)), jnp.float32(clip))
+    defined in the next cell, are resolved at the first call."""
+    size = 1 << max(6, (len(weight) - 1).bit_length())
+    gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(obs, size),
+                        _pad(act, size), _pad(weight, size),
+                        jnp.float32(len(weight)), jnp.float32(clip))
     return float(gnorm)
-```
-
-The second piece is per-framework speed, not algorithm, and follows the compilation rule of :numref:`sec_compilation`: compile what has a fixed shape and runs hot, leave ragged shapes eager. The acting forward runs a few hundred thousand times at one fixed shape, so the jax tab compiles and caches it exactly as :numref:`sec_deeprl` did; the pytorch tab's eager dispatch is already cheap at this scale and needs nothing.
-
-```{.python .input #actor-critic-a2c-by-name-2}
-%%tab jax
-_act_probs = nnx.jit(lambda net, obs: jax.nn.softmax(net(obs), -1))
-
-def _probs(ac, obs):   # the fixed-shape acting forward, compiled and
-    if not hasattr(ac, '_fwd'):        # cached as in :numref:`sec_deeprl`
-        ac._fwd = nnx.cached_partial(_act_probs, ac.policy)
-    return np.asarray(ac._fwd(jnp.asarray(obs)))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act(self, obs, rng):
-    p = _probs(self, obs)
-    return int(rng.choice(len(p), p=p))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act_greedy(self, obs, rng=None):
-    return int(_probs(self, obs).argmax())
 ```
 
 The critic's regression and the actor's clipped step are this section's hot loops, together tens of thousands of passes per run, each on a batch of a few fixed lengths. Padding every batch to a power-of-two length makes the shape one of a handful and lets the jitted passes and the jitted value read that computes the critic's target compile once per bucket rather than once per batch; a mask, or zero-padded weights, keeps the padded entries out of each loss.
@@ -233,9 +211,10 @@ def train_reinforce(seed, ac, num_updates=num_updates):
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma)
+        G = (batch.reward_to_go(gamma)
+             + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
-        gnorm = policy_step_clip(ac, batch, w)
+        gnorm = policy_step_clip(ac, batch.obs, batch.act, w)
         fit_value(ac, batch.obs, G)
         yield float(batch.episode_returns().mean()), gnorm
 ```
@@ -245,8 +224,20 @@ regresses on the one-step bootstrapped target rather than reward-to-go and
 takes `critic_steps` passes before the actor update. Each pass recomputes the
 target from the current critic, so this is fitted TD with a moving target rather
 than fixed-target regression. :numref:`sec_dqn` will instead freeze a separate
-target network when learning off-policy. The actor uses the TD error from
-:eqref:`eq_td_error_v`, normalized within the batch, as its weight.
+target network when learning off-policy. The actor's weight is the TD error
+of :eqref:`eq_td_error_v` itself. Unlike the Monte Carlo weight of
+`train_reinforce`, it is not normalized within the batch, and the reason is
+the critic. As the critic becomes accurate the TD errors shrink, from a
+standard deviation of about $3$ early in training to about $0.1$ at the
+ceiling, and what remains is mostly the critic's own noise. Normalizing would
+rescale that noise back to unit size, and Adam would take full-size steps on
+it; with the raw TD error the actor's steps shrink as the critic improves.
+In trial runs of 100 updates over forty seeds, the normalized version stalled
+below the ceiling or collapsed after reaching it on about a third of the
+seeds, against about a sixth with the raw TD error; the standard A2C recipe
+does not normalize either. Both loops here run for `num_updates`, 150 batches
+of eight episodes, and at that budget nearly every seed of `train_ac` reaches
+the ceiling.
 
 ```{.python .input #actor-critic-a2c-by-name-5}
 %%tab pytorch, jax
@@ -259,7 +250,7 @@ def train_ac(seed, ac, num_updates=num_updates):
         for _ in range(critic_steps):   # fresh target, one pass, repeat
             fit_value(ac, batch.obs, batch.td_target(ac.value_np, gamma))
         delta = batch.td_target(ac.value_np, gamma) - ac.value_np(batch.obs)
-        gnorm = policy_step_clip(ac, batch, d2l.normalize(delta))
+        gnorm = policy_step_clip(ac, batch.obs, batch.act, delta)   # not normalized
         yield float(batch.episode_returns().mean()), gnorm
 ```
 
@@ -303,11 +294,11 @@ for name, r in runs.items():
           f'{[longest_streak(row == 500) for row in r[:, :, 0]]}')
 ```
 
-Both methods reach the maximum batch return, and on most seeds the bootstrapped runs remain there for longer consecutive intervals. The streak length is only a visualization of these runs: it depends on policy quality, batch size, environment randomness, and estimator variance, so it is not a standard stability metric.
+Both methods reach the maximum batch return, and on most seeds the bootstrapped runs remain there for longer consecutive intervals. In trial runs over forty seeds, the actor-critic streak was the longer one on about nine seeds in ten, and its median was about three times as long; with three seeds, one of them can go the other way. The slower start holds as well: on most seeds actor-critic's ten-update running mean reaches 450 later than REINFORCE's. The streak length is only a visualization of these runs: it depends on policy quality, batch size, environment randomness, and estimator variance, so it is not a standard stability metric.
 
 The difference is consistent with the estimators' variance. A Monte Carlo weight contains the random outcomes of the entire remaining trajectory, so even a good policy can produce a lower-return update batch. A one-step temporal-difference weight replaces that tail with a critic estimate. The critic introduces bias early in training but reduces the variance that causes later fluctuations.
 
-The training functions also brought back a second number, and it justifies the clip. Both methods scale their weights to unit variance before the update, so it is tempting to assume both take steps of the same size:
+The training functions also brought back a second number, the actor's gradient norm before the clip, and it justifies the clip. The two weights differ in scale: REINFORCE's normalized weight has unit variance, whereas the TD error starts with a standard deviation of about $3$ and shrinks as the critic improves.
 
 ```{.python .input #actor-critic-a2c-by-name-8}
 %%tab pytorch, jax
@@ -317,13 +308,13 @@ for name, r in runs.items():
           f'clip binds on {(g > grad_clip).mean():4.0%} of updates')
 ```
 
-In these runs, actor--critic gradients are roughly an order of magnitude larger. The norm clip activates on about one third of actor--critic updates and on none of the Monte Carlo updates. The conditional zero-mean identity of :numref:`sec_baselines` helps explain this difference: state-dependent variance contributes nothing to the expected policy gradient, and the Monte Carlo weight contains more of it, whereas the temporal-difference error is more strongly action-dependent. Gradient norm alone does not measure signal quality, but the result shows that the two estimators can produce different update scales at the same learning rate. :numref:`sec_ppo` develops methods for controlling such policy updates.
+The actor-critic norm is several times larger in the median, and the clip binds on a fifth to two fifths of the actor-critic updates and on none of the REINFORCE updates. Two effects contribute, and this experiment does not separate them. One is scale: until the critic is accurate, the TD error's spread exceeds the unit spread of the normalized Monte Carlo weight. The other is direction. By the conditional zero-mean identity of :numref:`sec_baselines`, the state-dependent part of a weight contributes nothing to the expected policy gradient; the Monte Carlo weight contains more of it, whereas the TD error is more strongly action-dependent. Exercise :exref:`ex_actor-critic-gradient-norms`b separates the two by normalizing both weights at a fixed policy. Gradient norm alone does not measure signal quality, but the result shows that the two estimators produce different update scales at the same learning rate. :numref:`sec_ppo` develops methods for controlling such policy updates.
 
 ### The Critic's Moving Target and Data Freshness
 
 Every batch in this experiment comes from the current policy and from the states that policy visits. A critic error that affects current behavior is therefore likely to receive relevant transitions in the next batch, reducing the distributional mismatch between critic training and use. This feedback resembles the self-correction described in :numref:`sec_qlearning`.
 
-Fresh data do not guarantee stability. Nonlinear temporal-difference regression can diverge on-policy, and classical convergence results assume linear critics and two-timescale step sizes that this implementation does not use :cite:`Tsitsiklis.VanRoy.1997`. In this experiment, the reduced mismatch is sufficient for stable training. To compare the two estimators directly, we rerun `train_ac` and measure the temporal-difference error and Monte Carlo advantage on each shared batch.
+Fresh data do not guarantee stability. Nonlinear temporal-difference regression can diverge on-policy, and classical convergence results assume linear critics and two-timescale step sizes that this implementation does not use :cite:`Tsitsiklis.VanRoy.1997`. In this experiment, the reduced mismatch is sufficient for stable training. To compare the two estimators directly, we rerun `train_ac` and measure the temporal-difference error and the Monte Carlo advantage on each shared batch. The Monte Carlo advantage `A_mc` is the weight of `train_reinforce` before normalization: reward-to-go plus the bootstrap at the time limit, minus $\hat{V}$.
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later}
 %%tab pytorch, jax
@@ -337,9 +328,10 @@ for _ in range(num_updates):
         fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
     V = ac.value_np(b.obs)
     delta = b.td_target(ac.value_np, gamma) - V
-    A_mc = b.reward_to_go(gamma) - V
+    A_mc = (b.reward_to_go(gamma)   # G of train_reinforce, minus V
+            + b.truncation_bootstrap(gamma, ac.value_np) - V)
     trace.append((np.corrcoef(delta, A_mc)[0, 1], delta.var(), A_mc.var()))
-    policy_step_clip(ac, b, d2l.normalize(delta))
+    policy_step_clip(ac, b.obs, b.act, delta)
 trace = np.array(trace)
 print(f'corr(TD error, MC advantage): mean {trace[:10, 0].mean():.2f} over '
       f'the first ten updates, {trace[-50:, 0].mean():.2f} over the last 50')
@@ -347,9 +339,9 @@ d2l.plot_curves({'corr(TD error, MC advantage)': trace[:, 0]},
                 xlabel='update', ylabel='correlation', smooth=10)
 ```
 
-When episodes last a few dozen steps, the two weights have correlation near $0.3$; after episodes extend to hundreds of steps, the measured correlation approaches zero. Expanding :eqref:`eq_td_error_v` gives $\hat{G}_t-\hat{V}(s_t)=\delta_t+\gamma(\hat{G}_{t+1}-\hat{V}(s_{t+1}))$. The Monte Carlo advantage therefore contains the one-step temporal-difference error plus the discounted remainder of the trajectory. As the horizon grows, this additional tail contributes increasing variance.
+Over the first ten updates, when episodes last a few dozen steps, the two weights have a correlation of about $0.3$; over the last 50, when most episodes run to the 500-step limit, it is lower, about $0.15$ to $0.2$. Expanding :eqref:`eq_td_error_v` gives $\hat{G}_t-\hat{V}(s_t)=\delta_t+\gamma(\hat{G}_{t+1}-\hat{V}(s_{t+1}))$. The Monte Carlo advantage therefore contains the one-step temporal-difference error plus the discounted remainder of the trajectory, and the correlation falls as that remainder takes a larger share of its variance.
 
-The correlation is a descriptive diagnostic, not a certificate that the critic is accurate. It also changes with the policy, the state distribution, and the scales of both estimators. A direct critic evaluation would instead freeze the policy and compare predicted values with a reference. Here we next compare the absolute variances of the two policy weights:
+The correlation measures how much the two weights move together on the states the policy visits, and it changes with the policy, the state distribution, and the scales of both estimators. Judging the critic itself would take a frozen policy and a reference for its values. Here we next compare the absolute variances of the two policy weights:
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1}
 %%tab pytorch, jax
@@ -359,7 +351,7 @@ d2l.plot_curves({'TD error': trace[:, 1], 'MC advantage': trace[:, 2]},
                 xlabel='update', ylabel='variance of the weight', smooth=10)
 ```
 
-As episodes approach 500 steps, the variance of the Monte Carlo weight grows from tens to several hundred squared units. The temporal-difference error depends on one reward and one transition, so its variance remains much smaller and decreases further as the critic improves. The median variance ratio exceeds one hundred. Averaging eight trajectories per update reduces the Monte Carlo variance enough for REINFORCE to train, but does not remove its dependence on the horizon.
+The Monte Carlo weight's variance is a few tens of times that of the TD error throughout training; over seeds the printed median ratio ranges from about 10 to 60. The temporal-difference error depends on one reward and one transition, so its variance stays much smaller and falls further as the critic improves. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo weight's because the bootstrap replaces the tail of every cut episode by the critic's value, the same correction `train_reinforce` makes. Averaging eight trajectories per update reduces the Monte Carlo variance enough for REINFORCE to train, but does not remove its dependence on the horizon.
 
 Here the critic is trained on fresh on-policy data, and its target is recomputed after each update. When a value function is instead trained on replayed off-policy data while retaining a bootstrap target, the same semi-gradient update can diverge. :numref:`sec_dqn` addresses this problem by evaluating the bootstrap with a second network whose parameters are held fixed for several updates. This *target network* reduces the rate at which the regression target moves.
 
@@ -423,7 +415,7 @@ assert np.allclose(b.gae(fresh.value_np, gamma, 1.0),
 print('lambda = 0 is the TD error; lambda = 1 is the Monte Carlo advantage')
 ```
 
-One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` silently pretends the future is empty; the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
+One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` alone treats the future as empty (`truncation_bootstrap` of :numref:`sec_deeprl` adds it back); the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
 
 ### Eligibility Traces
 
@@ -436,7 +428,11 @@ The endpoint experiments above correspond to $\lambda=0$ and $\lambda=1$.
 We now evaluate intermediate values using `train_ac` with $\lambda$ exposed.
 The actor uses the `gae` advantage, and the critic target is the
 $\lambda$-return `A + V`. Thus $\lambda=0$ recovers the one-step target and,
-on episodes that terminate, $\lambda=1$ recovers reward-to-go. Following :numref:`sec_baselines`, each run
+on episodes that terminate, $\lambda=1$ recovers reward-to-go. Unlike
+`train_ac`, `train_gae` normalizes the actor's weights. Near $\lambda=1$ the
+GAE weight has the Monte Carlo scale, with a variance of order $100$, so raw
+weights would hit the clip at large $\lambda$ and not at small $\lambda$;
+normalized, every $\lambda$ takes steps of the same size. Following :numref:`sec_baselines`, each run
 uses 50 updates of four episodes. This small sample makes estimator variance
 visible while keeping the sweep over five values and five seeds manageable.
 
@@ -445,7 +441,8 @@ visible while keeping the sweep over five values and five seeds manageable.
 lams = [0.0, 0.5, 0.9, 0.95, 1.0]
 
 def train_gae(seed, lam, num_updates=50, batch_episodes=4):
-    """train_ac with the dial exposed; lam=0 is train_ac line for line."""
+    """train_ac with the dial exposed. The weights are normalized: near
+    lam=1 they have the Monte Carlo scale, and every lam steps alike."""
     rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
     ac = cartpole_agent(seed)
     env.reset(seed=seed)
@@ -455,7 +452,7 @@ def train_gae(seed, lam, num_updates=50, batch_episodes=4):
             fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
                       + ac.value_np(batch.obs))
         A = batch.gae(ac.value_np, gamma, lam)
-        policy_step_clip(ac, batch, d2l.normalize(A))
+        policy_step_clip(ac, batch.obs, batch.act, d2l.normalize(A))
         yield float(batch.episode_returns().mean())
 
 sweep = {lam: d2l.run_seeds(train_gae, 5, lam=lam) for lam in lams}
@@ -473,7 +470,7 @@ d2l.plot_curves({f'lambda = {lam:g}': r for lam, r in sweep.items()},
                 smooth=10, reference=500)
 ```
 
-The $\lambda=0$ and $\lambda=0.5$ runs remain far below the maximum return when the 50-update budget ends, whereas the seed ranges for $\lambda\geq0.9$ overlap. Early in training, the critic is inaccurate, so estimators that depend less on it improve faster. The longer comparison above showed the complementary result: after the critic improves, the $\lambda=0$ runs have the longest consecutive intervals at the maximum return.
+In the median over seeds, the $\lambda=0$ and $\lambda=0.5$ runs reach a best 20-update window of about 150 to 250, far below the maximum return, whereas $\lambda\geq0.9$ reaches about twice as high. Individual seeds overlap across this divide, so we compare medians. Early in training, the critic is inaccurate, so estimators that depend less on it improve faster. The longer comparison above showed the complementary result: after the critic improves, the one-step weights of `train_ac` keep the longest consecutive intervals at the maximum return.
 
 Training curves combine estimator quality with optimization and changing data. To examine the estimator directly, we freeze a partially trained agent and draw many batches at fixed parameters. For each $\lambda$, we compare the resulting policy-gradient estimates with a reference.
 
@@ -488,8 +485,8 @@ for _ in range(40):   # a mid-training freeze: the critic is still wrong
     b = d2l.rollout(env, frozen.act, batch_episodes, rng)
     for _ in range(critic_steps):
         fit_value(frozen, b.obs, b.td_target(frozen.value_np, gamma))
-    policy_step_clip(frozen, b, d2l.normalize(
-        b.td_target(frozen.value_np, gamma) - frozen.value_np(b.obs)))
+    policy_step_clip(frozen, b.obs, b.act, b.td_target(
+        frozen.value_np, gamma) - frozen.value_np(b.obs))   # as train_ac
 ```
 
 ```{.python .input #actor-critic-measuring-the-dial-4}
@@ -528,7 +525,7 @@ for lam in lams:
           f'variance {var:6.1f}, one-draw error {bias ** 2 + var:6.1f}')
 ```
 
-Moving from $\lambda=1$ toward smaller values first reduces variance rapidly; most of the reduction has occurred by $\lambda=0.9$. Bias increases toward $\lambda=0$, in some runs gradually and in others mostly within the first step below $\lambda=1$. The estimated one-draw error, bias squared plus variance, is therefore large at both endpoints and smallest at $\lambda=0.9$ or $\lambda=0.95$ in these experiments. Common PPO implementations use values in this range (:numref:`sec_ppo`).
+Moving from $\lambda=1$ toward smaller values first reduces variance rapidly; most of the reduction has occurred by $\lambda=0.9$. In most runs, bias increases toward $\lambda=0$, in some gradually and in others mostly within the first step below $\lambda=1$. The estimated one-draw error, bias squared plus variance, is then large at both endpoints and smallest at $\lambda=0.9$ or $\lambda=0.95$, the range common PPO implementations use (:numref:`sec_ppo`). In trial runs over about a hundred seeds, this held about three times in four; in the other runs the minimum moved, most often to a smaller $\lambda$.
 
 The location is not universal. It depends on the accuracy of the frozen critic and on the task. Moreover, the $\lambda=1$ row has zero estimated bias by construction because its sample mean defines the reference.
 
@@ -545,15 +542,17 @@ for name in runs:
     print(f'{name:>20}: greedy mean return over 100 episodes: {score:.0f}')
 ```
 
-Both agents finish at 499 or 500, so this experiment does not rank their
-final policies. It instead compares estimator variance, gradient norms,
+The two greedy policies of seed 0 score at or near the ceiling of 500. In
+trial runs over forty seeds, the greedy policy scored at least
+499 on about nine runs in ten for either method, with a few runs ending far
+lower, so this experiment does not rank the final policies. It instead compares estimator variance, gradient norms,
 and the persistence of ceiling-level batches during training.
 
 ## Summary
 
 Actor--critic methods use a learned value function to construct bootstrapped policy-gradient weights. With an exact critic, the expected temporal-difference error equals the advantage; an approximate critic introduces bias while usually reducing variance. The critic update is a semi-gradient policy-evaluation step, and the actor and critic form an approximate generalized policy-iteration scheme. Multi-step returns interpolate between one-step bootstrapping and Monte Carlo returns. The $\lambda$-return mixes these targets geometrically, and GAE computes the equivalent discounted sum of temporal-difference errors with a backward scan.
 
-**Experimental scope.** The training comparisons use three seeds per framework, the $\lambda$ sweep uses five seeds, and the frozen-policy estimator study uses 200 batches. Both one-step and Monte Carlo methods solve CartPole in these runs. Intermediate high values of $\lambda$ give the smallest estimator error on the frozen-policy probe, but the precise optimum varies by framework and policy. The experiments support the bias--variance interpretation rather than a universal choice of $\lambda$.
+**Experimental scope.** The training comparisons use three seeds, the $\lambda$ sweep uses five seeds, and the frozen-policy estimator study uses 200 batches. Both one-step and Monte Carlo methods solve CartPole in these runs. Intermediate values of $\lambda$, most often $0.9$ or $0.95$, give the smallest estimator error on the frozen-policy probe, but the precise optimum varies with the policy. The experiments support the bias--variance interpretation rather than a universal choice of $\lambda$.
 
 ## Exercises
 
@@ -693,10 +692,10 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
 1. [extended] **Fully online.** ● The update :eqref:`eq_actor_critic` can
    be applied after every transition, with no batch at all: one critic step
    toward the single target $r_t + \gamma\, \hat{V}(s_{t+1})$, masked at
-   termination, and one actor step weighted by $\delta_t$. A single TD error
-   cannot be normalized, so the actor uses $\delta_t$ itself.
+   termination, and one actor step weighted by $\delta_t$ itself, as in
+   `train_ac`.
     1. Implement this variant with `fit_value` and `policy_step_clip`
-       applied to a one-transition `d2l.Batch`. Count the environment steps
+       applied to arrays of length one. Count the environment steps
        of one run of `train_ac` and give the online variant the same number.
        Train three seeds at the default learning rate of `ActorCritic.mlp`
        and at one ten times smaller, passed as `lr` inside `cartpole_agent`,
@@ -715,11 +714,11 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
 1. [code] **Gradient norms and the clip.** ● The norm that
    `policy_step_clip` reports is that of
    $\hat{\mathbf{g}} = \frac{1}{N} \sum_t \hat{A}_t\, \boldsymbol{\psi}_t$,
-   where $\hat{A}_t$ is the normalized weight and
+   where $\hat{A}_t$ is the actor's weight, the normalized Monte Carlo
+   advantage in `train_reinforce` and the raw TD error in `train_ac`, and
    $\boldsymbol{\psi}_t = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$. In
-   `runs`, the median of this norm is about ten times larger for
-   actor-critic than for REINFORCE, although both weights have unit
-   variance.
+   `runs`, the median of this norm is several times larger for
+   actor-critic than for REINFORCE.
     1. Treat the $N$ terms as independent and identically distributed.
        Show that
 
@@ -734,12 +733,23 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        `grad_vec(frozen, b, d2l.normalize(w))` for the TD error and for the
        Monte Carlo advantage `b.reward_to_go(gamma) - frozen.value_np(b.obs)`,
        and again after randomly permuting each weight vector within the
-       batch. What does the permutation remove? How does the norm of each
-       estimator compare with that of its permuted version?
+       batch. Normalizing both weights removes the difference in scale
+       that `train_ac`'s raw TD error carries. What does the permutation
+       remove? How does the norm of each estimator compare with that of its
+       permuted version?
     1. Pass `clip=float('inf')` to `policy_step_clip` in both
        `train_reinforce` and `train_ac`. Predict which method's runs change,
        then rerun three seeds of each and compare the curves and
        `longest_streak` with those of `runs`.
+    1. Replace `delta` by `d2l.normalize(delta)` in the actor step of
+       `train_ac`, train five seeds with `num_updates=100` under both
+       rules, and record the standard deviation of
+       `delta` in every batch. How many runs stall below the ceiling or
+       collapse after reaching it under each rule? Use the
+       recorded standard deviations and the per-parameter step of Adam to
+       explain why normalizing a weight that shrinks toward critic noise
+       can hurt late in training.
+   :exlabel:`ex_actor-critic-gradient-norms`
 1. [code] **Uncorrelated TD errors.** ● Suppose the critic is exact,
    $\hat{V} = V^{\pi}$, and the episodes have no time limit. Let $\delta_t$
    be the TD errors of an on-policy episode.
@@ -766,10 +776,14 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        variance of $\delta_t$, and plot it against the update. It is zero
        for an exact critic. How does $\kappa$ behave early and late in
        training?
-       Late in training many episodes reach the 500-step limit; which term
-       does truncation add to the Monte Carlo advantage (problem
-       :exref:`ex_actor-critic-lambda-return-recursion`b), and how much of
-       the late values can it explain?
+    1. Late in training many episodes reach the 500-step limit, and the
+       cell that fills `trace` adds `truncation_bootstrap` to the Monte
+       Carlo advantage, the term of problem
+       :exref:`ex_actor-critic-lambda-return-recursion`b. Remove that term
+       from `A_mc` and rerun the cell. How do the correlation over the last
+       50 updates and the median variance ratio change? Explain both changes
+       from the advantage that the unbootstrapped weight assigns to the
+       steps of an episode cut at step 500.
    :exlabel:`ex_actor-critic-uncorrelated-td-errors`
 1. [code] **Bias of GAE.** ● Problem
    :exref:`ex_actor-critic-why-baseline-argument-does` found the bias of
@@ -805,8 +819,6 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        :exref:`ex_actor-critic-uncorrelated-td-errors`b found the best
        $\lambda$ for an exact critic. Does the measured optimum move toward
        it?
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36801)
 
@@ -884,8 +896,8 @@ step per batch. It is a single-environment teaching analogue of A2C
 . . .
 
 The critic uses `td_target` instead of `G`, takes `critic_steps` passes
-before the actor update, and supplies the normalized TD error $\delta_t$ as
-the actor's weight.
+before the actor update, and supplies the TD error $\delta_t$ itself, not
+normalized, as the actor's weight.
 :::
 
 ::: {.slide title="CartPole, Three Seeds Each"}
@@ -894,8 +906,8 @@ the actor's weight.
 . . .
 
 Actor--critic learns more slowly at first while its critic is inaccurate.
-Later, both methods reach the 500-step ceiling, but only actor--critic remains
-there for long consecutive intervals in these runs.
+Later, both methods reach the 500-step ceiling, and on most seeds
+actor--critic stays there longer.
 :::
 
 ::: {.slide title="Return and Stability"}
@@ -903,10 +915,11 @@ there for long consecutive intervals in these runs.
 
 . . .
 
-A perfect batch contains eight episodes of length 500. Only actor--critic
-produces long sequences of such batches in these runs. This observation is
-consistent with the greater sampling variance of Monte Carlo returns, though
-three seeds do not establish a general stability result.
+A perfect batch contains eight episodes of length 500. Over many seeds,
+actor--critic's longest run of such batches is about three times as long as
+REINFORCE's in the median. This observation is consistent with the greater
+sampling variance of Monte Carlo returns, though three seeds do not establish
+a general stability result.
 :::
 
 ::: {.slide title="Gradient-Norm Comparison"}
@@ -914,12 +927,12 @@ three seeds do not establish a general stability result.
 
 . . .
 
-Although both weights are normalized to unit variance, the actor--critic
-gradient norms are an order of magnitude larger in this experiment. A
-state-dependent component of the weight contributes variance but cancels in
-expectation, as shown in :numref:`sec_baselines`. The result is therefore
-consistent with the TD error concentrating more of its variation in
-action-dependent signal. :numref:`sec_ppo` develops a more accurate advantage
+The TD error enters unnormalized, and the actor--critic gradient norms are
+several times larger; the clip binds on a fifth to two fifths of its updates
+and never for REINFORCE. Part of this is scale: until the critic is accurate,
+the TD error's spread exceeds one. Part is direction: a state-dependent
+component of the weight contributes variance but cancels in expectation, and
+the TD error concentrates more of its variation in action-dependent signal. :numref:`sec_ppo` develops a more accurate advantage
 estimator.
 :::
 
@@ -930,12 +943,11 @@ Rerun the loop, measuring both candidate weights per batch:
   $\hat G_t - \hat V(s_t) = \delta_t +
   \gamma(\hat G_{t+1} - \hat V(s_{t+1}))$ separates the shared one-step term
   from the remaining trajectory.
-- Their correlation falls from about $0.3$ toward zero as episodes approach
-  500 steps. This is a descriptive diagnostic, not evidence that the critic
-  is accurate.
-- The variance of the Monte Carlo weight grows with the horizon, whereas the
-  TD-error variance remains nearly constant; their median ratio eventually
-  exceeds one hundred.
+- Their correlation falls from about $0.3$ to about $0.15$--$0.2$ as
+  episodes approach 500 steps. It measures how the two weights move
+  together; it does not test the critic.
+- The Monte Carlo weight's variance is a few tens of times the TD error's
+  throughout; both drop sharply once episodes reach the 500-step cut.
 
 . . .
 
@@ -997,9 +1009,10 @@ experiment favors estimators that rely more heavily on Monte Carlo returns.
 
 The mean-squared error is shallow and U-shaped. As $\lambda$ decreases from
 one, variance initially falls faster than squared bias grows; for still smaller
-values, bias dominates. The minimum therefore occurs between the two
-endpoints. PPO implementations commonly use $\lambda$ between $0.9$ and
-$0.97$ (:numref:`sec_ppo`).
+values, bias dominates. In most runs the minimum lies at $\lambda = 0.9$ or
+$0.95$; in some, the frozen critic is accurate enough that a smaller
+$\lambda$ wins. PPO implementations commonly use $\lambda$ between $0.9$
+and $0.97$.
 :::
 
 ::: {.slide title="Recap"}

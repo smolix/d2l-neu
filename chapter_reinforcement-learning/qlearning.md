@@ -1,7 +1,11 @@
-# Temporal-Difference Learning and Exploration
+# Temporal-Difference Learning
 :label:`sec_qlearning`
 
-Q-learning does not require a transition model or expert demonstrations. It replaces the expectation in the Bellman optimality operator with a sampled transition and updates an action-value estimate using the resulting temporal-difference error :cite:`Watkins.1989,Watkins.Dayan.1992`. This substitution introduces sampling noise and makes convergence depend on which state--action pairs the behavior policy visits. We first derive and evaluate the tabular update, then study exploration through multi-armed bandits and regret.
+The previous section found the best way across the slippery lake by reading its transition table: for every cell and every command, it summed over the three places the agent might slide to. An agent dropped onto a real lake has no such table. It can only act, see where it lands, and collect whatever reward follows. Each step shows it one successor, chosen by the environment, never the list of possible successors with their probabilities. Can the agent still learn how good each command is, and from that the best policy, from such single draws?
+
+The answer was found by Richard Sutton for predicting values in 1988 and by Chris Watkins for choosing actions in 1989 :cite:`Sutton.1988,Watkins.1989,Watkins.Dayan.1992`. Treat the one successor the agent saw as a one-sample estimate of the sum it cannot compute, and move the table entry a small step toward that estimate. Over many visits the steps average the samples, and the average is the backup of dynamic programming. The resulting method, *Q-learning*, needs no model of the environment. With a neural network in place of the table, it becomes the deep Q-learning of the next chapter.
+
+Learning from samples raises two questions. The samples are noisy, so the steps must shrink as visits accumulate; how fast? And an entry for a command the agent never tries is never updated, so the agent must keep trying commands that its table rates poorly. This section answers the first question and meets the second with the simplest rule, acting at random at a small rate; :numref:`sec_exploration` studies what that rule costs. The section ends by using the same transitions a second way, to estimate the transition table itself and plan in the estimate.
 
 ```{.python .input #qlearning-temporal-differences-q-learning-and-exploration}
 %%tab pytorch
@@ -21,80 +25,132 @@ import numpy as np
 
 ## The Sampled Backup
 
-### From the Bellman Operator to the TD Update
+We start from the equation that value iteration solved and ask which part of it needs the model.
 
-Value iteration, written for the action-value function, sweeps
+### From the Bellman Operator to One Sample
 
-$$Q_{k+1}(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q_k (s', a'); \ \textrm{for all } s \in \mathcal{S} \textrm{ and } a \in \mathcal{A},$$
+Value iteration in :numref:`sec_valueiter` repeated one operation, the Bellman optimality backup. Written for action values instead of state values, the Bellman operator $\mathcal{T}$ maps a table $Q$ to the table
 
-whose fixed point is $Q^*$; call the right-hand side $(TQ)(s, a)$, the optimality operator of :numref:`sec_valueiter` on action-value tables. We use $Q$ rather than $V$ because extracting the optimal policy from $Q^*$ requires only an argmax over a table row and no transition model. The kernel enters the sweep through one expectation, $\mathbb{E}_{s' \sim P(\cdot \mid s, a)} [\max_{a'} Q_k(s', a')]$, and an expectation can be estimated from samples. Panel (d) of :numref:`fig_rl_backups` shows this substitution: Q-learning uses one sampled successor where the exact backup sums over every successor, while retaining the maximum over next actions.
+$$(\mathcal{T}Q)(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a') \quad \textrm{for all } s \in \mathcal{S},\ a \in \mathcal{A}.$$
+:eqlabel:`eq_qlearning_operator`
 
-Let the agent act with some data-collection policy $\pi_e(a \mid s)$, its *behavior policy*, and record $n$ trajectories of $T$ timesteps each, $\{ (s_t^i, a_t^i)_{t=0,\ldots,T-1}\}_{i=1,\ldots, n}$. The Bellman equations constrain the action values of all state--action pairs. A sampled objective can impose corresponding residual terms only for pairs present in the data:
+Each entry of $\mathcal{T}Q$ is the expected immediate reward plus the discounted value of acting greedily on $Q$ from wherever the agent lands. Its fixed point is $Q^*$, and repeated application converges to $Q^*$ from any table, because $\mathcal{T}$ shrinks the largest difference between two tables by the factor $\gamma$, the contraction argument of :numref:`sec_valueiter` applied to action values.
 
-$$\hat{Q} = \mathrm{argmin}_Q \underbrace{\frac{1}{nT} \sum_{i=1}^n \sum_{t=0}^{T-1} (Q(s_t^i, a_t^i) - r(s_t^i, a_t^i) - \gamma \max_{a'} Q(s_{t+1}^i, a'))^2}_{\stackrel{\textrm{def}}{=} \ell(Q)}.$$
-:eqlabel:`q_learning_optimization_problem`
+The model enters the backup in one place, the average over the successor $s'$. An average can be estimated from samples. Suppose the agent stands at $s$, commands $a$, receives reward $r$ and lands in $s'$. The number $r + \gamma \max_{a'} Q(s', a')$ is random. On the lake the reward, too, depends on where the agent lands. Averaged over the successor and the reward, the number equals $(\mathcal{T}Q)(s, a)$. One transition is therefore an unbiased one-sample estimate of one entry of the backup.
 
-The objective does not evaluate the kernel explicitly. Instead, when the behavior policy $\pi_e$ takes action $a_t^i$ at state $s_t^i$, the next state $s_{t+1}^i$ is sampled from the transition distribution. The collected data therefore provide sampled access to the transition dynamics. For every constraint to be represented, $\pi_e$ must keep visiting every state-action pair.
+This is why model-free control learns $Q$ rather than $V$. The state-value backup $V(s) \leftarrow \max_a [r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V(s')]$ puts the maximum outside the average over $s'$. One transition shows what one action did and says nothing about the brackets of the other actions, so it cannot estimate their maximum. In the $Q$ form each action has its own entry, the average sits inside that entry, and the maximum acts only on numbers the table already holds. The same form makes the greedy policy $\mathrm{argmax}_a Q(s, a)$ a lookup in one row of the table, again without the model.
 
-An optimal deterministic policy would *not* qualify: it never takes the actions it considers suboptimal, so $\ell(Q)$ would contain no term for those state-action pairs and their values would be left unconstrained. The third part of this section takes that requirement seriously.
+Q-learning moves the visited entry a fraction $\alpha$ of the way toward the sample, which is called its *target*:
 
-Instead of solving the joint problem directly, Q-learning updates individual table entries. For each observed transition $(s, a, r, s')$, it moves the corresponding entry toward the *bootstrapped target* $r + \gamma \max_{a'} Q(s', a')$, treating the target as a constant even though it contains $Q$:
-
-$$Q(s, a) \leftarrow (1 - \alpha)\, Q(s, a) + \alpha \big( r + \gamma \max_{a'} Q(s', a') \big),$$
+$$Q(s, a) \leftarrow (1 - \alpha)\, Q(s, a) + \alpha \big( r + \gamma \max_{a'} Q(s', a') \big).$$
 :eqlabel:`q_learning`
 
-where $\alpha$ is the step size. Because the target itself depends on $Q$ and we deliberately hold it fixed, this is called a semi-gradient step: Q-learning is therefore not gradient descent on $\ell(Q)$ in the strict sense; it is a semi-gradient stochastic-approximation update. Rearranged, the update is a correction proportional to a single scalar,
+The step size $\alpha \in (0, 1]$ says how far to move: $\alpha = 1$ replaces the entry by the target, and a small $\alpha$ averages many targets. Because the target is built from the table's own estimate at the next state, the update is said to *bootstrap*. Rearranged, the change is proportional to a single number,
 
 $$\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a), \qquad Q(s, a) \leftarrow Q(s, a) + \alpha\, \delta.$$
 :eqlabel:`eq_td_error`
 
-The scalar $\delta$ is the *temporal-difference error* :cite:`Sutton.1988`: the observed reward plus the estimated best continuation, minus the current estimate. It also appears in the actor updates of :numref:`sec_actorcritic` and in deep Q-learning (:numref:`sec_dqn`).
+The number $\delta$ is the *temporal-difference error* :cite:`Sutton.1988`: what the pair appears to be worth one step later, minus what the table said before the step. Panel (d) of :numref:`fig_rl_backups` draws the substitution. The exact backup sums over every successor; the sampled one follows the single observed transition and keeps the maximum at the next state.
 
-*Monte Carlo* prediction waits until an episode ends and uses the realized return as a target for $Q^{\pi_e}(s_t,a_t)$, the value of the behavior policy. The target is unbiased but contains randomness from all subsequent transitions. *Temporal-difference* prediction bootstraps after one step; its target is biased while the value estimate is inaccurate but usually has lower variance :cite:`Sutton.1988,Sutton.Barto.2018`. Q-learning uses a maximum in this target to estimate $Q^*$. The multi-step methods of :numref:`sec_actorcritic` interpolate between Monte Carlo and one-step targets.
+Bootstrapping is a choice. *Monte Carlo* estimation waits until the episode ends and uses the realized return as the target for $Q(s_t, a_t)$. That target is unbiased for the value of the policy that generated the episode, but it carries the randomness of every later transition. A *temporal-difference* target looks one step ahead and trusts the table for the rest. It is biased while the table is inaccurate and usually far less variable :cite:`Sutton.1988,Sutton.Barto.2018`. Q-learning adds the maximum to the one-step target, and with it estimates $Q^*$ instead of the value of the data-collecting policy.
 
-### Convergence and the Double-Sampling Problem
+### One Transition by Hand
 
-Suppose $\pi_e$ visits every state--action pair and collects unlimited data. Minimizing $\ell(Q)$ then recovers the value-iteration solution when transitions are deterministic, but not in general. In the population objective, conditioning on $(s,a)$ decomposes each squared term into a squared mean and a variance:
+Start from a table of zeros on the slippery lake, with $\gamma = 0.95$ and, for easy arithmetic, $\alpha = 0.5$. Every target is zero until the agent first reaches the goal, because rewards are zero elsewhere and every entry it could bootstrap from is zero. Suppose the first success comes from cell $14$, where the command *right* slides into the goal, cell $15$, with probability $1/3$. The goal is terminal, so the target is the reward alone, and
 
-$$L(Q) = \mathbb{E}_{(s, a) \sim \mu} \Big[ \big( Q(s, a) - (TQ)(s, a) \big)^2 \Big] + \gamma^2\, \mathbb{E}_{(s, a) \sim \mu} \Big[ \textrm{Var}_{s' \sim P(\cdot \mid s, a)} \big( \max_{a'} Q(s', a') \big) \Big],$$
+$$Q(14, \textrm{right}) \leftarrow 0.5 \cdot 0 + 0.5 \cdot 1 = 0.5.$$
+
+Nothing else in the table changes. Later the agent stands on cell $13$, commands *right*, and slides to $14$. Its target is $0 + 0.95 \cdot \max_{a'} Q(14, a') = 0.95 \cdot 0.5 = 0.475$, so $Q(13, \textrm{right}) \leftarrow 0.5 \cdot 0.475 \approx 0.24$. Before the update at $14$, the same transition from $13$ would have taught the agent nothing. Value thus flows backward from the goal one cell per visit, along the transitions the agent happens to make. Value iteration moved it one cell per sweep, along all transitions at once.
+
+The targets are noisy. If the agent next commands *right* on $14$ and slips up to cell $10$, whose entries are still zero, the target is $0$ and $Q(14, \textrm{right}) \leftarrow 0.25$. The entry jumps between targets of $1$ and $0$, and later between values bootstrapped from cells $10$ and $14$. Only the average of these targets is the backup, and how fast the step should shrink to form that average is the subject of the step sizes below.
+
+### Least Squares and Double Sampling
+
+Why should such noisy steps lead anywhere? Hold the table fixed and average the temporal-difference error over the successor and the reward:
+
+$$\mathbb{E}[\delta \mid s, a] = (\mathcal{T}Q)(s, a) - Q(s, a).$$
+
+The expected update, $Q(s, a) \leftarrow Q(s, a) + \alpha \big((\mathcal{T}Q)(s, a) - Q(s, a)\big)$, is a damped step of value iteration on that one entry. Q-learning is value iteration executed one sampled entry at a time, each step perturbed by noise of mean zero.
+
+A reader who has fit regression models will object that the natural way to fit a table to targets is least squares. Given $N$ recorded transitions $(s_i, a_i, r_i, s_i')$, we could minimize the squared temporal-difference error by gradient descent,
+
+$$\ell(Q) = \frac{1}{N} \sum_{i=1}^{N} \Big( Q(s_i, a_i) - r_i - \gamma \max_{a'} Q(s_i', a') \Big)^2.$$
+:eqlabel:`q_learning_optimization_problem`
+
+The gradient of one term has two parts: one through $Q(s_i, a_i)$, and one through the maximum inside the target. The update :eqref:`eq_td_error` keeps the first and drops the second, holding the target fixed. It is therefore called a *semi-gradient* step, and it is not gradient descent on $\ell$.
+
+Dropping the second part is what makes Q-learning correct. Suppose the data contain each pair $(s, a)$ with frequency $d(s, a)$, the visitation distribution of the data-collecting policy, and that there are infinitely many of them. Conditioning on $(s, a)$ splits each expected squared term into the square of its mean and the variance of the target:
+
+$$L(Q) = \mathbb{E}_{(s, a) \sim d} \Big[ \big( Q(s, a) - (\mathcal{T}Q)(s, a) \big)^2 \Big] + \mathbb{E}_{(s, a) \sim d} \Big[ \textrm{Var} \big( r + \gamma \max_{a'} Q(s', a') \bigm| s, a \big) \Big].$$
 :eqlabel:`eq_double_sampling`
 
-Here $\mu$ is the visitation distribution of $\pi_e$. The first term is the squared Bellman residual and is zero at $Q^*$. The second term depends on $Q$ whenever transitions are stochastic, so the minimizer of $L$ need not be $Q^*$. Exercise :exref:`ex_qlearning-double-sampling-counterexample` gives a three-state counterexample. This is the *double-sampling problem*: an unbiased gradient of the squared Bellman residual requires two independent successors for the same $(s,a)$, which an ordinary environment interaction does not provide. For deterministic transitions the variance term vanishes.
+The first term is the squared Bellman residual and is zero at $Q^*$. The second is the variance of the target over the successor and the reward, and it depends on $Q$ whenever transitions are random. Minimizing $L$ trades a small residual against a less variable target, so its minimizer need not be $Q^*$. Three states show the direction of the distortion. From $s$, the only action leads with probability $1/2$ each to $u_1$, which pays $1$ and terminates, or to $u_2$, which pays $0$ and terminates; so $Q^*(u_1) = 1$, $Q^*(u_2) = 0$ and $Q^*(s) = \gamma/2$. The variance of the target at $s$ is $\gamma^2 (Q(u_1) - Q(u_2))^2/4$, and the minimizer of $L$ lowers it by pulling the two successor values toward each other, away from $1$ and $0$. Exercise :exref:`ex_qlearning-double-sampling-counterexample` computes how far.
 
-Convergence instead follows from the expected update. Averaging :eqref:`eq_td_error` over $s'$ gives $\mathbb{E}[\delta\mid s,a]=(TQ)(s,a)-Q(s,a)$, which is zero at the unique fixed point $Q^*$. Q-learning is therefore a stochastic approximation to Bellman fixed-point iteration. With the step-size conditions below and infinite visitation of every state-action pair, it converges to $Q^*$ with probability one :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994`. Sampling variance affects the rate, while the behavior policy determines whether the coverage condition holds.
+Residual-gradient methods descend the full gradient of the squared residual, and they meet the same difficulty :cite:`Baird.1995`. An unbiased estimate of that gradient needs two independent successors of the same pair, one for the target and one for the derivative, and an agent living through one trajectory sees one. This is the *double-sampling problem*. With deterministic transitions and rewards the variance term vanishes and the two approaches agree. Holding the target fixed returns with networks as a second, slowly updated copy of the network that computes the targets, the target network of :numref:`sec_dqn`.
 
-### Step Sizes and the Robbins-Monro Conditions
+### Step Sizes and Convergence
 
-For each state-action pair, the Robbins--Monro conditions are $\sum_k\alpha_k=\infty$ and $\sum_k\alpha_k^2<\infty$ :cite:`Robbins.Monro.1951`. A constant step size violates the second condition. With stochastic transitions, its estimates continue to fluctuate around $Q^*$. In a deterministic environment, the target has no transition noise and an update has the form $Q(s,a)\leftarrow(1-\alpha)Q(s,a)+\alpha(TQ)(s,a)$. Updating all entries gives a contraction with modulus $(1-\alpha)+\alpha\gamma$. The sampled asynchronous method additionally requires repeated visitation of every entry.
+The worked transition showed one entry receiving a stream of noisy targets $y_1, y_2, \ldots$. The plainest way to combine them is to average. With the step size $\alpha_n = 1/n$ at the $n$-th visit of the pair, the update reads $Q_n = Q_{n-1} + (y_n - Q_{n-1})/n = \big((n-1) Q_{n-1} + y_n\big)/n$, and by induction
 
-Panel (c) of :numref:`fig_rl_exploration` measures this coverage for deterministic FrozenLake, where a constant step size of $0.9$ learns quickly within the finite budget.
+$$Q_n = \frac{1}{n} \sum_{k=1}^{n} y_k,$$
 
-The conditions are necessary for the guarantee, not sufficient for a budget. The sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry including the current one, passes Robbins-Monro but weights early targets computed from an inaccurate zero table as heavily as later, better-informed targets. At the tested finite budget, this slows learning substantially. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes and approaches ten times that step size as the visit count grows. We compare all three schedules on the same seeds and report their finite-budget value errors and returns.
+the sample mean of the targets, whatever the initial value. If the targets were independent draws with a fixed mean, the entry would converge to that mean by the law of large numbers. Robbins and Monro gave conditions under which a decreasing step size has this effect in general :cite:`Robbins.Monro.1951`:
+
+$$\sum_{n=1}^{\infty} \alpha_n = \infty, \qquad \sum_{n=1}^{\infty} \alpha_n^2 < \infty.$$
+
+The first condition lets the steps travel any distance, so the initial value is forgotten. The second makes the accumulated noise finite. The sample mean $\alpha_n = 1/n$ satisfies both. A constant step size violates the second, and its entry keeps fluctuating around the mean with a variance of order $\alpha$ for small $\alpha$.
+
+**Proposition (convergence of tabular Q-learning).** *Let the state and action sets be finite, the rewards bounded and $\gamma < 1$. If every pair $(s, a)$ is updated infinitely often and its step sizes satisfy the Robbins–Monro conditions, then $Q$ converges to $Q^*$ with probability one* :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994,Tsitsiklis.1994`.
+
+Averaging alone does not prove this, because the targets are computed from the table being learned and have no fixed mean. Residual-gradient descent also has an expected step that vanishes at a fixed point, the wrong one. What singles out Q-learning is the contraction: whatever the current errors, the expected step shrinks the largest of them, and the step-size conditions make the noise around these steps average out.
+
+On calm ice, where every command moves where it says, each pair has one successor and the target carries no transition noise. The update with a constant $\alpha$ is then a damped backup, $Q(s, a) \leftarrow (1 - \alpha) Q(s, a) + \alpha (\mathcal{T}Q)(s, a)$, which applied to all entries contracts with modulus $(1 - \alpha) + \alpha \gamma < 1$. A step as large as $\alpha = 0.9$ is then safe.
+
+The conditions concern the limit, not a finite budget. The sample mean gives every target the same weight, including the early ones computed from a table that was still mostly zero, which on the lake are far too small. With $\alpha_n = 1/n$ the number of updates Q-learning needs can grow exponentially in $1/(1 - \gamma)$, here $20$; with $\alpha_n = 1/n^\omega$ for $1/2 < \omega < 1$ it grows only polynomially :cite:`EvenDar.Mansour.2003`. Below we test $\alpha_n = 1/(1 + n)$, the sample mean with the zero initial value counted as one more target. Our default, $\alpha_n = 1/(1 + 0.1\, n)$, also satisfies both conditions, and its step approaches ten times that of the sample mean. It weights later targets more heavily, the $k$-th one in proportion to about $k^9$ (exercise :exref:`ex_qlearning-step-sizes`), so the estimate follows the improving targets.
 
 ### Terminal Masking
 
-The update requires terminal masking in an episodic environment. When $s'$ is terminal, its continuation value is zero, so the target contains only the immediate reward,
+On an episodic task the target needs one correction. A terminal state, here a hole or the goal, has no future, so its continuation value is zero and the target contains only the immediate reward:
 
 $$Q(s, a) \leftarrow Q(s, a) + \alpha \Big( r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a' \in \mathcal{A}} Q(s', a') - Q(s, a) \Big).$$
 
-The mask uses `terminated`, not `truncated`: :numref:`sec_mdp` distinguishes a terminal state from an observation stopped by a time limit. Treating truncation as termination would impose an incorrect zero continuation value on a nonterminal state. In code the whole repair is one factor, `gamma * (1 - terminated) * Q[s_next].max()`.
+The mask uses `terminated`, not `truncated`. As :numref:`sec_mdp` explained, a time limit stops the recording at a state from which the process would go on, so its continuation is not zero. Treating truncation as termination would teach the table that the last cell of every long episode is worthless. In code the correction is one factor, `gamma * (1 - terminated) * Q[s_next].max()`.
 
-## Q-Learning on the Lake
+## Q-Learning on the Slippery Lake
 
-### The Implementation
-
-We return to the slippery lake of :numref:`sec_mdp` with the same discount. The learner accesses the environment only through `reset` and `step`; `mdp`, `V_star`, and `pi_star` are retained solely to compare the learned table with the exact solution.
+We now run the update on the slippery lake of :numref:`sec_mdp` with $\gamma = 0.95$ and grade the result against the exact solution of :numref:`sec_valueiter`. The learner touches the environment only through `reset` and `step`. The model `mdp`, the optimal values `V_star`, the optimal action values `Q_star` (one backup of $V^*$) and the optimal policy `pi_star` serve only for grading.
 
 ```{.python .input #qlearning-the-implementation-1}
 %%tab pytorch, jax
-gamma, num_episodes = 0.95, 4000
+gamma, num_episodes, num_seeds = 0.95, 4000, 5
 env = gym.make('FrozenLake-v1', is_slippery=True)
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 V_star = d2l.value_iteration(mdp, num_iters=1000)[-1]
-pi_star = mdp.backup(V_star).argmax(axis=1)
+Q_star = mdp.backup(V_star)
+pi_star = Q_star.argmax(axis=1)
 ```
 
-Two helpers, both plain numpy and both saved: the deep Q-network of :numref:`sec_dqn` and the PPO of :numref:`sec_ppo` will call them unchanged. The first turns a start value, an end value and a horizon into a schedule:
+### The Behavior Policy
+
+Q-learning needs a rule for choosing actions while it learns, its *behavior policy* $\pi_e$. Acting greedily on the current table fails in two ways. On a table of zeros every row is a four-way tie, and `np.argmax` returns the first index, so a greedy agent would always command *left* and never find the goal. And an action whose entry is currently low is never tried, so its entry is never updated, and the underestimate is permanent. The simplest repair acts at random with a small probability $\epsilon$:
+
+$$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon/|\mathcal{A}| & a = \mathrm{argmax}_{a'} Q(s, a'), \\ \epsilon/|\mathcal{A}| & \textrm{otherwise}. \end{cases}$$
+:eqlabel:`epsilon_greedy`
+
+This is the *$\epsilon$-greedy* policy. It explores with probability $\epsilon$ and otherwise takes the greedy action, breaking ties in the argmax uniformly at random. The function draws one uniform number to decide which, then picks a random action or a random member of the set of maximizers:
+
+```{.python .input #qlearning-the-implementation-3}
+%%tab pytorch, jax
+def epsilon_greedy(q, epsilon, rng):  #@save
+    """Explore with probability epsilon, else act greedily on the values q."""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    # Ties are coin flips: np.argmax would always pick action 0 on a zero
+    # table, and an agent that only ever moves left never finds the goal.
+    return int(rng.choice(np.flatnonzero(q == q.max())))
+```
+
+A table that knows nothing should explore a lot, and a table that is nearly right should mostly exploit. We therefore let $\epsilon$ fall over training. `linear_schedule` turns a start value, an end value and a number of steps into a function of the step that interpolates linearly and then holds the end value:
 
 ```{.python .input #qlearning-the-implementation-2}
 %%tab pytorch, jax
@@ -103,34 +159,21 @@ def linear_schedule(start, end, num_steps):  #@save
     return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
 ```
 
-The second is the behavior policy. With probability $\epsilon$ it takes a uniformly random action; otherwise it exploits the current table:
+### The Learning Loop
 
-$$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon/|\mathcal{A}| & a = \mathrm{argmax}_{a'} \hat{Q}(s, a') \\ \epsilon/|\mathcal{A}| & \textrm{otherwise}, \end{cases}$$
-:eqlabel:`epsilon_greedy`
-
-the *$\epsilon$-greedy* policy, with ties in the argmax broken uniformly at random. Random tie-breaking is necessary for exploration from a zero-initialized table, where every state begins as a four-way tie. In contrast, `np.argmax` always returns the first index:
-
-```{.python .input #qlearning-the-implementation-3}
-%%tab pytorch, jax
-def epsilon_greedy(q, epsilon, rng):  #@save
-    """Explore with probability epsilon, else act greedily on the values q."""
-    if rng.random() < epsilon:
-        return int(rng.integers(len(q)))
-    # Random tie-breaking is load-bearing: np.argmax would always return
-    # action 0 on a zero-initialized table, and an agent that only ever
-    # proposes *left* on this lake never finds the goal.
-    return int(rng.choice(np.flatnonzero(q == q.max())))
-```
-
-The implementation repeatedly selects an action, observes one transition, and changes one table entry by $\alpha\delta$. It mutates both the value table and the visit counts; the counts determine the step-size schedule and also record state--action coverage. The exploration rate decreases from $1$ to $0.05$ during the first half of training and remains at that floor thereafter:
+`q_learning` runs the update :eqref:`q_learning` with the terminal mask. It takes the table `Q` and a table of visit counts `visits`, and changes both in place. The counts set each pair's step size through the function `alpha(n)`, and afterward they record which pairs were tried. The exploration rate is a function `epsilon(k)` of the episode, by default falling from $1$ to $0.05$ over the first half of training and held at $0.05$ after that. The loop body chooses an action, observes one transition, and changes one entry by $\alpha\delta$; the function yields the return of each episode:
 
 ```{.python .input #qlearning-the-implementation-4}
 %%tab pytorch, jax
-def q_learning(seed, Q, visits, env, num_episodes,
-               alpha=lambda n: 1 / (1 + 0.1 * n)):
-    """Tabular Q-learning; updates Q in place, yields each episode's return."""
+def q_learning(seed, Q, visits, env, num_episodes, gamma,  #@save
+               alpha=lambda n: 1 / (1 + 0.1 * n), epsilon=None):
+    """Tabular Q-learning; updates Q in place, yields each episode's return.
+    `alpha(n)` is the step size at the n-th visit of a pair; `epsilon(k)` is
+    the exploration rate in episode k (default: 1 to 0.05 over the first
+    half of the episodes, then held)."""
     rng = np.random.default_rng(seed)
-    epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
+    if epsilon is None:
+        epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
     env.reset(seed=seed)
     for episode in range(num_episodes):
         s, done, ret = env.reset()[0], False, 0.0
@@ -144,46 +187,53 @@ def q_learning(seed, Q, visits, env, num_episodes,
         yield ret
 ```
 
-Every cell here is numpy and shared between the frameworks: tabular reinforcement learning is index arithmetic, and the frameworks enter when the table becomes a network in :numref:`sec_deeprl`. Five seeds, one plain loop:
+Every cell in this section is plain NumPy, because a table needs only index arithmetic. We train one table per seed for $4{,}000$ episodes and plot the return of each episode:
 
 ```{.python .input #qlearning-the-implementation-5}
 %%tab pytorch, jax
-Q = np.zeros((5, mdp.num_states, mdp.num_actions))
+Q = np.zeros((num_seeds, mdp.num_states, mdp.num_actions))
 visits = np.zeros_like(Q)
-returns = np.array([list(q_learning(k, Q[k], visits[k], env, num_episodes))
-                    for k in range(5)])
+returns = np.array([list(q_learning(k, Q[k], visits[k], env, num_episodes,
+                                    gamma)) for k in range(num_seeds)])
 d2l.plot_curves({'Q-learning': returns}, xlabel='episode',
                 ylabel='return per episode', smooth=200)
 ```
 
-The curve is a trailing 200-episode average, with the band spanning the seeds. It remains near zero while successful episodes are rare, increases as successful transitions update preceding state--action values, and flattens after the exploration schedule reaches its floor.
+Each point of the curve averages the $200$ episodes that end there, so the curve starts at episode $200$; the band spans the seeds. The return stays near zero while successes are rare, rises as value flows back from the goal, and flattens near $0.5$ after the exploration rate reaches its floor at episode $2{,}000$.
 
-### The Learned Table against the Exact Solution
+### The Learned Table and the Exact Solution
 
-The curve plateaus near $0.55$, below the optimal success probability of $73.6$ percent measured in :numref:`sec_valueiter`. This comparison includes failures caused by the behavior policy's continuing exploration and therefore does not directly assess the learned table. Because the exact solution is available for this example, we can compare the learned values with $V^*$:
+Is a return near $0.5$ good? The optimal policy of :numref:`sec_valueiter` reaches the goal within the $100$-step limit about $73\%$ of the time. It maximizes the discounted return, which rewards speed, so a policy that ignores the discount succeeds about one point more often. The training curve, moreover, measures the behavior policy, which still acts at random one step in twenty, so it does not grade the table itself.
+
+Because the model is known here, we can grade the table exactly. With $\gamma = 1$ and a reward of $1$ only at the goal, the value of the start state is the probability of reaching the goal. Run for $100$ sweeps from zero, `policy_evaluation` of :numref:`sec_valueiter` computes the probability of reaching it within $100$ steps, and `success` wraps this for a policy given as one row of action probabilities per state. The mask `live` marks the cells where the agent acts, and `greedy` holds each table's greedy policy. The cell prints each table's value error and action-value error, the largest value a greedy action gives up under $Q^*$, the exact success rates, the success of $\pi^*$ acting at random with probability $0.05$, and the steps a run used:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-1}
 %%tab pytorch, jax
+lake1 = d2l.TabularMDP.from_gym(env, 1.0)    # gamma = 1: V(s0) = P(goal)
+success = lambda pi: d2l.policy_evaluation(lake1, pi, 100)[-1][0]
+live = ~np.isin(env.unwrapped.desc.flatten(), [b'H', b'G'])  # agent acts
+greedy = np.eye(mdp.num_actions)[Q.argmax(axis=-1)]    # (seed, s, a)
 print(f'max_s |V_Qhat(s) - V*(s)| per seed: '
       f'{np.round(np.abs(Q.max(axis=-1) - V_star).max(axis=-1), 3)}')
-env.reset(seed=0)
-opt = d2l.evaluate(env, lambda s, rng: int(pi_star[s]), num_episodes=2000)
-rates = np.array([d2l.evaluate(env, lambda s, rng: int(Q[k, s].argmax()),
-                               num_episodes=2000) for k in range(5)])
-taxed = d2l.evaluate(env, lambda s, rng: int(pi_star[s])
-                     if rng.random() > 0.05 else int(rng.integers(4)),
-                     num_episodes=2000, rng=np.random.default_rng(1))
-print(f'success rate: learned greedy {rates.min():.1%} to {rates.max():.1%} '
-      f'over 5 seeds; pi* {opt:.1%}')
-print(f'pi* forced to explore at epsilon = 0.05: {taxed:.1%}')
-print(f'median environment steps: {int(np.median(visits.sum(axis=(1, 2))))}')
+print(f'max_(s,a) |Qhat - Q*| per seed:     '
+      f'{np.round(np.abs(Q - Q_star)[:, live].max(axis=(1, 2)), 3)}')
+print(f'max_s of V* - Q*(s, greedy action):  '
+      f'{np.round((V_star - (greedy * Q_star).sum(-1)).max(-1), 3)}')
+print(f'success within 100 steps: greedy '
+      f'{np.round([success(g) for g in greedy], 3)}, '
+      f'pi* {success(np.eye(mdp.num_actions)[pi_star]):.3f}')
+taxed = 0.95 * np.eye(mdp.num_actions)[pi_star] + 0.05 / mdp.num_actions
+print(f'pi* forced to explore at epsilon = 0.05: {success(taxed):.3f}')
+print(f'median environment steps: {np.median(visits.sum(axis=(1, 2))):,.0f}')
 ```
 
-Across seeds, the learned value functions are within $0.006$ to $0.021$ of $V^*$ in the sup norm. Their greedy policies succeed in $71$ to $74$ percent of evaluation episodes, compared with the optimal value of $73.6$ percent; differences within this range are sampling error. When the optimal policy is forced to select a random action with probability $0.05$, its success rate falls to $54$ percent. The training curve therefore reflects both the learned policy and the continuing exploration of the behavior policy.
+The third line is zero for every seed: in no cell does a learned greedy action lose value under $Q^*$, so each greedy policy is optimal up to ties and succeeds with the exact $73\%$ of $\pi^*$. This is the typical run, not a guarantee at this budget. In about one run in eight some greedy action is still suboptimal after $4{,}000$ episodes, usually at little cost (success $71\%$ to $74\%$). In the rare worst case the agent still prefers *right* at the start and succeeds less than half the time. The two best actions there differ by less than $0.01$ in $Q^*$, the run's estimates were low, and a low estimate is corrected slowly, because the greedy rule tries that action only when it explores. The value error stays within about $0.03$ of $V^*$ across seeds. The action-value error is several times larger, about $0.05$ to $0.17$: the entries of actions the greedy policy does not take are updated mainly when the agent explores, so they average fewer targets.
 
-The median run used $95{,}569$ environment steps. By comparison, :numref:`sec_valueiter` certified $V^*$ after $164$ sweeps of $64$ exact model backups, or about $10{,}500$ backups. These quantities are not directly interchangeable: a Bellman backup requires the full transition kernel, whereas an environment step provides only one sampled transition. Exercise :exref:`ex_qlearning-like-like-comparison-value` compares the two methods while keeping these different information requirements explicit.
+Forced to act at random one step in twenty, $\pi^*$ itself succeeds only about $54\%$ of the time. The plateau of the training curve near $0.5$ is this cost of exploration, not a defect of the table.
 
-The following panels compare the learned and exact solutions:
+A run typically uses about $96{,}000$ environment steps. Value iteration certified $V^*$ after $164$ sweeps of $64$ backups, about $10{,}500$ backups, but the two counts measure different things: a backup reads a whole row of the transition table, while a step reveals one sampled successor. Exercise :exref:`ex_qlearning-samples-backups` compares the two with these information requirements made explicit.
+
+The learned values and arrows of the first seed, next to the exact solution:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-2}
 %%tab pytorch, jax
@@ -192,195 +242,145 @@ d2l.show_grid(env.unwrapped.desc, np.stack([Q[0].max(-1), V_star]),
               titles=['Q-learning, seed 0', 'value iteration'])
 ```
 
-The learned arrows reproduce the slip-aware strategy of :numref:`sec_valueiter`
-except at state $6$: Q-learning selects *right*, whereas $\pi^*$ selects
-*left*. State $6$ lies between holes $5$ and $7$, and the two actions have
-equal values under $Q^*$, so this disagreement is a different resolution of an
-exact tie. The value estimates are most accurate in frequently visited states
-and coarser in the rarely visited top-right corner.
+The learned arrows reproduce the slip-aware strategy of :numref:`sec_valueiter` except at cell $6$, where Q-learning commands *right* and $\pi^*$ commands *left*. Cell $6$ lies between the holes $5$ and $7$, and the two commands have equal values under $Q^*$, so the disagreement is a different resolution of an exact tie. The values are most accurate in the cells the agent visits often and coarser in the rarely visited top-right corner.
 
-Now consider the deterministic special case. Disabling slip produces
-deterministic transitions and noiseless targets, for which the
-damped-contraction argument permits the constant $\alpha = 0.9$. In this
-experiment, one sixteenth of the episode budget suffices:
+### Step-Size Schedules Compared
+
+On calm ice the targets carry no transition noise, and the contraction argument above allows the constant step $\alpha = 0.9$. One eighth of the episode budget then almost always suffices, and here the greedy policy of the final table reaches the goal in every episode:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-3}
 %%tab pytorch, jax
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 table = np.zeros((mdp.num_states, mdp.num_actions))
-for _ in q_learning(0, table, np.zeros_like(table), calm, 256,
+calm_visits = np.zeros_like(table)
+for _ in q_learning(0, table, calm_visits, calm, 512, gamma,
                     alpha=lambda n: 0.9):
     pass
-print(f'calm ice, 256 episodes, alpha = 0.9: greedy policy succeeds '
+print(f'calm ice, 512 episodes ({calm_visits.sum():,.0f} steps), alpha = 0.9: '
+      f'greedy policy succeeds '
       f'{d2l.evaluate(calm, lambda s, rng: int(table[s].argmax()), 100):.0%}')
 ```
 
-In the deterministic environment, the same method finds a perfect policy with about one sixteenth as many episodes and can use a much larger step size. This contrast shows how transition noise changes the sample and step-size requirements. To compare the three schedules, we track $Q(s_0,\textrm{left})$ across the same five seeds; its exact value is available from dynamic programming.
+The calm-ice run takes about $3{,}500$ environment steps, against about $96{,}000$ for a run on slippery ice. In the rare run that fails, the agent has reached the goal too seldom for its value to flow back to the start, an exploration failure that :numref:`sec_exploration` studies. Transition noise, not the learning rule, sets most of the cost. On slippery ice the step size matters. We compare three schedules on the same seeds by tracking one entry, $Q(s_0, \textrm{left})$, whose exact value $0.180$ is the value of the start under $\pi^*$. The plot shows the median over seeds with a band from the smallest to the largest:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-4}
 %%tab pytorch, jax
-Q_star = mdp.backup(V_star)
-a0 = int(pi_star[0])
-print(f'Q*(s0, {"<v>^"[a0]}) = {Q_star[0, a0]:.3f}')
+a0 = int(pi_star[0])          # FrozenLake's actions: left, down, right, up
 trace = {}
 for name, alpha in [('0.9 (constant)', lambda n: 0.9),
                     ('1/(1 + 0.1 n)', lambda n: 1 / (1 + 0.1 * n)),
                     ('1/(1 + n)', lambda n: 1 / (1 + n))]:
     runs = []
-    for seed in range(5):
+    for seed in range(num_seeds):
         Qa = np.zeros_like(Q[0])
         runs.append([Qa[0, a0] for _ in q_learning(
-            seed, Qa, np.zeros_like(Qa), env, num_episodes, alpha)])
+            seed, Qa, np.zeros_like(Qa), env, num_episodes, gamma, alpha)])
     trace[f'alpha = {name}'] = np.array(runs)
     print(f'alpha = {name:>14}: final estimates {np.round(runs, 3)[:, -1]}')
+print(f'peak of each 1/(1 + 0.1 n) run:  '
+      f'{np.round(trace["alpha = 1/(1 + 0.1 n)"].max(axis=1), 3)}')
 d2l.plot_curves(trace, xlabel='episode', ylabel='estimate of Q(s0, left)',
                 reference=Q_star[0, a0])
 ```
 
-The constant step size does not converge to a fixed value: after four thousand episodes, the five estimates range from $0.06$ to $0.27$, compared with the exact value $0.180$. The default decreasing schedule places all five estimates between $0.180$ and $0.195$. The sample-average schedule $1/(1+n)$ also satisfies the Robbins--Monro conditions, but all five estimates remain below $0.025$ at this budget because early, inaccurate targets retain substantial weight. The asymptotic conditions therefore do not determine which schedule performs best at a finite horizon.
+The constant step never settles. Each target moves the estimate by $90\%$ of its error, so after $4{,}000$ episodes the final estimates scatter widely around $0.180$, from near $0.05$ to above $0.25$. The default schedule ends within about $0.02$ of the exact value in the typical run. The schedule $1/(1 + n)$ satisfies the Robbins–Monro conditions as well, yet every run stays below $0.03$, a sixth of the exact value, at this budget, because the early targets, computed from a table of zeros, keep their full weight. This is the slow rate that Even-Dar and Mansour predict. The conditions guarantee the limit; they do not choose a schedule for a finite budget.
 
 ### Feedback between Estimation and Data Collection
 
-The behavior policy depends on the current value estimates, so estimation errors influence which data are collected next. If $\hat{Q}(s,a)$ is too large, an $\epsilon$-greedy policy selects $a$ more often and produces additional transitions whose expected TD errors reduce the overestimate. An underestimate is corrected less directly, because the action may be selected only through random exploration. This creates an asymmetry between overestimation and underestimation.
+The behavior policy depends on the current estimates, so errors in the estimates change which data are collected next. If $Q(s, a)$ is too large, the $\epsilon$-greedy policy selects $a$ more often and gathers transitions whose targets pull the estimate down. If $Q(s, a)$ is too small, the action is tried only when the agent explores, and, as the run above showed, the error is corrected slowly. Overestimates are thus self-correcting and underestimates are not, which is why the low run above took so long to change its first action.
 
-At a fixed point, the expected correction must vanish for every state--action pair visited by the behavior policy. By :eqref:`eq_td_error`, this is precisely the Bellman optimality condition on the visited set. Interaction can therefore direct data collection toward errors in the current estimate. Offline reinforcement learning, introduced in :numref:`sec_offline`, removes this feedback because it learns from a fixed dataset.
-
-The preceding argument assumes continued exploration. To isolate the resulting tradeoff, we next study a multi-armed bandit, which removes state transitions and delayed rewards.
-
-## Exploration and Regret
-
-### The Multi-Armed Bandit
-
-To isolate exploration, use the one-state MDP from :numref:`sec_mdp`.
-Without transitions or delayed rewards, the resulting *multi-armed
-bandit* requires the agent to balance estimating action values against
-selecting actions with high expected reward. We use ten Bernoulli arms,
-one of which has the largest success probability:
-
-```{.python .input #qlearning-a-bandit-is-an-mdp-with-one-state}
-%%tab pytorch, jax
-arms = np.array([0.50, 0.42, 0.90, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50, 0.45])
-
-def bandit_run(rule, num_pulls, seed):
-    """One state, one step: pull an arm, log the shortfall, update tallies."""
-    rng = np.random.default_rng(seed)
-    wins, count = np.zeros(len(arms)), np.zeros(len(arms))
-    gap = np.empty(num_pulls)
-    for t in range(num_pulls):
-        a = rule(wins, count, t, rng)
-        count[a] += 1
-        wins[a] += float(rng.random() < arms[a])
-        gap[t] = arms.max() - arms[a]
-    return np.cumsum(gap)
-```
-
-A bandit policy is any rule from the running tallies to an arm, so
-`epsilon_greedy` applies unchanged to the empirical means. In a
-*contextual bandit*, a fresh context arrives each round independently of
-previous actions, one action is scored, and the episode ends. The model
-may generalize across contexts, but there are no controlled dynamics or
-delayed rewards. :numref:`sec_rl_sequences` uses this distinction when
-classifying single-turn preference optimization.
-
-### Regret and the Epsilon-Greedy Family
-
-A bandit permits evaluation by cumulative regret rather than success rate. Each pull contributes the gap between the best mean $\mu^* = \max_a \mu_a$ and the selected arm's mean,
-
-$$\textrm{regret after } t \textrm{ pulls} = \sum_{u=1}^{t} \big( \mu^* - \mu_{a_u} \big),$$
-
-which is what `bandit_run` accumulates. Its expectation is $\sum_a (\mu^* - \mu_a)\, \mathbb{E}[n(a)]$: the gap of each arm multiplied by its expected number of pulls. *Sublinear* regret means that average regret per pull converges to zero. We compare three members of the $\epsilon$-greedy family over twenty independent runs:
-
-```{.python .input #qlearning-regret-and-the-linear-tax}
-%%tab pytorch, jax
-def eps_rule(schedule):
-    """Epsilon-greedy on the empirical means, with epsilon = schedule(t)."""
-    return lambda wins, count, t, rng: epsilon_greedy(
-        wins / np.maximum(count, 1), schedule(t), rng)
-
-rules = {'greedy': eps_rule(lambda t: 0.0),
-         'epsilon = 0.1': eps_rule(lambda t: 0.1),
-         'annealed': eps_rule(lambda t: max(0.02, 1 / np.sqrt(t + 1)))}
-regret = {name: np.array([bandit_run(rule, 2000, [2026, i, s])
-                          for s in range(20)])
-          for i, (name, rule) in enumerate(rules.items())}
-for name, r in regret.items():
-    print(f'{name:>13}: mean regret after 2000 pulls {r[:, -1].mean():6.1f}')
-```
-
-The greedy rule is sensitive to its first observations. It incurs little subsequent regret if it identifies the best arm early, but it can remain committed to a suboptimal arm; its mean regret is $824$. With fixed $\epsilon = 0.1$, the best arm is usually identified quickly, but uniform exploration continues throughout the run. For these arms, exploration alone costs approximately $0.04$ regret per pull, and the total after $2000$ pulls is $117$. Annealing $\epsilon$ reduces exploration as the estimates improve and lowers the total regret to $69$.
-
-![Exploration, measured three ways. (a) One row of action values, $\hat Q(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, converted into greedy, $\epsilon$-greedy with $\epsilon = 0.3$, and softmax policies with temperature $0.3$. (b) Mean cumulative regret over 20 runs on the ten-armed Bernoulli bandit, shown on logarithmic axes. After $2000$ pulls, the regrets are $824$ for greedy, $117$ for fixed $\epsilon = 0.1$, $69$ for annealed $\epsilon$, $37$ for UCB with $\kappa = 0.5$, and $32$ for Thompson sampling. These finite runs do not measure asymptotic rates. The inset shows the UCB radius $\kappa \sqrt{\log t/n}$ at $t = 2000$. (c) Coverage of the 44 nonterminal state-action pairs (solid) and success rate of the training episodes (dashed) under three schedules for tabular Q-learning on deterministic FrozenLake. With random tie-breaking, the greedy policy covers 92 percent of the pairs; $\epsilon = 1$ covers nearly all pairs, but its training episodes, which never exploit, almost never succeed.](../img/mdl-rl-exploration.svg)
-:label:`fig_rl_exploration`
-
-### Optimism: UCB and Thompson Sampling
-
-Panel (a) of :numref:`fig_rl_exploration` represents the preceding policies as distributions over a row of action values. It also includes the softmax policy introduced in :numref:`sec_policygradient`, whose temperature controls how concentrated the distribution is. The two remaining methods use uncertainty to direct exploration. Optimistic initialization starts each estimate above the attainable rewards, so an arm continues to be selected until observations lower its estimate :cite:`Sutton.Barto.2018`. The *upper confidence bound* (UCB) rule instead adds an uncertainty bonus and selects the largest upper confidence estimate:
-
-$$a_t = \underset{a}{\mathrm{argmax}} \Big[ \hat{\mu}(a) + \kappa \sqrt{\log t \,/\, n(a)} \Big],$$
-:eqlabel:`eq_ucb`
-
-The bonus decreases with the number of observations $n(a)$ and increases slowly with $t$ while an arm is not selected :cite:`Auer.CesaBianchi.Fischer.2002`. Thus UCB adapts exploration separately for each arm. With the standard coefficient $\kappa=\sqrt{2}$, its regret is logarithmic in $t$, whereas fixed-$\epsilon$ exploration has linear regret. Smaller coefficients can work better on a particular finite problem but no longer satisfy that guarantee. Each arm is played once to initialize its index; subsequent choices are deterministic maximizers of the UCB score. Thompson sampling :cite:`Thompson.1933` takes a Bayesian approach. For Bernoulli rewards it maintains a Beta posterior for each arm, samples one mean from each posterior, and selects the arm with the largest sample. As observations accumulate, both methods concentrate their choices on well-supported arms:
-
-```{.python .input #qlearning-optimism-ucb-and-thompson-sampling}
-%%tab pytorch, jax
-kappa = 0.5
-
-def ucb(wins, count, t, rng):
-    if (count == 0).any():          # play each arm once before pricing any
-        return int(np.argmax(count == 0))
-    return int(np.argmax(wins / count + kappa * np.sqrt(np.log(t) / count)))
-
-def thompson(wins, count, t, rng):
-    return int(rng.beta(1 + wins, 1 + count - wins).argmax())
-
-for i, (name, rule) in enumerate([('UCB', ucb), ('Thompson', thompson)], 3):
-    regret[name] = np.array([bandit_run(rule, 2000, [2026, i, s])
-                             for s in range(20)])
-    print(f'{name:>13}: mean regret after 2000 pulls '
-          f'{regret[name][:, -1].mean():6.1f}')
-d2l.plot_curves(regret, xlabel='pulls', ylabel='cumulative regret')
-```
-
-Both methods have lower regret than the $\epsilon$-greedy variants in this experiment. The curvature on the logarithmic plot is consistent with logarithmic regret, but $2000$ pulls cannot verify an asymptotic rate. The coefficient also matters: $\kappa=0.5$ was selected for these arms; $\kappa=\sqrt{2}$ gives regret near $200$, while $\kappa=0.15$ sometimes commits to a suboptimal arm and in one of twenty runs exceeds $900$. At $\kappa=0.5$, total regret ranges from $21$ to $53$ across seeds. The relative performance of UCB and Thompson sampling is therefore specific to this experiment.
-
-**Online and offline uncertainty.** UCB adds an uncertainty term because an online agent can test optimistic estimates by collecting new observations. Offline methods often subtract an uncertainty penalty because no new data can correct an overestimate (:numref:`sec_offline`). The two terms express a related principle, but they are calibrated differently. UCB uses the online count and time, whereas an offline penalty is defined relative to a fixed dataset.
-
-### Exploration in MDPs
-
-Bandit actions are immediately available, whereas an uncertain state-action pair in an MDP may be reachable only through a particular sequence of actions. Under independent random exploration, the probability of executing a required sequence of $k$ actions decreases geometrically with $k$. Difficult MDPs therefore require exploration over temporally extended behavior.
-
-One approach assigns bonuses to uncertain state-action pairs and propagates them through value backups, so the policy selects action sequences leading toward uncertain states. With function approximation, explicit counts are unavailable; alternatives include density-model pseudo-counts, curiosity based on prediction error, random network distillation, state archives, and ensembles for approximate posterior sampling :cite:`Burda.Edwards.Storkey.ea.2019`. FrozenLake does not expose this difficulty. With only 44 nonterminal state--action pairs, the exploration schedules used here provide broad coverage within the training budget.
+At a fixed point of the update, the expected correction vanishes for every pair the behavior policy visits: $Q(s, a) = (\mathcal{T}Q)(s, a)$ there. This is not yet the optimality equation, because the maximum inside $\mathcal{T}Q$ still ranges over entries that are never visited and hence never constrained. A table can satisfy the equations on the visited pairs and still be wrong, which is why the convergence result needs every pair to be tried. An agent learning from a fixed log of transitions loses this feedback entirely; the next chapter returns to that case.
 
 ## Off-Policy Learning
 
-### The Off-Policy Mechanism
+The maximum in the target makes Q-learning learn about one policy while following another. The two subsections below name that property and the bias that comes with it.
 
-The $\max_{a'}$ in :eqref:`eq_td_error` evaluates a greedy continuation
-independently of the action that the behavior policy actually takes at
-$s'$. Q-learning is therefore *off-policy*: it estimates the value of the
-greedy policy while data are generated by the exploratory policy $\pi_e$.
-SARSA is the corresponding on-policy method; it bootstraps from the next
-action actually selected and estimates the value of the behavior policy,
-including its exploration :cite:`Sutton.Barto.2018`. This distinction
-explains why Q-learning can use persistent exploration while its reported
-greedy policy agrees with $\pi^*$. It also permits learning from older
-experience, another agent, or a fixed log, provided the data continue to
-cover the state--action pairs required by the target policy. Function
-approximation can make this flexibility unstable (:numref:`sec_dqn`),
-and a fixed dataset imposes the stronger coverage constraints studied in
-:numref:`sec_offline`.
+### The Off-Policy Target and SARSA
+
+The $\max_{a'}$ in :eqref:`eq_td_error` evaluates a greedy continuation regardless of the action the behavior policy takes next at $s'$. Q-learning is therefore *off-policy*: it estimates the values of the greedy policy while the data come from the exploring policy $\pi_e$. The on-policy alternative bootstraps from the action $a'$ that the behavior policy actually selects at $s'$,
+
+$$\delta = r + \gamma\, Q(s', a') - Q(s, a).$$
+:eqlabel:`eq_qlearning_sarsa`
+
+The method is called *SARSA*, after the tuple $(s, a, r, s', a')$ that each update uses :cite:`Rummery.Niranjan.1994,Sutton.Barto.2018`. For a fixed behavior policy, the expected SARSA update has the Bellman expectation equation of $\pi_e$ as its fixed point, so SARSA learns $Q^{\pi_e}$, the values of the exploring policy with its random actions included. On the slippery lake, a SARSA agent that keeps $\epsilon = 0.05$ would value the cells next to holes below what $\pi^*$ achieves there, because its own random steps sometimes fall in. Q-learning can explore persistently and still report a greedy policy that agrees with $\pi^*$, as it did above. The same property lets it learn from older experience, from another agent or from a fixed log, as long as the data cover the pairs the greedy policy needs. With networks in place of the table this flexibility can make learning unstable, as the next chapter shows.
 
 ### Maximization Bias
 
-The maximum of noisy estimates tends to exceed the maximum of their expectations because it selects entries with positive estimation errors. This produces *maximization bias* in bootstrapped targets. In the experiment, four of five final estimates of $Q(s_0,\textrm{left})$ exceed the true value $0.180$, and the fifth agrees to the reported precision. The bias decreases as tabular estimates converge, but it can persist under function approximation. Double Q-learning reduces it by using separate estimators to select and evaluate the maximizing action, although the resulting estimates can also be low :cite:`vanHasselt.2010`. :numref:`sec_dqn` studies this method.
+The maximum of noisy estimates tends to exceed the maximum of their means, because the maximum picks out the entries whose errors happen to be positive. Since the maximum is convex, $\mathbb{E}[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} \mathbb{E}[\hat{Q}(s', a')]$, and every target that bootstraps from a noisy row inherits this *maximization bias*. The step-size traces above show it. Under the default schedule, the estimate of $Q(s_0, \textrm{left})$ first climbs above $0.180$ and only then settles. Without noise the estimate could not do this. From a table of zeros, with rewards that are never negative, every exact backup can only raise the values toward $Q^*$, so value iteration approaches $0.180$ from below. The median trace instead sits at about $0.22$ or above from episode $500$ to episode $1{,}500$; noise, passed through the maximum, has pushed it up. The peaks of the printed runs lie between about $0.2$ and $0.33$, and over twelve seeds most runs overshoot in this way, by a few hundredths to more than a tenth. The constant step, whose estimates are noisier, overshoots further, to about $0.5$ for much of the first thousand episodes.
+
+The bias shrinks as the tabular estimates converge, but it can persist under function approximation, where the noise does not vanish. Double Q-learning keeps two estimators, uses one to select the maximizing action and the other to evaluate it, and so removes the upward bias, although its estimates can be low :cite:`vanHasselt.2010`. Exercise :exref:`ex_qlearning-maximization-bias` builds it on a task where the bias misleads the agent.
+
+## Planning in a Learned Model
+
+Q-learning uses each transition once. It moves one entry and discards the sample, and the next time the goal's value changes, the old transition is not there to carry the change backward. The same transitions can instead be counted. Let $N(s, a, s')$ count the observed transitions from $s$ under $a$ to $s'$, and $N(s, a) = \sum_{s'} N(s, a, s')$. The counts give an estimated model,
+
+$$\hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{N(s, a)}, \qquad \hat{r}(s, a) = \frac{1}{N(s, a)} \sum_{\textrm{visits of } (s, a)} r,$$
+
+the empirical frequency of each successor and the mean reward of each pair. Value iteration on $(\hat{P}, \hat{r})$, treating the estimate as if it were exact, is called *certainty equivalence*. It turns the problem without a model back into the problem of :numref:`sec_valueiter`.
+
+`Counts` wraps an environment: it passes every step through unchanged and records $N(s, a, s')$ and the summed rewards. Since `q_learning` touches the environment only through `reset` and `step`, it runs unchanged on the wrapper and learns the same table as it would without the wrapper. `learned_model` divides the counts into $\hat{P}$ and $\hat{r}$ and returns them as a `d2l.TabularMDP`. Rows of pairs that were never tried stay zero, so the planner treats them as worthless dead ends:
+
+```{.python .input #qlearning-planning-in-a-learned-model-1}
+%%tab pytorch, jax
+class Counts(gym.Wrapper):
+    """Pass every step through and count it: N[s, a, s'] and summed rewards."""
+    def __init__(self, env):
+        super().__init__(env)
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        self.N, self.R = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+
+    def reset(self, **kwargs):
+        self.s, info = self.env.reset(**kwargs)
+        return self.s, info
+
+    def step(self, a):
+        s_next, r, terminated, truncated, info = self.env.step(a)
+        self.N[self.s, a, s_next] += 1
+        self.R[self.s, a] += r
+        self.s = s_next
+        return s_next, r, terminated, truncated, info
+
+def learned_model(counts, gamma):
+    """Certainty equivalence: the empirical kernel and mean rewards."""
+    n = np.maximum(counts.N.sum(axis=-1), 1)   # unvisited pairs: zero rows
+    return d2l.TabularMDP(counts.N / n[..., None], counts.R / n, gamma)
+```
+
+How much better is the model's use of the data? We give Q-learning a short budget of $500$ episodes and a longer one of $2{,}000$, each a full run with its own exploration schedule. On the transitions of each run we compare two tables: the one Q-learning learned, and the action values of the estimated model, which are one backup of its value-iteration solution. `grade` returns a table's sup-norm value error against `V_star` and the exact success of its greedy policy, computed by `success`:
+
+```{.python .input #qlearning-planning-in-a-learned-model-2}
+%%tab pytorch, jax
+def grade(Q, V_star, success):   # sup-norm error, success of greedy policy
+    return (np.abs(Q.max(axis=-1) - V_star).max(),
+            success(np.eye(Q.shape[-1])[Q.argmax(axis=-1)]))
+
+for budget in [500, 2000]:
+    rows = []
+    for seed in range(num_seeds):
+        counts, Qs = Counts(env), np.zeros((mdp.num_states, mdp.num_actions))
+        for _ in q_learning(seed, Qs, np.zeros_like(Qs), counts, budget,
+                            gamma):
+            pass
+        model = learned_model(counts, gamma)
+        Q_model = model.backup(d2l.value_iteration(model, 500)[-1])
+        rows.append([counts.N.sum(), *grade(Qs, V_star, success),
+                     *grade(Q_model, V_star, success)])
+    n, err_q, win_q, err_m, win_m = np.median(rows, axis=0)
+    print(f'{budget} episodes, median {n:,.0f} steps '
+          f'(medians over {num_seeds} seeds)')
+    print(f'  Q-learning:        max |V - V*| {err_q:.3f}, success {win_q:.3f}')
+    print(f'  planning in model: max |V - V*| {err_m:.3f}, success {win_m:.3f}')
+```
+
+With little data, about $10{,}000$ steps, the planned greedy policy is the better one. It typically reaches the goal about two times in three, against about one in two for Q-learning's, and it was at least as good in about nine runs out of ten. The worst-case value error at this budget is set by a few rarely visited cells. It is usually smaller for the model, but not always, and the five runs printed here happen to favor Q-learning. With about $47{,}000$ steps both greedy policies are optimal in most runs, and the planned values are about twice as accurate. They were better in nearly every seed, and about as accurate as Q-learning's tables after twice as many episodes. The reason is the one the worked transition showed. Q-learning moves value backward one transition per visit, using targets computed from a table that was wrong when the transition arrived. The model keeps every transition, and each of the few hundred sweeps of value iteration propagates the goal's reward through all of them. Exercise :exref:`ex_qlearning-batch-td-monte-carlo` shows the same effect in a two-state process.
+
+The model has costs of its own. It stores $|\mathcal{S}|^2 |\mathcal{A}|$ counts, here about a thousand numbers and for a large state space far too many, and every new batch of data means solving it again. The planner also trusts the estimate completely: a pair that was never tried looks worthless, and a pair that was tried once and got lucky looks better than it is. Methods that learn models that generalize across states, and plan with them, are beyond these two chapters; the end of :numref:`sec_rl_sequences` names a few.
+
+The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the rule used here is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
 
 ## Summary
 
-Q-learning replaces the expectation in a Bellman backup with a sampled transition. Its temporal-difference update is $Q \leftarrow Q + \alpha \delta$. In stochastic environments, this semi-gradient update should not be confused with minimizing a sampled squared Bellman residual, whose population objective contains an additional variance term. Under sustained visitation and Robbins--Monro step sizes, tabular Q-learning converges to $Q^*$. Exploration can be studied separately in a one-state bandit: fixed-$\epsilon$ exploration has linear regret, whereas UCB and Thompson sampling reduce exploration as uncertainty decreases. The maximum in the target makes Q-learning off-policy and also introduces maximization bias.
-
-Replacing the table by a neural network gives the deep Q-learning methods developed in :numref:`sec_dqn`.
-
-**Experimental scope.** The FrozenLake results use five seeds, one finite state space, and a fixed training budget. They show that tabular Q-learning approaches the exact solution under the tested schedule, but they do not establish an optimal schedule or a scaling law. The bandit curves average twenty runs; the UCB coefficient was tuned for these arms, and $2{,}000$ pulls are insufficient to verify an asymptotic regret rate. The reported exploration cost is specific to the geometry of this environment.
+Q-learning replaces the expectation in the Bellman backup by one observed transition and moves the visited entry a step $\alpha$ along the temporal-difference error $\delta$. The expected step is a damped value-iteration step, and because the Bellman operator contracts, tabular Q-learning converges to $Q^*$ when every pair is tried infinitely often and the step sizes satisfy the Robbins–Monro conditions. It is a semi-gradient method: gradient descent on the squared temporal-difference error converges elsewhere when transitions are random, the double-sampling problem. On the slippery lake its greedy tables are optimal in the typical run, the step-size schedule decides how fast it gets there, and the maximum in the target makes it off-policy and biases its estimates upward while they are noisy. Counting the same transitions and planning in the estimated model gives more accurate values from the same data, at the cost of storing and solving the model.
 
 ## Exercises
 
@@ -424,43 +424,14 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
     1. Suppose instead that the time limit is part of the task, so that
        the return really ends after $H$ steps. Show that no single number
        is the correct value of the state. Add the number $h$ of remaining
-       steps to the state, as in problem :exref:`ex_mdp-time-limits`b
+       steps to the state, as in problem :exref:`ex_mdp-time-limits`
        of :numref:`sec_mdp`. Find the value of each state $(s, h)$, and show
        that the mask `terminated or truncated` is then correct.
    :exlabel:`ex_qlearning-truncation-termination`
 
-1. [code] **The exploration schedule.** On a zero-initialized table,
-   `epsilon_greedy` breaks every tie uniformly at random, and every reward
-   of FrozenLake is nonnegative.
-    1. Show that every entry of the table stays exactly zero until the
-       first successful episode, and that until then every $\epsilon$
-       produces the same behavior. What does this imply for the episode of
-       the first success as a criterion for choosing $\epsilon$?
-    1. After the first success, which entries are positive? Show that an
-       entry, once positive, stays positive, and that the greedy rule,
-       $\epsilon = 0$, never again tries the zero entries of a row that
-       contains a positive entry. Panel (c) of
-       :numref:`fig_rl_exploration` shows this rule covering 92 percent of
-       the nonterminal pairs of the calm lake and learning to succeed
-       there. Predict whether it also learns a good policy on slippery
-       ice.
-    1. Give `q_learning` an argument `epsilon`, a function from the episode
-       index to the exploration rate such as those returned by
-       `linear_schedule`. On the slippery lake, run five seeds each with
-       $\epsilon$ held at $0$, $0.1$, $0.5$ and $1$, and with the schedule
-       `linear_schedule(1.0, 0.05, num_episodes // 2)` that `q_learning`
-       uses in the section. For each setting, report the mean
-       training return, the success rate of the final greedy policy under
-       `d2l.evaluate` over $1000$ episodes, and
-       $\max_s |\max_a \hat{Q}(s, a) - V^*(s)|$.
-    1. Rank the settings by training return and by greedy success rate.
-       Where do the two rankings disagree, and what explains the
-       disagreement?
-   :exlabel:`ex_qlearning-exploration-schedule`
-
 1. **Greedy SARSA and Q-learning.** SARSA replaces the maximum in
    :eqref:`eq_td_error` by the value of the action $a'$ that the behavior
-   policy selects at $s'$, $\delta = r + \gamma Q(s', a') - Q(s, a)$. An
+   policy selects at $s'$, as in :eqref:`eq_qlearning_sarsa`. An
    implementation selects $a'$ before it updates $Q(s, a)$ and then takes
    $a'$ at the next step. Suppose that both methods select actions
    greedily on their current tables and break ties by the same fixed rule.
@@ -472,6 +443,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
     *Adapted from Richard S. Sutton and Andrew G. Barto,
     [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
     Exercise 6.12.*
+   :exlabel:`ex_qlearning-greedy-sarsa`
 
 1. [code] **The double-sampling counterexample.** ● Build a three-state
    MDP with one action per state. From state $s$, the action gives reward
@@ -483,7 +455,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        Which entries have nonzero derivatives, and which of these
        derivatives does the semi-gradient update :eqref:`eq_td_error` drop?
     1. Write down $Q^*$ for the three entries.
-    1. With $\mu$ uniform over the three pairs, write the population
+    1. With $d$ uniform over the three pairs, write the population
        objective :eqref:`eq_double_sampling` explicitly and minimize it in
        closed form as a function of $\gamma$. Which entries does the
        minimizer distort relative to $Q^*$, and in which direction?
@@ -509,9 +481,9 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        many updates. Evaluate it at $\alpha = 0.9$ for
        $Q(s_0, \textrm{left})$, taking as targets $r + \gamma V^*(s')$ with
        $s'$ drawn from `mdp.P[0, a0]` and `V_star` from the section, and
-       compare the resulting standard deviation with the spread of the five
-       final constant-step estimates, $0.06$ to $0.27$ around the exact
-       value $0.180$. Which assumption of the analysis fails for this
+       compare the resulting standard deviation with the spread of the
+       final constant-step estimates that the section prints around the
+       exact value $0.180$. Which assumption of the analysis fails for this
        entry, and where does the rest of the spread come from?
     1. For $c = 1$, write the estimate after $n$ visits as a weighted sum
        of the initial value and the $n$ targets. Which weight does the
@@ -527,6 +499,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        sup-norm error $\|\hat{Q} - Q^*\|_\infty$ over all entries. Explain
        the shape of the curves with parts (a) and (c). Do the two error
        measures select the same $c$?
+   :exlabel:`ex_qlearning-step-sizes`
 
 1. [code] **Samples against backups.** ● Take `Q_star` as ground truth.
     1. Record $\|\hat{Q} - Q^*\|_\infty$ after every episode of
@@ -537,15 +510,13 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        of Bellman backups at $64$ per sweep. How many backups does value
        iteration need to reach the error that Q-learning reaches after
        $4000$ episodes?
-    1. Add to `q_learning` a count of the observed transitions
-       $(s, a, s')$ and a sum of the observed rewards for each pair. After
-       $100$, $400$, $1000$ and $4000$ episodes, build the estimated model
-       `d2l.TabularMDP(P_hat, r_hat, gamma)`, leaving the rows of unvisited
-       pairs at zero, solve it with `d2l.value_iteration`, and add the
-       error of its action values to the plot at the same environment
-       steps. Which estimate makes better use of the samples, and what
-       does it cost in computation? Relate the result
-       to exercise :exref:`ex_qlearning-batch-td-monte-carlo`.
+    1. Run `q_learning` on `Counts(env)`, and after $100$, $400$, $1000$
+       and $4000$ episodes solve `learned_model` with
+       `d2l.value_iteration`, as in the section. Add the error of the
+       model's action values to the plot at the same environment steps.
+       How many environment steps does the model need to reach the error
+       of Q-learning after $4000$ episodes, and how many backups does each
+       solve of the model cost?
     1. Value iteration consumes model backups, Q-learning consumes
        environment steps, and the estimated model of part (b) consumes
        both. Suppose that one environment step costs as much computation
@@ -554,7 +525,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        $4000$ episodes at the lowest total cost. Which of the methods
        remain available to an agent that cannot read the transition
        kernel?
-   :exlabel:`ex_qlearning-like-like-comparison-value`
+   :exlabel:`ex_qlearning-samples-backups`
 
 1. [code] **Maximization bias in a two-state task.** ● Every episode
    starts in state $s_0$, which offers two actions: *right* terminates with
@@ -583,75 +554,30 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
     *Adapted from Richard S. Sutton and Andrew G. Barto,
     [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
     Example 6.7.*
+   :exlabel:`ex_qlearning-maximization-bias`
 
-1. **Logarithmic regret of UCB.** ●● With $\kappa = \sqrt{2}$, the rule
-   :eqref:`eq_ucb` is UCB1 of :citet:`Auer.CesaBianchi.Fischer.2002`,
-   whose Theorem 1 bounds the expected regret after $t$ pulls of arms with
-   rewards in $[0, 1]$ by
-   $$\sum_{a:\, \Delta_a > 0} \frac{8 \ln t}{\Delta_a} + \Big(1 + \frac{\pi^2}{3}\Big) \sum_a \Delta_a, \qquad \Delta_a = \mu^* - \mu_a.$$
-   Derive this bound. The tool is Hoeffding's inequality: the mean
-   $\hat{\mu}_n$ of $n$ independent rewards in $[0, 1]$ with mean $\mu$
-   satisfies
-   $$P(\hat{\mu}_n \geq \mu + \varepsilon) \leq e^{-2 n \varepsilon^2},$$
-   and likewise for the lower tail.
-    1. Fix a suboptimal arm $a$ and let
-       $\ell = \lceil 8 \ln t / \Delta_a^2 \rceil$. Show that if arm $a$ is
-       pulled at a step $u \leq t$ while $n(a) \geq \ell$, then either the
-       index of the best arm lies at or below $\mu^*$, or the empirical
-       mean of arm $a$ exceeds $\mu_a$ by more than its bonus.
-    1. For fixed pull counts of both arms, bound the probability of each
-       of the two events at step $u$ by $u^{-4}$. Take a union bound over
-       the counts and sum over $u$ to show
-       $\mathbb{E}[n(a)] \leq \ell + \pi^2/3$ after $t$ pulls.
-    1. Combine part (b) with the regret decomposition to obtain the
-       theorem. Evaluate the bound for `arms` at $t = 2000$ and compare it
-       with the regret near $200$ that the section reports for
-       $\kappa = \sqrt{2}$. Which step of the proof loses the most?
-    1. Repeat the argument for a general coefficient $\kappa$. For which
-       $\kappa$ does the sum over steps in part (b) still converge, and
-       what does the answer say about the section's choice
-       $\kappa = 0.5$?
-   :exlabel:`ex_qlearning-ucb-logarithmic-regret`
+1. [code] **SARSA and Q-learning on the cliff.** ● In `CliffWalking-v1`
+   the agent crosses a $4 \times 12$ grid from the bottom-left corner to
+   the bottom-right one. Every step costs $-1$, and a step into the cliff
+   along the bottom edge costs $-100$ and returns the agent to the start.
+   Use $\gamma = 1$, the constant step size $\alpha = 0.5$ and a constant
+   $\epsilon = 0.1$.
+    1. Write `sarsa`, a copy of `q_learning` that selects the next action
+       $a'$ with `d2l.epsilon_greedy` before the update, uses it in the
+       target :eqref:`eq_qlearning_sarsa`, and then takes it. Train both methods for
+       $500$ episodes on ten seeds and plot the return per episode.
+    1. Follow the greedy policy of each final table from the start. Which
+       path does each method learn, and how long is it? Which method
+       collects more reward while it learns, and why do the two answers
+       differ?
+    1. Let $\epsilon$ fall to zero over training. What happens to the two
+       learned paths, and which values does each method learn in the
+       limit?
 
-1. [extended] **Deep exploration.** ●● Under undirected exploration, the
-   probability of executing a required sequence of $k$ actions decreases
-   geometrically with $k$. Build a chain on which this decrease can be
-   computed exactly: states
-   $0, \ldots, N-1$, start in state $0$, action $0$ returns to state $0$,
-   action $1$ advances one state, reaching state $N-1$ gives reward $1$
-   and terminates, and episodes are truncated after $2N$ steps. Give the
-   chain the `reset` and `step` interface of Gymnasium so that
-   `q_learning`, with the `epsilon` argument of exercise
-   :exref:`ex_qlearning-exploration-schedule`, runs on it unchanged.
-    1. Show that the uniformly random policy succeeds in one episode with
-       probability at most $2N \cdot 2^{-(N-1)}$, so that the expected
-       number of episodes up to the first success is at least
-       $2^{N-2}/N$. By the argument of problem
-       :exref:`ex_qlearning-exploration-schedule`a, $\epsilon$-greedy
-       Q-learning from a zero table acts uniformly at random until its
-       first success, so the bound holds for it whatever the value of
-       $\epsilon$.
-    1. Measure the episode of the first success for
-       $N \in \{4, 6, \ldots, 20\}$, five seeds each, and plot it against
-       $N$ on a logarithmic axis together with the bound.
-    1. Initialize every entry to $1$, an upper bound on every return, and
-       act greedily with $\epsilon = 0$. Measure the same quantity, and
-       explain its growth with $N$ by tracing which entries the first
-       episodes lower.
-    1. Move both agents to
-       `gym.make('FrozenLake-v1', map_name='8x8', is_slippery=True)`, which
-       also truncates at $100$ steps. Compare the optimistic greedy agent
-       with the zero-initialized agent under the schedule
-       `linear_schedule(1.0, 0.05, num_episodes // 2)` at $4000$ and
-       $20000$ episodes, five seeds each. Report the success rate of the
-       greedy policy under `d2l.evaluate`, the environment steps used,
-       and, as a reference, the success rate of the optimal policy
-       computed by value iteration. Does optimism keep its advantage on a
-       stochastic map, and what does it cost?
-
-   The whole project takes about five minutes of CPU time.
-
-[Discussions](https://d2l.discourse.group/)
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Example 6.6.*
+   :exlabel:`ex_qlearning-cliff-walking`
 
 [Discussions](https://d2l.discourse.group/t/36797)
 
@@ -659,122 +585,332 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.4]{.kicker}
+[Dive into Deep Learning · §14.3]{.kicker}
 
-Temporal differences, Q-learning and exploration<br>
-**sampled backups · temporal-difference error · convergence · exploration**
+Temporal-Difference Learning<br>
+**sampled backups · the TD error · step sizes · off-policy targets · planning in a counted model**
 :::
 :::
 
-::: {.slide title="The Sampled Backup"}
-Value iteration needs $P$ inside one expectation. Replace it with the
-transition you just observed:
+::: {.slide title="On the Real Lake the Agent Sees One Successor per Step, Never P"}
+[The problem]{.kicker}
 
-$$\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a), \qquad
-Q(s, a) \leftarrow Q(s, a) + \alpha\, \delta$$
+![](../img/mdl-rl-gridworld.svg){width=66%}
 
-- $\delta$ is the **temporal-difference error**: the sampled one-step
-  target minus the current table estimate.
-- Bootstrap masked by `terminated`, never `truncated`.
+- Value iteration's backup at cell 9 sums over three successors, $1/3$ each, read from $P$.
+- An agent that commands *down* sees one of them, drawn by the lake.
 
-. . .
-
-:numref:`fig_rl_backups`, panel (d): one blue branch instead of the sum,
-the max at the next state kept.
+::: {.d2l-note .warn}
+From single draws alone, can it find $\pi^*$, which reaches the goal 73% of the time?
+:::
 :::
 
-::: {.slide title="What Actually Converges"}
-The sampled least-squares objective is *not* the right justification:
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
 
-$$L(Q) = \mathbb{E}_\mu \big[ (Q - TQ)^2 \big] + \gamma^2\, \mathbb{E}_\mu \big[ \textrm{Var}_{s'} ( \max_{a'} Q(s', a') ) \big]$$
+- compute a Q-learning update by hand from one observed transition;
+- show that its expected step is a value-iteration step, and why least squares on the error is not;
+- choose step sizes: the Robbins–Monro conditions, and what a finite budget adds;
+- tell an off-policy target from an on-policy one, and spot the upward bias of the max;
+- plan in a model counted from the same transitions.
 
-$Q^*$ makes the first term zero, but the variance term can change the
-minimizer (**double sampling**). It vanishes for deterministic transitions.
-
-. . .
-
-The expected update satisfies $\mathbb{E}[\delta \mid s, a] = (TQ)(s, a) - Q(s, a)$,
-zero exactly at $Q^*$. A stochastic approximation of value iteration,
-convergent under Robbins-Monro steps.
+**Running example:** slippery FrozenLake 4×4, $\gamma = 0.95$; $V^*(s_0) = 0.180$, and $\pi^*$ reaches the goal 73% of the time.
 :::
 
-::: {.slide title="The Update in Code"}
+::: {.slide title="Without the Model, Values Are Learned from Sampled Transitions"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | what the agent works from |
+|---|---|
+| Markov Decision Processes | the problem as arrays $P$, $r$, $\gamma$ |
+| Dynamic Programming | the known model: exact values |
+| **Temporal-Difference Learning** | **sampled transitions** |
+| Exploration | the cost of trying actions |
+| Learning from Demonstrations | an expert's actions |
+| Policy Gradient | the returns of its own attempts |
+| Baselines and Variance Reduction | less noisy gradient estimates |
+| Function Approximation | a network instead of a table |
+:::
+
+::: {.col .narrow}
+- **Uses:** the Bellman operator, $Q^*$ and $\pi^*$ of the lake, terminated against truncated.
+- **Skips:** better exploration rules, and networks in place of the table.
+:::
+:::
+:::
+
+::: {.slide title="One Transition Is an Unbiased Sample of One Entry of the Backup"}
+[The sampled backup]{.kicker}
+
+The Bellman operator on action values needs the model $P$:
+
+$$(\mathcal{T}Q)(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \max_{a'} Q(s', a')$$
+
+- At $s$ the agent commands $a$, receives $r$, lands in $s'$: the *target* is $y = r + \gamma \max_{a'} Q(s', a')$.
+- Averaged over $s'$ and $r$: $\mathbb{E}[y \mid s, a] = (\mathcal{T}Q)(s, a)$.
+- Why $Q$, not $V$: $V(s) \leftarrow \max_a [\ldots]$ maximizes over averages, and one transition shows one action's.
+- In $Q$ form the max acts on table entries, and greedy $\mathrm{argmax}_a\, Q(s, a)$ is a row lookup.
+:::
+
+::: {.slide title="The Sampled Backup Follows the Observed Branch and Keeps the Max"}
+[The sampled backup]{.kicker}
+
+![](../img/mdl-rl-backups.svg){width=98%}
+
+- Panel (c): the exact optimal backup averages over every successor, weighted by $P$.
+- Panel (d): the sampled backup follows the one observed transition (blue) and keeps the max at $s'$.
+:::
+
+::: {.slide title="Q-Learning Moves the Visited Entry a Step α along the TD Error"}
+[The sampled backup]{.kicker}
+
+$$\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a), \qquad Q(s, a) \leftarrow Q(s, a) + \alpha\, \delta$$
+
+- $\delta$, the *temporal-difference error*: the pair's worth one step later minus the table's value.
+- Step size $\alpha \in (0, 1]$: $\alpha = 1$ replaces the entry, a small $\alpha$ averages many targets.
+- The target uses the table's own estimate at $s'$: the update *bootstraps*.
+- Monte Carlo waits for the return: unbiased, but noisy from every later step.
+- TD looks one step ahead: biased while $Q$ is wrong, usually far less variable.
+
+[Sutton 1988; Watkins 1989; Watkins and Dayan 1992]{.small}
+:::
+
+::: {.slide title="Value Flows Back from the Goal One Cell per Visit"}
+[The sampled backup]{.kicker}
+
+Zero table, $\gamma = 0.95$, $\alpha = 0.5$; reward 1 only on entering the goal, cell 15.
+
+- First success: at 14, *right* slides into the terminal goal. $Q(14, \textit{right}) \leftarrow 0.5 \cdot 0 + 0.5 \cdot 1 = 0.5$.
+- Later, 13 to 14 under *right*: target $0.95 \cdot 0.5 = 0.475$, so $Q(13, \textit{right}) \leftarrow 0.24$.
+- Before the update at 14, the same move from 13 had target 0 and taught nothing.
+- Next, *right* at 14 slips up to cell 10, all zeros: target 0, $Q(14, \textit{right}) \leftarrow 0.25$.
+
+::: {.d2l-note}
+Value iteration moved value one cell per sweep along every transition; Q-learning moves it along the transitions the agent makes.
+:::
+:::
+
+::: {.slide title="Check: Cell 14 Reaches the Goal Again"}
+[Check]{.kicker}
+
+$Q(14, \textit{right}) = 0.25$. On the next visit, *right* slides into the goal.
+With $\alpha = 0.5$, what is the new entry? Will a constant $\alpha$ ever let it settle?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Target 1: $0.5 \cdot 0.25 + 0.5 \cdot 1 = 0.625$. It never settles: every target moves it halfway,
+so it jumps between targets near 1 and near 0. Only the average of the targets is the backup.
+:::
+:::
+:::
+
+::: {.slide title="Q-Learning Is Value Iteration in Expectation, Not Least Squares on δ"}
+[Why it converges]{.kicker}
+
+- Over $s'$ and $r$: $\mathbb{E}[\delta \mid s, a] = (\mathcal{T}Q)(s, a) - Q(s, a)$, a damped value-iteration step.
+- Least squares on $\delta$, over pairs drawn with frequency $d(s, a)$, minimizes
+
+$$L(Q) = \mathbb{E}_{d}\big[(Q - \mathcal{T}Q)^2\big] + \mathbb{E}_{d}\big[\mathrm{Var}(r + \gamma \max_{a'} Q(s', a') \mid s, a)\big]$$
+
+- The variance term depends on $Q$. From $s$, half to $u_1$ (pays 1), half to $u_2$ (pays 0): the minimizer pulls $Q(u_1)$ and $Q(u_2)$ toward each other.
+- An unbiased gradient needs two successors of one pair, the *double-sampling* problem.
+- Q-learning holds the target fixed: a *semi-gradient* step.
+
+[Baird 1995]{.small}
+:::
+
+::: {.slide title="The Step 1/n Is the Mean of the Targets; Robbins–Monro Generalizes It"}
+[Why it converges]{.kicker}
+
+At the $n$-th visit of a pair, $\alpha_n = 1/n$ gives
+$Q_n = Q_{n-1} + (y_n - Q_{n-1})/n = \frac{1}{n}\sum_{k \leq n} y_k$, the mean of the targets.
+
+$$\sum_{n=1}^{\infty} \alpha_n = \infty, \qquad \sum_{n=1}^{\infty} \alpha_n^2 < \infty$$
+
+- First condition: the steps can travel any distance, so the initial value is forgotten.
+- Second condition: the accumulated noise stays finite.
+- A constant $\alpha$ fails the second: the entry keeps fluctuating, with variance of order $\alpha$.
+
+[Robbins and Monro 1951]{.small}
+:::
+
+::: {.slide title="Contraction and Robbins–Monro Steps Give Q*, in the Limit"}
+[Why it converges]{.kicker}
+
+**Proposition.** Finite $\mathcal{S}$ and $\mathcal{A}$, bounded rewards, $\gamma < 1$: if every pair is updated
+infinitely often with Robbins–Monro steps, then $Q \to Q^*$ with probability one.
+
+- The targets have no fixed mean; the contraction of $\mathcal{T}$ shrinks the largest error in expectation.
+- Calm ice, no transition noise: constant $\alpha$ contracts by $(1 - \alpha) + \alpha\gamma$, so $\alpha = 0.9$ is safe.
+- Finite budget: $\alpha_n = 1/n$ can need exponentially many updates in $1/(1 - \gamma) = 20$.
+- Default $\alpha_n = 1/(1 + 0.1\, n)$, also Robbins–Monro: the $k$-th target weighs about $k^9$.
+
+[Watkins, Dayan 1992; Tsitsiklis 1994; Even-Dar, Mansour 2003]{.small}
+:::
+
+::: {.slide title="Mask the Bootstrap on Termination, Never on Truncation"}
+[The sampled backup]{.kicker}
+
+![](../img/mdl-rl-termination.svg){width=78%}
+
+- A hole or the goal has no future, so the target is $r$ alone: `gamma * (1 - terminated) * Q[s_next].max()`.
+- The 100-step limit cuts a process that goes on. Masking there teaches that the last cell of every long episode is worthless.
+:::
+
+::: {.slide title="ε-Greedy Explores at Rate ε and Breaks Ties by Coin Flips"}
+[On the slippery lake]{.kicker}
+
+- Greedy on a zero table: every row ties, `np.argmax` picks *left*, and the agent never finds the goal.
+- An entry that is too low is never tried, so it is never corrected.
+
+$$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon/|\mathcal{A}| & a = \mathrm{argmax}_{a'} Q(s, a') \\ \epsilon/|\mathcal{A}| & \text{otherwise} \end{cases}$$
+
 @qlearning-the-implementation-3
-
-. . .
-
-@qlearning-the-implementation-4
 :::
 
-::: {.slide title="Graded Against Dynamic Programming"}
-This finite example retains the exact MDP for evaluation.
+::: {.slide title="The Loop Acts, Sees One Transition, and Moves One Entry"}
+[On the slippery lake]{.kicker}
+
+The loop body of `q_learning`. `visits` counts each pair's updates and sets its step $\alpha(n)$;
+$\epsilon$ falls from 1 to 0.05 over the first half of the episodes, then holds.
+
+```
+for episode in range(num_episodes):
+    s, done, ret = env.reset()[0], False, 0.0
+    while not done:
+        a = epsilon_greedy(Q[s], epsilon(episode), rng)
+        s_next, r, terminated, truncated, _ = env.step(a)
+        visits[s, a] += 1
+        delta = (r + gamma * (1 - terminated) * Q[s_next].max()
+                 - Q[s, a])
+        Q[s, a] += alpha(visits[s, a]) * delta
+        s, done, ret = s_next, terminated or truncated, ret + r
+    yield ret
+```
+:::
+
+::: {.slide title="Check: Training Returns Flatten near 0.5. Is the Table Bad?"}
+[Check]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!qlearning-the-implementation-5
+:::
+
+::: {.col .narrow}
+- Five seeds, 4,000 episodes, each point a mean of 200.
+- $\epsilon$ reaches 0.05 at episode 2,000.
+- $\pi^*$ succeeds 73% of the time.
+:::
+:::
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Not necessarily. The curve grades the behavior policy, which acts at random one step in twenty.
+Forced to do the same, $\pi^*$ itself succeeds only about 54% of the time. Grade the greedy table instead.
+:::
+:::
+:::
+
+::: {.slide title="Most Greedy Tables Are Optimal up to Ties after About 96,000 Steps"}
+[On the slippery lake]{.kicker}
 
 @!qlearning-reading-the-curve-honestly-1
 
-. . .
-
-The table is within hundredths of $V^*$, and the greedy policy agrees with
-$\pi^*$ within sampling error. With $\epsilon=0.05$, continuing exploration
-reduces the measured success rate of the behavior policy to $54\%$.
+- Values within about 0.03 of $V^*$; action values off by up to about 0.17, since untaken actions update mainly while exploring.
+- Typical, not guaranteed: about one seed in eight keeps a suboptimal action. Overestimates get tried and corrected; underestimates wait for exploration.
 :::
 
-::: {.slide title="Step Sizes and Finite Budgets"}
+::: {.slide title="Without Slips, α = 0.9 Almost Always Learns a Perfect Table"}
+[On the slippery lake]{.kicker}
+
+@!qlearning-reading-the-curve-honestly-3
+
+- Calm ice: each pair has one successor, so the targets carry no transition noise; 1/8 of the episode budget, about 3,500 steps.
+- Slippery ice typically took about 96,000 steps. Transition noise, not the learning rule, sets most of the cost.
+- Slippery ice: three schedules, two of them Robbins–Monro, on one entry, $Q(s_0, \textit{left}) = 0.180$.
+:::
+
+::: {.slide title="At 4,000 Episodes, Only 1/(1 + 0.1 n) Settles near 0.180"}
+[On the slippery lake]{.kicker}
+
 @!qlearning-reading-the-curve-honestly-4
-
-. . .
-
-- constant $0.9$: estimates continue to fluctuate ($0.06$ to $0.27$)
-- $1/(1 + 0.1 n)$: converged, leaning slightly high
-- $1/(1 + n)$: satisfies Robbins--Monro but leaves **all five seeds** below $0.025$ at this budget
 :::
 
-::: {.slide title="Exploration Measured by Regret"}
-A bandit is an MDP with one state. Regret assigns each pull the mean-reward
-gap from the best arm.
+::: {.slide title="The Max Makes Q-Learning Off-Policy; SARSA Is On-Policy"}
+[Off-policy learning]{.kicker}
 
-![](../img/mdl-rl-exploration.svg){width=98%}
+- $\max_{a'}$ scores a greedy continuation, whatever the behavior policy $\pi_e$ does next: *off-policy*.
+- SARSA bootstraps on the action $a'$ that $\pi_e$ actually takes at $s'$:
 
-. . .
+$$\delta = r + \gamma\, Q(s', a') - Q(s, a)$$
 
-Greedy $824$ · fixed $\epsilon$ $117$ (linear regret) · annealed $69$ ·
-UCB $37$ · Thompson $32$.
+- SARSA learns $Q^{\pi_e}$, random steps included: at $\epsilon = 0.05$ it rates cells beside holes below $\pi^*$.
+- Q-learning can learn from old data, another agent, or a log, if the data cover the pairs the greedy policy needs.
+
+[Rummery and Niranjan 1994; Sutton and Barto 2018]{.small}
 :::
 
-::: {.slide title="Optimism and Uncertainty"}
-$$a_t = \mathrm{argmax}_a \big[ \hat{\mu}(a) + \kappa \sqrt{\log t / n(a)} \big]$$
+::: {.slide title="A Max over Noisy Estimates Is Biased Upward"}
+[Off-policy learning]{.kicker}
 
-Per-arm exploration decreases as observations accumulate: logarithmic regret
-under the stated UCB conditions, whereas fixed $\epsilon$ has linear regret (proved at $\kappa = \sqrt 2$; play each arm once
-first). Thompson: sample a Beta posterior, play the argmax.
+- The max picks the entries whose errors are positive: $\mathbb{E}[\max_{a'} \hat Q(s', a')] \geq \max_{a'} \mathbb{E}[\hat Q(s', a')]$.
+- Every target that bootstraps from a noisy row inherits the bias.
+- Lake, default schedule: exact backups from zeros approach 0.180 from below, yet the median of $Q(s_0, \textit{left})$ sits at about 0.22 or above over episodes 500–1,500, then settles near 0.180.
+- Constant 0.9, noisier: about 0.5 for much of the first thousand episodes.
+- It fades as tables converge but persists with networks. Double Q-learning: one table picks the action, the other scores it.
 
-. . .
-
-**Online and offline uncertainty.** Online exploration adds a confidence
-radius that decreases with counts; offline pessimism (:numref:`sec_offline`)
-subtracts an uncertainty penalty because no new samples can correct errors.
+[van Hasselt 2010]{.small}
 :::
 
-::: {.slide title="Which Policy Is Being Learned"}
-- The $\max_{a'}$ ignores the action the behavior took: **off-policy**.
-  Learn about the greedy policy from data collected by any policy.
-- One symbol away: SARSA bootstraps on the action taken, learning the
-  behavior's value, $\epsilon$ floor and all.
-- The $\max$ also produces positive bias here: four of five final estimates
-  exceed the true $0.180$, and none are below it. Maximization bias, repaired in
-  :numref:`sec_dqn`.
+::: {.slide title="Counting the Same Transitions Gives a Model to Plan In"}
+[Planning in a learned model]{.kicker}
+
+Q-learning uses each transition once. Count them instead, $N(s, a) = \sum_{s'} N(s, a, s')$:
+
+$$\hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{N(s, a)}, \qquad \hat{r}(s, a) = \text{mean reward of the visits of } (s, a)$$
+
+- *Certainty equivalence*: run value iteration on $(\hat P, \hat r)$ as if it were exact.
+- `Counts` wraps the environment and passes every step through, so `q_learning` runs on it unchanged.
+- A pair never tried keeps a zero row: the planner treats it as a worthless dead end.
 :::
 
-::: {.slide title="Recap"}
-- TD error :eqref:`eq_td_error`: the one-step residual; reused by every
-  algorithm ahead.
-- Convergence follows from the expected update's fixed point, not from
-  minimizing the sampled squared objective (double sampling).
-- Robbins-Monro is necessary for the guarantee; budgets decide between
-  schedules that both pass.
-- Online feedback: selecting an overestimated action provides data that can
-  correct its estimate; this mechanism is absent offline.
-- Fixed $\epsilon$ has linear regret; UCB and Thompson sampling reduce
-  exploration as uncertainty decreases. The uncertainty term changes sign in
-  :numref:`sec_offline`.
-- The first $\max$ defines a greedy off-policy target; the same $\max$ can also introduce maximization bias.
+::: {.slide title="From 10,000 Steps, the Planned Policy Wins Two Episodes in Three"}
+[Planning in a learned model]{.kicker}
+
+@!qlearning-planning-in-a-learned-model-2
+
+- 500 episodes: planned about 2 in 3, Q-learning about 1 in 2; as good or better in about 9 seeds in 10.
+- About 47,000 steps: usually both optimal; planned values about twice as accurate in nearly every seed.
+- The price: $|\mathcal{S}|^2 |\mathcal{A}| \approx 1{,}000$ counts here, solved again after every batch.
+:::
+
+::: {.slide title="Check: What Does the Planner Believe about a Pair Tried Once?"}
+[Check]{.kicker}
+
+After 500 episodes, one pair was tried once and happened to move as commanded (probability 1/3).
+Another pair was never tried. What do $\hat P$ and the planner make of each?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Tried once: $\hat P$ puts probability 1 on the observed successor and ignores the 2/3 of slips,
+so a lucky pair looks better than it is. Never tried: a zero row, a dead end worth nothing. The planner trusts both.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- $\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a)$, $Q \leftarrow Q + \alpha\delta$: a value-iteration step in expectation.
+- Semi-gradient, not least squares: the target's variance moves the least-squares minimizer.
+- Robbins–Monro guarantees the limit; at 4,000 episodes only $1/(1 + 0.1\,n)$ settles near 0.180.
+- Lake: in most runs the greedy table is optimal (73%) after about 96,000 steps; calm ice, about 3,500.
+- Exploring at $\epsilon = 0.05$ costs even $\pi^*$ its success: 73% falls to 54%.
+- The max makes the target off-policy and biases noisy estimates upward.
+- Planning in the counted model: about 2 in 3 against 1 in 2 from 10,000 steps.
+
+**Next:** can a smarter rule than $\epsilon$-greedy learn as much while losing less?
 :::

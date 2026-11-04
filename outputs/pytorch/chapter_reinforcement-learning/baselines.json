@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8d5205d6dd1d4dbc6c9845741f8e47319026699d8bbf2ddb5f2bcc5ce0d211bf",
+    "d2l_lib_fingerprint": "sha256:f88b44a32b2ba225b9a4aa6c7d6673b00d976f52e0be766763102e4e8f6779ac",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,17 +14,17 @@
       "outputs": []
     },
     "baselines-baselines-advantages-and-variance-reduction-2": {
-      "code_fingerprint": "sha256:4437c71b0b8e562028a44fc6207516076b9409a65b8dfddf7b968bafec8d4c21",
+      "code_fingerprint": "sha256:20499d87690bafa58ecb3e62adfb1012e2492dd586c68041c9900b3bb70cab05",
       "kind": "text",
       "outputs": []
     },
     "baselines-reward-to-go-and-causality": {
-      "code_fingerprint": "sha256:fc4bf9c8f2639a5b88b1d718fcc34f354d63d1f6aed6c3c0b9e918843b9e9c83",
+      "code_fingerprint": "sha256:69ccb38ff5f493aaa50492349f88aa5b285cb41d5b67d377753799f4dd51520b",
       "kind": "text",
       "outputs": []
     },
     "baselines-estimator-hygiene": {
-      "code_fingerprint": "sha256:931d7888ff2a825dfd91073590d2bccf5b0a0be7da263ceb3d8b27b922563a6d",
+      "code_fingerprint": "sha256:3e0eb9342c09293f06b87c304a972a58610789fd85d62b16b6cc781f691bd3e6",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling": {
-      "code_fingerprint": "sha256:d189d2dc61f8a55c9c2c5a46a1e703b81fc84e2ce1a686f033b874c2db99ce5a",
+      "code_fingerprint": "sha256:bbef524d684468987376c1826d3889c8753f6d662d8e90d1b17b72c675fc0bb8",
       "kind": "text",
       "outputs": []
     },
     "baselines-leave-one-out": {
-      "code_fingerprint": "sha256:fb8676d2e97c65c30b69c44c1720c917b2a810999cab8b874a32c1fa93eacacd",
+      "code_fingerprint": "sha256:495f23145f6762cbdbb248a348feeef6acb201688dda9d11c242d1a7ce9203b1",
       "kind": "text",
       "outputs": [
         {
@@ -50,8 +50,35 @@
         }
       ]
     },
+    "baselines-the-leave-one-out-baseline-1": {
+      "code_fingerprint": "sha256:677149565f4719f09e25372cea3316725ad17363582fb3b6db80d560e83a133c",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-the-group-is-the-baseline-3": {
+      "code_fingerprint": "sha256:c7736fb8840438268cbfd8bac4dd0aac9921385307a76c347731d7cf4057ec0a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E of the group-centered update is (K-1)/K of the gradient: True\nrescaled by K/(K-1), leave-one-out, it is exact: True\n"
+        }
+      ]
+    },
+    "rl-sequences-the-group-is-the-baseline-2": {
+      "code_fingerprint": "sha256:9b6ca8b3b6308a35b1877d57651f2a32d10c18bc9619f52365fa2ad24dee8e53",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  1: success of a sampled response 0.062\nK =  2: success of a sampled response 0.500\nK =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+        }
+      ]
+    },
     "baselines-summing-over-episodes-of-different-lengths": {
-      "code_fingerprint": "sha256:79c8fc920df2a4155dfb4a425d8dbf840b5e92e1780805721427bba027264677",
+      "code_fingerprint": "sha256:e98cae4b9c782d44dd9907d9fd5240542e462477d5192a8ad4af3a999443e023",
       "kind": "text",
       "outputs": [
         {
@@ -62,65 +89,85 @@
       ]
     },
     "baselines-five-estimators-1": {
-      "code_fingerprint": "sha256:8e8097c7466864d6927411f02a0ff3e260e9cd5a9413678f9a845c7268d3aecb",
+      "code_fingerprint": "sha256:ee7099d85c575aecb394615f4c3c09af377289fad5dc192344257022cbf9b641",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        return: cos(mean, exact) = 0.98, relative variance =   11.1\n  reward-to-go: cos(mean, exact) = 0.97, relative variance =   10.6\n      centered: cos(mean, exact) = 0.98, relative variance =    7.1\n    normalized: cos(mean, exact) = 0.97, relative variance =    6.9\nexact baseline: cos(mean, exact) = 0.98, relative variance =    5.3\n"
+          "text": "     lake         return: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n     lake         causal: |mean|/|grad J| = 0.99, cos = 0.998, noise =  13.6\n     lake   reward-to-go: |mean|/|grad J| = 1.38, cos = 0.987, noise =  12.4\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     lake       centered: |mean|/|grad J| = 1.11, cos = 0.986, noise =   7.6\n     lake     normalized: |mean|/|grad J| = 3.28, cos = 0.982, noise =   7.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     lake value baseline: |mean|/|grad J| = 1.38, cos = 0.990, noise =   5.7\nstep cost         return: |mean|/|grad J| = 0.98, cos = 0.996, noise =  19.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step cost         causal: |mean|/|grad J| = 1.00, cos = 0.999, noise =   5.8\nstep cost   reward-to-go: |mean|/|grad J| = 1.29, cos = 0.989, noise =   5.4\nstep cost       centered: |mean|/|grad J| = 1.07, cos = 0.985, noise =   5.6\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step cost     normalized: |mean|/|grad J| = 2.12, cos = 0.980, noise =   5.8\nstep cost value baseline: |mean|/|grad J| = 1.28, cos = 0.989, noise =   3.0\n"
         }
       ]
     },
     "baselines-five-estimators-2": {
-      "code_fingerprint": "sha256:81c413651a946b7026f5244686a8949371dc122b02dccf839130a71a608c62fc",
+      "code_fingerprint": "sha256:38e21264de4f665750ec26e3ed8b198066bb360d42edceee0793e9396a337cb8",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-3": {
-      "code_fingerprint": "sha256:49abd91027d1c5463aad2bf5ed1c86926d6425a62dbf87ce78f1651e52faaf72",
+      "code_fingerprint": "sha256:13220b51d734e044df471bff67a50eae0deb39f09fd9c5a42c1822e93fc80ecd",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-4": {
-      "code_fingerprint": "sha256:5f8cfda93998230f8a9781222e79cf631843bfeba701fd7fc4cf6296aa119fd1",
+      "code_fingerprint": "sha256:2eec000db2d922e16025b8af8f1a532f9d449cdea6f5e63d8e0b9b75563070dc",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-5": {
-      "code_fingerprint": "sha256:eb5489cc466334b327e48e72e82b3612f389df799bf123137654491f2a507856",
+      "code_fingerprint": "sha256:4d652c8dcfab6204b2215cfb870ffb60f25671027b46d7016a4f6f2ccb892456",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
-          "bytes": 73404,
-          "sha256": "sha256:ebd2e302e409bf867d3b26088a5d3bb7e369c3e3dbad322cc125dcd7201f9357"
+          "bytes": 51414,
+          "sha256": "sha256:c712142addc5afbcc6a1ef534b930b309921f55842436ecb69ab0ca1ede2d36e"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:04179fa333510f918befc3ec0438746b604e82bad826bf749a071bcc10c3195d",
+      "code_fingerprint": "sha256:ab28e511a4cb5b66b8e5c6869aa40108cc4d3d7c86995309e7f066f6f71889e9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          return: updates to 90%: median  60.0, fastest  26, slowest  92\n                  mean |step| over the first 40 updates: 0.20\n    reward-to-go: updates to 90%: median  40.0, fastest  22, slowest  95\n                  mean |step| over the first 40 updates: 0.38\n        centered: updates to 90%: median  58.0, fastest  43, slowest 108\n                  mean |step| over the first 40 updates: 0.15\n      normalized: updates to 90%: median  30.0, fastest   8, slowest  72\n                  mean |step| over the first 40 updates: 0.76\nlearned baseline: updates to 90%: median  40.5, fastest  22, slowest  84\n                  mean |step| over the first 40 updates: 0.32\n"
+          "text": "eta = 2\n        return: to 90%: median  63.0 [ 42, 108], never  0, |step| 0.43\n  reward-to-go: to 90%: median  51.0 [ 29, 109], never  0, |step| 0.53\n      centered: to 90%: median  58.5 [ 39, 119], never  0, |step| 0.32\n    normalized: to 90%: median  32.0 [ 15,  85], never  0, |step| 0.93\nvalue baseline: to 90%: median  52.0 [ 38,  97], never  0, |step| 0.37\nexact baseline: to 90%: median  50.5 [ 33,  96], never  0, |step| 0.40\neta = 16\n  reward-to-go: to 90%: median  35.5 [ 11, 150], never  3, |step| 1.58\nvalue baseline: to 90%: median  28.0 [ 11, 150], never  2, |step| 1.25\nexact baseline: to 90%: median  23.0 [ 11,  36], never  0, |step| 1.69\n"
         }
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:affdb4b9e7234b611b8497d0161c5f5518769a7365f09f4e90d0efd1366bba28",
+      "code_fingerprint": "sha256:57ab22c7d874c3cacee42c836c7b010f6b3c0f71a7669badac47ec803a77698d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 48156,
-          "sha256": "sha256:001e579bbbd99977c83f8809781338a55d7c0dd6cbc657e48e2f98fdad07055c"
+          "bytes": 45693,
+          "sha256": "sha256:5756647eb82d5aa8fb3741f7adaf1cb3b96c203f746384a507d3781e77cfb478"
         }
       ]
     }

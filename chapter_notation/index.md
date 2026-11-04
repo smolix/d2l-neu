@@ -102,4 +102,37 @@ $\mathbb{Z}$.
 
 
 
+## Reinforcement Learning
+
+These symbols belong to :numref:`chap_reinforcement_learning` and the chapter after it; :numref:`tab_rl_notation` lists them with the section that defines each.
+
+* $\mathcal{S}$, $\mathcal{A}$: the sets of states and actions
+* $s_t$, $a_t$, $r_t$: the state, action, and reward at step $t$
+* $P(s' \mid s, a)$: the transition kernel, the probability of reaching state $s'$ from state $s$ under action $a$
+* $r(s, a)$: the expected reward of action $a$ at state $s$
+* $\gamma$: the discount factor
+* $\mu_0$: the start-state distribution (for language models, the distribution of prompts)
+* $\tau$: a trajectory $(s_0, a_0, r_0, s_1, \ldots)$
+* $R(\tau)$: the discounted return $\sum_t \gamma^t r_t$ of a trajectory $\tau$
+* $\pi(a \mid s)$: a policy, the probability of action $a$ at state $s$; $\pi(s)$ is the action of a deterministic policy
+* $\pi_\theta$: a policy with parameters $\theta$
+* $J(\theta)$: the expected return of $\pi_\theta$
+* $V^\pi(s)$, $Q^\pi(s, a)$: the expected return under $\pi$ from state $s$, and from state $s$ after action $a$
+* $V^*$, $Q^*$: the value functions of an optimal policy
+* $A^\pi(s, a)$: the advantage $Q^\pi(s, a) - V^\pi(s)$
+* $\mathcal{T}$: the Bellman operator
+* $d^\pi_t$, $d^\pi_\gamma$: the distribution of the state at step $t$ under $\pi$, and its discounted average over steps
+* $\delta$, $\delta_t$: the temporal-difference error of one transition, of the transition at step $t$
+* $\alpha$: the step size of a temporal-difference update
+* $\eta$: the step size of a policy update
+* $\eta_V$: the step size of a value-baseline update
+* $\epsilon$: the exploration rate of $\epsilon$-greedy action selection, or the half-width of a clipped probability ratio
+* $\varepsilon$: the per-step probability that a cloned policy disagrees with the expert (not the exploration rate $\epsilon$)
+* $\kappa$: the weight of an uncertainty bonus (not the condition number $\kappa(\mathbf{X})$)
+* $\hat{G}_t$: the reward-to-go, the discounted sum of the rewards from step $t$ on
+* $b$: a baseline subtracted from a return
+* $K$: the number of responses sampled per prompt
+
+
+
 [Discussions](https://d2l.discourse.group/t/25)

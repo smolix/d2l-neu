@@ -42,9 +42,9 @@ if tab.selected('pytorch'):
                              nn.Linear(64, 1))
 if tab.selected('jax'):
     def make_critic(rngs):
-        return nnx.Sequential(nnx.Linear(4, 64, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(64, 64, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(64, 1, rngs=rngs))
+        return nnx.Sequential(d2l.Linear(4, 64, rngs=rngs), jax.nn.relu,
+                              d2l.Linear(64, 64, rngs=rngs), jax.nn.relu,
+                              d2l.Linear(64, 1, rngs=rngs))
 ```
 
 ## The Objective and Its Two Backups
@@ -154,15 +154,17 @@ reported entropy and in $\alpha\log\pi$ inside the target. Omitting it
 therefore shifts reported log densities by $\log c$. The quadrature check
 below verifies the density convention used here.
 
-The policy adds a reparameterized `sample` method that returns both the
-bounded action and its log-probability. Its mean and log standard
-deviation are state-dependent. We clamp the latter to $[-5,2]$ as a
-numerical implementation choice; without this bound, the present setup
+The policy network is the `GaussianHead` of :numref:`sec_deeprl` with two
+ReLU layers as its trunk and `state_std=True`, so both its mean and its
+log standard deviation are state-dependent. The policy adds a
+reparameterized `sample` method that returns both the bounded action and
+its log-probability. The head clamps the log standard deviation to
+$[-5,2]$ as a numerical implementation choice; without this bound, the present setup
 produced very small scales and divergent log densities within roughly one
 thousand updates. This observation is specific to the stated task and
 hyperparameters, not a property of all SAC implementations.
 
-During training, `log_prob` receives the stored pre-squash variable $u$,
+During training, `log_prob_u` receives the stored pre-squash variable $u$,
 so no inverse hyperbolic tangent is required on the differentiable path.
 The quadrature diagnostic inverts the transformation only to evaluate the
 density on a fixed action grid.
@@ -170,19 +172,16 @@ density on a fixed action grid.
 ```{.python .input #sac-the-change-of-variables}
 %%tab pytorch
 class SquashedGaussianPolicy(nn.Module):
-    """A state-dependent Gaussian squashed through a = c tanh(u)."""
+    """d2l.GaussianHead with SAC's network (two ReLU layers and a
+    state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64):
         super().__init__()
-        self.trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                                   nn.Linear(hidden, hidden), nn.ReLU())
-        self.mu = nn.Linear(hidden, act_dim)
-        self.log_std = nn.Linear(hidden, act_dim)
+        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                              nn.Linear(hidden, hidden), nn.ReLU())
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk)
 
-    def forward(self, obs):
-        h = self.trunk(obs)
-        return self.mu(h), self.log_std(h).clamp(-5, 2).exp()
-
-    def log_prob(self, u, mean, std):
+    def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
         logdet = 2 * (np.log(2) - u - nn.functional.softplus(-2 * u))
         return (torch.distributions.Normal(mean, std).log_prob(u)
@@ -190,38 +189,35 @@ class SquashedGaussianPolicy(nn.Module):
 
     def sample(self, obs):
         """A reparameterized action and its log-probability, differentiable."""
-        mean, std = self(obs)
+        mean, std = self.policy(obs)
         u = mean + std * torch.randn_like(std)
-        return c * torch.tanh(u), self.log_prob(u, mean, std)
+        return c * torch.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
         with torch.no_grad():
-            mean, std = self(torch.as_tensor(obs))
+            mean, std = self.policy(torch.as_tensor(obs))
         u = mean.numpy() + std.numpy() * rng.standard_normal(
             mean.shape, dtype=np.float32)
         return c * np.tanh(u)
 
     def act_greedy(self, obs, rng=None):
         with torch.no_grad():
-            return c * np.tanh(self(torch.as_tensor(obs))[0].numpy())
+            return c * np.tanh(self.policy(torch.as_tensor(obs))[0].numpy())
 ```
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab jax
 class SquashedGaussianPolicy(nnx.Module):
-    """A state-dependent Gaussian squashed through a = c tanh(u)."""
+    """d2l.GaussianHead with SAC's network (two ReLU layers and a
+    state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64, rngs=None):
-        self.trunk = nnx.Sequential(
-            nnx.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
-            nnx.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        self.mu = nnx.Linear(hidden, act_dim, rngs=rngs)
-        self.log_std = nnx.Linear(hidden, act_dim, rngs=rngs)
+        trunk = nnx.Sequential(
+            d2l.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
+            d2l.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
+                                       state_std=True, trunk=trunk)
 
-    def __call__(self, obs):
-        h = self.trunk(obs)
-        return self.mu(h), jnp.exp(jnp.clip(self.log_std(h), -5, 2))
-
-    def log_prob(self, u, mean, std):
+    def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
         logdet = 2 * (jnp.log(2.0) - u - jax.nn.softplus(-2 * u))
         return (jax.scipy.stats.norm.logpdf(u, mean, std)
@@ -229,25 +225,20 @@ class SquashedGaussianPolicy(nnx.Module):
 
     def sample(self, obs, key):
         """A reparameterized action and its log-probability, differentiable."""
-        mean, std = self(obs)
+        mean, std = self.policy(obs)
         u = mean + std * jax.random.normal(key, std.shape)
-        return c * jnp.tanh(u), self.log_prob(u, mean, std)
+        return c * jnp.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
-        if not hasattr(self, '_fwd'):   # compile the fixed-shape acting
-            self._fwd = nnx.cached_partial(nnx.jit(lambda net, o: net(o)),
-                                           self)  # forward, once
-        mean, std = self._fwd(jnp.asarray(obs))
-        u = np.asarray(mean) + np.asarray(std) * rng.standard_normal(
-            mean.shape, dtype=np.float32)
+        mean, std = d2l.forward_np(self.policy, obs)   # compiled forward
+        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
         return c * np.tanh(u)
 
     def act_greedy(self, obs, rng=None):
-        mean, _ = self(jnp.asarray(obs))
-        return c * np.tanh(np.asarray(mean))
+        return c * np.tanh(d2l.forward_np(self.policy, obs)[0])
 ```
 
-Inside `log_prob`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.
+Inside `log_prob_u`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.
 
 ### A Numerically Stable Log-Determinant
 
@@ -261,7 +252,7 @@ $$
 $$
 :eqlabel:`eq_tanh_logdet_stable`
 
-This identity is exact for every $u$ and avoids subtracting nearly equal numbers; `log_prob` uses this form. The following float32 calculation compares the direct expression, an epsilon-guarded expression, and the stable identity:
+This identity is exact for every $u$ and avoids subtracting nearly equal numbers; `log_prob_u` uses this form. The following float32 calculation compares the direct expression, an epsilon-guarded expression, and the stable identity:
 
 ```{.python .input #sac-the-stable-form-and-what-the-epsilon-hides-1}
 %%tab pytorch, jax
@@ -540,7 +531,7 @@ def steps_to(r, level=-200, k=5):
     hit = np.flatnonzero(s >= level)
     return int(r[hit[0] + k - 1, 0]) if len(hit) else None
 
-d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
+d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs}, x=grid / 1000,
                 xlabel='thousand environment steps', ylabel='episode return',
                 reference=-200)
 for arm in runs:
@@ -548,7 +539,7 @@ for arm in runs:
           f'{[steps_to(r) for r in runs[arm]]}')
 ```
 
-Every seed of both variants starts near $-1200$ or below and crosses $-200$ before ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task for 300 updates of 8 episodes and 200 steps, or $480{,}000$ environment steps. That experiment reported improvement, but no seed reached $-200$. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap throughout training, and their crossing times have no consistent ordering across frameworks. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
+Every seed of both variants starts near $-1200$ or below and crosses $-200$ within about ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task in updates of 8 episodes of 200 steps. Every seed there also passes $-200$, but only after roughly 150 to 300 updates, or $0.25$ to $0.5$ million environment steps, about 25 to 50 times as many. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap during nearly all of training, and neither variant consistently crosses first. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
 
 ### Policy Entropy and Temperature
 :label:`subsec_sac-entropy`
@@ -560,7 +551,7 @@ commonly used autotuning target $-\dim\mathcal{A}=-1$:
 ```{.python .input #sac-the-entropy-the-policy-keeps-1}
 %%tab pytorch, jax
 d2l.plot_curves({arm: on_grid(arm, 2) for arm in runs},
-                xlabel='thousand environment steps',
+                x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='policy entropy (nats)', reference=-1)
 for arm in runs:
     print(f'{arm}: entropy over the last 20 episodes, per seed '
@@ -603,7 +594,7 @@ for arm in runs:
               f'stochastic {s:7.1f}, noise cost {g - s:+6.1f}')
 ```
 
-Across variants and frameworks, deterministic returns lie between about $-140$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
+Across variants and seeds, deterministic returns lie between about $-120$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
 
 ### Critic Calibration: Predicted and Realized Returns
 :label:`subsec_sac-calibration`
@@ -623,10 +614,10 @@ def calibration(agent, seed, num_episodes=20):
         first = True
         while not done:
             with torch.no_grad():
-                mean, std = agent.actor(torch.as_tensor(obs))
+                mean, std = agent.actor.policy(torch.as_tensor(obs))
                 u = mean + std * torch.as_tensor(rng.standard_normal(
                     mean.shape, dtype=np.float32))
-                logp = float(agent.actor.log_prob(u, mean, std))
+                logp = float(agent.actor.log_prob_u(u, mean, std))
             a = c * np.tanh(u.numpy())
             if first:
                 with torch.no_grad():
@@ -661,10 +652,10 @@ def calibration(agent, seed, num_episodes=20):
         soft = plain = 0.0
         first = True
         while not done:
-            mean, std = agent.actor(jnp.asarray(obs))
+            mean, std = agent.actor.policy(jnp.asarray(obs))
             u = np.asarray(mean) + np.asarray(std) * rng.standard_normal(
                 mean.shape, dtype=np.float32)
-            logp = float(agent.actor.log_prob(jnp.asarray(u), mean, std))
+            logp = float(agent.actor.log_prob_u(jnp.asarray(u), mean, std))
             a = c * np.tanh(u)
             if first:
                 preds.append(float(agent.min_q(jnp.asarray(obs),
@@ -686,13 +677,13 @@ for arm in runs:
               f'(soft) {soft:7.1f}, gap {pred - soft:+6.1f}, plain {plain:7.1f}')
 ```
 
-The result is consistent across seeds and frameworks. Neither variant substantially overestimates the realized soft return. The single critic's prediction is typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to sixty points. The absolute gap is larger for the twin-critic variant on every seed, consistent with taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, pessimistic targets are intended to reduce feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
+The result is consistent across seeds. Neither variant substantially overestimates the realized soft return. The single critic's prediction is typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to eighty points. The absolute gap is larger for the twin-critic variant on every seed, consistent with taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, pessimistic targets are intended to reduce feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
 
 ## Summary
 
 SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha\log\pi$ to the bootstrap target, and soft policy improvement uses a pathwise gradient through the critic. A tanh transformation enforces bounded actions; its log density must include the change-of-variables determinant, evaluated in a numerically stable form. Replay, Polyak-averaged target networks, and the minimum of two critics provide the off-policy value-learning machinery. No target actor or importance ratios are required.
 
-**Experimental scope.** The density and soft-backup checks are deterministic. Training uses three seeds per method and framework. Every SAC run reaches return $-200$ within $10{,}000$ environment steps on Pendulum, while deterministic final evaluations lie roughly between $-140$ and $-190$. Twin and single critics have similar returns at this budget; the twin-critic minimum is more pessimistic in every calibration comparison. Exact crossing times and calibration gaps vary across seeds.
+**Experimental scope.** The density and soft-backup checks are deterministic. Training uses three seeds per method. Every SAC run reaches return $-200$ within about $10{,}000$ environment steps on Pendulum, while deterministic final evaluations lie roughly between $-120$ and $-190$. Twin and single critics have similar returns at this budget; the twin-critic minimum is more pessimistic in every calibration comparison. Exact crossing times and calibration gaps vary across seeds.
 
 ## Exercises
 
@@ -775,7 +766,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 
        At $\mu = 0$, which term grows with $\sigma$, and which one shrinks?
     1. Evaluate $H$ at $\mu = 0$ for $\sigma \in \{0.1, 0.3, 1, 3\}$ as an
-       expectation over $u$, by Monte Carlo with `log_prob` or by quadrature
+       expectation over $u$, by Monte Carlo with `log_prob_u` or by quadrature
        in $u$. Near which $\sigma$ does $H$ peak? Compare the peak with
        $\log 2c$, the entropy of the uniform distribution on $[-c, c]$, which
        no density on this interval exceeds.
@@ -865,7 +856,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
        `log(1 - tanh(u)**2 + 1e-6)` at $u \in \{3, 5, 7, 10, 20\}$, and
        compare both with $-2 \tanh u$. Beyond which $|u|$ does an actor
        trained with the guarded expression lose the push of part a?
-    1. Delete `logdet` from `log_prob`. Show that the remaining entropy term
+    1. Delete `logdet` from `log_prob_u`. Show that the remaining entropy term
        changes the loss at the rate $-\alpha/\sigma$ per unit of $\sigma$ and
        does not depend on $\mu$. Why can the critic term of the loss not hold
        $\sigma$ back once $u$ saturates? Which entropy does the trace report
@@ -946,8 +937,6 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
        and compare its return against environment steps with `train_dqn` of
        :numref:`sec_dqn` at the same budget and seeds.
    :exlabel:`ex_sac-discrete`
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36805)
 
@@ -1080,8 +1069,8 @@ incorrect zero continuation value at step 200.
 
 . . .
 
-14.7's REINFORCE spent $480{,}000$ steps on this task and never
-reached $-200$. Pathwise actor gradients and replay both improve reuse of
+REINFORCE with a learned baseline also reaches $-200$, but only after
+$0.25$--$0.5$ million steps, 25--50 times as many. Pathwise actor gradients and replay both improve reuse of
 collected transitions. The two variants are
 indistinguishable on this axis.
 :::
@@ -1109,6 +1098,6 @@ indistinguishable on this axis.
 
 Neither variant substantially overestimates the realized soft
 return. The single critic is near calibrated; the minimum of two
-critics underestimates by thirty to sixty points on every seed.
+critics underestimates by thirty to eighty points on every seed.
 At this budget, the return curves remain similar.
 :::

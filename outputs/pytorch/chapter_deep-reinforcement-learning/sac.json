@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:91b4861511c85720be445c97eeaab9dc6ddf98a84c88e7f4d6ada6f4fcda3064",
+    "d2l_lib_fingerprint": "sha256:73d1a9d53eafef55a85537fcd5d471a6e5e6110397cad24101c410444c75dc51",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,12 +30,12 @@
       ]
     },
     "sac-the-change-of-variables": {
-      "code_fingerprint": "sha256:b763c5b33beda99502c29e409b06e1132563021b510f92ffd82eb929ecc84743",
+      "code_fingerprint": "sha256:9e042c17c31dab048cc750d287c2b56dba59c8fa4a053e2a66be2b0a2de2670f",
       "kind": "text",
       "outputs": []
     },
     "sac-the-stable-form-and-what-the-epsilon-hides-1": {
-      "code_fingerprint": "sha256:870c3a2ac7e2508f07828cf1806362f46571314e493aca61f77dbf0140458e5c",
+      "code_fingerprint": "sha256:538ec37d334266464ebf0729e0c6f7e08369099219b9793c9dd36d78e2f5af59",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "sac-the-stable-form-and-what-the-epsilon-hides-2": {
-      "code_fingerprint": "sha256:68886874d5bbba7512fe1bbba14b55e5dc98ed034b9f0f69284434e8a7500660",
+      "code_fingerprint": "sha256:f26ec0ac9d0e3f5bdbe7bb3ce0e9b7b007540b67472751564aca00d8b61d06c3",
       "kind": "text",
       "outputs": [
         {
@@ -57,32 +57,32 @@
       ]
     },
     "sac-nothing-here-needs-a-ratio-1": {
-      "code_fingerprint": "sha256:a2ed2ddf3aaafa783daae88ed547b59d8d5c0dde35b40d48e2c2fd40fd72c511",
+      "code_fingerprint": "sha256:4da1e71d68408b67d6c2733fcf6f31bf1f20dd83623e077eb58a059df9b7461d",
       "kind": "text",
       "outputs": []
     },
     "sac-nothing-here-needs-a-ratio-2": {
-      "code_fingerprint": "sha256:325c2376234bd7d0ddea7f9fb53ae8a275fd984bc1d329b228705d36caa9181e",
+      "code_fingerprint": "sha256:452d5d48b096124d2bc056531556616d0e2b58047079ee17d78fab12aa94a568",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-1": {
-      "code_fingerprint": "sha256:f0fe69a78f6a6d19f62b05c4607bbe163240f7a6ea3ee5cd73ae927f0131c930",
+      "code_fingerprint": "sha256:74413dcee04bcaacaecf083a58101f473beff6e6e6b67d90d157efefa1bfe0a8",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-2": {
-      "code_fingerprint": "sha256:5c1fdf18b868ffcc2d7f319505ba3058c94bbce6a1cbed245848debbd0bee442",
+      "code_fingerprint": "sha256:d03610dcff250d6f140f413c6008d55ef849a5ce3891e17a9caf22388d04690b",
       "kind": "text",
       "outputs": []
     },
     "sac-one-update-3": {
-      "code_fingerprint": "sha256:725bc7a4a46f970fcfb1473e979aa08835181ea36e2e368a3d96fb771b31dbb1",
+      "code_fingerprint": "sha256:4270ebe953dd9ad964f17474145f35b66b67c51b143c4f678344f621cc711899",
       "kind": "text",
       "outputs": []
     },
     "sac-sample-efficiency-on-the-axis-that-bills": {
-      "code_fingerprint": "sha256:bbf7b6ce012a663cfe7c920c3a104af2713e3fe52e8a367e997c51bdafb06ed0",
+      "code_fingerprint": "sha256:fb26e65d46879196a8e6a7110d17c0f8a7346237f6ee13f2b70a89e24ada76e6",
       "kind": "mixed",
       "outputs": [
         {
@@ -94,13 +94,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
-          "bytes": 34614,
-          "sha256": "sha256:847f2eaed816ca2c991753352c97e552d8a5c663d37c79c21dc3ab58c59542c9"
+          "bytes": 34689,
+          "sha256": "sha256:61048c8686de5c421ce86053709b1c7b9cf4e8cb8c17bc38a373df490c02ad41"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-1": {
-      "code_fingerprint": "sha256:7a55f36b2dcb5233809038627f3de5ddf9dcad97c2fae752efd661c208144352",
+      "code_fingerprint": "sha256:b24e2fb1210eed68b788cf694f277471439cff4f9087be21c2fc4fe2f15481eb",
       "kind": "mixed",
       "outputs": [
         {
@@ -112,13 +112,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
-          "bytes": 34818,
-          "sha256": "sha256:3bbb46c6b44bda7b07c8a463e1876b40aa1903aebe6b5927d4ffeb8d113c97dd"
+          "bytes": 34896,
+          "sha256": "sha256:f04fe4032cd17a8712cb86a5c23b6df954eab2b6754bb92b02a42e330d2a4fb1"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-2": {
-      "code_fingerprint": "sha256:8fabbfe7553dc811aeb32b64c0a8e7d4b9ee0cda45d1bcc2a379d9313271dafa",
+      "code_fingerprint": "sha256:a8e5364314260761a72285b75572fd45dea0939ee7d4153ad46e6cdf95cdb001",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "sac-honest-promises-predicted-against-delivered": {
-      "code_fingerprint": "sha256:ab31d41119995be7bf5d701870710f406e2141012aa08824986d11e61328cf1e",
+      "code_fingerprint": "sha256:5de4590abed858cc535a35682a8e0794af5e9b0033e012971ac552d5f7e6703e",
       "kind": "text",
       "outputs": [
         {

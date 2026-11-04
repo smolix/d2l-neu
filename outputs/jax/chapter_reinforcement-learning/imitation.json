@@ -4,148 +4,152 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:b8bb12735fc9ff88f0994d6ca1e8a2340c7634d4b4521790e43efdcdb010c9ed",
+    "d2l_lib_fingerprint": "sha256:3fb912e80b11a2b75bef8b6e175b19f3ab19246d769c95d9eee212933dd4047a",
     "max_inline_bytes": 0
   },
   "cells": {
     "imitation-learning-from-demonstrations": {
-      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
+      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-1": {
-      "code_fingerprint": "sha256:3961256a25e8b52513d1e8aeb274e856e4abd2b833e265c2e41b676c5e125f0b",
+      "code_fingerprint": "sha256:12f15eb8871c25c1129847ce14c005bba8c6b5044c416310f5d3e26d268c3727",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "96 state-action pairs from 3 expert episodes, covering 7 of 11 reachable states\n"
+          "text": "18 state-action pairs from 3 expert episodes, covering states [ 0  4  8  9 13 14]\n"
         }
       ]
     },
     "imitation-the-reduction-to-classification-2": {
-      "code_fingerprint": "sha256:a6dae3277da61d50590fa073933e57c55970b7f0165cd4914069959a295de664",
+      "code_fingerprint": "sha256:ff277f23ce5007c28149ff132ec8ee55ad410da9e0d8d8d2b0eb525b187b6d42",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-3": {
-      "code_fingerprint": "sha256:ca23511d9da4d88c5ddb5c56df37e88dce7cd4852e9c71d0dafe9bab9c0dd2c2",
+      "code_fingerprint": "sha256:ae2fc72acf6730fff8e53def25d82b0117c28dd6fba9382a5bc206ea58d22feb",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-the-reduction-to-classification-5": {
+      "code_fingerprint": "sha256:8fc12b93da692b6657ece0021fb373e115f2295d111ad994b7ebe8ede357964b",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-4": {
-      "code_fingerprint": "sha256:59634fdc7db092a7f55821af32e093218af46023849db7491d85c685bd36be60",
+      "code_fingerprint": "sha256:f66b36f0b37324746f8bf987ec600eec4b11f8991c11086a2eed8f888a540a17",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cross-entropy on the demonstrations after the fit: 0.004\n"
+          "text": "clone pi(.|s=9): [0.061 0.818 0.061 0.061]\nclone pi(.|s=10): [0.25 0.25 0.25 0.25]\n"
+        }
+      ]
+    },
+    "imitation-what-the-reduction-quietly-assumes-1": {
+      "code_fingerprint": "sha256:ffcbfb1d27c8d7f36b85f7137084037934d2f63a38329a6a1b08ab863f2effd2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        expert: reaches the goal 1.000, falls into a hole 0.000\n  greedy clone: reaches the goal 1.000, falls into a hole 0.000\nsampling clone: reaches the goal 0.660, falls into a hole 0.340\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clone pi(.|s=9): [0.001 0.996 0.001 0.001]\nclone pi(.|s=3): [0.25 0.25 0.25 0.25]\n"
-        }
-      ]
-    },
-    "imitation-the-reduction-to-classification-5": {
-      "code_fingerprint": "sha256:b120b2ca23412c8b3998df1e53a231dbcae777b6d112e3ad84a5a9e32b2eb995",
-      "kind": "text",
-      "outputs": []
-    },
-    "imitation-what-the-reduction-quietly-assumes-1": {
-      "code_fingerprint": "sha256:90530176669a263426d4f50483681890ba069c7f9224ec89dce1a08ad8781224",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "mistakes on the 96 demonstration pairs: 0\nsuccess rate: expert 73.4%, clone 17.5%\n"
+          "text": "sampling clone, 1000 episodes of bc.act: reaches the goal 0.656\n"
         }
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-2": {
-      "code_fingerprint": "sha256:773c2e1d296f501edd1d5dab61e79e71e57445c618c16ca95b9be784e141baf7",
+      "code_fingerprint": "sha256:a970d70ac6a07defbc5453605a868a449336f9cbfa9f2401c087f3077e9d88bd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 episodes: median success 44%, worst 0%, over ten datasets\n"
+          "text": "disagreement with the expert\n  on the training pairs:        0.182\n  on 100 fresh expert episodes: 0.182\n  on the clone's own states:    0.216\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 3 episodes: median success 73%, worst 70%, over ten datasets\n"
+          "text": "clone of   1 expert episodes: reaches the goal 0.660\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 episodes: median success 73%, worst 70%, over ten datasets\n"
+          "text": "clone of  10 expert episodes: reaches the goal 0.660\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clone of 100 expert episodes: reaches the goal 0.660\n"
+        }
+      ]
+    },
+    "imitation-distribution-shift-between-training-and-deployment-1": {
+      "code_fingerprint": "sha256:4abf4cf0fe9ae7845a059ff54982cdfe257d54f4040062982b2eb2ba1a9a2152",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "share of 200 datasets whose greedy clone is below half the expert (0.730):\n  expert episodes per dataset  1: 32.0%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  expert episodes per dataset  3: 1.5%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  expert episodes per dataset 10: 0.0%\n"
         }
       ]
     },
     "imitation-the-proposition": {
-      "code_fingerprint": "sha256:16b972f409e02b5af1dd385be448141b4b2321fa1aee1b65cae2507d99ec87b8",
+      "code_fingerprint": "sha256:a2ae65e3fdfe6c563fd71ec485b5c916c4d64fcb36d29ec4963e7e0293c805e1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lost return at T=10: cloned 2.40 (eps T^2/2 = 2.50), recovering 0.51 (eps T = 0.50)\n"
+          "text": "lost return at T=64: cloned 17.03 (eps T(T+1)/2 = 20.80), recovering 0.64 (eps T = 0.64)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
-          "bytes": 28996,
-          "sha256": "sha256:46acb9db7274fe302a59f6b0dcca59f73303dd4b7aa7a655a673cbafa2f00a75"
+          "bytes": 39583,
+          "sha256": "sha256:1c5ec252e5ccba692902454596bf8ccd1d59af83d3ed47280cb129c064909a35"
         }
       ]
     },
     "imitation-why-this-is-not-a-defect-of-the-fit": {
-      "code_fingerprint": "sha256:5a7f6ff2e2f963d228f577d13cb1977bfe1dc0a2f7a7914041017c2b0d074c8d",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "after  3 steps: total variation 0.000\nafter  5 steps: total variation 0.004\nafter 10 steps: total variation 0.063\nafter 20 steps: total variation 0.227\nmass in the hole at s=12 after 20 steps: expert 0.000, clone 0.221\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "imitation/imitation-why-this-is-not-a-defect-of-the-fit-1.svg",
-          "bytes": 36125,
-          "sha256": "sha256:844251969798b73277f8ad3ad78e1868aa43c5cef606b0eb937ec3b9950331aa"
-        }
-      ]
-    },
-    "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
-      "code_fingerprint": "sha256:6e27ac62c705c1bfb132c83f3b96ae54541fff9c9feabf9f86b3568a83f622a1",
+      "code_fingerprint": "sha256:41cc7a8cfc1af99133f0e0729c52e499d92b7b20ff266eede00ad8d1269a0c45",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "round 0: trained on  96 pairs, success rate 18.0%\n"
-        },
+          "text": "the clone leaves the expert path in 0.172 of its episodes, entering cells [ 1 10]\nit reaches the goal in 0.715 of the episodes that stay on the path, 0.394 of those that leave it\na learner with the same error at every cell reaches the goal 0.735\n"
+        }
+      ]
+    },
+    "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
+      "code_fingerprint": "sha256:78543be1e8d3da269b4fb30df1a675df05e240f369dd31885e8fbac85da52e8d",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "round 1: trained on 188 pairs, success rate 72.0%\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "round 2: trained on 273 pairs, success rate 72.2%\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "round 3: trained on 426 pairs, success rate 71.9%\n"
+          "text": "round 0:  18 labels at  6 states, success 0.660 (seeds: 0.660 to 0.660; medians over 10 seeds)\nround 1:  84 labels at  8 states, success 0.710 (seeds: 0.649 to 0.735; medians over 10 seeds)\nround 2: 152 labels at  9 states, success 0.717 (seeds: 0.652 to 0.735; medians over 10 seeds)\nround 3: 218 labels at 11 states, success 0.735 (seeds: 0.710 to 0.735; medians over 10 seeds)\nround 4: 283 labels at 11 states, success 0.735 (seeds: 0.717 to 0.735; medians over 10 seeds)\n"
         }
       ]
     }

@@ -283,7 +283,7 @@ These two comparisons measure different properties. Comparison with behavior clo
 
 The largest errors occur at poorly supported state--action pairs. We therefore subtract $\kappa/\sqrt{n(s,a)}$ both inside the bootstrap maximum and from the final values, where $n(s,a)$ is the pair's count in the dataset, and clip each penalized value at zero, the smallest value any policy can attain here because rewards are nonnegative. This is the penalty implemented by `offline_q` when `kappa > 0`.
 
-The $1/\sqrt{n}$ dependence is motivated by the sampling error of an $n$-sample average and resembles the UCB radius $\kappa\sqrt{\log t/n}$ from :numref:`sec_qlearning`. Here it is a heuristic shrinkage term, not a confidence interval with a coverage guarantee. We evaluate this shape by pooling the counts and errors against $Q^*$ from the fifteen naive runs:
+The $1/\sqrt{n}$ dependence is motivated by the sampling error of an $n$-sample average and resembles the UCB radius $\kappa\sqrt{\log t/n}$ from :numref:`sec_exploration`. Here it is a heuristic shrinkage term, not a confidence interval with a coverage guarantee. We evaluate this shape by pooling the counts and errors against $Q^*$ from the fifteen naive runs:
 
 ```{.python .input #offline-rl-kappa-over-root-n}
 %%tab pytorch, jax
@@ -490,7 +490,7 @@ On-policy updates estimate expectations under the current policy; importance rat
        of arm $a$. Assume that every arm has at least one pull. Use
        Hoeffding's inequality, as stated in exercise
        :exref:`ex_qlearning-ucb-logarithmic-regret` of
-       :numref:`sec_qlearning`, and a union bound to show that
+       :numref:`sec_exploration`, and a union bound to show that
        $r(a^*) - r(\hat{a}) \leq 2 b(a^*)$ with probability at least
        $1 - \delta$.
     1. The optimistic rule $\operatorname{argmax}_a \hat{r}(a) + b(a)$ has

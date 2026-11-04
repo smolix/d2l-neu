@@ -274,7 +274,7 @@ boltzmann = np.exp(r / 0.5) / np.exp(r / 0.5).sum()
 print(np.allclose(pi_star(r, np.full(5, 0.2), 0.5), boltzmann))
 ```
 
-This is the form of :numref:`sec_policygradient`'s softmax policies. The Boltzmann exploration distribution in :numref:`sec_qlearning` is also the optimizer of an entropy-regularized one-step objective, with temperature corresponding to $\beta$. The sequential version of this consequence is the soft backup, which closes the section.
+This is the form of :numref:`sec_policygradient`'s softmax policies. The Boltzmann exploration distribution in :numref:`sec_exploration` is also the optimizer of an entropy-regularized one-step objective, with temperature corresponding to $\beta$. The sequential version of this consequence is the soft backup, which closes the section.
 
 **A posterior interpretation.** Equation :eqref:`eq_kl_optimum` has the
 form of Bayes' rule: $\pi_{\textrm{ref}}$ is a prior, $e^{r/\beta}$ an

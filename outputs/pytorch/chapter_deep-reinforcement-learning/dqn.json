@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fc87172713502979d2014f221a8d7c1776d23e366d6bef006e3e61b65af72bf7",
+    "d2l_lib_fingerprint": "sha256:34e1eed47fd14cca9c60d9fc8fe33bdc5aa9e0eea5c6866e853455fe05c63d54",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 25179,
-          "sha256": "sha256:7a8e5334e36de87a8ea0e42ae10118a685bdeba54a3c59f6319ffa43ab96ec40"
+          "sha256": "sha256:76f941f51be058e2b83f4a5e5480081b45f43d9637298bc385973d42212c50ab"
         }
       ]
     },
@@ -68,20 +68,20 @@
       "outputs": []
     },
     "dqn-the-ablation-2": {
-      "code_fingerprint": "sha256:65b7f3c2258451529ce5633e9b1e08e6d97977ffe995152b8e0bfb82ad80119f",
+      "code_fingerprint": "sha256:45e9db4b3d1743f6c2822a1c67c9489bac7f35fb2de5f2fd5a4e723c9402b562",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
-          "bytes": 35482,
-          "sha256": "sha256:5f1b0e8510a428399fc42690e6e1ed45c8ac01da1fa320b65e2be90756621ac9"
+          "bytes": 35530,
+          "sha256": "sha256:a74399558609ddf616950048abdfd23cf6f7ee6a6d9617d9019bb9b3ceab3a76"
         }
       ]
     },
     "dqn-the-ablation-3": {
-      "code_fingerprint": "sha256:925df49881abcb46819c7cd6f9804ce82bfcc53d93a395d3ad48292f045b2b81",
+      "code_fingerprint": "sha256:c8d99bbbba7c5dae002fbbc3191b1cd187863bc4cb50bcae63191c00be248916",
       "kind": "text",
       "outputs": [
         {
@@ -92,7 +92,7 @@
       ]
     },
     "dqn-the-ablation-4": {
-      "code_fingerprint": "sha256:f64df63d5f3467572a607487618be1c3e4760d9ff382c76e42d28d16c10e2039",
+      "code_fingerprint": "sha256:f48d254978600f37b4a1779d3a9ee7d6c2dbc8f662d0a349e57822a34edd08f9",
       "kind": "text",
       "outputs": [
         {
@@ -118,7 +118,7 @@
       ]
     },
     "dqn-the-ablation-5": {
-      "code_fingerprint": "sha256:bbacfdee8340984c4cd25512c225e86e4cf134c777d929fa99d445d60264634b",
+      "code_fingerprint": "sha256:3ed653250308d1fc45d92ece49740eda110f986f2fed643aff75584534d14afa",
       "kind": "mixed",
       "outputs": [
         {
@@ -130,13 +130,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
-          "bytes": 29454,
-          "sha256": "sha256:b999ec6fc7d3c4180b7a8c0735cb032f35d77c6bbbabbfc7a190d29528e14eb9"
+          "bytes": 29452,
+          "sha256": "sha256:66811e95f414bb02d71d075455b38e535c1ce0a3f93510453b06019cd2c53f55"
         }
       ]
     },
     "dqn-the-max-bias-measured": {
-      "code_fingerprint": "sha256:bb1a1415d2891c299dd09f651969be55b9c6e5923094dc0ce4f6d8918682a1e9",
+      "code_fingerprint": "sha256:e029ed1b7792005aca7790b4d9ca63b1164a36f1bc7aa8deb0e35cb13073de2d",
       "kind": "text",
       "outputs": [
         {
@@ -147,17 +147,17 @@
       ]
     },
     "dqn-double-dqn-in-three-lines-1": {
-      "code_fingerprint": "sha256:c293d1e71db261c5ee18d6812ab9b4ac3d54fc3267f5aebe0a2a6761bc76556b",
+      "code_fingerprint": "sha256:b3ec932f092df0033dc0a5d6003bf8f5c72309d9ef63e477eb346f175620583b",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-2": {
-      "code_fingerprint": "sha256:03089d6538ff3eb202743ef0991aa90e7c3cc0302580325ab6f72d908effee89",
+      "code_fingerprint": "sha256:1728b76847331f4879f1266ba88fbab750ee9d19942a97d1c72120e3b5544d71",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-3": {
-      "code_fingerprint": "sha256:11c95b34f09c07cc111c2c0d62d8dfdb046ca176f2bd45cf9aec6cb11ff7386a",
+      "code_fingerprint": "sha256:c26914b86b95c662d56a4fe7cc8ec747b1d0a84e1e99b25c008c207a232e98a5",
       "kind": "mixed",
       "outputs": [
         {
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
-          "bytes": 35349,
-          "sha256": "sha256:bfaab3f4bbe596c4a690e9f7903aad7d5dd22c863e996d65e43e000ff921fe8c"
+          "bytes": 35347,
+          "sha256": "sha256:4e5fdabbd1a77a1674a25e2fbbd84d7aa8643f4d607d0000d6ad46a06dff9427"
         }
       ]
     }

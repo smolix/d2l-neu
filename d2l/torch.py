@@ -2565,8 +2565,55 @@ class TabularMDP:
         return cls(P, r, gamma)
 
     def backup(self, V):
-        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
+        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s') for every
+        state-action pair: the bracket of the Bellman equations.
+
+        Defined in :numref:`sec_valueiter`"""
         return self.r + self.gamma * self.P @ V
+
+    def policy_value(self, pi):
+        """V^pi = (I - gamma P_pi)^{-1} r_pi exactly, for pi[s, a] the
+        probability of action a at state s (one-hot rows: deterministic).
+        Needs gamma < 1 here: from_gym's terminal states loop on themselves.
+
+        Defined in :numref:`sec_valueiter`"""
+        P_pi = np.einsum('sa,sat->st', pi, self.P)
+        r_pi = (pi * self.r).sum(axis=1)
+        return np.linalg.solve(np.eye(self.num_states) - self.gamma * P_pi,
+                               r_pi)
+
+class VerifierTask:
+    """Four prompts, nine candidate responses shared by all of them, an
+    exact-match verifier, and a reference policy that rarely hedges.
+
+    Defined in :numref:`sec_mdp`"""
+    prompts = ['2+2', '3*4', '8*8', '9*9']
+    answers = ['4', '12', '64', '81']
+    resp = ['1', '3', '4', '7', '12', '19', '23', '35',
+            'one of 4, 12, 64 or 81']          # the last one is the hedge
+
+    def __init__(self):
+        self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
+        self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
+        self.pi_ref = self.policy(self.theta_ref)
+
+    def verify(self, x, y):
+        """The verifier: reward 1 iff response y is prompt x's answer."""
+        return float(self.resp[y] == self.answers[x])
+
+    @staticmethod
+    def policy(theta):
+        """pi(y | x): a softmax over each prompt's row of preferences."""
+        z = np.exp(theta - theta.max(1, keepdims=True))
+        return z / z.sum(1, keepdims=True)
+
+    def success(self, pi, reward=None):
+        """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
+        unless another reward function is given."""
+        reward = self.verify if reward is None else reward
+        R = np.array([[reward(x, y) for y in range(len(self.resp))]
+                      for x in range(len(self.prompts))])
+        return (pi * R).sum(1).mean()
 
 def value_iteration(mdp, num_iters):
     """Sweep V <- max_a backup(V); return the whole history of iterates.
@@ -2591,8 +2638,8 @@ def policy_evaluation(mdp, pi, num_iters):
 def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
     """Mean discounted return of an acting policy over Monte Carlo episodes.
 
-    `policy(obs, rng) -> action` is the protocol every agent in these two
-    chapters speaks; a deterministic policy simply ignores `rng`.
+    A policy is any function `policy(obs, rng) -> action`; a deterministic
+    policy ignores `rng`, a stochastic one draws from it.
 
     Defined in :numref:`sec_valueiter`"""
     total = 0.0
@@ -2604,34 +2651,66 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
             total, discount = total + discount * reward, discount * gamma
     return total / num_episodes
 
-class ActorCritic(nn.Module):
-    """A policy and a value function, each with its own optimizer.
+def epsilon_greedy(q, epsilon, rng):
+    """Explore with probability epsilon, else act greedily on the values q.
+
+    Defined in :numref:`sec_qlearning`"""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    # Ties are coin flips: np.argmax would always pick action 0 on a zero
+    # table, and an agent that only ever moves left never finds the goal.
+    return int(rng.choice(np.flatnonzero(q == q.max())))
+
+def linear_schedule(start, end, num_steps):
+    """step -> value, interpolated from start to end, then held at end.
+
+    Defined in :numref:`sec_qlearning`"""
+    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
+
+def q_learning(seed, Q, visits, env, num_episodes, gamma,
+               alpha=lambda n: 1 / (1 + 0.1 * n), epsilon=None):
+    """Tabular Q-learning; updates Q in place, yields each episode's return.
+    `alpha(n)` is the step size at the n-th visit of a pair; `epsilon(k)` is
+    the exploration rate in episode k (default: 1 to 0.05 over the first
+    half of the episodes, then held).
+
+    Defined in :numref:`sec_qlearning`"""
+    rng = np.random.default_rng(seed)
+    if epsilon is None:
+        epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
+    env.reset(seed=seed)
+    for episode in range(num_episodes):
+        s, done, ret = env.reset()[0], False, 0.0
+        while not done:
+            a = epsilon_greedy(Q[s], epsilon(episode), rng)
+            s_next, r, terminated, truncated, _ = env.step(a)
+            visits[s, a] += 1
+            delta = r + gamma * (1 - terminated) * Q[s_next].max() - Q[s, a]
+            Q[s, a] += alpha(visits[s, a]) * delta
+            s, done, ret = s_next, terminated or truncated, ret + r
+        yield ret
+
+class Policy(nn.Module):
+    """A policy network and its optimizer; pi(.|s) is the softmax of the
+    network's outputs at s.
 
     Defined in :numref:`sec_imitation`"""
-    def __init__(self, policy, value, lr=1e-2):
+    def __init__(self, policy, lr=1e-2):
         super().__init__()
-        self.policy, self.value = policy, value
+        self.policy = policy
         self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
-        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
-
-    def forward(self, obs):
-        return torch.softmax(self.policy(obs), dim=-1)
 
     def log_prob(self, obs, act):
         """log pi(a|s) for a batch of states and the actions taken there."""
         return torch.log_softmax(self.policy(obs), dim=-1) \
                     .gather(-1, act[:, None]).squeeze(-1)
 
-    def V(self, obs):
-        return self.value(obs).squeeze(-1)
-
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        policy, value = (nn.Embedding(num_states, num_actions),
-                         nn.Embedding(num_states, 1))
-        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
-        return cls(policy, value, lr)
+        policy = nn.Embedding(num_states, num_actions)
+        nn.init.zeros_(policy.weight)
+        return cls(policy, lr)
 
     def act(self, obs, rng):
         """Sample an action; numpy in, int out, the acting protocol of evaluate.
@@ -2645,53 +2724,37 @@ class ActorCritic(nn.Module):
         with torch.no_grad():
             return int(self.policy(torch.as_tensor(obs)).argmax())
 
-    def value_np(self, obs):
-        with torch.no_grad():
-            return self.V(torch.as_tensor(obs)).numpy()
-
     def log_prob_np(self, obs, act):
         with torch.no_grad():
             return self.log_prob(torch.as_tensor(obs),
                                  torch.as_tensor(act)).numpy()
 
-    @classmethod
-    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
-        """The same container with the tables replaced by one-hidden-layer nets.
-
-        Defined in :numref:`sec_deeprl`"""
-        def net(out):
-            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                 nn.Linear(hidden, out))
-        return cls(net(num_actions), net(1), lr)
-
-def policy_step(ac, batch, advantage):
-    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+def policy_step(ac, obs, act, weight):
+    """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
+    n states and actions; the weights w arrive as numpy, that is, as data.
 
     Defined in :numref:`sec_imitation`"""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
-    adv = torch.as_tensor(advantage)
-    loss = -(adv * ac.log_prob(obs, act)).mean()
+    w = torch.as_tensor(weight)
+    loss = -(w * ac.log_prob(torch.as_tensor(obs),
+                             torch.as_tensor(act))).mean()
     ac.opt_pi.zero_grad()
     loss.backward()
     ac.opt_pi.step()
     return loss.item()
 
-def linear_schedule(start, end, num_steps):
-    """step -> value, interpolated from start to end, then held at end.
+def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):
+    """One REINFORCE step on a VerifierTask: K responses per prompt, each
+    score e_y - pi(.|x) (eq_softmax_score) weighted by weighting(rewards of
+    the prompt's K responses), averaged over the K, one ascent step.
 
-    Defined in :numref:`sec_qlearning`"""
-    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
-
-def epsilon_greedy(q, epsilon, rng):
-    """Explore with probability epsilon, else act greedily on the values q.
-
-    Defined in :numref:`sec_qlearning`"""
-    if rng.random() < epsilon:
-        return int(rng.integers(len(q)))
-    # Random tie-breaking is load-bearing: np.argmax would always return
-    # action 0 on a zero-initialized table, and an agent that only ever
-    # proposes *left* on this lake never finds the goal.
-    return int(rng.choice(np.flatnonzero(q == q.max())))
+    Defined in :numref:`sec_policygradient`"""
+    pi, g = task.policy(theta), np.zeros_like(theta)
+    eye = np.eye(len(task.resp))
+    for x in range(len(task.prompts)):         # one group of K per prompt
+        ys = rng.choice(len(task.resp), K, p=pi[x])
+        w = weighting(np.array([reward(x, y) for y in ys]))
+        g[x] = (eye[ys] - pi[x]).T @ w / K
+    return theta + lr * g
 
 class Batch:
     """A flat batch of transitions, plus the episode boundaries.
@@ -2717,6 +2780,10 @@ class Batch:
         return np.array([(gamma ** np.arange(ep.stop - ep.start)
                           * self.rew[ep]).sum() for ep in self.episodes()])
 
+    def per_step(self, values):
+        """Repeat one value per episode over that episode's steps."""
+        return np.repeat(values, np.diff(self.ep_ends, prepend=0))
+
     def backward_scan(self, x, factor):
         """y_t = x_t + factor * y_{t+1}, restarted at every episode boundary.
 
@@ -2735,6 +2802,17 @@ class Batch:
         Defined in :numref:`sec_baselines`"""
         return self.backward_scan(self.rew, gamma)
 
+    def truncation_bootstrap(self, gamma, V):
+        """gamma^(T-t) (1 - term_T) V(s_T) for every step t of each episode:
+        the discounted value of the future that a time-limit cut did not see.
+        V maps a batch of numpy states to numpy values.
+
+        Defined in :numref:`sec_deeprl`"""
+        tail = np.zeros_like(self.rew)
+        last = self.ep_ends - 1
+        tail[last] = gamma * (1 - self.term[last]) * V(self.next_obs[last])
+        return self.backward_scan(tail, gamma)
+
     def td_target(self, bootstrap, gamma):
         """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
 
@@ -2750,9 +2828,8 @@ class Batch:
 
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
-    Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
-
-    All sampling runs through the one numpy generator `rng`.
+    Batch. `term` records `terminated`, never `truncated`: a time-limit cut
+    is not a terminal state. All sampling runs through the numpy `rng`.
 
     Defined in :numref:`sec_policygradient`"""
     cols, ep_ends = [[] for _ in range(5)], []
@@ -2777,11 +2854,46 @@ def normalize(x, eps=1e-8):
     Defined in :numref:`sec_baselines`"""
     return (x - x.mean()) / (x.std() + eps)
 
-def run_seeds(train, num_seeds, **kwargs):
-    """Run train(seed, **kwargs), a generator of curve points, per seed.
+def group_step(task, theta, K, reward, rng, lr=2.0):
+    """verifier_step with the group-normalized weight (GRPO): the rewards
+    of each prompt's K responses, standardized within the group.
 
     Defined in :numref:`sec_baselines`"""
-    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+    return d2l.verifier_step(task, theta, K, reward, rng, normalize, lr)
+
+class ActorCritic(d2l.Policy):
+    """A policy and a value function, each with its own optimizer.
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, policy, value, lr=1e-2):
+        super().__init__(policy, lr)
+        self.value = value
+        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
+
+    def V(self, obs):
+        return self.value(obs).squeeze(-1)
+
+    def value_np(self, obs):
+        with torch.no_grad():
+            return self.V(torch.as_tensor(obs)).numpy()
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1):
+        """Preference and value tables: two zero-initialized embeddings."""
+        policy, value = (nn.Embedding(num_states, num_actions),
+                         nn.Embedding(num_states, 1))
+        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
+        return cls(policy, value, lr)
+
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+        """The same container with the tables replaced by one-hidden-layer nets.
+
+        Defined in :numref:`sec_deeprl`"""
+        def net(out):
+            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                 nn.Linear(hidden, out))
+        return cls(net(num_actions), net(1), lr)
 
 def fit_value(ac, obs, target, num_steps=1):
     """Regress the value head on a fixed target: eq_value_baseline for nets.
@@ -2796,25 +2908,34 @@ def fit_value(ac, obs, target, num_steps=1):
     return loss.item()
 
 class GaussianHead(nn.Module):
-    """Mean network plus a state-independent learned log standard deviation.
+    """A Gaussian over actions: a trunk of hidden features, a linear mean,
+    and a log standard deviation that is one learned vector or, with
+    `state_std=True`, a second linear head clamped to [-5, 2]. The default
+    trunk is one tanh layer; any module with `hidden` outputs will do.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden):
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None):
         super().__init__()
-        self.mean = nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                  nn.Linear(hidden, act_dim))
-        self.log_std = nn.Parameter(torch.zeros(act_dim))
+        self.trunk = trunk if trunk is not None else nn.Sequential(
+            nn.Linear(obs_dim, hidden), nn.Tanh())
+        self.mean = nn.Linear(hidden, act_dim)
+        self.state_std = state_std
+        self.log_std = (nn.Linear(hidden, act_dim) if state_std
+                        else nn.Parameter(torch.zeros(act_dim)))
 
     def forward(self, obs):
-        return self.mean(obs), self.log_std.exp()
+        h = self.trunk(obs)
+        if self.state_std:
+            return self.mean(h), self.log_std(h).clamp(-5, 2).exp()
+        return self.mean(h), self.log_std.exp()
 
-class GaussianPolicy(d2l.ActorCritic):
+class GaussianPolicy(ActorCritic):
     """The same interface over a Normal instead of a softmax; nothing that
-    consumes the interface changes.
+    consumes the interface changes. `head_args` go to GaussianHead.
 
     Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2):
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden),
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
                          nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
                                        nn.Linear(hidden, 1)), lr)
 
@@ -4803,70 +4924,111 @@ import os
 from matplotlib.figure import Figure
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
-                ylim=None):
+                ylim=None, x=None, xscale='linear', yscale='linear',
+                band='range'):
     """One panel per call. `curves` maps a label to an array of shape
-    [seed, step] (or [step] for a single seed); plots the seed median and
-    a shaded band between the seed min and max. `smooth`, if greater than
-    1, applies a trailing moving average of that many steps before taking
-    the seed statistics. `reference`, if given, draws a dashed horizontal
-    line; `ylim`, if given, fixes the y-axis range.
+    [seed, step] (or [step] for a single seed); plots the seed median and a
+    shaded band over the seeds: min to max (`band='range'`) or the
+    interquartile range (`band='iqr'`, the better summary from five seeds
+    on). `smooth`, if greater than 1, replaces each point by the mean of the
+    `smooth` steps that end there, before the seed statistics; the first
+    `smooth - 1` steps lack a full window and are dropped. `x` gives the
+    position of each step (default 0, 1, 2, ...). `reference`, if given,
+    draws a dashed horizontal line; `ylim` fixes the y-axis range; `xscale`
+    and `yscale` take matplotlib's scale names, e.g. 'log'.
 
     Defined in :numref:`sec_utils`"""
     set_figsize((6, 4))
     for name, values in curves.items():
         values = np.atleast_2d(values)
+        xs = np.arange(values.shape[1]) if x is None else np.asarray(x)
         if smooth > 1:
             kernel = np.ones(smooth) / smooth
             values = np.stack([np.convolve(v, kernel, 'valid')
                                for v in values])
-        x = np.arange(values.shape[1])
-        line, = plt.plot(x, np.median(values, axis=0), label=name)
+            xs = xs[smooth - 1:]      # each window sits at its last step
+        line, = plt.plot(xs, np.median(values, axis=0), label=name)
         if values.shape[0] > 1:
-            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
-                             alpha=0.2, color=line.get_color())
+            lo, hi = ((values.min(axis=0), values.max(axis=0))
+                      if band == 'range' else
+                      np.percentile(values, [25, 75], axis=0))
+            plt.fill_between(xs, lo, hi, alpha=0.2, color=line.get_color())
     if reference is not None:
         plt.axhline(reference, linestyle='--', color='gray')
     if ylim is not None:
         plt.ylim(ylim)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
 
-def show_grid(desc, values, policy, titles=None):
-    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
-    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
-    to any one map size. `values` and `policy` may each be a single frame,
-    shape (num_states,), or a sequence of frames, shape
-    (num_frames, num_states); `titles`, if given, labels each frame.
+def show_grid(desc, values, policy=None, titles=None,
+              diverging=False, fmt='{:.2f}'):
+    """A gridworld in the style of the chapter's figures. Each cell is
+    shaded by `values` (white to blue, or with `diverging=True` red to blue
+    around zero, for differences) and shows its state index (top left), its
+    value (bottom left) and an arrow for the action of `policy`, if given.
+    Holes are grey and the goal green; S, H and G sit at the bottom right.
+    The grid shape is read from `desc` (e.g. `env.unwrapped.desc`).
+    `values` and `policy` may each be a single frame, shape (num_states,),
+    or a sequence of frames, shape (num_frames, num_states); `titles`, if
+    given, labels each frame.
 
     Defined in :numref:`sec_utils`"""
     h, w = desc.shape
-    values = np.atleast_2d(values).reshape(-1, h, w)
-    policy = np.atleast_2d(policy).reshape(-1, h, w)
-    num_frames = values.shape[0]
-    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
-    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
-                             squeeze=False)
+    values = np.atleast_2d(values).reshape(-1, h * w)
+    if policy is not None:
+        policy = np.atleast_2d(policy).reshape(-1, h * w)
+    if diverging:
+        top = max(np.abs(values).max(), 1e-12)
+        cmap, norm = plt.get_cmap('RdBu'), plt.Normalize(-top, top)
+    else:
+        cmap = plt.get_cmap('Blues')
+        norm = plt.Normalize(min(0.0, values.min()),
+                             max(values.max(), 1e-12))
+    move = {0: (-1, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1)}   # (dx, dy)
+    fig, axes = plt.subplots(1, len(values), squeeze=False,
+                             figsize=(3.6 * len(values), 3.6))
     for k, ax in enumerate(axes[0]):
-        ax.imshow(values[k], cmap='bone')
-        ax.set_xticks(np.arange(-.5, w), minor=True)
-        ax.set_yticks(np.arange(-.5, h), minor=True)
-        ax.grid(which='minor', color='w', linewidth=2)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        for y in range(h):
-            for x in range(w):
-                cell = desc[y, x].decode()
-                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
-                ax.text(x, y, cell, ha='center', va='center', color=color,
-                       fontweight='bold')
-                if cell not in ('H', 'G'):
-                    dx, dy = action2offset[int(policy[k, y, x])]
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
-                            head_length=0.15)
+        for s in range(h * w):
+            y, x = divmod(s, w)
+            cell, v = desc[y, x].decode(), values[k, s]
+            fill = {'H': ('#565D66', 0.55), 'G': ('#2CA02C', 0.35)}.get(
+                cell, (cmap(norm(v)), 1.0))
+            ax.add_patch(plt.Rectangle((x, y), 1, 1, fc=fill[0],
+                                       alpha=fill[1], ec='black', lw=1.0))
+            shade = np.abs(norm(v) - 0.5) * 2 if diverging else norm(v)
+            ink = 'white' if cell == 'H' or (cell != 'G' and shade > 0.6) \
+                else 'black'
+            ax.text(x + 0.07, y + 0.07, str(s), ha='left', va='top',
+                    fontsize=9, color=ink)
+            if cell not in 'HG' or np.abs(v) > 1e-9:   # terminal: 0
+                ax.text(x + 0.07, y + 0.93, fmt.format(v), ha='left',
+                        va='bottom', fontsize=10, color=ink)
+            if cell in 'SHG':
+                ax.text(x + 0.82, y + 0.80, cell, ha='center', va='center',
+                        fontsize=13, fontweight='bold', color=ink)
+            if policy is not None and cell not in 'HG':
+                dx, dy = move[int(policy[k, s])]
+                ax.annotate('', xy=(x + 0.5 + 0.22 * dx, y + 0.45 + 0.22 * dy),
+                            xytext=(x + 0.5 - 0.22 * dx,
+                                    y + 0.45 - 0.22 * dy),
+                            arrowprops=dict(arrowstyle='-|>', color=ink,
+                                            lw=1.6, mutation_scale=14))
+        ax.set_xlim(0, w)
+        ax.set_ylim(h, 0)
+        ax.set_aspect('equal')
+        ax.axis('off')
         if titles is not None:
             ax.set_title(titles[k])
     fig.tight_layout()
+
+def run_seeds(train, num_seeds, **kwargs):
+    """Run train(seed, **kwargs), a generator of curve points, per seed.
+
+    Defined in :numref:`sec_utils`"""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a PyTorch data iterator.

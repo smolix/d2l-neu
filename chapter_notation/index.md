@@ -126,12 +126,23 @@ These symbols belong to :numref:`chap_reinforcement_learning` and the chapter af
 * $\alpha$: the step size of a temporal-difference update
 * $\eta$: the step size of a policy update
 * $\eta_V$: the step size of a value-baseline update
-* $\epsilon$: the exploration rate of $\epsilon$-greedy action selection, or the half-width of a clipped probability ratio
+* $\epsilon$: the exploration rate of $\epsilon$-greedy action selection
 * $\varepsilon$: the per-step probability that a cloned policy disagrees with the expert (not the exploration rate $\epsilon$)
 * $\kappa$: the weight of an uncertainty bonus (not the condition number $\kappa(\mathbf{X})$)
 * $\hat{G}_t$: the reward-to-go, the discounted sum of the rewards from step $t$ on
 * $b$: a baseline subtracted from a return
 * $K$: the number of responses sampled per prompt
+* $\lambda$: the weight of the $\lambda$-return
+* $w$, $w^-$: the parameters of a value network, and of its frozen or Polyak-averaged copy
+* $n$: the depth of an $n$-step target, or of a plan
+* $\rho_t$: the importance ratio $\pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$ at step $t$
+* $\epsilon_{\textrm{clip}}$: the half-width of the clip band of a probability ratio
+* $\Delta_{\textrm{KL}}$: a KL budget per update
+* $\pi_{\textrm{ref}}$: a reference policy
+* $\beta$: the weight of a KL penalty to a reference policy; soft actor-critic's temperature
+* $\hat{r}$: a fitted reward
+* $\nu$: the Polyak rate of a target network
+* $\hat{f}_\phi$: a learned transition model
 
 
 

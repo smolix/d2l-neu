@@ -1,9 +1,11 @@
 # Deep Q-Networks
 :label:`sec_dqn`
 
-A Deep Q-Network (DQN) replaces the tabular action-value function of Q-learning with a neural network :cite:`mnih2013playing,mnih2015human`. Unlike supervised regression, its bootstrapped targets depend on the function being trained. Consecutive transitions are correlated, and data in a replay buffer may have been collected by older policies. Together, function approximation, bootstrapping, and off-policy data can make value learning unstable.
+In :numref:`sec_qlearning` an agent learned a table of action values one transition at a time, from transitions that any behavior could have produced. In :numref:`sec_deeprl` we replaced a policy table by a network and trained it on CartPole. Doing the same for Q-learning looks like a one-line change: let a network output the two action values and keep the update. For the policy gradient the swap cost nothing, because nothing in its derivation used the table. For Q-learning the table sits inside the target, $r + \gamma \max_{a'} Q(s', a')$. Once the table is a network, every update moves the target together with the prediction, one update changes the values of states it never visited, and the contraction argument that made the tabular method converge no longer applies. Can a network keep the table's licence to learn from any transition?
 
-DQN addresses two of these interactions with an experience-replay buffer and a target network. We introduce both mechanisms on CartPole, ablate the target network, and compare learned values with bounds implied by the task. The final part measures maximization bias and derives Double DQN, which separates action selection from evaluation.
+In 2013 a group at DeepMind made the swap work: one network, with one set of hyperparameters, learned to play dozens of Atari games from the screen pixels, many of them about as well as a human tester :cite:`mnih2013playing,mnih2015human`. They called it a Deep Q-Network (DQN). Two devices kept it stable, a store of past transitions to train on and a frozen copy of the network to compute targets from. Both have been part of almost every off-policy deep method since. They also give the agent what the preceding sections could not: actor-critic used each batch once and PPO for a few epochs, while DQN trains on every transition it has stored, many times over.
+
+We first show why the naive swap can fail, on a seven-state example whose weights grow without bound although there is no sampling noise. We then build DQN on CartPole, remove the frozen copy to see what it prevents, and end with the bias that the maximum in the target creates and a small change that reduces it. :numref:`sec_regularized` replaced that maximum by a soft one; here it stays hard.
 
 ```{.python .input #dqn-deep-q-networks-1}
 %%tab pytorch
@@ -28,7 +30,7 @@ import numpy as np
 import optax
 ```
 
-We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps. Its Q-network maps a state to one value per action, and the greedy action is the corresponding argmax.
+We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment. Its argument `copies`, like the one of `make_qnet`, offers each action several times; it serves the last experiment of the section and is 1 until then.
 
 ```{.python .input #dqn-deep-q-networks-2}
 %%tab pytorch, jax
@@ -37,54 +39,52 @@ buffer_size, batch_size, lr = 200_000, 128, 1e-3
 train_freq, sync_every, warmup, grad_clip = 2, 250, 1_000, 10.0
 epsilon = d2l.linear_schedule(1.0, 0.05, 10_000)
 if tab.selected('pytorch'):
-    def make_qnet():
+    def make_qnet(copies=1):
         return nn.Sequential(nn.Linear(4, 128), nn.ReLU(),
                              nn.Linear(128, 128), nn.ReLU(),
-                             nn.Linear(128, 2))
+                             nn.Linear(128, 2 * copies))
 if tab.selected('jax'):
-    def make_qnet(rngs):
+    def make_qnet(rngs, copies=1):
         return nnx.Sequential(d2l.Linear(4, 128, rngs=rngs), jax.nn.relu,
                               d2l.Linear(128, 128, rngs=rngs), jax.nn.relu,
-                              d2l.Linear(128, 2, rngs=rngs))
+                              d2l.Linear(128, 2 * copies, rngs=rngs))
+
+def make_env(copies=1):
+    """CartPole; with copies > 1 each of its two actions is offered `copies`
+    times (action a moves the cart as action a % 2), which leaves Q* as is."""
+    env = gym.make('CartPole-v1')
+    return env if copies == 1 else gym.wrappers.TransformAction(
+        env, lambda a: a % 2, gym.spaces.Discrete(2 * copies))
 ```
 
 :begin_tab:`jax`
-The Q-network's layers are `d2l.Linear`, whose uniform initialization :numref:`sec_deeprl` describes. Run for 50 seeds with each initialization, this DQN solved CartPole (a greedy return of at least 475 over 100 episodes) on about two thirds of the runs with it and on about a quarter with Flax's default, which also ended most runs with a start-state value above $1/(1-\gamma) = 100$, the bound derived below.
+The Q-network's layers are `d2l.Linear`, whose uniform initialization :numref:`sec_deeprl` describes. With Flax's default initialization this DQN solved CartPole on fewer seeds in our runs.
 :end_tab:
 
 ## Sources of Instability
 
 ### The Semi-Gradient Update
 
-Replace the table of :numref:`sec_qlearning` by a network $Q_w$ and the update stays what it was, a semi-gradient step toward the bootstrapped target. Sample transitions $(s, a, r, s')$, form
+Replace the table of :numref:`sec_qlearning` by a network $Q_w$ with parameters $w$, and the update stays what it was, a semi-gradient step toward the bootstrapped target. Sample a transition $(s, a, r, s')$, form the target
 
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w(s', a'),$$
 
-hold $y$ fixed, and take one optimizer step on the regression loss between $Q_w(s,a)$ and $y$. Unlike the policy-gradient objective of :numref:`sec_deeprl`, this is ordinary supervised regression. A decreasing loss shows that the network is fitting its current targets, but it does not show that those targets are accurate.
+hold $y$ fixed, and take one optimizer step that moves $Q_w(s, a)$ toward $y$. The indicator removes the bootstrap when $s'$ ends the episode. Each step is a step of ordinary regression toward a fixed number. The sequence of steps is not descent on any fixed objective, though, because the number moves with $w$, which :numref:`sec_deeprl` observed for every bootstrapped target. A falling loss therefore shows that the network fits its current targets, not that the targets are right.
 
-For a table, Q-learning is a stochastic approximation to the Bellman contraction analyzed in :numref:`sec_valueiter` and :numref:`sec_qlearning`. Function approximation adds a projection onto the functions represented by the network, weighted by the data's visitation distribution. The composition of this projection with the Bellman backup need not be a contraction. Even with linear features, the combination of bootstrapping and off-policy data can diverge :cite:`Tsitsiklis.VanRoy.1997`.
+For a table, the expected update is a damped step of value iteration, and the Bellman backup is a contraction (:numref:`sec_valueiter`): it shrinks the largest error over all states by the factor $\gamma$. A network cannot represent every backed-up function, so each regression returns the function in its class closest to the targets. "Closest" is measured by least squares over the training data, in which the error at a state counts in proportion to how often the data visit it; for linear features this fit is a projection. The backup shrinks the largest error, while the fit shrinks a visitation-weighted average error. The two measures disagree, and a fit that reduces the weighted error can enlarge the error at a rarely visited state, which the next backup carries into the targets of the states that lead there. When the data come from the policy being evaluated, the two measures agree well enough for linear features to converge :cite:`Tsitsiklis.VanRoy.1997`. With data from another policy, even linear features can diverge.
 
-### Correlated Data
+### Correlated Data and Moving Targets
 
-Consecutive transitions from one episode are strongly correlated: the cart and pole change only slightly from one step to the next. Training on this stream can repeatedly update a narrow region of state space. Because shared parameters change predictions at many states at once (:numref:`fig_rl_table_vs_network`), these updates may degrade values learned elsewhere. A tabular method changes only the visited entry, so correlation mainly reduces sampling efficiency; with function approximation, it can also produce interference.
+Two couplings make the network case harder in practice than the table case. The first is in the data. Consecutive transitions of one episode are nearly identical, since the cart and pole move only slightly from one step to the next, so training on the stream as it arrives updates a narrow region of the state space many times in a row. A table changes only the visited entry, so correlation only slows it down. A network changes its predictions at many states with every step (:numref:`fig_rl_table_vs_network`), so a run of similar updates can overwrite what it learned elsewhere.
 
-### Moving Targets
+The second coupling is in the targets. The target $y$ contains $Q_w$, so every optimizer step changes both the prediction and the number it is regressed toward. The critic of :numref:`sec_actorcritic` had the same coupling, but it was refitted on fresh transitions of the current policy after every update, so an error at the states the policy visits was soon exposed and corrected.
 
-The second coupling is in the targets. The target $y$ contains $Q_w$, so every
-optimizer step changes both the regressor and its target. In actor--critic, new
-batches come from the current policy and may expose critic errors in the states
-that policy visits, although this does not guarantee convergence. Replay instead
-uses older transitions. A bootstrapping error can therefore persist across many
-updates before the behavior policy revisits the affected states.
-
-### The Deadly Triad
+### The Deadly Triad and Baird's Counterexample
 :label:`subsec_dqn-deadly-triad`
 
-The three ingredients are *function approximation*, *bootstrapping*, and *off-policy data*. Figure :numref:`fig_rl_deadly_triad` locates familiar algorithms by which ingredients they use. Removing function approximation gives tabular Q-learning, which converges under the conditions of :numref:`sec_qlearning`. Removing bootstrapping gives neural REINFORCE with Monte Carlo targets and an unbiased policy gradient. Removing off-policy data gives methods such as SARSA and on-policy actor--critic.
+Three ingredients meet in the network version of Q-learning: *function approximation*, *bootstrapping*, and *off-policy data*, that is, data collected by a policy other than the one whose values are learned. :numref:`fig_rl_deadly_triad` places the algorithms of this chapter and the last by the ingredients they use. Each region with two ingredients holds a method that converges under its own conditions. Tabular Q-learning bootstraps from off-policy data and converges under the step-size conditions of :numref:`sec_qlearning`. Linear temporal-difference learning, the critic of actor-critic in its simplest form, bootstraps with function approximation and converges for linear features when the data come from the evaluated policy. Behavior cloning fits a network to off-policy data without bootstrapping, which is supervised regression to fixed labels. These are sufficient conditions, not a theorem about pairs: nonlinear temporal-difference learning can diverge even on-policy :cite:`Tsitsiklis.VanRoy.1997`. The name *deadly triad* refers to all three ingredients at once :cite:`Sutton.Barto.2018,vanHasselt.Doron.Strub.ea.2018`.
 
-These comparisons do not imply that every method using only two ingredients converges. Nonlinear on-policy temporal-difference learning can also diverge, and positive results require assumptions about step sizes, coverage, and representation. The term *deadly triad* refers to the particularly difficult combination of all three ingredients :cite:`Sutton.Barto.2018,vanHasselt.Doron.Strub.ea.2018`.
-
-Baird's counterexample isolates this combination in a seven-state linear problem :cite:`Baird.1995`. Every reward is zero, so the true value function is zero and can be represented exactly by $w=0$. The experiment uses expected temporal-difference updates, eliminating sampling noise, but weights the seven states according to an off-policy distribution while evaluating a policy that always transitions to state seven:
+Baird's counterexample isolates the triad in a seven-state linear problem :cite:`Baird.1995`. Every reward is zero, so the true value function is zero and is represented exactly by $w = 0$. The computation uses expected temporal-difference updates, so there is no sampling noise. It weights the seven states uniformly, an off-policy distribution, while it evaluates a policy that always moves to state 7:
 
 ```{.python .input #dqn-the-deadly-triad}
 %%tab pytorch, jax
@@ -107,33 +107,25 @@ d2l.plot(np.arange(1, 1001), sup, 'sweeps over all seven states',
          'sup norm of w', yscale='log')
 ```
 
-The weights grow approximately exponentially: after a thousand sweeps, their
-sup norm has increased from $10$ to $335$, and the estimated value of state 7
-is $677$ although its true value is zero. This deterministic expected-update
-calculation has no sampling error, and reducing the step size slows but does not
-remove the divergence. Since the true value function is representable, the
-cause is not an approximation error. It lies in the semi-gradient dynamics:
-under the off-policy weighting, the expected update has a direction along
-which the weights grow :cite:`Sutton.Barto.2018`. Reweighting the updates by the evaluated
-policy's visitation distribution converges in this example (exercise :exref:`ex_dqn-baird-on-policy`).
+After a transient, the weights grow by a fixed factor per sweep: after a thousand sweeps their sup norm has grown from $10$ to $335$, and the value that the weights claim for state 7 is $677$, although its true value is zero. No sampling error is involved, and a smaller step size slows the divergence but does not remove it. Since the true value function is representable, the cause is not an approximation error either. Under the off-policy weighting, the expected update has a direction along which the weights grow :cite:`Sutton.Barto.2018`. Weighting the states by the evaluated policy's own visits instead stops the divergence, although the values it reaches are wrong at the states that this weighting never visits (exercise :exref:`ex_dqn-baird-on-policy`).
 
-Replay and target networks do not remove an element of the triad. They reduce
-temporal correlation and slow target changes, which often improves empirical
-stability but does not restore a general convergence guarantee.
+Replay and target networks do not remove an ingredient of the triad. They reduce temporal correlation and slow the changes of the targets, which makes training much more stable in practice but does not restore a general convergence guarantee.
 
-![The deadly triad. Each circle is one ingredient, and every region is occupied by an algorithm these two chapters have taught; the center, all three ingredients at once, is where DQN and offline Q-learning live, and where Baird's counterexample proves that divergence is possible. Drop any one ingredient and convergence arguments become available again, each under its own step-size, coverage and representation conditions: the triad is a warning pattern, not an if-and-only-if theorem.](../img/mdl-rl-deadly-triad.svg)
+![The deadly triad. Each circle is one ingredient, and every region is occupied by an algorithm these two chapters have taught; the center, all three ingredients at once, is where DQN and offline Q-learning live, and where Baird's counterexample shows that divergence is possible. Drop any one ingredient and a convergence argument becomes available, each under its own step-size, coverage and representation conditions: the triad is a warning pattern, not an if-and-only-if theorem.](../img/mdl-rl-deadly-triad.svg)
 :label:`fig_rl_deadly_triad`
 
 ## Replay and Target Networks
 
-:numref:`fig_rl_dqn_dataflow` draws the whole machine; the two subsections that follow walk its two ideas.
+DQN answers the two couplings with two devices, one for each. :numref:`fig_rl_dqn_dataflow` shows how they fit together.
 
 ![Deep Q-learning as a data flow. The behavior policy acts with the online network; transitions enter the replay buffer, and uniformly sampled minibatches scramble time, which makes the data nearly independent and reusable. The regression target is computed by a frozen copy of the network, refreshed every $C$ steps, so the targets stand still between syncs. The gradient flows along exactly one path, into the online network; the marked edge from the frozen copy carries no gradient. The drawn buffer is full and evicting its oldest entries, the steady state of a long run; in this section's runs the 50,000-step budget never fills the 200,000-slot ring, so nothing is evicted.](../img/mdl-rl-dqn-dataflow.svg)
 :label:`fig_rl_dqn_dataflow`
 
-### Experience Replay and Off-Policy Updates
+### Experience Replay
 
-The standard remedy for temporal correlation is an *experience replay buffer* :cite:`Lin.1992`. Transitions are stored in a finite array, and training minibatches are sampled uniformly from that array. A minibatch therefore combines transitions collected at different times, and each transition may be used in several updates. This is valid for Q-learning because the target for $(s,a,r,s')$ does not depend on the policy that selected $a$. The same property will be central to the distinction between on-policy and off-policy learning in :numref:`sec_offline`.
+The remedy for correlated data is an *experience replay buffer* :cite:`Lin.1992`. Every transition is stored in a large array, and each training minibatch is drawn uniformly from the array. A minibatch then combines transitions collected at different times, and each transition is used in many updates. Q-learning permits this because the target for $(s, a, r, s')$ does not depend on the policy that chose $a$. Replay has a drawback: most stored transitions were collected by older policies, so an error in the targets can persist over many updates until the current behavior revisits the states where it lives.
+
+`ReplayBuffer` keeps the five fields of a transition in preallocated arrays: the state, the action, the reward, the next state, and the flag `term` that records termination. `add` writes a transition at the next free slot, overwriting the oldest one once the array is full, and `sample` draws `batch_size` slots uniformly and returns them as the `Batch` of :numref:`sec_policygradient`:
 
 ```{.python .input #dqn-replay-and-the-off-policy-licence}
 %%tab pytorch, jax
@@ -166,18 +158,18 @@ class ReplayBuffer:  #@save
                          np.arange(1, batch_size + 1))
 ```
 
-Two details of the container matter. Its capacity is $200{,}000$ transitions, larger than the $50{,}000$-step training budget, so no transition is evicted in these experiments; exercise :exref:`ex_dqn-shrink-buffer` studies a smaller buffer. In addition, `sample` returns a `Batch` in which every transition is an episode fragment of length one. On such a batch `reward_to_go` is the reward itself and `truncation_bootstrap` adds $\gamma (1 - \mathrm{term}) \hat{V}(s')$, so their sum is `td_target`: replay leaves only the one-step target, which is why it combines naturally with one-step bootstrapping. The target below is the same `batch.td_target` used by the actor-critic critic.
+The capacity in this section is $200{,}000$ transitions, larger than the $50{,}000$-step budget, so no transition is evicted; exercise :exref:`ex_dqn-shrink-buffer` studies a smaller buffer. `sample` declares every transition an episode fragment of length one, because a uniform draw has no episode order. On such a batch `reward_to_go` is the reward itself, and the `truncation_bootstrap` of :numref:`sec_deeprl` adds $\gamma (1 - \mathrm{term})\, \hat{V}(s')$ for a given value estimate $\hat V$, so their sum is the one-step target that `td_target` from :numref:`sec_actorcritic` computes. Replay leaves only the one-step target, which is why it pairs with one-step bootstrapping. An $n$-step target needs consecutive transitions, so the buffer would have to keep their order (exercise :exref:`ex_dqn-nstep-replay`).
 
 ### The Target Network
 
-The repair for moving targets is the *target network* :cite:`mnih2015human`: a frozen copy $Q_{w^-}$ of the online network computes every bootstrap,
+The remedy for moving targets is the *target network* :cite:`mnih2015human`. A frozen copy $Q_{w^-}$ of the online network computes every bootstrap,
 
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_{w^-}(s', a'),$$
 :eqlabel:`eq_dqn_target`
 
-and synchronize the copy with the online weights, $w^-\leftarrow w$, every $C$ environment steps, here every 250. Between synchronizations, the target is fixed and the online network solves an ordinary regression problem. The feedback from predictions to targets now occurs once per synchronization rather than once per gradient step. The actor--critic method in :numref:`sec_actorcritic` updates its target from the newest critic because each batch contains fresh on-policy data. Replay removes that freshness, so DQN instead accepts stale targets to reduce the rate at which the regression problem changes.
+and the copy is synchronized with the online weights, $w^- \leftarrow w$, every $C$ environment steps, here 250. Between synchronizations the targets stand still, and the online network solves an ordinary regression problem. Predictions feed back into targets once per synchronization instead of once per gradient step. The critic of :numref:`sec_actorcritic` bootstrapped from its newest weights, because each batch was fresh; replay removes that freshness, and DQN accepts targets a few hundred steps old in exchange for a regression problem that changes slowly.
 
-The regression update uses two distinct controls. The Huber loss is quadratic near zero and linear for large residuals, so it bounds the derivative of the loss with respect to the prediction. The parameter gradient also contains $\nabla_w Q_w(s,a)$, which the Huber loss does not bound. Global norm clipping therefore bounds the norm of the complete parameter gradient before the optimizer uses it, including a large gradient produced by the simultaneous residual changes that may follow a target-network synchronization.
+Two further controls bound the size of a step. The Huber loss is quadratic for residuals below 1 and linear above, so its derivative with respect to the prediction never exceeds 1. The full gradient also contains $\nabla_w Q_w(s, a)$, which the Huber loss does not bound, so the update clips the norm of the parameter gradient at 10, the default of Stable-Baselines3 and CleanRL rather than of the original paper :cite:`Raffin.Hill.Gleave.ea.2021,Huang.Dossa.Ye.ea.2022`. In code, `q_values` runs the network on a NumPy state without recording gradients, `fit_q` takes one clipped Huber step of $Q_w(s, a)$ toward fixed targets $y$, and `q_step` is the DQN update: the targets are `batch.td_target` with the bootstrap $\max_{a'} Q_{w^-}(s', a')$ of the frozen copy.
 
 ```{.python .input #dqn-the-target-network-1}
 %%tab pytorch
@@ -222,15 +214,20 @@ def q_step(qnet, target, opt, obs, act, rew, next_obs, term):
 q_values = d2l.forward_np   # the acting forward: numpy in, numpy out
 ```
 
-Now the training loop, and it is short because everything it needs already exists: `epsilon_greedy` and `linear_schedule` from :numref:`sec_qlearning`, the buffer and step above. One switch controls the experiment of this section. With `use_target=True` the copy refreshes every `sync_every` steps; with `use_target=False` it refreshes every step, which makes the copy the online network in all but name, the naive recipe with no target network at all. The generator yields, at every episode's end, the step count, the episode's return, and one diagnostic we will need later: the network's value estimate $\max_a Q_w(s_0, a)$ at the centered start state $s_0 = \mathbf{0}$.
+:begin_tab:`jax`
+`q_values` is `d2l.forward_np`, which compiles one forward pass per network structure (:numref:`sec_utils`). The norm clip is part of the optimizer chain, and `q_step` is compiled with the `td_target` computation inside it.
+:end_tab:
+
+### The Training Loop
+
+The loop acts $\epsilon$-greedily with `epsilon_greedy` of :numref:`sec_qlearning`, which takes a random action with probability $\epsilon$ and the argmax otherwise, stores every transition, and after the warm-up of 1,000 steps calls `step` on a sampled minibatch every second step. One switch sets up the experiment of this section. With `use_target=True` the copy is refreshed every `sync_every` steps. With `use_target=False` it is refreshed after every step, so the target is computed by the online network itself, the naive recipe without a target network. The argument `step` selects the update rule, and `copies` the number of copies of each action. At the end of every episode the generator yields the step count, the episode's return, and the network's estimate $\max_a Q_w(s_0, a)$ at the centered start state $s_0 = \mathbf{0}$.
 
 ```{.python .input #dqn-the-target-network-3}
 %%tab pytorch
-def train_dqn(seed, qnet, use_target=True, step=None):
+def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
     """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a))."""
-    step = q_step if step is None else step
-    rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
-    target = make_qnet()
+    rng, env = np.random.default_rng(seed), make_env(copies)
+    target = make_qnet(copies)
     target.load_state_dict(qnet.state_dict())
     opt = torch.optim.Adam(qnet.parameters(), lr=lr)
     buffer, s0 = ReplayBuffer(buffer_size, 4), np.zeros(4, np.float32)
@@ -252,11 +249,10 @@ def train_dqn(seed, qnet, use_target=True, step=None):
 
 ```{.python .input #dqn-the-target-network-3}
 %%tab jax
-def train_dqn(seed, qnet, use_target=True, step=None):
+def train_dqn(seed, qnet, use_target=True, step=q_step, copies=1):
     """DQN on CartPole; yields (env step, episode return, max_a Q(s0, a)).
     The jitted step's module traversal is cached once per run."""
-    step = q_step if step is None else step
-    rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
+    rng, env = np.random.default_rng(seed), make_env(copies)
     target = nnx.clone(qnet)
     opt = nnx.Optimizer(qnet, optax.chain(
         optax.clip_by_global_norm(grad_clip), optax.adam(lr)), wrt=nnx.Param)
@@ -281,31 +277,49 @@ def train_dqn(seed, qnet, use_target=True, step=None):
             nnx.update(target, nnx.state(qnet, nnx.Param))
 ```
 
-Note what the buffer stores: `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state with a future, and :numref:`sec_qlearning` established that masking the bootstrap there teaches the network that surviving is worthless; exercise :exref:`ex_dqn-terminated-not-done` traces exactly what would go wrong.
+The buffer stores `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state that has a future, and :numref:`sec_qlearning` showed that masking the bootstrap there teaches the network that surviving is worthless; exercise :exref:`ex_dqn-terminated-not-done` traces what would go wrong.
 
-### Ablating the Target Network
+### The Target-Network Ablation
 :label:`subsec_dqn-ablation`
 
-Three seeds per arm, everything identical except the switch. The networks are caller-owned, as in :numref:`sec_actorcritic`, so later cells can audit the trained agents:
+Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. `new_qnet(seed, copies)` builds a seeded network, and the networks live outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
 
 ```{.python .input #dqn-the-ablation-1}
 %%tab pytorch, jax
 if tab.selected('pytorch'):
-    def new_qnet(seed):
+    def new_qnet(seed, copies=1):
         torch.manual_seed(seed)
-        return make_qnet()
+        return make_qnet(copies)
 if tab.selected('jax'):
-    def new_qnet(seed):
-        return make_qnet(nnx.Rngs(seed))
+    def new_qnet(seed, copies=1):
+        return make_qnet(nnx.Rngs(seed), copies)
 
-arms = ('DQN', 'no target network')
-qnets = {arm: [new_qnet(seed) for seed in range(num_seeds)] for arm in arms}
-runs = {arm: [list(train_dqn(seed, qnets[arm][seed],
-                             use_target=arm == 'DQN'))
-              for seed in range(num_seeds)] for arm in arms}
+def train_checked(seed, qnet, every=5_000, episodes=10, **kwargs):
+    """train_dqn, plus a greedy evaluation over a few episodes at the first
+    episode end past every multiple of `every` steps, and one at the end."""
+    env, run, checks = make_env(kwargs.get('copies', 1)), [], []
+    env.reset(seed=10_000 + seed)
+    greedy = lambda s, r: int(q_values(qnet, s).argmax())
+    for t, ret, v0 in train_dqn(seed, qnet, **kwargs):
+        run.append((t, ret, v0))
+        if t >= every * (len(checks) + 1):
+            checks.append(d2l.evaluate(env, greedy, episodes))
+    checks.append(d2l.evaluate(env, greedy, episodes))
+    return run, checks
 ```
 
-Each run yields one tuple per episode, and seeds finish different numbers of episodes, so the right x axis is the one the budget is written in. We resample every curve onto a common grid of environment steps and plot the seed bands:
+```{.python .input #dqn-the-target-network-ablation-1}
+%%tab pytorch, jax
+arms = ('DQN', 'no target network')
+qnets = {arm: [new_qnet(seed) for seed in range(num_seeds)] for arm in arms}
+runs, checks = {}, {}
+for arm in arms:
+    out = [train_checked(seed, qnets[arm][seed], use_target=arm == 'DQN')
+           for seed in range(num_seeds)]
+    runs[arm], checks[arm] = [r for r, _ in out], [c for _, c in out]
+```
+
+Seeds finish different numbers of episodes, so we plot against environment steps, the unit the budget is written in. `d2l.on_grid` resamples each run's per-episode records onto a common grid of environment steps, and `d2l.plot_curves` draws the median over seeds with a band from the lowest to the highest seed:
 
 ```{.python .input #dqn-the-ablation-2}
 %%tab pytorch, jax
@@ -316,58 +330,9 @@ d2l.plot_curves({arm: d2l.on_grid(runs[arm], grid, 1) for arm in runs},
                 reference=500)
 ```
 
-The two variants differ only in whether the bootstrap uses a target network. With a target network, every seed improves from the random policy's return of about 20 to returns in the hundreds, although learning remains variable. The behavior return also understates the policy, because the final exploration rate $\epsilon=0.05$ still forces a random action on approximately one step in twenty. Without a target network, returns improve briefly and then collapse for every seed. The online network then supplies its own changing targets, and the poor greedy policy collects data that reinforces the same estimates. The separate greedy evaluation below removes exploratory actions from the comparison.
+With a target network every seed improves from the random policy's return of about 20 to returns in the hundreds, although the curves stay ragged. The behavior return understates the policy, because the final exploration rate $\epsilon = 0.05$ still forces a random action on one step in twenty. Without a target network the return never rises above the random policy's and soon falls to about 9, the length of an episode in which the cart is pushed the same way at every step.
 
-Because the return keeps falling off its peaks and climbing back, the summary statistic you choose matters more than it should, and the next cell computes the candidates rather than asserting them. For each seed we take every trailing 20-episode average the run contains, and report the best one, the final one, and the one the run would have reported had we stopped it fifty episodes earlier:
-
-```{.python .input #dqn-the-ablation-3}
-%%tab pytorch, jax
-def windows(returns, k=20):
-    """All trailing k-episode averages of a run, in order."""
-    return np.convolve(returns, np.ones(k) / k, 'valid')
-
-for arm in runs:
-    w = [windows(np.asarray(r)[:, 1]) for r in runs[arm]]
-    best = np.array([x.max() for x in w])
-    final = np.array([x[-1] for x in w])
-    early = np.array([x[-51] for x in w])
-    print(f'{arm:>18}: best 20-episode window per seed {np.round(best)}\n'
-          f'{"":>18}  final window {np.round(final)} '
-          f'(spread {np.ptp(final):.0f})\n'
-          f'{"":>18}  fifty episodes earlier {np.round(early)}')
-```
-
-The final-window return depends on the seed, and the window fifty episodes
-earlier is often a hundred points or more away from it. It therefore describes the
-state of each training run at the stopping time rather than a stable endpoint.
-Selecting the best window after observing the entire curve introduces
-optimistic selection bias; reporting its seed spread does not remove that bias.
-
-For evaluation, we predeclare a budget of $50{,}000$ environment steps and
-then evaluate the resulting policy separately. This separates the policy from
-the exploration noise in the training return and avoids choosing a stopping
-point after inspecting the curves.
-
-The behavior return combines policy quality with the effect of $\epsilon$-greedy exploration. After the fixed training budget, we therefore evaluate the greedy policy separately with $\epsilon=0$:
-
-```{.python .input #dqn-the-ablation-4}
-%%tab pytorch, jax
-env = gym.make('CartPole-v1')
-for arm in arms:
-    for seed in range(num_seeds):
-        env.reset(seed=100 + seed)
-        qnet = qnets[arm][seed]
-        score = d2l.evaluate(env, lambda s, r: int(q_values(qnet, s).argmax()),
-                             num_episodes=100)
-        print(f'{arm:>18}, seed {seed}: greedy return over 100 episodes '
-              f'{score:.0f}')
-```
-
-Without exploratory actions, most greedy DQN policies balance the pole for the full 500 steps. The final greedy policy is, however, a single snapshot of an oscillatory training process, and a run that stops in a dip scores far below 500. Across ten seeds, a minority of runs end in such a dip, and training longer does not cure it. Every run without a target network fails almost immediately, with a greedy return of about 10, far below every DQN seed.
-
-To distinguish value instability from policy instability, the training loop records $\max_a Q_w(s_0,a)$ at the centered start state. The code masks bootstrapping only on `terminated`; it continues to bootstrap across the 500-step time limit, and the state contains no time coordinate. It therefore learns the continuing-task value in which the time limit ends data collection but not the underlying process.
-
-In this formulation, a policy that balances the pole indefinitely has value $1/(1-\gamma)=100$ from the start. The dashed line marks this ceiling:
+The value estimates show what went wrong. The training loop records $\max_a Q_w(s_0, a)$ at the centered start state, and we can say in advance where it should end. The buffer masks the bootstrap only on `terminated`, so the update keeps bootstrapping across the 500-step limit, and the state contains no clock. The network therefore learns the value of a continuing task, in which the time limit stops data collection but not the process. A policy that balances the pole forever earns $\sum_t \gamma^t = 1/(1-\gamma) = 100$ from the start, and no policy earns more, because every step pays 1. The dashed line marks this ceiling:
 
 ```{.python .input #dqn-the-ablation-5}
 %%tab pytorch, jax
@@ -381,20 +346,62 @@ print(f'continuing-task ceiling: {ceiling:.0f}; the no-target arm ends at ' +
                 runs['no target network']))
 ```
 
-For DQN, the recorded start-state estimate climbs toward the continuing-task ceiling and ends close to it on every seed. The corresponding return curves still oscillate because small changes in action values can change the greedy action and produce a substantially different policy. This trace concerns only $s_0$ and does not certify that every Q-value is stable or accurate.
+DQN's estimate climbs toward the ceiling, while the estimate without a target network passes $10^8$. The runaway goes up rather than in an arbitrary direction because CartPole pays 1 at every step. Every target of a transition that does not end the episode is $1 + \gamma \max_{a'} Q_w(s', a')$, one more than a discounted output of the network itself, and the shared parameters that lift $Q_w(s, a)$ toward it also lift $Q_w(s', \cdot)$, because $s'$ is close to $s$. The target stays ahead of the prediction at every step, and nothing stops the climb.
 
-The scale nevertheless separates the two ablations. DQN ends near $10^2$, whereas the version without a target network exceeds $10^8$. The latter clearly diverges. Since no policy can exceed the ceiling of 100 under the objective implemented here, an estimate above it would demonstrate overestimation. The DQN estimates end near the ceiling, at most a few points above it, so this probe cannot settle how much the maximum in the target inflates them.
+A frozen copy holds the target still for 125 gradient steps, so values can climb only one synchronization at a time. Suppose every value starts at zero and the online network fits its targets exactly between two synchronizations. Then after $n$ synchronizations no value exceeds
 
-The next experiment measures that maximization bias directly.
+$$\sum_{k=0}^{n-1} \gamma^k = \frac{1 - \gamma^n}{1 - \gamma},$$
+
+the discounted return of $n$ steps of reward 1. The budget holds about 196 synchronizations after the first gradient step, which bounds the start-state value by about 86. The plotted estimate follows this bound closely, a few points above it from about 10,000 steps on, and ends above 86 on every seed, because a network generalizes: a step that lifts the value of one state lifts its neighbors too, so value spreads faster than one backup per synchronization (exercise :exref:`ex_dqn-sync-period`).
+
+A target network is one repair for this feedback, not the only one. PQN :cite:`Gallici.Fellows.Ellis.ea.2025` drops both the frozen copy and the replay buffer, normalizes the activations of every hidden layer, and collects data from many environments in parallel; exercise :exref:`ex_dqn-layernorm` tries the normalization on CartPole.
+
+### Evaluation of the Greedy Policy
+
+The return curve is a poor summary of a run. It includes the exploratory actions, its final value depends on when the run happens to stop, and its best value is chosen after looking at the whole curve, which flatters every method. We therefore evaluate the greedy policy at budgets fixed in advance. These are the checks that `train_checked` recorded, a ten-episode greedy return after every 5,000 environment steps and one at the end of the budget:
+
+```{.python .input #dqn-the-ablation-3}
+%%tab pytorch, jax
+print('greedy return (10 episodes) every 5,000 environment steps')
+for arm in arms:
+    for seed, c in enumerate(checks[arm]):
+        print(f'{arm:>17}, seed {seed}: ' + ' '.join(f'{x:3.0f}' for x in c))
+```
+
+Checked this way, DQN's greedy policy sits at a return of about 100 to 250 for the first 30,000 steps and then reaches 500 on most seeds between 35,000 and 45,000 steps. Even the first check, at 5,000 steps, usually scores above the plateau that follows it. Reaching 500 is not final: some seeds later fall back by hundreds of points, as one seed of the printout does. Without a target network the greedy policy never lasts more than about 10 steps at any check, so training longer does not rescue it. Although DQN trains on each stored transition many times, it needs more environment steps to balance the pole for the full episode than PPO with four epochs per batch needed in :numref:`sec_ppo`.
+
+A greedy return says how good the policy is, not whether the network knows how good it is. :citet:`Hasselt.Guez.Silver.2016` test a value estimate against the discounted return that the greedy policy actually earns, which is the quantity the estimate claims to predict. `audit` computes three numbers for a trained network: the greedy return over 100 episodes, the greedy policy's discounted return over 20 episodes (`d2l.evaluate` with `gamma`), and the estimate $\max_a Q_w(s_0, a)$. Episodes start close to the centered state, so the discounted return measures the value of $s_0$. Under the 500-step limit even a perfect policy earns only $(1 - \gamma^{500})/(1 - \gamma) \approx 99.3$, slightly less than the ceiling of the continuing task.
+
+```{.python .input #dqn-the-ablation-4}
+%%tab pytorch, jax
+def audit(qnet, seed, copies=1):
+    """Greedy return over 100 episodes, its discounted return over 20, and
+    the network's own estimate max_a Q(s0, a) of the latter."""
+    env, greedy = make_env(copies), lambda s, r: int(q_values(qnet, s).argmax())
+    env.reset(seed=100 + seed)
+    score = d2l.evaluate(env, greedy, 100)
+    env.reset(seed=100 + seed)
+    disc = d2l.evaluate(env, greedy, 20, gamma=gamma)
+    return score, disc, q_values(qnet, np.zeros(4, np.float32)).max()
+
+audits = {arm: [audit(qnets[arm][seed], seed) for seed in range(num_seeds)]
+          for arm in arms}
+for arm in arms:
+    for seed, (score, disc, v0) in enumerate(audits[arm]):
+        print(f'{arm:>17}, seed {seed}: return {score:3.0f}, discounted '
+              f'{disc:5.1f}, max_a Q(s0) {v0:8.3g}')
+```
+
+Where the greedy policy balances the pole, the estimate sits a few points below the discounted return that the policy earns, never more than about eight: values still climb one synchronization at a time, and the lag of the bound above is visible at the end of the budget. Where the greedy policy fails, which happens on some seeds, the estimate is above what the policy earns, by more than 20 points on about half of such runs. With two actions, these failing runs are the only sign of the network promising more than its policy delivers, too few and too mixed with other errors to measure the effect. A cleaner test needs a maximum over more actions.
 
 ## Overestimation
 
-### Measuring the Maximization Bias
+### The Maximization Bias in Numbers
 :label:`subsec_dqn-max-bias`
 
-The target :eqref:`eq_dqn_target` maximizes estimated action values. For noisy estimates, $\mathbb{E}[\max_{a'}\hat{Q}(s',a')]\geq\max_{a'}\mathbb{E}[\hat{Q}(s',a')]$, with strict inequality when noise can change the maximizing action. :numref:`sec_qlearning` demonstrated this bias in a table, and :numref:`sec_regularized` showed that the hard maximum is the $\beta\to0$ limit of the soft backup. Function approximation can feed the resulting bias back into subsequent targets :cite:`Thrun.Schwartz.1993`.
+The target :eqref:`eq_dqn_target` maximizes estimated action values. For noisy estimates, $\mathbb{E}[\max_{a'}\hat{Q}(s',a')]\geq\max_{a'}\mathbb{E}[\hat{Q}(s',a')]$, with strict inequality when the noise can change which action is largest. :numref:`sec_qlearning` demonstrated this bias in a table, and :numref:`sec_regularized` showed that the hard maximum is the $\beta\to0$ limit of the soft backup with a uniform reference. With function approximation, the bias at one state feeds into the targets of the states that lead to it :cite:`Thrun.Schwartz.1993`.
 
-The following simulation gives four actions the same true value of zero and adds independent unit noise to each estimate. The single estimator selects and evaluates an action with the same noisy values. The double estimator selects with one set of noisy values and evaluates with an independent set :cite:`vanHasselt.2010`:
+The following simulation gives four actions the same true value of zero and adds independent unit noise to each estimate. The single estimator selects and evaluates an action with the same noisy values. The double estimator selects with one set of noisy values and evaluates with an independent second set :cite:`vanHasselt.2010`:
 
 ```{.python .input #dqn-the-max-bias-measured}
 %%tab pytorch, jax
@@ -407,31 +414,20 @@ print(f'select with one, evaluate with the other: '
       f'{second[np.arange(100_000), sel].mean():+.3f}')
 ```
 
-The maximum of four unit-noise estimates has about one unit of upward
-bias. With independent selection and evaluation estimates, the evaluator's
-noise has zero conditional mean for the selected action, and the measured
-bias is near zero. :numref:`fig_rl_max_bias` shows that the single-estimator
-bias grows with the number of actions while the independent double
-estimator remains near zero. In DQN, shared parameters and bootstrapping
-can propagate this bias to other states; a fixed offline dataset also
-removes the corrective effect of new interaction (:numref:`sec_offline`).
+The maximum of four unit-noise estimates has an upward bias of about one unit. With independent estimates for selection and evaluation, the evaluator's noise has mean zero whichever action was selected, and the measured bias is near zero. :numref:`fig_rl_max_bias` shows that the single estimator's bias grows with the number of actions, while the independent double estimator stays at zero. A language model choosing its next token among $10^5$ actions would face a far larger bias from a maximum over noisy estimates, one reason why language-model post-training uses policy gradients rather than a Q-network. A fixed dataset makes the bias worse still, because no new interaction corrects an overrated action (:numref:`sec_offline`).
 
-![A maximum over noisy estimates is biased upward. Left: the distribution of the largest of four independent estimates of the same true value of zero, against the distribution of a single estimate; the maximum carries a measured bias of $1.03$. Right: the bias of the single estimator grows with the number of actions, while the double estimator, one set of estimates selecting the action and an independent set scoring it, stays below $0.002$ in magnitude throughout.](../img/mdl-rl-max-bias.svg)
+![A maximum over noisy estimates is biased upward. Left: the distribution of the largest of four independent estimates of the same true value of zero, against the distribution of a single estimate; the maximum carries a measured bias of $1.03$. Right: the bias of the single estimator grows with the number of actions, while the bias of the independent double estimator, one set of estimates selecting the action and an independent set scoring it, is indistinguishable from zero throughout.](../img/mdl-rl-max-bias.svg)
 :label:`fig_rl_max_bias`
 
 ### Double DQN
 :label:`subsec_dqn-double-dqn`
 
-The double estimator requires two value estimates, and DQN already maintains an online network and a target network. Double DQN uses the online network to select the action and the target network to evaluate it :cite:`Hasselt.Guez.Silver.2016`:
+The double estimator needs two value estimates, and DQN already has two networks. Double DQN :cite:`Hasselt.Guez.Silver.2016` selects the action with the online network and evaluates it with the target network:
 
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\ Q_{w^-}\big(s',\ \underset{a'}{\mathrm{argmax}}\ Q_w(s', a')\big).$$
 :eqlabel:`eq_double_dqn`
 
-An action selected by an overestimate in the online network is therefore
-not evaluated by that same output. The target copy is correlated with the
-online network, so Double DQN only approximates the independent double
-estimator analyzed above. It reuses the two forward passes already
-required by DQN; the change to `q_step` is three lines:
+An action that the online network overrates by chance is then scored by a different network. The change needs no new network, only one more forward pass of the online network on $s'$. The two networks are not independent, since the copy is the online network of at most 125 gradient steps earlier, so Double DQN removes only part of the bias. If the evaluating estimate is correlated with the selecting one with coefficient $\rho$, the bias that remains is $\rho$ times that of the single estimator (exercise :exref:`ex_dqn-max-bias-closed-form`). The change to `q_step` is three lines:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-1}
 %%tab pytorch
@@ -453,37 +449,55 @@ def q_step_double(qnet, target, opt, obs, act, rew, next_obs, term):
         target(s), sel[:, None], -1).squeeze(-1), gamma))
 ```
 
-The training loop changes only the update function; data collection, replay,
-target synchronization, and evaluation remain fixed. We use the same logged
-diagnostic for the comparison:
+### Duplicated Actions
+
+CartPole gives the maximum little to choose from. The bias of the larger of two independent unit-noise estimates is $1/\sqrt{\pi} \approx 0.56$, about half the four-action value, and the two-action estimates of the ablation are pulled the other way by the lag of the synchronizations. To see the bias on a trained network without changing the task, we offer each of CartPole's actions nine times. `make_env(copies=9)` exposes 18 actions, the size of the full Atari action set, and action $a$ pushes the cart the way action $a \bmod 2$ does; `make_qnet(copies=9)` has 18 outputs. The duplicates change neither the optimal values nor the ceiling of 100. The 18 outputs are nine noisy estimates of each of two values, and the maximum in the target picks the luckiest of nine, the right panel of :numref:`fig_rl_max_bias` on a real network. The next cell trains DQN and Double DQN with 18 actions, and Double DQN with two, and audits every trained network; DQN with two actions is the arm of the ablation:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-2}
 %%tab pytorch, jax
-qnets['Double DQN'] = [new_qnet(seed) for seed in range(num_seeds)]
-runs['Double DQN'] = [list(train_dqn(seed, qnets['Double DQN'][seed],
-                                     step=q_step_double))
-                      for seed in range(num_seeds)]
+names = ('DQN, 2 actions', 'Double DQN, 2 actions',
+         'DQN, 18 actions', 'Double DQN, 18 actions')
+qnets[names[0]], runs[names[0]] = qnets['DQN'], runs['DQN']
+audits[names[0]] = audits['DQN']
+for name in names[1:]:
+    copies = 9 if '18' in name else 1
+    step = q_step_double if name.startswith('Double') else q_step
+    qnets[name] = [new_qnet(seed, copies) for seed in range(num_seeds)]
+    runs[name] = [list(train_dqn(seed, qnets[name][seed], step=step,
+                                 copies=copies)) for seed in range(num_seeds)]
+    audits[name] = [audit(qnets[name][seed], seed, copies)
+                    for seed in range(num_seeds)]
 ```
+
+For each arm we print, per seed, the greedy return, the greedy policy's discounted return and the start-state estimate:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-3}
 %%tab pytorch, jax
-d2l.plot_curves({arm: d2l.on_grid(runs[arm], grid, 2)
-                 for arm in ('DQN', 'Double DQN')},
+print(f'{"per seed:":>22} {"greedy return":>17}   {"discounted":>17}'
+      f'   {"max_a Q(s0)":>17}')
+for name in names:
+    res = np.array(audits[name]).T
+    print(f'{name:>22} ' + '   '.join(' '.join(f'{x:5.1f}' for x in row)
+                                     for row in res))
+```
+
+The start-state estimates of the 18-action pair, against the ceiling, over training:
+
+```{.python .input #dqn-duplicated-actions-1}
+%%tab pytorch, jax
+d2l.plot_curves({name: d2l.on_grid(runs[name], grid, 2) for name in names[2:]},
                 x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='value estimate at the start state',
                 reference=ceiling)
-for arm in ('DQN', 'Double DQN'):
-    print(f'{arm:>10}: final value estimate at s0, per seed: '
-          f'{np.round([np.asarray(r)[-1, 2] for r in runs[arm]], 1)}')
 ```
 
-The Double DQN estimates end close to the DQN estimates, sometimes above and sometimes below, and their seed bands overlap during most of training. CartPole has only two actions, and :numref:`fig_rl_max_bias` shows that maximization bias grows with the number of actions. The effect is therefore expected to be small here.
+With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns 99.3, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. In sweeps over twenty seeds, a few 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
 
-On Atari, with as many as eighteen actions, Double DQN changes scores substantially :cite:`Hasselt.Guez.Silver.2016`. The same distinction becomes important in offline learning, where inflated actions cannot be corrected by new interaction (:numref:`sec_offline`). At this CartPole budget, any difference in return remains within variation across seeds.
+We can now train a value network on transitions from any policy, replayed many times, with a frozen copy that keeps the targets still and a second estimate that keeps the maximum from inflating them. Both repairs assume that the maximum over actions can be computed: CartPole's two pushes and Atari's 18 joystick actions form a list. The torque of a motor is a number in an interval, and an argmax over it is an optimization problem of its own at every step. The next section keeps replay and the frozen copy, and replaces the maximum by a second network trained to propose the best action, which completes the off-policy column of :numref:`fig_rl_roadmap`.
 
 ## Summary
 
-With function approximation, bootstrapping, and off-policy data, Q-learning can diverge even when the value class contains the correct solution. Experience replay reduces temporal correlation and reuses transitions, while a target network holds bootstrap targets fixed between updates. These mechanisms improve stability but do not restore the tabular convergence theorem. DQN also inherits maximization bias. Double DQN reduces this bias by selecting an action with the online network and evaluating it with the target network.
+A network in place of the Q-table combines function approximation, bootstrapping and off-policy data, and Baird's seven states show that this combination can diverge even when the true values are representable and no sampling noise is present. DQN keeps all three ingredients and repairs two couplings: a replay buffer breaks the correlation of consecutive transitions and reuses each of them many times, and a frozen target network holds the regression targets still between synchronizations. On CartPole, removing the frozen copy sends the start-state value past $10^8$; with it, the value climbs one synchronization at a time toward the ceiling of 100, and the greedy policy balances the pole for the full 500 steps on most seeds after 35,000 to 45,000 environment steps. The maximum in the target biases the values upward, more so the more actions it chooses among, and with each action offered nine times DQN's estimate ends above the ceiling on every seed. Double DQN selects the action with the online network and evaluates it with the frozen copy, which removes most of that bias at the cost of one extra forward pass.
 
 ## Exercises
 
@@ -509,10 +523,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
     1. Mix the two weightings, $\mathbf{d} = (1 - p)\,\mathbf{1}/7 + p\,\mathbf{e}_7$,
        and find by bisection the smallest $p$ for which no eigenvalue of $A$
        has a positive real part, for $\gamma \in \{0.9, 0.95, 0.99\}$.
-       Because `Phi` has eight columns but only seven rows, $A$ always has
-       the eigenvalue $0$, and rounding can give it a real part of order
-       $10^{-17}$; count real parts below $10^{-10}$ as zero. How does the
-       amount of off-policy weight that the iteration tolerates depend on the
+       How does the amount of off-policy weight that the iteration tolerates depend on the
        discount?
    :exlabel:`ex_dqn-baird-on-policy`
 
@@ -524,9 +535,9 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
    `grad_clip` $= 10$ whenever its norm exceeds 10 and passes it to Adam.
     1. Show that $\ell'(e) = \max\big(-1, \min(1, e)\big)$. In which sense
        is Huber regression squared-loss regression with clipped residuals?
-    1. Show that the gradient of the minibatch loss with respect to $w$ has
-       norm at most $\max_i \|\nabla_w Q_w(s_i, a_i)\|$. How can this bound
-       grow during training while every residual stays the same?
+    1. Show that the minibatch gradient has norm at most
+       $\max_i \|\nabla_w Q_w(s_i, a_i)\|$, and explain why this bound can
+       grow while every residual stays the same.
     1. Adam divides a running average of the gradients by the square root
        of a running average of their squares. Apart from the small constant
        it adds for numerical stability, multiplying every gradient of a run
@@ -550,11 +561,12 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        episode reaches the limit?
     1. The observation contains no clock, so the network cannot tell a state
        at step 499 from a similar balanced state at step 50. Model its
-       estimate on balanced states by a single number $q$, the estimate of
-       the one-state task of exercise
-       :exref:`ex_qlearning-truncation-termination`a of
-       :numref:`sec_qlearning`, which pays reward 1 at every step. Evaluate
-       the value that this exercise found for the faulty mask at $H = 500$
+       estimate on balanced states by a single number $q$, the value of a
+       one-state task that pays reward 1 at every step and is cut off after
+       $H$ steps. With the faulty mask, $H - 1$ of the $H$ transitions of an
+       episode have the target $1 + \gamma q$ and the last one has the
+       target $1$. Show that the fixed point of the averaged update is
+       $q = H / \big(H - \gamma (H - 1)\big)$, and evaluate it at $H = 500$
        and $\gamma = 0.99$. The start-state value plot of
        :numref:`subsec_dqn-ablation` marks $1/(1 - \gamma)$ as the ceiling.
        Compare $q$ with the value of the start state of a 500-step episode
@@ -615,26 +627,27 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
 1. [code] **The sync period.** ● `train_dqn` copies the online weights into
    the target network every `sync_every` $= 250$ environment steps, which is
    every 125 gradient steps.
-    1. Suppose that every reward is 1, that all values start at zero, and that
-       the online network fits its targets exactly between two
-       synchronizations. Show that after $n$ synchronizations no value
-       exceeds $(1 - \gamma^n)/(1 - \gamma)$. Evaluate this bound at the end
-       of the budget for `sync_every` $\in \{10, 50, 250, 1000, 5000\}$,
-       counting the synchronizations that follow the first gradient step.
+    1. :numref:`subsec_dqn-ablation` bounds every value after $n$
+       synchronizations by $(1 - \gamma^n)/(1 - \gamma)$. Evaluate this bound
+       at the end of the budget for `sync_every`
+       $\in \{10, 50, 250, 1000, 5000\}$, counting the synchronizations that
+       follow the first gradient step.
     1. Rerun the DQN arm with these five values, two seeds each, and record
        the greedy evaluation after the budget and the start-state value
        trace. Which end of the sweep behaves like the run without a target
        network? At which end does the bound of part (a) limit what the run
        can reach?
-    1. With `sync_every` $= 250$, the final start-state values printed in
-       :numref:`subsec_dqn-double-dqn` exceed the bound of part (a). Which
-       assumption of part (a) fails, and what does the excess say about how
-       the network obtains its values?
+    1. The bound assumes that every value starts at zero and that the online
+       network fits its targets exactly between synchronizations. With
+       `sync_every` $= 250$, record $\max_a Q_w(s_0, a)$ just before each of
+       the first 40 synchronizations of one seed and plot it against the
+       bound. Where does the run first cross the bound, and which of the two
+       assumptions does the crossing violate?
    :exlabel:`ex_dqn-sync-period`
 
 1. **n-step targets from replay.** ● Several successors of DQN replace the
-   one-step target :eqref:`eq_dqn_target` by an $n$-step target in the manner
-   of :eqref:`eq_nstep_return`,
+   one-step target :eqref:`eq_dqn_target` by an $n$-step target, the
+   $n$-step return of :numref:`sec_actorcritic` with a maximum at its end,
 
    $$y^{(n)}_t = \sum_{i=0}^{n-1} \gamma^i r_{t+i} + \gamma^n \max_{a'} Q_{w^-}(s_{t+n}, a'),$$
 
@@ -653,6 +666,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        target estimate?
     1. The $n$-step returns of :numref:`sec_actorcritic` did not raise the
        question of part (c). Why not?
+   :exlabel:`ex_dqn-nstep-replay`
 
 1. **Prioritized sampling.** ● Prioritized replay
    :cite:`Schaul.Quan.Antonoglou.ea.2016` samples stored transition $i$ with
@@ -731,6 +745,7 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        update. Which of its assumptions does your experiment satisfy? Which
        outcomes of parts (a) to (c) would contradict the paper's claim, and
        which would only fall outside its scope?
+   :exlabel:`ex_dqn-layernorm`
 
 [Discussions](https://d2l.discourse.group/t/36804)
 
@@ -741,171 +756,283 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
 [Dive into Deep Learning · §15.4]{.kicker}
 
 Deep Q-Networks<br>
-**instability under function approximation · experience replay and target networks · termination and truncation · maximization bias and Double DQN**
+**the deadly triad · experience replay · target networks · greedy evaluation · maximization bias and Double DQN**
 :::
 :::
 
-::: {.slide title="Sources of Instability"}
-Unlike the policy-gradient target, the Q-learning target depends on the
-function being trained:
+::: {.slide title="Put a Network into Q-Learning and the Start-State Value Passes 10⁸"}
+[The problem]{.kicker}
 
-$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)
-\max_{a'} Q_w(s', a')$$
+- CartPole pays 1 per step; with $\gamma = 0.99$ no policy is worth more than $1/(1-\gamma) = 100$ from the start.
+- Replace the Q-table by a network and keep the update, $y = r + \gamma \max_{a'} Q_w(s', a')$.
+- After 50,000 steps the network's own estimate at the start state exceeds $10^8$, on every seed.
+- Its greedy policy keeps the pole up for about 9 steps; a random policy manages about 20.
 
-- The tabular convergence argument, based on stochastic approximation to a
-  contraction, no longer applies after projection onto a function class
-  :cite:`Tsitsiklis.VanRoy.1997`.
-- Consecutive transitions are strongly correlated, and each parameter update
-  changes the estimates for many states.
-- Replay decorrelates the data but makes them off-policy, so the critic is no
-  longer trained solely on the current policy's state distribution.
+::: {.d2l-note .warn}
+Can a network keep the table's licence to learn from any transition, collected by any policy?
+:::
 :::
 
-::: {.slide title="The Deadly Triad"}
-Function approximation + bootstrapping + off-policy data
-:cite:`Sutton.Barto.2018,vanHasselt.Doron.Strub.ea.2018`.
-Every region is an algorithm already taught:
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
 
-![](../img/mdl-rl-deadly-triad.svg){width=72%}
+- explain why a semi-gradient update with a network can diverge, and run Baird's counterexample;
+- build DQN from a replay buffer and a frozen target network;
+- bound the start-state value by the number of target synchronizations;
+- evaluate a run by greedy checks at fixed budgets, and test values against the policy's discounted return;
+- measure the maximization bias, and remove most of it with Double DQN.
+
+**Running example:** CartPole, $\gamma = 0.99$, 50,000 environment steps, three seeds per arm; the value ceiling is 100.
 :::
 
-::: {.slide title="Baird's Counterexample"}
-Baird's construction has seven states and zero true value everywhere, which
-the parameterization can represent with $w=0$. Even deterministic expected
-updates diverge under uniform off-policy weighting:
+::: {.slide title="DQN Learns from Every Stored Transition, Replayed"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | what one sample is used for |
+|---|---|
+| Actor-Critic Methods | a critic's estimate in place of the return |
+| Trust Regions and PPO | several clipped steps on one batch |
+| KL-Regularized Policy Optimization | a reward learned from comparisons |
+| **Deep Q-Networks** | **many updates, from a replay buffer** |
+| Soft Actor-Critic | replay for continuous actions |
+| Learned Models and Planning | a model to plan in |
+| Offline Reinforcement Learning | a fixed log, no new interaction |
+| RL for Sequence Generation | a verifier's reward on text |
+:::
+
+::: {.col .narrow}
+- **Uses:** Q-learning's target and terminal mask; the `Batch` and its one-step `td_target`; CartPole and its 500-step limit.
+- **Skips:** prioritized replay, dueling and distributional heads.
+:::
+:::
+:::
+
+::: {.slide title="The Target Moves with the Network It Trains"}
+[Why it can diverge]{.kicker}
+
+$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w(s', a')$$
+
+- Hold $y$ fixed and take one regression step of $Q_w(s, a)$ toward it: a *semi-gradient* step.
+- The next step's $y$ has moved, because it contains $Q_w$.
+- The sequence of steps is not descent on any fixed objective.
+- A falling loss means the network fits its current targets, not that the targets are right.
+:::
+
+::: {.slide title="The Backup Shrinks the Largest Error; the Fit Shrinks an Average"}
+[Why it can diverge]{.kicker}
+
+- Bellman backup: shrinks the largest error over all states by the factor $\gamma$.
+- Least-squares fit: shrinks the error averaged over the data, each state weighted by its visits.
+- The two disagree: a fit can enlarge the error at a rarely visited state.
+- The next backup carries that error into the targets of the states that lead there.
+- Data from the evaluated policy: the two agree, linear features converge.
+- Data from another policy: even linear features can diverge.
+
+[Tsitsiklis and Van Roy 1997]{.small}
+:::
+
+::: {.slide title="Baird: True Values Are Zero, Yet the Weights Grow from 10 to 335"}
+[Why it can diverge]{.kicker}
 
 @!dqn-the-deadly-triad
 
-. . .
+Seven states, linear features, every reward zero; expected updates (no noise), states weighted uniformly, the evaluated policy always moves to state 7.
 
-The parameters diverge exponentially for every positive constant step size.
-The failure belongs to the expected update operator, not to sampling noise
-:cite:`Baird.1995`.
+[Baird 1995]{.small}
 :::
 
-::: {.slide title="Replay and Target Networks"}
-![](../img/mdl-rl-dqn-dataflow.svg){width=88%}
+::: {.slide title="Every Pair of Ingredients Has a Convergent Method; DQN Has All Three"}
+[Why it can diverge]{.kicker}
+
+![](../img/mdl-rl-deadly-triad.svg){width=62%}
+
+Function approximation, bootstrapping, off-policy data: the *deadly triad*.
 :::
 
-::: {.slide title="Experience Replay and Off-Policy Data"}
-@dqn-replay-and-the-off-policy-licence
+::: {.slide title="Check: Which Ingredient Is Missing?"}
+[Check]{.kicker}
 
-. . .
+For each method, name the ingredient of the triad it does without:
+tabular Q-learning; REINFORCE with a network; behavior cloning.
 
-- The Q-learning target does not depend on the behavior policy, so transitions
-  collected by other policies remain usable (:numref:`sec_qlearning`).
-- A sampled `Batch` no longer preserves episode order. Consequently,
-  `reward_to_go` and `gae` cannot be computed from it, while the one-step
-  `td_target` remains available.
-- The replay capacity is 200,000 transitions and the experiment uses only
-  50,000 environment steps, so no transition is evicted.
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Tabular Q-learning: function approximation (it bootstraps from off-policy data).
+REINFORCE: bootstrapping and off-policy data (Monte Carlo returns of its own episodes).
+Behavior cloning: bootstrapping (regression to fixed expert labels).
+:::
+:::
 :::
 
-::: {.slide title="The Target Network"}
+::: {.slide title="Two Devices for Two Couplings"}
+[Two repairs]{.kicker}
+
+![](../img/mdl-rl-dqn-dataflow.svg){width=86%}
+
+Replay breaks the correlation of the data; a frozen copy holds the targets still.
+:::
+
+::: {.slide title="Replay Scrambles Time and Reuses Every Transition"}
+[Two repairs]{.kicker}
+
+- Store $(s, a, r, s', \mathrm{term})$ in a ring of 200,000 slots; never more than 50,000 are used here.
+- Every second step, regress on 128 transitions drawn uniformly: tens to hundreds of uses each.
+- Allowed because the target for $(s, a, r, s')$ does not depend on the policy that chose $a$.
+- A sampled batch has no episode order: only the one-step target can be formed.
+- Drawback: old transitions keep an error in the targets until the behavior revisits it.
+
+[Lin 1992]{.small}
+:::
+
+::: {.slide title="A Frozen Copy Holds the Target Still for 125 Gradient Steps"}
+[Two repairs]{.kicker}
+
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)
-\max_{a'} Q_{w^-}(s', a'), \qquad w^- \leftarrow w
-\textrm{ every } C \textrm{ steps}$$
+\max_{a'} Q_{w^-}(s', a'), \qquad w^- \leftarrow w \textrm{ every } C = 250 \textrm{ steps}$$
 
-Between synchronizations, the regression target is fixed.
+- Between synchronizations: an ordinary regression problem.
+- Huber loss: the derivative in the prediction never exceeds 1.
+- Gradient norm clipped at 10: bounds the rest of the step.
+- Ablation: synchronize after every step, so the online network computes its own targets.
 
-. . .
-
-The actor--critic method in :numref:`sec_actorcritic` recomputed its bootstrap
-target on every pass using fresh on-policy data. DQN instead freezes a copy of
-the value network to reduce feedback between an update and its target. The
-`use_target=False` ablation synchronizes this copy after every step and is
-therefore equivalent to using the online network in the target.
+[Mnih et al. 2015]{.small}
 :::
 
-::: {.slide title="The Training Loop"}
-@dqn-the-target-network-3
+::: {.slide title="Without the Frozen Copy, Every Seed Falls to About 9 Steps"}
+[Two repairs]{.kicker}
 
-. . .
-
-The budget is 50,000 environment steps, with one gradient update after every
-two steps. The implementation reuses `epsilon_greedy` and `linear_schedule`
-from :numref:`sec_qlearning`. The replay buffer records `terminated` rather
-than `truncated` so that a time limit does not suppress bootstrapping.
-:::
-
-::: {.slide title="Target-Network Ablation"}
 @!dqn-the-ablation-2
 
-. . .
-
-With a target network, every seed reaches returns in the hundreds, although
-performance remains variable. Without it, every seed falls to near-minimal
-return and its value estimates exceed $10^8$. In this
-ablation, removing the target network therefore causes clear divergence.
+With the copy every seed climbs from about 20 into the hundreds; $\epsilon = 0.05$ still randomizes one step in twenty.
 :::
 
-::: {.slide title="Value-Loss Diagnostics"}
-@!dqn-the-ablation-3
+::: {.slide title="With the Copy the Value Climbs toward 100; Without It, Past 10⁸"}
+[Two repairs]{.kicker}
 
-. . .
-
-Because performance rises and falls during training, the final moving average
-depends on the seed and is often a hundred points or more away from its value
-50 episodes earlier. Reporting the best window would introduce
-post-selection bias. We therefore use a greedy evaluation at the fixed
-training budget as the primary result.
-:::
-
-::: {.slide title="Converging Values, Churning Policy"}
 @!dqn-the-ablation-5
 
-. . .
-
-At the probe state, the value estimate approaches the correct scale rather
-than diverging; a single probe, however, cannot certify the whole value
-function. Small changes in action values can still change the greedy policy,
-so a fixed-budget evaluation can catch a seed in a dip far below 500.
-Because the update bootstraps through the time limit, it optimizes a continuing objective whose start-state value is bounded by
-$1/(1-\gamma)=100$. Estimates above this bound would be certain
-overestimates; DQN's end near it.
+Reward 1 at every step: the target $\geq 1 + \gamma Q_w(s', a')$, and shared weights lift $Q_w(s', \cdot)$ with $Q_w(s, a)$. The target stays ahead.
 :::
 
-::: {.slide title="Maximization Bias"}
+::: {.slide title="Values Climb One Synchronization at a Time: 196 Syncs Allow at Most 86"}
+[Two repairs]{.kicker}
+
+Values start at zero; the online network fits its targets exactly between syncs. After $n$ syncs:
+
+$$Q \leq \sum_{k=0}^{n-1} \gamma^k = \frac{1 - \gamma^n}{1 - \gamma}$$
+
+- 50,000 steps hold about 196 syncs after the first gradient step: $v(s_0) \leq 86$.
+- The estimates track this bound a few points above it, and end above 86 on every seed.
+- A network generalizes: lifting one state lifts its neighbors, faster than one backup per sync.
+:::
+
+::: {.slide title="Check: Synchronize Every 1,000 Steps Instead"}
+[Check]{.kicker}
+
+Same budget, same warm-up of 1,000 steps, but $C = 1{,}000$. About how high can $v(s_0)$ climb under the bound?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** About 49 syncs: $(1 - 0.99^{49})/0.01 \approx (1 - e^{-0.49})/0.01 \approx 39$.
+A slower copy is steadier but propagates value more slowly.
+:::
+:::
+:::
+
+::: {.slide title="A Final Window Is Not a Result: Check the Greedy Policy Every 5,000 Steps"}
+[Evaluation]{.kicker}
+
+@!dqn-the-ablation-3
+
+- DQN: about 100–250 for 30,000 steps, then 500 on most seeds by 35,000–45,000; some fall back.
+- No target network: never more than about 10 steps at any check.
+:::
+
+::: {.slide title="Solved Policies' Values Lag Their Return; Failed Ones Can Promise More"}
+[Evaluation]{.kicker}
+
+@!dqn-the-ablation-4
+
+- Under the 500-step limit a perfect policy earns $(1 - \gamma^{500})/(1 - \gamma) \approx 99.3$.
+- Solved: the estimate sits a few points below it. Failed: above what the policy earns, often by 20+.
+
+[van Hasselt, Guez, Silver 2016]{.small}
+:::
+
+::: {.slide title="The Max of Four Unit-Noise Estimates Is Biased Upward by About 1"}
+[Overestimation]{.kicker}
+
 @!dqn-the-max-bias-measured
 
-. . .
+- Four actions, true value 0 each, independent unit noise on every estimate.
+- Single estimator: select and evaluate with the same values. Biased by about 1.
+- Double estimator: select with one set, evaluate with an independent set. Unbiased.
 
-In this example, applying $\max$ to noisy estimates introduces approximately
-one unit of positive bias :cite:`Thrun.Schwartz.1993`. Using independent
-estimates for selection and evaluation removes the bias
-:cite:`vanHasselt.2010`. The hard maximum is the $\beta\to0$ limit of the
-soft backup in :numref:`sec_regularized`.
-
-![](../img/mdl-rl-max-bias.svg){width=90%}
+[Thrun and Schwartz 1993; van Hasselt 2010]{.small}
 :::
 
-::: {.slide title="The Double DQN Target"}
-Select with the online network, evaluate with the frozen one
-:cite:`Hasselt.Guez.Silver.2016`:
+::: {.slide title="The Bias Grows with the Number of Actions"}
+[Overestimation]{.kicker}
+
+![](../img/mdl-rl-max-bias.svg){width=90%}
+
+The independent double estimator stays at zero for every number of actions.
+:::
+
+::: {.slide title="Double DQN Selects with the Online Network and Evaluates with the Copy"}
+[Overestimation]{.kicker}
+
+$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\big(s', \mathrm{argmax}_{a'} Q_w(s', a')\big)$$
 
 @dqn-double-dqn-in-three-lines-1
 
-. . .
+- No new network, one more forward pass of the online network on $s'$.
+- The copy is correlated with the online network ($\rho$): the bias left is $\rho$ times DQN's.
+:::
+
+::: {.slide title="With Every Action Offered Nine Times, DQN Ends Above 100 on Every Seed"}
+[Overestimation]{.kicker}
+
+18 outputs; action $a$ pushes the cart as $a \bmod 2$ does: $Q^*$ and the ceiling of 100 are unchanged.
 
 @!dqn-double-dqn-in-three-lines-3
 
-The Double DQN values end close to DQN's, in either direction.
-This small difference is consistent with the two-action experiment in panel (b), where
-maximization has limited scope to select extreme errors. On Atari, with as many
-as 18 actions, the same modification produces substantially larger effects.
+- 18 actions: DQN typically 10–30 above the ceiling; Double DQN about 20 lower, near it.
+- 2 actions: the two agree within a few points.
 :::
 
-::: {.slide title="DQN in Modern Practice"}
-- $n$-step targets extend the return construction developed in
-  :numref:`sec_actorcritic`.
-- Prioritized replay :cite:`Schaul.Quan.Antonoglou.ea.2016`, dueling networks
-  :cite:`Wang.Schaul.Hessel.ea.2016`, and distributional value heads
-  :cite:`Bellemare.Dabney.Munos.2017` are combined and ablated in Rainbow
-  :cite:`Hessel.Modayil.vanHasselt.ea.2018`.
-- PQN :cite:`Gallici.Fellows.Ellis.ea.2025` uses LayerNorm and parallel
-  environments without a replay buffer or target network, illustrating that
-  replay and target networks are not the only route to stable value learning.
-- Modern applications often use PPO or newer value-based agents. DQN remains a
-  useful setting in which to study the principal failure modes.
-  :numref:`sec_offline` next considers the limiting case of fully offline data.
+::: {.slide title="Double DQN Keeps the 18-Action Estimates near the Ceiling"}
+[Overestimation]{.kicker}
+
+@!dqn-duplicated-actions-1
+
+The greedy returns do not separate the arms at this budget: the double estimator corrects the values.
+:::
+
+::: {.slide title="Check: A Language Model Chooses among 10⁵ Tokens"}
+[Check]{.kicker}
+
+A Q-network scores $10^5$ next tokens with unit noise on each estimate. Roughly how large is the
+bias of the maximum, and how much of it does Double DQN leave if the two networks correlate at $\rho = 0.9$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The largest of $10^5$ unit normals averages about 4.4 (the rule $\sqrt{2 \ln m}$ gives 4.8), against about 1 for four actions.
+Double DQN leaves $\rho$ times that, about 4. One reason post-training uses policy gradients.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- Network + bootstrapping + off-policy data can diverge: Baird's weights grow from 10 to 335, true values 0.
+- Replay reuses every transition; a frozen copy holds the targets still between syncs.
+- Without the copy: values past $10^8$, greedy policy about 9 steps. With it: values climb one sync at a time toward 100.
+- Greedy checks every 5,000 steps: about 100–250 until 30,000, then 500 on most seeds by 35,000–45,000.
+- Max of four unit-noise estimates: bias about 1. With 18 actions DQN ends 10–30 above 100; Double DQN near 100.
+
+**Next:** a torque has no argmax. Keep replay and the frozen copy, and let an actor propose the action.
 :::

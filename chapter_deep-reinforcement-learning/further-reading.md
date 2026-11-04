@@ -1,92 +1,84 @@
 # Further Reading
 :label:`sec_deep_rl-further-reading`
 
-<!-- Phase 1 (structure): the raw material below was moved verbatim from the sections named in each
-comment; the writer of this file rewrites it to the standard (PLAN 15.9-M1, 15.9-M2). -->
+Each section of this chapter taught one method and measured it on a small task. A reader who opens a recent paper meets variants of these methods, and most of them change one thing: a detail of the update, the data the update may use, or what it constrains. This page names the variants a reader is most likely to meet, in the order of the chapter, with the problem each addresses and what it changes. It ends with a project that builds the post-training loop of :numref:`sec_rl_sequences` in full.
 
 ## Policy Optimization in Practice
 
-<!-- from ppo.md (Omitted Implementation Details) -->
+The PPO of :numref:`sec_ppo` reaches CartPole's ceiling, yet an implementation that reproduces published results on harder tasks differs from it in many small choices that papers rarely state. :citet:`Huang.Dossa.Raffin.ea.2022` traced 37 of them to lines of the reference code. Those that change the update most are these:
 
-### Omitted Implementation Details
-:label:`subsec_ppo_omitted`
+| detail | what it changes |
+|:--|:--|
+| observation and reward normalization | running statistics keep the network's inputs and the critic's targets near unit scale |
+| advantage normalization per minibatch | the per-batch standardization of :numref:`sec_baselines`, applied to each minibatch |
+| a learning rate annealed to zero | smaller steps as training ends |
+| orthogonal initialization, small policy head | the first policy is nearly uniform, so the first ratios stay near 1 |
+| a clip on the global gradient norm | a bound on every step in parameter space as well |
+| one loss for actor and critic | policy, value and entropy terms share each minibatch pass, where :numref:`sec_ppo` fits the critic first |
+| value-loss clipping | a clip band on the critic's change, shipped by some implementations and not by others |
+| early stopping on the approximate KL | the epochs of a batch end once the measured KL passes a threshold |
 
-The gap between this section's PPO and a production one is a list of small, named decisions, none of which needs new theory:
+Two studies measured which of these matter. :citet:`Engstrom.Ilyas.Santurkar.ea.2020` found that without them PPO's ratios leave the clip band freely, and that TRPO given the same details performs about as well as PPO, so much of PPO's advantage comes from the code around its objective. :citet:`Andrychowicz.Raichuk.Stanczyk.ea.2021` trained hundreds of thousands of agents over a grid of such choices and turned the results into recommendations: normalizing observations helped on most tasks, and neither study found value-loss clipping to help. Reading a maintained single-file implementation beside :numref:`sec_ppo` turns this table into code.
 
-| What real implementations add | Purpose |
-|---|---|
-| Learning-rate annealing to zero | reduce late updates as the policy approaches convergence |
-| Observation and reward normalization | running estimates hold network inputs and value targets near unit scale on tasks whose raw numbers vary by orders of magnitude |
-| Value-loss clipping | the critic gets a band of its own; its measured benefit is disputed, yet nearly every implementation ships it |
-| KL-based early stopping | stop the epochs when the measured approximate KL passes a threshold: our diagnostic panel turned into an actuator |
-| Orthogonal initialization, small policy head | start the policy near uniform so the first updates cannot blow the ratios out |
-| Advantage normalization per minibatch | :numref:`sec_baselines`'s per-batch step size, recomputed at the granularity the gradient uses |
-| Joint policy-and-value minibatch updates | one shuffled pass interleaves both losses; our critic-first, actor-second phases are a teaching choice |
+The PPO paper offers a second way to bound the step :cite:`Schulman.Wolski.Dhariwal.ea.2017`: a KL penalty on the change from the old policy, whose weight is doubled after a batch that overshot a target KL and halved after one that fell short. It did worse than the clip in their experiments, but it is a close relative of the penalty to a fixed reference in :numref:`sec_regularized`.
 
-The list is not ours. A community audit collected 37 such implementation details and measured which ones matter :cite:`Huang.Dossa.Raffin.ea.2022`; a controlled study went further and showed that at matched code-level choices PPO and TRPO perform nearly identically, so these details, not the clipped objective, account for much of PPO's practical edge :cite:`Engstrom.Ilyas.Santurkar.ea.2020`; and a large-scale sweep across a quarter-million trained agents reached similarly sober conclusions about which knobs carry the performance :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The practical instruction a textbook can give is therefore this: when you need a real PPO, read a maintained single-file implementation and diff it against this section; the roughly 300-line `cleanrl/ppo.py` is the standard study text. Every line you do not recognize will be on the list above, and now you know why each is there.
-
-<!-- from offline-rl.md (Bounded Staleness and Importance Ratios) -->
-
-The distinction is not absolute in practical systems. Importance ratios can correct data from a nearby policy, but their variance grows rapidly as the two policies separate; PPO therefore reuses each batch for only a limited number of epochs. In distributed learning, actors may also lag behind the central learner. IMPALA's V-trace truncates importance corrections so that moderately stale data remains useful with controlled variance :cite:`Espeholt.Soyer.Munos.ea.2018`. The remainder of this section considers the extreme case: a fixed dataset with no further interaction.
+In distributed training, many actors collect data with copies of the policy that lag the learner by several updates. IMPALA's V-trace target :cite:`Espeholt.Soyer.Munos.ea.2018` corrects the $n$-step targets of :numref:`sec_actorcritic` with importance ratios truncated at one. The truncation keeps the variance bounded, and in exchange the targets estimate the value of a policy between the actors' and the learner's.
 
 ## Value Learning after DQN
 
-<!-- from dqn.md (The DQN Lineage) -->
+The DQN of :numref:`sec_dqn` needs tens of thousands of CartPole steps, and its maximum over noisy estimates overestimates. Its successors each change one part. A multi-step target puts the $n$-step return of :numref:`sec_actorcritic` inside the Q-learning target, so a reward reaches earlier states in fewer updates. Prioritized replay :cite:`Schaul.Quan.Antonoglou.ea.2016` samples transitions in proportion to their TD error and reweights them to undo the bias this introduces. A dueling network :cite:`Wang.Schaul.Hessel.ea.2016` splits the output into a state value and per-action advantages, so the shared value learns from the transitions of every action.
 
-### Extensions and Successors
+Distributional methods learn the whole distribution of the return rather than its mean, with a Bellman equation for distributions :cite:`Bellemare.Dabney.Munos.2017`. :citet:`Lyle.Castro.Bellemare.2019` showed that in tabular and linear settings the expected values they learn are those of the ordinary update, so their gains come from how the richer target trains a deep network. Rainbow :cite:`Hessel.Modayil.vanHasselt.ea.2018` combined six of these changes, the double estimator of :numref:`sec_dqn` among them. Its ablation on Atari ranked prioritized replay and multi-step targets as the most important parts, and the double estimator and the dueling head as the least.
 
-Several later methods modify individual components of DQN. An $n$-step target uses several observed rewards before bootstrapping, as developed in :numref:`sec_actorcritic`. Prioritized replay samples transitions according to their temporal-difference error rather than uniformly :cite:`Schaul.Quan.Antonoglou.ea.2016`; its advantage decreases as replay buffers become larger and more diverse. A dueling network represents $Q$ as a state value plus action advantages :cite:`Wang.Schaul.Hessel.ea.2016`.
-
-Distributional methods estimate the return distribution rather than only its mean :cite:`Bellemare.Dabney.Munos.2017`. In tabular and linear settings, their expected update for the mean coincides with the ordinary update, so their empirical benefit depends on the interaction with nonlinear function approximation. Rainbow combines six extensions and reports an ablation of their individual contributions :cite:`Hessel.Modayil.vanHasselt.ea.2018`.
-
-PQN provides a contrasting design: with LayerNorm and batches collected from parallel environments, deep Q-learning can train without a replay buffer or target network :cite:`Gallici.Fellows.Ellis.ea.2025`. Replay and target networks are therefore one solution to correlated data and moving targets, not necessary components of every stable deep Q-learning system.
-
-### DQN in Modern Practice
-
-Vanilla DQN is mainly useful here as a simple setting in which to study two problems of deep value learning: moving bootstrap targets and maximization bias. It also establishes how a learner can use transitions collected by a different policy. Since the policy requires an argmax over actions, the basic method is restricted to discrete action spaces; actor-based methods extend related ideas to continuous control. :numref:`sec_offline` considers the limiting case in which all learning uses a fixed dataset and no further interaction is allowed.
+:citet:`vanHasselt.Doron.Strub.ea.2018` measured how often the deadly triad of :numref:`sec_dqn` causes trouble in deep Q-networks trained under many settings. Unbounded divergence was rare, but estimates that rose for a while above any achievable return were common; multi-step targets and target networks made such episodes rarer. Two recent designs drop the repairs of :numref:`sec_dqn` altogether. PQN :cite:`Gallici.Fellows.Ellis.ea.2025` trains on batches from many parallel environments with layer normalization in the network, and uses neither a replay buffer nor a target network. Streaming methods :cite:`Elsayed.Vasan.Mahmood.2024` learn from each transition once, as it arrives, after normalizing observations and rewards and bounding the size of each update. Replay and a frozen copy are therefore one repair of correlated data and moving targets, not the only one.
 
 ## Continuous Control since 2018
 
-<!-- from rl-sequences.md (Where to Go Next) -->
+Q-learning's target takes a maximum over actions, which a continuous torque does not offer. DDPG :cite:`Lillicrap.Hunt.Pritzel.ea.2016` trains a deterministic actor to climb the critic's gradient with respect to the action. TD3 :cite:`Fujimoto.vanHoof.Meger.2018` repairs DDPG's overestimation with the minimum of two critics, which :numref:`sec_sac` also uses, updates the actor less often than the critics, and adds noise to the target's action so that the actor cannot exploit a narrow peak of the critic. Soft actor-critic replaces the deterministic actor by a stochastic one and adds the entropy.
 
-**Continuous control since 2024.** The objectives of :numref:`sec_deeprl` through :numref:`sec_regularized` stand; recent gains have come from normalization, scale and stability rather than new losses, and careful normalization even lets streaming, replay-free temporal-difference learning work after decades of not working :cite:`Elsayed.Vasan.Mahmood.2024,Gallici.Fellows.Ellis.ea.2025`. Reading a modern paper here, you should recognize nearly every symbol.
+Most progress since has come from taking more gradient steps per environment step, the update ratio of :numref:`sec_sac`, without the critic's estimates running away. REDQ :cite:`Chen.Wang.Zhou.ea.2021` keeps a large ensemble of critics and takes the minimum over a random pair of them, which sustains many updates per step. DroQ :cite:`Hiraoka.Imagawa.Hashimoto.ea.2022` replaces the ensemble by dropout and layer normalization in two critics. CrossQ :cite:`Bhatt.Palenicek.Belousov.ea.2024` removes the target networks altogether: its critic uses batch normalization, and passes the current and the next state-action pairs through the network in one batch so that both see the same statistics. BRO :cite:`Nauman.Ostaszewski.Jankowski.ea.2024` scales the critic up to a wide residual network with layer normalization and adds optimistic exploration. The common thread with PQN is normalization inside the critic.
 
 ## Models, Imagination and Search
 
-<!-- from rl-sequences.md (Where to Go Next) -->
+The planner of :numref:`sec_model_based` spends thousands of model evaluations per real step and trusts its model only near the data; the methods below use a learned model differently. Dyna :cite:`Sutton.1990` uses it to imagine extra transitions for a model-free learner, the counted model of :numref:`sec_qlearning` driving Q-learning updates between real steps. MBPO :cite:`Janner.Fu.Zhang.ea.2019` keeps the imagined rollouts short, a few steps branching from states in the replay buffer, and mixes them into soft actor-critic's batches, so the model's compounding error stays small. REDQ, from the previous topic, matched MBPO's sample efficiency without a model, which suggests that much of MBPO's gain came from more updates per real step.
 
-**Model-based reinforcement learning and search.** The book's model-based methods are planning in a known model (:numref:`sec_valueiter`) and in a model counted from samples (:numref:`sec_qlearning`). A direct extension of the latter is Dyna-Q: augment :numref:`sec_qlearning`'s tabular loop by storing observed transitions and applying the same Q-update to model-generated transitions between environment steps. Monte Carlo tree search can be viewed as a *policy-improvement operator*: search produces an improved action distribution, which is then distilled into the policy as a supervised target. That loop is AlphaZero :cite:`Silver.Schrittwieser.Simonyan.ea.2017,Silver.Hubert.Schrittwieser.ea.2018`; MuZero learns the model it searches in :cite:`Schrittwieser.Antonoglou.Hubert.ea.2020`; DreamerV3 and TD-MPC2 train control inside learned world models :cite:`Hafner.Pasukonis.Ba.ea.2025,Hansen.Su.Wang.2024`. The same search-and-distillation pattern appears in test-time reasoning methods for language models.
+PETS :cite:`Chua.Calandra.McAllister.ea.2018` fits an ensemble of probabilistic networks and plans through samples from it with the cross-entropy method. The members agree where the data is dense and disagree elsewhere, so their disagreement marks where a plan should not be trusted. Dreamer :cite:`Hafner.Pasukonis.Ba.ea.2025` learns a recurrent model of the dynamics in a learned latent space, from images, and trains its actor and critic entirely on imagined latent trajectories, with one setting of its hyperparameters across many domains.
+
+Search with a learned value closes the loop of :numref:`sec_model_based`. AlphaZero :cite:`Silver.Schrittwieser.Simonyan.ea.2017,Silver.Hubert.Schrittwieser.ea.2018` searches with the rules of the game as its model and a value network at the leaves, and distills the search's choices into the policy. MuZero :cite:`Schrittwieser.Antonoglou.Hubert.ea.2020` learns a model that predicts only rewards, values and policies, not observations, and searches in it. TD-MPC2 :cite:`Hansen.Su.Wang.2024` plans over short horizons in a latent model and closes each plan with a learned value. Search distilled into a policy also underlies the test-time search of reasoning language models.
+
+A learned model also helps when no new data may be collected, provided the offline learner distrusts it where the data is thin. MOPO :cite:`Yu.Thomas.Yu.ea.2020` and MOReL :cite:`Kidambi.Rajeswaran.Netrapalli.ea.2020` penalize imagined rewards where an ensemble of models disagrees: the pessimism of :numref:`sec_offline`, applied to a model.
 
 ## Offline Methods at Scale
 
-<!-- from offline-rl.md (Constraining the Policy, the Values, or Both) -->
+The penalty of :numref:`sec_offline` divides by the count of a state-action pair in the log. With continuous actions almost every action a learned policy proposes has a count of zero, so the deep offline methods replace the count by something a network can estimate. They differ in what they constrain:
 
-In continuous action spaces, almost every exact action is absent from the dataset, so support constraints become more important. Conservative Q-learning instead penalizes the values of out-of-distribution actions :cite:`Kumar.Zhou.Tucker.ea.2020`. Implicit Q-learning avoids querying unseen actions by backing up an upper expectile of values observed in the dataset :cite:`Kostrikov.Nair.Levine.2022`. TD3+BC adds a behavior-cloning term to an off-policy actor and provides a strong simple baseline :cite:`Fujimoto.Gu.2021`.
+| method | what it constrains | how |
+|:--|:--|:--|
+| BCQ :cite:`Fujimoto.Meger.Precup.2019` | the actions the policy may take | a generative model of the logged actions proposes candidates, and the policy picks among them |
+| CQL :cite:`Kumar.Zhou.Tucker.ea.2020` | the values | a loss term lowers $Q$ on the policy's actions and raises it on the logged ones |
+| IQL :cite:`Kostrikov.Nair.Levine.2022` | which actions the backup queries | $V$ is fitted to an upper expectile of $Q$ over logged actions only, and the policy is extracted by advantage-weighted regression |
+| TD3+BC :cite:`Fujimoto.Gu.2021` | the policy's distance from the data | a cloning term is added to TD3's actor loss |
 
-<!-- copied from offline-rl.md (Sequence Modeling without Bootstrapping), which keeps its own copy -->
+Return-conditioned sequence models, the other family, are discussed in :numref:`sec_offline` together with their limits.
 
-Decision Transformer avoids bootstrapping by treating each trajectory as a sequence of returns-to-go, states, and actions :cite:`Chen.Lu.Rajeswaran.ea.2021`. An autoregressive model is trained by supervised prediction and, at test time, is conditioned on a desired return. It uses neither a value function nor a maximization target. On standard benchmarks, this approach matches strong value-based offline methods. However, a later study found that a small return-conditioned network trained by ordinary supervised learning recovers much of the performance, so the contribution of the sequence architecture remains unsettled. :numref:`sec_rl_sequences` returns to this connection for language models.
+Many applications have a log and can also collect a little new data. Cal-QL :cite:`Nakamoto.Zhai.Singh.ea.2023` calibrates the pessimistic values so that they never fall below those of a reference policy such as the logging policy, which removes the drop in return that overly low values otherwise cause when online fine-tuning begins. RLPD :cite:`Ball.Smith.Kostrikov.ea.2023` skips offline training and runs an off-policy learner online from the start, with half of every batch drawn from the log and with the normalized critics of the previous topics.
 
 ## Post-Training Variants
 
+:numref:`sec_rl_sequences` assembles the post-training update from the group weight of :numref:`sec_baselines`, PPO's clipped ratio and the KL penalty of :numref:`sec_regularized`, and names four variants by the one thing each changes. Trained at the scale of reasoning models :cite:`Shao.Wang.Zhu.ea.2024,DeepSeekAI.2025`, the update met problems that the one-token task cannot show, and the variants answer them. DAPO :cite:`Yu.Zhang.Zhu.ea.2025` also averages the loss over all tokens of a batch rather than first within each response, so that a long response counts in proportion to its length, and it shapes the reward of responses cut off at the length limit. Dr. GRPO :cite:`Liu.Chen.Li.ea.2025` traces two biases to the divisions it removes: dividing by the response length shrinks the per-token penalty of long wrong answers, so training lengthens them, and dividing by the group's standard deviation gives the most weight to prompts whose groups are nearly all right or all wrong. GSPO :cite:`Zheng.Liu.Li.ea.2025` was introduced for the stability of large mixture-of-experts models, whose per-token ratios are especially noisy.
+
+Process rewards change where the reward comes from. :citet:`Lightman.Kosaraju.Burda.ea.2024` trained a reward model on human labels of individual reasoning steps, and it judged solutions better than a model trained on final answers alone. A learned process reward gives each step its own credit, as the prefix values of :numref:`sec_rl_sequences` do, and brings with it the exploitable errors of a learned reward that :numref:`sec_regularized` measured. The Language Models part treats post-training at scale, including learning from human preferences, in more depth.
+
 ## Beyond the Chapter
 
-<!-- from rl-sequences.md (Where to Go Next) -->
-
-These chapters provide an introduction rather than comprehensive coverage. Three extensions are especially relevant.
-
-**What we deliberately left out.** Multi-agent reinforcement learning, where the opponent learns too, reached superhuman poker with search plus self-play :cite:`Brown.Sandholm.2017`. Distributional reinforcement learning models the return's whole distribution rather than its mean :cite:`Bellemare.Dabney.Munos.2017`. Meta-learning, hierarchy and partial observability each relax one of :numref:`sec_mdp`'s assumptions; Murphy's overview treats all three at textbook depth :cite:`Murphy.2025`. For a broader treatment of post-training practice, see the reinforcement-learning-from-human-feedback book :cite:`Lambert.2026`.
+Three assumptions of these two chapters can fail. When several agents learn at once, each one's environment contains the others, and nothing is stationary; self-play combined with search reached superhuman play in heads-up no-limit poker :cite:`Brown.Sandholm.2017`. When the agent sees observations rather than the state, the Markov property of :numref:`sec_mdp` fails, and the policy needs memory, a recurrent network or a belief over states :cite:`Kaelbling.Littman.Cassandra.1998`. When tasks change, an agent can learn to adapt to a new task from a few episodes (meta-learning), or learn sub-policies that act over many steps together with a policy that chooses among them (hierarchical learning). Murphy's overview :cite:`Murphy.2025` treats all three at textbook depth.
 
 ## A Project
 
-<!-- from rl-sequences.md (Capstone Projects) -->
+:numref:`sec_rl_sequences` assembles the post-training update and applies it to a single group. This project builds the training loop around it and checks it against what the chapter can compute exactly.
 
-These four projects play the role of a course programming assignment; each runs on a laptop CPU in minutes, and each carries a numeric sanity bar in place of an autograder.
-
-**A. Build PPO from the pieces, and prove it is right.** Three self-checks: the ratio is exactly $1$ on the first epoch; GAE at $\lambda = 1$ equals reward-to-go minus $\hat{V}$ to floating-point tolerance; the clipped objective's gradient at $\theta = \theta_{\textrm{old}}$ equals the plain policy gradient. Bar: median return above $450$ on CartPole within $60$ updates, 3 seeds.
-
-**B. Which implementation details actually matter.** Ablate five of the 37 catalogued PPO details, one at a time, three seeds each. Bar: at least one factor changes the median by more than the seed spread, and you can say which.
-
-**C. Diagnose three faulty policies.** Examine one agent with a saturated policy, one with an untrained critic, and one with an undersized replay buffer. Identify each fault from the chapter's diagnostics before inspecting the code.
-
-**D. GRPO from REINFORCE, in two lines.** Start from :numref:`sec_baselines`'s `train`, add the group-standardized weight and the clip, and reproduce the $K$-sweep of :numref:`subsec_baselines_group`. Bar: $K = 1$ shows no learning; $K \geq 4$ reaches the verifier's ceiling.
+1. **The task.** Use the four prompts of the verifier task, answered with two digit tokens as in :numref:`sec_rl_sequences`, so that `04`, `12`, `64` and `81` are the correct responses. The policy is a table of preferences for the tens digit per prompt and for the units digit per prompt and tens digit, as in exercise :exref:`ex_rl-sequences-two-digit-responses`; the reference is uniform.
+2. **The update.** Extend `grpo_step` to two-token responses. For each prompt, sample a group of 16 responses, store their token log-probabilities, and standardize the rewards within the group. Then run $E$ epochs of gradient ascent with step size 1 on the clipped per-token surrogate with $\epsilon_{\textrm{clip}} = 0.2$, averaged over the tokens of the group, minus $\beta$ times the $k_3$ term of :numref:`sec_rl_sequences`; record the clip fraction of each epoch.
+3. **The checks.** In the first epoch every ratio equals 1 and the clip fraction is zero, so with $E = 1$ the update is the REINFORCE step with group-standardized weights.
+4. **The bar for reuse.** With $\beta = 0$ and the same step size, four epochs per group should reach a success rate of 0.9 with about half the sampled responses that one epoch needs, on every seed you try, while the clip fraction rises from the first epoch to the fourth.
+5. **The bar for the penalty.** On the one-token verifier task with the lenient checker of :numref:`sec_rl_sequences`, use the leave-one-out weight of :numref:`sec_baselines` and $\beta = 1/2$, and train until the policy settles. Under the $k_3$ loss the hedge should keep about half of the probability on `8*8`, the maximizer of the objective with the KL in the other direction (exercise :exref:`ex_rl-sequences-kl-loss`); with the penalty folded into the reward it should stay under two percent, the tilted optimum. Explain why the leave-one-out weight is needed for these two numbers, and what group standardization would change.

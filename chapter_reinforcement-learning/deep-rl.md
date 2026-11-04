@@ -543,7 +543,7 @@ We can now train a policy network on continuous states and continuous actions wi
 
 This chapter and the next present many methods. Two questions locate each of them: what does it learn, and which data may drive its update? :numref:`fig_rl_roadmap` arranges the methods along these two questions.
 
-![The methods of this chapter and of :numref:`chap_deep_rl`, arranged by what they learn and which data may drive their updates. Solid boxes hold this chapter's methods; dashed boxes and gray names belong to :numref:`chap_deep_rl`. Behavior cloning learns from a fixed set of demonstrations, while DAgger learns from the learner's own states relabeled by an expert, which places it in the on-policy column. Value iteration sits in the off-policy column because its update uses the known kernel rather than data from any one policy. The arrow from the on-policy policy box marks the reuse of recent batches, which needs a correction because the policy has changed since they were collected.](../img/mdl-rl-roadmap.svg)
+![The methods of this chapter and of :numref:`chap_deep_rl`, arranged by what they learn and which data may drive their updates. Solid boxes hold this chapter's methods; dashed boxes and gray names belong to :numref:`chap_deep_rl`. Behavior cloning learns from a fixed set of demonstrations, while DAgger learns from the learner's own states relabeled by an expert, which places it in the on-policy column. Value iteration sits in the off-policy column because its update uses the known kernel rather than data from any one policy. The arrow from the on-policy policy box marks the reuse of recent batches, which needs a correction because the policy has changed since they were collected. The learned model in the off-policy column is fitted to the agent's own stored experience, and the agent plans in it (:numref:`sec_model_based`).](../img/mdl-rl-roadmap.svg)
 :label:`fig_rl_roadmap`
 
 :numref:`tab_rl_map` lists the algorithms of both chapters with what each estimates, which data it can use, and where it is introduced.
@@ -571,9 +571,11 @@ This chapter and the next present many methods. Two questions locate each of the
 | Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_deep_rl-further-reading` |
 | DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_sac` |
 | SAC | twin soft critics, and a stochastic squashed actor maximizing reward plus entropy | a replay buffer (off-policy) | :numref:`sec_sac` |
+| model-predictive control in a learned model; search distilled into the policy | a model of the dynamics and reward fitted by regression, and plans searched in it | the agent's own stored experience, refit into the model | :numref:`sec_model_based` |
+| Dyna, MBPO | the same model, used to imagine extra transitions for an off-policy learner | a replay buffer plus model rollouts | named in :numref:`sec_model_based` |
 | offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
 | Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |
-| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`chap_deep_rl` |
+| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`sec_deep_rl-further-reading` |
 | DPO | the regularized optimum directly from preferences | a fixed preference dataset | :numref:`sec_rl_sequences`; preference optimization at scale is left to the Language Models part, which takes it up in more depth |
 
 ## Summary

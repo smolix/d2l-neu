@@ -13,13 +13,11 @@ import os
 import sys
 
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
-from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import (Arc, Circle, FancyArrowPatch, FancyBboxPatch,
                                 Patch, Rectangle)
 from matplotlib.ticker import NullFormatter
-from matplotlib.textpath import TextPath
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_mdl_figures as fl  # noqa: E402  (applies the shared rcParams)
@@ -40,15 +38,9 @@ TOY_MU, TOY_FLOOR, TOY_PEAK, TOY_WIDTH = 0.0, 0.4, 2.0, 1.0
 TOY_RESCALE = 5.0                                  # only for drawing R(a)
 TRIAD_R = 2.35
 TRIAD_C = np.array([[-1.275, -0.736], [1.275, -0.736], [0.000, 1.472]])
-OFFLINE_GAMMA, OFFLINE_ALPHA = 0.95, 0.2
-OFFLINE_EPISODES, OFFLINE_SWEEPS = 500, 200
-COLLAPSE = ["discounting", "bootstrapping", "the TD error",
-            "the Bellman equations", "value iteration", "Q-learning",
-            "replay", "the deadly triad", "per-token credit assignment"]
-SURVIVE = ["the score function", "baselines and advantages",
-           "variance grows with length", "on-policy staleness",
-           "importance ratios and clipping", "trust regions in policy space",
-           "entropy collapse", "over-optimization, and its two cures"]
+NOT_NEEDED = ["discounting", "replay", "Q-learning", "a transition model",
+              "the deadly triad"]
+OPTIONAL = ["a learned critic", "Monte Carlo restarts"]
 
 # --- shared helpers ---
 
@@ -349,14 +341,6 @@ def _tiles(ax, xs, y, w, h, c0=LIGHT, c1=BLUE, labels=None, fontsize=11,
             ax.text(cx, cy, labels[i], ha="center", va="center",
                     fontsize=fontsize, color="black", zorder=5)
 
-def _strike_width(fig, ax, text, fontsize):
-    """Width of ``text`` as a fraction of ``ax``'s width, from the font metrics
-    (no draw pass, so it is stable across runs).  Used to strike out the items
-    of F25's "simplifies" column at exactly their own length."""
-    pts = TextPath((0, 0), text, prop=FontProperties(size=fontsize)).get_extents()
-    axes_pt = fig.get_size_inches()[0] * ax.get_position().width * 72.0
-    return pts.width / axes_pt
-
 def _triad_anchors(n=1101):
     """For each of the seven Venn regions, the interior point that is farthest
     from every arc, plus the region's area, by sampling the three discs.  The
@@ -386,43 +370,6 @@ def _max_bias(k, n, rng):
     single = QA.max(axis=1)
     double = QB[np.arange(n), QA.argmax(axis=1)]   # one set picks, the other scores
     return single.mean(), double.mean()
-
-def _offline_experiment():
-    """The whole of F20, computed: a uniform-policy dataset on the slippery
-    lake, the tabular offline fit it supports, and the exact optimum to score
-    it against.  Returns counts, |Qhat - Q*|, and the greedy policy's pairs."""
-    P, R, terminal, S, A = _frozen_lake_mdp(slippery=True)
-    goal = np.array([MAP4[s // 4][s % 4] == "G" for s in range(S)])
-
-    V = np.zeros(S)                                  # exact optimum, 400 sweeps
-    for _ in range(400):
-        V = np.where(terminal, 0.0, (R + OFFLINE_GAMMA * P @ V).max(axis=1))
-    Qstar = np.where(terminal[:, None], 0.0, R + OFFLINE_GAMMA * P @ V)
-
-    rng = np.random.default_rng(0)                   # the dataset
-    data = []
-    for _ in range(OFFLINE_EPISODES):
-        s = 0
-        for _ in range(100):
-            a = int(rng.integers(A))
-            s2 = int(rng.choice(S, p=P[s, a]))
-            data.append((s, a, float(goal[s2]), s2, bool(terminal[s2])))
-            s = s2
-            if terminal[s]:
-                break
-    counts = np.zeros((S, A))
-    for s, a, _, _, _ in data:
-        counts[s, a] += 1
-
-    Q = np.zeros((S, A))                             # the offline fit
-    for _ in range(OFFLINE_SWEEPS):
-        for s, a, r, s2, done in data:
-            target = r if done else r + OFFLINE_GAMMA * Q[s2].max()
-            Q[s, a] += OFFLINE_ALPHA * (target - Q[s, a])
-
-    err = np.abs(Q - Qstar)
-    greedy = [(s, int(Q[s].argmax())) for s in range(S) if not terminal[s]]
-    return counts, err, greedy, terminal, len(data), V[0], Q[0].max()
 
 
 # --- figures (F1..F25 in program order) ---
@@ -522,9 +469,15 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
         ("policy", "offline", BLUE, False, [("behavior cloning", "black")]),
         ("both", "on", GRAY, True, [("actor-critic", CH2), ("PPO", CH2)]),
         ("both", "off", GRAY, True, [("SAC", CH2)]),
+        ("model", "off", GRAY, True, [("learned model", CH2),
+                                      ("+ planning", CH2)]),
         ("both", "offline", GRAY, True, [("Decision", CH2),
                                          ("Transformer", CH2)]),
     ]
+    # The learned-model box sits in the off-policy column between SAC and the
+    # bridge arrow: it learns from its own replay buffer, and what it learns
+    # (a model of the dynamics) is neither a value function nor a policy.
+    YS = dict(YS, model=3.95)
     for row, col, color, dashed, lines in cells:
         cx, cy = XS[col], YS[row]
         h = 0.42 + LH * len(lines)
@@ -536,11 +489,10 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
                     fontsize=12.5, color=tc, zorder=4)
 
     # --- the one bridge between the two families --------------------------- #
-    fl.arrow(ax, (3.20, YS["policy"]), (5.90, YS["policy"]), color=GRAY,
-             lw=1.6, mut=14)
-    ax.text(4.90, YS["policy"] + 0.14,
-            "reusing recent\nbatches, with\ncorrections",
-            ha="center", va="bottom", fontsize=12, color="black")
+    YB = YS["policy"] - 0.20                     # clear of the model box
+    fl.arrow(ax, (3.20, YB), (5.90, YB), color=GRAY, lw=1.6, mut=14)
+    ax.text(4.62, YB - 0.14, "reusing recent batches,\nwith corrections",
+            ha="center", va="top", fontsize=12, color="black")
 
     # --- the two families, bracketed and named in the right margin --------- #
     for y0, y1, note in [(0.60, 2.18, "learn $Q$,\nact greedily"),
@@ -1734,14 +1686,14 @@ def fig_actor_critic_loop():  # F11 -> mdl-rl-actor-critic-loop
                 color=ORANGE)
 
     ax.text(5.2, -0.20,
-            r"actor:  $\theta \leftarrow \theta + \alpha_\theta\, \delta_t\,"
+            r"actor:  $\theta \leftarrow \theta + \eta\, \delta_t\,"
             r"\nabla_\theta \log \pi_\theta(a_t \mid s_t)$"
             "        "
-            r"critic:  $w \leftarrow w + \alpha_w\, \delta_t\,"
+            r"critic:  $w \leftarrow w + \alpha\, \delta_t\,"
             r"\nabla_w \hat V_w(s_t)$",
             ha="center", va="center", fontsize=13, color="black")
-    ax.text(5.2, -0.78, "the critic must learn faster than the actor: "
-                        r"$\alpha_w$ large, or several critic passes per batch",
+    ax.text(5.2, -0.78, "the critic stays ahead of the actor: "
+                        "several critic passes per batch, one actor step",
             ha="center", va="center", fontsize=12, color="black")
 
     ax.set_xlim(0.05, 10.35)
@@ -1754,9 +1706,9 @@ def fig_td_mc_spectrum():     # F12 -> mdl-rl-td-mc-spectrum
 
     The measurement is a ten-state chain, deterministic step right, terminal
     after the last state, whose only payment is $1$ on the final transition
-    plus per-step reward noise.  The critic is deliberately imperfect in the
-    shape value learning actually produces: exact near termination and wrong
-    far from it, which is the wavefront of :numref:`fig_rl_value_wavefront` seen
+    plus per-step reward noise.  The critic is deliberately imperfect, with an
+    error that shrinks toward termination: exact near the end and wrong far
+    from it, which is the wavefront of :numref:`fig_rl_value_wavefront` seen
     from the side.  The error profile is a smooth deterministic taper rather
     than per-state noise, so the bias curve shows the trade instead of a seed
     accident; the randomness that *is* measured is the 20000 seeded rollouts.
@@ -1891,9 +1843,6 @@ def fig_td_mc_spectrum():     # F12 -> mdl-rl-td-mc-spectrum
     axb.plot(ns, mse, "o-", color="black", lw=2.6, ms=5.5, zorder=4,
              label="mean squared error")
     axb.plot([nbest], [mse[nbest - 1]], "o", color="black", ms=10, zorder=5)
-    axb.text(6.9, 0.036, "the interior optimum reflects\nthis critic's error taper",
-             ha="center", va="bottom", fontsize=12, color="black",
-             linespacing=1.4, zorder=6)
     axb.text(nbest, mse[nbest - 1] + 0.011, f"best depth\n$n = {nbest}$",
              ha="center", va="bottom", fontsize=12, color="black",
              linespacing=1.4, zorder=6,
@@ -1948,22 +1897,23 @@ def fig_policy_vs_parameter():   # F13 -> mdl-rl-policy-vs-parameter
                                      shrinkA=0, shrinkB=0, mutation_scale=11))
         axa.text(t0 + DT / 2, 0.115, rf"$\Delta\theta = {DT:g}$", ha="center",
                  va="bottom", fontsize=12, color="black")
+        big = p1 - p0 > 0.05
         for t, p in ((t0, p0), (t0 + DT, p1)):
             axa.plot([t, t], [0.06, p], ls=":", lw=1.2, color=LIGHT, zorder=1)
             axa.plot([t], [p], "o", color=color, ms=7, zorder=5)
-            axa.plot([RAIL, t], [p, p], ls=":", lw=1.1, color=LIGHT, zorder=1)
-        # the induced change, bracketed in the left margin
-        if p1 - p0 > 0.05:
+            if big:
+                axa.plot([RAIL, t], [p, p], ls=":", lw=1.1, color=LIGHT,
+                         zorder=1)
+        if big:              # the induced change, bracketed in the left margin
             axa.annotate("", xy=(RAIL, p1), xytext=(RAIL, p0),
                          arrowprops=dict(arrowstyle="<->", color=color, lw=1.7,
                                          shrinkA=0, shrinkB=0,
                                          mutation_scale=10))
-        else:                                    # too small to draw: two caps
-            for p in (p0, p1):
-                axa.plot([RAIL - 0.22, RAIL + 0.22], [p, p], color=color,
-                         lw=1.7, zorder=4)
-        axa.text(RAIL - 0.55, (p0 + p1) / 2, dpi_txt(float(p1 - p0)),
-                 ha="right", va="center", fontsize=13, color=color)
+            axa.text(RAIL - 0.55, (p0 + p1) / 2, dpi_txt(float(p1 - p0)),
+                     ha="right", va="center", fontsize=13, color=color)
+        else:                # too small to bracket: named beside the points
+            axa.text(t0 + DT + 0.35, p1 - 0.075, dpi_txt(float(p1 - p0)),
+                     ha="left", va="top", fontsize=13, color=color)
 
     axa.text(XL[1] - 0.1, 1.055,
              rf"$\sigma'(0) = {dsig[0]:.2f}$,    "
@@ -2054,8 +2004,10 @@ def fig_trust_region():          # F14 -> mdl-rl-trust-region
     assert J(T_IN) > J0 > J(T_OUT)                        # the whole point
 
     axa.axvspan(T_OLD - DELTA, T_OLD + DELTA, color=LIGHT, alpha=0.40, zorder=0)
+    # In one parameter the KL region is an interval; its half-width in
+    # theta is the delta of the ticks (and the radius of panel (b)'s ball).
     axa.text(T_OLD, 4.10, "trust region\n"
-             r"$|\theta - \theta_{\mathrm{old}}| \leq \delta$", ha="center",
+             r"$D_{\mathrm{KL}} \leq \Delta_{\mathrm{KL}}$", ha="center",
              va="top", fontsize=12.5, color="black", linespacing=1.4)
     axa.plot(t, J(t), color="black", lw=2.4, zorder=3)
     axa.plot(t, L(t), color=BLUE, lw=2.2, ls="--", zorder=3)
@@ -2084,8 +2036,9 @@ def fig_trust_region():          # F14 -> mdl-rl-trust-region
     axa.set_xlim(*XL)
     axa.set_ylim(*YL)
     axa.set_xticks([T_OLD - DELTA, T_OLD, T_OLD + DELTA])
-    axa.set_xticklabels([r"$-\delta$", r"$\theta_{\mathrm{old}}$",
-                         r"$+\delta$"], fontsize=13)
+    axa.set_xticklabels([r"$\theta_{\mathrm{old}} - \delta$",
+                         r"$\theta_{\mathrm{old}}$",
+                         r"$\theta_{\mathrm{old}} + \delta$"], fontsize=13)
     axa.set_yticks([-1, 0, 1, 2, 3, 4])
     axa.set_xlabel(r"$\theta$", fontsize=14)
     axa.set_ylabel("objective", fontsize=13)
@@ -2098,12 +2051,12 @@ def fig_trust_region():          # F14 -> mdl-rl-trust-region
     lam, V = np.linalg.eigh(F)                     # ascending eigenvalues
     semi = np.sqrt(2 * DEL / lam)                  # KL ellipse semi-axes
     u_long, u_short = V[:, 0], V[:, 1]             # long axis <-> small lambda
-    u_long = u_long * np.sign(u_long[1])           # fix signs: up-right,
-    u_short = u_short * np.sign(u_short[0])        # and down-right
+    u_long = -u_long * np.sign(u_long[1])          # fix signs: down-left,
+    u_short = -u_short * np.sign(u_short[0])       # and up-left
     ang = np.linspace(0.0, 2 * np.pi, 401)
     ell = (V * semi) @ np.vstack([np.cos(ang), np.sin(ang)])
     kl = 0.5 * np.einsum("ij,jk,ik->i", ell.T, F, ell.T)
-    assert np.allclose(kl, DEL)                    # it really is a KL level set
+    assert np.allclose(kl, DEL)                    # a level set of the quadratic
     RHO = float(np.sqrt(semi[0] * semi[1]))        # equal area: pi ab = pi rho^2
 
     axb.plot(ell[0], ell[1], color=ORANGE, lw=2.2, zorder=4)
@@ -2111,35 +2064,48 @@ def fig_trust_region():          # F14 -> mdl-rl-trust-region
                          ls=(0, (5, 3)), zorder=3))
     fl.axis_cross(axb, (-1.16, 1.16), (-1.16, 1.16), color="black", lw=1.0)
     axb.plot([0], [0], "o", color="black", ms=7, zorder=6)
-    axb.text(-0.07, -0.12, r"$\theta_{\mathrm{old}}$", ha="right", va="top",
+    axb.text(0.09, 0.07, r"$\theta_{\mathrm{old}}$", ha="left", va="bottom",
              fontsize=13, color="black")
 
     # The two equal steps, and their annotations placed radially past the tip of
     # the ellipse axis each one follows -- for an ellipse's own axes the radial
     # direction *is* the outward normal, and it is the only direction in which
-    # the label cannot fall back onto the curve.
-    for u, semi_i, name, va in ((u_long, semi[0], "barely moves", "bottom"),
-                                (u_short, semi[1], "is rewritten", "top")):
+    # the label cannot fall back onto the curve.  The labels quote the exact
+    # divergence KL(pi_old || pi_new) of each drawn step; the ellipse is its
+    # second-order approximation.
+    base = np.array([2.5, 0.0, 0.0])
+
+    def exact_kl(step):
+        q = _softmax(base + np.r_[step, 0.0])
+        return float((p * np.log(p / q)).sum())
+
+    d_kls = [exact_kl(RHO * u) for u in (u_long, u_short)]
+    assert abs(d_kls[0] - 0.009) < 5e-4 and abs(d_kls[1] - 0.062) < 5e-4
+    assert abs(d_kls[1] / d_kls[0] - 7.0) < 0.1    # "about seven times"
+    for u, semi_i, d_kl, name, va in (
+            (u_long, semi[0], d_kls[0], "barely moves", "top"),
+            (u_short, semi[1], d_kls[1], "about seven times as far",
+             "bottom")):
         tip = RHO * u
         fl.arrow(axb, (0.0, 0.0), tuple(tip), color=BLUE, lw=2.2, mut=15)
-        d_kl = 0.5 * float(tip @ F @ tip)
-        far = u * (max(RHO, float(semi_i)) + (0.22 if va == "bottom" else 0.27))
+        far = u * (max(RHO, float(semi_i)) + (0.22 if va == "top" else 0.27))
         axb.text(far[0], far[1],
-                 rf"same $\|\Delta\theta\|$: $D_{{\mathrm{{KL}}}} = {d_kl:.3f}$"
-                 "\n" f"the policy {name}", ha="left", va=va, fontsize=12,
-                 color="black", linespacing=1.5)
-    axb.text(-0.62, 0.95, rf"$D_{{\mathrm{{KL}}}} \leq \delta = {DEL:g}$",
-             ha="right", va="center", fontsize=12.5, color=ORANGE)
-    axb.text(-0.98, 0.40, "equal-area ball\n" r"$\|\Delta\theta\| \leq \rho$",
-             ha="right", va="center", fontsize=12.5, color=GRAY,
+                 rf"$D_{{\mathrm{{KL}}}} = {d_kl:.3f}$:" "\n" + name,
+                 ha="right", va=va, fontsize=12,
+                 color="black", linespacing=1.4)
+    axb.text(0.98, 1.10, r"$\Delta\theta^{\!\top}\! F\,\Delta\theta\, /\, 2 \leq "
+             rf"{DEL:g}$", ha="left", va="bottom", fontsize=12.5,
+             color=ORANGE)
+    axb.text(0.95, -0.50, "equal-area ball\n" r"$\|\Delta\theta\| \leq \delta$",
+             ha="left", va="top", fontsize=12.5, color="black",
              linespacing=1.5)
     axb.text(1.22, -0.10, r"$\Delta\theta_1$", ha="left", va="top",
              fontsize=13, color="black")
     axb.text(0.0, 1.22, r"$\Delta\theta_2$", ha="center", va="bottom",
              fontsize=13, color="black")
     axb.set_aspect("equal")
-    axb.set_xlim(-1.78, 1.92)
-    axb.set_ylim(-1.22, 1.68)
+    axb.set_xlim(-2.25, 2.75)
+    axb.set_ylim(-1.35, 1.50)
     axb.axis("off")
     fig.subplots_adjust(wspace=0.20)
     fl.save(fig, "mdl-rl-trust-region")
@@ -2167,9 +2133,11 @@ def fig_ppo_clip():              # F15 -> mdl-rl-ppo-clip
         ax.plot([1.0], [adv], "o", color="black", ms=7, zorder=5)
         ax.set_xlim(0.0, 2.02)
         ax.set_ylim(-2.05, 1.45)
-        ax.set_xticks([1 - EPS, 1.0, 1 + EPS])
-        ax.set_xticklabels([r"$1-\epsilon$", r"$1$", r"$1+\epsilon$"],
-                           fontsize=12.5)
+        # the point rho = 1 is annotated in both panels, so the band's two
+        # edges carry the only tick labels (three would collide)
+        ax.set_xticks([1 - EPS, 1 + EPS])
+        ax.set_xticklabels([r"$1-\epsilon_{\mathrm{clip}}$",
+                            r"$1+\epsilon_{\mathrm{clip}}$"], fontsize=12.5)
         ax.set_yticks([-2, -1, 0, 1])
         ax.set_title(title, fontsize=13.5, color="black")
         ax.set_xlabel(r"ratio $\rho_t(\theta)$", fontsize=13)
@@ -2177,7 +2145,8 @@ def fig_ppo_clip():              # F15 -> mdl-rl-ppo-clip
     axa.set_ylabel("clipped objective, one sample", fontsize=12.5)
 
     # (a) the flat stretch beyond 1 + eps, and where rho = 1 is
-    axa.annotate("zero gradient: no payoff\n" r"past $1+\epsilon$",
+    axa.annotate("zero gradient: no gain\n"
+                 r"past $1+\epsilon_{\mathrm{clip}}$",
                  xy=(1.62, 1.185), xytext=(2.00, 0.42), ha="right",
                  va="center", fontsize=12, color=ORANGE, linespacing=1.25,
                  arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.5,
@@ -2291,7 +2260,7 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
     ax.text(5.3, 4.62, "$a_t$", ha="center", va="bottom", fontsize=13.5,
             color=BLUE)
     fl.arrow(ax, (7.7, 3.79), (7.7, 3.32), color=GRAY, lw=1.8, mut=15)
-    ax.text(7.86, 3.55, "$(s,a,r,s')$", ha="left", va="center", fontsize=12.5,
+    ax.text(7.86, 3.55, "$(s,a,r,s',\\mathrm{term})$", ha="left", va="center", fontsize=12.5,
             color="black")
 
     # --- the first fix: the buffer ----------------------------------------- #
@@ -2318,9 +2287,10 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
     # --- the two networks -------------------------------------------------- #
     _box(ax, 2.2, 0.15, 3.1, 1.05, "online $Q_w$\n$Q_w(s,a)$", BLUE,
          fontsize=13, fc="#e8f1f8")
-    _box(ax, 8.05, 0.15, 3.9, 1.05,
+    _box(ax, 8.17, 0.15, 4.14, 1.05,
          "target $Q_{w^-}$ (frozen)\n"
-         "$y = r + \\gamma\\, \\mathrm{max}_{a'}\\, Q_{w^-}(s',a')$", ORANGE,
+         "$y = r + \\gamma (1 - \\mathrm{term})\\, \\mathrm{max}_{a'}\\, "
+         "Q_{w^-}(s',a')$", ORANGE,
          fontsize=12, fc="#fdf1e3")
     fl.arrow(ax, (4.20, 1.12), (2.95, 0.72), color=BLUE, lw=1.8, mut=14)
     fl.arrow(ax, (7.20, 1.12), (8.05, 0.72), color=BLUE, lw=1.8, mut=14)
@@ -2352,7 +2322,7 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
     ax.text(0.09, 2.40, "acts with $Q_w$", ha="center", va="center",
             fontsize=12, color=BLUE, rotation=90)
 
-    ax.set_xlim(-0.05, 10.15)
+    ax.set_xlim(-0.05, 10.30)
     ax.set_ylim(-2.05, 5.05)
     fl.save(fig, "mdl-rl-dqn-dataflow")
 
@@ -2402,9 +2372,8 @@ def fig_deadly_triad():       # F17 -> mdl-rl-deadly-triad
             fontsize=12, fontweight="bold", color="black", zorder=7,
             bbox=dict(fc="white", ec="black", lw=1.2, alpha=0.92, pad=2.2))
 
-    ax.text(0.0, -3.55, "drop any one of the three and convergence "
-                        "arguments return;\nDQN keeps all three and repairs "
-                        "the couplings instead",
+    ax.text(0.0, -3.55, "drop one ingredient and a convergence argument "
+                        "becomes available,\neach under its own conditions",
             ha="center", va="top", fontsize=12.5, color="black")
 
     ax.set_xlim(-4.90, 4.90)
@@ -2439,7 +2408,7 @@ def fig_max_bias():           # F18 -> mdl-rl-max-bias
              bbox=dict(fc="white", ec="none", alpha=0.92, pad=1.4))
     # the two distributions are named where they are, not in a legend box
     axa.text(-3.45, 0.30, "one estimate", ha="left", va="center", fontsize=12.5,
-             color=GRAY)
+             color="black")
     axa.text(2.55, 0.32, "max of four", ha="left", va="center",
              fontsize=12.5, color=ORANGE)
     axa.text(-0.16, 0.610, "$\\max_a \\mathbb{E}[\\hat Q] = 0$", ha="right",
@@ -2465,8 +2434,9 @@ def fig_max_bias():           # F18 -> mdl-rl-max-bias
              va="center", fontsize=12, color=BLUE)
     _leader(axb, "the case on the left", (4, single[2]), (6.4, 0.60), "black",
             fontsize=11.5, ha="left")
-    axb.text(16.6, 0.085, f"double estimator (Double DQN):\nbias below "
-                          f"${abs(double).max():.3f}$ throughout", ha="right",
+    assert abs(double).max() < 0.005              # zero within MC error
+    axb.text(16.6, 0.085, "independent double estimator:\nbias "
+                          "indistinguishable from zero", ha="right",
              va="bottom", fontsize=12, color=ORANGE)
     axb.set_xlim(1.2, 16.8)
     axb.set_ylim(-0.14, 2.06)
@@ -2516,7 +2486,7 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
                 fontsize=12, color=GREEN, rotation=90)
 
     axa, axb, axc = axes
-    notes = ("PPO's ratios buy a few\nepochs of extra life",
+    notes = ("PPO's ratios allow a few\nepochs of reuse",
              "the target does not mention\nwho collected the data",
              "errors are never tested: no mistake\n"
              "the learned policy makes is discovered")
@@ -2538,7 +2508,7 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
     axa.text(6.32, 3.02, "$\\times$", ha="center", va="center", fontsize=19,
              color=GRAY)
     axa.text(6.80, 2.74, "used once,\nthen stale", ha="right", va="top",
-             fontsize=12, color=GRAY)
+             fontsize=12, color="black")
 
     # --- (b) off-policy: every version's data still counts ------------------ #
     _box(axb, *EBOX, 2.4, 0.8, "environment", GRAY, fontsize=13, fc="#f3f3f3")
@@ -2564,9 +2534,9 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
                  zorder=3, solid_capstyle="round")
     fl.arrow(axb, merge, (merge[0], UTOP), color=BLUE, lw=1.8, mut=14)
     axb.text(5.65, ys[-1], "newest", ha="left", va="center", fontsize=12,
-             color=GRAY)
+             color="black")
     axb.text(5.65, ys[0], "oldest", ha="left", va="center", fontsize=12,
-             color=GRAY)
+             color="black")
 
     # --- (c) offline: the arrow to the world is gone ------------------------ #
     _box(axc, *EBOX, 2.4, 0.8, "environment", LIGHT, fontsize=13, tc=GRAY)
@@ -2583,12 +2553,12 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
              color="black", zorder=6,
              bbox=dict(fc="white", ec="none", alpha=0.9, pad=0.6))
     _box(axc, 2.10, DATA[1], 2.6, 0.9,
-         "$\\mathcal{D} \\sim \\pi_\\beta$\ncollected once", GRAY,
+         "$\\mathcal{D} \\sim \\pi_e$\ncollected once", GRAY,
          fontsize=12.5, fc="#f3f3f3")
     fl.arrow(axc, (2.95, 3.50), (3.15, UTOP), color=GRAY, lw=1.8, mut=14)
     _arc_arrow(axc, (0.95, UTOP), (1.25, 3.50), 0.42, GRAY, lw=1.6, mut=14)
     axc.text(1.55, 2.97, "sweep", ha="left", va="center", fontsize=12,
-             color=GRAY)
+             color="black")
     # deploy: the only edge that crosses the wall, into the world at last
     _elbow(axc, [(1.75, 5.95), (1.75, 6.60), (5.35, 6.60), (5.35, 5.97)],
            "black", lw=1.6)
@@ -2600,78 +2570,13 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
     fig.subplots_adjust(wspace=0.04)
     fl.save(fig, "mdl-rl-data-rules")
 
-def fig_distribution_shift():  # F20 -> mdl-rl-distribution-shift
-    """Distribution shift, measured.  (a) the dataset's support, pair by pair,
-    with the pairs the learned greedy policy actually queries marked; (b) the
-    error of each learned value against that support, with the pessimism
-    penalty of the same shape drawn through the cloud -- the exploration bonus
-    of :numref:`fig_rl_exploration` with the sign flipped."""
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(11.2, 4.1),
-                                   gridspec_kw={"width_ratios": [1.1, 1.0]})
-    counts, err, greedy, terminal, n_trans, v0, q0 = _offline_experiment()
-    live = ~terminal                                  # 11 cells, 44 pairs
-    pairs = [(s, a) for s in range(16) if live[s] for a in range(4)]
-    n = np.array([counts[s, a] for s, a in pairs])
-    e = np.array([err[s, a] for s, a in pairs])
-    order = np.argsort(-n)
-    rank = {pairs[j]: i + 1 for i, j in enumerate(order)}
-    kappa = float(np.median(e * np.sqrt(n)))          # the penalty that fits
-
-    # --- (a) how much data each pair has ----------------------------------- #
-    axa.bar(np.arange(1, len(n) + 1), n[order], width=0.86, color=BLUE,
-            zorder=2, label="pairs in the dataset")
-    qx = np.array([rank[p] for p in greedy])
-    qy = np.array([counts[s, a] for s, a in greedy])
-    axa.plot(qx, qy, "v", color=ORANGE, ms=9, ls="none", zorder=4,
-             label="queried by the learned policy")
-    axa.set_yscale("log")
-    axa.set_xlim(0, len(n) + 1)
-    axa.set_ylim(1.0, 1600.0)
-    axa.set_yticks([1, 10, 100, 1000])
-    axa.set_yticklabels(["1", "10", "100", "1000"])
-    axa.set_xlabel("state-action pairs, sorted by dataset support", fontsize=13)
-    axa.set_ylabel("times tried, $n(s,a)$", fontsize=13)
-    axa.legend(loc="upper right", fontsize=11.5, handlelength=1.4,
-               labelspacing=0.35)
-    _leader(axa, "the learned policy\nasks here too", (38.6, 11.0),
-            (23.5, 130.0), "black", fontsize=12, ha="left")
-
-    # --- (b) and how wrong each value is ----------------------------------- #
-    axb.plot(n, e, "o", color=BLUE, ms=5, alpha=0.6, ls="none", zorder=2,
-             label="all 44 pairs")
-    axb.plot([counts[s, a] for s, a in greedy], [err[s, a] for s, a in greedy],
-             "v", color=ORANGE, ms=9, ls="none", zorder=4,
-             label="queried by the learned policy")
-    grid = np.logspace(np.log10(1.6), np.log10(700.0), 200)
-    axb.plot(grid, kappa / np.sqrt(grid), color=ORANGE, lw=2.4, zorder=3,
-             label="fitted count penalty $\\kappa/\\sqrt{n}$")
-    axb.set_xscale("log")
-    axb.set_xlim(1.6, 700.0)
-    axb.set_ylim(0.0, 0.58)                          # legend clear of the data
-    axb.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    axb.set_xticks([2, 10, 100, 500])
-    axb.set_xticklabels(["2", "10", "100", "500"])
-    axb.set_xlabel("$n(s,a)$", fontsize=13)
-    axb.set_ylabel("$|\\hat Q - Q^\\star|$", fontsize=13)
-    axb.legend(loc="upper right", fontsize=11.5, handlelength=1.5,
-               labelspacing=0.35)
-    axb.text(560.0, 0.305, "a fitted envelope:\npoints on either side", ha="right",
-             va="center", fontsize=12, color="black")
-
-    for ax in (axa, axb):
-        _black_axes(ax)
-    fig.subplots_adjust(wspace=0.26)
-    fl.save(fig, "mdl-rl-distribution-shift")
-    return counts, err, greedy, kappa, n_trans, v0, q0
-
 def fig_token_mdp():          # F25 -> mdl-rl-token-mdp
     """A response is a trajectory: (a) the token Markov decision process, whose
     transitions all have probability 1 and whose reward arrives only at the
-    end; (b) the same object read as a one-step bandit.  The two columns say
-    which of the two chapters' machinery the collapse takes with it."""
-    fig = plt.figure(figsize=(11.8, 5.0))
-    # the right column sets the height (its lists need ~1.35 line spacing);
-    # the two diagrams on the left are pulled together towards the middle
+    end; (b) the same object read as a one-step bandit.  The right column says
+    what the response-level update does without, and what per-token credit
+    may still use.  Tokens are actions $a_t$; $y$ is the complete response."""
+    fig = plt.figure(figsize=(11.8, 4.0))
     gs = GridSpec(2, 2, width_ratios=[1.62, 1.0], height_ratios=[3.1, 2.27],
                   figure=fig, wspace=0.06, hspace=0.10, top=0.98, bottom=0.02)
     axa, axb, axc = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[1, 0]), \
@@ -2685,8 +2590,8 @@ def fig_token_mdp():          # F25 -> mdl-rl-token-mdp
     axa.set_aspect("equal")
     Y = 2.05
     xs = [0.75, 2.65, 4.55, 7.15]
-    slabels = ["$x$", "$(x, y_1)$", "$(x, y_{1:2})$", "$(x, y_{1:T-1})$"]
-    tokens = ["$y_1$", "$y_2$", None, "$y_T = \\mathrm{EOS}$"]
+    slabels = ["$x$", "$(x, a_1)$", "$(x, a_{1:2})$", "$(x, a_{1:T-1})$"]
+    tokens = ["$a_1$", "$a_2$", None, "$a_T = \\mathrm{EOS}$"]
     xe = 9.35                                        # the terminal node
     for i, (x, lab) in enumerate(zip(xs, slabels)):
         _state(axa, (x, Y), r=0.15)
@@ -2694,7 +2599,7 @@ def fig_token_mdp():          # F25 -> mdl-rl-token-mdp
                  color="black")
     axa.add_patch(Rectangle((xe - 0.17, Y - 0.17), 0.34, 0.34, fc="black",
                             ec="black", lw=1.4, zorder=5))
-    axa.text(xe, Y - 0.44, "$\\mathrm{EOS}$: terminal", ha="center", va="top",
+    axa.text(xe, Y - 0.44, "terminal", ha="center", va="top",
              fontsize=12.5, color="black")
 
     ends = xs[1:] + [xe]
@@ -2713,73 +2618,511 @@ def fig_token_mdp():          # F25 -> mdl-rl-token-mdp
         axa.text(lx, Y + 0.14, tokens[i], ha="center", va="bottom",
                  fontsize=13, color=BLUE)
         axa.text(lx, Y - 0.12, "$1$", ha="center", va="top",
-                 fontsize=13, color=GRAY)
+                 fontsize=13, color="black")
     rx = xs[-1] + 0.80 * (xe - xs[-1])         # clear of the token label
     axa.text(rx, Y + 0.60, "$r(x, y)$", ha="center", va="bottom",
              fontsize=13.5, color=ORANGE)
     fl.arrow(axa, (rx, Y + 0.56), (rx, Y + 0.12), color=ORANGE, lw=1.6, mut=13)
     axa.text(0.75, Y + 0.34, "prompt", ha="center", va="bottom", fontsize=12.5,
              color="black")
-    axa.text(4.9, 1.12, "state $=$ prefix,   action $=$ token,   "
+    axa.text(4.9, 1.12, "state $s_t =$ prefix,   action $a_t =$ token,   "
                         "transition $=$ concatenation", ha="center", va="top",
              fontsize=13, color="black")
     axa.text(4.9, 0.68, "every transition has probability $1$: all the "
-                        "randomness is the policy's,\nand $r_t = 0$ until "
-                        "the response ends",
-             ha="center", va="top", fontsize=12.5, color=GRAY)
+                        "randomness is the policy's,\nand the reward arrives "
+                        "only when the response ends",
+             ha="center", va="top", fontsize=12.5, color="black")
     axa.set_xlim(-0.05, 10.15)
     axa.set_ylim(0.05, 3.15)
 
     # --- (b) the same object as one step ------------------------------------ #
     axb.set_aspect("equal")
-    Yb, xb0, xb1 = 1.25, 3.25, 6.55
+    Yb, xb0, xb1 = 1.25, 2.05, 7.25
     _state(axb, (xb0, Yb), r=0.15, label="$x$")
     axb.add_patch(Rectangle((xb1 - 0.17, Yb - 0.17), 0.34, 0.34, fc="black",
                             ec="black", lw=1.4, zorder=5))
-    axb.text(xb1, Yb - 0.30, "$\\mathrm{EOS}$", ha="center", va="top",
-             fontsize=12.5, color="black")
     fl.arrow(axb, (xb0 + 0.19, Yb), (xb1 - 0.21, Yb), color=GRAY, lw=1.6,
              mut=14)
     axb.text((xb0 + xb1) / 2, Yb + 0.14,
-             "$y \\sim \\pi_\\theta(\\cdot \\mid x)$", ha="center",
-             va="bottom", fontsize=13, color=BLUE)
+             "$y = (a_1, \\ldots, a_T) \\sim \\pi_\\theta(\\cdot \\mid x)$",
+             ha="center", va="bottom", fontsize=13, color=BLUE)
     axb.text((xb0 + xb1) / 2, Yb - 0.12, "$1$", ha="center", va="top",
-             fontsize=13, color=GRAY)
+             fontsize=13, color="black")
     axb.text(xb1 + 0.34, Yb, "$r(x, y)$", ha="left", va="center",
              fontsize=13.5, color=ORANGE)
     axb.text(4.9, 0.30, "$\\nabla_\\theta \\log \\pi_\\theta(y \\mid x) = "
                         "\\sum_t \\nabla_\\theta \\log \\pi_\\theta"
-                        "(y_t \\mid x, y_{<t})$: the two views, one gradient",
+                        "(a_t \\mid s_t)$: the two views, one gradient",
              ha="center", va="top", fontsize=13, color="black")
     axb.set_xlim(-0.05, 10.15)
     axb.set_ylim(-0.42, 1.85)
 
-    # --- the two columns ---------------------------------------------------- #
-    x0, dy = 0.07, 0.047
-    y = 0.975
-    for head, color, items, struck in (("simplifies", RED, COLLAPSE, True),
-                                       ("survives", GREEN, SURVIVE, False)):
-        axc.text(x0 - 0.05, y, head, ha="left", va="center", fontsize=13.5,
-                 fontweight="bold", color=color, transform=axc.transAxes)
-        y -= 1.35 * dy
-        for item in items:
-            axc.text(x0, y, item, ha="left", va="center", fontsize=12,
-                     color=GRAY if struck else "black",
+    # --- the right column: not needed, and optional ------------------------- #
+    # The equal-aspect panels shrink inside their cells; the column's axes is
+    # fitted to their joint height so the tight crop leaves no empty band.
+    axa.apply_aspect()
+    axb.apply_aspect()
+    top, bot = axa.get_position().y1, axb.get_position().y0
+    pc = axc.get_position()
+    axc.set_position([pc.x0, bot, pc.width, top - bot])
+    x0, dy = 0.07, 0.072
+    rows = [("head", "not needed", RED)]
+    rows += [("item", t, RED) for t in NOT_NEEDED]
+    rows += [("gap", None, None), ("head", "optional", GREEN),
+             ("text", "a prefix value $V(s_t)$", None),
+             ("text", "for per-token credit, from", None)]
+    rows += [("sub", t, GREEN) for t in OPTIONAL]
+    y = 0.5 + dy * (len(rows) - 1) / 2               # centred on the left half
+    for kind, text, color in rows:
+        if kind == "head":
+            axc.text(x0 - 0.05, y, text, ha="left", va="center",
+                     fontsize=13.5, fontweight="bold", color=color,
                      transform=axc.transAxes)
-            if struck:
-                w = _strike_width(fig, axc, item, 12)
-                axc.plot([x0 - 0.006, x0 + w + 0.006], [y, y], color=RED,
-                         lw=1.3, transform=axc.transAxes, zorder=5,
-                         clip_on=False)
-            else:
-                axc.plot([x0 - 0.028], [y], marker="s", ms=4.5, color=GREEN,
-                         transform=axc.transAxes, clip_on=False)
-            y -= dy
-        y -= 0.9 * dy
+        elif kind in ("item", "sub", "text"):
+            dx = 0.05 if kind == "sub" else 0.0
+            axc.text(x0 + dx, y, text, ha="left", va="center", fontsize=12,
+                     color="black", transform=axc.transAxes)
+            if kind != "text":
+                axc.plot([x0 + dx - 0.028], [y], marker="s", ms=4.5,
+                         color=color, transform=axc.transAxes, clip_on=False)
+        y -= dy
     axc.set_xlim(0, 1)
     axc.set_ylim(0, 1)
 
     fl.save(fig, "mdl-rl-token-mdp")
+
+
+def fig_squashed_density():   # F8 (ch. 15) -> mdl-rl-squashed-density
+    """Squashing a Gaussian through $a = 2\\tanh u$: (a) the Gaussian of $u$,
+    (b) the density of $a$ with the Jacobian term and without it.  The areas
+    are computed by the same trapezoid rule as the quadrature cell of the SAC
+    section, so the figure and the printout quote the same numbers."""
+    MU, SIG, C = 0.7, 0.8, 2.0
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.7))
+
+    # --- (a) the Gaussian before the squash --------------------------------- #
+    u = np.linspace(-2.6, 4.0, 801)
+    pu = np.exp(-0.5 * ((u - MU) / SIG) ** 2) / (SIG * np.sqrt(2 * np.pi))
+    axa.fill_between(u, pu, color=BLUE, alpha=0.15, lw=0.0, zorder=1)
+    axa.plot(u, pu, color=BLUE, lw=2.4, zorder=3)
+    axa.text(MU + 1.05, 0.40, f"$u \\sim \\mathcal{{N}}({MU:g},\\, {SIG:g}^2)$",
+             ha="left", va="center", fontsize=13, color="black")
+    axa.set_xlim(u[0], u[-1])
+    axa.set_ylim(0.0, 0.62)
+    axa.set_yticks([0.0, 0.2, 0.4, 0.6])
+    axa.set_xlabel("$u$", fontsize=14)
+    axa.set_ylabel("density", fontsize=13)
+    _black_axes(axa)
+
+    # --- (b) the density of the squashed action ----------------------------- #
+    a = np.linspace(-C + 1e-6, C - 1e-6, 200_001)
+    ua = np.arctanh(a / C)
+    pa_naive = np.exp(-0.5 * ((ua - MU) / SIG) ** 2) / (SIG * np.sqrt(2 * np.pi))
+    pa = pa_naive / (C * (1.0 - np.tanh(ua) ** 2))     # divide by da/du
+    area, area_naive = np.trapezoid(pa, a), np.trapezoid(pa_naive, a)
+    assert abs(area - 1.0) < 1e-4 and abs(area_naive - 1.13) < 0.005
+    for x in (-C, C):
+        axb.axvline(x, color=LIGHT, lw=1.2, ls="--", zorder=0)
+    axb.fill_between(a, pa, color=BLUE, alpha=0.15, lw=0.0, zorder=1)
+    axb.plot(a, pa, color=BLUE, lw=2.4, zorder=3)
+    axb.plot(a, pa_naive, color=ORANGE, lw=2.2, ls=(0, (5, 2.5)), zorder=2)
+    axb.text(-1.85, 0.66, f"with the Jacobian:\narea ${area:.2f}$",
+             ha="left", va="center", fontsize=12.5, color=BLUE,
+             linespacing=1.3)
+    axb.text(-1.85, 0.32, f"without it:\narea ${area_naive:.2f}$",
+             ha="left", va="center", fontsize=12.5, color=ORANGE,
+             linespacing=1.3)
+    axb.set_xlim(-2.2, 2.2)
+    axb.set_ylim(0.0, 1.00)
+    axb.set_xticks([-2, -1, 0, 1, 2])
+    axb.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    axb.set_xlabel("$a = 2 \\tanh u$", fontsize=14)
+    _black_axes(axb)
+    fig.subplots_adjust(wspace=0.22)
+    fl.save(fig, "mdl-rl-squashed-density")
+
+
+def _between_rows(p, d, y_from, y_to):
+    """Tail and tip of the segment of the line ``p + t d`` that runs from the
+    horizontal edge ``y = y_from`` to the edge ``y = y_to``."""
+    tail = p + (y_from - p[1]) / d[1] * d
+    tip = p + (y_to - p[1]) / d[1] * d
+    return tuple(tail), tuple(tip)
+
+def fig_sac_update():         # F9 (ch. 15) -> mdl-rl-sac-update
+    """One SAC update as a graph, in the box vocabulary of the DQN data flow.
+    Top row: the soft target, from the target critics at a fresh action at
+    $s'$.  Middle row: the critics regress onto it.  Bottom row: the actor's
+    loss reaches the actor through the fresh action $\tilde a$ (the pathwise
+    gradient, red), and the temperature has a loss of its own.  The Polyak
+    arrow is the only edge that writes into the target critics."""
+    fig, ax = plt.subplots(figsize=(12.0, 5.3))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    GRAD = dict(color=RED, lw=1.8, ls=(0, (4.5, 2.6)))
+    XB, XA, XC, XL = 0.95, 3.3, 6.95, 11.3   # buffer, actor, critics, losses
+    YT, YM, YB = 4.85, 2.75, 0.65            # target, critic, actor rows
+    BW, BH, LW = 2.7, 0.95, 4.3
+
+    # --- the boxes ---------------------------------------------------------- #
+    _box(ax, XB, YM, 1.75, 1.15, "replay\nbuffer", GRAY, fontsize=13.5,
+         fc="#f3f3f3")
+    _box(ax, XA, YT, 2.2, BH, "actor $\\pi_\\theta$", BLUE, fontsize=14,
+         fc="#e8f1f8")
+    _box(ax, XC, YT, BW, BH, "target critics\n$Q_{w_1^-},\\ Q_{w_2^-}$",
+         ORANGE, fontsize=13, fc="#fdf1e3")
+    _box(ax, XC, YM, BW, BH, "critics\n$Q_{w_1},\\ Q_{w_2}$", GREEN,
+         fontsize=13, fc="#eaf6ea")
+    _box(ax, XL, YT, LW, 1.3,
+         "soft target $y$\n"
+         "$r + \\gamma (1 - \\mathrm{term})\\,(\\min_j Q_{w_j^-}(s', \\tilde a')$\n"
+         "$-\\ \\beta \\log \\pi_\\theta(\\tilde a' \\mid s'))$",
+         ORANGE, fontsize=12.5)
+    _box(ax, XL, YM, LW, BH,
+         "critic loss\n$\\sum_j (Q_{w_j}(s, a) - y)^2$", GREEN, fontsize=12.5)
+    _box(ax, XL, YB, LW, BH,
+         "actor loss\n$\\beta \\log \\pi_\\theta(\\tilde a \\mid s) - \\min_j"
+         " Q_{w_j}(s, \\tilde a)$", BLUE, fontsize=12.5)
+    TW = BW + 0.4
+    _box(ax, XC, YB, TW, BH,
+         "temperature loss\n$-\\log \\beta\\, (\\log \\pi_\\theta"
+         "(\\tilde a \\mid s) + \\bar{\\mathcal{H}})$", PURPLE, fontsize=12.5)
+
+    # --- data into the update ----------------------------------------------- #
+    fl.arrow(ax, (XB + 0.875, YM), (XC - BW / 2, YM), color=GRAY, lw=1.9,
+             mut=15)
+    ax.text(3.0, YM - 0.10, "$(s, a)$", ha="center", va="top",
+            fontsize=13, color="black")
+    _elbow(ax, [(XB, YM + 0.575), (XB, YT), (XA - 1.1, YT)], GRAY, lw=1.9,
+           ls="-")
+    ax.text(XB + 0.12, YT - 0.40, "$s,\\ s'$", ha="left", va="center",
+            fontsize=13, color="black")
+    ax.text(XB, YM - 0.70, "minibatch\n$(s, a, r, s', \\mathrm{term})$",
+            ha="center", va="top", fontsize=12, color="black",
+            linespacing=1.3)
+
+    # --- the actor's two fresh actions -------------------------------------- #
+    fl.arrow(ax, (XA + 1.1, YT), (XC - BW / 2, YT), color=BLUE, lw=1.9,
+             mut=15)
+    ax.text((XA + 1.1 + XC - BW / 2) / 2, YT + 0.10, "$\\tilde a'$ at $s'$",
+            ha="center", va="bottom", fontsize=13, color=BLUE)
+    p0 = np.array([XA + 0.55, YT - BH / 2])
+    p1 = np.array([XC - 0.80, YM + BH / 2])
+    fl.arrow(ax, tuple(p0), tuple(p1), color=BLUE, lw=1.9, mut=15)
+    n = (p1 - p0) / np.linalg.norm(p1 - p0)
+    nrm = np.array([-n[1], n[0]])                 # points up and to the right
+    mid = (p0 + p1) / 2
+    ax.text(*(mid - 0.30 * nrm), "$\\tilde a$ at $s$", ha="left", va="top",
+            fontsize=13, color=BLUE)
+    # the pathwise gradient runs back along the same edge, offset to its
+    # upper side and cut at the two box edges it runs between
+    fl.arrow(ax, *_between_rows(p0 + 0.24 * nrm, n, YM + BH / 2, YT - BH / 2),
+             **GRAD, mut=14)
+    ax.text(3.62, 3.80, "pathwise\ngradient", ha="right", va="center",
+            fontsize=12.5, color=RED, linespacing=1.2)
+
+    # --- into the losses ----------------------------------------------------- #
+    fl.arrow(ax, (XC + BW / 2, YT), (XL - LW / 2, YT), color=ORANGE, lw=1.9,
+             mut=15)
+    ax.text((XC + BW / 2 + XL - LW / 2) / 2, YT + 0.10, "$\\min_j$",
+            ha="center", va="bottom", fontsize=13, color="black")
+    fl.arrow(ax, (XL, YT - 0.65), (XL, YM + BH / 2), color=ORANGE, lw=1.9,
+             mut=15)
+    ax.text(XL + 0.12, (YT - 0.65 + YM + BH / 2) / 2, "$y$", ha="left",
+            va="center", fontsize=13.5, color="black")
+    fl.arrow(ax, (XC + BW / 2, YM), (XL - LW / 2, YM), color=GREEN, lw=1.9,
+             mut=15)
+    q0 = np.array([XC + 0.80, YM - BH / 2])
+    q1 = np.array([XL - 1.30, YB + BH / 2])
+    fl.arrow(ax, tuple(q0), tuple(q1), color=GREEN, lw=1.9, mut=15)
+    m = (q1 - q0) / np.linalg.norm(q1 - q0)
+    mrm = np.array([m[1], -m[0]])                # points down and to the left
+    fl.arrow(ax, *_between_rows(q0 + 0.24 * mrm, m, YB + BH / 2, YM - BH / 2),
+             **GRAD, mut=14)
+    # the actor loss hands its log-probability to the temperature
+    fl.arrow(ax, (XL - LW / 2, YB), (XC + TW / 2, YB), color=BLUE, lw=1.6,
+             mut=14)
+
+    # --- the slow copy -------------------------------------------------------- #
+    fl.arrow(ax, (XC + 0.95, YM + BH / 2), (XC + 0.95, YT - BH / 2),
+             color=ORANGE, lw=1.6, ls=(0, (4.5, 2.6)), mut=14)
+    ax.text(XC + 1.07, (YT + YM) / 2, "Polyak,\nrate $\\nu$", ha="left",
+            va="center", fontsize=12, color="black", linespacing=1.2)
+
+    ax.set_xlim(0.0, 13.5)
+    ax.set_ylim(0.1, 5.6)
+    fl.save(fig, "mdl-rl-sac-update")
+
+
+def _plan_rollout(y0, u):
+    """The schematic model of the planning figure: one coordinate, the
+    distance from upright, pushed down by the action, so the fan and its
+    scores are computed rather than drawn freehand.  Returns the predicted
+    states and the predicted return (state cost plus a small action cost)."""
+    y = [y0]
+    for a in u:
+        y.append(max(y[-1] - 0.05 * a * np.sqrt(y[-1]), 0.0))
+    y = np.array(y)
+    ret = -20.0 * float(5.0 * (y[1:] ** 2).mean() + 0.02 * (u ** 2).sum())
+    return y, ret
+
+def fig_model_planning():     # F10 (ch. 15) -> mdl-rl-model-planning
+    """Random shooting with a warm start, in the learned model.  (a) At time
+    $t$: candidate action sequences are drawn around the previous plan shifted
+    by one step (dashed), rolled out through the model and scored by the sum
+    of predicted rewards; only the first action of the best one (blue) is
+    executed.  (b) One real step later the agent is at the real $s_{t+1}$,
+    a little off the prediction, and plans again around the best plan of (a)
+    shifted by one step.  (c) The model's open-loop error grows with the
+    horizon (schematic), which is one reason to replan at every step.  No
+    critic appears anywhere."""
+    H = 25
+    k = np.arange(H)
+    decay = np.exp(-k / 12.0)
+    wig = np.sin(np.pi * k / H)
+    PERT_A = [(-0.85, 0.25), (-0.40, -0.35), (0.20, 0.30), (0.50, -0.25),
+              (0.95, 0.30)]
+    PERT_B = [(-0.80, 0.30), (-0.45, -0.30), (-0.15, 0.30), (0.15, -0.30),
+              (0.40, 0.30)]
+
+    fig = plt.figure(figsize=(12.2, 3.6))
+    gs = GridSpec(1, 3, width_ratios=[1.0, 1.0, 0.55], figure=fig,
+                  wspace=0.34)
+    axa, axb, axc = (fig.add_subplot(gs[0, i]) for i in range(3))
+    xs = np.arange(H + 1)
+
+    def panel(ax, y0, centre, perts, label_s):
+        spine, _ = _plan_rollout(y0, centre)
+        cands = [np.clip(centre + d * decay + w * wig, 0.0, None)
+                 for d, w in perts]
+        rolls = [_plan_rollout(y0, u) for u in cands]
+        best = int(np.argmax([r for _, r in rolls]))
+        assert 0 < best < len(perts) - 1          # an interior winner
+        ax.plot(xs, spine, color=GRAY, lw=1.8, ls=(0, (5, 3)), zorder=3)
+        for i, (y, _) in enumerate(rolls):
+            ax.plot(xs, y, color=BLUE if i == best else LIGHT,
+                    lw=2.6 if i == best else 1.6, zorder=4 if i == best else 2)
+        # the scores at the ends, spread apart (and off the axis) where two
+        # ends nearly coincide; a short leader joins a moved label to its end
+        ends = sorted((y[-1], i) for i, (y, _) in enumerate(rolls))
+        pos, GAPL = np.array([max(e, 0.07) for e, _ in ends]), 0.075
+        for _ in range(200):                      # relax overlapping pairs
+            gap = np.diff(pos)
+            j = int(np.argmin(gap))
+            if gap[j] >= GAPL - 1e-9:
+                break
+            push = (GAPL - gap[j]) / 2
+            pos[j] -= push
+            pos[j + 1] += push
+            pos = np.maximum(pos, 0.07 + GAPL * np.arange(len(pos)))
+        for (yend, i), yl in zip(ends, pos):
+            if abs(yl - yend) > 0.01:
+                ax.plot([H + 0.15, H + 0.85], [yend, yl], color=GRAY,
+                        lw=0.9, zorder=1)
+            ax.text(H + 1.0, yl, f"${rolls[i][1]:.0f}$", ha="left",
+                    va="center", fontsize=12,
+                    color=BLUE if i == best else "black")
+        yb = rolls[best][0]
+        ax.plot(xs[:2], yb[:2], color=BLUE, lw=5.5, solid_capstyle="round",
+                zorder=6)
+        ax.plot([0], [y0], "o", color="black", ms=8, zorder=7)
+        ax.text(-0.9, y0, label_s, ha="right", va="center", fontsize=13.5,
+                color="black")
+        ax.set_xlim(-0.5, H + 4.2)
+        ax.set_ylim(0.0, 1.0)
+        ax.set_xticks([0, H])
+        ax.set_yticks([])
+        ax.set_xlabel("model steps ahead", fontsize=13)
+        _black_axes(ax)
+        ax.spines["left"].set_visible(False)
+        return cands[best], yb, spine
+
+    # --- (a) the decision at t ---------------------------------------------- #
+    spine_a = 1.6 * decay
+    best_a, yb, _ = panel(axa, 0.85, spine_a, PERT_A, "$s_t$")
+    axa.set_ylabel("distance from upright", fontsize=13)
+    axa.annotate("execute $a_t$ only", xy=(1.05, yb[1]),
+                 xytext=(2.4, 0.95), ha="left", va="center", fontsize=12.5,
+                 color=BLUE, arrowprops=dict(arrowstyle="->", color=BLUE,
+                                             lw=1.1, shrinkA=2, shrinkB=3))
+    # an inline key in the empty upper right
+    for yk, kw, txt in ((0.80, dict(color=GRAY, lw=1.8, ls=(0, (5, 3))),
+                         "previous plan, shifted"),
+                        (0.71, dict(color=BLUE, lw=2.6), "best candidate")):
+        axa.plot([10.6, 13.0], [yk, yk], **kw)
+        axa.text(13.6, yk, txt, ha="left", va="center", fontsize=12,
+                 color="black")
+    _letter(axa, "(a)", x=-0.10, y=1.0)
+
+    # --- (b) one real step later --------------------------------------------- #
+    y1_real = yb[1] + 0.035                           # the model was a bit off
+    shifted = np.r_[best_a[1:], best_a[-1]]
+    panel(axb, y1_real, shifted, PERT_B, "$s_{t+1}$")
+    axb.plot([0], [yb[1]], "o", mfc="white", mec=BLUE, mew=1.6, ms=7,
+             zorder=8)
+    axb.annotate("predicted $s_{t+1}$", xy=(0.25, yb[1] - 0.012),
+                 xytext=(2.6, 0.93), ha="left", va="center", fontsize=12,
+                 color="black", arrowprops=dict(arrowstyle="->",
+                                                color="black", lw=1.0,
+                                                shrinkA=2, shrinkB=5))
+    _letter(axb, "(b)", x=-0.10, y=1.0)
+
+    # --- (c) error against the horizon (schematic) --------------------------- #
+    kk = np.linspace(1, H, 200)
+    axc.plot(kk, np.exp(kk / 5.5), color=ORANGE, lw=2.4)
+    axc.set_xlim(0, H + 1)
+    axc.set_ylim(0, np.exp(H / 5.5) * 1.08)
+    axc.set_xticks([1, 10, 25])
+    axc.set_yticks([])
+    axc.set_xlabel("horizon $k$", fontsize=13)
+    axc.set_ylabel("$k$-step model error", fontsize=13)
+    _black_axes(axc)
+    _letter(axc, "(c)", x=-0.16, y=1.0)
+    fl.save(fig, "mdl-rl-model-planning")
+
+
+REWARD_HAZARD = [5, 6]          # the hazard lane of the regularized section
+
+def _reward_gridworld_data(hazard=REWARD_HAZARD, gamma=0.95):
+    """The KL-regularized section's gridworld, its reference policy and the
+    1,000 reference trajectories, replayed with the notebook's own seed and
+    call order (rng 0, then rng.choice per step), so the counts drawn are the
+    counts the notebook's fit sees."""
+    P = np.zeros((16, 4, 16))
+    for s, a in np.ndindex(16, 4):
+        x, y = s % 4, s // 4
+        dx, dy = [(-1, 0), (0, 1), (1, 0), (0, -1)][a]
+        P[s, a, min(3, max(0, y + dy)) * 4 + min(3, max(0, x + dx))] = 1.0
+    P[15], P[15, :, 15] = 0.0, 1.0
+    bonus = np.full(16, -0.04)
+    bonus[hazard], bonus[15] = -1.5, 1.0
+    r_true = np.einsum('sat,t->sa', P, bonus)
+    r_true[15] = 0.0
+    V = np.zeros(16)
+    for _ in range(200):
+        V = (r_true + gamma * P @ V).max(axis=1)
+    Q = r_true + gamma * P @ V
+    pi_ref = np.exp(Q / 0.25)
+    pi_ref /= pi_ref.sum(1, keepdims=True)
+    rng = np.random.default_rng(0)
+    X, visits = [], np.zeros(16)
+    for _ in range(1000):
+        st, x, seen = 0, np.zeros((16, 4)), {0}
+        for t in range(40):
+            a = rng.choice(4, p=pi_ref[st])
+            x[st, a] += gamma ** t
+            st = P[st, a].argmax()
+            seen.add(int(st))
+            if st == 15:
+                break
+        for v in seen:
+            visits[v] += 1
+        X.append(x.ravel())
+    X = np.stack(X)
+    support = (X > 0).sum(0).reshape(16, 4)      # episodes containing (s, a)
+    return P, bonus, r_true, support, visits
+
+def fig_reward_gridworld():   # F5 (ch. 15) -> mdl-rl-reward-gridworld
+    """(a) The map: start, goal, the hazard lane, and how many of the 1,000
+    reference episodes visit each cell.  (b) Support of every state-action
+    pair: each cell is split into four triangles (left, down, right, up),
+    shaded by the number of episodes containing that pair on a log scale; a
+    cross marks a pair that never occurs, and the eight pairs that enter the
+    hazard lane are outlined.  Both panels replay the notebook's seed."""
+    P, bonus, r_true, support, visits = _reward_gridworld_data()
+    live = np.arange(15)
+    assert (support[live] == 0).sum() + 4 == 9           # notebook: 9 pairs
+    assert (support >= 50).sum() == 46                   # notebook: 46 pairs
+    enter = [(s, a) for s in live for a in range(4)
+             if r_true[s, a] == -1.5]
+    assert len(enter) == 8
+    cmap = plt.get_cmap("Blues")
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.6, 4.6))
+
+    # --- (a) the map with state visits ------------------------------------- #
+    for s in range(16):
+        r, c = divmod(s, 4)
+        if s == 15:
+            fc = (*to_rgb(GREEN), 0.35)
+        else:
+            fc = cmap(0.08 + 0.75 * visits[s] / 1000.0)
+        axa.add_patch(Rectangle((c, r), 1, 1, fc=fc, ec="black", lw=1.2,
+                                zorder=1))
+        if s in REWARD_HAZARD:
+            axa.add_patch(Rectangle((c + 0.05, r + 0.05), 0.9, 0.9, fc="none",
+                                    ec=RED, lw=2.6, zorder=3))
+        if s != 15:
+            dark = visits[s] / 1000.0 > 0.6
+            yc = r + (0.42 if s in REWARD_HAZARD else 0.55)
+            axa.text(c + 0.5, yc, f"{visits[s]:.0f}", ha="center",
+                     va="center", fontsize=13,
+                     color="white" if dark else "black", zorder=4)
+        if s in REWARD_HAZARD:
+            axa.text(c + 0.5, r + 0.74, "$-1.5$", ha="center", va="center",
+                     fontsize=12.5, color=RED, zorder=4)
+    axa.text(0.10, 0.10, "S", ha="left", va="top", fontsize=13,
+             fontweight="bold", color="white", zorder=4)
+    axa.text(3.5, 3.5, "G\n$+1$", ha="center", va="center", fontsize=13,
+             color="black", zorder=4, linespacing=1.2)
+    axa.set_xlim(-0.02, 4.02)
+    axa.set_ylim(4.02, -0.02)
+    axa.set_aspect("equal")
+    axa.axis("off")
+    _letter(axa, "(a)", x=0.0, y=1.01)
+
+    # --- (b) the support of every pair -------------------------------------- #
+    # triangle of action a in cell (r, c): centre and the two corners on the
+    # side the action moves towards (left, down, right, up; y grows downward)
+    side = {0: [(0, 0), (0, 1)], 1: [(0, 1), (1, 1)], 2: [(1, 1), (1, 0)],
+            3: [(1, 0), (0, 0)]}
+    lmax = np.log10(1001.0)
+    for s in range(16):
+        r, c = divmod(s, 4)
+        if s == 15:
+            axb.add_patch(Rectangle((c, r), 1, 1, fc=(*to_rgb(GREEN), 0.35),
+                                    ec="black", lw=1.2, zorder=1))
+            axb.text(c + 0.5, r + 0.5, "G", ha="center", va="center",
+                     fontsize=13, color="black", zorder=4)
+            continue
+        for a in range(4):
+            tri = [(c + 0.5, r + 0.5)] + [(c + dx, r + dy)
+                                          for dx, dy in side[a]]
+            n = support[s, a]
+            fc = cmap(0.08 + 0.80 * np.log10(1.0 + n) / lmax) if n else "white"
+            axb.add_patch(plt.Polygon(tri, closed=True, fc=fc, ec="white",
+                                      lw=0.8, zorder=1))
+            cx = np.mean([p[0] for p in tri])
+            cy = np.mean([p[1] for p in tri])
+            if n == 0:
+                axb.text(cx, cy, "$\\times$", ha="center", va="center",
+                         fontsize=14, color="black", zorder=4)
+            if (s, a) in enter:          # inset, so it never sits on a border
+                inset = [(cx + 0.78 * (px - cx), cy + 0.78 * (py - cy))
+                         for px, py in tri]
+                axb.add_patch(plt.Polygon(inset, closed=True, fc="none",
+                                          ec=RED, lw=1.8, zorder=3))
+        axb.add_patch(Rectangle((c, r), 1, 1, fc="none", ec="black", lw=1.2,
+                                zorder=2))
+    axb.set_xlim(-0.02, 4.02)
+    axb.set_ylim(4.02, -0.02)
+    axb.set_aspect("equal")
+    axb.axis("off")
+    _letter(axb, "(b)", x=0.0, y=1.01)
+
+    # a slim key for the shading of (b)
+    cax = fig.add_axes([0.915, 0.20, 0.012, 0.60])
+    grad = np.linspace(0.0, lmax, 256)[:, None]
+    cax.imshow(cmap(0.08 + 0.80 * grad / lmax), aspect="auto",
+               origin="lower", extent=(0, 1, 0, lmax))
+    cax.set_xticks([])
+    cax.yaxis.tick_right()
+    cax.set_yticks(np.log10([2, 11, 101, 1001]))
+    cax.set_yticklabels(["1", "10", "100", "1000"])
+    cax.tick_params(colors="black", labelsize=11)
+    cax.set_ylabel("episodes containing the pair", fontsize=12)
+    cax.yaxis.set_label_position("right")
+    fig.subplots_adjust(left=0.01, right=0.90, wspace=0.08)
+    fl.save(fig, "mdl-rl-reward-gridworld")
 
 
 FIGURES = [
@@ -2810,8 +3153,11 @@ FIGURES = [
         fig_deadly_triad,
         fig_max_bias,
         fig_data_rules,
-        fig_distribution_shift,
         fig_token_mdp,
+        fig_squashed_density,
+        fig_sac_update,
+        fig_model_planning,
+        fig_reward_gridworld,
 ]
 
 

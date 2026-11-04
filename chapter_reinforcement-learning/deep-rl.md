@@ -557,7 +557,7 @@ This chapter and the next present many methods. Two questions locate each of the
 | behavior cloning | $\pi(a \mid s)$ by cross-entropy on demonstrations | a fixed expert dataset | :numref:`sec_imitation` |
 | DAgger | the same fit | the learner's own states, relabeled by an expert on call | :numref:`sec_imitation` |
 | Q-learning (tabular) | $Q^*$ from sampled backups | any behavior's transitions (off-policy) | :numref:`sec_qlearning` |
-| SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | :numref:`sec_qlearning`; implemented in :numref:`sec_offline` |
+| SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | :numref:`sec_qlearning` |
 | certainty-equivalent planning | $Q^*$ of the model counted from samples | any behavior's transitions, counted | :numref:`sec_qlearning` |
 | UCB, Thompson sampling | arm means plus their uncertainty | its own pulls (the bandit) | :numref:`sec_exploration` |
 | REINFORCE | $\nabla_\theta J$ by the score function | fresh trajectories from the current policy only | :numref:`sec_policygradient` |
@@ -568,8 +568,8 @@ This chapter and the next present many methods. Two questions locate each of the
 | PPO | $\pi_\theta$ under a clipped probability ratio | one batch, reused for a few steps | :numref:`sec_ppo` |
 | KL-regularized policy optimization (the objective behind RLHF) | a policy tilted from a reference by reward | rollouts scored by a learned reward | :numref:`sec_regularized`; RLHF at scale is left to the Language Models part, which takes it up in more depth |
 | DQN, Double DQN | $Q$ as a network | a replay buffer of stale experience | :numref:`sec_dqn` |
-| Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_dqn` |
-| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_regularized` and :numref:`sec_sac` |
+| Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_deep_rl-further-reading` |
+| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_sac` |
 | SAC | twin soft critics, and a stochastic squashed actor maximizing reward plus entropy | a replay buffer (off-policy) | :numref:`sec_sac` |
 | offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
 | Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |

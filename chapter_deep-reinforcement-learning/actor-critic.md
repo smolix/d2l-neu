@@ -138,75 +138,38 @@ def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab jax
-def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
-    """d2l.policy_step with the actor's gradient norm capped at `clip`;
-    returns the norm measured before the cap. `_pad` and `_actor_pass`,
-    defined in the next cell, are resolved at the first call."""
-    size = 1 << max(6, (len(weight) - 1).bit_length())
-    gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(obs, size),
-                        _pad(act, size), _pad(weight, size),
-                        jnp.float32(len(weight)), jnp.float32(clip))
-    return float(gnorm)
-```
-
-The critic's regression and the actor's clipped step are this section's hot loops, together tens of thousands of passes per run, each on a batch of a few fixed lengths. Padding every batch to a power-of-two length makes the shape one of a handful and lets the jitted passes and the jitted value read that computes the critic's target compile once per bucket rather than once per batch; a mask, or zero-padded weights, keeps the padded entries out of each loss.
-
-```{.python .input #actor-critic-a2c-by-name-3}
-%%tab pytorch
-# Eager per-pass cost is about a millisecond in this tab; the library
-# helper needs no compilation story here, unlike its jax sibling.
-fit_value = d2l.fit_value
-```
-
-```{.python .input #actor-critic-a2c-by-name-3}
-%%tab jax
-def _pad(x, size):
-    return jnp.asarray(np.pad(x, ((0, size - len(x)),) + ((0, 0),)
-                              * (x.ndim - 1)))
-
-_value_fwd = nnx.jit(lambda net, obs: net(obs).squeeze(-1))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def value_np(self, obs):   # batched reads only, padded to the bucket size
-    size = 1 << max(6, (len(obs) - 1).bit_length())
-    return np.asarray(_value_fwd(self.value, _pad(obs, size)))[:len(obs)]
-
 @nnx.jit
-def _critic_pass(value, opt, obs, target, mask):
-    loss, grads = nnx.value_and_grad(lambda v: (mask * (
-        v(obs).squeeze(-1) - target) ** 2).sum() / mask.sum())(value)
-    opt.update(value, grads)
-    return loss
-
-@nnx.jit
-def _actor_pass(policy, opt, obs, act, adv, n_real, clip):
-    def loss_fn(p):   # zero-padded adv silences the padded rows exactly
-        logp = jax.nn.log_softmax(p(obs), -1)[jnp.arange(obs.shape[0]), act]
-        return -(adv * logp).sum() / n_real
-    grads = nnx.grad(loss_fn)(policy)
+def _actor_pass(ac, obs, act, adv, n, clip):
+    """d2l._policy_pass with the gradient norm capped at `clip`; returns
+    the norm before the cap. Padded rows carry adv = 0 and add nothing."""
+    grads = nnx.grad(lambda policy: -(adv * ac.log_prob(obs, act, policy))
+                     .sum() / n)(ac.policy)
     gnorm = optax.global_norm(grads)
     grads = jax.tree.map(lambda g: g * jnp.minimum(1.0, clip / gnorm), grads)
-    opt.update(policy, grads)
+    ac.opt_pi.update(ac.policy, grads)
     return gnorm
 
-def fit_value(ac, obs, target, num_steps=1):
-    """d2l.fit_value, padded to a power-of-two length: the jitted pass
-    compiles once per size bucket (:numref:`sec_compilation`)."""
-    size = 1 << max(6, (len(target) - 1).bit_length())
-    mask = jnp.asarray((np.arange(size) < len(target)).astype(np.float32))
-    for _ in range(num_steps):
-        loss = _critic_pass(ac.value, ac.opt_v, _pad(obs, size),
-                            _pad(target, size), mask)
-    return float(loss)
+def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
+    """d2l.policy_step with the actor's gradient norm capped at `clip`;
+    returns the norm measured before the cap."""
+    n = len(weight)
+    size = d2l._bucket(n)
+    return float(_actor_pass(ac, d2l._pad(obs, size), d2l._pad(act, size),
+                             d2l._pad(np.float32(weight), size), n, clip))
 ```
 
-Now the two training functions, side by side. The Monte Carlo reference is `train_reinforce` of :numref:`sec_deeprl` with two mechanical changes: the agent arrives from the caller, following the pattern of :numref:`sec_qlearning`'s caller-owned tables, so that the last cell of this section can audit the trained agents; and the actor's step goes through the clipped variant and yields its gradient norm, a diagnostic returned as data.
+:begin_tab:`jax`
+`policy_step_clip` pads its batch to a bucket length with `d2l._pad` and `d2l._bucket`, as `d2l.policy_step` does, so that the compiled `_actor_pass` is reused across batches of different lengths; the zero weights of the padded rows keep them out of the loss.
+:end_tab:
+
+Now the two training functions, side by side. The Monte Carlo reference is `train_reinforce` of :numref:`sec_deeprl` with three mechanical changes: the agent arrives from the caller, following the pattern of :numref:`sec_qlearning`'s caller-owned tables, so that the last cell of this section can audit the trained agents; the actor's step goes through the clipped variant and yields its gradient norm, a diagnostic returned as data; and the critic takes the same `critic_steps` regression passes per batch as `train_ac` below.
 
 ```{.python .input #actor-critic-a2c-by-name-4}
 %%tab pytorch, jax
 def train_reinforce(seed, ac, num_updates=num_updates):
-    """sec_deeprl's learned-baseline REINFORCE; the agent is caller-owned
-    and the actor step reports its pre-clip gradient norm."""
+    """sec_deeprl's learned-baseline REINFORCE; the agent is caller-owned,
+    the actor step reports its pre-clip gradient norm, and the critic gets
+    train_ac's budget of critic_steps passes."""
     rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
     env.reset(seed=seed)
     for _ in range(num_updates):
@@ -215,7 +178,7 @@ def train_reinforce(seed, ac, num_updates=num_updates):
              + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
         gnorm = policy_step_clip(ac, batch.obs, batch.act, w)
-        fit_value(ac, batch.obs, G)
+        d2l.fit_value(ac, batch.obs, G, num_steps=critic_steps)
         yield float(batch.episode_returns().mean()), gnorm
 ```
 
@@ -248,7 +211,7 @@ def train_ac(seed, ac, num_updates=num_updates):
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         for _ in range(critic_steps):   # fresh target, one pass, repeat
-            fit_value(ac, batch.obs, batch.td_target(ac.value_np, gamma))
+            d2l.fit_value(ac, batch.obs, batch.td_target(ac.value_np, gamma))
         delta = batch.td_target(ac.value_np, gamma) - ac.value_np(batch.obs)
         gnorm = policy_step_clip(ac, batch.obs, batch.act, delta)   # not normalized
         yield float(batch.episode_returns().mean()), gnorm
@@ -325,7 +288,7 @@ trace = []
 for _ in range(num_updates):
     b = d2l.rollout(env, ac.act, batch_episodes, rng)
     for _ in range(critic_steps):
-        fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
+        d2l.fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
     V = ac.value_np(b.obs)
     delta = b.td_target(ac.value_np, gamma) - V
     A_mc = (b.reward_to_go(gamma)   # G of train_reinforce, minus V
@@ -449,8 +412,8 @@ def train_gae(seed, lam, num_updates=50, batch_episodes=4):
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         for _ in range(critic_steps):
-            fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
-                      + ac.value_np(batch.obs))
+            d2l.fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
+                          + ac.value_np(batch.obs))
         A = batch.gae(ac.value_np, gamma, lam)
         policy_step_clip(ac, batch.obs, batch.act, d2l.normalize(A))
         yield float(batch.episode_returns().mean())
@@ -484,7 +447,7 @@ env.reset(seed=1)
 for _ in range(40):   # a mid-training freeze: the critic is still wrong
     b = d2l.rollout(env, frozen.act, batch_episodes, rng)
     for _ in range(critic_steps):
-        fit_value(frozen, b.obs, b.td_target(frozen.value_np, gamma))
+        d2l.fit_value(frozen, b.obs, b.td_target(frozen.value_np, gamma))
     policy_step_clip(frozen, b.obs, b.act, b.td_target(
         frozen.value_np, gamma) - frozen.value_np(b.obs))   # as train_ac
 ```
@@ -499,14 +462,14 @@ if tab.selected('pytorch'):
         return np.concatenate([x.numpy().ravel() for x in g])
 if tab.selected('jax'):
     @nnx.jit
-    def _grad_tree(policy, obs, act, adv, n_real):
-        return nnx.grad(lambda p: -(adv * jax.nn.log_softmax(p(obs), -1)[
-            jnp.arange(obs.shape[0]), act]).sum() / n_real)(policy)
+    def _grad_tree(ac, obs, act, adv, n):
+        return nnx.grad(lambda policy: -(adv * ac.log_prob(
+            obs, act, policy)).sum() / n)(ac.policy)
 
     def grad_vec(ac, b, w):   # padded + jitted: 1000 calls below
-        size = 1 << max(6, (len(w) - 1).bit_length())
-        g = _grad_tree(ac.policy, _pad(b.obs, size), _pad(b.act, size),
-                       _pad(w, size), jnp.float32(len(w)))
+        size = d2l._bucket(len(w))
+        g = _grad_tree(ac, d2l._pad(b.obs, size), d2l._pad(b.act, size),
+                       d2l._pad(np.float32(w), size), len(w))
         return np.concatenate([np.asarray(x).ravel()
                                for x in jax.tree.leaves(g)])
 
@@ -551,8 +514,6 @@ and the persistence of ceiling-level batches during training.
 ## Summary
 
 Actor--critic methods use a learned value function to construct bootstrapped policy-gradient weights. With an exact critic, the expected temporal-difference error equals the advantage; an approximate critic introduces bias while usually reducing variance. The critic update is a semi-gradient policy-evaluation step, and the actor and critic form an approximate generalized policy-iteration scheme. Multi-step returns interpolate between one-step bootstrapping and Monte Carlo returns. The $\lambda$-return mixes these targets geometrically, and GAE computes the equivalent discounted sum of temporal-difference errors with a backward scan.
-
-**Experimental scope.** The training comparisons use three seeds, the $\lambda$ sweep uses five seeds, and the frozen-policy estimator study uses 200 batches. Both one-step and Monte Carlo methods solve CartPole in these runs. Intermediate values of $\lambda$, most often $0.9$ or $0.95$, give the smallest estimator error on the frozen-policy probe, but the precise optimum varies with the policy. The experiments support the bias--variance interpretation rather than a universal choice of $\lambda$.
 
 ## Exercises
 

@@ -173,7 +173,18 @@ for beta in (0.0, 0.1, 0.2, 0.3, 0.5):
 
 The columns report the approximate grader score, the exact score, and the average probability of the hedged response. At $\beta=0$, the policy obtains a perfect grader score but only $0.50$ under exact evaluation. The multi-answer response remains favored at $\beta=0.1$ and, less strongly, at $0.2$, and is suppressed above the predicted threshold of $1/4$. Each row is close to the tilted optimum in :eqref:`eq_kl_optimum` but not equal to it: after $400$ updates at step size $2$ the iterate still fluctuates, and the random denominator of group standardization enlarges these fluctuations. Larger $\beta$ also limits useful changes to the policy: at $\beta=0.5$, the exact score falls to $0.24$. Thus regularization selects a point on the reward--divergence frontier rather than providing an absolute safeguard.
 
-## GRPO and the Notation Contract
+## The Post-Training Update
+
+### The Length-Normalized Trajectory Ratio
+
+A length-normalized trajectory ratio lies between the full product and the individual per-step ratios. Raising the product to the power $1/T$ gives its geometric mean, whose logarithm is the average per-step log-ratio and whose scale does not grow exponentially with sequence length. Group Sequence Policy Optimization (GSPO) clips this sequence-level ratio rather than each per-step ratio in language-model training :cite:`Zheng.Liu.Li.ea.2025`. :numref:`sec_rl_sequences` returns to this construction for token trajectories.
+
+### Asymmetric Clipping Bands
+:label:`subsec_ppo_asymmetric`
+
+A symmetric interval in ratio space permits different absolute probability changes. If the old policy assigns probability $0.01$ to an action, the upper ratio $1+\epsilon$ with $\epsilon=0.2$ stops rewarding increases above $0.012$. An action with probability $0.60$ may instead increase to $0.72$ within the same ratio interval. Low-probability actions therefore receive much smaller allowed changes in probability mass.
+
+An asymmetric band uses $1-\epsilon_{\textrm{low}}$ and $1+\epsilon_{\textrm{high}}$, with $\epsilon_{\textrm{high}}>\epsilon_{\textrm{low}}$, to permit larger relative increases. Variants of this design appear in some recent language-model training recipes discussed near :numref:`sec_rl_sequences`. It is not a standard component of PPO, and Exercise :exref:`ex_ppo-asymmetric-bands` examines its arithmetic.
 
 ### Components of GRPO
 
@@ -218,56 +229,9 @@ relation into the preference likelihood fits the policy directly rather
 than first fitting a scalar reward model :cite:`Rafailov.Sharma.Mitchell.ea.2023`.
 Preference optimization beyond this derivation is left to the Language Models part, which takes it up in more depth.
 
-### Notation for the Language Models Part
-
-The symbols below are fixed for reuse in the Language Models part without change; every object they name was defined and exercised in these two chapters.
-
-:The notation contract. Symbols fixed here so that later post-training material can use them without redefinition.
-:label:`tab_rl_notation_contract`
-
-| symbol | meaning | built in |
-|:--|:--|:--|
-| $x$, $y$ | prompt, response | :numref:`sec_mdp` |
-| $\tau$ | trajectory | :numref:`sec_mdp` |
-| $\mu_0$ | start-state, i.e. prompt, distribution | :numref:`sec_mdp` |
-| $\pi_\theta$, $\pi_{\textrm{ref}}$ | policy; frozen reference | :numref:`sec_policygradient`, :numref:`sec_regularized` |
-| $\hat{G}_t$ | reward-to-go | :numref:`sec_baselines` |
-| $A$ | advantage | :numref:`sec_baselines` |
-| $K$ | group size | :numref:`sec_exploration`, :numref:`sec_baselines` |
-| $\rho_t$ | importance ratio $\pi_\theta / \pi_{\theta_{\textrm{old}}}$ | :numref:`sec_ppo` |
-| $\epsilon$ | clip half-width, exploration rate; never a numerical constant | :numref:`sec_ppo`, :numref:`sec_qlearning` |
-| $\beta$ | KL coefficient | :numref:`sec_regularized` |
-| $\delta_t$ | TD error | :numref:`sec_qlearning` |
-| $w$, $w^-$ | critic parameters; target copy | :numref:`sec_actorcritic`, :numref:`sec_dqn` |
-| $D_{\textrm{KL}}(P \Vert Q)$, $\mathbf{1}(\cdot)$ | KL divergence; indicator | :numref:`sec_regularized` |
-
-## Where to Go Next
-
-These chapters provide an introduction rather than comprehensive coverage. Three extensions are especially relevant.
-
-**Model-based reinforcement learning and search.** The book's model-based methods are planning in a known model (:numref:`sec_valueiter`) and in a model counted from samples (:numref:`sec_qlearning`). A direct extension of the latter is Dyna-Q: augment :numref:`sec_qlearning`'s tabular loop by storing observed transitions and applying the same Q-update to model-generated transitions between environment steps. Monte Carlo tree search can be viewed as a *policy-improvement operator*: search produces an improved action distribution, which is then distilled into the policy as a supervised target. That loop is AlphaZero :cite:`Silver.Schrittwieser.Simonyan.ea.2017,Silver.Hubert.Schrittwieser.ea.2018`; MuZero learns the model it searches in :cite:`Schrittwieser.Antonoglou.Hubert.ea.2020`; DreamerV3 and TD-MPC2 train control inside learned world models :cite:`Hafner.Pasukonis.Ba.ea.2025,Hansen.Su.Wang.2024`. The same search-and-distillation pattern appears in test-time reasoning methods for language models.
-
-**Continuous control since 2024.** The objectives of :numref:`sec_deeprl` through :numref:`sec_regularized` stand; recent gains have come from normalization, scale and stability rather than new losses, and careful normalization even lets streaming, replay-free temporal-difference learning work after decades of not working :cite:`Elsayed.Vasan.Mahmood.2024,Gallici.Fellows.Ellis.ea.2025`. Reading a modern paper here, you should recognize nearly every symbol.
-
-**What we deliberately left out.** Multi-agent reinforcement learning, where the opponent learns too, reached superhuman poker with search plus self-play :cite:`Brown.Sandholm.2017`. Distributional reinforcement learning models the return's whole distribution rather than its mean :cite:`Bellemare.Dabney.Munos.2017`. Meta-learning, hierarchy and partial observability each relax one of :numref:`sec_mdp`'s assumptions; Murphy's overview treats all three at textbook depth :cite:`Murphy.2025`. For a broader treatment of post-training practice, see the reinforcement-learning-from-human-feedback book :cite:`Lambert.2026`.
-
-## Capstone Projects
-
-These four projects play the role of a course programming assignment; each runs on a laptop CPU in minutes, and each carries a numeric sanity bar in place of an autograder.
-
-**A. Build PPO from the pieces, and prove it is right.** Three self-checks: the ratio is exactly $1$ on the first epoch; GAE at $\lambda = 1$ equals reward-to-go minus $\hat{V}$ to floating-point tolerance; the clipped objective's gradient at $\theta = \theta_{\textrm{old}}$ equals the plain policy gradient. Bar: median return above $450$ on CartPole within $60$ updates, 3 seeds.
-
-**B. Which implementation details actually matter.** Ablate five of the 37 catalogued PPO details, one at a time, three seeds each. Bar: at least one factor changes the median by more than the seed spread, and you can say which.
-
-**C. Diagnose three faulty policies.** Examine one agent with a saturated policy, one with an untrained critic, and one with an undersized replay buffer. Identify each fault from the chapter's diagnostics before inspecting the code.
-
-**D. GRPO from REINFORCE, in two lines.** Start from :numref:`sec_baselines`'s `train`, add the group-standardized weight and the clip, and reproduce the $K$-sweep of :numref:`subsec_baselines_group`. Bar: $K = 1$ shows no learning; $K \geq 4$ reaches the verifier's ceiling.
-
 ## Summary
 
 In sequence generation, prompts are start states, tokens are actions, prefixes are states, and responses are trajectories with deterministic concatenation transitions. The response probability factorizes into next-token probabilities, so the response-level score equals the sum of token-level scores. With terminal reward, every token receives the same response-level weight unless an additional credit-assignment model is introduced. A same-group mean baseline shrinks the expected gradient by $(K-1)/K$; leave-one-out centering removes this bias. Learned rewards and programmatic verifiers can both be misspecified, and a KL penalty relative to a reference policy limits the resulting policy shift.
-
-**Experimental scope.** The examples use four prompts and finite response sets. The verifier example uses a deliberately constructed loophole and a reference distribution chosen to give a threshold near $\beta=1/4$. It illustrates the mechanism of reward exploitation, not the scale or complexity of language-model post-training.
 
 ## Exercises
 
@@ -528,7 +492,53 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
        folding the penalty into the reward, as `group_step` does, avoid the
        omission?
 
-[Discussions](https://d2l.discourse.group/)
+1. **Asymmetric bands.** An action has probability $0.01$ under the
+   collecting policy. Suppose that every batch raises its probability by
+   exactly the factor $1 + \epsilon_{\textrm{high}}$ at which the clip stops
+   rewarding further growth (:numref:`subsec_ppo_asymmetric`), and that the
+   next batch is collected by the updated policy.
+    1. How many batches does it take to raise the probability from $0.01$ to
+       $0.5$ with $\epsilon_{\textrm{high}} = 0.2$, and how many with
+       $\epsilon_{\textrm{high}} = 0.28$, the value that
+       :citet:`Yu.Zhang.Zhu.ea.2025` pair with $\epsilon_{\textrm{low}} = 0.2$?
+    1. In a two-action problem, the other action starts at probability
+       $0.99$. Compute its ratio after one such batch. Which side of the band,
+       applied to which action, limits how fast a rarely sampled action can
+       gain probability?
+    1. Lowering the bound $1 - \epsilon_{\textrm{low}}$ as well would widen
+       the band on both sides. What would that do to rare actions with
+       negative advantage?
+    1. Policy entropy falls from about $0.65$ to $0.25$ nats over the CartPole
+       runs of :numref:`subsec_ppo_diagnostics`. Convert both values into the
+       probability $p$ of the more likely of the two actions. The upper clip
+       limits the growth of an action only while
+       $(1 + \epsilon_{\textrm{high}})\, p < 1$, as in problem
+       :exref:`ex_ppo-step-limits`c of :numref:`sec_ppo`. Over which part of this range of $p$ does
+       raising $\epsilon_{\textrm{high}}$ from $0.2$ to $0.28$ let the more
+       likely action grow faster as well as the rare one? What does that do to
+       the entropy? A language model has tens of thousands of actions, most of
+       them with small probability. Why does the same change keep its entropy
+       higher?
+   :exlabel:`ex_ppo-asymmetric-bands`
+
+1. **Length-normalized ratio.** ● GSPO :cite:`Zheng.Liu.Li.ea.2025`
+   replaces the per-step ratios, both as weights and inside the clip, by the
+   geometric mean $s = W_T^{1/T}$ of the trajectory
+   ratio :eqref:`eq_traj_ratio`. Model the per-step log-ratios $\log \rho_t$ under
+   the old policy as independent and identically distributed, with mean
+   $-\kappa$ and variance $v$, where $\kappa$ is the per-step divergence
+   $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$.
+    1. Show that $\log W_T$ has mean $-\kappa T$ and variance $vT$, whereas
+       $\log s$ has mean $-\kappa$ and variance $v / T$.
+    1. Show that $\mathbb{E}[s] = \big(\mathbb{E}[\rho_t^{1/T}]\big)^T \leq 1$ and that
+       $\mathbb{E}[s] \to e^{-\kappa}$ as $T \to \infty$. Evaluate $\mathbb{E}[s]$ for the two
+       policies of problem :exref:`ex_ppo-exploding-product` of :numref:`sec_ppo` at
+       $T \in \{10, 500\}$. Is $s$ an importance weight in the sense of
+       :eqref:`eq_change_of_measure`?
+    1. GSPO's experiments clip $s$ to $[1 - 3 \cdot 10^{-4}, 1 + 4 \cdot 10^{-4}]$,
+       whereas their GRPO baseline clips per-token ratios to
+       $[1 - 0.2, 1 + 0.27]$. Use (a) to explain why a sequence-level band
+       must be much narrower than a per-token band to bind at all.
 
 [Discussions](https://d2l.discourse.group/t/36807)
 
@@ -625,12 +635,6 @@ Both can omit aspects of the intended objective, as do $\hat{Q}$
 in :numref:`sec_offline`, $r_\phi$ in :numref:`sec_regularized`,
 and the approximate grader here.
 
-. . .
-
-:numref:`tab_rl_notation_contract`: $x$, $y$, $\tau$, $\mu_0$,
-$\pi_{\textrm{ref}}$, $\hat{G}_t$, $A$, $K$, $\rho_t$,
-$\epsilon$, $\beta$, $\delta_t$, $w$: fixed here for reuse in
-the Language Models part.
 :::
 
 ::: {.slide title="Where To Go Next"}

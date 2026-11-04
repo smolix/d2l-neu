@@ -87,10 +87,6 @@ $$\hat{L}(\theta) = \frac{1}{n} \sum_{i=1}^n \sum_{t} \rho_t^i(\theta)\ \hat{A}_
 
 where $\hat{A}_t^i$ is an advantage estimate for step $t$ of trajectory $i$, such as the normalized reward-to-go of :numref:`sec_baselines`. Relative to :eqref:`eq_offpolicy_objective`, this approximation replaces the product of ratios by one ratio per step and retains the old policy's state distribution. These choices reduce variance. The approximation is locally exact in the sense needed for optimization: at $\theta = \theta_{\textrm{old}}$, every ratio equals one and $\nabla_\theta \rho_t = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$. Thus :eqref:`eq_surrogate` has the correct policy gradient at the old parameters, but it may be inaccurate after a large policy change. This raises the next question: how should the size of that change be measured and controlled?
 
-### The Length-Normalized Trajectory Ratio
-
-A length-normalized trajectory ratio lies between the full product and the individual per-step ratios. Raising the product to the power $1/T$ gives its geometric mean, whose logarithm is the average per-step log-ratio and whose scale does not grow exponentially with sequence length. Group Sequence Policy Optimization (GSPO) clips this sequence-level ratio rather than each per-step ratio in language-model training :cite:`Zheng.Liu.Li.ea.2025`. :numref:`sec_rl_sequences` returns to this construction for token trajectories.
-
 ## Bounding the Step
 
 ### The Performance Difference Lemma
@@ -146,18 +142,11 @@ with a clipping parameter $\epsilon$, typically $0.2$. Consider one sample. If $
 
 Unlike the TRPO bound in :eqref:`eq_trpo_bound`, the clipped objective does not guarantee monotonic improvement. It is a first-order heuristic that discourages large changes in sampled action probabilities. The ablation below tests its effect empirically, and the subsequent diagnostics measure the policy changes that the theorem would otherwise constrain.
 
-### Asymmetric Clipping Bands
-:label:`subsec_ppo_asymmetric`
-
-A symmetric interval in ratio space permits different absolute probability changes. If the old policy assigns probability $0.01$ to an action, the upper ratio $1+\epsilon$ with $\epsilon=0.2$ stops rewarding increases above $0.012$. An action with probability $0.60$ may instead increase to $0.72$ within the same ratio interval. Low-probability actions therefore receive much smaller allowed changes in probability mass.
-
-An asymmetric band uses $1-\epsilon_{\textrm{low}}$ and $1+\epsilon_{\textrm{high}}$, with $\epsilon_{\textrm{high}}>\epsilon_{\textrm{low}}$, to permit larger relative increases. Variants of this design appear in some recent language-model training recipes discussed near :numref:`sec_rl_sequences`. It is not a standard component of PPO, and Exercise :exref:`ex_ppo-asymmetric-bands` examines its arithmetic.
-
 ### The Entropy Bonus
 
 Implementations often add a small *entropy bonus*, `entropy_coef` times the mean entropy of the action distributions. The bonus discourages probabilities from concentrating near zero or one, where the frequently sampled action has a small score and recovery can become slow.
 
-The function `ppo_epochs` adds this term and records policy entropy after each epoch, allowing saturation to be measured directly. :numref:`sec_regularized` shows that an entropy bonus is equivalent, up to a constant, to a KL penalty relative to a uniform reference policy.
+The function `ppo_epochs` adds this term and records policy entropy before each pass, allowing saturation to be measured directly. :numref:`sec_regularized` shows that an entropy bonus is equivalent, up to a constant, to a KL penalty relative to a uniform reference policy.
 
 ## PPO in Practice
 
@@ -220,8 +209,8 @@ def _probs(ac, obs):   # batched action probabilities, read as numpy
 `_probs` runs the policy through `d2l.forward_np`, the compiled forward that `act` uses (:numref:`sec_imitation`).
 :end_tab:
 
-`ppo_epochs` receives a batch together with the quantities frozen before
-reuse: the advantages and the collecting policy's log-probabilities. It
+`ppo_epochs` receives a batch's states and actions together with the
+quantities frozen before reuse: the advantages and the collecting policy's log-probabilities. It
 then performs `num_epochs` gradient passes on the clipped surrogate plus
 the entropy bonus.
 
@@ -234,12 +223,13 @@ visited states, but its finite-sample estimate may be negative. The
 
 ```{.python .input #ppo-the-implementation-4}
 %%tab pytorch
-def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,  #@save
+def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,  #@save
                entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch; returns
-    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
-    band, approximate KL, mean policy entropy."""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    """num_epochs clipped-surrogate passes on one frozen batch of states
+    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
+    each pass: fraction of ratios outside the band, approximate KL, mean
+    policy entropy."""
+    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
     adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
     diag = []
     for _ in range(num_epochs):
@@ -282,15 +272,16 @@ def _ppo_step(policy, opt, obs, act, adv, logp_old, mask, epsilon,
     return ((mask * (jnp.abs(rho - 1) > epsilon)).sum() / n,
             (mask * (logp_old - logp)).sum() / n, (mask * entropy).sum() / n)
 
-def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,  #@save
+def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,  #@save
                entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch; returns
-    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
-    band, approximate KL, mean policy entropy."""
+    """num_epochs clipped-surrogate passes on one frozen batch of states
+    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
+    each pass: fraction of ratios outside the band, approximate KL, mean
+    policy entropy."""
     size = d2l._bucket(len(adv))
     mask = (np.arange(size) < len(adv)).astype(np.float32)
     obs, act, adv, logp_old = (d2l._pad(x, size) for x in
-                               (batch.obs, batch.act, adv, logp_old))
+                               (obs, act, adv, logp_old))
     step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
     return np.array([step(obs, act, adv, logp_old, mask, epsilon,
                           entropy_coef, use_clip)
@@ -328,8 +319,8 @@ def train_ppo(seed, ac, use_clip=True, trace=None):
                           + ac.value_np(batch.obs))
         adv = d2l.normalize(batch.gae(ac.value_np, gamma, lam))
         logp_old = ac.log_prob_np(batch.obs, batch.act)
-        d = ppo_epochs(ac, batch, adv, logp_old, epsilon_clip, num_epochs,
-                       entropy_coef, use_clip)
+        d = ppo_epochs(ac, batch.obs, batch.act, adv, logp_old, epsilon_clip,
+                       num_epochs, entropy_coef, use_clip)
         if trace is not None:
             trace.append(d)
         yield (float(batch.episode_returns().mean()), *d.mean(0), *d[-1])
@@ -433,8 +424,8 @@ rhos = {}
 for clip in (True, False):
     R = []
     for _ in range(num_epochs):   # one pass at a time, ratios read after
-        ppo_epochs(probe[clip], batch, adv, logp_old, epsilon_clip, 1,
-                   entropy_coef, use_clip=clip)
+        ppo_epochs(probe[clip], batch.obs, batch.act, adv, logp_old,
+                   epsilon_clip, 1, entropy_coef, use_clip=clip)
         R.append(np.exp(probe[clip].log_prob_np(batch.obs, batch.act)
                         - logp_old))
     rhos[clip] = np.array(R)
@@ -526,16 +517,14 @@ batch = d2l.rollout(env, full.act, batch_episodes,
                     np.random.default_rng(1))
 adv = d2l.normalize(batch.gae(full.value_np, gamma, lam))
 logp_old = full.log_prob_np(batch.obs, batch.act)
-ppo_epochs(full, batch, adv, logp_old, epsilon_clip, num_epochs,
-           entropy_coef)
+ppo_epochs(full, batch.obs, batch.act, adv, logp_old, epsilon_clip,
+           num_epochs, entropy_coef)
 idx = np.random.default_rng(1).permutation(len(batch))
 for _ in range(4):                  # four passes of minibatches of 32
     for i in range(0, len(idx), 32):
         sl = idx[i:i + 32]
-        mb = d2l.Batch(batch.obs[sl], batch.act[sl], batch.rew[sl],
-                       batch.next_obs[sl], batch.term[sl], [len(sl)])
-        ppo_epochs(mini, mb, adv[sl], logp_old[sl], epsilon_clip, 1,
-                   entropy_coef)
+        ppo_epochs(mini, batch.obs[sl], batch.act[sl], adv[sl],
+                   logp_old[sl], epsilon_clip, 1, entropy_coef)
 print(f'{len(batch)} steps spent as {num_epochs} full-batch passes '
       f'or as {4 * int(np.ceil(len(idx) / 32))} minibatch steps:')
 for name, ag in (('full batch', full), ('minibatches', mini)):
@@ -546,28 +535,9 @@ for name, ag in (('full batch', full), ('minibatches', mini)):
 
 The two procedures produce policy changes of similar order. Minibatching reduces memory requirements and improves hardware utilization while adding gradient noise. Each sample's ratio is checked four times rather than twenty, and advantage normalization is commonly recomputed within each minibatch. There is also an update-order difference: our loop completes all critic passes before computing advantages and updating the actor, whereas typical implementations compute advantages once with the pre-update critic and then interleave policy and value losses across minibatches.
 
-### Omitted Implementation Details
-:label:`subsec_ppo_omitted`
-
-The gap between this section's PPO and a production one is a list of small, named decisions, none of which needs new theory:
-
-| What real implementations add | Purpose |
-|---|---|
-| Learning-rate annealing to zero | reduce late updates as the policy approaches convergence |
-| Observation and reward normalization | running estimates hold network inputs and value targets near unit scale on tasks whose raw numbers vary by orders of magnitude |
-| Value-loss clipping | the critic gets a band of its own; its measured benefit is disputed, yet nearly every implementation ships it |
-| KL-based early stopping | stop the epochs when the measured approximate KL passes a threshold: our diagnostic panel turned into an actuator |
-| Orthogonal initialization, small policy head | start the policy near uniform so the first updates cannot blow the ratios out |
-| Advantage normalization per minibatch | :numref:`sec_baselines`'s per-batch step size, recomputed at the granularity the gradient uses |
-| Joint policy-and-value minibatch updates | one shuffled pass interleaves both losses; our critic-first, actor-second phases are a teaching choice |
-
-The list is not ours. A community audit collected 37 such implementation details and measured which ones matter :cite:`Huang.Dossa.Raffin.ea.2022`; a controlled study went further and showed that at matched code-level choices PPO and TRPO perform nearly identically, so these details, not the clipped objective, account for much of PPO's practical edge :cite:`Engstrom.Ilyas.Santurkar.ea.2020`; and a large-scale sweep across a quarter-million trained agents reached similarly sober conclusions about which knobs carry the performance :cite:`Andrychowicz.Raichuk.Stanczyk.ea.2021`. The practical instruction a textbook can give is therefore this: when you need a real PPO, read a maintained single-file implementation and diff it against this section; the roughly 300-line `cleanrl/ppo.py` is the standard study text. Every line you do not recognize will be on the list above, and now you know why each is there.
-
 ## Summary
 
 Equal parameter steps need not produce equal changes in a policy. Importance sampling corrects expectations when data come from an older policy, but trajectory-level products of ratios can have high variance. The per-step surrogate is a local approximation that retains the old policy's state distribution. TRPO controls this approximation through a divergence constraint and a monotonic-improvement bound. PPO instead clips individual probability ratios; this is simpler but does not inherit the TRPO guarantee. Practical PPO also uses GAE, an entropy bonus, repeated optimization epochs, and diagnostics for KL divergence, clipping, entropy, and effective sample size.
-
-**Experimental scope.** The clipping ablation uses eight seeds per method and framework. With twenty reuse epochs, every clipped run reaches the maximum CartPole return and holds it, whereas most unclipped runs either never reach the maximum or lose it again after reaching it. The exact failure rate and diagnostic values vary across seeds. The implementation uses full batches from a single environment and omits vectorized collection and minibatch updates, so it illustrates the clipped objective rather than reproducing a production PPO system.
 
 ## Exercises
 
@@ -620,35 +590,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        which approximation in :eqref:`eq_surrogate` makes it independent of
        $T$?
    :exlabel:`ex_ppo-exploding-product`
-
-1. **Asymmetric bands.** An action has probability $0.01$ under the
-   collecting policy. Suppose that every batch raises its probability by
-   exactly the factor $1 + \epsilon_{\textrm{high}}$ at which the clip stops
-   rewarding further growth (:numref:`subsec_ppo_asymmetric`), and that the
-   next batch is collected by the updated policy.
-    1. How many batches does it take to raise the probability from $0.01$ to
-       $0.5$ with $\epsilon_{\textrm{high}} = 0.2$, and how many with
-       $\epsilon_{\textrm{high}} = 0.28$, the value that
-       :citet:`Yu.Zhang.Zhu.ea.2025` pair with $\epsilon_{\textrm{low}} = 0.2$?
-    1. In a two-action problem, the other action starts at probability
-       $0.99$. Compute its ratio after one such batch. Which side of the band,
-       applied to which action, limits how fast a rarely sampled action can
-       gain probability?
-    1. Lowering the bound $1 - \epsilon_{\textrm{low}}$ as well would widen
-       the band on both sides. What would that do to rare actions with
-       negative advantage?
-    1. Policy entropy falls from about $0.65$ to $0.25$ nats over the CartPole
-       runs of :numref:`subsec_ppo_diagnostics`. Convert both values into the
-       probability $p$ of the more likely of the two actions. The upper clip
-       limits the growth of an action only while
-       $(1 + \epsilon_{\textrm{high}})\, p < 1$, as in problem
-       :exref:`ex_ppo-step-limits`c. Over which part of this range of $p$ does
-       raising $\epsilon_{\textrm{high}}$ from $0.2$ to $0.28$ let the more
-       likely action grow faster as well as the rare one? What does that do to
-       the entropy? A language model has tens of thousands of actions, most of
-       them with small probability. Why does the same change keep its entropy
-       higher?
-   :exlabel:`ex_ppo-asymmetric-bands`
 
 1. [code] **Entropy of the dead seeds.** The ablation of
    :numref:`subsec_ppo_ablation` explains the unclipped collapses by
@@ -715,25 +656,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
     1. The CartPole observation does not contain the time since the
        rectangle began. What does a policy update with the shifted advantages
        teach the policy about the actions it took shortly before each cut?
-
-1. **Length-normalized ratio.** ● GSPO :cite:`Zheng.Liu.Li.ea.2025`
-   replaces the per-step ratios, both as weights and inside the clip, by the
-   geometric mean $s = W_T^{1/T}$ of the trajectory
-   ratio :eqref:`eq_traj_ratio`. Model the per-step log-ratios $\log \rho_t$ under
-   the old policy as independent and identically distributed, with mean
-   $-\kappa$ and variance $v$, where $\kappa$ is the per-step divergence
-   $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$.
-    1. Show that $\log W_T$ has mean $-\kappa T$ and variance $vT$, whereas
-       $\log s$ has mean $-\kappa$ and variance $v / T$.
-    1. Show that $\mathbb{E}[s] = \big(\mathbb{E}[\rho_t^{1/T}]\big)^T \leq 1$ and that
-       $\mathbb{E}[s] \to e^{-\kappa}$ as $T \to \infty$. Evaluate $\mathbb{E}[s]$ for the two
-       policies of problem :exref:`ex_ppo-exploding-product` at
-       $T \in \{10, 500\}$. Is $s$ an importance weight in the sense of
-       :eqref:`eq_change_of_measure`?
-    1. GSPO's experiments clip $s$ to $[1 - 3 \cdot 10^{-4}, 1 + 4 \cdot 10^{-4}]$,
-       whereas their GRPO baseline clips per-token ratios to
-       $[1 - 0.2, 1 + 0.27]$. Use (a) to explain why a sequence-level band
-       must be much narrower than a per-token band to bind at all.
 
 1. [code] **KL early stopping.** ● :numref:`subsec_ppo_omitted` lists
    KL-based early stopping. Spinning Up's PPO computes the approximate KL
@@ -823,8 +745,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        perform similarly when their code-level choices are matched. Here the
        two share every choice except the policy update. Does your comparison
        agree?
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36802)
 

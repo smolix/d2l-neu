@@ -158,7 +158,12 @@ def act_greedy(self, obs, rng=None):
 
 @d2l.add_to_class(Policy)  #@save
 def log_prob_np(self, obs, act):
-    return np.asarray(self.log_prob(jnp.asarray(obs), jnp.asarray(act)))
+    """log pi(a|s) as numpy, on a batch padded to a bucket length, so that
+    each operation compiles once per bucket rather than once per length."""
+    n = len(act)
+    size = d2l._bucket(n)
+    return np.asarray(self.log_prob(jnp.asarray(d2l._pad(obs, size)),
+                                    jnp.asarray(d2l._pad(act, size))))[:n]
 ```
 
 :begin_tab:`pytorch`
@@ -166,7 +171,7 @@ The three methods run under `torch.no_grad`, because nothing they compute is dif
 :end_tab:
 
 :begin_tab:`jax`
-`act` and `act_greedy` run the network through `d2l.forward_np`, and `policy_step` below pads its batch to a bucket length with `d2l._pad` and `d2l._bucket`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. No `no_grad` wrapper is needed: JAX computes gradients only inside such a transformation.
+`act` and `act_greedy` run the network through `d2l.forward_np`; `log_prob_np`, and `policy_step` below, pad their batch to a bucket length with `d2l._pad` and `d2l._bucket`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. No `no_grad` wrapper is needed: JAX computes gradients only inside such a transformation.
 :end_tab:
 
 ### Fitting the Clone

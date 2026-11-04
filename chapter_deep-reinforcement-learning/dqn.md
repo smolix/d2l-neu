@@ -158,13 +158,15 @@ class ReplayBuffer:  #@save
         return self.size
 
     def sample(self, batch_size, rng):
+        """batch_size transitions drawn uniformly, each a one-step
+        fragment: ep_ends marks every transition as its own episode."""
         i = rng.integers(self.size, size=batch_size)
         return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
                          self.next_obs[i], self.term[i],
-                         np.array([batch_size]))
+                         np.arange(1, batch_size + 1))
 ```
 
-Two details of the container matter. Its capacity is $200{,}000$ transitions, larger than the $50{,}000$-step training budget, so no transition is evicted in these experiments; exercise :exref:`ex_dqn-shrink-buffer` studies a smaller buffer. In addition, `sample` returns a `Batch` without episode structure. Consequently, `reward_to_go` and `gae` are not defined for such a batch, whereas `td_target` requires only individual transitions. This is why replay combines naturally with one-step bootstrapping. The target below is the same `batch.td_target` used by the actor-critic critic.
+Two details of the container matter. Its capacity is $200{,}000$ transitions, larger than the $50{,}000$-step training budget, so no transition is evicted in these experiments; exercise :exref:`ex_dqn-shrink-buffer` studies a smaller buffer. In addition, `sample` returns a `Batch` in which every transition is an episode fragment of length one. On such a batch `reward_to_go` is the reward itself and `truncation_bootstrap` adds $\gamma (1 - \mathrm{term}) \hat{V}(s')$, so their sum is `td_target`: replay leaves only the one-step target, which is why it combines naturally with one-step bootstrapping. The target below is the same `batch.td_target` used by the actor-critic critic.
 
 ### The Target Network
 
@@ -212,55 +214,12 @@ def fit_q(qnet, opt, obs, act, y):
 
 @nnx.jit
 def q_step(qnet, target, opt, obs, act, rew, next_obs, term):
-    """The DQN update. The target line is Batch.td_target's expression,
-    computed inside the compiled step (:numref:`sec_compilation`)."""
+    """The DQN update: the critic's own td_target, bootstrapped by the copy."""
+    batch = d2l.Batch(obs, act, rew, next_obs, term, None)
     fit_q(qnet, opt, obs, act,
-          rew + gamma * (1 - term) * target(next_obs).max(-1))
+          batch.td_target(lambda s: target(s).max(-1), gamma))
 
-_q_forward, _cached = nnx.jit(lambda net, obs: net(obs)), {}
-
-def q_values(qnet, obs):
-    """The acting forward: compiled once, module traversal cached, because
-    the loop below calls it once per environment step."""
-    if id(qnet) not in _cached:
-        _cached[id(qnet)] = nnx.cached_partial(_q_forward, qnet)
-    return np.asarray(_cached[id(qnet)](jnp.asarray(obs)))
-```
-
-One hairline detail separates the two tabs. The pytorch update literally calls `batch.td_target`, the structural thesis in a single line; the jax update runs a couple of hundred thousand times and is compiled, and a compiled function cannot call back into a numpy method, so it computes the same expression inline (:numref:`sec_compilation`). The next cell certifies that "the same expression" is not a figure of speech, on a buffer filled by a random policy through the `rollout` helper both chapters share:
-
-```{.python .input #dqn-the-target-network-2}
-%%tab pytorch
-rng, env = np.random.default_rng(0), gym.make('CartPole-v1')
-env.reset(seed=0)
-data = d2l.rollout(env, lambda s, r: int(r.integers(2)), 20, rng)
-buffer = ReplayBuffer(buffer_size, 4)
-for i in range(len(data)):
-    buffer.add(data.obs[i], data.act[i], data.rew[i],
-               data.next_obs[i], data.term[i])
-b = buffer.sample(batch_size, rng)
-torch.manual_seed(0)
-tnet = make_qnet()
-with torch.inference_mode():
-    y = (torch.as_tensor(b.rew) + gamma * (1 - torch.as_tensor(b.term))
-         * tnet(torch.as_tensor(b.next_obs)).max(-1).values).numpy()
-print(np.allclose(y, b.td_target(lambda s: q_values(tnet, s).max(-1), gamma)))
-```
-
-```{.python .input #dqn-the-target-network-2}
-%%tab jax
-rng, env = np.random.default_rng(0), gym.make('CartPole-v1')
-env.reset(seed=0)
-data = d2l.rollout(env, lambda s, r: int(r.integers(2)), 20, rng)
-buffer = ReplayBuffer(buffer_size, 4)
-for i in range(len(data)):
-    buffer.add(data.obs[i], data.act[i], data.rew[i],
-               data.next_obs[i], data.term[i])
-b = buffer.sample(batch_size, rng)
-tnet = make_qnet(nnx.Rngs(0))
-y = np.asarray(jnp.asarray(b.rew) + gamma * (1 - jnp.asarray(b.term))
-               * tnet(jnp.asarray(b.next_obs)).max(-1))
-print(np.allclose(y, b.td_target(lambda s: q_values(tnet, s).max(-1), gamma)))
+q_values = d2l.forward_np   # the acting forward: numpy in, numpy out
 ```
 
 Now the training loop, and it is short because everything it needs already exists: `epsilon_greedy` and `linear_schedule` from :numref:`sec_qlearning`, the buffer and step above. One switch controls the experiment of this section. With `use_target=True` the copy refreshes every `sync_every` steps; with `use_target=False` it refreshes every step, which makes the copy the online network in all but name, the naive recipe with no target network at all. The generator yields, at every episode's end, the step count, the episode's return, and one diagnostic we will need later: the network's value estimate $\max_a Q_w(s_0, a)$ at the centered start state $s_0 = \mathbf{0}$.
@@ -351,13 +310,7 @@ Each run yields one tuple per episode, and seeds finish different numbers of epi
 ```{.python .input #dqn-the-ablation-2}
 %%tab pytorch, jax
 grid = np.arange(1, num_env_steps // 1000 + 1) * 1000
-
-def on_grid(arm, col):
-    """Resample each seed's per-episode series onto the env-step grid."""
-    return np.stack([np.interp(grid, np.asarray(r)[:, 0], np.asarray(r)[:, col])
-                     for r in runs[arm]])
-
-d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
+d2l.plot_curves({arm: d2l.on_grid(runs[arm], grid, 1) for arm in runs},
                 x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='return of the behavior policy', smooth=5,
                 reference=500)
@@ -419,7 +372,7 @@ In this formulation, a policy that balances the pole indefinitely has value $1/(
 ```{.python .input #dqn-the-ablation-5}
 %%tab pytorch, jax
 ceiling = 1 / (1 - gamma)
-d2l.plot_curves({'DQN': on_grid('DQN', 2)},
+d2l.plot_curves({'DQN': d2l.on_grid(runs['DQN'], grid, 2)},
                 x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='value estimate at the start state',
                 reference=ceiling)
@@ -495,8 +448,9 @@ def q_step_double(qnet, target, opt, batch):
 def q_step_double(qnet, target, opt, obs, act, rew, next_obs, term):
     """q_step with selection split from evaluation, eq_double_dqn."""
     sel = qnet(next_obs).argmax(-1)
-    fit_q(qnet, opt, obs, act, rew + gamma * (1 - term) * jnp.take_along_axis(
-        target(next_obs), sel[:, None], -1).squeeze(-1))
+    batch = d2l.Batch(obs, act, rew, next_obs, term, None)
+    fit_q(qnet, opt, obs, act, batch.td_target(lambda s: jnp.take_along_axis(
+        target(s), sel[:, None], -1).squeeze(-1), gamma))
 ```
 
 The training loop changes only the update function; data collection, replay,
@@ -513,7 +467,8 @@ runs['Double DQN'] = [list(train_dqn(seed, qnets['Double DQN'][seed],
 
 ```{.python .input #dqn-double-dqn-in-three-lines-3}
 %%tab pytorch, jax
-d2l.plot_curves({arm: on_grid(arm, 2) for arm in ('DQN', 'Double DQN')},
+d2l.plot_curves({arm: d2l.on_grid(runs[arm], grid, 2)
+                 for arm in ('DQN', 'Double DQN')},
                 x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='value estimate at the start state',
                 reference=ceiling)
@@ -526,25 +481,9 @@ The Double DQN estimates end close to the DQN estimates, sometimes above and som
 
 On Atari, with as many as eighteen actions, Double DQN changes scores substantially :cite:`Hasselt.Guez.Silver.2016`. The same distinction becomes important in offline learning, where inflated actions cannot be corrected by new interaction (:numref:`sec_offline`). At this CartPole budget, any difference in return remains within variation across seeds.
 
-## The DQN Lineage
-
-### Extensions and Successors
-
-Several later methods modify individual components of DQN. An $n$-step target uses several observed rewards before bootstrapping, as developed in :numref:`sec_actorcritic`. Prioritized replay samples transitions according to their temporal-difference error rather than uniformly :cite:`Schaul.Quan.Antonoglou.ea.2016`; its advantage decreases as replay buffers become larger and more diverse. A dueling network represents $Q$ as a state value plus action advantages :cite:`Wang.Schaul.Hessel.ea.2016`.
-
-Distributional methods estimate the return distribution rather than only its mean :cite:`Bellemare.Dabney.Munos.2017`. In tabular and linear settings, their expected update for the mean coincides with the ordinary update, so their empirical benefit depends on the interaction with nonlinear function approximation. Rainbow combines six extensions and reports an ablation of their individual contributions :cite:`Hessel.Modayil.vanHasselt.ea.2018`.
-
-PQN provides a contrasting design: with LayerNorm and batches collected from parallel environments, deep Q-learning can train without a replay buffer or target network :cite:`Gallici.Fellows.Ellis.ea.2025`. Replay and target networks are therefore one solution to correlated data and moving targets, not necessary components of every stable deep Q-learning system.
-
-### DQN in Modern Practice
-
-Vanilla DQN is mainly useful here as a simple setting in which to study two problems of deep value learning: moving bootstrap targets and maximization bias. It also establishes how a learner can use transitions collected by a different policy. Since the policy requires an argmax over actions, the basic method is restricted to discrete action spaces; actor-based methods extend related ideas to continuous control. :numref:`sec_offline` considers the limiting case in which all learning uses a fixed dataset and no further interaction is allowed.
-
 ## Summary
 
 With function approximation, bootstrapping, and off-policy data, Q-learning can diverge even when the value class contains the correct solution. Experience replay reduces temporal correlation and reuses transitions, while a target network holds bootstrap targets fixed between updates. These mechanisms improve stability but do not restore the tabular convergence theorem. DQN also inherits maximization bias. Double DQN reduces this bias by selecting an action with the online network and evaluating it with the target network.
-
-**Experimental scope.** Baird's counterexample and the synthetic maximization-bias calculation are deterministic. The CartPole ablation uses three seeds per method and framework for $50{,}000$ environment steps. Every run without a target network diverges beyond $10^8$ in value, while the target-network runs learn but remain variable. Fixed-budget greedy evaluation is reported separately from exploratory training return. At two actions, the effect of Double DQN on return is smaller than the variation across runs.
 
 ## Exercises
 
@@ -792,8 +731,6 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        update. Which of its assumptions does your experiment satisfy? Which
        outcomes of parts (a) to (c) would contradict the paper's claim, and
        which would only fall outside its scope?
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36804)
 

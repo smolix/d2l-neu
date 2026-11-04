@@ -232,9 +232,22 @@ def show_grid(desc, values, policy=None, titles=None,  #@save
 def run_seeds(train, num_seeds, **kwargs):  #@save
     """Run train(seed, **kwargs), a generator of curve points, per seed."""
     return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def on_grid(runs, grid, col, smooth=1):  #@save
+    """Resample per-episode rows (env step, value, ...) onto an env-step
+    grid. For each run, drop the rows whose column `col` is NaN, average
+    the column over the last `smooth` episodes, and interpolate linearly at
+    the grid points; returns [run, grid point], the input of plot_curves."""
+    out = []
+    for r in runs:
+        r = np.asarray(r, dtype=float)
+        r = r[~np.isnan(r[:, col])]
+        v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
+        out.append(np.interp(grid, r[smooth - 1:, 0], v))
+    return np.stack(out)
 ```
 
-`run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects.
+`run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects. Off-policy agents report once per episode, and seeds finish different numbers of episodes; `on_grid` puts such per-episode records on a common grid of environment steps, so that they too can be stacked and plotted.
 
 The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates.
 

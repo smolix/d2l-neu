@@ -68,15 +68,17 @@ ppo
 regularized
 dqn
 sac
+model-based
 offline-rl
 rl-sequences
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}
 
 The resources in :numref:`chap_reinforcement_learning` cover the general theory and courses. The following references focus on implementations and empirical evaluation.
 
-- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` publishes single-file, benchmarked implementations of every deep algorithm in this chapter; :numref:`sec_ppo` ends by asking you to diff its `ppo.py` against that section.
+- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` publishes single-file, benchmarked implementations of every deep algorithm in this chapter; :numref:`subsec_ppo_omitted` asks you to diff its `ppo.py` against :numref:`sec_ppo`.
 - [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/) :cite:`Huang.Dossa.Raffin.ea.2022` documents, one detail at a time, how much reported performance lives in choices papers do not mention.
 - The controlled study of :citet:`Engstrom.Ilyas.Santurkar.ea.2020` shows PPO and TRPO nearly indistinguishable at matched code-level choices: the details above, not the objective, carry much of the practical edge.
 - [rliable](https://github.com/google-research/rliable) :cite:`Agarwal.Schwarzer.Castro.ea.2021` turns the seed-spread discipline of :numref:`tab_rl_diagnostics` into tooling: interval estimates and performance profiles for few-seed results.

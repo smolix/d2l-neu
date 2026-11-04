@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2b2da06d029f6ce4d72e4035a8789fa07642fb16f1d5847454f7818686905104",
+    "d2l_lib_fingerprint": "sha256:7cb1169e706b0fcaaa26f742e517a487b5528cb9dc2b2b24c41fe22eb1f8c111",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,65 +13,88 @@
       "kind": "text",
       "outputs": []
     },
+    "deep-rl-replacing-the-table-with-a-network-1": {
+      "code_fingerprint": "sha256:39355423e5cf94f35546a8cf9aca3b2fbb91c92d903c7a2ad1e104a27790db99",
+      "kind": "text",
+      "outputs": []
+    },
     "deep-rl-the-swap-as-a-three-line-diff-1": {
-      "code_fingerprint": "sha256:1764d6d501cf6d79b5d3ef49c1de55625687691fb15a27181316dd41687d27ee",
+      "code_fingerprint": "sha256:c8f17de9cd1183b514777644962c8ba576b25381a972f8d2fe918e48951f38ce",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-2": {
-      "code_fingerprint": "sha256:4681349d13ce2875f0be8b54d61d23e36ad3cfc12cca898dac08426d3472d142",
+      "code_fingerprint": "sha256:86cf08bd830d8e66c3dceef1d8dac960758eb0b74a4dd86218c4c8891c095507",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-replacing-the-table-with-a-network-2": {
+      "code_fingerprint": "sha256:295023cc22b2b23fe4168577e050f8eda0c906e66b14706e9eabcdf0cd7e2a59",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:a6d575a16393eb7db2176fe3fdbbf30d5ef9bbc92993d066e3613475755b43ae",
+      "code_fingerprint": "sha256:76b535d51acc2c3af81fc3be8bbc89e486c7c1eb7ecb0d2e01ef953bebdeb1ea",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:e04984dd08faf0fb768112601f56410878fc9fe3cf8b3d20dbf013435a197dde",
+      "code_fingerprint": "sha256:d913a1da3ffbbba649a9725f270fea515867b468145f5748fd280c5b593df0de",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
-          "bytes": 35643,
-          "sha256": "sha256:0bd667154d1c3bf987a378fdb003ced33eccf1453d1f44d7b40d840535242af4"
+          "bytes": 32157,
+          "sha256": "sha256:d859985941eece459ddae9516ff4ec13e6086f59438aa511e8cac8a311ecb5a7"
+        }
+      ]
+    },
+    "deep-rl-the-estimator-written-as-a-loss": {
+      "code_fingerprint": "sha256:dd50ac7d88be017333c852f80ca556b6f2a8d131ec499f9dbd2b319c0b56b1ab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
+          "bytes": 27002,
+          "sha256": "sha256:4ed1bd427cc66633958adabf8a62173af72e41b83c7f6930de3da051574abf19"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:5a423877f49b7eb725d3dc6ac2f304cee1fa5491bc17a5d788da21e7fefb2c3b",
+      "code_fingerprint": "sha256:871b5c4454acf1f78d2a5b43d4c625a196824b31cbffd01584499e8210de881e",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:86956d3717e66f6feac983c820946d0293878cf5fdf18c5c6f53c18a2f2ef995",
+      "code_fingerprint": "sha256:611f9bcf266710bf08db2fdbd5c8d32a02030b618df652f9ffc2b5c3a8895e6c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "True\n"
+          "text": "density: True\nscore in mu: True | score in log sigma: True\n"
         }
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:f876e52eb3f336ee6675d4562f68a0ba8e7cdf1e130f37f85ae99d3c2440fc8e",
+      "code_fingerprint": "sha256:41dc52ee0eb1bb618bc6dea5945894c00eef69c59fdfc4037e7c5086a1cabb19",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
-          "bytes": 52147,
-          "sha256": "sha256:1b0cf377bcdce6f99f39d5ee86657f779fd9306989be3c97e29ef69179f61719"
+          "bytes": 51992,
+          "sha256": "sha256:c0dd1fb6997f3415091ee98d36cc4ccd573ada725c17ff361a2bcb8453b41f51"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:a8734a3e53b378a0677e273d3a3c887714d8b634567755a3aa56aab103dda657",
+      "code_fingerprint": "sha256:d66ba16a7a304f3c14c43818f7697e46e7c9a1397607368d2a136449d1374a93",
       "kind": "text",
       "outputs": [
         {
@@ -82,26 +105,13 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:c631444ec274041a0bfa621c3bd4d963245ea90f1ef30931c5657a6ab831afce",
+      "code_fingerprint": "sha256:402853099db67c62a8eb1019f53f7da23a70afc9f815ed28630ac0d9224a2317",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "network: nudged state moved +1.16; 255 of the 255 others moved too, |change| up to 1.19\ntable:   nudged entry moved +1.18; largest move among the other fifteen: 0.000000\n"
-        }
-      ]
-    },
-    "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:d771b9f6b7540e1d1c3679ddefcc27c0f352dea3141917bb3ee8dc85624b5211",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
-          "bytes": 31738,
-          "sha256": "sha256:d8166cc55a920e405155d5fafb0be8dc6c7c347a505113f59824c3986d77204a"
+          "text": "network: nudged state +0.49; 10 nearest probes +0.43, 10 farthest -0.06; 15 of 255 moved down\ntable:   nudged entry +0.50; largest move among the other fifteen: 0.000000\n"
         }
       ]
     }

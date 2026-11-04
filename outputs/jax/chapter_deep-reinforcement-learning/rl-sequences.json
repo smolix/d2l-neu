@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:f589e7acd0576d9cc6ca54c9f171f7409abeb29709adadd76a97c429fba809c1",
+    "d2l_lib_fingerprint": "sha256:1efcda4e536310c1ccc3526375a9baaba4490368f74bf8c744e069230f691b95",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,7 +14,7 @@
       "outputs": []
     },
     "rl-sequences-the-smallest-instance": {
-      "code_fingerprint": "sha256:e81df7a1be78f927b3acb8fdd5c5255e50df7c70fd2e0195eb762fd340a37cea",
+      "code_fingerprint": "sha256:42900b65a1936f87d90c0ee77f0be2adb9dadf554a86c0400ac44b8bdd92db3b",
       "kind": "text",
       "outputs": [
         {
@@ -25,65 +25,18 @@
       ]
     },
     "rl-sequences-the-group-is-the-baseline-1": {
-      "code_fingerprint": "sha256:34f0f4fd591113a302b0ef9ed2c49427c7671a595c7e3f4d1c6b4e34bdbd2c0c",
+      "code_fingerprint": "sha256:1c9975288cedbafce68720856f2531089b0215e355ef4e7ab1578c283981178c",
       "kind": "text",
       "outputs": []
     },
-    "rl-sequences-the-group-is-the-baseline-3": {
-      "code_fingerprint": "sha256:935b17c9d4bd8cec57f0539951f02ccb02c0645bfc0a75331da223fb4102e07d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "E of the group-centered update is (K-1)/K of the gradient: True\nrescaled by K/(K-1), leave-one-out, it is exact: True\n"
-        }
-      ]
-    },
-    "rl-sequences-the-group-is-the-baseline-2": {
-      "code_fingerprint": "sha256:3816797cc90dc3e3b6afe4b96c3b7596a6b1d6901ee4049fec292beaa78c74be",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  1: success of a sampled response 0.062\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  2: success of a sampled response 0.500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  4: success of a sampled response 0.500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
-        }
-      ]
-    },
     "rl-sequences-reward-hacking-unified": {
-      "code_fingerprint": "sha256:d74188c46fd6472a851695bbd50035a4d668e90094d2b212b67ce157952d2c0f",
+      "code_fingerprint": "sha256:13b6dfd530098cba4c780006d44ce5fa6189c54ce309dde82c5e4227807b7f4e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\nbeta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "beta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\nbeta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "beta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
+          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\nbeta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\nbeta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\nbeta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\nbeta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
         }
       ]
     }

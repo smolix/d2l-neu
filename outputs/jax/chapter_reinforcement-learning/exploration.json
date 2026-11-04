@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/exploration.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:7a75cf2d82e5354474290bb8992ec2cf97c289dc917e86a83dc31d4737f959e9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "exploration": {
+      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-a-bandit-is-an-mdp-with-one-state": {
+      "code_fingerprint": "sha256:39ebe36496fe18cd2c46381cb372adb3da5e6eb3286f297a72fa953abe3d5982",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-regret-and-the-linear-tax": {
+      "code_fingerprint": "sha256:6c18a28bf36a410ca9454ae5e074e98745bfc9b28bf384f35de94b56aa8a6435",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          greedy: regret after 2000 pulls: median 800 (quartiles 700 to 980)\n   epsilon = 0.1: regret after 2000 pulls: median 106 (quartiles 92 to 132)\n  epsilon = 20/t: regret after 2000 pulls: median  46 (quartiles 44 to 53)\n"
+        }
+      ]
+    },
+    "qlearning-optimism-ucb-and-thompson-sampling": {
+      "code_fingerprint": "sha256:7cb91e5bf599663757b1e811cde216ac9c274208fb51df24ec47c96d20a9c062",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "UCB, kappa = 0.5: regret after 2000 pulls: median  39 (quartiles 29 to 40)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        Thompson: regret after 2000 pulls: median  30 (quartiles 26 to 36)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
+          "bytes": 71999,
+          "sha256": "sha256:6350ccde76c9e4cc169d9ab564d0388bf06ff9f57c39be03e53add27f972f908"
+        }
+      ]
+    },
+    "exploration-optimism-ucb-and-thompson-sampling-1": {
+      "code_fingerprint": "sha256:05863288d21fd72a82038fae77aa519b20f3f92dac41cddb004a591bd2277079",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa = 0.15: regret after 2000 pulls over 40 runs: median   8, min   4, max 709\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa = 0.50: regret after 2000 pulls over 40 runs: median  37, min  20, max  50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "kappa = 1.41: regret after 2000 pulls over 40 runs: median 205, min 170, max 245\n"
+        }
+      ]
+    },
+    "exploration-exploration-in-mdps-1": {
+      "code_fingerprint": "sha256:52940a7dcc6c5d6903bb0d84c12acd7ae0d7c3fa00a522d01d32741be800a34d",
+      "kind": "text",
+      "outputs": []
+    },
+    "exploration-exploration-in-mdps-2": {
+      "code_fingerprint": "sha256:8539aafb041f9fddb1d7b69ad9f19427cd3c34318e7da983fdab176c67878bc9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
+        }
+      ]
+    },
+    "exploration-exploration-in-mdps-3": {
+      "code_fingerprint": "sha256:19751e07227113fa40bc8b35982519230b9ca09c5758a00b2a66d4300e6035c6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "           greedy: pairs tried 93%, episodes won 60% (medians); greedy policy solves 19/20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      epsilon = 1: pairs tried 100%, episodes won 2% (medians); greedy policy solves 19/20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "linear, 1 to 0.05: pairs tried 98%, episodes won 58% (medians); greedy policy solves 19/20\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
+          "bytes": 69442,
+          "sha256": "sha256:a5fa2c8f884039af6139ed0b5fd789351ee16de31f855e96a848e816e461391e"
+        }
+      ]
+    },
+    "exploration-exploration-on-the-verifier-task": {
+      "code_fingerprint": "sha256:12bdcfd21edd56069cddd3737de0ae78d0a230763aa19566b7309470c3a67856",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reference, K =  2: identical [0.78 0.78 1.   1.  ], mean 0.89, exact 0.89\nreference, K =  8: identical [0.35 0.33 1.   1.  ], mean 0.67, exact 0.67\nreference, K = 32: identical [0.01 0.02 1.   1.  ], mean 0.51, exact 0.51\n   solved, K =  2: identical [0.89 0.93 1.   1.  ], mean 0.96, exact 0.96\n   solved, K =  8: identical [0.67 0.7  1.   1.  ], mean 0.84, exact 0.85\n   solved, K = 32: identical [0.21 0.21 1.   1.  ], mean 0.60, exact 0.61\n"
+        }
+      ]
+    }
+  }
+}

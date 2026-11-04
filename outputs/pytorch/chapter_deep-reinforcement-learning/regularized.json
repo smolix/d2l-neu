@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cefa559aea85d3336ebe98afa453e55bf80a27ecab0607cf939b57fcc66ee305",
+    "d2l_lib_fingerprint": "sha256:25a04fe521c21a26c5aa3b1a7116e65a739c8bbd6cb00acb1650274f478efea5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,7 +54,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:e2175f90a6c3d51c3df43749ff6e169078a70c2f5e988caebf14f13fb697b555"
+          "sha256": "sha256:f8fd167e28f956180ecc4848f16671cb4c53f5b0a7adc1ce7ce106fd8b2d08d5"
         }
       ]
     },
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:f452647c2972ba7b3eb9d801a4f7ce70839efeef17047e1c39e4f9d25f712dfc"
+          "sha256": "sha256:69e6578fb9cb84a64f20b28473653246728ad27bd3125f57a8b350efc711b4dc"
         }
       ]
     }

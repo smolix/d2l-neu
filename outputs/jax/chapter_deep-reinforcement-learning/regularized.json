@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3f1a0800604465c68bb42ac40465f594f544b30421c4da9412e46fb79d35950f",
+    "d2l_lib_fingerprint": "sha256:9cc8524ea04075e09b15efee4ace9f3f3cc6da22efe10ce1e8eb4311d83baa45",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,7 +54,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24568,
-          "sha256": "sha256:0a3478a495b39fd6fb2e27e422c9c22d03b889ac57e33662deacca96d6809ec7"
+          "sha256": "sha256:a135cb90fac6a210c411e22e7e7a929f9b247ddb0dbb71418ec76145d3cce92e"
         }
       ]
     },
@@ -65,12 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "beta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
         }
       ]
     },
@@ -121,7 +116,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:3d0bf4a9c7c53aaca0344c1cc84b3c7e7ef7066e226bd46b94677c214e68990a"
+          "sha256": "sha256:1402b3b2c49b14d3d9abae82f3b1b66024f189cbf525298d18fc2f9e34bebe5c"
         }
       ]
     }

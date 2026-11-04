@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d64af196db737f6feb1fd9a76ed0ad902a9981e087cad7a4a22dd92d95604f01",
+    "d2l_lib_fingerprint": "sha256:0e7a03d04dfafd11340d50c862381c206b9ad8ba06b9c65ad37dc7346534d70d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "offline-rl/offline-rl-sarsa-one-symbol-the-opposite-rule-2-1.png",
-          "bytes": 20906,
-          "sha256": "sha256:c8f7bb434ea750cb0aeb6f7b38595d918b3dcafdc7b32b9e8e5956bd86f7629f"
+          "bytes": 41883,
+          "sha256": "sha256:358c64232daaf715308e0265cf70bdc28949a867132eea8f6d9ed0b2098b467d"
         }
       ]
     },
@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29548,
-          "sha256": "sha256:0594c7bfa4762b6707fc212df1f3e6435a31da56f62c3366e47107a20af0e870"
+          "sha256": "sha256:297aa423c9d6862be52aa55c8e9874f3689802ee6c858408c63e4a1983104837"
         }
       ]
     },
@@ -122,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101492,
-          "sha256": "sha256:499bcb945f2a0fea2c89fdd16bb2f2ff651d1a8a1f185871d3ade36a777daddb"
+          "sha256": "sha256:7ba8e1dec8958d0b5aeeb67936dc9e455e61e2e8fc022a17217c0d0326f1b0b6"
         }
       ]
     },

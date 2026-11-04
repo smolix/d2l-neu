@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:020b2698f5b4246c80e26a053f525be2aff505582d55420047816f6444a2a3dc",
+    "d2l_lib_fingerprint": "sha256:2421eaf6750b17013b04d6b1f3db1029f8a58a3b017e26af1b14a5cdbcefdcdc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,13 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "policy-gradient-parameterizing-the-policy": {
-      "code_fingerprint": "sha256:26a6b9cf5cf320ffa7ce573af84803a40cf3ae4108189629782adf547e2dace8",
-      "kind": "text",
-      "outputs": []
-    },
     "policy-gradient-the-score-function": {
-      "code_fingerprint": "sha256:3be343491af16d103735c088d9be5cdd5c2f6d9f5839111165d6441ca2b67b14",
+      "code_fingerprint": "sha256:225d442d0e86cdfe5cbdd3e460b3106281824584d553d81ce89cf1d6e73e34f1",
       "kind": "text",
       "outputs": [
         {
@@ -29,60 +24,86 @@
         }
       ]
     },
+    "policy-gradient-the-reinforce-estimator-4": {
+      "code_fingerprint": "sha256:4e91b0fe583490fd367c7828a63c0a4c7a3fd47a99005e2906e791a581e35a92",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-reinforce-estimator-5": {
+      "code_fingerprint": "sha256:ddf92809cdfd00a52b8a49f23f7363db29d899d399dc05fc105008381a14f947",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "success 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
+        }
+      ]
+    },
+    "policy-gradient-parameterizing-the-policy": {
+      "code_fingerprint": "sha256:66db833408723002ba4233bdeaf9cc2226a8e2abd712562170815a79035e45c4",
+      "kind": "text",
+      "outputs": []
+    },
     "policy-gradient-an-optimization-problem-over-trajectories-1": {
-      "code_fingerprint": "sha256:4226cc1b819d830e1e221e80fd9d7e34105bdd043a931b951c7c7a14f0e6ed7d",
+      "code_fingerprint": "sha256:74e703de2395e7eac1c6cc178a7aa500be8d559364a749277f402fb52fe86a5f",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-2": {
-      "code_fingerprint": "sha256:cecb0b0a3e2bc18d6999ca141ca88d507765e183a6ab46494609ab55f2365476",
+      "code_fingerprint": "sha256:4ba66fc1b59fe70a83b1064c0e23366edc9584ac035bff91dacec263843d5826",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-1": {
-      "code_fingerprint": "sha256:26ef840e74ca264c81700da9da61dd90de8cf2940271c0995a15957e396e7937",
+      "code_fingerprint": "sha256:5cf3a66eb164bf2d0dbad3d4f868c5b91993ca8a6b43685a9f46dde934dce56b",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-2": {
-      "code_fingerprint": "sha256:7eb1d87e4de5511dcf3f658876a7ac03f4525828290bd13ed6d2598f9abc003f",
+      "code_fingerprint": "sha256:f86f9405eff6053b7c3c425fc14032919cc97c8cf8c8545c289b5836cf12ad81",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
-          "bytes": 46687,
-          "sha256": "sha256:2138f1ca94274f56bf39fb05809d045a1f6916273d23fdc0fb02389b560edc63"
+          "bytes": 46674,
+          "sha256": "sha256:2d0bd30d89086680e63f5d687f7c66d0d882654d1dbe5e7216531914c2ed5d84"
         }
       ]
     },
     "policy-gradient-the-reinforce-estimator-3": {
-      "code_fingerprint": "sha256:c0538c1e8915951dacfc40af30507eafebc506da7245ed33810e62abb7a98220",
+      "code_fingerprint": "sha256:34c778ed3830b9ecb1b289ce70a74b654b96fc124a93e7f421dfe465c80d8c09",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
-          "bytes": 15262,
-          "sha256": "sha256:bb487e81394d7d3efdfdc0efb118b7423b70aeff00e1937a144caab0ebcb8338"
+          "bytes": 25513,
+          "sha256": "sha256:7c95b94d1c900fadb0685b52439189960d09d426f9731b2f3c867b1a2a99ee9d"
         }
       ]
     },
     "policy-gradient-on-policy-fresh-data-after-every-update": {
-      "code_fingerprint": "sha256:b32f85e7f462054e630ab165eff47c91bc30168c320f4174d052ef5b61d8e594",
+      "code_fingerprint": "sha256:a535a39ba8a04b1826a906c65f43d49650d2487291e852c85f75cc68db689cd4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "update at which the batch mean first reaches 0.7: [24 27 30]\nenvironment steps spent by that update:  [3210 3789 4287]\nenvironment steps spent by the full run: [26058 26582 27472]\n"
+          "text": "batches until a batch mean reaches 0.7: median     32, range 25 to 49\n          environment steps until then: median  4,313, range 3,210 to 6,191\n     environment steps of the full run: median 27,049, range 26,058 to 28,383\n"
         }
       ]
     },
     "policy-gradient-unbiased-and-how-noisy-1": {
-      "code_fingerprint": "sha256:26f53525ea468d14f089064a4a64470080157c871a0ad3c9cd5f0077993c718d",
+      "code_fingerprint": "sha256:1b57dba720b8da370be8472c97511240203821fed4b2f2698c804bf437ed12d9",
       "kind": "text",
       "outputs": [
         {
@@ -93,23 +114,23 @@
       ]
     },
     "policy-gradient-unbiased-and-how-noisy-2": {
-      "code_fingerprint": "sha256:f6dbfea561e7fa1c0127eca821a6d9e013176977caca4a66528bcd2b7fd7e946",
+      "code_fingerprint": "sha256:6eeb16e25ac8505be9fa298928cd68909cfb40829b8af49de45f3fa218afedd4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  4: zero estimates  3/50, cos(mean, exact) = 0.93, single-estimate relative error = 3.64\n"
+          "text": "n= 4:  3/50 zero; one draw off by 3.85, the mean of 50 by 0.48 (if unbiased: 0.54)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 16: zero estimates  0/50, cos(mean, exact) = 0.97, single-estimate relative error = 1.74\n"
+          "text": "n=16:  0/50 zero; one draw off by 1.78, the mean of 50 by 0.24 (if unbiased: 0.25)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 64: zero estimates  0/50, cos(mean, exact) = 1.00, single-estimate relative error = 0.94\n"
+          "text": "n=64:  0/50 zero; one draw off by 0.96, the mean of 50 by 0.10 (if unbiased: 0.14)\n"
         }
       ]
     }

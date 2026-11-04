@@ -4,47 +4,52 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e099535a8845e55500c8514e7d9eabd2095ea96c42163c03b180fca87ff6ea53",
+    "d2l_lib_fingerprint": "sha256:cd08eec25116905b707845351c1898ee3ac6ccec0a6dbf593cede628567f3399",
     "max_inline_bytes": 0
   },
   "cells": {
     "utils-utility-functions-and-classes-1": {
-      "code_fingerprint": "sha256:ddc5e53f062dfff6943bc924c253911a192903baa1770ded6d1715b27a126804",
+      "code_fingerprint": "sha256:ddffb1a460ba35333cd9d8f6da8f254e95763845c325c53a6387fcbbc277252a",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-2": {
-      "code_fingerprint": "sha256:11269cc8ce89c0a07692cf325761702619cc9f16ff146b902ba31dae88136a99",
+      "code_fingerprint": "sha256:b837a58d820468eb15cb0feac039ca8f698bfc68134bb1304f71b20e2f40d36a",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:e73b887947deea8870c12c8771a4840685443af211d444c90566d7eff301d6a1",
+      "code_fingerprint": "sha256:a69c5002b35e0a49f179f1b71d63730623d48339417f0db35ef5bf865ffd56e3",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:b9cba09e2e9cba74df33302fcbf30ee86676fb43829f7433020c1fd4ce905e73",
+      "code_fingerprint": "sha256:049723f52d7ecc21bb8391fb08ef56daff2fb529bb170af6a84f5d25169663f4",
+      "kind": "text",
+      "outputs": []
+    },
+    "utils-reinforcement-learning-utilities-1": {
+      "code_fingerprint": "sha256:a5344096de1e8e8763e1f3ee16f68e08e66ffd0ab213c98703145f8b2d9a768d",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:7fb9291246006e9586ebc655d4c7a630a98276fea46f9e520238a6ccaa989474",
+      "code_fingerprint": "sha256:37f5db9d9217b9b930c118962d0958aa3ac494dbc115e0b63a74c2289aaa48b1",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:6a7488987bfa2f4cba9befa0f28b305fd2fdfeeac6171aea9fe97172d4722a11",
+      "code_fingerprint": "sha256:db6f345d8cef193d30c450c9863976d544869d5a04782241db382ff28bc0b4e9",
       "kind": "text",
       "outputs": []
     },
     "utils-training-utilities-1": {
-      "code_fingerprint": "sha256:ec8b885cd04452916e20d8359ece0ab9d46f17cd29cc1e29de65380aafb21bde",
+      "code_fingerprint": "sha256:fdc6c9ffbf348fa236779d0492f431e5edd5401b7714b1199cd4999fb29f2208",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:3d795baf0839f85ea1e885476bb72c8c1bd9ad1179f210b8163012b054ad1c88",
+      "code_fingerprint": "sha256:9330e8333df1db2372573c1c2f51291152063bd3e3be68846d17addab579158e",
       "kind": "text",
       "outputs": []
     }

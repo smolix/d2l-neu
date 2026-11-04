@@ -289,10 +289,11 @@ Is the classifier to blame? The next cell measures how often the clone disagrees
 disagree = 1 - pi_bc[np.arange(mdp.num_states), pi_star]   # per state
 fresh_s, _ = demonstrations(env, pi_star, 100)
 occupancy = (visitation(mdp, pi_bc)[:-1] * ~(goal | holes)).sum(axis=0)
-print(f'disagreement with the expert: {disagree[demo_s].mean():.3f} on the '
-      f'training pairs, {disagree[fresh_s].mean():.3f} on 100 fresh expert '
-      f'episodes, {occupancy @ disagree / occupancy.sum():.3f} on the '
-      f"clone's own states")
+print('disagreement with the expert')
+print(f'  on the training pairs:        {disagree[demo_s].mean():.3f}')
+print(f'  on 100 fresh expert episodes: {disagree[fresh_s].mean():.3f}')
+print(f"  on the clone's own states:    "
+      f'{occupancy @ disagree / occupancy.sum():.3f}')
 for n in [1, 10, 100]:
     pi_n = policy_table(mdp, clone(mdp, *demonstrations(env, pi_star, n)))
     print(f'clone of {n:>3} expert episodes: reaches the goal '

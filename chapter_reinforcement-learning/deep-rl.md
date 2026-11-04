@@ -989,23 +989,37 @@ $$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t
 :::
 
 ::: {.slide title="Every CartPole Seed Reaches the 500-Step Ceiling by About Update 45"}
-`ActorCritic.mlp(4, 2)`, `'CartPole-v1'`, $\gamma = 0.99$ (horizon 100
-steps), three seeds:
-
+::: {.cols .vc}
+::: {.col .fig}
 @!deep-rl-the-swap-as-a-three-line-diff-4
+:::
 
-The untrained policy balances for about 20 steps. Single batches still
-dip, sometimes below 400. The time-limit correction made no visible
-difference here: only the successful episodes are truncated.
+::: {.col}
+- `ActorCritic.mlp(4, 2)` on `'CartPole-v1'`, $\gamma = 0.99$ (horizon
+  100 steps), three seeds
+- the untrained policy balances for about 20 steps
+- single batches still dip, sometimes below 400
+- the time-limit correction made no visible difference here: only the
+  successful episodes are truncated
+:::
+:::
 :::
 
 ::: {.slide title="The Surrogate Loss Has the Right Gradient and an Uninformative Value"}
 $$L(\theta) = -\frac{1}{N} \sum_{t} \tilde{w}_t\, \log \pi_\theta(a_t \mid s_t), \quad \tilde{w}_t \textrm{ held fixed}, \quad \nabla_\theta L = -\hat g$$
 
+::: {.cols .vc}
+::: {.col .fig}
 @!deep-rl-the-estimator-written-as-a-loss
+:::
 
+::: {.col}
 While the return rises from 20 to 500, $L$ stays below 0.1 in size and
-negative on almost every update. To follow training, watch the return.
+negative on almost every update.
+
+To follow training, watch the return.
+:::
+:::
 :::
 
 ::: {.slide title="Check: What Bounds the Size of L"}
@@ -1059,15 +1073,22 @@ $\sigma = 0.5$:
 :::
 
 ::: {.slide title="Every Pendulum Run Swings Up and Balances, After a Few Hundred Thousand Steps"}
-$\gamma = 0.95$; the mean layer starts at zero, so every seed starts at
-$\mu = 0$, $\sigma = 1$; 300 updates of eight episodes:
-
+::: {.cols .vc}
+::: {.col .fig}
 @!deep-rl-the-score-does-not-care-that-the-action-is-real
+:::
 
-The ten-update average crosses $-200$ after roughly 170 to 300 updates;
-the best lies between about $-150$ and $-200$, and $\sigma$ falls to
-about half. Without the time-limit correction only about half the seeds
-reached $-200$.
+::: {.col}
+- $\gamma = 0.95$; 300 updates of eight episodes
+- the mean layer starts at zero, so every seed starts at $\mu = 0$,
+  $\sigma = 1$
+- the ten-update average crosses $-200$ after roughly 170 to 300 updates
+- $\sigma$ falls to about half; the best lies between about $-150$ and
+  $-200$
+- without the time-limit correction only about half the seeds reached
+  $-200$
+:::
+:::
 :::
 
 ::: {.slide title="Check: Why Does σ Fall as the Policy Improves?"}

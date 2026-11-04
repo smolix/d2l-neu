@@ -4925,8 +4925,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
 
-import weakref
-
 import os
 from matplotlib.figure import Figure
 
@@ -5039,6 +5037,7 @@ def run_seeds(train, num_seeds, **kwargs):
 
 _forwards = {}                          # one compiled forward per net structure
 
+import weakref
 _splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
 
 def forward_np(net, x):

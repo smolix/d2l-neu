@@ -50,7 +50,6 @@ from flax import nnx
 import jax
 import numpy as np
 import optax
-import weakref  #@save
 ```
 
 ## Hyperparameter Utilities
@@ -245,6 +244,7 @@ The JAX implementations of the reinforcement-learning agents act one state at a 
 _forwards = {}                          # one compiled forward per net structure
 
 #@save
+import weakref
 _splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
 
 def forward_np(net, x):  #@save

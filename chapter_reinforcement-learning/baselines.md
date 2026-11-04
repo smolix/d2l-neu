@@ -1074,12 +1074,11 @@ Optimization), used to post-train language models.
 
 ::: {.slide title="A Group of One Never Learns; Every $K \geq 2$ Reaches the Ceiling"}
 The group mean includes the response's own reward: the expected update is
-$(K-1)/K$ of the gradient, zero at $K = 1$. Fixed budget of 6,400 scored
-responses per prompt (3,200 steps at $K = 2$, 200 at $K = 32$):
+$(K-1)/K$ of the gradient, zero at $K = 1$. `group_step` is the verifier
+update weighted by `normalize`; 6,400 scored responses per prompt (3,200
+steps at $K = 2$, 200 at $K = 32$):
 
 @rl-sequences-the-group-is-the-baseline-2
-
-`group_step` is the verifier update with `normalize` as the weighting.
 :::
 
 ::: {.slide title="Three Loss Divisors Rescale; Dividing by Each Episode's Length Tilts"}

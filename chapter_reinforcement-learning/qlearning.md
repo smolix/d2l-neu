@@ -91,7 +91,8 @@ gamma, num_episodes = 0.95, 4000
 env = gym.make('FrozenLake-v1', is_slippery=True)
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 V_star = d2l.value_iteration(mdp, num_iters=1000)[-1]
-pi_star = mdp.backup(V_star).argmax(axis=1)
+Q_star = mdp.backup(V_star)
+pi_star = Q_star.argmax(axis=1)
 ```
 
 Two helpers, both plain numpy and both saved: the deep Q-network of :numref:`sec_dqn` and the PPO of :numref:`sec_ppo` will call them unchanged. The first turns a start value, an end value and a horizon into a schedule:
@@ -167,20 +168,25 @@ The curve plateaus near $0.55$, below the optimal success probability of $73.6$ 
 
 ```{.python .input #qlearning-reading-the-curve-honestly-1}
 %%tab pytorch, jax
+lake1 = d2l.TabularMDP.from_gym(env, 1.0)    # gamma = 1: V(s0) = P(goal)
+success = lambda pi: d2l.policy_evaluation(lake1, pi, 100)[-1][0]
+live = ~np.isin(env.unwrapped.desc.flatten(), [b'H', b'G'])  # agent acts
+greedy = np.eye(mdp.num_actions)[Q.argmax(axis=-1)]    # (seed, s, a)
 print(f'max_s |V_Qhat(s) - V*(s)| per seed: '
       f'{np.round(np.abs(Q.max(axis=-1) - V_star).max(axis=-1), 3)}')
-env.reset(seed=0)
-opt = d2l.evaluate(env, lambda s, rng: int(pi_star[s]), num_episodes=2000)
-rates = np.array([d2l.evaluate(env, lambda s, rng: int(Q[k, s].argmax()),
-                               num_episodes=2000) for k in range(5)])
-taxed = d2l.evaluate(env, lambda s, rng: int(pi_star[s])
-                     if rng.random() > 0.05 else int(rng.integers(4)),
-                     num_episodes=2000, rng=np.random.default_rng(1))
-print(f'success rate: learned greedy {rates.min():.1%} to {rates.max():.1%} '
-      f'over 5 seeds; pi* {opt:.1%}')
-print(f'pi* forced to explore at epsilon = 0.05: {taxed:.1%}')
-print(f'median environment steps: {int(np.median(visits.sum(axis=(1, 2))))}')
+print(f'max_(s,a) |Qhat - Q*| per seed:     '
+      f'{np.round(np.abs(Q - Q_star)[:, live].max(axis=(1, 2)), 3)}')
+print(f'max_s of V* - Q*(s, greedy action):  '
+      f'{np.round((V_star - (greedy * Q_star).sum(-1)).max(-1), 3)}')
+print(f'success within 100 steps: greedy '
+      f'{np.round([success(g) for g in greedy], 3)}, '
+      f'pi* {success(np.eye(mdp.num_actions)[pi_star]):.3f}')
+taxed = 0.95 * np.eye(mdp.num_actions)[pi_star] + 0.05 / mdp.num_actions
+print(f'pi* forced to explore at epsilon = 0.05: {success(taxed):.3f}')
+print(f'median environment steps: {np.median(visits.sum(axis=(1, 2))):,.0f}')
 ```
+
+<!-- WRITER (14.3-M4): exact evaluation replaces the 2000-episode Monte Carlo. All five greedy policies give up nothing (third line 0.000: optimal up to ties; they differ from pi* only at the exact tie at state 6) and succeed with the exact 0.730 of pi*. Over 12 seeds this holds for 11; one run (seed 7) still prefers *right* at the start after 4,000 episodes, where the two best actions differ by 0.008 (Q* = 0.180 against 0.172) and its estimates sit low (0.136); its greedy policy succeeds 0.45 and is optimal by 16,000 episodes. Say "the greedy table is optimal in the typical run", not "always". V error 0.006-0.021 here, 0.006-0.031 over 12 seeds ("within about 0.03"); Q error on all live entries 0.075-0.131 here, 0.05-0.14 over 12 seeds, several times the V error (non-greedy entries are rarely visited). Exact price of exploration: 0.537 ("about 54%"). Median steps "about 96,000" (12 seeds: 73,000-98,000). -->
 
 Across seeds, the learned value functions are within $0.006$ to $0.021$ of $V^*$ in the sup norm. Their greedy policies succeed in $71$ to $74$ percent of evaluation episodes, compared with the optimal value of $73.6$ percent; differences within this range are sampling error. When the optimal policy is forced to select a random action with probability $0.05$, its success rate falls to $54$ percent. The training curve therefore reflects both the learned policy and the continuing exploration of the behavior policy.
 
@@ -211,18 +217,21 @@ experiment, one sixteenth of the episode budget suffices:
 %%tab pytorch, jax
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 table = np.zeros((mdp.num_states, mdp.num_actions))
-for _ in q_learning(0, table, np.zeros_like(table), calm, 256, gamma,
+calm_visits = np.zeros_like(table)
+for _ in q_learning(0, table, calm_visits, calm, 256, gamma,
                     alpha=lambda n: 0.9):
     pass
-print(f'calm ice, 256 episodes, alpha = 0.9: greedy policy succeeds '
+print(f'calm ice, 256 episodes ({calm_visits.sum():,.0f} steps), alpha = 0.9: '
+      f'greedy policy succeeds '
       f'{d2l.evaluate(calm, lambda s, rng: int(table[s].argmax()), 100):.0%}')
 ```
+
+<!-- WRITER: over 12 seeds every greedy table succeeds 100% after 256 calm episodes, using 1,670-1,920 environment steps ("under 2,000"); sec_policygradient compares REINFORCE on the same map in steps. -->
 
 In the deterministic environment, the same method finds a perfect policy with about one sixteenth as many episodes and can use a much larger step size. This contrast shows how transition noise changes the sample and step-size requirements. To compare the three schedules, we track $Q(s_0,\textrm{left})$ across the same five seeds; its exact value is available from dynamic programming.
 
 ```{.python .input #qlearning-reading-the-curve-honestly-4}
 %%tab pytorch, jax
-Q_star = mdp.backup(V_star)
 a0 = int(pi_star[0])
 print(f'Q*(s0, {"<v>^"[a0]}) = {Q_star[0, a0]:.3f}')
 trace = {}
@@ -236,9 +245,13 @@ for name, alpha in [('0.9 (constant)', lambda n: 0.9),
             seed, Qa, np.zeros_like(Qa), env, num_episodes, gamma, alpha)])
     trace[f'alpha = {name}'] = np.array(runs)
     print(f'alpha = {name:>14}: final estimates {np.round(runs, 3)[:, -1]}')
+print(f'peak of each 1/(1 + 0.1 n) run:  '
+      f'{np.round(trace["alpha = 1/(1 + 0.1 n)"].max(axis=1), 3)}')
 d2l.plot_curves(trace, xlabel='episode', ylabel='estimate of Q(s0, left)',
                 reference=Q_star[0, a0])
 ```
+
+<!-- WRITER (14.3-M5, 14.3-S2): the overshoot is the evidence for maximization bias, not the finals. Peaks of the default schedule, seeds 0-4: 0.228, 0.291, 0.262, 0.324, 0.205 (episodes 330-1180), all above Q* = 0.180, against finals 0.180-0.195. Over 12 seeds 10 of 12 runs overshoot, by 0.02 to 0.16; the two others stay at or below Q* throughout (one is the low run of the note above). Say "in most runs". Finals over 12 seeds: constant 0.9 gives 0.02-0.42 (5 seeds: 0.06-0.27), the default 0.14-0.195 (the low run; 11 of 12 in 0.179-0.195), 1/(1+n) below 0.025 in all 12. The trace plot shows the seed median with a min-max band. -->
 
 The constant step size does not converge to a fixed value: after four thousand episodes, the five estimates range from $0.06$ to $0.27$, compared with the exact value $0.180$. The default decreasing schedule places all five estimates between $0.180$ and $0.195$. The sample-average schedule $1/(1+n)$ also satisfies the Robbins--Monro conditions, but all five estimates remain below $0.025$ at this budget because early, inaccurate targets retain substantial weight. The asymptotic conditions therefore do not determine which schedule performs best at a finite horizon.
 
@@ -249,6 +262,58 @@ The behavior policy depends on the current value estimates, so estimation errors
 At a fixed point, the expected correction must vanish for every state--action pair visited by the behavior policy. By :eqref:`eq_td_error`, this is precisely the Bellman optimality condition on the visited set. Interaction can therefore direct data collection toward errors in the current estimate. Offline reinforcement learning, introduced in :numref:`sec_offline`, removes this feedback because it learns from a fixed dataset.
 
 The preceding argument assumes continued exploration; :numref:`sec_exploration` isolates the resulting tradeoff.
+
+### Planning in a Learned Model
+
+<!-- WRITER (14.3-S1, E3): certainty equivalence. The same transitions that Q-learning uses once can be counted: P_hat(s'|s,a) = N(s,a,s')/N(s,a), r_hat(s,a) = mean reward; unvisited pairs keep zero rows (value 0). `Counts` is a gym wrapper that passes every step through and counts it, so `q_learning` runs unchanged on it and produces the same table as on `env`. The cell runs 5 seeds at two budgets (each a full run with its own epsilon schedule) and compares, on the same data, Q-learning's table with value iteration on the estimated model: sup-norm V error and the exact success of the greedy policy. Over 12 seeds, median [range]: 500 episodes (about 9,000 steps): V error 0.091 [0.036, 0.51] learned against 0.036 [0.016, 0.47] planned, success 0.51 [0.00, 0.73] against 0.68 [0.50, 0.73] (model at least as good in 11 of 12 runs); 2,000 episodes (about 47,000 steps): V error 0.028 [0.021, 0.12] against 0.014 [0.008, 0.066], the model better in all 12 runs and as accurate as Q-learning after its 4,000 episodes (0.015, about 96,000 steps); Q error on all live entries 0.11 against 0.06. The printed medians over seeds 0-4: 500 episodes V error 0.084 learned against 0.096 planned (the worst-case error is still set by rarely visited cells and goes either way per seed), success 0.49 against 0.64; 2,000 episodes 0.023 against 0.011, both greedy policies at 0.730. So say: with little data the planned greedy policy is the better one; with more, the planned values are about twice as accurate. At 250 episodes the comparison flips with the seed (sup-norm errors are set by rarely visited cells), so it is not printed. Claim: on the same transitions the model's values are about twice as accurate (Q-learning needs about twice the data to match), at the price of storing |S|^2|A| counts and solving the model (500 sweeps, about 10 ms here). Exercise ex_qlearning-like-like-comparison-value keeps its cost analysis (parts a, c); its part b is now this cell. Dyna, MCTS and world models stay in ch. 15. -->
+
+```{.python .input #qlearning-planning-in-a-learned-model-1}
+%%tab pytorch, jax
+class Counts(gym.Wrapper):
+    """Pass every step through and count it: N[s, a, s'] and summed rewards."""
+    def __init__(self, env):
+        super().__init__(env)
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        self.N, self.R = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+
+    def reset(self, **kwargs):
+        self.s, info = self.env.reset(**kwargs)
+        return self.s, info
+
+    def step(self, a):
+        s_next, r, terminated, truncated, info = self.env.step(a)
+        self.N[self.s, a, s_next] += 1
+        self.R[self.s, a] += r
+        self.s = s_next
+        return s_next, r, terminated, truncated, info
+
+def learned_model(counts, gamma):
+    """Certainty equivalence: the empirical kernel and mean rewards."""
+    n = np.maximum(counts.N.sum(axis=-1), 1)   # unvisited pairs: zero rows
+    return d2l.TabularMDP(counts.N / n[..., None], counts.R / n, gamma)
+```
+
+```{.python .input #qlearning-planning-in-a-learned-model-2}
+%%tab pytorch, jax
+def grade(Q):   # sup-norm value error, exact success of the greedy policy
+    return (np.abs(Q.max(axis=-1) - V_star).max(),
+            success(np.eye(mdp.num_actions)[Q.argmax(axis=-1)]))
+
+for budget in [500, 2000]:
+    rows = []
+    for seed in range(5):
+        counts, Qs = Counts(env), np.zeros((mdp.num_states, mdp.num_actions))
+        for _ in q_learning(seed, Qs, np.zeros_like(Qs), counts, budget,
+                            gamma):
+            pass
+        model = learned_model(counts, gamma)
+        Q_model = model.backup(d2l.value_iteration(model, 500)[-1])
+        rows.append([counts.N.sum(), *grade(Qs), *grade(Q_model)])
+    n, err_q, win_q, err_m, win_m = np.median(rows, axis=0)
+    print(f'{budget} episodes, median {n:,.0f} steps (medians over 5 seeds)')
+    print(f'  Q-learning:        max |V - V*| {err_q:.3f}, success {win_q:.3f}')
+    print(f'  planning in model: max |V - V*| {err_m:.3f}, success {win_m:.3f}')
+```
 
 ## Off-Policy Learning
 

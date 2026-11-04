@@ -28,11 +28,14 @@ We retain the deterministic FrozenLake environment, complete-episode horizon, di
 
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-2}
 %%tab pytorch, jax
-gamma, alpha, alpha_v = 0.95, 16.0, 0.1  # discount; SGD step; value step
+gamma, alpha_v = 0.95, 0.1             # discount; value-table step
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
-num_seeds = 20                         # with 5, the medians below are noise
-env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=10_000)
+num_seeds = 20                         # twenty seeds: stable medians
+env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=200)
 ```
+
+<!-- WRITER: the cap is 200 steps, not 10,000. Only a policy locked into a loop walks that long (its value is near zero, so cutting it changes no weight measurably); at the probe no episode in 20,000 reaches 200 steps. Without the cap, large step sizes make runs walk 10,000-step episodes and the notebook takes minutes per arm. -->
+
 
 ## A Zero-Mean Identity
 
@@ -175,44 +178,49 @@ Several implementation choices affect either the estimator or its scale. To dist
 ```{.python .input #baselines-estimator-hygiene}
 %%tab pytorch
 mdp = d2l.TabularMDP.from_gym(env, gamma)
-P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
-torch.manual_seed(3)
 probe = d2l.Policy.tabular(16, 4)
 rng = np.random.default_rng(3)
 env.reset(seed=3)
-for _ in range(16):
+for _ in range(16):              # the probe of sec_policygradient
     b = d2l.rollout(env, probe.act, 16, rng)
     d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
-theta = probe.policy.weight.detach().requires_grad_(True)
-pi = torch.softmax(theta, -1)
-V = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
-                                                            pi, P),
-                       (pi * r).sum(-1))
-g_exact = torch.autograd.grad(V[0], theta)[0].numpy().ravel()
-V_pi = V.detach().numpy()
+theta_probe = probe.policy.weight.detach()
+pi_np = torch.softmax(theta_probe, -1).numpy()
+
+def exact_gradient(r):
+    """grad_theta V^pi(s_0) for rewards r[s, a], by autograd through the solve."""
+    th = theta_probe.clone().requires_grad_(True)
+    pi, P = torch.softmax(th, -1), torch.as_tensor(mdp.P).float()
+    V = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
+                                                                pi, P),
+                           (pi * torch.as_tensor(r).float()).sum(-1))
+    return torch.autograd.grad(V[0], th)[0].numpy().ravel()
+
+g_exact, V_pi = exact_gradient(mdp.r), mdp.policy_value(pi_np)
 print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 ```
 
 ```{.python .input #baselines-estimator-hygiene}
 %%tab jax
 mdp = d2l.TabularMDP.from_gym(env, gamma)
-P, r = jnp.asarray(mdp.P), jnp.asarray(mdp.r)
 probe = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(3))
 rng = np.random.default_rng(3)
 env.reset(seed=3)
-for _ in range(16):
+for _ in range(16):              # the probe of sec_policygradient
     b = d2l.rollout(env, probe.act, 16, rng)
     d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
+theta_probe = probe.policy.embedding[...]
+pi_np = np.asarray(jax.nn.softmax(theta_probe, -1), dtype=np.float64)
 
-def V_fn(theta):
-    pi = jax.nn.softmax(theta, -1)
-    return jnp.linalg.solve(jnp.eye(16) - gamma * jnp.einsum('sa,sat->st',
-                                                             pi, P),
-                            (pi * r).sum(-1))
+def exact_gradient(r):
+    """grad_theta V^pi(s_0) for rewards r[s, a], by autograd through the solve."""
+    def V0(th):
+        pi, P = jax.nn.softmax(th, -1), jnp.asarray(mdp.P)
+        return jnp.linalg.solve(jnp.eye(16) - gamma * jnp.einsum(
+            'sa,sat->st', pi, P), (pi * jnp.asarray(r)).sum(-1))[0]
+    return np.asarray(jax.grad(V0)(theta_probe)).ravel()
 
-theta = probe.policy.embedding[...]
-g_exact = np.asarray(jax.grad(lambda th: V_fn(th)[0])(theta)).ravel()
-V_pi = np.asarray(V_fn(theta))
+g_exact, V_pi = exact_gradient(mdp.r), mdp.policy_value(pi_np)
 print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 ```
 
@@ -352,8 +360,6 @@ We compare these four choices on a FrozenLake batch whose episode lengths differ
 
 ```{.python .input #baselines-summing-over-episodes-of-different-lengths}
 %%tab pytorch, jax
-pi_np = np.exp(probe.log_prob_np(np.repeat(np.arange(16), 4),
-                                 np.tile(np.arange(4), 16))).reshape(16, 4)
 b = d2l.rollout(env, probe.act, 4, np.random.default_rng(6))
 G, T = b.reward_to_go(gamma), np.diff(b.ep_ends, prepend=0)
 print(f'episode lengths {T}, successes {int(b.rew.sum())}')
@@ -398,32 +404,48 @@ Before training, we hold $\theta$ fixed, draw 200 batches of the training batch 
 
 ```{.python .input #baselines-five-estimators-1}
 %%tab pytorch, jax
-def estimate(b, w):
+def estimate(b, w, pi):
     """One draw of the estimator: weighted scores, averaged over episodes."""
     u = np.zeros((16, 4))
-    np.add.at(u, b.obs, w[:, None] * (np.eye(4)[b.act] - pi_np[b.obs]))
+    np.add.at(u, b.obs, w[:, None] * (np.eye(4)[b.act] - pi[b.obs]))
     return u.ravel() / len(b.ep_ends)
 
-weightings = {
-    'return': lambda b, G: b.per_step(b.episode_returns(gamma)),
-    'reward-to-go': lambda b, G: G,
-    'centered': lambda b, G: G - G.mean(),
-    'normalized': lambda b, G: normalize(G),
-    'exact baseline': lambda b, G: G - V_pi[b.obs]}
-rng, draws = np.random.default_rng(4), {k: [] for k in weightings}
-for _ in range(200):
-    b = d2l.rollout(env, probe.act, 4, rng)
-    G = b.reward_to_go(gamma)
+def discounted(b, G):
+    """gamma^t G_t: reward-to-go with the factor gamma^t of the gradient kept."""
+    t = np.concatenate([np.arange(ep.stop - ep.start) for ep in b.episodes()])
+    return gamma ** t * G
+
+weightings = {                   # V: exact V^pi here, the learned table later
+    'return': lambda b, G, V: b.per_step(b.episode_returns(gamma)),
+    'causal': lambda b, G, V: discounted(b, G),
+    'reward-to-go': lambda b, G, V: G,
+    'centered': lambda b, G, V: G - G.mean(),
+    'normalized': lambda b, G, V: normalize(G),
+    'value baseline': lambda b, G, V: G - V[b.obs]}
+
+step_cost = 0.1                  # charged for every move from a live cell
+live = ~np.isin(env.unwrapped.desc.ravel(), [b'H', b'G'])
+costly = d2l.TabularMDP(mdp.P, mdp.r - step_cost * live[:, None], gamma)
+cases = {'lake': (0.0, g_exact, V_pi),
+         'step cost': (step_cost, exact_gradient(costly.r),
+                       costly.policy_value(pi_np))}
+rng = np.random.default_rng(4)
+batches = [d2l.rollout(env, probe.act, 4, rng) for _ in range(2000)]
+for case, (c, g, V) in cases.items():
+    bs = [d2l.Batch(b.obs, b.act, b.rew - c, b.next_obs, b.term, b.ep_ends)
+          for b in batches]
     for k, fn in weightings.items():
-        draws[k].append(estimate(b, fn(b, G)))
-for k, u in draws.items():
-    u = np.stack(u)
-    m = u.mean(axis=0)
-    cos = m @ g_exact / (np.linalg.norm(m) * np.linalg.norm(g_exact))
-    rel = ((u - m) ** 2).sum(axis=1).mean() / (m ** 2).sum()
-    print(f'{k:>14}: cos(mean, exact) = {cos:.2f}, '
-          f'relative variance = {rel:6.1f}')
+        u = np.stack([estimate(b, fn(b, b.reward_to_go(gamma), V), pi_np)
+                      for b in bs])
+        m = u.mean(axis=0)
+        print(f'{case:>9} {k:>14}: |mean|/|grad J| = '
+              f'{np.linalg.norm(m) / np.linalg.norm(g):.2f}, cos = '
+              f'{m @ g / (np.linalg.norm(m) * np.linalg.norm(g)):.3f}, '
+              f'noise = {((u - m) ** 2).sum(axis=1).mean() / (m @ m):5.1f}')
 ```
+
+<!-- WRITER: "noise" is the relative variance tr Cov(u) / |E u|^2, measured against each estimator's own mean, so that a rescaled estimator (normalized = centered / sigma) is not charged for its scale; |mean|/|grad J| and cos show the scale and the direction separately. 'causal' keeps gamma^t (unbiased); 'reward-to-go' drops it (the surrogate eq_rtg). 'value baseline' uses the exact V^pi here. -->
+
 
 The cosine column checks whether the sample means align with the exact gradient. Cosine similarity cannot detect magnitude errors or errors parallel to the true gradient, but all five estimators agree within the resolution of these 200 draws. The variance measurements show that centering reduces relative variance by about one third and the exact state baseline nearly halves it. Dividing by $\sigma$ adds little variance reduction beyond centering, consistent with its interpretation as a step-size adjustment. Reward-to-go provides only a small improvement here because FrozenLake has a single terminal reward and therefore few past rewards to remove.
 
@@ -438,59 +460,64 @@ def table(ac):
     if tab.selected('jax'):
         return np.asarray(ac.policy.embedding[...])
 
-def entropy(ac):
-    """Mean policy entropy over the sixteen states, in nats."""
-    logp = ac.log_prob_np(np.repeat(np.arange(16), 4),
-                          np.tile(np.arange(4), 16))
-    return float(-(np.exp(logp) * logp).sum() / 16)
+def entropy(theta, obs):
+    """Entropy of pi(.|s) in nats, averaged over the states the batch visited."""
+    logp = theta - np.log(np.exp(theta).sum(axis=1, keepdims=True))
+    return float(-(np.exp(logp) * logp).sum(axis=1)[obs].mean())
 ```
 
 ```{.python .input #baselines-five-estimators-3}
 %%tab pytorch, jax
 if tab.selected('jax'):
-    sgd = optax.sgd(alpha)    # one transform for every agent: one compile
-def train(seed, variant):
-    """Five REINFORCE variants; they differ in one line, the weight."""
+    sgds = {}                 # one transform per step size: one compile each
+def train(seed, weighting, alpha):
+    """REINFORCE by plain SGD; the arms differ in one line, the weight."""
     rng, V = np.random.default_rng(seed), np.zeros(16, np.float32)
     if tab.selected('pytorch'):
-        torch.manual_seed(seed)
         ac = d2l.Policy.tabular(16, 4)
         ac.opt_pi = torch.optim.SGD(ac.policy.parameters(), lr=alpha)
     if tab.selected('jax'):
+        sgd = sgds.setdefault(alpha, optax.sgd(alpha))
         ac = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(seed))
         ac.opt_pi = nnx.Optimizer(ac.policy, sgd, wrt=nnx.Param)
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma)
-        w = {'return': batch.per_step(batch.episode_returns(gamma)),
-             'reward-to-go': G,
-             'centered': G - G.mean(),
-             'normalized': normalize(G),
-             'learned baseline': G - V[batch.obs]}[variant]
-        before = table(ac)
-        d2l.policy_step(ac, batch.obs, batch.act, w)
+        G, before = batch.reward_to_go(gamma), table(ac)
+        w = weighting(batch, G, V) * len(batch) / batch_episodes
+        d2l.policy_step(ac, batch.obs, batch.act, w)  # sum over steps / n
         for s, g in zip(batch.obs, G):     # eq_value_baseline, every arm
             V[s] += alpha_v * (g - V[s])
         yield (float(batch.episode_returns().mean()),
-               float(np.linalg.norm(table(ac) - before)), entropy(ac))
+               float(np.linalg.norm(table(ac) - before)),
+               entropy(before, batch.obs))
 ```
 
-We run five variants with twenty seeds each; `runs[v]` has shape (seeds, updates, 3):
+<!-- WRITER: E5. policy_step averages over the N steps of the batch; multiplying the weights by N / n turns that into the per-episode average of eq_rtg, the estimator the frozen table measured. Without it the step is alpha * n / N, which grows as episodes shorten. -->
+
+
+We run five variants with twenty seeds each, once at one shared step size and once at matched step sizes; each entry has shape (seeds, updates, 3):
 
 ```{.python .input #baselines-five-estimators-4}
 %%tab pytorch, jax
 variants = ['return', 'reward-to-go', 'centered', 'normalized',
-            'learned baseline']
-runs = {v: d2l.run_seeds(train, num_seeds, variant=v) for v in variants}
+            'value baseline']
+shared = {v: d2l.run_seeds(train, num_seeds, weighting=weightings[v],
+                           alpha=2.0) for v in variants}
+step_sizes = {'return': 4.0, 'reward-to-go': 2.83, 'centered': 8.0,
+              'normalized': 1.68, 'value baseline': 8.0}  # |step| near 0.6
+matched = {v: d2l.run_seeds(train, num_seeds, weighting=weightings[v],
+                            alpha=a) for v, a in step_sizes.items()}
 ```
 
-The success-rate column, smoothed over a ten-update window, with each band spanning the seed minimum to maximum around the seed median:
+<!-- WRITER: the step sizes in step_sizes put every arm's mean step norm over its first 40 updates near 0.6 (calibrated on 200 seeds: 0.58-0.61; these twenty seeds give 0.60-0.71); 'value baseline' here is the learned table V-hat of eq_value_baseline. The shared alpha = 2 runs are the confound; the matched runs are the comparison. -->
+
+The success rate at matched step sizes, smoothed over a ten-update window, with each band spanning the interquartile range of the seeds around their median:
 
 ```{.python .input #baselines-five-estimators-5}
 %%tab pytorch, jax
-d2l.plot_curves({v: r[:, :, 0] for v, r in runs.items()}, xlabel='update',
-                ylabel='batch success rate', smooth=10)
+d2l.plot_curves({v: r[:, :, 0] for v, r in matched.items()}, xlabel='update',
+                ylabel='batch success rate', smooth=10, band='iqr')
 ```
 
 We report performance and parameter-step norms together because both affect the observed ordering:
@@ -498,16 +525,17 @@ We report performance and parameter-step norms together because both affect the 
 ```{.python .input #baselines-five-estimators-6}
 %%tab pytorch, jax
 def to90(curve):
-    """First update whose trailing 10-update mean success reaches 0.9."""
-    hit = np.convolve(curve, np.ones(10) / 10, 'valid') >= 0.9
-    return hit.argmax() + 9 if hit.any() else len(curve)   # window's end
+    """Last update of the first 10-update window whose mean success is 0.9."""
+    hit = np.convolve(curve, np.ones(10) / 10, 'valid') >= 0.9 - 1e-9
+    return hit.argmax() + 9 if hit.any() else len(curve)
 
-for v, r in runs.items():
-    reach = np.array([to90(c) for c in r[:, :, 0]])
-    print(f'{v:>16}: updates to 90%: median {np.median(reach):5.1f}, '
-          f'fastest {reach.min():3d}, slowest {reach.max():3d}')
-    print(f'{"":>16}  mean |step| over the first 40 updates: '
-          f'{r[:, :40, 1].mean():.2f}')
+for name, runs in (('one alpha = 2', shared), ('matched steps', matched)):
+    print(name)
+    for v, r in runs.items():
+        reach = np.array([to90(c) for c in r[:, :, 0]])
+        print(f'{v:>15}: updates to 90%: median {np.median(reach):5.1f} '
+              f'[{reach.min():3d}, {reach.max():3d}], '
+              f'|step| {r[:, :40, 1].mean():.2f}')
 ```
 
 The plain trajectory-return estimator is the slowest in this experiment, with median runs requiring roughly 50--70 updates to maintain 90% batch success. Reward-to-go reduces the median by about one third. The learned baseline performs similarly to reward-to-go, with differences smaller than the variation across seeds. Sparse rewards explain part of this result: the value estimate remains near zero until the policy has reached the goal several times, so the learned-baseline update initially resembles reward-to-go. Centering reduces the frozen-policy variance but has little effect on the median training time.
@@ -518,9 +546,9 @@ The runs also record policy entropy. Each method starts at the uniform policy's 
 
 ```{.python .input #baselines-five-estimators-7}
 %%tab pytorch, jax
-d2l.plot_curves({v: runs[v][:, :, 2] for v in ('return', 'normalized')},
-                xlabel='update', ylabel='policy entropy (nats)',
-                reference=np.log(4))
+d2l.plot_curves({v: matched[v][:, :, 2] for v in ('return', 'value baseline')},
+                xlabel='update', ylabel='entropy along the batch (nats)',
+                reference=np.log(4), smooth=10, band='iqr')
 ```
 
 ### Reading the Comparison across Seeds

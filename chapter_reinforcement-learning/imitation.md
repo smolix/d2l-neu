@@ -35,28 +35,29 @@ An early example of imitation learning is ALVINN, which in 1989 trained a small 
 ```{.python .input #imitation-the-reduction-to-classification-1}
 %%tab pytorch, jax
 gamma = 0.95
-env = gym.make('FrozenLake-v1', is_slippery=True)
+env = gym.make('FrozenLake-v1', is_slippery=False)
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 V_star = d2l.value_iteration(mdp, num_iters=1000)[-1]
 pi_star = mdp.backup(V_star).argmax(axis=1)
 
-def demonstrations(num_episodes):
+def demonstrations(env, expert, num_episodes):
     """Roll the expert; record only what it saw and what it did."""
     states, actions = [], []
     for _ in range(num_episodes):
         s, done = env.reset()[0], False
         while not done:
             states.append(s)
-            actions.append(int(pi_star[s]))
-            s, reward, terminated, truncated, _ = env.step(actions[-1])
+            actions.append(int(expert[s]))
+            s, _, terminated, truncated, _ = env.step(actions[-1])
             done = terminated or truncated
     return np.array(states), np.array(actions)
 
-env.reset(seed=0)
-demo_s, demo_a = demonstrations(3)
+demo_s, demo_a = demonstrations(env, pi_star, 3)
 print(f'{demo_s.size} state-action pairs from 3 expert episodes, '
-      f'covering {np.unique(demo_s).size} of 11 reachable states')
+      f'covering states {np.unique(demo_s)}')
 ```
+
+<!-- WRITER: stale paragraph. Calm lake now: every expert episode is the same six pairs at states 0, 4, 8, 9, 13, 14 (18 pairs from 3 episodes); the expert never visits 1, 2, 3, 6, 10. Numbers in reports/exp-imitation.md. -->
 
 The three episodes produce 96 labeled pairs but visit only 7 of the 11 reachable frozen cells. The three top-row states and state 13 are absent, so their actions are unconstrained by the demonstrations.
 
@@ -206,21 +207,29 @@ The weights are supplied as a NumPy array and therefore cannot contain a gradien
 
 ```{.python .input #imitation-the-reduction-to-classification-4}
 %%tab pytorch, jax
-def clone(states, actions, num_steps=200):
-    """Behavior cloning: cross-entropy fit of pi(a|s) to expert choices,
-    that is, policy_step with every weight equal to one."""
-    learner = Policy.tabular(16, 4)
+def clone(mdp, states, actions, eps=0.2):
+    """Behavior cloning: cross-entropy fit of pi(a|s) to the expert's
+    choices (policy_step with every weight equal to one), stopped once pi
+    disagrees with the demonstrated actions with probability at most eps."""
+    learner = Policy.tabular(mdp.num_states, mdp.num_actions)
     weight = np.ones(len(states), np.float32)
-    for _ in range(num_steps):
-        nll = policy_step(learner, states, actions, weight)
-    return learner, nll
+    while 1 - np.exp(learner.log_prob_np(states, actions)).mean() > eps:
+        policy_step(learner, states, actions, weight)
+    return learner
 
-bc, nll = clone(demo_s, demo_a)
-print(f'cross-entropy on the demonstrations after the fit: {nll:.3f}')
-for s in (9, 3):
-    probs = np.exp(bc.log_prob_np(np.repeat(s, 4), np.arange(4)))
-    print(f'clone pi(.|s={s}): {np.round(probs, 3)}')
+def policy_table(mdp, learner):
+    """pi(a|s) of a learner as an array of shape (num_states, num_actions)."""
+    s, a = np.divmod(np.arange(mdp.num_states * mdp.num_actions),
+                     mdp.num_actions)
+    return np.exp(learner.log_prob_np(s, a)).reshape(mdp.num_states, -1)
+
+bc = clone(mdp, demo_s, demo_a)
+pi_bc = policy_table(mdp, bc)
+for s in (9, 10):
+    print(f'clone pi(.|s={s}): {np.round(pi_bc[s], 3)}')
 ```
+
+<!-- WRITER: stale paragraph. clone now stops at a stated disagreement eps = 0.2 (14 Adam steps; actual 0.182 on every demonstrated state); pi(.|9) = 0.818 on down; pi(.|10) is uniform (never demonstrated). -->
 
 The loss approaches zero. At state 9, which was demonstrated many times with the same label, the clone assigns nearly all probability to *down*. State 3 was never demonstrated, so its table row receives no gradient and remains exactly uniform. Greedy action selection resolves this four-way tie by choosing action 0, *left*, according to the implementation's tie-breaking rule.
 
@@ -231,31 +240,77 @@ A classifier is evaluated under the distribution on which its error is measured.
 
 ```{.python .input #imitation-what-the-reduction-quietly-assumes-1}
 %%tab pytorch, jax
-env.reset(seed=1)
-expert_rate = d2l.evaluate(env, lambda s, rng: int(pi_star[s]),
-                           num_episodes=1000)
-clone_rate = d2l.evaluate(env, bc.act_greedy, num_episodes=1000)
-mistakes = sum(bc.act_greedy(s) != a for s, a in zip(demo_s, demo_a))
-print(f'mistakes on the {demo_s.size} demonstration pairs: {mistakes}')
-print(f'success rate: expert {expert_rate:.1%}, clone {clone_rate:.1%}')
+def visitation(mdp, pi, absorbing=None, T=100):
+    """d_0, ..., d_T: the state distributions of the policy pi[s, a] from the
+    start state, propagated exactly through P for FrozenLake's 100-step
+    limit. Mass that enters an `absorbing` state stays there."""
+    P_pi = np.einsum('sa,sat->st', pi, mdp.P)
+    if absorbing is not None:
+        P_pi[absorbing] = np.eye(mdp.num_states)[absorbing]
+    d = [np.eye(mdp.num_states)[0]]
+    for _ in range(T):
+        d.append(d[-1] @ P_pi)
+    return np.array(d)
+
+desc = env.unwrapped.desc.ravel()
+goal, holes = desc == b'G', desc == b'H'
+expert = np.eye(mdp.num_actions)[pi_star]                # one-hot rows
+greedy = np.eye(mdp.num_actions)[pi_bc.argmax(axis=1)]
+for name, pi in [('expert', expert), ('greedy clone', greedy),
+                 ('sampling clone', pi_bc)]:
+    d_T = visitation(mdp, pi)[-1]
+    print(f'{name:>14}: reaches the goal {d_T[goal].sum():.3f}, '
+          f'falls into a hole {d_T[holes].sum():.3f}')
+rate = d2l.evaluate(env, bc.act, num_episodes=1000,
+                    rng=np.random.default_rng(0))
+print(f'sampling clone, 1000 episodes of bc.act: reaches the goal {rate:.3f}')
 ```
+
+<!-- WRITER: stale paragraph. Exact: expert 1.000, greedy clone 1.000, sampling clone 0.660 (holes 0.340); Monte Carlo with bc.act 0.656. -->
 
 The clone makes no errors on the demonstration pairs but attains only about one quarter of the expert's success rate. Slippery transitions move it into states absent from the demonstrations. At state 13, which borders the hole at 12, the expert selects *right* but the clone selects *left*. We repeat the experiment for ten independently sampled datasets at three sizes. Each model is trained until the greedy actions stabilize:
 
 ```{.python .input #imitation-what-the-reduction-quietly-assumes-2}
 %%tab pytorch, jax
-env.reset(seed=2)
+disagree = 1 - pi_bc[np.arange(mdp.num_states), pi_star]   # per state
+fresh_s, _ = demonstrations(env, pi_star, 100)
+occupancy = (visitation(mdp, pi_bc)[:-1] * ~(goal | holes)).sum(axis=0)
+print(f'disagreement with the expert: {disagree[demo_s].mean():.3f} on the '
+      f'training pairs, {disagree[fresh_s].mean():.3f} on 100 fresh expert '
+      f'episodes, {occupancy @ disagree / occupancy.sum():.3f} on the '
+      f"clone's own states")
+for n in [1, 10, 100]:
+    pi_n = policy_table(mdp, clone(mdp, *demonstrations(env, pi_star, n)))
+    print(f'clone of {n:>3} expert episodes: reaches the goal '
+          f'{visitation(mdp, pi_n)[-1][goal].sum():.3f}')
+```
+
+<!-- WRITER: coverage aside (slippery ice). With random dynamics the expert itself visits a random set of states, so a few episodes can miss a state that matters; this is a coverage gap, not the distribution shift above. Numbers: about one dataset in three at n=1, about 2% at n=3, none at n=10 (see report). -->
+
+```{.python .input #imitation-distribution-shift-between-training-and-deployment-1}
+%%tab pytorch, jax
+ice = gym.make('FrozenLake-v1', is_slippery=True)
+mdp_ice = d2l.TabularMDP.from_gym(ice, gamma)
+V_ice = d2l.value_iteration(mdp_ice, num_iters=1000)[-1]
+pi_ice = mdp_ice.backup(V_ice).argmax(axis=1)
+one_hot = np.eye(mdp_ice.num_actions)
+expert_ice = visitation(mdp_ice, one_hot[pi_ice])[-1][goal].sum()
+ice.reset(seed=5)
 for n in [1, 3, 10]:
     rates = []
-    for _ in range(10):
-        ac, _ = clone(*demonstrations(n), num_steps=50)
-        tab = np.array([ac.act_greedy(s) for s in range(16)])
-        rates.append(d2l.evaluate(env, lambda s, rng: int(tab[s]),
-                                  num_episodes=300))
-    rates = np.sort(np.array(rates))
-    print(f'{n:>2} episodes: median success {np.median(rates):.0%}, '
-          f'worst {rates[0]:.0%}, over ten datasets')
+    for _ in range(200):
+        seen = np.isin(np.arange(mdp_ice.num_states),
+                       demonstrations(ice, pi_ice, n)[0])
+        # the greedy clone: the expert's action where it has data; elsewhere
+        # its row is untouched and uniform, and the tie goes to action 0
+        tab = np.where(seen, pi_ice, 0)
+        rates.append(visitation(mdp_ice, one_hot[tab])[-1][goal].sum())
+    failed = np.mean(np.array(rates) < expert_ice / 2)
+    print(f'{n:>2} episodes on slippery ice: {failed:.1%} of 200 datasets '
+          f'give a clone below half the expert ({expert_ice:.3f})')
 ```
+
+<!-- WRITER: stale paragraph. Previous cell (-2): disagreement 0.182 on training pairs = 0.182 on 100 fresh expert episodes (no coverage gap), 0.216 on the clone's own states (0.75 at every never-demonstrated cell); clones of 1, 10, 100 expert episodes are the same table and all reach the goal 0.660, so more expert data cannot help. -->
 
 With three or ten demonstration episodes, all ten datasets give clones within a few percentage points of the expert, although the clone `bc` of the three episodes in `demo_s` shows that such a dataset can also miss a state that matters. A clone trained on one episode may never reach the goal. More demonstrations reduce the probability of such coverage gaps. The loss caused by an encountered gap, however, can still grow with the task horizon.
 
@@ -274,21 +329,24 @@ The two bounds differ by a factor of order $T$ because they measure the same err
 
 ```{.python .input #imitation-the-proposition}
 %%tab pytorch, jax
-eps, T_max = 0.05, 10
-rng = np.random.default_rng(3)
-wrong = rng.random((20000, T_max)) < eps
+eps, T_max = 0.01, 64
 T = np.arange(1, T_max + 1)
-gap_bc = T - np.cumprod(~wrong, axis=1).cumsum(axis=1).mean(axis=0)
-gap_rec = T - (~wrong).cumsum(axis=1).mean(axis=0)
-d2l.plot([T] * 4, [gap_bc, eps * T ** 2 / 2, gap_rec, eps * T],
+# probability of earning the reward of step t: the cloned imitator only if
+# it has agreed at every step up to t, the recovering one if it agrees at t
+earn_bc = np.cumprod(np.full(T_max, 1 - eps))
+earn_rec = np.full(T_max, 1 - eps)
+gap_bc, gap_rec = T - earn_bc.cumsum(), T - earn_rec.cumsum()
+d2l.plot([T] * 3, [gap_bc, eps * T * (T + 1) / 2, gap_rec],
          xlabel='horizon T', ylabel='return lost to the expert',
-         legend=['cloned', '$\\varepsilon T^2/2$', 'recovering',
-                 '$\\varepsilon T$'],
+         legend=['cloned', '$\\varepsilon T(T+1)/2$',
+                 'recovering ($=\\varepsilon T$)'],
          xscale='log', yscale='log', figsize=(5, 3.5))
 print(f'lost return at T={T_max}: cloned {gap_bc[-1]:.2f} '
-      f'(eps T^2/2 = {eps * T_max ** 2 / 2:.2f}), '
+      f'(eps T(T+1)/2 = {eps * T_max * (T_max + 1) / 2:.2f}), '
       f'recovering {gap_rec[-1]:.2f} (eps T = {eps * T_max:.2f})')
 ```
+
+<!-- WRITER: stale paragraph. The chain is now exact (no sampling), eps = 0.01, T = 1..64, reference eps T(T+1)/2; at T = 64 cloned 17.03 vs 20.80, recovering 0.64 = eps T; ratio about 27. Figure panel (b) is to be dropped (M5). -->
 
 On logarithmic axes, the two measurements follow lines with different slopes: the cloned imitator tracks the quadratic reference and the recovering imitator tracks the linear reference. Their gaps differ by a factor of about five at $T = 10$. Panel (b) of :numref:`fig_rl_compounding_error` runs the same simulation at $\varepsilon = 0.01$ out to $T = 64$, where the cloned imitator loses more than 25 times as much return as the recovering one.
 
@@ -302,23 +360,28 @@ The classifier satisfies its training objective, so the failure need not arise f
 
 ```{.python .input #imitation-why-this-is-not-a-defect-of-the-fit}
 %%tab pytorch, jax
-pi_clone = np.array([bc.act_greedy(s) for s in range(16)])
-states = np.arange(16)
-P_exp, P_clo = mdp.P[states, pi_star], mdp.P[states, pi_clone]
-d_exp = d_clo = np.eye(16)[0]
-occ_exp, occ_clo = np.zeros(16), np.zeros(16)
-for t in range(1, 21):
-    d_exp, d_clo = d_exp @ P_exp, d_clo @ P_clo
-    occ_exp, occ_clo = occ_exp + d_exp, occ_clo + d_clo
-    if t in (3, 5, 10, 20):
-        print(f'after {t:>2} steps: total variation '
-              f'{0.5 * np.abs(d_exp - d_clo).sum():.3f}')
-print(f'mass in the hole at s=12 after 20 steps: '
-      f'expert {d_exp[12]:.3f}, clone {d_clo[12]:.3f}')
-d2l.show_grid(env.unwrapped.desc, np.stack([occ_exp, occ_clo]) / 20,
-              np.stack([pi_star, pi_clone]),
-              titles=['expert occupancy', 'clone occupancy'])
+path = np.isin(np.arange(mdp.num_states), demo_s)    # the expert's cells
+off_path = ~path & ~(goal | holes)
+d_T = visitation(mdp, pi_bc, absorbing=off_path)[-1]
+left = d_T[off_path].sum()
+stay_goal = d_T[goal].sum()
+clone_goal = visitation(mdp, pi_bc)[-1][goal].sum()
+print(f'the clone leaves the expert path in {left:.3f} of its episodes, '
+      f'entering cells {np.flatnonzero(d_T * off_path)}')
+print(f'it reaches the goal in {stay_goal / (1 - left):.3f} of the episodes '
+      f'that stay on the path, {(clone_goal - stay_goal) / left:.3f} of '
+      f'those that leave it')
+
+def entry(pi):
+    """P(pi enters s within the time limit), for every state s."""
+    return np.array([visitation(mdp, pi, absorbing=[s])[-1][s]
+                     for s in range(mdp.num_states)])
+
+d2l.show_grid(env.unwrapped.desc, entry(pi_bc) - entry(expert),
+              diverging=True, titles=['clone minus expert: P(enter cell)'])
 ```
+
+<!-- WRITER: stale paragraph. The clone leaves the six-cell path in 0.172 of its episodes, always into cell 1 or 10 and only through its own wrong actions (the lake is deterministic); it reaches the goal in 0.715 of the episodes that stay on the path and 0.394 of those that leave. The map shows P(enter cell), clone minus expert. -->
 
 The distributions are identical for the first three steps because the clone agrees with the expert on all states reached that early. They then diverge as slippery transitions reach states absent from the demonstrations. By step 20, the clone assigns 22 percent probability to the hole at state 12, whereas the expert assigns none. The occupancy maps localize the difference near state 13, where the clone chooses the wrong action. Thus zero error on demonstrated states does not ensure small error on the distribution induced by the learned policy.
 
@@ -331,30 +394,41 @@ The linear bound applies when the error is controlled under the learner's state 
 
 ```{.python .input #imitation-dagger-collect-from-the-learner-relabel-with-the-expert}
 %%tab pytorch, jax
-def relabel(ac, num_episodes):
-    """Roll the learner; label its states with the expert's action."""
+def relabel(env, expert, learner, num_episodes, rng):
+    """Roll the learner, sampling its actions; label its states with the
+    expert's actions."""
     visited = []
     for _ in range(num_episodes):
         s, done = env.reset()[0], False
         while not done:
             visited.append(s)
-            s, reward, terminated, truncated, _ = env.step(ac.act_greedy(s))
+            s, _, terminated, truncated, _ = env.step(learner.act(s, rng))
             done = terminated or truncated
     visited = np.array(visited)
-    return visited, pi_star[visited]
+    return visited, expert[visited]
 
-env.reset(seed=4)
-agg_s, agg_a = demo_s, demo_a
-for k in range(4):
-    dag, _ = clone(agg_s, agg_a)
-    tab = np.array([dag.act_greedy(s) for s in range(16)])
-    rate = d2l.evaluate(env, lambda s, rng: int(tab[s]), num_episodes=1000)
-    print(f'round {k}: trained on {agg_s.size:>3} pairs, '
-          f'success rate {rate:.1%}')
-    new_s, new_a = relabel(dag, 3)
-    agg_s, agg_a = (np.concatenate([agg_s, new_s]),
-                    np.concatenate([agg_a, new_a]))
+def dagger(seed, num_rounds=4, num_episodes=10):
+    """Yield (labels, distinct states, success) for behavior cloning and
+    each DAgger round after it."""
+    rng = np.random.default_rng(seed)
+    agg_s, agg_a = demo_s, demo_a
+    for k in range(num_rounds + 1):
+        if k > 0:
+            new_s, new_a = relabel(env, pi_star, learner, num_episodes, rng)
+            agg_s = np.concatenate([agg_s, new_s])
+            agg_a = np.concatenate([agg_a, new_a])
+        learner = clone(mdp, agg_s, agg_a)
+        d_T = visitation(mdp, policy_table(mdp, learner))[-1]
+        yield agg_s.size, np.unique(agg_s).size, d_T[goal].sum()
+
+runs = d2l.run_seeds(dagger, num_seeds=10)   # (seed, round, quantity)
+for k, (n, m, rate) in enumerate(np.median(runs, axis=0)):
+    print(f'round {k}: {n:>3.0f} labels at {m:>2.0f} states, success '
+          f'{rate:.3f} (seeds: {runs[:, k, 2].min():.3f} to '
+          f'{runs[:, k, 2].max():.3f}; medians over 10 seeds)')
 ```
+
+<!-- WRITER: stale paragraph. DAgger medians over 10 seeds; BC at any budget stays at 0.660 (cell -2); DAgger rises to 0.735, the value of the same eps learner labeled at every cell. Not monotone: labeling state 1 alone gives 0.649 (see report). -->
 
 Round 0 is behavior cloning on the original 96 pairs. After one DAgger round, the learned policy matches the expert in this experiment. The model, loss, and optimizer are unchanged; the improvement comes from collecting labels on the learner's visited states. In particular, the new data include state 13, where the original policy often failed and which the three demonstration episodes happened to miss. In this example, these learner-state labels correct an error that additional trajectories from the expert distribution may not cover.
 

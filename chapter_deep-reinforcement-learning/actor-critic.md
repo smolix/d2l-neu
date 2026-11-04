@@ -32,7 +32,7 @@ We retain the CartPole environment, discount $0.99$, and one-hidden-layer `Actor
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-2}
 %%tab pytorch, jax
-gamma, num_updates, batch_episodes = 0.99, 100, 8
+gamma, num_updates, batch_episodes = 0.99, 150, 8
 num_seeds, critic_steps, grad_clip = 3, 20, 0.5
 if tab.selected('pytorch'):
     def cartpole_agent(seed):
@@ -124,11 +124,11 @@ We first modify `d2l.policy_step` to cap the actor's gradient norm at the common
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab pytorch
-def policy_step_clip(ac, batch, w, clip=grad_clip):
+def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap."""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
-    loss = -(torch.as_tensor(w) * ac.log_prob(obs, act)).mean()
+    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
+    loss = -(torch.as_tensor(weight) * ac.log_prob(obs, act)).mean()
     ac.opt_pi.zero_grad()
     loss.backward()
     gnorm = nn.utils.clip_grad_norm_(ac.policy.parameters(), clip)
@@ -138,15 +138,14 @@ def policy_step_clip(ac, batch, w, clip=grad_clip):
 
 ```{.python .input #actor-critic-a2c-by-name-1}
 %%tab jax
-def policy_step_clip(ac, batch, w, clip=grad_clip):
+def policy_step_clip(ac, obs, act, weight, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap. `_pad` and `_actor_pass`,
-    defined with the critic's compilation story in the next cell, are
-    resolved at the first call."""
-    size = 1 << max(6, (len(w) - 1).bit_length())
-    gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(batch.obs, size),
-                        _pad(batch.act, size), _pad(w, size),
-                        jnp.float32(len(w)), jnp.float32(clip))
+    defined in the next cell, are resolved at the first call."""
+    size = 1 << max(6, (len(weight) - 1).bit_length())
+    gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(obs, size),
+                        _pad(act, size), _pad(weight, size),
+                        jnp.float32(len(weight)), jnp.float32(clip))
     return float(gnorm)
 ```
 
@@ -215,7 +214,7 @@ def train_reinforce(seed, ac, num_updates=num_updates):
         G = (batch.reward_to_go(gamma)
              + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
-        gnorm = policy_step_clip(ac, batch, w)
+        gnorm = policy_step_clip(ac, batch.obs, batch.act, w)
         fit_value(ac, batch.obs, G)
         yield float(batch.episode_returns().mean()), gnorm
 ```
@@ -228,6 +227,8 @@ than fixed-target regression. :numref:`sec_dqn` will instead freeze a separate
 target network when learning off-policy. The actor uses the TD error from
 :eqref:`eq_td_error_v`, normalized within the batch, as its weight.
 
+<!-- WRITER: train_ac now weights the actor step by the TD error itself, not normalized (why: $C/reports/exp-ch15-ac.md item 1b); num_updates is 150. -->
+
 ```{.python .input #actor-critic-a2c-by-name-5}
 %%tab pytorch, jax
 def train_ac(seed, ac, num_updates=num_updates):
@@ -239,7 +240,7 @@ def train_ac(seed, ac, num_updates=num_updates):
         for _ in range(critic_steps):   # fresh target, one pass, repeat
             fit_value(ac, batch.obs, batch.td_target(ac.value_np, gamma))
         delta = batch.td_target(ac.value_np, gamma) - ac.value_np(batch.obs)
-        gnorm = policy_step_clip(ac, batch, d2l.normalize(delta))
+        gnorm = policy_step_clip(ac, batch.obs, batch.act, delta)   # not normalized
         yield float(batch.episode_returns().mean()), gnorm
 ```
 
@@ -283,6 +284,8 @@ for name, r in runs.items():
           f'{[longest_streak(row == 500) for row in r[:, :, 0]]}')
 ```
 
+<!-- WRITER: 150 updates and unnormalized TD errors; streak and reach numbers over 32-40 seeds in $C/reports/exp-ch15-ac.md items 1-2. -->
+
 Both methods reach the maximum batch return, and on most seeds the bootstrapped runs remain there for longer consecutive intervals. The streak length is only a visualization of these runs: it depends on policy quality, batch size, environment randomness, and estimator variance, so it is not a standard stability metric.
 
 The difference is consistent with the estimators' variance. A Monte Carlo weight contains the random outcomes of the entire remaining trajectory, so even a good policy can produce a lower-return update batch. A one-step temporal-difference weight replaces that tail with a critic estimate. The critic introduces bias early in training but reduces the variance that causes later fluctuations.
@@ -296,6 +299,8 @@ for name, r in runs.items():
     print(f'{name:>20}: median pre-clip gradient norm {np.median(g):5.2f}, '
           f'clip binds on {(g > grad_clip).mean():4.0%} of updates')
 ```
+
+<!-- WRITER: the actor-critic weight is no longer normalized; gradient-norm numbers and the changed premise in $C/reports/exp-ch15-ac.md item 2d. -->
 
 In these runs, actor--critic gradients are roughly an order of magnitude larger. The norm clip activates on about one third of actor--critic updates and on none of the Monte Carlo updates. The conditional zero-mean identity of :numref:`sec_baselines` helps explain this difference: state-dependent variance contributes nothing to the expected policy gradient, and the Monte Carlo weight contains more of it, whereas the temporal-difference error is more strongly action-dependent. Gradient norm alone does not measure signal quality, but the result shows that the two estimators can produce different update scales at the same learning rate. :numref:`sec_ppo` develops methods for controlling such policy updates.
 
@@ -317,15 +322,18 @@ for _ in range(num_updates):
         fit_value(ac, b.obs, b.td_target(ac.value_np, gamma))
     V = ac.value_np(b.obs)
     delta = b.td_target(ac.value_np, gamma) - V
-    A_mc = b.reward_to_go(gamma) - V
+    A_mc = (b.reward_to_go(gamma)   # G of train_reinforce, minus V
+            + b.truncation_bootstrap(gamma, ac.value_np) - V)
     trace.append((np.corrcoef(delta, A_mc)[0, 1], delta.var(), A_mc.var()))
-    policy_step_clip(ac, b, d2l.normalize(delta))
+    policy_step_clip(ac, b.obs, b.act, delta)
 trace = np.array(trace)
 print(f'corr(TD error, MC advantage): mean {trace[:10, 0].mean():.2f} over '
       f'the first ten updates, {trace[-50:, 0].mean():.2f} over the last 50')
 d2l.plot_curves({'corr(TD error, MC advantage)': trace[:, 0]},
                 xlabel='update', ylabel='correlation', smooth=10)
 ```
+
+<!-- WRITER: correlation with the bootstrapped A_mc: ~0.25 early, ~0.15-0.2 late (does not approach zero); see $C/reports/exp-ch15-ac.md item 3. -->
 
 When episodes last a few dozen steps, the two weights have correlation near $0.3$; after episodes extend to hundreds of steps, the measured correlation approaches zero. Expanding :eqref:`eq_td_error_v` gives $\hat{G}_t-\hat{V}(s_t)=\delta_t+\gamma(\hat{G}_{t+1}-\hat{V}(s_{t+1}))$. The Monte Carlo advantage therefore contains the one-step temporal-difference error plus the discounted remainder of the trajectory. As the horizon grows, this additional tail contributes increasing variance.
 
@@ -338,6 +346,8 @@ print(f'median variance, MC advantage over TD error: '
 d2l.plot_curves({'TD error': trace[:, 1], 'MC advantage': trace[:, 2]},
                 xlabel='update', ylabel='variance of the weight', smooth=10)
 ```
+
+<!-- WRITER: A_mc now bootstraps at the 500-step cut (as train_reinforce); the old "several hundred" and ">100x" were the truncation artefact; new numbers in $C/reports/exp-ch15-ac.md item 3. -->
 
 As episodes approach 500 steps, the variance of the Monte Carlo weight grows from tens to several hundred squared units. The temporal-difference error depends on one reward and one transition, so its variance remains much smaller and decreases further as the critic improves. The median variance ratio exceeds one hundred. Averaging eight trajectories per update reduces the Monte Carlo variance enough for REINFORCE to train, but does not remove its dependence on the horizon.
 
@@ -425,7 +435,8 @@ visible while keeping the sweep over five values and five seeds manageable.
 lams = [0.0, 0.5, 0.9, 0.95, 1.0]
 
 def train_gae(seed, lam, num_updates=50, batch_episodes=4):
-    """train_ac with the dial exposed; lam=0 is train_ac line for line."""
+    """train_ac with the dial exposed. The weights are normalized: near
+    lam=1 they have the Monte Carlo scale, and every lam steps alike."""
     rng, env = np.random.default_rng(seed), gym.make('CartPole-v1')
     ac = cartpole_agent(seed)
     env.reset(seed=seed)
@@ -435,7 +446,7 @@ def train_gae(seed, lam, num_updates=50, batch_episodes=4):
             fit_value(ac, batch.obs, batch.gae(ac.value_np, gamma, lam)
                       + ac.value_np(batch.obs))
         A = batch.gae(ac.value_np, gamma, lam)
-        policy_step_clip(ac, batch, d2l.normalize(A))
+        policy_step_clip(ac, batch.obs, batch.act, d2l.normalize(A))
         yield float(batch.episode_returns().mean())
 
 sweep = {lam: d2l.run_seeds(train_gae, 5, lam=lam) for lam in lams}
@@ -468,8 +479,8 @@ for _ in range(40):   # a mid-training freeze: the critic is still wrong
     b = d2l.rollout(env, frozen.act, batch_episodes, rng)
     for _ in range(critic_steps):
         fit_value(frozen, b.obs, b.td_target(frozen.value_np, gamma))
-    policy_step_clip(frozen, b, d2l.normalize(
-        b.td_target(frozen.value_np, gamma) - frozen.value_np(b.obs)))
+    policy_step_clip(frozen, b.obs, b.act, b.td_target(
+        frozen.value_np, gamma) - frozen.value_np(b.obs))   # as train_ac
 ```
 
 ```{.python .input #actor-critic-measuring-the-dial-4}
@@ -524,6 +535,8 @@ for name in runs:
     score = d2l.evaluate(env, agents[name][0].act_greedy, num_episodes=100)
     print(f'{name:>20}: greedy mean return over 100 episodes: {score:.0f}')
 ```
+
+<!-- WRITER: greedy scores over 32 seeds per framework, see $C/reports/exp-ch15-ac.md item 2c. -->
 
 Both agents finish at 499 or 500, so this experiment does not rank their
 final policies. It instead compares estimator variance, gradient norms,

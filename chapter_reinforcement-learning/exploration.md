@@ -33,9 +33,9 @@ one of which has the largest success probability:
 %%tab pytorch, jax
 arms = np.array([0.50, 0.42, 0.90, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50, 0.45])
 
-def bandit_run(rule, num_pulls, seed):
-    """One state, one step: pull an arm, log the shortfall, update tallies."""
-    rng = np.random.default_rng(seed)
+def bandit_run(arms, rule, num_pulls, rng):
+    """One state, one step: pull an arm, log the shortfall, update tallies.
+    Returns the cumulative regret after each pull."""
     wins, count = np.zeros(len(arms)), np.zeros(len(arms))
     gap = np.empty(num_pulls)
     for t in range(num_pulls):
@@ -69,14 +69,24 @@ def eps_rule(schedule):
     return lambda wins, count, t, rng: d2l.epsilon_greedy(
         wins / np.maximum(count, 1), schedule(t), rng)
 
+def regret_runs(arms, rule, stream, num_runs=20, num_pulls=2000):
+    """Regret curves of `num_runs` independent runs, shape [run, pull]."""
+    return np.array([bandit_run(arms, rule, num_pulls,
+                                np.random.default_rng([2026, stream, s]))
+                     for s in range(num_runs)])
+
+def report(name, r):
+    q25, q50, q75 = np.percentile(r[:, -1], [25, 50, 75])
+    print(f'{name:>16}: regret after {r.shape[1]} pulls: median {q50:3.0f}'
+          f' (quartiles {q25:.0f} to {q75:.0f})')
+
 rules = {'greedy': eps_rule(lambda t: 0.0),
          'epsilon = 0.1': eps_rule(lambda t: 0.1),
-         'annealed': eps_rule(lambda t: max(0.02, 1 / np.sqrt(t + 1)))}
-regret = {name: np.array([bandit_run(rule, 2000, [2026, i, s])
-                          for s in range(20)])
+         'epsilon = 20/t': eps_rule(lambda t: min(1.0, 20 / (t + 1)))}
+regret = {name: regret_runs(arms, rule, i)
           for i, (name, rule) in enumerate(rules.items())}
 for name, r in regret.items():
-    print(f'{name:>13}: mean regret after 2000 pulls {r[:, -1].mean():6.1f}')
+    report(name, r)
 ```
 
 The greedy rule is sensitive to its first observations. It incurs little subsequent regret if it identifies the best arm early, but it can remain committed to a suboptimal arm; its mean regret is $824$. With fixed $\epsilon = 0.1$, the best arm is usually identified quickly, but uniform exploration continues throughout the run. For these arms, exploration alone costs approximately $0.04$ regret per pull, and the total after $2000$ pulls is $117$. Annealing $\epsilon$ reduces exploration as the estimates improve and lowers the total regret to $69$.
@@ -95,22 +105,38 @@ The bonus decreases with the number of observations $n(a)$ and increases slowly 
 
 ```{.python .input #qlearning-optimism-ucb-and-thompson-sampling}
 %%tab pytorch, jax
-kappa = 0.5
-
-def ucb(wins, count, t, rng):
-    if (count == 0).any():          # play each arm once before pricing any
-        return int(np.argmax(count == 0))
-    return int(np.argmax(wins / count + kappa * np.sqrt(np.log(t) / count)))
+def ucb(kappa):
+    """The UCB rule with coefficient kappa: each arm once, then the largest
+    index mean + kappa * sqrt(log t / n)."""
+    def rule(wins, count, t, rng):
+        if (count == 0).any():          # play each arm once before pricing any
+            return int(np.argmax(count == 0))
+        bonus = kappa * np.sqrt(np.log(t) / count)
+        return int(np.argmax(wins / count + bonus))
+    return rule
 
 def thompson(wins, count, t, rng):
+    """Draw each arm's mean from its Beta posterior; play the largest draw."""
     return int(rng.beta(1 + wins, 1 + count - wins).argmax())
 
-for i, (name, rule) in enumerate([('UCB', ucb), ('Thompson', thompson)], 3):
-    regret[name] = np.array([bandit_run(rule, 2000, [2026, i, s])
-                             for s in range(20)])
-    print(f'{name:>13}: mean regret after 2000 pulls '
-          f'{regret[name][:, -1].mean():6.1f}')
-d2l.plot_curves(regret, xlabel='pulls', ylabel='cumulative regret')
+for i, (name, rule) in enumerate([('UCB, kappa = 0.5', ucb(0.5)),
+                                  ('Thompson', thompson)], 3):
+    regret[name] = regret_runs(arms, rule, i)
+    report(name, regret[name])
+pulls = np.unique(np.geomspace(1, 2000, 100).astype(int))  # even on a log axis
+d2l.plot_curves({name: r[:, pulls - 1] for name, r in regret.items()},
+                xlabel='pulls', ylabel='cumulative regret', x=pulls,
+                xscale='log', yscale='log', band='iqr')
+```
+
+<!-- WRITER: the plot shows the median over 20 runs with the interquartile band; the kappa sweep below shows what the coefficient does. -->
+
+```{.python .input #exploration-optimism-ucb-and-thompson-sampling-1}
+%%tab pytorch, jax
+for j, kappa in enumerate([0.15, 0.5, np.sqrt(2)]):
+    r = regret_runs(arms, ucb(kappa), 10 + j, num_runs=40)[:, -1]
+    print(f'kappa = {kappa:.2f}: regret after 2000 pulls over 40 runs: median '
+          f'{np.median(r):3.0f}, min {r.min():3.0f}, max {r.max():3.0f}')
 ```
 
 Both methods have lower regret than the $\epsilon$-greedy variants in this experiment. The curvature on the logarithmic plot is consistent with logarithmic regret, but $2000$ pulls cannot verify an asymptotic rate. The coefficient also matters: $\kappa=0.5$ was selected for these arms; $\kappa=\sqrt{2}$ gives regret near $200$, while $\kappa=0.15$ sometimes commits to a suboptimal arm and in one of twenty runs exceeds $900$. At $\kappa=0.5$, total regret ranges from $21$ to $53$ across seeds. The relative performance of UCB and Thompson sampling is therefore specific to this experiment.
@@ -121,11 +147,125 @@ Both methods have lower regret than the $\epsilon$-greedy variants in this exper
 
 Bandit actions are immediately available, whereas an uncertain state-action pair in an MDP may be reachable only through a particular sequence of actions. Under independent random exploration, the probability of executing a required sequence of $k$ actions decreases geometrically with $k$. Difficult MDPs therefore require exploration over temporally extended behavior.
 
+<!-- WRITER: the chain below makes the geometric decay exact: n states in a row, action 1 moves on, action 0 returns to the start, only the end pays. -->
+
+```{.python .input #exploration-exploration-in-mdps-1}
+%%tab pytorch, jax
+def chain(n, gamma):
+    """n states in a row: action 1 moves one state on, action 0 returns to
+    the start; entering the last state pays 1 and ends the episode."""
+    P, r = np.zeros((n, 2, n)), np.zeros((n, 2))
+    P[:, 0, 0] = 1
+    P[np.arange(n - 1), 1, np.arange(1, n)] = 1
+    P[n - 1] = 0
+    P[n - 1, :, n - 1] = 1              # the last state is absorbing
+    r[n - 2, 1] = 1
+    return d2l.TabularMDP(P, r, gamma)
+
+def success_random(mdp, horizon):
+    """Exact probability that uniformly random actions, started in state 0,
+    reach the last state within `horizon` steps."""
+    P_pi, d = mdp.P.mean(axis=1), np.eye(mdp.num_states)[0]
+    for _ in range(horizon):
+        d = d @ P_pi
+    return d[-1]
+```
+
+<!-- WRITER: q_learning needs reset and step; a few lines give a TabularMDP that interface, so the agent of the previous section runs on the chain unchanged. Optimism: every entry starts at 1, an upper bound on every return, and the agent acts greedily (epsilon = 0). -->
+
+```{.python .input #exploration-exploration-in-mdps-2}
+%%tab pytorch, jax
+class ModelEnv:
+    """Gymnasium's reset/step on a TabularMDP: start in state 0, draw s'
+    from P[s, a], end in a terminal state or after max_steps steps."""
+    def __init__(self, mdp, terminal, max_steps):
+        self.mdp, self.terminal, self.max_steps = mdp, terminal, max_steps
+        self.rng = np.random.default_rng(0)
+
+    def reset(self, seed=None):
+        if seed is not None:
+            self.rng = np.random.default_rng(seed)
+        self.s, self.t = 0, 0
+        return self.s, {}
+
+    def step(self, a):
+        s, self.t = self.s, self.t + 1
+        self.s = int(self.rng.choice(self.mdp.num_states, p=self.mdp.P[s, a]))
+        return (self.s, self.mdp.r[s, a], self.s in self.terminal,
+                self.t >= self.max_steps, {})
+
+for n in (4, 8, 12, 16, 20):
+    mdp = chain(n, gamma=0.95)
+    env = ModelEnv(mdp, terminal={n - 1}, max_steps=2 * n)
+    first = []
+    for seed in range(20):
+        Q = np.ones((n, 2))             # optimistic: 1 bounds every return
+        for k, ret in enumerate(d2l.q_learning(
+                seed, Q, np.zeros_like(Q), env, 100, mdp.gamma,
+                epsilon=lambda episode: 0.0)):
+            if ret > 0:
+                break
+        first.append(k + 1)
+    print(f'n = {n:2d}: episodes to the first success: random '
+          f'{1 / success_random(mdp, 2 * n):5.0f} (mean), optimistic '
+          f'{np.median(first):2.0f} (median, max {max(first)})')
+```
+
 One approach assigns bonuses to uncertain state-action pairs and propagates them through value backups, so the policy selects action sequences leading toward uncertain states. With function approximation, explicit counts are unavailable; alternatives include density-model pseudo-counts, curiosity based on prediction error, random network distillation, state archives, and ensembles for approximate posterior sampling :cite:`Burda.Edwards.Storkey.ea.2019`. FrozenLake does not expose this difficulty. With only 44 nonterminal state--action pairs, the exploration schedules used here provide broad coverage within the training budget.
+
+<!-- WRITER: the coverage comparison that replaces panel (c) of fig_rl_exploration: Q-learning on the calm lake (alpha = 0.9, 256 episodes, as in sec_qlearning) under three schedules; coverage counts the 44 pairs of the 11 states one acts from. -->
+
+```{.python .input #exploration-exploration-in-mdps-3}
+%%tab pytorch, jax
+calm = gym.make('FrozenLake-v1', is_slippery=False)
+live = np.array([c not in b'HG' for c in calm.unwrapped.desc.flatten()])
+schedules = {'greedy': lambda k: 0.0,
+             'epsilon = 1': lambda k: 1.0,
+             'linear, 1 to 0.05': d2l.linear_schedule(1.0, 0.05, 128)}
+coverage = {}
+for name, epsilon in schedules.items():
+    tried, won, solved = [], [], []
+    for seed in range(20):
+        Q, visits = np.zeros((16, 4)), np.zeros((16, 4))
+        rets = []
+        for ret in d2l.q_learning(seed, Q, visits, calm, 256, 0.95,
+                                  alpha=lambda n: 0.9, epsilon=epsilon):
+            rets.append(ret)
+            tried.append((visits[live] > 0).mean())
+        won.append(np.mean(rets))
+        solved.append(d2l.evaluate(calm, lambda s, rng: int(Q[s].argmax()), 1))
+    coverage[name] = np.array(tried).reshape(20, 256)
+    print(f'{name:>17}: pairs tried {np.median(coverage[name][:, -1]):.0%}, '
+          f'episodes won {np.median(won):.0%} (medians); greedy policy '
+          f'solves {np.sum(solved):.0f}/20')
+d2l.plot_curves(coverage, xlabel='episode', ylabel='fraction of pairs tried',
+                band='iqr')
+```
 
 ## Exploration on the Verifier Task
 
 [Placeholder for the writers (14.4-M7): on `VerifierTask` of :numref:`sec_mdp`, sample groups of $K$ responses at the reference policy and count the groups whose rewards are identical (all wrong on the two prompts without a matching candidate, all right once a prompt is solved); such a group gives a zero centered update (:numref:`sec_baselines` shows the algebra; here only the count). The policy's own sampling diversity is then the only exploration; one sentence on temperature and pass@$k$.]
+
+<!-- WRITER: the cell samples 1,000 groups per prompt; "solved" is a hand-built policy (preferences raised by 5 on the correct answers), not a trained one. -->
+
+```{.python .input #exploration-exploration-on-the-verifier-task}
+%%tab pytorch, jax
+task = d2l.VerifierTask()
+R = np.array([[task.verify(x, y) for y in range(len(task.resp))]
+              for x in range(len(task.prompts))])
+rng = np.random.default_rng(0)
+for name, pi in [('reference', task.pi_ref),
+                 ('solved', task.policy(task.theta_ref + 5 * R))]:
+    p = (pi * R).sum(axis=1)            # chance that one response is right
+    for K in (2, 8, 32):
+        same = []                       # per prompt: all K rewards equal
+        for x in range(len(task.prompts)):
+            ys = rng.choice(len(task.resp), (1000, K), p=pi[x])
+            same.append((R[x, ys] == R[x, ys[:, :1]]).all(axis=1).mean())
+        print(f'{name:>9}, K = {K:2d}: identical {np.round(same, 2)}, '
+              f'mean {np.mean(same):.2f}, '
+              f'exact {np.mean((1 - p) ** K + p ** K):.2f}')
+```
 
 ## Summary
 

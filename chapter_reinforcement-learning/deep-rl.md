@@ -24,6 +24,7 @@ import gymnasium as gym
 import jax
 from jax import numpy as jnp
 import numpy as np
+import optax
 ```
 
 ## Continuous States and Function Approximation
@@ -123,6 +124,8 @@ def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
 
 The learned baseline of :numref:`sec_baselines` must also use function approximation. Equation :eqref:`eq_value_baseline` moved one table entry toward an observed reward-to-go; for a network, the corresponding update minimizes mean squared error against the observed targets. The `num_steps` argument sets the number of critic regression steps per batch. This section uses $1$ step, while :numref:`sec_actorcritic` varies it.
 
+<!-- WRITER: train_reinforce now calls fit_value with value_steps=40 (one step per batch underfits V-hat: explained variance 0.4-0.8 against 0.99; see reports/exp-deeprl.md). Rewrite the sentence above. -->
+
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-2}
 %%tab pytorch
 def fit_value(ac, obs, target, num_steps=1):  #@save
@@ -178,8 +181,8 @@ We normalize the advantages because the tasks considered below have substantiall
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-3}
 %%tab pytorch, jax
-def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
-                    batch_episodes=8):
+def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=60,
+                    batch_episodes=8, value_steps=40):
     """The learned-baseline REINFORCE of :numref:`sec_baselines`, unchanged;
     what varies is the policy object handed in by `make_agent`."""
     rng, env = np.random.default_rng(seed), gym.make(env_name)
@@ -191,7 +194,7 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
              + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
         L = d2l.policy_step(ac, batch.obs, batch.act, w)
-        fit_value(ac, batch.obs, G)
+        fit_value(ac, batch.obs, G, num_steps=value_steps)  # fit V-hat well
         yield float(batch.episode_returns().mean()), L
 ```
 
@@ -326,17 +329,28 @@ The environment clips sampled torque to $[-2, 2]$, so `act` can return the unbou
 
 ```{.python .input #deep-rl-the-gaussian-policy-2}
 %%tab pytorch, jax
+sigma = 0.5
 if tab.selected('pytorch'):
     torch.manual_seed(1)
     gp = GaussianPolicy(3, 1)
+    gp.policy.log_std.data.fill_(np.log(sigma))
 if tab.selected('jax'):
     gp = GaussianPolicy(3, 1, rngs=nnx.Rngs(1))
+    gp.policy.log_std[...] = jnp.full(1, np.log(sigma))
 rng = np.random.default_rng(1)
 obs = rng.standard_normal((5, 3)).astype(np.float32)
 act = rng.standard_normal((5, 1)).astype(np.float32)
-mean = np.stack([gp.act_greedy(o) for o in obs])
-hand = -0.5 * (act - mean) ** 2 - 0.5 * np.log(2 * np.pi)
-print(np.allclose(gp.log_prob_np(obs, act), hand.sum(-1), atol=1e-5))
+z = (act - np.stack([gp.act_greedy(o) for o in obs])) / sigma
+hand = -0.5 * z ** 2 - np.log(sigma) - 0.5 * np.log(2 * np.pi)
+print('density:', np.allclose(gp.log_prob_np(obs, act), hand.sum(-1), atol=1e-5))
+if tab.selected('pytorch'):
+    gp.log_prob(torch.as_tensor(obs), torch.as_tensor(act)).sum().backward()
+    g_mu, g_ls = gp.policy.mean.bias.grad.numpy(), gp.policy.log_std.grad.numpy()
+if tab.selected('jax'):
+    g = nnx.grad(lambda p: gp.log_prob(obs, act, p).sum())(gp.policy)
+    g_mu, g_ls = np.asarray(g.mean.bias[...]), np.asarray(g.log_std[...])
+print('score in mu:', np.allclose(g_mu, (z / sigma).sum(0), atol=1e-4),
+      '| score in log sigma:', np.allclose(g_ls, (z ** 2 - 1).sum(0), atol=1e-4))
 ```
 
 ### The Score Function with Continuous Actions
@@ -350,10 +364,15 @@ We train longer because the policy must discover how to swing the pendulum uprig
 if tab.selected('pytorch'):
     def pendulum_agent(seed):
         torch.manual_seed(seed)
-        return GaussianPolicy(3, 1)
+        gp = GaussianPolicy(3, 1)
+        nn.init.zeros_(gp.policy.mean.weight)     # every seed starts at mu = 0
+        nn.init.zeros_(gp.policy.mean.bias)
+        return gp
 if tab.selected('jax'):
     def pendulum_agent(seed):
-        return GaussianPolicy(3, 1, rngs=nnx.Rngs(seed))
+        gp = GaussianPolicy(3, 1, rngs=nnx.Rngs(seed))
+        gp.policy.mean.kernel[...] = 0.0   # every seed starts at mu = 0
+        return gp
 
 runs_p = d2l.run_seeds(train_reinforce, 3, make_agent=pendulum_agent,
                        env_name='Pendulum-v1', gamma=0.95, num_updates=300)
@@ -361,6 +380,8 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs_p[:, :, 0]},
                 xlabel='update', ylabel='mean return of the batch',
                 reference=-200, smooth=10)
 ```
+
+<!-- WRITER: pendulum_agent zeroes the mean layer so every seed starts at mu = 0, sigma = 1 (without it some initializations start with the mean outside the torque bounds and stall); explain in one sentence. New Pendulum numbers in reports/exp-deeprl.md. -->
 
 The initial returns lie between approximately $-1200$ and $-1600$. At their best, the runs reduce this loss by roughly one quarter to three quarters, depending on the seed and framework. No seed reaches the reference level of $-200$, which corresponds to a controller that reliably swings the pendulum upright and holds it there. Performance can also decline later because the fixed step size continues to update an already improved policy.
 
@@ -433,22 +454,29 @@ Networks change how updates generalize across states. A table update changes one
 if tab.selected('pytorch'):
     torch.manual_seed(0)
     net_probe, tab_probe = ActorCritic.mlp(4, 2), ActorCritic.tabular(16, 4)
+    for ac, lr in ((net_probe, 0.02), (tab_probe, 0.25)):  # one plain step
+        ac.opt_v = torch.optim.SGD(ac.value.parameters(), lr=lr)
 if tab.selected('jax'):
     net_probe = ActorCritic.mlp(4, 2, rngs=nnx.Rngs(0))
     tab_probe = ActorCritic.tabular(16, 4, rngs=nnx.Rngs(0))
+    for ac, lr in ((net_probe, 0.02), (tab_probe, 0.25)):  # one plain step
+        ac.opt_v = nnx.Optimizer(ac.value, optax.sgd(lr), wrt=nnx.Param)
 S = np.random.default_rng(0).uniform(-1, 1, (256, 4)).astype(np.float32)
 before = net_probe.value_np(S)
-fit_value(net_probe, S[:1], before[:1] + 1.0, num_steps=25)   # raise ONE state
+fit_value(net_probe, S[:1], before[:1] + 1.0)      # raise ONE state
 dV = net_probe.value_np(S) - before
+order = 1 + np.argsort(np.linalg.norm(S[1:] - S[0], axis=1))  # nearest first
 before_t = tab_probe.value_np(np.arange(16))
-fit_value(tab_probe, np.arange(1), before_t[:1] + 1.0, num_steps=25)
+fit_value(tab_probe, np.arange(1), before_t[:1] + 1.0)
 dV_t = tab_probe.value_np(np.arange(16)) - before_t
-print(f'network: nudged state moved {dV[0]:+.2f}; '
-      f'{(np.abs(dV[1:]) > 1e-4).sum()} of the 255 others moved too, '
-      f'|change| up to {np.abs(dV[1:]).max():.2f}')
-print(f'table:   nudged entry moved {dV_t[0]:+.2f}; '
+print(f'network: nudged state {dV[0]:+.2f}; 10 nearest probes '
+      f'{dV[order[:10]].mean():+.2f}, 10 farthest {dV[order[-10:]].mean():+.2f}; '
+      f'{(dV[1:] < 0).sum()} of 255 moved down')
+print(f'table:   nudged entry {dV_t[0]:+.2f}; '
       f'largest move among the other fifteen: {np.abs(dV_t[1:]).max():.6f}')
 ```
+
+<!-- WRITER: the probe now takes one plain SGD step (opt_v swapped for SGD) and prints the nearest/farthest split; quote only the shape (nearest move almost as much as the nudged state, farthest move the other way), not the counts. Exercise 7's "25 Adam steps" premise needs rewording. -->
 
 The network update changes the output at all 255 unobserved probe states, sometimes by as much as at the selected state. The tabular update changes only one entry. Function approximation is useful because experience at one continuous state can influence nearby or related states that may never be visited exactly. The same coupling can also reduce performance at states absent from the current batch, which contributes to nonmonotone training curves. With bootstrapped value targets, this interaction becomes an important stability issue in :numref:`sec_dqn`.
 

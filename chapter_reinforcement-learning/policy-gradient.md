@@ -82,12 +82,18 @@ print(bool(torch.allclose(check.policy.weight.grad, torch.as_tensor(hand),
 ```{.python .input #policy-gradient-the-score-function}
 %%tab jax
 rng = np.random.default_rng(0)
-theta = jnp.asarray(rng.standard_normal((16, 4)))   # a generic table
-score = jax.grad(lambda th: jax.nn.log_softmax(th[6])[2])(theta)
-hand = jnp.zeros_like(theta).at[6].set(-jax.nn.softmax(theta[6]))
-hand = hand.at[6, 2].add(1.0)
-print(bool(jnp.allclose(score, hand, atol=1e-6)))
+check = d2l.Policy.tabular(16, 4)
+check.policy.embedding[...] = jnp.asarray(rng.standard_normal((16, 4)),
+                                          jnp.float32)   # a generic table
+score = nnx.grad(lambda policy: check.log_prob(
+    jnp.array([6]), jnp.array([2]), policy).sum())(check.policy)
+probs = np.exp(check.log_prob_np(np.repeat(6, 4), np.arange(4)))
+hand = np.zeros((16, 4), dtype=np.float32)
+hand[6], hand[6, 2] = -probs, 1 - probs[2]
+print(bool(np.allclose(score.embedding[...], hand, atol=1e-6)))
 ```
+
+<!-- WRITER (14.6-M6): both tabs now differentiate the library's `Policy.log_prob` (JAX through `nnx.grad` with the module passed back in, as `policy_step` does), so the sentence "PyTorch differentiates the model's log_prob, while JAX differentiates the log-softmax" goes; no cross-framework talk is needed. -->
 
 Both implementations confirm the identity. PyTorch differentiates the model's `log_prob`, while JAX differentiates the log-softmax as a function of the parameter table. The subsequent analysis uses :eqref:`eq_softmax_score` to interpret policy updates.
 
@@ -179,6 +185,31 @@ def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):  #@save
     return theta + lr * g
 ```
 
+<!-- WRITER (14.6-M3): at the reference policy each prompt's K = 16 estimate is (c/K)(e_y* - pi(.|x)) with c ~ Binomial(16, 0.125) correct answers, so its mean is the exact nine-term gradient. The cell draws 10,000 estimates (lr = 1 returns theta + g). Over 12 rng seeds: one estimate is off by 0.66 of the gradient's length (RMS); the mean of 10,000 by 0.003-0.012 (unbiased prediction 0.007), falling roughly as 1/sqrt(M) with no floor. Groups without a success: 9-14% for 2+2 and 3*4 (exact (1 - 0.125)^16 = 0.119), and every group for 8*8 and 9*9, where no response passes the exact-match verifier: those prompts never produce a gradient (they matter in sec_rl_sequences, where a hacked verifier pays the hedge). One step at lr = 2: success 0.062 -> 0.077 for the exact gradient; sampled steps give a median of 0.077-0.078 and a range 0.062-0.113; a step never lowers success here (weights are nonnegative and only the correct response is ever rewarded) and leaves it unchanged in 1-2% of draws (both groups miss, 0.119^2 = 0.014). -->
+
+```{.python .input #policy-gradient-the-reinforce-estimator-5}
+%%tab pytorch, jax
+task = d2l.VerifierTask()
+theta0, pi0 = task.theta_ref, task.policy(task.theta_ref)
+R = np.array([[task.verify(x, y) for y in range(len(task.resp))]
+              for x in range(len(task.prompts))])
+exact = pi0 * R - pi0 * (pi0 * R).sum(axis=1, keepdims=True)  # nine terms
+rng = np.random.default_rng(0)
+U = np.stack([verifier_step(task, theta0, 16, task.verify, rng, lambda r: r,
+                            lr=1.0) - theta0 for _ in range(10_000)])
+err = lambda u: np.linalg.norm(u - exact) / np.linalg.norm(exact)
+print(f'one K=16 estimate is off by '
+      f'{np.sqrt(np.mean([err(u) ** 2 for u in U])):.2f} of the gradient (RMS)')
+print('the mean of M of them: ' + ', '.join(
+    f'M={M}: {err(U[:M].mean(axis=0)):.3f}' for M in (10, 100, 1000, 10_000)))
+print(f'groups without a success, per prompt: '
+      f'{np.round((U == 0).all(axis=-1).mean(axis=0), 2)}')
+after = [task.success(task.policy(theta0 + 2.0 * u)) for u in U]
+print(f'success {task.success(pi0):.3f}; one step with lr = 2 gives '
+      f'{task.success(task.policy(theta0 + 2.0 * exact)):.3f} (exact gradient),'
+      f' median {np.median(after):.3f} (sampled)')
+```
+
 ### REINFORCE on the Lake
 
 The `Batch` class stores transitions from several episodes in flat arrays together with their episode boundaries. It records the `terminated` flag separately from truncation, as required for bootstrapped targets (:numref:`sec_mdp`).
@@ -243,7 +274,7 @@ The implementation reuses `policy_step` from :numref:`sec_imitation`, which take
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
-def train_reinforce_tabular(ac, seed, steps, num_updates=256,
+def train_reinforce_tabular(ac, env, gamma, seed, steps, num_updates=256,
                             batch_episodes=16):
     """REINFORCE: a fresh batch from the current policy, every step of a
     trajectory weighted by that trajectory's return, one ascent step."""
@@ -262,14 +293,11 @@ Equation :eqref:`eq_reinforce` divides the summed scores by the number of trajec
 ```{.python .input #policy-gradient-the-reinforce-estimator-2}
 %%tab pytorch, jax
 agents, steps, curves = [], [], []
-for seed in range(3):
-    if tab.selected('pytorch'):
-        torch.manual_seed(seed)            # init stream; the table is zeros
-        agents.append(d2l.Policy.tabular(16, 4))
-    if tab.selected('jax'):
-        agents.append(d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(seed)))
+for seed in range(12):
+    agents.append(d2l.Policy.tabular(16, 4))   # zero table: uniform policy
     steps.append([])
-    curves.append(list(train_reinforce_tabular(agents[-1], seed, steps[-1])))
+    curves.append(list(train_reinforce_tabular(agents[-1], env, gamma, seed,
+                                               steps[-1])))
 curves, steps = np.array(curves), np.array(steps)
 d2l.plot_curves({'REINFORCE': curves}, xlabel='update',
                 ylabel='mean return of the batch', reference=gamma ** 5)
@@ -309,12 +337,16 @@ The estimator :eqref:`eq_reinforce` averages trajectories drawn from the *curren
 
 ```{.python .input #policy-gradient-on-policy-fresh-data-after-every-update}
 %%tab pytorch, jax
-hit = (curves >= 0.7).argmax(axis=1)
-to_hit = np.array([s[:k + 1].sum() for s, k in zip(steps, hit)])
-print(f'update at which the batch mean first reaches 0.7: {np.sort(hit)}')
-print(f'environment steps spent by that update:  {np.sort(to_hit)}')
-print(f'environment steps spent by the full run: {np.sort(steps.sum(axis=1))}')
+hit = (curves >= 0.7).argmax(axis=1) + 1   # batches until the mean is 0.7
+to_hit = np.array([s[:k].sum() for s, k in zip(steps, hit)])
+for name, x in [('batches until a batch mean reaches 0.7', hit),
+                ('environment steps until then', to_hit),
+                ('environment steps of the full run', steps.sum(axis=1))]:
+    print(f'{name:>38}: median {np.median(x):>6,.0f}, '
+          f'range {x.min():,} to {x.max():,}')
 ```
+
+<!-- WRITER (14.6-M5): twelve seeds, identical in both frameworks: a batch mean first reaches 0.7 (90% of gamma^5) after 25-49 batches (median 32), 3,200-6,200 environment steps (median 4,300); a run of 256 updates uses 26,000-28,400 steps ("about 27,000"); the exact J after 256 updates is 0.755-0.772 against the ceiling 0.774. Quote "25 to 50 updates", "3,000 to 6,500 steps". Same map, in steps: tabular Q-learning with alpha = 0.9 finds the perfect greedy policy in 256 episodes, under 2,000 steps (sec_qlearning, 12 seeds); replaces the 95,569 cross-map number. -->
 
 Learning required roughly $3{,}000$--$4{,}500$ environment steps, while the complete run used about $27{,}000$. Data collection continues at every on-policy update even after performance has stabilized. The median Q-learning run in :numref:`sec_qlearning` used $95{,}569$ steps on the harder slippery environment, while its deterministic comparison used 256 episodes on this map. These results are not a controlled algorithm comparison, but they illustrate why interaction should be reported in environment steps.
 
@@ -331,17 +363,21 @@ a differentiable linear solve, so automatic differentiation gives the exact $\na
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab pytorch
+probe = d2l.Policy.tabular(16, 4)
+for _ in train_reinforce_tabular(probe, env, gamma, 3, [], num_updates=16):
+    pass
+
+def J_fn(theta, P, r, gamma):
+    """J(theta) = V(s0) of the softmax policy, a differentiable solve."""
+    pi = torch.softmax(theta, -1)
+    P_pi = torch.einsum('sa,sat->st', pi, P)
+    return torch.linalg.solve(torch.eye(len(P)) - gamma * P_pi,
+                              (pi * r).sum(-1))[0]
+
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
-torch.manual_seed(3)
-probe = d2l.Policy.tabular(16, 4)
-for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
-    pass
 theta = probe.policy.weight.detach().requires_grad_(True)
-pi = torch.softmax(theta, -1)
-J = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
-                                                            pi, P),
-                       (pi * r).sum(-1))[0]
+J = J_fn(theta, P, r, gamma)
 g_exact = torch.autograd.grad(J, theta)[0].numpy()
 print(f'J(theta) after 16 updates = {J.item():.3f}, '
       f'against the ceiling gamma^5 = {gamma ** 5:.3f}')
@@ -349,70 +385,54 @@ print(f'J(theta) after 16 updates = {J.item():.3f}, '
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab jax
-mdp = d2l.TabularMDP.from_gym(env, gamma)
-P, r = jnp.asarray(mdp.P), jnp.asarray(mdp.r)
-probe = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(3))
-for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
+probe = d2l.Policy.tabular(16, 4)
+for _ in train_reinforce_tabular(probe, env, gamma, 3, [], num_updates=16):
     pass
 
-def J_fn(theta):
+def J_fn(theta, P, r, gamma):
+    """J(theta) = V(s0) of the softmax policy, a differentiable solve."""
     pi = jax.nn.softmax(theta, -1)
-    return jnp.linalg.solve(jnp.eye(16) - gamma * jnp.einsum('sa,sat->st',
-                                                             pi, P),
+    P_pi = jnp.einsum('sa,sat->st', pi, P)
+    return jnp.linalg.solve(jnp.eye(len(P)) - gamma * P_pi,
                             (pi * r).sum(-1))[0]
 
+mdp = d2l.TabularMDP.from_gym(env, gamma)
+P, r = jnp.asarray(mdp.P, jnp.float32), jnp.asarray(mdp.r, jnp.float32)
 theta = probe.policy.embedding[...]
-g_exact = np.asarray(jax.grad(J_fn)(theta))
-print(f'J(theta) after 16 updates = {float(J_fn(theta)):.3f}, '
+g_exact = np.asarray(jax.grad(J_fn)(theta, P, r, gamma))
+print(f'J(theta) after 16 updates = {float(J_fn(theta, P, r, gamma)):.3f}, '
       f'against the ceiling gamma^5 = {gamma ** 5:.3f}')
 ```
 
 Now hold $\theta$ fixed and draw the estimator :eqref:`eq_reinforce` fifty times at each batch size:
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-2}
-%%tab pytorch
-def reinforce_estimate(n, rng):
-    """One draw of eq_reinforce: n fresh trajectories at the frozen theta."""
+%%tab pytorch, jax
+def reinforce_estimate(env, probe, gamma, n, rng):
+    """One draw of eq_reinforce at the frozen tabular policy `probe`: each
+    step adds its trajectory's return times the score e_a - pi(.|s)
+    (eq_softmax_score) to row s; the sum is divided by n."""
+    S, A = 16, 4
+    pi = np.exp(probe.log_prob_np(np.repeat(np.arange(S), A),
+                                  np.tile(np.arange(A), S))).reshape(S, A)
     batch = rollout(env, probe.act, n, rng)
-    w = batch.per_step(batch.episode_returns(gamma)).astype(np.float32)
-    th = probe.policy.weight.detach().requires_grad_(True)
-    logp = torch.log_softmax(th, -1)[torch.as_tensor(batch.obs),
-                                     torch.as_tensor(batch.act)]
-    return torch.autograd.grad((torch.as_tensor(w) * logp).sum() / n,
-                               th)[0].numpy().ravel()
+    w = batch.per_step(batch.episode_returns(gamma))
+    u = np.zeros((S, A))
+    np.add.at(u, batch.obs, w[:, None] * (np.eye(A)[batch.act] - pi[batch.obs]))
+    return u.ravel() / n
 
 rng, g = np.random.default_rng(4), g_exact.ravel()
 for n in [4, 16, 64]:
-    U = np.stack([reinforce_estimate(n, rng) for _ in range(50)])
-    zero = int((np.linalg.norm(U, axis=1) == 0).sum())
-    cos = U.mean(axis=0) @ g / (np.linalg.norm(U.mean(axis=0))
-                                * np.linalg.norm(g))
-    err = np.linalg.norm(U - g, axis=1).mean() / np.linalg.norm(g)
-    print(f'n={n:>3}: zero estimates {zero:>2}/50, cos(mean, exact) = '
-          f'{cos:.2f}, single-estimate relative error = {err:.2f}')
+    U = np.stack([reinforce_estimate(env, probe, gamma, n, rng)
+                  for _ in range(50)])
+    zero = int((U == 0).all(axis=1).sum())
+    one = np.sqrt(((U - g) ** 2).sum(axis=1).mean()) / np.linalg.norm(g)
+    mean = np.linalg.norm(U.mean(axis=0) - g) / np.linalg.norm(g)
+    print(f'n={n:>2}: {zero:>2}/50 zero; one draw off by {one:.2f}, the mean '
+          f'of 50 by {mean:.2f} (if unbiased: {one / np.sqrt(50):.2f})')
 ```
 
-```{.python .input #policy-gradient-unbiased-and-how-noisy-2}
-%%tab jax
-def reinforce_estimate(n, rng):
-    """One draw of eq_reinforce: n fresh trajectories at the frozen theta."""
-    batch = rollout(env, probe.act, n, rng)
-    w = jnp.asarray(batch.per_step(batch.episode_returns(gamma)))
-    def surrogate(th):
-        logp = jax.nn.log_softmax(th, -1)[batch.obs, batch.act]
-        return (w * logp).sum() / n
-    return np.asarray(jax.grad(surrogate)(theta)).ravel()
-
-rng, g = np.random.default_rng(4), g_exact.ravel()
-for n in [4, 16, 64]:
-    U = np.stack([reinforce_estimate(n, rng) for _ in range(50)])
-    zero = int((np.linalg.norm(U, axis=1) == 0).sum())
-    cos = U.mean(axis=0) @ g / (np.linalg.norm(U.mean(axis=0))
-                                * np.linalg.norm(g))
-    err = np.linalg.norm(U - g, axis=1).mean() / np.linalg.norm(g)
-    print(f'n={n:>3}: zero estimates {zero:>2}/50, cos(mean, exact) = '
-          f'{cos:.2f}, single-estimate relative error = {err:.2f}')
-```
+<!-- WRITER (14.6-M5, 14.6-S1): one NumPy estimator for both tabs, built from the score identity verified above (as `verifier_step` is); the old per-tab autograd estimators are gone (the eager JAX gradient on varying shapes cost about 40 s). The cosine is replaced by the sharper test: relative error of the 50-draw mean against the unbiased prediction RMS/sqrt(50). At this probe over 10 rng seeds: one draw is off by 3.4-4.0 (n=4), 1.75-2.0 (n=16), 0.88-0.96 (n=64) times the gradient's length, halving with each quadrupling of n; the mean of 50 is off by 0.4-0.8 / 0.23-0.36 / 0.10-0.17, against predictions 0.48-0.57 / 0.25-0.28 / 0.12-0.14 (ratio 0.7-1.4, no floor); 0-3 of 50 n=4 draws are zero. Across 12 probe seeds (J after 16 updates 0.01-0.40) the single-draw error at n=4 is 2.5-4.6 except at the one probe still near uniform (J = 0.009, most draws zero). Quote "more than three times the gradient's length at n = 4" for this probe. J after 16 updates is 0.313 here; it varies with the seed (0.01-0.40). -->
 
 The mean of fifty estimates approaches the exact gradient as the batch size grows: its cosine with the exact gradient increases from about $0.93$ to $1.00$. This is consistent with unbiasedness, although cosine similarity alone is not a proof because it does not measure magnitude errors. Individual estimates remain noisy. At $n=4$, the typical error exceeds three and a half times the norm of the true gradient, and some batches contain no successful trajectories and therefore yield a zero estimate. The error decreases approximately as $1/\sqrt{n}$, from about $3.6$ to $1.7$ to $0.9$ as the batch size quadruples. :numref:`sec_baselines` evaluates variance-reduction methods against the same exact gradient.
 

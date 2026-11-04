@@ -195,6 +195,25 @@ def value_iteration(mdp, num_iters):  #@save
     return np.array(history)
 ```
 
+<!-- WRITER (14.2-S1): calm ice first. The paragraph, figure and cell below moved here verbatim from the end of "The Optimal Policy on Slippery Ice"; rewrite as the smallest case (closed form, wavefront, greedy = shortest path). The cell now *defines* `shortest` as the greedy policy on calm ice (the hand-typed array is gone; argmax breaks the two-way ties at states 0 and 9 towards *down*). It prints the number of cells with nonzero value after each sweep: 1, 3, 5, 7, 10, 11, then 11 (exact from sweep 6). Note: d(s) in the closed form is the shortest-path length around the holes, not the Manhattan distance `dist` of the shaping cell; they differ at state 3 (5 moves against 3). -->
+
+**Deterministic case.** Without slippery transitions, $V^*(s)=\gamma V^*(s')$ along an optimal move. Hence $V^*(s)=\gamma^{d(s)-1}$, where $d(s)$ is the shortest distance to the goal. After $k$ sweeps, value has propagated to exactly the states within $k$ moves of the goal, and this map converges in six sweeps (:numref:`fig_rl_value_wavefront`). This finite wavefront is specific to deterministic terminal rewards; the stochastic case converges geometrically. The greedy policy for the deterministic solution is exactly the shortest-path policy, as verified below.
+
+![Value iteration on deterministic FrozenLake, whose values have a closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
+:label:`fig_rl_value_wavefront`
+
+```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-4}
+%%tab pytorch, jax
+calm = d2l.TabularMDP.from_gym(
+    gym.make('FrozenLake-v1', is_slippery=False), gamma)
+history_calm = value_iteration(calm, num_iters=10)
+V_calm = history_calm[-1]
+shortest = calm.backup(V_calm).argmax(axis=1)  # ties go to the lower action
+print(f'cells with nonzero value after each sweep: '
+      f'{(history_calm > 0).sum(axis=1)}')
+print(f'V*(s0) on calm ice: {V_calm[0]:.4f};  gamma^5 = {gamma ** 5:.4f}')
+```
+
 Value iteration is the chapter's explicit model-based planning algorithm:
 it uses the transition and reward arrays directly. The model-free methods
 introduced next use sampled transitions instead. We run value iteration
@@ -207,8 +226,13 @@ history = value_iteration(mdp, num_iters=1000)
 V_star = history[-1]
 pi_star = mdp.backup(V_star).argmax(axis=1)
 print(f'V*(s0) = {V_star[0]:.4f}')
+print(f'state 14: V* = {V_star[14]:.4f};  1/3 + gamma (V*(13) + V*(14)) / 3 = '
+      f'{1 / 3 + gamma * (V_star[13] + V_star[14]) / 3:.4f}')
 d2l.show_grid(env.unwrapped.desc, V_star, pi_star)
 ```
+
+<!-- WRITER (14.2-S1): the second print is state 14 worked by hand (command *down*: the goal with probability 1/3, a slip left to 13 or a bump in place otherwise), 0.7237 on both sides; V*(13) = 0.5090. -->
+
 
 The values increase from about $0.18$ at the start to $0.72$ beside the goal. On deterministic ice, the shortest route would give the start state value $\gamma^5\approx0.774$; stochastic slips reduce that value by roughly three quarters even under the optimal policy. Several optimal actions point away from the goal. We interpret them below after checking the predicted convergence rate:
 
@@ -317,12 +341,19 @@ The assertion verifies that value iteration and policy iteration agree on $V^*$ 
 
 ```{.python .input #value-iter-policy-iteration-and-generalized-policy-iteration-2}
 %%tab pytorch, jax
-ok = [(mdp.backup(V).argmax(axis=1) == pi_star).all() for V in history]
-print(f'policy iteration: {num_outer} rounds of evaluate-then-improve')
-print(f'value iteration: certified at sweep {k_cert}')
-print(f'its greedy policy already equals pi* from sweep '
-      f'{np.argmax(ok) + 1} on')
+ok = [(mdp.backup(V_k).argmax(axis=1) == pi_star).all() for V_k in history]
+first = mdp.backup(mdp.policy_value(uniform)).argmax(axis=1)
+per_sweep = mdp.num_states * mdp.num_actions          # backups in one sweep
+print(f'policy iteration: {num_outer} exact solves; the first greedy step '
+      f'gives pi*: {(first == pi_star).all()}')
+print(f'value iteration: certified at sweep {k_cert} '
+      f'({k_cert * per_sweep:,} backups)')
+print(f'its greedy policy already equals pi* from sweep {np.argmax(ok) + 1} '
+      f'on ({(np.argmax(ok) + 1) * per_sweep:,} backups)')
 ```
+
+<!-- WRITER (14.2-S4): two rounds = one improvement that already yields pi* plus one round that confirms it (exercise 4b); each round is one exact linear solve (16 unknowns), not 800 sweeps. Value iteration: 164 sweeps = 10,496 backups to the certificate, 14 sweeps = 896 backups to the optimal greedy policy. The loop variable is renamed `V_k` so that it no longer overwrites `V` (14.2-C1). -->
+
 
 Policy iteration requires two improvement rounds on this example, but each round contains 800 evaluation sweeps. Bellman backups therefore provide a more informative comparison than outer iterations. For value iteration, the greedy policy becomes optimal at sweep 14, well before the value-error certificate is satisfied. The policy depends only on the ordering of action values, so it can stabilize before their numerical values have converged.
 
@@ -357,47 +388,56 @@ The evaluation protocol represents a policy as a function from observation to ac
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-2}
 %%tab pytorch, jax
-shortest = np.array([DOWN, RIGHT, DOWN, LEFT,
-                     DOWN, LEFT, DOWN, LEFT,
-                     RIGHT, DOWN, DOWN, LEFT,
-                     LEFT, RIGHT, RIGHT, LEFT])   # optimal on calm ice, by hand
+lake1 = d2l.TabularMDP.from_gym(env, 1.0)    # gamma = 1: V(s0) = P(goal)
+rng = np.random.default_rng(0)
 env.reset(seed=0)
-for name, p in [('slip-aware optimum', pi_star),
-                ('shortest-path policy', shortest)]:
-    success = evaluate(env, lambda s, _: int(p[s]), num_episodes=2000)
-    print(f'{name}: reaches the goal in {success:.1%} of 2000 episodes')
+for name, p in [('slip-aware optimum', np.eye(4)[pi_star]),
+                ('shortest-path policy', np.eye(4)[shortest]),
+                ('uniformly random policy', uniform)]:
+    exact = policy_evaluation(lake1, p, 100)[-1][0]   # within 100 steps
+    mc = evaluate(env, lambda s, rng: int(rng.choice(4, p=p[s])), 2000,
+                  rng=rng)
+    print(f'{name:>23}: goal within 100 steps {exact:.3f} exactly, '
+          f'{mc:.3f} in 2000 episodes')
 ```
+
+<!-- WRITER (14.2-M4): exact rates replace seed-0 Monte Carlo: 0.730 (pi*), 0.045 (shortest), 0.014 (uniform), "about sixteen times" (exact 16.3). The Monte Carlo column agrees within its standard error (about 1 point at 0.73). Without the 100-step limit pi* reaches the goal with probability 0.780; its episodes last about 43 steps on average. `policy_evaluation` at gamma = 1 counts the probability of reaching the goal within k steps (exercise ex_value-iter-undiscounted-lake b); one clause where it is used. -->
+
 
 The dynamic-programming policy reaches the goal in about $0.74$ of the episodes, compared with about $0.05$ for the shortest-path policy. These rates count only episodes that reach the goal within the environment's 100-step limit; without the limit, $\pi^*$ reaches the goal with probability about $0.78$. The shortest path places five of its six actions next to holes, where perpendicular slips can terminate the episode. The optimal policy takes a longer route that reduces this risk. The statewise differences are shown below:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-3}
 %%tab pytorch, jax
-row, col = np.arange(16) // 4, np.arange(16) % 4
-to_row = np.clip(row + np.array([0, 1, 0, -1])[pi_star], 0, 3)
-to_col = np.clip(col + np.array([-1, 0, 1, 0])[pi_star], 0, 3)
-frozen = np.isin(env.unwrapped.desc.flatten(), [b'S', b'F'])
-away = np.flatnonzero(frozen & ((3 - to_row) + (3 - to_col)
-                                > (3 - row) + (3 - col)))
-for s in away:
-    print(f's={s:>2}: pi* commands {"<v>^"[pi_star[s]]}, '
-          f'the shortest path takes {"<v>^"[shortest[s]]}')
+desc = env.unwrapped.desc.flatten()
+hole, end = desc == b'H', np.isin(desc, [b'H', b'G'])
+risk = mdp.P[:, :, hole].sum(axis=-1)       # risk[s, a] = P(hole next | s, a)
+move = calm.P[np.arange(16), pi_star] @ V_calm - V_calm   # on calm ice
+for s in np.flatnonzero(~end):
+    kind = ('toward the goal' if move[s] > 1e-9 else
+            'into a wall' if move[s] > -1e-9 else 'away from the goal')
+    print(f's={s:>2}: pi* {"<v>^"[pi_star[s]]} {kind:<18}  hole risk: pi* '
+          f'{risk[s, pi_star[s]]:.2f}, shortest {risk[s, shortest[s]]:.2f}, '
+          f'least {risk[s].min():.2f}')
 ```
 
-At four of the eleven nonterminal frozen cells, the optimal command points away from the goal. At state 8, *up* is the only action whose three possible outcomes all avoid the hole at state 12: the agent moves to state 4, state 9, or remains against the wall. At states 1 and 3, commanding *up* also uses the wall to avoid more dangerous outcomes. These choices follow from averaging over the three transition outcomes in :eqref:`eq_optimal_policy`.
+<!-- WRITER (14.2-M2): the classification uses the calm-ice values: a command makes progress iff its calm successor has a larger V_calm, a wall bump keeps it equal. Of the eleven cells where the agent acts, only 9 and 13 command progress; five command into a wall (0, 1, 3, 4 and 14: at 14, *down* bumps the wall and slips left to 13 or right into the goal, never up to 10, which *right* risks); four point away (2, 6, 8, 10). pi*'s command has the least hole risk at every cell; that risk is 0 everywhere except at 6, where every action risks 1/3 or more and *left* ties *right* exactly (Q* = 0.1764). `shortest` takes a 1/3 risk at 1, 3, 4, 8, 10 and 2/3 at 6. The old prose explained 1 and 3 instead of 2, 6, 10. -->
 
-**Deterministic case.** Without slippery transitions, $V^*(s)=\gamma V^*(s')$ along an optimal move. Hence $V^*(s)=\gamma^{d(s)-1}$, where $d(s)$ is the shortest distance to the goal. After $k$ sweeps, value has propagated to exactly the states within $k$ moves of the goal, and this map converges in six sweeps (:numref:`fig_rl_value_wavefront`). This finite wavefront is specific to deterministic terminal rewards; the stochastic case converges geometrically. The greedy policy for the deterministic solution is exactly the shortest-path policy, as verified below.
-
-![Value iteration on deterministic FrozenLake, whose values have a closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
-:label:`fig_rl_value_wavefront`
-
-```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-4}
+```{.python .input #value-iter-the-optimal-policy-on-slippery-ice-1}
 %%tab pytorch, jax
-calm = d2l.TabularMDP.from_gym(
-    gym.make('FrozenLake-v1', is_slippery=False), gamma)
-V_calm = value_iteration(calm, num_iters=10)[-1]
-assert (calm.backup(V_calm).argmax(axis=1) == shortest).all()
-print(f'V*(s0) on calm ice: {V_calm[0]:.4f};  gamma^5 = {gamma ** 5:.4f}')
+def falls(pi):
+    """P(the episode falls into a hole from s), for each s, without a time
+    limit: expected visits to s before the end, times the hole risk at s."""
+    P_pi = mdp.P[np.arange(16), pi] * ~end[:, None]    # stop at the end
+    visits = np.linalg.solve(np.eye(16) - P_pi.T, np.eye(16)[0])
+    return visits * risk[np.arange(16), pi] * ~end
+
+for name, p in [('pi*', pi_star), ('shortest', shortest)]:
+    f = falls(p)
+    print(f'{name:>8}: P(falls into a hole) {f.sum():.2f}, from ' +
+          ', '.join(f'{s}: {f[s]:.2f}' for s in np.argsort(-f) if f[s] > 0))
 ```
+
+<!-- WRITER (14.2-M1): replaces "five of its six actions next to holes" (false). pi* can fall in only at state 6 (0.22 = 1 - 0.78, all its failures); `shortest` falls in 96% of episodes, from 4 (0.32), 1 (0.31), 8 (0.13), 6 (0.08), 3 (0.06), 10 (0.05): a third of its failures start at state 1, off the nominal route 0-4-8-9-13-14, where a slip at the start carries it. Expected visits are the row of (I - P_pi)^{-1} of the start state with the terminal rows removed (exercise ex_value-iter-linear-system b). -->
 
 The optimal start-state value decreases from $0.774$ on deterministic ice to $0.180$ on slippery ice. This difference quantifies the effect of the stochastic transitions under optimal play.
 
@@ -410,18 +450,22 @@ The optimal start-state value decreases from $0.774$ on deterministic ice to $0.
 %%tab pytorch, jax
 dist = abs(np.arange(16) // 4 - 3) + abs(np.arange(16) % 4 - 3)
 closer = dist < dist[:, None, None]    # closer[s, :, s'] = 1 iff d(s') < d(s)
-shaped = d2l.TabularMDP(mdp.P, mdp.r + 0.3 * (mdp.P * closer).sum(-1), gamma)
-V_shaped = value_iteration(shaped, num_iters=500)[-1]
-pi_shaped = shaped.backup(V_shaped).argmax(axis=1)
 
 def exact_value(pi, s=0):              # V(s) under the original reward
     return mdp.policy_value(np.eye(mdp.num_actions)[pi])[s]
 
-print(f'shaped-optimal: at s=14 goes {"<v>^"[pi_shaped[14]]}, shaped value '
-      f'{V_shaped[0]:.2f}, true value {exact_value(pi_shaped):.3f}')
-print(f'true-optimal:   at s=14 goes {"<v>^"[pi_star[14]]}, true value '
-      f'{exact_value(pi_star):.3f}')
+for bonus in [0.3, 0.1, 0.0]:
+    shaped = d2l.TabularMDP(mdp.P, mdp.r + bonus * (mdp.P * closer).sum(-1),
+                            gamma)
+    V_shaped = value_iteration(shaped, num_iters=500)[-1]
+    pi_shaped = shaped.backup(V_shaped).argmax(axis=1)
+    print(f'bonus {bonus}: at s=14 goes {"<v>^"[pi_shaped[14]]}, shaped V(0) '
+          f'{V_shaped[0]:.2f}, V(13) {V_shaped[13]:.2f}, V(14) '
+          f'{V_shaped[14]:.2f}; true V(0) {exact_value(pi_shaped):.3f}')
 ```
+
+<!-- WRITER (14.2-M6): 0.3 bonus: *left* at 14, shaped V(0) 2.15, V(13) 1.71 > V(14) 1.52 (the cycle 13 -> 14 -> 13 collects the bonus forever), true value 0.000 against 0.180. 0.1 bonus: *down* at 14 again, true value 0.115, the policy still differs from pi* at states 0, 2 and 6 (6 is the exact tie). 0.05 bonus (not printed): 0.144, same three states. The row with bonus 0.0 is the original reward (pi*, 0.180). The loop leaves `shaped` as the unshaped model; exercise ex_mdp-reward-design-its-failure c only reuses its construction. This cell is on the deck: 12 code lines. -->
+
 
 State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal.
 

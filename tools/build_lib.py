@@ -84,7 +84,7 @@ def _resolve_nested_tabs(body_lines, framework):
     i = 0
     while i < len(body_lines):
         line = body_lines[i]
-        m = re.match(r'^(\s*)if (tab\.selected\(.+)\):\s*$', line)
+        m = re.match(r'^(\s*)if (tab\.selected\(.+?)\):\s*(#.*)?$', line)
         if m:
             fws = re.findall(r"'(\w+)'", m.group(2))
             keep = framework in fws
@@ -118,7 +118,7 @@ def flatten_tab_branches(code, framework):
     i = 0
     while i < len(lines):
         line = lines[i]
-        m = re.match(r'^(\s*)if (tab\.selected\(.+)\):\s*$', line)
+        m = re.match(r'^(\s*)if (tab\.selected\(.+?)\):\s*(#.*)?$', line)
         if m:
             indent = m.group(1)
             fws = re.findall(r"'(\w+)'", m.group(2))
@@ -140,7 +140,9 @@ def flatten_tab_branches(code, framework):
             i += 1
 
     out = '\n'.join(result)
-    if 'tab.selected(' in out:
+    # Recurse only while a pass changes something: an unmatched
+    # ``tab.selected(`` (e.g. inside a string) must not loop forever.
+    if 'tab.selected(' in out and out != code:
         return flatten_tab_branches(out, framework)
     return out
 

@@ -653,91 +653,448 @@ Behavior cloning fits a policy $\pi_\theta(a \mid s)$ to an expert's state--acti
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.3]{.kicker}
+[Dive into Deep Learning · §14.5]{.kicker}
 
-Learning from demonstrations<br>
-**behavior cloning as classification · deployment distribution shift · compounding error $\varepsilon T^2$ · DAgger data collection**
+Learning from Demonstrations<br>
+**behavior cloning · distribution shift · compounding error · DAgger · fine-tuning as cloning**
 :::
 :::
 
-::: {.slide title="Behavior Cloning Is Supervised Action Prediction"}
-Behavior cloning consumes two columns of a demonstration:
-the states visited and the actions taken.
-Fitting $\pi_\theta(a \mid s)$ to the pairs is **softmax regression**.
+::: {.slide title="A Clone That Copies the Expert 82% of the Time Reaches the Goal 66% of the Time"}
+[The problem]{.kicker}
 
-@imitation-the-reduction-to-classification-1
+- ALVINN (1989) learned to steer a van from road images, each labeled with
+  a driver's steering angle.
+- The driver stayed in the middle of the lane: no views of the roadside, no
+  examples of steering back. Once the van drifted, the network saw images
+  it had never been shown.
+- On the calm lake the expert walks one six-move path and always succeeds.
+  Its clone takes the expert's action with probability 0.82 at every state
+  it was shown, and succeeds **66%** of the time, with 3 demonstrations or
+  with 100.
+
+::: {.d2l-note .warn}
+A classifier is tested on inputs like those it was trained on. A policy
+chooses the inputs it sees next.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- fit a policy to an expert's state–action pairs by cross-entropy;
+- compute a policy's state distribution exactly, and where its errors occur;
+- tell distribution shift from missing coverage;
+- show why a per-step error $\varepsilon$ can cost $\varepsilon T^2$ over
+  $T$ steps, or only $u\varepsilon T$;
+- split a clone's loss into its fit error and the shift, and remove the
+  shift with DAgger.
+
+**Running example:** calm 4×4 FrozenLake, $\gamma = 0.95$, the expert's
+six-move path, a tabular clone with 18% error.
+
+**The idea:** let the learner choose the states and the expert label them.
+:::
+
+::: {.slide title="Demonstrations Replace Trying"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Markov Decision Processes | states, actions, rewards, return |
+| Dynamic Programming | the best policy when the rules are known |
+| Temporal-Difference Learning | values from observed transitions |
+| Exploration | which actions to try, and what trying costs |
+| **Learning from Demonstrations** | **an expert's actions instead of trying** |
+| Policy Gradient | a policy improved from its own attempts |
+| Baselines and Variance Reduction | less noisy estimates; group updates |
+| Function Approximation | a network in place of the table |
+:::
+
+::: {.col .narrow}
+- **Uses:** the optimal policy from value iteration as the expert; the
+  tabular MDP; softmax regression.
+- **Skips:** inverse RL (exercises); fine-tuning and RLHF at scale (the
+  Language Models part).
+:::
+:::
+:::
+
+::: {.slide title="Three Expert Episodes Give 18 Pairs: One Six-Move Path, Three Times"}
+[Behavior cloning]{.kicker}
+
+The expert $\pi^*$ is the calm lake's optimal policy; record what it saw and did:
+
+```{.python #imitation-exercises-1}
+def demonstrations(env, expert, num_episodes):
+    states, actions = [], []
+    for _ in range(num_episodes):
+        s, done = env.reset()[0], False
+        while not done:
+            states.append(s)
+            actions.append(int(expert[s]))
+            s, _, terminated, truncated, _ = env.step(actions[-1])
+            done = terminated or truncated
+    return np.array(states), np.array(actions)
+```
+
+@!imitation-the-reduction-to-classification-1
+
+Every episode: *down, down, right, down, right, right*. Cells 1, 2, 3, 6,
+10 are never visited.
+:::
+
+::: {.slide title="Behavior Cloning Is Softmax Regression on the Expert's Pairs" only="pytorch"}
+[Behavior cloning]{.kicker}
+
+Maximize $\sum_i \log \pi_\theta(a_i \mid s_i)$, the negative cross-entropy.
+
+```{.python #imitation-exercises-2}
+class Policy(nn.Module):
+    def __init__(self, policy, lr=1e-2):
+        super().__init__()
+        self.policy = policy
+        self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
+
+    def log_prob(self, obs, act):
+        return torch.log_softmax(self.policy(obs), dim=-1) \
+                    .gather(-1, act[:, None]).squeeze(-1)
+```
+
+- `Policy.tabular`: `nn.Embedding(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
+:::
+
+::: {.slide title="Behavior Cloning Is Softmax Regression on the Expert's Pairs" only="jax"}
+[Behavior cloning]{.kicker}
+
+Maximize $\sum_i \log \pi_\theta(a_i \mid s_i)$, the negative cross-entropy.
+
+```{.python #imitation-exercises-3}
+class Policy(nnx.Module):
+    def __init__(self, policy, lr=1e-2):
+        self.policy = policy
+        self.opt_pi = nnx.Optimizer(policy, d2l.shared_adam(lr),
+                                    wrt=nnx.Param)
+
+    def log_prob(self, obs, act, policy=None):
+        policy = self.policy if policy is None else policy
+        logp = jax.nn.log_softmax(policy(obs), axis=-1)
+        return jnp.take_along_axis(logp, act[:, None],
+                                   axis=-1).squeeze(-1)
+```
+
+- `Policy.tabular`: `nnx.Embed(16, 4)` of preferences $\theta_{s,a}$, zeros: uniform.
+:::
+
+::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One" only="pytorch"}
+[Behavior cloning]{.kicker}
+
+$\frac{1}{n}\sum_i w_i \log \pi_\theta(a_i \mid s_i)$, one Adam step per call:
+
+@imitation-the-reduction-to-classification-5
+
+- The weights are NumPy data: no gradient flows into them.
+- Cloning sets every $w_i = 1$.
+:::
+
+::: {.slide title="One Fitting Step Ascends the Weighted Log-Likelihood, Every Weight One" only="jax"}
+[Behavior cloning]{.kicker}
+
+$\frac{1}{n}\sum_i w_i \log \pi_\theta(a_i \mid s_i)$, one Adam step per call:
+
+```{.python #imitation-exercises-4}
+@nnx.jit
+def _policy_pass(ac, obs, act, w, n):
+    loss, grads = nnx.value_and_grad(
+        lambda policy: -(w * ac.log_prob(obs, act, policy)).sum() / n)(
+            ac.policy)
+    ac.opt_pi.update(ac.policy, grads)
+    return loss
+```
+
+- `policy_step(ac, obs, act, weight)` runs this pass; the weights are NumPy
+  data, so no gradient flows into them.
+- Cloning sets every $w_i = 1$.
+:::
+
+::: {.slide title="Stopped at 18% Error, Each Demonstrated Row Puts 0.818 on the Expert's Action"}
+[Behavior cloning]{.kicker}
+
+Real classifiers keep some error: stop at average disagreement $\le 0.2$.
+
+```{.python #imitation-exercises-5}
+def clone(mdp, states, actions, eps=0.2):
+    learner = Policy.tabular(mdp.num_states, mdp.num_actions)
+    weight = np.ones(len(states), np.float32)
+    while 1 - np.exp(learner.log_prob_np(states, actions)).mean() > eps:
+        policy_step(learner, states, actions, weight)
+    return learner
+```
+
+@!imitation-the-reduction-to-classification-4
+
+- 14 Adam steps: disagreement 0.182. State 10, never shown, stays uniform.
+- A clone of one expert episode and of a hundred: the same table.
+:::
+
+::: {.slide title="The State Distribution Moves by One Matrix Product per Step"}
+[Distribution shift]{.kicker}
+
+$$d^\pi_{t+1}(s') = \sum_{s} d^\pi_t(s) \sum_a \pi(a \mid s)\, P(s' \mid s, a)$$
+
+```{.python #imitation-exercises-6}
+def visitation(mdp, pi, absorbing=None, T=100):
+    P_pi = np.einsum('sa,sat->st', pi, mdp.P)
+    if absorbing is not None:
+        P_pi[absorbing] = np.eye(mdp.num_states)[absorbing]
+    d = [np.eye(mdp.num_states)[0]]
+    for _ in range(T):
+        d.append(d[-1] @ P_pi)
+    return np.array(d)
+```
+
+- $d^\pi_0$: all mass on the start cell. The goal and the holes keep their
+  mass, so the goal's mass at $t = 100$ is the success probability, exactly.
+:::
+
+::: {.slide title="Check: Greedy or Sampled?"}
+[Check]{.kicker}
+
+The *greedy* clone takes the most probable action of each row. The
+*sampling* clone draws from $\pi_\theta$, as a language model samples its
+next token. Each demonstrated row puts 0.818 on the expert's action.
+Predict both success rates.
 
 . . .
 
-18 labeled pairs: on calm ice every expert episode walks the same six states.
+- Greedy: **100%**. Every demonstrated row's most probable action is the
+  expert's, so it walks the expert's path.
+- Sampling: at least $0.818^6 \approx 0.30$, the chance of six agreements in
+  a row; some wrong moves are survivable, so the exact rate is higher.
 :::
 
-::: {.slide title="One Policy Object"}
-@imitation-the-reduction-to-classification-2
+::: {.slide title="Sampled, the Clone Reaches the Goal 66% of the Time; Greedy, Always"}
+[Distribution shift]{.kicker}
 
-`nn.Embedding(16, 4)` represents the preference table $\theta_{s,a}$;
-zero initialization produces a uniform policy.
+@!imitation-what-the-reduction-quietly-assumes-1
+
+- Nothing on calm ice is random except the clone's own choices: every step
+  off the path is one of its own wrong actions.
+- 1,000 sampled episodes agree with the exact 0.660 within their noise.
 :::
 
-::: {.slide title="Training Fit Does Not Cover Unvisited States"}
-@imitation-the-reduction-to-classification-4
+::: {.slide title="The Clone Errs 18% of the Time on the Expert's States, 22% on Its Own"}
+[Distribution shift]{.kicker}
+
+Disagreement at $s$: $1 - \pi_\theta(\pi^*(s) \mid s)$.
+
+| states | disagreement |
+|---|---|
+| the 18 training pairs | 18% |
+| 100 fresh expert episodes | 18% |
+| the clone's own states, weighted by visits | 22% |
+
+- No generalization gap, and clones of 1, 10, 100 expert episodes all
+  succeed 66%: more expert data cannot help.
+- The clone's own states include cells with no data, where it disagrees
+  with probability 3/4. Its own actions moved the test distribution:
+  **distribution shift**.
+:::
+
+::: {.slide title="Missing Coverage Fades with More Demonstrations"}
+[Distribution shift]{.kicker}
+
+On slippery ice the expert slides, so the states it visits are random. For
+each $n$: 200 datasets of $n$ expert episodes, the greedy clone of each,
+evaluated exactly (the expert succeeds 73% of the time).
+
+| expert episodes | datasets whose clone is below half the expert |
+|---|---|
+| 1 | about 1 in 3 |
+| 3 | 1 or 2 in 100 |
+| 10 | none of 200 |
+
+::: {.d2l-note}
+Coverage of the expert's states improves with data. Distribution shift
+does not: the clone's mistakes take it where the expert never goes.
+:::
+:::
+
+::: {.slide title="Errors on the Expert's States Can Cost Quadratically in the Horizon"}
+[Compounding error]{.kicker}
+
+**Proposition.** A task of $T$ steps with rewards in $[0, 1]$; $\hat\pi$
+disagrees with the expert with probability at most $\varepsilon$ per step.
+
+- **(i)** $\varepsilon$ measured on the expert's states $d^{\pi^*}_t$, what
+  cloning controls: the return lost is at most
+  $\varepsilon T(T+1)/2 \le \varepsilon T^2$, and of this order on some
+  tasks when $\varepsilon T \le 1$.
+- **(ii)** $\varepsilon$ measured on $\hat\pi$'s own states $d^{\hat\pi}_t$,
+  and one wrong action followed by the expert costs at most $u$: the return
+  lost is at most $u\varepsilon T$.
+- If one mistake is fatal, $u$ is the remaining horizon and (ii) gives
+  order $\varepsilon T^2$ again.
+
+[Ross and Bagnell 2010]{.small}
+:::
+
+::: {.slide title="A First Mistake Is Charged with Everything After It"}
+[Compounding error]{.kicker}
+
+- **(i)** Run $\hat\pi$ and the expert on the same randomness: they agree
+  until $\hat\pi$'s first disagreement. Before it, the state at step $t$
+  follows $d^{\pi^*}_t$, so the first disagreement falls at $t$ with
+  probability at most $\varepsilon$ and loses at most $T - t + 1$ rewards:
+  $\sum_{t=1}^T \varepsilon (T - t + 1) = \varepsilon T(T+1)/2$.
+- **(ii)** Hybrid $\pi_k$: follow $\hat\pi$ for $k$ steps, then the expert;
+  $\pi_0$ is the expert, $\pi_T$ is $\hat\pi$. Consecutive hybrids differ
+  only at step $k$, at a state from $d^{\hat\pi}_k$: at most $u\varepsilon$.
+  The $T$ differences telescope to at most $u\varepsilon T$. $\blacksquare$
+:::
+
+::: {.slide title="Check: Two Imitators on a 64-Step Chain"}
+[Check]{.kicker}
+
+The expert earns 1 per step. Two imitators err independently with
+$\varepsilon = 0.01$ per step. The *cloned* one leaves the chain for good at
+its first mistake; the *recovering* one loses only that step's reward.
+Estimate what each loses at $T = 64$.
 
 . . .
 
-At state 9 the clone puts 0.82 on *down*; state 10 was never
-demonstrated, and its row stays uniform.
+- Recovering: exactly $\varepsilon T = 0.64$.
+- Cloned: the bound is $\varepsilon T(T+1)/2 = 20.8$. Exactly,
+  $T - \sum_{t=1}^{T} (1-\varepsilon)^t \approx 17$: at $\varepsilon T =
+  0.64$ the curve has begun to bend below the bound.
 :::
 
-::: {.slide title="Distribution Shift Reduces Policy Return"}
-@imitation-what-the-reduction-quietly-assumes-1
-
-. . .
-
-The classifier is certified on the **expert's** states.
-The agent is tested on the states **its own actions** produce.
-:::
-
-::: {.slide title="Compounding Error"}
-**Proposition.** Per-step error $\varepsilon$ under the expert's
-distribution can cost $\Theta(\varepsilon T^2)$ return; the same
-$\varepsilon$ under the learner's own distribution costs $O(\varepsilon T)$.
-
-. . .
-
-After the first deviation, the supervised guarantee no longer
-controls later states; a deviation at step $t$ can lose all
-$T - t + 1$ remaining rewards.
+::: {.slide title="At T = 64 Cloning Loses About 17 Rewards, Recovery 0.64"}
+[Compounding error]{.kicker}
 
 @!imitation-the-proposition
+
+Cloned: quadratic while $\varepsilon T \le 1$ (to $T \approx 10$), then below,
+since it cannot lose more than $T$. Recovering: $\varepsilon T$, about 27 times less.
 :::
 
-::: {.slide title="Not a Defect of the Fit"}
-@!imitation-why-this-is-not-a-defect-of-the-fit
+::: {.slide title="The Clone Leaves the Expert's Path in 17% of Its Episodes"}
+[Compounding error]{.kicker}
+
+::: {.cols .vc}
+::: {.col .fig}
+![](../img/mdl-rl-compounding-error.svg){width=80%}
+:::
+
+::: {.col}
+- Blue arrows: the expert's path. Each cell: the probability that the
+  sampling clone enters it within 100 steps.
+- Dashed: exits into cells without data, from 0 into 1 and from 9 or 14
+  into 10.
+- The holes beside the path, 5 and 12, take most of the failures.
+:::
+:::
+:::
+
+::: {.slide title="Distribution Shift Causes About a Fifth of the Clone's 34-Point Loss"}
+[Compounding error]{.kicker}
+
+Make the cells off the path absorbing, then split the episodes:
+
+| episodes | share | reach the goal | points lost |
+|---|---|---|---|
+| stay on the path | 0.828 | 72% | 24 $= 0.828 \times 0.285$ |
+| leave the path | 0.172 | 39% | 10 $= 0.172 \times 0.606$ |
+
+- A learner with the clone's 18% error at every cell, on the path and off,
+  reaches the goal 73.5% of the time.
+- Labels off the path can recover about 7.5 of the 34 points. The rest is
+  the 18% error itself, which no change of data removes.
+:::
+
+::: {.slide title="DAgger Changes Only the Data: the Learner Visits, the Expert Labels"}
+[DAgger]{.kicker}
+
+```{.python #imitation-exercises-7}
+agg_s, agg_a = demo_s, demo_a
+for k in range(num_rounds + 1):
+    if k > 0:
+        new_s, new_a = relabel(env, pi_star, learner, num_episodes, rng)
+        agg_s = np.concatenate([agg_s, new_s])
+        agg_a = np.concatenate([agg_a, new_a])
+    learner = clone(mdp, agg_s, agg_a)
+```
+
+- `relabel` rolls the learner, sampling with `act` as when deployed, and
+  labels each state it visits with the expert's action.
+- Model, loss, optimizer and stopping rule stay as they are; the data of
+  all earlier rounds are kept.
+
+[Ross, Gordon and Bagnell 2011]{.small}
+:::
+
+::: {.slide title="Four DAgger Rounds Lift the Median Learner from 0.66 to About 0.73"}
+[DAgger]{.kicker}
+
+Four rounds of ten learner episodes, ten seeds, each learner evaluated
+exactly:
+
+| learner | expert labels | success |
+|---|---|---|
+| behavior cloning, any number of expert episodes | any number | 0.66 |
+| DAgger after four rounds, median over seeds | a few hundred | about 0.73 |
+| the clone's error at every cell | | 0.735 |
+
+- About 65 labels per round, most at the six states of the path, now and
+  then a cell off it. On every seed round 4 beats cloning.
+- Round 1 can dip, to 0.649 at worst: the guarantee concerns the best
+  learner of the sequence, not the last one.
+:::
+
+::: {.slide title="Supervised Fine-Tuning Is Behavior Cloning on Tokens"}
+[Language models]{.kicker}
+
+| behavior cloning | a language model |
+|---|---|
+| state | the prompt and the tokens written so far |
+| action, transition | the next token, appended with probability 1 |
+| demonstrations | curated responses |
+| horizon $T$; cost $u$ | response length; one wrong token, small for an odd word, large for an early wrong digit |
+
+- At deployment the model conditions on its own samples, so its contexts
+  drift from the curated ones as a response grows.
+- On-policy distillation is DAgger: a teacher model labels the student's
+  own prefixes with its next-token distributions.
+:::
+
+::: {.slide title="Check: What Would Close the Last Gap?"}
+[Check]{.kicker}
+
+After four rounds DAgger's median learner is near 0.735; the expert
+succeeds every time. Which closes the gap: more DAgger rounds, more expert
+episodes, or a fit with smaller $\varepsilon$?
 
 . . .
 
-The clone leaves the path in about one episode in six.
-Off the path it reaches the goal about 40% of the time, on it about 70%.
+- Only a smaller $\varepsilon$. DAgger already labels the states the
+  learner reaches; 0.735 is what the clone's 18% error at every cell
+  allows.
+- More expert episodes give the same table; more rounds add labels where
+  the learner already has them.
 :::
 
-::: {.slide title="DAgger: Relabel the Learner's States"}
-Roll the **learner**, keep its states, ask the expert what it
-would have done, aggregate, refit.
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
 
-@!imitation-dagger-collect-from-the-learner-relabel-with-the-expert
+- Behavior cloning is cross-entropy on the expert's $(s, a)$ pairs: no model, no reward.
+- The clone errs 18% on the expert's states, 22% on its own; sampled, it succeeds 66%.
+- Error $\varepsilon$ costs up to $\varepsilon T(T+1)/2$ on the expert's states,
+  $u\varepsilon T$ on the learner's own; chain at $T = 64$: about 17 against 0.64.
+- The shift is a fifth of the 34-point loss; DAgger recovers it, 0.66 to about 0.73.
+- Fine-tuning a language model is behavior cloning; on-policy distillation is DAgger.
 
-. . .
-
-The added labels include states where the clone differs from the expert;
-this procedure requires continued expert access rather than only a fixed dataset.
-:::
-
-::: {.slide title="Recap"}
-- Behavior cloning = cross-entropy on $(s, a)$ pairs: no kernel, no reward.
-- The guarantee holds on the expert's distribution; acting moves the test distribution.
-- $\Theta(\varepsilon T^2)$ under the expert's states, $O(\varepsilon T)$ under your own: the gap is the missing off-distribution guarantee.
-- DAgger moves training onto the learner's states with a relabeling loop;
-  the guarantee needs iteration and a no-regret learner.
-- SFT of a language model **is** behavior cloning (:numref:`sec_rl_sequences`); BC is the offline baseline (:numref:`sec_offline`).
-- :numref:`sec_policygradient` reuses `Policy` and `policy_step`, replacing expert labels with sampled rewards.
+**Next:** without an expert, replace the weight $w_i = 1$ by a number that
+says how well the action turned out.
 :::

@@ -1,618 +1,459 @@
 # Exercise Catalog: chapter_reinforcement-learning
 
-Chapter overview (7 sections, all with `## Exercises`, 44 existing exercises). This
-is the strongest-edited chapter surveyed under the parallel style review (zero
-defects, zero clarity flags across all 44 items), and external comparison mostly
-confirms that verdict: **all 44 existing exercises are kept**, 0 rewritten, 0
-dropped. Two 2026-vintage primary sources overperformed expectations — Stanford
-CS234 Winter 2026 Assignment 1 (Bellman residuals/performance bounds, effective
-horizon, reward hacking, RiverSwim) and Assignment 2 (DQN, REINFORCE + baseline +
-PPO, the performance-difference lemma) map almost one-to-one onto five of the
-seven sections. Berkeley CS285 Fall 2020 HW1/HW2 are equally precise matches for
-imitation.md and policy-gradient.md/baselines.md. Sutton & Barto 2nd ed. supplies
-the deepest bench (Ch. 2, 3, 4, 6, 9, 13) but Ch. 13 has **no** dedicated
-baseline/control-variate exercise — a real gap CS285/CS234 fill instead. David
-Silver's Easy21 (UCL, 2015, official PDF) contributes a more principled
-visit-count exploration schedule than the book's own fixed-$\epsilon$ sweep.
-Coverage gaps: imitation learning has no textbook or CS234 tradition at all
-(only CS285 treats it); bandit *regret* analysis (vs. bias/spike analysis) is
-thin in course exercises; classical tile-coding exercises don't transfer to this
-chapter's neural-network tooling. Totals: 44 kept + 9 new = 53 proposed
-problems across 7 sections.
+Chapter overview (regenerated 2026-11-04 from the ch. 14 rebuild). The chapter
+has eight sections, in the order mdp, value-iter, qlearning, exploration,
+imitation, policy-gradient, baselines, deep-rl; the introduction (`index.md`)
+has no exercises. The sections hold 71 exercises, 56 of them with an
+`:exlabel:`. Each entry below lists one exercise in the order of the file: its
+tag and difficulty marks as printed (`[code]`, `[extended]`, ● and ●●; no tag
+means pencil and paper), its label or "no label", its topic, and its source.
 
-**Restructure (2026-11, ch. 14 rebuild).** The chapter now has 8 sections in
-the order mdp, value-iter, qlearning, exploration, imitation,
-policy-gradient, baselines, deep-rl. Exploration and bandits left
-qlearning.md for the new exploration.md, with its exercises
-`ex_qlearning-exploration-schedule`, `ex_qlearning-ucb-logarithmic-regret`
-and the deep-exploration project (labels kept). The potential-based shaping
-exercise `ex_mdp-reward-design-its-failure` and part (a) of the time-limits
-exercise (now `ex_value-iter-time-limits`) moved from mdp.md to
-value-iter.md with the shaping experiment; `ex_mdp-time-limits` keeps the
-Markov-state part. The entries below are moved accordingly; their item
-descriptions predate the rebuild and are regenerated in its exercise pass.
+Sources name where the exercise comes from in this book and, where one exists,
+its external basis. "Oct-2026 set" is the exercise set on `main` before the
+rebuild; "rebuild" is the 2026-11 ch. 14 rebuild (plan items W10 and 14.x in
+the book-pass notes). The earlier survey of this chapter (Sutton & Barto 2nd
+ed., Stanford CS234 Winter 2026, Berkeley CS285 Fall 2020, David Silver's UCL
+course, OpenAI Spinning Up) is summarized per section under "Survey sources";
+its proposed problem sets predate the rebuild and are in the git history of
+this file.
+
+Moves in the rebuild: exploration and bandits left qlearning.md for the new
+exploration.md, taking the exploration-schedule, UCB-regret and
+deep-exploration exercises with their labels; the potential-based shaping
+exercise and the optimal-policy part of the time-limits exercise moved from
+mdp.md to value-iter.md with the shaping experiment. Labels of moved exercises
+were kept, so one exercise in value-iter.md and two in exploration.md carry
+the label prefix of their old section. One label was renamed, that of
+qlearning's "Samples against backups" (the old label had no references).
 
 ---
 
 ## chapter_reinforcement-learning/mdp.md — Markov Decision Processes
 
-**Topic:** States, actions, transition kernels, rewards, the Markov assumption,
-discounting/effective horizon, terminated vs. truncated, reward shaping.
+**Topic:** States, actions and the transition kernel, return, discount and
+effective horizon, termination and truncation, the choice of state and partial
+observability, reward design, text generation and the verifier task as MDPs.
 
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — every item
-already names a concrete derivation or measurement (state augmentation,
-transition-matrix audit, effective-horizon sweep, shaping proof, random-reward
-argument, MDP classification); the prior style review found zero defects and
-zero clarity flags, and nothing found externally supersedes any of the six.
+**Exercises:** 8 (7 from the Oct-2026 set, 1 restored; the shaping exercise
+moved out to value-iter.md; 4 labels new in the rebuild).
 
-**External sources found:**
-- Sutton & Barto, *Reinforcement Learning: An Introduction* (2nd ed.), Exercise
-  3.1 — devise three original tasks that fit the MDP framework, testing whether
-  the abstraction has been internalized beyond the gridworld instance —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercise 3.2 — asks whether the MDP framework is "adequate to
-  usefully represent all goal-directed learning tasks," inviting a
-  counterexample — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercises 3.15/3.16 — prove that adding a constant to every
-  reward leaves relative state values unchanged in a *continuing* task, then
-  show the analogous claim is false for an *episodic* task — a clean paired
-  exercise on what discounting/episodicity does and does not make invariant —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Stanford CS234 (Winter 2026), Assignment 1, Q1 "Effect of Effective Horizon" —
-  a hand-built inventory MDP where the student says whether a finite horizon
-  $H$ and an infinite-horizon discount $\gamma$ can ever induce the *same*
-  optimal policy, and whether that match can hold for *every* $H$ —
-  https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf
-- Stanford CS234 (Winter 2026), Assignment 1, Q2 "Reward Hacking" — a worked
-  example (Pan, Bhatia & Steinhardt, ICLR 2022) where an AI-controlled car's
-  optimal policy under a plausible proxy reward ("maximize mean velocity") is
-  to never merge onto the highway at all —
-  https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf
+1. **What the state must contain.** `ex_mdp-state-must-contain` — the smallest
+   addition that makes a battery-limited robot, a recommender with fatigue and
+   chess with threefold repetition Markov, and whether the agent observes it.
+   *Source:* restored in the rebuild (W10) from the pre-October set, with new
+   scenarios; original.
+2. [code] **Episodes from the kernel.** `ex_mdp-kernel-predicts-episodes` —
+   which state-action pairs of `from_gym` merge outcomes, and propagating
+   $d^\pi_t$ under the random policy to predict episode statistics.
+   *Source:* Oct-2026 set; original.
+3. **Expected rewards.** `ex_mdp-expected-rewards` — transition rewards
+   $\rho(s,a,s')$ and expected rewards $r(s,a)$ give the same expected
+   return, also for random rewards; which FrozenLake episodes pay.
+   *Source:* Oct-2026 set; original.
+4. **Discount as termination.** `ex_mdp-discount-as-termination` — the bound
+   $\ln(1/p)/\ln(1/\gamma) \le \ln(1/p)/(1-\gamma)$ behind the effective
+   horizon, and $\gamma$ as a per-step survival probability.
+   *Source:* Oct-2026 set; original.
+5. **Time limits.** `ex_mdp-time-limits` — a time limit that is part of the
+   task makes $(s, h)$, not $s$, the Markov state. *Source:* Oct-2026 set
+   (its optimal-policy part moved to value-iter.md); after
+   Pardo et al. 2018.
+6. **Actions without consequences.** no label — with an action-independent
+   kernel the reward-greedy policy is optimal for every $\gamma$; a two-state
+   MDP where it is optimal only for small $\gamma$. *Source:* Oct-2026 set;
+   original.
+7. **Belief states.** ● `ex_mdp-belief-states` — the Bayes update of a POMDP
+   belief and the belief as a Markov state. *Source:* Oct-2026 set; after
+   Kaelbling, Littman & Cassandra 1998 and Bakker 2001.
+8. [extended] **Planning horizon and model error.** ●● `ex_mdp-planning-discount`
+   — the bias of planning with $\gamma' < \gamma$ and its trade against
+   estimation error in a learned model, using value iteration and exact
+   policy evaluation. *Source:* Oct-2026 set; after Jiang et al. 2015.
 
-**Proposed problem set** (8 problems):
-1. [conceptual] **What the state must contain.** Say which property of the MDP
-   definition a single Pong frame lacks, give the smallest fix, then repeat for
-   MountainCar. *Provenance:* original (section's own Ex1).
-2. [short-code] **Look at a transition function.** Audit `mdp.P` row sums and
-   successor counts on slippery vs. calm FrozenLake. *Provenance:* original
-   (section's own Ex2).
-3. [short-code] **The effective horizon.** Derive and sweep the discounted-tail
-   bound against $1/(1-\gamma)$. *Provenance:* original (section's own Ex3).
-4. *Moved to value-iter.md (2026-11):* **Reward design and its failure**
-   (`ex_mdp-reward-design-its-failure`), with the shaping experiment and the
-   proof that potential-based shaping preserves the optimal policy.
-5. [conceptual] **Random rewards.** Show a policy's value is unchanged by
-   folding a random reward's mean into $r(s,a)$. *Provenance:* original
-   (section's own Ex5).
-6. [conceptual] **Which problems are not MDPs.** Classify four scenarios and
-   say what state augmentation each needs. *Provenance:* original (section's
-   own Ex6).
-7. [short-code] **Horizon, truncation, and the optimal policy.** Build a small
-   deterministic MDP (a short corridor, or this section's own FrozenLake under
-   a hard step cap) and compute the optimal finite-horizon policy exactly by
-   backward induction for a few horizons $H$. Find the smallest $H$ at which
-   the optimal first action stops changing, then find a discount $\gamma$
-   whose infinite-horizon greedy policy agrees with the horizon-$H$ policy at
-   that $H$ but disagrees at $H-1$. State in one sentence why agreement at one
-   $H$ does not imply agreement at every $H$. *Provenance:* adapted from
-   Stanford CS234 Winter 2026 Assignment 1, Q1 (overlap med — the
-   finite-horizon-vs-discount question is transplanted onto the section's own
-   environment; cite CS234 on adoption).
-8. [conceptual] **A proxy reward that never merges.** Read the
-   Pan–Bhatia–Steinhardt highway-merge example (an AI car whose reward proxy,
-   "maximize mean velocity of all cars," makes never-merging optimal). Cast it
-   as a small MDP in the section's own $(\mathcal S,\mathcal A,P,r)$ notation:
-   what are the states, and what does $r$ assign to merging vs. not merging?
-   Explain why this is a different failure mode from the section's own Ex4 —
-   there a shaped reward broke an otherwise-correct model; here the proxy
-   reward is optimized perfectly and only the objective is wrong. *Provenance:*
-   adapted from Stanford CS234 Winter 2026 Assignment 1, Q2 (overlap med — the
-   scenario and its ICLR source are reused; the MDP formalization and contrast
-   with Ex4 are original).
+**Survey sources:** Sutton & Barto Ex. 3.1, 3.2 (tasks that fit or escape the
+MDP framework), 3.15/3.16 (constant reward shifts in continuing and episodic
+tasks), http://incompleteideas.net/book/RLbook2020.pdf; CS234 W2026 A1 Q1
+(finite horizon against discount) and Q2 (reward hacking in highway merging),
+https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf.
 
 ---
 
 ## chapter_reinforcement-learning/value-iter.md — Dynamic Programming
 
-**Topic:** Value functions, the Bellman equations, the Bellman operator as a
-$\gamma$-contraction, value iteration, policy iteration, generalized policy
-iteration.
+**Topic:** Policy values and the Bellman equations, value iteration and its
+contraction, stopping rules, policy evaluation as a linear system, policy
+iteration, the optimal policy on slippery ice, reward shaping.
 
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the review
-found no defects or clarity issues, and every item already pairs a derivation
-with a numeric check (sweep counts, per-map timings, backup counts); nothing
-found externally supersedes them.
+**Exercises:** 12 (10 from the Oct-2026 set, 2 moved in from mdp.md; 6 labels
+new in the rebuild).
 
-**External sources found:**
-- Sutton & Barto, Exercise 4.4 — the policy-iteration pseudocode on p. 80 can
-  cycle forever between equally-good policies; patch it so convergence is
-  guaranteed — a direct complement to the section's own Ex6, which measures
-  the *same* algorithm by backup count rather than termination —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercise 4.7 (programming) — the canonical Jack's Car Rental
-  problem, re-solved under a modified cost structure (a free shuttled car, a
-  parking-lot penalty above 10 cars) that breaks the linear-cost assumption —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercise 4.9 (programming) — the Gambler's Problem: value
-  iteration at two win probabilities, checked for stability as the convergence
-  threshold shrinks — http://incompleteideas.net/book/RLbook2020.pdf
-- Stanford CS234 (Winter 2026), Assignment 1, Q3 "Bellman Residuals and
-  Performance Bounds" — from scratch, for an *arbitrary* $V$ with Bellman
-  error $\varepsilon=\|BV-V\|_\infty$, derive $V^\pi(s)\ge V^*(s)-2\varepsilon/(1-\gamma)$
-  for its greedy policy, tightened to $\varepsilon/(1-\gamma)$ when $V^*\le V$ —
-  extends the section's contraction proposition into a *performance* guarantee
-  rather than a convergence-rate guarantee —
-  https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf
-- Stanford CS234 (Winter 2026), Assignment 1, Q4 "RiverSwim MDP" (programming)
-  — implement value iteration and policy iteration on a six-state chain with a
-  current pushing the agent backward; find the largest discount factor (to two
-  decimals) at which the optimal policy stops swimming upstream, at three
-  current strengths — the same "does the optimal policy do the obviously good
-  thing" question the section asks of FrozenLake's shortest path, on a
-  different environment —
-  https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf
+1. [code] **Policy evaluation as a linear system.**
+   `ex_value-iter-linear-system` — invertibility of $I - \gamma P_\pi$, the
+   Neumann series $M_\pi$, and its rows as discounted state-visitation
+   distributions. *Source:* Oct-2026 set; original.
+2. **Stopping certificate.** `ex_value-iter-certificate` — the a posteriori
+   certificate derived from the contraction, and an a priori sweep count
+   evaluated on the slippery lake. *Source:* Oct-2026 set; original.
+3. **The undiscounted lake.** `ex_value-iter-undiscounted-lake` — what the
+   contraction proof shows at $\gamma = 1$, non-unique fixed points, and
+   monotone convergence from zero to the probability of reaching the goal.
+   *Source:* Oct-2026 set; original.
+4. **Ties in policy iteration.** `ex_value-iter-ties` — why a stopping test
+   on policy equality can cycle between tied actions, and why the test "the
+   greedy step gains nothing" terminates. *Source:* Oct-2026 set; adapted
+   from Sutton & Barto Ex. 4.4.
+5. [code] **Discount on calm and slippery ice.** `ex_value-iter-discount` —
+   how the optimal policy depends on $\gamma$ on both maps, and the success
+   probability of each optimal policy. *Source:* Oct-2026 set; original.
+6. [code] **In-place sweeps.** ● no label — in-place sweeps are a
+   $\gamma$-contraction for every state order; sweep counts by order and map.
+   *Source:* Oct-2026 set; adapted from Sutton & Barto §4.1 and §4.5.
+7. [code] **Measured contraction rate.** ● `ex_value-iter-contraction-rate`
+   — the asymptotic rate as the spectral radius of $\gamma P_{\pi^*}$ on the
+   nonterminal states, at $\gamma = 0.95$ and $0.999$. *Source:* Oct-2026
+   set; original.
+8. [code] **Improvement, quantified.** ● `ex_value-iter-improvement-quantified`
+   — the matrix form of the performance-difference lemma and the gain of a
+   greedy step, checked numerically. *Source:* Oct-2026 set; after
+   Kakade & Langford 2002 (the lemma CS234 W2026 A2 Q3 also derives).
+9. [code] **When the greedy policy is optimal.** ● `ex_value-iter-greedy-optimal`
+   — the bound $V^\pi \ge V^* - 2\gamma e/(1-\gamma)$ for a greedy policy and
+   why the greedy policy is optimal long before the certificate fires.
+   *Source:* Oct-2026 set; after Singh & Yee 1994 (close to CS234 W2026 A1
+   Q3).
+10. [code] **Time limits under the optimal policy.** `ex_value-iter-time-limits`
+    — propagating $d^\pi_t$ under `pi_star` to split episodes into goal, hole
+    and truncation, and the horizon-dependent optimal command.
+    *Source:* moved in the rebuild from mdp.md (part (a) of its time-limits
+    exercise); original.
+11. [code] **Potential-based shaping.** ● `ex_mdp-reward-design-its-failure`
+    — constant rewards as potentials, per-step charges that change the
+    optimal policy, and shaping that preserves it. *Source:* moved in the
+    rebuild from mdp.md (label kept); adapted from Sutton & Barto Ex. 3.15
+    and 3.16, with the shaping proposition of Ng, Harada & Russell 1999.
+12. [extended] **Backup budgets.** ●● `ex_value-iter-backup-budgets` —
+    modified policy iteration, measuring value iteration, policy iteration and
+    the interpolation between them in backups. *Source:* Oct-2026 set; after
+    Puterman 1994.
 
-**Proposed problem set** (8 problems):
-1. [short-code] **Cost of a sweep.** Cost a value-iteration sweep and confirm
-   the $O(\log(1/\varepsilon)/\log(1/\gamma))$ sweep count empirically.
-   *Provenance:* original (section's own Ex1).
-2. [conceptual] **The contraction, verified.** Re-derive the certified stopping
-   rule by telescoping, then show where the $\gamma=1$ proof fails.
-   *Provenance:* original (section's own Ex2).
-3. [short-code] **Predict, then run.** Predict $V^*(s_0)$ and policy identity
-   across $\gamma$ before running value iteration. *Provenance:* original
-   (section's own Ex3).
-4. [short-code] **Let the ice be calm.** Compare optimal policies with slip on
-   vs. off, cell by cell. *Provenance:* original (section's own Ex4).
-5. [conceptual] **When $\gamma$ equals one.** Explain convergence at
-   $\gamma=1$ on FrozenLake, then build a two-state counterexample that
-   diverges. *Provenance:* original (section's own Ex5).
-6. [extended] **Policy iteration measured in backups.** Plot both algorithms'
-   sup-norm error against Bellman backups on two map sizes. *Provenance:*
-   original (section's own Ex6).
-7. [conceptual] **From contraction to a performance bound.** The section's
-   proposition bounds $\|V_k-V^*\|_\infty$ for the *iterate* value iteration
-   actually produces. Let $V$ be any vector (not necessarily an iterate) with
-   Bellman error $\varepsilon=\|BV-V\|_\infty$, and $\pi$ its greedy policy.
-   Insert $B^\pi V$ into the triangle inequality to show
-   $\|V-V^\pi\|_\infty \le \|V-B^\pi V\|_\infty/(1-\gamma)$, then derive
-   $V^\pi(s)\ge V^*(s)-2\varepsilon/(1-\gamma)$. Evaluate the bound at the
-   sweep where this section's own naive stopping test first fires, and compare
-   the guaranteed floor to the true gap $V^*(s_0)-V^{\pi_k}(s_0)$: how loose is
-   it? *Provenance:* adapted from Stanford CS234 Winter 2026 Assignment 1, Q3
-   parts (e)-(f) (overlap high — proof structure and hint reused directly;
-   cite CS234 on adoption).
-8. [short-code] **A current worth fighting.** Build a six-state "swim
-   upstream" chain (a "swim" action that usually fails backward, a large
-   terminal reward only at the far end) at three current strengths. For each,
-   find the largest $\gamma$ (to two decimals, by grid search using this
-   section's own value-iteration code) at which the optimal policy from the
-   start state does not attempt to swim upstream, and explain the trend as the
-   current strengthens. *Provenance:* adapted from Stanford CS234 Winter 2026
-   Assignment 1, Q4 (overlap high — environment and discount-threshold question
-   reused; re-implemented against this section's own code).
-9. [short-code] **Time limits under the optimal policy.** Propagate the state
-   distribution under `pi_star` and split episodes into goal, hole and
-   truncated. *Provenance:* original (moved from mdp.md, part (a) of its
-   time-limits exercise; `ex_value-iter-time-limits`).
-10. [conceptual] **Reward design and its failure.** Prove potential-based
-   shaping preserves the optimal policy; show a plausible bonus or a per-step
-   charge can still change it. *Provenance:* original (moved from mdp.md;
-   `ex_mdp-reward-design-its-failure`, label kept).
+**Survey sources:** Sutton & Barto Ex. 4.4 (policy iteration that cycles),
+4.7 (Jack's car rental with nonlinear costs), 4.9 (the gambler's problem),
+http://incompleteideas.net/book/RLbook2020.pdf; CS234 W2026 A1 Q3 (Bellman
+residuals and performance bounds) and Q4 (RiverSwim discount thresholds),
+https://web.stanford.edu/class/cs234/assignments/a1/CS234_A1_Questions.pdf.
 
 ---
 
 ## chapter_reinforcement-learning/qlearning.md — Temporal-Difference Learning
 
-**Topic:** The sampled Bellman backup, the TD error, tabular Q-learning
-convergence, off-policy learning and maximization bias. (Bandits, regret,
-$\epsilon$-greedy vs. UCB vs. Thompson sampling moved to exploration.md,
-2026-11.)
+**Topic:** The sampled Bellman backup, double sampling and the semi-gradient,
+step sizes, terminal masking, Q-learning on the slippery lake, off-policy
+targets, SARSA and maximization bias, planning in a learned model.
 
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the review's
-one formatting defect in this chapter (Ex4's inline "(i)/(ii)/(iii)" lettering)
-is cosmetic, not a clarity problem, and out of this catalog's scope; every item
-still names a concrete measurement.
+**Exercises:** 8 (7 from the Oct-2026 set, 1 new; three others moved out to
+exploration.md; 4 labels new in the rebuild, 1 renamed).
 
-**External sources found:**
-- Sutton & Barto, Exercises 6.11/6.12 — a compact conceptual pair: why is
-  Q-learning off-policy at all, and, if action selection were made greedy,
-  would Q-learning and Sarsa become *the same* algorithm (same action
-  selections, same weight updates)? — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercises 6.9/6.10 (programming) — Windy Gridworld extended
-  with eight King's-move actions (plus an optional ninth "stay" action) and,
-  separately, with stochastic wind — a different TD-control environment for the
-  same "does more structure help" question the section asks of its exploration
-  schedules — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercises 2.7/2.8 — the "Unbiased Constant-Step-Size Trick"
-  (a step size avoiding constant-$\alpha$'s initial bias while keeping
-  non-stationary adaptivity) and "UCB Spikes" (explain Figure 2.4's spike at
-  the 11th step, *and* why it decreases afterward) — the closest S&B analogue
-  to the section's own step-size and UCB-sensitivity exercises —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- David Silver, UCL Reinforcement Learning (2015), "Easy21" assignment —
-  Monte-Carlo control and Sarsa($\lambda$) on a custom blackjack-like game,
-  using a visit-count exploration schedule
-  $\epsilon_t = N_0/(N_0+N(s_t))$, $N_0=100$, rather than a fixed or
-  manually-annealed one — more principled than the section's own fixed-$\epsilon$
-  sweep — https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf
-- Stanford CS234 (Winter 2026), Assignment 2, Q1 "Deep $Q$-Networks (DQN)"
-  (written) — given DQN's pseudocode (replay buffer, target network, minibatch
-  updates), say exactly which lines must change to recover tabular Q-learning
-  — the section's own summary text already promises this connection but never
-  makes the reader work through it —
-  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
+1. **Batch TD against Monte Carlo.** `ex_qlearning-batch-td-monte-carlo` —
+   batch TD(0) and Monte Carlo on an eight-episode batch of a two-state
+   reward process: which estimate each converges to and why.
+   *Source:* Oct-2026 set; adapted from Sutton & Barto Example 6.4.
+2. **Truncation treated as termination.** `ex_qlearning-truncation-termination`
+   — the fixed point of a TD update that masks the bootstrap at truncation,
+   against $1/(1-\gamma)$. *Source:* Oct-2026 set; original.
+3. **Greedy SARSA and Q-learning.** `ex_qlearning-greedy-sarsa` — whether
+   SARSA and Q-learning coincide under greedy action selection, with a
+   transition of the calm lake where they differ. *Source:* Oct-2026 set;
+   adapted from Sutton & Barto Ex. 6.12.
+4. [code] **The double-sampling counterexample.** ●
+   `ex_qlearning-double-sampling-counterexample` — on a three-state MDP the
+   minimizer of the sampled squared TD error is not $Q^*$, while the
+   semi-gradient update converges to it. *Source:* Oct-2026 set; the
+   A-split example of Sutton & Barto §11.5.
+5. [code] **Step sizes under a finite budget.** ● `ex_qlearning-step-sizes`
+   — the stationary variance of a constant step size, the bias and variance
+   of $1/(1 + c\,n)$ schedules, and the best constant for a fixed budget.
+   *Source:* Oct-2026 set; original.
+6. [code] **Samples against backups.** ● `ex_qlearning-samples-backups` —
+   Q-learning's error against environment steps beside value iteration's
+   against backups, and the certainty-equivalence model on the same data.
+   *Source:* Oct-2026 set (label renamed in the rebuild); original.
+7. [code] **Maximization bias in a two-state task.** ●
+   `ex_qlearning-maximization-bias` — Q-learning's preference for a bad
+   action with many noisy successors, and double Q-learning.
+   *Source:* Oct-2026 set; adapted from Sutton & Barto Example 6.7, with
+   van Hasselt 2010.
+8. [code] **SARSA and Q-learning on the cliff.** ● `ex_qlearning-cliff-walking`
+   — `sarsa` against `q_learning` on `CliffWalking-v1`: the learned paths,
+   the reward collected while learning, and the limit as $\epsilon$ falls to
+   zero. *Source:* new in the rebuild (14.3-C1); adapted from Sutton & Barto
+   Example 6.6.
 
-**Proposed problem set** (8 problems):
-1. [conceptual] **Why greedy from the start cannot work.** Trace a
-   fixed-tie-break trajectory from a zero table, and explain why coverage
-   alone doesn't guarantee a good table. *Provenance:* original (section's own
-   Ex1).
-2. *Moved to exploration.md (2026-11):* **The exploration schedule.**
-3. [conceptual] **Step sizes under a finite budget.** Check Robbins-Monro
-   conditions, then find by experiment a constant beating both decaying
-   schedules. *Provenance:* original (section's own Ex3).
-4. [short-code] **The double-sampling counterexample.** Build a 3-state MDP,
-   solve the population objective in closed form, and show semi-gradient TD
-   converges to $Q^*$ instead. *Provenance:* original (section's own Ex4).
-5. [short-code] **A like-for-like comparison with value iteration.** Plot
-   $\|\hat Q-Q^*\|_\infty$ against environment steps vs. Bellman backups.
-   *Provenance:* original (section's own Ex5).
-6. *Moved to exploration.md (2026-11):* **Regret, measured properly.**
-7. *Moved to exploration.md (2026-11):* **A harder map.**
-8. [conceptual] **From tabular Q-learning to DQN, one line at a time.** Write
-   DQN's update as pseudocode with a replay buffer $\mathcal D$, target weights
-   $\theta^-$, and a minibatch of transitions. Say exactly which lines must be
-   deleted or changed — and why each is unneeded — to recover this section's
-   own `q_learning` update: what happens to the replay buffer when every
-   update uses only the transition just seen, what happens to the target
-   network when the table is its own exact target, and what happens to the
-   minibatch loop when the batch size is one. Then run this section's tabular
-   update once with a "replay buffer" of size one and confirm it reproduces the
-   original numbers exactly. *Provenance:* adapted from Stanford CS234 Winter
-   2026 Assignment 2, Q1.1(a) (overlap high — the reduction question is
-   reused directly; the empirical check against this section's own code is
-   original).
+**Survey sources:** Sutton & Barto Ex. 6.11/6.12 (why Q-learning is
+off-policy; greedy SARSA), 6.9/6.10 (windy gridworld with king's moves and
+stochastic wind), http://incompleteideas.net/book/RLbook2020.pdf; CS234
+W2026 A2 Q1 (which lines of DQN reduce to tabular Q-learning),
+https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf.
 
 ---
 
 ## chapter_reinforcement-learning/exploration.md — Exploration
 
-**Topic:** The multi-armed bandit as a one-state MDP, regret, greedy,
-$\epsilon$-greedy and annealed exploration, UCB and Thompson sampling,
-exploration in MDPs, identical-reward groups on the verifier task. New section
-(2026-11), split from qlearning.md.
+**Topic:** Multi-armed bandits and regret, greedy and $\epsilon$-greedy rules,
+upper confidence bounds and Thompson sampling, the regret lower bound,
+exploration in MDPs (the chain, count-based bonuses, coverage on the lake),
+identical-reward groups on the verifier task.
 
-**Current exercises:** 3, moved from qlearning.md with their labels; the
-section's exercise pass (Thompson's Beta posterior, the all-identical group as
-a function of $p$) is pending.
+**Exercises:** 6 (3 moved in from qlearning.md, 3 new in the rebuild).
 
-**External sources found:**
-- Sutton & Barto, Exercises 2.7/2.8 — the "Unbiased Constant-Step-Size Trick"
-  (a step size avoiding constant-$\alpha$'s initial bias while keeping
-  non-stationary adaptivity) and "UCB Spikes" (explain Figure 2.4's spike at
-  the 11th step, *and* why it decreases afterward) — the closest S&B analogue
-  to the section's own step-size and UCB-sensitivity exercises —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- David Silver, UCL Reinforcement Learning (2015), "Easy21" assignment —
-  Monte-Carlo control and Sarsa($\lambda$) on a custom blackjack-like game,
-  using a visit-count exploration schedule
-  $\epsilon_t = N_0/(N_0+N(s_t))$, $N_0=100$, rather than a fixed or
-  manually-annealed one — more principled than the section's own fixed-$\epsilon$
-  sweep — https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf
+1. [code] **The exploration schedule.** `ex_qlearning-exploration-schedule`
+   — a zero table behaves identically under every $\epsilon$ until the first
+   success, what greedy selection does after it, and five schedules compared
+   on slippery ice. *Source:* moved in the rebuild from qlearning.md (label
+   kept); original.
+2. **Logarithmic regret of UCB.** ●● `ex_qlearning-ucb-logarithmic-regret` —
+   deriving the UCB1 regret bound from Hoeffding's inequality and evaluating
+   it on the section's arms. *Source:* moved in the rebuild from
+   qlearning.md (label kept); Theorem 1 of
+   Auer, Cesa-Bianchi & Fischer 2002.
+3. **Thompson's posterior.** ● `ex_exploration-thompson-posterior` — the
+   Beta posterior of a Bernoulli arm, the probability of pulling an untried
+   arm, and Thompson sampling as probability matching. *Source:* new in the
+   rebuild (W10); original.
+4. [code] **Long horizons.** ●● `ex_exploration-long-horizons` — a
+   vectorized bandit runner, median regret of UCB and Thompson sampling to
+   $10^5$ pulls on log axes, and whether $\kappa = \sqrt{2}$ catches up.
+   *Source:* new in the rebuild; original.
+5. [extended] **Deep exploration.** ●● `ex_exploration-deep-exploration` —
+   the exponential cost of random exploration on the chain, the polynomial
+   cost of optimistic initialization, and both learners on the slippery
+   $8 \times 8$ lake. *Source:* moved in the rebuild from qlearning.md and
+   shortened (W10, new label); original.
+6. **Groups that teach nothing.** ● `ex_exploration-identical-groups` — the
+   probability $(1-p)^K + p^K$ of an identical group, the group size needed
+   for a mixed group, and the share of a training set that gives no signal.
+   *Source:* new in the rebuild (W10); original, complementing baselines
+   exercise 6.
 
-**Proposed problem set** (3 problems, as moved):
-1. [short-code] **The exploration schedule.** Predict then measure first
-   success and final greedy performance across $\epsilon$ schedules.
-   *Provenance:* original (moved from qlearning.md;
-   `ex_qlearning-exploration-schedule`, label kept).
-2. [conceptual] **Logarithmic regret of UCB.** Derive the UCB1 bound with
-   Hoeffding's inequality and evaluate it on the section's arms.
-   *Provenance:* original (moved from qlearning.md;
-   `ex_qlearning-ucb-logarithmic-regret`, label kept).
-3. [extended] **Deep exploration.** A chain on which undirected exploration
-   needs exponentially many episodes, optimistic initialization, and the
-   8x8 map. *Provenance:* original (moved from qlearning.md).
+**Survey sources:** Sutton & Barto Ex. 2.7 (unbiased constant-step-size
+trick), 2.8 (UCB spikes), http://incompleteideas.net/book/RLbook2020.pdf;
+David Silver, UCL RL (2015), Easy21 (visit-count schedule
+$\epsilon_t = N_0/(N_0 + N(s_t))$),
+https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf.
 
 ---
 
 ## chapter_reinforcement-learning/imitation.md — Learning from Demonstrations
 
-**Topic:** Behavior cloning as supervised classification, distribution shift
-between the expert's and the learner's state distribution, the
-$O(\varepsilon T^2)$ compounding-error bound, DAgger.
+**Topic:** Behavior cloning as classification, distribution shift and missing
+coverage, quadratic against linear error growth, DAgger, supervised
+fine-tuning as behavior cloning.
 
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the review
-flagged this as the *shortest* exercise section in the chapter and the only one
-with zero cross-references, but found no defects and no clarity problems; every
-item still names a deliverable.
+**Exercises:** 9 (7 from the Oct-2026 set, 1 replacing an Oct-2026 exercise,
+1 new; 1 label new in the rebuild).
 
-**External sources found:**
-- Berkeley CS285 (Fall 2020), Homework 1 "Imitation Learning" — the one course
-  assignment built around exactly this section's two algorithms. Structure:
-  implement BC and DAgger against a provided expert on MuJoCo tasks; report BC
-  reaching $\ge$30% of expert return on one task (Ant) *and* failing on another
-  at matched network size/data/iterations; sweep one BC hyperparameter and plot
-  the effect; plot a DAgger learning curve (return vs. iteration, with error
-  bars) against horizontal expert/BC reference lines —
-  https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw1.pdf
-- **No textbook tradition found.** Sutton & Barto's 2nd edition has no chapter
-  on imitation learning, behavior cloning, or DAgger — the topic postdates the
-  book's scope, so there is no S&B exercise to compare against.
-- **No CS234 tradition found.** Stanford CS234 (Winter 2026)'s three
-  assignments cover tabular MDP planning, Q-learning/function
-  approximation/policy gradients, and offline RL/RLHF — imitation learning is
-  not a graded topic in this iteration of the course.
+1. **The chain in closed form.** `ex_imitation-chain-closed-form` — the
+   closed-form loss of the cloned and the recovering imitator on the chain,
+   checked against the printed values. *Source:* Oct-2026 set (part (b)
+   rewritten in the rebuild); original.
+2. [code] **Where the clone's mass goes.** no label — total variation between
+   the expert's and the clone's state distributions over time, and which
+   holes take the clone's lost successes. *Source:* Oct-2026 set (takes the
+   total-variation material moved out of the text); original.
+3. **Fine-tuning as behavior cloning.** no label — why a fine-tuned language
+   model's error rate grows along its own responses, and which part of the
+   compounding-error proposition then applies. *Source:* Oct-2026 set;
+   original.
+4. **Two valid paths.** no label — squared-error and categorical fits to
+   bimodal demonstrations, and diffusion policies that execute action
+   sequences. *Source:* Oct-2026 set; after Chi et al. 2023.
+5. [code] **Demonstrations needed for coverage.** ●
+   `ex_imitation-demonstrations-coverage` — critical states of the slippery
+   lake and the number of demonstrations needed to cover them.
+   *Source:* Oct-2026 set (part 3 trimmed in the rebuild); original.
+6. [code] **DAgger on a longer path.** ● `ex_imitation-dagger-s-budget` —
+   the clone and DAgger on the $8 \times 8$ calm lake: the share of the loss
+   due to distribution shift and how DAgger closes it. *Source:* rebuild,
+   replacing the Oct-2026 "DAgger's budget" (label kept); original.
+7. [code] **A noisy expert.** no label — labels corrupted with probability
+   0.1: what cross-entropy converges to, and the clone against DAgger under
+   the noise. *Source:* new in the rebuild (14.5-S4); original, after a
+   pre-October "bad expert" item.
+8. **DAgger's guarantee.** ● `ex_imitation-dagger-guarantee` — the
+   no-regret reduction behind DAgger's linear bound, with mixing
+   probabilities $\beta_i$. *Source:* Oct-2026 set (part 3 trimmed in the
+   rebuild); after Ross, Gordon & Bagnell 2011.
+9. **Rewards behind demonstrations.** ● no label — reward ambiguity in
+   inverse RL (shaping and the zero reward), and what maximum-entropy IRL
+   can and cannot identify. *Source:* Oct-2026 set; after
+   Ziebart et al. 2008.
 
-**Proposed problem set** (7 problems):
-1. [conceptual] **Where the bound comes from.** Reproduce the $O(\varepsilon T^2)$
-   argument and identify where expert distribution is swapped for learner
-   distribution. *Provenance:* original (section's own Ex1).
-2. [short-code] **How many demonstrations.** Sweep $N$ and find where the clone
-   matches the expert on-distribution while still losing return. *Provenance:*
-   original (section's own Ex2).
-3. [short-code] **Where the errors are.** Plot per-state error against expert
-   visitation frequency. *Provenance:* original (section's own Ex3).
-4. [short-code] **DAgger's budget.** Compare DAgger and BC at matched expert
-   query counts. *Provenance:* original (section's own Ex4).
-5. [conceptual] **SFT is behavior cloning.** Map BC's bound onto language-model
-   fine-tuning degradation over long generations. *Provenance:* original
-   (section's own Ex5).
-6. [extended] **A bad expert.** Corrupt 10% of demonstrations and compare BC's
-   and DAgger's degradation. *Provenance:* original (section's own Ex6).
-7. [short-code] **A matched-capacity BC failure.** CS285's HW1 requires a
-   *paired* result — real fractional expert performance on one task, clear
-   failure on a second — at identical network size, dataset size, and training
-   iterations, a fairness discipline the section's own Ex2 (varying $N$ on one
-   task) does not enforce. Pick two of the section's ten demonstration sets
-   that visibly differ in how spread out the expert's state visitation is
-   (reuse the Ex3 plot to choose them), fit BC to both at identical
-   hyperparameters, and report training accuracy alongside deployed return for
-   both. Does the training-accuracy gap predict the deployed-return gap, or
-   does one task fail primarily from distribution shift despite a similar fit?
-   *Provenance:* adapted from Berkeley CS285 Fall 2020 HW1, Section 1 (overlap
-   med — the matched-capacity, one-works/one-doesn't comparison is reused; the
-   ten-dataset selection and fit-vs-shift diagnostic are original).
+**Survey sources:** Berkeley CS285 Fall 2020 HW1 (behavior cloning and DAgger
+on MuJoCo, a matched-capacity success and failure, a DAgger learning curve),
+https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw1.pdf.
+Sutton & Barto and CS234 W2026 have no imitation-learning exercises.
 
 ---
 
 ## chapter_reinforcement-learning/policy-gradient.md — Policy Gradient
 
-**Topic:** Direct policy parameterization, the log-derivative/score-function
-identity, the REINFORCE estimator, bias/variance of the estimator, the
-on-policy data requirement.
+**Topic:** Softmax policies and the score function, the log-derivative trick
+and the cancellation of the dynamics, REINFORCE on the verifier task and the
+lake, the policy gradient theorem, the on-policy requirement, unbiasedness
+and variance, plateaus.
 
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the review
-found this file's sweeps exemplary (every one names its axis, its metric, and
-its win condition); nothing external supersedes any item.
+**Exercises:** 9 (8 from the Oct-2026 set, 1 new; 2 labels new in the
+rebuild).
 
-**External sources found:**
-- Sutton & Barto, Exercise 13.1 — use the gridworld's own dynamics to write an
-  exact symbolic expression for the optimal probability of the "right" action
-  under the section's softmax parameterization — a closed-form counterpart to
-  the section's own numerically-verified two-state enumeration (Ex2) —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercise 13.3 — derive the softmax-with-linear-preferences
-  eligibility vector $\nabla\ln\pi(a|s,\theta)=x(s,a)-\sum_b\pi(b|s,\theta)x(s,b)$
-  from first principles — essentially the section's own Ex1 score identity, in
-  the book's original linear-feature notation —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- Berkeley CS285 (Fall 2020), Homework 2 "Policy Gradients" — its own
-  six-experiment design (trajectory-centric vs. reward-to-go weighting,
-  with/without advantage standardization, small vs. large batch, on CartPole;
-  then a batch-size/learning-rate search on InvertedPendulum for the smallest
-  batch and largest rate solving the task in under 100 iterations) is close
-  kin to the section's own Ex3 grid, but organized as a $2\times2\times2$
-  ablation rather than a single sweep —
-  https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw2.pdf
-- Stanford CS234 (Winter 2026), Assignment 2, Q3 "Distributions Induced by a
-  Policy" (written) — derives the *performance-difference lemma*,
-  $V^\pi(s_0)-V^{\pi'}(s_0)=\frac{1}{1-\gamma}\mathbb E_{s\sim d^\pi}\mathbb
-  E_{a\sim\pi'}[A^{\pi'}(s,a)]$, relating the trajectory-based objective this
-  section builds to a state-occupancy identity used throughout later
-  policy-optimization theory (TRPO/PPO surrogate bounds) — a foundational
-  identity the section never derives —
-  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
+1. **Parameter-dependent dynamics.** `ex_policy-gradient-parameter-dependent-dynamics`
+   — the term that survives when the kernel depends on $\theta$, in a
+   recommender whose users tire of an item. *Source:* Oct-2026 set; original.
+2. [code] **Sparse rewards.** `ex_policy-gradient-sparse-rewards` — the
+   success probability $p_0$ of the uniform policy computed exactly, batches
+   without a success, and the batch size that brings the noise down to the
+   mean. *Source:* Oct-2026 set; original.
+3. **Shifted rewards.** no label — subtracting one from every reward keeps
+   the mean but changes the noise; for which policies it helps.
+   *Source:* Oct-2026 set; original.
+4. [code] **The theorem in a table.** ● `ex_policy-gradient-theorem-table` —
+   the tabular softmax gradient $\rho_\gamma(s)\pi(b \mid s)A(s,b)$ from the
+   theorem, checked against `g_exact`, and why the gradient at the uniform
+   policy is one third as long on slippery ice. *Source:* Oct-2026 set (part
+   (c) new in the rebuild); original.
+5. [code] **Reusing a batch.** ● `ex_policy-gradient-breaking-policy-rule-purpose`
+   — $k$ uncorrected steps per batch: speed, drift of the probability ratio,
+   and where it breaks. *Source:* Oct-2026 set; original.
+6. [code] **Testing unbiasedness.** ● `ex_policy-gradient-testing-unbiasedness`
+   — the running-average test over $M$ estimates, and a biased estimator that
+   levels off. *Source:* Oct-2026 set; original.
+7. **Softmax plateaus.** ● `ex_policy-gradient-softmax-plateaus` — the
+   logistic plateau of a two-action softmax, the steps to escape it under
+   gradient ascent and under Adam, and the near-deterministic final policies
+   of slippery-lake runs. *Source:* Oct-2026 set; original.
+8. [code] **The dropped discount.** ●●
+   `ex_policy-gradient-discount-that-implementations-drop` — the update field
+   without $\gamma^t$ is not a gradient; checked on FrozenLake.
+   *Source:* Oct-2026 set; after Nota & Thomas 2020.
+9. **The Gaussian step of the figure.** no label — $J(\mu)$, the score and
+   the variance of the twelve-sample estimate for the policy and reward of
+   the score-ascent figure. *Source:* new in the rebuild; original.
 
-**Proposed problem set** (7 problems):
-1. [conceptual] **The score sums to zero.** Show the score identity sums to
-   zero over actions and conclude an update can only redistribute probability.
-   *Provenance:* original (section's own Ex1).
-2. [short-code] **Unbiased, where enumeration is exact.** Confirm the
-   $1/\sqrt n$ error rate on an enumerable two-state MDP. *Provenance:*
-   original (section's own Ex2).
-3. [short-code] **Batch size and learning rate.** Grid-sweep batch size and
-   learning rate, reporting episodes to a return threshold. *Provenance:*
-   original (section's own Ex3).
-4. [conceptual] **Sparse reward, seen from the estimator.** Compare
-   drop-out-from-the-estimator failure under two reward conventions.
-   *Provenance:* original (section's own Ex4).
-5. [short-code] **Breaking the on-policy rule on purpose.** Reuse batches for
-   $k$ gradient steps and log the importance ratio's drift. *Provenance:*
-   original (section's own Ex5).
-6. [conceptual] **The discount that implementations drop.** Identify the
-   different objective estimated when $\gamma^t$ is dropped from the score
-   weight. *Provenance:* original (section's own Ex6).
-7. [conceptual] **The performance-difference lemma.** For two policies
-   $\pi,\pi'$ on this section's own MDP, define the discounted state-occupancy
-   $d^\pi(s)=(1-\gamma)\sum_t\gamma^t\Pr(s_t=s\mid\pi)$ and the advantage
-   $A^{\pi'}(s,a)=Q^{\pi'}(s,a)-V^{\pi'}(s)$ from :numref:`sec_valueiter`. By
-   adding and subtracting $\sum_t\gamma^{t+1}V^{\pi'}(s_{t+1})$ inside
-   $V^\pi(s_0)-V^{\pi'}(s_0)$ and applying the tower property of expectation,
-   prove
-   $$V^\pi(s_0)-V^{\pi'}(s_0)=\frac{1}{1-\gamma}\,\mathbb E_{s\sim d^\pi}\big[\mathbb E_{a\sim\pi}[A^{\pi'}(s,a)]\big].$$
-   Then, on the section's tabular softmax policy, evaluate both sides
-   numerically before and after one REINFORCE update, estimating $d^\pi$ from
-   rollouts: does the identity hold to sampling error? Explain in one sentence
-   why a positive expected advantage under the *new* policy's own state
-   distribution does not by itself certify improvement, and connect this to
-   why :numref:`sec_ppo`'s surrogate clips the policy ratio rather than
-   trusting this identity directly. *Provenance:* adapted from Stanford CS234
-   Winter 2026 Assignment 2, Q3(c)-(d) (overlap high — the identity, proof
-   strategy, and hint chain are reused directly and should be cited on
-   adoption; the numerical verification is original).
+**Survey sources:** Sutton & Barto Ex. 13.1 (exact optimal probability on a
+gridworld), 13.3 (the softmax eligibility vector),
+http://incompleteideas.net/book/RLbook2020.pdf; CS285 Fall 2020 HW2
+(reward-to-go and standardization ablations, batch-size and learning-rate
+search), https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw2.pdf;
+CS234 W2026 A2 Q3 (the performance-difference lemma),
+https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf.
 
 ---
 
-## chapter_reinforcement-learning/baselines.md — Variance Reduction for Policy Gradients
+## chapter_reinforcement-learning/baselines.md — Baselines and Variance Reduction
 
-**Topic:** The zero-mean score identity, reward-to-go, constant/control-variate
-baselines, the variance-optimal baseline, centering vs. scaling, the
-GRPO/Dr.-GRPO connection.
+**Topic:** The zero-mean identity, reward-to-go and causality, baselines as
+control variates, the learned value baseline, centering and normalization,
+leave-one-out and group baselines, the loss divisor, five estimators compared
+at a frozen policy and in training at matched step sizes.
 
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — the review
-called this file "a strong example of the house style" with zero clarity
-flags; every exercise already names both the quantity to measure and the
-comparison to make.
+**Exercises:** 11 (10 from the Oct-2026 set, 1 new; 4 labels new in the
+rebuild).
 
-**External sources found:**
-- **No dedicated exercise found in Sutton & Barto.** Chapter 13's four
-  end-of-chapter exercises (13.1, 13.3, 13.4, 13.5) cover policy
-  parameterization and the score function, but none touches baselines,
-  control variates, or variance reduction — the book's own in-text "REINFORCE
-  with Baseline" section (13.4) states the zero-mean identity but is never
-  turned into a numbered exercise. A genuine gap in the canonical source for
-  exactly this section's topic.
-- Berkeley CS285 (Fall 2020), Homework 2, §2.2–2.3 and §6 — implements
-  reward-to-go, a learned state-dependent value baseline, and advantage
-  normalization as three separately toggleable pieces (`-rtg`,
-  `--nn_baseline`, standardize-by-default), then requires a 4-way ablation on
-  HalfCheetah (baseline on/off $\times$ reward-to-go on/off) — a factorial
-  design the section's own five-estimator comparison does not run —
-  https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw2.pdf
-- Berkeley CS285 (Fall 2020), Homework 2, §8 (bonus) — implement GAE-$\lambda$
-  for advantage estimation and test whether it speeds training on a MuJoCo
-  task; the section's own "Reward-to-Go: One Scan" slide already previews
-  this ("GAE will be this same scan, run on TD errors with factor
-  $\gamma\lambda$") but the exercise set never builds it —
-  https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw2.pdf
-- Stanford CS234 (Winter 2026), Assignment 2, §2.3 "Advantage Normalization" —
-  states the same centering-is-a-baseline / scaling-is-a-step-size distinction
-  as the section's own Ex6, corroborating rather than displacing it (overlap
-  with the existing exercises is high enough that no new problem is proposed
-  from this source) —
-  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
+1. **Admissible baselines.** `ex_baselines-admissible` — which of five
+   candidates (time index, past rewards, remaining steps, a function of
+   $s_{t+1}$, $\hat Q(s_t, a_t)$) leave the gradient unbiased.
+   *Source:* Oct-2026 set; original.
+2. **Baselines on stale data.** no label — a constant baseline biases the
+   score once the action comes from an older policy, and the probability
+   ratio restores the zero mean. *Source:* Oct-2026 set; original.
+3. **Optimal constant baseline.** `ex_baselines-optimal-constant-baseline` —
+   the score-weighted mean $b^*$ minimizes the trace of the covariance, as
+   the optimal control-variate coefficient. *Source:* Oct-2026 set;
+   original.
+4. [code] **Baseline step size and timing.** ● no label — sweeping $\eta_V$
+   (`eta_v`) and fitting the baseline before or after the policy step.
+   *Source:* Oct-2026 set; original.
+5. [code] **Bias of batch centering.** ● no label — the $(n-1)/n$ factor
+   derived directly, and the bias of step-wise centering by enumeration.
+   *Source:* Oct-2026 set; original.
+6. **The $\sigma$-normalized objective.** ● `ex_baselines-sigma-objective` —
+   which prompts GRPO's division by $\sigma$ favors and the objective it
+   ascends. *Source:* Oct-2026 set; after Liu et al. 2025 (Dr. GRPO).
+7. [code] **Variance ordering across policies.** ● `ex_baselines-variance-ordering`
+   — the frozen-policy table repeated at four points of training, the
+   estimators without a baseline near the maximum, and batches without a
+   success. *Source:* Oct-2026 set; original.
+8. [code] **The step-size confound.** ● `ex_baselines-step-size-confound-quantified`
+   — the normalized arm as centering at step size $\eta/\sigma$, logged per
+   batch, and the exact value baseline against reward-to-go at fixed $\eta$.
+   *Source:* Oct-2026 set; original.
+9. [code] **Optimal state baseline.** ●● `ex_baselines-optimal-state-baseline`
+   — the per-state optimal baseline for the tabular softmax and when it is
+   also optimal for the episodic estimate. *Source:* Oct-2026 set; after
+   Greensmith, Bartlett & Baxter 2004.
+10. [extended] **Length bias at small scale.** ●● no label — per-response
+    length normalization favors short correct and long incorrect responses,
+    in a toy model and on FrozenLake. *Source:* Oct-2026 set; after Liu et
+    al. 2025.
+11. [code] **Reward-to-go, taken apart.** ● `ex_baselines-reward-to-go-taken-apart`
+    — the mean of reward-to-go without $\gamma^t$, its exact tilt from the
+    gradient, and when dropping past rewards raises the noise.
+    *Source:* new in the rebuild (W10, the $\gamma^t$ problem); after Thomas
+    2014 and Nota & Thomas 2020.
 
-**Proposed problem set** (7 problems):
-1. [short-code] **The step-size confound, quantified.** Rescale the normalized
-   arm's learning rate by its measured $1/\sigma$ and check whether the
-   ordering survives. *Provenance:* original (section's own Ex1).
-2. [short-code] **Measure the variance you claim to reduce.** Freeze $\theta$,
-   draw 200 batches, and compare each estimator's covariance trace to its
-   learning-curve ordering. *Provenance:* original (section's own Ex2).
-3. [conceptual] **The variance-optimal baseline.** Derive the weighted-average
-   optimal constant baseline and connect it to the control-variate
-   coefficient. *Provenance:* original (section's own Ex3).
-4. [short-code] **Baseline step size.** Sweep $\alpha_V$ and diagnose the
-   failure at $\alpha_V=1$. *Provenance:* original (section's own Ex4).
-5. [short-code] **The group-relative baseline in two lines.** Implement the
-   GRPO-style normalized weight and test batch size one. *Provenance:*
-   original (section's own Ex5).
-6. [conceptual] **What dividing by sigma costs.** Compare $\sigma$-weighting
-   across two prompts of different success rate — the Dr. GRPO objection.
-   *Provenance:* original (section's own Ex6).
-7. [short-code] **A $\lambda$ dial between reward-to-go and one-step TD.**
-   Implement the $\gamma\lambda$-weighted scan over TD errors
-   $\delta_t=r_t+\gamma\hat V(s_{t+1})-\hat V(s_t)$ that the section's own
-   "Reward-to-Go: One Scan" slide names but never builds:
-   $\hat A_t^{GAE(\lambda)}=\sum_{k\ge0}(\gamma\lambda)^k\delta_{t+k}$. Confirm
-   $\lambda=0$ reproduces (up to the learned baseline's error) the one-step
-   actor-critic advantage and $\lambda=1$ reproduces the section's own
-   reward-to-go-minus-baseline estimator. Add this as a sixth arm to the
-   section's five-estimator variance comparison at
-   $\lambda\in\{0,0.5,0.9,1\}$ and report where it falls in the variance
-   ordering and in trained return. *Provenance:* adapted from Berkeley CS285
-   Fall 2020 HW2, §8 bonus problem (overlap med — GAE-$\lambda$ and its two
-   limiting cases are reused, citing Schulman et al. 2016 on adoption;
-   grafting it onto this section's own five-estimator comparison as a sixth
-   arm is original).
+**Survey sources:** Sutton & Barto has no baseline exercise in ch. 13 (the
+gap CS285 and CS234 fill); CS285 Fall 2020 HW2 §2.2–2.3 and §6 (baseline and
+reward-to-go ablation), §8 (GAE-$\lambda$),
+https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw2.pdf;
+CS234 W2026 A2 §2.3 (advantage normalization),
+https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf.
 
 ---
 
 ## chapter_reinforcement-learning/deep-rl.md — Function Approximation in Reinforcement Learning
 
-**Topic:** Replacing tabular representations with neural networks, continuous
-states (CartPole) and continuous actions (Pendulum, Gaussian policies), the
-coupling/generalization effect of shared parameters, score-function vs.
-pathwise gradient estimators.
+**Topic:** Tables as linear networks, policy and value networks, value
+regression, bootstrapping at time limits, REINFORCE on CartPole, the surrogate
+loss, Gaussian policies on Pendulum, score-function against pathwise
+gradients, coupling between states.
 
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the review
-found no defects and no clarity flags in this file; it is also the explicit
-chapter/book boundary, and Ex6 already makes a deliberate forward
-cross-reference to the next chapter.
+**Exercises:** 8 (all from the Oct-2026 set; 4 labels new in the rebuild).
 
-**External sources found:**
-- Sutton & Barto, Exercise 9.1 — show that tabular methods are a special case
-  of linear function approximation, and say what the feature vectors would be
-  — a formal proof of the claim the section's own "A Table Is a Linear
-  Network" slide makes only in prose (`nn.Embedding(16,4)` **is** a linear
-  layer on one-hot states) — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercise 13.4 — derive the Gaussian-policy eligibility
-  vector (score function) in closed form for both the mean and
-  log-standard-deviation parameters — the exact object the section's own "Two
-  Gradients of One Expectation" slide computes only for a scalar toy case —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- OpenAI Spinning Up in Deep RL, Exercises page, Problem Set 2, Exercise 2.2
-  "Silent Bug in DDPG" — a deliberately introduced shape bug (the critic's
-  output isn't squeezed from `[batch, 1]` to `[batch]`) that silently corrupts
-  a deterministic, pathwise-gradient actor-critic; the student must diagnose
-  it from training curves alone before checking a reference diff — a "debug
-  this" exercise style the section's own set does not use —
-  https://spinningup.openai.com/en/latest/spinningup/exercises.html
-- OpenAI Spinning Up in Deep RL, Exercises page, Problem Set 1, Exercise 1.3
-  "Computation Graph for TD3" — fill in TD3's loss functions and intermediate
-  calculations, another pathwise-gradient (differentiable-critic)
-  implementation task adjacent to the section's score-vs-pathwise comparison
-  — https://spinningup.openai.com/en/latest/spinningup/exercises.html
-- Stanford CS234 (Winter 2026), Assignment 2, §2 "Policy Gradient Methods"
-  (coding + written) — the same REINFORCE-with-baseline architecture on the
-  same two environments (CartPole, Pendulum) this section uses, with
-  published sanity-check reward targets (baseline REINFORCE $\approx$700 by
-  iteration 20 on Pendulum) that can cross-check this section's own
-  three-seed curves —
-  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
-- **No transfer found** for classical feature-engineering exercises: Sutton &
-  Barto's tile-coding exercise (9.5, choosing a step size for 98 overlapping
-  tilings of a 7-D state) has no counterpart the reader can attempt with this
-  section's tools, since the section replaces feature engineering with a
-  learned MLP entirely — a real gap in the book's coverage this section's own
-  tooling cannot close.
+1. **Discounting at the time limit.** `ex_deep-rl-time-limit` — discounted
+   and undiscounted CartPole returns rank episodes alike, the reward-to-go
+   near the limit without a correction, the bootstrapped target, and why
+   Pendulum needs the correction more. *Source:* Oct-2026 set (rewritten for
+   the truncation bootstrap); original.
+2. [code] **Gaussian score.** `ex_deep-rl-gaussian-score` — the score of the
+   mean and log standard deviation, $\mathbb{E}[Q(a)(z^2-1)] = \sigma^2 Q''$,
+   unbiasedness under torque clipping, and a state-dependent standard
+   deviation (`state_std=True`) on Pendulum. *Source:* Oct-2026 set (part
+   (d) new in the rebuild); adapted from Sutton & Barto Ex. 13.4.
+3. [code] **Discontinuous rewards.** no label — the pathwise estimator
+   returns zero for a threshold reward; smooth steps of growing sharpness.
+   *Source:* Oct-2026 set; original.
+4. **Surrogate loss value.** `ex_deep-rl-surrogate-value` — with normalized
+   weights the surrogate equals $-s\,c$, so its value is bounded and says
+   little about the return. *Source:* Oct-2026 set; original.
+5. [code] **Normalization under Adam.** ● `ex_deep-rl-normalization-adam` —
+   Adam's invariance to a constant gradient scale, its memory of past
+   scales, and centering without the division on CartPole and Pendulum.
+   *Source:* Oct-2026 set; original.
+6. **Score versus pathwise variance.** ● `ex_deep-rl-score-pathwise-variance`
+   — the exact single-sample variances $15\sigma^2 + 14 + 1/\sigma^2$ and
+   $4\sigma^2$, and what a baseline does to the score form.
+   *Source:* Oct-2026 set; original.
+7. [code] **Tangent kernel.** ● `ex_deep-rl-tangent-kernel` — one SGD step
+   moves the value at other states by the tangent kernel; computed and
+   compared with the coupling probe. *Source:* Oct-2026 set; original.
+8. [extended] **Parameter-space noise.** ●● no label — the evolution-strategies
+   gradient and its antithetic estimate, its noise in the dimension, and
+   random search with a linear policy on CartPole. *Source:* Oct-2026 set;
+   after Salimans et al. 2017 and Mania, Guy & Recht 2018.
 
-**Proposed problem set** (8 problems):
-1. [conceptual] **A surrogate loss is not a performance metric.** Show the
-   surrogate's gradient equals $-\hat u$ at fixed advantages, then construct a
-   case where the loss and the return diverge. *Provenance:* original
-   (section's own Ex1).
-2. [short-code] **How small can the policy be.** Sweep hidden width on
-   CartPole and report the smallest network that still balances the pole.
-   *Provenance:* original (section's own Ex2).
-3. [short-code] **Which return to plot.** Add the discounted return alongside
-   the undiscounted one and construct a task where they diverge.
-   *Provenance:* original (section's own Ex3).
-4. [short-code] **Batch size at a fixed episode budget.** Sweep batch size
-   with total episodes held fixed and compare per-episode learning speed.
-   *Provenance:* original (section's own Ex4).
-5. [short-code] **Advantage scale.** Replace normalized advantage with raw
-   reward-to-go and compare degradation across tasks. *Provenance:* original
-   (section's own Ex5).
-6. [conceptual] **Benefits and costs of generalization.** Argue why a batch
-   dominated by near-vertical states can worsen the policy at large angles.
-   *Provenance:* original (section's own Ex6).
-7. [short-code] **What the spread costs.** Fix the Gaussian head's $\sigma$ at
-   three values and relate the failures to exploration and score variance.
-   *Provenance:* original (section's own Ex7).
-8. [short-code] **A shape bug in the pathwise gradient.** Reintroduce, into
-   this section's own critic network, an analogous silent bug to Spinning
-   Up's DDPG exercise: forget to squeeze the critic's output so it returns
-   shape `[batch, 1]` instead of `[batch]`, then run the section's own
-   score-vs-pathwise comparison cell unchanged. Broadcasting will silently turn
-   the pathwise gradient's per-example terms into a `[batch, batch]`
-   outer-product sum instead of a `[batch]`-length vector before the mean.
-   From the corrupted variance ratio and gradient values alone (not from
-   reading the diff), diagnose that the bug is a shape error rather than a
-   real modeling problem, and say what property of the correct pathwise
-   estimator (the ratio being a small constant regardless of batch size) tips
-   you off. *Provenance:* adapted from OpenAI Spinning Up in Deep RL, Problem
-   Set 2, Exercise 2.2 (overlap high on the nature of the bug and the
-   diagnose-before-you-peek methodology; transplanted from DDPG onto this
-   section's own Gaussian-policy/critic code, which is original).
+**Survey sources:** Sutton & Barto Ex. 9.1 (tabular methods as linear
+function approximation), 13.4 (Gaussian eligibility vector), 9.5 (tile
+coding, no counterpart with this section's tools),
+http://incompleteideas.net/book/RLbook2020.pdf; Spinning Up Problem Set 2
+Ex. 2.2 (a silent shape bug in DDPG) and Problem Set 1 Ex. 1.3 (the TD3
+computation graph), https://spinningup.openai.com/en/latest/spinningup/exercises.html;
+CS234 W2026 A2 §2 (REINFORCE with a baseline on CartPole and Pendulum),
+https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf.

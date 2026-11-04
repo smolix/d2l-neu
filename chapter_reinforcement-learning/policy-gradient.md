@@ -670,122 +670,327 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.5]{.kicker}
+[Dive into Deep Learning · §14.6]{.kicker}
 
-Policy gradient<br>
-**a parameterized policy · the log-derivative identity · model-free gradient estimation · bias and variance diagnostics**
+Policy Gradient<br>
+**softmax preferences · the log-derivative trick · REINFORCE · checks against the exact gradient · the policy gradient theorem**
 :::
 :::
 
-::: {.slide title="Differentiate the Return Itself"}
-No model (:numref:`sec_valueiter` had one), no expert
-(:numref:`sec_imitation`), and no value function either: write the policy
-as a differentiable function of $\theta$ and ascend $J(\theta)$.
+::: {.slide title="Without an Expert, Only Returns Are Left to Weight the Update"}
+[The problem]{.kicker}
 
+Cloning raised $\log \pi_\theta(a_t \mid s_t)$ of each expert action with
+weight 1. Without an expert, the agent has only its own episodes and their returns.
+
+- Lake, 16 cells × 4 actions: the uniform policy reaches the goal in 1.4% of episodes.
+- Verifier, 4 prompts × 9 responses: 0.062 of sampled responses pass; the ceiling is 0.5.
+
+::: {.d2l-note}
+Guess: weight each action by its episode's return.
+**Is that gradient ascent on the expected return, and how noisy is it?**
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- write a softmax policy and its score $e_a - \pi_\theta(\cdot \mid s)$;
+- derive $\nabla_\theta J$ as an average over sampled episodes, without
+  the transition probabilities;
+- implement REINFORCE and train it on the verifier task and the lake;
+- measure its error against the exact gradient and its cost in
+  environment steps.
+
+**Running examples:** the 4×4 lake without slipping ($\gamma = 0.95$) and
+the four-prompt verifier. **Idea:** REINFORCE is cloning's update with
+returns as the weights.
+:::
+
+::: {.slide title="Policy Gradient Learns a Policy from Its Own Returns"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Markov Decision Processes | states, actions, returns; the lake, the verifier |
+| Dynamic Programming | values from a known model |
+| Temporal-Difference Learning | values from sampled transitions |
+| Exploration | the cost of trying actions; bandits |
+| Learning from Demonstrations | a policy from an expert's actions |
+| **Policy Gradient** | **a policy from its own returns** |
+| Baselines and Variance Reduction | less noise, the same mean |
+| Function Approximation | networks in place of tables |
+:::
+
+::: {.col .narrow}
+- **Uses:** softmax regression; the tabular policy and its update step
+  from cloning; the exact value solve.
+- **Skips:** variance reduction (next deck); network policies; training
+  large language models.
+:::
+:::
+:::
+
+::: {.slide title="A Softmax Policy Has the Score $e_a - \pi_\theta(\cdot \mid s)$"}
 $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}},
-\qquad J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big]$$
-
-- one free *preference* $\theta_{s,a}$ per pair: `Policy.tabular`,
-  reused from :numref:`sec_imitation`
-- softmax keeps every probability positive: exploration built in early;
-  support alone is not a visitation guarantee
-- calm ice: a command always moves the agent as intended, so one episode
-  says more about each action than on slippery ice
-:::
-
-::: {.slide title="The Score Function, Verified"}
-$$\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,b}}
+\qquad
+\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,b}}
 = \mathbf{1}(b = a) - \pi_\theta(b \mid s)$$
 
-@policy-gradient-the-score-function
+- An argmax policy is piecewise constant; softmax probabilities move smoothly.
+- One *preference* $\theta_{s,a}$ per state and action; the zero table is uniform.
+- The score's row at $s$ sums to zero; every other row is zero.
 
 . . .
 
-Automatic differentiation confirms the analytic score identity.
+Automatic differentiation of the library's `log_prob` at $s = 6$, $a = 2$
+agrees with the formula:
+
+@!policy-gradient-the-score-function
 :::
 
-::: {.slide title="The Log-Derivative Trick"}
-$R(\tau)$ does not depend on $\theta$; only the trajectory's
-probability does:
+::: {.slide title="Reward Times Score Averages to the Derivative"}
+One state, two actions: $r(1) = 1$, $r(2) = 0$, $p = \pi_\theta(1)$, so
+$J = p$. Multiply and divide by $\pi_\theta(a)$:
 
-$$\nabla_\theta J(\theta)
-  = \sum_\tau R(\tau)\, \nabla_\theta P(\tau; \theta)
-  = \sum_\tau P(\tau; \theta)\, R(\tau)\, \nabla_\theta \log P(\tau; \theta)$$
+$$\frac{\partial J}{\partial \theta_1}
+= \sum_a \pi_\theta(a)\, r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1}
+= \mathbb{E}_{a \sim \pi_\theta}\Big[ r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1} \Big]
+= p\,(1 - p)$$
 
 . . .
 
-$$\nabla_\theta \log P(\tau; \theta)
-= \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
+- One draw: $1 - p$ with probability $p$, else $0$. Unbiased.
+- Standard deviation $= \sqrt{(1-p)/p}\ \times$ mean; $n$ draws divide this by $\sqrt n$.
 
-The transition terms have zero gradient because the kernel does not depend on the policy parameters.
-Sampling $n$ trajectories gives **REINFORCE**:
-
-$$\hat u = \frac{1}{n} \sum_i R(\tau_i)
-\sum_t \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i)$$
+::: {.d2l-note}
+A rare success: the estimate is usually zero and occasionally about $1/p$
+times too large.
+:::
 :::
 
-::: {.slide title="One Step, Drawn"}
+::: {.slide title="Check: How Often Does a Batch on the Lake Say Nothing?"}
+[Check]{.kicker}
+
+Uniform policy on the lake: an episode succeeds with $p = 0.014$, and a
+failed episode earns nothing.
+
+1. Standard deviation over mean of a one-episode estimate?
+2. Probability that a batch of 16 episodes contains no success?
+
+::: {.fragment .fade-up}
+1. $\sqrt{0.986 / 0.014} \approx 8.4$.
+2. $0.986^{16} \approx 0.80$: four batches in five give the estimate zero.
+:::
+:::
+
+::: {.slide title="The Log-Derivative Trick Makes $\nabla J$ an Average over Own Episodes"}
+$$P(\tau; \theta) = \mu_0(s_0) \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\,
+P(s_{t+1} \mid s_t, a_t), \qquad J(\theta) = \sum_\tau P(\tau; \theta)\, R(\tau)$$
+
+$R(\tau) = \sum_t \gamma^t r_t$; $\mu_0$ is the start distribution (one
+start cell on the lake, the four prompts on the verifier).
+
+. . .
+
+$R(\tau)$ is fixed; only $P$ depends on $\theta$, and $\nabla P = P\, \nabla \log P$:
+
+$$\nabla_\theta J = \sum_\tau P(\tau; \theta)\, R(\tau)\, \nabla_\theta \log P(\tau; \theta)
+= \mathbb{E}_{\tau \sim P(\cdot;\, \theta)}\big[ R(\tau)\, \nabla_\theta \log P(\tau; \theta) \big]$$
+:::
+
+::: {.slide title="The Transition Probabilities Drop Out of the Score"}
+![](../img/mdl-rl-trajectory-chain.svg){width=98%}
+
+- $\mu_0$ and $P(s' \mid s, a)$ do not depend on $\theta$: their logarithms have zero gradient.
+- The kernel decides which episodes are sampled, but the estimate never evaluates it: **model-free**.
+- The one assumption: the dynamics do not depend on $\theta$.
+:::
+
+::: {.slide title="REINFORCE Weights Every Score in an Episode by Its Return"}
+$$\boxed{\ \hat u = \frac{1}{n} \sum_{i=1}^n R(\tau_i) \sum_{t=0}^{T_i-1}
+\nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i)\ }
+\qquad \theta \leftarrow \theta + \eta\, \hat u$$
+
+- Each term has mean $\nabla_\theta J$: $\hat u$ is unbiased.
+- Cloning's step with returns in place of unit weights.
+- Lake returns are $\geq 0$: sampled actions rise, the others fall through
+  $-\pi_\theta(\cdot \mid s)$; an episode with return 0 changes nothing.
+- After the step, a new batch from the updated policy.
+
+[Williams 1992]{.small}
+:::
+
+::: {.slide title="Every Sampled Action Pushes Up; Only the Size Differs"}
 ![](../img/mdl-rl-score-ascent.svg){width=98%}
 
+$\pi_\theta = \mathcal{N}(a; \mu, 1)$, score $a - \mu$; $R(a) = 0.4 + 2e^{-(a-2)^2/2}$, so $J = 0.92$, $\mathrm{d}J/\mathrm{d}\mu = 0.52$.
+Twelve samples with $\eta = 1$ move $\mu$ from 0 to 0.32.
+:::
+
+::: {.slide title="On the Verifier, One Step Averages K Scores Weighted by Reward"}
+Prompts `2+2`, `3*4`, `8*8`, `9*9`; nine shared responses; reward 1 for
+the exact answer. One row of preferences $\theta$ per prompt.
+
+@policy-gradient-the-reinforce-estimator-4
+
+`weighting = lambda r: r` gives REINFORCE; `lr` is $\eta$.
+:::
+
+::: {.slide title="One Group of $K = 16$ Is Off by 0.66; the Mean Has No Floor"}
+Correct count $c \sim \mathrm{Binomial}(K, p)$: relative error
+$\sqrt{(1-p)/(Kp)} = 0.66$ at $p \approx 1/8$, $K = 16$.
+
+@!policy-gradient-the-reinforce-estimator-5
+
 . . .
 
-All rewards in this example are positive, so every sampled action
-receives a positive weight. :numref:`sec_baselines` introduces
-centered weights that can be positive or negative.
+- The mean of $M$ falls on average like $0.66/\sqrt M$; one average can sit about 2× off that rate.
+- $(7/8)^{16} \approx 0.12$ of groups miss; on `8*8` and `9*9` every group is empty: no gradient.
+- One step with $\eta = 2$: success $0.062 \to 0.077$, exact or sampled (median).
 :::
 
-::: {.slide title="Trajectories Become Data"}
-@policy-gradient-an-optimization-problem-over-trajectories-2
+::: {.slide title="Without Slipping, the Gradient per Episode Is Three Times as Long"}
+![](../img/mdl-rl-gridworld.svg){width=72%}
 
-`term` records `terminated`, not `truncated`; later algorithms use
-the same distinction.
+- Uniform start: both maps give the same random walk, 1.4% success.
+- Slippery: a command only rules out the opposite move: 1/3 the gradient, 9× the batch.
+- Here: no slipping and no time limit, so every episode is complete.
 :::
 
-::: {.slide title="REINFORCE on the Calm Lake"}
+::: {.slide title="Check: What Does One Lucky Batch Change?"}
+[Check]{.kicker}
+
+Uniform policy, $n = 16$ episodes: fifteen fall into holes, one reaches
+the goal in six moves, return $\gamma^5 \approx 0.774$.
+
+1. Which rows of $\hat u$ are nonzero?
+2. What are their entries?
+
+::: {.fragment .fade-up}
+1. The six states on the successful path; failed episodes have return 0.
+2. Each such row is $\frac{\gamma^5}{16}\big(e_a - \tfrac14 \mathbf{1}\big)$:
+   $+0.036$ on the action taken, $-0.012$ on each of the other three.
+:::
+:::
+
+::: {.slide title="REINFORCE Is Cloning's Step with Returns as Weights"}
 @policy-gradient-the-reinforce-estimator-1
 
-. . .
-
-@!policy-gradient-the-reinforce-estimator-2
-
-Estimates are zero until a batch contains a success. The mean
-return then rises and stays just below $\gamma^5 = 0.774$.
+- `rollout` plays complete episodes; `per_step` repeats each return over its episode's steps.
+- `policy_step` (from cloning): one Adam step, learning rate 0.1, on
+  $\frac{1}{N} \sum_t w_t \log \pi_\theta(a_t \mid s_t)$.
 :::
 
-::: {.slide title="What It Costs"}
-The on-policy derivation requires trajectories from the current policy.
+::: {.slide title="Twelve Runs Sit Flat, Then Climb to Just Below $\gamma^5 \approx 0.774$"}
+@!policy-gradient-the-reinforce-estimator-2
+
+- Flat start: most early batches hold no success, so the estimate is zero.
+- Then successes feed on themselves; the policy stays stochastic, so it ends a
+  little below the six-step ceiling.
+:::
+
+::: {.slide title="The Learned Policy Commits to One Shortest Path"}
+@!policy-gradient-the-reinforce-estimator-3
+
+- One of three shortest paths, chosen by the first successful episodes.
+- Holes and goal stay uniform; off-path cells freeze once no longer visited.
+- The update read states, actions, returns: never the transition kernel.
+:::
+
+::: {.slide title="Each Update Buys a Fresh Batch: About 27,000 Steps per Run"}
+Episodes from an old $\theta$ no longer follow $P(\tau; \theta)$:
+REINFORCE is **on-policy**.
 
 @!policy-gradient-on-policy-fresh-data-after-every-update
 
-. . .
-
-A batch mean reaches 0.7 after 3,000--6,500 steps; the complete run
-uses about 27,000, because every update collects new data.
+- A batch mean reaches 0.7, about 90% of the ceiling, after 25 to 50
+  updates: 3,000 to 6,500 steps.
+- Off-policy tabular Q-learning ($\alpha = 0.9$), same map: a table that
+  always reaches the goal in under 2,000 steps.
 :::
 
-::: {.slide title="Unbiased, Measured"}
-On 16 states $J(\theta) = [(I - \gamma P^\pi)^{-1} r^\pi]_{s_0}$ is a
-differentiable linear solve: autograd gives the **exact** gradient.
+::: {.slide title="Against the Exact Gradient, Fifty Draws Show No Bias"}
+Exact: $J(\theta) = \big[(I - \gamma P^{\pi_\theta})^{-1} r^{\pi_\theta}\big]_{s_0}$,
+differentiated through the solve, at a policy frozen after 16 updates.
+Errors relative to $\|\nabla_\theta J\|$:
 
 @!policy-gradient-unbiased-and-how-noisy-2
 
-. . .
-
-The mean of fifty draws is as close to the exact gradient as
-unbiasedness predicts; one draw's error falls only as $1/\sqrt{n}$.
-:numref:`sec_baselines` uses the same exact-gradient reference.
+- At $n = 4$ one draw is off by more than three gradient lengths.
+- The error halves each time $n$ quadruples: $1/\sqrt n$.
+- The mean of 50 is as close as an unbiased estimator would be.
 :::
 
-::: {.slide title="Recap"}
-- The log-derivative identity expresses $\nabla_\theta J$ as an
-  expectation over trajectory scores; kernel terms have zero derivative.
-- REINFORCE weights each trajectory score by its return. Its sample
-  mean is compared with the exact $\nabla_\theta J$ in this example.
-- Policy gradient theorem: the same gradient over the discounted
-  occupancy, $Q^\pi$ against the score.
-- On-policy methods collect fresh data after every update.
-- $J(\theta)$ is not concave, yet exact ascent on the tabular softmax
-  has no suboptimal stationary point; plateaus can make it slow.
-- Noise falls only as $1/\sqrt{n}$: variance reduction is
-  :numref:`sec_baselines`.
+::: {.slide title="Policy Gradient Theorem: A Score Needs Only What Follows It"}
+$$\begin{aligned}
+\nabla_\theta J
+&= \mathbb{E}_{\tau}\Big[ \sum_{t \geq 0} \gamma^t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\,
+   Q^{\pi_\theta}(s_t, a_t) \Big] \\
+&= \frac{1}{1 - \gamma}\, \mathbb{E}_{s \sim d^{\pi_\theta}_\gamma,\ a \sim \pi_\theta(\cdot \mid s)}
+   \big[ \nabla_\theta \log \pi_\theta(a \mid s)\, Q^{\pi_\theta}(s, a) \big]
+\end{aligned}$$
+
+$Q^{\pi}(s,a)$: expected return after $a$ at $s$, then $\pi$.
+$d^{\pi}_\gamma(s) = (1-\gamma) \sum_t \gamma^t \Pr(s_t = s)$: discounted state occupancy.
+
+. . .
+
+**Proof idea.** Given $s_t$, the score of $a_t$ has mean
+$\sum_a \nabla_\theta \pi_\theta(a \mid s_t) = \nabla_\theta 1 = 0$: rewards before
+$t$ drop out; rewards from $t$ on average to $\gamma^t Q^{\pi_\theta}(s_t, a_t)$.
+
+[Sutton et al. 2000]{.small}
+:::
+
+::: {.slide title="Earlier Rewards Are Noise, and Unvisited States Get No Gradient"}
+- A score needs only the rewards from its step on: dropping the earlier
+  ones keeps the mean and removes noise.
+- States weigh by how often and how early $\pi$ visits them: unreached
+  states, like the frozen off-path cells, get no gradient.
+- Dropping $\gamma^t$, as many implementations do, counts late visits like
+  early ones: in general the gradient of no objective.
+
+[Nota and Thomas 2020]{.small}
+:::
+
+::: {.slide title="J Is Not Concave, Yet Exact Softmax Ascent Reaches an Optimum"}
+- Two actions: $J = \sigma(\theta_1 - \theta_2)$, flat on both sides.
+- Tabular softmax: exact ascent has no suboptimal stationary point.
+- Slow where the better action is rare (its gradient carries its
+  probability): exponentially many steps in some MDPs.
+- Sampled steps can lock a state onto a worse action.
+- No slipping: all twelve runs end within a few hundredths of the ceiling;
+  on slippery ice, runs settle at different levels below the optimum.
+
+[Agarwal et al. 2021; Mei et al. 2020; Li et al. 2021; Mei et al. 2021]{.small}
+:::
+
+::: {.slide title="Check: Batch Size and Frozen Cells"}
+[Check]{.kicker}
+
+1. At $n = 4$ one draw on the lake is off by 3.85 gradient lengths. About
+   how many episodes per batch bring it to one?
+2. Why do the off-path cells of the learned policy stop changing?
+
+::: {.fragment .fade-up}
+1. Error $\propto 1/\sqrt n$: $n \approx 4 \times 3.85^2 \approx 60$; the run
+   measured 0.96 at $n = 64$.
+2. The policy no longer visits them: $d^{\pi}_\gamma(s) = 0$, so their rows get no gradient.
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- $\nabla_\theta J = \mathbb{E}\big[R(\tau) \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)\big]$: no kernel needed.
+- REINFORCE: cloning's step with returns as weights.
+- Verifier: a group of 16 is off by 0.66 of the gradient; unsolvable prompts get none.
+- Lake: twelve runs climb to just below $\gamma^5 \approx 0.774$, about 27,000 steps each.
+- Unbiased; one draw at $n = 4$ is off by over 3×, falling as $1/\sqrt n$.
+- Theorem: a score needs only the rewards that follow it.
+
+**Next:** less noise without moving the mean: baselines.
 :::

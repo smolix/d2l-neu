@@ -125,7 +125,9 @@ These symbols belong to :numref:`chap_reinforcement_learning` and the chapter af
 * $\delta_t$: the temporal-difference error
 * $\alpha$: the step size of a temporal-difference update
 * $\eta$: the step size of a policy update
+* $\eta_V$: the step size of a value-baseline update
 * $\epsilon$: the exploration rate of $\epsilon$-greedy action selection, or the half-width of a clipped probability ratio
+* $\varepsilon$: the per-step probability that a cloned policy disagrees with the expert (not the exploration rate $\epsilon$)
 * $\kappa$: the weight of an uncertainty bonus (not the condition number $\kappa(\mathbf{X})$)
 * $b$: a baseline subtracted from a return
 * $K$: the number of responses sampled per prompt

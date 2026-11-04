@@ -1,13 +1,50 @@
 # Markov Decision Processes
 :label:`sec_mdp`
 
-A *Markov decision process* (MDP) provides a mathematical model of sequential interaction :cite:`BellmanMDP,Puterman.1994`. It consists of states, actions, transition probabilities, and rewards, together with the Markov assumption that the current state contains the information needed to predict the next state. This section develops these components using a sixteen-state FrozenLake environment.
+Every model in this book so far learned from examples that were handed to it, and its prediction on one example did not change which example came next. Now picture a robot crossing a frozen lake, a program playing a board game, or a language model writing an answer one token at a time. Each choice changes what happens next: the robot slips into a different cell, the game reaches a different position, the answer takes a different turn. The reward may come only at the end, and the same command may have several outcomes. Before we can ask how to act well, we need a way to write such a problem down: what the decision maker knows at each step, what it can do, what follows, and what it is trying to achieve.
 
-We first inspect the simulator's transition data and then express the same model in notation. The transition dynamics describe the environment, whereas the reward specifies the objective. A final subsection asks how an apparently reasonable reward modification can change the optimal policy; :numref:`sec_valueiter` computes the answer.
+Richard Bellman gave this description its form in the 1950s, in his work on multistage decision problems :cite:`BellmanMDP`. His idea was to put everything about the past that matters for the future into a *state*, so that the consequences of an action depend only on the state in which it is taken. That one assumption makes the problem tractable. Once the future depends on the present state alone, a single number per state can say how good it is to be there. The resulting model, the *Markov decision process* (MDP), became a standard tool of operations research :cite:`Puterman.1994`. Every method in this chapter and the next works on it, from dynamic programming to the training of language models with a reward.
+
+We work on a sixteen-cell frozen lake, small enough that every quantity can be checked by hand. It still has the feature that makes acting over time hard: on slippery ice the agent often slides somewhere other than where it meant to go. We read the lake's transition table out of a simulator and name its parts, then define the return an agent maximizes and the discount that keeps it finite. We ask what a state must contain, and we examine a bonus that looks helpful but pays the agent for going in circles. A second, even smaller example closes the section: a language model answering arithmetic questions, scored by a checker.
+
+The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section are defined below; the others belong to later sections, which define each where it is first used.
+
+:Symbols of the reinforcement-learning chapter. The rows from $V^\pi$ on belong to later sections. The exploration rate $\epsilon$ and the per-step disagreement $\varepsilon$ are different symbols.
+:label:`tab_rl_notation`
+
+| Symbol | Meaning | Introduced in |
+|:--|:--|:--|
+| $\mathcal{S}$, $\mathcal{A}$ | the sets of states and actions | :numref:`sec_mdp` |
+| $s_t$, $a_t$, $r_t$ | the state, action and reward at step $t$ | :numref:`sec_mdp` |
+| $P(s' \mid s, a)$ | transition kernel: the probability of reaching $s'$ from $s$ under action $a$ | :numref:`sec_mdp` |
+| $r(s, a)$ | expected reward of action $a$ at state $s$ | :numref:`sec_mdp` |
+| $\mu_0$ | start-state distribution (for language models, the distribution of prompts) | :numref:`sec_mdp` |
+| $\tau$ | trajectory $(s_0, a_0, r_0, s_1, \ldots)$ | :numref:`sec_mdp` |
+| $\gamma$ | discount factor | :numref:`sec_mdp` |
+| $R(\tau)$ | return of a trajectory, $\sum_t \gamma^t r_t$ | :numref:`sec_mdp` |
+| $T$ | number of steps of an episode, or a time limit | :numref:`sec_mdp` |
+| $\pi(a \mid s)$, $\pi(s)$ | policy: probability of action $a$ at state $s$; the action of a deterministic policy | :numref:`sec_mdp`, :numref:`sec_valueiter` |
+| $\ell(s)$ | Manhattan distance from cell $s$ to the goal | :numref:`sec_mdp` |
+| $x$, $y$, $r(x, y)$ | prompt, response, and the verifier's score of the response | :numref:`sec_mdp` |
+| $V^\pi$, $Q^\pi$ | expected return under $\pi$ from a state, from a state-action pair | :numref:`sec_valueiter` |
+| $V^*$, $Q^*$ | the same under an optimal policy | :numref:`sec_valueiter` |
+| $\mathcal{T}$ | Bellman operator: one step of lookahead applied to a vector of values | :numref:`sec_valueiter` |
+| $\delta_t$ | temporal-difference error | :numref:`sec_qlearning` |
+| $\alpha$ | step size of temporal-difference updates | :numref:`sec_qlearning` |
+| $\epsilon$ | exploration rate of $\epsilon$-greedy action selection | :numref:`sec_qlearning` |
+| $\kappa$ | weight of the uncertainty bonus | :numref:`sec_exploration` |
+| $K$ | number of responses sampled per prompt | :numref:`sec_exploration` |
+| $\pi_\theta$, $\theta$ | policy with parameters $\theta$ | :numref:`sec_imitation` |
+| $d^\pi_t$, $d^\pi_\gamma$ | distribution of $s_t$ under $\pi$; its discounted average over $t$ | :numref:`sec_imitation`, :numref:`sec_policygradient` |
+| $\varepsilon$ | per-step probability that a cloned policy disagrees with the expert | :numref:`sec_imitation` |
+| $J(\theta)$ | expected return of $\pi_\theta$ | :numref:`sec_policygradient` |
+| $\eta$ | step size of a policy update | :numref:`sec_policygradient` |
+| $b$ | baseline subtracted from a return | :numref:`sec_baselines` |
+| $\eta_V$ | step size of a value-baseline update | :numref:`sec_baselines` |
+| $A^\pi$ | advantage $Q^\pi - V^\pi$ | :numref:`sec_baselines` |
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab pytorch
-%matplotlib inline
 from d2l import torch as d2l
 import gymnasium as gym
 import numpy as np
@@ -15,7 +52,6 @@ import numpy as np
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab jax
-%matplotlib inline
 from d2l import jax as d2l
 import gymnasium as gym
 import numpy as np
@@ -23,91 +59,94 @@ import numpy as np
 
 ## The Model
 
-:numref:`fig_rl_gridworld` shows the environment used in the next four sections: FrozenLake from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`. The agent starts at the top-left cell and seeks the goal at the bottom right, which gives reward one. Four cells are holes, and reaching either a hole or the goal ends the episode. On *slippery* ice, a commanded move occurs with probability $1/3$; each of the two perpendicular moves also occurs with probability $1/3$. A move off the edge of the grid leaves the agent in its cell.
+:numref:`fig_rl_gridworld` shows the lake: FrozenLake from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`, which the tabular sections of this chapter share. The agent starts in the top-left cell and tries to reach the goal at the bottom right, which pays a reward of one. Four cells are holes, and entering a hole or the goal ends the attempt. On *slippery* ice a command moves the agent in the intended direction with probability $1/3$ and in each of the two perpendicular directions with probability $1/3$. A move off the edge of the grid leaves the agent where it is.
 
-![The environment for the next four sections. (a) S marks the start, G the goal, and the gray cells marked H are holes; each cell carries its state index. On non-slippery ice the shortest path takes six moves, for a discounted return of $\gamma^5$. (b) One command on slippery ice, read straight out of the transition table: from state $s = 9$ the action *down* lands in one of the three shaded cells with probability $1/3$ each; the intended move is one outcome among equals, and the probabilities sum to one.](../img/mdl-rl-gridworld.svg)
+![The lake. (a) S marks the start, G the goal, and the gray cells marked H are holes; each cell carries its state index. On calm ice the shortest path takes six moves. (b) One command on slippery ice: from state $s = 9$ the action *down* lands in cell 13, 8 or 10 with probability $1/3$ each. The intended move is one of three equally likely outcomes, and the probabilities sum to one.](../img/mdl-rl-gridworld.svg)
 :label:`fig_rl_gridworld`
+
+Consider the agent in cell 9, three moves from the goal. Three of its four commands can slide it into the hole at cell 5, one time in three each. Only *down* cannot, but *down* also slides it sideways two times in three, into cell 8 or 10. Is the safety of *down* worth the steps it loses sliding sideways? To compare commands we need to know where each can lead, what the agent can do from there, and what it receives at the end.
 
 ### States, Actions and the Transition Kernel
 
-Here the set of *states* $\mathcal{S}$ consists of the agent's cell, $\{0, 1, \ldots, 15\}$ numbered row by row. The set of *actions* $\mathcal{A}$ contains the four commands *left*, *down*, *right*, and *up*, encoded as 0 through 3. On slippery ice, an action determines a distribution over next states. Gymnasium stores this transition model as a table:
+The *state* of the lake is the agent's cell. The set of states $\mathcal{S} = \{0, 1, \ldots, 15\}$ numbers the cells row by row. The *actions* are the four commands *left*, *down*, *right* and *up*, encoded as 0 to 3; they form the set $\mathcal{A}$. On slippery ice an action determines a distribution over next states, and Gymnasium stores this distribution as a table that we can read directly:
 
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-1}
 %%tab pytorch, jax
 env = gym.make('FrozenLake-v1', is_slippery=True)
-env.unwrapped.P[9][1]
+LEFT, DOWN, RIGHT, UP = 0, 1, 2, 3
+ARROWS = '<v>^'                        # one glyph per action, for printing
+env.unwrapped.P[9][DOWN]
 ```
 
-The output contains three tuples, one per outcome, each of the form (probability, next state, reward, terminated). When commanded *down* from state 9, the agent reaches 13, 8, or 10 with probability $1/3$ each, as shown in :numref:`fig_rl_gridworld`. In symbols this is the *transition kernel* $P: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \to [0, 1]$, where $P(s' \mid s, a)$ is the conditional probability of reaching state $s'$ from state $s$ under action $a$; each row is a distribution, so $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$.
+The output lists three outcomes, each of the form (probability, next state, reward, terminated). Commanded *down* from cell 9, the agent reaches 8, 13 or 10 with probability $1/3$ each, as in :numref:`fig_rl_gridworld`. In symbols, this table is the *transition kernel* $P(s' \mid s, a)$, the probability of reaching state $s'$ from state $s$ under action $a$. For each pair $(s, a)$ the numbers $P(\cdot \mid s, a)$ form a distribution, so $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$.
 
-The fourth object is the *reward* $r: \mathcal{S} \times \mathcal{A} \to \mathbb{R}$, which assigns a numerical objective to taking action $a$ at state $s$. Together:
+The fourth ingredient is the *reward*. The simulator pays one for the step that enters the goal and zero for every other step, so the reward of a step depends on where the step lands. We work with its average over the landing cell, the *expected reward* $r(s, a)$ of action $a$ at state $s$; exercise :exref:`ex_mdp-expected-rewards` shows that the averaging changes no expected return. Together, the four objects form the MDP:
 
 $$
 \textrm{MDP}: \quad (\mathcal{S}, \mathcal{A}, P, r).
 $$
 :eqlabel:`eq_mdp`
 
-Some treatments fold the discount factor of the next subsection into this tuple, and some let the reward be random or depend on the next state; our $r(s, a)$ then plays the role of the expected reward, and nothing in this chapter loses generality from the simpler form.
+The first three describe the environment. The reward describes the task, and whoever sets the task chooses it, a difference that matters below. Some treatments add the discount factor defined below to this tuple, or let the reward be random or depend on the next state. Our $r(s, a)$ then plays the role of the expected reward, and nothing in this chapter loses generality from the simpler form.
 
 ## Return, Discount and Horizon
 
-The start-state distribution and return objective complete the problem specification. The agent starts at a state $s_0$ drawn from a *start-state distribution* $\mu_0$ (a point mass on state 0 here; the distribution over prompts in :numref:`sec_rl_sequences`) and produces a *trajectory*
+The agent starts at a state $s_0$ drawn from a *start-state distribution* $\mu_0$, which for the lake puts all its mass on cell 0. At each step $t$ the agent is at state $s_t$, takes action $a_t$, receives reward $r_t$, and moves to a next state $s_{t+1} \sim P(\cdot \mid s_t, a_t)$. The sequence of these quantities is a *trajectory*,
 
-$$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, s_2, a_2, r_2, \ldots),$$
+$$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, s_2, a_2, r_2, \ldots).$$
 
-where at each step $t$ it is at state $s_t$, takes action $a_t$, receives reward $r_t = r(s_t, a_t)$, and moves to $s_{t+1} \sim P(\cdot \mid s_t, a_t)$. The *return* of a trajectory is the total reward collected along it,
+The reward $r_t$ in a trajectory is the realized one that the simulator pays; the expected reward $r(s_t, a_t)$ is its average given $s_t$ and $a_t$.
 
-$$R(\tau) = r_0 + r_1 + r_2 + \cdots.$$
-
-The goal of reinforcement learning is to act so that the return is as large as possible, on average over the randomness of the kernel, the start state and the agent's own choices. For finite discounted MDPs the problem is well posed: an optimal way of acting exists and can be taken deterministic and time-independent :cite:`Puterman.1994`.
-
-We make this precise with policies and value functions in :numref:`sec_valueiter`; the same objects define imitation from demonstrations (:numref:`sec_imitation`) and direct policy improvement from sampled returns (:numref:`sec_policygradient`). The following uniformly random policy produces one example trajectory $\tau$:
+A rule for choosing actions is called a *policy*. The simplest one picks each of the four commands with probability $1/4$, whatever the state. We run it once from cell 0 and print every step:
 
 ```{.python .input #mdp-return-discount-and-horizon}
 %%tab pytorch, jax
 rng = np.random.default_rng(8)
 s, _ = env.reset(seed=8)
 terminated = truncated = False
-ret, t = 0.0, 0
+total, t = 0.0, 0
 while not (terminated or truncated):
     a = int(rng.integers(4))
     s_next, r, terminated, truncated, _ = env.step(a)
-    print(f't={t:>2}  s={s:>2}  a={"<v>^"[a]}  r={r:.0f}')
-    ret, s, t = ret + r, s_next, t + 1
-print(f'terminated={terminated}, truncated={truncated}, return={ret:.0f}')
+    print(f"t={t:>2}  s={s:>2}  a={ARROWS[a]}  s'={s_next:>2}  r={r:.0f}")
+    total, s, t = total + r, s_next, t + 1
+print(f'terminated={terminated}, truncated={truncated}, total reward={total:.0f}')
 ```
 
-In the transcript, the agent commands *right* at $t=0$ but remains in place. At $t=2$, it commands *left* and instead moves *down* to state 4. At $t=8$, it commands *right* from state 10 and enters the hole at state 11. These outcomes illustrate the stochastic transition kernel in :numref:`fig_rl_gridworld`. Because the agent never reaches the goal, every reward and the total return are zero.
+The transcript shows the kernel at work. At $t=0$ the agent commands *right* and stays in cell 0, because the ice slid it into the wall above. At $t=2$ it commands *left* and slides *down* to cell 4. At $t=8$ it commands *right* from cell 10 and enters the hole at cell 11, which ends the attempt with `terminated=True`. No step entered the goal, so every reward is zero. To score a trajectory that does reach the goal, we must first decide how much a late reward counts.
 
-### The Geometric Bound and the Effective Horizon
+### Discounting and the Effective Horizon
 
-An agent that wanders forever without reaching a hole or the goal has an infinitely long trajectory, and with positive rewards along the way the sum $R(\tau)$ could grow without bound. To keep the objective meaningful we introduce a *discount factor* $0 \leq \gamma < 1$ and use the discounted return
+Why not simply add the rewards? A trajectory can be infinitely long. The policy that always commands *up* never leaves the top row of the lake: *up* runs into the wall, and its two slips move along the row. With a positive reward on every step, the sum along such a trajectory grows without bound. A reward now is also usually worth more than the same reward later. Both concerns lead to a *discount factor* $0 \leq \gamma < 1$, which weights the reward of step $t$ by $\gamma^t$. The *return* of a trajectory is the discounted sum
 
 $$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^\infty \gamma^t r_t.$$
 :eqlabel:`eq_mdp_discounted_return`
 
-If rewards are bounded by $|r_t|\leq r_{\max}$, discounting makes the infinite return finite and gives a geometric bound on its tail:
+With $\gamma = 0.95$ a reward one step away counts $0.95$, and a reward twenty steps away counts about $0.36$. The goal is to act so that the return is as large as possible on average, over the draws of the kernel, the start state and the agent's own choices. We maximize this *expected return* because it is what many independent attempts collect on average. For a finite MDP with $\gamma < 1$ the problem has a clean answer :cite:`Puterman.1994`. There is one policy that is best from every start state at once, and it can be chosen deterministic and independent of time: one command per cell. A start-state distribution concentrated on one cell therefore loses nothing.
+
+The discount also controls how far ahead the agent looks. If every reward satisfies $|r_t| \leq r_{\max}$, discounting keeps the return finite and bounds the part of it that lies beyond step $k$:
 
 $$|R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big| \sum_{t \geq k} \gamma^t r_t \Big| \leq \frac{\gamma^k \, r_{\max}}{1 - \gamma}.$$
 
-The first bound makes the objective finite. The second motivates the *effective horizon* $1/(1-\gamma)$. For a constant reward stream, the fraction of discounted mass after step $k$ is $\gamma^k$; hence 95 percent lies within $\log(0.05)/\log(\gamma)$ steps, approximately three effective horizons. For example, the effective horizons for $\gamma=0.5$ and $\gamma=0.99$ are two and one hundred steps, respectively.
+The first bound makes the objective finite. The second says that rewards beyond step $k$ can move the return by at most a fraction $\gamma^k$ of its largest possible size. This suggests measuring the reach of the discount in steps, by the *effective horizon* $1/(1-\gamma)$. For $\gamma$ near one, $\gamma^{1/(1-\gamma)} \approx e^{-1}$, so the weights fall by a factor of about $e$ per horizon. For a constant reward stream, 95 percent of the discounted weight then lies within $\log(0.05)/\log(\gamma)$ steps, about three horizons. The table below lists both step counts for four discounts, together with the weight $\gamma^5$ that the goal's reward receives at the end of the six-move shortest path on calm ice:
 
 ```{.python .input #mdp-the-geometric-bound-and-the-effective-horizon}
 %%tab pytorch, jax
-print(f'{"gamma":>6} {"horizon 1/(1-gamma)":>20} {"t: gamma^t < 0.05":>18}')
+print(f'{"gamma":>6} {"horizon 1/(1-gamma)":>20} {"t: gamma^t < 0.05":>18} '
+      f'{"gamma^5":>8}')
 for g in [0.5, 0.9, 0.95, 0.99]:
-    t5 = int(np.ceil(np.log(0.05) / np.log(g)))
-    print(f'{g:>6} {1 / (1 - g):>20.0f} {t5:>18}')
+    t95 = int(np.ceil(np.log(0.05) / np.log(g)))
+    print(f'{g:>6} {1 / (1 - g):>20.0f} {t95:>18} {g**5:>8.3f}')
 ```
 
-:numref:`fig_rl_return_discount` shows these quantities. The shortest path in FrozenLake takes six moves, so the terminal reward receives weight $\gamma^5$: approximately $0.03$ for $\gamma=0.5$ and $0.77$ for $\gamma=0.95$. The discount factor therefore determines the relative importance of delayed rewards.
+At $\gamma = 0.95$, the discount used throughout this chapter, the horizon is 20 steps, 95 percent of the weight lies within 59 steps, and a goal reached in six moves is worth $\gamma^5 \approx 0.774$. At $\gamma = 0.5$ the same goal is worth about $0.03$. :numref:`fig_rl_return_discount` shows these quantities. The discount is part of the task, chosen by its designer: a small $\gamma$ makes the agent short-sighted, but exercise :exref:`ex_mdp-planning-discount` shows that it can make planning with an inaccurate model more reliable.
 
-![Discounting defines an effective horizon through $\gamma$. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
+![Discounting defines an effective horizon. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, at $t = 59$ for $\gamma = 0.95$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: two steps at $\gamma = 0.5$, twenty at $\gamma = 0.95$ and a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
 :label:`fig_rl_return_discount`
 
 ### The Model as Arrays
 
-The transition and reward model fits in two dense arrays. We wrap them in a class and save it to the `d2l` library for use throughout the chapter:
+Every algorithm in this chapter reads the kernel, the reward and the discount, many times over. The dictionary of tuples that Gymnasium exposes is awkward for that. We want $P$ as one array indexed by $(s, a, s')$ and $r$ as one array indexed by $(s, a)$, so that an average over next states becomes one matrix product. `TabularMDP` holds the three objects. Its `from_gym` method builds the arrays from the simulator's table: it adds up outcomes that lead to the same next state, and it averages the reward over the outcomes, which gives the expected reward $r(s, a)$. We save the class to the `d2l` library, since every tabular section of the chapter uses it:
 
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-2}
 %%tab pytorch, jax
@@ -130,76 +169,90 @@ class TabularMDP:  #@save
         return cls(P, r, gamma)
 ```
 
+We build the lake's model with $\gamma = 0.95$ and print the row of the command we read from the simulator above:
+
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-3}
 %%tab pytorch, jax
 gamma = 0.95
-LEFT, DOWN, RIGHT, UP = 0, 1, 2, 3
 mdp = TabularMDP.from_gym(env, gamma)
 print(mdp.P[9, DOWN])
 ```
 
-The dictionary of tuples has become a dense row: probability $1/3$ in columns 8, 10 and 13, zero elsewhere. Two consistency checks, one per array:
+The list of tuples has become a dense row of sixteen numbers: $1/3$ in columns 8, 10 and 13, zero elsewhere. Two checks, one per array, confirm the construction. Every row of $P$ must sum to one, and the reward must be nonzero only where the goal can be entered:
 
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-4}
 %%tab pytorch, jax
 print(f'largest |row sum - 1|: {np.abs(mdp.P.sum(axis=-1) - 1).max():.1e}')
 for s, a in np.argwhere(mdp.r > 0):
-    print(f'r(s={s}, a={"<v>^"[a]}) = {mdp.r[s, a]:.3f}')
+    print(f'r(s={s}, a={ARROWS[a]}) = {mdp.r[s, a]:.3f}')
 ```
 
-Every row of $P$ sums to one. The reward array is almost entirely zero: its nonzero entries occur at state 14, the only cell from which the goal can be entered, and equal $1/3$ because the corresponding action reaches the goal with that probability. FrozenLake therefore provides reward only on transitions into the goal.
+Every row of $P$ sums to one. The reward array is zero except in cell 14, the only cell next to the goal. There *down*, *right* and *up* each reach the goal with probability $1/3$ and so have expected reward $1/3$, while none of the three outcomes of *left* is the goal. The lake pays its reward only on the step that enters the goal.
 
 ### Episodes, Termination and Truncation
 :label:`subsec_mdp-termination`
 
-A state that ends the process is *terminal*. For analysis it may be represented as an absorbing state whose actions return to itself with zero reward. FrozenLake stores holes and the goal in this form, although the simulator ends the episode and requires a reset. A trajectory from the start to a terminal state is an *episode*. In an episodic task with at most $T$ steps, bounded rewards have a finite undiscounted sum and $\gamma=1$ is permitted. Continuing tasks instead rely on discounting or another average-reward formulation.
+A state that ends the process is *terminal*; on the lake, the holes and the goal are terminal. A run from the start to a terminal state is an *episode*. The simulator stops an episode there and must be reset. `TabularMDP` instead stores each terminal state as an absorbing state whose actions lead back to itself with zero reward, so that every row of $P$ is a distribution. The two descriptions give the same returns, since the absorbing state collects nothing more.
 
-Gymnasium distinguishes termination from truncation. `terminated=True` means that the process reached a terminal state and has zero continuation value. `truncated=True` means that observation stopped, usually because of a time limit, although the state can have nonzero continuation value. `gym.make` wraps FrozenLake in such a limit: after 100 steps the episode ends with `truncated=True`. Either flag may stop an interaction loop, but only termination should set a bootstrapped target's continuation to zero. The learning algorithms beginning in :numref:`sec_qlearning` therefore mask targets with `terminated` alone.
+When every episode ends after finitely many steps, discounting is not needed to keep the return finite, and $\gamma = 1$ is allowed: the return is then the plain sum of the rewards of an episode with $T$ steps. On the lake $\gamma = 1$ is safe for a further reason, because rewards are nonnegative and an episode collects at most one. It is not safe in general. The always-*up* policy never ends its episode, and with a reward of $+0.05$ per step its undiscounted return would be infinite. Tasks that never end, such as controlling the heating of a building, therefore use $\gamma < 1$. Maximizing the long-run reward per step is the other common choice for such tasks; this chapter does not treat it.
+
+Gymnasium separates two ways in which an episode can stop. `terminated=True` means that the process entered a terminal state: nothing more can happen, and the value of continuing is zero. `truncated=True` means that recording stopped, usually because of a time limit, while the agent stands in a state from which the process would go on. `gym.make` gives FrozenLake such a limit: after 100 steps the episode ends with `truncated=True`, even if the agent stands on frozen ice from where the goal can still be reached. :numref:`fig_rl_termination` shows both cases. The sum of rewards of a truncated episode is therefore not its return, since it misses everything after the cut. A method that estimates the value of continuing from the last state must treat them differently: the value is zero after termination, and after truncation it is whatever the last state is worth. Every learning method in this chapter uses `terminated` alone to decide that the continuation is zero.
+
+![Two ways an episode stops. (a) Terminated: the episode enters the hole $s_8$, a terminal state. Nothing follows, so the value of continuing from it, $V(s_8)$, is zero, and the return counted from the last step, $y_7$, is the last reward $r_7$ alone. (b) Truncated: the 100-step time limit cuts the recording while the agent stands on frozen ice, from where the process would go on. The unrecorded future is worth $V(s_{100})$, the value of continuing from the last recorded state, which is not zero, so an estimate of the return from the last step, $y_{99} = r_{99} + \gamma V(s_{100})$, must include it.](../img/mdl-rl-termination.svg)
+:label:`fig_rl_termination`
 
 ## The Choice of State
 
-The kernel $P(s' \mid s,a)$ conditions only on the current state and action. This is the *Markov assumption*: once the present state is known, the history provides no additional information for predicting the next state. Whether the assumption holds depends on how the state is defined.
+The kernel $P(s' \mid s,a)$ conditions on the current state and action, and on nothing else. This is the *Markov property*: once the present state is known, the earlier history says nothing more about the next state. It is what keeps the model small. Because the future depends on the present state alone, how good it is to be in a state can be summarized by one number per state, whatever path led there. On the lake the property holds by construction. The simulator samples the next cell from the row `P[s][a]` that we read above and draws each slip afresh. Whether the property holds in general depends on what we call the state.
 
-### The Markov Assumption and State Augmentation
+### State Augmentation
 
-Suppose the recorded state $s_t$ is a vehicle's location and the action $a_t$ is its acceleration. The next location also depends on the current velocity, which cannot generally be recovered from the current location alone. If velocity is inferred from successive locations, the dynamics have the form
+Suppose the recorded state $s_t$ is a vehicle's location and the action $a_t$ is its acceleration. The next location also depends on the current velocity, which the current location alone does not reveal. Velocity can be inferred from two successive locations, so the next location depends on two past ones,
 
-$$s_{t+1} = f(s_t, a_t, s_{t-1});$$
+$$s_{t+1} = f(s_t, a_t, s_{t-1}),$$
 
-and the location by itself is not Markov.
+and the location by itself is not Markov. Defining the state as the pair (location, velocity) resolves the problem: Newtonian dynamics determine the next location and velocity from the current pair and the applied acceleration. The Markov property is therefore a property of how we represent the state, not only of the physical system.
 
-The problem is resolved by defining the state as $(\textrm{location},\textrm{velocity})$. Newtonian dynamics then determine the distribution of the next location and velocity from the current pair and the applied acceleration. Thus the Markov property is a condition on the representation of state, not only on the physical system.
-
-This construction is called *state augmentation*: the state is enlarged until it contains the information needed to predict the future. Augmentation increases the state-space dimension, and the required sufficient statistic may be unknown, too large to store, or unobservable. The unobservable case leads to partial observability and belief states.
+This construction is called *state augmentation*: the state is enlarged until it contains what is needed to predict the future. The enlarged state can be large, and the information it needs can be unknown, too large to store, or impossible to observe. A time limit that is part of the task is a simple case: with 100 steps allowed, the best command in a cell can depend on how many steps remain, and adding that count to the state restores the property (exercise :exref:`ex_mdp-time-limits`).
 
 ### Partial Observability
 
-State augmentation requires the added variables to be observable. A poker player, for example, cannot observe the opponents' cards. When an agent receives an observation $o_t$ that reveals only part of the state, the problem is a *partially observable* MDP. Exact methods then maintain beliefs over the hidden state. A common approximation augments the observation with a short history. In Atari, a single frame gives position but not velocity, whereas several consecutive frames reveal motion. The remainder of this chapter assumes that the observation is a Markov state.
+Augmentation requires the added variables to be observable. A poker player cannot see the opponents' cards. When the agent receives an observation $o_t$ that reveals only part of the state, the problem is a *partially observable* MDP. An exact solution tracks the agent's *belief*, the posterior distribution of the hidden state given everything observed so far (exercise :exref:`ex_mdp-belief-states`). In practice agents approximate it with memory. Early Atari agents stacked the last few frames, since one frame shows positions but not velocities. Current agents carry a recurrent state or attend over their whole history, as a language model does over its context. The rest of this chapter assumes that the agent observes a Markov state.
 
-## Reward Design and Potential-Based Shaping
+## Reward Design
 
-The reward is chosen by the designer to represent the task. In contrast, the states, actions, and transition kernel describe the environment. An optimization algorithm maximizes the specified reward, so a mismatch between the reward and the intended task can produce undesirable behavior.
+The states, actions and kernel describe the environment; the reward describes the task, and the designer chooses it. An optimizer maximizes whatever reward is written down, including any difference between that reward and what the designer meant :cite:`Krakovna.Uesato.Mikulik.ea.2020`. The lake shows how this happens in a few lines of arithmetic.
 
-One reward modification provably preserves the optimal policy. Let $\Phi: \mathcal{S} \to \mathbb{R}$ be a *potential* that is zero at every terminal state, and replace the reward on each transition by
+FrozenLake's reward is *sparse*: it is zero on every step except the one that enters the goal. An agent that has never reached the goal has seen nothing but zeros, so it is tempting to help it along. Let $\ell(s)$ be the Manhattan distance from cell $s$ to the goal, the number of moves it would take if no hole were in the way, and pay a bonus of $0.3$ for every move that gets closer:
 
-$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
+$$\tilde r(s, a, s') = r(s, a) + 0.3\, \mathbf{1}\big(\ell(s') < \ell(s)\big).$$
+
+The bonus seems to point the agent toward the goal, but it can be collected without ever finishing. Take the two cells next to the goal on the bottom row, 13 and 14, with $\ell = 2$ and $\ell = 1$, and suppose for the moment that the ice is calm. The move from 14 to 13 earns nothing and costs nothing, and the move back earns $0.3$. From cell 14, entering the goal collects $1.3$, the reward and the bonus, and ends the episode. Shuttling to 13 and back instead collects $0.3$ on every second step, forever, which at $\gamma = 0.95$ is worth $0.3\gamma/(1 - \gamma^2) \approx 2.9$. The flaw is that the bonus pays for moving closer but charges nothing for moving away, so it adds up to a positive amount around any loop. :citet:`Randlov.Alstrom.1998` met the same flaw in a simulated bicycle that was rewarded for progress toward a goal and learned to ride in circles.
+
+A bonus that cannot be collected around a loop must charge for each move away what it pays for the move back. Bonuses of the form
+
+$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s),$$
 :eqlabel:`eq_mdp_shaping`
 
-This construction is called *potential-based shaping*. General bonuses need not preserve the optimal policy; what a plausible bonus does to the best policy is computed in :numref:`sec_valueiter`, once best policies can be computed, together with the proof that potential-based shaping preserves it. :numref:`sec_regularized` discusses explicit constraints, and :numref:`sec_rl_sequences` returns to reward misspecification at larger scale.
+for some function $\Phi: \mathcal{S} \to \mathbb{R}$ called a *potential*, have this property. Around a loop that returns to its start, the differences $\Phi(s') - \Phi(s)$ cancel, so apart from the effect of discounting a loop earns nothing. This construction is called *potential-based shaping*. With $\Phi(s) = -0.3\,\ell(s)$ it pays $0.315$ for the move from 13 to 14 and charges $0.27$ for the move back. Shuttling forever from cell 14 now collects $0.3$ in total, while entering the goal still collects $1.3$: the shaped reward keeps the goal ahead of the loop by exactly the one that the original reward pays. Such a bonus is still useful: a potential spreads the goal's reward over the route, which gives a learner a signal long before it first reaches the goal.
 
-## Bandits, Degenerate MDPs and the Model-Based Axis
+One condition remains: the potential must be zero at the terminal states. The simulator stops at a terminal state, so a nonzero potential there would leave a final term that depends on which terminal state the episode ends in, and when. Such a term can change which behavior is best. Our $\Phi = -0.3\,\ell$ is zero at the goal but not at the holes, so it must be set to zero there. What the approach bonus does to the best policy on slippery ice, and why the potential form leaves it unchanged, can be computed once we can compute best policies; :numref:`sec_valueiter` does both.
 
-Two special cases and the distinction between model-based and model-free methods organize the following sections.
+## Two Special Cases
 
-### The Bandit as a One-State MDP
+Two kinds of MDP recur in this chapter, because each removes one difficulty of the lake. When there is only one state, each round consists of choosing an action and observing a reward, and no action affects the future. This is the *multi-armed bandit*, named after a row of slot machines whose payout rates a player must discover by playing; it isolates the question of which actions to try, which :numref:`sec_exploration` studies. The second case keeps the future but removes the randomness of the transitions, and it describes a language model writing a response.
 
-When $|\mathcal{S}|=1$, each round consists of selecting an action and observing a reward. This is a *multi-armed bandit*. There are no state transitions or delayed rewards, so the problem isolates the exploration required to identify the action with the largest expected reward. :numref:`sec_exploration` uses this setting to compare exploration strategies.
+### Text Generation as an MDP
 
-### The Degenerate MDP: Deterministic Transitions, Terminal Reward
+A language model that writes a response one token at a time fits the MDP with simple dynamics. The state is the prompt together with the tokens written so far, the action is the next token, and the transition appends that token to the state with probability one. The reward arrives once, when the response is complete: a checker called a *verifier* compares the response with a known answer, or a learned model scores it. Two properties set this MDP apart from the lake. The transitions are deterministic, so all randomness comes from the policy. And the state is the whole prefix, so no state is ever visited twice, and the states form a tree rooted at the prompt.
 
-Another special case has deterministic transitions and reward only at termination. FrozenLake has terminal-only reward, and disabling its slippery dynamics makes the transitions deterministic as well. Text generation has this structure when appending a token deterministically updates the context and a verifier or reward model assigns a score to the completed sequence. :numref:`sec_rl_sequences` develops this formulation.
+With deterministic transitions, a single reward at the end, and no revisits, the expected return depends only on the probability that the policy gives to each complete response. Nothing is lost by treating the whole response as one action chosen at the prompt. The MDP then collapses to one step: the prompt $x$, drawn from a distribution $\mu_0$ over prompts, is the state; a complete response $y$ is the action; and the verifier's score $r(x, y)$ is the reward. This is why methods for language models can score and update whole responses. :numref:`sec_rl_sequences` returns to the token-level view.
 
-[Placeholder for the writers, from rl-sequences.md "The Smallest Instance": a finite one-step instance with four prompts, nine candidate responses shared across prompts, an exact-match verifier, and a reference policy $\pi_{\textrm{ref}}$ standing in for a pretrained model. The reference spreads its probability over the ordinary candidates and gives about $0.2$ percent to a response that lists every possible answer, the hedge. For two prompts no single candidate matches the answer, so the best exact-match score is $0.5$. The policy is a softmax with one preference row per prompt.]
+### The Verifier Task
+
+We make the one-step view concrete with an instance small enough to compute exactly, the second running example of this chapter. It has four arithmetic prompts and nine candidate responses shared by all of them. The verifier pays one when a response equals the prompt's answer exactly, and zero otherwise. Two of the prompts, `8*8` and `9*9`, have no correct candidate, so no policy can score more than $0.5$ on average over the prompts. The ninth candidate, "one of 4, 12, 64 or 81", lists every answer at once. The exact-match verifier rejects this *hedge*, but a lenient checker that accepts any response containing the answer would pay it on every prompt, the problem of reward design in another form.
+
+The policy stands in for a pretrained language model. It is a table $\theta$ of preferences with one row per prompt and one column per response, turned into probabilities by a softmax over each row, $\pi(y \mid x) \propto \exp \theta_{xy}$, as in softmax regression. The reference table $\theta_{\textrm{ref}}$ is zero except for the hedge column, which is $-4$. A reference response is therefore one of the eight ordinary candidates with probability about $1/8$ each, and the hedge with probability about $0.2$ percent. The class `VerifierTask` collects these pieces. Its method `verify(x, y)` is the checker. Its method `policy(theta)` applies the softmax to each row of a preference table. Its method `success(pi)` is the expected score of one sampled response, averaged over the four prompts: the expected return of this one-step MDP, with $\mu_0$ uniform over the prompts. An optional `reward` argument scores the policy under another checker instead. Training changes the table; here we only score the reference:
 
 ```{.python .input #mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward}
 %%tab pytorch, jax
@@ -239,23 +292,38 @@ print(f'success of a response sampled from the reference: '
       f'{task.success(task.pi_ref):.3f}')
 ```
 
-### Model-Based versus Model-Free Methods
+A response sampled from the reference passes the verifier with probability $0.062$. On each of the two answerable prompts the correct candidate has probability about $1/8$, and the other two prompts contribute nothing, so the average is about $1/16$. Training on this task has to close the gap between $0.062$ and the ceiling of $0.5$.
 
-The computations above use the transition and reward model directly. Algorithms that plan with a known or learned model are *model-based*; value iteration in :numref:`sec_valueiter` is an example. *Model-free* algorithms instead use sampled transitions $(s,a,r,s')$, as in :numref:`sec_qlearning`. A model can be evaluated at any state-action pair, whereas samples are available only for pairs visited by the data-collection policy.
+We can now write a decision problem down: the lake as two arrays and a discount, the verifier task as a table of scores, and for each the return that a trajectory earns. A model of this kind can be queried at any state and action, which is what *model-based* methods use; *model-free* methods see only the transitions that the agent's own experience produces. The question posed at cell 9 is still open. Comparing *down* with *right* requires the return that each command can lead to, and that depends on what the agent does in every cell it may reach next. :numref:`sec_valueiter` computes these values for all cells at once.
 
 ## Summary
 
-A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}$, a transition kernel $P$, and a reward $r$. The Markov assumption requires the state to contain the information from the past needed to predict the future; state augmentation can restore this property when the necessary information is observable. The objective is expected discounted return, and $1/(1-\gamma)$ provides a useful effective-horizon scale. Terminal states end the process, whereas truncation ends only the observation of it, so bootstrapped value estimates must distinguish the two.
-
-A one-state MDP is a bandit, and a deterministic MDP with terminal reward describes settings such as text generation. Potential-based shaping preserves the optimal policy when its terminal conditions are handled correctly; arbitrary reward modifications do not.
-
-**Experimental scope.** Except for the illustrative sampled trajectory, the results in this section are exact computations on a known sixteen-state model. Estimation, exploration, and function approximation are introduced in later sections.
+A Markov decision process writes a problem of acting over time as states, actions, a transition kernel and a reward, $(\mathcal{S}, \mathcal{A}, P, r)$, under the assumption that the present state carries everything about the past that matters for the future. The agent maximizes the expected discounted return; the discount $\gamma$ keeps the return finite and sets an effective horizon of $1/(1-\gamma)$ steps, with weights that fall by a factor of about $e$ per horizon when $\gamma$ is near one. Terminal states end the process, while truncation only stops the recording, so the value of continuing is zero only after termination. When the obvious state is not Markov, augmenting it restores the property if the missing information can be observed. The reward is a design choice: a bonus that can be collected around a loop changes what the agent does, while a potential-based bonus cannot be collected that way. FrozenLake and the four-prompt verifier task, a token MDP collapsed to one step, are the running examples of the chapter.
 
 ## Exercises
 
+1. **What the state must contain.** In each system below the obvious state
+   is not Markov. Name the smallest addition that restores the Markov
+   property, and say whether the agent can observe it.
+    1. A delivery robot whose state is its location, when every move drains
+       its battery by an amount that depends on the terrain and on the load
+       it carries, and the robot stops once the battery is empty.
+    1. A recommender whose state is the user's profile, when the user's
+       interest in a topic falls with the number of recent recommendations
+       of that topic.
+    1. A chess program whose state is the arrangement of the pieces on the
+       board, when the game ends in a draw as soon as a position occurs for
+       the third time, or as soon as fifty moves by each player pass without
+       a capture or a pawn move.
+
+   In which of the three systems can the addition grow with the length of
+   the episode, and what keeps it bounded there?
+   :exlabel:`ex_mdp-state-must-contain`
+
 1. [code] **Episodes from the kernel.** The example trajectory $\tau$ of
-   :numref:`sec_mdp` draws every action uniformly at random with
-   `rng.integers(4)`. Under this policy the next state has the distribution
+   this section draws every action uniformly at random with
+   `rng.integers(4)`. Under this policy $\pi$ the next state has the
+   distribution
 
    $$P_\pi(s' \mid s) = \frac{1}{4} \sum_{a \in \mathcal{A}} P(s' \mid s, a),$$
 
@@ -266,9 +334,9 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        :numref:`fig_rl_gridworld` why these pairs and no others. If the line
        that fills `P` assigned with `=` instead, which rows of `mdp.P` would
        no longer sum to one, and what would they sum to?
-    1. Let $\mu_t$ be the distribution of $s_t$, starting from the point
-       mass $\mu_0$ on state 0, so that
-       $\mu_{t+1}(s') = \sum_{s} \mu_t(s) P_\pi(s' \mid s)$. Plot, for
+    1. Let $d^\pi_t$ be the distribution of $s_t$, starting from
+       $d^\pi_0 = \mu_0$, the point mass on state 0, so that
+       $d^\pi_{t+1}(s') = \sum_{s} d^\pi_t(s) P_\pi(s' \mid s)$. Plot, for
        $t \leq 30$, the probability that the agent has reached the goal, the
        probability that it has fallen into a hole, and the probability that
        its episode is still running. What are the limits as
@@ -277,7 +345,7 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        equals $\sum_{t \geq 0} \Pr(s_t \textrm{ is not terminal})$. Run
        10,000 episodes of `env` with the random policy, and compare the
        fraction of episodes that reach the goal and the mean episode length
-       with the values that $\mu_t$ predicts.
+       with the values that $d^\pi_t$ predicts.
    :exlabel:`ex_mdp-kernel-predicts-episodes`
 
 1. **Expected rewards.** Gymnasium attaches its reward to the transition:
@@ -290,19 +358,21 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        reward that is drawn at each visit of $(s, a)$, independently of
        everything else, from a distribution with mean $r(s, a)$.
     1. Under the convention $r(s, a)$, which FrozenLake episodes have a
-       positive return? For the policy `pi_true`, compare the probability of
-       a positive return under the two conventions. Which properties of the
-       return does the model :eqref:`eq_mdp` therefore determine, and which
-       does it not?
+       positive return? For the uniformly random policy of this section,
+       estimate from 10,000 episodes the probability of a positive return
+       under each of the two conventions. Which properties of the return
+       does the model :eqref:`eq_mdp` therefore determine, and which does it
+       not?
+   :exlabel:`ex_mdp-expected-rewards`
 
 1. **Discount as termination.** The discounted return
    :eqref:`eq_mdp_discounted_return` weights the reward of step $t$ by
    $\gamma^t$.
-    1. :numref:`sec_mdp` locates 95 percent of the discounted weight within
+    1. This section locates 95 percent of the discounted weight within
        $\log(0.05) / \log(\gamma)$ steps and calls this about three effective
-       horizons. Show that for every $\varepsilon \in (0, 1)$
+       horizons. Show that for every fraction $p \in (0, 1)$
 
-        $$\frac{\ln(1/\varepsilon)}{\ln(1/\gamma)} \leq \frac{\ln(1/\varepsilon)}{1 - \gamma},$$
+        $$\frac{\ln(1/p)}{\ln(1/\gamma)} \leq \frac{\ln(1/p)}{1 - \gamma},$$
 
        and that the ratio of the two sides tends to one as $\gamma \to 1$.
        Use the inequality to explain the step counts of
@@ -312,8 +382,8 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        otherwise moves according to $P$. Show that the expected undiscounted
        return of every policy in the modified process equals its expected
        discounted return in the original, and that the expected number of
-       rewards collected is $1 / (1 - \gamma)$. Read `TabularMDP.backup` in
-       these terms: what do the row sums of $\gamma P$ mean?
+       rewards collected is $1 / (1 - \gamma)$. Read the arrays of
+       `TabularMDP` in these terms: what do the row sums of $\gamma P$ mean?
    :exlabel:`ex_mdp-discount-as-termination`
 
 1. **Time limits.** `gym.make` wraps FrozenLake in a time limit:
@@ -343,15 +413,15 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
 1. **Belief states.** ● In a partially observable MDP the agent receives
    an observation $o_t$, drawn with probability $O(o_t \mid s_t)$, instead
    of the state $s_t$. Its *belief*
-   $b_t(s) = \Pr(s_t = s \mid o_0, a_0, \ldots, a_{t-1}, o_t)$ is the
+   $\beta_t(s) = \Pr(s_t = s \mid o_0, a_0, \ldots, a_{t-1}, o_t)$ is the
    posterior over the hidden state given everything observed so far
    :cite:`Kaelbling.Littman.Cassandra.1998`.
     1. Using the Markov property of the hidden states, derive the update
 
-        $$b_{t+1}(s') \propto O(o_{t+1} \mid s') \sum_{s \in \mathcal{S}} P(s' \mid s, a_t)\, b_t(s).$$
+        $$\beta_{t+1}(s') \propto O(o_{t+1} \mid s') \sum_{s \in \mathcal{S}} P(s' \mid s, a_t)\, \beta_t(s).$$
 
-    1. Show that the belief is a Markov state: given $b_t$ and $a_t$, the
-       distribution of $b_{t+1}$ and the expected reward do not depend on
+    1. Show that the belief is a Markov state: given $\beta_t$ and $a_t$, the
+       distribution of $\beta_{t+1}$ and the expected reward do not depend on
        earlier observations. What are the state space and the kernel of the
        resulting MDP over beliefs?
     1. In a T-maze adapted from :citet:`Bakker.2001`, the agent observes a
@@ -364,6 +434,7 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        belief at the junction, and how much memory suffices to act
        optimally? Why does stacking a few frames work for Pong but not
        here?
+   :exlabel:`ex_mdp-belief-states`
 
 1. [extended] **Planning horizon and model error.** ●● The discount
    $\gamma$ of the objective is fixed by the task, but a planner may compute
@@ -371,8 +442,9 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
    :citet:`Jiang.Kulesza.Singh.ea.2015` found that when the model is
    estimated from data, $\gamma' < \gamma$ can yield a better policy than
    $\gamma' = \gamma$. Let $V^\pi_\gamma(s)$ be the expected discounted
-   return from $s$ under policy $\pi$ and discount $\gamma$, computed by a
-   linear solve as in `exact_value`.
+   return from $s$ under policy $\pi$ and discount $\gamma$. Part (b) uses
+   the value iteration and exact policy evaluation of :numref:`sec_valueiter`
+   (`d2l.value_iteration` and `TabularMDP.policy_value`).
     1. Let rewards lie in $[0, r_{\max}]$ and let $\gamma' \leq \gamma$.
        Show that for every policy $\pi$ and state $s$
 
@@ -392,15 +464,14 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        model at $\gamma = 0.99$, and average the loss
        $V^*_\gamma(s) - V^\pi_\gamma(s)$ over states, kernels and MDPs,
        where $V^*_\gamma$ is the value of the optimal policy of the true
-       model. `greedy_sweeps` runs 500 backups, which is too few at $0.99$;
-       use about 2,000 there. Plot the loss against $\gamma'$ for each $n$
+       model. Value iteration needs about 2,000 sweeps to converge at
+       $\gamma' = 0.99$. Plot the loss against $\gamma'$ for each $n$
        (a few minutes of CPU time).
     1. Which $\gamma'$ minimizes the loss for each $n$, and how does it move
        with $n$? Explain the shape of the curves with two sources of loss,
        the horizon bias bounded in this problem and the error of $\hat P$,
        and say which of the two grows with $\gamma'$.
-
-[Discussions](https://d2l.discourse.group/)
+   :exlabel:`ex_mdp-planning-discount`
 
 [Discussions](https://d2l.discourse.group/t/36794)
 
@@ -495,7 +566,7 @@ preserves the optimal policy; a general bonus need not.
 ::: {.slide title="Recap"}
 - An MDP is $(\mathcal{S}, \mathcal{A}, P, r)$ with discount $\gamma$.
 - The kernel is a distribution: on slippery ice, commands are proposals.
-- Effective horizon $1/(1-\gamma)$: rewards past it are geometrically negligible.
+- Effective horizon $1/(1-\gamma)$: weights fall by about $e$ per horizon; 95% lie within about three.
 - Terminal states end the future; truncation only ends the recording.
 - Not Markov? Augment the state (location *and* velocity; stacked frames).
 - Bandit = one-state MDP; text generation = deterministic, terminal-reward MDP.

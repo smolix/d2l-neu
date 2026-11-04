@@ -618,6 +618,73 @@ z
      <use xlink:href="#Cmex10-5d" transform="translate(1359.190679 100.369099) scale(0.899653)"/>
     </g>
    </g>
+   <g id="text_5">
+    <!-- (a) -->
+    <g transform="translate(8.575858 27.052434) scale(0.14 -0.14)">
+     <defs>
+      <path id="SourceSans3-Bold-5a2" d="M 1306 -1146 
+Q 902 -486 681 224 
+Q 461 934 461 1779 
+Q 461 2624 681 3334 
+Q 902 4045 1306 4704 
+L 1894 4461 
+Q 1542 3840 1382 3152 
+Q 1222 2464 1222 1779 
+Q 1222 1101 1382 413 
+Q 1542 -275 1894 -902 
+L 1306 -1146 
+z
+" transform="scale(0.015625)"/>
+      <path id="SourceSans3-Bold-1c" d="M 1216 -77 
+Q 781 -77 525 201 
+Q 269 480 269 883 
+Q 269 1395 691 1673 
+Q 1114 1952 2054 2048 
+Q 2042 2253 1926 2374 
+Q 1811 2496 1555 2496 
+Q 1357 2496 1152 2425 
+Q 947 2355 710 2221 
+L 378 2835 
+Q 678 3021 1020 3136 
+Q 1363 3251 1734 3251 
+Q 2342 3251 2668 2899 
+Q 2995 2547 2995 1811 
+L 2995 0 
+L 2227 0 
+L 2163 326 
+L 2138 326 
+Q 1933 147 1709 35 
+Q 1485 -77 1216 -77 
+z
+M 1530 659 
+Q 1690 659 1811 729 
+Q 1933 800 2054 922 
+L 2054 1459 
+Q 1555 1395 1363 1267 
+Q 1171 1139 1171 954 
+Q 1171 806 1270 732 
+Q 1370 659 1530 659 
+z
+" transform="scale(0.015625)"/>
+      <path id="SourceSans3-Bold-5a3" d="M 896 -1146 
+L 307 -902 
+Q 666 -275 826 413 
+Q 986 1101 986 1779 
+Q 986 2464 826 3152 
+Q 666 3840 307 4461 
+L 896 4704 
+Q 1299 4045 1520 3334 
+Q 1741 2624 1741 1779 
+Q 1741 934 1520 224 
+Q 1299 -486 896 -1146 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#SourceSans3-Bold-5a2"/>
+     <use xlink:href="#SourceSans3-Bold-1c" transform="translate(34.40625 0)"/>
+     <use xlink:href="#SourceSans3-Bold-5a3" transform="translate(87.109375 0)"/>
+    </g>
+   </g>
    <g id="patch_4">
     <path d="M 98.006604 31.277509 
 C 100.378335 31.277509 102.653245 30.33521 104.330312 28.658143 
@@ -709,7 +776,7 @@ C 150.458054 157.602041 152.732964 158.54434 155.104696 158.54434
 z
 " clip-path="url(#p41b464c7c6)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
-   <g id="text_5">
+   <g id="text_6">
     <!-- $s$ -->
     <g transform="translate(78.373027 26.546934) scale(0.125 -0.125)">
      <use xlink:href="#Cmmi10-58" transform="translate(0 0.8125)"/>
@@ -747,7 +814,7 @@ L 312.722946 149.601265
 L 351.24696 149.601265 
 " clip-path="url(#pe1616761ce)" style="fill: none; stroke: #565d66; stroke-width: 1.3; stroke-linecap: round"/>
    </g>
-   <g id="text_6">
+   <g id="text_7">
     <!-- $P(s' \mid s,a)$ -->
     <g transform="translate(214.655858 49.599514) scale(0.115 -0.115)">
      <use xlink:href="#Cmmi10-68" transform="translate(0 0.576391)"/>
@@ -761,7 +828,7 @@ L 351.24696 149.601265
      <use xlink:href="#Cmr10-44" transform="translate(400.960261 0.576391)"/>
     </g>
    </g>
-   <g id="text_7">
+   <g id="text_8">
     <g id="patch_11">
      <path d="M 271.436368 117.100036 
 L 316.861368 117.100036 
@@ -782,7 +849,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(335.494512 0.576391)"/>
     </g>
    </g>
-   <g id="text_8">
+   <g id="text_9">
     <!-- $Q^\pi(s,a)=r+\gamma\,\sum_{s'}\,P\,\sum_{a'}\,\pi\,Q^\pi(s',a')$ -->
     <g transform="translate(197.668868 197.904211) scale(0.12 -0.12)">
      <defs>
@@ -879,6 +946,45 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(1569.140002 0.674479)"/>
     </g>
    </g>
+   <g id="text_10">
+    <!-- (b) -->
+    <g transform="translate(204.718122 27.052434) scale(0.14 -0.14)">
+     <defs>
+      <path id="SourceSans3-Bold-1d" d="M 2080 -77 
+Q 1869 -77 1654 28 
+Q 1440 134 1254 339 
+L 1229 339 
+L 1152 0 
+L 416 0 
+L 416 4486 
+L 1357 4486 
+L 1357 3386 
+L 1331 2899 
+Q 1517 3066 1734 3158 
+Q 1952 3251 2170 3251 
+Q 2554 3251 2835 3052 
+Q 3117 2854 3267 2492 
+Q 3418 2131 3418 1645 
+Q 3418 1101 3226 713 
+Q 3034 326 2730 124 
+Q 2426 -77 2080 -77 
+z
+M 1862 691 
+Q 2106 691 2278 915 
+Q 2451 1139 2451 1626 
+Q 2451 2483 1901 2483 
+Q 1619 2483 1357 2195 
+L 1357 896 
+Q 1485 781 1613 736 
+Q 1741 691 1862 691 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#SourceSans3-Bold-5a2"/>
+     <use xlink:href="#SourceSans3-Bold-1d" transform="translate(34.40625 0)"/>
+     <use xlink:href="#SourceSans3-Bold-5a3" transform="translate(91.703125 0)"/>
+    </g>
+   </g>
    <g id="patch_12">
     <path d="M 294.148868 26.599593 
 C 295.280001 26.599593 296.364959 26.150189 297.164791 25.350357 
@@ -970,7 +1076,7 @@ C 349.030869 153.41702 350.115826 153.866424 351.24696 153.866424
 z
 " clip-path="url(#pe1616761ce)" style="stroke: #000000; stroke-linejoin: miter"/>
    </g>
-   <g id="text_9">
+   <g id="text_11">
     <!-- $(s,a)$ -->
     <g transform="translate(255.56735 26.546934) scale(0.125 -0.125)">
      <use xlink:href="#Cmr10-77"/>
@@ -1012,7 +1118,7 @@ L 508.86521 149.601265
 L 547.389224 149.601265 
 " clip-path="url(#pd499488b09)" style="fill: none; stroke: #565d66; stroke-width: 1.3; stroke-linecap: round"/>
    </g>
-   <g id="text_10">
+   <g id="text_12">
     <g id="patch_19">
      <path d="M 463.841132 117.100036 
 L 516.741132 117.100036 
@@ -1034,7 +1140,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(400.960261 0.576391)"/>
     </g>
    </g>
-   <g id="text_11">
+   <g id="text_13">
     <!-- $V^*(s)=\max_a \left[\, r+\gamma\,\sum_{s'}\,P\,V^*(s') \right]$ -->
     <g transform="translate(402.331132 197.904211) scale(0.12 -0.12)">
      <defs>
@@ -1253,6 +1359,38 @@ z
      <use xlink:href="#Cmex10-5d" transform="translate(1417.977028 100.369099) scale(0.899653)"/>
     </g>
    </g>
+   <g id="text_14">
+    <!-- (c) -->
+    <g transform="translate(400.860386 27.052434) scale(0.14 -0.14)">
+     <defs>
+      <path id="SourceSans3-Bold-1e" d="M 1818 -77 
+Q 1370 -77 1008 118 
+Q 646 314 438 688 
+Q 230 1062 230 1587 
+Q 230 2118 460 2489 
+Q 691 2861 1068 3056 
+Q 1446 3251 1882 3251 
+Q 2176 3251 2409 3158 
+Q 2643 3066 2810 2912 
+L 2368 2330 
+Q 2285 2400 2182 2445 
+Q 2080 2490 1939 2490 
+Q 1606 2490 1401 2246 
+Q 1197 2003 1197 1587 
+Q 1197 1178 1398 931 
+Q 1600 685 1914 685 
+Q 2227 685 2477 896 
+L 2848 314 
+Q 2650 134 2381 28 
+Q 2112 -77 1818 -77 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#SourceSans3-Bold-5a2"/>
+     <use xlink:href="#SourceSans3-Bold-1e" transform="translate(34.40625 0)"/>
+     <use xlink:href="#SourceSans3-Bold-5a3" transform="translate(81.109375 0)"/>
+    </g>
+   </g>
    <g id="patch_20">
     <path d="M 490.291132 31.277509 
 C 492.662863 31.277509 494.937774 30.33521 496.614841 28.658143 
@@ -1344,7 +1482,7 @@ C 542.742582 157.602041 545.017493 158.54434 547.389224 158.54434
 z
 " clip-path="url(#pd499488b09)" style="fill: #ffffff; stroke: #000000; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
-   <g id="text_12">
+   <g id="text_15">
     <!-- $s$ -->
     <g transform="translate(470.657556 26.546934) scale(0.125 -0.125)">
      <use xlink:href="#Cmmi10-58" transform="translate(0 0.8125)"/>
@@ -1358,7 +1496,7 @@ C 495.429185 39.532654 500.48731 38.821998 505.007645 37.465013
 C 509.52798 36.108028 513.369888 34.146934 516.185598 31.759249 
 " clip-path="url(#pd499488b09)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
-   <g id="text_13">
+   <g id="text_16">
     <g id="patch_28">
      <path d="M 477.921991 60.764944 
 L 502.660273 60.764944 
@@ -1510,7 +1648,7 @@ L 705.007474 149.601265
 L 743.531488 149.601265 
 " clip-path="url(#p65400a4e8d)" style="fill: none; stroke: #565d66; stroke-width: 1.3; stroke-linecap: round"/>
    </g>
-   <g id="text_14">
+   <g id="text_17">
     <!-- $y = r+\gamma\,\max_{a'}\, \hat Q(s',a')$ -->
     <g transform="translate(627.813396 199.824211) scale(0.12 -0.12)">
      <defs>
@@ -1598,6 +1736,46 @@ z
      <use xlink:href="#Cmmi10-79" transform="translate(849.05033 0.40625)"/>
      <use xlink:href="#Cmsy10-49" transform="translate(913.093715 41.695484) scale(0.7)"/>
      <use xlink:href="#Cmr10-44" transform="translate(938.057295 0.40625)"/>
+    </g>
+   </g>
+   <g id="text_18">
+    <!-- (d) -->
+    <g transform="translate(597.00265 27.052434) scale(0.14 -0.14)">
+     <defs>
+      <path id="SourceSans3-Bold-1f" d="M 1549 -77 
+Q 960 -77 605 368 
+Q 250 813 250 1587 
+Q 250 2106 438 2480 
+Q 627 2854 931 3052 
+Q 1235 3251 1568 3251 
+Q 1830 3251 2009 3161 
+Q 2189 3072 2349 2918 
+L 2310 3405 
+L 2310 4486 
+L 3251 4486 
+L 3251 0 
+L 2483 0 
+L 2419 314 
+L 2394 314 
+Q 2227 147 2003 35 
+Q 1779 -77 1549 -77 
+z
+M 1792 691 
+Q 1946 691 2070 755 
+Q 2195 819 2310 979 
+L 2310 2278 
+Q 2189 2394 2051 2438 
+Q 1914 2483 1786 2483 
+Q 1562 2483 1389 2268 
+Q 1216 2054 1216 1600 
+Q 1216 1133 1366 912 
+Q 1517 691 1792 691 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#SourceSans3-Bold-5a2"/>
+     <use xlink:href="#SourceSans3-Bold-1f" transform="translate(34.40625 0)"/>
+     <use xlink:href="#SourceSans3-Bold-5a3" transform="translate(91.703125 0)"/>
     </g>
    </g>
    <g id="patch_29">
@@ -1743,7 +1921,7 @@ C 741.315397 153.41702 742.400355 153.866424 743.531488 153.866424
 z
 " clip-path="url(#p65400a4e8d)" style="stroke: #000000; stroke-linejoin: miter"/>
    </g>
-   <g id="text_15">
+   <g id="text_19">
     <!-- $(s,a)$ -->
     <g transform="translate(647.851878 26.546934) scale(0.125 -0.125)">
      <use xlink:href="#Cmr10-77"/>
@@ -1753,7 +1931,7 @@ z
      <use xlink:href="#Cmr10-44" transform="translate(186.06451 0)"/>
     </g>
    </g>
-   <g id="text_16">
+   <g id="text_20">
     <!-- $r$ -->
     <g transform="translate(714.687175 53.892104) scale(0.125 -0.125)">
      <use xlink:href="#Cmmi10-84" transform="translate(0 0.8125)"/>
@@ -1767,7 +1945,7 @@ C 728.536156 95.254889 732.735125 94.645993 736.478896 93.484393
 C 740.222667 92.322792 743.392424 90.645353 745.695654 88.606873 
 " clip-path="url(#p65400a4e8d)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
-   <g id="text_17">
+   <g id="text_21">
     <g id="patch_41">
      <path d="M 750.636634 93.022527 
 L 773.395853 93.022527 

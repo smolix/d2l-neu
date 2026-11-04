@@ -466,14 +466,16 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
                                        ("+ baselines", "black"),
                                        ("regularized PO", CH2),
                                        ("GRPO", CH2)]),
-        ("policy", "offline", BLUE, False, [("behavior cloning", "black")]),
+        ("policy", "offline", BLUE, False, [("behavior cloning", "black"),
+                                            ("Decision", CH2),
+                                            ("Transformer", CH2)]),
         ("both", "on", GRAY, True, [("actor-critic", CH2), ("PPO", CH2)]),
         ("both", "off", GRAY, True, [("SAC", CH2)]),
         ("model", "off", GRAY, True, [("learned model", CH2),
                                       ("+ planning", CH2)]),
-        ("both", "offline", GRAY, True, [("Decision", CH2),
-                                         ("Transformer", CH2)]),
     ]
+    # Decision Transformer learns only a return-conditioned policy, with no
+    # value function, so it shares the offline policy box with behavior cloning.
     # The learned-model box sits in the off-policy column between SAC and the
     # bridge arrow: it learns from its own replay buffer, and what it learns
     # (a model of the dynamics) is neither a value function nor a policy.

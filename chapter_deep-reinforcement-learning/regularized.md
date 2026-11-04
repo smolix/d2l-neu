@@ -101,7 +101,7 @@ print(f'moves into the hazards: in {episodes[into]} episodes, '
 
 The fit has an rms error of $0.19$ on the forty-six pairs of `core`. Nine pairs never occur: the four actions at the goal, where every episode has already ended, and the five marked with crosses in :numref:`fig_rl_reward_gridworld`. Their fitted rewards stay at the initial value of zero. The moves into the hazard lane from above and from the sides occur in two to four of the thousand episodes each, and the two from below never occur. That is too few to move a fitted reward far from zero, where the weights started and where the weight decay pulls them; truly each costs $1.5$. A neural reward model would instead extrapolate according to its inductive bias, for better or worse (exercise :exref:`ex_regularized-neural-reward-models`).
 
-### What the Comparisons Cannot See
+### Invariance to Shaping
 
 An rms error of $0.19$ against step costs of $0.04$ looks large, but most of it is invisible to any comparison. Potential-based shaping, introduced in :numref:`sec_mdp`, adds $\gamma \Phi(s') - \Phi(s)$ to the reward of each move from $s$ to $s'$, for a function $\Phi$ on the states with $\Phi = 0$ at the goal, and :numref:`sec_valueiter` proved that it leaves the optimal policy unchanged. Along a trajectory these terms telescope, so every trajectory from state $0$ that reaches the goal changes its return by the same amount, $-\Phi(0)$. Every comparison involves two trajectories from state $0$, so the shift cancels in $r(\tau) - r(\tau')$, and :eqref:`eq_bradley_terry` cannot detect it. (The one trajectory in ten that is cut off after forty steps keeps a final term $\gamma^{40}\Phi(s_{40})$, too small to pin $\Phi$ down.) The comparisons therefore determine the reward only up to shaping, and among the rewards they cannot tell apart, the weight decay prefers the one with the smallest weights.
 
@@ -119,7 +119,7 @@ print(f'Phi(0) = {Phi[0]:.2f}; moves 13 -> 14 -> goal: fitted '
       f'{r_true[13, 2]:+.2f}, {r_true[14, 2]:+.2f}')
 ```
 
-Removing the shaping term leaves an rms error of $0.03$: up to shaping, the fit is good where the data are. The potential is about $0.8$ everywhere except at the goal. Such a potential subtracts about $0.8$ from the move into the goal and $0.05 \times 0.8 = 0.04$ from every other move, which is what the printed rewards show: the last move pays $0.09$ instead of $1$, and an ordinary move costs $0.08$ instead of $0.04$. Both rewards order every pair of trajectories from state $0$ alike, and the fitted one has the smaller weights. Under it, the hazard moves, estimated near zero, are cheaper than an ordinary move.
+Removing the shaping term leaves an rms error of $0.03$: up to shaping, the fit is good where the data are. The potential rises from about $0.8$ at the start to about $0.9$ beside the goal; at the hazard cells, which no pair of `core` touches, it is left undetermined. Such a potential subtracts about $0.9$ from the move into the goal and about $(1 - \gamma) \times 0.8 = 0.04$ from every other move, which is what the printed rewards show: the last move pays $0.09$ instead of $1$, and an ordinary move costs $0.08$ instead of $0.04$. Both rewards order every pair of trajectories from state $0$ alike, and the fitted one has the smaller weights. Under it, the hazard moves, estimated near zero, are cheaper than an ordinary move.
 
 Language models face the same invariance. A comparison there involves two responses $y$ and $y'$ to the same prompt $x$, and a reward $r(x, y) + f(x)$, for any function $f$ of the prompt, predicts every comparison as $r(x, y)$ does, so a learned reward is identified only relative to each prompt (exercise :exref:`ex_regularized-identifiability`). Policy-gradient methods are unaffected: subtracting a function of the prompt from the reward is a baseline, which leaves the expected gradient unchanged (:numref:`sec_baselines`). The group mean of GRPO is such a baseline, except that it includes the response's own reward, which scales the expected update by $(K-1)/K$ for groups of $K$ responses, as that section showed.
 
@@ -274,7 +274,7 @@ the closed form with coefficient $\tilde{\beta}/k$. As $k$ grows the coefficient
 ### The Direction of the Divergence
 :label:`subsec_kl_direction`
 
-The penalty $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ is the *reverse* divergence in the taxonomy of :numref:`sec_mdl-fwd-vs-rev-kl`, an expectation under $\pi$ that can be estimated from the policy's own samples. The closed form shows how it treats an action $a$ whose reward falls short of the best by $\Delta(a) > 0$: relative to the best action, its probability under $\pi^\star$ is its reference probability times $e^{-\Delta(a)/\beta}$. The forward penalty $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ is infinite for a policy that drops any action the reference takes, and its optimum keeps every action at a floor of order $\beta / \Delta(a)$ times its reference probability (exercise :exref:`ex_regularized-forward-kl-penalty`). Both directions keep the reference's support at every $\beta > 0$. They differ in how fast poor actions fade as $\beta$ shrinks: exponentially in $1/\beta$ under the reverse penalty, only linearly in $\beta$ under the forward one.
+The penalty $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ is the *reverse* divergence in the taxonomy of :numref:`sec_mdl-fwd-vs-rev-kl`, an expectation under $\pi$ that can be estimated from the policy's own samples. The closed form shows how it treats an action $a$ whose reward falls short of the best by $\Delta(a) > 0$: relative to the best action, its probability under $\pi^\star$ is its reference probability times $e^{-\Delta(a)/\beta}$. The forward penalty $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ is infinite for a policy that drops any action the reference takes, and its optimum keeps every action at a floor of order $\beta / \Delta(a)$ times its reference probability (exercise :exref:`ex_regularized-forward-kl-penalty`). Both directions keep every action the reference takes at positive probability for every $\beta > 0$. They differ in how fast poor actions fade as $\beta$ shrinks: exponentially in $1/\beta$ under the reverse penalty, only linearly in $\beta$ under the forward one.
 
 ## The Soft Backup
 
@@ -313,7 +313,7 @@ Writing this value at every state gives the general form. Let $Q_\beta(s, a)$ be
 $$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),$$
 :eqlabel:`eq_soft_backup`
 
-and the optimal policy is $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. These are the Bellman optimality equations of :numref:`sec_valueiter` with the maximum over actions replaced by a reference-weighted log-sum-exp, a *soft maximum* that tends to the hard maximum over the reference's support as $\beta \to 0$. With a uniform reference this is the soft value iteration of maximum-entropy reinforcement learning.
+and the optimal policy is $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. These are the Bellman optimality equations of :numref:`sec_valueiter` with the maximum over actions replaced by a reference-weighted log-sum-exp, a *soft maximum* that tends to the hard maximum over the reference's support as $\beta \to 0$. The hard maximum is biased upward when the action values are noisy estimates, as :numref:`sec_qlearning` demonstrated; the log-sum-exp, being convex, is biased upward too, only less sharply. With a uniform reference this is the soft value iteration of maximum-entropy reinforcement learning.
 
 Value iteration solved the hard equations by sweeping $V \leftarrow \max_a \textrm{backup}(V)$ from $V = 0$. The same sweep with the soft maximum solves :eqref:`eq_soft_backup`. The proof that the hard sweep contracts (:numref:`subsec_vi_contraction`) used only two properties of the maximum: it is monotone, and adding a constant to every entry adds that constant to the maximum. The soft maximum has both, so the soft sweep is also a $\gamma$-contraction, for every $\beta > 0$ and every reference (exercise :exref:`ex_regularized-soft-backup-transplanted`). `soft_max` computes the soft maximum of each row of an array of action values, after subtracting the row's maximum for numerical stability, and returns the tilted policy with it. `soft_v` sweeps `backup` followed by `soft_max`:
 
@@ -333,8 +333,6 @@ def soft_v(mdp, p, beta, num_iters=400):
         V, pi = soft_max(mdp.backup(V), p, beta)
     return V, pi
 ```
-
-The soft maximum is a smooth version of the hard maximum, whose upward bias under noisy estimates :numref:`sec_qlearning` demonstrated. Being convex, the log-sum-exp is still biased upward, only less sharply.
 
 ### True Return against the KL Budget
 :label:`subsec_kl_budget`
@@ -365,11 +363,11 @@ d2l.plot(kls, [true_ret, fit_ret], 'KL from the reference (nats)', 'return',
          legend=['true return', 'fitted return'])
 ```
 
-Every point in the plot is an exact optimum of the penalized objective; the largest Bellman residual is below $10^{-10}$. The fitted return rises throughout, and for exact optima it must. If $\beta_1 < \beta_2$ and the optima have fitted returns $J_1, J_2$ and divergences $K_1, K_2$, optimality gives $J_1 - \beta_1 K_1 \geq J_2 - \beta_1 K_2$ and $J_2 - \beta_2 K_2 \geq J_1 - \beta_2 K_1$. Adding the two gives $(\beta_2 - \beta_1)(K_1 - K_2) \geq 0$, so $K_1 \geq K_2$, and the first inequality then gives $J_1 \geq J_2$.
+Every point in the plot is an exact optimum of the penalized objective; the largest Bellman residual is below $10^{-10}$. The fitted return rises throughout, and for exact optima it must. If $\beta_1 < \beta_2$ and the optima have fitted returns $J_1, J_2$ and divergences $D_1, D_2$, optimality gives $J_1 - \beta_1 D_1 \geq J_2 - \beta_1 D_2$ and $J_2 - \beta_2 D_2 \geq J_1 - \beta_2 D_1$. Adding the two gives $(\beta_2 - \beta_1)(D_1 - D_2) \geq 0$, so $D_1 \geq D_2$, and the first inequality then gives $J_1 \geq J_2$.
 
-The true return behaves differently. It rises from the reference's $-0.12$ to $+0.53$ at $3.7$ nats, close to the true optimum of $+0.59$, and then falls to $-1.83$ as the policy concentrates on the hazard lane. A moderate push on the fitted reward improves the true return, and a stronger one exploits the moves the data never measured. Over $24$ preference datasets the peak lies between about $+0.5$ and the optimum $+0.59$ at a few nats, and the true return falls after it in $21$; in the other three, the fitted reward's own optimum happens to avoid the hazards. How far from the reference the peak sits and how deep the fall goes depend on how well the comparisons cover the hazard and on what it costs. :citet:`Gao.Schulman.Hilton.2023` measured the same rise and fall for language models optimized against a learned reward model and graded by a held-out one.
+The true return behaves differently. It rises from the reference's $-0.12$ to $+0.53$ at $3.7$ nats, close to the true optimum of $+0.59$, and then falls to $-1.83$ as the policy concentrates on the hazard lane. A moderate push on the fitted reward improves the true return, and a stronger one exploits the moves the data never measured. Over $24$ preference datasets the peak lies between about $+0.5$ and the optimum $+0.59$ at a few nats, and the true return falls after it in $21$. In the other three it does not fall within the swept range: in one the fitted optimum is the true one, and in two the fitted values of the safe and hazard routes nearly tie, so the penalized optimum keeps the safe route down to $\beta = 10^{-2.5}$. How far from the reference the peak sits and how deep the fall goes depend on how well the comparisons cover the hazard and on what it costs. :citet:`Gao.Schulman.Hilton.2023` measured the same rise and fall for language models optimized against a learned reward model and graded by a held-out one.
 
-The peak of the true return is invisible to the optimizer, which sees only the fitted curve, and that curve rises monotonically. In practice $\beta$ is therefore chosen by evaluating the policy against something other than the reward model it was trained on: held-out comparisons, human judgments, or a checker. With a uniform reference the same penalty is an entropy bonus, and :numref:`sec_sac` builds an off-policy actor-critic for continuous actions that maximizes it. Its critic evaluates its own policy under the reward with the entropy bonus rather than iterating the log-sum-exp backup; by the identity in the proof of the proposition, the two agree when the policy is the tilted one. :numref:`sec_rl_sequences` applies the closed form :eqref:`eq_kl_optimum` to the verifier task of :numref:`chap_reinforcement_learning`, where it predicts the $\beta$ at which a hedged answer stops paying.
+The peak of the true return is invisible to the optimizer, which sees only the fitted curve, and that curve rises monotonically. In practice $\beta$ is therefore chosen by evaluating the policy against something other than the reward model it was trained on: held-out comparisons, human judgments, or a checker. With a uniform reference the same penalty is an entropy bonus, and :numref:`sec_sac` builds an off-policy actor-critic for continuous actions that maximizes it. Its critic evaluates its own policy under the reward with the entropy bonus rather than iterating the log-sum-exp backup; by the identity in the proof of the proposition, the two agree when the policy is the tilted one. :numref:`sec_rl_sequences` applies the closed form :eqref:`eq_kl_optimum` to the verifier task of :numref:`chap_reinforcement_learning`, where it predicts the $\beta$ at which a hedged answer stops paying. Every method so far has learned from fresh samples of the current policy or from a known model; :numref:`sec_dqn` asks whether a network can learn action values from stored transitions of any policy, as the Q-table of :numref:`sec_qlearning` did.
 
 ## Summary
 
@@ -487,19 +485,19 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
        the new fit does `plan` exploit? Does the true return still peak at
        an intermediate divergence?
 1. **Slope of the frontier.** ● Write $u = 1 / \beta$, and let
-   $R(u)$ and $K(u)$ denote the expected reward and the
+   $R(u)$ and $D(u)$ denote the expected reward and the
    divergence $D_{\textrm{KL}}(\pi^\star \Vert \pi_{\textrm{ref}})$ of the
    optimum :eqref:`eq_kl_optimum`.
     1. Show that $R(u) = \frac{d}{du} \log Z$ and that
        $R'(u) = \textrm{Var}_{\pi^\star}(r)$. Then use the value
        $\beta \log Z$ of the proposition to show that
-       $K'(u) = u\, \textrm{Var}_{\pi^\star}(r)$.
+       $D'(u) = u\, \textrm{Var}_{\pi^\star}(r)$.
     1. Conclude that the frontier traced by `front` and `kl_f` has slope
        $\beta$ at the point $\pi^\star$, and that it is increasing and concave
        whenever $r$ is not constant on the support of $\pi_{\textrm{ref}}$.
     1. Show that $\pi^\star$ also solves the constrained problem
        $\max_\pi \mathbb{E}_\pi[r]$ subject to
-       $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) \leq K(u)$. Which
+       $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) \leq D(u)$. Which
        quantity of the constrained problem does $\beta$ become?
     1. Best-of-$N$ sampling draws $N$ independent samples from
        $\pi_{\textrm{ref}}$ and keeps the one with the highest reward. When
@@ -779,7 +777,7 @@ Action $a$ falls short of the best by $\Delta(a)$:
 | reverse $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ | $\propto e^{-\Delta(a)/\beta}$: exponential |
 | forward $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ | $\approx \beta/\Delta(a)$: linear |
 
-Both keep the reference's support at every $\beta > 0$.
+Both keep every action the reference takes at positive probability.
 :::
 
 ::: {.slide title="One Step Earlier, the Next Decision Is Worth β log Z, Not Its Best Reward"}

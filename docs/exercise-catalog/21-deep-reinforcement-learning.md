@@ -5,7 +5,7 @@ has nine sections, in the order actor-critic, ppo, regularized, dqn, sac,
 model-based, offline-rl, rl-sequences, further-reading; the introduction
 (`index.md`) and the Further Reading page have no exercises (the Further
 Reading page ends with one project, a multi-epoch GRPO loop, outside the
-exercise numbering). The eight sections hold 75 exercises, 57 of them with
+exercise numbering). The eight sections hold 72 exercises, 57 of them with
 an `:exlabel:`. Each entry below lists one exercise in the order of the
 file: its tag and difficulty marks as printed (`[code]`, `[extended]`, ● and
 ●●; no tag means pencil and paper), its label or "no label", its topic, and
@@ -296,9 +296,10 @@ reward-scale part folded into the quadratic-critic problem; 1 new).
    run.
    *Source:* Oct-2026 set; CS285 Spring 2026 HW3 §3.6 (single against
    clipped double critics).
-9. [code] **Update ratio.** `ex_sac-update-ratio` — the earliest possible
-   crossing, and twenty updates per environment step with twin and single
-   critics.
+9. [code] **Update ratio.** `ex_sac-update-ratio` — twenty updates per
+   environment step with twin and single critics (and a shorter warmup), the
+   critics' calibration at that ratio, and the gradient steps each run spends
+   before crossing $-200$.
    *Source:* new in the rebuild (decision Q4); Chen et al. 2021 (REDQ).
 10. [extended] ● **Discrete soft actor-critic.** `ex_sac-discrete` — exact
     expectations over a finite action set, on CartPole.
@@ -337,8 +338,10 @@ its distillation into the actor, and imagined transitions as training data.
    a disagreement penalty.
    *Source:* new in the rebuild; Chua et al. 2018 (PETS).
 5. [code] ● **Labels on the actor's own states.** `ex_model-based-dagger` —
-   episodes collected by the actor alone while the search relabels them:
-   DAgger with the search as the expert.
+   labels aggregated into one growing set while collecting with search, then
+   episodes collected by the actor alone while the search relabels them
+   (DAgger with the search as the expert), compared on the causes named in the
+   text; failed seeds and combining the two ways of collecting.
    *Source:* new in the rebuild; Ross, Gordon and Bagnell 2011 (DAgger).
 6. [extended] ●● **Imagined transitions for soft actor-critic.**
    `ex_model-based-dyna` — MBPO-style model rollouts mixed into the batches of
@@ -375,7 +378,10 @@ new in the rebuild).
    *Source:* Oct-2026 set; CS224R Spring 2026 HW3 (suboptimal data and
    stitching).
 3. [code] **How much pessimism.** `ex_offline-rl-how-much-pessimism` — the
-   $\kappa$ sweep over the uniform and narrow logs and two further kinds of log.
+   $\kappa$ sweep over the uniform and narrow logs and two further kinds of log;
+   calibration at $\kappa = 1$; the best $\kappa$ against the bound
+   $\kappa/(\sqrt{n}(1-\gamma))$ on the charge, and why the charge collected
+   is smaller.
    *Source:* Oct-2026 set, extended by the rebuild's $\kappa$ sweep over both
    logs and the 500-episode narrow logs; original.
 4. **Conditioning on luck.** no label — return-conditioned supervised learning
@@ -414,43 +420,43 @@ answers), what the update needs, verifiers and reward models, the
 KL-penalized group step against the closed form, ratios for stale samples,
 asymmetric bands, GRPO with the $k_3$ term, and DPO.
 
-**Exercises:** 10 (8 from the Oct-2026 set, the two-digit problem rewritten
-after its first part moved into the text; 2 dropped, unequal group sizes and
-the fixed point of `group_step`; 2 moved in from ppo; 1 label new in the
+**Exercises:** 7 (all from the Oct-2026 set or moved in from ppo; the two-digit
+problem rewritten after its first part moved into the text; 5 dropped: unequal
+group sizes, the fixed point of `group_step`, noisy verifiers, process rewards
+in GRPO and credit from restarts; 2 moved in from ppo; 1 label new in the
 rebuild).
 
-1. **Tool outputs in the trajectory.** no label — the probability of a
-   trajectory with a tool call, and why the tool's tokens carry no score.
+1. **Tool outputs in the trajectory.** no label — the probability and score
+   terms of a trajectory with a tool call, and the nonzero-mean term that
+   appears when the loop scores the tool's tokens.
    *Source:* Oct-2026 set; original.
 2. **Two-digit responses.** `ex_rl-sequences-two-digit-responses` — the
-   response weight and the token advantages agree in expectation; their
-   variances at the uniform and at a trained policy.
+   response weight and the token advantages agree in expectation and are
+   uncorrelated across positions; the variance reduction at a trained policy
+   against the uniform one.
    *Source:* Oct-2026 set, rewritten (its first part is now the text's credit
    example); original.
 3. **Two thresholds for the hedge.** `ex_rl-sequences-two-thresholds` — the
-   hedge's probability under the tilted optimum as a function of $\beta$.
+   hedge's probability under the tilted optimum as a function of $\beta$, its
+   limit as $\beta \to 0$, and which property of `d2l.group_step` selects the
+   split between rewarded responses.
    *Source:* Oct-2026 set; original.
-4. [code] ● **Noisy verifiers.** no label — a verifier with false negatives
-   and false positives rescales and offsets the gradient.
-   *Source:* Oct-2026 set; original.
-5. ● **Process rewards in GRPO.** no label — the step-level standardized
-   weights of process supervision.
-   *Source:* Oct-2026 set; Shao et al. 2024.
-6. [code] ● **DPO on the finite instance.** no label — DPO on preferences
-   generated with the lenient checker, against the tilted optimum.
+4. [code] ● **DPO on the finite instance.** no label — the DPO loss from the
+   Bradley–Terry model, its minimizer at infinite data, and gradient descent
+   on 1000 labeled pairs per prompt against the tilted optimum.
    *Source:* Oct-2026 set; Rafailov et al. 2023.
-7. [extended] ●● **Credit from restarts.** no label — Monte Carlo prefix
-   values against the group weight at a matched number of verifier calls.
-   *Source:* Oct-2026 set; Kazemnejad et al. 2025 (VinePPO).
-8. ●● **The KL term as a loss.** `ex_rl-sequences-kl-loss` — the expected
-   gradients of $k_1$, $k_2$, $k_3$, and the forward-KL optimum on `8*8`.
+5. ●● **The KL term as a loss.** `ex_rl-sequences-kl-loss` — the expected
+   gradients of $k_1$, $k_2$, $k_3$, the forward-KL optimum on `8*8`, and the
+   terms the per-token $k_2$ losses miss for $T$-token responses.
    *Source:* Oct-2026 set; Tang and Munos 2025.
-9. **Asymmetric bands.** `ex_ppo-asymmetric-bands` — batches needed to raise a
-   rare token's probability with symmetric and asymmetric bands.
+6. **Asymmetric bands.** `ex_ppo-asymmetric-bands` — batches needed to raise a
+   rare token's probability with symmetric and asymmetric bands, the two-action
+   case, and the effect on entropy.
    *Source:* moved from ppo.md in the rebuild; Yu et al. 2025 (DAPO).
-10. ● **Length-normalized ratio.** no label — the variance of the response
-    ratio against its geometric mean.
-    *Source:* moved from ppo.md in the rebuild; Zheng et al. 2025 (GSPO).
+7. ● **Length-normalized ratio.** no label — the mean and variance of the
+   response ratio against its geometric mean, and why a sequence-level band
+   must be narrower.
+   *Source:* moved from ppo.md in the rebuild; Zheng et al. 2025 (GSPO).
 
 **Survey sources:** the RLHF book's policy-gradient chapter (GRPO and the
 Dr. GRPO critique); CS224R Spring 2026 lectures on reward learning, DPO and RL

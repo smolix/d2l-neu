@@ -164,7 +164,7 @@ Implementations often add a small *entropy bonus*, a weight `entropy_coef` times
 
 ### The Advantage Estimate
 
-Any advantage estimate can fill the place of $\hat{A}$ in :eqref:`eq_ppo_clip`. We use generalized advantage estimation (GAE) from :numref:`sec_actorcritic`: `Batch.gae` sums the TD errors $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ of the critic backward through each episode with weights $(\gamma\lambda)^k$, and $\lambda$ sets how far ahead each advantage looks. That section found the error of this estimate smallest near $\lambda = 0.9$ to $0.95$; $0.95$ is also the setting of the PPO paper. The advantages are computed with the critic as it stands before it is fit to the batch, the order of the GAE paper :cite:`Schulman.Moritz.Levine.ea.2016`. A critic that has just been regressed on this batch's returns has absorbed part of their noise, and advantages computed from it are biased toward zero.
+Any advantage estimate can fill the place of $\hat{A}$ in :eqref:`eq_ppo_clip`. We use generalized advantage estimation (GAE) from :numref:`sec_actorcritic`: `Batch.gae` sums the TD errors $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ of the critic backward through each episode with weights $(\gamma\lambda)^k$, and $\lambda$ sets how far ahead each advantage looks. That section found the error of this estimate smallest near $\lambda = 0.9$ to $0.95$; $0.95$ is also the setting of the PPO paper. The advantages are computed with the critic as it stands before it is fit to the batch, the order of the GAE paper :cite:`Schulman.Moritz.Levine.ea.2016`. `train_ac` of :numref:`sec_actorcritic` used the opposite order, because its actor's weight was the one-step TD error, which rests entirely on the critic. At $\lambda = 0.95$ the advantage is mostly the batch's own sampled rewards and leans little on the critic, so the order changes no result of this section, and we follow the paper.
 
 ### The Implementation
 
@@ -257,7 +257,7 @@ def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,  #@save
 `ppo_epochs` pads the batch to a bucket length with `d2l._pad` and `d2l._bucket` (:numref:`sec_utils`) and masks the padded rows out of every mean, so the compiled `_ppo_step` is reused across batches of different lengths.
 :end_tab:
 
-The training loop is the actor-critic loop of :numref:`sec_actorcritic` with its single actor step replaced by `ppo_epochs`. `rollout` plays eight episodes into a `Batch`. The loop then computes the advantages with `Batch.gae` and the current critic, and standardizes them over the batch with `normalize`. It also reads `logp_old` with `log_prob_np`, which returns $\log \pi(a \mid s)$ for given states and actions as a NumPy array. Next the critic takes its regression passes toward the $\lambda$-return target `gae + value` with `fit_value` of :numref:`sec_deeprl`, and finally the actor takes its passes. Each update yields the batch's mean return, the three diagnostics averaged over the epochs, and the three diagnostics of the last epoch. An optional list `trace` keeps the full diagnostic matrix, and `epochs` overrides `num_epochs`.
+The training loop is the actor-critic loop of :numref:`sec_actorcritic` with its single actor step replaced by `ppo_epochs` and the advantages computed before the critic's passes. `rollout` plays eight episodes into a `Batch`. The loop then computes the advantages with `Batch.gae` and the current critic, and standardizes them over the batch with `normalize`. It also reads `logp_old` with `log_prob_np`, which returns $\log \pi(a \mid s)$ for given states and actions as a NumPy array. Next the critic takes its regression passes toward the $\lambda$-return target `gae + value` with `fit_value` of :numref:`sec_deeprl`, and finally the actor takes its passes. Each update yields the batch's mean return, the three diagnostics averaged over the epochs, and the three diagnostics of the last epoch. An optional list `trace` keeps the full diagnostic matrix, and `epochs` overrides `num_epochs`.
 
 ```{.python .input #ppo-the-implementation-5}
 %%tab pytorch, jax
@@ -283,7 +283,7 @@ def train_ppo(seed, ac, use_clip=True, trace=None, epochs=None):
 ### Reuse against Environment Steps
 :label:`subsec_ppo_reuse`
 
-How many environment steps does reuse save? We train clipped PPO with one, four and twenty passes per batch, on eight seeds each, stop each run once it has spent 50,000 environment steps, and plot the batch's mean return against the steps spent so far. With one pass every ratio equals one and the clip never acts, so that arm is the batched actor-critic of :numref:`sec_actorcritic` with GAE weights. CartPole pays a reward of one per step, so a batch of eight episodes with mean return $R$ costs $8R$ steps, and `np.interp` places each run on a common grid of steps.
+How many environment steps does reuse save? We train clipped PPO with one, four and twenty passes per batch, on eight seeds each, stop each run once it has spent 50,000 environment steps, and plot the batch's mean return against the steps spent so far. With one pass every ratio equals one and the clip never acts, so that arm is close to `train_gae` of :numref:`sec_actorcritic`, with an entropy bonus, no cap on the gradient, and the advantages computed before the critic's passes. CartPole pays a reward of one per step, so a batch of eight episodes with mean return $R$ costs $8R$ steps, and `np.interp` places each run on a common grid of steps.
 
 ```{.python .input #ppo-reuse-against-environment-steps-1}
 %%tab pytorch, jax
@@ -522,7 +522,7 @@ print(f'V at the cut, the value of the unrecorded future: '
 
 The trained agent does not fall within 32 steps, so all eight trajectories end at the cut, and their values are close to $1/(1-\gamma)=100$, the discounted value of balancing forever. Without the bootstrap, GAE would treat each cut as a fall and give the last actions before it large negative advantages. Gymnasium's vector environments also restart a finished episode by themselves: the step after an episode ends returns the first observation of a new episode with reward zero and ignores the action, so implementations mask that step out of the advantages and the loss. Finally, production code shuffles the rectangle into minibatches and takes a few epochs over them, typically four, so each ratio is checked four times rather than twenty; the smaller steps need less memory and add gradient noise. Exercise :exref:`ex_ppo-standard-recipe` builds this loop.
 
-PPO lets an agent take several steps on each batch, and on CartPole four epochs reach the ceiling in half the environment steps of one. Its clip limits how far each step moves the action probabilities, but it bounds the path, not the destination. The entropy of the clipped runs still falls from $0.65$ to $0.25$ nats, because the objective is still the plain return, whose optimum is a deterministic policy. :numref:`sec_regularized` changes the objective instead: it keeps the policy near a fixed reference, which moves the optimum and not only the path.
+PPO lets an agent take several steps on each batch, and on CartPole four epochs reach the ceiling in half the environment steps of one. Its clip limits how far each step moves the action probabilities, but it bounds the path, not the destination. The entropy of the clipped runs still falls from $0.65$ to $0.25$ nats, because the objective is still the return with a small entropy bonus, whose optimum is nearly deterministic. :numref:`sec_regularized` changes the objective instead: it keeps the policy near a fixed reference, which moves the optimum and not only the path.
 
 ## Summary
 
@@ -1006,15 +1006,15 @@ The critic takes its own regression passes on the same batch.
 ::: {.col}
 - learning rate $10^{-2}$: each pass moves far
 - unclipped: several seeds collapse to a return of about 9
-- at $10^{-3}$ no collapse, but about 35,000 to 40,000 steps instead of
-  24,000
+- at an actor rate of $10^{-3}$ no collapse, but about 35,000 to 40,000
+  steps instead of 24,000
 :::
 :::
 
 [Schulman et al. 2017, Table 1]{.small}
 :::
 
-::: {.slide title="Check: How Much Probability Can a Rare Action Gain?"}
+::: {.slide title="Check: How Much Gain Does the Clip Reward for a Rare Action?"}
 [Check]{.kicker}
 
 A sample has positive advantage and $\epsilon_{\text{clip}} = 0.2$. Up to
@@ -1024,23 +1024,16 @@ probability if $\pi_{\text{old}}(a) = 0.01$? If $\pi_{\text{old}}(a) = 0.6$?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $1.2 \times 0.01 = 0.012$ and $1.2 \times 0.6 = 0.72$. The band
-is relative: a rare action can gain at most $0.002$ of probability from one
-batch, a common one $0.12$.
+is relative: a rare action is rewarded for gaining at most $0.002$ of
+probability from one batch, a common one $0.12$.
 :::
 :::
 :::
 
-::: {.slide title="Within a Batch the Clip Fraction Peaks near Epoch Five, Then Falls"}
-::: {.cols .vc}
-::: {.col .fig .big}
+::: {.slide title="The Clip Fraction Peaks near Epoch Five, Then Falls"}
 @!ppo-how-to-know-your-rl-is-broken-1
-:::
 
-::: {.col}
-- 0 at epoch 1; half the peak by epoch 20
-- the KL: same shape, ten times smaller
-:::
-:::
+Zero at epoch 1, half the peak by epoch 20; the KL: same shape, ten times smaller.
 :::
 
 ::: {.slide title="Entropy Falls from 0.65 to 0.25 Nats; Without the Clip Much Faster"}

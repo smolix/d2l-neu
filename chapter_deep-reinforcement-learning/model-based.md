@@ -5,7 +5,7 @@ Soft actor-critic swung the pendulum up after a few thousand transitions, and it
 
 :numref:`sec_qlearning` did this on the lake. It counted the transitions it had seen into an estimated model and ran value iteration on the estimate, treating it as exact. Pendulum's states are continuous, so they cannot be counted. Regression takes the place of counting: a network learns to predict the next state and the reward from the current state and the torque. Search takes the place of value iteration: the agent tries many torque sequences inside the model and executes the first torque of the best one. Sutton's Dyna architecture combined a learned model with planning in 1990 :cite:`Sutton.1990`, and neural-network models searched in this way control simulated robots from minutes of experience :cite:`Nagabandi.Kahn.Fearing.ea.2018`.
 
-A model lets an agent use computation in place of experience: every real step can be followed by thousands of imagined ones. A search can also start from what a policy proposes and teach its result back to the policy. AlphaZero and MuZero learned to play board games beyond human strength in this way :cite:`Silver.Hubert.Schrittwieser.ea.2018,Schrittwieser.Antonoglou.Hubert.ea.2020`, and search guided by a learned policy is also how reasoning models spend extra computation at test time. In this section we fit a model of Pendulum from one random episode, measure how its errors grow along a plan, plan with it, and turn the search into a better policy. One question stays with us throughout: how far from its data can a model be trusted?
+A model lets an agent use computation in place of experience: every real step can be followed by thousands of imagined ones. A search can also start from what a policy proposes and teach its result back to the policy. AlphaZero and MuZero learned to play board games beyond human strength in this way :cite:`Silver.Hubert.Schrittwieser.ea.2018,Schrittwieser.Antonoglou.Hubert.ea.2020`, and search guided by a learned policy is one way language models spend extra computation at test time. In this section we fit a model of Pendulum from one random episode, measure how its errors grow along a plan, plan with it, and turn the search into a better policy. One question stays with us throughout: how far from its data can a model be trusted?
 
 ```{.python .input #model-based-learned-models-and-planning}
 %%tab pytorch
@@ -316,17 +316,22 @@ rng = np.random.default_rng(0)
 s = np.array([[-1.0, 0.0, 0.0]], np.float32)      # hanging down, at rest
 A = rng.uniform(-c, c, (1, 5, horizon, 1)).astype(np.float32)
 _, r_hat = rollout_model(model, np.repeat(s[:, None], 5, axis=1), A)
+real = gym.make('Pendulum-v1').unwrapped         # the same sequences, for real
 for a, ret in zip(A[0], np.asarray(r_hat[0]).sum(-1)):
-    print(f'first actions {a[:3, 0].round(2)}  predicted return {ret:8.2f}')
+    real.reset()
+    real.state = np.array([np.pi, 0.0])          # angle, velocity
+    true = sum(real.step(a_t)[1] for a_t in a)
+    print(f'first actions {a[:3, 0].round(2)}  predicted {ret:7.1f}  '
+          f'true {true:7.1f}')
 ```
 
-Hanging still for 25 steps would lose about $25 \times 9.9 \approx 247$. Every random sequence rocks the pendulum a little away from the bottom, so all five predictions are less negative than that, and they lie within a few points of each other. Of the five we would pick the one with the highest predicted return and apply its first torque.
+Hanging still for 25 steps would lose about $25 \times 9.9 \approx 247$, and the five predictions lie well above that and within a few points of each other. The last column replays the same five sequences in the real environment from the same state. They lose between 223 and 242: rocking the pendulum a little away from the bottom saves between 5 and 24 points against hanging still, not the 60 to 75 points the model predicts. The model is too optimistic by 40 to 70 points on every sequence. The likely cause is coverage. In the random episode the pendulum swept through the bottom fast, so the model never saw it hanging nearly still there, and its rewards for that state are too high. Even so, the sequence with the highest predicted return is also the best of the five in the real environment, and choosing among candidates needs only their ranking, not their values. Of the five we would pick that sequence and apply its first torque. How far the model can be trusted is already the question in this smallest case: here its values are wrong, and its choice is right.
 
 That is *random shooting*: draw many candidate sequences $(a_0^{(j)}, \ldots, a_{n-1}^{(j)})$, predict their returns
 
 $$\hat G^{(j)} = \sum_{t=0}^{n-1} \hat r_t^{(j)},$$
 
-where $\hat r_t^{(j)}$ is the model's reward for step $t$ of candidate $j$, and keep the best. The sum is undiscounted, since over 25 steps with $\gamma = 0.99$ a discount would change the weights by at most a fifth. Only the first torque of the best sequence is executed. At the next step the agent observes the real state and plans again from there. This scheme, *model-predictive control* (MPC), is a long-standing method in control engineering. Replanning at every step means that the model's errors over the later steps of a plan never act on the real pendulum: before they can, the next real observation replaces the prediction.
+where $\hat r_t^{(j)}$ is the model's reward for step $t$ of candidate $j$, and keep the best. The sum is undiscounted, since over 25 steps with $\gamma = 0.99$ a discount would change the weights by about a fifth at most. Only the first torque of the best sequence is executed. At the next step the agent observes the real state and plans again from there. This scheme, *model-predictive control* (MPC), is a long-standing method in control engineering. Replanning at every step keeps the model's errors from accumulating along the executed trajectory, because the next real observation replaces the prediction before its errors can compound; the errors over the later steps of a plan still shape which first torque wins.
 
 `plan` carries this out for a batch of $B$ states at once. It perturbs a given plan for each state with Gaussian noise into 500 candidates, keeps the given plan itself as one of them, clips the torques to $[-c, c]$, rolls all candidates out with `rollout_model`, and returns each state's best sequence with its predicted return. Because the given plan is one of the candidates, the returned plan never has a lower predicted return than the plan it started from. One action costs $500 \times 25 = 12{,}500$ evaluations of the model.
 
@@ -350,12 +355,12 @@ def plan(model, obs, init, rng, noise=c, num_cand=num_cand, scale=c):
 
 ### Warm Starts
 
-Which plan should the search start from? Without any knowledge it would start from zero torque and draw fresh candidates at every step. That throws away the plan found one step earlier, which was presumably good, and forces the search to find a swing-up among 500 random sequences again at every step. Consecutive torques then come from unrelated plans. A *warm start* reuses the previous plan: its first torque has just been executed, so the remaining 24 are shifted forward by one step, a zero torque is appended, and the search perturbs this shifted plan. A good plan is then found once and refined from step to step. :numref:`fig_rl_model_planning` shows one step of this search.
+Which plan should the search start from? Without any knowledge it would draw fresh random sequences at every step. That throws away the plan found one step earlier, which was presumably good, and forces the search to find a swing-up among 500 random sequences again at every step. Consecutive torques then come from unrelated plans. A *warm start* reuses the previous plan: its first torque has just been executed, so the remaining 24 are shifted forward by one step, a zero torque is appended, and the search perturbs this shifted plan. A good plan is then found once and refined from step to step. :numref:`fig_rl_model_planning` shows one step of this search.
 
-![Planning in a learned model by random shooting with a warm start. (a) At state $s_t$, candidate action sequences drawn around the previous plan shifted by one step (dashed) are rolled out through $\hat f_\phi$ for 25 steps and scored by the sum of predicted rewards (numbers at the right); only the first action of the best sequence (blue) is executed. (b) The real next state differs a little from the predicted one (open circle), and the planner starts again from it, around the best plan of (a) shifted by one step. (c) The model's open-loop error grows with the horizon, one reason to replan at every step. The vertical axis and the scores come from a schematic one-dimensional model, not from Pendulum.](../img/mdl-rl-model-planning.svg)
+![Planning in a learned model by random shooting with a warm start. (a) At state $s_t$, candidate action sequences drawn around the previous plan shifted by one step (dashed) are rolled out through $\hat f_\phi$ for 25 steps and scored by the sum of predicted rewards (numbers at the right); only the first action of the best sequence (blue) is executed. (b) The real next state differs a little from the predicted one (open circle), and the planner starts again from it, around the best plan of (a) shifted by one step. (c) The model's open-loop error grows with the horizon, one reason to replan at every step. The vertical axis and the scores come from a schematic one-dimensional model, not from Pendulum; a score adds the rewards of every step, including speed and torque costs, so the sequence that ends nearest upright need not score best.](../img/mdl-rl-model-planning.svg)
 :label:`fig_rl_model_planning`
 
-`mpc` builds such a controller from a model. The plans live in the controller's closure, one per environment, created at its first call; the perturbation has standard deviation $c = 2$, the width of the torque range. In separate runs with five seeds, a planner that drew fresh, uniformly random sequences at every step remained 40 to 110 points worse per episode on its test starts than the warm-started planner after five episodes of data, and was far worse early on.
+`mpc` builds such a controller from a model. The plans live in the controller's closure, one per environment, created at its first call; the perturbation has standard deviation equal to the torque bound, $c = 2$. In separate runs with five seeds, scored on another set of ten starts, we compared it with a planner that draws 500 fresh, uniformly random sequences at every step. After 600 real steps the warm-started planner scored between about $-115$ and $-155$ on every run, and the fresh planner between about $-165$ and $-555$; after 1,000 real steps the fresh planner was still 40 to 110 points worse on every seed.
 
 ```{.python .input #model-based-warm-starts}
 %%tab pytorch, jax
@@ -410,13 +415,13 @@ for seed, (scores, buf) in enumerate(runs):
           + ''.join(f'{s:7.0f}' for s in scores))
 ```
 
-What is a good score? From the ten test starts, a controller that swings up and balances loses close to nothing from the start nearest the top and about 250 to 320 from each of the five starts near the bottom, about 170 on average. The soft actor-critic of :numref:`sec_sac`, scored the same way, settles near $-170$ and first reaches $-200$ after several thousand steps at one update per step.
+What is a good score? From the ten test starts, a controller that swings up and balances loses close to nothing from the start nearest the top and about 250 to 320 from each of the five starts near the bottom, about 170 on average. The soft actor-critic of :numref:`sec_sac`, its greedy actor scored the same way after every episode, settles near $-170$ and first reaches $-200$ after about 5,000 to 7,500 steps at one update per step.
 
-After 600 real steps, three episodes, the planner scores between about $-165$ and $-215$ on every run, close to that level, and after 800 steps between about $-170$ and $-195$. On three of the five seeds the model of the random episode alone already gives a planner that scores between about $-175$ and $-340$, far from the random policy's $-1{,}000$ and below. On the other two, seeds 3 and 4, the first planner fails, with a score near $-1{,}500$; its first one or two episodes fail as well, and after 600 real steps the same planner succeeds.
+After 600 real steps, three episodes, the planner scores between about $-165$ and $-215$ on every run, close to that level, and after 800 steps between about $-170$ and $-195$. It first reaches $-200$ after 200 to 800 real steps, and by 600 on all runs but one. On three of the five seeds the model of the random episode alone already gives a planner that scores between about $-175$ and $-340$, far from the random policy's $-1{,}000$ and below. On the other two, seeds 3 and 4, the first planner fails, with a score near $-1{,}500$; its first one or two episodes fail as well, and after 600 real steps the same planner succeeds.
 
 ### Coverage
 
-The two slow seeds are the two whose random episode lost the most, about $1{,}500$ and $1{,}700$: the random torques never lifted the pendulum far from the bottom. We take the model fitted to that one random episode for each seed, as in the error table above, and test it along the planner's own episodes instead of a second random one:
+The two slow seeds are the two whose random episode lost the most, about $1{,}500$ and $1{,}700$: the random torques never lifted the pendulum above the horizontal. We take the model fitted to that one random episode for each seed, as in the error table above, and test it along the planner's own episodes instead of a second random one:
 
 ```{.python .input #model-based-coverage}
 %%tab pytorch, jax
@@ -430,7 +435,7 @@ On seeds 0 to 2 the errors along the planner's episodes start as small as on ran
 
 ### The Cost of a Real Step
 
-The planner needs a few hundred real steps. Soft actor-critic needs about five to eleven thousand at one gradient step per environment step, and between about 2,400 and 4,000 at ten gradient steps per environment step, a count that includes its first thousand steps of random warm-up. On the axis of environment steps the planner needs at least ten times fewer than the first and about five times fewer than the second.
+The planner first reaches $-200$ after 200 to 800 real steps. On the same score, the mean over the ten test starts, soft actor-critic first reaches $-200$ after about 5,000 to 7,500 real steps at one gradient step per environment step, and after about 1,600 to 4,000 at ten gradient steps per environment step. These are runs of the code of :numref:`sec_sac`, with its learned temperature, five seeds per setting, and the counts include its first thousand steps of random warm-up. On the axis of environment steps the planner needs about ten times fewer than the first and a few times fewer than the second.
 
 The other axis is computation. Every action of the planner is a search: 12,500 evaluations of the model, a few milliseconds on one CPU core for this small network, and every episode adds a refit of a thousand Adam steps. Soft actor-critic takes one or ten gradient steps of three small networks per real step, and acting needs only one forward pass of its actor. A real robot must also finish the search within its control period, here 0.05 seconds. The model does not make learning free. It moves the cost from experience, which is scarce on a robot, to computation, which is scarce on the robot's controller.
 
@@ -440,7 +445,7 @@ The other axis is computation. Every action of the planner is a search: 12,500 e
 
 The planner has no policy. Every action requires a full search, and nothing it finds is remembered except through the model and the shifted plan of the last step. A policy network would act with one forward pass and generalize across states, but it must be trained, and :numref:`sec_sac` needed thousands of steps to train one through a critic. Can the search train the policy instead?
 
-Start the search from the policy's own plan. Let the actor be a network that maps a state to a torque, $\mu_\theta(s)$. In the model, the actor's plan from state $s$ is the sequence of torques it chooses along its own predicted trajectory: $a_0 = \mu_\theta(s)$, $\hat s_1$ from $\hat f_\phi(s, a_0)$, $a_1 = \mu_\theta(\hat s_1)$, and so on for $n$ steps. `actor_plan` computes it for a batch of states. `improve` hands this plan to `plan` in place of the shifted previous plan, with the same 500 candidates and the same perturbation, and returns the first torque of the best candidate.
+Start the search from the policy's own plan. Let the actor be a network that maps a state to a torque, $\bar a_\theta(s)$. In the model, the actor's plan from state $s$ is the sequence of torques it chooses along its own predicted trajectory: $a_0 = \bar a_\theta(s)$, $\hat s_1$ from $\hat f_\phi(s, a_0)$, $a_1 = \bar a_\theta(\hat s_1)$, and so on for $n$ steps. `actor_plan` computes it for a batch of states. `improve` hands this plan to `plan` in place of the shifted previous plan, with the same 500 candidates and the same perturbation, and returns the first torque of the best candidate.
 
 ```{.python .input #model-based-search-seeded-by-the-actor}
 %%tab pytorch, jax
@@ -462,7 +467,7 @@ Since the actor's own plan is one of the candidates, the search returns an actio
 
 ### Distillation into the Actor
 
-If the search improves on the actor, we can train the actor to imitate the search. This is the behavior cloning of :numref:`sec_imitation` with the search as the expert: label states with `improve` and regress the actor's torque onto the labels with a squared error, since the torque is continuous. The actor is `d2l.SquashedGaussianPolicy` from :numref:`sec_sac`, a two-layer network whose Gaussian mean is squashed by $c \tanh$ into the torque range; we train only its mean, $\mu_\theta(s) = c \tanh(\text{mean}_\theta(s))$, which is also what its `act_greedy` returns. `make_actor` builds the actor with its Adam optimizer, and `distill` takes 1,000 Adam steps of this regression.
+If the search improves on the actor, we can train the actor to imitate the search. This is the behavior cloning of :numref:`sec_imitation` with the search as the expert: label states with `improve` and regress the actor's torque onto the labels with a squared error, since the torque is continuous. The actor is `d2l.SquashedGaussianPolicy` from :numref:`sec_sac`, a two-layer network whose Gaussian mean is squashed by $c \tanh$ into the torque range; we train only its squashed mean $\bar a_\theta(s) = c \tanh \mu_\theta(s)$, with $\mu_\theta$ the Gaussian mean as there, which is what its `act_greedy` returns. `make_actor` builds the actor with its Adam optimizer, and `distill` takes 1,000 Adam steps of this regression.
 
 ```{.python .input #model-based-distillation-into-the-actor-1}
 %%tab pytorch
@@ -507,9 +512,13 @@ def distill(actor, opt, obs, labels, rng, num_steps=1_000, batch_size=256):
     return float(loss)
 ```
 
-Each round of `search_and_distill` refits the model, labels 200 stored states drawn at random with the search, distills the labels into the actor, and collects one real episode acting with search. Acting with search makes each episode as good as the current model and actor allow, so the data reach the states a good controller visits. With a network that also predicts the value of each state and a tree search over discrete moves, this loop of acting with search, labeling and distilling is the loop of AlphaZero.
+:begin_tab:`jax`
+`distill_step` is one compiled Adam step of the regression, bound to the actor and its optimizer once per call of `distill` by `nnx.cached_partial`, as `model_step` was bound to the model.
+:end_tab:
 
-The loop records per round the return of the episode collected with search and the score of the actor alone, acting with no search at all; at the end it scores acting with search on the ten starts.
+Each round of `search_and_distill` refits the model, labels 200 stored states drawn at random with the search, distills these labels into the actor, and collects one real episode acting with search. Only the current round's labels train the actor; the labels of earlier rounds are not kept. Acting with search makes each episode as good as the current model and actor allow, so the data reach the states a good controller visits. With a network that also predicts the value of each state, a tree search over discrete moves, and a buffer that keeps the search's targets over many games, this loop of acting with search, labeling and distilling is the loop of AlphaZero.
+
+The loop records per round the return of the episode collected with search and the score of the actor alone, acting with no search at all; at the end it scores acting with search on the ten starts. The two curves measure different things. The first is one training episode per round, from wherever that episode happens to start, so it moves with the start state as much as with the agent; a single hard start shows up as a dip. The second is the mean over the ten test starts, the score used everywhere else in this section.
 
 ```{.python .input #model-based-distillation-into-the-actor-2}
 %%tab pytorch, jax
@@ -550,21 +559,21 @@ print('final score on the ten starts, acting with search:',
 
 ### Rounds of Search and Distillation
 
-Acting with search, the agent swings the pendulum up within two or three rounds on each of the five seeds we tried, and after eight rounds it scores between about $-175$ and $-320$ on the ten starts. That is close to the warm-started planner above, a little below it, because each search starts from the actor's plan rather than from a plan refined over many steps. The actor alone improves on every run, from between about $-900$ and $-1{,}600$ after the first round to between about $-190$ and $-1{,}100$ after the eighth, and its score can drop by hundreds from one round to the next. The network has learned part of what the search knows; acting on its own, it falls short.
+Acting with search, the agent swings the pendulum up within two or three rounds on each of the three runs shown, and after eight rounds it scores between about $-185$ and $-320$ on the ten starts, close to the warm-started planner above on most runs. The actor alone improves on every run, from between about $-900$ and $-1{,}600$ after the first round to between about $-190$ and $-1{,}100$ after the eighth, and its score can drop by hundreds from one round to the next. The network has learned part of what the search knows; acting on its own, it falls short.
 
-The likely cause is the one that :numref:`sec_imitation` measured on the lake. The labels lie on states the search visits. An actor that imitates the search imperfectly drifts, when it acts alone, into states the search never went to, where it has no labels, and its errors compound there. On the lake, DAgger (:numref:`subsec_il_dagger`) repaired this by labeling the learner's own states, and exercise :exref:`ex_model-based-dagger` tries the same repair here. AlphaZero avoids the gap by searching at test time as well, so its network only has to make the search's starting point good. The search and the network then improve each other: a better actor seeds a better search, and a better search teaches the actor.
+These runs do not show why it falls short, and three causes are candidates. The first is the distribution shift that :numref:`sec_imitation` measured on the lake. The labels are drawn from the stored states, and apart from the random episode these are states the search visited. An actor that imitates the search imperfectly drifts, when it acts alone, into states with few labels, and its errors compound there. DAgger (:numref:`subsec_il_dagger`) repaired this on the lake by labeling the learner's own states. The second is the size of the training set: each round trains the actor on 200 fresh labels and discards the earlier ones, while DAgger aggregates its labels over all rounds and AlphaZero keeps its search targets in a buffer. The third is the labels themselves: each is the first torque of the best of 500 random candidates, a noisy target. Exercise :exref:`ex_model-based-dagger` separates the first two causes. AlphaZero also searches at test time, so its network only has to make the search's starting point good. The search and the network then improve each other: a better actor seeds a better search, and a better search teaches the actor.
 
 ### Imagined Transitions as Data
 
 A model can also feed a learner that has no planner. Dyna :cite:`Sutton.1990` interleaves real steps with updates on transitions sampled from the model, and model-based policy optimization (MBPO) :cite:`Janner.Fu.Zhang.ea.2019` does this for soft actor-critic: every few hundred steps it refits the model, rolls the current actor out in the model for a few steps from states in the replay buffer, and fills most of each training batch with these imagined transitions. The imagined data are as plentiful as computation allows. The model's errors, however, enter the critic's targets, and short rollouts are how MBPO limits the compounding error measured above.
 
-Does this reduce the real steps on Pendulum? We ran soft actor-critic with its temperature fixed at 0.2, ten gradient steps per environment step, and batches made of 5% real and 95% imagined transitions from three-step rollouts, refitting the model every 250 steps. Over five seeds its greedy actor first scored $-200$ or better on ten fixed starts after 1,500 to 3,000 steps; without the model, at the same ten updates per step, it took 1,500 to 2,500. At a matched update ratio the imagined transitions did not reduce the real steps. Much of what MBPO gains over soft actor-critic at one update per step can come from the extra updates per real step, which replay supplies without a model; raising the update ratio of a model-free learner matched MBPO's sample efficiency :cite:`Chen.Wang.Zhou.ea.2021`. Exercise :exref:`ex_model-based-dyna` repeats the comparison. A model helps most where this section used it: to look ahead before acting and to turn the search into a policy. Ensembles of models that know where they are uncertain, models of a learned latent state, and searches that end in a learned value carry these ideas further; :numref:`sec_deep_rl-further-reading` describes them.
+Does this reduce the real steps on Pendulum? We ran soft actor-critic with its temperature fixed at 0.2, ten gradient steps per environment step, and batches made of 5% real and 95% imagined transitions from three-step rollouts, refitting the model every 250 steps. Over five seeds its greedy actor first scored $-200$ or better after 1,500 to 3,000 steps; without the model, at the same ten updates per step, it took 1,500 to 2,500. These runs used another set of ten fixed starts, from which a good controller loses less than from ours, so they reach $-200$ sooner than the runs quoted above. At a matched update ratio the imagined transitions did not reduce the real steps. Much of what MBPO gains over soft actor-critic at one update per step can come from the extra updates per real step, which replay supplies without a model; a model-free learner with a high update ratio and an ensemble of critics to control the overestimation that such ratios cause matched MBPO's sample efficiency :cite:`Chen.Wang.Zhou.ea.2021`. Exercise :exref:`ex_model-based-dyna` repeats the comparison. A model helps most where this section used it: to look ahead before acting and to turn the search into a policy. Ensembles of models that know where they are uncertain, models of a learned latent state, and searches that end in a learned value carry these ideas further; :numref:`sec_deep_rl-further-reading` describes them.
 
 We can now fit a model of the dynamics from a few hundred steps, plan through it, and teach a policy what the search finds. Every step trusted the model only where its own episodes had gone and only for 25 steps, and it could test that trust by acting and refitting. :numref:`sec_offline` takes away the acting: the data are a fixed log, and nothing that a model or a value function promises beyond that log can be checked.
 
 ## Summary
 
-A transition records how the environment moves, and a network fitted to transitions by least squares, $\hat f_\phi(s, a) \to (\hat s', \hat r)$, extends the counted model of the lake to continuous states. Its one-step errors are small, but they compound along a rollout, and they are large wherever the data never went. Model-predictive control searches torque sequences in the model, executes the first torque and plans again at the next step; with a warm start, a planner built from one to three episodes swings the pendulum up after a few hundred real steps, where soft actor-critic needed thousands, and each of its actions needs thousands of model evaluations. A search seeded by a policy never predicts a lower return than the policy, so it improves the policy, and regressing the actor onto the search's actions transfers part of that improvement; acting alone, the actor lags behind, because its labels lie on the search's states. Imagined transitions as training data did not reduce the real steps of soft actor-critic at a matched number of updates per step.
+A transition records how the environment moves, and a network fitted to transitions by least squares, $\hat f_\phi(s, a) \to (\hat s', \hat r)$, extends the counted model of the lake to continuous states. Its one-step errors are small, but they compound along a rollout, and they are large wherever the data never went. Model-predictive control searches torque sequences in the model, executes the first torque and plans again at the next step; with a warm start, a planner built from one to three episodes swings the pendulum up after a few hundred real steps, where soft actor-critic needed thousands, and each of its actions needs thousands of model evaluations. A search seeded by a policy never predicts a lower return than the policy, so it improves the policy, and regressing the actor onto the search's actions transfers part of that improvement; acting alone, the actor lags behind. Its labels lie mostly on the search's states, are few per round, and are noisy, and these runs do not say which of the three matters most. Imagined transitions as training data did not reduce the real steps of soft actor-critic at a matched number of updates per step.
 
 ## Exercises
 
@@ -621,17 +630,22 @@ A transition records how the environment moves, and a network fitted to transiti
    :exlabel:`ex_model-based-ensemble`
 
 1. [code] **Labels on the actor's own states.** ● The loop of this section
-   collects its episodes acting with search, so the labels lie on the states
-   the search visits.
-    1. Change `search_and_distill` so that every round collects its episode
-       with the actor alone, `actor.act_greedy`, while the labels still come
-       from `improve`. This is DAgger of :numref:`sec_imitation`, with the
-       search as the expert.
-    1. Run five seeds and compare the actor's scores per round with those of
-       this section. Which version gives the steadier actor?
-    1. On some seeds the new version may never swing the pendulum up. Inspect
-       the data of such a run and explain the failure with the coverage table
-       of this section. How could the two ways of collecting data be combined?
+   collects its episodes acting with search and trains the actor each round
+   only on that round's 200 labels.
+    1. Keep collecting with search, but aggregate the labels: append each
+       round's labeled states and torques to one growing set and distill the
+       actor on the whole set. Run five seeds and compare the actor's scores
+       per round with those of this section.
+    1. Now collect every round's episode with the actor alone,
+       `actor.act_greedy`, label states of the actor's episodes with
+       `improve`, and aggregate the labels as in part (a). This is DAgger of
+       :numref:`sec_imitation`, with the search as the expert. Which of the
+       three versions gives the steadier actor, and what does the comparison
+       say about the causes named in the text?
+    1. On some seeds the DAgger version may never swing the pendulum up.
+       Inspect the data of such a run and explain the failure with the
+       coverage table of this section. How could the two ways of collecting
+       data be combined?
    :exlabel:`ex_model-based-dagger`
 
 1. [extended] **Imagined transitions for soft actor-critic.** ●● Model-based
@@ -685,8 +699,8 @@ Learned Models and Planning<br>
 Pendulum: torque $a \in [-2, 2]$, angle $\vartheta$ from upright; each step
 costs $\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,a^2$; 200 steps per episode.
 
-- soft actor-critic: 5,000 to 11,000 real steps at one update per step,
-  2,400 to 4,000 at ten
+- soft actor-critic, on ten fixed starts: $-200$ after 5,000 to 7,500 real
+  steps at one update per step, 1,600 to 4,000 at ten
 - every transition $(s, a, r, s')$ only fed a critic target $r + \gamma V(s')$
 - but it also shows how the pendulum moves, by the same physics at every visit
 
@@ -708,7 +722,7 @@ Can an agent learn the physics from a few hundred steps and plan its way up?
 **Idea:** learn the dynamics, search in the model, execute the first torque.
 :::
 
-::: {.slide title="Where this fits"}
+::: {.slide title="A Model of the Dynamics Lets the Agent Search Before It Acts"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -788,7 +802,8 @@ $$\hat G^{(j)} = \sum_{t=0}^{n-1} \hat r^{(j)}_t, \qquad j = 1, \ldots, 500, \qu
 
 @!model-based-random-shooting-1
 
-- hanging still for 25 steps would score $25 \times 9.9 \approx -247$
+- hanging still: $-25 \times 9.9 \approx -247$; real returns: $-223$ to $-242$
+- the model is 40 to 70 points too optimistic, yet its best is truly the best
 - execute the first torque of the best; plan again from the real next state
 :::
 
@@ -798,7 +813,8 @@ $$\hat G^{(j)} = \sum_{t=0}^{n-1} \hat r^{(j)}_t, \qquad j = 1, \ldots, 500, \qu
 ![](../img/mdl-rl-model-planning.svg){width=80%}
 
 - previous best plan, shifted by one step, plus Gaussian noise of scale $c = 2$
-- fresh sequences at every step: 40 to 110 points worse per episode
+- fresh random sequences at every step: still 40 to 110 points worse after
+  1,000 real steps
 :::
 
 ::: {.slide title="From One to Three Episodes, the Planner Swings Up on Every Run"}
@@ -840,11 +856,11 @@ torques did, and the next refit has data there.
 ::: {.slide title="A Few Hundred Real Steps, Thousands of Model Evaluations per Action"}
 [Planning in the model]{.kicker}
 
-| | real steps | work per real step |
+| first score $\geq -200$ on the ten starts | real steps | work per real step |
 |---|---|---|
-| planner, until it swings up | 200 to 600 | $500 \times 25 = 12{,}500$ model evaluations |
-| SAC, 1 update per step, to $-200$ | 5,000 to 11,000 | 1 gradient step |
-| SAC, 10 updates per step, to $-200$ | 2,400 to 4,000 | 10 gradient steps |
+| planner | 200 to 800 | $500 \times 25 = 12{,}500$ model evaluations |
+| SAC, 1 update per step | 5,000 to 7,500 | 1 gradient step |
+| SAC, 10 updates per step | 1,600 to 4,000 | 10 gradient steps |
 
 - the planner also searches when it acts, within the 0.05 s control period
 - the model moves the cost from experience to computation
@@ -853,7 +869,7 @@ torques did, and the next refit has data there.
 ::: {.slide title="Search Seeded by the Actor Never Predicts Less than the Actor"}
 [Search as policy improvement]{.kicker}
 
-- actor's plan in the model: $a_t = \mu_\theta(\hat s_t)$, $\hat s_{t+1}$ from
+- actor's plan in the model: $a_t = \bar a_\theta(\hat s_t)$, $\hat s_{t+1}$ from
   $\hat f_\phi(\hat s_t, a_t)$, for 25 steps
 - perturb it into 500 candidates, keep the plan itself as one of them
 - best candidate: predicted return $\geq$ the actor's own
@@ -867,7 +883,8 @@ torques did, and the next refit has data there.
 @!model-based-distillation-into-the-actor-3
 
 - acting with search: swing-up within two or three rounds on every run
-- actor alone: improves, but lags and jumps; its labels lie on the search's states
+- actor alone: improves, but lags and jumps; candidate causes: labels on the
+  search's states, few per round, noisy
 :::
 
 ::: {.slide title="Imagined Transitions Did Not Cut SAC's Real Steps at Equal Updates"}
@@ -889,8 +906,8 @@ Dyna, MBPO: roll the actor out 3 steps in the model, 95% of each batch imagined.
 
 - $\hat f_\phi(s, a) \to (\hat s', \hat r)$ by least squares: the counted model, for continuous states.
 - One step: a fraction of a degree. Along a rollout the error compounds; off the data it is tens of degrees.
-- Warm-started random shooting with replanning: swing-up after 200 to 600 real steps on every run.
-- Soft actor-critic: 5,000 to 11,000 steps at one update per step; the planner: 12,500 model evaluations per action.
+- Warm-started random shooting with replanning: $-200$ on the ten starts after 200 to 800 real steps.
+- Soft actor-critic: 5,000 to 7,500 steps at one update per step; the planner: 12,500 model evaluations per action.
 - Search seeded by the actor improves on it inside the model; distilled, the actor learns part of it.
 - Imagined transitions: no fewer real steps at a matched update ratio.
 

@@ -107,7 +107,7 @@ d2l.plot(np.arange(1, 1001), sup, 'sweeps over all seven states',
          'sup norm of w', yscale='log')
 ```
 
-After a transient, the weights grow by a fixed factor per sweep: after a thousand sweeps their sup norm has grown from $10$ to $335$, and the value that the weights claim for state 7 is $677$, although its true value is zero. No sampling error is involved, and a smaller step size slows the divergence but does not remove it. Since the true value function is representable, the cause is not an approximation error either. Under the off-policy weighting, the expected update has a direction along which the weights grow :cite:`Sutton.Barto.2018`. Weighting the states by the evaluated policy's own visits instead stops the divergence, although the values it reaches are wrong at the states that this weighting never visits (exercise :exref:`ex_dqn-baird-on-policy`).
+After a transient, the weights grow by a factor per sweep that settles to a constant: after a thousand sweeps their sup norm has grown from $10$ to $335$, and the value that the weights claim for state 7 is $677$, although its true value is zero. No sampling error is involved, and a smaller step size slows the divergence but does not remove it. Since the true value function is representable, the cause is not an approximation error either. Under the off-policy weighting, the expected update has a direction along which the weights grow :cite:`Sutton.Barto.2018`. Weighting the states by the evaluated policy's own visits instead stops the divergence, although the values it reaches are wrong at the states that this weighting never visits (exercise :exref:`ex_dqn-baird-on-policy`).
 
 Replay and target networks do not remove an ingredient of the triad. They reduce temporal correlation and slow the changes of the targets, which makes training much more stable in practice but does not restore a general convergence guarantee.
 
@@ -169,7 +169,7 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_{
 
 and the copy is synchronized with the online weights, $w^- \leftarrow w$, every $C$ environment steps, here 250. Between synchronizations the targets stand still, and the online network solves an ordinary regression problem. Predictions feed back into targets once per synchronization instead of once per gradient step. The critic of :numref:`sec_actorcritic` bootstrapped from its newest weights, because each batch was fresh; replay removes that freshness, and DQN accepts targets a few hundred steps old in exchange for a regression problem that changes slowly.
 
-Two further controls bound the size of a step. The Huber loss is quadratic for residuals below 1 and linear above, so its derivative with respect to the prediction never exceeds 1. The full gradient also contains $\nabla_w Q_w(s, a)$, which the Huber loss does not bound, so the update clips the norm of the parameter gradient at 10, the default of Stable-Baselines3 and CleanRL rather than of the original paper :cite:`Raffin.Hill.Gleave.ea.2021,Huang.Dossa.Ye.ea.2022`. In code, `q_values` runs the network on a NumPy state without recording gradients, `fit_q` takes one clipped Huber step of $Q_w(s, a)$ toward fixed targets $y$, and `q_step` is the DQN update: the targets are `batch.td_target` with the bootstrap $\max_{a'} Q_{w^-}(s', a')$ of the frozen copy.
+Two further controls bound the size of a step. The Huber loss is quadratic for residuals below 1 and linear above, so its derivative with respect to the prediction never exceeds 1. The full gradient also contains $\nabla_w Q_w(s, a)$, which the Huber loss does not bound, so the update clips the norm of the parameter gradient at 10, the default of Stable-Baselines3 rather than of the original paper :cite:`Raffin.Hill.Gleave.ea.2021`. In code, `q_values` runs the network on a NumPy state without recording gradients, `fit_q` takes one clipped Huber step of $Q_w(s, a)$ toward fixed targets $y$, and `q_step` is the DQN update: the targets are `batch.td_target` with the bootstrap $\max_{a'} Q_{w^-}(s', a')$ of the frozen copy.
 
 ```{.python .input #dqn-the-target-network-1}
 %%tab pytorch
@@ -282,7 +282,7 @@ The buffer stores `terminated`, never `truncated`. A CartPole episode cut off at
 ### The Target-Network Ablation
 :label:`subsec_dqn-ablation`
 
-Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. `new_qnet(seed, copies)` builds a seeded network, and the networks live outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
+Is the frozen copy needed? We train three seeds of each arm, identical except for the switch. Statements below about how often something happens across seeds were checked over twenty seeds per arm. `new_qnet(seed, copies)` builds a seeded network, and the networks live outside the training loop so that later cells can evaluate the trained agents. `train_checked` wraps `train_dqn`. It collects the per-episode records and, at the first episode end past every multiple of 5,000 environment steps, runs the *greedy policy*, which always takes $\mathrm{argmax}_a Q_w(s, a)$, for ten episodes on a separate copy of the environment, and once more at the end of the budget; `d2l.evaluate` is the Monte Carlo evaluation of :numref:`sec_valueiter`, which averages the returns of a policy over a number of episodes. These checks do not change training; we read them once the value estimates are understood.
 
 ```{.python .input #dqn-the-ablation-1}
 %%tab pytorch, jax
@@ -368,7 +368,7 @@ for arm in arms:
         print(f'{arm:>17}, seed {seed}: ' + ' '.join(f'{x:3.0f}' for x in c))
 ```
 
-Checked this way, DQN's greedy policy sits mostly at a return of about 50 to 250 for the first 30,000 steps, with an occasional early check at 500, and then reaches 500 on most seeds between 35,000 and 45,000 steps. Even the first check, at 5,000 steps, usually scores above the plateau that follows it. A good check is not final: some seeds later fall back by hundreds of points, as one seed of the printout does, and in sweeps over twenty seeds about half of them did. Without a target network the greedy policy never lasts more than about 10 steps at any check, so training longer does not rescue it. Although DQN trains on each stored transition many times, it needs more environment steps to balance the pole for the full episode than PPO with four epochs per batch needed in :numref:`sec_ppo`.
+Checked this way, DQN's greedy policy sits mostly at a return of about 50 to 250 for the first 30,000 steps, with an occasional early check at 500, and then reaches 500 on most seeds between 35,000 and 45,000 steps. A good check is not final: some seeds later fall back by hundreds of points, as one seed of the printout does, and about half of the twenty did. Without a target network the greedy policy never lasts more than about 10 steps at any check, so training longer does not rescue it. Although DQN trains on each stored transition many times, it needs more environment steps to balance the pole for the full episode than PPO with four epochs per batch needed in :numref:`sec_ppo`.
 
 A greedy return says how good the policy is, not whether the network knows how good it is. :citet:`Hasselt.Guez.Silver.2016` test a value estimate against the discounted return that the greedy policy actually earns, which is the quantity the estimate claims to predict. `audit` computes three numbers for a trained network: the greedy return over 100 episodes, the greedy policy's discounted return over 20 episodes (`d2l.evaluate` with `gamma`), and the estimate $\max_a Q_w(s_0, a)$. Episodes start close to the centered state, so the discounted return measures the value of $s_0$. Under the 500-step limit even a perfect policy earns only $(1 - \gamma^{500})/(1 - \gamma) \approx 99.3$, slightly less than the ceiling of the continuing task.
 
@@ -392,7 +392,7 @@ for arm in arms:
               f'{disc:5.1f}, max_a Q(s0) {v0:8.3g}')
 ```
 
-Where the greedy policy balances the pole, the estimate sits a few points below the discounted return that the policy earns, never more than about eight: values still climb one synchronization at a time, and the lag of the bound above is visible at the end of the budget. Where the greedy policy fails, which in sweeps over twenty seeds happened on about two seeds in five, the estimate is above what the policy earns, by more than 20 points on about half of such runs. With two actions, these failing runs are the only sign of the network promising more than its policy delivers, too few and too mixed with other errors to measure the effect. A cleaner test needs a maximum over more actions.
+Where the greedy policy balances the pole, the estimate sits within about eight points of the discounted return that the policy earns, usually below it, because the values are still climbing at the end of the budget: the plot of the start-state value above has not leveled off. Where the greedy policy fails, which happened on about two seeds in five, the estimate is above what the policy earns, by more than 20 points on about half of such runs. With two actions, these failing runs are the only sign of the network promising more than its policy delivers, too few and too mixed with other errors to measure the effect. A cleaner test needs a maximum over more actions.
 
 ## Overestimation
 
@@ -491,7 +491,7 @@ d2l.plot_curves({name: d2l.on_grid(runs[name], grid, 2) for name in names[2:]},
                 reference=ceiling)
 ```
 
-With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. In sweeps over twenty seeds, a few 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
+With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. A few of the twenty 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
 
 We can now train a value network on transitions from any policy, replayed many times, with a frozen copy that keeps the targets still and a second estimate that keeps the maximum from inflating them. Both repairs assume that the maximum over actions can be computed: CartPole's two pushes and Atari's 18 joystick actions form a list. The torque of a motor is a number in an interval, and an argmax over it is an optimization problem of its own at every step. The next section keeps replay and the frozen copy, and replaces the maximum by a second network trained to propose the best action, which completes the off-policy column of :numref:`fig_rl_roadmap`.
 
@@ -604,9 +604,9 @@ A network in place of the Q-table combines function approximation, bootstrapping
    `batch_size` $= 128$ uniformly sampled transitions every `train_freq`
    $= 2$ environment steps. With the default capacity, no transition is
    evicted.
-    1. Show that a transition stored at step $\tau \geq 1000$ is sampled about
-       $64 \ln(50{,}000/\tau)$ times in expectation over the run, and evaluate
-       this for $\tau \in \{1000, 25{,}000, 49{,}000\}$. Data from which phase
+    1. Show that a transition stored at step $t_0 \geq 1000$ is sampled about
+       $64 \ln(50{,}000/t_0)$ times in expectation over the run, and evaluate
+       this for $t_0 \in \{1000, 25{,}000, 49{,}000\}$. Data from which phase
        of training dominate the updates?
     1. With a capacity of 500 transitions, how often is a transition sampled
        in expectation while it stays in the full buffer? Compare this with
@@ -683,10 +683,11 @@ A network in place of the Q-table combines function approximation, bootstrapping
        $e_i$. Under which condition is sampling in proportion to $|e_i|$
        optimal?
     1. :citet:`Schaul.Quan.Antonoglou.ea.2016` sample with
-       $P(i) \propto (|e_i| + c)^{\alpha}$ for a small constant $c > 0$, and
+       $P(i) \propto (|e_i| + c)^{p}$ for a small constant $c > 0$, and
        use the weights
-       $u_i = \big(N P(i)\big)^{-\beta}$ divided by $\max_j u_j$, with
-       $\beta$ annealed toward 1 over training. Which of the two changes to
+       $u_i = \big(N P(i)\big)^{-q}$ divided by $\max_j u_j$, with
+       $q$ annealed toward 1 over training; the exponents $p$ and $q$ are
+       the paper's $\alpha$ and $\beta$. Which of the two changes to
        the weights of part (a) affects only the step size, and which changes
        the point to which the updates converge?
 
@@ -709,12 +710,12 @@ A network in place of the Q-table combines function approximation, bootstrapping
     1. In the counterexample of Tsitsiklis and Van Roy, two nonterminal
        states have values $w$ and $2w$ for one weight $w$, and every reward is
        zero. The first state moves to the second, and the second stays where
-       it is with probability $1 - \eta$ and terminates otherwise. Weight both
+       it is with probability $1 - \xi$ and terminates otherwise. Weight both
        states equally. Show that exact least-squares regression to the targets
        of a frozen weight $w_k$ gives
-       $w_{k+1} = \gamma (6 - 4\eta)\, w_k / 5$, and that the semi-gradient
+       $w_{k+1} = \gamma (6 - 4\xi)\, w_k / 5$, and that the semi-gradient
        iteration without a target network diverges under the same condition
-       on $\gamma$ and $\eta$.
+       on $\gamma$ and $\xi$.
     1. Both examples contain all three ingredients of the triad. Which
        property of the function class separates the example that a target
        network repairs from the one that it cannot repair?
@@ -854,7 +855,7 @@ Function approximation, bootstrapping, off-policy data: the *deadly triad*.
 ::: {.slide title="Check: Which Ingredient Is Missing?"}
 [Check]{.kicker}
 
-For each method, name the ingredient of the triad it does without:
+For each method, name the ingredient(s) of the triad it does without:
 tabular Q-learning; REINFORCE with a network; behavior cloning.
 
 ::: {.fragment .fade-up}

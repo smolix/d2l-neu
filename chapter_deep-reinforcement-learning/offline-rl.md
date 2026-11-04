@@ -32,7 +32,7 @@ The update rules of the last two chapters fall into two families. A policy gradi
 ![Three data regimes. (a) On-policy: each batch comes from the current policy and is stale after the update; PPO's ratios allow a few epochs of reuse. (b) Off-policy: a buffer keeps older transitions, because the Bellman target does not depend on the policy that collected them. (c) Offline: a fixed dataset is swept repeatedly, and no new transition tests the actions the deployed policy chooses.](../img/mdl-rl-data-rules.svg)
 :label:`fig_rl_data_rules`
 
-SARSA, the on-policy relative of Q-learning from :numref:`sec_qlearning`, bootstraps on the action $a'$ that the behavior policy actually took at $s'$ instead of the best one:
+SARSA, the on-policy relative of Q-learning from :numref:`sec_qlearning`, bootstraps on the action $a'$ that the behavior policy actually took at $s'$ instead of the best one. We restate its temporal-difference error :eqref:`eq_qlearning_sarsa`:
 
 $$\delta_{\textrm{SARSA}} = r + \gamma\, Q(s', a') - Q(s, a).$$
 :eqlabel:`eq_sarsa`
@@ -123,7 +123,7 @@ def offline_q_sweeps(batch, gamma, num_sweeps=200, shape=(16, 4), seed=0):
     return Q
 ```
 
-Every sweep revisits the same transitions, so the table settles at a fixed point that depends on the log alone. Count the log into an estimated model: $\hat{P}(s' \mid s, a)$ is the fraction of the tries of $(s, a)$ that landed in $s'$, and $\hat{r}(s, a)$ their mean reward. The fixed point is the table of optimal action values of this *empirical MDP*, the certainty-equivalent table of :numref:`sec_qlearning`. `offline_q` computes it directly, by value iteration on the counted model. Its argument `kappa` is a per-pair penalty subtracted inside every backup, which stays zero until we turn to pessimism below. An untried pair has a row of zeros, so it leads nowhere and is worth nothing; once `kappa` is positive it is distrusted entirely. The clip at zero, the smallest value any policy can have on this lake because rewards are never negative, keeps the penalty from driving values below it:
+Every sweep revisits the same transitions, so the table settles at a fixed point that depends on the log alone. Count the log into an estimated model: $\hat{P}(s' \mid s, a)$ is the fraction of the tries of $(s, a)$ that landed in $s'$, and $\hat{r}(s, a)$ their mean reward. The fixed point is the table of optimal action values of this *empirical MDP*, the certainty-equivalent table of :numref:`sec_qlearning`. `offline_q` computes it directly, by value iteration on the counted model. Its argument `kappa` is a per-pair penalty subtracted inside every backup, which stays zero until we turn to pessimism below. An untried pair has a row of zeros, so it leads nowhere and is worth nothing. The clip at zero, the smallest value any policy can have on this lake because rewards are never negative, keeps the penalty from driving values below it. With a positive `kappa` the function also charges an untried pair an infinite penalty, but the clip returns it to the same floor of zero, so pessimism leaves untried pairs where the naive table already put them:
 
 ```{.python .input #offline-rl-distribution-shift-against-the-exact-optimum-1}
 %%tab pytorch, jax
@@ -218,7 +218,7 @@ for name in logs:
 
 On the uniform logs the naive table predicts more than its own policy earns on 36 of 40 logs, and more than any policy can earn on 28; the median prediction is about $0.20$, above the optimum $0.18$. On the narrow logs the gap is wider: the prediction exceeds $V^*$ on 39 of 40 logs, with a median of $0.25$, while the policies earn only about $0.1$. Comparing what a learner predicts with what its policy earns is the standard diagnostic of offline reinforcement learning, and with deep networks the gap can be far larger :cite:`Fujimoto.Meger.Precup.2019`.
 
-Where do the inflated predictions come from? We take the first narrow log and plot each tried live pair at its support $n(s, a)$ against the error $\hat{Q}(s, a) - Q^*(s, a)$ of the naive table, and mark the pair the greedy policy picks at each cell:
+Where do the inflated predictions come from? We take the first narrow log and plot each tried live pair at its support $n(s, a)$ against the error $\hat{Q}(s, a) - Q^*(s, a)$ of the naive table, and mark the pair the greedy policy picks at each cell (where two actions tie, `argmax` marks the first one, while `greedy` splits the tie; ties among the picks are rare on these logs):
 
 ```{.python .input #offline-rl-the-experiment-with-a-behavior-cloning-bar-6}
 %%tab pytorch, jax
@@ -236,7 +236,7 @@ d2l.plot([n[tried], n[cells, picks]], [err[tried], err[cells, picks]],
          xscale='log', fmts=('C0o', 'C1^'), figsize=(5, 3.5))
 ```
 
-Every pair with more than twenty samples errs upward, by about $0.05$ to $0.15$. Their own transitions are well estimated, but their targets bootstrap from the values of later cells, and those carry the errors of the cells after them. Below about ten samples the errors spread in both directions, from $-0.15$ to $+0.26$, and the greedy policy's thinly supported picks include the two largest errors in the plot: two picks rest on two samples and one on five, and two of them are overestimated by $0.26$ and $0.20$, more than the optimum itself. One log could be a coincidence, so we pool the picks over all 40 narrow logs and compare the picks that rest on one to five samples with all pairs that have so little support:
+Every pair with more than twenty samples errs upward, by about $0.05$ to $0.15$. Their own transitions are well estimated, but their targets bootstrap from the values of later cells, and those carry the errors of the cells after them, which the maximum in each later backup tilts upward. Below about ten samples the errors spread in both directions, from $-0.15$ to $+0.26$, and the greedy policy's thinly supported picks include the two largest errors in the plot: two picks rest on two samples and one on five, and two of them are overestimated by $0.26$ and $0.20$, more than the optimum itself. One log could be a coincidence, so we pool the picks over all 40 narrow logs and compare the picks that rest on one to five samples with all pairs that have so little support:
 
 ```{.python .input #offline-rl-distribution-shift-against-the-exact-optimum-3}
 %%tab pytorch, jax
@@ -260,7 +260,7 @@ About a quarter of the greedy policy's picks rest on five or fewer samples, and 
 
 ### The Clone and Stitching
 
-The clone is calibrated by construction. Its prediction is the log's own average return, an unbiased estimate of its value, and it lies above that value on about half the logs and below it on the rest. On the uniform logs the same property is its weakness: it reproduces a random walk and earns $0.01$.
+The clone is nearly calibrated. Its prediction is the log's own average return, an unbiased estimate of the behavior's value, which the clone's value approximates closely; the prediction lies above the clone's value on about half the logs and below it on the rest. On the uniform logs the same property is its weakness: it reproduces a random walk and earns $0.01$.
 
 The naive table beats the clone on all 40 uniform logs, and earns about $0.14$, three-quarters of the optimum, from data whose collector earned $0.008$. The reason is the per-transition backup. Suppose one random episode reaches cell 10 and then falls into a hole, while another reaches cell 10 by a different route and slides on to the goal. The backup values cell 10 by the second episode's continuation and passes that value back along the first episode's route, composing a path that no single episode followed. This composition is called *stitching*, and it is what lets offline Q-learning improve on the policy that collected its data. On the narrow logs the clone becomes a strong baseline: it copies an operator who earns $0.087$ and earns about $0.09$ itself, while the naive table, misled by its thinly supported picks, beats it on only 27 of 40 logs.
 
@@ -285,7 +285,7 @@ The lake learner gets the same treatment. Each entry of the naive table averages
 $$Q(s, a) \leftarrow \max\Big( \hat{r}(s, a) + \gamma \sum_{s'} \hat{P}(s' \mid s, a) \max_{a'} Q(s', a') - \frac{\kappa}{\sqrt{n(s, a)}},\ 0 \Big).$$
 :eqlabel:`eq_offline_pessimistic`
 
-The update is the naive one; the only difference is the penalty, which is largest where the log is thinnest and infinite where the pair was never tried. This form is the tabular version of pessimistic value iteration :cite:`Jin.Yang.Wang.2021`. Here $\kappa$ is a free scale rather than the constant of Hoeffding's inequality, because the targets of one pair bootstrap from the same estimated successors and are not independent.
+The update is the naive one; the only difference is the penalty, which is largest where the log is thinnest. A pair that was never tried stays at the floor of zero, with or without the penalty. This form is the tabular version of pessimistic value iteration :cite:`Jin.Yang.Wang.2021`. Here $\kappa$ is a free scale rather than the constant of Hoeffding's inequality, because the targets of one pair bootstrap from the same estimated successors and are not independent.
 
 The penalty mirrors the bonus of the upper-confidence-bound rule of :numref:`sec_exploration`, which picks the arm with the largest $\hat{\mu}(a) + \kappa\sqrt{\log t / n(a)}$. Both terms shrink like $1/\sqrt{n}$; they differ in sign because they differ in feedback. Online, an optimistic estimate sends the agent to try the action, and the trial corrects the estimate. Offline no trial is possible, so the same uncertainty is subtracted, and an action is chosen only when the data support it.
 
@@ -330,11 +330,11 @@ for name in logs:
           f'worse on {worse}')
 ```
 
-At $\kappa = 0.3$ the start value is driven to zero on nearly every log, and the policy loses to the naive table on 36 of the 40 narrow logs and on all 40 uniform ones. The reason is that the penalty is charged at every backup, and a value is a discounted sum over a path. Along a path whose pairs have about $n$ samples each, the charges add up to roughly $\kappa / (\sqrt{n}\,(1 - \gamma))$, twenty times the per-step charge at $\gamma = 0.95$. For this sum to stay below $V^*(s_0) = 0.18$, $\kappa = 0.3$ needs over a thousand samples per pair along the path, while the 100-episode logs hold several hundred samples at the start cell and far fewer further on. With five times as much data from the same operator the per-step charge shrinks by $\sqrt{5}$, and exercise :exref:`ex_offline-rl-how-much-pessimism` shows that $\kappa = 0.3$ then does little harm. The penalty has to match the amount of data, so choosing $\kappa$ is a model-selection problem.
+At $\kappa = 0.3$ the start value is driven to zero on nearly every log, and the policy loses to the naive table on 36 of the 40 narrow logs and on all 40 uniform ones. The reason is that the penalty is charged at every backup, and a value is a discounted sum over a path. Along a path whose pairs have about $n$ samples each, the charges add up to at most about $\kappa / (\sqrt{n}\,(1 - \gamma))$, twenty times the per-step charge at $\gamma = 0.95$; episodes end at the goal or in a hole, so the charges actually collected along a path are fewer. Even the bound stays below $V^*(s_0) = 0.18$ at $\kappa = 0.3$ once every pair along the path has over a thousand samples, while the 100-episode logs hold several hundred samples at the start cell and far fewer further on. With five times as much data from the same operator the per-step charge shrinks by $\sqrt{5}$. Most pairs along the optimal path then hold a few hundred samples, short of the thousand the bound asks for, and still, as exercise :exref:`ex_offline-rl-how-much-pessimism` shows, $\kappa = 0.3$ does little harm there: the charge actually collected is already small enough. The penalty has to match the amount of data, so choosing $\kappa$ is a model-selection problem.
 
 ### Calibration and Model Selection
 
-Every comparison above used the experimenter's exact model of the lake, which no offline deployment has. A deployment has the log, and it must estimate how well a candidate policy would do, for each value of $\kappa$ or each learned table, from that log alone. One estimator reweights the logged episodes by the probability ratio of each action under the candidate and the behavior policy. Its weight is the product of these ratios over an episode, the product whose variance grows with the horizon in :numref:`sec_ppo`, and for a greedy candidate most episodes get weight zero. Another evaluates the candidate in the empirical MDP of a held-out part of the log, which is reliable only where that part covers the candidate's choices. Calibration can be checked in part: a table that predicts more than the best discounted returns in its own log is suspect. Exercise :exref:`ex_offline-rl-what-you-cannot-measure` tries both estimators on the uniform logs.
+Every comparison above used the experimenter's exact model of the lake, which no offline deployment has. A deployment has the log, and it must estimate how well a candidate policy would do, for each value of $\kappa$ or each learned table, from that log alone. One estimator reweights the logged episodes by the probability ratio of each action under the candidate and the behavior policy. Its weight is the product of these ratios over an episode, the product whose variance grows with the horizon in :numref:`sec_ppo`, and for a greedy candidate most episodes get weight zero. Another evaluates the candidate in the empirical MDP of a held-out part of the log, which is reliable only where that part covers the candidate's choices. Calibration can be checked in part: a table that predicts more than the best discounted return in its own log is suspect. On the lake this check never fires: the best episode of every log returns about $0.5$ or more, above every prediction in this section. Exercise :exref:`ex_offline-rl-what-you-cannot-measure` tries both estimators on the uniform logs.
 
 ## Beyond the Table
 
@@ -344,7 +344,7 @@ With continuous states and actions there are no counts, but the two responses of
 
 $$\mathbb{E}_{a \sim \pi(\cdot \mid s)}\big[\hat{Q}(s, a)\big] - \beta\, D_{\textrm{KL}}\big(\pi(\cdot \mid s) \,\Vert\, \pi_e(\cdot \mid s)\big),$$
 
-and an action the log never took carries an infinite penalty. In practice $\pi_e$ is unknown and is replaced by the log. TD3+BC, for instance, adds to the actor's objective the squared distance between the policy's action and the logged one :cite:`Fujimoto.Gu.2021`. Up to a constant, the squared distance is the negative log-likelihood of the logged action under a Gaussian centered at the policy's action, so the term is a sample estimate of the divergence in the other direction, $D_{\textrm{KL}}(\pi_e \Vert \pi)$, up to a constant. Direct preference optimization, which closes the next section, learns from a fixed dataset of preferences between pairs of responses under the same constraint, with a reference policy in the role of $\pi_e$.
+and an action the log never took carries an infinite penalty. In practice $\pi_e$ is unknown and is replaced by the log. TD3+BC, for instance, adds to the actor's objective the squared distance between the policy's action and the logged one :cite:`Fujimoto.Gu.2021`. Up to a constant, the squared distance is the negative log-likelihood of the logged action under a Gaussian centered at the policy's action, so the term is a sample estimate of the divergence in the other direction, $D_{\textrm{KL}}(\pi_e \Vert \pi)$. Direct preference optimization, which closes the next section, learns from a fixed dataset of preferences between pairs of responses under the same constraint, with a reference policy in the role of $\pi_e$.
 
 The second response replaces $\kappa/\sqrt{n}$, which needs counts, with a penalty that needs only the network's outputs. Conservative Q-learning (CQL) adds to the temporal-difference loss a term that lowers the values of all actions at a logged state and raises the value of the logged action; with discrete actions the term is $\alpha_{\textrm{c}}\big(\log\sum_{a'} e^{Q(s, a')} - Q(s, a)\big)$ :cite:`Kumar.Zhou.Tucker.ea.2020`. :numref:`tab_rl_offline_families` sets the two families against what this section did with counts.
 
@@ -364,7 +364,7 @@ A third approach avoids the maximum altogether. Decision Transformer treats each
 
 The smallest case shows the failure. In a one-step task, action A pays $1$ with probability $1/2$ and $0$ otherwise, and action B always pays $0.6$; a uniformly random behavior has logged both many times. Every logged episode with return $1$ took action A, so a policy conditioned on the highest return in the log always takes A and earns $0.5$, less than the $0.6$ of B. The return-conditioned policy imitates the lucky episodes, while a Q-learner averages the outcomes of each action and picks B.
 
-We can now learn a policy from a fixed log, compare what it predicts with what it earns, and tell a supported estimate from a lucky one. Pessimism improves on the naive table when the log is narrow and should be left out when the log covers everything, and nothing in the log says which case we are in or how large $\kappa$ should be. The common practical answer is to stop being purely offline: learn from the log, then collect a little new data and fine-tune. :numref:`sec_rl_sequences` carries these ideas to language models, where a checker grades whole responses and a fixed dataset of preferences is learned from under the KL constraint above.
+We can now learn a policy from a fixed log, compare what it predicts with what it earns, and tell a supported estimate from a lucky one. Pessimism improves on the naive table when the log is narrow and should be left out when the log covers everything. The counts show how evenly a log covers the pairs, but not whether it covers the optimal policy's pairs, and nothing in the log fixes $\kappa$. The common practical answer is to stop being purely offline: learn from the log, then collect a little new data and fine-tune. One idea of this section reaches :numref:`sec_rl_sequences`: there, DPO learns a language model from a fixed dataset of preferences under the KL constraint above.
 
 ## Summary
 
@@ -418,8 +418,9 @@ Offline reinforcement learning learns a policy from a fixed log, which only off-
        calibrated is its prediction? What does this case say about
        calibration as a criterion for choosing $\kappa$?
     1. How does the best $\kappa$ move as the log grows from 100 to 500
-       episodes of the same operator? Relate your answer to the accumulated
-       charge $\kappa / (\sqrt{n}\,(1 - \gamma))$.
+       episodes of the same operator? Relate your answer to the bound
+       $\kappa / (\sqrt{n}\,(1 - \gamma))$ on the accumulated charge, and
+       explain why the charge actually collected is smaller.
     1. Which information did you use to find the best $\kappa$ that an
        offline deployment does not have?
    :exlabel:`ex_offline-rl-how-much-pessimism`
@@ -727,7 +728,8 @@ table beat a random collector?
 
 . . .
 
-- The clone predicts the log's own average return: unbiased by construction.
+- The clone predicts the log's own average return, an unbiased estimate of
+  the behavior's value, which the clone nearly matches.
 - The backup joins one episode's route to cell 10 with another's walk from
   cell 10 to the goal, a path no episode followed: *stitching*.
 - Narrow logs: the clone copies a good operator (0.09); the naive table
@@ -774,7 +776,8 @@ penalty = np.where(n > 0, kappa / np.sqrt(m), np.inf)
 Q = np.maximum(mdp_hat.backup(Q.max(axis=1)) - penalty, 0.0)
 ```
 
-- Untried pairs: infinite penalty, value 0, the floor of this lake.
+- Untried pairs: the clip turns the infinite penalty into 0, the value they
+  already had.
 - Mirror of UCB's $+\kappa\sqrt{\log t / n}$: online, optimism buys a trial
   that corrects the estimate; offline, no trial comes.
 :::
@@ -797,10 +800,11 @@ $\kappa = 0.1$, the same 80 logs:
 
 @!offline-rl-choosing-the-penalty
 
-- Charged at every backup, the penalty adds up along a path to about
+- Charged at every backup, the penalty adds up along a path to at most about
   $\kappa / (\sqrt{n}\,(1 - \gamma))$: 20 times the per-step charge.
-- $\kappa = 0.3$ needs over 1,000 samples per pair on the path to keep a value
-  above $0.18$. The penalty has to match the amount of data.
+- At $\kappa = 0.3$ the bound drops below $0.18$ only past 1,000 samples per
+  pair; with five times the data the realized charge is already small.
+- The penalty has to match the amount of data.
 :::
 
 ::: {.slide title="Check: Why Can Kappa Not Be Chosen from the Log?"}

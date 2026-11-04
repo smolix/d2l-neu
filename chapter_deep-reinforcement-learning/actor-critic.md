@@ -30,7 +30,7 @@ import numpy as np
 import optax
 ```
 
-We keep the task and the agent of :numref:`sec_deeprl`. CartPole's state is four numbers, the cart's position and velocity and the pole's angle and angular velocity; its two actions push the cart left or right; every step with the pole up pays $1$; and an episode is cut off after 500 steps, so the largest possible return is 500. The discount is $\gamma = 0.99$. The agent is `ActorCritic.mlp`, a policy network and a value network with one hidden layer of 64 units each, each with its own Adam optimizer. Every training run below takes 150 updates of eight episodes each, up to 600,000 environment steps. The new hyperparameter `critic_steps` sets how many regression passes the critic takes per batch, and `grad_clip` caps the norm of the actor's gradient; both are explained with the training loop.
+We keep the task and the agent of :numref:`sec_deeprl`. CartPole's state is four numbers, the cart's position and velocity and the pole's angle and angular velocity; its two actions push the cart left or right; every step with the pole up pays $1$; and an episode is cut off after 500 steps, so the largest possible return is 500. The discount is $\gamma = 0.99$. The agent is `ActorCritic.mlp`, a policy network and a value network with one hidden layer of 64 units each, each with its own Adam optimizer. The main training runs below take 150 updates of eight episodes each, up to 600,000 environment steps. The new hyperparameter `critic_steps` sets how many regression passes the critic takes per batch, and `grad_clip` caps the norm of the actor's gradient; both are explained with the training loop.
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-2}
 %%tab pytorch, jax
@@ -70,7 +70,7 @@ def td_target(self, bootstrap, gamma):
     return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
 ```
 
-As in the per-step estimator of :numref:`sec_baselines`, the actor's update omits the factor $\gamma^t$ that would discount late steps of an episode relative to early ones.
+As in the reward-to-go estimator :eqref:`eq_rtg` of :numref:`sec_baselines`, the actor's update omits the factor $\gamma^t$ that would discount late steps of an episode relative to early ones.
 
 ### One Transition by Hand
 
@@ -86,7 +86,7 @@ $$\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} 
 
 The right-hand side is the advantage $A^\pi(s_t, a_t)$, how much better the action taken is than the policy's average at that state. The learned baseline of :numref:`sec_baselines` estimated it with $\hat{G}_t - \hat{V}(s_t)$. One transition, with one reward and two critic evaluations, gives an unbiased sample of the advantage, where the Monte Carlo weight needed the entire rest of the episode.
 
-During training $\hat{V}$ is not equal to $V^\pi$, and then $\delta_t$ is a biased estimate of the advantage. The zero-mean identity of :numref:`sec_baselines` says that anything fixed before the action may be subtracted from the weight without moving the gradient's mean. It covers $\hat{V}(s_t)$, which depends on the current state only. It does not cover $\hat{V}(s_{t+1})$, which depends on the action through the next state, so the critic's error at the states the actions lead to enters the update as bias (exercise :exref:`ex_actor-critic-why-baseline-argument-does`). This bias comes on top of the one that dropping $\gamma^t$ already introduced relative to the per-step estimator of :numref:`sec_baselines`.
+During training $\hat{V}$ is not equal to $V^\pi$, and then $\delta_t$ is a biased estimate of the advantage. The zero-mean identity of :numref:`sec_baselines` says that anything fixed before the action may be subtracted from the weight without moving the gradient's mean. It covers $\hat{V}(s_t)$, which depends on the current state only. It does not cover $\hat{V}(s_{t+1})$, which depends on the action through the next state, so the critic's error at the states the actions lead to enters the update as bias (exercise :exref:`ex_actor-critic-why-baseline-argument-does`). This bias comes on top of the tilt that dropping $\gamma^t$ already gives :eqref:`eq_rtg`.
 
 The critic's own update is sampled policy evaluation. Policy evaluation in :numref:`sec_valueiter` applied the Bellman expectation backup, whose fixed point is $V^\pi$. Regressing $\hat{V}(s_t)$ toward $r_t + \gamma \hat{V}(s_{t+1})$ replaces that expectation by one sampled transition, just as Q-learning replaced the optimality backup by a sample. The critic estimates the value of the current policy and the actor improves the policy against that estimate, so actor-critic is an approximate form of the generalized policy iteration of :numref:`sec_valueiter`. Because the regression target contains $\hat{V}$ itself, the gradient is taken through the prediction $\hat{V}(s_t)$ and not through the target. Such an update is called a *semi-gradient* step: its expected update is not the gradient of any fixed objective.
 
@@ -188,7 +188,7 @@ def train_ac(seed, ac, num_updates=num_updates):
         yield steps, float(batch.episode_returns().mean()), gnorm
 ```
 
-Fitting the critic before computing the actor's weights is a choice. A2C and most GAE implementations compute the TD errors with the critic that was current when the batch was collected, and update both networks afterward. With one critic step per rollout, as in A2C, the order hardly matters. With twenty passes per batch it does: the refitted critic is much closer to $V^\pi$ on the batch's own states, so the actor's weights carry less of the critic's error. In our runs the other order reached the ceiling about as fast when it worked, but about one seed in four stalled or collapsed, against about one in twenty for the order used here (exercise :exref:`ex_actor-critic-critic-passes` repeats the comparison).
+Fitting the critic before computing the actor's weights is a choice. A2C and most GAE implementations compute the TD errors with the critic that was current when the batch was collected, and update both networks afterward. With one critic step per rollout, as in A2C, the order hardly matters. With twenty passes per batch it can: the refitted critic is much closer to $V^\pi$ on the batch's own states, so the actor's weights, which here rest entirely on the critic, carry less of its error (exercise :exref:`ex_actor-critic-critic-passes` compares the two orders).
 
 Fresh batches help the critic in a second way. Each batch comes from the current policy and from the states it visits, so a critic error that matters to the current behavior is likely to meet relevant transitions in the next batch. This feedback does not guarantee convergence: semi-gradient TD with a nonlinear critic can diverge even on its own policy's data :cite:`Tsitsiklis.VanRoy.1997`. Trained on replayed transitions of older policies, the same update combines function approximation, bootstrapping and off-policy data, the *deadly triad* of :citet:`Sutton.Barto.2018`, and divergence becomes common; :numref:`sec_dqn` takes up that case.
 
@@ -249,7 +249,7 @@ for name, r in runs.items():
           f'cap active {(r[:, :, 2] > grad_clip).mean():.0%}')
 ```
 
-The Monte Carlo weight reaches the ceiling first. With the same twenty critic passes per batch, REINFORCE gets there first on nearly every seed we have tried, typically with roughly a sixth to a third fewer environment steps than actor-critic. Once there, REINFORCE stays: its running mean does not fall back, while in our many-seed runs the few runs that ended below the ceiling were all actor-critic's. The cap is active on a fifth to two fifths of actor-critic's updates and on none of REINFORCE's, whose normalized weights keep the gradient small.
+The Monte Carlo weight reaches the ceiling first on at least two of the three seeds shown. Three seeds are a small sample; over 40 seeds, with the same twenty critic passes per batch, REINFORCE reached 450 first on at least 35, typically with roughly a sixth to a third fewer environment steps, and no REINFORCE run ended far below the ceiling, while two actor-critic runs did. The cap is active on a fifth to two fifths of actor-critic's updates and on none of REINFORCE's, whose normalized weights keep the gradient small.
 
 On CartPole the bootstrap does not even make the runs steadier. The reward is a deterministic $+1$ per step, and the bootstrap at the time limit already replaces the long tail of every cut episode by the critic's value, so the Monte Carlo weight is far less noisy than its worst case. What remains is the critic's bias, and it is largest while the critic is young, the phase in which actor-critic falls behind. The uniform $\delta_t \approx 1$ of an untrained critic is the extreme case.
 
@@ -290,7 +290,7 @@ d2l.plot_curves({'TD error': trace[:, 0] ** 2, 'MC advantage': trace[:, 1] ** 2}
 
 On the same transitions, the Monte Carlo advantage has two to three times the TD error's standard deviation in the first updates, a variance five to ten times larger, and over the whole run its variance is a few tens of times the TD error's; the plot's scale is logarithmic. The TD error depends on one reward and one transition; the Monte Carlo advantage depends on every reward and transition left in the episode. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo advantage's because the bootstrap replaces the tail of every cut episode by the critic's value.
 
-The variance saving is real, but on CartPole it is not what limits learning. REINFORCE averages eight episodes per update and normalizes its weights, and with a well-fitted baseline that suffices; the critic's bias, by contrast, slows every update until the critic catches up. Adding unit Gaussian noise to every reward, or updating after every single episode, did not reverse the comparison in our runs.
+The variance saving is real, but on CartPole it is not what limits learning. REINFORCE averages eight episodes per update and normalizes its weights, and with a well-fitted baseline that suffices; the critic's bias, by contrast, slows every update until the critic catches up.
 
 The bootstrap's lasting advantage is structural: the TD error needs one transition, so an update can come before the episode ends. In a continuing task the return never arrives, and in a task whose episodes last thousands of steps, eight episodes per update take tens of thousands of steps. There a critic is the only option (exercise :exref:`ex_actor-critic-fully-online` builds the fully online form). Between these extremes lies a dial: bootstrap after several steps instead of one, and keep most of the variance saving while taking on less of the critic's bias.
 
@@ -360,7 +360,7 @@ The $\lambda = 1$ identity needs episodes that terminate. On an episode cut off 
 
 ### The $\lambda$ Sweep
 
-Which $\lambda$ trains best? `train_gae` is `train_ac` with the dial exposed: the actor is weighted by the GAE advantage `A`, and the critic is fitted toward the $\lambda$-return `A + V`. It builds its own agent, so that `d2l.run_seeds` can run it once per seed and stack the curves. It also normalizes the actor's weights, because near $\lambda = 1$ they have the scale of the Monte Carlo advantage, with a variance of order $100$, and raw weights would hit the cap at large $\lambda$ and not at small $\lambda$. The budget is short, 50 updates of four episodes, so the comparison shows which estimator helps an agent whose critic is still being learned.
+Which $\lambda$ trains best? `train_gae` is `train_ac` with the dial exposed: the actor is weighted by the GAE advantage `A`, and the critic is fitted toward the $\lambda$-return `A + V`. It builds its own agent, so that `d2l.run_seeds` can run it once per seed and stack the curves. It also normalizes the actor's weights, because near $\lambda = 1$ they have the scale of the Monte Carlo advantage, with a variance of several tens, and raw weights would hit the cap at large $\lambda$ and not at small $\lambda$. The budget is short, 50 updates of four episodes, so the comparison shows which estimator helps an agent whose critic is still being learned.
 
 ```{.python .input #actor-critic-measuring-the-dial-1}
 %%tab pytorch, jax
@@ -397,7 +397,7 @@ d2l.plot_curves({f'lambda = {lam:g}': np.median(r, axis=0)
                 smooth=10, reference=500)
 ```
 
-In the median over seeds, $\lambda = 0$ and $\lambda = 0.5$ reach a best 20-update window of about 150 to 250, far below the ceiling, while $\lambda \geq 0.9$ reaches about twice as high. Individual seeds overlap across this divide, so we compare medians. On a short budget the critic is wrong for most of training, and the estimators that lean on it least learn fastest. This is the comparison of the previous section seen from the other end: on CartPole a young critic's bias costs more than the variance it removes.
+In the median over seeds, $\lambda = 0$ and $\lambda = 0.5$ reach a best 20-update window of about 150 to 250, far below the ceiling, while $\lambda \geq 0.9$ reaches about twice as high. Individual seeds overlap across this divide, so we compare medians. On a short budget the critic is wrong for most of training, and the estimators that lean on it least learn fastest. This is the CartPole comparison above seen from the other end: on CartPole a young critic's bias costs more than the variance it removes.
 
 ### A Frozen-Policy Probe
 
@@ -432,7 +432,7 @@ def freeze(seed, warmup=40):
     return ac
 ```
 
-`probe` draws 200 batches of four episodes at a frozen agent and returns, for every $\lambda$, the bias of the mean estimate and the variance of a single estimate, both relative to the squared length of the reference. Their sum, bias squared plus variance, is the expected squared error of one draw.
+`probe` draws 200 batches of four episodes at a frozen agent and returns, for every $\lambda$, the bias of the mean estimate and the variance of a single estimate, the bias relative to the reference's length and the variance relative to its squared length. Their sum, bias squared plus variance, is the expected squared error of one draw.
 
 ```{.python .input #actor-critic-measuring-the-dial-4}
 %%tab pytorch, jax
@@ -470,7 +470,7 @@ print(f'{hits} of {len(stats)} agents have their smallest error at lambda = 0.9 
       f'or 0.95')
 ```
 
-Across the eight frozen agents, the median error is smallest at $\lambda = 0.9$ or $0.95$, about half the error at $\lambda = 1$ and below the error at $\lambda = 0$. From $\lambda = 0$ to $\lambda = 1$ the bias falls to zero and the variance rises more than tenfold, most of the rise in the last step, where the weight $(\gamma\lambda)^l$ of distant TD errors stops decaying. Individual agents vary: most have their smallest error at $0.9$ or $0.95$, but not all; in our runs over many more frozen agents, the exceptions were mostly agents whose critic was accurate enough that a smaller $\lambda$ won. The $\lambda = 1$ row has zero bias by construction, because its own mean is the reference. The common default in PPO implementations is $\lambda = 0.95$ :cite:`Schulman.Wolski.Dhariwal.ea.2017`.
+Across the eight frozen agents, the median error is smallest at $\lambda = 0.9$ or $0.95$, about half the error at $\lambda = 1$ and below the error at $\lambda = 0$. From $\lambda = 0$ to $\lambda = 1$ the bias falls to zero and the variance rises more than tenfold, most of the rise in the last step, where the weight $(\gamma\lambda)^l$ of distant TD errors stops decaying. Individual agents vary: most have their smallest error at $0.9$ or $0.95$, and in the others a smaller $\lambda$ wins, as the proposition below predicts for a critic that is already accurate. The $\lambda = 1$ row has zero bias by construction, because its own mean is the reference. The common default in PPO implementations is $\lambda = 0.95$ :cite:`Schulman.Wolski.Dhariwal.ea.2017`.
 
 ### The Source of the Interior Optimum
 
@@ -896,8 +896,8 @@ rollout over many parallel environments.
 :::
 
 ::: {.slide title="On CartPole the Young Critic's Bias Outweighs the Variance It Removes"}
-- REINFORCE reaches the ceiling first on nearly every seed, typically with
-  roughly a sixth to a third fewer environment steps, and stays there.
+- Over 40 seeds REINFORCE reaches 450 first on at least 35, typically
+  with roughly a sixth to a third fewer environment steps.
 - CartPole's tail is tame: rewards are a deterministic $+1$, and the
   time-limit bootstrap replaces the tail of every cut episode.
 - Actor-critic lags while its critic is young.
@@ -907,7 +907,20 @@ The bootstrap does not speed up learning here; what it removes is variance.
 :::
 :::
 
-::: {.slide title="On Shared Batches the TD Error's Variance Is a Few Tens of Times Smaller"}
+::: {.slide title="Check: Why Does the Cap Act Only on Actor-Critic?"}
+[Check]{.kicker}
+
+Both arms cap the actor's gradient norm at $0.5$. The cap is active on
+about $29\%$ of actor-critic's updates and on none of REINFORCE's. Why?
+
+::: {.fragment .fade-up}
+REINFORCE's weights are normalized to unit standard deviation in every
+batch. Actor-critic's are raw TD errors, with a standard deviation near $3$
+while the critic is young, so its early gradients are several times larger.
+:::
+:::
+
+::: {.slide title="The TD Error's Variance Is a Few Tens of Times Smaller"}
 @!actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1
 
 One reward and one transition: an update can come before the episode ends.

@@ -255,7 +255,7 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs[:, :, 0]},
                 reference=500)
 ```
 
-The untrained policy balances the pole for about 20 steps. Every seed's batch mean reaches the 500-step ceiling by about update 50 and mostly stays there, although single batches still dip, sometimes below 400. On this task the time-limit correction barely changed the average return in our runs, because only the successful episodes are truncated, but without it the policy left the ceiling more often late in the run.
+The untrained policy balances the pole for about 20 steps. Every seed's batch mean reaches the 500-step ceiling by about update 50 and mostly stays there, although single batches still dip below it. On this task the time-limit correction barely changed the average return in our runs, because only the successful episodes are truncated, but without it the policy left the ceiling more often late in the run.
 
 ### The Surrogate Loss
 
@@ -440,7 +440,7 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs_p[:, :, 0]},
 
 Returns start near $-1200$. Every run learns to swing the pendulum up and balance it. Its ten-update average crosses $-200$ after roughly 150 to 300 updates, that is, after a few hundred thousand environment steps, and its best stays between about $-150$ and $-200$. Later updates mostly stay near that level, although a run can fall back by several hundred for a few updates. Over the run $\sigma$ falls to about half its initial value, the direction that exercise :exref:`ex_deep-rl-gaussian-score` predicts near a good action. Here the time-limit correction matters: every Pendulum episode is truncated, and without the correction only about half of the seeds in our runs reached $-200$ within the same budget.
 
-A few hundred thousand steps is a great deal of experience for a task this small. Each batch of 1,600 steps drives one update and is then discarded, and the weights come from whole returns rather than from a learned estimate of each action's value. Soft actor-critic (:numref:`sec_sac`) reaches $-200$ on the same task within about 10,000 steps. How a method can learn that much more from each sample is the question that :numref:`chap_deep_rl` takes up.
+A few hundred thousand steps is a great deal of experience for a task this small. Each batch of 1,600 steps drives one update and is then discarded, and the weights come from whole returns rather than from a learned estimate of each action's value. Soft actor-critic (:numref:`sec_sac`) reaches $-200$ on the same task within about 5,000 to 11,000 steps. How a method can learn that much more from each sample is the question that :numref:`chap_deep_rl` takes up.
 
 ### Score-Function and Pathwise Gradients
 
@@ -543,7 +543,7 @@ We can now train a policy network on continuous states and continuous actions wi
 
 This chapter and the next present many methods. Two questions locate each of them: what does it learn, and which data may drive its update? :numref:`fig_rl_roadmap` arranges the methods along these two questions.
 
-![The methods of this chapter and of :numref:`chap_deep_rl`, arranged by what they learn and which data may drive their updates. Solid boxes hold this chapter's methods; dashed boxes and gray names belong to :numref:`chap_deep_rl`. Behavior cloning learns from a fixed set of demonstrations, while DAgger learns from the learner's own states relabeled by an expert, which places it in the on-policy column. Value iteration sits in the off-policy column because its update uses the known kernel rather than data from any one policy. The arrow from the on-policy policy box marks the reuse of recent batches, which needs a correction because the policy has changed since they were collected.](../img/mdl-rl-roadmap.svg)
+![The methods of this chapter and of :numref:`chap_deep_rl`, arranged by what they learn and which data may drive their updates. Solid boxes hold this chapter's methods; dashed boxes and gray names belong to :numref:`chap_deep_rl`. Behavior cloning learns from a fixed set of demonstrations, while DAgger learns from the learner's own states relabeled by an expert, which places it in the on-policy column. Value iteration sits in the off-policy column because its update uses the known kernel rather than data from any one policy. The arrow from the on-policy policy box marks the reuse of recent batches, which needs a correction because the policy has changed since they were collected. The learned model in the off-policy column is fitted to the agent's own stored experience, and the agent plans in it (:numref:`sec_model_based`).](../img/mdl-rl-roadmap.svg)
 :label:`fig_rl_roadmap`
 
 :numref:`tab_rl_map` lists the algorithms of both chapters with what each estimates, which data it can use, and where it is introduced.
@@ -557,23 +557,25 @@ This chapter and the next present many methods. Two questions locate each of the
 | behavior cloning | $\pi(a \mid s)$ by cross-entropy on demonstrations | a fixed expert dataset | :numref:`sec_imitation` |
 | DAgger | the same fit | the learner's own states, relabeled by an expert on call | :numref:`sec_imitation` |
 | Q-learning (tabular) | $Q^*$ from sampled backups | any behavior's transitions (off-policy) | :numref:`sec_qlearning` |
-| SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | :numref:`sec_qlearning`; implemented in :numref:`sec_offline` |
+| SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | :numref:`sec_qlearning` |
 | certainty-equivalent planning | $Q^*$ of the model counted from samples | any behavior's transitions, counted | :numref:`sec_qlearning` |
 | UCB, Thompson sampling | arm means plus their uncertainty | its own pulls (the bandit) | :numref:`sec_exploration` |
 | REINFORCE | $\nabla_\theta J$ by the score function | fresh trajectories from the current policy only | :numref:`sec_policygradient` |
 | REINFORCE with baselines, RLOO | the same gradient at lower variance | fresh trajectories from the current policy | :numref:`sec_baselines` |
-| GRPO | group-normalized advantages, no value network | fresh groups of responses per prompt | weights in :numref:`sec_baselines`; machinery in :numref:`sec_rl_sequences` |
+| GRPO | group-normalized advantages, no value network | fresh groups per prompt, each reused for a few clipped steps | weights in :numref:`sec_baselines`; machinery in :numref:`sec_rl_sequences` |
 | REINFORCE with a learned baseline, on networks | $\pi_\theta$ and $\hat{V}$ as networks | fresh trajectories from the current policy | :numref:`sec_deeprl` |
 | actor-critic (A2C) | $\pi_\theta$ plus a bootstrapped critic | fresh, near-current trajectories | :numref:`sec_actorcritic` |
 | PPO | $\pi_\theta$ under a clipped probability ratio | one batch, reused for a few steps | :numref:`sec_ppo` |
 | KL-regularized policy optimization (the objective behind RLHF) | a policy tilted from a reference by reward | rollouts scored by a learned reward | :numref:`sec_regularized`; RLHF at scale is left to the Language Models part, which takes it up in more depth |
 | DQN, Double DQN | $Q$ as a network | a replay buffer of stale experience | :numref:`sec_dqn` |
-| Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_dqn` |
-| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_regularized` and :numref:`sec_sac` |
+| Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_deep_rl-further-reading` |
+| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_sac` |
 | SAC | twin soft critics, and a stochastic squashed actor maximizing reward plus entropy | a replay buffer (off-policy) | :numref:`sec_sac` |
+| model-predictive control in a learned model; search distilled into the policy | a model of the dynamics and reward fitted by regression, and plans searched in it | the agent's own stored experience, refit into the model | :numref:`sec_model_based` |
+| Dyna, MBPO | the same model, used to imagine extra transitions for an off-policy learner | a replay buffer plus model rollouts | named in :numref:`sec_model_based` |
 | offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
 | Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |
-| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`chap_deep_rl` |
+| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`sec_deep_rl-further-reading` |
 | DPO | the regularized optimum directly from preferences | a fixed preference dataset | :numref:`sec_rl_sequences`; preference optimization at scale is left to the Language Models part, which takes it up in more depth |
 
 ## Summary
@@ -998,7 +1000,7 @@ $$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t
 - `ActorCritic.mlp(4, 2)` on `'CartPole-v1'`, $\gamma = 0.99$ (horizon
   100 steps), three seeds
 - the untrained policy balances for about 20 steps
-- single batches still dip, sometimes below 400
+- single batches still dip below the ceiling
 - without the time-limit correction the average barely changes (only
   successful episodes are cut), but late batches leave 500 more often
 :::
@@ -1175,5 +1177,5 @@ Reusing recent batches needs a correction, since the policy has changed.
 
 **Next:** this agent waits for whole episodes, uses each batch once and
 does not limit its steps; the next chapter removes all three, and soft
-actor-critic reaches $-200$ within about 10,000 steps.
+actor-critic reaches $-200$ after about 5,000 to 11,000 steps.
 :::

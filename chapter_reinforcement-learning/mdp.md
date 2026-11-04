@@ -9,7 +9,7 @@ We work on a sixteen-cell frozen lake, small enough that every quantity can be c
 
 The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section are defined below; the others belong to later sections, which define each where it is first used.
 
-:Symbols of the reinforcement-learning chapter. The rows from $V^\pi$ on belong to later sections. The exploration rate $\epsilon$ and the per-step disagreement $\varepsilon$ are different symbols, and so are a response $y$ and a value target $y_t$. A $\mu$ with a subscript or argument other than 0 is a mean (an arm's, a Gaussian's).
+:Symbols of the reinforcement-learning chapters. The rows from $V^\pi$ on belong to later sections, and those from $\lambda$ on to :numref:`chap_deep_rl`. The exploration rate $\epsilon$ and the per-step disagreement $\varepsilon$ are different symbols, and so are a response $y$ and a value target $y_t$. A $\mu$ with a subscript or argument other than 0 is a mean (an arm's, a Gaussian's).
 :label:`tab_rl_notation`
 
 | Symbol | Meaning | Introduced in |
@@ -46,6 +46,16 @@ The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section
 | $b$ | baseline subtracted from a return | :numref:`sec_baselines` |
 | $\eta_V$ | step size of a value-baseline update | :numref:`sec_baselines` |
 | $A^\pi$ | advantage $Q^\pi - V^\pi$ | :numref:`sec_baselines` |
+| $\lambda$ | weight of the $\lambda$-return | :numref:`sec_actorcritic` |
+| $w$, $w^-$ | parameters of a value network; of its frozen or Polyak-averaged copy | :numref:`sec_actorcritic`, :numref:`sec_dqn` |
+| $n$ | depth of an $n$-step target, or of a plan | :numref:`sec_actorcritic`, :numref:`sec_model_based` |
+| $\rho_t$ | importance ratio $\pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$ at step $t$ | :numref:`sec_ppo` |
+| $\epsilon_{\textrm{clip}}$ | half-width of the clip band of the ratio | :numref:`sec_ppo` |
+| $\Delta_{\textrm{KL}}$ | a KL budget per update | :numref:`sec_ppo` |
+| $\pi_{\textrm{ref}}$, $\beta$ | reference policy; weight of the KL penalty, and soft actor-critic's temperature | :numref:`sec_regularized`, :numref:`sec_sac` |
+| $\hat{r}$ | a fitted reward | :numref:`sec_regularized`, :numref:`sec_model_based` |
+| $\nu$ | Polyak rate of a target network | :numref:`sec_sac` |
+| $\hat{f}_\phi$ | a learned transition model | :numref:`sec_model_based` |
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab pytorch

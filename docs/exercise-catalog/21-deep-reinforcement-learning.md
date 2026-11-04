@@ -1,254 +1,464 @@
-# Chapter Overview: chapter_deep-reinforcement-learning
+# Exercise Catalog: chapter_deep-reinforcement-learning
 
-This chapter's 44 existing exercises (7 sections: actor-critic, ppo, regularized,
-dqn, sac, offline-rl, rl-sequences) are corroborated more often than they are
-found wanting. The single best sources are the *current* (2026) graduate deep-RL
-assignments — Berkeley CS285's Assignment 2 (GAE derivation + λ-sweep),
-Assignment 3 (DQN/Double DQN + SAC with temperature autotuning), and
-Assignment 5/CS224R's Homework 3 (CQL/AWAC/IQL offline RL) — several of which
-independently converge on the same environment, sweep, or diagnostic the book
-already uses (CS285's CartPole critic-timescale sweep, its LunarLander DQN
-port, its Hopper twin-critic ablation). Stanford CS234's current Assignment 2
-supplies this search's single strongest individual match: a from-scratch proof
-of the performance-difference lemma, which the book states and proves in-text
-but had never turned into a reader exercise. Sutton & Barto remains the
-canonical source for the chapter's classical core (Baird's counterexample,
-Exercise 11.3; the λ-return recursion, Exercises 12.1–12.2; Q-learning-vs-SARSA,
-Exercises 6.11–6.12) but predates KL-regularized and maximum-entropy policy
-optimization entirely, leaving regularized.md and sac.md without a classical-text
-counterpart. Two clear gaps: OpenAI Spinning Up's algorithm suite has no DQN at
-all (confirmed against its algorithms page), and RLHF/GRPO/RL-for-sequences has
-not yet stabilized into a graded-homework tradition anywhere found — the one
-substantive supplement there (Dr. GRPO's variance-normalization critique) comes
-from a book (rlhfbook.com), not a course. Disposition across the chapter: keep
-43, rewrite 1 (rl-sequences' "read a paper" item, retitled around its
-deliverable), drop 0 — consistent with the brief's expectation that this is
-already the book's strongest exercise chapter. Five new problems are proposed
-as pure additions (one each in actor-critic, ppo, regularized, offline-rl,
-rl-sequences; none in dqn or sac, whose sets already matched canonical
-assignments closely enough that no gap justified an addition), bringing the
-proposed total to 49 problems.
+Chapter overview (regenerated 2026-11-04 from the ch. 15 rebuild). The chapter
+has nine sections, in the order actor-critic, ppo, regularized, dqn, sac,
+model-based, offline-rl, rl-sequences, further-reading; the introduction
+(`index.md`) and the Further Reading page have no exercises (the Further
+Reading page ends with one project, a multi-epoch GRPO loop, outside the
+exercise numbering). The eight sections hold 72 exercises, 57 of them with
+an `:exlabel:`. Each entry below lists one exercise in the order of the
+file: its tag and difficulty marks as printed (`[code]`, `[extended]`, ● and
+●●; no tag means pencil and paper), its label or "no label", its topic, and
+its source.
+
+Sources name where the exercise comes from in this book and, where one exists,
+its external basis. "Oct-2026 set" is the exercise set on `main` before the
+rebuild (commit 3f9e9ba6); "rebuild" is the 2026-11 ch. 15 rebuild (plan items
+W10 and 15.x in the book-pass notes). The earlier survey of this chapter
+(Berkeley CS285 Spring 2026 and Fall 2020, Stanford CS234 Winter 2026,
+Stanford CS224R Spring 2026, Sutton & Barto 2nd ed., OpenAI Spinning Up,
+CleanRL, the RLHF book) is summarized per section under "Survey sources"; its
+proposed problem sets predate the rebuild and are in the git history of this
+file.
+
+Moves in the rebuild: two ppo exercises (asymmetric bands, the
+length-normalized ratio) moved to rl-sequences with the text they belong to,
+keeping the label `ex_ppo-asymmetric-bands`; worked cases left the exercises
+for the bodies (actor-critic's interior-optimum part, rl-sequences' two-digit
+credit computation, offline-rl's two-armed bandit by hand); model-based.md is
+new. Labels of moved exercises were kept, so one exercise in rl-sequences
+carries the label prefix of its old section.
 
 ---
 
 ## chapter_deep-reinforcement-learning/actor-critic.md — Actor-Critic Methods and Multi-Step Returns
 
-**Topic:** bootstrapping the policy-gradient weight with a learned critic (the TD error as an advantage estimate), the batched actor-critic update, the bias-variance trade-off, and generalized advantage estimation (GAE) via a backward scan on TD errors.
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 — every item names a concrete deliverable and a check (a bias-vanishing condition, a predicted-vs-observed comparison, a failure mode to diagnose, a norm comparison, a working online variant, a four-way placement); this is already the group's house style at its best.
+**Topic:** The TD error as a bootstrapped advantage, the one-step actor-critic
+update, $n$-step returns, the $\lambda$-return and GAE as a backward scan, and
+the bias-variance trade of the $\lambda$ dial as measured on CartPole.
 
-**External sources found:**
-- Berkeley CS285 (Sergey Levine), Assignment 2: Policy Gradients, Spring 2026 (current) — derives GAE from the n-step advantage family through its recursive telescoping identity, then has students implement GAE-λ and sweep λ ∈ {0, 0.95, 0.98, 0.99, 1} on a noisy LunarLander-v2, explaining what the λ = 0 and λ = 1 endpoints mean and how λ moved performance — near-exactly the book's own λ-sweep and bias/variance framing — https://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw2.pdf
-- Berkeley CS285, Assignment 3: Q-Learning and Actor-Critic Algorithms, Fall 2020 (archived; the last on-policy-AC version before the course moved this slot to off-policy SAC) — "sanity check with CartPole" sweeps (num_target_updates, num_grad_steps_per_target_update) over {(1,1), (100,1), (1,100), (10,10)} and asks which combinations fail to train — independently converges on the book's own critic_steps ∈ {1,5,20} two-timescale exercise, same environment, same diagnostic — https://rail.eecs.berkeley.edu/deeprlcourse-fa20/static/homeworks/hw3.pdf
-- Sutton & Barto, *Reinforcement Learning: An Introduction* (2nd ed., 2020 draft), Exercise 12.1 — derive the recursive one-step form of the λ-return from its defining infinite sum, the direct ancestor of the telescoping proof this section gives for GAE.
-- Sutton & Barto, Exercise 12.2 — relate the trace-decay parameter λ to a half-life τ, the number of steps before the exponential weighting (γλ)^l has fallen to half its initial value — a natural companion to the book's own λ-sweep that nothing in the current set asks for.
-- OpenAI Spinning Up, Exercises page, Exercise 2.1 "Value Function Fitting in TRPO" — compares extensive (80-iteration) against absent (0-iteration) critic training on Hopper across seeds, structurally close to this section's critic-fitting-sensitivity theme, though framed as a TRPO ablation rather than an actor-critic two-timescale failure — https://spinningup.openai.com/en/latest/spinningup/exercises.html
-- Deep RL Bootcamp (Berkeley, August 2017), Core Lecture 5, "Natural Policy Gradients, TRPO, and PPO" (John Schulman) — the historically canonical GAE/TRPO derivation lecture; cited for completeness, no posed problem set attached.
+**Exercises:** 9 (8 from the Oct-2026 set, several trimmed; the traces problem
+dropped; 1 new; 4 labels new in the rebuild).
 
-No course or text was found posing the GAE telescoping identity itself as a stand-alone proof exercise — every source above either states GAE as background or exercises it empirically through a λ-sweep; that the book proves it as a Proposition in-text and then exercises only the empirical side is consistent with the wider tradition.
+1. **Bias of the bootstrapped weight.** `ex_actor-critic-why-baseline-argument-does`
+   — why the zero-mean baseline identity does not cover $\delta_t$; the split
+   $\delta_t = \delta^\pi_t + \gamma e(s_{t+1}) - e(s_t)$ and the bias it leaves.
+   *Source:* Oct-2026 set; original.
+2. [code] **Optimal bootstrap depth.** `ex_actor-critic-optimal-bootstrap-depth`
+   — bias and variance of the depth-$n$ target on the chain example, simulated
+   against the formulas; a constant critic error makes the error monotone.
+   *Source:* Oct-2026 set, shortened (its derivation of the optimum moved into
+   the text); original.
+3. [code] **Critic passes and the order of the updates.**
+   `ex_actor-critic-critic-passes` — `critic_steps` in $\{1, 5, 20\}$, a target
+   fixed per batch against one recomputed per pass, and the TD error computed
+   before the critic fit.
+   *Source:* Oct-2026 set, extended with the order of the updates; corroborated
+   by CS285 Fall 2020 HW3 (target-update sweep on CartPole).
+4. **The $\lambda$-return recursion.** `ex_actor-critic-lambda-return-recursion`
+   — the recursion of the GAE target, its form at termination and at a
+   time-limit cut.
+   *Source:* Oct-2026 set; Sutton & Barto Ex. 12.1.
+5. [extended] ● **Fully online.** `ex_actor-critic-fully-online` — the
+   per-transition update with no batch, at a matched number of environment
+   steps.
+   *Source:* Oct-2026 set; original.
+6. [code] ● **Gradient norms and the cap.** `ex_actor-critic-gradient-norms` —
+   the pre-clip actor gradient norms of the two arms, a variance model of the
+   norm, and what the clip does inside Adam.
+   *Source:* Oct-2026 set, with the gradient-norm cell that left the text;
+   original.
+7. [code] ● **Correlation of the two weights.**
+   `ex_actor-critic-uncorrelated-td-errors` — with an exact critic the
+   correlation of $\delta_t$ and the Monte Carlo advantage is the square root of
+   the variance ratio; measured along a run.
+   *Source:* Oct-2026 set, with the correlation cell that left the text; its
+   part (e) removed; original.
+8. [code] ● **Bias of GAE.** `ex_actor-critic-bias-of-gae` — the bias of the
+   GAE weight for every $\lambda$ in terms of the critic's error, checked on
+   the frozen probe.
+   *Source:* Oct-2026 set (its first two parts moved into the text as the
+   proposition on the interior optimum); original.
+9. **A critic on a one-step task.** `ex_actor-critic-verifier-critic` — on the
+   verifier task the TD error is the reward minus a per-prompt baseline; the
+   exact critic against the group-centered weight.
+   *Source:* new in the rebuild (15.1 plan); original.
 
-**Proposed problem set** (7 problems):
-1. [conceptual] **Why the baseline argument does not extend.** (unchanged) Explain why the zero-mean baseline identity does not cover the bootstrapped weight $\delta_t$, and state the condition on $\hat V$ under which the bias vanishes.
-   *Provenance:* original.
-1. [short-code] **Where the U comes from.** (unchanged) Combine the estimator table's bias and variance per $\lambda$ into a predicted one-draw error, predict the sweep's favored $\lambda$ before looking, and diagnose any disagreement.
-   *Provenance:* original.
-1. [short-code] **The two timescales.** (unchanged) Sweep `critic_steps` over $\{1,5,20\}$ and diagnose the two-timescale failure mode.
-   *Provenance:* original — independently corroborated by Berkeley CS285's own (num_target_updates, num_grad_steps_per_target_update) sweep on CartPole (Fall 2020 HW3, Q4), which finds the same class of failure on the same environment; this is evidence the existing exercise already sits at the canonical difficulty and shape, not a reason to change it.
-1. [short-code] **The clip, removed.** (unchanged) Compare pre-clip gradient norms between REINFORCE and actor-critic and predict which run changes when the clip is removed.
-   *Provenance:* original.
-1. [extended] **Fully online.** (unchanged) Implement the fully online, no-batch actor-critic update and compare it with the batched version.
-   *Provenance:* original.
-1. [conceptual] **Where the actor-critic sits.** (unchanged) Place REINFORCE, REINFORCE+baseline, actor-critic, and Q-learning on bias and wait-time axes.
-   *Provenance:* original.
-1. [conceptual] **Lambda's half-life.** Derive the number of steps $\tau$ after which the GAE weight $(\gamma\lambda)^l$ has fallen to half its $l=0$ value, as a function of $\lambda$ (and $\gamma$) alone. Compute $\tau$ for $\lambda \in \{0.9, 0.95, 0.97, 0.99\}$ at $\gamma = 0.99$, and compare each value against this section's own finding that the smallest one-draw error sits near $\lambda = 0.9$–$0.95$. Does an "effective horizon" reading explain why moving $\lambda$ much closer to $1$ costs accuracy on a 500-step CartPole episode, while it would cost less on a task with a shorter horizon?
-   *Provenance:* inspired by Sutton & Barto Exercise 12.2, the trace-decay half-life question (overlap low — S&B asks for the general $\lambda$-to-$\tau$ relation in isolation; the book would adapt it to interpret this section's own $\lambda$-sweep results, so cite on adoption).
+**Survey sources:** CS285 Spring 2026 HW2 (GAE and a $\lambda$ sweep on
+LunarLander, the section's own framing); CS285 Fall 2020 HW3 (critic-update
+sweep on CartPole); Sutton & Barto Ex. 12.1 (the $\lambda$-return recursion)
+and Ex. 12.2 (the half-life of $(\gamma\lambda)^l$, used on the deck's check
+slide); Spinning Up Exercise 2.1 (value-function fitting in TRPO).
 
 ---
 
 ## chapter_deep-reinforcement-learning/ppo.md — Trust Regions and Proximal Policy Optimization
 
-**Topic:** the mismatch between parameter-space and policy-space distance, the importance-sampling surrogate objective, the performance-difference lemma, TRPO's monotonic-improvement bound, and PPO's clipped objective with its training diagnostics.
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the densest, most quantitatively precise file in the group; every item states exactly what to compute and compare. External material adds one derivation exercise that closes a genuine gap: none of the seven currently asks the reader to prove the performance-difference lemma the section states and proves as a Proposition in the main text.
+**Topic:** Parameter space against policy space, importance ratios and the
+per-step surrogate, the performance-difference lemma and the monotonic
+improvement bound, the clipped objective, reuse against environment steps, the
+clip ablation and the training diagnostics.
 
-**External sources found:**
-- Stanford CS234 (Emma Brunskill), Assignment 2, Winter 2026 (current, due Feb 1 2026), Section 2.4 — poses the exact clipped-ratio objective $z_\theta(s,a) = \pi_\theta/\pi_{\theta_{\textrm{old}}}$ and asks for which cases the clipped-loss gradient vanishes, and why PPO needs cached log-probabilities while REINFORCE does not — closely matches this section's Ex1 and its general ratio-mechanics framing — https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
-- Stanford CS234, same assignment, Section 3(d) — derives the discounted stationary state distribution $d^\pi$ and then asks students to prove the performance-difference lemma $V^\pi(s_0) - V^{\pi'}(s_0) = \frac{1}{1-\gamma} E_{s\sim d^{\pi'}}[E_{a\sim\pi}[A^{\pi'}(s,a)]]$, with hints tied explicitly to Kakade and Langford's monotonic-improvement argument — a direct, high-quality match for the Proposition this section states and proves but never turns into a reader exercise.
-- OpenAI Spinning Up, TRPO background page — states the surrogate objective and KL constraint and includes a "You Should Know" box prompting the reader to verify both vanish exactly at the unchanged policy — a small embedded check in the spirit of this section's Ex1 — https://spinningup.openai.com/en/latest/algorithms/trpo.html
-- OpenAI Spinning Up, PPO background page — exposition of the clipped objective and PPO-Clip pseudocode; no posed derivation or exercise — https://spinningup.openai.com/en/latest/algorithms/ppo.html
-- CleanRL documentation, PPO page — beyond the "37 Implementation Details" audit and the Engstrom et al. controlled study this section already cites, its per-variant numbered "Implementation Details" checklists and cross-implementation benchmark tables against `openai/baselines` are a distinct resource; the book's own :numref:`sec_rl_sequences` Capstone Project B already assigns "ablate five of the 37 catalogued details," so this is noted rather than duplicated here — https://docs.cleanrl.dev/rl-algorithms/ppo/
-- Deep RL Bootcamp, Core Lecture 5 (John Schulman) — the canonical TRPO/PPO derivation lecture; cited for completeness, no posed problem set.
+**Exercises:** 10 (8 from the Oct-2026 set; 2 moved out to rl-sequences; 2
+new in the rebuild; 3 labels new).
 
-No institution was found posing the asymmetric-clipping-band arithmetic (this section's own Ex7) as a stand-alone problem; that appears to be a genuinely thin area and an original contribution of the book.
+1. ● **Step limits for one logit.** `ex_ppo-step-limits` — a KL trust region,
+   PPO's clip and a cap on the parameter step on a two-action policy; the
+   second-order expansion of the divergence.
+   *Source:* Oct-2026 set; CS234 Winter 2026 A2 §2.4 (when the clipped gradient
+   vanishes).
+2. **Exploding product of ratios.** `ex_ppo-exploding-product` — mean one and
+   variance $(1 + \chi^2)^T - 1$ of the trajectory ratio.
+   *Source:* Oct-2026 set; original.
+3. [code] **Entropy of the dead seeds.** `ex_ppo-dead-seed-entropy` — the
+   stored entropy of the unclipped arm, split into dead and surviving seeds.
+   *Source:* Oct-2026 set; original.
+4. ● **What the diagnostics estimate.** `ex_ppo-diagnostics-estimate` — the
+   $k_1$ and $k_3$ estimators of the KL and the clip fraction as estimates.
+   *Source:* Oct-2026 set; original.
+5. **Bootstrapping at the cut.** no label — what treating each cut of the
+   vectorized rectangle as a termination does to GAE.
+   *Source:* Oct-2026 set, made self-contained; original.
+6. [code] ● **KL early stopping.** no label — Spinning Up's stopping rule on
+   the approximate KL in place of the clip.
+   *Source:* Oct-2026 set, made independent of the implementation-details table
+   that moved to the Further Reading page; Spinning Up PPO.
+7. [code] **The width of the band.** no label — $\epsilon_{\textrm{clip}}$
+   swept from $0.05$ to $10$ in the twenty-epoch ablation.
+   *Source:* new in the rebuild (15.2 plan); original.
+8. [code] ●● **The standard recipe.** `ex_ppo-standard-recipe` — vectorized
+   collection, four epochs of minibatches and the standard learning rate,
+   against the arms of the section on the step axis.
+   *Source:* new in the rebuild (decision Q3b, experiment E11); CleanRL's
+   `ppo.py` and the RL Baselines3 Zoo defaults.
+9. ●● **The monotonic-improvement bound.** `ex_ppo-monotonic-bound` — the
+   coupling proof of the TRPO bound.
+   *Source:* Oct-2026 set; CS234 Winter 2026 A2 §3(d) (the
+   performance-difference lemma).
+10. [extended] ●● **TRPO from the pieces.** `ex_ppo-trpo` — conjugate gradient
+    with Fisher-vector products and a line search in place of `ppo_epochs`.
+    *Source:* Oct-2026 set; Spinning Up TRPO.
 
-**Proposed problem set** (8 problems):
-1. [conceptual] **One epoch is not PPO.** (unchanged) Show the ratio and clipped-objective gradient reduce to the plain policy gradient at $\theta_{\textrm{old}}$.
-   *Provenance:* original.
-1. [extended] **Reuse against clipping.** (unchanged) Sweep `num_epochs` with and without clipping and report failure rates.
-   *Provenance:* original.
-1. [short-code] **How wide should the band be.** (unchanged) Sweep the clip parameter $\epsilon$ including a very large value.
-   *Provenance:* original.
-1. [short-code] **Minibatch epochs.** (unchanged) Extend to minibatch updates and compare against full-batch epochs.
-   *Provenance:* original.
-1. [short-code] **Saturation, and the cure.** (unchanged) Break REINFORCE with an oversized learning rate and cure it with an entropy bonus.
-   *Provenance:* original.
-1. [conceptual] **The clip as a step size.** (unchanged) Translate the ratio band into a bound on logit-difference change for a two-action softmax.
-   *Provenance:* original.
-1. [conceptual] **Asymmetric bands.** (unchanged) Compute clip-band probability bounds for two actions at different starting probabilities.
-   *Provenance:* original.
-1. [conceptual] **Proving the performance-difference lemma.** Before rereading the section's proof, derive $J(\theta) - J(\theta_{\textrm{old}}) = E_{\tau\sim\theta}\big[\sum_t \gamma^t A^{\textrm{old}}(s_t,a_t)\big]$ from the telescoping sum of one-step TD residuals under $V^{\textrm{old}}$ — the same telescoping technique :numref:`sec_actorcritic` uses to prove GAE's discounted-TD-error identity. Then, in the sampled surrogate $\hat L$, identify exactly which quantity replaces the new policy's trajectory distribution with the old policy's, and state in one sentence why that approximation — not the ratio clip — is where PPO's guarantee departs from TRPO's.
-   *Provenance:* adapted from Stanford CS234 Assignment 2 (Winter 2026), Section 3(d) (overlap high; cite on adoption).
-
----
-
-## chapter_deep-reinforcement-learning/regularized.md — Regularized Policy Optimization
-
-**Topic:** learning a reward from preferences (Bradley-Terry), reward hacking under optimization of a fitted reward, and the closed-form KL-regularized optimum with its soft Bellman backup.
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 (plus 1 new addition) — the six cover the closed-form limits, the frontier's concavity, a reward-error-detection budget, the trust-region/penalty taxonomy, Bradley-Terry identifiability, and the soft backup transplanted to a second gridworld; one gap remains (forward vs. reverse KL is asserted in the text but never exercised).
-
-**External sources found:**
-- Stanford CS224R (current, Spring 2026), Homework 2: Online Reinforcement Learning — its PPO implementation uses "a frozen reference actor $\pi_{\theta_{\textrm{ref}}}$, a snapshot of the policy taken after behavior-cloning pre-training... used during PPO updates to regularize the policy via a reverse-KL penalty, preventing it from drifting too far from the pre-trained initialization" — a directly-taught, currently-assigned instance of exactly this section's fixed-reference-penalty construction, and the same course explicitly separates it from PPO's own trust-region clip, matching this section's Ex4 taxonomy — https://cs224r.stanford.edu/material/hw2/CS224R_2026_Homework_2.pdf
-- Nathan Lambert, *RLHF Book* (rlhfbook.com, already cited by this chapter), "Reward Modeling" chapter — walks through Bradley-Terry reward-model fitting and lists "Suggested Experiments": train a BT model on UltraFeedback and observe the reward margin grow; compare outcome- versus process-supervision on GSM8K/PRM800K; add a small held-out evaluation split — the closest thing to a posed exercise tradition for this section's reward-fitting cell, though at LLM-preference-dataset scale rather than this section's exactly-verifiable gridworld scale — https://rlhfbook.com/c/07-reward-models.html
-- Nathan Lambert, *RLHF Book*, "Policy Gradients" chapter — its GRPO discussion cites the "Dr. GRPO" critique (Liu et al., 2025) that dividing by the group standard deviation inflates advantages on prompts where every sampled response scores alike — a live, actively-debated instance of exactly the overoptimization-of-a-proxy pattern this section demonstrates on the hazard gridworld, though it belongs more precisely to :numref:`sec_rl_sequences`'s own group-baseline material (see that entry).
-- OpenAI Spinning Up, TRPO and PPO background pages — both state a trust-region KL role without a fixed-reference penalty, useful as the contrasting case behind this section's own Ex4.
-- Sutton & Barto, *Reinforcement Learning: An Introduction* — checked chapters 11–13 directly; the 2020 draft predates KL-regularized/maximum-entropy policy optimization as a named topic, and no exercise anywhere poses a soft Bellman backup or a reward-tilting proposition. This is a genuine, notable gap in the classical textbook tradition, one this section's own derivation fills rather than adapts.
-
-No course or text was found posing this section's own two sharpest questions — "how much KL budget does it take an optimizer to rediscover a planted reward-model error" (Ex3) and a from-scratch proof of the closed-form tilted optimum (Ex1) — as stand-alone homework; the nearest analogues operate at LLM scale (the RLHF book) rather than this section's tabular, exactly-checkable scale.
-
-**Proposed problem set** (7 problems):
-1. [conceptual] **Three limits.** (unchanged) Derive $\beta\to0$, $\beta\to\infty$, and uniform-reference from the proposition.
-   *Provenance:* original.
-1. [short-code] **The frontier is concave.** (unchanged) Sweep $\beta$ and verify concavity of reward against KL.
-   *Provenance:* original.
-1. [short-code] **Break the reward.** (unchanged) Perturb the fitted reward at one rarely-visited state and measure the KL budget needed to expose it.
-   *Provenance:* original.
-1. [conceptual] **Trust region or penalty.** (unchanged) Classify TRPO, PPO's clip, RLHF's KL term, and on-policy distillation.
-   *Provenance:* original — corroborated by Stanford CS224R's current HW2, which implements both a trust-region clip and a fixed-reference penalty in the same PPO loop and requires students to keep the two roles distinct, exactly the discipline this exercise tests.
-1. [conceptual] **Identifiability.** (unchanged) Show a per-prompt reward shift leaves the Bradley-Terry likelihood unchanged.
-   *Provenance:* original.
-1. [extended] **The soft backup, transplanted.** (unchanged) Port `soft_v` to the slippery lake with a uniform reference and sweep $\beta$.
-   *Provenance:* original.
-1. [short-code] **Which KL, and what it misses.** For the five-action bandit already in the text ($\pi_{\textrm{ref}} = (0.30, 0.10, 0.25, 0.20, 0.15)$, $r = (0, 0.5, 1, 2, 3)$), compute the *forward*-KL-regularized optimum $\arg\max_\pi E_\pi[r] - \beta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ at the same $\beta$ values already used for the reverse-KL optimum $\pi^\star$, by gradient ascent analogous to `solve_kl`. Report where the two optima disagree most (which action), and connect the disagreement to the mode-seeking-versus-mode-covering language the section states but does not compute. Which of the two would be the wrong choice if $\pi_{\textrm{ref}}$'s low-probability action ($a_2$, at $0.10$) were in fact catastrophic to under-visit?
-   *Provenance:* original.
+**Survey sources:** CS234 Winter 2026 A2 (the clipped objective, §2.4; the
+performance-difference lemma, §3(d)); Spinning Up's TRPO and PPO pages;
+CleanRL's PPO documentation; the Deep RL Bootcamp lecture 5 (no posed
+problems).
 
 ---
 
-## chapter_deep-reinforcement-learning/sac.md — Soft Actor-Critic
+## chapter_deep-reinforcement-learning/regularized.md — KL-Regularized Policy Optimization
 
-**Topic:** SAC's maximum-entropy actor-critic — the soft policy-evaluation target, soft policy improvement as a KL projection, the squashed-Gaussian policy's change-of-variables correction, twin critics with a pessimistic minimum, and Polyak-averaged targets.
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the group's highest citation and crossref density; every item states an exact computation and comparison target, and independent cross-institution checking (below) shows the set already matches the current canonical assignment closely enough that no addition is warranted.
+**Topic:** A reward fitted from comparisons (Bradley–Terry), what comparisons
+cannot see (shaping), reward hacking, the KL-regularized optimum and its
+frontier, trust region against penalty, the soft backup, and the true return
+against the KL budget.
 
-**External sources found:**
-- Berkeley CS285 (Sergey Levine), Assignment 3, Spring 2026 (current), §3.5 "Automatic Temperature Tuning" — implements the SAC paper's dual-gradient-descent temperature autotuning verbatim (target entropy $-\dim\mathcal{A}$, a learnable $\log\alpha$ with its own optimizer), tested on HalfCheetah, and asks "how does the temperature evolve during training? does it increase, decrease, or stabilize, and why might it change this way for HalfCheetah?" — a near one-to-one match for this section's own Ex1, on a different environment — https://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw3.pdf
-- Berkeley CS285, same Assignment 3, §3.6 "Stabilizing Target Values" — runs single-critic vs. clipped-double-critic SAC on Hopper and asks students to relate the difference to overestimation bias, logging both `eval_return` and `q_values` — corroborates rather than extends this section's own single-critic-vs-twin-critic calibration comparison, which the main text already runs on Pendulum.
-- OpenAI Spinning Up, SAC background page — derives the entropy-regularized Bellman backup and documents that SAC's squashed-Gaussian specifically requires *state-dependent* log-std ("SAC with state-independent log std devs... did not work"), and gives the full twin-Q/target-network update — pure exposition, but an independently authored cross-check of this section's own derivation and its emphasis on the state-dependent scale — https://spinningup.openai.com/en/latest/algorithms/sac.html
-- OpenAI Spinning Up, TD3 background page — derives clipped double-Q, target-policy smoothing, and delayed policy updates with concrete defaults (one policy update per two critic updates) — the DDPG$\to$TD3 lineage this section's Ex5 asks students to trace — https://spinningup.openai.com/en/latest/algorithms/td3.html
-- OpenAI Spinning Up, Exercises page, Exercise 1.3 "Computation Graph for TD3" — implement TD3's loss functions and intermediate calculations from a near-complete skeleton, tested on HalfCheetah and InvertedPendulum — the nearest posed-homework relative of this section's own algorithm family, though it targets TD3 rather than SAC directly.
-- CleanRL documentation, `sac_continuous_action` page — logged-metric glossary and a comparison table against the original paper's numbers, independently confirming the "twin critics reduce but do not eliminate overestimation" pattern this section measures via its calibration experiment.
+**Exercises:** 10 (all from the Oct-2026 set, several trimmed and their
+symbols renamed; 2 labels new in the rebuild).
 
-**Proposed problem set** (7 problems, unchanged):
-1. [short-code] **Autotune the temperature.** Implement Lagrange-multiplier temperature tuning targeting $\bar H = -\dim\mathcal{A}$ and plot $\alpha_t$ against the entropy trace.
-   *Provenance:* original — independently corroborated by Berkeley CS285's current Assignment 3, §3.5, which assigns the identical construction (same target-entropy convention, same dual-gradient-descent update) on HalfCheetah rather than Pendulum; cite CS285/the underlying Haarnoja et al. 2018 paper (already cited by the book) if drawing the HalfCheetah variant into the book directly.
-1. [short-code] **Delete the log-determinant.** Remove the tanh Jacobian correction and see which diagnostics expose the resulting error.
-   *Provenance:* original.
-1. [conceptual] **Off-policy without ratios.** State the distribution each SAC expectation is taken under and what a replay buffer still cannot correct.
-   *Provenance:* original.
-1. [short-code] **Entropy is not monotone in the noise.** Show the squashed policy's entropy peaks at an intermediate $\sigma$.
-   *Provenance:* original.
-1. [short-code] **The limit $\alpha\to0$ is DDPG.** Recover DDPG's actor update and connect to TD3's three repairs.
-   *Provenance:* original — the DDPG/TD3 lineage is independently derivable from OpenAI Spinning Up's TD3 and DDPG background pages, useful as a cross-check reference when writing a solution.
-1. [short-code] **Port it.** Move the section's code to `LunarLander-v3` continuous.
-   *Provenance:* original.
-1. [extended] **Discrete soft actor-critic.** Derive and implement discrete-action SAC and compare against DQN.
-   *Provenance:* original.
+1. **Identifiability and scale.** `ex_regularized-identifiability` — rewards
+   are identified up to a function of the prompt, and up to a constant per
+   connected component of the comparison graph.
+   *Source:* Oct-2026 set; original.
+2. [code] **Trajectory divergence.** `ex_regularized-trajectory-divergence` —
+   the trajectory KL as a sum of per-step KLs, without a model; under
+   geometric termination.
+   *Source:* Oct-2026 set; original.
+3. [code] **Tilting by the unregularized value.** no label — tilting
+   $\pi_{\textrm{ref}}$ by $Q^*$ instead of $Q_\beta$ traces a worse curve.
+   *Source:* Oct-2026 set; original.
+4. [code] **Soft backup on the lake.** `ex_regularized-soft-backup-transplanted`
+   — the soft backup is a $\gamma$-contraction; soft value iteration on the
+   slippery lake.
+   *Source:* Oct-2026 set; original.
+5. [extended] ● **Neural reward models.** `ex_regularized-neural-reward-models`
+   — an MLP reward model extrapolates to unsupported pairs by its inductive
+   bias.
+   *Source:* Oct-2026 set, shortened; the RLHF book's reward-modeling
+   experiments.
+6. [code] ● **Exploited reward errors.** no label — errors added to unsupported
+   and supported entries of $\hat r$, and how the peak of the true return
+   moves.
+   *Source:* Oct-2026 set; original.
+7. ● **Slope of the frontier.** `ex_regularized-frontier-is-concave` — the
+   frontier has slope $\beta$ and is concave; best-of-$N$'s divergence bound.
+   *Source:* Oct-2026 set, with the best-of-$N$ bound added; original.
+8. ● **A moving reference.** `ex_regularized-moving-reference` — a trust region
+   alone converges to the argmax; with a fixed-reference penalty it converges
+   to the tilted optimum.
+   *Source:* Oct-2026 set (its first part moved into the text); original.
+9. [code] ● **Forward-KL penalty.** `ex_regularized-forward-kl-penalty` — the
+   optimum under the forward divergence and its polynomial suppression of
+   suboptimal actions.
+   *Source:* Oct-2026 set; original.
+10. [code] ●● **Error modulo shaping.** `ex_regularized-error-modulo-shaping` —
+    shaping leaves the soft optimum unchanged; the reward error measured modulo
+    the best potential.
+    *Source:* Oct-2026 set, part (d) dropped; Ng, Harada and Russell 1999.
+
+**Survey sources:** CS224R Spring 2026 HW2 (a frozen reference actor in PPO
+fine-tuning); the RLHF book's reward-modeling and policy-gradient chapters
+(Bradley–Terry fitting, the Dr. GRPO critique); Sutton & Barto has no
+KL-regularized or maximum-entropy exercise.
 
 ---
 
 ## chapter_deep-reinforcement-learning/dqn.md — Deep Q-Networks
 
-**Topic:** instability from combining function approximation, bootstrapping, and off-policy data (the deadly triad and Baird's counterexample), the experience-replay-and-target-network repair, maximization bias, and Double DQN.
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — every sweep names its grid and its diagnostic; independent cross-checking below shows the current set already matches, almost line for line, the canonical modern DQN assignment.
+**Topic:** The semi-gradient update and the deadly triad (Baird), replay and
+the target network, the ablation, greedy evaluation and the value audit,
+maximization bias, Double DQN and duplicated actions.
 
-**External sources found:**
-- Berkeley CS285 (Sergey Levine), Assignment 3, Spring 2026 (current), §2 "Deep Q-Learning" — implements DQN on CartPole, LunarLander (three seeds), and MsPacman (Atari, ~3 hours on a GPU), and specifically asks: run DQN with the learning rate changed to $0.05$ and explain what happens to (a) the predicted Q-values and (b) the critic error, connecting the answer to class discussion of instability — this maps closely onto this section's own overestimation diagnostics (Ex3, Ex4) and its "port the code and list every changed line" Ex6, down to sharing `LunarLander` as the port target — https://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw3.pdf
-- Berkeley CS285, same Assignment 3, §2.5 "Double Q-Learning" — implements :eqref:`eq_double_dqn` exactly, selection with the online network and evaluation with the target network, and requires a side-by-side vanilla-DQN vs. Double-DQN comparison on LunarLander — essentially the same derivation and ablation this section runs on CartPole.
-- Sutton & Barto, *Reinforcement Learning: An Introduction* (2nd ed., 2020 draft), Exercise 11.3 (programming) — "Apply one-step semi-gradient Q-learning to Baird's counterexample and show empirically that its weights diverge" — the canonical textbook source of the exact demonstration this section runs; this section's own Ex7 (add a target network and sweep the sync period) is a natural extension the textbook exercise does not itself pose, so the book goes one step further than its own source here.
-- Stanford CS234 (Emma Brunskill), Assignment 2 — implements the "Nature DQN" architecture with a target network and experience replay on CartPole and Atari Pong, including an $n$-step-estimator component — a canonical DQN implementation assignment, structurally similar to this section though without its specific target-network-ablation framing. **Caveat:** this description is reconstructed from student repository descriptions and search summaries rather than a directly fetched official assignment PDF (unlike the other sources in this entry); treat it as lower-confidence and reverify the current PDF before citing it in the book.
-- CleanRL documentation, DQN page — logs "TD loss," episodic return, and mean Q-value (flagged as an overestimation indicator), and documents concrete deviations from Mnih et al. 2015 (Adam vs. RMSProp, sync period 1000 vs. 10000 steps, no error clipping) — corroborates this section's own choice to log a fixed-probe-state value estimate as its overestimation diagnostic.
+**Exercises:** 10 (all from the Oct-2026 set, some trimmed or made
+self-contained; 2 labels new in the rebuild).
 
-**Notable gap:** OpenAI Spinning Up's algorithm suite (VPG, TRPO, PPO, DDPG, TD3, SAC) does not include DQN at all — confirmed directly against its algorithms page. Despite being the single most useful teaching resource for four of this chapter's other six sections, it has nothing to offer value-based methods; this is a genuine, notable absence rather than an oversight in the search.
+1. [code] **Baird under on-policy weighting.** `ex_dqn-baird-on-policy` — the
+   eigenvalues of the expected update with off- and on-policy state weights.
+   *Source:* Oct-2026 set; Sutton & Barto Ex. 11.3.
+2. **Huber loss and norm clipping.** no label — Huber regression as clipped
+   squared-loss regression, and what the norm clip adds.
+   *Source:* Oct-2026 set, trimmed; original.
+3. **Terminated, not done.** `ex_dqn-terminated-not-done` — storing
+   `terminated or truncated` at CartPole's time limit, and a network with no
+   clock.
+   *Source:* Oct-2026 set; original.
+4. [code] **Maximization bias in closed form.** `ex_dqn-max-bias-closed-form` —
+   the bias of a maximum of $m$ correlated normal estimates.
+   *Source:* Oct-2026 set; original.
+5. [code] ● **Replay reuse and buffer capacity.** `ex_dqn-shrink-buffer` — how
+   often each stored transition is sampled, and smaller buffers.
+   *Source:* Oct-2026 set, made self-contained; original.
+6. [code] ● **The sync period.** `ex_dqn-sync-period` — the sync bound
+   $(1-\gamma^n)/(1-\gamma)$ and runs at five sync periods.
+   *Source:* Oct-2026 set; CS285 Spring 2026 HW3 §2.
+7. ● **n-step targets from replay.** `ex_dqn-nstep-replay` — what the buffer
+   must store for $n$-step targets, termination inside the window, and the
+   off-policy bias.
+   *Source:* Oct-2026 set; CS234 Winter 2026 A2 ($n$-step component).
+8. ● **Prioritized sampling.** no label — the importance weights that make
+   prioritized replay unbiased, and the variance-minimizing distribution.
+   *Source:* Oct-2026 set; Schaul et al. 2016.
+9. [code] ●● **Baird with a target network.** `ex_dqn-baird-target-network` —
+   a target copy refreshed every $k$ sweeps on Baird's counterexample.
+   *Source:* Oct-2026 set; original.
+10. [extended] ●● **LayerNorm instead of a target network.** `ex_dqn-layernorm`
+    — LayerNorm in `make_qnet` without a target network, on CartPole and on
+    Baird.
+    *Source:* Oct-2026 set; Gallici et al. 2025 (PQN).
 
-**Proposed problem set** (7 problems, unchanged):
-1. [conceptual] **What survives the scramble.** State which of `td_target`, `reward_to_go`, and `gae` remain meaningful on a replay-scrambled batch.
-   *Provenance:* original.
-1. [conceptual] **Terminated, not done.** Describe the damage from storing `done` instead of `terminated`.
-   *Provenance:* original.
-1. [short-code] **The sync period.** Sweep `sync_every` over $\{50, 250, 2500\}$ and distinguish two failure directions.
-   *Provenance:* original — independently corroborated by Berkeley CS285's current Assignment 3, §2.4, whose own learning-rate perturbation on CartPole produces the same class of diagnosis (predicted-Q-value vs. critic-error decoupling).
-1. [short-code] **Shrink the buffer.** Set replay capacity to 500 and retrain one seed.
-   *Provenance:* original.
-1. [short-code] **Best against final, at scale.** Collect best/final-window statistics across every already-logged seed and arm, with no new training.
-   *Provenance:* original.
-1. [short-code] **Port it.** Move the section's code to `LunarLander-v3` and list every changed line.
-   *Provenance:* original — corroborated by Berkeley CS285's current Assignment 3, which assigns exactly this port (DQN and Double DQN on `LunarLander-v2`/`v3`) as a graded deliverable, evidence the book's choice of port target is the field's own standard second environment for this algorithm.
-1. [extended] **Baird, with a target network.** Add a target network to the Baird cell and sweep its sync period $k\in\{10,100\}$.
-   *Provenance:* adapted from Sutton & Barto Exercise 11.3 (overlap medium — S&B's exercise stops at demonstrating divergence; the book's extension, adding the very repair this section derives, goes beyond what the textbook itself asks and needs no further citation on adoption since it only reuses the classical counterexample construction, already cited elsewhere in the book via :cite:`Baird.1995`).
+**Survey sources:** CS285 Spring 2026 HW3 §2 (DQN on CartPole and
+LunarLander, the learning-rate and target-update questions) and §2.5 (Double
+DQN); Sutton & Barto Ex. 11.3 (Baird); CS234 Winter 2026 A2 (Nature DQN with
+an $n$-step component); CleanRL's DQN page (mean Q as an overestimation
+signal). Spinning Up has no DQN.
 
 ---
+## chapter_deep-reinforcement-learning/sac.md — Soft Actor-Critic
 
-## chapter_deep-reinforcement-learning/offline-rl.md — On-Policy, Off-Policy, and Offline Learning
+**Topic:** The maximum-entropy objective as the uniform-reference case of the
+KL-regularized objective, two actions by hand, soft policy evaluation and
+improvement, the squashed Gaussian and its log-determinant, twin critics and
+Polyak targets, automatic temperature, return against environment steps, the
+update ratio, and critic calibration.
 
-**Topic:** the on-policy/off-policy distinction (Q-learning vs. SARSA targets), offline learning from a fixed dataset, measuring distribution shift and overestimation against a computable optimum, and a count-based pessimistic penalty.
-**Current exercises:** 6; disposition: keep 6, rewrite 0, drop 0 (plus 1 new addition) — the six already cover behavior-cloning comparison, dataset-size scaling, dataset-composition, pessimism-strength sweeping, the support-constraint-vs-count-penalty distinction, and what a real deployment would need instead of simulator rollouts; one genuinely different angle (trajectory *stitching*) is missing and is not a duplicate of any existing item.
+**Exercises:** 10 (9 from the Oct-2026 set; the temperature-autotuning problem
+removed because the learned temperature is now in the main code, its
+reward-scale part folded into the quadratic-critic problem; 1 new).
 
-**External sources found:**
-- Stanford CS224R (current, Spring 2026), Homework 3: Offline RL — implements AWAC and IQL on AntMaze (from D4RL) and explicitly "studies the stitching behavior of offline RL using IQL on a PointMass task with suboptimal data" to "evaluate whether the learned policy can compose better trajectories than those seen in the data" — a modern, currently-taught match for exactly the distribution-shift/overestimation theme this section builds, and a genuinely different angle (composing sub-trajectories) from anything in the current six — https://cs224r.stanford.edu/material/hw3/CS224R_2026_Homework_3.pdf
-- Berkeley CS285 (Sergey Levine), Assignment 5: Exploration and Offline Reinforcement Learning (Fall 2022 vintage; the offline-RL slot has since moved to a dedicated assignment in courses like CS224R) — implements CQL, AWAC, and IQL on gridworld `Pointmass` domains and specifically asks students to "examine the difference between the Q-values on state-action tuples learned by CQL vs. DQN" and interpret whether CQL underestimates relative to plain DQN — directly matches this section's own predicted-vs-realized-value calibration comparison between its "naive" and "pessimistic" arms — https://rail.eecs.berkeley.edu/deeprlcourse-fa22/static/homeworks/hw5.pdf
-- Sutton & Barto, *Reinforcement Learning: An Introduction* (2nd ed., 2020 draft), Exercise 6.11 ("Why is Q-learning considered an off-policy control method?") and Exercise 6.12 ("Suppose action selection is greedy. Is Q-learning then exactly the same algorithm as Sarsa?") — the canonical textbook pairing behind this section's own Q-learning-vs-SARSA comparison; this section's own experiment already goes past both by calibrating the two learned tables against the known-optimal FrozenLake values, so these serve to corroborate the conceptual core rather than mark a gap.
-- OpenAI Spinning Up — checked directly; its algorithm suite has neither DQN nor a dedicated offline-RL method, so it is not a source for this section (consistent with the same finding recorded for :numref:`sec_dqn`).
-- Levine, Kumar, Tucker, and Fujimoto's offline-RL papers (CQL, IQL, BCQ), already cited by this section, are methods papers rather than teaching materials with posed problems; noted rather than stretched into an exercise citation.
+1. **Entropy in the target.** `ex_sac-entropy-in-target` — the entropy term in
+   the critic target values entropy collected at later states; a two-branch
+   example.
+   *Source:* Oct-2026 set; original.
+2. [code] **Variance of the sampled bracket.** `ex_sac-bracket-variance` — the
+   one-sample estimate of the soft value on the two-action example, and its
+   variance across temperatures.
+   *Source:* Oct-2026 set; original.
+3. [code] **Quadratic critic.** `ex_sac-quadratic-critic` — the entropy-optimal
+   Gaussian under a quadratic critic; rescaling the reward equals rescaling
+   $\beta$, measured with a fixed and a learned temperature.
+   *Source:* Oct-2026 set, extended by the reward-scale part of the former
+   autotuning problem; Haarnoja et al. 2018 (reward-scale sensitivity of SAC
+   with a fixed temperature).
+4. [code] **Entropy of the squashed policy.** `ex_sac-squashed-entropy` — the
+   entropy of $2\tanh u$ and where it peaks in $\sigma$.
+   *Source:* Oct-2026 set; Spinning Up's SAC page (state-dependent log-std).
+5. **Off-policy without ratios.** `ex_sac-off-policy-without-ratios` — why
+   fresh actions in the target remove the need for importance ratios.
+   *Source:* Oct-2026 set, trimmed; original.
+6. ● **Projection direction.** `ex_sac-projection-direction` — reverse- and
+   forward-KL projections of the tilted distribution onto the policy family.
+   *Source:* Oct-2026 set; original.
+7. [code] ● **Restoring force of the Jacobian.** `ex_sac-jacobian-force` — the
+   log-determinant term pulls the pre-squash action back from saturation.
+   *Source:* Oct-2026 set; original.
+8. [code] ● **Twin-critic disagreement.** `ex_sac-twin-disagreement` — the
+   minimum of two critics as mean minus half the distance, measured along a
+   run.
+   *Source:* Oct-2026 set; CS285 Spring 2026 HW3 §3.6 (single against
+   clipped double critics).
+9. [code] **Update ratio.** `ex_sac-update-ratio` — twenty updates per
+   environment step with twin and single critics (and a shorter warmup), the
+   critics' calibration at that ratio, and the gradient steps each run spends
+   before crossing $-200$.
+   *Source:* new in the rebuild (decision Q4); Chen et al. 2021 (REDQ).
+10. [extended] ● **Discrete soft actor-critic.** `ex_sac-discrete` — exact
+    expectations over a finite action set, on CartPole.
+    *Source:* Oct-2026 set; Christodoulou 2019.
 
-No institution was found posing a fixed-dataset, no-further-interaction offline-RL problem as *undergraduate* homework — the tradition is concentrated in the two graduate deep-RL courses above, both confirmed current or near-current, which is itself worth recording: offline RL is a young but now-institutionalized homework topic at the graduate level, still largely absent from courses like Stanford CS234.
+**Survey sources:** CS285 Spring 2026 HW3 §3.5 (automatic temperature tuning,
+now in the section's code) and §3.6 (single against clipped double critics on
+Hopper); Spinning Up's SAC and TD3 pages and its Exercise 1.3 (TD3's
+computation graph); CleanRL's `sac_continuous_action` page.
 
-**Proposed problem set** (7 problems):
-1. [short-code] **Does the clone win?** (unchanged) Add a behavior-cloning arm across the three dataset types of exercise 3.
-   *Provenance:* original.
-1. [short-code] **More data, or better data.** (unchanged) Rerun with 100/500/2000-episode datasets and track predicted vs. actual value.
-   *Provenance:* original.
-1. [short-code] **Where the data comes from.** (unchanged) Compare random, near-optimal, and mixed behavior datasets.
-   *Provenance:* original.
-1. [short-code] **How much pessimism.** (unchanged) Sweep $\kappa$ over $\{0.02, 0.1, 0.3, 1.0\}$.
-   *Provenance:* original.
-1. [conceptual] **Constrain the values, or constrain the policy.** (unchanged) Construct a case where the hard support rule and the count penalty genuinely differ.
-   *Provenance:* original.
-1. [conceptual] **What you cannot measure offline.** (unchanged) Name the estimator a real deployment would use instead of simulator rollouts, and why it inherits PPO's variance problem.
-   *Provenance:* original.
-1. [short-code] **Stitching from suboptimal pieces.** Build a FrozenLake dataset from two behavior policies whose combined trajectories reach the goal only by composition: policy A reliably reaches one interior state via a safe detour but rarely continues past it, and policy B starts near that state and reliably finishes, so that no single collected episode does both halves. Run naive offline Q-learning and the behavior-cloning baseline on the pooled dataset and report whether the learned greedy policy's return exceeds the return of *either* source policy alone. State which property of Q-learning's per-transition bootstrap — as opposed to behavior cloning's per-trajectory imitation — makes this composition possible in principle, and name the exact line in `offline_q` that is doing the combining.
-   *Provenance:* adapted from Stanford CS224R Homework 3 (Spring 2026), "stitching behavior of offline RL using IQL on a PointMass task with suboptimal data" (overlap medium — CS224R runs this on continuous PointMass/AntMaze D4RL data with IQL; this adapts the same experimental question, composing behavior from suboptimal sub-trajectories, to the section's own tabular FrozenLake and its existing `offline_q` function; cite on adoption).
+---
+## chapter_deep-reinforcement-learning/model-based.md — Learned Models and Planning
+
+**Topic:** A dynamics-and-reward model fitted by regression from a few hundred
+Pendulum steps, the compounding of its error and its coverage, model-predictive
+control by warm-started random shooting, the cost of a real step in model
+evaluations, search seeded by the actor as a policy-improvement operator and
+its distillation into the actor, and imagined transitions as training data.
+
+**Exercises:** 7 (all new in the rebuild, the section being new; 7 labels).
+
+1. [code] **Depth of the plan.** `ex_model-based-horizon` — predict, then run,
+   the planner at depths 10 and 50 against 25, read with the error tables.
+   *Source:* new in the rebuild (15.6 plan); original.
+2. [code] **How much random data.** `ex_model-based-data` — models fitted to
+   one, two and five random episodes for the two seeds whose random episode
+   stayed at the bottom; coverage against error.
+   *Source:* new in the rebuild; original.
+3. [code] **The cross-entropy method.** `ex_model-based-cem` — five rounds of
+   refitting the sampling distribution to the best candidates, against warm-
+   started random shooting at its cost in model evaluations.
+   *Source:* new in the rebuild; Rubinstein and Kroese 2004; Chua et al. 2018
+   (CEM planning in PETS).
+4. [code] ● **Disagreement as a trust signal.** `ex_model-based-ensemble` — an
+   ensemble of three models; disagreement against error, and plans scored with
+   a disagreement penalty.
+   *Source:* new in the rebuild; Chua et al. 2018 (PETS).
+5. [code] ● **Labels on the actor's own states.** `ex_model-based-dagger` —
+   labels aggregated into one growing set while collecting with search, then
+   episodes collected by the actor alone while the search relabels them
+   (DAgger with the search as the expert), compared on the causes named in the
+   text; failed seeds and combining the two ways of collecting.
+   *Source:* new in the rebuild; Ross, Gordon and Bagnell 2011 (DAgger).
+6. [extended] ●● **Imagined transitions for soft actor-critic.**
+   `ex_model-based-dyna` — MBPO-style model rollouts mixed into the batches of
+   `train_sac`, against the real-data control at the same update ratio.
+   *Source:* new in the rebuild (decision Q1, experiment E10d); Janner et al.
+   2019 (MBPO); Sutton 1990 (Dyna).
+7. [code] **Lookahead with a value.** `ex_model-based-cartpole` — a learned
+   CartPole model with one-step lookahead into the DQN of the Deep Q-Networks
+   section, against acting greedily on $Q$.
+   *Source:* new in the rebuild; original.
+
+**Survey sources:** none surveyed yet for this new section. Candidates to check
+in a later survey: Berkeley CS285's model-based assignment (learned dynamics,
+random-shooting and CEM planning, ensembles), and Sutton & Barto ch. 8 (Dyna).
+
+---
+## chapter_deep-reinforcement-learning/offline-rl.md — Offline Reinforcement Learning
+
+**Topic:** Which targets can use another policy's data, two logs of the
+slippery lake, distribution shift against the exact optimum, the behavior
+clone and stitching, pessimism (a two-armed bandit by hand, $\kappa/\sqrt{n}$
+in the backup, narrow against uniform data, choosing $\kappa$), calibration,
+and the deep methods by what they constrain.
+
+**Exercises:** 9 (8 from the Oct-2026 set, several trimmed; 1 new; no label
+new in the rebuild).
+
+1. **Expected SARSA.** no label — Expected SARSA becomes Q-learning under the
+   greedy policy, and why its action-value target needs no importance ratio.
+   *Source:* Oct-2026 set, trimmed to two parts; Sutton & Barto Ex. 6.11–6.12
+   (why Q-learning is off-policy).
+2. [code] **Data from a better policy.** `ex_offline-rl-where-data-comes` —
+   naive table and clone on logs of a better operator and on mixed logs.
+   *Source:* Oct-2026 set; CS224R Spring 2026 HW3 (suboptimal data and
+   stitching).
+3. [code] **How much pessimism.** `ex_offline-rl-how-much-pessimism` — the
+   $\kappa$ sweep over the uniform and narrow logs and two further kinds of log;
+   calibration at $\kappa = 1$; the best $\kappa$ against the bound
+   $\kappa/(\sqrt{n}(1-\gamma))$ on the charge, and why the charge collected
+   is smaller.
+   *Source:* Oct-2026 set, extended by the rebuild's $\kappa$ sweep over both
+   logs and the 500-episode narrow logs; original.
+4. **Conditioning on luck.** no label — return-conditioned supervised learning
+   on a one-step task with a stochastic reward.
+   *Source:* Oct-2026 set; Brandfonbrener et al. 2022.
+5. [code] **Dataset size and the error floor.** `ex_offline-rl-dataset-size` —
+   whether the naive table's errors fall like $1/\sqrt{n}$.
+   *Source:* Oct-2026 set, trimmed to one part; original.
+6. ● **Pessimism in a two-armed bandit.** no label — the empirical best arm
+   against a lower-confidence-bound rule as the logs grow.
+   *Source:* Oct-2026 set (the text now works the smallest case by hand);
+   original.
+7. [code] ● **Evaluation without a simulator.**
+   `ex_offline-rl-what-you-cannot-measure` — ordinary and weighted importance
+   sampling of the learned policy from the log.
+   *Source:* Oct-2026 set, trimmed; original.
+8. ●● **Conservative Q-learning in a table.** no label — the CQL term in a
+   table, its fixed point, and the part that plays the role of
+   $\kappa/\sqrt{n}$.
+   *Source:* Oct-2026 set, trimmed; CS285 Fall 2022 HW5 and CS224R Spring 2026
+   HW3 (CQL, IQL, AWAC).
+9. [extended] **Deep offline Q-learning.** no label — DQN on a frozen CartPole
+   replay buffer, with and without the one-line CQL term.
+   *Source:* new in the rebuild (decision Q5); Kumar et al. 2020.
+
+**Survey sources:** CS224R Spring 2026 HW3 (AWAC and IQL on AntMaze;
+stitching on PointMass); CS285 Fall 2022 HW5 (CQL, AWAC, IQL on gridworld
+PointMass); Sutton & Barto Ex. 6.11–6.12. Spinning Up has no offline method.
 
 ---
 
 ## chapter_deep-reinforcement-learning/rl-sequences.md — Reinforcement Learning for Sequence Generation
 
-**Topic:** casting autoregressive generation as an MDP, the response/token score-function equivalence, which general-RL machinery survives a terminal-reward deterministic-transition setting, the group-mean baseline's self-inclusion bias (GRPO/RLOO), and reward hacking under a KL budget.
-**Current exercises:** 5; disposition: keep 4, rewrite 1, drop 0 (plus 1 new addition) — the shortest file in the group and the one that ties most explicitly into the upcoming Language Models part; four exercises are fully sound, the fifth ("read a paper") is the group's only item framed as an activity rather than a deliverable per the prior style review, and the group-baseline analysis stops at the *mean*, leaving its *variance* term unexercised. This section also carries four separate "Capstone Projects" (outside the `## Exercises` heading and not counted in the disposition above), which are out of scope for this catalog's per-exercise format but are worth noting as already excellent, larger-scope material.
+**Topic:** A response as a trajectory, credit within a response (two-digit
+answers), what the update needs, verifiers and reward models, the
+KL-penalized group step against the closed form, ratios for stale samples,
+asymmetric bands, GRPO with the $k_3$ term, and DPO.
 
-**External sources found:**
-- Nathan Lambert, *RLHF Book* (rlhfbook.com, already cited by this chapter), "Policy Gradients" chapter — its GRPO discussion cites the "Dr. GRPO" critique (Liu, Chen, Du et al., 2025) that dividing by the group's reward standard deviation inflates the advantage on prompts where every sampled response scores alike (uniformly easy or uniformly hard), and separately covers GSPO's sequence-level length-normalized ratio (already the source this chapter's own ppo.md cites for the same construction) and CISPO's clip-the-importance-weight-rather-than-the-objective design — directly extends this section's own self-inclusion-bias analysis, which currently examines only the group *mean*, to the group's *variance* term, a mechanism the book does not yet exercise — https://rlhfbook.com/c/11-policy-gradients.html
-- Stanford CS224R (current, Spring 2026) — its syllabus lists dedicated lectures on "Reward Learning & RLHF," preference optimization, DPO, and "RL for language models reasoning" (Apr 24–May 1), but its graded homeworks (HW1–HW3, verified directly) cover imitation learning, on/off-policy actor-critic, and offline RL rather than an RLHF/DPO/GRPO problem set — the lecture content exists, but no *posed homework problem* on this section's specific material (group baselines, RLVR, DPO derivation) was found in the current assignments.
-- Berkeley CS285 — checked; no assignment on RLHF, DPO, or the language-model-as-MDP framing was found in the current or recent homework set (HW1–HW5 cover imitation learning through offline RL/exploration, not post-training).
+**Exercises:** 7 (all from the Oct-2026 set or moved in from ppo; the two-digit
+problem rewritten after its first part moved into the text; 5 dropped: unequal
+group sizes, the fixed point of `group_step`, noisy verifiers, process rewards
+in GRPO and credit from restarts; 2 moved in from ppo; 1 label new in the
+rebuild).
 
-This section's own topic — RLHF/GRPO/RL-for-sequences posed as a graded, checkable *exercise* rather than a paper or blog post — has a genuinely thin external tradition as of this search: the fast-moving 2023–2025 research area has not yet stabilized into standard courses' problem sets the way DQN or PPO have. The one substantive find (the Dr. GRPO variance-normalization critique) comes from a book, not a course, and is itself very recent (2025).
+1. **Tool outputs in the trajectory.** no label — the probability and score
+   terms of a trajectory with a tool call, and the nonzero-mean term that
+   appears when the loop scores the tool's tokens.
+   *Source:* Oct-2026 set; original.
+2. **Two-digit responses.** `ex_rl-sequences-two-digit-responses` — the
+   response weight and the token advantages agree in expectation and are
+   uncorrelated across positions; the variance reduction at a trained policy
+   against the uniform one.
+   *Source:* Oct-2026 set, rewritten (its first part is now the text's credit
+   example); original.
+3. **Two thresholds for the hedge.** `ex_rl-sequences-two-thresholds` — the
+   hedge's probability under the tilted optimum as a function of $\beta$, its
+   limit as $\beta \to 0$, and which property of `d2l.group_step` selects the
+   split between rewarded responses.
+   *Source:* Oct-2026 set; original.
+4. [code] ● **DPO on the finite instance.** no label — the DPO loss from the
+   Bradley–Terry model, its minimizer at infinite data, and gradient descent
+   on 1000 labeled pairs per prompt against the tilted optimum.
+   *Source:* Oct-2026 set; Rafailov et al. 2023.
+5. ●● **The KL term as a loss.** `ex_rl-sequences-kl-loss` — the expected
+   gradients of $k_1$, $k_2$, $k_3$, the forward-KL optimum on `8*8`, and the
+   terms the per-token $k_2$ losses miss for $T$-token responses.
+   *Source:* Oct-2026 set; Tang and Munos 2025.
+6. **Asymmetric bands.** `ex_ppo-asymmetric-bands` — batches needed to raise a
+   rare token's probability with symmetric and asymmetric bands, the two-action
+   case, and the effect on entropy.
+   *Source:* moved from ppo.md in the rebuild; Yu et al. 2025 (DAPO).
+7. ● **Length-normalized ratio.** no label — the mean and variance of the
+   response ratio against its geometric mean, and why a sequence-level band
+   must be narrower.
+   *Source:* moved from ppo.md in the rebuild; Zheng et al. 2025 (GSPO).
 
-**Proposed problem set** (6 problems):
-1. [conceptual] **The factorization.** (unchanged) Prove $\nabla_\theta \log \pi_\theta(y\mid x) = \sum_t \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t})$.
-   *Provenance:* original.
-1. [conceptual] **Which terms disappear.** (unchanged) Say what property removes discounting, bootstrapping, the TD error, and replay, and when each returns.
-   *Provenance:* original.
-1. [short-code] **Why $K=1$ learns nothing.** (unchanged) Predict and verify the $(K-1)/K$ shrinkage's zero at $K=1$.
-   *Provenance:* original.
-1. [short-code] **Price the exploit.** (unchanged) Find the $\beta$ at which the KL penalty makes the verifier loophole unprofitable.
-   *Provenance:* original.
-1. [conceptual] **Map GRPO's published objective.** (lightly rewritten from "Read a paper") Take the GRPO objective as published and, for each symbol, name the section of these two chapters that built it and the one component absent from the book. State the mapping and the missing component as the deliverable up front, before any reading.
-   *Provenance:* original — retitled and re-ordered per the prior style review's observation that this was the group's only exercise framed as an activity ("read a paper") rather than a deliverable; the underlying task is unchanged.
-1. [short-code] **The denominator's hidden lever.** Modify `group_step` to compute two candidate advantages per group: the book's own standardized $A_j = (r_j - \mu)/(\sigma + 10^{-8})$, and a mean-only version $A_j' = r_j - \mu$ with no division. Rerun the $K$-sweep for $K \in \{2, 4, 8, 32\}$ under both, and for each $K$ report how many update steps hit a group where every sampled response scored identically (so $\sigma = 0$ or $\sigma$ is at floating-point noise) and what the standardized version's update looks like there versus the mean-only version's. Does either variant reach the verifier's ceiling faster at the matched sample budget used in the text? In one sentence, connect what you observe to the "Dr. GRPO" objection that dividing by $\sigma$ inflates advantages on uniformly-scored groups, and say whether this toy instance's near-binary verifier rewards make the effect easier or harder to see than it would be with continuous-valued rewards.
-   *Provenance:* inspired by Nathan Lambert's *RLHF Book*, "Policy Gradients" chapter, discussion of Liu et al.'s "Dr. GRPO" critique of GRPO's standard-deviation normalization (overlap low — the source is a critique of the published algorithm, not a posed exercise; the book would adapt the *question* to its own finite worked example and existing `group_step` code; cite Liu et al. 2025 on adoption, as the book already does for the Dr. GRPO reference in :numref:`sec_baselines`).
-
+**Survey sources:** the RLHF book's policy-gradient chapter (GRPO and the
+Dr. GRPO critique); CS224R Spring 2026 lectures on reward learning, DPO and RL
+for reasoning (no graded problems on post-training); CS285 has no assignment
+on post-training.

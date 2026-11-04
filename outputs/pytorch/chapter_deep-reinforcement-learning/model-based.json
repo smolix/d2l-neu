@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/model-based.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:78dccee40775f443ada9c5e247fd3621f856c4fb2a32b08eba6f303339d64868",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "model-based-learned-models-and-planning": {
+      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-1": {
+      "code_fingerprint": "sha256:d2555b898646bbfdb8c3279aeb5627b032b785ce0cf91ac779b76cf53c952c2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-2": {
+      "code_fingerprint": "sha256:ef0cca6183612ca9e62ac81deba02ab7520a1d96ee9ad8fc74864852a4539986",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-3": {
+      "code_fingerprint": "sha256:ad0779bdc716fae706a82b88a1d64c87542a7a70f33069c1900367b413e1dd21",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-regression-in-place-of-counting-4": {
+      "code_fingerprint": "sha256:0df989884343aae4b5c56600644b359ef583643fc0353b83e911fd672bc1e006",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "return of the random episode: -1072\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final minibatch loss (standardized units): 0.0018\n"
+        }
+      ]
+    },
+    "model-based-one-step-by-hand-1": {
+      "code_fingerprint": "sha256:29fe4c21b83a9c8156e8f9ed97e0a450827e1abc9ee0de633f05e82fbed3f123",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-one-step-by-hand-2": {
+      "code_fingerprint": "sha256:5a79a07905bd78a7991dad35c44e07ddcb6ce034e165f2b4a352539ac3d019da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "s        [-0.9407 -0.3394  5.6896] a = -0.0800\ntrue s'  [-0.8154 -0.5789  5.4231] r = -11.0511\nmodel s' [-0.8109 -0.584   5.436 ] r = -11.2768\nangle error 0.386 degrees\n"
+        }
+      ]
+    },
+    "model-based-compounding-error-1": {
+      "code_fingerprint": "sha256:eda339a8914c73eb47877413a1ba8d7a413c0cfc6bec34f17de1aa50bb1b41fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-compounding-error-2": {
+      "code_fingerprint": "sha256:a9ccb4c31252f1f564b0c589362639284efe11393ec85a30d7bbbf056351b1dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed   k=1    k=5   k=10   k=25   (degrees, held-out random episode)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   0   0.44   1.91   2.52   1.51\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1   1.83   7.08   8.67  12.29\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   2   0.53   2.37   3.65   5.51\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   3   0.38   1.89   4.77  11.82\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   4   0.04   0.12   0.13   0.33\n"
+        }
+      ]
+    },
+    "model-based-random-shooting-1": {
+      "code_fingerprint": "sha256:baed483094425b2b48c72b3007284fc84b07b5d456e5906f29d588951b3998f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first actions [ 0.55 -0.92 -1.84]  predicted  -174.2  true  -237.6\nfirst actions [-0.47  1.99  1.92]  predicted  -173.8  true  -232.7\nfirst actions [ 1.15 -1.04  1.51]  predicted  -174.3  true  -229.4\nfirst actions [-0.3   0.48  1.98]  predicted  -170.7  true  -223.2\nfirst actions [-0.08 -1.07  1.21]  predicted  -174.5  true  -242.4\n"
+        }
+      ]
+    },
+    "model-based-random-shooting-2": {
+      "code_fingerprint": "sha256:230f446f5e21b4e4ca8d0a9323821f317dceaaf48a14e9b00da290365007d67b",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-warm-starts": {
+      "code_fingerprint": "sha256:abcbf9498fa2de60e320cc6880ef4367989c72112eac6686c1063b7542bbbabe",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-swing-up-from-a-few-episodes-1": {
+      "code_fingerprint": "sha256:ee4c05bd4b9902219677dab92ee3e5303ee8ce3c0cc91498e51e0b7adb6be8d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-swing-up-from-a-few-episodes-2": {
+      "code_fingerprint": "sha256:adeb508813607bca85deeb71def2079ccb333eb8180655facaae8f8fbc3b73e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed  episode returns: random, MPC x 3 |  test score at 200/400/600/800 steps\n   0   -1072   -242   -118   -125  |    -181   -168   -168   -171\n   1    -876   -264   -121   -123  |    -266   -201   -204   -180\n   2    -966   -122   -125   -116  |    -337   -190   -168   -169\n   3   -1501  -1287   -246     -2  |   -1464   -265   -191   -195\n   4   -1703  -1576  -1323   -120  |   -1567  -1437   -171   -187\n"
+        }
+      ]
+    },
+    "model-based-coverage": {
+      "code_fingerprint": "sha256:8d6af20e8c7c6b6525ba728ba23eb61a73554a02b0434f0ec486d1e8b2c41f04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed   k=1    k=5   k=10   k=25   (degrees, the planner's episodes)\n   0    0.3    1.4    3.3   42.4\n   1    0.4    1.5    2.6   40.2\n   2    0.2    0.9    1.7   28.3\n   3    6.8   41.3   61.5  138.8\n   4   14.8   71.9   89.8  128.3\n"
+        }
+      ]
+    },
+    "model-based-search-seeded-by-the-actor": {
+      "code_fingerprint": "sha256:7837be1dd2d12da268426f122d16a03861e5f8f7b5f45465d6a79477552f610a",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-distillation-into-the-actor-1": {
+      "code_fingerprint": "sha256:ec7842d17a62c87c4b974309e186b6c206ea7f6df022ac88fe1411bef00d4bbd",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-distillation-into-the-actor-2": {
+      "code_fingerprint": "sha256:0ed244b15e75af060f2e874f257e6d9e56b3b474b64dffb42bcac9dc5a56967a",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-based-distillation-into-the-actor-3": {
+      "code_fingerprint": "sha256:2109d75ce889361731362c05137af55a6d4fbdc55a1530226d10d431228badd6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final score on the ten starts, acting with search: -191 -202 -222\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "model-based/model-based-distillation-into-the-actor-3-1.svg",
+          "bytes": 32971,
+          "sha256": "sha256:15e542341e2f5116c8fb96e06ff50e2c1383242c80d7e76aedc88603fecbc4e5"
+        }
+      ]
+    }
+  }
+}

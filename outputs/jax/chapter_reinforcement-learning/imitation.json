@@ -30,17 +30,17 @@
       "outputs": []
     },
     "imitation-the-reduction-to-classification-3": {
-      "code_fingerprint": "sha256:ae2fc72acf6730fff8e53def25d82b0117c28dd6fba9382a5bc206ea58d22feb",
+      "code_fingerprint": "sha256:8e23d767a0c8b79189728a5ed5e8afbbdc02f400d5f20b94f1f55b57996ccf19",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-5": {
-      "code_fingerprint": "sha256:8fc12b93da692b6657ece0021fb373e115f2295d111ad994b7ebe8ede357964b",
+      "code_fingerprint": "sha256:94e0279bd9f4331252311faa9426e2a6319441b3043d26584daa1596883f7c4c",
       "kind": "text",
       "outputs": []
     },
     "imitation-the-reduction-to-classification-4": {
-      "code_fingerprint": "sha256:f66b36f0b37324746f8bf987ec600eec4b11f8991c11086a2eed8f888a540a17",
+      "code_fingerprint": "sha256:b06c7aed0ada3d345968429f96409e77c8f081ced9e7e1590e05d27067352fba",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-1": {
-      "code_fingerprint": "sha256:ffcbfb1d27c8d7f36b85f7137084037934d2f63a38329a6a1b08ab863f2effd2",
+      "code_fingerprint": "sha256:2eb3c49e193ef754cc45ae588e62e499a42b5dac57a892bc51a82c9e3141b959",
       "kind": "text",
       "outputs": [
         {
@@ -67,23 +67,13 @@
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-2": {
-      "code_fingerprint": "sha256:a970d70ac6a07defbc5453605a868a449336f9cbfa9f2401c087f3077e9d88bd",
+      "code_fingerprint": "sha256:75aa9af1a797aecf4d8d627ab2af4ad18063bb50f907128909ae15f10df977dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "disagreement with the expert\n  on the training pairs:        0.182\n  on 100 fresh expert episodes: 0.182\n  on the clone's own states:    0.216\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "clone of   1 expert episodes: reaches the goal 0.660\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "clone of  10 expert episodes: reaches the goal 0.660\n"
+          "text": "disagreement with the expert\n  on the training pairs:        0.182\n  on 100 fresh expert episodes: 0.182\n  on the clone's own states:    0.216\nclone of   1 expert episodes: reaches the goal 0.660\nclone of  10 expert episodes: reaches the goal 0.660\n"
         },
         {
           "type": "stream",
@@ -93,7 +83,7 @@
       ]
     },
     "imitation-distribution-shift-between-training-and-deployment-1": {
-      "code_fingerprint": "sha256:4abf4cf0fe9ae7845a059ff54982cdfe257d54f4040062982b2eb2ba1a9a2152",
+      "code_fingerprint": "sha256:d962effdc6ee53cc4829360ad913ff460867fc42d709e1a4b6f8c3cede9d66a6",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +104,7 @@
       ]
     },
     "imitation-the-proposition": {
-      "code_fingerprint": "sha256:a2ae65e3fdfe6c563fd71ec485b5c916c4d64fcb36d29ec4963e7e0293c805e1",
+      "code_fingerprint": "sha256:90267e3399b29b8baa13e367eec319eff12977b3c9ca18bf8bb7fe1a3eb1dea8",
       "kind": "mixed",
       "outputs": [
         {
@@ -127,12 +117,12 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 39583,
-          "sha256": "sha256:1c5ec252e5ccba692902454596bf8ccd1d59af83d3ed47280cb129c064909a35"
+          "sha256": "sha256:3e2ac55a2c1c0dc19cd3dc029b07f2369fd2e006bfa269693188b30fbd5a6fa9"
         }
       ]
     },
     "imitation-why-this-is-not-a-defect-of-the-fit": {
-      "code_fingerprint": "sha256:41cc7a8cfc1af99133f0e0729c52e499d92b7b20ff266eede00ad8d1269a0c45",
+      "code_fingerprint": "sha256:2d2afc54e030a8030310458990c675ef605aee2e83a387baceb466151b268962",
       "kind": "text",
       "outputs": [
         {
@@ -143,7 +133,7 @@
       ]
     },
     "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
-      "code_fingerprint": "sha256:78543be1e8d3da269b4fb30df1a675df05e240f369dd31885e8fbac85da52e8d",
+      "code_fingerprint": "sha256:d8cf77d2c6a087361d6cf050d7e83fbd2eb71261f3913c288016e1bab9c19b33",
       "kind": "text",
       "outputs": [
         {

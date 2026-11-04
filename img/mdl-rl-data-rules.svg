@@ -627,8 +627,8 @@ z
     </g>
    </g>
    <g id="text_3">
-    <!-- PPO's ratios buy a few -->
-    <g transform="translate(76.350802 221.069557) scale(0.12 -0.12)">
+    <!-- PPO's ratios allow a few -->
+    <g transform="translate(72.108614 221.069557) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-574" d="M 634 2758 
 L 531 3827 
@@ -672,56 +672,6 @@ Q 2214 179 1961 51
 Q 1709 -77 1338 -77 
 z
 " transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-1d" d="M 1901 -77 
-Q 1683 -77 1449 28 
-Q 1216 134 1011 320 
-L 992 320 
-L 947 0 
-L 525 0 
-L 525 4557 
-L 1050 4557 
-L 1050 3315 
-L 1037 2752 
-Q 1248 2938 1501 3062 
-Q 1754 3187 2010 3187 
-Q 2618 3187 2931 2758 
-Q 3245 2330 3245 1606 
-Q 3245 1075 3056 697 
-Q 2867 320 2563 121 
-Q 2259 -77 1901 -77 
-z
-M 1811 365 
-Q 2195 365 2448 694 
-Q 2701 1024 2701 1600 
-Q 2701 2112 2512 2429 
-Q 2323 2746 1882 2746 
-Q 1683 2746 1478 2637 
-Q 1274 2528 1050 2323 
-L 1050 691 
-Q 1254 512 1456 438 
-Q 1658 365 1811 365 
-z
-" transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-30" d="M 1434 -77 
-Q 941 -77 710 233 
-Q 480 544 480 1139 
-L 480 3110 
-L 1011 3110 
-L 1011 1210 
-Q 1011 774 1148 576 
-Q 1286 378 1594 378 
-Q 1837 378 2025 502 
-Q 2214 627 2432 902 
-L 2432 3110 
-L 2957 3110 
-L 2957 0 
-L 2522 0 
-L 2477 486 
-L 2458 486 
-Q 2240 230 1997 76 
-Q 1754 -77 1434 -77 
-z
-" transform="scale(0.015625)"/>
       <path id="SourceSans3-Regular-21" d="M 614 0 
 L 614 2682 
 L 154 2682 
@@ -757,18 +707,20 @@ z
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(404.09375 0)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(458.296875 0)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(500.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1d" transform="translate(520.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-30" transform="translate(575.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-34" transform="translate(629.90625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(676.609375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(696.609375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(747.015625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-21" transform="translate(767.015625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(795.21875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-32" transform="translate(845.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(520.203125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-27" transform="translate(570.609375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-27" transform="translate(596.109375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(621.609375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-32" transform="translate(675.40625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(747.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(767.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(817.71875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-21" transform="translate(837.71875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(865.921875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-32" transform="translate(916.015625 0)"/>
     </g>
-    <!-- epochs of extra life -->
-    <g transform="translate(84.579239 236.981557) scale(0.12 -0.12)">
+    <!-- epochs of reuse -->
+    <g transform="translate(92.155177 236.981557) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-23" d="M 525 0 
 L 525 4557 
@@ -790,29 +742,24 @@ L 1050 0
 L 525 0 
 z
 " transform="scale(0.015625)"/>
-      <path id="SourceSans3-Regular-33" d="M 90 0 
-L 1107 1626 
-L 166 3110 
-L 736 3110 
-L 1152 2426 
-Q 1222 2304 1299 2169 
-Q 1376 2035 1459 1907 
-L 1485 1907 
-Q 1555 2035 1625 2169 
-Q 1696 2304 1766 2426 
-L 2144 3110 
-L 2694 3110 
-L 1754 1568 
-L 2765 0 
-L 2195 0 
-L 1741 723 
-Q 1658 864 1574 1005 
-Q 1491 1146 1402 1280 
-L 1376 1280 
-Q 1293 1146 1216 1008 
-Q 1139 870 1062 723 
-L 640 0 
-L 90 0 
+      <path id="SourceSans3-Regular-30" d="M 1434 -77 
+Q 941 -77 710 233 
+Q 480 544 480 1139 
+L 480 3110 
+L 1011 3110 
+L 1011 1210 
+Q 1011 774 1148 576 
+Q 1286 378 1594 378 
+Q 1837 378 2025 502 
+Q 2214 627 2432 902 
+L 2432 3110 
+L 2957 3110 
+L 2957 0 
+L 2522 0 
+L 2477 486 
+L 2458 486 
+Q 2240 230 1997 76 
+Q 1754 -77 1434 -77 
 z
 " transform="scale(0.015625)"/>
      </defs>
@@ -826,16 +773,11 @@ z
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(321.203125 0)"/>
      <use xlink:href="#SourceSans3-Regular-21" transform="translate(375.40625 0)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(404.609375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(424.609375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-33" transform="translate(473.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(515.6875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(549.484375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(581.78125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(632.1875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-27" transform="translate(652.1875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(677.6875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-21" transform="translate(702.28125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(730.484375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(424.609375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(458.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-30" transform="translate(507.90625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(562.3125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(604.21875 0)"/>
     </g>
    </g>
    <g id="patch_5">
@@ -1031,7 +973,7 @@ z
    </g>
    <g id="text_6">
     <!-- used once, -->
-    <g style="fill: #565d66" transform="translate(198.232374 172.47133) scale(0.12 -0.12)">
+    <g transform="translate(198.232374 172.47133) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-1f" d="M 1587 -77 
 Q 1005 -77 653 348 
@@ -1076,7 +1018,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56c" transform="translate(423.40625 0)"/>
     </g>
     <!-- then stale -->
-    <g style="fill: #565d66" transform="translate(202.876749 188.38333) scale(0.12 -0.12)">
+    <g transform="translate(202.876749 188.38333) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-2f"/>
      <use xlink:href="#SourceSans3-Regular-23" transform="translate(33.796875 0)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(88.203125 0)"/>
@@ -1190,6 +1132,33 @@ z
    <g id="text_8">
     <!-- update an expectation -->
     <g transform="translate(49.302593 183.244301) scale(0.125 -0.125)">
+     <defs>
+      <path id="SourceSans3-Regular-33" d="M 90 0 
+L 1107 1626 
+L 166 3110 
+L 736 3110 
+L 1152 2426 
+Q 1222 2304 1299 2169 
+Q 1376 2035 1459 1907 
+L 1485 1907 
+Q 1555 2035 1625 2169 
+Q 1696 2304 1766 2426 
+L 2144 3110 
+L 2694 3110 
+L 1754 1568 
+L 2765 0 
+L 2195 0 
+L 1741 723 
+Q 1658 864 1574 1005 
+Q 1491 1146 1402 1280 
+L 1376 1280 
+Q 1293 1146 1216 1008 
+Q 1139 870 1062 723 
+L 640 0 
+L 90 0 
+z
+" transform="scale(0.015625)"/>
+     </defs>
      <use xlink:href="#SourceSans3-Regular-30"/>
      <use xlink:href="#SourceSans3-Regular-2b" transform="translate(54.40625 0)"/>
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(109.90625 0)"/>
@@ -1290,6 +1259,36 @@ z
     <!-- one batch $\sim \pi_\theta$ -->
     <g transform="translate(162.001952 123.562254) scale(0.125 -0.125)">
      <defs>
+      <path id="SourceSans3-Regular-1d" d="M 1901 -77 
+Q 1683 -77 1449 28 
+Q 1216 134 1011 320 
+L 992 320 
+L 947 0 
+L 525 0 
+L 525 4557 
+L 1050 4557 
+L 1050 3315 
+L 1037 2752 
+Q 1248 2938 1501 3062 
+Q 1754 3187 2010 3187 
+Q 2618 3187 2931 2758 
+Q 3245 2330 3245 1606 
+Q 3245 1075 3056 697 
+Q 2867 320 2563 121 
+Q 2259 -77 1901 -77 
+z
+M 1811 365 
+Q 2195 365 2448 694 
+Q 2701 1024 2701 1600 
+Q 2701 2112 2512 2429 
+Q 2323 2746 1882 2746 
+Q 1683 2746 1478 2637 
+Q 1274 2528 1050 2323 
+L 1050 691 
+Q 1254 512 1456 438 
+Q 1658 365 1811 365 
+z
+" transform="scale(0.015625)"/>
       <path id="Cmsy10-1b" d="M 447 850 
 Q 378 850 359 1013 
 L 359 1050 
@@ -1717,7 +1716,7 @@ z
    </g>
    <g id="text_15">
     <!-- newest -->
-    <g style="fill: #565d66" transform="translate(469.192579 95.526239) scale(0.12 -0.12)">
+    <g transform="translate(469.192579 95.526239) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-29"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(54.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-32" transform="translate(104.796875 0)"/>
@@ -1728,7 +1727,7 @@ z
    </g>
    <g id="text_16">
     <!-- oldest -->
-    <g style="fill: #565d66" transform="translate(469.192579 158.058223) scale(0.12 -0.12)">
+    <g transform="translate(469.192579 158.058223) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-2a"/>
      <use xlink:href="#SourceSans3-Regular-27" transform="translate(54.203125 0)"/>
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(79.703125 0)"/>
@@ -2763,7 +2762,7 @@ z
    </g>
    <g id="text_29">
     <!-- sweep -->
-    <g style="fill: #565d66" transform="translate(586.100201 156.698832) scale(0.12 -0.12)">
+    <g transform="translate(586.100201 156.698832) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-2e"/>
      <use xlink:href="#SourceSans3-Regular-32" transform="translate(41.90625 0)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(113.40625 0)"/>
@@ -2959,73 +2958,51 @@ z
     </g>
    </g>
    <g id="text_35">
-    <!-- $\mathcal{D} \sim \pi_\beta$ -->
-    <g transform="translate(586.166826 115.274754) scale(0.125 -0.125)">
+    <!-- $\mathcal{D} \sim \pi_e$ -->
+    <g transform="translate(586.604326 115.274754) scale(0.125 -0.125)">
      <defs>
-      <path id="Cmmi10-23" d="M 172 -1241 
-Q 153 -1241 137 -1219 
-Q 122 -1197 122 -1178 
-L 1106 2778 
-Q 1191 3097 1353 3397 
-Q 1516 3697 1761 3955 
-Q 2006 4213 2300 4363 
-Q 2594 4513 2925 4513 
-Q 3163 4513 3355 4408 
-Q 3547 4303 3658 4114 
-Q 3769 3925 3769 3688 
-Q 3769 3459 3681 3251 
-Q 3594 3044 3437 2864 
-Q 3281 2684 3103 2572 
-Q 3206 2506 3287 2404 
-Q 3369 2303 3419 2192 
-Q 3469 2081 3497 1945 
-Q 3525 1809 3525 1691 
-Q 3525 1363 3384 1044 
-Q 3244 725 3001 465 
-Q 2759 206 2446 54 
-Q 2134 -97 1806 -97 
-Q 1447 -97 1159 100 
-Q 872 297 763 634 
-L 300 -1203 
-Q 300 -1241 250 -1241 
-L 172 -1241 
+      <path id="Cmmi10-3" d="M 1288 -72 
+Q 981 -72 751 87 
+Q 522 247 401 517 
+Q 281 788 281 1088 
+Q 281 1544 511 1945 
+Q 741 2347 1134 2587 
+Q 1528 2828 1978 2828 
+Q 2253 2828 2458 2686 
+Q 2663 2544 2663 2278 
+Q 2663 1909 2369 1729 
+Q 2075 1550 1706 1508 
+Q 1338 1466 891 1466 
+L 872 1466 
+Q 769 1084 769 813 
+Q 769 528 900 312 
+Q 1031 97 1300 97 
+Q 1681 97 2032 272 
+Q 2384 447 2606 756 
+Q 2625 775 2656 775 
+Q 2688 775 2720 739 
+Q 2753 703 2753 672 
+Q 2753 647 2741 634 
+Q 2506 306 2109 117 
+Q 1713 -72 1288 -72 
 z
-M 1819 78 
-Q 2106 78 2339 267 
-Q 2572 456 2723 742 
-Q 2875 1028 2954 1348 
-Q 3034 1669 3034 1931 
-Q 3034 2256 2847 2444 
-Q 2628 2363 2419 2363 
-Q 1913 2363 1913 2534 
-Q 1913 2759 2491 2759 
-Q 2697 2759 2869 2694 
-Q 3006 2800 3118 3006 
-Q 3231 3213 3289 3438 
-Q 3347 3663 3347 3859 
-Q 3347 4069 3236 4208 
-Q 3125 4347 2913 4347 
-Q 2522 4347 2186 4106 
-Q 1850 3866 1619 3498 
-Q 1388 3131 1288 2741 
-L 934 1325 
-Q 900 1178 891 997 
-Q 891 597 1153 337 
-Q 1416 78 1819 78 
-z
-M 2106 2553 
-Q 2203 2528 2425 2528 
-Q 2534 2528 2644 2566 
-Q 2638 2572 2619 2572 
-Q 2550 2591 2472 2591 
-Q 2181 2591 2106 2553 
+M 909 1631 
+Q 1281 1631 1597 1665 
+Q 1913 1700 2169 1839 
+Q 2425 1978 2425 2272 
+Q 2425 2391 2359 2480 
+Q 2294 2569 2189 2616 
+Q 2084 2663 1972 2663 
+Q 1700 2663 1483 2516 
+Q 1266 2369 1125 2133 
+Q 984 1897 909 1631 
 z
 " transform="scale(0.015625)"/>
      </defs>
      <use xlink:href="#Cmsy10-36" transform="translate(0 0.6875)"/>
      <use xlink:href="#Cmsy10-1b" transform="translate(97.099667 0.6875)"/>
      <use xlink:href="#Cmmi10-24" transform="translate(194.785271 0.6875)"/>
-     <use xlink:href="#Cmmi10-23" transform="translate(251.767693 -14.312462) scale(0.7)"/>
+     <use xlink:href="#Cmmi10-3" transform="translate(251.767693 -14.312462) scale(0.7)"/>
     </g>
     <!-- collected once -->
     <g transform="translate(567.143389 131.849754) scale(0.125 -0.125)">

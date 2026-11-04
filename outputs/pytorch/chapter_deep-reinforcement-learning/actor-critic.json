@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a74ea31cf971315122aeb0b9b3c17e8cad49c834318f79c97f9174ed6b4c3e0f",
+    "d2l_lib_fingerprint": "sha256:81f5ce6ffe06e8244f3bab5cf743c1b662a12ed0664af5b706b562d94732bd6a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -28,104 +28,75 @@
       "kind": "text",
       "outputs": []
     },
-    "actor-critic-a2c-by-name-3": {
-      "code_fingerprint": "sha256:fb19668bd3dd84bd86cd3252c0f11770f1999b50624dd0eb14c31afc488b6332",
+    "actor-critic-a2c-by-name-5": {
+      "code_fingerprint": "sha256:00a80465f5789f0eb108fdc7dbc833f5869f4205706e6ee99cffd429933ae3f2",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-4": {
-      "code_fingerprint": "sha256:95c9fe8086a619f8f38e0c896d0ee2fd04c2721c8ee48c3f4623745c01b04b20",
-      "kind": "text",
-      "outputs": []
-    },
-    "actor-critic-a2c-by-name-5": {
-      "code_fingerprint": "sha256:49507aa4844a0112694cdab0656af5e051731591319d9c8567811872b3cdad47",
+      "code_fingerprint": "sha256:641883c9e1d7f3255dc1d8faa09a846f62c9bf16535a36ee7c273a2506443a6c",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-6": {
-      "code_fingerprint": "sha256:766297f27c3cf677f3da45ecba30896238da1504d66976ad226d74e9ed67d4ea",
+      "code_fingerprint": "sha256:c902afec7b38a390ba65a2202e904e455718494a5644b93ccd8eb0b015320a75",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-a2c-by-name-9": {
-      "code_fingerprint": "sha256:939e40b4957cbe82715297a9be5b8f25e0c0d3f5b46f6f68d311b9429f7b6b90",
+      "code_fingerprint": "sha256:26cc6e43ed19cb183df1585ca2e605d220827bfa9f0f329424b9b7a19a875fda",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
-          "bytes": 50409,
-          "sha256": "sha256:3470dcc549ac890de5152972a1e4a2691bbb70cbb38843d61220a858b48670f1"
+          "bytes": 37358,
+          "sha256": "sha256:4d2f1e1db5bdad892b6f62a15d6abaf4c3126c2bff1ea3d0e34224b24a92f90a"
         }
       ]
     },
-    "actor-critic-a2c-by-name-7": {
-      "code_fingerprint": "sha256:ea7994cfc995f81931c6ccbcf2de0f1a4797b8c8e0e8b0f1181a6c6c311cf4cd",
+    "actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1": {
+      "code_fingerprint": "sha256:12cc984d6d5795b6fe9feeb53118440ff9b6d7eba9e12286182a2d3b27320c17",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [16, 29, 23]\n        actor-critic: longest stretch of perfect batches, per seed: [73, 32, 44]\n"
-        }
-      ]
-    },
-    "actor-critic-a2c-by-name-8": {
-      "code_fingerprint": "sha256:97f9ef4ae2eb03ac77638a237423f64759f11e827246e5eb9141c0b3d18aeef3",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "REINFORCE + baseline: median pre-clip gradient norm  0.04, clip binds on   0% of updates\n        actor-critic: median pre-clip gradient norm  0.21, clip binds on  29% of updates\n"
+          "text": "REINFORCE + baseline: 450 after 79, 64, 77 thousand steps; cap active 0%\n        actor-critic: 450 after 113, 187, 112 thousand steps; cap active 29%\n"
         }
       ]
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later": {
-      "code_fingerprint": "sha256:9776bea92c85196697f1ae5557274d2b7fe6b80a54f1a98cce7f7faa9d9d34a3",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "corr(TD error, MC advantage): mean 0.29 over the first ten updates, 0.15 over the last 50\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
-          "bytes": 29136,
-          "sha256": "sha256:150562179d4e6a7e3b654e85d458c2dc1bb91dbd792539785d3a5003c5b66945"
-        }
-      ]
+      "code_fingerprint": "sha256:b42a3556e949028a90320056caea7076c404c3296ac38f6761a07444265888c7",
+      "kind": "text",
+      "outputs": []
     },
     "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1": {
-      "code_fingerprint": "sha256:cfaf0de08be1817791310563aef935bf0b535f060742aad86462a5467436108b",
+      "code_fingerprint": "sha256:21686bc96bceda0d1ecdea3db87482ae80afd650108bae5b0c3e9ff012da8556",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median variance, MC advantage over TD error: 56x\n"
+          "text": "first 10 updates: std of the TD error 2.69, of the MC advantage 7.69\n last 50 updates: std of the TD error 0.04, of the MC advantage 0.41\nmedian variance ratio, MC over TD: 56x\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
-          "bytes": 30305,
-          "sha256": "sha256:655d3046df3d1127f7248dc9c772bcdc21f7f676e24238fe02cbcf6746ab79be"
+          "bytes": 42023,
+          "sha256": "sha256:4cf48bde6f0d223183d33ebcfff499eacd5cdd8485b3f2f1250259ec32134b83"
         }
       ]
     },
     "actor-critic-gae-in-one-old-function-1": {
-      "code_fingerprint": "sha256:91b73e3dcb2b8c251aa749f365b7ee7d0f076e74ebc3a0bc307b8d23fe8f683a",
+      "code_fingerprint": "sha256:30b4921a60e8ea310f8828e0f6e9c8e9ff6e95f32665654708f80f568f9f4633",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-gae-in-one-old-function-2": {
-      "code_fingerprint": "sha256:0b93e0b4fc7edc8bf32d11ee9ec298b99dd00da8530ee28b615310aaebebc080",
+      "code_fingerprint": "sha256:6bc8181cabb9bcc194fec83524fce577c2042cea7ad12799eb9b0c04cef2eee6",
       "kind": "text",
       "outputs": [
         {
@@ -136,12 +107,12 @@
       ]
     },
     "actor-critic-measuring-the-dial-1": {
-      "code_fingerprint": "sha256:90c1cb62cbd44e0fdc2eb5187b5701927e424c6fbf37e043ca1150900bd43f4b",
+      "code_fingerprint": "sha256:e77d423f27a9187c17316a8cb5cc0fbcb57305df422516ddf6b3e9bedac11023",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-2": {
-      "code_fingerprint": "sha256:85f0e6a71c2c3f9bc989b8faa6871734dea32dc707da156dbe0ce5fc40e70cac",
+      "code_fingerprint": "sha256:e9d2ccf173d280ec976dc6f0259fdee0928ef86c15aa9f1baa90be83852cd7e3",
       "kind": "mixed",
       "outputs": [
         {
@@ -153,40 +124,29 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
-          "bytes": 46599,
-          "sha256": "sha256:ef60762397a711c4dde3bdd4499bfb76461ec109bedcc31c2cfe426283c7961f"
+          "bytes": 34423,
+          "sha256": "sha256:70b26a931231b2a368c015e8261df44470ac36eed4e8064326bb16389e5c647b"
         }
       ]
     },
     "actor-critic-measuring-the-dial-3": {
-      "code_fingerprint": "sha256:015ede9dc4f6f86f72662d2761bc8ea762fa1e968e2a49e7de43e3bd27a414f6",
+      "code_fingerprint": "sha256:d07a26c7a4c0d5c611ac664c041bb88369c94d23200f05dda7a338fe200c3196",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-measuring-the-dial-4": {
-      "code_fingerprint": "sha256:7fccc29fd1c1bdd104e50037b2d6fbc3dab7879cbc420fb408a413b54f43d610",
+      "code_fingerprint": "sha256:548e0f4faf8124d12178edcb3706dceab95dee383ecae5465d9c6952bf3f0781",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "lambda =  0.0: relative bias 1.22, relative variance    0.0, one-draw error    1.5\nlambda =  0.5: relative bias 1.14, relative variance    0.0, one-draw error    1.3\nlambda =  0.9: relative bias 0.74, relative variance    0.1, one-draw error    0.6\nlambda = 0.95: relative bias 0.49, relative variance    0.1, one-draw error    0.4\nlambda =  1.0: relative bias 0.00, relative variance    0.6, one-draw error    0.6\n"
-        }
-      ]
+      "outputs": []
     },
-    "actor-critic-measuring-the-dial-5": {
-      "code_fingerprint": "sha256:51bacd3efc2dd9eabd37be761440a36a33dcbd4460e7cce8d79c22006cca9402",
+    "actor-critic-a-frozen-policy-probe-1": {
+      "code_fingerprint": "sha256:06675f8ea8f32a0d6ed6b23a346e07c398c5ad01d78dd711b4271f5558dc86a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: greedy mean return over 100 episodes: 500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        actor-critic: greedy mean return over 100 episodes: 500\n"
+          "text": "lambda =  0.0: bias 1.19, variance 0.04, error / error at 1: 1.91\nlambda =  0.5: bias 1.13, variance 0.05, error / error at 1: 1.61\nlambda =  0.9: bias 0.84, variance 0.17, error / error at 1: 0.83\nlambda = 0.95: bias 0.53, variance 0.32, error / error at 1: 0.61\nlambda =  1.0: bias 0.00, variance 0.98, error / error at 1: 1.00\n7 of 8 agents have their smallest error at lambda = 0.9 or 0.95\n"
         }
       ]
     }

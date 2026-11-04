@@ -1,64 +1,13 @@
 # Deep Reinforcement Learning
 :label:`chap_deep_rl`
 
-:numref:`chap_reinforcement_learning` introduced tabular value methods, policy gradients, and neural function approximation. The resulting REINFORCE agent waits for complete episodes, uses each on-policy batch once, and places no explicit constraint on the change in its policy. Deep reinforcement learning addresses these limitations while also introducing new sources of instability: bootstrapped targets depend on learned predictions, shared parameters couple updates across states, and reused data may have been collected by an older policy.
+The last agent of :numref:`chap_reinforcement_learning` swung a pendulum up after a few hundred thousand steps. A simulator makes that cheap. A robot arm would wear out first, and a language model trained on its own answers cannot discard each batch of answers after one update. The agent waited for every episode to end, used each batch once and never limited how far an update moved its policy. How much can one sample teach, and what goes wrong when we make it teach more?
 
-The chapter develops these issues through seven examples. Actor--critic methods replace complete returns with bootstrapped value estimates and lead to $n$-step returns and generalized advantage estimation. Trust regions and PPO control changes in the policy while permitting limited reuse of on-policy data. Regularized policy optimization studies learned rewards and KL penalties. DQN combines Q-learning with replay and target networks; SAC extends the same off-policy machinery to continuous actions. Offline reinforcement learning considers a fixed dataset with no further interaction. The final section formulates language-model generation as a decision process and identifies which preceding methods remain necessary in that special case.
+Four ideas answer, each with an error of its own. An agent can trust a learned estimate of the rest of an episode instead of waiting for it :cite:`Samuel.1959,Sutton.1988`; the estimate is biased while it is young. It can reuse an older policy's data, reweighted or replayed :cite:`Lin.1992`; the data goes stale and the targets move. It can bound each update by the change in the policy's behavior :cite:`Kakade.Langford.2002,Schulman.Wolski.Dhariwal.ea.2017`; the bound limits each step, not where the steps lead. It can learn a model of the environment and plan in it :cite:`Sutton.1990`, inheriting the model's errors and computing at every step. Together, a learned target, a network shared across states and another policy's data can make values diverge, which a table never does. Controllers, game players and post-trained language models are built from these ideas.
 
-:numref:`fig_rl_roadmap`, at the end of :numref:`sec_deeprl`, locates these methods according to what they learn and which data they use. Because the implementations reuse objects introduced in :numref:`chap_reinforcement_learning`, :numref:`tab_rl_inherited` lists those objects and the additions made in this chapter.
+:numref:`sec_actorcritic` asks whether a policy must wait for the episode to end. :numref:`sec_ppo` asks whether one batch can drive several updates, and how far. :numref:`sec_regularized` asks how far a policy may stray from the data behind a learned reward. :numref:`sec_dqn` asks whether a network can learn values from any transition, as a table can. :numref:`sec_sac` asks how the pendulum can be learned in a few thousand steps. :numref:`sec_model_based` asks whether an agent that learns the physics from a few hundred steps can plan its way up. :numref:`sec_offline` asks what can be learned when no new action may be tried. :numref:`sec_rl_sequences` asks what survives when the environment appends tokens and a checker gives the reward.
 
-:The objects this chapter's code uses without rebuilding, and where each was built. The rows below the marked line join the library in this chapter.
-:label:`tab_rl_inherited`
-
-| object | what it does | built in |
-|:--|:--|:--|
-| `TabularMDP` | the model as arrays: kernel, reward and discount | :numref:`sec_mdp` |
-| `TabularMDP.backup`, `.policy_value` | one Bellman backup of a value vector; the exact $V^\pi$ by a linear solve | :numref:`sec_valueiter` |
-| `VerifierTask` | four prompts, nine candidate responses, an exact-match verifier, and a reference policy | :numref:`sec_mdp` |
-| `value_iteration`, `policy_evaluation` | the exact sweeps to $V^*$ and to $V^\pi$, this chapter's yardsticks | :numref:`sec_valueiter` |
-| `evaluate` | the mean return of a policy over fresh evaluation episodes | :numref:`sec_valueiter` |
-| `Policy`, `.tabular` | the policy container with its optimizer, and its table form | :numref:`sec_imitation` |
-| `ActorCritic`, `.mlp` | `Policy` plus a value function and its optimizer; one-hidden-layer network heads | :numref:`sec_deeprl` |
-| `GaussianHead`, `GaussianPolicy` | a Gaussian over continuous actions (a configurable trunk, a linear mean, a learned or state-dependent standard deviation), and the container that acts with it | :numref:`sec_deeprl` |
-| `policy_step` | one ascent step on weighted log-probabilities of given states and actions | :numref:`sec_imitation` |
-| `fit_value` | regression passes of $\hat{V}$ toward a supplied target | :numref:`sec_deeprl` |
-| `Batch`, `rollout` | the trajectory container and the collection loop that fills it | :numref:`sec_policygradient` |
-| `Batch.backward_scan`, `Batch.reward_to_go` | the discounted backward scan, and the reward-to-go it computes | :numref:`sec_baselines` |
-| `Batch.truncation_bootstrap` | the discounted $\hat{V}(s_T)$ that an episode cut by a time limit did not see | :numref:`sec_deeprl` |
-| `normalize` | per-batch standardization of the policy weight | :numref:`sec_baselines` |
-| `verifier_step` | one REINFORCE step on a `VerifierTask`, the weight a function of the group's rewards | :numref:`sec_policygradient` |
-| `group_step` | `verifier_step` with group-standardized rewards | :numref:`sec_baselines` |
-| `epsilon_greedy`, `linear_schedule` | the exploration rule and its annealing | :numref:`sec_qlearning` |
-| `plot_curves`, `show_grid`, `run_seeds` | seed-band learning curves; gridworld values and policies as panels; one training generator run across seeds into a single array | :numref:`sec_utils` |
-| `forward_np` | JAX only: a network's forward pass on NumPy inputs, compiled once per network structure | :numref:`sec_utils` |
-| **added in this chapter** | | |
-| `Batch.td_target` | the one-step bootstrapped target $r + \gamma (1 - \textrm{terminated})\, \hat{V}(s')$ | :numref:`sec_actorcritic` |
-| `Batch.gae` | generalized advantage estimation: the backward scan run on TD errors | :numref:`sec_actorcritic` |
-| `ppo_epochs` | clipped-surrogate reuse epochs on a frozen batch, diagnostics returned as data | :numref:`sec_ppo` |
-| `ReplayBuffer` | a ring of transitions whose `sample` scrambles time into a `Batch` | :numref:`sec_dqn` |
-| `offline_q` | Q-learning swept over a fixed dataset, with optional pessimism $\kappa/\sqrt{n}$ | :numref:`sec_offline` |
-
-Training loss alone is often insufficient to diagnose a reinforcement-learning run. A value estimate can diverge while its regression loss decreases, and a poor policy can continue to generate apparently regular curves. :numref:`tab_rl_diagnostics` collects the additional measurements used in this chapter and indicates how they should be interpreted.
-
-:Diagnostics for the reinforcement-learning experiments in this chapter. The reported ranges are task-specific; the qualitative patterns are more general.
-:label:`tab_rl_diagnostics`
-
-| diagnostic | healthy reading | measured in |
-|:--|:--|:--|
-| the ratio $\rho_t$ on the first reuse epoch | exactly $1$, by construction; anything else is a bug in the frozen log-probabilities | :numref:`sec_ppo` |
-| approximate KL within a batch | small and front-loaded: it increases for a few epochs, then flattens; continued growth indicates excessive policy change | :numref:`sec_ppo` |
-| fraction of ratios outside the clip band | about one check in twenty; several times that means the reuse or the step size is too aggressive | :numref:`sec_ppo` |
-| policy entropy | a slow decrease, about $0.65$ to $0.25$ nats over a CartPole run; a rapid decrease toward zero indicates policy saturation | :numref:`sec_ppo` |
-| weight-only effective sample size of the reused batch | ratio concentration: weights nearly flat through the reuse epochs; concentration to half or less says stop reusing; blind to advantages, dependence, and state staleness | :numref:`sec_ppo` |
-| correlation of the TD error with the Monte Carlo advantage | about $0.3$ early, falling toward zero as episodes lengthen, consistent with the Monte Carlo weight dissolving into tail noise; a descriptive diagnostic, not a critic certificate | :numref:`sec_actorcritic` |
-| pre-clip gradient norm, and how often the clip binds | stable norms, the clip binding on a bounded fraction of updates: about a third for the bootstrapped weight and none for Monte Carlo, at matched normalization; descriptive of where variance lives, not proof of signal | :numref:`sec_actorcritic` |
-| streak lengths at the ceiling | long runs of consecutive perfect batches, a run-specific stability visualization; arriving without resting points at the estimator's noise, not the policy | :numref:`sec_actorcritic` |
-| value estimate at the start state | below the ceiling of the objective the update defines, $1/(1-\gamma) = 100$ on CartPole's continuing formulation, by tens of points at most; above the line is overestimation, growing without bound is divergence | :numref:`sec_dqn` |
-| best against final trailing window, across seeds | descriptive statistics of the curve only: the final window depends on when training stops, while the retrospective best window is affected by optimistic selection; report a predeclared fixed-budget evaluation instead | :numref:`sec_dqn` |
-| the entropy trace of a stochastic continuous policy | descends from its wide start and ends within about a nat of the autotuning target $-\dim \mathcal{A}$; an entropy that rises without bound, or disagrees with a one-line quadrature check of the density, indicates an incorrect squashing-density calculation | :numref:`sec_sac` |
-| predicted value against evaluated return | predictions should not exceed the maximum achievable return; a prediction above a computable optimum establishes overestimation without requiring a baseline | :numref:`sec_offline`, and the twin-against-single calibration of :numref:`sec_sac` |
-
-Most experiments use CartPole and several random seeds. :numref:`sec_regularized` and :numref:`sec_offline` use tabular gridworlds because their optimal values can be computed exactly, and :numref:`sec_rl_sequences` uses deterministic string concatenation rather than a simulator. The chapter does not cover multi-agent, meta-, hierarchical, goal-conditioned, partially observable, or model-based reinforcement learning. Post-training at scale, including learning from human preferences, is left to the Language Models part, which takes it up in more depth.
+CartPole carries the three methods with discrete actions, so that their sample counts share one axis, and Pendulum carries soft actor-critic and the learned model. Exact answers come from the verifier task and two gridworlds: one built so that a learned reward can be exploited, and the slippery lake. The code, in PyTorch and JAX, runs in CPU minutes. :numref:`fig_rl_roadmap` and :numref:`tab_rl_map` place every method of both chapters, and :numref:`sec_deep_rl-further-reading` collects those this chapter names without teaching. Several agents, hidden state, and meta- and hierarchical learning are left out; the Language Models part treats post-training at scale, including learning from human preferences, in more depth.
 
 ```toc
 :maxdepth: 2
@@ -68,20 +17,243 @@ ppo
 regularized
 dqn
 sac
+model-based
 offline-rl
 rl-sequences
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}
 
-The resources in :numref:`chap_reinforcement_learning` cover the general theory and courses. The following references focus on implementations and empirical evaluation.
+The resources of :numref:`chap_reinforcement_learning`, among them CleanRL's single-file implementations and the catalog of PPO's implementation details, serve this chapter as well. The following accompany particular sections; :numref:`sec_deep_rl-further-reading` turns to the methods and topics the chapter does not teach.
 
-- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` publishes single-file, benchmarked implementations of every deep algorithm in this chapter; :numref:`sec_ppo` ends by asking you to diff its `ppo.py` against that section.
-- [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/) :cite:`Huang.Dossa.Raffin.ea.2022` documents, one detail at a time, how much reported performance lives in choices papers do not mention.
-- The controlled study of :citet:`Engstrom.Ilyas.Santurkar.ea.2020` shows PPO and TRPO nearly indistinguishable at matched code-level choices: the details above, not the objective, carry much of the practical edge.
-- [rliable](https://github.com/google-research/rliable) :cite:`Agarwal.Schwarzer.Castro.ea.2021` turns the seed-spread discipline of :numref:`tab_rl_diagnostics` into tooling: interval estimates and performance profiles for few-seed results.
-- The [RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo) :cite:`Raffin.Hill.Gleave.ea.2021` ships tuned hyperparameter configurations per environment, the sensible starting point when a method of this chapter meets a task that is not CartPole.
-- The offline survey of :citet:`Levine.Kumar.Tucker.ea.2020` continues :numref:`sec_offline` at full depth, from the tabular diagnosis to the deep-scale methods it could only name.
-- Chapters 11 to 13 of Sutton and Barto :cite:`Sutton.Barto.2018` give the deadly triad of :numref:`sec_dqn` its full theory, including what is provable once one corner is dropped.
-- [The RLHF book](https://rlhfbook.com/) :cite:`Lambert.2026` develops the
-  post-training applications introduced in :numref:`sec_rl_sequences`.
+- Chapters 11 to 13 of Sutton and Barto :cite:`Sutton.Barto.2018` treat the $\lambda$-return and eligibility traces of :numref:`sec_actorcritic`, the actor-critic methods built on them, and the deadly triad of :numref:`sec_dqn` with what can be proved once one of its three ingredients is dropped. Their chapter 8 develops Dyna and planning with a learned model, the tabular ancestors of :numref:`sec_model_based`.
+- The controlled study of :citet:`Engstrom.Ilyas.Santurkar.ea.2020` accompanies :numref:`sec_ppo`: at matched code-level choices PPO and TRPO perform nearly alike, so much of PPO's practical edge comes from details its objective does not mention.
+- The [RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo) :cite:`Raffin.Hill.Gleave.ea.2021` ships tuned hyperparameters per environment for the PPO, DQN and SAC of :numref:`sec_ppo`, :numref:`sec_dqn` and :numref:`sec_sac`, the starting point when one of them meets a task other than CartPole or Pendulum.
+- [rliable](https://github.com/google-research/rliable) :cite:`Agarwal.Schwarzer.Castro.ea.2021` provides interval estimates and performance profiles, the tools to compare results over a few seeds more carefully than the counts and medians this chapter quotes.
+- The survey of :citet:`Levine.Kumar.Tucker.ea.2020` continues :numref:`sec_offline` from the tabular diagnosis to the deep offline methods.
+- [The RLHF book](https://rlhfbook.com/) :cite:`Lambert.2026` develops the post-training methods whose update :numref:`sec_regularized` and :numref:`sec_rl_sequences` assemble, at the scale of real language models.
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §15]{.kicker}
+
+Getting more from each sample<br>
+**actor-critic · PPO · KL penalties · DQN · SAC · learned models · offline data · post-training**
+:::
+:::
+
+::: {.slide title="The Pendulum Took a Few Hundred Thousand Steps to Swing Up"}
+[The problem]{.kicker}
+
+- Pendulum: a torque in $[-2, 2]$; doing nothing scores about $-1200$ per
+  episode, and $-200$ or better holds the pendulum up.
+- REINFORCE with a learned baseline crosses $-200$ after 150 to 300 updates
+  of 1,600 steps each: a few hundred thousand steps.
+- It waits for whole episodes, uses each batch once, and never limits how
+  far an update moves the policy.
+- A robot arm wears out first; a language model cannot resample its
+  training set after every update.
+
+::: {.d2l-note}
+How much can one sample teach, and what goes wrong when we make it teach
+more?
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- update a policy after one transition, and choose how far to trust a critic;
+- reuse a batch for several clipped updates, and read when to stop;
+- train a value network from replay, and detect when it overestimates;
+- learn the pendulum in thousands of steps, or hundreds with a model;
+- learn from a fixed log, and assemble the update that post-trains
+  language models.
+
+**Running examples:** CartPole and Pendulum; two gridworlds; four prompts
+and a verifier.
+:::
+
+::: {.slide title="This Chapter Puts Networks Inside the Update and Reuses Data"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| part or chapter | the learner learns from |
+|---|---|
+| Basics | a fixed dataset, a label for every example |
+| Reinforcement Learning | its own attempts, on problems solved exactly |
+| **Deep Reinforcement Learning** | **value networks in the update; reused, modeled and fixed data** |
+| Language Models | post-training at scale, preferences |
+:::
+
+::: {.col .narrow}
+- **Uses:** policy gradient with a baseline, Q-learning, the Bellman
+  backup, the Gaussian policy.
+- **Skips:** several agents, hidden state, meta- and hierarchical
+  learning.
+:::
+:::
+:::
+
+::: {.slide title="Four Ideas Get More from Each Sample, Each with Its Own Error"}
+| idea | what it changes | the new error |
+|---|---|---|
+| trust a learned value | update after one transition | the critic's bias while it is young |
+| reuse old data | reweight by a ratio, or replay | stale data, moving targets |
+| bound the step | limit the change in behavior | limits each step, not the destination |
+| learn a model, plan in it | experience trains a model | model error, computation per step |
+
+::: {.d2l-note}
+Each idea removes a reason to collect new data, and adds an estimate that
+can be wrong.
+:::
+
+[Samuel 1959 · Sutton 1988 · Lin 1992 · Kakade and Langford 2002 · Schulman et al. 2017 · Sutton 1990]{.small}
+:::
+
+::: {.slide title="A Learned Target, a Network and Another Policy's Data Can Diverge"}
+- **Bootstrapping:** the target $r + \gamma \hat{V}(s')$ contains the
+  estimate being fitted.
+- **Function approximation:** one update moves the estimate at every state.
+- **Off-policy data:** the states come from a policy other than the one
+  evaluated.
+- All three together can diverge even with exact expectations and a linear
+  model: Baird's seven-state example.
+- A table fitted to exact backups always converges.
+
+::: {.d2l-note .warn}
+A value loss can fall while the values diverge: check the values, not the
+loss.
+:::
+:::
+
+::: {.slide title="Check: Which Idea Explains Each Symptom?"}
+[Check]{.kicker}
+
+1. Early on CartPole, a policy trained on one-step TD errors lags behind one
+   trained on whole returns.
+2. Reusing each batch for twenty epochs of the unclipped ratio objective at
+   a large step size, the return collapses to about 9.
+3. A Q-network's estimate at the start state climbs past the best return
+   any policy can earn.
+
+::: {.fragment .fade-up}
+1. Trusting a learned value: the young critic is biased.
+2. An unbounded step: nothing limits how far the policy moves.
+3. A learned target fitted on replayed data, plus a maximum over noisy
+   estimates.
+:::
+:::
+
+::: {.slide title="Two Questions Place Every Method: What It Learns, Which Data Drives It"}
+![](../img/mdl-rl-roadmap.svg){width=86%}
+
+- Solid boxes: the previous chapter; dashed boxes: this one.
+- Left to right, the update may use older data, then no new data at all.
+:::
+
+::: {.slide title="CartPole and Pendulum Measure What Each Method Costs in Steps"}
+[Running examples]{.kicker}
+
+- CartPole: four numbers of state, two actions, reward 1 per step while the
+  pole is up, cut at 500 steps.
+- At $\gamma = 0.99$, balancing forever is worth $1/(1-\gamma) = 100$; the
+  500-step cut leaves $99.3$.
+- Actor-critic, PPO and DQN all run on CartPole, so their step counts
+  compare.
+- Pendulum: three numbers of state, a torque in $[-2, 2]$, 200 steps per
+  episode.
+- Soft actor-critic and the learned model run on Pendulum.
+:::
+
+::: {.slide title="Three Small Problems Have Exact Answers"}
+[Running examples]{.kicker}
+
+- A $4 \times 4$ grid with a costly lane the reference policy rarely visits:
+  a reward fitted from comparisons cannot see the cost.
+- The slippery lake: logs of past episodes, judged against the exact
+  optimum.
+- Four prompts and a verifier: the reference passes 6.2% of the time, the
+  ceiling is 50%.
+
+::: {.d2l-note}
+An exact answer turns "the curve looks good" into "the promise exceeds
+the optimum".
+:::
+:::
+
+::: {.slide title="Eight Sections, One Question Each"}
+[Chapter map]{.kicker}
+
+| section | question |
+|---|---|
+| Actor-Critic Methods | must a policy wait for the episode to end? |
+| Proximal Policy Optimization | can one batch drive several updates, and how far? |
+| KL-Regularized Policy Optimization | how far may a policy stray from a learned reward's data? |
+| Deep Q-Networks | can a network learn values from any transition? |
+| Soft Actor-Critic | how is the pendulum learned in a few thousand steps? |
+| Learned Models and Planning | can a model from a few hundred steps plan the swing-up? |
+| Offline Reinforcement Learning | what can be learned when no action may be tried? |
+| Sequence Generation | what survives when actions are tokens and a checker pays? |
+:::
+
+::: {.slide title="From Hundreds of Thousands of Steps to a Few Hundred"}
+| method | task, goal | environment steps |
+|---|---|---|
+| REINFORCE, learned baseline | Pendulum, $-200$ | a few hundred thousand |
+| PPO, 1 or 4 epochs per batch | CartPole, 475 | 50,000 or more, or about 25,000 |
+| DQN | CartPole, 500 | 35,000 to 45,000 |
+| SAC, 1 or 10 updates per step | Pendulum, $-200$ | 5,400 to 11,200, or 2,400 to 4,000 |
+| a learned model and a planner | Pendulum, swing-up | 200 to 600 |
+
+::: {.d2l-note}
+Fewer environment steps cost more computation per step: ten gradient
+steps, or 12,500 model evaluations per action.
+:::
+:::
+
+::: {.slide title="Check: Which Section Answers Each Finding?"}
+[Check]{.kicker}
+
+1. With each action offered nine times, a Q-network ends above the best
+   possible return on every seed.
+2. A planner whose data never left the bottom of the swing fails until its
+   own failed attempts collect new states.
+3. A table learned from a narrow log promises more than the optimum on
+   almost every dataset.
+
+::: {.fragment .fade-up}
+1. Deep Q-Networks: the maximum picks the luckiest of nine noisy estimates.
+2. Learned Models: a model is accurate only where the data went.
+3. Offline: the best-looking actions are the rarely tried ones.
+:::
+:::
+
+::: {.slide title="The Chapter Ends Where Post-Training Begins"}
+- A response is a trajectory whose actions are tokens; a checker's verdict
+  arrives once, at the end.
+- The update that post-trains language models combines a group baseline, a
+  clipped probability ratio and a KL penalty to a reference.
+- Each piece comes from this chapter or the previous one.
+- The Language Models part treats post-training at scale, including
+  learning from human preferences, in more depth.
+:::
+
+::: {.slide title="Wrap-up"}
+[Wrap-up]{.kicker}
+
+- The previous chapter's pendulum needed a few hundred thousand steps.
+- Four ideas: trust a critic, reuse data, bound the step, learn a model;
+  each adds an error.
+- A learned target, a network and another policy's data can diverge
+  together.
+- Steps fall to tens of thousands on CartPole, a few thousand with SAC and
+  a few hundred with a model.
+- Small problems with exact answers expose overestimation.
+
+**Next:** a learned critic in place of the rest of the episode.
+:::

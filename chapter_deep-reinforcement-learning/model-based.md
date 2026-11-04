@@ -682,6 +682,8 @@ A transition records how the environment moves, and a network fitted to transiti
        and when do the model's errors outweigh what it adds?
    :exlabel:`ex_model-based-cartpole`
 
+[Discussions](https://d2l.discourse.group/t/36872)
+
 <!-- slides -->
 
 ::: {.slide}
@@ -877,14 +879,12 @@ torques did, and the next refit has data there.
 - only inside the model and over the horizon: a wrong model certifies wrongly
 :::
 
-::: {.slide title="Distilled Search Teaches the Actor Part of What the Search Knows"}
+::: {.slide title="Distillation Teaches the Actor Part of the Search"}
 [Search as policy improvement]{.kicker}
 
 @!model-based-distillation-into-the-actor-3
 
-- acting with search: swing-up within two or three rounds on every run
-- actor alone: improves, but lags and jumps; candidate causes: labels on the
-  search's states, few per round, noisy
+- with search: swing-up in two or three rounds; actor alone: improves, but lags
 :::
 
 ::: {.slide title="Imagined Transitions Did Not Cut SAC's Real Steps at Equal Updates"}

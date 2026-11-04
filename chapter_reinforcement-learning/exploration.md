@@ -785,7 +785,7 @@ exploration.
        the verifier alone does not provide.
    :exlabel:`ex_exploration-identical-groups`
 
-[Discussions](https://d2l.discourse.group/)
+[Discussions](https://d2l.discourse.group/t/36871)
 
 <!-- slides -->
 

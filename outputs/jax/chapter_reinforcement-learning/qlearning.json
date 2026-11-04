@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:665dc057cc87721d901fa90117408325dc6b419a333bcd65789861bf4082252a",
+    "d2l_lib_fingerprint": "sha256:a5e2d6806e7fbcc15106a4290e23e1df8862aa8707d161cfa597ad8368a98edb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:269fcb093d85120ffb0f7f9b67ae6b4bb82a8b01867f588af0a7d91fcea99605"
+          "sha256": "sha256:f9a1b65903f2b6a3d9960936b09bc0dd255331ce348526a8d0ea9f7f24abcff0"
         }
       ]
     },
@@ -66,30 +66,25 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:9012cb44aed5746a09843f71d34075b30d08b0adb200e299effccf10c2bf3522"
+          "sha256": "sha256:4348e8ed9c87b60b0b109762dd0bba605b403b359218dddf4cbadc015dea4ef0"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:ec37d93a7512ee01bd1215f3fb97751446fd2ca4c3d8d95fc4cc7c9fc704dd2c",
+      "code_fingerprint": "sha256:0e73fb3c932081de8db335d08ab12ec9adc9d1b3a32936ce7019f8178cd15b21",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "calm ice, 256 episodes (1,725 steps), alpha = 0.9: greedy policy succeeds 100%\n"
+          "text": "calm ice, 512 episodes (3,658 steps), alpha = 0.9: greedy policy succeeds 100%\n"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:0df8c6ef300b4daaa8baa4a1e267182d8687151fbbac63d72a9a991239d90641",
+      "code_fingerprint": "sha256:2e2bb72b4a9baf24d47c0bc450f71d712ebfc5829af1bf98fc475308d032e3f1",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Q*(s0, left) = 0.180\n"
-        },
         {
           "type": "stream",
           "name": "stdout",
@@ -110,17 +105,17 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:bc9c424779978e84104c296dac6b4dfff035d8808a1b95849c23686b342286f8"
+          "sha256": "sha256:a61a2eb976c3248b600da5eb38657e8f35c64a806ad53a942ad2b4223a899aff"
         }
       ]
     },
     "qlearning-planning-in-a-learned-model-1": {
-      "code_fingerprint": "sha256:84bb6b30a997b15c201a088878ee849d4d1a1cfc13a2afa0ee0186361082e615",
+      "code_fingerprint": "sha256:7d778e062e697e3bddd29c60686182dcbf84fad9e99ad528e483ff35f74b90fe",
       "kind": "text",
       "outputs": []
     },
     "qlearning-planning-in-a-learned-model-2": {
-      "code_fingerprint": "sha256:b0f6e243ce25ffda2f0968829e2b517d48fa9084b50506a1b8b34c5665a448f3",
+      "code_fingerprint": "sha256:e85f2e37f8892ccfff234d29584b8c2975100f07c890233b50ec2ef36559b984",
       "kind": "text",
       "outputs": [
         {

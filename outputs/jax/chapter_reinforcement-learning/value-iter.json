@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ada7af0dcb5d04db5ec1ba45b976a8dfec8c0dfc46727acd462aeef63d9a9fa3",
+    "d2l_lib_fingerprint": "sha256:2290ddf270a8272513c064316691d43b40fe91e6ab44cafb9cf2a0dd2186341b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,20 +58,20 @@
       ]
     },
     "value-iter-value-iteration-3": {
-      "code_fingerprint": "sha256:99c310c83d7ba0a20ead576034fd558703747be31f74be67f012f5069dff0921",
+      "code_fingerprint": "sha256:22d99637e4056a59e84625bde4544b7d2f784b0a9c89e649a4caf99df388fee1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
-          "bytes": 28636,
-          "sha256": "sha256:c752f3e5cc89487cb903062338685a89e9ca96ca9ef416d95b934c92281b2917"
+          "bytes": 42057,
+          "sha256": "sha256:2d9387d43fe652f249bcc5980aa1f88533a3415c6934799842752e210e6e5447"
         }
       ]
     },
     "value-iter-value-iteration-4": {
-      "code_fingerprint": "sha256:639dc49e64edb83951c8197e2c542a8b09567679d559c93d9d4c1deb856767f6",
+      "code_fingerprint": "sha256:45941097655e0f00e75d6539cbe1b6b08bf656650aaedd51210c893f53c0a2dd",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "value-iter-policy-evaluation": {
-      "code_fingerprint": "sha256:bdc9b26def7dd5fbf3f28f2be5edd348a1ab59955d7a074aec506d871746d9da",
+      "code_fingerprint": "sha256:f7871c37f7ff73f9781da6fc790b01ad491eb5c53f85cfda75da6636c225e759",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +93,7 @@
       ]
     },
     "value-iter-policy-evaluation-1": {
-      "code_fingerprint": "sha256:37d8527ace612174f1df9b8290a528f264cb4bd01a45638acd548aa69761fb6a",
+      "code_fingerprint": "sha256:7a9c408076298dc8527ae70af9f86bb48241881a9f862d2dc67b84936f7192f4",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +104,12 @@
       ]
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-1": {
-      "code_fingerprint": "sha256:34e428be414df1548ad5a5f05f38e72f0e95e3682d7b26c7578cc04a20401958",
+      "code_fingerprint": "sha256:d2a80b42821a40b1521cd3d18abf1f5651a2b00a3b57ef315b37a2d7b9e1690d",
       "kind": "text",
       "outputs": []
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-2": {
-      "code_fingerprint": "sha256:cf1547e9e010170939dc72c8a9ae05a143fc9c52ac0cadd71f885e9bfefa42d3",
+      "code_fingerprint": "sha256:ffe0dcb59c98c778d2a793adaf0aa9f47aaeb20101dd4df6df30c76f9d5ecc6e",
       "kind": "text",
       "outputs": [
         {
@@ -120,12 +120,12 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-1": {
-      "code_fingerprint": "sha256:c2e42eb20de785b47ffcce3ce8d27a5e8bb1cf500f58f07f99cb945c6a9ced81",
+      "code_fingerprint": "sha256:529c1673630f9260b0b888b66919f8ba5b5b23c02a38e84922c10b52ea75296a",
       "kind": "text",
       "outputs": []
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-2": {
-      "code_fingerprint": "sha256:b1796d410a08422a3801af46a7a76e1873daf9781f82a71edb3e68b42a43ab78",
+      "code_fingerprint": "sha256:e003537090c2ccb69dd99c08af8f3b42f4b931aba7ae695debad31163997cdce",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +146,7 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-3": {
-      "code_fingerprint": "sha256:e4c71bccb4d64d5e33dae28e47dffee0cd2de0b375e010986a8d51d7e7b167af",
+      "code_fingerprint": "sha256:7f260e0c01aa82f019d85612abba73b4292d70822834f2d3241f86688a500230",
       "kind": "text",
       "outputs": [
         {
@@ -157,7 +157,7 @@
       ]
     },
     "value-iter-the-optimal-policy-on-slippery-ice-1": {
-      "code_fingerprint": "sha256:ad6c5c6c84a3149eef719ff59708119b6167143f218d0c38b5475404f2e54eeb",
+      "code_fingerprint": "sha256:2812508695b1b63a3693fe98b973f6e3fa1f1ce855025504d72a208594f1bbb6",
       "kind": "text",
       "outputs": [
         {
@@ -168,7 +168,7 @@
       ]
     },
     "mdp-model-based-versus-model-free": {
-      "code_fingerprint": "sha256:00b4787b53cfd06d363ff298e7a4fff8c15b569eec5fd53b59479f3d6e15e965",
+      "code_fingerprint": "sha256:aeb82ff00569a3bf9f411680ca12548b6d105e0744c5ab61160b227b4dcf38a3",
       "kind": "text",
       "outputs": [
         {

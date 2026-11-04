@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:a7275b66ee52fc49494e4413a9b2f2115eed7406974e2856102988b6e8e16de4",
+    "d2l_lib_fingerprint": "sha256:8cc03d3b6e322b198026fd0191362d297eff8fb7f3add672d1a4608495e40cab",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
           "bytes": 35145,
-          "sha256": "sha256:45a9e41fedb074a84ee9bd851ab0a68f3b5bfa35f963d3c0e9930ecbfd771455"
+          "sha256": "sha256:2d6dac7f93edf8a394eb69a59c5df836f54cfd04e11135b471455d5a98fc22da"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
           "bytes": 35955,
-          "sha256": "sha256:3f1258cfaf6edf6df88dc1cc0dd59a5d53740d5270e2eca0b7df8699abb2010c"
+          "sha256": "sha256:4f9b31c136d2dd58f3d2f51835a2d713a8a3a0c0bb43d0f6f1285d89d91ed27d"
         }
       ]
     },
@@ -110,7 +110,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 53736,
-          "sha256": "sha256:b91fd02f3ef2b6220ddd24c8bba510776fa7ece284679cbef34165138b5ce85a"
+          "sha256": "sha256:99a58572c7f38a11f91b5996f4eb19a3e818e932fd685b94e1712593dca3a2a2"
         }
       ]
     },
@@ -128,7 +128,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 30908,
-          "sha256": "sha256:b2db6497844bd8d25ce24d88e76c7fa6f49551b26f80292720aceb5717ae25e5"
+          "sha256": "sha256:9486f9e257d3643f402060607b251309d2656d64fee834808368d4fb55003df5"
         }
       ]
     },

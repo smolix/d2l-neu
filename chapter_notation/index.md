@@ -122,13 +122,14 @@ These symbols belong to :numref:`chap_reinforcement_learning` and the chapter af
 * $A^\pi(s, a)$: the advantage $Q^\pi(s, a) - V^\pi(s)$
 * $\mathcal{T}$: the Bellman operator
 * $d^\pi_t$, $d^\pi_\gamma$: the distribution of the state at step $t$ under $\pi$, and its discounted average over steps
-* $\delta_t$: the temporal-difference error
+* $\delta$, $\delta_t$: the temporal-difference error of one transition, of the transition at step $t$
 * $\alpha$: the step size of a temporal-difference update
 * $\eta$: the step size of a policy update
 * $\eta_V$: the step size of a value-baseline update
 * $\epsilon$: the exploration rate of $\epsilon$-greedy action selection, or the half-width of a clipped probability ratio
 * $\varepsilon$: the per-step probability that a cloned policy disagrees with the expert (not the exploration rate $\epsilon$)
 * $\kappa$: the weight of an uncertainty bonus (not the condition number $\kappa(\mathbf{X})$)
+* $\hat{G}_t$: the reward-to-go, the discounted sum of the rewards from step $t$ on
 * $b$: a baseline subtracted from a return
 * $K$: the number of responses sampled per prompt
 

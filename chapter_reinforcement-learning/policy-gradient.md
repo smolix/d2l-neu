@@ -5,7 +5,7 @@ In the previous section a policy learned from an expert. Behavior cloning took o
 
 Ronald Williams answered this question in 1992 :cite:`Williams.1992`. The average of the guessed update is the gradient of the expected return, so the guess is stochastic gradient ascent, and he called the algorithm REINFORCE. The return of an episode depends on the environment's transition probabilities, which the agent does not know, yet the estimate needs only sampled episodes and the policy's own log-probabilities. Writing the policy down as a function $\pi_\theta(a \mid s)$ also lifts a limit of the value tables of :numref:`sec_qlearning`. Acting greedily on a table needs a maximum over a finite list of actions, whereas a parameterized policy can output a torque, or a distribution over a vocabulary of tokens. The same identity, applied to the next-token distribution of a language model, trains reasoning models from a single reward given to the finished answer.
 
-We derive the estimator from the smallest problem that has one and run it on the verifier task of :numref:`sec_mdp`, where every gradient can be computed exactly, and on the lake. It is right on average, but it needs fresh episodes after every update, and a small batch leaves much noise.
+We derive the estimator from the smallest problem with a policy gradient and run it on the verifier task of :numref:`sec_mdp`, where every gradient can be computed exactly, and on the lake. It is right on average, but it needs fresh episodes after every update, and a small batch leaves much noise.
 
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab pytorch
@@ -38,13 +38,13 @@ Gradient ascent needs a policy that changes smoothly with its parameters. A dete
 $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}}.$$
 :eqlabel:`eq_softmax_policy`
 
-This is the softmax regression of :numref:`sec_softmax` with a state index as its input, the policy that behavior cloning fitted, and the zero table gives the uniform policy. Unlike $Q(s,a)$, a preference is not an estimate of return; adding the same constant to every preference at a state leaves the policy unchanged.
+This is the softmax regression of :numref:`sec_softmax` with a state index as its input, the same policy that behavior cloning fitted. The zero table gives the uniform policy. Unlike $Q(s,a)$, a preference is not an estimate of return; adding the same constant to every preference at a state leaves the policy unchanged.
 
 ### The Score Function
 
-The softmax is easy to differentiate. Since $\log \pi_\theta(a \mid s) = \theta_{s,a} - \log \sum_{a'} e^{\theta_{s,a'}}$, the derivative with respect to the preference $\theta_{s,b}$ of any action $b$ at the same state is
+The softmax is easy to differentiate. Since $\log \pi_\theta(a \mid s) = \theta_{s,a} - \log \sum_{a''} e^{\theta_{s,a''}}$, the derivative with respect to the preference $\theta_{s,a'}$ of any action $a'$ at the same state is
 
-$$\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,b}} = \mathbf{1}(b = a) - \pi_\theta(b \mid s),$$
+$$\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,a'}} = \mathbf{1}(a' = a) - \pi_\theta(a' \mid s),$$
 :eqlabel:`eq_softmax_score`
 
 and the derivative with respect to the preferences at every other state is zero. The vector $\nabla_\theta\log\pi_\theta(a\mid s)$ is called the *score function*. In words, increasing the log-probability of $a$ means raising its own preference and lowering every preference at $s$ in proportion to its probability. Writing $e_a$ for the indicator vector of action $a$, the row of the score at $s$ is $e_a - \pi_\theta(\cdot \mid s)$. Its components sum to zero, so the score has no component along the one direction that leaves the policy unchanged, adding a constant to every preference at $s$. We check the formula against automatic differentiation of `Policy.log_prob` at a random table:
@@ -99,7 +99,7 @@ $$\sqrt{\frac{1 - p}{p}}$$
 
 times the mean. When the paying action is rare, the estimate is right on average and useless in almost every single draw: it is usually zero, and occasionally about $1/p$ times too large. Averaging $n$ independent draws divides the ratio by $\sqrt n$.
 
-The lake has the same structure at the start of learning. The uniform policy reaches the goal in about $1.4\%$ of episodes (:numref:`sec_valueiter`), and an episode that misses earns nothing. At $p = 0.014$ the ratio is $8.4$, and a batch of 16 episodes contains no success at all with probability $(1 - 0.014)^{16} \approx 0.80$. Four batches in five then give an estimate of zero. The rest of this section carries out the same computation with trajectories in place of the two actions.
+The lake has the same structure at the start of learning. The uniform policy reaches the goal in about $1.4\%$ of episodes (:numref:`sec_valueiter`), on calm and slippery ice alike, because a uniformly random command is a uniformly random move. An episode that misses earns nothing. At $p = 0.014$ the ratio is $8.4$, and a batch of 16 episodes contains no success at all with probability $(1 - 0.014)^{16} \approx 0.80$. Four batches in five then give an estimate of zero. The rest of this section carries out the same computation with trajectories in place of the two actions.
 
 ### An Optimization Problem over Trajectories
 
@@ -159,7 +159,7 @@ $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i) \sum_{t=0}^{T_i-1} \nabla_\theta 
 
 Each trajectory pushes up the log-probability of every action it took, by an amount proportional to its return. This is the guess of the opening, and each term has expectation $\nabla_\theta J(\theta)$, so $\hat u$ is an unbiased estimate of the gradient. REINFORCE :cite:`Williams.1992` takes the ascent step $\theta \leftarrow \theta + \eta\, \hat u$ with a step size $\eta$, then samples a new batch from the updated policy. On the lake every return is nonnegative, so every sampled action is pushed up. Actions that were not sampled lose probability through the $-\pi_\theta(\cdot\mid s)$ part of the score, and an episode with return zero changes nothing.
 
-:numref:`fig_rl_score_ascent` draws one step for a one-step problem with a continuous action, which a softmax over four actions cannot show as a curve. The policy is a Gaussian $\mathcal{N}(a; \mu, 1)$, whose score with respect to the mean is $a - \mu$, so the step reads $\mu \leftarrow \mu + \eta\, \frac{1}{n}\sum_i R(a_i)(a_i - \mu)$: the mean moves toward the sampled actions that paid most. Twelve samples move it to $0.32$, where the exact gradient would give $0.52$.
+:numref:`fig_rl_score_ascent` draws one step for a one-step problem with a continuous action, which a softmax over four actions cannot show as a curve. The policy is a Gaussian $\mathcal{N}(a; \mu, 1)$, whose score with respect to the mean is $a - \mu$. An episode is a single action $a$, so its return $R(a)$ is that action's reward, and the step reads $\mu \leftarrow \mu + \eta\, \frac{1}{n}\sum_i R(a_i)(a_i - \mu)$: the mean moves toward the sampled actions that paid most. Twelve samples move it to $0.32$, where the exact gradient would give $0.52$.
 
 ![One REINFORCE step on a one-step problem. The policy is $\pi_\theta(a) = \mathcal{N}(a; \mu, 1)$ with $\mu = 0$, and the reward is $R(a) = 0.4 + 2e^{-(a-2)^2/2}$, so the expected reward is $J = 0.92$ and the exact gradient is $\mathrm{d}J/\mathrm{d}\mu = 0.52$. (a) Twelve sampled actions each push up their own log-probability, weighted by their rewards; all rewards are positive, so every arrow points up. (b) The step $\mu \leftarrow \mu + \eta\,\frac{1}{12}\sum_i R(a_i)(a_i - \mu)$ with $\eta = 1$ moves the mean from $0$ to $0.32$, toward the actions with higher reward; the exact gradient would have moved it to $0.52$.](../img/mdl-rl-score-ascent.svg)
 :label:`fig_rl_score_ascent`
@@ -191,7 +191,9 @@ def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):  #@save
     return theta + lr * g
 ```
 
-The exact-match verifier pays only the correct response $y^*$, so the estimate for prompt $x$ is $\frac{c}{K}\big(e_{y^*} - \pi_\theta(\cdot \mid x)\big)$, where $c$ counts the correct responses among the $K$. The count $c$ is binomial with success probability $p = \pi_\theta(y^* \mid x)$, so the estimate has mean $p\,(e_{y^*} - \pi_\theta(\cdot\mid x))$, the exact gradient, and relative standard deviation $\sqrt{(1-p)/(Kp)}$: the ratio of the smallest case divided by $\sqrt K$. At the reference table $p \approx 1/8$ on the two answerable prompts, so a group of $K = 16$ should be off by about $0.66$ of the gradient's length. The next cell checks this. It draws 10,000 estimates at the reference table (with `lr=1.0` the step minus $\theta$ is the estimate) and takes one step with $\eta = 2$:
+The exact-match verifier pays only the correct response $y^*$, so the estimate for prompt $x$ is $\frac{c}{K}\big(e_{y^*} - \pi_\theta(\cdot \mid x)\big)$, where $c$ counts the correct responses among the $K$. The count $c$ is binomial with success probability $p = \pi_\theta(y^* \mid x)$, so the estimate has mean $p\,(e_{y^*} - \pi_\theta(\cdot\mid x))$, the exact gradient, and relative standard deviation $\sqrt{(1-p)/(Kp)}$: the ratio of the smallest case divided by $\sqrt K$. At the reference table $p \approx 1/8$ on the two answerable prompts, so a group of $K = 16$ should be off by about $0.66$ of the gradient's length.
+
+The next cell checks this prediction. It draws 10,000 estimates at the reference table (with `lr=1.0` the step minus $\theta$ is the estimate) and takes one step with $\eta = 2$:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-5}
 %%tab pytorch, jax
@@ -216,13 +218,13 @@ print(f'success {task.success(pi0):.3f}; one step with lr = 2 gives '
       f' median {np.median(after):.3f} (sampled)')
 ```
 
-One estimate is off by $0.66$ of the gradient's length, as predicted. The error of the mean of $M$ estimates keeps falling as $M$ grows, on average like $0.66/\sqrt M$, and shows no floor: the estimator is unbiased. Each estimate amounts to one binomial count per answerable prompt, so a single average can sit up to about twice above or below that rate. On each answerable prompt about $12\%$ of the groups contain no correct response, $(7/8)^{16} \approx 0.12$, and contribute nothing. On `8*8` and `9*9`, where no candidate passes the verifier, every group is empty: no amount of sampling produces a gradient for a prompt that no response solves. One exact step with $\eta = 2$ raises the success from $0.062$ to $0.077$, and a sampled step does about as well in the median. A sampled step never lowers the success on this task, because the only weighted score is that of the correct response.
+One estimate is off by $0.66$ of the gradient's length, as predicted. The error of the mean of $M$ estimates keeps falling as $M$ grows, on average like $0.66/\sqrt M$, and shows no floor: the estimator is unbiased. Each estimate amounts to one binomial count per answerable prompt, so a single average can land well below that rate or up to about twice above it. On each answerable prompt about $12\%$ of the groups contain no correct response, $(7/8)^{16} \approx 0.12$, and contribute nothing. On `8*8` and `9*9`, where no candidate passes the verifier, every group is empty: no amount of sampling produces a gradient for a prompt that no response solves. One exact step with $\eta = 2$ raises the success from $0.062$ to $0.077$, and a sampled step does about as well in the median. A sampled step never lowers the success on this task, because the only weighted score is that of the correct response.
 
 ### The Lake
 
-On the lake an episode has several steps and the kernel enters. We use the calm lake, where every command moves the agent as intended, rather than the slippery ice of the earlier sections. The reason is how much one episode says about one action. At the uniform start both maps give the same walk, because a uniformly random command on slippery ice is again a uniformly random move, so the success probability of about $1.4\%$ is the same on both. But on slippery ice a command moves the agent in its own direction or in either perpendicular direction with probability $1/3$ each, so the one thing it controls is that the agent does not move the opposite way. At the uniform start this makes the exact gradient on slippery ice one third as long as on calm ice, while the noise of a one-episode estimate is about the same, so a batch must be nine times larger for the same precision (exercise :exref:`ex_policy-gradient-theorem-table` derives the factor).
+On the lake an episode has several steps and the kernel enters. We use the calm lake, where every command moves the agent as intended, rather than the slippery ice of the earlier sections. The reason is how much one episode says about one action. At the uniform start both maps give the same walk and the same success probability of about $1.4\%$. But on slippery ice a command moves the agent in its own direction or in either perpendicular direction with probability $1/3$ each, so the one thing it controls is that the agent does not move the opposite way. At the uniform start this makes the exact gradient on slippery ice one third as long as on calm ice, while the noise of a one-episode estimate is about the same, so a batch must be nine times larger for the same precision (exercise :exref:`ex_policy-gradient-theorem-table` derives the factor).
 
-As the policy improves the gap widens: successful episodes on slippery ice last tens of steps instead of six, so each success is shared among many more actions and discounted by $\gamma^T$. REINFORCE still learns on slippery ice, slowly (exercise :exref:`ex_policy-gradient-softmax-plateaus`).
+As the policy improves the gap widens: successful episodes on slippery ice last tens of steps instead of six, so each success is shared among many more actions and discounted by $\gamma^{T-1}$. REINFORCE still learns on slippery ice, slowly (exercise :exref:`ex_policy-gradient-softmax-plateaus`).
 
 We remove Gymnasium's default limit of 100 steps for this map. The objective :eqref:`eq_pg_objective` is defined over complete episodes, and the sum of rewards of a cut episode is not its return (:numref:`sec_mdp`). A softmax policy gives every action positive probability, so on this map every episode ends with probability one, and the cap of 10,000 steps is only a safeguard far above any episode these runs produce:
 
@@ -263,7 +265,7 @@ class Batch:  #@save
         return np.repeat(values, np.diff(self.ep_ends, prepend=0))
 ```
 
-`rollout` fills a batch. It plays complete episodes with any policy written as a function `policy(obs, rng) -> action`, the acting protocol of `evaluate` in :numref:`sec_valueiter`, and appends each step's state, action, reward, next state and termination flag. All randomness of the agent comes from the NumPy generator `rng`, so both framework tabs sample the same episodes.
+`rollout` fills a batch. It plays complete episodes with any policy written as a function `policy(obs, rng) -> action`, the acting protocol of `evaluate` in :numref:`sec_valueiter`, and appends each step's state, action, reward, next state and termination flag. All randomness of the agent comes from the NumPy generator `rng`, so the seed fixes every sampled episode.
 
 ```{.python .input #policy-gradient-an-optimization-problem-over-trajectories-2}
 %%tab pytorch, jax
@@ -290,7 +292,7 @@ def rollout(env, policy, num_episodes, rng):  #@save
 
 The training loop reuses `policy_step` from :numref:`sec_imitation`, which takes one optimizer step on $\frac{1}{N}\sum_t w_t \log \pi_\theta(a_t \mid s_t)$ over the $N$ steps of a batch. Behavior cloning passed $w_t = 1$; REINFORCE passes the return of the episode that contains step $t$. Internally `policy_step` minimizes the negative of this sum, a *surrogate loss*, whose value says nothing about how well the policy performs; only its gradient at the current $\theta$, the estimate, matters.
 
-Two details differ from :eqref:`eq_reinforce`. First, `policy_step` divides by the number of steps $N$ rather than the number of episodes $n$, which rescales the estimate by the mean episode length of the batch, a factor that varies from batch to batch. Second, the optimizer is Adam with the learning rate $0.1$ of `Policy.tabular`, not the plain step $\theta \leftarrow \theta + \eta\hat u$. Plain ascent crawls wherever an action has small probability, because by :eqref:`eq_softmax_score` the gradient of its preference carries that probability as a factor, while Adam moves each coordinate by about its learning rate (exercise :exref:`ex_policy-gradient-softmax-plateaus` compares the two). The loop collects a fresh batch, weights each step by its episode's return, takes one step, records the batch length in `steps`, and yields the batch's mean return:
+Two details differ from :eqref:`eq_reinforce`. First, `policy_step` divides by the number of steps $N$ rather than the number of episodes $n$, which divides the estimate by the mean episode length of the batch, a factor that varies from batch to batch. Second, the optimizer is Adam with the learning rate $0.1$ of `Policy.tabular`, not the plain step $\theta \leftarrow \theta + \eta\hat u$. Plain ascent crawls wherever an action has small probability, because by :eqref:`eq_softmax_score` the gradient of its preference carries that probability as a factor, while Adam moves each coordinate by about its learning rate (exercise :exref:`ex_policy-gradient-softmax-plateaus` compares the two). The loop collects a fresh batch, weights each step by its episode's return, takes one step, records the batch length in `steps`, and yields the batch's mean return:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
@@ -323,7 +325,7 @@ d2l.plot_curves({'REINFORCE': curves}, xlabel='update',
                 ylabel='mean return of the batch', reference=gamma ** 5)
 ```
 
-The curves start flat because, as the smallest case predicted, most early batches contain no success and give a zero estimate. Once a batch succeeds, its actions become more likely, successes become more frequent, and the mean return rises quickly. Every run approaches the dashed ceiling within a few dozen updates and stays a little below it, because the policy is still stochastic and sometimes leaves the shortest path. The next cell shows the learned policy of the first agent, with the most probable action and its probability at each cell:
+The plot shows the median of the twelve runs, with a band from the slowest to the fastest. The median starts flat because, as the smallest case predicted, most early batches contain no success and give a zero estimate. Once a batch succeeds, its actions become more likely, successes become more frequent, and the mean return rises quickly. Every run approaches the dashed ceiling within a few dozen updates and stays a little below it, because the policy is still stochastic and sometimes leaves the shortest path. The next cell shows the learned policy of the first agent, with the most probable action and its probability at each cell:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-3}
 %%tab pytorch, jax
@@ -332,7 +334,7 @@ probs = np.exp(agents[0].log_prob_np(np.repeat(np.arange(16), 4),
 d2l.show_grid(env.unwrapped.desc, probs.max(axis=1), probs.argmax(axis=1))
 ```
 
-The policy concentrates on one of the three shortest paths to the goal, chosen by the episodes that happened to succeed first. The holes and the goal stay uniform, because no action is ever taken there. Cells off the chosen path keep whatever preferences they picked up from early successful episodes that passed through them, and once the policy stops visiting them nothing changes them further. Nothing in this loop evaluated the transition kernel: `rollout` recorded the next states that the simulator sampled, and the update read only states, actions and returns. This is the cancellation of :numref:`subsec_pg-cancellation` at work, which the verifier task, having no kernel, could not show.
+The policy concentrates on one of the three shortest paths to the goal, chosen by the episodes that happened to succeed first. The holes and the goal stay uniform, because no action is ever taken there. Cells off the chosen path keep most of the preferences they picked up from early successful episodes that passed through them. They change only when an episode strays through them, which becomes rare as the path firms up; between visits Adam's momentum carries the last change on for a few dozen updates, then they stay put. Nothing in this loop evaluated the transition kernel: `rollout` recorded the next states that the simulator sampled, and the update read only states, actions and returns. This is the cancellation of :numref:`subsec_pg-cancellation` at work, which the verifier task, having no kernel, could not show.
 
 ## The Policy Gradient Theorem
 
@@ -353,7 +355,7 @@ $$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum
 
 ### Consequences
 
-The theorem has three consequences. First, the score at time $t$ needs only the rewards from $t$ on, because the proof removed the earlier ones as zero-mean noise, so an estimator that drops them has the same mean and less noise. Second, the gradient is an average over the states the policy visits, weighted by how often and how early it visits them, so a state that the policy no longer reaches receives no gradient; this is why the cells off the learned path above stopped changing. Third, many implementations drop the factor $\gamma^t$ from the first form. This replaces $d^{\pi_\theta}_\gamma$ by the undiscounted visitation of states, changes the relative weight of states visited late, and in general yields an update that is not the gradient of any objective :cite:`Nota.Thomas.2020`. Exercise :exref:`ex_policy-gradient-discount-that-implementations-drop` examines the difference.
+The theorem has three consequences. First, the score at time $t$ needs only the rewards from $t$ on, because the proof removed the earlier ones as zero-mean noise, so an estimator that drops them has the same mean and usually less noise. Second, the gradient is an average over the states the policy visits, weighted by how often and how early it visits them, so a state the policy rarely reaches receives little gradient, and a batch that never visits it gives its row an estimate of exactly zero; this is why the cells off the learned path above barely change. Third, many implementations drop the factor $\gamma^t$ from the first form. This replaces $d^{\pi_\theta}_\gamma$ by the undiscounted visitation of states, changes the relative weight of states visited late, and in general yields an update that is not the gradient of any objective :cite:`Nota.Thomas.2020`. Exercise :exref:`ex_policy-gradient-discount-that-implementations-drop` examines the difference.
 
 ## Costs and Limitations
 
@@ -372,16 +374,16 @@ for name, x in [('batches until a batch mean reaches 0.7', hit),
           f'range {x.min():,} to {x.max():,}')
 ```
 
-A batch mean first reaches $0.7$, about $90\%$ of the ceiling, after 25 to 50 updates, which is 3,000 to 6,500 environment steps. The full run of 256 updates uses about 27,000 steps, because each update keeps collecting a new batch long after the policy has stopped improving. On the same map, tabular Q-learning with $\alpha = 0.9$ found a greedy table that always reaches the goal in under 2,000 steps (:numref:`sec_qlearning`). Reusing a batch for several updates is the obvious remedy, and it is unsound without a correction (exercise :exref:`ex_policy-gradient-breaking-policy-rule-purpose`).
+A batch mean first reaches $0.7$, about $90\%$ of the ceiling, after 25 to 50 updates, which is 3,000 to 7,000 environment steps. The full run of 256 updates uses about 27,000 steps, because each update keeps collecting a new batch long after the policy has stopped improving. On the same map, tabular Q-learning with $\alpha = 0.9$ found, in almost every run, a greedy table that reaches the goal, and the whole run took about 3,500 steps (:numref:`sec_qlearning`). Reusing a batch for several updates is the obvious remedy, and it is unsound without a correction (exercise :exref:`ex_policy-gradient-breaking-policy-rule-purpose`).
 
 ### Unbiasedness and Variance
 
-The lake, like the verifier task, permits a check against the exact gradient, because its model is known. In :numref:`sec_valueiter` the value of a policy solved the linear system $V^\pi = r^\pi + \gamma P^\pi V^\pi$, where $P^\pi(s, s') = \sum_a \pi(a \mid s) P(s' \mid s, a)$ and $r^\pi(s) = \sum_a \pi(a \mid s)\, r(s, a)$. The objective is therefore
+The lake, like the verifier task, permits a check against the exact gradient, because its model is known. In :numref:`sec_valueiter` the value of a policy solved the linear system $V^\pi = r_\pi + \gamma P_\pi V^\pi$, where $P_\pi(s' \mid s) = \sum_a \pi(a \mid s) P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi(a \mid s)\, r(s, a)$. The objective is therefore
 
-$$J(\theta) = V^{\pi_\theta}(s_0) = \Big[ \big(I - \gamma P^{\pi_\theta}\big)^{-1} r^{\pi_\theta} \Big]_{s_0}.$$
+$$J(\theta) = V^{\pi_\theta}(s_0) = \Big[ \big(I - \gamma P_{\pi_\theta}\big)^{-1} r_{\pi_\theta} \Big]_{s_0}.$$
 :eqlabel:`eq_pg_exact_objective`
 
-Every entry of $P^{\pi_\theta}$ and $r^{\pi_\theta}$ is a smooth function of $\theta$, so automatic differentiation through the linear solve gives the exact $\nabla_\theta J$. Holes and the goal are absorbing states with zero reward in `TabularMDP.from_gym`, so the solve accounts for termination. We freeze a policy `probe` after 16 updates of a run with seed 3, partway up its learning curve, and compute $J$ and its exact gradient there:
+Every entry of $P_{\pi_\theta}$ and $r_{\pi_\theta}$ is a smooth function of $\theta$, so automatic differentiation through the linear solve gives the exact $\nabla_\theta J$. Holes and the goal are absorbing states with zero reward in `TabularMDP.from_gym`, so the solve accounts for termination. We freeze a policy `probe` after 16 updates of the run with seed 3, which has started to climb by then, and compute $J$ and its exact gradient there:
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab pytorch
@@ -454,20 +456,20 @@ for n in [4, 16, 64]:
           f'of 50 by {mean:.2f} (if unbiased: {one / np.sqrt(50):.2f})')
 ```
 
-At $n = 4$ a single draw is off by more than three times the length of the gradient it estimates, and a few of the fifty draws are zero because no episode in the batch reached the goal. The error halves each time $n$ quadruples, the $1/\sqrt n$ law of the smallest case. At every $n$ the mean of fifty draws is off by about as much as an unbiased estimator would be, so the test finds no bias; exercise :exref:`ex_policy-gradient-testing-unbiasedness` pushes it to many more draws, where a small bias would show.
+At $n = 4$ a single draw is off by more than three times the length of the gradient it estimates, and some draws can be zero because no episode in the batch reached the goal. The error halves each time $n$ quadruples, the $1/\sqrt n$ law of the smallest case. At every $n$ the mean of fifty draws is off by about as much as an unbiased estimator would be, so the test finds no bias; exercise :exref:`ex_policy-gradient-testing-unbiasedness` pushes it to many more draws, where a small bias would show.
 
 ### Plateaus and Convergence
 :label:`subsec_pg-nonconcavity`
 
-The objective is not concave in $\theta$. Already in the smallest case $J = p$ is a logistic function of $\theta_1 - \theta_2$, flat on both sides. Gradient ascent on a nonconcave function can in general stop at a poor stationary point. For the tabular softmax policy it cannot: exact gradient ascent has no suboptimal stationary point and converges to an optimal policy :cite:`Agarwal.Kakade.Lee.ea.2021,Mei.Xiao.Szepesvari.ea.2020`. Convergence can still be slow. Where the better action at a state has small probability, the gradient of its preference carries that probability as a factor, so ascent creeps across a plateau, and there are MDPs in which exact softmax ascent needs a number of steps exponential in the number of states :cite:`Li.Wei.Chi.ea.2021`.
+The objective is not concave in $\theta$. Already in the smallest case $J = p$ is a logistic function of $\theta_1 - \theta_2$, flat on both sides. Gradient ascent on a nonconcave function can in general stop at a poor stationary point. For the tabular softmax policy it cannot: there is no suboptimal stationary point, and exact gradient ascent with a small enough step converges to an optimal policy when the start distribution gives every state positive probability :cite:`Agarwal.Kakade.Lee.ea.2021,Mei.Xiao.Szepesvari.ea.2020`. Convergence can still be slow. Where the better action at a state has small probability, the gradient of its preference carries that probability as a factor, so ascent creeps across a plateau, and there are MDPs in which exact softmax ascent needs a number of steps exponential in the number of states :cite:`Li.Wei.Chi.ea.2021`.
 
-Sampled updates with a fixed step size add a second risk. A few lucky batches can make the policy at some state nearly deterministic on a worse action, after which the gradient that would undo the choice is tiny, and the run stays committed for a long time :cite:`Mei.Dai.Xiao.ea.2021`. On the calm lake all twelve runs ended within a few hundredths of the ceiling; on slippery ice the same recipe settles at different levels below the optimum from seed to seed, and exercise :exref:`ex_policy-gradient-softmax-plateaus` finds out why.
+Sampled updates with a fixed step size add a second risk. A few lucky batches can make the policy at some state nearly deterministic on a worse action, after which the gradient that would undo the choice is tiny, and the run stays committed for a long time :cite:`Mei.Dai.Xiao.ea.2021`. On the calm lake all twelve runs ended within a few hundredths of the ceiling; on slippery ice the same recipe settles at different levels from seed to seed, some well below the optimum, and exercise :exref:`ex_policy-gradient-softmax-plateaus` finds out why.
 
-We can now improve a policy from its own episodes and their rewards alone, without a model, an expert, or a table of values, and on the verifier task the same update already has the shape of post-training a language model: a response is a trajectory, and its reward arrives at the end. The estimate is right on average, but with four episodes per batch a single draw is off by more than three times the gradient's length, and every failed episode contributes nothing. :numref:`sec_baselines` asks how much of that noise can be removed without moving the mean.
+We can now improve a policy from its own episodes and their rewards alone, without a model, an expert, or a table of values, and on the verifier task the same update already has the shape of post-training a language model: a response is a trajectory, and its reward arrives at the end. The estimate is right on average, but at the probe policy, with four episodes per batch, a single draw is off by more than three times the gradient's length, and every failed episode contributes nothing. :numref:`sec_baselines` asks how much of that noise can be removed without moving the mean.
 
 ## Summary
 
-Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by gradient ascent on its expected return $J(\theta)$. The log-derivative trick writes $\nabla_\theta J$ as an average over the policy's own trajectories of the return times the trajectory's score, and the transition kernel drops out of the score, so the gradient can be estimated from sampled episodes without a model. REINFORCE weights the score of every action by the return of its episode, which is behavior cloning's update with returns in place of unit weights. On the verifier task and the calm lake the estimate matches the exact gradient on average, but a small batch is off by several times the gradient's length, and the error shrinks only as $1/\sqrt n$. The policy gradient theorem shows that rewards collected before an action contribute only noise; every update needs a fresh batch from the current policy.
+Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by gradient ascent on its expected return $J(\theta)$. The log-derivative trick writes $\nabla_\theta J$ as an average over the policy's own trajectories of the return times the trajectory's score, and the transition kernel drops out of the score, so the gradient can be estimated from sampled episodes without a model. REINFORCE weights the score of every action by the return of its episode, which is behavior cloning's update with returns in place of unit weights. On the verifier task and the calm lake the estimate matches the exact gradient on average, but on the lake a small batch is off by several times the gradient's length, and the error shrinks only as $1/\sqrt n$. The policy gradient theorem shows that rewards collected before an action contribute only noise; every update needs a fresh batch from the current policy.
 
 ## Exercises
 
@@ -491,17 +493,17 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
 1. [code] **Sparse rewards.** The smallest case of the text has one state,
    two actions, reward $1$ for action 1 and $0$ for action 2, and
    $p = \pi_\theta(1)$; a single-sample estimate has standard deviation
-   $\sqrt{(1-p)/p}$ times its mean.
-    1. On FrozenLake, the analogous quantity is the probability $p_0$ that
-       an episode of the uniform initial policy reaches the goal. Compute
-       $p_0$ with `d2l.policy_evaluation` on
-       `d2l.TabularMDP.from_gym(env, 1.0)`, whose value function at
-       $\gamma = 1$ is the probability of reaching the goal (problem
-       :exref:`ex_value-iter-undiscounted-lake`b of :numref:`sec_valueiter`).
-       What fraction of the batches of 16 episodes in
-       `train_reinforce_tabular` contains no success at the start of
-       training? How many updates does that predict before the first
-       nonzero estimate, and does the start of the training curve agree?
+   $\sqrt{(1-p)/p}$ times its mean. On the lake the analogous quantity is the
+   probability $p_0 \approx 0.014$ that an episode of the uniform policy
+   reaches the goal, which :numref:`subsec_vi_slippery_ice` computes by
+   policy evaluation at $\gamma = 1$.
+    1. A batch with no success gives the estimate zero, and `policy_step`
+       then leaves the zero table unchanged, so the policy stays uniform
+       until the first success. What distribution does the number of
+       updates up to and including the first nonzero estimate follow, and
+       what is its mean for batches of 16 episodes? Record that number for
+       each of the twelve training runs and compare it with the prediction
+       and with the flat start of the training curve.
     1. Show that the mean of $n$ independent single-sample estimates has
        standard deviation $\sqrt{(1-p)/(np)}$ times its mean. How many
        episodes per batch would make the standard deviation equal to the
@@ -521,11 +523,12 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
        the step into the goal earn $0$. Show that the return of an episode
        of $T$ steps decreases by $(1 - \gamma^T)/(1 - \gamma)$. Does this
        shift change $J$ by a constant, as in the two-action setting?
-    1. The shift is the per-step charge $c = -1$ of problem
-       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_valueiter`. At
+    1. The shift is the per-step charge of problem
+       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_valueiter`,
+       taken to $c = -1$. At
        $\gamma = 0.95$, compare the shifted return of the shortest path from
        the start into a hole with that of a shortest path to the goal on the
-       deterministic map. Which policy maximizes $J$ under the shifted
+       calm lake. Which policy maximizes $J$ under the shifted
        rewards? Among the failed episodes of a batch, which ones does the
        estimate :eqref:`eq_reinforce` penalize least?
 1. [code] **The theorem in a table.** ● For the tabular softmax policy,
@@ -534,10 +537,10 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
    $d^{\pi_\theta}_\gamma = (1 - \gamma)\rho_\gamma$ in :eqref:`eq_pg_theorem`.
     1. Combine the occupancy form of :eqref:`eq_pg_theorem` with
        :eqref:`eq_softmax_score` to show that
-       $$\frac{\partial J}{\partial \theta_{s,b}} = \rho_\gamma(s)\, \pi_\theta(b \mid s) \big( Q^{\pi_\theta}(s,b) - V^{\pi_\theta}(s) \big).$$
+       $$\frac{\partial J}{\partial \theta_{s,a'}} = \rho_\gamma(s)\, \pi_\theta(a' \mid s) \big( Q^{\pi_\theta}(s,a') - V^{\pi_\theta}(s) \big).$$
     1. By problem :exref:`ex_value-iter-linear-system`b of
        :numref:`sec_valueiter`, $\rho_\gamma^\top$ is the row of
-       $(I - \gamma P^{\pi_\theta})^{-1}$ that belongs to $s_0$. Compute
+       $(I - \gamma P_{\pi_\theta})^{-1}$ that belongs to $s_0$. Compute
        $\rho_\gamma$, $V^{\pi_\theta}$ and $Q^{\pi_\theta}$ at the parameters
        of `probe` by linear solves with `mdp.P` and `mdp.r`, assemble the
        formula, and compare the result with `g_exact`.
@@ -555,7 +558,7 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
    `policy_step` $k$ times on each batch without any correction, for
    $k \in \{1, 2, 5, 20\}$. Write $\theta_\textrm{old}$ for the parameters
    that collected the batch.
-    1. On the deterministic map, log the batch mean return and, after the
+    1. On the calm lake, log the batch mean return and, after the
        $k$-th step, the mean and the maximum over the batch of the ratio
        $\pi_\theta(a_t \mid s_t) / \pi_{\theta_\textrm{old}}(a_t \mid s_t)$;
        `log_prob_np` evaluates both policies. How many environment steps
@@ -570,7 +573,7 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
        (`is_slippery=True`) by the final $J(\theta)$, computed with
        :eqref:`eq_pg_exact_objective` from the slippery transition table.
        Each run takes seconds. Explain the difference from the
-       deterministic map with the closed form of part b.
+       calm lake with the closed form of part b.
    :exlabel:`ex_policy-gradient-breaking-policy-rule-purpose`
 1. [code] **Testing unbiasedness.** ● The fifty-draw test of the text
    cannot reveal a bias smaller than the noise of fifty draws. A sharper
@@ -628,7 +631,7 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
     1. Following problem :exref:`ex_policy-gradient-theorem-table`a, show
        that
 
-       $$F_{s,b}(\theta) = \rho_1(s)\, \pi_\theta(b \mid s) \big( Q^{\pi_\theta}(s,b) - V^{\pi_\theta}(s) \big),$$
+       $$F_{s,a'}(\theta) = \rho_1(s)\, \pi_\theta(a' \mid s) \big( Q^{\pi_\theta}(s,a') - V^{\pi_\theta}(s) \big),$$
 
        where $\rho_1(s) = \sum_{t \geq 0} \Pr(s_t = s,\ t < T)$ is the
        expected number of visits to $s$ before the episode ends. Compute
@@ -734,10 +737,10 @@ returns as the weights.
 :::
 
 ::: {.slide title="A Softmax Policy Has the Score $e_a - \pi_\theta(\cdot \mid s)$"}
-$$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}},
+$$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a''} e^{\theta_{s,a''}}},
 \qquad
-\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,b}}
-= \mathbf{1}(b = a) - \pi_\theta(b \mid s)$$
+\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,a'}}
+= \mathbf{1}(a' = a) - \pi_\theta(a' \mid s)$$
 
 - An argmax policy is piecewise constant; softmax probabilities move smoothly.
 - One *preference* $\theta_{s,a}$ per state and action; the zero table is uniform.
@@ -786,7 +789,7 @@ failed episode earns nothing.
 :::
 :::
 
-::: {.slide title="The Log-Derivative Trick Makes $\nabla J$ an Average over Own Episodes"}
+::: {.slide title="The Log-Derivative Trick Makes $\nabla J$ an Average over the Policy's Own Episodes"}
 $$P(\tau; \theta) = \mu_0(s_0) \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\,
 P(s_{t+1} \mid s_t, a_t), \qquad J(\theta) = \sum_\tau P(\tau; \theta)\, R(\tau)$$
 
@@ -847,12 +850,12 @@ $\sqrt{(1-p)/(Kp)} = 0.66$ at $p \approx 1/8$, $K = 16$.
 
 . . .
 
-- The mean of $M$ falls on average like $0.66/\sqrt M$; one average can sit about 2× off that rate.
+- The mean of $M$ falls on average like $0.66/\sqrt M$; one average can land well below the rate or up to 2× above.
 - $(7/8)^{16} \approx 0.12$ of groups miss; on `8*8` and `9*9` every group is empty: no gradient.
 - One step with $\eta = 2$: success $0.062 \to 0.077$, exact or sampled (median).
 :::
 
-::: {.slide title="Without Slipping, the Gradient per Episode Is Three Times as Long"}
+::: {.slide title="Without Slipping, the Exact Gradient Starts Three Times as Long"}
 ![](../img/mdl-rl-gridworld.svg){width=72%}
 
 - Uniform start: both maps give the same random walk, 1.4% success.
@@ -896,7 +899,7 @@ the goal in six moves, return $\gamma^5 \approx 0.774$.
 @!policy-gradient-the-reinforce-estimator-3
 
 - One of three shortest paths, chosen by the first successful episodes.
-- Holes and goal stay uniform; off-path cells freeze once no longer visited.
+- Holes and goal stay uniform; off-path cells change only when an episode strays there.
 - The update read states, actions, returns: never the transition kernel.
 :::
 
@@ -907,13 +910,13 @@ REINFORCE is **on-policy**.
 @!policy-gradient-on-policy-fresh-data-after-every-update
 
 - A batch mean reaches 0.7, about 90% of the ceiling, after 25 to 50
-  updates: 3,000 to 6,500 steps.
-- Off-policy tabular Q-learning ($\alpha = 0.9$), same map: a table that
-  always reaches the goal in under 2,000 steps.
+  updates: 3,000 to 7,000 steps.
+- Off-policy tabular Q-learning ($\alpha = 0.9$), same map: almost always
+  a table that reaches the goal, in about 3,500 steps.
 :::
 
 ::: {.slide title="Against the Exact Gradient, Fifty Draws Show No Bias"}
-Exact: $J(\theta) = \big[(I - \gamma P^{\pi_\theta})^{-1} r^{\pi_\theta}\big]_{s_0}$,
+Exact: $J(\theta) = \big[(I - \gamma P_{\pi_\theta})^{-1} r_{\pi_\theta}\big]_{s_0}$,
 differentiated through the solve, at a policy frozen after 16 updates.
 Errors relative to $\|\nabla_\theta J\|$:
 
@@ -945,11 +948,11 @@ $t$ drop out; rewards from $t$ on average to $\gamma^t Q^{\pi_\theta}(s_t, a_t)$
 [Sutton et al. 2000]{.small}
 :::
 
-::: {.slide title="Earlier Rewards Are Noise, and Unvisited States Get No Gradient"}
+::: {.slide title="Earlier Rewards Are Noise, and Rarely Visited States Get Little Gradient"}
 - A score needs only the rewards from its step on: dropping the earlier
-  ones keeps the mean and removes noise.
-- States weigh by how often and how early $\pi$ visits them: unreached
-  states, like the frozen off-path cells, get no gradient.
+  ones keeps the mean and usually removes noise.
+- States weigh by how often and how early $\pi$ visits them: rarely visited
+  states, like the off-path cells, get little gradient.
 - Dropping $\gamma^t$, as many implementations do, counts late visits like
   early ones: in general the gradient of no objective.
 
@@ -958,27 +961,27 @@ $t$ drop out; rewards from $t$ on average to $\gamma^t Q^{\pi_\theta}(s_t, a_t)$
 
 ::: {.slide title="J Is Not Concave, Yet Exact Softmax Ascent Reaches an Optimum"}
 - Two actions: $J = \sigma(\theta_1 - \theta_2)$, flat on both sides.
-- Tabular softmax: exact ascent has no suboptimal stationary point.
+- Tabular softmax, start spread over all states: exact ascent reaches an optimum.
 - Slow where the better action is rare (its gradient carries its
   probability): exponentially many steps in some MDPs.
 - Sampled steps can lock a state onto a worse action.
 - No slipping: all twelve runs end within a few hundredths of the ceiling;
-  on slippery ice, runs settle at different levels below the optimum.
+  on slippery ice, runs settle at different levels, some well below the optimum.
 
 [Agarwal et al. 2021; Mei et al. 2020; Li et al. 2021; Mei et al. 2021]{.small}
 :::
 
-::: {.slide title="Check: Batch Size and Frozen Cells"}
+::: {.slide title="Check: Batch Size and Off-Path Cells"}
 [Check]{.kicker}
 
-1. At $n = 4$ one draw on the lake is off by 3.85 gradient lengths. About
-   how many episodes per batch bring it to one?
-2. Why do the off-path cells of the learned policy stop changing?
+1. At $n = 4$ one draw on the lake is off by about four gradient lengths.
+   About how many episodes per batch bring it to one?
+2. Why do the off-path cells of the learned policy barely change?
 
 ::: {.fragment .fade-up}
-1. Error $\propto 1/\sqrt n$: $n \approx 4 \times 3.85^2 \approx 60$; the run
-   measured 0.96 at $n = 64$.
-2. The policy no longer visits them: $d^{\pi}_\gamma(s) = 0$, so their rows get no gradient.
+1. Error $\propto 1/\sqrt n$: $n \approx 4 \times 4^2 = 64$; the run
+   measured about one at $n = 64$.
+2. The policy rarely visits them: $d^{\pi}_\gamma(s)$ is tiny, and a batch that misses $s$ gives row $s$ a zero estimate.
 :::
 :::
 
@@ -989,7 +992,7 @@ $t$ drop out; rewards from $t$ on average to $\gamma^t Q^{\pi_\theta}(s_t, a_t)$
 - REINFORCE: cloning's step with returns as weights.
 - Verifier: a group of 16 is off by 0.66 of the gradient; unsolvable prompts get none.
 - Lake: twelve runs climb to just below $\gamma^5 \approx 0.774$, about 27,000 steps each.
-- Unbiased; one draw at $n = 4$ is off by over 3×, falling as $1/\sqrt n$.
+- Unbiased; at the probe, one draw at $n = 4$ is off by over 3×, falling as $1/\sqrt n$.
 - Theorem: a score needs only the rewards that follow it.
 
 **Next:** less noise without moving the mean: baselines.

@@ -58,20 +58,20 @@
       ]
     },
     "value-iter-value-iteration-3": {
-      "code_fingerprint": "sha256:695fdb5bca21dda487f9719f430ca079aad9cbbedfa651f4d961a0afd7013685",
+      "code_fingerprint": "sha256:e5d70176e3d1530ecb73d9141646b9f2a05103b28e89778c149350b8a86892e4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
-          "bytes": 28636,
-          "sha256": "sha256:7c03c0daf822ac94a91e9acbc6b2a96b8a85466dc4b094fef5ee64e830c405e7"
+          "bytes": 42057,
+          "sha256": "sha256:c74bf688e59d67ef4d4bce7d2b184fb67e95fc95610e0a355760a4838fcad886"
         }
       ]
     },
     "value-iter-value-iteration-4": {
-      "code_fingerprint": "sha256:bb611f1eb95c84e0cd87fb7abde6a6da422140eadbae930059b66ba5c48e81e1",
+      "code_fingerprint": "sha256:50c73a9be3d43bf7f086339fa8a8ed6c09bfe7abc6394984ae82e3e8556e1ba0",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "value-iter-policy-evaluation": {
-      "code_fingerprint": "sha256:f35b2d546d9b7cbee23742e02de6c1c03ee5f62a85b5be77671333618019aaac",
+      "code_fingerprint": "sha256:167c204215fab0a4648c1616ad165ceb823fc2b24464e0142631a000696128ef",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +93,7 @@
       ]
     },
     "value-iter-policy-evaluation-1": {
-      "code_fingerprint": "sha256:4ee65231e9dceccf9814388d177a888954d817f4bd61eb949ce172594ead689b",
+      "code_fingerprint": "sha256:8b173da51efdc35e529e6b5c1579e8f3b2d939ed52634e1f066aaf69d62266d5",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +104,12 @@
       ]
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-1": {
-      "code_fingerprint": "sha256:141fa0d2404867dbeef685f3c63a0f3a44e5e91563d231a6ca592fa99b6c25d9",
+      "code_fingerprint": "sha256:f8945807e56646e2dd875e0bef3fabe3f6e0bb0ee6bd9ad2e2a2810bd17b1aa7",
       "kind": "text",
       "outputs": []
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-2": {
-      "code_fingerprint": "sha256:72437a570f20905ad7418f094a53ffd62391d2ac949cf324b8fd8e076c62f4e1",
+      "code_fingerprint": "sha256:42def04c64d858ca683e41e820f3440acd7e11ae2fe82ad646c7b4ca721af438",
       "kind": "text",
       "outputs": [
         {
@@ -120,12 +120,12 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-1": {
-      "code_fingerprint": "sha256:44acb315b362aa91fdfab0b1fca75ec585f1630c885b1024d4703c4aa3bda5c5",
+      "code_fingerprint": "sha256:2f45957a1a175cc3c2fd1244423f203d2a780cc7f6e4c745e39a085259d434cc",
       "kind": "text",
       "outputs": []
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-2": {
-      "code_fingerprint": "sha256:90d3b93524ac8cddfca31c851347cfa59f6e014e54dddfd4d50a8063104faca0",
+      "code_fingerprint": "sha256:06b3d2c3218785e426185cfcaa609dc9aadef35cc90eee9319a83dcf4395cd57",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +146,7 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-3": {
-      "code_fingerprint": "sha256:c1871eb4e4560c56a54bc998d497f0f559daff5c937636d5e488bb9d1bccf055",
+      "code_fingerprint": "sha256:25560898b41d0d09260ea309c38917be7b8f5b562fd52455c0c126dd051f5f57",
       "kind": "text",
       "outputs": [
         {
@@ -157,7 +157,7 @@
       ]
     },
     "value-iter-the-optimal-policy-on-slippery-ice-1": {
-      "code_fingerprint": "sha256:cdb30ab9dcc850dbe6e7b75449a4c42fbc11f4ef7500a709562088886069be73",
+      "code_fingerprint": "sha256:ca4f80a5de3ed5c51a4f8a33e585bdc53ba4c9110f36e97e8cbf73a447337026",
       "kind": "text",
       "outputs": [
         {
@@ -168,7 +168,7 @@
       ]
     },
     "mdp-model-based-versus-model-free": {
-      "code_fingerprint": "sha256:b372411a8bb15dfbb7a4579954837eff5d7886469b665bd350a00dcd9d89bb50",
+      "code_fingerprint": "sha256:fa40e190efb2c5885b86ba8a106843d115bb964a8a213c137607945bc6c84f9f",
       "kind": "text",
       "outputs": [
         {

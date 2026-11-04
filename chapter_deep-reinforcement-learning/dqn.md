@@ -49,7 +49,7 @@ if tab.selected('jax'):
 ```
 
 :begin_tab:`jax`
-The Q-network's layers are `d2l.Linear`, whose uniform initialization :numref:`sec_deeprl` describes. With Flax's default initialization instead, this DQN solved CartPole on about 4 of 10 seeds in our runs rather than about 8 of 10.
+The Q-network's layers are `d2l.Linear`, whose uniform initialization :numref:`sec_deeprl` describes. Run for 50 seeds with each initialization, this DQN solved CartPole (a greedy return of at least 475 over 100 episodes) on about two thirds of the runs with it and on about a quarter with Flax's default, which also ended most runs with a start-state value above $1/(1-\gamma) = 100$, the bound derived below.
 :end_tab:
 
 ## Sources of Instability

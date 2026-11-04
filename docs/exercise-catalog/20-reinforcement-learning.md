@@ -3,7 +3,7 @@
 Chapter overview (regenerated 2026-11-04 from the ch. 14 rebuild). The chapter
 has eight sections, in the order mdp, value-iter, qlearning, exploration,
 imitation, policy-gradient, baselines, deep-rl; the introduction (`index.md`)
-has no exercises. The sections hold 71 exercises, 56 of them with an
+has no exercises. The sections hold 71 exercises, 57 of them with an
 `:exlabel:`. Each entry below lists one exercise in the order of the file: its
 tag and difficulty marks as printed (`[code]`, `[extended]`, ● and ●●; no tag
 means pencil and paper), its label or "no label", its topic, and its source.
@@ -205,7 +205,7 @@ identical-reward groups on the verifier task.
 
 **Exercises:** 6 (3 moved in from qlearning.md, 3 new in the rebuild).
 
-1. [code] **The exploration schedule.** `ex_qlearning-exploration-schedule`
+1. [code] **The exploration schedule.** ●● `ex_qlearning-exploration-schedule`
    — a zero table behaves identically under every $\epsilon$ until the first
    success, what greedy selection does after it, and five schedules compared
    on slippery ice. *Source:* moved in the rebuild from qlearning.md (label
@@ -271,8 +271,10 @@ fine-tuning as behavior cloning.
    lake and the number of demonstrations needed to cover them.
    *Source:* Oct-2026 set (part 3 trimmed in the rebuild); original.
 6. [code] **DAgger on a longer path.** ● `ex_imitation-dagger-s-budget` —
-   the clone and DAgger on the $8 \times 8$ calm lake: the share of the loss
-   due to distribution shift and how DAgger closes it. *Source:* rebuild,
+   the experiment of the text repeated on the $8 \times 8$ calm lake: the
+   clone's loss after leaving the path against the share that labels off the
+   path recover, DAgger against cloning at equal label counts, and the
+   distinct states DAgger labels. *Source:* rebuild,
    replacing the Oct-2026 "DAgger's budget" (label kept); original.
 7. [code] **A noisy expert.** no label — labels corrupted with probability
    0.1: what cross-entropy converges to, and the clone against DAgger under
@@ -312,7 +314,9 @@ rebuild).
    without a success, and the batch size that brings the noise down to the
    mean. *Source:* Oct-2026 set; original.
 3. **Shifted rewards.** no label — subtracting one from every reward keeps
-   the mean but changes the noise; for which policies it helps.
+   the mean but changes the noise, for which policies it helps; on FrozenLake
+   the shift as a per-step charge, and which failed episodes it penalizes
+   least.
    *Source:* Oct-2026 set; original.
 4. [code] **The theorem in a table.** ● `ex_policy-gradient-theorem-table` —
    the tabular softmax gradient $\rho_\gamma(s)\pi(b \mid s)A(s,b)$ from the
@@ -371,8 +375,9 @@ rebuild).
 4. [code] **Baseline step size and timing.** ● no label — sweeping $\eta_V$
    (`eta_v`) and fitting the baseline before or after the policy step.
    *Source:* Oct-2026 set; original.
-5. [code] **Bias of batch centering.** ● no label — the $(n-1)/n$ factor
-   derived directly, and the bias of step-wise centering by enumeration.
+5. [code] **Bias of batch centering.** ● `ex_baselines-batch-centering` — the
+   $(n-1)/n$ factor derived directly, and the bias of step-wise centering by
+   enumeration.
    *Source:* Oct-2026 set; original.
 6. **The $\sigma$-normalized objective.** ● `ex_baselines-sigma-objective` —
    which prompts GRPO's division by $\sigma$ favors and the objective it

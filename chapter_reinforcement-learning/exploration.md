@@ -1,25 +1,30 @@
 # Exploration
 :label:`sec_exploration`
 
-Q-learning in :numref:`sec_qlearning` learned only the entries of its table
-that it tried. To keep trying commands that its table rated poorly, it acted
-at random with probability $\epsilon$, and this rule has a visible cost:
-forced to act at random one step in twenty, the optimal policy on the
-slippery lake succeeds about 54% of the time instead of 73%. Is that the
-right amount of trying? Could a different rule learn as much while losing
-less?
+Returning to a favorite restaurant gives a good meal; a new one may give a
+better meal or a worse one, and staying with the favorite forever means never
+finding out. The same question arises whenever we choose repeatedly among
+options whose value we learn only by choosing them: how often should we try
+something new, and when may we stop?
 
-The same question arises whenever we choose repeatedly among options whose
-value we learn only by choosing them. Returning to a favorite restaurant
-gives a good meal; a new one may give a better meal or a worse one, and
-staying with the favorite forever means never finding out. William Thompson
-posed the problem in 1933 for medicine: which of two treatments should the
-next patient receive, given how the earlier patients fared
-:cite:`Thompson.1933`? Herbert Robbins restated it in 1952 for a gambler
-facing several slot machines, the *multi-armed bandit*
-:cite:`Robbins.1952`. In 1985 Tze Leung Lai and Robbins showed that the cost
-of learning must grow with the number of trials, but that it can be kept as
-small as the logarithm of that number :cite:`Lai.Robbins.1985`.
+William Thompson posed the problem in 1933 for medicine: which of two
+treatments should the next patient receive, given how the earlier patients
+fared :cite:`Thompson.1933`? Herbert Robbins restated it in 1952 as a
+problem of sampling repeatedly from two populations, choosing each time
+which one to sample :cite:`Robbins.1952`. It soon took the name *two-armed
+bandit*, after the slot machine, the one-armed bandit; with more than two
+options it is the *multi-armed bandit*. In 1985 Tze Leung Lai and Robbins
+showed that the cost of learning must grow with the number of trials, but
+that it can be kept as small as the logarithm of that number
+:cite:`Lai.Robbins.1985`.
+
+Q-learning in :numref:`sec_qlearning` faced the same question and answered
+it crudely. It learned only the entries of its table that it tried, and to
+keep trying commands that its table rated poorly, it acted at random with
+probability $\epsilon$. The rule has a visible cost: forced to act at random
+one step in twenty, the optimal policy on the slippery lake succeeds about
+54% of the time instead of 73%. Is that the right amount of trying? Could a
+different rule learn as much while losing less?
 
 The question matters again for language models trained with a verifier. The
 model samples several answers to a prompt, a checker scores them, and the
@@ -101,8 +106,9 @@ The second form groups the pulls by arm: each arm's gap $\Delta_a$ times the
 number $n_t(a)$ of its pulls. Regret is what the agent loses against one that
 knew the best arm from the start. A rule that pulls one arm with mean $0.50$
 for good loses $0.40$ per pull, $800$ after $2000$ pulls, and its regret grows
-linearly in $t$. A rule whose regret grows more slowly than $t$ pulls worse
-arms ever more rarely, so its average regret per pull tends to zero.
+linearly in $t$. If a rule's regret grows more slowly than $t$, the rule
+pulls worse arms ever more rarely, and its average regret per pull tends to
+zero.
 
 ### Greedy and Epsilon-Greedy Rules
 
@@ -118,7 +124,8 @@ first twenty rounds and then ever more rarely. The schedule depends only on
 the round, not on anything the agent has learned.
 
 Each of these rules turns a row of value estimates into a distribution over
-actions, as :numref:`fig_rl_exploration` shows for a row of the lake's table.
+actions, as :numref:`fig_rl_exploration` shows for a row of four action
+values, one per move of the lake.
 Greedy puts all probability on the largest estimate, and $\epsilon$-greedy
 spreads a fraction $\epsilon$ of it uniformly over all actions. A third rule,
 *Boltzmann exploration*, makes the probability of each action proportional to
@@ -180,9 +187,9 @@ $2000\,\Delta_a$ in all, so the expected regret is
 
 $$\mathbb{E}\big[\textrm{Regret}(2000)\big] \approx 2000 \sum_a \frac{\mu_a}{\sum_b \mu_b}\, \Delta_a \approx 707.$$
 
-A single run loses one of the values $2000\,\Delta_a$, which lie between $0$
-and $1300$, so the quartiles of greedy's regret lie far apart. Its median,
-around $800$, belongs to the runs that settle on an arm with mean $0.50$.
+A single run loses one of the values $2000\,\Delta_a$, from $0$ (about one
+run in five) to $1300$; the median, around $800$, belongs to the runs that
+settle on an arm with mean $0.50$.
 
 The fixed rule with $\epsilon = 0.1$ finds the best arm in almost every run
 but never stops exploring. A random pull falls short of the best arm by the
@@ -200,8 +207,9 @@ so does the regret: an $\epsilon_t$ proportional to $1/t$ gives logarithmic
 regret. The constant matters. If it is too small, the rule stops exploring
 before it has told the best arm from the second best. The analysis of
 :citet:`Auer.CesaBianchi.Fischer.2002` guarantees logarithmic regret on every
-bandit whose gaps are at least $d$ with $\epsilon_t = \min(1, c\,m/(d^2 t))$
-for $m$ arms and any $c > 5$. For these arms, with $d = 0.30$, that is nearly
+bandit with $m$ arms whose smallest gap is $\Delta_{\min}$, with
+$\epsilon_t = \min(1, c\,m/(\Delta_{\min}^2 t))$ and any $c > 5$. For these
+arms, with $\Delta_{\min} = 0.30$, that is nearly
 thirty times our $20/t$. Our constant was chosen for these arms, and the
 guarantee does not cover it.
 
@@ -240,7 +248,7 @@ The size of the bonus comes from Hoeffding's inequality
 $[0, 1]$ exceeds the true mean $\mu$ by more than $h$ with probability at
 most $e^{-2 n h^2}$, and likewise falls below it. With
 $h = \kappa \sqrt{\log t / n}$, the true mean lies above the index
-with probability at most $t^{-2\kappa^2}$. A larger $\kappa$ makes such
+with probability at most $t^{-2\kappa^2}$, for a fixed count $n$. A larger $\kappa$ makes such
 failures rarer and spends more pulls on bad arms. With
 $\kappa = \sqrt{2}$ the rule is UCB1 of
 :citet:`Auer.CesaBianchi.Fischer.2002`, whose regret grows logarithmically in
@@ -301,8 +309,8 @@ Both rules end with a median regret of roughly $30$ to $40$, about a third of
 the fixed $\epsilon$ and below the annealed rule. They are close to each
 other: the difference between them is smaller than the spread over runs. On
 logarithmic axes a regret that grows linearly is a line of slope one. Greedy
-and fixed $\epsilon$ approach that slope, while UCB and Thompson sampling bend
-away from it. $2000$ pulls cannot establish an asymptotic rate, but the bend
+and fixed $\epsilon$ approach that slope, while UCB, Thompson sampling and the
+annealed rule bend away from it. $2000$ pulls cannot establish an asymptotic rate, but the bend
 is what logarithmic growth looks like.
 
 ### The UCB Coefficient
@@ -319,9 +327,9 @@ for j, kappa in enumerate([0.15, 0.5, np.sqrt(2)]):
           f'{np.median(r):3.0f}, min {r.min():3.0f}, max {r.max():3.0f}')
 ```
 
-At $2000$ pulls the coefficient decides the result. With $\kappa = \sqrt{2}$,
-UCB1 with its guarantee, the regret ends near $200$, five to six times that of
-$\kappa = 0.5$. With $\kappa = 0.15$ the median is the smallest, under ten,
+At $2000$ pulls the coefficient decides the result. UCB1, $\kappa = \sqrt{2}$,
+ends near $200$, five to six times the regret of $\kappa = 0.5$. With
+$\kappa = 0.15$ the median is the smallest, about ten,
 but the maximum is large. With so small a bonus, a run in which the best arm
 starts with a few unlucky pulls can settle on a worse arm and keep losing
 $0.3$ or more per pull. This happens in roughly one run in ten; the median
@@ -331,7 +339,11 @@ One might expect the theory's $\kappa$ to win once the horizon is long
 enough. On these arms it does not: in runs of $10^5$ pulls and more, which
 exercise :exref:`ex_exploration-long-horizons` reproduces, $\kappa = \sqrt{2}$
 keeps six to eight times the regret of $\kappa = 0.5$, and both grow like
-$\log t$. What the theory guarantees is something else: $\kappa = \sqrt{2}$
+$\log t$. The bonus accounts for the factor. UCB keeps pulling a worse arm
+$a$ until its bonus $\kappa\sqrt{\log t / n(a)}$ has shrunk to about
+$\Delta_a$, that is for about $\kappa^2 \log t / \Delta_a^2$ pulls, so in
+long runs the ratio of the two regrets approaches
+$(\sqrt{2}/0.5)^2 = 8$. What the theory guarantees is something else: $\kappa = \sqrt{2}$
 has logarithmic regret on every bandit with rewards in $[0, 1]$, and
 $\kappa = 0.5$ has no such guarantee. Hoeffding's inequality must hold for the
 worst case, an arm with variance $1/4$. The best arm here has variance
@@ -353,8 +365,9 @@ good as the best is hard to tell apart and must be pulled more often. For the
 arm with mean $0.60$, $D(0.60 \,\|\, 0.90) = 0.31$, and it must be pulled
 about $\ln 2000 / 0.31 \approx 24$ times by round $2000$. With
 :eqref:`eq_regret`, the regret of every such rule grows at least like
-$\ln t$. UCB and Thompson sampling grow at this rate, so in long runs no rule does
-better by more than a constant factor; fixed $\epsilon$ does not.
+$\ln t$. UCB and Thompson sampling grow at this rate, so in long runs no rule
+does better by more than a constant factor; fixed $\epsilon$, whose regret
+grows linearly, does not reach this rate.
 
 ## Exploration in MDPs
 
@@ -540,9 +553,10 @@ limits all three schedules is the first success. Until then every entry is
 zero and every schedule acts at random, so for a given seed the first success
 arrives in the same episode under every schedule. The goal is six moves from
 the start, and random walks find it within a few dozen episodes. The lake is
-too small to show the difficulty of the chain. On slippery ice, where a single
-visit to a pair says little about it, trying every pair once is not enough
-(exercise :exref:`ex_qlearning-exploration-schedule`).
+too small to show the difficulty of the chain. On slippery ice, the lake of
+this section's opening, a single visit to a pair says little about it, and
+trying every pair once is not enough (exercise
+:exref:`ex_qlearning-exploration-schedule`).
 
 ## Exploration on the Verifier Task
 
@@ -608,7 +622,7 @@ probability $p \approx 0.125$, and larger groups are more often mixed: about
 $78\%$ of the groups of two are identical, a third of the groups of eight,
 and almost none of the groups of $32$. Once a prompt is nearly solved, groups
 become identical again, about two thirds of them at $K = 8$, now because
-almost every response is right, and learning on that prompt slows to a halt.
+almost every response is right, and learning on that prompt slows.
 
 The learner explores only through its own sampling. The probability that a
 group contains at least one correct response, $1 - (1 - p)^K$, is the
@@ -645,7 +659,7 @@ exploration.
 
 ## Exercises
 
-1. [code] **The exploration schedule.** On a zero-initialized table,
+1. [code] **The exploration schedule.** ●● On a zero-initialized table,
    `epsilon_greedy` breaks every tie uniformly at random, and every reward
    of FrozenLake is nonnegative.
     1. Show that every entry of the table stays exactly zero until the
@@ -661,7 +675,8 @@ exploration.
        policy on slippery ice.
     1. The optional argument `epsilon` of `q_learning` is a function from
        the episode index to the exploration rate, such as those returned by
-       `linear_schedule`. On the slippery lake, run five seeds each with
+       `linear_schedule`. On the slippery lake, with the $4000$ episodes
+       of :numref:`sec_qlearning`, run five seeds each with
        $\epsilon$ held at $0$, $0.1$, $0.5$ and $1$, and with the schedule
        `linear_schedule(1.0, 0.05, num_episodes // 2)` that `q_learning`
        uses in :numref:`sec_qlearning`. For each setting, report the mean
@@ -684,14 +699,14 @@ exploration.
    $$P(\hat{\mu}_n \geq \mu + h) \leq e^{-2 n h^2},$$
    and likewise for the lower tail.
     1. Fix a suboptimal arm $a$ and let
-       $\ell = \lceil 8 \ln t / \Delta_a^2 \rceil$. Show that if arm $a$ is
-       pulled at a step $u \leq t$ while $n(a) \geq \ell$, then either the
+       $n_0 = \lceil 8 \ln t / \Delta_a^2 \rceil$. Show that if arm $a$ is
+       pulled at a step $u \leq t$ while $n(a) \geq n_0$, then either the
        index of the best arm lies at or below $\mu^*$, or the empirical
        mean of arm $a$ exceeds $\mu_a$ by more than its bonus.
     1. For fixed pull counts of both arms, bound the probability of each
        of the two events at step $u$ by $u^{-4}$. Take a union bound over
        the counts and sum over $u$ to show
-       $\mathbb{E}[n(a)] \leq \ell + \pi^2/3$ after $t$ pulls.
+       $\mathbb{E}[n(a)] \leq n_0 + \pi^2/3$ after $t$ pulls.
     1. Combine part (b) with the regret decomposition :eqref:`eq_regret`
        to obtain the theorem. Evaluate the bound for `arms` at $t = 2000$
        and compare it with the median regret near $200$ that the
@@ -700,7 +715,9 @@ exploration.
     1. Repeat the argument for a general coefficient $\kappa$. For which
        $\kappa$ does the sum over steps in part (b) still converge, and
        what does the answer say about the section's choice
-       $\kappa = 0.5$?
+       $\kappa = 0.5$? (The union bound over counts is loose; a peeling
+       argument of :cite:`Bubeck.CesaBianchi.2012` reaches every
+       $\kappa > 1$.)
    :exlabel:`ex_qlearning-ucb-logarithmic-regret`
 
 1. **Thompson's posterior.** ● Thompson sampling draws each arm's mean
@@ -969,8 +986,8 @@ true means (black). Nearly every pull went to the best arm.
 - Draw one sample from each arm's posterior; pull the largest draw.
 - Rewards in $\{0, 1\}$, uniform prior: $w$ wins in $n$ pulls give the
   posterior $\mathrm{Beta}(1 + w, 1 + n - w)$.
-- 3 wins in 4: $\mathrm{Beta}(4, 2)$, mean $2/3$ but wide. An untried draw
-  $U \sim \mathrm{Beta}(1, 1)$ beats it with probability $\mathbb{E}[1 - X] = 1/3$.
+- 3 wins in 4: $X \sim \mathrm{Beta}(4, 2)$, mean $2/3$ but wide. An untried
+  draw $U \sim \mathrm{Beta}(1, 1)$ beats $X$ with probability $\mathbb{E}[1 - X] = 1/3$.
 - Posteriors narrow as pulls accumulate. Logarithmic regret, and no
   constant to choose.
 - The rule in one line: `rng.beta(1 + wins, 1 + count - wins).argmax()`
@@ -993,8 +1010,8 @@ Log–log axes: linear regret has slope one; UCB and Thompson bend away from it.
   $\kappa = 0.5$; still six to eight times at $10^5$ pulls and more.
 - $\kappa = 0.15$: the smallest median, but in roughly one run in ten an
   unlucky start leaves it on a worse arm. The median hides these runs.
-- The guarantee covers the worst arm, variance $1/4$; the best arm here has
-  $0.9 \times 0.1 = 0.09$, so a smaller bonus is enough on this problem.
+- The guarantee covers the worst case, an arm of variance $1/4$; the best
+  arm here has $0.9 \times 0.1 = 0.09$, so a smaller bonus is enough here.
 :::
 
 ::: {.slide title="No Rule Beats ln t: the Lai–Robbins Lower Bound"}

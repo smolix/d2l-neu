@@ -36,7 +36,7 @@ $$(\mathcal{T}Q)(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s,
 
 Each entry of $\mathcal{T}Q$ is the expected immediate reward plus the discounted value of acting greedily on $Q$ from wherever the agent lands. Its fixed point is $Q^*$, and repeated application converges to $Q^*$ from any table, because $\mathcal{T}$ shrinks the largest difference between two tables by the factor $\gamma$, the contraction argument of :numref:`sec_valueiter` applied to action values.
 
-The model enters the backup in one place, the average over the successor $s'$. An average can be estimated from samples. Suppose the agent stands at $s$, commands $a$, receives reward $r$ and lands in $s'$. The number $r + \gamma \max_{a'} Q(s', a')$ is a random draw whose expectation over the successor, and over the reward, which on the lake depends on where the agent lands, is $(\mathcal{T}Q)(s, a)$. One transition is therefore an unbiased one-sample estimate of one entry of the backup.
+The model enters the backup in one place, the average over the successor $s'$. An average can be estimated from samples. Suppose the agent stands at $s$, commands $a$, receives reward $r$ and lands in $s'$. The number $r + \gamma \max_{a'} Q(s', a')$ is random. On the lake the reward, too, depends on where the agent lands. Averaged over the successor and the reward, the number equals $(\mathcal{T}Q)(s, a)$. One transition is therefore an unbiased one-sample estimate of one entry of the backup.
 
 This is why model-free control learns $Q$ rather than $V$. The state-value backup $V(s) \leftarrow \max_a [r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V(s')]$ puts the maximum outside the average over $s'$. One transition shows what one action did and says nothing about the brackets of the other actions, so it cannot estimate their maximum. In the $Q$ form each action has its own entry, the average sits inside that entry, and the maximum acts only on numbers the table already holds. The same form makes the greedy policy $\mathrm{argmax}_a Q(s, a)$ a lookup in one row of the table, again without the model.
 
@@ -98,7 +98,7 @@ the sample mean of the targets, whatever the initial value. If the targets were 
 
 $$\sum_{n=1}^{\infty} \alpha_n = \infty, \qquad \sum_{n=1}^{\infty} \alpha_n^2 < \infty.$$
 
-The first condition lets the steps travel any distance, so the initial value is forgotten. The second makes the accumulated noise finite. The sample mean $\alpha_n = 1/n$ satisfies both. A constant step size violates the second, and its entry keeps fluctuating around the mean with a variance proportional to $\alpha$.
+The first condition lets the steps travel any distance, so the initial value is forgotten. The second makes the accumulated noise finite. The sample mean $\alpha_n = 1/n$ satisfies both. A constant step size violates the second, and its entry keeps fluctuating around the mean with a variance of order $\alpha$ for small $\alpha$.
 
 **Proposition (convergence of tabular Q-learning).** *Let the state and action sets be finite, the rewards bounded and $\gamma < 1$. If every pair $(s, a)$ is updated infinitely often and its step sizes satisfy the Robbins–Monro conditions, then $Q$ converges to $Q^*$ with probability one* :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994,Tsitsiklis.1994`.
 
@@ -227,11 +227,11 @@ print(f'pi* forced to explore at epsilon = 0.05: {success(taxed):.3f}')
 print(f'median environment steps: {np.median(visits.sum(axis=(1, 2))):,.0f}')
 ```
 
-The third line is zero for every seed: in no cell does a learned greedy action lose value under $Q^*$, so each greedy policy is optimal up to ties and succeeds with the exact $73\%$ of $\pi^*$. This is the typical run, not a guarantee at this budget. In a set of twelve seeds, one run still preferred *right* at the start after $4{,}000$ episodes. The two best actions there differ by less than $0.01$ in $Q^*$, the run's estimates were low, and low estimates are corrected slowly, as the last subsection of this part explains. The value error stays within about $0.03$ of $V^*$ across seeds. The action-value error is several times larger, up to about $0.14$: the entries of actions the greedy policy does not take are updated mainly when the agent explores, so they average fewer targets.
+The third line is zero for every seed: in no cell does a learned greedy action lose value under $Q^*$, so each greedy policy is optimal up to ties and succeeds with the exact $73\%$ of $\pi^*$. This is the typical run, not a guarantee at this budget. In about one run in eight some greedy action is still suboptimal after $4{,}000$ episodes, usually at little cost (success $71\%$ to $74\%$). In the rare worst case the agent still prefers *right* at the start and succeeds less than half the time. The two best actions there differ by less than $0.01$ in $Q^*$, the run's estimates were low, and a low estimate is corrected slowly, because the greedy rule tries that action only when it explores. The value error stays within about $0.03$ of $V^*$ across seeds. The action-value error is several times larger, about $0.05$ to $0.17$: the entries of actions the greedy policy does not take are updated mainly when the agent explores, so they average fewer targets.
 
 Forced to act at random one step in twenty, $\pi^*$ itself succeeds only about $54\%$ of the time. The plateau of the training curve near $0.5$ is this cost of exploration, not a defect of the table.
 
-A run uses about $96{,}000$ environment steps. Value iteration certified $V^*$ after $164$ sweeps of $64$ backups, about $10{,}500$ backups, but the two counts measure different things: a backup reads a whole row of the transition table, while a step reveals one sampled successor. Exercise :exref:`ex_qlearning-samples-backups` compares the two with these information requirements made explicit.
+A run typically uses about $96{,}000$ environment steps. Value iteration certified $V^*$ after $164$ sweeps of $64$ backups, about $10{,}500$ backups, but the two counts measure different things: a backup reads a whole row of the transition table, while a step reveals one sampled successor. Exercise :exref:`ex_qlearning-samples-backups` compares the two with these information requirements made explicit.
 
 The learned values and arrows of the first seed, next to the exact solution:
 
@@ -246,27 +246,26 @@ The learned arrows reproduce the slip-aware strategy of :numref:`sec_valueiter` 
 
 ### Step-Size Schedules Compared
 
-On calm ice the targets carry no transition noise, and the contraction argument above allows the constant step $\alpha = 0.9$. One sixteenth of the episode budget then suffices, and the greedy policy of the final table reaches the goal in every episode:
+On calm ice the targets carry no transition noise, and the contraction argument above allows the constant step $\alpha = 0.9$. One eighth of the episode budget then almost always suffices, and here the greedy policy of the final table reaches the goal in every episode:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-3}
 %%tab pytorch, jax
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 table = np.zeros((mdp.num_states, mdp.num_actions))
 calm_visits = np.zeros_like(table)
-for _ in q_learning(0, table, calm_visits, calm, 256, gamma,
+for _ in q_learning(0, table, calm_visits, calm, 512, gamma,
                     alpha=lambda n: 0.9):
     pass
-print(f'calm ice, 256 episodes ({calm_visits.sum():,.0f} steps), alpha = 0.9: '
+print(f'calm ice, 512 episodes ({calm_visits.sum():,.0f} steps), alpha = 0.9: '
       f'greedy policy succeeds '
       f'{d2l.evaluate(calm, lambda s, rng: int(table[s].argmax()), 100):.0%}')
 ```
 
-A perfect table on calm ice takes under $2{,}000$ environment steps, against about $96{,}000$ for a run on slippery ice. Transition noise, not the learning rule, sets most of the cost. On slippery ice the step size matters. We compare three schedules on the same seeds by tracking one entry, $Q(s_0, \textrm{left})$, whose exact value $0.180$ is the value of the start under $\pi^*$. The plot shows the median over seeds with a band from the smallest to the largest:
+The calm-ice run takes about $3{,}500$ environment steps, against about $96{,}000$ for a run on slippery ice. In the rare run that fails, the agent has reached the goal too seldom for its value to flow back to the start, an exploration failure that :numref:`sec_exploration` studies. Transition noise, not the learning rule, sets most of the cost. On slippery ice the step size matters. We compare three schedules on the same seeds by tracking one entry, $Q(s_0, \textrm{left})$, whose exact value $0.180$ is the value of the start under $\pi^*$. The plot shows the median over seeds with a band from the smallest to the largest:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-4}
 %%tab pytorch, jax
 a0 = int(pi_star[0])          # FrozenLake's actions: left, down, right, up
-print(f'Q*(s0, {["left", "down", "right", "up"][a0]}) = {Q_star[0, a0]:.3f}')
 trace = {}
 for name, alpha in [('0.9 (constant)', lambda n: 0.9),
                     ('1/(1 + 0.1 n)', lambda n: 1 / (1 + 0.1 * n)),
@@ -284,11 +283,11 @@ d2l.plot_curves(trace, xlabel='episode', ylabel='estimate of Q(s0, left)',
                 reference=Q_star[0, a0])
 ```
 
-The constant step never settles. Each target moves the estimate by $90\%$ of its error, so after $4{,}000$ episodes the final estimates scatter widely around $0.180$, from near $0.05$ to above $0.25$. The default schedule ends within about $0.02$ of the exact value in the typical run. The schedule $1/(1 + n)$ satisfies the Robbins–Monro conditions as well, yet every run stays below $0.025$ at this budget, because the early targets, computed from a table of zeros, keep their full weight. This is the slow rate that Even-Dar and Mansour predict. The conditions guarantee the limit; they do not choose a schedule for a finite budget.
+The constant step never settles. Each target moves the estimate by $90\%$ of its error, so after $4{,}000$ episodes the final estimates scatter widely around $0.180$, from near $0.05$ to above $0.25$. The default schedule ends within about $0.02$ of the exact value in the typical run. The schedule $1/(1 + n)$ satisfies the Robbins–Monro conditions as well, yet every run stays below $0.03$, a sixth of the exact value, at this budget, because the early targets, computed from a table of zeros, keep their full weight. This is the slow rate that Even-Dar and Mansour predict. The conditions guarantee the limit; they do not choose a schedule for a finite budget.
 
 ### Feedback between Estimation and Data Collection
 
-The behavior policy depends on the current estimates, so errors in the estimates change which data are collected next. If $Q(s, a)$ is too large, the $\epsilon$-greedy policy selects $a$ more often and gathers transitions whose targets pull the estimate down. If $Q(s, a)$ is too small, the action is tried only when the agent explores, and the error is corrected slowly. Overestimates are thus self-correcting and underestimates are not, which is why the low run above took so long to change its first action.
+The behavior policy depends on the current estimates, so errors in the estimates change which data are collected next. If $Q(s, a)$ is too large, the $\epsilon$-greedy policy selects $a$ more often and gathers transitions whose targets pull the estimate down. If $Q(s, a)$ is too small, the action is tried only when the agent explores, and, as the run above showed, the error is corrected slowly. Overestimates are thus self-correcting and underestimates are not, which is why the low run above took so long to change its first action.
 
 At a fixed point of the update, the expected correction vanishes for every pair the behavior policy visits: $Q(s, a) = (\mathcal{T}Q)(s, a)$ there. This is not yet the optimality equation, because the maximum inside $\mathcal{T}Q$ still ranges over entries that are never visited and hence never constrained. A table can satisfy the equations on the visited pairs and still be wrong, which is why the convergence result needs every pair to be tried. An agent learning from a fixed log of transitions loses this feedback entirely; the next chapter returns to that case.
 
@@ -307,7 +306,7 @@ The method is called *SARSA*, after the tuple $(s, a, r, s', a')$ that each upda
 
 ### Maximization Bias
 
-The maximum of noisy estimates tends to exceed the maximum of their means, because the maximum picks out the entries whose errors happen to be positive. Since the maximum is convex, $\mathbb{E}[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} \mathbb{E}[\hat{Q}(s', a')]$, and every target that bootstraps from a noisy row inherits this *maximization bias*. The step-size traces above show it. Under the default schedule, the estimate of $Q(s_0, \textrm{left})$ first climbs above $0.180$ and only then settles. Its peaks in the printed runs lie between about $0.2$ and $0.33$, and over twelve seeds most runs overshoot in this way, by a few hundredths to more than a tenth. The constant step, whose estimates are noisier, overshoots further, to about $0.5$ for much of the first thousand episodes.
+The maximum of noisy estimates tends to exceed the maximum of their means, because the maximum picks out the entries whose errors happen to be positive. Since the maximum is convex, $\mathbb{E}[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} \mathbb{E}[\hat{Q}(s', a')]$, and every target that bootstraps from a noisy row inherits this *maximization bias*. The step-size traces above show it. Under the default schedule, the estimate of $Q(s_0, \textrm{left})$ first climbs above $0.180$ and only then settles. Without noise the estimate could not do this. From a table of zeros, with rewards that are never negative, every exact backup can only raise the values toward $Q^*$, so value iteration approaches $0.180$ from below. The median trace instead sits at about $0.22$ or above from episode $500$ to episode $1{,}500$; noise, passed through the maximum, has pushed it up. The peaks of the printed runs lie between about $0.2$ and $0.33$, and over twelve seeds most runs overshoot in this way, by a few hundredths to more than a tenth. The constant step, whose estimates are noisier, overshoots further, to about $0.5$ for much of the first thousand episodes.
 
 The bias shrinks as the tabular estimates converge, but it can persist under function approximation, where the noise does not vanish. Double Q-learning keeps two estimators, uses one to select the maximizing action and the other to evaluate it, and so removes the upward bias, although its estimates can be low :cite:`vanHasselt.2010`. Exercise :exref:`ex_qlearning-maximization-bias` builds it on a task where the bias misleads the agent.
 
@@ -319,7 +318,7 @@ $$\hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{N(s, a)}, \qquad \hat{r}(s, a) = \f
 
 the empirical frequency of each successor and the mean reward of each pair. Value iteration on $(\hat{P}, \hat{r})$, treating the estimate as if it were exact, is called *certainty equivalence*. It turns the problem without a model back into the problem of :numref:`sec_valueiter`.
 
-`Counts` wraps an environment: it passes every step through unchanged and records $N(s, a, s')$ and the summed rewards. Since `q_learning` touches the environment only through `reset` and `step`, it runs unchanged on the wrapper and learns the same table as before. `learned_model` divides the counts into $\hat{P}$ and $\hat{r}$ and returns them as a `d2l.TabularMDP`. Rows of pairs that were never tried stay zero, so the planner treats them as worthless dead ends:
+`Counts` wraps an environment: it passes every step through unchanged and records $N(s, a, s')$ and the summed rewards. Since `q_learning` touches the environment only through `reset` and `step`, it runs unchanged on the wrapper and learns the same table as it would without the wrapper. `learned_model` divides the counts into $\hat{P}$ and $\hat{r}$ and returns them as a `d2l.TabularMDP`. Rows of pairs that were never tried stay zero, so the planner treats them as worthless dead ends:
 
 ```{.python .input #qlearning-planning-in-a-learned-model-1}
 %%tab pytorch, jax
@@ -373,9 +372,9 @@ for budget in [500, 2000]:
     print(f'  planning in model: max |V - V*| {err_m:.3f}, success {win_m:.3f}')
 ```
 
-With little data, about $10{,}000$ steps, the planned greedy policy is the better one. It typically reaches the goal about two times in three, against about one in two for Q-learning's, and over twelve seeds it was at least as good in all but one run. The worst-case value error at this budget is set by a few rarely visited cells and goes either way from seed to seed. With about $47{,}000$ steps both greedy policies are optimal, and the planned values are about twice as accurate. They were better in all of twelve seeds, and about as accurate as Q-learning's tables after twice as many episodes. The reason is the one the worked transition showed. Q-learning moves value backward one transition per visit, using targets computed from a table that was wrong when the transition arrived. The model keeps every transition, and each of the few hundred sweeps of value iteration propagates the goal's reward through all of them. Exercise :exref:`ex_qlearning-batch-td-monte-carlo` shows the same effect in a two-state process.
+With little data, about $10{,}000$ steps, the planned greedy policy is the better one. It typically reaches the goal about two times in three, against about one in two for Q-learning's, and it was at least as good in about nine runs out of ten. The worst-case value error at this budget is set by a few rarely visited cells. It is usually smaller for the model, but not always, and the five runs printed here happen to favor Q-learning. With about $47{,}000$ steps both greedy policies are optimal in most runs, and the planned values are about twice as accurate. They were better in nearly every seed, and about as accurate as Q-learning's tables after twice as many episodes. The reason is the one the worked transition showed. Q-learning moves value backward one transition per visit, using targets computed from a table that was wrong when the transition arrived. The model keeps every transition, and each of the few hundred sweeps of value iteration propagates the goal's reward through all of them. Exercise :exref:`ex_qlearning-batch-td-monte-carlo` shows the same effect in a two-state process.
 
-The model has costs of its own. It stores $|\mathcal{S}|^2 |\mathcal{A}|$ counts, here about a thousand numbers and for a large state space far too many, and every new batch of data means solving it again. The planner also trusts the estimate completely: a pair that was never tried looks worthless, and a pair that was tried once and got lucky looks better than it is. Methods that learn models that generalize across states, and plan with them, belong to the next chapter.
+The model has costs of its own. It stores $|\mathcal{S}|^2 |\mathcal{A}|$ counts, here about a thousand numbers and for a large state space far too many, and every new batch of data means solving it again. The planner also trusts the estimate completely: a pair that was never tried looks worthless, and a pair that was tried once and got lucky looks better than it is. Methods that learn models that generalize across states, and plan with them, are beyond these two chapters; the end of :numref:`sec_rl_sequences` names a few.
 
 The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the rule used here is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
 
@@ -612,7 +611,6 @@ From single draws alone, can it find $\pi^*$, which reaches the goal 73% of the 
 - compute a Q-learning update by hand from one observed transition;
 - show that its expected step is a value-iteration step, and why least squares on the error is not;
 - choose step sizes: the Robbins–Monro conditions, and what a finite budget adds;
-- mask the target at termination but not at a time limit;
 - tell an off-policy target from an on-policy one, and spot the upward bias of the max;
 - plan in a model counted from the same transitions.
 
@@ -633,7 +631,7 @@ From single draws alone, can it find $\pi^*$, which reaches the goal 73% of the 
 | Learning from Demonstrations | an expert's actions |
 | Policy Gradient | the returns of its own attempts |
 | Baselines and Variance Reduction | less noisy gradient estimates |
-| Function Approximation in RL | a network instead of a table |
+| Function Approximation | a network instead of a table |
 :::
 
 ::: {.col .narrow}
@@ -733,7 +731,7 @@ $$\sum_{n=1}^{\infty} \alpha_n = \infty, \qquad \sum_{n=1}^{\infty} \alpha_n^2 <
 
 - First condition: the steps can travel any distance, so the initial value is forgotten.
 - Second condition: the accumulated noise stays finite.
-- A constant $\alpha$ fails the second: the entry keeps fluctuating, with variance proportional to $\alpha$.
+- A constant $\alpha$ fails the second: the entry keeps fluctuating, with variance of order $\alpha$.
 
 [Robbins and Monro 1951]{.small}
 :::
@@ -785,7 +783,8 @@ for episode in range(num_episodes):
         a = epsilon_greedy(Q[s], epsilon(episode), rng)
         s_next, r, terminated, truncated, _ = env.step(a)
         visits[s, a] += 1
-        delta = r + gamma * (1 - terminated) * Q[s_next].max() - Q[s, a]
+        delta = (r + gamma * (1 - terminated) * Q[s_next].max()
+                 - Q[s, a])
         Q[s, a] += alpha(visits[s, a]) * delta
         s, done, ret = s_next, terminated or truncated, ret + r
     yield ret
@@ -815,26 +814,28 @@ Forced to do the same, $\pi^*$ itself succeeds only about 54% of the time. Grade
 :::
 :::
 
-::: {.slide title="Every Greedy Table Is Optimal up to Ties after About 96,000 Steps"}
+::: {.slide title="Most Greedy Tables Are Optimal up to Ties after About 96,000 Steps"}
 [On the slippery lake]{.kicker}
 
 @!qlearning-reading-the-curve-honestly-1
 
-- Values within about 0.03 of $V^*$; action values off by up to about 0.14, since untaken actions update mainly while exploring.
-- Typical, not guaranteed: one of twelve seeds kept a wrong first action. Overestimates get tried and corrected; underestimates wait for exploration.
+- Values within about 0.03 of $V^*$; action values off by up to about 0.17, since untaken actions update mainly while exploring.
+- Typical, not guaranteed: about one seed in eight keeps a suboptimal action. Overestimates get tried and corrected; underestimates wait for exploration.
 :::
 
-::: {.slide title="Without Slips, α = 0.9 Learns a Perfect Table in under 2,000 Steps"}
+::: {.slide title="Without Slips, α = 0.9 Almost Always Learns a Perfect Table"}
 [On the slippery lake]{.kicker}
 
 @!qlearning-reading-the-curve-honestly-3
 
-- Calm ice: each pair has one successor, so the targets carry no transition noise; 1/16 of the episode budget.
-- Slippery ice took about 96,000 steps. Transition noise, not the learning rule, sets most of the cost.
+- Calm ice: each pair has one successor, so the targets carry no transition noise; 1/8 of the episode budget, about 3,500 steps.
+- Slippery ice typically took about 96,000 steps. Transition noise, not the learning rule, sets most of the cost.
 - Slippery ice: three schedules, two of them Robbins–Monro, on one entry, $Q(s_0, \textit{left}) = 0.180$.
 :::
 
 ::: {.slide title="At 4,000 Episodes, Only 1/(1 + 0.1 n) Settles near 0.180"}
+[On the slippery lake]{.kicker}
+
 @!qlearning-reading-the-curve-honestly-4
 :::
 
@@ -857,7 +858,7 @@ $$\delta = r + \gamma\, Q(s', a') - Q(s, a)$$
 
 - The max picks the entries whose errors are positive: $\mathbb{E}[\max_{a'} \hat Q(s', a')] \geq \max_{a'} \mathbb{E}[\hat Q(s', a')]$.
 - Every target that bootstraps from a noisy row inherits the bias.
-- Lake, default schedule: $Q(s_0, \textit{left})$ peaks between about 0.2 and 0.33, then settles at 0.180; most of twelve seeds overshoot.
+- Lake, default schedule: exact backups from zeros approach 0.180 from below, yet the median of $Q(s_0, \textit{left})$ sits at about 0.22 or above over episodes 500–1,500, then settles near 0.180.
 - Constant 0.9, noisier: about 0.5 for much of the first thousand episodes.
 - It fades as tables converge but persists with networks. Double Q-learning: one table picks the action, the other scores it.
 
@@ -881,8 +882,8 @@ $$\hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{N(s, a)}, \qquad \hat{r}(s, a) = \t
 
 @!qlearning-planning-in-a-learned-model-2
 
-- 500 episodes: planned about 2 in 3, Q-learning about 1 in 2; as good or better in 11 of 12 seeds.
-- About 47,000 steps: both optimal; planned values about twice as accurate, in all 12 seeds.
+- 500 episodes: planned about 2 in 3, Q-learning about 1 in 2; as good or better in about 9 seeds in 10.
+- About 47,000 steps: usually both optimal; planned values about twice as accurate in nearly every seed.
 - The price: $|\mathcal{S}|^2 |\mathcal{A}| \approx 1{,}000$ counts here, solved again after every batch.
 :::
 
@@ -905,8 +906,8 @@ so a lucky pair looks better than it is. Never tried: a zero row, a dead end wor
 
 - $\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a)$, $Q \leftarrow Q + \alpha\delta$: a value-iteration step in expectation.
 - Semi-gradient, not least squares: the target's variance moves the least-squares minimizer.
-- Robbins–Monro guarantees the limit; at 4,000 episodes only $1/(1 + 0.1\,n)$ ends near 0.180.
-- Lake: every greedy table optimal (73%) after about 96,000 steps; calm ice, under 2,000.
+- Robbins–Monro guarantees the limit; at 4,000 episodes only $1/(1 + 0.1\,n)$ settles near 0.180.
+- Lake: in most runs the greedy table is optimal (73%) after about 96,000 steps; calm ice, about 3,500.
 - Exploring at $\epsilon = 0.05$ costs even $\pi^*$ its success: 73% falls to 54%.
 - The max makes the target off-policy and biases noisy estimates upward.
 - Planning in the counted model: about 2 in 3 against 1 in 2 from 10,000 steps.

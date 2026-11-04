@@ -39,7 +39,7 @@ The question at cell 9 compares commands, while $V^\pi$ averages over them. The 
 
 $$Q^\pi(s_0, a_0) = r(s_0, a_0) + \mathbb{E}_{a_t \sim \pi(\cdot \mid s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big].$$
 
-The sum starts at $t = 1$ because the first reward is fixed by $a_0$: act as you must for one step, then follow the policy forever. Averaging the action value over the policy's own first action gives back the value,
+The sum starts at $t = 1$ because the first reward is fixed by $a_0$: take the given action for one step, then follow the policy forever. Averaging the action value over the policy's own first action gives back the value,
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a) \quad \textrm{for all } s \in \mathcal{S}.$$
 
@@ -54,7 +54,7 @@ $$V^\pi(s_0) = \mathbb{E}_{a_0 \sim \pi(\cdot \mid s_0)} \Big[ r(s_0, a_0) + \ga
 
 The outer expectation averages over the policy's choice of $a_0$; the inner one averages over the environment's next state $s_1$ given that action. For finite state and action spaces, the expectations are sums:
 
-$$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
+$$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_dynamic_programming_val`
 
 Conditioning also on the first action gives the corresponding equation for the action value:
@@ -208,7 +208,7 @@ The right-hand side depends only on the last two iterates, so value iteration ca
 
 The fourth concerns policies. Replacing the maximum in $\mathcal{T}$ by the average under a fixed policy $\pi$ gives the operator $\mathcal{T}^\pi$, which maps a table $V$ to the right-hand side of the expectation equation :eqref:`eq_dynamic_programming_val` with $V$ in place of $V^\pi$. The proof above, with an average in place of the maximum, shows that $\mathcal{T}^\pi$ is a $\gamma$-contraction too, so $V^\pi$ is its unique fixed point :cite:`Puterman.1994,Bertsekas.2025`. Now let $\pi$ be greedy with respect to $V^*$, as in :eqref:`eq_optimal_policy`. Then $\mathcal{T}^\pi V^* = \mathcal{T}V^* = V^*$, so $V^*$ is the fixed point of $\mathcal{T}^\pi$, which is $V^\pi$. Every greedy policy of $V^*$ is therefore optimal, whichever way ties between maximizing actions are broken, and extracting a policy with `argmax` is safe.
 
-All four consequences need $\gamma < 1$. At $\gamma = 1$ the proof shows only that $\mathcal{T}$ does not increase distances, and both uniqueness and convergence can fail (exercise :exref:`ex_value-iter-undiscounted-lake`). The always-*up* policy of :numref:`sec_mdp`, which never ends its episode, shows how: with a reward of $0.05$ per step, its undiscounted values would grow by $0.05$ with every sweep and never converge. Problems in which every policy ends its episodes with probability one, called stochastic shortest-path problems, keep a unique solution at $\gamma = 1$ :cite:`Bertsekas.2025`.
+All four consequences need $\gamma < 1$. At $\gamma = 1$ the proof shows only that $\mathcal{T}$ does not increase distances, and both uniqueness and convergence can fail (exercise :exref:`ex_value-iter-undiscounted-lake`). The always-*up* policy of :numref:`sec_mdp`, which never ends its episode, shows how: with a reward of $0.05$ per step, its undiscounted values would grow by $0.05$ with every sweep and never converge. Problems in which every policy ends its episodes with probability one, called stochastic shortest-path problems, keep a unique solution at $\gamma = 1$ once the values of the terminal states are fixed at zero :cite:`Bertsekas.2025`.
 
 ### Slippery Ice
 
@@ -230,20 +230,21 @@ d2l.show_grid(env.unwrapped.desc, [V_calm, V_star], [shortest, pi_star],
 
 The equation of cell 14 holds with $V^*(13) = 0.509$: $\tfrac13 + 0.95\,(0.509 + 0.724)/3 = 0.724$, the same number on both sides. The question of cell 9 has its answer. Commanding *down* is worth $0.375$, against $0.289$ for *right*, the better of the commands that risk the hole: the safety of *down* is worth the sideways slips. Compared with calm ice, the slips lower every value. The start cell falls from $0.774$ to $0.180$, and even cell 14, beside the goal, is worth $0.724$ rather than $1$. The commands change as well. In four cells the slippery optimum points away from the goal, and in several others into a wall; :numref:`subsec_vi_slippery_ice` explains each of them.
 
-How fast did the sweeps converge? The cell below plots the error $e_k$ of the first 130 iterates against the guarantee $\gamma^k e_0$, and asserts that the guarantee is never violated:
+How fast did the sweeps converge? The cell below plots the error $e_k$ of the first 170 sweeps against the guarantee $\gamma^k e_0$, with the tolerance $10^{-6}$ as a dashed line, and asserts that the guarantee is never violated:
 
 ```{.python .input #value-iter-value-iteration-3}
 %%tab pytorch, jax
 err = np.concatenate([[np.abs(V_star).max()],
                       np.abs(history - V_star).max(axis=1)])
-k = np.arange(131)
+k = np.arange(171)
 assert (err[k] <= err[0] * gamma ** k + 1e-12).all()
-d2l.plot_curves({'value iteration': np.log10(err[k]),
-                 'gamma^k guarantee': np.log10(err[0] * gamma ** k)},
-                xlabel='sweep k', ylabel='log10 of sup-norm distance to V*')
+d2l.plot_curves({'value iteration': err[k],
+                 r'guarantee $\gamma^k e_0$': err[0] * gamma ** k},
+                xlabel='sweep k', ylabel='sup-norm distance to V*',
+                yscale='log', reference=1e-6)
 ```
 
-On a logarithmic scale a geometric decay is a straight line. The guarantee falls by $\gamma = 0.95$ per sweep; from $e_0 = V^*(14) = 0.724$ it reaches $10^{-6}$ at sweep 264. The measured error falls faster, by about $0.92$ per sweep, and reaches $10^{-6}$ at sweep 158. The guarantee holds for every MDP with this discount, so neither the number of cells nor their distance from the goal enters it. The faster measured rate comes from the holes, which absorb probability and so cut the feedback between values (exercise :exref:`ex_value-iter-contraction-rate`).
+On a logarithmic scale a geometric decay is a straight line. The guarantee falls by $\gamma = 0.95$ per sweep; from $e_0 = V^*(14) = 0.724$ it reaches $10^{-6}$ at sweep 264. The measured error falls faster, by about $0.92$ per sweep, and crosses the dashed line at sweep 158. The guarantee holds for every MDP with this discount, so neither the number of cells nor their distance from the goal enters it (exercise :exref:`ex_value-iter-contraction-rate` explains the faster rate).
 
 ### Stopping Rules
 
@@ -350,6 +351,7 @@ The assertion checks that policy iteration and value iteration agree on $V^*$ to
 ```{.python .input #value-iter-policy-iteration-and-generalized-policy-iteration-2}
 %%tab pytorch, jax
 ok = [(mdp.backup(V_k).argmax(axis=1) == pi_star).all() for V_k in history]
+assert all(ok[np.argmax(ok):])     # once optimal, the greedy policy stays so
 first = mdp.backup(mdp.policy_value(uniform)).argmax(axis=1)
 per_sweep = mdp.num_states * mdp.num_actions          # backups in one sweep
 print(f'policy iteration: {num_outer} exact solves; the first greedy step '
@@ -364,7 +366,7 @@ Policy iteration needed two exact solves. The greedy policy of the uniform polic
 
 Evaluation and improvement need not alternate in complete phases. *Generalized policy iteration* is the name for any scheme that interleaves steps that move the values toward $V^\pi$ with steps that move the policy toward the greedy one :cite:`Sutton.Barto.2018`. Policy iteration completes each evaluation before it improves; value iteration improves after a single sweep of evaluation. Methods that learn from experience take smaller and noisier steps of the same two kinds, computed from sampled transitions instead of the model. :numref:`fig_rl_gpi` draws four such schemes.
 
-![Generalized policy iteration. The line $V = V^\pi$ holds the value estimates that are exact for their policy, the line $\pi = \mathrm{greedy}(V)$ the policies that are greedy for their estimate, and both hold only at $(V^*, \pi^*)$. From the same start, policy iteration evaluates all the way to the first line before each improvement, value iteration takes one sweep toward it, sampled backups take short noisy steps, and actor-critic methods move both coordinates a little at once. The axes stand for the spaces of value functions and policies; the drawing is schematic.](../img/mdl-rl-gpi.svg)
+![Generalized policy iteration. The line $V = V^\pi$ holds the value estimates that are exact for their policy, the line $\pi = \mathrm{greedy}(V)$ the policies that are greedy for their estimate, and both hold only at $(V^*, \pi^*)$. From the same start, policy iteration evaluates all the way to the first line before each improvement, value iteration takes one sweep toward it, sampled backups take short noisy steps, and methods that update a policy and its value estimate together move both coordinates a little at once. The axes stand for the spaces of value functions and policies; the drawing is schematic.](../img/mdl-rl-gpi.svg)
 :label:`fig_rl_gpi`
 
 ## The Optimal Policy on Slippery Ice
@@ -414,11 +416,11 @@ for name, p in [('slip-aware optimum', np.eye(4)[pi_star]),
           f'{mc:.3f} in 2000 episodes')
 ```
 
-The optimal policy reaches the goal within 100 steps with probability $0.730$, the shortest-path policy with probability $0.045$, about sixteen times less often, and the random walker with probability $0.014$. Each Monte Carlo estimate agrees with its exact value to within its sampling error, which is about one percentage point at $0.73$. The time limit costs $\pi^*$ a little, because its cautious commands make for long episodes and some that would reach the goal after more than 100 steps are cut off.
+The optimal policy reaches the goal within 100 steps with probability $0.730$, the shortest-path policy with probability $0.045$, about one sixteenth as often, and the random walker with probability $0.014$. Each Monte Carlo estimate differs from its exact value by no more than sampling noise explains: the standard error of 2,000 episodes is about one percentage point at $0.73$ and a quarter of a point at $0.014$. The time limit costs $\pi^*$ a little, because its cautious commands make for long episodes and some that would reach the goal after more than 100 steps are cut off.
 
 ### Commands That Turn Away from the Goal
 
-Why does the shortest path fail so badly? We look at each of the eleven frozen cells where the agent acts and ask two things: where the command of $\pi^*$ points, and how likely each policy's command is to move the agent into a hole on the next step. The direction is read from the calm-ice values: a command moves toward the goal if its calm-ice successor has a larger value `V_calm`, into a wall if the successor is the cell itself, and away from the goal otherwise. The array `risk[s, a]` holds the one-step hole probability $\sum_{s' \textrm{ a hole}} P(s' \mid s, a)$:
+Why does the shortest path fail so badly? We look at each of the eleven frozen cells where the agent acts and ask two things: where the command of $\pi^*$ points, and how likely each policy's command is to move the agent into a hole on the next step. The direction is read from the calm-ice values: a command moves toward the goal if its calm-ice successor has a larger value `V_calm`, into a wall if the successor is the cell itself, and away from the goal otherwise; a move into a hole or the goal counts as away, since both have value zero on calm ice. The array `risk[s, a]` holds the one-step hole probability $\sum_{s' \textrm{ a hole}} P(s' \mid s, a)$:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-3}
 %%tab pytorch, jax
@@ -434,11 +436,11 @@ for s in np.flatnonzero(~end):
           f'least {risk[s].min():.2f}')
 ```
 
-The optimal policy moves toward the goal in only two cells, 9 and 13. In five cells, 0, 1, 3, 4 and 14, it commands into a wall. Such a command turns the intended move into staying put and leaves the two slips as the moves that happen. At cell 4, for instance, *left* slides the agent up or down along the wall and never right into the hole at cell 5. At cell 14, *down* and *right* both reach the goal one time in three and stay in cell 14 one time in three; the third outcome is cell 13 for *down* and cell 10 for *right*, which is worth less (0.40 against 0.51 in the grid above).
+The optimal policy moves toward the goal in only two cells, 9 and 13. In five cells, 0, 1, 3, 4 and 14, it commands into a wall. Such a command turns the intended move into staying put and leaves the two slips as the moves that happen. At cell 4, for instance, *left* slides the agent up or down along the wall and never right into the hole at cell 5. At cell 14, *down* and *right* both reach the goal one time in three and stay in cell 14 one time in three. The third outcome is cell 13 for *down* and cell 10 for *right*, and cell 10 is worth less (0.40 against 0.51 in the grid above).
 
-In four cells, 2, 6, 8 and 10, the optimal policy points away from the goal. At cells 8 and 10 the commands toward the goal can slip into a hole, 12 below cell 8 and 11 beside cell 10; *up* at 8 and *left* at 10 cannot, and *left* at 10 still slides the agent down to cell 14 one time in three. At cell 6 every command risks a hole, since holes lie on both sides. *Left* and *right* risk one third, *up* and *down* two thirds, and $\pi^*$ takes one of the two least risky commands, which tie. It thus commands a move into a hole, which happens one time in three, because both of its slips land on safe cells. At cell 2 no command risks a hole, and *left* wins because it cannot slip the agent into the corner cell 3, the least valuable cell of the top row, from which every route passes back through cell 2.
+In four cells, 2, 6, 8 and 10, the optimal policy points away from the goal. At cells 8 and 10 the commands toward the goal can lead into a hole, 12 below cell 8 and 11 beside cell 10; *up* at 8 and *left* at 10 cannot, and *left* at 10 still slides the agent down to cell 14 one time in three. At cell 6 every command risks a hole, since holes lie on both sides. *Left* and *right* risk one third, *up* and *down* two thirds, and $\pi^*$ takes one of the two least risky commands, which tie; `argmax` picks *left*, and *right* would point toward the goal. It commands the move into hole 5, which happens one time in three, because both of its slips land on safe cells, while both slips of *up* and *down* land in holes. At cell 2 no command risks a hole, and *left* wins because it cannot slip the agent into the corner cell 3, the least valuable cell of the top row, from which every route passes back through cell 2.
 
-Over all eleven cells the risk of the optimal command is the least available, and it is zero everywhere except at cell 6. The shortest-path policy takes a risk of one third at cells 1, 3, 4, 8 and 10 and of two thirds at cell 6. These one-step risks do not yet say where episodes end, because that also depends on how often each cell is visited. For a deterministic policy $\pi$, let $P_\pi$ be the kernel under $\pi$ with the rows of the terminal states set to zero, so that the process stops there. The expected numbers of visits to the states, starting from $s_0 = 0$, form the row of $(I - P_\pi)^{-1}$ that belongs to $s_0$, which the function `falls` obtains by solving the transposed system. Visits times the hole risk of the command in each cell give the probability that the episode ends in a hole from that cell:
+Over all eleven cells the risk of the optimal command is the least available, and it is zero everywhere except at cell 6. The shortest-path policy takes a risk of one third at cells 1, 3, 4, 8 and 10 and of two thirds at cell 6. These one-step risks do not yet say where episodes end, because that also depends on how often each cell is visited. For a deterministic policy $\pi$, let $P_\pi$ be the kernel under $\pi$ with the rows of the terminal states set to zero, so that the process stops there. Both policies studied here end every episode with probability one, so $I - P_\pi$ is invertible, and the expected numbers of visits to the states, starting from $s_0 = 0$, form the row of $(I - P_\pi)^{-1}$ that belongs to $s_0$, which the function `falls` obtains by solving the transposed system. Visits times the hole risk of the command in each cell give the probability that the episode ends in a hole from that cell:
 
 ```{.python .input #value-iter-the-optimal-policy-on-slippery-ice-1}
 %%tab pytorch, jax
@@ -494,7 +496,7 @@ The bonus that :numref:`sec_mdp` proposed instead is a difference of potentials,
 
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s),$$
 
-for a bounded function $\Phi$ on the states. Around a loop its terms cancel, and the following proposition shows that it changes the value of every policy by the same amount.
+for a bounded function $\Phi$ on the states. Around a loop its terms cancel up to the discount, and the following proposition shows that it changes the value of every policy by the same amount.
 
 **Proposition (potential-based shaping).** *Let $0 \leq \gamma < 1$, let the terminal states be absorbing, as in `TabularMDP`, and let $\tilde V^\pi$ and $\tilde Q^\pi$ be the values under the shaped reward. Then for every policy $\pi$, state $s$ and action $a$,*
 
@@ -508,11 +510,11 @@ $$\sum_{t=0}^{T-1} \gamma^t \big( \gamma \Phi(s_{t+1}) - \Phi(s_t) \big) = \gamm
 
 As $T \to \infty$ the first term vanishes, because $\Phi$ is bounded and $\gamma < 1$. The shaped return of every trajectory is therefore its original return minus $\Phi(s_0)$. Taking expectations under $\pi$ from $s$ gives the first identity, and from $(s, a)$ the second. At each state the shift $\Phi(s)$ is the same for every policy and every action, so the ordering of policies and the maximizing actions of $Q^*(s, \cdot)$ are unchanged. $\blacksquare$
 
-Thus a potential changes every value, but every policy feels the change equally, and the comparison between policies, which is all that optimization uses, stays the same. Exercise :exref:`ex_mdp-reward-design-its-failure`c checks $\tilde V^* = V^* - \Phi$ on the lake. :citet:`Ng.Harada.Russell.1999` also proved a converse: if an added term $F(s, a, s')$ is not a difference of potentials, then there are a kernel and a reward on the same states and actions for which no optimal policy of the shaped MDP is optimal for the original one. The approach bonus is such a term, and the slippery lake is such an MDP.
+Thus a potential changes every value, but every policy feels the change equally, and the comparison between policies, which is all that optimization uses, stays the same. Exercise :exref:`ex_mdp-reward-design-its-failure`c checks $\tilde V^* = V^* - \Phi$ on the lake. :citet:`Ng.Harada.Russell.1999` also proved a converse. If an added term $F(s, a, s')$ is not a difference of potentials, then there are a kernel and a reward on the same states and actions for which no optimal policy of the shaped MDP is optimal for the original one. The approach bonus is such a term, and the slippery lake is such an MDP.
 
 If a potential cannot change the optimal policy, why use one? For exact planning there is no reason, since value iteration finds the same policy with or without it. The purpose is a learner that sees only sampled transitions. A potential that rises toward the goal, such as $\Phi = -0.3\,\ell$, spreads the goal's reward over the route, so that a learner receives a signal on every move instead of only on the last one.
 
-The proof used one property of `TabularMDP`: its terminal states are absorbing, so trajectories continue forever and the term $\gamma^T \Phi(s_T)$ vanishes in the limit. A simulator stops at the first terminal state instead. If that happens after $T$ steps, the shaped return of the episode is its original return plus $\gamma^T \Phi(s_T) - \Phi(s_0)$. The term $\gamma^T \Phi(s_T)$ depends on which terminal state the episode ends in, and when, so it can change which policy is best, unless $\Phi$ is zero at every terminal state. This is the condition that :numref:`sec_mdp` stated in words. The potential $\Phi = -0.3\,\ell$ is zero at the goal but negative at the holes, so in a simulator it would charge the agent for falling in, more for an early fall than for a late one, a penalty the original task does not contain.
+The proof used one property of `TabularMDP`: its terminal states are absorbing, so trajectories continue forever and the term $\gamma^T \Phi(s_T)$ vanishes in the limit. A simulator stops at the first terminal state instead. If that happens after $T$ steps, the shaped return of the episode is its original return plus $\gamma^T \Phi(s_T) - \Phi(s_0)$. The term $\gamma^T \Phi(s_T)$ depends on which terminal state the episode ends in, and when, so it can change which policy is best, unless $\Phi$ is zero at every terminal state. This is the condition that :numref:`sec_mdp` stated in words. The potential $\Phi = -0.3\,\ell$ is zero at the goal but negative at the holes. In a simulator it would therefore charge the agent for falling in, more for an early fall than for a late one, a penalty the original task does not contain.
 
 Everything in this section read the table $P$: every backup averaged over the next states with their exact probabilities. We can now compute the value of every state and every command of a known finite MDP, find an optimal policy with a certificate, and check what a change of reward does to it. A learning agent is rarely given the table. It sees one transition at a time, the one its own action produced. :numref:`sec_qlearning` asks whether values and an optimal policy can be learned from such samples alone.
 
@@ -747,9 +749,9 @@ Dynamic programming computes the best policy of a known MDP from the values of i
        optimum under the original reward. Finally set $\Phi$ to zero at the
        terminal states and repeat.
 
-   *Adapted from Sutton and Barto,
-   [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-   Exercises 3.15 and 3.16.*
+    *Adapted from Sutton and Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Exercises 3.15 and 3.16.*
    :exlabel:`ex_mdp-reward-design-its-failure`
 1. [extended] **Backup budgets.** ●● Policy iteration in
    :numref:`subsec_vi_policy_iteration` needed only two rounds, each with one
@@ -836,7 +838,7 @@ Which command is best depends on what every reachable cell is worth.
 | Learning from Demonstrations | an expert's actions |
 | Policy Gradient | the returns of its own attempts |
 | Baselines and Variance Reduction | less noisy gradient estimates |
-| Function Approximation in RL | a network instead of a table |
+| Function Approximation | a network instead of a table |
 :::
 
 ::: {.col .narrow}
@@ -1005,7 +1007,7 @@ III. If $V^{\pi'} = V^\pi$, then $\mathcal{T}V^\pi = V^\pi$, so $V^\pi = V^*$. $
 [Howard 1960; Puterman 1994]{.small}
 :::
 
-::: {.slide title="Policy Iteration: Evaluate Exactly, Act Greedily, Stop When Nothing Gains"}
+::: {.slide title="Policy Iteration: Evaluate, Improve, Stop When Nothing Gains"}
 @value-iter-policy-iteration-and-generalized-policy-iteration-1
 
 - Values never fall, and deterministic policies are finite: the loop ends.
@@ -1022,7 +1024,7 @@ III. If $V^{\pi'} = V^\pi$, then $\mathcal{T}V^\pi = V^\pi$, so $V^\pi = V^*$. $
 ::: {.slide title="π* Reaches the Goal About 16 Times as Often as the Shortest Path"}
 @!value-iter-what-the-optimal-policy-looks-like-on-ice-2
 
-- Exact: 100 sweeps of policy evaluation at $\gamma = 1$; Monte Carlo agrees to about a point.
+- Exact: 100 sweeps of policy evaluation at $\gamma = 1$; Monte Carlo agrees within sampling noise.
 - No time limit: $\pi^*$ falls into a hole 22% of the time (all at cell 6), the shortest path 96%.
 - A third of those falls start at cell 1, off the shortest route: slips carry it there.
 :::
@@ -1036,7 +1038,7 @@ Which command risks the least?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** *Left* or *right*: risk $1/3$, against $2/3$ for *up* and *down*, whose slips both hit holes.
-$\pi^*$ takes *left*. In every cell its command has the least hole risk: zero except at cell 6.
+$\pi^*$ takes one of them (`argmax` picks *left*). In every cell its command has the least hole risk: zero except at cell 6.
 :::
 :::
 :::

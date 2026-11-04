@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:7a75cf2d82e5354474290bb8992ec2cf97c289dc917e86a83dc31d4737f959e9",
+    "d2l_lib_fingerprint": "sha256:56ab142b9adcd0bbe6802b6108b4a767a72cc1730386c075d4273cedc5e9f399",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,7 +48,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
           "bytes": 71999,
-          "sha256": "sha256:6350ccde76c9e4cc169d9ab564d0388bf06ff9f57c39be03e53add27f972f908"
+          "sha256": "sha256:3a21997f3e7585f4994b30760e12ba147649b9de4ba404fa43a5c7eecd087614"
         }
       ]
     },
@@ -85,17 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "N = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "N = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
+          "text": "N =  4: episodes to the first success: random     2 (mean), optimistic  2 (median, max 2)\nN =  8: episodes to the first success: random    23 (mean), optimistic  3 (median, max 4)\nN = 12: episodes to the first success: random   273 (mean), optimistic  4 (median, max 5)\nN = 16: episodes to the first success: random  3449 (mean), optimistic  6 (median, max 7)\nN = 20: episodes to the first success: random 45590 (mean), optimistic  8 (median, max 10)\n"
         }
       ]
     },
@@ -123,7 +113,7 @@
           "mime": "image/svg+xml",
           "asset": "exploration/exploration-exploration-in-mdps-3-1.svg",
           "bytes": 69442,
-          "sha256": "sha256:a5fa2c8f884039af6139ed0b5fd789351ee16de31f855e96a848e816e461391e"
+          "sha256": "sha256:0b08e7c5bf82829b7a5e27b72d4e1b169705855fd438a46615938618f7ff8321"
         }
       ]
     },

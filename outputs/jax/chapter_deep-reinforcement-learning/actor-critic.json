@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:632e0a0920d91e441654ae06fd8ed452e6c6803c716367a4cf8a144793d6cab8",
+    "d2l_lib_fingerprint": "sha256:be41ddadaf12fa5e8213436ca63acca6b1e92dadf4a47cec98a431d069bff05f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
           "bytes": 49629,
-          "sha256": "sha256:0007bdf35f090977a2dc26a4525eaf917bd9b7cd23cbd363d936907561587bb5"
+          "sha256": "sha256:64a9cbb90821714abd296125f0ffddb4ea8772ca45c5260f45fefcaa2d4374d6"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
           "bytes": 30516,
-          "sha256": "sha256:5d0b761c8e0ce224faf4488db4c0ac376d2856a5e581bff9551846d6fd3d9765"
+          "sha256": "sha256:7aeb56eadcb429064db4948663320f406ecf7e6a315d691bf42bca08605a3106"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
           "bytes": 28340,
-          "sha256": "sha256:919e4a34bad66d17a7bc21426b3eb727992e000b83b86768e1af0f25cd639501"
+          "sha256": "sha256:81ef45bf4664d337aeab974b8713d5e340ba958f18505fae6126201914c2343e"
         }
       ]
     },
@@ -154,7 +154,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
           "bytes": 46279,
-          "sha256": "sha256:4ef51c21c36964d95c5f4535cf83530bbdf7b3a4faa3f46951790c863b58221d"
+          "sha256": "sha256:f16b75f929d91fef5cafbff802d8667a0e3e8c822eee8a2cc3da65cedef170b2"
         }
       ]
     },

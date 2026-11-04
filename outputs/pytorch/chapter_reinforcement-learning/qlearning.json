@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247670,
-          "sha256": "sha256:97a51da81c2e85c2a576a6df2c559217824c25d61d277dd1aa9a9068be6e6d22"
+          "sha256": "sha256:d718c46b0da2b693a1576c7db94cb2874010ce9b0966de9d4d3e45d597e48987"
         }
       ]
     },
@@ -66,30 +66,25 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 49420,
-          "sha256": "sha256:77679a1f85696202c3a8047950b6f270485198c15439b6560590b2b65d44db66"
+          "sha256": "sha256:79d962683c3b8cb24f988b1de7ba2001c9db88f0bdc1d25a3b887bdf983feeda"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:b8ec78523228b88e3a34a9cea92ce202834a9d203fc5e099676902510de3aef7",
+      "code_fingerprint": "sha256:b877e78edfad14f6416bf4efcf11bf5fdd657fd75781dd3bc86653f3095bdeb4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "calm ice, 256 episodes (1,725 steps), alpha = 0.9: greedy policy succeeds 100%\n"
+          "text": "calm ice, 512 episodes (3,658 steps), alpha = 0.9: greedy policy succeeds 100%\n"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:e8d7ef87d8d8d134fc6769f7be94ecc633384b3f1427b426dffb8f09e770803b",
+      "code_fingerprint": "sha256:7f51623221c6d4f5e5122b74ecc79582b44e98d215ae6406207bc1e768a3e805",
       "kind": "mixed",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Q*(s0, left) = 0.180\n"
-        },
         {
           "type": "stream",
           "name": "stdout",
@@ -110,17 +105,17 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 707108,
-          "sha256": "sha256:5b9d1816743bb4b6a7c94a068ffea88fc62a692e427d4eec1db690dede098cb7"
+          "sha256": "sha256:efda8e9789240db77554e468d6ab22781efa47c841138176be17fe1b87b42e83"
         }
       ]
     },
     "qlearning-planning-in-a-learned-model-1": {
-      "code_fingerprint": "sha256:fd790c093f6e2aa940912aff34e4db84a80ed62e1b83b3f19ff2396f0367bd1c",
+      "code_fingerprint": "sha256:c1efad7e27c5c5297d5fb8280d7aafa40e0a79b2012b39558ef805c2440a333c",
       "kind": "text",
       "outputs": []
     },
     "qlearning-planning-in-a-learned-model-2": {
-      "code_fingerprint": "sha256:f3b3d61eecf3374c35de1022706d7b45160541180b86988682b4c782ead56763",
+      "code_fingerprint": "sha256:4f710435962b233cae749512d94ba6191161c16ba89cdb6780ff7875f7c2c9e8",
       "kind": "text",
       "outputs": [
         {

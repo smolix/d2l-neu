@@ -508,7 +508,7 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
     # --- the boxes: (row, col) -> edge colour, dashed?, [(text, colour)] --- #
     CH2 = GRAY                                    # the second chapter, grayed
     cells = [
-        ("value", "on", GRAY, True, [("SARSA", CH2)]),
+        ("value", "on", BLUE, False, [("SARSA", "black")]),
         ("value", "off", BLUE, False, [("value iteration", "black"),
                                         ("Q-learning", "black"),
                                         ("DQN", CH2)]),

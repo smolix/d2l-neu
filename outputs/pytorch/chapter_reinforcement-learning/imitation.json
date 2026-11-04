@@ -67,39 +67,39 @@
       ]
     },
     "imitation-what-the-reduction-quietly-assumes-2": {
-      "code_fingerprint": "sha256:e7c01d7ff005e9d25905d243f2e684e663ba5785512ee5445f440511cd99f19e",
+      "code_fingerprint": "sha256:18fda4c59ee9ab36f8722b07868c5ee529968738a31299b958047eb318e9f56d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "disagreement with the expert: 0.182 on the training pairs, 0.182 on 100 fresh expert episodes, 0.216 on the clone's own states\nclone of   1 expert episodes: reaches the goal 0.660\nclone of  10 expert episodes: reaches the goal 0.660\nclone of 100 expert episodes: reaches the goal 0.660\n"
+          "text": "disagreement with the expert\n  on the training pairs:        0.182\n  on 100 fresh expert episodes: 0.182\n  on the clone's own states:    0.216\nclone of   1 expert episodes: reaches the goal 0.660\nclone of  10 expert episodes: reaches the goal 0.660\nclone of 100 expert episodes: reaches the goal 0.660\n"
         }
       ]
     },
     "imitation-distribution-shift-between-training-and-deployment-1": {
-      "code_fingerprint": "sha256:38b69ac7a3e7e2b1b66f044ca2bc3113f7bc79f0258a6204dc744307ede2e06e",
+      "code_fingerprint": "sha256:b1c16673c1d6b09e85c69aa263608e926a25320f23eacee44f13ccc3b09ca990",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1 episodes on slippery ice: 32.0% of 200 datasets give a clone below half the expert (0.730)\n"
+          "text": "share of 200 datasets whose greedy clone is below half the expert (0.730):\n  expert episodes per dataset  1: 32.0%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 3 episodes on slippery ice: 1.5% of 200 datasets give a clone below half the expert (0.730)\n"
+          "text": "  expert episodes per dataset  3: 1.5%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 episodes on slippery ice: 0.0% of 200 datasets give a clone below half the expert (0.730)\n"
+          "text": "  expert episodes per dataset 10: 0.0%\n"
         }
       ]
     },
     "imitation-the-proposition": {
-      "code_fingerprint": "sha256:eb7e1931ff803e82d6431cfc5f86b8237314eb310ec5efbc344877b47817d0bd",
+      "code_fingerprint": "sha256:58dfbaac24f55a0035fec86dca3938b136a3aab995551b291f2eda533202fcd0",
       "kind": "mixed",
       "outputs": [
         {
@@ -112,12 +112,12 @@
           "mime": "image/svg+xml",
           "asset": "imitation/imitation-the-proposition-1.svg",
           "bytes": 39583,
-          "sha256": "sha256:5510f4b16768b189dc9cbfc62814601af8e8f8eab0d61e1a37455ab3af26c282"
+          "sha256": "sha256:dbfc4e56a825255b4da93b653e451848a1affcd14db3ca5e0d49c4443471e4b7"
         }
       ]
     },
     "imitation-why-this-is-not-a-defect-of-the-fit": {
-      "code_fingerprint": "sha256:ceacb91154fa595638cc1a30508023c75d71eadf33feee82aeb568360bac295d",
+      "code_fingerprint": "sha256:75b37c5aead563449856bc2e80a98f0a7d939150e37634ce8bcb890cde76b6b6",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +128,7 @@
       ]
     },
     "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
-      "code_fingerprint": "sha256:81a51c2085e00c947f2c22b0c1a8a1c1c42518a47af94dd418e0ab42634f13ac",
+      "code_fingerprint": "sha256:2ee2a24c1d22ec52a65953306b2bb7ac4ae55fb0d7dcaadc6c6e69ee463e9873",
       "kind": "text",
       "outputs": [
         {

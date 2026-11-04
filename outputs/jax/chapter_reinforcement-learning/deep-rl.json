@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:3c02b1ff62e25eb477630371c47fa76ace98267a6ed5abfb802faa26494a277d",
+    "d2l_lib_fingerprint": "sha256:9108438d8f8b0cf4b55f048c1ef7d4bbfc79ab6a626914c74d220137620bb020",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -34,12 +34,12 @@
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:5245e6459aaa2467dc306f4dbe24842b7e49de660a4c45a47b1f889722ec73b3",
+      "code_fingerprint": "sha256:40efb44e1cd8af4dac13efd431f8379cf7d42c0c4e20458832faf899131bb609",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:e17e99b709419042ba41fceb46fda5c76471ed1b8a19f8fe90d4359a0dfb37f7",
+      "code_fingerprint": "sha256:f16b0b900624125ec2997bb5e329e3a3315ff483b92bee1f3da2bfa70824c70d",
       "kind": "asset",
       "outputs": [
         {
@@ -47,12 +47,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 32186,
-          "sha256": "sha256:4fefaea55f0be560efb48a4bb61b294fc4e7a7143cf9df7dc9c7ca2dabd09635"
+          "sha256": "sha256:653e59aed642a8c8022c86b7b378b19d5e570f0ac756b7d63e87d723dc2d5fc4"
         }
       ]
     },
     "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:2981b6ff93a0c01df330e24bce7c691356634a3deccf30ab3cf01aa5e996df6b",
+      "code_fingerprint": "sha256:cdb428c79087bf905f39e7ad78b62da30bbacb561857e8cf7350de32a192e389",
       "kind": "asset",
       "outputs": [
         {
@@ -60,17 +60,17 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 28331,
-          "sha256": "sha256:31cb9767b984c6db19c238f9460be3956446ca854dfb364b25100d14ee5f6bce"
+          "sha256": "sha256:296b4ac1f74edc1196ccdf1e5a4a8a85e8ab37fbf643168a7a192c7b85f98c8b"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:60f17b0b11104d86520d8e9153b9ce59294eaf8c134b38f0a98369fb7d1b4113",
+      "code_fingerprint": "sha256:55cdeeb407e233a8fe4bce8021e781fdfbefb27be11c5f4ab196b41e45aacac0",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:b28a9fc81a04d9a6c4902afd1abb0a8bd12a43fb7281048c7b28e114b5309dd5",
+      "code_fingerprint": "sha256:bed6bfa43f0fa837a5c25f0db132a3aed53f8271ed6c1cb0c221ef3e330b9b81",
       "kind": "text",
       "outputs": [
         {
@@ -86,7 +86,7 @@
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:8bc2a9562b9a686c53d6bda4697dd3dfa989be733d2d3cc5c46e2c98785d4530",
+      "code_fingerprint": "sha256:6361840d088fdb0e8aa183e3230d207107c0100b2c5033902c5236fccff3bf38",
       "kind": "asset",
       "outputs": [
         {
@@ -94,12 +94,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 52005,
-          "sha256": "sha256:5b4d6ab06841f3a401172887befc4f4ead935647d91db6239c73596dcd11ddf4"
+          "sha256": "sha256:6f47c49d8a81dcc286260acdfbee03122517e5a9c9101f3d3de4b43701e78258"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:2d88bda553a2b3e284180eebe58f3041272f7e5b06d5af9067dd73bebb097542",
+      "code_fingerprint": "sha256:2f39e74fea3c2fb879f4e2b57b9d417da487a0aba387fd002d7deb24555616ac",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:94d03f54c90ecd72e5afc9cc6f7907a38556060f37d52b46ad823573319b0021",
+      "code_fingerprint": "sha256:c9f4993ddfb77aecc07e4a5ed1939607cd07e5e3c1c140f0525eea2884490781",
       "kind": "text",
       "outputs": [
         {

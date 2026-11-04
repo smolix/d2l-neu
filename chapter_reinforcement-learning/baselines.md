@@ -5,7 +5,7 @@ In the previous section we trained a policy by raising the log-probability of ev
 
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i) \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i).$$
 
-On average this estimate is the gradient of the expected return $J(\theta)$. In a single draw it is not: with four episodes per update, one estimate at a partly trained policy missed the true gradient by more than three times the gradient's length, and a batch without a success gave no update at all. The weights explain much of this. On the calm lake every return is either zero or $\gamma^{T-1}$, so an action is either ignored or rewarded. A detour on a successful episode is pushed up, and the step into a hole on a failed one is never pushed down.
+On average this estimate is the gradient of the expected return $J(\theta)$. In a single draw it is not: with four episodes per update, a single estimate at a partly trained policy was typically off by more than three times the gradient's length, and a batch without a success gave no update at all. The weights explain much of this. On the calm lake every return is either zero or $\gamma^{T-1}$, so an action is either ignored or rewarded. A detour on a successful episode is pushed up, and the step into a hole on a failed one is never pushed down.
 
 Williams saw the problem in the 1992 paper that introduced REINFORCE and proposed a remedy there: subtract a reference level, a *baseline*, from the return before weighting :cite:`Williams.1992`. Statisticians call this a control variate. Subtract something whose mean you know, and the estimate keeps its mean while its variance can fall. Starting from one fact, that the score of the policy's own action averages to zero, this section works out which quantities may be subtracted and how much variance each removes, measured against exact gradients. The actor-critic methods of the next chapter and the group-based updates used to post-train language models are this estimator with other baselines.
 
@@ -30,19 +30,19 @@ import numpy as np
 import optax
 ```
 
-We keep the calm lake, $\gamma = 0.95$ and the softmax table of :numref:`sec_policygradient`. On the calm lake every action visibly affects the return; on slippery ice success is mostly luck, the return says little about any one action, and sixteen updates would not separate the estimators. Each update uses four episodes, few enough for differences in variance to show, and each training comparison runs twenty seeds. Episodes are cut after 200 steps. Only a policy stuck in a loop walks that long, and its value is near zero, so the cut changes no weight measurably; without it, the large step sizes used below produce episodes thousands of steps long.
+We keep the calm lake, $\gamma = 0.95$ and the softmax table of :numref:`sec_policygradient`. On the calm lake every action visibly affects the return; on slippery ice success is mostly luck, the return says little about any one action (at the uniform start, :numref:`sec_policygradient` found, a batch must be about nine times larger there for the same precision). Each update uses four episodes, few enough for differences in variance to show, and each training comparison runs twenty seeds. Episodes are cut after 200 steps. Only a policy stuck in a loop walks that long, and its value is near zero, so the cut changes no weight measurably; without it, the large step sizes used below produce episodes thousands of steps long.
 
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-2}
 %%tab pytorch, jax
 gamma, eta_v = 0.95, 0.1               # discount; value-table step size
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
-num_seeds = 20                         # twenty seeds: stable medians
+num_seeds = 20                         # twenty seeds per arm
 env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=200)
 ```
 
 ## The Zero-Mean Identity
 
-Every method in this section changes the weight of a score and must leave the mean in place. One identity guarantees this.
+Every method in this section changes the weight of a score and must leave the mean in place. One identity, already used in the proof of :eqref:`eq_pg_theorem`, guarantees this; we state it here for every differentiable policy.
 
 ### The Zero-Mean Lemma
 
@@ -89,7 +89,7 @@ $$\hat{u} = \frac{1}{n} \sum_{i=1}^n \sum_{t=0}^{T-1} \hat{G}_t^i\ \nabla_\theta
 
 Dropping $\gamma^t$ is not licensed by the identity. It counts a late visit to a state as heavily as an early one, so for $\gamma < 1$ the mean of :eqref:`eq_rtg` tilts away from $\nabla_\theta J$. :citet:`Thomas.2014` identified this bias in actor-critic algorithms, and :citet:`Nota.Thomas.2020` showed that the update is the gradient of no objective at all. At the policy studied below the tilt is about eight degrees (a cosine of $0.991$) and the mean is about $1.4$ times longer (exercise :exref:`ex_baselines-reward-to-go-taken-apart`). We keep the convention, which the methods built on this estimator share, and measure both versions.
 
-The reward-to-go of every step follows from one backward pass per episode, $\hat{G}_t = r_t + \gamma \hat{G}_{t+1}$, starting from zero after the last step. `backward_scan` runs this recursion for any vector and factor over each episode that `Batch.episodes` of :numref:`sec_policygradient` reports, and `reward_to_go` applies it to the rewards with factor $\gamma$:
+The reward-to-go of every step follows from one backward pass per episode, $\hat{G}_t = r_t + \gamma \hat{G}_{t+1}$, starting from zero after the last step. `backward_scan` runs this recursion for any vector and factor (later sections scan other quantities with other factors) over each episode that `Batch.episodes` of :numref:`sec_policygradient` reports, and `reward_to_go` applies it to the rewards with factor $\gamma$:
 
 ```{.python .input #baselines-reward-to-go-and-causality}
 %%tab pytorch, jax
@@ -140,7 +140,7 @@ Substituting $c^*$ back in leaves the variance at $(1 - \mathrm{corr}^2)\, \text
 
 For a policy gradient, take $X = \hat{G}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)$ and $Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$. By the lemma $\mathbb{E}[Y\mid s_t]=0$, and $c=b(s_t)$ recovers :eqref:`eq_pg_baseline`: a baseline is a control variate built from the score. The best coefficient is $c^*$, computed separately for each state; for a vector-valued score, inner products replace the products and give the optimal baseline $b^*$ of exercise :exref:`ex_baselines-optimal-constant-baseline`. :citet:`Greensmith.Bartlett.Baxter.2004` develop this analysis for policy gradients.
 
-The smallest case shows the size of the effect. Take the one-step problem of :numref:`fig_rl_score_ascent`: one action $a$ drawn from the normal distribution $\mathcal{N}(\theta, 1)$ at $\theta = 0$, and the reward $R(a)=0.4+2e^{-(a-2)^2/2}$. The expected reward is $J = \mathbb{E}[R] = 0.92$, the score with respect to $\theta$ is $a - \theta = a$, and the exact gradient is $\mathrm{d}J/\mathrm{d}\theta = 0.52$. A single-sample estimate $R(a)\,a$ has this mean and a standard deviation of $1.34$, more than two and a half times the quantity it estimates. Subtracting the mean reward, $(R(a) - 0.92)\,a$, cuts the standard deviation to $0.69$. The best constant is $b^* = \mathbb{E}[R(a)\,a^2] / \mathbb{E}[a^2] = 1.18$, above the mean reward because actions far from zero have large scores and, here, large rewards; it leaves $1-\mathrm{corr}^2 = 0.23$ of the variance without a baseline (:numref:`fig_rl_variance_reduction`).
+The smallest case shows the size of the effect. Take the one-step problem of :numref:`fig_rl_score_ascent`: one action $a$ drawn from the normal distribution $\mathcal{N}(a; \mu, 1)$ at $\mu = 0$, and the reward $R(a)=0.4+2e^{-(a-2)^2/2}$. The expected reward is $J = \mathbb{E}[R] = 0.92$, the score with respect to $\mu$ is $a - \mu = a$, and the exact gradient is $\mathrm{d}J/\mathrm{d}\mu = 0.52$. A single-sample estimate $R(a)\,a$ has this mean and a standard deviation of $1.34$, more than two and a half times the quantity it estimates. Subtracting the mean reward, $(R(a) - 0.92)\,a$, cuts the standard deviation to $0.69$. The best constant is $b^* = \mathbb{E}[R(a)\,a^2] / \mathbb{E}[a^2] = 1.18$, above the mean reward because actions far from zero have large scores and, here, large rewards; it leaves $1-\mathrm{corr}^2 = 0.23$ of the variance without a baseline (:numref:`fig_rl_variance_reduction`).
 
 ![Two ways to quiet the score-function estimator. (a) In a multi-step episode, rewards collected before an action have zero expected product with its score, so only the reward-to-go $\hat G_3$ remains. (b) On the one-step problem of :numref:`fig_rl_score_ascent`, subtracting the mean reward cuts the standard deviation of a single-sample estimate from $1.34$ to $0.69$; both histograms are clipped at their 1st and 95th percentiles. (c) The variance as a function of a constant baseline $b$ is a parabola, smallest at $b^* = 1.18$, where $0.23$ of the variance at $b = 0$ remains.](../img/mdl-rl-variance-reduction.svg)
 :label:`fig_rl_variance_reduction`
@@ -161,13 +161,13 @@ We do not know $V^{\pi_\theta}$, but we can estimate it from the same batches. K
 $$\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \eta_V \big( \hat{G}_t - \hat{V}(s_t) \big),$$
 :eqlabel:`eq_value_baseline`
 
-with a step size $\eta_V$. This is REINFORCE with a baseline :cite:`Williams.1992`. The table is fitted by regression on Monte Carlo returns, the reward-to-go values of complete episodes. Targets built from $\hat{V}$'s own predictions one step later give the actor-critic methods of :numref:`chap_deep_rl`, and their generalized advantage estimate equals $\hat{G}_t - \hat{V}(s_t)$ at its endpoint $\lambda = 1$.
+with a step size $\eta_V$. This is REINFORCE with a baseline :cite:`Williams.1992`. The table is fitted by regression on Monte Carlo returns, the reward-to-go values of complete episodes. Targets built from $\hat{V}$'s own predictions one step later give the actor-critic methods of :numref:`chap_deep_rl`, whose advantage estimate reduces to $\hat{G}_t - \hat{V}(s_t)$ when it does not bootstrap at all.
 
 ## Centering, Scaling, and Normalization
 
 Practitioners often standardize the weights of each batch or compare the samples of a group with one another, and every implementation must decide what to divide a summed loss by. Each choice changes either the estimator or only its scale, and the two are easy to confuse. Telling them apart needs a fixed policy whose exact gradient we know.
 
-We reuse `probe`, the policy of :numref:`sec_policygradient` after the same sixteen updates of sixteen episodes. Its value $J(\theta)=V^{\pi_\theta}(s_0)$ is the first entry of the solution of the linear system $V = r_\pi + \gamma P_\pi V$ of :numref:`sec_valueiter`, with $P_\pi(s' \mid s) = \sum_a \pi_\theta(a \mid s)\, P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi_\theta(a \mid s)\, r(s, a)$. `exact_gradient` builds this system from the softmax of the preference table and lets autograd differentiate $V(s_0)$ through the solve; it takes the reward table `r` as an argument, so it also serves a modified reward later. `mdp.policy_value(pi_np)` solves the same system in NumPy and returns $V^{\pi_\theta}$ at every state, the exact state baseline:
+We rebuild `probe` exactly as in :numref:`sec_policygradient`, after the same sixteen updates of sixteen episodes. Its value $J(\theta)=V^{\pi_\theta}(s_0)$ is the first entry of the solution of the linear system $V = r_\pi + \gamma P_\pi V$ of :numref:`sec_valueiter`, with $P_\pi(s' \mid s) = \sum_a \pi_\theta(a \mid s)\, P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi_\theta(a \mid s)\, r(s, a)$. `exact_gradient` builds this system from the softmax of the preference table and lets autograd differentiate $V(s_0)$ through the solve; it takes the reward table `r` as an argument, so it also serves a modified reward later. `mdp.policy_value(pi_np)` solves the same system in NumPy and returns $V^{\pi_\theta}$ at every state, the exact state baseline:
 
 ```{.python .input #baselines-estimator-hygiene}
 %%tab pytorch
@@ -227,9 +227,9 @@ A common variant standardizes the reward-to-go values within each batch. Collect
 $$\tilde{G}_t^i = \frac{\hat{G}_t^i - \bar{R}}{\sigma + 10^{-8}}$$
 :eqlabel:`eq_pg_normalized`
 
-in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\bar{R}$ is a baseline: it changes the relative weights of the samples and can change the direction of the estimate. Because $\bar{R}$ comes from the same batch, it depends weakly on the sampled actions; the next subsection computes the resulting bias.
+in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\bar{R}$ is a baseline: it changes the relative weights of the samples and can change the direction of the estimate. Because $\bar{R}$ comes from the same batch, it depends weakly on the sampled actions; the next subsection computes the resulting bias for per-trajectory weights, and exercise :exref:`ex_baselines-batch-centering` for the step-level weights used here.
 
-Dividing by $\sigma + 10^{-8}$ multiplies the whole batch estimate by one positive number, so within a batch it acts as a step size that adapts to the spread of the rewards, not as a baseline. Across batches the factor is random and correlated with the batch, so the expected update tilts as well (exercise :exref:`ex_baselines-sigma-objective`). On the lake $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so at a fixed step size normalization takes steps at least twice as long as centering; below we measure about three times. `normalize` implements :eqref:`eq_pg_normalized`:
+Dividing by $\sigma + 10^{-8}$ multiplies the whole batch estimate by one positive number, so within a batch it acts as a step size that adapts to the spread of the rewards, not as a baseline. Across batches the factor is random and correlated with the batch, so the expected update tilts as well; exercise :exref:`ex_baselines-sigma-objective` works out the related effect of a $\sigma$ that differs across prompts. On the lake $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so at a fixed step size normalization takes steps at least twice as long as centering; below we measure about three times. `normalize` implements :eqref:`eq_pg_normalized`:
 
 ```{.python .input #baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling}
 %%tab pytorch, jax
@@ -249,7 +249,7 @@ Trajectories are drawn independently, so $b_i$ is independent of trajectory $i$,
 
 $$R_i-b_i=\frac{n}{n-1}(R_i-\bar{R}),$$
 
-so plain centering with per-trajectory weights shrinks the mean of the estimator by $(n-1)/n$, one half at $n = 2$. We verify both statements on a problem small enough to enumerate: two states visited in order, two actions at each, rewards from a table. `leave_one_out` computes the weights $R_i - b_i$ of one batch; the cell computes the exact gradient `g` from the four possible trajectories and the exact mean of both estimators over all sixteen ordered batches of two:
+so plain centering with per-trajectory weights multiplies the mean of the estimator by $(n-1)/n$, one half at $n = 2$. We verify both statements on a problem small enough to enumerate: two states visited in order, two actions at each, rewards from a table. `leave_one_out` computes the weights $R_i - b_i$ of one batch; the cell computes the exact gradient `g` from the four possible trajectories and the exact mean of both estimators over all sixteen ordered batches of two:
 
 ```{.python .input #baselines-leave-one-out}
 %%tab pytorch, jax
@@ -340,7 +340,7 @@ for K in (1, 2, 4, 8, 32):
           f'{task.success(task.policy(theta)):.3f}')
 ```
 
-At $K=1$ the policy keeps the reference score $0.062$, as predicted, and every $K\geq2$ reaches the ceiling of $0.5$ within the same budget, for every random seed we tried. The group supplies the per-prompt comparison that a learned value table would otherwise supply. Dividing by $\sigma$ per prompt has a further effect that this instance does not show: it changes which prompts the update favors (exercise :exref:`ex_baselines-sigma-objective`).
+At $K=1$ the policy keeps the reference score $0.062$, as predicted, and every $K\geq2$ reaches the ceiling of $0.5$ within the same budget, for each of the ten seeds we tried. The group supplies the per-prompt comparison that a learned value table would otherwise supply. Dividing by $\sigma$ per prompt has a further effect that this instance does not show: it changes which prompts the update favors (exercise :exref:`ex_baselines-sigma-objective`).
 
 ### The Loss Divisor
 :label:`subsec_pg_loss_divisor`
@@ -376,7 +376,7 @@ Three of the four gradients are parallel, at sizes an order of magnitude apart; 
 
 We now have five weightings for the score at step $t$. Which of them reduce the variance, and by how much? We answer first at a fixed policy, where the exact gradient is known, and then in training.
 
-### Five Gradient Estimators
+### Estimators at a Frozen Policy
 :label:`subsec_five_estimators`
 
 The five weightings are:
@@ -389,7 +389,7 @@ The five weightings are:
 
 A sixth row, **causal**, weights the score at step $t$ by $\gamma^t \hat{G}_t$, the unbiased estimator of the causality argument; it separates dropping past rewards from dropping $\gamma^t$.
 
-Holding the probe fixed, we draw $2{,}000$ batches of four episodes and compute every estimator on each. `estimate` sums the weighted scores of a batch and divides by the number of episodes, as in :eqref:`eq_rtg`; `discounted` multiplies each reward-to-go by $\gamma^t$, counting $t$ from the start of its episode; `weightings` maps each name to a function of the batch, its reward-to-go and a value table (`per_step` repeats each episode's return at its every step). `|mean|/|grad J|` and `cos` give the length of the mean of the draws relative to $\nabla_\theta J$ and the cosine between them, the scale and direction of the estimator's mean. `noise` is the relative variance: the trace of the covariance of the draws divided by the squared length of their own mean. Normalized weights are centered weights divided by $\sigma$, so measuring each estimator against its own mean keeps a rescaled estimator from being charged for its scale.
+Holding the probe fixed, we draw $2{,}000$ batches of four episodes and compute every estimator on each. `estimate` sums the weighted scores of a batch and divides by the number of episodes, as in :eqref:`eq_rtg`; `discounted` multiplies each reward-to-go by $\gamma^t$, counting $t$ from the start of its episode; `weightings` maps each name to a function of the batch, its reward-to-go and a value table (`per_step` repeats each episode's return over its steps). The printed columns `|mean|/|grad J|` and `cos` give the scale and direction of the estimator's mean: the length of the mean of the draws relative to $\nabla_\theta J$, and the cosine between them. The column `noise` is the relative variance, the trace of the covariance of the draws divided by the squared length of their own mean. It is measured against each estimator's own mean because normalized weights are centered weights divided by $\sigma$, and a rescaled estimator should not be charged for its scale.
 
 The lake has a single reward, at the goal, so there are no past rewards to drop. To see causality at work, the cell repeats the measurement with a charge of $0.1$ for every move from a live cell. Every recorded step is such a move, so subtracting $0.1$ from every reward of a batch gives the same episodes under the new reward; `costly` is the MDP with the same kernel and the charged reward, which supplies the exact gradient and $V^\pi$:
 
@@ -435,13 +435,13 @@ for case, (c, g, V) in cases.items():
               f'noise = {((u - m) ** 2).sum(axis=1).mean() / (m @ m):5.1f}')
 ```
 
-On the lake the return and causal rows agree draw for draw: with one reward at the end of a successful episode, $\gamma^t \hat{G}_t = \gamma^{T-1}$ is the return itself at every step. Reward-to-go differs from them only by the dropped $\gamma^t$, with a mean about $1.4$ times longer and a slightly lower cosine. An unbiased estimator averaged over $2{,}000$ draws has a cosine near $0.997$, so that column shows this tilt and little else. The noise column gives the ordering that holds when the draws are repeated with other seeds: the value baseline is quietest, centered and normalized come next and agree with each other, and return and reward-to-go are noisiest. Centering removes about 40 percent of the noise of reward-to-go, and the value baseline about half. Dividing by $\sigma$ lengthens the mean about threefold and leaves the noise where centering put it, as a step size should.
+On the lake the return and causal rows agree draw for draw: with one reward at the end of a successful episode, $\gamma^t \hat{G}_t = \gamma^{T-1}$ is the return itself at every step. Reward-to-go differs from them only by the dropped $\gamma^t$, with a mean about $1.4$ times longer and a slightly lower cosine. An unbiased estimator averaged over $2{,}000$ draws has a cosine near $0.997$, so that column shows this tilt and little else. The noise column gives the ordering that holds when the draws are repeated with other seeds: the value baseline is quietest, centered and normalized come next and agree with each other, and return and reward-to-go are noisiest. Centering removes about 40 percent of the noise of reward-to-go, and the value baseline about half. Centering also shortens the mean to about 0.8 of that of reward-to-go, near the factor $(n-1)/n = 3/4$ of per-trajectory centering. Dividing by $\sigma$ lengthens the mean about threefold and leaves the noise where centering put it, as a step size should.
 
 With the charge per move, dropping past rewards cuts the noise of the return about threefold here. It need not. The dropped terms have mean zero but are correlated with the rest, and $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y)$ can be smaller than $\textrm{Var}(X)$: at a charge of $0.01$ per move, dropping them raises the noise by about a sixth (exercise :exref:`ex_baselines-reward-to-go-taken-apart`). The ordering of the other rows also belongs to this policy; at the uniform policy centering does not help (exercise :exref:`ex_baselines-variance-ordering`).
 
-### Training at Matched Step Sizes
+### Step Size and Variance in Training
 
-Training compounds many steps, and the step size enters. The five arms below share one data generator and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `table` copies the preference table out of the policy, and `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
+Training compounds many steps, and the step size enters. The arms below use the same twenty seeds and differ only in the weight passed to `policy_step`. They update by plain SGD with step size $\eta$, because Adam rescales each coordinate and would partly undo the differences in scale under study. Every run updates $\hat{V}$ by :eqref:`eq_value_baseline`, though only the value-baseline arm uses it. `table` copies the preference table out of the policy, and `entropy` averages the entropy $-\sum_a \pi(a \mid s) \log \pi(a \mid s)$, in nats, over the states of a batch, so each state counts as often as the agent visits it:
 
 ```{.python .input #baselines-five-estimators-2}
 %%tab pytorch, jax
@@ -458,15 +458,16 @@ def entropy(theta, obs):
     return float(-(np.exp(logp) * logp).sum(axis=1)[obs].mean())
 ```
 
-`train` is REINFORCE with one of the `weightings` and a step size `eta`; its other arguments are the environment and the settings fixed at the start of the section. `policy_step` averages over the $N$ steps of a batch, while the frozen table averaged over its $n$ episodes; multiplying every weight by $N/n$ turns the first average into the second, so each arm runs the estimator the table measured. Without the factor the effective step would be $\eta\, n/N$, which grows as episodes shorten. Each update yields the batch's success rate, the length of the parameter step and the entropy along the batch:
+`train` is REINFORCE with one of the `weightings` and a step size `eta`; its other arguments are the environment and the settings fixed at the start of the section. `policy_step` averages over the $N$ steps of a batch, while the frozen table averaged over its $n$ episodes; multiplying every weight by $N/n$ turns the first average into the second, so each arm runs the estimator the table measured. Without the factor the effective step would be $\eta\, n/N$, which grows as episodes shorten. Given the MDP as `exact`, `train` replaces the learned table by the exact $V^{\pi_\theta}$ of the policy about to be updated, solved afresh before every update as at the frozen policy; we call this arm the *exact baseline*. Each update yields the batch's success rate, the length of the parameter step and the entropy along the batch:
 
 ```{.python .input #baselines-five-estimators-3}
 %%tab pytorch, jax
 if tab.selected('jax'):
     sgds = {}                 # one transform per step size: one compile each
 def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
-          eta_v):
-    """REINFORCE by plain SGD; the arms differ in one line, the weight."""
+          eta_v, exact=None):
+    """REINFORCE by plain SGD; the arms differ in one line, the weight. With
+    an MDP as `exact`, V is the exact V^pi of the current policy."""
     rng, V = np.random.default_rng(seed), np.zeros(16, np.float32)
     if tab.selected('pytorch'):
         ac = d2l.Policy.tabular(16, 4)
@@ -479,6 +480,9 @@ def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         G, before = batch.reward_to_go(gamma), table(ac)
+        if exact is not None:              # V^pi of the policy that acted
+            pi = np.exp(before - before.max(axis=1, keepdims=True))
+            V = exact.policy_value(pi / pi.sum(axis=1, keepdims=True))
         w = weighting(batch, G, V) * len(batch) / batch_episodes
         d2l.policy_step(ac, batch.obs, batch.act, w)  # sum over steps / n
         for s, g in zip(batch.obs, G):     # eq_value_baseline, every arm
@@ -492,32 +496,32 @@ def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,
 `sgds` keeps one `optax.sgd` transform per step size, so that all runs at the same step size share one compiled update.
 :end_tab:
 
-The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. We run every arm twice. `shared` uses $\eta = 2$ for all five. `matched` uses `step_sizes`, which put each arm's mean step length over its first 40 updates near $0.6$ (calibrated on 200 seeds outside the notebook). `setup` collects the settings every run shares. `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results into an array of shape (seeds, updates, 3):
+The weightings have different scales, so a shared $\eta$ gives them steps of different lengths, and step length alone changes how fast a run learns. Matching the average step length does not remove this. A step's length includes its noise, and the steps of an arm with a baseline shrink once its policy succeeds, while an arm without one keeps pushing up the actions it already takes; arms matched on average therefore still take steps of different lengths while they learn. The clean test holds the expected update fixed instead. The exact $V^{\pi_\theta}$ is fixed before the batch is drawn, and so is the learned $\hat{V}$, which was fitted on earlier batches only. By the conditional identity, reward-to-go, the value baseline and the exact baseline therefore have the same expected update at every $\theta$, and at one $\eta$ they differ only in their noise. We run all six arms at $\eta = 2$ (`shared`) and these three again at $\eta = 16$ (`large`). `setup` collects the settings every run shares, and `d2l.run_seeds` (:numref:`sec_utils`) calls `train` once per seed and stacks the results into an array of shape (seeds, updates, 3):
 
 ```{.python .input #baselines-five-estimators-4}
 %%tab pytorch, jax
 variants = ['return', 'reward-to-go', 'centered', 'normalized',
             'value baseline']
+arms = {v: dict(weighting=weightings[v]) for v in variants}
+arms['exact baseline'] = dict(weighting=weightings['value baseline'],
+                              exact=mdp)
 setup = dict(env=env, gamma=gamma, num_updates=num_updates,
              batch_episodes=batch_episodes, eta_v=eta_v)
-shared = {v: d2l.run_seeds(train, num_seeds, weighting=weightings[v],
-                           eta=2.0, **setup) for v in variants}
-step_sizes = {'return': 4.0, 'reward-to-go': 2.83, 'centered': 8.0,
-              'normalized': 1.68, 'value baseline': 8.0}  # |step| near 0.6
-matched = {v: d2l.run_seeds(train, num_seeds, weighting=weightings[v],
-                            eta=eta, **setup)
-           for v, eta in step_sizes.items()}
+shared = {v: d2l.run_seeds(train, num_seeds, eta=2.0, **kw, **setup)
+          for v, kw in arms.items()}
+large = {v: d2l.run_seeds(train, num_seeds, eta=16.0, **arms[v], **setup)
+         for v in ('reward-to-go', 'value baseline', 'exact baseline')}
 ```
 
-The success rate at matched step sizes, smoothed over a ten-update window, with each band spanning the interquartile range of the seeds around their median:
+The success rate of the three arms with a common mean at $\eta = 16$, smoothed over a ten-update window, with each band spanning the interquartile range of the seeds around their median:
 
 ```{.python .input #baselines-five-estimators-5}
 %%tab pytorch, jax
-d2l.plot_curves({v: r[:, :, 0] for v, r in matched.items()}, xlabel='update',
+d2l.plot_curves({v: r[:, :, 0] for v, r in large.items()}, xlabel='update',
                 ylabel='batch success rate', smooth=10, band='iqr')
 ```
 
-`to90` finds the first update at which the success rate over the last ten updates reaches 90 percent; the tolerance absorbs the rounding of nine in ten. The cell prints, for both designs, the median over seeds with the fastest and slowest seed, and the mean step length over the first 40 updates:
+`to90` finds the first update at which the success rate over the last ten updates reaches 90 percent; the tolerance absorbs the rounding of nine in ten. The cell prints, for both step sizes, the median over seeds with the fastest and slowest seed, the number of runs that never reach 90 percent within the 150 updates, and the mean step length over the updates before a run reaches 90 percent:
 
 ```{.python .input #baselines-five-estimators-6}
 %%tab pytorch, jax
@@ -526,35 +530,39 @@ def to90(curve):
     hit = np.convolve(curve, np.ones(10) / 10, 'valid') >= 0.9 - 1e-9
     return hit.argmax() + 9 if hit.any() else len(curve)
 
-for name, runs in (('eta = 2 for all', shared), ('matched steps', matched)):
+for name, runs in (('eta = 2', shared), ('eta = 16', large)):
     print(name)
     for v, r in runs.items():
         reach = np.array([to90(c) for c in r[:, :, 0]])
-        print(f'{v:>15}: updates to 90%: median {np.median(reach):5.1f} '
-              f'[{reach.min():3d}, {reach.max():3d}], '
-              f'|step| {r[:, :40, 1].mean():.2f}')
+        climb = np.mean([c[:t, 1].mean() for c, t in zip(r, reach)])
+        print(f'{v:>14}: to 90%: median {np.median(reach):5.1f} '
+              f'[{reach.min():3d}, {reach.max():3d}], never '
+              f'{(reach == num_updates).sum():2d}, |step| {climb:.2f}')
 ```
 
-At the shared step size the ordering is a step-size effect. Normalization needs the fewest updates, about 30 against 50 to 65, but its steps are about three times as long as those of centering and nearly twice those of reward-to-go. Centering is no faster than the plain return and slower than reward-to-go, the weight it centers, because it shrinks the step.
+At the shared step size the ordering is a step-size effect. Normalization needs the fewest updates, about 30 against 50 to 70, but before reaching 90 percent its steps are about three times as long as those of centering and more than one and a half times those of reward-to-go. Centering is no faster than the plain return and slower than reward-to-go, the weight it centers, because it shrinks the step. The three arms with a common mean cannot be told apart at this step size: each needs about 50 updates (over 200 seeds outside the notebook, 51 for reward-to-go and the value baseline and 50 for the exact baseline).
 
-At matched step lengths the two arms with a baseline, centered and value baseline, need about a quarter to a third fewer updates than the other three, roughly 25 to 30 against about 40, the ordering the frozen-policy table predicts. Normalization is no better than reward-to-go once its longer step is taken away, and return and reward-to-go cannot be told apart. Within every arm the slowest seed needs several times the updates of the fastest, so single runs can reverse the ordering; we report medians and ranges over twenty seeds :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
+At $\eta = 16$ they separate. All three learn faster than at $\eta = 2$, but the exact baseline gains most: over 200 seeds its median falls from 50 to 20 updates, and that of reward-to-go from 51 to about 30. The larger difference is in the failures. About one reward-to-go run in eight never reaches 90 percent, against none of the 200 exact-baseline runs. Nearly every such run has stalled: long steps along noisy directions made the policy nearly deterministic on a path that loops until the time limit or ends in a hole, every later episode returns zero, every weight is zero, and the policy never moves again. The learned table falls between the two (over 200 seeds, a median of 26 updates, and one run in twenty never reaches 90 percent), because at this step size the policy changes faster than $\hat{V}$ can follow. The step column shows that the gain is not a longer step: before reaching 90 percent the exact baseline moves about as far per update as reward-to-go. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
+
+At $\eta = 2$ the slowest seed of every arm needs two to six times the updates of the fastest, and at $\eta = 16$ the runs without the exact baseline spread wider still. Twenty seeds can therefore reorder medians that lie close together. Drawing twenty of the 200 seeds at random, the medians of reward-to-go and the exact baseline at $\eta = 2$ differ by more than six updates about one time in seven, while at $\eta = 16$ the exact baseline has the lower median in about 49 draws of 50. We report medians and ranges, and check a claim on more seeds before relying on it :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`.
 
 How deterministic does the policy become along the states the agent visits?
 
 ```{.python .input #baselines-five-estimators-7}
 %%tab pytorch, jax
-d2l.plot_curves({v: matched[v][:, :, 2] for v in ('return', 'value baseline')},
+d2l.plot_curves({v: large[v][:, :, 2] for v in ('reward-to-go',
+                                                 'exact baseline')},
                 xlabel='update', ylabel='entropy along the batch (nats)',
                 reference=np.log(4), smooth=10, band='iqr')
 ```
 
-Both arms start at the uniform policy's $\ln 4 \approx 1.39$ nats and fall below $0.1$ nats along the batch by about update 80 to 100, the value baseline earlier. An average over all sixteen states would stay near $0.8$ nats, because the four holes and the goal are never acted in and keep $\ln 4$.
+At $\eta = 16$ the median of both arms falls from the uniform policy's $\ln 4 \approx 1.39$ nats to below $0.1$ nats along the batch within the first 20 to 40 updates, that of reward-to-go usually sooner. A stalled run is as deterministic as a successful one, near zero nats on the path it repeats. An average over all sixteen states would stay above $0.4$ nats, because the four holes and the goal are never acted in and keep $\ln 4$.
 
 We can now say which weights may be used, how much variance each removes, and how to tell a better estimator from a longer step. Every estimator here indexed a table, sixteen rows of preferences and sixteen entries of $\hat{V}$. A cart on a track is described by four real numbers and never visits the same state twice; :numref:`sec_deeprl` replaces both tables by networks.
 
 ## Summary
 
-The score of a policy's own action has zero mean, and so does its product with anything fixed before the action. This lets us drop earlier rewards and subtract a baseline without changing the expected gradient. A baseline is a control variate; the state value $V^\pi$, which turns the weight into a sampled advantage, removed about half the noise at the policy we measured. A batch or group mean is a baseline with a bias of $(n-1)/n$ that leave-one-out removes, while dividing by the spread changes the step size; with binary rewards the group-normalized weight of GRPO pushes failures down, and a group of one cannot learn. At matched step lengths the arms with a baseline needed about a quarter to a third fewer updates, an ordering a shared step size hides.
+The score of a policy's own action has zero mean, and so does its product with anything fixed before the action. This lets us drop earlier rewards and subtract a baseline without changing the expected gradient. A baseline is a control variate; the state value $V^\pi$, which turns the weight into a sampled advantage, removed about half the noise at the policy we measured. Centering each trajectory's return by the batch or group mean multiplies the expected gradient by $(n-1)/n$, which leave-one-out removes; centering step by step shrinks it by a different factor. Dividing by the spread changes the step size, and with binary rewards the group-normalized weight of GRPO pushes failures down; a group of one cannot learn. A shared step size favors whichever weighting takes the longest steps. Compared at one step size and with the same mean, the exact value baseline and reward-to-go learn equally fast at a small step, while at a large step the baseline learns faster and does not stall.
 
 ## Exercises
 
@@ -610,8 +618,8 @@ The score of a policy's own action has zero mean, and so does its product with a
        for $X = \hat{G}\, \boldsymbol{\psi}$ and $Y = \boldsymbol{\psi}$,
        with inner products in place of products.
     1. In the one-step problem of :numref:`fig_rl_variance_reduction`, the
-       action is $a \sim \mathcal{N}(\theta, 1)$ at $\theta = 0$, so the
-       score with respect to $\theta$ is $a$. Compute $b^*$ for
+       action is $a \sim \mathcal{N}(\mu, 1)$ at $\mu = 0$, so the
+       score with respect to $\mu$ is $a$. Compute $b^*$ for
        $R(a) = 0.4 + 2e^{-(a-2)^2/2}$ and confirm the value $b^* = 1.18$. The product of the standard normal density with
        $e^{-(a-2)^2/2}$ is proportional to another normal density. Why does
        $b^*$ exceed $\mathbb{E}[R] = 0.92$?
@@ -620,8 +628,8 @@ The score of a policy's own action has zero mean, and so does its product with a
    `train` updates its table $\hat{V}$ by :eqref:`eq_value_baseline` after
    `policy_step`, so the baseline used on each batch was fitted on earlier
    batches only.
-    1. Sweep $\eta_V$ (`eta_v`) over $\{0.01, 0.1, 0.5, 1\}$, with the
-       arm's matched step size from `step_sizes`, and report the median and
+    1. Sweep $\eta_V$ (`eta_v`) over $\{0.01, 0.1, 0.5, 1\}$ at
+       $\eta = 16$, the step size of `large`, and report the median and
        the range over twenty seeds of the number of updates to 90% success.
        How sensitive is the arm to $\eta_V$?
     1. Move the value update above the line that computes the weights `w`,
@@ -655,6 +663,7 @@ The score of a policy's own action has zero mean, and so does its product with a
     1. Explain the comparison. For each of the two steps, which
        reward-to-go values inside the batch mean have a nonzero expected
        product with the score of that step?
+   :exlabel:`ex_baselines-batch-centering`
 1. **The $\sigma$-normalized objective.** ● GRPO divides the centered
    rewards of each group by their standard deviation $\sigma$, a choice
    that :citet:`Liu.Chen.Li.ea.2025` analyze. Consider a
@@ -707,17 +716,19 @@ The score of a policy's own action has zero mean, and so does its product with a
        change as the policy improves? What does that imply for an attempt to
        equalize the two arms by running the normalized arm at $\eta$ divided
        by the run average of $1/(\sigma + 10^{-8})$?
-    1. Matching step lengths, as the section does, gives a noisier arm a
-       smaller $\eta$ and so mixes variance with step size. A cleaner
-       comparison holds the expected update fixed. The exact value baseline
-       is admissible, so it has the same mean as reward-to-go. Add an arm
-       that subtracts $V^{\pi_\theta}$ of the current policy, recomputed at
-       every update by `mdp.policy_value` from the softmax of `table(ac)` and
-       passed to the weighting in place of the learned table. Run it against
-       reward-to-go at $\eta \in \{2, 16\}$ with twenty seeds. At which
-       step size does the baseline help, and how often does each arm fail to
-       reach 90% within 150 updates? Explain why lower variance matters more
-       at larger steps.
+    1. Repeat the comparison of reward-to-go, the value baseline and the
+       exact baseline at $\eta \in \{4, 8, 32\}$, and plot for each arm,
+       against $\eta$, the median number of updates to 90% and the fraction
+       of runs that never get there. Which step size is best for each arm?
+       Explain why the best step size grows as the noise of the estimator
+       falls.
+    1. Matching step lengths instead gives a noisier arm a smaller $\eta$.
+       Choose for each of the five arms of `shared` a step size at which its
+       mean step length over the first 40 updates is about $0.6$, and log
+       the mean step length separately before and after each run reaches
+       90%. Which arms take longer steps while they learn, and why does a
+       comparison at matched average step lengths still mix variance with
+       step size?
    :exlabel:`ex_baselines-step-size-confound-quantified`
 1. [code] **Optimal state baseline.** ●● Exercise
    :exref:`ex_baselines-optimal-constant-baseline` derived the
@@ -780,7 +791,8 @@ The score of a policy's own action has zero mean, and so does its product with a
        where $N$ is `len(b)`, the number of steps in the batch. Train twenty
        seeds with each divisor for 200 updates of plain SGD at $\eta = 16$
        (both divisors are about ten times larger than the per-episode divisor
-       of `train`, so this step size gives steps of similar length), and
+       of `train`, so $\eta = 16$ here acts roughly like $\eta = 1.6$ there,
+       close to the step size of `shared`; log the step lengths to check), and
        record per update the batch success rate and the mean length of the
        failed episodes.
     1. The two divisors learn at different speeds, so compare them at
@@ -794,9 +806,9 @@ The score of a policy's own action has zero mean, and so does its product with a
    rewards collected before each action, which the conditional identity
    allows, and it drops the factor $\gamma^t$, which it does not.
     1. Let $\rho(s) = \mathbb{E}\big[\sum_t \mathbf{1}(s_t = s)\big]$ be the
-       expected number of visits to $s$ in one episode. Using
-       $\mathbb{E}[\hat{G}_t \mid s_t, a_t] = Q^{\pi_\theta}(s_t, a_t)$,
-       show that the mean of :eqref:`eq_rtg` is
+       expected number of visits to $s$ in one episode. As in problem
+       :exref:`ex_policy-gradient-discount-that-implementations-drop`a, the
+       mean of :eqref:`eq_rtg` is
        $\sum_s \rho(s) \sum_a \nabla_\theta \pi_\theta(a \mid s)\,
        Q^{\pi_\theta}(s, a)$, while the policy gradient weights the states by
        $\sum_t \gamma^t \Pr(s_t = s)$ instead. For which $\gamma$ do the two
@@ -835,8 +847,8 @@ Baselines and Variance Reduction<br>
 
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i) \sum_{t} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i), \qquad n = 4$$
 
-- Unbiased on average; one draw at a partly trained lake policy is off by
-  more than $3\times$ the gradient's length.
+- Unbiased on average; one draw at a partly trained lake policy is typically
+  off by more than $3\times$ the gradient's length.
 - Lake returns are $0$ or $\gamma^{T-1}$: a detour on a success is pushed up,
   a step into a hole is never pushed down.
 - A batch without a success gives no update at all.
@@ -854,8 +866,8 @@ $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i) \sum_{t} \nabla_\theta \log \pi_\
 - compute the best constant baseline and the variance it leaves;
 - tell centering (a baseline) from dividing by $\sigma$ (a step size);
 - remove the $(n-1)/n$ bias of a batch or group mean;
-- measure estimators against an exact gradient, and compare them at matched
-  step lengths.
+- measure estimators against an exact gradient, and compare them in
+  training at one step size and one mean.
 
 **Running examples:** the 4×4 lake without slipping ($\gamma = 0.95$, four
 episodes per update) and the four-prompt verifier. **Idea:** subtract
@@ -977,7 +989,7 @@ $$c^* = \frac{\textrm{Cov}(X,Y)}{\textrm{Var}(Y)}
 ::: {.slide title="On a One-Step Problem, Subtracting the Mean Reward Halves the Spread"}
 ![](../img/mdl-rl-variance-reduction.svg){width=98%}
 
-$a \sim \mathcal{N}(\theta, 1)$ at $\theta = 0$ (score $a$), $R(a) = 0.4 + 2e^{-(a-2)^2/2}$: $J = 0.92$, $\mathrm{d}J/\mathrm{d}\theta = 0.52$.
+$a \sim \mathcal{N}(\mu, 1)$ at $\mu = 0$ (score $a$), $R(a) = 0.4 + 2e^{-(a-2)^2/2}$: $J = 0.92$, $\mathrm{d}J/\mathrm{d}\mu = 0.52$.
 One-sample std of $R(a)\,a$: $1.34$; of $(R(a) - 0.92)\,a$: $0.69$.
 The best constant $b^* = 1.18$ leaves $0.23$ of the variance.
 :::
@@ -1025,12 +1037,12 @@ $$\tilde G_t^i = \frac{\hat G_t^i - \bar R}{\sigma + 10^{-8}}, \qquad
   $2\times$ those of centering; measured about $3\times$.
 :::
 
-::: {.slide title="A Batch Mean Shrinks the Gradient by $(n-1)/n$; Leave-One-Out Is Exact"}
+::: {.slide title="A Per-Trajectory Batch Mean Shrinks the Gradient by $(n-1)/n$; Leave-One-Out Is Exact"}
 $$b_i = \frac{1}{n-1} \sum_{j \neq i} R(\tau_j), \qquad
 R_i - b_i = \frac{n}{n-1}\,\big(R_i - \bar R\big)$$
 
 - $b_i$ is independent of trajectory $i$: unbiased at every $n$.
-- Centering by $\bar R$ is leave-one-out times $(n-1)/n$: half at $n = 2$.
+- Per-trajectory centering by $\bar R$ is leave-one-out times $(n-1)/n$: half at $n = 2$.
 
 Two states, two actions; the exact mean over all 16 ordered batches of two:
 
@@ -1051,8 +1063,8 @@ baseline.
 
 ::: {.fragment .fade-up}
 1. $\bar R \approx 0.19$: the success gets $+0.58$, each failure $-0.19$.
-2. The success gets $0.77 - 0 = +0.77$, each failure $0 - 0.77/3 \approx -0.26$:
-   both $4/3$ times larger. The failures are now pushed down.
+2. The success gets $0.77 - 0 = +0.77$, each failure $0 - 0.77/3 \approx -0.26$.
+   Both push the failures down; leave-one-out scales every weight by $4/3$.
 :::
 :::
 
@@ -1117,34 +1129,34 @@ not help.
 :::
 
 ::: {.slide title="At One Shared Step Size, Normalization Wins by Taking Longer Steps"}
-Plain SGD, 150 updates, twenty seeds. Shared: $\eta = 2$ for all.
-Matched: mean step length near $0.6$ for every arm.
+Plain SGD, 150 updates, twenty seeds. All six arms at $\eta = 2$; the three
+with one mean (reward-to-go, learned and exact $V^{\pi_\theta}$) again at $\eta = 16$.
 
 @!baselines-five-estimators-6
 
 At $\eta = 2$, normalized steps are about $3\times$ those of centering.
 :::
 
-::: {.slide title="At Matched Steps, the Baselines Need a Quarter to a Third Fewer Updates"}
+::: {.slide title="At $\eta = 16$, the Exact Baseline Learns Faster and Does Not Stall"}
 @!baselines-five-estimators-5
 
-- Centered and value baseline: about 25 to 30 updates to 90%, the other three
-  about 40; normalized is no better than reward-to-go.
-- The slowest seed needs several times the fastest: report medians and ranges.
+- One mean, so only the noise differs. 200 seeds: exact 20, learned 26,
+  reward-to-go about 30 updates (all about 50 at $\eta = 2$).
+- One reward-to-go run in eight stalls on a deterministic loop: zero weights.
 :::
 
 ::: {.slide title="Check: Is Normalization the Better Estimator?"}
 [Check]{.kicker}
 
 At $\eta = 2$ the normalized arm reaches 90% success in about 30 updates,
-the other four arms in 50 to 65. Should you prefer normalization? What would
+the other arms in 50 to 70. Should you prefer normalization? What would
 you compare instead?
 
 ::: {.fragment .fade-up}
 Not on this evidence: its steps are about $3\times$ longer, and at the
-frozen policy its noise equals centering's. Compare at matched step
-lengths: there normalization is no better than reward-to-go, and the two
-baselines win.
+frozen policy its noise equals centering's. Compare weightings with the
+same mean at one step size: the exact baseline ties with reward-to-go at
+$\eta = 2$ and wins at $\eta = 16$.
 :::
 :::
 
@@ -1155,10 +1167,11 @@ baselines win.
   $s_t$ may be dropped or subtracted.
 - A baseline is a control variate leaving $(1 - \mathrm{corr}^2)$ of the
   variance; one-step problem: $1.34 \to 0.69$, $b^* = 1.18$.
-- Centering is a baseline, dividing by $\sigma$ a step size; batch and group
+- Centering is a baseline, dividing by $\sigma$ a step size; per-trajectory
   means shrink by $(n-1)/n$, leave-one-out does not; a group of one never learns.
 - Fixed lake policy: centering removes about 40% of the noise, the value
-  baseline about half; at matched steps both need a quarter to a third fewer updates.
+  baseline about half. In training at one mean, the exact baseline pays off
+  only at a large step, where it is faster and does not stall.
 
 **Next:** sixteen cells fit a table; a cart on a track does not. Networks
 replace both tables.

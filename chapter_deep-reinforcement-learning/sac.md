@@ -539,7 +539,7 @@ for arm in runs:
           f'{[steps_to(r) for r in runs[arm]]}')
 ```
 
-Every seed of both variants starts near $-1200$ or below and crosses $-200$ within about ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task in updates of 8 episodes of 200 steps. Every seed there also passes $-200$, but only after roughly 170 to 300 updates, or $0.3$ to $0.5$ million environment steps, about 30 to 50 times as many. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap during nearly all of training, and neither variant consistently crosses first. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
+Every seed of both variants starts near $-1200$ or below and crosses $-200$ within about ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task in updates of 8 episodes of 200 steps. Every seed there also passes $-200$, but only after roughly 150 to 300 updates, or $0.25$ to $0.5$ million environment steps, about 25 to 50 times as many. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap during nearly all of training, and neither variant consistently crosses first. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
 
 ### Policy Entropy and Temperature
 :label:`subsec_sac-entropy`
@@ -1070,7 +1070,7 @@ incorrect zero continuation value at step 200.
 . . .
 
 REINFORCE with a learned baseline also reaches $-200$, but only after
-$0.3$--$0.5$ million steps, 30--50 times as many. Pathwise actor gradients and replay both improve reuse of
+$0.25$--$0.5$ million steps, 25--50 times as many. Pathwise actor gradients and replay both improve reuse of
 collected transitions. The two variants are
 indistinguishable on this axis.
 :::

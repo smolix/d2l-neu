@@ -34,12 +34,12 @@
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:76b535d51acc2c3af81fc3be8bbc89e486c7c1eb7ecb0d2e01ef953bebdeb1ea",
+      "code_fingerprint": "sha256:31f2637e7377c4c5736ca9202ccf54a06166122ddacffbd42a06a78de63c68c1",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:d913a1da3ffbbba649a9725f270fea515867b468145f5748fd280c5b593df0de",
+      "code_fingerprint": "sha256:38a4fa37280252a8da255db6f1da30867fa8be4523f1344c00bafd9d9d7f713d",
       "kind": "asset",
       "outputs": [
         {
@@ -47,12 +47,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 32157,
-          "sha256": "sha256:d859985941eece459ddae9516ff4ec13e6086f59438aa511e8cac8a311ecb5a7"
+          "sha256": "sha256:4c0020645e64e2699b2e22a9393aaea3fef8af235d9c13ce61f8a2c9a5bf2989"
         }
       ]
     },
     "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:dd50ac7d88be017333c852f80ca556b6f2a8d131ec499f9dbd2b319c0b56b1ab",
+      "code_fingerprint": "sha256:9a765c8adad502d190f306656836e1aaa48212663bef6c03cd92c5aad4ad47f8",
       "kind": "asset",
       "outputs": [
         {
@@ -60,17 +60,17 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 27002,
-          "sha256": "sha256:4ed1bd427cc66633958adabf8a62173af72e41b83c7f6930de3da051574abf19"
+          "sha256": "sha256:7ff6d3605dc00ff4929b6054df03fbb8f6cbdc65dfe13ea6bfd555dd14831246"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:871b5c4454acf1f78d2a5b43d4c625a196824b31cbffd01584499e8210de881e",
+      "code_fingerprint": "sha256:0569d37553a596cf02bfd7f0f62f376f66a8fb1065c48948f8d52978b3ba553f",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:611f9bcf266710bf08db2fdbd5c8d32a02030b618df652f9ffc2b5c3a8895e6c",
+      "code_fingerprint": "sha256:0304eb79723d2ab77719b1bf762ba5906482693f116f97d3a4d4cfeba8fd5488",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +81,7 @@
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:41dc52ee0eb1bb618bc6dea5945894c00eef69c59fdfc4037e7c5086a1cabb19",
+      "code_fingerprint": "sha256:92275f4ba1e204c061283eaf16fa4f752c12158628fca51a7da59b9f060ca9c3",
       "kind": "asset",
       "outputs": [
         {
@@ -89,12 +89,12 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 51992,
-          "sha256": "sha256:c0dd1fb6997f3415091ee98d36cc4ccd573ada725c17ff361a2bcb8453b41f51"
+          "sha256": "sha256:936dad813d1a7f7728fb1a40180ec74297ca2abaff47e5fc59d9fff41ecacf92"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:d66ba16a7a304f3c14c43818f7697e46e7c9a1397607368d2a136449d1374a93",
+      "code_fingerprint": "sha256:2bd229c67c11200d105fefd60d19f03800f4db67cc5318690c9b299dc5345a1c",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +105,7 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:402853099db67c62a8eb1019f53f7da23a70afc9f815ed28630ac0d9224a2317",
+      "code_fingerprint": "sha256:99316d5fb7333cf1e3998a2e28abe742e631b618daff7f3078ccfcddadc346e3",
       "kind": "text",
       "outputs": [
         {

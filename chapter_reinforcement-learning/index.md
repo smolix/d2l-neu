@@ -318,7 +318,7 @@ from next.
 - REINFORCE with a learned baseline gets there after a few hundred thousand
   steps: it waits for whole episodes and uses each batch once.
 - Next, Deep Reinforcement Learning: value networks in the update, reused
-  experience, fixed data; its soft actor-critic crosses $-200$ in under 10,000 steps.
+  experience, fixed data; its soft actor-critic crosses $-200$ within about 10,000 steps.
 - The Language Models part treats post-training, including learning from
   human preferences, in more depth.
 :::

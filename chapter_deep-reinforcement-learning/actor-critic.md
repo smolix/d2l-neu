@@ -308,7 +308,7 @@ for name, r in runs.items():
           f'clip binds on {(g > grad_clip).mean():4.0%} of updates')
 ```
 
-The actor-critic norm is several times larger, about five times in the median, and the clip binds on a fifth to a third of the actor-critic updates and on none of the REINFORCE updates. Two effects contribute, and this experiment does not separate them. One is scale: until the critic is accurate, the TD error's spread exceeds the unit spread of the normalized Monte Carlo weight. The other is direction. By the conditional zero-mean identity of :numref:`sec_baselines`, the state-dependent part of a weight contributes nothing to the expected policy gradient; the Monte Carlo weight contains more of it, whereas the TD error is more strongly action-dependent. Exercise :exref:`ex_actor-critic-gradient-norms`b separates the two by normalizing both weights at a fixed policy. Gradient norm alone does not measure signal quality, but the result shows that the two estimators produce different update scales at the same learning rate. :numref:`sec_ppo` develops methods for controlling such policy updates.
+The actor-critic norm is several times larger in the median, and the clip binds on a fifth to two fifths of the actor-critic updates and on none of the REINFORCE updates. Two effects contribute, and this experiment does not separate them. One is scale: until the critic is accurate, the TD error's spread exceeds the unit spread of the normalized Monte Carlo weight. The other is direction. By the conditional zero-mean identity of :numref:`sec_baselines`, the state-dependent part of a weight contributes nothing to the expected policy gradient; the Monte Carlo weight contains more of it, whereas the TD error is more strongly action-dependent. Exercise :exref:`ex_actor-critic-gradient-norms`b separates the two by normalizing both weights at a fixed policy. Gradient norm alone does not measure signal quality, but the result shows that the two estimators produce different update scales at the same learning rate. :numref:`sec_ppo` develops methods for controlling such policy updates.
 
 ### The Critic's Moving Target and Data Freshness
 
@@ -351,7 +351,7 @@ d2l.plot_curves({'TD error': trace[:, 1], 'MC advantage': trace[:, 2]},
                 xlabel='update', ylabel='variance of the weight', smooth=10)
 ```
 
-The Monte Carlo weight's variance is a few tens of times that of the TD error throughout training; over seeds the printed median ratio ranges from about 20 to 70. The temporal-difference error depends on one reward and one transition, so its variance stays much smaller and falls further as the critic improves. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo weight's because the bootstrap replaces the tail of every cut episode by the critic's value, the same correction `train_reinforce` makes. Averaging eight trajectories per update reduces the Monte Carlo variance enough for REINFORCE to train, but does not remove its dependence on the horizon.
+The Monte Carlo weight's variance is a few tens of times that of the TD error throughout training; over seeds the printed median ratio ranges from about 10 to 60. The temporal-difference error depends on one reward and one transition, so its variance stays much smaller and falls further as the critic improves. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo weight's because the bootstrap replaces the tail of every cut episode by the critic's value, the same correction `train_reinforce` makes. Averaging eight trajectories per update reduces the Monte Carlo variance enough for REINFORCE to train, but does not remove its dependence on the horizon.
 
 Here the critic is trained on fresh on-policy data, and its target is recomputed after each update. When a value function is instead trained on replayed off-policy data while retaining a bootstrap target, the same semi-gradient update can diverge. :numref:`sec_dqn` addresses this problem by evaluating the bootstrap with a second network whose parameters are held fixed for several updates. This *target network* reduces the rate at which the regression target moves.
 
@@ -470,7 +470,7 @@ d2l.plot_curves({f'lambda = {lam:g}': r for lam, r in sweep.items()},
                 smooth=10, reference=500)
 ```
 
-In the median over seeds, the $\lambda=0$ and $\lambda=0.5$ runs reach a best 20-update window of about 200 to 300, far below the maximum return, whereas $\lambda\geq0.9$ reaches about 400 or more. Individual seeds overlap across this divide, so we compare medians. Early in training, the critic is inaccurate, so estimators that depend less on it improve faster. The longer comparison above showed the complementary result: after the critic improves, the one-step weights of `train_ac` keep the longest consecutive intervals at the maximum return.
+In the median over seeds, the $\lambda=0$ and $\lambda=0.5$ runs reach a best 20-update window of about 150 to 250, far below the maximum return, whereas $\lambda\geq0.9$ reaches about twice as high. Individual seeds overlap across this divide, so we compare medians. Early in training, the critic is inaccurate, so estimators that depend less on it improve faster. The longer comparison above showed the complementary result: after the critic improves, the one-step weights of `train_ac` keep the longest consecutive intervals at the maximum return.
 
 Training curves combine estimator quality with optimization and changing data. To examine the estimator directly, we freeze a partially trained agent and draw many batches at fixed parameters. For each $\lambda$, we compare the resulting policy-gradient estimates with a reference.
 
@@ -525,7 +525,7 @@ for lam in lams:
           f'variance {var:6.1f}, one-draw error {bias ** 2 + var:6.1f}')
 ```
 
-Moving from $\lambda=1$ toward smaller values first reduces variance rapidly; most of the reduction has occurred by $\lambda=0.9$. Bias increases toward $\lambda=0$, in some runs gradually and in others mostly within the first step below $\lambda=1$. The estimated one-draw error, bias squared plus variance, is therefore large at both endpoints and smallest at $\lambda=0.9$ or $\lambda=0.95$ in these experiments. Common PPO implementations use values in this range (:numref:`sec_ppo`).
+Moving from $\lambda=1$ toward smaller values first reduces variance rapidly; most of the reduction has occurred by $\lambda=0.9$. In most runs, bias increases toward $\lambda=0$, in some gradually and in others mostly within the first step below $\lambda=1$. The estimated one-draw error, bias squared plus variance, is then large at both endpoints and smallest at $\lambda=0.9$ or $\lambda=0.95$, the range common PPO implementations use (:numref:`sec_ppo`). In trial runs over about a hundred seeds, this held about three times in four; in the other runs the minimum moved, most often to a smaller $\lambda$.
 
 The location is not universal. It depends on the accuracy of the frozen critic and on the task. Moreover, the $\lambda=1$ row has zero estimated bias by construction because its sample mean defines the reference.
 
@@ -552,7 +552,7 @@ and the persistence of ceiling-level batches during training.
 
 Actor--critic methods use a learned value function to construct bootstrapped policy-gradient weights. With an exact critic, the expected temporal-difference error equals the advantage; an approximate critic introduces bias while usually reducing variance. The critic update is a semi-gradient policy-evaluation step, and the actor and critic form an approximate generalized policy-iteration scheme. Multi-step returns interpolate between one-step bootstrapping and Monte Carlo returns. The $\lambda$-return mixes these targets geometrically, and GAE computes the equivalent discounted sum of temporal-difference errors with a backward scan.
 
-**Experimental scope.** The training comparisons use three seeds, the $\lambda$ sweep uses five seeds, and the frozen-policy estimator study uses 200 batches. Both one-step and Monte Carlo methods solve CartPole in these runs. Intermediate high values of $\lambda$ give the smallest estimator error on the frozen-policy probe, but the precise optimum varies with the policy. The experiments support the bias--variance interpretation rather than a universal choice of $\lambda$.
+**Experimental scope.** The training comparisons use three seeds, the $\lambda$ sweep uses five seeds, and the frozen-policy estimator study uses 200 batches. Both one-step and Monte Carlo methods solve CartPole in these runs. Intermediate values of $\lambda$, most often $0.9$ or $0.95$, give the smallest estimator error on the frozen-policy probe, but the precise optimum varies with the policy. The experiments support the bias--variance interpretation rather than a universal choice of $\lambda$.
 
 ## Exercises
 
@@ -928,7 +928,7 @@ a general stability result.
 . . .
 
 The TD error enters unnormalized, and the actor--critic gradient norms are
-about five times larger; the clip binds on a fifth to a third of its updates
+several times larger; the clip binds on a fifth to two fifths of its updates
 and never for REINFORCE. Part of this is scale: until the critic is accurate,
 the TD error's spread exceeds one. Part is direction: a state-dependent
 component of the weight contributes variance but cancels in expectation, and
@@ -1009,9 +1009,10 @@ experiment favors estimators that rely more heavily on Monte Carlo returns.
 
 The mean-squared error is shallow and U-shaped. As $\lambda$ decreases from
 one, variance initially falls faster than squared bias grows; for still smaller
-values, bias dominates. The minimum therefore occurs between the two
-endpoints. PPO implementations commonly use $\lambda$ between $0.9$ and
-$0.97$ (:numref:`sec_ppo`).
+values, bias dominates. In most runs the minimum lies at $\lambda = 0.9$ or
+$0.95$; in some, the frozen critic is accurate enough that a smaller
+$\lambda$ wins. PPO implementations commonly use $\lambda$ between $0.9$
+and $0.97$.
 :::
 
 ::: {.slide title="Recap"}

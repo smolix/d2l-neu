@@ -42,9 +42,9 @@ if tab.selected('pytorch'):
                              nn.Linear(64, 1))
 if tab.selected('jax'):
     def make_critic(rngs):
-        return nnx.Sequential(nnx.Linear(4, 64, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(64, 64, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(64, 1, rngs=rngs))
+        return nnx.Sequential(d2l.Linear(4, 64, rngs=rngs), jax.nn.relu,
+                              d2l.Linear(64, 64, rngs=rngs), jax.nn.relu,
+                              d2l.Linear(64, 1, rngs=rngs))
 ```
 
 ## The Objective and Its Two Backups
@@ -212,8 +212,8 @@ class SquashedGaussianPolicy(nnx.Module):
     state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64, rngs=None):
         trunk = nnx.Sequential(
-            nnx.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
-            nnx.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
+            d2l.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
+            d2l.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
         self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
                                        state_std=True, trunk=trunk)
 
@@ -539,7 +539,7 @@ for arm in runs:
           f'{[steps_to(r) for r in runs[arm]]}')
 ```
 
-Every seed of both variants starts near $-1200$ or below and crosses $-200$ before ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task in updates of 8 episodes of 200 steps. Every seed there also passes $-200$, but only after roughly 170 to 300 updates, or $0.3$ to $0.5$ million environment steps, about 30 to 50 times as many. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap throughout training, and neither variant consistently crosses first. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
+Every seed of both variants starts near $-1200$ or below and crosses $-200$ within about ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task in updates of 8 episodes of 200 steps. Every seed there also passes $-200$, but only after roughly 170 to 300 updates, or $0.3$ to $0.5$ million environment steps, about 30 to 50 times as many. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap during nearly all of training, and neither variant consistently crosses first. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
 
 ### Policy Entropy and Temperature
 :label:`subsec_sac-entropy`
@@ -594,7 +594,7 @@ for arm in runs:
               f'stochastic {s:7.1f}, noise cost {g - s:+6.1f}')
 ```
 
-Across variants and seeds, deterministic returns lie between about $-140$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
+Across variants and seeds, deterministic returns lie between about $-120$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
 
 ### Critic Calibration: Predicted and Realized Returns
 :label:`subsec_sac-calibration`
@@ -677,13 +677,13 @@ for arm in runs:
               f'(soft) {soft:7.1f}, gap {pred - soft:+6.1f}, plain {plain:7.1f}')
 ```
 
-The result is consistent across seeds. Neither variant substantially overestimates the realized soft return. The single critic's prediction is typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to sixty points. The absolute gap is larger for the twin-critic variant on every seed, consistent with taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, pessimistic targets are intended to reduce feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
+The result is consistent across seeds. Neither variant substantially overestimates the realized soft return. The single critic's prediction is typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to eighty points. The absolute gap is larger for the twin-critic variant on every seed, consistent with taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, pessimistic targets are intended to reduce feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
 
 ## Summary
 
 SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha\log\pi$ to the bootstrap target, and soft policy improvement uses a pathwise gradient through the critic. A tanh transformation enforces bounded actions; its log density must include the change-of-variables determinant, evaluated in a numerically stable form. Replay, Polyak-averaged target networks, and the minimum of two critics provide the off-policy value-learning machinery. No target actor or importance ratios are required.
 
-**Experimental scope.** The density and soft-backup checks are deterministic. Training uses three seeds per method. Every SAC run reaches return $-200$ within $10{,}000$ environment steps on Pendulum, while deterministic final evaluations lie roughly between $-140$ and $-190$. Twin and single critics have similar returns at this budget; the twin-critic minimum is more pessimistic in every calibration comparison. Exact crossing times and calibration gaps vary across seeds.
+**Experimental scope.** The density and soft-backup checks are deterministic. Training uses three seeds per method. Every SAC run reaches return $-200$ within about $10{,}000$ environment steps on Pendulum, while deterministic final evaluations lie roughly between $-120$ and $-190$. Twin and single critics have similar returns at this budget; the twin-critic minimum is more pessimistic in every calibration comparison. Exact crossing times and calibration gaps vary across seeds.
 
 ## Exercises
 
@@ -1098,6 +1098,6 @@ indistinguishable on this axis.
 
 Neither variant substantially overestimates the realized soft
 return. The single critic is near calibrated; the minimum of two
-critics underestimates by thirty to sixty points on every seed.
+critics underestimates by thirty to eighty points on every seed.
 At this budget, the return curves remain similar.
 :::

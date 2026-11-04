@@ -42,10 +42,19 @@ if tab.selected('pytorch'):
                              nn.Linear(128, 128), nn.ReLU(),
                              nn.Linear(128, 2))
 if tab.selected('jax'):
+    def linear(n_in, n_out, rngs):
+        # Weights and biases uniform in +-1/sqrt(n_in). Flax's default
+        # (lecun-normal weights, zero bias) starts 1.7x larger, and on
+        # CartPole it learns more slowly and overestimates more.
+        init = lambda key, shape, dtype: jax.random.uniform(
+            key, shape, dtype, -n_in ** -0.5, n_in ** -0.5)
+        return nnx.Linear(n_in, n_out, kernel_init=init, bias_init=init,
+                          rngs=rngs)
+
     def make_qnet(rngs):
-        return nnx.Sequential(nnx.Linear(4, 128, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(128, 128, rngs=rngs), jax.nn.relu,
-                              nnx.Linear(128, 2, rngs=rngs))
+        return nnx.Sequential(linear(4, 128, rngs), jax.nn.relu,
+                              linear(128, 128, rngs), jax.nn.relu,
+                              linear(128, 2, rngs))
 ```
 
 ## Sources of Instability
@@ -359,7 +368,7 @@ d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
                 reference=500)
 ```
 
-The two variants differ only in whether the bootstrap uses a target network. With a target network, every seed improves from the random policy's return of about 20, although learning remains variable and no seed remains at the maximum return of 500. The behavior-policy curve cannot reach 500 consistently because the final exploration rate is $\epsilon=0.05$, which forces a random action on approximately one step in twenty. Without a target network, returns improve briefly and then collapse for every seed in both framework implementations. The online network then supplies its own changing targets, and the poor greedy policy collects data that reinforces the same estimates. The separate greedy evaluation below removes exploratory actions from the comparison.
+The two variants differ only in whether the bootstrap uses a target network. With a target network, every seed improves from the random policy's return of about 20 to returns in the hundreds, although learning remains variable. The behavior return also understates the policy, because the final exploration rate $\epsilon=0.05$ still forces a random action on approximately one step in twenty. Without a target network, returns improve briefly and then collapse for every seed. The online network then supplies its own changing targets, and the poor greedy policy collects data that reinforces the same estimates. The separate greedy evaluation below removes exploratory actions from the comparison.
 
 Because the return keeps falling off its peaks and climbing back, the summary statistic you choose matters more than it should, and the next cell computes the candidates rather than asserting them. For each seed we take every trailing 20-episode average the run contains, and report the best one, the final one, and the one the run would have reported had we stopped it fifty episodes earlier:
 
@@ -380,8 +389,8 @@ for arm in runs:
           f'{"":>18}  fifty episodes earlier {np.round(early)}')
 ```
 
-The final-window return varies by more than one hundred points across seeds,
-and the value fifty episodes earlier differs again. It therefore describes the
+The final-window return depends on the seed, and the window fifty episodes
+earlier is often a hundred points or more away from it. It therefore describes the
 state of each training run at the stopping time rather than a stable endpoint.
 Selecting the best window after observing the entire curve introduces
 optimistic selection bias; reporting its seed spread does not remove that bias.
@@ -406,7 +415,7 @@ for arm in arms:
               f'{score:.0f}')
 ```
 
-Without exploratory actions, some seeds achieve the maximum return of 500, while others score far below their recent behavior returns. The final greedy policy is a single snapshot of an oscillatory training process, so evaluation depends on the point at which training stops. Across frameworks and seeds, the greedy returns range from roughly 90 to 500. Every run without a target network fails almost immediately.
+Without exploratory actions, most greedy DQN policies balance the pole for the full 500 steps. The final greedy policy is, however, a single snapshot of an oscillatory training process, and a run that stops in a dip scores far below 500. Across ten seeds, a minority of runs end in such a dip, and training longer does not cure it. Every run without a target network fails almost immediately, with a greedy return of about 10, far below every DQN seed.
 
 To distinguish value instability from policy instability, the training loop records $\max_a Q_w(s_0,a)$ at the centered start state. The code masks bootstrapping only on `terminated`; it continues to bootstrap across the 500-step time limit, and the state contains no time coordinate. It therefore learns the continuing-task value in which the time limit ends data collection but not the underlying process.
 
@@ -424,11 +433,11 @@ print(f'continuing-task ceiling: {ceiling:.0f}; the no-target arm ends at ' +
                 runs['no target network']))
 ```
 
-For DQN, the recorded start-state estimate remains within tens of points of the continuing-task ceiling across frameworks and seeds. The corresponding return curves still oscillate because small changes in action values can change the greedy action and produce a substantially different policy. This trace concerns only $s_0$ and does not certify that every Q-value is stable or accurate.
+For DQN, the recorded start-state estimate climbs toward the continuing-task ceiling and ends close to it on every seed. The corresponding return curves still oscillate because small changes in action values can change the greedy action and produce a substantially different policy. This trace concerns only $s_0$ and does not certify that every Q-value is stable or accurate.
 
-The scale nevertheless separates the two ablations. DQN ends near $10^2$, whereas the version without a target network exceeds $10^8$. The latter clearly diverges. Some DQN seeds settle above the ceiling of 100. Since no policy can exceed that value under the objective implemented here, those estimates demonstrate overestimation.
+The scale nevertheless separates the two ablations. DQN ends near $10^2$, whereas the version without a target network exceeds $10^8$. The latter clearly diverges. Since no policy can exceed the ceiling of 100 under the objective implemented here, an estimate above it would demonstrate overestimation. The DQN estimates end near the ceiling, at most a few points above it, so this probe cannot settle how much the maximum in the target inflates them.
 
-The next experiment isolates the maximization bias that produces this effect.
+The next experiment measures that maximization bias directly.
 
 ## Overestimation
 
@@ -518,7 +527,7 @@ for arm in ('DQN', 'Double DQN'):
           f'{np.round([np.asarray(r)[-1, 2] for r in runs[arm]], 1)}')
 ```
 
-The Double DQN estimates usually end a few points below the DQN estimates, with the largest reductions in seeds that had moved furthest above the ceiling. Their seed bands overlap during most of training. CartPole has only two actions, and :numref:`fig_rl_max_bias` shows that maximization bias grows with the number of actions. The effect is therefore expected to be small here.
+The Double DQN estimates end close to the DQN estimates, sometimes above and sometimes below, and their seed bands overlap during most of training. CartPole has only two actions, and :numref:`fig_rl_max_bias` shows that maximization bias grows with the number of actions. The effect is therefore expected to be small here.
 
 On Atari, with as many as eighteen actions, Double DQN changes scores substantially :cite:`Hasselt.Guez.Silver.2016`. The same distinction becomes important in offline learning, where inflated actions cannot be corrected by new interaction (:numref:`sec_offline`). At this CartPole budget, any difference in return remains within variation across seeds.
 
@@ -893,8 +902,8 @@ than `truncated` so that a time limit does not suppress bootstrapping.
 . . .
 
 With a target network, every seed reaches returns in the hundreds, although
-performance remains variable. Without it, every seed in both implementations
-falls to near-minimal return and its value estimates exceed $10^8$. In this
+performance remains variable. Without it, every seed falls to near-minimal
+return and its value estimates exceed $10^8$. In this
 ablation, removing the target network therefore causes clear divergence.
 :::
 
@@ -904,7 +913,7 @@ ablation, removing the target network therefore causes clear divergence.
 . . .
 
 Because performance rises and falls during training, the final moving average
-varies by more than one hundred points across seeds and changes if evaluated
+depends on the seed and is often a hundred points or more away from its value
 50 episodes earlier. Reporting the best window would introduce
 post-selection bias. We therefore use a greedy evaluation at the fixed
 training budget as the primary result.
@@ -918,11 +927,10 @@ training budget as the primary result.
 At the probe state, the value estimate approaches the correct scale rather
 than diverging; a single probe, however, cannot certify the whole value
 function. Small changes in action values can still change the greedy policy,
-and fixed-budget evaluations range from 90 to 500 across seeds and
-implementations. Because the update bootstraps through the time limit, it
-optimizes a continuing objective whose start-state value is bounded by
-$1/(1-\gamma)=100$. Estimates above this bound are necessarily
-overestimates.
+so a fixed-budget evaluation can catch a seed in a dip far below 500.
+Because the update bootstraps through the time limit, it optimizes a continuing objective whose start-state value is bounded by
+$1/(1-\gamma)=100$. Estimates above this bound would be certain
+overestimates; DQN's end near it.
 :::
 
 ::: {.slide title="Maximization Bias"}
@@ -949,8 +957,8 @@ Select with the online network, evaluate with the frozen one
 
 @!dqn-double-dqn-in-three-lines-3
 
-Most seeds finish with values a few points lower under Double DQN. This small
-difference is consistent with the two-action experiment in panel (b), where
+The Double DQN values end close to DQN's, in either direction.
+This small difference is consistent with the two-action experiment in panel (b), where
 maximization has limited scope to select extreme errors. On Atari, with as many
 as 18 actions, the same modification produces substantially larger effects.
 :::

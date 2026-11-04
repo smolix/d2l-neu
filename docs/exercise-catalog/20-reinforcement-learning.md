@@ -20,6 +20,18 @@ thin in course exercises; classical tile-coding exercises don't transfer to this
 chapter's neural-network tooling. Totals: 44 kept + 9 new = 53 proposed
 problems across 7 sections.
 
+**Restructure (2026-11, ch. 14 rebuild).** The chapter now has 8 sections in
+the order mdp, value-iter, qlearning, exploration, imitation,
+policy-gradient, baselines, deep-rl. Exploration and bandits left
+qlearning.md for the new exploration.md, with its exercises
+`ex_qlearning-exploration-schedule`, `ex_qlearning-ucb-logarithmic-regret`
+and the deep-exploration project (labels kept). The potential-based shaping
+exercise `ex_mdp-reward-design-its-failure` and part (a) of the time-limits
+exercise (now `ex_value-iter-time-limits`) moved from mdp.md to
+value-iter.md with the shaping experiment; `ex_mdp-time-limits` keeps the
+Markov-state part. The entries below are moved accordingly; their item
+descriptions predate the rebuild and are regenerated in its exercise pass.
+
 ---
 
 ## chapter_reinforcement-learning/mdp.md — Markov Decision Processes
@@ -66,9 +78,9 @@ zero clarity flags, and nothing found externally supersedes any of the six.
    (section's own Ex2).
 3. [short-code] **The effective horizon.** Derive and sweep the discounted-tail
    bound against $1/(1-\gamma)$. *Provenance:* original (section's own Ex3).
-4. [conceptual] **Reward design and its failure.** Prove potential-based
-   shaping preserves the optimal policy; show a two-sided distance reward can
-   still fail. *Provenance:* original (section's own Ex4).
+4. *Moved to value-iter.md (2026-11):* **Reward design and its failure**
+   (`ex_mdp-reward-design-its-failure`), with the shaping experiment and the
+   proof that potential-based shaping preserves the optimal policy.
 5. [conceptual] **Random rewards.** Show a policy's value is unchanged by
    folding a random reward's mean into $r(s,a)$. *Provenance:* original
    (section's own Ex5).
@@ -179,6 +191,128 @@ found externally supersedes them.
    current strengthens. *Provenance:* adapted from Stanford CS234 Winter 2026
    Assignment 1, Q4 (overlap high — environment and discount-threshold question
    reused; re-implemented against this section's own code).
+9. [short-code] **Time limits under the optimal policy.** Propagate the state
+   distribution under `pi_star` and split episodes into goal, hole and
+   truncated. *Provenance:* original (moved from mdp.md, part (a) of its
+   time-limits exercise; `ex_value-iter-time-limits`).
+10. [conceptual] **Reward design and its failure.** Prove potential-based
+   shaping preserves the optimal policy; show a plausible bonus or a per-step
+   charge can still change it. *Provenance:* original (moved from mdp.md;
+   `ex_mdp-reward-design-its-failure`, label kept).
+
+---
+
+## chapter_reinforcement-learning/qlearning.md — Temporal-Difference Learning
+
+**Topic:** The sampled Bellman backup, the TD error, tabular Q-learning
+convergence, off-policy learning and maximization bias. (Bandits, regret,
+$\epsilon$-greedy vs. UCB vs. Thompson sampling moved to exploration.md,
+2026-11.)
+
+**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the review's
+one formatting defect in this chapter (Ex4's inline "(i)/(ii)/(iii)" lettering)
+is cosmetic, not a clarity problem, and out of this catalog's scope; every item
+still names a concrete measurement.
+
+**External sources found:**
+- Sutton & Barto, Exercises 6.11/6.12 — a compact conceptual pair: why is
+  Q-learning off-policy at all, and, if action selection were made greedy,
+  would Q-learning and Sarsa become *the same* algorithm (same action
+  selections, same weight updates)? — http://incompleteideas.net/book/RLbook2020.pdf
+- Sutton & Barto, Exercises 6.9/6.10 (programming) — Windy Gridworld extended
+  with eight King's-move actions (plus an optional ninth "stay" action) and,
+  separately, with stochastic wind — a different TD-control environment for the
+  same "does more structure help" question the section asks of its exploration
+  schedules — http://incompleteideas.net/book/RLbook2020.pdf
+- Sutton & Barto, Exercises 2.7/2.8 — the "Unbiased Constant-Step-Size Trick"
+  (a step size avoiding constant-$\alpha$'s initial bias while keeping
+  non-stationary adaptivity) and "UCB Spikes" (explain Figure 2.4's spike at
+  the 11th step, *and* why it decreases afterward) — the closest S&B analogue
+  to the section's own step-size and UCB-sensitivity exercises —
+  http://incompleteideas.net/book/RLbook2020.pdf
+- David Silver, UCL Reinforcement Learning (2015), "Easy21" assignment —
+  Monte-Carlo control and Sarsa($\lambda$) on a custom blackjack-like game,
+  using a visit-count exploration schedule
+  $\epsilon_t = N_0/(N_0+N(s_t))$, $N_0=100$, rather than a fixed or
+  manually-annealed one — more principled than the section's own fixed-$\epsilon$
+  sweep — https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf
+- Stanford CS234 (Winter 2026), Assignment 2, Q1 "Deep $Q$-Networks (DQN)"
+  (written) — given DQN's pseudocode (replay buffer, target network, minibatch
+  updates), say exactly which lines must change to recover tabular Q-learning
+  — the section's own summary text already promises this connection but never
+  makes the reader work through it —
+  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
+
+**Proposed problem set** (8 problems):
+1. [conceptual] **Why greedy from the start cannot work.** Trace a
+   fixed-tie-break trajectory from a zero table, and explain why coverage
+   alone doesn't guarantee a good table. *Provenance:* original (section's own
+   Ex1).
+2. *Moved to exploration.md (2026-11):* **The exploration schedule.**
+3. [conceptual] **Step sizes under a finite budget.** Check Robbins-Monro
+   conditions, then find by experiment a constant beating both decaying
+   schedules. *Provenance:* original (section's own Ex3).
+4. [short-code] **The double-sampling counterexample.** Build a 3-state MDP,
+   solve the population objective in closed form, and show semi-gradient TD
+   converges to $Q^*$ instead. *Provenance:* original (section's own Ex4).
+5. [short-code] **A like-for-like comparison with value iteration.** Plot
+   $\|\hat Q-Q^*\|_\infty$ against environment steps vs. Bellman backups.
+   *Provenance:* original (section's own Ex5).
+6. *Moved to exploration.md (2026-11):* **Regret, measured properly.**
+7. *Moved to exploration.md (2026-11):* **A harder map.**
+8. [conceptual] **From tabular Q-learning to DQN, one line at a time.** Write
+   DQN's update as pseudocode with a replay buffer $\mathcal D$, target weights
+   $\theta^-$, and a minibatch of transitions. Say exactly which lines must be
+   deleted or changed — and why each is unneeded — to recover this section's
+   own `q_learning` update: what happens to the replay buffer when every
+   update uses only the transition just seen, what happens to the target
+   network when the table is its own exact target, and what happens to the
+   minibatch loop when the batch size is one. Then run this section's tabular
+   update once with a "replay buffer" of size one and confirm it reproduces the
+   original numbers exactly. *Provenance:* adapted from Stanford CS234 Winter
+   2026 Assignment 2, Q1.1(a) (overlap high — the reduction question is
+   reused directly; the empirical check against this section's own code is
+   original).
+
+---
+
+## chapter_reinforcement-learning/exploration.md — Exploration
+
+**Topic:** The multi-armed bandit as a one-state MDP, regret, greedy,
+$\epsilon$-greedy and annealed exploration, UCB and Thompson sampling,
+exploration in MDPs, identical-reward groups on the verifier task. New section
+(2026-11), split from qlearning.md.
+
+**Current exercises:** 3, moved from qlearning.md with their labels; the
+section's exercise pass (Thompson's Beta posterior, the all-identical group as
+a function of $p$) is pending.
+
+**External sources found:**
+- Sutton & Barto, Exercises 2.7/2.8 — the "Unbiased Constant-Step-Size Trick"
+  (a step size avoiding constant-$\alpha$'s initial bias while keeping
+  non-stationary adaptivity) and "UCB Spikes" (explain Figure 2.4's spike at
+  the 11th step, *and* why it decreases afterward) — the closest S&B analogue
+  to the section's own step-size and UCB-sensitivity exercises —
+  http://incompleteideas.net/book/RLbook2020.pdf
+- David Silver, UCL Reinforcement Learning (2015), "Easy21" assignment —
+  Monte-Carlo control and Sarsa($\lambda$) on a custom blackjack-like game,
+  using a visit-count exploration schedule
+  $\epsilon_t = N_0/(N_0+N(s_t))$, $N_0=100$, rather than a fixed or
+  manually-annealed one — more principled than the section's own fixed-$\epsilon$
+  sweep — https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf
+
+**Proposed problem set** (3 problems, as moved):
+1. [short-code] **The exploration schedule.** Predict then measure first
+   success and final greedy performance across $\epsilon$ schedules.
+   *Provenance:* original (moved from qlearning.md;
+   `ex_qlearning-exploration-schedule`, label kept).
+2. [conceptual] **Logarithmic regret of UCB.** Derive the UCB1 bound with
+   Hoeffding's inequality and evaluate it on the section's arms.
+   *Provenance:* original (moved from qlearning.md;
+   `ex_qlearning-ucb-logarithmic-regret`, label kept).
+3. [extended] **Deep exploration.** A chain on which undirected exploration
+   needs exponentially many episodes, optimistic initialization, and the
+   8x8 map. *Provenance:* original (moved from qlearning.md).
 
 ---
 
@@ -239,85 +373,6 @@ item still names a deliverable.
    *Provenance:* adapted from Berkeley CS285 Fall 2020 HW1, Section 1 (overlap
    med — the matched-capacity, one-works/one-doesn't comparison is reused; the
    ten-dataset selection and fit-vs-shift diagnostic are original).
-
----
-
-## chapter_reinforcement-learning/qlearning.md — Temporal-Difference Learning and Exploration
-
-**Topic:** The sampled Bellman backup, the TD error, tabular Q-learning
-convergence, off-policy learning and maximization bias, multi-armed bandits,
-regret, $\epsilon$-greedy vs. UCB vs. Thompson sampling.
-
-**Current exercises:** 7; disposition: keep 7, rewrite 0, drop 0 — the review's
-one formatting defect in this chapter (Ex4's inline "(i)/(ii)/(iii)" lettering)
-is cosmetic, not a clarity problem, and out of this catalog's scope; every item
-still names a concrete measurement.
-
-**External sources found:**
-- Sutton & Barto, Exercises 6.11/6.12 — a compact conceptual pair: why is
-  Q-learning off-policy at all, and, if action selection were made greedy,
-  would Q-learning and Sarsa become *the same* algorithm (same action
-  selections, same weight updates)? — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercises 6.9/6.10 (programming) — Windy Gridworld extended
-  with eight King's-move actions (plus an optional ninth "stay" action) and,
-  separately, with stochastic wind — a different TD-control environment for the
-  same "does more structure help" question the section asks of its exploration
-  schedules — http://incompleteideas.net/book/RLbook2020.pdf
-- Sutton & Barto, Exercises 2.7/2.8 — the "Unbiased Constant-Step-Size Trick"
-  (a step size avoiding constant-$\alpha$'s initial bias while keeping
-  non-stationary adaptivity) and "UCB Spikes" (explain Figure 2.4's spike at
-  the 11th step, *and* why it decreases afterward) — the closest S&B analogue
-  to the section's own step-size and UCB-sensitivity exercises —
-  http://incompleteideas.net/book/RLbook2020.pdf
-- David Silver, UCL Reinforcement Learning (2015), "Easy21" assignment —
-  Monte-Carlo control and Sarsa($\lambda$) on a custom blackjack-like game,
-  using a visit-count exploration schedule
-  $\epsilon_t = N_0/(N_0+N(s_t))$, $N_0=100$, rather than a fixed or
-  manually-annealed one — more principled than the section's own fixed-$\epsilon$
-  sweep — https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/easy21-assignment.pdf
-- Stanford CS234 (Winter 2026), Assignment 2, Q1 "Deep $Q$-Networks (DQN)"
-  (written) — given DQN's pseudocode (replay buffer, target network, minibatch
-  updates), say exactly which lines must change to recover tabular Q-learning
-  — the section's own summary text already promises this connection but never
-  makes the reader work through it —
-  https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf
-
-**Proposed problem set** (8 problems):
-1. [conceptual] **Why greedy from the start cannot work.** Trace a
-   fixed-tie-break trajectory from a zero table, and explain why coverage
-   alone doesn't guarantee a good table. *Provenance:* original (section's own
-   Ex1).
-2. [short-code] **The exploration schedule.** Predict then measure first
-   success and final greedy performance across five $\epsilon$ schedules.
-   *Provenance:* original (section's own Ex2).
-3. [conceptual] **Step sizes under a finite budget.** Check Robbins-Monro
-   conditions, then find by experiment a constant beating both decaying
-   schedules. *Provenance:* original (section's own Ex3).
-4. [short-code] **The double-sampling counterexample.** Build a 3-state MDP,
-   solve the population objective in closed form, and show semi-gradient TD
-   converges to $Q^*$ instead. *Provenance:* original (section's own Ex4).
-5. [short-code] **A like-for-like comparison with value iteration.** Plot
-   $\|\hat Q-Q^*\|_\infty$ against environment steps vs. Bellman backups.
-   *Provenance:* original (section's own Ex5).
-6. [short-code] **Regret, measured properly.** Re-plot per-seed cumulative
-   regret log-log, then sweep UCB's exploration coefficient. *Provenance:*
-   original (section's own Ex6).
-7. [extended] **A harder map.** Solve the 8x8 map and reconcile the
-   random-walk hitting time with measured episodes-to-first-success.
-   *Provenance:* original (section's own Ex7).
-8. [conceptual] **From tabular Q-learning to DQN, one line at a time.** Write
-   DQN's update as pseudocode with a replay buffer $\mathcal D$, target weights
-   $\theta^-$, and a minibatch of transitions. Say exactly which lines must be
-   deleted or changed — and why each is unneeded — to recover this section's
-   own `q_learning` update: what happens to the replay buffer when every
-   update uses only the transition just seen, what happens to the target
-   network when the table is its own exact target, and what happens to the
-   minibatch loop when the batch size is one. Then run this section's tabular
-   update once with a "replay buffer" of size one and confirm it reproduces the
-   original numbers exactly. *Provenance:* adapted from Stanford CS234 Winter
-   2026 Assignment 2, Q1.1(a) (overlap high — the reduction question is
-   reused directly; the empirical check against this section's own code is
-   original).
 
 ---
 

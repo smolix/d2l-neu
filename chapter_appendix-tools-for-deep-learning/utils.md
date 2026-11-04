@@ -46,7 +46,11 @@ import inspect
 from IPython import display
 import collections
 from d2l import jax as d2l
+from flax import nnx
 import jax
+import numpy as np
+import optax
+import weakref  #@save
 ```
 
 ## Hyperparameter Utilities
@@ -124,7 +128,7 @@ def _plot(self, ax):
     ax.grid()
 ```
 
-## Reinforcement Learning Visualizations
+## Reinforcement Learning Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-18}
 %%tab pytorch, jax
@@ -225,6 +229,59 @@ def show_grid(desc, values, policy=None, titles=None,  #@save
         if titles is not None:
             ax.set_title(titles[k])
     fig.tight_layout()
+
+def run_seeds(train, num_seeds, **kwargs):  #@save
+    """Run train(seed, **kwargs), a generator of curve points, per seed."""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+```
+
+`run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects.
+
+The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates.
+
+```{.python .input #utils-reinforcement-learning-utilities-1}
+%%tab jax
+#@save
+_forwards = {}                          # one compiled forward per net structure
+
+#@save
+_splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
+
+def forward_np(net, x):  #@save
+    """net(x) for numpy x, as numpy, through one compiled forward per net
+    structure and input shape. The net is split once and its variables are
+    kept, so each call reads their current values: optimizer steps show up
+    without splitting again."""
+    if net not in _splits:
+        graph, state = nnx.split(net)
+        tree = jax.tree.structure(state)
+        if (graph, tree) not in _forwards:
+            _forwards[graph, tree] = jax.jit(lambda leaves, x: nnx.merge(
+                graph, jax.tree.unflatten(tree, leaves))(x))
+        _splits[net] = _forwards[graph, tree], jax.tree.leaves(
+            state, is_leaf=lambda v: isinstance(v, nnx.Variable))
+    forward, variables = _splits[net]
+    leaves = [v.get_raw_value() for v in variables]
+    return jax.tree.map(np.asarray, forward(leaves, x))
+
+def _pad(x, size):  #@save
+    """Zero-pad axis 0 of an array to `size` rows."""
+    x = np.asarray(x)
+    return np.pad(x, ((0, size - len(x)),) + ((0, 0),) * (x.ndim - 1))
+
+def _bucket(n):  #@save
+    """Padded batch length: the next power of two, at least 64, so that a
+    compiled pass is reused across batches of different lengths."""
+    return 1 << max(6, (n - 1).bit_length())
+
+#@save
+_adams = {}
+
+def shared_adam(lr):  #@save
+    """One optax.adam per learning rate, shared by all agents: compiled
+    updates are keyed on the optimizer, so a new agent reuses the compiled
+    code instead of compiling it again."""
+    return _adams.setdefault(lr, optax.adam(lr))
 ```
 
 ## Training Utilities

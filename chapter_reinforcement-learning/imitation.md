@@ -22,8 +22,6 @@ import gymnasium as gym
 import jax
 from jax import numpy as jnp
 import numpy as np
-import optax
-import weakref  #@save
 ```
 
 ## Behavior Cloning
@@ -62,55 +60,40 @@ print(f'{demo_s.size} state-action pairs from 3 expert episodes, '
 
 The three episodes produce 96 labeled pairs but visit only 7 of the 11 reachable frozen cells. The three top-row states and state 13 are absent, so their actions are unconstrained by the demonstrations.
 
-*Behavior cloning* treats these pairs exactly as :numref:`sec_softmax` treated images and labels: the state is the input, the expert's action is the class, and we fit a conditional distribution $\pi_\theta(a \mid s)$ by maximizing the log-likelihood $\sum_i \log \pi_\theta(a_i \mid s_i)$, that is, by minimizing cross-entropy. Behavior cloning requires only a parameterized policy. The following container represents policies used throughout these two chapters:
+*Behavior cloning* treats these pairs exactly as :numref:`sec_softmax` treated images and labels: the state is the input, the expert's action is the class, and we fit a conditional distribution $\pi_\theta(a \mid s)$ by maximizing the log-likelihood $\sum_i \log \pi_\theta(a_i \mid s_i)$, that is, by minimizing cross-entropy. Behavior cloning requires only a parameterized policy. The following container holds a policy network and its optimizer:
 
 ```{.python .input #imitation-the-reduction-to-classification-2}
 %%tab pytorch
-class ActorCritic(nn.Module):  #@save
-    """A policy and a value function, each with its own optimizer."""
-    def __init__(self, policy, value, lr=1e-2):
+class Policy(nn.Module):  #@save
+    """A policy network and its optimizer; pi(.|s) is the softmax of the
+    network's outputs at s."""
+    def __init__(self, policy, lr=1e-2):
         super().__init__()
-        self.policy, self.value = policy, value
+        self.policy = policy
         self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
-        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
-
-    def forward(self, obs):
-        return torch.softmax(self.policy(obs), dim=-1)
 
     def log_prob(self, obs, act):
         """log pi(a|s) for a batch of states and the actions taken there."""
         return torch.log_softmax(self.policy(obs), dim=-1) \
                     .gather(-1, act[:, None]).squeeze(-1)
 
-    def V(self, obs):
-        return self.value(obs).squeeze(-1)
-
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1):
         """One preference theta_{s,a} per state-action pair: an embedding."""
-        policy, value = (nn.Embedding(num_states, num_actions),
-                         nn.Embedding(num_states, 1))
-        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
-        return cls(policy, value, lr)
+        policy = nn.Embedding(num_states, num_actions)
+        nn.init.zeros_(policy.weight)
+        return cls(policy, lr)
 ```
 
 ```{.python .input #imitation-the-reduction-to-classification-2}
 %%tab jax
-#@save
-_adams = {}
-
-def shared_adam(lr):  #@save
-    """One optax.adam per learning rate, shared by all agents: compiled
-    updates are keyed on the optimizer, so a new agent reuses the compiled
-    code instead of compiling it again."""
-    return _adams.setdefault(lr, optax.adam(lr))
-
-class ActorCritic(nnx.Module):  #@save
-    """A policy and a value function, each with its own optimizer."""
-    def __init__(self, policy, value, lr=1e-2):
-        self.policy, self.value = policy, value
-        self.opt_pi = nnx.Optimizer(policy, shared_adam(lr), wrt=nnx.Param)
-        self.opt_v = nnx.Optimizer(value, shared_adam(lr), wrt=nnx.Param)
+class Policy(nnx.Module):  #@save
+    """A policy network and its optimizer; pi(.|s) is the softmax of the
+    network's outputs at s."""
+    def __init__(self, policy, lr=1e-2):
+        self.policy = policy
+        self.opt_pi = nnx.Optimizer(policy, d2l.shared_adam(lr),
+                                    wrt=nnx.Param)
 
     def log_prob(self, obs, act, policy=None):
         """log pi(a|s). Gradients flow w.r.t. the module you differentiate;
@@ -119,18 +102,12 @@ class ActorCritic(nnx.Module):  #@save
         logp = jax.nn.log_softmax(policy(obs), axis=-1)
         return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
 
-    def V(self, obs, value=None):
-        value = self.value if value is None else value
-        return value(obs).squeeze(-1)
-
     @classmethod
     def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
         """One preference theta_{s,a} per state-action pair: an embedding."""
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        zeros = nnx.initializers.zeros_init()
-        return cls(nnx.Embed(num_states, num_actions,
-                             embedding_init=zeros, rngs=rngs),
-                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+        return cls(nnx.Embed(num_states, num_actions, rngs=rngs,
+                             embedding_init=nnx.initializers.zeros_init()),
                    lr)
 ```
 
@@ -140,33 +117,23 @@ integer state indexes its row, and a softmax produces
 $\pi_\theta(\cdot\mid s)$. Zero initialization makes the initial policy
 uniform.
 
-The class also contains a value head and a second optimizer, neither of
-which is used for behavior cloning. They are included so that
-:numref:`sec_policygradient` can reuse the same policy container when the
-training signal changes from expert actions to sampled rewards.
-
-The environment and `d2l.evaluate` exchange NumPy values, so four boundary methods convert framework arrays to NumPy. The PyTorch methods use `no_grad`; JAX records gradients only inside an explicit `grad` transformation and requires no equivalent wrapper:
+The environment and `d2l.evaluate` exchange NumPy values, so three boundary methods convert framework arrays to NumPy. The PyTorch methods use `no_grad`; JAX records gradients only inside an explicit `grad` transformation and requires no equivalent wrapper:
 
 ```{.python .input #imitation-the-reduction-to-classification-3}
 %%tab pytorch
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def act(self, obs, rng):
     """Sample an action; numpy in, int out, the acting protocol of evaluate."""
     with torch.no_grad():
         probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
     return int(rng.choice(len(probs), p=probs))
 
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def act_greedy(self, obs, rng=None):
     with torch.no_grad():
         return int(self.policy(torch.as_tensor(obs)).argmax())
 
-@d2l.add_to_class(ActorCritic)  #@save
-def value_np(self, obs):
-    with torch.no_grad():
-        return self.V(torch.as_tensor(obs)).numpy()
-
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def log_prob_np(self, obs, act):
     with torch.no_grad():
         return self.log_prob(torch.as_tensor(obs),
@@ -175,114 +142,38 @@ def log_prob_np(self, obs, act):
 
 ```{.python .input #imitation-the-reduction-to-classification-3}
 %%tab jax
-#@save
-_forwards = {}                          # one compiled forward per net structure
-
-#@save
-_splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
-
-def forward_np(net, x):  #@save
-    """net(x) for numpy x, as numpy, through one compiled forward per net
-    structure and input shape. The net is split once and its variables are
-    kept, so each call reads their current values: optimizer steps show up
-    without splitting again."""
-    if net not in _splits:
-        graph, state = nnx.split(net)
-        tree = jax.tree.structure(state)
-        if (graph, tree) not in _forwards:
-            _forwards[graph, tree] = jax.jit(lambda leaves, x: nnx.merge(
-                graph, jax.tree.unflatten(tree, leaves))(x))
-        _splits[net] = _forwards[graph, tree], jax.tree.leaves(
-            state, is_leaf=lambda v: isinstance(v, nnx.Variable))
-    forward, variables = _splits[net]
-    leaves = [v.get_raw_value() for v in variables]
-    return jax.tree.map(np.asarray, forward(leaves, x))
-
-def _pad(x, size):  #@save
-    """Zero-pad axis 0 of an array to `size` rows."""
-    x = np.asarray(x)
-    return np.pad(x, ((0, size - len(x)),) + ((0, 0),) * (x.ndim - 1))
-
-def _bucket(n):  #@save
-    """Padded batch length: the next power of two, at least 64, so that a
-    compiled pass is reused across batches of different lengths."""
-    return 1 << max(6, (n - 1).bit_length())
-
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def act(self, obs, rng):
     """Sample an action; numpy in, int out, the acting protocol of evaluate."""
-    logits = forward_np(self.policy, obs)
+    logits = d2l.forward_np(self.policy, obs)
     probs = np.exp(logits - logits.max())
     return int(rng.choice(len(probs), p=probs / probs.sum()))
 
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def act_greedy(self, obs, rng=None):
-    return int(forward_np(self.policy, obs).argmax())
+    return int(d2l.forward_np(self.policy, obs).argmax())
 
-@d2l.add_to_class(ActorCritic)  #@save
-def value_np(self, obs):
-    """V(s) for a batch of states, padded to a bucket length."""
-    out = forward_np(self.value, _pad(obs, _bucket(len(obs))))
-    return out[:len(obs), 0]
-
-@d2l.add_to_class(ActorCritic)  #@save
+@d2l.add_to_class(Policy)  #@save
 def log_prob_np(self, obs, act):
     return np.asarray(self.log_prob(jnp.asarray(obs), jnp.asarray(act)))
 ```
 
-Both `act` methods draw from the supplied shared NumPy generator rather than a framework sampler, so environment-facing randomness comes from one explicit source. Behavior cloning uses `act_greedy` and `log_prob_np`; :numref:`sec_policygradient` also uses stochastic sampling and the value reader. The fitting loop follows :numref:`sec_softmax`, with states replacing images:
+:begin_tab:`jax`
+`act` and `act_greedy` run the network through `d2l.forward_np`, and `policy_step` below pads its batch to a bucket length with `d2l._pad` and `d2l._bucket`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`.
+:end_tab:
 
-```{.python .input #imitation-the-reduction-to-classification-4}
-%%tab pytorch
-def clone(states, actions, num_steps=200):
-    """Behavior cloning: cross-entropy fit of pi(a|s) to expert choices."""
-    ac = ActorCritic.tabular(16, 4)
-    obs, act = torch.as_tensor(states), torch.as_tensor(actions)
-    for _ in range(num_steps):
-        loss = -ac.log_prob(obs, act).mean()
-        ac.opt_pi.zero_grad()
-        loss.backward()
-        ac.opt_pi.step()
-    return ac, loss.item()
+Both `act` methods draw from the supplied shared NumPy generator rather than a framework sampler, so environment-facing randomness comes from one explicit source. Behavior cloning uses `act_greedy` and `log_prob_np`; :numref:`sec_policygradient` also uses stochastic sampling.
 
-bc, nll = clone(demo_s, demo_a)
-print(f'cross-entropy on the demonstrations after the fit: {nll:.3f}')
-for s in (9, 3):
-    probs = np.exp(bc.log_prob_np(np.repeat(s, 4), np.arange(4)))
-    print(f'clone pi(.|s={s}): {np.round(probs, 3)}')
-```
-
-```{.python .input #imitation-the-reduction-to-classification-4}
-%%tab jax
-def clone(states, actions, num_steps=200):
-    """Behavior cloning: cross-entropy fit of pi(a|s) to expert choices."""
-    ac = ActorCritic.tabular(16, 4)
-    obs, act = jnp.asarray(states), jnp.asarray(actions)
-    def nll_fn(policy):
-        return -ac.log_prob(obs, act, policy).mean()
-    for _ in range(num_steps):
-        loss, grads = nnx.value_and_grad(nll_fn)(ac.policy)
-        ac.opt_pi.update(ac.policy, grads)
-    return ac, float(loss)
-
-bc, nll = clone(demo_s, demo_a)
-print(f'cross-entropy on the demonstrations after the fit: {nll:.3f}')
-for s in (9, 3):
-    probs = np.exp(bc.log_prob_np(np.repeat(s, 4), np.arange(4)))
-    print(f'clone pi(.|s={s}): {np.round(probs, 3)}')
-```
-
-The loss approaches zero. At state 9, which was demonstrated many times with the same label, the clone assigns nearly all probability to *down*. State 3 was never demonstrated, so its table row receives no gradient and remains exactly uniform. Greedy action selection resolves this four-way tie by choosing action 0, *left*, according to the implementation's tie-breaking rule.
-
-The cloning update is an ascent step on a weighted sum of log-probabilities with all weights equal to one. We save this update for reuse in later sections. Its `batch` argument is any object containing `obs` and `act` arrays; :numref:`sec_policygradient` defines the shared container and supplies return-based weights instead of unit weights:
+Fitting the clone maximizes $\sum_i \log \pi_\theta(a_i \mid s_i)$: an ascent step on a weighted sum of log-probabilities with every weight equal to one. We save this update with the weights as an argument, for reuse in later sections:
 
 ```{.python .input #imitation-the-reduction-to-classification-5}
 %%tab pytorch
-def policy_step(ac, batch, advantage):  #@save
-    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data."""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
-    adv = torch.as_tensor(advantage)
-    loss = -(adv * ac.log_prob(obs, act)).mean()
+def policy_step(ac, obs, act, weight):  #@save
+    """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
+    n states and actions; the weights w arrive as numpy, that is, as data."""
+    w = torch.as_tensor(weight)
+    loss = -(w * ac.log_prob(torch.as_tensor(obs),
+                             torch.as_tensor(act))).mean()
     ac.opt_pi.zero_grad()
     loss.backward()
     ac.opt_pi.step()
@@ -292,25 +183,46 @@ def policy_step(ac, batch, advantage):  #@save
 ```{.python .input #imitation-the-reduction-to-classification-5}
 %%tab jax
 @nnx.jit  #@save
-def _policy_pass(ac, obs, act, adv, n):
-    """-sum(adv * log pi(act|obs)) / n and one optimizer step; padded rows
-    carry adv = 0 and add nothing."""
+def _policy_pass(ac, obs, act, w, n):
+    """-sum(w * log pi(act|obs)) / n and one optimizer step; padded rows
+    carry w = 0 and add nothing."""
     loss, grads = nnx.value_and_grad(
-        lambda policy: -(adv * ac.log_prob(obs, act, policy)).sum() / n)(
+        lambda policy: -(w * ac.log_prob(obs, act, policy)).sum() / n)(
             ac.policy)
     ac.opt_pi.update(ac.policy, grads)
     return loss
 
-def policy_step(ac, batch, advantage):  #@save
-    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+def policy_step(ac, obs, act, weight):  #@save
+    """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
+    n states and actions; the weights w arrive as numpy, that is, as data.
     The batch is padded to a bucket length, so the compiled pass is reused."""
-    n = len(advantage)
-    size = _bucket(n)
-    return float(_policy_pass(ac, _pad(batch.obs, size), _pad(batch.act, size),
-                              _pad(np.float32(advantage), size), n))
+    n = len(weight)
+    size = d2l._bucket(n)
+    return float(_policy_pass(ac, d2l._pad(obs, size), d2l._pad(act, size),
+                              d2l._pad(np.float32(weight), size), n))
 ```
 
-The weights are supplied as a NumPy array and therefore cannot contain a gradient graph. Both framework implementations consequently treat them as fixed data without requiring an explicit stop-gradient operation.
+The weights are supplied as a NumPy array and therefore cannot contain a gradient graph. Both framework implementations consequently treat them as fixed data without requiring an explicit stop-gradient operation. The fitting loop follows :numref:`sec_softmax`, with states replacing images, and calls `policy_step` with unit weights:
+
+```{.python .input #imitation-the-reduction-to-classification-4}
+%%tab pytorch, jax
+def clone(states, actions, num_steps=200):
+    """Behavior cloning: cross-entropy fit of pi(a|s) to expert choices,
+    that is, policy_step with every weight equal to one."""
+    learner = Policy.tabular(16, 4)
+    weight = np.ones(len(states), np.float32)
+    for _ in range(num_steps):
+        nll = policy_step(learner, states, actions, weight)
+    return learner, nll
+
+bc, nll = clone(demo_s, demo_a)
+print(f'cross-entropy on the demonstrations after the fit: {nll:.3f}')
+for s in (9, 3):
+    probs = np.exp(bc.log_prob_np(np.repeat(s, 4), np.arange(4)))
+    print(f'clone pi(.|s={s}): {np.round(probs, 3)}')
+```
+
+The loss approaches zero. At state 9, which was demonstrated many times with the same label, the clone assigns nearly all probability to *down*. State 3 was never demonstrated, so its table row receives no gradient and remains exactly uniform. Greedy action selection resolves this four-way tie by choosing action 0, *left*, according to the implementation's tie-breaking rule.
 
 ### Distribution Shift between Training and Deployment
 :label:`subsec_il_distribution_shift`
@@ -463,9 +375,9 @@ Generative adversarial imitation learning trains a discriminator to distinguish 
 
 Behavior cloning fits $\pi_\theta(a\mid s)$ to demonstrated state--action pairs by cross-entropy and requires neither a transition model nor a reward. Its supervised guarantee applies to the expert's state distribution, whereas deployment evaluates the policy on states generated by its own actions. A per-step error $\varepsilon$ under the expert distribution can therefore produce a return gap of order $\varepsilon T^2$ over horizon $T$; controlling the error under the learner distribution yields an order-$\varepsilon T$ bound.
 
-DAgger collects states from the learner and obtains expert labels for them, addressing this distribution mismatch when used iteratively with a no-regret learner. The section also introduced the `ActorCritic` container and the weighted log-likelihood update `policy_step`, for which behavior cloning uses unit weights.
+DAgger collects states from the learner and obtains expert labels for them, addressing this distribution mismatch when used iteratively with a no-regret learner. The section also introduced the `Policy` container and the weighted log-likelihood update `policy_step`, for which behavior cloning uses unit weights.
 
-**Experimental scope.** The reported fits and evaluations are reproducible from the stated seeds. The large gap between training accuracy and deployed performance comes from one small demonstration set; the ten-dataset comparison shows how often similar failures occur. The chain experiment constructs the two limiting error-propagation cases, while practical tasks generally fall between them. :numref:`sec_qlearning` considers the setting without an expert.
+**Experimental scope.** The reported fits and evaluations are reproducible from the stated seeds. The large gap between training accuracy and deployed performance comes from one small demonstration set; the ten-dataset comparison shows how often similar failures occur. The chain experiment constructs the two limiting error-propagation cases, while practical tasks generally fall between them. :numref:`sec_policygradient` considers the setting without an expert.
 
 ## Exercises
 
@@ -676,11 +588,11 @@ Fitting $\pi_\theta(a \mid s)$ to the pairs is **softmax regression**.
 96 labeled pairs; 4 of 11 reachable states never appear.
 :::
 
-::: {.slide title="One Policy Object for Two Chapters"}
+::: {.slide title="One Policy Object"}
 @imitation-the-reduction-to-classification-2
 
 `nn.Embedding(16, 4)` represents the preference table $\theta_{s,a}$;
-zero initialization produces a uniform policy. The value head is first used in :numref:`sec_policygradient`.
+zero initialization produces a uniform policy.
 :::
 
 ::: {.slide title="Training Fit Does Not Cover Unvisited States"}
@@ -744,5 +656,5 @@ this procedure requires continued expert access rather than only a fixed dataset
 - DAgger moves training onto the learner's states with a relabeling loop;
   the guarantee needs iteration and a no-regret learner.
 - SFT of a language model **is** behavior cloning (:numref:`sec_rl_sequences`); BC is the offline baseline (:numref:`sec_offline`).
-- :numref:`sec_policygradient` reuses `ActorCritic` and `policy_step`, replacing expert labels with sampled rewards.
+- :numref:`sec_policygradient` reuses `Policy` and `policy_step`, replacing expert labels with sampled rewards.
 :::

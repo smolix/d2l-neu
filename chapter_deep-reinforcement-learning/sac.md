@@ -154,10 +154,12 @@ reported entropy and in $\alpha\log\pi$ inside the target. Omitting it
 therefore shifts reported log densities by $\log c$. The quadrature check
 below verifies the density convention used here.
 
-The policy adds a reparameterized `sample` method that returns both the
-bounded action and its log-probability. Its mean and log standard
-deviation are state-dependent. We clamp the latter to $[-5,2]$ as a
-numerical implementation choice; without this bound, the present setup
+The policy network is the `GaussianHead` of :numref:`sec_deeprl` with two
+ReLU layers as its trunk and `state_std=True`, so both its mean and its
+log standard deviation are state-dependent. The policy adds a
+reparameterized `sample` method that returns both the bounded action and
+its log-probability. The head clamps the log standard deviation to
+$[-5,2]$ as a numerical implementation choice; without this bound, the present setup
 produced very small scales and divergent log densities within roughly one
 thousand updates. This observation is specific to the stated task and
 hyperparameters, not a property of all SAC implementations.
@@ -169,14 +171,15 @@ density on a fixed action grid.
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab pytorch
-class SquashedGaussianPolicy(d2l.GaussianPolicy):
-    """d2l.GaussianPolicy with SAC's network (two ReLU layers and a
+class SquashedGaussianPolicy(nn.Module):
+    """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64):
+        super().__init__()
         trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
                               nn.Linear(hidden, hidden), nn.ReLU())
-        super().__init__(obs_dim, act_dim, hidden, state_std=True,
-                         trunk=trunk)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk)
 
     def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
@@ -191,23 +194,28 @@ class SquashedGaussianPolicy(d2l.GaussianPolicy):
         return c * torch.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
-        return c * np.tanh(super().act(obs, rng))
+        with torch.no_grad():
+            mean, std = self.policy(torch.as_tensor(obs))
+        u = mean.numpy() + std.numpy() * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+        return c * np.tanh(u)
 
     def act_greedy(self, obs, rng=None):
-        return c * np.tanh(super().act_greedy(obs))
+        with torch.no_grad():
+            return c * np.tanh(self.policy(torch.as_tensor(obs))[0].numpy())
 ```
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab jax
-class SquashedGaussianPolicy(d2l.GaussianPolicy):
-    """d2l.GaussianPolicy with SAC's network (two ReLU layers and a
+class SquashedGaussianPolicy(nnx.Module):
+    """d2l.GaussianHead with SAC's network (two ReLU layers and a
     state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64, rngs=None):
         trunk = nnx.Sequential(
             nnx.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
             nnx.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        super().__init__(obs_dim, act_dim, hidden, rngs=rngs, state_std=True,
-                         trunk=trunk)
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden, rngs,
+                                       state_std=True, trunk=trunk)
 
     def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
@@ -222,10 +230,12 @@ class SquashedGaussianPolicy(d2l.GaussianPolicy):
         return c * jnp.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
-        return c * np.tanh(super().act(obs, rng))
+        mean, std = d2l.forward_np(self.policy, obs)   # compiled forward
+        u = mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
+        return c * np.tanh(u)
 
     def act_greedy(self, obs, rng=None):
-        return c * np.tanh(super().act_greedy(obs))
+        return c * np.tanh(d2l.forward_np(self.policy, obs)[0])
 ```
 
 Inside `log_prob_u`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.

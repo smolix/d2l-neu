@@ -49,7 +49,7 @@ The objective is defined over complete episodes; treating a time-limit truncatio
 
 ### Softmax Preferences
 
-Gradient ascent requires a differentiable parameterization of the policy. `ActorCritic.tabular` from :numref:`sec_imitation` stores one parameter $\theta_{s,a}$, called a *preference*, for each state-action pair. A softmax converts the preferences at state $s$ into probabilities:
+Gradient ascent requires a differentiable parameterization of the policy. `Policy.tabular` from :numref:`sec_imitation` stores one parameter $\theta_{s,a}$, called a *preference*, for each state-action pair. A softmax converts the preferences at state $s$ into probabilities:
 
 $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}}.$$
 :eqlabel:`eq_softmax_policy`
@@ -68,7 +68,7 @@ and the derivative with respect to preferences at other states is zero. The vect
 ```{.python .input #policy-gradient-the-score-function}
 %%tab pytorch
 rng = np.random.default_rng(0)
-check = d2l.ActorCritic.tabular(16, 4)
+check = d2l.Policy.tabular(16, 4)
 with torch.no_grad():   # move to a generic table, off the uniform start
     check.policy.weight.copy_(torch.as_tensor(rng.standard_normal((16, 4))))
 check.log_prob(torch.tensor([6]), torch.tensor([2])).backward()
@@ -114,6 +114,72 @@ $$J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau) \Big] = \s
 where the sum ranges over trajectories of length $T$. Episodes that terminate early may be padded with an absorbing state and zero rewards, without changing the objective. The implementation stores only the observed portion of each episode. In the notation of :numref:`sec_valueiter`, $J(\theta)=V^{\pi_\theta}(s_0)$. We optimize this quantity directly:
 
 $$\max_\theta J(\theta) = \max_\theta \sum_{\tau} R(\tau)\ P(\tau; \theta).$$
+
+### The Log-Derivative Trick
+
+To maximize $J(\theta)$ by gradient ascent we need its gradient. The return $R(\tau)$ of a fixed trajectory does not depend on $\theta$, only the probability of the trajectory does, so (the summation is finite, so we can exchange it with the gradient)
+
+$$
+\begin{aligned}
+\nabla_\theta J(\theta) &= \nabla_\theta \sum_\tau R(\tau)\ P(\tau; \theta) = \sum_\tau R(\tau)\ \nabla_\theta P(\tau; \theta) \\
+&= \sum_\tau R(\tau)\ P(\tau; \theta)\ \frac{\nabla_\theta P(\tau; \theta)}{P(\tau; \theta)} \\
+&= \sum_\tau P(\tau; \theta)\ R(\tau)\ \nabla_\theta \log P(\tau; \theta),
+\end{aligned}
+$$
+
+where we multiplied and divided by $P(\tau; \theta)$ and used the identity $\nabla \log P = \nabla P / P$. This step, known as the log-derivative trick, is important because it turns the gradient back into an average over trajectories,
+
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nabla_\theta \log P(\tau; \theta) \Big],$$
+:eqlabel:`eq_pg_gradient`
+
+This expectation can be estimated by sampling trajectories from the current policy.
+
+### Cancellation of the Transition Probabilities
+:label:`subsec_pg-cancellation`
+
+Although $P(\tau;\theta)$ contains the transition kernel, its derivative does not require evaluating that kernel. Taking the logarithm and differentiating gives
+
+$$
+\begin{aligned}
+\nabla_\theta \log P(\tau; \theta) &= \nabla_\theta \Big[ \sum_{t=0}^{T-1} \log \pi_\theta(a_t \mid s_t) + \sum_{t=0}^{T-1} \log P(s_{t+1} \mid s_t, a_t) \Big] \\
+&= \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t \mid s_t).
+\end{aligned}
+$$
+
+The transition probabilities do not depend on $\theta$, so their derivatives are zero. The kernel still determines the distribution of sampled trajectories, but the estimator need not evaluate it explicitly.
+
+### The REINFORCE Estimator
+
+We approximate the expectation in :eqref:`eq_pg_gradient` with an empirical average. The agent runs its current policy $\pi_\theta$ to collect $n$ trajectories $\tau_1, \ldots, \tau_n$ and computes
+
+$$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i)\ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i),$$
+:eqlabel:`eq_reinforce`
+
+This is an unbiased estimate of $\nabla_\theta J(\theta)$. REINFORCE :cite:`Williams.1992` applies the ascent step $\theta\leftarrow\theta+\alpha\hat u$. Each trajectory return weights the scores of all actions in that trajectory. On FrozenLake the returns are nonnegative, so sampled actions receive nonnegative weights; their relative probabilities still change through the softmax coupling. Baselines introduced in :numref:`sec_baselines` provide weights that are positive for better-than-typical outcomes and negative for worse ones.
+
+Since each update changes the policy, a new on-policy batch is collected before the next update. :numref:`fig_rl_score_ascent` illustrates one update.
+
+![One REINFORCE step on a one-step problem. The Gaussian policy is $\pi_\theta(a)=\mathcal{N}(a;\mu,1)$ with $\mu=0$, and the reward is $R(a)=0.4+2e^{-(a-2)^2/2}$, giving expected reward $J=0.92$ and exact gradient $\mathrm{d}J/\mathrm{d}\mu=0.52$. (a) Twelve sampled actions increase their log-probabilities in proportion to their rewards. All arrows point upward because all rewards are positive. (b) After the update, the policy mean moves from $0$ to $0.55$, toward the actions with higher rewards.](../img/mdl-rl-score-ascent.svg)
+:label:`fig_rl_score_ascent`
+
+[Placeholder for the writers (14.6-M3): on the verifier task of :numref:`sec_mdp` a trajectory is one response $y$ to a prompt $x$, the score is $e_y-\pi(\cdot\mid x)$ by :eqref:`eq_softmax_score`, and the exact gradient per prompt is the nine-term sum $\sum_y\pi(y\mid x)\,r(x,y)\,(e_y-\pi(\cdot\mid x))$. `verifier_step` samples $K$ responses per prompt, weights each score by a function of the group's rewards (here the rewards themselves, `lambda r: r`, which is :eqref:`eq_reinforce`), and takes one ascent step on the preference table.]
+
+```{.python .input #policy-gradient-the-reinforce-estimator-4}
+%%tab pytorch, jax
+def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):  #@save
+    """One REINFORCE step on a VerifierTask: K responses per prompt, each
+    score e_y - pi(.|x) (eq_softmax_score) weighted by weighting(rewards of
+    the prompt's K responses), averaged over the K, one ascent step."""
+    pi, g = task.policy(theta), np.zeros_like(theta)
+    eye = np.eye(len(task.resp))
+    for x in range(len(task.prompts)):         # one group of K per prompt
+        ys = rng.choice(len(task.resp), K, p=pi[x])
+        w = weighting(np.array([reward(x, y) for y in ys]))
+        g[x] = (eye[ys] - pi[x]).T @ w / K
+    return theta + lr * g
+```
+
+### REINFORCE on the Lake
 
 The `Batch` class stores transitions from several episodes in flat arrays together with their episode boundaries. It records the `terminated` flag separately from truncation, as required for bootstrapped targets (:numref:`sec_mdp`).
 
@@ -173,54 +239,7 @@ def rollout(env, policy, num_episodes, rng):  #@save
 
 Both objects use NumPy arrays and are shared by the framework implementations. Conversion to framework arrays occurs inside update functions. The same `rollout` function is used by the later learning algorithms.
 
-### The Log-Derivative Trick
-
-To maximize $J(\theta)$ by gradient ascent we need its gradient. The return $R(\tau)$ of a fixed trajectory does not depend on $\theta$, only the probability of the trajectory does, so (the summation is finite, so we can exchange it with the gradient)
-
-$$
-\begin{aligned}
-\nabla_\theta J(\theta) &= \nabla_\theta \sum_\tau R(\tau)\ P(\tau; \theta) = \sum_\tau R(\tau)\ \nabla_\theta P(\tau; \theta) \\
-&= \sum_\tau R(\tau)\ P(\tau; \theta)\ \frac{\nabla_\theta P(\tau; \theta)}{P(\tau; \theta)} \\
-&= \sum_\tau P(\tau; \theta)\ R(\tau)\ \nabla_\theta \log P(\tau; \theta),
-\end{aligned}
-$$
-
-where we multiplied and divided by $P(\tau; \theta)$ and used the identity $\nabla \log P = \nabla P / P$. This step, known as the log-derivative trick, is important because it turns the gradient back into an average over trajectories,
-
-$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nabla_\theta \log P(\tau; \theta) \Big],$$
-:eqlabel:`eq_pg_gradient`
-
-This expectation can be estimated by sampling trajectories from the current policy.
-
-### Cancellation of the Transition Probabilities
-:label:`subsec_pg-cancellation`
-
-Although $P(\tau;\theta)$ contains the transition kernel, its derivative does not require evaluating that kernel. Taking the logarithm and differentiating gives
-
-$$
-\begin{aligned}
-\nabla_\theta \log P(\tau; \theta) &= \nabla_\theta \Big[ \sum_{t=0}^{T-1} \log \pi_\theta(a_t \mid s_t) + \sum_{t=0}^{T-1} \log P(s_{t+1} \mid s_t, a_t) \Big] \\
-&= \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t \mid s_t).
-\end{aligned}
-$$
-
-The transition probabilities do not depend on $\theta$, so their derivatives are zero. The kernel still determines the distribution of sampled trajectories, but the estimator need not evaluate it explicitly.
-
-### The REINFORCE Estimator
-
-We approximate the expectation in :eqref:`eq_pg_gradient` with an empirical average. The agent runs its current policy $\pi_\theta$ to collect $n$ trajectories $\tau_1, \ldots, \tau_n$ and computes
-
-$$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i)\ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i),$$
-:eqlabel:`eq_reinforce`
-
-This is an unbiased estimate of $\nabla_\theta J(\theta)$. REINFORCE :cite:`Williams.1992` applies the ascent step $\theta\leftarrow\theta+\alpha\hat u$. Each trajectory return weights the scores of all actions in that trajectory. On FrozenLake the returns are nonnegative, so sampled actions receive nonnegative weights; their relative probabilities still change through the softmax coupling. Baselines introduced in :numref:`sec_baselines` provide weights that are positive for better-than-typical outcomes and negative for worse ones.
-
-Since each update changes the policy, a new on-policy batch is collected before the next update. :numref:`fig_rl_score_ascent` illustrates one update.
-
-![One REINFORCE step on a one-step problem. The Gaussian policy is $\pi_\theta(a)=\mathcal{N}(a;\mu,1)$ with $\mu=0$, and the reward is $R(a)=0.4+2e^{-(a-2)^2/2}$, giving expected reward $J=0.92$ and exact gradient $\mathrm{d}J/\mathrm{d}\mu=0.52$. (a) Twelve sampled actions increase their log-probabilities in proportion to their rewards. All arrows point upward because all rewards are positive. (b) After the update, the policy mean moves from $0$ to $0.55$, toward the actions with higher rewards.](../img/mdl-rl-score-ascent.svg)
-:label:`fig_rl_score_ascent`
-
-The implementation reuses `policy_step` from :numref:`sec_imitation`, which takes one Adam step with the learning rate `lr` of `ActorCritic.tabular` ($0.1$ by default) in place of the plain ascent step. Behavior cloning assigned weight one to each demonstrated action; REINFORCE assigns the trajectory return $R(\tau_i)$ to every action in trajectory $i$. The caller supplies the agent and records the number of environment steps:
+The implementation reuses `policy_step` from :numref:`sec_imitation`, which takes one Adam step with the learning rate `lr` of `Policy.tabular` ($0.1$ by default) in place of the plain ascent step. Behavior cloning assigned weight one to each demonstrated action; REINFORCE assigns the trajectory return $R(\tau_i)$ to every action in trajectory $i$. The caller supplies the agent and records the number of environment steps:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
@@ -233,7 +252,7 @@ def train_reinforce_tabular(ac, seed, steps, num_updates=256,
     for _ in range(num_updates):
         batch = rollout(env, ac.act, batch_episodes, rng)
         R = batch.episode_returns(gamma)
-        d2l.policy_step(ac, batch, batch.per_step(R))
+        d2l.policy_step(ac, batch.obs, batch.act, batch.per_step(R))
         steps.append(len(batch))
         yield float(R.mean())
 ```
@@ -246,9 +265,9 @@ agents, steps, curves = [], [], []
 for seed in range(3):
     if tab.selected('pytorch'):
         torch.manual_seed(seed)            # init stream; the table is zeros
-        agents.append(d2l.ActorCritic.tabular(16, 4))
+        agents.append(d2l.Policy.tabular(16, 4))
     if tab.selected('jax'):
-        agents.append(d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(seed)))
+        agents.append(d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(seed)))
     steps.append([])
     curves.append(list(train_reinforce_tabular(agents[-1], seed, steps[-1])))
 curves, steps = np.array(curves), np.array(steps)
@@ -315,7 +334,7 @@ a differentiable linear solve, so automatic differentiation gives the exact $\na
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
 torch.manual_seed(3)
-probe = d2l.ActorCritic.tabular(16, 4)
+probe = d2l.Policy.tabular(16, 4)
 for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
     pass
 theta = probe.policy.weight.detach().requires_grad_(True)
@@ -332,7 +351,7 @@ print(f'J(theta) after 16 updates = {J.item():.3f}, '
 %%tab jax
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = jnp.asarray(mdp.P), jnp.asarray(mdp.r)
-probe = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(3))
+probe = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(3))
 for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
     pass
 
@@ -459,7 +478,7 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        of $T$ steps decreases by $(1 - \gamma^T)/(1 - \gamma)$. Does this
        shift change $J$ by a constant, as in the two-action setting?
     1. The shift is the per-step charge $c = -1$ of problem
-       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_mdp`. At
+       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_valueiter`. At
        $\gamma = 0.95$, compare the shifted return of the shortest path from
        the start into a hole with that of a shortest path to the goal on the
        deterministic map. Which policy maximizes $J$ under the shifted
@@ -532,7 +551,7 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        Estimate the number of steps it needs, and compare it with the
        answer of part b at
        $L = 10$ and $\alpha = 0.1$. What does the comparison suggest about
-       the use of Adam in `ActorCritic.tabular`?
+       the use of Adam in `Policy.tabular`?
    :exlabel:`ex_policy-gradient-softmax-plateaus`
 1. [code] **The dropped discount.** ●● Many implementations omit the
    factor $\gamma^t$ from the trajectory form of :eqref:`eq_pg_theorem`,
@@ -593,7 +612,7 @@ as a differentiable function of $\theta$ and ascend $J(\theta)$.
 $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}},
 \qquad J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big]$$
 
-- one free *preference* $\theta_{s,a}$ per pair: `ActorCritic.tabular`,
+- one free *preference* $\theta_{s,a}$ per pair: `Policy.tabular`,
   reused from :numref:`sec_imitation`
 - softmax keeps every probability positive: exploration built in early;
   support alone is not a visitation guarantee

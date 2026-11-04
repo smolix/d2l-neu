@@ -96,18 +96,9 @@ def backward_scan(self, x, factor):
     return y
 
 @d2l.add_to_class(d2l.Batch)  #@save
-def reward_to_go(self, gamma, bootstrap=None):
-    """G_t: the discounted return of the rest of its episode, by one scan.
-    With a value function `bootstrap` (numpy in, numpy out), an episode cut
-    by a time limit (term = 0 at its last step) continues with
-    gamma * V(s_T) at the cut, so G_t gains gamma^(T-t) V(s_T)."""
-    x = self.rew
-    if bootstrap is not None:
-        last = self.ep_ends - 1
-        x = x.copy()
-        x[last] += (gamma * (1 - self.term[last])
-                    * bootstrap(self.next_obs[last]))
-    return self.backward_scan(x, gamma)
+def reward_to_go(self, gamma):
+    """G_t: the discounted return of the rest of its episode, by one scan."""
+    return self.backward_scan(self.rew, gamma)
 ```
 
 The same backward scan will be used for generalized advantage estimation in :numref:`sec_ppo`. There it is applied to the temporal-difference errors of :numref:`sec_actorcritic` with decay $\gamma\lambda$. At $\lambda=1$, the resulting sum telescopes to the reward-to-go.
@@ -159,6 +150,15 @@ This interpretation explains both unbiasedness and the choice of baseline. Any c
 
 ### The Advantage and the Learned Baseline
 
+The *advantage* of an action is its value relative to the policy's average value at that state,
+
+$$
+A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(s)} \big[ A^\pi(s, a) \big] = 0,
+$$
+:eqlabel:`eq_advantage`
+
+The zero-mean identity follows directly from the relation between $V^\pi$ and $Q^\pi$ in :numref:`sec_valueiter`. A positive advantage indicates that action $a$ performs better than the policy's current average at state $s$. Policy-improvement methods increase probability on actions with positive advantage. Later policy-gradient methods estimate or approximate this quantity when updating the policy.
+
 A natural state-dependent baseline is the value function $V^\pi(s)$. Since $A^\pi(s,a)=Q^\pi(s,a)-V^\pi(s)$ has mean zero under the policy, subtracting $V^{\pi_\theta}(s_t)$ from the reward-to-go makes $\hat G_t-V^{\pi_\theta}(s_t)$ a sample estimate of the advantage. It is positive when the sampled continuation performs better than the policy's average continuation from $s_t$, and negative when it performs worse.
 
 We do not know $V^{\pi_\theta}$, but we can estimate it from the same batch of trajectories. Keep a table $\hat{V}(s)$, and after each batch move the estimate at every visited state toward the reward-to-go observed there,
@@ -177,12 +177,12 @@ Several implementation choices affect either the estimator or its scale. To dist
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
 torch.manual_seed(3)
-probe = d2l.ActorCritic.tabular(16, 4)
+probe = d2l.Policy.tabular(16, 4)
 rng = np.random.default_rng(3)
 env.reset(seed=3)
 for _ in range(16):
     b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b, b.per_step(b.episode_returns(gamma)))
+    d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
 theta = probe.policy.weight.detach().requires_grad_(True)
 pi = torch.softmax(theta, -1)
 V = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
@@ -197,12 +197,12 @@ print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 %%tab jax
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = jnp.asarray(mdp.P), jnp.asarray(mdp.r)
-probe = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(3))
+probe = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(3))
 rng = np.random.default_rng(3)
 env.reset(seed=3)
 for _ in range(16):
     b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b, b.per_step(b.episode_returns(gamma)))
+    d2l.policy_step(probe, b.obs, b.act, b.per_step(b.episode_returns(gamma)))
 
 def V_fn(theta):
     pi = jax.nn.softmax(theta, -1)
@@ -229,17 +229,13 @@ in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero.
 
 Centering and scaling have different effects. Subtracting $\mu$ changes the relative weights of the samples and can change the direction of the estimate. Dividing by $\sigma+10^{-8}$ multiplies the complete batch estimate by one positive scalar, leaving its direction unchanged. It is therefore a per-batch step-size adjustment rather than a baseline. On FrozenLake, $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so normalization increases the step norm by at least a factor of two at a fixed learning rate; the measured factor below is about five. Any performance difference must consequently be interpreted together with the optimizer and effective step size, as in :numref:`sec_sgd` and :numref:`sec_batch_size`.
 
-Two utilities support the remaining experiments: `normalize` implements :eqref:`eq_pg_normalized`, and `run_seeds` executes a seeded training generator and stacks its curves. The experiments compute multi-seed results explicitly before plotting.
+`normalize` implements :eqref:`eq_pg_normalized`; `d2l.run_seeds` (:numref:`sec_utils`) runs a seeded training generator once per seed and stacks its curves. The experiments compute multi-seed results explicitly before plotting.
 
 ```{.python .input #baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling}
 %%tab pytorch, jax
 def normalize(x, eps=1e-8):  #@save
     """Center a batch of weights and rescale them to unit spread."""
     return (x - x.mean()) / (x.std() + eps)
-
-def run_seeds(train, num_seeds, **kwargs):  #@save
-    """Run train(seed, **kwargs), a generator of curve points, per seed."""
-    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
 ```
 
 ### The Leave-One-Out Baseline
@@ -293,21 +289,59 @@ print(f'E[centered] equals (n-1)/n of it:           {np.allclose(u_cen, g / 2)}'
 
 Both identities hold to machine precision. The same estimator is used for language-model post-training under the name RLOO: sample $n$ responses to a prompt and weight each response by its reward minus the mean reward of the other $n-1$ responses :cite:`Ahmadian.Cremer.Galle.ea.2024`.
 
+### The Group as the Batch
+:label:`subsec_baselines_group`
+
+Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024` samples a *group* of $K$ responses to the same prompt, assigns each response a reward $r_j$, and weights the score function with
+
+$$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}},$$
+
+where $\mu$ and $\sigma$ are the mean and standard deviation within the group. This is :eqref:`eq_pg_normalized`, with a prompt corresponding to a start state and its responses to a batch of trajectories. The group mean provides a prompt-specific baseline without requiring a separate value network, and the group standard deviation normalizes reward scales across prompts. Division by $\sigma$ also changes the effective step size separately for each prompt; it is therefore not merely baseline subtraction. The remaining components of GRPO are discussed in :numref:`sec_ppo` and :numref:`sec_rl_sequences`.
+
 [Placeholder for the writers, from rl-sequences.md "The Group Mean as the Baseline": on the verifier task of :numref:`sec_mdp`, sample a group of $K$ responses for each prompt, score them, standardize the scores within the group, and take one ascent step on the log-probabilities. This applies :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state; the group mean is a per-prompt baseline, so no value network is needed.]
 
 ```{.python .input #baselines-the-leave-one-out-baseline-1}
 %%tab pytorch, jax
 def group_step(task, theta, K, reward, rng, lr=2.0):  #@save
-    """One ascent step on a VerifierTask: K responses per prompt, rewards
-    standardized within each group, the softmax score per prompt."""
-    pi, g = task.policy(theta), np.zeros_like(theta)
-    eye = np.eye(len(task.resp))
-    for x in range(len(task.prompts)):         # one group of K per prompt
-        ys = rng.choice(len(task.resp), K, p=pi[x])
-        A = normalize(np.array([reward(x, y) for y in ys]))   # group baseline
-        g[x] = (eye[ys] - pi[x]).T @ A / K     # eq_softmax_score
-    return theta + lr * g
+    """verifier_step with the group-normalized weight (GRPO): the rewards
+    of each prompt's K responses, standardized within the group."""
+    return d2l.verifier_step(task, theta, K, reward, rng, normalize, lr)
 ```
+
+The zero-mean lemma applies only when a baseline does not depend on the sampled action. A same-group mean includes the current sample's reward, so centering by it produces a biased estimator whose expectation is $(K-1)/K$ times the true gradient, as derived in :numref:`subsec_leave_one_out`, where the leave-one-out correction is also described. Division by the group standard deviation adds a random scale factor. Leave-one-out centering is unbiased because each sample is compared with the mean of the other $K-1$ samples. The following enumeration verifies the centering result for groups of two, without standardization:
+
+```{.python .input #rl-sequences-the-group-is-the-baseline-3}
+%%tab pytorch, jax
+task = d2l.VerifierTask()                  # the instance of sec_mdp
+K, pi = 2, task.policy(task.theta_ref)
+Rv = np.array([[task.verify(x, y) for y in range(len(task.resp))]
+               for x in range(len(task.prompts))])
+Sv = np.eye(len(task.resp))[None, :, :] - pi[:, None, :]  # eq_softmax_score
+gv = np.einsum('xy,xy,xyv->xv', pi, Rv, Sv)          # the exact gradient
+u = np.zeros_like(gv)
+for y1, y2 in np.ndindex(len(task.resp), len(task.resp)):  # groups of K = 2
+    w = (Rv[:, y1] - Rv[:, y2]) / 2                  # reward minus group mean
+    u += (pi[:, y1] * pi[:, y2] * w)[:, None] * (Sv[:, y1] - Sv[:, y2]) / K
+print(f'E of the group-centered update is (K-1)/K of the gradient: '
+      f'{np.allclose(u, gv * (K - 1) / K)}')
+print(f'rescaled by K/(K-1), leave-one-out, it is exact: '
+      f'{np.allclose(u * K / (K - 1), gv)}')
+```
+
+At $K=1$, the factor $(K-1)/K$ is zero: the group mean equals the sample's reward, the standardized advantage is zero, and the reward-gradient update does not change the parameters. The underlying policy gradient is generally nonzero, and REINFORCE without this baseline would still learn. The $K=1$ row below therefore retains the reference score of $0.062$. The sweep fixes the sample budget at $6400$ scored responses per prompt, so smaller groups receive proportionally more updates:
+
+```{.python .input #rl-sequences-the-group-is-the-baseline-2}
+%%tab pytorch, jax
+budget = 6400                    # scored responses per prompt, matched
+for K in (1, 2, 4, 8, 32):
+    rng, theta = np.random.default_rng(1), task.theta_ref.copy()
+    for _ in range(budget // K):
+        theta = group_step(task, theta, K, task.verify, rng)
+    print(f'K = {K:2d}: success of a sampled response '
+          f'{task.success(task.policy(theta)):.3f}')
+```
+
+The $K=1$ result matches the predicted reference score to three decimal places, while every tested $K\geq2$ reaches the verifier ceiling of $0.5$ at the same sample budget. For $K\geq2$, the factor $(K-1)/K$ rescales the centered gradient rather than eliminating it. The group samples provide the per-prompt comparison that a learned value baseline would otherwise supply, but the current sample's inclusion causes the stated bias. If every response in a group receives the same score, all standardized advantages are zero; this occurs on prompts that the current policy always fails or always solves. The zero-update result is specific to the reward-gradient term. Separate KL gradients, supervised objectives, or other loss terms can still update parameters at $K=1$.
 
 ### Summing over Episodes of Different Lengths
 :label:`subsec_pg_loss_divisor`
@@ -342,14 +376,6 @@ for k, u in grads.items():
 ```
 
 Three of the four gradients are exactly parallel, at sizes an order of magnitude apart; the per-own-length variant tilts away from the rest. In order, these are the per-trajectory estimator, the per-response length normalization, the token-level loss, and the fixed-constant normalization of the LLM post-training literature. The choice of divisor differs among language-model objectives: GRPO normalizes each response by its own length, whereas the "Dr. GRPO" modification :cite:`Liu.Chen.Li.ea.2025` uses a constant because only batchwise rescaling preserves the estimator direction. The four-episode example above shows the resulting gradients.
-
-### Normalized Returns and GRPO
-
-Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024` samples a *group* of $K$ responses to the same prompt, assigns each response a reward $r_j$, and weights the score function with
-
-$$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}},$$
-
-where $\mu$ and $\sigma$ are the mean and standard deviation within the group. This is :eqref:`eq_pg_normalized`, with a prompt corresponding to a start state and its responses to a batch of trajectories. The group mean provides a prompt-specific baseline without requiring a separate value network, and the group standard deviation normalizes reward scales across prompts. Division by $\sigma$ also changes the effective step size separately for each prompt; it is therefore not merely baseline subtraction. The remaining components of GRPO are discussed in :numref:`sec_ppo` and :numref:`sec_rl_sequences`.
 
 ## Empirical Comparison of Gradient Estimators
 
@@ -428,10 +454,10 @@ def train(seed, variant):
     rng, V = np.random.default_rng(seed), np.zeros(16, np.float32)
     if tab.selected('pytorch'):
         torch.manual_seed(seed)
-        ac = d2l.ActorCritic.tabular(16, 4)
+        ac = d2l.Policy.tabular(16, 4)
         ac.opt_pi = torch.optim.SGD(ac.policy.parameters(), lr=alpha)
     if tab.selected('jax'):
-        ac = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(seed))
+        ac = d2l.Policy.tabular(16, 4, rngs=nnx.Rngs(seed))
         ac.opt_pi = nnx.Optimizer(ac.policy, sgd, wrt=nnx.Param)
     env.reset(seed=seed)
     for _ in range(num_updates):
@@ -443,7 +469,7 @@ def train(seed, variant):
              'normalized': normalize(G),
              'learned baseline': G - V[batch.obs]}[variant]
         before = table(ac)
-        d2l.policy_step(ac, batch, w)
+        d2l.policy_step(ac, batch.obs, batch.act, w)
         for s, g in zip(batch.obs, G):     # eq_value_baseline, every arm
             V[s] += alpha_v * (g - V[s])
         yield (float(batch.episode_returns().mean()),
@@ -456,7 +482,7 @@ We run five variants with twenty seeds each; `runs[v]` has shape (seeds, updates
 %%tab pytorch, jax
 variants = ['return', 'reward-to-go', 'centered', 'normalized',
             'learned baseline']
-runs = {v: run_seeds(train, num_seeds, variant=v) for v in variants}
+runs = {v: d2l.run_seeds(train, num_seeds, variant=v) for v in variants}
 ```
 
 The success-rate column, smoothed over a ten-update window, with each band spanning the seed minimum to maximum around the seed median:
@@ -509,7 +535,7 @@ The leave-one-out calculation is framework independent. Measurements that use fr
 
 The score function has zero conditional mean. This identity permits the removal of rewards that precede an action and the subtraction of action-independent baselines without changing the expected gradient. Constant control variates and state-dependent value baselines reduce variance, while reward-to-go removes terms that cannot be influenced by the current action. Batch centering introduces a finite-sample shrinkage that leave-one-out centering removes. Dividing by the batch standard deviation instead changes the effective step size and should be evaluated separately from variance reduction. The empirical comparison confirms these distinctions and reports parameter-step norms alongside training performance.
 
-The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`, and `run_seeds` to the shared library.
+The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`, and `group_step` to the shared library.
 
 **Experimental scope.** The variance comparison probes one intermediate policy with 200 batches of four episodes. Other policies change the numerical variances; whether they also change the ordering is not tested here. Training results use twenty seeds, and their spreads are often wider than the gaps between methods. FrozenLake's sparse terminal reward limits the benefit of reward-to-go, while plain SGD makes differences in effective step size visible.
 
@@ -807,7 +833,7 @@ $1 - \mathrm{corr}^2 = 0.23$ of the variance.
 
 ::: {.slide title="The Advantage, and a Learned Baseline"}
 A natural $b(s)$ is the value function, which makes the weight a
-sampled advantage (:numref:`sec_valueiter` defined it).
+sampled advantage $A^\pi = Q^\pi - V^\pi$.
 
 $$\hat V(s_t) \leftarrow \hat V(s_t) + \alpha_V\,(\hat G_t - \hat V(s_t)),
 \qquad \textrm{weight} = \hat G_t - \hat V(s_t) \approx A^{\pi_\theta}.$$
@@ -839,6 +865,22 @@ $$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}}$$
 - group mean = a per-prompt baseline without a value network
 - dividing by $\sigma$: a per-prompt **step-size rescaling**,
   not a baseline (Dr. GRPO's objection)
+:::
+
+::: {.slide title="The Group-Mean Baseline"}
+Sample $K$ responses per prompt, standardize within the group,
+one step on the log-probs. Same-group centering is *biased*:
+its expectation is $(K-1)/K$ of the gradient (leave-one-out is
+exact). **Prediction:** at $K = 1$ the shrinkage reaches zero
+and the update vanishes identically.
+
+@!rl-sequences-the-group-is-the-baseline-2
+
+. . .
+
+$0.062$ is the unchanged reference score. At $K=1$, including
+the sample in its own baseline makes the reward-gradient update
+identically zero.
 :::
 
 ::: {.slide title="Five Estimators at a Frozen Theta"}

@@ -43,18 +43,7 @@ The value function averages the action-value function over the policy's first ac
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a);\ \textrm{for all } s \in \mathcal{S}.$$
 
-Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s')$. Because $V^\pi(s)$ is a convex combination of $Q^\pi(s, a)$ over actions, $\max_a Q^\pi(s, a) \geq V^\pi(s)$. The inequality is strict when the policy assigns positive probability to actions below the maximum. Policy-improvement methods increase probability on actions with positive advantage.
-
-### The Advantage Function
-
-The *advantage* of an action is its value relative to the policy's average value at that state,
-
-$$
-A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(s)} \big[ A^\pi(s, a) \big] = 0,
-$$
-:eqlabel:`eq_advantage`
-
-The zero-mean identity follows directly from the relation between $V^\pi$ and $Q^\pi$. A positive advantage indicates that action $a$ performs better than the policy's current average at state $s$. Later policy-gradient methods estimate or approximate this quantity when updating the policy.
+Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s')$. Because $V^\pi(s)$ is a convex combination of $Q^\pi(s, a)$ over actions, $\max_a Q^\pi(s, a) \geq V^\pi(s)$. The inequality is strict when the policy assigns positive probability to actions below the maximum.
 
 ## The Bellman Equations
 
@@ -83,6 +72,17 @@ $$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_
 :eqlabel:`eq_dynamic_programming_q`
 
 This version is the analog of :eqref:`eq_dynamic_programming_val` for the action value function. These are the *Bellman expectation equations*: for a fixed policy, :eqref:`eq_dynamic_programming_val` is a system of $|\mathcal{S}|$ linear equations in $|\mathcal{S}|$ unknowns. The infinite horizon has disappeared into the recursion.
+
+Both equations evaluate the same bracket, the immediate reward plus the discounted expected value of the next state, for every state--action pair. On the arrays of `TabularMDP` from :numref:`sec_mdp`, the bracket is one matrix product that contracts the last axis of $P$ against a value vector $V$. We add it to the class as `backup`; every algorithm in this section repeats it:
+
+```{.python .input #value-iter-the-expectation-form}
+%%tab pytorch, jax
+@d2l.add_to_class(d2l.TabularMDP)  #@save
+def backup(self, V):
+    """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s') for every
+    state-action pair: the bracket of the Bellman equations."""
+    return self.r + self.gamma * self.P @ V
+```
 
 ### The Optimality Equation
 :label:`subsec_vi_optimality`
@@ -182,7 +182,7 @@ Iterate the operator: initialize $V_0$ arbitrarily (we use zeros) and sweep
 $$V_{k+1}(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V_k(s') \Big];\ \textrm{for all } s \in \mathcal{S},$$
 :eqlabel:`eq_value_iteration`
 
-that is, $V_{k+1} = TV_k$. This is *value iteration*. The contraction result implies that $V_k \to V^*$ from any initialization at geometric rate $\gamma$. In code the sweep is one line, because `mdp.backup` from :numref:`sec_mdp` computes the bracket for every state-action pair at once:
+that is, $V_{k+1} = TV_k$. This is *value iteration*. The contraction result implies that $V_k \to V^*$ from any initialization at geometric rate $\gamma$. In code the sweep is one line, because `backup` computes the bracket for every state-action pair at once:
 
 ```{.python .input #value-iter-value-iteration-1}
 %%tab pytorch, jax
@@ -247,7 +247,7 @@ Replace the max in :eqref:`eq_value_iteration` by the policy's own average and t
 $$V^\pi_{k+1}(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^\pi_k(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_policy_eval`
 
-This is *policy evaluation*, the fixed-point iteration $V^\pi_{k+1} = T^\pi V^\pi_k$ of the operator $T^\pi$, which maps a table $V$ to the right-hand side of :eqref:`eq_policy_eval` with $V$ in place of $V^\pi_k$. It converges from any initialization because $T^\pi$ contracts too. With the max gone the equations are linear, so they can also be solved directly, as :numref:`sec_mdp` did with `np.linalg.solve`; the sweep does the same work one contraction at a time, and is the form that generalizes beyond tables.
+This is *policy evaluation*, the fixed-point iteration $V^\pi_{k+1} = T^\pi V^\pi_k$ of the operator $T^\pi$, which maps a table $V$ to the right-hand side of :eqref:`eq_policy_eval` with $V$ in place of $V^\pi_k$. It converges from any initialization because $T^\pi$ contracts too.
 
 ```{.python .input #value-iter-policy-evaluation}
 %%tab pytorch, jax
@@ -265,6 +265,29 @@ print(f'V(s0) for the uniformly random policy: '
 ```
 
 The uniformly random policy of :numref:`sec_mdp` reaches the goal in very few episodes. Its start-state value is $0.0078$, about four percent of the optimum. Policy evaluation measures performance without improving the policy; learned critics in :numref:`sec_actorcritic` approximate the same value computation from sampled data.
+
+With the max gone, the equations are also linear and can be solved directly. Write $P_\pi(s' \mid s) = \sum_a \pi(a \mid s) P(s' \mid s, a)$ and $r_\pi(s) = \sum_a \pi(a \mid s) r(s, a)$ for the kernel and the reward under $\pi$. Then :eqref:`eq_dynamic_programming_val` reads $V^\pi = r_\pi + \gamma P_\pi V^\pi$, whose solution is
+
+$$V^\pi = (I - \gamma P_\pi)^{-1} r_\pi.$$
+:eqlabel:`eq_policy_value_solve`
+
+For a table, one linear solve gives $V^\pi$ exactly; the sweep does the same work one contraction at a time and is the form that generalizes beyond tables. We add the solve to the class:
+
+```{.python .input #value-iter-policy-evaluation-1}
+%%tab pytorch, jax
+@d2l.add_to_class(d2l.TabularMDP)  #@save
+def policy_value(self, pi):
+    """V^pi = (I - gamma P_pi)^{-1} r_pi exactly, for pi[s, a] the
+    probability of action a at state s (one-hot rows: deterministic).
+    Needs gamma < 1 here: from_gym's terminal states loop on themselves."""
+    P_pi = np.einsum('sa,sat->st', pi, self.P)
+    r_pi = (pi * self.r).sum(axis=1)
+    return np.linalg.solve(np.eye(self.num_states) - self.gamma * P_pi,
+                           r_pi)
+
+print(f'V(s0) for the uniformly random policy, solved exactly: '
+      f'{mdp.policy_value(uniform)[0]:.4f}')
+```
 
 ### Policy Iteration and Generalized Policy Iteration
 :label:`subsec_vi_policy_iteration`
@@ -378,11 +401,43 @@ print(f'V*(s0) on calm ice: {V_calm[0]:.4f};  gamma^5 = {gamma ** 5:.4f}')
 
 The optimal start-state value decreases from $0.774$ on deterministic ice to $0.180$ on slippery ice. This difference quantifies the effect of the stochastic transitions under optimal play.
 
+## Reward Shaping and the Optimal Policy
+:label:`subsec_vi_shaping`
+
+:numref:`sec_mdp` asked what a plausible reward bonus does to the best policy; with value iteration and exact policy evaluation we can now compute the answer. Because the original reward is sparse, one might add a bonus of $0.3$ whenever a transition moves closer to the goal. In expectation this gives $\tilde r(s,a)=r(s,a)+0.3\sum_{s'}P(s'\mid s,a)\mathbf{1}(d(s')<d(s))$, where $d$ is the Manhattan distance to the goal. This modification is not potential based: movement toward the goal receives a bonus, whereas movement away incurs no corresponding penalty. We compute its optimal policy by value iteration and evaluate both policies under the original reward with `policy_value`:
+
+```{.python .input #mdp-model-based-versus-model-free}
+%%tab pytorch, jax
+dist = abs(np.arange(16) // 4 - 3) + abs(np.arange(16) % 4 - 3)
+closer = dist < dist[:, None, None]    # closer[s, :, s'] = 1 iff d(s') < d(s)
+shaped = d2l.TabularMDP(mdp.P, mdp.r + 0.3 * (mdp.P * closer).sum(-1), gamma)
+V_shaped = value_iteration(shaped, num_iters=500)[-1]
+pi_shaped = shaped.backup(V_shaped).argmax(axis=1)
+
+def exact_value(pi, s=0):              # V(s) under the original reward
+    return mdp.policy_value(np.eye(mdp.num_actions)[pi])[s]
+
+print(f'shaped-optimal: at s=14 goes {"<v>^"[pi_shaped[14]]}, shaped value '
+      f'{V_shaped[0]:.2f}, true value {exact_value(pi_shaped):.3f}')
+print(f'true-optimal:   at s=14 goes {"<v>^"[pi_star[14]]}, true value '
+      f'{exact_value(pi_star):.3f}')
+```
+
+State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal.
+
+Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered.
+
+For the potential-based reward :eqref:`eq_mdp_shaping` of :numref:`sec_mdp`, the shaping terms telescope along a trajectory to $\gamma^T \Phi(s_T)-\Phi(s_0)$. The first term vanishes for an infinite discounted trajectory or for an episode ending at a state with $\Phi(s_T)=0$. Every policy's return then changes by the same constant $-\Phi(s_0)$, so the optimal policy is unchanged :cite:`Ng.Harada.Russell.1999`.
+
+The terminal-state condition is essential. If returns stop at the terminal transition and $\Phi(s_T)$ is unconstrained, the remaining term $\gamma^T\Phi(s_T)$ can depend on the terminal state and duration, thereby changing the optimum. Equivalently, one may retain an unconstrained terminal potential if the return includes an absorbing continuation that cancels the residual.
+
+Exercise :exref:`ex_mdp-reward-design-its-failure`c replaces the bonus with a potential-based reward.
+
 ## Summary
 
 A policy is described by its state and action values, related by $V^\pi(s)=\sum_a\pi(a\mid s)Q^\pi(s,a)$. The Bellman expectation equations characterize a fixed policy, and the Bellman optimality equation characterizes $V^*$. For $\gamma<1$, the optimality operator is a contraction: its fixed point is unique, value iteration converges geometrically, and consecutive iterates give a computable error bound. Policy evaluation replaces maximization by an expectation under a fixed policy. Policy iteration alternates evaluation with greedy improvement, while generalized policy iteration permits partial interleaving. These methods require the transition and reward model; later sections replace exact expectations by sampled transitions.
 
-**Experimental scope.** The value functions, convergence counts, and policies are exact for this MDP at $\gamma=0.95$. The two success rates are Monte Carlo estimates from $2{,}000$ seeded episodes and vary slightly with the seed. The comparison demonstrates the value of planning with the correct stochastic model on this environment; it does not address learning when the model is unknown.
+**Experimental scope.** The value functions, convergence counts, and policies are exact for this MDP at $\gamma=0.95$. The two success rates are Monte Carlo estimates from $2{,}000$ seeded episodes and vary slightly with the seed. The comparison demonstrates the value of planning with the correct stochastic model on this environment; it does not address learning when the model is unknown. The reward-shaping example establishes that one plausible bonus can change the optimal policy; it does not imply that all reward shaping fails.
 
 ## Exercises
 
@@ -553,6 +608,54 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
        the first sweep at which the condition of part b holds. Compare it with
        sweep 14. Why can the greedy policy be optimal long before the
        condition holds?
+1. [code] **Time limits under the optimal policy.** `gym.make` wraps
+   FrozenLake in a time limit: after 100 steps the episode ends with
+   `truncated=True` (:numref:`subsec_mdp-termination`). Propagate the state
+   distribution $\mu_t$ of problem
+   :exref:`ex_mdp-kernel-predicts-episodes`b of :numref:`sec_mdp` under
+   `pi_star` instead of the random policy. Compute the probabilities that an
+   episode reaches the goal, falls into a hole, or is truncated. Compare the
+   truncated fraction with the one that $\mu_{100}$ gives for the random
+   policy.
+   :exlabel:`ex_value-iter-time-limits`
+1. [code] **Potential-based shaping.** ● `TabularMDP` stores the holes and
+   the goal as absorbing states whose actions lead back to themselves, so
+   the returns it defines continue forever, while the simulator stops at the
+   first terminal state. The telescoping argument of
+   :numref:`subsec_vi_shaping` shows that the shaped reward
+   :eqref:`eq_mdp_shaping` preserves the optimal
+   policy in the first setting for every potential $\Phi$, and in the second
+   only when $\Phi$ vanishes at the terminal states.
+    1. Add a constant $c$ to every entry of `mdp.r`, the absorbing states
+       included. Show that the discounted return of every trajectory changes
+       by the same amount, and find that amount. Which constant potential
+       $\Phi$ satisfies $\gamma \Phi(s') - \Phi(s) = c$?
+    1. Now charge the constant only while the episode runs: add $c$ to
+       $r(s, a)$ at the nonterminal states alone. For
+       $c \in \{-0.02, -0.01, 0.01, 0.05\}$, compute the optimal policy with
+       `value_iteration`, report its action at state 0 and its value under the
+       original reward with `exact_value`, and estimate its success rate from
+       1,000 episodes of `env`. Explain the effect of each sign of $c$ with
+       the constant potential and the terminal condition.
+    1. Replace the approach bonus of `shaped` by the potential
+       $\Phi(s) = -0.3\, d(s)$, where $d$ is the Manhattan distance `dist`,
+       and average :eqref:`eq_mdp_shaping` over the next state, which gives
+       at every state
+
+        $$\tilde r(s, a) = r(s, a) + \sum_{s'} P(s' \mid s, a)\,[\gamma \Phi(s') - \Phi(s)].$$
+
+       Check that the values $\tilde V$ that `value_iteration` returns
+       satisfy $\tilde V(s) = V(s) - \Phi(s)$ at every state, where $V$ is
+       `V_star`, and that the shaped optimum has
+       the same value under the original reward as `pi_star`. Then drop the
+       shaping term at the terminal states, as a simulator that stops there
+       would, and recompute the value of the optimum under the original
+       reward. Finally set $\Phi$ to zero at the terminal states and repeat.
+
+   *Adapted from Sutton and Barto,
+   [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+   Exercises 3.15 and 3.16.*
+   :exlabel:`ex_mdp-reward-design-its-failure`
 1. [extended] **Backup budgets.** ●● Policy iteration in
    :numref:`subsec_vi_policy_iteration` needed only two rounds, but each round
    ran 800 evaluation sweeps. Measure cost in *backups* instead: one backup
@@ -599,18 +702,10 @@ Dynamic programming<br>
 :::
 :::
 
-::: {.slide title="Two Value Functions and Their Gap"}
+::: {.slide title="Two Value Functions"}
 - $V^\pi(s)$: expected discounted return, following $\pi$ from $s$.
 - $Q^\pi(s, a)$: same, but the first action is pinned to $a$.
 - Linked by averaging: $V^\pi(s) = \sum_a \pi(a \mid s)\, Q^\pi(s, a)$.
-
-. . .
-
-The gap is the *advantage* (:eqref:`eq_advantage`):
-
-$$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(s)}[A^\pi] = 0$$
-
-$A^\pi(s,a) > 0$ identifies actions $a$ whose value exceeds the policy average.
 :::
 
 ::: {.slide title="The Bellman Equations"}
@@ -687,8 +782,23 @@ points away from the goal, and at others it points into walls, because
 :eqref:`eq_optimal_policy` accounts for the outcomes of stochastic slips.
 :::
 
+::: {.slide title="Reward Misspecification"}
+A plausible modification of a sparse reward: add $0.3$ for a step that moves
+the agent closer to the goal.
+
+@mdp-model-based-versus-model-free
+
+. . .
+
+At $s = 14$, the shaped-reward optimum selects *left* and never
+reaches the goal. Its shaped value is $2.15$, but its true value is
+$0$. Potential-based shaping,
+$r + \gamma \Phi(s') - \Phi(s)$ with $\Phi = 0$ at terminal states,
+preserves the optimal policy.
+:::
+
 ::: {.slide title="Recap"}
-- $V^\pi$, $Q^\pi$, advantage $A^\pi = Q^\pi - V^\pi$: defined once, used for two chapters.
+- $V^\pi$ and $Q^\pi$: defined once, used for two chapters.
 - Bellman: expectation form for a policy, optimality form :eqref:`eq_bellman_optimality` for the best one.
 - The operator contracts at rate $\gamma$: unique $V^*$, geometric convergence, checkable certificate.
 - Value iteration, policy evaluation, policy iteration: one proof, three algorithms.

@@ -141,7 +141,7 @@ def policy_step_clip(ac, batch, w, clip=grad_clip):
 def policy_step_clip(ac, batch, w, clip=grad_clip):
     """d2l.policy_step with the actor's gradient norm capped at `clip`;
     returns the norm measured before the cap. `_pad` and `_actor_pass`,
-    defined with the critic's compilation story two cells below, are
+    defined with the critic's compilation story in the next cell, are
     resolved at the first call."""
     size = 1 << max(6, (len(w) - 1).bit_length())
     gnorm = _actor_pass(ac.policy, ac.opt_pi, _pad(batch.obs, size),
@@ -212,7 +212,8 @@ def train_reinforce(seed, ac, num_updates=num_updates):
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma, bootstrap=ac.value_np)   # time limits
+        G = (batch.reward_to_go(gamma)
+             + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
         gnorm = policy_step_clip(ac, batch, w)
         fit_value(ac, batch.obs, G)
@@ -402,7 +403,7 @@ assert np.allclose(b.gae(fresh.value_np, gamma, 1.0),
 print('lambda = 0 is the TD error; lambda = 1 is the Monte Carlo advantage')
 ```
 
-One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` called without its `bootstrap` argument treats the future as empty; the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
+One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` alone treats the future as empty (`truncation_bootstrap` of :numref:`sec_deeprl` adds it back); the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
 
 ### Eligibility Traces
 

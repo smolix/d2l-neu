@@ -3,7 +3,7 @@
 
 A *Markov decision process* (MDP) provides a mathematical model of sequential interaction :cite:`BellmanMDP,Puterman.1994`. It consists of states, actions, transition probabilities, and rewards, together with the Markov assumption that the current state contains the information needed to predict the next state. This section develops these components using a sixteen-state FrozenLake environment.
 
-We first inspect the simulator's transition data and then express the same model in notation. The transition dynamics describe the environment, whereas the reward specifies the objective. A final example shows how an apparently reasonable reward modification can change the optimal policy in an unintended way.
+We first inspect the simulator's transition data and then express the same model in notation. The transition dynamics describe the environment, whereas the reward specifies the objective. A final subsection asks how an apparently reasonable reward modification can change the optimal policy; :numref:`sec_valueiter` computes the answer.
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab pytorch
@@ -48,75 +48,6 @@ $$
 :eqlabel:`eq_mdp`
 
 Some treatments fold the discount factor of the next subsection into this tuple, and some let the reward be random or depend on the next state; our $r(s, a)$ then plays the role of the expected reward, and nothing in this chapter loses generality from the simpler form.
-
-The transition and reward model fits in two dense arrays. We wrap them in a class and save it to the `d2l` library for use throughout the chapter:
-
-```{.python .input #mdp-states-actions-and-the-transition-kernel-2}
-%%tab pytorch, jax
-class TabularMDP:  #@save
-    """A finite MDP as dense arrays: P[s, a, s'] and r[s, a]."""
-    def __init__(self, P, r, gamma):
-        self.P, self.r, self.gamma = P, r, gamma
-        self.num_states, self.num_actions = r.shape
-
-    @classmethod
-    def from_gym(cls, env, gamma):
-        """Read the transition table Gymnasium exposes as env.unwrapped.P."""
-        n_s, n_a = env.observation_space.n, env.action_space.n
-        P, r = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
-        for s, actions in env.unwrapped.P.items():
-            for a, outcomes in actions.items():
-                for p, s_next, reward, _ in outcomes:
-                    P[s, a, s_next] += p      # several outcomes may share s'
-                    r[s, a] += p * reward     # r(s,a) is the expected reward
-        return cls(P, r, gamma)
-
-    def backup(self, V):
-        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
-        return self.r + self.gamma * self.P @ V
-
-    def policy_value(self, pi):
-        """V^pi = (I - gamma P_pi)^{-1} r_pi exactly, for pi[s, a] the
-        probability of action a at state s (one-hot rows: deterministic)."""
-        P_pi = np.einsum('sa,sat->st', pi, self.P)
-        r_pi = (pi * self.r).sum(axis=1)
-        return np.linalg.solve(np.eye(self.num_states) - self.gamma * P_pi,
-                               r_pi)
-```
-
-In `backup`, `numpy`'s matrix product contracts the last axis of $P$ against a value estimate $V$: reward plus discounted lookahead for every state-action pair, in one line. :numref:`sec_valueiter` builds this chapter's first algorithm by repeating it.
-
-```{.python .input #mdp-states-actions-and-the-transition-kernel-3}
-%%tab pytorch, jax
-gamma = 0.95
-LEFT, DOWN, RIGHT, UP = 0, 1, 2, 3
-mdp = TabularMDP.from_gym(env, gamma)
-print(mdp.P[9, DOWN])
-```
-
-The dictionary of tuples has become a dense row: probability $1/3$ in columns 8, 10 and 13, zero elsewhere. Two consistency checks, one per array:
-
-```{.python .input #mdp-states-actions-and-the-transition-kernel-4}
-%%tab pytorch, jax
-print(f'largest |row sum - 1|: {np.abs(mdp.P.sum(axis=-1) - 1).max():.1e}')
-for s, a in np.argwhere(mdp.r > 0):
-    print(f'r(s={s}, a={"<v>^"[a]}) = {mdp.r[s, a]:.3f}')
-```
-
-Every row of $P$ sums to one. The reward array is almost entirely zero: its nonzero entries occur at state 14, the only cell from which the goal can be entered, and equal $1/3$ because the corresponding action reaches the goal with that probability. FrozenLake therefore provides reward only on transitions into the goal.
-
-### Reward Design and Potential-Based Shaping
-
-The reward is chosen by the designer to represent the task. In contrast, the states, actions, and transition kernel describe the environment. An optimization algorithm maximizes the specified reward, so a mismatch between the reward and the intended task can produce undesirable behavior.
-
-One reward modification provably preserves the optimal policy. Let $\Phi: \mathcal{S} \to \mathbb{R}$ be a *potential* that is zero at every terminal state, and replace the reward on each transition by
-
-$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
-:eqlabel:`eq_mdp_shaping`
-
-Along a trajectory, the shaping terms telescope to $\gamma^T \Phi(s_T)-\Phi(s_0)$. The first term vanishes for an infinite discounted trajectory or for an episode ending at a state with $\Phi(s_T)=0$. Every policy's return then changes by the same constant $-\Phi(s_0)$, so the optimal policy is unchanged :cite:`Ng.Harada.Russell.1999`. This construction is called *potential-based shaping*.
-
-The terminal-state condition is essential. If returns stop at the terminal transition and $\Phi(s_T)$ is unconstrained, the remaining term $\gamma^T\Phi(s_T)$ can depend on the terminal state and duration, thereby changing the optimum. Equivalently, one may retain an unconstrained terminal potential if the return includes an absorbing continuation that cancels the residual. General bonuses need not preserve the optimal policy; the example at the end of the section demonstrates such a failure. :numref:`sec_regularized` discusses explicit constraints, and :numref:`sec_rl_sequences` returns to reward misspecification at larger scale.
 
 ## Return, Discount and Horizon
 
@@ -174,6 +105,50 @@ for g in [0.5, 0.9, 0.95, 0.99]:
 ![Discounting defines an effective horizon through $\gamma$. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
 :label:`fig_rl_return_discount`
 
+### The Model as Arrays
+
+The transition and reward model fits in two dense arrays. We wrap them in a class and save it to the `d2l` library for use throughout the chapter:
+
+```{.python .input #mdp-states-actions-and-the-transition-kernel-2}
+%%tab pytorch, jax
+class TabularMDP:  #@save
+    """A finite MDP as dense arrays: P[s, a, s'] and r[s, a]."""
+    def __init__(self, P, r, gamma):
+        self.P, self.r, self.gamma = P, r, gamma
+        self.num_states, self.num_actions = r.shape
+
+    @classmethod
+    def from_gym(cls, env, gamma):
+        """Read the transition table Gymnasium exposes as env.unwrapped.P."""
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        P, r = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+        for s, actions in env.unwrapped.P.items():
+            for a, outcomes in actions.items():
+                for p, s_next, reward, _ in outcomes:
+                    P[s, a, s_next] += p      # several outcomes may share s'
+                    r[s, a] += p * reward     # r(s,a) is the expected reward
+        return cls(P, r, gamma)
+```
+
+```{.python .input #mdp-states-actions-and-the-transition-kernel-3}
+%%tab pytorch, jax
+gamma = 0.95
+LEFT, DOWN, RIGHT, UP = 0, 1, 2, 3
+mdp = TabularMDP.from_gym(env, gamma)
+print(mdp.P[9, DOWN])
+```
+
+The dictionary of tuples has become a dense row: probability $1/3$ in columns 8, 10 and 13, zero elsewhere. Two consistency checks, one per array:
+
+```{.python .input #mdp-states-actions-and-the-transition-kernel-4}
+%%tab pytorch, jax
+print(f'largest |row sum - 1|: {np.abs(mdp.P.sum(axis=-1) - 1).max():.1e}')
+for s, a in np.argwhere(mdp.r > 0):
+    print(f'r(s={s}, a={"<v>^"[a]}) = {mdp.r[s, a]:.3f}')
+```
+
+Every row of $P$ sums to one. The reward array is almost entirely zero: its nonzero entries occur at state 14, the only cell from which the goal can be entered, and equal $1/3$ because the corresponding action reaches the goal with that probability. FrozenLake therefore provides reward only on transitions into the goal.
+
 ### Episodes, Termination and Truncation
 :label:`subsec_mdp-termination`
 
@@ -201,13 +176,24 @@ This construction is called *state augmentation*: the state is enlarged until it
 
 State augmentation requires the added variables to be observable. A poker player, for example, cannot observe the opponents' cards. When an agent receives an observation $o_t$ that reveals only part of the state, the problem is a *partially observable* MDP. Exact methods then maintain beliefs over the hidden state. A common approximation augments the observation with a short history. In Atari, a single frame gives position but not velocity, whereas several consecutive frames reveal motion. The remainder of this chapter assumes that the observation is a Markov state.
 
+## Reward Design and Potential-Based Shaping
+
+The reward is chosen by the designer to represent the task. In contrast, the states, actions, and transition kernel describe the environment. An optimization algorithm maximizes the specified reward, so a mismatch between the reward and the intended task can produce undesirable behavior.
+
+One reward modification provably preserves the optimal policy. Let $\Phi: \mathcal{S} \to \mathbb{R}$ be a *potential* that is zero at every terminal state, and replace the reward on each transition by
+
+$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
+:eqlabel:`eq_mdp_shaping`
+
+This construction is called *potential-based shaping*. General bonuses need not preserve the optimal policy; what a plausible bonus does to the best policy is computed in :numref:`sec_valueiter`, once best policies can be computed, together with the proof that potential-based shaping preserves it. :numref:`sec_regularized` discusses explicit constraints, and :numref:`sec_rl_sequences` returns to reward misspecification at larger scale.
+
 ## Bandits, Degenerate MDPs and the Model-Based Axis
 
 Two special cases and the distinction between model-based and model-free methods organize the following sections.
 
 ### The Bandit as a One-State MDP
 
-When $|\mathcal{S}|=1$, each round consists of selecting an action and observing a reward. This is a *multi-armed bandit*. There are no state transitions or delayed rewards, so the problem isolates the exploration required to identify the action with the largest expected reward. :numref:`sec_qlearning` uses this setting to compare exploration strategies.
+When $|\mathcal{S}|=1$, each round consists of selecting an action and observing a reward. This is a *multi-armed bandit*. There are no state transitions or delayed rewards, so the problem isolates the exploration required to identify the action with the largest expected reward. :numref:`sec_exploration` uses this setting to compare exploration strategies.
 
 ### The Degenerate MDP: Deterministic Transitions, Terminal Reward
 
@@ -257,42 +243,13 @@ print(f'success of a response sampled from the reference: '
 
 The computations above use the transition and reward model directly. Algorithms that plan with a known or learned model are *model-based*; value iteration in :numref:`sec_valueiter` is an example. *Model-free* algorithms instead use sampled transitions $(s,a,r,s')$, as in :numref:`sec_qlearning`. A model can be evaluated at any state-action pair, whereas samples are available only for pairs visited by the data-collection policy.
 
-Because the original reward is sparse, one might add a bonus of $0.3$ whenever a transition moves closer to the goal. In expectation this gives $\tilde r(s,a)=r(s,a)+0.3\sum_{s'}P(s'\mid s,a)\mathbf{1}(d(s')<d(s))$, where $d$ is the Manhattan distance to the goal. This modification is not potential based: movement toward the goal receives a bonus, whereas movement away incurs no corresponding penalty. We compute its optimal policy by repeated backups and evaluate both policies under the original reward using exact policy evaluation:
-
-```{.python .input #mdp-model-based-versus-model-free}
-%%tab pytorch, jax
-dist = abs(np.arange(16) // 4 - 3) + abs(np.arange(16) % 4 - 3)
-closer = dist < dist[:, None, None]    # closer[s, :, s'] = 1 iff d(s') < d(s)
-shaped = TabularMDP(mdp.P, mdp.r + 0.3 * (mdp.P * closer).sum(-1), gamma)
-
-def greedy_sweeps(m):                  # repeated backups; named in next section
-    V = np.zeros(m.num_states)
-    for _ in range(500):
-        V = m.backup(V).max(axis=1)
-    return m.backup(V).argmax(axis=1), V
-
-def exact_value(pi, s=0):              # V(s) under the true reward, exactly
-    return mdp.policy_value(np.eye(mdp.num_actions)[pi])[s]
-
-pi_shaped, V_shaped = greedy_sweeps(shaped)
-pi_true, V_true = greedy_sweeps(mdp)
-print(f'shaped-optimal: at s=14 goes {"<v>^"[pi_shaped[14]]}, shaped value '
-      f'{V_shaped[0]:.2f}, true value {exact_value(pi_shaped):.3f}')
-print(f'true-optimal:   at s=14 goes {"<v>^"[pi_true[14]]}, true value '
-      f'{exact_value(pi_true):.3f}')
-```
-
-State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal.
-
-Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise :exref:`ex_mdp-reward-design-its-failure`c replaces the bonus with a potential-based reward.
-
 ## Summary
 
 A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}$, a transition kernel $P$, and a reward $r$. The Markov assumption requires the state to contain the information from the past needed to predict the future; state augmentation can restore this property when the necessary information is observable. The objective is expected discounted return, and $1/(1-\gamma)$ provides a useful effective-horizon scale. Terminal states end the process, whereas truncation ends only the observation of it, so bootstrapped value estimates must distinguish the two.
 
 A one-state MDP is a bandit, and a deterministic MDP with terminal reward describes settings such as text generation. Potential-based shaping preserves the optimal policy when its terminal conditions are handled correctly; arbitrary reward modifications do not.
 
-**Experimental scope.** Except for the illustrative sampled trajectory, the results in this section are exact computations on a known sixteen-state model. The reward-shaping example establishes that one plausible bonus can change the optimal policy; it does not imply that all reward shaping fails. Estimation, exploration, and function approximation are introduced in later sections.
+**Experimental scope.** Except for the illustrative sampled trajectory, the results in this section are exact computations on a known sixteen-state model. Estimation, exploration, and function approximation are introduced in later sections.
 
 ## Exercises
 
@@ -359,21 +316,16 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        these terms: what do the row sums of $\gamma P$ mean?
    :exlabel:`ex_mdp-discount-as-termination`
 
-1. [code] **Time limits.** `gym.make` wraps FrozenLake in a time limit:
+1. **Time limits.** `gym.make` wraps FrozenLake in a time limit:
    after 100 steps the episode ends with
    `truncated=True` (:numref:`subsec_mdp-termination`).
-    1. Propagate the state distribution $\mu_t$ of problem
-       :exref:`ex_mdp-kernel-predicts-episodes`b under `pi_true` instead of
-       the random policy. Compute the probabilities that an episode reaches
-       the goal, falls into a hole, or is truncated. Compare the truncated
-       fraction with the one that $\mu_{100}$ gives for the random policy.
-    1. Suppose now that the limit is part of the task: the objective is the
-       probability of entering the goal within 100 steps. Model the end of
-       the limit as a move to an absorbing state. Show that the distribution
-       of the next state then depends on the number $h$ of steps that
-       remain, so that the location alone is not a Markov state, whereas the
-       pair $(s, h)$ is :cite:`Pardo.Tavakoli.Levdik.ea.2018`. Why can the
-       best action at a location depend on $h$?
+   Suppose that the limit is part of the task: the objective is the
+   probability of entering the goal within 100 steps. Model the end of
+   the limit as a move to an absorbing state. Show that the distribution
+   of the next state then depends on the number $h$ of steps that
+   remain, so that the location alone is not a Markov state, whereas the
+   pair $(s, h)$ is :cite:`Pardo.Tavakoli.Levdik.ea.2018`. Why can the
+   best action at a location depend on $h$?
    :exlabel:`ex_mdp-time-limits`
 
 1. **Actions without consequences.** A multi-armed bandit has a single
@@ -387,44 +339,6 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        greedy policy is optimal for small $\gamma$ and not for large
        $\gamma$, and find the value of $\gamma$ at which the optimal action
        changes.
-
-1. [code] **Potential-based shaping.** ● `TabularMDP` stores the holes and
-   the goal as absorbing states whose actions lead back to themselves, so
-   the returns it defines continue forever, while the simulator stops at the
-   first terminal state. The telescoping argument of :numref:`sec_mdp` shows
-   that the shaped reward :eqref:`eq_mdp_shaping` preserves the optimal
-   policy in the first setting for every potential $\Phi$, and in the second
-   only when $\Phi$ vanishes at the terminal states.
-    1. Add a constant $c$ to every entry of `mdp.r`, the absorbing states
-       included. Show that the discounted return of every trajectory changes
-       by the same amount, and find that amount. Which constant potential
-       $\Phi$ satisfies $\gamma \Phi(s') - \Phi(s) = c$?
-    1. Now charge the constant only while the episode runs: add $c$ to
-       $r(s, a)$ at the nonterminal states alone. For
-       $c \in \{-0.02, -0.01, 0.01, 0.05\}$, compute the optimal policy with
-       `greedy_sweeps`, report its action at state 0 and its value under the
-       original reward with `exact_value`, and estimate its success rate from
-       1,000 episodes of `env`. Explain the effect of each sign of $c$ with
-       the constant potential and the terminal condition.
-    1. Replace the approach bonus of `shaped` by the potential
-       $\Phi(s) = -0.3\, d(s)$, where $d$ is the Manhattan distance `dist`,
-       and average :eqref:`eq_mdp_shaping` over the next state, which gives
-       at every state
-
-        $$\tilde r(s, a) = r(s, a) + \sum_{s'} P(s' \mid s, a)\,[\gamma \Phi(s') - \Phi(s)].$$
-
-       Check that the values $\tilde V$ that `greedy_sweeps` returns
-       satisfy $\tilde V(s) = V(s) - \Phi(s)$ at every state, where $V$ is
-       `V_true`, and that the shaped optimum has
-       the same value under the original reward as `pi_true`. Then drop the
-       shaping term at the terminal states, as a simulator that stops there
-       would, and recompute the value of the optimum under the original
-       reward. Finally set $\Phi$ to zero at the terminal states and repeat.
-
-   *Adapted from Sutton and Barto,
-   [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-   Exercises 3.15 and 3.16.*
-   :exlabel:`ex_mdp-reward-design-its-failure`
 
 1. **Belief states.** ● In a partially observable MDP the agent receives
    an observation $o_t$, drawn with probability $O(o_t \mid s_t)$, instead
@@ -532,8 +446,8 @@ The commanded move is one outcome among equals.
 ::: {.slide title="One Object for the Whole Chapter"}
 @mdp-states-actions-and-the-transition-kernel-2
 
-`backup` is one application of $r + \gamma P V$: the chapter's
-algorithms are built out of this line.
+Two arrays and a discount: every later algorithm in the chapter
+reads the model from these three fields.
 :::
 
 ::: {.slide title="Trajectory and Return"}
@@ -571,15 +485,11 @@ must distinguish them: bootstrapped targets are masked by `terminated` alone.
 A plausible modification of a sparse reward: add $0.3$ for a step that moves
 the agent closer to the goal.
 
-@mdp-model-based-versus-model-free
-
 . . .
 
-At $s = 14$, the shaped-reward optimum selects *left* and never
-reaches the goal. Its shaped value is $2.15$, but its true value is
-$0$. Potential-based shaping,
+Potential-based shaping,
 $r + \gamma \Phi(s') - \Phi(s)$ with $\Phi = 0$ at terminal states,
-preserves the optimal policy.
+preserves the optimal policy; a general bonus need not.
 :::
 
 ::: {.slide title="Recap"}

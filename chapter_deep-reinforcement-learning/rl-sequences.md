@@ -138,38 +138,7 @@ def group_step(theta, K, reward, rng, beta=0.0, lr=2.0):
     return d2l.group_step(task, theta, K, penalized, rng, lr)
 ```
 
-The zero-mean lemma applies only when a baseline does not depend on the sampled action. A same-group mean includes the current sample's reward, so centering by it produces a biased estimator whose expectation is $(K-1)/K$ times the true gradient, as derived in :numref:`sec_baselines`. The leave-one-out correction is also described in :numref:`sec_baselines`. Division by the group standard deviation adds a random scale factor. Leave-one-out centering is unbiased because each sample is compared with the mean of the other $K-1$ samples. The following enumeration verifies the centering result for groups of two, without standardization:
-
-```{.python .input #rl-sequences-the-group-is-the-baseline-3}
-%%tab pytorch, jax
-K, pi = 2, policy(theta_ref)
-Rv = np.array([[verify(x, y) for y in range(len(resp))] for x in range(4)])
-S = np.eye(len(resp))[None, :, :] - pi[:, None, :]   # eq_softmax_score
-g = np.einsum('xy,xy,xyv->xv', pi, Rv, S)            # the exact gradient
-u = np.zeros_like(g)
-for y1, y2 in np.ndindex(len(resp), len(resp)):      # every group of K = 2
-    w = (Rv[:, y1] - Rv[:, y2]) / 2                  # reward minus group mean
-    u += (pi[:, y1] * pi[:, y2] * w)[:, None] * (S[:, y1] - S[:, y2]) / K
-print(f'E of the group-centered update is (K-1)/K of the gradient: '
-      f'{np.allclose(u, g * (K - 1) / K)}')
-print(f'rescaled by K/(K-1), leave-one-out, it is exact: '
-      f'{np.allclose(u * K / (K - 1), g)}')
-```
-
-At $K=1$, the factor $(K-1)/K$ is zero: the group mean equals the sample's reward, the standardized advantage is zero, and the reward-gradient update does not change the parameters. The underlying policy gradient is generally nonzero, and REINFORCE without this baseline would still learn. The $K=1$ row below therefore retains the reference score of $0.062$. The sweep fixes the sample budget at $6400$ scored responses per prompt, so smaller groups receive proportionally more updates:
-
-```{.python .input #rl-sequences-the-group-is-the-baseline-2}
-%%tab pytorch, jax
-budget = 6400                    # scored responses per prompt, matched
-for K in (1, 2, 4, 8, 32):
-    rng, theta = np.random.default_rng(1), theta_ref.copy()
-    for _ in range(budget // K):
-        theta = group_step(theta, K, verify, rng)
-    print(f'K = {K:2d}: success of a sampled response '
-          f'{success(policy(theta), verify):.3f}')
-```
-
-The $K=1$ result matches the predicted reference score to three decimal places, while every tested $K\geq2$ reaches the verifier ceiling of $0.5$ at the same sample budget. For $K\geq2$, the factor $(K-1)/K$ rescales the centered gradient rather than eliminating it. The group samples provide the per-prompt comparison that a learned value baseline would otherwise supply, but the current sample's inclusion causes the stated bias. If every response in a group receives the same score, all standardized advantages are zero; this occurs on prompts that the current policy always fails or always solves. The zero-update result is specific to the reward-gradient term. Separate KL gradients, supervised objectives, or other loss terms can still update parameters at $K=1$.
+On this instance, :numref:`subsec_baselines_group` derives the bias of the same-group mean, checks it by enumeration for groups of two, and sweeps the group size at a fixed budget of scored responses; the reward-hacking experiment below uses this wrapper.
 
 ## Where the Reward Comes From
 
@@ -233,7 +202,8 @@ They therefore play the two distinct roles described in
 The finite experiment above is not a complete GRPO implementation. It takes
 one update per group, folds the KL term into the reward, uses one-token
 responses, and applies no response-length normalization. It does share
-the same-group mean and hence the self-inclusion bias measured above;
+the same-group mean and hence the self-inclusion bias measured in
+:numref:`subsec_baselines_group`;
 RLOO replaces that mean with the unbiased leave-one-out baseline from
 :numref:`sec_baselines`.
 
@@ -246,7 +216,7 @@ $$r(x,y)=\beta\log\frac{\pi^\star(y\mid x)}{\pi_{\textrm{ref}}(y\mid x)}+c(x),$$
 where $c(x)$ is unidentified by same-prompt comparisons. Substituting this
 relation into the preference likelihood fits the policy directly rather
 than first fitting a scalar reward model :cite:`Rafailov.Sharma.Mitchell.ea.2023`.
-The Language Models part develops that derivation and its assumptions.
+The Language Models part treats preference optimization in more depth.
 
 ### Notation Inherited by the Language Models Part
 
@@ -262,7 +232,7 @@ The Language Models part inherits these symbols verbatim; every object below was
 | $\mu_0$ | start-state, i.e. prompt, distribution | :numref:`sec_mdp` |
 | $\pi_\theta$, $\pi_{\textrm{ref}}$ | policy; frozen reference | :numref:`sec_policygradient`, :numref:`sec_regularized` |
 | $\hat{G}_t$ | reward-to-go | :numref:`sec_baselines` |
-| $A$ | advantage | :numref:`sec_valueiter`, :numref:`sec_baselines` |
+| $A$ | advantage | :numref:`sec_baselines` |
 | $K$ | group size | :numref:`sec_baselines` |
 | $\rho_t$ | importance ratio $\pi_\theta / \pi_{\theta_{\textrm{old}}}$ | :numref:`sec_ppo` |
 | $\epsilon$ | clip half-width, exploration rate; never a numerical constant | :numref:`sec_ppo`, :numref:`sec_qlearning` |
@@ -291,13 +261,13 @@ These four projects play the role of a course programming assignment; each runs 
 
 **C. Diagnose three faulty policies.** Examine one agent with a saturated policy, one with an untrained critic, and one with an undersized replay buffer. Identify each fault from the chapter's diagnostics before inspecting the code.
 
-**D. GRPO from REINFORCE, in two lines.** Start from :numref:`sec_baselines`'s `train`, add the group-standardized weight and the clip, and reproduce this section's $K$-sweep. Bar: $K = 1$ shows no learning; $K \geq 4$ reaches the verifier's ceiling.
+**D. GRPO from REINFORCE, in two lines.** Start from :numref:`sec_baselines`'s `train`, add the group-standardized weight and the clip, and reproduce the $K$-sweep of :numref:`subsec_baselines_group`. Bar: $K = 1$ shows no learning; $K \geq 4$ reaches the verifier's ceiling.
 
 ## Summary
 
 In sequence generation, prompts are start states, tokens are actions, prefixes are states, and responses are trajectories with deterministic concatenation transitions. The response probability factorizes into next-token probabilities, so the response-level score equals the sum of token-level scores. With terminal reward, every token receives the same response-level weight unless an additional credit-assignment model is introduced. A same-group mean baseline shrinks the expected gradient by $(K-1)/K$; leave-one-out centering removes this bias. Learned rewards and programmatic verifiers can both be misspecified, and a KL penalty relative to a reference policy limits the resulting policy shift.
 
-**Experimental scope.** The examples use four prompts and finite response sets. The $K=1$ same-group update is exactly zero, while all tested $K\geq2$ solve this small problem. The verifier example uses a deliberately constructed loophole and a reference distribution chosen to give a threshold near $\beta=1/4$. It illustrates the mechanism of reward exploitation, not the scale or complexity of language-model post-training.
+**Experimental scope.** The examples use four prompts and finite response sets. The verifier example uses a deliberately constructed loophole and a reference distribution chosen to give a threshold near $\beta=1/4$. It illustrates the mechanism of reward exploitation, not the scale or complexity of language-model post-training.
 
 ## Exercises
 
@@ -394,7 +364,7 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
     1. Write a verifier `noisy(x, y)` that returns $1$ with probability
        $1 - \alpha$ on a response that `verify` accepts and with probability
        $f$ otherwise, at $\alpha = f = 0.1$, and rerun the $K$-sweep of
-       :numref:`subsec_rl_sequences_group` for $K \in \{8, 32\}$ with `noisy`
+       :numref:`subsec_baselines_group` for $K \in \{8, 32\}$ with `noisy`
        in place of `verify` in the call of `group_step`. Evaluate the final
        policy with `verify`, and compute its entropy on each prompt. What
        happens on `8*8` and `9*9`, although the expected score on these
@@ -601,7 +571,7 @@ $$\nabla_\theta \log \pi_\theta(y \mid x)
   $r(x, y) - b(x)$ on every token's score (rather than the
   prefix-dependent $A(s_t, a_t)$)
 - one structured action per episode: the contextual bandit of
-  :numref:`sec_qlearning`; multi-turn interaction restores
+  :numref:`sec_exploration`; multi-turn interaction restores
   sequential dependence
 :::
 
@@ -613,22 +583,6 @@ $$\nabla_\theta \log \pi_\theta(y \mid x)
 Deterministic concatenation and terminal reward remove the need
 for transition learning and intermediate Bellman targets; policy
 optimization components remain applicable.
-:::
-
-::: {.slide title="The Group-Mean Baseline"}
-Sample $K$ responses per prompt, standardize within the group,
-one step on the log-probs. Same-group centering is *biased*:
-its expectation is $(K-1)/K$ of the gradient (leave-one-out is
-exact). **Prediction:** at $K = 1$ the shrinkage reaches zero
-and the update vanishes identically.
-
-@!rl-sequences-the-group-is-the-baseline-2
-
-. . .
-
-$0.062$ is the unchanged reference score. At $K=1$, including
-the sample in its own baseline makes the reward-gradient update
-identically zero.
 :::
 
 ::: {.slide title="Reward-Model Exploitation"}

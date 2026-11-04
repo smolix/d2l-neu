@@ -5,29 +5,32 @@
 
 The chapter develops these issues through seven examples. Actor--critic methods replace complete returns with bootstrapped value estimates and lead to $n$-step returns and generalized advantage estimation. Trust regions and PPO control changes in the policy while permitting limited reuse of on-policy data. Regularized policy optimization studies learned rewards and KL penalties. DQN combines Q-learning with replay and target networks; SAC extends the same off-policy machinery to continuous actions. Offline reinforcement learning considers a fixed dataset with no further interaction. The final section formulates language-model generation as a decision process and identifies which preceding methods remain necessary in that special case.
 
-:numref:`fig_rl_roadmap` locates these methods according to what they learn and which data they use. Because the implementations reuse objects introduced in :numref:`chap_reinforcement_learning`, :numref:`tab_rl_inherited` lists those objects and the additions made in this chapter.
+:numref:`fig_rl_roadmap`, at the end of :numref:`sec_deeprl`, locates these methods according to what they learn and which data they use. Because the implementations reuse objects introduced in :numref:`chap_reinforcement_learning`, :numref:`tab_rl_inherited` lists those objects and the additions made in this chapter.
 
 :The objects this chapter's code uses without rebuilding, and where each was built. The rows below the marked line join the library in this chapter.
 :label:`tab_rl_inherited`
 
 | object | what it does | built in |
 |:--|:--|:--|
-| `TabularMDP` | the model as arrays: kernel, reward, discount, and one Bellman `backup` sweep | :numref:`sec_mdp` |
+| `TabularMDP` | the model as arrays: kernel, reward and discount | :numref:`sec_mdp` |
+| `TabularMDP.backup`, `.policy_value` | one Bellman backup of a value vector; the exact $V^\pi$ by a linear solve | :numref:`sec_valueiter` |
 | `VerifierTask` | four prompts, nine candidate responses, an exact-match verifier, and a reference policy | :numref:`sec_mdp` |
 | `value_iteration`, `policy_evaluation` | the exact sweeps to $V^*$ and to $V^\pi$, this chapter's yardsticks | :numref:`sec_valueiter` |
 | `evaluate` | the mean return of a policy over fresh evaluation episodes | :numref:`sec_valueiter` |
-| `ActorCritic`, `.tabular` | the policy-plus-value container with its optimizers, and its table form | :numref:`sec_imitation` |
-| `ActorCritic.mlp` | the same container with one-hidden-layer network heads | :numref:`sec_deeprl` |
-| `GaussianPolicy` | the same container over a Gaussian on continuous actions, its network configurable | :numref:`sec_deeprl` |
-| `policy_step` | one ascent step on advantage-weighted log-probabilities | :numref:`sec_imitation` |
+| `Policy`, `.tabular` | the policy container with its optimizer, and its table form | :numref:`sec_imitation` |
+| `ActorCritic`, `.mlp` | `Policy` plus a value function and its optimizer; one-hidden-layer network heads | :numref:`sec_deeprl` |
+| `GaussianHead`, `GaussianPolicy` | a Gaussian over continuous actions (a configurable trunk, a linear mean, a learned or state-dependent standard deviation), and the container that acts with it | :numref:`sec_deeprl` |
+| `policy_step` | one ascent step on weighted log-probabilities of given states and actions | :numref:`sec_imitation` |
 | `fit_value` | regression passes of $\hat{V}$ toward a supplied target | :numref:`sec_deeprl` |
 | `Batch`, `rollout` | the trajectory container and the collection loop that fills it | :numref:`sec_policygradient` |
 | `Batch.backward_scan`, `Batch.reward_to_go` | the discounted backward scan, and the reward-to-go it computes | :numref:`sec_baselines` |
+| `Batch.truncation_bootstrap` | the discounted $\hat{V}(s_T)$ that an episode cut by a time limit did not see | :numref:`sec_deeprl` |
 | `normalize` | per-batch standardization of the policy weight | :numref:`sec_baselines` |
-| `run_seeds` | one training generator run across seeds into a single array | :numref:`sec_baselines` |
-| `group_step` | one ascent step on a `VerifierTask` with group-standardized rewards | :numref:`sec_baselines` |
+| `verifier_step` | one REINFORCE step on a `VerifierTask`, the weight a function of the group's rewards | :numref:`sec_policygradient` |
+| `group_step` | `verifier_step` with group-standardized rewards | :numref:`sec_baselines` |
 | `epsilon_greedy`, `linear_schedule` | the exploration rule and its annealing | :numref:`sec_qlearning` |
-| `plot_curves`, `show_grid` | seed-band learning curves; gridworld values and policies as panels | :numref:`sec_utils` |
+| `plot_curves`, `show_grid`, `run_seeds` | seed-band learning curves; gridworld values and policies as panels; one training generator run across seeds into a single array | :numref:`sec_utils` |
+| `forward_np` | JAX only: a network's forward pass on NumPy inputs, compiled once per network structure | :numref:`sec_utils` |
 | **added in this chapter** | | |
 | `Batch.td_target` | the one-step bootstrapped target $r + \gamma (1 - \textrm{terminated})\, \hat{V}(s')$ | :numref:`sec_actorcritic` |
 | `Batch.gae` | generalized advantage estimation: the backward scan run on TD errors | :numref:`sec_actorcritic` |
@@ -55,7 +58,7 @@ Training loss alone is often insufficient to diagnose a reinforcement-learning r
 | the entropy trace of a stochastic continuous policy | descends from its wide start and ends within about a nat of the autotuning target $-\dim \mathcal{A}$; an entropy that rises without bound, or disagrees with a one-line quadrature check of the density, indicates an incorrect squashing-density calculation | :numref:`sec_sac` |
 | predicted value against evaluated return | predictions should not exceed the maximum achievable return; a prediction above a computable optimum establishes overestimation without requiring a baseline | :numref:`sec_offline`, and the twin-against-single calibration of :numref:`sec_sac` |
 
-Most experiments use CartPole and several random seeds. :numref:`sec_regularized` and :numref:`sec_offline` use tabular gridworlds because their optimal values can be computed exactly, and :numref:`sec_rl_sequences` uses deterministic string concatenation rather than a simulator. The chapter does not cover multi-agent, meta-, hierarchical, goal-conditioned, partially observable, or model-based reinforcement learning. Large-scale RLHF, DPO, and additional GRPO variants are treated in the Language Models part.
+Most experiments use CartPole and several random seeds. :numref:`sec_regularized` and :numref:`sec_offline` use tabular gridworlds because their optimal values can be computed exactly, and :numref:`sec_rl_sequences` uses deterministic string concatenation rather than a simulator. The chapter does not cover multi-agent, meta-, hierarchical, goal-conditioned, partially observable, or model-based reinforcement learning. The Language Models part treats post-training, including learning from human preferences, in more depth.
 
 ```toc
 :maxdepth: 2

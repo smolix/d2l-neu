@@ -32,13 +32,73 @@ import numpy as np
 
 CartPole is the classic small control problem: a cart slides along a track with a pole hinged on top, the state is four real numbers (cart position, cart velocity, pole angle, angular velocity), and the two actions push the cart left or right. Every step the pole stays up earns reward $1$; the episode ends when the pole tips too far, the cart leaves the track, or 500 steps pass. The best possible return is therefore 500. A table over four continuous coordinates does not exist, so $\pi_\theta$ and $\hat{V}$ must become functions.
 
+### Tables as Linear Networks on One-Hot States
+
+`Policy.tabular` stores its preferences in an embedding table. Selecting row $s$ from this table is equivalent to applying a linear layer to the one-hot vector for state $s$. A tabular policy can therefore be viewed as a linear network with fixed one-hot features. These features are orthogonal, so an update at one state does not affect another. A hidden layer learns shared features instead, allowing observations to generalize across states. Shared parameters also introduce nonconvex optimization, extrapolation outside well-sampled regions, and interference between updates; these issues are developed in :numref:`chap_deep_rl`.
+
 ### Replacing the Table with a Network
 
-The `ActorCritic` interface from :numref:`sec_imitation` requires a module that maps a state to one preference per action. The `.tabular` constructor supplies an embedding table; the constructor below instead supplies a one-hidden-layer network with four inputs and two action preferences, plus a value network of the same shape. The softmax in :eqref:`eq_softmax_policy` operates on the network outputs as it did on a table row. The score $\nabla_\theta \log \pi_\theta(a \mid s)$ now includes the hidden layer, and automatic differentiation applies the additional chain rule.
+The `Policy` container from :numref:`sec_imitation` requires a module that maps a state to one preference per action; its `.tabular` constructor supplies an embedding table. A network will also replace the NumPy value table of the learned baseline in :numref:`sec_baselines`, so the container gains a value function with its own optimizer. `tabular` now builds both tables:
+
+```{.python .input #deep-rl-replacing-the-table-with-a-network-1}
+%%tab pytorch
+class ActorCritic(d2l.Policy):  #@save
+    """A policy and a value function, each with its own optimizer."""
+    def __init__(self, policy, value, lr=1e-2):
+        super().__init__(policy, lr)
+        self.value = value
+        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
+
+    def V(self, obs):
+        return self.value(obs).squeeze(-1)
+
+    def value_np(self, obs):
+        with torch.no_grad():
+            return self.V(torch.as_tensor(obs)).numpy()
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1):
+        """Preference and value tables: two zero-initialized embeddings."""
+        policy, value = (nn.Embedding(num_states, num_actions),
+                         nn.Embedding(num_states, 1))
+        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
+        return cls(policy, value, lr)
+```
+
+```{.python .input #deep-rl-replacing-the-table-with-a-network-1}
+%%tab jax
+class ActorCritic(d2l.Policy):  #@save
+    """A policy and a value function, each with its own optimizer."""
+    def __init__(self, policy, value, lr=1e-2):
+        super().__init__(policy, lr)
+        self.value = value
+        self.opt_v = nnx.Optimizer(value, d2l.shared_adam(lr), wrt=nnx.Param)
+
+    def V(self, obs, value=None):
+        value = self.value if value is None else value
+        return value(obs).squeeze(-1)
+
+    def value_np(self, obs):
+        """V(s) for a batch of states, padded to a bucket length."""
+        out = d2l.forward_np(self.value, d2l._pad(obs, d2l._bucket(len(obs))))
+        return out[:len(obs), 0]
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+        """Preference and value tables: two zero-initialized embeddings."""
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        zeros = nnx.initializers.zeros_init()
+        return cls(nnx.Embed(num_states, num_actions,
+                             embedding_init=zeros, rngs=rngs),
+                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   lr)
+```
+
+The constructor below instead supplies a one-hidden-layer network with four inputs and two action preferences, plus a value network of the same shape. The softmax in :eqref:`eq_softmax_policy` operates on the network outputs as it did on a table row. The score $\nabla_\theta \log \pi_\theta(a \mid s)$ now includes the hidden layer, and automatic differentiation applies the additional chain rule.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab pytorch
-@d2l.add_to_class(d2l.ActorCritic)  #@save
+@d2l.add_to_class(ActorCritic)  #@save
 @classmethod
 def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
     """The same container with the tables replaced by one-hidden-layer nets."""
@@ -50,7 +110,7 @@ def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab jax
-@d2l.add_to_class(d2l.ActorCritic)  #@save
+@d2l.add_to_class(ActorCritic)  #@save
 @classmethod
 def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
     """The same container with the tables replaced by one-hidden-layer nets."""
@@ -97,6 +157,21 @@ def fit_value(ac, obs, target, num_steps=1):  #@save
     return float(loss)
 ```
 
+[Placeholder for the writers (14.8-M2): CartPole cuts every episode at 500 steps and Pendulum at 200. The return of an episode cut by a time limit is not its return (:numref:`sec_mdp`): the future it did not see is worth about $\gamma V(s_T)$ at the cut, discounted back to each earlier step. `rollout` records `terminated` and never `truncated`, so the episodes that need the correction are those whose last step has `term = 0`. `truncation_bootstrap` adds $\gamma^{T-t}(1-\mathrm{term}_T)\,\hat V(s_T)$ to every step $t$ of each episode by one backward scan of a vector that is zero except at the episode ends.]
+
+```{.python .input #deep-rl-replacing-the-table-with-a-network-2}
+%%tab pytorch, jax
+@d2l.add_to_class(d2l.Batch)  #@save
+def truncation_bootstrap(self, gamma, V):
+    """gamma^(T-t) (1 - term_T) V(s_T) for every step t of each episode:
+    the discounted value of the future that a time-limit cut did not see.
+    V maps a batch of numpy states to numpy values."""
+    tail = np.zeros_like(self.rew)
+    last = self.ep_ends - 1
+    tail[last] = gamma * (1 - self.term[last]) * V(self.next_obs[last])
+    return self.backward_scan(tail, gamma)
+```
+
 The training function below is the learned-baseline REINFORCE algorithm from :numref:`sec_baselines`. It collects rollouts, computes reward-to-go, subtracts a learned value estimate, updates the policy, and fits the value function. The agent constructor and environment are arguments, allowing the same function to train different policy representations.
 
 We normalize the advantages because the tasks considered below have substantially different return scales; as discussed in :numref:`sec_baselines`, under plain SGD this changes the effective step size. The controlled estimator comparison used plain SGD to expose that effect, whereas the neural-network experiments use Adam through the optimizer owned by each policy object.
@@ -112,31 +187,32 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma, bootstrap=ac.value_np)   # time limits
+        G = (batch.reward_to_go(gamma)
+             + batch.truncation_bootstrap(gamma, ac.value_np))   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
-        L = d2l.policy_step(ac, batch, w)
+        L = d2l.policy_step(ac, batch.obs, batch.act, w)
         fit_value(ac, batch.obs, G)
         yield float(batch.episode_returns().mean()), L
 ```
 
 Relative to :numref:`sec_baselines`, three inputs change: the constructor
-is `ActorCritic.mlp(4, 2)` instead of `ActorCritic.tabular(16, 4)`, the
+is `ActorCritic.mlp(4, 2)` instead of `Policy.tabular(16, 4)`, the
 environment is `'CartPole-v1'` instead of `'FrozenLake-v1'`, and the
 discount is $0.99$ instead of $0.95$, which raises the effective horizon
 $1/(1-\gamma)$ of :numref:`sec_mdp` from 20 to 100 steps. The
 rollout, reward-to-go, policy update, and value-regression code remains
 unchanged. This compact diagnostic omits the replay, bootstrapped targets,
-and update constraints introduced in Chapter 15. We run three seeds:
+and update constraints introduced in :numref:`chap_deep_rl`. We run three seeds:
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-4}
 %%tab pytorch, jax
 if tab.selected('pytorch'):
     def cartpole_agent(seed):
         torch.manual_seed(seed)
-        return d2l.ActorCritic.mlp(4, 2)
+        return ActorCritic.mlp(4, 2)
 if tab.selected('jax'):
     def cartpole_agent(seed):
-        return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
+        return ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
 
 runs = d2l.run_seeds(train_reinforce, 3, make_agent=cartpole_agent,
                      env_name='CartPole-v1')
@@ -146,10 +222,6 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs[:, :, 0]},
 ```
 
 The untrained policy obtains return about 20. Every seed's per-update batch mean exceeds 400 within approximately fifty updates and remains above 400 through the final update. Variation among seeds in this range makes the overall level more informative than the final digit. The tabular derivation requires no new equation for the network policy.
-
-### Tables as Linear Networks on One-Hot States
-
-`ActorCritic.tabular` stores its preferences in an embedding table. Selecting row $s$ from this table is equivalent to applying a linear layer to the one-hot vector for state $s$. A tabular policy can therefore be viewed as a linear network with fixed one-hot features. These features are orthogonal, so an update at one state does not affect another. A hidden layer learns shared features instead, allowing observations to generalize across states. Shared parameters also introduce nonconvex optimization, extrapolation outside well-sampled regions, and interference between updates; these issues are developed in :numref:`chap_deep_rl`.
 
 ## Continuous Actions and Stochastic Policies
 
@@ -181,7 +253,7 @@ class GaussianHead(nn.Module):  #@save
             return self.mean(h), self.log_std(h).clamp(-5, 2).exp()
         return self.mean(h), self.log_std.exp()
 
-class GaussianPolicy(d2l.ActorCritic):  #@save
+class GaussianPolicy(ActorCritic):  #@save
     """The same interface over a Normal instead of a softmax; nothing that
     consumes the interface changes. `head_args` go to GaussianHead."""
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
@@ -226,7 +298,7 @@ class GaussianHead(nnx.Module):  #@save
             return self.mean(h), jnp.exp(jnp.clip(self.log_std(h), -5, 2))
         return self.mean(h), jnp.exp(self.log_std[...])
 
-class GaussianPolicy(d2l.ActorCritic):  #@save
+class GaussianPolicy(ActorCritic):  #@save
     """The same interface over a Normal instead of a softmax; nothing that
     consumes the interface changes. `head_args` go to GaussianHead."""
     def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None,
@@ -360,11 +432,10 @@ Networks change how updates generalize across states. A table update changes one
 %%tab pytorch, jax
 if tab.selected('pytorch'):
     torch.manual_seed(0)
-    net_probe, tab_probe = d2l.ActorCritic.mlp(4, 2), \
-        d2l.ActorCritic.tabular(16, 4)
+    net_probe, tab_probe = ActorCritic.mlp(4, 2), ActorCritic.tabular(16, 4)
 if tab.selected('jax'):
-    net_probe = d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(0))
-    tab_probe = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(0))
+    net_probe = ActorCritic.mlp(4, 2, rngs=nnx.Rngs(0))
+    tab_probe = ActorCritic.tabular(16, 4, rngs=nnx.Rngs(0))
 S = np.random.default_rng(0).uniform(-1, 1, (256, 4)).astype(np.float32)
 before = net_probe.value_np(S)
 fit_value(net_probe, S[:1], before[:1] + 1.0, num_steps=25)   # raise ONE state
@@ -410,6 +481,42 @@ d2l.plot_curves({'CartPole': runs[:, :, 1]}, xlabel='update',
 The return increases substantially, but the policy loss fluctuates near zero without a consistent trend across seeds. This is expected because the normalized advantages have zero sample mean and the loss records their current correlation with the log-probabilities. Its gradient defines the update, but its numerical value is not a measure of policy quality. Return and update diagnostics such as probability ratios, divergences, and entropy are more informative.
 
 The resulting agent still has three important limitations. It waits for complete episodes before updating because the critic uses reward-to-go targets; :numref:`sec_actorcritic` introduces bootstrapping for earlier updates. It uses each on-policy batch for a single policy step; :numref:`sec_ppo` studies controlled batch reuse, while :numref:`sec_dqn` uses a replay buffer. Finally, the algorithm does not constrain the size of a policy update, even though a large change can degrade both current performance and subsequent data collection. These topics motivate :numref:`chap_deep_rl`.
+
+## A Map of the Methods
+
+:numref:`fig_rl_roadmap` organizes the methods of this chapter and of :numref:`chap_deep_rl` by what they learn and which data they use.
+
+![Reinforcement-learning methods organized by what they estimate and which data they use. Solid boxes denote methods introduced in this chapter; dashed boxes and gray labels denote methods from :numref:`chap_deep_rl`. Behavior cloning trains on a fixed expert dataset, whereas DAgger trains on learner-generated states relabeled by an expert. Value iteration consumes a known transition kernel rather than sampled transitions. The half-length arrow from the on-policy policy-gradient box toward the off-policy column marks a limited reuse of recent trajectories, which :numref:`chap_deep_rl` develops.](../img/mdl-rl-roadmap.svg)
+:label:`fig_rl_roadmap`
+
+:numref:`tab_rl_map` provides a more detailed guide to the algorithms in both chapters. It records what each method estimates, which data it can use, and where it is introduced.
+
+:The algorithm map of these two chapters. "Named in" marks methods this book describes but does not implement.
+:label:`tab_rl_map`
+
+| algorithm | what it estimates | which data may drive the update | where |
+|:--|:--|:--|:--|
+| value iteration | $V^*$ exactly, by sweeping the Bellman operator | none: it consumes the kernel $P$ and reward $r$ | :numref:`sec_valueiter` |
+| behavior cloning | $\pi(a \mid s)$ by cross-entropy on demonstrations | a fixed expert dataset | :numref:`sec_imitation` |
+| DAgger | the same fit | the learner's own states, relabeled by an expert on call | :numref:`sec_imitation` |
+| Q-learning (tabular) | $Q^*$ from sampled backups | any behavior's transitions (off-policy) | :numref:`sec_qlearning` |
+| SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | named in :numref:`sec_qlearning` |
+| UCB, Thompson sampling | arm means plus their uncertainty | its own pulls (the bandit) | :numref:`sec_exploration` |
+| REINFORCE | $\nabla_\theta J$ by the score function | fresh trajectories from the current policy only | :numref:`sec_policygradient` |
+| REINFORCE with baselines, RLOO | the same gradient at lower variance | fresh trajectories from the current policy | :numref:`sec_baselines` |
+| GRPO | group-normalized advantages, no value network | fresh groups of responses per prompt | weights in :numref:`sec_baselines`; machinery in :numref:`chap_deep_rl` |
+| REINFORCE with a learned baseline, on networks | $\pi_\theta$ and $\hat{V}$ as networks | fresh trajectories from the current policy | :numref:`sec_deeprl` |
+| actor-critic (A2C) | $\pi_\theta$ plus a bootstrapped critic | fresh, near-current trajectories | :numref:`sec_actorcritic` |
+| PPO | $\pi_\theta$ under a clipped probability ratio | one batch, reused for a few steps | :numref:`sec_ppo` |
+| KL-regularized policy optimization, RLHF | a policy tilted from a reference by reward | rollouts scored by a learned reward | :numref:`sec_regularized` |
+| DQN, Double DQN | $Q$ as a network | a replay buffer of stale experience | :numref:`sec_dqn` |
+| Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_dqn` |
+| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_regularized` and :numref:`sec_sac` |
+| SAC | twin soft critics, and a stochastic squashed actor maximizing reward plus entropy | a replay buffer (off-policy) | :numref:`sec_sac` |
+| offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
+| Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |
+| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`chap_deep_rl` |
+| DPO | the regularized optimum directly from preferences | a fixed preference dataset | :numref:`sec_rl_sequences`; the Language Models part treats preference optimization in more depth |
 
 ## Summary
 

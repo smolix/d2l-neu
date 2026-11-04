@@ -116,9 +116,8 @@ def epsilon_greedy(q, epsilon, rng):  #@save
     """Explore with probability epsilon, else act greedily on the values q."""
     if rng.random() < epsilon:
         return int(rng.integers(len(q)))
-    # Random tie-breaking is load-bearing: np.argmax would always return
-    # action 0 on a zero-initialized table, and an agent that only ever
-    # proposes *left* on this lake never finds the goal.
+    # Ties are coin flips: np.argmax would always pick action 0 on a zero
+    # table, and an agent that only ever moves left never finds the goal.
     return int(rng.choice(np.flatnonzero(q == q.max())))
 ```
 
@@ -126,11 +125,15 @@ The implementation repeatedly selects an action, observes one transition, and ch
 
 ```{.python .input #qlearning-the-implementation-4}
 %%tab pytorch, jax
-def q_learning(seed, Q, visits, env, num_episodes,
-               alpha=lambda n: 1 / (1 + 0.1 * n)):
-    """Tabular Q-learning; updates Q in place, yields each episode's return."""
+def q_learning(seed, Q, visits, env, num_episodes, gamma,  #@save
+               alpha=lambda n: 1 / (1 + 0.1 * n), epsilon=None):
+    """Tabular Q-learning; updates Q in place, yields each episode's return.
+    `alpha(n)` is the step size at the n-th visit of a pair; `epsilon(k)` is
+    the exploration rate in episode k (default: 1 to 0.05 over the first
+    half of the episodes, then held)."""
     rng = np.random.default_rng(seed)
-    epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
+    if epsilon is None:
+        epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
     env.reset(seed=seed)
     for episode in range(num_episodes):
         s, done, ret = env.reset()[0], False, 0.0
@@ -150,8 +153,8 @@ Every cell here is numpy and shared between the frameworks: tabular reinforcemen
 %%tab pytorch, jax
 Q = np.zeros((5, mdp.num_states, mdp.num_actions))
 visits = np.zeros_like(Q)
-returns = np.array([list(q_learning(k, Q[k], visits[k], env, num_episodes))
-                    for k in range(5)])
+returns = np.array([list(q_learning(k, Q[k], visits[k], env, num_episodes,
+                                    gamma)) for k in range(5)])
 d2l.plot_curves({'Q-learning': returns}, xlabel='episode',
                 ylabel='return per episode', smooth=200)
 ```
@@ -208,7 +211,7 @@ experiment, one sixteenth of the episode budget suffices:
 %%tab pytorch, jax
 calm = gym.make('FrozenLake-v1', is_slippery=False)
 table = np.zeros((mdp.num_states, mdp.num_actions))
-for _ in q_learning(0, table, np.zeros_like(table), calm, 256,
+for _ in q_learning(0, table, np.zeros_like(table), calm, 256, gamma,
                     alpha=lambda n: 0.9):
     pass
 print(f'calm ice, 256 episodes, alpha = 0.9: greedy policy succeeds '
@@ -230,7 +233,7 @@ for name, alpha in [('0.9 (constant)', lambda n: 0.9),
     for seed in range(5):
         Qa = np.zeros_like(Q[0])
         runs.append([Qa[0, a0] for _ in q_learning(
-            seed, Qa, np.zeros_like(Qa), env, num_episodes, alpha)])
+            seed, Qa, np.zeros_like(Qa), env, num_episodes, gamma, alpha)])
     trace[f'alpha = {name}'] = np.array(runs)
     print(f'alpha = {name:>14}: final estimates {np.round(runs, 3)[:, -1]}')
 d2l.plot_curves(trace, xlabel='episode', ylabel='estimate of Q(s0, left)',
@@ -444,8 +447,8 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        the nonterminal pairs of the calm lake and learning to succeed
        there. Predict whether it also learns a good policy on slippery
        ice.
-    1. Give `q_learning` an argument `epsilon`, a function from the episode
-       index to the exploration rate such as those returned by
+    1. The optional argument `epsilon` of `q_learning` is a function from
+       the episode index to the exploration rate, such as those returned by
        `linear_schedule`. On the slippery lake, run five seeds each with
        $\epsilon$ held at $0$, $0.1$, $0.5$ and $1$, and with the schedule
        `linear_schedule(1.0, 0.05, num_episodes // 2)` that `q_learning`

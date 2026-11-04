@@ -31,8 +31,7 @@ We retain the deterministic FrozenLake environment, complete-episode horizon, di
 gamma, alpha, alpha_v = 0.95, 16.0, 0.1  # discount; SGD step; value step
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
 num_seeds = 20                         # with 5, the medians below are noise
-env = gym.wrappers.TimeLimit(
-    gym.make('FrozenLake-v1', is_slippery=False).env, max_episode_steps=10_000)
+env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=10_000)
 ```
 
 ## A Zero-Mean Identity
@@ -97,9 +96,18 @@ def backward_scan(self, x, factor):
     return y
 
 @d2l.add_to_class(d2l.Batch)  #@save
-def reward_to_go(self, gamma):
-    """G_t: the discounted return of the rest of its episode, by one scan."""
-    return self.backward_scan(self.rew, gamma)
+def reward_to_go(self, gamma, bootstrap=None):
+    """G_t: the discounted return of the rest of its episode, by one scan.
+    With a value function `bootstrap` (numpy in, numpy out), an episode cut
+    by a time limit (term = 0 at its last step) continues with
+    gamma * V(s_T) at the cut, so G_t gains gamma^(T-t) V(s_T)."""
+    x = self.rew
+    if bootstrap is not None:
+        last = self.ep_ends - 1
+        x = x.copy()
+        x[last] += (gamma * (1 - self.term[last])
+                    * bootstrap(self.next_obs[last]))
+    return self.backward_scan(x, gamma)
 ```
 
 The same backward scan will be used for generalized advantage estimation in :numref:`sec_ppo`. There it is applied to the temporal-difference errors of :numref:`sec_actorcritic` with decay $\gamma\lambda$. At $\lambda=1$, the resulting sum telescopes to the reward-to-go.
@@ -174,8 +182,7 @@ rng = np.random.default_rng(3)
 env.reset(seed=3)
 for _ in range(16):
     b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b, np.repeat(b.episode_returns(gamma),
-                                        np.diff(b.ep_ends, prepend=0)))
+    d2l.policy_step(probe, b, b.per_step(b.episode_returns(gamma)))
 theta = probe.policy.weight.detach().requires_grad_(True)
 pi = torch.softmax(theta, -1)
 V = torch.linalg.solve(torch.eye(16) - gamma * torch.einsum('sa,sat->st',
@@ -195,8 +202,7 @@ rng = np.random.default_rng(3)
 env.reset(seed=3)
 for _ in range(16):
     b = d2l.rollout(env, probe.act, 16, rng)
-    d2l.policy_step(probe, b, np.repeat(b.episode_returns(gamma),
-                                        np.diff(b.ep_ends, prepend=0)))
+    d2l.policy_step(probe, b, b.per_step(b.episode_returns(gamma)))
 
 def V_fn(theta):
     pi = jax.nn.softmax(theta, -1)
@@ -287,6 +293,22 @@ print(f'E[centered] equals (n-1)/n of it:           {np.allclose(u_cen, g / 2)}'
 
 Both identities hold to machine precision. The same estimator is used for language-model post-training under the name RLOO: sample $n$ responses to a prompt and weight each response by its reward minus the mean reward of the other $n-1$ responses :cite:`Ahmadian.Cremer.Galle.ea.2024`.
 
+[Placeholder for the writers, from rl-sequences.md "The Group Mean as the Baseline": on the verifier task of :numref:`sec_mdp`, sample a group of $K$ responses for each prompt, score them, standardize the scores within the group, and take one ascent step on the log-probabilities. This applies :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state; the group mean is a per-prompt baseline, so no value network is needed.]
+
+```{.python .input #baselines-the-leave-one-out-baseline-1}
+%%tab pytorch, jax
+def group_step(task, theta, K, reward, rng, lr=2.0):  #@save
+    """One ascent step on a VerifierTask: K responses per prompt, rewards
+    standardized within each group, the softmax score per prompt."""
+    pi, g = task.policy(theta), np.zeros_like(theta)
+    eye = np.eye(len(task.resp))
+    for x in range(len(task.prompts)):         # one group of K per prompt
+        ys = rng.choice(len(task.resp), K, p=pi[x])
+        A = normalize(np.array([reward(x, y) for y in ys]))   # group baseline
+        g[x] = (eye[ys] - pi[x]).T @ A / K     # eq_softmax_score
+    return theta + lr * g
+```
+
 ### Summing over Episodes of Different Lengths
 :label:`subsec_pg_loss_divisor`
 
@@ -357,8 +379,7 @@ def estimate(b, w):
     return u.ravel() / len(b.ep_ends)
 
 weightings = {
-    'return': lambda b, G: np.repeat(b.episode_returns(gamma),
-                                     np.diff(b.ep_ends, prepend=0)),
+    'return': lambda b, G: b.per_step(b.episode_returns(gamma)),
     'reward-to-go': lambda b, G: G,
     'centered': lambda b, G: G - G.mean(),
     'normalized': lambda b, G: normalize(G),
@@ -400,6 +421,8 @@ def entropy(ac):
 
 ```{.python .input #baselines-five-estimators-3}
 %%tab pytorch, jax
+if tab.selected('jax'):
+    sgd = optax.sgd(alpha)    # one transform for every agent: one compile
 def train(seed, variant):
     """Five REINFORCE variants; they differ in one line, the weight."""
     rng, V = np.random.default_rng(seed), np.zeros(16, np.float32)
@@ -409,13 +432,12 @@ def train(seed, variant):
         ac.opt_pi = torch.optim.SGD(ac.policy.parameters(), lr=alpha)
     if tab.selected('jax'):
         ac = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(seed))
-        ac.opt_pi = nnx.Optimizer(ac.policy, optax.sgd(alpha), wrt=nnx.Param)
+        ac.opt_pi = nnx.Optimizer(ac.policy, sgd, wrt=nnx.Param)
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
         G = batch.reward_to_go(gamma)
-        w = {'return': np.repeat(batch.episode_returns(gamma),
-                                 np.diff(batch.ep_ends, prepend=0)),
+        w = {'return': batch.per_step(batch.episode_returns(gamma)),
              'reward-to-go': G,
              'centered': G - G.mean(),
              'normalized': normalize(G),
@@ -452,7 +474,7 @@ We report performance and parameter-step norms together because both affect the 
 def to90(curve):
     """First update whose trailing 10-update mean success reaches 0.9."""
     hit = np.convolve(curve, np.ones(10) / 10, 'valid') >= 0.9
-    return hit.argmax() if hit.any() else len(curve)
+    return hit.argmax() + 9 if hit.any() else len(curve)   # window's end
 
 for v, r in runs.items():
     reach = np.array([to90(c) for c in r[:, :, 0]])

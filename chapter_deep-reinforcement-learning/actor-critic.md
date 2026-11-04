@@ -150,27 +150,6 @@ def policy_step_clip(ac, batch, w, clip=grad_clip):
     return float(gnorm)
 ```
 
-The second piece is per-framework speed, not algorithm, and follows the compilation rule of :numref:`sec_compilation`: compile what has a fixed shape and runs hot, leave ragged shapes eager. The acting forward runs a few hundred thousand times at one fixed shape, so the jax tab compiles and caches it exactly as :numref:`sec_deeprl` did; the pytorch tab's eager dispatch is already cheap at this scale and needs nothing.
-
-```{.python .input #actor-critic-a2c-by-name-2}
-%%tab jax
-_act_probs = nnx.jit(lambda net, obs: jax.nn.softmax(net(obs), -1))
-
-def _probs(ac, obs):   # the fixed-shape acting forward, compiled and
-    if not hasattr(ac, '_fwd'):        # cached as in :numref:`sec_deeprl`
-        ac._fwd = nnx.cached_partial(_act_probs, ac.policy)
-    return np.asarray(ac._fwd(jnp.asarray(obs)))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act(self, obs, rng):
-    p = _probs(self, obs)
-    return int(rng.choice(len(p), p=p))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act_greedy(self, obs, rng=None):
-    return int(_probs(self, obs).argmax())
-```
-
 The critic's regression and the actor's clipped step are this section's hot loops, together tens of thousands of passes per run, each on a batch of a few fixed lengths. Padding every batch to a power-of-two length makes the shape one of a handful and lets the jitted passes and the jitted value read that computes the critic's target compile once per bucket rather than once per batch; a mask, or zero-padded weights, keeps the padded entries out of each loss.
 
 ```{.python .input #actor-critic-a2c-by-name-3}
@@ -233,7 +212,7 @@ def train_reinforce(seed, ac, num_updates=num_updates):
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma)
+        G = batch.reward_to_go(gamma, bootstrap=ac.value_np)   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
         gnorm = policy_step_clip(ac, batch, w)
         fit_value(ac, batch.obs, G)
@@ -423,7 +402,7 @@ assert np.allclose(b.gae(fresh.value_np, gamma, 1.0),
 print('lambda = 0 is the TD error; lambda = 1 is the Monte Carlo advantage')
 ```
 
-One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` silently pretends the future is empty; the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
+One boundary clause: the $\lambda = 1$ identity holds on episodes that *terminate*. On an episode cut off by a time limit, `gae` correctly bootstraps the missing future through the unmasked $\hat{V}$ in its last TD error, while `reward_to_go` called without its `bootstrap` argument treats the future as empty; the untrained probe above ends every episode by falling, which is why the assertion is exact. The estimator handles the `terminated`-versus-`truncated` distinction of :numref:`sec_mdp` correctly because `td_target` does.
 
 ### Eligibility Traces
 

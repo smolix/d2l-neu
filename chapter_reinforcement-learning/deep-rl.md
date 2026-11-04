@@ -59,18 +59,6 @@ def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
         return nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
                               nnx.Linear(hidden, out, rngs=rngs))
     return cls(net(num_actions), net(1), lr)
-
-_act_probs = nnx.jit(lambda net, obs: jax.nn.softmax(net(obs), -1))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act(self, obs, rng):
-    """As in :numref:`sec_imitation`; the acting forward has one fixed input
-    shape and runs a few hundred thousand times below, so it is compiled
-    once and cached (:numref:`sec_compilation`)."""
-    if not hasattr(self, '_fwd'):
-        self._fwd = nnx.cached_partial(_act_probs, self.policy)
-    probs = np.asarray(self._fwd(jnp.asarray(obs)))
-    return int(rng.choice(len(probs), p=probs))
 ```
 
 The learned baseline of :numref:`sec_baselines` must also use function approximation. Equation :eqref:`eq_value_baseline` moved one table entry toward an observed reward-to-go; for a network, the corresponding update minimizes mean squared error against the observed targets. The `num_steps` argument sets the number of critic regression steps per batch. This section uses $1$ step, while :numref:`sec_actorcritic` varies it.
@@ -90,15 +78,22 @@ def fit_value(ac, obs, target, num_steps=1):  #@save
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-2}
 %%tab jax
+@nnx.jit  #@save
+def _value_pass(value, opt, obs, target, mask):
+    """Masked mean squared error over the real rows, one optimizer step."""
+    loss, grads = nnx.value_and_grad(lambda v: (mask * (
+        v(obs).squeeze(-1) - target) ** 2).sum() / mask.sum())(value)
+    opt.update(value, grads)
+    return loss
+
 def fit_value(ac, obs, target, num_steps=1):  #@save
     """Regress the value head on a fixed target: eq_value_baseline for nets.
-
-    Not jitted: batches change shape at every update; jit would recompile."""
-    obs, target = jnp.asarray(obs), jnp.asarray(target)
+    The batch is padded to a bucket length, so the compiled pass is reused."""
+    size = d2l._bucket(len(target))
+    mask = (np.arange(size) < len(target)).astype(np.float32)
+    obs, target = d2l._pad(obs, size), d2l._pad(np.float32(target), size)
     for _ in range(num_steps):
-        loss, grads = nnx.value_and_grad(
-            lambda value: ((ac.V(obs, value) - target) ** 2).mean())(ac.value)
-        ac.opt_v.update(ac.value, grads)
+        loss = _value_pass(ac.value, ac.opt_v, obs, target, mask)
     return float(loss)
 ```
 
@@ -117,7 +112,7 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
     env.reset(seed=seed)
     for _ in range(num_updates):
         batch = d2l.rollout(env, ac.act, batch_episodes, rng)
-        G = batch.reward_to_go(gamma)
+        G = batch.reward_to_go(gamma, bootstrap=ac.value_np)   # time limits
         w = d2l.normalize(G - ac.value_np(batch.obs))
         L = d2l.policy_step(ac, batch, w)
         fit_value(ac, batch.obs, G)
@@ -167,21 +162,30 @@ We use a Gaussian policy $\pi_\theta(a\mid s)=\mathcal{N}(a;\mu_\theta(s),\sigma
 ```{.python .input #deep-rl-the-gaussian-policy-1}
 %%tab pytorch
 class GaussianHead(nn.Module):  #@save
-    """Mean network plus a state-independent learned log standard deviation."""
-    def __init__(self, obs_dim, act_dim, hidden):
+    """A Gaussian over actions: a trunk of hidden features, a linear mean,
+    and a log standard deviation that is one learned vector or, with
+    `state_std=True`, a second linear head clamped to [-5, 2]. The default
+    trunk is one tanh layer; any module with `hidden` outputs will do."""
+    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None):
         super().__init__()
-        self.mean = nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
-                                  nn.Linear(hidden, act_dim))
-        self.log_std = nn.Parameter(torch.zeros(act_dim))
+        self.trunk = trunk if trunk is not None else nn.Sequential(
+            nn.Linear(obs_dim, hidden), nn.Tanh())
+        self.mean = nn.Linear(hidden, act_dim)
+        self.state_std = state_std
+        self.log_std = (nn.Linear(hidden, act_dim) if state_std
+                        else nn.Parameter(torch.zeros(act_dim)))
 
     def forward(self, obs):
-        return self.mean(obs), self.log_std.exp()
+        h = self.trunk(obs)
+        if self.state_std:
+            return self.mean(h), self.log_std(h).clamp(-5, 2).exp()
+        return self.mean(h), self.log_std.exp()
 
 class GaussianPolicy(d2l.ActorCritic):  #@save
     """The same interface over a Normal instead of a softmax; nothing that
-    consumes the interface changes."""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2):
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden),
+    consumes the interface changes. `head_args` go to GaussianHead."""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, **head_args):
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, **head_args),
                          nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
                                        nn.Linear(hidden, 1)), lr)
 
@@ -203,22 +207,33 @@ class GaussianPolicy(d2l.ActorCritic):  #@save
 ```{.python .input #deep-rl-the-gaussian-policy-1}
 %%tab jax
 class GaussianHead(nnx.Module):  #@save
-    """Mean network plus a state-independent learned log standard deviation."""
-    def __init__(self, obs_dim, act_dim, hidden, rngs):
-        self.mean = nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
-                                   jnp.tanh,
-                                   nnx.Linear(hidden, act_dim, rngs=rngs))
-        self.log_std = nnx.Param(jnp.zeros(act_dim))
+    """A Gaussian over actions: a trunk of hidden features, a linear mean,
+    and a log standard deviation that is one learned vector or, with
+    `state_std=True`, a second linear head clamped to [-5, 2]. The default
+    trunk is one tanh layer; any module with `hidden` outputs will do."""
+    def __init__(self, obs_dim, act_dim, hidden, rngs, state_std=False,
+                 trunk=None):
+        self.trunk = trunk if trunk is not None else nnx.Sequential(
+            nnx.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh)
+        self.mean = nnx.Linear(hidden, act_dim, rngs=rngs)
+        self.state_std = state_std
+        self.log_std = (nnx.Linear(hidden, act_dim, rngs=rngs) if state_std
+                        else nnx.Param(jnp.zeros(act_dim)))
 
     def __call__(self, obs):
-        return self.mean(obs), jnp.exp(self.log_std[...])
+        h = self.trunk(obs)
+        if self.state_std:
+            return self.mean(h), jnp.exp(jnp.clip(self.log_std(h), -5, 2))
+        return self.mean(h), jnp.exp(self.log_std[...])
 
 class GaussianPolicy(d2l.ActorCritic):  #@save
     """The same interface over a Normal instead of a softmax; nothing that
-    consumes the interface changes."""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None):
+    consumes the interface changes. `head_args` go to GaussianHead."""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None,
+                 **head_args):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs),
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs,
+                                      **head_args),
                          nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
                                         jnp.tanh,
                                         nnx.Linear(hidden, 1, rngs=rngs)), lr)
@@ -228,15 +243,11 @@ class GaussianPolicy(d2l.ActorCritic):  #@save
         return jax.scipy.stats.norm.logpdf(act, mean, std).sum(-1)
 
     def act(self, obs, rng):
-        if not hasattr(self, '_fwd'):   # compile the fixed-shape acting
-            self._fwd = nnx.cached_partial(nnx.jit(lambda net, o: net(o)),
-                                           self.policy)  # forward, once
-        mean, std = self._fwd(jnp.asarray(obs))
-        return np.asarray(mean) + np.asarray(std) * rng.standard_normal(
-            mean.shape, dtype=np.float32)
+        mean, std = d2l.forward_np(self.policy, obs)   # compiled, as in tabular
+        return mean + std * rng.standard_normal(mean.shape, dtype=np.float32)
 
     def act_greedy(self, obs, rng=None):
-        return np.asarray(self.policy(jnp.asarray(obs))[0])
+        return d2l.forward_np(self.policy, obs)[0]
 ```
 
 The environment clips sampled torque to $[-2, 2]$, so `act` can return the unbounded Gaussian draw. Before training, we compare `log_prob` with the analytic Gaussian density, following the softmax-score check in :numref:`sec_policygradient`. At initialization, $\sigma = e^0 = 1$, so the analytic expression requires only the mean returned by `act_greedy`:

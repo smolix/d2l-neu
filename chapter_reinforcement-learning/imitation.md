@@ -23,6 +23,7 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 import optax
+import weakref  #@save
 ```
 
 ## Behavior Cloning
@@ -95,12 +96,21 @@ class ActorCritic(nn.Module):  #@save
 
 ```{.python .input #imitation-the-reduction-to-classification-2}
 %%tab jax
+#@save
+_adams = {}
+
+def shared_adam(lr):  #@save
+    """One optax.adam per learning rate, shared by all agents: compiled
+    updates are keyed on the optimizer, so a new agent reuses the compiled
+    code instead of compiling it again."""
+    return _adams.setdefault(lr, optax.adam(lr))
+
 class ActorCritic(nnx.Module):  #@save
     """A policy and a value function, each with its own optimizer."""
     def __init__(self, policy, value, lr=1e-2):
         self.policy, self.value = policy, value
-        self.opt_pi = nnx.Optimizer(policy, optax.adam(lr), wrt=nnx.Param)
-        self.opt_v = nnx.Optimizer(value, optax.adam(lr), wrt=nnx.Param)
+        self.opt_pi = nnx.Optimizer(policy, shared_adam(lr), wrt=nnx.Param)
+        self.opt_v = nnx.Optimizer(value, shared_adam(lr), wrt=nnx.Param)
 
     def log_prob(self, obs, act, policy=None):
         """log pi(a|s). Gradients flow w.r.t. the module you differentiate;
@@ -165,19 +175,55 @@ def log_prob_np(self, obs, act):
 
 ```{.python .input #imitation-the-reduction-to-classification-3}
 %%tab jax
+#@save
+_forwards = {}                          # one compiled forward per net structure
+
+#@save
+_splits = weakref.WeakKeyDictionary()  # per net: its forward and variables
+
+def forward_np(net, x):  #@save
+    """net(x) for numpy x, as numpy, through one compiled forward per net
+    structure and input shape. The net is split once and its variables are
+    kept, so each call reads their current values: optimizer steps show up
+    without splitting again."""
+    if net not in _splits:
+        graph, state = nnx.split(net)
+        tree = jax.tree.structure(state)
+        if (graph, tree) not in _forwards:
+            _forwards[graph, tree] = jax.jit(lambda leaves, x: nnx.merge(
+                graph, jax.tree.unflatten(tree, leaves))(x))
+        _splits[net] = _forwards[graph, tree], jax.tree.leaves(
+            state, is_leaf=lambda v: isinstance(v, nnx.Variable))
+    forward, variables = _splits[net]
+    leaves = [v.get_raw_value() for v in variables]
+    return jax.tree.map(np.asarray, forward(leaves, x))
+
+def _pad(x, size):  #@save
+    """Zero-pad axis 0 of an array to `size` rows."""
+    x = np.asarray(x)
+    return np.pad(x, ((0, size - len(x)),) + ((0, 0),) * (x.ndim - 1))
+
+def _bucket(n):  #@save
+    """Padded batch length: the next power of two, at least 64, so that a
+    compiled pass is reused across batches of different lengths."""
+    return 1 << max(6, (n - 1).bit_length())
+
 @d2l.add_to_class(ActorCritic)  #@save
 def act(self, obs, rng):
     """Sample an action; numpy in, int out, the acting protocol of evaluate."""
-    probs = np.asarray(jax.nn.softmax(self.policy(jnp.asarray(obs)), axis=-1))
-    return int(rng.choice(len(probs), p=probs))
+    logits = forward_np(self.policy, obs)
+    probs = np.exp(logits - logits.max())
+    return int(rng.choice(len(probs), p=probs / probs.sum()))
 
 @d2l.add_to_class(ActorCritic)  #@save
 def act_greedy(self, obs, rng=None):
-    return int(self.policy(jnp.asarray(obs)).argmax())
+    return int(forward_np(self.policy, obs).argmax())
 
 @d2l.add_to_class(ActorCritic)  #@save
 def value_np(self, obs):
-    return np.asarray(self.V(jnp.asarray(obs)))
+    """V(s) for a batch of states, padded to a bucket length."""
+    out = forward_np(self.value, _pad(obs, _bucket(len(obs))))
+    return out[:len(obs), 0]
 
 @d2l.add_to_class(ActorCritic)  #@save
 def log_prob_np(self, obs, act):
@@ -245,16 +291,23 @@ def policy_step(ac, batch, advantage):  #@save
 
 ```{.python .input #imitation-the-reduction-to-classification-5}
 %%tab jax
+@nnx.jit  #@save
+def _policy_pass(ac, obs, act, adv, n):
+    """-sum(adv * log pi(act|obs)) / n and one optimizer step; padded rows
+    carry adv = 0 and add nothing."""
+    loss, grads = nnx.value_and_grad(
+        lambda policy: -(adv * ac.log_prob(obs, act, policy)).sum() / n)(
+            ac.policy)
+    ac.opt_pi.update(ac.policy, grads)
+    return loss
+
 def policy_step(ac, batch, advantage):  #@save
     """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
-
-    Not jitted: batches change shape at every update; jit would recompile."""
-    obs, act = jnp.asarray(batch.obs), jnp.asarray(batch.act)
-    adv = jnp.asarray(advantage)
-    loss, grads = nnx.value_and_grad(
-        lambda policy: -(adv * ac.log_prob(obs, act, policy)).mean())(ac.policy)
-    ac.opt_pi.update(ac.policy, grads)
-    return float(loss)
+    The batch is padded to a bucket length, so the compiled pass is reused."""
+    n = len(advantage)
+    size = _bucket(n)
+    return float(_policy_pass(ac, _pad(batch.obs, size), _pad(batch.act, size),
+                              _pad(np.float32(advantage), size), n))
 ```
 
 The weights are supplied as a NumPy array and therefore cannot contain a gradient graph. Both framework implementations consequently treat them as fixed data without requiring an explicit stop-gradient operation.

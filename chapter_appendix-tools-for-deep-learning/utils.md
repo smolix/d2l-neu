@@ -130,63 +130,98 @@ def _plot(self, ax):
 %%tab pytorch, jax
 
 def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,  #@save
-                ylim=None):
+                ylim=None, x=None, xscale='linear', yscale='linear',
+                band='range'):
     """One panel per call. `curves` maps a label to an array of shape
-    [seed, step] (or [step] for a single seed); plots the seed median and
-    a shaded band between the seed min and max. `smooth`, if greater than
-    1, applies a trailing moving average of that many steps before taking
-    the seed statistics. `reference`, if given, draws a dashed horizontal
-    line; `ylim`, if given, fixes the y-axis range."""
+    [seed, step] (or [step] for a single seed); plots the seed median and a
+    shaded band over the seeds: min to max (`band='range'`) or the
+    interquartile range (`band='iqr'`, the better summary from five seeds
+    on). `smooth`, if greater than 1, replaces each point by the mean of the
+    `smooth` steps that end there, before the seed statistics; the first
+    `smooth - 1` steps lack a full window and are dropped. `x` gives the
+    position of each step (default 0, 1, 2, ...). `reference`, if given,
+    draws a dashed horizontal line; `ylim` fixes the y-axis range; `xscale`
+    and `yscale` take matplotlib's scale names, e.g. 'log'."""
     set_figsize((6, 4))
     for name, values in curves.items():
         values = np.atleast_2d(values)
+        xs = np.arange(values.shape[1]) if x is None else np.asarray(x)
         if smooth > 1:
             kernel = np.ones(smooth) / smooth
             values = np.stack([np.convolve(v, kernel, 'valid')
                                for v in values])
-        x = np.arange(values.shape[1])
-        line, = plt.plot(x, np.median(values, axis=0), label=name)
+            xs = xs[smooth - 1:]      # each window sits at its last step
+        line, = plt.plot(xs, np.median(values, axis=0), label=name)
         if values.shape[0] > 1:
-            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
-                             alpha=0.2, color=line.get_color())
+            lo, hi = ((values.min(axis=0), values.max(axis=0))
+                      if band == 'range' else
+                      np.percentile(values, [25, 75], axis=0))
+            plt.fill_between(xs, lo, hi, alpha=0.2, color=line.get_color())
     if reference is not None:
         plt.axhline(reference, linestyle='--', color='gray')
     if ylim is not None:
         plt.ylim(ylim)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
 
-def show_grid(desc, values, policy, titles=None):  #@save
-    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
-    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
-    to any one map size. `values` and `policy` may each be a single frame,
-    shape (num_states,), or a sequence of frames, shape
-    (num_frames, num_states); `titles`, if given, labels each frame."""
+def show_grid(desc, values, policy=None, titles=None,  #@save
+              diverging=False, fmt='{:.2f}'):
+    """A gridworld in the style of the chapter's figures. Each cell is
+    shaded by `values` (white to blue, or with `diverging=True` red to blue
+    around zero, for differences) and shows its state index (top left), its
+    value (bottom left) and an arrow for the action of `policy`, if given.
+    Holes are grey and the goal green; S, H and G sit at the bottom right.
+    The grid shape is read from `desc` (e.g. `env.unwrapped.desc`).
+    `values` and `policy` may each be a single frame, shape (num_states,),
+    or a sequence of frames, shape (num_frames, num_states); `titles`, if
+    given, labels each frame."""
     h, w = desc.shape
-    values = np.atleast_2d(values).reshape(-1, h, w)
-    policy = np.atleast_2d(policy).reshape(-1, h, w)
-    num_frames = values.shape[0]
-    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
-    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
-                             squeeze=False)
+    values = np.atleast_2d(values).reshape(-1, h * w)
+    if policy is not None:
+        policy = np.atleast_2d(policy).reshape(-1, h * w)
+    if diverging:
+        top = max(np.abs(values).max(), 1e-12)
+        cmap, norm = plt.get_cmap('RdBu'), plt.Normalize(-top, top)
+    else:
+        cmap = plt.get_cmap('Blues')
+        norm = plt.Normalize(min(0.0, values.min()),
+                             max(values.max(), 1e-12))
+    move = {0: (-1, 0), 1: (0, 1), 2: (1, 0), 3: (0, -1)}   # (dx, dy)
+    fig, axes = plt.subplots(1, len(values), squeeze=False,
+                             figsize=(3.6 * len(values), 3.6))
     for k, ax in enumerate(axes[0]):
-        ax.imshow(values[k], cmap='bone')
-        ax.set_xticks(np.arange(-.5, w), minor=True)
-        ax.set_yticks(np.arange(-.5, h), minor=True)
-        ax.grid(which='minor', color='w', linewidth=2)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        for y in range(h):
-            for x in range(w):
-                cell = desc[y, x].decode()
-                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
-                ax.text(x, y, cell, ha='center', va='center', color=color,
-                       fontweight='bold')
-                if cell not in ('H', 'G'):
-                    dx, dy = action2offset[int(policy[k, y, x])]
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
-                            head_length=0.15)
+        for s in range(h * w):
+            y, x = divmod(s, w)
+            cell, v = desc[y, x].decode(), values[k, s]
+            fill = {'H': ('#565D66', 0.55), 'G': ('#2CA02C', 0.35)}.get(
+                cell, (cmap(norm(v)), 1.0))
+            ax.add_patch(plt.Rectangle((x, y), 1, 1, fc=fill[0],
+                                       alpha=fill[1], ec='black', lw=1.0))
+            shade = np.abs(norm(v) - 0.5) * 2 if diverging else norm(v)
+            ink = 'white' if cell == 'H' or (cell != 'G' and shade > 0.6) \
+                else 'black'
+            ax.text(x + 0.07, y + 0.07, str(s), ha='left', va='top',
+                    fontsize=9, color=ink)
+            if cell not in 'HG' or np.abs(v) > 1e-9:   # terminal: 0
+                ax.text(x + 0.07, y + 0.93, fmt.format(v), ha='left',
+                        va='bottom', fontsize=10, color=ink)
+            if cell in 'SHG':
+                ax.text(x + 0.82, y + 0.80, cell, ha='center', va='center',
+                        fontsize=13, fontweight='bold', color=ink)
+            if policy is not None and cell not in 'HG':
+                dx, dy = move[int(policy[k, s])]
+                ax.annotate('', xy=(x + 0.5 + 0.22 * dx, y + 0.45 + 0.22 * dy),
+                            xytext=(x + 0.5 - 0.22 * dx,
+                                    y + 0.45 - 0.22 * dy),
+                            arrowprops=dict(arrowstyle='-|>', color=ink,
+                                            lw=1.6, mutation_scale=14))
+        ax.set_xlim(0, w)
+        ax.set_ylim(h, 0)
+        ax.set_aspect('equal')
+        ax.axis('off')
         if titles is not None:
             ax.set_title(titles[k])
     fig.tight_layout()

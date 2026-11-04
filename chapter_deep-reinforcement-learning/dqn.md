@@ -354,7 +354,7 @@ def on_grid(arm, col):
                      for r in runs[arm]])
 
 d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
-                xlabel='thousand environment steps',
+                x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='return of the behavior policy', smooth=5,
                 reference=500)
 ```
@@ -416,7 +416,7 @@ In this formulation, a policy that balances the pole indefinitely has value $1/(
 %%tab pytorch, jax
 ceiling = 1 / (1 - gamma)
 d2l.plot_curves({'DQN': on_grid('DQN', 2)},
-                xlabel='thousand environment steps',
+                x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='value estimate at the start state',
                 reference=ceiling)
 print(f'continuing-task ceiling: {ceiling:.0f}; the no-target arm ends at ' +
@@ -510,7 +510,7 @@ runs['Double DQN'] = [list(train_dqn(seed, qnets['Double DQN'][seed],
 ```{.python .input #dqn-double-dqn-in-three-lines-3}
 %%tab pytorch, jax
 d2l.plot_curves({arm: on_grid(arm, 2) for arm in ('DQN', 'Double DQN')},
-                xlabel='thousand environment steps',
+                x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='value estimate at the start state',
                 reference=ceiling)
 for arm in ('DQN', 'Double DQN'):

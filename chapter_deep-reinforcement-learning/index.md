@@ -13,16 +13,19 @@ The chapter develops these issues through seven examples. Actor--critic methods 
 | object | what it does | built in |
 |:--|:--|:--|
 | `TabularMDP` | the model as arrays: kernel, reward, discount, and one Bellman `backup` sweep | :numref:`sec_mdp` |
+| `VerifierTask` | four prompts, nine candidate responses, an exact-match verifier, and a reference policy | :numref:`sec_mdp` |
 | `value_iteration`, `policy_evaluation` | the exact sweeps to $V^*$ and to $V^\pi$, this chapter's yardsticks | :numref:`sec_valueiter` |
 | `evaluate` | the mean return of a policy over fresh evaluation episodes | :numref:`sec_valueiter` |
 | `ActorCritic`, `.tabular` | the policy-plus-value container with its optimizers, and its table form | :numref:`sec_imitation` |
 | `ActorCritic.mlp` | the same container with one-hidden-layer network heads | :numref:`sec_deeprl` |
+| `GaussianPolicy` | the same container over a Gaussian on continuous actions, its network configurable | :numref:`sec_deeprl` |
 | `policy_step` | one ascent step on advantage-weighted log-probabilities | :numref:`sec_imitation` |
 | `fit_value` | regression passes of $\hat{V}$ toward a supplied target | :numref:`sec_deeprl` |
 | `Batch`, `rollout` | the trajectory container and the collection loop that fills it | :numref:`sec_policygradient` |
 | `Batch.backward_scan`, `Batch.reward_to_go` | the discounted backward scan, and the reward-to-go it computes | :numref:`sec_baselines` |
 | `normalize` | per-batch standardization of the policy weight | :numref:`sec_baselines` |
 | `run_seeds` | one training generator run across seeds into a single array | :numref:`sec_baselines` |
+| `group_step` | one ascent step on a `VerifierTask` with group-standardized rewards | :numref:`sec_baselines` |
 | `epsilon_greedy`, `linear_schedule` | the exploration rule and its annealing | :numref:`sec_qlearning` |
 | `plot_curves`, `show_grid` | seed-band learning curves; gridworld values and policies as panels | :numref:`sec_utils` |
 | **added in this chapter** | | |

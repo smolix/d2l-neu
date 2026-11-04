@@ -281,12 +281,12 @@ Each round of *policy iteration* therefore strictly improves the policy until it
 %%tab pytorch, jax
 pi, num_outer = uniform, 0
 while True:
-    V = policy_evaluation(mdp, pi, 800)[-1]                # evaluate pi
-    new = np.eye(mdp.num_actions)[mdp.backup(V).argmax(axis=1)]  # improve
+    V = mdp.policy_value(pi)                           # evaluate pi exactly
+    Q = mdp.backup(V)
     num_outer += 1
-    if (new == pi).all():                                  # nothing changed
-        break
-    pi = new
+    if (Q.max(axis=1) <= V + 1e-12).all():             # greedy gains nothing:
+        break                                          # pi is optimal
+    pi = np.eye(mdp.num_actions)[Q.argmax(axis=1)]     # improve
 assert np.abs(V - V_star).max() < 1e-12
 ```
 
@@ -318,8 +318,8 @@ Although $\pi^*$ maximizes expected return, some of its actions point away from 
 def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):  #@save
     """Mean discounted return of an acting policy over Monte Carlo episodes.
 
-    `policy(obs, rng) -> action` is the protocol every agent in these two
-    chapters speaks; a deterministic policy simply ignores `rng`."""
+    A policy is any function `policy(obs, rng) -> action`; a deterministic
+    policy ignores `rng`, a stochastic one draws from it."""
     total = 0.0
     for _ in range(num_episodes):
         obs, done, discount = env.reset()[0], False, 1.0

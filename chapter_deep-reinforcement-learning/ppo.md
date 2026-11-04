@@ -201,7 +201,7 @@ if tab.selected('jax'):
         return d2l.ActorCritic.mlp(4, 2, rngs=nnx.Rngs(seed))
 ```
 
-Two pieces of per-framework speed first, not algorithm, both following the compilation rule of :numref:`sec_compilation` exactly as :numref:`sec_actorcritic` did: compile what has a fixed shape and runs hot. The acting forward is compiled and cached in the jax tab and stays eager in the pytorch tab; both tabs gain a batched probability read `_probs` that the vectorized collection at the end of the section will want.
+Two pieces of per-framework speed first, not algorithm, both following the compilation rule of :numref:`sec_compilation` exactly as :numref:`sec_actorcritic` did: compile what has a fixed shape and runs hot. The acting forward needs nothing new: `act` already runs through the library's compiled forward in the jax tab (:numref:`sec_imitation`) and stays eager in the pytorch tab. Both tabs gain a batched probability read `_probs` that the vectorized collection at the end of the section will want.
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab pytorch
@@ -212,21 +212,8 @@ def _probs(ac, obs):   # batched action probabilities, read as numpy
 
 ```{.python .input #ppo-the-implementation-2}
 %%tab jax
-_act_probs = nnx.jit(lambda net, obs: jax.nn.softmax(net(obs), -1))
-
-def _probs(ac, obs):   # the fixed-shape acting forward, compiled and
-    if not hasattr(ac, '_fwd'):    # cached as in :numref:`sec_actorcritic`
-        ac._fwd = nnx.cached_partial(_act_probs, ac.policy)
-    return np.asarray(ac._fwd(jnp.asarray(obs)))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act(self, obs, rng):
-    p = _probs(self, obs)
-    return int(rng.choice(len(p), p=p))
-
-@d2l.add_to_class(d2l.ActorCritic)
-def act_greedy(self, obs, rng=None):
-    return int(_probs(self, obs).argmax())
+def _probs(ac, obs):   # batched action probabilities, read as numpy
+    return np.asarray(jax.nn.softmax(d2l.forward_np(ac.policy, obs), -1))
 ```
 
 The critic's regression is the same hot loop it was in :numref:`sec_actorcritic`, and the jax tab repeats that section's padding trick, batches padded to a power-of-two length so the jitted pass compiles once per size bucket; sections are self-contained, so the cell is repeated rather than imported.
@@ -240,7 +227,7 @@ fit_value = d2l.fit_value
 
 ```{.python .input #ppo-the-implementation-3}
 %%tab jax
-def _pad(x, size):  #@save
+def _pad(x, size):
     return jnp.asarray(np.pad(x, ((0, size - len(x)),) + ((0, 0),)
                               * (x.ndim - 1)))
 

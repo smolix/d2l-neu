@@ -114,25 +114,10 @@ We study a finite one-step example that requires no environment simulator. It co
 
 ```{.python .input #rl-sequences-the-smallest-instance}
 %%tab pytorch, jax
-prompts = ['2+2', '3*4', '8*8', '9*9']     # four prompts
-answers = ['4', '12', '64', '81']          # their checked answers
-resp = ['1', '3', '4', '7', '12', '19', '23', '35',
-        'one of 4, 12, 64 or 81']          # nine candidate responses
-
-def verify(x, y):                          # the verifier: exact match
-    return float(resp[y] == answers[x])
-
-def policy(theta):                         # pi(y | x), one row per prompt
-    z = np.exp(theta - theta.max(1, keepdims=True))
-    return z / z.sum(1, keepdims=True)
-
-def success(pi, reward):                   # E r(x, y) over sampled y
-    R = [[reward(x, y) for y in range(len(resp))] for x in range(4)]
-    return (pi * np.array(R)).sum(1).mean()
-
-theta_ref = np.zeros((4, 9))
-theta_ref[:, 8] = -4.0                     # the reference rarely hedges
-pi_ref = policy(theta_ref)
+task = d2l.VerifierTask()                  # the instance of sec_mdp
+prompts, answers, resp = task.prompts, task.answers, task.resp
+verify, policy, success = task.verify, task.policy, task.success
+theta_ref, pi_ref = task.theta_ref, task.pi_ref
 print(f'success of a response sampled from the reference: '
       f'{success(pi_ref, verify):.3f}')
 ```
@@ -145,14 +130,12 @@ For each prompt, we sample a group of $K$ responses, score them, standardize sco
 ```{.python .input #rl-sequences-the-group-is-the-baseline-1}
 %%tab pytorch, jax
 def group_step(theta, K, reward, rng, beta=0.0, lr=2.0):
-    pi, g = policy(theta), np.zeros_like(theta)
-    for x in range(len(prompts)):              # one group of K per prompt
-        ys = rng.choice(len(resp), K, p=pi[x])
-        r = np.array([reward(x, y) for y in ys])
-        r = r - beta * np.log(pi[x, ys] / pi_ref[x, ys])   # the KL penalty
-        A = d2l.normalize(r)                   # the group mean as baseline
-        g[x] = (np.eye(len(resp))[ys] - pi[x]).T @ A / K   # eq_softmax_score
-    return theta + lr * g
+    """d2l.group_step of sec_baselines, with the KL penalty folded into
+    the reward: r(x, y) - beta log(pi(y | x) / pi_ref(y | x))."""
+    pi = policy(theta)                         # the policy that samples
+    def penalized(x, y):
+        return reward(x, y) - beta * np.log(pi[x, y] / pi_ref[x, y])
+    return d2l.group_step(task, theta, K, penalized, rng, lr)
 ```
 
 The zero-mean lemma applies only when a baseline does not depend on the sampled action. A same-group mean includes the current sample's reward, so centering by it produces a biased estimator whose expectation is $(K-1)/K$ times the true gradient, as derived in :numref:`sec_baselines`. The leave-one-out correction is also described in :numref:`sec_baselines`. Division by the group standard deviation adds a random scale factor. Leave-one-out centering is unbiased because each sample is compared with the mean of the other $K-1$ samples. The following enumeration verifies the centering result for groups of two, without standardization:

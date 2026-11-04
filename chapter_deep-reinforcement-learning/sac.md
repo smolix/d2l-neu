@@ -162,27 +162,23 @@ produced very small scales and divergent log densities within roughly one
 thousand updates. This observation is specific to the stated task and
 hyperparameters, not a property of all SAC implementations.
 
-During training, `log_prob` receives the stored pre-squash variable $u$,
+During training, `log_prob_u` receives the stored pre-squash variable $u$,
 so no inverse hyperbolic tangent is required on the differentiable path.
 The quadrature diagnostic inverts the transformation only to evaluate the
 density on a fixed action grid.
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab pytorch
-class SquashedGaussianPolicy(nn.Module):
-    """A state-dependent Gaussian squashed through a = c tanh(u)."""
+class SquashedGaussianPolicy(d2l.GaussianPolicy):
+    """d2l.GaussianPolicy with SAC's network (two ReLU layers and a
+    state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64):
-        super().__init__()
-        self.trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                                   nn.Linear(hidden, hidden), nn.ReLU())
-        self.mu = nn.Linear(hidden, act_dim)
-        self.log_std = nn.Linear(hidden, act_dim)
+        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                              nn.Linear(hidden, hidden), nn.ReLU())
+        super().__init__(obs_dim, act_dim, hidden, state_std=True,
+                         trunk=trunk)
 
-    def forward(self, obs):
-        h = self.trunk(obs)
-        return self.mu(h), self.log_std(h).clamp(-5, 2).exp()
-
-    def log_prob(self, u, mean, std):
+    def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
         logdet = 2 * (np.log(2) - u - nn.functional.softplus(-2 * u))
         return (torch.distributions.Normal(mean, std).log_prob(u)
@@ -190,38 +186,30 @@ class SquashedGaussianPolicy(nn.Module):
 
     def sample(self, obs):
         """A reparameterized action and its log-probability, differentiable."""
-        mean, std = self(obs)
+        mean, std = self.policy(obs)
         u = mean + std * torch.randn_like(std)
-        return c * torch.tanh(u), self.log_prob(u, mean, std)
+        return c * torch.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
-        with torch.no_grad():
-            mean, std = self(torch.as_tensor(obs))
-        u = mean.numpy() + std.numpy() * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-        return c * np.tanh(u)
+        return c * np.tanh(super().act(obs, rng))
 
     def act_greedy(self, obs, rng=None):
-        with torch.no_grad():
-            return c * np.tanh(self(torch.as_tensor(obs))[0].numpy())
+        return c * np.tanh(super().act_greedy(obs))
 ```
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab jax
-class SquashedGaussianPolicy(nnx.Module):
-    """A state-dependent Gaussian squashed through a = c tanh(u)."""
+class SquashedGaussianPolicy(d2l.GaussianPolicy):
+    """d2l.GaussianPolicy with SAC's network (two ReLU layers and a
+    state-dependent standard deviation), squashed through a = c tanh(u)."""
     def __init__(self, obs_dim, act_dim, hidden=64, rngs=None):
-        self.trunk = nnx.Sequential(
+        trunk = nnx.Sequential(
             nnx.Linear(obs_dim, hidden, rngs=rngs), jax.nn.relu,
             nnx.Linear(hidden, hidden, rngs=rngs), jax.nn.relu)
-        self.mu = nnx.Linear(hidden, act_dim, rngs=rngs)
-        self.log_std = nnx.Linear(hidden, act_dim, rngs=rngs)
+        super().__init__(obs_dim, act_dim, hidden, rngs=rngs, state_std=True,
+                         trunk=trunk)
 
-    def __call__(self, obs):
-        h = self.trunk(obs)
-        return self.mu(h), jnp.exp(jnp.clip(self.log_std(h), -5, 2))
-
-    def log_prob(self, u, mean, std):
+    def log_prob_u(self, u, mean, std):
         """log pi at a = c tanh(u), from the pre-squash u the sampler keeps."""
         logdet = 2 * (jnp.log(2.0) - u - jax.nn.softplus(-2 * u))
         return (jax.scipy.stats.norm.logpdf(u, mean, std)
@@ -229,25 +217,18 @@ class SquashedGaussianPolicy(nnx.Module):
 
     def sample(self, obs, key):
         """A reparameterized action and its log-probability, differentiable."""
-        mean, std = self(obs)
+        mean, std = self.policy(obs)
         u = mean + std * jax.random.normal(key, std.shape)
-        return c * jnp.tanh(u), self.log_prob(u, mean, std)
+        return c * jnp.tanh(u), self.log_prob_u(u, mean, std)
 
     def act(self, obs, rng):
-        if not hasattr(self, '_fwd'):   # compile the fixed-shape acting
-            self._fwd = nnx.cached_partial(nnx.jit(lambda net, o: net(o)),
-                                           self)  # forward, once
-        mean, std = self._fwd(jnp.asarray(obs))
-        u = np.asarray(mean) + np.asarray(std) * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-        return c * np.tanh(u)
+        return c * np.tanh(super().act(obs, rng))
 
     def act_greedy(self, obs, rng=None):
-        mean, _ = self(jnp.asarray(obs))
-        return c * np.tanh(np.asarray(mean))
+        return c * np.tanh(super().act_greedy(obs))
 ```
 
-Inside `log_prob`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.
+Inside `log_prob_u`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.
 
 ### A Numerically Stable Log-Determinant
 
@@ -261,7 +242,7 @@ $$
 $$
 :eqlabel:`eq_tanh_logdet_stable`
 
-This identity is exact for every $u$ and avoids subtracting nearly equal numbers; `log_prob` uses this form. The following float32 calculation compares the direct expression, an epsilon-guarded expression, and the stable identity:
+This identity is exact for every $u$ and avoids subtracting nearly equal numbers; `log_prob_u` uses this form. The following float32 calculation compares the direct expression, an epsilon-guarded expression, and the stable identity:
 
 ```{.python .input #sac-the-stable-form-and-what-the-epsilon-hides-1}
 %%tab pytorch, jax
@@ -540,7 +521,7 @@ def steps_to(r, level=-200, k=5):
     hit = np.flatnonzero(s >= level)
     return int(r[hit[0] + k - 1, 0]) if len(hit) else None
 
-d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
+d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs}, x=grid / 1000,
                 xlabel='thousand environment steps', ylabel='episode return',
                 reference=-200)
 for arm in runs:
@@ -560,7 +541,7 @@ commonly used autotuning target $-\dim\mathcal{A}=-1$:
 ```{.python .input #sac-the-entropy-the-policy-keeps-1}
 %%tab pytorch, jax
 d2l.plot_curves({arm: on_grid(arm, 2) for arm in runs},
-                xlabel='thousand environment steps',
+                x=grid / 1000, xlabel='thousand environment steps',
                 ylabel='policy entropy (nats)', reference=-1)
 for arm in runs:
     print(f'{arm}: entropy over the last 20 episodes, per seed '
@@ -623,10 +604,10 @@ def calibration(agent, seed, num_episodes=20):
         first = True
         while not done:
             with torch.no_grad():
-                mean, std = agent.actor(torch.as_tensor(obs))
+                mean, std = agent.actor.policy(torch.as_tensor(obs))
                 u = mean + std * torch.as_tensor(rng.standard_normal(
                     mean.shape, dtype=np.float32))
-                logp = float(agent.actor.log_prob(u, mean, std))
+                logp = float(agent.actor.log_prob_u(u, mean, std))
             a = c * np.tanh(u.numpy())
             if first:
                 with torch.no_grad():
@@ -661,10 +642,10 @@ def calibration(agent, seed, num_episodes=20):
         soft = plain = 0.0
         first = True
         while not done:
-            mean, std = agent.actor(jnp.asarray(obs))
+            mean, std = agent.actor.policy(jnp.asarray(obs))
             u = np.asarray(mean) + np.asarray(std) * rng.standard_normal(
                 mean.shape, dtype=np.float32)
-            logp = float(agent.actor.log_prob(jnp.asarray(u), mean, std))
+            logp = float(agent.actor.log_prob_u(jnp.asarray(u), mean, std))
             a = c * np.tanh(u)
             if first:
                 preds.append(float(agent.min_q(jnp.asarray(obs),
@@ -775,7 +756,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 
        At $\mu = 0$, which term grows with $\sigma$, and which one shrinks?
     1. Evaluate $H$ at $\mu = 0$ for $\sigma \in \{0.1, 0.3, 1, 3\}$ as an
-       expectation over $u$, by Monte Carlo with `log_prob` or by quadrature
+       expectation over $u$, by Monte Carlo with `log_prob_u` or by quadrature
        in $u$. Near which $\sigma$ does $H$ peak? Compare the peak with
        $\log 2c$, the entropy of the uniform distribution on $[-c, c]$, which
        no density on this interval exceeds.
@@ -865,7 +846,7 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
        `log(1 - tanh(u)**2 + 1e-6)` at $u \in \{3, 5, 7, 10, 20\}$, and
        compare both with $-2 \tanh u$. Beyond which $|u|$ does an actor
        trained with the guarded expression lose the push of part a?
-    1. Delete `logdet` from `log_prob`. Show that the remaining entropy term
+    1. Delete `logdet` from `log_prob_u`. Show that the remaining entropy term
        changes the loss at the rate $-\alpha/\sigma$ per unit of $\sigma$ and
        does not depend on $\mu$. Why can the critic term of the loss not hold
        $\sigma$ back once $u$ saturates? Which entropy does the trace report

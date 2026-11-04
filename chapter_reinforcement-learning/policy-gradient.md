@@ -40,8 +40,7 @@ We use the FrozenLake environment of :numref:`fig_rl_gridworld` with determinist
 ```{.python .input #policy-gradient-parameterizing-the-policy}
 %%tab pytorch, jax
 gamma = 0.95
-env = gym.wrappers.TimeLimit(
-    gym.make('FrozenLake-v1', is_slippery=False).env, max_episode_steps=10_000)
+env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=10_000)
 ```
 
 We use deterministic FrozenLake because a nearly random policy reaches the goal too rarely on the slippery version for whole-trajectory REINFORCE to provide a useful signal at this computational budget. We also remove Gymnasium's default 100-step time limit and retain a 10,000-step cap only as a safeguard.
@@ -141,6 +140,10 @@ class Batch:  #@save
         """R(tau), the discounted return, one number per episode."""
         return np.array([(gamma ** np.arange(ep.stop - ep.start)
                           * self.rew[ep]).sum() for ep in self.episodes()])
+
+    def per_step(self, values):
+        """Repeat one value per episode over that episode's steps."""
+        return np.repeat(values, np.diff(self.ep_ends, prepend=0))
 ```
 
 Filling it is a loop over the `evaluate` protocol of :numref:`sec_valueiter`, a policy being any function `policy(obs, rng) -> action`:
@@ -149,9 +152,8 @@ Filling it is a loop over the `evaluate` protocol of :numref:`sec_valueiter`, a 
 %%tab pytorch, jax
 def rollout(env, policy, num_episodes, rng):  #@save
     """Collect complete episodes from `policy(obs, rng) -> action` as a
-    Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
-
-    All sampling runs through the one numpy generator `rng`."""
+    Batch. `term` records `terminated`, never `truncated`: a time-limit cut
+    is not a terminal state. All sampling runs through the numpy `rng`."""
     cols, ep_ends = [[] for _ in range(5)], []
     for _ in range(num_episodes):
         obs, done = env.reset()[0], False
@@ -222,7 +224,8 @@ The implementation reuses `policy_step` from :numref:`sec_imitation`, which take
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
-def train_reinforce(ac, seed, steps, num_updates=256, batch_episodes=16):
+def train_reinforce_tabular(ac, seed, steps, num_updates=256,
+                            batch_episodes=16):
     """REINFORCE: a fresh batch from the current policy, every step of a
     trajectory weighted by that trajectory's return, one ascent step."""
     rng = np.random.default_rng(seed)      # one stream for all sampling
@@ -230,8 +233,7 @@ def train_reinforce(ac, seed, steps, num_updates=256, batch_episodes=16):
     for _ in range(num_updates):
         batch = rollout(env, ac.act, batch_episodes, rng)
         R = batch.episode_returns(gamma)
-        d2l.policy_step(ac, batch,
-                        np.repeat(R, np.diff(batch.ep_ends, prepend=0)))
+        d2l.policy_step(ac, batch, batch.per_step(R))
         steps.append(len(batch))
         yield float(R.mean())
 ```
@@ -248,7 +250,7 @@ for seed in range(3):
     if tab.selected('jax'):
         agents.append(d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(seed)))
     steps.append([])
-    curves.append(list(train_reinforce(agents[-1], seed, steps[-1])))
+    curves.append(list(train_reinforce_tabular(agents[-1], seed, steps[-1])))
 curves, steps = np.array(curves), np.array(steps)
 d2l.plot_curves({'REINFORCE': curves}, xlabel='update',
                 ylabel='mean return of the batch', reference=gamma ** 5)
@@ -314,7 +316,7 @@ mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = torch.as_tensor(mdp.P).float(), torch.as_tensor(mdp.r).float()
 torch.manual_seed(3)
 probe = d2l.ActorCritic.tabular(16, 4)
-for _ in train_reinforce(probe, 3, [], num_updates=16):
+for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
     pass
 theta = probe.policy.weight.detach().requires_grad_(True)
 pi = torch.softmax(theta, -1)
@@ -331,7 +333,7 @@ print(f'J(theta) after 16 updates = {J.item():.3f}, '
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 P, r = jnp.asarray(mdp.P), jnp.asarray(mdp.r)
 probe = d2l.ActorCritic.tabular(16, 4, rngs=nnx.Rngs(3))
-for _ in train_reinforce(probe, 3, [], num_updates=16):
+for _ in train_reinforce_tabular(probe, 3, [], num_updates=16):
     pass
 
 def J_fn(theta):
@@ -353,8 +355,7 @@ Now hold $\theta$ fixed and draw the estimator :eqref:`eq_reinforce` fifty times
 def reinforce_estimate(n, rng):
     """One draw of eq_reinforce: n fresh trajectories at the frozen theta."""
     batch = rollout(env, probe.act, n, rng)
-    w = np.repeat(batch.episode_returns(gamma),
-                  np.diff(batch.ep_ends, prepend=0)).astype(np.float32)
+    w = batch.per_step(batch.episode_returns(gamma)).astype(np.float32)
     th = probe.policy.weight.detach().requires_grad_(True)
     logp = torch.log_softmax(th, -1)[torch.as_tensor(batch.obs),
                                      torch.as_tensor(batch.act)]
@@ -377,8 +378,7 @@ for n in [4, 16, 64]:
 def reinforce_estimate(n, rng):
     """One draw of eq_reinforce: n fresh trajectories at the frozen theta."""
     batch = rollout(env, probe.act, n, rng)
-    w = jnp.asarray(np.repeat(batch.episode_returns(gamma),
-                              np.diff(batch.ep_ends, prepend=0)))
+    w = jnp.asarray(batch.per_step(batch.episode_returns(gamma)))
     def surrogate(th):
         logp = jax.nn.log_softmax(th, -1)[batch.obs, batch.act]
         return (w * logp).sum() / n
@@ -439,9 +439,9 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        `d2l.TabularMDP.from_gym(env, 1.0)`, whose value function at
        $\gamma = 1$ is the probability of reaching the goal (problem
        :exref:`ex_value-iter-undiscounted-lake`b of :numref:`sec_valueiter`).
-       What fraction of the batches of 16 episodes in `train_reinforce`
-       contains no success at the start of training, and what is the ratio
-       of part a at $p = p_0$?
+       What fraction of the batches of 16 episodes in
+       `train_reinforce_tabular` contains no success at the start of
+       training, and what is the ratio of part a at $p = p_0$?
    :exlabel:`ex_policy-gradient-sparse-rewards`
 1. **Shifted rewards.** A trajectory with return zero drops out of
    :eqref:`eq_reinforce`, so subtracting one from every reward is a
@@ -479,7 +479,7 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        `probe` by linear solves with `mdp.P` and `mdp.r`, assemble the
        formula, and compare the result with `g_exact`.
    :exlabel:`ex_policy-gradient-theorem-table`
-1. [code] **Reusing a batch.** ● Modify `train_reinforce` to call
+1. [code] **Reusing a batch.** ● Modify `train_reinforce_tabular` to call
    `policy_step` $k$ times on each batch without any correction, for
    $k \in \{1, 2, 5, 20\}$. Write $\theta_\textrm{old}$ for the parameters
    that collected the batch.

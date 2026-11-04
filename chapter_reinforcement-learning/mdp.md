@@ -74,6 +74,14 @@ class TabularMDP:  #@save
     def backup(self, V):
         """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
         return self.r + self.gamma * self.P @ V
+
+    def policy_value(self, pi):
+        """V^pi = (I - gamma P_pi)^{-1} r_pi exactly, for pi[s, a] the
+        probability of action a at state s (one-hot rows: deterministic)."""
+        P_pi = np.einsum('sa,sat->st', pi, self.P)
+        r_pi = (pi * self.r).sum(axis=1)
+        return np.linalg.solve(np.eye(self.num_states) - self.gamma * P_pi,
+                               r_pi)
 ```
 
 In `backup`, `numpy`'s matrix product contracts the last axis of $P$ against a value estimate $V$: reward plus discounted lookahead for every state-action pair, in one line. :numref:`sec_valueiter` builds this chapter's first algorithm by repeating it.
@@ -205,6 +213,46 @@ When $|\mathcal{S}|=1$, each round consists of selecting an action and observing
 
 Another special case has deterministic transitions and reward only at termination. FrozenLake has terminal-only reward, and disabling its slippery dynamics makes the transitions deterministic as well. Text generation has this structure when appending a token deterministically updates the context and a verifier or reward model assigns a score to the completed sequence. :numref:`sec_rl_sequences` develops this formulation.
 
+[Placeholder for the writers, from rl-sequences.md "The Smallest Instance": a finite one-step instance with four prompts, nine candidate responses shared across prompts, an exact-match verifier, and a reference policy $\pi_{\textrm{ref}}$ standing in for a pretrained model. The reference spreads its probability over the ordinary candidates and gives about $0.2$ percent to a response that lists every possible answer, the hedge. For two prompts no single candidate matches the answer, so the best exact-match score is $0.5$. The policy is a softmax with one preference row per prompt.]
+
+```{.python .input #mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward}
+%%tab pytorch, jax
+class VerifierTask:  #@save
+    """Four prompts, nine candidate responses shared by all of them, an
+    exact-match verifier, and a reference policy that rarely hedges."""
+    prompts = ['2+2', '3*4', '8*8', '9*9']
+    answers = ['4', '12', '64', '81']
+    resp = ['1', '3', '4', '7', '12', '19', '23', '35',
+            'one of 4, 12, 64 or 81']          # the last one is the hedge
+
+    def __init__(self):
+        self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
+        self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
+        self.pi_ref = self.policy(self.theta_ref)
+
+    def verify(self, x, y):
+        """The verifier: reward 1 iff response y is prompt x's answer."""
+        return float(self.resp[y] == self.answers[x])
+
+    @staticmethod
+    def policy(theta):
+        """pi(y | x): a softmax over each prompt's row of preferences."""
+        z = np.exp(theta - theta.max(1, keepdims=True))
+        return z / z.sum(1, keepdims=True)
+
+    def success(self, pi, reward=None):
+        """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
+        unless another reward function is given."""
+        reward = self.verify if reward is None else reward
+        R = np.array([[reward(x, y) for y in range(len(self.resp))]
+                      for x in range(len(self.prompts))])
+        return (pi * R).sum(1).mean()
+
+task = VerifierTask()
+print(f'success of a response sampled from the reference: '
+      f'{task.success(task.pi_ref):.3f}')
+```
+
 ### Model-Based versus Model-Free Methods
 
 The computations above use the transition and reward model directly. Algorithms that plan with a known or learned model are *model-based*; value iteration in :numref:`sec_valueiter` is an example. *Model-free* algorithms instead use sampled transitions $(s,a,r,s')$, as in :numref:`sec_qlearning`. A model can be evaluated at any state-action pair, whereas samples are available only for pairs visited by the data-collection policy.
@@ -224,8 +272,7 @@ def greedy_sweeps(m):                  # repeated backups; named in next section
     return m.backup(V).argmax(axis=1), V
 
 def exact_value(pi, s=0):              # V(s) under the true reward, exactly
-    i = np.arange(mdp.num_states)
-    return np.linalg.solve(np.eye(16) - gamma * mdp.P[i, pi], mdp.r[i, pi])[s]
+    return mdp.policy_value(np.eye(mdp.num_actions)[pi])[s]
 
 pi_shaped, V_shaped = greedy_sweeps(shaped)
 pi_true, V_true = greedy_sweeps(mdp)

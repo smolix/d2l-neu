@@ -5,7 +5,7 @@ The agent of :numref:`sec_deeprl` learns to balance the pole, but it learns late
 
 It can, and the piece it needs is already in hand. The learned baseline $\hat{V}$ of :numref:`sec_deeprl` is trained to predict the reward-to-go, the discounted sum of the rewards that follow a state. If it predicts the rest of the episode, the agent need not wait for it: one reward plus the prediction at the next state can stand in for the sampled tail. The policy then becomes the *actor* and the value estimate its *critic*. :citet:`Barto.Sutton.Anderson.1983` built the first such pair for this very cart-pole problem, and the "adaptive critic element" of their paper gave the critic its name.
 
-The substitution trades the randomness of the future for the error of the critic. This section works out that trade: what a single transition can tell the actor, how much of the sampled tail to keep, and how the trade comes out on CartPole, where the critic's error turns out to matter more than the variance it removes. Every method in the rest of this chapter carries a critic of some kind, and the estimator built here, a geometric mix of one-step and many-step targets, is the one they use.
+The substitution trades the randomness of the future for the error of the critic. This section works out that trade: what a single transition can tell the actor, how much of the sampled tail to keep, and how the trade comes out on CartPole, where the critic's error turns out to matter more than the variance it removes. Most methods in the rest of this chapter carry a critic of some kind, and the estimator built here, a geometric mix of one-step and many-step targets, is the one PPO uses.
 
 ```{.python .input #actor-critic-actor-critic-and-the-credit-assignment-dial-1}
 %%tab pytorch

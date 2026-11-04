@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9b91573d58561876346d45773ead991077b4145d6795fd12773b01339bca14d8",
+    "d2l_lib_fingerprint": "sha256:bf72d9f0cd68f984c0d25a4205fd1963aa8028ef6ab21c3498e94dd01f4a54f0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,17 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "K =  2: success of a sampled response 0.500"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\nK =  4: success of a sampled response 0.500\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "K =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+          "text": "K =  2: success of a sampled response 0.500\nK =  4: success of a sampled response 0.500\nK =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
         }
       ]
     },
@@ -158,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 51414,
-          "sha256": "sha256:36dc644a088782bc8706f9116f072bdcab4ec4b759d6574509e1e0b0a873135f"
+          "sha256": "sha256:f6587d3d6d9b56697730eccf4627a2e45d49a44f23adc2f3b8f7139778553eb4"
         }
       ]
     },
@@ -182,7 +172,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 45695,
-          "sha256": "sha256:8f325358f9049255e674a73ce1db9939a54839df5ff339265748b255f916ee87"
+          "sha256": "sha256:e327d8724df1b19c63da5384fac0bc76bbba690b27a73c3cf85e5cc6c3efd30f"
         }
       ]
     }

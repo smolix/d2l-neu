@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:25a04fe521c21a26c5aa3b1a7116e65a739c8bbd6cb00acb1650274f478efea5",
+    "d2l_lib_fingerprint": "sha256:ed374d071e0c6170d07bf3fdec23542811b4df7372ca01d03ab82a77384df012",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,18 +19,29 @@
       "outputs": []
     },
     "regularized-preferences-and-bradley-terry-2": {
-      "code_fingerprint": "sha256:bcfeb987f54f21e0dc40088ac65a12ca1b7970f9ad883700b44d1aa7ebab5334",
+      "code_fingerprint": "sha256:8712a6d9e3ebff701d79df105fe8436771f8497d6c55d129f07ed3175b198108",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "never visited: 9 pairs; in at least 50 episodes: 46 pairs\nrms fit error on those 46: 0.193\nentries into the hazard lane: true [-1.5 -1.5 -1.5 -1.5], fitted [-0.03 -0.05 -0.02  0.  ]\n"
+          "text": "never visited: 9 pairs; in at least 50 episodes: 46 pairs\nrms fit error on those 46: 0.193\nmoves into the hazards: in [3 4 3 2] episodes, fitted [-0.03 -0.05 -0.02 -0.02]\n"
+        }
+      ]
+    },
+    "regularized-what-the-comparisons-cannot-see": {
+      "code_fingerprint": "sha256:eeba02d59c23c3f97712f42b3242d1706593f9c37f205a76f3ef49a6933089c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rms error on core 0.193, after removing the best shaping term 0.032\nPhi(0) = 0.78; moves 13 -> 14 -> goal: fitted -0.08, +0.09, true -0.04, +1.00\n"
         }
       ]
     },
     "regularized-reward-hacking-and-goodhart": {
-      "code_fingerprint": "sha256:85b3639534df8cc09585db9934188763dcd06f1419be270965b0462496c56080",
+      "code_fingerprint": "sha256:7b6da2d4ac0e11e0039986960974edfff1c02a646fcc4a29e08b58048aa2a4d3",
       "kind": "text",
       "outputs": [
         {
@@ -40,26 +51,8 @@
         }
       ]
     },
-    "regularized-the-measurement-true-return-against-the-kl-budget": {
-      "code_fingerprint": "sha256:2e56f47cb840defbd9dee5cff7bb5223ad9906b09cdd58ceaa4f431af13fb104",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "largest soft Bellman residual across the sweep: 0.0e+00\ntrue return -0.10 at KL 0, peak +0.53 at KL 3.7, then -1.83 at KL 14.2\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
-          "bytes": 24568,
-          "sha256": "sha256:f8fd167e28f956180ecc4848f16671cb4c53f5b0a7adc1ce7ce106fd8b2d08d5"
-        }
-      ]
-    },
     "regularized-the-proposition-1": {
-      "code_fingerprint": "sha256:78ea64d57b4822bb98ef52b2bff5e8a47d4fef7c37bbcc22eec4c351d514c3df",
+      "code_fingerprint": "sha256:01158cb3ab0ca3fa340fc7d8a19542894c5594e998e7d8d3d5c264f31cd49b16",
       "kind": "text",
       "outputs": [
         {
@@ -75,7 +68,7 @@
       ]
     },
     "regularized-the-proposition-2": {
-      "code_fingerprint": "sha256:ddadedb2e2b6960f4d411e1d5dbcbe6e3024324b78da86ab8d5f7e5e1e6be7b8",
+      "code_fingerprint": "sha256:55235275d6269f5670d2d97c961b21afab9e404184b0a3672c5f6e484f7c9be7",
       "kind": "text",
       "outputs": [
         {
@@ -86,7 +79,7 @@
       ]
     },
     "regularized-four-consequences-1": {
-      "code_fingerprint": "sha256:7c9360aaa00ad7eac3557768747a573a4f37cf6feea14f889d6eeb3df642b5e0",
+      "code_fingerprint": "sha256:4a12ca444e12fe77b0d3240c838693cb447913b1f598313fa7be9515eb9564c4",
       "kind": "text",
       "outputs": [
         {
@@ -97,7 +90,7 @@
       ]
     },
     "regularized-four-consequences-2": {
-      "code_fingerprint": "sha256:685c162c2b1362461343156f1d797407f30f6ee5fdd1e9249039a4ba3f914909",
+      "code_fingerprint": "sha256:60518d48d9e8ab5d105dd729712a5b997cac57940a13e528f067197c977c3317",
       "kind": "text",
       "outputs": [
         {
@@ -108,7 +101,7 @@
       ]
     },
     "regularized-four-consequences-3": {
-      "code_fingerprint": "sha256:7f399a7b69dd3de61f71749c37ed4a86d8b803436775c5fd0913556b257c3a5f",
+      "code_fingerprint": "sha256:c1f2753bdd3c9d9325b37845e82b3277c576e0c5e398ba47550a4e8c7ef561b0",
       "kind": "mixed",
       "outputs": [
         {
@@ -121,7 +114,41 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23371,
-          "sha256": "sha256:69e6578fb9cb84a64f20b28473653246728ad27bd3125f57a8b350efc711b4dc"
+          "sha256": "sha256:3dbf9549ae597f9bdac8ef623708813b21d3dd14bf149cf60b9dd8f90594b0a3"
+        }
+      ]
+    },
+    "regularized-one-step-before-the-end": {
+      "code_fingerprint": "sha256:5bb14d64eb3545ed789818de158a3e9b36feb2d7eb5eb14644ad88859cad3e45",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tilt by the soft value 1.44: pi(enter) = 0.43, objective 1.740\ntilt by the best reward 3.00: pi(enter) = 0.62, objective 1.592\nbeta log Z of the first decision: 1.740\n"
+        }
+      ]
+    },
+    "regularized-soft-value-iteration": {
+      "code_fingerprint": "sha256:249d2900bacece913d29181eab8f481be6f95ab86eb81c11f94ef37845d43adb",
+      "kind": "text",
+      "outputs": []
+    },
+    "regularized-the-measurement-true-return-against-the-kl-budget": {
+      "code_fingerprint": "sha256:9c8981b8367c083ee3b4043b7bf5966c7c8a1b91f48022181c84e6505138d3cd",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest soft Bellman residual: 0e+00\nreference: true return -0.12; beta = 10: KL 0.001, true return -0.10\npeak: true return +0.53 at KL 3.7; smallest beta: -1.83 at KL 14.2\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
+          "bytes": 24568,
+          "sha256": "sha256:ef9e16dabfe46d4838d6746159d4ea9e554c5b97fe801bcc86cffe3f9f7523b3"
         }
       ]
     }

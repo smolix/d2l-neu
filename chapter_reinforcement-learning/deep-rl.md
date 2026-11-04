@@ -440,7 +440,7 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs_p[:, :, 0]},
 
 Returns start near $-1200$. Every run learns to swing the pendulum up and balance it. Its ten-update average crosses $-200$ after roughly 150 to 300 updates, that is, after a few hundred thousand environment steps, and its best stays between about $-150$ and $-200$. Later updates mostly stay near that level, although a run can fall back by several hundred for a few updates. Over the run $\sigma$ falls to about half its initial value, the direction that exercise :exref:`ex_deep-rl-gaussian-score` predicts near a good action. Here the time-limit correction matters: every Pendulum episode is truncated, and without the correction only about half of the seeds in our runs reached $-200$ within the same budget.
 
-A few hundred thousand steps is a great deal of experience for a task this small. Each batch of 1,600 steps drives one update and is then discarded, and the weights come from whole returns rather than from a learned estimate of each action's value. Soft actor-critic (:numref:`sec_sac`) reaches $-200$ on the same task within about 10,000 steps. How a method can learn that much more from each sample is the question that :numref:`chap_deep_rl` takes up.
+A few hundred thousand steps is a great deal of experience for a task this small. Each batch of 1,600 steps drives one update and is then discarded, and the weights come from whole returns rather than from a learned estimate of each action's value. Soft actor-critic (:numref:`sec_sac`) reaches $-200$ on the same task within about 5,000 to 11,000 steps. How a method can learn that much more from each sample is the question that :numref:`chap_deep_rl` takes up.
 
 ### Score-Function and Pathwise Gradients
 
@@ -1177,5 +1177,5 @@ Reusing recent batches needs a correction, since the policy has changed.
 
 **Next:** this agent waits for whole episodes, uses each batch once and
 does not limit its steps; the next chapter removes all three, and soft
-actor-critic reaches $-200$ within about 10,000 steps.
+actor-critic reaches $-200$ after about 5,000 to 11,000 steps.
 :::

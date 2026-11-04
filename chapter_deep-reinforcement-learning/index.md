@@ -136,8 +136,8 @@ loss.
 
 1. Early on CartPole, a policy trained on one-step TD errors lags behind one
    trained on whole returns.
-2. Reusing each batch for twenty epochs at a large step size, the return
-   collapses to about 9.
+2. Reusing each batch for twenty epochs of the unclipped ratio objective at
+   a large step size, the return collapses to about 9.
 3. A Q-network's estimate at the start state climbs past the best return
    any policy can earn.
 

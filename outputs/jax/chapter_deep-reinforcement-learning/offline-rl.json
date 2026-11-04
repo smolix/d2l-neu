@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0cc618b23b1b594b41b21d78301b0e6f18cf35b7acadffabbe09a88528658b46",
+    "d2l_lib_fingerprint": "sha256:8eaf5299e8118adeb9701727e66405a2dadf00cc50088848fdb455202cf22e32",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,126 +14,127 @@
       "outputs": []
     },
     "offline-rl-sarsa-one-symbol-the-opposite-rule-1": {
-      "code_fingerprint": "sha256:b558994d270f6a2002eae001982fba1e9e497f25abb06d07bf4764dda4612480",
-      "kind": "text",
-      "outputs": []
-    },
-    "offline-rl-sarsa-one-symbol-the-opposite-rule-2": {
-      "code_fingerprint": "sha256:da806c3d9b2f2e1429e82381b72e0ca4a3b8efdfa541156b963b886427978a2f",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "offline-rl/offline-rl-sarsa-one-symbol-the-opposite-rule-2-1.png",
-          "bytes": 41883,
-          "sha256": "sha256:358c64232daaf715308e0265cf70bdc28949a867132eea8f6d9ed0b2098b467d"
-        }
-      ]
-    },
-    "offline-rl-sarsa-one-symbol-the-opposite-rule-3": {
-      "code_fingerprint": "sha256:b2df00e148be915d922f6a0a36c6fe7d90a4860dfaefb316200b139be4c16b8d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.180\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.061\n"
-        }
-      ]
-    },
-    "offline-rl-distribution-shift-measured": {
-      "code_fingerprint": "sha256:01aaade91f5a97f371b17d8647ddd704f5bae87bcba243b7414ca8bd7123d181",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "3997 transitions; support over the 44 live pairs: min 7, median 42, max 465\nthe behavior earned 0.012 per episode, discounted\n"
-        }
-      ]
-    },
-    "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
-      "code_fingerprint": "sha256:022f3853246ddadb6a288e7c16204b86a7132775382ed11fe4fd2ad7ab3bfa8c",
-      "kind": "text",
-      "outputs": []
-    },
-    "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
-      "code_fingerprint": "sha256:65dc960a6542bc9f71ec8cdd748d2bc3f0d9fd59a5157ef3ad3cb388a8c7a0fb",
+      "code_fingerprint": "sha256:bf4141d70b3ad11b41a885b48b89fc993c59586bb9c8683388a8889c427776a8",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
-      "code_fingerprint": "sha256:68e80059ec78d9625004d48e8873e84a8dc1a3b23f07869993ef40a1d539ff09",
+      "code_fingerprint": "sha256:7696bb77b3f6f4c21a115e5d94f651a6ff2dc6183220aa7087351fa1f1e05989",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the yardstick no offline deployment has: V*(s0) = 0.180\n"
+          "text": "V*(s0) = 0.180\n"
         }
       ]
     },
+    "offline-rl-distribution-shift-measured": {
+      "code_fingerprint": "sha256:94458f3c708a1dacb1219caecd1cb24ccbd064844624070c66d2a3b8d031f5fc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform: 3,997 transitions, 44/44 pairs tried, median support 42; behavior earns 0.008\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " narrow: 1,897 transitions, 42/44 pairs tried, median support 8; behavior earns 0.087\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
+      "code_fingerprint": "sha256:bd96d3d0553b02dc05bba1b737fd0ec4f72a2526567a06385a2dab779c49bf99",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-distribution-shift-against-the-exact-optimum-1": {
+      "code_fingerprint": "sha256:a60428eada794093418e5ef2133d6bae7c2d621181d19bebd01f296093c49726",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-distribution-shift-against-the-exact-optimum-2": {
+      "code_fingerprint": "sha256:94767a10c6ada54f37b2d5275c255c097aec0133a558029535384c7042297a13",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest difference between the two tables: 0.006\ntheir greedy policies earn 0.137 and 0.137\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
+      "code_fingerprint": "sha256:67e9c7d9103b8bb2fb00573670f961021a77078d17c7a4a9682cc65ccf6fe3ae",
+      "kind": "text",
+      "outputs": []
+    },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
-      "code_fingerprint": "sha256:8e826865bf7c43cf7f67c9bcf292a7eb0e5e1568db39753cba592ef7376660d8",
+      "code_fingerprint": "sha256:c0a73ec494796856a92094b9ba3b8562b6e0e597b8bfd32767f94c5fdd184f45",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
-      "code_fingerprint": "sha256:5e8edfa7e1a71267f6c2cb75e87b40a1de7b0e30bb615c4081998bbac2b19e8b",
+      "code_fingerprint": "sha256:b08a254c8ec64ed2d033e016575023f7513b2f08e5a1177418f35245908cf6ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      naive: predicted median 0.274, spread 0.185 to 0.388\n             actual    median 0.097, spread 0.070 to 0.184\npessimistic: predicted median 0.121, spread 0.035 to 0.225\n             actual    median 0.080, spread 0.050 to 0.189\n      clone: predicted median 0.007, spread 0.004 to 0.014\n             actual    median 0.008, spread 0.003 to 0.014\npromises above V*(s0): naive on 15 of 15 datasets, pessimistic on 2 of 15\npessimism delivered the better policy on 4 of 15 datasets\n"
+          "text": "uniform clone: predicts 0.01, earns 0.01; above V* on  0, above own value on 17\nuniform naive: predicts 0.20, earns 0.14; above V* on 28, above own value on 36\n        the naive table beats the clone on 40 of 40 logs\n narrow clone: predicts 0.09, earns 0.09; above V* on  0, above own value on 18\n narrow naive: predicts 0.25, earns 0.11; above V* on 39, above own value on 39\n        the naive table beats the clone on 27 of 40 logs\n"
         }
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
-      "code_fingerprint": "sha256:faf98ab460517ddea41cf71fb190ccd7201ec61c644b526f76b569802e28b249",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
-          "bytes": 29548,
-          "sha256": "sha256:1c641381b87f910edf1c3e7fcaba7fa20176dc80feee34991316928d4172633d"
-        }
-      ]
-    },
-    "offline-rl-kappa-over-root-n": {
-      "code_fingerprint": "sha256:823564beac1854f3471e9e609738a04c96730dba68e9fbe11b4f50c37773900e",
+      "code_fingerprint": "sha256:0a9a8a4655d290f3b1141bdfe43331b14f63035a81b4eebb14d9c786b0ca95dc",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "659 supported live pairs over 15 datasets: error min 0.000, median 0.094, max 0.458\nkappa centering kappa/sqrt(n) on the cloud: 0.57\nresidual error at n > 100: median 0.077\n"
+          "text": "picks with n <= 5: cell 2 (n = 2, +0.09), cell 10 (n = 5, +0.20), cell 14 (n = 2, +0.26)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
-          "bytes": 101492,
-          "sha256": "sha256:e796106fa35b7aa5bb9b02b4b2afd2f07295c46da7db22ac48953782695bb159"
+          "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
+          "bytes": 41682,
+          "sha256": "sha256:78e0802875a74f5a651773cc9af7c942f9b6aaa0b8f26f92435b619fd892109b"
         }
       ]
     },
-    "offline-rl-constrain-the-policy-the-values-or-both": {
-      "code_fingerprint": "sha256:4f000813e641a000676abac9208154b0c04687fb877517e8dd8ddb8944dc010a",
+    "offline-rl-distribution-shift-against-the-exact-optimum-3": {
+      "code_fingerprint": "sha256:cff39e0884beebd46d516d9bc7809845d8d4e9647d756d8084e776bae82865f4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "on this dataset the support rule reproduces the naive run, bit for bit\n"
+          "text": "greedy picks resting on 1 to 5 samples: 23% of picks\ntheir median error +0.22; all pairs with 1 to 5 samples +0.08\n"
+        }
+      ]
+    },
+    "offline-rl-kappa-over-root-n": {
+      "code_fingerprint": "sha256:01c84153b21bde7f4783e505a0bb1618ade9c2e7925621b517573357feb44499",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform kappa 0.1: predicts 0.05, earns 0.10; above V* on  0, above own value on  3\n        against naive: better on 4, worse on 28, tied on 8; beats the clone on 40\n narrow kappa 0.1: predicts 0.13, earns 0.14; above V* on  4, above own value on 15\n        against naive: better on 29, worse on 1, tied on 10; beats the clone on 39\n"
+        }
+      ]
+    },
+    "offline-rl-choosing-the-penalty": {
+      "code_fingerprint": "sha256:5c39746c7d407d366c3874e27bdf3afde8b4f0d206b68422a78b8e61cd8889ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform kappa 0.3: predicts 0.00, earns 0.02; against naive better on 0, worse on 40\n narrow kappa 0.3: predicts 0.00, earns 0.05; against naive better on 4, worse on 36\n"
         }
       ]
     }

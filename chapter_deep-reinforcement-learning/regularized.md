@@ -265,11 +265,11 @@ Trust regions and the fixed-reference penalty both use KL divergence, in differe
 
 > **Two uses of KL divergence.** A **trust region** (:numref:`sec_ppo`) measures divergence from the *previous iterate*. It limits each update and protects a local approximation, and its reference moves after every update. A **fixed-reference penalty** (this section) is part of the objective and moves the optimum to :eqref:`eq_kl_optimum`. PPO-style fine-tuning of language models uses both: a clipped surrogate relative to the sampling policy for stable updates, and a reward penalty relative to the frozen initial model to control the final policy :cite:`ouyang2022training`.
 
-The closed form shows where a trust region alone leads. Suppose every update solves its trust-region problem exactly, $\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \nu D_{\textrm{KL}}(\pi \Vert \pi_k)$, starting from $\pi_0 = \pi_{\textrm{ref}}$. By the proposition each step multiplies the policy by $e^{r/\nu}$, so after $k$ steps
+The closed form shows where a trust region alone leads. Suppose every update solves its trust-region problem exactly, with a weight $\tilde{\beta}$ on the divergence from the previous iterate, $\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \tilde{\beta} D_{\textrm{KL}}(\pi \Vert \pi_k)$, starting from $\pi_0 = \pi_{\textrm{ref}}$. By the proposition each step multiplies the policy by $e^{r/\tilde{\beta}}$, so after $k$ steps
 
-$$\pi_k(a) = \frac{\pi_{\textrm{ref}}(a)\, e^{k\, r(a)/\nu}}{\sum_{a'} \pi_{\textrm{ref}}(a')\, e^{k\, r(a')/\nu}},$$
+$$\pi_k(a) = \frac{\pi_{\textrm{ref}}(a)\, e^{k\, r(a)/\tilde{\beta}}}{\sum_{a'} \pi_{\textrm{ref}}(a')\, e^{k\, r(a')/\tilde{\beta}}},$$
 
-the closed form with coefficient $\nu/k$. As $k$ grows the coefficient goes to zero, and the iterates approach the point mass on the best action. A trust region shapes the path but not the destination; only a fixed reference changes where the iterates converge (exercise :exref:`ex_regularized-moving-reference`).
+the closed form with coefficient $\tilde{\beta}/k$. As $k$ grows the coefficient goes to zero, and the iterates approach the point mass on the best action. A trust region shapes the path but not the destination; only a fixed reference changes where the iterates converge (exercise :exref:`ex_regularized-moving-reference`).
 
 ### The Direction of the Divergence
 :label:`subsec_kl_direction`
@@ -516,18 +516,18 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
 1. **A moving reference.** ● The trust region of :numref:`sec_ppo` measures
    divergence from the previous iterate. This section showed that the
    idealized update
-   $\pi_{k+1} = \operatorname{argmax}_\pi\ \mathbb{E}_\pi[r] - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k)$,
+   $\pi_{k+1} = \operatorname{argmax}_\pi\ \mathbb{E}_\pi[r] - \tilde{\beta}\, D_{\textrm{KL}}(\pi \Vert \pi_k)$,
    started at $\pi_0 = \pi_{\textrm{ref}}$, converges to the argmax.
     1. Now add the fixed-reference penalty of :eqref:`eq_kl_objective`, as
        PPO-style fine-tuning does, so that $\pi_{k+1}$ maximizes
-       $$\mathbb{E}_\pi[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k).$$
+       $$\mathbb{E}_\pi[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) - \tilde{\beta}\, D_{\textrm{KL}}(\pi \Vert \pi_k).$$
        Show that, up to a constant,
-       $$\log \pi_{k+1} = \frac{\beta \log \pi_{\textrm{ref}} + \nu \log \pi_k + r}{\beta + \nu},$$
+       $$\log \pi_{k+1} = \frac{\beta \log \pi_{\textrm{ref}} + \tilde{\beta} \log \pi_k + r}{\beta + \tilde{\beta}},$$
        and find the limit of $\pi_k$. Which coefficient determines the limit?
        How fast is the limit approached?
     1. Show that the recursion of part a is the update of `solve_kl` with a
        suitable step size, and express that step size through $\beta$ and
-       $\nu$. Which of the convergent step sizes of
+       $\tilde{\beta}$. Which of the convergent step sizes of
        `solve_kl` have no interpretation as a trust region?
    :exlabel:`ex_regularized-moving-reference`
 1. [code] **Forward-KL penalty.** ● :numref:`subsec_kl_direction` contrasts
@@ -593,7 +593,7 @@ KL-Regularized Policy Optimization<br>
 ::: {.slide title="Planning on a Fitted Reward Scores −0.03 and Earns −2.11"}
 [The problem]{.kicker}
 
-![](../img/mdl-rl-reward-gridworld.svg){width=80%}
+![](../img/mdl-rl-reward-gridworld.svg){width=90%}
 
 Fit a reward to 6000 comparisons, plan on it, grade with the hidden true reward.
 
@@ -761,10 +761,10 @@ below 1 when $1/\beta < 4$: for $\beta > 1/4$.
 
 ::: {.slide title="A Trust Region Alone Still Converges to the Argmax"}
 Solve each step exactly:
-$\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \nu
+$\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \tilde{\beta}
 D_{\textrm{KL}}(\pi \Vert \pi_k)$, $\pi_0 = \pi_{\textrm{ref}}$.
 
-$$\pi_k \propto \pi_{\textrm{ref}}\, e^{k\, r/\nu}: \textrm{ the tilt with coefficient } \nu/k \to 0$$
+$$\pi_k \propto \pi_{\textrm{ref}}\, e^{k\, r/\tilde{\beta}}: \textrm{ the tilt with coefficient } \tilde{\beta}/k \to 0$$
 
 - **Trust region:** against the previous iterate; shapes the path.
 - **Fixed penalty:** against a frozen reference; sets the destination.
@@ -833,6 +833,7 @@ penalty, without any training.
 - Many steps: tilt by $Q_\beta$, solved by soft value iteration.
 - True return: $-0.12 \to +0.53$ at $3.7$ nats, then $-1.83$.
 
-**Next:** with a uniform reference the penalty is an entropy bonus; soft
-actor-critic maximizes it with continuous actions.
+**Next:** values learned by a network from replayed transitions. Later,
+with a uniform reference, the penalty becomes soft actor-critic's entropy
+bonus.
 :::

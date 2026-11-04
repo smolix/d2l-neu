@@ -74,7 +74,7 @@ Which pieces of the chapter does a learner need when the transitions are concate
 
 A critic is optional. The response weight is unbiased with any prompt baseline, and the group mean of :numref:`sec_baselines` supplies one without a network. The post-training methods built on it, such as RLOO :cite:`Ahmadian.Cremer.Galle.ea.2024` and the GRPO update of the last part of this section, drop the value network to save memory and computation. A learned value of each prefix gives per-token credit of the kind computed above: PPO-based post-training trains a value head on every token and weights the tokens by GAE :cite:`ouyang2022training`, and VinePPO estimates prefix values by sampling continuations from them :cite:`Kazemnejad.Aghajohari.Portelance.ea.2025`. :numref:`fig_rl_token_mdp` collects both views and these components.
 
-![The token MDP. Top: a response is a trajectory whose states are prefixes and whose actions are tokens; every transition appends the chosen token with probability one, and the reward arrives once, on the edge into EOS. Bottom: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, with one gradient for both views by :eqref:`eq_seq_factorization`. Right: the components that a terminal reward and deterministic transitions make unnecessary, and the one that stays optional, a prefix value for per-token credit.](../img/mdl-rl-token-mdp.svg)
+![The token MDP. Top: a response is a trajectory whose states are prefixes and whose actions are tokens; every transition appends the chosen token with probability one, and the reward arrives once, on the edge on which the token EOS enters the terminal state. Bottom: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, with one gradient for both views by :eqref:`eq_seq_factorization`. Right: the components that a terminal reward and deterministic transitions make unnecessary, and the one that stays optional, a prefix value for per-token credit.](../img/mdl-rl-token-mdp.svg)
 :label:`fig_rl_token_mdp`
 
 ## Verifiers, Reward Models and Their Loopholes
@@ -707,7 +707,7 @@ lenient checker pays the hedge 1.
 - The sampler's kernels differ from the trainer's, and several steps share
   one batch: the data come from an older policy.
 - Token ratio $\rho_t = \pi_\theta(a_t \mid s_t) / \pi_{\textrm{old}}(a_t \mid s_t)$,
-  clipped to $[1 - \epsilon, 1 + \epsilon]$.
+  clipped to $[1 - \epsilon_{\textrm{clip}}, 1 + \epsilon_{\textrm{clip}}]$.
 
 $$W = \prod_{t=1}^{T} \rho_t, \qquad s = W^{1/T} = \exp\Big(\tfrac{1}{T}\sum_t \log \rho_t\Big)$$
 
@@ -716,7 +716,7 @@ reply.
 :::
 
 ::: {.slide title="A Symmetric Band Lets Rare Tokens Grow Only Slowly"}
-- $\epsilon = 0.2$: a token at $0.01$ may rise to $0.012$; a token at
+- $\epsilon_{\textrm{clip}} = 0.2$: a token at $0.01$ may rise to $0.012$; a token at
   $0.6$ to $0.72$.
 - Most of a vocabulary is rare: mass concentrates on likely tokens, and
   entropy falls.
@@ -736,7 +736,7 @@ $$k_3 = \frac{\pi_{\textrm{ref}}}{\pi_\theta} - \log \frac{\pi_{\textrm{ref}}}{\
 :::
 
 ::: {.slide title="Reusing One Group: Ratios Leave 1 after the First Step"}
-Four epochs on one group of 32 replies per prompt, $\epsilon = 0.2$:
+Four epochs on one group of 32 replies per prompt, $\epsilon_{\textrm{clip}} = 0.2$:
 
 @!rl-sequences-group-relative-policy-optimization-2
 

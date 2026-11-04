@@ -2953,14 +2953,15 @@ class GaussianPolicy(ActorCritic):
         with torch.no_grad():
             return self.policy(torch.as_tensor(obs))[0].numpy()
 
-def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,
                entropy_coef=0.01, use_clip=True):
-    """num_epochs clipped-surrogate passes on one frozen batch; returns
-    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
-    band, approximate KL, mean policy entropy.
+    """num_epochs clipped-surrogate passes on one frozen batch of states
+    and actions; returns [num_epochs, 3] numpy diagnostics, recorded before
+    each pass: fraction of ratios outside the band, approximate KL, mean
+    policy entropy.
 
     Defined in :numref:`sec_ppo`"""
-    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    obs, act = torch.as_tensor(obs), torch.as_tensor(act)
     adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
     diag = []
     for _ in range(num_epochs):
@@ -3003,32 +3004,68 @@ class ReplayBuffer:
         return self.size
 
     def sample(self, batch_size, rng):
+        """batch_size transitions drawn uniformly, each a one-step
+        fragment: ep_ends marks every transition as its own episode."""
         i = rng.integers(self.size, size=batch_size)
         return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
                          self.next_obs[i], self.term[i],
-                         np.array([batch_size]))
+                         np.arange(1, batch_size + 1))
 
-def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
-              shape=(16, 4), seed=0):
-    """Q-learning swept over a fixed dataset, with optional pessimism.
+class SquashedGaussianPolicy(nn.Module):
+    """d2l.GaussianHead with SAC's network (two ReLU layers and a
+    state-dependent standard deviation), squashed through
+    a = scale * tanh(u).
 
-    kappa > 0 subtracts kappa/sqrt(n(s, a)) from every value consulted;
-    an untried pair is distrusted entirely, and no pessimistic value
-    drops below zero, the floor this environment guarantees.
+    Defined in :numref:`sec_sac`"""
+    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0):
+        super().__init__()
+        trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
+                              nn.Linear(hidden, hidden), nn.ReLU())
+        self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
+                                       state_std=True, trunk=trunk)
+        self.scale = scale
 
-    Defined in :numref:`sec_offline`"""
-    Q, counts = np.zeros(shape), np.zeros(shape)
-    np.add.at(counts, (batch.obs, batch.act), 1)
-    penalty = np.where(counts > 0, kappa / np.sqrt(np.maximum(counts, 1)),
-                       np.inf if kappa > 0 else 0.0)
-    rng = np.random.default_rng(seed)
-    for _ in range(num_sweeps):
-        for i in rng.permutation(len(batch)):
-            s, a, s2 = batch.obs[i], batch.act[i], batch.next_obs[i]
-            v2 = np.maximum(Q[s2] - penalty[s2], 0.0).max()
-            Q[s, a] += alpha * (batch.rew[i] + gamma
-                                * (1 - batch.term[i]) * v2 - Q[s, a])
-    return np.maximum(Q - penalty, 0.0)
+    def log_prob_u(self, u, mean, std):
+        """log pi at a = scale tanh(u), from the pre-squash u the sampler
+        keeps."""
+        logdet = 2 * (np.log(2) - u - nn.functional.softplus(-2 * u))
+        return (torch.distributions.Normal(mean, std).log_prob(u)
+                - logdet - np.log(self.scale)).sum(-1)
+
+    def sample(self, obs):
+        """A reparameterized action and its log-probability, differentiable."""
+        mean, std = self.policy(obs)
+        u = mean + std * torch.randn_like(std)
+        return self.scale * torch.tanh(u), self.log_prob_u(u, mean, std)
+
+    def act(self, obs, rng):
+        with torch.no_grad():
+            mean, std = self.policy(torch.as_tensor(obs))
+        u = mean.numpy() + std.numpy() * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+        return self.scale * np.tanh(u)
+
+    def act_logp(self, obs, rng):
+        """A sampled action and its log-probability, numpy in and out."""
+        with torch.no_grad():
+            mean, std = self.policy(torch.as_tensor(obs))
+            u = mean + std * torch.as_tensor(rng.standard_normal(
+                mean.shape, dtype=np.float32))
+            return (self.scale * np.tanh(u.numpy()),
+                    self.log_prob_u(u, mean, std).numpy())
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            mean = self.policy(torch.as_tensor(obs))[0].numpy()
+        return self.scale * np.tanh(mean)
+
+class ReplayBufferC(d2l.ReplayBuffer):
+    """d2l.ReplayBuffer with the action column widened to float vectors.
+
+    Defined in :numref:`sec_sac`"""
+    def __init__(self, capacity, obs_dim, act_dim):
+        super().__init__(capacity, obs_dim)
+        self.act = np.zeros((capacity, act_dim), np.float32)
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update the discriminator.
@@ -5029,6 +5066,21 @@ def run_seeds(train, num_seeds, **kwargs):
 
     Defined in :numref:`sec_utils`"""
     return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def on_grid(runs, grid, col, smooth=1):
+    """Resample per-episode rows (env step, value, ...) onto an env-step
+    grid. For each run, drop the rows whose column `col` is NaN, average
+    the column over the last `smooth` episodes, and interpolate linearly at
+    the grid points; returns [run, grid point], the input of plot_curves.
+
+    Defined in :numref:`sec_utils`"""
+    out = []
+    for r in runs:
+        r = np.asarray(r, dtype=float)
+        r = r[~np.isnan(r[:, col])]
+        v = np.convolve(r[:, col], np.ones(smooth) / smooth, 'valid')
+        out.append(np.interp(grid, r[smooth - 1:, 0], v))
+    return np.stack(out)
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a PyTorch data iterator.

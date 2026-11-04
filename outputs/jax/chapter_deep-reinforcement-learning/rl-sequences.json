@@ -13,35 +13,67 @@
       "kind": "text",
       "outputs": []
     },
-    "rl-sequences-the-smallest-instance": {
-      "code_fingerprint": "sha256:42900b65a1936f87d90c0ee77f0be2adb9dadf554a86c0400ac44b8bdd92db3b",
+    "rl-sequences-credit-within-a-response-1": {
+      "code_fingerprint": "sha256:b803adb8d1ff746424c4ab5740fb0d9604fb2b16196481da4642b3b542f76ea7",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-credit-within-a-response-2": {
+      "code_fingerprint": "sha256:fee7e5b4b29886d54dc2fde102ebcfc18d7bb98f1b674ad8319f842c969b6e8b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "success of a response sampled from the reference: 0.062\n"
+          "text": "response   r - V(x)   A(s_1, a_1)   A(s_2, a_2)\n      12       0.99          0.09          0.90\n      13      -0.01          0.09         -0.10\n      52      -0.01         -0.01          0.00\nsame expected gradient for the tens digit: True\nvariance: r - V(x) 0.0099, A(s_1, a_1) 0.0009, A(s_2, a_2) 0.0090\n"
+        }
+      ]
+    },
+    "rl-sequences-the-smallest-instance": {
+      "code_fingerprint": "sha256:1d9040e5d31686ec9aaeef0015d85d5adbd7b39fa7dd110d9caac7d2aac5e6a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reference: exact score 0.062, lenient score 0.065\n"
         }
       ]
     },
     "rl-sequences-the-group-is-the-baseline-1": {
-      "code_fingerprint": "sha256:1c9975288cedbafce68720856f2531089b0215e355ef4e7ab1578c283981178c",
+      "code_fingerprint": "sha256:33810c46b075aea0a8c8844568d708f376120757564bc954b70723d6a15f124e",
       "kind": "text",
       "outputs": []
     },
     "rl-sequences-reward-hacking-unified": {
-      "code_fingerprint": "sha256:13b6dfd530098cba4c780006d44ce5fa6189c54ce309dde82c5e4227807b7f4e",
+      "code_fingerprint": "sha256:3b4fa5f7d5006b43867631370ca8a629e0252c59ffd861d629d6bed22de8187b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\nbeta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\nbeta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\n"
+          "text": "beta   trained: lenient  exact  hedge  optimum: lenient  exact  hedge\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\nbeta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
+          "text": " 0.0               1.00   0.50   0.50\n 0.1               0.99   0.50   0.49              0.99   0.49   0.50\n 0.2               0.60   0.48   0.12              0.60   0.47   0.14\n 0.3               0.44   0.40   0.04              0.43   0.39   0.04\n 0.5               0.25   0.23   0.01              0.27   0.25   0.01\n"
+        }
+      ]
+    },
+    "rl-sequences-group-relative-policy-optimization-1": {
+      "code_fingerprint": "sha256:b6366e246ea1703ab7f9d3c0c49542ac589e6ddb9d2b0800c59d732db0501cd3",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-group-relative-policy-optimization-2": {
+      "code_fingerprint": "sha256:3c107fd4652e185ee13d79d31b01f76d356832895173303615c472f319771c7f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1: ratios from 1.00 to 1.00, 0% outside the band\nepoch 2: ratios from 0.81 to 1.97, 5% outside the band\nepoch 3: ratios from 0.74 to 2.23, 14% outside the band\nepoch 4: ratios from 0.75 to 2.39, 30% outside the band\nexact score: reference 0.062, one epoch 0.111, four epochs 0.137\n"
         }
       ]
     }

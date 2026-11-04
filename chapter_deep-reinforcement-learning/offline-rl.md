@@ -792,7 +792,7 @@ $\kappa = 0.1$, the same 80 logs:
   every pair.
 :::
 
-::: {.slide title="At 100 Episodes, Kappa = 0.3 Drives Every Start Value to Zero"}
+::: {.slide title="At 100 Episodes, Kappa = 0.3 Drives Nearly Every Start Value to Zero"}
 [Choosing the penalty]{.kicker}
 
 @!offline-rl-choosing-the-penalty
@@ -852,7 +852,8 @@ a random behavior logged both many times.
   a quarter of its picks rest on 5 samples or fewer.
 - Stitching: on uniform logs it earns 0.14 against the clone's 0.01.
 - $\kappa/\sqrt{n}$ inside the backup: narrow logs better on 29 of 40;
-  uniform logs worse on 28 of 40; $\kappa = 0.3$ zeroes 100-episode logs.
+  uniform logs worse on 28 of 40; $\kappa = 0.3$ zeroes nearly every start
+  value of the 100-episode logs.
 
 **Next:** a fixed dataset of human preferences, and the same KL constraint,
 for language models.

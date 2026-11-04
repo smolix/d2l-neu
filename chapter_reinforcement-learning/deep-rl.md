@@ -255,7 +255,7 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs[:, :, 0]},
                 reference=500)
 ```
 
-The untrained policy balances the pole for about 20 steps. Every seed's batch mean reaches the 500-step ceiling by about update 50 and mostly stays there, although single batches still dip, sometimes below 400. On this task the time-limit correction barely changed the average return in our runs, because only the successful episodes are truncated, but without it the policy left the ceiling more often late in the run.
+The untrained policy balances the pole for about 20 steps. Every seed's batch mean reaches the 500-step ceiling by about update 50 and mostly stays there, although single batches still dip below it. On this task the time-limit correction barely changed the average return in our runs, because only the successful episodes are truncated, but without it the policy left the ceiling more often late in the run.
 
 ### The Surrogate Loss
 
@@ -1000,7 +1000,7 @@ $$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t
 - `ActorCritic.mlp(4, 2)` on `'CartPole-v1'`, $\gamma = 0.99$ (horizon
   100 steps), three seeds
 - the untrained policy balances for about 20 steps
-- single batches still dip, sometimes below 400
+- single batches still dip below the ceiling
 - without the time-limit correction the average barely changes (only
   successful episodes are cut), but late batches leave 500 more often
 :::

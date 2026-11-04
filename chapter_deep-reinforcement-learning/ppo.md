@@ -309,7 +309,7 @@ d2l.plot_curves(reuse, xlabel='environment steps',
                 ylabel='mean return of the batch', x=grid, reference=500)
 ```
 
-Reusing each batch for four epochs reaches the ceiling in about half the environment steps that one epoch needs, roughly 25,000 against 50,000, and in about half the updates. Going on to twenty epochs changes little by comparison, and no clipped run collapses. The gain comes from the batch: a batch of a few thousand steps holds more information than one gradient step can extract, and the clip lets the optimizer take several steps without moving any action probability too far.
+Reusing each batch for four epochs reaches the ceiling in about half the environment steps that one epoch needs, roughly 25,000 against 50,000 or more, and in about half the updates; within the 50,000-step budget the one-epoch median stays just short of the ceiling. Going on to twenty epochs changes little by comparison, and no clipped run collapses. The gain comes from the batch: a batch of a few thousand steps holds more information than one gradient step can extract, and the clip lets the optimizer take several steps without moving any action probability too far.
 
 ### The Clipping Ablation
 :label:`subsec_ppo_ablation`
@@ -440,7 +440,7 @@ d2l.plt.legend()
 d2l.plt.show()
 ```
 
-After twenty passes the clipped agent's ratios stay near one, with a minority beyond the dashed band edges. The unclipped ratios pile up near zero and between two and three. A ratio there is $1/\pi_{\theta_{\textrm{old}}}(a)$ for an action that the fresh policy chose with probability between a third and a half and the new policy chooses almost always; a ratio near zero belongs to the other action. How much is such a reweighted batch still worth? The *effective sample size* of $n$ importance weights answers this, $N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$, where $\bar{w}_j$ is the ratio of step $j$ divided by the sum of all the batch's ratios. It equals $n$ when all weights are equal and one when a single weight dominates.
+After twenty passes the clipped agent's ratios stay near one, with a minority beyond the dashed band edges. The unclipped ratios pile up near zero, and most of the others lie far above the band, up to about two or three. A ratio of two or three is $1/\pi_{\theta_{\textrm{old}}}(a)$ for an action that the fresh policy chose with probability a half or a third and the new policy chooses almost always; a ratio near zero belongs to the other action. How much is such a reweighted batch still worth? The *effective sample size* of $n$ importance weights answers this, $N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$, where $\bar{w}_j$ is the ratio of step $j$ divided by the sum of all the batch's ratios. It equals $n$ when all weights are equal and one when a single weight dominates.
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-4}
 %%tab pytorch, jax
@@ -991,7 +991,7 @@ The critic takes its own regression passes on the same batch.
 
 ::: {.col}
 - clipped PPO, eight seeds, 50,000 environment steps
-- one epoch: about 50,000 steps to 475; four: about 25,000
+- four epochs: about 25,000 steps to 475; one: 50,000 or more
 - twenty: little more gain; no run collapses
 :::
 :::
@@ -1037,9 +1037,8 @@ batch, a common one $0.12$.
 :::
 
 ::: {.col}
-- exactly 0 at epoch 1; about half the peak by epoch 20
-- past the band on the losing side: still a gradient, pulled back
-- the KL has the same shape, ten times smaller
+- 0 at epoch 1; half the peak by epoch 20
+- the KL: same shape, ten times smaller
 :::
 :::
 :::
@@ -1101,7 +1100,7 @@ cut would look disastrous, although nothing went wrong.
 - trajectory weights: variance $1.04^{500} - 1 \approx 3 \times 10^8$; one ratio per step
 - the surrogate's only error is the state distribution; TRPO bounds it by KL
 - PPO stops rewarding a sample at $\rho = 1 \pm 0.2$
-- CartPole: four epochs reach 475 in about 25,000 steps, one in about 50,000
+- CartPole: four epochs reach 475 in about 25,000 steps, one in 50,000 or more
 - twenty epochs at $10^{-2}$: every clipped seed holds, several unclipped die
 - clip fraction about 1 in 20; entropy $0.65 \to 0.25$ nats
 

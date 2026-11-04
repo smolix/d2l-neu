@@ -34,7 +34,7 @@ import optax
 
 ### Regression in Place of Counting
 
-Pendulum is the task of :numref:`sec_sac`. A pendulum hangs from a motorized pivot; the state is $s = (\cos\vartheta, \sin\vartheta, \dot\vartheta)$, where $\vartheta$ is the angle from upright, and the action is a torque $a \in [-2, 2]$. Each step gives the reward $-(\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,a^2)$ with $\vartheta$ wrapped to $[-\pi, \pi]$, and an episode lasts 200 steps. A pendulum hanging still at the bottom loses $\pi^2 \approx 9.9$ per step, about $2{,}000$ per episode; random torques lose about $1{,}000$ to $1{,}700$; a controller that swings the pendulum up and balances it loses between zero and a few hundred, depending on where it starts.
+Pendulum is the task of :numref:`sec_sac`. A pendulum hangs from a motorized pivot; the state is $s = (\cos\vartheta, \sin\vartheta, \dot\vartheta)$, where $\vartheta$ is the angle from upright, and the action is a torque $a \in [-2, 2]$. Each step gives the reward $-(\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,a^2)$ with $\vartheta$ wrapped to $[-\pi, \pi]$, and an episode lasts 200 steps. A pendulum hanging still at the bottom loses $\pi^2 \approx 9.9$ per step, about $2{,}000$ per episode; random torques lose about $900$ to $1{,}700$; a controller that swings the pendulum up and balances it loses between zero and a few hundred, depending on where it starts.
 
 A *model* of the environment predicts what the environment does. We write $\hat f_\phi$ for a network with parameters $\phi$ that maps a state and an action to a predicted next state and reward,
 
@@ -256,7 +256,7 @@ print(f'angle error {abs(angle(pred[0]) - angle(buffer.next_obs[i])):.3f} '
       f'degrees')
 ```
 
-At step 100 the pendulum is at $\vartheta = \operatorname{atan2}(-0.3394, -0.9407) = -2.796$ radians, about $160$ degrees from upright, and it swings at $5.69$ radians per second while the torque is nearly zero. The reward is $-(2.796^2 + 0.1 \cdot 5.690^2 + 0.001 \cdot 0.08^2) = -11.05$, as printed. In the 0.05 seconds of one step the angle moves to $\operatorname{atan2}(-0.5789, -0.8154) = -144.6$ degrees, about $5.6 \times 0.05 = 0.28$ radians or 16 degrees, and the model predicts this move to within a fraction of a degree. Its reward is off by less than three tenths. One step is easy: it is a small correction of a state the model has just been shown.
+At step 100 the pendulum is at $\vartheta = \operatorname{atan2}(-0.3394, -0.9407) = -2.795$ radians, about $160$ degrees from upright, and it swings at $5.69$ radians per second while the torque is nearly zero. The reward is $-(2.795^2 + 0.1 \cdot 5.690^2 + 0.001 \cdot 0.08^2) = -11.05$, as printed. In the 0.05 seconds of one step the angle moves to $\operatorname{atan2}(-0.5789, -0.8154) = -144.6$ degrees, about $5.6 \times 0.05 = 0.28$ radians or 16 degrees, and the model predicts this move to within a fraction of a degree. Its reward is off by less than three tenths. One step is easy: it is a small correction of a state the model has just been shown.
 
 ### Compounding Error
 
@@ -300,7 +300,7 @@ for seed in range(num_seeds):
     print(f'{seed:4d} ' + ' '.join(f'{e:6.2f}' for e in errors))
 ```
 
-On every seed the error after ten steps is several times the error after one step, and after one step it is a fraction of a degree on most seeds. After 25 steps the error depends on the seed, but on these held-out episodes it stays below about 15 degrees: under random torques the pendulum keeps swinging near the bottom, where the training episode went too. We return to this proviso after the planner has taken the pendulum elsewhere.
+On every seed the error after ten steps is several times the error after one step, and after one step it is a fraction of a degree on most seeds. After 25 steps the error depends on the seed, but on these held-out episodes it stays below about 20 degrees: under random torques the pendulum keeps swinging near the bottom, where the training episode went too. We return to this proviso after the planner has taken the pendulum elsewhere.
 
 The depth of a plan is a dial like the $n$ of the $n$-step returns in :numref:`sec_actorcritic`. A deeper plan sees further consequences of a torque; a swing-up takes a few dozen steps, and a plan that ends before the pendulum rises cannot tell a good pumping sequence from a bad one. But each further step adds the model's error to the prediction. We use $n = 25$ steps, 1.25 seconds, and exercise :exref:`ex_model-based-horizon` moves the dial.
 
@@ -410,7 +410,7 @@ for seed, (scores, buf) in enumerate(runs):
           + ''.join(f'{s:7.0f}' for s in scores))
 ```
 
-What is a good score? From the ten test starts, a controller that swings up and balances loses close to nothing from the start nearest the top and about 250 to 320 from each of the five starts near the bottom, about 170 on average. The soft actor-critic of :numref:`sec_sac`, scored the same way, settles near $-170$ and first reaches $-200$ after about six to seven thousand steps at one update per step.
+What is a good score? From the ten test starts, a controller that swings up and balances loses close to nothing from the start nearest the top and about 250 to 320 from each of the five starts near the bottom, about 170 on average. The soft actor-critic of :numref:`sec_sac`, scored the same way, settles near $-170$ and first reaches $-200$ after several thousand steps at one update per step.
 
 After 600 real steps, three episodes, the planner scores between about $-165$ and $-215$ on every run, close to that level, and after 800 steps between about $-170$ and $-195$. On three of the five seeds the model of the random episode alone already gives a planner that scores between about $-175$ and $-340$, far from the random policy's $-1{,}000$ and below. On the other two, seeds 3 and 4, the first planner fails, with a score near $-1{,}500$; its first one or two episodes fail as well, and after 600 real steps the same planner succeeds.
 
@@ -430,7 +430,7 @@ On seeds 0 to 2 the errors along the planner's episodes start as small as on ran
 
 ### The Cost of a Real Step
 
-The planner needs a few hundred real steps. Soft actor-critic needs about seven thousand at one gradient step per environment step, and between about 2,400 and 4,000 at ten gradient steps per environment step, a count that includes its first thousand steps of random warm-up. On the axis of environment steps the planner needs about ten times fewer than the first and about five times fewer than the second.
+The planner needs a few hundred real steps. Soft actor-critic needs about five to eleven thousand at one gradient step per environment step, and between about 2,400 and 4,000 at ten gradient steps per environment step, a count that includes its first thousand steps of random warm-up. On the axis of environment steps the planner needs at least ten times fewer than the first and about five times fewer than the second.
 
 The other axis is computation. Every action of the planner is a search: 12,500 evaluations of the model, a few milliseconds on one CPU core for this small network, and every episode adds a refit of a thousand Adam steps. Soft actor-critic takes one or ten gradient steps of three small networks per real step, and acting needs only one forward pass of its actor. A real robot must also finish the search within its control period, here 0.05 seconds. The model does not make learning free. It moves the cost from experience, which is scarce on a robot, to computation, which is scarce on the robot's controller.
 
@@ -685,7 +685,7 @@ Learned Models and Planning<br>
 Pendulum: torque $a \in [-2, 2]$, angle $\vartheta$ from upright; each step
 costs $\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,a^2$; 200 steps per episode.
 
-- soft actor-critic: about 7,000 real steps at one update per step,
+- soft actor-critic: 5,000 to 11,000 real steps at one update per step,
   2,400 to 4,000 at ten
 - every transition $(s, a, r, s')$ only fed a critic target $r + \gamma V(s')$
 - but it also shows how the pendulum moves, by the same physics at every visit
@@ -753,7 +753,7 @@ $$\min_\phi \sum_i \big\| \hat f_\phi(s_i, a_i) - (s'_i, r_i) \big\|^2$$
 @!model-based-one-step-by-hand-2
 
 - the pendulum swings from $-160.2°$ to $-144.6°$ in 0.05 s
-- reward by hand: $-(2.796^2 + 0.1 \cdot 5.690^2 + 0.001 \cdot 0.08^2) = -11.05$
+- reward by hand: $-(2.795^2 + 0.1 \cdot 5.690^2 + 0.001 \cdot 0.08^2) = -11.05$
 :::
 
 ::: {.slide title="Errors Compound When the Model Feeds on Its Own Predictions"}
@@ -843,7 +843,7 @@ torques did, and the next refit has data there.
 | | real steps | work per real step |
 |---|---|---|
 | planner, until it swings up | 200 to 600 | $500 \times 25 = 12{,}500$ model evaluations |
-| SAC, 1 update per step, to $-200$ | about 7,000 | 1 gradient step |
+| SAC, 1 update per step, to $-200$ | 5,000 to 11,000 | 1 gradient step |
 | SAC, 10 updates per step, to $-200$ | 2,400 to 4,000 | 10 gradient steps |
 
 - the planner also searches when it acts, within the 0.05 s control period
@@ -863,8 +863,6 @@ torques did, and the next refit has data there.
 
 ::: {.slide title="Distilled Search Teaches the Actor Part of What the Search Knows"}
 [Search as policy improvement]{.kicker}
-
-Refit the model, label states with the search, regress the actor, act with search.
 
 @!model-based-distillation-into-the-actor-3
 
@@ -892,7 +890,7 @@ Dyna, MBPO: roll the actor out 3 steps in the model, 95% of each batch imagined.
 - $\hat f_\phi(s, a) \to (\hat s', \hat r)$ by least squares: the counted model, for continuous states.
 - One step: a fraction of a degree. Along a rollout the error compounds; off the data it is tens of degrees.
 - Warm-started random shooting with replanning: swing-up after 200 to 600 real steps on every run.
-- Soft actor-critic: about 7,000 steps at one update per step; the planner: 12,500 model evaluations per action.
+- Soft actor-critic: 5,000 to 11,000 steps at one update per step; the planner: 12,500 model evaluations per action.
 - Search seeded by the actor improves on it inside the model; distilled, the actor learns part of it.
 - Imagined transitions: no fewer real steps at a matched update ratio.
 

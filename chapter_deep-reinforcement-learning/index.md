@@ -205,7 +205,7 @@ the optimum".
 | method | task, goal | environment steps |
 |---|---|---|
 | REINFORCE, learned baseline | Pendulum, $-200$ | a few hundred thousand |
-| PPO, 1 or 4 epochs per batch | CartPole, 475 | about 50,000 or 25,000 |
+| PPO, 1 or 4 epochs per batch | CartPole, 475 | 50,000 or more, or about 25,000 |
 | DQN | CartPole, 500 | 35,000 to 45,000 |
 | SAC, 1 or 10 updates per step | Pendulum, $-200$ | 5,400 to 11,200, or 2,400 to 4,000 |
 | a learned model and a planner | Pendulum, swing-up | 200 to 600 |

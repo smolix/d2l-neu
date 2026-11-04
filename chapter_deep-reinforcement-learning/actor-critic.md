@@ -125,7 +125,7 @@ The critic's target moves with both networks. An actor step changes the values t
 
 The code does not apply :eqref:`eq_actor_critic` after every transition. It keeps the eight-episode batches of :numref:`sec_deeprl` and changes what happens to each batch. The critic first takes `critic_steps` regression passes toward the batch's one-step targets, recomputing the targets from the current critic before every pass. Regression toward targets that contain the regressor's own predictions is called *fitted TD*, and recomputing the targets makes them a moving target. The actor then takes one step weighted by the TD errors of the refitted critic. We call this loop a batched one-step actor-critic. Its best-known relative, A2C :cite:`Mnih.Badia.Mirza.ea.2016`, weights the same score by $n$-step advantages, adds an entropy bonus, and takes one joint gradient step per rollout collected from many environments in parallel.
 
-The actor's weight is the raw TD error, not normalized within the batch as the Monte Carlo weight of :numref:`sec_deeprl` was, because of the way Adam scales its steps. Adam divides each gradient coordinate by the square root of a running average of its past squares, an average that with the default decay remembers about a thousand steps, longer than our 150 updates. Its first steps therefore have about the same size whatever the scale of the weights, and later steps shrink only when the gradients shrink below their early size. As the critic improves, the TD errors fall from a standard deviation of about $3$ early in training to around $0.1$ near the ceiling, by then mostly the critic's own noise, and Adam's steps fall with them, about eightfold over a run. Normalized TD errors would keep the gradient near its early size, and Adam would keep taking large steps in directions set by that noise (exercise :exref:`ex_actor-critic-gradient-norms`).
+The actor's weight is the raw TD error, not normalized within the batch as the Monte Carlo weight of :numref:`sec_deeprl` was, because of the way Adam scales its steps. Adam divides each gradient coordinate by the square root of a running average of its past squares, an average that with the default decay remembers about a thousand steps, longer than our 150 updates. Its first steps therefore have about the same size whatever the scale of the weights, and later steps shrink only when the gradients shrink below their early size. As the critic improves, the TD errors fall from a standard deviation of about $3$ early in training to $0.1$ or less near the ceiling, by then mostly the critic's own noise, and Adam's steps fall with them, about eightfold over a run. Normalized TD errors would keep the gradient near its early size, and Adam would keep taking large steps in directions set by that noise (exercise :exref:`ex_actor-critic-gradient-norms`).
 
 Early in training the raw weights, and with them the actor's gradient, are larger than a normalized weight would give. We cap the gradient's norm at $0.5$, a common value. Under Adam the cap does not limit the size of a step; it limits how much these large early batches count in Adam's running averages. `policy_step_clip` is the `policy_step` of :numref:`sec_imitation`, one gradient step on the weighted log-probabilities of the batch's actions, with the cap added; it returns the norm measured before the cap.
 
@@ -249,7 +249,7 @@ for name, r in runs.items():
           f'cap active {(r[:, :, 2] > grad_clip).mean():.0%}')
 ```
 
-The Monte Carlo weight reaches the ceiling first. With the same twenty critic passes per batch, REINFORCE gets there first on nearly every seed we have tried, with a fifth to a third fewer environment steps than actor-critic, which arrives 20 to 30 updates later. Once there, REINFORCE stays: its running mean does not fall back, while the few runs that end below the ceiling are actor-critic's. The cap is active on a fifth to two fifths of actor-critic's updates and on none of REINFORCE's, whose normalized weights keep the gradient small.
+The Monte Carlo weight reaches the ceiling first. With the same twenty critic passes per batch, REINFORCE gets there first on nearly every seed we have tried, typically with roughly a sixth to a third fewer environment steps than actor-critic. Once there, REINFORCE stays: its running mean does not fall back, while in our many-seed runs the few runs that ended below the ceiling were all actor-critic's. The cap is active on a fifth to two fifths of actor-critic's updates and on none of REINFORCE's, whose normalized weights keep the gradient small.
 
 On CartPole the bootstrap does not even make the runs steadier. The reward is a deterministic $+1$ per step, and the bootstrap at the time limit already replaces the long tail of every cut episode by the critic's value, so the Monte Carlo weight is far less noisy than its worst case. What remains is the critic's bias, and it is largest while the critic is young, the phase in which actor-critic falls behind. The uniform $\delta_t \approx 1$ of an untrained critic is the extreme case.
 
@@ -288,7 +288,7 @@ d2l.plot_curves({'TD error': trace[:, 0] ** 2, 'MC advantage': trace[:, 1] ** 2}
                 yscale='log')
 ```
 
-On the same transitions, the Monte Carlo advantage has about three times the TD error's standard deviation in the first updates, a variance about ten times larger, and over the whole run its variance is a few tens of times the TD error's; the plot's scale is logarithmic. The TD error depends on one reward and one transition; the Monte Carlo advantage depends on every reward and transition left in the episode. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo advantage's because the bootstrap replaces the tail of every cut episode by the critic's value.
+On the same transitions, the Monte Carlo advantage has two to three times the TD error's standard deviation in the first updates, a variance five to ten times larger, and over the whole run its variance is a few tens of times the TD error's; the plot's scale is logarithmic. The TD error depends on one reward and one transition; the Monte Carlo advantage depends on every reward and transition left in the episode. Both variances drop sharply once nearly every episode reaches the 500-step cut: the TD error's because the critic is then accurate, the Monte Carlo advantage's because the bootstrap replaces the tail of every cut episode by the critic's value.
 
 The variance saving is real, but on CartPole it is not what limits learning. REINFORCE averages eight episodes per update and normalizes its weights, and with a well-fitted baseline that suffices; the critic's bias, by contrast, slows every update until the critic catches up. Adding unit Gaussian noise to every reward, or updating after every single episode, did not reverse the comparison in our runs.
 
@@ -470,7 +470,7 @@ print(f'{hits} of {len(stats)} agents have their smallest error at lambda = 0.9 
       f'or 0.95')
 ```
 
-Across the eight frozen agents, the median error is smallest at $\lambda = 0.9$ or $0.95$, about half the error at $\lambda = 1$ and below the error at $\lambda = 0$. From $\lambda = 0$ to $\lambda = 1$ the bias falls to zero and the variance rises more than tenfold, most of the rise in the last step, where the weight $(\gamma\lambda)^l$ of distant TD errors stops decaying. Individual agents vary: most have their smallest error at $0.9$ or $0.95$, but in some the critic is accurate enough that a smaller $\lambda$ wins. The $\lambda = 1$ row has zero bias by construction, because its own mean is the reference. The common default in PPO implementations is $\lambda = 0.95$ :cite:`Schulman.Wolski.Dhariwal.ea.2017`.
+Across the eight frozen agents, the median error is smallest at $\lambda = 0.9$ or $0.95$, about half the error at $\lambda = 1$ and below the error at $\lambda = 0$. From $\lambda = 0$ to $\lambda = 1$ the bias falls to zero and the variance rises more than tenfold, most of the rise in the last step, where the weight $(\gamma\lambda)^l$ of distant TD errors stops decaying. Individual agents vary: most have their smallest error at $0.9$ or $0.95$, but not all; in our runs over many more frozen agents, the exceptions were mostly agents whose critic was accurate enough that a smaller $\lambda$ won. The $\lambda = 1$ row has zero bias by construction, because its own mean is the reference. The common default in PPO implementations is $\lambda = 0.95$ :cite:`Schulman.Wolski.Dhariwal.ea.2017`.
 
 ### The Source of the Interior Optimum
 
@@ -896,11 +896,11 @@ rollout over many parallel environments.
 :::
 
 ::: {.slide title="On CartPole the Young Critic's Bias Outweighs the Variance It Removes"}
-- REINFORCE reaches the ceiling first on nearly every seed, with a fifth to
-  a third fewer environment steps, and stays there.
+- REINFORCE reaches the ceiling first on nearly every seed, typically with
+  roughly a sixth to a third fewer environment steps, and stays there.
 - CartPole's tail is tame: rewards are a deterministic $+1$, and the
   time-limit bootstrap replaces the tail of every cut episode.
-- Actor-critic lags while its critic is young: 20 to 30 more updates.
+- Actor-critic lags while its critic is young.
 
 ::: {.d2l-note}
 The bootstrap does not speed up learning here; what it removes is variance.
@@ -910,9 +910,7 @@ The bootstrap does not speed up learning here; what it removes is variance.
 ::: {.slide title="On Shared Batches the TD Error's Variance Is a Few Tens of Times Smaller"}
 @!actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1
 
-The TD error needs one reward and one transition, so an update can come
-before the episode ends: the only option for continuing tasks and very
-long episodes.
+One reward and one transition: an update can come before the episode ends.
 :::
 
 ::: {.slide title="n-Step Returns and the λ-Return Interpolate between δ and Monte Carlo"}
@@ -1020,8 +1018,8 @@ one-step TD error has the least variance.
   step and $-99$ on a fall under a critic predicting $100$.
 - Exact critic: $\delta_t$ is an unbiased advantage sample; a learned one
   adds bias through $\hat V(s_{t+1})$.
-- CartPole, equal critic budgets: Monte Carlo first, with a fifth to a third
-  fewer steps; the TD error's variance is a few tens of times smaller.
+- CartPole, equal critic budgets: Monte Carlo first, with roughly a sixth to
+  a third fewer steps; the TD error's variance is a few tens of times smaller.
 - GAE $= \sum_l (\gamma\lambda)^l \delta_{t+l}$, one backward scan; error
   smallest near $\lambda = 0.9$ to $0.95$, the common default.
 

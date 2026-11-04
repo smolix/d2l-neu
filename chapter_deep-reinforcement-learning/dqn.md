@@ -368,7 +368,7 @@ for arm in arms:
         print(f'{arm:>17}, seed {seed}: ' + ' '.join(f'{x:3.0f}' for x in c))
 ```
 
-Checked this way, DQN's greedy policy sits at a return of about 100 to 250 for the first 30,000 steps and then reaches 500 on most seeds between 35,000 and 45,000 steps. Even the first check, at 5,000 steps, usually scores above the plateau that follows it. Reaching 500 is not final: some seeds later fall back by hundreds of points, as one seed of the printout does. Without a target network the greedy policy never lasts more than about 10 steps at any check, so training longer does not rescue it. Although DQN trains on each stored transition many times, it needs more environment steps to balance the pole for the full episode than PPO with four epochs per batch needed in :numref:`sec_ppo`.
+Checked this way, DQN's greedy policy sits mostly at a return of about 50 to 250 for the first 30,000 steps, with an occasional early check at 500, and then reaches 500 on most seeds between 35,000 and 45,000 steps. Even the first check, at 5,000 steps, usually scores above the plateau that follows it. A good check is not final: some seeds later fall back by hundreds of points, as one seed of the printout does, and in sweeps over twenty seeds about half of them did. Without a target network the greedy policy never lasts more than about 10 steps at any check, so training longer does not rescue it. Although DQN trains on each stored transition many times, it needs more environment steps to balance the pole for the full episode than PPO with four epochs per batch needed in :numref:`sec_ppo`.
 
 A greedy return says how good the policy is, not whether the network knows how good it is. :citet:`Hasselt.Guez.Silver.2016` test a value estimate against the discounted return that the greedy policy actually earns, which is the quantity the estimate claims to predict. `audit` computes three numbers for a trained network: the greedy return over 100 episodes, the greedy policy's discounted return over 20 episodes (`d2l.evaluate` with `gamma`), and the estimate $\max_a Q_w(s_0, a)$. Episodes start close to the centered state, so the discounted return measures the value of $s_0$. Under the 500-step limit even a perfect policy earns only $(1 - \gamma^{500})/(1 - \gamma) \approx 99.3$, slightly less than the ceiling of the continuing task.
 
@@ -392,7 +392,7 @@ for arm in arms:
               f'{disc:5.1f}, max_a Q(s0) {v0:8.3g}')
 ```
 
-Where the greedy policy balances the pole, the estimate sits a few points below the discounted return that the policy earns, never more than about eight: values still climb one synchronization at a time, and the lag of the bound above is visible at the end of the budget. Where the greedy policy fails, which happens on some seeds, the estimate is above what the policy earns, by more than 20 points on about half of such runs. With two actions, these failing runs are the only sign of the network promising more than its policy delivers, too few and too mixed with other errors to measure the effect. A cleaner test needs a maximum over more actions.
+Where the greedy policy balances the pole, the estimate sits a few points below the discounted return that the policy earns, never more than about eight: values still climb one synchronization at a time, and the lag of the bound above is visible at the end of the budget. Where the greedy policy fails, which in sweeps over twenty seeds happened on about two seeds in five, the estimate is above what the policy earns, by more than 20 points on about half of such runs. With two actions, these failing runs are the only sign of the network promising more than its policy delivers, too few and too mixed with other errors to measure the effect. A cleaner test needs a maximum over more actions.
 
 ## Overestimation
 
@@ -491,7 +491,7 @@ d2l.plot_curves({name: d2l.on_grid(runs[name], grid, 2) for name in names[2:]},
                 reference=ceiling)
 ```
 
-With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns 99.3, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. In sweeps over twenty seeds, a few 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
+With each action offered nine times, DQN's start-state estimate ends above the ceiling on every seed, typically 10 to 30 points above it. Where its greedy policy balances the pole and earns about 99, the estimate exceeds that return by about as much. No value the task allows lies above the ceiling, so the overestimation is certain without any further evaluation. In the plot, DQN's estimate crosses the ceiling before 40,000 steps and keeps rising, while Double DQN's stays near or below it. Double DQN's estimate ends about 20 points lower on almost every seed, near the ceiling, although a seed whose policy fails can still overshoot. In sweeps over twenty seeds, a few 18-action DQN runs are still climbing at 50,000 steps, the bias feeding back through the bootstrap. With two actions the two targets agree within a few points, and at this budget neither arm's greedy return differs beyond the variation across seeds. On CartPole the double estimator makes the values more accurate without changing how well the greedy policy balances the pole.
 
 We can now train a value network on transitions from any policy, replayed many times, with a frozen copy that keeps the targets still and a second estimate that keeps the maximum from inflating them. Both repairs assume that the maximum over actions can be computed: CartPole's two pushes and Atari's 18 joystick actions form a list. The torque of a motor is a number in an interval, and an argmax over it is an optimization problem of its own at every step. The next section keeps replay and the frozen copy, and replaces the maximum by a second network trained to propose the best action, which completes the off-policy column of :numref:`fig_rl_roadmap`.
 
@@ -878,7 +878,7 @@ Replay breaks the correlation of the data; a frozen copy holds the targets still
 [Two repairs]{.kicker}
 
 - Store $(s, a, r, s', \mathrm{term})$ in a ring of 200,000 slots; never more than 50,000 are used here.
-- Every second step, regress on 128 transitions drawn uniformly: tens to hundreds of uses each.
+- Every second step, regress on 128 transitions drawn uniformly: early transitions are reused hundreds of times.
 - Allowed because the target for $(s, a, r, s')$ does not depend on the policy that chose $a$.
 - A sampled batch has no episode order: only the one-step target can be formed.
 - Drawback: old transitions keep an error in the targets until the behavior revisits it.
@@ -913,7 +913,7 @@ With the copy every seed climbs from about 20 into the hundreds; $\epsilon = 0.0
 
 @!dqn-the-ablation-5
 
-Reward 1 at every step: the target $\geq 1 + \gamma Q_w(s', a')$, and shared weights lift $Q_w(s', \cdot)$ with $Q_w(s, a)$. The target stays ahead.
+Reward 1 at every step, and shared weights lift $Q_w(s', \cdot)$ with $Q_w(s, a)$: the target stays ahead.
 :::
 
 ::: {.slide title="Values Climb One Synchronization at a Time: 196 Syncs Allow at Most 86"}
@@ -946,7 +946,7 @@ A slower copy is steadier but propagates value more slowly.
 
 @!dqn-the-ablation-3
 
-- DQN: about 100–250 for 30,000 steps, then 500 on most seeds by 35,000–45,000; some fall back.
+- DQN: mostly about 50–250 for 30,000 steps, then 500 on most seeds by 35,000–45,000; some fall back.
 - No target network: never more than about 10 steps at any check.
 :::
 
@@ -1031,7 +1031,7 @@ Double DQN leaves $\rho$ times that, about 4. One reason post-training uses poli
 - Network + bootstrapping + off-policy data can diverge: Baird's weights grow from 10 to 335, true values 0.
 - Replay reuses every transition; a frozen copy holds the targets still between syncs.
 - Without the copy: values past $10^8$, greedy policy about 9 steps. With it: values climb one sync at a time toward 100.
-- Greedy checks every 5,000 steps: about 100–250 until 30,000, then 500 on most seeds by 35,000–45,000.
+- Greedy checks every 5,000 steps: mostly about 50–250 until 30,000, then 500 on most seeds by 35,000–45,000.
 - Max of four unit-noise estimates: bias about 1. With 18 actions DQN ends 10–30 above 100; Double DQN near 100.
 
 **Next:** a torque has no argmax. Keep replay and the frozen copy, and let an actor propose the action.

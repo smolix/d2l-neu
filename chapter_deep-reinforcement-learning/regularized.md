@@ -673,7 +673,7 @@ every return from state 0 shifts by $-\Phi(0)$.
 ::: {.slide title="The Optimizer Walks Through the Hazard Lane"}
 @!regularized-reward-hacking-and-goodhart
 
-- Both fitted scores sit $\approx 0.8$ low: the shaping offset; compare differences.
+- The true optimum's fitted score sits $0.83$ low, near $\Phi(0) = 0.78$: compare differences.
 - Plan on $\hat r$: $0 \to 1 \to 5 \to 6 \to 7 \to 11 \to 15$.
 - 24 datasets: 19 cross the hazards, 4 circle forever, 1 is optimal.
 :::
@@ -688,7 +688,7 @@ reach the goal in six moves. Why does the planner prefer the hazards?
 ::: {.d2l-note}
 **Answer.** Under $\hat r$ an ordinary move costs $\approx 0.08$, while the
 two hazard moves, never measured by the data, cost $\approx 0$. The route
-through the hazards looks cheaper by about $0.1$.
+through the hazards looks cheaper by about $0.2$.
 :::
 :::
 :::

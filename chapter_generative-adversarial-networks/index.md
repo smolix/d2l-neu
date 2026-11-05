@@ -44,25 +44,12 @@ ratio.
 current systems and reconnects the central density-ratio identity to
 likelihood-based models.
 
-Table :numref:`tab_gan_games` summarizes the chapter's analytical results. It
+:numref:`tab_gan_games` summarizes the chapter's analytical results. It
 lists each adversarial game, the critic's input, and the value attained by the
 optimal critic. This last quantity is what the generator minimizes. Here $p$
 denotes the data distribution, $q$ the generator distribution, and
 $\mathrm{JS}$ the Jensen--Shannon divergence; :numref:`sec_basic_gan` defines
 all three.
-
-:The games of this chapter. Each row gives an objective, what its critic scores, and the value of the game at the optimal critic.
-:label:`tab_gan_games`
-
-| objective | the critic scores | value at the optimal critic | where |
-|:--|:--|:--|:--|
-| log loss, the original GAN | one sample's realness logit | $2\,\mathrm{JS}(p, q) - 2 \log 2$, attained at the logit $\log(p/q)$ | :numref:`sec_basic_gan` |
-| non-saturating generator loss | the same critic; the generator maximizes its samples' scores | the same minimizer $q = p$ under an optimal critic; confidently rejected samples receive large weights when the critic retains a nonzero score gradient | :numref:`sec_basic_gan` |
-| proper classification losses and $f$-GAN | one sample, under other classification losses | an $f$-divergence: an average of a convex function of the ratio $p/q$ | :numref:`sec_gan_objectives` |
-| integral probability metrics: MMD, Wasserstein | one sample, scored by a critic from a constrained class | the largest expectation gap the class can certify; geometry-sensitive classes remain informative as supports separate, while a bounded kernel loses sensitivity beyond its length scale | :numref:`sec_gan_objectives` |
-| relativistic pairing, RpGAN | a real--generated pair, rewarded for ranking the real member higher | $\mathrm{JS}(p \otimes q,\, q \otimes p)$: the information a pair carries about which member is real | :numref:`sec_gan_relativistic` |
-| zero-centered gradient penalties $R_1$, $R_2$ | any of the above, with a penalty on the critic's input gradients | near equilibrium, a squared linearized Wasserstein-2 distance and dynamics that converge for every positive penalty weight | :numref:`sec_gan_convergence` |
-| the conditional game | a sample together with the condition it claims to satisfy | the average over conditions, $\mathbb{E}_c\big[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big] - 2\log 2$; shared log-linear class posteriors motivate the projection discriminator | :numref:`sec_gan_conditional` |
 
 :numref:`sec_dcgan` and :numref:`sec_gan_beyond` add no further games. The
 first assembles the penalized relativistic loss into an image generator and
@@ -86,6 +73,7 @@ convergence
 dcgan
 conditional
 adversarial-losses
+further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}

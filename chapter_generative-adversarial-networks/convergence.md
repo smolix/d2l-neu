@@ -24,8 +24,6 @@ import numpy as np
 import optax
 ```
 
-## Equilibrium Values Do Not Ensure Convergence
-
 :numref:`sec_gan_relativistic` showed that the pairing objective removes the mode-dropping basins of the classical loss: its rank weight cannot be satisfied merely by placing generated samples beyond one decision threshold. Pairing does not, however, prevent saturation on disjoint supports. Its value is a Jensen--Shannon divergence of product measures, so it reaches its maximum when generated and data samples have disjoint supports. The resulting gradient is then zero. As :numref:`sec_gan_objectives` showed, changing the classification loss changes the induced divergence but does not resolve support separation unless the objective also reflects the geometry of the sample space.
 
 The best-response analysis also omits the dynamics used in training. Every derivation so far solved the critic's inner optimization exactly and then evaluated an outer objective. Actual training solves neither problem at each step. It updates two coupled players simultaneously or alternately, and each update changes the objective faced by the other player. An equilibrium calculation alone therefore provides no convergence guarantee. In the example below, gradient training fails even though the equilibrium is unique and the generator begins close to it.
@@ -150,9 +148,9 @@ $$
 
 Constants do not enter, since $\int (p - q) = 0$ and a constant critic has zero gradient; the supremum is over critics modulo constants. The computation behind the statement is one-dimensional: along each ray $\{t D_0\}$ the objective is a scalar quadratic in $t$, and optimizing over the direction $D_0$ produces the squared dual norm. Exercise :exref:`ex_convergence-prove-eqref-eq-gan`a carries it out.
 
-Equation :eqref:`eq_gan_sobolev` is a squared norm of the *difference* $p - q$, whereas the unpenalized objectives in this chapter depend on the *ratio* $p/q$. The ratio degenerates when the supports separate, but a norm of the difference can continue to vary as the supports move. The value scales as $1/\gamma$. Its local weighting is determined by the mixture $m$, which penalizes critic variation where either distribution has mass but not outside their combined support.
+:eqref:`eq_gan_sobolev` is a squared norm of the *difference* $p - q$, whereas the unpenalized objectives in this chapter depend on the *ratio* $p/q$. The ratio degenerates when the supports separate, but a norm of the difference can continue to vary as the supports move. The value scales as $1/\gamma$. Its local weighting is determined by the mixture $m$, which penalizes critic variation where either distribution has mass but not outside their combined support.
 
-The norm also has a geometric interpretation. Equation :eqref:`eq_mdl-w2` defines the Wasserstein-2 distance as the minimum quadratic transport cost between two distributions. The Benamou--Brenier theorem :eqref:`eq_mdl-benamou-brenier` expresses the same distance as the least kinetic energy of a flow that transports one distribution into the other.
+The norm also has a geometric interpretation. :eqref:`eq_mdl-w2` defines the Wasserstein-2 distance as the minimum quadratic transport cost between two distributions. The Benamou--Brenier theorem :eqref:`eq_mdl-benamou-brenier` expresses the same distance as the least kinetic energy of a flow that transports one distribution into the other.
 
 In this dynamic formulation, an infinitesimal perturbation $h$ of a base distribution $m$ is carried by a velocity field $\nabla\phi$ satisfying the continuity equation $h + \nabla \cdot (m\, \nabla\phi) = 0$. This is the same Poisson equation solved by the optimal penalized critic, and the kinetic energy of the field is $\|h\|^2_{\dot H^{-1}(m)}$. Consequently,
 
@@ -224,7 +222,7 @@ fig.tight_layout()
 
 The phase portraits agree with the eigenvalue analysis. To visual accuracy, the integrated flow repeatedly traces the same circle, as required by the conservation law. The discrete iterates leave the dashed circle immediately and cross their previous orbit on every revolution; after 300 steps their distance from the equilibrium is twice its initial value. Both penalized trajectories converge. The underdamped trajectory follows a shrinking spiral, whereas the critically damped trajectory turns once before approaching without further rotation. The penalty changes the dynamics from divergence to convergence without changing the equilibrium of the objective.
 
-## When One Penalty Is Not Enough
+### One Penalty or Two
 
 The Dirac-GAN cannot distinguish $R_1$ from $R_2$ because the linear critic has the same slope everywhere. More generally, either penalty can suffice near equilibrium. When the supports of $p$ and $q$ nearly coincide, regularizing the critic under one measure also controls it under the other, and :eqref:`eq_gan_sobolev` holds with $m$ replaced by either measure. The local convergence result of :citet:`Mescheder.Geiger.Nowozin.2018` therefore requires only one penalty.
 
@@ -232,17 +230,26 @@ Far from equilibrium, the two penalties are no longer interchangeable. The inter
 
 The available evidence is empirical and depends on the training setting. In R3GAN's StackedMNIST ablation, training with $R_1$ alone diverged early for both the classical and pairing objectives. For the pairing objective, increasing $\gamma$ from 0.1 to 100 did not prevent divergence, whereas adding $R_2$ made training stable for both objectives :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. StyleGAN2 provides an important counterexample: it trained successfully on FFHQ using $R_1$ alone :cite:`Karras.Laine.Aittala.ea.2020`. Whether one penalty suffices therefore depends on the dataset and the remaining training choices. Both the smoothing argument and the R3GAN ablation favor symmetric regularization, at the cost of one additional term in the backward pass.
 
+A separate loss ablation uses StackedMNIST, which combines MNIST digits into a synthetic distribution with 1000 known modes :cite:`Metz.Poole.Pfau.ea.2017`, to distinguish the effects of pairing and gradient penalties:
+
+| loss | modes recovered (of 1000) | reverse KL |
+|:---|---:|---:|
+| RpGAN with $R_1$ and $R_2$ | 1000 | 0.078 |
+| GAN with $R_1$ and $R_2$ | 693 | 0.927 |
+| RpGAN with $R_1$ only | diverged | --- |
+| GAN with $R_1$ only | diverged | --- |
+
+Under identical penalties, the classical loss recovers 693 modes with reverse KL 0.927, whereas the pairing loss recovers all 1000 modes with reverse KL 0.078. Without $R_2$, both objectives diverge, and for the pairing loss no tested value of $\gamma$ from 0.1 to 100 prevents it :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. These single runs on one synthetic dataset suggest that the penalties govern convergence while pairing improves coverage; they do not establish the magnitude of either effect more broadly.
+
 ## The R3GAN Recipe
 
 The preceding results combine into a practical objective. R3GAN uses the pairing loss of :numref:`sec_gan_relativistic`, trains the generator with its non-saturating form, and subtracts both zero-centered penalties from the critic's objective. Pairing addresses mode-dropping minima in the best-response landscape, while the penalties make the equilibrium locally attracting. :citet:`Huang.Gokaslan.Kuleshov.ea.2024` show that this loss supports a comparatively simple architecture without many of the specialized components used by earlier GANs.
 
 ### The Loss in Code
 
-The implementation separates the critic loss, generator loss, and gradient penalties. For a real sample $x$ and generated sample $y$, the critic minimizes the pairing loss $\mathrm{softplus}(D(y) - D(x)) = -\log \sigma(D(x) - D(y))$, averaged over aligned pairs in the two batches. The generator reverses the ranking and minimizes $\mathrm{softplus}(D(x) - D(y))$. This is the non-saturating update used by the reference implementation, rather than the zero-sum form displayed in the paper, as discussed in :numref:`sec_gan_relativistic`. The penalty function returns unscaled per-sample squared gradient norms for both distributions. The caller applies the batch mean and the factor $\gamma/2$, allowing the same function to implement either penalty alone or their sum.
+The implementation separates the critic loss, generator loss, and gradient penalties. For a real sample $x$ and generated sample $y$, the critic minimizes the pairing loss $\mathrm{softplus}(D(y) - D(x)) = -\log \sigma(D(x) - D(y))$, averaged over aligned pairs in the two batches. The generator reverses the ranking and minimizes $\mathrm{softplus}(D(x) - D(y))$. This is the non-saturating update used by the reference implementation, rather than the zero-sum form displayed in the paper, as discussed in :numref:`sec_gan_relativistic`. The functions `gan_loss_D` and `gan_loss_G` give the classical logistic critic loss and the non-saturating generator loss under the same contract, so a training loop can take either pair of losses as an argument. The penalty function returns unscaled per-sample squared gradient norms for both distributions. The caller applies the batch mean and the factor $\gamma/2$, allowing the same function to implement either penalty alone or their sum.
 
-The two implementations differ only in their use of automatic differentiation. In PyTorch, one backward pass through the *sum* of the critic outputs produces the input gradient for every sample. This gradient decomposes by row because each output depends only on the corresponding input row; the property requires a critic without batch-mixing layers such as batch normalization. Setting `create_graph=True` retains the graph needed to differentiate the penalty with respect to the critic parameters.
-
-In JAX, a per-sample `grad` computes the input gradient and `vmap` applies it across the batch. Nested functional differentiation supplies the required second derivative without an additional flag. Both implementations first detach the samples, using `detach` in PyTorch and `stop_gradient` in JAX. Consequently, the penalty updates the critic parameters but not the process that generated the samples.
+The penalty differentiates the *sum* of the critic outputs with respect to the input batch, so one backward pass produces the input gradient for every sample. This gradient decomposes by row because each output depends only on the corresponding input row; the property requires a critic without batch-mixing layers such as batch normalization. Training then differentiates the penalty with respect to the critic parameters, a second derivative that `create_graph=True` keeps available in PyTorch and nested `grad` provides in JAX. The critic may be any function from a batch of inputs to a batch of scores, including a closure that fixes a condition, as in :numref:`sec_gan_conditional`. The samples are detached first. Consequently, the penalty updates the critic parameters but not the process that generated the samples.
 
 ```{.python .input #convergence-the-loss-in-code}
 %%tab pytorch
@@ -255,6 +262,17 @@ def rpgan_loss_D(critic, real, fake):
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator."""
     return F.softplus(critic(real) - critic(fake)).mean()
+
+#@save
+def gan_loss_D(critic, real, fake):
+    """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(y))]: the
+    batch means, where update_D reports the halved sum."""
+    return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
+
+#@save
+def gan_loss_G(critic, real, fake):
+    """Non-saturating generator loss -E[log sigma(D(y))]; real is unused."""
+    return F.softplus(-critic(fake)).mean()
 
 #@save
 def r1_r2_penalty(critic, real, fake):
@@ -280,44 +298,33 @@ def rpgan_loss_G(critic, real, fake):
     return jax.nn.softplus(critic(real) - critic(fake)).mean()
 
 #@save
+def gan_loss_D(critic, real, fake):
+    """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(y))]: the
+    batch means, where update_D reports the halved sum."""
+    return (jax.nn.softplus(-critic(real)).mean()
+            + jax.nn.softplus(critic(fake)).mean())
+
+#@save
+def gan_loss_G(critic, real, fake):
+    """Non-saturating generator loss -E[log sigma(D(y))]; real is unused."""
+    return jax.nn.softplus(-critic(fake)).mean()
+
+#@save
 def r1_r2_penalty(critic, real, fake):
     """Per-sample squared critic input gradients on real (R1) and fake (R2),
     before the gamma/2 scale."""
     def sq_grad_norm(x):
-        x = jax.lax.stop_gradient(x)
-        grad_fn = jax.grad(lambda xi: critic(xi[None, ...]).squeeze())
-        grad = jax.vmap(grad_fn)(x)
+        # Rows are independent, so the gradient of the sum is per-sample
+        grad = jax.grad(lambda x: critic(x).sum())(jax.lax.stop_gradient(x))
         return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
     return sq_grad_norm(real), sq_grad_norm(fake)
 ```
 
 The penalties are evaluated at every critic step. StyleGAN2 instead uses *lazy regularization*: it applies the penalty only every few minibatches and rescales it to compensate. In the R3GAN ablation, this schedule slightly reduced image quality on real datasets and caused training to fail on StackedMNIST and two-dimensional toy problems :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
 
-### Principles and Evidence
-:label:`subsec_gan_r3gan_principles`
+### The Penalty Weight as a Length
 
-R3GAN summarizes its ablations as six training principles. The first is a convergent objective: the paper emphasizes $R_1$, while the implemented recipe uses the pairing loss with both $R_1$ and $R_2$, as in this section. The remaining principles specify (b) a small learning rate and Adam with no first-moment momentum ($\beta_1 = 0$); (c) no normalization layers in either network; (d) bilinear interpolation rather than strided or transposed convolution for resampling; (e) leaky ReLU in both networks and no tanh at the generator output; and (f) a modern residual backbone. Their ablations report that violating (a), (b), or (c) often prevents training, whereas changing (d) or (e) mainly reduces sample quality :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. An experiment on FFHQ-256 tests whether these principles can replace the specialized components of StyleGAN2 while approximately matching parameter count and training budget:
-
-| config | change relative to the previous row | FID |
-|:---|:---|---:|
-| A | StyleGAN2 baseline | 7.5 |
-| B | remove all ten tricks: $z$ normalization, minibatch standard deviation, equalized learning rate, mapping network, style injection, weight demodulation, noise injection, mixing regularization, path-length regularization, lazy regularization | 12.5 |
-| C | add the well-behaved loss: RpGAN objective with $R_1$ and $R_2$ | 11.7 |
-| D | modernize the backbone: ResNet generator and critic | 10.0 |
-| E | widen with grouped convolutions and inverted bottlenecks | 7.0 |
-
-Removing the ten components raises FID from 7.5 to 12.5. Adding the revised loss and modernizing the architecture lowers it to 7.0, slightly below the StyleGAN2 baseline despite retaining none of the removed components :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. A separate loss ablation uses StackedMNIST, which combines MNIST digits into a synthetic distribution with 1000 known modes :cite:`Metz.Poole.Pfau.ea.2017`, to distinguish the effects of pairing and gradient penalties:
-
-| loss | modes recovered (of 1000) | reverse KL |
-|:---|---:|---:|
-| RpGAN with $R_1$ and $R_2$ | 1000 | 0.078 |
-| GAN with $R_1$ and $R_2$ | 693 | 0.927 |
-| RpGAN with $R_1$ only | diverged | --- |
-| GAN with $R_1$ only | diverged | --- |
-
-Under identical penalties, the classical loss recovers 693 modes with reverse KL 0.927, whereas the pairing loss recovers all 1000 modes with reverse KL 0.078. Without $R_2$, both objectives diverge, and for the pairing loss no tested value of $\gamma$ from 0.1 to 100 prevents it :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. These single runs on one synthetic dataset suggest that the penalties govern convergence while pairing improves coverage; they do not establish the magnitude of either effect more broadly.
-
-The reported hyperparameters and compute also delimit these results. Across R3GAN's benchmarks, $\gamma$ ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256, so a value tuned on one problem provides only an order-of-magnitude starting point for another. The quoted experiments require seven hours on eight L40 GPUs for StackedMNIST, four days for CIFAR-10, about three weeks on eight A6000s for FFHQ-256, and about a day on 32 H100s for conditional ImageNet :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. The experiment below runs in minutes; :numref:`sec_dcgan` discusses image-scale training.
+Across R3GAN's benchmarks, $\gamma$ ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256, so a value tuned on one problem provides only an order-of-magnitude starting point for another. The experiment below runs in minutes; :numref:`sec_dcgan` discusses image-scale training.
 
 ### Mode Coverage on 25 Gaussians
 :label:`subsec_gan_25_gaussians`
@@ -338,12 +345,6 @@ def sample_modes(centers, n, std=0.05):
     return centers[idx] + std * torch.randn(n, 2, device=centers.device)
 
 centers = grid_centers().to(device)
-
-def gan_loss_D(critic, real, fake):
-    return (F.softplus(-critic(real)) + F.softplus(critic(fake))).mean()
-
-def gan_loss_G(critic, fake):
-    return F.softplus(-critic(fake)).mean()
 
 def make_mlp(sizes, act):
     layers = []
@@ -376,7 +377,7 @@ def train_toy(loss_type, gamma, steps=20000, batch=256, latent=64):
         if loss_type == 'rp':
             loss_G = rpgan_loss_G(net_D, sample_modes(centers, batch), fake)
         else:
-            loss_G = gan_loss_G(net_D, fake)
+            loss_G = gan_loss_G(net_D, real, fake)
         opt_G.zero_grad(), loss_G.backward(), opt_G.step()
     return net_G
 
@@ -399,13 +400,6 @@ def sample_modes(key, centers, n, std=0.05):
     return centers[idx] + std * jax.random.normal(k2, (n, 2))
 
 centers = grid_centers()
-
-def gan_loss_D(critic, real, fake):
-    return (jax.nn.softplus(-critic(real)) +
-            jax.nn.softplus(critic(fake))).mean()
-
-def gan_loss_G(critic, fake):
-    return jax.nn.softplus(-critic(fake)).mean()
 
 class ToyMLP(nnx.Module):
     def __init__(self, d_in, d_hidden, d_out, act, rngs):
@@ -441,11 +435,10 @@ def make_steps(loss_type, gamma, batch=256, latent=64):
         kr, kz = jax.random.split(key)
         z = jax.random.normal(kz, (batch, latent))
         def loss_fn(net_G):
-            fake = net_G(z)
+            fake, real = net_G(z), sample_modes(kr, centers, batch)
             if loss_type == 'rp':
-                real = sample_modes(kr, centers, batch)
                 return rpgan_loss_G(net_D, real, fake)
-            return gan_loss_G(net_D, fake)
+            return gan_loss_G(net_D, real, fake)
         loss, grads = nnx.value_and_grad(loss_fn)(net_G)
         opt_G.update(net_G, grads)
         return loss
@@ -553,6 +546,21 @@ The displayed runs support a comparison between the unpenalized configuration an
 Coverage does not imply that the generated distribution matches the mixture. The target assigns 98.9% of its mass to the $3\sigma$ neighborhoods, but each trained generator places only about one tenth or less of its mass there in the stored runs. The mean and median nearest-center distances are more than ten times the target standard deviation $\sigma = 0.05$, indicating that the generated samples spread far beyond the target modes. Consequently, the off-mode bin dominates the 26-bin KL. The experiment shows that the penalties improve support reach and balance, but none of the three configurations closely fits the target distribution at this model size and training budget.
 
 The experiment does not distinguish the two penalized configurations because both attain the maximum coverage score on 25 well-separated modes. The reported advantage of pairing appears under greater capacity pressure in StackedMNIST: RpGAN covers 1000 of 1000 modes with reverse KL 0.078, compared with 693 modes and reverse KL 0.927 for the classical loss under the same penalties :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. The two-dimensional experiment has neither enough modes nor a sufficiently constrained generator to reproduce this difference. It supports only the narrower conclusion that the penalties improve coverage and balance in this setting. Evidence for the additional effect of pairing comes from StackedMNIST. Exercise :exref:`ex_convergence-printed-statistics-mode-coverage` asks how the reported coverage and fit statistics can differ so sharply.
+
+## The Games of This Chapter
+
+:The games of this chapter. Each row gives an objective, what its critic scores, and the value of the game at the optimal critic.
+:label:`tab_gan_games`
+
+| objective | the critic scores | value at the optimal critic | where |
+|:--|:--|:--|:--|
+| log loss, the original GAN | one sample's realness logit | $2\,\mathrm{JS}(p, q) - 2 \log 2$, attained at the logit $\log(p/q)$ | :numref:`sec_basic_gan` |
+| non-saturating generator loss | the same critic; the generator maximizes its samples' scores | the same minimizer $q = p$ under an optimal critic; confidently rejected samples receive large weights when the critic retains a nonzero score gradient | :numref:`sec_basic_gan` |
+| proper classification losses and $f$-GAN | one sample, under other classification losses | an $f$-divergence: an average of a convex function of the ratio $p/q$ | :numref:`sec_gan_objectives` |
+| integral probability metrics: MMD, Wasserstein | one sample, scored by a critic from a constrained class | the largest expectation gap the class can certify; geometry-sensitive classes remain informative as supports separate, while a bounded kernel loses sensitivity beyond its length scale | :numref:`sec_gan_objectives` |
+| relativistic pairing, RpGAN | a real--generated pair, rewarded for ranking the real member higher | $\mathrm{JS}(p \otimes q,\, q \otimes p)$: the information a pair carries about which member is real | :numref:`sec_gan_relativistic` |
+| zero-centered gradient penalties $R_1$, $R_2$ | any of the above, with a penalty on the critic's input gradients | near equilibrium, a squared linearized Wasserstein-2 distance and dynamics that converge for every positive penalty weight | :numref:`sec_gan_convergence` |
+| the conditional game | a sample together with the condition it claims to satisfy | the average over conditions, $\mathbb{E}_c\big[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big] - 2\log 2$; shared log-linear class posteriors motivate the projection discriminator | :numref:`sec_gan_conditional` |
 
 ## Summary
 
@@ -788,8 +796,6 @@ Far from equilibrium, the two penalties smooth the data and generator distributi
        distance from the equilibrium with $r^\star$. Check (b) with
        `flow=True`.
    :exlabel:`ex_convergence-non-saturating-dynamics`
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36811)
 

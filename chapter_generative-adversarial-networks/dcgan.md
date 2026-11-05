@@ -8,7 +8,6 @@ The preceding experiments used two-dimensional distributions, where a scatter pl
 %matplotlib inline
 from d2l import torch as d2l
 import numpy as np
-import pickle
 import torch
 import torchvision
 import warnings
@@ -26,7 +25,6 @@ from flax import nnx
 import numpy as np
 import optax
 import os
-import pickle
 import warnings
 from PIL import Image
 ```
@@ -305,7 +303,6 @@ def dcgan_init(module):
 
 def train_dcgan(net_D, net_G, num_epochs=20, batch_size=256, lr=0.0002,
                 latent_dim=100):
-    loss = nn.BCEWithLogitsLoss(reduction='mean')
     for net in (net_D, net_G):
         net.apply(dcgan_init)
     net_D, net_G = net_D.to(device), net_G.to(device)
@@ -321,8 +318,9 @@ def train_dcgan(net_D, net_G, num_epochs=20, batch_size=256, lr=0.0002,
             X = train_imgs[order[i:i + batch_size]]
             Z = torch.randn(batch_size, latent_dim, 1, 1, device=device)
             metric.add(
-                d2l.update_D(X, Z, net_D, net_G, loss, trainer_D).detach(),
-                d2l.update_G(Z, net_D, net_G, loss, trainer_G).detach(), 1)
+                d2l.update_D(X, Z, net_D, net_G, trainer_D).detach(),
+                d2l.update_G(Z, net_D, net_G, trainer_G).detach(),
+                batch_size)
         history.append((metric[0] / metric[2], metric[1] / metric[2]))
     return history
 ```
@@ -384,6 +382,40 @@ d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 The samples reproduce several visible properties of the dataset: centered shapes, plausible palettes, rough silhouettes, and clean backgrounds. DCGAN made the classic objective practical for image generation, but its architecture does not alter that objective. The mode-dropping minima of :numref:`sec_gan_relativistic` and the divergent dynamics of :numref:`sec_gan_convergence` therefore remain possible. DCGAN remains sensitive to hyperparameters and may collapse during longer runs. To compare objectives directly, we next use a backbone without normalization or other DCGAN-specific stabilizers.
 
 ## A Modern Minimal Backbone
+
+### Architectural Developments after DCGAN
+:label:`subsec_gan_r3gan_principles`
+
+The preceding comparison moves directly from the 2015 recipe to a 2024 backbone. During the intervening decade, many improvements to image GANs were architectural responses to specific training failures. The pattern predates DCGAN: the Laplacian-pyramid GAN split generation into stages at different scales :cite:`Denton.Chintala.Szlam.ea.2015`, while DCGAN replaced those stages with a single convolutional network stabilized by normalization :cite:`Radford.Metz.Chintala.2015`. Later methods addressed high-resolution instability, critic smoothness, long-range structure, and controllable synthesis in turn.
+
+| Design | Problem addressed |
+|:--|:--|
+| Progressive growing :cite:`Karras.Aila.Laine.ea.2017` | Instability at high resolution: both networks start at $4 \times 4$ and grow in lockstep, so the game is never played at a resolution before the coarser ones have settled. |
+| Spectral normalization :cite:`Miyato.Kataoka.Koyama.ea.2018` | An unboundedly steep critic: dividing each weight matrix by its largest singular value caps the critic's Lipschitz constant by construction. |
+| Self-attention :cite:`Zhang.Goodfellow.Metaxas.ea.2019` | Missing long-range structure: convolutional networks process texture locally, so attention gives both networks image-wide receptive fields. |
+| BigGAN :cite:`Brock.Donahue.Simonyan.2019` | Small-scale ceilings: large batches, wide networks, and a catalog of stabilizing tricks, with the paper reporting that collapse is delayed rather than removed. |
+| StyleGAN :cite:`Karras.Laine.Aila.2019` | Entangled latent factors: a mapping network and per-layer style modulation separate coarse attributes from fine detail. |
+| StyleGAN2 :cite:`Karras.Laine.Aittala.ea.2020` | Droplet artifacts introduced by StyleGAN's own normalization, which is replaced by weight demodulation. |
+| StyleGAN3 :cite:`Karras.Aittala.Laine.ea.2021` | Texture sticking to pixel coordinates, an aliasing artifact of the resampling stack, which is replaced by band-limited resampling. |
+| Projected discriminators :cite:`Sauer.Chitta.Muller.ea.2021` | Slow, unreliable critic learning: the discriminator evaluates frozen pretrained features instead of learning image statistics from scratch. |
+
+The methods in the second column address two types of problem. Some impose architectural constraints on pathologies derived earlier in the chapter. Spectral normalization is the hard-constraint counterpart of the zero-centered penalties: it bounds the critic's steepness throughout the input space rather than penalizing gradients at the data. Progressive growing does not make the high-resolution game convergent; it postpones that game until training has established a coarse representation. Other methods correct artifacts introduced by previous architectures. StyleGAN2 removes artifacts caused by StyleGAN's normalization, and StyleGAN3 removes aliasing caused by its resampling stack. These components accumulate because each addresses a different failure.
+
+R3GAN tests this distinction directly :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. It first replaces the objective with the pairing loss and both zero-centered penalties from :numref:`sec_gan_convergence`. It then uses a modern convolutional backbone without progressive growing, spectral normalization, attention, style modulation, or pretrained features. On standard benchmarks, this simpler network matches or exceeds the performance of architectures that combine those devices. The smaller comparison above follows the same design. Together, the results suggest that many architectural stabilizers compensated for deficiencies in the training objective. Capacity scaling and attention may still be useful for representational reasons. Pretrained discriminators require a separate caution: ImageNet features in the critic can favor evaluation metrics computed from similar features, a dependence considered below.
+
+R3GAN summarizes its ablations as six training principles. The first is a convergent objective: the paper emphasizes $R_1$, while the implemented recipe uses the pairing loss with both $R_1$ and $R_2$, as in this section. The remaining principles specify (b) a small learning rate and Adam with no first-moment momentum ($\beta_1 = 0$); (c) no normalization layers in either network; (d) bilinear interpolation rather than strided or transposed convolution for resampling; (e) leaky ReLU in both networks and no tanh at the generator output; and (f) a modern residual backbone. Their ablations report that violating (a), (b), or (c) often prevents training, whereas changing (d) or (e) mainly reduces sample quality :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. An experiment on FFHQ-256 tests whether these principles can replace the specialized components of StyleGAN2 while approximately matching parameter count and training budget:
+
+| config | change relative to the previous row | FID |
+|:---|:---|---:|
+| A | StyleGAN2 baseline | 7.5 |
+| B | remove all ten tricks: $z$ normalization, minibatch standard deviation, equalized learning rate, mapping network, style injection, weight demodulation, noise injection, mixing regularization, path-length regularization, lazy regularization | 12.5 |
+| C | add the well-behaved loss: RpGAN objective with $R_1$ and $R_2$ | 11.7 |
+| D | modernize the backbone: ResNet generator and critic | 10.0 |
+| E | widen with grouped convolutions and inverted bottlenecks | 7.0 |
+
+Removing the ten components raises FID from 7.5 to 12.5. Adding the revised loss and modernizing the architecture lowers it to 7.0, slightly below the StyleGAN2 baseline despite retaining none of the removed components :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
+
+### The Backbone
 
 The R3GAN recipe of :numref:`sec_gan_convergence` combines the pairing loss and two zero-centered penalties with a simpler architecture. At the scale of the sprite experiment, we use bilinear interpolation followed by an ordinary $3 \times 3$ convolution for both upsampling and downsampling. This replaces strided and transposed convolutions, whose uneven kernel overlap can produce checkerboard artifacts :cite:`Odena.Dumoulin.Olah.2016`. Both networks use leaky ReLU throughout, and the generator has no tanh output. Neither network uses normalization. Batch normalization would make each critic score depend on the entire minibatch, coupling the per-sample input gradients in :eqref:`eq_gan_r1r2` and confounding the penalty with a second stabilizer. Removing normalization also eliminates running statistics and the distinction between training and evaluation modes, so the update rules of :numref:`sec_basic_gan` apply without special cases.
 
@@ -512,56 +544,77 @@ for net in (Generator(rngs=nnx.Rngs(0)), Discriminator(rngs=nnx.Rngs(0))):
 
 The generator has about 2.8 million parameters and the critic about 1.6 million. This model is a reduced instance of the R3GAN design rather than the published Config E. We omit its grouped convolutions, inverted bottlenecks, and additional residual depth, which provide capacity at the larger scale considered in that work.
 
-Two additional training choices complete the recipe. First, random horizontal flips augment the real images. A critic with enough capacity can memorize a dataset of this size, and augmentation reduces that risk; :citet:`Karras.Aittala.Hellsten.ea.2020` develops a feedback-controlled version for larger models. Second, evaluation uses an exponential moving average of the generator parameters rather than the raw iterates. This is the weight EMA introduced for classifiers in :eqref:`eq_ema`. The two-player dynamics analyzed in :numref:`sec_gan_convergence` rotate while contracting, so averaging successive iterates can also reduce their displacement from the equilibrium. We use a half-life of 500 steps.
+Two additional training choices complete the recipe. First, random horizontal flips augment the real images. A critic with enough capacity can memorize a dataset of this size, and augmentation reduces that risk; :citet:`Karras.Aittala.Hellsten.ea.2020` develops a feedback-controlled version for larger models. Second, evaluation uses an exponential moving average of the generator parameters rather than the raw iterates. This is the weight EMA introduced for classifiers in :eqref:`eq_ema`. The two-player dynamics analyzed in :numref:`sec_gan_convergence` rotate while contracting, so averaging successive iterates can also reduce their displacement from the equilibrium. We use a half-life of 500 steps. The saved class `EMA` keeps the averaged network as `ema.model`; it averages the parameters and copies buffers such as batch-norm statistics, so it also applies to networks with batch normalization.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab pytorch
+#@save
 class EMA:
-    """Exponential moving average of model weights, given as a half-life."""
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied."""
     def __init__(self, model, half_life):
-        self.shadow = {k: v.detach().clone()
-                       for k, v in model.state_dict().items()}
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False)
         self.decay = 0.5 ** (1 / half_life)
 
     def update(self, model):
         with torch.no_grad():
-            for k, v in model.state_dict().items():
-                self.shadow[k].lerp_(v, 1 - self.decay)
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
 
-    def copy_to(self, model):
-        model.load_state_dict(self.shadow)
-
-def sample_real(images, n):
-    """Draw a training batch with random horizontal flips."""
+#@save
+def sample_real(images, n, labels=None):
+    """Draw a training batch with random horizontal flips (and its labels)."""
     idx = torch.randint(0, len(images), (n,), device=images.device)
     batch = images[idx]
     flip = torch.rand(n, device=images.device) < 0.5
-    return torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1), batch)
+    batch = torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1), batch)
+    return batch if labels is None else (batch, labels[idx])
+
+#@save
+def ranking_accuracy(critic, real, fake):
+    """Fraction of aligned (real, generated) pairs with D(real) > D(fake)."""
+    with torch.no_grad():
+        return float((critic(real) > critic(fake)).float().mean())
 ```
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab jax
+#@save
 class EMA:
-    """Exponential moving average of model weights, given as a half-life."""
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Other state such as batch-norm statistics is copied."""
     def __init__(self, model, half_life):
-        self.shadow = jax.tree.map(jnp.copy, nnx.state(model, nnx.Param))
+        self.model = nnx.clone(model)
         self.decay = 0.5 ** (1 / half_life)
 
     def update(self, model):
-        self.shadow = jax.tree.map(
-            lambda s, p: self.decay * s + (1 - self.decay) * p,
-            self.shadow, nnx.state(model, nnx.Param))
+        self._average(self.model, model, self.decay)
 
-    def copy_to(self, model):
-        nnx.update(model, self.shadow)
+    @staticmethod
+    @nnx.jit
+    def _average(avg, model, decay):
+        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
+                              nnx.state(avg, nnx.Param),
+                              nnx.state(model, nnx.Param))
+        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
-def sample_real(key, images, n):
-    """Draw a training batch with random horizontal flips."""
+#@save
+def sample_real(key, images, n, labels=None):
+    """Draw a training batch with random horizontal flips (and its labels)."""
     k1, k2 = jax.random.split(key)
     idx = jax.random.randint(k1, (n,), 0, len(images))
     batch = images[idx]
     flip = jax.random.bernoulli(k2, 0.5, (n,))
-    return jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :], batch)
+    batch = jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :], batch)
+    return batch if labels is None else (batch, labels[idx])
+
+#@save
+def ranking_accuracy(critic, real, fake):
+    """Fraction of aligned (real, generated) pairs with D(real) > D(fake)."""
+    return float((critic(real) > critic(fake)).mean())
 ```
 
 ## Loss A/B on One Backbone
@@ -588,15 +641,14 @@ def train_backbone(loss_type, gamma=10, num_steps=15000, batch_size=64,
                                  betas=(0.0, 0.99))
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr,
                                  betas=(0.0, 0.99))
-    loss = nn.BCEWithLogitsLoss(reduction='mean')
     ema, history = EMA(net_G, half_life), []
     for step in range(1, num_steps + 1):
         X = sample_real(train_imgs, batch_size)
         Z = torch.randn(batch_size, latent_dim, device=device)
         Z2 = torch.randn(batch_size, latent_dim, device=device)
         if loss_type == 'classic':
-            loss_D = d2l.update_D(X, Z, net_D, net_G, loss, trainer_D)
-            loss_G = d2l.update_G(Z2, net_D, net_G, loss, trainer_G)
+            loss_D = d2l.update_D(X, Z, net_D, net_G, trainer_D) / batch_size
+            loss_G = d2l.update_G(Z2, net_D, net_G, trainer_G) / batch_size
         else:
             fake = net_G(Z).detach()
             r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)
@@ -613,9 +665,7 @@ def train_backbone(loss_type, gamma=10, num_steps=15000, batch_size=64,
                 d_real = net_D(sample_real(train_imgs, 256)).mean()
             history.append((step, float(loss_D.detach()),
                             float(loss_G.detach()), float(d_real)))
-    ema_G = Generator().to(device)
-    ema.copy_to(ema_G)
-    return ema_G, net_D, torch.tensor(history)
+    return ema.model, net_D, torch.tensor(history)
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
@@ -662,9 +712,7 @@ def train_backbone(loss_type, gamma=10.0, num_steps=15000, batch_size=64,
             d_real = net_D(sample_real(kd, train_imgs, 256)).mean()
             history.append((step, float(loss_D), float(loss_G),
                             float(d_real)))
-    ema_G = Generator(rngs=nnx.Rngs(0))
-    ema.copy_to(ema_G)
-    return ema_G, net_D, np.array(history)
+    return ema.model, net_D, np.array(history)
 ```
 
 These two runs are the longest computation in the chapter. The penalized arm costs more because the penalty differentiates the critic's input gradient a second time. On one RTX 4090, the pair takes twenty to thirty minutes in PyTorch and about half that time in JAX; peak memory remains modest at batch size 64. After each run, we compare the critic's mean score on training and held-out images. A positive training--holdout gap is evidence that the critic distinguishes its training set from unseen images, whereas a gap near zero shows no such difference in the mean score. This statistic does not determine whether the *generator* memorizes training images. :numref:`subsec_gan_limited_data` tests generator memorization directly by comparing generated samples with their nearest training images.
@@ -776,25 +824,6 @@ In the classic arm, the discriminator loss remains near zero while the generator
 
 In the penalized arm, both losses remain near their equilibrium values. After an initial transient, the critic's mean score on real images stays within a narrow band. The position of this band varies between runs because the pairing objective depends only on score *differences*. Its absolute level is the shift-invariant direction identified in :numref:`sec_gan_relativistic`, and gradient penalties do not determine that level.
 
-### Architectural Developments after DCGAN
-
-The preceding comparison moves directly from the 2015 recipe to a 2024 backbone. During the intervening decade, many improvements to image GANs were architectural responses to specific training failures. The pattern predates DCGAN: the Laplacian-pyramid GAN split generation into stages at different scales :cite:`Denton.Chintala.Szlam.ea.2015`, while DCGAN replaced those stages with a single convolutional network stabilized by normalization :cite:`Radford.Metz.Chintala.2015`. Later methods addressed high-resolution instability, critic smoothness, long-range structure, and controllable synthesis in turn.
-
-| Design | Problem addressed |
-|:--|:--|
-| Progressive growing :cite:`Karras.Aila.Laine.ea.2017` | Instability at high resolution: both networks start at $4 \times 4$ and grow in lockstep, so the game is never played at a resolution before the coarser ones have settled. |
-| Spectral normalization :cite:`Miyato.Kataoka.Koyama.ea.2018` | An unboundedly steep critic: dividing each weight matrix by its largest singular value caps the critic's Lipschitz constant by construction. |
-| Self-attention :cite:`Zhang.Goodfellow.Metaxas.ea.2019` | Missing long-range structure: convolutional networks process texture locally, so attention gives both networks image-wide receptive fields. |
-| BigGAN :cite:`Brock.Donahue.Simonyan.2019` | Small-scale ceilings: large batches, wide networks, and a catalog of stabilizing tricks, with the paper reporting that collapse is delayed rather than removed. |
-| StyleGAN :cite:`Karras.Laine.Aila.2019` | Entangled latent factors: a mapping network and per-layer style modulation separate coarse attributes from fine detail. |
-| StyleGAN2 :cite:`Karras.Laine.Aittala.ea.2020` | Droplet artifacts introduced by StyleGAN's own normalization, which is replaced by weight demodulation. |
-| StyleGAN3 :cite:`Karras.Aittala.Laine.ea.2021` | Texture sticking to pixel coordinates, an aliasing artifact of the resampling stack, which is replaced by band-limited resampling. |
-| Projected discriminators :cite:`Sauer.Chitta.Muller.ea.2021` | Slow, unreliable critic learning: the discriminator evaluates frozen pretrained features instead of learning image statistics from scratch. |
-
-The methods in the second column address two types of problem. Some impose architectural constraints on pathologies derived earlier in the chapter. Spectral normalization is the hard-constraint counterpart of the zero-centered penalties: it bounds the critic's steepness throughout the input space rather than penalizing gradients at the data. Progressive growing does not make the high-resolution game convergent; it postpones that game until training has established a coarse representation. Other methods correct artifacts introduced by previous architectures. StyleGAN2 removes artifacts caused by StyleGAN's normalization, and StyleGAN3 removes aliasing caused by its resampling stack. These components accumulate because each addresses a different failure.
-
-R3GAN tests this distinction directly :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. It first replaces the objective with the pairing loss and both zero-centered penalties from :numref:`sec_gan_convergence`. It then uses a modern convolutional backbone without progressive growing, spectral normalization, attention, style modulation, or pretrained features. On standard benchmarks, this simpler network matches or exceeds the performance of architectures that combine those devices. The smaller comparison above follows the same design. Together, the results suggest that many architectural stabilizers compensated for deficiencies in the training objective. Capacity scaling and attention may still be useful for representational reasons. Pretrained discriminators require a separate caution: ImageNet features in the critic can favor evaluation metrics computed from similar features, a dependence considered below.
-
 ## Measuring Sample Quality
 
 Sample grids reveal gross failures such as collapse, but they do not support systematic comparisons across checkpoints or hyperparameters. An implicit generator also provides no likelihood with which to rank such models. Instead, common metrics pass $n$ real and $n$ generated images through a fixed feature map $\phi$ and compare the resulting feature distributions. The two metrics used here apply the chapter's analytically tractable Wasserstein and MMD cases in this feature space.
@@ -825,7 +854,9 @@ with real features $\phi_i$, generated features $\phi'_j$, and the polynomial ke
 
 ```{.python .input #dcgan-measuring-sample-quality}
 %%tab pytorch, jax
+#@save
 def fid_score(feat_p, feat_q):
+    """Frechet distance between Gaussians fitted to two feature sets."""
     feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
     mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
     C_p = np.cov(feat_p, rowvar=False)
@@ -837,7 +868,9 @@ def fid_score(feat_p, feat_q):
     return (((mu_p - mu_q) ** 2).sum() + np.trace(C_p) + np.trace(C_q)
             - 2 * np.sqrt(np.maximum(cross, 0)).sum())
 
+#@save
 def kid_score(feat_p, feat_q):
+    """Unbiased MMD^2 between two feature sets, cubic polynomial kernel."""
     m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
     K_pp = (feat_p @ feat_p.T / d + 1) ** 3
     K_qq = (feat_q @ feat_q.T / d + 1) ** 3
@@ -849,57 +882,69 @@ def kid_score(feat_p, feat_q):
 
 ### A Feature Network Trained in the Notebook
 
-Both metrics require a feature map $\phi$. Published FID usually uses pooled features from an Inception-v3 classifier trained on ImageNet. To keep the experiment reproducible within the notebook, we train a small convolutional classifier on CIFAR-10 in about two minutes and use its 128-dimensional penultimate layer as $\phi$. This choice retains a limitation of standard FID: features learned on one distribution, here natural photographs from ten classes, evaluate another distribution, here sprites. We train the network on bilinearly upsampled $64 \times 64$ CIFAR-10 images rather than downsampling the sprites to $32 \times 32$. Downsampling generated images could suppress checkerboard texture and lost fine detail that the metric should detect.
+Both metrics require a feature map $\phi$. Published FID usually uses pooled features from an Inception-v3 classifier trained on ImageNet. To keep the experiment reproducible within the notebook, we train a small convolutional classifier on CIFAR-10 in about two minutes and use its 128-dimensional penultimate layer as $\phi$. This choice retains a limitation of standard FID: features learned on one distribution, here natural photographs from ten classes, evaluate another distribution, here sprites. We train the network on bilinearly upsampled $64 \times 64$ CIFAR-10 images rather than downsampling the sprites to $32 \times 32$. Downsampling generated images could suppress checkerboard texture and lost fine detail that the metric should detect. The loader, the network, whose `resolution` argument sets the size to which it resizes its inputs, and its training recipe are saved to the `d2l` library for reuse in :numref:`sec_gan_conditional`.
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-1}
 %%tab pytorch
-d2l.DATA_HUB['cifar10'] = (
-    'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-    '874905e36347c8536514d0a26261acf3bff89bc7')
-cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+#@save
+def load_cifar10_arrays():
+    """CIFAR-10 on the GPU if there is one, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y."""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = torch.tensor(batch[b'data'], dtype=torch.float32)
+        return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
+            batch[b'labels'])
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    device = d2l.try_gpu()
+    return (torch.cat(Xs).to(device), torch.cat(ys).to(device),
+            test_X.to(device), test_y.to(device))
 
-def load_cifar_batch(path):
-    with open(path, 'rb') as f, warnings.catch_warnings():
-        warnings.simplefilter('ignore')   # legacy NumPy pickle format
-        batch = pickle.load(f, encoding='bytes')
-    X = torch.tensor(batch[b'data'], dtype=torch.float32)
-    return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
-        batch[b'labels'])
-
-Xs, ys = zip(*[load_cifar_batch(f'{cifar_dir}/data_batch_{i}')
-               for i in range(1, 6)])
-cifar_X, cifar_y = torch.cat(Xs).to(device), torch.cat(ys).to(device)
-test_X, test_y = load_cifar_batch(f'{cifar_dir}/test_batch')
-test_X, test_y = test_X.to(device), test_y.to(device)
+cifar_X, cifar_y, test_X, test_y = load_cifar10_arrays()
 ```
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-1}
 %%tab jax
-d2l.DATA_HUB['cifar10'] = (
-    'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-    '874905e36347c8536514d0a26261acf3bff89bc7')
-cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+#@save
+def load_cifar10_arrays():
+    """CIFAR-10 on the default device, pixel values scaled to [-1, 1].
+    Returns train_X, train_y, test_X, test_y."""
+    import pickle, warnings  # not in the d2l library preamble
+    d2l.DATA_HUB['cifar10'] = (
+        'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+        '874905e36347c8536514d0a26261acf3bff89bc7')
+    cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
+    def load_batch(name):
+        with open(f'{cifar_dir}/{name}', 'rb') as f, warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # legacy NumPy pickle format
+            batch = pickle.load(f, encoding='bytes')
+        X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
+                jnp.asarray(batch[b'labels']))
+    Xs, ys = zip(*[load_batch(f'data_batch_{i}') for i in range(1, 6)])
+    test_X, test_y = load_batch('test_batch')
+    return jnp.concatenate(Xs), jnp.concatenate(ys), test_X, test_y
 
-def load_cifar_batch(path):
-    with open(path, 'rb') as f, warnings.catch_warnings():
-        warnings.simplefilter('ignore')   # legacy NumPy pickle format
-        batch = pickle.load(f, encoding='bytes')
-    X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-    return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
-            jnp.asarray(batch[b'labels']))
-
-Xs, ys = zip(*[load_cifar_batch(f'{cifar_dir}/data_batch_{i}')
-               for i in range(1, 6)])
-cifar_X, cifar_y = jnp.concatenate(Xs), jnp.concatenate(ys)
-test_X, test_y = load_cifar_batch(f'{cifar_dir}/test_batch')
+cifar_X, cifar_y, test_X, test_y = load_cifar10_arrays()
 ```
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab pytorch
+#@save
 class FeatureCNN(nn.Module):
-    """Three conv blocks, global average pooling, and a linear head."""
-    def __init__(self, feature_dim=128):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution."""
+    def __init__(self, feature_dim=128, resolution=32):
         super().__init__()
+        self.resolution = resolution
         widths = [3, 32, 64, feature_dim]
         self.blocks = nn.ModuleList(
             [nn.Sequential(nn.Conv2d(c_in, c_out, 3, padding=1),
@@ -909,6 +954,9 @@ class FeatureCNN(nn.Module):
         self.head = nn.Linear(feature_dim, 10)
 
     def features(self, x):
+        if x.shape[-1] != self.resolution:
+            x = F.interpolate(x, size=(self.resolution, self.resolution),
+                              mode='bilinear')
         for block in self.blocks:
             x = block(x)
         return x.mean(dim=(2, 3))
@@ -916,31 +964,48 @@ class FeatureCNN(nn.Module):
     def forward(self, x):
         return self.head(self.features(x))
 
-def upsample(X):
-    return F.interpolate(X, size=(64, 64), mode='bilinear')
+#@save
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode."""
+    torch.manual_seed(seed)
+    opt = torch.optim.Adam(cnn.parameters())
+    sched = torch.optim.lr_scheduler.OneCycleLR(
+        opt, max_lr, total_steps=num_epochs * (len(X) // batch_size),
+        cycle_momentum=False)
+    h, w = X.shape[2:]
+    cnn.train()
+    for epoch in range(num_epochs):
+        order = torch.randperm(len(X), device=X.device)
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            Xb, yb = X[order[i:i + batch_size]], y[order[i:i + batch_size]]
+            flip = torch.rand(len(Xb), 1, 1, 1, device=X.device) < 0.5
+            Xb = torch.where(flip, Xb.flip(-1), Xb)
+            a, b = torch.randint(0, 2 * shift + 1, (2,)).tolist()
+            Xb = F.pad(Xb, (shift,) * 4, mode='reflect')[..., a:a + h, b:b + w]
+            loss = F.cross_entropy(cnn(Xb), yb)
+            opt.zero_grad(), loss.backward(), opt.step(), sched.step()
+    cnn.eval()
 
 torch.manual_seed(0)
-cnn = FeatureCNN().to(device)
-opt = torch.optim.Adam(cnn.parameters(), lr=0.001)
-for epoch in range(3):
-    order = torch.randperm(len(cifar_X), device=device)
-    for i in range(0, len(order) - 255, 256):
-        idx = order[i:i + 256]
-        l = F.cross_entropy(cnn(upsample(cifar_X[idx])), cifar_y[idx])
-        opt.zero_grad(), l.backward(), opt.step()
-cnn.eval()
+cnn = FeatureCNN(resolution=64).to(device)
+train_feature_cnn(cnn, cifar_X, cifar_y)
 with torch.no_grad():
-    pred = torch.cat([cnn(upsample(test_X[i:i + 1000])).argmax(1)
+    pred = torch.cat([cnn(test_X[i:i + 1000]).argmax(1)
                       for i in range(0, len(test_X), 1000)])
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab jax
+#@save
 class FeatureCNN(nnx.Module):
-    """Three conv blocks, global average pooling, and a linear head."""
-    def __init__(self, feature_dim=128, rngs=None):
+    """Three conv blocks, global average pooling, and a linear head. Inputs
+    are first resized bilinearly to resolution x resolution."""
+    def __init__(self, feature_dim=128, resolution=32, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.resolution = resolution
         widths = [3, 32, 64, feature_dim]
         self.convs = nnx.List(
             [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
@@ -953,6 +1018,10 @@ class FeatureCNN(nnx.Module):
         self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
 
     def features(self, x):
+        if x.shape[1] != self.resolution:
+            x = jax.image.resize(
+                x, (x.shape[0], self.resolution, self.resolution, x.shape[3]),
+                method='bilinear')
         for conv, norm in zip(self.convs, self.norms):
             x = nnx.max_pool(nnx.relu(norm(conv(x))),
                              window_shape=(2, 2), strides=(2, 2))
@@ -961,29 +1030,44 @@ class FeatureCNN(nnx.Module):
     def __call__(self, x):
         return self.head(self.features(x))
 
-def upsample(X):
-    return jax.image.resize(X, (X.shape[0], 64, 64, 3), method='bilinear')
+#@save
+def train_feature_cnn(cnn, X, y, num_epochs=15, max_lr=0.003,
+                      batch_size=256, shift=0, seed=0):
+    """Train on random horizontal flips, plus random shifts of up to `shift`
+    pixels, with a one-cycle learning rate; end in evaluation mode."""
+    schedule = optax.cosine_onecycle_schedule(
+        num_epochs * (len(X) // batch_size), max_lr)
+    opt = nnx.Optimizer(cnn, optax.adam(schedule), wrt=nnx.Param)
+    h, w = X.shape[1:3]
 
-@nnx.jit
-def cnn_step(cnn, opt, X, y):
-    def loss_fn(cnn):
-        return optax.softmax_cross_entropy_with_integer_labels(
-            cnn(upsample(X)), y).mean()
-    l, grads = nnx.value_and_grad(loss_fn)(cnn)
-    opt.update(cnn, grads)
-    return l
+    @nnx.jit
+    def step(cnn, opt, Xb, yb, key):
+        k1, k2 = jax.random.split(key)
+        flip = jax.random.bernoulli(k1, 0.5, (len(Xb), 1, 1, 1))
+        Xb = jnp.where(flip, Xb[:, :, ::-1], Xb)
+        a, b = jax.random.randint(k2, (2,), 0, 2 * shift + 1)
+        Xb = jnp.pad(Xb, ((0, 0), (shift, shift), (shift, shift), (0, 0)),
+                     mode='reflect')
+        Xb = jax.lax.dynamic_slice(Xb, (0, a, b, 0), (len(Xb), h, w, 3))
+        def loss_fn(cnn):
+            return optax.softmax_cross_entropy_with_integer_labels(
+                cnn(Xb), yb).mean()
+        opt.update(cnn, nnx.grad(loss_fn)(cnn))
 
-cnn = FeatureCNN(rngs=nnx.Rngs(0))
-opt = nnx.Optimizer(cnn, optax.adam(0.001), wrt=nnx.Param)
-key = jax.random.PRNGKey(3)
-for epoch in range(3):
-    key, kp = jax.random.split(key)
-    order = jax.random.permutation(kp, len(cifar_X))
-    for i in range(0, len(order) - 255, 256):
-        idx = order[i:i + 256]
-        cnn_step(cnn, opt, cifar_X[idx], cifar_y[idx])
-cnn.eval()
-pred = jnp.concatenate([cnn(upsample(test_X[i:i + 1000])).argmax(1)
+    cnn.train()
+    key = jax.random.PRNGKey(seed)
+    for epoch in range(num_epochs):
+        key, kp = jax.random.split(key)
+        order = jax.random.permutation(kp, len(X))
+        for i in range(0, len(order) - batch_size + 1, batch_size):
+            key, ka = jax.random.split(key)
+            idx = order[i:i + batch_size]
+            step(cnn, opt, X[idx], y[idx], ka)
+    cnn.eval()
+
+cnn = FeatureCNN(resolution=64, rngs=nnx.Rngs(0))
+train_feature_cnn(cnn, cifar_X, cifar_y)
+pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
                         for i in range(0, len(test_X), 1000)])
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 ```
@@ -1052,8 +1136,6 @@ Both scores rank the penalized relativistic run far above the collapsed classic 
 The main limitations concern the evaluation design. First, each score depends on the feature network as well as the generator. Our CIFAR-trained CNN emphasizes properties useful for CIFAR-10 classification, just as Inception features emphasize properties useful for ImageNet classification. Changing the feature network changes the values and may reverse the ordering of two similar models; Exercise :exref:`ex_dcgan-retrain-feature-network-this` tests this dependence.
 
 Second, the evaluation features may overlap with features used during training. Matching the ImageNet class histogram of the real data can reduce Inception-based FID without a visible improvement in sample quality. A discriminator built from ImageNet-pretrained features may exploit this dependence :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`; R3GAN therefore reports results without pretrained discriminators :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Third, preprocessing affects the score. Incorrect antialiasing during resizing can shift FID by amounts comparable to reported differences between methods :cite:`Parmar.Zhang.Zhu.2022`. We avoid one such change by training the feature network at the sprites' native resolution. Finally, the finite-sample bias shown by the reference row depends on both the model and $n$. At small sample sizes, this bias alone can reverse a ranking :cite:`Chong.Forsyth.2020`; Exercise :exref:`ex_dcgan-measure-finite-sample-bias` measures the effect.
-
-A single score also combines two distinct failures: low-fidelity samples and missing modes. The precision and recall metrics of :citet:`Kynkaanniemi.Karras.Laine.ea.2019` separate them through feature-space neighborhoods. Precision measures the fraction of generated samples that lie within the support of the real features; recall measures the fraction of real samples covered by generated features. A collapsed generator can retain nonzero precision if its single output lies near the data manifold, while its recall approaches zero. FID does not expose this asymmetry. R3GAN therefore reports recall as a separate measure of diversity alongside FID.
 
 ## Limited Data, Scale, and Scope
 
@@ -1357,8 +1439,6 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        below about 0.85, but not reliably above. Why can a finite critic
        trained on a finite dataset fail before the limit $\pi = 1$?
    :exlabel:`ex_dcgan-augmentation-leaks`
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36812)
 

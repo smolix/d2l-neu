@@ -13,6 +13,7 @@ This interaction raises a precise question: which discrepancy between distributi
 from d2l import torch as d2l
 import torch
 from torch import nn
+from torch.nn import functional as F
 ```
 
 ```{.python .input #gan-generative-adversarial-networks}
@@ -234,18 +235,16 @@ One training iteration is two half-steps, one per player. The discriminator upda
 ```{.python .input #gan-the-update-rules-1}
 %%tab pytorch
 #@save
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update the discriminator."""
-    batch_size = X.shape[0]
-    ones = torch.ones((batch_size,), device=X.device)
-    zeros = torch.zeros((batch_size,), device=X.device)
+def update_D(X, Z, net_D, net_G, trainer_D):
+    """Update the discriminator; return the summed log loss, halved."""
     trainer_D.zero_grad()
     real_Y = net_D(X)
     # The generator is the fixed player here: detach its output
-    fake_X = net_G(Z)
-    fake_Y = net_D(fake_X.detach())
-    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
-              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
+    fake_Y = net_D(net_G(Z).detach())
+    loss_D = (F.binary_cross_entropy_with_logits(
+                  real_Y, torch.ones_like(real_Y), reduction='sum') +
+              F.binary_cross_entropy_with_logits(
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
     loss_D.backward()
     trainer_D.step()
     return loss_D
@@ -256,7 +255,7 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
 #@save
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the discriminator."""
+    """Update the discriminator; return the summed log loss, halved."""
     batch_size = X.shape[0]
     fake_X = net_G(Z)  # computed outside the loss: no gradient to net_G
     def loss_D_fn(model_D):
@@ -276,14 +275,13 @@ The generator update implements the non-saturating loss of :eqref:`eq_gan_weight
 ```{.python .input #gan-the-update-rules-2}
 %%tab pytorch
 #@save
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update the generator on the non-saturating loss."""
-    batch_size = Z.shape[0]
-    ones = torch.ones((batch_size,), device=Z.device)
+def update_G(Z, net_D, net_G, trainer_G):
+    """Update the generator on the non-saturating loss; return its sum."""
     trainer_G.zero_grad()
     # net_D changed in its half-step, so recompute the scores
     fake_Y = net_D(net_G(Z))
-    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
+    loss_G = F.binary_cross_entropy_with_logits(
+        fake_Y, torch.ones_like(fake_Y), reduction='sum')
     loss_G.backward()
     trainer_G.step()
     return loss_G
@@ -294,7 +292,7 @@ def update_G(Z, net_D, net_G, loss, trainer_G):
 #@save
 @nnx.jit
 def update_G(Z, net_D, net_G, optimizer_G):
-    """Update the generator on the non-saturating loss."""
+    """Update the generator on the non-saturating loss; return its sum."""
     def loss_G_fn(model_G, model_D):
         fake_Y = model_D(model_G(Z)).squeeze()
         return jnp.sum(optax.sigmoid_binary_cross_entropy(
@@ -314,7 +312,6 @@ The loop alternates the two half-steps over minibatches, records each player's p
 def train(net_D, net_G, data_iter, num_epochs, lr_D=0.05, lr_G=0.005,
           step_G=None, snapshot_epochs=()):
     step_G = step_G if step_G is not None else update_G
-    loss = nn.BCEWithLogitsLoss(reduction='sum')
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr_D)
     trainer_G = torch.optim.Adam(net_G.parameters(), lr=lr_G)
     history, snapshots = [], {}
@@ -323,8 +320,8 @@ def train(net_D, net_G, data_iter, num_epochs, lr_D=0.05, lr_G=0.005,
         for (X,) in data_iter:
             Zb = torch.normal(0, 1, (X.shape[0], 2))
             metric.add(
-                update_D(X, Zb, net_D, net_G, loss, trainer_D).detach(),
-                step_G(Zb, net_D, net_G, loss, trainer_G).detach(),
+                update_D(X, Zb, net_D, net_G, trainer_D).detach(),
+                step_G(Zb, net_D, net_G, trainer_G).detach(),
                 X.shape[0])
         history.append((metric[0] / metric[2], metric[1] / metric[2]))
         if epoch in snapshot_epochs:
@@ -398,12 +395,12 @@ axes[1].legend()
 fig.tight_layout()
 ```
 
-The loss curves provide an empirical check of the value calculation. While real and generated samples remain distinguishable, the discriminator loss is below $\log 2$. As the generator improves, the loss approaches the dashed line at $\log 2 \approx 0.693$. Equation :eqref:`eq_gan_js_value` places the optimal discriminator's per-sample negative log-likelihood at $\log 2 - \mathrm{JS}(p, q)$, so the observed rise is consistent with $\mathrm{JS}$ approaching zero. The generator loss approaches the same level from above for a different reason. By :eqref:`eq_gan_ns_value`, the non-saturating loss against a near-optimal critic approaches its minimum $\log 2$ as $q$ approaches $p$. The sample overlay provides a separate qualitative check: generated samples occupy the same tilted ellipse as the data. Nevertheless, a discriminator loss of $\log 2$ establishes only that the trained discriminator cannot distinguish the samples. It does not prove that $q=p$, so the next two measurements evaluate the fit independently.
+The loss curves provide an empirical check of the value calculation. While real and generated samples remain distinguishable, the discriminator loss is below $\log 2$. As the generator improves, the loss approaches the dashed line at $\log 2 \approx 0.693$. :eqref:`eq_gan_js_value` places the optimal discriminator's per-sample negative log-likelihood at $\log 2 - \mathrm{JS}(p, q)$, so the observed rise is consistent with $\mathrm{JS}$ approaching zero. The generator loss approaches the same level from above for a different reason. By :eqref:`eq_gan_ns_value`, the non-saturating loss against a near-optimal critic approaches its minimum $\log 2$ as $q$ approaches $p$. The sample overlay provides a separate qualitative check: generated samples occupy the same tilted ellipse as the data. Nevertheless, a discriminator loss of $\log 2$ establishes only that the trained discriminator cannot distinguish the samples. It does not prove that $q=p$, so the next two measurements evaluate the fit independently.
 
 ### Verifying the Optimal Critic
 :label:`subsec_gan_verify_critic`
 
-Equation :eqref:`eq_gan_dstar` states that an optimal critic computes $\lambda = \log(p/q)$. Both densities are known in this experiment: $p = \mathcal{N}(b, A^\top A)$ by construction, and the trained linear generator determines the Gaussian $q$. Two conditions are needed for a useful check. First, the theorem concerns the best response to a *fixed* generator, whereas ordinary training alternates between the two networks. We therefore freeze the generator and give the critic additional steps to converge. Second, by the end of the main run $q$ is so close to $p$ that $\lambda$ is nearly zero throughout the sampled region. We instead freeze the partially trained generator at epoch ten, when the mismatch remains measurable.
+:eqref:`eq_gan_dstar` states that an optimal critic computes $\lambda = \log(p/q)$. Both densities are known in this experiment: $p = \mathcal{N}(b, A^\top A)$ by construction, and the trained linear generator determines the Gaussian $q$. Two conditions are needed for a useful check. First, the theorem concerns the best response to a *fixed* generator, whereas ordinary training alternates between the two networks. We therefore freeze the generator and give the critic additional steps to converge. Second, by the end of the main run $q$ is so close to $p$ that $\lambda$ is nearly zero throughout the sampled region. We instead freeze the partially trained generator at epoch ten, when the mismatch remains measurable.
 
 ```{.python .input #gan-verifying-the-optimal-critic-1}
 %%tab pytorch
@@ -419,13 +416,12 @@ def generator_gaussian(net_G):
 
 net_G_mid, net_D_mid = make_nets()
 train(net_D_mid, net_G_mid, data_iter, num_epochs=10)
-loss = nn.BCEWithLogitsLoss(reduction='sum')
 trainer_D = torch.optim.Adam(net_D_mid.parameters(), lr=0.01)
 torch.manual_seed(2)
 for _ in range(2000):  # critic-only steps against the frozen generator
     X = data[torch.randint(0, 1000, (256,))]
     Zb = torch.normal(0, 1, (256, 2))
-    update_D(X, Zb, net_D_mid, net_G_mid, loss, trainer_D)
+    update_D(X, Zb, net_D_mid, net_G_mid, trainer_D)
 ```
 
 ```{.python .input #gan-verifying-the-optimal-critic-1}
@@ -552,13 +548,12 @@ Testing the two weights in :eqref:`eq_gan_weights` requires an initialization at
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
-def update_G_saturating(Z, net_D, net_G, loss, trainer_G):
-    batch_size = Z.shape[0]
-    zeros = torch.zeros((batch_size,), device=Z.device)
+def update_G_saturating(Z, net_D, net_G, trainer_G):
     trainer_G.zero_grad()
     fake_Y = net_D(net_G(Z))
     # minimize E[log sigma(-D)]: the minimax game taken literally
-    loss_G = -loss(fake_Y, zeros.reshape(fake_Y.shape))
+    loss_G = -F.binary_cross_entropy_with_logits(
+        fake_Y, torch.zeros_like(fake_Y), reduction='sum')
     loss_G.backward()
     trainer_G.step()
     return loss_G
@@ -645,7 +640,7 @@ axes[2].legend()
 fig.tight_layout()
 ```
 
-The printed KL values quantify the predicted difference. The saturating generator remains near its initialization, and its final divergence exceeds three hundred nats. The discriminator reaches near-zero loss within the first few epochs, so $\sigma(D(x')) \approx 0$ for every generated sample. Equation :eqref:`eq_gan_weights` then assigns nearly zero weight to each generator update. Because the generator scarcely changes, the discriminator can continue to reject its samples confidently.
+The printed KL values quantify the predicted difference. The saturating generator remains near its initialization, and its final divergence exceeds three hundred nats. The discriminator reaches near-zero loss within the first few epochs, so $\sigma(D(x')) \approx 0$ for every generated sample. :eqref:`eq_gan_weights` then assigns nearly zero weight to each generator update. Because the generator scarcely changes, the discriminator can continue to reject its samples confidently.
 
 The non-saturating generator leaves its initialization and moves toward the data, but how far it gets within this budget depends on the random draw. The reweighting provides a useful gradient under confident rejection, but it does not guarantee a complete fit within a fixed training budget.
 
@@ -952,8 +947,6 @@ The saturating and non-saturating generator losses have the same fixed point but
        tell apart? Propose a measurement that separates the two causes, and
        state what it costs.
    :exlabel:`ex_gan-finite-sample-critic`
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36808)
 

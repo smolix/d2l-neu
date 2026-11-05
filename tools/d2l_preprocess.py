@@ -1278,6 +1278,7 @@ CHAPTER_NUMBERING = {
     'chapter_generative-adversarial-networks/dcgan.md': [16, 5],
     'chapter_generative-adversarial-networks/conditional.md': [16, 6],
     'chapter_generative-adversarial-networks/adversarial-losses.md': [16, 7],
+    'chapter_generative-adversarial-networks/further-reading.md': [16, 8],
     'chapter_diffusion-models/index.md': [17],
     'chapter_diffusion-models/limits.md': [17, 1],
     'chapter_diffusion-models/energy-training.md': [17, 2],

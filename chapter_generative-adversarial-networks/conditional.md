@@ -8,9 +8,7 @@ The generator of :numref:`sec_dcgan` accepts noise but offers no control over th
 %matplotlib inline
 from d2l import torch as d2l
 import numpy as np
-import pickle
 import torch
-import warnings
 from torch import nn
 from torch.nn import functional as F
 ```
@@ -24,8 +22,6 @@ from jax import numpy as jnp
 from flax import nnx
 import numpy as np
 import optax
-import pickle
-import warnings
 ```
 
 ## The Conditional Game
@@ -62,17 +58,21 @@ The conditional game is an average of per-condition games, weighted by how often
 
 This requirement is stronger than matching the unconditional distribution. Consider a generator that produces accurate CIFAR-10 images but shifts every label cyclically, so that $q(\cdot \mid c) = p(\cdot \mid c{+}1)$. A request for a bird then produces a cat. Because all ten classes occur equally often, the cyclic shift leaves the mixture over classes unchanged. The unconditional generator distribution equals the data marginal, so the game in :numref:`sec_basic_gan` cannot detect the incorrect labels. By contrast, :eqref:`eq_gan_cond_value` averages divergences between the mismatched class-conditional distributions and is far from its minimum. Exercise :exref:`ex_conditional-verify-decomposition-eqref-eq` verifies this decomposition on a toy example with known densities.
 
-Equations :eqref:`eq_gan_cond_dstar` and :eqref:`eq_gan_cond_value` apply the chapter's unconditional identities separately to each condition. Saturation on disjoint supports, the non-saturating weight in :eqref:`eq_gan_weights`, the pairing objective from :numref:`sec_gan_relativistic`, and the zero-centered penalties from :numref:`sec_gan_convergence` therefore extend in the same way. Conditioning changes the network inputs and the data pipeline, but not these arguments.
+:eqref:`eq_gan_cond_dstar` and :eqref:`eq_gan_cond_value` apply the chapter's unconditional identities separately to each condition. Saturation on disjoint supports, the non-saturating weight in :eqref:`eq_gan_weights`, the pairing objective from :numref:`sec_gan_relativistic`, and the zero-centered penalties from :numref:`sec_gan_convergence` therefore extend in the same way. Conditioning changes the network inputs and the data pipeline, but not these arguments.
 
 The weighting by $p(c)$ has two consequences for imbalanced data. First, a rare condition contributes little to the objective, so the generator can perform poorly on it at a small cost. Second, the cancellation in :eqref:`eq_gan_cond_dstar` assumes that generator conditions are sampled from the data marginal. If the sampling distribution $r(c)$ differs from $p(c)$, the optimal critic gains the offset $\log(p(c)/r(c))$. Reweighting or resampling the real batches to match $r(c)$ removes this offset, as in class-balanced training. Exercise :exref:`ex_conditional-rare-class` examines the first effect, and exercise :exref:`ex_conditional-suppose-label-marginal-is` the second.
 
-## How the Condition Enters the Networks
+## Conditioning Mechanisms
+
+### Three Ways In
 
 The analysis specifies the function computed by an optimal critic but not how a network should represent $c$. Three common mechanisms are concatenation, condition-dependent modulation of intermediate activations, and a critic head that scores compatibility between the sample and condition. They differ in the structural assumptions built into the network.
 
 The first mechanism is *concatenation* :cite:`Mirza.Osindero.2014`. The condition is embedded in a vector and appended to an existing input pathway: beside the latent code in the generator, or beside the image or an intermediate feature map in the critic. Concatenation works for discrete and continuous conditions and imposes little structure on their interaction with the sample. Consequently, the network must learn that interaction from the adversarial signal alone.
 
-The second mechanism uses the condition to control intermediate activations. After normalizing a feature map $h$, learned functions of the condition supply the affine coefficients in $h \mapsto \gamma(c) \cdot \mathrm{norm}(h) + \beta(c)$. Conditional batch normalization, FiLM, and AdaIN are instances of this *condition-dependent modulation*. They differ in the normalization rule and in the functions used to compute $\gamma$ and $\beta$. SPADE is a spatial variant in which a semantic layout supplies a separate scale and offset at each location :cite:`Park.Liu.Wang.ea.2019`. Applying modulation at several layers gives the condition a direct influence on global attributes such as class or style. The R3GAN supplement omits normalization-based conditioning to keep the architecture minimal, while reporting that it improves FID :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
+The second mechanism uses the condition to control intermediate activations. After normalizing a feature map $h$, learned functions of the condition supply the affine coefficients in $h \mapsto \gamma(c) \cdot \mathrm{norm}(h) + \beta(c)$. Conditional batch normalization, FiLM, and AdaIN are instances of this *condition-dependent modulation*. They differ in the normalization rule and in the functions used to compute $\gamma$ and $\beta$. Applying modulation at several layers gives the condition a direct influence on global attributes such as class or style. The R3GAN supplement omits normalization-based conditioning to keep the architecture minimal, while reporting that it improves FID :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
+
+### The Projection Head from Bayes' Rule
 
 The third mechanism conditions the critic through a *compatibility head*. Its most common form follows from the optimal critic in :eqref:`eq_gan_cond_dstar`. Bayes' rule gives $p(x \mid c) = p(c \mid x)\, p(x) / p(c)$. Applying this identity to the numerator and denominator cancels the shared label marginal and yields
 
@@ -87,43 +87,39 @@ The optimal conditional critic thus separates unconditional sample quality from 
 The first term has a form every classifier in this book has used. Model both posteriors as softmax classifiers over one shared feature map $\varphi$, so that $p(c \mid x) \propto \exp(u_c^\top \varphi(x))$ with one weight vector per class, and $q(c \mid x) \propto \exp(w_c^\top \varphi(x))$ likewise. The two normalizers do not depend on $c$, so the log ratio of the posteriors is the inner product $(u_c - w_c)^\top \varphi(x)$ plus a function of $x$ alone. Absorbing that function, together with the unconditional term of :eqref:`eq_gan_cond_bayes`, into a single head $\psi$, and writing $e_c = u_c - w_c$, the critic becomes
 
 $$
-D(x, c) \;=\; e_c^\top \varphi(x) + \psi(x) :
+D(x, c) \;=\; e_c^\top \varphi(x) + \psi(x) .
 $$
 :eqlabel:`eq_gan_cond_projection`
 
 This expression contains one learned embedding per class, an inner product with the critic features, and an unconditional head. It is the *projection discriminator* of :citet:`Miyato.Koyama.2018`. The bilinear term makes the score depend on the compatibility of the sample and condition. Thus the architecture represents the decomposition in :eqref:`eq_gan_cond_bayes` directly rather than learning it through unrestricted concatenation. Bayes' rule gives an identity, but the log-linear form of both posteriors in a *shared* feature map is a modeling assumption. Learning $\varphi$ makes this restriction more flexible, though one representation must still support both posteriors. Exercise :exref:`ex_conditional-projection-derivation-modeled-both` examines the effect of limited capacity. Projection heads are standard in large class-conditional GANs; BigGAN uses one for ImageNet :cite:`Brock.Donahue.Simonyan.2019`.
 
-The projection head is not the only compatibility mechanism. The *auxiliary classifier* of :citet:`Odena.Olah.Shlens.2017` adds a classification head and loss to the critic. The critic predicts the condition from its features, and the generator is trained to make its samples receive the requested label. This objective may favor exaggerated class prototypes and reduce within-class diversity, because such samples are easy for the classifier to label. The generator also optimizes the same quantity later used to measure condition alignment, which can make that metric misleading. Text and other structured conditions are commonly incorporated through cross-attention from condition tokens to image features, as in the text-to-image GAN of :citet:`Kang.Zhu.Zhang.ea.2023`. By 2026, diffusion and autoregressive models dominate general text-to-image synthesis; adversarial variants remain useful when single-pass sampling speed is important.
+The projection head is not the only compatibility mechanism. The *auxiliary classifier* of :citet:`Odena.Olah.Shlens.2017` adds a classification head and loss to the critic. The critic predicts the condition from its features, and the generator is trained to make its samples receive the requested label. This objective may favor exaggerated class prototypes and reduce within-class diversity, because such samples are easy for the classifier to label. The generator also optimizes the same quantity later used to measure condition alignment, which can make that metric misleading.
 
-The experiment uses concatenation in the generator and a projection head in the critic. No corresponding identity determines how the generator should transform $c$, so concatenation leaves this interaction flexible. Equation :eqref:`eq_gan_cond_projection` provides a direct structural motivation for the critic's projection head. R3GAN uses the same division in its class-conditional experiments :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Exercise :exref:`ex_conditional-implement-concatenation-critic-one` replaces the projection head with concatenation and compares the two critics at the same budget.
+The experiment uses concatenation in the generator and a projection head in the critic. No corresponding identity determines how the generator should transform $c$, so concatenation leaves this interaction flexible. :eqref:`eq_gan_cond_projection` provides a direct structural motivation for the critic's projection head. R3GAN uses the same division in its class-conditional experiments :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Exercise :exref:`ex_conditional-implement-concatenation-critic-one` replaces the projection head with concatenation and compares the two critics at the same budget.
+
+### Images as Conditions
+
+The condition in :eqref:`eq_gan_cond_V` may be an entire image, such as a semantic map, edge sketch, or grayscale photograph. This gives *paired image-to-image translation*. Pix2pix :cite:`Isola.Zhu.Zhou.ea.2017` trains the conditional critic $D(x,c)$ on output--input pairs and adds an L1 reconstruction loss against the paired target. The two losses represent different aspects of the output. The source image largely determines low-frequency structure, which the pointwise L1 loss recovers. Ambiguous local textures are averaged by a pointwise loss and may appear blurred. A patch critic instead compares local texture statistics with those of real image patches and promotes sharper output. :numref:`sec_gan_beyond` develops this capacity argument in detail.
+
+Unpaired translation instead provides two image collections, such as horses and zebras, without paired examples. CycleGAN :cite:`Zhu.Park.Isola.ea.2017` uses marginal rather than conditional critics. For the direction $G: X \to Y$, the critic distinguishes real targets $y$ from translations $G(x)$ but never receives the source $x$. A second game handles the reverse direction. The two generators are coupled by a *cycle-consistency* loss that requires translation forward and back to approximately reconstruct the input. This reconstruction term constrains an otherwise underidentified mapping, but it does not guarantee the intended semantic correspondence. Two mappings may satisfy both cycles while pairing images in an unintended way. The table summarizes the distinction:
+
+| | Critic sees the source? | Paired targets? | What carries the input--output relation |
+|:--|:--|:--|:--|
+| pix2pix | yes: $D(x, c)$ scores output--input pairs | yes | the conditional adversarial loss and the L1 term |
+| CycleGAN | no: each critic scores its target marginal | no | the cycle-consistency loss alone |
+
+Only pix2pix plays this section's conditional game; CycleGAN substitutes a reconstruction constraint for a conditional critic. The systems themselves, with their encoder-decoder generators and patch critics, are built in :numref:`chap_cv`.
 
 ## Class-Conditional CIFAR-10
 
-We evaluate the method on CIFAR-10, which contains 50,000 labeled $32 \times 32$ training images from ten classes. :numref:`sec_dcgan` used these images to train a feature network; here they are the target distribution. R3GAN also reports a class-conditional CIFAR-10 benchmark, trained for four days on eight GPUs :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Our run uses 15,000 steps and completes in well under half an hour on one GPU. Its purpose is to test the conditioning mechanism rather than to match large-scale sample quality. The data registration is repeated because each section executes as an independent notebook.
+We evaluate the method on CIFAR-10, which contains 50,000 labeled $32 \times 32$ training images from ten classes. :numref:`sec_dcgan` used these images to train a feature network; here they are the target distribution. R3GAN also reports a class-conditional CIFAR-10 benchmark, trained for four days on eight GPUs :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Our run uses 15,000 steps and completes in well under half an hour on one GPU. Its purpose is to test the conditioning mechanism rather than to match large-scale sample quality. The loader `d2l.load_cifar10_arrays` was saved in :numref:`sec_dcgan`.
 
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab pytorch
-d2l.DATA_HUB['cifar10'] = (
-    'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-    '874905e36347c8536514d0a26261acf3bff89bc7')
-cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck']
-
-def load_cifar_batch(path):
-    with open(path, 'rb') as f, warnings.catch_warnings():
-        warnings.simplefilter('ignore')   # legacy NumPy pickle format
-        batch = pickle.load(f, encoding='bytes')
-    X = torch.tensor(batch[b'data'], dtype=torch.float32)
-    return X.reshape(-1, 3, 32, 32) / 127.5 - 1, torch.tensor(
-        batch[b'labels'])
-
-Xs, ys = zip(*[load_cifar_batch(f'{cifar_dir}/data_batch_{i}')
-               for i in range(1, 6)])
 device = d2l.try_gpu()
-train_X, train_y = torch.cat(Xs).to(device), torch.cat(ys).to(device)
-test_X, test_y = load_cifar_batch(f'{cifar_dir}/test_batch')
-test_X, test_y = test_X.to(device), test_y.to(device)
+train_X, train_y, test_X, test_y = d2l.load_cifar10_arrays()
 first = [int((train_y == c).nonzero()[0]) for c in range(10)]
 d2l.show_images(train_X[first].cpu().permute(0, 2, 3, 1) / 2 + 0.5,
                 num_rows=2, num_cols=5, titles=classes);
@@ -131,25 +127,9 @@ d2l.show_images(train_X[first].cpu().permute(0, 2, 3, 1) / 2 + 0.5,
 
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab jax
-d2l.DATA_HUB['cifar10'] = (
-    'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-    '874905e36347c8536514d0a26261acf3bff89bc7')
-cifar_dir = d2l.download_extract('cifar10', 'cifar-10-batches-py')
 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck']
-
-def load_cifar_batch(path):
-    with open(path, 'rb') as f, warnings.catch_warnings():
-        warnings.simplefilter('ignore')   # legacy NumPy pickle format
-        batch = pickle.load(f, encoding='bytes')
-    X = batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-    return (jnp.asarray(X, dtype=jnp.float32) / 127.5 - 1,
-            jnp.asarray(batch[b'labels']))
-
-Xs, ys = zip(*[load_cifar_batch(f'{cifar_dir}/data_batch_{i}')
-               for i in range(1, 6)])
-train_X, train_y = jnp.concatenate(Xs), jnp.concatenate(ys)
-test_X, test_y = load_cifar_batch(f'{cifar_dir}/test_batch')
+train_X, train_y, test_X, test_y = d2l.load_cifar10_arrays()
 first = [int(np.nonzero(np.asarray(train_y) == c)[0][0]) for c in range(10)]
 d2l.show_images(np.asarray(train_X[np.array(first)]) / 2 + 0.5,
                 num_rows=2, num_cols=5, titles=classes);
@@ -302,61 +282,9 @@ print(net_D(jnp.zeros((2, 32, 32, 3)), jnp.zeros(2, dtype=jnp.int32)).shape)
 
 ### Training with the Chapter's Loss
 
-Training uses the relativistic pairing losses `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G` from :numref:`sec_gan_convergence`, together with both zero-centered penalties from `d2l.r1_r2_penalty`. In the conditional setting, each real--generated pair must share a condition. Comparing a real bird with a generated truck would not estimate the within-condition objective in :eqref:`eq_gan_cond_value`. We therefore draw a labeled real batch and use the same labels to condition the generated batch. The remaining training choices follow :numref:`sec_dcgan`: horizontal flips augment the real images while preserving their labels, and a 500-step exponential moving average supplies the generator used for evaluation.
+Training uses the relativistic pairing losses `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G` from :numref:`sec_gan_convergence`, together with both zero-centered penalties from `d2l.r1_r2_penalty`. In the conditional setting, each real--generated pair must share a condition. Comparing a real bird with a generated truck would not estimate the within-condition objective in :eqref:`eq_gan_cond_value`. We therefore draw a labeled real batch and use the same labels to condition the generated batch. The remaining training choices follow :numref:`sec_dcgan`: horizontal flips augment the real images while preserving their labels (`d2l.sample_real` with its `labels` argument), and a 500-step exponential moving average (`d2l.EMA`) supplies the generator used for evaluation.
 
-```{.python .input #conditional-training-with-the-chapter-s-loss-1}
-%%tab pytorch
-class EMA:
-    """Exponential moving average of model weights, given as a half-life."""
-    def __init__(self, model, half_life):
-        self.shadow = {k: v.detach().clone()
-                       for k, v in model.state_dict().items()}
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        with torch.no_grad():
-            for k, v in model.state_dict().items():
-                self.shadow[k].lerp_(v, 1 - self.decay)
-
-    def copy_to(self, model):
-        model.load_state_dict(self.shadow)
-
-def sample_real(images, labels, n):
-    """Draw a labeled training batch with random horizontal flips."""
-    idx = torch.randint(0, len(images), (n,), device=images.device)
-    batch = images[idx]
-    flip = torch.rand(n, device=images.device) < 0.5
-    return torch.where(flip.view(-1, 1, 1, 1), batch.flip(-1),
-                       batch), labels[idx]
-```
-
-```{.python .input #conditional-training-with-the-chapter-s-loss-1}
-%%tab jax
-class EMA:
-    """Exponential moving average of model weights, given as a half-life."""
-    def __init__(self, model, half_life):
-        self.shadow = jax.tree.map(jnp.copy, nnx.state(model, nnx.Param))
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        self.shadow = jax.tree.map(
-            lambda s, p: self.decay * s + (1 - self.decay) * p,
-            self.shadow, nnx.state(model, nnx.Param))
-
-    def copy_to(self, model):
-        nnx.update(model, self.shadow)
-
-def sample_real(key, images, labels, n):
-    """Draw a labeled training batch with random horizontal flips."""
-    k1, k2 = jax.random.split(key)
-    idx = jax.random.randint(k1, (n,), 0, len(images))
-    batch = images[idx]
-    flip = jax.random.bernoulli(k2, 0.5, (n,))
-    return jnp.where(flip[:, None, None, None], batch[:, :, ::-1, :],
-                     batch), labels[idx]
-```
-
-The library losses expect a critic that maps a batch of images to a batch of scores. Fixing the labels turns the conditional critic into such a function. In PyTorch, a lambda closes over the labels for both the pairing losses and the penalty. The JAX penalty helper differentiates each sample under `vmap`, so its closure must receive the corresponding label as well. The conditional helper below differs from `d2l.r1_r2_penalty` only by this additional argument. The training function returns the EMA generator and the trained critic for the subsequent diagnostics.
+The library losses and the penalty expect a critic that maps a batch of images to a batch of scores. Fixing the labels turns the conditional critic into such a function: a lambda closes over the labels, and the same closure serves the pairing losses and `d2l.r1_r2_penalty`. The training function returns the EMA generator and the trained critic for the subsequent diagnostics.
 
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab pytorch
@@ -376,9 +304,9 @@ def train_conditional(train_X, train_y, gamma, num_steps=15000,
                                  betas=(0.0, 0.99))
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr,
                                  betas=(0.0, 0.99))
-    ema, history = EMA(net_G, half_life), []
+    ema, history = d2l.EMA(net_G, half_life), []
     for step in range(1, num_steps + 1):
-        X, y = sample_real(train_X, train_y, batch_size)
+        X, y = d2l.sample_real(train_X, batch_size, train_y)
         Z = torch.randn(batch_size, latent_dim, device=device)
         crit = lambda x: net_D(x, y)
         fake = net_G(Z, y).detach()
@@ -386,7 +314,7 @@ def train_conditional(train_X, train_y, gamma, num_steps=15000,
         loss_D = (d2l.rpgan_loss_D(crit, X, fake)
                   + gamma / 2 * (r1 + r2).mean())
         trainer_D.zero_grad(), loss_D.backward(), trainer_D.step()
-        X2, y2 = sample_real(train_X, train_y, batch_size)
+        X2, y2 = d2l.sample_real(train_X, batch_size, train_y)
         Z2 = torch.randn(batch_size, latent_dim, device=device)
         crit2 = lambda x: net_D(x, y2)
         loss_G = d2l.rpgan_loss_G(crit2, X2, net_G(Z2, y2))
@@ -394,35 +322,23 @@ def train_conditional(train_X, train_y, gamma, num_steps=15000,
         ema.update(net_G)
         if step % log_every == 0:
             with torch.no_grad():
-                Xd, yd = sample_real(train_X, train_y, 256)
+                Xd, yd = d2l.sample_real(train_X, 256, train_y)
                 d_real = net_D(Xd, yd).mean()
             history.append((step, float(loss_D.detach()),
                             float(loss_G.detach()),
                             float((r1 + r2).mean().detach()),
                             float(d_real)))
-    ema_G = Generator().to(device)
-    ema.copy_to(ema_G)
-    return ema_G, net_D, torch.tensor(history)
+    return ema.model, net_D, torch.tensor(history)
 ```
 
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab jax
-def cond_r1_r2_penalty(net_D, real, fake, y):
-    """d2l.r1_r2_penalty with the condition threaded through vmap."""
-    def sq_grad_norm(x):
-        x = jax.lax.stop_gradient(x)
-        grad_fn = jax.grad(
-            lambda xi, yi: net_D(xi[None, ...], yi[None]).squeeze())
-        grad = jax.vmap(grad_fn)(x, y)
-        return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
-    return sq_grad_norm(real), sq_grad_norm(fake)
-
 @nnx.jit
 def cond_step(net_G, net_D, opt_G, opt_D, X, y, Z, X2, y2, Z2, gamma):
     def loss_D_fn(net_D):
         crit = lambda x: net_D(x, y)
         fake = jax.lax.stop_gradient(net_G(Z, y))
-        r1, r2 = cond_r1_r2_penalty(net_D, X, fake, y)
+        r1, r2 = d2l.r1_r2_penalty(crit, X, fake)
         return (d2l.rpgan_loss_D(crit, X, fake)
                 + gamma / 2 * (r1 + r2).mean()), (r1 + r2).mean()
     (loss_D, pen), grads = nnx.value_and_grad(
@@ -444,24 +360,22 @@ def train_conditional(train_X, train_y, gamma, num_steps=15000,
                           wrt=nnx.Param)
     opt_D = nnx.Optimizer(net_D, optax.adam(lr, b1=0.0, b2=0.99),
                           wrt=nnx.Param)
-    ema, history = EMA(net_G, half_life), []
+    ema, history = d2l.EMA(net_G, half_life), []
     key = jax.random.PRNGKey(seed + 1)
     for step in range(1, num_steps + 1):
         key, kx, kz, kx2, kz2, kd = jax.random.split(key, 6)
-        X, y = sample_real(kx, train_X, train_y, batch_size)
+        X, y = d2l.sample_real(kx, train_X, batch_size, train_y)
         Z = jax.random.normal(kz, (batch_size, latent_dim))
-        X2, y2 = sample_real(kx2, train_X, train_y, batch_size)
+        X2, y2 = d2l.sample_real(kx2, train_X, batch_size, train_y)
         Z2 = jax.random.normal(kz2, (batch_size, latent_dim))
         loss_D, loss_G, pen = cond_step(net_G, net_D, opt_G, opt_D,
                                         X, y, Z, X2, y2, Z2, gamma)
         ema.update(net_G)
         if step % log_every == 0:
-            Xd, yd = sample_real(kd, train_X, train_y, 256)
+            Xd, yd = d2l.sample_real(kd, train_X, 256, train_y)
             history.append((step, float(loss_D), float(loss_G),
                             float(pen), float(net_D(Xd, yd).mean())))
-    ema_G = Generator(rngs=nnx.Rngs(seed))
-    ema.copy_to(ema_G)
-    return ema_G, net_D, np.array(history)
+    return ema.model, net_D, np.array(history)
 ```
 
 We retune the penalty weight rather than reuse the value from the sprite experiment. A development-time pilot, not reproduced in this notebook, compared $\gamma \in \{0.05, 0.5, 5\}$ over 4,000 steps. All three values trained stably and reached similar condition alignment. They differed in the penalized quantity $\mathbb{E}_m[\|\nabla_x D\|^2]$, as :eqref:`eq_gan_dirac_pen` predicts. At $\gamma = 0.05$, this quantity was several times larger than at $\gamma = 0.5$; at $\gamma = 5$, it remained near zero. These settings correspond to lighter and heavier damping, respectively. The full runs use the intermediate value $\gamma = 0.5$.
@@ -536,42 +450,15 @@ This limited training budget is sufficient to demonstrate conditioning, but not 
 
 ## Measuring Condition Alignment
 
-An unconditional metric cannot detect a mismatch between generated images and their assigned conditions. The cyclic label shift above is one example: it preserves the marginal image distribution while violating every requested label. We measure this failure with a classifier trained on CIFAR-10. Because generated images already have the native $32 \times 32$ resolution, the small convolutional classifier from :numref:`sec_dcgan` is trained at that resolution until its test accuracy plateaus.
+An unconditional metric cannot detect a mismatch between generated images and their assigned conditions. The cyclic label shift above is one example: it preserves the marginal image distribution while violating every requested label. We measure this failure with a classifier trained on CIFAR-10. Because generated images already have the native $32 \times 32$ resolution, the small convolutional classifier from :numref:`sec_dcgan`, `d2l.FeatureCNN`, is trained at that resolution with the saved recipe `d2l.train_feature_cnn`, adding random shifts of up to four pixels to its flips.
 
 For each generated image, the classifier either predicts the requested class or it does not. The matching fraction, computed both overall and per class, is the *condition alignment*. We compare this quantity with the classifier's accuracy on real test images from the same class. This reference matters because the classifier also misclassifies real examples. It is not an upper bound: unusually prototypical generated images can be easier to classify than real photographs.
 
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab pytorch
-class FeatureCNN(nn.Module):
-    """Three conv blocks, global average pooling, and a linear head."""
-    def __init__(self, feature_dim=128):
-        super().__init__()
-        widths = [3, 32, 64, feature_dim]
-        self.blocks = nn.ModuleList(
-            [nn.Sequential(nn.Conv2d(c_in, c_out, 3, padding=1),
-                           nn.BatchNorm2d(c_out), nn.ReLU(),
-                           nn.MaxPool2d(2))
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        self.head = nn.Linear(feature_dim, 10)
-
-    def features(self, x):
-        for block in self.blocks:
-            x = block(x)
-        return x.mean(dim=(2, 3))
-
-    def forward(self, x):
-        return self.head(self.features(x))
-
 torch.manual_seed(0)
-cnn = FeatureCNN().to(device)
-opt = torch.optim.Adam(cnn.parameters(), lr=0.001)
-for epoch in range(15):
-    order = torch.randperm(len(train_X), device=device)
-    for i in range(0, len(order) - 255, 256):
-        idx = order[i:i + 256]
-        l = F.cross_entropy(cnn(train_X[idx]), train_y[idx])
-        opt.zero_grad(), l.backward(), opt.step()
-cnn.eval()
+cnn = d2l.FeatureCNN(resolution=32).to(device)
+d2l.train_feature_cnn(cnn, train_X, train_y, shift=4)
 with torch.no_grad():
     pred = torch.cat([cnn(test_X[i:i + 1000]).argmax(1)
                       for i in range(0, len(test_X), 1000)])
@@ -582,49 +469,8 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab jax
-class FeatureCNN(nnx.Module):
-    """Three conv blocks, global average pooling, and a linear head."""
-    def __init__(self, feature_dim=128, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        widths = [3, 32, 64, feature_dim]
-        self.convs = nnx.List(
-            [nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
-             for c_in, c_out in zip(widths[:-1], widths[1:])])
-        # Running averages decay 0.9; the variance is computed in two passes
-        self.norms = nnx.List([nnx.BatchNorm(c, momentum=0.9,
-                                             use_fast_variance=False,
-                                             rngs=rngs)
-                               for c in widths[1:]])
-        self.head = nnx.Linear(feature_dim, 10, rngs=rngs)
-
-    def features(self, x):
-        for conv, norm in zip(self.convs, self.norms):
-            x = nnx.max_pool(nnx.relu(norm(conv(x))),
-                             window_shape=(2, 2), strides=(2, 2))
-        return x.mean(axis=(1, 2))
-
-    def __call__(self, x):
-        return self.head(self.features(x))
-
-@nnx.jit
-def cnn_step(cnn, opt, X, y):
-    def loss_fn(cnn):
-        return optax.softmax_cross_entropy_with_integer_labels(
-            cnn(X), y).mean()
-    l, grads = nnx.value_and_grad(loss_fn)(cnn)
-    opt.update(cnn, grads)
-    return l
-
-cnn = FeatureCNN(rngs=nnx.Rngs(0))
-opt = nnx.Optimizer(cnn, optax.adam(0.001), wrt=nnx.Param)
-key = jax.random.PRNGKey(3)
-for epoch in range(15):
-    key, kp = jax.random.split(key)
-    order = jax.random.permutation(kp, len(train_X))
-    for i in range(0, len(order) - 255, 256):
-        idx = order[i:i + 256]
-        cnn_step(cnn, opt, train_X[idx], train_y[idx])
-cnn.eval()
+cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(0))
+d2l.train_feature_cnn(cnn, train_X, train_y, shift=4)
 pred = jnp.concatenate([cnn(test_X[i:i + 1000]).argmax(1)
                         for i in range(0, len(test_X), 1000)])
 cls_acc = [float((pred[test_y == c] == c).mean()) for c in range(10)]
@@ -673,30 +519,6 @@ Condition alignment does not measure image quality. We therefore also compute th
 
 The evaluation compares 1,000 generated images, 100 per class, with 1,000 held-out test images selected in the same proportions. Thus the real and generated sets have identical balanced class marginals. A second disjoint and stratified set of 1,000 real images provides the finite-sample reference. As in :numref:`sec_dcgan`, the final column reports the fraction of raw generated pixels outside $[-1,1]$.
 
-```{.python .input #conditional-measuring-condition-alignment-3}
-%%tab pytorch, jax
-def fid_score(feat_p, feat_q):
-    feat_p, feat_q = np.float64(feat_p), np.float64(feat_q)
-    mu_p, mu_q = feat_p.mean(0), feat_q.mean(0)
-    C_p = np.cov(feat_p, rowvar=False)
-    C_q = np.cov(feat_q, rowvar=False)
-    lam, U = np.linalg.eigh(C_p)
-    sqrt_C_p = (U * np.sqrt(np.maximum(lam, 0))) @ U.T
-    M = sqrt_C_p @ C_q @ sqrt_C_p
-    cross = np.linalg.eigvalsh((M + M.T) / 2)   # symmetric up to rounding
-    return (((mu_p - mu_q) ** 2).sum() + np.trace(C_p) + np.trace(C_q)
-            - 2 * np.sqrt(np.maximum(cross, 0)).sum())
-
-def kid_score(feat_p, feat_q):
-    m, n, d = len(feat_p), len(feat_q), feat_p.shape[1]
-    K_pp = (feat_p @ feat_p.T / d + 1) ** 3
-    K_qq = (feat_q @ feat_q.T / d + 1) ** 3
-    K_pq = (feat_p @ feat_q.T / d + 1) ** 3
-    return ((K_pp.sum() - np.trace(K_pp)) / (m * (m - 1))
-            + (K_qq.sum() - np.trace(K_qq)) / (n * (n - 1))
-            - 2 * K_pq.mean())
-```
-
 ```{.python .input #conditional-measuring-condition-alignment-4}
 %%tab pytorch
 def features(imgs, bs=500):
@@ -717,10 +539,10 @@ f_real2 = features(test_X[torch.cat([i[100:] for i in idx])])
 f_gen = features(gen)
 print(f'{"comparison":22s}{"FD (CIFAR-CNN)":>16s}{"MMD^2 (CIFAR-CNN)":>19s}'
       f'{"out-of-range":>14s}')
-print(f'{"real vs. real":22s}{fid_score(f_real2, f_real):16.2f}'
-      f'{kid_score(f_real2, f_real):19.3f}{"--":>14s}')
-print(f'{"generated vs. real":22s}{fid_score(f_gen, f_real):16.2f}'
-      f'{kid_score(f_gen, f_real):19.3f}{oob:14.3f}')
+print(f'{"real vs. real":22s}{d2l.fid_score(f_real2, f_real):16.2f}'
+      f'{d2l.kid_score(f_real2, f_real):19.3f}{"--":>14s}')
+print(f'{"generated vs. real":22s}{d2l.fid_score(f_gen, f_real):16.2f}'
+      f'{d2l.kid_score(f_gen, f_real):19.3f}{oob:14.3f}')
 ```
 
 ```{.python .input #conditional-measuring-condition-alignment-4}
@@ -740,10 +562,10 @@ f_real2 = features(test_X[jnp.concatenate([i[100:] for i in idx])])
 f_gen = features(gen)
 print(f'{"comparison":22s}{"FD (CIFAR-CNN)":>16s}{"MMD^2 (CIFAR-CNN)":>19s}'
       f'{"out-of-range":>14s}')
-print(f'{"real vs. real":22s}{fid_score(f_real2, f_real):16.2f}'
-      f'{kid_score(f_real2, f_real):19.3f}{"--":>14s}')
-print(f'{"generated vs. real":22s}{fid_score(f_gen, f_real):16.2f}'
-      f'{kid_score(f_gen, f_real):19.3f}{oob:14.3f}')
+print(f'{"real vs. real":22s}{d2l.fid_score(f_real2, f_real):16.2f}'
+      f'{d2l.kid_score(f_real2, f_real):19.3f}{"--":>14s}')
+print(f'{"generated vs. real":22s}{d2l.fid_score(f_gen, f_real):16.2f}'
+      f'{d2l.kid_score(f_gen, f_real):19.3f}{oob:14.3f}')
 ```
 
 The two distances support the visual assessment at different scales. In the recorded runs, generated-versus-real FD is a small multiple of the real-versus-real reference. The gap is measurable but much smaller than for the collapsed classic arm in :numref:`sec_dcgan`, whose FD was two orders of magnitude above its reference. The unbiased $\mathrm{MMD}^2$ estimate gives the same ordering on a smaller numerical scale: the real-versus-real estimate fluctuates around zero, while the generated-versus-real estimate is small and positive.
@@ -774,8 +596,8 @@ cvar = lambda f: float(np.float64(f).reshape(10, 100, -1).var(1).mean())
 print(f'permuted labels: alignment '
       f'{float((pred_gen == yg).float().mean()):.2f} -> '
       f'{float((pred_gen == y_perm).float().mean()):.2f}, '
-      f'FD {fid_score(f_gen, f_real):.2f}, '
-      f'MMD^2 {kid_score(f_gen, f_real):.3f} (both unchanged)')
+      f'FD {d2l.fid_score(f_gen, f_real):.2f}, '
+      f'MMD^2 {d2l.kid_score(f_gen, f_real):.3f} (both unchanged)')
 print(f'critic label check: mean D(x, y) - D(x, y+1) on real = '
       f'{float(d_true - d_perm):.2f}')
 print(f'collapse baseline: alignment '
@@ -798,8 +620,8 @@ cvar = lambda f: float(np.float64(f).reshape(10, 100, -1).var(1).mean())
 print(f'permuted labels: alignment '
       f'{float((pred_gen == yg).mean()):.2f} -> '
       f'{float((pred_gen == y_perm).mean()):.2f}, '
-      f'FD {fid_score(f_gen, f_real):.2f}, '
-      f'MMD^2 {kid_score(f_gen, f_real):.3f} (both unchanged)')
+      f'FD {d2l.fid_score(f_gen, f_real):.2f}, '
+      f'MMD^2 {d2l.kid_score(f_gen, f_real):.3f} (both unchanged)')
 print(f'critic label check: mean D(x, y) - D(x, y+1) on real = '
       f'{float(d_true - d_perm):.2f}')
 print(f'collapse baseline: alignment '
@@ -813,19 +635,6 @@ Conditional evaluation has three distinct axes: sample fidelity, sample diversit
 The repeated-image baseline exposes this limitation. One stored image per class attains about the classifier's accuracy on real images, up to the noise of ten images, despite having zero within-class diversity. This *within-class collapse* is mode collapse within a conditional distribution. The objective in :eqref:`eq_gan_cond_value` penalizes it because a point mass differs from $p(\cdot \mid c)$ under the divergences considered here. Alignment cannot detect the collapse, and a marginal feature distance observes it only after mixing the classes. Per-class feature variance provides a more direct diagnostic.
 
 Incorrect labels are not the only conditional failure. A generator may ignore the condition, obey it through shortcuts such as background or palette, collapse within a condition, leak between conditions, neglect rare conditions, or optimize for classifier prototypes. A sound evaluation therefore considers fidelity, diversity, and alignment together. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends the collapse diagnosis to per-class distribution metrics. Exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which deliberately exchanges sample variety for fidelity.
-
-## Translation as Conditioning
-
-The condition in :eqref:`eq_gan_cond_V` may be an entire image, such as a semantic map, edge sketch, or grayscale photograph. This gives *paired image-to-image translation*. Pix2pix :cite:`Isola.Zhu.Zhou.ea.2017` trains the conditional critic $D(x,c)$ on output--input pairs and adds an L1 reconstruction loss against the paired target. The two losses represent different aspects of the output. The source image largely determines low-frequency structure, which the pointwise L1 loss recovers. Ambiguous local textures are averaged by a pointwise loss and may appear blurred. A patch critic instead compares local texture statistics with those of real image patches and promotes sharper output. :numref:`sec_gan_beyond` develops this capacity argument in detail.
-
-Unpaired translation instead provides two image collections, such as horses and zebras, without paired examples. CycleGAN :cite:`Zhu.Park.Isola.ea.2017` uses marginal rather than conditional critics. For the direction $G: X \to Y$, the critic distinguishes real targets $y$ from translations $G(x)$ but never receives the source $x$. A second game handles the reverse direction. The two generators are coupled by a *cycle-consistency* loss that requires translation forward and back to approximately reconstruct the input. This reconstruction term constrains an otherwise underidentified mapping, but it does not guarantee the intended semantic correspondence. Two mappings may satisfy both cycles while pairing images in an unintended way. The table summarizes the distinction:
-
-| | Critic sees the source? | Paired targets? | What carries the input--output relation |
-|:--|:--|:--|:--|
-| pix2pix | yes: $D(x, c)$ scores output--input pairs | yes | the conditional adversarial loss and the L1 term |
-| CycleGAN | no: each critic scores its target marginal | no | the cycle-consistency loss alone |
-
-Only pix2pix plays this section's conditional game; CycleGAN substitutes a reconstruction constraint for a conditional critic. The systems themselves, with their encoder-decoder generators and patch critics, are built in :numref:`chap_cv`.
 
 ## Summary
 
@@ -1072,8 +881,6 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        object? :citet:`Chu.Zhmoginov.Sandler.2017` examine this behavior in
        a trained CycleGAN.
    :exlabel:`ex_conditional-translation-identifiability`
-
-[Discussions](https://d2l.discourse.group/)
 
 [Discussions](https://d2l.discourse.group/t/36813)
 

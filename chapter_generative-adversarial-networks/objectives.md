@@ -550,7 +550,7 @@ d2l.plot(np.arange(len(runs['logistic'])) * 200, list(runs.values()),
          legend=list(runs), figsize=(5, 3))
 ```
 
-Every objective takes the generator from about half a nat to about a thousandth of a nat, except the hinge, which stalls at a residual several times larger, about $0.005$ nats. The squared hinge, with the same margin and generator loss, ends as low as the logistic and least-squares games. MMD, which has no critic to keep up with, ends lowest. The logistic and least-squares runs also stay on their initial plateau longer than the other three.
+Every objective takes the generator from about half a nat to a few thousandths of a nat or less. The hinge ends highest, at about $0.005$ nats, usually several times above the rest. The squared hinge, with the same margin and generator loss, ends below it, at the level of the logistic and least-squares games. MMD, which has no critic to keep up with, ends lowest. The logistic and least-squares runs also stay on their initial plateau longer than the other three.
 
 The hinge stall comes from what its critic must track. Its target $\operatorname{sign} \lambda$ is a full-margin step however small the mismatch, and inside the margin the hinge risk pulls the critic toward it with slope $|1 - 2\eta| \approx |\lambda|/2$, which vanishes as $q$ approaches $p$. The critic falls behind, and the generator keeps following a stale push of full size. The squared hinge's target $\tanh(\lambda/2)$ shrinks with the mismatch, and its quadratic risk pulls in proportion to the error, so its critic keeps up. All five losses share the minimizer $q = p$; what the critic reports near it decides how closely the generator approaches it (Exercise :exref:`ex_objectives-plateaus-lag` tests the lag).
 
@@ -558,7 +558,7 @@ With overlapping supports every loss reaches the data, and studies that give eac
 
 ## Summary
 
-Every adversarial objective of this section is a supremum, over a critic class, of a difference of expected scores, so it is convex in the generator's distribution. With a free critic, a classification loss evaluates the f-divergence given by its Bayes-risk gap, and the trained critic reports a fixed link of the log ratio $\lambda$; Fenchel duality extends this to any divergence function. Constraining the critic instead gives integral probability metrics: MMD for a kernel ball, $W_1$ for the Lipschitz ball. When the supports separate, the ratio-based objectives saturate, while $W_1$ keeps unit slope and MMD keeps a slope over separations set by its bandwidth. When they overlap, every loss tested reaches the data, but the hinge, whose critic reports only a sign, stalls several times higher than the squared hinge.
+Every adversarial objective of this section is a supremum, over a critic class, of a difference of expected scores, so it is convex in the generator's distribution. With a free critic, a classification loss evaluates the f-divergence given by its Bayes-risk gap, and the trained critic reports a fixed link of the log ratio $\lambda$; Fenchel duality extends this to any divergence function. Constraining the critic instead gives integral probability metrics: MMD for a kernel ball, $W_1$ for the Lipschitz ball. When the supports separate, the ratio-based objectives saturate, while $W_1$ keeps unit slope and MMD keeps a slope over separations set by its bandwidth. When they overlap, every loss tested reaches the data, but the hinge, whose critic reports only a sign, stalls above the squared hinge and every other loss.
 
 ## Exercises
 
@@ -903,14 +903,11 @@ $\mu = \sqrt{s^2 + 2} = \sqrt{18} \approx 4.2$.
 :::
 :::
 
-::: {.slide title="Hinge Stalls Several Times above the Squared Hinge"}
-One generator, three-mode mixture, five objectives, same start:
-
+::: {.slide title="The Hinge Stalls above the Squared Hinge"}
 @!objectives-one-testbed-four-losses-6
 
-From about 0.5 nats, the other four reach about $10^{-3}$ nats or less;
-hinge stalls near $0.005$; squared hinge ends with logistic and least
-squares; MMD lowest.
+All five reach a few $10^{-3}$ nats or less; the hinge ends highest, near
+$0.005$; the squared hinge matches logistic and least squares; MMD lowest.
 :::
 
 ::: {.slide title="The Hinge Critic Falls behind the Generator"}
@@ -937,7 +934,8 @@ Same minimizer, same margin, same generator loss: the link decides the finish.
 - **Duality:** any $f$, critic $f'(p/q)$; an imperfect critic underestimates.
 - **Constrained critic:** JS slope falls from 0.2 to 0.0013 between
   $\mu = 1$ and 7; $W_1$ keeps slope 1, MMD up to its bandwidth.
-- **Training:** hinge stalls near 0.005 nats, squared hinge near 0.001.
+- **Training:** hinge stalls highest, near 0.005 nats; squared hinge lower,
+  level with logistic and least squares.
 
 **Next:** a critic that ranks a real sample against a generated one.
 :::

@@ -604,7 +604,7 @@ for ax, (name, x) in zip(axes, samples.items()):
 fig.tight_layout()
 ```
 
-The R3GAN loss at $\gamma = 1$ fits the grid: it reaches all 25 modes and puts most of its samples within three widths of a center. The classical GAN reaches 24 or 25 modes and also puts most of its samples on a mode, so this experiment does not test coverage. What separates the two runs is the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: fewer samples lie on a mode, and their mean distance to the nearest center is at least about twice that at $\gamma = 1$. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
+The R3GAN loss at $\gamma = 1$ fits the grid: it reaches all 25 modes and puts most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode and reaches 24 or 25 modes. That count is lenient: one sample within three widths reaches a mode, so a mode left with a handful of samples still counts. The plot shows how evenly each run spreads its samples over the modes, and a single run cannot settle coverage. What separates the two runs is the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: fewer samples lie on a mode, and their mean distance to the nearest center is at least about twice that at $\gamma = 1$. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
 
 ## The Games of This Chapter
 
@@ -938,7 +938,7 @@ $$J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix}, 
 @!convergence-phase-portraits-1
 
 Start $(1, 1)$, steps of 0.2: unpenalized steps spiral out to twice the
-distance in 300 steps; $\gamma = 0.3$ spirals in; $\gamma = 1$ goes straight in.
+distance in 300 steps; $\gamma = 0.3$ spirals in; $\gamma = 1$ goes in without circling.
 :::
 
 ::: {.slide title="R1 Alone Leaves the Critic Free Where Only Generated Samples Lie"}
@@ -1022,11 +1022,7 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- $\gamma = 1$: all 25 modes, most samples within three widths;
-  $\mathbb{E}_q\|\nabla D\|^2$ three to four orders of magnitude below the
-  GAN's.
-- GAN: 24–25 modes. $\gamma = 10$: fewer samples on a mode, mean distance
-  at least about twice.
+- $\gamma = 1$: all modes, critic $10^3$–$10^4\times$ flatter than the GAN's; $\gamma = 10$: blurred.
 :::
 
 ::: {.slide title="Three Choices Describe the Games of the First Four Sections"}

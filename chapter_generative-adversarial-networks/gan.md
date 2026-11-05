@@ -397,16 +397,16 @@ Thirty samples from fresh latent draws:
 %%tab pytorch
 with torch.no_grad():
     fake_img = net_G_img(torch.randn(30, 100))
-d2l.show_images(fake_img.reshape(30, 28, 28), 3, 10, scale=1, cmap='gray')
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray')
 ```
 
 ```{.python .input #gan-garments-from-noise-3}
 %%tab jax
 fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
-d2l.show_images(fake_img.reshape(30, 28, 28), 3, 10, scale=1, cmap='gray')
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray')
 ```
 
-The samples are recognizable garments: shirts and other tops, dresses and shoes. Their outlines are clear, but their interiors are grainy and speckled rather than blurred; neither network knows that neighboring pixels belong together, which the convolutional networks of :numref:`sec_dcgan` add. The two losses show how far the game is from its end.
+The samples are recognizable garments: shirts and other tops, dresses and shoes. Most outlines are clear, but the interiors are grainy and speckled rather than blurred; neither network knows that neighboring pixels belong together, which the convolutional networks of :numref:`sec_dcgan` add. The two losses show how far the game is from its end.
 
 ```{.python .input #gan-garments-from-noise-4}
 %%tab pytorch, jax
@@ -937,17 +937,13 @@ Generative adversarial networks<br>
 :::
 :::
 
-::: {.slide title="A Hundred Random Numbers Become a Garment, but Nothing Gives Its Probability"}
+::: {.slide title="A Garment from a Hundred Random Numbers"}
 [The problem]{.kicker}
 
 @!gan-garments-from-noise-3
 
-- $x' = G(z)$ with $z \sim \mathcal{N}(0, I_{100})$: one forward pass per
-  image, no density to evaluate or maximize.
-- Likelihood would mislead anyway:
-  $\tilde p = 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}$ is within
-  $\log 100 \approx 4.6$ nats of the best model, yet 99% of its samples are
-  noise.
+- $x' = G(z)$, $z \sim \mathcal{N}(0, I_{100})$: one forward pass per image,
+  no density to evaluate or maximize.
 
 ::: {.d2l-note .warn}
 Can a classifier that tells samples from data take the place of the
@@ -1138,10 +1134,9 @@ $p$: two separated modes, equal weight. $q$: one of them.
 ::: {.slide title="The Same Two Updates Turn Noise into Garments"}
 @!gan-garments-from-noise-3
 
-- Fashion-MNIST, pixels in $[-1, 1]$. Generator: MLP $100 \to 256 \to 512
-  \to 784$, tanh output. Critic: $784 \to 512 \to 256 \to 1$.
-- Adam, rate $2 \cdot 10^{-4}$, $\beta_1 = 0.5$; batches of 64; 20 epochs.
-- Recognizable garments; outlines clear, interiors grainy and speckled.
+- MLPs $100 \to 256 \to 512 \to 784$ and $784 \to 512 \to 256 \to 1$; Adam
+  $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, batch 64, 20 epochs.
+- Recognizable garments: outlines mostly clear, interiors grainy.
 :::
 
 ::: {.slide title="On Garments the Critic Stays Ahead after Twenty Epochs"}
@@ -1164,15 +1159,12 @@ The garments cannot be scored in nats: neither density can be evaluated.
 :::
 :::
 
-::: {.slide title="On a Gaussian the Critic's Loss Rises to log 2 and the Fit Can Be Measured"}
+::: {.slide title="On a Gaussian the Fit Can Be Measured"}
 @!gan-training-3
 
-- Data $x = zA + b$, a thin tilted ellipse; a linear generator, so $q$ is
-  Gaussian and $\lambda$, $D_{\mathrm{KL}}(q\|p)$ have closed forms.
-- Critic loss $= \log 2 - \mathrm{JS}$ at the best response: rising to
-  $\log 2$ means $\mathrm{JS} \to 0$.
-- $D_{\mathrm{KL}}(q\|p)$ from the weights: about 8 nats at initialization,
-  about a hundredth or less after 20 epochs.
+- Linear generator on a tilted ellipse: $\lambda$ and $D_{\mathrm{KL}}(q\|p)$
+  in closed form; critic loss $\to \log 2$ means $\mathrm{JS} \to 0$.
+- $D_{\mathrm{KL}}(q\|p)$: about 8 nats at start, a hundredth or less after 20 epochs.
 :::
 
 ::: {.slide title="A Trained Critic Tracks log(p/q) on a Hand-Set q"}

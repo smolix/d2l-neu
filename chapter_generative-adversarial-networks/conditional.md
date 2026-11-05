@@ -323,7 +323,7 @@ d2l.plot(history[:, 0], history[:, 4], 'step', 'held-out pair accuracy',
          ylim=[0.3, 1], axes=axes[1])
 axes[1].axhline(0.5, ls='--', c='gray', lw=1);
 ```
-The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after an early peak of the generator loss: the generator's near 1.0, above $\log 2$, and the critic's near 0.5, below it, with the penalty adding about 0.06. The critic still wins most comparisons: late in training it orders about 80% of fresh same-class pairs correctly, down from about 90% in the first few thousand steps. At this budget the generator has not caught up with the data.
+The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after a high start of the generator loss: the generator's near 1.0, above $\log 2$, and the critic's near 0.5, below it, with the penalty adding about 0.06. The critic still wins most comparisons: late in training it orders about 80% of fresh same-class pairs correctly, down from about 90% early in training. At this budget the generator has not caught up with the data.
 
 ### Samples on Request
 
@@ -422,7 +422,7 @@ for c in range(10):
 print(f'{"mean":12s}{np.mean(align):11.2f}{np.mean(cls_acc):7.2f}'
       f'{np.mean(align) - np.mean(cls_acc):+7.2f}')
 ```
-Averaged over classes, alignment is about 0.7, five or six points below the referee's accuracy on real images. No class is recognized much more often than its real counterpart, and cat is the hardest class in both columns. Individual gaps move by several points between runs, so the table does not rank them.
+Averaged over classes, alignment is about 0.7, five or six points below the referee's accuracy on real images. No class is recognized much more often than its real counterpart, and no class is harder than cat in either column. Individual gaps move by several points between runs, so the table does not rank them.
 
 ### Fidelity and Within-Class Diversity
 
@@ -929,7 +929,7 @@ return label + self.head(phi).squeeze(-1)  # + psi_0(x)
 @!conditional-measuring-condition-alignment-2
 
 - Mean alignment about 0.7 against about 0.78 on real images.
-- No class far above its real reference; cat is hardest in both.
+- No class far above its real reference; none harder than cat in either column.
 - Single gaps move by several points between runs: do not rank them.
 :::
 

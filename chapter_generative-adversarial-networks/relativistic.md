@@ -277,7 +277,7 @@ print(f'highest real score: threshold {sigma(top):.2f} at lambda, '
       f'rank {rank_weight(np.array([top]), lam, p)[0]:.2f} at both')
 ```
 
-Shifting the critic moves the threshold curve two units to the left, so at the highest real score the threshold weight rises from 0.95 to 0.99 although the pairing game has not changed. The two rank curves coincide. They climb in steps of $p(x)$ across the real scores and reach only 0.75 at the highest one, so the rank weight separates samples that the threshold weight treats as nearly equal.
+Shifting the critic moves the threshold curve two units to the left, so at the highest real score the threshold weight rises from 0.95 to 0.99 although the pairing game has not changed. The two rank curves coincide. They rise smoothly across the real scores, each real atom contributing its mass $p(x)$, and reach only 0.75 at the highest one, so the rank weight separates samples that the threshold weight treats as nearly equal.
 
 Neither weight by itself forbids collapse. Against a fixed critic, each generator loss is the $q$-average of a function that decreases as $D(x')$ grows, so it is linear in $q$ and smallest when all generated mass sits at the critic's highest-scoring point. What differs is how the critic responds once the generator moves.
 

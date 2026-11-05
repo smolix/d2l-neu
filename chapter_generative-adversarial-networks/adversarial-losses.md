@@ -232,7 +232,7 @@ d2l.plot([c_data, cs, cs, cs],
          figsize=(5.5, 3.2))
 ```
 
-The squared-error student lies within about 0.02 of the dashed line $x = c$, as :eqref:`eq_beyond_condmean` predicts, and so about one unit from every band: everywhere it predicts a value that never occurs in the data. The adversarial student lies on a band, a few hundredths from it on average, and leaves the bands only at zero, one or two narrow crossings; other seeds change which band it follows and where it crosses, not these numbers. A curve that changes bands must pass through the corridor, since it is continuous. The adversarial loss confines that passage to a narrow interval, whereas squared error places every prediction in the corridor.
+The squared-error student lies on average within about 0.02 of the dashed line $x = c$, a little farther at the ends of the interval, as :eqref:`eq_beyond_condmean` predicts, and so about one unit from every band: everywhere it predicts a value that never occurs in the data. The adversarial student lies on a band, a few hundredths from it on average, and leaves the bands only at zero, one or two narrow crossings; other seeds change which band it follows and where it crosses, not these numbers. A curve that changes bands must pass through the corridor, since it is continuous. The adversarial loss confines that passage to a narrow interval, whereas squared error places every prediction in the corridor.
 
 ### Ambiguity and Capacity
 
@@ -614,7 +614,7 @@ Same 32-unit network for both students, same initial weights.
 
 @!adversarial-losses-the-capacity-argument-3
 
-Squared error: within about 0.02 of $x = c$, one unit from every band.
+Squared error: on average within about 0.02 of $x = c$, one unit from every band.
 Adversarial: a few hundredths from a band, zero to two crossings.
 :::
 
@@ -783,8 +783,8 @@ and which of those play a minimax game?
 ::: {.slide title="What Remains after the Repairs"}
 [Wrap-up]{.kicker}
 
-- Two bands: squared error within 0.02 of $x = c$, a unit from the data; the
-  critic keeps the student on a band. ADD: 315.6 to 20.6.
+- Two bands: squared error on average within 0.02 of $x = c$, a unit
+  from the data; the critic keeps the student on a band. ADD: 315.6 to 20.6.
 - Kept gradient, a penalized game that converges near equilibrium, a plain
   image generator.
 - Still: no density; two networks and a tuned penalty; no likelihood term

@@ -59,88 +59,88 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "critic loss 0.53 (+ penalty 0.061), generator loss 1.05, pair accuracy 0.78\n"
+          "text": "critic loss 0.53 (+ penalty 0.066), generator loss 1.07, pair accuracy 0.81\n"
         }
       ]
     },
     "conditional-training-with-the-chapter-s-loss-4": {
-      "code_fingerprint": "sha256:46b26cd2d18b3442fcde02bf798183b01a6c08f0ebeaebf22e8be81ee35daffa",
+      "code_fingerprint": "sha256:9a9a97181aa43fb9025137546322762e5c7d0ffd74330be31fdaf09d74025fc4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-4-1.svg",
-          "bytes": 47830,
-          "sha256": "sha256:c08b9eb0f3a344cdb5951747354cd834873676fb9330b2cc32754c09696efa9d"
+          "bytes": 49464,
+          "sha256": "sha256:58c4006b122c40037ecb26e723149b4924e3d22b9fc4021040e3260d6b1756c2"
         }
       ]
     },
     "conditional-training-with-the-chapter-s-loss-5": {
-      "code_fingerprint": "sha256:4e539ea0e29f7a55cf2a2971ac02ed35afad173d54fa0a25a24be940acf2f3cc",
+      "code_fingerprint": "sha256:e4958eeb79b57f3f3aca1635ee1247602e4e76bb05050b3fa2873638a86e6b4b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-5-1.svg",
-          "bytes": 605515,
-          "sha256": "sha256:789502ac0ec76215f5ec73c5491b80d13dac5ce70c7697a32577568ad81f1e33"
+          "bytes": 598779,
+          "sha256": "sha256:28a0c3cce12e785516a7597650290ad5714d562da2a77d108ed95800ec1b38ef"
         }
       ]
     },
     "conditional-measuring-condition-alignment-1": {
-      "code_fingerprint": "sha256:c9c9107160531d4da9f4a3abd91ee8975c23b8c4aa8d20a2606c7a2e2bf1c4c5",
+      "code_fingerprint": "sha256:5b9c41a8b3bd77bdcce0f5149bdf86be5f077cce3c3ef1d4e548d8899e94071f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.769\n"
+          "text": "CIFAR-10 test accuracy: 0.770\n"
         }
       ]
     },
     "conditional-measuring-condition-alignment-2": {
-      "code_fingerprint": "sha256:6512d4426dc656914f5da78a31b570de2864411b0a0c7ae5a9b26b6044327307",
+      "code_fingerprint": "sha256:ecb427375b1c25dee3784631c1c4dd4efd9a18463ccd00bfe618facdf06ee194",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class         alignment   real    gap\nairplane           0.70   0.79  -0.09\nautomobile         0.83   0.89  -0.06\nbird               0.62   0.64  -0.01\ncat                0.55   0.56  -0.01\ndeer               0.65   0.71  -0.06\ndog                0.64   0.73  -0.09\nfrog               0.79   0.86  -0.06\nhorse              0.75   0.79  -0.04\nship               0.87   0.88  -0.01\ntruck              0.78   0.85  -0.07\nmean               0.72   0.77  -0.05\n"
+          "text": "class         alignment   real    gap\nairplane           0.71   0.79  -0.08\nautomobile         0.77   0.89  -0.12\nbird               0.61   0.64  -0.02\ncat                0.54   0.56  -0.02\ndeer               0.60   0.71  -0.11\ndog                0.66   0.73  -0.07\nfrog               0.79   0.86  -0.06\nhorse              0.72   0.79  -0.07\nship               0.88   0.88  +0.01\ntruck              0.77   0.85  -0.08\nmean               0.71   0.77  -0.06\n"
         }
       ]
     },
     "conditional-measuring-condition-alignment-4": {
-      "code_fingerprint": "sha256:9774c84b1dcaa70c1bf7cdcaaac7ba0c7df0beb21492cf66991a48b480d1d017",
+      "code_fingerprint": "sha256:64b58ee634f73a88ebbbf408316895e218ed681a2c95c6a9bd3885b47cecfd0f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.65             -0.003            --\ngenerated vs. real                1.73              0.062         0.008\nwithin-class feature variance: generated 0.152, real 0.19, second real set 0.181\n"
+          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.65             -0.003            --\ngenerated vs. real                1.69              0.056         0.010\nwithin-class feature variance: generated 0.156, real 0.191, second real set 0.181\n"
         }
       ]
     },
     "conditional-measuring-condition-alignment-5": {
-      "code_fingerprint": "sha256:ca9171624760519484186d3512d1fa52072a70a4a5f2180171c3512bf15e3f8d",
+      "code_fingerprint": "sha256:1ca496227cc5e11ee351159c04385680b0a61268759c098f9ad854a246ec5e33",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "permuted labels: alignment 0.72 -> 0.03, FD 1.73, MMD^2 0.062 (both unchanged)\nmost confident image per class: alignment 1.00, within-class variance 0\n"
+          "text": "permuted labels: alignment 0.73 -> 0.03, FD 1.69, MMD^2 0.056 (both unchanged)\nmost confident image per class: alignment 1.00, within-class variance 0\n"
         }
       ]
     },
     "conditional-the-critic-s-label-signal": {
-      "code_fingerprint": "sha256:efe72c7601a46a7e310dc644673394d11ea72762e539738030d606733532c61e",
+      "code_fingerprint": "sha256:6e079ad8d80127abcf1931a9684b13e6dcc932dcd55bf1bb4298cec3204cf176",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P(D(x, c) > D(x, c+1)) = 0.64\ncritic as a classifier: raw 0.19, constants removed 0.30\n"
+          "text": "P(D(x, c) > D(x, c+1)) = 0.57\ncritic as a classifier: raw 0.12, constants removed 0.32\n"
         }
       ]
     }

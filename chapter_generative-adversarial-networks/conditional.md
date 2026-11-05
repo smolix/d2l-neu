@@ -416,10 +416,10 @@ d2l.plot(history[:, 0], [history[:, 1], history[:, 2]], 'step', 'loss',
          axes=axes[0])
 axes[0].axhline(np.log(2), ls='--', c='gray', lw=1)
 d2l.plot(history[:, 0], history[:, 4], 'step', 'held-out pair accuracy',
-         ylim=[0.4, 1], axes=axes[1])
+         ylim=[0.3, 1], axes=axes[1])
 axes[1].axhline(0.5, ls='--', c='gray', lw=1);
 ```
-The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after a brief spike of the generator loss at the start. The generator loss then stays near 1.0, above $\log 2$, and the critic's pairing loss near 0.5, below it, with the penalty adding about 0.06. Both readings say that the critic still wins most comparisons, and the pair accuracy agrees: late in training the critic orders about 80% of fresh same-class pairs correctly, down from about 90% in the first few thousand steps, with occasional dips at a single logging step. At this budget the accuracy does not approach one half, so on average over classes the generator has not caught up with the data.
+The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after an early peak of the generator loss. The generator loss then stays near 1.0, above $\log 2$, and the critic's pairing loss near 0.5, below it, with the penalty adding about 0.06. Both readings say that the critic still wins most comparisons, and the pair accuracy agrees: late in training the critic orders about 80% of fresh same-class pairs correctly, down from about 90% in the first few thousand steps, with occasional brief dips. At this budget the accuracy does not approach one half, so on average over classes the generator has not caught up with the data.
 
 The next grid tests generation on demand. Each row requests one class, and each column uses a fresh latent code. As in :numref:`sec_dcgan`, the generator has no tanh, so the display and every evaluation below clamp its output to $[-1, 1]$.
 
@@ -657,7 +657,7 @@ print(f'P(D(x, c) > D(x, c+1)) = '
 print(f'critic as a classifier: raw {hit(S):.2f}, '
       f'constants removed {hit(S - zeta):.2f}')
 ```
-Between 55% and 70% of real images score higher under their own label than under the next one, so the critic still has label information to pass to the generator; at the equilibrium the fraction would be one half. Used as a raw classifier, the critic labels 10% to 25% of the images correctly, against 10% for chance, because the scores of each class carry their own constant. Removing the constants raises its accuracy to about 30%, three times chance. This is the shift invariance of :numref:`sec_gan_relativistic` at work in a trained network, one constant per class. The corrected critic is still a poor classifier, and it should be: its label term records where the generator still disagrees with the data, not what an image shows (Exercise :exref:`ex_conditional-critic-classifier`).
+Depending on the run, between half and two thirds of real images score higher under their own label than under the next one, close to the value of one half that the equilibrium would give, so this pairwise test barely registers the label information. The per-class constants hide it. Used as a raw classifier, the critic labels 10% to 25% of the images correctly, against 10% for chance, because the scores of each class carry their own constant. Removing the constants raises its accuracy to between a quarter and a third, two to three times chance, so the critic still has label information to pass to the generator. This is the shift invariance of :numref:`sec_gan_relativistic` at work in a trained network, one constant per class. The corrected critic is still a poor classifier, and it should be: its label term records where the generator still disagrees with the data, not what an image shows (Exercise :exref:`ex_conditional-critic-classifier`).
 
 We can now ask a GAN for a class and check what we got: whether it obeys, how much it varies, and how close it comes to the data. The image-to-image systems of this section ask for more, an output that matches a known target, and pix2pix still adds a critic to its $L_1$ loss. Why a learned comparison helps when a regression target exists is the question of :numref:`sec_gan_beyond`.
 
@@ -1178,11 +1178,12 @@ scores of the same class, so $\zeta_c$ cancels: monitor that one.
 
 @!conditional-the-critic-s-label-signal
 
-- 55–70% of real images score higher under their own label: label
-  signal remains (equilibrium: 50%).
-- Raw $\arg\max_c D(x, c)$: not much above chance; the free $\zeta_c$
+- Own label above the next label: 50–65% of real images, close to the
+  equilibrium's 50%.
+- Raw $\arg\max_c D(x, c)$: 10–25%, against 10% chance; the free $\zeta_c$
   distort it.
-- Constants removed: about 30%, three times chance.
+- Constants removed: a quarter to a third, two to three times chance;
+  the label signal is there.
 :::
 
 ::: {.slide title="Check: Which Measurement Catches Which Failure?"}

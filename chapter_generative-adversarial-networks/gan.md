@@ -529,7 +529,7 @@ for name, net in [('at initialization', make_nets()[0]),
           f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.3f} nats')
 ```
 
-The divergence falls from about eight nats at initialization to well below one, typically about a hundredth of a nat. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
+The divergence falls from about eight nats at initialization to well below one, typically about a hundredth of a nat or less. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
 
 ### The Learned Density Ratio
 :label:`subsec_gan_verify_critic`
@@ -623,7 +623,7 @@ d2l.plot([lam[:200], lam[200:], lims], [D_out[:200], D_out[200:], lims],
          fmts=('C0.', 'C1.', 'k--'), figsize=(4.2, 3.4))
 ```
 
-A network trained only to classify has learned the log density ratio, as :eqref:`eq_gan_dstar` predicts: the correlation exceeds 0.97 and the critic explains more than 90 percent of the variance of $\lambda$. The errors concentrate in the tails. On the tenth of points with the most extreme $\lambda$, generated samples where $p$ is nearly zero, the critic misses by one to a few nats; elsewhere by a few tenths. The objective constrains the critic only where the mixture $m$ has appreciable mass, so density-ratio estimates are least accurate where the ratio is most extreme.
+A network trained only to classify has learned the log density ratio, as :eqref:`eq_gan_dstar` predicts: the correlation exceeds 0.97 and the critic explains more than 90 percent of the variance of $\lambda$. The errors concentrate in the tails. On the tenth of points with the most extreme $\lambda$, generated samples where $p$ is nearly zero, the critic misses by one to a few nats; elsewhere by a few tenths or less. The objective constrains the critic only where the mixture $m$ has appreciable mass, so density-ratio estimates are least accurate where the ratio is most extreme.
 
 ### Saturating and Non-Saturating Losses Compared
 :label:`subsec_gan_saturation`
@@ -707,7 +707,7 @@ d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
 fig.tight_layout()
 ```
 
-The saturating generator does not move. Its critic's loss drops to zero within the first epochs, so $\sigma(D(x')) \approx 0$ for every generated sample and every update has a weight near zero. The generator stays put, the critic keeps rejecting it, and the run ends where it started, more than three hundred nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples already lie in the data region, though spread more widely than the data. By epoch twenty they fill the ellipse, $D_{\mathrm{KL}}(q \,\|\, p)$ is well below one nat, and its critic's loss has climbed back to $\log 2$.
+The saturating generator does not move. Its critic's loss drops to zero within the first epochs, so $\sigma(D(x')) \approx 0$ for every generated sample and every update has a weight near zero. The generator stays put, the critic keeps rejecting it, and the run ends where it started, more than three hundred nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples already lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\mathrm{KL}}(q \,\|\, p)$ is well below one nat, and its critic's loss has climbed back to $\log 2$.
 
 The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot create it. Here the critic's score surface slopes toward the data even far from them, and the reweighting turns that slope into progress. An optimal critic on separated supports, as in the point-mass example, offers no slope, and no choice of weight helps.
 
@@ -813,7 +813,7 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        generator in either setting. Yet the run of
        :numref:`subsec_gan_training` trains on $\hat p$ and reduces
        $D_{\mathrm{KL}}(q \,\|\, p)$ from about eight nats to about a
-       hundredth of a nat. Let $V_{\hat p}(D)$ denote :eqref:`eq_gan_V` with $p$
+       hundredth of a nat or less. Let $V_{\hat p}(D)$ denote :eqref:`eq_gan_V` with $p$
        replaced by $\hat p$, and restrict the critic to functions with
        $|D(x) - D(\tilde x)| \leq \kappa \|x - \tilde x\|$ for all $x, \tilde x$; the
        critic built by `make_nets` is such a function for some finite
@@ -1240,7 +1240,7 @@ for 2,000 steps; compare with the analytic $\lambda$.
 - Correlation above 0.97; the critic explains over 90% of the variance of
   $\lambda$ ($R^2$; a constant critic scores 0).
 - Errors of one to a few nats on the tenth with the most extreme $\lambda$,
-  a few tenths elsewhere: the tails, where samples are rare.
+  a few tenths or less elsewhere: the tails, where samples are rare.
 :::
 
 ::: {.col .narrow}

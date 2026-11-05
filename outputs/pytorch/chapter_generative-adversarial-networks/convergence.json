@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:803241913b7566cb3ca94a1f7c4fff851e852b3a7d682157dda632012c0cf64c"
+          "sha256": "sha256:9e56fd28213929761be1210f53a6a597c0e0e5aa1049c4084ffc296a82831a06"
         }
       ]
     },
@@ -38,7 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
+          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
         }
       ]
     },
@@ -63,7 +68,7 @@
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:76c618a46eb245457f905e4b324f86e5bca1653a1eb1cdd429c4af8c4b5eff58",
+      "code_fingerprint": "sha256:62d74267632ffedf6d82f7fb7916ff38244910bc80fc59c99b9ebe54869aa61e",
       "kind": "mixed",
       "outputs": [
         {
@@ -76,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
           "bytes": 996991,
-          "sha256": "sha256:e8aed5e2f37ef81ea12e88fcdaed97547a95bedec2e95a4b47b5a17d180c40c1"
+          "sha256": "sha256:8fd14661ab310cf95be0ff2299ab29568db4c72e408926548bebceb5e625a33c"
         }
       ]
     }

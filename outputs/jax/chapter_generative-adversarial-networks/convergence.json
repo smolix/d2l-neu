@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 58242,
-          "sha256": "sha256:2e007c6076e33a09eff9e5d1b6f0d061397b8416ca985b42f4302a400fd16318"
+          "sha256": "sha256:e356810849ec2727136ab039b7641d30617b20d44b972b6f1da8d416e7efb38f"
         }
       ]
     },
@@ -63,20 +63,20 @@
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:6b02b7756e08169531ac41a75b294f26e1415845bcb7fbdabb9f40775cda847b",
+      "code_fingerprint": "sha256:a424d6444b5ecf8ec78379fe1cd70e246e774ddb5c16f5ca491376c90fe5f506",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 25/25 modes, on-mode 0.72, distance 0.17, E_q|grad D|^2 4.3e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.88, distance 0.10, E_q|grad D|^2 3.3e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.60, distance 0.25, E_q|grad D|^2 2.9e-05\n"
+          "text": "GAN: 25/25 modes, on-mode 0.89, distance 0.10, E_q|grad D|^2 2.1e+00\nR3GAN, gamma=1: 25/25 modes, on-mode 0.81, distance 0.14, E_q|grad D|^2 7.5e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.36, distance 0.34, E_q|grad D|^2 5.5e-05\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
-          "bytes": 997413,
-          "sha256": "sha256:bd2ed27498a6e9644860ee2aaec75c12dbfced388b8a49835e6d4a76a64c8aa1"
+          "bytes": 997212,
+          "sha256": "sha256:04e269b2c372a5fd26f70f68604656a5ff612dd08da252652750296e889fd193"
         }
       ]
     }

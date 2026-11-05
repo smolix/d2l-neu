@@ -729,7 +729,7 @@ axes[0].legend(names, loc='center right')
 fig.tight_layout()
 ```
 
-The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps around between about 0.1 and ten, mostly near one; both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at almost every check, the unpenalized one with sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. The third panel shows what this means for the generator. Without the penalty the rank weight stays mostly below 0.2, often near zero, with spikes; with it, the weight settles between about a quarter and two fifths.
+The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps around between about 0.1 and ten, mostly near one; both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at most checks, with occasional sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. The third panel shows what this means for the generator. Without the penalty the rank weight stays mostly below 0.2, often near zero, with spikes; with it, the weight settles between about a quarter and two fifths.
 
 ### Samples of the Three Arms
 
@@ -773,7 +773,7 @@ Without a penalty the classic loss collapses: after 6,000 steps the 64 latent co
 
 The collapse is a training failure of an unregularized game, not a minimum of the loss. :numref:`sec_gan_convergence` showed that gradient training circles the equilibrium unless something damps the critic near the data. Here nothing does: the squared input gradient of the unpenalized critic at the real images is about a hundred times that of the penalized critics, and the critic places nearly every generated sample far below the real ones.
 
-The third panel connects this to :numref:`sec_gan_relativistic`. A rank weight near zero, as without the penalty, means that the critic ranks every generated sample below nearly every real one. The weight has saturated, and its values no longer say which samples are worse. The non-saturating generator, which weights a sample by $1 - w_{\mathrm{Rp}}$, then gives every sample the same full-size push. The penalty keeps the rank weight between about a quarter and two fifths, so samples the critic ranks lower are pushed harder than samples it nearly mistakes for real ones. The weight is computed from the critic's scores alone, so it can be read in every arm, whichever generator loss uses it. The ranking accuracy, one minus its hard-threshold version, is close to one in all three arms and misses this difference.
+The third panel connects this to :numref:`sec_gan_relativistic`. A rank weight near zero, which the unpenalized critic often reaches, means that the critic ranks every generated sample below nearly every real one. The weight has saturated, and its values no longer say which samples are worse. The non-saturating generator, which weights a sample by $1 - w_{\mathrm{Rp}}$, then gives every sample the same full-size push. The penalty keeps the rank weight between about a quarter and two fifths, so samples the critic ranks lower are pushed harder than samples it nearly mistakes for real ones. The weight is computed from the critic's scores alone, so it can be read in every arm, whichever generator loss uses it. The ranking accuracy, one minus its hard-threshold version, is close to one in all three arms and misses this difference.
 
 Pairing itself adds nothing measurable here. With both penalties, the classic and the pairing loss reach the same quality on sprites at this budget: their scores below overlap across seeds and frameworks, and so do their grids. Sprites have no known modes, so this comparison cannot measure coverage. R3GAN measured it on StackedMNIST, whose 1,000 modes can be counted: with both penalties the pairing loss recovered all of them and the classic loss 693, in single runs (:numref:`sec_gan_convergence`). The theory of :numref:`sec_gan_relativistic` does not settle the question either. Its no-collapse result holds for a fixed one-to-one pairing, while our loop, like R3GAN's, draws new pairs at every step, and averaged over pairings that is the all-pairs loss, which has as many mode-dropping minima as the classic loss.
 
@@ -1565,14 +1565,14 @@ the loss is passed in as a function.
 
 - Steepness $\mathbb{E}\|\nabla_x D\|^2$: about 100× larger without $R_1$.
 - Ranking accuracy: near 1 in all three arms.
-- Rank weight $w_{\mathrm{Rp}}$: near 0 without the penalty, 0.25 to 0.4 with it.
+- Rank weight $w_{\mathrm{Rp}}$: mostly below 0.2 without the penalty, 0.25 to 0.4 with it.
 :::
 
 ::: {.slide title="The Unpenalized Arm Collapses; Both Penalized Arms Stay Diverse"}
 @!dcgan-loss-a-b-on-one-backbone-3
 
 A training failure of an unregularized game: nothing damps the critic,
-whose squared input gradient ends about 100× larger than with the penalty,
+whose squared input gradient is about 100× larger than with the penalty,
 and every sample gets the same push.
 :::
 

@@ -341,7 +341,7 @@ kl = (np.exp(logp) * (logp - logq)).sum() * cell_area
 print(f'KL(p || q) = {kl:.3f} nats, attained bound = {bound:.3f} nats')
 ```
 
-The attained bound lies below the exact divergence, as the duality argument requires, and recovers more than four fifths of it. The missing part comes mostly from unfinished optimization where the samples are dense, and training the critic longer closes most of it. A critic that overshoots $1 + \lambda$ where $q$ almost never samples is penalized by the quadrature but not by a minibatch estimate, which can therefore flatter the critic.
+The attained bound lies below the exact divergence, as the duality argument requires, and recovers more than four fifths of it. Much of the gap is unfinished optimization where the samples are dense: training the critic four times as long brings the bound to within a few percent of the divergence. A critic that overshoots $1 + \lambda$ where $q$ almost never samples is penalized by the quadrature but not by a minibatch estimate, which can therefore flatter the critic.
 
 ## Integral Probability Metrics
 
@@ -1007,7 +1007,7 @@ The forward-KL critic's bound, evaluated by quadrature:
 @!objectives-critic-links-2
 
 - Below the exact KL, as duality requires; recovers more than four fifths.
-- The gap is mostly unfinished training where samples are dense.
+- Much of the gap is unfinished training where samples are dense.
 :::
 
 ::: {.slide title="Check: Read a Ratio off a Critic"}

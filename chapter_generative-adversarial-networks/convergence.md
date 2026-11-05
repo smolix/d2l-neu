@@ -1,7 +1,7 @@
 # Gradient Penalties and Convergence
 :label:`sec_gan_convergence`
 
-The Gaussian of :numref:`sec_basic_gan` trained without trouble: both losses settled near $\log 2$, and the divergence between generated and real data typically fell to a few hundredths of a nat. Even from a start far from the data, where the value of the game barely depends on the generator's position, the non-saturating generator kept moving, because the trained critic still sloped toward the data. That problem was easy, and GANs on harder data are known for losses that oscillate and samples that drift instead of settling. The last three sections computed what the game is worth when the critic answers optimally. Training never gives the critic that chance: both networks take small gradient steps at the same time, and every step of one player changes the objective the other one faces. Knowing where the equilibrium lies says nothing yet about whether these steps reach it.
+The Gaussian of :numref:`sec_basic_gan` trained without trouble: both losses settled near $\log 2$, and the divergence between generated and real data typically fell to about a hundredth of a nat. Even from a start far from the data, where the value of the game barely depends on the generator's position, the non-saturating generator kept moving, because the trained critic still sloped toward the data. That problem was easy, and GANs on harder data are known for losses that oscillate and samples that drift instead of settling. The last three sections computed what the game is worth when the critic answers optimally. Training never gives the critic that chance: both networks take small gradient steps at the same time, and every step of one player changes the objective the other one faces. Knowing where the equilibrium lies says nothing yet about whether these steps reach it.
 
 :citet:`Mescheder.Geiger.Nowozin.2018` asked which training methods for GANs actually converge. Their answer starts from the smallest game there is: the data sit at one point, the generator places its sample at another, and the critic is a straight line. Even this game defeats plain gradient training, and a penalty on the critic's slope at the data and generated samples repairs it. R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` and the image generators of :numref:`sec_dcgan` train with this penalty.
 
@@ -571,13 +571,13 @@ for ax, (name, x) in zip(axes, samples.items()):
     modes, on, dist = mode_stats(x, grid)
     print(f'{name}: {modes}/25 modes, on-mode {on:.2f}, '
           f'distance {dist:.2f}, E_q|grad D|^2 {grad_q[name]:.1e}')
-    d2l.plot([grid[:, 0], x[:3000, 0]], [grid[:, 1], x[:3000, 1]],
-             fmts=('C0x', 'C1.'), xlim=(-5, 5), ylim=(-5, 5), axes=ax)
+    d2l.plot([x[:3000, 0], grid[:, 0]], [x[:3000, 1], grid[:, 1]],  # centers on top
+             fmts=('C1.', 'C0x'), xlim=(-5, 5), ylim=(-5, 5), axes=ax)
     ax.set_title(name), ax.set_aspect('equal')
 fig.tight_layout()
 ```
 
-The R3GAN loss at $\gamma = 1$ fits the grid: it reaches all 25 modes and puts roughly three quarters or more of its samples within three widths of a center. The classical GAN reaches 24 or 25 modes by the same count and puts a similar fraction of its samples on a mode. The count is lenient, since one sample in 10,000 marks a mode as reached, so the panels show better how evenly each run spreads its samples. What separates the two runs in every seed is the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the generator reaches every mode but leaves the grid blurred, with fewer than half of its samples on a mode and at least twice the mean distance, as predicted. The penalized game still has its equilibrium at $q = p$; the larger $\gamma$ slows the resolution of fine structure, and exercise :exref:`ex_convergence-penalty-length` asks whether more steps recover it. This experiment does not test coverage; the evidence on coverage is the StackedMNIST ablation above.
+The R3GAN loss at $\gamma = 1$ fits the grid: it reaches all 25 modes and puts roughly three quarters or more of its samples within three widths of a center. The classical GAN reaches 24 or 25 modes by the same count and also puts most of its samples on a mode. The count is lenient, since one sample in 10,000 marks a mode as reached, so the panels show better how evenly each run spreads its samples. What separates the two runs in every seed is the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the generator reaches every mode but leaves the grid blurred, with fewer of its samples on a mode and at least twice the mean distance, as predicted. The penalized game still has its equilibrium at $q = p$; the larger $\gamma$ slows the resolution of fine structure, and exercise :exref:`ex_convergence-penalty-length` asks whether more steps recover it. This experiment does not test coverage; the evidence on coverage is the StackedMNIST ablation above.
 
 ## The Games of This Chapter
 
@@ -1132,10 +1132,8 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- $\gamma = 1$: all 25 modes, most samples within three widths.
-- The plain GAN also reaches 24 or 25 modes, but its
-  $\mathbb{E}_q\|\nabla_x D\|^2$ is thousands of times larger: the critic
-  stays steep.
+- $\gamma = 1$: all 25 modes; the plain GAN reaches 24 or 25 with a critic
+  thousands of times steeper.
 :::
 
 ::: {.slide title="Three Choices Describe the Games of the First Four Sections"}

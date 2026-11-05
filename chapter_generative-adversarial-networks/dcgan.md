@@ -855,7 +855,7 @@ print(f'real pixel values equal to +1: '
       f'{float((holdout_imgs == 1).mean()):.0%}')
 ```
 
-The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score several times the floor, between about five and fifteen times in our runs, which fits the soft outlines in their grids, and they overlap each other. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the others and the other three within a factor of three of each other. About one in six raw pixel values of a penalized generator lies outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
+The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score about an order of magnitude above the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, sometimes by a factor of two or three, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. About one in six raw pixel values of a penalized generator lies outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
 
 Both scores depend on the feature network as well as on the generator: our classifier judges sprites by what helps to classify photographs, and a different feature network can change the values and reorder similar models.
 
@@ -1295,7 +1295,7 @@ $\phi'_j = \phi(x'_j)$ generated.
 @!dcgan-scoring-the-two-runs
 
 - Collapsed arm: dozens to hundreds of times the floor.
-- Penalized arms: about 5 to 15 times the floor; DCGAN close to them.
+- Penalized arms: about 10× the floor, which one is lower changes from run to run; DCGAN close to them.
 - Out-of-range pixels: the white background overshooting $+1$.
 :::
 

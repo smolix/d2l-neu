@@ -514,7 +514,7 @@ d2l.plot([data[:100, 0], fake[:100, 0]], [data[:100, 1], fake[:100, 1]],
 fig.tight_layout()
 ```
 
-Unlike on the garments, the critic's loss rises to $\log 2$, as it should if $\mathrm{JS}$ approaches zero, since the best critic's per-sample loss is $\log 2 - \mathrm{JS}(p, q)$. The generator's loss approaches the same level from above, the minimum of the non-saturating loss by :eqref:`eq_gan_ns_value`, and the generated samples fill the data's ellipse. Still, a critic loss of $\log 2$ shows only that this critic can no longer separate the samples, not that $q = p$, so we check the fit independently.
+Unlike on the garments, the critic's loss rises to $\log 2$ within about ten epochs and then stays near it, apart from an occasional epoch in which both losses jump above it and fall back. That is what it should do if $\mathrm{JS}$ approaches zero, since the best critic's per-sample loss is $\log 2 - \mathrm{JS}(p, q)$. The generator's loss approaches the same level from above, the minimum of the non-saturating loss by :eqref:`eq_gan_ns_value`, and the generated samples fill the data's ellipse. Still, a critic loss of $\log 2$ shows only that this critic can no longer separate the samples, not that $q = p$, so we check the fit independently.
 
 ### The Fit in Nats
 :label:`subsec_gan_fit`
@@ -571,7 +571,7 @@ for name, net in [('at initialization', make_nets()[0]),
           f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.3f} nats')
 ```
 
-The divergence falls from about eight nats at initialization to well below one, typically about a hundredth of a nat or less. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
+The divergence falls from about eight nats at initialization to well below one, typically a few hundredths of a nat or less. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
 
 ### The Learned Density Ratio
 :label:`subsec_gan_verify_critic`
@@ -817,7 +817,7 @@ A GAN replaces the likelihood with a learned comparison: a critic learns to tell
     1. Show that $\mathrm{JS}(\hat p, q) = \log 2$ for the empirical
        distribution $\hat p$ of the thousand training points and every $q$
        with a density, $q = p$ included.
-    1. Yet training on $\hat p$ fits $q$ to about a hundredth of a nat. For a
+    1. Yet training on $\hat p$ fits $q$ to a few hundredths of a nat. For a
        $\kappa$-Lipschitz critic, such as that of `make_nets`, use the
        Kantorovich--Rubinstein duality (:numref:`sec_mdl-optimal-transport`)
        to show that replacing $p$ by $\hat p$ in :eqref:`eq_gan_V` changes
@@ -1164,7 +1164,7 @@ The garments cannot be scored in nats: neither density can be evaluated.
 
 - Linear generator on a tilted ellipse: $\lambda$ and $D_{\mathrm{KL}}(q\|p)$
   in closed form; critic loss $\to \log 2$ means $\mathrm{JS} \to 0$.
-- $D_{\mathrm{KL}}(q\|p)$: about 8 nats at start, a hundredth or less after 20 epochs.
+- $D_{\mathrm{KL}}(q\|p)$: about 8 nats at start, a few hundredths or less after 20 epochs.
 :::
 
 ::: {.slide title="A Trained Critic Tracks log(p/q) on a Hand-Set q"}

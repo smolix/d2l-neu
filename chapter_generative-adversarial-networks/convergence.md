@@ -614,7 +614,7 @@ for ax, (name, x) in zip(axes, samples.items()):
 fig.tight_layout()
 ```
 
-The R3GAN loss at $\gamma = 1$ fits the grid. Over sixteen runs with different seeds it covered all 25 modes in every run but one, which covered 24, and put most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode but spreads them less evenly: it covered between 20 and 25 modes, dropped at least one mode in about half the runs, and in its weakest runs left a whole line of five modes nearly empty. The two losses differ more reliably in the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends about three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: only an eighth to three fifths of the samples lie on a mode, and their mean distance to the nearest center is 1.5 to 6 times that at $\gamma = 1$. The blur also thins out some modes, mostly near the center of the grid, so the strict count finds between 21 and 25 covered. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
+The R3GAN loss at $\gamma = 1$ fits the grid. Over sixteen runs with different seeds it covered all 25 modes in every run but one, which covered 24, and put most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode but spreads them less evenly. Over about 150 runs it covered all 25 modes in only about two runs out of five, and in more than a quarter of them it left a whole row or column of the grid nearly empty. The two losses differ more reliably in the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends about three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: only an eighth to three fifths of the samples lie on a mode, and their mean distance to the nearest center is 1.5 to 6 times that at $\gamma = 1$. The blur also thins out some modes, mostly near the center of the grid, so the strict count finds between 21 and 25 covered. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
 
 ## The Games of This Chapter
 
@@ -1032,10 +1032,7 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- $\gamma = 1$: all 25 modes in 15 of 16 runs; critic $10^3$–$10^4\times$
-  flatter than the GAN's.
-- GAN: 20 to 25 modes across seeds; its weakest runs empty a line of the grid.
-- $\gamma = 10$: blurred; an eighth to three fifths of samples on a mode.
+- $\gamma = 1$: all 25 modes almost always; GAN: all 25 in about 2 runs of 5.
 :::
 
 ::: {.slide title="Three Choices Describe the Games of the First Four Sections"}

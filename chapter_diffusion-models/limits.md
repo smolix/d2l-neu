@@ -92,8 +92,8 @@ The fourth difficulty is that the model provides no density. Held-out
 likelihood cannot be reported, two trained generators cannot be compared by
 the probability they assign to a test set, and anomalies cannot be scored by
 their probability.
-Evaluation relies on feature-space statistics of samples, whose limitations
-:numref:`sec_dcgan` examined. A separate restriction, not a difficulty of
+Evaluation relies on feature-space statistics of samples (:numref:`sec_dcgan`),
+whose limitations :numref:`sec_gan-further-reading` collects. A separate restriction, not a difficulty of
 the game itself, is that the generator is trained through the gradient of
 the discriminator with respect to the generated sample, so the basic
 formulation requires continuous data.

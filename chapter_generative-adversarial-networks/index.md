@@ -1,13 +1,13 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently: from which of two answers a judge preferred, through the Bradley--Terry model. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
+Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently: from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
 
-:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed that it can. A second network, the critic, learns to tell generated samples from real ones, and the generator learns to make that hard, like a forger who improves against the appraiser who catches the forgeries. The idea rests on a fact we used for covariate shift in :numref:`subsec_covariate-shift-correction`: a classifier trained to separate two samples reports the logarithm of the ratio of their densities on its logit, although neither density is ever written down. The ratio tells the generator where its samples are too dense and where too sparse.
+:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed that it can. A second network, the critic, learns to tell generated samples from real ones, and the generator learns to make that hard. The critic's output tells the generator where its samples are too dense and where too sparse, although neither density is ever written down.
 
-Diffusion and flow models (:numref:`chap_diffusion`) have since replaced stand-alone GANs for most image synthesis, yet the learned comparison survives in the systems built on them: one-step generators distilled from diffusion models, the autoencoders many of them run on, and many speech vocoders train with an adversarial term.
+Diffusion and flow models (:numref:`chap_diffusion`) have since replaced stand-alone GANs for most image synthesis, yet the learned comparison survives: one-step generators distilled from diffusion models, the autoencoders on which many image generators run, and many speech vocoders all train with an adversarial term.
 
-Seven questions organize the chapter. What does the classifier compute, and what does the generator then minimize (:numref:`sec_basic_gan`)? Which losses and critics give which distance, and which keep a gradient far from the data (:numref:`sec_gan_objectives`)? What changes when the critic ranks a real sample against a generated one, as a Bradley--Terry model does (:numref:`sec_gan_relativistic`)? Why does gradient training circle an equilibrium, and what makes it converge (:numref:`sec_gan_convergence`)? Which network maps noise to an image, and how do we score the images (:numref:`sec_dcgan`)? How do we request a bird rather than any image, and check that we got one (:numref:`sec_gan_conditional`)? Why is a learned comparison still needed once generators are trained by regression (:numref:`sec_gan_beyond`)? :numref:`tab_gan_games`, at the end of :numref:`sec_gan_convergence`, places every game of the chapter by what the critic estimates, what it does with the estimate and how it is constrained.
+Seven questions organize the chapter. What does the classifier compute, and what does the generator then minimize (:numref:`sec_basic_gan`)? Which losses and critics give which distance, and which keep a gradient far from the data (:numref:`sec_gan_objectives`)? What changes when the critic ranks a real sample against a generated one, as a Bradley--Terry model does (:numref:`sec_gan_relativistic`)? Why does gradient training circle an equilibrium, and what makes it converge (:numref:`sec_gan_convergence`)? Which network maps noise to an image, and how do we score the images (:numref:`sec_dcgan`)? How do we request a bird rather than any image, and check that we got one (:numref:`sec_gan_conditional`)? Why is a learned comparison still needed once generators are trained by regression (:numref:`sec_gan_beyond`)? :numref:`tab_gan_games`, at the end of :numref:`sec_gan_convergence`, places every game of the first four sections by what the critic estimates, what it does with the estimate and how it is constrained.
 
 The experiments, in PyTorch and JAX, run on planar Gaussians and mixtures whose densities we know, on game sprites and on CIFAR-10. We do not survey architectures or applications; :numref:`sec_gan-further-reading` points to them.
 
@@ -164,8 +164,10 @@ Which losses and which critics keep the generator moving?
 | how it is constrained | not at all, a fixed ball, a penalty on its gradient |
 
 ::: {.d2l-note}
-The second choice decides whether dropping modes can lower the loss; the
-third, whether a gradient survives separated supports and training converges.
+Ranking alone leaves the minima where dropping modes lowers the loss; only a
+fixed one-to-one pairing of real and generated samples removes them. The
+third choice decides whether a gradient survives separated supports and
+training converges.
 :::
 :::
 
@@ -204,8 +206,8 @@ whether the output looks like data.
 - **Planar Gaussians and mixtures:** both densities known, so the critic is
   checked against $\log(p/q)$ and the fit is measured in nats.
 - **25 Gaussians on a $5 \times 5$ grid:** do the samples cover every mode?
-- **40,597 game sprites at $64 \times 64$:** three losses on one backbone,
-  scored by FID and KID.
+- **40,597 game sprites at $64 \times 64$:** three training recipes on one
+  backbone, scored by FID and KID.
 - **CIFAR-10 at $32 \times 32$, ten classes:** ask for a bird; a classifier
   checks the request.
 :::

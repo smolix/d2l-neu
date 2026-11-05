@@ -216,7 +216,7 @@ print(X.shape, net_D(X).shape)
 
 ### Training with the Classic Loss
 
-The update functions of :numref:`sec_basic_gan` apply to images unchanged. `d2l.update_D` takes one step of logistic regression with label one for data and label zero for generated samples, and `d2l.update_G` takes one step on the non-saturating generator loss $-\mathbb{E}_{z}[\log \sigma(D(G(z)))]$; both return the loss summed over the batch. The loop below alternates them over shuffled minibatches of 256 images with the DCGAN settings: learning rate $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, convolution kernels drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and offsets at zero.
+The update functions of :numref:`sec_basic_gan` apply to images unchanged. `d2l.update_D` takes one step of logistic regression with label one for data and label zero for generated samples, and `d2l.update_G` takes one step on the non-saturating generator loss $-\mathbb{E}_{z}[\log \sigma(D(G(z)))]$; `update_D` returns half the summed loss over the real and the generated batch, and `update_G` the summed loss. Divided by the batch size, both therefore equal $\log 2$ at the equilibrium, while the backbone below reports the full logistic loss, $2 \log 2$. The loop below alternates them over shuffled minibatches of 256 images with the DCGAN settings: learning rate $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, convolution kernels drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and offsets at zero.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab pytorch
@@ -268,7 +268,7 @@ def train_dcgan(net_D, net_G, images, num_epochs=20, batch_size=256,
     return float(loss_D) / n, float(loss_G) / n  # last epoch, per image
 ```
 
-Twenty epochs take a minute or two on one GPU. The printed losses are per image; at the equilibrium $q = p$ both would equal $\log 2 \approx 0.69$.
+Twenty epochs take a minute or two on one GPU. The printed losses are per image.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab pytorch
@@ -300,7 +300,7 @@ fake = net_G(jax.random.normal(jax.random.key(2), (20, 1, 1, 100)))
 d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 ```
 
-The samples are diverse: centered, creature-like shapes on mostly white backgrounds, with plausible palettes but blotchy textures. The losses show an unbalanced game. The critic's loss sits far below $\log 2$ and the generator's several times above it, so the critic separates the two sets well, yet the generator does not collapse onto one output. Batch normalization and the architecture keep the classic loss trainable here; they do not change the loss, so the divergent dynamics of :numref:`sec_gan_convergence` remain possible and DCGAN stays sensitive to its hyperparameters. We score this run against the modern backbone below.
+The samples are diverse: centered, creature-like shapes on mostly white backgrounds, with plausible palettes but blotchy textures. The losses show an unbalanced game. The critic's loss sits far below $\log 2$ and the generator's several times above it, so the critic separates the two sets well, yet the generator does not collapse onto one output. Batch normalization and the architecture keep the classic loss trainable here without changing it, so the divergent dynamics of :numref:`sec_gan_convergence` remain possible. We score this run against the modern backbone below.
 
 ## A Modern Minimal Backbone
 
@@ -324,7 +324,7 @@ Some of these devices impose by architecture what the penalties of :numref:`sec_
 
 R3GAN tests whether the loss can replace them :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. It trains with the pairing loss and both zero-centered penalties of :numref:`sec_gan_convergence` and uses a plain modern convolutional backbone without progressive growing, spectral normalization, attention, style modulation, or pretrained features. On standard benchmarks this simpler network matches or exceeds the architectures that combine those devices, which suggests that many of them compensated for a badly behaved objective.
 
-The paper lists six differences between its minimal baseline and DCGAN: (a) a well-behaved loss, which in the paper's text is the pairing loss with $R_1$ and in its code adds $R_2$, as we do; (b) a small learning rate and Adam with no first-moment momentum ($\beta_1 = 0$); (c) no normalization layer in either network; (d) bilinear resampling instead of strided or transposed convolutions; (e) leaky ReLU in both networks and no tanh at the generator's output; and (f) a $4 \times 4$ constant input, output skips, and a residual critic. The authors report that violating (a), (b), or (c) often leads to training failures, while (d) and (e) mainly affect sample quality. On FFHQ at $256 \times 256$ they take StyleGAN2 apart and rebuild it from these principles at about the same parameter count and training budget:
+The paper lists six differences between its minimal baseline and DCGAN: (a) a convergent objective with $R_1$ regularization, which the paper's experiments use as the pairing loss with $R_1$ and $R_2$, as we do; (b) a small learning rate and Adam with no first-moment momentum ($\beta_1 = 0$); (c) no normalization layer in either network; (d) bilinear resampling instead of strided or transposed convolutions; (e) leaky ReLU in both networks and no tanh at the generator's output; and (f) a $4 \times 4$ constant input, output skips, and a residual critic. Violating (a), (b), or (c) often leads to training failures, while violating (d) or (e) lowers sample quality. On FFHQ at $256 \times 256$ they take StyleGAN2 apart and rebuild it from these principles at about the same parameter count and training budget:
 
 | config | change relative to the previous row | FID |
 |:---|:---|---:|
@@ -334,7 +334,7 @@ The paper lists six differences between its minimal baseline and DCGAN: (a) a we
 | D | modernize the backbone: ResNet generator and critic | 10.0 |
 | E | widen with grouped convolutions and inverted bottlenecks | 7.0 |
 
-Rows D and E each merge two steps of the paper's table (10.17 then 9.95, and 7.51 then 7.05). Removing the ten components raises FID from 7.5 to 12.5; the revised loss and a modern architecture bring it back to 7.0 without any of them :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
+Rows D and E each merge two steps of the paper's table. Without any of the ten components, the revised loss and a modern backbone bring FID back to 7.0 :cite:`Huang.Gokaslan.Kuleshov.ea.2024`.
 
 ### The Backbone
 
@@ -487,7 +487,7 @@ print(f'latent path: projection {G.z_proj.kernel.size + G.z_proj.bias.size}'
       f', mixing weights on z {G.mix.kernel[:, :, 128:].size}')
 ```
 
-The generator has about 2.8 million parameters and the critic about 1.6 million, a reduced instance of R3GAN's design without its residual blocks, grouped convolutions, and inverted bottlenecks. Concatenation is not the cheap way in: the projection of $z$ has about 160,000 parameters and the mixing convolution spends another 460,000 on its 100 extra input channels, whereas a basis layer of the same width (a $100 \times 512$ linear map and 512 learned $4 \times 4$ maps) needs about 60,000 (Exercise :exref:`ex_dcgan-rerun-arm-classic-loss` implements it).
+The generator has about 2.8 million parameters and the critic about 1.6 million, a reduced instance of R3GAN's design without its residual blocks, grouped convolutions, and inverted bottlenecks. Its latent path, the projection of $z$ and the mixing weights on the 100 extra channels, has about 620,000 parameters, ten times as many as R3GAN's basis layer of the same width (Exercise :exref:`ex_dcgan-rerun-arm-classic-loss` implements it).
 
 Three helpers, saved for the next section, complete the recipe. Random horizontal flips augment the real images, which makes it harder for the critic to memorize them. Samples are drawn from an exponential moving average of the generator's parameters, $\bar\theta \leftarrow \beta \bar\theta + (1 - \beta)\theta$ after every step with $\beta = 2^{-1/500}$, a half-life of 500 steps. Because the game's iterates rotate around the equilibrium as they contract (:numref:`sec_gan_convergence`), their average sits closer to the center than they do. The class `EMA` keeps the averaged network as `ema.model`, in evaluation mode; it averages the parameters and copies buffers such as batch-normalization statistics, so it also serves networks that have them. Finally, `ranking_accuracy` reports the fraction of (real, generated) pairs that a critic orders correctly; we use it in the comparison below.
 
@@ -589,7 +589,7 @@ which flatten the critic at the real images ($R_1$) and at the generated ones ($
 | NS + $R_1$ + $R_2$ | classic | $\gamma = 10$ | 12,000 |
 | RpGAN + $R_1$ + $R_2$ | pairing | $\gamma = 10$ | 12,000 |
 
-The first two arms isolate the penalty; the last two isolate pairing. $\gamma$ is a squared length on the input scale (:numref:`sec_gan_convergence`), and R3GAN's tuned values range from 0.05 on CIFAR-10 to 150 on FFHQ-256, so a value from one dataset is only an order-of-magnitude guide for another; we use $\gamma = 10$. The unpenalized arm gets half the budget because it has failed by then.
+The first two arms isolate the penalty; the last two isolate pairing. We use $\gamma = 10$. Because $\gamma$ is a squared length on the input scale (:numref:`sec_gan_convergence`), a tuned value does not transfer between datasets (Exercise :exref:`ex_dcgan-penalty-weight-resolution`). The unpenalized arm gets half the budget because it has failed by then.
 
 The training function takes the two losses as functions and the penalty weight as a number, so all three arms run through one loop. The penalty is computed in every arm, at weight zero in the first, so that the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged for all three, and every 250 steps the loop scores 256 fresh real images against 256 fresh generated ones.
 
@@ -617,7 +617,7 @@ def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
         if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
             with torch.no_grad():
                 X, fake = sample_real(images, 256), net_G(noise(256))
-                weight = torch.sigmoid(net_D(X) - net_D(fake)).mean()
+                weight = torch.sigmoid(net_D(fake) - net_D(X)).mean()
             history.append([step, loss.item(), penalty.item(),
                             r1.mean().item(), ranking_accuracy(net_D, X, fake),
                             weight.item()])
@@ -664,13 +664,13 @@ def train_backbone(images, loss_D, loss_G, gamma, num_steps, batch_size=64,
         if step % log_every == 0:  # fresh pairs: 256 real, 256 generated
             key, kx, kz = jax.random.split(key, 3)
             X, fake = sample_real(kx, images, 256), net_G(noise(kz, 256))
-            weight = jax.nn.sigmoid(net_D(X) - net_D(fake)).mean()
+            weight = jax.nn.sigmoid(net_D(fake) - net_D(X)).mean()
             history.append([step, *map(float, logs),
                             ranking_accuracy(net_D, X, fake), float(weight)])
     return ema.model, net_D, np.array(history)
 ```
 
-The three runs are the longest computation in the chapter, well under half an hour on one RTX 4090; each penalized step costs more because the penalty differentiates the critic's input gradient a second time. After each run we print the critic's loss and penalty, averaged over the last 2,000 steps, and the difference between the critic's mean score on 1,024 training images and on 1,024 held-out images.
+The three runs are the longest computation in the chapter, well under half an hour on one RTX 4090; each penalized step costs more because the penalty differentiates the critic's input gradient a second time. After each run we print the critic's loss and penalty, averaged over the last eight logging steps (2,000 steps), and the difference between the critic's mean score on 1,024 training images and on 1,024 held-out images.
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-2}
 %%tab pytorch
@@ -711,7 +711,7 @@ Both penalized critics sit below the value they would have at the equilibrium, a
 
 ### Training Traces
 
-The losses alone do not say how the critic separates the two sets. Three statistics of the logged pairs do. The first is the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, which the $R_1$ penalty pushes down. The second is the *ranking accuracy* $\hat P(D(x) > D(x'))$, the fraction of fresh (real, generated) pairs that the critic orders correctly; 0.5 means that it cannot tell the sets apart and 1 that it orders every pair. The third is the *rank weight* $\mathbb{E}_{x, x'}[\sigma(D(x) - D(x'))]$, the weight with which the non-saturating pairing generator of :numref:`sec_gan_relativistic` moves a generated sample, averaged over samples. Replacing the sigmoid by a step function turns the rank weight into the ranking accuracy, so the two measure the same ordering, once softly and once by a hard threshold.
+The losses alone do not say how the critic separates the two sets. Three statistics of the logged pairs do. The first is the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, which the $R_1$ penalty pushes down. The second is the *ranking accuracy* $\hat P(D(x) > D(x'))$, the fraction of fresh (real, generated) pairs that the critic orders correctly; 0.5 means that it cannot tell the sets apart and 1 that it orders every pair. The third is the *rank weight* of :numref:`sec_gan_relativistic`, averaged over generated samples, $\mathbb{E}_{x'}[w_{\mathrm{Rp}}(x')] = \mathbb{E}_{x, x'}[\sigma(D(x') - D(x))]$: the probability, softened by the sigmoid, that a generated image outranks a random real one. Replacing the sigmoid by a step function turns it into one minus the ranking accuracy, so the two measure the same ordering, once softly and once by a hard threshold.
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-4}
 %%tab pytorch, jax
@@ -719,7 +719,8 @@ fig, axes = d2l.plt.subplots(1, 3, figsize=(12, 3.2))
 names = list(runs)
 for ax, col, ylabel, yscale in zip(
         axes, (3, 4, 5),
-        (r'$E\,\|\nabla_x D(x)\|^2$', 'ranking accuracy', 'rank weight'),
+        (r'$E\,\|\nabla_x D(x)\|^2$', 'ranking accuracy',
+         r'rank weight $w_{\mathrm{Rp}}$'),
         ('log', 'linear', 'linear')):
     d2l.plot([runs[n][1][:, 0] for n in names],
              [runs[n][1][:, col] for n in names], 'step', ylabel,
@@ -728,9 +729,9 @@ axes[0].legend(names, loc='center right')
 fig.tight_layout()
 ```
 
-The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps around between about 0.1 and ten, mostly near one; both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at almost every check, the unpenalized one with sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. The third panel shows what this means for the generator. Without the penalty the rank weight stays mostly between 0.8 and one, with dips; with it, the weight settles between about 0.6 and 0.75.
+The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images jumps around between about 0.1 and ten, mostly near one; both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at almost every check, the unpenalized one with sharp dips. The penalty does not stop the critic from ranking; it limits how steep the critic is. The third panel shows what this means for the generator. Without the penalty the rank weight stays mostly below 0.2, often near zero, with spikes; with it, the weight settles between about a quarter and two fifths.
 
-### What the Traces Show
+### Samples of the Three Arms
 
 The grids show 64 samples of each EMA generator, drawn from the same latent codes in all three arms.
 
@@ -770,15 +771,11 @@ fig.tight_layout()
 
 Without a penalty the classic loss collapses: after 6,000 steps the 64 latent codes produce one grey texture that resembles no sprite (in some runs a handful of images). The two penalized arms produce diverse, creature-shaped sprites on white backgrounds, with softer outlines than real sprites, and no difference between the two is visible.
 
-The collapse is a training failure of an unregularized game. Nothing limits the critic's slope, so its gradient at the data grows; :numref:`sec_gan_convergence` showed that gradient training circles the equilibrium unless something damps the critic near the data, and here nothing does. The generator's non-saturating weight $1 - \sigma(D(x'))$ is then close to one for every generated sample, so all samples are pushed alike along the critic's steepest direction and follow it to one output.
+The collapse is a training failure of an unregularized game, not a minimum of the loss. :numref:`sec_gan_convergence` showed that gradient training circles the equilibrium unless something damps the critic near the data. Here nothing does: the squared input gradient of the unpenalized critic at the real images is about a hundred times that of the penalized critics, and the critic places nearly every generated sample far below the real ones.
 
-The rank-weight panel connects this to :numref:`sec_gan_relativistic`. There the generator's update of a sample $x'$ carries a weight, and the two losses weigh differently: the classic weight compares $D(x')$ with the critic's fixed zero level, while the pairing weight
+The third panel connects this to :numref:`sec_gan_relativistic`. A rank weight near zero, as without the penalty, means that the critic ranks every generated sample below nearly every real one. The weight has saturated, and its values no longer say which samples are worse. The non-saturating generator, which weights a sample by $1 - w_{\mathrm{Rp}}$, then gives every sample the same full-size push. The penalty keeps the rank weight between about a quarter and two fifths, so samples the critic ranks lower are pushed harder than samples it nearly mistakes for real ones. The weight is computed from the critic's scores alone, so it can be read in every arm, whichever generator loss uses it. The ranking accuracy, one minus its hard-threshold version, is close to one in all three arms and misses this difference.
 
-$$w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}\big[\sigma\big(D(x) - D(x')\big)\big]$$
-
-compares it with the whole distribution of real scores and is the probability, softened by the sigmoid, that a random real image outranks $x'$. The panel averages this weight over generated samples. When it is close to one, the critic places every generated sample far below every real one, and all samples get the same full-size push: the critic's scores no longer say which samples are worse. The penalty keeps the weight graded, between about 0.6 and 0.75, so that samples the critic ranks lower are pushed harder than samples it nearly mistakes for real ones. The ranking accuracy, its hard-threshold version, reads close to one in all three arms and misses this difference.
-
-Pairing itself adds nothing measurable here. With both penalties, the classic and the pairing loss reach the same quality on sprites at this budget: their scores below overlap across seeds and frameworks, and so do their grids. The tie is consistent with :numref:`sec_gan_relativistic`: our loop draws new pairs at every step, so averaged over pairings it optimizes the all-pairs loss, which has as many mode-dropping minima as the classic loss; the one-to-one guarantee belongs to a fixed coupling. The coverage advantage of pairing is measured where coverage is hard, on the 1,000 modes of StackedMNIST in :numref:`sec_gan_convergence`; 36,000 sprites at 12,000 steps do not stress coverage.
+Pairing itself adds nothing measurable here. With both penalties, the classic and the pairing loss reach the same quality on sprites at this budget: their scores below overlap across seeds and frameworks, and so do their grids. Sprites have no known modes, so this comparison cannot measure coverage. R3GAN measured it on StackedMNIST, whose 1,000 modes can be counted: with both penalties the pairing loss recovered all of them and the classic loss 693, in single runs (:numref:`sec_gan_convergence`). The theory of :numref:`sec_gan_relativistic` does not settle the question either. Its no-collapse result holds for a fixed one-to-one pairing, while our loop, like R3GAN's, draws new pairs at every step, and averaged over pairings that is the all-pairs loss, which has as many mode-dropping minima as the classic loss.
 
 ## Measuring Sample Quality
 
@@ -1102,13 +1099,13 @@ print(f'real pixel values equal to +1: '
       f'{float((holdout_imgs == 1).mean()):.0%}')
 ```
 
-The real-versus-real row shows the finite-sample behavior derived above: FD is positive for two samples of the same distribution, while the unbiased $\widehat{\mathrm{MMD}}^2$ is close to zero and can come out negative. Against this floor, the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score several times the floor (between about five and fifteen times in our runs), consistent with the soft outlines in their grids, and overlap each other across seeds. DCGAN lands close to them, within a factor of about two: the 2015 architecture keeps the same classic loss trainable that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ orders the runs as FD does. About one in six raw pixel values of a penalized generator lies outside $[-1, 1]$. The last two lines say why this is harmless: nearly all of these values lie just above $+1$, and 45% of the real pixel values equal $+1$ exactly, the white background. The generator's background overshoots slightly, and clamping maps it back to white.
+The real-versus-real row shows the finite-sample behavior described above: FD is positive for two samples of the same distribution, while the unbiased $\widehat{\mathrm{MMD}}^2$ is close to zero and can come out negative. Against this floor, the collapsed arm scores dozens to hundreds of times higher. The two penalized arms score several times the floor (between about five and fifteen times in our runs), consistent with the soft outlines in their grids, and overlap each other across seeds. DCGAN lands close to them, within a factor of about two: the 2015 architecture keeps the same classic loss trainable that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees: the collapsed arm scores far above the others, and the other three lie within a factor of about two of each other. About one in six raw pixel values of a penalized generator lies outside $[-1, 1]$, nearly all just above $+1$. Because 45% of the real pixel values equal $+1$ exactly, the white background, this is background overshoot, and clamping maps it back to white.
 
-Each score depends on the feature network as well as on the generator: our classifier, trained on photographs, judges sprites, as Inception judges every domain by what helps to classify ImageNet, and a different feature network can change the values and reorder similar models (Exercise :exref:`ex_dcgan-retrain-feature-network-this`); recent work therefore also reports FD in the features of the self-supervised DINOv2 network :cite:`Oquab.Darcet.Moutakanni.ea.2024,Karras.Aittala.Kynkaanniemi.ea.2024`. The evaluation features can also leak into training: a critic built on ImageNet features can lower Inception-based FID by matching ImageNet class statistics without better images :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`, which is one reason R3GAN uses no pretrained critic. Preprocessing matters too, since aliased resizing shifts FID by as much as the differences between published methods :cite:`Parmar.Zhang.Zhu.2022`. Finally, the finite-sample bias depends on the model as well as on $n$, so at small $n$ it alone can reverse a ranking :cite:`Chong.Forsyth.2020` (Exercise :exref:`ex_dcgan-measure-finite-sample-bias`).
+Each score depends on the feature network as well as on the generator: our classifier, trained on photographs, judges sprites, as Inception judges every domain by what helps to classify ImageNet, and a different feature network can change the values and reorder similar models (Exercise :exref:`ex_dcgan-retrain-feature-network-this`); recent work therefore also reports FD in the features of the self-supervised DINOv2 network :cite:`Oquab.Darcet.Moutakanni.ea.2024,Karras.Aittala.Kynkaanniemi.ea.2024`. The evaluation features can also leak into training: a critic built on ImageNet features can lower Inception-based FID by matching ImageNet class statistics without better images :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`. Preprocessing matters too, since aliased resizing shifts FID by as much as the differences between published methods :cite:`Parmar.Zhang.Zhu.2022`. Finally, the finite-sample bias depends on the model as well as on $n$, so at small $n$ it alone can reverse a ranking :cite:`Chong.Forsyth.2020` (Exercise :exref:`ex_dcgan-measure-finite-sample-bias`).
 
-## Limited Data and Scale
+## Limited Data
 
-### Training on Limited Data
+### Overfitting and Augmentation
 :label:`subsec_gan_limited_data`
 
 Forty thousand sprites is a small dataset for a critic with 1.6 million parameters. In 12,000 steps at batch size 64 the critic sees each training image about twenty times. Instead of estimating a density ratio, it can start to recognize individual training images: an overfit critic scores its training images higher than held-out real images, and its gradient then pulls the generator toward the finite training set rather than the distribution behind it. The train--holdout gap printed after each run measures this. In our runs the penalized critics' gaps stay within a few hundredths of zero, so at this budget they score held-out sprites as they score their training images; the unpenalized critic's gap is noisy and lives on a larger score scale (Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic`). As the dataset shrinks, a critic of fixed capacity separates its training images from the rest of image space sooner, and the gap becomes the first sign of trouble :cite:`Karras.Aittala.Hellsten.ea.2020`.
@@ -1116,6 +1113,8 @@ Forty thousand sprites is a small dataset for a critic with 1.6 million paramete
 Augmentation makes memorization harder, but where it is applied decides what the generator learns. Our loop flips only the real images, which assumes that the sprite distribution is mirror-symmetric; color jitter or cutout applied only to real images would teach the generator to produce color shifts and erased patches. *Differentiable augmentation* instead applies the same random transformation to the real and the generated inputs of the critic in both updates :cite:`Zhao.Liu.Lin.ea.2020`, with the transformation inside the generator's gradient path. The critic then sees many transformed versions of each training image, and the matching problem stays the original one as long as the transformation cannot map two different distributions to the same one; :citet:`Karras.Aittala.Hellsten.ea.2020` call such a transformation *non-leaking*.
 
 Adaptive discriminator augmentation sets the augmentation probability from an overfitting statistic, $r_t = \mathbb{E}[\operatorname{sign} D(x_{\mathrm{train}})]$, and with it StyleGAN2 reaches competitive quality on a few thousand images :cite:`Karras.Aittala.Hellsten.ea.2020`. That statistic reads the sign of a single score and so presumes a meaningful zero level, which a pairing critic does not have: adding a constant to its scores changes nothing in its loss. A pairing critic needs a pairwise statistic instead (Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic`).
+
+### Checking for Copies
 
 A memorizing critic and a copying generator call for different checks. To test the generator, we embed the 500 samples of the RpGAN + $R_1$ + $R_2$ arm in the classifier's feature space and find each one's nearest training image, calibrated by doing the same for held-out sprites. A copying generator would sit closer to its training images than new real images do. Because variants of one species fall on both sides of the split, held-out sprites often have a close training neighbor, which keeps their distances low and makes the test conservative.
 
@@ -1167,15 +1166,11 @@ d2l.show_images(np.asarray(pairs) / 2 + 0.5, num_rows=2, num_cols=8);
 
 Generated samples sit about two and a half times farther from their nearest training image than held-out sprites do, the opposite of copying. The top row of the grid shows the eight generated samples closest to the training set, mostly sparse shapes on white, and the bottom row their nearest training images. The neighbors look unrelated, which says as much about the features, statistics of local texture and color, as about the generator. The test detects direct copying; it cannot rule out recombination of memorized parts.
 
-### Scale
-
-Large-scale training keeps the recipe and schedules its constants: R3GAN decays $\gamma$ together with the learning rate, and the EMA half-life grows to millions of images :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. R3GAN also reports that mixed-precision training works with BF16 and fails with FP16.
-
 We can now build an image generator from either decade, change its loss one ingredient at a time, and score the result with a number whose meaning we know. The generator still answers no request: it returns a random sprite, never the one we ask for. :numref:`sec_gan_conditional` gives both players the request.
 
 ## Summary
 
-DCGAN made the classic loss train on images through architecture: transposed convolutions, batch normalization except at the discriminator's input and the generator's output, and Adam with $\beta_1 = 0.5$. A modern backbone drops normalization and relies on the loss. On it, the classic loss without a penalty collapses within 6,000 steps, while with the zero-centered penalties $R_1$ and $R_2$ both the classic and the pairing loss train to diverse sprites and tie. The penalty does not stop the critic from ranking; it keeps it about a hundred times flatter, so the generator's rank weight stays graded instead of saturating near one. FID and KID are the Gaussian Wasserstein-2 distance and an unbiased cubic-kernel MMD in a feature space; their values depend on the feature network, the preprocessing, and $n$, so we read them against a real-versus-real floor. On limited data the critic memorizes first, and a non-leaking augmentation of both of its inputs counters this.
+DCGAN made the classic loss train on images through architecture: transposed convolutions, batch normalization except at the discriminator's input and the generator's output, and Adam with $\beta_1 = 0.5$. A modern backbone drops normalization and relies on the loss. On it, the classic loss without a penalty collapses within 6,000 steps, while with the zero-centered penalties $R_1$ and $R_2$ both the classic and the pairing loss train to diverse sprites and tie. The penalty does not stop the critic from ranking; it keeps its squared input gradient about a hundred times smaller, so the rank weight stays graded instead of saturating near zero. FID and KID are the Gaussian Wasserstein-2 distance and an unbiased cubic-kernel MMD in a feature space; their values depend on the feature network, the preprocessing, and $n$, so we read them against a real-versus-real floor. On limited data the critic memorizes first, and a non-leaking augmentation of both of its inputs counters this.
 
 ## Exercises
 
@@ -1379,27 +1374,32 @@ DCGAN made the classic loss train on images through architecture: transposed con
 1. **Leaking augmentations.** ● Let $F$ denote the horizontal flip of an
    image, and for a distribution $r$ over images let $F_\# r$ denote the
    distribution of the flipped images. An augmentation that flips each image
-   with probability $\pi$ maps $r$ to $T_\pi r = (1 - \pi)\, r + \pi\, F_\# r$.
-    1. `sample_real` flips only the real images, with $\pi = 1/2$, so the
-       generator is trained toward $T_{1/2}\, p$ rather than $p$, and the
-       two agree only if $F_\# p = p$. Suppose that a fraction $\alpha$ of
-       the sprites faces left and has no mirrored counterpart in the
-       dataset, while every other sprite equals its own mirror image. Which
-       fraction of the samples of the optimal generator faces right?
+   with probability $p_{\mathrm{aug}}$ maps $r$ to
+   $T_{p_{\mathrm{aug}}} r = (1 - p_{\mathrm{aug}})\, r + p_{\mathrm{aug}}\, F_\# r$.
+    1. `sample_real` flips only the real images, with
+       $p_{\mathrm{aug}} = 1/2$, so the generator is trained toward
+       $T_{1/2}\, p$ rather than $p$, and the two agree only if
+       $F_\# p = p$. Suppose that a fraction $\alpha$ of the sprites faces
+       left and has no mirrored counterpart in the dataset, while every
+       other sprite equals its own mirror image. Which fraction of the
+       samples of the optimal generator faces right?
     1. A differentiable augmentation :cite:`Zhao.Liu.Lin.ea.2020` applies
-       $T_\pi$ to the real and to the generated images. Show that
-       $T_\pi q = T_\pi p$ implies $q = p$ whenever $\pi \neq 1/2$, using
-       $F_\# F_\# r = r$. For $\pi = 1/2$, describe the set of generator
-       distributions that the critic cannot distinguish from $p$, and give
-       one in this set that never produces an unmirrored sprite.
+       $T_{p_{\mathrm{aug}}}$ to the real and to the generated images. Show
+       that $T_{p_{\mathrm{aug}}} q = T_{p_{\mathrm{aug}}} p$ implies $q = p$
+       whenever $p_{\mathrm{aug}} \neq 1/2$, using $F_\# F_\# r = r$. For
+       $p_{\mathrm{aug}} = 1/2$, describe the set of generator distributions
+       that the critic cannot distinguish from $p$, and give one in this set
+       that never produces an unmirrored sprite.
     1. Let $S$ rotate an image by $90^\circ$. An augmentation replaces each
-       image, with probability $\pi$, by its rotation under $S$, $S^2$,
-       $S^3$, or the identity, chosen uniformly. Show that this augmentation
-       is non-leaking for every $\pi < 1$ and leaking at $\pi = 1$.
+       image, with probability $p_{\mathrm{aug}}$, by its rotation under
+       $S$, $S^2$, $S^3$, or the identity, chosen uniformly. Show that this
+       augmentation is non-leaking for every $p_{\mathrm{aug}} < 1$ and
+       leaking at $p_{\mathrm{aug}} = 1$.
        :citet:`Karras.Aittala.Hellsten.ea.2020` observe that the generated
-       images are always oriented correctly in practice while $\pi$ stays
-       below about 0.85, but not reliably above. Why can a finite critic
-       trained on a finite dataset fail before the limit $\pi = 1$?
+       images are always oriented correctly in practice while
+       $p_{\mathrm{aug}}$ stays below about 0.85, but not reliably above.
+       Why can a finite critic trained on a finite dataset fail before the
+       limit $p_{\mathrm{aug}} = 1$?
    :exlabel:`ex_dcgan-augmentation-leaks`
 
 [Discussions](https://d2l.discourse.group/t/36812)
@@ -1449,15 +1449,15 @@ the game stable.
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
+| section | asks |
 |---|---|
-| Generative Adversarial Networks | the game; the critic estimates $\log p/q$ |
+| Generative Adversarial Networks | what a classifier of samples computes |
 | Adversarial Objectives and Divergences | which loss gives which distance |
-| Relativistic Objectives | scoring pairs; the rank weight |
-| Gradient Penalties and Convergence | $R_1$, $R_2$; damping the game |
-| **Adversarial Image Generation** | **networks for images; scores** |
-| Conditional Generation | asking for a class |
-| Adversarial Losses Beyond GANs | where the critic survives |
+| Relativistic Objectives | what changes when the critic ranks pairs |
+| Gradient Penalties and Convergence | why training circles, and what stops it |
+| **Adversarial Image Generation** | **which network, and how to score images** |
+| Conditional Generation | how to ask for a class |
+| Adversarial Losses Beyond GANs | where a learned comparison remains |
 :::
 
 ::: {.col .narrow}
@@ -1560,30 +1560,33 @@ $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones;
 the loss is passed in as a function.
 :::
 
-::: {.slide title="Without a Penalty the Critic Grows Steep; It Ranks Equally Well Either Way"}
+::: {.slide title="Without a Penalty the Critic Is Steep; All Three Rank Equally Well"}
 @!dcgan-loss-a-b-on-one-backbone-4
 
 - Steepness $\mathbb{E}\|\nabla_x D\|^2$: about 100× larger without $R_1$.
 - Ranking accuracy: near 1 in all three arms.
-- Rank weight: near 1 without the penalty, 0.6 to 0.8 with it.
+- Rank weight $w_{\mathrm{Rp}}$: near 0 without the penalty, 0.25 to 0.4 with it.
 :::
 
 ::: {.slide title="The Unpenalized Arm Collapses; Both Penalized Arms Stay Diverse"}
 @!dcgan-loss-a-b-on-one-backbone-3
 
-A training failure of an unregularized game: nothing limits the critic's
-slope, so every sample follows the same steep direction.
+A training failure of an unregularized game: nothing damps the critic,
+whose squared input gradient ends about 100× larger than with the penalty,
+and every sample gets the same push.
 :::
 
-::: {.slide title="The Rank Weight Says How Much a Sample Still Needs to Move"}
-Non-saturating pairing generator, weight on a generated $x'$:
+::: {.slide title="Near Zero, the Rank Weight No Longer Tells Better Samples from Worse"}
+Rank weight of a generated $x'$, the probability that it outranks a real
+image:
 
-$$w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}\,\sigma\big(D(x) - D(x')\big)$$
+$$w_{\mathrm{Rp}}(x') = \mathbb{E}_{x \sim p}\,\sigma\big(D(x') - D(x)\big)$$
 
-- Near 1 for every $x'$: all samples ranked far below all real ones, all
-  pushed alike.
-- Graded (0.6 to 0.8): worse samples pushed harder.
-- Replace $\sigma$ by a step: the ranking accuracy, near 1 in every arm.
+- Near 0 for every $x'$: all samples ranked far below all real ones. The
+  non-saturating generator, weight $1 - w_{\mathrm{Rp}}$, pushes all alike.
+- Graded (0.25 to 0.4): worse samples pushed harder.
+- Replace $\sigma$ by a step: one minus the ranking accuracy, near 0 in
+  every arm.
 
 ::: {.d2l-note}
 The penalty keeps the critic's verdict graded, not its ranking wrong.
@@ -1594,8 +1597,8 @@ The penalty keeps the critic's verdict graded, not its ranking wrong.
 [Check]{.kicker}
 
 Three runs, all with ranking accuracy near 0.98. One has
-$\mathbb{E}\|\nabla_x D\|^2$ rising past 1 and rank weight near 1; two sit
-at 0.01 and 0.7.
+$\mathbb{E}\|\nabla_x D\|^2$ near 1 and rank weight near 0; two sit at
+0.01 and 0.3.
 
 ::: {.fragment .fade-up}
 The first: its critic separates the sets by a steep wall, the step that
@@ -1620,6 +1623,10 @@ $k(u, v) = (u^\top v / d + 1)^3$ on features $\phi$; drop the self-pairs:
 
 $$\widehat{\mathrm{MMD}}^2 = \tfrac{1}{n_p(n_p-1)}\textstyle\sum_{i \neq i'} k_{ii'}
 + \tfrac{1}{n_q(n_q-1)}\sum_{j \neq j'} k'_{jj'} - \tfrac{2}{n_p n_q}\sum_{i, j} k''_{ij}$$
+
+with $k_{ii'} = k(\phi_i, \phi_{i'})$, $k'_{jj'} = k(\phi'_j, \phi'_{j'})$,
+$k''_{ij} = k(\phi_i, \phi'_j)$, $\phi_i = \phi(x_i)$ real,
+$\phi'_j = \phi(x'_j)$ generated.
 
 - Within-set similarity minus across-set similarity.
 - Unbiased: real vs. real fluctuates around 0, may be negative.
@@ -1682,7 +1689,7 @@ only the reals is safe only if $p$ is mirror-symmetric.
 - Transposed convolution: side $\text{stride}\cdot(n-1) + \text{kernel} - 2\cdot\text{pad}$; five layers grow $1 \to 64$.
 - DCGAN: batch norm makes the classic loss train on 36,538 sprites.
 - No normalization, no penalty: collapse within 6,000 steps.
-- $R_1 + R_2$ at $\gamma = 10$: critic about 100× flatter, rank weight 0.6 to 0.75, diverse sprites.
+- $R_1 + R_2$ at $\gamma = 10$: squared input gradient about 100× smaller, rank weight 0.25 to 0.4, diverse sprites.
 - Classic and pairing losses tie once both are penalized.
 - FID = Gaussian $W_2^2$, KID = unbiased cubic-kernel MMD; read against the real-versus-real floor.
 

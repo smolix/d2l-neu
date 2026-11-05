@@ -148,31 +148,39 @@ These symbols belong to :numref:`chap_reinforcement_learning` and the chapter af
 
 ## Generative Adversarial Networks
 
-These symbols belong to :numref:`chap_gans`; :numref:`tab_gan_notation` lists them with the section that defines each and the letters the papers use.
+These symbols belong to :numref:`chap_gans`; :numref:`tab_gan_notation` lists them with the section that defines each and the letters the papers use. Where the chapter departs from the usual letter, a parenthesis gives the papers' letter and the reason.
 
 * $p$, $q$, $m$: the data density, the generator's density, and their balanced mixture $\tfrac12(p + q)$
-* $x \sim p$, $x' \sim q$: a real and a generated sample
-* $z$, $G$, $d_z$: the latent variable, the generator $x' = G(z)$, and the latent dimension
-* $D$: the critic's realness logit; $\sigma(D)$ is its probability that a sample is real
+* $x \sim p$, $x' \sim q$: a real and a generated sample (papers often write $y$ or $\hat x$ for the generated sample; $y$ is the source label here)
+* $y$: the source label of a sample, $y = 1$ for real and $y = 0$ for generated
+* $z$, $G$, $d_z$: the latent variable, the generator $x' = G(z)$, and the latent dimension (papers often write $k$; $k$ is a kernel here)
+* $D$: the critic's realness logit; $\sigma(D)$ is its probability that a sample is real (papers say discriminator; "critic" also covers the rankers and witness functions of later sections, and R3GAN's fakeness logit is $-D$)
+* $V$, $V_\ell$: the value function of the log-loss game, and of the game with payoff $\ell$
 * $\rho = p/q$, $\lambda = \log \rho$: the density ratio and its logarithm, the optimal log-loss critic
-* $\mu$: a mean, of a Gaussian or of features; $\mu(x)$ is a conditional mean
-* $\delta_\theta$, $\delta$: the point mass at $\theta$; the separation of two supports
-* $b$: an additive shift, of a critic or of a feature map
+* $\mu$: a mean, of a Gaussian or of features; the separation of $\mathcal{N}(0, 1)$ and $\mathcal{N}(\mu, 1)$; $\mu(c)$ is a conditional mean (papers often write $\delta$ or $d$ for the separation; both are taken here)
+* $\delta_\theta$: the point mass at $\theta$
+* $b$, $b_q$: an additive shift, of a critic $D + b$, of the linear generator $z A_q + b_q$, of a feature map $b(c)$, or of a band
+* $d(p, q)$, $d_x$: a discrepancy between two distributions, and the data dimension (papers write $d$ for the dimension; $d$ is the discrepancy here)
 * $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$: the per-sample weights of the saturating, non-saturating and pairing generator updates
-* $\eta = p/(p + q)$: the class posterior
-* $\ell$, $\Delta_\ell$: the payoff of a score ($\ell = \log \sigma$ for the log loss) and its Bayes-risk gap
-* $T$, $\mathcal{T}$, $\ell_p$, $\ell_q$: a critic or test function, its class, and the scores of real and generated samples in the general adversarial objective
+* $\eta = p/(p + q)$: the class posterior (the step size, often $\eta$ in papers, is $h$ here)
+* $\ell$, $L(\eta)$, $\Delta_\ell$: the payoff of a score ($\ell = \log \sigma$ for the log loss), its conditional Bayes risk, and its Bayes-risk gap (papers state the loss $-\ell$)
+* $T$, $\mathcal{T}$, $\mathcal{F}$, $\ell_p$, $\ell_q$: a critic or test function, its class, the function class of an integral probability metric, and the scores of real and generated samples in the general adversarial objective (papers write $f$ for the test functions of an integral probability metric; $f$ is the divergence function here)
 * $f$, $D_f$: a divergence function and its $f$-divergence
-* $k$, $s$: a kernel and its bandwidth
-* $\Phi$, $d_{\textrm{Rp}}$: the pairing objective and its value at the optimal critic
+* $k$, $s$: a kernel and its bandwidth (papers write $\sigma$ or $\ell$ for the bandwidth; both are taken here)
+* $\Phi$, $d_{\textrm{Rp}}$: the pairing objective and its value at the optimal critic (Jolicoeur-Martineau's divergence is $2\, d_{\textrm{Rp}}$)
 * $P = p \otimes q$, $Q = q \otimes p$: the two orderings of a real--generated pair
-* $v$: the direction of a small change $q = p\,(1 + \epsilon v)$
+* $(a_1, a_2)$, $\pi$: an ordered pair holding one real and one generated sample, and a permutation that pairs real with generated samples
+* $\mathcal{E}_{\textrm{GAN}}$, $\mathcal{E}_{\textrm{diag}}$, $\mathcal{E}_{\textrm{all}}$: the classical, paired and all-pairs losses at the critic's best response, as functions of the generated points
+* $v$, $\epsilon$: the direction and the size of a small change $q = p\,(1 + \epsilon v)$ (papers write $h$ for the direction; $h$ is the step size here)
 * $\gamma$, $R_1$, $R_2$: the penalty weight and the zero-centered gradient penalties at the data and generated samples
-* $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$: the step size, the eigenvalues, the critic's slope and the gradient field of the two-point game (the Dirac-GAN)
-* $\omega$: a wavenumber or angular frequency
+* $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$: the step size, the eigenvalues, the critic's slope and the gradient field of the Dirac-GAN, the two-point game (Mescheder et al. write $\lambda_{1,2}$ and $v$; $\lambda$ is the log ratio and $v$ a direction here)
+* $\omega$: a wavenumber or angular frequency (papers write $k$ for the wavenumber; $k$ is a kernel here)
 * $\phi$: a feature map
-* $c$, $e_c$, $a(c)$, $b(c)$, $\psi_0$, $\zeta_c$: a condition, its embedding, a modulation's scale and shift, the unconditional head of a projection critic, and the critic's free constant per class
-* $g$: a predictor of a target $y$ from an input $x$
+* $p_{\textrm{aug}}$: the probability of applying an augmentation (ADA writes $p$, the data density here)
+* $c$, $e_c$, $a(c)$, $b(c)$, $\psi_0$, $\zeta_c$: a condition, its embedding, a modulation's scale and shift, the unconditional head of a projection critic, and the critic's free constant per class (papers write $\gamma(c)$, $\beta(c)$ for the scale and shift; $\gamma$ is the penalty weight here)
+* $g$: a predictor of a sample $x$ from a condition $c$ (regression papers write $f: x \mapsto y$; $f$ is the divergence function and $y$ the source label here, so the condition-and-sample letters of conditional generation are kept)
+* $\xi$: standard normal noise (papers write $\epsilon$, a small number here)
+* $\vartheta$: a phase (papers write $\varphi$, too close to the feature map $\phi$)
 * $\mathrm{JS}(p, q)$, $D_{\textrm{J}}$, $H_b(t)$: the Jensen--Shannon divergence, the symmetrized KL divergence $D_{\textrm{KL}}(p\|q) + D_{\textrm{KL}}(q\|p)$, and the entropy of a coin with bias $t$
 
 

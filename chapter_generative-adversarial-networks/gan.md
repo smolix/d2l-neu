@@ -55,7 +55,7 @@ Training alternates between the two networks, as :numref:`fig_gan` shows. The cr
 
 ### Notation
 
-The chapter uses about thirty symbols, collected in :numref:`tab_gan_notation` with the section where each first appears. Each has one meaning throughout the chapter; letters defined inside a single exercise are local to it. We follow the letters of the literature where they do not clash; the last column says where we depart from them.
+The chapter's symbols are collected in :numref:`tab_gan_notation` with the section where each first appears. Each has one meaning throughout the chapter; letters defined inside a single exercise are local to it. We follow the letters of the literature where they do not clash; the last column says where we depart from them.
 
 :Notation of this chapter.
 :label:`tab_gan_notation`
@@ -64,27 +64,35 @@ The chapter uses about thirty symbols, collected in :numref:`tab_gan_notation` w
 |:--|:--|:--|:--|
 | $p$, $q$, $m = \tfrac12(p + q)$ | data, generator and mixture densities | :numref:`sec_basic_gan` | the same |
 | $x \sim p$, $x' \sim q$ | a real and a generated sample | :numref:`sec_basic_gan` | often $y$ or $\hat x$ for the generated sample |
+| $y$ | the source label of a sample, $y = 1$ for real and $y = 0$ for generated | :numref:`sec_basic_gan` | the same |
 | $z$, $G$, $d_z$ | the latent variable, the generator $x' = G(z)$, the latent dimension | :numref:`sec_basic_gan` | $k$ for the latent dimension, a kernel here |
 | $D$, $\sigma(D)$ | the critic's realness logit and its probability | :numref:`sec_basic_gan` | the discriminator; :citet:`Huang.Gokaslan.Kuleshov.ea.2024` use a fakeness logit, our $-D$ |
+| $V$, $V_\ell$ | the value function of the log-loss game, and of the game with payoff $\ell$ | :numref:`sec_basic_gan` | the same |
 | $\rho = p/q$, $\lambda = \log \rho$ | the density ratio and its logarithm; $D^\star = \lambda$ | :numref:`sec_basic_gan` | the same |
-| $\mu$ | a mean: of a Gaussian, of features, and in :numref:`sec_gan_beyond` the conditional mean $\mu(x)$ | :numref:`sec_basic_gan` | the same |
-| $\delta_\theta$, $\delta$ | the point mass at $\theta$; the separation of two supports | :numref:`sec_basic_gan` | $d$ for the separation, the discrepancy here |
-| $b$ | an additive shift: of the critic, $D + b$; of a feature map, $b(c)$; of a band in :numref:`sec_gan_beyond` | :numref:`sec_basic_gan` | the same |
+| $\mu$ | a mean: of a Gaussian, hence the separation of $\mathcal{N}(0, 1)$ and $\mathcal{N}(\mu, 1)$; of features; and in :numref:`sec_gan_beyond` the conditional mean $\mu(c)$ | :numref:`sec_basic_gan` | $\delta$ or $d$ for the separation |
+| $\delta_\theta$ | the point mass at $\theta$ | :numref:`sec_basic_gan` | the same |
+| $b$ | an additive shift: of the critic, $D + b$; of a linear map, $z A + b$ or $z A_q + b_q$; of a feature map, $b(c)$; of a band in :numref:`sec_gan_beyond` | :numref:`sec_basic_gan` | the same |
+| $d(p, q)$, $d_x$ | a discrepancy between two distributions; the data dimension | :numref:`sec_basic_gan` | $d$ for the dimension |
 | $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$ | per-sample weights of the generator's update | :numref:`sec_basic_gan` | not named |
 | $\eta = p/(p + q) = \sigma(\lambda)$ | the class posterior | :numref:`sec_gan_objectives` | the same; the step size is $h$ here, not $\eta$ |
-| $\ell$, $\Delta_\ell$ | the payoff of a score, $\ell = \log \sigma$ for the log loss (the loss is $-\ell$), and its Bayes-risk gap | :numref:`sec_gan_objectives` | the loss $-\ell$ |
-| $T$, $\mathcal{T}$, $\ell_p$, $\ell_q$ | a critic, or test function, in the template of :numref:`sec_gan_objectives`, its class, and the template's scores of real and generated samples | :numref:`sec_gan_objectives` | $T$ for $f$-GAN critics, $f$ for the test functions of an integral probability metric |
+| $\ell$, $L$, $\Delta_\ell$ | the payoff of a score, $\ell = \log \sigma$ for the log loss (the loss is $-\ell$), its conditional Bayes risk $L(\eta)$, and its Bayes-risk gap | :numref:`sec_gan_objectives` | the loss $-\ell$ |
+| $T$, $\mathcal{T}$, $\mathcal{F}$, $\ell_p$, $\ell_q$ | a critic, or test function, in the template of :numref:`sec_gan_objectives`, its class ($\mathcal{F}$ for the class of an integral probability metric), and the template's scores of real and generated samples | :numref:`sec_gan_objectives` | $T$ for $f$-GAN critics, $f$ for the test functions of an integral probability metric |
 | $f$, $D_f$ | a divergence function and its $f$-divergence | :numref:`sec_gan_objectives` | $f$ is called the generator of $D_f$ |
 | $k$, $s$ | a kernel and its bandwidth | :numref:`sec_gan_objectives` | $\sigma$ or $\ell$ for the bandwidth, both taken here |
 | $\Phi$, $d_{\textrm{Rp}}$ | the pairing objective and its value at the optimal critic | :numref:`sec_gan_relativistic` | Jolicoeur-Martineau's divergence is $2\, d_{\textrm{Rp}}$ |
 | $P = p \otimes q$, $Q = q \otimes p$ | the two orderings of a real--generated pair | :numref:`sec_gan_relativistic` | the same |
-| $v$ | the direction of a small change $q = p\,(1 + \epsilon v)$ | :numref:`sec_gan_relativistic` | $h$, the step size here |
+| $(a_1, a_2)$, $\pi$ | an ordered pair holding one real and one generated sample; a permutation that pairs real with generated samples | :numref:`sec_gan_relativistic` | the same |
+| $\mathcal{E}_{\mathrm{GAN}}$, $\mathcal{E}_{\mathrm{diag}}$, $\mathcal{E}_{\mathrm{all}}$ | the classical, paired and all-pairs losses at the critic's best response, as functions of the generated points | :numref:`sec_gan_relativistic` | not named |
+| $v$, $\epsilon$ | the direction and the size of a small change $q = p\,(1 + \epsilon v)$ | :numref:`sec_gan_relativistic` | $h$ for the direction, the step size here |
 | $\gamma$, $R_1$, $R_2$ | the penalty weight and the two zero-centered gradient penalties | :numref:`sec_gan_convergence` | the same |
 | $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$ | the step size, the eigenvalues, the critic's slope and the gradient field of the Dirac-GAN | :numref:`sec_gan_convergence` | :citet:`Mescheder.Geiger.Nowozin.2018` write $\lambda_{1,2}$ for the eigenvalues and $v$ for the field |
 | $\omega$ | a wavenumber or angular frequency | :numref:`sec_gan_convergence` | $k$ for the wavenumber |
 | $\phi$ | a feature map: of FID and KID, of a modulated layer, of the projection head | :numref:`sec_dcgan` | the same |
+| $p_{\mathrm{aug}}$ | the probability of applying an augmentation | :numref:`sec_dcgan` | $p$, the data density here |
 | $c$, $e_c$, $a(c)$, $\psi_0$, $\zeta_c$ | a condition, its embedding, a modulation's scale (its shift is $b(c)$), the unconditional head, the critic's free constant per class | :numref:`sec_gan_conditional` | $\gamma(c)$, $\beta(c)$ for the scale and shift |
-| $g$ | a predictor of $y$ from $x$ | :numref:`sec_gan_beyond` | $f$, the divergence function here |
+| $g$ | a predictor of a sample $x$ from a condition $c$ | :numref:`sec_gan_beyond` | $f$, the divergence function here; $x \mapsto y$ for input and output in regression |
+| $\xi$ | standard normal noise | :numref:`sec_gan_beyond` | $\epsilon$, a small number here |
+| $\vartheta$ | a phase | :numref:`sec_gan_beyond` | $\varphi$, too close to the feature map $\phi$ |
 
 Divergences and entropies follow the book's appendix: $D_{\mathrm{KL}}(p \,\|\, q)$ is the Kullback--Leibler divergence, $D_{\mathrm{J}} = D_{\mathrm{KL}}(p \,\|\, q) + D_{\mathrm{KL}}(q \,\|\, p)$ its symmetrized form, $\mathrm{JS}(p, q)$ the Jensen--Shannon divergence, $H(p)$ the entropy of a distribution and $H_b(t)$ that of a coin with bias $t$, all in nats.
 
@@ -120,7 +128,7 @@ $$
 \lambda(x) = -\frac{x^2}{2} + \frac{(x - \mu)^2}{2} = \mu \Big(\frac{\mu}{2} - x\Big),
 $$
 
-a linear function of $x$, positive left of the midpoint $\mu/2$, where a sample is more likely real. A logistic regression $D(x) = wx + c$ therefore already contains the optimal critic, at $w = -\mu$ and $c = \mu^2/2$, and a deeper critic cannot do better. When the two Gaussians also differ in their covariances, as in the experiment at the end of this section, $\lambda$ is quadratic and a nonlinear critic is needed.
+a linear function of $x$, positive left of the midpoint $\mu/2$, where a sample is more likely real. A logistic regression $D(x) = wx + b$ therefore already contains the optimal critic, at $w = -\mu$ and $b = \mu^2/2$, and a deeper critic cannot do better. When the two Gaussians also differ in their covariances, as in the experiment at the end of this section, $\lambda$ is quadratic and a nonlinear critic is needed.
 
 ### The Value of the Game
 
@@ -131,7 +139,7 @@ V(D^\star) = \int p \log \frac{p}{2m} + \int q \log \frac{q}{2m}
 = D_{\mathrm{KL}}(p \,\|\, m) + D_{\mathrm{KL}}(q \,\|\, m) - 2 \log 2 .
 $$
 
-The two divergences are the ones that define the Jensen--Shannon divergence of :eqref:`eq_mdl-js-def`, $\mathrm{JS}(p, q) = \tfrac12 D_{\mathrm{KL}}(p \,\|\, m) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, m)$, which compares each distribution with their mixture. Hence
+The two divergences are the ones that define the Jensen--Shannon divergence (:numref:`sec_mdl-divergences-distances`), $\mathrm{JS}(p, q) = \tfrac12 D_{\mathrm{KL}}(p \,\|\, m) + \tfrac12 D_{\mathrm{KL}}(q \,\|\, m)$, which compares each distribution with their mixture. Hence
 
 $$
 \max_D V(D) = 2\,\mathrm{JS}(p, q) - 2 \log 2 .
@@ -218,14 +226,14 @@ $$
 D_{\mathrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q),
 $$
 
-an $f$-divergence whose function $f$ is strictly convex (Exercise :exref:`ex_gan-generator-weight-divergences` derives it). So $q = p$ is again its only minimizer, and the descent step points toward it.
+an $f$-divergence whose function $f$ is strictly convex (Exercise :exref:`ex_gan-generator-weight-divergences` derives it). So $q = p$ is again its only minimizer. A gradient step on the generator's parameters lowers this divergence, but it sees the divergence only where $q$ already has mass. It can therefore stall at a $q \neq p$ where the divergence is flat in those parameters, as the next example shows.
 
 ### Mode Dropping
 :label:`subsec_gan_mode_dropping`
 
-The leading term of that divergence is the reverse Kullback--Leibler divergence $D_{\mathrm{KL}}(q \,\|\, p)$. It charges the generator heavily for placing mass where the data have little, but lightly for failing to place mass where the data have much. Take $p$ an equal mixture of two well-separated modes and $q$ a copy of one of them. On the covered mode $p = q/2$, so $D_{\mathrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats, and $\mathrm{JS}(p, q) \approx 0.22$ nats, a third of its ceiling. The forward divergence $D_{\mathrm{KL}}(p \,\|\, q)$ is infinite, because $q$ misses half of $p$. A generator that covers only some of the data's modes is said to suffer *mode dropping*.
+That divergence inherits the asymmetry of its first term, the reverse Kullback--Leibler divergence $D_{\mathrm{KL}}(q \,\|\, p)$, which charges the generator heavily for placing mass where the data have little, but lightly for failing to place mass where the data have much. Take $p$ an equal mixture of two well-separated modes and $q$ a copy of one of them. On the covered mode $p = q/2$, so $D_{\mathrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats, and $\mathrm{JS}(p, q) \approx 0.22$ nats, a third of its ceiling. The forward divergence $D_{\mathrm{KL}}(p \,\|\, q)$ is infinite, because $q$ misses half of $p$. A generator that covers only some of the data's modes is said to suffer *mode dropping*.
 
-Gradient steps rarely leave such a state. With the critic at its best response, the score on the covered mode is the constant $\log(p/q) = -\log 2$, so $\nabla_\theta D$ vanishes there and neither weight produces a push toward the missing mode; reaching it would also mean moving mass across the gap, where $p$ is nearly zero. More generally, both classical weights read a sample's own score $D(x')$ against the zero level that the log-loss game fixes, and nothing in them compares the sample with the real data. A generator whose samples all score above that level receives little push, whatever the data's other modes do. Later in the chapter, a critic that ranks a generated sample against a real one replaces this threshold with a comparison.
+Gradient steps rarely leave such a state. With the critic at its best response, the score on the covered mode is the constant $\log(p/q) = -\log 2$, so $\nabla_\theta D$ vanishes there and neither weight produces a push toward the missing mode; reaching it would also mean moving mass across the gap, where $p$ is nearly zero. A critic away from its best response shows a second blindness, through the weights. Both classical weights read a sample's own score $D(x')$ against the zero level that the log-loss game fixes, and nothing in them compares the sample with the real data. A generator whose samples all score above that level receives little push, whatever the data's other modes do. Later in the chapter, a critic that ranks a generated sample against a real one replaces this threshold with a comparison.
 
 ## Fitting a Gaussian
 
@@ -256,7 +264,7 @@ print(f'covariance of the data distribution:\n{A.T @ A}')
 d2l.plot(data[:100, 0], data[:100, 1], fmts=('C0.',), figsize=(3.5, 3))
 ```
 
-The generator is a single linear layer, so its output distribution is Gaussian and its mean and covariance can be read off the weights. The critic is a multilayer perceptron with two hidden layers of 16 leaky ReLU units, which pass negative inputs with slope 0.2 instead of zeroing them. With leaky units the critic's score surface keeps a slope everywhere, so the generator always receives a direction; tanh units can saturate and leave the surface flat (Exercise :exref:`ex_gan-dead-critic`). The critic sees only samples, never the densities used in the analysis. A factory function builds both networks from a fixed seed so that later cells can restart from the same initialization.
+The generator is a single linear layer, so its output distribution is Gaussian and its mean and covariance can be read off the weights. The critic is a multilayer perceptron with two hidden layers of 16 leaky ReLU units, which pass negative inputs with slope 0.2 instead of zeroing them. With leaky units the critic's score surface keeps a slope wherever the units are active, so the generator almost always receives a direction; tanh units can saturate and leave the surface flat (Exercise :exref:`ex_gan-dead-critic`). The critic sees only samples, never the densities used in the analysis. A factory function builds both networks from a fixed seed so that later cells can restart from the same initialization.
 
 ```{.python .input #gan-data-and-models-2}
 %%tab pytorch
@@ -303,7 +311,7 @@ def make_nets():
 
 ### The Update Rules
 
-One training iteration is two half-steps, one per player. The critic's update ascends :eqref:`eq_gan_V` on a minibatch, implemented as logistic regression with label one for data and zero for generated samples; the generator's parameters are held fixed during this half-step. Both update functions are saved to the `d2l` library, since :numref:`sec_dcgan` trains image networks with the same rules.
+One training iteration is two half-steps, one per player. The critic's update ascends :eqref:`eq_gan_V` on a minibatch, implemented as logistic regression with label one for data and zero for generated samples; the generator's parameters are held fixed during this half-step. Both update functions are saved to the `d2l` library, since later sections train image networks with the same rules.
 
 ```{.python .input #gan-the-update-rules-1}
 %%tab pytorch
@@ -380,7 +388,7 @@ def update_G(Z, net_D, net_G, optimizer_G):
 ### Training
 :label:`subsec_gan_training`
 
-The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and keeps generated samples at chosen epochs for the comparison at the end of the section. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the setting of :citet:`Radford.Metz.Chintala.2015` that most GAN code follows: a shorter momentum lets each player respond sooner to the other's latest move. The critic gets the larger learning rate, so that its scores stay close to their best response to the current generator.
+The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and keeps generated samples at chosen epochs for the comparison at the end of the section. Both players use Adam with $\beta_1 = 0.5$ instead of the default 0.9, the setting :citet:`Radford.Metz.Chintala.2015` chose for the DCGAN; later recipes lower it further, to zero. A shorter momentum lets each player respond sooner to the other's latest move. The critic gets the larger learning rate, so that its scores stay close to their best response to the current generator.
 
 ```{.python .input #gan-training-1}
 %%tab pytorch
@@ -469,23 +477,23 @@ The critic's loss starts below $\log 2$ and rises toward it as the generator imp
 ### The Fit in Nats
 :label:`subsec_gan_fit`
 
-The linear generator lets us measure the fit in nats. A linear layer $G(z) = zW^\top + c$ applied to $z \sim \mathcal{N}(0, I_2)$ produces the Gaussian $q = \mathcal{N}(c, WW^\top)$. For Gaussians in $d$ dimensions the Kullback--Leibler divergence has the closed form :cite:`Kullback.1959`
+The linear generator lets us measure the fit in nats. A linear layer $G(z) = z A_q + b_q$ applied to $z \sim \mathcal{N}(0, I_2)$ produces the Gaussian $q = \mathcal{N}(b_q, A_q^\top A_q)$. For Gaussians in $d_x$ dimensions the Kullback--Leibler divergence has the closed form :cite:`Kullback.1959`
 
 $$
 D_{\mathrm{KL}}\big(\mathcal{N}(\mu_0, \Sigma_0) \,\|\, \mathcal{N}(\mu_1, \Sigma_1)\big)
 = \tfrac12 \Big[ \operatorname{tr}(\Sigma_1^{-1} \Sigma_0)
 + (\mu_1 - \mu_0)^\top \Sigma_1^{-1} (\mu_1 - \mu_0)
-- d + \log \tfrac{\det \Sigma_1}{\det \Sigma_0} \Big],
+- d_x + \log \tfrac{\det \Sigma_1}{\det \Sigma_0} \Big],
 $$
 :eqlabel:`eq_gan_mvn_kl`
 
-the multivariate form of the univariate formula :eqref:`eq_mdl-gaussian_kl`. We report $D_{\mathrm{KL}}(q \,\|\, p)$, the direction that charges the generator for placing mass where the data have little, at initialization and after training.
+the multivariate form of the univariate formula of :numref:`sec_mdl-information_theory`. We report $D_{\mathrm{KL}}(q \,\|\, p)$, the direction that charges the generator for placing mass where the data have little, at initialization and after training.
 
 ```{.python .input #gan-quantifying-the-fit}
 %%tab pytorch
 def generator_gaussian(net_G):
-    W, c = net_G[0].weight.detach(), net_G[0].bias.detach()
-    return c, W @ W.T
+    A_qT, b_q = net_G[0].weight.detach(), net_G[0].bias.detach()
+    return b_q, A_qT @ A_qT.T  # nn.Linear stores A_q.T
 
 def kl_gaussians(mu0, S0, mu1, S1):
     diff = mu1 - mu0
@@ -504,8 +512,8 @@ for name, net in [('at initialization', make_nets()[0]),
 ```{.python .input #gan-quantifying-the-fit}
 %%tab jax
 def generator_gaussian(net_G):
-    K, c = net_G.out.kernel[...], net_G.out.bias[...]
-    return c, K.T @ K
+    A_q, b_q = net_G.out.kernel[...], net_G.out.bias[...]
+    return b_q, A_q.T @ A_q
 
 def kl_gaussians(mu0, S0, mu1, S1):
     diff = mu1 - mu0
@@ -521,7 +529,7 @@ for name, net in [('at initialization', make_nets()[0]),
           f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.3f} nats')
 ```
 
-The divergence falls from about eight nats at initialization to well below one, typically a few hundredths of a nat. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
+The divergence falls from about eight nats at initialization to well below one, typically about a hundredth of a nat. The training loop never evaluates the generator's density, yet the critic supplies enough information to fit its parameters.
 
 ### The Learned Density Ratio
 :label:`subsec_gan_verify_critic`
@@ -705,7 +713,7 @@ The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot crea
 
 ## Summary
 
-A GAN trains a sampler without a density by replacing the likelihood with a learned comparison: a critic learns to tell real from generated samples, and the generator learns to defeat it. With the log loss, the optimal critic's logit is the log density ratio $\lambda = \log(p/q)$, and the value of the game is $2\,\mathrm{JS}(p,q) - 2\log 2$, where $\mathrm{JS}$ is the information a sample carries about its source. The saturating and non-saturating generator losses share the fixed point $q = p$, but only the second keeps learning from confidently rejected samples, as a two-dimensional Gaussian confirmed. Two limits remain: the value is constant on separated supports, and the reverse divergence that the generator descends charges little for a dropped mode. :numref:`sec_gan_objectives` changes the loss and the critic class to obtain discrepancies that keep a gradient when the supports separate.
+A GAN trains a sampler without a density by replacing the likelihood with a learned comparison: a critic learns to tell real from generated samples, and the generator learns to defeat it. With the log loss, the optimal critic's logit is the log density ratio $\lambda = \log(p/q)$, and the value of the game is $2\,\mathrm{JS}(p,q) - 2\log 2$, where $\mathrm{JS}$ is the information a sample carries about its source. The saturating and non-saturating generator losses share the fixed point $q = p$, but only the second keeps learning from confidently rejected samples, as a two-dimensional Gaussian confirmed. Two limits remain: the value is constant on separated supports, and the divergence that the non-saturating generator descends inherits the asymmetry of the reverse KL, so it charges little for a dropped mode. :numref:`sec_gan_objectives` changes the loss and the critic class to obtain discrepancies that keep a gradient when the supports separate.
 
 ## Exercises
 
@@ -724,14 +732,14 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
     1. Image models often report likelihoods in bits per dimension: the
        negative log-likelihood divided by the number of dimensions and by
        $\log 2$. Convert the bound for $\epsilon = 0.01$ into bits per
-       dimension for $32 \times 32$ color images, with $d = 3072$. Would a
+       dimension for $32 \times 32$ color images, with $d_x = 3072$. Would a
        table of results rounded to two decimals reveal the difference?
     1. Now take the converse case. Let the data distribution be
-       $p = \mathcal{N}(0, I_d)$ and let a model be
-       $q = \mathcal{N}(0, s^2 I_d)$ with $s < 1$. Each sample of $q$ is then
+       $p = \mathcal{N}(0, I_{d_x})$ and let a model be
+       $q = \mathcal{N}(0, s^2 I_{d_x})$ with $s < 1$. Each sample of $q$ is then
        a data sample shrunk by the factor $s$, which for images resembles a
        slight loss of contrast. Use :eqref:`eq_gan_mvn_kl` to compute the gap
-       $\mathbb{E}_p[\log p] - \mathbb{E}_p[\log q]$ for $d = 3072$ and $s = 0.9$. Find the $s$
+       $\mathbb{E}_p[\log p] - \mathbb{E}_p[\log q]$ for $d_x = 3072$ and $s = 0.9$. Find the $s$
        at which the gap equals the $\log 100$ nats of the noise mixture. Which
        of the two models wins by likelihood, and which by its samples?
    :exlabel:`ex_gan-likelihood-versus-samples`
@@ -792,10 +800,10 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
    space. Two settings close to this section's experiment violate that
    assumption.
     1. A generator with a one-dimensional latent variable,
-       $G(z) = z v + c$ with $z \sim \mathcal{N}(0, 1)$ and fixed vectors
-       $v \neq 0$ and $c$ in the plane, places all its samples on a line.
+       $G(z) = z v + b_q$ with $z \sim \mathcal{N}(0, 1)$ and fixed vectors
+       $v \neq 0$ and $b_q$ in the plane, places all its samples on a line.
        Show that $\mathrm{JS}(p, q) = \log 2$ against the data distribution
-       $p = \mathcal{N}(b, A^\top A)$ for every choice of $v$ and $c$, and
+       $p = \mathcal{N}(b, A^\top A)$ for every choice of $v$ and $b_q$, and
        describe the best response of an unrestricted critic.
     1. The training loop never sees $p$, only the empirical distribution
        $\hat p$ that places mass $1/1000$ on each point of `data`. Show that
@@ -804,15 +812,18 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
     1. By (a) and (b), the unrestricted game assigns the same value to every
        generator in either setting. Yet the run of
        :numref:`subsec_gan_training` trains on $\hat p$ and reduces
-       $D_{\mathrm{KL}}(q \,\|\, p)$ from about eight nats to a few hundredths
-       of a nat. Let $V_{\hat p}(D)$ denote :eqref:`eq_gan_V` with $p$
+       $D_{\mathrm{KL}}(q \,\|\, p)$ from about eight nats to about a
+       hundredth of a nat. Let $V_{\hat p}(D)$ denote :eqref:`eq_gan_V` with $p$
        replaced by $\hat p$, and restrict the critic to functions with
-       $|D(x) - D(y)| \leq L \|x - y\|$ for all $x, y$; the critic built by
-       `make_nets` is such a function for some finite $L$. Use the
-       Kantorovich--Rubinstein duality :eqref:`eq_mdl-kr-dual` to show that
-       $|V_{\hat p}(D) - V(D)| \leq L\, W_1(\hat p, p)$ for every such critic.
-       Why does this bound make the restricted game on $\hat p$ informative
-       about $q$? What happens to it as $L$ grows?
+       $|D(x) - D(\tilde x)| \leq \kappa \|x - \tilde x\|$ for all $x, \tilde x$; the
+       critic built by `make_nets` is such a function for some finite
+       $\kappa$. Use the Kantorovich--Rubinstein duality
+       $W_1(\hat p, p) = \sup_T \{\mathbb{E}_{\hat p}[T] - \mathbb{E}_p[T]\}$, the
+       supremum taken over 1-Lipschitz functions $T$
+       (:numref:`sec_mdl-optimal-transport`), to show that
+       $|V_{\hat p}(D) - V(D)| \leq \kappa\, W_1(\hat p, p)$ for every such
+       critic. Why does this bound make the restricted game on $\hat p$
+       informative about $q$? What happens to it as $\kappa$ grows?
    :exlabel:`ex_gan-measure-zero-supports`
 
 1. [code] **Critic error over the plane.** The comparison of
@@ -847,9 +858,9 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        Adam at the critic's learning rate of $0.05$, while the critic rejects
        a distant generator, can drive the units into this state, and why the
        generator then receives no direction at all.
-    1. Show that a constant critic $D \equiv c$ has the per-sample loss
-       $\tfrac12 \log(1 + e^{-c}) + \tfrac12 \log(1 + e^{c})$, minimized at
-       $c = 0$ with the value $\log 2$. Why does a stalled run report a loss of
+    1. Show that a constant critic $D \equiv b$ has the per-sample loss
+       $\tfrac12 \log(1 + e^{-b}) + \tfrac12 \log(1 + e^{b})$, minimized at
+       $b = 0$ with the value $\log 2$. Why does a stalled run report a loss of
        $\log 2$ although $q$ is tens of nats from $p$?
     1. A critic loss of $\log 2$ has two readings: a best-response critic
        against $q = p$, or a critic class that cannot separate the samples.
@@ -890,8 +901,10 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
 
        $$\mathbb{E}_{x \sim m}\big[\max(\eta(x), 1 - \eta(x))\big] = \tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$$
 
-       with the total variation distance :eqref:`eq_mdl-tv-def`. Use
-       Pinsker's inequality :eqref:`eq_mdl-pinsker` and the printed
+       with the total variation distance
+       $\mathrm{TV}(p, q) = \tfrac12 \int |p - q|$
+       (:numref:`sec_mdl-tv-pinsker`). Use Pinsker's inequality,
+       $\mathrm{TV}(p, q) \leq \sqrt{D_{\mathrm{KL}}(q \,\|\, p)/2}$, and the printed
        $D_{\mathrm{KL}}(q \,\|\, p)$ to bound the accuracy that any
        classifier can reach against `net_G`.
     1. Estimate the Bayes accuracy by Monte Carlo with `gaussian_logpdf`
@@ -919,7 +932,7 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        $D_{\mathrm{KL}}(q \,\|\, p)$ at $D = \lambda$, and that its weight is
        $w = 1$.
     1. Let $D_f(p \,\|\, q_\theta) = \mathbb{E}_{x \sim q_\theta}\big[f\big(p(x)/q_\theta(x)\big)\big]$
-       be the $f$-divergence :eqref:`eq_mdl-f-div-def` with a twice
+       be the $f$-divergence of :numref:`sec_mdl-f-divergences` with a twice
        differentiable convex function $f$; the subscript distinguishes it
        from the critic $D$. Show that
 
@@ -940,13 +953,14 @@ A GAN trains a sampler without a density by replacing the likelihood with a lear
        :citet:`Arjovsky.Bottou.2017`.
     1. :citet:`Arjovsky.Bottou.2017` read the negative Jensen--Shannon term in
        the divergence of $w_{\textrm{ns}}$ as pushing the two distributions
-       apart. Show that the function $f$ of this divergence is strictly
-       convex with $f(1) = 0$. What does this imply for the fixed points of
+       apart. Show that this divergence equals $2\, D_{\mathrm{KL}}(m \,\|\, p)$
+       with $m = \tfrac12(p + q)$, and that the function $f$ of this
+       divergence is strictly convex with $f(1) = 0$. What does this imply for the fixed points of
        non-saturating training against a best-response critic, and for that
        reading?
 
    *Adapted from Stefano Ermon and Aditya Grover,
-   [CS236: Deep Generative Models, Homework 3](https://raw.githubusercontent.com/Subhajit135/CS236_DGM/master/hw/CS236_Homework_3.pdf),
+   [CS236: Deep Generative Models](https://cs236.stanford.edu), Homework 3,
    Problem 2.3.*
    :exlabel:`ex_gan-generator-weight-divergences`
 
@@ -1030,7 +1044,7 @@ whose densities we know.
 | **Generative Adversarial Networks** | **the log-loss game and its value** |
 | Adversarial Objectives | other losses and critic classes |
 | Relativistic Objectives | a critic that ranks pairs |
-| Gradient Penalties | convergence of the training dynamics |
+| Gradient Penalties and Convergence | convergence of the training dynamics |
 | Adversarial Image Generation | convolutional networks, scores |
 | Conditional Generation | asking for a class |
 | Adversarial Losses Beyond GANs | where the comparison survives |
@@ -1265,7 +1279,8 @@ matched the data?
 - Disjoint supports: value fixed at $\log 2$, no gradient.
 - Weights $\sigma(D)$ and $\sigma(-D)$: same fixed point; a ratio of 148 at
   $D = -5$.
-- Mode dropping costs only $\log 2$ nats of reverse KL.
+- Mode dropping costs only $\log 2$ nats of reverse KL in the two-mode
+  example.
 - Gaussian test: KL from about 8 nats to well below 1; the critic explains
   over 90% of $\lambda$'s variance; far start, only non-saturating moves.
 

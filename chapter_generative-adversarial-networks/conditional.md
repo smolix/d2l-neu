@@ -64,7 +64,7 @@ This requirement is stronger than matching the distribution of images. Consider 
 
 ### Imbalanced Conditions
 
-The weighting by $p(c)$ has two consequences for imbalanced data. First, a rare condition contributes little to the objective, so the generator can serve it poorly at a small cost. Second, the cancellation in :eqref:`eq_gan_cond_dstar` assumes that the generator's conditions are drawn from the data marginal. If they are drawn from a different distribution $r(c)$, the optimal critic gains the offset $\log(p(c)/r(c))$. Reweighting or resampling the real batches to match $r(c)$ removes this offset, as in class-balanced training. Exercise :exref:`ex_conditional-rare-class` examines the first effect, and exercise :exref:`ex_conditional-suppose-label-marginal-is` the second.
+The weighting by $p(c)$ has two consequences for imbalanced data. First, a rare condition contributes little to the objective, so the generator can serve it poorly at a small cost. Second, the cancellation in :eqref:`eq_gan_cond_dstar` assumes that the generator's conditions are drawn from the data marginal. If they are drawn from a different distribution $r(c)$, the optimal critic gains the offset $\log(p(c)/r(c))$. Reweighting or resampling the real batches to match $r(c)$ removes this offset, as in class-balanced training. Exercise :exref:`ex_conditional-rare-class` examines the first effect, and Exercise :exref:`ex_conditional-suppose-label-marginal-is` the second.
 
 ### Same-Class Pairs
 
@@ -76,7 +76,7 @@ $$
 $$
 :eqlabel:`eq_gan_cond_rp_value`
 
-Each term is zero exactly when its slice is matched, so the fixed point is the same as that of :eqref:`eq_gan_cond_value`. Two properties of the pairing game carry over class by class. First, adding a constant to the critic leaves every score difference unchanged; with same-class pairs this holds for one constant per class, so $D(x, c) + \zeta_c$ has the same loss for any constants $\zeta_1, \ldots, \zeta_{10}$. The critic never has to calibrate its scores across classes, and the diagnostics below must not depend on these constants. Second, the generator's rank weight, the probability that a generated sample outranks a random real one, becomes the probability that a generated bird outranks a real bird. In the finite setting of :numref:`sec_gan_relativistic`, where the critic responds optimally, the paired loss leaves no configuration with generated points piled onto a few data points as a local minimum; with same-class pairs this holds within each class. Pairing a real bird with a generated truck would keep the fixed point but would compare scores across classes, where the constants $\zeta_c$ no longer cancel.
+Each term is zero exactly when its slice is matched, so the fixed point is the same as that of :eqref:`eq_gan_cond_value`. Two properties of the pairing game carry over class by class. First, adding a constant to the critic leaves every score difference unchanged; with same-class pairs this holds for one constant per class, so $D(x, c) + \zeta_c$ has the same loss for any constants $\zeta_1, \ldots, \zeta_{10}$. The critic never has to calibrate its scores across classes, and the diagnostics below must not depend on these constants. Second, the generator's rank weight, the probability that a generated sample outranks a random real one, becomes the probability that a generated bird outranks a real bird. In the finite setting of :numref:`sec_gan_relativistic`, where the critic responds optimally and each real point keeps one generated partner, the paired loss has no local minimum with generated points piled onto a few data points; with same-class pairs this holds within each class. Pairing a real bird with a generated truck would keep the fixed point but would compare scores across classes, where the constants $\zeta_c$ no longer cancel.
 
 The other results of the chapter extend per condition in the same way. Saturation on disjoint supports, the non-saturating generator, and the zero-centered penalties of :numref:`sec_gan_convergence` are statements about one pair of distributions, and conditioning only changes which pair. What remains open is how a network should receive $c$.
 
@@ -114,15 +114,15 @@ D(x, c) \;=\; e_c^\top \phi(x) + \psi_0(x).
 $$
 :eqlabel:`eq_gan_cond_projection`
 
-This is the *projection discriminator* of :citet:`Miyato.Koyama.2018`: one learned embedding per class, an inner product with the critic's features, and an unconditional head. Bayes' rule is an identity, but the log-linear form of both posteriors in a *shared* feature map is a modeling assumption; learning $\phi$ makes it flexible, though one representation must still serve both posteriors (exercise :exref:`ex_conditional-projection-derivation-modeled-both`). When $\psi_0$ is linear, $\psi_0(x) = w^\top \phi(x) + w_0$, the score is $(e_c + w)^\top \phi(x) + w_0$: the unconditional head can be absorbed into the class embeddings, so the split into two terms is a reparameterization rather than a constraint, and R3GAN's conditional critic keeps only the inner product :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. The table of class embeddings generalizes to any embedding of the condition. StyleGAN-T conditions its critic by projection onto the CLIP embedding of a caption :cite:`Sauer.Karras.Laine.ea.2023`, which makes the same head the text-conditioned critic of current one-step generators.
+This is the *projection discriminator* of :citet:`Miyato.Koyama.2018`: one learned embedding per class, an inner product with the critic's features, and an unconditional head. Bayes' rule is an identity, but the log-linear form of both posteriors in a *shared* feature map is a modeling assumption; learning $\phi$ makes it flexible, though one representation must still serve both posteriors (Exercise :exref:`ex_conditional-projection-derivation-modeled-both`). When $\psi_0$ is linear, $\psi_0(x) = w^\top \phi(x) + w_0$, the score is $(e_c + w)^\top \phi(x) + w_0$: the unconditional head can be absorbed into the class embeddings, so the split into two terms is a reparameterization rather than a constraint, and R3GAN's conditional critic keeps only the inner product :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. The table of class embeddings generalizes to any embedding of the condition. StyleGAN-T conditions its critic by projection onto the CLIP embedding of a caption :cite:`Sauer.Karras.Laine.ea.2023`, which makes the same head the text-conditioned critic of current one-step generators.
 
-The projection head is not the only compatibility mechanism. The *auxiliary classifier* critic of :citet:`Odena.Olah.Shlens.2017` adds a classification head and loss: the critic predicts the condition from its features, and the generator is trained to make its samples receive the requested label. This objective favors exaggerated class prototypes, which are easy to classify, over within-class diversity (exercise :exref:`ex_conditional-auxiliary-classifier-bias`). The generator also optimizes the quantity later used to measure condition alignment, which makes that measurement misleading.
+The projection head is not the only compatibility mechanism. The *auxiliary classifier* critic of :citet:`Odena.Olah.Shlens.2017` adds a classification head and loss: the critic predicts the condition from its features, and the generator is trained to make its samples receive the requested label. This objective favors exaggerated class prototypes, which are easy to classify, over within-class diversity (Exercise :exref:`ex_conditional-auxiliary-classifier-bias`). The generator also optimizes the quantity later used to measure condition alignment, which makes that measurement misleading.
 
 The experiment uses concatenation in the generator and a projection head in the critic. No identity like :eqref:`eq_gan_cond_projection` says how the generator should transform $c$, so concatenation leaves that interaction free, while the critic gets the structure the derivation motivates. R3GAN uses the same division in its class-conditional experiments. Exercise :exref:`ex_conditional-implement-concatenation-critic-one` replaces the projection head by concatenation and compares the two critics at the same budget.
 
 ### Images as Conditions
 
-The condition can also be an entire image: a semantic map, an edge sketch, or a grayscale photograph. Pix2pix :cite:`Isola.Zhu.Zhou.ea.2017` plays the conditional game on output--input pairs, with the source image as $c$, and adds an $L_1$ loss against the paired target. The source fixes the low-frequency structure of the output, which the $L_1$ term recovers. Fine texture is ambiguous given the source; a pointwise loss averages over the possibilities and blurs it, while the critic compares local patches with real ones and keeps them sharp. Without paired examples, CycleGAN :cite:`Zhu.Park.Isola.ea.2017` gives up the conditional critic: each direction plays an unconditional game against its target collection, and a cycle-consistency loss asks that translating forward and back return the input. The cycle loss constrains the map without identifying it, since two maps can satisfy both cycles and both critics while pairing images in an unintended way (exercise :exref:`ex_conditional-translation-identifiability`).
+The condition can also be an entire image: a semantic map, an edge sketch, or a grayscale photograph. Pix2pix :cite:`Isola.Zhu.Zhou.ea.2017` plays the conditional game on output--input pairs, with the source image as $c$, and adds an $L_1$ loss against the paired target. The source fixes the low-frequency structure of the output, which the $L_1$ term recovers. Fine texture is ambiguous given the source, and the $L_1$ term alone blurs it. Without paired examples, CycleGAN :cite:`Zhu.Park.Isola.ea.2017` gives up the conditional critic: each direction plays an unconditional game against its target collection, and a cycle-consistency loss asks that translating forward and back return the input. The cycle loss constrains the map without identifying it, since two maps can satisfy both cycles and both critics while pairing images in an unintended way (Exercise :exref:`ex_conditional-translation-identifiability`).
 
 ## Class-Conditional CIFAR-10
 
@@ -388,22 +388,24 @@ def train_conditional(train_X, train_y, test_X, test_y, gamma,
             history.append((step, *map(float, logs), acc))
     return ema.model, net_D, np.array(history)
 ```
-The runs use the penalty weight $\gamma = 0.5$. Penalty weights do not transfer between experiments: :numref:`sec_dcgan` uses $\gamma = 10$ for $64 \times 64$ sprites, whereas R3GAN decays its CIFAR-10 value from $0.05$ to $0.005$ over its four-day run. The right value depends on the resolution, the input scale, the critic, the batch size and the budget, so a new setup needs its own sweep; exercise :exref:`ex_conditional-implement-concatenation-critic-one` runs one.
+The runs use the penalty weight $\gamma = 0.5$. Penalty weights do not transfer between experiments: :numref:`sec_dcgan` uses $\gamma = 10$ for $64 \times 64$ sprites, whereas R3GAN decays its CIFAR-10 value from $0.05$ to $0.005$ over its four-day run. The right value depends on the resolution, the input scale, the critic, the batch size and the budget, so a new setup needs its own sweep; Exercise :exref:`ex_conditional-implement-concatenation-critic-one` runs one.
 
 ```{.python .input #conditional-training-with-the-chapter-s-loss-3}
 %%tab pytorch
+gamma = 0.5
 ema_G, net_D, history = train_conditional(train_X, train_y, test_X, test_y,
-                                          gamma=0.5)
+                                          gamma)
 loss_D, loss_G, pen, acc = history[-20:, 1:].mean(0)  # last 5,000 steps
-print(f'critic loss {loss_D:.2f} (+ penalty {0.5 / 2 * pen:.3f}), '
+print(f'critic loss {loss_D:.2f} (+ penalty {gamma / 2 * pen:.3f}), '
       f'generator loss {loss_G:.2f}, pair accuracy {acc:.2f}')
 ```
 ```{.python .input #conditional-training-with-the-chapter-s-loss-3}
 %%tab jax
+gamma = 0.5
 ema_G, net_D, history = train_conditional(train_X, train_y, test_X, test_y,
-                                          gamma=0.5)
+                                          gamma)
 loss_D, loss_G, pen, acc = history[-20:, 1:].mean(0)  # last 5,000 steps
-print(f'critic loss {loss_D:.2f} (+ penalty {0.5 / 2 * pen:.3f}), '
+print(f'critic loss {loss_D:.2f} (+ penalty {gamma / 2 * pen:.3f}), '
       f'generator loss {loss_G:.2f}, pair accuracy {acc:.2f}')
 ```
 ```{.python .input #conditional-training-with-the-chapter-s-loss-4}
@@ -417,7 +419,7 @@ d2l.plot(history[:, 0], history[:, 4], 'step', 'held-out pair accuracy',
          ylim=[0.4, 1], axes=axes[1])
 axes[1].axhline(0.5, ls='--', c='gray', lw=1);
 ```
-The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after a brief spike of the generator loss at the start. The generator loss then stays near 1.0, above $\log 2$, and the critic's pairing loss near 0.5, below it, with the penalty adding about 0.06. Both readings say that the critic still wins most comparisons, and the pair accuracy agrees: late in training the critic orders about 80% of fresh same-class pairs correctly, down from about 90% in the first few thousand steps, with occasional dips at a single logging step. At this budget the accuracy does not approach one half, so the generator has not caught up with the data in any class.
+The dashed lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after a brief spike of the generator loss at the start. The generator loss then stays near 1.0, above $\log 2$, and the critic's pairing loss near 0.5, below it, with the penalty adding about 0.06. Both readings say that the critic still wins most comparisons, and the pair accuracy agrees: late in training the critic orders about 80% of fresh same-class pairs correctly, down from about 90% in the first few thousand steps, with occasional dips at a single logging step. At this budget the accuracy does not approach one half, so on average over classes the generator has not caught up with the data.
 
 The next grid tests generation on demand. Each row requests one class, and each column uses a fresh latent code. As in :numref:`sec_dcgan`, the generator has no tanh, so the display and every evaluation below clamp its output to $[-1, 1]$.
 
@@ -437,7 +439,7 @@ d2l.plt.xticks([]);
 ```
 ```{.python .input #conditional-training-with-the-chapter-s-loss-5}
 %%tab jax
-z = jax.random.normal(jax.random.PRNGKey(42), (100, 100))
+z = jax.random.normal(jax.random.key(42), (100, 100))
 y = jnp.repeat(jnp.arange(10), 10)
 imgs = (jnp.clip(ema_G(z, y), -1, 1) + 1) / 2
 grid = np.asarray(imgs.reshape(10, 10, 32, 32, 3).transpose(0, 2, 1, 3, 4)
@@ -501,7 +503,7 @@ print(f'{"mean":12s}{np.mean(align):11.2f}{np.mean(cls_acc):7.2f}'
 ```
 ```{.python .input #conditional-measuring-condition-alignment-2}
 %%tab jax
-key = jax.random.PRNGKey(7)
+key = jax.random.key(7)
 align = []
 for c in range(10):
     key, kz = jax.random.split(key)
@@ -558,7 +560,7 @@ def features(imgs, bs=500):
     return np.concatenate([np.asarray(cnn.features(imgs[i:i + bs]))
                            for i in range(0, len(imgs), bs)])
 
-z = jax.random.normal(jax.random.PRNGKey(11), (1000, 100))
+z = jax.random.normal(jax.random.key(11), (1000, 100))
 yg = jnp.repeat(jnp.arange(10), 100)
 raw = ema_G(z, yg)
 oob = float(((raw < -1) | (raw > 1)).mean())
@@ -624,7 +626,7 @@ print(f'most confident image per class: alignment '
 ```
 Shifting the requests drops alignment from about 0.7 to a few percent, while FD and $\mathrm{MMD}^2$ do not change, because neither receives a label. The confident-image generator reaches alignment 1.00 with zero within-class variance. It beats real images on alignment and is the most collapsed generator possible: one image per request, a *within-class collapse*, which is mode collapse inside each conditional distribution. The conditional objective :eqref:`eq_gan_cond_value` penalizes it, because a point mass is far from $p(\cdot \mid c)$, and so does the within-class variance; alignment rewards it, and the pooled distances see it only after mixing the classes.
 
-Conditional evaluation thus has three axes: fidelity, diversity, and alignment. The feature distances mix fidelity with coverage and ignore the labels, alignment sees only agreement with the request, and the within-class variance sees only spread. Two established metrics combine sample quality with the condition. The Fréchet joint distance embeds image and condition together, so a realistic image with the wrong condition changes the score :cite:`DeVries.Romero.Pineda.ea.2019`. The classification accuracy score trains a classifier on generated pairs and tests it on real ones, so a collapsed or missing class shows up as errors on real images of that class :cite:`Ravuri.Vinyals.2019`. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends the diagnosis to per-class distances, and exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which trades variety for fidelity on purpose.
+Conditional evaluation thus has three axes: fidelity, diversity, and alignment. The feature distances mix fidelity with coverage and ignore the labels, alignment sees only agreement with the request, and the within-class variance sees only spread. Two established metrics combine sample quality with the condition. The Fréchet joint distance embeds image and condition together, so a realistic image with the wrong condition changes the score :cite:`DeVries.Romero.Pineda.ea.2019`. The classification accuracy score trains a classifier on generated pairs and tests it on real ones, so a collapsed or missing class shows up as errors on real images of that class :cite:`Ravuri.Vinyals.2019`. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends the diagnosis to per-class distances, and Exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which trades variety for fidelity on purpose.
 
 ### The Critic's Label Signal
 
@@ -638,7 +640,7 @@ with torch.no_grad():
                      for c in range(10)], 1)       # S[i, c] = D(x_i, c)
     zeta = net_D(gen, yg).reshape(10, 100).mean(1)  # per-class constants
 hit = lambda s: float((s.argmax(1) == yb).float().mean())
-print(f'P(D(x, y) > D(x, y+1)) = '
+print(f'P(D(x, c) > D(x, c+1)) = '
       f'{float((S[ar, yb] > S[ar, (yb + 1) % 10]).float().mean()):.2f}')
 print(f'critic as a classifier: raw {hit(S):.2f}, '
       f'constants removed {hit(S - zeta):.2f}')
@@ -650,18 +652,18 @@ S = jnp.stack([net_D(test_X[bal], jnp.full_like(yb, c))
                for c in range(10)], 1)             # S[i, c] = D(x_i, c)
 zeta = net_D(gen, yg).reshape(10, 100).mean(1)      # per-class constants
 hit = lambda s: float((s.argmax(1) == yb).mean())
-print(f'P(D(x, y) > D(x, y+1)) = '
+print(f'P(D(x, c) > D(x, c+1)) = '
       f'{float((S[ar, yb] > S[ar, (yb + 1) % 10]).mean()):.2f}')
 print(f'critic as a classifier: raw {hit(S):.2f}, '
       f'constants removed {hit(S - zeta):.2f}')
 ```
-Between 55% and 70% of real images score higher under their own label than under the next one, so the critic still has label information to pass to the generator; at the equilibrium the fraction would be one half. Used as a raw classifier, the critic labels 10% to 25% of the images correctly, against 10% for chance, because the scores of each class carry their own constant. Removing the constants raises its accuracy to about 30%, three times chance. This is the shift invariance of :numref:`sec_gan_relativistic` at work in a trained network, one constant per class. The corrected critic is still a poor classifier, and it should be: its label term records where the generator still disagrees with the data, not what an image shows (exercise :exref:`ex_conditional-critic-classifier`).
+Between 55% and 70% of real images score higher under their own label than under the next one, so the critic still has label information to pass to the generator; at the equilibrium the fraction would be one half. Used as a raw classifier, the critic labels 10% to 25% of the images correctly, against 10% for chance, because the scores of each class carry their own constant. Removing the constants raises its accuracy to about 30%, three times chance. This is the shift invariance of :numref:`sec_gan_relativistic` at work in a trained network, one constant per class. The corrected critic is still a poor classifier, and it should be: its label term records where the generator still disagrees with the data, not what an image shows (Exercise :exref:`ex_conditional-critic-classifier`).
 
 We can now ask a GAN for a class and check what we got: whether it obeys, how much it varies, and how close it comes to the data. The image-to-image systems of this section ask for more, an output that matches a known target, and pix2pix still adds a critic to its $L_1$ loss. Why a learned comparison helps when a regression target exists is the question of :numref:`sec_gan_beyond`.
 
 ## Summary
 
-Conditional generation gives the request to both players and plays the chapter's game on sample--condition pairs. Its optimal critic is the per-class log density ratio $\log(p(x \mid c)/q(x \mid c))$, its value averages the per-class divergences, and so it detects a generator that returns perfect images with the wrong labels, which the unconditional game cannot. With same-class pairs the pairing loss plays the game of :numref:`sec_gan_relativistic` in every class: the critic estimates the per-class log ratio up to one free constant per class, compares a real and a generated image of the same class, and is constrained by $R_1$ and $R_2$ on the images. Bayes' rule splits that ratio into a label term and a realness term, which gives the projection critic $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$. On CIFAR-10 the chapter's recipe produces requested classes about 70% of the time against the referee's 78% on real images, with about a fifth less within-class variety than real data, and the two baselines show that alignment, feature distances and variance each see a different failure.
+Conditional generation gives the request to both players and plays the chapter's game on sample--condition pairs. Its optimal critic is the per-class log density ratio $\log(p(x \mid c)/q(x \mid c))$, its value averages the per-class divergences, and so it detects a generator that returns perfect images with the wrong labels, which the unconditional game cannot. With same-class pairs the pairing loss plays the game of :numref:`sec_gan_relativistic` in every class: the critic estimates the per-class log ratio up to one free constant per class, compares a real and a generated image of the same class, and is constrained by $R_1$ and $R_2$ on the images. Bayes' rule splits that ratio into a label term and a realness term, which gives the projection critic $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$. On CIFAR-10 the referee recognizes the requested class in about 70% of the generated images, against 78% of real images, and the generated images have about a fifth less within-class variety than real data. The two baselines show that alignment, feature distances and variance each see a different failure.
 
 ## Exercises
 
@@ -730,7 +732,7 @@ Conditional generation gives the request to both players and plays the chapter's
        classes with the ranking by alignment. Which agreement would you
        expect, and do you find it?
     1. Suppose that after much longer training the printed fraction
-       $P(D(x, y) > D(x, y+1))$ on real images fell to one half. Name two
+       $P(D(x, c) > D(x, c+1))$ on real images fell to one half. Name two
        different states of the game that would produce this. Which
        measurement of this section tells them apart?
    :exlabel:`ex_conditional-critic-classifier`
@@ -862,8 +864,8 @@ Conditional generation gives the request to both players and plays the chapter's
    choices for the critic: the penalty weight $\gamma = 0.5$ and the
    projection head.
     1. Train for 4,000 steps at $\gamma \in \{0.05, 0.5, 5\}$. Report the
-       logged $\mathbb{E}\|\nabla_x D\|^2$ on real and generated images
-       (the column `history[:, 3]`), the alignment, and the within-class
+       logged sum of the squared input gradients on real and generated
+       images (the column `history[:, 3]`), the alignment, and the within-class
        feature variance. Which of these change by an order of magnitude
        across the sweep, and which barely move? $\gamma$ multiplies a squared
        input gradient, so it has the units of a squared distance in pixel
@@ -894,8 +896,8 @@ Conditional generation gives the request to both players and plays the chapter's
        game. What do the conditional critic and the L1 term each restore?
     1. For CycleGAN, suppose that $G: X \to Y$ and $F: Y \to X$ have zero
        cycle loss, that $G$ maps $p_X$ to $p_Y$, and that $F$ maps $p_Y$ to
-       $p_X$. Let $\pi: Y \to Y$ be an invertible map that leaves $p_Y$
-       unchanged. Show that the pair $(\pi \circ G,\, F \circ \pi^{-1})$
+       $p_X$. Let $B: Y \to Y$ be an invertible map that leaves $p_Y$
+       unchanged. Show that the pair $(B \circ G,\, F \circ B^{-1})$
        also has zero cycle loss and satisfies both marginal critics. Give
        two such solutions for $p_X = p_Y = \mathcal{N}(0, 1)$ on the real
        line, and count the solutions when $X$ and $Y$ each consist of $n$
@@ -959,13 +961,13 @@ then optimize, and how do we check that the generator obeys?
 ::: {.col}
 | section | asks |
 |---|---|
-| Generative Adversarial Networks | what does a classifier of samples compute? |
-| Objectives and Divergences | which loss gives which distance? |
-| Relativistic Objectives | what changes when the critic ranks pairs? |
-| Penalties and Convergence | does gradient training reach the optimum? |
-| Adversarial Image Generation | which network, and how to score images? |
-| **Conditional Generation** | **how to ask for a class, and check the answer?** |
-| Adversarial Losses beyond GANs | where does a learned comparison remain? |
+| Generative Adversarial Networks | what a classifier of samples computes |
+| Adversarial Objectives and Divergences | which loss gives which distance |
+| Relativistic Objectives | what changes when the critic ranks pairs |
+| Gradient Penalties and Convergence | why training circles, and what stops it |
+| Adversarial Image Generation | which network, and how to score images |
+| **Conditional Generation** | **how to ask for a class** |
+| Adversarial Losses Beyond GANs | where a learned comparison remains |
 :::
 
 ::: {.col .narrow}
@@ -1031,8 +1033,8 @@ $$\mathbb{E}_c\big[\mathrm{JS}(p_c \otimes q_c,\; q_c \otimes p_c)\big],
 - **One free constant per class:** $D(x, c) + \zeta_c$ has the same loss.
 - **Rank weight:** the probability that a generated bird outranks a real
   bird.
-- **Paired loss:** with an optimal critic on finite data, no piled-up
-  configuration is a local minimum, now within each class.
+- **Paired loss:** with an optimal critic and a fixed one-to-one pairing,
+  no piled-up configuration is a local minimum, now within each class.
 :::
 
 ::: {.slide title="Three Ways for the Condition to Enter"}
@@ -1083,6 +1085,19 @@ return label + self.psi0(phi)[:, 0]    # + psi_0(x)
 - The generator concatenates a class embedding at the $4 \times 4$ stage.
 :::
 
+::: {.slide title="Check: Which Training Statistic Can Drift Without the Game Changing?"}
+[Check]{.kicker}
+
+The pairing loss is unchanged by $D(x, c) \to D(x, c) + \zeta_c$ for any
+constants $\zeta_c$. Which can drift: the mean critic score on real birds,
+or the fraction of (real bird, generated bird) pairs ordered correctly?
+
+::: {.fragment .fade-up}
+The mean score drifts with $\zeta_c$. The pair fraction compares two
+scores of the same class, so $\zeta_c$ cancels: monitor that one.
+:::
+:::
+
 ::: {.slide title="The Recipe Is the Chapter's, with Labels Shared Across Each Pair"}
 [Class-conditional CIFAR-10]{.kicker}
 
@@ -1104,7 +1119,7 @@ return label + self.psi0(phi)[:, 0]    # + psi_0(x)
 - Losses settle within a few thousand steps: generator near 1.0, critic's
   pairing loss near 0.5 ($\log 2 \approx 0.69$ dashed).
 - Pair accuracy falls from about 90% to about 80%: the generator improves
-  but has not caught up in any class.
+  but has not caught up on average.
 :::
 
 ::: {.slide title="Each Row Is a Request"}
@@ -1188,8 +1203,8 @@ FD/MMD$^2$, within-class variance flags each?
 [Images as conditions]{.kicker}
 
 - **pix2pix** (paired): conditional critic on output--input pairs plus an
-  $L_1$ loss. $L_1$ recovers the structure; the critic keeps ambiguous
-  texture sharp instead of averaged.
+  $L_1$ loss. $L_1$ recovers the structure but blurs ambiguous texture;
+  pix2pix adds the critic for it.
 - **CycleGAN** (unpaired): one unconditional critic per direction plus a
   cycle loss. The cycle loss constrains the map but does not identify it.
 :::

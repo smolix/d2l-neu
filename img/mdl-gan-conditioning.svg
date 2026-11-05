@@ -730,60 +730,63 @@ z
 " clip-path="url(#pf44df54f4c)" style="fill: #f0f2f5; stroke: #565d66; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="text_6">
-    <!-- $h$ -->
-    <g transform="translate(271.001297 179.000335) scale(0.15 -0.15)">
+    <!-- $\phi$ -->
+    <g transform="translate(270.851297 179.000335) scale(0.15 -0.15)">
      <defs>
-      <path id="Cmmi10-5f" d="M 341 116 
-Q 341 153 347 172 
-L 1275 3872 
-Q 1300 3981 1306 4044 
-Q 1306 4147 891 4147 
-Q 825 4147 825 4231 
-Q 828 4247 839 4287 
-Q 850 4328 867 4350 
-Q 884 4372 916 4372 
-L 1778 4441 
-L 1797 4441 
-Q 1797 4434 1819 4423 
-Q 1841 4413 1844 4409 
-Q 1856 4378 1856 4359 
-L 1356 2363 
-Q 1750 2828 2291 2828 
-Q 2516 2828 2680 2750 
-Q 2844 2672 2936 2514 
-Q 3028 2356 3028 2138 
-Q 3028 1875 2911 1503 
-Q 2794 1131 2619 672 
-Q 2528 463 2528 288 
-Q 2528 97 2675 97 
-Q 2925 97 3092 364 
-Q 3259 631 3328 941 
-Q 3341 978 3378 978 
-L 3456 978 
-Q 3481 978 3497 961 
-Q 3513 944 3513 922 
-Q 3513 916 3506 903 
-Q 3450 672 3339 448 
-Q 3228 225 3059 76 
-Q 2891 -72 2663 -72 
-Q 2438 -72 2278 83 
-Q 2119 238 2119 459 
-Q 2119 578 2169 709 
-Q 2350 1191 2470 1569 
-Q 2591 1947 2591 2234 
-Q 2591 2419 2519 2541 
-Q 2447 2663 2278 2663 
-Q 1934 2663 1678 2452 
-Q 1422 2241 1234 1894 
-L 800 147 
-Q 775 50 703 -11 
-Q 631 -72 538 -72 
-Q 456 -72 398 -17 
-Q 341 38 341 116 
+      <path id="Cmmi10-2a" d="M 1241 -1247 
+L 1528 -91 
+Q 1203 -91 922 61 
+Q 641 213 470 484 
+Q 300 756 300 1075 
+Q 300 1422 472 1737 
+Q 644 2053 942 2311 
+Q 1241 2569 1584 2708 
+Q 1928 2847 2266 2847 
+L 2650 4403 
+Q 2663 4441 2700 4441 
+L 2778 4441 
+Q 2803 4441 2818 4419 
+Q 2834 4397 2834 4378 
+L 2450 2847 
+Q 2691 2847 2916 2759 
+Q 3141 2672 3314 2514 
+Q 3488 2356 3584 2142 
+Q 3681 1928 3681 1684 
+Q 3681 1338 3509 1022 
+Q 3338 706 3047 453 
+Q 2756 200 2398 54 
+Q 2041 -91 1716 -91 
+L 1422 -1275 
+Q 1409 -1313 1369 -1313 
+L 1294 -1313 
+Q 1269 -1313 1255 -1289 
+Q 1241 -1266 1241 -1247 
+z
+M 1569 78 
+L 2222 2681 
+Q 2059 2681 1881 2615 
+Q 1703 2550 1545 2450 
+Q 1388 2350 1259 2222 
+Q 1103 2066 984 1853 
+Q 866 1641 805 1405 
+Q 744 1169 744 941 
+Q 744 700 847 503 
+Q 950 306 1137 192 
+Q 1325 78 1569 78 
+z
+M 1759 78 
+Q 2000 78 2272 215 
+Q 2544 353 2719 538 
+Q 2959 775 3098 1120 
+Q 3238 1466 3238 1819 
+Q 3238 2056 3134 2254 
+Q 3031 2453 2843 2567 
+Q 2656 2681 2413 2681 
+L 1759 78 
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmmi10-5f" transform="translate(0 0.609375)"/>
+     <use xlink:href="#Cmmi10-2a" transform="translate(0 0.609375)"/>
     </g>
    </g>
    <g id="patch_11">
@@ -963,8 +966,8 @@ z
     </g>
    </g>
    <g id="text_9">
-    <!-- $a(c) \odot h + b(c)$ -->
-    <g transform="translate(315.770042 214.841707) scale(0.16 -0.16)">
+    <!-- $a(c) \odot \phi + b(c)$ -->
+    <g transform="translate(315.610042 214.841707) scale(0.16 -0.16)">
      <defs>
       <path id="Cmsy10-40" d="M 2491 -531 
 Q 2053 -531 1668 -365 
@@ -1048,12 +1051,12 @@ z
      <use xlink:href="#Cmmi10-7f" transform="translate(91.601562 0)"/>
      <use xlink:href="#Cmr10-44" transform="translate(134.814453 0)"/>
      <use xlink:href="#Cmsy10-40" transform="translate(193.63287 0)"/>
-     <use xlink:href="#Cmmi10-5f" transform="translate(291.318474 0)"/>
-     <use xlink:href="#Cmr10-4c" transform="translate(368.935719 0)"/>
-     <use xlink:href="#Cmmi10-4b" transform="translate(466.621323 0)"/>
-     <use xlink:href="#Cmr10-77" transform="translate(509.541245 0)"/>
-     <use xlink:href="#Cmmi10-7f" transform="translate(548.359604 0)"/>
-     <use xlink:href="#Cmr10-44" transform="translate(591.572495 0)"/>
+     <use xlink:href="#Cmmi10-2a" transform="translate(291.318474 0)"/>
+     <use xlink:href="#Cmr10-4c" transform="translate(370.840015 0)"/>
+     <use xlink:href="#Cmmi10-4b" transform="translate(468.52562 0)"/>
+     <use xlink:href="#Cmr10-77" transform="translate(511.445541 0)"/>
+     <use xlink:href="#Cmmi10-7f" transform="translate(550.263901 0)"/>
+     <use xlink:href="#Cmr10-44" transform="translate(593.476791 0)"/>
     </g>
    </g>
    <g id="text_10">
@@ -1463,8 +1466,8 @@ z
     </g>
    </g>
    <g id="text_13">
-    <!-- $D(x, c) = e_c^{\top} \varphi(x) + \psi_0(x)$ -->
-    <g transform="translate(541.080753 214.841707) scale(0.16 -0.16)">
+    <!-- $D(x, c) = e_c^{\top} \phi(x) + \psi_0(x)$ -->
+    <g transform="translate(541.560753 214.841707) scale(0.16 -0.16)">
      <defs>
       <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 
@@ -1509,58 +1512,6 @@ Q 2619 69 2578 34
 Q 2538 0 2491 0 
 Q 2438 0 2400 34 
 Q 2363 69 2363 122 
-z
-" transform="scale(0.015625)"/>
-      <path id="Cmmi10-6" d="M 1044 -1216 
-Q 1044 -1191 1056 -1141 
-L 1416 -13 
-Q 938 106 628 428 
-Q 319 750 319 1216 
-Q 319 1450 406 1744 
-Q 494 2038 631 2302 
-Q 769 2566 928 2741 
-Q 966 2759 972 2759 
-L 1050 2759 
-Q 1069 2759 1084 2740 
-Q 1100 2722 1100 2700 
-Q 1100 2675 1088 2663 
-Q 981 2547 879 2380 
-Q 778 2213 698 2028 
-Q 619 1844 566 1641 
-Q 513 1438 513 1288 
-Q 513 909 814 676 
-Q 1116 444 1528 366 
-L 1709 941 
-Q 1828 1313 1945 1605 
-Q 2063 1897 2239 2176 
-Q 2416 2456 2666 2642 
-Q 2916 2828 3225 2828 
-Q 3469 2828 3633 2706 
-Q 3797 2584 3876 2381 
-Q 3956 2178 3956 1947 
-Q 3956 1566 3787 1202 
-Q 3619 838 3325 548 
-Q 3031 259 2662 93 
-Q 2294 -72 1919 -72 
-Q 1869 -69 1811 -66 
-Q 1753 -63 1716 -63 
-L 1503 -1178 
-Q 1484 -1272 1407 -1333 
-Q 1331 -1394 1234 -1394 
-Q 1156 -1394 1100 -1345 
-Q 1044 -1297 1044 -1216 
-z
-M 1784 331 
-Q 1856 325 1991 325 
-Q 2388 325 2798 520 
-Q 3209 716 3479 1056 
-Q 3750 1397 3750 1797 
-Q 3750 1978 3676 2122 
-Q 3603 2266 3470 2348 
-Q 3338 2431 3163 2431 
-Q 2666 2431 2331 1950 
-Q 1997 1469 1894 916 
-L 1784 331 
 z
 " transform="scale(0.015625)"/>
       <path id="Cmmi10-1f" d="M 1522 -1247 
@@ -1661,16 +1612,16 @@ z
      <use xlink:href="#Cmmi10-3" transform="translate(426.015797 0.084203)"/>
      <use xlink:href="#Cmsy10-64" transform="translate(497.760394 41.373438) scale(0.7)"/>
      <use xlink:href="#Cmmi10-7f" transform="translate(472.500172 -24.637514) scale(0.7)"/>
-     <use xlink:href="#Cmmi10-6" transform="translate(571.860732 0.084203)"/>
-     <use xlink:href="#Cmr10-77" transform="translate(637.241591 0.084203)"/>
-     <use xlink:href="#Cmmi10-3f" transform="translate(676.059951 0.084203)"/>
-     <use xlink:href="#Cmr10-44" transform="translate(733.140029 0.084203)"/>
-     <use xlink:href="#Cmr10-4c" transform="translate(791.958445 0.084203)"/>
-     <use xlink:href="#Cmmi10-1f" transform="translate(889.644049 0.084203)"/>
-     <use xlink:href="#Cmr10-28" transform="translate(954.73194 -14.915759) scale(0.7)"/>
-     <use xlink:href="#Cmr10-77" transform="translate(995.452356 0.084203)"/>
-     <use xlink:href="#Cmmi10-3f" transform="translate(1034.270715 0.084203)"/>
-     <use xlink:href="#Cmr10-44" transform="translate(1091.350793 0.084203)"/>
+     <use xlink:href="#Cmmi10-2a" transform="translate(571.860732 0.084203)"/>
+     <use xlink:href="#Cmr10-77" transform="translate(631.382216 0.084203)"/>
+     <use xlink:href="#Cmmi10-3f" transform="translate(670.200576 0.084203)"/>
+     <use xlink:href="#Cmr10-44" transform="translate(727.280654 0.084203)"/>
+     <use xlink:href="#Cmr10-4c" transform="translate(786.09907 0.084203)"/>
+     <use xlink:href="#Cmmi10-1f" transform="translate(883.784674 0.084203)"/>
+     <use xlink:href="#Cmr10-28" transform="translate(948.872565 -14.915759) scale(0.7)"/>
+     <use xlink:href="#Cmr10-77" transform="translate(989.592981 0.084203)"/>
+     <use xlink:href="#Cmmi10-3f" transform="translate(1028.41134 0.084203)"/>
+     <use xlink:href="#Cmr10-44" transform="translate(1085.491418 0.084203)"/>
     </g>
    </g>
    <g id="text_14">
@@ -1712,21 +1663,21 @@ z
     </g>
    </g>
    <g id="text_16">
-    <!-- $\varphi$ -->
-    <g transform="translate(587.886904 133.369837) scale(0.17 -0.17)">
-     <use xlink:href="#Cmmi10-6" transform="translate(0 0.8125)"/>
+    <!-- $\phi$ -->
+    <g transform="translate(588.396904 133.369837) scale(0.17 -0.17)">
+     <use xlink:href="#Cmmi10-2a" transform="translate(0 0.609375)"/>
     </g>
    </g>
    <g id="text_17">
-    <!-- $e_c^{\top} \varphi(x)$ -->
-    <g transform="translate(644.810837 96.336339) scale(0.15 -0.15)">
+    <!-- $e_c^{\top} \phi(x)$ -->
+    <g transform="translate(645.185837 96.336339) scale(0.15 -0.15)">
      <use xlink:href="#Cmmi10-3" transform="translate(0 0.084203)"/>
      <use xlink:href="#Cmsy10-64" transform="translate(71.744597 41.373438) scale(0.7)"/>
      <use xlink:href="#Cmmi10-7f" transform="translate(46.484375 -24.637514) scale(0.7)"/>
-     <use xlink:href="#Cmmi10-6" transform="translate(145.844935 0.084203)"/>
-     <use xlink:href="#Cmr10-77" transform="translate(211.225795 0.084203)"/>
-     <use xlink:href="#Cmmi10-3f" transform="translate(250.044154 0.084203)"/>
-     <use xlink:href="#Cmr10-44" transform="translate(307.124232 0.084203)"/>
+     <use xlink:href="#Cmmi10-2a" transform="translate(145.844935 0.084203)"/>
+     <use xlink:href="#Cmr10-77" transform="translate(205.36642 0.084203)"/>
+     <use xlink:href="#Cmmi10-3f" transform="translate(244.184779 0.084203)"/>
+     <use xlink:href="#Cmr10-44" transform="translate(301.264857 0.084203)"/>
     </g>
    </g>
    <g id="text_18">

@@ -146,4 +146,35 @@ These symbols belong to :numref:`chap_reinforcement_learning` and the chapter af
 
 
 
+## Generative Adversarial Networks
+
+These symbols belong to :numref:`chap_gans`; :numref:`tab_gan_notation` lists them with the section that defines each and the letters the papers use.
+
+* $p$, $q$, $m$: the data density, the generator's density, and their balanced mixture $\tfrac12(p + q)$
+* $x \sim p$, $x' \sim q$: a real and a generated sample
+* $z$, $G$, $d_z$: the latent variable, the generator $x' = G(z)$, and the latent dimension
+* $D$: the critic's realness logit; $\sigma(D)$ is its probability that a sample is real
+* $\rho = p/q$, $\lambda = \log \rho$: the density ratio and its logarithm, the optimal log-loss critic
+* $\mu$: a mean, of a Gaussian or of features; $\mu(x)$ is a conditional mean
+* $\delta_\theta$, $\delta$: the point mass at $\theta$; the separation of two supports
+* $b$: an additive shift, of a critic or of a feature map
+* $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$: the per-sample weights of the saturating, non-saturating and pairing generator updates
+* $\eta = p/(p + q)$: the class posterior
+* $\ell$, $\Delta_\ell$: the payoff of a score ($\ell = \log \sigma$ for the log loss) and its Bayes-risk gap
+* $T$, $\mathcal{T}$, $\ell_p$, $\ell_q$: a critic or test function, its class, and the scores of real and generated samples in the general adversarial objective
+* $f$, $D_f$: a divergence function and its $f$-divergence
+* $k$, $s$: a kernel and its bandwidth
+* $\Phi$, $d_{\textrm{Rp}}$: the pairing objective and its value at the optimal critic
+* $P = p \otimes q$, $Q = q \otimes p$: the two orderings of a real--generated pair
+* $v$: the direction of a small change $q = p\,(1 + \epsilon v)$
+* $\gamma$, $R_1$, $R_2$: the penalty weight and the zero-centered gradient penalties at the data and generated samples
+* $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$: the step size, the eigenvalues, the critic's slope and the gradient field of the two-point game (the Dirac-GAN)
+* $\omega$: a wavenumber or angular frequency
+* $\phi$: a feature map
+* $c$, $e_c$, $a(c)$, $b(c)$, $\psi_0$, $\zeta_c$: a condition, its embedding, a modulation's scale and shift, the unconditional head of a projection critic, and the critic's free constant per class
+* $g$: a predictor of a target $y$ from an input $x$
+* $\mathrm{JS}(p, q)$, $D_{\textrm{J}}$, $H_b(t)$: the Jensen--Shannon divergence, the symmetrized KL divergence $D_{\textrm{KL}}(p\|q) + D_{\textrm{KL}}(q\|p)$, and the entropy of a coin with bias $t$
+
+
+
 [Discussions](https://d2l.discourse.group/t/25)

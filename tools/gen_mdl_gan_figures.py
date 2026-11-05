@@ -189,7 +189,7 @@ def fig_template():
     ax.add_patch(Polygon([P(0, 0.35), P(U1, 0.35), P(U1, 1.75), P(0, 1.75)],
                          closed=True, fc=GRAY, alpha=0.13, ec="none", zorder=2))
     ax.text(*(P(U1, 1.05) + np.array([0.22, 0.0])),
-            "integral probability\nmetrics: $a(T)=b(T)=T$", ha="left",
+            "integral probability\nmetrics: $\\ell_p(T)=\\ell_q(T)=T$", ha="left",
             va="center", fontsize=12.5, color="black")
 
     # the two axes
@@ -197,7 +197,7 @@ def fig_template():
     fl.arrow(ax, P(0, 0), P(0, V1 + 0.45), color="black", lw=1.5, mut=15)
     ax.text(*(P(U1 / 2, 0) + np.array([0.0, -0.62])), r"critic class $\mathcal{T}$",
             ha="center", va="top", fontsize=14.5, color="black")
-    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"scoring functions $(a,b)$",
+    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"scoring functions $(\ell_p, \ell_q)$",
             ha="right", va="bottom", fontsize=14.5, color="black")
 
     # ticks along each axis
@@ -774,7 +774,7 @@ def fig_conditioning():
     xh, xm, xp = x0 + 0.65, x0 + 2.25, x0 + 3.3
     xo = xp + 1.35
     _fmap(ax, xh, 1.75, 16)
-    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$h$", ha="center", va="top",
+    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$\phi$", ha="center", va="top",
             fontsize=15, color="black")
     circ(xm, 1.75, r"$\times$")
     circ(xp, 1.75, r"$+$")
@@ -794,7 +794,7 @@ def fig_conditioning():
                  (xx, 1.75 + 0.27), color=E_EC, lw=1.5, mut=12)
         ax.text(xx + 0.22 * sgn, 2.55, lab, ha=ha, va="center", fontsize=15,
                 color="black")
-    ax.text((xh + xo) / 2, yf, r"$a(c) \odot h + b(c)$", ha="center",
+    ax.text((xh + xo) / 2, yf, r"$a(c) \odot \phi + b(c)$", ha="center",
             va="center", fontsize=16, color="black")
 
     # ---------------- (c) compatibility head ----------------
@@ -806,11 +806,11 @@ def fig_conditioning():
     _fmap(ax, xx_, 1.95, 32)
     ax.text(xx_, 1.95 - a32 / 2 - 0.12, r"$x$", ha="center", va="top",
             fontsize=15, color="black")
-    _box(ax, xphi, 1.95, 0.8, 1.0, r"$\varphi$", GREEN, fontsize=17)
+    _box(ax, xphi, 1.95, 0.8, 1.0, r"$\phi$", GREEN, fontsize=17)
     fl.arrow(ax, (xx_ + a32 / 2 + 0.08, 1.95), (xphi - 0.44, 1.95),
              color="black", lw=1.5, mut=12)
     bw = 1.45
-    _box(ax, xh2, 2.75, bw, 0.6, r"$e_c^{\top} \varphi(x)$", E_EC,
+    _box(ax, xh2, 2.75, bw, 0.6, r"$e_c^{\top} \phi(x)$", E_EC,
          fontsize=15, fc=E_FC)
     _box(ax, xh2, 1.15, bw, 0.6, r"$\psi_0(x)$", GREEN, fontsize=15)
     for yy in (2.75, 1.15):
@@ -830,7 +830,7 @@ def fig_conditioning():
              lw=1.5, mut=12)
     ax.text(xs_ + 0.88, 1.95, r"$D(x, c)$", ha="left", va="center",
             fontsize=15, color="black")
-    ax.text((xx_ + xs_) / 2, yf, r"$D(x, c) = e_c^{\top} \varphi(x) + \psi_0(x)$",
+    ax.text((xx_ + xs_) / 2, yf, r"$D(x, c) = e_c^{\top} \phi(x) + \psi_0(x)$",
             ha="center", va="center", fontsize=16, color="black")
 
     fl.clean_axes(ax, lim=((-0.1, xs_ + 2.0), (-0.25, 4.6)), hide=True,
